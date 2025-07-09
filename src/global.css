@@ -1,0 +1,159 @@
+/* Variables globales para modo claro */
+:root {
+  --color-bg: #f5f5f5;
+  --color-bg-paper: #fff;
+  --color-text: #222;
+  --color-text-secondary: #444;
+  --color-link: #1976d2;
+  --color-scrollbar: #888;
+  --color-scrollbar-track: #f1f1f1;
+  --color-scrollbar-hover: #555;
+  --color-error-bg: #ffebee;
+  --color-error-text: #d32f2f;
+  --color-error-border: #ffcdd2;
+  --color-success-bg: #e8f5e8;
+  --color-success-text: #2e7d32;
+  --color-success-border: #c8e6c9;
+  --color-table-header: #f2f2f2;
+}
+
+/* Variables para modo oscuro */
+[data-theme="dark"] {
+  --color-bg: #111;
+  --color-bg-paper: #222;
+  --color-text: #fff;
+  --color-text-secondary: #bbb;
+  --color-link: #90caf9;
+  --color-scrollbar: #444;
+  --color-scrollbar-track: #222;
+  --color-scrollbar-hover: #888;
+  --color-error-bg: #2d1a1a;
+  --color-error-text: #ff8a80;
+  --color-error-border: #ff5252;
+  --color-success-bg: #1b2b1b;
+  --color-success-text: #b9f6ca;
+  --color-success-border: #69f0ae;
+  --color-table-header: #222;
+}
+
+*{
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: var(--color-bg);
+  color: var(--color-text);
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+    monospace;
+}
+
+/* Estilos para el scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-scrollbar-track);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-scrollbar);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-scrollbar-hover);
+}
+
+/* Estilos para los enlaces */
+a {
+  text-decoration: none;
+  color: var(--color-link);
+}
+
+/* Estilos para los botones */
+button {
+  cursor: pointer;
+}
+
+/* Estilos para las imágenes */
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Estilos para los formularios */
+input, textarea, select {
+  font-family: inherit;
+}
+
+/* Estilos para el focus */
+*:focus {
+  outline: 2px solid var(--color-link);
+  outline-offset: 2px;
+}
+
+/* Estilos para el loading */
+.loading-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 200px;
+}
+
+/* Estilos para las tarjetas */
+.card {
+  background: var(--color-bg-paper);
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  padding: 16px;
+  margin-bottom: 16px;
+  color: var(--color-text);
+}
+
+/* Estilos para las tablas */
+table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+th, td {
+  border: 1px solid #ddd;
+  padding: 8px;
+  text-align: left;
+}
+
+th {
+  background-color: var(--color-table-header);
+  font-weight: bold;
+}
+
+/* Estilos para los mensajes de error */
+.error-message {
+  color: var(--color-error-text);
+  background-color: var(--color-error-bg);
+  border: 1px solid var(--color-error-border);
+  border-radius: 4px;
+  padding: 8px 12px;
+  margin: 8px 0;
+}
+
+/* Estilos para los mensajes de éxito */
+.success-message {
+  color: var(--color-success-text);
+  background-color: var(--color-success-bg);
+  border: 1px solid var(--color-success-border);
+  border-radius: 4px;
+  padding: 8px 12px;
+  margin: 8px 0;
+}

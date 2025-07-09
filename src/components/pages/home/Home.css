@@ -1,0 +1,28 @@
+/* General styles for the Home component */
+.root {
+    background-color: #f5f5f5;
+    min-height: 100vh;
+    padding: 2rem;
+  }
+  
+  .header {
+    text-align: center;
+    margin-bottom: 2rem;
+  }
+  
+  .button {
+    margin-top: 1rem;
+  }
+  
+  .card {
+    padding: 2rem;
+    text-align: center;
+    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+  }
+  
+  .image {
+    width: 100%;
+    height: auto;
+    border-radius: 8px;
+  }
+  

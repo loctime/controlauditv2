@@ -1,0 +1,10 @@
+.firma-container {
+    margin-top: 15px; /* Ajusta el margen según tus necesidades */
+    text-align: center; /* Centra el contenido horizontalmente */
+  }
+  
+  .sigCanvas {
+    border: 1px solid #000;
+    margin-top: 10px;
+  }
+  

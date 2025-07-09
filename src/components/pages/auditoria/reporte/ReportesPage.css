@@ -1,0 +1,43 @@
+.pdf-content {
+  font-family: Arial, sans-serif;
+}
+
+.page-break {
+  page-break-before: always;
+}
+
+.page-break-avoid {
+  page-break-inside: avoid; /* Evita que el contenido de este elemento se corte en dos páginas */
+}
+
+.signature-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.pdf-table {
+  width: 100%;
+}
+
+.signature-image {
+  max-width: 200px;
+  max-height: 100px;
+}
+
+/* Estilos para ocultar elementos en impresión */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  
+  /* Ocultar botones y elementos de navegación */
+  button, .MuiButton-root {
+    display: none !important;
+  }
+  
+  /* Ocultar elementos específicos */
+  .print-hide {
+    display: none !important;
+  }
+}
