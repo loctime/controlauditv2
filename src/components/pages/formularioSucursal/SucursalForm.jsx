@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { Button, TextField, Grid, Typography, Box, MenuItem, FormControl, InputLabel, Select, Paper } from "@mui/material";
 import { db } from "../../../firebaseConfig";
-import { getDocs, collection, doc, getDoc } from "firebase/firestore";
+import { getDocs, collection } from "firebase/firestore";
+import { useNavigate } from "react-router-dom";
 
 const SucursalForm = ({ agregarSucursal, empresaId }) => {
   const [empresas, setEmpresas] = useState([]);
@@ -12,6 +13,7 @@ const SucursalForm = ({ agregarSucursal, empresaId }) => {
     telefono: "",
     empresa: "",
   });
+  const navigate = useNavigate();
 
   useEffect(() => {
     const obtenerEmpresas = async () => {
@@ -49,6 +51,9 @@ const SucursalForm = ({ agregarSucursal, empresaId }) => {
     if (name === "empresa") {
       const empresa = empresas.find(e => e.nombre === value);
       setEmpresaSeleccionada(empresa);
+      if (empresa && empresa.id !== empresaId) {
+        navigate(`/sucursales/${empresa.id}`);
+      }
     }
   };
 
@@ -79,7 +84,6 @@ const SucursalForm = ({ agregarSucursal, empresaId }) => {
                 value={sucursal.empresa}
                 onChange={handleChange}
                 label="Empresa"
-                // Quitar disabled para permitir siempre el cambio
               >
                 <MenuItem value="">
                   <em>Seleccione una empresa</em>

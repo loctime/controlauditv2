@@ -7,7 +7,9 @@ import SeleccionFormulario from "./SeleccionFormulario";
 import PreguntasYSeccion from "./PreguntasYSeccion";
 import Reporte from "./Reporte";
 import BotonGenerarReporte from "./BotonGenerarReporte";
-import { Typography, Grid, Alert, Box, Button, Paper, Container } from "@mui/material";
+import { Typography, Grid, Alert, Box, Button, Paper, Container, IconButton, Divider } from "@mui/material";
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import { useNavigate } from "react-router-dom";
 
 const Auditoria = () => {
   const [empresaSeleccionada, setEmpresaSeleccionada] = useState(null);
@@ -23,6 +25,7 @@ const Auditoria = () => {
   const [sucursales, setSucursales] = useState([]);
   const [formularios, setFormularios] = useState([]);
   const [auditoriaGenerada, setAuditoriaGenerada] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const obtenerEmpresas = async () => {
@@ -203,6 +206,60 @@ const Auditoria = () => {
 
   return (
     <Container maxWidth="lg" sx={{ py: 3 }}>
+      {/* Botón Atrás SIEMPRE visible */}
+      <Box display="flex" alignItems="center" mb={2}>
+        <Button
+          onClick={() => navigate('/establecimiento')}
+          color="primary"
+          sx={{ fontWeight: 'bold', textTransform: 'none' }}
+          startIcon={<ArrowBackIcon />}
+          size="large"
+        >
+          Atrás
+        </Button>
+        <Typography variant="h5" sx={{ fontWeight: 'bold', ml: 2 }}>
+          Auditoría
+        </Typography>
+      </Box>
+      {/* Cabecera empresa seleccionada */}
+      {empresaSeleccionada && (
+        <Paper elevation={2} sx={{ p: 2, display: 'flex', alignItems: 'center', gap: 2, mb: 4 }}>
+          <Typography variant="subtitle1" sx={{ fontWeight: 'bold', minWidth: 'fit-content' }}>
+            Empresa:
+          </Typography>
+          <Typography variant="h6" color="primary" sx={{ flex: 1 }}>
+            {empresaSeleccionada.nombre}
+          </Typography>
+          {empresaSeleccionada.logo && empresaSeleccionada.logo.trim() !== "" ? (
+            <img
+              src={empresaSeleccionada.logo}
+              alt={`Logo de ${empresaSeleccionada.nombre}`}
+              style={{ width: "60px", height: "60px", objectFit: 'contain', borderRadius: '8px' }}
+              onError={(e) => {
+                e.target.style.display = 'none';
+              }}
+            />
+          ) : (
+            <Box
+              sx={{
+                width: "60px",
+                height: "60px",
+                backgroundColor: "#f0f0f0",
+                borderRadius: "8px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: "20px",
+                color: "#666",
+                border: "2px dashed #ccc"
+              }}
+            >
+              {empresaSeleccionada.nombre.charAt(0).toUpperCase()}
+            </Box>
+          )}
+        </Paper>
+      )}
+      <Divider sx={{ mb: 4 }} />
       {!auditoriaGenerada ? (
         <>
           <Typography variant="h4" gutterBottom sx={{ mb: 4, textAlign: 'center', fontWeight: 'bold' }}>
