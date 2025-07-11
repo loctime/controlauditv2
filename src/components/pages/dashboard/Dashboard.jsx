@@ -5,11 +5,8 @@ import { AuthContext } from "../../context/AuthContext";
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import interactionPlugin from '@fullcalendar/interaction';
-
 import { collection, addDoc, setDoc, doc } from "firebase/firestore";
-
-
-import { db, signUp} from "../../../firebaseConfig";
+import { db, signUp } from "../../../firebaseConfig";
 
 
 const empresasEjemplo = [
