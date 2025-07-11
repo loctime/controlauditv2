@@ -22,7 +22,7 @@ const empresasEjemplo = [
     fechaVencimiento: '2024-07-01',
   },
   {
-    id: 'empresa2',
+    id: 'empresa218',
     nombre: 'Empresa XYZ',
     sociosActuales: 12,
     sociosMaximos: 10,
