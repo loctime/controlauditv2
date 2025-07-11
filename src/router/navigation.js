@@ -8,6 +8,12 @@ import PersonIcon from '@mui/icons-material/Person';
 
 export const menuItems = [
     {
+        id: "dashboard",
+        path: "/dashboard",
+        title: "Panel de Control",
+        Icon: HomeIcon
+    },
+    {
         id: "home",
         path: "/",
         title: "Inicio",
