@@ -1,18 +1,22 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { collection, getDocs, doc, getDoc } from "firebase/firestore";
 import { db } from "../../../firebaseConfig";
-import { FormControl, InputLabel, Select, MenuItem, Typography, Box, Alert, Chip } from "@mui/material";
+import { FormControl, InputLabel, Select, MenuItem, Typography, Box, Alert, Chip, Button } from "@mui/material";
 import EditarSeccionYPreguntas from "./EditarSeccionYPreguntas";
 import { useAuth } from "../../context/AuthContext";
 import Swal from 'sweetalert2';
+import { useNavigate } from "react-router-dom";
 
 const EditarFormulario = () => {
   const { user, userProfile } = useAuth();
-  const [formularios, setFormularios] = useState([]);
+  const [formularios, setFormularios] = useState([]); // Solo metadatos
   const [formularioSeleccionado, setFormularioSeleccionado] = useState(null);
+  const [formulariosCache, setFormulariosCache] = useState({}); // id -> formulario completo
   const [reload, setReload] = useState(false);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
+  // Cargar solo metadatos al inicio
   const obtenerFormularios = useCallback(async () => {
     try {
       if (!user) {
@@ -20,50 +24,40 @@ const EditarFormulario = () => {
         setLoading(false);
         return;
       }
-
       setLoading(true);
       const formulariosCollection = collection(db, "formularios");
       const res = await getDocs(formulariosCollection);
-      const todosLosFormularios = res.docs.map((formulario) => ({
-        ...formulario.data(),
-        id: formulario.id
-      }));
-
-      // ✅ Filtrar formularios por permisos
-      const formulariosPermitidos = todosLosFormularios.filter(formulario => {
-        // Administradores ven todos los formularios
-        if (userProfile?.role === 'max') {
-          return true;
-        }
-
-        // Usuarios ven sus propios formularios
-        if (formulario.creadorId === user.uid) {
-          return true;
-        }
-
-        // Formularios públicos
-        if (formulario.esPublico) {
-          return true;
-        }
-
-        // Formularios donde el usuario tiene permisos explícitos
-        if (formulario.permisos?.puedeVer?.includes(user.uid)) {
-          return true;
-        }
-
+      const metadatos = res.docs.map((formulario) => {
+        const data = formulario.data();
+        return {
+          id: formulario.id,
+          nombre: data.nombre,
+          creadorId: data.creadorId,
+          creadorNombre: data.creadorNombre,
+          creadorEmail: data.creadorEmail,
+          estado: data.estado,
+          version: data.version,
+          esPublico: data.esPublico,
+          timestamp: data.timestamp,
+          ultimaModificacion: data.ultimaModificacion,
+          permisos: data.permisos
+        };
+      });
+      // Filtrar por permisos
+      const formulariosPermitidos = metadatos.filter(formulario => {
+        if (userProfile?.role === 'max') return true;
+        if (formulario.creadorId === user.uid) return true;
+        if (formulario.esPublico) return true;
+        if (formulario.permisos?.puedeVer?.includes(user.uid)) return true;
         return false;
       });
-
       setFormularios(formulariosPermitidos);
-
-      // Seleccionar el primer formulario si no hay uno seleccionado
+      // Seleccionar el primero si no hay uno seleccionado
       if (!formularioSeleccionado && formulariosPermitidos.length > 0) {
         setFormularioSeleccionado(formulariosPermitidos[0]);
       } else if (formulariosPermitidos.length === 0) {
         setFormularioSeleccionado(null);
       }
-
-      console.log(`✅ Formularios cargados: ${formulariosPermitidos.length} de ${todosLosFormularios.length} totales`);
     } catch (error) {
       console.error("Error al obtener formularios:", error);
       Swal.fire("Error", "Error al cargar formularios.", "error");
@@ -76,14 +70,29 @@ const EditarFormulario = () => {
     obtenerFormularios();
   }, [obtenerFormularios, reload]);
 
+  // Cuando el usuario selecciona un formulario, cargar el detalle solo si no está en cache
   const handleChangeFormulario = async (event) => {
     const formularioId = event.target.value;
-    if (formularioId) {
+    if (!formularioId) {
+      setFormularioSeleccionado(null);
+      return;
+    }
+    // Si ya está en cache, usarlo
+    if (formulariosCache[formularioId]) {
+      setFormularioSeleccionado(formulariosCache[formularioId]);
+      return;
+    }
+    // Buscar metadatos para mostrar mientras carga
+    const meta = formularios.find(f => f.id === formularioId);
+    setFormularioSeleccionado(meta);
+    try {
       const formularioDoc = await getDoc(doc(db, "formularios", formularioId));
       const formularioData = formularioDoc.data();
-      setFormularioSeleccionado({ ...formularioData, id: formularioId });
-    } else {
-      setFormularioSeleccionado(null);
+      const completo = { ...meta, ...formularioData, id: formularioId };
+      setFormularioSeleccionado(completo);
+      setFormulariosCache(prev => ({ ...prev, [formularioId]: completo }));
+    } catch (error) {
+      Swal.fire("Error", "No se pudo cargar el formulario.", "error");
     }
   };
 
@@ -130,30 +139,39 @@ const EditarFormulario = () => {
 
   return (
     <div>
-      {/* Título y selector alineados horizontalmente */}
+      {/* Título, selector y botón crear alineados horizontalmente */}
       <Box display="flex" alignItems="center" justifyContent="space-between" mb={2}>
         <Typography variant="h4" gutterBottom>
           Editar Formularios
         </Typography>
-        <FormControl sx={{ minWidth: 250 }} size="small">
-          <InputLabel id="select-formulario-label">Seleccionar Formulario</InputLabel>
-          <Select
-            labelId="select-formulario-label"
-            id="select-formulario"
-            value={formularioSeleccionado ? formularioSeleccionado.id : ""}
-            onChange={handleChangeFormulario}
-            label="Seleccionar Formulario"
+        <Box display="flex" alignItems="center" gap={2}>
+          <FormControl sx={{ minWidth: 250 }} size="small">
+            <InputLabel id="select-formulario-label">Seleccionar Formulario</InputLabel>
+            <Select
+              labelId="select-formulario-label"
+              id="select-formulario"
+              value={formularioSeleccionado ? formularioSeleccionado.id : ""}
+              onChange={handleChangeFormulario}
+              label="Seleccionar Formulario"
+            >
+              <MenuItem value=""><em>Todos</em></MenuItem>
+              {formularios.map((formulario) => (
+                <MenuItem key={formulario.id} value={formulario.id}>
+                  {formulario.nombre}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={() => navigate("/formulario")}
+            sx={{ whiteSpace: 'nowrap', minWidth: 100 }}
           >
-            <MenuItem value=""><em>Todos</em></MenuItem>
-            {formularios.map((formulario) => (
-              <MenuItem key={formulario.id} value={formulario.id}>
-                {formulario.nombre}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
+            Crear
+          </Button>
+        </Box>
       </Box>
-
       {/* Layout horizontal para detalle y edición */}
       {formularioSeleccionado && formularioSeleccionado.id && (
         <Box display={{ xs: 'block', md: 'flex' }} gap={3} alignItems="flex-start">

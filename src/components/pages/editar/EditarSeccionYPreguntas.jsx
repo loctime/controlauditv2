@@ -32,6 +32,8 @@ import AddIcon from "@mui/icons-material/Add";
 import { doc, updateDoc, deleteDoc } from "firebase/firestore";
 import { db } from "../../../firebaseConfig";
 import Swal from 'sweetalert2';
+import Tooltip from '@mui/material/Tooltip';
+import clsx from 'clsx';
 
 const ESTADOS = [
   { value: 'activo', label: 'Activo' },
@@ -294,6 +296,13 @@ const EditarSeccionYPreguntas = ({
     }
   };
 
+  const seccionesObj = formularioSeleccionado.secciones && typeof formularioSeleccionado.secciones === 'object'
+    ? formularioSeleccionado.secciones
+    : {};
+  const seccionesArr = Object.values(seccionesObj);
+  const numSecciones = Object.keys(seccionesObj).length;
+  const numPreguntas = seccionesArr.reduce((acc, s) => acc + (s.preguntas?.length || 0), 0);
+
   return (
     <div>
       {/* Alertas de permisos */}
@@ -349,91 +358,82 @@ const EditarSeccionYPreguntas = ({
             Editar contenido del formulario
           </Typography>
           <Box ml={2} display="flex" gap={2} alignItems="center">
-            <Chip label={`Secciones: ${Object.keys(formularioSeleccionado.secciones).length}`} size="small" />
-            <Chip label={`Preguntas: ${Object.values(formularioSeleccionado.secciones).reduce((acc, s) => acc + (s.preguntas?.length || 0), 0)}`} size="small" />
+            <Chip label={`Secciones: ${numSecciones}`} size="small" />
+            <Chip label={`Preguntas: ${numPreguntas}`} size="small" />
           </Box>
         </AccordionSummary>
         <AccordionDetails>
-          {/* Aquí va TODO el contenido editable: secciones y preguntas */}
-          {Object.values(formularioSeleccionado.secciones).map((seccion, seccionIndex) => (
-            <Box key={seccionIndex} mb={3}>
-              <Typography variant="h5">{seccion.nombre}</Typography>
-              <Box display="flex" gap={1} mb={2}>
-                {puedeEditar && (
-                  <IconButton 
-                    onClick={() => {
-                      setSeccionSeleccionada(seccion);
-                      setNuevoNombreSeccion(seccion.nombre);
-                      setModalEditarSeccionAbierto(true);
-                    }}
-                    color="primary"
-                    size="small"
-                  >
-                    <EditIcon />
-                  </IconButton>
-                )}
-                {puedeEliminar && (
-                  <IconButton 
-                    onClick={() => handleEliminarSeccion(seccion.nombre)}
-                    color="error"
-                    size="small"
-                  >
-                    <DeleteForeverIcon />
-                  </IconButton>
-                )}
-                {puedeEditar && (
-                  <IconButton 
-                    onClick={() => {
-                      setSeccionSeleccionada(seccion);
-                      setModalAgregarPreguntaAbierto(true);
-                    }}
-                    color="primary"
-                    size="small"
-                  >
-                    <AddIcon />
-                  </IconButton>
-                )}
+          {seccionesArr.length === 0 && (
+            <Alert severity="info" sx={{ my: 2 }}>
+              Este formulario no tiene secciones o aún se está cargando.
+            </Alert>
+          )}
+          {seccionesArr.map((seccion, seccionIndex) => (
+            <Box key={seccionIndex} mb={2} p={2} bgcolor="#fafbfc" borderRadius={2} boxShadow={0}>
+              <Box display="flex" alignItems="center" justifyContent="space-between" mb={1}>
+                <Typography variant="subtitle1" fontWeight={500} sx={{ mb: 0 }}>
+                  {seccion.nombre}
+                </Typography>
+                <Box display="flex" flexDirection="column" alignItems="flex-end" gap={0.5}>
+                  <Tooltip title="Editar sección" arrow>
+                    <span>
+                      <IconButton size="small" color="primary" onClick={() => { setSeccionSeleccionada(seccion); setNuevoNombreSeccion(seccion.nombre); setModalEditarSeccionAbierto(true); }} sx={{ opacity: 0.7, ':hover': { opacity: 1 } }}>
+                        <EditIcon fontSize="small" />
+                      </IconButton>
+                    </span>
+                  </Tooltip>
+                  <Tooltip title="Eliminar sección" arrow>
+                    <span>
+                      <IconButton size="small" color="error" onClick={() => handleEliminarSeccion(seccion.nombre)} sx={{ opacity: 0.7, ':hover': { opacity: 1 } }}>
+                        <DeleteForeverIcon fontSize="small" />
+                      </IconButton>
+                    </span>
+                  </Tooltip>
+                  <Tooltip title="Agregar pregunta" arrow>
+                    <span>
+                      <IconButton size="small" color="primary" onClick={() => { setSeccionSeleccionada(seccion); setModalAgregarPreguntaAbierto(true); }} sx={{ opacity: 0.7, ':hover': { opacity: 1 } }}>
+                        <AddIcon fontSize="small" />
+                      </IconButton>
+                    </span>
+                  </Tooltip>
+                </Box>
               </Box>
-              <TableContainer component={Paper}>
-                <Table sx={{ minWidth: 650 }} aria-label="simple table">
+              <TableContainer component={Paper} elevation={0} sx={{ boxShadow: 'none', bgcolor: 'transparent' }}>
+                <Table size="small" sx={{ minWidth: 400 }}>
                   <TableHead>
                     <TableRow>
-                      <TableCell align="left">Pregunta</TableCell>
-                      {puedeEditar || puedeEliminar ? (
-                        <TableCell align="left">Acciones</TableCell>
-                      ) : null}
+                      <TableCell align="left" sx={{ fontWeight: 500, fontSize: 14, bgcolor: '#f3f4f6' }}>Pregunta</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 500, fontSize: 14, bgcolor: '#f3f4f6', width: 120 }}>Acciones</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
                     {seccion.preguntas && seccion.preguntas.map((pregunta, preguntaIndex) => (
-                      <TableRow key={preguntaIndex} sx={{ "&:last-child td, &:last-child th": { border: 0 } }}>
-                        <TableCell align="left">{pregunta}</TableCell>
-                        {(puedeEditar || puedeEliminar) && (
-                          <TableCell align="left">
-                            {puedeEditar && (
-                              <IconButton 
-                                onClick={() => {
-                                  setPreguntaSeleccionada({ pregunta, seccionNombre: seccion.nombre, index: preguntaIndex });
-                                  setNuevoTextoPregunta(pregunta);
-                                  setModalEditarPreguntaAbierto(true);
-                                }}
-                                color="primary"
-                                size="small"
-                              >
-                                <EditIcon />
-                              </IconButton>
-                            )}
-                            {puedeEliminar && (
-                              <IconButton 
-                                onClick={() => handleEliminarPregunta(preguntaIndex, seccion.nombre)}
-                                color="error"
-                                size="small"
-                              >
-                                <DeleteForeverIcon />
-                              </IconButton>
-                            )}
-                          </TableCell>
-                        )}
+                      <TableRow
+                        key={preguntaIndex}
+                        sx={{
+                          transition: 'background 0.2s',
+                          '&:hover': { background: '#f5f7fa' }
+                        }}
+                      >
+                        <TableCell align="left" sx={{ fontSize: 14 }}>{pregunta}</TableCell>
+                        <TableCell align="right" sx={{ p: 0 }}>
+                          <Box display="flex" justifyContent="flex-end" gap={0.5}>
+                            <Tooltip title="Editar pregunta" arrow>
+                              <span>
+                                <IconButton size="small" color="primary" onClick={() => { setPreguntaSeleccionada({ pregunta, seccionNombre: seccion.nombre, index: preguntaIndex }); setNuevoTextoPregunta(pregunta); setModalEditarPreguntaAbierto(true); }} sx={{ opacity: 0.7, ':hover': { opacity: 1 } }}>
+                                  <EditIcon fontSize="small" />
+                                </IconButton>
+                              </span>
+                            </Tooltip>
+                            <Tooltip title="Eliminar pregunta" arrow>
+                              <span>
+                                <IconButton size="small" color="error" onClick={() => handleEliminarPregunta(preguntaIndex, seccion.nombre)} sx={{ opacity: 0.7, ':hover': { opacity: 1 } }}>
+                                  <DeleteForeverIcon fontSize="small" />
+                                </IconButton>
+                              </span>
+                            </Tooltip>
+                          </Box>
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
