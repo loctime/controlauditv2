@@ -1,5 +1,8 @@
 // Utilidades para manejar datos de Firestore
 
+import { collection, addDoc, Timestamp } from 'firebase/firestore';
+import { db } from '../firebaseConfig';
+
 /**
  * Convierte arrays anidados a objetos planos para Firestore
  * @param {Array} arraysAnidados - Array de arrays (ej: respuestas, comentarios, imágenes)
@@ -86,4 +89,26 @@ export const reconstruirDatosDesdeFirestore = (datosFirestore) => {
     comentarios: reconstruirArraysAnidados(comentarios, metadata),
     imagenes: reconstruirArraysAnidados(imagenes, metadata)
   };
+}; 
+
+/**
+ * Registra una acción de operario en la colección 'logs_operarios'.
+ * @param {string} userId - ID del operario
+ * @param {string} accion - Acción realizada
+ * @param {object} detalles - Detalles adicionales
+ */
+export const registrarLogOperario = async (userId, accion, detalles = {}) => {
+  try {
+    await addDoc(collection(db, 'logs_operarios'), {
+      userId,
+      accion,
+      detalles,
+      fecha: Timestamp.now()
+    });
+    // eslint-disable-next-line no-console
+    console.log(`[LOG OPERARIO] ${userId} - ${accion}`, detalles);
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.error('Error al registrar log de operario:', error);
+  }
 }; 

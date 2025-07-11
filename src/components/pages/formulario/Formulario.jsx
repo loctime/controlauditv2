@@ -2,8 +2,11 @@ import React, { useState } from "react";
 import { Button, TextField, Typography, Box } from "@mui/material";
 import { collection, addDoc, Timestamp } from "firebase/firestore";
 import { db } from "../../../firebaseConfig";
+import { useAuth } from "../../context/AuthContext";
+import Swal from 'sweetalert2';
 
 const Formulario = () => {
+  const { user, userProfile } = useAuth();
   const [nombreFormulario, setNombreFormulario] = useState("");
   const [secciones, setSecciones] = useState([{ nombre: "", preguntas: "" }]);
 
@@ -35,6 +38,12 @@ const Formulario = () => {
 
   const handleSubmit = async (event) => {
     event.preventDefault();
+    
+    if (!user) {
+      Swal.fire("Error", "Debe iniciar sesión para crear formularios.", "error");
+      return;
+    }
+
     try {
       const formularioData = {
         nombre: nombreFormulario,
@@ -43,13 +52,33 @@ const Formulario = () => {
           preguntas: seccion.preguntas.split("\n").map((pregunta) => pregunta.trim()).filter(Boolean),
         })),
         timestamp: Timestamp.now(),
+        // ✅ Campos de creador y permisos
+        creadorId: user.uid,
+        creadorEmail: user.email,
+        creadorNombre: user.displayName || user.email,
+        esPublico: false, // Por defecto privado
+        permisos: {
+          puedeEditar: [user.uid], // Solo el creador puede editar
+          puedeVer: [user.uid], // Solo el creador puede ver
+          puedeEliminar: [user.uid] // Solo el creador puede eliminar
+        },
+        // ✅ Metadatos adicionales
+        version: "1.0",
+        estado: "activo",
+        ultimaModificacion: Timestamp.now()
       };
+      
       const docRef = await addDoc(collection(db, "formularios"), formularioData);
       console.log("Formulario creado con ID: ", docRef.id);
+      
+      Swal.fire("Éxito", "Formulario creado exitosamente.", "success");
+      
+      // Limpiar formulario
       setNombreFormulario("");
       setSecciones([{ nombre: "", preguntas: "" }]);
     } catch (error) {
       console.error("Error al crear el formulario: ", error);
+      Swal.fire("Error", "Error al crear el formulario.", "error");
     }
   };
 
@@ -57,8 +86,21 @@ const Formulario = () => {
     <Box>
       <Typography variant="h6" gutterBottom>
         Crear Nuevo Formulario
-        Las pregutas de deberan ingresar una debajo de otra por cada seccion 
+        Las preguntas se deben ingresar una debajo de otra por cada sección 
       </Typography>
+      
+      {/* ✅ Información del creador */}
+      {user && (
+        <Box mb={2} p={2} bgcolor="primary.light" borderRadius={1}>
+          <Typography variant="body2" color="white">
+            <strong>Creador:</strong> {user.displayName || user.email}
+          </Typography>
+          <Typography variant="body2" color="white">
+            <strong>Rol:</strong> {userProfile?.role || 'Usuario'}
+          </Typography>
+        </Box>
+      )}
+      
       <form onSubmit={handleSubmit}>
         <TextField
           required

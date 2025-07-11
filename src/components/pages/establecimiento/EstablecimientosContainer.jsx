@@ -7,8 +7,10 @@ import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import AddEmpresaModal from "./AddEmpresaModal";
 import EliminarEmpresa from "./EliminarEmpresa";
 import Swal from 'sweetalert2';
+import { useAuth } from "../../context/AuthContext";
 
 const EstablecimientosContainer = () => {
+  const { userProfile, userEmpresas, canViewEmpresa, crearEmpresa } = useAuth();
   const [empresas, setEmpresas] = useState([]);
   const [openModal, setOpenModal] = useState(false);
   const [empresa, setEmpresa] = useState({
@@ -21,17 +23,25 @@ const EstablecimientosContainer = () => {
 
   const obtenerEmpresas = useCallback(async () => {
     try {
+      if (!userProfile) return;
+      
       const refCollection = collection(db, "empresas");
       const querySnapshot = await getDocs(refCollection);
-      const newArray = querySnapshot.docs.map((empresa) => ({
+      const todasLasEmpresas = querySnapshot.docs.map((empresa) => ({
         ...empresa.data(),
         id: empresa.id,
       }));
-      setEmpresas(newArray);
+      
+      // Filtrar empresas que el usuario puede ver
+      const empresasPermitidas = todasLasEmpresas.filter(empresa => 
+        canViewEmpresa(empresa.id)
+      );
+      
+      setEmpresas(empresasPermitidas);
     } catch (error) {
       console.error("Error al obtener empresas:", error);
     }
-  }, []);
+  }, [userProfile, canViewEmpresa]);
 
   useEffect(() => {
     obtenerEmpresas();
@@ -68,7 +78,7 @@ const EstablecimientosContainer = () => {
         logoURL = await getDownloadURL(snapshot.ref);
       }
 
-      // Crear el documento de la empresa
+      // Crear el documento de la empresa usando el contexto
       const empresaData = {
         nombre: empresa.nombre,
         direccion: empresa.direccion,
@@ -76,7 +86,7 @@ const EstablecimientosContainer = () => {
         logo: logoURL
       };
       
-      await addDoc(collection(db, "empresas"), empresaData);
+      await crearEmpresa(empresaData);
 
       Swal.fire({
         icon: 'success',

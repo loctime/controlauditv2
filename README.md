@@ -205,3 +205,85 @@ Este proyecto está bajo la Licencia MIT. Ver el archivo `LICENSE` para más det
 ---
 
 **Desarrollado con ❤️ usando React y Firebase**
+
+# Sistema de Superadmin, Operarios y Permisos Granulares
+
+## 🏗️ Arquitectura General
+
+- **Superadmin (`role=max`)**: Puede crear usuarios tipo operario, asignarles permisos y ver logs de todas las acciones.
+- **Operario**: Usuario con permisos limitados, configurables individualmente por el superadmin.
+- **Permisos**: Cada operario puede tener permisos distintos (crear empresas, sucursales, auditorías, compartir, etc).
+- **Logs**: Todas las acciones relevantes de los operarios quedan registradas y son visibles para el superadmin.
+
+## ⚙️ Variables de entorno
+
+```
+ADMIN_ROLE=max
+```
+
+## 🚦 Roles y Permisos
+
+- **Superadmin**
+  - Acceso a `/usuarios/operarios` para gestionar usuarios y permisos.
+  - Acceso a `/usuarios/logs` para ver logs de acciones.
+  - Puede crear, editar y eliminar operarios.
+  - Puede asignar permisos personalizados a cada operario.
+
+- **Operario**
+  - Solo puede realizar acciones permitidas por su configuración de permisos.
+  - Si intenta una acción no permitida, recibe feedback inmediato.
+
+## 👥 Gestión de Operarios
+
+- El superadmin crea operarios ingresando su email.
+- Puede editar los permisos de cada operario en cualquier momento (checkboxes en la UI).
+- Los permisos son personales y pueden variar entre usuarios.
+
+## 📝 Logs de Acciones
+
+- Todas las acciones importantes de los operarios (creación, edición de permisos, etc) quedan registradas en la colección `logs_operarios`.
+- El superadmin puede ver los logs en `/usuarios/logs`.
+
+## 🔒 Visibilidad y Propiedad de Recursos
+
+- **Empresas, sucursales y auditorías creadas por el admin**:
+  - Pertenecen a la organización del admin.
+  - Los usuarios (operarios) solo pueden ver y trabajar con los recursos creados por su propio admin/organización.
+  - Ejemplo: Si el admin crea la empresa "Empresa X", todos sus usuarios podrán ver y auditar esa empresa.
+
+- **Auditorías creadas por usuarios**:
+  - Solo pueden ser realizadas sobre recursos de su organización.
+  - No pueden ver ni auditar recursos de otras organizaciones.
+
+- **Privacidad**:
+  - Los usuarios solo ven lo que pertenece a su organización (admin y compañeros).
+  - No hay cruce de datos entre organizaciones.
+
+## 🔄 Flujo de Trabajo Típico
+
+1. El superadmin crea un usuario operario.
+2. El admin crea empresas, sucursales y auditorías.
+3. El usuario operario puede acceder solo a los recursos de su organización y realizar acciones según sus permisos.
+4. Todas las acciones quedan registradas en logs.
+
+## 🧩 Ejemplo de Permisos Personalizados
+
+- Operario A: puede crear auditorías y ver empresas, pero no puede crear empresas ni sucursales.
+- Operario B: solo puede ver auditorías y empresas, sin crear nada.
+- El superadmin puede cambiar estos permisos en cualquier momento desde la UI.
+
+## 🛡️ Seguridad y Escalabilidad
+
+- El sistema es modular y permite agregar más roles o permisos fácilmente.
+- Todo el código está comentado y con logs de depuración para facilitar el mantenimiento.
+- Las reglas de visibilidad y permisos están centralizadas en el contexto de autenticación.
+
+## 📚 Buenas Prácticas
+
+- Usa siempre roles y permisos para condicionar la UI y las acciones.
+- Registra todas las acciones críticas en logs.
+- Mantén la lógica de visibilidad y permisos en el contexto global para evitar errores de seguridad.
+
+---
+
+¿Dudas o sugerencias? ¡Revisa el código fuente y los comentarios para más detalles!

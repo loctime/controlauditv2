@@ -8,6 +8,8 @@ import EditarFormulario from "../components/pages/editar/EditarFormulario";
 //import Reporte from "../components/pages/auditoria/reporte";
 import Informe from "../components/pages/auditoria/Informe";
 import GenerarPdf from "../components/pages/auditoria/reporte/GenerarPdf";
+import PerfilUsuario from "../components/pages/perfil/PerfilUsuario";
+import { OperariosManager, LogsOperarios } from '../components/pages/usuarios';
 
 export const routes = [
   {
@@ -55,4 +57,23 @@ export const routes = [
     path: "/reporte",
     Element: GenerarPdf,
   },
-  ];
+  {
+    id: "perfil",
+    path: "/perfil",
+    Element: PerfilUsuario,
+  },
+  {
+    id: "operarios",
+    path: "/usuarios/operarios",
+    Element: OperariosManager,
+    protected: true,
+    roles: ['max']
+  },
+  {
+    id: "logs",
+    path: "/usuarios/logs",
+    Element: LogsOperarios,
+    protected: true,
+    roles: ['max']
+  },
+];

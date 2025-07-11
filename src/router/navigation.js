@@ -4,6 +4,7 @@ import ChecklistIcon from '@mui/icons-material/Checklist';
 import BadgeOutlinedIcon from '@mui/icons-material/BadgeOutlined';
 import BusinessIcon from '@mui/icons-material/Business';
 import FormatListBulletedOutlinedIcon from '@mui/icons-material/FormatListBulletedOutlined';
+import PersonIcon from '@mui/icons-material/Person';
 
 export const menuItems = [
     {
@@ -53,5 +54,11 @@ export const menuItems = [
         path: "/usuarios",
         title: "Usuarios",
         Icon: BadgeOutlinedIcon
+    },
+    {
+        id: "perfil",
+        path: "/perfil",
+        title: "Mi Perfil",
+        Icon: PersonIcon
     }
 ];

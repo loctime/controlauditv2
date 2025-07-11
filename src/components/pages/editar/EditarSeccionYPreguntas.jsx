@@ -12,20 +12,48 @@ import {
   Modal,
   Box,
   TextField,
-  Button
+  Button,
+  Alert,
+  Chip,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
+  FormControlLabel,
+  Switch,
+  MenuItem,
+  Select,
+  InputLabel,
+  FormControl
 } from "@mui/material";
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteForeverIcon from "@mui/icons-material/DeleteForever";
 import AddIcon from "@mui/icons-material/Add";
-import { doc, updateDoc, deleteField, deleteDoc } from "firebase/firestore";
+import { doc, updateDoc, deleteDoc } from "firebase/firestore";
 import { db } from "../../../firebaseConfig";
 import Swal from 'sweetalert2';
-const EditarSeccionYPreguntas = ({ formularioSeleccionado, setFormularioSeleccionado }) => {
+
+const ESTADOS = [
+  { value: 'activo', label: 'Activo' },
+  { value: 'inactivo', label: 'Inactivo' },
+  { value: 'borrador', label: 'Borrador' }
+];
+
+const EditarSeccionYPreguntas = ({ 
+  formularioSeleccionado, 
+  setFormularioSeleccionado,
+  puedeEditar = true,
+  puedeEliminar = true 
+}) => {
   const [modalEditarFormularioAbierto, setModalEditarFormularioAbierto] = useState(false);
   const [modalEditarSeccionAbierto, setModalEditarSeccionAbierto] = useState(false);
   const [modalEditarPreguntaAbierto, setModalEditarPreguntaAbierto] = useState(false);
   const [modalAgregarPreguntaAbierto, setModalAgregarPreguntaAbierto] = useState(false);
-  const [nuevoNombreFormulario, setNuevoNombreFormulario] = useState('');
+  const [accordionOpen, setAccordionOpen] = useState(false);
+  const [nuevoNombreFormulario, setNuevoNombreFormulario] = useState(formularioSeleccionado.nombre || '');
+  const [nuevoEstado, setNuevoEstado] = useState(formularioSeleccionado.estado || 'activo');
+  const [nuevaVersion, setNuevaVersion] = useState(formularioSeleccionado.version || '1.0');
+  const [nuevoEsPublico, setNuevoEsPublico] = useState(!!formularioSeleccionado.esPublico);
   const [nuevoNombreSeccion, setNuevoNombreSeccion] = useState('');
   const [nuevoTextoPregunta, setNuevoTextoPregunta] = useState('');
   const [nuevaPregunta, setNuevaPregunta] = useState('');
@@ -33,18 +61,41 @@ const EditarSeccionYPreguntas = ({ formularioSeleccionado, setFormularioSeleccio
   const [preguntaSeleccionada, setPreguntaSeleccionada] = useState(null);
 
   const handleGuardarCambiosFormulario = async () => {
+    if (!puedeEditar) {
+      Swal.fire("Error", "No tienes permisos para editar este formulario.", "error");
+      return;
+    }
     try {
       const formularioRef = doc(db, "formularios", formularioSeleccionado.id);
-      await updateDoc(formularioRef, { nombre: nuevoNombreFormulario });
-      setFormularioSeleccionado(prev => ({ ...prev, nombre: nuevoNombreFormulario }));
-      setModalEditarFormularioAbierto(false);
+      await updateDoc(formularioRef, {
+        nombre: nuevoNombreFormulario,
+        estado: nuevoEstado,
+        version: nuevaVersion,
+        esPublico: nuevoEsPublico,
+        ultimaModificacion: new Date()
+      });
+      setFormularioSeleccionado(prev => ({
+        ...prev,
+        nombre: nuevoNombreFormulario,
+        estado: nuevoEstado,
+        version: nuevaVersion,
+        esPublico: nuevoEsPublico,
+        ultimaModificacion: new Date()
+      }));
       Swal.fire("Éxito", "Formulario actualizado exitosamente.", "success");
+      setAccordionOpen(false);
     } catch (error) {
+      console.error("Error al actualizar formulario:", error);
       Swal.fire("Error", "Error al actualizar el formulario.", "error");
     }
   };
 
   const handleGuardarCambiosSeccion = async () => {
+    if (!puedeEditar) {
+      Swal.fire("Error", "No tienes permisos para editar este formulario.", "error");
+      return;
+    }
+
     try {
       if (!seccionSeleccionada) {
         Swal.fire("Error", "No se ha seleccionado ninguna sección.", "error");
@@ -53,16 +104,25 @@ const EditarSeccionYPreguntas = ({ formularioSeleccionado, setFormularioSeleccio
       const seccionIndex = Object.keys(formularioSeleccionado.secciones).find(key => formularioSeleccionado.secciones[key].nombre === seccionSeleccionada.nombre);
       const seccionesActualizadas = { ...formularioSeleccionado.secciones, [seccionIndex]: { ...formularioSeleccionado.secciones[seccionIndex], nombre: nuevoNombreSeccion } };
       const formularioRef = doc(db, "formularios", formularioSeleccionado.id);
-      await updateDoc(formularioRef, { secciones: seccionesActualizadas });
+      await updateDoc(formularioRef, { 
+        secciones: seccionesActualizadas,
+        ultimaModificacion: new Date()
+      });
       setFormularioSeleccionado(prev => ({ ...prev, secciones: seccionesActualizadas }));
       setModalEditarSeccionAbierto(false);
       Swal.fire("Éxito", "Sección actualizada exitosamente.", "success");
     } catch (error) {
+      console.error("Error al actualizar sección:", error);
       Swal.fire("Error", "Error al actualizar la sección.", "error");
     }
   };
 
   const handleGuardarCambiosPregunta = async () => {
+    if (!puedeEditar) {
+      Swal.fire("Error", "No tienes permisos para editar este formulario.", "error");
+      return;
+    }
+
     try {
       if (!preguntaSeleccionada) {
         Swal.fire("Error", "No se ha seleccionado ninguna pregunta.", "error");
@@ -71,7 +131,10 @@ const EditarSeccionYPreguntas = ({ formularioSeleccionado, setFormularioSeleccio
       const seccionIndex = Object.keys(formularioSeleccionado.secciones).find(key => formularioSeleccionado.secciones[key].nombre === preguntaSeleccionada.seccionNombre);
       const preguntasActualizadas = formularioSeleccionado.secciones[seccionIndex].preguntas.map((pregunta, index) => index === preguntaSeleccionada.index ? nuevoTextoPregunta : pregunta);
       const formularioRef = doc(db, "formularios", formularioSeleccionado.id);
-      await updateDoc(formularioRef, { [`secciones.${seccionIndex}.preguntas`]: preguntasActualizadas });
+      await updateDoc(formularioRef, { 
+        [`secciones.${seccionIndex}.preguntas`]: preguntasActualizadas,
+        ultimaModificacion: new Date()
+      });
       setFormularioSeleccionado(prev => ({
         ...prev,
         secciones: {
@@ -85,11 +148,17 @@ const EditarSeccionYPreguntas = ({ formularioSeleccionado, setFormularioSeleccio
       setModalEditarPreguntaAbierto(false);
       Swal.fire("Éxito", "Pregunta actualizada exitosamente.", "success");
     } catch (error) {
+      console.error("Error al actualizar pregunta:", error);
       Swal.fire("Error", "Error al actualizar la pregunta.", "error");
     }
   };
 
   const handleAgregarPregunta = async () => {
+    if (!puedeEditar) {
+      Swal.fire("Error", "No tienes permisos para editar este formulario.", "error");
+      return;
+    }
+
     try {
       if (!seccionSeleccionada) {
         Swal.fire("Error", "Sección no proporcionada.", "error");
@@ -98,7 +167,10 @@ const EditarSeccionYPreguntas = ({ formularioSeleccionado, setFormularioSeleccio
       const seccionIndex = Object.keys(formularioSeleccionado.secciones).find(key => formularioSeleccionado.secciones[key].nombre === seccionSeleccionada.nombre);
       const preguntasActualizadas = [...formularioSeleccionado.secciones[seccionIndex].preguntas, nuevaPregunta];
       const formularioRef = doc(db, "formularios", formularioSeleccionado.id);
-      await updateDoc(formularioRef, { [`secciones.${seccionIndex}.preguntas`]: preguntasActualizadas });
+      await updateDoc(formularioRef, { 
+        [`secciones.${seccionIndex}.preguntas`]: preguntasActualizadas,
+        ultimaModificacion: new Date()
+      });
       setFormularioSeleccionado(prev => ({
         ...prev,
         secciones: {
@@ -112,11 +184,17 @@ const EditarSeccionYPreguntas = ({ formularioSeleccionado, setFormularioSeleccio
       setModalAgregarPreguntaAbierto(false);
       Swal.fire("Éxito", "Pregunta agregada exitosamente.", "success");
     } catch (error) {
+      console.error("Error al agregar pregunta:", error);
       Swal.fire("Error", "Error al agregar pregunta.", "error");
     }
   };
 
   const handleEliminarFormulario = async (id) => {
+    if (!puedeEliminar) {
+      Swal.fire("Error", "No tienes permisos para eliminar este formulario.", "error");
+      return;
+    }
+
     const result = await Swal.fire({
       title: '¿Estás seguro?',
       text: "¡No podrás recuperar este formulario!",
@@ -133,12 +211,18 @@ const EditarSeccionYPreguntas = ({ formularioSeleccionado, setFormularioSeleccio
         setFormularioSeleccionado(null);
         Swal.fire("Eliminado", "Formulario eliminado exitosamente.", "success");
       } catch (error) {
+        console.error("Error al eliminar formulario:", error);
         Swal.fire("Error", "Error al eliminar el formulario.", "error");
       }
     }
   };
 
   const handleEliminarSeccion = async (nombreSeccion) => {
+    if (!puedeEliminar) {
+      Swal.fire("Error", "No tienes permisos para eliminar secciones.", "error");
+      return;
+    }
+
     const result = await Swal.fire({
       title: '¿Estás seguro?',
       text: "¡No podrás recuperar esta sección y sus preguntas!",
@@ -154,16 +238,25 @@ const EditarSeccionYPreguntas = ({ formularioSeleccionado, setFormularioSeleccio
         const seccionIndex = Object.keys(formularioSeleccionado.secciones).find(key => formularioSeleccionado.secciones[key].nombre === nombreSeccion);
         const { [seccionIndex]: _, ...seccionesActualizadas } = formularioSeleccionado.secciones;
         const formularioRef = doc(db, "formularios", formularioSeleccionado.id);
-        await updateDoc(formularioRef, { secciones: seccionesActualizadas });
+        await updateDoc(formularioRef, { 
+          secciones: seccionesActualizadas,
+          ultimaModificacion: new Date()
+        });
         setFormularioSeleccionado(prev => ({ ...prev, secciones: seccionesActualizadas }));
         Swal.fire("Eliminado", "Sección eliminada exitosamente.", "success");
       } catch (error) {
+        console.error("Error al eliminar sección:", error);
         Swal.fire("Error", "Error al eliminar la sección.", "error");
       }
     }
   };
 
   const handleEliminarPregunta = async (indexPregunta, nombreSeccion) => {
+    if (!puedeEliminar) {
+      Swal.fire("Error", "No tienes permisos para eliminar preguntas.", "error");
+      return;
+    }
+
     const result = await Swal.fire({
       title: '¿Estás seguro?',
       text: "¡No podrás recuperar esta pregunta!",
@@ -179,7 +272,10 @@ const EditarSeccionYPreguntas = ({ formularioSeleccionado, setFormularioSeleccio
         const seccionIndex = Object.keys(formularioSeleccionado.secciones).find(key => formularioSeleccionado.secciones[key].nombre === nombreSeccion);
         const preguntasActualizadas = formularioSeleccionado.secciones[seccionIndex].preguntas.filter((_, idx) => idx !== indexPregunta);
         const formularioRef = doc(db, "formularios", formularioSeleccionado.id);
-        await updateDoc(formularioRef, { [`secciones.${seccionIndex}.preguntas`]: preguntasActualizadas });
+        await updateDoc(formularioRef, { 
+          [`secciones.${seccionIndex}.preguntas`]: preguntasActualizadas,
+          ultimaModificacion: new Date()
+        });
         setFormularioSeleccionado(prev => ({
           ...prev,
           secciones: {
@@ -192,6 +288,7 @@ const EditarSeccionYPreguntas = ({ formularioSeleccionado, setFormularioSeleccio
         }));
         Swal.fire("Eliminado", "Pregunta eliminada exitosamente.", "success");
       } catch (error) {
+        console.error("Error al eliminar pregunta:", error);
         Swal.fire("Error", "Error al eliminar la pregunta.", "error");
       }
     }
@@ -199,75 +296,168 @@ const EditarSeccionYPreguntas = ({ formularioSeleccionado, setFormularioSeleccio
 
   return (
     <div>
-      {/* Sección para editar el formulario */}
-      <Button onClick={() => setModalEditarFormularioAbierto(true)}>
-        Editar Formulario
-      </Button>
+      {/* Alertas de permisos */}
+      {!puedeEditar && (
+        <Alert severity="warning" sx={{ mb: 2 }}>
+          <Typography variant="body2">
+            <strong>Modo de solo lectura:</strong> No puedes editar este formulario.
+          </Typography>
+        </Alert>
+      )}
+      {!puedeEliminar && (
+        <Alert severity="info" sx={{ mb: 2 }}>
+          <Typography variant="body2">
+            <strong>Permisos limitados:</strong> No puedes eliminar elementos de este formulario.
+          </Typography>
+        </Alert>
+      )}
+
+      {/* Información del formulario */}
+      <Box mb={2} p={2} bgcolor="grey.100" borderRadius={1}>
+        <Typography variant="h6" gutterBottom>
+          {formularioSeleccionado.nombre}
+        </Typography>
+        <Box display="flex" gap={1} flexWrap="wrap">
+          <Chip 
+            label={puedeEditar ? "Puede editar" : "Solo lectura"} 
+            color={puedeEditar ? "success" : "warning"} 
+            size="small" 
+          />
+          <Chip 
+            label={puedeEliminar ? "Puede eliminar" : "No puede eliminar"} 
+            color={puedeEliminar ? "success" : "warning"} 
+            size="small" 
+          />
+          {formularioSeleccionado.esPublico && (
+            <Chip label="Público" color="primary" size="small" />
+          )}
+        </Box>
+        {/* Metadatos solo info */}
+        <Box mt={1}>
+          <Typography variant="caption" color="text.secondary">
+            <strong>Creado por:</strong> {formularioSeleccionado.creadorNombre || formularioSeleccionado.creadorEmail || 'Desconocido'}<br/>
+            <strong>Fecha de creación:</strong> {formularioSeleccionado.timestamp?.toDate?.()?.toLocaleString?.() || 'No disponible'}<br/>
+            <strong>Última modificación:</strong> {formularioSeleccionado.ultimaModificacion?.toLocaleString?.() || 'No disponible'}
+          </Typography>
+        </Box>
+      </Box>
+
+      {/* Accordion para edición de secciones y preguntas */}
+      <Accordion expanded={accordionOpen} onChange={() => setAccordionOpen(!accordionOpen)} sx={{ mb: 2 }}>
+        <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+          <Typography variant="subtitle1" fontWeight={600}>
+            Editar contenido del formulario
+          </Typography>
+          <Box ml={2} display="flex" gap={2} alignItems="center">
+            <Chip label={`Secciones: ${Object.keys(formularioSeleccionado.secciones).length}`} size="small" />
+            <Chip label={`Preguntas: ${Object.values(formularioSeleccionado.secciones).reduce((acc, s) => acc + (s.preguntas?.length || 0), 0)}`} size="small" />
+          </Box>
+        </AccordionSummary>
+        <AccordionDetails>
+          {/* Aquí va TODO el contenido editable: secciones y preguntas */}
+          {Object.values(formularioSeleccionado.secciones).map((seccion, seccionIndex) => (
+            <Box key={seccionIndex} mb={3}>
+              <Typography variant="h5">{seccion.nombre}</Typography>
+              <Box display="flex" gap={1} mb={2}>
+                {puedeEditar && (
+                  <IconButton 
+                    onClick={() => {
+                      setSeccionSeleccionada(seccion);
+                      setNuevoNombreSeccion(seccion.nombre);
+                      setModalEditarSeccionAbierto(true);
+                    }}
+                    color="primary"
+                    size="small"
+                  >
+                    <EditIcon />
+                  </IconButton>
+                )}
+                {puedeEliminar && (
+                  <IconButton 
+                    onClick={() => handleEliminarSeccion(seccion.nombre)}
+                    color="error"
+                    size="small"
+                  >
+                    <DeleteForeverIcon />
+                  </IconButton>
+                )}
+                {puedeEditar && (
+                  <IconButton 
+                    onClick={() => {
+                      setSeccionSeleccionada(seccion);
+                      setModalAgregarPreguntaAbierto(true);
+                    }}
+                    color="primary"
+                    size="small"
+                  >
+                    <AddIcon />
+                  </IconButton>
+                )}
+              </Box>
+              <TableContainer component={Paper}>
+                <Table sx={{ minWidth: 650 }} aria-label="simple table">
+                  <TableHead>
+                    <TableRow>
+                      <TableCell align="left">Pregunta</TableCell>
+                      {puedeEditar || puedeEliminar ? (
+                        <TableCell align="left">Acciones</TableCell>
+                      ) : null}
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {seccion.preguntas && seccion.preguntas.map((pregunta, preguntaIndex) => (
+                      <TableRow key={preguntaIndex} sx={{ "&:last-child td, &:last-child th": { border: 0 } }}>
+                        <TableCell align="left">{pregunta}</TableCell>
+                        {(puedeEditar || puedeEliminar) && (
+                          <TableCell align="left">
+                            {puedeEditar && (
+                              <IconButton 
+                                onClick={() => {
+                                  setPreguntaSeleccionada({ pregunta, seccionNombre: seccion.nombre, index: preguntaIndex });
+                                  setNuevoTextoPregunta(pregunta);
+                                  setModalEditarPreguntaAbierto(true);
+                                }}
+                                color="primary"
+                                size="small"
+                              >
+                                <EditIcon />
+                              </IconButton>
+                            )}
+                            {puedeEliminar && (
+                              <IconButton 
+                                onClick={() => handleEliminarPregunta(preguntaIndex, seccion.nombre)}
+                                color="error"
+                                size="small"
+                              >
+                                <DeleteForeverIcon />
+                              </IconButton>
+                            )}
+                          </TableCell>
+                        )}
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </Box>
+          ))}
+        </AccordionDetails>
+      </Accordion>
 
       {/* Botón para eliminar el formulario */}
-      <Button
-        variant="contained"
-        color="error"
-        onClick={() => handleEliminarFormulario(formularioSeleccionado.id)}
-      >
-        Eliminar Formulario
-        <DeleteForeverIcon />
-      </Button>
+      {puedeEliminar && (
+        <Button
+          variant="contained"
+          color="error"
+          onClick={() => handleEliminarFormulario(formularioSeleccionado.id)}
+          sx={{ mb: 2, ml: 2 }}
+        >
+          Eliminar Formulario
+          <DeleteForeverIcon />
+        </Button>
+      )}
 
-      <Typography variant="h4">{formularioSeleccionado.nombre}</Typography>
-      
-      {/* Aquí puedes añadir más secciones y preguntas */}
-      {Object.values(formularioSeleccionado.secciones).map((seccion, seccionIndex) => (
-        <div key={seccionIndex}>
-          <Typography variant="h5">{seccion.nombre}</Typography>
-          <IconButton onClick={() => {
-            setSeccionSeleccionada(seccion);
-            setNuevoNombreSeccion(seccion.nombre);
-            setModalEditarSeccionAbierto(true);
-          }}>
-            <EditIcon color="primary" />
-          </IconButton>
-          <IconButton onClick={() => handleEliminarSeccion(seccion.nombre)}>
-            <DeleteForeverIcon color="error" />
-          </IconButton>
-          <IconButton onClick={() => {
-            setSeccionSeleccionada(seccion);
-            setModalAgregarPreguntaAbierto(true);
-          }}>
-            <AddIcon color="primary" />
-          </IconButton>
-          <TableContainer component={Paper}>
-            <Table sx={{ minWidth: 650 }} aria-label="simple table">
-              <TableHead>
-                <TableRow>
-                  <TableCell align="left">Pregunta</TableCell>
-                  <TableCell align="left">Acciones</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {seccion.preguntas && seccion.preguntas.map((pregunta, preguntaIndex) => (
-                  <TableRow key={preguntaIndex} sx={{ "&:last-child td, &:last-child th": { border: 0 } }}>
-                    <TableCell align="left">{pregunta}</TableCell>
-                    <TableCell align="left">
-                      <IconButton onClick={() => {
-                        setPreguntaSeleccionada({ pregunta, seccionNombre: seccion.nombre, index: preguntaIndex });
-                        setNuevoTextoPregunta(pregunta);
-                        setModalEditarPreguntaAbierto(true);
-                      }}>
-                        <EditIcon color="primary" />
-                      </IconButton>
-                      <IconButton onClick={() => handleEliminarPregunta(preguntaIndex, seccion.nombre)}>
-                        <DeleteForeverIcon color="error" />
-                      </IconButton>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        </div>
-      ))}
-
+      {/* Modales de edición de secciones y preguntas ... (sin cambios) */}
       <Modal
         open={modalEditarFormularioAbierto}
         onClose={() => setModalEditarFormularioAbierto(false)}
@@ -279,6 +469,7 @@ const EditarSeccionYPreguntas = ({ formularioSeleccionado, setFormularioSeleccio
             label="Nombre del Formulario"
             value={nuevoNombreFormulario}
             onChange={(e) => setNuevoNombreFormulario(e.target.value)}
+            sx={{ mb: 2 }}
           />
           <Button variant="contained" color="primary" onClick={handleGuardarCambiosFormulario}>
             Guardar Cambios
@@ -297,6 +488,7 @@ const EditarSeccionYPreguntas = ({ formularioSeleccionado, setFormularioSeleccio
             label="Nombre de la Sección"
             value={nuevoNombreSeccion}
             onChange={(e) => setNuevoNombreSeccion(e.target.value)}
+            sx={{ mb: 2 }}
           />
           <Button variant="contained" color="primary" onClick={handleGuardarCambiosSeccion}>
             Guardar Cambios
@@ -315,6 +507,7 @@ const EditarSeccionYPreguntas = ({ formularioSeleccionado, setFormularioSeleccio
             label="Texto de la Pregunta"
             value={nuevoTextoPregunta}
             onChange={(e) => setNuevoTextoPregunta(e.target.value)}
+            sx={{ mb: 2 }}
           />
           <Button variant="contained" color="primary" onClick={handleGuardarCambiosPregunta}>
             Guardar Cambios
@@ -333,6 +526,7 @@ const EditarSeccionYPreguntas = ({ formularioSeleccionado, setFormularioSeleccio
             label="Texto de la Pregunta"
             value={nuevaPregunta}
             onChange={(e) => setNuevaPregunta(e.target.value)}
+            sx={{ mb: 2 }}
           />
           <Button variant="contained" color="primary" onClick={handleAgregarPregunta}>
             Agregar Pregunta

@@ -10,8 +10,10 @@ import BotonGenerarReporte from "./BotonGenerarReporte";
 import { Typography, Grid, Alert, Box, Button, Paper, Container, IconButton, Divider } from "@mui/material";
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../../../context/AuthContext";
 
 const Auditoria = () => {
+  const { userProfile, userEmpresas, canViewEmpresa } = useAuth();
   const [empresaSeleccionada, setEmpresaSeleccionada] = useState(null);
   const [sucursalSeleccionada, setSucursalSeleccionada] = useState("");
   const [formularioSeleccionadoId, setFormularioSeleccionadoId] = useState("");
@@ -30,21 +32,31 @@ const Auditoria = () => {
   useEffect(() => {
     const obtenerEmpresas = async () => {
       try {
+        if (!userProfile) return;
+        
+        // Obtener todas las empresas y filtrar por permisos
         const empresasCollection = collection(db, "empresas");
         const snapshot = await getDocs(empresasCollection);
-        const empresasData = snapshot.docs.map((doc) => ({
+        const todasLasEmpresas = snapshot.docs.map((doc) => ({
           id: doc.id,
           nombre: doc.data().nombre,
           logo: doc.data().logo,
+          propietarioId: doc.data().propietarioId,
         }));
-        setEmpresas(empresasData);
+        
+        // Filtrar empresas que el usuario puede ver
+        const empresasPermitidas = todasLasEmpresas.filter(empresa => 
+          canViewEmpresa(empresa.id)
+        );
+        
+        setEmpresas(empresasPermitidas);
       } catch (error) {
         console.error("Error al obtener empresas:", error);
       }
     };
 
     obtenerEmpresas();
-  }, []);
+  }, [userProfile, canViewEmpresa]);
 
   useEffect(() => {
     const obtenerSucursales = async () => {
@@ -72,21 +84,54 @@ const Auditoria = () => {
   useEffect(() => {
     const obtenerFormularios = async () => {
       try {
+        if (!userProfile) return;
+        
         const formulariosCollection = collection(db, "formularios");
         const snapshot = await getDocs(formulariosCollection);
-        const formulariosData = snapshot.docs.map((doc) => ({
+        const todosLosFormularios = snapshot.docs.map((doc) => ({
           id: doc.id,
           nombre: doc.data().nombre,
           secciones: doc.data().secciones,
+          creadorId: doc.data().creadorId,
+          creadorEmail: doc.data().creadorEmail,
+          esPublico: doc.data().esPublico,
+          permisos: doc.data().permisos
         }));
-        setFormularios(formulariosData);
+
+        // ✅ Filtrar formularios por permisos
+        const formulariosPermitidos = todosLosFormularios.filter(formulario => {
+          // Administradores ven todos los formularios
+          if (userProfile.role === 'max') {
+            return true;
+          }
+
+          // Usuarios ven sus propios formularios
+          if (formulario.creadorId === userProfile.uid) {
+            return true;
+          }
+
+          // Formularios públicos
+          if (formulario.esPublico) {
+            return true;
+          }
+
+          // Formularios donde el usuario tiene permisos explícitos
+          if (formulario.permisos?.puedeVer?.includes(userProfile.uid)) {
+            return true;
+          }
+
+          return false;
+        });
+
+        setFormularios(formulariosPermitidos);
+        console.log(`✅ Formularios disponibles para auditoría: ${formulariosPermitidos.length} de ${todosLosFormularios.length} totales`);
       } catch (error) {
         console.error("Error al obtener formularios:", error);
       }
     };
 
     obtenerFormularios();
-  }, []);
+  }, [userProfile]);
 
   useEffect(() => {
     if (formularioSeleccionadoId) {

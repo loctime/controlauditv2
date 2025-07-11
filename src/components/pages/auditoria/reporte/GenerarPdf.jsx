@@ -15,8 +15,10 @@ import {
 } from "@mui/material";
 import "./ReportesPage.css";
 import FiltrosReportes from "./FiltrosReportes";
+import { useAuth } from "../../../context/AuthContext";
 
 const ReportesPage = () => {
+  const { userProfile, userAuditorias, auditoriasCompartidas, canViewAuditoria } = useAuth();
   const [reportes, setReportes] = useState([]);
   const [filteredReportes, setFilteredReportes] = useState([]);
   const [selectedReporte, setSelectedReporte] = useState(null);
@@ -28,13 +30,20 @@ const ReportesPage = () => {
   useEffect(() => {
     const fetchReportes = async () => {
       try {
+        if (!userProfile) return;
+        
         const querySnapshot = await getDocs(collection(db, "reportes"));
-        const reportesData = querySnapshot.docs.map((doc) => ({
+        const todasLasAuditorias = querySnapshot.docs.map((doc) => ({
           id: doc.id,
           ...doc.data(),
         }));
 
-        reportesData.sort((a, b) => {
+        // Filtrar auditorías que el usuario puede ver
+        const auditoriasPermitidas = todasLasAuditorias.filter(auditoria => 
+          canViewAuditoria(auditoria.id)
+        );
+
+        auditoriasPermitidas.sort((a, b) => {
           const fechaA = a.fechaGuardado
             ? new Date(a.fechaGuardado.seconds * 1000)
             : new Date(0);
@@ -44,8 +53,8 @@ const ReportesPage = () => {
           return fechaB - fechaA;
         });
 
-        setReportes(reportesData);
-        setFilteredReportes(reportesData);
+        setReportes(auditoriasPermitidas);
+        setFilteredReportes(auditoriasPermitidas);
       } catch (error) {
         setError("Error al obtener reportes: " + error.message);
       } finally {
@@ -54,7 +63,7 @@ const ReportesPage = () => {
     };
 
     fetchReportes();
-  }, []);
+  }, [userProfile, canViewAuditoria]);
 
   useEffect(() => {
     if (selectedEmpresa) {
