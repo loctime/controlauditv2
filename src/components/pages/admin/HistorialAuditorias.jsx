@@ -1,5 +1,5 @@
 //src/components/pages/admin/HistorialAuditorias.jsx
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import {
   Typography,
   Box,
@@ -35,8 +35,10 @@ import {
 import { collection, getDocs, query, where, orderBy } from "firebase/firestore";
 import { db } from "../../../firebaseConfig";
 import { toast } from 'react-toastify';
+import { AuthContext } from "../../context/AuthContext";
 
 const HistorialAuditorias = () => {
+  const { userProfile, role } = useContext(AuthContext);
   const [auditorias, setAuditorias] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedAuditoria, setSelectedAuditoria] = useState(null);
@@ -46,25 +48,84 @@ const HistorialAuditorias = () => {
 
   useEffect(() => {
     cargarAuditorias();
-  }, []);
+  }, [userProfile, role]);
 
   const cargarAuditorias = async () => {
     try {
       setLoading(true);
-      const auditoriasRef = collection(db, 'auditorias_agendadas');
-      const q = query(
-        auditoriasRef,
-        where('estado', '==', 'completada'),
-        orderBy('fechaCompletada', 'desc')
-      );
       
-      const snapshot = await getDocs(q);
-      const auditoriasData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
+      if (!userProfile) {
+        setAuditorias([]);
+        return;
+      }
+
+      let auditoriasData = [];
+
+      if (role === 'supermax') {
+        // Super administradores ven todas las auditorías completadas
+        const auditoriasRef = collection(db, 'auditorias_agendadas');
+        const q = query(
+          auditoriasRef,
+          where('estado', '==', 'completada'),
+          orderBy('fechaCompletada', 'desc')
+        );
+        
+        const snapshot = await getDocs(q);
+        auditoriasData = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+      } else if (role === 'max') {
+        // Clientes administradores ven sus auditorías y las de sus usuarios operarios
+        const auditoriasRef = collection(db, "auditorias_agendadas");
+        
+        // Obtener sus propias auditorías completadas
+        const misAuditoriasQuery = query(
+          auditoriasRef,
+          where('usuarioId', '==', userProfile.uid),
+          where('estado', '==', 'completada'),
+          orderBy('fechaCompletada', 'desc')
+        );
+        const misAuditoriasSnapshot = await getDocs(misAuditoriasQuery);
+        const misAuditorias = misAuditoriasSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+
+        // Obtener usuarios operarios del cliente administrador
+        const usuariosRef = collection(db, "usuarios");
+        const usuariosQuery = query(usuariosRef, where("clienteAdminId", "==", userProfile.uid));
+        const usuariosSnapshot = await getDocs(usuariosQuery);
+        const usuariosOperarios = usuariosSnapshot.docs.map(doc => doc.id);
+
+        // Obtener auditorías completadas de usuarios operarios
+        let auditoriasOperarios = [];
+        for (const operarioId of usuariosOperarios) {
+          const operarioAuditoriasQuery = query(
+            auditoriasRef,
+            where('usuarioId', '==', operarioId),
+            where('estado', '==', 'completada'),
+            orderBy('fechaCompletada', 'desc')
+          );
+          const operarioAuditoriasSnapshot = await getDocs(operarioAuditoriasQuery);
+          const operarioAuditorias = operarioAuditoriasSnapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          }));
+          auditoriasOperarios.push(...operarioAuditorias);
+        }
+
+        auditoriasData = [...misAuditorias, ...auditoriasOperarios];
+      }
       
       setAuditorias(auditoriasData);
+      
+      console.log('[DEBUG] Historial cargado con filtrado multi-tenant:', {
+        total: auditoriasData.length,
+        role: role,
+        userId: userProfile?.uid
+      });
+      
     } catch (error) {
       console.error('Error cargando auditorías:', error);
       toast.error('Error al cargar el historial');

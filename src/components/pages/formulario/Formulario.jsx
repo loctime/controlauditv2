@@ -1,12 +1,15 @@
 import React, { useState } from "react";
 import { Button, TextField, Typography, Box } from "@mui/material";
+import { ArrowBack } from "@mui/icons-material";
 import { collection, addDoc, Timestamp } from "firebase/firestore";
 import { db } from "../../../firebaseConfig";
 import { useAuth } from "../../context/AuthContext";
 import Swal from 'sweetalert2';
+import { useNavigate } from "react-router-dom";
 
 const Formulario = () => {
   const { user, userProfile } = useAuth();
+  const navigate = useNavigate();
   const [nombreFormulario, setNombreFormulario] = useState("");
   const [secciones, setSecciones] = useState([{ nombre: "", preguntas: "" }]);
 
@@ -86,9 +89,27 @@ const Formulario = () => {
 
   return (
     <Box>
-      <Typography variant="h6" gutterBottom>
-        Crear Nuevo Formulario
-        Las preguntas se deben ingresar una debajo de otra por cada sección 
+      {/* Botón Volver */}
+      <Box sx={{ mb: 3, display: 'flex', alignItems: 'center', gap: 2 }}>
+        <Button
+          variant="outlined"
+          startIcon={<ArrowBack />}
+          onClick={() => navigate('/editar')}
+          sx={{ 
+            borderRadius: '20px',
+            px: 3,
+            py: 1
+          }}
+        >
+          Volver a Formularios
+        </Button>
+        <Typography variant="h5" sx={{ flex: 1 }}>
+          Crear Nuevo Formulario
+        </Typography>
+      </Box>
+
+      <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
+        Las preguntas se deben ingresar una debajo de otra por cada sección
       </Typography>
       
       {/* ✅ Información del creador */}

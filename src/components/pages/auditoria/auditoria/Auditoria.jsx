@@ -7,6 +7,7 @@ import SeleccionFormulario from "./SeleccionFormulario";
 import PreguntasYSeccion from "./PreguntasYSeccion";
 import Reporte from "./Reporte";
 import BotonGenerarReporte from "./BotonGenerarReporte";
+import AuditoriaService from "../auditoriaService";
 import { 
   Typography, 
   Grid, 
@@ -533,7 +534,7 @@ const Auditoria = () => {
         <Box display="flex" alignItems="center" justifyContent="space-between" mb={3}>
           <Box display="flex" alignItems="center" gap={2}>
             <Button
-              onClick={() => navigate('/establecimiento')}
+              onClick={() => navigate('/cliente-dashboard')}
               variant="outlined"
               startIcon={<ArrowBackIcon />}
               sx={{ 

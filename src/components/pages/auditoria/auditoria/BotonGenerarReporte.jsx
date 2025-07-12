@@ -1,10 +1,8 @@
-// components/BotonGenerarReporte.js
+// Componente optimizado para generar reportes de auditoría
 import React, { useState } from "react";
-import { Button, Box, Alert, Snackbar } from "@mui/material";
+import { Button, Box, Alert, Snackbar, CircularProgress } from "@mui/material";
 import { useAuth } from "../../../context/AuthContext";
-import { collection, addDoc, serverTimestamp } from "firebase/firestore";
-import { db } from "../../../../firebaseConfig";
-import { prepararDatosParaFirestore } from "../../../../utils/firestoreUtils";
+import AuditoriaService from "../auditoriaService";
 
 const BotonGenerarReporte = ({ 
   onClick, 
@@ -16,84 +14,14 @@ const BotonGenerarReporte = ({
   comentarios, 
   imagenes, 
   secciones,
-  onFinalizar // NUEVO: callback para finalizar
+  onFinalizar
 }) => {
   const { user, userProfile } = useAuth();
   const [guardando, setGuardando] = useState(false);
-  const [guardadoExitoso, setGuardadoExitoso] = useState(false); // NUEVO
+  const [guardadoExitoso, setGuardadoExitoso] = useState(false);
   const [mensaje, setMensaje] = useState("");
   const [tipoMensaje, setTipoMensaje] = useState("success");
   const [mostrarMensaje, setMostrarMensaje] = useState(false);
-
-  const generarNombreArchivo = () => {
-    const fecha = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
-    const nombreEmpresa = empresa?.nombre || "Empresa";
-    const ubicacion = sucursal && sucursal.trim() !== "" ? `_${sucursal}` : "_CasaCentral";
-    const nombreUsuario = user?.displayName || user?.email || "Usuario";
-    
-    return `${nombreEmpresa}${ubicacion}_${nombreUsuario}_${fecha}`;
-  };
-
-  // Función para convertir imagen a base64
-  const convertirImagenABase64 = (file) => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result);
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
-    });
-  };
-
-  // Función para procesar todas las imágenes
-  const procesarImagenes = async (imagenesArray) => {
-    const imagenesProcesadas = [];
-    
-    for (let seccionIndex = 0; seccionIndex < imagenesArray.length; seccionIndex++) {
-      const seccionImagenes = [];
-      for (let preguntaIndex = 0; preguntaIndex < imagenesArray[seccionIndex].length; preguntaIndex++) {
-        const imagen = imagenesArray[seccionIndex][preguntaIndex];
-        if (imagen instanceof File) {
-          try {
-            const base64 = await convertirImagenABase64(imagen);
-            seccionImagenes.push({
-              nombre: imagen.name,
-              tipo: imagen.type,
-              tamaño: imagen.size,
-              datos: base64
-            });
-          } catch (error) {
-            console.error("Error al procesar imagen:", error);
-            seccionImagenes.push(null);
-          }
-        } else {
-          seccionImagenes.push(imagen);
-        }
-      }
-      imagenesProcesadas.push(seccionImagenes);
-    }
-    
-    return imagenesProcesadas;
-  };
-
-  // Función para generar estadísticas como en las auditorías antiguas
-  const generarEstadisticas = () => {
-    const respuestasPlanas = respuestas.flat();
-    const conforme = respuestasPlanas.filter((r) => r === "Conforme").length;
-    const noConforme = respuestasPlanas.filter((r) => r === "No conforme").length;
-    const necesitaMejora = respuestasPlanas.filter((r) => r === "Necesita mejora").length;
-    const noAplica = respuestasPlanas.filter((r) => r === "No aplica").length;
-
-    return {
-      labels: ["Conforme", "No Conforme", "Necesita Mejora", "No Aplica"],
-      datasets: [
-        {
-          label: "Respuestas",
-          data: [conforme, noConforme, necesitaMejora, noAplica],
-          backgroundColor: ["#4caf50", "#f44336", "#ff9800", "#9e9e9e"],
-        },
-      ],
-    };
-  };
 
   const handleGuardar = async () => {
     if (!empresa || !formulario) {
@@ -105,50 +33,33 @@ const BotonGenerarReporte = ({
 
     setGuardando(true);
     try {
-      // Procesar imágenes antes de guardar
-      const imagenesProcesadas = await procesarImagenes(imagenes);
-
-      // Determinar el tipo de ubicación
-      const tipoUbicacion = sucursal && sucursal.trim() !== "" ? "Sucursal" : "Casa Central";
-      const nombreUbicacion = sucursal && sucursal.trim() !== "" ? sucursal : "Casa Central";
-
-      // Preparar datos para Firestore (nunca undefined)
+      // Usar el servicio centralizado para guardar
       const datosAuditoria = {
-        empresaId: empresa?.id || null,
-        empresaNombre: empresa?.nombre || null,
-        sucursal: nombreUbicacion || null,
-        formularioId: formulario?.id || null,
-        nombreForm: formulario?.nombre || null,
-        respuestas: Array.isArray(respuestas) ? respuestas.flat() : [],
-        comentarios: Array.isArray(comentarios) ? comentarios.flat() : [],
-        imagenes: Array.isArray(imagenesProcesadas) ? imagenesProcesadas.flat() : [],
-        secciones: Array.isArray(secciones) ? secciones : [],
-        estadisticas: generarEstadisticas(),
-        estado: "completada",
-        nombreArchivo: generarNombreArchivo(),
-        creadoPor: userProfile?.uid || user?.uid || null,
-        creadoPorEmail: userProfile?.email || user?.email || null,
-        clienteAdminId: userProfile?.clienteAdminId || userProfile?.uid || user?.uid || null,
-        timestamp: new Date(),
+        empresa,
+        sucursal,
+        formulario,
+        respuestas,
+        comentarios,
+        imagenes,
+        secciones
       };
 
-      // Limpiar posibles undefined (por seguridad extra)
-      Object.keys(datosAuditoria).forEach(key => {
-        if (typeof datosAuditoria[key] === 'undefined') datosAuditoria[key] = null;
-      });
-
-      // Log para debugging
-      console.log("[DEBUG] Objeto a guardar en Firestore:", datosAuditoria);
-
-      const docRef = await addDoc(collection(db, "reportes"), datosAuditoria);
-      setGuardadoExitoso(true); // NUEVO
-      setMensaje(`Auditoría de ${tipoUbicacion.toLowerCase()} guardada exitosamente en reportes con ID: ${docRef.id}`);
+      const auditoriaId = await AuditoriaService.guardarAuditoria(datosAuditoria, userProfile);
+      
+      setGuardadoExitoso(true);
+      const tipoUbicacion = sucursal && sucursal.trim() !== "" ? "Sucursal" : "Casa Central";
+      setMensaje(`✅ Auditoría de ${tipoUbicacion.toLowerCase()} guardada exitosamente con ID: ${auditoriaId}`);
       setTipoMensaje("success");
       setMostrarMensaje(true);
+      
+      // Llamar callback de finalización
+      if (onFinalizar) {
+        onFinalizar();
+      }
     } catch (error) {
       setGuardadoExitoso(false);
-      console.error("Error al guardar auditoría:", error);
-      setMensaje(`Error al guardar: ${error.message}`);
+      console.error("❌ Error al guardar auditoría:", error);
+      setMensaje(`❌ Error al guardar: ${error.message}`);
       setTipoMensaje("error");
       setMostrarMensaje(true);
     } finally {
@@ -283,8 +194,9 @@ const BotonGenerarReporte = ({
         variant="contained"
         color="success"
         onClick={handleGuardar}
-        disabled={deshabilitado || guardando || guardadoExitoso} // Desactivar tras éxito
+        disabled={deshabilitado || guardando || guardadoExitoso}
         size="large"
+        startIcon={guardando ? <CircularProgress size={20} color="inherit" /> : null}
       >
         {guardando ? "Guardando..." : "Guardar en Reportes"}
       </Button>
@@ -298,6 +210,7 @@ const BotonGenerarReporte = ({
       >
         Imprimir PDF
       </Button>
+      
       {/* Botón Finalizar solo visible tras guardado exitoso */}
       {guardadoExitoso && (
         <Button
@@ -309,6 +222,7 @@ const BotonGenerarReporte = ({
           Finalizar
         </Button>
       )}
+      
       {/* Mensajes */}
       <Snackbar
         open={mostrarMensaje}

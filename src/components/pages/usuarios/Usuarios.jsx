@@ -34,6 +34,7 @@ const PERMISOS_LISTA = [
   { key: 'puedeCrearEmpresas', label: 'Crear Empresas' },
   { key: 'puedeCrearSucursales', label: 'Crear Sucursales' },
   { key: 'puedeCrearAuditorias', label: 'Crear Auditorías' },
+  { key: 'puedeAgendarAuditorias', label: 'Agendar Auditorías' },
   { key: 'puedeCompartirAuditorias', label: 'Compartir Auditorías' },
   { key: 'puedeAgregarSocios', label: 'Agregar Socios' }
 ];
@@ -59,6 +60,7 @@ const Usuarios = () => {
       puedeCrearEmpresas: false,
       puedeCrearSucursales: false,
       puedeCrearAuditorias: false,
+      puedeAgendarAuditorias: false,
       puedeCompartirAuditorias: false,
       puedeAgregarSocios: false
     }
@@ -97,6 +99,7 @@ const Usuarios = () => {
           puedeCrearEmpresas: false,
           puedeCrearSucursales: false,
           puedeCrearAuditorias: false,
+          puedeAgendarAuditorias: false,
           puedeCompartirAuditorias: false,
           puedeAgregarSocios: false
         }
@@ -112,6 +115,7 @@ const Usuarios = () => {
           puedeCrearEmpresas: false,
           puedeCrearSucursales: false,
           puedeCrearAuditorias: false,
+          puedeAgendarAuditorias: false,
           puedeCompartirAuditorias: false,
           puedeAgregarSocios: false
         }
@@ -133,6 +137,7 @@ const Usuarios = () => {
         puedeCrearEmpresas: false,
         puedeCrearSucursales: false,
         puedeCrearAuditorias: false,
+        puedeAgendarAuditorias: false,
         puedeCompartirAuditorias: false,
         puedeAgregarSocios: false
       }
