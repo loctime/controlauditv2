@@ -50,6 +50,13 @@ body {
   -moz-osx-font-smoothing: grayscale;
   background-color: var(--color-bg);
   color: var(--color-text);
+  /* Asegurar escalado consistente */
+  font-size: 16px;
+  line-height: 1.5;
+  /* Prevenir escalado no deseado en algunos navegadores */
+  -webkit-text-size-adjust: 100%;
+  -ms-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 code {
@@ -156,4 +163,11 @@ th {
   border-radius: 4px;
   padding: 8px 12px;
   margin: 8px 0;
+}
+
+.main-app-container {
+  max-width: 1280px;
+  margin: 0 auto;
+  width: 100%;
+  padding: 16px 8px;
 }

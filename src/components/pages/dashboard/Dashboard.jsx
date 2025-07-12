@@ -1,13 +1,11 @@
 // src/pages/Dashboard.jsx
 import React, { useContext, useState } from "react";
-import { Typography, Box, Grid, Paper, Alert, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Button, TextField, Dialog, DialogTitle, DialogContent, DialogActions } from "@mui/material";
+import { Typography, Box, Grid, Paper, Alert, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Button, TextField, Dialog, DialogTitle, DialogContent, DialogActions, Card, CardContent } from "@mui/material";
 import { AuthContext } from "../../context/AuthContext";
-import FullCalendar from '@fullcalendar/react';
-import dayGridPlugin from '@fullcalendar/daygrid';
-import interactionPlugin from '@fullcalendar/interaction';
-import { collection, addDoc, setDoc, doc } from "firebase/firestore";
+import { collection, addDoc, setDoc, doc, updateDoc, query, where, getDocs } from "firebase/firestore";
 import { db, signUp } from "../../../firebaseConfig";
-
+import { toast } from 'react-toastify';
+import { verifyAdminCode, verifySuperAdminCode } from "../../../config/admin";
 
 const empresasEjemplo = [
   {
@@ -29,8 +27,10 @@ const empresasEjemplo = [
 ];
 
 function Dashboard() {
-  const { userProfile } = useContext(AuthContext);
+  const { userProfile, role, permisos } = useContext(AuthContext);
   const [openDialog, setOpenDialog] = useState(false);
+  const [openAdminDialog, setOpenAdminDialog] = useState(false);
+  const [adminCode, setAdminCode] = useState('');
   const [form, setForm] = useState({ nombre: '', email: '', sociosMaximos: 1, password: '' });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -41,6 +41,85 @@ function Dashboard() {
     setError('');
   };
   const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
+
+  // Función para activar administrador con código
+  const activarAdminConCodigo = async () => {
+    if (!adminCode.trim()) {
+      toast.error('Ingresa el código de administrador');
+      return;
+    }
+
+    if (!userProfile?.uid) {
+      toast.error('No se pudo identificar tu usuario');
+      return;
+    }
+
+    try {
+      let newRole = null;
+      let newPermisos = {};
+
+      // Verificar código de super administrador
+      if (verifySuperAdminCode(adminCode)) {
+        newRole = 'supermax';
+        newPermisos = {
+          puedeCrearEmpresas: true,
+          puedeCrearSucursales: true,
+          puedeCrearAuditorias: true,
+          puedeCompartirAuditorias: true,
+          puedeAgregarSocios: true,
+          puedeGestionarUsuarios: true,
+          puedeGestionarSistema: true,
+          puedeEliminarUsuarios: true,
+          puedeVerLogs: true
+        };
+        toast.success('¡Código válido! Rol actualizado a DEVELOPER. Recarga la página para ver los cambios.');
+      }
+      // Verificar código de administrador normal
+      else if (verifyAdminCode(adminCode)) {
+        newRole = 'max';
+        newPermisos = {
+          puedeCrearEmpresas: true,
+          puedeCrearSucursales: true,
+          puedeCrearAuditorias: true,
+          puedeCompartirAuditorias: true,
+          puedeAgregarSocios: true,
+          puedeGestionarUsuarios: true
+        };
+        toast.success('¡Código válido! Rol actualizado a Cliente Administrador. Recarga la página para ver los cambios.');
+      }
+      // Código incorrecto
+      else {
+        toast.error('Código de administrador incorrecto');
+        return;
+      }
+
+      // Actualizar usuario en Firestore
+      const userRef = doc(db, 'usuarios', userProfile.uid);
+      await updateDoc(userRef, {
+        role: newRole,
+        permisos: newPermisos
+      });
+
+      setOpenAdminDialog(false);
+      setAdminCode('');
+      setTimeout(() => window.location.reload(), 2000);
+    } catch (error) {
+      console.error('Error al actualizar rol:', error);
+      toast.error('Error al actualizar rol');
+    }
+  };
+
+  // Función temporal para actualizar rol a administrador (mantener por compatibilidad)
+  const actualizarRolAAdmin = async () => {
+    setOpenAdminDialog(true);
+  };
+
+  // Log de información del usuario
+  console.log('=== INFORMACIÓN DEL USUARIO ===');
+  console.log('Rol actual:', role);
+  console.log('Permisos:', permisos);
+  console.log('Perfil completo:', userProfile);
+  console.log('================================');
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -90,151 +169,177 @@ function Dashboard() {
     }
   };
 
-  // Si el usuario es dueño del sistema (rol maxdigfer)
-  if (userProfile?.role === "maxdigfer") {
+  // Solo developers pueden ver el dashboard
+  if (role !== 'supermax') {
     return (
-      <Box sx={{ padding: 4 }}>
-        <Typography variant="h4" gutterBottom>Dashboard Dueño del Sistema</Typography>
-        <Button variant="contained" color="primary" sx={{ mb: 2 }} onClick={handleOpenDialog}>
-          Agregar Empresa / Usuario Principal
-        </Button>
-        <Dialog open={openDialog} onClose={handleCloseDialog}>
-          <DialogTitle>Agregar Empresa y Usuario Principal</DialogTitle>
-          <form onSubmit={handleSubmit}>
-            <DialogContent>
-              <TextField
-                autoFocus
-                margin="dense"
-                name="nombre"
-                label="Nombre de la Empresa"
-                type="text"
-                fullWidth
-                required
-                value={form.nombre}
-                onChange={handleChange}
-              />
-              <TextField
-                margin="dense"
-                name="email"
-                label="Email del Usuario Principal"
-                type="email"
-                fullWidth
-                required
-                value={form.email}
-                onChange={handleChange}
-              />
-              <TextField
-                margin="dense"
-                name="sociosMaximos"
-                label="Límite de Usuarios (Socios)"
-                type="number"
-                fullWidth
-                required
-                inputProps={{ min: 1 }}
-                value={form.sociosMaximos}
-                onChange={handleChange}
-              />
-              <TextField
-                margin="dense"
-                name="password"
-                label="Contraseña temporal"
-                type="text"
-                fullWidth
-                required
-                value={form.password}
-                onChange={handleChange}
-                helperText="La contraseña temporal será enviada al usuario principal."
-              />
-              {error && <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert>}
-            </DialogContent>
-            <DialogActions>
-              <Button onClick={handleCloseDialog}>Cancelar</Button>
-              <Button type="submit" variant="contained" disabled={loading}>{loading ? 'Creando...' : 'Crear'}</Button>
-            </DialogActions>
-          </form>
-        </Dialog>
-        <Grid container spacing={3}>
-          {/* Calendario de pagos */}
-          <Grid item xs={12} md={6}>
-            <Paper sx={{ p: 2 }}>
-              <Typography variant="h6">Calendario de Pagos</Typography>
-              <Box sx={{ height: 400 }}>
-                <FullCalendar
-                  plugins={[dayGridPlugin, interactionPlugin]}
-                  initialView="dayGridMonth"
-                  height={350}
-                  events={[
-                    { title: 'Pago Empresa Ejemplo', date: '2024-06-10', color: '#4caf50' },
-                    { title: 'Vencimiento Empresa XYZ', date: '2024-06-15', color: '#f44336' }
-                  ]}
-                />
-              </Box>
-            </Paper>
-          </Grid>
-          {/* Tabla de empresas/usuarios */}
-          <Grid item xs={12} md={6}>
-            <Paper sx={{ p: 2 }}>
-              <Typography variant="h6">Empresas/Clientes</Typography>
-              <TableContainer>
-                <Table size="small">
-                  <TableHead>
-                    <TableRow>
-                      <TableCell>Nombre</TableCell>
-                      <TableCell align="center">Socios (actual/máx)</TableCell>
-                      <TableCell align="center">Estado de pago</TableCell>
-                      <TableCell align="center">Vencimiento</TableCell>
-                      <TableCell align="center">Acciones</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {empresasEjemplo.map((empresa) => (
-                      <TableRow key={empresa.id}>
-                        <TableCell>{empresa.nombre}</TableCell>
-                        <TableCell align="center">{empresa.sociosActuales} / {empresa.sociosMaximos}</TableCell>
-                        <TableCell align="center">
-                          <span style={{ color: empresa.estadoPago === 'al_dia' ? 'green' : 'red', fontWeight: 'bold' }}>
-                            {empresa.estadoPago === 'al_dia' ? 'Al día' : 'Vencido'}
-                          </span>
-                        </TableCell>
-                        <TableCell align="center">{empresa.fechaVencimiento}</TableCell>
-                        <TableCell align="center">
-                          <Button size="small" variant="outlined" color="primary" sx={{ mr: 1 }}>Editar socios</Button>
-                          <Button size="small" variant="contained" color="success">Registrar pago</Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-            </Paper>
-          </Grid>
-          {/* Alertas */}
-          <Grid item xs={12}>
-            <Alert severity="warning" sx={{ mb: 2 }}>
-              (Aquí irán las alertas de morosidad y vencimientos)
-            </Alert>
-          </Grid>
-          {/* Controles */}
-          <Grid item xs={12}>
-            <Paper sx={{ p: 2 }}>
-              <Typography variant="h6">Controles de Socios y Pagos</Typography>
-              <Box sx={{ height: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'gray' }}>
-                (Aquí irán los formularios para asignar límite de socios y registrar pagos)
-              </Box>
-            </Paper>
-          </Grid>
-        </Grid>
+      <Box sx={{ p: 4 }}>
+        <Typography variant="h4" color="error">
+          Acceso denegado: Solo los developers pueden ver el Dashboard.
+        </Typography>
       </Box>
     );
   }
 
-  // Dashboard normal para otros roles
   return (
     <Box sx={{ padding: 4 }}>
-      <Typography variant="h4">Bienvenido al Dashboard</Typography>
-      <Typography variant="body1" sx={{ marginTop: 2 }}>
-        Aquí puedes navegar y acceder a todas las funcionalidades de la aplicación.
-      </Typography>
+      <Typography variant="h4" gutterBottom>Dashboard Dueño del Sistema</Typography>
+      <Button variant="contained" color="primary" sx={{ mb: 2 }} onClick={handleOpenDialog}>
+        Agregar Empresa / Usuario Principal
+      </Button>
+      <Dialog open={openDialog} onClose={handleCloseDialog}>
+        <DialogTitle>Agregar Empresa y Usuario Principal</DialogTitle>
+        <form onSubmit={handleSubmit}>
+          <DialogContent>
+            <TextField
+              autoFocus
+              margin="dense"
+              name="nombre"
+              label="Nombre de la Empresa"
+              type="text"
+              fullWidth
+              required
+              value={form.nombre}
+              onChange={handleChange}
+            />
+            <TextField
+              margin="dense"
+              name="email"
+              label="Email del Usuario Principal"
+              type="email"
+              fullWidth
+              required
+              value={form.email}
+              onChange={handleChange}
+            />
+            <TextField
+              margin="dense"
+              name="sociosMaximos"
+              label="Límite de Usuarios (Socios)"
+              type="number"
+              fullWidth
+              required
+              inputProps={{ min: 1 }}
+              value={form.sociosMaximos}
+              onChange={handleChange}
+            />
+            <TextField
+              margin="dense"
+              name="password"
+              label="Contraseña temporal"
+              type="text"
+              fullWidth
+              required
+              value={form.password}
+              onChange={handleChange}
+              helperText="La contraseña temporal será enviada al usuario principal."
+            />
+            {error && <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert>}
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={handleCloseDialog}>Cancelar</Button>
+            <Button type="submit" variant="contained" disabled={loading}>{loading ? 'Creando...' : 'Crear'}</Button>
+          </DialogActions>
+        </form>
+      </Dialog>
+
+      {/* Modal para código de administrador */}
+      <Dialog open={openAdminDialog} onClose={() => setOpenAdminDialog(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Activar Administrador</DialogTitle>
+        <DialogContent>
+          <Typography variant="body1" sx={{ mb: 2 }}>
+            Ingresa el código de administrador para activar los permisos en tu cuenta.
+          </Typography>
+          <Box sx={{ mb: 2, p: 2, bgcolor: '#f5f5f5', borderRadius: 1 }}>
+            <Typography variant="subtitle2" color="primary" gutterBottom>
+              Códigos disponibles:
+            </Typography>
+            <Typography variant="body2" sx={{ mb: 1 }}>
+              • <strong>AUDITORIA2024</strong> - Cliente Administrador (max)
+            </Typography>
+            <Typography variant="body2">
+              • <strong>SUPERMAX2024</strong> - Developer (supermax)
+            </Typography>
+          </Box>
+          <TextField
+            autoFocus
+            margin="dense"
+            label="Código de Administrador"
+            type="password"
+            fullWidth
+            value={adminCode}
+            onChange={(e) => setAdminCode(e.target.value)}
+            placeholder="Ingresa el código"
+            helperText="Ingresa AUDITORIA2024 para Cliente Admin o SUPERMAX2024 para Developer"
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpenAdminDialog(false)}>Cancelar</Button>
+          <Button onClick={activarAdminConCodigo} variant="contained">
+            Activar
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Grid container spacing={3}>
+        {/* Resumen de pagos */}
+        <Grid item xs={12} md={6}>
+          <Paper sx={{ p: 2 }}>
+            <Typography variant="h6">Resumen de Pagos</Typography>
+            <Box sx={{ mt: 2 }}>
+              <Card sx={{ mb: 2, bgcolor: '#e8f5e8' }}>
+                <CardContent>
+                  <Typography variant="h6" color="success.main">Pagos al Día</Typography>
+                  <Typography variant="h4">8</Typography>
+                  <Typography variant="body2">Empresas con pagos actualizados</Typography>
+                </CardContent>
+              </Card>
+              <Card sx={{ bgcolor: '#ffebee' }}>
+                <CardContent>
+                  <Typography variant="h6" color="error.main">Pagos Vencidos</Typography>
+                  <Typography variant="h4">2</Typography>
+                  <Typography variant="body2">Empresas con pagos pendientes</Typography>
+                </CardContent>
+              </Card>
+            </Box>
+          </Paper>
+        </Grid>
+        {/* Tabla de empresas/usuarios */}
+        <Grid item xs={12} md={6}>
+          <Paper sx={{ p: 2 }}>
+            <Typography variant="h6">Empresas/Clientes</Typography>
+            <TableContainer>
+              <Table size="small">
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Nombre</TableCell>
+                    <TableCell align="center">Socios (actual/máx)</TableCell>
+                    <TableCell align="center">Estado de pago</TableCell>
+                    <TableCell align="center">Vencimiento</TableCell>
+                    <TableCell align="center">Acciones</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {empresasEjemplo.map((empresa) => (
+                    <TableRow key={empresa.id}>
+                      <TableCell>{empresa.nombre}</TableCell>
+                      <TableCell align="center">{empresa.sociosActuales} / {empresa.sociosMaximos}</TableCell>
+                      <TableCell align="center">
+                        <span style={{ color: empresa.estadoPago === 'al_dia' ? 'green' : 'red', fontWeight: 'bold' }}>
+                          {empresa.estadoPago === 'al_dia' ? 'Al día' : 'Vencido'}
+                        </span>
+                      </TableCell>
+                      <TableCell align="center">{empresa.fechaVencimiento}</TableCell>
+                      <TableCell align="center">
+                        <Button size="small" variant="outlined">Ver</Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </Paper>
+        </Grid>
+      </Grid>
     </Box>
   );
 }

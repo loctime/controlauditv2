@@ -32,7 +32,8 @@ import {
   Add as AddIcon,
   Email as EmailIcon,
   Delete as DeleteIcon,
-  Info as InfoIcon
+  Info as InfoIcon,
+  Settings as SettingsIcon
 } from "@mui/icons-material";
 import { useAuth } from "../../context/AuthContext";
 import Swal from 'sweetalert2';
@@ -57,6 +58,14 @@ const PerfilUsuario = () => {
   const [openDialogSocio, setOpenDialogSocio] = useState(false);
   const [openDialogCompartir, setOpenDialogCompartir] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [selectedRole, setSelectedRole] = useState('operario');
+
+  // Actualizar selectedRole cuando userProfile cambie
+  useEffect(() => {
+    if (userProfile?.role) {
+      setSelectedRole(userProfile.role);
+    }
+  }, [userProfile?.role]);
 
   const handleTabChange = (event, newValue) => {
     setTabValue(newValue);
@@ -107,6 +116,68 @@ const PerfilUsuario = () => {
       Swal.fire('Éxito', 'Perfil actualizado correctamente', 'success');
     } catch (error) {
       Swal.fire('Error', 'Error al actualizar el perfil', 'error');
+    }
+  };
+
+  const handleRoleChange = async () => {
+    try {
+      setLoading(true);
+      
+      // Definir permisos según el rol seleccionado
+      let newPermisos = {};
+      
+      switch (selectedRole) {
+        case 'supermax':
+          newPermisos = {
+            puedeCrearEmpresas: true,
+            puedeCrearSucursales: true,
+            puedeCrearAuditorias: true,
+            puedeCompartirAuditorias: true,
+            puedeAgregarSocios: true,
+            puedeGestionarUsuarios: true,
+            puedeGestionarSistema: true,
+            puedeEliminarUsuarios: true,
+            puedeVerLogs: true
+          };
+          break;
+        case 'max':
+          newPermisos = {
+            puedeCrearEmpresas: true,
+            puedeCrearSucursales: true,
+            puedeCrearAuditorias: true,
+            puedeCompartirAuditorias: true,
+            puedeAgregarSocios: true,
+            puedeGestionarUsuarios: true
+          };
+          break;
+        case 'operario':
+        default:
+          newPermisos = {
+            puedeCrearEmpresas: false,
+            puedeCrearSucursales: false,
+            puedeCrearAuditorias: false,
+            puedeCompartirAuditorias: false,
+            puedeAgregarSocios: false
+          };
+          break;
+      }
+
+      await updateUserProfile({
+        role: selectedRole,
+        permisos: newPermisos
+      });
+
+      Swal.fire('Éxito', `Rol cambiado a ${selectedRole}. Recarga la página para ver los cambios.`, 'success');
+      
+      // Recargar la página después de 2 segundos
+      setTimeout(() => {
+        window.location.reload();
+      }, 2000);
+      
+    } catch (error) {
+      Swal.fire('Error', 'Error al cambiar el rol', 'error');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -175,6 +246,7 @@ const PerfilUsuario = () => {
               <Tab label="Mis Auditorías" icon={<AssessmentIcon />} />
               <Tab label="Mis Socios" icon={<PersonIcon />} />
               <Tab label="Auditorías Compartidas" icon={<ShareIcon />} />
+              <Tab label="Configuración" icon={<SettingsIcon />} />
               <Tab label="Info del Sistema" icon={<InfoIcon />} />
             </Tabs>
 
@@ -330,8 +402,78 @@ const PerfilUsuario = () => {
               </Box>
             )}
 
-            {/* Tab: Info del Sistema */}
+            {/* Tab: Configuración */}
             {tabValue === 4 && (
+              <Box sx={{ p: 3 }}>
+                <Typography variant="h6" gutterBottom>
+                  Configuración de Cuenta
+                </Typography>
+                
+                <Box sx={{ mb: 3 }}>
+                  <Typography variant="subtitle1" gutterBottom>
+                    Cambiar Rol (Solo para desarrollo)
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                    Selecciona tu rol para cambiar los permisos y páginas disponibles.
+                  </Typography>
+                  
+                  <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', mb: 2 }}>
+                    <TextField
+                      select
+                      label="Rol"
+                      value={selectedRole}
+                      onChange={(e) => setSelectedRole(e.target.value)}
+                      sx={{ minWidth: 200 }}
+                      SelectProps={{ native: true }}
+                    >
+                      <option value="operario">Usuario</option>
+                      <option value="max">Cliente Administrador</option>
+                      <option value="supermax">Developer</option>
+                    </TextField>
+                    
+                    <Button
+                      variant="contained"
+                      onClick={handleRoleChange}
+                      disabled={loading || selectedRole === userProfile?.role}
+                    >
+                      {loading ? 'Cambiando...' : 'Cambiar Rol'}
+                    </Button>
+                  </Box>
+                  
+                  <Alert severity="info" sx={{ mt: 2 }}>
+                    <strong>Rol actual:</strong> {userProfile?.role || 'No asignado'}
+                    <br />
+                    <strong>Rol seleccionado:</strong> {selectedRole}
+                  </Alert>
+                </Box>
+
+                <Divider sx={{ my: 3 }} />
+
+                <Box>
+                  <Typography variant="subtitle1" gutterBottom>
+                    Información de Permisos
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                    Permisos actuales de tu cuenta:
+                  </Typography>
+                  
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                    {userProfile?.permisos && Object.entries(userProfile.permisos).map(([key, value]) => (
+                      <Chip
+                        key={key}
+                        label={key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
+                        size="small"
+                        color={value ? "primary" : "default"}
+                        variant={value ? "filled" : "outlined"}
+                      />
+                    ))}
+                  </Box>
+                </Box>
+              </Box>
+            )}
+
+            {/* Tab: Info del Sistema */}
+            {tabValue === 5 && (
               <Box sx={{ p: 3 }}>
                 <InfoSistema />
               </Box>

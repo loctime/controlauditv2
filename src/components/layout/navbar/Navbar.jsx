@@ -15,7 +15,7 @@ import { Link, useNavigate, Outlet } from "react-router-dom";
 import "./Navbar.css";
 import { useState } from "react";
 import LogoutIcon from "@mui/icons-material/Logout";
-import { menuItems } from "../../../router/navigation";
+import { getMenuItems } from "../../../router/navigation";
 import { logout } from "../../../firebaseConfig";
 import { useAuth } from "../../context/AuthContext";
 import Brightness4Icon from '@mui/icons-material/Brightness4';
@@ -29,8 +29,18 @@ function Navbar(props) {
   const { window } = props;
   const [mobileOpen, setMobileOpen] = useState(false);
   const navigate = useNavigate();
-  const { logoutContext, user } = useAuth();
+  const { logoutContext, user, role, permisos } = useAuth();
   const { mode, toggleColorMode } = useColorMode();
+
+  // Obtener menú dinámico basado en rol y permisos
+  const menuItems = getMenuItems(role, permisos);
+
+  // Log de información de navegación
+  console.log('=== INFORMACIÓN DE NAVEGACIÓN ===');
+  console.log('Rol:', role);
+  console.log('Permisos:', permisos);
+  console.log('Menú generado:', menuItems.map(item => item.title));
+  console.log('==================================');
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);
@@ -84,18 +94,18 @@ function Navbar(props) {
   return (
     <Box sx={{ display: "flex" }}>
       <CssBaseline />
-      <AppBar position="fixed" sx={{ width: "100%" }}>
-        <Toolbar sx={{ gap: "20px", display: "flex", justifyContent: "space-between" }}>
-          <Link to="/" style={{ color: "whitesmoke", textDecoration: "none" }}>
+      <AppBar position="fixed" sx={{ width: "100%", minHeight: 40, height: 44 }}>
+        <Toolbar sx={{ gap: "20px", display: "flex", justifyContent: "space-between", minHeight: 40, height: 44, px: 1 }}>
+          <Link to="/" style={{ color: "whitesmoke", textDecoration: "none", fontSize: '0.95rem', padding: '0 8px' }}>
             Inicio
           </Link> 
-          <Link to="/auditoria" style={{ color: "whitesmoke", textDecoration: "none" }}>
+          <Link to="/auditoria" style={{ color: "whitesmoke", textDecoration: "none", fontSize: '0.95rem', padding: '0 8px' }}>
             Auditoria
           </Link>
-          <Link to="/Reporte" style={{ color: "whitesmoke", textDecoration: "none" }}>
+          <Link to="/Reporte" style={{ color: "whitesmoke", textDecoration: "none", fontSize: '0.95rem', padding: '0 8px' }}>
             Reporte
           </Link>
-          <Link to="/formulario" style={{ color: "whitesmoke", textDecoration: "none" }}>
+          <Link to="/formulario" style={{ color: "whitesmoke", textDecoration: "none", fontSize: '0.95rem', padding: '0 8px' }}>
             Formularios
           </Link>
 

@@ -11,12 +11,18 @@ import GenerarPdf from "../components/pages/auditoria/reporte/GenerarPdf";
 import PerfilUsuario from "../components/pages/perfil/PerfilUsuario";
 import { OperariosManager, LogsOperarios } from '../components/pages/usuarios';
 import Dashboard from "../components/pages/dashboard/Dashboard";
+import ClienteDashboard from "../components/pages/admin/ClienteDashboard";
 
 export const routes = [
   {
     id: "dashboard",
     path: "/dashboard",
     Element: Dashboard,
+  },
+  {
+    id: "cliente-dashboard",
+    path: "/cliente-dashboard",
+    Element: ClienteDashboard,
   },
   {
     id: "home",

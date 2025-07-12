@@ -12,19 +12,21 @@ const App = () => {
     <ColorModeProvider>
       <AuthContextComponent>
         <BrowserRouter> {/* Envuelve AppRouter en BrowserRouter */}
-          <AppRouter />
-          <ToastContainer
-            position="top-right"
-            autoClose={5000}
-            hideProgressBar={false}
-            newestOnTop={false}
-            closeOnClick
-            rtl={false}
-            pauseOnFocusLoss
-            draggable
-            pauseOnHover
-            theme="light"
-          />
+          <div className="main-app-container">
+            <AppRouter />
+            <ToastContainer
+              position="top-right"
+              autoClose={5000}
+              hideProgressBar={false}
+              newestOnTop={false}
+              closeOnClick
+              rtl={false}
+              pauseOnFocusLoss
+              draggable
+              pauseOnHover
+              theme="light"
+            />
+          </div>
         </BrowserRouter>
       </AuthContextComponent>
     </ColorModeProvider>
