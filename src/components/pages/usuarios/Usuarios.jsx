@@ -245,7 +245,7 @@ const Usuarios = () => {
     }
   };
 
-  // Verificar permisos
+  // Verificar permisos multi-tenant
   if (role !== 'max' && role !== 'supermax') {
     return (
       <Box sx={{ p: 3 }}>
@@ -255,6 +255,22 @@ const Usuarios = () => {
       </Box>
     );
   }
+
+  // Filtrar usuarios según el rol del usuario actual
+  const usuariosFiltrados = usuarios.filter(usuario => {
+    // Super administradores ven todos los usuarios
+    if (role === 'supermax') {
+      return true;
+    }
+    
+    // Clientes administradores solo ven sus usuarios operarios
+    if (role === 'max') {
+      return usuario.clienteAdminId === userProfile?.uid || 
+             usuario.uid === userProfile?.uid;
+    }
+    
+    return false;
+  });
 
   return (
     <Box sx={{ p: 3 }}>
@@ -289,7 +305,7 @@ const Usuarios = () => {
               </TableRow>
             </TableHead>
             <TableBody>
-              {usuarios.map((usuario) => (
+              {usuariosFiltrados.map((usuario) => (
                 <TableRow key={usuario.id}>
                   <TableCell>{usuario.displayName || 'Sin nombre'}</TableCell>
                   <TableCell>{usuario.email}</TableCell>

@@ -14,21 +14,29 @@ const PERMISOS_LISTA = [
 ];
 
 const OperariosManager = () => {
-  const { role, crearOperario, editarPermisosOperario } = useAuth();
+  const { role, userProfile, crearOperario, editarPermisosOperario } = useAuth();
   const [operarios, setOperarios] = useState([]);
   const [loading, setLoading] = useState(true);
   const [nuevoEmail, setNuevoEmail] = useState('');
   const [editando, setEditando] = useState({});
 
-  // Cargar operarios
+  // Cargar operarios con filtrado multi-tenant
   const fetchOperarios = async () => {
     setLoading(true);
     try {
       const usuariosRef = collection(db, 'usuarios');
       const snapshot = await getDocs(usuariosRef);
-      const lista = snapshot.docs
+      let lista = snapshot.docs
         .map(doc => ({ id: doc.id, ...doc.data() }))
         .filter(u => u.role === 'operario');
+
+      // Filtrar según el rol del usuario actual
+      if (role === 'max') {
+        // Clientes administradores solo ven sus operarios
+        lista = lista.filter(operario => operario.clienteAdminId === userProfile?.uid);
+      }
+      // Super administradores ven todos los operarios (no se filtra)
+
       setOperarios(lista);
     } catch (e) {
       toast.error('Error al cargar operarios');
@@ -77,8 +85,15 @@ const OperariosManager = () => {
     }
   };
 
-  if (role !== 'max') {
-    return <Typography color="error">Acceso restringido solo para superadmin.</Typography>;
+  // Verificar permisos multi-tenant
+  if (role !== 'max' && role !== 'supermax') {
+    return (
+      <Box sx={{ p: 3 }}>
+        <Typography color="error">
+          Acceso restringido solo para administradores (max) y super administradores (supermax).
+        </Typography>
+      </Box>
+    );
   }
 
   return (

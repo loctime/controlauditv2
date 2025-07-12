@@ -72,7 +72,7 @@ function Dashboard() {
           puedeEliminarUsuarios: true,
           puedeVerLogs: true
         };
-        toast.success('¡Código válido! Rol actualizado a DEVELOPER. Recarga la página para ver los cambios.');
+        toast.success('¡Código válido! Rol actualizado a Super Administrador (supermax). Recarga la página para ver los cambios.');
       }
       // Verificar código de administrador normal
       else if (verifyAdminCode(adminCode)) {
@@ -85,7 +85,7 @@ function Dashboard() {
           puedeAgregarSocios: true,
           puedeGestionarUsuarios: true
         };
-        toast.success('¡Código válido! Rol actualizado a Cliente Administrador. Recarga la página para ver los cambios.');
+        toast.success('¡Código válido! Rol actualizado a Cliente Administrador (max). Recarga la página para ver los cambios.');
       }
       // Código incorrecto
       else {

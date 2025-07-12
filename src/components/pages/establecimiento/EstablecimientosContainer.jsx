@@ -10,7 +10,7 @@ import Swal from 'sweetalert2';
 import { useAuth } from "../../context/AuthContext";
 
 const EstablecimientosContainer = () => {
-  const { userProfile, userEmpresas, canViewEmpresa, crearEmpresa } = useAuth();
+  const { userProfile, userEmpresas, canViewEmpresa, crearEmpresa, verificarYCorregirEmpresas } = useAuth();
   const [empresas, setEmpresas] = useState([]);
   const [openModal, setOpenModal] = useState(false);
   const [empresa, setEmpresa] = useState({
@@ -20,6 +20,7 @@ const EstablecimientosContainer = () => {
     logo: null
   });
   const [loading, setLoading] = useState(false);
+  const [verificando, setVerificando] = useState(false);
 
   const obtenerEmpresas = useCallback(async () => {
     try {
@@ -111,20 +112,53 @@ const EstablecimientosContainer = () => {
     obtenerEmpresas(); // Actualiza la lista de empresas después de eliminar una
   };
 
+  const handleVerificarEmpresas = async () => {
+    setVerificando(true);
+    try {
+      await verificarYCorregirEmpresas();
+      await obtenerEmpresas(); // Recargar empresas después de la verificación
+      Swal.fire({
+        icon: 'success',
+        title: 'Verificación Completada',
+        text: 'Las empresas han sido verificadas y corregidas.',
+      });
+    } catch (error) {
+      console.error("Error al verificar empresas:", error);
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: 'Ocurrió un error al verificar las empresas.',
+      });
+    } finally {
+      setVerificando(false);
+    }
+  };
+
   return (
     <Box sx={{ px: { xs: 1, sm: 3 }, py: 2 }}>
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
         <Typography variant="h4" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
           Empresas Registradas
         </Typography>
-        <Button
-          variant="contained"
-          color="primary"
-          onClick={() => setOpenModal(true)}
-          sx={{ minWidth: 180, fontWeight: 600 }}
-        >
-          Agregar Empresa
-        </Button>
+        <Box display="flex" gap={2}>
+          <Button
+            variant="outlined"
+            color="secondary"
+            onClick={handleVerificarEmpresas}
+            disabled={verificando}
+            sx={{ minWidth: '120px' }}
+          >
+            {verificando ? 'Verificando...' : 'Verificar Empresas'}
+          </Button>
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={() => setOpenModal(true)}
+            sx={{ minWidth: '120px' }}
+          >
+            Agregar Empresa
+          </Button>
+        </Box>
       </Box>
       <Divider sx={{ mb: 4 }} />
       <Grid container spacing={4}>

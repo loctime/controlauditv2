@@ -6,6 +6,7 @@ import ListaSucursales from "./ListaSucursales";
 import { Alert, Box, Typography, Tabs, Tab, Paper, Button } from "@mui/material";
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { useNavigate, useParams } from "react-router-dom";
+import { useAuth } from "../../context/AuthContext";
 
 const SucursalContainer = () => {
   const { empresaId } = useParams();
@@ -15,6 +16,8 @@ const SucursalContainer = () => {
   const [activeTab, setActiveTab] = useState(0); // Ahora el listado es el tab 0
   const [refreshList, setRefreshList] = useState(false);
   const [empresa, setEmpresa] = useState(null);
+  const [canAccessEmpresa, setCanAccessEmpresa] = useState(false);
+  const { userProfile, role, canViewEmpresa } = useAuth();
 
   useEffect(() => {
     const fetchEmpresa = async () => {
@@ -23,31 +26,53 @@ const SucursalContainer = () => {
         const docRef = doc(db, "empresas", empresaId);
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
-          setEmpresa({
+          const empresaData = {
             id: empresaId,
             nombre: docSnap.data().nombre,
-            logo: docSnap.data().logo || ""
-          });
+            logo: docSnap.data().logo || "",
+            propietarioId: docSnap.data().propietarioId
+          };
+          setEmpresa(empresaData);
+          
+          // Verificar si el usuario puede acceder a esta empresa
+          const tieneAcceso = canViewEmpresa(empresaId);
+          setCanAccessEmpresa(tieneAcceso);
+          
+          if (!tieneAcceso) {
+            setError("No tienes permisos para acceder a esta empresa.");
+          }
         } else {
           setEmpresa(null);
+          setError("Empresa no encontrada.");
         }
       } catch (e) {
         setEmpresa(null);
+        setError("Error al cargar la empresa.");
       }
     };
     fetchEmpresa();
-  }, [empresaId]);
+  }, [empresaId, canViewEmpresa]);
 
   const agregarSucursal = async (sucursal) => {
     try {
       setError(null);
       setSuccess(null);
       
+      // Verificar permisos antes de crear la sucursal
+      if (!canAccessEmpresa) {
+        setError("No tienes permisos para crear sucursales en esta empresa.");
+        return;
+      }
+      
       const sucursalRef = collection(db, "sucursales");
       await addDoc(sucursalRef, {
         ...sucursal,
         empresaId: empresaId,
         fechaCreacion: Timestamp.now(),
+        // Agregar información del usuario que crea la sucursal
+        creadoPor: userProfile?.uid,
+        creadoPorEmail: userProfile?.email,
+        clienteAdminId: userProfile?.clienteAdminId || userProfile?.uid
       });
       
       setSuccess(`Sucursal "${sucursal.nombre}" agregada exitosamente.`);
@@ -58,6 +83,7 @@ const SucursalContainer = () => {
       }, 5000);
       
     } catch (error) {
+      console.error("Error al agregar sucursal:", error);
       setError("Error al agregar la sucursal. Por favor, intente nuevamente.");
     }
   };
@@ -65,6 +91,31 @@ const SucursalContainer = () => {
   const handleTabChange = (event, newValue) => {
     setActiveTab(newValue);
   };
+
+  // Si no tiene acceso a la empresa, mostrar mensaje de error
+  if (!canAccessEmpresa && empresaId) {
+    return (
+      <Box>
+        <Box display="flex" alignItems="center" mb={2}>
+          <Button
+            onClick={() => navigate('/establecimiento')}
+            color="primary"
+            sx={{ fontWeight: 'bold', textTransform: 'none', mr: 2 }}
+            startIcon={<ArrowBackIcon />}
+            size="large"
+          >
+            Atrás
+          </Button>
+          <Typography variant="h4" gutterBottom>
+            Gestión de Sucursales
+          </Typography>
+        </Box>
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {error || "No tienes permisos para acceder a esta empresa."}
+        </Alert>
+      </Box>
+    );
+  }
 
   return (
     <Box>

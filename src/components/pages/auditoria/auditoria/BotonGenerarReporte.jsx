@@ -15,10 +15,12 @@ const BotonGenerarReporte = ({
   respuestas, 
   comentarios, 
   imagenes, 
-  secciones 
+  secciones,
+  onFinalizar // NUEVO: callback para finalizar
 }) => {
-  const { user } = useAuth();
+  const { user, userProfile } = useAuth();
   const [guardando, setGuardando] = useState(false);
+  const [guardadoExitoso, setGuardadoExitoso] = useState(false); // NUEVO
   const [mensaje, setMensaje] = useState("");
   const [tipoMensaje, setTipoMensaje] = useState("success");
   const [mostrarMensaje, setMostrarMensaje] = useState(false);
@@ -110,30 +112,41 @@ const BotonGenerarReporte = ({
       const tipoUbicacion = sucursal && sucursal.trim() !== "" ? "Sucursal" : "Casa Central";
       const nombreUbicacion = sucursal && sucursal.trim() !== "" ? sucursal : "Casa Central";
 
-      // Preparar datos para Firestore
+      // Preparar datos para Firestore (nunca undefined)
       const datosAuditoria = {
-        empresa: empresa,
-        sucursal: nombreUbicacion,
-        respuestas: respuestas.flat(),
-        comentarios: comentarios.flat(),
-        imagenes: imagenesProcesadas.flat(),
-        secciones: secciones,
+        empresaId: empresa?.id || null,
+        empresaNombre: empresa?.nombre || null,
+        sucursal: nombreUbicacion || null,
+        formularioId: formulario?.id || null,
+        nombreForm: formulario?.nombre || null,
+        respuestas: Array.isArray(respuestas) ? respuestas.flat() : [],
+        comentarios: Array.isArray(comentarios) ? comentarios.flat() : [],
+        imagenes: Array.isArray(imagenesProcesadas) ? imagenesProcesadas.flat() : [],
+        secciones: Array.isArray(secciones) ? secciones : [],
         estadisticas: generarEstadisticas(),
-        fechaGuardado: new Date(),
-        formularios: [formulario],
-        nombreForm: formulario.nombre,
-        usuario: user?.displayName || user?.email || "Usuario desconocido",
-        usuarioId: user?.uid,
         estado: "completada",
-        nombreArchivo: generarNombreArchivo()
+        nombreArchivo: generarNombreArchivo(),
+        creadoPor: userProfile?.uid || user?.uid || null,
+        creadoPorEmail: userProfile?.email || user?.email || null,
+        clienteAdminId: userProfile?.clienteAdminId || userProfile?.uid || user?.uid || null,
+        timestamp: new Date(),
       };
 
+      // Limpiar posibles undefined (por seguridad extra)
+      Object.keys(datosAuditoria).forEach(key => {
+        if (typeof datosAuditoria[key] === 'undefined') datosAuditoria[key] = null;
+      });
+
+      // Log para debugging
+      console.log("[DEBUG] Objeto a guardar en Firestore:", datosAuditoria);
+
       const docRef = await addDoc(collection(db, "reportes"), datosAuditoria);
-      
+      setGuardadoExitoso(true); // NUEVO
       setMensaje(`Auditoría de ${tipoUbicacion.toLowerCase()} guardada exitosamente en reportes con ID: ${docRef.id}`);
       setTipoMensaje("success");
       setMostrarMensaje(true);
     } catch (error) {
+      setGuardadoExitoso(false);
       console.error("Error al guardar auditoría:", error);
       setMensaje(`Error al guardar: ${error.message}`);
       setTipoMensaje("error");
@@ -270,7 +283,7 @@ const BotonGenerarReporte = ({
         variant="contained"
         color="success"
         onClick={handleGuardar}
-        disabled={deshabilitado || guardando}
+        disabled={deshabilitado || guardando || guardadoExitoso} // Desactivar tras éxito
         size="large"
       >
         {guardando ? "Guardando..." : "Guardar en Reportes"}
@@ -285,7 +298,18 @@ const BotonGenerarReporte = ({
       >
         Imprimir PDF
       </Button>
-
+      {/* Botón Finalizar solo visible tras guardado exitoso */}
+      {guardadoExitoso && (
+        <Button
+          variant="contained"
+          color="primary"
+          onClick={onFinalizar}
+          size="large"
+        >
+          Finalizar
+        </Button>
+      )}
+      {/* Mensajes */}
       <Snackbar
         open={mostrarMensaje}
         autoHideDuration={6000}

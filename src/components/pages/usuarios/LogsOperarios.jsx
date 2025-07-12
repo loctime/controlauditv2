@@ -28,8 +28,15 @@ const LogsOperarios = () => {
     fetchLogs();
   }, []);
 
-  if (role !== 'max') {
-    return <Typography color="error">Acceso restringido solo para superadmin.</Typography>;
+  // Verificar permisos multi-tenant
+  if (role !== 'max' && role !== 'supermax') {
+    return (
+      <Box sx={{ p: 3 }}>
+        <Typography color="error">
+          Acceso restringido solo para administradores (max) y super administradores (supermax).
+        </Typography>
+      </Box>
+    );
   }
 
   return (

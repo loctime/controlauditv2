@@ -13,32 +13,107 @@ import {
   Delete as DeleteIcon,
   Edit as EditIcon
 } from "@mui/icons-material";
-import { collection, getDocs, deleteDoc, doc } from "firebase/firestore";
+import { collection, getDocs, deleteDoc, doc, query, where } from "firebase/firestore";
 import { db } from "../../../firebaseConfig";
+import { useAuth } from "../../context/AuthContext";
 
 const ListaSucursales = ({ empresaId }) => {
   const [sucursales, setSucursales] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const { userProfile, role } = useAuth();
 
   useEffect(() => {
     cargarSucursales();
     // eslint-disable-next-line
-  }, [empresaId]);
+  }, [empresaId, userProfile, role]);
 
   const cargarSucursales = async () => {
     try {
       setLoading(true);
-      const sucursalesSnapshot = await getDocs(collection(db, "sucursales"));
-      const sucursalesData = sucursalesSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        fechaCreacion: doc.data().fechaCreacion?.toDate?.() || new Date()
-      }));
-      // Filtrar por empresaId si está presente
+      setError(null);
+
+      // Si no hay usuario autenticado, no cargar nada
+      if (!userProfile) {
+        setSucursales([]);
+        return;
+      }
+
+      let sucursalesData = [];
+
+      // Aplicar filtrado multi-tenant según el rol
+      if (role === 'supermax') {
+        // Super administradores ven todas las sucursales
+        const sucursalesSnapshot = await getDocs(collection(db, "sucursales"));
+        sucursalesData = sucursalesSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data(),
+          fechaCreacion: doc.data().fechaCreacion?.toDate?.() || new Date()
+        }));
+      } else if (role === 'max') {
+        // Clientes administradores ven sus sucursales y las de sus usuarios operarios
+        // Primero obtener las empresas del cliente administrador
+        const empresasRef = collection(db, "empresas");
+        const empresasQuery = query(empresasRef, where("propietarioId", "==", userProfile.uid));
+        const empresasSnapshot = await getDocs(empresasQuery);
+        const empresasIds = empresasSnapshot.docs.map(doc => doc.id);
+
+        // Obtener usuarios operarios del cliente administrador
+        const usuariosRef = collection(db, "usuarios");
+        const usuariosQuery = query(usuariosRef, where("clienteAdminId", "==", userProfile.uid));
+        const usuariosSnapshot = await getDocs(usuariosQuery);
+        const usuariosOperarios = usuariosSnapshot.docs.map(doc => doc.id);
+
+        // Obtener empresas de los usuarios operarios (solo si hay usuarios operarios)
+        let empresasOperariosIds = [];
+        if (usuariosOperarios.length > 0) {
+          const empresasOperariosQuery = query(empresasRef, where("propietarioId", "in", usuariosOperarios));
+          const empresasOperariosSnapshot = await getDocs(empresasOperariosQuery);
+          empresasOperariosIds = empresasOperariosSnapshot.docs.map(doc => doc.id);
+        }
+
+        // Combinar todas las empresas que puede ver
+        const todasLasEmpresasIds = [...empresasIds, ...empresasOperariosIds];
+
+        if (todasLasEmpresasIds.length > 0) {
+          // Obtener sucursales de todas las empresas que puede ver
+          const sucursalesRef = collection(db, "sucursales");
+          const sucursalesQuery = query(sucursalesRef, where("empresaId", "in", todasLasEmpresasIds));
+          const sucursalesSnapshot = await getDocs(sucursalesQuery);
+          sucursalesData = sucursalesSnapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data(),
+            fechaCreacion: doc.data().fechaCreacion?.toDate?.() || new Date()
+          }));
+        }
+      } else if (role === 'operario') {
+        // Usuarios operarios ven sucursales de su cliente administrador
+        if (userProfile.clienteAdminId) {
+          // Obtener empresas del cliente administrador
+          const empresasRef = collection(db, "empresas");
+          const empresasQuery = query(empresasRef, where("propietarioId", "==", userProfile.clienteAdminId));
+          const empresasSnapshot = await getDocs(empresasQuery);
+          const empresasIds = empresasSnapshot.docs.map(doc => doc.id);
+
+          if (empresasIds.length > 0) {
+            // Obtener sucursales de las empresas del cliente administrador
+            const sucursalesRef = collection(db, "sucursales");
+            const sucursalesQuery = query(sucursalesRef, where("empresaId", "in", empresasIds));
+            const sucursalesSnapshot = await getDocs(sucursalesQuery);
+            sucursalesData = sucursalesSnapshot.docs.map(doc => ({
+              id: doc.id,
+              ...doc.data(),
+              fechaCreacion: doc.data().fechaCreacion?.toDate?.() || new Date()
+            }));
+          }
+        }
+      }
+
+      // Filtrar por empresaId específico si está presente
       const filtradas = empresaId
         ? sucursalesData.filter(s => s.empresaId === empresaId)
         : sucursalesData;
+
       setSucursales(filtradas);
     } catch (error) {
       console.error("Error al cargar sucursales:", error);

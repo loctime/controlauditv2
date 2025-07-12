@@ -9,7 +9,7 @@ export const isAdmin = (userProfile) => {
   return userProfile?.role === 'max' || userProfile?.role === 'supermax';
 };
 
-// Función para verificar si un usuario es dueño del sistema
+// Función para verificar si un usuario es super administrador
 export const isSuperAdmin = (userProfile) => {
   return userProfile?.role === 'supermax';
 };
@@ -19,7 +19,7 @@ export const getUserRole = (userEmail) => {
   return 'operario'; // Por defecto todos son operarios
 };
 
-// Función para verificar código de activación
+// Función para verificar código de activación de cliente administrador
 export const verifyAdminCode = (code) => {
   return code === ADMIN_ACTIVATION_CODE;
 };
@@ -29,11 +29,11 @@ export const verifySuperAdminCode = (code) => {
   return code === SUPER_ADMIN_ACTIVATION_CODE;
 };
 
-// Función para activar administrador
+// Función para activar cliente administrador (role: 'max')
 export const activateAdmin = async (userProfile, code) => {
   if (verifyAdminCode(code)) {
     return {
-      role: 'max',
+      role: 'max', // Cliente administrador
       permisos: {
         puedeCrearEmpresas: true,
         puedeCrearSucursales: true,
@@ -47,11 +47,11 @@ export const activateAdmin = async (userProfile, code) => {
   return null;
 };
 
-// Función para activar super administrador
+// Función para activar super administrador (role: 'supermax')
 export const activateSuperAdmin = async (userProfile, code) => {
   if (verifySuperAdminCode(code)) {
     return {
-      role: 'supermax',
+      role: 'supermax', // Super administrador
       permisos: {
         puedeCrearEmpresas: true,
         puedeCrearSucursales: true,

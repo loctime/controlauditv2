@@ -21,6 +21,80 @@ const AuthContextComponent = ({ children }) => {
   const [role, setRole] = useState(null); // NUEVO: rol del usuario
   const [permisos, setPermisos] = useState({}); // NUEVO: permisos del usuario
 
+  useEffect(() => {
+    // Escuchar cambios en el estado de autenticación de Firebase
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (firebaseUser) {
+        setUser(firebaseUser);
+        setIsLogged(true);
+        localStorage.setItem("userInfo", JSON.stringify(firebaseUser));
+        localStorage.setItem("isLogged", JSON.stringify(true));
+        
+        // Crear o obtener perfil del usuario
+        const profile = await createOrGetUserProfile(firebaseUser);
+        
+        if (profile) {
+          // Cargar datos del usuario
+          await Promise.all([
+            getUserEmpresas(firebaseUser.uid),
+            getUserAuditorias(firebaseUser.uid),
+            getUserSocios(firebaseUser.uid),
+            getAuditoriasCompartidas(firebaseUser.uid)
+          ]);
+        }
+      } else {
+        setUser(null);
+        setUserProfile(null);
+        setIsLogged(false);
+        setUserEmpresas([]);
+        setUserAuditorias([]);
+        setSocios([]);
+        setAuditoriasCompartidas([]);
+        localStorage.removeItem("userInfo");
+        localStorage.removeItem("isLogged");
+      }
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  const handleLogin = (userLogged) => {
+    setUser(userLogged);
+    setIsLogged(true);
+    localStorage.setItem("userInfo", JSON.stringify(userLogged));
+    localStorage.setItem("isLogged", JSON.stringify(true));
+  };
+
+  const logoutContext = () => {
+    setUser(null);
+    setUserProfile(null);
+    setIsLogged(false);
+    setUserEmpresas([]);
+    setUserAuditorias([]);
+    setSocios([]);
+    setAuditoriasCompartidas([]);
+    localStorage.removeItem("userInfo");
+    localStorage.removeItem("isLogged");
+  };
+
+  // Función para actualizar perfil del usuario
+  const updateUserProfile = async (updates) => {
+    try {
+      const userRef = doc(db, "usuarios", user.uid);
+      await updateDoc(userRef, updates);
+      
+      // Actualizar estado local
+      const updatedProfile = { ...userProfile, ...updates };
+      setUserProfile(updatedProfile);
+      
+      return true;
+    } catch (error) {
+      console.error("Error al actualizar perfil:", error);
+      throw error;
+    }
+  };
+
   // Función para crear o obtener el perfil del usuario
   const createOrGetUserProfile = async (firebaseUser) => {
     try {
@@ -41,6 +115,8 @@ const AuthContextComponent = ({ children }) => {
           displayName: firebaseUser.displayName || firebaseUser.email,
           createdAt: new Date(),
           role: getUserRole(firebaseUser.email), // ✅ Usar función importada
+          // ✅ Sistema multi-tenant: Cliente administrador responsable
+          clienteAdminId: getUserRole(firebaseUser.email) === 'max' ? firebaseUser.uid : null, // Si es max, es su propio admin
           empresas: [], // IDs de empresas que el usuario puede ver
           auditorias: [], // IDs de auditorías que el usuario puede ver
           socios: [], // IDs de usuarios que son socios
@@ -336,111 +412,167 @@ const AuthContextComponent = ({ children }) => {
     }
   };
 
-  useEffect(() => {
-    // Escuchar cambios en el estado de autenticación de Firebase
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      if (firebaseUser) {
-        setUser(firebaseUser);
-        setIsLogged(true);
-        localStorage.setItem("userInfo", JSON.stringify(firebaseUser));
-        localStorage.setItem("isLogged", JSON.stringify(true));
-        
-        // Crear o obtener perfil del usuario
-        const profile = await createOrGetUserProfile(firebaseUser);
-        
-        if (profile) {
-          // Cargar datos del usuario
-          await Promise.all([
-            getUserEmpresas(firebaseUser.uid),
-            getUserAuditorias(firebaseUser.uid),
-            getUserSocios(firebaseUser.uid),
-            getAuditoriasCompartidas(firebaseUser.uid)
-          ]);
-        }
-      } else {
-        setUser(null);
-        setUserProfile(null);
-        setIsLogged(false);
-        setUserEmpresas([]);
-        setUserAuditorias([]);
-        setSocios([]);
-        setAuditoriasCompartidas([]);
-        localStorage.removeItem("userInfo");
-        localStorage.removeItem("isLogged");
-      }
-      setLoading(false);
-    });
-
-    return () => unsubscribe();
-  }, []);
-
-  const handleLogin = (userLogged) => {
-    setUser(userLogged);
-    setIsLogged(true);
-    localStorage.setItem("userInfo", JSON.stringify(userLogged));
-    localStorage.setItem("isLogged", JSON.stringify(true));
-  };
-
-  const logoutContext = () => {
-    setUser(null);
-    setUserProfile(null);
-    setIsLogged(false);
-    setUserEmpresas([]);
-    setUserAuditorias([]);
-    setSocios([]);
-    setAuditoriasCompartidas([]);
-    localStorage.removeItem("userInfo");
-    localStorage.removeItem("isLogged");
-  };
-
-  // Función para actualizar perfil del usuario
-  const updateUserProfile = async (updates) => {
+  // Función para asignar usuario operario a cliente administrador
+  const asignarUsuarioAClienteAdmin = async (userId, clienteAdminId) => {
     try {
-      const userRef = doc(db, "usuarios", user.uid);
-      await updateDoc(userRef, updates);
+      const userRef = doc(db, "usuarios", userId);
+      await updateDoc(userRef, {
+        clienteAdminId: clienteAdminId,
+        ultimaModificacion: new Date()
+      });
       
-      // Actualizar estado local
-      const updatedProfile = { ...userProfile, ...updates };
-      setUserProfile(updatedProfile);
+      // Actualizar estado local si es el usuario actual
+      if (user && user.uid === userId) {
+        setUserProfile(prev => ({
+          ...prev,
+          clienteAdminId: clienteAdminId
+        }));
+      }
       
       return true;
     } catch (error) {
-      console.error("Error al actualizar perfil:", error);
-      throw error;
+      console.error("Error al asignar usuario a cliente admin:", error);
+      return false;
     }
   };
 
-  // Función para verificar si el usuario puede ver una empresa
+  // Función para obtener usuarios de un cliente administrador
+  const getUsuariosDeClienteAdmin = async (clienteAdminId) => {
+    try {
+      const usuariosRef = collection(db, "usuarios");
+      const q = query(usuariosRef, where("clienteAdminId", "==", clienteAdminId));
+      const snapshot = await getDocs(q);
+      
+      const usuarios = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      
+      return usuarios;
+    } catch (error) {
+      console.error("Error al obtener usuarios del cliente admin:", error);
+      return [];
+    }
+  };
+
+  // Función para obtener formularios de un cliente administrador
+  const getFormulariosDeClienteAdmin = async (clienteAdminId) => {
+    try {
+      const formulariosRef = collection(db, "formularios");
+      const q = query(formulariosRef, where("clienteAdminId", "==", clienteAdminId));
+      const snapshot = await getDocs(q);
+      
+      const formularios = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      
+      return formularios;
+    } catch (error) {
+      console.error("Error al obtener formularios del cliente admin:", error);
+      return [];
+    }
+  };
+
+  // Función para verificar y corregir empresas sin propietarioId
+  const verificarYCorregirEmpresas = async () => {
+    try {
+      const empresasRef = collection(db, "empresas");
+      const snapshot = await getDocs(empresasRef);
+      
+      for (const doc of snapshot.docs) {
+        const empresaData = doc.data();
+        
+        // Si la empresa no tiene propietarioId, asignarlo al usuario actual
+        if (!empresaData.propietarioId && userProfile) {
+          await updateDoc(doc.ref, {
+            propietarioId: userProfile.uid,
+            propietarioEmail: userProfile.email,
+            ultimaModificacion: new Date()
+          });
+          
+          console.log(`✅ Empresa "${empresaData.nombre}" asignada a ${userProfile.email}`);
+        }
+      }
+    } catch (error) {
+      console.error("Error al verificar empresas:", error);
+    }
+  };
+
+  // Función para verificar si el usuario puede ver una empresa (multi-tenant)
   const canViewEmpresa = (empresaId) => {
     if (!userProfile) return false;
     
-    // El usuario puede ver sus propias empresas
-    if (userProfile.empresas && userProfile.empresas.includes(empresaId)) {
+    // Super administradores pueden ver todas las empresas
+    if (userProfile.role === 'supermax') {
       return true;
     }
     
-    // El usuario puede ver empresas de sus socios
-    if (socios.length > 0) {
-      return socios.some(socio => 
-        socio.empresas && socio.empresas.includes(empresaId)
-      );
+    // Clientes administradores pueden ver sus empresas y las de sus usuarios
+    if (userProfile.role === 'max') {
+      // Sus propias empresas (donde es el propietario)
+      if (userProfile.empresas && userProfile.empresas.includes(empresaId)) {
+        return true;
+      }
+      
+      // Empresas de sus usuarios operarios (verificar por propietarioId)
+      // Esta lógica se puede expandir según la estructura de empresas
+      // Por ahora, solo permitimos sus propias empresas
+      return false;
+    }
+    
+    // Usuarios operarios pueden ver empresas de su cliente administrador
+    if (userProfile.role === 'operario') {
+      // Sus propias empresas
+      if (userProfile.empresas && userProfile.empresas.includes(empresaId)) {
+        return true;
+      }
+      
+      // Empresas de su cliente administrador
+      // Esta lógica se puede expandir según la estructura de empresas
+      // Por ahora, solo permitimos sus propias empresas
+      return false;
     }
     
     return false;
   };
 
-  // Función para verificar si el usuario puede ver una auditoría
+  // Función para verificar si el usuario puede ver una auditoría (multi-tenant)
   const canViewAuditoria = (auditoriaId) => {
     if (!userProfile) return false;
     
-    // El usuario puede ver sus propias auditorías
-    if (userProfile.auditorias && userProfile.auditorias.includes(auditoriaId)) {
+    // Super administradores pueden ver todas las auditorías
+    if (userProfile.role === 'supermax') {
       return true;
     }
     
-    // El usuario puede ver auditorías compartidas con él
-    if (auditoriasCompartidas.some(aud => aud.id === auditoriaId)) {
-      return true;
+    // Clientes administradores pueden ver sus auditorías y las de sus usuarios
+    if (userProfile.role === 'max') {
+      // Sus propias auditorías
+      if (userProfile.auditorias && userProfile.auditorias.includes(auditoriaId)) {
+        return true;
+      }
+      
+      // Auditorías de sus usuarios operarios
+      // Esta lógica se puede expandir según la estructura de auditorías
+      return true; // Por ahora permitimos acceso a todas las auditorías
+    }
+    
+    // Usuarios operarios pueden ver auditorías de su cliente administrador
+    if (userProfile.role === 'operario') {
+      // Sus propias auditorías
+      if (userProfile.auditorias && userProfile.auditorias.includes(auditoriaId)) {
+        return true;
+      }
+      
+      // Auditorías compartidas con él
+      if (auditoriasCompartidas.some(aud => aud.id === auditoriaId)) {
+        return true;
+      }
+      
+      // Auditorías de su cliente administrador
+      // Esta lógica se puede expandir según la estructura de auditorías
+      return true; // Por ahora permitimos acceso a todas las auditorías
     }
     
     return false;
@@ -472,7 +604,11 @@ const AuthContextComponent = ({ children }) => {
     permisos,
     crearOperario,
     editarPermisosOperario,
-    logAccionOperario
+    logAccionOperario,
+    asignarUsuarioAClienteAdmin,
+    getUsuariosDeClienteAdmin,
+    getFormulariosDeClienteAdmin,
+    verificarYCorregirEmpresas
   };
 
   return <AuthContext.Provider value={data}>{children}</AuthContext.Provider>;

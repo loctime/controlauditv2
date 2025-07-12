@@ -35,6 +35,7 @@ const EditarFormulario = () => {
           creadorId: data.creadorId,
           creadorNombre: data.creadorNombre,
           creadorEmail: data.creadorEmail,
+          clienteAdminId: data.clienteAdminId, // Nuevo campo para multi-tenant
           estado: data.estado,
           version: data.version,
           esPublico: data.esPublico,
@@ -43,12 +44,51 @@ const EditarFormulario = () => {
           permisos: data.permisos
         };
       });
-      // Filtrar por permisos
+      // Filtrar por permisos multi-tenant
       const formulariosPermitidos = metadatos.filter(formulario => {
-        if (userProfile?.role === 'max') return true;
-        if (formulario.creadorId === user.uid) return true;
-        if (formulario.esPublico) return true;
-        if (formulario.permisos?.puedeVer?.includes(user.uid)) return true;
+        // Super administradores ven todos los formularios
+        if (userProfile?.role === 'supermax') {
+          return true;
+        }
+
+        // Clientes administradores ven sus formularios y los de sus usuarios
+        if (userProfile?.role === 'max') {
+          // Si es el cliente admin del formulario
+          if (formulario.clienteAdminId === user.uid) {
+            return true;
+          }
+          // Si es el creador del formulario
+          if (formulario.creadorId === user.uid) {
+            return true;
+          }
+          return false;
+        }
+
+        // Usuarios operarios ven sus formularios y los de su cliente admin
+        if (userProfile?.role === 'operario') {
+          // Sus propios formularios
+          if (formulario.creadorId === user.uid) {
+            return true;
+          }
+
+          // Formularios de su cliente administrador
+          if (formulario.clienteAdminId === userProfile.clienteAdminId) {
+            return true;
+          }
+
+          // Formularios públicos
+          if (formulario.esPublico) {
+            return true;
+          }
+
+          // Formularios con permisos explícitos
+          if (formulario.permisos?.puedeVer?.includes(user.uid)) {
+            return true;
+          }
+
+          return false;
+        }
+
         return false;
       });
       setFormularios(formulariosPermitidos);

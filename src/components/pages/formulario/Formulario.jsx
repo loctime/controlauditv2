@@ -52,14 +52,16 @@ const Formulario = () => {
           preguntas: seccion.preguntas.split("\n").map((pregunta) => pregunta.trim()).filter(Boolean),
         })),
         timestamp: Timestamp.now(),
-        // ✅ Campos de creador y permisos
+        // ✅ Campos de creador y permisos multi-tenant
         creadorId: user.uid,
         creadorEmail: user.email,
         creadorNombre: user.displayName || user.email,
+        // ✅ Cliente administrador responsable
+        clienteAdminId: userProfile?.clienteAdminId || user.uid, // Si no tiene cliente admin, es su propio admin
         esPublico: false, // Por defecto privado
         permisos: {
-          puedeEditar: [user.uid], // Solo el creador puede editar
-          puedeVer: [user.uid], // Solo el creador puede ver
+          puedeEditar: [user.uid], // Solo el creador puede editar inicialmente
+          puedeVer: [user.uid], // Solo el creador puede ver inicialmente
           puedeEliminar: [user.uid] // Solo el creador puede eliminar
         },
         // ✅ Metadatos adicionales

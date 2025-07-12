@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { Button, TextField, Grid, Typography, Box, MenuItem, FormControl, InputLabel, Select, Paper } from "@mui/material";
 import { db } from "../../../firebaseConfig";
-import { getDocs, collection } from "firebase/firestore";
+import { getDocs, collection, query, where } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../../context/AuthContext";
 
 const SucursalForm = ({ agregarSucursal, empresaId }) => {
   const [empresas, setEmpresas] = useState([]);
@@ -14,20 +15,76 @@ const SucursalForm = ({ agregarSucursal, empresaId }) => {
     empresa: "",
   });
   const navigate = useNavigate();
+  const { userProfile, role } = useAuth();
 
   useEffect(() => {
     const obtenerEmpresas = async () => {
       try {
-        const empresasSnapshot = await getDocs(collection(db, "empresas"));
-        const empresasData = [];
-        empresasSnapshot.forEach((doc) => {
-          empresasData.push({
+        // Si no hay usuario autenticado, no cargar nada
+        if (!userProfile) {
+          setEmpresas([]);
+          return;
+        }
+
+        let empresasData = [];
+
+        // Aplicar filtrado multi-tenant según el rol
+        if (role === 'supermax') {
+          // Super administradores ven todas las empresas
+          const empresasSnapshot = await getDocs(collection(db, "empresas"));
+          empresasData = empresasSnapshot.docs.map(doc => ({
             id: doc.id,
             nombre: doc.data().nombre,
             logo: doc.data().logo || ""
-          });
-        });
+          }));
+        } else if (role === 'max') {
+          // Clientes administradores ven sus empresas y las de sus usuarios operarios
+          // Obtener sus propias empresas
+          const empresasRef = collection(db, "empresas");
+          const empresasQuery = query(empresasRef, where("propietarioId", "==", userProfile.uid));
+          const empresasSnapshot = await getDocs(empresasQuery);
+          const misEmpresas = empresasSnapshot.docs.map(doc => ({
+            id: doc.id,
+            nombre: doc.data().nombre,
+            logo: doc.data().logo || ""
+          }));
+
+          // Obtener usuarios operarios del cliente administrador
+          const usuariosRef = collection(db, "usuarios");
+          const usuariosQuery = query(usuariosRef, where("clienteAdminId", "==", userProfile.uid));
+          const usuariosSnapshot = await getDocs(usuariosQuery);
+          const usuariosOperarios = usuariosSnapshot.docs.map(doc => doc.id);
+
+          // Obtener empresas de los usuarios operarios (solo si hay usuarios operarios)
+          let empresasOperarios = [];
+          if (usuariosOperarios.length > 0) {
+            const empresasOperariosQuery = query(empresasRef, where("propietarioId", "in", usuariosOperarios));
+            const empresasOperariosSnapshot = await getDocs(empresasOperariosQuery);
+            empresasOperarios = empresasOperariosSnapshot.docs.map(doc => ({
+              id: doc.id,
+              nombre: doc.data().nombre,
+              logo: doc.data().logo || ""
+            }));
+          }
+
+          // Combinar todas las empresas que puede ver
+          empresasData = [...misEmpresas, ...empresasOperarios];
+        } else if (role === 'operario') {
+          // Usuarios operarios ven empresas de su cliente administrador
+          if (userProfile.clienteAdminId) {
+            const empresasRef = collection(db, "empresas");
+            const empresasQuery = query(empresasRef, where("propietarioId", "==", userProfile.clienteAdminId));
+            const empresasSnapshot = await getDocs(empresasQuery);
+            empresasData = empresasSnapshot.docs.map(doc => ({
+              id: doc.id,
+              nombre: doc.data().nombre,
+              logo: doc.data().logo || ""
+            }));
+          }
+        }
+
         setEmpresas(empresasData);
+        
         // Si hay empresaId, seleccionarla automáticamente
         if (empresaId) {
           const empresa = empresasData.find(e => e.id === empresaId);
@@ -40,7 +97,7 @@ const SucursalForm = ({ agregarSucursal, empresaId }) => {
     };
     obtenerEmpresas();
     // eslint-disable-next-line
-  }, [empresaId]);
+  }, [empresaId, userProfile, role]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
