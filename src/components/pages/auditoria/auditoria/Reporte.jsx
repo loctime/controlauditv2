@@ -20,6 +20,9 @@ const Reporte = ({
 }) => {
   const navigate = useNavigate();
 
+  // NOTA: Este componente es SOLO de visualización.
+  // Los datos deben venir filtrados y seguros desde la consulta principal (multi-tenant).
+
   if (!Array.isArray(respuestas) || respuestas.length === 0) {
     return <div>No hay datos de respuestas disponibles.</div>;
   }
@@ -51,53 +54,6 @@ const Reporte = ({
   const todasPreguntasContestadas =
     respuestas.flat().length ===
     seccionesArray.reduce((acc, seccion) => acc + seccion.preguntas.length, 0);
-
-  const uploadImage = async (file) => {
-    if (!file || !(file instanceof File)) {
-      console.error("Archivo no válido:", file);
-      return null;
-    }
-    try {
-      const storageRef = ref(storage, `imagenes/${file.name}`);
-      await uploadBytes(storageRef, file);
-      return await getDownloadURL(storageRef);
-    } catch (error) {
-      console.error("Error al subir imagen:", error);
-      return null;
-    }
-  };
-
-  const guardarReporte = async () => {
-    try {
-      // Convierte las imágenes en URLs antes de guardar
-      const imagenesURLs = await Promise.all(
-        imagenes.flat().map(async (imagen) => await uploadImage(imagen))
-      );
-
-      // Filtra las URLs nulas en caso de errores al subir imágenes
-      const imagenesURLsFiltradas = imagenesURLs.filter((url) => url !== null);
-
-      const reporte = {
-        empresa,
-        sucursal,
-        formulario, // Asegúrate de que 'formulario' esté definido
-        respuestas: respuestas.flat(), // Simplificar a array plano
-        comentarios: comentarios.flat(), // Simplificar a array plano
-        imagenes: imagenesURLsFiltradas, // Guardar solo las URLs de las imágenes
-        secciones: seccionesArray,
-        estadisticas,
-        estadisticasSinNoAplica,
-        totalRespuestas,
-        fechaGuardado: Timestamp.fromDate(new Date()), // Usar Timestamp de Firestore
-      };
-
-      await addDoc(collection(db, "reportes"), reporte);
-      alert("Reporte guardado exitosamente");
-    } catch (error) {
-      console.error("Error al guardar el reporte:", error);
-      alert("Error al guardar el reporte");
-    }
-  };
 
   const handleVolver = () => {
     navigate(-1); // Navega a la página anterior
@@ -142,7 +98,7 @@ const Reporte = ({
       </Typography>
       <Typography variant="h6">Empresa: {empresa.nombre}</Typography>
       <Typography variant="h6">Sucursal: {sucursal}</Typography>
-      <Typography variant="h6">Formulario: {formulario.nombre}</Typography> {/* Cambiado de "formulairo" a "Formulario" */}
+      <Typography variant="h6">Formulario: {formulario.nombre}</Typography>
       <ResumenRespuestas
         totalRespuestas={totalRespuestas}
         estadisticas={estadisticas}
@@ -154,23 +110,21 @@ const Reporte = ({
             <EstadisticasChart
               estadisticas={estadisticas}
               title="Estadísticas Generales"
-              style={{ maxWidth: '100%', height: 'auto' }} // Ajusta el tamaño del gráfico
+              style={{ maxWidth: '100%', height: 'auto' }}
             />
           </Box>
         </Grid>
-
         {/* Espacio para el segundo gráfico: Estadísticas (Sin "No aplica") */}
         <Grid size={{ xs: 12, sm: 2, md: 10 }}>
           <Box display="flex" justifyContent="center">
             <EstadisticasChart
               estadisticas={estadisticasSinNoAplica}
               title='Estadísticas (Sin "No aplica")'
-              style={{ maxWidth: '100%', height: 'auto' }} // Ajusta el tamaño del gráfico
+              style={{ maxWidth: '100%', height: 'auto' }}
             />
           </Box>
         </Grid>
       </Grid>
-
       <Box mt={3}>
         <ImagenesTable
           secciones={seccionesArray}
@@ -182,9 +136,6 @@ const Reporte = ({
       <Box display="flex" justifyContent="space-between" mt={3}>
         <Button variant="contained" onClick={handleVolver}>
           Volver
-        </Button>
-        <Button variant="contained" onClick={guardarReporte}>
-          Guardar en la DB
         </Button>
       </Box>
     </Box>
