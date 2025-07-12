@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
-import { collection, getDocs } from "firebase/firestore";
+import { collection, getDocs, query, where } from "firebase/firestore";
 import { db } from "./../../../../firebaseConfig";
+import { useAuth } from "../../context/AuthContext";
 import {
   Button,
   Table,
@@ -18,11 +19,18 @@ const ListadoAuditorias = ({ onSelect, empresaSeleccionada }) => {
   const [reportes, setReportes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const { userProfile } = useAuth();
 
   useEffect(() => {
     const fetchReportes = async () => {
+      if (!userProfile) return;
       try {
-        const querySnapshot = await getDocs(collection(db, "reportes"));
+        // Filtrar por clienteAdminId (multi-tenant seguro)
+        const q = query(
+          collection(db, "reportes"),
+          where("clienteAdminId", "==", userProfile.clienteAdminId || userProfile.uid)
+        );
+        const querySnapshot = await getDocs(q);
         const reportesData = querySnapshot.docs.map((doc) => ({
           id: doc.id,
           ...doc.data(),
@@ -43,6 +51,7 @@ const ListadoAuditorias = ({ onSelect, empresaSeleccionada }) => {
         });
 
         setReportes(reportesData);
+        console.log("[DEBUG] Reportes filtrados por clienteAdminId:", reportesData);
       } catch (error) {
         setError("Error al obtener reportes: " + error.message);
       } finally {
@@ -51,7 +60,7 @@ const ListadoAuditorias = ({ onSelect, empresaSeleccionada }) => {
     };
 
     fetchReportes();
-  }, []);
+  }, [userProfile]);
 
   if (loading) return <Typography>Cargando reportes...</Typography>;
   if (error) return <Typography color="error">{error}</Typography>;

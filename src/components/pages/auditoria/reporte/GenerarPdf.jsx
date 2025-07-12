@@ -17,6 +17,22 @@ import "./ReportesPage.css";
 import FiltrosReportes from "./FiltrosReportes";
 import { useAuth } from "../../../context/AuthContext";
 
+// Helpers seguros para obtener nombre de empresa y formulario
+const getNombreEmpresa = (empresa) =>
+  typeof empresa === "object" && empresa && empresa.nombre
+    ? empresa.nombre
+    : typeof empresa === "string"
+    ? empresa
+    : "Empresa no disponible";
+
+const getNombreFormulario = (formulario, nombreForm) =>
+  nombreForm ||
+  (typeof formulario === "object" && formulario && formulario.nombre
+    ? formulario.nombre
+    : typeof formulario === "string"
+    ? formulario
+    : "Formulario no disponible");
+
 const ReportesPage = () => {
   const { userProfile, userAuditorias, auditoriasCompartidas, canViewAuditoria } = useAuth();
   const [reportes, setReportes] = useState([]);
@@ -68,7 +84,7 @@ const ReportesPage = () => {
   useEffect(() => {
     if (selectedEmpresa) {
       setFilteredReportes(
-        reportes.filter((reporte) => reporte.empresa.nombre === selectedEmpresa)
+        reportes.filter((reporte) => getNombreEmpresa(reporte.empresa) === selectedEmpresa)
       );
     } else {
       setFilteredReportes(reportes);
@@ -98,7 +114,7 @@ const ReportesPage = () => {
   if (loading) return <Typography>Cargando reportes...</Typography>;
   if (error) return <Typography color="error">{error}</Typography>;
 
-  const empresas = [...new Set(reportes.map((reporte) => reporte.empresa?.nombre).filter(Boolean))];
+  const empresas = [...new Set(reportes.map((reporte) => getNombreEmpresa(reporte.empresa)).filter(Boolean))];
 
   return (
     <Box className="reportes-container" p={3}>
@@ -106,7 +122,7 @@ const ReportesPage = () => {
         <Box ref={detalleRef} className="public-report-content">
           <Box className="membrete" mb={3}>
             <Typography variant="h4">
-              {selectedReporte.empresa?.nombre ?? "Nombre no disponible"}
+              {getNombreEmpresa(selectedReporte.empresa)}
             </Typography>
             <Typography variant="h6">
               Sucursal: {selectedReporte.sucursal ?? "Sucursal no disponible"}
@@ -145,7 +161,7 @@ const ReportesPage = () => {
                     </TableHead>
                     <TableBody>
                       <TableRow>
-                        <TableCell>{selectedReporte.formulario?.nombre ?? "Formulario no disponible"}</TableCell>
+                        <TableCell>{getNombreFormulario(selectedReporte.formulario, selectedReporte.nombreForm)}</TableCell>
                         <TableCell>
                           {selectedReporte.secciones?.[idx]?.nombre ?? "Sección no disponible"}
                         </TableCell>
@@ -205,9 +221,9 @@ const ReportesPage = () => {
               <TableBody>
                 {filteredReportes.map((reporte) => (
                   <TableRow key={reporte.id}>
-                    <TableCell>{reporte.empresa?.nombre ?? "Empresa no disponible"}</TableCell>
+                    <TableCell>{getNombreEmpresa(reporte.empresa)}</TableCell>
                     <TableCell>{reporte.sucursal ?? "Sucursal no disponible"}</TableCell>
-                    <TableCell>{reporte.formulario?.nombre ?? "Formulario no disponible"}</TableCell>
+                    <TableCell>{getNombreFormulario(reporte.formulario, reporte.nombreForm)}</TableCell>
                     <TableCell>
                       {reporte.fechaGuardado
                         ? new Date(reporte.fechaGuardado.seconds * 1000).toLocaleString()
