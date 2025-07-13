@@ -21,100 +21,80 @@ const ListaSucursales = ({ empresaId }) => {
   const [sucursales, setSucursales] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const { userProfile, role } = useAuth();
+  const { userProfile, userEmpresas, role } = useAuth();
 
   useEffect(() => {
     cargarSucursales();
     // eslint-disable-next-line
-  }, [empresaId, userProfile, role]);
+  }, [empresaId, userProfile, userEmpresas, role]);
 
   const cargarSucursales = async () => {
     try {
       setLoading(true);
       setError(null);
 
+      console.log('=== DEBUG ListaSucursales ===');
+      console.log('userProfile:', userProfile);
+      console.log('userEmpresas:', userEmpresas);
+      console.log('empresaId:', empresaId);
+      console.log('role:', role);
+
       // Si no hay usuario autenticado, no cargar nada
       if (!userProfile) {
+        console.log('No hay userProfile, no cargando sucursales');
         setSucursales([]);
         return;
       }
 
       let sucursalesData = [];
 
-      // Aplicar filtrado multi-tenant según el rol
-      if (role === 'supermax') {
-        // Super administradores ven todas las sucursales
-        const sucursalesSnapshot = await getDocs(collection(db, "sucursales"));
+      // Usar userEmpresas del contexto que ya está filtrado por multi-tenant
+      const empresasDisponibles = userEmpresas || [];
+      console.log('Empresas disponibles del contexto:', empresasDisponibles.length);
+
+      if (empresasDisponibles.length === 0) {
+        console.log('No hay empresas disponibles');
+        setSucursales([]);
+        return;
+      }
+
+      // Determinar qué empresas consultar
+      let empresasAConsultar = empresasDisponibles;
+      
+      // Si hay empresaId específico, filtrar solo esa empresa
+      if (empresaId) {
+        const empresaEspecifica = empresasDisponibles.find(e => e.id === empresaId);
+        if (empresaEspecifica) {
+          empresasAConsultar = [empresaEspecifica];
+          console.log('Filtrando por empresa específica:', empresaEspecifica.nombre);
+        } else {
+          console.log('Empresa específica no encontrada en empresas disponibles');
+          setSucursales([]);
+          return;
+        }
+      }
+
+      // Obtener IDs de empresas para la consulta
+      const empresasIds = empresasAConsultar.map(e => e.id);
+      console.log('IDs de empresas a consultar:', empresasIds);
+
+      // Obtener sucursales de las empresas disponibles
+      if (empresasIds.length > 0) {
+        const sucursalesRef = collection(db, "sucursales");
+        const sucursalesQuery = query(sucursalesRef, where("empresaId", "in", empresasIds));
+        const sucursalesSnapshot = await getDocs(sucursalesQuery);
+        
         sucursalesData = sucursalesSnapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data(),
           fechaCreacion: doc.data().fechaCreacion?.toDate?.() || new Date()
         }));
-      } else if (role === 'max') {
-        // Clientes administradores ven sus sucursales y las de sus usuarios operarios
-        // Primero obtener las empresas del cliente administrador
-        const empresasRef = collection(db, "empresas");
-        const empresasQuery = query(empresasRef, where("propietarioId", "==", userProfile.uid));
-        const empresasSnapshot = await getDocs(empresasQuery);
-        const empresasIds = empresasSnapshot.docs.map(doc => doc.id);
 
-        // Obtener usuarios operarios del cliente administrador
-        const usuariosRef = collection(db, "usuarios");
-        const usuariosQuery = query(usuariosRef, where("clienteAdminId", "==", userProfile.uid));
-        const usuariosSnapshot = await getDocs(usuariosQuery);
-        const usuariosOperarios = usuariosSnapshot.docs.map(doc => doc.id);
-
-        // Obtener empresas de los usuarios operarios (solo si hay usuarios operarios)
-        let empresasOperariosIds = [];
-        if (usuariosOperarios.length > 0) {
-          const empresasOperariosQuery = query(empresasRef, where("propietarioId", "in", usuariosOperarios));
-          const empresasOperariosSnapshot = await getDocs(empresasOperariosQuery);
-          empresasOperariosIds = empresasOperariosSnapshot.docs.map(doc => doc.id);
-        }
-
-        // Combinar todas las empresas que puede ver
-        const todasLasEmpresasIds = [...empresasIds, ...empresasOperariosIds];
-
-        if (todasLasEmpresasIds.length > 0) {
-          // Obtener sucursales de todas las empresas que puede ver
-          const sucursalesRef = collection(db, "sucursales");
-          const sucursalesQuery = query(sucursalesRef, where("empresaId", "in", todasLasEmpresasIds));
-          const sucursalesSnapshot = await getDocs(sucursalesQuery);
-          sucursalesData = sucursalesSnapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data(),
-            fechaCreacion: doc.data().fechaCreacion?.toDate?.() || new Date()
-          }));
-        }
-      } else if (role === 'operario') {
-        // Usuarios operarios ven sucursales de su cliente administrador
-        if (userProfile.clienteAdminId) {
-          // Obtener empresas del cliente administrador
-          const empresasRef = collection(db, "empresas");
-          const empresasQuery = query(empresasRef, where("propietarioId", "==", userProfile.clienteAdminId));
-          const empresasSnapshot = await getDocs(empresasQuery);
-          const empresasIds = empresasSnapshot.docs.map(doc => doc.id);
-
-          if (empresasIds.length > 0) {
-            // Obtener sucursales de las empresas del cliente administrador
-            const sucursalesRef = collection(db, "sucursales");
-            const sucursalesQuery = query(sucursalesRef, where("empresaId", "in", empresasIds));
-            const sucursalesSnapshot = await getDocs(sucursalesQuery);
-            sucursalesData = sucursalesSnapshot.docs.map(doc => ({
-              id: doc.id,
-              ...doc.data(),
-              fechaCreacion: doc.data().fechaCreacion?.toDate?.() || new Date()
-            }));
-          }
-        }
+        console.log('Sucursales encontradas:', sucursalesData.length);
       }
 
-      // Filtrar por empresaId específico si está presente
-      const filtradas = empresaId
-        ? sucursalesData.filter(s => s.empresaId === empresaId)
-        : sucursalesData;
-
-      setSucursales(filtradas);
+      setSucursales(sucursalesData);
+      console.log('=== FIN DEBUG ===');
     } catch (error) {
       console.error("Error al cargar sucursales:", error);
       setError("Error al cargar las sucursales");
@@ -127,7 +107,8 @@ const ListaSucursales = ({ empresaId }) => {
     if (window.confirm(`¿Está seguro de que desea eliminar la sucursal "${nombreSucursal}"?`)) {
       try {
         await deleteDoc(doc(db, "sucursales", sucursalId));
-        setSucursales(sucursales.filter(s => s.id !== sucursalId));
+        // Recargar sucursales después de eliminar
+        await cargarSucursales();
       } catch (error) {
         console.error("Error al eliminar sucursal:", error);
         setError("Error al eliminar la sucursal");
@@ -144,6 +125,17 @@ const ListaSucursales = ({ empresaId }) => {
       minute: '2-digit'
     });
   };
+
+  // Verificar permisos de acceso
+  if (!userProfile) {
+    return (
+      <Box>
+        <Alert severity="error">
+          No tienes permisos para acceder a esta sección.
+        </Alert>
+      </Box>
+    );
+  }
 
   if (loading) {
     return (
@@ -170,6 +162,11 @@ const ListaSucursales = ({ empresaId }) => {
           <Typography variant="h6" color="textSecondary">
             No hay sucursales registradas
           </Typography>
+          {empresaId && (
+            <Typography variant="body2" color="textSecondary" sx={{ mt: 1 }}>
+              Para esta empresa específica
+            </Typography>
+          )}
         </Box>
       ) : (
         <Grid container spacing={2}>

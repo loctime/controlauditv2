@@ -29,6 +29,14 @@ export const getMenuItems = (role, permisos = {}) => {
       required: true
     },
     {
+      id: "operario-dashboard",
+      path: "/operario-dashboard",
+      title: "Mi Dashboard",
+      Icon: HomeIcon,
+      roles: ['operario'],
+      required: true
+    },
+    {
       id: "home",
       path: "/",
       title: "Inicio",
@@ -52,20 +60,13 @@ export const getMenuItems = (role, permisos = {}) => {
   const formularioItems = [
     {
       id: "formularios",
-      path: "/formulario",
+      path: "/editar",
       title: "Formularios",
       Icon: FormatListBulletedOutlinedIcon,
       roles: ['max', 'supermax'],
       required: true
     },
-    {
-      id: "editar-formulario",
-      path: "/editar",
-      title: "Editar Formulario",
-      Icon: FormatListBulletedOutlinedIcon,
-      roles: ['max', 'supermax'],
-      required: true
-    }
+    
   ];
 
   const empresaItems = [
@@ -77,14 +78,7 @@ export const getMenuItems = (role, permisos = {}) => {
       roles: ['max', 'supermax'],
       required: permisos.puedeCrearEmpresas || role === 'max' || role === 'supermax'
     },
-    {
-      id: "sucursal",
-      path: "/sucursales",
-      title: "Sucursales",
-      Icon: BusinessIcon,
-      roles: ['max', 'supermax'],
-      required: permisos.puedeCrearSucursales || role === 'max' || role === 'supermax'
-    }
+    
   ];
 
   const reporteItems = [
@@ -185,7 +179,7 @@ export const menuItems = [
     },
     {
         id: "formularios",
-        path: "/formulario",
+        path: "/editar",
         title: "Formularios",
         Icon: FormatListBulletedOutlinedIcon
     },

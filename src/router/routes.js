@@ -11,6 +11,7 @@ import PerfilUsuario from "../components/pages/perfil/PerfilUsuario";
 import { LogsOperarios } from '../components/pages/usuarios';
 import Dashboard from "../components/pages/dashboard/Dashboard";
 import ClienteDashboard from "../components/pages/admin/ClienteDashboard";
+import OperarioDashboard from "../components/pages/user/OperarioDashboard";
 import PermissionsDebug from "../components/pages/debug/PermissionsDebug";
 
 export const routes = [
@@ -23,6 +24,11 @@ export const routes = [
     id: "cliente-dashboard",
     path: "/cliente-dashboard",
     Element: ClienteDashboard,
+  },
+  {
+    id: "operario-dashboard",
+    path: "/operario-dashboard",
+    Element: OperarioDashboard,
   },
   {
     id: "home",

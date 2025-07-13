@@ -35,12 +35,42 @@ function Navbar(props) {
   // Obtener menú dinámico basado en rol y permisos
   const menuItems = getMenuItems(role, permisos);
 
+  // ✅ Función para obtener la ruta del dashboard según el rol
+  const getDashboardRoute = () => {
+    switch (role) {
+      case 'supermax':
+        return '/dashboard';
+      case 'max':
+        return '/cliente-dashboard';
+      case 'operario':
+        return '/operario-dashboard';
+      default:
+        return '/';
+    }
+  };
+
+  // ✅ Función para obtener el texto del dashboard según el rol
+  const getDashboardText = () => {
+    switch (role) {
+      case 'supermax':
+        return 'Panel de Control';
+      case 'max':
+        return 'Calendario';
+      case 'operario':
+        return 'Mi Dashboard';
+      default:
+        return 'Dashboard';
+    }
+  };
+
   // Log de información de navegación
   console.log('=== INFORMACIÓN DE NAVEGACIÓN ===');
   console.log('Rol:', role);
   console.log('Permisos:', permisos);
   console.log('Menú generado:', menuItems.map(item => item.title));
   console.log('Total de items en menú:', menuItems.length);
+  console.log('Dashboard route:', getDashboardRoute());
+  console.log('Dashboard text:', getDashboardText());
   console.log('==================================');
 
   const handleDrawerToggle = () => {
@@ -97,8 +127,8 @@ function Navbar(props) {
       <CssBaseline />
       <AppBar position="fixed" sx={{ width: "100%", minHeight: 40, height: 44 }}>
         <Toolbar sx={{ gap: "20px", display: "flex", justifyContent: "space-between", minHeight: 40, height: 44, px: 1 }}>
-          <Link to="/" style={{ color: "whitesmoke", textDecoration: "none", fontSize: '0.95rem', padding: '0 8px' }}>
-            Inicio
+          <Link to={getDashboardRoute()} style={{ color: "whitesmoke", textDecoration: "none", fontSize: '0.95rem', padding: '0 8px' }}>
+            {getDashboardText()}
           </Link> 
           <Link to="/auditoria" style={{ color: "whitesmoke", textDecoration: "none", fontSize: '0.95rem', padding: '0 8px' }}>
             Auditoria

@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { Button, Card, CardContent, Grid, IconButton, Typography, Box, CardActions, Divider, Stack } from "@mui/material";
+import { Button, Card, Grid, Typography, Box, CardActions, Divider, Stack, Tooltip, IconButton, CircularProgress } from "@mui/material";
+import InfoIcon from '@mui/icons-material/Info';
 import { Link } from "react-router-dom";
-import { db, storage } from "../../../firebaseConfig";
-import { collection, getDocs, addDoc } from "firebase/firestore";
+import { storage } from "../../../firebaseConfig";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import AddEmpresaModal from "./AddEmpresaModal";
 import EliminarEmpresa from "./EliminarEmpresa";
@@ -10,8 +10,13 @@ import Swal from 'sweetalert2';
 import { useAuth } from "../../context/AuthContext";
 
 const EstablecimientosContainer = () => {
-  const { userProfile, userEmpresas, canViewEmpresa, crearEmpresa, verificarYCorregirEmpresas } = useAuth();
-  const [empresas, setEmpresas] = useState([]);
+  const { userProfile, userEmpresas, crearEmpresa, verificarYCorregirEmpresas, getUserEmpresas } = useAuth();
+  
+  // Función para formatear email (mostrar solo usuario)
+  const formatearEmail = (email) => {
+    if (!email) return '';
+    return email.split('@')[0];
+  };
   const [openModal, setOpenModal] = useState(false);
   const [empresa, setEmpresa] = useState({
     nombre: "",
@@ -21,35 +26,33 @@ const EstablecimientosContainer = () => {
   });
   const [loading, setLoading] = useState(false);
   const [verificando, setVerificando] = useState(false);
+  const [cargandoEmpresas, setCargandoEmpresas] = useState(false);
+  const [empresasCargadas, setEmpresasCargadas] = useState(false);
 
-  const obtenerEmpresas = useCallback(async () => {
-    try {
-      console.log('=== DEBUG EstablecimientosContainer ===');
-      console.log('userProfile:', userProfile);
-      console.log('userEmpresas:', userEmpresas);
-      console.log('userEmpresas.length:', userEmpresas?.length);
-      
-      if (!userProfile) {
-        console.log('No hay userProfile, retornando');
-        return;
-      }
-      
-      // Usar directamente userEmpresas del contexto que ya está filtrado por multi-tenant
-      setEmpresas(userEmpresas || []);
-      console.log('Empresas establecidas:', userEmpresas || []);
-      console.log('=== FIN DEBUG ===');
-    } catch (error) {
-      console.error("Error al obtener empresas:", error);
-    }
+  // Debug logs para verificar el filtrado multi-tenant
+  useEffect(() => {
+    console.log('=== DEBUG Multi-Tenant Filtrado ===');
+    console.log('userProfile:', userProfile);
+    console.log('userEmpresas (filtradas):', userEmpresas);
+    console.log('Cantidad de empresas filtradas:', userEmpresas?.length || 0);
+    console.log('=== FIN DEBUG ===');
   }, [userProfile, userEmpresas]);
 
+  // Recargar empresas cuando el componente se monta
   useEffect(() => {
-    obtenerEmpresas();
-  }, [obtenerEmpresas]);
+    if (userProfile && userProfile.uid && !empresasCargadas) {
+      console.log('Recargando empresas al montar componente...');
+      setCargandoEmpresas(true);
+      getUserEmpresas(userProfile.uid).finally(() => {
+        setCargandoEmpresas(false);
+        setEmpresasCargadas(true);
+      });
+    }
+  }, [userProfile?.uid, empresasCargadas]); // Solo depende del uid del usuario y si ya se cargaron
 
   const handleCloseModal = () => {
     setOpenModal(false);
-    obtenerEmpresas(); // Actualiza la lista de empresas después de cerrar el modal
+    // No necesitamos llamar obtenerEmpresas() porque userEmpresas se actualiza automáticamente
   };
 
   const handleInputChange = (e) => {
@@ -70,6 +73,9 @@ const EstablecimientosContainer = () => {
   const handleAddEmpresa = async () => {
     setLoading(true);
     try {
+      console.log('=== INICIANDO CREACIÓN DE EMPRESA ===');
+      console.log('Empresas antes de crear:', userEmpresas?.length || 0);
+      
       let logoURL = "";
       if (empresa.logo) {
         // Cargar la imagen al almacenamiento de Firebase
@@ -78,7 +84,7 @@ const EstablecimientosContainer = () => {
         logoURL = await getDownloadURL(snapshot.ref);
       }
 
-      // Crear el documento de la empresa usando el contexto
+      // Crear el documento de la empresa usando el contexto (ya incluye filtrado multi-tenant)
       const empresaData = {
         nombre: empresa.nombre,
         direccion: empresa.direccion,
@@ -86,7 +92,12 @@ const EstablecimientosContainer = () => {
         logo: logoURL
       };
       
-      await crearEmpresa(empresaData);
+      const empresaId = await crearEmpresa(empresaData);
+      console.log('Empresa creada con ID:', empresaId);
+      console.log('=== FIN CREACIÓN DE EMPRESA ===');
+
+      // Resetear estado para forzar recarga
+      setEmpresasCargadas(false);
 
       Swal.fire({
         icon: 'success',
@@ -108,30 +119,62 @@ const EstablecimientosContainer = () => {
   };
 
   const eliminarEmpresa = () => {
-    obtenerEmpresas(); // Actualiza la lista de empresas después de eliminar una
+    // No necesitamos llamar obtenerEmpresas() porque userEmpresas se actualiza automáticamente
+    console.log('Empresa eliminada, userEmpresas se actualizará automáticamente');
   };
 
+  /**
+   * Verifica y corrige empresas que no tienen propietario asignado
+   * Esta función es necesaria para mantener la integridad del sistema multi-tenant
+   * Solo corrige empresas que ya pertenecen al usuario actual (filtrado por multi-tenant)
+   */
   const handleVerificarEmpresas = async () => {
     setVerificando(true);
     try {
-      await verificarYCorregirEmpresas();
-      await obtenerEmpresas(); // Recargar empresas después de la verificación
-      Swal.fire({
-        icon: 'success',
-        title: 'Verificación Completada',
-        text: 'Las empresas han sido verificadas y corregidas.',
-      });
+      console.log('=== INICIANDO VERIFICACIÓN DE EMPRESAS ===');
+      console.log('Empresas antes de verificar:', userEmpresas?.length || 0);
+      console.log('userProfile:', userProfile);
+      
+      const empresasCorregidas = await verificarYCorregirEmpresas();
+      
+      console.log('Empresas después de verificar:', userEmpresas?.length || 0);
+      console.log('Empresas corregidas:', empresasCorregidas);
+      
+      if (empresasCorregidas > 0) {
+        Swal.fire({
+          icon: 'success',
+          title: 'Verificación Completada',
+          text: `Se corrigieron ${empresasCorregidas} empresa(s) que no tenían propietario asignado.`,
+        });
+      } else {
+        Swal.fire({
+          icon: 'info',
+          title: 'Verificación Completada',
+          text: 'Todas las empresas ya tienen propietario asignado correctamente.',
+        });
+      }
     } catch (error) {
       console.error("Error al verificar empresas:", error);
       Swal.fire({
         icon: 'error',
-        title: 'Error',
-        text: 'Ocurrió un error al verificar las empresas.',
+        title: 'Error en Verificación',
+        text: 'Ocurrió un error al verificar las empresas. Revisa la consola para más detalles.',
       });
     } finally {
       setVerificando(false);
     }
   };
+
+  // Verificar permisos de acceso
+  if (!userProfile) {
+    return (
+      <Box sx={{ px: { xs: 1, sm: 3 }, py: 2 }}>
+        <Typography variant="h6" color="error">
+          No tienes permisos para acceder a esta sección.
+        </Typography>
+      </Box>
+    );
+  }
 
   return (
     <Box sx={{ px: { xs: 1, sm: 3 }, py: 2 }}>
@@ -147,7 +190,7 @@ const EstablecimientosContainer = () => {
             disabled={verificando}
             sx={{ minWidth: '120px' }}
           >
-            {verificando ? 'Verificando...' : 'Verificar Empresas'}
+            {verificando ? 'Verificando...' : 'Verificar'}
           </Button>
           <Button
             variant="contained"
@@ -161,8 +204,16 @@ const EstablecimientosContainer = () => {
       </Box>
       <Divider sx={{ mb: 4 }} />
       <Grid container spacing={4}>
-        {console.log('Renderizando empresas:', empresas)}
-        {empresas.length === 0 ? (
+        {cargandoEmpresas && (!userEmpresas || userEmpresas.length === 0) ? (
+          <Grid item xs={12}>
+            <Box sx={{ textAlign: 'center', py: 4 }}>
+              <CircularProgress sx={{ mb: 2 }} />
+              <Typography variant="h6" color="text.secondary">
+                Cargando empresas...
+              </Typography>
+            </Box>
+          </Grid>
+        ) : userEmpresas?.length === 0 ? (
           <Grid item xs={12}>
             <Box sx={{ textAlign: 'center', py: 4 }}>
               <Typography variant="h6" color="text.secondary">
@@ -174,9 +225,43 @@ const EstablecimientosContainer = () => {
             </Box>
           </Grid>
         ) : (
-          empresas.map((empresa) => (
+          userEmpresas?.map((empresa) => (
             <Grid item xs={12} sm={6} md={4} lg={3} key={empresa.id}>
-              <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', p: 2, borderRadius: 3, boxShadow: 3 }}>
+              <Card sx={{ 
+                height: '100%', 
+                display: 'flex', 
+                flexDirection: 'column', 
+                justifyContent: 'space-between', 
+                p: 2, 
+                borderRadius: 3, 
+                boxShadow: 3,
+                position: 'relative',
+                // Indicador visual para empresas de otros usuarios (solo para supermax)
+                ...(userProfile?.role === 'supermax' && empresa.propietarioId !== userProfile?.uid && {
+                  border: '2px solid',
+                  borderColor: 'warning.main'
+                })
+              }}>
+                {/* Indicador de empresa de otro usuario */}
+                {userProfile?.role === 'supermax' && empresa.propietarioId !== userProfile?.uid && (
+                  <Box
+                    sx={{
+                      position: 'absolute',
+                      top: 8,
+                      right: 8,
+                      backgroundColor: 'warning.main',
+                      color: 'warning.contrastText',
+                      px: 1,
+                      py: 0.25,
+                      borderRadius: 1,
+                      fontSize: '0.6rem',
+                      fontWeight: 'bold',
+                      zIndex: 1
+                    }}
+                  >
+                    OTRO USUARIO
+                  </Box>
+                )}
                 <Box display="flex" flexDirection="column" alignItems="center" mb={2}>
                   {empresa.logo && empresa.logo.trim() !== "" ? (
                     <img
@@ -215,6 +300,78 @@ const EstablecimientosContainer = () => {
                   <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', mb: 0.5 }}>
                     Teléfono: {empresa.telefono}
                   </Typography>
+                  {/* Información del propietario y fecha de creación */}
+                  <Box sx={{ mt: 1, textAlign: 'center' }}>
+                    {empresa.propietarioEmail && (
+                      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 0.5 }}>
+                        <Typography 
+                          variant="caption" 
+                          sx={{ 
+                            color: 'text.secondary',
+                            fontSize: '0.7rem',
+                            mr: 0.5
+                          }}
+                        >
+                          Propietario: {formatearEmail(empresa.propietarioEmail)}
+                        </Typography>
+                        <Tooltip 
+                          title={`Empresa propiedad de ${empresa.propietarioEmail}${empresa.propietarioRole ? ` (${empresa.propietarioRole})` : ''}`}
+                          arrow
+                        >
+                          <IconButton size="small" sx={{ p: 0, color: 'text.secondary' }}>
+                            <InfoIcon sx={{ fontSize: '0.8rem' }} />
+                          </IconButton>
+                        </Tooltip>
+                      </Box>
+                    )}
+                    {empresa.creadorEmail && empresa.creadorEmail !== empresa.propietarioEmail && (
+                      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 0.5 }}>
+                        <Typography 
+                          variant="caption" 
+                          sx={{ 
+                            color: 'primary.main',
+                            fontSize: '0.7rem',
+                            mr: 0.5,
+                            fontWeight: 500
+                          }}
+                        >
+                          Creado por: {formatearEmail(empresa.creadorEmail)}
+                        </Typography>
+                        <Tooltip 
+                          title={`Empresa creada por ${empresa.creadorEmail}${empresa.creadorRole ? ` (${empresa.creadorRole})` : ''}`}
+                          arrow
+                        >
+                          <IconButton size="small" sx={{ p: 0, color: 'primary.main' }}>
+                            <InfoIcon sx={{ fontSize: '0.8rem' }} />
+                          </IconButton>
+                        </Tooltip>
+                      </Box>
+                    )}
+                    {empresa.createdAt && (
+                      <Tooltip 
+                        title={`Fecha de creación: ${empresa.createdAt.toDate ? 
+                          empresa.createdAt.toDate().toLocaleString('es-ES') : 
+                          new Date(empresa.createdAt).toLocaleString('es-ES')
+                        }`}
+                        arrow
+                      >
+                        <Typography 
+                          variant="caption" 
+                          sx={{ 
+                            display: 'block',
+                            color: 'text.secondary',
+                            fontSize: '0.7rem',
+                            cursor: 'help'
+                          }}
+                        >
+                          Creada: {empresa.createdAt.toDate ? 
+                            empresa.createdAt.toDate().toLocaleDateString('es-ES') : 
+                            new Date(empresa.createdAt).toLocaleDateString('es-ES')
+                          }
+                        </Typography>
+                      </Tooltip>
+                    )}
+                  </Box>
                 </Box>
                 <Divider sx={{ my: 2 }} />
                 <CardActions sx={{ justifyContent: 'space-between', mt: 'auto' }}>

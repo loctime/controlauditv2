@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { collection, getDocs, doc, getDoc } from "firebase/firestore";
 import { db } from "../../../firebaseConfig";
 import { FormControl, InputLabel, Select, MenuItem, Typography, Box, Alert, Chip, Button } from "@mui/material";
+import RefreshIcon from '@mui/icons-material/Refresh';
 import EditarSeccionYPreguntas from "./EditarSeccionYPreguntas";
 import { useAuth } from "../../context/AuthContext";
 import Swal from 'sweetalert2';
@@ -14,6 +15,8 @@ const EditarFormulario = () => {
   const [formulariosCache, setFormulariosCache] = useState({}); // id -> formulario completo
   const [reload, setReload] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [cargandoFormulario, setCargandoFormulario] = useState(false); // Nuevo estado
+  const [recargando, setRecargando] = useState(false); // Estado para animación del botón
   const navigate = useNavigate();
 
   // Cargar solo metadatos al inicio
@@ -25,6 +28,13 @@ const EditarFormulario = () => {
         return;
       }
       setLoading(true);
+      
+      // Limpiar cache si es una recarga
+      if (reload) {
+        setFormulariosCache({});
+        console.log('🔄 Cache de formularios limpiado');
+      }
+      
       const formulariosCollection = collection(db, "formularios");
       const res = await getDocs(formulariosCollection);
       const metadatos = res.docs.map((formulario) => {
@@ -104,7 +114,7 @@ const EditarFormulario = () => {
     } finally {
       setLoading(false);
     }
-  }, [user, userProfile, formularioSeleccionado]);
+  }, [user, userProfile, formularioSeleccionado, reload]);
 
   useEffect(() => {
     obtenerFormularios();
@@ -115,29 +125,51 @@ const EditarFormulario = () => {
     const formularioId = event.target.value;
     if (!formularioId) {
       setFormularioSeleccionado(null);
+      setCargandoFormulario(false);
       return;
     }
+    
+    setCargandoFormulario(true);
+    
     // Si ya está en cache, usarlo
     if (formulariosCache[formularioId]) {
       setFormularioSeleccionado(formulariosCache[formularioId]);
+      setCargandoFormulario(false);
       return;
     }
-    // Buscar metadatos para mostrar mientras carga
-    const meta = formularios.find(f => f.id === formularioId);
-    setFormularioSeleccionado(meta);
+    
     try {
       const formularioDoc = await getDoc(doc(db, "formularios", formularioId));
       const formularioData = formularioDoc.data();
+      const meta = formularios.find(f => f.id === formularioId);
       const completo = { ...meta, ...formularioData, id: formularioId };
+      
       setFormularioSeleccionado(completo);
       setFormulariosCache(prev => ({ ...prev, [formularioId]: completo }));
     } catch (error) {
+      console.error("Error al cargar formulario:", error);
       Swal.fire("Error", "No se pudo cargar el formulario.", "error");
+    } finally {
+      setCargandoFormulario(false);
     }
   };
 
-  const handleReload = () => {
+  const handleReload = async () => {
+    setRecargando(true);
     setReload((prev) => !prev);
+    
+    // Simular un pequeño delay para la animación
+    setTimeout(() => {
+      setRecargando(false);
+      // Mostrar mensaje de confirmación
+      Swal.fire({
+        icon: 'success',
+        title: 'Lista Actualizada',
+        text: 'La lista de formularios se ha recargado exitosamente.',
+        timer: 1500,
+        showConfirmButton: false
+      });
+    }, 1000);
   };
 
   // ✅ Función para verificar permisos de edición
@@ -179,12 +211,29 @@ const EditarFormulario = () => {
 
   return (
     <div>
+      <style>
+        {`
+          @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+          }
+        `}
+      </style>
       {/* Título, selector y botón crear alineados horizontalmente */}
       <Box display="flex" alignItems="center" justifyContent="space-between" mb={2}>
         <Typography variant="h4" gutterBottom>
           Editar Formularios
         </Typography>
         <Box display="flex" alignItems="center" gap={2}>
+          {recargando && (
+            <Chip 
+              label="Recargando..." 
+              color="primary" 
+              size="small"
+              sx={{ animation: 'pulse 1s infinite' }}
+            />
+          )}
           <FormControl sx={{ minWidth: 250 }} size="small">
             <InputLabel id="select-formulario-label">Seleccionar Formulario</InputLabel>
             <Select
@@ -202,6 +251,30 @@ const EditarFormulario = () => {
               ))}
             </Select>
           </FormControl>
+          <Button
+            variant="outlined"
+            color="primary"
+            onClick={handleReload}
+            disabled={recargando}
+            sx={{ 
+              minWidth: 40, 
+              width: 40, 
+              height: 40,
+              borderRadius: '50%',
+              p: 0
+            }}
+            title="Recargar lista de formularios"
+          >
+            <RefreshIcon 
+              sx={{ 
+                animation: recargando ? 'spin 1s linear infinite' : 'none',
+                '@keyframes spin': {
+                  '0%': { transform: 'rotate(0deg)' },
+                  '100%': { transform: 'rotate(360deg)' }
+                }
+              }} 
+            />
+          </Button>
           <Button
             variant="contained"
             color="primary"
@@ -230,13 +303,19 @@ const EditarFormulario = () => {
           </Box>
           {/* Edición del formulario (Accordion) */}
           <Box flex={2} minWidth={320}>
-            <EditarSeccionYPreguntas
-              formularioSeleccionado={formularioSeleccionado}
-              setFormularioSeleccionado={setFormularioSeleccionado}
-              handleReload={handleReload}
-              puedeEditar={puedeEditarFormulario(formularioSeleccionado)}
-              puedeEliminar={puedeEliminarFormulario(formularioSeleccionado)}
-            />
+            {cargandoFormulario ? (
+              <Box display="flex" justifyContent="center" alignItems="center" minHeight="200px">
+                <Typography>Cargando formulario...</Typography>
+              </Box>
+            ) : (
+              <EditarSeccionYPreguntas
+                formularioSeleccionado={formularioSeleccionado}
+                setFormularioSeleccionado={setFormularioSeleccionado}
+                handleReload={handleReload}
+                puedeEditar={puedeEditarFormulario(formularioSeleccionado)}
+                puedeEliminar={puedeEliminarFormulario(formularioSeleccionado)}
+              />
+            )}
           </Box>
         </Box>
       )}

@@ -23,7 +23,8 @@ import {
   MenuItem,
   Select,
   InputLabel,
-  FormControl
+  FormControl,
+  CircularProgress
 } from "@mui/material";
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import EditIcon from "@mui/icons-material/Edit";
@@ -243,18 +244,27 @@ const EditarSeccionYPreguntas = ({
 
   // ✅ Función para normalizar las secciones (manejar tanto arrays como objetos)
   const normalizarSecciones = useCallback((secciones) => {
-    if (!secciones) return [];
+    console.log('🔍 Normalizando secciones:', secciones);
+    
+    if (!secciones) {
+      console.log('⚠️ No hay secciones definidas');
+      return [];
+    }
     
     // Si es un array, devolverlo tal como está
     if (Array.isArray(secciones)) {
+      console.log('✅ Secciones ya es un array, longitud:', secciones.length);
       return secciones;
     }
     
     // Si es un objeto, convertirlo a array
     if (typeof secciones === 'object') {
-      return Object.values(secciones);
+      const seccionesArray = Object.values(secciones);
+      console.log('🔄 Secciones convertidas de objeto a array, longitud:', seccionesArray.length);
+      return seccionesArray;
     }
     
+    console.log('❌ Formato de secciones no reconocido:', typeof secciones);
     return [];
   }, []);
 
@@ -313,6 +323,17 @@ const EditarSeccionYPreguntas = ({
       cacheFormulario();
     }
   }, [formularioSeleccionado, seccionesNormalizadas, cacheFormulario]);
+
+  // ✅ Debug cuando cambia el formulario
+  React.useEffect(() => {
+    console.log('🔄 Formulario seleccionado cambió:', {
+      id: formularioSeleccionado?.id,
+      nombre: formularioSeleccionado?.nombre,
+      secciones: formularioSeleccionado?.secciones,
+      seccionesNormalizadas: seccionesNormalizadas,
+      estadisticas: estadisticas
+    });
+  }, [formularioSeleccionado, seccionesNormalizadas, estadisticas]);
 
   const handleGuardarCambiosFormulario = useCallback(async () => {
     if (!puedeEditar) {
@@ -614,7 +635,15 @@ const EditarSeccionYPreguntas = ({
         <AccordionDetails>
           {seccionesNormalizadas.length === 0 && (
             <Alert severity="info" sx={{ my: 2 }}>
-              Este formulario no tiene secciones o aún se está cargando.
+              <Box display="flex" alignItems="center" gap={2}>
+                {!formularioSeleccionado.secciones && <CircularProgress size={20} />}
+                <Typography variant="body2">
+                  {formularioSeleccionado.secciones ? 
+                    'Este formulario no tiene secciones definidas.' : 
+                    'Cargando secciones del formulario...'
+                  }
+                </Typography>
+              </Box>
             </Alert>
           )}
           {seccionesNormalizadas.map((seccion, seccionIndex) => (

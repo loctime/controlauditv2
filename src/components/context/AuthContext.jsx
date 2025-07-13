@@ -247,6 +247,12 @@ const AuthContextComponent = ({ children }) => {
       console.log('role:', role);
       console.log('userProfile:', userProfile);
       
+      if (!userId) {
+        console.log('No hay userId, abortando');
+        setUserEmpresas([]);
+        return [];
+      }
+      
       const empresasRef = collection(db, "empresas");
       let snapshot;
       
@@ -294,6 +300,7 @@ const AuthContextComponent = ({ children }) => {
       return empresas;
     } catch (error) {
       console.error("Error al obtener empresas del usuario:", error);
+      setUserEmpresas([]);
       return [];
     }
   };
@@ -507,38 +514,79 @@ const AuthContextComponent = ({ children }) => {
   const crearEmpresa = async (empresaData) => {
     try {
       const empresaRef = collection(db, "empresas");
+      
+      // Determinar propietario y creador
+      let propietarioId, propietarioEmail, propietarioRole;
+      let creadorId, creadorEmail, creadorRole;
+      
+      if (role === 'operario' && userProfile?.clienteAdminId) {
+        // Si es operario, el propietario es su cliente admin
+        propietarioId = userProfile.clienteAdminId;
+        
+        // Obtener email del cliente admin
+        const adminRef = doc(db, "usuarios", userProfile.clienteAdminId);
+        const adminSnap = await getDoc(adminRef);
+        propietarioEmail = adminSnap.exists() ? adminSnap.data().email : 'admin@empresa.com';
+        propietarioRole = 'max';
+        
+        // El creador es el operario
+        creadorId = user.uid;
+        creadorEmail = user.email;
+        creadorRole = role;
+      } else {
+        // Si es admin o supermax, es propietario y creador
+        propietarioId = user.uid;
+        propietarioEmail = user.email;
+        propietarioRole = role;
+        
+        creadorId = user.uid;
+        creadorEmail = user.email;
+        creadorRole = role;
+      }
+      
       const nuevaEmpresa = {
         ...empresaData,
-        propietarioId: user.uid,
-        propietarioEmail: user.email,
-        propietarioRole: role, // Agregar el rol del propietario
+        propietarioId,
+        propietarioEmail,
+        propietarioRole,
+        creadorId,
+        creadorEmail,
+        creadorRole,
         createdAt: new Date(),
-        socios: [user.uid] // El propietario es el primer socio
+        socios: [propietarioId] // El propietario es el primer socio
       };
       
       const docRef = await addDoc(empresaRef, nuevaEmpresa);
       
-      // Actualizar perfil del usuario
-      const userRef = doc(db, "usuarios", user.uid);
-      const userSnap = await getDoc(userRef);
+      // Actualizar perfil del propietario (cliente admin)
+      const propietarioRef = doc(db, "usuarios", propietarioId);
+      const propietarioSnap = await getDoc(propietarioRef);
       
-      if (userSnap.exists()) {
-        const userData = userSnap.data();
-        const empresasActuales = userData.empresas || [];
+      if (propietarioSnap.exists()) {
+        const propietarioData = propietarioSnap.data();
+        const empresasActuales = propietarioData.empresas || [];
         
-        await updateDoc(userRef, {
+        await updateDoc(propietarioRef, {
           empresas: [...empresasActuales, docRef.id]
         });
       }
       
-      // Actualizar estado local
+      // Actualizar estado local agregando la nueva empresa directamente
+      const nuevaEmpresaConId = {
+        id: docRef.id,
+        ...nuevaEmpresa
+      };
+      
+      setUserEmpresas(prevEmpresas => [...prevEmpresas, nuevaEmpresaConId]);
+      
+      // También recargar desde Firestore para asegurar consistencia
       await getUserEmpresas(user.uid);
       
       // Registrar log de la acción
       await registrarAccionSistema(
         user.uid,
         `Crear empresa: ${empresaData.nombre}`,
-        { empresaData, empresaId: docRef.id },
+        { empresaData, empresaId: docRef.id, propietarioId, creadorId },
         'crear',
         'empresa',
         docRef.id
@@ -707,25 +755,74 @@ const AuthContextComponent = ({ children }) => {
   // Función para verificar y corregir empresas sin propietarioId
   const verificarYCorregirEmpresas = async () => {
     try {
-      const empresasRef = collection(db, "empresas");
-      const snapshot = await getDocs(empresasRef);
+      console.log('=== DEBUG verificarYCorregirEmpresas ===');
+      console.log('userProfile:', userProfile);
+      console.log('userEmpresas actuales:', userEmpresas);
       
-      for (const doc of snapshot.docs) {
-        const empresaData = doc.data();
+      if (!userProfile) {
+        console.log('No hay userProfile, abortando verificación');
+        return 0;
+      }
+
+      // Solo verificar empresas que ya pertenecen al usuario actual
+      const empresasAVerificar = userEmpresas || [];
+      console.log('Empresas a verificar:', empresasAVerificar.length);
+      
+      let empresasCorregidas = 0;
+      const empresasActualizadas = [...userEmpresas]; // Clonar array actual
+      
+      for (const empresa of empresasAVerificar) {
+        console.log('Verificando empresa:', empresa.nombre, 'ID:', empresa.id);
         
-        // Si la empresa no tiene propietarioId, asignarlo al usuario actual
-        if (!empresaData.propietarioId && userProfile) {
-          await updateDoc(doc.ref, {
+        // Verificar si la empresa tiene propietarioId
+        if (!empresa.propietarioId) {
+          console.log(`🔧 Corrigiendo empresa "${empresa.nombre}" - asignando propietarioId`);
+          
+          const empresaRef = doc(db, "empresas", empresa.id);
+          await updateDoc(empresaRef, {
             propietarioId: userProfile.uid,
             propietarioEmail: userProfile.email,
+            propietarioRole: userProfile.role,
+            creadorId: userProfile.uid,
+            creadorEmail: userProfile.email,
+            creadorRole: userProfile.role,
             ultimaModificacion: new Date()
           });
           
-          console.log(`✅ Empresa "${empresaData.nombre}" asignada a ${userProfile.email}`);
+          // Actualizar la empresa en el array local
+          const index = empresasActualizadas.findIndex(e => e.id === empresa.id);
+          if (index !== -1) {
+            empresasActualizadas[index] = {
+              ...empresasActualizadas[index],
+              propietarioId: userProfile.uid,
+              propietarioEmail: userProfile.email,
+              propietarioRole: userProfile.role,
+              creadorId: userProfile.uid,
+              creadorEmail: userProfile.email,
+              creadorRole: userProfile.role,
+              ultimaModificacion: new Date()
+            };
+          }
+          
+          empresasCorregidas++;
+          console.log(`✅ Empresa "${empresa.nombre}" corregida y asignada a ${userProfile.email}`);
+        } else {
+          console.log(`✅ Empresa "${empresa.nombre}" ya tiene propietarioId: ${empresa.propietarioId}`);
         }
       }
+      
+      // Actualizar el estado local sin recargar desde Firestore
+      if (empresasCorregidas > 0) {
+        console.log(`🔄 Actualizando estado local con ${empresasCorregidas} empresas corregidas`);
+        setUserEmpresas(empresasActualizadas);
+      }
+      
+      console.log(`=== FIN DEBUG - Empresas corregidas: ${empresasCorregidas} ===`);
+      
+      return empresasCorregidas;
     } catch (error) {
       console.error("Error al verificar empresas:", error);
+      throw error;
     }
   };
 
