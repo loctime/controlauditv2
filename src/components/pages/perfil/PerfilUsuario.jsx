@@ -147,7 +147,10 @@ const PerfilUsuario = () => {
             puedeCrearAuditorias: true,
             puedeCompartirAuditorias: true,
             puedeAgregarSocios: true,
-            puedeGestionarUsuarios: true
+            puedeGestionarUsuarios: true,
+            puedeVerLogs: true,
+            puedeGestionarSistema: true,
+            puedeEliminarUsuarios: true
           };
           break;
         case 'operario':

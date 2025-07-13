@@ -12,6 +12,7 @@ import PerfilUsuario from "../components/pages/perfil/PerfilUsuario";
 import { OperariosManager, LogsOperarios } from '../components/pages/usuarios';
 import Dashboard from "../components/pages/dashboard/Dashboard";
 import ClienteDashboard from "../components/pages/admin/ClienteDashboard";
+import PermissionsDebug from "../components/pages/debug/PermissionsDebug";
 
 export const routes = [
   {
@@ -80,6 +81,11 @@ export const routes = [
     Element: OperariosManager,
     protected: true,
     roles: ['max']
+  },
+  {
+    id: "debug",
+    path: "/debug",
+    Element: PermissionsDebug,
   },
   {
     id: "logs",

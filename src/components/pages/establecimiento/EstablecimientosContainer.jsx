@@ -24,25 +24,24 @@ const EstablecimientosContainer = () => {
 
   const obtenerEmpresas = useCallback(async () => {
     try {
-      if (!userProfile) return;
+      console.log('=== DEBUG EstablecimientosContainer ===');
+      console.log('userProfile:', userProfile);
+      console.log('userEmpresas:', userEmpresas);
+      console.log('userEmpresas.length:', userEmpresas?.length);
       
-      const refCollection = collection(db, "empresas");
-      const querySnapshot = await getDocs(refCollection);
-      const todasLasEmpresas = querySnapshot.docs.map((empresa) => ({
-        ...empresa.data(),
-        id: empresa.id,
-      }));
+      if (!userProfile) {
+        console.log('No hay userProfile, retornando');
+        return;
+      }
       
-      // Filtrar empresas que el usuario puede ver
-      const empresasPermitidas = todasLasEmpresas.filter(empresa => 
-        canViewEmpresa(empresa.id)
-      );
-      
-      setEmpresas(empresasPermitidas);
+      // Usar directamente userEmpresas del contexto que ya está filtrado por multi-tenant
+      setEmpresas(userEmpresas || []);
+      console.log('Empresas establecidas:', userEmpresas || []);
+      console.log('=== FIN DEBUG ===');
     } catch (error) {
       console.error("Error al obtener empresas:", error);
     }
-  }, [userProfile, canViewEmpresa]);
+  }, [userProfile, userEmpresas]);
 
   useEffect(() => {
     obtenerEmpresas();
@@ -162,65 +161,79 @@ const EstablecimientosContainer = () => {
       </Box>
       <Divider sx={{ mb: 4 }} />
       <Grid container spacing={4}>
-        {empresas.map((empresa) => (
-          <Grid item xs={12} sm={6} md={4} lg={3} key={empresa.id}>
-            <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', p: 2, borderRadius: 3, boxShadow: 3 }}>
-              <Box display="flex" flexDirection="column" alignItems="center" mb={2}>
-                {empresa.logo && empresa.logo.trim() !== "" ? (
-                  <img
-                    src={empresa.logo}
-                    alt="Logo de la empresa"
-                    style={{ width: 90, height: 90, objectFit: 'contain', borderRadius: 12, marginBottom: 12, border: '1px solid #eee' }}
-                    onError={(e) => {
-                      e.target.style.display = 'none';
-                    }}
-                  />
-                ) : (
-                  <Box
-                    sx={{
-                      width: 90,
-                      height: 90,
-                      backgroundColor: "#f0f0f0",
-                      borderRadius: 2,
-                      marginBottom: 2,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      fontSize: "32px",
-                      color: "#666",
-                      border: "2px dashed #ccc"
-                    }}
-                  >
-                    {empresa.nombre.charAt(0).toUpperCase()}
-                  </Box>
-                )}
-                <Typography variant="h6" sx={{ fontWeight: 700, textAlign: 'center', mb: 1 }}>
-                  {empresa.nombre}
-                </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', mb: 0.5 }}>
-                  Dirección: {empresa.direccion}
-                </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', mb: 0.5 }}>
-                  Teléfono: {empresa.telefono}
-                </Typography>
-              </Box>
-              <Divider sx={{ my: 2 }} />
-              <CardActions sx={{ justifyContent: 'space-between', mt: 'auto' }}>
-                <Stack direction="row" spacing={1} sx={{ width: '100%' }}>
-                  <Link to={`/sucursales/${empresa.id}`} style={{ textDecoration: "none", flex: 1 }}>
-                    <Button variant="contained" color="primary" fullWidth>
-                      Sucursales
-                    </Button>
-                  </Link>
-                  <EliminarEmpresa
-                    empresaId={empresa.id}
-                    eliminarEmpresa={eliminarEmpresa}
-                  />
-                </Stack>
-              </CardActions>
-            </Card>
+        {console.log('Renderizando empresas:', empresas)}
+        {empresas.length === 0 ? (
+          <Grid item xs={12}>
+            <Box sx={{ textAlign: 'center', py: 4 }}>
+              <Typography variant="h6" color="text.secondary">
+                No hay empresas registradas
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                Haz clic en "Agregar Empresa" para crear tu primera empresa
+              </Typography>
+            </Box>
           </Grid>
-        ))}
+        ) : (
+          empresas.map((empresa) => (
+            <Grid item xs={12} sm={6} md={4} lg={3} key={empresa.id}>
+              <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', p: 2, borderRadius: 3, boxShadow: 3 }}>
+                <Box display="flex" flexDirection="column" alignItems="center" mb={2}>
+                  {empresa.logo && empresa.logo.trim() !== "" ? (
+                    <img
+                      src={empresa.logo}
+                      alt="Logo de la empresa"
+                      style={{ width: 90, height: 90, objectFit: 'contain', borderRadius: 12, marginBottom: 12, border: '1px solid #eee' }}
+                      onError={(e) => {
+                        e.target.style.display = 'none';
+                      }}
+                    />
+                  ) : (
+                    <Box
+                      sx={{
+                        width: 90,
+                        height: 90,
+                        backgroundColor: "#f0f0f0",
+                        borderRadius: 2,
+                        marginBottom: 2,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontSize: "32px",
+                        color: "#666",
+                        border: "2px dashed #ccc"
+                      }}
+                    >
+                      {empresa.nombre.charAt(0).toUpperCase()}
+                    </Box>
+                  )}
+                  <Typography variant="h6" sx={{ fontWeight: 700, textAlign: 'center', mb: 1 }}>
+                    {empresa.nombre}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', mb: 0.5 }}>
+                    Dirección: {empresa.direccion}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', mb: 0.5 }}>
+                    Teléfono: {empresa.telefono}
+                  </Typography>
+                </Box>
+                <Divider sx={{ my: 2 }} />
+                <CardActions sx={{ justifyContent: 'space-between', mt: 'auto' }}>
+                  <Stack direction="row" spacing={1} sx={{ width: '100%' }}>
+                    <Link to={`/sucursales/${empresa.id}`} style={{ textDecoration: "none", flex: 1 }}>
+                      <Button variant="contained" color="primary" fullWidth>
+                        Sucursales
+                      </Button>
+                    </Link>
+                    <EliminarEmpresa
+                      empresaId={empresa.id}
+                      eliminarEmpresa={eliminarEmpresa}
+                    />
+                  </Stack>
+                </CardActions>
+              </Card>
+            </Grid>
+          ))
+        )}
       </Grid>
       {openModal && (
         <AddEmpresaModal

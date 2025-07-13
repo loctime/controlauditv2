@@ -5,6 +5,7 @@ import Login from "../components/pages/login/Login";
 import Register from "../components/pages/register/Register";
 import ForgotPassword from "../components/pages/forgotPassword/ForgotPassword";
 import ProtectedUsers from "./ProtectedUsers";
+import DashboardProtected from "./DashboardProtected";
 
 const AppRouter = () => {
   return (
@@ -18,7 +19,19 @@ const AppRouter = () => {
       <Route element={<ProtectedUsers />}>
         <Route element={<Navbar />}>
           {routes.map(({ id, path, Element }) => (
-            <Route key={id} path={path} element={<Element />} />
+            <Route 
+              key={id} 
+              path={path} 
+              element={
+                path === "/dashboard" ? (
+                  <DashboardProtected>
+                    <Element />
+                  </DashboardProtected>
+                ) : (
+                  <Element />
+                )
+              } 
+            />
           ))}
         </Route>
       </Route>

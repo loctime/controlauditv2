@@ -15,89 +15,45 @@ const SucursalForm = ({ agregarSucursal, empresaId }) => {
     empresa: "",
   });
   const navigate = useNavigate();
-  const { userProfile, role } = useAuth();
+  const { userProfile, role, userEmpresas } = useAuth();
 
   useEffect(() => {
     const obtenerEmpresas = async () => {
       try {
+        console.log('=== DEBUG SucursalForm ===');
+        console.log('userProfile:', userProfile);
+        console.log('userEmpresas:', userEmpresas);
+        console.log('empresaId:', empresaId);
+        
         // Si no hay usuario autenticado, no cargar nada
         if (!userProfile) {
+          console.log('No hay userProfile');
           setEmpresas([]);
           return;
         }
 
-        let empresasData = [];
-
-        // Aplicar filtrado multi-tenant según el rol
-        if (role === 'supermax') {
-          // Super administradores ven todas las empresas
-          const empresasSnapshot = await getDocs(collection(db, "empresas"));
-          empresasData = empresasSnapshot.docs.map(doc => ({
-            id: doc.id,
-            nombre: doc.data().nombre,
-            logo: doc.data().logo || ""
-          }));
-        } else if (role === 'max') {
-          // Clientes administradores ven sus empresas y las de sus usuarios operarios
-          // Obtener sus propias empresas
-          const empresasRef = collection(db, "empresas");
-          const empresasQuery = query(empresasRef, where("propietarioId", "==", userProfile.uid));
-          const empresasSnapshot = await getDocs(empresasQuery);
-          const misEmpresas = empresasSnapshot.docs.map(doc => ({
-            id: doc.id,
-            nombre: doc.data().nombre,
-            logo: doc.data().logo || ""
-          }));
-
-          // Obtener usuarios operarios del cliente administrador
-          const usuariosRef = collection(db, "usuarios");
-          const usuariosQuery = query(usuariosRef, where("clienteAdminId", "==", userProfile.uid));
-          const usuariosSnapshot = await getDocs(usuariosQuery);
-          const usuariosOperarios = usuariosSnapshot.docs.map(doc => doc.id);
-
-          // Obtener empresas de los usuarios operarios (solo si hay usuarios operarios)
-          let empresasOperarios = [];
-          if (usuariosOperarios.length > 0) {
-            const empresasOperariosQuery = query(empresasRef, where("propietarioId", "in", usuariosOperarios));
-            const empresasOperariosSnapshot = await getDocs(empresasOperariosQuery);
-            empresasOperarios = empresasOperariosSnapshot.docs.map(doc => ({
-              id: doc.id,
-              nombre: doc.data().nombre,
-              logo: doc.data().logo || ""
-            }));
-          }
-
-          // Combinar todas las empresas que puede ver
-          empresasData = [...misEmpresas, ...empresasOperarios];
-        } else if (role === 'operario') {
-          // Usuarios operarios ven empresas de su cliente administrador
-          if (userProfile.clienteAdminId) {
-            const empresasRef = collection(db, "empresas");
-            const empresasQuery = query(empresasRef, where("propietarioId", "==", userProfile.clienteAdminId));
-            const empresasSnapshot = await getDocs(empresasQuery);
-            empresasData = empresasSnapshot.docs.map(doc => ({
-              id: doc.id,
-              nombre: doc.data().nombre,
-              logo: doc.data().logo || ""
-            }));
-          }
-        }
-
+        // Usar userEmpresas del contexto que ya está filtrado por multi-tenant
+        const empresasData = userEmpresas || [];
+        console.log('Empresas disponibles:', empresasData);
+        
         setEmpresas(empresasData);
         
         // Si hay empresaId, seleccionarla automáticamente
         if (empresaId) {
           const empresa = empresasData.find(e => e.id === empresaId);
+          console.log('Empresa encontrada para empresaId:', empresa);
           setEmpresaSeleccionada(empresa);
           setSucursal((prev) => ({ ...prev, empresa: empresa ? empresa.nombre : "" }));
         }
+        
+        console.log('=== FIN DEBUG ===');
       } catch (error) {
         console.error("Error al obtener empresas:", error);
       }
     };
     obtenerEmpresas();
     // eslint-disable-next-line
-  }, [empresaId, userProfile, role]);
+  }, [empresaId, userProfile, userEmpresas]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -145,6 +101,7 @@ const SucursalForm = ({ agregarSucursal, empresaId }) => {
                 <MenuItem value="">
                   <em>Seleccione una empresa</em>
                 </MenuItem>
+                {console.log('Empresas en selector:', empresas)}
                 {empresas.map((empresa) => (
                   <MenuItem key={empresa.id} value={empresa.nombre}>
                     {empresa.nombre}

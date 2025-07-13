@@ -17,7 +17,7 @@ export const getMenuItems = (role, permisos = {}) => {
       path: "/dashboard",
       title: "Panel de Control",
       Icon: HomeIcon,
-      roles: ['operario', 'max', 'supermax'],
+      roles: ['supermax'],
       required: true
     },
     {
@@ -45,7 +45,7 @@ export const getMenuItems = (role, permisos = {}) => {
       title: "Auditoría",
       Icon: ChecklistIcon,
       roles: ['operario', 'max', 'supermax'],
-      required: permisos.puedeCrearAuditorias || role === 'supermax'
+      required: permisos.puedeCrearAuditorias || role === 'max' || role === 'supermax'
     }
   ];
 
@@ -75,7 +75,7 @@ export const getMenuItems = (role, permisos = {}) => {
       title: "Establecimientos",
       Icon: BusinessIcon,
       roles: ['max', 'supermax'],
-      required: permisos.puedeCrearEmpresas || role === 'supermax'
+      required: permisos.puedeCrearEmpresas || role === 'max' || role === 'supermax'
     },
     {
       id: "sucursal",
@@ -83,7 +83,7 @@ export const getMenuItems = (role, permisos = {}) => {
       title: "Sucursales",
       Icon: BusinessIcon,
       roles: ['max', 'supermax'],
-      required: permisos.puedeCrearSucursales || role === 'supermax'
+      required: permisos.puedeCrearSucursales || role === 'max' || role === 'supermax'
     }
   ];
 
@@ -94,7 +94,7 @@ export const getMenuItems = (role, permisos = {}) => {
       title: "Reporte",
       Icon: PictureAsPdfIcon,
       roles: ['operario', 'max', 'supermax'],
-      required: permisos.puedeCrearAuditorias || role === 'supermax'
+      required: permisos.puedeCrearAuditorias || role === 'max' || role === 'supermax'
     }
   ];
 
@@ -105,7 +105,15 @@ export const getMenuItems = (role, permisos = {}) => {
       title: "Usuarios",
       Icon: BadgeOutlinedIcon,
       roles: ['max', 'supermax'],
-      required: permisos.puedeGestionarUsuarios || role === 'supermax'
+      required: permisos.puedeGestionarUsuarios || role === 'max' || role === 'supermax'
+    },
+    {
+      id: "operarios",
+      path: "/usuarios/operarios",
+      title: "Gestión de Operarios",
+      Icon: BadgeOutlinedIcon,
+      roles: ['max', 'supermax'],
+      required: permisos.puedeGestionarUsuarios || role === 'max' || role === 'supermax'
     }
   ];
 

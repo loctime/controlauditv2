@@ -1,11 +1,12 @@
 // src/pages/Dashboard.jsx
 import React, { useContext, useState } from "react";
-import { Typography, Box, Grid, Paper, Alert, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Button, TextField, Dialog, DialogTitle, DialogContent, DialogActions, Card, CardContent } from "@mui/material";
+import { Typography, Box, Grid, Paper, Alert, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Button, TextField, Dialog, DialogTitle, DialogContent, DialogActions, Card, CardContent, Tabs, Tab } from "@mui/material";
 import { AuthContext } from "../../context/AuthContext";
 import { collection, addDoc, setDoc, doc, updateDoc, query, where, getDocs } from "firebase/firestore";
 import { db, signUp } from "../../../firebaseConfig";
 import { toast } from 'react-toastify';
 import { verifyAdminCode, verifySuperAdminCode } from "../../../config/admin";
+import GestionClientes from "./GestionClientes";
 
 const empresasEjemplo = [
   {
@@ -34,6 +35,7 @@ function Dashboard() {
   const [form, setForm] = useState({ nombre: '', email: '', sociosMaximos: 1, password: '' });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [tabValue, setTabValue] = useState(0);
 
   const handleOpenDialog = () => setOpenDialog(true);
   const handleCloseDialog = () => {
@@ -83,7 +85,10 @@ function Dashboard() {
           puedeCrearAuditorias: true,
           puedeCompartirAuditorias: true,
           puedeAgregarSocios: true,
-          puedeGestionarUsuarios: true
+          puedeGestionarUsuarios: true,
+          puedeVerLogs: true,
+          puedeGestionarSistema: true,
+          puedeEliminarUsuarios: true
         };
         toast.success('¡Código válido! Rol actualizado a Cliente Administrador (max). Recarga la página para ver los cambios.');
       }
@@ -153,10 +158,21 @@ function Dashboard() {
         email: form.email,
         empresaId: empresaRef.id,
         role: 'max',
+        plan: 'estandar',
+        limiteUsuarios: Number(form.sociosMaximos),
+        usuariosActivos: 0,
+        fechaCreacion: new Date(),
+        estadoPago: 'al_dia',
         permisos: {
-          puedeAgregarEmpresas: true,
-          puedeAgregarFormularios: true,
-          puedeHacerAuditorias: true
+          puedeCrearEmpresas: true,
+          puedeCrearSucursales: true,
+          puedeCrearAuditorias: true,
+          puedeCompartirAuditorias: true,
+          puedeAgregarSocios: true,
+          puedeGestionarUsuarios: true,
+          puedeVerLogs: true,
+          puedeGestionarSistema: true,
+          puedeEliminarUsuarios: true
         }
       });
       setOpenDialog(false);
@@ -169,23 +185,41 @@ function Dashboard() {
     }
   };
 
-  // Solo developers pueden ver el dashboard
+  // Solo super administradores pueden ver el dashboard
   if (role !== 'supermax') {
     return (
       <Box sx={{ p: 4 }}>
         <Typography variant="h4" color="error">
-          Acceso denegado: Solo los developers pueden ver el Dashboard.
+          Acceso denegado: Solo los Super Administradores (supermax) pueden ver el Dashboard.
         </Typography>
       </Box>
     );
   }
 
+  const handleTabChange = (event, newValue) => {
+    setTabValue(newValue);
+  };
+
   return (
     <Box sx={{ padding: 4 }}>
       <Typography variant="h4" gutterBottom>Dashboard Dueño del Sistema</Typography>
-      <Button variant="contained" color="primary" sx={{ mb: 2 }} onClick={handleOpenDialog}>
-        Agregar Empresa / Usuario Principal
-      </Button>
+      
+      <Tabs value={tabValue} onChange={handleTabChange} sx={{ mb: 3 }}>
+        <Tab label="Crear Cliente" />
+        <Tab label="Gestión de Clientes" />
+      </Tabs>
+
+      {tabValue === 0 && (
+        <>
+          <Button variant="contained" color="primary" sx={{ mb: 2 }} onClick={handleOpenDialog}>
+            Agregar Empresa / Usuario Principal
+          </Button>
+        </>
+      )}
+
+      {tabValue === 1 && (
+        <GestionClientes />
+      )}
       <Dialog open={openDialog} onClose={handleCloseDialog}>
         <DialogTitle>Agregar Empresa y Usuario Principal</DialogTitle>
         <form onSubmit={handleSubmit}>

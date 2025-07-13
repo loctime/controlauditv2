@@ -122,10 +122,14 @@ const AuthContextComponent = ({ children }) => {
           socios: [], // IDs de usuarios que son socios
           permisos: {
             puedeCrearEmpresas: true,
+            puedeCrearSucursales: true,
+            puedeCrearAuditorias: true,
             puedeCompartirAuditorias: true,
             puedeAgregarSocios: true,
-            puedeCrearAuditorias: true,
-            puedeCrearSucursales: true
+            puedeGestionarUsuarios: true,
+            puedeVerLogs: true,
+            puedeGestionarSistema: true,
+            puedeEliminarUsuarios: true
           },
           configuracion: {
             notificaciones: true,
@@ -145,17 +149,56 @@ const AuthContextComponent = ({ children }) => {
     }
   };
 
-  // Función para obtener empresas del usuario
+  // Función para obtener empresas del usuario (multi-tenant)
   const getUserEmpresas = async (userId) => {
     try {
+      console.log('=== DEBUG getUserEmpresas ===');
+      console.log('userId:', userId);
+      console.log('role:', role);
+      console.log('userProfile:', userProfile);
+      
       const empresasRef = collection(db, "empresas");
-      const q = query(empresasRef, where("propietarioId", "==", userId));
-      const snapshot = await getDocs(q);
+      let snapshot;
+      
+      // Si es supermax, ve todas las empresas
+      if (role === 'supermax') {
+        console.log('Acceso: supermax - ve todas las empresas');
+        snapshot = await getDocs(empresasRef);
+      } 
+      // Si es max, solo ve sus propias empresas
+      else if (role === 'max') {
+        console.log('Acceso: max - ve sus propias empresas');
+        const q = query(empresasRef, where("propietarioId", "==", userId));
+        snapshot = await getDocs(q);
+      }
+      // Si es operario, ve empresas de su cliente admin
+      else {
+        console.log('Acceso: operario - ve empresas de su cliente admin');
+        const userRef = doc(db, "usuarios", userId);
+        const userSnap = await getDoc(userRef);
+        if (userSnap.exists()) {
+          const userData = userSnap.data();
+          const clienteAdminId = userData.clienteAdminId;
+          console.log('clienteAdminId:', clienteAdminId);
+          if (clienteAdminId) {
+            const q = query(empresasRef, where("propietarioId", "==", clienteAdminId));
+            snapshot = await getDocs(q);
+          } else {
+            snapshot = { docs: [] }; // No tiene acceso
+          }
+        } else {
+          snapshot = { docs: [] };
+        }
+      }
       
       const empresas = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       }));
+      
+      console.log('Empresas encontradas:', empresas.length);
+      console.log('Empresas:', empresas);
+      console.log('=== FIN DEBUG ===');
       
       setUserEmpresas(empresas);
       return empresas;
@@ -165,12 +208,44 @@ const AuthContextComponent = ({ children }) => {
     }
   };
 
-  // Función para obtener auditorías del usuario
+  // Función para obtener auditorías del usuario (multi-tenant)
   const getUserAuditorias = async (userId) => {
     try {
       const auditoriasRef = collection(db, "reportes");
-      const q = query(auditoriasRef, where("usuarioId", "==", userId));
-      const snapshot = await getDocs(q);
+      let snapshot;
+      
+      // Si es supermax, ve todas las auditorías
+      if (role === 'supermax') {
+        snapshot = await getDocs(auditoriasRef);
+      } 
+      // Si es max, ve sus propias auditorías y las de sus operarios
+      else if (role === 'max') {
+        // Obtener auditorías propias
+        const qPropias = query(auditoriasRef, where("usuarioId", "==", userId));
+        const snapshotPropias = await getDocs(qPropias);
+        
+        // Obtener auditorías de sus operarios
+        const usuariosRef = collection(db, "usuarios");
+        const qOperarios = query(usuariosRef, where("clienteAdminId", "==", userId));
+        const snapshotOperarios = await getDocs(qOperarios);
+        const operariosIds = snapshotOperarios.docs.map(doc => doc.id);
+        
+        let auditoriasOperarios = [];
+        if (operariosIds.length > 0) {
+          const qAuditoriasOperarios = query(auditoriasRef, where("usuarioId", "in", operariosIds));
+          const snapshotAuditoriasOperarios = await getDocs(qAuditoriasOperarios);
+          auditoriasOperarios = snapshotAuditoriasOperarios.docs;
+        }
+        
+        // Combinar auditorías propias y de operarios
+        const todasLasAuditorias = [...snapshotPropias.docs, ...auditoriasOperarios];
+        snapshot = { docs: todasLasAuditorias };
+      }
+      // Si es operario, ve sus propias auditorías
+      else {
+        const q = query(auditoriasRef, where("usuarioId", "==", userId));
+        snapshot = await getDocs(q);
+      }
       
       const auditorias = snapshot.docs.map(doc => ({
         id: doc.id,
@@ -315,7 +390,7 @@ const AuthContextComponent = ({ children }) => {
     }
   };
 
-  // Función para crear empresa
+  // Función para crear empresa (multi-tenant)
   const crearEmpresa = async (empresaData) => {
     try {
       const empresaRef = collection(db, "empresas");
@@ -323,6 +398,7 @@ const AuthContextComponent = ({ children }) => {
         ...empresaData,
         propietarioId: user.uid,
         propietarioEmail: user.email,
+        propietarioRole: role, // Agregar el rol del propietario
         createdAt: new Date(),
         socios: [user.uid] // El propietario es el primer socio
       };
@@ -360,13 +436,15 @@ const AuthContextComponent = ({ children }) => {
       const q = query(usuariosRef, where("email", "==", email));
       const snapshot = await getDocs(q);
       if (!snapshot.empty) throw new Error("El usuario ya existe");
-      // Crear perfil básico
+      
+      // Crear perfil básico con clienteAdminId
       const newOperario = {
         uid: null, // Se asignará al registrarse
         email,
         displayName,
         createdAt: new Date(),
         role: 'operario',
+        clienteAdminId: user.uid, // Asignar al cliente admin actual
         empresas: [],
         auditorias: [],
         socios: [],

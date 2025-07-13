@@ -16,7 +16,9 @@ export const isSuperAdmin = (userProfile) => {
 
 // Función para obtener el rol del usuario
 export const getUserRole = (userEmail) => {
-  return 'operario'; // Por defecto todos son operarios
+  // Por defecto, usuarios nuevos tienen rol 'max' (cliente administrador)
+  // con todos los permisos habilitados
+  return 'max';
 };
 
 // Función para verificar código de activación de cliente administrador
@@ -40,7 +42,10 @@ export const activateAdmin = async (userProfile, code) => {
         puedeCrearAuditorias: true,
         puedeCompartirAuditorias: true,
         puedeAgregarSocios: true,
-        puedeGestionarUsuarios: true
+        puedeGestionarUsuarios: true,
+        puedeVerLogs: true,
+        puedeGestionarSistema: true,
+        puedeEliminarUsuarios: true
       }
     };
   }

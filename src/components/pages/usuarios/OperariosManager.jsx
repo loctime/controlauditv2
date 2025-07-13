@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Checkbox, Button, TextField, Typography, Box } from '@mui/material';
+import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Checkbox, Button, TextField, Typography, Box, Alert } from '@mui/material';
 import { useAuth } from '../../context/AuthContext';
 import { toast } from 'react-toastify';
-import { collection, getDocs } from 'firebase/firestore';
+import { collection, getDocs, query, where, doc, getDoc } from 'firebase/firestore';
 import { db } from '../../../firebaseConfig';
 
 const PERMISOS_LISTA = [
@@ -19,6 +19,7 @@ const OperariosManager = () => {
   const [loading, setLoading] = useState(true);
   const [nuevoEmail, setNuevoEmail] = useState('');
   const [editando, setEditando] = useState({});
+  const [limiteUsuarios, setLimiteUsuarios] = useState(10);
 
   // Cargar operarios con filtrado multi-tenant
   const fetchOperarios = async () => {
@@ -38,6 +39,15 @@ const OperariosManager = () => {
       // Super administradores ven todos los operarios (no se filtra)
 
       setOperarios(lista);
+      
+      // Obtener límite de usuarios del cliente admin
+      if (role === 'max' && userProfile?.uid) {
+        const userRef = doc(db, 'usuarios', userProfile.uid);
+        const userSnap = await getDoc(userRef);
+        if (userSnap.exists()) {
+          setLimiteUsuarios(userSnap.data()?.limiteUsuarios || 10);
+        }
+      }
     } catch (e) {
       toast.error('Error al cargar operarios');
     } finally {
@@ -52,7 +62,24 @@ const OperariosManager = () => {
   // Crear operario
   const handleCrearOperario = async () => {
     if (!nuevoEmail) return;
+    
     try {
+      // Verificar límite de usuarios
+      const usuariosRef = collection(db, 'usuarios');
+      const qOperarios = query(usuariosRef, where('clienteAdminId', '==', userProfile?.uid));
+      const snapshotOperarios = await getDocs(qOperarios);
+      const usuariosActuales = snapshotOperarios.size;
+      
+      // Obtener límite del cliente admin
+      const userRef = doc(db, 'usuarios', userProfile?.uid);
+      const userSnap = await getDoc(userRef);
+      const limiteUsuarios = userSnap.data()?.limiteUsuarios || 10;
+      
+      if (usuariosActuales >= limiteUsuarios) {
+        toast.error(`Límite de usuarios alcanzado (${limiteUsuarios}). Contacta al administrador para aumentar tu límite.`);
+        return;
+      }
+      
       await crearOperario(nuevoEmail);
       toast.success('Operario creado');
       setNuevoEmail('');
@@ -99,14 +126,34 @@ const OperariosManager = () => {
   return (
     <Box>
       <Typography variant="h5" sx={{ mb: 2 }}>Gestión de Operarios</Typography>
+      
+      {/* Información de límites */}
+      {role === 'max' && (
+        <Alert severity="info" sx={{ mb: 2 }}>
+          Usuarios actuales: {operarios.length} / {limiteUsuarios}
+          {operarios.length >= limiteUsuarios && (
+            <Typography variant="body2" color="error" sx={{ mt: 1 }}>
+              Has alcanzado tu límite de usuarios. Contacta al administrador para aumentar tu límite.
+            </Typography>
+          )}
+        </Alert>
+      )}
+      
       <Box display="flex" gap={2} mb={2}>
         <TextField
           label="Email del nuevo operario"
           value={nuevoEmail}
           onChange={e => setNuevoEmail(e.target.value)}
           size="small"
+          disabled={role === 'max' && operarios.length >= limiteUsuarios}
         />
-        <Button variant="contained" onClick={handleCrearOperario}>Crear Operario</Button>
+        <Button 
+          variant="contained" 
+          onClick={handleCrearOperario}
+          disabled={role === 'max' && operarios.length >= limiteUsuarios}
+        >
+          Crear Operario
+        </Button>
       </Box>
       <TableContainer component={Paper}>
         <Table>

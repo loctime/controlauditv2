@@ -40,6 +40,7 @@ function Navbar(props) {
   console.log('Rol:', role);
   console.log('Permisos:', permisos);
   console.log('Menú generado:', menuItems.map(item => item.title));
+  console.log('Total de items en menú:', menuItems.length);
   console.log('==================================');
 
   const handleDrawerToggle = () => {
