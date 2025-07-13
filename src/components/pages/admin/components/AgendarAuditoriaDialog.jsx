@@ -28,7 +28,7 @@ const AgendarAuditoriaDialog = ({ open, onClose, onSave, empresas, sucursales, f
     descripcion: ''
   });
 
-  // Función para obtener el nombre del día
+  // Función para obtener el nombre del días
   const getNombreDia = (fechaStr) => {
     if (!fechaStr) return '';
     const fecha = new Date(fechaStr);

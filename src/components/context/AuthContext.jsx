@@ -20,6 +20,8 @@ const AuthContextComponent = ({ children }) => {
   const [auditoriasCompartidas, setAuditoriasCompartidas] = useState([]);
   const [role, setRole] = useState(null); // NUEVO: rol del usuario
   const [permisos, setPermisos] = useState({}); // NUEVO: permisos del usuario
+  const [bloqueado, setBloqueado] = useState(false);
+  const [motivoBloqueo, setMotivoBloqueo] = useState('');
 
   useEffect(() => {
     // Escuchar cambios en el estado de autenticación de Firebase
@@ -58,6 +60,55 @@ const AuthContextComponent = ({ children }) => {
 
     return () => unsubscribe();
   }, []);
+
+  useEffect(() => {
+    // Lógica de bloqueo de acceso por estado de pago
+    const verificarBloqueo = async () => {
+      if (!userProfile) {
+        setBloqueado(false);
+        setMotivoBloqueo('');
+        return;
+      }
+      // Si es supermax, nunca se bloquea
+      if (userProfile.role === 'supermax') {
+        setBloqueado(false);
+        setMotivoBloqueo('');
+        return;
+      }
+      // Si es max, verificar estado de pago y activo
+      if (userProfile.role === 'max') {
+        if (
+          userProfile.activo === false ||
+          userProfile.estadoPago === 'vencido' ||
+          (userProfile.fechaVencimiento && userProfile.fechaVencimiento.toDate && new Date(userProfile.fechaVencimiento.toDate()) < new Date())
+        ) {
+          setBloqueado(true);
+          setMotivoBloqueo('Tu suscripción está vencida o inactiva. Contacta al administrador para regularizar tu acceso.');
+          return;
+        }
+      }
+      // Si es operario, buscar el cliente admin y verificar su estado
+      if (userProfile.role === 'operario' && userProfile.clienteAdminId) {
+        const adminRef = doc(db, 'usuarios', userProfile.clienteAdminId);
+        const adminSnap = await getDoc(adminRef);
+        if (adminSnap.exists()) {
+          const adminData = adminSnap.data();
+          if (
+            adminData.activo === false ||
+            adminData.estadoPago === 'vencido' ||
+            (adminData.fechaVencimiento && adminData.fechaVencimiento.toDate && new Date(adminData.fechaVencimiento.toDate()) < new Date())
+          ) {
+            setBloqueado(true);
+            setMotivoBloqueo('El cliente administrador de tu cuenta tiene la suscripción vencida o inactiva. No puedes acceder al sistema.');
+            return;
+          }
+        }
+      }
+      setBloqueado(false);
+      setMotivoBloqueo('');
+    };
+    verificarBloqueo();
+  }, [userProfile]);
 
   const handleLogin = (userLogged) => {
     setUser(userLogged);
@@ -686,7 +737,9 @@ const AuthContextComponent = ({ children }) => {
     asignarUsuarioAClienteAdmin,
     getUsuariosDeClienteAdmin,
     getFormulariosDeClienteAdmin,
-    verificarYCorregirEmpresas
+    verificarYCorregirEmpresas,
+    bloqueado,
+    motivoBloqueo
   };
 
   return <AuthContext.Provider value={data}>{children}</AuthContext.Provider>;

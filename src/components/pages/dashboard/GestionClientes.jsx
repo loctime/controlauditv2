@@ -23,7 +23,8 @@ import {
   Alert,
   Switch,
   FormControlLabel,
-  Tooltip
+  Tooltip,
+  Collapse
 } from '@mui/material';
 import {
   Edit as EditIcon,
@@ -33,11 +34,13 @@ import {
   Payment as PaymentIcon,
   Warning as WarningIcon,
   Error as ErrorIcon,
-  PlayArrow as DemoIcon
+  PlayArrow as DemoIcon,
+  ExpandMore as ExpandMoreIcon
 } from '@mui/icons-material';
 import { collection, getDocs, updateDoc, doc, query, where, Timestamp } from 'firebase/firestore';
 import { db } from '../../../firebaseConfig';
 import { toast } from 'react-toastify';
+import HistorialPagosModal from './HistorialPagosModal';
 
 const GestionClientes = () => {
   const [clientes, setClientes] = useState([]);
@@ -52,6 +55,10 @@ const GestionClientes = () => {
     esDemo: false,
     activo: true
   });
+  const [openHistorial, setOpenHistorial] = useState(false);
+  const [clienteHistorial, setClienteHistorial] = useState(null);
+  const [expandedRows, setExpandedRows] = useState({});
+  const [operariosPorCliente, setOperariosPorCliente] = useState({});
 
   // Cargar todos los clientes (max)
   const cargarClientes = async () => {
@@ -90,6 +97,27 @@ const GestionClientes = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Cargar operarios de un cliente
+  const cargarOperarios = async (clienteId) => {
+    if (operariosPorCliente[clienteId]) return; // Ya cargados
+    try {
+      const usuariosRef = collection(db, 'usuarios');
+      const q = query(usuariosRef, where('clienteAdminId', '==', clienteId), where('role', '==', 'operario'));
+      const snapshot = await getDocs(q);
+      setOperariosPorCliente(prev => ({
+        ...prev,
+        [clienteId]: snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+      }));
+    } catch (error) {
+      toast.error('Error al cargar operarios');
+    }
+  };
+
+  const handleExpandRow = (clienteId) => {
+    setExpandedRows(prev => ({ ...prev, [clienteId]: !prev[clienteId] }));
+    if (!operariosPorCliente[clienteId]) cargarOperarios(clienteId);
   };
 
   useEffect(() => {
@@ -374,105 +402,15 @@ const GestionClientes = () => {
                   Math.ceil((fechaVencimiento - new Date()) / (1000 * 60 * 60 * 24)) : 0;
                 
                 return (
-                  <TableRow key={cliente.id}>
-                    <TableCell>
-                      <Tooltip title={`Estado: ${cliente.semaforo}`}>
-                        <IconButton 
-                          color={getSemaforoColor(cliente.semaforo)}
-                          size="small"
-                        >
-                          {getSemaforoIcon(cliente.semaforo)}
-                        </IconButton>
-                      </Tooltip>
-                    </TableCell>
-                    <TableCell>
-                      <Typography variant="subtitle2">
-                        {cliente.nombre || cliente.displayName || 'Sin nombre'}
-                      </Typography>
-                      <Chip 
-                        label={cliente.activo ? 'Activo' : 'Inactivo'} 
-                        color={cliente.activo ? 'success' : 'error'}
-                        size="small"
-                        sx={{ mt: 0.5 }}
-                      />
-                    </TableCell>
-                    <TableCell>{cliente.email}</TableCell>
-                    <TableCell>
-                      <Chip 
-                        label={cliente.plan || 'estandar'} 
-                        color={getPlanColor(cliente.plan)}
-                        size="small"
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Typography variant="body2">
-                        {cliente.usuariosActivos} / {cliente.limiteUsuarios || 10}
-                      </Typography>
-                      {cliente.usuariosActivos > (cliente.limiteUsuarios || 10) && (
-                        <Alert severity="warning" sx={{ mt: 1, fontSize: '0.75rem' }}>
-                          Límite excedido
-                        </Alert>
-                      )}
-                    </TableCell>
-                    <TableCell>{cliente.empresasCount || 0}</TableCell>
-                    <TableCell>
-                      <Chip 
-                        label={cliente.estadoPago || 'al_dia'} 
-                        color={getEstadoPagoColor(cliente.estadoPago)}
-                        size="small"
-                      />
-                    </TableCell>
-                    <TableCell>
-                      {fechaVencimiento ? (
-                        <Box>
-                          <Typography variant="body2">
-                            {fechaVencimiento.toLocaleDateString()}
-                          </Typography>
-                          <Typography 
-                            variant="caption" 
-                            color={diasRestantes <= 7 ? 'error' : 'text.secondary'}
-                          >
-                            {diasRestantes > 0 ? `${diasRestantes} días` : 'Vencido'}
-                          </Typography>
-                        </Box>
-                      ) : (
-                        'N/A'
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <Chip 
-                        label={cliente.esDemo ? 'Sí' : 'No'} 
-                        color={cliente.esDemo ? 'warning' : 'default'}
-                        size="small"
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Box display="flex" gap={1}>
-                        <Tooltip title="Editar">
+                  <React.Fragment key={cliente.id}>
+                    <TableRow>
+                      <TableCell>
+                        <Tooltip title={`Estado: ${cliente.semaforo}`}>
                           <IconButton 
-                            onClick={() => handleEditCliente(cliente)}
-                            color="primary"
+                            color={getSemaforoColor(cliente.semaforo)}
                             size="small"
                           >
-                            <EditIcon />
-                          </IconButton>
-                        </Tooltip>
-                        <Tooltip title="Procesar Pago">
-                          <IconButton 
-                            onClick={() => handlePago(cliente)}
-                            color="success"
-                            size="small"
-                          >
-                            <PaymentIcon />
-                          </IconButton>
-                        </Tooltip>
-                        <Tooltip title="Activar Demo">
-                          <IconButton 
-                            onClick={() => handleDemo(cliente)}
-                            color="warning"
-                            size="small"
-                          >
-                            <DemoIcon />
+                            {getSemaforoIcon(cliente.semaforo)}
                           </IconButton>
                         </Tooltip>
                         <Tooltip title={cliente.activo ? 'Desactivar' : 'Activar'}>
@@ -484,9 +422,165 @@ const GestionClientes = () => {
                             {cliente.activo ? <BlockIcon /> : <CheckIcon />}
                           </IconButton>
                         </Tooltip>
-                      </Box>
-                    </TableCell>
-                  </TableRow>
+                        <Tooltip title="Ver historial de pagos y acciones">
+                          <IconButton
+                            onClick={() => {
+                              setClienteHistorial(cliente);
+                              setOpenHistorial(true);
+                            }}
+                            color="info"
+                            size="small"
+                          >
+                            <span role="img" aria-label="historial">📜</span>
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip title={cliente.activo ? 'Desactivar' : 'Activar'}>
+                          <IconButton 
+                            onClick={() => handleToggleActivo(cliente)}
+                            color={cliente.activo ? 'error' : 'success'}
+                            size="small"
+                          >
+                            {cliente.activo ? <BlockIcon /> : <CheckIcon />}
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Ver operarios">
+                          <IconButton
+                            onClick={() => handleExpandRow(cliente.id)}
+                            color="primary"
+                            size="small"
+                          >
+                            <ExpandMoreIcon
+                              style={{ transform: expandedRows[cliente.id] ? 'rotate(180deg)' : 'rotate(0deg)', transition: '0.2s' }}
+                            />
+                          </IconButton>
+                        </Tooltip>
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="subtitle2">
+                          {cliente.nombre || cliente.displayName || 'Sin nombre'}
+                        </Typography>
+                        <Chip 
+                          label={cliente.activo ? 'Activo' : 'Inactivo'} 
+                          color={cliente.activo ? 'success' : 'error'}
+                          size="small"
+                          sx={{ mt: 0.5 }}
+                        />
+                      </TableCell>
+                      <TableCell>{cliente.email}</TableCell>
+                      <TableCell>
+                        <Chip 
+                          label={cliente.plan || 'estandar'} 
+                          color={getPlanColor(cliente.plan)}
+                          size="small"
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="body2">
+                          {cliente.usuariosActivos} / {cliente.limiteUsuarios || 10}
+                        </Typography>
+                        {cliente.usuariosActivos > (cliente.limiteUsuarios || 10) && (
+                          <Alert severity="warning" sx={{ mt: 1, fontSize: '0.75rem' }}>
+                            Límite excedido
+                          </Alert>
+                        )}
+                      </TableCell>
+                      <TableCell>{cliente.empresasCount || 0}</TableCell>
+                      <TableCell>
+                        <Chip 
+                          label={cliente.estadoPago || 'al_dia'} 
+                          color={getEstadoPagoColor(cliente.estadoPago)}
+                          size="small"
+                        />
+                      </TableCell>
+                      <TableCell>
+                        {fechaVencimiento ? (
+                          <Box>
+                            <Typography variant="body2">
+                              {fechaVencimiento.toLocaleDateString()}
+                            </Typography>
+                            <Typography 
+                              variant="caption" 
+                              color={diasRestantes <= 7 ? 'error' : 'text.secondary'}
+                            >
+                              {diasRestantes > 0 ? `${diasRestantes} días` : 'Vencido'}
+                            </Typography>
+                          </Box>
+                        ) : (
+                          'N/A'
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <Chip 
+                          label={cliente.esDemo ? 'Sí' : 'No'} 
+                          color={cliente.esDemo ? 'warning' : 'default'}
+                          size="small"
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Box display="flex" gap={1}>
+                          <Tooltip title="Editar">
+                            <IconButton 
+                              onClick={() => handleEditCliente(cliente)}
+                              color="primary"
+                              size="small"
+                            >
+                              <EditIcon />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title="Procesar Pago">
+                            <IconButton 
+                              onClick={() => handlePago(cliente)}
+                              color="success"
+                              size="small"
+                            >
+                              <PaymentIcon />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title="Activar Demo">
+                            <IconButton 
+                              onClick={() => handleDemo(cliente)}
+                              color="warning"
+                              size="small"
+                            >
+                              <DemoIcon />
+                            </IconButton>
+                          </Tooltip>
+                        </Box>
+                      </TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={10}>
+                        <Collapse in={expandedRows[cliente.id]} timeout="auto" unmountOnExit>
+                          <Box margin={2}>
+                            <Typography variant="subtitle2" gutterBottom>Operarios</Typography>
+                            <Table size="small">
+                              <TableHead>
+                                <TableRow>
+                                  <TableCell>Nombre</TableCell>
+                                  <TableCell>Email</TableCell>
+                                  <TableCell>Estado</TableCell>
+                                </TableRow>
+                              </TableHead>
+                              <TableBody>
+                                {(operariosPorCliente[cliente.id] || []).map((operario) => (
+                                  <TableRow key={operario.id}>
+                                    <TableCell>{operario.nombre || operario.displayName || 'Sin nombre'}</TableCell>
+                                    <TableCell>{operario.email}</TableCell>
+                                    <TableCell>
+                                      <Chip label={operario.activo !== false ? 'Activo' : 'Inactivo'} color={operario.activo !== false ? 'success' : 'error'} size="small" />
+                                    </TableCell>
+                                  </TableRow>
+                                ))}
+                                {(operariosPorCliente[cliente.id]?.length === 0) && (
+                                  <TableRow><TableCell colSpan={3} align="center">Sin operarios</TableCell></TableRow>
+                                )}
+                              </TableBody>
+                            </Table>
+                          </Box>
+                        </Collapse>
+                      </TableCell>
+                    </TableRow>
+                  </React.Fragment>
                 );
               })}
             </TableBody>
@@ -538,7 +632,7 @@ const GestionClientes = () => {
           </TextField>
           <TextField
             margin="dense"
-            label="Fecha de Vencimiento"
+            label="Fecha de Vencimiento (editable)"
             type="date"
             fullWidth
             value={form.fechaVencimiento}
@@ -573,6 +667,11 @@ const GestionClientes = () => {
           </Button>
         </DialogActions>
       </Dialog>
+      <HistorialPagosModal
+        open={openHistorial}
+        onClose={() => setOpenHistorial(false)}
+        cliente={clienteHistorial}
+      />
     </Box>
   );
 };
