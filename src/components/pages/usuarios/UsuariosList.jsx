@@ -23,12 +23,13 @@ import {
   CircularProgress
 } from '@mui/material';
 import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon } from '@mui/icons-material';
-import { useAuth } from '../../context/AuthContext';
-import { toast } from 'react-toastify';
-import { collection, getDocs, doc, deleteDoc, updateDoc, setDoc } from 'firebase/firestore';
+import { collection, getDocs, doc, deleteDoc, updateDoc, setDoc, query, where } from 'firebase/firestore';
 import { db } from '../../../firebaseConfig';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '../../../firebaseConfig';
+import { useAuth } from '../../context/AuthContext';
+import { toast } from 'react-toastify';
+import { registrarAccionSistema } from '../../../utils/firestoreUtils';
 
 const PERMISOS_LISTA = [
   { key: 'puedeCrearEmpresas', label: 'Crear Empresas' },
@@ -45,7 +46,7 @@ const ROLES = [
   { value: 'supermax', label: 'Developer' }
 ];
 
-const Usuarios = () => {
+const UsuariosList = ({ clienteAdminId, showAddButton = true }) => {
   const { role, userProfile } = useAuth();
   const [usuarios, setUsuarios] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -66,17 +67,23 @@ const Usuarios = () => {
     }
   });
 
-  // Cargar usuarios
+  // Cargar usuarios filtrados por clienteAdminId si se provee
   const fetchUsuarios = async () => {
     setLoading(true);
     try {
-      const usuariosRef = collection(db, 'usuarios');
-      const snapshot = await getDocs(usuariosRef);
+      let usuariosRef = collection(db, 'usuarios');
+      let snapshot;
+      if (clienteAdminId) {
+        const q = query(usuariosRef, where('clienteAdminId', '==', clienteAdminId));
+        snapshot = await getDocs(q);
+      } else {
+        snapshot = await getDocs(usuariosRef);
+      }
       const lista = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setUsuarios(lista);
     } catch (error) {
       toast.error('Error al cargar usuarios');
-      console.error('Error:', error);
+      setUsuarios([]);
     } finally {
       setLoading(false);
     }
@@ -84,7 +91,8 @@ const Usuarios = () => {
 
   useEffect(() => {
     fetchUsuarios();
-  }, []);
+    // eslint-disable-next-line
+  }, [clienteAdminId]);
 
   // Abrir modal para crear/editar usuario
   const handleOpenModal = (usuario = null) => {
@@ -185,19 +193,33 @@ const Usuarios = () => {
         configuracion: {
           notificaciones: true,
           tema: 'light'
-        }
+        },
+        clienteAdminId: clienteAdminId || (userProfile?.role === 'max' ? userProfile?.uid : null)
       };
 
       // Guardar en Firestore usando setDoc en lugar de updateDoc
       await setDoc(doc(db, 'usuarios', userCredential.user.uid), userProfile);
 
+      // Registrar log de la acción
+      await registrarAccionSistema(
+        userProfile?.uid || 'system',
+        `Crear usuario: ${formData.email}`,
+        { 
+          email: formData.email, 
+          nombre: formData.nombre, 
+          role: formData.role,
+          permisos: formData.permisos 
+        },
+        'crear',
+        'usuario',
+        userCredential.user.uid
+      );
+
       toast.success('Usuario creado exitosamente');
       handleCloseModal();
       fetchUsuarios();
     } catch (error) {
-      console.error('Error al crear usuario:', error);
       let errorMessage = 'Error al crear usuario';
-      
       if (error.code === 'auth/email-already-in-use') {
         errorMessage = 'El correo electrónico ya está en uso';
       } else if (error.code === 'auth/weak-password') {
@@ -205,7 +227,6 @@ const Usuarios = () => {
       } else if (error.code === 'auth/invalid-email') {
         errorMessage = 'Correo electrónico inválido';
       }
-      
       toast.error(errorMessage);
     }
   };
@@ -213,7 +234,6 @@ const Usuarios = () => {
   // Actualizar usuario existente
   const handleActualizarUsuario = async () => {
     if (!editando) return;
-
     try {
       const userRef = doc(db, 'usuarios', editando.id);
       await updateDoc(userRef, {
@@ -221,6 +241,24 @@ const Usuarios = () => {
         role: formData.role,
         permisos: formData.permisos
       });
+
+      // Registrar log de la acción
+      await registrarAccionSistema(
+        userProfile?.uid || 'system',
+        `Editar usuario: ${editando.email}`,
+        { 
+          email: editando.email,
+          nombreAnterior: editando.displayName,
+          nombreNuevo: formData.nombre,
+          roleAnterior: editando.role,
+          roleNuevo: formData.role,
+          permisosAnteriores: editando.permisos,
+          permisosNuevos: formData.permisos
+        },
+        'editar',
+        'usuario',
+        editando.id
+      );
 
       toast.success('Usuario actualizado exitosamente');
       handleCloseModal();
@@ -237,10 +275,25 @@ const Usuarios = () => {
       toast.error('No puedes eliminar tu propia cuenta');
       return;
     }
-
     if (window.confirm(`¿Estás seguro de que quieres eliminar al usuario ${usuario.email}?`)) {
       try {
         await deleteDoc(doc(db, 'usuarios', usuario.id));
+
+        // Registrar log de la acción
+        await registrarAccionSistema(
+          userProfile?.uid || 'system',
+          `Eliminar usuario: ${usuario.email}`,
+          { 
+            email: usuario.email,
+            nombre: usuario.displayName,
+            role: usuario.role,
+            permisos: usuario.permisos
+          },
+          'eliminar',
+          'usuario',
+          usuario.id
+        );
+
         toast.success('Usuario eliminado exitosamente');
         fetchUsuarios();
       } catch (error) {
@@ -250,52 +303,28 @@ const Usuarios = () => {
     }
   };
 
-  // Verificar permisos multi-tenant
-  if (role !== 'max' && role !== 'supermax') {
-    return (
-      <Box sx={{ p: 3 }}>
-        <Alert severity="error">
-          No tienes permisos para acceder a esta página. Solo administradores pueden gestionar usuarios.
-        </Alert>
-      </Box>
-    );
-  }
-
-  // Filtrar usuarios según el rol del usuario actual
-  const usuariosFiltrados = usuarios.filter(usuario => {
-    // Super administradores ven todos los usuarios
-    if (role === 'supermax') {
-      return true;
-    }
-    
-    // Clientes administradores solo ven sus usuarios operarios
-    if (role === 'max') {
-      return usuario.clienteAdminId === userProfile?.uid || 
-             usuario.uid === userProfile?.uid;
-    }
-    
-    return false;
-  });
-
   return (
     <Box sx={{ p: 3 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Typography variant="h4" component="h1">
-          Gestión de Usuarios
+        <Typography variant="h6" component="h2">
+          Usuarios
         </Typography>
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={() => handleOpenModal()}
-        >
-          Agregar Usuario
-        </Button>
+        {showAddButton && (
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={() => handleOpenModal()}
+          >
+            Agregar Usuario
+          </Button>
+        )}
       </Box>
-
       {loading ? (
         <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
           <CircularProgress />
         </Box>
+      ) : usuarios.length === 0 ? (
+        <Alert severity="info">No hay usuarios para mostrar.</Alert>
       ) : (
         <TableContainer component={Paper}>
           <Table>
@@ -310,7 +339,7 @@ const Usuarios = () => {
               </TableRow>
             </TableHead>
             <TableBody>
-              {usuariosFiltrados.map((usuario) => (
+              {usuarios.map((usuario) => (
                 <TableRow key={usuario.id}>
                   <TableCell>{usuario.displayName || 'Sin nombre'}</TableCell>
                   <TableCell>{usuario.email}</TableCell>
@@ -361,7 +390,6 @@ const Usuarios = () => {
           </Table>
         </TableContainer>
       )}
-
       {/* Modal para crear/editar usuario */}
       <Dialog open={openModal} onClose={handleCloseModal} maxWidth="md" fullWidth>
         <DialogTitle>
@@ -376,7 +404,6 @@ const Usuarios = () => {
               fullWidth
               required
             />
-            
             <TextField
               label="Email"
               type="email"
@@ -386,7 +413,6 @@ const Usuarios = () => {
               required
               disabled={!!editando}
             />
-            
             {!editando && (
               <TextField
                 label="Contraseña"
@@ -398,7 +424,6 @@ const Usuarios = () => {
                 helperText="Mínimo 6 caracteres"
               />
             )}
-
             <TextField
               select
               label="Rol"
@@ -413,11 +438,9 @@ const Usuarios = () => {
                 </option>
               ))}
             </TextField>
-
             <Typography variant="h6" sx={{ mt: 2 }}>
               Permisos
             </Typography>
-            
             <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 1 }}>
               {PERMISOS_LISTA.map((permiso) => (
                 <FormControlLabel
@@ -448,4 +471,4 @@ const Usuarios = () => {
   );
 };
 
-export default Usuarios;
+export default UsuariosList; 

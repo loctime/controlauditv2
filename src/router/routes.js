@@ -1,5 +1,4 @@
 import Home from "../components/pages/home/Home";
-import usuarios from "../components/pages/usuarios/Usuarios";
 import EstablecimientosContainer from "../components/pages/establecimiento/EstablecimientosContainer";
 import SucursalContainer from "../components/pages/SucursalContainer.jsx/SucursalContainer";
 import Auditoria from "../components/pages/auditoria/auditoria/Auditoria";
@@ -9,7 +8,7 @@ import EditarFormulario from "../components/pages/editar/EditarFormulario";
 import Informe from "../components/pages/auditoria/Informe";
 import GenerarPdf from "../components/pages/auditoria/reporte/GenerarPdf";
 import PerfilUsuario from "../components/pages/perfil/PerfilUsuario";
-import { OperariosManager, LogsOperarios } from '../components/pages/usuarios';
+import { LogsOperarios } from '../components/pages/usuarios';
 import Dashboard from "../components/pages/dashboard/Dashboard";
 import ClienteDashboard from "../components/pages/admin/ClienteDashboard";
 import PermissionsDebug from "../components/pages/debug/PermissionsDebug";
@@ -29,11 +28,6 @@ export const routes = [
     id: "home",
     path: "/",
     Element: Home,
-  },
-  {
-    id: "usuarios",
-    path: "/usuarios",
-    Element: usuarios,
   },
   {
     id: "establecimiento",
@@ -76,13 +70,6 @@ export const routes = [
     Element: PerfilUsuario,
   },
   {
-    id: "operarios",
-    path: "/usuarios/operarios",
-    Element: OperariosManager,
-    protected: true,
-    roles: ['max']
-  },
-  {
     id: "debug",
     path: "/debug",
     Element: PermissionsDebug,
@@ -92,6 +79,6 @@ export const routes = [
     path: "/usuarios/logs",
     Element: LogsOperarios,
     protected: true,
-    roles: ['max']
+    roles: ['max', 'supermax']
   },
 ];

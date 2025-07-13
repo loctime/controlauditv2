@@ -101,16 +101,8 @@ export const getMenuItems = (role, permisos = {}) => {
   const adminItems = [
     {
       id: "usuarios",
-      path: "/usuarios",
-      title: "Usuarios",
-      Icon: BadgeOutlinedIcon,
-      roles: ['max', 'supermax'],
-      required: permisos.puedeGestionarUsuarios || role === 'max' || role === 'supermax'
-    },
-    {
-      id: "operarios",
-      path: "/usuarios/operarios",
-      title: "Gestión de Operarios",
+      path: "/usuarios/logs",
+      title: "Logs de Usuarios",
       Icon: BadgeOutlinedIcon,
       roles: ['max', 'supermax'],
       required: permisos.puedeGestionarUsuarios || role === 'max' || role === 'supermax'
@@ -223,8 +215,8 @@ export const menuItems = [
     },
     {
         id: "usuarios",
-        path: "/usuarios",
-        title: "Usuarios",
+        path: "/usuarios/logs",
+        title: "Logs de Usuarios",
         Icon: BadgeOutlinedIcon
     },
     {

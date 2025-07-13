@@ -96,19 +96,73 @@ export const reconstruirDatosDesdeFirestore = (datosFirestore) => {
  * @param {string} userId - ID del operario
  * @param {string} accion - Acción realizada
  * @param {object} detalles - Detalles adicionales
+ * @param {object} metadata - Metadatos adicionales (opcional)
  */
-export const registrarLogOperario = async (userId, accion, detalles = {}) => {
+export const registrarLogOperario = async (userId, accion, detalles = {}, metadata = {}) => {
   try {
-    await addDoc(collection(db, 'logs_operarios'), {
+    // Obtener información del navegador
+    const userAgent = navigator.userAgent;
+    const browser = userAgent.includes('Chrome') ? 'Chrome' : 
+                   userAgent.includes('Firefox') ? 'Firefox' : 
+                   userAgent.includes('Safari') ? 'Safari' : 
+                   userAgent.includes('Edge') ? 'Edge' : 'Desconocido';
+    
+    // Obtener información de la página
+    const currentUrl = window.location.href;
+    const referrer = document.referrer;
+    
+    // Crear objeto de log mejorado
+    const logData = {
       userId,
       accion,
       detalles,
-      fecha: Timestamp.now()
+      fecha: Timestamp.now(),
+      // Información del sistema
+      userAgent,
+      browser,
+      currentUrl,
+      referrer,
+      // Metadatos adicionales
+      ...metadata,
+      // Información de sesión
+      sessionId: sessionStorage.getItem('sessionId') || 'no-session',
+      timestamp: Date.now()
+    };
+
+    await addDoc(collection(db, 'logs_operarios'), logData);
+    
+    // Log en consola para debugging
+    console.log(`[LOG OPERARIO] ${userId} - ${accion}`, {
+      detalles,
+      browser,
+      url: currentUrl,
+      timestamp: new Date().toISOString()
     });
-    // eslint-disable-next-line no-console
-    console.log(`[LOG OPERARIO] ${userId} - ${accion}`, detalles);
   } catch (error) {
-    // eslint-disable-next-line no-console
     console.error('Error al registrar log de operario:', error);
+  }
+};
+
+/**
+ * Registra una acción del sistema con información completa
+ * @param {string} userId - ID del usuario
+ * @param {string} accion - Acción realizada
+ * @param {object} detalles - Detalles de la acción
+ * @param {string} tipo - Tipo de acción (crear, editar, eliminar, ver, etc.)
+ * @param {string} entidad - Entidad afectada (usuario, empresa, auditoria, etc.)
+ * @param {string} entidadId - ID de la entidad (opcional)
+ */
+export const registrarAccionSistema = async (userId, accion, detalles = {}, tipo = 'general', entidad = null, entidadId = null) => {
+  try {
+    const metadata = {
+      tipo,
+      entidad,
+      entidadId,
+      severidad: tipo === 'eliminar' ? 'alta' : tipo === 'crear' ? 'media' : 'baja'
+    };
+    
+    await registrarLogOperario(userId, accion, detalles, metadata);
+  } catch (error) {
+    console.error('Error al registrar acción del sistema:', error);
   }
 }; 

@@ -33,11 +33,16 @@ import {
   Email as EmailIcon,
   Delete as DeleteIcon,
   Info as InfoIcon,
-  Settings as SettingsIcon
+  Settings as SettingsIcon,
+  Edit as EditIcon
 } from "@mui/icons-material";
 import { useAuth } from "../../context/AuthContext";
 import Swal from 'sweetalert2';
 import InfoSistema from "./InfoSistema";
+import ConfiguracionFirma from "./ConfiguracionFirma";
+import { db } from '../../../firebaseConfig';
+import { collection, getDocs, query, where } from 'firebase/firestore';
+import UsuariosList from '../usuarios/UsuariosList';
 
 const PerfilUsuario = () => {
   const {
@@ -59,6 +64,8 @@ const PerfilUsuario = () => {
   const [openDialogCompartir, setOpenDialogCompartir] = useState(false);
   const [loading, setLoading] = useState(false);
   const [selectedRole, setSelectedRole] = useState('operario');
+  const [usuariosCreados, setUsuariosCreados] = useState([]);
+  const [loadingUsuariosCreados, setLoadingUsuariosCreados] = useState(false);
 
   // Actualizar selectedRole cuando userProfile cambie
   useEffect(() => {
@@ -66,6 +73,25 @@ const PerfilUsuario = () => {
       setSelectedRole(userProfile.role);
     }
   }, [userProfile?.role]);
+
+  useEffect(() => {
+    const fetchUsuariosCreados = async () => {
+      if (!userProfile?.uid) return;
+      setLoadingUsuariosCreados(true);
+      try {
+        const usuariosRef = collection(db, 'usuarios');
+        const q = query(usuariosRef, where('clienteAdminId', '==', userProfile.uid));
+        const snapshot = await getDocs(q);
+        const lista = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        setUsuariosCreados(lista);
+      } catch (error) {
+        setUsuariosCreados([]);
+      } finally {
+        setLoadingUsuariosCreados(false);
+      }
+    };
+    fetchUsuariosCreados();
+  }, [userProfile?.uid]);
 
   const handleTabChange = (event, newValue) => {
     setTabValue(newValue);
@@ -247,9 +273,10 @@ const PerfilUsuario = () => {
             <Tabs value={tabValue} onChange={handleTabChange} sx={{ borderBottom: 1, borderColor: 'divider' }}>
               <Tab label="Mis Empresas" icon={<BusinessIcon />} />
               <Tab label="Mis Auditorías" icon={<AssessmentIcon />} />
-              <Tab label="Mis Socios" icon={<PersonIcon />} />
+              <Tab label="Mis Usuarios" icon={<PersonIcon />} />
               <Tab label="Auditorías Compartidas" icon={<ShareIcon />} />
               <Tab label="Configuración" icon={<SettingsIcon />} />
+              <Tab label="Mi Firma" icon={<PersonIcon />} />
               <Tab label="Info del Sistema" icon={<InfoIcon />} />
             </Tabs>
 
@@ -331,42 +358,10 @@ const PerfilUsuario = () => {
               </Box>
             )}
 
-            {/* Tab: Mis Socios */}
+            {/* Tab: Mis usuarios */}
             {tabValue === 2 && (
               <Box sx={{ p: 3 }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                  <Typography variant="h6">Mis Socios</Typography>
-                  <Button
-                    variant="contained"
-                    startIcon={<AddIcon />}
-                    onClick={() => setOpenDialogSocio(true)}
-                  >
-                    Agregar Socio
-                  </Button>
-                </Box>
-                
-                {socios.length === 0 ? (
-                  <Alert severity="info">
-                    No tienes socios agregados. Agrega socios para compartir empresas y auditorías.
-                  </Alert>
-                ) : (
-                  <List>
-                    {socios.map((socio) => (
-                      <ListItem key={socio.id} divider>
-                        <ListItemAvatar>
-                          <Avatar>
-                            <PersonIcon />
-                          </Avatar>
-                        </ListItemAvatar>
-                        <ListItemText
-                          primary={socio.displayName}
-                          secondary={socio.email}
-                        />
-                        <Chip label="Socio" size="small" color="secondary" />
-                      </ListItem>
-                    ))}
-                  </List>
-                )}
+                <UsuariosList clienteAdminId={userProfile?.uid} showAddButton={true} />
               </Box>
             )}
 
@@ -475,8 +470,15 @@ const PerfilUsuario = () => {
               </Box>
             )}
 
-            {/* Tab: Info del Sistema */}
+            {/* Tab: Mi Firma */}
             {tabValue === 5 && (
+              <Box sx={{ p: 3 }}>
+                <ConfiguracionFirma />
+              </Box>
+            )}
+
+            {/* Tab: Info del Sistema */}
+            {tabValue === 6 && (
               <Box sx={{ p: 3 }}>
                 <InfoSistema />
               </Box>

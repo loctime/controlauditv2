@@ -3,7 +3,7 @@ import { createContext, useState, useEffect, useContext } from "react";
 import { auth, db } from "../../firebaseConfig";
 import { onAuthStateChanged } from "firebase/auth";
 import { doc, getDoc, setDoc, updateDoc, collection, query, where, getDocs, addDoc } from "firebase/firestore";
-import { registrarLogOperario } from '../../utils/firestoreUtils'; // NUEVO: función para logs
+import { registrarLogOperario, registrarAccionSistema } from '../../utils/firestoreUtils'; // NUEVO: función para logs
 import { getUserRole } from '../../config/admin'; // ✅ Importar configuración del administrador
 
 // Definimos y exportamos el contexto
@@ -36,6 +36,20 @@ const AuthContextComponent = ({ children }) => {
         const profile = await createOrGetUserProfile(firebaseUser);
         
         if (profile) {
+          // Registrar log de inicio de sesión
+          await registrarAccionSistema(
+            firebaseUser.uid,
+            `Inicio de sesión`,
+            { 
+              email: firebaseUser.email,
+              displayName: firebaseUser.displayName,
+              role: profile.role
+            },
+            'login',
+            'usuario',
+            firebaseUser.uid
+          );
+          
           // Cargar datos del usuario
           await Promise.all([
             getUserEmpresas(firebaseUser.uid),
@@ -45,6 +59,21 @@ const AuthContextComponent = ({ children }) => {
           ]);
         }
       } else {
+        // Registrar log de cierre de sesión si había un usuario
+        if (user) {
+          await registrarAccionSistema(
+            user.uid,
+            `Cierre de sesión`,
+            { 
+              email: user.email,
+              displayName: user.displayName
+            },
+            'logout',
+            'usuario',
+            user.uid
+          );
+        }
+        
         setUser(null);
         setUserProfile(null);
         setIsLogged(false);
@@ -138,6 +167,16 @@ const AuthContextComponent = ({ children }) => {
       // Actualizar estado local
       const updatedProfile = { ...userProfile, ...updates };
       setUserProfile(updatedProfile);
+      
+      // Registrar log de la acción
+      await registrarAccionSistema(
+        user.uid,
+        `Actualizar perfil de usuario`,
+        { updates },
+        'editar',
+        'usuario',
+        user.uid
+      );
       
       return true;
     } catch (error) {
@@ -392,6 +431,16 @@ const AuthContextComponent = ({ children }) => {
             socios: [...sociosActuales, socioId]
           });
           
+          // Registrar log de la acción
+          await registrarAccionSistema(
+            user.uid,
+            `Agregar socio: ${emailSocio}`,
+            { emailSocio, socioId },
+            'crear',
+            'usuario',
+            socioId
+          );
+          
           // Actualizar estado local
           await getUserSocios(user.uid);
         }
@@ -431,6 +480,19 @@ const AuthContextComponent = ({ children }) => {
           await updateDoc(auditoriaRef, {
             compartidoCon: [...compartidoCon, usuarioId]
           });
+          
+          // Registrar log de la acción
+          await registrarAccionSistema(
+            user.uid,
+            `Compartir auditoría con: ${emailUsuario}`,
+            { emailUsuario, usuarioId, auditoriaId },
+            'editar',
+            'auditoria',
+            auditoriaId
+          );
+          
+          // Actualizar estado local
+          await getAuditoriasCompartidas(user.uid);
         }
       }
       
@@ -472,6 +534,16 @@ const AuthContextComponent = ({ children }) => {
       // Actualizar estado local
       await getUserEmpresas(user.uid);
       
+      // Registrar log de la acción
+      await registrarAccionSistema(
+        user.uid,
+        `Crear empresa: ${empresaData.nombre}`,
+        { empresaData, empresaId: docRef.id },
+        'crear',
+        'empresa',
+        docRef.id
+      );
+      
       return docRef.id;
     } catch (error) {
       console.error("Error al crear empresa:", error);
@@ -482,36 +554,57 @@ const AuthContextComponent = ({ children }) => {
   // NUEVO: Crear operario (solo para admin)
   const crearOperario = async (email, displayName = "Operario") => {
     try {
-      // Verificar si ya existe
+      // Verificar límite de usuarios
       const usuariosRef = collection(db, "usuarios");
-      const q = query(usuariosRef, where("email", "==", email));
-      const snapshot = await getDocs(q);
-      if (!snapshot.empty) throw new Error("El usuario ya existe");
+      const qOperarios = query(usuariosRef, where("clienteAdminId", "==", user.uid));
+      const snapshotOperarios = await getDocs(qOperarios);
+      const usuariosActuales = snapshotOperarios.size;
       
-      // Crear perfil básico con clienteAdminId
-      const newOperario = {
-        uid: null, // Se asignará al registrarse
-        email,
-        displayName,
-        createdAt: new Date(),
+      // Obtener límite del cliente admin
+      const userRef = doc(db, "usuarios", user.uid);
+      const userSnap = await getDoc(userRef);
+      const limiteUsuarios = userSnap.data()?.limiteUsuarios || 10;
+      
+      if (usuariosActuales >= limiteUsuarios) {
+        throw new Error(`Límite de usuarios alcanzado (${limiteUsuarios}). Contacta al administrador para aumentar tu límite.`);
+      }
+
+      // Crear usuario en Firebase Auth
+      const userCredential = await createUserWithEmailAndPassword(auth, email, "123456");
+      
+      // Crear perfil en Firestore
+      const operarioProfile = {
+        uid: userCredential.user.uid,
+        email: email,
+        displayName: displayName,
         role: 'operario',
-        clienteAdminId: user.uid, // Asignar al cliente admin actual
-        empresas: [],
-        auditorias: [],
-        socios: [],
+        clienteAdminId: user.uid,
+        createdAt: new Date(),
         permisos: {
           puedeCrearEmpresas: false,
+          puedeCrearSucursales: false,
+          puedeCrearAuditorias: true,
           puedeCompartirAuditorias: false,
-          puedeAgregarSocios: false,
-          puedeCrearAuditorias: false,
-          puedeCrearSucursales: false
+          puedeAgregarSocios: false
         },
         configuracion: {
           notificaciones: true,
           tema: 'light'
         }
       };
-      await addDoc(usuariosRef, newOperario);
+
+      await setDoc(doc(db, "usuarios", userCredential.user.uid), operarioProfile);
+      
+      // Registrar log de la acción
+      await registrarAccionSistema(
+        user.uid,
+        `Crear operario: ${email}`,
+        { email, displayName, limiteUsuarios, usuariosActuales },
+        'crear',
+        'usuario',
+        userCredential.user.uid
+      );
+
       return true;
     } catch (error) {
       console.error("Error al crear operario:", error);
@@ -525,6 +618,14 @@ const AuthContextComponent = ({ children }) => {
       const userRef = doc(db, "usuarios", userId);
       await updateDoc(userRef, { permisos: nuevosPermisos });
       await registrarLogOperario(userId, 'editarPermisos', { nuevosPermisos });
+      await registrarAccionSistema(
+        user.uid,
+        `Editar permisos de operario`,
+        { userId, nuevosPermisos },
+        'editar',
+        'usuario',
+        userId
+      );
       return true;
     } catch (error) {
       console.error("Error al editar permisos del operario:", error);

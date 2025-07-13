@@ -1,0 +1,19 @@
+/* Estilos para el componente de firma digital */
+.signature-canvas {
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  cursor: crosshair;
+}
+
+.signature-canvas:focus {
+  outline: 2px solid #1976d2;
+  outline-offset: 2px;
+}
+
+/* Mejoras para dispositivos móviles */
+@media (max-width: 768px) {
+  .signature-canvas {
+    width: 100% !important;
+    height: 150px !important;
+  }
+} 
