@@ -1,10 +1,51 @@
 .firma-container {
-    margin-top: 15px; /* Ajusta el margen según tus necesidades */
-    text-align: center; /* Centra el contenido horizontalmente */
-  }
-  
+  margin-top: 15px;
+  text-align: center;
+}
+
+.sigCanvas {
+  border: 1px solid #e0e0e0;
+  margin-top: 10px;
+  border-radius: 4px;
+  /* Optimizaciones para touch */
+  touch-action: none;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -khtml-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  /* Mejor rendimiento */
+  will-change: transform;
+  transform: translateZ(0);
+}
+
+/* Mejorar respuesta táctil en móviles */
+@media (max-width: 768px) {
   .sigCanvas {
-    border: 1px solid #000;
-    margin-top: 10px;
+    border: 2px solid #e0e0e0;
+    margin-top: 15px;
+    /* Área de toque más grande */
+    min-height: 120px;
   }
+}
+
+/* Efectos hover para desktop */
+@media (min-width: 769px) {
+  .sigCanvas:hover {
+    border-color: #1976d2;
+    box-shadow: 0 0 0 2px rgba(25, 118, 210, 0.1);
+  }
+}
+
+/* Prevenir zoom en móvil al tocar */
+.sigCanvas:focus {
+  outline: none;
+}
+
+/* Mejorar la calidad de renderizado */
+.sigCanvas canvas {
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+}
   

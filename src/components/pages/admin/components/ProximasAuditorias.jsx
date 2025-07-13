@@ -7,11 +7,31 @@ import {
   List,
   ListItem,
   ListItemText,
-  Chip
+  Chip,
+  Avatar
 } from "@mui/material";
-import { Schedule } from "@mui/icons-material";
+import { Schedule, Person, PersonOff } from "@mui/icons-material";
 
 const ProximasAuditorias = ({ auditoriasPendientes }) => {
+  // Función para obtener el nombre del usuario
+  const getNombreUsuario = (encargado) => {
+    if (!encargado) return null;
+    return typeof encargado === 'object' ? encargado.displayName || encargado.email : encargado;
+  };
+
+  // Función para obtener el email del usuario
+  const getEmailUsuario = (encargado) => {
+    if (!encargado) return null;
+    return typeof encargado === 'object' ? encargado.email : null;
+  };
+
+  // Función para obtener la inicial del usuario
+  const getInicialUsuario = (encargado) => {
+    if (!encargado) return '';
+    const nombre = getNombreUsuario(encargado);
+    return nombre ? nombre.charAt(0).toUpperCase() : '';
+  };
+
   return (
     <Paper elevation={2} sx={{ p: 3, mb: 3 }}>
       <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -31,9 +51,18 @@ const ProximasAuditorias = ({ auditoriasPendientes }) => {
               <ListItem key={auditoria.id} divider sx={{ px: 0 }}>
                 <ListItemText
                   primary={
-                    <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
-                      {auditoria.empresa}
-                    </Typography>
+                    <Box display="flex" alignItems="center" gap={1}>
+                      <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
+                        {auditoria.empresa}
+                      </Typography>
+                      <Chip 
+                        label="Pendiente" 
+                        size="small" 
+                        color="warning" 
+                        variant="outlined"
+                        sx={{ fontSize: '0.7rem' }}
+                      />
+                    </Box>
                   }
                   secondary={
                     <Box>
@@ -48,15 +77,33 @@ const ProximasAuditorias = ({ auditoriasPendientes }) => {
                           📍 {auditoria.sucursal}
                         </Typography>
                       )}
+                      
+                      {/* Información del encargado */}
+                      <Box sx={{ mt: 0.5, display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                        {auditoria.encargado ? (
+                          <>
+                            <Avatar sx={{ width: 16, height: 16, fontSize: '0.6rem' }}>
+                              {getInicialUsuario(auditoria.encargado)}
+                            </Avatar>
+                            <Typography variant="caption" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.3 }}>
+                              <Person sx={{ fontSize: '0.7rem' }} />
+                              {getNombreUsuario(auditoria.encargado)}
+                              {getEmailUsuario(auditoria.encargado) && (
+                                <span style={{ fontSize: '0.7rem', opacity: 0.7 }}>
+                                  {' '}({getEmailUsuario(auditoria.encargado)})
+                                </span>
+                              )}
+                            </Typography>
+                          </>
+                        ) : (
+                          <Typography variant="caption" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.3 }}>
+                            <PersonOff sx={{ fontSize: '0.7rem' }} />
+                            Sin encargado
+                          </Typography>
+                        )}
+                      </Box>
                     </Box>
                   }
-                />
-                <Chip 
-                  label="Pendiente" 
-                  size="small" 
-                  color="warning" 
-                  variant="outlined"
-                  sx={{ fontSize: '0.7rem' }}
                 />
               </ListItem>
             ))}

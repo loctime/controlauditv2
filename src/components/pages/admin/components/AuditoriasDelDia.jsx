@@ -9,7 +9,9 @@ import {
   ListItem,
   ListItemText,
   ListItemSecondaryAction,
-  Stack
+  Stack,
+  Avatar,
+  Chip
 } from "@mui/material";
 import { 
   CalendarToday, 
@@ -18,7 +20,9 @@ import {
   Schedule, 
   LocationOn,
   Description,
-  Delete
+  Delete,
+  Person,
+  PersonOff
 } from "@mui/icons-material";
 import { IconButton } from "@mui/material";
 
@@ -30,6 +34,25 @@ const AuditoriasDelDia = ({
   onEliminar,
   canAgendarAuditorias = true // ✅ Prop para validar permisos
 }) => {
+  // Función para obtener el nombre del usuario
+  const getNombreUsuario = (encargado) => {
+    if (!encargado) return null;
+    return typeof encargado === 'object' ? encargado.displayName || encargado.email : encargado;
+  };
+
+  // Función para obtener el email del usuario
+  const getEmailUsuario = (encargado) => {
+    if (!encargado) return null;
+    return typeof encargado === 'object' ? encargado.email : null;
+  };
+
+  // Función para obtener la inicial del usuario
+  const getInicialUsuario = (encargado) => {
+    if (!encargado) return '';
+    const nombre = getNombreUsuario(encargado);
+    return nombre ? nombre.charAt(0).toUpperCase() : '';
+  };
+
   return (
     <Paper elevation={2} sx={{ p: 3, mb: 3 }}>
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
@@ -78,9 +101,19 @@ const AuditoriasDelDia = ({
             <ListItem key={auditoria.id} divider>
               <ListItemText
                 primary={
-                  <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
-                    {auditoria.empresa}
-                  </Typography>
+                  <Box display="flex" alignItems="center" gap={1}>
+                    <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
+                      {auditoria.empresa}
+                    </Typography>
+                    {/* Chip de estado */}
+                    <Chip 
+                      label={auditoria.estado === 'agendada' ? 'Agendada' : 'Completada'} 
+                      size="small" 
+                      color={auditoria.estado === 'agendada' ? 'warning' : 'success'} 
+                      variant="outlined"
+                      sx={{ fontSize: '0.7rem' }}
+                    />
+                  </Box>
                 }
                 secondary={
                   <Box>
@@ -96,6 +129,32 @@ const AuditoriasDelDia = ({
                       <Description sx={{ fontSize: '1rem', mr: 0.5, verticalAlign: 'middle' }} />
                       {auditoria.formulario}
                     </Typography>
+                    
+                    {/* Información del encargado */}
+                    <Box sx={{ mt: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+                      {auditoria.encargado ? (
+                        <>
+                          <Avatar sx={{ width: 20, height: 20, fontSize: '0.7rem' }}>
+                            {getInicialUsuario(auditoria.encargado)}
+                          </Avatar>
+                          <Typography variant="body2" color="text.secondary">
+                            <Person sx={{ fontSize: '0.9rem', mr: 0.5, verticalAlign: 'middle' }} />
+                            {getNombreUsuario(auditoria.encargado)}
+                            {getEmailUsuario(auditoria.encargado) && (
+                              <span style={{ fontSize: '0.8rem', opacity: 0.7 }}>
+                                {' '}({getEmailUsuario(auditoria.encargado)})
+                              </span>
+                            )}
+                          </Typography>
+                        </>
+                      ) : (
+                        <Typography variant="body2" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                          <PersonOff sx={{ fontSize: '0.9rem' }} />
+                          Sin encargado asignado
+                        </Typography>
+                      )}
+                    </Box>
+                    
                     {auditoria.descripcion && (
                       <Typography variant="body2" color="text.secondary" sx={{ mt: 1, fontStyle: 'italic' }}>
                         "{auditoria.descripcion}"

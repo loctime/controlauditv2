@@ -1,6 +1,6 @@
 // src/components/pages/admin/hooks/useClienteDashboard.js
 import { useState, useEffect, useContext, useMemo, useCallback } from "react";
-import { collection, addDoc, query, where, getDocs, updateDoc, doc, deleteDoc, serverTimestamp, limit, orderBy } from "firebase/firestore";
+import { collection, addDoc, query, where, getDocs, updateDoc, doc, deleteDoc, serverTimestamp, limit, orderBy, getDoc } from "firebase/firestore";
 import { db } from "../../../../firebaseConfig";
 import { AuthContext } from "../../../context/AuthContext";
 import { toast } from 'react-toastify';
@@ -160,6 +160,124 @@ export const useClienteDashboard = () => {
     }
   }, [userProfile, role]);
 
+  // ✅ Funciones optimizadas con useCallback
+  const handleAgendarAuditoria = useCallback(async (formData) => {
+    try {
+      // Si hay un encargado seleccionado, obtener su información completa
+      let encargadoInfo = null;
+      if (formData.encargado) {
+        try {
+          const usuarioRef = doc(db, 'usuarios', formData.encargado);
+          const usuarioDoc = await getDoc(usuarioRef);
+          if (usuarioDoc.exists()) {
+            encargadoInfo = {
+              id: usuarioDoc.id,
+              displayName: usuarioDoc.data().displayName,
+              email: usuarioDoc.data().email,
+              role: usuarioDoc.data().role
+            };
+          }
+        } catch (error) {
+          console.error('Error obteniendo información del encargado:', error);
+          // Si no se puede obtener la información, usar solo el ID
+          encargadoInfo = { id: formData.encargado };
+        }
+      }
+
+      const nuevaAuditoria = {
+        ...formData,
+        fecha: formData.fecha,
+        hora: formData.hora,
+        estado: 'agendada',
+        usuarioId: userProfile?.uid,
+        usuarioNombre: userProfile?.displayName || userProfile?.email,
+        clienteAdminId: userProfile?.clienteAdminId || userProfile?.uid,
+        encargado: encargadoInfo, // Guardar información completa del encargado
+        fechaCreacion: serverTimestamp(),
+        fechaActualizacion: serverTimestamp()
+      };
+
+      const docRef = await addDoc(collection(db, 'auditorias_agendadas'), nuevaAuditoria);
+      
+      setAuditorias(prev => [{
+        id: docRef.id,
+        ...nuevaAuditoria,
+        fechaCreacion: new Date(),
+        fechaActualizacion: new Date()
+      }, ...prev]);
+      
+      toast.success('Auditoría agendada exitosamente');
+      return true;
+    } catch (error) {
+      console.error('Error agendando auditoría:', error);
+      toast.error('Error al agendar la auditoría');
+      return false;
+    }
+  }, [userProfile]);
+
+  // ✅ Función para cargar información completa de usuarios cuando solo tenemos IDs
+  const cargarInformacionUsuarios = useCallback(async (auditoriasData) => {
+    try {
+      // Obtener todos los IDs únicos de usuarios que necesitamos cargar
+      const userIds = new Set();
+      auditoriasData.forEach(auditoria => {
+        if (auditoria.encargado && typeof auditoria.encargado === 'string') {
+          userIds.add(auditoria.encargado);
+        }
+      });
+
+      if (userIds.size === 0) return auditoriasData;
+
+      // Cargar información de usuarios en paralelo
+      const usuariosPromises = Array.from(userIds).map(async (userId) => {
+        try {
+          const usuarioRef = doc(db, 'usuarios', userId);
+          const usuarioDoc = await getDoc(usuarioRef);
+          if (usuarioDoc.exists()) {
+            return {
+              id: usuarioDoc.id,
+              ...usuarioDoc.data()
+            };
+          }
+          return null;
+        } catch (error) {
+          console.error(`Error cargando usuario ${userId}:`, error);
+          return null;
+        }
+      });
+
+      const usuarios = await Promise.all(usuariosPromises);
+      const usuariosMap = new Map();
+      usuarios.forEach(usuario => {
+        if (usuario) {
+          usuariosMap.set(usuario.id, usuario);
+        }
+      });
+
+      // Actualizar auditorías con información completa de usuarios
+      return auditoriasData.map(auditoria => {
+        if (auditoria.encargado && typeof auditoria.encargado === 'string') {
+          const usuarioInfo = usuariosMap.get(auditoria.encargado);
+          if (usuarioInfo) {
+            return {
+              ...auditoria,
+              encargado: {
+                id: usuarioInfo.id,
+                displayName: usuarioInfo.displayName,
+                email: usuarioInfo.email,
+                role: usuarioInfo.role
+              }
+            };
+          }
+        }
+        return auditoria;
+      });
+    } catch (error) {
+      console.error('Error cargando información de usuarios:', error);
+      return auditoriasData;
+    }
+  }, []);
+
   // ✅ Función optimizada para cargar auditorías con paginación
   const cargarAuditorias = useCallback(async () => {
     try {
@@ -220,12 +338,16 @@ export const useClienteDashboard = () => {
 
         auditoriasData = [...misAuditorias, ...auditoriasOperarios];
       }
+
+      // Cargar información completa de usuarios para auditorías que solo tienen IDs
+      auditoriasData = await cargarInformacionUsuarios(auditoriasData);
+
       return auditoriasData;
     } catch (error) {
       console.error('Error cargando auditorías:', error);
       return [];
     }
-  }, [userProfile, role]);
+  }, [userProfile, role, cargarInformacionUsuarios]);
 
   // ✅ Cargar datos en paralelo para mejor rendimiento
   useEffect(() => {
@@ -306,39 +428,6 @@ export const useClienteDashboard = () => {
       .sort((a, b) => new Date(a.fecha) - new Date(b.fecha))
       .slice(0, 5);
   }, [auditorias]);
-
-  // ✅ Funciones optimizadas con useCallback
-  const handleAgendarAuditoria = useCallback(async (formData) => {
-    try {
-      const nuevaAuditoria = {
-        ...formData,
-        fecha: formData.fecha,
-        hora: formData.hora,
-        estado: 'agendada',
-        usuarioId: userProfile?.uid,
-        usuarioNombre: userProfile?.displayName || userProfile?.email,
-        clienteAdminId: userProfile?.clienteAdminId || userProfile?.uid,
-        fechaCreacion: serverTimestamp(),
-        fechaActualizacion: serverTimestamp()
-      };
-
-      const docRef = await addDoc(collection(db, 'auditorias_agendadas'), nuevaAuditoria);
-      
-      setAuditorias(prev => [{
-        id: docRef.id,
-        ...nuevaAuditoria,
-        fechaCreacion: new Date(),
-        fechaActualizacion: new Date()
-      }, ...prev]);
-      
-      toast.success('Auditoría agendada exitosamente');
-      return true;
-    } catch (error) {
-      console.error('Error agendando auditoría:', error);
-      toast.error('Error al agendar la auditoría');
-      return false;
-    }
-  }, [userProfile]);
 
   const handleCompletarAuditoria = useCallback(async (auditoriaId) => {
     try {

@@ -3,7 +3,16 @@ import { Button, Grid, Modal, TextField, Typography, Box, Paper, Stack } from "@
 
 const respuestasPosibles = ["Conforme", "No conforme", "Necesita mejora", "No aplica"];
 
-const PreguntasYSeccion = ({ secciones: seccionesObj = {}, guardarRespuestas, guardarComentario, guardarImagenes }) => {
+const PreguntasYSeccion = ({ 
+  secciones: seccionesObj = {}, 
+  guardarRespuestas, 
+  guardarComentario, 
+  guardarImagenes,
+  // Props para mantener respuestas existentes
+  respuestasExistentes = [],
+  comentariosExistentes = [],
+  imagenesExistentes = []
+}) => {
   const [respuestas, setRespuestas] = useState([]);
   const [comentarios, setComentarios] = useState([]);
   const [modalAbierto, setModalAbierto] = useState(false);
@@ -17,18 +26,33 @@ const PreguntasYSeccion = ({ secciones: seccionesObj = {}, guardarRespuestas, gu
 
   useEffect(() => {
     if (!initialized && secciones.length > 0) {
-      const newRespuestas = secciones.map(seccion => Array(seccion.preguntas.length).fill(''));
+      // Inicializar con respuestas existentes o vacías
+      const newRespuestas = secciones.map((seccion, seccionIndex) => 
+        Array(seccion.preguntas.length).fill('').map((_, preguntaIndex) => 
+          respuestasExistentes[seccionIndex]?.[preguntaIndex] || ''
+        )
+      );
       setRespuestas(newRespuestas);
 
-      const newComentarios = secciones.map(seccion => Array(seccion.preguntas.length).fill(''));
+      // Inicializar con comentarios existentes o vacíos
+      const newComentarios = secciones.map((seccion, seccionIndex) => 
+        Array(seccion.preguntas.length).fill('').map((_, preguntaIndex) => 
+          comentariosExistentes[seccionIndex]?.[preguntaIndex] || ''
+        )
+      );
       setComentarios(newComentarios);
 
-      const newImagenes = secciones.map(seccion => Array(seccion.preguntas.length).fill(null)); // Inicializar imágenes
+      // Inicializar con imágenes existentes o null
+      const newImagenes = secciones.map((seccion, seccionIndex) => 
+        Array(seccion.preguntas.length).fill(null).map((_, preguntaIndex) => 
+          imagenesExistentes[seccionIndex]?.[preguntaIndex] || null
+        )
+      );
       setImagenes(newImagenes);
 
       setInitialized(true);
     }
-  }, [initialized, secciones]);
+  }, [initialized, secciones, respuestasExistentes, comentariosExistentes, imagenesExistentes]);
 
   const handleRespuestaChange = (seccionIndex, preguntaIndex, value) => {
     const nuevasRespuestas = respuestas.map((resp, index) =>

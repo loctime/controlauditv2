@@ -8,6 +8,7 @@ import PreguntasYSeccion from "./PreguntasYSeccion";
 import Reporte from "./Reporte";
 import BotonGenerarReporte from "./BotonGenerarReporte";
 import AuditoriaService from "../auditoriaService";
+import FirmaSection from "../reporte/FirmaSection";
 import { 
   Typography, 
   Grid, 
@@ -38,8 +39,10 @@ import AssignmentIcon from '@mui/icons-material/Assignment';
 import QuestionAnswerIcon from '@mui/icons-material/QuestionAnswer';
 import AssessmentIcon from '@mui/icons-material/Assessment';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import EditIcon from '@mui/icons-material/Edit';
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../../context/AuthContext";
+import Swal from 'sweetalert2';
 
 const Auditoria = () => {
   const theme = useTheme();
@@ -61,14 +64,73 @@ const Auditoria = () => {
   const navigate = useNavigate();
   // Agregar estado para errores de navegación
   const [navegacionError, setNavegacionError] = useState("");
+  
+  // Estados para las firmas digitales
+  const [firmaAuditor, setFirmaAuditor] = useState(null);
+  const [firmaResponsable, setFirmaResponsable] = useState(null);
+  const [firmasCompletadas, setFirmasCompletadas] = useState(false);
+
+  // Estados para rastrear cambios y reiniciar firmas
+  const [auditoriaHash, setAuditoriaHash] = useState('');
+  const [firmasValidas, setFirmasValidas] = useState(false);
+  const [mostrarAlertaReinicio, setMostrarAlertaReinicio] = useState(false);
+
+  // Función para generar hash de la auditoría (para detectar cambios)
+  const generarHashAuditoria = () => {
+    const datos = {
+      empresa: empresaSeleccionada?.id,
+      sucursal: sucursalSeleccionada,
+      formulario: formularioSeleccionadoId,
+      respuestas: JSON.stringify(respuestas),
+      comentarios: JSON.stringify(comentarios),
+      imagenes: imagenes.length // Solo contamos cantidad, no contenido
+    };
+    return btoa(JSON.stringify(datos)); // Hash simple en base64
+  };
+
+  // Función para reiniciar firmas
+  const reiniciarFirmas = () => {
+    console.log('[DEBUG] Reiniciando firmas debido a cambios en las respuestas de la auditoría');
+    setFirmaAuditor(null);
+    setFirmaResponsable(null);
+    setFirmasCompletadas(false);
+    setFirmasValidas(false);
+    setMostrarAlertaReinicio(true);
+    
+    // Ocultar alerta después de 5 segundos
+    setTimeout(() => {
+      setMostrarAlertaReinicio(false);
+    }, 5000);
+  };
+
+  // Verificar cambios en la auditoría y reiniciar firmas si es necesario
+  useEffect(() => {
+    const nuevoHash = generarHashAuditoria();
+    
+    // Solo reiniciar si hay firmas válidas y se detectan cambios
+    if (auditoriaHash && auditoriaHash !== nuevoHash && firmasValidas) {
+      console.log('[DEBUG] Cambios detectados en las respuestas, reiniciando firmas');
+      reiniciarFirmas();
+    }
+    
+    setAuditoriaHash(nuevoHash);
+  }, [empresaSeleccionada, sucursalSeleccionada, formularioSeleccionadoId, respuestas, comentarios, imagenes]);
+
+  // Marcar firmas como válidas cuando se completan
+  useEffect(() => {
+    if (firmaAuditor) {
+      setFirmasValidas(true);
+    }
+  }, [firmaAuditor]);
 
   // Calcular progreso de la auditoría
   const calcularProgreso = () => {
     let progreso = 0;
-    if (empresaSeleccionada) progreso += 25;
-    if (formularioSeleccionadoId) progreso += 25;
-    if (secciones.length > 0) progreso += 25;
-    if (todasLasPreguntasContestadas()) progreso += 25;
+    if (empresaSeleccionada) progreso += 20;
+    if (formularioSeleccionadoId) progreso += 20;
+    if (secciones.length > 0) progreso += 20;
+    if (todasLasPreguntasContestadas()) progreso += 20;
+    if (firmasCompletadas) progreso += 20;
     return progreso;
   };
 
@@ -79,6 +141,7 @@ const Auditoria = () => {
       case 1: return formularioSeleccionadoId ? 'completed' : (empresaSeleccionada ? 'active' : 'disabled');
       case 2: return secciones.length > 0 ? 'completed' : (formularioSeleccionadoId ? 'active' : 'disabled');
       case 3: return todasLasPreguntasContestadas() ? 'completed' : (secciones.length > 0 ? 'active' : 'disabled');
+      case 4: return firmasCompletadas ? 'completed' : (todasLasPreguntasContestadas() ? 'active' : 'disabled');
       default: return 'disabled';
     }
   };
@@ -92,6 +155,8 @@ const Auditoria = () => {
         return !!formularioSeleccionadoId;
       case 2:
         return todasLasPreguntasContestadas();
+      case 3:
+        return firmasCompletadas;
       default:
         return false;
     }
@@ -109,12 +174,34 @@ const Auditoria = () => {
 
   const handleAnterior = () => {
     setNavegacionError("");
+    
+    // Solo mostrar advertencia si hay firmas válidas
+    // Las firmas se mantendrán si no se hacen cambios
+    if (firmasValidas && activeStep > 0) {
+      Swal.fire({
+        title: '⚠️ Información',
+        text: 'Puede navegar hacia atrás para revisar o editar. Las firmas se mantendrán si no hace cambios en las respuestas.',
+        icon: 'info',
+        showCancelButton: true,
+        confirmButtonColor: '#3085d6',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'Continuar',
+        cancelButtonText: 'Cancelar'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          setActiveStep((prev) => Math.max(prev - 1, 0));
+        }
+      });
+      return;
+    }
+    
     setActiveStep((prev) => Math.max(prev - 1, 0));
   };
 
   // Permitir navegación directa en el stepper solo si los pasos previos están completos
   const handleStepClick = (index) => {
     setNavegacionError("");
+    
     // Solo permitir si todos los pasos previos están completos
     for (let i = 0; i < index; i++) {
       if (!pasoCompleto(i)) {
@@ -122,8 +209,51 @@ const Auditoria = () => {
         return;
       }
     }
+
+    // Solo mostrar advertencia si hay firmas válidas y se está navegando hacia atrás
+    // Las firmas se mantendrán si no se hacen cambios
+    if (firmasValidas && index < activeStep) {
+      Swal.fire({
+        title: '⚠️ Información',
+        text: 'Puede navegar hacia atrás para revisar o editar. Las firmas se mantendrán si no hace cambios en las respuestas.',
+        icon: 'info',
+        showCancelButton: true,
+        confirmButtonColor: '#3085d6',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'Continuar',
+        cancelButtonText: 'Cancelar'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          setActiveStep(index);
+        }
+      });
+      return;
+    }
+    
     setActiveStep(index);
   };
+
+  // Manejar guardado de firmas
+  const handleSaveFirmaAuditor = (firmaURL) => {
+    setFirmaAuditor(firmaURL);
+    verificarFirmasCompletadas();
+  };
+
+  const handleSaveFirmaResponsable = (firmaURL) => {
+    setFirmaResponsable(firmaURL);
+    verificarFirmasCompletadas();
+  };
+
+  const verificarFirmasCompletadas = () => {
+    // Solo la firma del auditor es obligatoria
+    const completadas = firmaAuditor; // Removido firmaResponsable de la validación
+    setFirmasCompletadas(completadas);
+  };
+
+  // Verificar firmas cuando cambien
+  useEffect(() => {
+    verificarFirmasCompletadas();
+  }, [firmaAuditor, firmaResponsable]);
 
   useEffect(() => {
     const obtenerEmpresas = async () => {
@@ -310,14 +440,20 @@ const Auditoria = () => {
   };
 
   const generarReporte = () => {
-    if (todasLasPreguntasContestadas()) {
-      setMostrarReporte(true);
-      setErrores([]);
-      setAuditoriaGenerada(true);
-      setActiveStep(3);
-    } else {
+    if (!todasLasPreguntasContestadas()) {
       setErrores(["Por favor, responda todas las preguntas antes de generar el reporte."]);
+      return;
     }
+    
+    if (!firmaAuditor) {
+      setErrores(["Por favor, complete la firma del auditor antes de generar el reporte."]);
+      return;
+    }
+    
+    setMostrarReporte(true);
+    setErrores([]);
+    setAuditoriaGenerada(true);
+    setActiveStep(4);
   };
 
   const generarNuevaAuditoria = () => {
@@ -331,6 +467,13 @@ const Auditoria = () => {
     setMostrarReporte(false);
     setAuditoriaGenerada(false);
     setActiveStep(0);
+    setFirmaAuditor(null);
+    setFirmaResponsable(null);
+    setFirmasCompletadas(false);
+    // Reiniciar estados de hash y alertas
+    setAuditoriaHash('');
+    setFirmasValidas(false);
+    setMostrarAlertaReinicio(false);
   };
 
   const handleFinalizar = () => {
@@ -478,6 +621,9 @@ const Auditoria = () => {
               guardarRespuestas={handleGuardarRespuestas}
               guardarComentario={handleGuardarComentario}
               guardarImagenes={handleGuardarImagenes}
+              respuestasExistentes={respuestas}
+              comentariosExistentes={comentarios}
+              imagenesExistentes={imagenes}
             />
             
             {todasLasPreguntasContestadas() && (
@@ -503,6 +649,49 @@ const Auditoria = () => {
       )
     },
     {
+      label: 'Firmar Auditoría',
+      description: 'Firma digital de la auditoría',
+      icon: <EditIcon />,
+      content: (
+        <Fade in={true} timeout={800}>
+          <Box>
+            <FirmaSection
+              onSaveFirmaAuditor={handleSaveFirmaAuditor}
+              onSaveFirmaResponsable={handleSaveFirmaResponsable}
+              firmaAuditor={firmaAuditor}
+              firmaResponsable={firmaResponsable}
+              // Props para el resumen de auditoría
+              empresa={empresaSeleccionada}
+              sucursal={sucursalSeleccionada}
+              formulario={formularios.find(formulario => formulario.id === formularioSeleccionadoId)}
+              respuestas={respuestas}
+              secciones={secciones}
+              encargado={null} // Por ahora null, se puede implementar después si es necesario
+            />
+            
+            {firmasCompletadas && (
+              <Zoom in={true} timeout={600}>
+                <Card sx={{ 
+                  mt: 3, 
+                  background: `linear-gradient(135deg, ${alpha(theme.palette.success.main, 0.1)}, ${alpha(theme.palette.success.main, 0.05)})`,
+                  border: `2px solid ${alpha(theme.palette.success.main, 0.2)}`
+                }}>
+                  <CardContent>
+                    <Box display="flex" alignItems="center" gap={2}>
+                      <CheckCircleIcon color="success" sx={{ fontSize: 32 }} />
+                      <Typography variant="h6" color="success.main">
+                        ¡Firmas completadas correctamente!
+                      </Typography>
+                    </Box>
+                  </CardContent>
+                </Card>
+              </Zoom>
+            )}
+          </Box>
+        </Fade>
+      )
+    },
+    {
       label: 'Generar Reporte',
       description: 'Revisa y genera el reporte final',
       icon: <AssessmentIcon />,
@@ -511,7 +700,7 @@ const Auditoria = () => {
           <Box>
             <BotonGenerarReporte
               onClick={generarReporte}
-              deshabilitado={!todasLasPreguntasContestadas()}
+              deshabilitado={!todasLasPreguntasContestadas() || !firmasCompletadas}
               empresa={empresaSeleccionada}
               sucursal={sucursalSeleccionada}
               formulario={formularios.find(formulario => formulario.id === formularioSeleccionadoId)}
@@ -519,6 +708,8 @@ const Auditoria = () => {
               comentarios={comentarios}
               imagenes={imagenes}
               secciones={secciones}
+              firmaAuditor={firmaAuditor}
+              firmaResponsable={firmaResponsable}
               onFinalizar={handleFinalizar}
             />
           </Box>
@@ -578,6 +769,28 @@ const Auditoria = () => {
             }
           }} 
         />
+
+        {/* Alerta de reinicio de firmas */}
+        {mostrarAlertaReinicio && (
+          <Fade in={true} timeout={600}>
+            <Alert 
+              severity="warning" 
+              sx={{ 
+                mt: 2, 
+                borderRadius: 2,
+                '& .MuiAlert-message': {
+                  width: '100%'
+                }
+              }}
+              onClose={() => setMostrarAlertaReinicio(false)}
+            >
+              <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                ⚠️ <strong>Firmas reiniciadas:</strong> Se detectaron cambios en las respuestas de la auditoría. 
+                Las firmas han sido reiniciadas para mantener la integridad del documento.
+              </Typography>
+            </Alert>
+          </Fade>
+        )}
       </Box>
 
       {/* Contenido principal */}

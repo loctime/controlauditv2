@@ -13,20 +13,29 @@ import {
   MenuItem,
   TextField,
   Button,
-  Chip
+  Chip,
+  Avatar,
+  Typography
 } from "@mui/material";
-import { Add } from "@mui/icons-material";
+import { Add, Person, PersonOff } from "@mui/icons-material";
 import { toast } from 'react-toastify';
+import { collection, getDocs, query, where } from "firebase/firestore";
+import { db } from "../../../../firebaseConfig";
+import { useAuth } from "../../../context/AuthContext";
 
 const AgendarAuditoriaDialog = ({ open, onClose, onSave, empresas, sucursales, formularios, fechaPreestablecida }) => {
+  const { userProfile } = useAuth();
   const [form, setForm] = useState({
     empresa: '',
     sucursal: '',
     formulario: '',
     fecha: '',
     hora: '',
-    descripcion: ''
+    descripcion: '',
+    encargado: '' // Nuevo campo para el encargado
   });
+  const [usuariosOperarios, setUsuariosOperarios] = useState([]);
+  const [cargandoUsuarios, setCargandoUsuarios] = useState(false);
 
   // Función para obtener el nombre del días
   const getNombreDia = (fechaStr) => {
@@ -34,6 +43,37 @@ const AgendarAuditoriaDialog = ({ open, onClose, onSave, empresas, sucursales, f
     const fecha = new Date(fechaStr);
     const dias = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
     return dias[fecha.getDay()];
+  };
+
+  // Cargar usuarios operarios disponibles
+  const cargarUsuariosOperarios = async () => {
+    if (!userProfile) return;
+    
+    setCargandoUsuarios(true);
+    try {
+      console.log('[DEBUG] Cargando usuarios operarios para clienteAdminId:', userProfile.clienteAdminId || userProfile.uid);
+      
+      // Query para obtener usuarios operarios del mismo cliente
+      const q = query(
+        collection(db, "usuarios"),
+        where("clienteAdminId", "==", userProfile.clienteAdminId || userProfile.uid),
+        where("role", "==", "operario")
+      );
+      
+      const querySnapshot = await getDocs(q);
+      const usuarios = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      
+      console.log(`[DEBUG] ${usuarios.length} usuarios operarios cargados`);
+      setUsuariosOperarios(usuarios);
+    } catch (error) {
+      console.error('[ERROR] Error al cargar usuarios operarios:', error);
+      toast.error('Error al cargar la lista de usuarios');
+    } finally {
+      setCargandoUsuarios(false);
+    }
   };
 
   // Actualizar el formulario cuando cambie la fecha preestablecida
@@ -46,6 +86,13 @@ const AgendarAuditoriaDialog = ({ open, onClose, onSave, empresas, sucursales, f
     }
   }, [fechaPreestablecida]);
 
+  // Cargar usuarios operarios cuando se abre el diálogo
+  useEffect(() => {
+    if (open) {
+      cargarUsuariosOperarios();
+    }
+  }, [open, userProfile]);
+
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
@@ -57,7 +104,19 @@ const AgendarAuditoriaDialog = ({ open, onClose, onSave, empresas, sucursales, f
       return;
     }
     onSave(form);
-    setForm({ empresa: '', sucursal: '', formulario: '', fecha: '', hora: '', descripcion: '' });
+    setForm({ empresa: '', sucursal: '', formulario: '', fecha: '', hora: '', descripcion: '', encargado: '' });
+  };
+
+  // Función para obtener el nombre del usuario
+  const getNombreUsuario = (userId) => {
+    const usuario = usuariosOperarios.find(u => u.id === userId);
+    return usuario ? (usuario.displayName || usuario.email) : 'Usuario no encontrado';
+  };
+
+  // Función para obtener el email del usuario
+  const getEmailUsuario = (userId) => {
+    const usuario = usuariosOperarios.find(u => u.id === userId);
+    return usuario ? usuario.email : '';
   };
 
   return (
@@ -129,6 +188,45 @@ const AgendarAuditoriaDialog = ({ open, onClose, onSave, empresas, sucursales, f
             </Grid>
             
             <Grid item xs={12} md={6}>
+              <FormControl fullWidth>
+                <InputLabel>Encargado (Opcional)</InputLabel>
+                <Select
+                  name="encargado"
+                  value={form.encargado}
+                  onChange={handleChange}
+                  label="Encargado (Opcional)"
+                  disabled={cargandoUsuarios}
+                >
+                  <MenuItem value="">
+                    <Box display="flex" alignItems="center" gap={1}>
+                      <PersonOff color="action" />
+                      <Typography variant="body2" color="text.secondary">
+                        Sin especificar
+                      </Typography>
+                    </Box>
+                  </MenuItem>
+                  {usuariosOperarios.map((usuario) => (
+                    <MenuItem key={usuario.id} value={usuario.id}>
+                      <Box display="flex" alignItems="center" gap={1}>
+                        <Avatar sx={{ width: 24, height: 24, fontSize: '0.75rem' }}>
+                          {usuario.displayName ? usuario.displayName.charAt(0).toUpperCase() : usuario.email.charAt(0).toUpperCase()}
+                        </Avatar>
+                        <Box>
+                          <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                            {usuario.displayName || 'Sin nombre'}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            {usuario.email}
+                          </Typography>
+                        </Box>
+                      </Box>
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+            
+            <Grid item xs={12} md={6}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                 <TextField
                   fullWidth
@@ -176,6 +274,30 @@ const AgendarAuditoriaDialog = ({ open, onClose, onSave, empresas, sucursales, f
                 placeholder="Agregar notas o detalles sobre la auditoría..."
               />
             </Grid>
+
+            {/* Mostrar información del encargado seleccionado */}
+            {form.encargado && (
+              <Grid item xs={12}>
+                <Box sx={{ 
+                  p: 2, 
+                  bgcolor: 'primary.light', 
+                  borderRadius: 1,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 2
+                }}>
+                  <Person color="primary" />
+                  <Box>
+                    <Typography variant="subtitle2" color="primary" sx={{ fontWeight: 600 }}>
+                      Encargado asignado:
+                    </Typography>
+                    <Typography variant="body2">
+                      {getNombreUsuario(form.encargado)} ({getEmailUsuario(form.encargado)})
+                    </Typography>
+                  </Box>
+                </Box>
+              </Grid>
+            )}
           </Grid>
         </DialogContent>
         <DialogActions>

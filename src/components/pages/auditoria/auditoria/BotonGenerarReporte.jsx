@@ -14,6 +14,8 @@ const BotonGenerarReporte = ({
   comentarios, 
   imagenes, 
   secciones,
+  firmaAuditor,
+  firmaResponsable,
   onFinalizar
 }) => {
   const { user, userProfile } = useAuth();
@@ -31,6 +33,13 @@ const BotonGenerarReporte = ({
       return;
     }
 
+    if (!firmaAuditor || !firmaResponsable) {
+      setMensaje("Error: Ambas firmas digitales son requeridas");
+      setTipoMensaje("error");
+      setMostrarMensaje(true);
+      return;
+    }
+
     setGuardando(true);
     try {
       // Usar el servicio centralizado para guardar
@@ -41,7 +50,9 @@ const BotonGenerarReporte = ({
         respuestas,
         comentarios,
         imagenes,
-        secciones
+        secciones,
+        firmaAuditor,
+        firmaResponsable
       };
 
       const auditoriaId = await AuditoriaService.guardarAuditoria(datosAuditoria, userProfile);
@@ -69,10 +80,10 @@ const BotonGenerarReporte = ({
 
   const handleImprimir = () => {
     // Usar la función de impresión nativa
-    abrirImpresionNativa(empresa, sucursal, formulario, respuestas, comentarios, imagenes, secciones, user);
+    abrirImpresionNativa(empresa, sucursal, formulario, respuestas, comentarios, imagenes, secciones, user, firmaAuditor, firmaResponsable);
   };
 
-  const abrirImpresionNativa = (empresa, sucursal, formulario, respuestas, comentarios, imagenes, secciones, user) => {
+  const abrirImpresionNativa = (empresa, sucursal, formulario, respuestas, comentarios, imagenes, secciones, user, firmaAuditor, firmaResponsable) => {
     const contenido = generarContenidoImpresion();
     const nuevaVentana = window.open('', '_blank', 'width=800,height=600');
     
@@ -110,6 +121,9 @@ const BotonGenerarReporte = ({
             .respuesta { margin-left: 20px; margin-bottom: 5px; }
             .comentario { margin-left: 20px; font-style: italic; color: #666; }
             .imagen { max-width: 200px; max-height: 150px; margin: 10px 0; }
+            .firmas { margin-top: 30px; display: flex; justify-content: space-between; }
+            .firma { text-align: center; width: 45%; }
+            .firma img { max-width: 200px; max-height: 100px; border: 1px solid #ccc; }
             .footer { margin-top: 30px; text-align: center; font-size: 12px; color: #666; }
             @page { margin: 1cm; }
             /* Ocultar elementos en impresión */
@@ -125,6 +139,9 @@ const BotonGenerarReporte = ({
           .respuesta { margin-left: 20px; margin-bottom: 5px; }
           .comentario { margin-left: 20px; font-style: italic; color: #666; }
           .imagen { max-width: 200px; max-height: 150px; margin: 10px 0; }
+          .firmas { margin-top: 30px; display: flex; justify-content: space-between; }
+          .firma { text-align: center; width: 45%; }
+          .firma img { max-width: 200px; max-height: 100px; border: 1px solid #ccc; }
           .footer { margin-top: 30px; text-align: center; font-size: 12px; color: #666; }
         </style>
       </head>
@@ -171,6 +188,22 @@ const BotonGenerarReporte = ({
         contenido += `</div>`;
       });
     }
+
+    // Agregar sección de firmas
+    contenido += `
+        <div class="firmas">
+          <div class="firma">
+            <h4>Firma del Auditor</h4>
+            ${firmaAuditor ? `<img src="${firmaAuditor}" alt="Firma del Auditor" />` : '<p>Sin firma</p>'}
+            <p><strong>${user?.displayName || user?.email || 'Usuario'}</strong></p>
+          </div>
+          <div class="firma">
+            <h4>Firma del Responsable</h4>
+            ${firmaResponsable ? `<img src="${firmaResponsable}" alt="Firma del Responsable" />` : '<p>Sin firma</p>'}
+            <p><strong>Responsable de la Empresa</strong></p>
+          </div>
+        </div>
+    `;
 
     contenido += `
         <div class="footer">

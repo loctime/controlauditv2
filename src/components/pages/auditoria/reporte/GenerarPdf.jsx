@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from "react";
-import { collection, getDocs } from "firebase/firestore";
+import React, { useState, useEffect, useRef, useMemo } from "react";
+import { collection, getDocs, query, where, orderBy, limit } from "firebase/firestore";
 import { db } from "./../../../../firebaseConfig";
 import {
   Button,
@@ -12,6 +12,8 @@ import {
   Paper,
   Typography,
   Box,
+  CircularProgress,
+  Alert,
 } from "@mui/material";
 import "./ReportesPage.css";
 import FiltrosReportes from "./FiltrosReportes";
@@ -34,7 +36,7 @@ const getNombreFormulario = (formulario, nombreForm) =>
     : "Formulario no disponible");
 
 const ReportesPage = () => {
-  const { userProfile, userAuditorias, auditoriasCompartidas, canViewAuditoria } = useAuth();
+  const { userProfile, userEmpresas } = useAuth();
   const [reportes, setReportes] = useState([]);
   const [filteredReportes, setFilteredReportes] = useState([]);
   const [selectedReporte, setSelectedReporte] = useState(null);
@@ -43,35 +45,34 @@ const ReportesPage = () => {
   const [selectedEmpresa, setSelectedEmpresa] = useState("");
   const detalleRef = useRef();
 
+  // ✅ Query segura con filtro multi-tenant
   useEffect(() => {
     const fetchReportes = async () => {
       try {
         if (!userProfile) return;
         
-        const querySnapshot = await getDocs(collection(db, "reportes"));
-        const todasLasAuditorias = querySnapshot.docs.map((doc) => ({
+        console.log("[DEBUG] Iniciando fetch de reportes con multi-tenant para:", userProfile.clienteAdminId || userProfile.uid);
+
+        // Query optimizada con filtro multi-tenant en Firestore
+        const q = query(
+          collection(db, "reportes"),
+          where("clienteAdminId", "==", userProfile.clienteAdminId || userProfile.uid),
+          orderBy("fechaGuardado", "desc"),
+          limit(100) // Limitar para mejor performance
+        );
+
+        const querySnapshot = await getDocs(q);
+        const reportesData = querySnapshot.docs.map((doc) => ({
           id: doc.id,
           ...doc.data(),
         }));
 
-        // Filtrar auditorías que el usuario puede ver
-        const auditoriasPermitidas = todasLasAuditorias.filter(auditoria => 
-          canViewAuditoria(auditoria.id)
-        );
+        console.log(`[DEBUG] ${reportesData.length} reportes cargados con multi-tenant`);
 
-        auditoriasPermitidas.sort((a, b) => {
-          const fechaA = a.fechaGuardado
-            ? new Date(a.fechaGuardado.seconds * 1000)
-            : new Date(0);
-          const fechaB = b.fechaGuardado
-            ? new Date(b.fechaGuardado.seconds * 1000)
-            : new Date(0);
-          return fechaB - fechaA;
-        });
-
-        setReportes(auditoriasPermitidas);
-        setFilteredReportes(auditoriasPermitidas);
+        setReportes(reportesData);
+        setFilteredReportes(reportesData);
       } catch (error) {
+        console.error("[ERROR] Error al obtener reportes:", error);
         setError("Error al obtener reportes: " + error.message);
       } finally {
         setLoading(false);
@@ -79,8 +80,9 @@ const ReportesPage = () => {
     };
 
     fetchReportes();
-  }, [userProfile, canViewAuditoria]);
+  }, [userProfile]);
 
+  // ✅ Filtrar reportes por empresa seleccionada
   useEffect(() => {
     if (selectedEmpresa) {
       setFilteredReportes(
@@ -90,6 +92,16 @@ const ReportesPage = () => {
       setFilteredReportes(reportes);
     }
   }, [selectedEmpresa, reportes]);
+
+  // ✅ Extraer empresas únicas de los reportes filtrados (ya seguros por multi-tenant)
+  const empresas = useMemo(() => {
+    const empresasUnicas = [...new Set(
+      reportes.map((reporte) => getNombreEmpresa(reporte.empresa)).filter(Boolean)
+    )];
+    
+    console.log("[DEBUG] Empresas extraídas de reportes filtrados:", empresasUnicas);
+    return empresasUnicas;
+  }, [reportes]);
 
   const handleSelectReporte = (reporte) => {
     setSelectedReporte(reporte);
@@ -105,16 +117,27 @@ const ReportesPage = () => {
 
   // Función para imprimir el contenido del reporte
   const handlePrintReport = () => {
-    // Opcional: si deseas imprimir solo la sección del reporte,
-    // podrías abrir una nueva ventana con el contenido de "detalleRef.current".
-    // En este ejemplo, se imprimirá la ventana actual.
     window.print();
   };
 
-  if (loading) return <Typography>Cargando reportes...</Typography>;
-  if (error) return <Typography color="error">{error}</Typography>;
+  if (loading) {
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="200px">
+        <CircularProgress />
+        <Typography variant="body2" sx={{ ml: 2 }}>
+          Cargando reportes...
+        </Typography>
+      </Box>
+    );
+  }
 
-  const empresas = [...new Set(reportes.map((reporte) => getNombreEmpresa(reporte.empresa)).filter(Boolean))];
+  if (error) {
+    return (
+      <Alert severity="error" sx={{ mb: 2 }}>
+        {error}
+      </Alert>
+    );
+  }
 
   return (
     <Box className="reportes-container" p={3}>
@@ -219,27 +242,40 @@ const ReportesPage = () => {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {filteredReportes.map((reporte) => (
-                  <TableRow key={reporte.id}>
-                    <TableCell>{getNombreEmpresa(reporte.empresa)}</TableCell>
-                    <TableCell>{reporte.sucursal ?? "Sucursal no disponible"}</TableCell>
-                    <TableCell>{getNombreFormulario(reporte.formulario, reporte.nombreForm)}</TableCell>
-                    <TableCell>
-                      {reporte.fechaGuardado
-                        ? new Date(reporte.fechaGuardado.seconds * 1000).toLocaleString()
-                        : "Fecha no disponible"}
-                    </TableCell>
-                    <TableCell>
-                      <Button
-                        variant="contained"
-                        color="primary"
-                        onClick={() => handleSelectReporte(reporte)}
-                      >
-                        Ver Detalles
-                      </Button>
+                {filteredReportes.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} align="center" sx={{ py: 4 }}>
+                      <Typography variant="body2" color="textSecondary">
+                        {selectedEmpresa 
+                          ? "No se encontraron reportes para esta empresa"
+                          : "No hay reportes disponibles"
+                        }
+                      </Typography>
                     </TableCell>
                   </TableRow>
-                ))}
+                ) : (
+                  filteredReportes.map((reporte) => (
+                    <TableRow key={reporte.id}>
+                      <TableCell>{getNombreEmpresa(reporte.empresa)}</TableCell>
+                      <TableCell>{reporte.sucursal ?? "Sucursal no disponible"}</TableCell>
+                      <TableCell>{getNombreFormulario(reporte.formulario, reporte.nombreForm)}</TableCell>
+                      <TableCell>
+                        {reporte.fechaGuardado
+                          ? new Date(reporte.fechaGuardado.seconds * 1000).toLocaleString()
+                          : "Fecha no disponible"}
+                      </TableCell>
+                      <TableCell>
+                        <Button
+                          variant="contained"
+                          color="primary"
+                          onClick={() => handleSelectReporte(reporte)}
+                        >
+                          Ver Detalles
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
               </TableBody>
             </Table>
           </TableContainer>
