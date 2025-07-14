@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import {
   Box,
   Typography,
@@ -37,10 +37,11 @@ import {
   PlayArrow as DemoIcon,
   ExpandMore as ExpandMoreIcon
 } from '@mui/icons-material';
-import { collection, getDocs, updateDoc, doc, query, where, Timestamp } from 'firebase/firestore';
+import { collection, getDocs, updateDoc, doc, query, where, Timestamp, addDoc } from 'firebase/firestore';
 import { db } from '../../../firebaseConfig';
 import { toast } from 'react-toastify';
 import HistorialPagosModal from './HistorialPagosModal';
+import { AuthContext } from '../../context/AuthContext';
 
 const GestionClientes = () => {
   const [clientes, setClientes] = useState([]);
@@ -59,6 +60,7 @@ const GestionClientes = () => {
   const [clienteHistorial, setClienteHistorial] = useState(null);
   const [expandedRows, setExpandedRows] = useState({});
   const [operariosPorCliente, setOperariosPorCliente] = useState({});
+  const { userProfile } = useContext(AuthContext); // Para obtener el email del usuario logueado
 
   // Cargar todos los clientes (max)
   const cargarClientes = async () => {
@@ -219,14 +221,20 @@ const GestionClientes = () => {
       const userRef = doc(db, 'usuarios', cliente.id);
       const fechaVencimiento = new Date();
       fechaVencimiento.setMonth(fechaVencimiento.getMonth() + 1); // 1 mes
-      
       await updateDoc(userRef, {
         estadoPago: 'al_dia',
         fechaVencimiento: Timestamp.fromDate(fechaVencimiento),
         esDemo: false,
         ultimaModificacion: Timestamp.now()
       });
-      
+      // Agregar registro al historial de pagos
+      const pagosRef = collection(db, 'usuarios', cliente.id, 'pagos');
+      await addDoc(pagosRef, {
+        fecha: Timestamp.now(),
+        tipo: 'pago',
+        detalle: 'Se acreditó el pago de ControlDoc. ¡Gracias por su compra!',
+        usuarioEmail: userProfile?.email || ''
+      });
       toast.success(`Pago procesado para ${cliente.nombre || cliente.email}`);
       cargarClientes();
     } catch (error) {
