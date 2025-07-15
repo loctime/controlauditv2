@@ -1,12 +1,28 @@
-import React, { useEffect, useState } from 'react';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import React, { useEffect, useState, useMemo } from 'react';
+import { collection, query, where, getDocs, doc, updateDoc, increment } from 'firebase/firestore';
 import { db } from '../../../firebaseConfig';
-import { Box, Typography, Card, CardContent, Button, Grid, Alert } from '@mui/material';
+import {
+  Box, Typography, Accordion, AccordionSummary, AccordionDetails, Chip, Button, Grid, Alert, TextField, InputAdornment, Select, MenuItem, Rating, Stack, Tooltip, Avatar, CircularProgress
+} from '@mui/material';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import SearchIcon from '@mui/icons-material/Search';
+
+const FILTROS = [
+  { value: 'todos', label: 'Todos' },
+  { value: 'masCopiados', label: 'Más copiados' },
+  { value: 'mejorValorados', label: 'Mejor valorados' },
+  { value: 'menosPreguntas', label: 'Menos preguntas' },
+  { value: 'masPreguntas', label: 'Más preguntas' }
+];
 
 const GaleriaFormulariosPublicos = ({ onCopiar }) => {
   const [formularios, setFormularios] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [busqueda, setBusqueda] = useState('');
+  const [filtro, setFiltro] = useState('todos');
+  const [copiandoId, setCopiandoId] = useState(null);
+  const [ratingLoading, setRatingLoading] = useState(null);
 
   useEffect(() => {
     const fetchPublicForms = async () => {
@@ -20,33 +36,197 @@ const GaleriaFormulariosPublicos = ({ onCopiar }) => {
     fetchPublicForms();
   }, []);
 
+  // Filtro y búsqueda en frontend
+  const formulariosFiltrados = useMemo(() => {
+    let lista = [...formularios];
+    if (busqueda.trim()) {
+      const b = busqueda.trim().toLowerCase();
+      lista = lista.filter(f =>
+        (f.nombre?.toLowerCase().includes(b) ||
+         f.creadorEmail?.toLowerCase().includes(b) ||
+         f.creadorDisplayName?.toLowerCase?.().includes(b))
+      );
+    }
+    switch (filtro) {
+      case 'masCopiados':
+        lista.sort((a, b) => (b.copiadoCount || 0) - (a.copiadoCount || 0));
+        break;
+      case 'mejorValorados':
+        lista.sort((a, b) => (b.rating || 0) - (a.rating || 0));
+        break;
+      case 'menosPreguntas':
+        lista.sort((a, b) =>
+          (a.secciones?.reduce((acc, s) => acc + (s.preguntas?.length || 0), 0) || 0) -
+          (b.secciones?.reduce((acc, s) => acc + (s.preguntas?.length || 0), 0) || 0)
+        );
+        break;
+      case 'masPreguntas':
+        lista.sort((a, b) =>
+          (b.secciones?.reduce((acc, s) => acc + (s.preguntas?.length || 0), 0) || 0) -
+          (a.secciones?.reduce((acc, s) => acc + (s.preguntas?.length || 0), 0) || 0)
+        );
+        break;
+      default:
+        break;
+    }
+    return lista;
+  }, [formularios, busqueda, filtro]);
+
+  // Copiar formulario: incrementa contador en Firestore y llama onCopiar
+  const handleCopiar = async (form) => {
+    setCopiandoId(form.id);
+    try {
+      const ref = doc(db, 'formularios', form.id);
+      await updateDoc(ref, { copiadoCount: increment(1) });
+      onCopiar && onCopiar(form);
+      setFormularios(prev => prev.map(f => f.id === form.id ? { ...f, copiadoCount: (f.copiadoCount || 0) + 1 } : f));
+      console.log('[GaleriaFormulariosPublicos] Formulario copiado:', form.id);
+    } catch (e) {
+      console.error('Error al incrementar copiadoCount:', e);
+    } finally {
+      setCopiandoId(null);
+    }
+  };
+
+  // Puntuar formulario: rating anónimo, promedio simple
+  const handlePuntuar = async (form, value) => {
+    setRatingLoading(form.id);
+    try {
+      const ref = doc(db, 'formularios', form.id);
+      const ratingsCount = (form.ratingsCount || 0) + 1;
+      const newRating = ((form.rating || 0) * (form.ratingsCount || 0) + value) / ratingsCount;
+      await updateDoc(ref, { rating: newRating, ratingsCount });
+      setFormularios(prev => prev.map(f => f.id === form.id ? { ...f, rating: newRating, ratingsCount } : f));
+      console.log('[GaleriaFormulariosPublicos] Formulario puntuado:', form.id, value);
+    } catch (e) {
+      console.error('Error al puntuar:', e);
+    } finally {
+      setRatingLoading(null);
+    }
+  };
+
+  // Obtener UID del usuario actual (desde localStorage)
+  const userInfo = useMemo(() => {
+    try {
+      return JSON.parse(localStorage.getItem('userInfo'));
+    } catch {
+      return null;
+    }
+  }, []);
+  const myUid = userInfo?.uid;
+
   if (loading) return <Alert severity="info">Cargando formularios públicos...</Alert>;
   if (formularios.length === 0) return <Alert severity="info">No hay formularios públicos aún.</Alert>;
 
   return (
     <Box sx={{ p: 3 }}>
       <Typography variant="h5" gutterBottom>Galería de Formularios Públicos</Typography>
+      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ mb: 2 }}>
+        <TextField
+          placeholder="Buscar por nombre o creador..."
+          value={busqueda}
+          onChange={e => setBusqueda(e.target.value)}
+          size="small"
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <SearchIcon />
+              </InputAdornment>
+            )
+          }}
+          sx={{ minWidth: 220 }}
+        />
+        <Select
+          value={filtro}
+          onChange={e => setFiltro(e.target.value)}
+          size="small"
+          sx={{ minWidth: 180 }}
+        >
+          {FILTROS.map(f => <MenuItem key={f.value} value={f.value}>{f.label}</MenuItem>)}
+        </Select>
+      </Stack>
       <Grid container spacing={2}>
-        {formularios.map(form => (
-          <Grid item xs={12} md={6} lg={4} key={form.id}>
-            <Card>
-              <CardContent>
-                <Typography variant="h6">{form.nombre}</Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                  Secciones: {Array.isArray(form.secciones) ? form.secciones.length : 0} | Preguntas: {Array.isArray(form.secciones) ? form.secciones.reduce((acc, s) => acc + (Array.isArray(s.preguntas) ? s.preguntas.length : 0), 0) : 0}
-                </Typography>
-                <Button
-                  variant="contained"
-                  startIcon={<ContentCopyIcon />}
-                  onClick={() => onCopiar(form)}
-                  fullWidth
-                >
-                  Copiar a mi sistema
-                </Button>
-              </CardContent>
-            </Card>
-          </Grid>
-        ))}
+        {formulariosFiltrados.map(form => {
+          const esPropio = form.creadorId && myUid && form.creadorId === myUid;
+          return (
+            <Grid item xs={12} key={form.id}>
+              <Accordion>
+                <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                  <Box sx={{ flex: 1 }}>
+                    <Typography variant="h6" sx={{ display: 'inline', mr: 1 }}>{form.nombre}</Typography>
+                    <Chip label={`Creador: ${form.creadorEmail || form.creadorDisplayName || 'N/A'}`} size="small" sx={{ ml: 1 }} />
+                    <Chip label={`Secciones: ${Array.isArray(form.secciones) ? form.secciones.length : 0}`} size="small" sx={{ ml: 1 }} />
+                    <Chip label={`Preguntas: ${Array.isArray(form.secciones) ? form.secciones.reduce((acc, s) => acc + (Array.isArray(s.preguntas) ? s.preguntas.length : 0), 0) : 0}`} size="small" sx={{ ml: 1 }} />
+                    <Chip label={`Copias: ${form.copiadoCount || 0}`} size="small" color="info" sx={{ ml: 1 }} />
+                    <Tooltip title={form.rating ? `Valoración: ${form.rating.toFixed(2)} (${form.ratingsCount || 0} votos)` : 'Sin puntuación'}>
+                      <span>
+                        <Rating
+                          value={form.rating || 0}
+                          precision={0.5}
+                          readOnly
+                          size="small"
+                          sx={{ ml: 1, verticalAlign: 'middle' }}
+                        />
+                      </span>
+                    </Tooltip>
+                  </Box>
+                  <Tooltip title={esPropio ? 'No puedes copiar tu propio formulario' : 'Copiar a mi sistema'}>
+                    <span>
+                      <Button
+                        variant="contained"
+                        startIcon={<ContentCopyIcon />}
+                        onClick={e => { e.stopPropagation(); handleCopiar(form); }}
+                        disabled={copiandoId === form.id || esPropio}
+                        sx={{ ml: 2 }}
+                      >
+                        {copiandoId === form.id ? <CircularProgress size={18} /> : 'Copiar'}
+                      </Button>
+                    </span>
+                  </Tooltip>
+                </AccordionSummary>
+                <AccordionDetails>
+                  <Box>
+                    <Typography variant="subtitle2" sx={{ mb: 1 }}>Secciones y Preguntas:</Typography>
+                    {Array.isArray(form.secciones) && form.secciones.length > 0 ? (
+                      form.secciones.map((sec, idx) => (
+                        <Box key={idx} sx={{ mb: 2, pl: 1 }}>
+                          <Typography variant="body1" sx={{ fontWeight: 600 }}>{sec.nombre || `Sección ${idx + 1}`}</Typography>
+                          {Array.isArray(sec.preguntas) && sec.preguntas.length > 0 ? (
+                            <ul style={{ margin: 0, paddingLeft: 18 }}>
+                              {sec.preguntas.map((preg, i) => (
+                                <li key={i}>
+                                  <Typography variant="body2">{preg.texto || preg.pregunta || `Pregunta ${i + 1}`}</Typography>
+                                </li>
+                              ))}
+                            </ul>
+                          ) : (
+                            <Typography variant="body2" color="text.secondary">Sin preguntas</Typography>
+                          )}
+                        </Box>
+                      ))
+                    ) : (
+                      <Typography variant="body2" color="text.secondary">Sin secciones</Typography>
+                    )}
+                    <Box sx={{ mt: 2, display: 'flex', alignItems: 'center', gap: 2 }}>
+                      <Typography variant="body2">¿Te gustó este formulario?</Typography>
+                      <Tooltip title={esPropio ? 'No puedes puntuar tu propio formulario' : 'Puntuar'}>
+                        <span>
+                          <Rating
+                            value={form.rating || 0}
+                            precision={1}
+                            onChange={(_, value) => value && !esPropio && handlePuntuar(form, value)}
+                            disabled={!!ratingLoading || esPropio}
+                          />
+                        </span>
+                      </Tooltip>
+                      {ratingLoading === form.id && <CircularProgress size={18} />}
+                    </Box>
+                  </Box>
+                </AccordionDetails>
+              </Accordion>
+            </Grid>
+          );
+        })}
       </Grid>
     </Box>
   );

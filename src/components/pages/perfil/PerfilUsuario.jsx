@@ -114,7 +114,7 @@ const PerfilUsuario = () => {
             puedeCrearEmpresas: true,
             puedeCrearSucursales: true,
             puedeCrearAuditorias: true,
-            puedeCompartirAuditorias: true,
+            puedeCompartirFormularios: true,
             puedeAgregarSocios: true,
             puedeGestionarUsuarios: true,
             puedeGestionarSistema: true,
@@ -127,7 +127,7 @@ const PerfilUsuario = () => {
             puedeCrearEmpresas: true,
             puedeCrearSucursales: true,
             puedeCrearAuditorias: true,
-            puedeCompartirAuditorias: true,
+            puedeCompartirFormularios: true,
             puedeAgregarSocios: true,
             puedeGestionarUsuarios: true,
             puedeVerLogs: true,
@@ -141,7 +141,7 @@ const PerfilUsuario = () => {
             puedeCrearEmpresas: false,
             puedeCrearSucursales: false,
             puedeCrearAuditorias: false,
-            puedeCompartirAuditorias: false,
+            puedeCompartirFormularios: false,
             puedeAgregarSocios: false
           };
           break;

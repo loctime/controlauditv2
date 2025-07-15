@@ -30,6 +30,8 @@ import { auth } from '../../../firebaseConfig';
 import { useAuth } from '../../context/AuthContext';
 import { toast } from 'react-toastify';
 import { registrarAccionSistema } from '../../../utils/firestoreUtils';
+import Permiso from '../../common/Permiso';
+import { usePermiso } from '../../hooks/usePermiso';
 
 const PERMISOS_LISTA = [
   { key: 'puedeCrearEmpresas', label: 'Crear Empresas' },
@@ -62,7 +64,7 @@ const UsuariosList = ({ clienteAdminId, showAddButton = true }) => {
       puedeCrearSucursales: false,
       puedeCrearAuditorias: false,
       puedeAgendarAuditorias: false,
-      puedeCompartirAuditorias: false,
+      puedeCompartirFormularios: false,
       puedeAgregarSocios: false
     }
   });
@@ -108,7 +110,7 @@ const UsuariosList = ({ clienteAdminId, showAddButton = true }) => {
           puedeCrearSucursales: false,
           puedeCrearAuditorias: false,
           puedeAgendarAuditorias: false,
-          puedeCompartirAuditorias: false,
+          puedeCompartirFormularios: false,
           puedeAgregarSocios: false
         }
       });
@@ -124,7 +126,7 @@ const UsuariosList = ({ clienteAdminId, showAddButton = true }) => {
           puedeCrearSucursales: false,
           puedeCrearAuditorias: false,
           puedeAgendarAuditorias: false,
-          puedeCompartirAuditorias: false,
+          puedeCompartirFormularios: false,
           puedeAgregarSocios: false
         }
       });
@@ -146,7 +148,7 @@ const UsuariosList = ({ clienteAdminId, showAddButton = true }) => {
         puedeCrearSucursales: false,
         puedeCrearAuditorias: false,
         puedeAgendarAuditorias: false,
-        puedeCompartirAuditorias: false,
+        puedeCompartirFormularios: false,
         puedeAgregarSocios: false
       }
     });
@@ -353,14 +355,16 @@ const UsuariosList = ({ clienteAdminId, showAddButton = true }) => {
                   <TableCell>
                     <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
                       {PERMISOS_LISTA.map((permiso) => (
-                        usuario.permisos?.[permiso.key] && (
-                          <Chip
-                            key={permiso.key}
-                            label={permiso.label}
-                            size="small"
-                            variant="outlined"
-                          />
-                        )
+                        <Permiso permiso={permiso.key} key={permiso.key} fallback={null}>
+                          {usuario.permisos?.[permiso.key] && (
+                            <Chip
+                              key={permiso.key}
+                              label={permiso.label}
+                              size="small"
+                              variant="outlined"
+                            />
+                          )}
+                        </Permiso>
                       ))}
                     </Box>
                   </TableCell>
@@ -443,16 +447,17 @@ const UsuariosList = ({ clienteAdminId, showAddButton = true }) => {
             </Typography>
             <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 1 }}>
               {PERMISOS_LISTA.map((permiso) => (
-                <FormControlLabel
-                  key={permiso.key}
-                  control={
-                    <Checkbox
-                      checked={formData.permisos[permiso.key] || false}
-                      onChange={(e) => handleFormChange('permisos', { [permiso.key]: e.target.checked })}
-                    />
-                  }
-                  label={permiso.label}
-                />
+                <Permiso permiso={permiso.key} key={permiso.key} fallback={null}>
+                  <FormControlLabel
+                    control={
+                      <Checkbox
+                        checked={formData.permisos[permiso.key] || false}
+                        onChange={(e) => handleFormChange('permisos', { [permiso.key]: e.target.checked })}
+                      />
+                    }
+                    label={permiso.label}
+                  />
+                </Permiso>
               ))}
             </Box>
           </Box>

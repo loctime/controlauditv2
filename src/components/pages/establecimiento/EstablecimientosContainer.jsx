@@ -8,9 +8,10 @@ import AddEmpresaModal from "./AddEmpresaModal";
 import EliminarEmpresa from "./EliminarEmpresa";
 import Swal from 'sweetalert2';
 import { useAuth } from "../../context/AuthContext";
+import EditarEmpresaModal from "./EditarEmpresa";
 
 const EstablecimientosContainer = () => {
-  const { userProfile, userEmpresas, crearEmpresa, verificarYCorregirEmpresas, getUserEmpresas } = useAuth();
+  const { userProfile, userEmpresas, crearEmpresa, verificarYCorregirEmpresas, getUserEmpresas, updateEmpresa } = useAuth();
   
   // Función para formatear email (mostrar solo usuario)
   const formatearEmail = (email) => {
@@ -28,6 +29,8 @@ const EstablecimientosContainer = () => {
   const [verificando, setVerificando] = useState(false);
   const [cargandoEmpresas, setCargandoEmpresas] = useState(false);
   const [empresasCargadas, setEmpresasCargadas] = useState(false);
+  const [openEditModal, setOpenEditModal] = useState(false);
+  const [empresaEdit, setEmpresaEdit] = useState(null);
 
   // Debug logs para verificar el filtrado multi-tenant
   useEffect(() => {
@@ -162,6 +165,73 @@ const EstablecimientosContainer = () => {
       });
     } finally {
       setVerificando(false);
+    }
+  };
+
+  // Abrir modal de edición y setear empresa a editar
+  const handleOpenEditModal = (empresa) => {
+    setEmpresaEdit({ ...empresa, logo: null }); // logo: null para saber si se cambia
+    setOpenEditModal(true);
+  };
+
+  // Cerrar modal de edición
+  const handleCloseEditModal = () => {
+    setOpenEditModal(false);
+    setEmpresaEdit(null);
+  };
+
+  // Manejar cambios en inputs del modal de edición
+  const handleEditInputChange = (e) => {
+    const { name, value } = e.target;
+    setEmpresaEdit((prev) => ({ ...prev, [name]: value }));
+  };
+
+  // Manejar cambio de logo en edición
+  const handleEditLogoChange = (e) => {
+    setEmpresaEdit((prev) => ({ ...prev, logo: e.target.files[0] }));
+  };
+
+  // Guardar cambios de empresa
+  const [loadingEdit, setLoadingEdit] = useState(false);
+  const handleEditEmpresa = async () => {
+    setLoadingEdit(true);
+    try {
+      console.log('[handleEditEmpresa] Editando empresa:', empresaEdit);
+      let logoURL = empresaEdit.logoUrlOriginal || empresaEdit.logo || '';
+      // Si el usuario seleccionó un nuevo logo, subirlo
+      if (empresaEdit.logo && empresaEdit.logo instanceof File) {
+        const logoRef = ref(storage, `logos/${empresaEdit.logo.name}`);
+        const snapshot = await uploadBytes(logoRef, empresaEdit.logo);
+        logoURL = await getDownloadURL(snapshot.ref);
+        console.log('[handleEditEmpresa] Nuevo logo subido:', logoURL);
+      } else if (empresaEdit.logo === null && empresaEdit.logoUrlOriginal) {
+        logoURL = empresaEdit.logoUrlOriginal;
+      }
+      // Construir datos a actualizar
+      const updateData = {
+        nombre: empresaEdit.nombre,
+        direccion: empresaEdit.direccion,
+        telefono: empresaEdit.telefono,
+        logo: logoURL
+      };
+      await updateEmpresa(empresaEdit.id, updateData);
+      console.log('[handleEditEmpresa] Empresa actualizada:', empresaEdit.id);
+      Swal.fire({
+        icon: 'success',
+        title: 'Empresa actualizada',
+        text: 'Los cambios se guardaron correctamente.'
+      });
+      setEmpresasCargadas(false); // Forzar recarga
+      handleCloseEditModal();
+    } catch (error) {
+      console.error('[handleEditEmpresa] Error al editar empresa:', error);
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: 'Ocurrió un error al guardar los cambios.'
+      });
+    } finally {
+      setLoadingEdit(false);
     }
   };
 
@@ -381,6 +451,20 @@ const EstablecimientosContainer = () => {
                         Sucursales
                       </Button>
                     </Link>
+                    {/* Botón editar solo para propietario o admin */}
+                    {(userProfile?.uid === empresa.propietarioId || userProfile?.role === 'supermax') && (
+                      <Button
+                        variant="outlined"
+                        color="secondary"
+                        onClick={() => handleOpenEditModal({
+                          ...empresa,
+                          logoUrlOriginal: empresa.logo // Para mantener el logo si no se cambia
+                        })}
+                        sx={{ minWidth: 0, px: 1 }}
+                      >
+                        Editar
+                      </Button>
+                    )}
                     <EliminarEmpresa
                       empresaId={empresa.id}
                       eliminarEmpresa={eliminarEmpresa}
@@ -401,6 +485,17 @@ const EstablecimientosContainer = () => {
           handleInputChange={handleInputChange}
           handleLogoChange={handleLogoChange}
           loading={loading}
+        />
+      )}
+      {openEditModal && empresaEdit && (
+        <EditarEmpresaModal
+          open={openEditModal}
+          handleClose={handleCloseEditModal}
+          handleEditEmpresa={handleEditEmpresa}
+          empresa={empresaEdit}
+          handleInputChange={handleEditInputChange}
+          handleLogoChange={handleEditLogoChange}
+          loading={loadingEdit}
         />
       )}
     </Box>

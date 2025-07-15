@@ -1,5 +1,33 @@
 # 📚 Documentación Consolidada del Sistema de Auditorías
 
+## 🚀 Novedades 2024-06
+
+- Permisos unificados: ahora todo el sistema usa `puedeCompartirFormularios` (antes `puedeCompartirAuditorias`).
+- Nuevo hook `usePermiso` y componente `<Permiso />` para validación de permisos reutilizable en UI y lógica. Ejemplo:
+  ```jsx
+  <Permiso permiso="puedeCompartirFormularios">
+    <Button>Compartir</Button>
+  </Permiso>
+  // O en lógica:
+  const puede = usePermiso('puedeCrearEmpresas');
+  ```
+- Galería de formularios públicos optimizada:
+  - Buscador por nombre/creador
+  - Filtros avanzados (más copiados, mejor valorados, preguntas)
+  - Rating anónimo (promedio, votos)
+  - Contador de copias
+  - Accordion con secciones y preguntas
+  - Creador visible
+  - Botón copiar y rating deshabilitados para el creador (con tooltip)
+  - Chips de estado: público, compartido, propio
+- Lógica de copiado: copiar un formulario crea un nuevo documento independiente; editar el original no afecta las copias.
+- Refactor de permisos en usuarios y formularios para coherencia y mantenibilidad.
+- Mejoras de UX: tooltips, feedback visual, loading en acciones, chips de estado.
+- Seguridad: validación de permisos en frontend y backend, logs de intentos de acceso sin permisos.
+- 100% responsivo y accesible.
+
+---
+
 ## 📋 **Índice**
 1. [Sistema Multi-Tenant](#sistema-multi-tenant)
 2. [Sistema de Roles](#sistema-de-roles)

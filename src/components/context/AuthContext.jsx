@@ -937,6 +937,34 @@ const AuthContextComponent = ({ children }) => {
     return false;
   };
 
+  // Actualizar datos de una empresa y registrar log
+  const updateEmpresa = async (empresaId, updateData) => {
+    try {
+      console.log('[updateEmpresa] Iniciando actualización de empresa:', empresaId, updateData);
+      const empresaRef = doc(db, 'empresas', empresaId);
+      await updateDoc(empresaRef, {
+        ...updateData,
+        ultimaModificacion: new Date(),
+      });
+      // Registrar log de acción
+      await registrarAccionSistema(
+        userProfile?.uid,
+        `Actualización de empresa (${empresaId})`,
+        { ...updateData },
+        'update',
+        'empresa',
+        empresaId
+      );
+      // Actualizar localmente si corresponde
+      setUserEmpresas((prev) => prev.map(e => e.id === empresaId ? { ...e, ...updateData, ultimaModificacion: new Date() } : e));
+      console.log('[updateEmpresa] Empresa actualizada correctamente:', empresaId);
+      return true;
+    } catch (error) {
+      console.error('[updateEmpresa] Error al actualizar empresa:', error);
+      throw error;
+    }
+  };
+
   // Los valores disponibles en el contexto
   const data = {
     user,
@@ -967,6 +995,7 @@ const AuthContextComponent = ({ children }) => {
     getUsuariosDeClienteAdmin,
     getFormulariosDeClienteAdmin,
     verificarYCorregirEmpresas,
+    updateEmpresa,
     bloqueado,
     motivoBloqueo
   };

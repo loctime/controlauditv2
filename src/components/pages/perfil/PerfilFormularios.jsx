@@ -11,6 +11,7 @@ import { db } from '../../../firebaseConfig';
 import { v4 as uuidv4 } from 'uuid';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import { usePermissions } from '../admin/hooks/usePermissions';
+import { useNavigate } from 'react-router-dom';
 
 const PerfilFormularios = ({ formularios, loading }) => {
   // Log de depuración
@@ -19,6 +20,7 @@ const PerfilFormularios = ({ formularios, loading }) => {
   const [shareLink, setShareLink] = useState('');
   const [copying, setCopying] = useState(false);
   const { canCompartirFormularios } = usePermissions();
+  const navigate = useNavigate();
 
   const handleCompartir = async (form) => {
     if (!canCompartirFormularios) return;
@@ -46,9 +48,23 @@ const PerfilFormularios = ({ formularios, loading }) => {
     <Box sx={{ p: 3 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
         <Typography variant="h6">Mis Formularios</Typography>
-        <Typography variant="body2" color="text.secondary">
-          {formularios.length} formulario(s)
-        </Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <Typography variant="body2" color="text.secondary">
+            {formularios.length} formulario(s)
+          </Typography>
+          {/* Botón para ir a gestión de empresas */}
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={() => {
+              console.log('[PerfilFormularios] Navegando a /establecimiento');
+              navigate('/editar');
+            }}
+            sx={{ ml: 2 }}
+          >
+            Gestionar Formularios
+          </Button>
+        </Box>
       </Box>
       {loading ? (
         <Alert severity="info">Cargando formularios...</Alert>
@@ -69,6 +85,9 @@ const PerfilFormularios = ({ formularios, loading }) => {
                   secondary={form.descripcion || ''}
                 />
                 {form.esPublico && <Chip label="Público" size="small" color="success" sx={{ ml: 1 }} />}
+                {Array.isArray(form.compartidoCon) && form.compartidoCon.length > 0 && (
+                  <Chip label="Compartido" size="small" color="info" sx={{ ml: 1 }} />
+                )}
               </ListItem>
             </AccordionSummary>
             <AccordionDetails>

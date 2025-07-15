@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import {
   Box, Typography, Accordion, AccordionSummary, AccordionDetails,
-  List, ListItem, ListItemAvatar, Avatar, ListItemText, Chip, Alert, CircularProgress
+  List, ListItem, ListItemAvatar, Avatar, ListItemText, Chip, Alert, CircularProgress, Button
 } from '@mui/material';
 import { Business as BusinessIcon, ExpandMore as ExpandMoreIcon, Store as StoreIcon } from '@mui/icons-material';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { db } from '../../../firebaseConfig';
+import { useNavigate } from 'react-router-dom';
 
 // Componente para mostrar sucursales de una empresa
 const SucursalesEmpresa = ({ empresaId }) => {
@@ -49,14 +50,29 @@ const SucursalesEmpresa = ({ empresaId }) => {
 const PerfilEmpresas = ({ empresas, loading }) => {
   // Log de depuración
   console.debug('[PerfilEmpresas] empresas:', empresas);
+  const navigate = useNavigate();
 
   return (
     <Box sx={{ p: 3 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
         <Typography variant="h6">Mis Empresas</Typography>
-        <Typography variant="body2" color="text.secondary">
-          {empresas.length} empresa(s)
-        </Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <Typography variant="body2" color="text.secondary">
+            {empresas.length} empresa(s)
+          </Typography>
+          {/* Botón para ir a gestión de empresas */}
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={() => {
+              console.log('[PerfilEmpresas] Navegando a /establecimiento');
+              navigate('/establecimiento');
+            }}
+            sx={{ ml: 2 }}
+          >
+            Gestionar Empresas
+          </Button>
+        </Box>
       </Box>
       {loading ? (
         <Alert severity="info">Cargando empresas...</Alert>

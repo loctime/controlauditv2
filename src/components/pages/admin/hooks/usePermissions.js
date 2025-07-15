@@ -65,7 +65,7 @@ export const usePermissions = () => {
     return permissions.puedeCrearSucursales || role === 'supermax';
   }, [permissions.puedeCrearSucursales, role]);
 
-  const canCompartirAuditorias = useMemo(() => {
+  const canCompartirFormularios = useMemo(() => {
     return permissions.puedeCompartirFormularios || role === 'supermax';
   }, [permissions.puedeCompartirFormularios, role]);
 
@@ -89,7 +89,7 @@ export const usePermissions = () => {
     canCrearAuditorias,
     canCrearEmpresas,
     canCrearSucursales,
-    canCompartirAuditorias,
+    canCompartirFormularios,
     canAgregarSocios,
     canAuditar,
     hasPermission

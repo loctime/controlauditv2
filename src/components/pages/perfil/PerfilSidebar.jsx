@@ -5,7 +5,6 @@ import { Business as BusinessIcon, Draw as DrawIcon, Share as ShareIcon, Setting
 const sidebarItems = [
   { label: 'Empresas', icon: <BusinessIcon />, key: 'empresas' },
   { label: 'Formularios', icon: <DrawIcon />, key: 'formularios' },
-  { label: 'Formularios Compartidos', icon: <ShareIcon />, key: 'compartidas' },
   { label: 'Configuración', icon: <SettingsIcon />, key: 'configuracion' },
   { label: 'Usuarios', icon: <GroupIcon />, key: 'usuarios' },
   { label: 'Firma', icon: <DrawIcon />, key: 'firma' },
