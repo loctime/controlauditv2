@@ -6,6 +6,7 @@ import Register from "../components/pages/register/Register";
 import ForgotPassword from "../components/pages/forgotPassword/ForgotPassword";
 import ProtectedUsers from "./ProtectedUsers";
 import DashboardProtected from "./DashboardProtected";
+import VistaFormularioPublico from '../components/pages/formulario/VistaFormularioPublico';
 
 const AppRouter = () => {
   return (
@@ -14,6 +15,7 @@ const AppRouter = () => {
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/formularios/public/:publicSharedId" element={<VistaFormularioPublico />} />
 
       {/* Rutas protegidas */}
       <Route element={<ProtectedUsers />}>

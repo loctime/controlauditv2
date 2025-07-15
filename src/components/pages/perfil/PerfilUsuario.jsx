@@ -26,16 +26,12 @@ const PerfilUsuario = () => {
     socios,
     auditoriasCompartidas,
     agregarSocio,
-    compartirAuditoria,
     updateUserProfile
   } = useAuth();
 
   const [selectedSection, setSelectedSection] = useState('empresas');
   const [emailSocio, setEmailSocio] = useState("");
-  const [emailCompartir, setEmailCompartir] = useState("");
-  const [auditoriaSeleccionada, setAuditoriaSeleccionada] = useState("");
   const [openDialogSocio, setOpenDialogSocio] = useState(false);
-  const [openDialogCompartir, setOpenDialogCompartir] = useState(false);
   const [loading, setLoading] = useState(false);
   const [selectedRole, setSelectedRole] = useState('operario');
   const [usuariosCreados, setUsuariosCreados] = useState([]);
@@ -101,26 +97,6 @@ const PerfilUsuario = () => {
       setEmailSocio("");
       setOpenDialogSocio(false);
       Swal.fire('Éxito', 'Socio agregado correctamente', 'success');
-    } catch (error) {
-      Swal.fire('Error', error.message, 'error');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleCompartirAuditoria = async () => {
-    if (!emailCompartir.trim() || !auditoriaSeleccionada) {
-      Swal.fire('Error', 'Por favor completa todos los campos', 'error');
-      return;
-    }
-
-    setLoading(true);
-    try {
-      await compartirAuditoria(auditoriaSeleccionada, emailCompartir);
-      setEmailCompartir("");
-      setAuditoriaSeleccionada("");
-      setOpenDialogCompartir(false);
-      Swal.fire('Éxito', 'Auditoría compartida correctamente', 'success');
     } catch (error) {
       Swal.fire('Error', error.message, 'error');
     } finally {
@@ -224,14 +200,6 @@ const PerfilUsuario = () => {
         setEmailSocio={setEmailSocio}
         loading={loading}
         handleAgregarSocio={handleAgregarSocio}
-        openDialogCompartir={openDialogCompartir}
-        setOpenDialogCompartir={setOpenDialogCompartir}
-        auditoriaSeleccionada={auditoriaSeleccionada}
-        setAuditoriaSeleccionada={setAuditoriaSeleccionada}
-        userAuditorias={userAuditorias}
-        emailCompartir={emailCompartir}
-        setEmailCompartir={setEmailCompartir}
-        handleCompartirAuditoria={handleCompartirAuditoria}
       />
     </Box>
   );

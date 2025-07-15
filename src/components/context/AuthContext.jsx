@@ -2,7 +2,7 @@
 import { createContext, useState, useEffect, useContext } from "react";
 import { auth, db } from "../../firebaseConfig";
 import { onAuthStateChanged } from "firebase/auth";
-import { doc, getDoc, setDoc, updateDoc, collection, query, where, getDocs, addDoc } from "firebase/firestore";
+import { doc, getDoc, setDoc, updateDoc, collection, query, where, getDocs, addDoc, onSnapshot } from "firebase/firestore";
 import { registrarLogOperario, registrarAccionSistema } from '../../utils/firestoreUtils'; // NUEVO: función para logs
 import { getUserRole } from '../../config/admin'; // ✅ Importar configuración del administrador
 
@@ -89,6 +89,38 @@ const AuthContextComponent = ({ children }) => {
 
     return () => unsubscribe();
   }, []);
+
+  // --- Listener reactivo para empresas del usuario (multi-tenant) ---
+  useEffect(() => {
+    if (!userProfile?.uid || !role) {
+      setUserEmpresas([]);
+      return;
+    }
+    let q;
+    const empresasRef = collection(db, "empresas");
+    if (role === 'supermax') {
+      // Supermax ve todas las empresas
+      q = empresasRef;
+    } else if (role === 'max') {
+      // Max ve solo sus propias empresas
+      q = query(empresasRef, where("propietarioId", "==", userProfile.uid));
+    } else if (role === 'operario' && userProfile.clienteAdminId) {
+      // Operario ve empresas de su cliente admin
+      q = query(empresasRef, where("propietarioId", "==", userProfile.clienteAdminId));
+    } else {
+      setUserEmpresas([]);
+      return;
+    }
+    console.debug('[AuthContext] Suscribiendo a empresas en tiempo real para rol:', role, 'query:', q);
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      setUserEmpresas(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      console.debug('[AuthContext] Empresas actualizadas en tiempo real:', snapshot.docs.length);
+    }, (error) => {
+      console.error('[AuthContext] Error en onSnapshot de empresas:', error);
+      setUserEmpresas([]);
+    });
+    return () => unsubscribe();
+  }, [userProfile?.uid, role, userProfile?.clienteAdminId]);
 
   useEffect(() => {
     // Lógica de bloqueo de acceso por estado de pago
@@ -214,7 +246,7 @@ const AuthContextComponent = ({ children }) => {
             puedeCrearEmpresas: true,
             puedeCrearSucursales: true,
             puedeCrearAuditorias: true,
-            puedeCompartirAuditorias: true,
+            puedeCompartirFormularios: true,
             puedeAgregarSocios: true,
             puedeGestionarUsuarios: true,
             puedeVerLogs: true,
@@ -632,7 +664,7 @@ const AuthContextComponent = ({ children }) => {
           puedeCrearEmpresas: false,
           puedeCrearSucursales: false,
           puedeCrearAuditorias: true,
-          puedeCompartirAuditorias: false,
+          puedeCompartirFormularios: false,
           puedeAgregarSocios: false
         },
         configuracion: {
@@ -918,7 +950,6 @@ const AuthContextComponent = ({ children }) => {
     handleLogin,
     logoutContext,
     agregarSocio,
-    compartirAuditoria,
     crearEmpresa,
     updateUserProfile,
     canViewEmpresa,

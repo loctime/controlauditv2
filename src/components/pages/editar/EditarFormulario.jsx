@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { collection, getDocs, doc, getDoc } from "firebase/firestore";
+import { collection, getDocs, doc, getDoc, onSnapshot } from "firebase/firestore";
 import { db } from "../../../firebaseConfig";
 import { FormControl, InputLabel, Select, MenuItem, Typography, Box, Alert, Chip, Button } from "@mui/material";
 import RefreshIcon from '@mui/icons-material/Refresh';
@@ -7,6 +7,9 @@ import EditarSeccionYPreguntas from "./EditarSeccionYPreguntas";
 import { useAuth } from "../../context/AuthContext";
 import Swal from 'sweetalert2';
 import { useNavigate } from "react-router-dom";
+import PublicIcon from '@mui/icons-material/Public';
+import AddIcon from '@mui/icons-material/Add';
+import FormulariosAccordionList from "./FormulariosAccordionList";
 
 const EditarFormulario = () => {
   const { user, userProfile } = useAuth();
@@ -19,24 +22,64 @@ const EditarFormulario = () => {
   const [recargando, setRecargando] = useState(false); // Estado para animación del botón
   const navigate = useNavigate();
 
-  // Cargar solo metadatos al inicio
-  const obtenerFormularios = useCallback(async () => {
+  // Almacena detalles completos de formularios
+  const [formulariosCompletos, setFormulariosCompletos] = useState([]);
+
+  const CACHE_KEY = 'formularios_detalle_cache';
+  const CACHE_EXPIRATION_MS = 10 * 60 * 1000; // 10 minutos
+
+  // Cargar detalles completos de todos los formularios permitidos
+  const cargarDetallesFormularios = useCallback(async (formulariosPermitidos) => {
+    // Intentar recuperar de localStorage
     try {
-      if (!user) {
-        setFormularios([]);
-        setLoading(false);
-        return;
+      const cacheRaw = localStorage.getItem(CACHE_KEY);
+      if (cacheRaw) {
+        const cache = JSON.parse(cacheRaw);
+        if (Date.now() - cache.timestamp < CACHE_EXPIRATION_MS) {
+          // Validar que los ids coincidan
+          const idsCache = cache.formularios.map(f => f.id).sort().join(',');
+          const idsActual = formulariosPermitidos.map(f => f.id).sort().join(',');
+          if (idsCache === idsActual) {
+            setFormulariosCompletos(cache.formularios);
+            console.debug('[EditarFormulario] Formularios completos cargados de cache local');
+            setLoading(false);
+            return;
+          }
+        }
       }
-      setLoading(true);
-      
-      // Limpiar cache si es una recarga
-      if (reload) {
-        setFormulariosCache({});
-        console.log('🔄 Cache de formularios limpiado');
+    } catch (e) { console.warn('Error leyendo cache local:', e); }
+    // Si no hay cache válido, cargar de Firestore
+    setLoading(true);
+    const detalles = await Promise.all(formulariosPermitidos.map(async (meta) => {
+      try {
+        const docSnap = await getDoc(doc(db, 'formularios', meta.id));
+        const data = docSnap.data();
+        return { ...meta, ...data, id: meta.id };
+      } catch (e) {
+        console.warn('Error cargando detalle de formulario', meta.id, e);
+        return meta;
       }
-      
-      const formulariosCollection = collection(db, "formularios");
-      const res = await getDocs(formulariosCollection);
+    }));
+    setFormulariosCompletos(detalles);
+    // Guardar en cache local
+    try {
+      localStorage.setItem(CACHE_KEY, JSON.stringify({ formularios: detalles, timestamp: Date.now() }));
+    } catch (e) { console.warn('Error guardando cache local:', e); }
+    setLoading(false);
+    console.debug('[EditarFormulario] Formularios completos cargados de Firestore');
+  }, []);
+
+  // Suscripción reactiva a formularios multi-tenant
+  useEffect(() => {
+    if (!user) {
+      setFormularios([]);
+      setFormulariosCompletos([]);
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    const formulariosCollection = collection(db, "formularios");
+    const unsubscribe = onSnapshot(formulariosCollection, (res) => {
       const metadatos = res.docs.map((formulario) => {
         const data = formulario.data();
         return {
@@ -56,102 +99,57 @@ const EditarFormulario = () => {
       });
       // Filtrar por permisos multi-tenant
       const formulariosPermitidos = metadatos.filter(formulario => {
-        // Super administradores ven todos los formularios
-        if (userProfile?.role === 'supermax') {
-          return true;
-        }
-
-        // Clientes administradores ven sus formularios y los de sus usuarios
+        if (userProfile?.role === 'supermax') return true;
         if (userProfile?.role === 'max') {
-          // Si es el cliente admin del formulario
-          if (formulario.clienteAdminId === user.uid) {
-            return true;
-          }
-          // Si es el creador del formulario
-          if (formulario.creadorId === user.uid) {
-            return true;
-          }
+          if (formulario.clienteAdminId === user.uid) return true;
+          if (formulario.creadorId === user.uid) return true;
           return false;
         }
-
-        // Usuarios operarios ven sus formularios y los de su cliente admin
         if (userProfile?.role === 'operario') {
-          // Sus propios formularios
-          if (formulario.creadorId === user.uid) {
-            return true;
-          }
-
-          // Formularios de su cliente administrador
-          if (formulario.clienteAdminId === userProfile.clienteAdminId) {
-            return true;
-          }
-
-          // Formularios públicos
-          if (formulario.esPublico) {
-            return true;
-          }
-
-          // Formularios con permisos explícitos
-          if (formulario.permisos?.puedeVer?.includes(user.uid)) {
-            return true;
-          }
-
+          if (formulario.creadorId === user.uid) return true;
+          if (formulario.clienteAdminId === userProfile.clienteAdminId) return true;
+          if (formulario.esPublico) return true;
+          if (formulario.permisos?.puedeVer?.includes(user.uid)) return true;
           return false;
         }
-
         return false;
       });
       setFormularios(formulariosPermitidos);
-      // Seleccionar el primero si no hay uno seleccionado
-      if (!formularioSeleccionado && formulariosPermitidos.length > 0) {
-        setFormularioSeleccionado(formulariosPermitidos[0]);
-      } else if (formulariosPermitidos.length === 0) {
-        setFormularioSeleccionado(null);
-      }
-    } catch (error) {
-      console.error("Error al obtener formularios:", error);
-      Swal.fire("Error", "Error al cargar formularios.", "error");
-    } finally {
+      // Por defecto, selector en 'Todos'
+      setFormularioSeleccionado(null);
+      cargarDetallesFormularios(formulariosPermitidos);
       setLoading(false);
-    }
-  }, [user, userProfile, formularioSeleccionado, reload]);
-
-  useEffect(() => {
-    obtenerFormularios();
-  }, [obtenerFormularios, reload]);
+      console.debug(`[onSnapshot] ${formulariosPermitidos.length} formularios cargados en tiempo real`);
+    }, (error) => {
+      setLoading(false);
+      console.error('[onSnapshot] Error al obtener formularios:', error);
+    });
+    return () => unsubscribe();
+  }, [user, userProfile, reload, cargarDetallesFormularios]);
 
   // Cuando el usuario selecciona un formulario, cargar el detalle solo si no está en cache
   const handleChangeFormulario = async (event) => {
     const formularioId = event.target.value;
     if (!formularioId) {
       setFormularioSeleccionado(null);
-      setCargandoFormulario(false);
       return;
     }
-    
-    setCargandoFormulario(true);
-    
-    // Si ya está en cache, usarlo
-    if (formulariosCache[formularioId]) {
-      setFormularioSeleccionado(formulariosCache[formularioId]);
-      setCargandoFormulario(false);
-      return;
+    // Buscar en cache primero
+    let detalle = formulariosCompletos.find(f => f.id === formularioId);
+    if (!detalle) {
+      try {
+        const formularioDoc = await getDoc(doc(db, "formularios", formularioId));
+        const formularioData = formularioDoc.data();
+        const meta = formularios.find(f => f.id === formularioId);
+        detalle = { ...meta, ...formularioData, id: formularioId };
+        setFormulariosCompletos(prev => ([...prev.filter(f => f.id !== formularioId), detalle]));
+      } catch (error) {
+        console.error("Error al cargar formulario:", error);
+        Swal.fire("Error", "No se pudo cargar el formulario.", "error");
+        return;
+      }
     }
-    
-    try {
-      const formularioDoc = await getDoc(doc(db, "formularios", formularioId));
-      const formularioData = formularioDoc.data();
-      const meta = formularios.find(f => f.id === formularioId);
-      const completo = { ...meta, ...formularioData, id: formularioId };
-      
-      setFormularioSeleccionado(completo);
-      setFormulariosCache(prev => ({ ...prev, [formularioId]: completo }));
-    } catch (error) {
-      console.error("Error al cargar formulario:", error);
-      Swal.fire("Error", "No se pudo cargar el formulario.", "error");
-    } finally {
-      setCargandoFormulario(false);
-    }
+    setFormularioSeleccionado(detalle);
   };
 
   const handleReload = async () => {
@@ -201,6 +199,24 @@ const EditarFormulario = () => {
     return false;
   };
 
+  // Ref para hacer scroll a la edición
+  const edicionRef = React.useRef(null);
+
+  // Función para scroll suave a la edición
+  const scrollToEdicion = () => {
+    if (edicionRef.current) {
+      edicionRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+      console.debug("[EditarFormulario] Scroll a la edición");
+    }
+  };
+
+  // Callback para el acordeón: selecciona y hace scroll
+  const handleEditarDesdeAccordion = async (formularioId) => {
+    // Simula el evento del selector
+    await handleChangeFormulario({ target: { value: formularioId } });
+    setTimeout(scrollToEdicion, 300);
+  };
+
   if (loading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="200px">
@@ -220,81 +236,106 @@ const EditarFormulario = () => {
           }
         `}
       </style>
-      {/* Título, selector y botón crear alineados horizontalmente */}
-      <Box display="flex" alignItems="center" justifyContent="space-between" mb={2}>
-        <Typography variant="h4" gutterBottom>
+      {/* Cabecera optimizada con barra de acciones */}
+      <Box display="flex" alignItems="center" justifyContent="space-between" mb={2} flexWrap="wrap" gap={2}>
+        <Typography variant="h4" gutterBottom sx={{ flex: 1, minWidth: 200 }}>
           Editar Formularios
         </Typography>
-        <Box display="flex" alignItems="center" gap={2}>
-          {recargando && (
-            <Chip 
-              label="Recargando..." 
-              color="primary" 
-              size="small"
-              sx={{ animation: 'pulse 1s infinite' }}
-            />
-          )}
-          <FormControl sx={{ minWidth: 250 }} size="small">
-            <InputLabel id="select-formulario-label">Seleccionar Formulario</InputLabel>
-            <Select
-              labelId="select-formulario-label"
-              id="select-formulario"
-              value={formularioSeleccionado ? formularioSeleccionado.id : ""}
-              onChange={handleChangeFormulario}
-              label="Seleccionar Formulario"
-            >
-              <MenuItem value=""><em>Todos</em></MenuItem>
-              {formularios.map((formulario) => (
-                <MenuItem key={formulario.id} value={formulario.id}>
-                  {formulario.nombre}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
+        <FormControl sx={{ minWidth: 250, mr: 2 }} size="small">
+          <InputLabel id="select-formulario-label">Seleccionar Formulario</InputLabel>
+          <Select
+            labelId="select-formulario-label"
+            id="select-formulario"
+            value={formularioSeleccionado ? formularioSeleccionado.id : ""}
+            onChange={handleChangeFormulario}
+            label="Seleccionar Formulario"
+          >
+            <MenuItem value=""><em>Todos</em></MenuItem>
+            {formularios.map((formulario) => (
+              <MenuItem key={formulario.id} value={formulario.id}>
+                {formulario.nombre}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+        <Box display="flex" alignItems="center" gap={1} flexWrap="wrap">
+          <Button
+            variant="outlined"
+            startIcon={<PublicIcon />}
+            onClick={() => {
+              console.debug('[EditarFormulario] Ir a galería de formularios públicos');
+              navigate('/formularios-publicos');
+            }}
+            sx={{ borderRadius: '20px', px: 2, py: 1, minWidth: 0 }}
+            title="Ver y copiar plantillas públicas"
+          >
+            Galería Pública
+          </Button>
+          <Button
+            variant="contained"
+            color="primary"
+            startIcon={<AddIcon />}
+            onClick={() => navigate("/formulario")}
+            sx={{ borderRadius: '20px', px: 2, py: 1, minWidth: 0 }}
+          >
+            Crear
+          </Button>
           <Button
             variant="outlined"
             color="primary"
             onClick={handleReload}
             disabled={recargando}
-            sx={{ 
-              minWidth: 40, 
-              width: 40, 
+            sx={{
+              minWidth: 40,
+              width: 40,
               height: 40,
               borderRadius: '50%',
               p: 0
             }}
             title="Recargar lista de formularios"
           >
-            <RefreshIcon 
-              sx={{ 
+            <RefreshIcon
+              sx={{
                 animation: recargando ? 'spin 1s linear infinite' : 'none',
                 '@keyframes spin': {
                   '0%': { transform: 'rotate(0deg)' },
                   '100%': { transform: 'rotate(360deg)' }
                 }
-              }} 
+              }}
             />
           </Button>
-          <Button
-            variant="contained"
-            color="primary"
-            onClick={() => navigate("/formulario")}
-            sx={{ whiteSpace: 'nowrap', minWidth: 100 }}
-          >
-            Crear
-          </Button>
+          {recargando && (
+            <Chip
+              label="Recargando..."
+              color="primary"
+              size="small"
+              sx={{ animation: 'pulse 1s infinite' }}
+            />
+          )}
         </Box>
       </Box>
       {/* Layout horizontal para detalle y edición */}
       {formularioSeleccionado && formularioSeleccionado.id && (
-        <Box display={{ xs: 'block', md: 'flex' }} gap={3} alignItems="flex-start">
+        <Box display={{ xs: 'block', md: 'flex' }} gap={3} alignItems="flex-start" ref={edicionRef}>
           {/* Detalle del formulario */}
           <Box flex={1} minWidth={280}>
             <Alert severity="info" sx={{ mb: 2 }}>
               <Typography variant="body2">
                 <strong>Creado por:</strong> {formularioSeleccionado.creadorNombre || formularioSeleccionado.creadorEmail || 'Desconocido'}<br/>
-                <strong>Fecha de creación:</strong> {formularioSeleccionado.timestamp?.toDate?.()?.toLocaleString?.() || 'No disponible'}<br/>
-                <strong>Última modificación:</strong> {formularioSeleccionado.ultimaModificacion?.toLocaleString?.() || 'No disponible'}<br/>
+                <strong>Fecha de creación:</strong> {
+                  formularioSeleccionado.timestamp?.toDate?.()
+                    ? formularioSeleccionado.timestamp.toDate().toLocaleString('es-ES')
+                    : (formularioSeleccionado.timestamp instanceof Date
+                        ? formularioSeleccionado.timestamp.toLocaleString('es-ES')
+                        : (console.debug('[EditarFormulario] Fecha de creación no válida:', formularioSeleccionado.timestamp), 'No disponible'))
+                }<br/>
+                <strong>Última modificación:</strong> {
+                  formularioSeleccionado.ultimaModificacion?.toDate?.()
+                    ? formularioSeleccionado.ultimaModificacion.toDate().toLocaleString('es-ES')
+                    : (formularioSeleccionado.ultimaModificacion instanceof Date
+                        ? formularioSeleccionado.ultimaModificacion.toLocaleString('es-ES')
+                        : (console.debug('[EditarFormulario] Última modificación no válida:', formularioSeleccionado.ultimaModificacion), 'No disponible'))
+                }<br/>
                 <strong>Estado:</strong> {formularioSeleccionado.estado || 'Activo'}<br/>
                 <strong>Versión:</strong> {formularioSeleccionado.version || '1.0'}<br/>
                 <strong>Visibilidad:</strong> {formularioSeleccionado.esPublico ? 'Público' : 'Privado'}
@@ -319,11 +360,16 @@ const EditarFormulario = () => {
           </Box>
         </Box>
       )}
-      {/* Si se selecciona 'Todos', mostrar mensaje o listado general */}
+      {/* Si se selecciona 'Todos', mostrar acordeón de formularios */}
       {(!formularioSeleccionado || !formularioSeleccionado.id) && (
-        <Alert severity="info" sx={{ mt: 4 }}>
-          Selecciona un formulario para editar o usa la opción "Todos" para ver el listado general.
-        </Alert>
+        <Box mt={4}>
+          <FormulariosAccordionList
+            formularios={formulariosCompletos}
+            onEditar={handleEditarDesdeAccordion}
+            formularioSeleccionadoId={formularioSeleccionado?.id || null}
+            scrollToEdicion={scrollToEdicion}
+          />
+        </Box>
       )}
     </div>
   );

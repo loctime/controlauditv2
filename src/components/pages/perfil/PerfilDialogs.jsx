@@ -7,15 +7,7 @@ const PerfilDialogs = ({
   emailSocio,
   setEmailSocio,
   loading,
-  handleAgregarSocio,
-  openDialogCompartir,
-  setOpenDialogCompartir,
-  auditoriaSeleccionada,
-  setAuditoriaSeleccionada,
-  userAuditorias,
-  emailCompartir,
-  setEmailCompartir,
-  handleCompartirAuditoria
+  handleAgregarSocio
 }) => {
   // Log de depuración
   console.debug('[PerfilDialogs] render');
@@ -48,51 +40,6 @@ const PerfilDialogs = ({
             disabled={loading}
           >
             {loading ? 'Agregando...' : 'Agregar Socio'}
-          </Button>
-        </DialogActions>
-      </Dialog>
-      {/* Dialog para compartir auditoría */}
-      <Dialog open={openDialogCompartir} onClose={() => setOpenDialogCompartir(false)}>
-        <DialogTitle>Compartir Auditoría</DialogTitle>
-        <DialogContent>
-          <TextField
-            select
-            margin="dense"
-            label="Seleccionar Auditoría"
-            fullWidth
-            variant="outlined"
-            value={auditoriaSeleccionada}
-            onChange={(e) => setAuditoriaSeleccionada(e.target.value)}
-            sx={{ mb: 2 }}
-          >
-            {userAuditorias && userAuditorias.map((auditoria) => (
-              <option key={auditoria.id} value={auditoria.id}>
-                {auditoria.nombreArchivo || 'Auditoría sin nombre'}
-              </option>
-            ))}
-          </TextField>
-          <TextField
-            margin="dense"
-            label="Email del usuario"
-            type="email"
-            fullWidth
-            variant="outlined"
-            value={emailCompartir}
-            onChange={(e) => setEmailCompartir(e.target.value)}
-            placeholder="usuario@ejemplo.com"
-          />
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-            El usuario podrá ver y copiar esta auditoría.
-          </Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setOpenDialogCompartir(false)}>Cancelar</Button>
-          <Button 
-            onClick={handleCompartirAuditoria} 
-            variant="contained"
-            disabled={loading}
-          >
-            {loading ? 'Compartiendo...' : 'Compartir Auditoría'}
           </Button>
         </DialogActions>
       </Dialog>

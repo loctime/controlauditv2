@@ -36,14 +36,7 @@ export const getMenuItems = (role, permisos = {}) => {
       roles: ['operario'],
       required: true
     },
-    {
-      id: "home",
-      path: "/",
-      title: "Inicio",
-      Icon: HomeIcon,
-      roles: ['operario', 'max', 'supermax'],
-      required: true
-    }
+    
   ];
 
   const auditoriaItems = [

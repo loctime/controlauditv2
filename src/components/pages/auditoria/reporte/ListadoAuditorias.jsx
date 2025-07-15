@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo, useCallback } from "react";
-import { collection, getDocs, query, where, orderBy, limit } from "firebase/firestore";
+import { collection, getDocs, query, where, orderBy, limit, onSnapshot } from "firebase/firestore";
 import { db } from "./../../../../firebaseConfig";
 import { useAuth } from "../../context/AuthContext";
 import {
@@ -31,45 +31,31 @@ const ListadoAuditorias = ({ onSelect, empresaSeleccionada }) => {
   const [refreshing, setRefreshing] = useState(false);
   const { userProfile } = useAuth();
 
-  // Memoizar la función de fetch para evitar re-renders innecesarios
-  const fetchReportes = useCallback(async (isRefresh = false) => {
+  // Suscripción reactiva a reportes multi-tenant
+  useEffect(() => {
     if (!userProfile) return;
-    
-    try {
-      setLoading(!isRefresh);
-      setRefreshing(isRefresh);
-      setError(null);
-
-      console.log("[DEBUG] Iniciando fetch de reportes para clienteAdminId:", userProfile.clienteAdminId || userProfile.uid);
-
-      // Query optimizada con ordenamiento en Firestore
-      const q = query(
-        collection(db, "reportes"),
-        where("clienteAdminId", "==", userProfile.clienteAdminId || userProfile.uid),
-        orderBy("fechaGuardado", "desc"),
-        limit(100) // Limitar resultados para mejor performance
-      );
-
-      const querySnapshot = await getDocs(q);
-      const reportesData = querySnapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
-
+    setLoading(true);
+    setError(null);
+    const q = query(
+      collection(db, "reportes"),
+      where("clienteAdminId", "==", userProfile.clienteAdminId || userProfile.uid),
+      orderBy("fechaGuardado", "desc"),
+      limit(100)
+    );
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const reportesData = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
       setReportes(reportesData);
-      console.log(`[DEBUG] ${reportesData.length} reportes cargados exitosamente`);
-    } catch (error) {
-      console.error("[ERROR] Error al obtener reportes:", error);
-      setError(`Error al obtener reportes: ${error.message}`);
-    } finally {
       setLoading(false);
       setRefreshing(false);
-    }
+      console.debug(`[onSnapshot] ${reportesData.length} reportes cargados en tiempo real`);
+    }, (err) => {
+      setError(`Error al obtener reportes: ${err.message}`);
+      setLoading(false);
+      setRefreshing(false);
+      console.error("[onSnapshot] Error al obtener reportes:", err);
+    });
+    return () => unsubscribe();
   }, [userProfile]);
-
-  useEffect(() => {
-    fetchReportes();
-  }, [fetchReportes]);
 
   // Memoizar el filtrado para evitar recálculos innecesarios
   const reportesFiltrados = useMemo(() => {
@@ -177,7 +163,29 @@ const ListadoAuditorias = ({ onSelect, empresaSeleccionada }) => {
         {error}
         <Button 
           size="small" 
-          onClick={() => fetchReportes(true)}
+          onClick={() => {
+            setRefreshing(true);
+            // Reintentar la suscripción
+            const q = query(
+              collection(db, "reportes"),
+              where("clienteAdminId", "==", userProfile.clienteAdminId || userProfile.uid),
+              orderBy("fechaGuardado", "desc"),
+              limit(100)
+            );
+            const unsubscribe = onSnapshot(q, (snapshot) => {
+              const reportesData = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+              setReportes(reportesData);
+              setLoading(false);
+              setRefreshing(false);
+              console.debug(`[onSnapshot] ${reportesData.length} reportes cargados en tiempo real`);
+            }, (err) => {
+              setError(`Error al obtener reportes: ${err.message}`);
+              setLoading(false);
+              setRefreshing(false);
+              console.error("[onSnapshot] Error al obtener reportes:", err);
+            });
+            return () => unsubscribe();
+          }}
           sx={{ ml: 1 }}
         >
           Reintentar
@@ -207,7 +215,29 @@ const ListadoAuditorias = ({ onSelect, empresaSeleccionada }) => {
         
         <Tooltip title="Actualizar reportes">
           <IconButton 
-            onClick={() => fetchReportes(true)}
+            onClick={() => {
+              setRefreshing(true);
+              // Reintentar la suscripción
+              const q = query(
+                collection(db, "reportes"),
+                where("clienteAdminId", "==", userProfile.clienteAdminId || userProfile.uid),
+                orderBy("fechaGuardado", "desc"),
+                limit(100)
+              );
+              const unsubscribe = onSnapshot(q, (snapshot) => {
+                const reportesData = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+                setReportes(reportesData);
+                setLoading(false);
+                setRefreshing(false);
+                console.debug(`[onSnapshot] ${reportesData.length} reportes cargados en tiempo real`);
+              }, (err) => {
+                setError(`Error al obtener reportes: ${err.message}`);
+                setLoading(false);
+                setRefreshing(false);
+                console.error("[onSnapshot] Error al obtener reportes:", err);
+              });
+              return () => unsubscribe();
+            }}
             disabled={refreshing}
           >
             <Refresh className={refreshing ? 'MuiCircularProgress-root' : ''} />

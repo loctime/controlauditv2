@@ -18,7 +18,7 @@ export const usePermissions = () => {
         puedeCrearSucursales: false,
         puedeCrearAuditorias: false,
         puedeAgendarAuditorias: false,
-        puedeCompartirAuditorias: false,
+        puedeCompartirFormularios: false,
         puedeAgregarSocios: false
       },
       max: {
@@ -26,7 +26,7 @@ export const usePermissions = () => {
         puedeCrearSucursales: true,
         puedeCrearAuditorias: true,
         puedeAgendarAuditorias: true,
-        puedeCompartirAuditorias: true,
+        puedeCompartirFormularios: true,
         puedeAgregarSocios: true
       },
       supermax: {
@@ -34,7 +34,7 @@ export const usePermissions = () => {
         puedeCrearSucursales: true,
         puedeCrearAuditorias: true,
         puedeAgendarAuditorias: true,
-        puedeCompartirAuditorias: true,
+        puedeCompartirFormularios: true,
         puedeAgregarSocios: true
       }
     };
@@ -66,8 +66,8 @@ export const usePermissions = () => {
   }, [permissions.puedeCrearSucursales, role]);
 
   const canCompartirAuditorias = useMemo(() => {
-    return permissions.puedeCompartirAuditorias || role === 'supermax';
-  }, [permissions.puedeCompartirAuditorias, role]);
+    return permissions.puedeCompartirFormularios || role === 'supermax';
+  }, [permissions.puedeCompartirFormularios, role]);
 
   const canAgregarSocios = useMemo(() => {
     return permissions.puedeAgregarSocios || role === 'supermax';

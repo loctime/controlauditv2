@@ -13,7 +13,7 @@ import {
   Delete as DeleteIcon,
   Edit as EditIcon
 } from "@mui/icons-material";
-import { collection, getDocs, deleteDoc, doc, query, where } from "firebase/firestore";
+import { collection, getDocs, deleteDoc, doc, query, where, onSnapshot } from "firebase/firestore";
 import { db } from "../../../firebaseConfig";
 import { useAuth } from "../../context/AuthContext";
 
@@ -23,92 +23,62 @@ const ListaSucursales = ({ empresaId }) => {
   const [error, setError] = useState(null);
   const { userProfile, userEmpresas, role } = useAuth();
 
+  // Suscripción reactiva a sucursales multi-tenant
   useEffect(() => {
-    cargarSucursales();
-    // eslint-disable-next-line
-  }, [empresaId, userProfile, userEmpresas, role]);
-
-  const cargarSucursales = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      console.log('=== DEBUG ListaSucursales ===');
-      console.log('userProfile:', userProfile);
-      console.log('userEmpresas:', userEmpresas);
-      console.log('empresaId:', empresaId);
-      console.log('role:', role);
-
-      // Si no hay usuario autenticado, no cargar nada
-      if (!userProfile) {
-        console.log('No hay userProfile, no cargando sucursales');
-        setSucursales([]);
-        return;
-      }
-
-      let sucursalesData = [];
-
-      // Usar userEmpresas del contexto que ya está filtrado por multi-tenant
-      const empresasDisponibles = userEmpresas || [];
-      console.log('Empresas disponibles del contexto:', empresasDisponibles.length);
-
-      if (empresasDisponibles.length === 0) {
-        console.log('No hay empresas disponibles');
-        setSucursales([]);
-        return;
-      }
-
-      // Determinar qué empresas consultar
-      let empresasAConsultar = empresasDisponibles;
-      
-      // Si hay empresaId específico, filtrar solo esa empresa
-      if (empresaId) {
-        const empresaEspecifica = empresasDisponibles.find(e => e.id === empresaId);
-        if (empresaEspecifica) {
-          empresasAConsultar = [empresaEspecifica];
-          console.log('Filtrando por empresa específica:', empresaEspecifica.nombre);
-        } else {
-          console.log('Empresa específica no encontrada en empresas disponibles');
-          setSucursales([]);
-          return;
-        }
-      }
-
-      // Obtener IDs de empresas para la consulta
-      const empresasIds = empresasAConsultar.map(e => e.id);
-      console.log('IDs de empresas a consultar:', empresasIds);
-
-      // Obtener sucursales de las empresas disponibles
-      if (empresasIds.length > 0) {
-        const sucursalesRef = collection(db, "sucursales");
-        const sucursalesQuery = query(sucursalesRef, where("empresaId", "in", empresasIds));
-        const sucursalesSnapshot = await getDocs(sucursalesQuery);
-        
-        sucursalesData = sucursalesSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data(),
-          fechaCreacion: doc.data().fechaCreacion?.toDate?.() || new Date()
-        }));
-
-        console.log('Sucursales encontradas:', sucursalesData.length);
-      }
-
-      setSucursales(sucursalesData);
-      console.log('=== FIN DEBUG ===');
-    } catch (error) {
-      console.error("Error al cargar sucursales:", error);
-      setError("Error al cargar las sucursales");
-    } finally {
+    if (!userProfile) {
+      setSucursales([]);
       setLoading(false);
+      return;
     }
-  };
+    setLoading(true);
+    let empresasDisponibles = userEmpresas || [];
+    if (empresasDisponibles.length === 0) {
+      setSucursales([]);
+      setLoading(false);
+      return;
+    }
+    let empresasAConsultar = empresasDisponibles;
+    if (empresaId) {
+      const empresaEspecifica = empresasDisponibles.find(e => e.id === empresaId);
+      if (empresaEspecifica) {
+        empresasAConsultar = [empresaEspecifica];
+      } else {
+        setSucursales([]);
+        setLoading(false);
+        return;
+      }
+    }
+    const empresasIds = empresasAConsultar.map(e => e.id);
+    if (empresasIds.length === 0) {
+      setSucursales([]);
+      setLoading(false);
+      return;
+    }
+    const sucursalesRef = collection(db, "sucursales");
+    const sucursalesQuery = query(sucursalesRef, where("empresaId", "in", empresasIds));
+    const unsubscribe = onSnapshot(sucursalesQuery, (snapshot) => {
+      const sucursalesData = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+        fechaCreacion: doc.data().fechaCreacion?.toDate?.() || new Date()
+      }));
+      setSucursales(sucursalesData);
+      setLoading(false);
+      console.debug(`[onSnapshot] ${sucursalesData.length} sucursales cargadas en tiempo real`);
+    }, (error) => {
+      setError("Error al cargar las sucursales");
+      setLoading(false);
+      console.error('[onSnapshot] Error al obtener sucursales:', error);
+    });
+    return () => unsubscribe();
+  }, [empresaId, userProfile, userEmpresas, role]);
 
   const handleEliminar = async (sucursalId, nombreSucursal) => {
     if (window.confirm(`¿Está seguro de que desea eliminar la sucursal "${nombreSucursal}"?`)) {
       try {
         await deleteDoc(doc(db, "sucursales", sucursalId));
         // Recargar sucursales después de eliminar
-        await cargarSucursales();
+        // La suscripción onSnapshot ya maneja la actualización en tiempo real
       } catch (error) {
         console.error("Error al eliminar sucursal:", error);
         setError("Error al eliminar la sucursal");

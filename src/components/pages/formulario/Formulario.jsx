@@ -6,6 +6,7 @@ import { db } from "../../../firebaseConfig";
 import { useAuth } from "../../context/AuthContext";
 import Swal from 'sweetalert2';
 import { useNavigate } from "react-router-dom";
+import PublicIcon from '@mui/icons-material/Public';
 
 const Formulario = () => {
   const { user, userProfile } = useAuth();
@@ -89,6 +90,20 @@ const Formulario = () => {
 
   return (
     <Box>
+      {/* Botón para galería de formularios públicos */}
+      <Box sx={{ mb: 3, display: 'flex', alignItems: 'center', gap: 2 }}>
+        <Button
+          variant="outlined"
+          startIcon={<PublicIcon />}
+          onClick={() => {
+            console.debug('[Formulario] Ir a galería de formularios públicos');
+            navigate('/formularios-publicos');
+          }}
+          sx={{ borderRadius: '20px', px: 3, py: 1 }}
+        >
+          Ver Galería de Formularios Públicos
+        </Button>
+      </Box>
       {/* Botón Volver */}
       <Box sx={{ mb: 3, display: 'flex', alignItems: 'center', gap: 2 }}>
         <Button

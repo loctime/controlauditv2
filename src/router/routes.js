@@ -13,6 +13,7 @@ import Dashboard from "../components/pages/dashboard/Dashboard";
 import ClienteDashboard from "../components/pages/admin/ClienteDashboard";
 import OperarioDashboard from "../components/pages/user/OperarioDashboard";
 import PermissionsDebug from "../components/pages/debug/PermissionsDebug";
+import GaleriaFormulariosPublicos from '../components/pages/formulario/GaleriaFormulariosPublicos';
 
 export const routes = [
   {
@@ -86,5 +87,10 @@ export const routes = [
     Element: LogsOperarios,
     protected: true,
     roles: ['max', 'supermax']
+  },
+  {
+    id: "formularios-publicos",
+    path: "/formularios-publicos",
+    Element: GaleriaFormulariosPublicos,
   },
 ];

@@ -1,10 +1,55 @@
-import React from 'react';
-import { Box, Typography, List, ListItem, ListItemAvatar, Avatar, ListItemText, Chip, Alert } from '@mui/material';
-import { Business as BusinessIcon } from '@mui/icons-material';
+import React, { useState, useEffect } from 'react';
+import {
+  Box, Typography, Accordion, AccordionSummary, AccordionDetails,
+  List, ListItem, ListItemAvatar, Avatar, ListItemText, Chip, Alert, CircularProgress
+} from '@mui/material';
+import { Business as BusinessIcon, ExpandMore as ExpandMoreIcon, Store as StoreIcon } from '@mui/icons-material';
+import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import { db } from '../../../firebaseConfig';
+
+// Componente para mostrar sucursales de una empresa
+const SucursalesEmpresa = ({ empresaId }) => {
+  const [sucursales, setSucursales] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!empresaId) return;
+    setLoading(true);
+    const q = query(collection(db, 'sucursales'), where('empresaId', '==', empresaId));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      setSucursales(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      setLoading(false);
+      console.debug(`[SucursalesEmpresa] ${snapshot.docs.length} sucursales para empresa ${empresaId}`);
+    });
+    return () => unsubscribe();
+  }, [empresaId]);
+
+  if (loading) return <CircularProgress size={20} sx={{ ml: 2 }} />;
+  if (sucursales.length === 0) return <Typography variant="body2" color="text.secondary" sx={{ ml: 2 }}>Sin sucursales</Typography>;
+
+  return (
+    <List dense>
+      {sucursales.map(sucursal => (
+        <ListItem key={sucursal.id}>
+          <ListItemAvatar>
+            <Avatar>
+              <StoreIcon />
+            </Avatar>
+          </ListItemAvatar>
+          <ListItemText
+            primary={sucursal.nombre}
+            secondary={sucursal.direccion || ''}
+          />
+        </ListItem>
+      ))}
+    </List>
+  );
+};
 
 const PerfilEmpresas = ({ empresas, loading }) => {
   // Log de depuración
   console.debug('[PerfilEmpresas] empresas:', empresas);
+
   return (
     <Box sx={{ p: 3 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
@@ -18,22 +63,28 @@ const PerfilEmpresas = ({ empresas, loading }) => {
       ) : empresas.length === 0 ? (
         <Alert severity="info">No tienes empresas registradas.</Alert>
       ) : (
-        <List>
-          {empresas.map((empresa) => (
-            <ListItem key={empresa.id} divider>
-              <ListItemAvatar>
-                <Avatar>
-                  <BusinessIcon />
-                </Avatar>
-              </ListItemAvatar>
-              <ListItemText
-                primary={empresa.nombre}
-                secondary={`${empresa.direccion || ''} ${empresa.telefono ? '• ' + empresa.telefono : ''}`}
-              />
-              <Chip label="Propietario" size="small" color="primary" />
-            </ListItem>
-          ))}
-        </List>
+        empresas.map((empresa) => (
+          <Accordion key={empresa.id} disableGutters>
+            <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+              <ListItem disableGutters>
+                <ListItemAvatar>
+                  <Avatar src={empresa.logo || undefined}>
+                    {!empresa.logo && <BusinessIcon />}
+                  </Avatar>
+                </ListItemAvatar>
+                <ListItemText
+                  primary={empresa.nombre}
+                  secondary={`${empresa.direccion || ''} ${empresa.telefono ? '• ' + empresa.telefono : ''}`}
+                />
+                <Chip label="Propietario" size="small" color="primary" />
+              </ListItem>
+            </AccordionSummary>
+            <AccordionDetails>
+              <Typography variant="subtitle2" sx={{ mb: 1 }}>Sucursales:</Typography>
+              <SucursalesEmpresa empresaId={empresa.id} />
+            </AccordionDetails>
+          </Accordion>
+        ))
       )}
     </Box>
   );

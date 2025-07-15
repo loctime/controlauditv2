@@ -144,8 +144,8 @@ function Navbar(props) {
           <Link to="/Reporte" style={{ color: "whitesmoke", textDecoration: "none", fontSize: '0.95rem', padding: '0 8px', lineHeight: 1.2 }}>
             Reporte
           </Link>
-          <Link to="/formulario" style={{ color: "whitesmoke", textDecoration: "none", fontSize: '0.95rem', padding: '0 8px', lineHeight: 1.2 }}>
-            Formularios
+          <Link to="/perfil" style={{ color: "whitesmoke", textDecoration: "none", fontSize: '0.95rem', padding: '0 8px', lineHeight: 1.2 }}>
+            Perfil
           </Link>
 
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
