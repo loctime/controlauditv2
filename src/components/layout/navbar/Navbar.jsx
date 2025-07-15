@@ -125,18 +125,26 @@ function Navbar(props) {
   return (
     <Box sx={{ display: "flex" }}>
       <CssBaseline />
-      <AppBar position="fixed" sx={{ width: "100%", minHeight: 40, height: 44 }}>
-        <Toolbar sx={{ gap: "20px", display: "flex", justifyContent: "space-between", minHeight: 40, height: 44, px: 1 }}>
-          <Link to={getDashboardRoute()} style={{ color: "whitesmoke", textDecoration: "none", fontSize: '0.95rem', padding: '0 8px' }}>
+      <AppBar position="fixed" sx={{ width: "100%", minHeight: { xs: 48, sm: 56 }, height: { xs: 48, sm: 56 } }}>
+        <Toolbar sx={{
+          gap: "20px",
+          display: "flex",
+          justifyContent: "space-between",
+          minHeight: { xs: 48, sm: 56 },
+          height: { xs: 48, sm: 56 },
+          px: 1,
+          py: 0,
+        }}>
+          <Link to={getDashboardRoute()} style={{ color: "whitesmoke", textDecoration: "none", fontSize: '0.95rem', padding: '0 8px', lineHeight: 1.2 }}>
             {getDashboardText()}
           </Link> 
-          <Link to="/auditoria" style={{ color: "whitesmoke", textDecoration: "none", fontSize: '0.95rem', padding: '0 8px' }}>
+          <Link to="/auditoria" style={{ color: "whitesmoke", textDecoration: "none", fontSize: '0.95rem', padding: '0 8px', lineHeight: 1.2 }}>
             Auditoria
           </Link>
-          <Link to="/Reporte" style={{ color: "whitesmoke", textDecoration: "none", fontSize: '0.95rem', padding: '0 8px' }}>
+          <Link to="/Reporte" style={{ color: "whitesmoke", textDecoration: "none", fontSize: '0.95rem', padding: '0 8px', lineHeight: 1.2 }}>
             Reporte
           </Link>
-          <Link to="/formulario" style={{ color: "whitesmoke", textDecoration: "none", fontSize: '0.95rem', padding: '0 8px' }}>
+          <Link to="/formulario" style={{ color: "whitesmoke", textDecoration: "none", fontSize: '0.95rem', padding: '0 8px', lineHeight: 1.2 }}>
             Formularios
           </Link>
 
@@ -150,12 +158,14 @@ function Navbar(props) {
               onChange={toggleColorMode}
               color="default"
               inputProps={{ 'aria-label': 'switch modo claro/oscuro' }}
+              sx={{ my: 0 }}
             />
             <IconButton
               color="secondary.primary"
               aria-label="open drawer"
               edge="start"
               onClick={handleDrawerToggle}
+              sx={{ my: 0 }}
             >
               <MenuIcon color="secondary.primary" />
             </IconButton>
