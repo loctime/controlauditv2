@@ -156,7 +156,10 @@ class AuditoriaService {
         clienteAdminId: userProfile?.clienteAdminId || userProfile?.uid || null,
         timestamp: serverTimestamp(),
         fechaCreacion: new Date().toISOString(),
-        version: "2.0" // Versión del formato de datos
+        version: "2.0",
+        // Guardar firmas
+        firmaAuditor: datosAuditoria.firmaAuditor || null,
+        firmaResponsable: datosAuditoria.firmaResponsable || null
       };
 
       // Limpiar valores undefined

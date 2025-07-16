@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import { collection, getDocs, query, where, orderBy, limit } from "firebase/firestore";
-import { db } from "./../../../../firebaseConfig";
+import { db } from "../../../../firebaseConfig";
 import {
   Button,
   Table,
@@ -14,14 +14,22 @@ import {
   Box,
   CircularProgress,
   Alert,
+  Dialog,
+  DialogContent,
+  DialogTitle,
+  IconButton,
 } from "@mui/material";
 import "./ReportesPage.css";
 import FiltrosReportes from "./FiltrosReportes";
 import { useAuth } from "../../../context/AuthContext";
-import ReporteWrapper from './reporte';
+import ReporteWrapper from './ReporteImprimir';
 import ReactToPrint from 'react-to-print';
 import { getEmpresaIdFromReporte } from '../../../../services/useMetadataService';
 import dayjs from 'dayjs';
+import CloseIcon from '@mui/icons-material/Close';
+import ReporteConImpresion from './ReporteDetalleConImpresion';
+import PrintIcon from '@mui/icons-material/Print';
+import ReporteDetallePro from './ReporteDetallePro';
 
 // Helpers seguros para obtener nombre de empresa y formulario
 const getNombreEmpresa = (reporte, empresas = []) => {
@@ -45,8 +53,8 @@ const getNombreFormulario = (formulario, nombreForm) =>
 
 const ReportesPage = () => {
   const { userProfile, userEmpresas } = useAuth();
-  
 
+  // Estados primero
   const [reportes, setReportes] = useState([]);
   const [filteredReportes, setFilteredReportes] = useState([]);
   const [selectedReporte, setSelectedReporte] = useState(null);
@@ -58,6 +66,29 @@ const ReportesPage = () => {
   const [fechaHasta, setFechaHasta] = useState(dayjs());
   const [searchTerm, setSearchTerm] = useState("");
   const detalleRef = useRef();
+  const [openModal, setOpenModal] = useState(false);
+
+  // Obtener empresas únicas de los reportes (temporal)
+  const empresasDeReportes = useMemo(() => {
+    const empresasMap = new Map();
+    reportes.forEach(reporte => {
+      const empresaId = getEmpresaIdFromReporte(reporte);
+      const empresaNombre = getNombreEmpresa(reporte, userEmpresas);
+      if (empresaId && !empresasMap.has(empresaId)) {
+        empresasMap.set(empresaId, {
+          id: empresaId,
+          nombre: empresaNombre
+        });
+      }
+    });
+    const empresasArray = Array.from(empresasMap.values());
+    return empresasArray;
+  }, [reportes, userEmpresas]);
+
+  // Ahora sí puedes usar empresasSeleccionadas
+  const empresaSeleccionada = empresasSeleccionadas.length > 0
+    ? (empresasDeReportes.find(e => e.id === empresasSeleccionadas[0]) || null)
+    : null;
 
   // ✅ Query segura con filtro multi-tenant
   useEffect(() => {
@@ -150,28 +181,13 @@ const ReportesPage = () => {
 
   const handleSelectReporte = (reporte) => {
     setSelectedReporte(reporte);
+    setOpenModal(true);
   };
 
-  const handleCloseDetalles = () => {
+  const handleCloseModal = () => {
+    setOpenModal(false);
     setSelectedReporte(null);
   };
-
-  // Obtener empresas únicas de los reportes (temporal)
-  const empresasDeReportes = useMemo(() => {
-    const empresasMap = new Map();
-    reportes.forEach(reporte => {
-      const empresaId = getEmpresaIdFromReporte(reporte);
-      const empresaNombre = getNombreEmpresa(reporte, userEmpresas);
-      if (empresaId && !empresasMap.has(empresaId)) {
-        empresasMap.set(empresaId, {
-          id: empresaId,
-          nombre: empresaNombre
-        });
-      }
-    });
-    const empresasArray = Array.from(empresasMap.values());
-    return empresasArray;
-  }, [reportes, userEmpresas]);
 
   // Obtener formularios únicos de los reportes
   const formulariosDisponibles = useMemo(() => {
@@ -217,97 +233,79 @@ const ReportesPage = () => {
 
   return (
     <Box className="reportes-container" p={3}>
-      {selectedReporte ? (
-        <Box ref={detalleRef} className="public-report-content">
-          <ReporteWrapper {...selectedReporte} />
-          <Box display="flex" justifyContent="flex-end" mt={2}>
-            <ReactToPrint
-              trigger={() => (
-                <Button variant="contained" color="primary" style={{ padding: "10px", minWidth: "50px", minHeight: "50px" }}>
-                  Imprimir
-                </Button>
-              )}
-              content={() => detalleRef.current}
-              onBeforeGetContent={() => new Promise(resolve => setTimeout(resolve, 500))}
-            />
-            <Button
-              variant="outlined"
-              color="secondary"
-              onClick={handleCloseDetalles}
-              style={{ marginLeft: "10px" }}
-            >
-              Volver
-            </Button>
-          </Box>
-        </Box>
-      ) : (
-        <>
-          <FiltrosReportes
-            empresas={empresasDeReportes.length > 0 ? empresasDeReportes : userEmpresas}
-            formularios={formulariosDisponibles}
-            empresasSeleccionadas={empresasSeleccionadas}
-            formulariosSeleccionados={formulariosSeleccionados}
-            fechaDesde={fechaDesde}
-            fechaHasta={fechaHasta}
-            onChangeEmpresas={setEmpresasSeleccionadas}
-            onChangeFormularios={setFormulariosSeleccionados}
-            onChangeFechaDesde={setFechaDesde}
-            onChangeFechaHasta={setFechaHasta}
-            searchTerm={searchTerm}
-            onChangeSearchTerm={setSearchTerm}
-            loading={loading}
-          />
-          <TableContainer component={Paper}>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell>Empresa</TableCell>
-                  <TableCell>Sucursal</TableCell>
-                  <TableCell>Formulario</TableCell>
-                  <TableCell>Fecha de Guardado</TableCell>
-                  <TableCell>Acciones</TableCell>
+      {/* Modal para ver el detalle del reporte */}
+      <ReporteDetallePro
+        open={openModal}
+        onClose={handleCloseModal}
+        reporte={selectedReporte}
+        modo="modal"
+        onImprimir={() => window.print()}
+      />
+      {/* Tabla y filtros siempre visibles */}
+      <FiltrosReportes
+        empresas={empresasDeReportes.length > 0 ? empresasDeReportes : userEmpresas}
+        formularios={formulariosDisponibles}
+        empresasSeleccionadas={empresasSeleccionadas}
+        formulariosSeleccionados={formulariosSeleccionados}
+        fechaDesde={fechaDesde}
+        fechaHasta={fechaHasta}
+        onChangeEmpresas={setEmpresasSeleccionadas}
+        onChangeFormularios={setFormulariosSeleccionados}
+        onChangeFechaDesde={setFechaDesde}
+        onChangeFechaHasta={setFechaHasta}
+        searchTerm={searchTerm}
+        onChangeSearchTerm={setSearchTerm}
+        loading={loading}
+      />
+      <TableContainer component={Paper}>
+        <Table>
+          <TableHead>
+            <TableRow>
+              <TableCell>Empresa</TableCell>
+              <TableCell>Sucursal</TableCell>
+              <TableCell>Formulario</TableCell>
+              <TableCell>Fecha de Guardado</TableCell>
+              <TableCell>Acciones</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {filteredReportes.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={5} align="center" sx={{ py: 4 }}>
+                  <Typography variant="body2" color="textSecondary">
+                    {empresasSeleccionadas.length > 0 
+                      ? "No se encontraron reportes para esta empresa"
+                      : "No hay reportes disponibles"
+                    }
+                  </Typography>
+                </TableCell>
+              </TableRow>
+            ) : (
+              filteredReportes.map((reporte) => (
+                <TableRow key={reporte.id}>
+                  <TableCell>{getNombreEmpresa(reporte, userEmpresas)}</TableCell>
+                  <TableCell>{reporte.sucursal ?? "Sucursal no disponible"}</TableCell>
+                  <TableCell>{getNombreFormulario(reporte.formulario, reporte.nombreForm)}</TableCell>
+                  <TableCell>
+                    {reporte.fechaCreacion
+                      ? new Date(reporte.fechaCreacion).toLocaleString()
+                      : "Fecha no disponible"}
+                  </TableCell>
+                  <TableCell>
+                    <Button
+                      variant="contained"
+                      color="primary"
+                      onClick={() => handleSelectReporte(reporte)}
+                    >
+                      Ver Detalles
+                    </Button>
+                  </TableCell>
                 </TableRow>
-              </TableHead>
-              <TableBody>
-                {filteredReportes.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={5} align="center" sx={{ py: 4 }}>
-                      <Typography variant="body2" color="textSecondary">
-                        {empresasSeleccionadas.length > 0 
-                          ? "No se encontraron reportes para esta empresa"
-                          : "No hay reportes disponibles"
-                        }
-                      </Typography>
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  filteredReportes.map((reporte) => (
-                    <TableRow key={reporte.id}>
-                      <TableCell>{getNombreEmpresa(reporte, userEmpresas)}</TableCell>
-                      <TableCell>{reporte.sucursal ?? "Sucursal no disponible"}</TableCell>
-                      <TableCell>{getNombreFormulario(reporte.formulario, reporte.nombreForm)}</TableCell>
-                      <TableCell>
-                        {reporte.fechaCreacion
-                          ? new Date(reporte.fechaCreacion).toLocaleString()
-                          : "Fecha no disponible"}
-                      </TableCell>
-                      <TableCell>
-                        <Button
-                          variant="contained"
-                          color="primary"
-                          onClick={() => handleSelectReporte(reporte)}
-                        >
-                          Ver Detalles
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        </>
-      )}
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </TableContainer>
     </Box>
   );
 };

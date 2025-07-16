@@ -1,6 +1,6 @@
 import React, { useRef } from 'react';
 import ReactToPrint from 'react-to-print';
-import Reporte from './reporte';
+import Reporte from './ReporteImprimir.jsx';
 import { Box, Button } from '@mui/material';
 import PrintIcon from '@mui/icons-material/Print';
 

@@ -122,7 +122,7 @@ const OperarioDashboard = () => {
 
   // ✅ Función para ver reporte
   const handleVerReporte = (auditoriaId) => {
-    navigate(`/Reporte?id=${auditoriaId}`);
+    navigate(`/reporte?id=${auditoriaId}`);
   };
 
   // ✅ Renderizar tarjeta de estadísticas
@@ -347,7 +347,7 @@ const OperarioDashboard = () => {
                 variant="outlined"
                 fullWidth
                 startIcon={<Assessment />}
-                onClick={() => navigate('/Reporte')}
+                onClick={() => navigate('/reporte')}
               >
                 Ver Todos los Reportes
               </Button>
@@ -378,7 +378,7 @@ const OperarioDashboard = () => {
               variant="outlined"
               fullWidth
               startIcon={<Assessment />}
-              onClick={() => navigate('/Reporte')}
+              onClick={() => navigate('/reporte')}
               sx={{ py: 2 }}
             >
               Ver Reportes

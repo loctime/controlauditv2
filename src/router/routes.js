@@ -6,7 +6,7 @@ import Formulario from "../components/pages/formulario/Formulario";
 import EditarFormulario from "../components/pages/editar/EditarFormulario";
 //import Reporte from "../components/pages/auditoria/reporte";
 import Informe from "../components/pages/auditoria/Informe";
-import GenerarPdf from "../components/pages/auditoria/reporte/GenerarPdf";
+import ReportesPage from "../components/pages/auditoria/reporte/ReportesPage";
 import PerfilUsuario from "../components/pages/perfil/PerfilUsuario";
 import { LogsOperarios } from '../components/pages/usuarios';
 import Dashboard from "../components/pages/dashboard/Dashboard";
@@ -69,7 +69,7 @@ export const routes = [
   {
     id: "reporte",
     path: "/reporte",
-    Element: GenerarPdf,
+    Element: ReportesPage,
   },
   {
     id: "perfil",

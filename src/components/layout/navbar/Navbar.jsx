@@ -141,7 +141,7 @@ function Navbar(props) {
           <Link to="/auditoria" style={{ color: "whitesmoke", textDecoration: "none", fontSize: '0.95rem', padding: '0 8px', lineHeight: 1.2 }}>
             Auditoria
           </Link>
-          <Link to="/Reporte" style={{ color: "whitesmoke", textDecoration: "none", fontSize: '0.95rem', padding: '0 8px', lineHeight: 1.2 }}>
+          <Link to="/reporte" style={{ color: "whitesmoke", textDecoration: "none", fontSize: '0.95rem', padding: '0 8px', lineHeight: 1.2 }}>
             Reporte
           </Link>
           <Link to="/perfil" style={{ color: "whitesmoke", textDecoration: "none", fontSize: '0.95rem', padding: '0 8px', lineHeight: 1.2 }}>

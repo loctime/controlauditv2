@@ -5,7 +5,7 @@ import SeleccionEmpresa from "./SeleccionEmpresa";
 import SeleccionSucursal from "./SeleccionSucursal";
 import SeleccionFormulario from "./SeleccionFormulario";
 import PreguntasYSeccion from "./PreguntasYSeccion";
-import Reporte from "./Reporte";
+import Reporte from "../reporte/ReporteImprimir";
 import BotonGenerarReporte from "./BotonGenerarReporte";
 import AuditoriaService from "../auditoriaService";
 import FirmaSection from "../reporte/FirmaSection";
@@ -43,7 +43,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../../context/AuthContext";
 import Swal from 'sweetalert2';
-import ReporteConImpresion from '../reporte/ReporteConImpresion';
+import ReporteConImpresion from '../reporte/ReporteDetalleConImpresion';
 
 const Auditoria = () => {
   const theme = useTheme();
