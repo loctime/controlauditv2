@@ -18,14 +18,21 @@ import {
 import "./ReportesPage.css";
 import FiltrosReportes from "./FiltrosReportes";
 import { useAuth } from "../../../context/AuthContext";
+import ReporteWrapper from './reporte';
+import ReactToPrint from 'react-to-print';
+import { getEmpresaIdFromReporte } from '../../../../services/useMetadataService';
 
 // Helpers seguros para obtener nombre de empresa y formulario
-const getNombreEmpresa = (empresa) =>
-  typeof empresa === "object" && empresa && empresa.nombre
-    ? empresa.nombre
-    : typeof empresa === "string"
-    ? empresa
-    : "Empresa no disponible";
+const getNombreEmpresa = (reporte, empresas = []) => {
+  if (reporte.empresaNombre) return reporte.empresaNombre;
+  if (reporte.empresaId && empresas.length > 0) {
+    const emp = empresas.find(e => e.id === reporte.empresaId);
+    if (emp) return emp.nombre;
+  }
+  if (reporte.empresa && typeof reporte.empresa === 'object' && reporte.empresa.nombre) return reporte.empresa.nombre;
+  if (typeof reporte.empresa === 'string') return reporte.empresa;
+  return 'Empresa no disponible';
+};
 
 const getNombreFormulario = (formulario, nombreForm) =>
   nombreForm ||
@@ -37,12 +44,18 @@ const getNombreFormulario = (formulario, nombreForm) =>
 
 const ReportesPage = () => {
   const { userProfile, userEmpresas } = useAuth();
+  
+
   const [reportes, setReportes] = useState([]);
   const [filteredReportes, setFilteredReportes] = useState([]);
   const [selectedReporte, setSelectedReporte] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [selectedEmpresa, setSelectedEmpresa] = useState("");
+  const [empresasSeleccionadas, setEmpresasSeleccionadas] = useState([]);
+  const [formulariosSeleccionados, setFormulariosSeleccionados] = useState([]);
+  const [fechaDesde, setFechaDesde] = useState(null);
+  const [fechaHasta, setFechaHasta] = useState(new Date());
+  const [searchTerm, setSearchTerm] = useState("");
   const detalleRef = useRef();
 
   // ✅ Query segura con filtro multi-tenant
@@ -57,7 +70,7 @@ const ReportesPage = () => {
         const q = query(
           collection(db, "reportes"),
           where("clienteAdminId", "==", userProfile.clienteAdminId || userProfile.uid),
-          orderBy("fechaGuardado", "desc"),
+          orderBy("fechaCreacion", "desc"),
           limit(100) // Limitar para mejor performance
         );
 
@@ -82,26 +95,57 @@ const ReportesPage = () => {
     fetchReportes();
   }, [userProfile]);
 
-  // ✅ Filtrar reportes por empresa seleccionada
+  // ✅ Filtrar reportes por múltiples criterios
   useEffect(() => {
-    if (selectedEmpresa) {
-      setFilteredReportes(
-        reportes.filter((reporte) => getNombreEmpresa(reporte.empresa) === selectedEmpresa)
-      );
-    } else {
-      setFilteredReportes(reportes);
-    }
-  }, [selectedEmpresa, reportes]);
+    let filtered = [...reportes];
 
-  // ✅ Extraer empresas únicas de los reportes filtrados (ya seguros por multi-tenant)
-  const empresas = useMemo(() => {
-    const empresasUnicas = [...new Set(
-      reportes.map((reporte) => getNombreEmpresa(reporte.empresa)).filter(Boolean)
-    )];
-    
-    console.log("[DEBUG] Empresas extraídas de reportes filtrados:", empresasUnicas);
-    return empresasUnicas;
-  }, [reportes]);
+    // Filtrar por empresas seleccionadas
+    if (empresasSeleccionadas.length > 0) {
+      filtered = filtered.filter((reporte) => 
+        empresasSeleccionadas.includes(getEmpresaIdFromReporte(reporte))
+      );
+    }
+
+    // Filtrar por formularios seleccionados
+    if (formulariosSeleccionados.length > 0) {
+      filtered = filtered.filter((reporte) => 
+        formulariosSeleccionados.includes(reporte.formularioId || reporte.formulario?.id)
+      );
+    }
+
+    // Filtrar por rango de fechas
+    if (fechaDesde) {
+      filtered = filtered.filter((reporte) => {
+        const fechaReporte = reporte.fechaCreacion?.toDate?.() || new Date(reporte.fechaCreacion);
+        return fechaReporte >= fechaDesde;
+      });
+    }
+
+    if (fechaHasta) {
+      filtered = filtered.filter((reporte) => {
+        const fechaReporte = reporte.fechaCreacion?.toDate?.() || new Date(reporte.fechaCreacion);
+        return fechaReporte <= fechaHasta;
+      });
+    }
+
+    // Filtrar por término de búsqueda
+    if (searchTerm.trim()) {
+      const term = searchTerm.toLowerCase();
+      filtered = filtered.filter((reporte) => {
+        const nombreEmpresa = getNombreEmpresa(reporte, userEmpresas).toLowerCase();
+        const nombreFormulario = getNombreFormulario(reporte.formulario, reporte.nombreForm).toLowerCase();
+        const sucursal = (reporte.sucursal || '').toLowerCase();
+        
+        return nombreEmpresa.includes(term) || 
+               nombreFormulario.includes(term) || 
+               sucursal.includes(term);
+      });
+    }
+
+    setFilteredReportes(filtered);
+  }, [empresasSeleccionadas, formulariosSeleccionados, fechaDesde, fechaHasta, searchTerm, reportes, userEmpresas]);
+
+  // Elimino el useMemo de empresas y uso directamente userEmpresas
 
   const handleSelectReporte = (reporte) => {
     setSelectedReporte(reporte);
@@ -111,9 +155,40 @@ const ReportesPage = () => {
     setSelectedReporte(null);
   };
 
-  const handleChangeEmpresa = (event) => {
-    setSelectedEmpresa(event.target.value);
-  };
+  // Obtener empresas únicas de los reportes (temporal)
+  const empresasDeReportes = useMemo(() => {
+    const empresasMap = new Map();
+    reportes.forEach(reporte => {
+      const empresaId = getEmpresaIdFromReporte(reporte);
+      const empresaNombre = getNombreEmpresa(reporte, userEmpresas);
+      if (empresaId && !empresasMap.has(empresaId)) {
+        empresasMap.set(empresaId, {
+          id: empresaId,
+          nombre: empresaNombre
+        });
+      }
+    });
+    const empresasArray = Array.from(empresasMap.values());
+    return empresasArray;
+  }, [reportes, userEmpresas]);
+
+  // Obtener formularios únicos de los reportes
+  const formulariosDisponibles = useMemo(() => {
+    const formulariosMap = new Map();
+    reportes.forEach(reporte => {
+      const formId = reporte.formularioId || reporte.formulario?.id;
+      const formNombre = getNombreFormulario(reporte.formulario, reporte.nombreForm);
+      if (formId && !formulariosMap.has(formId)) {
+        formulariosMap.set(formId, {
+          id: formId,
+          nombre: formNombre,
+          empresaId: getEmpresaIdFromReporte(reporte)
+        });
+      }
+    });
+    const formulariosArray = Array.from(formulariosMap.values());
+    return formulariosArray;
+  }, [reportes]);
 
   // Función para imprimir el contenido del reporte
   const handlePrintReport = () => {
@@ -143,76 +218,17 @@ const ReportesPage = () => {
     <Box className="reportes-container" p={3}>
       {selectedReporte ? (
         <Box ref={detalleRef} className="public-report-content">
-          <Box className="membrete" mb={3}>
-            <Typography variant="h4">
-              {getNombreEmpresa(selectedReporte.empresa)}
-            </Typography>
-            <Typography variant="h6">
-              Sucursal: {selectedReporte.sucursal ?? "Sucursal no disponible"}
-            </Typography>
-            <Typography variant="h6">
-              Fecha:{" "}
-              {selectedReporte.fechaGuardado
-                ? new Date(selectedReporte.fechaGuardado.seconds * 1000).toLocaleString()
-                : "Fecha no disponible"}
-            </Typography>
-          </Box>
-
-          {selectedReporte.imagenes &&
-            selectedReporte.imagenes.map((imagen, idx) => (
-              <Box key={idx} className="imagen-detalle" mb={3} textAlign="center">
-                <img
-                  src={imagen}
-                  alt="Imagen Auditoría"
-                  style={{
-                    width: "100%",
-                    maxWidth: "600px",
-                    borderRadius: "10px",
-                    boxShadow: "0px 4px 6px rgba(0,0,0,0.1)",
-                  }}
-                />
-                <TableContainer component={Paper} style={{ marginTop: "15px" }}>
-                  <Table>
-                    <TableHead>
-                      <TableRow>
-                        <TableCell>Formulario</TableCell>
-                        <TableCell>Sección</TableCell>
-                        <TableCell>Pregunta</TableCell>
-                        <TableCell>Respuesta</TableCell>
-                        <TableCell>Comentario</TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      <TableRow>
-                        <TableCell>{getNombreFormulario(selectedReporte.formulario, selectedReporte.nombreForm)}</TableCell>
-                        <TableCell>
-                          {selectedReporte.secciones?.[idx]?.nombre ?? "Sección no disponible"}
-                        </TableCell>
-                        <TableCell>
-                          {selectedReporte.secciones?.[idx]?.preguntas?.[idx] ?? "Pregunta no disponible"}
-                        </TableCell>
-                        <TableCell>
-                          {selectedReporte.respuestas?.[idx] ?? "Respuesta no disponible"}
-                        </TableCell>
-                        <TableCell>
-                          {selectedReporte.comentarios?.[idx] ?? "Comentario no disponible"}
-                        </TableCell>
-                      </TableRow>
-                    </TableBody>
-                  </Table>
-                </TableContainer>
-              </Box>
-            ))}
-
-          <Box display="flex" justifyContent="flex-end">
-            <Button
-              variant="contained"
-              color="primary"
-              onClick={handlePrintReport}
-              style={{ padding: "10px", minWidth: "50px", minHeight: "50px" }}
-            >
-              Imprimir
-            </Button>
+          <ReporteWrapper {...selectedReporte} />
+          <Box display="flex" justifyContent="flex-end" mt={2}>
+            <ReactToPrint
+              trigger={() => (
+                <Button variant="contained" color="primary" style={{ padding: "10px", minWidth: "50px", minHeight: "50px" }}>
+                  Imprimir
+                </Button>
+              )}
+              content={() => detalleRef.current}
+              onBeforeGetContent={() => new Promise(resolve => setTimeout(resolve, 500))}
+            />
             <Button
               variant="outlined"
               color="secondary"
@@ -226,9 +242,19 @@ const ReportesPage = () => {
       ) : (
         <>
           <FiltrosReportes
-            empresas={empresas.map((nombre) => ({ nombre }))}
-            empresaSeleccionada={selectedEmpresa}
-            onChangeEmpresa={handleChangeEmpresa}
+            empresas={empresasDeReportes.length > 0 ? empresasDeReportes : userEmpresas}
+            formularios={formulariosDisponibles}
+            empresasSeleccionadas={empresasSeleccionadas}
+            formulariosSeleccionados={formulariosSeleccionados}
+            fechaDesde={fechaDesde}
+            fechaHasta={fechaHasta}
+            onChangeEmpresas={setEmpresasSeleccionadas}
+            onChangeFormularios={setFormulariosSeleccionados}
+            onChangeFechaDesde={setFechaDesde}
+            onChangeFechaHasta={setFechaHasta}
+            searchTerm={searchTerm}
+            onChangeSearchTerm={setSearchTerm}
+            loading={loading}
           />
           <TableContainer component={Paper}>
             <Table>
@@ -256,12 +282,12 @@ const ReportesPage = () => {
                 ) : (
                   filteredReportes.map((reporte) => (
                     <TableRow key={reporte.id}>
-                      <TableCell>{getNombreEmpresa(reporte.empresa)}</TableCell>
+                      <TableCell>{getNombreEmpresa(reporte, userEmpresas)}</TableCell>
                       <TableCell>{reporte.sucursal ?? "Sucursal no disponible"}</TableCell>
                       <TableCell>{getNombreFormulario(reporte.formulario, reporte.nombreForm)}</TableCell>
                       <TableCell>
-                        {reporte.fechaGuardado
-                          ? new Date(reporte.fechaGuardado.seconds * 1000).toLocaleString()
+                        {reporte.fechaCreacion
+                          ? new Date(reporte.fechaCreacion).toLocaleString()
                           : "Fecha no disponible"}
                       </TableCell>
                       <TableCell>

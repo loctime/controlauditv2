@@ -1,11 +1,11 @@
 // FiltrosReportes.jsx
 import React, { useState, useMemo } from 'react';
-import { 
-  Box, 
-  FormControl, 
-  InputLabel, 
-  Select, 
-  MenuItem, 
+import {
+  Box,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
   Chip,
   TextField,
   InputAdornment,
@@ -13,204 +13,359 @@ import {
   Tooltip,
   Typography,
   Divider,
-  Alert
+  Alert,
+  FormGroup,
+  FormControlLabel,
+  Checkbox
 } from '@mui/material';
-import { 
-  Search, 
-  Clear, 
-  Business, 
-  FilterList,
-  Refresh 
-} from '@mui/icons-material';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import { Search, Clear, Business, FilterList, Refresh, Assignment } from '@mui/icons-material';
 
-const FiltrosReportes = ({ 
-  empresas = [], 
-  empresaSeleccionada, 
-  onChangeEmpresa,
+const FiltrosReportes = ({
+  empresas = [],
+  formularios = [],
+  empresasSeleccionadas = [],
+  formulariosSeleccionados = [],
+  fechaDesde,
+  fechaHasta,
+  onChangeEmpresas,
+  onChangeFormularios,
+  onChangeFechaDesde,
+  onChangeFechaHasta,
+  searchTerm = '',
+  onChangeSearchTerm,
   onRefresh,
-  loading = false,
-  totalEmpresas = 0
+  loading = false
 }) => {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [showAll, setShowAll] = useState(true);
+
+  // Filtros locales
+  const [localSearch, setLocalSearch] = useState(searchTerm);
+  const [openEmpresas, setOpenEmpresas] = useState(false);
+  const [openFormularios, setOpenFormularios] = useState(false);
 
   // Filtrar empresas por término de búsqueda
   const empresasFiltradas = useMemo(() => {
-    if (!searchTerm.trim()) return empresas;
-    
-    return empresas.filter(empresa => 
-      empresa.nombre?.toLowerCase().includes(searchTerm.toLowerCase())
+    if (!localSearch.trim()) return empresas;
+    return empresas.filter(empresa =>
+      empresa.nombre?.toLowerCase().includes(localSearch.toLowerCase())
     );
-  }, [empresas, searchTerm]);
+  }, [empresas, localSearch]);
 
-  // Limpiar filtros
-  const handleClearFilters = () => {
-    setSearchTerm('');
-    setShowAll(true);
-    onChangeEmpresa('');
-  };
+  // Filtrar formularios por empresas seleccionadas
+  const formulariosFiltrados = useMemo(() => {
+    if (empresasSeleccionadas.length === 0) return formularios;
+    return formularios.filter(f => empresasSeleccionadas.includes(f.empresaId));
+  }, [formularios, empresasSeleccionadas]);
 
-  // Manejar cambio de empresa
-  const handleEmpresaChange = (event) => {
-    const value = event.target.value;
-    setShowAll(value === '');
-    onChangeEmpresa(value);
-  };
-
-  // Manejar búsqueda
+  // Handlers
   const handleSearchChange = (event) => {
-    setSearchTerm(event.target.value);
+    setLocalSearch(event.target.value);
+    if (onChangeSearchTerm) onChangeSearchTerm(event.target.value);
+  };
+
+  const handleEmpresasChange = (event) => {
+    const value = event.target.value;
+    const newValue = typeof value === 'string' ? value.split(',') : value;
+    
+    // Si se selecciona "todos", limpiar selección y cerrar dropdown
+    if (newValue.includes('todos')) {
+      onChangeEmpresas([]);
+      setOpenEmpresas(false);
+    } else {
+      onChangeEmpresas(newValue);
+    }
+  };
+
+  const handleFormulariosChange = (event) => {
+    const value = event.target.value;
+    const newValue = typeof value === 'string' ? value.split(',') : value;
+    
+    // Si se selecciona "todos", limpiar selección y cerrar dropdown
+    if (newValue.includes('todos')) {
+      onChangeFormularios([]);
+      setOpenFormularios(false);
+    } else {
+      onChangeFormularios(newValue);
+    }
+  };
+
+  const handleRemoveEmpresa = (empresaId) => {
+    onChangeEmpresas(empresasSeleccionadas.filter(id => id !== empresaId));
+  };
+
+  const handleRemoveFormulario = (formularioId) => {
+    onChangeFormularios(formulariosSeleccionados.filter(id => id !== formularioId));
+  };
+
+  const handleClearEmpresas = () => {
+    onChangeEmpresas([]);
+  };
+
+  const handleClearFormularios = () => {
+    onChangeFormularios([]);
+  };
+
+  const handleCheckboxEmpresa = (id) => {
+    let newSelected = empresasSeleccionadas.includes(id)
+      ? empresasSeleccionadas.filter(eid => eid !== id)
+      : [...empresasSeleccionadas, id];
+    onChangeEmpresas(newSelected);
   };
 
   return (
-    <Box>
-      {/* Header con estadísticas */}
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-        <Box display="flex" alignItems="center" gap={1}>
-          <FilterList color="primary" />
-          <Typography variant="h6" component="h2">
-            Filtros de Reportes
-          </Typography>
-        </Box>
-        
-        <Box display="flex" alignItems="center" gap={1}>
-          <Chip 
-            icon={<Business />}
-            label={`${empresas.length} empresas disponibles`}
-            variant="outlined"
-            size="small"
-          />
-          
-          {onRefresh && (
-            <Tooltip title="Actualizar lista de empresas">
-              <IconButton 
-                onClick={onRefresh}
-                disabled={loading}
-                size="small"
-              >
-                <Refresh />
-              </IconButton>
-            </Tooltip>
+    <Box display="flex" alignItems="center" gap={2} flexWrap="wrap" mb={2}>
+
+      
+      {/* Buscador */}
+      <TextField
+        size="small"
+        placeholder="Buscar..."
+        value={localSearch}
+        onChange={handleSearchChange}
+        InputProps={{
+          startAdornment: (
+            <InputAdornment position="start">
+              <Search color="action" />
+            </InputAdornment>
+          ),
+          endAdornment: localSearch && (
+            <InputAdornment position="end">
+              <Tooltip title="Limpiar búsqueda">
+                <IconButton size="small" onClick={() => { setLocalSearch(''); onChangeSearchTerm && onChangeSearchTerm(''); }}>
+                  <Clear />
+                </IconButton>
+              </Tooltip>
+            </InputAdornment>
+          ),
+        }}
+        sx={{ minWidth: 180 }}
+      />
+
+      {/* Selector de empresas (multi) */}
+      <FormControl size="small" sx={{ minWidth: 180 }}>
+        <InputLabel id="empresas-multi-label">Empresas ({empresasFiltradas.length})</InputLabel>
+        <Select
+          labelId="empresas-multi-label"
+          multiple
+          open={openEmpresas}
+          onOpen={() => setOpenEmpresas(true)}
+          onClose={() => setOpenEmpresas(false)}
+          value={empresasSeleccionadas}
+          onChange={handleEmpresasChange}
+          label={`Empresas (${empresasFiltradas.length})`}
+          renderValue={(selected) => (
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, alignItems: 'center' }}>
+              {selected.length === 0 ? (
+                <Chip label="Todas las empresas" size="small" color="primary" />
+              ) : (
+                <>
+                  {selected.map((id) => {
+                    const emp = empresas.find(e => e.id === id);
+                    return (
+                      <Chip 
+                        key={id} 
+                        label={emp ? emp.nombre : id} 
+                        size="small"
+                      />
+                    );
+                  })}
+                  <Tooltip title="Limpiar todas las empresas">
+                    <IconButton 
+                      size="small" 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleClearEmpresas();
+                      }}
+                      sx={{ ml: 0.5 }}
+                    >
+                      <Clear fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
+                </>
+              )}
+            </Box>
           )}
-        </Box>
-      </Box>
-
-      {/* Barra de búsqueda */}
-      <Box mb={2}>
-        <TextField
-          fullWidth
-          size="small"
-          placeholder="Buscar empresa..."
-          value={searchTerm}
-          onChange={handleSearchChange}
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <Search color="action" />
-              </InputAdornment>
-            ),
-            endAdornment: searchTerm && (
-              <InputAdornment position="end">
-                <Tooltip title="Limpiar búsqueda">
-                  <IconButton
-                    size="small"
-                    onClick={() => setSearchTerm('')}
-                  >
-                    <Clear />
-                  </IconButton>
-                </Tooltip>
-              </InputAdornment>
-            ),
-          }}
-        />
-      </Box>
-
-      {/* Selector de empresa */}
-      <Box mb={2}>
-        <FormControl fullWidth size="small">
-          <InputLabel id="empresa-select-label">
-            Seleccionar Empresa
-          </InputLabel>
-          <Select
-            labelId="empresa-select-label"
-            value={empresaSeleccionada}
-            onChange={handleEmpresaChange}
-            label="Seleccionar Empresa"
-            disabled={loading}
-          >
-            <MenuItem value="">
-              <Box display="flex" alignItems="center" gap={1}>
-                <Business color="action" />
-                <em>Todas las empresas</em>
-              </Box>
-            </MenuItem>
-            
-            {empresasFiltradas.length > 0 && <Divider />}
-            
-            {empresasFiltradas.map((empresa, index) => (
-              <MenuItem key={empresa.id || index} value={empresa.nombre}>
-                <Box display="flex" alignItems="center" gap={1}>
-                  <Business color="primary" fontSize="small" />
-                  {empresa.nombre}
+        >
+          <MenuItem value="todos">
+            <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
+              ✓ Todos los reportes
+            </Typography>
+          </MenuItem>
+          <Divider />
+          {empresasFiltradas.length === 0 ? (
+            <MenuItem disabled>No hay empresas disponibles</MenuItem>
+          ) : (
+            empresasFiltradas.map((empresa) => (
+              <MenuItem key={empresa.id} value={empresa.id}>
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                    <Business fontSize="small" sx={{ mr: 1 }} />
+                    {empresa.nombre}
+                  </Box>
+                  {empresasSeleccionadas.includes(empresa.id) && (
+                    <Tooltip title="Eliminar empresa">
+                      <IconButton 
+                        size="small" 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleRemoveEmpresa(empresa.id);
+                        }}
+                        sx={{ ml: 1 }}
+                      >
+                        <Clear fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                  )}
                 </Box>
               </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-      </Box>
+            ))
+          )}
+        </Select>
+      </FormControl>
 
-      {/* Estado actual de filtros */}
-      {(empresaSeleccionada || searchTerm) && (
-        <Box mb={2}>
-          <Alert severity="info" sx={{ py: 0 }}>
-            <Typography variant="body2">
-              <strong>Filtros activos:</strong>
-              {empresaSeleccionada && (
-                <Chip 
-                  label={`Empresa: ${empresaSeleccionada}`}
-                  size="small"
-                  sx={{ ml: 1 }}
-                />
+      {/* Selector de formularios (multi) */}
+      <FormControl size="small" sx={{ minWidth: 180 }}>
+        <InputLabel id="formularios-multi-label">Formularios ({formulariosFiltrados.length})</InputLabel>
+        <Select
+          labelId="formularios-multi-label"
+          multiple
+          open={openFormularios}
+          onOpen={() => setOpenFormularios(true)}
+          onClose={() => setOpenFormularios(false)}
+          value={formulariosSeleccionados}
+          onChange={handleFormulariosChange}
+          label={`Formularios (${formulariosFiltrados.length})`}
+          renderValue={(selected) => (
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, alignItems: 'center' }}>
+              {selected.length === 0 ? (
+                <Chip label="Todos los formularios" size="small" color="primary" />
+              ) : (
+                <>
+                  {selected.map((id) => {
+                    const form = formularios.find(f => f.id === id);
+                    return (
+                      <Chip 
+                        key={id} 
+                        label={form ? form.nombre : id} 
+                        size="small"
+                      />
+                    );
+                  })}
+                  <Tooltip title="Limpiar todos los formularios">
+                    <IconButton 
+                      size="small" 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleClearFormularios();
+                      }}
+                      sx={{ ml: 0.5 }}
+                    >
+                      <Clear fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
+                </>
               )}
-              {searchTerm && (
-                <Chip 
-                  label={`Búsqueda: "${searchTerm}"`}
-                  size="small"
-                  sx={{ ml: 1 }}
-                />
-              )}
+            </Box>
+          )}
+        >
+          <MenuItem value="todos">
+            <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
+              ✓ Todos los formularios
             </Typography>
-          </Alert>
-        </Box>
-      )}
+          </MenuItem>
+          <Divider />
+          {formulariosFiltrados.length === 0 ? (
+            <MenuItem disabled>No hay formularios disponibles</MenuItem>
+          ) : (
+            formulariosFiltrados.map((formulario) => (
+              <MenuItem key={formulario.id} value={formulario.id}>
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                    <Assignment fontSize="small" sx={{ mr: 1 }} />
+                    {formulario.nombre}
+                  </Box>
+                  {formulariosSeleccionados.includes(formulario.id) && (
+                    <Tooltip title="Eliminar formulario">
+                      <IconButton 
+                        size="small" 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleRemoveFormulario(formulario.id);
+                        }}
+                        sx={{ ml: 1 }}
+                      >
+                        <Clear fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                  )}
+                </Box>
+              </MenuItem>
+            ))
+          )}
+        </Select>
+      </FormControl>
 
-      {/* Botón limpiar filtros */}
-      {(empresaSeleccionada || searchTerm) && (
-        <Box display="flex" justifyContent="flex-end">
-          <Tooltip title="Limpiar todos los filtros">
-            <IconButton 
-              onClick={handleClearFilters}
-              color="secondary"
-              size="small"
-            >
-              <Clear />
-            </IconButton>
-          </Tooltip>
-        </Box>
-      )}
+      {/* Filtro por fecha (rango) */}
+      <DatePicker
+        label="Desde"
+        value={fechaDesde}
+        onChange={onChangeFechaDesde}
+        slotProps={{ textField: { size: 'small', sx: { minWidth: 120 } } }}
+      />
+      <DatePicker
+        label="Hasta"
+        value={fechaHasta}
+        onChange={onChangeFechaHasta}
+        slotProps={{ textField: { size: 'small', sx: { minWidth: 120 } } }}
+      />
 
-      {/* Mensaje cuando no hay empresas */}
-      {empresas.length === 0 && !loading && (
-        <Alert severity="warning">
-          No hay empresas disponibles para filtrar.
-        </Alert>
-      )}
+      {/* Checkboxes de empresas (multi) */}
+      <FormGroup row sx={{ maxWidth: 400, flexWrap: 'wrap' }}>
+        {empresasFiltradas.length === 0 ? (
+          <Typography variant="body2" color="textSecondary">
+            No hay empresas para mostrar
+          </Typography>
+        ) : (
+          <>
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={empresasSeleccionadas.length === 0}
+                  onChange={() => onChangeEmpresas([])}
+                  size="small"
+                  color="primary"
+                />
+              }
+              label={
+                <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
+                  Todas las empresas
+                </Typography>
+              }
+            />
+            {empresasFiltradas.map((empresa) => (
+              <FormControlLabel
+                key={empresa.id}
+                control={
+                  <Checkbox
+                    checked={empresasSeleccionadas.includes(empresa.id)}
+                    onChange={() => handleCheckboxEmpresa(empresa.id)}
+                    size="small"
+                  />
+                }
+                label={empresa.nombre}
+              />
+            ))}
+          </>
+        )}
+      </FormGroup>
 
-      {/* Mensaje cuando la búsqueda no encuentra resultados */}
-      {searchTerm && empresasFiltradas.length === 0 && empresas.length > 0 && (
-        <Alert severity="info">
-          No se encontraron empresas que coincidan con "{searchTerm}".
-        </Alert>
+      {/* Botón de refresh */}
+      {onRefresh && (
+        <Tooltip title="Actualizar lista de empresas">
+          <IconButton onClick={onRefresh} disabled={loading} size="small">
+            <Refresh />
+          </IconButton>
+        </Tooltip>
       )}
     </Box>
   );

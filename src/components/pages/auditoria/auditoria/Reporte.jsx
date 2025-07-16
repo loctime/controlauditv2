@@ -8,16 +8,21 @@ import { collection, addDoc, Timestamp } from "firebase/firestore";
 import { db, storage } from "./../../../../firebaseConfig";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { useNavigate } from "react-router-dom";
+import { getEmpresaIdFromReporte, getEmpresaNombreFromReporte, normalizeReporteEmpresa } from '../../../../services/useMetadataService';
 
-const Reporte = ({
-  empresa,
-  sucursal,
-  formulario, // Asegúrate de agregar formulario como prop
-  respuestas,
-  comentarios = [],
-  imagenes = [],
-  secciones,
-}) => {
+const Reporte = (props) => {
+  // Permitir recibir props sueltos o un objeto reporte
+  const reporte = props.reporte || props;
+
+  // Extraer y normalizar metadatos usando helpers
+  const empresa = normalizeReporteEmpresa(reporte, props.empresas || []);
+  const sucursal = reporte.sucursal || '';
+  const formulario = reporte.formulario || { id: reporte.formularioId, nombre: reporte.formularioNombre };
+  const respuestas = reporte.respuestas || [];
+  const comentarios = reporte.comentarios || [];
+  const imagenes = reporte.imagenes || [];
+  const secciones = reporte.secciones || [];
+
   const navigate = useNavigate();
 
   // NOTA: Este componente es SOLO de visualización.

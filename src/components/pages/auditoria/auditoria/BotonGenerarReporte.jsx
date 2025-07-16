@@ -3,6 +3,7 @@ import React, { useState } from "react";
 import { Button, Box, Alert, Snackbar, CircularProgress } from "@mui/material";
 import { useAuth } from "../../../context/AuthContext";
 import AuditoriaService from "../auditoriaService";
+import { buildReporteMetadata } from '../../../../services/useMetadataService';
 
 const BotonGenerarReporte = ({ 
   onClick, 
@@ -42,8 +43,8 @@ const BotonGenerarReporte = ({
 
     setGuardando(true);
     try {
-      // Usar el servicio centralizado para guardar
-      const datosAuditoria = {
+      // Construir metadatos consistentes y multi-tenant
+      const datosAuditoria = buildReporteMetadata({
         empresa,
         sucursal,
         formulario,
@@ -52,9 +53,16 @@ const BotonGenerarReporte = ({
         imagenes,
         secciones,
         firmaAuditor,
-        firmaResponsable
-      };
+        firmaResponsable,
+        // Multi-tenant
+        clienteAdminId: userProfile?.clienteAdminId || userProfile?.uid,
+        usuarioId: userProfile?.uid,
+        usuarioEmail: userProfile?.email,
+        fechaGuardado: new Date(),
+      });
+      console.debug('[BotonGenerarReporte] Guardando auditoría con metadatos:', datosAuditoria);
 
+      // Usar el servicio centralizado para guardar
       const auditoriaId = await AuditoriaService.guardarAuditoria(datosAuditoria, userProfile);
       
       setGuardadoExitoso(true);

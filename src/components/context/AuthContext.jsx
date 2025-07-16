@@ -15,6 +15,7 @@ const AuthContextComponent = ({ children }) => {
   const [isLogged, setIsLogged] = useState(false);
   const [loading, setLoading] = useState(true);
   const [userEmpresas, setUserEmpresas] = useState([]);
+  const [loadingEmpresas, setLoadingEmpresas] = useState(true);
   const [userAuditorias, setUserAuditorias] = useState([]);
   const [socios, setSocios] = useState([]);
   const [auditoriasCompartidas, setAuditoriasCompartidas] = useState([]);
@@ -94,8 +95,10 @@ const AuthContextComponent = ({ children }) => {
   useEffect(() => {
     if (!userProfile?.uid || !role) {
       setUserEmpresas([]);
+      setLoadingEmpresas(false);
       return;
     }
+    setLoadingEmpresas(true);
     let q;
     const empresasRef = collection(db, "empresas");
     if (role === 'supermax') {
@@ -109,15 +112,18 @@ const AuthContextComponent = ({ children }) => {
       q = query(empresasRef, where("propietarioId", "==", userProfile.clienteAdminId));
     } else {
       setUserEmpresas([]);
+      setLoadingEmpresas(false);
       return;
     }
     console.debug('[AuthContext] Suscribiendo a empresas en tiempo real para rol:', role, 'query:', q);
     const unsubscribe = onSnapshot(q, (snapshot) => {
       setUserEmpresas(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      setLoadingEmpresas(false);
       console.debug('[AuthContext] Empresas actualizadas en tiempo real:', snapshot.docs.length);
     }, (error) => {
       console.error('[AuthContext] Error en onSnapshot de empresas:', error);
       setUserEmpresas([]);
+      setLoadingEmpresas(false);
     });
     return () => unsubscribe();
   }, [userProfile?.uid, role, userProfile?.clienteAdminId]);
@@ -972,6 +978,7 @@ const AuthContextComponent = ({ children }) => {
     isLogged,
     loading,
     userEmpresas,
+    loadingEmpresas,
     userAuditorias,
     socios,
     auditoriasCompartidas,

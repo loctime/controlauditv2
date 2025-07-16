@@ -43,6 +43,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../../context/AuthContext";
 import Swal from 'sweetalert2';
+import ReporteConImpresion from '../reporte/ReporteConImpresion';
 
 const Auditoria = () => {
   const theme = useTheme();
@@ -911,7 +912,7 @@ const Auditoria = () => {
                 variant="outlined" 
                 color="primary" 
                 size="large"
-                onClick={() => navigate('/reportes')}
+                onClick={() => navigate('/reporte')}
               >
                 Ver Reportes
               </Button>
@@ -933,7 +934,7 @@ const Auditoria = () => {
       {mostrarReporte && (
         <Zoom in={true} timeout={800}>
           <Paper elevation={6} sx={{ p: 4, mt: 4, borderRadius: 3 }}>
-            <Reporte 
+            <ReporteConImpresion 
               empresa={empresaSeleccionada} 
               sucursal={sucursalSeleccionada} 
               formulario={formularios.find(formulario => formulario.id === formularioSeleccionadoId)}
@@ -941,6 +942,7 @@ const Auditoria = () => {
               comentarios={comentarios}
               imagenes={imagenes}
               secciones={secciones} 
+              formularios={formularios}
             />
           </Paper>
         </Zoom>

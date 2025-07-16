@@ -980,4 +980,4 @@ console.log('[DEBUG] Datos cargados con filtrado multi-tenant:', {
 
 **Última actualización**: $(date)
 **Versión del sistema**: 2.0.0
-**Estado**: Producción 
+**Estado**: Producción

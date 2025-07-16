@@ -104,6 +104,12 @@ class AuditoriaService {
     return `${nombreEmpresa}${ubicacion}_${nombreUsuario}_${fecha}`;
   }
 
+  // Helper para transformar arrays anidados a arrays de objetos por sección
+  static anidarAObjetosPorSeccion(arr) {
+    if (!Array.isArray(arr)) return [];
+    return arr.map((valores, idx) => ({ seccion: idx, valores: Array.isArray(valores) ? valores : [] }));
+  }
+
   /**
    * Guarda una auditoría en Firestore
    * @param {Object} datosAuditoria - Datos de la auditoría
@@ -133,9 +139,10 @@ class AuditoriaService {
         sucursal: datosAuditoria.sucursal || "Casa Central",
         formularioId: datosAuditoria.formulario?.id || null,
         nombreForm: datosAuditoria.formulario?.nombre || null,
-        respuestas: Array.isArray(datosAuditoria.respuestas) ? datosAuditoria.respuestas.flat() : [],
-        comentarios: Array.isArray(datosAuditoria.comentarios) ? datosAuditoria.comentarios.flat() : [],
-        imagenes: imagenesProcesadas.flat().filter(img => img !== null),
+        // Guardar como arrays de objetos por sección para evitar arrays anidados
+        respuestas: this.anidarAObjetosPorSeccion(datosAuditoria.respuestas),
+        comentarios: this.anidarAObjetosPorSeccion(datosAuditoria.comentarios),
+        imagenes: this.anidarAObjetosPorSeccion(imagenesProcesadas),
         secciones: Array.isArray(datosAuditoria.secciones) ? datosAuditoria.secciones : [],
         estadisticas: estadisticas,
         estado: "completada",

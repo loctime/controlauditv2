@@ -26,7 +26,8 @@ const PerfilUsuario = () => {
     socios,
     auditoriasCompartidas,
     agregarSocio,
-    updateUserProfile
+    updateUserProfile,
+    loadingEmpresas
   } = useAuth();
 
   const [selectedSection, setSelectedSection] = useState('empresas');
@@ -172,7 +173,7 @@ const PerfilUsuario = () => {
         {/* Contenido principal */}
         <Box sx={{ flex: 1, minWidth: 0 }}>
           {selectedSection === 'empresas' && (
-            <PerfilEmpresas empresas={userEmpresas} loading={false} />
+            <PerfilEmpresas empresas={userEmpresas} loading={loadingEmpresas} />
           )}
           {selectedSection === 'formularios' && (
             <PerfilFormularios formularios={formularios} loading={loadingFormularios} />
