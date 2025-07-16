@@ -21,6 +21,7 @@ import { useAuth } from "../../../context/AuthContext";
 import ReporteWrapper from './reporte';
 import ReactToPrint from 'react-to-print';
 import { getEmpresaIdFromReporte } from '../../../../services/useMetadataService';
+import dayjs from 'dayjs';
 
 // Helpers seguros para obtener nombre de empresa y formulario
 const getNombreEmpresa = (reporte, empresas = []) => {
@@ -54,7 +55,7 @@ const ReportesPage = () => {
   const [empresasSeleccionadas, setEmpresasSeleccionadas] = useState([]);
   const [formulariosSeleccionados, setFormulariosSeleccionados] = useState([]);
   const [fechaDesde, setFechaDesde] = useState(null);
-  const [fechaHasta, setFechaHasta] = useState(new Date());
+  const [fechaHasta, setFechaHasta] = useState(dayjs());
   const [searchTerm, setSearchTerm] = useState("");
   const detalleRef = useRef();
 
@@ -272,7 +273,7 @@ const ReportesPage = () => {
                   <TableRow>
                     <TableCell colSpan={5} align="center" sx={{ py: 4 }}>
                       <Typography variant="body2" color="textSecondary">
-                        {selectedEmpresa 
+                        {empresasSeleccionadas.length > 0 
                           ? "No se encontraron reportes para esta empresa"
                           : "No hay reportes disponibles"
                         }

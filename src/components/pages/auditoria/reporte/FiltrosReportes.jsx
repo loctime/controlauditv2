@@ -16,7 +16,8 @@ import {
   Alert,
   FormGroup,
   FormControlLabel,
-  Checkbox
+  Checkbox,
+  Button
 } from '@mui/material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { Search, Clear, Business, FilterList, Refresh, Assignment } from '@mui/icons-material';
@@ -42,6 +43,7 @@ const FiltrosReportes = ({
   const [localSearch, setLocalSearch] = useState(searchTerm);
   const [openEmpresas, setOpenEmpresas] = useState(false);
   const [openFormularios, setOpenFormularios] = useState(false);
+  const [showAllEmpresas, setShowAllEmpresas] = useState(false);
 
   // Filtrar empresas por término de búsqueda
   const empresasFiltradas = useMemo(() => {
@@ -342,7 +344,7 @@ const FiltrosReportes = ({
                 </Typography>
               }
             />
-            {empresasFiltradas.map((empresa) => (
+            {(showAllEmpresas ? empresasFiltradas : empresasFiltradas.slice(0, 5)).map((empresa) => (
               <FormControlLabel
                 key={empresa.id}
                 control={
@@ -355,6 +357,23 @@ const FiltrosReportes = ({
                 label={empresa.nombre}
               />
             ))}
+            {empresasFiltradas.length > 5 && (
+              <Button
+                size="small"
+                onClick={() => setShowAllEmpresas(!showAllEmpresas)}
+                sx={{ 
+                  mt: 0.5, 
+                  textTransform: 'none',
+                  color: 'primary.main',
+                  '&:hover': { backgroundColor: 'transparent' }
+                }}
+              >
+                {showAllEmpresas 
+                  ? `Ver menos (${empresasFiltradas.length - 5} menos)` 
+                  : `Ver más (${empresasFiltradas.length - 5} más)`
+                }
+              </Button>
+            )}
           </>
         )}
       </FormGroup>
