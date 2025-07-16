@@ -1,10 +1,11 @@
-import React from "react";
+import React, { useRef } from "react";
 import ResumenRespuestas from "../auditoria/ResumenRespuestas";
 import ImagenesTable from "./ImagenesTable";
 import PreguntasRespuestasList from "../../../common/PreguntasRespuestasList";
 import { Typography, Grid, Box, Button, Paper, Dialog, DialogTitle, DialogContent, DialogActions, IconButton } from "@mui/material";
 import PrintIcon from '@mui/icons-material/Print';
 import CloseIcon from '@mui/icons-material/Close';
+import EstadisticasChart from './EstadisticasChart';
 
 // Normaliza respuestas a array de arrays de strings
 const normalizarRespuestas = (res) => {
@@ -79,7 +80,7 @@ const normalizarComentarios = (comentariosFirestore, secciones) => {
   return secciones.map((_, idx) => []);
 };
 
-function generarContenidoImpresion({empresa, sucursal, formulario, fecha, respuestas, secciones, comentarios, imagenes, firmaResponsable}) {
+function generarContenidoImpresion({empresa, sucursal, formulario, fecha, respuestas, secciones, comentarios, imagenes, firmaResponsable, firmaAuditor, chartImgDataUrl, sectionChartsImgDataUrl}) {
   // Resumen de respuestas
   const totalPreguntas = respuestas.flat().length;
   const conforme = respuestas.flat().filter(r => r === 'Conforme').length;
@@ -132,6 +133,16 @@ function generarContenidoImpresion({empresa, sucursal, formulario, fecha, respue
         </ul>
       </div>
       <div class="section">
+        <h2>Gráfico de Respuestas</h2>
+        ${chartImgDataUrl ? `<img src="${chartImgDataUrl}" style="max-width:400px;" />` : ''}
+      </div>
+      ${sectionChartsImgDataUrl && sectionChartsImgDataUrl.length > 0 ? `
+        <div class="section">
+          <h2>Distribución por sección</h2>
+          ${sectionChartsImgDataUrl.map((img, idx) => img ? `<div style='margin-bottom:16px;'><b>${secciones[idx]?.nombre || `Sección ${idx+1}`}</b><br/><img src='${img}' style='max-width:350px;max-height:220px;'/></div>` : '').join('')}
+        </div>
+      ` : ''}
+      <div class="section">
         <h2>Preguntas y Respuestas</h2>
         ${secciones.map((seccion, sIdx) => `
           <div style="margin-bottom: 12px;">
@@ -148,6 +159,10 @@ function generarContenidoImpresion({empresa, sucursal, formulario, fecha, respue
             </ul>
           </div>
         `).join('')}
+      </div>
+      <div class="section">
+        <h2>Firma del Auditor</h2>
+        ${firmaAuditor ? `<img src="${firmaAuditor}" class="firma-img" alt="Firma del auditor" />` : '<p>No hay firma registrada.</p>'}
       </div>
       <div class="section">
         <h2>Firma del Responsable</h2>
@@ -205,14 +220,58 @@ const ReporteDetallePro = ({ open = false, onClose = () => {}, reporte = null, m
   console.debug('[ReporteDetallePro] comentariosNormalizados:', comentariosNormalizados);
   console.debug('[ReporteDetallePro] imagenesNormalizadas:', imagenesNormalizadas);
 
-  const handleImprimir = () => {
-    const html = generarContenidoImpresion({empresa, sucursal, formulario, fecha, respuestas: respuestasNormalizadas, secciones, comentarios: comentariosNormalizados, imagenes: imagenesNormalizadas, firmaResponsable});
+  // Ref para el gráfico principal
+  const chartRef = useRef();
+  // Refs para los gráficos por sección
+  const sectionChartRefs = useRef([]);
+
+  const handleImprimir = async () => {
+    // Obtener imagen del gráfico principal
+    let chartImgDataUrl = '';
+    if (chartRef.current && chartRef.current.getImage) {
+      chartImgDataUrl = chartRef.current.getImage();
+    }
+    // Obtener imágenes de los gráficos por sección
+    let sectionChartsImgDataUrl = [];
+    if (sectionChartRefs.current && sectionChartRefs.current.length > 0) {
+      sectionChartsImgDataUrl = sectionChartRefs.current.map(ref =>
+        ref && ref.getImage ? ref.getImage() : ''
+      );
+    }
+    // Generar el HTML de impresión, incluyendo firmas y gráficos
+    const html = generarContenidoImpresion({
+      empresa,
+      sucursal,
+      formulario,
+      fecha,
+      respuestas: respuestasNormalizadas,
+      secciones,
+      comentarios: comentariosNormalizados,
+      imagenes: imagenesNormalizadas,
+      firmaResponsable: firmaResponsableFinal,
+      firmaAuditor: reporte.firmaAuditor,
+      chartImgDataUrl, // Gráfico principal
+      sectionChartsImgDataUrl // Array de gráficos por sección
+    });
     const printWindow = window.open('', '_blank', 'width=900,height=700');
     printWindow.document.write(html);
     printWindow.document.close();
     printWindow.focus();
     printWindow.onload = () => {
-      setTimeout(() => printWindow.print(), 300);
+      const imgs = printWindow.document.images;
+      let loaded = 0;
+      if (imgs.length === 0) {
+        printWindow.print();
+        return;
+      }
+      for (let img of imgs) {
+        img.onload = img.onerror = () => {
+          loaded++;
+          if (loaded === imgs.length) {
+            setTimeout(() => printWindow.print(), 300);
+          }
+        };
+      }
     };
   };
 
@@ -224,60 +283,57 @@ const ReporteDetallePro = ({ open = false, onClose = () => {}, reporte = null, m
           <IconButton onClick={onClose} size="small"><CloseIcon /></IconButton>
         </DialogTitle>
         <DialogContent>
-          <Box p={3}>
-            <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-              <Typography variant="h4" gutterBottom>
-                Reporte de Auditoría de Higiene y Seguridad
-              </Typography>
-              {empresa.logo && empresa.logo.trim() !== "" ? (
-                <img
-                  src={empresa.logo}
-                  alt="Logo de la empresa"
-                  style={{ height: '60px' }}
-                  onError={e => { e.target.style.display = 'none'; }}
-                />
-              ) : (
-                <Box
-                  sx={{
-                    width: "60px",
-                    height: "60px",
-                    backgroundColor: "#f0f0f0",
-                    borderRadius: "4px",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    fontSize: "18px",
-                    color: "#666",
-                    border: "1px solid #ccc"
-                  }}
-                >
-                  {empresa.nombre ? empresa.nombre.charAt(0).toUpperCase() : '?'}
-                </Box>
-              )}
-            </Box>
-            <Typography variant="h6" gutterBottom>Datos de la Empresa</Typography>
-            <Typography variant="body1">Empresa: {empresa.nombre}</Typography>
-            <Typography variant="body1">Sucursal: {sucursal}</Typography>
-            <Typography variant="body1">Formulario: {formulario.nombre}</Typography>
-            <Typography variant="body1">Fecha: {fecha}</Typography>
-            {/* Resumen avanzado de respuestas */}
-            <ResumenRespuestas respuestas={respuestasNormalizadas} secciones={secciones} />
-            {/* Preguntas, respuestas, comentarios e imágenes */}
-            <Box mt={3}>
-              <PreguntasRespuestasList
-                secciones={secciones}
-                respuestas={respuestasNormalizadas}
-                comentarios={comentariosNormalizados}
-                imagenes={imagenesNormalizadas}
-              />
-            </Box>
+          {/* Layout superior: Detalle a la izquierda, Resumen+Gráfico a la derecha */}
+          <Grid container spacing={3} alignItems="flex-start">
+            {/* Izquierda: Detalle de auditoría + gráfico */}
+            <Grid item xs={12} md={6}>
+              <Paper elevation={2} sx={{ p: 3, mb: 2 }}>
+                <Typography variant="h6" gutterBottom>Datos de la Empresa</Typography>
+                <Typography variant="body1"><b>Empresa:</b> {empresa.nombre}</Typography>
+                <Typography variant="body1"><b>Sucursal:</b> {sucursal || 'Casa Central'}</Typography>
+                <Typography variant="body1"><b>Formulario:</b> {formulario.nombre}</Typography>
+                <Typography variant="body1"><b>Fecha:</b> {fecha}</Typography>
+                {/* Gráfico general debajo del detalle */}
+                {reporte.estadisticas && reporte.estadisticas.conteo && (
+                  <Box mt={3}>
+                    <EstadisticasChart
+                      ref={chartRef}
+                      estadisticas={reporte.estadisticas.conteo}
+                      title="Distribución general de respuestas"
+                    />
+                  </Box>
+                )}
+              </Paper>
+            </Grid>
+            {/* Derecha: Resumen de respuestas */}
+            <Grid item xs={12} md={6}>
+              <Paper elevation={2} sx={{ p: 3, mb: 2 }}>
+                <Typography variant="h6" gutterBottom>Resumen de Respuestas</Typography>
+                <ResumenRespuestas respuestas={respuestasNormalizadas} secciones={secciones} />
+              </Paper>
+            </Grid>
+          </Grid>
+
+          {/* Preguntas y respuestas */}
+          <Box mt={4}>
+            <Typography variant="h6" gutterBottom>Preguntas y Respuestas</Typography>
+            <PreguntasRespuestasList
+              secciones={secciones}
+              respuestas={respuestasNormalizadas}
+              comentarios={comentariosNormalizados}
+              imagenes={imagenesNormalizadas}
+            />
+          </Box>
+
+          {/* Firmas lado a lado */}
+          <Box mt={4} display="flex" flexDirection={{ xs: 'column', md: 'row' }} gap={4} justifyContent="center" alignItems="flex-start">
             {/* Firma del Auditor */}
-            <Box mt={3}>
+            <Box flex={1} textAlign="center">
               <Typography variant="subtitle1" color="primary" fontWeight={600} gutterBottom>
                 Firma del Auditor
               </Typography>
               {reporte.firmaAuditor && typeof reporte.firmaAuditor === 'string' && reporte.firmaAuditor.length > 10 ? (
-                <Box sx={{ border: '2px solid', borderColor: 'info.main', borderRadius: 1, p: 2, mb: 2, maxWidth: 300 }}>
+                <Box sx={{ border: '2px solid', borderColor: 'info.main', borderRadius: 1, p: 2, mb: 2, maxWidth: 300, mx: 'auto' }}>
                   <img
                     src={reporte.firmaAuditor}
                     alt="Firma del auditor"
@@ -296,13 +352,12 @@ const ReporteDetallePro = ({ open = false, onClose = () => {}, reporte = null, m
               )}
             </Box>
             {/* Firma del Responsable */}
-            <Box mt={3}>
+            <Box flex={1} textAlign="center">
               <Typography variant="subtitle1" color="primary" fontWeight={600} gutterBottom>
                 Firma del Responsable
               </Typography>
-              {/* Renderizado seguro de la firma */}
               {firmaResponsableFinal && typeof firmaResponsableFinal === 'string' && firmaResponsableFinal.length > 10 ? (
-                <Box sx={{ border: '2px solid', borderColor: 'success.main', borderRadius: 1, p: 2, mb: 2, maxWidth: 300 }}>
+                <Box sx={{ border: '2px solid', borderColor: 'success.main', borderRadius: 1, p: 2, mb: 2, maxWidth: 300, mx: 'auto' }}>
                   <img
                     src={firmaResponsableFinal}
                     alt="Firma del responsable"
@@ -314,7 +369,6 @@ const ReporteDetallePro = ({ open = false, onClose = () => {}, reporte = null, m
                   No hay firma registrada.
                 </Typography>
               )}
-              {/* Advertencia si la firma no es válida */}
               {(!firmaResponsableFinal || typeof firmaResponsableFinal !== 'string' || firmaResponsableFinal.length < 10) && (
                 <Typography variant="caption" color="error">
                   [ADVERTENCIA] La firma no está disponible o es inválida.
@@ -375,6 +429,44 @@ const ReporteDetallePro = ({ open = false, onClose = () => {}, reporte = null, m
       <Typography variant="body1">Fecha: {fecha}</Typography>
       {/* Resumen avanzado de respuestas */}
       <ResumenRespuestas respuestas={respuestasNormalizadas} secciones={secciones} />
+      {/* Gráfico general de respuestas */}
+      {reporte.estadisticas && reporte.estadisticas.conteo && (
+        <Box mt={3}>
+          <EstadisticasChart
+            ref={chartRef}
+            estadisticas={reporte.estadisticas.conteo}
+            title="Distribución general de respuestas"
+          />
+        </Box>
+      )}
+      {/* Gráficos por sección */}
+      {secciones && secciones.length > 1 && respuestasNormalizadas.length === secciones.length && (
+        <Box mt={3}>
+          <Typography variant="h6" gutterBottom>Distribución por sección</Typography>
+          {secciones.map((seccion, idx) => {
+            // Calcular conteo por sección
+            const conteo = { 'Conforme': 0, 'No conforme': 0, 'Necesita mejora': 0, 'No aplica': 0 };
+            (respuestasNormalizadas[idx] || []).forEach(r => {
+              if (conteo[r] !== undefined) conteo[r]++;
+            });
+            // Solo mostrar si hay respuestas
+            const total = Object.values(conteo).reduce((a, b) => a + b, 0);
+            if (total === 0) return null;
+            // Asignar ref dinámico
+            if (!sectionChartRefs.current[idx]) sectionChartRefs.current[idx] = React.createRef();
+            return (
+              <Box key={idx} mt={2}>
+                <Typography variant="subtitle1" gutterBottom>{seccion.nombre}</Typography>
+                <EstadisticasChart
+                  ref={sectionChartRefs.current[idx]}
+                  estadisticas={conteo}
+                  title={`Sección: ${seccion.nombre}`}
+                />
+              </Box>
+            );
+          })}
+        </Box>
+      )}
       {/* Preguntas, respuestas, comentarios e imágenes */}
       <Box mt={3}>
         <PreguntasRespuestasList

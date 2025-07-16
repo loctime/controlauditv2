@@ -1,7 +1,67 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
 import { Box, Typography } from '@mui/material';
 
-const EstadisticasChart = ({ estadisticas, title }) => {
+// Mapeo de colores por categoría
+const COLOR_MAP = {
+  'Conforme': '#43a047',        // verde
+  'No conforme': '#e53935',    // rojo
+  'Necesita mejora': '#fbc02d',// amarillo
+  'No aplica': '#1976d2',      // azul
+};
+
+/**
+ * EstadisticasChart
+ * Props:
+ * - estadisticas: objeto { 'Conforme': 2, ... } o array de { title, estadisticas }
+ * - title: string (opcional, solo para gráfico único)
+ * - height, width: tamaño opcional
+ */
+const EstadisticasChart = forwardRef(({ estadisticas, title, height = 320, width = '100%' }, ref) => {
+  const chartInstance = useRef(null);
+
+  useImperativeHandle(ref, () => ({
+    getImage: () => {
+      if (chartInstance.current && chartInstance.current.getImageURI) {
+        return chartInstance.current.getImageURI();
+      }
+      return null;
+    }
+  }));
+
+  // Helper para dibujar un gráfico
+  const drawChart = (elementId, dataObj, chartTitle) => {
+    const entries = Object.entries(dataObj);
+    const data = window.google.visualization.arrayToDataTable([
+      ['Category', 'Value'],
+      ...entries,
+    ]);
+    // Asignar colores por categoría
+    const slices = {};
+    entries.forEach(([key], idx) => {
+      if (COLOR_MAP[key]) {
+        slices[idx] = { color: COLOR_MAP[key] };
+      }
+    });
+    const options = {
+      title: chartTitle,
+      pieHole: 0.4,
+      pieSliceText: 'label',
+      tooltip: { trigger: 'selection' },
+      chartArea: { width: '90%', height: '80%' },
+      slices,
+      legend: { position: 'bottom', alignment: 'center' },
+      pieSliceTextStyle: { color: 'black', fontSize: 12 },
+      pieSliceText: 'percentage',
+    };
+    const chart = new window.google.visualization.PieChart(
+      document.getElementById(elementId)
+    );
+    chart.draw(data, options);
+    if (elementId === 'donutchart-main') {
+      chartInstance.current = chart;
+    }
+  };
+
   useEffect(() => {
     const loadGoogleCharts = () => {
       const script = document.createElement('script');
@@ -9,54 +69,50 @@ const EstadisticasChart = ({ estadisticas, title }) => {
       script.onload = () => {
         window.google.charts.load('current', { packages: ['corechart'] });
         window.google.charts.setOnLoadCallback(() => {
-          drawChart('donutchart-incluye', true);  // Gráfico con "No aplica"
-          drawChart('donutchart-excluye', false); // Gráfico sin "No aplica"
+          if (Array.isArray(estadisticas)) {
+            estadisticas.forEach((item, idx) => {
+              drawChart(`donutchart-${idx}`, item.estadisticas, item.title);
+            });
+          } else {
+            drawChart('donutchart-main', estadisticas, title);
+          }
         });
       };
       document.body.appendChild(script);
     };
-
-    const drawChart = (elementId, includeNoAplica) => {
-      const filteredData = Object.entries(estadisticas).filter(([key]) => includeNoAplica || key !== 'No aplica');
-      const data = window.google.visualization.arrayToDataTable([
-        ['Category', 'Value'],
-        ...filteredData.map(([key, value]) => [key, value]),
-      ]);
-
-      const options = {
-        title: title,
-        pieHole: 0.4, // Hacer que el gráfico sea de tipo donut
-        pieSliceText: 'label', // Mostrar etiquetas con nombres y porcentajes
-        tooltip: {
-          trigger: 'selection', // Mostrar tooltips al seleccionar
-        },
-        chartArea: {
-          width: '90%', // Ajustar el área del gráfico para llenar el contenedor
-          height: '80%', // Ajustar la altura del gráfico
-        },
-        slices: {
-          0: { offset: 0.05 }, // Espacio entre los segmentos
-        },
-        legend: {
-          position: 'bottom', // Posicionar la leyenda en la parte inferior
-          alignment: 'center', // Alinear la leyenda al centro horizontalmente
-        },
-        pieSliceTextStyle: {
-          color: 'black', // Color del texto de las etiquetas
-          fontSize: 12, // Tamaño de la fuente de las etiquetas
-        },
-        pieSliceText: 'percentage', // Mostrar porcentajes en las etiquetas
-      };
-
-      const chart = new window.google.visualization.PieChart(
-        document.getElementById(elementId)
-      );
-      chart.draw(data, options);
-    };
-
     loadGoogleCharts();
+    // eslint-disable-next-line
   }, [estadisticas, title]);
 
+  // Renderiza uno o varios gráficos
+  if (Array.isArray(estadisticas)) {
+    return (
+      <Box
+        sx={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          gap: 3,
+          justifyContent: 'center',
+          alignItems: 'flex-start',
+          width: '100%',
+        }}
+      >
+        {estadisticas.map((item, idx) => (
+          <Box key={idx} sx={{ minWidth: 260, maxWidth: 400, flex: 1 }}>
+            <Typography variant="subtitle1" align="center" gutterBottom>
+              {item.title}
+            </Typography>
+            <Box
+              id={`donutchart-${idx}`}
+              sx={{ width: '100%', height, minHeight: height }}
+            ></Box>
+          </Box>
+        ))}
+      </Box>
+    );
+  }
+
+  // Gráfico único
   return (
     <Box
       sx={{
@@ -68,42 +124,21 @@ const EstadisticasChart = ({ estadisticas, title }) => {
         backgroundColor: '#f9f9f9',
         borderRadius: 2,
         boxShadow: 2,
-        height: '75vh', // Ocupa toda la altura de la pantalla
-        width: '75vw', // Ocupa toda la anchura de la pantalla
-        overflow: 'hidden', // Evita el desbordamiento
+        width,
+        overflow: 'hidden',
       }}
     >
-      <Typography variant="h6" gutterBottom>
-        {title}
-      </Typography>
+      {title && (
+        <Typography variant="h6" gutterBottom>
+          {title}
+        </Typography>
+      )}
       <Box
-        sx={{
-          display: 'flex',
-          flexDirection: 'row',
-          justifyContent: 'space-between',
-          width: '100%',
-          height: '90%', // Ajusta la altura para el espacio disponible
-        }}
-      >
-        <Box
-          id="donutchart-incluye"
-          sx={{
-            width: '48%',
-            height: '100%', // Ocupa toda la altura disponible
-            padding: 2,
-          }}
-        ></Box>
-        <Box
-          id="donutchart-excluye"
-          sx={{
-            width: '48%',
-            height: '100%', // Ocupa toda la altura disponible
-            padding: 2,
-          }}
-        ></Box>
-      </Box>
+        id="donutchart-main"
+        sx={{ width: '100%', height, minHeight: height }}
+      ></Box>
     </Box>
   );
-};
+});
 
 export default EstadisticasChart;

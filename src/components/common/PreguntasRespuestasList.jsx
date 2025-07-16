@@ -69,12 +69,7 @@ const PreguntasRespuestasList = ({ secciones = [], respuestas = [], comentarios 
                       />
                     </Box>
                   )}
-                  {/* Debug log solo en desarrollo */}
-                  {process.env.NODE_ENV === 'development' && (
-                    <Typography variant="caption" color="warning.main">
-                      [DEBUG] sIdx={sIdx} pIdx={pIdx} resp={JSON.stringify(respuesta)}
-                    </Typography>
-                  )}
+                  
                 </Box>
               );
             })

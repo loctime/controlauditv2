@@ -72,51 +72,53 @@ const ResumenRespuestas = ({ totalRespuestas, estadisticas, respuestas, seccione
           📊 Resumen de Respuestas
         </Typography>
         
+        
         {/* Total de respuestas */}
         <Box mb={3}>
           <Typography variant="h6" gutterBottom>
-            Total de Preguntas Respondidas
-          </Typography>
-          <Chip 
+            Total de Preguntas Respondidas - <Chip 
             label={total}
             color="primary"
             variant="filled"
             size="large"
             sx={{ fontSize: '1.2rem', fontWeight: 600 }}
           />
+          </Typography>
         </Box>
 
         {/* Estadísticas detalladas */}
-        <Grid container spacing={2}>
+        <Grid container spacing={0.5}>
           {Object.entries(datos).map(([tipo, cantidad]) => {
             const porcentaje = total > 0 ? ((cantidad / total) * 100).toFixed(1) : 0;
             
             return (
-              <Grid item xs={12} sm={6} md={3} key={tipo}>
+              <Grid item xs={1} sm={1} md={3} key={tipo}>
                 <Card 
                   variant="outlined"
                   sx={{ 
                     textAlign: 'center',
-                    p: 2,
+                    p: 0.5,
                     background: alpha(theme.palette[colores[tipo]]?.main || theme.palette.grey[500], 0.05),
                     borderColor: alpha(theme.palette[colores[tipo]]?.main || theme.palette.grey[500], 0.3)
                   }}
                 >
-                  <Box display="flex" alignItems="center" justifyContent="center" mb={1}>
-                    {iconos[tipo]}
-                  </Box>
+                  
                   <Typography variant="h4" color={`${colores[tipo]}.main`} sx={{ fontWeight: 700 }}>
                     {cantidad}
                   </Typography>
                   <Typography variant="body2" color="textSecondary" gutterBottom>
                     {tipo}
                   </Typography>
+                  <Box display="flex" alignItems="center" justifyContent="center" mb={1}>
+                    {iconos[tipo]}
+                  
                   <Chip 
                     label={`${porcentaje}%`}
                     size="small"
                     color={colores[tipo]}
                     variant="outlined"
                   />
+                  </Box>
                 </Card>
               </Grid>
             );

@@ -280,6 +280,7 @@ const BotonGenerarReporte = ({
         </Alert>
       </Snackbar>
     </Box>
+    
   );
 };
 
