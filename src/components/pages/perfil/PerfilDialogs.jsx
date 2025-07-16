@@ -29,7 +29,7 @@ const PerfilDialogs = ({
             placeholder="usuario@ejemplo.com"
           />
           <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-            Los socios podrán ver tus empresas y auditorías, y tú podrás ver las suyas.
+            Los usuarios podrán ver tus empresas y auditorías, y tú podrás ver las suyas.
           </Typography>
         </DialogContent>
         <DialogActions>

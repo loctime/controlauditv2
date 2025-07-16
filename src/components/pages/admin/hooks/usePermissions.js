@@ -19,7 +19,7 @@ export const usePermissions = () => {
         puedeCrearAuditorias: false,
         puedeAgendarAuditorias: false,
         puedeCompartirFormularios: false,
-        puedeAgregarSocios: false
+        puedeAgregarUsuarios: false // Solo admin puede
       },
       max: {
         puedeCrearEmpresas: true,
@@ -27,7 +27,7 @@ export const usePermissions = () => {
         puedeCrearAuditorias: true,
         puedeAgendarAuditorias: true,
         puedeCompartirFormularios: true,
-        puedeAgregarSocios: true
+        puedeAgregarUsuarios: true
       },
       supermax: {
         puedeCrearEmpresas: true,
@@ -35,7 +35,7 @@ export const usePermissions = () => {
         puedeCrearAuditorias: true,
         puedeAgendarAuditorias: true,
         puedeCompartirFormularios: true,
-        puedeAgregarSocios: true
+        puedeAgregarUsuarios: true
       }
     };
 
@@ -69,9 +69,10 @@ export const usePermissions = () => {
     return permissions.puedeCompartirFormularios || role === 'supermax';
   }, [permissions.puedeCompartirFormularios, role]);
 
-  const canAgregarSocios = useMemo(() => {
-    return permissions.puedeAgregarSocios || role === 'supermax';
-  }, [permissions.puedeAgregarSocios, role]);
+  // Solo el admin puede agregar usuarios
+  const canAgregarUsuarios = useMemo(() => {
+    return (role === 'max' && permissions.puedeAgregarUsuarios) || role === 'supermax';
+  }, [permissions.puedeAgregarUsuarios, role]);
 
   // ✅ Función para verificar si puede auditar (usar auditorías)
   const canAuditar = useMemo(() => {
@@ -90,7 +91,7 @@ export const usePermissions = () => {
     canCrearEmpresas,
     canCrearSucursales,
     canCompartirFormularios,
-    canAgregarSocios,
+    canAgregarUsuarios,
     canAuditar,
     hasPermission
   };

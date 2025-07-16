@@ -12,16 +12,16 @@ const empresasEjemplo = [
   {
     id: 'empresa1',
     nombre: 'Empresa Ejemplo',
-    sociosActuales: 4,
-    sociosMaximos: 10,
+    usuariosActuales: 4,
+    usuariosMaximos: 10,
     estadoPago: 'al_dia',
     fechaVencimiento: '2024-07-01',
   },
   {
     id: 'empresa218',
     nombre: 'Empresa XYZ',
-    sociosActuales: 12,
-    sociosMaximos: 10,
+    usuariosActuales: 12,
+    usuariosMaximos: 10,
     estadoPago: 'vencido',
     fechaVencimiento: '2024-06-10',
   },
@@ -32,7 +32,7 @@ function Dashboard() {
   const [openDialog, setOpenDialog] = useState(false);
   const [openAdminDialog, setOpenAdminDialog] = useState(false);
   const [adminCode, setAdminCode] = useState('');
-  const [form, setForm] = useState({ nombre: '', email: '', sociosMaximos: 1, password: '' });
+  const [form, setForm] = useState({ nombre: '', email: '', usuariosMaximos: 1, password: '' });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [tabValue, setTabValue] = useState(0);
@@ -144,8 +144,8 @@ function Dashboard() {
       const empresaRef = await addDoc(collection(db, 'empresas'), {
         nombre: form.nombre,
         emailContacto: form.email,
-        sociosMaximos: Number(form.sociosMaximos),
-        sociosActuales: 1,
+        usuariosMaximos: Number(form.usuariosMaximos), // Solo como metadato de empresa
+        usuariosActuales: 1,
         usuarios: [user.uid],
         estadoPago: 'al_dia',
         fechaUltimoPago: new Date(),
@@ -159,7 +159,7 @@ function Dashboard() {
         empresaId: empresaRef.id,
         role: 'max',
         plan: 'estandar',
-        limiteUsuarios: Number(form.sociosMaximos),
+        limiteUsuarios: Number(form.usuariosMaximos), // Unificado aquí
         usuariosActivos: 0,
         fechaCreacion: new Date(),
         estadoPago: 'al_dia',
@@ -176,7 +176,7 @@ function Dashboard() {
         }
       });
       setOpenDialog(false);
-      setForm({ nombre: '', email: '', sociosMaximos: 1, password: '' });
+      setForm({ nombre: '', email: '', usuariosMaximos: 1, password: '' });
       alert('Empresa y usuario principal creados correctamente.');
     } catch (err) {
       setError(err.message || 'Error al crear empresa y usuario.');
@@ -221,14 +221,14 @@ function Dashboard() {
         <GestionClientes />
       )}
       <Dialog open={openDialog} onClose={handleCloseDialog}>
-        <DialogTitle>Agregar Empresa y Usuario Principal</DialogTitle>
+        <DialogTitle>Agregar Administrador Principal</DialogTitle>
         <form onSubmit={handleSubmit}>
           <DialogContent>
             <TextField
               autoFocus
               margin="dense"
               name="nombre"
-              label="Nombre de la Empresa"
+              label="Nombre"
               type="text"
               fullWidth
               required
@@ -238,7 +238,7 @@ function Dashboard() {
             <TextField
               margin="dense"
               name="email"
-              label="Email del Usuario Principal"
+              label="Email"
               type="email"
               fullWidth
               required
@@ -247,13 +247,13 @@ function Dashboard() {
             />
             <TextField
               margin="dense"
-              name="sociosMaximos"
-              label="Límite de Usuarios (Socios)"
+              name="usuariosMaximos"
+              label="Límite de Usuarios"
               type="number"
               fullWidth
               required
               inputProps={{ min: 1 }}
-              value={form.sociosMaximos}
+              value={form.usuariosMaximos}
               onChange={handleChange}
             />
             <TextField
@@ -346,7 +346,7 @@ function Dashboard() {
                 <TableHead>
                   <TableRow>
                     <TableCell>Nombre</TableCell>
-                    <TableCell align="center">Socios (actual/máx)</TableCell>
+                    <TableCell align="center">Usuarios (actual/máx)</TableCell>
                     <TableCell align="center">Estado de pago</TableCell>
                     <TableCell align="center">Vencimiento</TableCell>
                     <TableCell align="center">Acciones</TableCell>
@@ -356,7 +356,7 @@ function Dashboard() {
                   {empresasEjemplo.map((empresa) => (
                     <TableRow key={empresa.id}>
                       <TableCell>{empresa.nombre}</TableCell>
-                      <TableCell align="center">{empresa.sociosActuales} / {empresa.sociosMaximos}</TableCell>
+                      <TableCell align="center">{empresa.usuariosActuales} / {empresa.usuariosMaximos}</TableCell>
                       <TableCell align="center">
                         <span style={{ color: empresa.estadoPago === 'al_dia' ? 'green' : 'red', fontWeight: 'bold' }}>
                           {empresa.estadoPago === 'al_dia' ? 'Al día' : 'Vencido'}

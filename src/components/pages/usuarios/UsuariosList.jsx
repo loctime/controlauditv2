@@ -38,8 +38,8 @@ const PERMISOS_LISTA = [
   { key: 'puedeCrearSucursales', label: 'Crear Sucursales' },
   { key: 'puedeCrearAuditorias', label: 'Crear Auditorías' },
   { key: 'puedeAgendarAuditorias', label: 'Agendar Auditorías' },
-  { key: 'puedeCompartirAuditorias', label: 'Compartir Auditorías' },
-  { key: 'puedeAgregarSocios', label: 'Agregar Socios' }
+  { key: 'puedeCrearFormularios', label: 'Crear Formularios' },
+  { key: 'puedeCompartirFormularios', label: 'Compartir Formularios' }
 ];
 
 const ROLES = [
@@ -48,8 +48,18 @@ const ROLES = [
   { value: 'supermax', label: 'Developer' }
 ];
 
+// Límite de usuarios: SIEMPRE usar userProfile.limiteUsuarios para validación y visualización. No usar sociosMaximos para usuarios.
 const UsuariosList = ({ clienteAdminId, showAddButton = true }) => {
   const { role, userProfile } = useAuth();
+  // Filtrado multi-tenant robusto
+  let adminId = null;
+  if (role === 'supermax') {
+    adminId = null; // Ver todos
+  } else if (userProfile?.clienteAdminId) {
+    adminId = userProfile.clienteAdminId;
+  } else {
+    adminId = userProfile?.uid;
+  }
   const [usuarios, setUsuarios] = useState([]);
   const [loading, setLoading] = useState(true);
   const [openModal, setOpenModal] = useState(false);
@@ -64,10 +74,15 @@ const UsuariosList = ({ clienteAdminId, showAddButton = true }) => {
       puedeCrearSucursales: false,
       puedeCrearAuditorias: false,
       puedeAgendarAuditorias: false,
-      puedeCompartirFormularios: false,
-      puedeAgregarSocios: false
+      puedeCrearFormularios: false,
+      puedeCompartirFormularios: false
     }
   });
+
+  // Validación de límite de usuarios
+  const limiteUsuarios = userProfile?.limiteUsuarios ?? 0;
+  const usuariosActuales = usuarios.length;
+  const puedeAgregar = usuariosActuales < limiteUsuarios || !limiteUsuarios; // Si no hay límite, permitir
 
   // Cargar usuarios filtrados por clienteAdminId si se provee
   const fetchUsuarios = async () => {
@@ -75,11 +90,13 @@ const UsuariosList = ({ clienteAdminId, showAddButton = true }) => {
     try {
       let usuariosRef = collection(db, 'usuarios');
       let snapshot;
-      if (clienteAdminId) {
-        const q = query(usuariosRef, where('clienteAdminId', '==', clienteAdminId));
+      if (role === 'supermax') {
+        snapshot = await getDocs(usuariosRef);
+      } else if (adminId) {
+        const q = query(usuariosRef, where('clienteAdminId', '==', adminId));
         snapshot = await getDocs(q);
       } else {
-        snapshot = await getDocs(usuariosRef);
+        snapshot = await getDocs(usuariosRef); // fallback, no debería ocurrir
       }
       const lista = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setUsuarios(lista);
@@ -110,8 +127,8 @@ const UsuariosList = ({ clienteAdminId, showAddButton = true }) => {
           puedeCrearSucursales: false,
           puedeCrearAuditorias: false,
           puedeAgendarAuditorias: false,
-          puedeCompartirFormularios: false,
-          puedeAgregarSocios: false
+          puedeCrearFormularios: false,
+          puedeCompartirFormularios: false
         }
       });
     } else {
@@ -126,8 +143,8 @@ const UsuariosList = ({ clienteAdminId, showAddButton = true }) => {
           puedeCrearSucursales: false,
           puedeCrearAuditorias: false,
           puedeAgendarAuditorias: false,
-          puedeCompartirFormularios: false,
-          puedeAgregarSocios: false
+          puedeCrearFormularios: false,
+          puedeCompartirFormularios: false
         }
       });
     }
@@ -148,8 +165,8 @@ const UsuariosList = ({ clienteAdminId, showAddButton = true }) => {
         puedeCrearSucursales: false,
         puedeCrearAuditorias: false,
         puedeAgendarAuditorias: false,
-        puedeCompartirFormularios: false,
-        puedeAgregarSocios: false
+        puedeCrearFormularios: false,
+        puedeCompartirFormularios: false
       }
     });
   };
@@ -170,6 +187,11 @@ const UsuariosList = ({ clienteAdminId, showAddButton = true }) => {
   const handleCrearUsuario = async () => {
     if (!formData.email || !formData.password || !formData.nombre) {
       toast.error('Todos los campos son obligatorios');
+      return;
+    }
+    // Validar límite antes de crear
+    if (!puedeAgregar) {
+      toast.error('Has alcanzado el límite de usuarios permitidos para tu plan.');
       return;
     }
 
@@ -316,11 +338,18 @@ const UsuariosList = ({ clienteAdminId, showAddButton = true }) => {
             variant="contained"
             startIcon={<AddIcon />}
             onClick={() => handleOpenModal()}
+            disabled={!puedeAgregar}
           >
             Agregar Usuario
           </Button>
         )}
       </Box>
+      {/* Mensaje de límite alcanzado */}
+      {showAddButton && !puedeAgregar && (
+        <Alert severity="warning" sx={{ mb: 2 }}>
+          Has alcanzado el límite de usuarios permitidos para tu plan ({limiteUsuarios}). Contacta a soporte para ampliarlo.
+        </Alert>
+      )}
       {loading ? (
         <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
           <CircularProgress />

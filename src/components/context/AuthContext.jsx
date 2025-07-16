@@ -17,7 +17,7 @@ const AuthContextComponent = ({ children }) => {
   const [userEmpresas, setUserEmpresas] = useState([]);
   const [loadingEmpresas, setLoadingEmpresas] = useState(true);
   const [userAuditorias, setUserAuditorias] = useState([]);
-  const [socios, setSocios] = useState([]);
+  // Eliminado: socios. Usar solo usuarios.
   const [auditoriasCompartidas, setAuditoriasCompartidas] = useState([]);
   const [role, setRole] = useState(null); // NUEVO: rol del usuario
   const [permisos, setPermisos] = useState({}); // NUEVO: permisos del usuario
@@ -55,7 +55,7 @@ const AuthContextComponent = ({ children }) => {
           await Promise.all([
             getUserEmpresas(firebaseUser.uid),
             getUserAuditorias(firebaseUser.uid),
-            getUserSocios(firebaseUser.uid),
+            // getUserSocios(firebaseUser.uid), // Eliminado: socios
             getAuditoriasCompartidas(firebaseUser.uid)
           ]);
         }
@@ -80,7 +80,7 @@ const AuthContextComponent = ({ children }) => {
         setIsLogged(false);
         setUserEmpresas([]);
         setUserAuditorias([]);
-        setSocios([]);
+        // setSocios([]); // Eliminado: socios
         setAuditoriasCompartidas([]);
         localStorage.removeItem("userInfo");
         localStorage.removeItem("isLogged");
@@ -190,7 +190,7 @@ const AuthContextComponent = ({ children }) => {
     setIsLogged(false);
     setUserEmpresas([]);
     setUserAuditorias([]);
-    setSocios([]);
+    // setSocios([]); // Eliminado: socios
     setAuditoriasCompartidas([]);
     localStorage.removeItem("userInfo");
     localStorage.removeItem("isLogged");
@@ -247,7 +247,7 @@ const AuthContextComponent = ({ children }) => {
           clienteAdminId: getUserRole(firebaseUser.email) === 'max' ? firebaseUser.uid : null, // Si es max, es su propio admin
           empresas: [], // IDs de empresas que el usuario puede ver
           auditorias: [], // IDs de auditorías que el usuario puede ver
-          socios: [], // IDs de usuarios que son socios
+          // Eliminado: socios. Usar solo usuarios.
           permisos: {
             puedeCrearEmpresas: true,
             puedeCrearSucursales: true,
@@ -395,38 +395,7 @@ const AuthContextComponent = ({ children }) => {
     }
   };
 
-  // Función para obtener socios del usuario
-  const getUserSocios = async (userId) => {
-    try {
-      const userRef = doc(db, "usuarios", userId);
-      const userSnap = await getDoc(userRef);
-      
-      if (userSnap.exists()) {
-        const userData = userSnap.data();
-        const sociosIds = userData.socios || [];
-        
-        // Obtener información de los socios
-        const sociosInfo = [];
-        for (const socioId of sociosIds) {
-          const socioRef = doc(db, "usuarios", socioId);
-          const socioSnap = await getDoc(socioRef);
-          if (socioSnap.exists()) {
-            sociosInfo.push({
-              id: socioSnap.id,
-              ...socioSnap.data()
-            });
-          }
-        }
-        
-        setSocios(sociosInfo);
-        return sociosInfo;
-      }
-      return [];
-    } catch (error) {
-      console.error("Error al obtener socios del usuario:", error);
-      return [];
-    }
-  };
+  // Eliminada función getUserSocios. Usar solo usuarios.
 
   // Función para obtener auditorías compartidas
   const getAuditoriasCompartidas = async (userId) => {
@@ -448,55 +417,7 @@ const AuthContextComponent = ({ children }) => {
     }
   };
 
-  // Función para agregar socio
-  const agregarSocio = async (emailSocio) => {
-    try {
-      // Buscar usuario por email
-      const usuariosRef = collection(db, "usuarios");
-      const q = query(usuariosRef, where("email", "==", emailSocio));
-      const snapshot = await getDocs(q);
-      
-      if (snapshot.empty) {
-        throw new Error("Usuario no encontrado");
-      }
-      
-      const socioDoc = snapshot.docs[0];
-      const socioId = socioDoc.id;
-      
-      // Actualizar perfil del usuario actual
-      const userRef = doc(db, "usuarios", user.uid);
-      const userSnap = await getDoc(userRef);
-      
-      if (userSnap.exists()) {
-        const userData = userSnap.data();
-        const sociosActuales = userData.socios || [];
-        
-        if (!sociosActuales.includes(socioId)) {
-          await updateDoc(userRef, {
-            socios: [...sociosActuales, socioId]
-          });
-          
-          // Registrar log de la acción
-          await registrarAccionSistema(
-            user.uid,
-            `Agregar socio: ${emailSocio}`,
-            { emailSocio, socioId },
-            'crear',
-            'usuario',
-            socioId
-          );
-          
-          // Actualizar estado local
-          await getUserSocios(user.uid);
-        }
-      }
-      
-      return true;
-    } catch (error) {
-      console.error("Error al agregar socio:", error);
-      throw error;
-    }
-  };
+  // Eliminada función agregarSocio. Usar solo usuarios.
 
   // Función para compartir auditoría
   const compartirAuditoria = async (auditoriaId, emailUsuario) => {
@@ -592,6 +513,7 @@ const AuthContextComponent = ({ children }) => {
         creadorRole,
         createdAt: new Date(),
         socios: [propietarioId] // El propietario es el primer socio
+        // Eliminado: socios. Usar solo usuarios.
       };
       
       const docRef = await addDoc(empresaRef, nuevaEmpresa);
@@ -980,18 +902,18 @@ const AuthContextComponent = ({ children }) => {
     userEmpresas,
     loadingEmpresas,
     userAuditorias,
-    socios,
+    // Eliminado: socios. Usar solo usuarios.
     auditoriasCompartidas,
     handleLogin,
     logoutContext,
-    agregarSocio,
+    // Eliminada función agregarSocio. Usar solo usuarios.
     crearEmpresa,
     updateUserProfile,
     canViewEmpresa,
     canViewAuditoria,
     getUserEmpresas: () => getUserEmpresas(user?.uid),
     getUserAuditorias: () => getUserAuditorias(user?.uid),
-    getUserSocios: () => getUserSocios(user?.uid),
+    // Eliminada función getUserSocios. Usar solo usuarios.
     getAuditoriasCompartidas: () => getAuditoriasCompartidas(user?.uid),
     role,
     permisos,

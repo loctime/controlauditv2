@@ -70,8 +70,8 @@ const InfoSistema = () => {
                     <GroupIcon color="primary" />
                   </ListItemIcon>
                   <ListItemText 
-                    primary="Compartir con Socios"
-                    secondary="Los socios pueden ver tus empresas y tú las suyas"
+                    primary="Colaboración entre Usuarios"
+                    secondary="Puedes compartir empresas con otros usuarios según permisos"
                   />
                 </ListItem>
               </List>
@@ -112,8 +112,8 @@ const InfoSistema = () => {
                     <GroupIcon color="primary" />
                   </ListItemIcon>
                   <ListItemText 
-                    primary="Auditorías de Socios"
-                    secondary="Puedes ver auditorías de tus socios"
+                    primary="Auditorías de Otros Usuarios"
+                    secondary="Puedes ver auditorías compartidas por otros usuarios"
                   />
                 </ListItem>
               </List>
@@ -121,19 +121,17 @@ const InfoSistema = () => {
           </Card>
         </Grid>
 
-        {/* Sistema de Socios */}
+        {/* Colaboración entre Usuarios */}
         <Grid item xs={12}>
           <Card>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                 <GroupIcon sx={{ mr: 1, color: 'primary.main' }} />
-                <Typography variant="h6">Sistema de Socios</Typography>
+                <Typography variant="h6">Colaboración entre Usuarios</Typography>
               </Box>
-              
               <Typography variant="body1" paragraph>
-                El sistema de socios permite una colaboración completa entre usuarios:
+                El sistema permite colaboración entre usuarios para compartir empresas y auditorías según permisos.
               </Typography>
-              
               <List dense>
                 <ListItem>
                   <ListItemIcon>
@@ -141,7 +139,7 @@ const InfoSistema = () => {
                   </ListItemIcon>
                   <ListItemText 
                     primary="Compartir Empresas"
-                    secondary="Los socios pueden ver y gestionar las mismas empresas"
+                    secondary="Puedes compartir empresas con otros usuarios según permisos"
                   />
                 </ListItem>
                 <ListItem>
@@ -150,7 +148,7 @@ const InfoSistema = () => {
                   </ListItemIcon>
                   <ListItemText 
                     primary="Compartir Auditorías"
-                    secondary="Los socios pueden ver todas las auditorías realizadas"
+                    secondary="Puedes compartir auditorías con otros usuarios"
                   />
                 </ListItem>
                 <ListItem>
@@ -159,7 +157,7 @@ const InfoSistema = () => {
                   </ListItemIcon>
                   <ListItemText 
                     primary="Acceso Completo"
-                    secondary="Los socios tienen acceso completo a todos los recursos compartidos"
+                    secondary="Los usuarios con permisos pueden gestionar los recursos compartidos"
                   />
                 </ListItem>
               </List>
@@ -183,7 +181,7 @@ const InfoSistema = () => {
               <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
                 <Chip label="Ver Mis Empresas" color="primary" />
                 <Chip label="Ver Mis Auditorías" color="primary" />
-                <Chip label="Gestionar Socios" color="primary" />
+                <Chip label="Gestionar Usuarios" color="primary" />
                 <Chip label="Auditorías Compartidas" color="primary" />
                 <Chip label="Compartir Auditorías" color="primary" />
                 <Chip label="Configurar Permisos" color="primary" />
@@ -231,7 +229,7 @@ const InfoSistema = () => {
                   </ListItemIcon>
                   <ListItemText 
                     primary="Trabajo en Equipo"
-                    secondary="Los socios pueden trabajar juntos en las mismas empresas y auditorías"
+                    secondary="Los usuarios pueden trabajar juntos en las mismas empresas y auditorías"
                   />
                 </ListItem>
                 <ListItem>
