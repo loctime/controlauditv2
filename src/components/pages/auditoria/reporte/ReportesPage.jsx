@@ -22,13 +22,8 @@ import {
 import "./ReportesPage.css";
 import FiltrosReportes from "./FiltrosReportes";
 import { useAuth } from "../../../context/AuthContext";
-import ReporteWrapper from './ReporteImprimir';
-import ReactToPrint from 'react-to-print';
 import { getEmpresaIdFromReporte } from '../../../../services/useMetadataService';
 import dayjs from 'dayjs';
-import CloseIcon from '@mui/icons-material/Close';
-import ReporteConImpresion from './ReporteDetalleConImpresion';
-import PrintIcon from '@mui/icons-material/Print';
 import ReporteDetallePro from './ReporteDetallePro';
 
 // Helpers seguros para obtener nombre de empresa y formulario

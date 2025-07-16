@@ -6,6 +6,7 @@ import { Typography, Grid, Box, Button, Paper, Dialog, DialogTitle, DialogConten
 import PrintIcon from '@mui/icons-material/Print';
 import CloseIcon from '@mui/icons-material/Close';
 import EstadisticasChart from './EstadisticasChart';
+import { useAuth } from '../../../context/AuthContext';
 
 // Normaliza respuestas a array de arrays de strings
 const normalizarRespuestas = (res) => {
@@ -80,7 +81,7 @@ const normalizarComentarios = (comentariosFirestore, secciones) => {
   return secciones.map((_, idx) => []);
 };
 
-function generarContenidoImpresion({empresa, sucursal, formulario, fecha, respuestas, secciones, comentarios, imagenes, firmaResponsable, firmaAuditor, chartImgDataUrl, sectionChartsImgDataUrl}) {
+function generarContenidoImpresion({empresa, sucursal, formulario, fecha, respuestas, secciones, comentarios, imagenes, firmaAuditor, chartImgDataUrl, sectionChartsImgDataUrl, nombreAuditor, firmaResponsable}) {
   // Resumen de respuestas
   const totalPreguntas = respuestas.flat().length;
   const conforme = respuestas.flat().filter(r => r === 'Conforme').length;
@@ -106,6 +107,7 @@ function generarContenidoImpresion({empresa, sucursal, formulario, fecha, respue
         .imagenes-table th { background: #f5f5f5; }
         .img-preview { max-width: 100px; max-height: 80px; }
         .firma-label { color: #1976d2; font-weight: bold; margin-bottom: 4px; }
+        .firma-aclaracion { color: #333; font-size: 15px; margin-top: 4px; }
         .footer { margin-top: 32px; text-align: center; color: #888; font-size: 13px; }
         @media print { .no-print { display: none !important; } }
       </style>
@@ -163,10 +165,11 @@ function generarContenidoImpresion({empresa, sucursal, formulario, fecha, respue
       <div class="section">
         <h2>Firma del Auditor</h2>
         ${firmaAuditor ? `<img src="${firmaAuditor}" class="firma-img" alt="Firma del auditor" />` : '<p>No hay firma registrada.</p>'}
+        <div class="firma-aclaracion">${nombreAuditor}</div>
       </div>
       <div class="section">
-        <h2>Firma del Responsable</h2>
-        ${firmaResponsable ? `<img src="${firmaResponsable}" class="firma-img" alt="Firma del responsable" />` : '<p>No hay firma registrada.</p>'}
+        <h2>Firma de la Empresa</h2>
+        ${firmaResponsable ? `<img src="${firmaResponsable}" class="firma-img" alt="Firma de la empresa" />` : '<p>No hay firma registrada.</p>'}
       </div>
       <div class="footer">
         Reporte generado el ${new Date().toLocaleString('es-ES')}
@@ -178,6 +181,7 @@ function generarContenidoImpresion({empresa, sucursal, formulario, fecha, respue
 }
 
 const ReporteDetallePro = ({ open = false, onClose = () => {}, reporte = null, modo = 'modal', firmaResponsable }) => {
+  const { userProfile } = useAuth();
   if (!reporte) {
     return modo === 'modal' ? (
       <Dialog open={open} onClose={onClose} maxWidth="lg" fullWidth>
@@ -225,6 +229,9 @@ const ReporteDetallePro = ({ open = false, onClose = () => {}, reporte = null, m
   // Refs para los gráficos por sección
   const sectionChartRefs = useRef([]);
 
+  // Obtener nombre del auditor para aclaración
+  const nombreAuditor = reporte?.auditorNombre || userProfile?.nombre || userProfile?.displayName || userProfile?.email || 'Nombre no disponible';
+
   const handleImprimir = async () => {
     // Obtener imagen del gráfico principal
     let chartImgDataUrl = '';
@@ -248,10 +255,11 @@ const ReporteDetallePro = ({ open = false, onClose = () => {}, reporte = null, m
       secciones,
       comentarios: comentariosNormalizados,
       imagenes: imagenesNormalizadas,
-      firmaResponsable: firmaResponsableFinal,
       firmaAuditor: reporte.firmaAuditor,
       chartImgDataUrl, // Gráfico principal
-      sectionChartsImgDataUrl // Array de gráficos por sección
+      sectionChartsImgDataUrl, // Array de gráficos por sección
+      nombreAuditor, // Añadir nombreAuditor a la función de impresión
+      firmaResponsable: firmaResponsableFinal // Añadir firmaResponsable a la función de impresión
     });
     const printWindow = window.open('', '_blank', 'width=900,height=700');
     printWindow.document.write(html);
@@ -275,6 +283,7 @@ const ReporteDetallePro = ({ open = false, onClose = () => {}, reporte = null, m
     };
   };
 
+  // En el modal, eliminar la firma del responsable y mostrar aclaración solo en la firma del auditor
   if (modo === 'modal') {
     return (
       <Dialog open={open} onClose={onClose} maxWidth="lg" fullWidth>
@@ -325,7 +334,7 @@ const ReporteDetallePro = ({ open = false, onClose = () => {}, reporte = null, m
             />
           </Box>
 
-          {/* Firmas lado a lado */}
+          {/* Firma del Auditor con aclaración y Firma de la Empresa solo imagen */}
           <Box mt={4} display="flex" flexDirection={{ xs: 'column', md: 'row' }} gap={4} justifyContent="center" alignItems="flex-start">
             {/* Firma del Auditor */}
             <Box flex={1} textAlign="center">
@@ -345,33 +354,31 @@ const ReporteDetallePro = ({ open = false, onClose = () => {}, reporte = null, m
                   No hay firma registrada.
                 </Typography>
               )}
+              <Typography variant="body2" sx={{ mt: 1 }}>
+                {nombreAuditor}
+              </Typography>
               {(!reporte.firmaAuditor || typeof reporte.firmaAuditor !== 'string' || reporte.firmaAuditor.length < 10) && (
                 <Typography variant="caption" color="error">
                   [ADVERTENCIA] La firma no está disponible o es inválida.
                 </Typography>
               )}
             </Box>
-            {/* Firma del Responsable */}
+            {/* Firma de la Empresa solo imagen */}
             <Box flex={1} textAlign="center">
               <Typography variant="subtitle1" color="primary" fontWeight={600} gutterBottom>
-                Firma del Responsable
+                Firma de la Empresa
               </Typography>
               {firmaResponsableFinal && typeof firmaResponsableFinal === 'string' && firmaResponsableFinal.length > 10 ? (
                 <Box sx={{ border: '2px solid', borderColor: 'success.main', borderRadius: 1, p: 2, mb: 2, maxWidth: 300, mx: 'auto' }}>
                   <img
                     src={firmaResponsableFinal}
-                    alt="Firma del responsable"
+                    alt="Firma de la empresa"
                     style={{ maxWidth: '100%', maxHeight: '100px', objectFit: 'contain' }}
                   />
                 </Box>
               ) : (
                 <Typography variant="body2" color="text.secondary">
                   No hay firma registrada.
-                </Typography>
-              )}
-              {(!firmaResponsableFinal || typeof firmaResponsableFinal !== 'string' || firmaResponsableFinal.length < 10) && (
-                <Typography variant="caption" color="error">
-                  [ADVERTENCIA] La firma no está disponible o es inválida.
                 </Typography>
               )}
             </Box>
@@ -476,54 +483,53 @@ const ReporteDetallePro = ({ open = false, onClose = () => {}, reporte = null, m
           imagenes={imagenesNormalizadas}
         />
       </Box>
-      {/* Firma del Auditor */}
-      <Box mt={3}>
-        <Typography variant="subtitle1" color="primary" fontWeight={600} gutterBottom>
-          Firma del Auditor
-        </Typography>
-        {reporte.firmaAuditor && typeof reporte.firmaAuditor === 'string' && reporte.firmaAuditor.length > 10 ? (
-          <Box sx={{ border: '2px solid', borderColor: 'info.main', borderRadius: 1, p: 2, mb: 2, maxWidth: 300 }}>
-            <img
-              src={reporte.firmaAuditor}
-              alt="Firma del auditor"
-              style={{ maxWidth: '100%', maxHeight: '100px', objectFit: 'contain' }}
-            />
-          </Box>
-        ) : (
-          <Typography variant="body2" color="text.secondary">
-            No hay firma registrada.
+      {/* Firma del Auditor con aclaración y Firma de la Empresa solo imagen en la vista suelta */}
+      <Box mt={3} display="flex" flexDirection={{ xs: 'column', md: 'row' }} gap={4} justifyContent="center" alignItems="flex-start">
+        <Box flex={1} textAlign="center">
+          <Typography variant="subtitle1" color="primary" fontWeight={600} gutterBottom>
+            Firma del Auditor
           </Typography>
-        )}
-        {(!reporte.firmaAuditor || typeof reporte.firmaAuditor !== 'string' || reporte.firmaAuditor.length < 10) && (
-          <Typography variant="caption" color="error">
-            [ADVERTENCIA] La firma no está disponible o es inválida.
+          {reporte.firmaAuditor && typeof reporte.firmaAuditor === 'string' && reporte.firmaAuditor.length > 10 ? (
+            <Box sx={{ border: '2px solid', borderColor: 'info.main', borderRadius: 1, p: 2, mb: 2, maxWidth: 300 }}>
+              <img
+                src={reporte.firmaAuditor}
+                alt="Firma del auditor"
+                style={{ maxWidth: '100%', maxHeight: '100px', objectFit: 'contain' }}
+              />
+            </Box>
+          ) : (
+            <Typography variant="body2" color="text.secondary">
+              No hay firma registrada.
+            </Typography>
+          )}
+          <Typography variant="body2" sx={{ mt: 1 }}>
+            {nombreAuditor}
           </Typography>
-        )}
-      </Box>
-      {/* Firma del Responsable */}
-      <Box mt={3}>
-        <Typography variant="subtitle1" color="primary" fontWeight={600} gutterBottom>
-          Firma del Responsable
-        </Typography>
-        {firmaResponsableFinal ? (
-          <Box sx={{ border: '2px solid', borderColor: 'success.main', borderRadius: 1, p: 2, mb: 2, maxWidth: 300 }}>
-            <img
-              src={firmaResponsableFinal}
-              alt="Firma del responsable"
-              style={{ maxWidth: '100%', maxHeight: '100px', objectFit: 'contain' }}
-            />
-          </Box>
-        ) : (
-          <Typography variant="body2" color="text.secondary">
-            No hay firma registrada.
+          {(!reporte.firmaAuditor || typeof reporte.firmaAuditor !== 'string' || reporte.firmaAuditor.length < 10) && (
+            <Typography variant="caption" color="error">
+              [ADVERTENCIA] La firma no está disponible o es inválida.
+            </Typography>
+          )}
+        </Box>
+        {/* Firma de la Empresa solo imagen */}
+        <Box flex={1} textAlign="center">
+          <Typography variant="subtitle1" color="primary" fontWeight={600} gutterBottom>
+            Firma de la Empresa
           </Typography>
-        )}
-        {/* Advertencia si la firma no es válida */}
-        {(!firmaResponsableFinal || typeof firmaResponsableFinal !== 'string' || firmaResponsableFinal.length < 10) && (
-          <Typography variant="caption" color="error">
-            [ADVERTENCIA] La firma no está disponible o es inválida.
-          </Typography>
-        )}
+          {firmaResponsableFinal && typeof firmaResponsableFinal === 'string' && firmaResponsableFinal.length > 10 ? (
+            <Box sx={{ border: '2px solid', borderColor: 'success.main', borderRadius: 1, p: 2, mb: 2, maxWidth: 300 }}>
+              <img
+                src={firmaResponsableFinal}
+                alt="Firma de la empresa"
+                style={{ maxWidth: '100%', maxHeight: '100px', objectFit: 'contain' }}
+              />
+            </Box>
+          ) : (
+            <Typography variant="body2" color="text.secondary">
+              No hay firma registrada.
+            </Typography>
+          )}
+        </Box>
       </Box>
     </Box>
   );

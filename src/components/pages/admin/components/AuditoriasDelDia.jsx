@@ -117,19 +117,18 @@ const AuditoriasDelDia = ({
                 }
                 secondary={
                   <Box>
-                    <Typography variant="body1" sx={{ mt: 1 }}>
+                    <Typography variant="body1" sx={{ mt: 1 }} component="div">
                       <LocationOn sx={{ fontSize: '1rem', mr: 0.5, verticalAlign: 'middle' }} />
                       {auditoria.sucursal || 'Casa Central'}
                     </Typography>
-                    <Typography variant="body1" sx={{ mt: 0.5 }}>
+                    <Typography variant="body1" sx={{ mt: 0.5 }} component="div">
                       <Schedule sx={{ fontSize: '1rem', mr: 0.5, verticalAlign: 'middle' }} />
                       {auditoria.hora}
                     </Typography>
-                    <Typography variant="body1" sx={{ mt: 0.5 }}>
+                    <Typography variant="body1" sx={{ mt: 0.5 }} component="div">
                       <Description sx={{ fontSize: '1rem', mr: 0.5, verticalAlign: 'middle' }} />
                       {auditoria.formulario}
                     </Typography>
-                    
                     {/* Información del encargado */}
                     <Box sx={{ mt: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
                       {auditoria.encargado ? (
@@ -137,7 +136,7 @@ const AuditoriasDelDia = ({
                           <Avatar sx={{ width: 20, height: 20, fontSize: '0.7rem' }}>
                             {getInicialUsuario(auditoria.encargado)}
                           </Avatar>
-                          <Typography variant="body2" color="text.secondary">
+                          <Typography variant="body2" color="text.secondary" component="div">
                             <Person sx={{ fontSize: '0.9rem', mr: 0.5, verticalAlign: 'middle' }} />
                             {getNombreUsuario(auditoria.encargado)}
                             {getEmailUsuario(auditoria.encargado) && (
@@ -148,15 +147,14 @@ const AuditoriasDelDia = ({
                           </Typography>
                         </>
                       ) : (
-                        <Typography variant="body2" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                        <Typography variant="body2" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }} component="div">
                           <PersonOff sx={{ fontSize: '0.9rem' }} />
                           Sin encargado asignado
                         </Typography>
                       )}
                     </Box>
-                    
                     {auditoria.descripcion && (
-                      <Typography variant="body2" color="text.secondary" sx={{ mt: 1, fontStyle: 'italic' }}>
+                      <Typography variant="body2" color="text.secondary" sx={{ mt: 1, fontStyle: 'italic' }} component="div">
                         "{auditoria.descripcion}"
                       </Typography>
                     )}
