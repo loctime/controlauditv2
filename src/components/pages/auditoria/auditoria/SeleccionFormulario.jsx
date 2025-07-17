@@ -17,7 +17,7 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import PublicIcon from '@mui/icons-material/Public';
 import LockIcon from '@mui/icons-material/Lock';
 
-const SeleccionFormulario = ({ formularios, formularioSeleccionadoId, onChange, disabled }) => {
+const SeleccionFormulario = ({ formularios, formularioSeleccionadoId, onChange, disabled, formularioAgendadoId }) => {
   const theme = useTheme();
 
   const handleChange = (event) => {
@@ -28,8 +28,15 @@ const SeleccionFormulario = ({ formularios, formularioSeleccionadoId, onChange, 
     return formularios.find(formulario => formulario.id === formularioSeleccionadoId);
   };
 
+  // Buscar el formulario agendado
+  const formularioAgendado = formularios.find(f => f.id === formularioAgendadoId);
+
   return (
     <Box>
+      {/* Texto informativo del formulario agendado */}
+      <Typography variant="subtitle2" sx={{ mb: 1 }}>
+        Formulario agendado: {formularioAgendado ? formularioAgendado.nombre : "ninguno"}
+      </Typography>
       <Typography variant="h6" gutterBottom sx={{ 
         color: 'primary.main', 
         mb: 3, 

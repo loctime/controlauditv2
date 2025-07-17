@@ -25,6 +25,7 @@ import {
   PersonOff
 } from "@mui/icons-material";
 import { IconButton } from "@mui/material";
+import { useNavigate } from "react-router-dom";
 
 const AuditoriasDelDia = ({ 
   selectedDate, 
@@ -34,6 +35,7 @@ const AuditoriasDelDia = ({
   onEliminar,
   canAgendarAuditorias = true // ✅ Prop para validar permisos
 }) => {
+  const navigate = useNavigate();
   // Función para obtener el nombre del usuario
   const getNombreUsuario = (encargado) => {
     if (!encargado) return null;
@@ -169,7 +171,17 @@ const AuditoriasDelDia = ({
                       color="success"
                       size="small"
                       startIcon={<CheckCircle />}
-                      onClick={() => onCompletar(auditoria.id)}
+                      onClick={() => {
+                        navigate('/auditoria', {
+                          state: {
+                            empresa: auditoria.empresa,
+                            sucursal: auditoria.sucursal,
+                            formularioId: auditoria.formularioId, // Asegúrate de que este campo exista
+                            auditoriaId: auditoria.id,
+                            fecha: auditoria.fecha
+                          }
+                        });
+                      }}
                     >
                       Completar
                     </Button>

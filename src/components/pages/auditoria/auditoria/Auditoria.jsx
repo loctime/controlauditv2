@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { collection, getDocs, query, where } from "firebase/firestore";
+import { collection, getDocs, query, where, doc, updateDoc } from "firebase/firestore";
 import { db } from "../../../../firebaseConfig";
 import SeleccionEmpresa from "./SeleccionEmpresa";
 import SeleccionSucursal from "./SeleccionSucursal";
@@ -28,7 +28,10 @@ import {
   Fade,
   Zoom,
   useTheme,
-  alpha
+  alpha,
+  Snackbar,
+  Alert as MuiAlert,
+  Button as MuiButton
 } from "@mui/material";
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import BusinessIcon from '@mui/icons-material/Business';
@@ -38,14 +41,14 @@ import QuestionAnswerIcon from '@mui/icons-material/QuestionAnswer';
 import AssessmentIcon from '@mui/icons-material/Assessment';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import EditIcon from '@mui/icons-material/Edit';
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../../context/AuthContext";
 import Swal from 'sweetalert2';
 import ReporteConImpresion from '../reporte/ReporteDetalleConImpresion';
 
 const Auditoria = () => {
   const theme = useTheme();
-  const { userProfile, userEmpresas, canViewEmpresa } = useAuth();
+  const { userProfile, userEmpresas, canViewEmpresa, userFormularios } = useAuth();
   const [empresaSeleccionada, setEmpresaSeleccionada] = useState(null);
   const [sucursalSeleccionada, setSucursalSeleccionada] = useState("");
   const [formularioSeleccionadoId, setFormularioSeleccionadoId] = useState("");
@@ -61,6 +64,13 @@ const Auditoria = () => {
   const [auditoriaGenerada, setAuditoriaGenerada] = useState(false);
   const [activeStep, setActiveStep] = useState(0);
   const navigate = useNavigate();
+  const location = useLocation();
+  const [bloquearDatosAgenda, setBloquearDatosAgenda] = useState(!!location.state?.auditoriaId);
+  const [openAlertaEdicion, setOpenAlertaEdicion] = useState(false);
+  const [auditoriaIdAgenda, setAuditoriaIdAgenda] = useState(location.state?.auditoriaId || null);
+  const [snackbarMsg, setSnackbarMsg] = useState("");
+  const [snackbarType, setSnackbarType] = useState("info");
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
   // Agregar estado para errores de navegación
   const [navegacionError, setNavegacionError] = useState("");
   
@@ -73,6 +83,12 @@ const Auditoria = () => {
   const [auditoriaHash, setAuditoriaHash] = useState('');
   const [firmasValidas, setFirmasValidas] = useState(false);
   const [mostrarAlertaReinicio, setMostrarAlertaReinicio] = useState(false);
+
+  // Helper para logs
+  const log = (msg, ...args) => {
+    // eslint-disable-next-line no-console
+    console.log(`[AUDITORIA] ${msg}`, ...args);
+  };
 
   // Función para generar hash de la auditoría (para detectar cambios)
   const generarHashAuditoria = () => {
@@ -121,6 +137,45 @@ const Auditoria = () => {
       setFirmasValidas(true);
     }
   }, [firmaAuditor]);
+
+  // Función para marcar auditoría como completada en Firestore
+  const marcarAuditoriaCompletada = async () => {
+    try {
+      if (auditoriaIdAgenda) {
+        await updateDoc(doc(db, "auditorias", auditoriaIdAgenda), { estado: "completada" });
+        log("Auditoría agendada (ID: %s) marcada como completada.", auditoriaIdAgenda);
+        setSnackbarMsg("Auditoría agendada marcada como completada.");
+        setSnackbarType("success");
+        setSnackbarOpen(true);
+      } else {
+        // Buscar si existe una auditoría agendada para los mismos datos y fecha
+        const q = query(
+          collection(db, "auditorias"),
+          where("empresa", "==", empresaSeleccionada?.nombre),
+          where("sucursal", "==", sucursalSeleccionada),
+          where("formularioId", "==", formularioSeleccionadoId),
+          where("fecha", "==", location.state?.fecha || null)
+        );
+        const snapshot = await getDocs(q);
+        if (!snapshot.empty) {
+          snapshot.forEach(async (docu) => {
+            await updateDoc(doc(db, "auditorias", docu.id), { estado: "completada" });
+            log("Auditoría agendada encontrada (ID: %s) y marcada como completada.", docu.id);
+          });
+          setSnackbarMsg("Auditoría agendada encontrada y marcada como completada.");
+          setSnackbarType("success");
+          setSnackbarOpen(true);
+        } else {
+          log("No se encontró auditoría agendada para marcar como completada.");
+        }
+      }
+    } catch (error) {
+      log("Error al marcar auditoría como completada:", error);
+      setSnackbarMsg("Error al marcar auditoría como completada.");
+      setSnackbarType("error");
+      setSnackbarOpen(true);
+    }
+  };
 
   // Calcular progreso de la auditoría
   const calcularProgreso = () => {
@@ -254,34 +309,13 @@ const Auditoria = () => {
     verificarFirmasCompletadas();
   }, [firmaAuditor, firmaResponsable]);
 
+  // Usar empresas del contexto
   useEffect(() => {
-    const obtenerEmpresas = async () => {
-      try {
-        if (!userProfile) return;
-        
-        // Obtener todas las empresas y filtrar por permisos
-        const empresasCollection = collection(db, "empresas");
-        const snapshot = await getDocs(empresasCollection);
-        const todasLasEmpresas = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          nombre: doc.data().nombre,
-          logo: doc.data().logo,
-          propietarioId: doc.data().propietarioId,
-        }));
-        
-        // Filtrar empresas que el usuario puede ver
-        const empresasPermitidas = todasLasEmpresas.filter(empresa => 
-          canViewEmpresa(empresa.id)
-        );
-        
-        setEmpresas(empresasPermitidas);
-      } catch (error) {
-        console.error("Error al obtener empresas:", error);
-      }
-    };
-
-    obtenerEmpresas();
-  }, [userProfile, canViewEmpresa]);
+    if (userEmpresas && userEmpresas.length > 0) {
+      setEmpresas(userEmpresas);
+      console.log('[DEBUG Auditoria] Empresas desde contexto:', userEmpresas);
+    }
+  }, [userEmpresas]);
 
   useEffect(() => {
     const obtenerSucursales = async () => {
@@ -306,52 +340,56 @@ const Auditoria = () => {
     obtenerSucursales();
   }, [empresaSeleccionada]);
 
+  // Usar formularios del contexto si existen
   useEffect(() => {
-    const obtenerFormularios = async () => {
-      try {
-        if (!userProfile) return;
-        
-        const formulariosCollection = collection(db, "formularios");
-        const snapshot = await getDocs(formulariosCollection);
-        const todosLosFormularios = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          nombre: doc.data().nombre,
-          secciones: doc.data().secciones,
-          creadorId: doc.data().creadorId,
-          creadorEmail: doc.data().creadorEmail,
-          esPublico: doc.data().esPublico,
-          permisos: doc.data().permisos,
-          clienteAdminId: doc.data().clienteAdminId
-        }));
+    if (userFormularios && userFormularios.length > 0) {
+      setFormularios(userFormularios);
+      console.log('[DEBUG Auditoria] Formularios desde contexto:', userFormularios);
+    }
+  }, [userFormularios]);
 
-        // ✅ Filtrar formularios por permisos multi-tenant
-        const formulariosPermitidos = todosLosFormularios.filter(formulario => {
-          if (userProfile.role === 'supermax') return true;
-          
-          if (userProfile.role === 'max') {
-            return formulario.clienteAdminId === userProfile.uid || 
-                   formulario.creadorId === userProfile.uid;
-          }
-          
-          if (userProfile.role === 'operario') {
-            return formulario.creadorId === userProfile.uid ||
-                   formulario.clienteAdminId === userProfile.clienteAdminId ||
-                   formulario.esPublico ||
-                   formulario.permisos?.puedeVer?.includes(userProfile.uid);
-          }
-          
-          return false;
-        });
-
-        setFormularios(formulariosPermitidos);
-        console.log(`✅ Formularios disponibles: ${formulariosPermitidos.length} de ${todosLosFormularios.length}`);
-      } catch (error) {
-        console.error("Error al obtener formularios:", error);
-      }
-    };
-
-    obtenerFormularios();
-  }, [userProfile]);
+  // Mantener la consulta a Firestore solo si userFormularios no está disponible
+  useEffect(() => {
+    if (!userFormularios || userFormularios.length === 0) {
+      const obtenerFormularios = async () => {
+        try {
+          if (!userProfile) return;
+          const formulariosCollection = collection(db, "formularios");
+          const snapshot = await getDocs(formulariosCollection);
+          const todosLosFormularios = snapshot.docs.map((doc) => ({
+            id: doc.id,
+            nombre: doc.data().nombre,
+            secciones: doc.data().secciones,
+            creadorId: doc.data().creadorId,
+            creadorEmail: doc.data().creadorEmail,
+            esPublico: doc.data().esPublico,
+            permisos: doc.data().permisos,
+            clienteAdminId: doc.data().clienteAdminId
+          }));
+          // Filtrar formularios por permisos multi-tenant
+          const formulariosPermitidos = todosLosFormularios.filter(formulario => {
+            if (userProfile.role === 'supermax') return true;
+            if (userProfile.role === 'max') {
+              return formulario.clienteAdminId === userProfile.uid || 
+                     formulario.creadorId === userProfile.uid;
+            }
+            if (userProfile.role === 'operario') {
+              return formulario.creadorId === userProfile.uid ||
+                     formulario.clienteAdminId === userProfile.clienteAdminId ||
+                     formulario.esPublico ||
+                     formulario.permisos?.puedeVer?.includes(userProfile.uid);
+            }
+            return false;
+          });
+          setFormularios(formulariosPermitidos);
+          console.log(`[DEBUG Auditoria] Formularios permitidos: ${formulariosPermitidos.length} de ${todosLosFormularios.length}`);
+        } catch (error) {
+          console.error("Error al obtener formularios:", error);
+        }
+      };
+      obtenerFormularios();
+    }
+  }, [userProfile, userFormularios]);
 
   useEffect(() => {
     if (formularioSeleccionadoId) {
@@ -475,7 +513,8 @@ const Auditoria = () => {
     setMostrarAlertaReinicio(false);
   };
 
-  const handleFinalizar = () => {
+  const handleFinalizar = async () => {
+    await marcarAuditoriaCompletada();
     setAuditoriaGenerada(true);
   };
 
@@ -492,7 +531,8 @@ const Auditoria = () => {
                 <SeleccionEmpresa
                   empresas={empresas}
                   empresaSeleccionada={empresaSeleccionada}
-                  onChange={handleEmpresaChange}
+                  onChange={bloquearDatosAgenda ? () => setOpenAlertaEdicion(true) : handleEmpresaChange}
+                  disabled={bloquearDatosAgenda}
                 />
               </Grid>
               
@@ -502,7 +542,8 @@ const Auditoria = () => {
                     <SeleccionSucursal
                       sucursales={sucursales}
                       sucursalSeleccionada={sucursalSeleccionada}
-                      onChange={handleSucursalChange}
+                      onChange={bloquearDatosAgenda ? () => setOpenAlertaEdicion(true) : handleSucursalChange}
+                      disabled={bloquearDatosAgenda}
                     />
                   ) : (
                     <Card sx={{ 
@@ -574,11 +615,24 @@ const Auditoria = () => {
       content: (
         <Fade in={true} timeout={800}>
           <Box>
+            {console.log('[DEBUG Paso2] bloquearDatosAgenda:', bloquearDatosAgenda, 'empresaSeleccionada:', empresaSeleccionada, 'formularios:', formularios)}
+            {location.state?.formularioId && (
+              <Box mb={2}>
+                <Typography variant="body2" color="info.main">
+                  Formulario agendado: {
+                    formularios.length === 0
+                      ? 'Cargando...'
+                      : (formularios.find(f => f.id === location.state.formularioId || f.nombre === location.state.formularioId)?.nombre || 'No disponible')
+                  }
+                </Typography>
+              </Box>
+            )}
             <SeleccionFormulario
               formularios={formularios}
               formularioSeleccionadoId={formularioSeleccionadoId}
               onChange={handleSeleccionarFormulario}
               disabled={!empresaSeleccionada}
+              formularioAgendadoId={location.state?.formularioId}
             />
             
             {formularioSeleccionadoId && (
@@ -716,6 +770,58 @@ const Auditoria = () => {
       )
     }
   ];
+
+  // DEBUG: log de empresas y empresaSeleccionada
+  useEffect(() => {
+    console.log('[DEBUG Auditoria] empresas:', empresas);
+    console.log('[DEBUG Auditoria] empresaSeleccionada:', empresaSeleccionada);
+  }, [empresas, empresaSeleccionada]);
+
+  // Forzar seteo de empresaSeleccionada cuando empresas se cargan y hay datos de la agenda
+  useEffect(() => {
+    if (
+      location.state?.empresa &&
+      empresas.length > 0 &&
+      !empresaSeleccionada
+    ) {
+      const empresa =
+        empresas.find(e => e.id === location.state.empresa || e.nombre === location.state.empresa);
+      if (empresa) {
+        setEmpresaSeleccionada(empresa);
+        console.log('[DEBUG Auditoria] Empresa seleccionada por agenda:', empresa);
+      }
+    }
+    // Lo mismo para sucursal si aplica
+    if (
+      location.state?.sucursal &&
+      sucursales.length > 0 &&
+      !sucursalSeleccionada
+    ) {
+      const sucursal =
+        sucursales.find(s => s.id === location.state.sucursal || s.nombre === location.state.sucursal);
+      if (sucursal) {
+        setSucursalSeleccionada(sucursal.nombre);
+        console.log('[DEBUG Auditoria] Sucursal seleccionada por agenda:', sucursal);
+      } else {
+        setSucursalSeleccionada(location.state.sucursal); // fallback
+      }
+    }
+  }, [location.state, empresas, sucursales, empresaSeleccionada, sucursalSeleccionada]);
+
+  // Salto automático al paso 2 si viene de la agenda y todo está preseleccionado
+  useEffect(() => {
+    if (
+      location.state?.empresa &&
+      location.state?.formularioId &&
+      empresaSeleccionada &&
+      sucursalSeleccionada &&
+      formularioSeleccionadoId &&
+      activeStep === 0
+    ) {
+      setActiveStep(1); // Paso 2 (índice base 0)
+      console.log('[DEBUG Auditoria] Salto automático al paso 2 por agenda');
+    }
+  }, [location.state, empresaSeleccionada, sucursalSeleccionada, formularioSeleccionadoId, activeStep]);
 
   return (
     <Container maxWidth="xl" sx={{ py: 4 }}>
@@ -945,6 +1051,31 @@ const Auditoria = () => {
           </Paper>
         </Zoom>
       )}
+      <Snackbar open={openAlertaEdicion} autoHideDuration={6000} onClose={() => setOpenAlertaEdicion(false)}>
+        <MuiAlert
+          onClose={() => setOpenAlertaEdicion(false)}
+          severity="warning"
+          action={
+            <MuiButton color="inherit" size="small" onClick={() => {
+              setBloquearDatosAgenda(false);
+              setOpenAlertaEdicion(false);
+              log("El usuario desbloqueó los datos de agenda para edición manual.");
+              setSnackbarMsg("Ahora puedes editar los datos de empresa, sucursal y formulario.");
+              setSnackbarType("info");
+              setSnackbarOpen(true);
+            }}>
+              Editar Igualmente
+            </MuiButton>
+          }
+        >
+          Esta auditoría proviene de la agenda. ¿Deseas editar los datos igualmente?
+        </MuiAlert>
+      </Snackbar>
+      <Snackbar open={snackbarOpen} autoHideDuration={6000} onClose={() => setSnackbarOpen(false)}>
+        <MuiAlert onClose={() => setSnackbarOpen(false)} severity={snackbarType} sx={{ width: '100%' }}>
+          {snackbarMsg}
+        </MuiAlert>
+      </Snackbar>
     </Container>
   );
 };
