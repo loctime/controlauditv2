@@ -25,13 +25,12 @@ import {
 import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon } from '@mui/icons-material';
 import { collection, getDocs, doc, deleteDoc, updateDoc, setDoc, query, where } from 'firebase/firestore';
 import { db } from '../../../firebaseConfig';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '../../../firebaseConfig';
 import { useAuth } from '../../context/AuthContext';
 import { toast } from 'react-toastify';
 import { registrarAccionSistema } from '../../../utils/firestoreUtils';
 import Permiso from '../../common/Permiso';
 import { usePermiso } from '../../hooks/usePermiso';
+import userService from '../../../services/userService';
 
 const PERMISOS_LISTA = [
   { key: 'puedeCrearEmpresas', label: 'Crear Empresas' },
@@ -84,24 +83,15 @@ const UsuariosList = ({ clienteAdminId, showAddButton = true }) => {
   const usuariosActuales = usuarios.length;
   const puedeAgregar = usuariosActuales < limiteUsuarios || !limiteUsuarios; // Si no hay límite, permitir
 
-  // Cargar usuarios filtrados por clienteAdminId si se provee
+  // Cargar usuarios usando el backend
   const fetchUsuarios = async () => {
     setLoading(true);
     try {
-      let usuariosRef = collection(db, 'usuarios');
-      let snapshot;
-      if (role === 'supermax') {
-        snapshot = await getDocs(usuariosRef);
-      } else if (adminId) {
-        const q = query(usuariosRef, where('clienteAdminId', '==', adminId));
-        snapshot = await getDocs(q);
-      } else {
-        snapshot = await getDocs(usuariosRef); // fallback, no debería ocurrir
-      }
-      const lista = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      // Usar el servicio del backend en lugar de consultas directas a Firestore
+      const lista = await userService.listUsers();
       setUsuarios(lista);
     } catch (error) {
-      toast.error('Error al cargar usuarios');
+      toast.error('Error al cargar usuarios: ' + error.message);
       setUsuarios([]);
     } finally {
       setLoading(false);
@@ -183,7 +173,7 @@ const UsuariosList = ({ clienteAdminId, showAddButton = true }) => {
     }
   };
 
-  // Crear nuevo usuario
+  // Crear nuevo usuario usando el backend
   const handleCrearUsuario = async () => {
     if (!formData.email || !formData.password || !formData.nombre) {
       toast.error('Todos los campos son obligatorios');
@@ -196,33 +186,15 @@ const UsuariosList = ({ clienteAdminId, showAddButton = true }) => {
     }
 
     try {
-      // Crear usuario en Firebase Auth
-      const userCredential = await createUserWithEmailAndPassword(
-        auth,
-        formData.email,
-        formData.password
-      );
-
-      // Crear perfil en Firestore
-      const userProfile = {
-        uid: userCredential.user.uid,
+      // Usar el servicio del backend para crear usuario
+      const result = await userService.createUser({
         email: formData.email,
-        displayName: formData.nombre,
+        password: formData.password,
+        nombre: formData.nombre,
         role: formData.role,
         permisos: formData.permisos,
-        createdAt: new Date(),
-        empresas: [],
-        auditorias: [],
-        socios: [],
-        configuracion: {
-          notificaciones: true,
-          tema: 'light'
-        },
         clienteAdminId: clienteAdminId || (userProfile?.role === 'max' ? userProfile?.uid : null)
-      };
-
-      // Guardar en Firestore usando setDoc en lugar de updateDoc
-      await setDoc(doc(db, 'usuarios', userCredential.user.uid), userProfile);
+      });
 
       // Registrar log de la acción
       await registrarAccionSistema(
@@ -236,31 +208,22 @@ const UsuariosList = ({ clienteAdminId, showAddButton = true }) => {
         },
         'crear',
         'usuario',
-        userCredential.user.uid
+        result.uid
       );
 
-      toast.success('Usuario creado exitosamente');
+      toast.success('Usuario creado exitosamente sin desconectar tu sesión');
       handleCloseModal();
       fetchUsuarios();
     } catch (error) {
-      let errorMessage = 'Error al crear usuario';
-      if (error.code === 'auth/email-already-in-use') {
-        errorMessage = 'El correo electrónico ya está en uso';
-      } else if (error.code === 'auth/weak-password') {
-        errorMessage = 'La contraseña es muy débil';
-      } else if (error.code === 'auth/invalid-email') {
-        errorMessage = 'Correo electrónico inválido';
-      }
-      toast.error(errorMessage);
+      toast.error(error.message);
     }
   };
 
-  // Actualizar usuario existente
+  // Actualizar usuario existente usando el backend
   const handleActualizarUsuario = async () => {
     if (!editando) return;
     try {
-      const userRef = doc(db, 'usuarios', editando.id);
-      await updateDoc(userRef, {
+      await userService.updateUser(editando.id, {
         displayName: formData.nombre,
         role: formData.role,
         permisos: formData.permisos
@@ -289,11 +252,11 @@ const UsuariosList = ({ clienteAdminId, showAddButton = true }) => {
       fetchUsuarios();
     } catch (error) {
       console.error('Error al actualizar usuario:', error);
-      toast.error('Error al actualizar usuario');
+      toast.error(error.message);
     }
   };
 
-  // Eliminar usuario
+  // Eliminar usuario usando el backend
   const handleEliminarUsuario = async (usuario) => {
     if (usuario.id === userProfile?.uid) {
       toast.error('No puedes eliminar tu propia cuenta');
@@ -301,7 +264,7 @@ const UsuariosList = ({ clienteAdminId, showAddButton = true }) => {
     }
     if (window.confirm(`¿Estás seguro de que quieres eliminar al usuario ${usuario.email}?`)) {
       try {
-        await deleteDoc(doc(db, 'usuarios', usuario.id));
+        await userService.deleteUser(usuario.id);
 
         // Registrar log de la acción
         await registrarAccionSistema(
@@ -322,7 +285,7 @@ const UsuariosList = ({ clienteAdminId, showAddButton = true }) => {
         fetchUsuarios();
       } catch (error) {
         console.error('Error al eliminar usuario:', error);
-        toast.error('Error al eliminar usuario');
+        toast.error(error.message);
       }
     }
   };
