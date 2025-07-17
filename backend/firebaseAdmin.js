@@ -1,7 +1,7 @@
 // backend/firebaseAdmin.js
 const admin = require('firebase-admin');
 
-// Cargar credenciales desde variable de entorno o archivo
+// Caargar credenciales desde variable de entorno o archivo
 // Recomendado: usar GOOGLE_APPLICATION_CREDENTIALS o un path seguro
 const serviceAccount = process.env.GOOGLE_APPLICATION_CREDENTIALS
   ? require(process.env.GOOGLE_APPLICATION_CREDENTIALS)
