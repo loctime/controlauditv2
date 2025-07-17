@@ -168,7 +168,7 @@ app.put('/api/update-user/:uid', verificarTokenAdmin, async (req, res) => {
   try {
     // Verificar permisos (solo puede actualizar sus propios usuarios)
     if (req.user.role === 'max') {
-      const userDoc = await admin.firestore().collection('usuarios').doc(uid).get();
+    const userDoc = await admin.firestore().collection('usuarios').doc(uid).get();
       if (!userDoc.exists || userDoc.data().clienteAdminId !== req.user.uid) {
         return res.status(403).json({ error: 'No puedes actualizar este usuario' });
       }
@@ -183,7 +183,7 @@ app.put('/api/update-user/:uid', verificarTokenAdmin, async (req, res) => {
 
     await admin.firestore().collection('usuarios').doc(uid).update(updateData);
 
-    res.json({ 
+    res.json({
       success: true,
       message: 'Usuario actualizado exitosamente'
     });
@@ -216,8 +216,8 @@ app.delete('/api/delete-user/:uid', verificarTokenAdmin, async (req, res) => {
     
     // Eliminar de Firestore
     await admin.firestore().collection('usuarios').doc(uid).delete();
-
-    res.json({ 
+    
+    res.json({
       success: true,
       message: 'Usuario eliminado exitosamente'
     });
@@ -248,7 +248,7 @@ app.put('/api/change-role/:uid', verificarTokenAdmin, async (req, res) => {
       updatedAt: new Date()
     });
 
-    res.json({ 
+    res.json({
       success: true,
       message: 'Rol actualizado exitosamente sin desconectar al usuario'
     });
