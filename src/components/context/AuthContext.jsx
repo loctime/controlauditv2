@@ -5,6 +5,7 @@ import { onAuthStateChanged } from "firebase/auth";
 import { doc, getDoc, setDoc, updateDoc, collection, query, where, getDocs, addDoc, onSnapshot } from "firebase/firestore";
 import { registrarLogOperario, registrarAccionSistema } from '../../utils/firestoreUtils'; // NUEVO: función para logs
 import { getUserRole } from '../../config/admin'; // ✅ Importar configuración del administrador
+import userService from '../../services/userService';
 
 // Definimos y exportamos el contexto
 export const AuthContext = createContext();
@@ -577,17 +578,12 @@ const AuthContextComponent = ({ children }) => {
         throw new Error(`Límite de usuarios alcanzado (${limiteUsuarios}). Contacta al administrador para aumentar tu límite.`);
       }
 
-      // Crear usuario en Firebase Auth
-      const userCredential = await createUserWithEmailAndPassword(auth, email, "123456");
-      
-      // Crear perfil en Firestore
-      const operarioProfile = {
-        uid: userCredential.user.uid,
-        email: email,
-        displayName: displayName,
+      // Crear usuario usando el backend (NO con createUserWithEmailAndPassword)
+      const result = await userService.createUser({
+        email,
+        password: "123456", // Contraseña temporal
+        nombre: displayName,
         role: 'operario',
-        clienteAdminId: user.uid,
-        createdAt: new Date(),
         permisos: {
           puedeCrearEmpresas: false,
           puedeCrearSucursales: false,
@@ -595,13 +591,8 @@ const AuthContextComponent = ({ children }) => {
           puedeCompartirFormularios: false,
           puedeAgregarSocios: false
         },
-        configuracion: {
-          notificaciones: true,
-          tema: 'light'
-        }
-      };
-
-      await setDoc(doc(db, "usuarios", userCredential.user.uid), operarioProfile);
+        clienteAdminId: user.uid
+      });
       
       // Registrar log de la acción
       await registrarAccionSistema(
@@ -610,7 +601,7 @@ const AuthContextComponent = ({ children }) => {
         { email, displayName, limiteUsuarios, usuariosActuales },
         'crear',
         'usuario',
-        userCredential.user.uid
+        result.uid
       );
 
       return true;

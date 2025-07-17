@@ -3,10 +3,11 @@ import React, { useContext, useState } from "react";
 import { Typography, Box, Grid, Paper, Alert, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Button, TextField, Dialog, DialogTitle, DialogContent, DialogActions, Card, CardContent, Tabs, Tab } from "@mui/material";
 import { AuthContext } from "../../context/AuthContext";
 import { collection, addDoc, setDoc, doc, updateDoc, query, where, getDocs } from "firebase/firestore";
-import { db, signUp } from "../../../firebaseConfig";
+import { db } from "../../../firebaseConfig";
 import { toast } from 'react-toastify';
 import { verifyAdminCode, verifySuperAdminCode } from "../../../config/admin";
 import GestionClientes from "./GestionClientes";
+import userService from "../../../services/userService";
 
 const empresasEjemplo = [
   {
@@ -136,33 +137,13 @@ function Dashboard() {
       return;
     }
     try {
-      // 1. Crear usuario principal en Auth
-      const password = form.password || 'Cambiar123!'; // Puedes pedir la contraseña o generar una temporal
-      const userRes = await signUp({ email: form.email, password });
-      const user = userRes.user;
-      // 2. Crear empresa en Firestore
-      const empresaRef = await addDoc(collection(db, 'empresas'), {
-        nombre: form.nombre,
-        emailContacto: form.email,
-        usuariosMaximos: Number(form.usuariosMaximos), // Solo como metadato de empresa
-        usuariosActuales: 1,
-        usuarios: [user.uid],
-        estadoPago: 'al_dia',
-        fechaUltimoPago: new Date(),
-        fechaVencimiento: null,
-        plan: 'estandar',
-      });
-      // 3. Crear usuario principal en Firestore
-      await setDoc(doc(db, 'usuarios', user.uid), {
-        nombre: form.nombre,
+      // 1. Crear usuario principal usando el backend (sin desconectar)
+      const password = form.password || 'Cambiar123!';
+      const userRes = await userService.createUser({
         email: form.email,
-        empresaId: empresaRef.id,
+        password: password,
+        nombre: form.nombre,
         role: 'max',
-        plan: 'estandar',
-        limiteUsuarios: Number(form.usuariosMaximos), // Unificado aquí
-        usuariosActivos: 0,
-        fechaCreacion: new Date(),
-        estadoPago: 'al_dia',
         permisos: {
           puedeCrearEmpresas: true,
           puedeCrearSucursales: true,
@@ -175,9 +156,33 @@ function Dashboard() {
           puedeEliminarUsuarios: true
         }
       });
+
+      // 2. Crear empresa en Firestore
+      const empresaRef = await addDoc(collection(db, 'empresas'), {
+        nombre: form.nombre,
+        emailContacto: form.email,
+        usuariosMaximos: Number(form.usuariosMaximos),
+        usuariosActuales: 1,
+        usuarios: [userRes.uid],
+        estadoPago: 'al_dia',
+        fechaUltimoPago: new Date(),
+        fechaVencimiento: null,
+        plan: 'estandar',
+      });
+
+      // 3. Actualizar usuario con información adicional
+      await userService.updateUser(userRes.uid, {
+        empresaId: empresaRef.id,
+        plan: 'estandar',
+        limiteUsuarios: Number(form.usuariosMaximos),
+        usuariosActivos: 0,
+        fechaCreacion: new Date(),
+        estadoPago: 'al_dia'
+      });
+
       setOpenDialog(false);
       setForm({ nombre: '', email: '', usuariosMaximos: 1, password: '' });
-      alert('Empresa y usuario principal creados correctamente.');
+      toast.success('Empresa y usuario principal creados correctamente sin desconectar tu sesión.');
     } catch (err) {
       setError(err.message || 'Error al crear empresa y usuario.');
     } finally {
