@@ -7,6 +7,8 @@ import {
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import SearchIcon from '@mui/icons-material/Search';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import { useNavigate } from 'react-router-dom';
 
 const FILTROS = [
   { value: 'todos', label: 'Todos' },
@@ -23,6 +25,7 @@ const GaleriaFormulariosPublicos = ({ onCopiar }) => {
   const [filtro, setFiltro] = useState('todos');
   const [copiandoId, setCopiandoId] = useState(null);
   const [ratingLoading, setRatingLoading] = useState(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchPublicForms = async () => {
@@ -120,6 +123,20 @@ const GaleriaFormulariosPublicos = ({ onCopiar }) => {
 
   return (
     <Box sx={{ p: 3 }}>
+      {/* Botón Volver */}
+      <Button
+        variant="outlined"
+        startIcon={<ArrowBackIcon />}
+        onClick={() => {
+          console.debug('[GaleriaFormulariosPublicos] Volver a /editar');
+          navigate('/editar');
+        }}
+        aria-label="Volver a edición"
+        sx={{ mb: 2 }}
+      >
+        Volver
+      </Button>
+      {/* Título */}
       <Typography variant="h5" gutterBottom>Galería de Formularios Públicos</Typography>
       <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ mb: 2 }}>
         <TextField

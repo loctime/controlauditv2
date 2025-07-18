@@ -5,6 +5,7 @@ import { useAuth } from "../../context/AuthContext";
 import Swal from 'sweetalert2';
 import { db } from '../../../firebaseConfig';
 import { collection, getDocs, query, where } from 'firebase/firestore';
+import { useLocation } from 'react-router-dom';
 // Componentes modulares
 import PerfilHeader from './PerfilHeader';
 import PerfilSidebar from './PerfilSidebar';
@@ -19,6 +20,7 @@ import PerfilDialogs from './PerfilDialogs';
 const PerfilUsuario = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const location = useLocation();
   const {
     userProfile,
     userEmpresas,
@@ -30,6 +32,7 @@ const PerfilUsuario = () => {
     loadingEmpresas
   } = useAuth();
 
+  const validTabs = ['empresas', 'formularios', 'usuarios', 'configuracion', 'firma', 'info'];
   const [selectedSection, setSelectedSection] = useState('empresas');
   const [emailSocio, setEmailSocio] = useState("");
   const [openDialogSocio, setOpenDialogSocio] = useState(false);
@@ -46,6 +49,16 @@ const PerfilUsuario = () => {
       setSelectedRole(userProfile.role);
     }
   }, [userProfile?.role]);
+
+  // Sincronizar selectedSection con query param 'tab'
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const tab = params.get('tab');
+    if (tab && validTabs.includes(tab)) {
+      setSelectedSection(tab);
+      console.debug('[PerfilUsuario] Tab seleccionado desde URL:', tab);
+    }
+  }, [location.search]);
 
   useEffect(() => {
     const fetchUsuariosCreados = async () => {

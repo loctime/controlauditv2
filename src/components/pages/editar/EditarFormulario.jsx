@@ -10,6 +10,7 @@ import { useNavigate } from "react-router-dom";
 import PublicIcon from '@mui/icons-material/Public';
 import AddIcon from '@mui/icons-material/Add';
 import FormulariosAccordionList from "./FormulariosAccordionList";
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 
 const EditarFormulario = () => {
   const { user, userProfile } = useAuth();
@@ -236,6 +237,19 @@ const EditarFormulario = () => {
           }
         `}
       </style>
+      {/* Botón Volver */}
+      <Button
+        variant="outlined"
+        startIcon={<ArrowBackIcon />}
+        onClick={() => {
+          console.debug('[EditarFormulario] Volver a /perfil?tab=formularios');
+          navigate('/perfil?tab=formularios');
+        }}
+        aria-label="Volver a perfil, pestaña formularios"
+        sx={{ mb: 2 }}
+      >
+        Volver
+      </Button>
       {/* Cabecera optimizada con barra de acciones */}
       <Box display="flex" alignItems="center" justifyContent="space-between" mb={2} flexWrap="wrap" gap={2}>
         <Typography variant="h4" gutterBottom sx={{ flex: 1, minWidth: 200 }}>

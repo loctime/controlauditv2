@@ -326,7 +326,6 @@ const UsuariosList = ({ clienteAdminId, showAddButton = true }) => {
               <TableRow>
                 <TableCell>Nombre</TableCell>
                 <TableCell>Email</TableCell>
-                <TableCell>Rol</TableCell>
                 <TableCell>Permisos</TableCell>
                 <TableCell>Fecha Creación</TableCell>
                 <TableCell>Acciones</TableCell>
@@ -337,13 +336,6 @@ const UsuariosList = ({ clienteAdminId, showAddButton = true }) => {
                 <TableRow key={usuario.id}>
                   <TableCell>{usuario.displayName || 'Sin nombre'}</TableCell>
                   <TableCell>{usuario.email}</TableCell>
-                  <TableCell>
-                    <Chip
-                      label={ROLES.find(r => r.value === usuario.role)?.label || usuario.role}
-                      color={usuario.role === 'supermax' ? 'error' : usuario.role === 'max' ? 'warning' : 'default'}
-                      size="small"
-                    />
-                  </TableCell>
                   <TableCell>
                     <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
                       {PERMISOS_LISTA.map((permiso) => (
@@ -361,7 +353,28 @@ const UsuariosList = ({ clienteAdminId, showAddButton = true }) => {
                     </Box>
                   </TableCell>
                   <TableCell>
-                    {usuario.createdAt?.toDate?.()?.toLocaleDateString() || 'N/A'}
+                    {(() => {
+                      // Soporta Firestore Timestamp, string ISO o Date
+                      const fecha = usuario.createdAt;
+                      if (!fecha) return 'N/A';
+                      if (typeof fecha === 'string' || fecha instanceof Date) {
+                        const d = new Date(fecha);
+                        return isNaN(d.getTime()) ? 'N/A' : d.toLocaleDateString('es-ES');
+                      }
+                      if (fecha.seconds) {
+                        // Firestore Timestamp
+                        const d = new Date(fecha.seconds * 1000);
+                        return d.toLocaleDateString('es-ES');
+                      }
+                      if (typeof fecha.toDate === 'function') {
+                        try {
+                          return fecha.toDate().toLocaleDateString('es-ES');
+                        } catch {
+                          return 'N/A';
+                        }
+                      }
+                      return 'N/A';
+                    })()}
                   </TableCell>
                   <TableCell>
                     <IconButton
