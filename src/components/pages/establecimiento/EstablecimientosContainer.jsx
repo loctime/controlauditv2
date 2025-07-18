@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { Button, Card, Grid, Typography, Box, CardActions, Divider, Stack, Tooltip, IconButton, CircularProgress } from "@mui/material";
 import InfoIcon from '@mui/icons-material/Info';
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { storage } from "../../../firebaseConfig";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import AddEmpresaModal from "./AddEmpresaModal";
@@ -9,9 +9,11 @@ import EliminarEmpresa from "./EliminarEmpresa";
 import Swal from 'sweetalert2';
 import { useAuth } from "../../context/AuthContext";
 import EditarEmpresaModal from "./EditarEmpresa";
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 
 const EstablecimientosContainer = () => {
   const { userProfile, userEmpresas, crearEmpresa, verificarYCorregirEmpresas, getUserEmpresas, updateEmpresa } = useAuth();
+  const navigate = useNavigate();
   
   // Función para formatear email (mostrar solo usuario)
   const formatearEmail = (email) => {
@@ -248,6 +250,19 @@ const EstablecimientosContainer = () => {
 
   return (
     <Box sx={{ px: { xs: 1, sm: 3 }, py: 2 }}>
+      {/* Botón Volver */}
+      <Button
+        variant="outlined"
+        startIcon={<ArrowBackIcon />}
+        onClick={() => {
+          console.debug('[EstablecimientosContainer] Volver a /perfil');
+          navigate('/perfil');
+        }}
+        aria-label="Volver a perfil"
+        sx={{ mb: 2 }}
+      >
+        Volver
+      </Button>
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
         <Typography variant="h4" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
           Empresas Registradas
