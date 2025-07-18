@@ -136,6 +136,7 @@ const PreguntasYSeccion = ({
                   <Box>
                     <input
                       accept="image/*"
+                      capture="environment"
                       style={{ display: 'none' }}
                       id={`upload-button-${seccionIndex}-${preguntaIndex}`}
                       type="file"
@@ -146,6 +147,9 @@ const PreguntasYSeccion = ({
                         Cargar Foto
                       </Button>
                     </label>
+                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
+                      En móvil puedes sacar una foto o elegir de la galería.
+                    </Typography>
                   </Box>
                 </Stack>
                 {/* Comentario y foto debajo, bien separados */}

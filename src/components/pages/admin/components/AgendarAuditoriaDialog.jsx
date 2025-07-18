@@ -200,7 +200,7 @@ const AgendarAuditoriaDialog = ({ open, onClose, onSave, empresas, sucursales, f
                   <MenuItem value="">
                     <Box display="flex" alignItems="center" gap={1}>
                       <PersonOff color="action" />
-                      <Typography variant="body2" color="text.secondary">
+                      <Typography variant="body2" color="text.secondary" component="span">
                         Sin especificar
                       </Typography>
                     </Box>
@@ -212,10 +212,10 @@ const AgendarAuditoriaDialog = ({ open, onClose, onSave, empresas, sucursales, f
                           {usuario.displayName ? usuario.displayName.charAt(0).toUpperCase() : usuario.email.charAt(0).toUpperCase()}
                         </Avatar>
                         <Box>
-                          <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                          <Typography variant="body2" sx={{ fontWeight: 500 }} component="span">
                             {usuario.displayName || 'Sin nombre'}
                           </Typography>
-                          <Typography variant="caption" color="text.secondary">
+                          <Typography variant="caption" color="text.secondary" component="span">
                             {usuario.email}
                           </Typography>
                         </Box>
@@ -288,10 +288,10 @@ const AgendarAuditoriaDialog = ({ open, onClose, onSave, empresas, sucursales, f
                 }}>
                   <Person color="primary" />
                   <Box>
-                    <Typography variant="subtitle2" color="primary" sx={{ fontWeight: 600 }}>
+                    <Typography variant="subtitle2" color="primary" sx={{ fontWeight: 600 }} component="div">
                       Encargado asignado:
                     </Typography>
-                    <Typography variant="body2">
+                    <Typography variant="body2" component="span">
                       {getNombreUsuario(form.encargado)} ({getEmailUsuario(form.encargado)})
                     </Typography>
                   </Box>
