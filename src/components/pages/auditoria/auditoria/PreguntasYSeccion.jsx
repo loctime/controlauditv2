@@ -134,21 +134,43 @@ const PreguntasYSeccion = ({
                     Comentario
                   </Button>
                   <Box>
+                    {/* Botón para tomar foto con cámara */}
                     <input
                       accept="image/*"
                       capture="environment"
                       style={{ display: 'none' }}
-                      id={`upload-button-${seccionIndex}-${preguntaIndex}`}
+                      id={`upload-camera-${seccionIndex}-${preguntaIndex}`}
                       type="file"
-                      onChange={(e) => handleFileChange(seccionIndex, preguntaIndex, e)}
+                      onChange={(e) => {
+                        console.log("Foto tomada desde cámara", e.target.files[0]);
+                        handleFileChange(seccionIndex, preguntaIndex, e);
+                      }}
                     />
-                    <label htmlFor={`upload-button-${seccionIndex}-${preguntaIndex}`}>
+                    <label htmlFor={`upload-camera-${seccionIndex}-${preguntaIndex}`}>
                       <Button variant="outlined" component="span" sx={{ minWidth: 120 }}>
                         Cargar Foto
                       </Button>
                     </label>
+
+                    {/* Botón para subir desde galería */}
+                    <input
+                      accept="image/*"
+                      style={{ display: 'none' }}
+                      id={`upload-gallery-${seccionIndex}-${preguntaIndex}`}
+                      type="file"
+                      onChange={(e) => {
+                        console.log("Imagen seleccionada desde galería", e.target.files[0]);
+                        handleFileChange(seccionIndex, preguntaIndex, e);
+                      }}
+                    />
+                    <label htmlFor={`upload-gallery-${seccionIndex}-${preguntaIndex}`}>
+                      <Button variant="outlined" component="span" sx={{ minWidth: 120, ml: 1 }}>
+                        Subir desde galería
+                      </Button>
+                    </label>
+
                     <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
-                      En móvil puedes sacar una foto o elegir de la galería.
+                      Puedes tomar una foto o elegir una imagen de la galería.
                     </Typography>
                   </Box>
                 </Stack>
