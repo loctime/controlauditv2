@@ -160,61 +160,6 @@ export const useClienteDashboard = () => {
     }
   }, [userProfile, role]);
 
-  // ✅ Funciones optimizadas con useCallback
-  const handleAgendarAuditoria = useCallback(async (formData) => {
-    try {
-      // Si hay un encargado seleccionado, obtener su información completa
-      let encargadoInfo = null;
-      if (formData.encargado) {
-        try {
-          const usuarioRef = doc(db, 'usuarios', formData.encargado);
-          const usuarioDoc = await getDoc(usuarioRef);
-          if (usuarioDoc.exists()) {
-            encargadoInfo = {
-              id: usuarioDoc.id,
-              displayName: usuarioDoc.data().displayName,
-              email: usuarioDoc.data().email,
-              role: usuarioDoc.data().role
-            };
-          }
-        } catch (error) {
-          console.error('Error obteniendo información del encargado:', error);
-          // Si no se puede obtener la información, usar solo el ID
-          encargadoInfo = { id: formData.encargado };
-        }
-      }
-
-      const nuevaAuditoria = {
-        ...formData,
-        fecha: formData.fecha,
-        hora: formData.hora,
-        estado: 'agendada',
-        usuarioId: userProfile?.uid,
-        usuarioNombre: userProfile?.displayName || userProfile?.email,
-        clienteAdminId: userProfile?.clienteAdminId || userProfile?.uid,
-        encargado: encargadoInfo, // Guardar información completa del encargado
-        fechaCreacion: serverTimestamp(),
-        fechaActualizacion: serverTimestamp()
-      };
-
-      const docRef = await addDoc(collection(db, 'auditorias_agendadas'), nuevaAuditoria);
-      
-      setAuditorias(prev => [{
-        id: docRef.id,
-        ...nuevaAuditoria,
-        fechaCreacion: new Date(),
-        fechaActualizacion: new Date()
-      }, ...prev]);
-      
-      toast.success('Auditoría agendada exitosamente');
-      return true;
-    } catch (error) {
-      console.error('Error agendando auditoría:', error);
-      toast.error('Error al agendar la auditoría');
-      return false;
-    }
-  }, [userProfile]);
-
   // ✅ Función para cargar información completa de usuarios cuando solo tenemos IDs
   const cargarInformacionUsuarios = useCallback(async (auditoriasData) => {
     try {
@@ -349,6 +294,70 @@ export const useClienteDashboard = () => {
     }
   }, [userProfile, role, cargarInformacionUsuarios]);
 
+  // ✅ Funciones optimizadas con useCallback
+  const handleAgendarAuditoria = useCallback(async (formData) => {
+    try {
+      // Si hay un encargado seleccionado, obtener su información completa
+      let encargadoInfo = null;
+      if (formData.encargado) {
+        try {
+          const usuarioRef = doc(db, 'usuarios', formData.encargado);
+          const usuarioDoc = await getDoc(usuarioRef);
+          if (usuarioDoc.exists()) {
+            encargadoInfo = {
+              id: usuarioDoc.id,
+              displayName: usuarioDoc.data().displayName,
+              email: usuarioDoc.data().email,
+              role: usuarioDoc.data().role
+            };
+          }
+        } catch (error) {
+          console.error('Error obteniendo información del encargado:', error);
+          // Si no se puede obtener la información, usar solo el ID
+          encargadoInfo = { id: formData.encargado };
+        }
+      }
+
+      const nuevaAuditoria = {
+        ...formData,
+        fecha: formData.fecha,
+        hora: formData.hora,
+        estado: 'agendada',
+        usuarioId: userProfile?.uid,
+        usuarioNombre: userProfile?.displayName || userProfile?.email,
+        clienteAdminId: userProfile?.clienteAdminId || userProfile?.uid,
+        encargado: encargadoInfo, // Guardar información completa del encargado
+        fechaCreacion: serverTimestamp(),
+        fechaActualizacion: serverTimestamp()
+      };
+
+      const docRef = await addDoc(collection(db, 'auditorias_agendadas'), nuevaAuditoria);
+      
+      // Eliminar el setAuditorias manual
+      // setAuditorias(prev => [{
+      //   id: docRef.id,
+      //   ...nuevaAuditoria,
+      //   fechaCreacion: new Date(),
+      //   fechaActualizacion: new Date()
+      // }, ...prev]);
+
+      // Recargar auditorías desde Firestore
+      const auditoriasActualizadas = await cargarAuditorias();
+      // Filtrar duplicados por ID
+      const auditoriasUnicas = auditoriasActualizadas.filter(
+        (aud, idx, self) => self.findIndex(a => a.id === aud.id) === idx
+      );
+      setAuditorias(auditoriasUnicas);
+
+      toast.success('Auditoría agendada exitosamente');
+      return true;
+    } catch (error) {
+      console.error('Error agendando auditoría:', error);
+      toast.error('Error al agendar la auditoría');
+      return false;
+    }
+  }, [userProfile, cargarAuditorias]);
+
   // ✅ Cargar datos en paralelo para mejor rendimiento
   useEffect(() => {
     const cargarDatosParalelos = async () => {
@@ -360,18 +369,30 @@ export const useClienteDashboard = () => {
         // Cargar empresas primero (necesarias para sucursales)
         setLoadingStates(prev => ({ ...prev, empresas: true }));
         const empresasData = await cargarEmpresas();
-        setEmpresas(empresasData);
+        // Filtrar duplicados por ID
+        const empresasUnicas = empresasData.filter(
+          (emp, idx, self) => self.findIndex(e => e.id === emp.id) === idx
+        );
+        setEmpresas(empresasUnicas);
         setLoadingStates(prev => ({ ...prev, empresas: false }));
 
         // Cargar el resto en paralelo
         const [sucursalesData, formulariosData, auditoriasData] = await Promise.all([
-          cargarSucursales(empresasData),
+          cargarSucursales(empresasUnicas),
           cargarFormularios(),
           cargarAuditorias()
         ]);
 
-        setSucursales(sucursalesData);
-        setFormularios(formulariosData);
+        // Filtrar duplicados por ID en sucursales y formularios
+        const sucursalesUnicas = sucursalesData.filter(
+          (suc, idx, self) => self.findIndex(s => s.id === suc.id) === idx
+        );
+        const formulariosUnicos = formulariosData.filter(
+          (f, idx, self) => self.findIndex(ff => ff.id === f.id) === idx
+        );
+
+        setSucursales(sucursalesUnicas);
+        setFormularios(formulariosUnicos);
         setAuditorias(auditoriasData);
 
         setLoadingStates({

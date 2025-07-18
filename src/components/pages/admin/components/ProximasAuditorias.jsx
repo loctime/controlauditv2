@@ -13,6 +13,8 @@ import {
 import { Schedule, Person, PersonOff } from "@mui/icons-material";
 
 const ProximasAuditorias = ({ auditoriasPendientes }) => {
+  // Debug: Mostrar todos los IDs de auditorías pendientes
+  console.debug("[ProximasAuditorias] IDs de auditoriasPendientes:", auditoriasPendientes.map(a => a.id));
   // Función para obtener el nombre del usuario
   const getNombreUsuario = (encargado) => {
     if (!encargado) return null;
@@ -47,66 +49,69 @@ const ProximasAuditorias = ({ auditoriasPendientes }) => {
           {auditoriasPendientes
             .sort((a, b) => new Date(a.fecha) - new Date(b.fecha))
             .slice(0, 5)
-            .map((auditoria) => (
-              <ListItem key={auditoria.id} divider sx={{ px: 0 }}>
-                <ListItemText
-                  primary={
-                    <Box display="flex" alignItems="center" gap={1}>
-                      <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
-                        {auditoria.empresa}
-                      </Typography>
-                      <Chip 
-                        label="Pendiente" 
-                        size="small" 
-                        color="warning" 
-                        variant="outlined"
-                        sx={{ fontSize: '0.7rem' }}
-                      />
-                    </Box>
-                  }
-                  secondary={
-                    <Box>
-                      <Typography variant="body2" color="text.secondary">
-                        {new Date(auditoria.fecha).toLocaleDateString()} • {auditoria.hora}
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8rem' }}>
-                        {auditoria.formulario}
-                      </Typography>
-                      {auditoria.sucursal && (
-                        <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8rem' }}>
-                          📍 {auditoria.sucursal}
+            .map((auditoria, idx) => {
+              // Debug: Log de cada auditoría renderizada
+              console.debug(`[ProximasAuditorias] Renderizando auditoría`, { idx, id: auditoria.id, empresa: auditoria.empresa });
+              return (
+                <ListItem key={`${auditoria.id}-${idx}`} divider sx={{ px: 0 }}>
+                  <ListItemText
+                    primary={
+                      <Box display="flex" alignItems="center" gap={1}>
+                        <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} component="span">
+                          {auditoria.empresa}
                         </Typography>
-                      )}
-                      
-                      {/* Información del encargado */}
-                      <Box sx={{ mt: 0.5, display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                        {auditoria.encargado ? (
-                          <>
-                            <Avatar sx={{ width: 16, height: 16, fontSize: '0.6rem' }}>
-                              {getInicialUsuario(auditoria.encargado)}
-                            </Avatar>
-                            <Typography variant="caption" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.3 }}>
-                              <Person sx={{ fontSize: '0.7rem' }} />
-                              {getNombreUsuario(auditoria.encargado)}
-                              {getEmailUsuario(auditoria.encargado) && (
-                                <span style={{ fontSize: '0.7rem', opacity: 0.7 }}>
-                                  {' '}({getEmailUsuario(auditoria.encargado)})
-                                </span>
-                              )}
-                            </Typography>
-                          </>
-                        ) : (
-                          <Typography variant="caption" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.3 }}>
-                            <PersonOff sx={{ fontSize: '0.7rem' }} />
-                            Sin encargado
+                        <Chip 
+                          label="Pendiente" 
+                          size="small" 
+                          color="warning" 
+                          variant="outlined"
+                          sx={{ fontSize: '0.7rem' }}
+                        />
+                      </Box>
+                    }
+                    secondary={
+                      <Box>
+                        <Typography variant="body2" color="text.secondary" component="span">
+                          {new Date(auditoria.fecha).toLocaleDateString()} • {auditoria.hora}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8rem' }} component="span">
+                          {auditoria.formulario}
+                        </Typography>
+                        {auditoria.sucursal && (
+                          <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8rem' }} component="span">
+                            📍 {auditoria.sucursal}
                           </Typography>
                         )}
+                        {/* Información del encargado */}
+                        <Box sx={{ mt: 0.5, display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                          {auditoria.encargado ? (
+                            <>
+                              <Avatar sx={{ width: 16, height: 16, fontSize: '0.6rem' }}>
+                                {getInicialUsuario(auditoria.encargado)}
+                              </Avatar>
+                              <Typography variant="caption" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.3 }} component="span">
+                                <Person sx={{ fontSize: '0.7rem' }} />
+                                {getNombreUsuario(auditoria.encargado)}
+                                {getEmailUsuario(auditoria.encargado) && (
+                                  <span style={{ fontSize: '0.7rem', opacity: 0.7 }}>
+                                    {' '}({getEmailUsuario(auditoria.encargado)})
+                                  </span>
+                                )}
+                              </Typography>
+                            </>
+                          ) : (
+                            <Typography variant="caption" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.3 }} component="span">
+                              <PersonOff sx={{ fontSize: '0.7rem' }} />
+                              Sin encargado
+                            </Typography>
+                          )}
+                        </Box>
                       </Box>
-                    </Box>
-                  }
-                />
-              </ListItem>
-            ))}
+                    }
+                  />
+                </ListItem>
+              );
+            })}
         </List>
       )}
     </Paper>
