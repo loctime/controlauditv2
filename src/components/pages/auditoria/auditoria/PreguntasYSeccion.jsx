@@ -3,6 +3,44 @@ import { Button, Grid, Modal, TextField, Typography, Box, Paper, Stack } from "@
 
 const respuestasPosibles = ["Conforme", "No conforme", "Necesita mejora", "No aplica"];
 
+// Función para comprimir imágenes
+const comprimirImagen = (file, maxWidth = 800, quality = 0.7) => {
+  return new Promise((resolve) => {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    const img = new Image();
+    
+    img.onload = () => {
+      // Calcular nuevas dimensiones manteniendo proporción
+      let { width, height } = img;
+      if (width > maxWidth) {
+        height = (height * maxWidth) / width;
+        width = maxWidth;
+      }
+      
+      canvas.width = width;
+      canvas.height = height;
+      
+      // Dibujar imagen redimensionada
+      ctx.drawImage(img, 0, 0, width, height);
+      
+      // Convertir a blob con compresión
+      canvas.toBlob((blob) => {
+        // Crear nuevo archivo con el blob comprimido
+        const compressedFile = new File([blob], file.name, {
+          type: 'image/jpeg',
+          lastModified: Date.now()
+        });
+        
+        console.log(`Imagen comprimida: ${file.size} -> ${compressedFile.size} bytes (${Math.round((1 - compressedFile.size/file.size) * 100)}% reducción)`);
+        resolve(compressedFile);
+      }, 'image/jpeg', quality);
+    };
+    
+    img.src = URL.createObjectURL(file);
+  });
+};
+
 const PreguntasYSeccion = ({ 
   secciones: seccionesObj = {}, 
   guardarRespuestas, 
@@ -21,6 +59,7 @@ const PreguntasYSeccion = ({
   const [currentPreguntaIndex, setCurrentPreguntaIndex] = useState(null);
   const [initialized, setInitialized] = useState(false);
   const [imagenes, setImagenes] = useState([]); // Estado para las imágenes
+  const [procesandoImagen, setProcesandoImagen] = useState({}); // Estado para indicar procesamiento
 
   const secciones = Object.values(seccionesObj);
 
@@ -90,13 +129,38 @@ const PreguntasYSeccion = ({
     setComentario("");
   };
 
-  const handleFileChange = (seccionIndex, preguntaIndex, event) => {
+  const handleFileChange = async (seccionIndex, preguntaIndex, event) => {
     const file = event.target.files[0];
-    const nuevasImagenes = imagenes.map((img, index) =>
-      index === seccionIndex ? [...img.slice(0, preguntaIndex), file, ...img.slice(preguntaIndex + 1)] : img
-    );
-    setImagenes(nuevasImagenes);
-    guardarImagenes(nuevasImagenes);
+    
+    if (!file) return;
+    
+    // Mostrar indicador de procesamiento
+    const key = `${seccionIndex}-${preguntaIndex}`;
+    setProcesandoImagen(prev => ({ ...prev, [key]: true }));
+    
+    try {
+      // Comprimir imagen antes de guardar
+      const compressedFile = await comprimirImagen(file);
+      
+      const nuevasImagenes = imagenes.map((img, index) =>
+        index === seccionIndex ? [...img.slice(0, preguntaIndex), compressedFile, ...img.slice(preguntaIndex + 1)] : img
+      );
+      setImagenes(nuevasImagenes);
+      guardarImagenes(nuevasImagenes);
+      
+      console.log(`Imagen procesada para pregunta ${preguntaIndex} de sección ${seccionIndex}`);
+    } catch (error) {
+      console.error('Error al comprimir imagen:', error);
+      // Fallback: usar imagen original si falla la compresión
+      const nuevasImagenes = imagenes.map((img, index) =>
+        index === seccionIndex ? [...img.slice(0, preguntaIndex), file, ...img.slice(preguntaIndex + 1)] : img
+      );
+      setImagenes(nuevasImagenes);
+      guardarImagenes(nuevasImagenes);
+    } finally {
+      // Ocultar indicador de procesamiento
+      setProcesandoImagen(prev => ({ ...prev, [key]: false }));
+    }
   };
 
   if (!Array.isArray(secciones)) {
@@ -147,8 +211,13 @@ const PreguntasYSeccion = ({
                       }}
                     />
                     <label htmlFor={`upload-camera-${seccionIndex}-${preguntaIndex}`}>
-                      <Button variant="outlined" component="span" sx={{ minWidth: 120 }}>
-                        Cargar Foto
+                      <Button 
+                        variant="outlined" 
+                        component="span" 
+                        sx={{ minWidth: 120 }}
+                        disabled={procesandoImagen[`${seccionIndex}-${preguntaIndex}`]}
+                      >
+                        {procesandoImagen[`${seccionIndex}-${preguntaIndex}`] ? 'Procesando...' : 'Cargar Foto'}
                       </Button>
                     </label>
 
@@ -164,8 +233,13 @@ const PreguntasYSeccion = ({
                       }}
                     />
                     <label htmlFor={`upload-gallery-${seccionIndex}-${preguntaIndex}`}>
-                      <Button variant="outlined" component="span" sx={{ minWidth: 120, ml: 1 }}>
-                        Subir desde galería
+                      <Button 
+                        variant="outlined" 
+                        component="span" 
+                        sx={{ minWidth: 120, ml: 1 }}
+                        disabled={procesandoImagen[`${seccionIndex}-${preguntaIndex}`]}
+                      >
+                        {procesandoImagen[`${seccionIndex}-${preguntaIndex}`] ? 'Procesando...' : 'Subir desde galería'}
                       </Button>
                     </label>
 
