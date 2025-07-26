@@ -25,4 +25,64 @@
     height: auto;
     border-radius: 8px;
   }
+
+/* --- NUEVOS ESTILOS MODERNOS PARA CENTRADO Y CARD --- */
+.home-main-container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(120deg, #f5f7fa 0%, #c3cfe2 100%);
+  padding: 0;
+}
+
+.home-card {
+  background: #fff;
+  border-radius: 32px;
+  box-shadow: 0 8px 32px 0 rgba(60,60,120,0.15);
+  padding: 48px 48px 32px 48px;
+  max-width: 800px;
+  width: 100%;
+  text-align: center;
+  margin: 0 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.home-card .MuiGrid-root {
+  margin-top: 32px;
+  margin-bottom: 32px;
+}
+
+.home-contact {
+  margin-top: 32px;
+  color: #888;
+  font-size: 15px;
+  letter-spacing: 1px;
+}
+/* --- FIN NUEVOS ESTILOS --- */
+
+@media (max-width: 600px) {
+  .home-card, .MuiPaper-root {
+    max-width: 98vw !important;
+    padding: 16px 4px 24px 4px !important;
+    border-radius: 18px !important;
+    margin: 0 1vw !important;
+  }
+  .MuiButton-root {
+    font-size: 1.1rem !important;
+    min-height: 44px !important;
+    width: 100% !important;
+    margin-bottom: 8px !important;
+  }
+  .MuiGrid-root {
+    margin-top: 12px !important;
+    margin-bottom: 12px !important;
+  }
+  .home-contact {
+    font-size: 13px;
+    margin-top: 18px;
+  }
+}
   

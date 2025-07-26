@@ -174,9 +174,9 @@ const PreguntasYSeccion = ({
           <Typography variant="h5" sx={{ mb: 2, fontWeight: 'bold', color: 'primary.main' }}>{seccion.nombre}</Typography>
           <Stack spacing={3}>
             {seccion.preguntas.map((pregunta, preguntaIndex) => (
-              <Paper key={preguntaIndex} elevation={2} sx={{ p: 3, borderRadius: 2 }}>
+              <Paper key={preguntaIndex} elevation={2} sx={{ p: 3, borderRadius: 2, mb: 3 }}>
                 <Typography variant="subtitle1" sx={{ fontWeight: 500, mb: 2 }}>{pregunta}</Typography>
-                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems="flex-start" flexWrap="wrap">
+                <Stack direction="column" spacing={1.5}>
                   <Stack direction="row" spacing={1} flexWrap="wrap">
                     {respuestasPosibles.map((respuesta, index) => (
                       <Button
@@ -197,56 +197,26 @@ const PreguntasYSeccion = ({
                   >
                     Comentario
                   </Button>
-                  <Box>
-                    {/* Botón para tomar foto con cámara */}
-                    <input
-                      accept="image/*"
-                      capture="environment"
-                      style={{ display: 'none' }}
-                      id={`upload-camera-${seccionIndex}-${preguntaIndex}`}
-                      type="file"
-                      onChange={(e) => {
-                        console.log("Foto tomada desde cámara", e.target.files[0]);
-                        handleFileChange(seccionIndex, preguntaIndex, e);
-                      }}
-                    />
-                    <label htmlFor={`upload-camera-${seccionIndex}-${preguntaIndex}`}>
-                      <Button 
-                        variant="outlined" 
-                        component="span" 
-                        sx={{ minWidth: 120 }}
-                        disabled={procesandoImagen[`${seccionIndex}-${preguntaIndex}`]}
-                      >
-                        {procesandoImagen[`${seccionIndex}-${preguntaIndex}`] ? 'Procesando...' : 'Cargar Foto'}
-                      </Button>
-                    </label>
-
-                    {/* Botón para subir desde galería */}
-                    <input
-                      accept="image/*"
-                      style={{ display: 'none' }}
-                      id={`upload-gallery-${seccionIndex}-${preguntaIndex}`}
-                      type="file"
-                      onChange={(e) => {
-                        console.log("Imagen seleccionada desde galería", e.target.files[0]);
-                        handleFileChange(seccionIndex, preguntaIndex, e);
-                      }}
-                    />
-                    <label htmlFor={`upload-gallery-${seccionIndex}-${preguntaIndex}`}>
-                      <Button 
-                        variant="outlined" 
-                        component="span" 
-                        sx={{ minWidth: 120, ml: 1 }}
-                        disabled={procesandoImagen[`${seccionIndex}-${preguntaIndex}`]}
-                      >
-                        {procesandoImagen[`${seccionIndex}-${preguntaIndex}`] ? 'Procesando...' : 'Subir desde galería'}
-                      </Button>
-                    </label>
-
-                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
-                      Puedes tomar una foto o elegir una imagen de la galería.
-                    </Typography>
-                  </Box>
+                  <label htmlFor={`upload-camera-${seccionIndex}-${preguntaIndex}`}>
+                    <Button
+                      variant="outlined"
+                      component="span"
+                      sx={{ minWidth: 120 }}
+                      disabled={procesandoImagen[`${seccionIndex}-${preguntaIndex}`]}
+                    >
+                      {procesandoImagen[`${seccionIndex}-${preguntaIndex}`] ? 'Procesando...' : 'Tomar foto'}
+                    </Button>
+                  </label>
+                  <label htmlFor={`upload-gallery-${seccionIndex}-${preguntaIndex}`}>
+                    <Button
+                      variant="outlined"
+                      component="span"
+                      sx={{ minWidth: 120 }}
+                      disabled={procesandoImagen[`${seccionIndex}-${preguntaIndex}`]}
+                    >
+                      {procesandoImagen[`${seccionIndex}-${preguntaIndex}`] ? 'Procesando...' : 'Subir desde galería'}
+                    </Button>
+                  </label>
                 </Stack>
                 {/* Comentario y foto debajo, bien separados */}
                 <Box mt={2} display="flex" alignItems="center" gap={3} flexWrap="wrap">
