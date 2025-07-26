@@ -242,15 +242,7 @@ const BotonGenerarReporte = ({
         {guardando ? "Guardando..." : "Guardar en Reportes"}
       </Button>
       
-      <Button
-        variant="contained"
-        color="primary"
-        onClick={handleImprimir}
-        disabled={deshabilitado}
-        size="large"
-      >
-        Imprimir PDF
-      </Button>
+      
       
       {/* Botón Finalizar solo visible tras guardado exitoso */}
       {guardadoExitoso && (
