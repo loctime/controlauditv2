@@ -43,7 +43,7 @@ const BotonGenerarReporte = ({
 
     setGuardando(true);
     try {
-      // Construir metadatos consistentes y multi-tenant
+      // Construir l metadatos consistentes y multi-tenant
       const datosAuditoria = buildReporteMetadata({
         empresa,
         sucursal,
