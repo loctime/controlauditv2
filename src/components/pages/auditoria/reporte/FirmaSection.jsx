@@ -1,10 +1,31 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Firma from "./Firma";
 import ResumenAuditoriaModal from "./ResumenAuditoriaModal";
-import { Grid, Box, Typography, Alert, Chip, Button } from "@mui/material";
-import { CheckCircle, Edit, Person, Visibility } from "@mui/icons-material";
+import { 
+  Grid, 
+  Box, 
+  Typography, 
+  Alert, 
+  Chip, 
+  Button,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Paper,
+  TextField,
+  Card,
+  CardContent
+} from "@mui/material";
+import { CheckCircle, Edit, Person, Visibility, Save, Clear, Upload } from "@mui/icons-material";
 import { useAuth } from "../../../context/AuthContext";
+import SignaturePad from 'react-signature-canvas';
+import Swal from 'sweetalert2';
 import './ReportesPage.css'; // Asegúrate de que la clase CSS esté disponible
+
+const capitalizeWords = (str) => {
+  return str.replace(/\b\w+/g, (word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase());
+};
 
 const FirmaSection = ({ 
   isPdf = false, 
@@ -20,11 +41,20 @@ const FirmaSection = ({
   secciones,
   encargado
 }) => {
-  const { userProfile } = useAuth();
+  const { userProfile, updateUserProfile } = useAuth();
   const [firmaAuditorURL, setFirmaAuditorURL] = useState(firmaAuditor);
   const [firmaResponsableURL, setFirmaResponsableURL] = useState(firmaResponsable);
   const [firmaAuditorAutoAplicada, setFirmaAuditorAutoAplicada] = useState(false);
   const [modalResumenAbierto, setModalResumenAbierto] = useState(false);
+  
+  // Estados para el modal de creación de firma
+  const [modalCrearFirmaAbierto, setModalCrearFirmaAbierto] = useState(false);
+  const [nombre, setNombre] = useState(userProfile?.nombre || '');
+  const [dni, setDni] = useState(userProfile?.dni || '');
+  const [telefono, setTelefono] = useState(userProfile?.telefono || '');
+  const [isSaving, setIsSaving] = useState(false);
+  const [signatureData, setSignatureData] = useState('');
+  const sigPadRef = useRef(null);
 
   // Aplicar automáticamente la firma del auditor si tiene una configurada
   useEffect(() => {
@@ -37,6 +67,16 @@ const FirmaSection = ({
       }
     }
   }, [userProfile?.firmaDigital, firmaAuditorURL, firmaAuditorAutoAplicada, onSaveFirmaAuditor]);
+
+  // Cargar datos del perfil cuando se abre el modal
+  useEffect(() => {
+    if (modalCrearFirmaAbierto) {
+      setNombre(userProfile?.nombre || '');
+      setDni(userProfile?.dni || '');
+      setTelefono(userProfile?.telefono || '');
+      setSignatureData('');
+    }
+  }, [modalCrearFirmaAbierto, userProfile]);
 
   const handleSaveFirmaAuditor = (url) => {
     setFirmaAuditorURL(url);
@@ -52,6 +92,74 @@ const FirmaSection = ({
     }
   };
 
+  // Funciones para el modal de creación de firma
+  const handleClearSignature = () => {
+    if (sigPadRef.current) {
+      sigPadRef.current.clear();
+    }
+  };
+
+  const handleSaveFirma = async () => {
+    if (!nombre.trim()) {
+      Swal.fire('Error', 'Por favor ingresa tu nombre y apellido', 'error');
+      return;
+    }
+    if (!dni.trim()) {
+      Swal.fire('Error', 'Por favor ingresa tu DNI', 'error');
+      return;
+    }
+    if ((!sigPadRef.current || sigPadRef.current.isEmpty()) && !signatureData) {
+      Swal.fire('Error', 'Por favor dibuja tu firma antes de guardar', 'error');
+      return;
+    }
+    
+    setIsSaving(true);
+    try {
+      const signatureDataUrl = sigPadRef.current && !sigPadRef.current.isEmpty()
+        ? sigPadRef.current.getTrimmedCanvas().toDataURL('image/png')
+        : signatureData;
+      
+      const nombreFormateado = capitalizeWords(nombre.trim());
+      
+      await updateUserProfile({
+        firmaDigital: signatureDataUrl,
+        firmaActualizada: new Date().toISOString(),
+        nombre: nombreFormateado,
+        dni: dni.trim(),
+        telefono: telefono.trim()
+      });
+      
+      // Aplicar la firma inmediatamente
+      setFirmaAuditorURL(signatureDataUrl);
+      setFirmaAuditorAutoAplicada(false); // No es automática, es manual
+      if (onSaveFirmaAuditor) {
+        onSaveFirmaAuditor(signatureDataUrl);
+      }
+      
+      setModalCrearFirmaAbierto(false);
+      Swal.fire('Éxito', 'Firma creada y aplicada correctamente', 'success');
+    } catch (error) {
+      console.error('Error al guardar firma:', error);
+      Swal.fire('Error', 'Error al guardar la firma', 'error');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleFileUpload = (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      Swal.fire('Error', 'Por favor selecciona un archivo de imagen', 'error');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      setSignatureData(e.target.result);
+    };
+    reader.readAsDataURL(file);
+  };
+
   // Estilos específicos para el PDF
   const pdfStyle = isPdf ? {
     width: '50%', // Ajusta el ancho para el PDF
@@ -63,7 +171,8 @@ const FirmaSection = ({
     padding: '10px 0', // Ajusta el padding
   } : {};
 
-  const firmasCompletadas = firmaAuditorURL && firmaResponsableURL;
+  // Solo la firma del auditor es obligatoria
+  const firmasCompletadas = firmaAuditorURL;
 
   return (
     <Box>
@@ -156,13 +265,22 @@ const FirmaSection = ({
                     : 'No tienes una firma configurada en tu perfil'
                   }
                 </Typography>
-                {userProfile?.firmaDigital && (
+                {userProfile?.firmaDigital ? (
                   <Button
                     variant="contained"
                     startIcon={<CheckCircle />}
                     onClick={() => handleSaveFirmaAuditor(userProfile.firmaDigital)}
                   >
                     Aplicar Firma del Perfil
+                  </Button>
+                ) : (
+                  <Button
+                    variant="contained"
+                    startIcon={<Edit />}
+                    onClick={() => setModalCrearFirmaAbierto(true)}
+                    color="primary"
+                  >
+                    Crear Firma Digital
                   </Button>
                 )}
               </Box>
@@ -266,6 +384,150 @@ const FirmaSection = ({
         onSaveFirmaResponsable={handleSaveFirmaResponsable}
         firmaResponsable={firmaResponsableURL}
       />
+
+      {/* Modal para crear firma */}
+      <Dialog 
+        open={modalCrearFirmaAbierto} 
+        onClose={() => setModalCrearFirmaAbierto(false)}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>
+          <Typography variant="h6" sx={{ fontWeight: 600 }}>
+            Crear Firma Digital
+          </Typography>
+        </DialogTitle>
+        <DialogContent>
+          <Grid container spacing={3}>
+            <Grid item xs={12} md={6}>
+              <Card>
+                <CardContent>
+                  <Typography variant="subtitle1" gutterBottom>
+                    Datos Personales
+                  </Typography>
+                  <TextField
+                    fullWidth
+                    label="Nombre y Apellido"
+                    value={nombre}
+                    onChange={(e) => setNombre(e.target.value)}
+                    margin="normal"
+                    required
+                    placeholder="Ingresa tu nombre y apellido"
+                  />
+                  <TextField
+                    fullWidth
+                    label="DNI"
+                    value={dni}
+                    onChange={(e) => setDni(e.target.value)}
+                    margin="normal"
+                    required
+                    placeholder="Ingresa tu DNI"
+                  />
+                  <TextField
+                    fullWidth
+                    label="Teléfono (opcional)"
+                    value={telefono}
+                    onChange={(e) => setTelefono(e.target.value)}
+                    margin="normal"
+                    placeholder="Ingresa tu teléfono"
+                  />
+                </CardContent>
+              </Card>
+            </Grid>
+            
+            <Grid item xs={12} md={6}>
+              <Card>
+                <CardContent>
+                  <Typography variant="subtitle1" gutterBottom>
+                    Dibuja tu Firma
+                  </Typography>
+                  <Paper 
+                    elevation={2} 
+                    sx={{ 
+                      border: '2px solid #e0e0e0',
+                      backgroundColor: '#fff',
+                      mb: 2
+                    }}
+                  >
+                    <SignaturePad
+                      ref={sigPadRef}
+                      canvasProps={{
+                        width: 400,
+                        height: 200,
+                        className: 'signature-canvas'
+                      }}
+                      backgroundColor="#ffffff"
+                    />
+                  </Paper>
+                  <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 2 }}>
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      startIcon={<Clear />}
+                      onClick={handleClearSignature}
+                    >
+                      Limpiar
+                    </Button>
+                    <input
+                      accept="image/*"
+                      style={{ display: 'none' }}
+                      id="firma-file-upload-modal"
+                      type="file"
+                      onChange={handleFileUpload}
+                    />
+                    <label htmlFor="firma-file-upload-modal">
+                      <Button
+                        variant="outlined"
+                        component="span"
+                        startIcon={<Upload />}
+                        size="small"
+                      >
+                        Subir Imagen
+                      </Button>
+                    </label>
+                  </Box>
+                  {signatureData && (
+                    <Box sx={{ mt: 2 }}>
+                      <Typography variant="body2" color="text.secondary" gutterBottom>
+                        Vista previa:
+                      </Typography>
+                      <img 
+                        src={signatureData} 
+                        alt="Vista previa de firma" 
+                        style={{ 
+                          maxWidth: '100%', 
+                          maxHeight: '80px',
+                          objectFit: 'contain',
+                          border: '1px solid #e0e0e0',
+                          borderRadius: '4px',
+                          padding: '4px',
+                          backgroundColor: '#fff'
+                        }} 
+                      />
+                    </Box>
+                  )}
+                </CardContent>
+              </Card>
+            </Grid>
+          </Grid>
+        </DialogContent>
+        <DialogActions>
+          <Button 
+            onClick={() => setModalCrearFirmaAbierto(false)}
+            color="inherit"
+          >
+            Cancelar
+          </Button>
+          <Button 
+            onClick={handleSaveFirma}
+            variant="contained"
+            startIcon={<Save />}
+            disabled={isSaving}
+          >
+            {isSaving ? 'Guardando...' : 'Guardar y Aplicar Firma'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

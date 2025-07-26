@@ -1,183 +1,185 @@
-import React, { useState, useEffect } from "react";
-import { collection, getDocs, query, where, doc, updateDoc } from "firebase/firestore";
+import React, { useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
+import { 
+  Container, 
+  Typography, 
+  Box, 
+  Button,
+  Alert,
+  Snackbar,
+  Alert as MuiAlert,
+  Button as MuiButton,
+  useTheme,
+  alpha,
+  Fade,
+  Grid,
+  Card,
+  CardContent,
+  Chip,
+  LinearProgress
+} from "@mui/material";
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import Swal from 'sweetalert2';
+import { useAuth } from "../../../context/AuthContext";
+import { doc, updateDoc } from "firebase/firestore";
 import { db } from "../../../../firebaseConfig";
+
+// Hooks personalizados
+import { useAuditoriaState } from "./hooks/useAuditoriaState";
+import { useAuditoriaData } from "./hooks/useAuditoriaData";
+
+// Componentes
+import AuditoriaStepper from "./components/AuditoriaStepper";
+import AuditoriaCompletada from "./components/AuditoriaCompletada";
+
+// Servicios
+import AuditoriaService from "../auditoriaService";
+import { buildReporteMetadata } from '../../../../services/useMetadataService';
+
+// Componentes de pasos
 import SeleccionEmpresa from "./SeleccionEmpresa";
 import SeleccionSucursal from "./SeleccionSucursal";
 import SeleccionFormulario from "./SeleccionFormulario";
 import PreguntasYSeccion from "./PreguntasYSeccion";
 import FirmaSection from "../reporte/FirmaSection";
 import BotonGenerarReporte from "../reporte/ReporteImprimir";
-import { 
-  Typography, 
-  Grid, 
-  Alert, 
-  Box, 
-  Button, 
-  Paper, 
-  Container, 
-  IconButton, 
-  Divider,
-  Stepper,
-  Step,
-  StepLabel,
-  StepContent,
-  Card,
-  CardContent,
-  Chip,
-  LinearProgress,
-  Fade,
-  Zoom,
-  useTheme,
-  alpha,
-  Snackbar,
-  Alert as MuiAlert,
-  Button as MuiButton
-} from "@mui/material";
-import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import ReporteConImpresion from '../reporte/ReporteDetalleConImpresion';
+
+// Iconos para los pasos
 import BusinessIcon from '@mui/icons-material/Business';
-import LocationOnIcon from '@mui/icons-material/LocationOn';
 import AssignmentIcon from '@mui/icons-material/Assignment';
 import QuestionAnswerIcon from '@mui/icons-material/QuestionAnswer';
 import AssessmentIcon from '@mui/icons-material/Assessment';
-import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import EditIcon from '@mui/icons-material/Edit';
-import { useNavigate, useLocation } from "react-router-dom";
-import { useAuth } from "../../../context/AuthContext";
-import Swal from 'sweetalert2';
-import ReporteConImpresion from '../reporte/ReporteDetalleConImpresion';
+import LocationOnIcon from '@mui/icons-material/LocationOn';
+import { Fade as MuiFade, Zoom } from "@mui/material";
 
-const Auditoria = () => {
+const AuditoriaRefactorizada = () => {
   const theme = useTheme();
-  const { userProfile, userEmpresas, canViewEmpresa, userFormularios } = useAuth();
-  const [empresaSeleccionada, setEmpresaSeleccionada] = useState(null);
-  const [sucursalSeleccionada, setSucursalSeleccionada] = useState("");
-  const [formularioSeleccionadoId, setFormularioSeleccionadoId] = useState("");
-  const [secciones, setSecciones] = useState([]);
-  const [respuestas, setRespuestas] = useState([]);
-  const [comentarios, setComentarios] = useState([]);
-  const [imagenes, setImagenes] = useState([]);
-  const [mostrarReporte, setMostrarReporte] = useState(false);
-  const [errores, setErrores] = useState([]);
-  const [empresas, setEmpresas] = useState([]);
-  const [sucursales, setSucursales] = useState([]);
-  const [formularios, setFormularios] = useState([]);
-  const [auditoriaGenerada, setAuditoriaGenerada] = useState(false);
-  const [activeStep, setActiveStep] = useState(0);
   const navigate = useNavigate();
   const location = useLocation();
-  const [bloquearDatosAgenda, setBloquearDatosAgenda] = useState(!!location.state?.auditoriaId);
-  const [openAlertaEdicion, setOpenAlertaEdicion] = useState(false);
-  const [auditoriaIdAgenda, setAuditoriaIdAgenda] = useState(location.state?.auditoriaId || null);
-  const [snackbarMsg, setSnackbarMsg] = useState("");
-  const [snackbarType, setSnackbarType] = useState("info");
-  const [snackbarOpen, setSnackbarOpen] = useState(false);
-  // Agregar estado para errores de navegación
-  const [navegacionError, setNavegacionError] = useState("");
-  
-  // Estados para las firmas digitales
-  const [firmaAuditor, setFirmaAuditor] = useState(null);
-  const [firmaResponsable, setFirmaResponsable] = useState(null);
-  const [firmasCompletadas, setFirmasCompletadas] = useState(false);
+  const { userProfile, userEmpresas, userFormularios } = useAuth();
 
-  // Estados para rastrear cambios y reiniciar firmas
-  const [auditoriaHash, setAuditoriaHash] = useState('');
-  const [firmasValidas, setFirmasValidas] = useState(false);
-  const [mostrarAlertaReinicio, setMostrarAlertaReinicio] = useState(false);
+  // Hook para manejar todo el estado
+  const auditoriaState = useAuditoriaState();
+  const {
+    empresaSeleccionada, setEmpresaSeleccionada,
+    sucursalSeleccionada, setSucursalSeleccionada,
+    formularioSeleccionadoId, setFormularioSeleccionadoId,
+    secciones, setSecciones,
+    respuestas, setRespuestas,
+    comentarios, setComentarios,
+    imagenes, setImagenes,
+    mostrarReporte, setMostrarReporte,
+    errores, setErrores,
+    empresas, setEmpresas,
+    sucursales, setSucursales,
+    formularios, setFormularios,
+    auditoriaGenerada, setAuditoriaGenerada,
+    activeStep, setActiveStep,
+    bloquearDatosAgenda, setBloquearDatosAgenda,
+    openAlertaEdicion, setOpenAlertaEdicion,
+    auditoriaIdAgenda, setAuditoriaIdAgenda,
+    snackbarMsg, setSnackbarMsg,
+    snackbarType, setSnackbarType,
+    snackbarOpen, setSnackbarOpen,
+    navegacionError, setNavegacionError,
+    firmaAuditor, setFirmaAuditor,
+    firmaResponsable, setFirmaResponsable,
+    firmasCompletadas, setFirmasCompletadas,
+    firmasValidas, setFirmasValidas,
+    mostrarAlertaReinicio, setMostrarAlertaReinicio,
+    log,
+    reiniciarAuditoria,
+    generarHashAuditoria
+  } = auditoriaState;
 
-  // Helper para logs
-  const log = (msg, ...args) => {
-    // eslint-disable-next-line no-console
-    console.log(`[AUDITORIA] ${msg}`, ...args);
+  // Hook para cargar datos
+  useAuditoriaData(
+    setEmpresas,
+    setSucursales,
+    setFormularios,
+    empresaSeleccionada,
+    userProfile,
+    userEmpresas,
+    userFormularios
+  );
+
+  // Funciones de manejo de datos
+  const handleEmpresaChange = (selectedEmpresa) => {
+    setEmpresaSeleccionada(selectedEmpresa);
+    setSucursalSeleccionada("");
+    setFormularioSeleccionadoId("");
+    setActiveStep(0);
   };
 
-  // Función para generar hash de la auditoría (para detectar cambios)
-  const generarHashAuditoria = () => {
-    const datos = {
-      empresa: empresaSeleccionada?.id,
-      sucursal: sucursalSeleccionada,
-      formulario: formularioSeleccionadoId,
-      respuestas: JSON.stringify(respuestas),
-      comentarios: JSON.stringify(comentarios),
-      imagenes: imagenes.length // Solo contamos cantidad, no contenido
-    };
-    return btoa(JSON.stringify(datos)); // Hash simple en base64
+  const handleSucursalChange = (e) => {
+    setSucursalSeleccionada(e.target.value);
   };
 
-  // Función para reiniciar firmas
-  const reiniciarFirmas = () => {
-    console.log('[DEBUG] Reiniciando firmas debido a cambios en las respuestas de la auditoría');
-    setFirmaAuditor(null);
-    setFirmaResponsable(null);
-    setFirmasCompletadas(false);
-    setFirmasValidas(false);
-    setMostrarAlertaReinicio(true);
-    
-    // Ocultar alerta después de 5 segundos
-    setTimeout(() => {
-      setMostrarAlertaReinicio(false);
-    }, 5000);
+  const handleSeleccionarFormulario = (e) => {
+    setFormularioSeleccionadoId(e.target.value);
+    setActiveStep(1);
   };
 
-  // Verificar cambios en la auditoría y reiniciar firmas si es necesario
+  const handleGuardarRespuestas = (nuevasRespuestas) => {
+    setRespuestas(nuevasRespuestas);
+  };
+
+  const handleGuardarComentario = (nuevosComentarios) => {
+    setComentarios(nuevosComentarios);
+  };
+
+  const handleGuardarImagenes = (nuevasImagenes) => {
+    setImagenes(nuevasImagenes);
+  };
+
+  const handleSaveFirmaAuditor = (firmaURL) => {
+    console.log('[DEBUG] handleSaveFirmaAuditor llamado con:', firmaURL);
+    setFirmaAuditor(firmaURL);
+    verificarFirmasCompletadas();
+  };
+
+  const handleSaveFirmaResponsable = (firmaURL) => {
+    setFirmaResponsable(firmaURL);
+    verificarFirmasCompletadas();
+  };
+
+  const verificarFirmasCompletadas = () => {
+    const completadas = firmaAuditor;
+    console.log('[DEBUG] Verificando firmas:', { firmaAuditor, firmaResponsable, completadas });
+    setFirmasCompletadas(completadas);
+  };
+
+  // Verificar firmas cuando cambien
   useEffect(() => {
-    const nuevoHash = generarHashAuditoria();
-    
-    // Solo reiniciar si hay firmas válidas y se detectan cambios
-    if (auditoriaHash && auditoriaHash !== nuevoHash && firmasValidas) {
-      console.log('[DEBUG] Cambios detectados en las respuestas, reiniciando firmas');
-      reiniciarFirmas();
-    }
-    
-    setAuditoriaHash(nuevoHash);
-  }, [empresaSeleccionada, sucursalSeleccionada, formularioSeleccionadoId, respuestas, comentarios, imagenes]);
+    console.log('[DEBUG] useEffect firmas - firmaAuditor:', firmaAuditor, 'firmaResponsable:', firmaResponsable);
+    verificarFirmasCompletadas();
+  }, [firmaAuditor, firmaResponsable]);
 
-  // Marcar firmas como válidas cuando se completan
-  useEffect(() => {
-    if (firmaAuditor) {
-      setFirmasValidas(true);
-    }
-  }, [firmaAuditor]);
-
-  // Función para marcar auditoría como completada en Firestore
-  const marcarAuditoriaCompletada = async () => {
-    try {
-      if (auditoriaIdAgenda) {
-        await updateDoc(doc(db, "auditorias", auditoriaIdAgenda), { estado: "completada" });
-        log("Auditoría agendada (ID: %s) marcada como completada.", auditoriaIdAgenda);
-        setSnackbarMsg("Auditoría agendada marcada como completada.");
-        setSnackbarType("success");
-        setSnackbarOpen(true);
-      } else {
-        // Buscar si existe una auditoría agendada para los mismos datos y fecha
-        const q = query(
-          collection(db, "auditorias"),
-          where("empresa", "==", empresaSeleccionada?.nombre),
-          where("sucursal", "==", sucursalSeleccionada),
-          where("formularioId", "==", formularioSeleccionadoId),
-          where("fecha", "==", location.state?.fecha || null)
-        );
-        const snapshot = await getDocs(q);
-        if (!snapshot.empty) {
-          snapshot.forEach(async (docu) => {
-            await updateDoc(doc(db, "auditorias", docu.id), { estado: "completada" });
-            log("Auditoría agendada encontrada (ID: %s) y marcada como completada.", docu.id);
-          });
-          setSnackbarMsg("Auditoría agendada encontrada y marcada como completada.");
-          setSnackbarType("success");
-          setSnackbarOpen(true);
-        } else {
-          log("No se encontró auditoría agendada para marcar como completada.");
-        }
-      }
-    } catch (error) {
-      log("Error al marcar auditoría como completada:", error);
-      setSnackbarMsg("Error al marcar auditoría como completada.");
-      setSnackbarType("error");
-      setSnackbarOpen(true);
-    }
+  // Funciones de validación
+  const todasLasPreguntasContestadas = () => {
+    return respuestas.every(seccionRespuestas => 
+      seccionRespuestas.every(respuesta => respuesta !== '')
+    );
   };
 
-  // Calcular progreso de la auditoría
+  const obtenerTipoUbicacion = () => {
+    if (!empresaSeleccionada) return "";
+    
+    if (sucursales.length === 0) {
+      return "Casa Central";
+    }
+    
+    if (sucursalSeleccionada && sucursalSeleccionada !== "Sin sucursal específica") {
+      return `Sucursal: ${sucursalSeleccionada}`;
+    }
+    
+    return "Casa Central";
+  };
+
+  // Funciones de navegación
   const calcularProgreso = () => {
     let progreso = 0;
     if (empresaSeleccionada) progreso += 20;
@@ -188,7 +190,6 @@ const Auditoria = () => {
     return progreso;
   };
 
-  // Obtener estado del paso actual
   const getStepStatus = (step) => {
     switch (step) {
       case 0: return empresaSeleccionada ? 'completed' : 'active';
@@ -200,23 +201,21 @@ const Auditoria = () => {
     }
   };
 
-  // Validar si el paso actual está completo
   const pasoCompleto = (step) => {
-    switch (step) {
-      case 0:
-        return !!empresaSeleccionada;
-      case 1:
-        return !!formularioSeleccionadoId;
-      case 2:
-        return todasLasPreguntasContestadas();
-      case 3:
-        return firmasCompletadas;
-      default:
-        return false;
-    }
+    const resultado = (() => {
+      switch (step) {
+        case 0: return !!empresaSeleccionada;
+        case 1: return !!formularioSeleccionadoId;
+        case 2: return todasLasPreguntasContestadas();
+        case 3: return firmasCompletadas;
+        default: return false;
+      }
+    })();
+    
+    console.log(`[DEBUG] Paso ${step} completo:`, resultado);
+    return resultado;
   };
 
-  // Manejar avance manual
   const handleSiguiente = () => {
     setNavegacionError("");
     if (!pasoCompleto(activeStep)) {
@@ -229,8 +228,6 @@ const Auditoria = () => {
   const handleAnterior = () => {
     setNavegacionError("");
     
-    // Solo mostrar advertencia si hay firmas válidas
-    // Las firmas se mantendrán si no se hacen cambios
     if (firmasValidas && activeStep > 0) {
       Swal.fire({
         title: '⚠️ Información',
@@ -252,11 +249,9 @@ const Auditoria = () => {
     setActiveStep((prev) => Math.max(prev - 1, 0));
   };
 
-  // Permitir navegación directa en el stepper solo si los pasos previos están completos
   const handleStepClick = (index) => {
     setNavegacionError("");
     
-    // Solo permitir si todos los pasos previos están completos
     for (let i = 0; i < index; i++) {
       if (!pasoCompleto(i)) {
         setNavegacionError("Completa los pasos anteriores antes de avanzar.");
@@ -264,8 +259,6 @@ const Auditoria = () => {
       }
     }
 
-    // Solo mostrar advertencia si hay firmas válidas y se está navegando hacia atrás
-    // Las firmas se mantendrán si no se hacen cambios
     if (firmasValidas && index < activeStep) {
       Swal.fire({
         title: '⚠️ Información',
@@ -287,110 +280,187 @@ const Auditoria = () => {
     setActiveStep(index);
   };
 
-  // Manejar guardado de firmas
-  const handleSaveFirmaAuditor = (firmaURL) => {
-    setFirmaAuditor(firmaURL);
-    verificarFirmasCompletadas();
-  };
-
-  const handleSaveFirmaResponsable = (firmaURL) => {
-    setFirmaResponsable(firmaURL);
-    verificarFirmasCompletadas();
-  };
-
-  const verificarFirmasCompletadas = () => {
-    // Solo la firma del auditor es obligatoria
-    const completadas = firmaAuditor; // Removido firmaResponsable de la validación
-    setFirmasCompletadas(completadas);
-  };
-
-  // Verificar firmas cuando cambien
-  useEffect(() => {
-    verificarFirmasCompletadas();
-  }, [firmaAuditor, firmaResponsable]);
-
-  // Usar empresas del contexto
-  useEffect(() => {
-    if (userEmpresas && userEmpresas.length > 0) {
-      setEmpresas(userEmpresas);
-      console.log('[DEBUG Auditoria] Empresas desde contexto:', userEmpresas);
+  // Funciones de auditoría
+  const generarReporte = () => {
+    if (!todasLasPreguntasContestadas()) {
+      setErrores(["Por favor, responda todas las preguntas antes de generar el reporte."]);
+      return;
     }
-  }, [userEmpresas]);
+    
+    if (!firmaAuditor) {
+      setErrores(["Por favor, complete la firma del auditor antes de generar el reporte."]);
+      return;
+    }
+    
+    setMostrarReporte(true);
+    setErrores([]);
+    setAuditoriaGenerada(true);
+    setActiveStep(4);
+  };
 
-  useEffect(() => {
-    const obtenerSucursales = async () => {
-      if (empresaSeleccionada) {
-        try {
-          const sucursalesCollection = collection(db, "sucursales");
-          const q = query(sucursalesCollection, where("empresa", "==", empresaSeleccionada.nombre));
-          const snapshot = await getDocs(q);
-          const sucursalesData = snapshot.docs.map((doc) => ({
-            id: doc.id,
-            nombre: doc.data().nombre,
-          }));
-          setSucursales(sucursalesData);
-        } catch (error) {
-          console.error("Error al obtener sucursales:", error);
-        }
-      } else {
-        setSucursales([]);
+  const generarNuevaAuditoria = () => {
+    reiniciarAuditoria();
+    navigate('/auditoria', { replace: true });
+    log("Nueva auditoría iniciada - todos los estados reiniciados");
+  };
+
+  const handleFinalizar = async () => {
+    await marcarAuditoriaCompletada();
+    setAuditoriaGenerada(true);
+  };
+
+  // Función para marcar auditoría como completada
+  const marcarAuditoriaCompletada = async () => {
+    try {
+      if (auditoriaIdAgenda) {
+        await updateDoc(doc(db, "auditorias", auditoriaIdAgenda), { estado: "completada" });
+        log("Auditoría agendada (ID: %s) marcada como completada.", auditoriaIdAgenda);
+        setSnackbarMsg("Auditoría agendada marcada como completada.");
+        setSnackbarType("success");
+        setSnackbarOpen(true);
       }
-    };
-
-    obtenerSucursales();
-  }, [empresaSeleccionada]);
-
-  // Usar formularios del contexto si existen
-  useEffect(() => {
-    if (userFormularios && userFormularios.length > 0) {
-      setFormularios(userFormularios);
-      console.log('[DEBUG Auditoria] Formularios desde contexto:', userFormularios);
+    } catch (error) {
+      log("Error al marcar auditoría como completada:", error);
+      setSnackbarMsg("Error al marcar auditoría como completada.");
+      setSnackbarType("error");
+      setSnackbarOpen(true);
     }
-  }, [userFormularios]);
+  };
 
-  // Mantener la consulta a Firestore solo si userFormularios no está disponible
-  useEffect(() => {
-    if (!userFormularios || userFormularios.length === 0) {
-      const obtenerFormularios = async () => {
-        try {
-          if (!userProfile) return;
-          const formulariosCollection = collection(db, "formularios");
-          const snapshot = await getDocs(formulariosCollection);
-          const todosLosFormularios = snapshot.docs.map((doc) => ({
-            id: doc.id,
-            nombre: doc.data().nombre,
-            secciones: doc.data().secciones,
-            creadorId: doc.data().creadorId,
-            creadorEmail: doc.data().creadorEmail,
-            esPublico: doc.data().esPublico,
-            permisos: doc.data().permisos,
-            clienteAdminId: doc.data().clienteAdminId
-          }));
-          // Filtrar formularios por permisos multi-tenant
-          const formulariosPermitidos = todosLosFormularios.filter(formulario => {
-            if (userProfile.role === 'supermax') return true;
-            if (userProfile.role === 'max') {
-              return formulario.clienteAdminId === userProfile.uid || 
-                     formulario.creadorId === userProfile.uid;
-            }
-            if (userProfile.role === 'operario') {
-              return formulario.creadorId === userProfile.uid ||
-                     formulario.clienteAdminId === userProfile.clienteAdminId ||
-                     formulario.esPublico ||
-                     formulario.permisos?.puedeVer?.includes(userProfile.uid);
-            }
-            return false;
+  // Función para generar contenido de impresión
+  const generarContenidoImpresion = () => {
+    const fecha = new Date().toLocaleDateString('es-ES');
+    const hora = new Date().toLocaleTimeString('es-ES');
+    
+    let contenido = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="UTF-8">
+        <title>Auditoría - ${empresaSeleccionada?.nombre || 'Empresa'}</title>
+        <style>
+          @media print {
+            body { margin: 0; padding: 20px; font-family: Arial, sans-serif; }
+            .header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #333; padding-bottom: 20px; }
+            .empresa-info { margin-bottom: 20px; }
+            .seccion { margin-bottom: 30px; page-break-inside: avoid; }
+            .seccion h3 { color: #333; border-bottom: 1px solid #ccc; padding-bottom: 5px; }
+            .pregunta { margin-bottom: 15px; page-break-inside: avoid; }
+            .pregunta-texto { font-weight: bold; margin-bottom: 5px; }
+            .respuesta { margin-left: 20px; margin-bottom: 5px; }
+            .comentario { margin-left: 20px; font-style: italic; color: #666; }
+            .imagen { max-width: 200px; max-height: 150px; margin: 10px 0; }
+            .firmas { margin-top: 30px; display: flex; justify-content: space-between; }
+            .firma { text-align: center; width: 45%; }
+            .firma img { max-width: 200px; max-height: 100px; border: 1px solid #ccc; }
+            .footer { margin-top: 30px; text-align: center; font-size: 12px; color: #666; }
+            @page { margin: 1cm; }
+            .no-print, button, .MuiButton-root { display: none !important; }
+          }
+          body { font-family: Arial, sans-serif; line-height: 1.6; }
+          .header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #333; padding-bottom: 20px; }
+          .empresa-info { margin-bottom: 20px; }
+          .seccion { margin-bottom: 30px; }
+          .seccion h3 { color: #333; border-bottom: 1px solid #ccc; padding-bottom: 5px; }
+          .pregunta { margin-bottom: 15px; }
+          .pregunta-texto { font-weight: bold; margin-bottom: 5px; }
+          .respuesta { margin-left: 20px; margin-bottom: 5px; }
+          .comentario { margin-left: 20px; font-style: italic; color: #666; }
+          .imagen { max-width: 200px; max-height: 150px; margin: 10px 0; }
+          .firmas { margin-top: 30px; display: flex; justify-content: space-between; }
+          .firma { text-align: center; width: 45%; }
+          .firma img { max-width: 200px; max-height: 100px; border: 1px solid #ccc; }
+          .footer { margin-top: 30px; text-align: center; font-size: 12px; color: #666; }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <h1>REPORTE DE AUDITORÍA</h1>
+          <p><strong>Fecha:</strong> ${fecha} | <strong>Hora:</strong> ${hora}</p>
+        </div>
+        
+        <div class="empresa-info">
+          <h2>Información de la Auditoría</h2>
+          <p><strong>Empresa:</strong> ${empresaSeleccionada?.nombre || 'No especificada'}</p>
+          <p><strong>Ubicación:</strong> ${sucursalSeleccionada && sucursalSeleccionada.trim() !== "" ? sucursalSeleccionada : 'Casa Central'}</p>
+          <p><strong>Formulario:</strong> ${formularios.find(f => f.id === formularioSeleccionadoId)?.nombre || 'No especificado'}</p>
+          <p><strong>Auditor:</strong> ${userProfile?.displayName || userProfile?.email || 'Usuario'}</p>
+        </div>
+    `;
+
+    // Agregar secciones y preguntas
+    if (secciones && secciones.length > 0) {
+      secciones.forEach((seccion, seccionIndex) => {
+        contenido += `
+          <div class="seccion">
+            <h3>${seccion.nombre}</h3>
+        `;
+
+        if (seccion.preguntas && seccion.preguntas.length > 0) {
+          seccion.preguntas.forEach((pregunta, preguntaIndex) => {
+            const respuesta = respuestas[seccionIndex]?.[preguntaIndex] || 'No respondida';
+            const comentario = comentarios[seccionIndex]?.[preguntaIndex] || '';
+            const imagen = imagenes[seccionIndex]?.[preguntaIndex];
+
+            contenido += `
+              <div class="pregunta">
+                <div class="pregunta-texto">${preguntaIndex + 1}. ${pregunta}</div>
+                <div class="respuesta"><strong>Respuesta:</strong> ${respuesta}</div>
+                ${comentario && comentario.trim() !== '' ? `<div class="comentario"><strong>Comentario:</strong> ${comentario}</div>` : ''}
+                ${imagen && imagen instanceof File ? `<div class="imagen"><img src="${URL.createObjectURL(imagen)}" alt="Imagen de la pregunta" style="max-width: 200px; max-height: 150px;" /></div>` : ''}
+              </div>
+            `;
           });
-          setFormularios(formulariosPermitidos);
-          console.log(`[DEBUG Auditoria] Formularios permitidos: ${formulariosPermitidos.length} de ${todosLosFormularios.length}`);
-        } catch (error) {
-          console.error("Error al obtener formularios:", error);
         }
-      };
-      obtenerFormularios();
-    }
-  }, [userProfile, userFormularios]);
 
+        contenido += `</div>`;
+      });
+    }
+
+    // Agregar sección de firmas
+    contenido += `
+        <div class="firmas">
+          <div class="firma">
+            <h4>Firma del Auditor</h4>
+            ${firmaAuditor ? `<img src="${firmaAuditor}" alt="Firma del Auditor" />` : '<p>Sin firma</p>'}
+            <p><strong>${userProfile?.displayName || userProfile?.email || 'Usuario'}</strong></p>
+          </div>
+          <div class="firma">
+            <h4>Firma del Responsable</h4>
+            ${firmaResponsable ? `<img src="${firmaResponsable}" alt="Firma del Responsable" />` : '<p>Sin firma</p>'}
+            <p><strong>Responsable de la Empresa</strong></p>
+          </div>
+        </div>
+    `;
+
+    contenido += `
+        <div class="footer">
+          <p>Reporte generado el ${fecha} a las ${hora}</p>
+          <p>Auditoría realizada por: ${userProfile?.displayName || userProfile?.email || 'Usuario'}</p>
+        </div>
+      </body>
+      </html>
+    `;
+
+    return contenido;
+  };
+
+  // Función para abrir impresión nativa
+  const abrirImpresionNativa = () => {
+    const contenido = generarContenidoImpresion();
+    const nuevaVentana = window.open('', '_blank', 'width=800,height=600');
+    
+    nuevaVentana.document.write(contenido);
+    nuevaVentana.document.close();
+    
+    nuevaVentana.onload = () => {
+      setTimeout(() => {
+        nuevaVentana.print();
+      }, 500);
+    };
+  };
+
+  // Configurar secciones cuando cambie el formulario
   useEffect(() => {
     if (formularioSeleccionadoId) {
       const formularioSeleccionado = formularios.find((formulario) => formulario.id === formularioSeleccionadoId);
@@ -414,117 +484,58 @@ const Auditoria = () => {
     }
   }, [formularioSeleccionadoId, formularios]);
 
+  // Configurar datos de agenda
   useEffect(() => {
-    if (empresaSeleccionada) {
-      setSucursalSeleccionada("");
+    if (
+      location.state?.empresa &&
+      empresas.length > 0 &&
+      !empresaSeleccionada
+    ) {
+      const empresa = empresas.find(e => e.id === location.state.empresa || e.nombre === location.state.empresa);
+      if (empresa) {
+        setEmpresaSeleccionada(empresa);
+        console.log('[DEBUG Auditoria] Empresa seleccionada por agenda:', empresa);
+      }
     }
-  }, [empresaSeleccionada]);
+    
+    if (
+      location.state?.sucursal &&
+      sucursales.length > 0 &&
+      !sucursalSeleccionada
+    ) {
+      const sucursal = sucursales.find(s => s.id === location.state.sucursal || s.nombre === location.state.sucursal);
+      if (sucursal) {
+        setSucursalSeleccionada(sucursal.nombre);
+        console.log('[DEBUG Auditoria] Sucursal seleccionada por agenda:', sucursal);
+      } else {
+        setSucursalSeleccionada(location.state.sucursal);
+      }
+    }
+  }, [location.state, empresas, sucursales, empresaSeleccionada, sucursalSeleccionada]);
 
+  // Salto automático al paso 2 si viene de la agenda
   useEffect(() => {
-    if (empresaSeleccionada && sucursales.length === 0) {
-      setSucursalSeleccionada("Sin sucursal específica");
-    } else if (empresaSeleccionada && sucursales.length > 0 && sucursalSeleccionada === "Sin sucursal específica") {
-      setSucursalSeleccionada("");
+    if (
+      location.state?.empresa &&
+      location.state?.formularioId &&
+      empresaSeleccionada &&
+      sucursalSeleccionada &&
+      formularioSeleccionadoId &&
+      activeStep === 0
+    ) {
+      setActiveStep(1);
+      console.log('[DEBUG Auditoria] Salto automático al paso 2 por agenda');
     }
-  }, [empresaSeleccionada, sucursales.length, sucursalSeleccionada]);
+  }, [location.state, empresaSeleccionada, sucursalSeleccionada, formularioSeleccionadoId, activeStep]);
 
-  const handleEmpresaChange = (selectedEmpresa) => {
-    setEmpresaSeleccionada(selectedEmpresa);
-    setSucursalSeleccionada("");
-    setFormularioSeleccionadoId("");
-    setActiveStep(0);
-  };
-
-  const handleSucursalChange = (e) => {
-    setSucursalSeleccionada(e.target.value);
-  };
-
-  const handleSeleccionarFormulario = (e) => {
-    setFormularioSeleccionadoId(e.target.value);
-    setActiveStep(1);
-  };
-
-  const obtenerTipoUbicacion = () => {
-    if (!empresaSeleccionada) return "";
-    
-    if (sucursales.length === 0) {
-      return "Casa Central";
-    }
-    
-    if (sucursalSeleccionada && sucursalSeleccionada !== "Sin sucursal específica") {
-      return `Sucursal: ${sucursalSeleccionada}`;
-    }
-    
-    return "Casa Central";
-  };
-
-  const handleGuardarRespuestas = (nuevasRespuestas) => {
-    setRespuestas(nuevasRespuestas);
-  };
-
-  const handleGuardarComentario = (nuevosComentarios) => {
-    setComentarios(nuevosComentarios);
-  };
-
-  const handleGuardarImagenes = (nuevasImagenes) => {
-    setImagenes(nuevasImagenes);
-  };
-
-  const todasLasPreguntasContestadas = () => {
-    return respuestas.every(seccionRespuestas => 
-      seccionRespuestas.every(respuesta => respuesta !== '')
-    );
-  };
-
-  const generarReporte = () => {
-    if (!todasLasPreguntasContestadas()) {
-      setErrores(["Por favor, responda todas las preguntas antes de generar el reporte."]);
-      return;
-    }
-    
-    if (!firmaAuditor) {
-      setErrores(["Por favor, complete la firma del auditor antes de generar el reporte."]);
-      return;
-    }
-    
-    setMostrarReporte(true);
-    setErrores([]);
-    setAuditoriaGenerada(true);
-    setActiveStep(4);
-  };
-
-  const generarNuevaAuditoria = () => {
-    setEmpresaSeleccionada(null);
-    setSucursalSeleccionada("");
-    setFormularioSeleccionadoId("");
-    setSecciones([]);
-    setRespuestas([]);
-    setComentarios([]);
-    setImagenes([]);
-    setMostrarReporte(false);
-    setAuditoriaGenerada(false);
-    setActiveStep(0);
-    setFirmaAuditor(null);
-    setFirmaResponsable(null);
-    setFirmasCompletadas(false);
-    // Reiniciar estados de hash y alertas
-    setAuditoriaHash('');
-    setFirmasValidas(false);
-    setMostrarAlertaReinicio(false);
-  };
-
-  const handleFinalizar = async () => {
-    await marcarAuditoriaCompletada();
-    setAuditoriaGenerada(true);
-  };
-
+  // Definir los pasos
   const steps = [
     {
       label: 'Empresa y Ubicación',
       description: 'Selecciona la empresa y ubicación para auditar',
       icon: <BusinessIcon />,
       content: (
-        <Fade in={true} timeout={800}>
+        <MuiFade in={true} timeout={800}>
           <Box>
             <Grid container spacing={3}>
               <Grid item xs={12} md={6}>
@@ -605,7 +616,7 @@ const Auditoria = () => {
               </Zoom>
             )}
           </Box>
-        </Fade>
+        </MuiFade>
       )
     },
     {
@@ -613,9 +624,8 @@ const Auditoria = () => {
       description: 'Elige el formulario que vas a utilizar',
       icon: <AssignmentIcon />,
       content: (
-        <Fade in={true} timeout={800}>
+        <MuiFade in={true} timeout={800}>
           <Box>
-            {console.log('[DEBUG Paso2] bloquearDatosAgenda:', bloquearDatosAgenda, 'empresaSeleccionada:', empresaSeleccionada, 'formularios:', formularios)}
             {location.state?.formularioId && (
               <Box mb={2}>
                 <Typography variant="body2" color="info.main">
@@ -659,7 +669,7 @@ const Auditoria = () => {
               </Zoom>
             )}
           </Box>
-        </Fade>
+        </MuiFade>
       )
     },
     {
@@ -667,7 +677,7 @@ const Auditoria = () => {
       description: 'Completa todas las preguntas del formulario',
       icon: <QuestionAnswerIcon />,
       content: (
-        <Fade in={true} timeout={800}>
+        <MuiFade in={true} timeout={800}>
           <Box>
             <PreguntasYSeccion
               secciones={secciones}
@@ -698,7 +708,7 @@ const Auditoria = () => {
               </Zoom>
             )}
           </Box>
-        </Fade>
+        </MuiFade>
       )
     },
     {
@@ -706,20 +716,19 @@ const Auditoria = () => {
       description: 'Firma digital de la auditoría',
       icon: <EditIcon />,
       content: (
-        <Fade in={true} timeout={800}>
+        <MuiFade in={true} timeout={800}>
           <Box>
             <FirmaSection
               onSaveFirmaAuditor={handleSaveFirmaAuditor}
               onSaveFirmaResponsable={handleSaveFirmaResponsable}
               firmaAuditor={firmaAuditor}
               firmaResponsable={firmaResponsable}
-              // Props para el resumen de auditoría
               empresa={empresaSeleccionada}
               sucursal={sucursalSeleccionada}
               formulario={formularios.find(formulario => formulario.id === formularioSeleccionadoId)}
               respuestas={respuestas}
               secciones={secciones}
-              encargado={null} // Por ahora null, se puede implementar después si es necesario
+              encargado={null}
             />
             
             {firmasCompletadas && (
@@ -741,7 +750,7 @@ const Auditoria = () => {
               </Zoom>
             )}
           </Box>
-        </Fade>
+        </MuiFade>
       )
     },
     {
@@ -749,10 +758,9 @@ const Auditoria = () => {
       description: 'Revisa y genera el reporte final',
       icon: <AssessmentIcon />,
       content: (
-        <Fade in={true} timeout={800}>
+        <MuiFade in={true} timeout={800}>
           <Box>
             <BotonGenerarReporte
-              onClick={generarReporte}
               deshabilitado={!todasLasPreguntasContestadas() || !firmasCompletadas}
               empresa={empresaSeleccionada}
               sucursal={sucursalSeleccionada}
@@ -766,62 +774,10 @@ const Auditoria = () => {
               onFinalizar={handleFinalizar}
             />
           </Box>
-        </Fade>
+        </MuiFade>
       )
     }
   ];
-
-  // DEBUG: log de empresas y empresaSeleccionada
-  useEffect(() => {
-    console.log('[DEBUG Auditoria] empresas:', empresas);
-    console.log('[DEBUG Auditoria] empresaSeleccionada:', empresaSeleccionada);
-  }, [empresas, empresaSeleccionada]);
-
-  // Forzar seteo de empresaSeleccionada cuando empresas se cargan y hay datos de la agenda
-  useEffect(() => {
-    if (
-      location.state?.empresa &&
-      empresas.length > 0 &&
-      !empresaSeleccionada
-    ) {
-      const empresa =
-        empresas.find(e => e.id === location.state.empresa || e.nombre === location.state.empresa);
-      if (empresa) {
-        setEmpresaSeleccionada(empresa);
-        console.log('[DEBUG Auditoria] Empresa seleccionada por agenda:', empresa);
-      }
-    }
-    // Lo mismo para sucursal si aplica
-    if (
-      location.state?.sucursal &&
-      sucursales.length > 0 &&
-      !sucursalSeleccionada
-    ) {
-      const sucursal =
-        sucursales.find(s => s.id === location.state.sucursal || s.nombre === location.state.sucursal);
-      if (sucursal) {
-        setSucursalSeleccionada(sucursal.nombre);
-        console.log('[DEBUG Auditoria] Sucursal seleccionada por agenda:', sucursal);
-      } else {
-        setSucursalSeleccionada(location.state.sucursal); // fallback
-      }
-    }
-  }, [location.state, empresas, sucursales, empresaSeleccionada, sucursalSeleccionada]);
-
-  // Salto automático al paso 2 si viene de la agenda y todo está preseleccionado
-  useEffect(() => {
-    if (
-      location.state?.empresa &&
-      location.state?.formularioId &&
-      empresaSeleccionada &&
-      sucursalSeleccionada &&
-      formularioSeleccionadoId &&
-      activeStep === 0
-    ) {
-      setActiveStep(1); // Paso 2 (índice base 0)
-      console.log('[DEBUG Auditoria] Salto automático al paso 2 por agenda');
-    }
-  }, [location.state, empresaSeleccionada, sucursalSeleccionada, formularioSeleccionadoId, activeStep]);
 
   return (
     <Container maxWidth="xl" sx={{ py: 4 }}>
@@ -900,138 +856,52 @@ const Auditoria = () => {
 
       {/* Contenido principal */}
       {!auditoriaGenerada ? (
-        <Box>
-          {/* Stepper vertical */}
-          <Grid container spacing={4}>
-            <Grid item xs={12} md={4}>
-              <Paper elevation={3} sx={{ p: 3, borderRadius: 3 }}>
-                <Typography variant="h6" gutterBottom sx={{ mb: 3, fontWeight: 600 }}>
-                  Progreso de la Auditoría
-                </Typography>
-                <Stepper orientation="vertical" activeStep={activeStep}>
-                  {steps.map((step, index) => (
-                    <Step key={step.label} completed={pasoCompleto(index)}>
-                      <StepLabel
-                        StepIconComponent={() => (
-                          <Box sx={{
-                            color: pasoCompleto(index)
-                              ? 'success.main'
-                              : getStepStatus(index) === 'active'
-                              ? 'primary.main'
-                              : 'text.disabled',
-                          }}>
-                            {pasoCompleto(index) ? <CheckCircleIcon color="success" /> : step.icon}
-                          </Box>
-                        )}
-                        onClick={() => handleStepClick(index)}
-                        sx={{ cursor: 'pointer' }}
-                      >
-                        <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-                          {step.label}
-                        </Typography>
-                        <Typography variant="body2" color="textSecondary">
-                          {step.description}
-                        </Typography>
-                      </StepLabel>
-                    </Step>
-                  ))}
-                </Stepper>
-              </Paper>
-            </Grid>
-            
-            <Grid item xs={12} md={8}>
-              <Paper elevation={3} sx={{ p: 4, borderRadius: 3, minHeight: '600px' }}>
-                {steps[activeStep]?.content}
-                
-                <Box display="flex" gap={2} mt={4}>
-                  <Button
-                    variant="outlined"
-                    color="primary"
-                    onClick={handleAnterior}
-                    disabled={activeStep === 0}
-                  >
-                    Anterior
-                  </Button>
-                  <Button
-                    variant="contained"
-                    color="primary"
-                    onClick={handleSiguiente}
-                    disabled={!pasoCompleto(activeStep) || activeStep === steps.length - 1}
-                  >
-                    Siguiente
-                  </Button>
-                </Box>
-
-                {navegacionError && (
-                  <Alert severity="error" sx={{ mt: 2 }}>
-                    {navegacionError}
-                  </Alert>
-                )}
-                
-                {/* Errores */}
-                {errores.length > 0 && (
-                  <Fade in={true} timeout={600}>
-                    <Alert severity="error" sx={{ mt: 3, borderRadius: 2 }}>
-                      {errores.map((error, index) => (
-                        <Typography key={index} variant="body2">
-                          {error}
-                        </Typography>
-                      ))}
-                    </Alert>
-                  </Fade>
-                )}
-              </Paper>
-            </Grid>
-          </Grid>
-        </Box>
+        <AuditoriaStepper
+          activeStep={activeStep}
+          setActiveStep={setActiveStep}
+          steps={steps}
+          pasoCompleto={pasoCompleto}
+          getStepStatus={getStepStatus}
+          handleStepClick={handleStepClick}
+          navegacionError={navegacionError}
+          errores={errores}
+          handleAnterior={handleAnterior}
+          handleSiguiente={handleSiguiente}
+          // Props para los componentes
+          empresas={empresas}
+          empresaSeleccionada={empresaSeleccionada}
+          handleEmpresaChange={handleEmpresaChange}
+          sucursales={sucursales}
+          sucursalSeleccionada={sucursalSeleccionada}
+          handleSucursalChange={handleSucursalChange}
+          bloquearDatosAgenda={bloquearDatosAgenda}
+          setOpenAlertaEdicion={setOpenAlertaEdicion}
+          formularios={formularios}
+          formularioSeleccionadoId={formularioSeleccionadoId}
+          handleSeleccionarFormulario={handleSeleccionarFormulario}
+          secciones={secciones}
+          handleGuardarRespuestas={handleGuardarRespuestas}
+          handleGuardarComentario={handleGuardarComentario}
+          handleGuardarImagenes={handleGuardarImagenes}
+          respuestas={respuestas}
+          comentarios={comentarios}
+          imagenes={imagenes}
+          todasLasPreguntasContestadas={todasLasPreguntasContestadas}
+          handleSaveFirmaAuditor={handleSaveFirmaAuditor}
+          handleSaveFirmaResponsable={handleSaveFirmaResponsable}
+          firmaAuditor={firmaAuditor}
+          firmaResponsable={firmaResponsable}
+          firmasCompletadas={firmasCompletadas}
+          location={location}
+          obtenerTipoUbicacion={obtenerTipoUbicacion}
+          theme={theme}
+        />
       ) : (
-        /* Pantalla de éxito */
-        <Zoom in={true} timeout={800}>
-          <Paper elevation={6} sx={{ 
-            p: 6, 
-            textAlign: "center", 
-            borderRadius: 4,
-            background: `linear-gradient(135deg, ${alpha(theme.palette.success.main, 0.1)}, ${alpha(theme.palette.success.main, 0.05)})`,
-            border: `2px solid ${alpha(theme.palette.success.main, 0.2)}`
-          }}>
-            <CheckCircleIcon sx={{ fontSize: 80, color: 'success.main', mb: 3 }} />
-            <Typography variant="h4" gutterBottom sx={{ mb: 3, color: 'success.main', fontWeight: 700 }}>
-              ✅ Auditoría Completada
-            </Typography>
-            <Typography variant="h6" sx={{ mb: 4, color: 'text.secondary' }}>
-              La auditoría ha sido guardada exitosamente en el sistema.
-            </Typography>
-            <Box display="flex" gap={2} justifyContent="center" flexWrap="wrap">
-              {/* Botón para nueva auditoría */}
-              <Button 
-                variant="contained" 
-                color="primary" 
-                size="large"
-                onClick={generarNuevaAuditoria}
-              >
-                Nueva Auditoría
-              </Button>
-              {/* Botón para ver reportes */}
-              <Button 
-                variant="outlined" 
-                color="primary" 
-                size="large"
-                onClick={() => navigate('/reporte')}
-              >
-                Ver Reportes
-              </Button>
-              {/* Botón para volver al inicio */}
-              <Button 
-                variant="outlined" 
-                color="secondary" 
-                size="large"
-                onClick={() => navigate('/')}
-              >
-                Volver al Inicio
-              </Button>
-            </Box>
-          </Paper>
-        </Zoom>
+        <AuditoriaCompletada
+          generarNuevaAuditoria={generarNuevaAuditoria}
+          navigate={navigate}
+          abrirImpresionNativa={abrirImpresionNativa}
+        />
       )}
 
       {/* Reporte */}
@@ -1051,6 +921,8 @@ const Auditoria = () => {
           </Paper>
         </Zoom>
       )}
+
+      {/* Snackbars */}
       <Snackbar open={openAlertaEdicion} autoHideDuration={6000} onClose={() => setOpenAlertaEdicion(false)}>
         <MuiAlert
           onClose={() => setOpenAlertaEdicion(false)}
@@ -1071,6 +943,7 @@ const Auditoria = () => {
           Esta auditoría proviene de la agenda. ¿Deseas editar los datos igualmente?
         </MuiAlert>
       </Snackbar>
+      
       <Snackbar open={snackbarOpen} autoHideDuration={6000} onClose={() => setSnackbarOpen(false)}>
         <MuiAlert onClose={() => setSnackbarOpen(false)} severity={snackbarType} sx={{ width: '100%' }}>
           {snackbarMsg}
@@ -1080,4 +953,4 @@ const Auditoria = () => {
   );
 };
 
-export default Auditoria;
+export default AuditoriaRefactorizada; 
