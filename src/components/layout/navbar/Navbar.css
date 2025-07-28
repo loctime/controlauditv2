@@ -2,3 +2,108 @@ a{
     text-decoration: none;
     color: black;
 }
+
+/* Estilos para mejorar la experiencia móvil */
+@media (max-width: 768px) {
+  /* Mejorar la barra de direcciones del navegador */
+  body {
+    /* Evitar que la barra de direcciones se superponga */
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+  
+  /* Mejorar el drawer en móvil */
+  .MuiDrawer-paper {
+    /* Asegurar que el drawer se vea bien en móvil */
+    width: 85vw !important;
+    max-width: 300px !important;
+    border-radius: 0 !important;
+  }
+  
+  /* Mejorar los enlaces del drawer */
+  .MuiListItemButton-root {
+    padding: 12px 16px !important;
+    margin: 2px 8px !important;
+    border-radius: 8px !important;
+    transition: background-color 0.2s ease !important;
+  }
+  
+  .MuiListItemButton-root:hover {
+    background-color: rgba(255, 255, 255, 0.1) !important;
+  }
+  
+  /* Mejorar el AppBar en móvil */
+  .MuiAppBar-root {
+    /* Asegurar que la barra se vea bien */
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+  }
+  
+  /* Mejorar los botones en móvil */
+  .MuiIconButton-root {
+    min-width: 44px !important;
+    min-height: 44px !important;
+    /* Tamaño mínimo para toque */
+  }
+  
+  /* Mejorar el texto en móvil */
+  .MuiTypography-root {
+    font-size: 14px !important;
+    line-height: 1.4 !important;
+  }
+}
+
+/* Estilos para pantallas muy pequeñas */
+@media (max-width: 480px) {
+  .MuiDrawer-paper {
+    width: 90vw !important;
+  }
+  
+  .MuiToolbar-root {
+    padding-left: 8px !important;
+    padding-right: 8px !important;
+  }
+  
+  .MuiIconButton-root {
+    padding: 8px !important;
+  }
+}
+
+/* Mejorar la transición del drawer */
+.MuiDrawer-root .MuiBackdrop-root {
+  background-color: rgba(0, 0, 0, 0.5) !important;
+}
+
+/* Mejorar el scroll en móvil */
+@media (max-width: 768px) {
+  body {
+    -webkit-overflow-scrolling: touch;
+    overflow-x: hidden;
+  }
+  
+  /* Mejorar el scroll del drawer */
+  .MuiDrawer-paper {
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* Mejorar la accesibilidad en móvil */
+@media (max-width: 768px) {
+  /* Asegurar que los elementos sean tocables */
+  button, a, [role="button"] {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  /* Mejorar el contraste */
+  .MuiAppBar-root {
+    background-color: #1976d2 !important;
+  }
+  
+  /* Mejorar la legibilidad del texto */
+  .MuiListItemText-primary {
+    font-weight: 500 !important;
+  }
+}
