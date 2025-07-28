@@ -361,7 +361,7 @@ const FirmaSection = ({
       {!firmasCompletadas && (
         <Alert severity="info" sx={{ mt: 3 }}>
           <Typography variant="body2">
-            📝 Complete la firma del auditor para continuar con la auditoría
+            📝 Las firmas son opcionales. Puede continuar sin firmar o configurar su firma en el perfil para aplicarla automáticamente.
             {!userProfile?.firmaDigital && (
               <span style={{ display: 'block', marginTop: '4px' }}>
                 💡 <strong>Consejo:</strong> Configura tu firma en el perfil para aplicarla automáticamente

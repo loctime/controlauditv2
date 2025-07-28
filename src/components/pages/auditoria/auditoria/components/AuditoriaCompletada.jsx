@@ -9,7 +9,6 @@ import {
   alpha
 } from "@mui/material";
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
-import PrintIcon from '@mui/icons-material/Print';
 
 const AuditoriaCompletada = ({
   generarNuevaAuditoria,
@@ -31,16 +30,6 @@ const AuditoriaCompletada = ({
         <Typography variant="h4" gutterBottom sx={{ mb: 3, color: 'success.main', fontWeight: 700 }}>
           ✅ Auditoría Completada
         </Typography>
-           {/* Botón para imprimir */}
-           <Button 
-            variant="contained" 
-            color="secondary" 
-            size="large"
-            startIcon={<PrintIcon />}
-            onClick={abrirImpresionNativa}
-          >
-            Imprimir Reporte
-          </Button>
         <Typography variant="h6" sx={{ mb: 4, color: 'text.secondary' }}>
           La auditoría ha sido guardada exitosamente en el sistema.
         </Typography>
