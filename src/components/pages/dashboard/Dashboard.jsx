@@ -206,7 +206,7 @@ function Dashboard() {
   };
 
   return (
-    <Box sx={{ padding: 4 }}>
+    <Box sx={{ padding: { xs: 1, sm: 2, md: 3 } }}>
       <Typography variant="h4" gutterBottom>Dashboard Dueño del Sistema</Typography>
       
       <Tabs value={tabValue} onChange={handleTabChange} sx={{ mb: 3 }}>
