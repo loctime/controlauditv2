@@ -147,8 +147,9 @@ const AuditoriaRefactorizada = () => {
   };
 
   const verificarFirmasCompletadas = () => {
-    const completadas = firmaAuditor;
-    console.log('[DEBUG] Verificando firmas:', { firmaAuditor, firmaResponsable, completadas });
+    // Las firmas son opcionales - siempre considerar como completadas
+    const completadas = true; // Siempre true porque las firmas son opcionales
+    console.log('[DEBUG] Verificando firmas (opcionales):', { firmaAuditor, firmaResponsable, completadas });
     setFirmasCompletadas(completadas);
   };
 
@@ -182,11 +183,11 @@ const AuditoriaRefactorizada = () => {
   // Funciones de navegación
   const calcularProgreso = () => {
     let progreso = 0;
-    if (empresaSeleccionada) progreso += 20;
-    if (formularioSeleccionadoId) progreso += 20;
-    if (secciones.length > 0) progreso += 20;
-    if (todasLasPreguntasContestadas()) progreso += 20;
-    if (firmasCompletadas) progreso += 20;
+    if (empresaSeleccionada) progreso += 25;
+    if (formularioSeleccionadoId) progreso += 25;
+    if (secciones.length > 0) progreso += 25;
+    if (todasLasPreguntasContestadas()) progreso += 25;
+    // Las firmas son opcionales, no afectan el progreso
     return progreso;
   };
 
@@ -196,7 +197,7 @@ const AuditoriaRefactorizada = () => {
       case 1: return formularioSeleccionadoId ? 'completed' : (empresaSeleccionada ? 'active' : 'disabled');
       case 2: return secciones.length > 0 ? 'completed' : (formularioSeleccionadoId ? 'active' : 'disabled');
       case 3: return todasLasPreguntasContestadas() ? 'completed' : (secciones.length > 0 ? 'active' : 'disabled');
-      case 4: return firmasCompletadas ? 'completed' : (todasLasPreguntasContestadas() ? 'active' : 'disabled');
+      case 4: return true ? 'completed' : (todasLasPreguntasContestadas() ? 'active' : 'disabled'); // Firmas opcionales
       default: return 'disabled';
     }
   };
@@ -207,7 +208,7 @@ const AuditoriaRefactorizada = () => {
         case 0: return !!empresaSeleccionada;
         case 1: return !!formularioSeleccionadoId;
         case 2: return todasLasPreguntasContestadas();
-        case 3: return firmasCompletadas;
+        case 3: return true; // Las firmas son opcionales, siempre considerar como completo
         default: return false;
       }
     })();
