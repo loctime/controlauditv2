@@ -10,6 +10,8 @@ import ListItemIcon from "@mui/material/ListItemIcon";
 import ListItemText from "@mui/material/ListItemText";
 import MenuIcon from "@mui/icons-material/Menu";
 import Toolbar from "@mui/material/Toolbar";
+import useMediaQuery from "@mui/material/useMediaQuery";
+import { useTheme } from "@mui/material/styles";
 
 import { Link, useNavigate, Outlet } from "react-router-dom";
 import "./Navbar.css";
@@ -23,7 +25,7 @@ import Brightness7Icon from '@mui/icons-material/Brightness7';
 import Switch from '@mui/material/Switch';
 import { useColorMode } from '../../context/ColorModeContext';
 
-const drawerWidth = 200;
+const drawerWidth = 240;
 
 function Navbar(props) {
   const { window } = props;
@@ -31,6 +33,8 @@ function Navbar(props) {
   const navigate = useNavigate();
   const { logoutContext, user, role, permisos } = useAuth();
   const { mode, toggleColorMode } = useColorMode();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
   // Obtener menú dinámico basado en rol y permisos
   const menuItems = getMenuItems(role, permisos);
@@ -97,7 +101,7 @@ function Navbar(props) {
         {menuItems.map(({ id, path, title, Icon }) => (
           <Link key={id} to={path} style={{ textDecoration: 'none' }}>
             <ListItem disablePadding>
-              <ListItemButton>
+              <ListItemButton onClick={() => setMobileOpen(false)}>
                 <ListItemIcon>
                   <Icon sx={{ color: "whitesmoke" }} />
                 </ListItemIcon>
@@ -125,77 +129,164 @@ function Navbar(props) {
   return (
     <Box sx={{ display: "flex" }}>
       <CssBaseline />
-      <AppBar position="fixed" sx={{ width: "100%", minHeight: { xs: 48, sm: 56 }, height: { xs: 48, sm: 56 } }}>
+      <AppBar 
+        position="fixed" 
+        sx={{ 
+          width: "100%", 
+          minHeight: { xs: 56, sm: 64 }, 
+          height: { xs: 56, sm: 64 },
+          zIndex: theme.zIndex.drawer + 1
+        }}
+      >
         <Toolbar sx={{
-          gap: "20px",
+          gap: { xs: 1, sm: 2 },
           display: "flex",
           justifyContent: "space-between",
-          minHeight: { xs: 48, sm: 56 },
-          height: { xs: 48, sm: 56 },
-          px: 1,
+          minHeight: { xs: 56, sm: 64 },
+          height: { xs: 56, sm: 64 },
+          px: { xs: 1, sm: 2 },
           py: 0,
         }}>
-          <Link to={getDashboardRoute()} style={{ color: "whitesmoke", textDecoration: "none", fontSize: '0.95rem', padding: '0 8px', lineHeight: 1.2 }}>
-            {getDashboardText()}
-          </Link> 
-          <Link to="/auditoria" style={{ color: "whitesmoke", textDecoration: "none", fontSize: '0.95rem', padding: '0 8px', lineHeight: 1.2 }}>
-            Auditoria
-          </Link>
-          <Link to="/reporte" style={{ color: "whitesmoke", textDecoration: "none", fontSize: '0.95rem', padding: '0 8px', lineHeight: 1.2 }}>
-            Reporte
-          </Link>
-          <Link to="/perfil" style={{ color: "whitesmoke", textDecoration: "none", fontSize: '0.95rem', padding: '0 8px', lineHeight: 1.2 }}>
-            Perfil
-          </Link>
+          {/* Navegación principal - oculta en móvil */}
+          <Box sx={{ 
+            display: { xs: 'none', md: 'flex' }, 
+            gap: 2, 
+            alignItems: 'center',
+            flex: 1
+          }}>
+            <Link to={getDashboardRoute()} style={{ 
+              color: "whitesmoke", 
+              textDecoration: "none", 
+              fontSize: '0.95rem', 
+              padding: '8px 12px', 
+              lineHeight: 1.2,
+              borderRadius: '4px',
+              transition: 'background-color 0.2s',
+              '&:hover': {
+                backgroundColor: 'rgba(255,255,255,0.1)'
+              }
+            }}>
+              {getDashboardText()}
+            </Link> 
+            <Link to="/auditoria" style={{ 
+              color: "whitesmoke", 
+              textDecoration: "none", 
+              fontSize: '0.95rem', 
+              padding: '8px 12px', 
+              lineHeight: 1.2,
+              borderRadius: '4px',
+              transition: 'background-color 0.2s'
+            }}>
+              Auditoria
+            </Link>
+            <Link to="/reporte" style={{ 
+              color: "whitesmoke", 
+              textDecoration: "none", 
+              fontSize: '0.95rem', 
+              padding: '8px 12px', 
+              lineHeight: 1.2,
+              borderRadius: '4px',
+              transition: 'background-color 0.2s'
+            }}>
+              Reporte
+            </Link>
+            <Link to="/perfil" style={{ 
+              color: "whitesmoke", 
+              textDecoration: "none", 
+              fontSize: '0.95rem', 
+              padding: '8px 12px', 
+              lineHeight: 1.2,
+              borderRadius: '4px',
+              transition: 'background-color 0.2s'
+            }}>
+              Perfil
+            </Link>
+          </Box>
 
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            {/* Switch de modo claro/oscuro */}
-            <IconButton sx={{ ml: 1 }} onClick={toggleColorMode} color="inherit" aria-label="Alternar modo claro/oscuro">
-              {mode === 'dark' ? <Brightness7Icon /> : <Brightness4Icon />}
-            </IconButton>
-            <Switch
-              checked={mode === 'dark'}
-              onChange={toggleColorMode}
-              color="default"
-              inputProps={{ 'aria-label': 'switch modo claro/oscuro' }}
-              sx={{ my: 0 }}
-            />
+          {/* Título en móvil */}
+          <Box sx={{ 
+            display: { xs: 'block', md: 'none' }, 
+            flex: 1,
+            textAlign: 'center'
+          }}>
+            <Link to={getDashboardRoute()} style={{ 
+              color: "whitesmoke", 
+              textDecoration: "none", 
+              fontSize: '1rem',
+              fontWeight: 500
+            }}>
+              {getDashboardText()}
+            </Link>
+          </Box>
+
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, sm: 2 } }}>
+            {/* Switch de modo claro/oscuro - oculto en móvil muy pequeño */}
+            <Box sx={{ display: { xs: 'none', sm: 'flex' }, alignItems: 'center', gap: 1 }}>
+              <IconButton onClick={toggleColorMode} color="inherit" aria-label="Alternar modo claro/oscuro">
+                {mode === 'dark' ? <Brightness7Icon /> : <Brightness4Icon />}
+              </IconButton>
+              <Switch
+                checked={mode === 'dark'}
+                onChange={toggleColorMode}
+                color="default"
+                inputProps={{ 'aria-label': 'switch modo claro/oscuro' }}
+                sx={{ my: 0 }}
+              />
+            </Box>
+            
+            {/* Botón de menú */}
             <IconButton
-              color="secondary.primary"
+              color="inherit"
               aria-label="open drawer"
-              edge="start"
+              edge="end"
               onClick={handleDrawerToggle}
-              sx={{ my: 0 }}
+              sx={{ 
+                my: 0,
+                ml: { xs: 1, sm: 2 }
+              }}
             >
-              <MenuIcon color="secondary.primary" />
+              <MenuIcon />
             </IconButton>
           </Box>
         </Toolbar>
       </AppBar>
+      
       <Box component="nav" aria-label="mailbox folders">
         <Drawer
           container={container}
           variant="temporary"
           open={mobileOpen}
-          anchor={"right"}
+          anchor="right"
           onClose={handleDrawerToggle}
           ModalProps={{
-            keepMounted: true,
+            keepMounted: true, // Mejor rendimiento en móvil
           }}
           sx={{
             display: { xs: "block" },
             "& .MuiDrawer-paper": {
               boxSizing: "border-box",
-              width: drawerWidth,
+              width: { xs: '85vw', sm: drawerWidth },
+              maxWidth: drawerWidth,
               backgroundColor: "#1976d2",
+              borderLeft: '1px solid rgba(255,255,255,0.1)',
             },
           }}
         >
           {drawer}
         </Drawer>
       </Box>
-      <Box component="main" sx={{ flexGrow: 1, py: 4, width: "100%", minHeight: "100vh", px: 2 }}>
-        <Toolbar />
+      
+      <Box 
+        component="main" 
+        sx={{ 
+          flexGrow: 1, 
+          py: { xs: 2, sm: 3, md: 4 }, 
+          width: "100%", 
+          minHeight: "100vh", 
+          px: { xs: 1, sm: 2, md: 3 },
+          mt: { xs: 56, sm: 64 } // Margen superior para compensar AppBar fijo
+        }}
+      >
         <Outlet />
       </Box>
     </Box>
