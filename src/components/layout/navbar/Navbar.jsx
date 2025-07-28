@@ -133,8 +133,8 @@ function Navbar(props) {
         position="fixed" 
         sx={{ 
           width: "100%", 
-          minHeight: { xs: 56, sm: 64 }, 
-          height: { xs: 56, sm: 64 },
+          minHeight: { xs: 40, sm: 48 }, 
+          height: { xs: 40, sm: 48 },
           zIndex: theme.zIndex.drawer + 1
         }}
       >
@@ -142,8 +142,8 @@ function Navbar(props) {
           gap: { xs: 1, sm: 2 },
           display: "flex",
           justifyContent: "space-between",
-          minHeight: { xs: 56, sm: 64 },
-          height: { xs: 56, sm: 64 },
+          minHeight: { xs: 40, sm: 48 },
+          height: { xs: 40, sm: 48 },
           px: { xs: 1, sm: 2 },
           py: 0,
         }}>
@@ -284,7 +284,7 @@ function Navbar(props) {
           width: "100%", 
           minHeight: "100vh", 
           px: { xs: 1, sm: 2, md: 3 },
-          mt: { xs: 56, sm: 64 } // Margen superior para compensar AppBar fijo
+          mt: { xs: 6, sm: 8 } // Ajustado para coincidir exactamente con la altura del AppBar
         }}
       >
         <Outlet />

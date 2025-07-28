@@ -30,10 +30,10 @@
 .home-main-container {
   min-height: 100vh;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
   background: linear-gradient(120deg, #f5f7fa 0%, #c3cfe2 100%);
-  padding: 0;
+  padding: 20px 0;
 }
 
 .home-card {

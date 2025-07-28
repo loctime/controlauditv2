@@ -1,9 +1,10 @@
-import React, { useRef } from "react";
+import React, { useRef, useState } from "react";
 import ResumenRespuestas from "../auditoria/ResumenRespuestas";
 import ImagenesTable from "./ImagenesTable";
 import PreguntasRespuestasList from "../../../common/PreguntasRespuestasList";
-import { Typography, Grid, Box, Button, Paper, Dialog, DialogTitle, DialogContent, DialogActions, IconButton } from "@mui/material";
+import { Typography, Grid, Box, Button, Paper, Dialog, DialogTitle, DialogContent, DialogActions, IconButton, TextField, Alert, Snackbar, Switch, FormControlLabel } from "@mui/material";
 import PrintIcon from '@mui/icons-material/Print';
+import EmailIcon from '@mui/icons-material/Email';
 import CloseIcon from '@mui/icons-material/Close';
 import EstadisticasChart from './EstadisticasChart';
 import { useAuth } from '../../../context/AuthContext';

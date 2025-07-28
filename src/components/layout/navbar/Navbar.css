@@ -7,8 +7,7 @@ a{
 @media (max-width: 768px) {
   /* Mejorar la barra de direcciones del navegador */
   body {
-    /* Evitar que la barra de direcciones se superponga */
-    padding-top: env(safe-area-inset-top);
+    /* Removido el padding-top que causaba espacio extra */
     padding-bottom: env(safe-area-inset-bottom);
     padding-left: env(safe-area-inset-left);
     padding-right: env(safe-area-inset-right);
