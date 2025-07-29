@@ -484,34 +484,72 @@ const PreguntasYSeccion = ({
 
       {/* Botón para ver preguntas no contestadas */}
       {obtenerPreguntasNoContestadas().length > 0 && (
-        <Alert 
-          severity="warning" 
-          sx={{ 
-            mb: isMobile ? 2 : 3,
-            '& .MuiAlert-message': {
-              fontSize: isMobile ? '0.875rem' : '1rem'
-            }
-          }}
-          action={
+        <Box sx={{
+          ...mobileBoxStyle,
+          background: alpha(theme.palette.warning.main, 0.1),
+          border: `2px solid ${alpha(theme.palette.warning.main, 0.3)}`,
+          mb: isMobile ? 2 : 3
+        }}>
+          <Box sx={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: isMobile ? 1 : 2,
+            mb: isMobile ? 1 : 2
+          }}>
+            <Box sx={{ 
+              p: isMobile ? 1 : 1.5, 
+              borderRadius: '50%', 
+              bgcolor: alpha(theme.palette.warning.main, 0.1),
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}>
+              <WarningIcon 
+                color="warning" 
+                sx={{ fontSize: isMobile ? 20 : 24 }} 
+              />
+            </Box>
+            <Typography 
+              variant={isMobile ? "body1" : "h6"} 
+              sx={{ 
+                fontWeight: 600, 
+                color: 'text.primary',
+                flex: 1,
+                fontSize: isMobile ? '0.875rem' : '1rem'
+              }}
+            >
+              Preguntas sin contestar
+            </Typography>
             <Button
               color="warning"
+              variant="contained"
               size={isMobile ? "small" : "medium"}
               onClick={() => setOpenPreguntasNoContestadas(true)}
               startIcon={<VisibilityIcon />}
-              sx={{ fontSize: isMobile ? '0.75rem' : '0.875rem' }}
+              sx={{ 
+                fontSize: isMobile ? '0.75rem' : '0.875rem',
+                fontWeight: 500,
+                textTransform: 'none',
+                px: isMobile ? 1.5 : 2,
+                py: isMobile ? 0.5 : 1
+              }}
             >
-              Ver {obtenerPreguntasNoContestadas().length} no contestadas
+              VER {obtenerPreguntasNoContestadas().length} NO CONTESTADAS
             </Button>
-          }
-        >
+          </Box>
           <Typography 
             variant="body2"
-            sx={{ fontSize: isMobile ? '0.875rem' : '1rem' }}
+            color="text.secondary"
+            sx={{ 
+              pl: isMobile ? 3.5 : 4.5,
+              fontSize: isMobile ? '0.875rem' : '1rem',
+              lineHeight: 1.4
+            }}
           >
             ⚠️ Tienes {obtenerPreguntasNoContestadas().length} pregunta(s) sin contestar. 
             Haz clic en "Ver no contestadas" para encontrarlas rápidamente.
           </Typography>
-        </Alert>
+        </Box>
       )}
 
       {secciones.map((seccion, seccionIndex) => (

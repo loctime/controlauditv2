@@ -10,7 +10,13 @@ import {
   Stack,
   Tooltip,
   TextField,
-  InputAdornment
+  InputAdornment,
+  useTheme,
+  useMediaQuery,
+  alpha,
+  Card,
+  CardContent,
+  IconButton
 } from "@mui/material";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import EditIcon from "@mui/icons-material/Edit";
@@ -25,6 +31,10 @@ import SearchIcon from '@mui/icons-material/Search';
  * @param {Function} scrollToEdicion - Función para hacer scroll a la sección de edición
  */
 const FormulariosAccordionList = ({ formularios, onEditar, formularioSeleccionadoId, scrollToEdicion }) => {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const isSmallMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  
   const lastClickedRef = useRef(null);
   const [busqueda, setBusqueda] = useState("");
 
@@ -73,99 +83,307 @@ const FormulariosAccordionList = ({ formularios, onEditar, formularioSeleccionad
   };
 
   if (!formularios || formularios.length === 0) {
-    return <Typography color="text.secondary">No hay formularios disponibles.</Typography>;
+    return (
+      <Box sx={{
+        bgcolor: alpha(theme.palette.warning.main, 0.05),
+        borderRadius: 2,
+        p: isSmallMobile ? 3 : 4,
+        border: `1px solid ${alpha(theme.palette.warning.main, 0.1)}`,
+        textAlign: 'center'
+      }}>
+        <Typography variant="h6" color="warning.main" sx={{ mb: 1 }}>
+          No hay formularios disponibles
+        </Typography>
+        <Typography variant="body2" color="text.secondary">
+          Crea tu primer formulario para comenzar
+        </Typography>
+      </Box>
+    );
   }
 
   return (
-    <Box mt={2}>
-      <TextField
-        value={busqueda}
-        onChange={e => setBusqueda(e.target.value)}
-        placeholder="Buscar por nombre, propietario o pregunta..."
-        size="small"
-        fullWidth
-        sx={{ mb: 2, maxWidth: 500 }}
-        InputProps={{
-          startAdornment: (
-            <InputAdornment position="start">
-              <SearchIcon />
-            </InputAdornment>
-          ),
-          'aria-label': 'Buscar formularios'
-        }}
-      />
-      {formulariosFiltrados.map((formulario) => (
-        <Accordion key={formulario.id} defaultExpanded={false} sx={{ mb: 1 }}>
-          <AccordionSummary expandIcon={<ExpandMoreIcon />} aria-controls={`panel-${formulario.id}-content`} id={`panel-${formulario.id}-header`}>
-            <Stack direction="row" spacing={2} alignItems="center" width="100%">
-              <Typography variant="subtitle1" sx={{ flex: 1, fontWeight: 600 }}>
-                {formulario.nombre}
-              </Typography>
-              <Tooltip title="Número de preguntas">
-                <Chip label={`Preguntas: ${contarPreguntas(formulario)}`} size="small" color="primary" />
-              </Tooltip>
-              <Tooltip title="Última edición">
-                <Chip label={formulario.ultimaModificacion ? new Date(formulario.ultimaModificacion.seconds * 1000).toLocaleString('es-ES') : 'Sin fecha'} size="small" />
-              </Tooltip>
-              <Tooltip title={formulario.esPublico ? 'Público' : 'Privado'}>
-                <Chip icon={formulario.esPublico ? <PublicIcon /> : null} label={formulario.esPublico ? 'Público' : 'Privado'} size="small" color={formulario.esPublico ? 'success' : 'default'} />
-              </Tooltip>
-              <Button
-                variant={formularioSeleccionadoId === formulario.id ? "contained" : "outlined"}
-                color="secondary"
-                size="small"
-                startIcon={<EditIcon />}
-                onClick={() => handleEditar(formulario.id)}
-                sx={{ minWidth: 100 }}
+    <Box sx={{ mt: 2 }}>
+      {/* Barra de búsqueda */}
+      <Box sx={{ mb: isSmallMobile ? 2 : 3 }}>
+        <TextField
+          value={busqueda}
+          onChange={e => setBusqueda(e.target.value)}
+          placeholder="Buscar por nombre, propietario o pregunta..."
+          size={isSmallMobile ? "small" : "medium"}
+          fullWidth
+          sx={{ 
+            maxWidth: isMobile ? '100%' : 500,
+            '& .MuiOutlinedInput-root': {
+              borderRadius: 2,
+              '&:hover': {
+                '& .MuiOutlinedInput-notchedOutline': {
+                  borderColor: theme.palette.primary.main,
+                }
+              }
+            }
+          }}
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <SearchIcon color="primary" />
+              </InputAdornment>
+            ),
+            'aria-label': 'Buscar formularios'
+          }}
+        />
+      </Box>
+      
+      {/* Lista de formularios en acordeón */}
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: isSmallMobile ? 1 : 2 }}>
+        {formulariosFiltrados.map((formulario) => (
+          <Card 
+            key={formulario.id}
+            sx={{ 
+              bgcolor: 'background.paper',
+              borderRadius: 3,
+              border: `1px solid ${alpha(theme.palette.divider, 0.3)}`,
+              boxShadow: '0 2px 12px rgba(0,0,0,0.08)',
+              overflow: 'hidden',
+              '&:hover': {
+                transform: 'translateY(-1px)',
+                boxShadow: '0 4px 16px rgba(0,0,0,0.12)',
+                transition: 'all 0.2s ease'
+              },
+              transition: 'all 0.2s ease'
+            }}
+          >
+            <Accordion 
+              defaultExpanded={false} 
+              sx={{ 
+                boxShadow: 'none',
+                '&:before': { display: 'none' },
+                '& .MuiAccordionSummary-root': {
+                  p: isSmallMobile ? 2 : 3,
+                  '&:hover': {
+                    bgcolor: alpha(theme.palette.primary.main, 0.05)
+                  }
+                },
+                '& .MuiAccordionDetails-root': {
+                  p: isSmallMobile ? 2 : 3,
+                  pt: 0
+                }
+              }}
+            >
+              <AccordionSummary 
+                expandIcon={<ExpandMoreIcon color="primary" />} 
+                aria-controls={`panel-${formulario.id}-content`} 
+                id={`panel-${formulario.id}-header`}
               >
-                Editar
-              </Button>
-            </Stack>
-          </AccordionSummary>
-          <AccordionDetails>
-            <Typography variant="body2" color="text.secondary" gutterBottom>
-              <b>Propietario:</b> {formulario.creadorNombre || formulario.creadorEmail || 'Desconocido'}
-            </Typography>
-            <Typography variant="body2" color="text.secondary" gutterBottom>
-              <b>Estado:</b> {formulario.estado || 'Sin estado'}
-            </Typography>
-            <Typography variant="body2" color="text.secondary" gutterBottom>
-              <b>Versión:</b> {formulario.version || 'N/A'}
-            </Typography>
-            <Typography variant="body2" color="text.secondary" gutterBottom>
-              <b>Preguntas:</b>
-            </Typography>
-            {contarPreguntas(formulario) > 0 ? (
-              <Box>
-                {(Array.isArray(formulario.secciones)
-                  ? formulario.secciones
-                  : (typeof formulario.secciones === 'object' ? Object.values(formulario.secciones) : [])
-                ).map((seccion, sidx) => (
-                  <Box key={sidx} mb={1}>
-                    <Typography variant="subtitle2" color="primary.main" sx={{ fontWeight: 600, mb: 0.5 }}>
-                      {seccion.nombre || `Sección ${sidx + 1}`}
+                <Box sx={{ 
+                  display: 'flex', 
+                  flexDirection: isMobile ? 'column' : 'row',
+                  alignItems: isMobile ? 'stretch' : 'center',
+                  justifyContent: 'space-between',
+                  width: '100%',
+                  gap: isSmallMobile ? 1 : 2
+                }}>
+                  {/* Información principal */}
+                  <Box sx={{ 
+                    display: 'flex', 
+                    flexDirection: isMobile ? 'column' : 'row',
+                    alignItems: isMobile ? 'stretch' : 'center',
+                    gap: isSmallMobile ? 1 : 2,
+                    flex: 1
+                  }}>
+                    <Typography 
+                      variant={isSmallMobile ? "subtitle1" : "h6"} 
+                      sx={{ 
+                        fontWeight: 700, 
+                        color: 'text.primary',
+                        flex: 1,
+                        wordBreak: 'break-word'
+                      }}
+                    >
+                      📋 {formulario.nombre}
                     </Typography>
-                    <ul style={{ marginTop: 0, marginBottom: 0 }}>
-                      {(seccion.preguntas || []).map((pregunta, pidx) => (
-                        <li key={sidx + '-' + pidx}>
-                          <Typography variant="body2">
-                            {typeof pregunta === "string"
-                              ? pregunta
-                              : (pregunta.titulo || pregunta.texto || pregunta.pregunta || '(Sin texto)')}
-                          </Typography>
-                        </li>
-                      ))}
-                    </ul>
+                    
+                    <Box sx={{ 
+                      display: 'flex', 
+                      flexDirection: isMobile ? 'row' : 'row',
+                      alignItems: 'center',
+                      gap: 1,
+                      flexWrap: 'wrap'
+                    }}>
+                      <Tooltip title="Número de preguntas">
+                        <Chip 
+                          label={`❓ ${contarPreguntas(formulario)}`} 
+                          size="small" 
+                          color="primary" 
+                          variant="outlined"
+                          sx={{ fontWeight: 600 }}
+                        />
+                      </Tooltip>
+                      
+                      <Tooltip title="Última edición">
+                        <Chip 
+                          label={formulario.ultimaModificacion ? new Date(formulario.ultimaModificacion.seconds * 1000).toLocaleString('es-ES') : 'Sin fecha'} 
+                          size="small" 
+                          variant="outlined"
+                          sx={{ fontWeight: 600 }}
+                        />
+                      </Tooltip>
+                      
+                      <Tooltip title={formulario.esPublico ? 'Público' : 'Privado'}>
+                        <Chip 
+                          icon={formulario.esPublico ? <PublicIcon /> : null} 
+                          label={formulario.esPublico ? '🌐 Público' : '🔒 Privado'} 
+                          size="small" 
+                          color={formulario.esPublico ? 'success' : 'default'} 
+                          variant="outlined"
+                          sx={{ fontWeight: 600 }}
+                        />
+                      </Tooltip>
+                    </Box>
                   </Box>
-                ))}
-              </Box>
-            ) : (
-              <Typography variant="body2" color="text.disabled">Sin preguntas</Typography>
-            )}
-            {/* Aquí puedes agregar más metadatos o secciones si lo necesitas */}
-          </AccordionDetails>
-        </Accordion>
-      ))}
+                  
+                  {/* Botón de editar */}
+                  <Button
+                    variant={formularioSeleccionadoId === formulario.id ? "contained" : "outlined"}
+                    color="primary"
+                    size={isSmallMobile ? "small" : "medium"}
+                    startIcon={<EditIcon />}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleEditar(formulario.id);
+                    }}
+                    sx={{ 
+                      minWidth: isMobile ? '100%' : 120,
+                      fontWeight: 600,
+                      borderRadius: 2,
+                      '&:hover': {
+                        transform: 'translateY(-1px)',
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                        transition: 'all 0.2s ease'
+                      },
+                      transition: 'all 0.2s ease'
+                    }}
+                  >
+                    ✏️ Editar
+                  </Button>
+                </Box>
+              </AccordionSummary>
+              
+              <AccordionDetails>
+                <Box sx={{
+                  bgcolor: alpha(theme.palette.info.main, 0.05),
+                  borderRadius: 2,
+                  p: isSmallMobile ? 2 : 3,
+                  border: `1px solid ${alpha(theme.palette.info.main, 0.1)}`
+                }}>
+                  {/* Información detallada */}
+                  <Box sx={{ mb: isSmallMobile ? 2 : 3 }}>
+                    <Typography variant="subtitle2" color="primary.main" sx={{ fontWeight: 700, mb: 1 }}>
+                      📊 Información del Formulario
+                    </Typography>
+                    
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Typography component="span" sx={{ fontWeight: 600, color: 'text.primary' }}>
+                          👤 Propietario:
+                        </Typography>
+                        <Typography component="span" color="text.secondary">
+                          {formulario.creadorNombre || formulario.creadorEmail || 'Desconocido'}
+                        </Typography>
+                      </Box>
+                      
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Typography component="span" sx={{ fontWeight: 600, color: 'text.primary' }}>
+                          📊 Estado:
+                        </Typography>
+                        <Chip 
+                          label={formulario.estado || 'Sin estado'} 
+                          size="small" 
+                          color="info" 
+                          variant="outlined"
+                        />
+                      </Box>
+                      
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Typography component="span" sx={{ fontWeight: 600, color: 'text.primary' }}>
+                          🏷️ Versión:
+                        </Typography>
+                        <Typography component="span" color="text.secondary">
+                          {formulario.version || 'N/A'}
+                        </Typography>
+                      </Box>
+                    </Box>
+                  </Box>
+                  
+                  {/* Lista de preguntas */}
+                  <Box>
+                    <Typography variant="subtitle2" color="primary.main" sx={{ fontWeight: 700, mb: 2 }}>
+                      ❓ Preguntas del Formulario
+                    </Typography>
+                    
+                    {contarPreguntas(formulario) > 0 ? (
+                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                        {(Array.isArray(formulario.secciones)
+                          ? formulario.secciones
+                          : (typeof formulario.secciones === 'object' ? Object.values(formulario.secciones) : [])
+                        ).map((seccion, sidx) => (
+                          <Box key={sidx} sx={{
+                            bgcolor: 'background.paper',
+                            borderRadius: 2,
+                            p: isSmallMobile ? 2 : 3,
+                            border: `1px solid ${alpha(theme.palette.divider, 0.2)}`
+                          }}>
+                            <Typography variant="subtitle2" color="primary.main" sx={{ fontWeight: 600, mb: 1 }}>
+                              📝 {seccion.nombre || `Sección ${sidx + 1}`}
+                            </Typography>
+                            <Box component="ul" sx={{ 
+                              margin: 0, 
+                              paddingLeft: isSmallMobile ? 2 : 3,
+                              listStyle: 'none',
+                              '& li': {
+                                mb: 0.5,
+                                '&:before': {
+                                  content: '"•"',
+                                  color: theme.palette.primary.main,
+                                  fontWeight: 'bold',
+                                  display: 'inline-block',
+                                  width: '1em',
+                                  marginLeft: '-1em'
+                                }
+                              }
+                            }}>
+                              {(seccion.preguntas || []).map((pregunta, pidx) => (
+                                <Box component="li" key={sidx + '-' + pidx}>
+                                  <Typography variant="body2" sx={{ lineHeight: 1.6 }}>
+                                    {typeof pregunta === "string"
+                                      ? pregunta
+                                      : (pregunta.titulo || pregunta.texto || pregunta.pregunta || '(Sin texto)')}
+                                  </Typography>
+                                </Box>
+                              ))}
+                            </Box>
+                          </Box>
+                        ))}
+                      </Box>
+                    ) : (
+                      <Box sx={{
+                        bgcolor: alpha(theme.palette.warning.main, 0.05),
+                        borderRadius: 2,
+                        p: isSmallMobile ? 2 : 3,
+                        border: `1px solid ${alpha(theme.palette.warning.main, 0.1)}`,
+                        textAlign: 'center'
+                      }}>
+                        <Typography variant="body2" color="warning.main" sx={{ fontWeight: 600 }}>
+                          ⚠️ Sin preguntas definidas
+                        </Typography>
+                      </Box>
+                    )}
+                  </Box>
+                </Box>
+              </AccordionDetails>
+            </Accordion>
+          </Card>
+        ))}
+      </Box>
     </Box>
   );
 };

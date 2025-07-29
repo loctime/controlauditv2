@@ -1,7 +1,23 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { collection, getDocs, doc, getDoc, onSnapshot } from "firebase/firestore";
 import { db } from "../../../firebaseConfig";
-import { FormControl, InputLabel, Select, MenuItem, Typography, Box, Alert, Chip, Button } from "@mui/material";
+import { 
+  FormControl, 
+  InputLabel, 
+  Select, 
+  MenuItem, 
+  Typography, 
+  Box, 
+  Alert, 
+  Chip, 
+  Button,
+  useTheme,
+  useMediaQuery,
+  alpha,
+  Card,
+  CardContent,
+  IconButton
+} from "@mui/material";
 import RefreshIcon from '@mui/icons-material/Refresh';
 import EditarSeccionYPreguntas from "./EditarSeccionYPreguntas";
 import { useAuth } from "../../context/AuthContext";
@@ -13,6 +29,10 @@ import FormulariosAccordionList from "./FormulariosAccordionList";
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 
 const EditarFormulario = () => {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const isSmallMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  
   const { user, userProfile } = useAuth();
   const [formularios, setFormularios] = useState([]); // Solo metadatos
   const [formularioSeleccionado, setFormularioSeleccionado] = useState(null);
@@ -227,7 +247,13 @@ const EditarFormulario = () => {
   }
 
   return (
-    <div>
+    <Box sx={{ 
+      p: isSmallMobile ? 1 : 3,
+      bgcolor: 'background.paper',
+      borderRadius: 3,
+      border: `1px solid ${alpha(theme.palette.divider, 0.3)}`,
+      boxShadow: '0 2px 12px rgba(0,0,0,0.08)'
+    }}>
       <style>
         {`
           @keyframes pulse {
@@ -237,6 +263,7 @@ const EditarFormulario = () => {
           }
         `}
       </style>
+      
       {/* Botón Volver */}
       <Button
         variant="outlined"
@@ -246,146 +273,378 @@ const EditarFormulario = () => {
           navigate('/perfil?tab=formularios');
         }}
         aria-label="Volver a perfil, pestaña formularios"
-        sx={{ mb: 2 }}
+        sx={{ 
+          mb: isSmallMobile ? 2 : 3,
+          fontSize: isSmallMobile ? '0.875rem' : '1rem'
+        }}
       >
         Volver
       </Button>
-      {/* Cabecera optimizada con barra de acciones */}
-      <Box display="flex" alignItems="center" justifyContent="space-between" mb={2} flexWrap="wrap" gap={2}>
-        <Typography variant="h4" gutterBottom sx={{ flex: 1, minWidth: 200 }}>
-          Editar Formularios
+      
+      {/* Header con título y controles */}
+      <Box sx={{ 
+        display: 'flex', 
+        flexDirection: isMobile ? 'column' : 'row',
+        alignItems: isMobile ? 'stretch' : 'center',
+        justifyContent: 'space-between', 
+        mb: isSmallMobile ? 3 : 4,
+        gap: isSmallMobile ? 2 : 3
+      }}>
+        <Typography 
+          variant={isSmallMobile ? "h5" : "h4"} 
+          sx={{ 
+            fontWeight: 700, 
+            color: 'primary.main',
+            textAlign: isMobile ? 'center' : 'left',
+            mb: isMobile ? 2 : 0
+          }}
+        >
+          📝 Editar Formularios
         </Typography>
-        <FormControl sx={{ minWidth: 250, mr: 2 }} size="small">
-          <InputLabel id="select-formulario-label">Seleccionar Formulario</InputLabel>
-          <Select
-            labelId="select-formulario-label"
-            id="select-formulario"
-            value={formularioSeleccionado ? formularioSeleccionado.id : ""}
-            onChange={handleChangeFormulario}
-            label="Seleccionar Formulario"
-          >
-            <MenuItem value=""><em>Todos</em></MenuItem>
-            {formularios.map((formulario) => (
-              <MenuItem key={formulario.id} value={formulario.id}>
-                {formulario.nombre}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-        <Box display="flex" alignItems="center" gap={1} flexWrap="wrap">
-          <Button
-            variant="outlined"
-            startIcon={<PublicIcon />}
-            onClick={() => {
-              console.debug('[EditarFormulario] Ir a galería de formularios públicos');
-              navigate('/formularios-publicos');
+        
+        <Box sx={{ 
+          display: 'flex', 
+          flexDirection: isMobile ? 'column' : 'row',
+          alignItems: 'center',
+          gap: isSmallMobile ? 2 : 3,
+          flexWrap: 'wrap'
+        }}>
+          <FormControl 
+            size={isSmallMobile ? "small" : "medium"}
+            sx={{ 
+              minWidth: isMobile ? '100%' : 250,
+              mb: isMobile ? 2 : 0
             }}
-            sx={{ borderRadius: '20px', px: 2, py: 1, minWidth: 0 }}
-            title="Ver y copiar plantillas públicas"
           >
-            Galería Pública
-          </Button>
-          <Button
-            variant="contained"
-            color="primary"
-            startIcon={<AddIcon />}
-            onClick={() => navigate("/formulario")}
-            sx={{ borderRadius: '20px', px: 2, py: 1, minWidth: 0 }}
-          >
-            Crear
-          </Button>
-          <Button
-            variant="outlined"
-            color="primary"
-            onClick={handleReload}
-            disabled={recargando}
-            sx={{
-              minWidth: 40,
-              width: 40,
-              height: 40,
-              borderRadius: '50%',
-              p: 0
-            }}
-            title="Recargar lista de formularios"
-          >
-            <RefreshIcon
-              sx={{
-                animation: recargando ? 'spin 1s linear infinite' : 'none',
-                '@keyframes spin': {
-                  '0%': { transform: 'rotate(0deg)' },
-                  '100%': { transform: 'rotate(360deg)' }
-                }
+            <InputLabel id="select-formulario-label">Seleccionar Formulario</InputLabel>
+            <Select
+              labelId="select-formulario-label"
+              id="select-formulario"
+              value={formularioSeleccionado ? formularioSeleccionado.id : ""}
+              onChange={handleChangeFormulario}
+              label="Seleccionar Formulario"
+            >
+              <MenuItem value=""><em>Todos</em></MenuItem>
+              {formularios.map((formulario) => (
+                <MenuItem key={formulario.id} value={formulario.id}>
+                  {formulario.nombre}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+          
+          <Box sx={{ 
+            display: 'flex', 
+            flexDirection: isMobile ? 'column' : 'row',
+            alignItems: 'center',
+            gap: isSmallMobile ? 1 : 2,
+            flexWrap: 'wrap'
+          }}>
+            <Button
+              variant="outlined"
+              startIcon={<PublicIcon />}
+              onClick={() => {
+                console.debug('[EditarFormulario] Ir a galería de formularios públicos');
+                navigate('/formularios-publicos');
               }}
-            />
-          </Button>
-          {recargando && (
-            <Chip
-              label="Recargando..."
+              sx={{ 
+                borderRadius: 2,
+                px: isSmallMobile ? 2 : 3,
+                py: isSmallMobile ? 1 : 1.5,
+                fontSize: isSmallMobile ? '0.875rem' : '1rem',
+                fontWeight: 600,
+                minWidth: isMobile ? '100%' : 'auto',
+                '&:hover': {
+                  transform: 'translateY(-1px)',
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                  transition: 'all 0.2s ease'
+                },
+                transition: 'all 0.2s ease'
+              }}
+              title="Ver y copiar plantillas públicas"
+            >
+              🌐 Galería Pública
+            </Button>
+            
+            <Button
+              variant="contained"
               color="primary"
-              size="small"
-              sx={{ animation: 'pulse 1s infinite' }}
-            />
-          )}
-        </Box>
-      </Box>
-      {/* Layout horizontal para detalle y edición */}
-      {formularioSeleccionado && formularioSeleccionado.id && (
-        <Box display={{ xs: 'block', md: 'flex' }} gap={3} alignItems="flex-start" ref={edicionRef}>
-          {/* Detalle del formulario */}
-          <Box flex={1} minWidth={280}>
-            <Alert severity="info" sx={{ mb: 2 }}>
-              <Typography variant="body2">
-                <strong>Creado por:</strong> {formularioSeleccionado.creadorNombre || formularioSeleccionado.creadorEmail || 'Desconocido'}<br/>
-                <strong>Fecha de creación:</strong> {
-                  formularioSeleccionado.timestamp?.toDate?.()
-                    ? formularioSeleccionado.timestamp.toDate().toLocaleString('es-ES')
-                    : (formularioSeleccionado.timestamp instanceof Date
-                        ? formularioSeleccionado.timestamp.toLocaleString('es-ES')
-                        : (console.debug('[EditarFormulario] Fecha de creación no válida:', formularioSeleccionado.timestamp), 'No disponible'))
-                }<br/>
-                <strong>Última modificación:</strong> {
-                  formularioSeleccionado.ultimaModificacion?.toDate?.()
-                    ? formularioSeleccionado.ultimaModificacion.toDate().toLocaleString('es-ES')
-                    : (formularioSeleccionado.ultimaModificacion instanceof Date
-                        ? formularioSeleccionado.ultimaModificacion.toLocaleString('es-ES')
-                        : (console.debug('[EditarFormulario] Última modificación no válida:', formularioSeleccionado.ultimaModificacion), 'No disponible'))
-                }<br/>
-                <strong>Estado:</strong> {formularioSeleccionado.estado || 'Activo'}<br/>
-                <strong>Versión:</strong> {formularioSeleccionado.version || '1.0'}<br/>
-                <strong>Visibilidad:</strong> {formularioSeleccionado.esPublico ? 'Público' : 'Privado'}
-              </Typography>
-            </Alert>
-          </Box>
-          {/* Edición del formulario (Accordion) */}
-          <Box flex={2} minWidth={320}>
-            {cargandoFormulario ? (
-              <Box display="flex" justifyContent="center" alignItems="center" minHeight="200px">
-                <Typography>Cargando formulario...</Typography>
-              </Box>
-            ) : (
-              <EditarSeccionYPreguntas
-                formularioSeleccionado={formularioSeleccionado}
-                setFormularioSeleccionado={setFormularioSeleccionado}
-                handleReload={handleReload}
-                puedeEditar={puedeEditarFormulario(formularioSeleccionado)}
-                puedeEliminar={puedeEliminarFormulario(formularioSeleccionado)}
+              startIcon={<AddIcon />}
+              onClick={() => navigate("/formulario")}
+              sx={{ 
+                borderRadius: 2,
+                px: isSmallMobile ? 2 : 3,
+                py: isSmallMobile ? 1 : 1.5,
+                fontSize: isSmallMobile ? '0.875rem' : '1rem',
+                fontWeight: 600,
+                minWidth: isMobile ? '100%' : 'auto',
+                '&:hover': {
+                  transform: 'translateY(-1px)',
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                  transition: 'all 0.2s ease'
+                },
+                transition: 'all 0.2s ease'
+              }}
+            >
+              ➕ Crear
+            </Button>
+            
+            <Button
+              variant="outlined"
+              color="primary"
+              onClick={handleReload}
+              disabled={recargando}
+              sx={{
+                minWidth: isSmallMobile ? 40 : 48,
+                width: isSmallMobile ? 40 : 48,
+                height: isSmallMobile ? 40 : 48,
+                borderRadius: '50%',
+                p: 0,
+                '&:hover': {
+                  transform: 'translateY(-1px)',
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                  transition: 'all 0.2s ease'
+                },
+                transition: 'all 0.2s ease'
+              }}
+              title="Recargar lista de formularios"
+            >
+              <RefreshIcon
+                sx={{
+                  animation: recargando ? 'spin 1s linear infinite' : 'none',
+                  '@keyframes spin': {
+                    '0%': { transform: 'rotate(0deg)' },
+                    '100%': { transform: 'rotate(360deg)' }
+                  }
+                }}
+              />
+            </Button>
+            
+            {recargando && (
+              <Chip
+                label="Recargando..."
+                color="primary"
+                size="small"
+                sx={{ 
+                  animation: 'pulse 1s infinite',
+                  fontWeight: 600
+                }}
               />
             )}
           </Box>
         </Box>
-      )}
-      {/* Si se selecciona 'Todos', mostrar acordeón de formularios */}
-      {(!formularioSeleccionado || !formularioSeleccionado.id) && (
-        <Box mt={4}>
-          <FormulariosAccordionList
-            formularios={formulariosCompletos}
-            onEditar={handleEditarDesdeAccordion}
-            formularioSeleccionadoId={formularioSeleccionado?.id || null}
-            scrollToEdicion={scrollToEdicion}
-          />
+      </Box>
+      {/* Layout horizontal para detalle y edición */}
+      {formularioSeleccionado && formularioSeleccionado.id && (
+        <Box 
+          sx={{ 
+            display: { xs: 'block', md: 'flex' }, 
+            gap: isSmallMobile ? 2 : 3, 
+            alignItems: 'flex-start',
+            mt: isSmallMobile ? 3 : 4
+          }} 
+          ref={edicionRef}
+        >
+          {/* Detalle del formulario */}
+          <Card 
+            sx={{ 
+              flex: 1, 
+              minWidth: 280,
+              bgcolor: 'background.paper',
+              borderRadius: 3,
+              border: `1px solid ${alpha(theme.palette.divider, 0.3)}`,
+              boxShadow: '0 2px 12px rgba(0,0,0,0.08)',
+              overflow: 'hidden'
+            }}
+          >
+            <CardContent sx={{ p: isSmallMobile ? 2 : 3 }}>
+              <Typography 
+                variant={isSmallMobile ? "h6" : "h5"} 
+                sx={{ 
+                  fontWeight: 700, 
+                  color: 'primary.main',
+                  mb: isSmallMobile ? 2 : 3,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 1
+                }}
+              >
+                📋 Información del Formulario
+              </Typography>
+              
+              <Box sx={{
+                bgcolor: alpha(theme.palette.info.main, 0.05),
+                borderRadius: 2,
+                p: isSmallMobile ? 2 : 3,
+                border: `1px solid ${alpha(theme.palette.info.main, 0.1)}`
+              }}>
+                <Typography variant="body2" sx={{ lineHeight: 1.8 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                    <Typography component="span" sx={{ fontWeight: 600, color: 'text.primary' }}>
+                      👤 Creado por:
+                    </Typography>
+                    <Typography component="span" color="text.secondary">
+                      {formularioSeleccionado.creadorNombre || formularioSeleccionado.creadorEmail || 'Desconocido'}
+                    </Typography>
+                  </Box>
+                  
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                    <Typography component="span" sx={{ fontWeight: 600, color: 'text.primary' }}>
+                      📅 Fecha de creación:
+                    </Typography>
+                    <Typography component="span" color="text.secondary">
+                      {formularioSeleccionado.timestamp?.toDate?.()
+                        ? formularioSeleccionado.timestamp.toDate().toLocaleString('es-ES')
+                        : (formularioSeleccionado.timestamp instanceof Date
+                            ? formularioSeleccionado.timestamp.toLocaleString('es-ES')
+                            : (console.debug('[EditarFormulario] Fecha de creación no válida:', formularioSeleccionado.timestamp), 'No disponible'))}
+                    </Typography>
+                  </Box>
+                  
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                    <Typography component="span" sx={{ fontWeight: 600, color: 'text.primary' }}>
+                      🔄 Última modificación:
+                    </Typography>
+                    <Typography component="span" color="text.secondary">
+                      {formularioSeleccionado.ultimaModificacion?.toDate?.()
+                        ? formularioSeleccionado.ultimaModificacion.toDate().toLocaleString('es-ES')
+                        : (formularioSeleccionado.ultimaModificacion instanceof Date
+                            ? formularioSeleccionado.ultimaModificacion.toLocaleString('es-ES')
+                            : (console.debug('[EditarFormulario] Última modificación no válida:', formularioSeleccionado.ultimaModificacion), 'No disponible'))}
+                    </Typography>
+                  </Box>
+                  
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                    <Typography component="span" sx={{ fontWeight: 600, color: 'text.primary' }}>
+                      📊 Estado:
+                    </Typography>
+                    <Chip 
+                      label={formularioSeleccionado.estado || 'Activo'} 
+                      size="small" 
+                      color="success" 
+                      variant="outlined"
+                    />
+                  </Box>
+                  
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                    <Typography component="span" sx={{ fontWeight: 600, color: 'text.primary' }}>
+                      🏷️ Versión:
+                    </Typography>
+                    <Typography component="span" color="text.secondary">
+                      {formularioSeleccionado.version || '1.0'}
+                    </Typography>
+                  </Box>
+                  
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Typography component="span" sx={{ fontWeight: 600, color: 'text.primary' }}>
+                      👁️ Visibilidad:
+                    </Typography>
+                    <Chip 
+                      label={formularioSeleccionado.esPublico ? 'Público' : 'Privado'} 
+                      size="small" 
+                      color={formularioSeleccionado.esPublico ? "success" : "default"} 
+                      variant="outlined"
+                    />
+                  </Box>
+                </Typography>
+              </Box>
+            </CardContent>
+          </Card>
+          
+          {/* Edición del formulario (Accordion) */}
+          <Card 
+            sx={{ 
+              flex: 2, 
+              minWidth: 320,
+              bgcolor: 'background.paper',
+              borderRadius: 3,
+              border: `1px solid ${alpha(theme.palette.divider, 0.3)}`,
+              boxShadow: '0 2px 12px rgba(0,0,0,0.08)',
+              overflow: 'hidden'
+            }}
+          >
+            <CardContent sx={{ p: isSmallMobile ? 2 : 3 }}>
+              <Typography 
+                variant={isSmallMobile ? "h6" : "h5"} 
+                sx={{ 
+                  fontWeight: 700, 
+                  color: 'primary.main',
+                  mb: isSmallMobile ? 2 : 3,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 1
+                }}
+              >
+                ✏️ Editar Formulario
+              </Typography>
+              
+              {cargandoFormulario ? (
+                <Box 
+                  sx={{ 
+                    display: 'flex', 
+                    justifyContent: 'center', 
+                    alignItems: 'center', 
+                    minHeight: 200,
+                    bgcolor: alpha(theme.palette.info.main, 0.05),
+                    borderRadius: 2,
+                    border: `1px solid ${alpha(theme.palette.info.main, 0.1)}`
+                  }}
+                >
+                  <Typography color="info.main" sx={{ fontWeight: 600 }}>
+                    Cargando formulario...
+                  </Typography>
+                </Box>
+              ) : (
+                <EditarSeccionYPreguntas
+                  formularioSeleccionado={formularioSeleccionado}
+                  setFormularioSeleccionado={setFormularioSeleccionado}
+                  handleReload={handleReload}
+                  puedeEditar={puedeEditarFormulario(formularioSeleccionado)}
+                  puedeEliminar={puedeEliminarFormulario(formularioSeleccionado)}
+                />
+              )}
+            </CardContent>
+          </Card>
         </Box>
       )}
-    </div>
+      
+      {/* Si se selecciona 'Todos', mostrar acordeón de formularios */}
+      {(!formularioSeleccionado || !formularioSeleccionado.id) && (
+        <Card 
+          sx={{ 
+            mt: isSmallMobile ? 3 : 4,
+            bgcolor: 'background.paper',
+            borderRadius: 3,
+            border: `1px solid ${alpha(theme.palette.divider, 0.3)}`,
+            boxShadow: '0 2px 12px rgba(0,0,0,0.08)',
+            overflow: 'hidden'
+          }}
+        >
+          <CardContent sx={{ p: isSmallMobile ? 2 : 3 }}>
+            <Typography 
+              variant={isSmallMobile ? "h6" : "h5"} 
+              sx={{ 
+                fontWeight: 700, 
+                color: 'primary.main',
+                mb: isSmallMobile ? 2 : 3,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 1
+              }}
+            >
+              📋 Lista de Formularios
+            </Typography>
+            
+            <FormulariosAccordionList
+              formularios={formulariosCompletos}
+              onEditar={handleEditarDesdeAccordion}
+              formularioSeleccionadoId={formularioSeleccionado?.id || null}
+              scrollToEdicion={scrollToEdicion}
+            />
+          </CardContent>
+        </Card>
+      )}
+    </Box>
   );
 };
 
