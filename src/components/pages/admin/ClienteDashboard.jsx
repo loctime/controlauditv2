@@ -157,9 +157,10 @@ const ClienteDashboard = React.memo(() => {
         startIcon={<Add />}
         onClick={() => handleOpenDialog()}
         sx={{ 
-          fontSize: '0.85rem',
-          px: 2,
-          borderRadius: '20px'
+          fontSize: { xs: '0.75rem', sm: '0.85rem' },
+          px: { xs: 1, sm: 2 },
+          borderRadius: '20px',
+          minWidth: { xs: 'auto', sm: 'auto' }
         }}
       >
         Agendar
@@ -181,9 +182,10 @@ const ClienteDashboard = React.memo(() => {
         startIcon={<Assignment />}
         onClick={() => navigate('/auditoria')}
         sx={{ 
-          fontSize: '0.85rem',
-          px: 2,
-          borderRadius: '20px'
+          fontSize: { xs: '0.75rem', sm: '0.85rem' },
+          px: { xs: 1, sm: 2 },
+          borderRadius: '20px',
+          minWidth: { xs: 'auto', sm: 'auto' }
         }}
       >
         Auditar
@@ -193,7 +195,13 @@ const ClienteDashboard = React.memo(() => {
 
   // ✅ Memoizar las pestañas
   const tabs = useMemo(() => (
-    <Tabs value={currentTab} onChange={handleTabChange} centered>
+    <Tabs value={currentTab} onChange={handleTabChange} centered sx={{ 
+      '& .MuiTab-root': {
+        fontSize: { xs: '0.75rem', sm: '0.875rem' },
+        minHeight: { xs: 32, sm: 48 },
+        padding: { xs: '4px 8px', sm: '6px 16px' }
+      }
+    }}>
       <Tab 
         icon={<CalendarToday />} 
         label="Calendario" 
@@ -223,8 +231,13 @@ const ClienteDashboard = React.memo(() => {
   }
 
   return (
-    <Box sx={{ padding: { xs: 1, sm: 2, md: 3 } }}>
-      <Typography variant="h4" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+    <Box sx={{ padding: { xs: 0, sm: 0.5, md: 1 } }}>
+      <Typography variant="h4" gutterBottom sx={{ 
+        display: 'flex', 
+        alignItems: 'center', 
+        gap: 2,
+        fontSize: { xs: '1.2rem', sm: '1.5rem', md: '2.125rem' }
+      }}>
         <Business color="primary" />
         Dashboard de Auditorías
       </Typography>
@@ -238,10 +251,16 @@ const ClienteDashboard = React.memo(() => {
 
       {/* Pestañas */}
       <Paper elevation={2} sx={{ mb: 3 }}>
-        <Box display="flex" justifyContent="space-between" alignItems="center" sx={{ px: 2 }}>
-          {agendarButton}
-          {tabs}
-          {auditarButton}
+        <Box display="flex" flexDirection={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems="center" sx={{ px: 2, py: 1 }}>
+          {/* Botones en fila para móvil */}
+          <Box display="flex" gap={1} sx={{ mb: { xs: 1, sm: 0 }, width: { xs: '100%', sm: 'auto' }, justifyContent: { xs: 'center', sm: 'flex-start' } }}>
+            {agendarButton}
+            {auditarButton}
+          </Box>
+          {/* Tabs centrados */}
+          <Box sx={{ flex: 1, display: 'flex', justifyContent: 'center' }}>
+            {tabs}
+          </Box>
         </Box>
       </Paper>
 

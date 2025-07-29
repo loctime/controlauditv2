@@ -42,14 +42,43 @@ const normalizarRespuestas = (res) => {
 
 // Normaliza empresa
 const normalizarEmpresa = (empresa) => {
-  if (empresa && typeof empresa === "object") return empresa;
-  return { nombre: empresa || "" };
+  console.debug('[normalizarEmpresa] entrada:', empresa);
+  
+  if (empresa && typeof empresa === "object" && empresa.nombre) {
+    console.debug('[normalizarEmpresa] objeto con nombre:', empresa);
+    return empresa;
+  }
+  
+  if (typeof empresa === "string" && empresa.trim()) {
+    console.debug('[normalizarEmpresa] string válido:', empresa);
+    return { nombre: empresa.trim() };
+  }
+  
+  console.debug('[normalizarEmpresa] fallback a vacío');
+  return { nombre: "Empresa no disponible" };
 };
 
 // Normaliza formulario
 const normalizarFormulario = (formulario, nombreForm) => {
-  if (formulario && typeof formulario === "object") return formulario;
-  return { nombre: nombreForm || "" };
+  console.debug('[normalizarFormulario] formulario:', formulario, 'nombreForm:', nombreForm);
+  
+  if (formulario && typeof formulario === "object" && formulario.nombre) {
+    console.debug('[normalizarFormulario] objeto con nombre:', formulario);
+    return formulario;
+  }
+  
+  if (nombreForm && nombreForm.trim()) {
+    console.debug('[normalizarFormulario] usando nombreForm:', nombreForm);
+    return { nombre: nombreForm.trim() };
+  }
+  
+  if (typeof formulario === "string" && formulario.trim()) {
+    console.debug('[normalizarFormulario] string válido:', formulario);
+    return { nombre: formulario.trim() };
+  }
+  
+  console.debug('[normalizarFormulario] fallback a vacío');
+  return { nombre: "Formulario no disponible" };
 };
 
 // Normaliza imagenes: array de objetos {seccion, valores: [ ... ]} a array de arrays de urls
@@ -203,17 +232,150 @@ const ReporteDetallePro = ({ open = false, onClose = () => {}, reporte = null, m
 
   // Normalizar datos
   const secciones = Array.isArray(reporte.secciones) ? reporte.secciones : Object.values(reporte.secciones || {});
-  const empresa = normalizarEmpresa(reporte.empresa);
-  const formulario = normalizarFormulario(reporte.formulario, reporte.formularioNombre);
+  
+  // Normalizar empresa usando todos los campos disponibles
+  const empresa = (() => {
+    console.debug('[normalizarEmpresa] reporte.empresa:', reporte.empresa);
+    console.debug('[normalizarEmpresa] reporte.empresaId:', reporte.empresaId);
+    console.debug('[normalizarEmpresa] reporte.empresaNombre:', reporte.empresaNombre);
+    
+    // Si tenemos objeto completo
+    if (reporte.empresa && typeof reporte.empresa === "object" && reporte.empresa.nombre) {
+      return reporte.empresa;
+    }
+    
+    // Si tenemos ID y nombre separados
+    if (reporte.empresaId && reporte.empresaNombre) {
+      return { id: reporte.empresaId, nombre: reporte.empresaNombre };
+    }
+    
+    // Si solo tenemos nombre
+    if (reporte.empresaNombre) {
+      return { id: reporte.empresaId || 'unknown', nombre: reporte.empresaNombre };
+    }
+    
+    // Si tenemos string
+    if (typeof reporte.empresa === "string" && reporte.empresa.trim()) {
+      return { id: reporte.empresaId || 'unknown', nombre: reporte.empresa.trim() };
+    }
+    
+    return { id: 'unknown', nombre: "Empresa no disponible" };
+  })();
+  
+  // Normalizar formulario usando todos los campos disponibles
+  const formulario = (() => {
+    console.debug('[normalizarFormulario] reporte.formulario:', reporte.formulario);
+    console.debug('[normalizarFormulario] reporte.formularioId:', reporte.formularioId);
+    console.debug('[normalizarFormulario] reporte.formularioNombre:', reporte.formularioNombre);
+    console.debug('[normalizarFormulario] reporte.nombreForm:', reporte.nombreForm);
+    
+    // Si tenemos objeto completo
+    if (reporte.formulario && typeof reporte.formulario === "object" && reporte.formulario.nombre) {
+      return reporte.formulario;
+    }
+    
+    // Si tenemos ID y nombre separados
+    if (reporte.formularioId && reporte.formularioNombre) {
+      return { id: reporte.formularioId, nombre: reporte.formularioNombre };
+    }
+    
+    // Si tenemos nombreForm
+    if (reporte.nombreForm && reporte.nombreForm.trim()) {
+      return { id: reporte.formularioId || 'unknown', nombre: reporte.nombreForm.trim() };
+    }
+    
+    // Si tenemos formularioNombre
+    if (reporte.formularioNombre && reporte.formularioNombre.trim()) {
+      return { id: reporte.formularioId || 'unknown', nombre: reporte.formularioNombre.trim() };
+    }
+    
+    // Si tenemos string
+    if (typeof reporte.formulario === "string" && reporte.formulario.trim()) {
+      return { id: reporte.formularioId || 'unknown', nombre: reporte.formulario.trim() };
+    }
+    
+    return { id: 'unknown', nombre: "Formulario no disponible" };
+  })();
+  
   const sucursal = reporte.sucursal || '';
   const respuestasNormalizadas = normalizarRespuestas(reporte.respuestas || []);
   const imagenesNormalizadas = normalizarImagenes(reporte.imagenes, secciones);
   const comentariosNormalizados = normalizarComentarios(reporte.comentarios, secciones);
-  const fecha = reporte.fecha
-    ? new Date(reporte.fecha.seconds * 1000).toLocaleDateString('es-ES')
-    : reporte.fechaGuardado
-    ? new Date(reporte.fechaGuardado).toLocaleDateString('es-ES')
-    : 'Fecha no disponible';
+  const fecha = (() => {
+    console.debug('[normalizarFecha] reporte.fecha:', reporte.fecha);
+    console.debug('[normalizarFecha] reporte.fechaGuardado:', reporte.fechaGuardado);
+    console.debug('[normalizarFecha] reporte.timestamp:', reporte.timestamp);
+    console.debug('[normalizarFecha] reporte.fechaCreacion:', reporte.fechaCreacion);
+    console.debug('[normalizarFecha] reporte.fechaActualizacion:', reporte.fechaActualizacion);
+    
+    // Intentar con reporte.fecha (Timestamp de Firestore)
+    if (reporte.fecha && reporte.fecha.seconds) {
+      const fechaTimestamp = new Date(reporte.fecha.seconds * 1000);
+      console.debug('[normalizarFecha] usando reporte.fecha:', fechaTimestamp);
+      return fechaTimestamp.toLocaleDateString('es-ES');
+    }
+    
+    // Intentar con reporte.fechaGuardado (string ISO)
+    if (reporte.fechaGuardado) {
+      try {
+        const fechaGuardado = new Date(reporte.fechaGuardado);
+        if (!isNaN(fechaGuardado.getTime())) {
+          console.debug('[normalizarFecha] usando reporte.fechaGuardado:', fechaGuardado);
+          return fechaGuardado.toLocaleDateString('es-ES');
+        }
+      } catch (error) {
+        console.error('[normalizarFecha] error parseando fechaGuardado:', error);
+      }
+    }
+    
+    // Intentar con reporte.timestamp
+    if (reporte.timestamp && reporte.timestamp.seconds) {
+      const fechaTimestamp = new Date(reporte.timestamp.seconds * 1000);
+      console.debug('[normalizarFecha] usando reporte.timestamp:', fechaTimestamp);
+      return fechaTimestamp.toLocaleDateString('es-ES');
+    }
+    
+    // Intentar con reporte.fechaCreacion
+    if (reporte.fechaCreacion) {
+      try {
+        const fechaCreacion = new Date(reporte.fechaCreacion);
+        if (!isNaN(fechaCreacion.getTime())) {
+          console.debug('[normalizarFecha] usando reporte.fechaCreacion:', fechaCreacion);
+          return fechaCreacion.toLocaleDateString('es-ES');
+        }
+      } catch (error) {
+        console.error('[normalizarFecha] error parseando fechaCreacion:', error);
+      }
+    }
+    
+    // Intentar con reporte.fechaActualizacion
+    if (reporte.fechaActualizacion) {
+      try {
+        const fechaActualizacion = new Date(reporte.fechaActualizacion);
+        if (!isNaN(fechaActualizacion.getTime())) {
+          console.debug('[normalizarFecha] usando reporte.fechaActualizacion:', fechaActualizacion);
+          return fechaActualizacion.toLocaleDateString('es-ES');
+        }
+      } catch (error) {
+        console.error('[normalizarFecha] error parseando fechaActualizacion:', error);
+      }
+    }
+    
+    console.debug('[normalizarFecha] fallback a fecha actual');
+    return new Date().toLocaleDateString('es-ES');
+  })();
+
+  // Debug logs para ver qué datos están llegando
+  console.debug('[ReporteDetallePro] reporte completo:', reporte);
+  console.debug('[ReporteDetallePro] empresa normalizada:', empresa);
+  console.debug('[ReporteDetallePro] formulario normalizado:', formulario);
+  console.debug('[ReporteDetallePro] sucursal:', sucursal);
+  console.debug('[ReporteDetallePro] fecha:', fecha);
+  console.debug('[ReporteDetallePro] reporte.empresa:', reporte.empresa);
+  console.debug('[ReporteDetallePro] reporte.formulario:', reporte.formulario);
+  console.debug('[ReporteDetallePro] reporte.formularioNombre:', reporte.formularioNombre);
+  console.debug('[ReporteDetallePro] reporte.fecha:', reporte.fecha);
+  console.debug('[ReporteDetallePro] reporte.fechaGuardado:', reporte.fechaGuardado);
 
   // Usar la firma pasada por prop o la del reporte
   const firmaResponsableFinal = firmaResponsable || reporte.firmaResponsable;

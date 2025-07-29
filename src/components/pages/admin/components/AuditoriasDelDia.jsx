@@ -56,9 +56,22 @@ const AuditoriasDelDia = ({
   };
 
   return (
-    <Paper elevation={2} sx={{ p: 3, mb: 3 }}>
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-        <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+    <Paper elevation={2} sx={{ 
+      p: { xs: 2, sm: 3 }, 
+      mb: 3,
+      borderRadius: { xs: 1, sm: 2 }
+    }}>
+      <Box display="flex" justifyContent="space-between" alignItems="center" mb={2} sx={{ 
+        flexDirection: { xs: 'column', sm: 'row' },
+        gap: { xs: 1, sm: 0 },
+        alignItems: { xs: 'stretch', sm: 'center' }
+      }}>
+        <Typography variant="h6" sx={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: 1,
+          fontSize: { xs: '1rem', sm: '1.25rem' }
+        }}>
           <CalendarToday color="primary" />
           Auditorías del {selectedDate ? selectedDate.toLocaleDateString() : 'día seleccionado'}
         </Typography>
@@ -69,7 +82,12 @@ const AuditoriasDelDia = ({
             size="small"
             startIcon={<Add />}
             onClick={() => onAgendar(selectedDate.toISOString().split('T')[0])}
-            sx={{ fontSize: '0.85rem' }}
+            sx={{ 
+              fontSize: { xs: '0.75rem', sm: '0.85rem' },
+              px: { xs: 2, sm: 2 },
+              borderRadius: '20px',
+              minWidth: { xs: 'auto', sm: 'auto' }
+            }}
           >
             Agendar
           </Button>
@@ -81,21 +99,42 @@ const AuditoriasDelDia = ({
           Selecciona una fecha en el calendario para ver las auditorías
         </Typography>
       ) : auditoriasDelDia.length === 0 ? (
-        <Box textAlign="center" py={2}>
-          <Typography variant="body2" color="text.secondary" gutterBottom>
-            No hay auditorías agendadas para este día
-          </Typography>
-          {canAgendarAuditorias && (
-            <Button
-              variant="outlined"
-              color="primary"
-              startIcon={<Add />}
-              onClick={() => onAgendar(selectedDate.toISOString().split('T')[0])}
-              sx={{ mt: 1 }}
-            >
-              Agendar Primera Auditoría
-            </Button>
-          )}
+        <Box sx={{ 
+          display: 'flex', 
+          flexDirection: 'column', 
+          alignItems: 'center', 
+          gap: 2,
+          py: 3,
+          px: 2
+        }}>
+          <Box sx={{ 
+            display: 'flex', 
+            flexDirection: 'column', 
+            alignItems: 'center', 
+            gap: 1,
+            textAlign: 'center'
+          }}>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+              No hay auditorías agendadas para este día
+            </Typography>
+            {canAgendarAuditorias && (
+              <Button
+                variant="contained"
+                color="primary"
+                startIcon={<Add />}
+                onClick={() => onAgendar(selectedDate.toISOString().split('T')[0])}
+                sx={{ 
+                  borderRadius: '20px',
+                  px: 3,
+                  py: 1,
+                  fontSize: '0.9rem',
+                  fontWeight: 500
+                }}
+              >
+                Agendar Primera Auditoría
+              </Button>
+            )}
+          </Box>
         </Box>
       ) : (
         <List>

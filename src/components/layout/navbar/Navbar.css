@@ -7,7 +7,7 @@ a{
 @media (max-width: 768px) {
   /* Mejorar la barra de direcciones del navegador */
   body {
-    /* Removido el padding-top que causaba espacio extra */
+    /* Removido todo el padding que causaba espacio extra */
     padding-bottom: env(safe-area-inset-bottom);
     padding-left: env(safe-area-inset-left);
     padding-right: env(safe-area-inset-right);
@@ -104,5 +104,31 @@ a{
   /* Mejorar la legibilidad del texto */
   .MuiListItemText-primary {
     font-weight: 500 !important;
+  }
+}
+
+/* Estilos específicos para móvil - reducir espacio superior */
+@media (max-width: 768px) {
+  /* Reducir espacio superior en móvil */
+  .MuiAppBar-root {
+    min-height: 32px !important;
+    height: 32px !important;
+  }
+  
+  .MuiToolbar-root {
+    min-height: 32px !important;
+    height: 32px !important;
+    padding: 0 4px !important;
+  }
+  
+  /* Reducir margen superior del contenido principal */
+  main {
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+  }
+  
+  /* Reducir padding del contenido */
+  .main-app-container {
+    padding: 4px !important;
   }
 }

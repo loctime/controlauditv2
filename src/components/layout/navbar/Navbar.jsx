@@ -133,8 +133,8 @@ function Navbar(props) {
         position="fixed" 
         sx={{ 
           width: "100%", 
-          minHeight: { xs: 40, sm: 48 }, 
-          height: { xs: 40, sm: 48 },
+          minHeight: { xs: 32, sm: 40 }, 
+          height: { xs: 32, sm: 40 },
           zIndex: theme.zIndex.drawer + 1
         }}
       >
@@ -142,9 +142,9 @@ function Navbar(props) {
           gap: { xs: 1, sm: 2 },
           display: "flex",
           justifyContent: "space-between",
-          minHeight: { xs: 40, sm: 48 },
-          height: { xs: 40, sm: 48 },
-          px: { xs: 1, sm: 2 },
+          minHeight: { xs: 32, sm: 40 },
+          height: { xs: 32, sm: 40 },
+          px: { xs: 0.5, sm: 1 },
           py: 0,
         }}>
           {/* Navegación principal - oculta en móvil */}
@@ -280,11 +280,11 @@ function Navbar(props) {
         component="main" 
         sx={{ 
           flexGrow: 1, 
-          py: { xs: 2, sm: 3, md: 4 }, 
+          py: { xs: 0.5, sm: 1, md: 2 }, 
           width: "100%", 
           minHeight: "100vh", 
-          px: { xs: 1, sm: 2, md: 3 },
-          mt: { xs: 6, sm: 8 } // Ajustado para coincidir exactamente con la altura del AppBar
+          px: { xs: 0.5, sm: 1, md: 2 },
+          mt: { xs: 0, sm: 1 } // Sin margen superior en móvil
         }}
       >
         <Outlet />
