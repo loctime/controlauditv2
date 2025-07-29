@@ -1,6 +1,25 @@
 import React, { useState, useEffect } from "react";
-import { Box, useMediaQuery } from "@mui/material";
-import { useTheme } from '@mui/material/styles';
+import { 
+  Box, 
+  useMediaQuery, 
+  useTheme, 
+  alpha,
+  Typography,
+  Button,
+  Chip,
+  Avatar,
+  IconButton,
+  Tooltip
+} from "@mui/material";
+import PersonIcon from '@mui/icons-material/Person';
+import EmailIcon from '@mui/icons-material/Email';
+import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
+import BusinessIcon from '@mui/icons-material/Business';
+import AssignmentIcon from '@mui/icons-material/Assignment';
+import GroupIcon from '@mui/icons-material/Group';
+import SettingsIcon from '@mui/icons-material/Settings';
+import DrawIcon from '@mui/icons-material/Draw';
+import InfoIcon from '@mui/icons-material/Info';
 import { useAuth } from "../../context/AuthContext";
 import Swal from 'sweetalert2';
 import { db } from '../../../firebaseConfig';
@@ -20,6 +39,7 @@ import PerfilDialogs from './PerfilDialogs';
 const PerfilUsuario = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const isSmallMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const location = useLocation();
   const {
     userProfile,
@@ -177,35 +197,305 @@ const PerfilUsuario = () => {
 
   // Render principal
   return (
-    <Box sx={{ width: '100%', px: { xs: 0, md: 0 }, py: 0, mt: { xs: -1, sm: -2, md: -3 } }}>
-      {separador}
-      <PerfilHeader userProfile={userProfile} />
-      <Box sx={{ display: { xs: 'block', md: 'flex' }, alignItems: 'flex-start', width: '100%' }}>
-        {/* Sidebar */}
-        <PerfilSidebar selectedSection={selectedSection} onSelectSection={setSelectedSection} />
+    <Box sx={{ 
+      width: '100%', 
+      px: { xs: 1, sm: 2, md: 3 }, 
+      py: { xs: 2, sm: 3, md: 4 },
+      bgcolor: 'background.default'
+    }}>
+      {/* Contenedor principal con Box de MUI */}
+      <Box sx={{
+        bgcolor: 'background.paper',
+        borderRadius: 3,
+        border: `1px solid ${alpha(theme.palette.divider, 0.3)}`,
+        boxShadow: '0 4px 16px rgba(0,0,0,0.08)',
+        overflow: 'hidden'
+      }}>
+        {/* Header del perfil con Card */}
+        <Box sx={{
+          p: isSmallMobile ? 3 : 4,
+          background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.1)}, ${alpha(theme.palette.primary.main, 0.05)})`,
+          borderBottom: `1px solid ${alpha(theme.palette.divider, 0.2)}`
+        }}>
+          {userProfile ? (
+            <Box sx={{ 
+              display: 'flex', 
+              flexDirection: isMobile ? 'column' : 'row',
+              alignItems: isMobile ? 'center' : 'flex-start',
+              gap: isSmallMobile ? 2 : 3
+            }}>
+              {/* Avatar */}
+              <Box sx={{ 
+                display: 'flex', 
+                justifyContent: 'center',
+                mb: isMobile ? 2 : 0
+              }}>
+                <Avatar sx={{ 
+                  bgcolor: 'primary.main', 
+                  width: isSmallMobile ? 80 : 100, 
+                  height: isSmallMobile ? 80 : 100,
+                  fontSize: isSmallMobile ? '2rem' : '2.5rem'
+                }}>
+                  <PersonIcon fontSize="large" />
+                </Avatar>
+              </Box>
+              
+              {/* Información del usuario */}
+              <Box sx={{ 
+                flex: 1,
+                textAlign: isMobile ? 'center' : 'left'
+              }}>
+                <Typography 
+                  variant={isSmallMobile ? "h5" : "h4"} 
+                  sx={{ 
+                    fontWeight: 700, 
+                    color: 'primary.main',
+                    mb: 1
+                  }}
+                >
+                  {userProfile.displayName || 'Usuario'}
+                </Typography>
+                
+                <Box sx={{ 
+                  display: 'flex', 
+                  flexDirection: isMobile ? 'column' : 'row',
+                  alignItems: 'center',
+                  gap: isSmallMobile ? 1 : 2,
+                  flexWrap: 'wrap'
+                }}>
+                  <Box sx={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: 0.5 
+                  }}>
+                    <EmailIcon sx={{ fontSize: isSmallMobile ? 16 : 20, color: 'text.secondary' }} />
+                    <Typography variant="body2" color="text.secondary">
+                      {userProfile.email}
+                    </Typography>
+                  </Box>
+                  
+                  <Box sx={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: 0.5 
+                  }}>
+                    <CalendarTodayIcon sx={{ fontSize: isSmallMobile ? 16 : 20, color: 'text.secondary' }} />
+                    <Typography variant="body2" color="text.secondary">
+                      Miembro desde: {new Date(userProfile.createdAt?.seconds * 1000).toLocaleDateString()}
+                    </Typography>
+                  </Box>
+                </Box>
+              </Box>
+            </Box>
+          ) : (
+            <Box sx={{ textAlign: 'center', py: 4 }}>
+              <Typography variant="h6" color="text.secondary">
+                Cargando perfil...
+              </Typography>
+            </Box>
+          )}
+        </Box>
+        
+        {/* Sección de habilitaciones con Card */}
+        <Box sx={{
+          p: isSmallMobile ? 3 : 4,
+          bgcolor: 'background.paper'
+        }}>
+          <Typography 
+            variant={isSmallMobile ? "h6" : "h5"} 
+            sx={{ 
+              fontWeight: 600, 
+              color: 'primary.main',
+              mb: isSmallMobile ? 2 : 3,
+              textAlign: 'center'
+            }}
+          >
+            🔧 Mis Habilitaciones
+          </Typography>
+          
+          <Box sx={{ 
+            display: 'grid',
+            gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(250px, 1fr))',
+            gap: isSmallMobile ? 2 : 3
+          }}>
+            {/* Auditorías */}
+            <Box sx={{
+              bgcolor: alpha(theme.palette.primary.main, 0.05),
+              borderRadius: 2,
+              p: isSmallMobile ? 2 : 3,
+              border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}`
+            }}>
+              <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1, color: 'primary.main' }}>
+                📋 Auditorías
+              </Typography>
+              <Button
+                variant="contained"
+                color="primary"
+                size={isSmallMobile ? "small" : "medium"}
+                fullWidth
+                sx={{ mb: 1 }}
+              >
+                Crear Auditoría
+              </Button>
+            </Box>
+            
+            {/* Empresas */}
+            <Box sx={{
+              bgcolor: alpha(theme.palette.success.main, 0.05),
+              borderRadius: 2,
+              p: isSmallMobile ? 2 : 3,
+              border: `1px solid ${alpha(theme.palette.success.main, 0.1)}`
+            }}>
+              <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1, color: 'success.main' }}>
+                🏢 Empresas
+              </Typography>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                <Button
+                  variant="contained"
+                  color="success"
+                  size={isSmallMobile ? "small" : "medium"}
+                  fullWidth
+                >
+                  Crear Empresa
+                </Button>
+                <Button
+                  variant="outlined"
+                  color="success"
+                  size={isSmallMobile ? "small" : "medium"}
+                  fullWidth
+                >
+                  Gestionar Empresas
+                </Button>
+              </Box>
+            </Box>
+            
+            {/* Usuarios */}
+            <Box sx={{
+              bgcolor: alpha(theme.palette.warning.main, 0.05),
+              borderRadius: 2,
+              p: isSmallMobile ? 2 : 3,
+              border: `1px solid ${alpha(theme.palette.warning.main, 0.1)}`
+            }}>
+              <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1, color: 'warning.main' }}>
+                👥 Usuarios
+              </Typography>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                <Button
+                  variant="contained"
+                  color="warning"
+                  size={isSmallMobile ? "small" : "medium"}
+                  fullWidth
+                >
+                  Gestionar Usuarios
+                </Button>
+                <Button
+                  variant="outlined"
+                  color="warning"
+                  size={isSmallMobile ? "small" : "medium"}
+                  fullWidth
+                >
+                  Agregar Usuario
+                </Button>
+                <Button
+                  variant="outlined"
+                  color="error"
+                  size={isSmallMobile ? "small" : "medium"}
+                  fullWidth
+                >
+                  Eliminar Usuario
+                </Button>
+              </Box>
+            </Box>
+            
+            {/* Sistema */}
+            <Box sx={{
+              bgcolor: alpha(theme.palette.info.main, 0.05),
+              borderRadius: 2,
+              p: isSmallMobile ? 2 : 3,
+              border: `1px solid ${alpha(theme.palette.info.main, 0.1)}`
+            }}>
+              <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1, color: 'info.main' }}>
+                ⚙️ Sistema
+              </Typography>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                <Button
+                  variant="contained"
+                  color="info"
+                  size={isSmallMobile ? "small" : "medium"}
+                  fullWidth
+                >
+                  Ver Sistema
+                </Button>
+                <Button
+                  variant="outlined"
+                  color="info"
+                  size={isSmallMobile ? "small" : "medium"}
+                  fullWidth
+                >
+                  Gestionar Sistema
+                </Button>
+              </Box>
+            </Box>
+            
+            {/* Otros */}
+            <Box sx={{
+              bgcolor: alpha(theme.palette.secondary.main, 0.05),
+              borderRadius: 2,
+              p: isSmallMobile ? 2 : 3,
+              border: `1px solid ${alpha(theme.palette.secondary.main, 0.1)}`
+            }}>
+              <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1, color: 'secondary.main' }}>
+                🔗 Otros
+              </Typography>
+              <Button
+                variant="contained"
+                color="secondary"
+                size={isSmallMobile ? "small" : "medium"}
+                fullWidth
+              >
+                Compartir
+              </Button>
+            </Box>
+          </Box>
+        </Box>
+        
         {/* Contenido principal */}
-        <Box sx={{ flex: 1, minWidth: 0 }}>
-          {selectedSection === 'empresas' && (
-            <PerfilEmpresas empresas={userEmpresas} loading={loadingEmpresas} />
-          )}
-          {selectedSection === 'formularios' && (
-            <PerfilFormularios formularios={formularios} loading={loadingFormularios} />
-          )}
-          {selectedSection === 'usuarios' && (
-            <PerfilUsuarios usuariosCreados={usuariosCreados} loading={loadingUsuariosCreados} clienteAdminId={userProfile?.clienteAdminId || userProfile?.uid} />
-          )}
-          {selectedSection === 'configuracion' && (
-            <PerfilConfiguracion userProfile={userProfile} selectedRole={selectedRole} setSelectedRole={setSelectedRole} handleRoleChange={handleRoleChange} loading={loading} />
-          )}
-          {selectedSection === 'firma' && (
-            <PerfilFirma />
-          )}
-          {selectedSection === 'info' && (
-            <PerfilInfoSistema />
-          )}
-          {/* Puedes agregar más secciones aquí según lo que necesites */}
+        <Box sx={{ 
+          display: { xs: 'block', md: 'flex' }, 
+          alignItems: 'flex-start', 
+          width: '100%' 
+        }}>
+          {/* Sidebar */}
+          <PerfilSidebar selectedSection={selectedSection} onSelectSection={setSelectedSection} />
+          
+          {/* Contenido principal */}
+          <Box sx={{ 
+            flex: 1, 
+            minWidth: 0,
+            p: isSmallMobile ? 3 : 4
+          }}>
+            {selectedSection === 'empresas' && (
+              <PerfilEmpresas empresas={userEmpresas} loading={loadingEmpresas} />
+            )}
+            {selectedSection === 'formularios' && (
+              <PerfilFormularios formularios={formularios} loading={loadingFormularios} />
+            )}
+            {selectedSection === 'usuarios' && (
+              <PerfilUsuarios usuariosCreados={usuariosCreados} loading={loadingUsuariosCreados} clienteAdminId={userProfile?.clienteAdminId || userProfile?.uid} />
+            )}
+            {selectedSection === 'configuracion' && (
+              <PerfilConfiguracion userProfile={userProfile} selectedRole={selectedRole} setSelectedRole={setSelectedRole} handleRoleChange={handleRoleChange} loading={loading} />
+            )}
+            {selectedSection === 'firma' && (
+              <PerfilFirma />
+            )}
+            {selectedSection === 'info' && (
+              <PerfilInfoSistema />
+            )}
+          </Box>
         </Box>
       </Box>
+      
       {/* Diálogos modales */}
       <PerfilDialogs
         openDialogSocio={openDialogSocio}

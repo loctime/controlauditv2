@@ -18,7 +18,23 @@ import {
   DialogContent,
   DialogTitle,
   IconButton,
+  useTheme,
+  useMediaQuery,
+  Card,
+  CardContent,
+  Chip,
+  alpha,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
+  Grid,
 } from "@mui/material";
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import BusinessIcon from '@mui/icons-material/Business';
+import LocationOnIcon from '@mui/icons-material/LocationOn';
+import AssignmentIcon from '@mui/icons-material/Assignment';
+import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
+import VisibilityIcon from '@mui/icons-material/Visibility';
 import "./ReportesPage.css";
 import FiltrosReportes from "./FiltrosReportes";
 import { useAuth } from "../../../context/AuthContext";
@@ -48,6 +64,13 @@ const getNombreFormulario = (formulario, nombreForm) =>
 
 const ReportesPage = () => {
   const { userProfile, userEmpresas } = useAuth();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const isSmallMobile = useMediaQuery(theme.breakpoints.down('xs'));
+  
+  // Debug para verificar si se está detectando móvil correctamente
+  console.log('ReportesPage - isMobile:', isMobile);
+  console.log('ReportesPage - isSmallMobile:', isSmallMobile);
 
   // Estados primero
   const [reportes, setReportes] = useState([]);
@@ -62,6 +85,7 @@ const ReportesPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const detalleRef = useRef();
   const [openModal, setOpenModal] = useState(false);
+  const [expandedAccordion, setExpandedAccordion] = useState(null);
 
   // Obtener empresas únicas de los reportes (temporal)
   const empresasDeReportes = useMemo(() => {
@@ -252,55 +276,302 @@ const ReportesPage = () => {
         onChangeSearchTerm={setSearchTerm}
         loading={loading}
       />
-      <TableContainer component={Paper}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>Empresa</TableCell>
-              <TableCell>Sucursal</TableCell>
-              <TableCell>Formulario</TableCell>
-              <TableCell>Fecha de Guardado</TableCell>
-              <TableCell>Acciones</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {filteredReportes.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={5} align="center" sx={{ py: 4 }}>
-                  <Typography variant="body2" color="textSecondary">
-                    {empresasSeleccionadas.length > 0 
-                      ? "No se encontraron reportes para esta empresa"
-                      : "No hay reportes disponibles"
-                    }
-                  </Typography>
-                </TableCell>
-              </TableRow>
-            ) : (
-              filteredReportes.map((reporte) => (
-                <TableRow key={reporte.id}>
-                  <TableCell>{getNombreEmpresa(reporte, userEmpresas)}</TableCell>
-                  <TableCell>{reporte.sucursal ?? "Sucursal no disponible"}</TableCell>
-                  <TableCell>{getNombreFormulario(reporte.formulario, reporte.nombreForm)}</TableCell>
-                  <TableCell>
-                    {reporte.fechaCreacion
-                      ? new Date(reporte.fechaCreacion).toLocaleString()
-                      : "Fecha no disponible"}
-                  </TableCell>
-                  <TableCell>
-                    <Button
-                      variant="contained"
-                      color="primary"
-                      onClick={() => handleSelectReporte(reporte)}
+      {/* Vista responsiva: Cards para móvil, Tabla para desktop */}
+      {console.log('Renderizando vista móvil:', isMobile)}
+      {/* Forzar vista móvil para testing */}
+      {true ? (
+        // Vista móvil con cards expandibles
+        <Box sx={{ mt: 2 }}>
+          {filteredReportes.length === 0 ? (
+            <Box sx={{ 
+              textAlign: 'center', 
+              py: 6,
+              px: 4,
+              bgcolor: alpha(theme.palette.info.main, 0.05),
+              borderRadius: 3,
+              border: `1px solid ${alpha(theme.palette.info.main, 0.2)}`,
+              boxShadow: '0 4px 16px rgba(0,0,0,0.08)',
+              mb: 3,
+              minHeight: isSmallMobile ? '200px' : '250px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}>
+              <Box sx={{ 
+                display: 'flex', 
+                flexDirection: 'column', 
+                alignItems: 'center', 
+                gap: 3,
+                maxWidth: '400px'
+              }}>
+                <Box sx={{ 
+                  p: 3, 
+                  borderRadius: '50%', 
+                  bgcolor: alpha(theme.palette.info.main, 0.1),
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  border: `2px solid ${alpha(theme.palette.info.main, 0.2)}`
+                }}>
+                  <AssignmentIcon 
+                    color="info" 
+                    sx={{ fontSize: isSmallMobile ? 40 : 48 }} 
+                  />
+                </Box>
+                <Typography 
+                  variant={isSmallMobile ? "h6" : "h5"} 
+                  sx={{ 
+                    fontWeight: 700, 
+                    color: 'text.primary',
+                    mb: 2,
+                    textAlign: 'center'
+                  }}
+                >
+                  No hay reportes disponibles
+                </Typography>
+                <Typography 
+                  variant="body1" 
+                  color="text.secondary"
+                  sx={{ 
+                    fontSize: isSmallMobile ? '1rem' : '1.125rem',
+                    maxWidth: '350px',
+                    lineHeight: 1.6,
+                    textAlign: 'center'
+                  }}
+                >
+                  {empresasSeleccionadas.length > 0 
+                    ? "No se encontraron reportes para la empresa seleccionada. Intenta con otros filtros o modifica los criterios de búsqueda."
+                    : "Aún no se han generado reportes de auditoría. Los reportes aparecerán aquí una vez que se completen las auditorías."
+                  }
+                </Typography>
+              </Box>
+            </Box>
+          ) : (
+            <Box sx={{
+              bgcolor: 'background.paper',
+              borderRadius: 3,
+              border: `1px solid ${alpha(theme.palette.divider, 0.3)}`,
+              boxShadow: '0 4px 16px rgba(0,0,0,0.08)',
+              p: isSmallMobile ? 3 : 4,
+              mb: 3
+            }}>
+              <Typography 
+                variant={isSmallMobile ? "h6" : "h5"} 
+                sx={{ 
+                  fontWeight: 700, 
+                  color: 'primary.main',
+                  mb: isSmallMobile ? 3 : 4,
+                  textAlign: 'center',
+                  pb: 3,
+                  borderBottom: `2px solid ${alpha(theme.palette.primary.main, 0.2)}`,
+                  fontSize: isSmallMobile ? '1.25rem' : '1.5rem'
+                }}
+              >
+                📊 Reportes Disponibles ({filteredReportes.length})
+              </Typography>
+              <Box sx={{ 
+                display: 'flex', 
+                flexDirection: 'column', 
+                gap: isSmallMobile ? 2 : 3,
+                pt: 1
+              }}>
+                <Grid container spacing={isSmallMobile ? 2 : 3}>
+                {console.log('Renderizando reportes:', filteredReportes.length)}
+                {filteredReportes.map((reporte) => (
+                  <Grid item xs={12} key={reporte.id}>
+                    <Accordion 
+                      expanded={expandedAccordion === reporte.id}
+                      onChange={(event, isExpanded) => {
+                        setExpandedAccordion(isExpanded ? reporte.id : null);
+                      }}
+                      sx={{ 
+                        borderRadius: 3,
+                        boxShadow: '0 2px 12px rgba(0,0,0,0.08)',
+                        '&:before': { display: 'none' },
+                        border: `1px solid ${alpha(theme.palette.primary.main, 0.15)}`,
+                        bgcolor: 'background.paper',
+                        '&:hover': {
+                          boxShadow: '0 4px 16px rgba(0,0,0,0.12)',
+                          borderColor: alpha(theme.palette.primary.main, 0.3),
+                          transform: 'translateY(-2px)',
+                          transition: 'all 0.3s ease'
+                        },
+                        transition: 'all 0.3s ease'
+                      }}
                     >
-                      Ver Detalles
-                    </Button>
+                    <AccordionSummary
+                      expandIcon={<ExpandMoreIcon />}
+                      sx={{ 
+                        px: isSmallMobile ? 3 : 4,
+                        py: isSmallMobile ? 2 : 3,
+                        '& .MuiAccordionSummary-content': {
+                          margin: 0
+                        },
+                        '&:hover': {
+                          bgcolor: alpha(theme.palette.primary.main, 0.02)
+                        }
+                      }}
+                    >
+                      <Box sx={{ 
+                        display: 'flex', 
+                        flexDirection: 'column', 
+                        gap: 1, 
+                        width: '100%' 
+                      }}>
+                        {/* Header principal */}
+                        <Box sx={{ 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          justifyContent: 'space-between',
+                          mb: 1
+                        }}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <BusinessIcon 
+                              color="primary" 
+                              sx={{ fontSize: isSmallMobile ? 20 : 24 }} 
+                            />
+                            <Typography 
+                              variant={isSmallMobile ? "body1" : "h6"} 
+                              sx={{ 
+                                fontWeight: 600,
+                                color: 'primary.main',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap',
+                                overflow: 'hidden',
+                                maxWidth: '200px'
+                              }}
+                            >
+                              {getNombreEmpresa(reporte, userEmpresas)}
+                            </Typography>
+                          </Box>
+                          <Chip 
+                            label="Ver detalles" 
+                            color="primary" 
+                            size={isSmallMobile ? "small" : "medium"}
+                            icon={<VisibilityIcon />}
+                            sx={{ fontSize: isSmallMobile ? '0.75rem' : '0.875rem' }}
+                          />
+                        </Box>
+                        
+                        {/* Información rápida */}
+                        <Box sx={{ 
+                          display: 'flex', 
+                          flexWrap: 'wrap', 
+                          gap: 1,
+                          fontSize: isSmallMobile ? '0.875rem' : '1rem'
+                        }}>
+                          <Chip 
+                            icon={<LocationOnIcon />}
+                            label={reporte.sucursal ?? "Casa Central"} 
+                            size="small" 
+                            variant="outlined"
+                            sx={{ fontSize: isSmallMobile ? '0.75rem' : '0.875rem' }}
+                          />
+                          <Chip 
+                            icon={<AssignmentIcon />}
+                            label={getNombreFormulario(reporte.formulario, reporte.nombreForm)} 
+                            size="small" 
+                            variant="outlined"
+                            sx={{ fontSize: isSmallMobile ? '0.75rem' : '0.875rem' }}
+                          />
+                        </Box>
+                      </Box>
+                    </AccordionSummary>
+                    
+                                        <AccordionDetails sx={{ 
+                      px: isSmallMobile ? 3 : 4, 
+                      pb: isSmallMobile ? 3 : 4,
+                      pt: isSmallMobile ? 2 : 3
+                    }}>
+                      <Box sx={{ 
+                        display: 'flex', 
+                        flexDirection: 'column', 
+                        gap: 2,
+                        p: 2,
+                        bgcolor: alpha(theme.palette.primary.main, 0.03),
+                        borderRadius: 2,
+                        border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}`
+                      }}>
+                        <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
+                          📅 Fecha: {reporte.fechaCreacion ? new Date(reporte.fechaCreacion).toLocaleString() : "Fecha no disponible"}
+                        </Typography>
+                        <Button
+                          variant="contained"
+                          color="primary"
+                          fullWidth
+                          onClick={() => handleSelectReporte(reporte)}
+                          sx={{ 
+                            mt: 1,
+                            py: isSmallMobile ? 1.5 : 2,
+                            fontWeight: 600,
+                            textTransform: 'none',
+                            fontSize: isSmallMobile ? '0.875rem' : '1rem'
+                          }}
+                        >
+                          👁️ Ver Detalles Completos
+                        </Button>
+                      </Box>
+                    </AccordionDetails>
+                  </Accordion>
+                </Grid>
+              ))}
+            </Grid>
+              </Box>
+            </Box>
+          )}
+        </Box>
+      ) : (
+        // Vista desktop con tabla
+        <TableContainer component={Paper} sx={{ mt: 2 }}>
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableCell>Empresa</TableCell>
+                <TableCell>Sucursal</TableCell>
+                <TableCell>Formulario</TableCell>
+                <TableCell>Fecha de Guardado</TableCell>
+                <TableCell>Acciones</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {filteredReportes.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={5} align="center" sx={{ py: 4 }}>
+                    <Typography variant="body2" color="textSecondary">
+                      {empresasSeleccionadas.length > 0 
+                        ? "No se encontraron reportes para esta empresa"
+                        : "No hay reportes disponibles"
+                      }
+                    </Typography>
                   </TableCell>
                 </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </TableContainer>
+              ) : (
+                filteredReportes.map((reporte) => (
+                  <TableRow key={reporte.id}>
+                    <TableCell>{getNombreEmpresa(reporte, userEmpresas)}</TableCell>
+                    <TableCell>{reporte.sucursal ?? "Sucursal no disponible"}</TableCell>
+                    <TableCell>{getNombreFormulario(reporte.formulario, reporte.nombreForm)}</TableCell>
+                    <TableCell>
+                      {reporte.fechaCreacion
+                        ? new Date(reporte.fechaCreacion).toLocaleString()
+                        : "Fecha no disponible"}
+                    </TableCell>
+                    <TableCell>
+                      <Button
+                        variant="contained"
+                        color="primary"
+                        onClick={() => handleSelectReporte(reporte)}
+                      >
+                        Ver Detalles
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      )}
     </Box>
   );
 };
