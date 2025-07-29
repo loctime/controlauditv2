@@ -1,11 +1,11 @@
 // src/App.jsx
 import React from "react";
-import { BrowserRouter } from "react-router-dom"; // Importa BrowserRouter
+import { BrowserRouter } from "react-router-dom";
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import { ColorModeProvider } from "./components/context/ColorModeContext";
 import AuthContextComponent from "./components/context/AuthContext";
 import AppRouter from "./router/AppRouter";
-import { ColorModeProvider } from "./components/context/ColorModeContext";
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 
@@ -14,7 +14,7 @@ const App = () => {
     <ColorModeProvider>
       <AuthContextComponent>
         <LocalizationProvider dateAdapter={AdapterDayjs}>
-          <BrowserRouter> {/* Envuelve AppRouter en BrowserRouter */}
+          <BrowserRouter>
             <div className="main-app-container">
               <AppRouter />
               <ToastContainer

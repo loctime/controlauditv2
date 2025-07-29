@@ -26,70 +26,86 @@ const AuthContextComponent = ({ children }) => {
   const [motivoBloqueo, setMotivoBloqueo] = useState('');
 
   useEffect(() => {
+    
+    // Timeout de seguridad para evitar loading infinito
+    const timeoutId = setTimeout(() => {
+      setLoading(false);
+    }, 5000); // 5 segundos máximo
+    
     // Escuchar cambios en el estado de autenticación de Firebase
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      if (firebaseUser) {
-        setUser(firebaseUser);
-        setIsLogged(true);
-        localStorage.setItem("userInfo", JSON.stringify(firebaseUser));
-        localStorage.setItem("isLogged", JSON.stringify(true));
-        
-        // Crear o obtener perfil del usuario
-        const profile = await createOrGetUserProfile(firebaseUser);
-        
-        if (profile) {
-          // Registrar log de inicio de sesión
-          await registrarAccionSistema(
-            firebaseUser.uid,
-            `Inicio de sesión`,
-            { 
-              email: firebaseUser.email,
-              displayName: firebaseUser.displayName,
-              role: profile.role
-            },
-            'login',
-            'usuario',
-            firebaseUser.uid
-          );
+      
+      try {
+        if (firebaseUser) {
+          setUser(firebaseUser);
+          setIsLogged(true);
+          localStorage.setItem("userInfo", JSON.stringify(firebaseUser));
+          localStorage.setItem("isLogged", JSON.stringify(true));
           
-          // Cargar datos del usuario
-          await Promise.all([
-            getUserEmpresas(firebaseUser.uid),
-            getUserAuditorias(firebaseUser.uid),
-            // getUserSocios(firebaseUser.uid), // Eliminado: socios
-            getAuditoriasCompartidas(firebaseUser.uid)
-          ]);
+          // Crear o obtener perfil del usuario
+          const profile = await createOrGetUserProfile(firebaseUser);
+          
+          if (profile) {
+            // Registrar log de inicio de sesión
+            await registrarAccionSistema(
+              firebaseUser.uid,
+              `Inicio de sesión`,
+              { 
+                email: firebaseUser.email,
+                displayName: firebaseUser.displayName,
+                role: profile.role
+              },
+              'login',
+              'usuario',
+              firebaseUser.uid
+            );
+            
+            // Cargar datos del usuario
+            await Promise.all([
+              getUserEmpresas(firebaseUser.uid),
+              getUserAuditorias(firebaseUser.uid),
+              // getUserSocios(firebaseUser.uid), // Eliminado: socios
+              getAuditoriasCompartidas(firebaseUser.uid)
+            ]);
+          }
+        } else {
+          // Registrar log de cierre de sesión si había un usuario
+          if (user) {
+            await registrarAccionSistema(
+              user.uid,
+              `Cierre de sesión`,
+              { 
+                email: user.email,
+                displayName: user.displayName
+              },
+              'logout',
+              'usuario',
+              user.uid
+            );
+          }
+          
+          setUser(null);
+          setUserProfile(null);
+          setIsLogged(false);
+          setUserEmpresas([]);
+          setUserAuditorias([]);
+          // setSocios([]); // Eliminado: socios
+          setAuditoriasCompartidas([]);
+          localStorage.removeItem("userInfo");
+          localStorage.removeItem("isLogged");
         }
-      } else {
-        // Registrar log de cierre de sesión si había un usuario
-        if (user) {
-          await registrarAccionSistema(
-            user.uid,
-            `Cierre de sesión`,
-            { 
-              email: user.email,
-              displayName: user.displayName
-            },
-            'logout',
-            'usuario',
-            user.uid
-          );
-        }
-        
-        setUser(null);
-        setUserProfile(null);
-        setIsLogged(false);
-        setUserEmpresas([]);
-        setUserAuditorias([]);
-        // setSocios([]); // Eliminado: socios
-        setAuditoriasCompartidas([]);
-        localStorage.removeItem("userInfo");
-        localStorage.removeItem("isLogged");
+      } catch (error) {
+        console.error('AuthContext error in onAuthStateChanged:', error);
+      } finally {
+        clearTimeout(timeoutId); // Limpiar timeout
+        setLoading(false);
       }
-      setLoading(false);
     });
 
-    return () => unsubscribe();
+    return () => {
+      clearTimeout(timeoutId);
+      unsubscribe();
+    };
   }, []);
 
   // --- Listener reactivo para empresas del usuario (multi-tenant) ---
@@ -116,11 +132,9 @@ const AuthContextComponent = ({ children }) => {
       setLoadingEmpresas(false);
       return;
     }
-    console.debug('[AuthContext] Suscribiendo a empresas en tiempo real para rol:', role, 'query:', q);
     const unsubscribe = onSnapshot(q, (snapshot) => {
       setUserEmpresas(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
       setLoadingEmpresas(false);
-      console.debug('[AuthContext] Empresas actualizadas en tiempo real:', snapshot.docs.length);
     }, (error) => {
       console.error('[AuthContext] Error en onSnapshot de empresas:', error);
       setUserEmpresas([]);
@@ -281,13 +295,8 @@ const AuthContextComponent = ({ children }) => {
   // Función para obtener empresas del usuario (multi-tenant)
   const getUserEmpresas = async (userId) => {
     try {
-      console.log('=== DEBUG getUserEmpresas ===');
-      console.log('userId:', userId);
-      console.log('role:', role);
-      console.log('userProfile:', userProfile);
       
       if (!userId) {
-        console.log('No hay userId, abortando');
         setUserEmpresas([]);
         return [];
       }
@@ -297,24 +306,20 @@ const AuthContextComponent = ({ children }) => {
       
       // Si es supermax, ve todas las empresas
       if (role === 'supermax') {
-        console.log('Acceso: supermax - ve todas las empresas');
         snapshot = await getDocs(empresasRef);
       } 
       // Si es max, solo ve sus propias empresas
       else if (role === 'max') {
-        console.log('Acceso: max - ve sus propias empresas');
         const q = query(empresasRef, where("propietarioId", "==", userId));
         snapshot = await getDocs(q);
       }
       // Si es operario, ve empresas de su cliente admin
       else {
-        console.log('Acceso: operario - ve empresas de su cliente admin');
         const userRef = doc(db, "usuarios", userId);
         const userSnap = await getDoc(userRef);
         if (userSnap.exists()) {
           const userData = userSnap.data();
           const clienteAdminId = userData.clienteAdminId;
-          console.log('clienteAdminId:', clienteAdminId);
           if (clienteAdminId) {
             const q = query(empresasRef, where("propietarioId", "==", clienteAdminId));
             snapshot = await getDocs(q);
@@ -330,10 +335,6 @@ const AuthContextComponent = ({ children }) => {
         id: doc.id,
         ...doc.data()
       }));
-      
-      console.log('Empresas encontradas:', empresas.length);
-      console.log('Empresas:', empresas);
-      console.log('=== FIN DEBUG ===');
       
       setUserEmpresas(empresas);
       return empresas;
@@ -706,28 +707,21 @@ const AuthContextComponent = ({ children }) => {
   // Función para verificar y corregir empresas sin propietarioId
   const verificarYCorregirEmpresas = async () => {
     try {
-      console.log('=== DEBUG verificarYCorregirEmpresas ===');
-      console.log('userProfile:', userProfile);
-      console.log('userEmpresas actuales:', userEmpresas);
       
       if (!userProfile) {
-        console.log('No hay userProfile, abortando verificación');
         return 0;
       }
 
       // Solo verificar empresas que ya pertenecen al usuario actual
       const empresasAVerificar = userEmpresas || [];
-      console.log('Empresas a verificar:', empresasAVerificar.length);
       
       let empresasCorregidas = 0;
       const empresasActualizadas = [...userEmpresas]; // Clonar array actual
       
       for (const empresa of empresasAVerificar) {
-        console.log('Verificando empresa:', empresa.nombre, 'ID:', empresa.id);
         
         // Verificar si la empresa tiene propietarioId
         if (!empresa.propietarioId) {
-          console.log(`🔧 Corrigiendo empresa "${empresa.nombre}" - asignando propietarioId`);
           
           const empresaRef = doc(db, "empresas", empresa.id);
           await updateDoc(empresaRef, {
@@ -756,19 +750,14 @@ const AuthContextComponent = ({ children }) => {
           }
           
           empresasCorregidas++;
-          console.log(`✅ Empresa "${empresa.nombre}" corregida y asignada a ${userProfile.email}`);
         } else {
-          console.log(`✅ Empresa "${empresa.nombre}" ya tiene propietarioId: ${empresa.propietarioId}`);
         }
       }
       
       // Actualizar el estado local sin recargar desde Firestore
       if (empresasCorregidas > 0) {
-        console.log(`🔄 Actualizando estado local con ${empresasCorregidas} empresas corregidas`);
         setUserEmpresas(empresasActualizadas);
       }
-      
-      console.log(`=== FIN DEBUG - Empresas corregidas: ${empresasCorregidas} ===`);
       
       return empresasCorregidas;
     } catch (error) {
@@ -859,7 +848,6 @@ const AuthContextComponent = ({ children }) => {
   // Actualizar datos de una empresa y registrar log
   const updateEmpresa = async (empresaId, updateData) => {
     try {
-      console.log('[updateEmpresa] Iniciando actualización de empresa:', empresaId, updateData);
       const empresaRef = doc(db, 'empresas', empresaId);
       await updateDoc(empresaRef, {
         ...updateData,
@@ -876,7 +864,6 @@ const AuthContextComponent = ({ children }) => {
       );
       // Actualizar localmente si corresponde
       setUserEmpresas((prev) => prev.map(e => e.id === empresaId ? { ...e, ...updateData, ultimaModificacion: new Date() } : e));
-      console.log('[updateEmpresa] Empresa actualizada correctamente:', empresaId);
       return true;
     } catch (error) {
       console.error('[updateEmpresa] Error al actualizar empresa:', error);
