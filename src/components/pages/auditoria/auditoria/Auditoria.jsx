@@ -10,13 +10,15 @@ import {
   Alert as MuiAlert,
   Button as MuiButton,
   useTheme,
+  useMediaQuery,
   alpha,
   Fade,
   Grid,
   Card,
   CardContent,
   Chip,
-  LinearProgress
+  LinearProgress,
+  Paper
 } from "@mui/material";
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
@@ -60,6 +62,7 @@ const AuditoriaRefactorizada = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { userProfile, userEmpresas, userFormularios } = useAuth();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
   // Hook para manejar todo el estado
   const auditoriaState = useAuditoriaState();
@@ -581,39 +584,61 @@ const AuditoriaRefactorizada = () => {
 
             {empresaSeleccionada && (
               <Zoom in={true} timeout={600}>
-                <Card sx={{ 
+                <Box sx={{ 
                   mt: 3, 
                   background: `linear-gradient(135deg, ${alpha(theme.palette.success.main, 0.1)}, ${alpha(theme.palette.success.main, 0.05)})`,
-                  border: `2px solid ${alpha(theme.palette.success.main, 0.2)}`
+                  border: `2px solid ${alpha(theme.palette.success.main, 0.2)}`,
+                  borderRadius: 2,
+                  p: isMobile ? 2 : 3,
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
+                  overflow: 'hidden'
                 }}>
-                  <CardContent>
-                    <Box display="flex" alignItems="center" gap={2}>
-                      <CheckCircleIcon color="success" sx={{ fontSize: 32 }} />
-                      <Box flex={1}>
-                        <Typography variant="h6" color="success.main" gutterBottom>
-                          Empresa Seleccionada
-                        </Typography>
-                        <Typography variant="body1" color="textSecondary">
-                          <strong>Empresa:</strong> {empresaSeleccionada.nombre} | 
-                          <strong> Ubicación:</strong> {obtenerTipoUbicacion()}
-                        </Typography>
-                      </Box>
-                      {empresaSeleccionada.logo && (
-                        <img
-                          src={empresaSeleccionada.logo}
-                          alt={`Logo de ${empresaSeleccionada.nombre}`}
-                          style={{ 
-                            width: "60px", 
-                            height: "60px", 
-                            objectFit: 'contain',
-                            borderRadius: '8px'
-                          }}
-                          onError={(e) => { e.target.style.display = 'none'; }}
-                        />
-                      )}
+                  <Box display="flex" alignItems="center" gap={isMobile ? 1.5 : 2}>
+                    <CheckCircleIcon 
+                      color="success" 
+                      sx={{ fontSize: isMobile ? 24 : 32 }} 
+                    />
+                    <Box flex={1}>
+                      <Typography 
+                        variant={isMobile ? "body1" : "h6"} 
+                        color="success.main" 
+                        gutterBottom
+                        sx={{ 
+                          fontWeight: 600,
+                          fontSize: isMobile ? '1rem' : '1.25rem'
+                        }}
+                      >
+                        Empresa Seleccionada
+                      </Typography>
+                      <Typography 
+                        variant={isMobile ? "body2" : "body1"} 
+                        color="textSecondary"
+                        sx={{ 
+                          fontSize: isMobile ? '0.875rem' : '1rem',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden'
+                        }}
+                      >
+                        <strong>Empresa:</strong> {empresaSeleccionada.nombre} | 
+                        <strong> Ubicación:</strong> {obtenerTipoUbicacion()}
+                      </Typography>
                     </Box>
-                  </CardContent>
-                </Card>
+                    {empresaSeleccionada.logo && (
+                      <img
+                        src={empresaSeleccionada.logo}
+                        alt={`Logo de ${empresaSeleccionada.nombre}`}
+                        style={{ 
+                          width: isMobile ? "40px" : "60px", 
+                          height: isMobile ? "40px" : "60px", 
+                          objectFit: 'contain',
+                          borderRadius: '8px'
+                        }}
+                        onError={(e) => { e.target.style.display = 'none'; }}
+                      />
+                    )}
+                  </Box>
+                </Box>
               </Zoom>
             )}
           </Box>

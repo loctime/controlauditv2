@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Button, Grid, Modal, TextField, Typography, Box, Paper, Stack, Dialog, DialogTitle, DialogContent, DialogActions, Chip, Alert, List, ListItem, ListItemText, ListItemIcon } from "@mui/material";
+import { Button, Grid, Modal, TextField, Typography, Box, Paper, Stack, Dialog, DialogTitle, DialogContent, DialogActions, Chip, Alert, List, ListItem, ListItemText, ListItemIcon, useTheme, useMediaQuery, alpha } from "@mui/material";
 import CameraAltIcon from '@mui/icons-material/CameraAlt';
 import PhotoLibraryIcon from '@mui/icons-material/PhotoLibrary';
 import WarningIcon from '@mui/icons-material/Warning';
@@ -114,6 +114,24 @@ const PreguntasYSeccion = ({
   comentariosExistentes = [],
   imagenesExistentes = []
 }) => {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const isSmallMobile = useMediaQuery(theme.breakpoints.down('xs'));
+
+  const mobileBoxStyle = {
+    mb: isMobile ? 1.5 : 3,
+    p: isMobile ? 2 : 3,
+    borderRadius: 2,
+    bgcolor: 'background.paper',
+    border: `1px solid ${theme.palette.divider}`,
+    boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
+    overflow: 'hidden',
+    minHeight: isMobile ? '100px' : '120px',
+    display: 'flex',
+    flexDirection: 'column',
+    justifyContent: 'space-between'
+  };
+
   const [respuestas, setRespuestas] = useState([]);
   const [comentarios, setComentarios] = useState([]);
   const [modalAbierto, setModalAbierto] = useState(false);
@@ -384,31 +402,62 @@ const PreguntasYSeccion = ({
   };
 
   if (!Array.isArray(secciones)) {
-    return <div>Error: Las secciones no están en el formato correcto.</div>;
+    return (
+      <Box sx={mobileBoxStyle}>
+        <Typography variant="body2" color="text.secondary">
+          Error: Las secciones no están en el formato correcto.
+        </Typography>
+      </Box>
+    );
   }
 
   return (
     <Box>
       {/* Indicador de progreso general */}
-      <Paper elevation={1} sx={{ p: 2, mb: 3, backgroundColor: '#f5f5f5' }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
-          <Typography variant="h6" sx={{ fontWeight: 600 }}>
+      <Box sx={{
+        ...mobileBoxStyle,
+        backgroundColor: '#f5f5f5',
+        mb: isMobile ? 2 : 3
+      }}>
+        <Box sx={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'space-between', 
+          mb: isMobile ? 1 : 2 
+        }}>
+          <Typography 
+            variant={isMobile ? "body1" : "h6"} 
+            sx={{ fontWeight: 600 }}
+          >
             Progreso de la Auditoría
           </Typography>
           <Chip 
             label={`${obtenerPreguntasNoContestadas().length} sin contestar`}
             color={obtenerPreguntasNoContestadas().length > 0 ? "warning" : "success"}
-            size="small"
+            size={isMobile ? "small" : "medium"}
+            sx={{ fontSize: isMobile ? '0.75rem' : '0.875rem' }}
           />
         </Box>
         
         {/* Barra de progreso */}
-        <Box sx={{ width: '100%', mb: 1 }}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
-            <Typography variant="body2" color="text.secondary">
+        <Box sx={{ width: '100%', mb: isMobile ? 1 : 2 }}>
+          <Box sx={{ 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            mb: isMobile ? 0.5 : 1 
+          }}>
+            <Typography 
+              variant="body2" 
+              color="text.secondary"
+              sx={{ fontSize: isMobile ? '0.75rem' : '0.875rem' }}
+            >
               Preguntas contestadas
             </Typography>
-            <Typography variant="body2" color="text.secondary">
+            <Typography 
+              variant="body2" 
+              color="text.secondary"
+              sx={{ fontSize: isMobile ? '0.75rem' : '0.875rem' }}
+            >
               {secciones.reduce((total, seccion) => 
                 total + seccion.preguntas.length, 0) - obtenerPreguntasNoContestadas().length} / {secciones.reduce((total, seccion) => 
                 total + seccion.preguntas.length, 0)}
@@ -416,7 +465,7 @@ const PreguntasYSeccion = ({
           </Box>
           <Box sx={{ 
             width: '100%', 
-            height: 8, 
+            height: isMobile ? 6 : 8, 
             backgroundColor: '#e0e0e0', 
             borderRadius: 4,
             overflow: 'hidden'
@@ -431,25 +480,34 @@ const PreguntasYSeccion = ({
             }} />
           </Box>
         </Box>
-      </Paper>
+      </Box>
 
       {/* Botón para ver preguntas no contestadas */}
       {obtenerPreguntasNoContestadas().length > 0 && (
         <Alert 
           severity="warning" 
-          sx={{ mb: 3 }}
+          sx={{ 
+            mb: isMobile ? 2 : 3,
+            '& .MuiAlert-message': {
+              fontSize: isMobile ? '0.875rem' : '1rem'
+            }
+          }}
           action={
             <Button
               color="warning"
-              size="small"
+              size={isMobile ? "small" : "medium"}
               onClick={() => setOpenPreguntasNoContestadas(true)}
               startIcon={<VisibilityIcon />}
+              sx={{ fontSize: isMobile ? '0.75rem' : '0.875rem' }}
             >
               Ver {obtenerPreguntasNoContestadas().length} no contestadas
             </Button>
           }
         >
-          <Typography variant="body2">
+          <Typography 
+            variant="body2"
+            sx={{ fontSize: isMobile ? '0.875rem' : '1rem' }}
+          >
             ⚠️ Tienes {obtenerPreguntasNoContestadas().length} pregunta(s) sin contestar. 
             Haz clic en "Ver no contestadas" para encontrarlas rápidamente.
           </Typography>
@@ -457,24 +515,45 @@ const PreguntasYSeccion = ({
       )}
 
       {secciones.map((seccion, seccionIndex) => (
-        <Box key={seccionIndex} mb={4}>
-          <Typography variant="h5" sx={{ mb: 2, fontWeight: 'bold', color: 'primary.main' }}>{seccion.nombre}</Typography>
-          <Stack spacing={3}>
+        <Box key={seccionIndex} mb={isMobile ? 2 : 4}>
+          <Typography 
+            variant={isMobile ? "h6" : "h5"} 
+            sx={{ 
+              mb: isMobile ? 1.5 : 2, 
+              fontWeight: 'bold', 
+              color: 'primary.main',
+              fontSize: isMobile ? '1.25rem' : '1.5rem'
+            }}
+          >
+            {seccion.nombre}
+          </Typography>
+          <Stack spacing={isMobile ? 2 : 3}>
             {seccion.preguntas.map((pregunta, preguntaIndex) => (
-              <Paper 
+              <Box 
                 key={preguntaIndex} 
-                elevation={2} 
-                sx={{ 
-                  p: 3, 
-                  borderRadius: 2, 
-                  mb: 3,
+                sx={{
+                  ...mobileBoxStyle,
                   border: preguntaContestada(seccionIndex, preguntaIndex) ? '2px solid #4caf50' : '2px solid #ff9800',
-                  backgroundColor: preguntaContestada(seccionIndex, preguntaIndex) ? '#f1f8e9' : '#fff3e0'
+                  backgroundColor: preguntaContestada(seccionIndex, preguntaIndex) ? '#f1f8e9' : '#fff3e0',
+                  p: isMobile ? 2 : 3,
+                  mb: isMobile ? 2 : 3
                 }}
                 id={`pregunta-${seccionIndex}-${preguntaIndex}`}
               >
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-                  <Typography variant="subtitle1" sx={{ fontWeight: 500, flex: 1 }}>
+                <Box sx={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: isMobile ? 1 : 2, 
+                  mb: isMobile ? 1.5 : 2 
+                }}>
+                  <Typography 
+                    variant={isMobile ? "body1" : "subtitle1"} 
+                    sx={{ 
+                      fontWeight: 500, 
+                      flex: 1,
+                      fontSize: isMobile ? '0.875rem' : '1rem'
+                    }}
+                  >
                     {pregunta}
                   </Typography>
                   {preguntaContestada(seccionIndex, preguntaIndex) ? (
@@ -482,26 +561,38 @@ const PreguntasYSeccion = ({
                       icon={<CheckCircleIcon />} 
                       label="Contestada" 
                       color="success" 
-                      size="small" 
+                      size={isMobile ? "small" : "medium"}
+                      sx={{ fontSize: isMobile ? '0.75rem' : '0.875rem' }}
                     />
                   ) : (
                     <Chip 
                       icon={<WarningIcon />} 
                       label="Sin contestar" 
                       color="warning" 
-                      size="small" 
+                      size={isMobile ? "small" : "medium"}
+                      sx={{ fontSize: isMobile ? '0.75rem' : '0.875rem' }}
                     />
                   )}
                 </Box>
-                <Stack direction="column" spacing={1.5}>
-                  <Stack direction="row" spacing={1} flexWrap="wrap">
+                <Stack direction="column" spacing={isMobile ? 1 : 1.5}>
+                  <Stack 
+                    direction="row" 
+                    spacing={isMobile ? 0.5 : 1} 
+                    flexWrap="wrap"
+                    sx={{ gap: isMobile ? 0.5 : 1 }}
+                  >
                     {respuestasPosibles.map((respuesta, index) => (
                       <Button
                         key={index}
                         variant={respuestas[seccionIndex]?.[preguntaIndex] === respuesta ? "contained" : "outlined"}
                         onClick={() => handleRespuestaChange(seccionIndex, preguntaIndex, respuesta)}
                         disabled={modalAbierto}
-                        sx={{ minWidth: 120 }}
+                        sx={{ 
+                          minWidth: isMobile ? 80 : 120,
+                          fontSize: isMobile ? '0.75rem' : '0.875rem',
+                          py: isMobile ? 0.5 : 1,
+                          px: isMobile ? 1 : 2
+                        }}
                       >
                         {respuesta}
                       </Button>
@@ -510,7 +601,12 @@ const PreguntasYSeccion = ({
                   <Button
                     variant="outlined"
                     onClick={() => handleOpenModal(seccionIndex, preguntaIndex)}
-                    sx={{ minWidth: 120 }}
+                    sx={{ 
+                      minWidth: isMobile ? 80 : 120,
+                      fontSize: isMobile ? '0.75rem' : '0.875rem',
+                      py: isMobile ? 0.5 : 1,
+                      px: isMobile ? 1 : 2
+                    }}
                   >
                     Comentario
                   </Button>
@@ -519,7 +615,12 @@ const PreguntasYSeccion = ({
                     component="span"
                     onClick={() => handleOpenCameraDialog(seccionIndex, preguntaIndex)}
                     disabled={procesandoImagen[`${seccionIndex}-${preguntaIndex}`]}
-                    sx={{ minWidth: 120 }}
+                    sx={{ 
+                      minWidth: isMobile ? 80 : 120,
+                      fontSize: isMobile ? '0.75rem' : '0.875rem',
+                      py: isMobile ? 0.5 : 1,
+                      px: isMobile ? 1 : 2
+                    }}
                   >
                     {procesandoImagen[`${seccionIndex}-${preguntaIndex}`] ? 'Procesando...' : 'Tomar foto'}
                   </Button>
@@ -527,7 +628,12 @@ const PreguntasYSeccion = ({
                     <Button
                       variant="outlined"
                       component="span"
-                      sx={{ minWidth: 120 }}
+                      sx={{ 
+                        minWidth: isMobile ? 80 : 120,
+                        fontSize: isMobile ? '0.75rem' : '0.875rem',
+                        py: isMobile ? 0.5 : 1,
+                        px: isMobile ? 1 : 2
+                      }}
                       disabled={procesandoImagen[`${seccionIndex}-${preguntaIndex}`]}
                     >
                       {procesandoImagen[`${seccionIndex}-${preguntaIndex}`] ? 'Procesando...' : 'Subir desde galería'}
@@ -535,19 +641,37 @@ const PreguntasYSeccion = ({
                   </label>
                 </Stack>
                 {/* Comentario y foto debajo, bien separados */}
-                <Box mt={2} display="flex" alignItems="center" gap={3} flexWrap="wrap">
-                  <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+                <Box 
+                  mt={isMobile ? 1.5 : 2} 
+                  display="flex" 
+                  alignItems="center" 
+                  gap={isMobile ? 2 : 3} 
+                  flexWrap="wrap"
+                >
+                  <Typography 
+                    variant="body2" 
+                    color="text.secondary" 
+                    sx={{ 
+                      fontStyle: 'italic',
+                      fontSize: isMobile ? '0.75rem' : '0.875rem'
+                    }}
+                  >
                     {comentarios[seccionIndex]?.[preguntaIndex] ? `Comentario: ${comentarios[seccionIndex][preguntaIndex]}` : "Sin comentario"}
                   </Typography>
                   {imagenes[seccionIndex]?.[preguntaIndex] && (
                     <img
                       src={URL.createObjectURL(imagenes[seccionIndex][preguntaIndex])}
                       alt={`Imagen de la pregunta ${preguntaIndex}`}
-                      style={{ maxWidth: '100px', maxHeight: '100px', borderRadius: 8, border: '1px solid #eee' }}
+                      style={{ 
+                        maxWidth: isMobile ? '80px' : '100px', 
+                        maxHeight: isMobile ? '80px' : '100px', 
+                        borderRadius: 8, 
+                        border: '1px solid #eee' 
+                      }}
                     />
                   )}
                 </Box>
-              </Paper>
+              </Box>
             ))}
           </Stack>
         </Box>
