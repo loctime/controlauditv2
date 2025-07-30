@@ -2,7 +2,7 @@
 
 ## 🚀 Novedades 2024-06
 
-- Permisos, unificados: ahora todo el sistema usa `puedeCompartirFormularios` (antes `puedeCompartirAuditorias`).
+- Permisos unificados: ahora todo el sistema usa `puedeCompartirFormularios` (antes `puedeCompartirAuditorias`).
 - Nuevo hook `usePermiso` y componente `<Permiso />` para validación de permisos reutilizable en UI y lógica. Ejemplo:
   ```jsx
   <Permiso permiso="puedeCompartirFormularios">
