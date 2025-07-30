@@ -127,17 +127,7 @@ const Formulario = () => {
         Las preguntas se deben ingresar una debajo de otra por cada sección
       </Typography>
       
-      {/* ✅ Información del creador */}
-      {user && (
-        <Box mb={2} p={2} bgcolor="primary.light" borderRadius={1}>
-          <Typography variant="body2" color="white">
-            <strong>Creador:</strong> {user.displayName || user.email}
-          </Typography>
-          <Typography variant="body2" color="white">
-            <strong>Rol:</strong> {userProfile?.role || 'Usuario'}
-          </Typography>
-        </Box>
-      )}
+
       
       <form onSubmit={handleSubmit}>
         <TextField
