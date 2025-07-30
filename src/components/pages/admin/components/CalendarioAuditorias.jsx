@@ -124,6 +124,7 @@ const CalendarioAuditorias = React.memo(({
                 sx={{
                   p: 1,
                   minHeight: 60,
+                  minWidth: '40px',
                   border: day ? '1px solid #e0e0e0' : 'none',
                   borderRadius: 1,
                   cursor: day && canAgendarAuditorias ? 'pointer' : 'default',
@@ -133,12 +134,31 @@ const CalendarioAuditorias = React.memo(({
                     bgcolor: isSelected ? 'primary.main' : 'grey.100'
                   } : {},
                   position: 'relative',
-                  opacity: day && !canAgendarAuditorias ? 0.6 : 1
+                  opacity: day && !canAgendarAuditorias ? 0.6 : 1,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'flex-start',
+                  alignItems: 'center'
                 }}
               >
                 {day && (
                   <>
-                    <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+                    <Typography 
+                      variant="body2" 
+                      sx={{ 
+                        fontWeight: 'bold',
+                        textAlign: 'center',
+                        display: 'flex',
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        minHeight: '24px',
+                        fontSize: '0.875rem',
+                        lineHeight: 1,
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis'
+                      }}
+                    >
                       {day.getDate()}
                     </Typography>
                     {auditoriasDelDia.length > 0 && (
@@ -147,7 +167,15 @@ const CalendarioAuditorias = React.memo(({
                           label={`${auditoriasDelDia.length} auditoría${auditoriasDelDia.length > 1 ? 's' : ''}`}
                           size="small"
                           color={auditoriasDelDia.some(a => a.estado === 'completada') ? 'success' : 'warning'}
-                          sx={{ fontSize: '0.7rem', height: 20 }}
+                          sx={{ 
+                            fontSize: '0.7rem', 
+                            height: 20,
+                            '& .MuiChip-label': {
+                              whiteSpace: 'nowrap',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis'
+                            }
+                          }}
                         />
                       </Box>
                     )}

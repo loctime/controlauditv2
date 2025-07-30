@@ -1,5 +1,22 @@
 import React, { useState } from 'react';
-import { Box, Button, FormControl, Grid, IconButton, InputAdornment, InputLabel, OutlinedInput, TextField, Typography, Alert } from '@mui/material';
+import { 
+  Box, 
+  Button, 
+  FormControl, 
+  Grid, 
+  IconButton, 
+  InputAdornment, 
+  InputLabel, 
+  OutlinedInput, 
+  TextField, 
+  Typography, 
+  Alert,
+  useTheme,
+  useMediaQuery,
+  alpha,
+  Card,
+  CardContent
+} from '@mui/material';
 import { Link, useNavigate } from 'react-router-dom';
 import { Visibility, VisibilityOff } from '@mui/icons-material';
 import { onSignIn } from '../../../firebaseConfig';
@@ -8,6 +25,10 @@ import * as Yup from 'yup';
 import { useAuth } from '../../context/AuthContext';
 
 const Login = () => {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const isSmallMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -63,25 +84,56 @@ const Login = () => {
         justifyContent: 'center',
         alignItems: 'center',
         flexDirection: 'column',
-        backgroundColor: '#f5f5f5',
+        background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.1)} 0%, ${alpha(theme.palette.secondary.main, 0.1)} 100%)`,
+        p: isSmallMobile ? 2 : 4,
       }}
     >
-      <Box
+      <Card
         sx={{
-          backgroundColor: 'white',
-          padding: 4,
-          borderRadius: 2,
-          boxShadow: 3,
-          maxWidth: 400,
+          bgcolor: 'background.paper',
+          borderRadius: 4,
+          border: `1px solid ${alpha(theme.palette.divider, 0.3)}`,
+          boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
+          maxWidth: isMobile ? '100%' : 450,
           width: '100%',
+          overflow: 'hidden',
+          '&:hover': {
+            transform: 'translateY(-2px)',
+            boxShadow: '0 12px 40px rgba(0,0,0,0.15)',
+            transition: 'all 0.3s ease'
+          },
+          transition: 'all 0.3s ease'
         }}
       >
-        <Typography variant="h4" component="h1" gutterBottom textAlign="center">
-          Iniciar Sesión
-        </Typography>
+        <CardContent sx={{ p: isSmallMobile ? 3 : 5 }}>
+          <Box sx={{ textAlign: 'center', mb: isSmallMobile ? 3 : 4 }}>
+            <Typography 
+              variant={isSmallMobile ? "h5" : "h4"} 
+              component="h1" 
+              sx={{ 
+                fontWeight: 700, 
+                color: 'primary.main',
+                mb: 1
+              }}
+            >
+              🔐 Iniciar Sesión
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Accede a tu cuenta de Control de Auditorías
+            </Typography>
+          </Box>
         
         {error && (
-          <Alert severity="error" sx={{ mb: 2 }}>
+          <Alert 
+            severity="error" 
+            sx={{ 
+              mb: 3,
+              borderRadius: 2,
+              '& .MuiAlert-icon': {
+                alignItems: 'center'
+              }
+            }}
+          >
             {error}
           </Alert>
         )}
@@ -93,46 +145,70 @@ const Login = () => {
         >
           {({ isSubmitting, errors, touched }) => (
             <Form>
-              <Grid container spacing={2}>
-                <Grid size={{ xs: 12 }}>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: isSmallMobile ? 2 : 3 }}>
+                {/* Campo de email */}
+                <Box>
                   <Field 
                     as={TextField} 
                     name="email" 
-                    label="Correo Electrónico" 
+                    label="📧 Correo Electrónico" 
                     fullWidth 
                     disabled={isSubmitting || loading}
                     error={touched.email && Boolean(errors.email)}
                     helperText={touched.email && errors.email}
+                    size={isSmallMobile ? "small" : "medium"}
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        borderRadius: 2,
+                        '&:hover': {
+                          '& .MuiOutlinedInput-notchedOutline': {
+                            borderColor: theme.palette.primary.main,
+                          }
+                        }
+                      }
+                    }}
                   />
-                </Grid>
-                <Grid size={{ xs: 12 }}>
+                </Box>
+                
+                {/* Campo de contraseña */}
+                <Box>
                   <FormControl variant="outlined" fullWidth>
                     <InputLabel htmlFor="outlined-adornment-password">
-                      Contraseña
+                      🔒 Contraseña
                     </InputLabel>
                     <Field
                       as={OutlinedInput}
                       name="password"
                       id="outlined-adornment-password"
                       type={showPassword ? 'text' : 'password'}
+                      size={isSmallMobile ? "small" : "medium"}
                       endAdornment={
                         <InputAdornment position="end">
                           <IconButton
                             aria-label="toggle password visibility"
                             onClick={handleClickShowPassword}
                             edge="end"
+                            sx={{ color: 'primary.main' }}
                           >
                             {showPassword ? (
-                              <VisibilityOff color="primary" />
+                              <VisibilityOff />
                             ) : (
-                              <Visibility color="primary" />
+                              <Visibility />
                             )}
                           </IconButton>
                         </InputAdornment>
                       }
-                      label="Contraseña"
+                      label="🔒 Contraseña"
                       disabled={isSubmitting || loading}
                       error={touched.password && Boolean(errors.password)}
+                      sx={{
+                        borderRadius: 2,
+                        '&:hover': {
+                          '& .MuiOutlinedInput-notchedOutline': {
+                            borderColor: theme.palette.primary.main,
+                          }
+                        }
+                      }}
                     />
                   </FormControl>
                   {touched.password && errors.password && (
@@ -140,45 +216,62 @@ const Login = () => {
                       {errors.password}
                     </Typography>
                   )}
-                </Grid>
-                <Grid size={{ xs: 12 }}>
+                </Box>
+                
+                {/* Link de olvidé contraseña */}
+                <Box sx={{ textAlign: 'center' }}>
                   <Link
                     to="/forgot-password"
-                    style={{ color: 'steelblue', textDecoration: 'none' }}
+                    style={{ 
+                      color: theme.palette.primary.main, 
+                      textDecoration: 'none',
+                      fontWeight: 600,
+                      fontSize: isSmallMobile ? '0.875rem' : '1rem'
+                    }}
                   >
-                    ¿Olvidaste tu contraseña?
+                    🔑 ¿Olvidaste tu contraseña?
                   </Link>
-                </Grid>
-                <Grid size={{ xs: 12 }}>
+                </Box>
+                
+                {/* Botón de ingresar */}
+                <Box>
                   <Button
                     variant="contained"
                     fullWidth
                     type="submit"
                     disabled={isSubmitting || loading}
+                    size={isSmallMobile ? "medium" : "large"}
                     sx={{
                       color: 'white',
                       textTransform: 'none',
-                      py: 1.5,
+                      py: isSmallMobile ? 1.5 : 2,
+                      px: isSmallMobile ? 3 : 4,
+                      fontSize: isSmallMobile ? '1rem' : '1.1rem',
+                      fontWeight: 600,
+                      borderRadius: 2,
+                      background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`,
+                      '&:hover': {
+                        background: `linear-gradient(135deg, ${theme.palette.primary.dark} 0%, ${theme.palette.primary.main} 100%)`,
+                        transform: 'translateY(-1px)',
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                        transition: 'all 0.2s ease'
+                      },
+                      transition: 'all 0.2s ease'
                     }}
                   >
-                    {loading ? 'Cargando...' : 'Ingresar'}
+                    {loading ? '⏳ Cargando...' : '🚀 Ingresar'}
                   </Button>
-                </Grid>
-                <Grid size={{ xs: 12 }} textAlign="center">
-                  <Typography variant="body2">
-                    ¿No tienes cuenta?{' '}
-                    <Link to="/register" style={{ color: 'steelblue', textDecoration: 'none' }}>
-                      Regístrate aquí
-                    </Link>
-                  </Typography>
-                </Grid>
-              </Grid>
+                </Box>
+                
+
+              </Box>
             </Form>
           )}
         </Formik>
+          </CardContent>
+        </Card>
       </Box>
-    </Box>
-  );
-};
+    );
+  };
 
 export default Login;
