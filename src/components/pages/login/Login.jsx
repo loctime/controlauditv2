@@ -106,19 +106,27 @@ const Login = () => {
         }}
       >
         <CardContent sx={{ p: isSmallMobile ? 3 : 5 }}>
-          <Box sx={{ textAlign: 'center', mb: isSmallMobile ? 3 : 4 }}>
+          <Box sx={{ textAlign: 'center', mb: isSmallMobile ? 4 : 5 }}>
             <Typography 
               variant={isSmallMobile ? "h5" : "h4"} 
               component="h1" 
               sx={{ 
                 fontWeight: 700, 
                 color: 'primary.main',
-                mb: 1
+                mb: 2,
+                lineHeight: 1.2
               }}
             >
               🔐 Iniciar Sesión
             </Typography>
-            <Typography variant="body2" color="text.secondary">
+            <Typography 
+              variant="body1" 
+              color="text.secondary"
+              sx={{ 
+                lineHeight: 1.5,
+                mb: 1
+              }}
+            >
               Accede a tu cuenta de Control de Auditorías
             </Typography>
           </Box>
@@ -145,7 +153,7 @@ const Login = () => {
         >
           {({ isSubmitting, errors, touched }) => (
             <Form>
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: isSmallMobile ? 2 : 3 }}>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: isSmallMobile ? 3 : 4 }}>
                 {/* Campo de email */}
                 <Box>
                   <Field 
@@ -165,6 +173,13 @@ const Login = () => {
                             borderColor: theme.palette.primary.main,
                           }
                         }
+                      },
+                      '& .MuiInputLabel-root': {
+                        fontSize: isSmallMobile ? '0.875rem' : '1rem'
+                      },
+                      '& .MuiInputBase-input': {
+                        fontSize: isSmallMobile ? '0.875rem' : '1rem',
+                        padding: isSmallMobile ? '12px 14px' : '16px 14px'
                       }
                     }}
                   />
@@ -173,7 +188,10 @@ const Login = () => {
                 {/* Campo de contraseña */}
                 <Box>
                   <FormControl variant="outlined" fullWidth>
-                    <InputLabel htmlFor="outlined-adornment-password">
+                    <InputLabel 
+                      htmlFor="outlined-adornment-password"
+                      sx={{ fontSize: isSmallMobile ? '0.875rem' : '1rem' }}
+                    >
                       🔒 Contraseña
                     </InputLabel>
                     <Field
@@ -207,6 +225,10 @@ const Login = () => {
                           '& .MuiOutlinedInput-notchedOutline': {
                             borderColor: theme.palette.primary.main,
                           }
+                        },
+                        '& .MuiInputBase-input': {
+                          fontSize: isSmallMobile ? '0.875rem' : '1rem',
+                          padding: isSmallMobile ? '12px 14px' : '16px 14px'
                         }
                       }}
                     />
@@ -219,14 +241,15 @@ const Login = () => {
                 </Box>
                 
                 {/* Link de olvidé contraseña */}
-                <Box sx={{ textAlign: 'center' }}>
+                <Box sx={{ textAlign: 'center', mt: 1 }}>
                   <Link
                     to="/forgot-password"
                     style={{ 
                       color: theme.palette.primary.main, 
                       textDecoration: 'none',
                       fontWeight: 600,
-                      fontSize: isSmallMobile ? '0.875rem' : '1rem'
+                      fontSize: isSmallMobile ? '0.875rem' : '1rem',
+                      lineHeight: 1.5
                     }}
                   >
                     🔑 ¿Olvidaste tu contraseña?
@@ -234,7 +257,7 @@ const Login = () => {
                 </Box>
                 
                 {/* Botón de ingresar */}
-                <Box>
+                <Box sx={{ mt: 2 }}>
                   <Button
                     variant="contained"
                     fullWidth
