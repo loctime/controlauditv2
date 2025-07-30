@@ -170,8 +170,9 @@ function Dashboard() {
         plan: 'estandar',
       });
 
-      // 3. Actualizar usuario con información adicional
-      await userService.updateUser(userRes.uid, {
+      // 3. Actualizar usuario con información adicional usando Firestore directamente
+      const userRef = doc(db, 'usuarios', userRes.uid);
+      await updateDoc(userRef, {
         empresaId: empresaRef.id,
         plan: 'estandar',
         limiteUsuarios: Number(form.usuariosMaximos),
