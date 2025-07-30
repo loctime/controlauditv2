@@ -168,7 +168,7 @@ app.put('/api/update-user/:uid', verificarTokenAdmin, async (req, res) => {
   try {
     // Verificar permisos (solo puede actualizar sus propios usuarios)
     if (req.user.role === 'max') {
-    const userDoc = await admin.firestore().collection('usuarios').doc(uid).get();
+      const userDoc = await admin.firestore().collection('usuarios').doc(uid).get();
       if (!userDoc.exists || userDoc.data().clienteAdminId !== req.user.uid) {
         return res.status(403).json({ error: 'No puedes actualizar este usuario' });
       }
