@@ -24,7 +24,8 @@ import {
   Switch,
   FormControlLabel,
   Tooltip,
-  Collapse
+  Collapse,
+  TableSortLabel
 } from '@mui/material';
 import {
   Edit as EditIcon,
@@ -60,6 +61,8 @@ const GestionClientes = () => {
   const [clienteHistorial, setClienteHistorial] = useState(null);
   const [expandedRows, setExpandedRows] = useState({});
   const [operariosPorCliente, setOperariosPorCliente] = useState({});
+  const [orderBy, setOrderBy] = useState('nombre');
+  const [order, setOrder] = useState('asc');
   const { userProfile } = useContext(AuthContext); // Para obtener el email del usuario logueado
 
   // Cargar todos los clientes (max)
@@ -291,6 +294,72 @@ const GestionClientes = () => {
     }
   };
 
+  // Función para manejar el ordenamiento
+  const handleRequestSort = (property) => {
+    const isAsc = orderBy === property && order === 'asc';
+    setOrder(isAsc ? 'desc' : 'asc');
+    setOrderBy(property);
+  };
+
+  // Función para ordenar los clientes
+  const sortedClientes = React.useMemo(() => {
+    const sorted = [...clientes].sort((a, b) => {
+      let aValue, bValue;
+
+      switch (orderBy) {
+        case 'nombre':
+          aValue = (a.nombre || a.displayName || '').toLowerCase();
+          bValue = (b.nombre || b.displayName || '').toLowerCase();
+          break;
+        case 'email':
+          aValue = (a.email || '').toLowerCase();
+          bValue = (b.email || '').toLowerCase();
+          break;
+        case 'plan':
+          aValue = (a.plan || 'estandar').toLowerCase();
+          bValue = (b.plan || 'estandar').toLowerCase();
+          break;
+        case 'usuarios':
+          aValue = a.usuariosActivos || 0;
+          bValue = b.usuariosActivos || 0;
+          break;
+        case 'empresas':
+          aValue = a.empresasCount || 0;
+          bValue = b.empresasCount || 0;
+          break;
+        case 'estado':
+          aValue = (a.estadoPago || 'al_dia').toLowerCase();
+          bValue = (b.estadoPago || 'al_dia').toLowerCase();
+          break;
+        case 'vencimiento':
+          aValue = a.fechaVencimiento ? a.fechaVencimiento.toDate() : new Date(0);
+          bValue = b.fechaVencimiento ? b.fechaVencimiento.toDate() : new Date(0);
+          break;
+                 case 'demo':
+           aValue = a.esDemo ? 1 : 0;
+           bValue = b.esDemo ? 1 : 0;
+           break;
+         case 'creadoPor':
+           aValue = (a.creadoPorEmail || a.creadoPor || '').toLowerCase();
+           bValue = (b.creadoPorEmail || b.creadoPor || '').toLowerCase();
+           break;
+         default:
+           aValue = a[orderBy] || '';
+           bValue = b[orderBy] || '';
+      }
+
+      if (aValue < bValue) {
+        return order === 'asc' ? -1 : 1;
+      }
+      if (aValue > bValue) {
+        return order === 'asc' ? 1 : -1;
+      }
+      return 0;
+    });
+
+    return sorted;
+  }, [clientes, orderBy, order]);
+
   // Calcular métricas
   const totalClientes = clientes.length;
   const clientesActivos = clientes.filter(c => c.activo !== false).length;
@@ -391,19 +460,92 @@ const GestionClientes = () => {
             <TableHead>
               <TableRow>
                 <TableCell>Semáforo</TableCell>
-                <TableCell>Cliente</TableCell>
-                <TableCell>Email</TableCell>
-                <TableCell>Plan</TableCell>
-                <TableCell>Usuarios</TableCell>
-                <TableCell>Empresas</TableCell>
-                <TableCell>Estado</TableCell>
-                <TableCell>Vencimiento</TableCell>
-                <TableCell>Demo</TableCell>
+                <TableCell>
+                  <TableSortLabel
+                    active={orderBy === 'nombre'}
+                    direction={orderBy === 'nombre' ? order : 'asc'}
+                    onClick={() => handleRequestSort('nombre')}
+                  >
+                    Cliente
+                  </TableSortLabel>
+                </TableCell>
+                <TableCell>
+                  <TableSortLabel
+                    active={orderBy === 'email'}
+                    direction={orderBy === 'email' ? order : 'asc'}
+                    onClick={() => handleRequestSort('email')}
+                  >
+                    Email
+                  </TableSortLabel>
+                </TableCell>
+                <TableCell>
+                  <TableSortLabel
+                    active={orderBy === 'plan'}
+                    direction={orderBy === 'plan' ? order : 'asc'}
+                    onClick={() => handleRequestSort('plan')}
+                  >
+                    Plan
+                  </TableSortLabel>
+                </TableCell>
+                                 <TableCell width="80px">
+                   <TableSortLabel
+                     active={orderBy === 'usuarios'}
+                     direction={orderBy === 'usuarios' ? order : 'asc'}
+                     onClick={() => handleRequestSort('usuarios')}
+                   >
+                     Usuarios
+                   </TableSortLabel>
+                 </TableCell>
+                 <TableCell width="80px">
+                   <TableSortLabel
+                     active={orderBy === 'empresas'}
+                     direction={orderBy === 'empresas' ? order : 'asc'}
+                     onClick={() => handleRequestSort('empresas')}
+                   >
+                     Empresas
+                   </TableSortLabel>
+                 </TableCell>
+                 <TableCell width="100px">
+                   <TableSortLabel
+                     active={orderBy === 'estado'}
+                     direction={orderBy === 'estado' ? order : 'asc'}
+                     onClick={() => handleRequestSort('estado')}
+                   >
+                     Estado
+                   </TableSortLabel>
+                 </TableCell>
+                 <TableCell width="120px">
+                   <TableSortLabel
+                     active={orderBy === 'vencimiento'}
+                     direction={orderBy === 'vencimiento' ? order : 'asc'}
+                     onClick={() => handleRequestSort('vencimiento')}
+                   >
+                     Vencimiento
+                   </TableSortLabel>
+                 </TableCell>
+                 <TableCell width="80px">
+                   <TableSortLabel
+                     active={orderBy === 'demo'}
+                     direction={orderBy === 'demo' ? order : 'asc'}
+                     onClick={() => handleRequestSort('demo')}
+                   >
+                     Demo
+                   </TableSortLabel>
+                 </TableCell>
+                <TableCell>
+                  <TableSortLabel
+                    active={orderBy === 'creadoPor'}
+                    direction={orderBy === 'creadoPor' ? order : 'asc'}
+                    onClick={() => handleRequestSort('creadoPor')}
+                  >
+                    Creado Por
+                  </TableSortLabel>
+                </TableCell>
                 <TableCell>Acciones</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
-              {clientes.map((cliente) => {
+              {sortedClientes.map((cliente) => {
                 const fechaVencimiento = cliente.fechaVencimiento ? 
                   new Date(cliente.fechaVencimiento.toDate()) : null;
                 const diasRestantes = fechaVencimiento ? 
@@ -442,26 +584,7 @@ const GestionClientes = () => {
                             <span role="img" aria-label="historial">📜</span>
                           </IconButton>
                         </Tooltip>
-                        <Tooltip title={cliente.activo ? 'Desactivar' : 'Activar'}>
-                          <IconButton 
-                            onClick={() => handleToggleActivo(cliente)}
-                            color={cliente.activo ? 'error' : 'success'}
-                            size="small"
-                          >
-                            {cliente.activo ? <BlockIcon /> : <CheckIcon />}
-                          </IconButton>
-                        </Tooltip>
-                        <Tooltip title="Ver operarios">
-                          <IconButton
-                            onClick={() => handleExpandRow(cliente.id)}
-                            color="primary"
-                            size="small"
-                          >
-                            <ExpandMoreIcon
-                              style={{ transform: expandedRows[cliente.id] ? 'rotate(180deg)' : 'rotate(0deg)', transition: '0.2s' }}
-                            />
-                          </IconButton>
-                        </Tooltip>
+                        
                       </TableCell>
                       <TableCell>
                         <Typography variant="subtitle2">
@@ -482,47 +605,61 @@ const GestionClientes = () => {
                           size="small"
                         />
                       </TableCell>
+                                             <TableCell width="80px">
+                         <Typography variant="body2" align="center">
+                           {cliente.usuariosActivos} / {cliente.limiteUsuarios || 10}
+                         </Typography>
+                         {cliente.usuariosActivos > (cliente.limiteUsuarios || 10) && (
+                           <Alert severity="warning" sx={{ mt: 1, fontSize: '0.75rem' }}>
+                             Límite excedido
+                           </Alert>
+                         )}
+                       </TableCell>
+                       <TableCell width="80px" align="center">
+                         {cliente.empresasCount || 0}
+                       </TableCell>
+                       <TableCell width="100px">
+                         <Chip 
+                           label={cliente.estadoPago || 'al_dia'} 
+                           color={getEstadoPagoColor(cliente.estadoPago)}
+                           size="small"
+                         />
+                       </TableCell>
+                       <TableCell width="120px">
+                         {fechaVencimiento ? (
+                           <Box>
+                             <Typography variant="body2">
+                               {fechaVencimiento.toLocaleDateString()}
+                             </Typography>
+                             <Typography 
+                               variant="caption" 
+                               color={diasRestantes <= 7 ? 'error' : 'text.secondary'}
+                             >
+                               {diasRestantes > 0 ? `${diasRestantes} días` : 'Vencido'}
+                             </Typography>
+                           </Box>
+                         ) : (
+                           'N/A'
+                         )}
+                       </TableCell>
+                       <TableCell width="80px" align="center">
+                         <Chip 
+                           label={cliente.esDemo ? 'Sí' : 'No'} 
+                           color={cliente.esDemo ? 'warning' : 'default'}
+                           size="small"
+                         />
+                       </TableCell>
                       <TableCell>
-                        <Typography variant="body2">
-                          {cliente.usuariosActivos} / {cliente.limiteUsuarios || 10}
-                        </Typography>
-                        {cliente.usuariosActivos > (cliente.limiteUsuarios || 10) && (
-                          <Alert severity="warning" sx={{ mt: 1, fontSize: '0.75rem' }}>
-                            Límite excedido
-                          </Alert>
-                        )}
-                      </TableCell>
-                      <TableCell>{cliente.empresasCount || 0}</TableCell>
-                      <TableCell>
-                        <Chip 
-                          label={cliente.estadoPago || 'al_dia'} 
-                          color={getEstadoPagoColor(cliente.estadoPago)}
-                          size="small"
-                        />
-                      </TableCell>
-                      <TableCell>
-                        {fechaVencimiento ? (
-                          <Box>
-                            <Typography variant="body2">
-                              {fechaVencimiento.toLocaleDateString()}
+                        <Box>
+                          <Typography variant="body2" color="text.secondary">
+                            {cliente.creadoPorEmail || cliente.creadoPor || 'Sistema'}
+                          </Typography>
+                          {cliente.createdAt && (
+                            <Typography variant="caption" color="text.secondary">
+                              {new Date(cliente.createdAt.toDate ? cliente.createdAt.toDate() : cliente.createdAt).toLocaleDateString()}
                             </Typography>
-                            <Typography 
-                              variant="caption" 
-                              color={diasRestantes <= 7 ? 'error' : 'text.secondary'}
-                            >
-                              {diasRestantes > 0 ? `${diasRestantes} días` : 'Vencido'}
-                            </Typography>
-                          </Box>
-                        ) : (
-                          'N/A'
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <Chip 
-                          label={cliente.esDemo ? 'Sí' : 'No'} 
-                          color={cliente.esDemo ? 'warning' : 'default'}
-                          size="small"
-                        />
+                          )}
+                        </Box>
                       </TableCell>
                       <TableCell>
                         <Box display="flex" gap={1}>
@@ -556,38 +693,57 @@ const GestionClientes = () => {
                         </Box>
                       </TableCell>
                     </TableRow>
-                    <TableRow>
-                      <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={10}>
-                        <Collapse in={expandedRows[cliente.id]} timeout="auto" unmountOnExit>
-                          <Box margin={2}>
-                            <Typography variant="subtitle2" gutterBottom>Operarios</Typography>
-                            <Table size="small">
-                              <TableHead>
-                                <TableRow>
-                                  <TableCell>Nombre</TableCell>
-                                  <TableCell>Email</TableCell>
-                                  <TableCell>Estado</TableCell>
-                                </TableRow>
-                              </TableHead>
-                              <TableBody>
-                                {(operariosPorCliente[cliente.id] || []).map((operario) => (
-                                  <TableRow key={operario.id}>
-                                    <TableCell>{operario.nombre || operario.displayName || 'Sin nombre'}</TableCell>
-                                    <TableCell>{operario.email}</TableCell>
-                                    <TableCell>
-                                      <Chip label={operario.activo !== false ? 'Activo' : 'Inactivo'} color={operario.activo !== false ? 'success' : 'error'} size="small" />
-                                    </TableCell>
-                                  </TableRow>
-                                ))}
-                                {(operariosPorCliente[cliente.id]?.length === 0) && (
-                                  <TableRow><TableCell colSpan={3} align="center">Sin operarios</TableCell></TableRow>
-                                )}
-                              </TableBody>
-                            </Table>
-                          </Box>
-                        </Collapse>
-                      </TableCell>
-                    </TableRow>
+                                         <TableRow 
+                       onClick={() => handleExpandRow(cliente.id)}
+                       sx={{ 
+                         cursor: 'pointer',
+                         '&:hover': { backgroundColor: 'action.hover' }
+                       }}
+                     >
+                       <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={11}>
+                         <Box display="flex" justifyContent="center" alignItems="center" py={1}>
+                           <Tooltip title="Ver operarios">
+                             <Box display="flex" alignItems="center" gap={1}>
+                               <ExpandMoreIcon
+                                 style={{ transform: expandedRows[cliente.id] ? 'rotate(180deg)' : 'rotate(0deg)', transition: '0.2s' }}
+                                 color="primary"
+                               />
+                               <Typography variant="body2" color="primary">
+                                 {expandedRows[cliente.id] ? 'Ocultar operarios' : 'Ver operarios'}
+                               </Typography>
+                             </Box>
+                           </Tooltip>
+                         </Box>
+                         <Collapse in={expandedRows[cliente.id]} timeout="auto" unmountOnExit>
+                           <Box margin={2}>
+                             <Typography variant="subtitle2" gutterBottom>Operarios</Typography>
+                             <Table size="small">
+                               <TableHead>
+                                 <TableRow>
+                                   <TableCell>Nombre</TableCell>
+                                   <TableCell>Email</TableCell>
+                                   <TableCell>Estado</TableCell>
+                                 </TableRow>
+                               </TableHead>
+                               <TableBody>
+                                 {(operariosPorCliente[cliente.id] || []).map((operario) => (
+                                   <TableRow key={operario.id}>
+                                     <TableCell>{operario.nombre || operario.displayName || 'Sin nombre'}</TableCell>
+                                     <TableCell>{operario.email}</TableCell>
+                                     <TableCell>
+                                       <Chip label={operario.activo !== false ? 'Activo' : 'Inactivo'} color={operario.activo !== false ? 'success' : 'error'} size="small" />
+                                     </TableCell>
+                                   </TableRow>
+                                 ))}
+                                 {(operariosPorCliente[cliente.id]?.length === 0) && (
+                                   <TableRow><TableCell colSpan={3} align="center">Sin operarios</TableCell></TableRow>
+                                 )}
+                               </TableBody>
+                             </Table>
+                           </Box>
+                         </Collapse>
+                       </TableCell>
+                     </TableRow>
                   </React.Fragment>
                 );
               })}
