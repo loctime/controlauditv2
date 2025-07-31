@@ -214,8 +214,11 @@ const EditarFormulario = () => {
     // Administradores pueden eliminar todo
     if (userProfile?.role === 'max') return true;
     
-    // Solo el creador puede eliminar
+    // El creador puede eliminar (incluye formularios copiados)
     if (formulario.creadorId === user.uid) return true;
+    
+    // Usuarios con permisos explícitos de eliminación
+    if (formulario.permisos?.puedeEliminar?.includes(user.uid)) return true;
     
     return false;
   };
