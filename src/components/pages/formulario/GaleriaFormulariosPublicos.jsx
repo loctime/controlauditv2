@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { collection, query, where, getDocs, doc, updateDoc, increment } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, updateDoc, increment, addDoc } from 'firebase/firestore';
 import { db } from '../../../firebaseConfig';
 import {
   Box, Typography, Accordion, AccordionSummary, AccordionDetails, Chip, Button, Grid, Alert, TextField, InputAdornment, Select, MenuItem, Rating, Stack, Tooltip, Avatar, CircularProgress
@@ -9,6 +9,7 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import SearchIcon from '@mui/icons-material/Search';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 
 const FILTROS = [
   { value: 'todos', label: 'Todos' },
@@ -25,7 +26,9 @@ const GaleriaFormulariosPublicos = ({ onCopiar }) => {
   const [filtro, setFiltro] = useState('todos');
   const [copiandoId, setCopiandoId] = useState(null);
   const [ratingLoading, setRatingLoading] = useState(null);
+  const [copiadoExitoso, setCopiadoExitoso] = useState(null);
   const navigate = useNavigate();
+  const { userProfile } = useAuth();
 
   useEffect(() => {
     const fetchPublicForms = async () => {
@@ -75,17 +78,41 @@ const GaleriaFormulariosPublicos = ({ onCopiar }) => {
     return lista;
   }, [formularios, busqueda, filtro]);
 
-  // Copiar formulario: incrementa contador en Firestore y llama onCopiar
+  // Copiar formulario: incrementa contador en Firestore y copia realmente el formulario
   const handleCopiar = async (form) => {
     setCopiandoId(form.id);
     try {
+      // Incrementar contador de copias
       const ref = doc(db, 'formularios', form.id);
       await updateDoc(ref, { copiadoCount: increment(1) });
+      
+      // Copiar realmente el formulario a la cuenta del usuario
+      if (userProfile) {
+        const nuevoFormulario = {
+          ...form,
+          clienteAdminId: userProfile.clienteAdminId || userProfile.uid,
+          creadorId: userProfile.uid,
+          esPublico: false,
+          publicSharedId: null,
+          createdAt: new Date()
+        };
+        delete nuevoFormulario.id;
+        await addDoc(collection(db, 'formularios'), nuevoFormulario);
+        console.debug('[GaleriaFormulariosPublicos] Formulario copiado a sistema:', userProfile.uid);
+      }
+      
+      // Llamar función onCopiar si existe (para compatibilidad)
       onCopiar && onCopiar(form);
+      
+      // Actualizar estado local
       setFormularios(prev => prev.map(f => f.id === form.id ? { ...f, copiadoCount: (f.copiadoCount || 0) + 1 } : f));
       console.log('[GaleriaFormulariosPublicos] Formulario copiado:', form.id);
+      
+      // Mostrar mensaje de éxito
+      setCopiadoExitoso(form.id);
+      setTimeout(() => setCopiadoExitoso(null), 2000);
     } catch (e) {
-      console.error('Error al incrementar copiadoCount:', e);
+      console.error('Error al copiar formulario:', e);
     } finally {
       setCopiandoId(null);
     }
@@ -138,6 +165,13 @@ const GaleriaFormulariosPublicos = ({ onCopiar }) => {
       </Button>
       {/* Título */}
       <Typography variant="h5" gutterBottom>Galería de Formularios Públicos</Typography>
+      
+      {/* Alerta para usuarios no autenticados */}
+      {!userProfile && (
+        <Alert severity="info" sx={{ mb: 2 }}>
+          Debes iniciar sesión para poder copiar formularios a tu sistema.
+        </Alert>
+      )}
       <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ mb: 2 }}>
         <TextField
           placeholder="Buscar por nombre o creador..."
@@ -187,16 +221,18 @@ const GaleriaFormulariosPublicos = ({ onCopiar }) => {
                       </span>
                     </Tooltip>
                   </Box>
-                  <Tooltip title={esPropio ? 'No puedes copiar tu propio formulario' : 'Copiar a mi sistema'}>
+                  <Tooltip title={!userProfile ? 'Debes iniciar sesión para copiar formularios' : 
+                                 esPropio ? 'No puedes copiar tu propio formulario' : 'Copiar a mi sistema'}>
                     <span>
                       <Button
                         variant="contained"
                         startIcon={<ContentCopyIcon />}
                         onClick={e => { e.stopPropagation(); handleCopiar(form); }}
-                        disabled={copiandoId === form.id || esPropio}
+                        disabled={copiandoId === form.id || esPropio || !userProfile}
                         sx={{ ml: 2 }}
                       >
-                        {copiandoId === form.id ? <CircularProgress size={18} /> : 'Copiar'}
+                        {copiandoId === form.id ? <CircularProgress size={18} /> : 
+                         copiadoExitoso === form.id ? '¡Copiado!' : 'Copiar'}
                       </Button>
                     </span>
                   </Tooltip>
