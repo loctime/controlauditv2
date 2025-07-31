@@ -69,19 +69,7 @@ export const userService = {
     }
   },
 
-  // Cambiar rol de usuario (sin desconectar)
-  async changeUserRole(uid, newRole, newPermisos) {
-    try {
-      const response = await api.put(`/change-role/${uid}`, {
-        newRole,
-        newPermisos
-      });
-      return response.data;
-    } catch (error) {
-      console.error('Error cambiando rol:', error);
-      throw new Error(error.response?.data?.error || 'Error al cambiar rol');
-    }
-  }
+
 };
 
 export default userService; 

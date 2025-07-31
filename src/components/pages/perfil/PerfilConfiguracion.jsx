@@ -1,7 +1,7 @@
 import React from 'react';
-import { Box, Typography, Divider, TextField, Button, Alert } from '@mui/material';
+import { Box, Typography, Divider } from '@mui/material';
 
-const PerfilConfiguracion = ({ userProfile, selectedRole, setSelectedRole, handleRoleChange, loading }) => {
+const PerfilConfiguracion = ({ userProfile }) => {
   // Log de depuración
   console.debug('[PerfilConfiguracion] userProfile:', userProfile);
   return (
@@ -9,41 +9,6 @@ const PerfilConfiguracion = ({ userProfile, selectedRole, setSelectedRole, handl
       <Typography variant="h6" gutterBottom>
         Configuración de Cuenta
       </Typography>
-      <Box sx={{ mb: 3 }}>
-        <Typography variant="subtitle1" gutterBottom>
-          Cambiar Rol (Solo para desarrollo)
-        </Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-          Selecciona tu rol para cambiar los permisos y páginas disponibles.
-        </Typography>
-        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', mb: 2 }}>
-          <TextField
-            select
-            label="Rol"
-            value={selectedRole}
-            onChange={(e) => setSelectedRole(e.target.value)}
-            sx={{ minWidth: 200 }}
-            SelectProps={{ native: true }}
-          >
-            <option value="operario">Usuario</option>
-            <option value="max">Cliente Administrador</option>
-            <option value="supermax">Developer</option>
-          </TextField>
-          <Button
-            variant="contained"
-            onClick={handleRoleChange}
-            disabled={loading || selectedRole === userProfile?.role}
-          >
-            {loading ? 'Cambiando...' : 'Cambiar Rol'}
-          </Button>
-        </Box>
-        <Alert severity="info" sx={{ mt: 2 }}>
-          <strong>Rol actual:</strong> {userProfile?.role || 'No asignado'}
-          <br />
-          <strong>Rol seleccionado:</strong> {selectedRole}
-        </Alert>
-      </Box>
-      <Divider sx={{ my: 3 }} />
       <Box>
         <Typography variant="subtitle1" gutterBottom>
           Información de Permisos

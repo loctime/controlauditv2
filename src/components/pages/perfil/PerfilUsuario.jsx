@@ -57,18 +57,10 @@ const PerfilUsuario = () => {
   const [emailSocio, setEmailSocio] = useState("");
   const [openDialogSocio, setOpenDialogSocio] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [selectedRole, setSelectedRole] = useState('operario');
   const [usuariosCreados, setUsuariosCreados] = useState([]);
   const [loadingUsuariosCreados, setLoadingUsuariosCreados] = useState(false);
   const [formularios, setFormularios] = useState([]);
   const [loadingFormularios, setLoadingFormularios] = useState(false);
-
-  // Actualizar selectedRole cuando userProfile cambie
-  useEffect(() => {
-    if (userProfile?.role) {
-      setSelectedRole(userProfile.role);
-    }
-  }, [userProfile?.role]);
 
   // Sincronizar selectedSection con query param 'tab'
   useEffect(() => {
@@ -138,57 +130,7 @@ const PerfilUsuario = () => {
     }
   };
 
-  const handleRoleChange = async () => {
-    try {
-      setLoading(true);
-      let newPermisos = {};
-      switch (selectedRole) {
-        case 'supermax':
-          newPermisos = {
-            puedeCrearEmpresas: true,
-            puedeCrearSucursales: true,
-            puedeCrearAuditorias: true,
-            puedeCompartirFormularios: true,
-            puedeAgregarSocios: true,
-            puedeGestionarUsuarios: true,
-            puedeGestionarSistema: true,
-            puedeEliminarUsuarios: true,
-            puedeVerLogs: true
-          };
-          break;
-        case 'max':
-          newPermisos = {
-            puedeCrearEmpresas: true,
-            puedeCrearSucursales: true,
-            puedeCrearAuditorias: true,
-            puedeCompartirFormularios: true,
-            puedeAgregarSocios: true,
-            puedeGestionarUsuarios: true,
-            puedeVerLogs: true,
-            puedeGestionarSistema: true,
-            puedeEliminarUsuarios: true
-          };
-          break;
-        case 'operario':
-        default:
-          newPermisos = {
-            puedeCrearEmpresas: false,
-            puedeCrearSucursales: false,
-            puedeCrearAuditorias: false,
-            puedeCompartirFormularios: false,
-            puedeAgregarSocios: false
-          };
-          break;
-      }
-      await updateUserProfile({ role: selectedRole, permisos: newPermisos });
-      Swal.fire('Éxito', `Rol cambiado a ${selectedRole}. Recarga la página para ver los cambios.`, 'success');
-      setTimeout(() => { window.location.reload(); }, 2000);
-    } catch (error) {
-      Swal.fire('Error', 'Error al cambiar el rol', 'error');
-    } finally {
-      setLoading(false);
-    }
-  };
+
 
   // Línea sutil de separación
   const separador = (
@@ -484,7 +426,7 @@ const PerfilUsuario = () => {
               <PerfilUsuarios usuariosCreados={usuariosCreados} loading={loadingUsuariosCreados} clienteAdminId={userProfile?.clienteAdminId || userProfile?.uid} />
             )}
             {selectedSection === 'configuracion' && (
-              <PerfilConfiguracion userProfile={userProfile} selectedRole={selectedRole} setSelectedRole={setSelectedRole} handleRoleChange={handleRoleChange} loading={loading} />
+                              <PerfilConfiguracion userProfile={userProfile} />
             )}
             {selectedSection === 'firma' && (
               <PerfilFirma />

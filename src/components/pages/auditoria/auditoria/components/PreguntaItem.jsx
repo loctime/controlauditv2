@@ -18,7 +18,7 @@ import {
   obtenerColorRespuesta, 
   obtenerIconoRespuesta, 
   preguntaContestada 
-} from '../utils/respuestaUtils';
+} from '../utils/respuestaUtils.jsx';
 
 const PreguntaItem = ({
   seccionIndex,

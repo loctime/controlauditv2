@@ -14,6 +14,7 @@ import ClienteDashboard from "../components/pages/admin/ClienteDashboard";
 import OperarioDashboard from "../components/pages/user/OperarioDashboard";
 import PermissionsDebug from "../components/pages/debug/PermissionsDebug";
 import GaleriaFormulariosPublicos from '../components/pages/formulario/GaleriaFormulariosPublicos';
+import ConfiguracionPage from '../components/pages/configuracion/ConfiguracionPage';
 
 export const routes = [
   {
@@ -92,5 +93,12 @@ export const routes = [
     id: "formularios-publicos",
     path: "/formularios-publicos",
     Element: GaleriaFormulariosPublicos,
+  },
+  {
+    id: "configuracion",
+    path: "/configuracion",
+    Element: ConfiguracionPage,
+    protected: true,
+    roles: ['supermax']
   },
 ];

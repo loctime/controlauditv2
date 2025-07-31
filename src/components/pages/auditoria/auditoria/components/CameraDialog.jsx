@@ -224,6 +224,20 @@ const CameraDialog = ({
     }
   }, [open, onClose]);
 
+  // Automáticamente iniciar la cámara trasera cuando se abre el diálogo
+  useEffect(() => {
+    if (open) {
+      // Asegurar que siempre inicie con la cámara trasera (evita selfies)
+      setCurrentCamera('environment');
+      // Iniciar la cámara automáticamente después de un breve delay
+      const timer = setTimeout(() => {
+        startCamera();
+      }, 500);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [open]);
+
   // Detectar cámaras disponibles
   const detectAvailableCameras = async () => {
     try {
@@ -264,6 +278,7 @@ const CameraDialog = ({
         setCameraZoom(1);
       }
 
+      // Usar la cámara seleccionada (trasera por defecto, pero permite cambio)
       const constraints = {
         video: {
           width: { ideal: 1280, max: 1920 },
@@ -274,14 +289,14 @@ const CameraDialog = ({
 
       let stream;
       try {
-        console.log('📹 Intentando con configuración HD...');
+        console.log(`📹 Intentando con cámara ${currentCamera === 'environment' ? 'trasera' : 'frontal'} y configuración HD...`);
         stream = await navigator.mediaDevices.getUserMedia(constraints);
       } catch (basicError) {
         console.log('⚠️ Fallback a configuración básica:', basicError.message);
         try {
           stream = await navigator.mediaDevices.getUserMedia({ 
             video: { 
-              facingMode: currentCamera 
+              facingMode: currentCamera
             } 
           });
         } catch (fallbackError) {
@@ -440,8 +455,12 @@ const CameraDialog = ({
       setCameraStream(null);
     }
     
-    setCurrentCamera(currentCamera === 'environment' ? 'user' : 'environment');
+    // Cambiar entre cámara frontal y trasera
+    const newCamera = currentCamera === 'environment' ? 'user' : 'environment';
+    setCurrentCamera(newCamera);
     setCameraZoom(1);
+    
+    console.log(`🔄 Cambiando a cámara: ${newCamera === 'environment' ? 'trasera' : 'frontal'}`);
     
     setTimeout(() => {
       startCamera();
