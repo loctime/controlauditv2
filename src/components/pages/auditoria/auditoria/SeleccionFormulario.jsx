@@ -113,52 +113,7 @@ const SeleccionFormulario = ({ formularios, formularioSeleccionadoId, onChange, 
         </Select>
       </FormControl>
 
-      {/* Información del formulario seleccionado */}
-      {getFormularioSeleccionado() && (
-        <Card sx={{ 
-          mt: 2, 
-          background: `linear-gradient(135deg, ${alpha(theme.palette.info.main, 0.1)}, ${alpha(theme.palette.info.main, 0.05)})`,
-          border: `2px solid ${alpha(theme.palette.info.main, 0.2)}`
-        }}>
-          <CardContent>
-            <Box display="flex" alignItems="center" gap={2}>
-              <CheckCircleIcon color="info" />
-              <Box flex={1}>
-                <Typography variant="subtitle2" color="info.main" sx={{ fontWeight: 600 }}>
-                  Formulario Seleccionado
-                </Typography>
-                <Typography variant="body2" color="textSecondary" gutterBottom>
-                  {getFormularioSeleccionado().nombre}
-                </Typography>
-                <Box display="flex" gap={1} flexWrap="wrap">
-                  <Chip 
-                    label={`${getFormularioSeleccionado().secciones?.length || 0} secciones`} 
-                    size="small" 
-                    variant="outlined"
-                  />
-                  {getFormularioSeleccionado().esPublico ? (
-                    <Chip 
-                      icon={<PublicIcon />} 
-                      label="Público" 
-                      size="small" 
-                      color="success" 
-                      variant="filled"
-                    />
-                  ) : (
-                    <Chip 
-                      icon={<LockIcon />} 
-                      label="Privado" 
-                      size="small" 
-                      color="default" 
-                      variant="filled"
-                    />
-                  )}
-                </Box>
-              </Box>
-            </Box>
-          </CardContent>
-        </Card>
-      )}
+
 
       {/* Mensaje cuando no hay formularios */}
       {formularios.length === 0 && (

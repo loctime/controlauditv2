@@ -413,144 +413,34 @@ const PreguntasYSeccion = ({
 
   return (
     <Box>
-      {/* Indicador de progreso general */}
-      <Box sx={{
-        ...mobileBoxStyle,
-        backgroundColor: '#f5f5f5',
-        mb: isMobile ? 2 : 3
-      }}>
-        <Box sx={{ 
-          display: 'flex', 
-          alignItems: 'center', 
-          justifyContent: 'space-between', 
-          mb: isMobile ? 1 : 2 
-        }}>
-          <Typography 
-            variant={isMobile ? "body1" : "h6"} 
-            sx={{ fontWeight: 600 }}
-          >
-            Progreso de la Auditoría
-          </Typography>
-          <Chip 
-            label={`${obtenerPreguntasNoContestadas().length} sin contestar`}
-            color={obtenerPreguntasNoContestadas().length > 0 ? "warning" : "success"}
-            size={isMobile ? "small" : "medium"}
-            sx={{ fontSize: isMobile ? '0.75rem' : '0.875rem' }}
-          />
-        </Box>
-        
-        {/* Barra de progreso */}
-        <Box sx={{ width: '100%', mb: isMobile ? 1 : 2 }}>
-          <Box sx={{ 
-            display: 'flex', 
-            justifyContent: 'space-between', 
-            mb: isMobile ? 0.5 : 1 
-          }}>
-            <Typography 
-              variant="body2" 
-              color="text.secondary"
-              sx={{ fontSize: isMobile ? '0.75rem' : '0.875rem' }}
-            >
-              Preguntas contestadas
-            </Typography>
-            <Typography 
-              variant="body2" 
-              color="text.secondary"
-              sx={{ fontSize: isMobile ? '0.75rem' : '0.875rem' }}
-            >
-              {secciones.reduce((total, seccion) => 
-                total + seccion.preguntas.length, 0) - obtenerPreguntasNoContestadas().length} / {secciones.reduce((total, seccion) => 
-                total + seccion.preguntas.length, 0)}
-            </Typography>
-          </Box>
-          <Box sx={{ 
-            width: '100%', 
-            height: isMobile ? 6 : 8, 
-            backgroundColor: '#e0e0e0', 
-            borderRadius: 4,
-            overflow: 'hidden'
-          }}>
-            <Box sx={{ 
-              width: `${((secciones.reduce((total, seccion) => 
-                total + seccion.preguntas.length, 0) - obtenerPreguntasNoContestadas().length) / 
-                secciones.reduce((total, seccion) => total + seccion.preguntas.length, 0)) * 100}%`,
-              height: '100%',
-              backgroundColor: obtenerPreguntasNoContestadas().length > 0 ? '#ff9800' : '#4caf50',
-              transition: 'width 0.3s ease'
-            }} />
-          </Box>
-        </Box>
-      </Box>
+             {/* Botón de progreso compacto */}
+       <Box sx={{ mb: isMobile ? 1 : 1.5 }}>
+         <Button
+           variant="outlined"
+           size="small"
+           onClick={() => setOpenPreguntasNoContestadas(true)}
+           startIcon={obtenerPreguntasNoContestadas().length > 0 ? <WarningIcon /> : <CheckCircleIcon />}
+           color={obtenerPreguntasNoContestadas().length > 0 ? "warning" : "success"}
+           sx={{ 
+             fontSize: '0.75rem',
+             height: '32px',
+             px: 2,
+             py: 0.5,
+             borderRadius: 2,
+             borderWidth: '2px',
+             '&:hover': {
+               borderWidth: '2px'
+             }
+           }}
+         >
+           {obtenerPreguntasNoContestadas().length > 0 
+             ? `${obtenerPreguntasNoContestadas().length} pendientes` 
+             : 'Todas completadas'
+           }
+         </Button>
+       </Box>
 
-      {/* Botón para ver preguntas no contestadas */}
-      {obtenerPreguntasNoContestadas().length > 0 && (
-        <Box sx={{
-          ...mobileBoxStyle,
-          background: alpha(theme.palette.warning.main, 0.1),
-          border: `2px solid ${alpha(theme.palette.warning.main, 0.3)}`,
-          mb: isMobile ? 2 : 3
-        }}>
-          <Box sx={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            gap: isMobile ? 1 : 2,
-            mb: isMobile ? 1 : 2
-          }}>
-            <Box sx={{ 
-              p: isMobile ? 1 : 1.5, 
-              borderRadius: '50%', 
-              bgcolor: alpha(theme.palette.warning.main, 0.1),
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}>
-              <WarningIcon 
-                color="warning" 
-                sx={{ fontSize: isMobile ? 20 : 24 }} 
-              />
-            </Box>
-            <Typography 
-              variant={isMobile ? "body1" : "h6"} 
-              sx={{ 
-                fontWeight: 600, 
-                color: 'text.primary',
-                flex: 1,
-                fontSize: isMobile ? '0.875rem' : '1rem'
-              }}
-            >
-              Preguntas sin contestar
-            </Typography>
-            <Button
-              color="warning"
-              variant="contained"
-              size={isMobile ? "small" : "medium"}
-              onClick={() => setOpenPreguntasNoContestadas(true)}
-              startIcon={<VisibilityIcon />}
-              sx={{ 
-                fontSize: isMobile ? '0.75rem' : '0.875rem',
-                fontWeight: 500,
-                textTransform: 'none',
-                px: isMobile ? 1.5 : 2,
-                py: isMobile ? 0.5 : 1
-              }}
-            >
-              VER {obtenerPreguntasNoContestadas().length} NO CONTESTADAS
-            </Button>
-          </Box>
-          <Typography 
-            variant="body2"
-            color="text.secondary"
-            sx={{ 
-              pl: isMobile ? 3.5 : 4.5,
-              fontSize: isMobile ? '0.875rem' : '1rem',
-              lineHeight: 1.4
-            }}
-          >
-            ⚠️ Tienes {obtenerPreguntasNoContestadas().length} pregunta(s) sin contestar. 
-            Haz clic en "Ver no contestadas" para encontrarlas rápidamente.
-          </Typography>
-        </Box>
-      )}
+
 
       {secciones.map((seccion, seccionIndex) => (
         <Box key={seccionIndex} mb={isMobile ? 2 : 4}>
