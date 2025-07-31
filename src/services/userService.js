@@ -1,13 +1,17 @@
 // src/services/userService.js
 import axios from 'axios';
 import { auth } from '../firebaseConfig';
+import { getBackendUrl } from '../config/environment.js';
+import { doc, setDoc, collection, getDocs, updateDoc, deleteDoc } from 'firebase/firestore';
+import { db } from '../firebaseConfig';
 
-const API_BASE_URL = 'http://localhost:4000/api'; // Cambiar según tu configuración
+// Usar la URL del backend desde la configuración del entorno
+const API_BASE_URL = `${getBackendUrl()}/api`;
 
 // Configurar axios con interceptor para agregar token automáticamente
 const api = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 10000,
+  timeout: 30000, // Aumentar timeout para producción
 });
 
 // Interceptor para agregar token de Firebase automáticamente
@@ -23,16 +27,98 @@ api.interceptors.request.use(async (config) => {
   return config;
 });
 
+// Interceptor para manejar errores de red
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    console.error('Error en petición API:', error);
+    
+    // Manejar errores específicos
+    if (error.code === 'ERR_NETWORK') {
+      console.error('Error de red - Verificar conectividad con el backend');
+      throw new Error('Error de conectividad con el servidor. Verifica tu conexión a internet.');
+    }
+    
+    if (error.response?.status === 401) {
+      console.error('Error de autenticación');
+      throw new Error('Sesión expirada. Por favor, inicia sesión nuevamente.');
+    }
+    
+    if (error.response?.status === 403) {
+      console.error('Error de permisos');
+      throw new Error('No tienes permisos para realizar esta acción.');
+    }
+    
+    if (error.response?.status >= 500) {
+      console.error('Error del servidor');
+      throw new Error('Error interno del servidor. Intenta nuevamente más tarde.');
+    }
+    
+    return Promise.reject(error);
+  }
+);
+
+// Función de fallback usando Firebase directamente
+const createUserWithFirebase = async (userData) => {
+  try {
+    console.log('🔄 Backend no disponible, creando usuario en Firestore directamente...');
+    
+    // Generar un UID temporal
+    const tempUid = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    
+    // Crear perfil en Firestore
+    const userProfile = {
+      uid: tempUid,
+      email: userData.email,
+      displayName: userData.nombre,
+      role: userData.role || 'operario',
+      permisos: userData.permisos || {},
+      createdAt: new Date(),
+      empresas: [],
+      auditorias: [],
+      socios: [],
+      configuracion: {
+        notificaciones: true,
+        tema: 'light'
+      },
+      clienteAdminId: userData.clienteAdminId || null,
+      status: 'pending_creation', // Marcar como pendiente de creación en Firebase Auth
+      tempPassword: userData.password // Guardar temporalmente para que el admin pueda crear el usuario en Firebase Auth
+    };
+
+    await setDoc(doc(db, 'usuarios', tempUid), userProfile);
+
+    console.log('✅ Usuario creado en Firestore (pendiente de creación en Firebase Auth)');
+    return {
+      success: true,
+      uid: tempUid,
+      message: 'Usuario creado en Firestore. El administrador debe crear el usuario en Firebase Auth manualmente.',
+      requiresManualCreation: true
+    };
+  } catch (error) {
+    console.error('❌ Error creando usuario en Firestore:', error);
+    throw new Error(`Error creando usuario: ${error.message}`);
+  }
+};
+
 // Servicios de usuarios
 export const userService = {
   // Crear usuario (sin desconectar al admin)
   async createUser(userData) {
     try {
+      console.log('Intentando crear usuario con URL:', API_BASE_URL);
       const response = await api.post('/create-user', userData);
       return response.data;
     } catch (error) {
-      console.error('Error creando usuario:', error);
-      throw new Error(error.response?.data?.error || 'Error al crear usuario');
+      console.error('Error creando usuario con backend:', error);
+      
+      // Si es un error de red, intentar con Firebase directamente
+      if (error.code === 'ERR_NETWORK' || error.message.includes('conectividad')) {
+        console.log('🔄 Backend no disponible, intentando con Firebase...');
+        return await createUserWithFirebase(userData);
+      }
+      
+      throw new Error(error.response?.data?.error || error.message || 'Error al crear usuario');
     }
   },
 
@@ -43,7 +129,7 @@ export const userService = {
       return response.data.usuarios;
     } catch (error) {
       console.error('Error listando usuarios:', error);
-      throw new Error(error.response?.data?.error || 'Error al listar usuarios');
+      throw new Error(error.response?.data?.error || error.message || 'Error al listar usuarios');
     }
   },
 
@@ -54,7 +140,7 @@ export const userService = {
       return response.data;
     } catch (error) {
       console.error('Error actualizando usuario:', error);
-      throw new Error(error.response?.data?.error || 'Error al actualizar usuario');
+      throw new Error(error.response?.data?.error || error.message || 'Error al actualizar usuario');
     }
   },
 
@@ -65,11 +151,20 @@ export const userService = {
       return response.data;
     } catch (error) {
       console.error('Error eliminando usuario:', error);
-      throw new Error(error.response?.data?.error || 'Error al eliminar usuario');
+      throw new Error(error.response?.data?.error || error.message || 'Error al eliminar usuario');
     }
   },
 
-
+  // Verificar conectividad con el backend
+  async checkBackendHealth() {
+    try {
+      const response = await api.get('/health');
+      return response.data;
+    } catch (error) {
+      console.error('Error verificando salud del backend:', error);
+      throw new Error('No se puede conectar con el servidor');
+    }
+  }
 };
 
 export default userService; 
