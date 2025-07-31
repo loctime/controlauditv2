@@ -11,6 +11,10 @@ import BuildIcon from '@mui/icons-material/Build';
 import BlockIcon from '@mui/icons-material/Block';
 import CommentIcon from '@mui/icons-material/Comment';
 import UploadIcon from '@mui/icons-material/Upload';
+import ZoomInIcon from '@mui/icons-material/ZoomIn';
+import ZoomOutIcon from '@mui/icons-material/ZoomOut';
+import CameraFrontIcon from '@mui/icons-material/CameraFront';
+import CameraRearIcon from '@mui/icons-material/CameraRear';
 
 const respuestasPosibles = ["Conforme", "No conforme", "Necesita mejora", "No aplica"];
 
@@ -212,6 +216,8 @@ const PreguntasYSeccion = ({
   const [availableCameras, setAvailableCameras] = useState([]);
   const [compressionProgress, setCompressionProgress] = useState(0);
   const [photoQuality, setPhotoQuality] = useState(null); // 'good', 'poor', 'excellent'
+  const [cameraZoom, setCameraZoom] = useState(1); // Factor de zoom (1 = sin zoom)
+  const [maxZoom, setMaxZoom] = useState(4); // Zoom máximo disponible
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const [openPreguntasNoContestadas, setOpenPreguntasNoContestadas] = useState(false);
@@ -253,6 +259,11 @@ const PreguntasYSeccion = ({
     if (!openCameraDialog && cameraStream) {
       cameraStream.getTracks().forEach(track => track.stop());
       setCameraStream(null);
+      // Resetear zoom y transformaciones CSS
+      setCameraZoom(1);
+      if (videoRef.current) {
+        videoRef.current.style.transform = 'none';
+      }
     }
   }, [openCameraDialog, cameraStream]);
 
@@ -464,16 +475,31 @@ const PreguntasYSeccion = ({
         await detectAvailableCameras();
       }
 
+      // Resetear zoom si es la primera vez que se inicia la cámara
+      if (!cameraStream) {
+        setCameraZoom(1);
+      }
+
       const stream = await navigator.mediaDevices.getUserMedia({ 
         video: { 
           width: { ideal: 1280 },
           height: { ideal: 720 },
-          facingMode: currentCamera
+          facingMode: currentCamera,
+          zoom: cameraZoom
         } 
       });
       setCameraStream(stream);
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
+        // Aplicar zoom inicial si es necesario
+        if (cameraZoom > 1) {
+          setTimeout(() => {
+            if (videoRef.current) {
+              videoRef.current.style.transform = `scale(${cameraZoom})`;
+              videoRef.current.style.transformOrigin = 'center center';
+            }
+          }, 100);
+        }
       }
     } catch (error) {
       console.error('Error al acceder a la cámara:', error);
@@ -565,10 +591,85 @@ const PreguntasYSeccion = ({
     // Cambiar a la otra cámara
     setCurrentCamera(currentCamera === 'environment' ? 'user' : 'environment');
     
+    // Resetear zoom al cambiar de cámara
+    setCameraZoom(1);
+    
     // Reiniciar cámara con nueva configuración
     setTimeout(() => {
       startCamera();
     }, 100);
+  };
+
+  // Función para aumentar zoom
+  const increaseZoom = async () => {
+    if (cameraZoom < maxZoom) {
+      const newZoom = Math.min(cameraZoom + 0.5, maxZoom);
+      setCameraZoom(newZoom);
+      
+      if (cameraStream) {
+        // Aplicar zoom al stream actual
+        const videoTrack = cameraStream.getVideoTracks()[0];
+        if (videoTrack && videoTrack.getCapabilities) {
+          const capabilities = videoTrack.getCapabilities();
+          if (capabilities.zoom) {
+            try {
+              await videoTrack.applyConstraints({
+                advanced: [{ zoom: newZoom }]
+              });
+            } catch (error) {
+              console.log('Zoom no soportado en este dispositivo');
+              // Fallback: aplicar zoom mediante CSS transform
+              if (videoRef.current) {
+                videoRef.current.style.transform = `scale(${newZoom})`;
+                videoRef.current.style.transformOrigin = 'center center';
+              }
+            }
+          } else {
+            // Fallback: aplicar zoom mediante CSS transform
+            if (videoRef.current) {
+              videoRef.current.style.transform = `scale(${newZoom})`;
+              videoRef.current.style.transformOrigin = 'center center';
+            }
+          }
+        }
+      }
+    }
+  };
+
+  // Función para disminuir zoom
+  const decreaseZoom = async () => {
+    if (cameraZoom > 1) {
+      const newZoom = Math.max(cameraZoom - 0.5, 1);
+      setCameraZoom(newZoom);
+      
+      if (cameraStream) {
+        // Aplicar zoom al stream actual
+        const videoTrack = cameraStream.getVideoTracks()[0];
+        if (videoTrack && videoTrack.getCapabilities) {
+          const capabilities = videoTrack.getCapabilities();
+          if (capabilities.zoom) {
+            try {
+              await videoTrack.applyConstraints({
+                advanced: [{ zoom: newZoom }]
+              });
+            } catch (error) {
+              console.log('Zoom no soportado en este dispositivo');
+              // Fallback: aplicar zoom mediante CSS transform
+              if (videoRef.current) {
+                videoRef.current.style.transform = newZoom === 1 ? 'none' : `scale(${newZoom})`;
+                videoRef.current.style.transformOrigin = 'center center';
+              }
+            }
+          } else {
+            // Fallback: aplicar zoom mediante CSS transform
+            if (videoRef.current) {
+              videoRef.current.style.transform = newZoom === 1 ? 'none' : `scale(${newZoom})`;
+              videoRef.current.style.transformOrigin = 'center center';
+            }
+          }
+        }
+      }
+    }
   };
 
   // Función para verificar si una pregunta está contestada
@@ -963,166 +1064,381 @@ const PreguntasYSeccion = ({
          </Box>
        </Modal>
 
-             {/* Diálogo de cámara web */}
-       <Dialog 
-         open={openCameraDialog} 
-         onClose={handleCloseCameraDialog}
-         maxWidth="md"
-         fullWidth
-       >
-         <DialogTitle sx={{ fontWeight: 'bold', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-           <span>Tomar Foto</span>
-           {availableCameras.length > 1 && (
-             <Button
-               variant="outlined"
-               size="small"
-               onClick={switchCamera}
-               disabled={!cameraStream}
-               sx={{ fontSize: '0.75rem' }}
-             >
-               {currentCamera === 'environment' ? '📷 Trasera' : '📱 Frontal'}
-             </Button>
-           )}
-         </DialogTitle>
-                   <DialogContent sx={{ p: isMobile ? 2 : 3 }}>
-            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: isMobile ? 1 : 2 }}>
-              {/* Video de la cámara - Más compacto en móvil */}
-              <Box sx={{ 
-                position: 'relative', 
-                width: '100%', 
-                maxWidth: isMobile ? '100%' : 640,
-                maxHeight: isMobile ? '200px' : '400px',
-                overflow: 'hidden',
-                borderRadius: 2
-              }}>
-                <video
-                  ref={videoRef}
-                  autoPlay
-                  playsInline
-                  style={{ 
-                    width: '100%', 
-                    height: '100%',
-                    objectFit: 'cover',
-                    borderRadius: 8,
-                    border: '2px solid #ddd'
-                  }}
-                />
-                <canvas
-                  ref={canvasRef}
-                  style={{ display: 'none' }}
-                />
-                
-                {/* Indicador de calidad de foto */}
-                {photoQuality && (
-                  <Box
-                    sx={{
-                      position: 'absolute',
-                      top: 8,
-                      right: 8,
-                      backgroundColor: photoQuality === 'excellent' ? '#4caf50' : 
-                                    photoQuality === 'good' ? '#ff9800' : '#f44336',
-                      color: 'white',
-                      px: 1.5,
-                      py: 0.5,
-                      borderRadius: 1,
-                      fontSize: '0.7rem',
-                      fontWeight: 'bold'
+                     {/* Diálogo de cámara web - Pantalla completa en móvil */}
+        <Dialog 
+          open={openCameraDialog} 
+          onClose={handleCloseCameraDialog}
+          maxWidth={isMobile ? false : "md"}
+          fullWidth={!isMobile}
+          fullScreen={isMobile}
+          PaperProps={{
+            sx: isMobile ? {
+              margin: 0,
+              borderRadius: 0,
+              height: '100vh',
+              maxHeight: '100vh'
+            } : {}
+          }}
+        >
+          {/* Header para móvil */}
+          {isMobile && (
+            <Box sx={{ 
+              position: 'absolute', 
+              top: 0, 
+              left: 0, 
+              right: 0, 
+              zIndex: 10,
+              background: 'linear-gradient(to bottom, rgba(0,0,0,0.7) 0%, transparent 100%)',
+              p: 2,
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center'
+            }}>
+              <Button
+                onClick={handleCloseCameraDialog}
+                sx={{ 
+                  color: 'white', 
+                  minWidth: 'auto',
+                  p: 1,
+                  borderRadius: '50%',
+                  backgroundColor: 'rgba(0,0,0,0.3)',
+                  '&:hover': { backgroundColor: 'rgba(0,0,0,0.5)' }
+                }}
+              >
+                ✕
+              </Button>
+              
+              {/* Controles de zoom */}
+              {cameraStream && (
+                <Box sx={{ display: 'flex', gap: 1 }}>
+                  <Button
+                    onClick={decreaseZoom}
+                    disabled={cameraZoom <= 1}
+                    sx={{ 
+                      color: 'white', 
+                      minWidth: 'auto',
+                      p: 1,
+                      borderRadius: '50%',
+                      backgroundColor: 'rgba(0,0,0,0.3)',
+                      '&:hover': { backgroundColor: 'rgba(0,0,0,0.5)' },
+                      '&:disabled': { opacity: 0.5 }
                     }}
                   >
-                    {photoQuality === 'excellent' ? '⭐' : 
-                     photoQuality === 'good' ? '✅' : '⚠️'}
-                  </Box>
-                )}
-              </Box>
-              
-              {/* Barra de progreso de compresión - Más compacta */}
-              {compressionProgress > 0 && (
-                <Box sx={{ width: '100%', mt: 1 }}>
-                  <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: 'block' }}>
-                    Procesando imagen...
-                  </Typography>
-                  <Box sx={{ width: '100%', bgcolor: 'grey.200', borderRadius: 1, height: 6 }}>
-                    <Box
-                      sx={{
-                        width: `${compressionProgress}%`,
-                        bgcolor: 'primary.main',
-                        height: '100%',
-                        borderRadius: 1,
-                        transition: 'width 0.3s ease'
-                      }}
-                    />
-                  </Box>
+                    <ZoomOutIcon />
+                  </Button>
+                  <Button
+                    onClick={increaseZoom}
+                    disabled={cameraZoom >= maxZoom}
+                    sx={{ 
+                      color: 'white', 
+                      minWidth: 'auto',
+                      p: 1,
+                      borderRadius: '50%',
+                      backgroundColor: 'rgba(0,0,0,0.3)',
+                      '&:hover': { backgroundColor: 'rgba(0,0,0,0.5)' },
+                      '&:disabled': { opacity: 0.5 }
+                    }}
+                  >
+                    <ZoomInIcon />
+                  </Button>
                 </Box>
               )}
               
-              {/* Botones de acción - Layout optimizado */}
-              <Box sx={{ 
-                display: 'flex', 
-                gap: isMobile ? 1 : 2, 
-                mt: isMobile ? 1 : 2, 
-                flexWrap: 'wrap', 
-                justifyContent: 'center',
-                width: '100%'
-              }}>
-                {/* Solo mostrar "Activar Cámara" si no está activa */}
-                {!cameraStream && (
-                  <Button
-                    variant="contained"
-                    startIcon={<CameraAltIcon />}
-                    onClick={startCamera}
-                    size={isMobile ? "small" : "medium"}
-                    sx={{ 
-                      minWidth: isMobile ? '120px' : '140px',
-                      fontSize: isMobile ? '0.75rem' : '0.875rem'
-                    }}
-                  >
-                    Activar Cámara
-                  </Button>
-                )}
-                
-                {/* Solo mostrar "Capturar Foto" si la cámara está activa */}
-                {cameraStream && (
-                  <Button
-                    variant="contained"
-                    color="secondary"
-                    onClick={capturePhoto}
-                    disabled={compressionProgress > 0}
-                    size={isMobile ? "small" : "medium"}
-                    sx={{ 
-                      minWidth: isMobile ? '120px' : '140px',
-                      fontSize: isMobile ? '0.75rem' : '0.875rem'
-                    }}
-                  >
-                    📸 Capturar Foto
-                  </Button>
-                )}
-                
+              {/* Botón de cambio de cámara */}
+              {availableCameras.length > 1 && (
                 <Button
-                  variant="outlined"
-                  startIcon={<PhotoLibraryIcon />}
-                  onClick={handleSelectFromGallery}
-                  size={isMobile ? "small" : "medium"}
+                  onClick={switchCamera}
+                  disabled={!cameraStream}
                   sx={{ 
-                    minWidth: isMobile ? '120px' : '140px',
-                    fontSize: isMobile ? '0.75rem' : '0.875rem'
+                    color: 'white', 
+                    minWidth: 'auto',
+                    p: 1,
+                    borderRadius: '50%',
+                    backgroundColor: 'rgba(0,0,0,0.3)',
+                    '&:hover': { backgroundColor: 'rgba(0,0,0,0.5)' }
                   }}
                 >
-                  {isMobile ? 'Galería' : 'Elegir de Galería'}
+                  {currentCamera === 'environment' ? <CameraRearIcon /> : <CameraFrontIcon />}
                 </Button>
-              </Box>
-              
-              {/* Información sobre múltiples fotos - Más compacta */}
-              <Typography variant="caption" color="text.secondary" sx={{ textAlign: 'center', mt: 0.5 }}>
-                💡 Puedes tomar múltiples fotos
-              </Typography>
+              )}
             </Box>
-          </DialogContent>
-         <DialogActions>
-           <Button onClick={handleCloseCameraDialog}>
-             Cerrar
-           </Button>
-         </DialogActions>
-       </Dialog>
+          )}
+
+          {/* Contenido principal */}
+          <Box sx={{ 
+            height: isMobile ? '100vh' : 'auto',
+            display: 'flex',
+            flexDirection: 'column',
+            position: 'relative'
+          }}>
+            {/* Video de la cámara - Pantalla completa en móvil */}
+            <Box sx={{ 
+              position: 'relative', 
+              width: '100%', 
+              height: isMobile ? '100%' : '400px',
+              backgroundColor: '#000',
+              overflow: 'hidden'
+            }}>
+              <video
+                ref={videoRef}
+                autoPlay
+                playsInline
+                style={{ 
+                  width: '100%', 
+                  height: '100%',
+                  objectFit: 'cover'
+                }}
+              />
+              <canvas
+                ref={canvasRef}
+                style={{ display: 'none' }}
+              />
+              
+              {/* Indicador de calidad de foto */}
+              {photoQuality && (
+                <Box
+                  sx={{
+                    position: 'absolute',
+                    top: isMobile ? 80 : 8,
+                    right: 8,
+                    backgroundColor: photoQuality === 'excellent' ? '#4caf50' : 
+                                  photoQuality === 'good' ? '#ff9800' : '#f44336',
+                    color: 'white',
+                    px: 1.5,
+                    py: 0.5,
+                    borderRadius: 1,
+                    fontSize: '0.7rem',
+                    fontWeight: 'bold',
+                    zIndex: 5
+                  }}
+                >
+                  {photoQuality === 'excellent' ? '⭐' : 
+                   photoQuality === 'good' ? '✅' : '⚠️'}
+                </Box>
+              )}
+
+              {/* Indicador de zoom */}
+              {cameraStream && cameraZoom > 1 && (
+                <Box
+                  sx={{
+                    position: 'absolute',
+                    top: isMobile ? 120 : 48,
+                    right: 8,
+                    backgroundColor: 'rgba(0,0,0,0.7)',
+                    color: 'white',
+                    px: 1.5,
+                    py: 0.5,
+                    borderRadius: 1,
+                    fontSize: '0.7rem',
+                    fontWeight: 'bold',
+                    zIndex: 5,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 0.5
+                  }}
+                >
+                  <ZoomInIcon sx={{ fontSize: '0.8rem' }} />
+                  {cameraZoom.toFixed(1)}x
+                </Box>
+              )}
+
+              {/* Botones flotantes en móvil */}
+              {isMobile && (
+                <Box sx={{ 
+                  position: 'absolute', 
+                  bottom: 0, 
+                  left: 0, 
+                  right: 0,
+                  background: 'linear-gradient(to top, rgba(0,0,0,0.8) 0%, transparent 100%)',
+                  p: 3,
+                  display: 'flex',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  gap: 2
+                }}>
+                  {/* Botón de galería */}
+                  <Button
+                    variant="contained"
+                    onClick={handleSelectFromGallery}
+                    sx={{ 
+                      borderRadius: '50%',
+                      minWidth: '60px',
+                      width: '60px',
+                      height: '60px',
+                      backgroundColor: 'rgba(255,255,255,0.2)',
+                      '&:hover': { backgroundColor: 'rgba(255,255,255,0.3)' }
+                    }}
+                  >
+                    <PhotoLibraryIcon />
+                  </Button>
+
+                  {/* Botón de captura */}
+                  {cameraStream ? (
+                    <Button
+                      variant="contained"
+                      onClick={capturePhoto}
+                      disabled={compressionProgress > 0}
+                      sx={{ 
+                        borderRadius: '50%',
+                        minWidth: '80px',
+                        width: '80px',
+                        height: '80px',
+                        backgroundColor: 'white',
+                        color: 'black',
+                        '&:hover': { backgroundColor: 'rgba(255,255,255,0.9)' },
+                        '&:disabled': { backgroundColor: 'rgba(255,255,255,0.5)' }
+                      }}
+                    >
+                      📸
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="contained"
+                      onClick={startCamera}
+                      sx={{ 
+                        borderRadius: '50%',
+                        minWidth: '80px',
+                        width: '80px',
+                        height: '80px',
+                        backgroundColor: 'white',
+                        color: 'black',
+                        '&:hover': { backgroundColor: 'rgba(255,255,255,0.9)' }
+                      }}
+                    >
+                      <CameraAltIcon />
+                    </Button>
+                  )}
+
+                  {/* Espaciador para centrar */}
+                  <Box sx={{ width: '60px' }} />
+                </Box>
+              )}
+            </Box>
+
+            {/* Contenido para desktop */}
+            {!isMobile && (
+              <>
+                <DialogTitle sx={{ fontWeight: 'bold', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span>Tomar Foto</span>
+                  <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                    {/* Controles de zoom para desktop */}
+                    {cameraStream && (
+                      <Box sx={{ display: 'flex', gap: 0.5 }}>
+                        <Button
+                          variant="outlined"
+                          size="small"
+                          onClick={decreaseZoom}
+                          disabled={cameraZoom <= 1}
+                          sx={{ minWidth: 'auto', p: 0.5 }}
+                        >
+                          <ZoomOutIcon sx={{ fontSize: '1rem' }} />
+                        </Button>
+                        <Button
+                          variant="outlined"
+                          size="small"
+                          onClick={increaseZoom}
+                          disabled={cameraZoom >= maxZoom}
+                          sx={{ minWidth: 'auto', p: 0.5 }}
+                        >
+                          <ZoomInIcon sx={{ fontSize: '1rem' }} />
+                        </Button>
+                      </Box>
+                    )}
+                    
+                    {/* Botón de cambio de cámara */}
+                    {availableCameras.length > 1 && (
+                      <Button
+                        variant="outlined"
+                        size="small"
+                        onClick={switchCamera}
+                        disabled={!cameraStream}
+                        sx={{ fontSize: '0.75rem' }}
+                        startIcon={currentCamera === 'environment' ? <CameraRearIcon /> : <CameraFrontIcon />}
+                      >
+                        {currentCamera === 'environment' ? 'Trasera' : 'Frontal'}
+                      </Button>
+                    )}
+                  </Box>
+                </DialogTitle>
+                
+                <DialogContent sx={{ p: 3 }}>
+                  {/* Barra de progreso de compresión */}
+                  {compressionProgress > 0 && (
+                    <Box sx={{ width: '100%', mb: 2 }}>
+                      <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: 'block' }}>
+                        Procesando imagen...
+                      </Typography>
+                      <Box sx={{ width: '100%', bgcolor: 'grey.200', borderRadius: 1, height: 6 }}>
+                        <Box
+                          sx={{
+                            width: `${compressionProgress}%`,
+                            bgcolor: 'primary.main',
+                            height: '100%',
+                            borderRadius: 1,
+                            transition: 'width 0.3s ease'
+                          }}
+                        />
+                      </Box>
+                    </Box>
+                  )}
+                  
+                  {/* Botones de acción */}
+                  <Box sx={{ 
+                    display: 'flex', 
+                    gap: 2, 
+                    justifyContent: 'center',
+                    width: '100%'
+                  }}>
+                    {!cameraStream && (
+                      <Button
+                        variant="contained"
+                        startIcon={<CameraAltIcon />}
+                        onClick={startCamera}
+                        size="medium"
+                        sx={{ minWidth: '140px' }}
+                      >
+                        Activar Cámara
+                      </Button>
+                    )}
+                    
+                    {cameraStream && (
+                      <Button
+                        variant="contained"
+                        color="secondary"
+                        onClick={capturePhoto}
+                        disabled={compressionProgress > 0}
+                        size="medium"
+                        sx={{ minWidth: '140px' }}
+                      >
+                        📸 Capturar Foto
+                      </Button>
+                    )}
+                    
+                    <Button
+                      variant="outlined"
+                      startIcon={<PhotoLibraryIcon />}
+                      onClick={handleSelectFromGallery}
+                      size="medium"
+                      sx={{ minWidth: '140px' }}
+                    >
+                      Elegir de Galería
+                    </Button>
+                  </Box>
+                  
+                  <Typography variant="caption" color="text.secondary" sx={{ textAlign: 'center', mt: 1, display: 'block' }}>
+                    💡 Puedes tomar múltiples fotos
+                  </Typography>
+                </DialogContent>
+                
+                <DialogActions>
+                  <Button onClick={handleCloseCameraDialog}>
+                    Cerrar
+                  </Button>
+                </DialogActions>
+              </>
+            )}
+          </Box>
+        </Dialog>
 
       {/* Modal de preguntas no contestadas */}
       <Dialog 
