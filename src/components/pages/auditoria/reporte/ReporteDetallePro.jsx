@@ -1,5 +1,5 @@
-import React, { useRef, useState } from "react";
-import ResumenRespuestas from "../auditoria/ResumenRespuestas";
+import React, { useRef, useState, forwardRef, useImperativeHandle } from "react";
+import ResumenRespuestas from "./ResumenRespuestas";
 import ImagenesTable from "./ImagenesTable";
 import PreguntasRespuestasList from "../../../common/PreguntasRespuestasList";
 import { Typography, Grid, Box, Button, Paper, Dialog, DialogTitle, DialogContent, DialogActions, IconButton, TextField, Alert, Snackbar, Switch, FormControlLabel } from "@mui/material";
@@ -210,8 +210,22 @@ function generarContenidoImpresion({empresa, sucursal, formulario, fecha, respue
   return html;
 }
 
-const ReporteDetallePro = ({ open = false, onClose = () => {}, reporte = null, modo = 'modal', firmaResponsable }) => {
+const ReporteDetallePro = forwardRef(({ open = false, onClose = () => {}, reporte = null, modo = 'modal', firmaResponsable, onPrint }, ref) => {
   const { userProfile } = useAuth();
+  
+  console.log('[ReporteDetallePro] Props recibidas:', { open, reporte, modo, firmaResponsable, onPrint });
+  console.log('[ReporteDetallePro] reporte completo:', reporte);
+  
+  // Exponer métodos a través del ref
+  useImperativeHandle(ref, () => ({
+    printReport: () => {
+      if (onPrint) {
+        onPrint();
+      } else {
+        handleImprimir();
+      }
+    }
+  }));
   if (!reporte) {
     return modo === 'modal' ? (
       <Dialog open={open} onClose={onClose} maxWidth="lg" fullWidth>
@@ -231,7 +245,9 @@ const ReporteDetallePro = ({ open = false, onClose = () => {}, reporte = null, m
   }
 
   // Normalizar datos
+  console.log('[ReporteDetallePro] Normalizando secciones...');
   const secciones = Array.isArray(reporte.secciones) ? reporte.secciones : Object.values(reporte.secciones || {});
+  console.log('[ReporteDetallePro] Secciones normalizadas:', secciones);
   
   // Normalizar empresa usando todos los campos disponibles
   const empresa = (() => {
@@ -447,6 +463,7 @@ const ReporteDetallePro = ({ open = false, onClose = () => {}, reporte = null, m
   };
 
   // En el modal, eliminar la firma del responsable y mostrar aclaración solo en la firma del auditor
+  console.log('[ReporteDetallePro] Renderizando modal...');
   if (modo === 'modal') {
     return (
       <Dialog open={open} onClose={onClose} maxWidth="lg" fullWidth>
@@ -455,95 +472,27 @@ const ReporteDetallePro = ({ open = false, onClose = () => {}, reporte = null, m
           <IconButton onClick={onClose} size="small"><CloseIcon /></IconButton>
         </DialogTitle>
         <DialogContent>
-          {/* Layout superior: Detalle a la izquierda, Resumen+Gráfico a la derecha */}
-          <Grid container spacing={3} alignItems="flex-start">
-            {/* Izquierda: Detalle de auditoría + gráfico */}
-            <Grid item xs={12} md={6}>
-              <Paper elevation={2} sx={{ p: 3, mb: 2 }}>
-                <Typography variant="h6" gutterBottom>Datos de la Empresa</Typography>
-                <Typography variant="body1"><b>Empresa:</b> {empresa.nombre}</Typography>
-                <Typography variant="body1"><b>Sucursal:</b> {sucursal || 'Casa Central'}</Typography>
-                <Typography variant="body1"><b>Formulario:</b> {formulario.nombre}</Typography>
-                <Typography variant="body1"><b>Fecha:</b> {fecha}</Typography>
-                {/* Gráfico general debajo del detalle */}
-                {reporte.estadisticas && reporte.estadisticas.conteo && (
-                  <Box mt={3}>
-                    <EstadisticasChart
-                      ref={chartRef}
-                      estadisticas={reporte.estadisticas.conteo}
-                      title="Distribución general de respuestas"
-                    />
-                  </Box>
-                )}
-              </Paper>
-            </Grid>
-            {/* Derecha: Resumen de respuestas */}
-            <Grid item xs={12} md={6}>
-              <Paper elevation={2} sx={{ p: 3, mb: 2 }}>
-                <Typography variant="h6" gutterBottom>Resumen de Respuestas</Typography>
-                <ResumenRespuestas respuestas={respuestasNormalizadas} secciones={secciones} />
-              </Paper>
-            </Grid>
-          </Grid>
-
-          {/* Preguntas y respuestas */}
-          <Box mt={4}>
-            <Typography variant="h6" gutterBottom>Preguntas y Respuestas</Typography>
-            <PreguntasRespuestasList
-              secciones={secciones}
-              respuestas={respuestasNormalizadas}
-              comentarios={comentariosNormalizados}
-              imagenes={imagenesNormalizadas}
-            />
-          </Box>
-
-          {/* Firma del Auditor con aclaración y Firma de la Empresa solo imagen */}
-          <Box mt={4} display="flex" flexDirection={{ xs: 'column', md: 'row' }} gap={4} justifyContent="center" alignItems="flex-start">
-            {/* Firma del Auditor */}
-            <Box flex={1} textAlign="center">
-              <Typography variant="subtitle1" color="primary" fontWeight={600} gutterBottom>
-                Firma del Auditor
-              </Typography>
-              {reporte.firmaAuditor && typeof reporte.firmaAuditor === 'string' && reporte.firmaAuditor.length > 10 ? (
-                <Box sx={{ border: '2px solid', borderColor: 'info.main', borderRadius: 1, p: 2, mb: 2, maxWidth: 300, mx: 'auto' }}>
-                  <img
-                    src={reporte.firmaAuditor}
-                    alt="Firma del auditor"
-                    style={{ maxWidth: '100%', maxHeight: '100px', objectFit: 'contain' }}
-                  />
-                </Box>
-              ) : (
-                <Typography variant="body2" color="text.secondary">
-                  No hay firma registrada.
-                </Typography>
-              )}
-              <Typography variant="body2" sx={{ mt: 1 }}>
-                {nombreAuditor}
-              </Typography>
-              {(!reporte.firmaAuditor || typeof reporte.firmaAuditor !== 'string' || reporte.firmaAuditor.length < 10) && (
-                <Typography variant="caption" color="error">
-                  [ADVERTENCIA] La firma no está disponible o es inválida.
-                </Typography>
-              )}
+          <Box p={3}>
+            <Typography variant="h5" gutterBottom>Datos del Reporte</Typography>
+            <Typography variant="body1"><b>Empresa:</b> {empresa.nombre}</Typography>
+            <Typography variant="body1"><b>Sucursal:</b> {sucursal || 'Casa Central'}</Typography>
+            <Typography variant="body1"><b>Formulario:</b> {formulario.nombre}</Typography>
+            <Typography variant="body1"><b>Fecha:</b> {fecha}</Typography>
+            <Typography variant="body1"><b>Auditor:</b> {nombreAuditor}</Typography>
+            
+            <Box mt={3}>
+              <Typography variant="h6" gutterBottom>Resumen de Respuestas</Typography>
+              <ResumenRespuestas respuestas={respuestasNormalizadas} secciones={secciones} />
             </Box>
-            {/* Firma de la Empresa solo imagen */}
-            <Box flex={1} textAlign="center">
-              <Typography variant="subtitle1" color="primary" fontWeight={600} gutterBottom>
-                Firma de la Empresa
-              </Typography>
-              {firmaResponsableFinal && typeof firmaResponsableFinal === 'string' && firmaResponsableFinal.length > 10 ? (
-                <Box sx={{ border: '2px solid', borderColor: 'success.main', borderRadius: 1, p: 2, mb: 2, maxWidth: 300, mx: 'auto' }}>
-                  <img
-                    src={firmaResponsableFinal}
-                    alt="Firma de la empresa"
-                    style={{ maxWidth: '100%', maxHeight: '100px', objectFit: 'contain' }}
-                  />
-                </Box>
-              ) : (
-                <Typography variant="body2" color="text.secondary">
-                  No hay firma registrada.
-                </Typography>
-              )}
+            
+            <Box mt={3}>
+              <Typography variant="h6" gutterBottom>Preguntas y Respuestas</Typography>
+              <PreguntasRespuestasList
+                secciones={secciones}
+                respuestas={respuestasNormalizadas}
+                comentarios={comentariosNormalizados}
+                imagenes={imagenesNormalizadas}
+              />
             </Box>
           </Box>
         </DialogContent>
@@ -696,6 +645,6 @@ const ReporteDetallePro = ({ open = false, onClose = () => {}, reporte = null, m
       </Box>
     </Box>
   );
-};
+});
 
 export default ReporteDetallePro;

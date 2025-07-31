@@ -227,36 +227,7 @@ app.delete('/api/delete-user/:uid', verificarTokenAdmin, async (req, res) => {
   }
 });
 
-// 5. Cambiar rol de usuario (sin desconectar)
-app.put('/api/change-role/:uid', verificarTokenAdmin, async (req, res) => {
-  const { uid } = req.params;
-  const { newRole, newPermisos } = req.body;
 
-  try {
-    // Verificar permisos
-    if (req.user.role === 'max') {
-      const userDoc = await admin.firestore().collection('usuarios').doc(uid).get();
-      if (!userDoc.exists || userDoc.data().clienteAdminId !== req.user.uid) {
-        return res.status(403).json({ error: 'No puedes cambiar el rol de este usuario' });
-      }
-    }
-
-    // Actualizar rol en Firestore (NO en Auth para evitar desconexión)
-    await admin.firestore().collection('usuarios').doc(uid).update({
-      role: newRole,
-      permisos: newPermisos || {},
-      updatedAt: new Date()
-    });
-
-    res.json({
-      success: true,
-      message: 'Rol actualizado exitosamente sin desconectar al usuario'
-    });
-  } catch (error) {
-    console.error('Error al cambiar rol:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
 
 app.use('/api/set-role', setRoleRouter); // Solo para superadmin, uso administrativo
 

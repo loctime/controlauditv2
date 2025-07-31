@@ -188,14 +188,14 @@ const FiltrosReportes = ({
             </Box>
           )}
         >
-          <MenuItem value="todos">
+          <MenuItem key="todos-empresas" value="todos">
             <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
               ✓ Todos los reportes
             </Typography>
           </MenuItem>
           <Divider />
           {empresasFiltradas.length === 0 ? (
-            <MenuItem disabled>No hay empresas disponibles</MenuItem>
+            <MenuItem key="no-empresas" disabled>No hay empresas disponibles</MenuItem>
           ) : (
             empresasFiltradas.map((empresa) => (
               <MenuItem key={empresa.id} value={empresa.id}>
@@ -270,14 +270,14 @@ const FiltrosReportes = ({
             </Box>
           )}
         >
-          <MenuItem value="todos">
+          <MenuItem key="todos-formularios" value="todos">
             <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
               ✓ Todos los formularios
             </Typography>
           </MenuItem>
           <Divider />
           {formulariosFiltrados.length === 0 ? (
-            <MenuItem disabled>No hay formularios disponibles</MenuItem>
+            <MenuItem key="no-formularios" disabled>No hay formularios disponibles</MenuItem>
           ) : (
             formulariosFiltrados.map((formulario) => (
               <MenuItem key={formulario.id} value={formulario.id}>

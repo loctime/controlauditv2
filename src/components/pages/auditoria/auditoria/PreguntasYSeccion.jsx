@@ -10,7 +10,7 @@ import PendingQuestionsModal from './components/PendingQuestionsModal';
 import PreguntaItem from './components/PreguntaItem';
 
 // Importar utilidades
-import { obtenerPreguntasNoContestadas } from './utils/respuestaUtils';
+import { obtenerPreguntasNoContestadas } from './utils/respuestaUtils.jsx';
 import { comprimirImagen, validarArchivoImagen } from './utils/imageUtils';
 
 const PreguntasYSeccion = ({ 
