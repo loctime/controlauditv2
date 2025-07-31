@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { 
   Container, 
@@ -26,6 +26,21 @@ import Swal from 'sweetalert2';
 import { useAuth } from "../../../context/AuthContext";
 import { doc, updateDoc } from "firebase/firestore";
 import { db } from "../../../../firebaseConfig";
+
+// Hooks personalizados
+import { useAuditoriaState } from "./hooks/useAuditoriaState";
+import { useAuditoriaData } from "./hooks/useAuditoriaData";
+import { useNavigationGuard } from "./hooks/useNavigationGuard";
+
+// Componentes
+import AuditoriaStepper from "./components/AuditoriaStepper";
+import AuditoriaCompletada from "./components/AuditoriaCompletada";
+import AutoSaveAlert from "./components/AutoSaveAlert";
+
+// Servicios
+import AuditoriaService from "../auditoriaService";
+import { buildReporteMetadata } from '../../../../services/useMetadataService';
+import autoSaveService from "./services/autoSaveService";
 
 // Hooks personalizados
 import { useAuditoriaState } from "./hooks/useAuditoriaState";
@@ -63,6 +78,11 @@ const AuditoriaRefactorizada = () => {
   const location = useLocation();
   const { userProfile, userEmpresas, userFormularios } = useAuth();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+
+  // Estados para autoguardado
+  const [isSaving, setIsSaving] = useState(false);
+  const [lastSaved, setLastSaved] = useState(null);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   // Hook para manejar todo el estado
   const auditoriaState = useAuditoriaState();
@@ -137,6 +157,124 @@ const AuditoriaRefactorizada = () => {
   const handleGuardarImagenes = (nuevasImagenes) => {
     setImagenes(nuevasImagenes);
   };
+
+  // Funciones de autoguardado
+  const checkUnsavedChanges = useCallback(() => {
+    // Verificar si hay datos de auditoría con cambios
+    const hasData = empresaSeleccionada || sucursalSeleccionada || formularioSeleccionadoId || 
+                   respuestas.some(seccion => seccion.some(resp => resp !== '')) ||
+                   comentarios.some(seccion => seccion.some(com => com !== '')) ||
+                   imagenes.some(seccion => seccion.some(img => img !== null));
+    
+    return hasData && hasUnsavedChanges;
+  }, [empresaSeleccionada, sucursalSeleccionada, formularioSeleccionadoId, respuestas, comentarios, imagenes, hasUnsavedChanges]);
+
+  const handleAutoSave = useCallback(async () => {
+    if (!userProfile?.uid) return;
+
+    setIsSaving(true);
+    
+    try {
+      const auditoriaData = {
+        empresaSeleccionada,
+        sucursalSeleccionada,
+        formularioSeleccionadoId,
+        secciones,
+        respuestas,
+        comentarios,
+        imagenes: imagenes.map(seccion => seccion.map(img => img ? 'image' : null)), // Solo guardar referencias
+        activeStep,
+        timestamp: Date.now()
+      };
+
+      await autoSaveService.saveToFirestore(userProfile.uid, auditoriaData);
+      setLastSaved(Date.now());
+      setHasUnsavedChanges(false);
+      
+      console.log('✅ Autoguardado exitoso');
+    } catch (error) {
+      console.error('❌ Error en autoguardado:', error);
+    } finally {
+      setIsSaving(false);
+    }
+  }, [userProfile?.uid, empresaSeleccionada, sucursalSeleccionada, formularioSeleccionadoId, secciones, respuestas, comentarios, imagenes, activeStep]);
+
+  const handleDiscardChanges = useCallback(async () => {
+    try {
+      autoSaveService.clearLocalStorage();
+      setHasUnsavedChanges(false);
+      setLastSaved(null);
+      console.log('🗑️ Cambios descartados');
+    } catch (error) {
+      console.error('❌ Error al descartar cambios:', error);
+    }
+  }, []);
+
+  // Hook de navegación guardada
+  const navigationGuard = useNavigationGuard({
+    hasUnsavedChanges: checkUnsavedChanges,
+    onSave: handleAutoSave,
+    onDiscard: handleDiscardChanges,
+    autoSaveInterval: 30000, // 30 segundos
+    showConfirmation: true
+  });
+
+  // Detectar cambios en los datos de auditoría
+  useEffect(() => {
+    const hasData = empresaSeleccionada || sucursalSeleccionada || formularioSeleccionadoId || 
+                   respuestas.some(seccion => seccion.some(resp => resp !== '')) ||
+                   comentarios.some(seccion => seccion.some(com => com !== '')) ||
+                   imagenes.some(seccion => seccion.some(img => img !== null));
+    
+    if (hasData) {
+      setHasUnsavedChanges(true);
+    }
+  }, [empresaSeleccionada, sucursalSeleccionada, formularioSeleccionadoId, respuestas, comentarios, imagenes]);
+
+  // Intentar restaurar auditoría al cargar
+  useEffect(() => {
+    const restoreAuditoria = async () => {
+      if (!userProfile?.uid) return;
+
+      try {
+        const savedData = await autoSaveService.restoreAuditoria(userProfile.uid);
+        if (savedData && !location.state?.auditoriaId) {
+          // Mostrar confirmación para restaurar
+          const shouldRestore = await Swal.fire({
+            title: '🔄 Auditoría encontrada',
+            text: 'Se encontró una auditoría guardada automáticamente. ¿Quieres restaurarla?',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'Restaurar',
+            cancelButtonText: 'Comenzar nueva',
+            reverseButtons: true
+          });
+
+          if (shouldRestore.isConfirmed) {
+            setEmpresaSeleccionada(savedData.empresaSeleccionada);
+            setSucursalSeleccionada(savedData.sucursalSeleccionada);
+            setFormularioSeleccionadoId(savedData.formularioSeleccionadoId);
+            setSecciones(savedData.secciones || []);
+            setRespuestas(savedData.respuestas || []);
+            setComentarios(savedData.comentarios || []);
+            setImagenes(savedData.imagenes || []);
+            setActiveStep(savedData.activeStep || 0);
+            setHasUnsavedChanges(false);
+            setLastSaved(savedData.timestamp);
+            
+            console.log('✅ Auditoría restaurada');
+          } else {
+            // Limpiar datos guardados si no se quiere restaurar
+            autoSaveService.clearLocalStorage();
+          }
+        }
+      } catch (error) {
+        console.error('❌ Error al restaurar auditoría:', error);
+      }
+    };
+
+    restoreAuditoria();
+  }, [userProfile?.uid, location.state?.auditoriaId]);
 
   const handleSaveFirmaAuditor = (firmaURL) => {
     console.log('[DEBUG] handleSaveFirmaAuditor llamado con:', firmaURL);
@@ -963,6 +1101,14 @@ const AuditoriaRefactorizada = () => {
         </MuiAlert>
       </Snackbar>
       
+      {/* Alerta de autoguardado */}
+      <AutoSaveAlert
+        isSaving={isSaving}
+        lastSaved={lastSaved}
+        hasUnsavedChanges={hasUnsavedChanges}
+        showAlert={true}
+      />
+
       <Snackbar open={snackbarOpen} autoHideDuration={6000} onClose={() => setSnackbarOpen(false)}>
         <MuiAlert onClose={() => setSnackbarOpen(false)} severity={snackbarType} sx={{ width: '100%' }}>
           {snackbarMsg}
