@@ -541,7 +541,7 @@ const AuditoriaRefactorizada = () => {
       content: (
         <MuiFade in={true} timeout={800}>
           <Box>
-            <Grid container spacing={3}>
+            <Grid container spacing={isMobile ? 1 : 3}>
               <Grid item xs={12} md={6}>
                 <SeleccionEmpresa
                   empresas={empresas}
@@ -566,12 +566,12 @@ const AuditoriaRefactorizada = () => {
                       background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.1)}, ${alpha(theme.palette.primary.main, 0.05)})`,
                       border: `2px solid ${alpha(theme.palette.primary.main, 0.2)}`
                     }}>
-                      <CardContent sx={{ textAlign: 'center', py: 4 }}>
-                        <LocationOnIcon sx={{ fontSize: 48, color: 'primary.main', mb: 2 }} />
-                        <Typography variant="h6" color="primary" gutterBottom>
+                      <CardContent sx={{ textAlign: 'center', py: isMobile ? 1.5 : 4 }}>
+                        <LocationOnIcon sx={{ fontSize: isMobile ? 24 : 48, color: 'primary.main', mb: isMobile ? 0.5 : 2 }} />
+                        <Typography variant={isMobile ? "body2" : "h6"} color="primary" gutterBottom>
                           Casa Central
                         </Typography>
-                        <Typography variant="body2" color="textSecondary">
+                        <Typography variant="body2" color="textSecondary" sx={{ fontSize: isMobile ? '0.75rem' : '1rem' }}>
                           Esta empresa no tiene sucursales registradas. 
                           La auditoría se realizará en casa central.
                         </Typography>
@@ -585,36 +585,36 @@ const AuditoriaRefactorizada = () => {
             {empresaSeleccionada && (
               <Zoom in={true} timeout={600}>
                 <Box sx={{ 
-                  mt: 3, 
+                  mt: isMobile ? 1 : 3, 
                   background: `linear-gradient(135deg, ${alpha(theme.palette.success.main, 0.1)}, ${alpha(theme.palette.success.main, 0.05)})`,
                   border: `2px solid ${alpha(theme.palette.success.main, 0.2)}`,
                   borderRadius: 2,
-                  p: isMobile ? 2 : 3,
+                  p: isMobile ? 1 : 3,
                   boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
                   overflow: 'hidden'
                 }}>
-                  <Box display="flex" alignItems="center" gap={isMobile ? 1.5 : 2}>
+                  <Box display="flex" alignItems="center" gap={isMobile ? 1 : 2}>
                     <CheckCircleIcon 
                       color="success" 
-                      sx={{ fontSize: isMobile ? 24 : 32 }} 
+                      sx={{ fontSize: isMobile ? 16 : 32 }} 
                     />
                     <Box flex={1}>
                       <Typography 
-                        variant={isMobile ? "body1" : "h6"} 
+                        variant={isMobile ? "body2" : "h6"} 
                         color="success.main" 
                         gutterBottom
                         sx={{ 
                           fontWeight: 600,
-                          fontSize: isMobile ? '1rem' : '1.25rem'
+                          fontSize: isMobile ? '0.8rem' : '1.25rem'
                         }}
                       >
                         Empresa Seleccionada
                       </Typography>
                       <Typography 
-                        variant={isMobile ? "body2" : "body1"} 
+                        variant="body2" 
                         color="textSecondary"
                         sx={{ 
-                          fontSize: isMobile ? '0.875rem' : '1rem',
+                          fontSize: isMobile ? '0.7rem' : '1rem',
                           textOverflow: 'ellipsis',
                           whiteSpace: 'nowrap',
                           overflow: 'hidden'
@@ -629,8 +629,8 @@ const AuditoriaRefactorizada = () => {
                         src={empresaSeleccionada.logo}
                         alt={`Logo de ${empresaSeleccionada.nombre}`}
                         style={{ 
-                          width: isMobile ? "40px" : "60px", 
-                          height: isMobile ? "40px" : "60px", 
+                          width: isMobile ? "24px" : "60px", 
+                          height: isMobile ? "24px" : "60px", 
                           objectFit: 'contain',
                           borderRadius: '8px'
                         }}
@@ -678,19 +678,7 @@ const AuditoriaRefactorizada = () => {
                   background: `linear-gradient(135deg, ${alpha(theme.palette.info.main, 0.1)}, ${alpha(theme.palette.info.main, 0.05)})`,
                   border: `2px solid ${alpha(theme.palette.info.main, 0.2)}`
                 }}>
-                  <CardContent>
-                    <Box display="flex" alignItems="center" gap={2}>
-                      <CheckCircleIcon color="info" sx={{ fontSize: 32 }} />
-                      <Box flex={1}>
-                        <Typography variant="h6" color="info.main" gutterBottom>
-                          Formulario Seleccionado
-                        </Typography>
-                        <Typography variant="body1" color="textSecondary">
-                          {formularios.find(f => f.id === formularioSeleccionadoId)?.nombre}
-                        </Typography>
-                      </Box>
-                    </Box>
-                  </CardContent>
+                  
                 </Card>
               </Zoom>
             )}
@@ -806,38 +794,43 @@ const AuditoriaRefactorizada = () => {
   ];
 
   return (
-    <Container maxWidth="xl" sx={{ py: 4 }}>
+    <Container maxWidth="xl" sx={{ py: isMobile ? 1 : 4 }}>
       {/* Header con navegación y progreso */}
-      <Box sx={{ mb: 4 }}>
-        <Box display="flex" alignItems="center" justifyContent="space-between" mb={3}>
-          <Box display="flex" alignItems="center" gap={2}>
+      <Box sx={{ mb: isMobile ? 1 : 3 }}>
+        <Box display="flex" alignItems="center" justifyContent="space-between" mb={isMobile ? 0.5 : 2}>
+          <Box display="flex" alignItems="center" gap={isMobile ? 0.5 : 2}>
             <Button
               onClick={() => navigate('/cliente-dashboard')}
               variant="outlined"
               startIcon={<ArrowBackIcon />}
+              size="small"
               sx={{ 
                 borderRadius: 2,
                 textTransform: 'none',
-                fontWeight: 600
+                fontWeight: 600,
+                px: isMobile ? 1 : 2,
+                py: isMobile ? 0.5 : 1
               }}
             >
               Volver
             </Button>
-            <Typography variant="h4" sx={{ 
+            <Typography variant={isMobile ? "h6" : "h4"} sx={{ 
               fontWeight: 700,
               background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
               backgroundClip: 'text',
               WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent'
+              WebkitTextFillColor: 'transparent',
+              fontSize: isMobile ? '1.1rem' : undefined
             }}>
               Nueva Auditoría
             </Typography>
           </Box>
           
           <Chip 
-            label={`${calcularProgreso()}% Completado`}
+            label={`${calcularProgreso()}%`}
             color="primary"
             variant="filled"
+            size="small"
             sx={{ fontWeight: 600 }}
           />
         </Box>
@@ -847,7 +840,7 @@ const AuditoriaRefactorizada = () => {
           variant="determinate" 
           value={calcularProgreso()} 
           sx={{ 
-            height: 8, 
+            height: isMobile ? 4 : 8, 
             borderRadius: 4,
             backgroundColor: alpha(theme.palette.primary.main, 0.1),
             '& .MuiLinearProgress-bar': {
@@ -863,7 +856,7 @@ const AuditoriaRefactorizada = () => {
             <Alert 
               severity="warning" 
               sx={{ 
-                mt: 2, 
+                mt: isMobile ? 0.5 : 2, 
                 borderRadius: 2,
                 '& .MuiAlert-message': {
                   width: '100%'

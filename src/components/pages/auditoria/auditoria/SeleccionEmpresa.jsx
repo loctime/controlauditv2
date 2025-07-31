@@ -23,14 +23,14 @@ const SeleccionEmpresa = ({ empresas, empresaSeleccionada, onChange }) => {
   const [empresaSeleccionadaLocal, setEmpresaSeleccionadaLocal] = useState(empresaSeleccionada);
 
   const mobileBoxStyle = {
-    mb: isMobile ? 1.5 : 3,
-    p: isMobile ? 2 : 3,
+    mb: isMobile ? 0.25 : 1,
+    p: isMobile ? 1 : 3,
     borderRadius: 2,
     bgcolor: 'background.paper',
     border: `1px solid ${theme.palette.divider}`,
     boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
     overflow: 'hidden',
-    minHeight: isMobile ? '100px' : '120px',
+    minHeight: isMobile ? '60px' : '120px',
     display: 'flex',
     flexDirection: 'column',
     justifyContent: 'space-between'
@@ -46,6 +46,9 @@ const SeleccionEmpresa = ({ empresas, empresaSeleccionada, onChange }) => {
     onChange(selectedEmpresa);
   };
 
+  // Determinar si hay una empresa seleccionada para aplicar estilos verdes
+  const hasSelectedEmpresa = !!empresaSeleccionadaLocal;
+
   return (
     <Box>
       {/* Selección de Empresa */}
@@ -53,37 +56,71 @@ const SeleccionEmpresa = ({ empresas, empresaSeleccionada, onChange }) => {
         <Box sx={{ 
           display: 'flex', 
           alignItems: 'center', 
-          gap: isMobile ? 1 : 2,
-          mb: isMobile ? 1.5 : 2
+          gap: isMobile ? 0.5 : 2,
+          mb: isMobile ? 0.5 : 2
         }}>
           <Box sx={{ 
-            p: isMobile ? 1 : 1.5, 
+            p: isMobile ? 0.5 : 1.5, 
             borderRadius: '50%', 
-            bgcolor: alpha(theme.palette.primary.main, 0.1),
+            bgcolor: hasSelectedEmpresa 
+              ? alpha(theme.palette.success.main, 0.1)
+              : alpha(theme.palette.primary.main, 0.1),
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center'
           }}>
-            <BusinessIcon 
-              color="primary" 
-              sx={{ fontSize: isMobile ? 20 : 24 }} 
-            />
+            {hasSelectedEmpresa ? (
+              <CheckCircleIcon 
+                color="success" 
+                sx={{ fontSize: isMobile ? 16 : 24 }} 
+              />
+            ) : (
+              <BusinessIcon 
+                color="primary" 
+                sx={{ fontSize: isMobile ? 16 : 24 }} 
+              />
+            )}
           </Box>
           <Typography 
-            variant={isMobile ? "body1" : "h6"} 
-            sx={{ fontWeight: 600, color: 'text.primary' }}
+            variant={isMobile ? "body2" : "h6"} 
+            sx={{ 
+              fontWeight: 600, 
+              color: hasSelectedEmpresa ? 'success.main' : 'text.primary',
+              fontSize: isMobile ? '0.8rem' : undefined
+            }}
           >
-            Seleccionar Empresa
+            {hasSelectedEmpresa ? 'Empresa Seleccionada' : 'Seleccionar Empresa'}
           </Typography>
         </Box>
         
         <FormControl 
           fullWidth 
           sx={{ 
-            mt: isMobile ? 1 : 2,
+            mt: isMobile ? 0.25 : 2,
             '& .MuiInputBase-root': {
               fontSize: isMobile ? '0.875rem' : '1rem',
-              minHeight: isMobile ? '48px' : '56px'
+              minHeight: isMobile ? '36px' : '56px',
+              // Aplicar estilos verdes cuando hay empresa seleccionada
+              ...(hasSelectedEmpresa && {
+                backgroundColor: alpha(theme.palette.success.main, 0.05),
+                borderColor: theme.palette.success.main,
+                '&:hover': {
+                  borderColor: theme.palette.success.main,
+                  backgroundColor: alpha(theme.palette.success.main, 0.08)
+                },
+                '&.Mui-focused': {
+                  borderColor: theme.palette.success.main,
+                  backgroundColor: alpha(theme.palette.success.main, 0.1)
+                }
+              })
+            },
+            '& .MuiInputLabel-root': {
+              ...(hasSelectedEmpresa && {
+                color: theme.palette.success.main,
+                '&.Mui-focused': {
+                  color: theme.palette.success.main
+                }
+              })
             }
           }}
         >
@@ -180,8 +217,7 @@ const SeleccionEmpresa = ({ empresas, empresaSeleccionada, onChange }) => {
                   <Typography 
                     variant="body1" 
                     sx={{ 
-                      fontWeight: 500,
-                      fontSize: isMobile ? '0.875rem' : '1rem',
+                      fontWeight: 600,
                       textOverflow: 'ellipsis',
                       whiteSpace: 'nowrap',
                       overflow: 'hidden'
@@ -189,7 +225,30 @@ const SeleccionEmpresa = ({ empresas, empresaSeleccionada, onChange }) => {
                   >
                     {empresa.nombre}
                   </Typography>
+                  <Typography 
+                    variant="body2" 
+                    color="text.secondary"
+                    sx={{ 
+                      fontSize: '0.875rem',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden'
+                    }}
+                  >
+                    {empresa.direccion || 'Sin dirección'}
+                  </Typography>
                 </Box>
+                {empresa.activa && (
+                  <Chip 
+                    label="Activa" 
+                    color="success" 
+                    size="small"
+                    sx={{ 
+                      fontSize: '0.75rem',
+                      fontWeight: 500
+                    }}
+                  />
+                )}
               </MenuItem>
             ))}
           </Select>
@@ -242,107 +301,7 @@ const SeleccionEmpresa = ({ empresas, empresaSeleccionada, onChange }) => {
         </Box>
       )}
 
-      {/* Empresa Seleccionada */}
-      {empresaSeleccionadaLocal && (
-        <Box sx={{
-          ...mobileBoxStyle,
-          background: `linear-gradient(135deg, ${alpha(theme.palette.success.main, 0.1)}, ${alpha(theme.palette.success.main, 0.05)})`,
-          border: `2px solid ${alpha(theme.palette.success.main, 0.2)}`
-        }}>
-          <Box sx={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            gap: isMobile ? 1 : 2,
-            mb: isMobile ? 1 : 2
-          }}>
-            <Box sx={{ 
-              p: isMobile ? 1 : 1.5, 
-              borderRadius: '50%', 
-              bgcolor: alpha(theme.palette.success.main, 0.1),
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}>
-              <CheckCircleIcon 
-                color="success" 
-                sx={{ fontSize: isMobile ? 20 : 24 }} 
-              />
-            </Box>
-            <Typography 
-              variant={isMobile ? "body1" : "h6"} 
-              sx={{ fontWeight: 600, color: 'success.main' }}
-            >
-              Empresa Seleccionada
-            </Typography>
-          </Box>
-          
-          <Box sx={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            gap: isMobile ? 1.5 : 2,
-            pl: isMobile ? 3.5 : 4.5
-          }}>
-            {empresaSeleccionadaLocal.logo && empresaSeleccionadaLocal.logo.trim() !== "" ? (
-              <Avatar
-                src={empresaSeleccionadaLocal.logo}
-                alt={`${empresaSeleccionadaLocal.nombre} logo`}
-                sx={{ 
-                  width: isMobile ? 40 : 48, 
-                  height: isMobile ? 40 : 48,
-                  border: `2px solid ${alpha(theme.palette.success.main, 0.2)}`
-                }}
-              />
-            ) : (
-              <Avatar 
-                sx={{ 
-                  width: isMobile ? 40 : 48, 
-                  height: isMobile ? 40 : 48,
-                  bgcolor: alpha(theme.palette.success.main, 0.2),
-                  color: theme.palette.success.main,
-                  fontSize: isMobile ? '1rem' : '1.25rem'
-                }}
-              >
-                {empresaSeleccionadaLocal.nombre.charAt(0).toUpperCase()}
-              </Avatar>
-            )}
-            <Box sx={{ flex: 1, minWidth: 0 }}>
-              <Typography 
-                variant={isMobile ? "body1" : "h6"} 
-                sx={{ 
-                  fontWeight: 600,
-                  color: 'success.main',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
-                  overflow: 'hidden'
-                }}
-              >
-                {empresaSeleccionadaLocal.nombre}
-              </Typography>
-              <Typography 
-                variant="body2" 
-                color="text.secondary"
-                sx={{ 
-                  fontSize: isMobile ? '0.875rem' : '1rem',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
-                  overflow: 'hidden'
-                }}
-              >
-                {empresaSeleccionadaLocal.direccion || 'Sin dirección'}
-              </Typography>
-            </Box>
-            <Chip 
-              label="Activa" 
-              color="success" 
-              size={isMobile ? "small" : "medium"}
-              sx={{ 
-                fontSize: isMobile ? '0.75rem' : '0.875rem',
-                fontWeight: 500
-              }}
-            />
-          </Box>
-        </Box>
-      )}
+
     </Box>
   );
 };
