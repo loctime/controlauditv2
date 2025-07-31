@@ -57,14 +57,18 @@ const GaleriaFormulariosPublicos = ({ onCopiar }) => {
         const snapshot = await getDocs(q);
         const misFormularios = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         
-        // Crear un mapa de formularios copiados basado en el nombre y estructura similar
+        // Crear un mapa de formularios copiados basado en el formularioOriginalId o nombre
         const formulariosCopiados = misFormularios.filter(form => {
-          // Buscar si hay un formulario público con el mismo nombre y estructura similar
+          // Buscar si hay un formulario público que ya fue copiado por este usuario
           return formularios.some(formPublico => 
-            formPublico.nombre === form.nombre && 
-            formPublico.creadorId !== userProfile.uid // No es propio
+            (form.formularioOriginalId === formPublico.id) || // Copia directa por ID
+            (form.nombre === formPublico.nombre && 
+             formPublico.creadorId !== userProfile.uid && // No es propio
+             form.creadorId === userProfile.uid) // Es una copia del usuario actual
           );
         });
+        
+        console.debug('[GaleriaFormulariosPublicos] Formularios copiados detectados:', formulariosCopiados.map(f => f.nombre));
         
         setMisFormulariosCopiados(formulariosCopiados);
         console.debug('[GaleriaFormulariosPublicos] Formularios del usuario cargados:', misFormularios.length);
@@ -128,6 +132,7 @@ const GaleriaFormulariosPublicos = ({ onCopiar }) => {
           creadorId: userProfile.uid,
           esPublico: false,
           publicSharedId: null,
+          formularioOriginalId: form.id, // ID del formulario original
           createdAt: new Date()
         };
         delete nuevoFormulario.id;
@@ -237,8 +242,22 @@ const GaleriaFormulariosPublicos = ({ onCopiar }) => {
         {formulariosFiltrados.map(form => {
           const esPropio = form.creadorId && myUid && form.creadorId === myUid;
           const yaCopiado = misFormulariosCopiados.some(
-            (copiado) => copiado.nombre === form.nombre && copiado.creadorId !== userProfile?.uid
+            (copiado) => (copiado.formularioOriginalId === form.id) || 
+                         (copiado.nombre === form.nombre && copiado.creadorId === userProfile?.uid)
           );
+          
+          // Debug: mostrar información sobre formularios copiados
+          if (form.nombre === 'RGRL') {
+            console.debug('[DEBUG] Formulario RGRL:', {
+              formId: form.id,
+              misFormulariosCopiados: misFormulariosCopiados.map(f => ({ 
+                nombre: f.nombre, 
+                formularioOriginalId: f.formularioOriginalId,
+                creadorId: f.creadorId 
+              })),
+              yaCopiado
+            });
+          }
           return (
             <Grid item xs={12} key={form.id}>
               <Accordion>

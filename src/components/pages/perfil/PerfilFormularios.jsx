@@ -7,12 +7,14 @@ import {
 import { Draw as DrawIcon, ExpandMore as ExpandMoreIcon } from '@mui/icons-material';
 import ShareIcon from '@mui/icons-material/Share';
 import { useState } from 'react';
-import { doc, updateDoc } from 'firebase/firestore';
+import { doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../../../firebaseConfig';
 import { v4 as uuidv4 } from 'uuid';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import DeleteForeverIcon from '@mui/icons-material/DeleteForever';
 import { usePermissions } from '../admin/hooks/usePermissions';
 import { useNavigate } from 'react-router-dom';
+import Swal from 'sweetalert2';
 
 const PerfilFormularios = ({ formularios, loading }) => {
   const theme = useTheme();
@@ -29,6 +31,13 @@ const PerfilFormularios = ({ formularios, loading }) => {
 
   const handleCompartir = async (form) => {
     if (!canCompartirFormularios) return;
+    
+    // Verificar si el formulario es propio (no copiado)
+    if (form.formularioOriginalId) {
+      console.warn('[PerfilFormularios] No se puede compartir un formulario copiado:', form.id);
+      return;
+    }
+    
     let publicSharedId = form.publicSharedId;
     if (!form.esPublico || !form.publicSharedId) {
       publicSharedId = uuidv4();
@@ -47,6 +56,31 @@ const PerfilFormularios = ({ formularios, loading }) => {
     setCopying(true);
     await navigator.clipboard.writeText(shareLink);
     setTimeout(() => setCopying(false), 1000);
+  };
+
+  const handleEliminarFormulario = async (form) => {
+    const result = await Swal.fire({
+      title: '¿Estás seguro?',
+      text: `¿Quieres eliminar el formulario "${form.nombre}"? ¡Esta acción no se puede deshacer!`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#3085d6',
+      confirmButtonText: 'Sí, eliminar',
+      cancelButtonText: 'Cancelar'
+    });
+
+    if (result.isConfirmed) {
+      try {
+        await deleteDoc(doc(db, 'formularios', form.id));
+        Swal.fire('Eliminado', 'El formulario ha sido eliminado exitosamente.', 'success');
+        // Recargar la página para actualizar la lista
+        window.location.reload();
+      } catch (error) {
+        console.error('Error al eliminar formulario:', error);
+        Swal.fire('Error', 'No se pudo eliminar el formulario.', 'error');
+      }
+    }
   };
 
   return (
@@ -232,6 +266,14 @@ const PerfilFormularios = ({ formularios, loading }) => {
                     gap: 1,
                     alignItems: isMobile ? 'center' : 'flex-end'
                   }}>
+                    {form.formularioOriginalId && (
+                      <Chip 
+                        label="Copia" 
+                        size={isSmallMobile ? "small" : "medium"}
+                        color="warning" 
+                        sx={{ fontWeight: 600 }}
+                      />
+                    )}
                     {form.esPublico && (
                       <Chip 
                         label="Público" 
@@ -278,32 +320,54 @@ const PerfilFormularios = ({ formularios, loading }) => {
                     gap: isSmallMobile ? 1 : 2,
                     justifyContent: isMobile ? 'center' : 'flex-start'
                   }}>
-                    <Button
-                      variant="outlined"
-                      color="primary"
-                      size={isSmallMobile ? "small" : "medium"}
-                      onClick={() => handleCompartir(form)}
-                      disabled={!canCompartirFormularios}
-                      sx={{ 
-                        minWidth: isMobile ? '100%' : 'auto',
-                        py: isSmallMobile ? 1 : 1.5
-                      }}
-                    >
-                      📤 Compartir
-                    </Button>
+                    <Tooltip title={form.formularioOriginalId ? 'No puedes compartir un formulario copiado' : 'Compartir formulario'}>
+                      <span>
+                        <Button
+                          variant="outlined"
+                          color="primary"
+                          size={isSmallMobile ? "small" : "medium"}
+                          onClick={() => handleCompartir(form)}
+                          disabled={!canCompartirFormularios || form.formularioOriginalId}
+                          sx={{ 
+                            minWidth: isMobile ? '100%' : 'auto',
+                            py: isSmallMobile ? 1 : 1.5
+                          }}
+                        >
+                          📤 Compartir
+                        </Button>
+                      </span>
+                    </Tooltip>
                     
-                    <Button
-                      variant="outlined"
-                      color="secondary"
-                      size={isSmallMobile ? "small" : "medium"}
-                      onClick={() => navigate(`/editar/${form.id}`)}
-                      sx={{ 
-                        minWidth: isMobile ? '100%' : 'auto',
-                        py: isSmallMobile ? 1 : 1.5
-                      }}
-                    >
-                      ✏️ Editar
-                    </Button>
+                                         <Button
+                       variant="outlined"
+                       color="secondary"
+                       size={isSmallMobile ? "small" : "medium"}
+                       onClick={() => navigate(`/editar/${form.id}`)}
+                       sx={{ 
+                         minWidth: isMobile ? '100%' : 'auto',
+                         py: isSmallMobile ? 1 : 1.5
+                       }}
+                     >
+                       ✏️ Editar
+                     </Button>
+                     
+                     <Tooltip title="Eliminar formulario">
+                       <span>
+                         <Button
+                           variant="outlined"
+                           color="error"
+                           size={isSmallMobile ? "small" : "medium"}
+                           onClick={() => handleEliminarFormulario(form)}
+                           startIcon={<DeleteForeverIcon />}
+                           sx={{ 
+                             minWidth: isMobile ? '100%' : 'auto',
+                             py: isSmallMobile ? 1 : 1.5
+                           }}
+                         >
+                           🗑️ Eliminar
+                         </Button>
+                       </span>
+                     </Tooltip>
                   </Box>
                 </Box>
               </CardContent>
