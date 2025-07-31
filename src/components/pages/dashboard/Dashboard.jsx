@@ -8,6 +8,9 @@ import { toast } from 'react-toastify';
 import { verifyAdminCode, verifySuperAdminCode } from "../../../config/admin";
 import GestionClientes from "./GestionClientes";
 import userService from "../../../services/userService";
+import { getEnvironmentInfo } from "../../../config/environment.js";
+import BackendHealthCheck from "../../../utils/backendHealthCheck.js";
+import BackendStatus from "../../../utils/backendStatus.js";
 
 const empresasEjemplo = [
   {
@@ -127,16 +130,84 @@ function Dashboard() {
   console.log('Perfil completo:', userProfile);
   console.log('================================');
 
+  // Función para diagnosticar problemas de conectividad
+  const diagnosticarBackend = async () => {
+    try {
+      // Primero verificar el estado del entorno
+      const statusChecker = new BackendStatus();
+      const statusReport = statusChecker.generateStatusReport();
+      
+      console.log('📋 Reporte de estado del entorno:', statusReport);
+      
+      // Luego verificar conectividad
+      const healthChecker = new BackendHealthCheck();
+      const diagnostico = await healthChecker.runFullDiagnostic();
+      
+      return {
+        success: diagnostico.connectivity.success,
+        message: diagnostico.connectivity.success ? 'Backend funcionando correctamente' : 'Error de conectividad',
+        details: {
+          ...diagnostico,
+          statusReport
+        }
+      };
+    } catch (error) {
+      console.error('❌ Error en diagnóstico del backend:', error);
+      return { 
+        success: false, 
+        message: `Error en diagnóstico: ${error.message}`,
+        details: error
+      };
+    }
+  };
+
+  // Función para mostrar diagnóstico completo
+  const mostrarDiagnostico = async () => {
+    try {
+      setLoading(true);
+      const diagnostico = await diagnosticarBackend();
+      
+      if (diagnostico.success) {
+        toast.success('✅ Backend funcionando correctamente');
+        console.log('📊 Diagnóstico completo:', diagnostico.details);
+      } else {
+        toast.error(`❌ ${diagnostico.message}`);
+        console.error('Detalles del error:', diagnostico.details);
+        
+        // Mostrar recomendaciones si están disponibles
+        if (diagnostico.details?.recommendations) {
+          diagnostico.details.recommendations.forEach(rec => {
+            console.log(rec);
+          });
+        }
+      }
+    } catch (error) {
+      toast.error('Error al realizar diagnóstico');
+      console.error('Error en diagnóstico:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError('');
+    
     if (!form.password) {
       setError('La contraseña temporal es obligatoria.');
       setLoading(false);
       return;
     }
+    
     try {
+      // Primero diagnosticar el backend
+      const diagnostico = await diagnosticarBackend();
+      if (!diagnostico.success) {
+        console.log('⚠️ Backend no disponible, continuando con creación en Firestore...');
+        // No bloquear la creación, permitir que use el fallback
+      }
+      
       // 1. Crear usuario principal usando el backend (sin desconectar)
       const password = form.password || 'Cambiar123!';
       const userRes = await userService.createUser({
@@ -156,6 +227,12 @@ function Dashboard() {
           puedeEliminarUsuarios: true
         }
       });
+
+      // Verificar si requiere creación manual
+      if (userRes.requiresManualCreation) {
+        toast.warning('⚠️ Usuario creado en Firestore. El administrador debe crear el usuario en Firebase Auth manualmente.');
+        console.log('📝 Usuario pendiente de creación en Firebase Auth:', userRes);
+      }
 
       // 2. Crear empresa en Firestore
       const empresaRef = await addDoc(collection(db, 'empresas'), {
@@ -217,9 +294,19 @@ function Dashboard() {
 
       {tabValue === 0 && (
         <>
-          <Button variant="contained" color="primary" sx={{ mb: 2 }} onClick={handleOpenDialog}>
-            Agregar Empresa / Usuario Principal
-          </Button>
+          <Box sx={{ mb: 2, display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+            <Button variant="contained" color="primary" onClick={handleOpenDialog}>
+              Agregar Empresa / Usuario Principal
+            </Button>
+            <Button 
+              variant="outlined" 
+              color="secondary" 
+              onClick={mostrarDiagnostico}
+              disabled={loading}
+            >
+              🔍 Diagnosticar Backend
+            </Button>
+          </Box>
         </>
       )}
 

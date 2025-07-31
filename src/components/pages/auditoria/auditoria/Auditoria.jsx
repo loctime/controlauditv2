@@ -42,18 +42,6 @@ import AuditoriaService from "../auditoriaService";
 import { buildReporteMetadata } from '../../../../services/useMetadataService';
 import autoSaveService from "./services/autoSaveService";
 
-// Hooks personalizados
-import { useAuditoriaState } from "./hooks/useAuditoriaState";
-import { useAuditoriaData } from "./hooks/useAuditoriaData";
-
-// Componentes
-import AuditoriaStepper from "./components/AuditoriaStepper";
-import AuditoriaCompletada from "./components/AuditoriaCompletada";
-
-// Servicios
-import AuditoriaService from "../auditoriaService";
-import { buildReporteMetadata } from '../../../../services/useMetadataService';
-
 // Componentes de pasos
 import SeleccionEmpresa from "./SeleccionEmpresa";
 import SeleccionSucursal from "./SeleccionSucursal";
