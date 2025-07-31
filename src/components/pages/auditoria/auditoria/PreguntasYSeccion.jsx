@@ -5,6 +5,12 @@ import PhotoLibraryIcon from '@mui/icons-material/PhotoLibrary';
 import WarningIcon from '@mui/icons-material/Warning';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import VisibilityIcon from '@mui/icons-material/Visibility';
+import ThumbUpIcon from '@mui/icons-material/ThumbUp';
+import ThumbDownIcon from '@mui/icons-material/ThumbDown';
+import BuildIcon from '@mui/icons-material/Build';
+import BlockIcon from '@mui/icons-material/Block';
+import CommentIcon from '@mui/icons-material/Comment';
+import UploadIcon from '@mui/icons-material/Upload';
 
 const respuestasPosibles = ["Conforme", "No conforme", "Necesita mejora", "No aplica"];
 
@@ -45,6 +51,22 @@ const obtenerColorRespuesta = (respuesta) => {
       };
     default:
       return {};
+  }
+};
+
+// Función para obtener el icono de cada respuesta
+const obtenerIconoRespuesta = (respuesta) => {
+  switch (respuesta) {
+    case "Conforme":
+      return <ThumbUpIcon />;
+    case "No conforme":
+      return <ThumbDownIcon />;
+    case "Necesita mejora":
+      return <BuildIcon />;
+    case "No aplica":
+      return <BlockIcon />;
+    default:
+      return null;
   }
 };
 
@@ -235,11 +257,23 @@ const PreguntasYSeccion = ({
   }, [openCameraDialog, cameraStream]);
 
   const handleRespuestaChange = (seccionIndex, preguntaIndex, value) => {
-    const nuevasRespuestas = respuestas.map((resp, index) =>
-      index === seccionIndex ? [...resp.slice(0, preguntaIndex), value, ...resp.slice(preguntaIndex + 1)] : resp
-    );
-    setRespuestas(nuevasRespuestas);
-    guardarRespuestas(nuevasRespuestas);
+    const respuestaActual = respuestas[seccionIndex]?.[preguntaIndex];
+    
+    // Si la respuesta seleccionada es la misma que ya estaba seleccionada, la deseleccionamos
+    if (respuestaActual === value) {
+      const nuevasRespuestas = respuestas.map((resp, index) =>
+        index === seccionIndex ? [...resp.slice(0, preguntaIndex), '', ...resp.slice(preguntaIndex + 1)] : resp
+      );
+      setRespuestas(nuevasRespuestas);
+      guardarRespuestas(nuevasRespuestas);
+    } else {
+      // Si es una respuesta diferente, la seleccionamos
+      const nuevasRespuestas = respuestas.map((resp, index) =>
+        index === seccionIndex ? [...resp.slice(0, preguntaIndex), value, ...resp.slice(preguntaIndex + 1)] : resp
+      );
+      setRespuestas(nuevasRespuestas);
+      guardarRespuestas(nuevasRespuestas);
+    }
   };
 
   const handleComentarioChange = (event) => {
@@ -659,13 +693,17 @@ const PreguntasYSeccion = ({
             {seccion.preguntas.map((pregunta, preguntaIndex) => (
               <Box 
                 key={preguntaIndex} 
-                sx={{
-                  ...mobileBoxStyle,
-                  border: preguntaContestada(seccionIndex, preguntaIndex) ? '2px solid #4caf50' : '2px solid #ff9800',
-                  backgroundColor: preguntaContestada(seccionIndex, preguntaIndex) ? '#f1f8e9' : '#fff3e0',
-                  p: isMobile ? 2 : 3,
-                  mb: isMobile ? 2 : 3
-                }}
+                                 sx={{
+                   ...mobileBoxStyle,
+                   border: preguntaContestada(seccionIndex, preguntaIndex) 
+                     ? `2px solid ${obtenerColorRespuesta(respuestas[seccionIndex]?.[preguntaIndex]).backgroundColor}` 
+                     : '2px solid #2196f3',
+                   backgroundColor: preguntaContestada(seccionIndex, preguntaIndex) 
+                     ? `${obtenerColorRespuesta(respuestas[seccionIndex]?.[preguntaIndex]).backgroundColor}15` 
+                     : '#e3f2fd',
+                   p: isMobile ? 2 : 3,
+                   mb: isMobile ? 2 : 3
+                 }}
                 id={`pregunta-${seccionIndex}-${preguntaIndex}`}
               >
                 <Box sx={{ 
@@ -703,82 +741,119 @@ const PreguntasYSeccion = ({
                   )}
                 </Box>
                 <Stack direction="column" spacing={isMobile ? 1 : 1.5}>
-                  <Stack 
-                    direction="row" 
-                    spacing={isMobile ? 0.5 : 1} 
-                    flexWrap="wrap"
-                    sx={{ gap: isMobile ? 0.5 : 1 }}
-                  >
-                    {respuestasPosibles.map((respuesta, index) => (
-                      <Button
-                        key={index}
-                        variant={respuestas[seccionIndex]?.[preguntaIndex] === respuesta ? "contained" : "outlined"}
-                        onClick={() => handleRespuestaChange(seccionIndex, preguntaIndex, respuesta)}
-                        disabled={modalAbierto}
-                        sx={{ 
-                          minWidth: isMobile ? 80 : 120,
-                          fontSize: isMobile ? '0.75rem' : '0.875rem',
-                          py: isMobile ? 0.5 : 1,
-                          px: isMobile ? 1 : 2,
-                          ...(respuestas[seccionIndex]?.[preguntaIndex] === respuesta 
-                            ? obtenerColorRespuesta(respuesta)
-                            : {
-                                borderColor: obtenerColorRespuesta(respuesta).backgroundColor,
-                                color: obtenerColorRespuesta(respuesta).backgroundColor,
-                                '&:hover': {
-                                  backgroundColor: obtenerColorRespuesta(respuesta).backgroundColor,
-                                  color: 'white',
-                                  borderColor: obtenerColorRespuesta(respuesta).backgroundColor,
+                                     <Stack 
+                     direction="row" 
+                     spacing={isMobile ? 0.5 : 1} 
+                     flexWrap="wrap"
+                     sx={{ gap: isMobile ? 0.5 : 1 }}
+                   >
+                     {(() => {
+                       const respuestaSeleccionada = respuestas[seccionIndex]?.[preguntaIndex];
+                       
+                                               // Si hay una respuesta seleccionada, solo mostrar esa
+                        if (respuestaSeleccionada && respuestaSeleccionada.trim() !== '') {
+                          return (
+                            <Button
+                              key={respuestaSeleccionada}
+                              variant="contained"
+                              startIcon={obtenerIconoRespuesta(respuestaSeleccionada)}
+                              onClick={() => handleRespuestaChange(seccionIndex, preguntaIndex, respuestaSeleccionada)}
+                              disabled={modalAbierto}
+                              sx={{ 
+                                minWidth: isMobile ? 80 : 120,
+                                fontSize: isMobile ? '0.75rem' : '0.875rem',
+                                py: isMobile ? 0.5 : 1,
+                                px: isMobile ? 1 : 2,
+                                ...obtenerColorRespuesta(respuestaSeleccionada),
+                                animation: 'fadeIn 0.3s ease-in',
+                                '@keyframes fadeIn': {
+                                  from: { opacity: 0, transform: 'scale(0.9)' },
+                                  to: { opacity: 1, transform: 'scale(1)' }
                                 }
+                              }}
+                            >
+                              {respuestaSeleccionada}
+                            </Button>
+                          );
+                        }
+                        
+                        // Si no hay respuesta seleccionada, mostrar todas las opciones
+                        return respuestasPosibles.map((respuesta, index) => (
+                          <Button
+                            key={index}
+                            variant="outlined"
+                            startIcon={obtenerIconoRespuesta(respuesta)}
+                            onClick={() => handleRespuestaChange(seccionIndex, preguntaIndex, respuesta)}
+                            disabled={modalAbierto}
+                            sx={{ 
+                              minWidth: isMobile ? 80 : 120,
+                              fontSize: isMobile ? '0.75rem' : '0.875rem',
+                              py: isMobile ? 0.5 : 1,
+                              px: isMobile ? 1 : 2,
+                              borderColor: obtenerColorRespuesta(respuesta).backgroundColor,
+                              color: obtenerColorRespuesta(respuesta).backgroundColor,
+                              '&:hover': {
+                                backgroundColor: obtenerColorRespuesta(respuesta).backgroundColor,
+                                color: 'white',
+                                borderColor: obtenerColorRespuesta(respuesta).backgroundColor,
                               }
-                          )
-                        }}
-                      >
-                        {respuesta}
-                      </Button>
-                    ))}
-                  </Stack>
-                  <Button
-                    variant="outlined"
-                    onClick={() => handleOpenModal(seccionIndex, preguntaIndex)}
-                    sx={{ 
-                      minWidth: isMobile ? 80 : 120,
-                      fontSize: isMobile ? '0.75rem' : '0.875rem',
-                      py: isMobile ? 0.5 : 1,
-                      px: isMobile ? 1 : 2
-                    }}
-                  >
-                    Comentario
-                  </Button>
-                  <Button
-                    variant="outlined"
-                    component="span"
-                    onClick={() => handleOpenCameraDialog(seccionIndex, preguntaIndex)}
-                    disabled={procesandoImagen[`${seccionIndex}-${preguntaIndex}`]}
-                    sx={{ 
-                      minWidth: isMobile ? 80 : 120,
-                      fontSize: isMobile ? '0.75rem' : '0.875rem',
-                      py: isMobile ? 0.5 : 1,
-                      px: isMobile ? 1 : 2
-                    }}
-                  >
-                    {procesandoImagen[`${seccionIndex}-${preguntaIndex}`] ? 'Procesando...' : 'Tomar foto'}
-                  </Button>
-                  <label htmlFor={`upload-gallery-${seccionIndex}-${preguntaIndex}`}>
-                    <Button
+                            }}
+                          >
+                            {respuesta}
+                          </Button>
+                        ));
+                     })()}
+                   </Stack>
+                                                         <Button
                       variant="outlined"
-                      component="span"
+                      startIcon={<CommentIcon />}
+                      onClick={() => handleOpenModal(seccionIndex, preguntaIndex)}
                       sx={{ 
                         minWidth: isMobile ? 80 : 120,
                         fontSize: isMobile ? '0.75rem' : '0.875rem',
                         py: isMobile ? 0.5 : 1,
                         px: isMobile ? 1 : 2
                       }}
-                      disabled={procesandoImagen[`${seccionIndex}-${preguntaIndex}`]}
                     >
-                      {procesandoImagen[`${seccionIndex}-${preguntaIndex}`] ? 'Procesando...' : 'Subir desde galería'}
+                      Comentario
                     </Button>
-                  </label>
+                    <Stack 
+                      direction="row" 
+                      spacing={isMobile ? 0.5 : 1}
+                      sx={{ gap: isMobile ? 0.5 : 1 }}
+                    >
+                      <Button
+                        variant="outlined"
+                        component="span"
+                        startIcon={<CameraAltIcon />}
+                        onClick={() => handleOpenCameraDialog(seccionIndex, preguntaIndex)}
+                        disabled={procesandoImagen[`${seccionIndex}-${preguntaIndex}`]}
+                        sx={{ 
+                          minWidth: isMobile ? 80 : 120,
+                          fontSize: isMobile ? '0.75rem' : '0.875rem',
+                          py: isMobile ? 0.5 : 1,
+                          px: isMobile ? 1 : 2
+                        }}
+                      >
+                        {procesandoImagen[`${seccionIndex}-${preguntaIndex}`] ? 'Procesando...' : 'Camara'}
+                      </Button>
+                      <label htmlFor={`upload-gallery-${seccionIndex}-${preguntaIndex}`}>
+                        <Button
+                          variant="outlined"
+                          component="span"
+                          startIcon={<UploadIcon />}
+                          sx={{ 
+                            minWidth: isMobile ? 80 : 120,
+                            fontSize: isMobile ? '0.75rem' : '0.875rem',
+                            py: isMobile ? 0.5 : 1,
+                            px: isMobile ? 1 : 2
+                          }}
+                          disabled={procesandoImagen[`${seccionIndex}-${preguntaIndex}`]}
+                        >
+                          {procesandoImagen[`${seccionIndex}-${preguntaIndex}`] ? 'Procesando...' : 'Subir'}
+                        </Button>
+                      </label>
+                    </Stack>
                 </Stack>
                 {/* Comentario y foto debajo, bien separados */}
                 <Box 
@@ -909,102 +984,139 @@ const PreguntasYSeccion = ({
              </Button>
            )}
          </DialogTitle>
-         <DialogContent>
-           <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
-             {/* Video de la cámara */}
-             <Box sx={{ position: 'relative', width: '100%', maxWidth: 640 }}>
-               <video
-                 ref={videoRef}
-                 autoPlay
-                 playsInline
-                 style={{ 
-                   width: '100%', 
-                   height: 'auto',
-                   borderRadius: 8,
-                   border: '2px solid #ddd'
-                 }}
-               />
-               <canvas
-                 ref={canvasRef}
-                 style={{ display: 'none' }}
-               />
-               
-               {/* Indicador de calidad de foto */}
-               {photoQuality && (
-                 <Box
-                   sx={{
-                     position: 'absolute',
-                     top: 10,
-                     right: 10,
-                     backgroundColor: photoQuality === 'excellent' ? '#4caf50' : 
-                                   photoQuality === 'good' ? '#ff9800' : '#f44336',
-                     color: 'white',
-                     px: 2,
-                     py: 1,
-                     borderRadius: 2,
-                     fontSize: '0.75rem',
-                     fontWeight: 'bold'
-                   }}
-                 >
-                   {photoQuality === 'excellent' ? '⭐ Excelente' : 
-                    photoQuality === 'good' ? '✅ Buena' : '⚠️ Borrosa'}
-                 </Box>
-               )}
-             </Box>
-             
-             {/* Barra de progreso de compresión */}
-             {compressionProgress > 0 && (
-               <Box sx={{ width: '100%', mt: 2 }}>
-                 <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                   Procesando imagen...
-                 </Typography>
-                 <Box sx={{ width: '100%', bgcolor: 'grey.200', borderRadius: 1, height: 8 }}>
-                   <Box
-                     sx={{
-                       width: `${compressionProgress}%`,
-                       bgcolor: 'primary.main',
-                       height: '100%',
-                       borderRadius: 1,
-                       transition: 'width 0.3s ease'
-                     }}
-                   />
-                 </Box>
-               </Box>
-             )}
-             
-             {/* Botones de acción */}
-             <Box sx={{ display: 'flex', gap: 2, mt: 2, flexWrap: 'wrap', justifyContent: 'center' }}>
-               <Button
-                 variant="contained"
-                 startIcon={<CameraAltIcon />}
-                 onClick={startCamera}
-                 disabled={!!cameraStream}
-               >
-                 Activar Cámara
-               </Button>
-               <Button
-                 variant="contained"
-                 color="secondary"
-                 onClick={capturePhoto}
-                 disabled={!cameraStream || compressionProgress > 0}
-               >
-                 📸 Capturar Foto
-               </Button>
-               <Button
-                 variant="outlined"
-                 startIcon={<PhotoLibraryIcon />}
-                 onClick={handleSelectFromGallery}
-               >
-                 Elegir de Galería
-               </Button>
-             </Box>
-             
-             {/* Información sobre múltiples fotos */}
-             <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', mt: 1 }}>
-               💡 Puedes tomar múltiples fotos. El modal no se cerrará automáticamente.
-             </Typography>
-           </Box>
-         </DialogContent>
+                   <DialogContent sx={{ p: isMobile ? 2 : 3 }}>
+            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: isMobile ? 1 : 2 }}>
+              {/* Video de la cámara - Más compacto en móvil */}
+              <Box sx={{ 
+                position: 'relative', 
+                width: '100%', 
+                maxWidth: isMobile ? '100%' : 640,
+                maxHeight: isMobile ? '200px' : '400px',
+                overflow: 'hidden',
+                borderRadius: 2
+              }}>
+                <video
+                  ref={videoRef}
+                  autoPlay
+                  playsInline
+                  style={{ 
+                    width: '100%', 
+                    height: '100%',
+                    objectFit: 'cover',
+                    borderRadius: 8,
+                    border: '2px solid #ddd'
+                  }}
+                />
+                <canvas
+                  ref={canvasRef}
+                  style={{ display: 'none' }}
+                />
+                
+                {/* Indicador de calidad de foto */}
+                {photoQuality && (
+                  <Box
+                    sx={{
+                      position: 'absolute',
+                      top: 8,
+                      right: 8,
+                      backgroundColor: photoQuality === 'excellent' ? '#4caf50' : 
+                                    photoQuality === 'good' ? '#ff9800' : '#f44336',
+                      color: 'white',
+                      px: 1.5,
+                      py: 0.5,
+                      borderRadius: 1,
+                      fontSize: '0.7rem',
+                      fontWeight: 'bold'
+                    }}
+                  >
+                    {photoQuality === 'excellent' ? '⭐' : 
+                     photoQuality === 'good' ? '✅' : '⚠️'}
+                  </Box>
+                )}
+              </Box>
+              
+              {/* Barra de progreso de compresión - Más compacta */}
+              {compressionProgress > 0 && (
+                <Box sx={{ width: '100%', mt: 1 }}>
+                  <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: 'block' }}>
+                    Procesando imagen...
+                  </Typography>
+                  <Box sx={{ width: '100%', bgcolor: 'grey.200', borderRadius: 1, height: 6 }}>
+                    <Box
+                      sx={{
+                        width: `${compressionProgress}%`,
+                        bgcolor: 'primary.main',
+                        height: '100%',
+                        borderRadius: 1,
+                        transition: 'width 0.3s ease'
+                      }}
+                    />
+                  </Box>
+                </Box>
+              )}
+              
+              {/* Botones de acción - Layout optimizado */}
+              <Box sx={{ 
+                display: 'flex', 
+                gap: isMobile ? 1 : 2, 
+                mt: isMobile ? 1 : 2, 
+                flexWrap: 'wrap', 
+                justifyContent: 'center',
+                width: '100%'
+              }}>
+                {/* Solo mostrar "Activar Cámara" si no está activa */}
+                {!cameraStream && (
+                  <Button
+                    variant="contained"
+                    startIcon={<CameraAltIcon />}
+                    onClick={startCamera}
+                    size={isMobile ? "small" : "medium"}
+                    sx={{ 
+                      minWidth: isMobile ? '120px' : '140px',
+                      fontSize: isMobile ? '0.75rem' : '0.875rem'
+                    }}
+                  >
+                    Activar Cámara
+                  </Button>
+                )}
+                
+                {/* Solo mostrar "Capturar Foto" si la cámara está activa */}
+                {cameraStream && (
+                  <Button
+                    variant="contained"
+                    color="secondary"
+                    onClick={capturePhoto}
+                    disabled={compressionProgress > 0}
+                    size={isMobile ? "small" : "medium"}
+                    sx={{ 
+                      minWidth: isMobile ? '120px' : '140px',
+                      fontSize: isMobile ? '0.75rem' : '0.875rem'
+                    }}
+                  >
+                    📸 Capturar Foto
+                  </Button>
+                )}
+                
+                <Button
+                  variant="outlined"
+                  startIcon={<PhotoLibraryIcon />}
+                  onClick={handleSelectFromGallery}
+                  size={isMobile ? "small" : "medium"}
+                  sx={{ 
+                    minWidth: isMobile ? '120px' : '140px',
+                    fontSize: isMobile ? '0.75rem' : '0.875rem'
+                  }}
+                >
+                  {isMobile ? 'Galería' : 'Elegir de Galería'}
+                </Button>
+              </Box>
+              
+              {/* Información sobre múltiples fotos - Más compacta */}
+              <Typography variant="caption" color="text.secondary" sx={{ textAlign: 'center', mt: 0.5 }}>
+                💡 Puedes tomar múltiples fotos
+              </Typography>
+            </Box>
+          </DialogContent>
          <DialogActions>
            <Button onClick={handleCloseCameraDialog}>
              Cerrar
