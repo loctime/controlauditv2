@@ -2,7 +2,7 @@
 
 ## Problemas Comunes y Soluciones
 
-### 1. **Permiso Denegado (NotAllowedError)**
+### 1. **Permiso Denegado (NotAllowedErroEr)**
 **Síntoma:** El navegador muestra "Permiso denegado" al intentar acceder a la cámara.
 
 **Soluciones:**
