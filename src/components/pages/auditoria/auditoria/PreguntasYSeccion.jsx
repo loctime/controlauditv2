@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Button, Grid, Modal, TextField, Typography, Box, Paper, Stack, Dialog, DialogTitle, DialogContent, DialogActions, Chip, Alert, List, ListItem, ListItemText, ListItemIcon, useTheme, useMediaQuery } from "@mui/material";
+import { Button, Grid, Modal, TextField, Typography, Box, Paper, Stack, Dialog, DialogTitle, DialogContent, DialogActions, Chip, Alert, List, ListItem, ListItemText, ListItemIcon, useTheme, useMediaQuery, CircularProgress } from "@mui/material";
 import CameraAltIcon from '@mui/icons-material/CameraAlt';
 import PhotoLibraryIcon from '@mui/icons-material/PhotoLibrary';
 import WarningIcon from '@mui/icons-material/Warning';
@@ -221,8 +221,33 @@ const PreguntasYSeccion = ({
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const [openPreguntasNoContestadas, setOpenPreguntasNoContestadas] = useState(false);
+  const [cameraStatus, setCameraStatus] = useState('idle'); // 'idle', 'starting', 'ready', 'error'
+  const [cameraError, setCameraError] = useState(null);
 
   const secciones = Object.values(seccionesObj);
+
+  // Función para verificar compatibilidad del navegador
+  const checkBrowserCompatibility = () => {
+    const isHTTPS = window.location.protocol === 'https:' || window.location.hostname === 'localhost';
+    const hasGetUserMedia = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
+    const hasEnumerateDevices = !!(navigator.mediaDevices && navigator.mediaDevices.enumerateDevices);
+    
+    console.log('🔍 Verificando compatibilidad del navegador:');
+    console.log('- HTTPS/Localhost:', isHTTPS);
+    console.log('- getUserMedia disponible:', hasGetUserMedia);
+    console.log('- enumerateDevices disponible:', hasEnumerateDevices);
+    
+    if (!isHTTPS) {
+      console.warn('⚠️ La cámara requiere HTTPS (excepto en localhost)');
+    }
+    
+    if (!hasGetUserMedia) {
+      console.error('❌ getUserMedia no está disponible en este navegador');
+      return false;
+    }
+    
+    return true;
+  };
 
   useEffect(() => {
     if (!initialized && secciones.length > 0) {
@@ -253,6 +278,17 @@ const PreguntasYSeccion = ({
       setInitialized(true);
     }
   }, [initialized, secciones, respuestasExistentes, comentariosExistentes, imagenesExistentes]);
+
+  // Verificar compatibilidad al abrir el diálogo de cámara
+  useEffect(() => {
+    if (openCameraDialog) {
+      const isCompatible = checkBrowserCompatibility();
+      if (!isCompatible) {
+        alert('Tu navegador no es compatible con la funcionalidad de cámara. Usa Chrome, Firefox o Safari actualizado.');
+        setOpenCameraDialog(false);
+      }
+    }
+  }, [openCameraDialog]);
 
   // Limpiar cámara cuando se cierre el diálogo
   useEffect(() => {
@@ -397,6 +433,8 @@ const PreguntasYSeccion = ({
 
   const handleCloseCameraDialog = () => {
     setOpenCameraDialog(false);
+    setCameraStatus('idle');
+    setCameraError(null);
     if (cameraStream) {
       cameraStream.getTracks().forEach(track => track.stop());
       setCameraStream(null);
@@ -406,12 +444,24 @@ const PreguntasYSeccion = ({
   // Función para detectar cámaras disponibles
   const detectAvailableCameras = async () => {
     try {
+      // Primero solicitar permisos básicos
+      await navigator.mediaDevices.getUserMedia({ video: true });
+      
       const devices = await navigator.mediaDevices.enumerateDevices();
       const videoDevices = devices.filter(device => device.kind === 'videoinput');
       setAvailableCameras(videoDevices);
       console.log('📷 Cámaras disponibles:', videoDevices.length);
     } catch (error) {
       console.error('Error al detectar cámaras:', error);
+      // Si falla, intentar sin permisos previos
+      try {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const videoDevices = devices.filter(device => device.kind === 'videoinput');
+        setAvailableCameras(videoDevices);
+        console.log('📷 Cámaras detectadas (sin permisos):', videoDevices.length);
+      } catch (fallbackError) {
+        console.error('Error en fallback de detección:', fallbackError);
+      }
     }
   };
 
@@ -470,6 +520,15 @@ const PreguntasYSeccion = ({
 
   const startCamera = async () => {
     try {
+      console.log('🔄 Iniciando cámara...');
+      setCameraStatus('starting');
+      setCameraError(null);
+      
+      // Verificar compatibilidad primero
+      if (!checkBrowserCompatibility()) {
+        throw new Error('Navegador no compatible');
+      }
+      
       // Detectar cámaras disponibles si no se han detectado
       if (availableCameras.length === 0) {
         await detectAvailableCameras();
@@ -480,44 +539,133 @@ const PreguntasYSeccion = ({
         setCameraZoom(1);
       }
 
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: { 
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
+      // Configuración más compatible para diferentes dispositivos
+      const constraints = {
+        video: {
+          width: { ideal: 1280, max: 1920 },
+          height: { ideal: 720, max: 1080 },
           facingMode: currentCamera,
-          zoom: cameraZoom
-        } 
-      });
-      setCameraStream(stream);
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        // Aplicar zoom inicial si es necesario
-        if (cameraZoom > 1) {
-          setTimeout(() => {
-            if (videoRef.current) {
-              videoRef.current.style.transform = `scale(${cameraZoom})`;
-              videoRef.current.style.transformOrigin = 'center center';
-            }
-          }, 100);
+          // Remover zoom de las constraints iniciales para mejor compatibilidad
+        }
+      };
+
+      // Intentar con configuración básica primero
+      let stream;
+      try {
+        console.log('📹 Intentando con configuración HD...');
+        stream = await navigator.mediaDevices.getUserMedia(constraints);
+      } catch (basicError) {
+        console.log('⚠️ Fallback a configuración básica:', basicError.message);
+        // Fallback a configuración más básica
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({ 
+            video: { 
+              facingMode: currentCamera 
+            } 
+          });
+        } catch (fallbackError) {
+          console.log('⚠️ Fallback a configuración mínima:', fallbackError.message);
+          // Último fallback: cualquier cámara disponible
+          stream = await navigator.mediaDevices.getUserMedia({ 
+            video: true 
+          });
         }
       }
+
+      setCameraStream(stream);
+      
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        
+        // Esperar a que el video esté listo
+        videoRef.current.onloadedmetadata = () => {
+          console.log('✅ Cámara iniciada correctamente');
+          console.log(`📐 Dimensiones del video: ${videoRef.current.videoWidth}x${videoRef.current.videoHeight}`);
+          setCameraStatus('ready');
+          
+          // Aplicar zoom inicial si es necesario (solo después de que el video esté listo)
+          if (cameraZoom > 1) {
+            setTimeout(() => {
+              if (videoRef.current) {
+                videoRef.current.style.transform = `scale(${cameraZoom})`;
+                videoRef.current.style.transformOrigin = 'center center';
+              }
+            }, 100);
+          }
+        };
+        
+        videoRef.current.onerror = (error) => {
+          console.error('❌ Error en el video:', error);
+          setCameraStatus('error');
+          setCameraError('Error en el video');
+        };
+        
+        videoRef.current.oncanplay = () => {
+          console.log('🎬 Video listo para reproducir');
+        };
+      }
     } catch (error) {
-      console.error('Error al acceder a la cámara:', error);
-      alert('No se pudo acceder a la cámara. Verifica los permisos.');
+      console.error('❌ Error al acceder a la cámara:', error);
+      setCameraStatus('error');
+      setCameraError(error.message);
+      
+      // Mensajes de error más específicos
+      let errorMessage = 'No se pudo acceder a la cámara.';
+      
+      if (error.name === 'NotAllowedError') {
+        errorMessage = 'Permiso denegado. Por favor, permite el acceso a la cámara y recarga la página.';
+      } else if (error.name === 'NotFoundError') {
+        errorMessage = 'No se encontró ninguna cámara en tu dispositivo.';
+      } else if (error.name === 'NotSupportedError') {
+        errorMessage = 'Tu navegador no soporta el acceso a la cámara.';
+      } else if (error.name === 'NotReadableError') {
+        errorMessage = 'La cámara está siendo usada por otra aplicación.';
+      } else if (error.name === 'OverconstrainedError') {
+        errorMessage = 'La configuración de la cámara no es compatible con tu dispositivo.';
+      } else if (error.name === 'TypeError') {
+        errorMessage = 'Error de configuración de la cámara.';
+      }
+      
+      alert(errorMessage);
+      
+      // Limpiar estado en caso de error
+      setCameraStream(null);
     }
   };
 
   const capturePhoto = async () => {
-    if (videoRef.current && canvasRef.current) {
-      const video = videoRef.current;
-      const canvas = canvasRef.current;
-      const ctx = canvas.getContext('2d');
+    if (!videoRef.current || !canvasRef.current) {
+      console.error('❌ Referencias de video o canvas no disponibles');
+      alert('Error: No se puede acceder a la cámara. Intenta activar la cámara primero.');
+      return;
+    }
+
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext('2d');
+    
+    // Verificar que el video esté reproduciéndose
+    if (video.readyState < 2) {
+      console.error('❌ Video no está listo');
+      alert('La cámara no está lista. Espera un momento e intenta de nuevo.');
+      return;
+    }
+    
+    try {
+      console.log('📸 Capturando foto...');
       
       // Configurar canvas con dimensiones optimizadas
       const maxWidth = 800;
       const maxHeight = 800;
       
       let { videoWidth, videoHeight } = video;
+      
+      // Verificar que las dimensiones del video sean válidas
+      if (!videoWidth || !videoHeight) {
+        console.warn('⚠️ Dimensiones de video no disponibles, usando valores por defecto');
+        videoWidth = 640;
+        videoHeight = 480;
+      }
       
       // Redimensionar si es muy grande
       if (videoWidth > maxWidth) {
@@ -531,6 +679,8 @@ const PreguntasYSeccion = ({
       
       canvas.width = videoWidth;
       canvas.height = videoHeight;
+      
+      // Dibujar el frame actual del video
       ctx.drawImage(video, 0, 0, videoWidth, videoHeight);
       
       // Obtener datos de la imagen para evaluar calidad
@@ -545,6 +695,12 @@ const PreguntasYSeccion = ({
       
       // Comprimir con calidad optimizada y barra de progreso
       canvas.toBlob(async (blob) => {
+        if (!blob) {
+          console.error('❌ Error al generar blob de imagen');
+          alert('Error al procesar la imagen. Intenta de nuevo.');
+          return;
+        }
+        
         setCompressionProgress(30);
         
         const file = new File([blob], `foto_${Date.now()}.jpg`, { type: 'image/jpeg' });
@@ -559,6 +715,8 @@ const PreguntasYSeccion = ({
         
         setCompressionProgress(100);
         
+        console.log('✅ Foto capturada y guardada exitosamente');
+        
         // Mostrar feedback de calidad
         setTimeout(() => {
           setPhotoQuality(null);
@@ -568,6 +726,11 @@ const PreguntasYSeccion = ({
         // No cerrar el modal automáticamente para permitir múltiples fotos
         // handleCloseCameraDialog();
       }, 'image/jpeg', 0.6); // Calidad inicial moderada
+      
+    } catch (error) {
+      console.error('❌ Error al capturar foto:', error);
+      alert('Error al capturar la foto. Intenta de nuevo.');
+      setCompressionProgress(0);
     }
   };
 
@@ -1179,14 +1342,74 @@ const PreguntasYSeccion = ({
               backgroundColor: '#000',
               overflow: 'hidden'
             }}>
+              {/* Indicador de estado de la cámara */}
+              {cameraStatus === 'starting' && (
+                <Box
+                  sx={{
+                    position: 'absolute',
+                    top: '50%',
+                    left: '50%',
+                    transform: 'translate(-50%, -50%)',
+                    zIndex: 10,
+                    textAlign: 'center',
+                    color: 'white'
+                  }}
+                >
+                  <Box sx={{ mb: 2 }}>
+                    <CircularProgress color="inherit" />
+                  </Box>
+                  <Typography variant="body2">
+                    Iniciando cámara...
+                  </Typography>
+                </Box>
+              )}
+
+              {cameraStatus === 'error' && (
+                <Box
+                  sx={{
+                    position: 'absolute',
+                    top: '50%',
+                    left: '50%',
+                    transform: 'translate(-50%, -50%)',
+                    zIndex: 10,
+                    textAlign: 'center',
+                    color: 'white',
+                    p: 2
+                  }}
+                >
+                  <WarningIcon sx={{ fontSize: 48, mb: 2 }} />
+                  <Typography variant="h6" sx={{ mb: 1 }}>
+                    Error de Cámara
+                  </Typography>
+                  <Typography variant="body2" sx={{ mb: 2 }}>
+                    {cameraError || 'No se pudo acceder a la cámara'}
+                  </Typography>
+                  <Button
+                    variant="contained"
+                    onClick={startCamera}
+                    sx={{ mr: 1 }}
+                  >
+                    Reintentar
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    onClick={handleSelectFromGallery}
+                  >
+                    Usar Galería
+                  </Button>
+                </Box>
+              )}
+
               <video
                 ref={videoRef}
                 autoPlay
                 playsInline
+                muted
                 style={{ 
                   width: '100%', 
                   height: '100%',
-                  objectFit: 'cover'
+                  objectFit: 'cover',
+                  opacity: cameraStatus === 'ready' ? 1 : 0.3
                 }}
               />
               <canvas
@@ -1273,7 +1496,7 @@ const PreguntasYSeccion = ({
                   </Button>
 
                   {/* Botón de captura */}
-                  {cameraStream ? (
+                  {cameraStream && cameraStatus === 'ready' ? (
                     <Button
                       variant="contained"
                       onClick={capturePhoto}
@@ -1291,7 +1514,7 @@ const PreguntasYSeccion = ({
                     >
                       📸
                     </Button>
-                  ) : (
+                  ) : cameraStatus === 'error' ? (
                     <Button
                       variant="contained"
                       onClick={startCamera}
@@ -1300,9 +1523,27 @@ const PreguntasYSeccion = ({
                         minWidth: '80px',
                         width: '80px',
                         height: '80px',
+                        backgroundColor: '#f44336',
+                        color: 'white',
+                        '&:hover': { backgroundColor: '#d32f2f' }
+                      }}
+                    >
+                      🔄
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="contained"
+                      onClick={startCamera}
+                      disabled={cameraStatus === 'starting'}
+                      sx={{ 
+                        borderRadius: '50%',
+                        minWidth: '80px',
+                        width: '80px',
+                        height: '80px',
                         backgroundColor: 'white',
                         color: 'black',
-                        '&:hover': { backgroundColor: 'rgba(255,255,255,0.9)' }
+                        '&:hover': { backgroundColor: 'rgba(255,255,255,0.9)' },
+                        '&:disabled': { backgroundColor: 'rgba(255,255,255,0.5)' }
                       }}
                     >
                       <CameraAltIcon />
@@ -1389,19 +1630,33 @@ const PreguntasYSeccion = ({
                     justifyContent: 'center',
                     width: '100%'
                   }}>
-                    {!cameraStream && (
+                    {!cameraStream && cameraStatus !== 'error' && (
                       <Button
                         variant="contained"
                         startIcon={<CameraAltIcon />}
                         onClick={startCamera}
+                        disabled={cameraStatus === 'starting'}
                         size="medium"
                         sx={{ minWidth: '140px' }}
                       >
-                        Activar Cámara
+                        {cameraStatus === 'starting' ? 'Iniciando...' : 'Activar Cámara'}
                       </Button>
                     )}
                     
-                    {cameraStream && (
+                    {cameraStatus === 'error' && (
+                      <Button
+                        variant="contained"
+                        color="error"
+                        startIcon={<WarningIcon />}
+                        onClick={startCamera}
+                        size="medium"
+                        sx={{ minWidth: '140px' }}
+                      >
+                        Reintentar Cámara
+                      </Button>
+                    )}
+                    
+                    {cameraStream && cameraStatus === 'ready' && (
                       <Button
                         variant="contained"
                         color="secondary"
@@ -1428,6 +1683,19 @@ const PreguntasYSeccion = ({
                   <Typography variant="caption" color="text.secondary" sx={{ textAlign: 'center', mt: 1, display: 'block' }}>
                     💡 Puedes tomar múltiples fotos
                   </Typography>
+                  
+                  {/* Información sobre requisitos */}
+                  <Box sx={{ mt: 2, p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
+                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+                      <strong>Requisitos para la cámara:</strong>
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', fontSize: '0.7rem' }}>
+                      • Conexión HTTPS (excepto en localhost)<br/>
+                      • Navegador compatible (Chrome, Firefox, Safari)<br/>
+                      • Permisos de cámara habilitados<br/>
+                      • Cámara disponible en el dispositivo
+                    </Typography>
+                  </Box>
                 </DialogContent>
                 
                 <DialogActions>
