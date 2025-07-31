@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { 
   Box, 
   useMediaQuery, 
@@ -24,7 +24,7 @@ import { useAuth } from "../../context/AuthContext";
 import Swal from 'sweetalert2';
 import { db } from '../../../firebaseConfig';
 import { collection, getDocs, query, where } from 'firebase/firestore';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 // Componentes modulares
 import PerfilHeader from './PerfilHeader';
 import PerfilSidebar from './PerfilSidebar';
@@ -41,6 +41,7 @@ const PerfilUsuario = () => {
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const isSmallMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const location = useLocation();
+  const navigate = useNavigate();
   const {
     userProfile,
     userEmpresas,
@@ -49,7 +50,9 @@ const PerfilUsuario = () => {
     auditoriasCompartidas,
     agregarSocio,
     updateUserProfile,
-    loadingEmpresas
+    loadingEmpresas,
+    role,
+    permisos
   } = useAuth();
 
   const validTabs = ['empresas', 'formularios', 'usuarios', 'configuracion', 'firma', 'info'];
@@ -61,6 +64,7 @@ const PerfilUsuario = () => {
   const [loadingUsuariosCreados, setLoadingUsuariosCreados] = useState(false);
   const [formularios, setFormularios] = useState([]);
   const [loadingFormularios, setLoadingFormularios] = useState(false);
+  const contentRef = useRef(null);
 
   // Sincronizar selectedSection con query param 'tab'
   useEffect(() => {
@@ -130,7 +134,122 @@ const PerfilUsuario = () => {
     }
   };
 
+  // Funciones de navegación para los botones de habilitaciones
+  const handleCrearAuditoria = () => {
+    navigate('/reporte', { state: { from: 'perfil' } });
+  };
 
+  const handleCrearAuditoriaNueva = () => {
+    navigate('/auditoria', { state: { from: 'perfil' } });
+  };
+
+  const handleCrearEmpresa = () => {
+    navigate('/establecimiento');
+  };
+
+  const handleGestionarEmpresas = () => {
+    setSelectedSection('empresas');
+    
+    // Scroll automático hacia el contenido principal después de un pequeño delay
+    setTimeout(() => {
+      if (contentRef.current) {
+        contentRef.current.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'start' 
+        });
+      }
+    }, 100);
+  };
+
+  const handleGestionarUsuarios = () => {
+    setSelectedSection('usuarios');
+    
+    // Scroll automático hacia el contenido principal después de un pequeño delay
+    setTimeout(() => {
+      if (contentRef.current) {
+        contentRef.current.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'start' 
+        });
+      }
+    }, 100);
+  };
+
+  const handleAgregarUsuario = () => {
+    setSelectedSection('usuarios');
+    
+    // Scroll automático hacia el contenido principal después de un pequeño delay
+    setTimeout(() => {
+      if (contentRef.current) {
+        contentRef.current.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'start' 
+        });
+      }
+    }, 100);
+  };
+
+  const handleEliminarUsuario = () => {
+    setSelectedSection('usuarios');
+    
+    // Scroll automático hacia el contenido principal después de un pequeño delay
+    setTimeout(() => {
+      if (contentRef.current) {
+        contentRef.current.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'start' 
+        });
+      }
+    }, 100);
+  };
+
+  const handleVerSistema = () => {
+    setSelectedSection('info');
+    
+    // Scroll automático hacia el contenido principal después de un pequeño delay
+    setTimeout(() => {
+      if (contentRef.current) {
+        contentRef.current.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'start' 
+        });
+      }
+    }, 100);
+  };
+
+  const handleGestionarSistema = () => {
+    setSelectedSection('configuracion');
+    
+    // Scroll automático hacia el contenido principal después de un pequeño delay
+    setTimeout(() => {
+      if (contentRef.current) {
+        contentRef.current.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'start' 
+        });
+      }
+    }, 100);
+  };
+
+  const handleCompartir = () => {
+    // Navegar a la sección de formularios públicos
+    navigate('/formularios-publicos');
+  };
+
+  const handleMisFormularios = () => {
+    // Navegar a la sección de formularios
+    setSelectedSection('formularios');
+    
+    // Scroll automático hacia el contenido principal después de un pequeño delay
+    setTimeout(() => {
+      if (contentRef.current) {
+        contentRef.current.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'start' 
+        });
+      }
+    }, 100);
+  };
 
   // Línea sutil de separación
   const separador = (
@@ -260,144 +379,195 @@ const PerfilUsuario = () => {
             gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(250px, 1fr))',
             gap: isSmallMobile ? 2 : 3
           }}>
-            {/* Auditorías */}
-            <Box sx={{
-              bgcolor: alpha(theme.palette.primary.main, 0.05),
-              borderRadius: 2,
-              p: isSmallMobile ? 2 : 3,
-              border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}`
-            }}>
-              <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1, color: 'primary.main' }}>
-                📋 Auditorías
-              </Typography>
-              <Button
-                variant="contained"
-                color="primary"
-                size={isSmallMobile ? "small" : "medium"}
-                fullWidth
-                sx={{ mb: 1 }}
-              >
-                Crear Auditoría
-              </Button>
-            </Box>
+                         {/* Auditorías */}
+             <Box sx={{
+               bgcolor: alpha(theme.palette.primary.main, 0.05),
+               borderRadius: 2,
+               p: isSmallMobile ? 2 : 3,
+               border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}`
+             }}>
+               <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1, color: 'primary.main' }}>
+                 📋 Auditorías
+               </Typography>
+               {permisos?.puedeCrearAuditorias && (
+                 <Button
+                   variant="contained"
+                   color="primary"
+                   size={isSmallMobile ? "small" : "medium"}
+                   fullWidth
+                   sx={{ mb: 1 }}
+                   onClick={handleCrearAuditoria}
+                 >
+                   Reportes
+                 </Button>
+               )}
+               {permisos?.puedeCrearAuditorias && (
+                 <Button
+                   variant="contained"
+                   color="primary"
+                   size={isSmallMobile ? "small" : "medium"}
+                   fullWidth
+                   sx={{ mb: 1 }}
+                   onClick={handleCrearAuditoriaNueva}
+                 >
+                   Crear auditoria
+                 </Button>
+               )}
+               {permisos?.puedeCrearAuditorias && (
+                 <Button
+                   variant="outlined"
+                   color="primary"
+                   size={isSmallMobile ? "small" : "medium"}
+                   fullWidth
+                   sx={{ mb: 1 }}
+                   onClick={handleMisFormularios}
+                 >
+                   Mis Formularios
+                 </Button>
+               )}
+             </Box>
             
-            {/* Empresas */}
-            <Box sx={{
-              bgcolor: alpha(theme.palette.success.main, 0.05),
-              borderRadius: 2,
-              p: isSmallMobile ? 2 : 3,
-              border: `1px solid ${alpha(theme.palette.success.main, 0.1)}`
-            }}>
-              <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1, color: 'success.main' }}>
-                🏢 Empresas
-              </Typography>
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                <Button
-                  variant="contained"
-                  color="success"
-                  size={isSmallMobile ? "small" : "medium"}
-                  fullWidth
-                >
-                  Crear Empresa
-                </Button>
-                <Button
-                  variant="outlined"
-                  color="success"
-                  size={isSmallMobile ? "small" : "medium"}
-                  fullWidth
-                >
-                  Gestionar Empresas
-                </Button>
-              </Box>
-            </Box>
+                         {/* Empresas */}
+             <Box sx={{
+               bgcolor: alpha(theme.palette.success.main, 0.05),
+               borderRadius: 2,
+               p: isSmallMobile ? 2 : 3,
+               border: `1px solid ${alpha(theme.palette.success.main, 0.1)}`
+             }}>
+               <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1, color: 'success.main' }}>
+                 🏢 Empresas
+               </Typography>
+               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                 {permisos?.puedeCrearEmpresas && (
+                   <Button
+                     variant="contained"
+                     color="success"
+                     size={isSmallMobile ? "small" : "medium"}
+                     fullWidth
+                     onClick={handleCrearEmpresa}
+                   >
+                     Crear Empresa
+                   </Button>
+                 )}
+                 {permisos?.puedeCrearEmpresas && (
+                   <Button
+                     variant="outlined"
+                     color="success"
+                     size={isSmallMobile ? "small" : "medium"}
+                     fullWidth
+                     onClick={handleGestionarEmpresas}
+                   >
+                     Gestionar Empresas
+                   </Button>
+                 )}
+               </Box>
+             </Box>
             
-            {/* Usuarios */}
-            <Box sx={{
-              bgcolor: alpha(theme.palette.warning.main, 0.05),
-              borderRadius: 2,
-              p: isSmallMobile ? 2 : 3,
-              border: `1px solid ${alpha(theme.palette.warning.main, 0.1)}`
-            }}>
-              <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1, color: 'warning.main' }}>
-                👥 Usuarios
-              </Typography>
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                <Button
-                  variant="contained"
-                  color="warning"
-                  size={isSmallMobile ? "small" : "medium"}
-                  fullWidth
-                >
-                  Gestionar Usuarios
-                </Button>
-                <Button
-                  variant="outlined"
-                  color="warning"
-                  size={isSmallMobile ? "small" : "medium"}
-                  fullWidth
-                >
-                  Agregar Usuario
-                </Button>
-                <Button
-                  variant="outlined"
-                  color="error"
-                  size={isSmallMobile ? "small" : "medium"}
-                  fullWidth
-                >
-                  Eliminar Usuario
-                </Button>
-              </Box>
-            </Box>
+                         {/* Usuarios */}
+             <Box sx={{
+               bgcolor: alpha(theme.palette.warning.main, 0.05),
+               borderRadius: 2,
+               p: isSmallMobile ? 2 : 3,
+               border: `1px solid ${alpha(theme.palette.warning.main, 0.1)}`
+             }}>
+               <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1, color: 'warning.main' }}>
+                 👥 Usuarios
+               </Typography>
+               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                 {permisos?.puedeGestionarUsuarios && (
+                   <Button
+                     variant="contained"
+                     color="warning"
+                     size={isSmallMobile ? "small" : "medium"}
+                     fullWidth
+                     onClick={handleGestionarUsuarios}
+                   >
+                     Gestionar Usuarios
+                   </Button>
+                 )}
+                 {permisos?.puedeAgregarSocios && (
+                   <Button
+                     variant="outlined"
+                     color="warning"
+                     size={isSmallMobile ? "small" : "medium"}
+                     fullWidth
+                     onClick={handleAgregarUsuario}
+                   >
+                     Agregar Usuario
+                   </Button>
+                 )}
+                 {permisos?.puedeEliminarUsuarios && (
+                   <Button
+                     variant="outlined"
+                     color="error"
+                     size={isSmallMobile ? "small" : "medium"}
+                     fullWidth
+                     onClick={handleEliminarUsuario}
+                   >
+                     Eliminar Usuario
+                   </Button>
+                 )}
+               </Box>
+             </Box>
             
-            {/* Sistema */}
-            <Box sx={{
-              bgcolor: alpha(theme.palette.info.main, 0.05),
-              borderRadius: 2,
-              p: isSmallMobile ? 2 : 3,
-              border: `1px solid ${alpha(theme.palette.info.main, 0.1)}`
-            }}>
-              <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1, color: 'info.main' }}>
-                ⚙️ Sistema
-              </Typography>
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                <Button
-                  variant="contained"
-                  color="info"
-                  size={isSmallMobile ? "small" : "medium"}
-                  fullWidth
-                >
-                  Ver Sistema
-                </Button>
-                <Button
-                  variant="outlined"
-                  color="info"
-                  size={isSmallMobile ? "small" : "medium"}
-                  fullWidth
-                >
-                  Gestionar Sistema
-                </Button>
-              </Box>
-            </Box>
+                         {/* Sistema */}
+             <Box sx={{
+               bgcolor: alpha(theme.palette.info.main, 0.05),
+               borderRadius: 2,
+               p: isSmallMobile ? 2 : 3,
+               border: `1px solid ${alpha(theme.palette.info.main, 0.1)}`
+             }}>
+               <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1, color: 'info.main' }}>
+                 ⚙️ Sistema
+               </Typography>
+               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                 {permisos?.puedeVerLogs && (
+                   <Button
+                     variant="contained"
+                     color="info"
+                     size={isSmallMobile ? "small" : "medium"}
+                     fullWidth
+                     onClick={handleVerSistema}
+                   >
+                     Ver Sistema
+                   </Button>
+                 )}
+                 {permisos?.puedeGestionarSistema && (
+                   <Button
+                     variant="outlined"
+                     color="info"
+                     size={isSmallMobile ? "small" : "medium"}
+                     fullWidth
+                     onClick={handleGestionarSistema}
+                   >
+                     Gestionar Sistema
+                   </Button>
+                 )}
+               </Box>
+             </Box>
             
-            {/* Otros */}
-            <Box sx={{
-              bgcolor: alpha(theme.palette.secondary.main, 0.05),
-              borderRadius: 2,
-              p: isSmallMobile ? 2 : 3,
-              border: `1px solid ${alpha(theme.palette.secondary.main, 0.1)}`
-            }}>
-              <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1, color: 'secondary.main' }}>
-                🔗 Otros
-              </Typography>
-              <Button
-                variant="contained"
-                color="secondary"
-                size={isSmallMobile ? "small" : "medium"}
-                fullWidth
-              >
-                Compartir
-              </Button>
-            </Box>
+                         {/* Otros */}
+             <Box sx={{
+               bgcolor: alpha(theme.palette.secondary.main, 0.05),
+               borderRadius: 2,
+               p: isSmallMobile ? 2 : 3,
+               border: `1px solid ${alpha(theme.palette.secondary.main, 0.1)}`
+             }}>
+               <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1, color: 'secondary.main' }}>
+                 🔗 Otros
+               </Typography>
+               {permisos?.puedeCompartirFormularios && (
+                 <Button
+                   variant="contained"
+                   color="secondary"
+                   size={isSmallMobile ? "small" : "medium"}
+                   fullWidth
+                   onClick={handleCompartir}
+                 >
+                   Compartir
+                 </Button>
+               )}
+             </Box>
           </Box>
         </Box>
         
@@ -408,14 +578,20 @@ const PerfilUsuario = () => {
           width: '100%' 
         }}>
           {/* Sidebar */}
-          <PerfilSidebar selectedSection={selectedSection} onSelectSection={setSelectedSection} />
+          <PerfilSidebar 
+            selectedSection={selectedSection} 
+            onSelectSection={setSelectedSection} 
+          />
           
           {/* Contenido principal */}
-          <Box sx={{ 
-            flex: 1, 
-            minWidth: 0,
-            p: isSmallMobile ? 3 : 4
-          }}>
+          <Box 
+            ref={contentRef}
+            sx={{ 
+              flex: 1, 
+              minWidth: 0,
+              p: isSmallMobile ? 3 : 4
+            }}
+          >
             {selectedSection === 'empresas' && (
               <PerfilEmpresas empresas={userEmpresas} loading={loadingEmpresas} />
             )}

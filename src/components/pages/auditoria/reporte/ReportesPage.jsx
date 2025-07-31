@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import { collection, getDocs, query, where, orderBy, limit } from "firebase/firestore";
 import { db } from "../../../../firebaseConfig";
+import { useLocation, useNavigate } from 'react-router-dom';
 import {
   Button,
   Table,
@@ -69,6 +70,11 @@ const ReportesPage = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const isSmallMobile = useMediaQuery(theme.breakpoints.down('xs'));
+  const location = useLocation();
+  const navigate = useNavigate();
+  
+  // Detectar si viene del perfil
+  const vieneDelPerfil = location.state?.from === 'perfil';
   
   // Debug para verificar si se está detectando móvil correctamente
   console.log('ReportesPage - isMobile:', isMobile);
@@ -296,6 +302,10 @@ const ReportesPage = () => {
     }
   };
 
+  const handleVolver = () => {
+    navigate('/perfil');
+  };
+
   // Renderizado condicional para móvil vs desktop
   const renderMobileView = () => (
     <Box sx={{ 
@@ -464,6 +474,32 @@ const ReportesPage = () => {
         textAlign: 'center', 
         mb: isSmallMobile ? 4 : 6 
       }}>
+        {/* Botón de volver si viene del perfil */}
+        {vieneDelPerfil && (
+          <Box sx={{ 
+            display: 'flex', 
+            justifyContent: 'flex-start', 
+            mb: 2 
+          }}>
+            <Button
+              variant="outlined"
+              color="primary"
+              onClick={handleVolver}
+              sx={{
+                borderRadius: 2,
+                px: 3,
+                py: 1,
+                fontWeight: 600,
+                '&:hover': {
+                  bgcolor: alpha(theme.palette.primary.main, 0.1)
+                }
+              }}
+            >
+              ← Volver al Perfil
+            </Button>
+          </Box>
+        )}
+        
         <Typography 
           variant={isSmallMobile ? "h5" : "h4"} 
           sx={{ 

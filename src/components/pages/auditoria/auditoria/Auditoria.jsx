@@ -926,7 +926,14 @@ const AuditoriaRefactorizada = () => {
         <Box display="flex" alignItems="center" justifyContent="space-between" mb={isMobile ? 0.5 : 2}>
           <Box display="flex" alignItems="center" gap={isMobile ? 0.5 : 2}>
             <Button
-              onClick={() => navigate('/cliente-dashboard')}
+              onClick={() => {
+                // Navegar dinámicamente basado en el origen
+                if (location.state?.from === 'perfil') {
+                  navigate('/perfil');
+                } else {
+                  navigate('/cliente-dashboard');
+                }
+              }}
               variant="outlined"
               startIcon={<ArrowBackIcon />}
               size="small"
