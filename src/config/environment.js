@@ -140,6 +140,28 @@ const getEnvironmentConfig = () => {
     };
   }
   
+  if (hostname === 'auditoria.controldoc.app' || hostname === 'controlauditv2.onrender.com') {
+    // Entorno de Render
+    return {
+      ...baseConfig,
+      app: {
+        ...baseConfig.app,
+        name: 'ControlAudit - Render',
+        environment: 'production'
+      },
+      backend: {
+        url: 'https://controlauditv2.onrender.com',
+        timeout: 30000,
+        maxRetries: 3
+      },
+      features: {
+        debugMode: false,
+        enableLogs: true,
+        enableAnalytics: true
+      }
+    };
+  }
+  
   // Configuración por defecto (fallback)
   return {
     ...baseConfig,

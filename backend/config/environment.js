@@ -93,7 +93,9 @@ const getEnvironmentConfig = () => {
           'https://controlaudit.app',
           'https://www.controlaudit.app',
           'https://cliente.controlaudit.app',
-          'https://demo.controlaudit.app'
+          'https://demo.controlaudit.app',
+          'https://auditoria.controldoc.app',
+          'https://controlauditv2.onrender.com'
         ]
       },
       logging: {
