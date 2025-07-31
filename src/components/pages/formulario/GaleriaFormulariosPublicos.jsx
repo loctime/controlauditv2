@@ -120,9 +120,28 @@ const GaleriaFormulariosPublicos = ({ onCopiar }) => {
   const handleCopiar = async (form) => {
     setCopiandoId(form.id);
     try {
-      // Incrementar contador de copias
-      const ref = doc(db, 'formularios', form.id);
-      await updateDoc(ref, { copiadoCount: increment(1) });
+      // Verificar si este usuario ya copió este formulario antes
+      const yaCopiadoAntes = misFormulariosCopiados.some(
+        (copiado) => (copiado.formularioOriginalId === form.id) || 
+                     (copiado.nombre === form.nombre && copiado.creadorId === userProfile?.uid)
+      );
+      
+      // También verificar si el usuario ya está en la lista de usuarios que copiaron
+      const usuarioYaCopio = form.usuariosQueCopiaron?.includes(userProfile?.uid) || false;
+      
+      // Solo incrementar contador si es la primera vez que este usuario copia este formulario
+      if (!yaCopiadoAntes && !usuarioYaCopio) {
+        const ref = doc(db, 'formularios', form.id);
+        // Agregar el usuario a la lista de usuarios que han copiado este formulario
+        const usuariosQueCopiaron = form.usuariosQueCopiaron || [];
+        await updateDoc(ref, { 
+          copiadoCount: increment(1),
+          usuariosQueCopiaron: [...usuariosQueCopiaron, userProfile.uid]
+        });
+        console.debug('[GaleriaFormulariosPublicos] Contador incrementado - primera copia del usuario');
+      } else {
+        console.debug('[GaleriaFormulariosPublicos] No se incrementa contador - usuario ya copió este formulario antes');
+      }
       
       // Copiar realmente el formulario a la cuenta del usuario
       if (userProfile) {
@@ -143,16 +162,23 @@ const GaleriaFormulariosPublicos = ({ onCopiar }) => {
       // Llamar función onCopiar si existe (para compatibilidad)
       onCopiar && onCopiar(form);
       
-             // Actualizar estado local
-       setFormularios(prev => prev.map(f => f.id === form.id ? { ...f, copiadoCount: (f.copiadoCount || 0) + 1 } : f));
-       console.log('[GaleriaFormulariosPublicos] Formulario copiado:', form.id);
-       
-       // Actualizar lista de formularios copiados
-       setMisFormulariosCopiados(prev => [...prev, { ...form, creadorId: userProfile.uid }]);
-       
-       // Mostrar mensaje de éxito
-       setCopiadoExitoso(form.id);
-       setTimeout(() => setCopiadoExitoso(null), 2000);
+      // Actualizar estado local solo si es la primera copia
+      if (!yaCopiadoAntes && !usuarioYaCopio) {
+        setFormularios(prev => prev.map(f => f.id === form.id ? { 
+          ...f, 
+          copiadoCount: (f.copiadoCount || 0) + 1,
+          usuariosQueCopiaron: [...(f.usuariosQueCopiaron || []), userProfile.uid]
+        } : f));
+      }
+      
+      console.log('[GaleriaFormulariosPublicos] Formulario copiado:', form.id);
+      
+      // Actualizar lista de formularios copiados
+      setMisFormulariosCopiados(prev => [...prev, { ...form, creadorId: userProfile.uid }]);
+      
+      // Mostrar mensaje de éxito
+      setCopiadoExitoso(form.id);
+      setTimeout(() => setCopiadoExitoso(null), 2000);
     } catch (e) {
       console.error('Error al copiar formulario:', e);
     } finally {
@@ -309,7 +335,9 @@ const GaleriaFormulariosPublicos = ({ onCopiar }) => {
                             <ul style={{ margin: 0, paddingLeft: 18 }}>
                               {sec.preguntas.map((preg, i) => (
                                 <li key={i}>
-                                  <Typography variant="body2">{preg.texto || preg.pregunta || `Pregunta ${i + 1}`}</Typography>
+                                  <Typography variant="body2">
+                                    {typeof preg === 'string' ? preg : preg.texto || preg.pregunta || `Pregunta ${i + 1}`}
+                                  </Typography>
                                 </li>
                               ))}
                             </ul>

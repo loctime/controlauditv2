@@ -71,7 +71,7 @@ const Home = () => {
         <div style={{ textAlign: 'center', marginTop: 32 }}>
           <Button
             component={Link}
-            to="/login"
+            to="/auditoria"
             variant="contained"
             size="large"
             endIcon={<ArrowForwardIcon />}
