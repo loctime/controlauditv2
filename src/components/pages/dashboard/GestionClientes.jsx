@@ -61,8 +61,11 @@ const GestionClientes = () => {
   const [clienteHistorial, setClienteHistorial] = useState(null);
   const [expandedRows, setExpandedRows] = useState({});
   const [operariosPorCliente, setOperariosPorCliente] = useState({});
-  const [orderBy, setOrderBy] = useState('nombre');
-  const [order, setOrder] = useState('asc');
+  const [orderBy, setOrderBy] = useState('creadoPor');
+  const [order, setOrder] = useState('desc');
+  const [openConfirmPago, setOpenConfirmPago] = useState(false);
+  const [openConfirmDemo, setOpenConfirmDemo] = useState(false);
+  const [clienteConfirmacion, setClienteConfirmacion] = useState(null);
   const { userProfile } = useContext(AuthContext); // Para obtener el email del usuario logueado
 
   // Cargar todos los clientes (max)
@@ -226,6 +229,7 @@ const GestionClientes = () => {
       fechaVencimiento.setMonth(fechaVencimiento.getMonth() + 1); // 1 mes
       await updateDoc(userRef, {
         estadoPago: 'al_dia',
+        activo: true, // Activar al usuario automáticamente
         fechaVencimiento: Timestamp.fromDate(fechaVencimiento),
         esDemo: false,
         ultimaModificacion: Timestamp.now()
@@ -246,6 +250,21 @@ const GestionClientes = () => {
     }
   };
 
+  // Función para confirmar pago
+  const confirmarPago = (cliente) => {
+    setClienteConfirmacion(cliente);
+    setOpenConfirmPago(true);
+  };
+
+  // Función para ejecutar pago después de confirmación
+  const ejecutarPago = async () => {
+    if (clienteConfirmacion) {
+      await handlePago(clienteConfirmacion);
+      setOpenConfirmPago(false);
+      setClienteConfirmacion(null);
+    }
+  };
+
   // Función para activar demo
   const handleDemo = async (cliente) => {
     try {
@@ -255,6 +274,7 @@ const GestionClientes = () => {
       
       await updateDoc(userRef, {
         esDemo: true,
+        activo: true, // Activar al usuario automáticamente
         fechaVencimiento: Timestamp.fromDate(fechaVencimiento),
         estadoPago: 'al_dia',
         ultimaModificacion: Timestamp.now()
@@ -265,6 +285,21 @@ const GestionClientes = () => {
     } catch (error) {
       console.error('Error al activar demo:', error);
       toast.error('Error al activar demo');
+    }
+  };
+
+  // Función para confirmar demo
+  const confirmarDemo = (cliente) => {
+    setClienteConfirmacion(cliente);
+    setOpenConfirmDemo(true);
+  };
+
+  // Función para ejecutar demo después de confirmación
+  const ejecutarDemo = async () => {
+    if (clienteConfirmacion) {
+      await handleDemo(clienteConfirmacion);
+      setOpenConfirmDemo(false);
+      setClienteConfirmacion(null);
     }
   };
 
@@ -323,9 +358,18 @@ const GestionClientes = () => {
           aValue = a.usuariosActivos || 0;
           bValue = b.usuariosActivos || 0;
           break;
-        case 'empresas':
-          aValue = a.empresasCount || 0;
-          bValue = b.empresasCount || 0;
+        case 'semaforo':
+          // Ordenar por prioridad: rojo (1), amarillo (2), verde (3)
+          const getSemaforoPriority = (semaforo) => {
+            switch (semaforo) {
+              case 'rojo': return 1;
+              case 'amarillo': return 2;
+              case 'verde': return 3;
+              default: return 4;
+            }
+          };
+          aValue = getSemaforoPriority(a.semaforo);
+          bValue = getSemaforoPriority(b.semaforo);
           break;
         case 'estado':
           aValue = (a.estadoPago || 'al_dia').toLowerCase();
@@ -339,10 +383,10 @@ const GestionClientes = () => {
            aValue = a.esDemo ? 1 : 0;
            bValue = b.esDemo ? 1 : 0;
            break;
-         case 'creadoPor':
-           aValue = (a.creadoPorEmail || a.creadoPor || '').toLowerCase();
-           bValue = (b.creadoPorEmail || b.creadoPor || '').toLowerCase();
-           break;
+                   case 'creadoPor':
+            aValue = a.createdAt ? a.createdAt.toDate() : new Date(0);
+            bValue = b.createdAt ? b.createdAt.toDate() : new Date(0);
+            break;
          default:
            aValue = a[orderBy] || '';
            bValue = b[orderBy] || '';
@@ -459,7 +503,7 @@ const GestionClientes = () => {
           <Table>
             <TableHead>
               <TableRow>
-                <TableCell>Semáforo</TableCell>
+                <TableCell>Detalles</TableCell>
                 <TableCell>
                   <TableSortLabel
                     active={orderBy === 'nombre'}
@@ -498,11 +542,11 @@ const GestionClientes = () => {
                  </TableCell>
                  <TableCell width="80px">
                    <TableSortLabel
-                     active={orderBy === 'empresas'}
-                     direction={orderBy === 'empresas' ? order : 'asc'}
-                     onClick={() => handleRequestSort('empresas')}
+                     active={orderBy === 'semaforo'}
+                     direction={orderBy === 'semaforo' ? order : 'asc'}
+                     onClick={() => handleRequestSort('semaforo')}
                    >
-                     Empresas
+                     Semaforo
                    </TableSortLabel>
                  </TableCell>
                  <TableCell width="100px">
@@ -538,7 +582,7 @@ const GestionClientes = () => {
                     direction={orderBy === 'creadoPor' ? order : 'asc'}
                     onClick={() => handleRequestSort('creadoPor')}
                   >
-                    Creado Por
+                    Creado
                   </TableSortLabel>
                 </TableCell>
                 <TableCell>Acciones</TableCell>
@@ -616,7 +660,14 @@ const GestionClientes = () => {
                          )}
                        </TableCell>
                        <TableCell width="80px" align="center">
-                         {cliente.empresasCount || 0}
+                         <Tooltip title={`Estado: ${cliente.semaforo}`}>
+                           <IconButton 
+                             color={getSemaforoColor(cliente.semaforo)}
+                             size="small"
+                           >
+                             {getSemaforoIcon(cliente.semaforo)}
+                           </IconButton>
+                         </Tooltip>
                        </TableCell>
                        <TableCell width="100px">
                          <Chip 
@@ -650,16 +701,11 @@ const GestionClientes = () => {
                          />
                        </TableCell>
                       <TableCell>
-                        <Box>
+                        {cliente.createdAt && (
                           <Typography variant="body2" color="text.secondary">
-                            {cliente.creadoPorEmail || cliente.creadoPor || 'Sistema'}
+                            {new Date(cliente.createdAt.toDate ? cliente.createdAt.toDate() : cliente.createdAt).toLocaleDateString()}
                           </Typography>
-                          {cliente.createdAt && (
-                            <Typography variant="caption" color="text.secondary">
-                              {new Date(cliente.createdAt.toDate ? cliente.createdAt.toDate() : cliente.createdAt).toLocaleDateString()}
-                            </Typography>
-                          )}
-                        </Box>
+                        )}
                       </TableCell>
                       <TableCell>
                         <Box display="flex" gap={1}>
@@ -672,24 +718,24 @@ const GestionClientes = () => {
                               <EditIcon />
                             </IconButton>
                           </Tooltip>
-                          <Tooltip title="Procesar Pago">
-                            <IconButton 
-                              onClick={() => handlePago(cliente)}
-                              color="success"
-                              size="small"
-                            >
-                              <PaymentIcon />
-                            </IconButton>
-                          </Tooltip>
-                          <Tooltip title="Activar Demo">
-                            <IconButton 
-                              onClick={() => handleDemo(cliente)}
-                              color="warning"
-                              size="small"
-                            >
-                              <DemoIcon />
-                            </IconButton>
-                          </Tooltip>
+                                                     <Tooltip title="Procesar Pago">
+                             <IconButton 
+                               onClick={() => confirmarPago(cliente)}
+                               color="success"
+                               size="small"
+                             >
+                               <PaymentIcon />
+                             </IconButton>
+                           </Tooltip>
+                           <Tooltip title="Activar Demo">
+                             <IconButton 
+                               onClick={() => confirmarDemo(cliente)}
+                               color="warning"
+                               size="small"
+                             >
+                               <DemoIcon />
+                             </IconButton>
+                           </Tooltip>
                         </Box>
                       </TableCell>
                     </TableRow>
@@ -831,13 +877,65 @@ const GestionClientes = () => {
           </Button>
         </DialogActions>
       </Dialog>
-      <HistorialPagosModal
-        open={openHistorial}
-        onClose={() => setOpenHistorial(false)}
-        cliente={clienteHistorial}
-      />
-    </Box>
-  );
-};
+             <HistorialPagosModal
+         open={openHistorial}
+         onClose={() => setOpenHistorial(false)}
+         cliente={clienteHistorial}
+       />
+
+       {/* Dialog de confirmación para pago */}
+       <Dialog open={openConfirmPago} onClose={() => setOpenConfirmPago(false)}>
+         <DialogTitle>Confirmar Procesamiento de Pago</DialogTitle>
+         <DialogContent>
+           <Typography>
+             ¿Estás seguro de que deseas procesar el pago para{' '}
+             <strong>{clienteConfirmacion?.nombre || clienteConfirmacion?.email}</strong>?
+           </Typography>
+           <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+             Esta acción:
+           </Typography>
+           <ul>
+             <li>Activará al usuario automáticamente</li>
+             <li>Establecerá el estado de pago como "al día"</li>
+             <li>Extenderá el acceso por 1 mes</li>
+             <li>Registrará el pago en el historial</li>
+           </ul>
+         </DialogContent>
+         <DialogActions>
+           <Button onClick={() => setOpenConfirmPago(false)}>Cancelar</Button>
+           <Button onClick={ejecutarPago} variant="contained" color="success">
+             Confirmar Pago
+           </Button>
+         </DialogActions>
+       </Dialog>
+
+       {/* Dialog de confirmación para demo */}
+       <Dialog open={openConfirmDemo} onClose={() => setOpenConfirmDemo(false)}>
+         <DialogTitle>Confirmar Activación de Demo</DialogTitle>
+         <DialogContent>
+           <Typography>
+             ¿Estás seguro de que deseas activar el demo para{' '}
+             <strong>{clienteConfirmacion?.nombre || clienteConfirmacion?.email}</strong>?
+           </Typography>
+           <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+             Esta acción:
+           </Typography>
+           <ul>
+             <li>Activará al usuario automáticamente</li>
+             <li>Marcará al cliente como usuario de demostración</li>
+             <li>Establecerá el estado de pago como "al día"</li>
+             <li>Extenderá el acceso por 1 mes</li>
+           </ul>
+         </DialogContent>
+         <DialogActions>
+           <Button onClick={() => setOpenConfirmDemo(false)}>Cancelar</Button>
+           <Button onClick={ejecutarDemo} variant="contained" color="warning">
+             Confirmar Demo
+           </Button>
+         </DialogActions>
+       </Dialog>
+     </Box>
+   );
+ };
 
 export default GestionClientes; 
