@@ -152,9 +152,16 @@ const EstablecimientosContainer = () => {
     }
   };
 
-  const eliminarEmpresa = () => {
-    // La función se llama desde el componente EliminarEmpresa
-    // No necesitamos hacer nada aquí porque userEmpresas se actualiza automáticamente
+  const eliminarEmpresa = async () => {
+    // Recargar empresas después de eliminar
+    try {
+      setCargandoEmpresas(true);
+      await getUserEmpresas(userProfile.uid);
+    } catch (error) {
+      console.error('Error al recargar empresas después de eliminar:', error);
+    } finally {
+      setCargandoEmpresas(false);
+    }
   };
 
   const handleVerificarEmpresas = async () => {
@@ -326,7 +333,7 @@ const EstablecimientosContainer = () => {
               </Typography>
             </Box>
           ) : (
-            userEmpresas?.map((empresa) => (
+            userEmpresas?.filter(empresa => empresa && empresa.id && empresa.nombre).map((empresa) => (
               <Box
                 key={empresa.id}
                 sx={{
@@ -540,7 +547,7 @@ const EstablecimientosContainer = () => {
               </Box>
             </Grid>
           ) : (
-            userEmpresas?.map((empresa) => (
+            userEmpresas?.filter(empresa => empresa && empresa.id && empresa.nombre).map((empresa) => (
               <Grid item xs={12} sm={6} md={4} lg={3} key={empresa.id}>
                 <Card sx={{ 
                   height: '100%', 
