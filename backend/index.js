@@ -1,3 +1,6 @@
+// Cargar variables de entorno
+require('dotenv').config();
+
 const express = require('express');
 const cors = require('cors');
 const admin = require('./firebaseAdmin');
@@ -232,8 +235,8 @@ app.delete('/api/delete-user/:uid', verificarTokenAdmin, async (req, res) => {
 app.use('/api/set-role', setRoleRouter); // Solo para superadmin, uso administrativo
 
 // Iniciar servidor con configuración flexible
-const PORT = config.server.port;
-const HOST = config.server.host;
+const PORT = process.env.PORT || config.server.port;
+const HOST = '0.0.0.0'; // Para Render, usar 0.0.0.0 en lugar de localhost
 
 app.listen(PORT, HOST, () => {
   const envInfo = getEnvironmentInfo();

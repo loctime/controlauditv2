@@ -1,14 +1,18 @@
 // src/pages/Dashboard.jsx
-import React, { useContext, useState } from "react";
-import { Typography, Box, Grid, Paper, Alert, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Button, TextField, Dialog, DialogTitle, DialogContent, DialogActions, Card, CardContent, Tabs, Tab } from "@mui/material";
+import React, { useContext, useState, useEffect } from "react";
+import { Typography, Box, Grid, Paper, Alert, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Button, TextField, Dialog, DialogTitle, DialogContent, DialogActions, Card, CardContent, Tabs, Tab, CircularProgress } from "@mui/material";
 import { AuthContext } from "../../context/AuthContext";
-import { collection, addDoc, setDoc, doc, updateDoc, query, where, getDocs } from "firebase/firestore";
+import { collection, addDoc, setDoc, doc, updateDoc, query, where, getDocs, getDoc } from "firebase/firestore";
 import { db } from "../../../firebaseConfig";
 import { toast } from 'react-toastify';
 import { verifyAdminCode, verifySuperAdminCode } from "../../../config/admin";
 import GestionClientes from "./GestionClientes";
 import userService from "../../../services/userService";
+import { getEnvironmentInfo } from "../../../config/environment.js";
+import BackendHealthCheck from "../../../utils/backendHealthCheck.js";
+import BackendStatus from "../../../utils/backendStatus.js";
 
+// Datos de ejemplo (se mantienen como fallback)
 const empresasEjemplo = [
   {
     id: 'empresa1',
@@ -29,7 +33,7 @@ const empresasEjemplo = [
 ];
 
 function Dashboard() {
-  const { userProfile, role, permisos } = useContext(AuthContext);
+  const { userProfile, role, permisos, userEmpresas } = useContext(AuthContext);
   const [openDialog, setOpenDialog] = useState(false);
   const [openAdminDialog, setOpenAdminDialog] = useState(false);
   const [adminCode, setAdminCode] = useState('');
@@ -37,6 +41,119 @@ function Dashboard() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [tabValue, setTabValue] = useState(0);
+  
+  // Estados para empresas reales
+  const [empresasReales, setEmpresasReales] = useState([]);
+  const [loadingEmpresas, setLoadingEmpresas] = useState(true);
+  const [resumenPagos, setResumenPagos] = useState({ alDia: 0, vencidos: 0 });
+
+     // Función para cargar empresas reales con información de usuarios
+   const cargarEmpresasReales = async () => {
+     if (!userProfile?.uid || !role) {
+       setEmpresasReales([]);
+       setLoadingEmpresas(false);
+       return;
+     }
+
+     setLoadingEmpresas(true);
+     try {
+       let empresasData = [];
+       
+       // Obtener clientes administradores según el rol del usuario
+       if (role === 'supermax') {
+         // Super administradores ven todos los clientes administradores
+         const usuariosRef = collection(db, "usuarios");
+         const clientesQuery = query(usuariosRef, where("role", "==", "max"));
+         const clientesSnapshot = await getDocs(clientesQuery);
+         empresasData = clientesSnapshot.docs.map(doc => ({
+           id: doc.id,
+           nombre: doc.data().displayName || doc.data().email,
+           propietarioId: doc.id,
+           ...doc.data()
+         }));
+       } else if (role === 'max') {
+         // Clientes administradores solo ven sus propios datos
+         const userRef = doc(db, "usuarios", userProfile.uid);
+         const userSnap = await getDoc(userRef);
+         if (userSnap.exists()) {
+           const userData = userSnap.data();
+           empresasData = [{
+             id: userProfile.uid,
+             nombre: userData.displayName || userData.email,
+             propietarioId: userProfile.uid,
+             ...userData
+           }];
+         }
+       } else {
+         // Operarios ven datos de su cliente admin
+         if (userProfile.clienteAdminId) {
+           const adminRef = doc(db, "usuarios", userProfile.clienteAdminId);
+           const adminSnap = await getDoc(adminRef);
+           if (adminSnap.exists()) {
+             const adminData = adminSnap.data();
+             empresasData = [{
+               id: userProfile.clienteAdminId,
+               nombre: adminData.displayName || adminData.email,
+               propietarioId: userProfile.clienteAdminId,
+               ...adminData
+             }];
+           }
+         }
+       }
+
+                           // Enriquecer datos con información de usuarios
+        const empresasEnriquecidas = await Promise.all(
+          empresasData.map(async (cliente) => {
+            // Contar usuarios operarios de este cliente
+            const usuariosRef = collection(db, "usuarios");
+            const usuariosQuery = query(usuariosRef, where("clienteAdminId", "==", cliente.id));
+            const usuariosSnapshot = await getDocs(usuariosQuery);
+            const usuariosCount = usuariosSnapshot.size;
+
+            return {
+              ...cliente,
+              usuariosActuales: usuariosCount,
+              usuariosMaximos: cliente.limiteUsuarios || 10,
+              estadoPago: cliente.estadoPago || 'al_dia',
+              fechaVencimiento: cliente.fechaVencimiento ? 
+                cliente.fechaVencimiento.toDate().toISOString().split('T')[0] : 
+                new Date().toISOString().split('T')[0],
+              propietarioEmail: cliente.email || 'N/A'
+            };
+          })
+        );
+
+             // Filtrar empresas válidas (con nombre y datos básicos)
+       const empresasValidas = empresasEnriquecidas.filter(empresa => 
+         empresa.nombre && empresa.nombre.trim() !== ''
+       );
+       
+       // Log para debugging
+       console.log('=== EMPRESAS CARGADAS ===');
+       empresasValidas.forEach(emp => {
+         console.log(`Empresa: ${emp.nombre} | Estado: ${emp.estadoPago} | Usuarios: ${emp.usuariosActuales}/${emp.usuariosMaximos}`);
+       });
+       console.log('==========================');
+       
+       setEmpresasReales(empresasValidas);
+       
+       // Calcular resumen de pagos
+       const alDia = empresasValidas.filter(emp => emp.estadoPago === 'al_dia').length;
+       const vencidos = empresasValidas.filter(emp => emp.estadoPago === 'vencido').length;
+       setResumenPagos({ alDia, vencidos });
+
+    } catch (error) {
+      console.error('Error al cargar empresas:', error);
+      toast.error('Error al cargar empresas');
+    } finally {
+      setLoadingEmpresas(false);
+    }
+  };
+
+  // Cargar empresas cuando cambie el usuario o rol
+  useEffect(() => {
+    cargarEmpresasReales();
+  }, [userProfile?.uid, role]);
 
   const handleOpenDialog = () => setOpenDialog(true);
   const handleCloseDialog = () => {
@@ -127,16 +244,84 @@ function Dashboard() {
   console.log('Perfil completo:', userProfile);
   console.log('================================');
 
+  // Función para diagnosticar problemas de conectividad
+  const diagnosticarBackend = async () => {
+    try {
+      // Primero verificar el estado del entorno
+      const statusChecker = new BackendStatus();
+      const statusReport = statusChecker.generateStatusReport();
+      
+      console.log('📋 Reporte de estado del entorno:', statusReport);
+      
+      // Luego verificar conectividad
+      const healthChecker = new BackendHealthCheck();
+      const diagnostico = await healthChecker.runFullDiagnostic();
+      
+      return {
+        success: diagnostico.connectivity.success,
+        message: diagnostico.connectivity.success ? 'Backend funcionando correctamente' : 'Error de conectividad',
+        details: {
+          ...diagnostico,
+          statusReport
+        }
+      };
+    } catch (error) {
+      console.error('❌ Error en diagnóstico del backend:', error);
+      return { 
+        success: false, 
+        message: `Error en diagnóstico: ${error.message}`,
+        details: error
+      };
+    }
+  };
+
+  // Función para mostrar diagnóstico completo
+  const mostrarDiagnostico = async () => {
+    try {
+      setLoading(true);
+      const diagnostico = await diagnosticarBackend();
+      
+      if (diagnostico.success) {
+        toast.success('✅ Backend funcionando correctamente');
+        console.log('📊 Diagnóstico completo:', diagnostico.details);
+      } else {
+        toast.error(`❌ ${diagnostico.message}`);
+        console.error('Detalles del error:', diagnostico.details);
+        
+        // Mostrar recomendaciones si están disponibles
+        if (diagnostico.details?.recommendations) {
+          diagnostico.details.recommendations.forEach(rec => {
+            console.log(rec);
+          });
+        }
+      }
+    } catch (error) {
+      toast.error('Error al realizar diagnóstico');
+      console.error('Error en diagnóstico:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError('');
+    
     if (!form.password) {
       setError('La contraseña temporal es obligatoria.');
       setLoading(false);
       return;
     }
+    
     try {
+      // Primero diagnosticar el backend
+      const diagnostico = await diagnosticarBackend();
+      if (!diagnostico.success) {
+        console.log('⚠️ Backend no disponible, continuando con creación en Firestore...');
+        // No bloquear la creación, permitir que use el fallback
+      }
+      
       // 1. Crear usuario principal usando el backend (sin desconectar)
       const password = form.password || 'Cambiar123!';
       const userRes = await userService.createUser({
@@ -156,6 +341,12 @@ function Dashboard() {
           puedeEliminarUsuarios: true
         }
       });
+
+      // Verificar si requiere creación manual
+      if (userRes.requiresManualCreation) {
+        toast.warning('⚠️ Usuario creado en Firestore. El administrador debe crear el usuario en Firebase Auth manualmente.');
+        console.log('📝 Usuario pendiente de creación en Firebase Auth:', userRes);
+      }
 
       // 2. Crear empresa en Firestore
       const empresaRef = await addDoc(collection(db, 'empresas'), {
@@ -217,9 +408,19 @@ function Dashboard() {
 
       {tabValue === 0 && (
         <>
-          <Button variant="contained" color="primary" sx={{ mb: 2 }} onClick={handleOpenDialog}>
-            Agregar Empresa / Usuario Principal
-          </Button>
+          <Box sx={{ mb: 2, display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+            <Button variant="contained" color="primary" onClick={handleOpenDialog}>
+              Agregar Empresa / Usuario Principal
+            </Button>
+            <Button 
+              variant="outlined" 
+              color="secondary" 
+              onClick={mostrarDiagnostico}
+              disabled={loading}
+            >
+              🔍 Diagnosticar Backend
+            </Button>
+          </Box>
         </>
       )}
 
@@ -329,14 +530,14 @@ function Dashboard() {
               <Card sx={{ mb: 2, bgcolor: '#e8f5e8' }}>
                 <CardContent>
                   <Typography variant="h6" color="success.main">Pagos al Día</Typography>
-                  <Typography variant="h4">8</Typography>
+                  <Typography variant="h4">{resumenPagos.alDia}</Typography>
                   <Typography variant="body2">Empresas con pagos actualizados</Typography>
                 </CardContent>
               </Card>
               <Card sx={{ bgcolor: '#ffebee' }}>
                 <CardContent>
                   <Typography variant="h6" color="error.main">Pagos Vencidos</Typography>
-                  <Typography variant="h4">2</Typography>
+                  <Typography variant="h4">{resumenPagos.vencidos}</Typography>
                   <Typography variant="body2">Empresas con pagos pendientes</Typography>
                 </CardContent>
               </Card>
@@ -347,36 +548,48 @@ function Dashboard() {
         <Grid item xs={12} md={6}>
           <Paper sx={{ p: 2 }}>
             <Typography variant="h6">Empresas/Clientes</Typography>
-            <TableContainer>
-              <Table size="small">
-                <TableHead>
-                  <TableRow>
-                    <TableCell>Nombre</TableCell>
-                    <TableCell align="center">Usuarios (actual/máx)</TableCell>
-                    <TableCell align="center">Estado de pago</TableCell>
-                    <TableCell align="center">Vencimiento</TableCell>
-                    <TableCell align="center">Acciones</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {empresasEjemplo.map((empresa) => (
-                    <TableRow key={empresa.id}>
-                      <TableCell>{empresa.nombre}</TableCell>
-                      <TableCell align="center">{empresa.usuariosActuales} / {empresa.usuariosMaximos}</TableCell>
-                      <TableCell align="center">
-                        <span style={{ color: empresa.estadoPago === 'al_dia' ? 'green' : 'red', fontWeight: 'bold' }}>
-                          {empresa.estadoPago === 'al_dia' ? 'Al día' : 'Vencido'}
-                        </span>
-                      </TableCell>
-                      <TableCell align="center">{empresa.fechaVencimiento}</TableCell>
-                      <TableCell align="center">
-                        <Button size="small" variant="outlined">Ver</Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
+                         {loadingEmpresas ? (
+               <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 200 }}>
+                 <CircularProgress />
+               </Box>
+             ) : empresasReales.length === 0 ? (
+               <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 200 }}>
+                 <Typography variant="body1" color="text.secondary">
+                   No hay empresas disponibles para mostrar
+                 </Typography>
+               </Box>
+             ) : (
+               <TableContainer>
+                 <Table size="small">
+                   <TableHead>
+                     <TableRow>
+                       <TableCell>Nombre</TableCell>
+                       <TableCell align="center">Usuarios (actual/máx)</TableCell>
+                       <TableCell align="center">Estado de pago</TableCell>
+                       <TableCell align="center">Vencimiento</TableCell>
+                       <TableCell align="center">Acciones</TableCell>
+                     </TableRow>
+                   </TableHead>
+                   <TableBody>
+                     {empresasReales.map((empresa) => (
+                       <TableRow key={empresa.id}>
+                         <TableCell>{empresa.nombre}</TableCell>
+                         <TableCell align="center">{empresa.usuariosActuales} / {empresa.usuariosMaximos}</TableCell>
+                         <TableCell align="center">
+                           <span style={{ color: empresa.estadoPago === 'al_dia' ? 'green' : 'red', fontWeight: 'bold' }}>
+                             {empresa.estadoPago === 'al_dia' ? 'Al día' : 'Vencido'}
+                           </span>
+                         </TableCell>
+                         <TableCell align="center">{empresa.fechaVencimiento}</TableCell>
+                         <TableCell align="center">
+                           <Button size="small" variant="outlined">Ver</Button>
+                         </TableCell>
+                       </TableRow>
+                     ))}
+                   </TableBody>
+                 </Table>
+               </TableContainer>
+             )}
           </Paper>
         </Grid>
       </Grid>
