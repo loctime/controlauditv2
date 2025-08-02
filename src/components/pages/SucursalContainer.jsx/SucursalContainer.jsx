@@ -3,7 +3,7 @@ import { collection, addDoc, Timestamp, doc, getDoc } from "firebase/firestore";
 import { db } from "../../../firebaseConfig";
 import SucursalForm from "../formularioSucursal/SucursalForm";
 import ListaSucursales from "./ListaSucursales";
-import { Alert, Box, Typography, Tabs, Tab, Paper, Button } from "@mui/material";
+import { Alert, Box, Typography, Tabs, Tab, Paper, Button, CircularProgress } from "@mui/material";
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
@@ -17,14 +17,26 @@ const SucursalContainer = () => {
   const [refreshList, setRefreshList] = useState(false);
   const [empresa, setEmpresa] = useState(null);
   const [canAccessEmpresa, setCanAccessEmpresa] = useState(false);
+  const [loadingEmpresa, setLoadingEmpresa] = useState(true);
   const { userProfile, role, canViewEmpresa } = useAuth();
 
   useEffect(() => {
     const fetchEmpresa = async () => {
-      if (!empresaId) return;
+      if (!empresaId) {
+        setLoadingEmpresa(false);
+        return;
+      }
+
+      if (!userProfile) {
+        setLoadingEmpresa(false);
+        setError("No hay usuario autenticado");
+        return;
+      }
+
       try {
         const docRef = doc(db, "empresas", empresaId);
         const docSnap = await getDoc(docRef);
+        
         if (docSnap.exists()) {
           const empresaData = {
             id: empresaId,
@@ -46,12 +58,16 @@ const SucursalContainer = () => {
           setError("Empresa no encontrada.");
         }
       } catch (e) {
+        console.error('[SucursalContainer] Error al cargar empresa:', e);
         setEmpresa(null);
-        setError("Error al cargar la empresa.");
+        setError("Error al cargar la empresa: " + e.message);
+      } finally {
+        setLoadingEmpresa(false);
       }
     };
+    
     fetchEmpresa();
-  }, [empresaId, canViewEmpresa]);
+  }, [empresaId, canViewEmpresa, userProfile]);
 
   const agregarSucursal = async (sucursal) => {
     try {
@@ -83,14 +99,24 @@ const SucursalContainer = () => {
       }, 5000);
       
     } catch (error) {
-      console.error("Error al agregar sucursal:", error);
-      setError("Error al agregar la sucursal. Por favor, intente nuevamente.");
+      console.error("[SucursalContainer] Error al agregar sucursal:", error);
+      setError("Error al agregar la sucursal: " + error.message);
     }
   };
 
   const handleTabChange = (event, newValue) => {
     setActiveTab(newValue);
   };
+
+  // Loading state
+  if (loadingEmpresa) {
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px" flexDirection="column" gap={2}>
+        <CircularProgress />
+        <Typography>Cargando información de la empresa...</Typography>
+      </Box>
+    );
+  }
 
   // Si no tiene acceso a la empresa, mostrar mensaje de error
   if (!canAccessEmpresa && empresaId) {
@@ -133,6 +159,7 @@ const SucursalContainer = () => {
           Gestión de Sucursales
         </Typography>
       </Box>
+      
       {/* Mostrar nombre y logo de la empresa seleccionada */}
       {empresa && (
         <Paper elevation={2} sx={{ p: 2, display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
@@ -171,23 +198,28 @@ const SucursalContainer = () => {
           )}
         </Paper>
       )}
+      
       {error && (
         <Alert severity="error" sx={{ mb: 2 }}>
           {error}
         </Alert>
       )}
+      
       {success && (
         <Alert severity="success" sx={{ mb: 2 }}>
           {success}
         </Alert>
       )}
+      
       <Tabs value={activeTab} onChange={handleTabChange} sx={{ mb: 3 }}>
         <Tab label="Ver Sucursales" />
         <Tab label="Agregar Sucursal" />
       </Tabs>
+      
       {activeTab === 0 && (
         <ListaSucursales key={refreshList} empresaId={empresaId} />
       )}
+      
       {activeTab === 1 && (
         <SucursalForm agregarSucursal={agregarSucursal} empresaId={empresaId} />
       )}
