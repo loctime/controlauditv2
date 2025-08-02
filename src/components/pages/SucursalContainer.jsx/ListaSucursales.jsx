@@ -7,7 +7,8 @@ import {
   Grid,
   Chip,
   IconButton,
-  Alert
+  Alert,
+  CircularProgress
 } from "@mui/material";
 import {
   Delete as DeleteIcon,
@@ -28,15 +29,22 @@ const ListaSucursales = ({ empresaId }) => {
     if (!userProfile) {
       setSucursales([]);
       setLoading(false);
+      setError("No hay usuario autenticado");
       return;
     }
+
     setLoading(true);
+    setError(null);
+    
     let empresasDisponibles = userEmpresas || [];
+    
     if (empresasDisponibles.length === 0) {
       setSucursales([]);
       setLoading(false);
+      setError("No hay empresas disponibles para este usuario");
       return;
     }
+
     let empresasAConsultar = empresasDisponibles;
     if (empresaId) {
       const empresaEspecifica = empresasDisponibles.find(e => e.id === empresaId);
@@ -45,17 +53,23 @@ const ListaSucursales = ({ empresaId }) => {
       } else {
         setSucursales([]);
         setLoading(false);
+        setError(`No tienes acceso a la empresa con ID: ${empresaId}`);
         return;
       }
     }
+
     const empresasIds = empresasAConsultar.map(e => e.id);
+    
     if (empresasIds.length === 0) {
       setSucursales([]);
       setLoading(false);
+      setError("No hay empresas válidas para consultar");
       return;
     }
+
     const sucursalesRef = collection(db, "sucursales");
     const sucursalesQuery = query(sucursalesRef, where("empresaId", "in", empresasIds));
+    
     const unsubscribe = onSnapshot(sucursalesQuery, (snapshot) => {
       const sucursalesData = snapshot.docs.map(doc => ({
         id: doc.id,
@@ -64,24 +78,26 @@ const ListaSucursales = ({ empresaId }) => {
       }));
       setSucursales(sucursalesData);
       setLoading(false);
-      console.debug(`[onSnapshot] ${sucursalesData.length} sucursales cargadas en tiempo real`);
+      setError(null);
     }, (error) => {
-      setError("Error al cargar las sucursales");
+      console.error('[ListaSucursales] Error en onSnapshot:', error);
+      setError("Error al cargar las sucursales: " + error.message);
       setLoading(false);
-      console.error('[onSnapshot] Error al obtener sucursales:', error);
     });
-    return () => unsubscribe();
+
+    return () => {
+      unsubscribe();
+    };
   }, [empresaId, userProfile, userEmpresas, role]);
 
   const handleEliminar = async (sucursalId, nombreSucursal) => {
     if (window.confirm(`¿Está seguro de que desea eliminar la sucursal "${nombreSucursal}"?`)) {
       try {
         await deleteDoc(doc(db, "sucursales", sucursalId));
-        // Recargar sucursales después de eliminar
         // La suscripción onSnapshot ya maneja la actualización en tiempo real
       } catch (error) {
-        console.error("Error al eliminar sucursal:", error);
-        setError("Error al eliminar la sucursal");
+        console.error("[ListaSucursales] Error al eliminar sucursal:", error);
+        setError("Error al eliminar la sucursal: " + error.message);
       }
     }
   };
@@ -109,7 +125,8 @@ const ListaSucursales = ({ empresaId }) => {
 
   if (loading) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="200px">
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="200px" flexDirection="column" gap={2}>
+        <CircularProgress />
         <Typography>Cargando sucursales...</Typography>
       </Box>
     );
@@ -137,6 +154,9 @@ const ListaSucursales = ({ empresaId }) => {
               Para esta empresa específica
             </Typography>
           )}
+          <Typography variant="body2" color="textSecondary" sx={{ mt: 2 }}>
+            Las sucursales aparecerán aquí una vez que se creen.
+          </Typography>
         </Box>
       ) : (
         <Grid container spacing={2}>

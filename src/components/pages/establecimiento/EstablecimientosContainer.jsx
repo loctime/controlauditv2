@@ -23,6 +23,7 @@ import PhoneIcon from '@mui/icons-material/Phone';
 import PersonIcon from '@mui/icons-material/Person';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import InfoIcon from '@mui/icons-material/Info';
+import StorefrontIcon from '@mui/icons-material/Storefront';
 import { Link, useNavigate } from "react-router-dom";
 import { storage } from "../../../firebaseConfig";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
@@ -101,302 +102,222 @@ const EstablecimientosContainer = () => {
   };
 
   const handleAddEmpresa = async () => {
+    if (!empresa.nombre.trim()) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: 'El nombre de la empresa es requerido'
+      });
+      return;
+    }
+
     setLoading(true);
     try {
-      console.log('=== INICIANDO CREACIÓN DE EMPRESA ===');
-      console.log('Empresas antes de crear:', userEmpresas?.length || 0);
-      
       let logoURL = "";
       if (empresa.logo) {
-        // Cargar la imagen al almacenamiento de Firebase
-        const logoRef = ref(storage, `logos/${empresa.logo.name}`);
-        const snapshot = await uploadBytes(logoRef, empresa.logo);
+        const storageRef = ref(storage, `empresas/${Date.now()}_${empresa.logo.name}`);
+        const snapshot = await uploadBytes(storageRef, empresa.logo);
         logoURL = await getDownloadURL(snapshot.ref);
       }
 
-      // Crear el documento de la empresa usando el contexto (ya incluye filtrado multi-tenant)
-      const empresaData = {
+      await crearEmpresa({
         nombre: empresa.nombre,
         direccion: empresa.direccion,
         telefono: empresa.telefono,
         logo: logoURL
-      };
-      
-      const empresaId = await crearEmpresa(empresaData);
-      console.log('Empresa creada con ID:', empresaId);
-      console.log('=== FIN CREACIÓN DE EMPRESA ===');
+      });
 
-      // Resetear estado para forzar recarga
-      setEmpresasCargadas(false);
+      setEmpresa({
+        nombre: "",
+        direccion: "",
+        telefono: "",
+        logo: null
+      });
 
       Swal.fire({
         icon: 'success',
-        title: 'Empresa Agregada',
-        text: 'La empresa ha sido agregada con éxito.',
+        title: 'Éxito',
+        text: 'Empresa creada exitosamente'
       });
-
-      handleCloseModal();
     } catch (error) {
-      console.error("Error al agregar empresa:", error);
+      console.error('Error al crear empresa:', error);
       Swal.fire({
         icon: 'error',
         title: 'Error',
-        text: 'Ocurrió un error al agregar la empresa.',
+        text: 'Error al crear la empresa'
       });
     } finally {
       setLoading(false);
+      setOpenModal(false);
     }
   };
 
   const eliminarEmpresa = () => {
-    // No necesitamos llamar obtenerEmpresas() porque userEmpresas se actualiza automáticamente
-    console.log('Empresa eliminada, userEmpresas se actualizará automáticamente');
+    // La función se llama desde el componente EliminarEmpresa
+    // No necesitamos hacer nada aquí porque userEmpresas se actualiza automáticamente
   };
 
-  /**
-   * Verifica y corrige empresas que no tienen propietario asignado
-   * Esta función es necesaria para mantener la integridad del sistema multi-tenant
-   * Solo corrige empresas que ya pertenecen al usuario actual (filtrado por multi-tenant)
-   */
   const handleVerificarEmpresas = async () => {
     setVerificando(true);
     try {
-      console.log('=== INICIANDO VERIFICACIÓN DE EMPRESAS ===');
-      console.log('Empresas antes de verificar:', userEmpresas?.length || 0);
-      console.log('userProfile:', userProfile);
-      
-      const empresasCorregidas = await verificarYCorregirEmpresas();
-      
-      console.log('Empresas después de verificar:', userEmpresas?.length || 0);
-      console.log('Empresas corregidas:', empresasCorregidas);
-      
-      if (empresasCorregidas > 0) {
-        Swal.fire({
-          icon: 'success',
-          title: 'Verificación Completada',
-          text: `Se corrigieron ${empresasCorregidas} empresa(s) que no tenían propietario asignado.`,
-        });
-      } else {
-        Swal.fire({
-          icon: 'info',
-          title: 'Verificación Completada',
-          text: 'Todas las empresas ya tienen propietario asignado correctamente.',
-        });
-      }
+      await verificarYCorregirEmpresas();
+      Swal.fire({
+        icon: 'success',
+        title: 'Verificación completada',
+        text: 'Las empresas han sido verificadas y corregidas si era necesario'
+      });
     } catch (error) {
-      console.error("Error al verificar empresas:", error);
+      console.error('Error al verificar empresas:', error);
       Swal.fire({
         icon: 'error',
-        title: 'Error en Verificación',
-        text: 'Ocurrió un error al verificar las empresas. Revisa la consola para más detalles.',
+        title: 'Error',
+        text: 'Error al verificar las empresas'
       });
     } finally {
       setVerificando(false);
     }
   };
 
-  // Abrir modal de edición y setear empresa a editar
   const handleOpenEditModal = (empresa) => {
-    setEmpresaEdit({ ...empresa, logo: null }); // logo: null para saber si se cambia
+    setEmpresaEdit(empresa);
     setOpenEditModal(true);
   };
 
-  // Cerrar modal de edición
   const handleCloseEditModal = () => {
     setOpenEditModal(false);
     setEmpresaEdit(null);
   };
 
-  // Manejar cambios en inputs del modal de edición
   const handleEditInputChange = (e) => {
     const { name, value } = e.target;
-    setEmpresaEdit((prev) => ({ ...prev, [name]: value }));
+    setEmpresaEdit((prevEmpresa) => ({
+      ...prevEmpresa,
+      [name]: value
+    }));
   };
 
-  // Manejar cambio de logo en edición
   const handleEditLogoChange = (e) => {
-    setEmpresaEdit((prev) => ({ ...prev, logo: e.target.files[0] }));
+    setEmpresaEdit((prevEmpresa) => ({
+      ...prevEmpresa,
+      logo: e.target.files[0]
+    }));
   };
 
-  // Guardar cambios de empresa
-  const [loadingEdit, setLoadingEdit] = useState(false);
   const handleEditEmpresa = async () => {
-    setLoadingEdit(true);
+    if (!empresaEdit.nombre.trim()) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: 'El nombre de la empresa es requerido'
+      });
+      return;
+    }
+
+    setLoading(true);
     try {
-      console.log('[handleEditEmpresa] Editando empresa:', empresaEdit);
-      let logoURL = empresaEdit.logoUrlOriginal || empresaEdit.logo || '';
-      // Si el usuario seleccionó un nuevo logo, subirlo
+      let logoURL = empresaEdit.logoURL || "";
       if (empresaEdit.logo && empresaEdit.logo instanceof File) {
-        const logoRef = ref(storage, `logos/${empresaEdit.logo.name}`);
-        const snapshot = await uploadBytes(logoRef, empresaEdit.logo);
+        const storageRef = ref(storage, `empresas/${Date.now()}_${empresaEdit.logo.name}`);
+        const snapshot = await uploadBytes(storageRef, empresaEdit.logo);
         logoURL = await getDownloadURL(snapshot.ref);
-        console.log('[handleEditEmpresa] Nuevo logo subido:', logoURL);
-      } else if (empresaEdit.logo === null && empresaEdit.logoUrlOriginal) {
-        logoURL = empresaEdit.logoUrlOriginal;
       }
-      // Construir datos a actualizar
-      const updateData = {
+
+      await updateEmpresa(empresaEdit.id, {
         nombre: empresaEdit.nombre,
         direccion: empresaEdit.direccion,
         telefono: empresaEdit.telefono,
         logo: logoURL
-      };
-      await updateEmpresa(empresaEdit.id, updateData);
-      console.log('[handleEditEmpresa] Empresa actualizada:', empresaEdit.id);
+      });
+
       Swal.fire({
         icon: 'success',
-        title: 'Empresa actualizada',
-        text: 'Los cambios se guardaron correctamente.'
+        title: 'Éxito',
+        text: 'Empresa actualizada exitosamente'
       });
-      setEmpresasCargadas(false); // Forzar recarga
-      handleCloseEditModal();
     } catch (error) {
-      console.error('[handleEditEmpresa] Error al editar empresa:', error);
+      console.error('Error al actualizar empresa:', error);
       Swal.fire({
         icon: 'error',
         title: 'Error',
-        text: 'Ocurrió un error al guardar los cambios.'
+        text: 'Error al actualizar la empresa'
       });
     } finally {
-      setLoadingEdit(false);
+      setLoading(false);
+      setOpenEditModal(false);
     }
   };
 
-  // Verificar permisos de acceso
-  if (!userProfile) {
-    return (
-      <Box sx={{ px: { xs: 1, sm: 3 }, py: 2 }}>
-        <Typography variant="h6" color="error">
-          No tienes permisos para acceder a esta sección.
-        </Typography>
-      </Box>
-    );
-  }
+  const handleNavigateToSucursales = (empresaId) => {
+    console.log('[EstablecimientosContainer] Navegando a sucursales de empresa:', empresaId);
+    navigate(`/sucursales/${empresaId}`);
+  };
 
   return (
-    <Box sx={{ px: { xs: 1, sm: 3 }, py: 2 }}>
-      {/* Sección de navegación y acciones con Box */}
-      <Box sx={{
-        bgcolor: 'background.paper',
-        borderRadius: 3,
-        border: `1px solid ${alpha(theme.palette.divider, 0.3)}`,
-        boxShadow: '0 2px 12px rgba(0,0,0,0.08)',
-        p: isSmallMobile ? 3 : 4,
-        mb: 3
+    <Box sx={{ p: isSmallMobile ? 2 : 4 }}>
+      {/* Header */}
+      <Box sx={{ 
+        display: 'flex', 
+        flexDirection: isSmallMobile ? 'column' : 'row',
+        alignItems: 'center', 
+        justifyContent: 'space-between', 
+        mb: 4,
+        gap: 2
       }}>
-        {/* Botón Volver */}
-        <Button
-          variant="outlined"
-          startIcon={<ArrowBackIcon />}
-          onClick={() => {
-            console.debug('[EstablecimientosContainer] Volver a /perfil');
-            navigate('/perfil');
-          }}
-          aria-label="Volver a perfil"
-          sx={{ 
-            mb: isSmallMobile ? 2 : 3,
-            fontSize: isSmallMobile ? '0.875rem' : '1rem'
-          }}
-        >
-          Volver
-        </Button>
-        
-        {/* Header con título y botones */}
-        <Box sx={{ 
-          display: 'flex', 
-          flexDirection: isMobile ? 'column' : 'row',
-          justifyContent: 'space-between', 
-          alignItems: isMobile ? 'stretch' : 'center',
-          gap: isSmallMobile ? 2 : 3
-        }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <BusinessIcon sx={{ fontSize: isSmallMobile ? 32 : 40, color: 'primary.main' }} />
           <Typography 
             variant={isSmallMobile ? "h5" : "h4"} 
             sx={{ 
-              fontWeight: 'bold', 
+              fontWeight: 700, 
               color: 'primary.main',
-              textAlign: isMobile ? 'center' : 'left',
-              mb: isMobile ? 2 : 0
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1
             }}
           >
-            🏢 Empresas Registradas
+            Empresas Registradas
           </Typography>
-          
-          <Box sx={{ 
-            display: 'flex', 
-            flexDirection: isMobile ? 'column' : 'row',
-            gap: isSmallMobile ? 1 : 2,
-            width: isMobile ? '100%' : 'auto'
-          }}>
-            <Button
-              variant="outlined"
-              color="secondary"
-              onClick={handleVerificarEmpresas}
-              disabled={verificando}
-              sx={{ 
-                minWidth: isMobile ? '100%' : '120px',
-                py: isSmallMobile ? 1.5 : 2,
-                fontSize: isSmallMobile ? '0.875rem' : '1rem',
-                fontWeight: 600
-              }}
-            >
-              {verificando ? (
-                <>
-                  <CircularProgress size={16} sx={{ mr: 1 }} />
-                  Verificando...
-                </>
-              ) : (
-                '🔍 Verificar'
-              )}
-            </Button>
-            <Button
-              variant="contained"
-              color="primary"
-              onClick={() => setOpenModal(true)}
-              sx={{ 
-                minWidth: isMobile ? '100%' : '120px',
-                py: isSmallMobile ? 1.5 : 2,
-                fontSize: isSmallMobile ? '0.875rem' : '1rem',
-                fontWeight: 600
-              }}
-            >
-              ➕ Agregar Empresa
-            </Button>
-          </Box>
         </Box>
-      </Box>
-      <Divider sx={{ mb: 4 }} />
-      
-      {/* Vista responsiva con Box de MUI */}
-      {isMobile ? (
-        // Vista móvil con Box
+        
         <Box sx={{ 
           display: 'flex', 
-          flexDirection: 'column', 
-          gap: isSmallMobile ? 2 : 3 
+          gap: 1, 
+          flexWrap: 'wrap',
+          justifyContent: isSmallMobile ? 'center' : 'flex-end'
         }}>
+          <Button
+            variant="outlined"
+            onClick={handleVerificarEmpresas}
+            disabled={verificando}
+            startIcon={verificando ? <CircularProgress size={16} /> : <ExpandMoreIcon />}
+            size={isSmallMobile ? "small" : "medium"}
+          >
+            {verificando ? "Verificando..." : "Verificar"}
+          </Button>
+          <Button
+            variant="contained"
+            onClick={() => setOpenModal(true)}
+            startIcon={<BusinessIcon />}
+            size={isSmallMobile ? "small" : "medium"}
+          >
+            Agregar Empresa
+          </Button>
+        </Box>
+      </Box>
+
+      {/* Contenido */}
+      {isMobile ? (
+        // Vista móvil con Stack
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
           {cargandoEmpresas && (!userEmpresas || userEmpresas.length === 0) ? (
-            <Box sx={{ 
-              textAlign: 'center', 
-              py: 6,
-              bgcolor: 'background.paper',
-              borderRadius: 3,
-              border: `1px solid ${alpha(theme.palette.divider, 0.3)}`,
-              boxShadow: '0 4px 16px rgba(0,0,0,0.08)'
-            }}>
+            <Box sx={{ textAlign: 'center', py: 4 }}>
               <CircularProgress sx={{ mb: 2 }} />
               <Typography variant="h6" color="text.secondary">
                 Cargando empresas...
               </Typography>
             </Box>
           ) : userEmpresas?.length === 0 ? (
-            <Box sx={{ 
-              textAlign: 'center', 
-              py: 6,
-              bgcolor: 'background.paper',
-              borderRadius: 3,
-              border: `1px solid ${alpha(theme.palette.divider, 0.3)}`,
-              boxShadow: '0 4px 16px rgba(0,0,0,0.08)'
-            }}>
+            <Box sx={{ textAlign: 'center', py: 4 }}>
               <Typography variant="h6" color="text.secondary">
                 No hay empresas registradas
               </Typography>
@@ -573,6 +494,15 @@ const EstablecimientosContainer = () => {
                   borderTop: `1px solid ${alpha(theme.palette.divider, 0.2)}`
                 }}>
                   <Button
+                    variant="contained"
+                    size={isSmallMobile ? "small" : "medium"}
+                    onClick={() => handleNavigateToSucursales(empresa.id)}
+                    startIcon={<StorefrontIcon />}
+                    sx={{ flex: 1 }}
+                  >
+                    Sucursales
+                  </Button>
+                  <Button
                     variant="outlined"
                     size={isSmallMobile ? "small" : "medium"}
                     onClick={() => handleOpenEditModal(empresa)}
@@ -707,6 +637,15 @@ const EstablecimientosContainer = () => {
                   <CardActions sx={{ justifyContent: 'center', pt: 0 }}>
                     <Stack direction="row" spacing={1} sx={{ width: '100%' }}>
                       <Button
+                        variant="contained"
+                        size="small"
+                        onClick={() => handleNavigateToSucursales(empresa.id)}
+                        startIcon={<StorefrontIcon />}
+                        sx={{ flex: 1 }}
+                      >
+                        Sucursales
+                      </Button>
+                      <Button
                         variant="outlined"
                         size="small"
                         onClick={() => handleOpenEditModal(empresa)}
@@ -742,7 +681,7 @@ const EstablecimientosContainer = () => {
           empresa={empresaEdit}
           handleInputChange={handleEditInputChange}
           handleLogoChange={handleEditLogoChange}
-          loading={loadingEdit}
+          loading={loading}
         />
       )}
     </Box>

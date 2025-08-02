@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Button, TextField, Grid, Typography, Box, MenuItem, FormControl, InputLabel, Select, Paper } from "@mui/material";
+import { Button, TextField, Grid, Typography, Box, MenuItem, FormControl, InputLabel, Select, Paper, Alert, CircularProgress } from "@mui/material";
 import { db } from "../../../firebaseConfig";
 import { getDocs, collection, query, where } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
@@ -14,53 +14,67 @@ const SucursalForm = ({ agregarSucursal, empresaId }) => {
     telefono: "",
     empresa: "",
   });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const navigate = useNavigate();
   const { userProfile, role, userEmpresas } = useAuth();
 
   useEffect(() => {
     const obtenerEmpresas = async () => {
+      setLoading(true);
+      setError(null);
+      
       try {
-        console.log('=== DEBUG SucursalForm ===');
-        console.log('userProfile:', userProfile);
-        console.log('userEmpresas:', userEmpresas);
-        console.log('empresaId:', empresaId);
-        
         // Si no hay usuario autenticado, no cargar nada
         if (!userProfile) {
-          console.log('No hay userProfile');
           setEmpresas([]);
+          setLoading(false);
+          setError("No hay usuario autenticado");
           return;
         }
 
         // Usar userEmpresas del contexto que ya está filtrado por multi-tenant
         const empresasData = userEmpresas || [];
-        console.log('Empresas disponibles:', empresasData);
+        
+        if (empresasData.length === 0) {
+          setEmpresas([]);
+          setLoading(false);
+          setError("No hay empresas disponibles para este usuario");
+          return;
+        }
         
         setEmpresas(empresasData);
         
         // Si hay empresaId, seleccionarla automáticamente
         if (empresaId) {
           const empresa = empresasData.find(e => e.id === empresaId);
-          console.log('Empresa encontrada para empresaId:', empresa);
-          setEmpresaSeleccionada(empresa);
-          setSucursal((prev) => ({ ...prev, empresa: empresa ? empresa.nombre : "" }));
+          if (empresa) {
+            setEmpresaSeleccionada(empresa);
+            setSucursal((prev) => ({ ...prev, empresa: empresa.nombre }));
+          } else {
+            setError(`No se encontró la empresa con ID: ${empresaId}`);
+          }
         }
         
-        console.log('=== FIN DEBUG ===');
       } catch (error) {
-        console.error("Error al obtener empresas:", error);
+        console.error("[SucursalForm] Error al obtener empresas:", error);
+        setError("Error al cargar las empresas: " + error.message);
+      } finally {
+        setLoading(false);
       }
     };
+    
     obtenerEmpresas();
-    // eslint-disable-next-line
   }, [empresaId, userProfile, userEmpresas]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
+    
     setSucursal((prevSucursal) => ({
       ...prevSucursal,
       [name]: value,
     }));
+    
     if (name === "empresa") {
       const empresa = empresas.find(e => e.nombre === value);
       setEmpresaSeleccionada(empresa);
@@ -72,6 +86,27 @@ const SucursalForm = ({ agregarSucursal, empresaId }) => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    
+    if (!empresaSeleccionada) {
+      setError("Debe seleccionar una empresa");
+      return;
+    }
+    
+    if (!sucursal.nombre.trim()) {
+      setError("El nombre de la sucursal es requerido");
+      return;
+    }
+    
+    if (!sucursal.direccion.trim()) {
+      setError("La dirección es requerida");
+      return;
+    }
+    
+    if (!sucursal.telefono.trim()) {
+      setError("El teléfono es requerido");
+      return;
+    }
+    
     agregarSucursal(sucursal);
     setSucursal({
       nombre: "",
@@ -81,11 +116,27 @@ const SucursalForm = ({ agregarSucursal, empresaId }) => {
     });
   };
 
+  if (loading) {
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="200px" flexDirection="column" gap={2}>
+        <CircularProgress />
+        <Typography>Cargando formulario de sucursal...</Typography>
+      </Box>
+    );
+  }
+
   return (
     <Box>
       <Typography variant="h6" gutterBottom>
         Agregar Sucursal
       </Typography>
+      
+      {error && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {error}
+        </Alert>
+      )}
+      
       <form onSubmit={handleSubmit}>
         <Grid container spacing={2}>
           {/* Selector de empresa SIEMPRE primero */}
@@ -97,11 +148,11 @@ const SucursalForm = ({ agregarSucursal, empresaId }) => {
                 value={sucursal.empresa}
                 onChange={handleChange}
                 label="Empresa"
+                error={!sucursal.empresa}
               >
                 <MenuItem value="">
                   <em>Seleccione una empresa</em>
                 </MenuItem>
-                {console.log('Empresas en selector:', empresas)}
                 {empresas.map((empresa) => (
                   <MenuItem key={empresa.id} value={empresa.nombre}>
                     {empresa.nombre}
@@ -161,6 +212,8 @@ const SucursalForm = ({ agregarSucursal, empresaId }) => {
               value={sucursal.nombre}
               onChange={handleChange}
               required
+              error={!sucursal.nombre.trim()}
+              helperText={!sucursal.nombre.trim() ? "El nombre es requerido" : ""}
             />
           </Grid>
           <Grid item xs={12} sm={6}>
@@ -171,6 +224,8 @@ const SucursalForm = ({ agregarSucursal, empresaId }) => {
               value={sucursal.direccion}
               onChange={handleChange}
               required
+              error={!sucursal.direccion.trim()}
+              helperText={!sucursal.direccion.trim() ? "La dirección es requerida" : ""}
             />
           </Grid>
           <Grid item xs={12} sm={6}>
@@ -181,10 +236,18 @@ const SucursalForm = ({ agregarSucursal, empresaId }) => {
               value={sucursal.telefono}
               onChange={handleChange}
               required
+              error={!sucursal.telefono.trim()}
+              helperText={!sucursal.telefono.trim() ? "El teléfono es requerido" : ""}
             />
           </Grid>
         </Grid>
-        <Button type="submit" variant="contained" color="primary" sx={{ mt: 2 }}>
+        <Button 
+          type="submit" 
+          variant="contained" 
+          color="primary" 
+          sx={{ mt: 2 }}
+          disabled={!empresaSeleccionada || !sucursal.nombre.trim() || !sucursal.direccion.trim() || !sucursal.telefono.trim()}
+        >
           Agregar Sucursal
         </Button>
       </form>
