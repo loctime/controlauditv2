@@ -1,2 +1,16 @@
+# Archivos de configuración sensibles
 serviceAccountKey.json
 .env
+.env.local
+.env.production
+.env.staging
+
+# Logs
+*.log
+
+# Dependencias
+node_modules/
+
+# Archivos temporales
+*.tmp
+*.temp
