@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { collection, getDocs, doc, getDoc, onSnapshot } from "firebase/firestore";
 import { db } from "../../../firebaseConfig";
-import { 
+import {
   FormControl, 
   InputLabel, 
   Select, 
@@ -16,7 +16,8 @@ import {
   alpha,
   Card,
   CardContent,
-  IconButton
+  IconButton,
+  CircularProgress
 } from "@mui/material";
 import RefreshIcon from '@mui/icons-material/Refresh';
 import EditarSeccionYPreguntas from "./EditarSeccionYPreguntas";
@@ -148,27 +149,48 @@ const EditarFormulario = () => {
     return () => unsubscribe();
   }, [user, userProfile, reload, cargarDetallesFormularios]);
 
+  // ✅ Debug del estado loading
+  React.useEffect(() => {
+    console.log('🔧 [DEBUG] Estado loading cambió:', loading);
+  }, [loading]);
+
   // Cuando el usuario selecciona un formulario, cargar el detalle solo si no está en cache
   const handleChangeFormulario = async (event) => {
     const formularioId = event.target.value;
+    console.log('[DEBUG] handleChangeFormulario llamado con formularioId:', formularioId);
+    
     if (!formularioId) {
+      console.log('[DEBUG] FormularioId vacío, estableciendo formularioSeleccionado a null');
       setFormularioSeleccionado(null);
       return;
     }
+    
+    console.log('[DEBUG] Seleccionando formulario:', formularioId);
+    console.log('[DEBUG] Formularios completos disponibles:', formulariosCompletos.length);
+    
     // Buscar en cache primero
     let detalle = formulariosCompletos.find(f => f.id === formularioId);
     if (!detalle) {
+      console.log('[DEBUG] Formulario no encontrado en cache, cargando desde Firestore...');
       try {
         const formularioDoc = await getDoc(doc(db, "formularios", formularioId));
+        if (!formularioDoc.exists()) {
+          console.error("Formulario no encontrado en Firestore:", formularioId);
+          Swal.fire("Error", "El formulario seleccionado no existe.", "error");
+          return;
+        }
         const formularioData = formularioDoc.data();
         const meta = formularios.find(f => f.id === formularioId);
         detalle = { ...meta, ...formularioData, id: formularioId };
         setFormulariosCompletos(prev => ([...prev.filter(f => f.id !== formularioId), detalle]));
+        console.log('[DEBUG] Formulario cargado exitosamente:', detalle);
       } catch (error) {
         console.error("Error al cargar formulario:", error);
-        Swal.fire("Error", "No se pudo cargar el formulario.", "error");
+        Swal.fire("Error", "No se pudo cargar el formulario. Verifica tu conexión a internet.", "error");
         return;
       }
+    } else {
+      console.log('[DEBUG] Formulario encontrado en cache:', detalle);
     }
     setFormularioSeleccionado(detalle);
   };
@@ -193,33 +215,89 @@ const EditarFormulario = () => {
 
   // ✅ Función para verificar permisos de edición
   const puedeEditarFormulario = (formulario) => {
-    if (!formulario || !user) return false;
+    console.log('🔧 [DEBUG] puedeEditarFormulario llamado con:', {
+      formulario: formulario?.id,
+      user: user?.uid,
+      userProfile: userProfile,
+      userProfileRole: userProfile?.role,
+      formularioCreadorId: formulario?.creadorId,
+      formularioPermisos: formulario?.permisos
+    });
+    
+    if (!formulario || !user) {
+      console.log('🔧 [DEBUG] No hay formulario o usuario');
+      return false;
+    }
+    
+    // Supermax puede editar todo
+    if (userProfile?.role === 'supermax') {
+      console.log('🔧 [DEBUG] Usuario es supermax - puede editar');
+      return true;
+    }
     
     // Administradores pueden editar todo
-    if (userProfile?.role === 'max') return true;
+    if (userProfile?.role === 'max') {
+      console.log('🔧 [DEBUG] Usuario es max - puede editar');
+      return true;
+    }
     
     // Creador puede editar
-    if (formulario.creadorId === user.uid) return true;
+    if (formulario.creadorId === user.uid) {
+      console.log('🔧 [DEBUG] Usuario es creador - puede editar');
+      return true;
+    }
     
     // Usuarios con permisos explícitos
-    if (formulario.permisos?.puedeEditar?.includes(user.uid)) return true;
+    if (formulario.permisos?.puedeEditar?.includes(user.uid)) {
+      console.log('🔧 [DEBUG] Usuario tiene permisos explícitos - puede editar');
+      return true;
+    }
     
+    console.log('🔧 [DEBUG] Usuario NO puede editar');
     return false;
   };
 
   // ✅ Función para verificar permisos de eliminación
   const puedeEliminarFormulario = (formulario) => {
-    if (!formulario || !user) return false;
+    console.log('🔧 [DEBUG] puedeEliminarFormulario llamado con:', {
+      formulario: formulario?.id,
+      user: user?.uid,
+      userProfile: userProfile,
+      userProfileRole: userProfile?.role,
+      formularioCreadorId: formulario?.creadorId,
+      formularioPermisos: formulario?.permisos
+    });
+    
+    if (!formulario || !user) {
+      console.log('🔧 [DEBUG] No hay formulario o usuario');
+      return false;
+    }
+    
+    // Supermax puede eliminar todo
+    if (userProfile?.role === 'supermax') {
+      console.log('🔧 [DEBUG] Usuario es supermax - puede eliminar');
+      return true;
+    }
     
     // Administradores pueden eliminar todo
-    if (userProfile?.role === 'max') return true;
+    if (userProfile?.role === 'max') {
+      console.log('🔧 [DEBUG] Usuario es max - puede eliminar');
+      return true;
+    }
     
     // El creador puede eliminar (incluye formularios copiados)
-    if (formulario.creadorId === user.uid) return true;
+    if (formulario.creadorId === user.uid) {
+      console.log('🔧 [DEBUG] Usuario es creador - puede eliminar');
+      return true;
+    }
     
     // Usuarios con permisos explícitos de eliminación
-    if (formulario.permisos?.puedeEliminar?.includes(user.uid)) return true;
+    if (formulario.permisos?.puedeEliminar?.includes(user.uid)) {
+      console.log('🔧 [DEBUG] Usuario tiene permisos explícitos - puede eliminar');
+      return true;
+    }
     
+    console.log('🔧 [DEBUG] Usuario NO puede eliminar');
     return false;
   };
 
@@ -241,10 +319,41 @@ const EditarFormulario = () => {
     setTimeout(scrollToEdicion, 300);
   };
 
+  // ✅ Debug del estado del usuario y permisos
+  React.useEffect(() => {
+    console.log('🔧 [DEBUG] Estado del usuario y permisos:', {
+      user: user?.uid,
+      userProfile: userProfile,
+      userProfileRole: userProfile?.role,
+      loading: loading,
+      formularioSeleccionado: formularioSeleccionado?.id,
+      formularioSeleccionadoCompleto: formularioSeleccionado,
+      puedeEditar: formularioSeleccionado ? puedeEditarFormulario(formularioSeleccionado) : false,
+      puedeEliminar: formularioSeleccionado ? puedeEliminarFormulario(formularioSeleccionado) : false
+    });
+  }, [user, userProfile, loading, formularioSeleccionado]);
+
+  // ✅ Debug cuando cambia el formulario seleccionado
+  React.useEffect(() => {
+    console.log('🔧 [DEBUG] formularioSeleccionado cambió:', {
+      id: formularioSeleccionado?.id,
+      nombre: formularioSeleccionado?.nombre,
+      completo: formularioSeleccionado
+    });
+  }, [formularioSeleccionado]);
+
   if (loading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="200px">
-        <Typography>Cargando formularios...</Typography>
+        <Box sx={{ textAlign: 'center' }}>
+          <CircularProgress size={40} sx={{ mb: 2 }} />
+          <Typography variant="h6" color="text.secondary">
+            Cargando formularios...
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+            Esto puede tomar unos segundos
+          </Typography>
+        </Box>
       </Box>
     );
   }
@@ -323,7 +432,7 @@ const EditarFormulario = () => {
             <Select
               labelId="select-formulario-label"
               id="select-formulario"
-              value={formularioSeleccionado ? formularioSeleccionado.id : ""}
+              value={formularioSeleccionado?.id || ""}
               onChange={handleChangeFormulario}
               label="Seleccionar Formulario"
             >
@@ -481,75 +590,75 @@ const EditarFormulario = () => {
                 p: isSmallMobile ? 2 : 3,
                 border: `1px solid ${alpha(theme.palette.info.main, 0.1)}`
               }}>
-                <Typography variant="body2" sx={{ lineHeight: 1.8 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                    <Typography component="span" sx={{ fontWeight: 600, color: 'text.primary' }}>
-                      👤 Creado por:
-                    </Typography>
-                    <Typography component="span" color="text.secondary">
-                      {formularioSeleccionado.creadorNombre || formularioSeleccionado.creadorEmail || 'Desconocido'}
-                    </Typography>
-                  </Box>
-                  
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                    <Typography component="span" sx={{ fontWeight: 600, color: 'text.primary' }}>
-                      📅 Fecha de creación:
-                    </Typography>
-                    <Typography component="span" color="text.secondary">
-                      {formularioSeleccionado.timestamp?.toDate?.()
-                        ? formularioSeleccionado.timestamp.toDate().toLocaleString('es-ES')
-                        : (formularioSeleccionado.timestamp instanceof Date
-                            ? formularioSeleccionado.timestamp.toLocaleString('es-ES')
-                            : (console.debug('[EditarFormulario] Fecha de creación no válida:', formularioSeleccionado.timestamp), 'No disponible'))}
-                    </Typography>
-                  </Box>
-                  
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                    <Typography component="span" sx={{ fontWeight: 600, color: 'text.primary' }}>
-                      🔄 Última modificación:
-                    </Typography>
-                    <Typography component="span" color="text.secondary">
-                      {formularioSeleccionado.ultimaModificacion?.toDate?.()
-                        ? formularioSeleccionado.ultimaModificacion.toDate().toLocaleString('es-ES')
-                        : (formularioSeleccionado.ultimaModificacion instanceof Date
-                            ? formularioSeleccionado.ultimaModificacion.toLocaleString('es-ES')
-                            : (console.debug('[EditarFormulario] Última modificación no válida:', formularioSeleccionado.ultimaModificacion), 'No disponible'))}
-                    </Typography>
-                  </Box>
-                  
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                    <Typography component="span" sx={{ fontWeight: 600, color: 'text.primary' }}>
-                      📊 Estado:
-                    </Typography>
-                    <Chip 
-                      label={formularioSeleccionado.estado || 'Activo'} 
-                      size="small" 
-                      color="success" 
-                      variant="outlined"
-                    />
-                  </Box>
-                  
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                    <Typography component="span" sx={{ fontWeight: 600, color: 'text.primary' }}>
-                      🏷️ Versión:
-                    </Typography>
-                    <Typography component="span" color="text.secondary">
-                      {formularioSeleccionado.version || '1.0'}
-                    </Typography>
-                  </Box>
-                  
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Typography component="span" sx={{ fontWeight: 600, color: 'text.primary' }}>
-                      👁️ Visibilidad:
-                    </Typography>
-                    <Chip 
-                      label={formularioSeleccionado.esPublico ? 'Público' : 'Privado'} 
-                      size="small" 
-                      color={formularioSeleccionado.esPublico ? "success" : "default"} 
-                      variant="outlined"
-                    />
-                  </Box>
-                </Typography>
+                                 <Box sx={{ lineHeight: 1.8 }}>
+                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                     <Typography component="span" sx={{ fontWeight: 600, color: 'text.primary' }}>
+                       👤 Creado por:
+                     </Typography>
+                     <Typography component="span" color="text.secondary">
+                       {formularioSeleccionado.creadorNombre || formularioSeleccionado.creadorEmail || 'Desconocido'}
+                     </Typography>
+                   </Box>
+                   
+                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                     <Typography component="span" sx={{ fontWeight: 600, color: 'text.primary' }}>
+                       📅 Fecha de creación:
+                     </Typography>
+                     <Typography component="span" color="text.secondary">
+                       {formularioSeleccionado.timestamp?.toDate?.()
+                         ? formularioSeleccionado.timestamp.toDate().toLocaleString('es-ES')
+                         : (formularioSeleccionado.timestamp instanceof Date
+                             ? formularioSeleccionado.timestamp.toLocaleString('es-ES')
+                             : (console.debug('[EditarFormulario] Fecha de creación no válida:', formularioSeleccionado.timestamp), 'No disponible'))}
+                     </Typography>
+                   </Box>
+                   
+                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                     <Typography component="span" sx={{ fontWeight: 600, color: 'text.primary' }}>
+                       🔄 Última modificación:
+                     </Typography>
+                     <Typography component="span" color="text.secondary">
+                       {formularioSeleccionado.ultimaModificacion?.toDate?.()
+                         ? formularioSeleccionado.ultimaModificacion.toDate().toLocaleString('es-ES')
+                         : (formularioSeleccionado.ultimaModificacion instanceof Date
+                             ? formularioSeleccionado.ultimaModificacion.toLocaleString('es-ES')
+                             : (console.debug('[EditarFormulario] Última modificación no válida:', formularioSeleccionado.ultimaModificacion), 'No disponible'))}
+                     </Typography>
+                   </Box>
+                   
+                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                     <Typography component="span" sx={{ fontWeight: 600, color: 'text.primary' }}>
+                       📊 Estado:
+                     </Typography>
+                     <Chip 
+                       label={formularioSeleccionado.estado || 'Activo'} 
+                       size="small" 
+                       color="success" 
+                       variant="outlined"
+                     />
+                   </Box>
+                   
+                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                     <Typography component="span" sx={{ fontWeight: 600, color: 'text.primary' }}>
+                       🏷️ Versión:
+                     </Typography>
+                     <Typography component="span" color="text.secondary">
+                       {formularioSeleccionado.version || '1.0'}
+                     </Typography>
+                   </Box>
+                   
+                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                     <Typography component="span" sx={{ fontWeight: 600, color: 'text.primary' }}>
+                       👁️ Visibilidad:
+                     </Typography>
+                     <Chip 
+                       label={formularioSeleccionado.esPublico ? 'Público' : 'Privado'} 
+                       size="small" 
+                       color={formularioSeleccionado.esPublico ? "success" : "default"} 
+                       variant="outlined"
+                     />
+                   </Box>
+                 </Box>
               </Box>
             </CardContent>
           </Card>
@@ -602,8 +711,8 @@ const EditarFormulario = () => {
                   formularioSeleccionado={formularioSeleccionado}
                   setFormularioSeleccionado={setFormularioSeleccionado}
                   handleReload={handleReload}
-                  puedeEditar={puedeEditarFormulario(formularioSeleccionado)}
-                  puedeEliminar={puedeEliminarFormulario(formularioSeleccionado)}
+                  puedeEditar={formularioSeleccionado ? puedeEditarFormulario(formularioSeleccionado) : false}
+                  puedeEliminar={formularioSeleccionado ? puedeEliminarFormulario(formularioSeleccionado) : false}
                 />
               )}
             </CardContent>

@@ -14,14 +14,18 @@ import {
   Delete as DeleteIcon,
   Edit as EditIcon
 } from "@mui/icons-material";
-import { collection, getDocs, deleteDoc, doc, query, where, onSnapshot } from "firebase/firestore";
+import { collection, getDocs, deleteDoc, doc, query, where, onSnapshot, updateDoc } from "firebase/firestore";
 import { db } from "../../../firebaseConfig";
 import { useAuth } from "../../context/AuthContext";
+import EditarSucursalModal from "./EditarSucursal";
 
 const ListaSucursales = ({ empresaId }) => {
   const [sucursales, setSucursales] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [openEditModal, setOpenEditModal] = useState(false);
+  const [sucursalEdit, setSucursalEdit] = useState(null);
+  const [editLoading, setEditLoading] = useState(false);
   const { userProfile, userEmpresas, role } = useAuth();
 
   // Suscripción reactiva a sucursales multi-tenant
@@ -99,6 +103,49 @@ const ListaSucursales = ({ empresaId }) => {
         console.error("[ListaSucursales] Error al eliminar sucursal:", error);
         setError("Error al eliminar la sucursal: " + error.message);
       }
+    }
+  };
+
+  const handleOpenEditModal = (sucursal) => {
+    setSucursalEdit(sucursal);
+    setOpenEditModal(true);
+  };
+
+  const handleCloseEditModal = () => {
+    setOpenEditModal(false);
+    setSucursalEdit(null);
+  };
+
+  const handleEditInputChange = (e) => {
+    const { name, value } = e.target;
+    setSucursalEdit((prevSucursal) => ({
+      ...prevSucursal,
+      [name]: value
+    }));
+  };
+
+  const handleEditSucursal = async () => {
+    if (!sucursalEdit.nombre.trim()) {
+      setError("El nombre de la sucursal es requerido");
+      return;
+    }
+
+    setEditLoading(true);
+    try {
+      await updateDoc(doc(db, "sucursales", sucursalEdit.id), {
+        nombre: sucursalEdit.nombre,
+        direccion: sucursalEdit.direccion,
+        telefono: sucursalEdit.telefono
+      });
+
+      setError(null);
+      setOpenEditModal(false);
+      setSucursalEdit(null);
+    } catch (error) {
+      console.error("[ListaSucursales] Error al actualizar sucursal:", error);
+      setError("Error al actualizar la sucursal: " + error.message);
+    } finally {
+      setEditLoading(false);
     }
   };
 
@@ -191,7 +238,7 @@ const ListaSucursales = ({ empresaId }) => {
                     <IconButton 
                       size="small" 
                       color="primary"
-                      disabled
+                      onClick={() => handleOpenEditModal(sucursal)}
                     >
                       <EditIcon />
                     </IconButton>
@@ -209,6 +256,17 @@ const ListaSucursales = ({ empresaId }) => {
             </Grid>
           ))}
         </Grid>
+      )}
+      
+      {openEditModal && sucursalEdit && (
+        <EditarSucursalModal
+          open={openEditModal}
+          handleClose={handleCloseEditModal}
+          handleEditSucursal={handleEditSucursal}
+          sucursal={sucursalEdit}
+          handleInputChange={handleEditInputChange}
+          loading={editLoading}
+        />
       )}
     </Box>
   );

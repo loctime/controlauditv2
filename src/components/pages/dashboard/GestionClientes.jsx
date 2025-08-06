@@ -139,7 +139,7 @@ const GestionClientes = () => {
       plan: cliente.plan || 'estandar',
       estadoPago: cliente.estadoPago || 'al_dia',
       fechaVencimiento: cliente.fechaVencimiento ? 
-        new Date(cliente.fechaVencimiento.toDate()).toISOString().split('T')[0] : '',
+        (cliente.fechaVencimiento.toDate ? new Date(cliente.fechaVencimiento.toDate()).toISOString().split('T')[0] : new Date(cliente.fechaVencimiento).toISOString().split('T')[0]) : '',
       esDemo: cliente.esDemo || false,
       activo: cliente.activo !== false
     });
@@ -186,7 +186,7 @@ const GestionClientes = () => {
   // Función para calcular el estado del semáforo
   const calcularSemaforo = (cliente) => {
     const hoy = new Date();
-    const fechaVencimiento = cliente.fechaVencimiento ? new Date(cliente.fechaVencimiento.toDate()) : null;
+    const fechaVencimiento = cliente.fechaVencimiento ? (cliente.fechaVencimiento.toDate ? new Date(cliente.fechaVencimiento.toDate()) : new Date(cliente.fechaVencimiento)) : null;
     const diasRestantes = fechaVencimiento ? Math.ceil((fechaVencimiento - hoy) / (1000 * 60 * 60 * 24)) : 0;
     
     if (!cliente.activo) return 'rojo';
@@ -376,16 +376,16 @@ const GestionClientes = () => {
           bValue = (b.estadoPago || 'al_dia').toLowerCase();
           break;
         case 'vencimiento':
-          aValue = a.fechaVencimiento ? a.fechaVencimiento.toDate() : new Date(0);
-          bValue = b.fechaVencimiento ? b.fechaVencimiento.toDate() : new Date(0);
+          aValue = a.fechaVencimiento ? (a.fechaVencimiento.toDate ? a.fechaVencimiento.toDate() : new Date(a.fechaVencimiento)) : new Date(0);
+          bValue = b.fechaVencimiento ? (b.fechaVencimiento.toDate ? b.fechaVencimiento.toDate() : new Date(b.fechaVencimiento)) : new Date(0);
           break;
                  case 'demo':
            aValue = a.esDemo ? 1 : 0;
            bValue = b.esDemo ? 1 : 0;
            break;
                    case 'creadoPor':
-            aValue = a.createdAt ? a.createdAt.toDate() : new Date(0);
-            bValue = b.createdAt ? b.createdAt.toDate() : new Date(0);
+            aValue = a.createdAt ? (a.createdAt.toDate ? a.createdAt.toDate() : a.createdAt) : new Date(0);
+            bValue = b.createdAt ? (b.createdAt.toDate ? b.createdAt.toDate() : b.createdAt) : new Date(0);
             break;
          default:
            aValue = a[orderBy] || '';
@@ -591,7 +591,7 @@ const GestionClientes = () => {
             <TableBody>
               {sortedClientes.map((cliente) => {
                 const fechaVencimiento = cliente.fechaVencimiento ? 
-                  new Date(cliente.fechaVencimiento.toDate()) : null;
+                  (cliente.fechaVencimiento.toDate ? new Date(cliente.fechaVencimiento.toDate()) : new Date(cliente.fechaVencimiento)) : null;
                 const diasRestantes = fechaVencimiento ? 
                   Math.ceil((fechaVencimiento - new Date()) / (1000 * 60 * 60 * 24)) : 0;
                 
