@@ -253,14 +253,14 @@ const ReportesPage = () => {
     if (fechaDesde) {
       filtered = filtered.filter(reporte => {
         const fechaReporte = new Date(reporte.fechaCreacion);
-        return fechaReporte >= fechaDesde.toDate();
+        return fechaReporte >= (fechaDesde.toDate ? fechaDesde.toDate() : new Date(fechaDesde));
       });
     }
 
     if (fechaHasta) {
       filtered = filtered.filter(reporte => {
         const fechaReporte = new Date(reporte.fechaCreacion);
-        return fechaReporte <= fechaHasta.toDate();
+        return fechaReporte <= (fechaHasta.toDate ? fechaHasta.toDate() : new Date(fechaHasta));
       });
     }
 

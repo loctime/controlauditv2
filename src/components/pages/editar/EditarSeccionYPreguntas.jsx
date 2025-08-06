@@ -37,6 +37,7 @@ import Swal from 'sweetalert2';
 import Tooltip from '@mui/material/Tooltip';
 import clsx from 'clsx';
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../../context/AuthContext";
 
 const ESTADOS = [
   { value: 'activo', label: 'Activo' },
@@ -148,7 +149,10 @@ const SeccionItem = memo(({
                           <IconButton 
                             size="small" 
                             color="primary" 
-                            onClick={() => onEditarPregunta({ pregunta, seccionNombre: seccion.nombre, index: preguntaIndex })}
+                            onClick={() => {
+                              console.log('🔧 [DEBUG] Click en icono editar pregunta:', { pregunta, seccionNombre: seccion.nombre, index: preguntaIndex });
+                              onEditarPregunta({ pregunta, seccionNombre: seccion.nombre, index: preguntaIndex });
+                            }}
                             sx={{ opacity: 0.7, ':hover': { opacity: 1 } }}
                           >
                             <EditIcon fontSize="small" />
@@ -227,15 +231,16 @@ const EditarSeccionYPreguntas = ({
   puedeEliminar = true 
 }) => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [modalEditarFormularioAbierto, setModalEditarFormularioAbierto] = useState(false);
   const [modalEditarSeccionAbierto, setModalEditarSeccionAbierto] = useState(false);
   const [modalEditarPreguntaAbierto, setModalEditarPreguntaAbierto] = useState(false);
   const [modalAgregarPreguntaAbierto, setModalAgregarPreguntaAbierto] = useState(false);
   const [accordionOpen, setAccordionOpen] = useState(false);
-  const [nuevoNombreFormulario, setNuevoNombreFormulario] = useState(formularioSeleccionado.nombre || '');
-  const [nuevoEstado, setNuevoEstado] = useState(formularioSeleccionado.estado || 'activo');
-  const [nuevaVersion, setNuevaVersion] = useState(formularioSeleccionado.version || '1.0');
-  const [nuevoEsPublico, setNuevoEsPublico] = useState(!!formularioSeleccionado.esPublico);
+  const [nuevoNombreFormulario, setNuevoNombreFormulario] = useState(formularioSeleccionado?.nombre || '');
+  const [nuevoEstado, setNuevoEstado] = useState(formularioSeleccionado?.estado || 'activo');
+  const [nuevaVersion, setNuevaVersion] = useState(formularioSeleccionado?.version || '1.0');
+  const [nuevoEsPublico, setNuevoEsPublico] = useState(!!formularioSeleccionado?.esPublico);
   const [nuevoNombreSeccion, setNuevoNombreSeccion] = useState('');
   const [nuevoTextoPregunta, setNuevoTextoPregunta] = useState('');
   const [nuevaPregunta, setNuevaPregunta] = useState('');
@@ -270,8 +275,8 @@ const EditarSeccionYPreguntas = ({
 
   // ✅ Obtener secciones normalizadas con memoización
   const seccionesNormalizadas = useMemo(() => {
-    return normalizarSecciones(formularioSeleccionado.secciones);
-  }, [formularioSeleccionado.secciones, normalizarSecciones]);
+    return normalizarSecciones(formularioSeleccionado?.secciones);
+  }, [formularioSeleccionado?.secciones, normalizarSecciones]);
 
   // ✅ Calcular estadísticas con memoización
   const estadisticas = useMemo(() => {
@@ -282,6 +287,8 @@ const EditarSeccionYPreguntas = ({
 
   // ✅ Cache del formulario en localStorage
   const cacheFormulario = useCallback(() => {
+    if (!formularioSeleccionado?.id) return;
+    
     try {
       const cacheKey = `formulario_${formularioSeleccionado.id}`;
       const cacheData = {
@@ -298,6 +305,8 @@ const EditarSeccionYPreguntas = ({
 
   // ✅ Recuperar formulario del cache
   const recuperarFormularioCache = useCallback(() => {
+    if (!formularioSeleccionado?.id) return null;
+    
     try {
       const cacheKey = `formulario_${formularioSeleccionado.id}`;
       const cached = localStorage.getItem(cacheKey);
@@ -315,11 +324,11 @@ const EditarSeccionYPreguntas = ({
       console.warn('⚠️ Error al recuperar cache:', error);
     }
     return null;
-  }, [formularioSeleccionado.id]);
+  }, [formularioSeleccionado?.id]);
 
   // ✅ Cachear formulario cuando cambie
   React.useEffect(() => {
-    if (formularioSeleccionado && seccionesNormalizadas.length > 0) {
+    if (formularioSeleccionado?.id && seccionesNormalizadas.length > 0) {
       cacheFormulario();
     }
   }, [formularioSeleccionado, seccionesNormalizadas, cacheFormulario]);
@@ -335,8 +344,58 @@ const EditarSeccionYPreguntas = ({
     });
   }, [formularioSeleccionado, seccionesNormalizadas, estadisticas]);
 
+  // ✅ Debug para el modal de editar pregunta
+  React.useEffect(() => {
+    console.log('🔧 [DEBUG] modalEditarPreguntaAbierto cambió a:', modalEditarPreguntaAbierto);
+    if (modalEditarPreguntaAbierto) {
+      console.log('🔧 [DEBUG] Modal de editar pregunta ABIERTO');
+      console.log('🔧 [DEBUG] preguntaSeleccionada:', preguntaSeleccionada);
+      console.log('🔧 [DEBUG] nuevoTextoPregunta:', nuevoTextoPregunta);
+    }
+  }, [modalEditarPreguntaAbierto, preguntaSeleccionada, nuevoTextoPregunta]);
+
+  // ✅ Debug de props recibidas
+  React.useEffect(() => {
+    console.log('🔧 [DEBUG] EditarSeccionYPreguntas props:', {
+      formularioSeleccionado: formularioSeleccionado?.id,
+      puedeEditar,
+      puedeEliminar,
+      seccionesNormalizadas: seccionesNormalizadas?.length
+    });
+  }, [formularioSeleccionado, puedeEditar, puedeEliminar, seccionesNormalizadas]);
+
+  // ✅ Validar que hay un formulario seleccionado
+  if (!formularioSeleccionado || !formularioSeleccionado.id) {
+    return (
+      <Box sx={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        minHeight: '200px',
+        bgcolor: 'background.paper',
+        borderRadius: 2,
+        border: '1px solid',
+        borderColor: 'divider'
+      }}>
+        <Box sx={{ textAlign: 'center' }}>
+          <Typography variant="h6" color="text.secondary" sx={{ mb: 2 }}>
+            📝 Selecciona un formulario para editar
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            Usa el selector de arriba para elegir un formulario
+          </Typography>
+        </Box>
+      </Box>
+    );
+  }
+
   const handleGuardarCambiosFormulario = useCallback(async () => {
     if (!puedeEditar) {
+      console.log('[DEBUG] Usuario no tiene permisos para editar:', {
+        puedeEditar,
+        formularioId: formularioSeleccionado?.id,
+        usuarioId: user?.uid
+      });
       Swal.fire("Error", "No tienes permisos para editar este formulario.", "error");
       return;
     }
@@ -398,13 +457,21 @@ const EditarSeccionYPreguntas = ({
   }, [puedeEditar, seccionSeleccionada, seccionesNormalizadas, nuevoNombreSeccion, formularioSeleccionado.id, setFormularioSeleccionado]);
 
   const handleGuardarCambiosPregunta = useCallback(async () => {
+    console.log('🔧 [DEBUG] handleGuardarCambiosPregunta llamado');
+    console.log('🔧 [DEBUG] puedeEditar:', puedeEditar);
+    console.log('🔧 [DEBUG] preguntaSeleccionada:', preguntaSeleccionada);
+    console.log('🔧 [DEBUG] nuevoTextoPregunta:', nuevoTextoPregunta);
+    console.log('🔧 [DEBUG] seccionesNormalizadas:', seccionesNormalizadas);
+    
     if (!puedeEditar) {
+      console.log('🔧 [DEBUG] Usuario no tiene permisos para editar');
       Swal.fire("Error", "No tienes permisos para editar este formulario.", "error");
       return;
     }
 
     try {
       if (!preguntaSeleccionada) {
+        console.log('🔧 [DEBUG] No hay pregunta seleccionada');
         Swal.fire("Error", "No se ha seleccionado ninguna pregunta.", "error");
         return;
       }
@@ -419,11 +486,17 @@ const EditarSeccionYPreguntas = ({
         return seccion;
       });
 
+      console.log('🔧 [DEBUG] Secciones actualizadas:', seccionesActualizadas);
+      console.log('🔧 [DEBUG] Formulario ID:', formularioSeleccionado.id);
+
       const formularioRef = doc(db, "formularios", formularioSeleccionado.id);
       await updateDoc(formularioRef, { 
         secciones: seccionesActualizadas,
         ultimaModificacion: new Date()
       });
+      
+      console.log('🔧 [DEBUG] Documento actualizado en Firestore exitosamente');
+      
       setFormularioSeleccionado(prev => ({ ...prev, secciones: seccionesActualizadas }));
       setModalEditarPreguntaAbierto(false);
       Swal.fire("Éxito", "Pregunta actualizada exitosamente.", "success");
@@ -434,13 +507,21 @@ const EditarSeccionYPreguntas = ({
   }, [puedeEditar, preguntaSeleccionada, seccionesNormalizadas, nuevoTextoPregunta, formularioSeleccionado.id, setFormularioSeleccionado]);
 
   const handleGuardarNuevaPregunta = useCallback(async () => {
+    console.log('🔧 [DEBUG] handleGuardarNuevaPregunta llamado');
+    console.log('🔧 [DEBUG] puedeEditar:', puedeEditar);
+    console.log('🔧 [DEBUG] seccionSeleccionada:', seccionSeleccionada);
+    console.log('🔧 [DEBUG] nuevaPregunta:', nuevaPregunta);
+    console.log('🔧 [DEBUG] seccionesNormalizadas:', seccionesNormalizadas);
+    
     if (!puedeEditar) {
+      console.log('🔧 [DEBUG] Usuario no tiene permisos para editar');
       Swal.fire("Error", "No tienes permisos para editar este formulario.", "error");
       return;
     }
 
     try {
       if (!seccionSeleccionada) {
+        console.log('🔧 [DEBUG] No hay sección seleccionada');
         Swal.fire("Error", "Sección no proporcionada.", "error");
         return;
       }
@@ -453,11 +534,17 @@ const EditarSeccionYPreguntas = ({
         return seccion;
       });
 
+      console.log('🔧 [DEBUG] Secciones actualizadas:', seccionesActualizadas);
+      console.log('🔧 [DEBUG] Formulario ID:', formularioSeleccionado.id);
+
       const formularioRef = doc(db, "formularios", formularioSeleccionado.id);
       await updateDoc(formularioRef, { 
         secciones: seccionesActualizadas,
         ultimaModificacion: new Date()
       });
+      
+      console.log('🔧 [DEBUG] Documento actualizado en Firestore exitosamente');
+      
       setFormularioSeleccionado(prev => ({ ...prev, secciones: seccionesActualizadas }));
       setModalAgregarPreguntaAbierto(false);
       setNuevaPregunta('');
@@ -532,7 +619,14 @@ const EditarSeccionYPreguntas = ({
   }, [puedeEliminar, seccionesNormalizadas, formularioSeleccionado.id, setFormularioSeleccionado]);
 
   const handleEliminarPregunta = useCallback(async (indexPregunta, nombreSeccion) => {
+    console.log('🔧 [DEBUG] handleEliminarPregunta llamado');
+    console.log('🔧 [DEBUG] puedeEliminar:', puedeEliminar);
+    console.log('🔧 [DEBUG] indexPregunta:', indexPregunta);
+    console.log('🔧 [DEBUG] nombreSeccion:', nombreSeccion);
+    console.log('🔧 [DEBUG] seccionesNormalizadas:', seccionesNormalizadas);
+    
     if (!puedeEliminar) {
+      console.log('🔧 [DEBUG] Usuario no tiene permisos para eliminar');
       Swal.fire("Error", "No tienes permisos para eliminar preguntas.", "error");
       return;
     }
@@ -557,11 +651,17 @@ const EditarSeccionYPreguntas = ({
           return seccion;
         });
 
+        console.log('🔧 [DEBUG] Secciones actualizadas:', seccionesActualizadas);
+        console.log('🔧 [DEBUG] Formulario ID:', formularioSeleccionado.id);
+
         const formularioRef = doc(db, "formularios", formularioSeleccionado.id);
         await updateDoc(formularioRef, { 
           secciones: seccionesActualizadas,
           ultimaModificacion: new Date()
         });
+        
+        console.log('🔧 [DEBUG] Documento actualizado en Firestore exitosamente');
+        
         setFormularioSeleccionado(prev => ({ ...prev, secciones: seccionesActualizadas }));
         Swal.fire("Eliminado", "Pregunta eliminada exitosamente.", "success");
       } catch (error) {
@@ -584,10 +684,18 @@ const EditarSeccionYPreguntas = ({
   }, []);
 
   const handleEditarPregunta = useCallback((preguntaData) => {
+    console.log('🔧 [DEBUG] handleEditarPregunta llamado con:', preguntaData);
+    console.log('🔧 [DEBUG] puedeEditar:', puedeEditar);
+    console.log('🔧 [DEBUG] modalEditarPreguntaAbierto antes:', modalEditarPreguntaAbierto);
+    
     setPreguntaSeleccionada(preguntaData);
     setNuevoTextoPregunta(preguntaData.pregunta);
     setModalEditarPreguntaAbierto(true);
-  }, []);
+    
+    console.log('🔧 [DEBUG] Estados actualizados - preguntaSeleccionada:', preguntaData);
+    console.log('🔧 [DEBUG] Estados actualizados - nuevoTextoPregunta:', preguntaData.pregunta);
+    console.log('🔧 [DEBUG] Estados actualizados - modalEditarPreguntaAbierto: true');
+  }, [puedeEditar, modalEditarPreguntaAbierto]);
 
   return (
     <div>
@@ -717,7 +825,10 @@ const EditarSeccionYPreguntas = ({
 
       <Modal
         open={modalEditarPreguntaAbierto}
-        onClose={() => setModalEditarPreguntaAbierto(false)}
+        onClose={() => {
+          console.log('🔧 [DEBUG] Cerrando modal editar pregunta');
+          setModalEditarPreguntaAbierto(false);
+        }}
       >
         <Box sx={{ ...style, width: 400 }}>
           <Typography variant="h6">Editar Pregunta</Typography>

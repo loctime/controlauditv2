@@ -116,7 +116,7 @@ function Dashboard() {
               usuariosMaximos: cliente.limiteUsuarios || 10,
               estadoPago: cliente.estadoPago || 'al_dia',
               fechaVencimiento: cliente.fechaVencimiento ? 
-                cliente.fechaVencimiento.toDate().toISOString().split('T')[0] : 
+                (cliente.fechaVencimiento.toDate ? cliente.fechaVencimiento.toDate().toISOString().split('T')[0] : new Date(cliente.fechaVencimiento).toISOString().split('T')[0]) : 
                 new Date().toISOString().split('T')[0],
               propietarioEmail: cliente.email || 'N/A'
             };

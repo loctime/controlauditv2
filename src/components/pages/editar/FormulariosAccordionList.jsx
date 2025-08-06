@@ -16,12 +16,16 @@ import {
   alpha,
   Card,
   CardContent,
-  IconButton
+  IconButton,
+  Alert
 } from "@mui/material";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import EditIcon from "@mui/icons-material/Edit";
 import PublicIcon from '@mui/icons-material/Public';
 import SearchIcon from '@mui/icons-material/Search';
+import { doc, updateDoc } from "firebase/firestore";
+import { db } from "../../../firebaseConfig";
+import EditarFormularioModal from "./EditarFormularioModal";
 
 /**
  * Lista de formularios en modo acordeón expandible.
@@ -37,6 +41,10 @@ const FormulariosAccordionList = ({ formularios, onEditar, formularioSeleccionad
   
   const lastClickedRef = useRef(null);
   const [busqueda, setBusqueda] = useState("");
+  const [openEditModal, setOpenEditModal] = useState(false);
+  const [formularioEdit, setFormularioEdit] = useState(null);
+  const [editLoading, setEditLoading] = useState(false);
+  const [error, setError] = useState(null);
 
   const handleEditar = (id) => {
     console.debug(`[FormulariosAccordionList] Editar formulario: ${id}`);
@@ -44,6 +52,59 @@ const FormulariosAccordionList = ({ formularios, onEditar, formularioSeleccionad
     setTimeout(() => {
       if (scrollToEdicion) scrollToEdicion();
     }, 300); // Espera para asegurar el render
+  };
+
+  const handleOpenEditModal = (formulario) => {
+    setFormularioEdit(formulario);
+    setOpenEditModal(true);
+    setError(null);
+  };
+
+  const handleCloseEditModal = () => {
+    setOpenEditModal(false);
+    setFormularioEdit(null);
+    setError(null);
+  };
+
+  const handleEditInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormularioEdit((prevFormulario) => {
+      const updated = { ...prevFormulario, [name]: value };
+      
+      // Manejar campos especiales
+      if (name === 'esPublico') {
+        updated.esPublico = value === 'publico';
+      }
+      
+      return updated;
+    });
+  };
+
+  const handleEditFormulario = async () => {
+    if (!formularioEdit.nombre.trim()) {
+      setError("El nombre del formulario es requerido");
+      return;
+    }
+
+    setEditLoading(true);
+    try {
+      await updateDoc(doc(db, "formularios", formularioEdit.id), {
+        nombre: formularioEdit.nombre,
+        estado: formularioEdit.estado,
+        version: formularioEdit.version,
+        esPublico: formularioEdit.esPublico,
+        ultimaModificacion: new Date()
+      });
+
+      setError(null);
+      setOpenEditModal(false);
+      setFormularioEdit(null);
+    } catch (error) {
+      console.error("[FormulariosAccordionList] Error al actualizar formulario:", error);
+      setError("Error al actualizar el formulario: " + error.message);
+    } finally {
+      setEditLoading(false);
+    }
   };
 
   // Filtro de formularios por nombre, propietario o preguntas
@@ -241,30 +302,60 @@ const FormulariosAccordionList = ({ formularios, onEditar, formularioSeleccionad
                     </Box>
                   </Box>
                   
-                  {/* Botón de editar */}
-                  <Button
-                    variant={formularioSeleccionadoId === formulario.id ? "contained" : "outlined"}
-                    color="primary"
-                    size={isSmallMobile ? "small" : "medium"}
-                    startIcon={<EditIcon />}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleEditar(formulario.id);
-                    }}
-                    sx={{ 
-                      minWidth: isMobile ? '100%' : 120,
-                      fontWeight: 600,
-                      borderRadius: 2,
-                      '&:hover': {
-                        transform: 'translateY(-1px)',
-                        boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                  {/* Botones de acción */}
+                  <Box sx={{ 
+                    display: 'flex', 
+                    flexDirection: isMobile ? 'column' : 'row',
+                    gap: 1,
+                    minWidth: isMobile ? '100%' : 'auto'
+                  }}>
+                    <Button
+                      variant={formularioSeleccionadoId === formulario.id ? "contained" : "outlined"}
+                      color="primary"
+                      size={isSmallMobile ? "small" : "medium"}
+                      startIcon={<EditIcon />}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleEditar(formulario.id);
+                      }}
+                      sx={{ 
+                        minWidth: isMobile ? '100%' : 120,
+                        fontWeight: 600,
+                        borderRadius: 2,
+                        '&:hover': {
+                          transform: 'translateY(-1px)',
+                          boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                          transition: 'all 0.2s ease'
+                        },
                         transition: 'all 0.2s ease'
-                      },
-                      transition: 'all 0.2s ease'
-                    }}
-                  >
-                    ✏️ Editar
-                  </Button>
+                      }}
+                    >
+                      ✏️ Editar
+                    </Button>
+                    
+                    <Button
+                      variant="outlined"
+                      color="secondary"
+                      size={isSmallMobile ? "small" : "medium"}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleOpenEditModal(formulario);
+                      }}
+                      sx={{ 
+                        minWidth: isMobile ? '100%' : 120,
+                        fontWeight: 600,
+                        borderRadius: 2,
+                        '&:hover': {
+                          transform: 'translateY(-1px)',
+                          boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                          transition: 'all 0.2s ease'
+                        },
+                        transition: 'all 0.2s ease'
+                      }}
+                    >
+                      ⚙️ Configurar
+                    </Button>
+                  </Box>
                 </Box>
               </AccordionSummary>
               
@@ -384,6 +475,23 @@ const FormulariosAccordionList = ({ formularios, onEditar, formularioSeleccionad
           </Card>
         ))}
       </Box>
+      
+      {error && (
+        <Alert severity="error" sx={{ mt: 2 }}>
+          {error}
+        </Alert>
+      )}
+      
+      {openEditModal && formularioEdit && (
+        <EditarFormularioModal
+          open={openEditModal}
+          handleClose={handleCloseEditModal}
+          handleEditFormulario={handleEditFormulario}
+          formulario={formularioEdit}
+          handleInputChange={handleEditInputChange}
+          loading={editLoading}
+        />
+      )}
     </Box>
   );
 };

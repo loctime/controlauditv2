@@ -487,7 +487,7 @@ const EstablecimientosContainer = () => {
                     }}>
                       <CalendarTodayIcon sx={{ fontSize: isSmallMobile ? 16 : 20, color: 'text.secondary' }} />
                       <Typography variant="body2" color="text.secondary">
-                        Creada: {new Date(empresa.createdAt.toDate()).toLocaleDateString()}
+                        Creada: {new Date(empresa.createdAt.toDate ? empresa.createdAt.toDate() : empresa.createdAt).toLocaleDateString()}
                       </Typography>
                     </Box>
                   )}
@@ -636,7 +636,7 @@ const EstablecimientosContainer = () => {
                       )}
                       {empresa.createdAt && (
                         <Typography variant="body2" color="text.secondary">
-                          Creada: {new Date(empresa.createdAt.toDate()).toLocaleDateString()}
+                          Creada: {new Date(empresa.createdAt.toDate ? empresa.createdAt.toDate() : empresa.createdAt).toLocaleDateString()}
                         </Typography>
                       )}
                     </Box>
