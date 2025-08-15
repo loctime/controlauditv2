@@ -2,7 +2,7 @@ import { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
   appId: 'com.controlaudit.app',
-  appName: 'Control de Auditorías',
+  appName: 'ControlAudit',
   webDir: 'dist',
   server: {
     androidScheme: 'https'
