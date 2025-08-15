@@ -61,12 +61,15 @@ Para información detallada sobre:
 
 📖 **Ver [Documentación Consolidada](DOCUMENTACION_CONSOLIDADA.md)**
 
+📱 **Ver [Configuración Capacitor](CAPACITOR_SETUP.md)**
+
 ## 🛠️ **Tecnologías**
 
 - **Frontend**: React + Vite + Material-UI
 - **Backend**: Firebase (Auth, Firestore, Storage)
 - **Almacenamiento**: Backblaze B2 (opcional)
 - **Despliegue**: Render + Cloudflare
+- **Móvil**: Capacitor (Android/iOS)
 
 ## 📁 **Estructura del Proyecto**
 
@@ -101,6 +104,12 @@ npm run preview
 
 # Linting
 npm run lint
+
+# Capacitor - App Móvil
+npm run cap:build          # Construir y sincronizar con móvil
+npm run cap:sync           # Sincronizar cambios
+npm run cap:open:android   # Abrir en Android Studio
+npm run cap:run:android    # Ejecutar en Android
 ```
 
 ## 🔧 **Configuración Avanzada**
@@ -125,6 +134,7 @@ VITE_B2_BUCKET_NAME=tu_bucket_name
 - ✅ **Roles**: Sistema de permisos funcional
 - ✅ **Auditorías**: Flujo completo implementado
 - ✅ **Reportes**: Generación de PDF funcional
+- ✅ **App Móvil**: Capacitor configurado y listo
 - 🔄 **Mejoras**: En desarrollo continuo
 
 ## 🤝 **Contribución**
