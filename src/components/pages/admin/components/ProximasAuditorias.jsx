@@ -59,7 +59,7 @@ const ProximasAuditorias = ({ auditoriasPendientes }) => {
   return (
     <Box sx={{
       ...mobileBoxStyle,
-      backgroundColor: '#f8f9fa',
+      backgroundColor: theme.palette.mode === 'dark' ? theme.palette.background.default : '#f8f9fa',
       mb: isMobile ? 2 : 3
     }}>
       <Box sx={{ 

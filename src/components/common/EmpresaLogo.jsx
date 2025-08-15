@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box } from '@mui/material';
+import { Box, useTheme } from '@mui/material';
 import PropTypes from 'prop-types';
 
 const EmpresaLogo = ({ 
@@ -10,20 +10,22 @@ const EmpresaLogo = ({
   fontSize = "16px",
   showBorder = true 
 }) => {
+  const theme = useTheme();
+
   if (!logo || logo.trim() === "") {
     return (
       <Box
         sx={{
           width,
           height,
-          backgroundColor: "#f0f0f0",
+          backgroundColor: theme.palette.mode === 'dark' ? theme.palette.grey[800] : "#f0f0f0",
           borderRadius: "4px",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
           fontSize,
-          color: "#666",
-          border: showBorder ? "2px dashed #ccc" : "none"
+          color: theme.palette.mode === 'dark' ? theme.palette.text.secondary : "#666",
+          border: showBorder ? `2px dashed ${theme.palette.divider}` : "none"
         }}
       >
         {nombre ? nombre.charAt(0).toUpperCase() : "E"}
@@ -45,17 +47,18 @@ const EmpresaLogo = ({
         e.target.style.display = 'none';
         // Mostrar el fallback cuando la imagen falla
         const fallback = document.createElement('div');
+        const isDark = theme.palette.mode === 'dark';
         fallback.style.cssText = `
           width: ${width};
           height: ${height};
-          background-color: #f0f0f0;
+          background-color: ${isDark ? theme.palette.grey[800] : '#f0f0f0'};
           border-radius: 4px;
           display: flex;
           align-items: center;
           justify-content: center;
           font-size: ${fontSize};
-          color: #666;
-          border: ${showBorder ? '2px dashed #ccc' : 'none'};
+          color: ${isDark ? theme.palette.text.secondary : '#666'};
+          border: ${showBorder ? `2px dashed ${theme.palette.divider}` : 'none'};
         `;
         fallback.textContent = nombre ? nombre.charAt(0).toUpperCase() : "E";
         e.target.parentNode.appendChild(fallback);
