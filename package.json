@@ -27,7 +27,9 @@
     "cap:open:android": "npx cap open android",
     "cap:open:ios": "npx cap open ios",
     "cap:run:android": "npx cap run android",
-    "cap:run:ios": "npx cap run ios"
+    "cap:run:ios": "npx cap run ios",
+    "fer": "npm run build && npx cap sync",
+    "die": "concurrently \"npm run dev\" \"npm run backend:dev\" && npm run build && npx cap sync"
   },
   "dependencies": {
     "@capacitor/android": "^7.4.2",
