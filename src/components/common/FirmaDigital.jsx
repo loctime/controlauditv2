@@ -1,24 +1,19 @@
-import React, { useState } from 'react';
-import {
-  Box,
-  Button,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Typography,
-  Paper,
-  IconButton,
-  Tooltip,
-  Alert
+import React, { useState, useContext } from 'react';
+import { 
+  Button, 
+  Dialog, 
+  DialogTitle, 
+  DialogContent, 
+  DialogActions, 
+  Typography, 
+  Box, 
+  Paper, 
+  IconButton, 
+  Alert,
+  useTheme
 } from '@mui/material';
-import {
-  Edit as EditIcon,
-  Check as CheckIcon,
-  Close as CloseIcon,
-  Signature as SignatureIcon
-} from '@mui/icons-material';
-import { useAuth } from '../context/AuthContext';
+import { Check as CheckIcon, Close as CloseIcon } from '@mui/icons-material';
+import { AuthContext } from '../context/AuthContext';
 
 const FirmaDigital = ({ 
   onFirmar, 
@@ -28,33 +23,30 @@ const FirmaDigital = ({
   variant = 'contained',
   children 
 }) => {
-  const { userProfile } = useAuth();
+  const { userProfile } = useContext(AuthContext);
   const [openDialog, setOpenDialog] = useState(false);
-  const [firmaSeleccionada, setFirmaSeleccionada] = useState('');
+  const [firmaSeleccionada, setFirmaSeleccionada] = useState(null);
+  const theme = useTheme();
 
   const handleFirmar = () => {
     if (!userProfile?.firmaDigital) {
       setOpenDialog(true);
-      return;
-    }
-    
-    // Si ya tiene firma, usar directamente
-    if (onFirmar) {
+    } else {
       onFirmar(userProfile.firmaDigital);
     }
   };
 
   const handleConfirmarFirma = () => {
-    if (firmaSeleccionada && onFirmar) {
+    if (firmaSeleccionada) {
       onFirmar(firmaSeleccionada);
       setOpenDialog(false);
-      setFirmaSeleccionada('');
+      setFirmaSeleccionada(null);
     }
   };
 
   const handleCancelar = () => {
     setOpenDialog(false);
-    setFirmaSeleccionada('');
+    setFirmaSeleccionada(null);
   };
 
   const getButtonSize = () => {
@@ -73,47 +65,30 @@ const FirmaDigital = ({
     }
   };
 
-  if (!userProfile?.firmaDigital && !showPreview) {
-    return (
+  return (
+    <>
       <Button
         variant={getButtonVariant()}
         size={getButtonSize()}
-        startIcon={<SignatureIcon />}
         onClick={handleFirmar}
         disabled={disabled}
-        color="warning"
+        startIcon={<CheckIcon />}
       >
-        Configurar Firma
+        {children || 'Firmar'}
       </Button>
-    );
-  }
 
-  return (
-    <>
-      {children || (
-        <Button
-          variant={getButtonVariant()}
-          size={getButtonSize()}
-          startIcon={<SignatureIcon />}
-          onClick={handleFirmar}
-          disabled={disabled}
-        >
-          Firmar Documento
-        </Button>
-      )}
-
-      {/* Preview de firma si está habilitado */}
+      {/* Vista previa de la firma */}
       {showPreview && userProfile?.firmaDigital && (
-        <Box sx={{ mt: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1 }}>
           <Typography variant="caption" color="text.secondary">
-            Firma configurada:
+            Firma:
           </Typography>
           <Paper 
             elevation={1} 
             sx={{ 
               p: 0.5, 
-              border: '1px solid #e0e0e0',
-              backgroundColor: '#fafafa',
+              border: `1px solid ${theme.palette.divider}`,
+              backgroundColor: theme.palette.mode === 'dark' ? theme.palette.background.paper : '#fafafa',
               maxWidth: 100,
               maxHeight: 40
             }}
@@ -166,12 +141,12 @@ const FirmaDigital = ({
                   p: 2, 
                   mb: 2, 
                   border: firmaSeleccionada === userProfile.firmaDigital ? '2px solid #1976d2' : '2px dashed #ccc',
-                  backgroundColor: '#fafafa',
+                  backgroundColor: theme.palette.mode === 'dark' ? theme.palette.background.paper : '#fafafa',
                   cursor: 'pointer',
                   transition: 'all 0.2s',
                   '&:hover': {
                     borderColor: '#1976d2',
-                    backgroundColor: '#f0f8ff'
+                    backgroundColor: theme.palette.mode === 'dark' ? theme.palette.action.hover : '#f0f8ff'
                   }
                 }}
                 onClick={() => setFirmaSeleccionada(userProfile.firmaDigital)}

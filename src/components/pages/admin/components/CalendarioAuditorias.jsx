@@ -6,7 +6,8 @@ import {
   Grid, 
   Paper, 
   IconButton,
-  Chip
+  Chip,
+  useTheme
 } from "@mui/material";
 import { CalendarToday } from "@mui/icons-material";
 
@@ -16,6 +17,7 @@ const CalendarioAuditorias = React.memo(({
   selectedDate,
   canAgendarAuditorias = true // ✅ Prop para validar permisos
 }) => {
+  const theme = useTheme();
   const [currentMonth, setCurrentMonth] = useState(new Date());
   
   // ✅ Memoizar el cálculo de días del mes
@@ -104,7 +106,8 @@ const CalendarioAuditorias = React.memo(({
               p: 1, 
               textAlign: 'center', 
               fontWeight: 'bold',
-              bgcolor: 'grey.100',
+              bgcolor: theme.palette.mode === 'dark' ? theme.palette.grey[800] : 'grey.100',
+              color: theme.palette.mode === 'dark' ? 'text.primary' : 'text.primary',
               borderRadius: 1
             }}>
               {day}
@@ -125,13 +128,13 @@ const CalendarioAuditorias = React.memo(({
                   p: 1,
                   minHeight: 60,
                   minWidth: '40px',
-                  border: day ? '1px solid #e0e0e0' : 'none',
+                  border: day ? `1px solid ${theme.palette.divider}` : 'none',
                   borderRadius: 1,
                   cursor: day && canAgendarAuditorias ? 'pointer' : 'default',
                   bgcolor: isSelected ? 'primary.light' : 'transparent',
-                  color: isSelected ? 'white' : 'inherit',
+                  color: isSelected ? 'white' : 'text.primary',
                   '&:hover': day && canAgendarAuditorias ? {
-                    bgcolor: isSelected ? 'primary.main' : 'grey.100'
+                    bgcolor: isSelected ? 'primary.main' : theme.palette.mode === 'dark' ? 'grey.700' : 'grey.100'
                   } : {},
                   position: 'relative',
                   opacity: day && !canAgendarAuditorias ? 0.6 : 1,

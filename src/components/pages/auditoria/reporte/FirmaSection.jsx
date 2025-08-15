@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useContext } from "react";
 import Firma from "./Firma";
 import ResumenAuditoriaModal from "./ResumenAuditoriaModal";
 import { 
@@ -15,13 +15,15 @@ import {
   Paper,
   TextField,
   Card,
-  CardContent
+  CardContent,
+  useTheme
 } from "@mui/material";
-import { CheckCircle, Edit, Person, Visibility, Save, Clear, Upload } from "@mui/icons-material";
+import { CheckCircle, Edit, Person, Visibility, Save, Clear, Upload, Download } from "@mui/icons-material";
 import { useAuth } from "../../../context/AuthContext";
 import SignaturePad from 'react-signature-canvas';
 import Swal from 'sweetalert2';
 import './ReportesPage.css'; // Asegúrate de que la clase CSS esté disponible
+import FirmaDigital from '../../../common/FirmaDigital';
 
 const capitalizeWords = (str) => {
   return str.replace(/\b\w+/g, (word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase());
@@ -41,7 +43,9 @@ const FirmaSection = ({
   secciones,
   encargado
 }) => {
-  const { userProfile, updateUserProfile } = useAuth();
+  const { userProfile } = useContext(AuthContext);
+  const theme = useTheme();
+  const sigPadRef = useRef(null);
   const [firmaAuditorURL, setFirmaAuditorURL] = useState(firmaAuditor);
   const [firmaResponsableURL, setFirmaResponsableURL] = useState(firmaResponsable);
   const [firmaAuditorAutoAplicada, setFirmaAuditorAutoAplicada] = useState(false);
@@ -54,7 +58,6 @@ const FirmaSection = ({
   const [telefono, setTelefono] = useState(userProfile?.telefono || '');
   const [isSaving, setIsSaving] = useState(false);
   const [signatureData, setSignatureData] = useState('');
-  const sigPadRef = useRef(null);
 
   // Aplicar automáticamente la firma del auditor si tiene una configurada
   useEffect(() => {
@@ -121,13 +124,13 @@ const FirmaSection = ({
       
       const nombreFormateado = capitalizeWords(nombre.trim());
       
-      await updateUserProfile({
-        firmaDigital: signatureDataUrl,
-        firmaActualizada: new Date().toISOString(),
-        nombre: nombreFormateado,
-        dni: dni.trim(),
-        telefono: telefono.trim()
-      });
+      // await updateUserProfile({ // This line was removed as per the new_code
+      //   firmaDigital: signatureDataUrl,
+      //   firmaActualizada: new Date().toISOString(),
+      //   nombre: nombreFormateado,
+      //   dni: dni.trim(),
+      //   telefono: telefono.trim()
+      // });
       
       // Aplicar la firma inmediatamente
       setFirmaAuditorURL(signatureDataUrl);
@@ -444,8 +447,8 @@ const FirmaSection = ({
                   <Paper 
                     elevation={2} 
                     sx={{ 
-                      border: '2px solid #e0e0e0',
-                      backgroundColor: '#fff',
+                      border: `2px solid ${theme.palette.divider}`,
+                      backgroundColor: theme.palette.mode === 'dark' ? theme.palette.background.paper : '#fff',
                       mb: 2
                     }}
                   >
@@ -456,7 +459,7 @@ const FirmaSection = ({
                         height: 200,
                         className: 'signature-canvas'
                       }}
-                      backgroundColor="#ffffff"
+                      backgroundColor={theme.palette.mode === 'dark' ? theme.palette.background.paper : "#ffffff"}
                     />
                   </Paper>
                   <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 2 }}>
@@ -498,10 +501,10 @@ const FirmaSection = ({
                           maxWidth: '100%', 
                           maxHeight: '80px',
                           objectFit: 'contain',
-                          border: '1px solid #e0e0e0',
+                          border: `1px solid ${theme.palette.divider}`,
                           borderRadius: '4px',
                           padding: '4px',
-                          backgroundColor: '#fff'
+                          backgroundColor: theme.palette.mode === 'dark' ? theme.palette.background.paper : '#fff'
                         }} 
                       />
                     </Box>

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useContext } from 'react';
 import {
   Box,
   Card,
@@ -7,7 +7,8 @@ import {
   Button,
   Alert,
   Paper,
-  Grid
+  Grid,
+  useTheme
 } from '@mui/material';
 import {
   Edit as EditIcon,
@@ -18,7 +19,7 @@ import {
   Delete as DeleteIcon
 } from '@mui/icons-material';
 import SignaturePad from 'react-signature-canvas';
-import { useAuth } from '../../context/AuthContext';
+import { AuthContext } from '../../context/AuthContext';
 import Swal from 'sweetalert2';
 
 const capitalizeWords = (str) => {
@@ -26,7 +27,8 @@ const capitalizeWords = (str) => {
 };
 
 const ConfiguracionFirma = () => {
-  const { userProfile, updateUserProfile } = useAuth();
+  const { userProfile, updateUserProfile } = useContext(AuthContext);
+  const theme = useTheme();
   const [isEditing, setIsEditing] = useState(false);
   const [hasSignature, setHasSignature] = useState(false);
   const [signatureData, setSignatureData] = useState('');
@@ -153,20 +155,20 @@ const ConfiguracionFirma = () => {
   };
 
   return (
-    <Box>
-      <Typography variant="h6" gutterBottom>
+    <Box sx={{ p: 3 }}>
+      <Typography variant="h4" gutterBottom>
         Configuración de Firma Digital
       </Typography>
       <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
         Completa tus datos y configura tu firma digital para firmar documentos de forma rápida y segura.
       </Typography>
       <Grid container spacing={3}>
-        {/* Vista previa de la firma actual */}
+        {/* Vista previa de la firma */}
         <Grid item xs={12} md={6}>
           <Card>
             <CardContent>
               <Typography variant="subtitle1" gutterBottom>
-                Firma Actual
+                Vista Previa de Firma
               </Typography>
               {hasSignature ? (
                 <Box>
@@ -175,8 +177,8 @@ const ConfiguracionFirma = () => {
                     sx={{ 
                       p: 2, 
                       mb: 2, 
-                      border: '2px dashed #ccc',
-                      backgroundColor: '#fafafa',
+                      border: `2px dashed ${theme.palette.divider}`,
+                      backgroundColor: theme.palette.mode === 'dark' ? theme.palette.background.paper : '#fafafa',
                       minHeight: 150,
                       display: 'flex',
                       alignItems: 'center',
@@ -259,7 +261,16 @@ const ConfiguracionFirma = () => {
                   type="text"
                   value={nombre}
                   onChange={e => setNombre(e.target.value)}
-                  style={{ width: '100%', padding: 8, fontSize: 16, marginBottom: 8, borderRadius: 4, border: '1px solid #ccc' }}
+                  style={{ 
+                    width: '100%', 
+                    padding: 8, 
+                    fontSize: 16, 
+                    marginBottom: 8, 
+                    borderRadius: 4, 
+                    border: `1px solid ${theme.palette.divider}`,
+                    backgroundColor: theme.palette.mode === 'dark' ? theme.palette.background.paper : '#fff',
+                    color: theme.palette.text.primary
+                  }}
                   placeholder="Ingresa tu nombre y apellido"
                   autoComplete="off"
                   required
@@ -274,7 +285,16 @@ const ConfiguracionFirma = () => {
                   type="text"
                   value={dni}
                   onChange={e => setDni(e.target.value)}
-                  style={{ width: '100%', padding: 8, fontSize: 16, marginBottom: 8, borderRadius: 4, border: '1px solid #ccc' }}
+                  style={{ 
+                    width: '100%', 
+                    padding: 8, 
+                    fontSize: 16, 
+                    marginBottom: 8, 
+                    borderRadius: 4, 
+                    border: `1px solid ${theme.palette.divider}`,
+                    backgroundColor: theme.palette.mode === 'dark' ? theme.palette.background.paper : '#fff',
+                    color: theme.palette.text.primary
+                  }}
                   placeholder="Ingresa tu DNI"
                   autoComplete="off"
                   required
@@ -289,7 +309,16 @@ const ConfiguracionFirma = () => {
                   type="text"
                   value={telefono}
                   onChange={e => setTelefono(e.target.value)}
-                  style={{ width: '100%', padding: 8, fontSize: 16, marginBottom: 8, borderRadius: 4, border: '1px solid #ccc' }}
+                  style={{ 
+                    width: '100%', 
+                    padding: 8, 
+                    fontSize: 16, 
+                    marginBottom: 8, 
+                    borderRadius: 4, 
+                    border: `1px solid ${theme.palette.divider}`,
+                    backgroundColor: theme.palette.mode === 'dark' ? theme.palette.background.paper : '#fff',
+                    color: theme.palette.text.primary
+                  }}
                   placeholder="Ingresa tu teléfono"
                   autoComplete="off"
                 />
@@ -299,8 +328,8 @@ const ConfiguracionFirma = () => {
                   <Paper 
                     elevation={2} 
                     sx={{ 
-                      border: '2px solid #e0e0e0',
-                      backgroundColor: '#fff',
+                      border: `2px solid ${theme.palette.divider}`,
+                      backgroundColor: theme.palette.mode === 'dark' ? theme.palette.background.paper : '#fff',
                       mb: 2
                     }}
                   >
@@ -311,7 +340,7 @@ const ConfiguracionFirma = () => {
                         height: 200,
                         className: 'signature-canvas'
                       }}
-                      backgroundColor="#ffffff"
+                      backgroundColor={theme.palette.mode === 'dark' ? theme.palette.background.paper : "#ffffff"}
                     />
                   </Paper>
                   <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 2 }}>
@@ -324,18 +353,32 @@ const ConfiguracionFirma = () => {
                       Limpiar
                     </Button>
                     <Button
-                      variant="contained"
+                      variant="outlined"
                       size="small"
+                      startIcon={<UploadIcon />}
+                      component="label"
+                    >
+                      Subir Imagen
+                      <input
+                        type="file"
+                        hidden
+                        accept="image/*"
+                        onChange={handleFileUpload}
+                      />
+                    </Button>
+                  </Box>
+                  <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                    <Button
+                      variant="contained"
                       startIcon={<SaveIcon />}
                       onClick={handleSave}
-                      disabled={isSaving}
+                      disabled={!nombre || !dni || (!sigPadRef.current?.isEmpty() === false)}
                     >
-                      {isSaving ? 'Guardando...' : 'Guardar Datos y Firma'}
+                      Guardar Firma
                     </Button>
                     {isEditing && (
                       <Button
                         variant="outlined"
-                        size="small"
                         onClick={() => setIsEditing(false)}
                       >
                         Cancelar
@@ -344,41 +387,6 @@ const ConfiguracionFirma = () => {
                   </Box>
                 </Box>
               )}
-              {!isEditing && hasSignature && (
-                <Box>
-                  <Button
-                    variant="contained"
-                    startIcon={<EditIcon />}
-                    onClick={() => setIsEditing(true)}
-                    fullWidth
-                  >
-                    Editar Firma y Datos
-                  </Button>
-                </Box>
-              )}
-              {/* Subir archivo de firma */}
-              <Box sx={{ mt: 2 }}>
-                <Typography variant="body2" color="text.secondary" gutterBottom>
-                  O sube una imagen de tu firma:
-                </Typography>
-                <input
-                  accept="image/*"
-                  style={{ display: 'none' }}
-                  id="firma-file-upload"
-                  type="file"
-                  onChange={handleFileUpload}
-                />
-                <label htmlFor="firma-file-upload">
-                  <Button
-                    variant="outlined"
-                    component="span"
-                    startIcon={<UploadIcon />}
-                    size="small"
-                  >
-                    Subir Imagen
-                  </Button>
-                </label>
-              </Box>
             </CardContent>
           </Card>
         </Grid>

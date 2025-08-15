@@ -42,7 +42,7 @@ const ResumenGeneral = ({ auditoriasPendientes, auditoriasCompletadas, auditoria
   return (
     <Box sx={{
       ...mobileBoxStyle,
-      backgroundColor: '#f5f5f5',
+      backgroundColor: theme.palette.mode === 'dark' ? theme.palette.background.default : '#f5f5f5',
       mb: isMobile ? 2 : 3
     }}>
       <Box sx={{ 
@@ -75,7 +75,7 @@ const ResumenGeneral = ({ auditoriasPendientes, auditoriasCompletadas, auditoria
       <Grid container spacing={isMobile ? 1 : 2} sx={{ mt: isMobile ? 1 : 2 }}>
         <Grid item xs={4}>
           <Box sx={{ 
-            bgcolor: '#fff3e0', 
+            bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.warning.main, 0.1) : '#fff3e0', 
             textAlign: 'center',
             p: isMobile ? 1.5 : 2,
             borderRadius: 2,
@@ -100,7 +100,8 @@ const ResumenGeneral = ({ auditoriasPendientes, auditoriasCompletadas, auditoria
               variant={isMobile ? "h5" : "h4"}
               sx={{ 
                 fontWeight: 700,
-                fontSize: isMobile ? '1.5rem' : '2rem'
+                fontSize: isMobile ? '1.5rem' : '2rem',
+                color: 'text.primary'
               }}
             >
               {auditoriasPendientes.length}
@@ -109,7 +110,7 @@ const ResumenGeneral = ({ auditoriasPendientes, auditoriasCompletadas, auditoria
         </Grid>
         <Grid item xs={4}>
           <Box sx={{ 
-            bgcolor: '#e8f5e8', 
+            bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.success.main, 0.1) : '#e8f5e8', 
             textAlign: 'center',
             p: isMobile ? 1.5 : 2,
             borderRadius: 2,
@@ -134,7 +135,8 @@ const ResumenGeneral = ({ auditoriasPendientes, auditoriasCompletadas, auditoria
               variant={isMobile ? "h5" : "h4"}
               sx={{ 
                 fontWeight: 700,
-                fontSize: isMobile ? '1.5rem' : '2rem'
+                fontSize: isMobile ? '1.5rem' : '2rem',
+                color: 'text.primary'
               }}
             >
               {auditoriasCompletadas.length}
@@ -143,7 +145,7 @@ const ResumenGeneral = ({ auditoriasPendientes, auditoriasCompletadas, auditoria
         </Grid>
         <Grid item xs={4}>
           <Box sx={{ 
-            bgcolor: '#e3f2fd', 
+            bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.info.main, 0.1) : '#e3f2fd', 
             textAlign: 'center',
             p: isMobile ? 1.5 : 2,
             borderRadius: 2,
@@ -168,7 +170,8 @@ const ResumenGeneral = ({ auditoriasPendientes, auditoriasCompletadas, auditoria
               variant={isMobile ? "h5" : "h4"}
               sx={{ 
                 fontWeight: 700,
-                fontSize: isMobile ? '1.5rem' : '2rem'
+                fontSize: isMobile ? '1.5rem' : '2rem',
+                color: 'text.primary'
               }}
             >
               {auditoriasEsteMes}
