@@ -29,7 +29,10 @@
     "cap:run:android": "npx cap run android",
     "cap:run:ios": "npx cap run ios",
     "fer": "npm run build && npx cap sync",
-    "die": "concurrently \"npm run dev\" \"npm run backend:dev\" && npm run build && npx cap sync"
+    "die": "concurrently \"npm run dev\" \"npm run backend:dev\" && npm run build && npx cap sync",
+    "analyze": "npm run build && npx vite-bundle-analyzer dist",
+    "clean": "rm -rf dist node_modules/.vite",
+    "optimize": "npm run clean && npm run build"
   },
   "dependencies": {
     "@capacitor/android": "^7.4.2",
@@ -47,12 +50,9 @@
     "@mui/material": "^5.16.6",
     "@mui/x-date-pickers": "^8.8.0",
     "@react-pdf/renderer": "^3.4.4",
-    "@types/react-notifications-component": "^3.1.4",
     "axios": "^1.10.0",
-    "blob-stream": "^0.1.3",
     "bootstrap": "^5.3.3",
     "chart.js": "^4.1.1",
-    "cors": "^2.8.5",
     "date-fns": "^3.6.0",
     "dayjs": "^1.11.13",
     "docx": "^8.5.0",
@@ -90,12 +90,16 @@
     "@types/react": "^18.2.15",
     "@types/react-dom": "^18.2.7",
     "@vitejs/plugin-react": "^4.0.3",
+    "autoprefixer": "^10.4.20",
     "concurrently": "^8.2.2",
+    "cssnano": "^7.0.6",
     "eslint": "^8.45.0",
     "eslint-plugin-react": "^7.32.2",
     "eslint-plugin-react-hooks": "^4.6.0",
     "eslint-plugin-react-refresh": "^0.4.3",
+    "terser": "^5.32.1",
     "typescript": "^5.9.2",
-    "vite": "^4.5.14"
+    "vite": "^4.5.14",
+    "vite-bundle-analyzer": "^0.7.0"
   }
 }

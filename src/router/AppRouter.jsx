@@ -1,12 +1,14 @@
 import { Route, Routes } from "react-router-dom";
+import React, { Suspense } from "react";
 import Navbar from "../components/layout/navbar/Navbar";
-import { routes } from "./routes";
+import { routes } from "./routesOptimized";
 import Login from "../components/pages/login/Login";
 import Register from "../components/pages/register/Register";
 import ForgotPassword from "../components/pages/forgotPassword/ForgotPassword";
 import ProtectedUsers from "./ProtectedUsers";
 import DashboardProtected from "./DashboardProtected";
 import VistaFormularioPublico from '../components/pages/formulario/VistaFormularioPublico';
+import LazyLoader from '../components/common/LazyLoader';
 
 const AppRouter = () => {
   return (
@@ -25,13 +27,15 @@ const AppRouter = () => {
               key={id} 
               path={path} 
               element={
-                path === "/dashboard" ? (
-                  <DashboardProtected>
+                <Suspense fallback={<LazyLoader message={`Cargando ${id}...`} />}>
+                  {path === "/dashboard" ? (
+                    <DashboardProtected>
+                      <Element />
+                    </DashboardProtected>
+                  ) : (
                     <Element />
-                  </DashboardProtected>
-                ) : (
-                  <Element />
-                )
+                  )}
+                </Suspense>
               } 
             />
           ))}
