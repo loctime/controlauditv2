@@ -19,9 +19,20 @@
     "backend:start": "cd backend && npm start",
     "start:full": "concurrently \"npm run dev\" \"npm run backend:dev\"",
     "deploy:staging": "npm run build:staging && vercel --prod",
-    "deploy:production": "npm run build:production && vercel --prod"
+    "deploy:production": "npm run build:production && vercel --prod",
+    "cap:add:android": "npx cap add android",
+    "cap:add:ios": "npx cap add ios",
+    "cap:sync": "npx cap sync",
+    "cap:build": "npm run build && npx cap sync",
+    "cap:open:android": "npx cap open android",
+    "cap:open:ios": "npx cap open ios",
+    "cap:run:android": "npx cap run android",
+    "cap:run:ios": "npx cap run ios"
   },
   "dependencies": {
+    "@capacitor/android": "^7.4.2",
+    "@capacitor/core": "^7.4.2",
+    "@capacitor/ios": "^7.4.2",
     "@emotion/react": "^11.13.0",
     "@emotion/styled": "^11.13.0",
     "@fontsource/roboto": "^5.0.5",
@@ -73,6 +84,7 @@
     "yup": "^1.4.0"
   },
   "devDependencies": {
+    "@capacitor/cli": "^7.4.2",
     "@types/react": "^18.2.15",
     "@types/react-dom": "^18.2.7",
     "@vitejs/plugin-react": "^4.0.3",
@@ -81,6 +93,7 @@
     "eslint-plugin-react": "^7.32.2",
     "eslint-plugin-react-hooks": "^4.6.0",
     "eslint-plugin-react-refresh": "^0.4.3",
+    "typescript": "^5.9.2",
     "vite": "^4.5.14"
   }
 }
