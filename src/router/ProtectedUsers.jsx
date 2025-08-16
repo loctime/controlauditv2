@@ -1,11 +1,10 @@
 // src/router/ProtectedUsers.js
-import { useContext } from "react";
-import { AuthContext } from "../components/context/AuthContext";
+import { useAuth } from "../components/context/AuthContext";
 import { Outlet, Navigate } from "react-router-dom";
 import { Box, CircularProgress, Typography, Alert, Button } from "@mui/material";
 
 const ProtectedUsers = () => {
-  const { isLogged, loading, bloqueado, motivoBloqueo, userProfile, logoutContext } = useContext(AuthContext);
+  const { isLogged, loading, bloqueado, motivoBloqueo, userProfile, logoutContext } = useAuth();
 
   if (loading) {
     return (

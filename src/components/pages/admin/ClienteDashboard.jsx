@@ -1,6 +1,6 @@
 //src/components/pages/admin/ClienteDashboard.jsx
 // Dashboard para Clientes Administradores
-import React, { useContext, useState, useMemo, useCallback } from "react";
+import React, { useState, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { 
   Typography, 
@@ -18,7 +18,7 @@ import {
   History,
   Assignment
 } from "@mui/icons-material";
-import { AuthContext } from "../../context/AuthContext";
+import { useAuth } from "../../context/AuthContext";
 import { useClienteDashboard } from "./hooks/useClienteDashboard";
 import { usePermissions } from "./hooks/usePermissions";
 
@@ -33,7 +33,7 @@ import LoadingSkeleton from "./components/LoadingSkeleton";
 import PermissionAlert from "./components/PermissionAlert";
 
 const ClienteDashboard = React.memo(() => {
-  const { role } = useContext(AuthContext);
+  const { role } = useAuth();
   const navigate = useNavigate();
   const [openDialog, setOpenDialog] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date());

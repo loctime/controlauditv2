@@ -1,5 +1,5 @@
 //src/components/pages/admin/HistorialAuditorias.jsx
-import React, { useState, useEffect, useContext } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Typography,
   Box,
@@ -35,10 +35,10 @@ import {
 import { collection, getDocs, query, where, orderBy } from "firebase/firestore";
 import { db } from "../../../firebaseConfig";
 import { toast } from 'react-toastify';
-import { AuthContext } from "../../context/AuthContext";
+import { useAuth } from "../../context/AuthContext";
 
 const HistorialAuditorias = () => {
-  const { userProfile, role } = useContext(AuthContext);
+  const { userProfile, role } = useAuth();
   const [auditorias, setAuditorias] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedAuditoria, setSelectedAuditoria] = useState(null);

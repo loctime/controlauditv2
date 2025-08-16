@@ -1,6 +1,6 @@
 // src/components/pages/user/OperarioDashboard.jsx
 // Dashboard para Operarios
-import React, { useContext, useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { 
   Typography, 
@@ -29,12 +29,12 @@ import {
   CalendarToday,
   Assessment
 } from "@mui/icons-material";
-import { AuthContext } from "../../context/AuthContext";
+import { useAuth } from "../../context/AuthContext";
 import { collection, query, where, getDocs, orderBy, limit } from "firebase/firestore";
 import { db } from "../../../firebaseConfig";
 
 const OperarioDashboard = () => {
-  const { user, userProfile, role } = useContext(AuthContext);
+  const { user, userProfile, role } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [auditoriasAsignadas, setAuditoriasAsignadas] = useState([]);

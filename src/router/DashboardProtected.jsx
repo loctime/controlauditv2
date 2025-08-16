@@ -1,12 +1,11 @@
 // src/router/DashboardProtected.jsx
-import { useContext } from "react";
-import { AuthContext } from "../components/context/AuthContext";
+import { useAuth } from "../components/context/AuthContext";
 import { Navigate } from "react-router-dom";
 import { Box, Typography, Button } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 
 const DashboardProtected = ({ children }) => {
-  const { userProfile, role, permisos } = useContext(AuthContext);
+  const { userProfile, role, permisos } = useAuth();
   const navigate = useNavigate();
 
   // Verificar si el usuario puede acceder al dashboard

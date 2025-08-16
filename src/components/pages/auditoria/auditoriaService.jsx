@@ -104,10 +104,55 @@ class AuditoriaService {
     return `${nombreEmpresa}${ubicacion}_${nombreUsuario}_${fecha}`;
   }
 
+  // Helper para limpiar arrays anidados recursivamente
+  static limpiarArraysAnidados(obj) {
+    if (Array.isArray(obj)) {
+      return obj.map(item => this.limpiarArraysAnidados(item));
+    } else if (obj && typeof obj === 'object') {
+      const objLimpio = {};
+      Object.keys(obj).forEach(key => {
+        const valor = obj[key];
+        if (Array.isArray(valor)) {
+          // Si es un array, verificar si contiene arrays anidados
+          objLimpio[key] = valor.map(item => {
+            if (Array.isArray(item)) {
+              return item.join(', '); // Convertir arrays anidados a string
+            }
+            return this.limpiarArraysAnidados(item);
+          });
+        } else {
+          objLimpio[key] = this.limpiarArraysAnidados(valor);
+        }
+      });
+      return objLimpio;
+    }
+    return obj;
+  }
+
   // Helper para transformar arrays anidados a arrays de objetos por sección
   static anidarAObjetosPorSeccion(arr) {
     if (!Array.isArray(arr)) return [];
-    return arr.map((valores, idx) => ({ seccion: idx, valores: Array.isArray(valores) ? valores : [] }));
+    
+    return arr.map((valores, idx) => {
+      // Si valores es un array, procesar cada elemento para evitar arrays anidados
+      let valoresProcesados = [];
+      if (Array.isArray(valores)) {
+        valoresProcesados = valores.map(valor => {
+          // Si el valor es un array, convertirlo a string o procesarlo
+          if (Array.isArray(valor)) {
+            return valor.join(', '); // Convertir array a string
+          }
+          return valor;
+        });
+      } else if (valores !== null && valores !== undefined) {
+        valoresProcesados = [valores];
+      }
+      
+      return { 
+        seccion: idx, 
+        valores: valoresProcesados 
+      };
+    });
   }
 
   /**
@@ -143,7 +188,30 @@ class AuditoriaService {
         respuestas: this.anidarAObjetosPorSeccion(datosAuditoria.respuestas),
         comentarios: this.anidarAObjetosPorSeccion(datosAuditoria.comentarios),
         imagenes: this.anidarAObjetosPorSeccion(imagenesProcesadas),
-        secciones: Array.isArray(datosAuditoria.secciones) ? datosAuditoria.secciones : [],
+        secciones: Array.isArray(datosAuditoria.secciones) ? datosAuditoria.secciones.map(seccion => {
+          // Asegurar que las secciones no contengan arrays anidados
+          if (seccion && typeof seccion === 'object') {
+            const seccionLimpia = { ...seccion };
+            // Procesar preguntas si existen
+            if (Array.isArray(seccionLimpia.preguntas)) {
+              seccionLimpia.preguntas = seccionLimpia.preguntas.map(pregunta => {
+                if (pregunta && typeof pregunta === 'object') {
+                  const preguntaLimpia = { ...pregunta };
+                  // Convertir arrays a strings si es necesario
+                  Object.keys(preguntaLimpia).forEach(key => {
+                    if (Array.isArray(preguntaLimpia[key])) {
+                      preguntaLimpia[key] = preguntaLimpia[key].join(', ');
+                    }
+                  });
+                  return preguntaLimpia;
+                }
+                return pregunta;
+              });
+            }
+            return seccionLimpia;
+          }
+          return seccion;
+        }) : [],
         estadisticas: estadisticas,
         estado: "completada",
         nombreArchivo: this.generarNombreArchivo(
@@ -162,15 +230,21 @@ class AuditoriaService {
         firmaResponsable: datosAuditoria.firmaResponsable || null
       };
 
-      // Limpiar valores undefined
+      // Limpiar valores undefined y arrays anidados
       Object.keys(datosCompletos).forEach(key => {
         if (typeof datosCompletos[key] === 'undefined') {
           datosCompletos[key] = null;
         }
       });
 
+      // Limpiar arrays anidados recursivamente
+      const datosLimpios = this.limpiarArraysAnidados(datosCompletos);
+
+      // Log para debugging
+      console.log('[AuditoriaService] Datos limpios para Firestore:', JSON.stringify(datosLimpios, null, 2));
+
       // Guardar en Firestore
-      const docRef = await addDoc(collection(db, "reportes"), datosCompletos);
+      const docRef = await addDoc(collection(db, "reportes"), datosLimpios);
 
       // Registrar log de operación
       await registrarLogOperario(

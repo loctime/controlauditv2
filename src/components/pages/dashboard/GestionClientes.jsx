@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Typography,
@@ -42,7 +42,7 @@ import { collection, getDocs, updateDoc, doc, query, where, Timestamp, addDoc } 
 import { db } from '../../../firebaseConfig';
 import { toast } from 'react-toastify';
 import HistorialPagosModal from './HistorialPagosModal';
-import { AuthContext } from '../../context/AuthContext';
+import { useAuth } from '../../context/AuthContext';
 
 const GestionClientes = () => {
   const [clientes, setClientes] = useState([]);
@@ -66,7 +66,7 @@ const GestionClientes = () => {
   const [openConfirmPago, setOpenConfirmPago] = useState(false);
   const [openConfirmDemo, setOpenConfirmDemo] = useState(false);
   const [clienteConfirmacion, setClienteConfirmacion] = useState(null);
-  const { userProfile } = useContext(AuthContext); // Para obtener el email del usuario logueado
+  const { userProfile } = useAuth(); // Para obtener el email del usuario logueado
 
   // Cargar todos los clientes (max)
   const cargarClientes = async () => {

@@ -1,9 +1,9 @@
 // src/components/pages/admin/hooks/usePermissions.js
-import { useContext, useMemo, useCallback } from "react";
-import { AuthContext } from "../../../context/AuthContext";
+import { useMemo, useCallback } from "react";
+import { useAuth } from "../../../context/AuthContext";
 
 export const usePermissions = () => {
-  const { userProfile, role } = useContext(AuthContext);
+  const { userProfile, role } = useAuth();
 
   // ✅ Memoizar permisos para evitar recálculos
   const permissions = useMemo(() => {

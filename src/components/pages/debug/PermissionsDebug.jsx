@@ -1,10 +1,10 @@
-import React, { useContext } from 'react';
+import React from 'react';
 import { Box, Typography, Paper, List, ListItem, ListItemText, Divider } from '@mui/material';
-import { AuthContext } from '../../context/AuthContext';
+import { useAuth } from '../../context/AuthContext';
 import { getMenuItems } from '../../../router/navigation';
 
 const PermissionsDebug = () => {
-  const { userProfile, role, permisos } = useContext(AuthContext);
+  const { userProfile, role, permisos } = useAuth();
   const menuItems = getMenuItems(role, permisos);
 
   return (
