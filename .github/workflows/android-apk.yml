@@ -45,6 +45,10 @@ jobs:
       - name: Sync Capacitor
         run: npx cap sync android
 
+      - name: Set Gradle wrapper permissions
+        working-directory: android
+        run: chmod +x ./gradlew
+
       - name: Build Android APK (Release)
         working-directory: android
         run: |
