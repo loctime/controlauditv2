@@ -20,6 +20,12 @@ android {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            // Configurar nombre del APK
+            setArchivesBaseName("ControlAudit")
+        }
+        debug {
+            // Configurar nombre del APK para debug también
+            setArchivesBaseName("ControlAudit-debug")
         }
     }
 }
