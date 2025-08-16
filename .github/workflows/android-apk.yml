@@ -53,7 +53,7 @@ jobs:
         working-directory: android
         run: |
           # Configurar variables de entorno para el build
-          export GRADLE_OPTS="-Dorg.gradle.daemon=false -Dorg.gradle.parallel=true -Dorg.gradle.jvmargs=-Xmx2048m -XX:MaxPermSize=512m -XX:+HeapDumpOnOutOfMemoryError"
+          export GRADLE_OPTS="-Dorg.gradle.daemon=false -Dorg.gradle.parallel=true -Dorg.gradle.jvmargs=-Xmx2048m -XX:+HeapDumpOnOutOfMemoryError"
           
           # Limpiar build anterior
           ./gradlew clean
