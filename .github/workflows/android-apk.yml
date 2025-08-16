@@ -67,11 +67,11 @@ jobs:
           if [ -f "android/app/build/outputs/apk/release/ControlAudit-release-unsigned.apk" ]; then
             echo "✅ APK release encontrada"
             ls -lh android/app/build/outputs/apk/release/ControlAudit-release-unsigned.apk
-            APK_PATH="android/app/build/outputs/apk/release/ControlAudit-release-unsigned.apk"
+            echo "APK_PATH=android/app/build/outputs/apk/release/ControlAudit-release-unsigned.apk" >> $GITHUB_ENV
           elif [ -f "android/app/build/outputs/apk/release/ControlAudit-debug-release-unsigned.apk" ]; then
             echo "✅ APK debug-release encontrada"
             ls -lh android/app/build/outputs/apk/release/ControlAudit-debug-release-unsigned.apk
-            APK_PATH="android/app/build/outputs/apk/release/ControlAudit-debug-release-unsigned.apk"
+            echo "APK_PATH=android/app/build/outputs/apk/release/ControlAudit-debug-release-unsigned.apk" >> $GITHUB_ENV
           else
             echo "❌ APK no encontrada en la ubicación esperada"
             ls -la android/app/build/outputs/apk/release/
@@ -105,6 +105,6 @@ jobs:
           echo "- **Node Version:** ${{ env.NODE_VERSION }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Java Version:** ${{ env.JAVA_VERSION }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Build Type:** Release (Unsigned)" >> $GITHUB_STEP_SUMMARY
-          echo "- **APK Size:** $(ls -lh $APK_PATH | awk '{print $5}')" >> $GITHUB_STEP_SUMMARY
+          echo "- **APK Size:** $(ls -lh ${{ env.APK_PATH }} | awk '{print $5}')" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "✅ Build completado exitosamente!" >> $GITHUB_STEP_SUMMARY
