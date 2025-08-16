@@ -1,11 +1,13 @@
 // Cargar variables de entorno
-require('dotenv').config();
+import dotenv from 'dotenv';
+dotenv.config();
 
-const express = require('express');
-const cors = require('cors');
-const admin = require('./firebaseAdmin');
-const setRoleRouter = require('./routes/setRole');
-const { config, getEnvironmentInfo } = require('./config/environment');
+import express from 'express';
+import cors from 'cors';
+import admin from './firebaseAdmin.js';
+import setRoleRouter from './routes/setRole.js';
+import { config, getEnvironmentInfo } from './config/environment.js';
+import fetch from 'node-fetch';
 
 const app = express();
 
@@ -43,6 +45,65 @@ app.get('/health', (req, res) => {
     environment: getEnvironmentInfo().nodeEnv,
     timestamp: new Date().toISOString()
   });
+});
+
+// Endpoint para obtener información de la última APK
+app.get('/api/latest-apk', async (req, res) => {
+  try {
+    // URL del repositorio de GitHub
+    const repoOwner = 'tu-usuario'; // Cambiar por tu usuario de GitHub
+    const repoName = 'controlauditv2';
+    
+    // Obtener la última release de GitHub
+    const response = await fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/releases/latest`);
+    
+    if (!response.ok) {
+      throw new Error('No se pudo obtener la información de la última release');
+    }
+    
+    const release = await response.json();
+    
+    // Buscar el asset de la APK
+    const apkAsset = release.assets.find(asset => 
+      asset.name.includes('ControlAudit') && 
+      asset.name.endsWith('.apk')
+    );
+    
+    if (!apkAsset) {
+      return res.status(404).json({ 
+        error: 'APK no encontrada en la última release',
+        release: {
+          tag_name: release.tag_name,
+          name: release.name,
+          published_at: release.published_at
+        }
+      });
+    }
+    
+    res.json({
+      success: true,
+      apk: {
+        name: apkAsset.name,
+        download_url: apkAsset.browser_download_url,
+        size: apkAsset.size,
+        download_count: apkAsset.download_count,
+        created_at: apkAsset.created_at
+      },
+      release: {
+        tag_name: release.tag_name,
+        name: release.name,
+        published_at: release.published_at,
+        body: release.body
+      }
+    });
+    
+  } catch (error) {
+    console.error('Error obteniendo información de APK:', error);
+    res.status(500).json({ 
+      error: 'Error interno del servidor',
+      message: error.message 
+    });
+  }
 });
 
 // Middleware para verificar token de Firebase (solo admins pueden gestionar usuarios)
