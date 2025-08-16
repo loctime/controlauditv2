@@ -16,9 +16,9 @@ const DownloadAPK = ({ variant = 'contained', size = 'medium', showInfo = true }
       setLoading(true);
       setError(null);
       
-             // Configuración del repositorio - CAMBIAR POR TU USUARIO Y REPO
-       const repoOwner = 'tu-usuario'; // CAMBIAR: tu usuario de GitHub (ej: 'johndoe')
-       const repoName = 'controlauditv2'; // CAMBIAR: nombre de tu repositorio
+             // Configuración del repositorio
+       const repoOwner = 'loctime'; // Usuario de GitHub
+       const repoName = 'controlauditv2'; // Nombre del repositorio
       
       const response = await fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/releases/latest`);
       
@@ -28,11 +28,10 @@ const DownloadAPK = ({ variant = 'contained', size = 'medium', showInfo = true }
       
       const release = await response.json();
       
-      // Buscar el asset de la APK
-      const apkAsset = release.assets.find(asset => 
-        asset.name.includes('ControlAudit') && 
-        asset.name.endsWith('.apk')
-      );
+             // Buscar el asset de la APK (buscar cualquier APK en la release)
+       const apkAsset = release.assets.find(asset => 
+         asset.name.endsWith('.apk')
+       );
       
       if (!apkAsset) {
         throw new Error('APK no encontrada en la última release');
