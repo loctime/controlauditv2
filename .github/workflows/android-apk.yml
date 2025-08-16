@@ -63,19 +63,26 @@ jobs:
 
       - name: Verify APK exists
         run: |
-          if [ ! -f "android/app/build/outputs/apk/release/ControlAudit-release-unsigned.apk" ]; then
+          # Buscar APK con cualquier variación del nombre
+          if [ -f "android/app/build/outputs/apk/release/ControlAudit-release-unsigned.apk" ]; then
+            echo "✅ APK release encontrada"
+            ls -lh android/app/build/outputs/apk/release/ControlAudit-release-unsigned.apk
+            APK_PATH="android/app/build/outputs/apk/release/ControlAudit-release-unsigned.apk"
+          elif [ -f "android/app/build/outputs/apk/release/ControlAudit-debug-release-unsigned.apk" ]; then
+            echo "✅ APK debug-release encontrada"
+            ls -lh android/app/build/outputs/apk/release/ControlAudit-debug-release-unsigned.apk
+            APK_PATH="android/app/build/outputs/apk/release/ControlAudit-debug-release-unsigned.apk"
+          else
             echo "❌ APK no encontrada en la ubicación esperada"
             ls -la android/app/build/outputs/apk/release/
             exit 1
           fi
-          echo "✅ APK generada exitosamente"
-          ls -lh android/app/build/outputs/apk/release/ControlAudit-release-unsigned.apk
 
       - name: Upload APK as artifact
         uses: actions/upload-artifact@v4
         with:
           name: ControlAudit-release
-          path: android/app/build/outputs/apk/release/ControlAudit-release-unsigned.apk
+          path: ${{ env.APK_PATH }}
           retention-days: 30
           if-no-files-found: error
 
@@ -83,7 +90,7 @@ jobs:
         uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/')
         with:
-          files: android/app/build/outputs/apk/release/ControlAudit-release-unsigned.apk
+          files: ${{ env.APK_PATH }}
           generate_release_notes: true
           draft: false
           prerelease: false
@@ -98,6 +105,6 @@ jobs:
           echo "- **Node Version:** ${{ env.NODE_VERSION }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Java Version:** ${{ env.JAVA_VERSION }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Build Type:** Release (Unsigned)" >> $GITHUB_STEP_SUMMARY
-          echo "- **APK Size:** $(ls -lh android/app/build/outputs/apk/release/ControlAudit-release-unsigned.apk | awk '{print $5}')" >> $GITHUB_STEP_SUMMARY
+          echo "- **APK Size:** $(ls -lh $APK_PATH | awk '{print $5}')" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "✅ Build completado exitosamente!" >> $GITHUB_STEP_SUMMARY
