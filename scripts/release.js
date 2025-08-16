@@ -165,8 +165,8 @@ function main() {
   log(`  ✅ Release se creará en GitHub`, 'green');
   log('', 'reset');
   log('🔗 Enlaces útiles:', 'cyan');
-  log(`  📊 Progreso del build: https://github.com/[tu-usuario]/controlauditv2/actions`, 'yellow');
-  log(`  📱 APK disponible en: https://github.com/[tu-usuario]/controlauditv2/releases/tag/v${newVersion}`, 'yellow');
+  log(`  📊 Progreso del build: https://github.com/loctime/controlauditv2/actions`, 'yellow');
+  log(`  📱 APK disponible en: https://github.com/loctime/controlauditv2/releases/tag/v${newVersion}`, 'yellow');
   log('', 'reset');
   log('⚡ Próximos pasos:', 'cyan');
   log('  • Espera 5-10 minutos para que se genere la APK', 'reset');

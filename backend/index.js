@@ -51,7 +51,7 @@ app.get('/health', (req, res) => {
 app.get('/api/latest-apk', async (req, res) => {
   try {
     // URL del repositorio de GitHub
-    const repoOwner = 'tu-usuario'; // Cambiar por tu usuario de GitHub
+    const repoOwner = 'loctime'; // Usuario de GitHub
     const repoName = 'controlauditv2';
     
     // Obtener la última release de GitHub
