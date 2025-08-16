@@ -4,7 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "concurrently \"vite\" \"cd backend && npm run dev\" \"npm run android:dev\"",
     "dev:staging": "vite --mode staging",
     "dev:production": "vite --mode production",
     "build": "vite build",
@@ -29,7 +29,11 @@
     "cap:run:android": "npx cap run android",
     "cap:run:ios": "npx cap run ios",
     "fer": "npm run build && npx cap sync",
-    "die": "concurrently \"npm run dev\" \"npm run backend:dev\" && npm run build && npx cap sync",
+    "die": "node scripts/release.js",
+    "android:dev": "npm run build && npx cap sync && npx cap run android",
+    "dev:web": "vite",
+    "dev:full": "concurrently \"npm run dev\" \"npm run backend:dev\"",
+    "build:full": "npm run build && npx cap sync",
     "analyze": "npm run build && npx vite-bundle-analyzer dist",
     "clean": "rm -rf dist node_modules/.vite",
     "optimize": "npm run clean && npm run build"

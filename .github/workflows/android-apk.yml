@@ -1,0 +1,99 @@
+name: Build Android APK
+
+on:
+  push:
+    tags:
+      - 'v*'   # Se ejecuta cuando hagas un tag tipo v1.0.0
+  workflow_dispatch:  # Permite ejecutar manualmente desde GitHub
+
+env:
+  NODE_VERSION: '20'
+  JAVA_VERSION: '17'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Necesario para obtener el historial completo de git
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'  # Cache de dependencias para acelerar builds
+
+      - name: Setup Java Development Kit
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+          cache: 'gradle'  # Cache de Gradle
+
+      - name: Install dependencies
+        run: npm ci --prefer-offline --no-audit
+
+      - name: Build web application
+        run: npm run build
+        env:
+          NODE_ENV: production
+
+      - name: Sync Capacitor
+        run: npx cap sync android
+
+      - name: Build Android APK (Release)
+        working-directory: android
+        run: |
+          # Configurar variables de entorno para el build
+          export GRADLE_OPTS="-Dorg.gradle.daemon=false -Dorg.gradle.parallel=true -Dorg.gradle.jvmargs=-Xmx2048m -XX:MaxPermSize=512m -XX:+HeapDumpOnOutOfMemoryError"
+          
+          # Limpiar build anterior
+          ./gradlew clean
+          
+          # Construir APK de release
+          ./gradlew assembleRelease --no-daemon --parallel
+
+      - name: Verify APK exists
+        run: |
+          if [ ! -f "android/app/build/outputs/apk/release/app-release.apk" ]; then
+            echo "❌ APK no encontrada en la ubicación esperada"
+            ls -la android/app/build/outputs/apk/release/
+            exit 1
+          fi
+          echo "✅ APK generada exitosamente"
+          ls -lh android/app/build/outputs/apk/release/app-release.apk
+
+      - name: Upload APK as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: controlaudit-app-release
+          path: android/app/build/outputs/apk/release/app-release.apk
+          retention-days: 30
+          if-no-files-found: error
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: android/app/build/outputs/apk/release/app-release.apk
+          generate_release_notes: true
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build Summary
+        run: |
+          echo "## 📱 Build Summary" >> $GITHUB_STEP_SUMMARY
+          echo "- **App Name:** ControlAudit" >> $GITHUB_STEP_SUMMARY
+          echo "- **Package ID:** com.controlaudit.app" >> $GITHUB_STEP_SUMMARY
+          echo "- **Node Version:** ${{ env.NODE_VERSION }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Java Version:** ${{ env.JAVA_VERSION }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Build Type:** Release" >> $GITHUB_STEP_SUMMARY
+          echo "- **APK Size:** $(ls -lh android/app/build/outputs/apk/release/app-release.apk | awk '{print $5}')" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Build completado exitosamente!" >> $GITHUB_STEP_SUMMARY
