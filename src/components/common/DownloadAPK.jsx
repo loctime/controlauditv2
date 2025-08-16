@@ -16,9 +16,9 @@ const DownloadAPK = ({ variant = 'contained', size = 'medium', showInfo = true }
       setLoading(true);
       setError(null);
       
-      // Configuración del repositorio - CAMBIAR POR TU USUARIO Y REPO
-      const repoOwner = 'tu-usuario'; // CAMBIAR: tu usuario de GitHub
-      const repoName = 'controlauditv2'; // CAMBIAR: nombre de tu repositorio
+             // Configuración del repositorio - CAMBIAR POR TU USUARIO Y REPO
+       const repoOwner = 'tu-usuario'; // CAMBIAR: tu usuario de GitHub (ej: 'johndoe')
+       const repoName = 'controlauditv2'; // CAMBIAR: nombre de tu repositorio
       
       const response = await fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/releases/latest`);
       
