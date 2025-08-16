@@ -55,6 +55,26 @@ const ConfiguracionFirma = () => {
     }
   }, [userProfile?.firmaDigital, userProfile?.nombre, userProfile?.dni, userProfile?.telefono]);
 
+  // Optimizar canvas después del montaje
+  useEffect(() => {
+    const optimizeCanvas = () => {
+      if (sigPadRef.current && sigPadRef.current._canvas) {
+        const canvas = sigPadRef.current._canvas;
+        // Configurar willReadFrequently directamente en el canvas
+        canvas.willReadFrequently = true;
+        console.debug('[ConfiguracionFirma] Canvas optimizado para lecturas frecuentes');
+      }
+    };
+
+    // Intentar optimizar inmediatamente
+    optimizeCanvas();
+    
+    // Si no está disponible inmediatamente, intentar después de un breve delay
+    const timeoutId = setTimeout(optimizeCanvas, 100);
+    
+    return () => clearTimeout(timeoutId);
+  }, []);
+
   const handleClear = () => {
     if (sigPadRef.current) {
       sigPadRef.current.clear();

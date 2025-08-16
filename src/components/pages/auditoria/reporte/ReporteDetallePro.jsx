@@ -83,17 +83,113 @@ const normalizarFormulario = (formulario, nombreForm) => {
 
 // Normaliza imagenes: array de objetos {seccion, valores: [ ... ]} a array de arrays de urls
 const normalizarImagenes = (imagenesFirestore, secciones) => {
-  if (!Array.isArray(imagenesFirestore)) return [];
+  console.debug('[normalizarImagenes] imagenesFirestore:', imagenesFirestore);
+  console.debug('[normalizarImagenes] secciones:', secciones);
+  
+  if (!Array.isArray(imagenesFirestore)) {
+    console.debug('[normalizarImagenes] imagenesFirestore no es array, retornando array vacío');
+    return secciones.map(() => []);
+  }
+  
   // Si es array de objetos {seccion, valores}
   if (imagenesFirestore.length > 0 && imagenesFirestore[0] && typeof imagenesFirestore[0] === 'object' && Array.isArray(imagenesFirestore[0].valores)) {
-    return secciones.map((_, idx) => {
+    console.debug('[normalizarImagenes] Procesando formato de objetos por sección');
+    const resultado = secciones.map((_, idx) => {
       const imgSec = imagenesFirestore.find(img => img.seccion === idx);
-      if (!imgSec || !Array.isArray(imgSec.valores)) return [];
-      return imgSec.valores.map(val => (val && typeof val === "object" && val.url) ? val.url : (typeof val === "string" ? val : ""));
+      console.debug(`[normalizarImagenes] Sección ${idx}, imgSec:`, imgSec);
+      
+      if (!imgSec || !Array.isArray(imgSec.valores)) {
+        console.debug(`[normalizarImagenes] Sección ${idx} no tiene valores válidos`);
+        return [];
+      }
+      
+      const imagenesSeccion = imgSec.valores.map(val => {
+        console.debug(`[normalizarImagenes] Procesando valor:`, val);
+        if (val && typeof val === "object" && val.url) {
+          console.debug(`[normalizarImagenes] Encontrada URL: ${val.url}`);
+          return val.url;
+        } else if (typeof val === "string") {
+          console.debug(`[normalizarImagenes] Encontrada string: ${val}`);
+          return val;
+        } else {
+          console.debug(`[normalizarImagenes] Valor no válido:`, val);
+          return "";
+        }
+      });
+      
+      console.debug(`[normalizarImagenes] Imágenes de sección ${idx}:`, imagenesSeccion);
+      return imagenesSeccion;
     });
+    
+    console.debug('[normalizarImagenes] Resultado final:', resultado);
+    return resultado;
   }
+  
+  // Si es array de arrays (formato clásico)
+  if (Array.isArray(imagenesFirestore[0])) {
+    console.debug('[normalizarImagenes] Procesando formato de arrays anidados');
+    const resultado = imagenesFirestore.map((seccionImagenes, idx) => {
+      console.debug(`[normalizarImagenes] Procesando sección ${idx}:`, seccionImagenes);
+      if (!Array.isArray(seccionImagenes)) return [];
+      
+      return seccionImagenes.map(img => {
+        if (img && typeof img === "object" && img.url) {
+          return img.url;
+        } else if (typeof img === "string") {
+          return img;
+        } else {
+          return "";
+        }
+      });
+    });
+    
+    console.debug('[normalizarImagenes] Resultado final (formato clásico):', resultado);
+    return resultado;
+  }
+  
+  // Si es un objeto plano con claves numéricas
+  if (imagenesFirestore.length > 0 && typeof imagenesFirestore[0] === 'object' && !Array.isArray(imagenesFirestore[0])) {
+    console.debug('[normalizarImagenes] Procesando formato de objeto plano');
+    const resultado = secciones.map((_, idx) => {
+      const seccionImagenes = imagenesFirestore[idx];
+      console.debug(`[normalizarImagenes] Sección ${idx} del objeto plano:`, seccionImagenes);
+      
+      if (!seccionImagenes) return [];
+      
+      if (Array.isArray(seccionImagenes)) {
+        return seccionImagenes.map(img => {
+          if (img && typeof img === "object" && img.url) {
+            return img.url;
+          } else if (typeof img === "string") {
+            return img;
+          } else {
+            return "";
+          }
+        });
+      } else if (typeof seccionImagenes === 'object') {
+        // Si es un objeto con propiedades numéricas
+        const imagenes = [];
+        Object.keys(seccionImagenes).forEach(key => {
+          const img = seccionImagenes[key];
+          if (img && typeof img === "object" && img.url) {
+            imagenes.push(img.url);
+          } else if (typeof img === "string") {
+            imagenes.push(img);
+          }
+        });
+        return imagenes;
+      }
+      
+      return [];
+    });
+    
+    console.debug('[normalizarImagenes] Resultado final (objeto plano):', resultado);
+    return resultado;
+  }
+  
   // Fallback clásico
-  return secciones.map((_, idx) => []);
+  console.debug('[normalizarImagenes] Usando fallback, retornando arrays vacíos');
+  return secciones.map(() => []);
 };
 
 // Normaliza comentarios: array de objetos {seccion, valores: [ ... ]} a array de arrays de strings
@@ -403,6 +499,74 @@ const ReporteDetallePro = forwardRef(({ open = false, onClose = () => {}, report
   console.debug('[ReporteDetallePro] comentariosNormalizados:', comentariosNormalizados);
   console.debug('[ReporteDetallePro] imagenesNormalizadas:', imagenesNormalizadas);
 
+  // Función de debug temporal
+  const debugImagenes = () => {
+    console.log('=== DEBUG IMÁGENES ===');
+    console.log('Reporte completo:', reporte);
+    console.log('Imágenes del reporte:', reporte.imagenes);
+    console.log('Secciones:', secciones);
+    console.log('Imágenes normalizadas:', imagenesNormalizadas);
+    
+    // Verificar estructura de imágenes
+    if (reporte.imagenes) {
+      console.log('Estructura de imágenes:');
+      reporte.imagenes.forEach((seccion, idx) => {
+        console.log(`Sección ${idx}:`, seccion);
+      });
+    }
+  };
+
+  // Función para probar carga de imágenes
+  const probarCargaImagenes = async () => {
+    console.log('=== PROBANDO CARGA DE IMÁGENES ===');
+    
+    if (!reporte.imagenes) {
+      console.log('No hay imágenes en el reporte');
+      return;
+    }
+
+    // Probar diferentes formatos de imágenes
+    const testUrls = [];
+    
+    // Buscar URLs en la estructura de imágenes
+    const buscarUrls = (obj, path = '') => {
+      if (typeof obj === 'string' && obj.startsWith('http')) {
+        testUrls.push({ url: obj, path });
+      } else if (typeof obj === 'object' && obj !== null) {
+        if (obj.url && typeof obj.url === 'string') {
+          testUrls.push({ url: obj.url, path: path + '.url' });
+        }
+        Object.keys(obj).forEach(key => {
+          buscarUrls(obj[key], path + '.' + key);
+        });
+      } else if (Array.isArray(obj)) {
+        obj.forEach((item, index) => {
+          buscarUrls(item, path + '[' + index + ']');
+        });
+      }
+    };
+
+    buscarUrls(reporte.imagenes);
+    
+    console.log('URLs encontradas:', testUrls);
+    
+    // Probar cargar cada URL
+    for (const { url, path } of testUrls) {
+      try {
+        const img = new Image();
+        img.onload = () => {
+          console.log(`✅ Imagen cargada exitosamente: ${path} - ${url}`);
+        };
+        img.onerror = () => {
+          console.error(`❌ Error cargando imagen: ${path} - ${url}`);
+        };
+        img.src = url;
+      } catch (error) {
+        console.error(`❌ Error probando imagen ${path}:`, error);
+      }
+    }
+  };
+
   // Ref para el gráfico principal
   const chartRef = useRef();
   // Refs para los gráficos por sección
@@ -503,6 +667,16 @@ const ReporteDetallePro = forwardRef(({ open = false, onClose = () => {}, report
           <Button onClick={handleImprimir} variant="outlined" color="secondary" startIcon={<PrintIcon />}>
             Imprimir
           </Button>
+          {process.env.NODE_ENV === 'development' && (
+            <Button onClick={debugImagenes} variant="outlined" color="warning">
+              Debug Imágenes
+            </Button>
+          )}
+          {process.env.NODE_ENV === 'development' && (
+            <Button onClick={probarCargaImagenes} variant="outlined" color="info">
+              Probar Carga
+            </Button>
+          )}
         </DialogActions>
       </Dialog>
     );

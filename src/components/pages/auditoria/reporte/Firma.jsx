@@ -45,6 +45,26 @@ const Firma = ({ title, setFirmaURL, firmaExistente }) => {
     }
   }, [firmaExistente]);
 
+  // Optimizar canvas después del montaje
+  useEffect(() => {
+    const optimizeCanvas = () => {
+      if (sigCanvas.current && sigCanvas.current._canvas) {
+        const canvas = sigCanvas.current._canvas;
+        // Configurar willReadFrequently directamente en el canvas
+        canvas.willReadFrequently = true;
+        console.debug('[Firma] Canvas optimizado para lecturas frecuentes');
+      }
+    };
+
+    // Intentar optimizar inmediatamente
+    optimizeCanvas();
+    
+    // Si no está disponible inmediatamente, intentar después de un breve delay
+    const timeoutId = setTimeout(optimizeCanvas, 100);
+    
+    return () => clearTimeout(timeoutId);
+  }, []);
+
   const clearSignature = () => {
     sigCanvas.current.clear();
     setHasSignature(false);
@@ -178,7 +198,14 @@ const Firma = ({ title, setFirmaURL, firmaExistente }) => {
             <SignatureCanvas
               ref={sigCanvas}
               canvasProps={canvasConfig}
-              {...signatureConfig}
+              penColor={signatureConfig.penColor}
+              backgroundColor={signatureConfig.backgroundColor}
+              dotSize={signatureConfig.dotSize}
+              minWidth={signatureConfig.minWidth}
+              maxWidth={signatureConfig.maxWidth}
+              throttle={signatureConfig.throttle}
+              velocityFilterWeight={signatureConfig.velocityFilterWeight}
+              onEnd={signatureConfig.onEnd}
             />
             
             {/* Indicador de área de firma */}

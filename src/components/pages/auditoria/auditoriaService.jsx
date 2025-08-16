@@ -49,15 +49,36 @@ class AuditoriaService {
    * @returns {Promise<Array>} URLs de las imágenes subidas
    */
   static async procesarImagenes(imagenes) {
+    console.debug('[AuditoriaService] Procesando imágenes:', imagenes);
+    
+    if (!Array.isArray(imagenes)) {
+      console.warn('[AuditoriaService] imagenes no es un array:', imagenes);
+      return [];
+    }
+    
     const imagenesProcesadas = [];
     
     for (let seccionIndex = 0; seccionIndex < imagenes.length; seccionIndex++) {
       const seccionImagenes = [];
-      for (let preguntaIndex = 0; preguntaIndex < imagenes[seccionIndex].length; preguntaIndex++) {
-        const imagen = imagenes[seccionIndex][preguntaIndex];
+      const seccionActual = imagenes[seccionIndex];
+      
+      console.debug(`[AuditoriaService] Procesando sección ${seccionIndex}:`, seccionActual);
+      
+      if (!Array.isArray(seccionActual)) {
+        console.warn(`[AuditoriaService] Sección ${seccionIndex} no es un array:`, seccionActual);
+        imagenesProcesadas.push([]);
+        continue;
+      }
+      
+      for (let preguntaIndex = 0; preguntaIndex < seccionActual.length; preguntaIndex++) {
+        const imagen = seccionActual[preguntaIndex];
+        
+        console.debug(`[AuditoriaService] Procesando imagen sección ${seccionIndex}, pregunta ${preguntaIndex}:`, imagen);
         
         if (imagen instanceof File) {
           try {
+            console.debug(`[AuditoriaService] Subiendo archivo: ${imagen.name}, tamaño: ${(imagen.size/1024/1024).toFixed(2)}MB`);
+            
             // Generar nombre único para la imagen
             const timestamp = Date.now();
             const nombreArchivo = `auditoria_${timestamp}_${imagen.name}`;
@@ -67,24 +88,74 @@ class AuditoriaService {
             await uploadBytes(storageRef, imagen);
             const url = await getDownloadURL(storageRef);
             
-            seccionImagenes.push({
+            const imagenProcesada = {
               nombre: imagen.name,
               tipo: imagen.type,
               tamaño: imagen.size,
               url: url,
               timestamp: timestamp
-            });
+            };
+            
+            console.debug(`[AuditoriaService] Imagen subida exitosamente:`, imagenProcesada);
+            seccionImagenes.push(imagenProcesada);
           } catch (error) {
-            console.error("Error al procesar imagen:", error);
+            console.error(`[AuditoriaService] Error al procesar imagen:`, error);
+            seccionImagenes.push(null);
+          }
+        } else if (imagen && typeof imagen === 'object' && imagen.url) {
+          // Si ya es un objeto con URL (ya procesada)
+          console.debug(`[AuditoriaService] Imagen ya procesada:`, imagen);
+          seccionImagenes.push(imagen);
+        } else if (typeof imagen === 'string' && imagen.trim() !== '') {
+          // Si es una URL directa
+          console.debug(`[AuditoriaService] Imagen como URL:`, imagen);
+          seccionImagenes.push({
+            nombre: 'imagen_existente',
+            tipo: 'image/*',
+            tamaño: 0,
+            url: imagen,
+            timestamp: Date.now()
+          });
+        } else if (Array.isArray(imagen) && imagen.length > 0) {
+          // Si es un array de imágenes, procesar la primera
+          console.debug(`[AuditoriaService] Array de imágenes, procesando primera:`, imagen);
+          const primeraImagen = imagen[0];
+          if (primeraImagen instanceof File) {
+            try {
+              const timestamp = Date.now();
+              const nombreArchivo = `auditoria_${timestamp}_${primeraImagen.name}`;
+              const storageRef = ref(storage, `imagenes/auditorias/${nombreArchivo}`);
+              
+              await uploadBytes(storageRef, primeraImagen);
+              const url = await getDownloadURL(storageRef);
+              
+              seccionImagenes.push({
+                nombre: primeraImagen.name,
+                tipo: primeraImagen.type,
+                tamaño: primeraImagen.size,
+                url: url,
+                timestamp: timestamp
+              });
+            } catch (error) {
+              console.error(`[AuditoriaService] Error al procesar primera imagen del array:`, error);
+              seccionImagenes.push(null);
+            }
+          } else if (primeraImagen && typeof primeraImagen === 'object' && primeraImagen.url) {
+            seccionImagenes.push(primeraImagen);
+          } else {
             seccionImagenes.push(null);
           }
         } else {
-          seccionImagenes.push(imagen);
+          console.debug(`[AuditoriaService] Imagen no válida o null:`, imagen);
+          seccionImagenes.push(null);
         }
       }
+      
+      console.debug(`[AuditoriaService] Sección ${seccionIndex} procesada:`, seccionImagenes);
       imagenesProcesadas.push(seccionImagenes);
     }
     
+    console.debug('[AuditoriaService] Todas las imágenes procesadas:', imagenesProcesadas);
     return imagenesProcesadas;
   }
 

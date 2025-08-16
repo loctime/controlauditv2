@@ -21,7 +21,46 @@ const getSafeValue = (val) => {
   return String(val);
 };
 
+// Función helper para procesar imagen
+const procesarImagen = (imagen, seccionIndex, preguntaIndex) => {
+  console.debug(`[ImagenesTable] Procesando imagen para sección ${seccionIndex}, pregunta ${preguntaIndex}:`, imagen);
+  
+  if (!imagen) {
+    console.debug(`[ImagenesTable] No hay imagen para sección ${seccionIndex}, pregunta ${preguntaIndex}`);
+    return null;
+  }
+
+  // Si es un objeto con URL
+  if (typeof imagen === 'object' && imagen.url) {
+    console.debug(`[ImagenesTable] Imagen con URL: ${imagen.url}`);
+    return imagen.url;
+  }
+
+  // Si es una string (URL directa)
+  if (typeof imagen === 'string' && imagen.trim() !== '') {
+    console.debug(`[ImagenesTable] Imagen como string: ${imagen}`);
+    return imagen;
+  }
+
+  // Si es un array de imágenes
+  if (Array.isArray(imagen) && imagen.length > 0) {
+    console.debug(`[ImagenesTable] Array de imágenes:`, imagen);
+    // Tomar la primera imagen del array
+    const primeraImagen = imagen[0];
+    if (typeof primeraImagen === 'object' && primeraImagen.url) {
+      return primeraImagen.url;
+    } else if (typeof primeraImagen === 'string') {
+      return primeraImagen;
+    }
+  }
+
+  console.debug(`[ImagenesTable] Formato de imagen no reconocido:`, imagen);
+  return null;
+};
+
 const ImagenesTable = ({ secciones, imagenes, comentarios }) => {
+  console.debug('[ImagenesTable] Props recibidas:', { secciones, imagenes, comentarios });
+
   return (
     <TableContainer component={Paper}>
       <Table>
@@ -34,29 +73,46 @@ const ImagenesTable = ({ secciones, imagenes, comentarios }) => {
           </TableRow>
         </TableHead>
         <TableBody>
-          {secciones.flatMap((seccion, index) =>
-            seccion.preguntas.map((pregunta, idx) => (
-              <TableRow key={`${seccion.nombre}-${idx}`}>
-                <TableCell>{seccion.nombre}</TableCell>
-                <TableCell>{pregunta}</TableCell>
-                <TableCell>
-                  {imagenes && imagenes[idx] ? (
-                    typeof imagenes[idx] === "string" ? (
-                      <img src={imagenes[idx]} alt="Imagen" style={{ width: "100px" }} />
-                    ) : getSafeValue(imagenes[idx]).startsWith("data:image") || getSafeValue(imagenes[idx]).startsWith("http") ? (
-                      <img src={getSafeValue(imagenes[idx])} alt="Imagen" style={{ width: "100px" }} />
+          {secciones.flatMap((seccion, seccionIndex) =>
+            seccion.preguntas.map((pregunta, preguntaIndex) => {
+              const imagen = imagenes[seccionIndex]?.[preguntaIndex];
+              const imagenProcesada = procesarImagen(imagen, seccionIndex, preguntaIndex);
+              const comentario = comentarios[seccionIndex]?.[preguntaIndex];
+              
+              console.debug(`[ImagenesTable] Renderizando fila sección ${seccionIndex}, pregunta ${preguntaIndex}:`, {
+                imagen: imagen,
+                imagenProcesada: imagenProcesada,
+                comentario: comentario
+              });
+
+              return (
+                <TableRow key={`${seccion.nombre}-${preguntaIndex}`}>
+                  <TableCell>{seccion.nombre}</TableCell>
+                  <TableCell>{pregunta}</TableCell>
+                  <TableCell>
+                    {imagenProcesada ? (
+                      <img 
+                        src={imagenProcesada} 
+                        alt="Imagen" 
+                        style={{ width: "100px" }}
+                        onError={(e) => { 
+                          console.error(`[ImagenesTable] Error cargando imagen: ${imagenProcesada}`, e);
+                          e.target.style.display = 'none'; 
+                        }}
+                        onLoad={() => {
+                          console.debug(`[ImagenesTable] Imagen cargada exitosamente: ${imagenProcesada}`);
+                        }}
+                      />
                     ) : (
-                      getSafeValue(imagenes[idx])
-                    )
-                  ) : (
-                    "Imagen no disponible"
-                  )}
-                </TableCell>
-                <TableCell>
-                  {comentarios && comentarios[idx] ? getSafeValue(comentarios[idx]) : "Comentario no disponible"}
-                </TableCell>
-              </TableRow>
-            ))
+                      "Imagen no disponible"
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {comentario ? getSafeValue(comentario) : "Comentario no disponible"}
+                  </TableCell>
+                </TableRow>
+              );
+            })
           )}
         </TableBody>
       </Table>

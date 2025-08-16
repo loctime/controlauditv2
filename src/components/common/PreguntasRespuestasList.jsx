@@ -27,6 +27,43 @@ const PreguntasRespuestasList = ({ secciones = [], respuestas = [], comentarios 
     return <Typography variant="body2" color="text.secondary">No hay datos para mostrar.</Typography>;
   }
 
+  // Función helper para procesar imagen
+  const procesarImagen = (imagen, seccionIndex, preguntaIndex) => {
+    console.debug(`[PreguntasRespuestasList] Procesando imagen para sección ${seccionIndex}, pregunta ${preguntaIndex}:`, imagen);
+    
+    if (!imagen) {
+      console.debug(`[PreguntasRespuestasList] No hay imagen para sección ${seccionIndex}, pregunta ${preguntaIndex}`);
+      return null;
+    }
+
+    // Si es un objeto con URL
+    if (typeof imagen === 'object' && imagen.url) {
+      console.debug(`[PreguntasRespuestasList] Imagen con URL: ${imagen.url}`);
+      return imagen.url;
+    }
+
+    // Si es una string (URL directa)
+    if (typeof imagen === 'string' && imagen.trim() !== '') {
+      console.debug(`[PreguntasRespuestasList] Imagen como string: ${imagen}`);
+      return imagen;
+    }
+
+    // Si es un array de imágenes
+    if (Array.isArray(imagen) && imagen.length > 0) {
+      console.debug(`[PreguntasRespuestasList] Array de imágenes:`, imagen);
+      // Tomar la primera imagen del array
+      const primeraImagen = imagen[0];
+      if (typeof primeraImagen === 'object' && primeraImagen.url) {
+        return primeraImagen.url;
+      } else if (typeof primeraImagen === 'string') {
+        return primeraImagen;
+      }
+    }
+
+    console.debug(`[PreguntasRespuestasList] Formato de imagen no reconocido:`, imagen);
+    return null;
+  };
+
   return (
     <Box>
       {secciones.map((seccion, sIdx) => (
@@ -45,7 +82,14 @@ const PreguntasRespuestasList = ({ secciones = [], respuestas = [], comentarios 
               }
               const mostrarRespuesta = !respuesta ? "Sin responder" : respuesta;
               const comentario = comentarios[sIdx]?.[pIdx] || "";
-              const imagen = imagenes[sIdx]?.[pIdx] || "";
+              const imagen = imagenes[sIdx]?.[pIdx];
+              const imagenProcesada = procesarImagen(imagen, sIdx, pIdx);
+              
+              console.debug(`[PreguntasRespuestasList] Sección ${sIdx}, Pregunta ${pIdx}:`, {
+                imagen: imagen,
+                imagenProcesada: imagenProcesada
+              });
+
               return (
                 <Box key={pIdx} sx={{ mb: 2, pl: 1, borderLeft: '3px solid #1976d2' }}>
                   <Typography variant="subtitle1" fontWeight={600}>
@@ -59,13 +103,19 @@ const PreguntasRespuestasList = ({ secciones = [], respuestas = [], comentarios 
                       <strong>Comentario:</strong> {comentario}
                     </Typography>
                   )}
-                  {imagen && imagen.trim() !== "" && (
+                  {imagenProcesada && (
                     <Box sx={{ mt: 1, mb: 1 }}>
                       <img
-                        src={imagen}
+                        src={imagenProcesada}
                         alt={`Imagen pregunta ${pIdx + 1}`}
                         style={{ maxWidth: '180px', maxHeight: '120px', borderRadius: 4, border: '1px solid #ccc' }}
-                        onError={e => { e.target.style.display = 'none'; }}
+                        onError={(e) => { 
+                          console.error(`[PreguntasRespuestasList] Error cargando imagen: ${imagenProcesada}`, e);
+                          e.target.style.display = 'none'; 
+                        }}
+                        onLoad={() => {
+                          console.debug(`[PreguntasRespuestasList] Imagen cargada exitosamente: ${imagenProcesada}`);
+                        }}
                       />
                     </Box>
                   )}
