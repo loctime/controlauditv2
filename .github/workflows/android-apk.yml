@@ -53,6 +53,12 @@ jobs:
         working-directory: android
         run: chmod +x ./gradlew
 
+      - name: Generate debug keystore
+        working-directory: android
+        run: |
+          chmod +x ./generate-keystore.sh
+          ./generate-keystore.sh
+
       - name: Build Android APK (Release)
         working-directory: android
         run: |
@@ -62,7 +68,7 @@ jobs:
           # Limpiar build anterior
           ./gradlew clean
           
-          # Construir APK de release
+          # Construir APK de release firmada
           ./gradlew assembleRelease --no-daemon --parallel
 
       - name: Verify APK exists
