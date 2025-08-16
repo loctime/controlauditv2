@@ -68,23 +68,19 @@ jobs:
           # Limpiar build anterior
           ./gradlew clean
           
-          # Construir APK de release firmada
-          ./gradlew assembleRelease --no-daemon --parallel
+          # Construir APK de debug (más fácil de instalar)
+          ./gradlew assembleDebug --no-daemon --parallel
 
       - name: Verify APK exists
         run: |
-          # Buscar APK con cualquier variación del nombre
-          if [ -f "android/app/build/outputs/apk/release/ControlAudit-release-unsigned.apk" ]; then
-            echo "✅ APK release encontrada"
-            ls -lh android/app/build/outputs/apk/release/ControlAudit-release-unsigned.apk
-            echo "APK_PATH=android/app/build/outputs/apk/release/ControlAudit-release-unsigned.apk" >> $GITHUB_ENV
-          elif [ -f "android/app/build/outputs/apk/release/ControlAudit-debug-release-unsigned.apk" ]; then
-            echo "✅ APK debug-release encontrada"
-            ls -lh android/app/build/outputs/apk/release/ControlAudit-debug-release-unsigned.apk
-            echo "APK_PATH=android/app/build/outputs/apk/release/ControlAudit-debug-release-unsigned.apk" >> $GITHUB_ENV
+          # Buscar APK de debug
+          if [ -f "android/app/build/outputs/apk/debug/ControlAudit-debug.apk" ]; then
+            echo "✅ APK debug encontrada"
+            ls -lh android/app/build/outputs/apk/debug/ControlAudit-debug.apk
+            echo "APK_PATH=android/app/build/outputs/apk/debug/ControlAudit-debug.apk" >> $GITHUB_ENV
           else
             echo "❌ APK no encontrada en la ubicación esperada"
-            ls -la android/app/build/outputs/apk/release/
+            ls -la android/app/build/outputs/apk/debug/
             exit 1
           fi
 
