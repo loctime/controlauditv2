@@ -1,7 +1,7 @@
 // src/pages/Dashboard.jsx
-import React, { useContext, useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { Typography, Box, Grid, Paper, Alert, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Button, TextField, Dialog, DialogTitle, DialogContent, DialogActions, Card, CardContent, Tabs, Tab, CircularProgress } from "@mui/material";
-import { AuthContext } from "../../context/AuthContext";
+import { useAuth } from "../../context/AuthContext";
 import { collection, addDoc, setDoc, doc, updateDoc, query, where, getDocs, getDoc } from "firebase/firestore";
 import { db } from "../../../firebaseConfig";
 import { toast } from 'react-toastify';
@@ -33,7 +33,7 @@ const empresasEjemplo = [
 ];
 
 function Dashboard() {
-  const { userProfile, role, permisos, userEmpresas } = useContext(AuthContext);
+  const { userProfile, role, permisos, userEmpresas } = useAuth();
   const [openDialog, setOpenDialog] = useState(false);
   const [openAdminDialog, setOpenAdminDialog] = useState(false);
   const [adminCode, setAdminCode] = useState('');

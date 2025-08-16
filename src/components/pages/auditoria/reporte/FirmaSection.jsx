@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useContext } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Firma from "./Firma";
 import ResumenAuditoriaModal from "./ResumenAuditoriaModal";
 import { 
@@ -43,7 +43,7 @@ const FirmaSection = ({
   secciones,
   encargado
 }) => {
-  const { userProfile } = useContext(AuthContext);
+  const { userProfile } = useAuth();
   const theme = useTheme();
   const sigPadRef = useRef(null);
   const [firmaAuditorURL, setFirmaAuditorURL] = useState(firmaAuditor);

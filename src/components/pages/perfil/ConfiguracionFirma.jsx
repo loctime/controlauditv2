@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useContext } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   Box,
   Card,
@@ -19,7 +19,7 @@ import {
   Delete as DeleteIcon
 } from '@mui/icons-material';
 import SignaturePad from 'react-signature-canvas';
-import { AuthContext } from '../../context/AuthContext';
+import { useAuth } from '../../context/AuthContext';
 import Swal from 'sweetalert2';
 
 const capitalizeWords = (str) => {
@@ -27,7 +27,7 @@ const capitalizeWords = (str) => {
 };
 
 const ConfiguracionFirma = () => {
-  const { userProfile, updateUserProfile } = useContext(AuthContext);
+  const { userProfile, updateUserProfile } = useAuth();
   const theme = useTheme();
   const [isEditing, setIsEditing] = useState(false);
   const [hasSignature, setHasSignature] = useState(false);

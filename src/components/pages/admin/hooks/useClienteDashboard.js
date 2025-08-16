@@ -1,12 +1,12 @@
 // src/components/pages/admin/hooks/useClienteDashboard.js
-import { useState, useEffect, useContext, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { collection, addDoc, query, where, getDocs, updateDoc, doc, deleteDoc, serverTimestamp, limit, orderBy, getDoc } from "firebase/firestore";
 import { db } from "../../../../firebaseConfig";
-import { AuthContext } from "../../../context/AuthContext";
+import { useAuth } from "../../../context/AuthContext";
 import { toast } from 'react-toastify';
 
 export const useClienteDashboard = () => {
-  const { userProfile, role } = useContext(AuthContext);
+  const { userProfile, role } = useAuth();
   const [auditorias, setAuditorias] = useState([]);
   const [empresas, setEmpresas] = useState([]);
   const [sucursales, setSucursales] = useState([]);

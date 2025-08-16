@@ -1,4 +1,4 @@
-import React, { useState, useContext } from 'react';
+import React, { useState } from 'react';
 import { 
   Button, 
   Dialog, 
@@ -13,7 +13,7 @@ import {
   useTheme
 } from '@mui/material';
 import { Check as CheckIcon, Close as CloseIcon } from '@mui/icons-material';
-import { AuthContext } from '../context/AuthContext';
+import { useAuth } from '../context/AuthContext';
 
 const FirmaDigital = ({ 
   onFirmar, 
@@ -23,7 +23,7 @@ const FirmaDigital = ({
   variant = 'contained',
   children 
 }) => {
-  const { userProfile } = useContext(AuthContext);
+  const { userProfile } = useAuth();
   const [openDialog, setOpenDialog] = useState(false);
   const [firmaSeleccionada, setFirmaSeleccionada] = useState(null);
   const theme = useTheme();
