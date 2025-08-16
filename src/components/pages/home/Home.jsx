@@ -1,12 +1,13 @@
 import React from 'react';
 import './Home.css';
-import { Typography, Button, Grid, List, ListItem, ListItemIcon, ListItemText, Divider, useTheme } from '@mui/material';
+import { Typography, Button, Grid, List, ListItem, ListItemIcon, ListItemText, Divider, useTheme, Box } from '@mui/material';
 import { Link } from 'react-router-dom';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import DescriptionIcon from '@mui/icons-material/Description';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import AssessmentIcon from '@mui/icons-material/Assessment';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
+import DownloadAPK from '../../common/DownloadAPK';
 
 const features = [
   { icon: <CheckCircleIcon color="success" />, text: 'Gestión completa de formularios' },
@@ -95,6 +96,21 @@ const Home = () => {
           >
             Comenzar
           </Button>
+          
+          {/* Sección de descarga de APK */}
+          <Box mt={4} p={3} sx={{ 
+            background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.02)',
+            borderRadius: 2,
+            border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`
+          }}>
+            <Typography variant="h6" gutterBottom fontWeight={600}>
+              📱 Aplicación Móvil
+            </Typography>
+            <Typography variant="body2" color="text.secondary" mb={2}>
+              Descarga nuestra aplicación móvil para realizar auditorías desde tu dispositivo Android
+            </Typography>
+            <DownloadAPK variant="outlined" size="large" showInfo={true} />
+          </Box>
         </div>
         <Divider sx={{ mb: 2, mt: 4 }} />
         <div className="home-contact">
