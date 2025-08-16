@@ -73,11 +73,19 @@ jobs:
 
       - name: Verify APK exists
         run: |
-          # Buscar APK de debug
-          if [ -f "android/app/build/outputs/apk/debug/ControlAudit-debug.apk" ]; then
-            echo "✅ APK debug encontrada"
+          # Buscar APK de debug con cualquier variación del nombre
+          if [ -f "android/app/build/outputs/apk/debug/app-debug.apk" ]; then
+            echo "✅ APK debug encontrada (app-debug.apk)"
+            ls -lh android/app/build/outputs/apk/debug/app-debug.apk
+            echo "APK_PATH=android/app/build/outputs/apk/debug/app-debug.apk" >> $GITHUB_ENV
+          elif [ -f "android/app/build/outputs/apk/debug/ControlAudit-debug.apk" ]; then
+            echo "✅ APK debug encontrada (ControlAudit-debug.apk)"
             ls -lh android/app/build/outputs/apk/debug/ControlAudit-debug.apk
             echo "APK_PATH=android/app/build/outputs/apk/debug/ControlAudit-debug.apk" >> $GITHUB_ENV
+          elif [ -f "android/app/build/outputs/apk/debug/ControlAudit-debug-debug.apk" ]; then
+            echo "✅ APK debug-debug encontrada"
+            ls -lh android/app/build/outputs/apk/debug/ControlAudit-debug-debug.apk
+            echo "APK_PATH=android/app/build/outputs/apk/debug/ControlAudit-debug-debug.apk" >> $GITHUB_ENV
           else
             echo "❌ APK no encontrada en la ubicación esperada"
             ls -la android/app/build/outputs/apk/debug/

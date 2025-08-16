@@ -36,8 +36,7 @@ android {
         }
         debug {
             signingConfig signingConfigs.release
-            // Configurar nombre del APK para debug también
-            setArchivesBaseName("ControlAudit-debug")
+            // No configurar nombre base para debug (Gradle lo maneja automáticamente)
         }
     }
 }
