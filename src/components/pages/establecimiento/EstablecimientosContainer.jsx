@@ -260,9 +260,10 @@ const EstablecimientosContainer = () => {
   };
 
   return (
-    <Box sx={{ p: isSmallMobile ? 2 : 4 }}>
-      {/* Header */}
-      <Box sx={{ 
+    <Box className="page-container">
+      <Box className="content-container">
+        {/* Header */}
+        <Box sx={{ 
         display: 'flex', 
         flexDirection: isSmallMobile ? 'column' : 'row',
         alignItems: 'center', 
@@ -691,6 +692,7 @@ const EstablecimientosContainer = () => {
           loading={loading}
         />
       )}
+      </Box>
     </Box>
   );
 };

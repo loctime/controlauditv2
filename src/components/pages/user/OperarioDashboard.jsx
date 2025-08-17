@@ -223,7 +223,8 @@ const OperarioDashboard = () => {
   }
 
   return (
-    <Box sx={{ p: 3 }}>
+    <Box className="page-container">
+      <Box className="content-container">
       {/* Header */}
       <Box sx={{ mb: 4 }}>
         <Typography variant="h4" component="h1" gutterBottom fontWeight="bold">
@@ -408,6 +409,7 @@ const OperarioDashboard = () => {
           </Grid>
         </Grid>
       </Paper>
+      </Box>
     </Box>
   );
 };

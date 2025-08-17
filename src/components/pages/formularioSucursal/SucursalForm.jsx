@@ -126,7 +126,8 @@ const SucursalForm = ({ agregarSucursal, empresaId }) => {
   }
 
   return (
-    <Box>
+    <Box className="page-container">
+      <Box className="content-container">
       <Typography variant="h6" gutterBottom>
         Agregar Sucursal
       </Typography>
@@ -251,6 +252,7 @@ const SucursalForm = ({ agregarSucursal, empresaId }) => {
           Agregar Sucursal
         </Button>
       </form>
+      </Box>
     </Box>
   );
 };

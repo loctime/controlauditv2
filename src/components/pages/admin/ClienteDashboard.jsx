@@ -231,7 +231,8 @@ const ClienteDashboard = React.memo(() => {
   }
 
   return (
-    <Box sx={{ padding: { xs: 0, sm: 0.5, md: 1 } }}>
+    <Box className="page-container">
+      <Box className="content-container">
       <Typography variant="h4" gutterBottom sx={{ 
         display: 'flex', 
         alignItems: 'center', 
@@ -279,6 +280,7 @@ const ClienteDashboard = React.memo(() => {
           fechaPreestablecida={fechaPreestablecida}
         />
       )}
+      </Box>
     </Box>
   );
 });

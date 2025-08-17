@@ -8,7 +8,8 @@ const PermissionsDebug = () => {
   const menuItems = getMenuItems(role, permisos);
 
   return (
-    <Box sx={{ p: 3 }}>
+    <Box className="page-container">
+      <Box className="content-container">
       <Typography variant="h4" gutterBottom>
         Debug de Permisos y Roles
       </Typography>
@@ -79,6 +80,7 @@ const PermissionsDebug = () => {
           {JSON.stringify(userProfile, null, 2)}
         </pre>
       </Paper>
+      </Box>
     </Box>
   );
 };

@@ -171,7 +171,8 @@ const HistorialAuditorias = () => {
   }
 
   return (
-    <Box sx={{ padding: 4 }}>
+    <Box className="page-container">
+      <Box className="content-container">
       <Typography variant="h4" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
         <CheckCircle color="primary" />
         Historial de Auditorías Completadas
@@ -386,6 +387,7 @@ const HistorialAuditorias = () => {
           <Button onClick={() => setOpenDialog(false)}>Cerrar</Button>
         </DialogActions>
       </Dialog>
+      </Box>
     </Box>
   );
 };

@@ -37,28 +37,23 @@ const Home = () => {
   }
 
   return (
-    <div 
-      className="home-container"
-      style={{
+    <Box 
+      className="page-container"
+      sx={{
+        background: 'linear-gradient(120deg, #f5f7fa 0%, #c3cfe2 100%)',
         minHeight: '100vh',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'flex-start',
-        background: 'linear-gradient(120deg, #f5f7fa 0%, #c3cfe2 100%)',
         padding: 0,
-        // Safe areas para móviles - padding mínimo con espacio lateral
-        paddingTop: 'calc(4px + env(safe-area-inset-top, 0px))',
-        paddingBottom: 'calc(16px + env(safe-area-inset-bottom, 0px))',
-        paddingLeft: 'calc(12px + env(safe-area-inset-left, 0px))',
-        paddingRight: 'calc(12px + env(safe-area-inset-right, 0px))',
-        boxSizing: 'border-box',
         width: '100vw',
         margin: 0,
         overflowY: 'auto',
         WebkitOverflowScrolling: 'touch'
       }}
     >
+      <Box className="content-container">
       <Typography variant="h3" component="h1" align="center" gutterBottom fontWeight={700} sx={{ mb: 2, mt: 1 }}>
         ¡Bienvenido a <span style={{ color: theme.palette.primary.light }}>Tu Control de Auditoría</span>
       </Typography>
@@ -97,7 +92,7 @@ const Home = () => {
         </Grid>
       </Grid>
 
-      <div style={{ textAlign: 'center', marginTop: 32, width: '100%', maxWidth: '100%' }}>
+      <Box sx={{ textAlign: 'center', marginTop: 32, width: '100%', maxWidth: '100%' }}>
         <Button
           component={Link}
           to="/auditoria"
@@ -159,12 +154,13 @@ const Home = () => {
           </Typography>
           <DownloadAPK variant="outlined" size="large" showInfo={true} />
         </Box>
-      </div>
+      </Box>
       <Divider sx={{ mb: 2, mt: 4, width: '100%' }} />
-      <div className="home-contact">
+      <Box className="home-contact">
         Contacto: <a href="mailto:licvidalfernando@gmail.com" style={{ color: "#1976d2", textDecoration: "none" }}>licvidalfernando@gmail.com</a>
-      </div>
-    </div>
+      </Box>
+      </Box>
+    </Box>
   );
 };
 
