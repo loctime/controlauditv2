@@ -8,6 +8,8 @@ import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import AssessmentIcon from '@mui/icons-material/Assessment';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import DownloadAPK from '../../common/DownloadAPK';
+import SafeAreaContainer from '../../common/SafeAreaContainer';
+import SafeAreaTest from '../../common/SafeAreaTest';
 
 const features = [
   { icon: <CheckCircleIcon color="success" />, text: 'Gestión completa de formularios' },
@@ -27,12 +29,31 @@ const Home = () => {
   console.debug('[Home] Renderizando página principal');
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
+  const [showSafeAreaTest, setShowSafeAreaTest] = React.useState(false);
+
+  // Si se debe mostrar la prueba de safe areas
+  if (showSafeAreaTest) {
+    return <SafeAreaTest onBack={() => setShowSafeAreaTest(false)} />;
+  }
 
   return (
-    <div className="home-main-container">
+    <div style={{
+      minHeight: '100vh',
+      display: 'flex',
+      alignItems: 'flex-start',
+      justifyContent: 'center',
+      background: 'linear-gradient(120deg, #f5f7fa 0%, #c3cfe2 100%)',
+      padding: '20px 0',
+      // Safe areas para móviles
+      paddingTop: 'calc(20px + env(safe-area-inset-top, 0px))',
+      paddingBottom: 'calc(20px + env(safe-area-inset-bottom, 0px))',
+      paddingLeft: 'calc(20px + env(safe-area-inset-left, 0px))',
+      paddingRight: 'calc(20px + env(safe-area-inset-right, 0px))',
+      boxSizing: 'border-box'
+    }}>
       <div className="home-card">
         <Typography variant="h3" component="h1" align="center" gutterBottom fontWeight={700}>
-          AABienvenido a <span style={{ color: theme.palette.primary.light }}>Tu Control de Auditoría</span>
+          ¡Bienvenido a <span style={{ color: theme.palette.primary.light }}>Tu Control de Auditoría</span>
         </Typography>
         <Typography variant="h6" align="center" gutterBottom sx={{ opacity: 0.85 }}>
           Optimiza tus auditorías con nuestra plataforma profesional.
@@ -92,9 +113,28 @@ const Home = () => {
                   : 'linear-gradient(90deg, #1976d2 0%, #1565c0 100%)',
               },
               transition: 'background 0.3s, color 0.3s',
+              mb: 2
             }}
           >
             Comenzar
+          </Button>
+          
+          {/* Botón de prueba de safe areas */}
+          <Button
+            variant="outlined"
+            size="medium"
+            onClick={() => setShowSafeAreaTest(true)}
+            sx={{
+              borderColor: isDark ? '#666' : '#1976d2',
+              color: isDark ? '#fff' : '#1976d2',
+              '&:hover': {
+                borderColor: isDark ? '#888' : '#1565c0',
+                backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(25,118,210,0.1)',
+              },
+              mt: 1
+            }}
+          >
+            🧪 Probar Safe Areas
           </Button>
           
           {/* Sección de descarga de APK */}

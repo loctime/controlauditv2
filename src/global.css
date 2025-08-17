@@ -15,6 +15,12 @@
   --color-success-text: #2e7d32;
   --color-success-border: #c8e6c9;
   --color-table-header: #f2f2f2;
+  
+  /* Safe area variables para dispositivos móviles */
+  --safe-area-inset-top: env(safe-area-inset-top, 0px);
+  --safe-area-inset-right: env(safe-area-inset-right, 0px);
+  --safe-area-inset-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-area-inset-left: env(safe-area-inset-left, 0px);
 }
 
 /* Variables para modo oscuro */
@@ -34,6 +40,12 @@
   --color-success-text: #b9f6ca;
   --color-success-border: #69f0ae;
   --color-table-header: #222;
+  
+  /* Safe area variables para dispositivos móviles (modo oscuro) */
+  --safe-area-inset-top: env(safe-area-inset-top, 0px);
+  --safe-area-inset-right: env(safe-area-inset-right, 0px);
+  --safe-area-inset-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-area-inset-left: env(safe-area-inset-left, 0px);
 }
 
 /* Reset básico */
@@ -65,6 +77,10 @@ html, body {
 @media (max-width: 600px) {
   .main-app-container {
     padding: 8px;
+    /* Asegurar que el contenido respete las safe areas usando env() directamente */
+    padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+    padding-left: calc(8px + env(safe-area-inset-left, 0px));
+    padding-right: calc(8px + env(safe-area-inset-right, 0px));
   }
   
   .card {
@@ -89,6 +105,10 @@ html, body {
 @media (max-width: 480px) {
   .main-app-container {
     padding: 4px;
+    /* Asegurar que el contenido respete las safe areas en pantallas pequeñas usando env() directamente */
+    padding-bottom: calc(4px + env(safe-area-inset-bottom, 0px));
+    padding-left: calc(4px + env(safe-area-inset-left, 0px));
+    padding-right: calc(4px + env(safe-area-inset-right, 0px));
   }
   
   .card {
@@ -261,4 +281,41 @@ th {
   border-radius: 4px;
   padding: 8px 12px;
   margin: 8px 0;
+}
+
+/* Configuraciones específicas para safe areas en dispositivos móviles */
+@media (max-width: 768px) {
+  /* Asegurar que el body respete las safe areas usando env() directamente */
+  body {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    padding-left: env(safe-area-inset-left, 0px);
+    padding-right: env(safe-area-inset-right, 0px);
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+  
+  /* Asegurar que el contenedor principal respete las safe areas */
+  #root {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    min-height: calc(100vh - env(safe-area-inset-bottom, 0px));
+  }
+  
+  /* Asegurar que los elementos con posición fija respeten las safe areas */
+  .MuiAppBar-root {
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+  
+  /* Asegurar que los botones flotantes respeten las safe areas */
+  .floating-button {
+    bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  }
+  
+  /* Asegurar que los diálogos respeten las safe areas */
+  .MuiDialog-paper {
+    margin-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  
+  /* Asegurar que los drawers respeten las safe areas */
+  .MuiDrawer-paper {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
 }

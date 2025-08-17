@@ -106,26 +106,42 @@ const Login = () => {
           transition: 'all 0.3s ease'
         }}
       >
-        <CardContent sx={{ p: isSmallMobile ? 3 : 5 }}>
+        <CardContent sx={{ p: isSmallMobile ? 4 : 6 }}>
+          {/* Sección de descarga de APK - MOVIDA ARRIBA */}
           <Box sx={{ textAlign: 'center', mb: isSmallMobile ? 4 : 5 }}>
             <Typography 
-              variant={isSmallMobile ? "h5" : "h4"} 
+              variant={isSmallMobile ? "h6" : "h5"} 
+              color="text.secondary" 
+              sx={{ 
+                mb: 2,
+                fontWeight: 600,
+                lineHeight: 1.4
+              }}
+            >
+              📱 Descarga nuestra aplicación móvil
+            </Typography>
+            <DownloadAPK variant="outlined" size="large" showInfo={false} />
+          </Box>
+
+          <Box sx={{ textAlign: 'center', mb: isSmallMobile ? 5 : 6 }}>
+            <Typography 
+              variant={isSmallMobile ? "h4" : "h3"} 
               component="h1" 
               sx={{ 
                 fontWeight: 700, 
                 color: 'primary.main',
-                mb: 2,
+                mb: 3,
                 lineHeight: 1.2
               }}
             >
               🔐 Iniciar Sesión
             </Typography>
             <Typography 
-              variant="body1" 
+              variant={isSmallMobile ? "h6" : "h5"} 
               color="text.secondary"
               sx={{ 
                 lineHeight: 1.5,
-                mb: 1
+                mb: 2
               }}
             >
               Accede a tu cuenta de Control de Auditorías
@@ -136,7 +152,7 @@ const Login = () => {
           <Alert 
             severity="error" 
             sx={{ 
-              mb: 3,
+              mb: 4,
               borderRadius: 2,
               '& .MuiAlert-icon': {
                 alignItems: 'center'
@@ -154,7 +170,7 @@ const Login = () => {
         >
           {({ isSubmitting, errors, touched }) => (
             <Form>
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: isSmallMobile ? 3 : 4 }}>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: isSmallMobile ? 4 : 5 }}>
                 {/* Campo de email */}
                 <Box>
                   <Field 
@@ -165,10 +181,10 @@ const Login = () => {
                     disabled={isSubmitting || loading}
                     error={touched.email && Boolean(errors.email)}
                     helperText={touched.email && errors.email}
-                    size={isSmallMobile ? "small" : "medium"}
+                    size="large"
                     sx={{
                       '& .MuiOutlinedInput-root': {
-                        borderRadius: 2,
+                        borderRadius: 3,
                         '&:hover': {
                           '& .MuiOutlinedInput-notchedOutline': {
                             borderColor: theme.palette.primary.main,
@@ -176,11 +192,11 @@ const Login = () => {
                         }
                       },
                       '& .MuiInputLabel-root': {
-                        fontSize: isSmallMobile ? '0.875rem' : '1rem'
+                        fontSize: isSmallMobile ? '1rem' : '1.1rem'
                       },
                       '& .MuiInputBase-input': {
-                        fontSize: isSmallMobile ? '0.875rem' : '1rem',
-                        padding: isSmallMobile ? '12px 14px' : '16px 14px'
+                        fontSize: isSmallMobile ? '1rem' : '1.1rem',
+                        padding: isSmallMobile ? '16px 18px' : '20px 18px'
                       }
                     }}
                   />
@@ -191,7 +207,7 @@ const Login = () => {
                   <FormControl variant="outlined" fullWidth>
                     <InputLabel 
                       htmlFor="outlined-adornment-password"
-                      sx={{ fontSize: isSmallMobile ? '0.875rem' : '1rem' }}
+                      sx={{ fontSize: isSmallMobile ? '1rem' : '1.1rem' }}
                     >
                       🔒 Contraseña
                     </InputLabel>
@@ -200,7 +216,7 @@ const Login = () => {
                       name="password"
                       id="outlined-adornment-password"
                       type={showPassword ? 'text' : 'password'}
-                      size={isSmallMobile ? "small" : "medium"}
+                      size="large"
                       endAdornment={
                         <InputAdornment position="end">
                           <IconButton
@@ -221,15 +237,15 @@ const Login = () => {
                       disabled={isSubmitting || loading}
                       error={touched.password && Boolean(errors.password)}
                       sx={{
-                        borderRadius: 2,
+                        borderRadius: 3,
                         '&:hover': {
                           '& .MuiOutlinedInput-notchedOutline': {
                             borderColor: theme.palette.primary.main,
                           }
                         },
                         '& .MuiInputBase-input': {
-                          fontSize: isSmallMobile ? '0.875rem' : '1rem',
-                          padding: isSmallMobile ? '12px 14px' : '16px 14px'
+                          fontSize: isSmallMobile ? '1rem' : '1.1rem',
+                          padding: isSmallMobile ? '16px 18px' : '20px 18px'
                         }
                       }}
                     />
@@ -242,14 +258,14 @@ const Login = () => {
                 </Box>
                 
                 {/* Link de olvidé contraseña */}
-                <Box sx={{ textAlign: 'center', mt: 1 }}>
+                <Box sx={{ textAlign: 'center', mt: 2 }}>
                   <Link
                     to="/forgot-password"
                     style={{ 
                       color: theme.palette.primary.main, 
                       textDecoration: 'none',
                       fontWeight: 600,
-                      fontSize: isSmallMobile ? '0.875rem' : '1rem',
+                      fontSize: isSmallMobile ? '1rem' : '1.1rem',
                       lineHeight: 1.5
                     }}
                   >
@@ -258,21 +274,21 @@ const Login = () => {
                 </Box>
                 
                 {/* Botón de ingresar */}
-                <Box sx={{ mt: 2 }}>
+                <Box sx={{ mt: 3 }}>
                   <Button
                     variant="contained"
                     fullWidth
                     type="submit"
                     disabled={isSubmitting || loading}
-                    size={isSmallMobile ? "medium" : "large"}
+                    size="large"
                     sx={{
                       color: 'white',
                       textTransform: 'none',
-                      py: isSmallMobile ? 1.5 : 2,
-                      px: isSmallMobile ? 3 : 4,
-                      fontSize: isSmallMobile ? '1rem' : '1.1rem',
+                      py: isSmallMobile ? 2 : 2.5,
+                      px: isSmallMobile ? 4 : 5,
+                      fontSize: isSmallMobile ? '1.1rem' : '1.2rem',
                       fontWeight: 600,
-                      borderRadius: 2,
+                      borderRadius: 3,
                       background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`,
                       '&:hover': {
                         background: `linear-gradient(135deg, ${theme.palette.primary.dark} 0%, ${theme.palette.primary.main} 100%)`,
@@ -286,32 +302,6 @@ const Login = () => {
                     {loading ? '⏳ Cargando...' : '🚀 Ingresar'}
                   </Button>
                 </Box>
-                
-                {/* Separador */}
-                <Box sx={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  my: 3,
-                  '&::before, &::after': {
-                    content: '""',
-                    flex: 1,
-                    borderBottom: `1px solid ${alpha(theme.palette.divider, 0.3)}`
-                  }
-                }}>
-                  <Typography variant="body2" sx={{ px: 2, color: 'text.secondary' }}>
-                    o
-                  </Typography>
-                </Box>
-                
-                {/* Sección de descarga de APK */}
-                <Box sx={{ textAlign: 'center' }}>
-                  <Typography variant="body2" color="text.secondary" mb={2}>
-                    📱 Descarga nuestra aplicación móvil
-                  </Typography>
-                  <DownloadAPK variant="outlined" size="medium" showInfo={false} />
-                </Box>
-                
-
               </Box>
             </Form>
           )}

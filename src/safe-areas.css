@@ -1,0 +1,136 @@
+/* Configuraciones específicas para Safe Areas en dispositivos móviles */
+
+/* Variables CSS para safe areas */
+:root {
+  --safe-area-inset-top: env(safe-area-inset-top, 0px);
+  --safe-area-inset-right: env(safe-area-inset-right, 0px);
+  --safe-area-inset-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-area-inset-left: env(safe-area-inset-left, 0px);
+}
+
+/* Configuraciones para dispositivos móviles */
+@media (max-width: 768px) {
+  /* Configuración del viewport para safe areas */
+  html {
+    /* Asegurar que el viewport respete las safe areas */
+    height: 100%;
+    overflow-x: hidden;
+  }
+  
+  /* Configuración del body */
+  body {
+    /* Aplicar padding para respetar las safe areas usando env() directamente */
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    padding-left: env(safe-area-inset-left, 0px);
+    padding-right: env(safe-area-inset-right, 0px);
+    min-height: 100vh;
+    /* Asegurar que el contenido no se superponga con las barras del sistema */
+    box-sizing: border-box;
+  }
+  
+  /* Configuración del contenedor principal */
+  #root {
+    min-height: calc(100vh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  
+  /* Configuración del contenedor de la aplicación */
+  .main-app-container {
+    min-height: calc(100vh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  
+  /* Configuración para elementos con posición fija */
+  .MuiAppBar-root {
+    padding-top: env(safe-area-inset-top, 0px);
+    height: calc(56px + env(safe-area-inset-top, 0px));
+  }
+  
+  /* Configuración para botones flotantes */
+  .floating-button,
+  .MuiFab-root {
+    bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  }
+  
+  /* Configuración para diálogos */
+  .MuiDialog-paper {
+    margin-bottom: env(safe-area-inset-bottom, 0px);
+    max-height: calc(100vh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+  }
+  
+  /* Configuración para drawers */
+  .MuiDrawer-paper {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    height: calc(100vh - env(safe-area-inset-bottom, 0px));
+  }
+  
+  /* Configuración para modales */
+  .MuiModal-root .MuiBox-root {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  
+  /* Configuración para elementos de navegación */
+  .MuiBottomNavigation-root {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    height: calc(56px + env(safe-area-inset-bottom, 0px));
+  }
+  
+  /* Configuración para toolbars */
+  .MuiToolbar-root {
+    padding-top: env(safe-area-inset-top, 0px);
+    min-height: calc(56px + env(safe-area-inset-top, 0px));
+  }
+}
+
+/* Configuraciones específicas para pantallas muy pequeñas */
+@media (max-width: 480px) {
+  body {
+    /* Reducir padding en pantallas muy pequeñas */
+    padding-top: calc(var(--safe-area-inset-top) * 0.5);
+    padding-bottom: calc(var(--safe-area-inset-bottom) * 0.5);
+    padding-left: calc(var(--safe-area-inset-left) * 0.5);
+    padding-right: calc(var(--safe-area-inset-right) * 0.5);
+  }
+  
+  .MuiAppBar-root {
+    padding-top: calc(var(--safe-area-inset-top) * 0.5);
+    height: calc(48px + var(--safe-area-inset-top) * 0.5);
+  }
+  
+  .MuiToolbar-root {
+    padding-top: calc(var(--safe-area-inset-top) * 0.5);
+    min-height: calc(48px + var(--safe-area-inset-top) * 0.5);
+  }
+}
+
+/* Configuraciones para orientación landscape en móviles */
+@media (max-width: 768px) and (orientation: landscape) {
+  body {
+    /* Ajustar para orientación landscape */
+    padding-top: calc(var(--safe-area-inset-top) * 0.3);
+    padding-bottom: calc(var(--safe-area-inset-bottom) * 0.3);
+  }
+  
+  .MuiAppBar-root {
+    padding-top: calc(var(--safe-area-inset-top) * 0.3);
+    height: calc(48px + var(--safe-area-inset-top) * 0.3);
+  }
+  
+  .MuiToolbar-root {
+    padding-top: calc(var(--safe-area-inset-top) * 0.3);
+    min-height: calc(48px + var(--safe-area-inset-top) * 0.3);
+  }
+}
+
+/* Configuraciones para dispositivos con notch */
+@supports (padding: max(0px)) {
+  @media (max-width: 768px) {
+    body {
+      padding-top: max(var(--safe-area-inset-top), 0px);
+      padding-bottom: max(var(--safe-area-inset-bottom), 0px);
+      padding-left: max(var(--safe-area-inset-left), 0px);
+      padding-right: max(var(--safe-area-inset-right), 0px);
+    }
+  }
+}

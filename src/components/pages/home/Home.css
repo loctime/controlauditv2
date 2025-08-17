@@ -34,6 +34,12 @@
   justify-content: center;
   background: linear-gradient(120deg, #f5f7fa 0%, #c3cfe2 100%);
   padding: 20px 0;
+  /* Safe areas para móviles usando env() directamente */
+  padding-top: calc(20px + env(safe-area-inset-top, 0px));
+  padding-bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+  padding-left: calc(20px + env(safe-area-inset-left, 0px));
+  padding-right: calc(20px + env(safe-area-inset-right, 0px));
+  box-sizing: border-box;
 }
 
 .home-card {
@@ -69,6 +75,8 @@
     padding: 16px 4px 24px 4px !important;
     border-radius: 18px !important;
     margin: 0 1vw !important;
+    /* Asegurar que respete las safe areas */
+    margin-bottom: var(--safe-area-inset-bottom, 0px) !important;
   }
   .MuiButton-root {
     font-size: 1.1rem !important;
@@ -83,6 +91,8 @@
   .home-contact {
     font-size: 13px;
     margin-top: 18px;
+    /* Asegurar que el contacto respete las safe areas */
+    margin-bottom: var(--safe-area-inset-bottom, 0px);
   }
 }
   

@@ -45,7 +45,6 @@ const EstadisticasChart = forwardRef(({ estadisticas, title, height = 320, width
     const options = {
       title: chartTitle,
       pieHole: 0.4,
-      pieSliceText: 'label',
       tooltip: { trigger: 'selection' },
       chartArea: { width: '90%', height: '80%' },
       slices,
