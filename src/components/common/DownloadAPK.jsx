@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Button, CircularProgress, Alert, Box, Typography, Chip } from '@mui/material';
 import { Download, Android, Info } from '@mui/icons-material';
+import { getBackendUrl } from '../../config/environment.js';
 
 const DownloadAPK = ({ variant = 'contained', size = 'medium', showInfo = true }) => {
   const [apkInfo, setApkInfo] = useState(null);
@@ -16,8 +17,10 @@ const DownloadAPK = ({ variant = 'contained', size = 'medium', showInfo = true }
       setLoading(true);
       setError(null);
       
-      // Usar el backend como proxy para evitar problemas de CORS y autenticación
-      const backendUrl = process.env.REACT_APP_BACKEND_URL || 'http://localhost:4000';
+      // Obtener URL del backend desde la configuración
+      const backendUrl = getBackendUrl();
+      console.log('🔗 Backend URL detectada:', backendUrl);
+      
       const response = await fetch(`${backendUrl}/api/latest-apk`);
       
       if (!response.ok) {

@@ -1,238 +1,105 @@
-// Sistema de configuración flexible para múltiples entornos y subdominios
-// Detecta automáticamente el entorno basado en el hostname
-
+// Configuración de entorno para el frontend
 const getEnvironmentConfig = () => {
   const hostname = window.location.hostname;
   const protocol = window.location.protocol;
-  const port = window.location.port;
   
   // Configuración base
   const baseConfig = {
-    // Configuración de Firebase (común para todos los entornos)
-    firebase: {
-      apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-      authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-      projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-      storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-      messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-      appId: import.meta.env.VITE_FIREBASE_APP_ID,
-      measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
+    // URLs del backend por entorno
+    backend: {
+      development: 'http://localhost:4000',
+      production: 'https://controlauditv2.onrender.com',
+      staging: 'https://controlauditv2-staging.onrender.com'
     },
     
     // Configuración de la aplicación
     app: {
       name: 'ControlAudit',
-      version: '1.0.0',
-      environment: 'production'
+      version: '2.0.0'
     }
   };
-
-  // Configuración específica por entorno
+  
+  // Detectar entorno
   if (hostname === 'localhost' || hostname === '127.0.0.1') {
-    // Desarrollo local
     return {
       ...baseConfig,
-      app: {
-        ...baseConfig.app,
-        name: 'ControlAudit - Desarrollo',
-        environment: 'development'
-      },
-      backend: {
-        url: 'http://localhost:4000',
-        timeout: 30000,
-        maxRetries: 3
-      },
-      features: {
-        debugMode: true,
-        enableLogs: true,
-        enableAnalytics: false
-      }
+      environment: 'development',
+      backendUrl: baseConfig.backend.development
     };
   }
   
-  if (hostname === 'demo.controlaudit.app') {
-    // Entorno de demostración
+  // Subdominios de controldoc.app
+  if (hostname.endsWith('controldoc.app')) {
+    // Configuración específica por subdominio
+    if (hostname === 'auditoria.controldoc.app') {
+      return {
+        ...baseConfig,
+        environment: 'production',
+        backendUrl: baseConfig.backend.production,
+        app: {
+          ...baseConfig.app,
+          name: 'ControlAudit - Auditoría'
+        }
+      };
+    }
+    
+    if (hostname === 'cliente.controldoc.app') {
+      return {
+        ...baseConfig,
+        environment: 'production',
+        backendUrl: baseConfig.backend.production,
+        app: {
+          ...baseConfig.app,
+          name: 'ControlAudit - Cliente'
+        }
+      };
+    }
+    
+    if (hostname === 'demo.controldoc.app') {
+      return {
+        ...baseConfig,
+        environment: 'staging',
+        backendUrl: baseConfig.backend.staging,
+        app: {
+          ...baseConfig.app,
+          name: 'ControlAudit - Demo'
+        }
+      };
+    }
+    
+    // Configuración por defecto para otros subdominios
     return {
       ...baseConfig,
-      app: {
-        ...baseConfig.app,
-        name: 'ControlAudit - Demo',
-        environment: 'demo'
-      },
-      backend: {
-        url: 'https://demo-api.controlaudit.app',
-        timeout: 30000,
-        maxRetries: 3
-      },
-      features: {
-        debugMode: true,
-        enableLogs: true,
-        enableAnalytics: false,
-        demoMode: true
-      }
+      environment: 'production',
+      backendUrl: baseConfig.backend.production
     };
   }
   
-  if (hostname === 'cliente.controlaudit.app') {
-    // Entorno de clientes
+  // Otros dominios de producción
+  if (hostname.includes('vercel.app') || hostname.includes('controlaudit.app')) {
     return {
       ...baseConfig,
-      app: {
-        ...baseConfig.app,
-        name: 'ControlAudit - Cliente',
-        environment: 'client'
-      },
-      backend: {
-        url: 'https://api.controlaudit.app',
-        timeout: 30000,
-        maxRetries: 3
-      },
-      features: {
-        debugMode: false,
-        enableLogs: true,
-        enableAnalytics: true,
-        clientMode: true
-      }
+      environment: 'production',
+      backendUrl: baseConfig.backend.production
     };
   }
   
-  if (hostname === 'controlaudit.app' || hostname === 'www.controlaudit.app') {
-    // Entorno principal de producción
+  if (hostname.includes('onrender.com')) {
     return {
       ...baseConfig,
-      app: {
-        ...baseConfig.app,
-        name: 'ControlAudit',
-        environment: 'production'
-      },
-      backend: {
-        url: 'https://api.controlaudit.app',
-        timeout: 30000,
-        maxRetries: 3
-      },
-      features: {
-        debugMode: false,
-        enableLogs: true,
-        enableAnalytics: true
-      }
+      environment: 'production',
+      backendUrl: `${protocol}//${hostname}`
     };
   }
   
-  if (hostname === 'controlaudit.vercel.app') {
-    // Entorno de Vercel (temporal)
-    return {
-      ...baseConfig,
-      app: {
-        ...baseConfig.app,
-        name: 'ControlAudit - Vercel',
-        environment: 'staging'
-      },
-      backend: {
-        url: 'https://api.controlaudit.app',
-        timeout: 30000,
-        maxRetries: 3
-      },
-      features: {
-        debugMode: true,
-        enableLogs: true,
-        enableAnalytics: false
-      }
-    };
-  }
-  
-  if (hostname === 'auditoria.controldoc.app' || hostname === 'controlauditv2.onrender.com') {
-    // Entorno de Render
-    return {
-      ...baseConfig,
-      app: {
-        ...baseConfig.app,
-        name: 'ControlAudit - Render',
-        environment: 'production'
-      },
-      backend: {
-        url: 'https://controlauditv2.onrender.com',
-        timeout: 30000,
-        maxRetries: 3
-      },
-      features: {
-        debugMode: false,
-        enableLogs: true,
-        enableAnalytics: true
-      }
-    };
-  }
-  
-  // Configuración por defecto (fallback)
+  // Fallback
   return {
     ...baseConfig,
-    app: {
-      ...baseConfig.app,
-      name: 'ControlAudit - Desconocido',
-      environment: 'unknown'
-    },
-    backend: {
-      url: import.meta.env.VITE_BACKEND_URL || 'https://api.controlaudit.app',
-      timeout: 30000,
-      maxRetries: 3
-    },
-    features: {
-      debugMode: false,
-      enableLogs: true,
-      enableAnalytics: false
-    }
+    environment: 'production',
+    backendUrl: process.env.REACT_APP_BACKEND_URL || baseConfig.backend.production
   };
 };
 
-// Configuración global
-const config = getEnvironmentConfig();
-
-// Función para obtener configuración específica
-export const getConfig = (key) => {
-  const keys = key.split('.');
-  let value = config;
-  
-  for (const k of keys) {
-    if (value && typeof value === 'object' && k in value) {
-      value = value[k];
-    } else {
-      return undefined;
-    }
-  }
-  
-  return value;
-};
-
-// Función para verificar si estamos en un entorno específico
-export const isEnvironment = (environment) => {
-  return config.app.environment === environment;
-};
-
-// Función para verificar si una característica está habilitada
-export const isFeatureEnabled = (feature) => {
-  return config.features[feature] === true;
-};
-
-// Función para obtener la URL del backend
-export const getBackendUrl = () => {
-  return config.backend.url;
-};
-
-// Función para obtener la configuración de Firebase
-export const getFirebaseConfig = () => {
-  return config.firebase;
-};
-
-// Función para obtener información del entorno actual
-export const getEnvironmentInfo = () => {
-  return {
-    hostname: window.location.hostname,
-    protocol: window.location.protocol,
-    port: window.location.port,
-    environment: config.app.environment,
-    appName: config.app.name,
-    backendUrl: config.backend.url
-  };
-};
-
-// Exportar configuración completa
-export default config; 
+export const config = getEnvironmentConfig();
+export const getBackendUrl = () => config.backendUrl;
+export const getEnvironment = () => config.environment; 
