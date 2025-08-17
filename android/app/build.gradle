@@ -17,26 +17,39 @@ android {
         }
     }
     signingConfigs {
+        debug {
+            // Usa el debug.keystore global de Android (~/.android/debug.keystore)
+            storeFile file(System.properties['user.home'] + '/.android/debug.keystore')
+            storePassword 'android'
+            keyAlias 'androiddebugkey'
+            keyPassword 'android'
+        }
+
+        // release debe apuntar a tu keystore de producción (NO el de debug)
+        // Dejalo opcional con propiedades para no romper el debug:
         release {
-            // Usar keystore por defecto para desarrollo
-            storeFile file("debug.keystore")
-            storePassword "android"
-            keyAlias "androiddebugkey"
-            keyPassword "android"
+            if (project.hasProperty('MYAPP_UPLOAD_STORE_FILE')) {
+                storeFile file(MYAPP_UPLOAD_STORE_FILE)
+                storePassword MYAPP_UPLOAD_STORE_PASSWORD
+                keyAlias MYAPP_UPLOAD_KEY_ALIAS
+                keyPassword MYAPP_UPLOAD_KEY_PASSWORD
+            }
         }
     }
     
     buildTypes {
+        debug {
+            signingConfig signingConfigs.debug
+        }
         release {
+            // Solo firmará si pusiste las props arriba; si no, no validará nada.
+            if (signingConfigs.release.storeFile != null) {
+                signingConfig signingConfigs.release
+            }
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
-            signingConfig signingConfigs.release
             // Configurar nombre del APK
             setArchivesBaseName("ControlAudit")
-        }
-        debug {
-            signingConfig signingConfigs.release
-            // No configurar nombre base para debug (Gradle lo maneja automáticamente)
         }
     }
 }

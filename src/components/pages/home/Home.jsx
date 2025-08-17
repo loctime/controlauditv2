@@ -32,7 +32,7 @@ const Home = () => {
     <div className="home-main-container">
       <div className="home-card">
         <Typography variant="h3" component="h1" align="center" gutterBottom fontWeight={700}>
-          Bienvenido a <span style={{ color: theme.palette.primary.light }}>Tu Control de Auditoría</span>
+          AABienvenido a <span style={{ color: theme.palette.primary.light }}>Tu Control de Auditoría</span>
         </Typography>
         <Typography variant="h6" align="center" gutterBottom sx={{ opacity: 0.85 }}>
           Optimiza tus auditorías con nuestra plataforma profesional.
