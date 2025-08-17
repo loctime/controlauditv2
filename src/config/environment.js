@@ -102,4 +102,20 @@ const getEnvironmentConfig = () => {
 
 export const config = getEnvironmentConfig();
 export const getBackendUrl = () => config.backendUrl;
-export const getEnvironment = () => config.environment; 
+export const getEnvironment = () => config.environment;
+
+// Función para obtener información del entorno actual
+export const getEnvironmentInfo = () => {
+  const hostname = window.location.hostname;
+  const protocol = window.location.protocol;
+  const port = window.location.port;
+  
+  return {
+    hostname,
+    protocol,
+    port,
+    environment: config.environment,
+    backendUrl: config.backendUrl,
+    appName: config.app.name
+  };
+}; 
