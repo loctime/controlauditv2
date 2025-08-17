@@ -63,6 +63,8 @@ Para información detallada sobre:
 
 📱 **Ver [Configuración Capacitor](CAPACITOR_SETUP.md)**
 
+📋 **Ver [Changelog](CHANGELOG.md)** - Historial de cambios y versiones
+
 ## 🛠️ **Tecnologías**
 
 - **Frontend**: React + Vite + Material-UI
