@@ -1,0 +1,484 @@
+/* Optimizaciones específicas para dispositivos móviles */
+
+/* Configuraciones para pantalla completa en móviles */
+@media (max-width: 768px) {
+  /* Asegurar que el contenedor principal ocupe toda la pantalla */
+  .main-app-container {
+    min-height: 100vh;
+    min-height: calc(100vh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+    width: 100vw;
+    overflow-x: hidden;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  /* Optimizar contenedores de páginas */
+  .page-container {
+    min-height: 100vh;
+    min-height: calc(100vh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+    width: 100%;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Asegurar que el contenedor principal del navbar no tenga padding */
+  .MuiBox-root[component="main"] {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  /* Asegurar que no haya márgenes en el contenedor principal */
+  .main-app-container {
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100vw !important;
+    max-width: 100vw !important;
+    overflow-x: hidden !important;
+  }
+
+  /* Optimizar contenedores de contenido */
+  .content-container {
+    flex: 1;
+    width: 100%;
+    padding: 8px;
+    padding-top: calc(8px + env(safe-area-inset-top, 0px));
+    padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+    padding-left: calc(8px + env(safe-area-inset-left, 0px));
+    padding-right: calc(8px + env(safe-area-inset-right, 0px));
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+
+  /* Optimizaciones específicas para el perfil */
+  .page-container .content-container {
+    padding: 0;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    padding-left: env(safe-area-inset-left, 0px);
+    padding-right: env(safe-area-inset-right, 0px);
+  }
+
+  /* Forzar que el perfil use toda la pantalla */
+  .page-container {
+    width: 100vw !important;
+    max-width: 100vw !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .page-container .content-container {
+    width: 100vw !important;
+    max-width: 100vw !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    padding-top: env(safe-area-inset-top, 0px) !important;
+    padding-bottom: env(safe-area-inset-bottom, 0px) !important;
+    padding-left: env(safe-area-inset-left, 0px) !important;
+    padding-right: env(safe-area-inset-right, 0px) !important;
+  }
+
+  /* Optimizar contenedores de formularios */
+  .form-container {
+    width: 100%;
+    padding: 8px;
+    margin: 0;
+  }
+
+  /* Optimizaciones específicas para componentes del perfil */
+  .page-container .form-container {
+    padding: 0;
+    width: 100%;
+  }
+
+  /* Optimizar grids en el perfil */
+  .page-container .MuiGrid-container {
+    margin: 0 !important;
+    width: 100% !important;
+  }
+
+  .page-container .MuiGrid-item {
+    padding: 4px !important;
+  }
+
+  /* Optimizar secciones de habilitaciones */
+  .page-container .MuiBox-root {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  /* Optimizar cards y contenedores de Material-UI */
+  .MuiContainer-root {
+    padding: 8px !important;
+    padding-top: calc(8px + env(safe-area-inset-top, 0px)) !important;
+    padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px)) !important;
+    padding-left: calc(8px + env(safe-area-inset-left, 0px)) !important;
+    padding-right: calc(8px + env(safe-area-inset-right, 0px)) !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+  }
+
+  .MuiBox-root {
+    width: 100%;
+  }
+
+  .MuiCard-root {
+    margin: 4px 0;
+    border-radius: 8px;
+  }
+
+  .MuiCardContent-root {
+    padding: 12px !important;
+  }
+
+  /* Optimizar steppers y pasos */
+  .MuiStepper-root {
+    padding: 8px;
+  }
+
+  .MuiStepContent-root {
+    padding: 8px !important;
+  }
+
+  /* Optimizar botones */
+  .MuiButton-root {
+    margin: 4px 0;
+    min-height: 44px; /* Tamaño mínimo para touch */
+  }
+
+  /* Optimizar inputs y campos de formulario */
+  .MuiTextField-root {
+    margin: 8px 0;
+  }
+
+  .MuiInputBase-root {
+    min-height: 44px; /* Tamaño mínimo para touch */
+  }
+
+  /* Optimizar diálogos */
+  .MuiDialog-paper {
+    margin: 16px;
+    margin-top: calc(16px + env(safe-area-inset-top, 0px));
+    margin-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+    max-height: calc(100vh - 32px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+    width: calc(100vw - 32px);
+  }
+
+  /* Optimizar drawers */
+  .MuiDrawer-paper {
+    width: 280px;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  /* Optimizar toolbars */
+  .MuiToolbar-root {
+    padding-top: env(safe-area-inset-top, 0px) !important;
+    min-height: calc(56px + env(safe-area-inset-top, 0px)) !important;
+  }
+
+  /* Optimizar navegación */
+  .MuiBottomNavigation-root {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    height: calc(56px + env(safe-area-inset-bottom, 0px));
+  }
+
+  /* Optimizar grids */
+  .MuiGrid-root {
+    margin: 0 !important;
+  }
+
+  .MuiGrid-item {
+    padding: 4px !important;
+  }
+
+  /* Optimizar chips */
+  .MuiChip-root {
+    margin: 2px;
+  }
+
+  /* Optimizar alerts */
+  .MuiAlert-root {
+    margin: 4px 0;
+    border-radius: 8px;
+  }
+
+  /* Optimizar tabs */
+  .MuiTabs-root {
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+
+  .MuiTab-root {
+    min-height: 48px;
+    min-width: 80px;
+  }
+
+  /* Optimizar listas */
+  .MuiList-root {
+    padding: 4px !important;
+  }
+
+  .MuiListItem-root {
+    padding: 8px !important;
+    margin: 2px 0;
+  }
+
+  /* Optimizar avatars */
+  .MuiAvatar-root {
+    margin: 4px;
+  }
+
+  /* Optimizar iconos */
+  .MuiSvgIcon-root {
+    margin: 2px;
+  }
+
+  /* Optimizar tipografía */
+  .MuiTypography-root {
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+  }
+
+  /* Optimizar espaciado */
+  .MuiStack-root {
+    gap: 8px !important;
+  }
+
+  /* Optimizar dividers */
+  .MuiDivider-root {
+    margin: 8px 0;
+  }
+
+  /* Optimizar paper */
+  .MuiPaper-root {
+    border-radius: 8px;
+  }
+
+  /* Optimizar modal */
+  .MuiModal-root .MuiBox-root {
+    padding: 16px;
+    padding-top: calc(16px + env(safe-area-inset-top, 0px));
+    padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  }
+
+  /* Optimizar snackbar */
+  .MuiSnackbar-root {
+    bottom: calc(16px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+
+  /* Optimizar tooltip */
+  .MuiTooltip-popper {
+    margin: 8px;
+  }
+
+  /* Optimizar menu */
+  .MuiMenu-paper {
+    margin: 8px;
+    max-height: calc(100vh - 16px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+  }
+
+  /* Optimizar select */
+  .MuiSelect-select {
+    min-height: 44px;
+  }
+
+  /* Optimizar checkbox y radio */
+  .MuiCheckbox-root,
+  .MuiRadio-root {
+    padding: 8px;
+  }
+
+  /* Optimizar switch */
+  .MuiSwitch-root {
+    margin: 4px;
+  }
+
+  /* Optimizar slider */
+  .MuiSlider-root {
+    margin: 8px 0;
+  }
+
+  /* Optimizar rating */
+  .MuiRating-root {
+    margin: 4px;
+  }
+
+  /* Optimizar skeleton */
+  .MuiSkeleton-root {
+    margin: 4px;
+  }
+
+  /* Optimizar progress */
+  .MuiLinearProgress-root {
+    margin: 4px 0;
+  }
+
+  /* Optimizar circular progress */
+  .MuiCircularProgress-root {
+    margin: 8px;
+  }
+
+  /* Optimizar badge */
+  .MuiBadge-root {
+    margin: 4px;
+  }
+
+  /* Optimizar speed dial */
+  .MuiSpeedDial-root {
+    bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+    right: 16px;
+  }
+
+  /* Optimizar fab */
+  .MuiFab-root {
+    bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  }
+
+  /* Optimizar back to top */
+  .back-to-top {
+    bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+    right: 16px;
+  }
+
+  /* Optimizar scroll */
+  ::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 2px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 0, 0, 0.3);
+  }
+
+  /* Optimizar focus */
+  *:focus {
+    outline: 2px solid #1976d2;
+    outline-offset: 2px;
+  }
+
+  /* Optimizar hover */
+  @media (hover: hover) {
+    .MuiButton-root:hover {
+      transform: translateY(-1px);
+      transition: transform 0.2s ease;
+    }
+  }
+
+  /* Optimizar active */
+  .MuiButton-root:active {
+    transform: translateY(0);
+  }
+
+  /* Optimizar disabled */
+  .Mui-disabled {
+    opacity: 0.5;
+  }
+
+  /* Optimizar loading */
+  .MuiCircularProgress-root {
+    color: #1976d2;
+  }
+
+  /* Optimizar error */
+  .Mui-error {
+    color: #d32f2f;
+  }
+
+  /* Optimizar success */
+  .Mui-success {
+    color: #2e7d32;
+  }
+
+  /* Optimizar warning */
+  .Mui-warning {
+    color: #ed6c02;
+  }
+
+  /* Optimizar info */
+  .Mui-info {
+    color: #0288d1;
+  }
+}
+
+/* Configuraciones específicas para pantallas muy pequeñas */
+@media (max-width: 480px) {
+  .content-container {
+    padding: 4px;
+    padding-top: calc(4px + env(safe-area-inset-top, 0px));
+    padding-bottom: calc(4px + env(safe-area-inset-bottom, 0px));
+    padding-left: calc(4px + env(safe-area-inset-left, 0px));
+    padding-right: calc(4px + env(safe-area-inset-right, 0px));
+  }
+
+  .MuiContainer-root {
+    padding: 4px !important;
+    padding-top: calc(4px + env(safe-area-inset-top, 0px)) !important;
+    padding-bottom: calc(4px + env(safe-area-inset-bottom, 0px)) !important;
+    padding-left: calc(4px + env(safe-area-inset-left, 0px)) !important;
+    padding-right: calc(4px + env(safe-area-inset-right, 0px)) !important;
+  }
+
+  .MuiCardContent-root {
+    padding: 8px !important;
+  }
+
+  .MuiButton-root {
+    min-height: 48px;
+    font-size: 14px;
+  }
+
+  .MuiInputBase-root {
+    min-height: 48px;
+    font-size: 16px; /* Evitar zoom en iOS */
+  }
+}
+
+/* Configuraciones para orientación landscape en móviles */
+@media (max-width: 768px) and (orientation: landscape) {
+  .content-container {
+    padding: 4px;
+    padding-top: calc(4px + env(safe-area-inset-top, 0px));
+    padding-bottom: calc(4px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .MuiContainer-root {
+    padding: 4px !important;
+    padding-top: calc(4px + env(safe-area-inset-top, 0px)) !important;
+    padding-bottom: calc(4px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+
+  .MuiToolbar-root {
+    padding-top: calc(env(safe-area-inset-top, 0px) * 0.5) !important;
+    min-height: calc(48px + env(safe-area-inset-top, 0px) * 0.5) !important;
+  }
+}
+
+/* Configuraciones para dispositivos con notch */
+@supports (padding: max(0px)) {
+  @media (max-width: 768px) {
+    .content-container {
+      padding-top: max(8px, env(safe-area-inset-top, 0px));
+      padding-bottom: max(8px, env(safe-area-inset-bottom, 0px));
+      padding-left: max(8px, env(safe-area-inset-left, 0px));
+      padding-right: max(8px, env(safe-area-inset-right, 0px));
+    }
+
+    .MuiContainer-root {
+      padding-top: max(8px, env(safe-area-inset-top, 0px)) !important;
+      padding-bottom: max(8px, env(safe-area-inset-bottom, 0px)) !important;
+      padding-left: max(8px, env(safe-area-inset-left, 0px)) !important;
+      padding-right: max(8px, env(safe-area-inset-right, 0px)) !important;
+    }
+  }
+}

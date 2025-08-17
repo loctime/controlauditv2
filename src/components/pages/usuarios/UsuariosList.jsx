@@ -291,7 +291,7 @@ const UsuariosList = ({ clienteAdminId, showAddButton = true }) => {
   };
 
   return (
-    <Box sx={{ p: 3 }}>
+    <Box className="content-container">
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Typography variant="h6" component="h2">
           Usuarios

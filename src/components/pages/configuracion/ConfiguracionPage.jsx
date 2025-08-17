@@ -32,11 +32,11 @@ const ConfiguracionPage = () => {
   }
 
   return (
-    <Box sx={{ 
-      p: isSmallMobile ? 2 : 4,
-      maxWidth: 1200,
-      mx: 'auto'
-    }}>
+    <Box className="page-container">
+      <Box className="content-container" sx={{ 
+        maxWidth: 1200,
+        mx: 'auto'
+      }}>
       <Box sx={{ 
         textAlign: 'center', 
         mb: isSmallMobile ? 4 : 6 
@@ -262,6 +262,7 @@ const ConfiguracionPage = () => {
           </Card>
         </Grid>
       </Grid>
+      </Box>
     </Box>
   );
 };

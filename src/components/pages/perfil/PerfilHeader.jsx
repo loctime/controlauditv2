@@ -39,7 +39,7 @@ const PerfilHeader = ({ userProfile }) => {
   // Log de depuración
   console.debug('[PerfilHeader] userProfile:', userProfile);
   return (
-    <Grid container alignItems="center" spacing={2} sx={{ m: 0, p: 0, width: '100%' }}>
+    <Grid container alignItems="center" spacing={2} sx={{ m: 0, p: 0, width: '100%', maxWidth: '100%' }}>
       {/* Avatar */}
       <Grid item xs={12} md={2} sx={{ display: 'flex', justifyContent: { xs: 'center', md: 'flex-start' }, p: 0, m: 0 }}>
         <Avatar sx={{ bgcolor: 'primary.main', width: 56, height: 56 }}>

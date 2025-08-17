@@ -122,7 +122,7 @@ const AuditoriaStepper = ({
   );
 
   return (
-    <Box>
+    <Box className="form-container">
       {isMobile ? (
         // Layout móvil: header compacto + contenido
         <Box>

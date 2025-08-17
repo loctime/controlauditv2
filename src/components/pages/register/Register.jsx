@@ -61,6 +61,7 @@ const Register = () => {
 
   return (
     <Box
+      className="page-container"
       sx={{
         width: '100%',
         minHeight: '100vh',
@@ -69,14 +70,16 @@ const Register = () => {
         alignItems: 'center',
         flexDirection: 'column',
         backgroundColor: '#f5f5f5',
+        padding: 0,
       }}
     >
       <Box
+        className="content-container"
         sx={{
           backgroundColor: 'white',
-          padding: 4,
-          borderRadius: 2,
-          boxShadow: 3,
+          padding: { xs: 2, sm: 4 },
+          borderRadius: { xs: 0, sm: 2 },
+          boxShadow: { xs: 0, sm: 3 },
           maxWidth: 400,
           width: '100%',
         }}

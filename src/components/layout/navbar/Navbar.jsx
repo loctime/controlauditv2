@@ -370,10 +370,10 @@ function Navbar(props) {
         component="main" 
         sx={{ 
           flexGrow: 1, 
-          py: { xs: 0.5, sm: 1, md: 2 }, 
+          py: { xs: 0, sm: 1, md: 2 }, 
           width: "100%", 
           minHeight: "100vh", 
-          px: { xs: 0.5, sm: 1, md: 2 },
+          px: { xs: 0, sm: 0, md: 0 },
           // Ajustar margen superior para considerar AppBar con safe areas
           mt: { xs: `calc(56px + env(safe-area-inset-top, 0px))`, sm: 64, md: 64 }
         }}

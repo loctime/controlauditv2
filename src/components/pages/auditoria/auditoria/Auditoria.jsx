@@ -920,7 +920,8 @@ const AuditoriaRefactorizada = () => {
   ];
 
   return (
-    <Container maxWidth="xl" sx={{ py: isMobile ? 1 : 4 }}>
+    <Box className="page-container">
+      <Container maxWidth="xl" className="content-container">
       {/* Header con navegación y progreso */}
       <Box sx={{ mb: isMobile ? 1 : 3 }}>
         <Box display="flex" alignItems="center" justifyContent="space-between" mb={isMobile ? 0.5 : 2}>
@@ -1109,7 +1110,8 @@ const AuditoriaRefactorizada = () => {
           {snackbarMsg}
         </MuiAlert>
       </Snackbar>
-    </Container>
+      </Container>
+    </Box>
   );
 };
 

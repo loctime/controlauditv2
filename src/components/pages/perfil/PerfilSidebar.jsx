@@ -38,11 +38,12 @@ const PerfilSidebar = ({ selectedSection, onSelectSection }) => {
     return (
       <Box sx={{
         bgcolor: 'background.paper',
-        borderRadius: 3,
-        border: `1px solid ${alpha(theme.palette.divider, 0.3)}`,
-        boxShadow: '0 2px 12px rgba(0,0,0,0.08)',
+        borderRadius: 0,
+        border: 'none',
+        boxShadow: 'none',
         p: isSmallMobile ? 2 : 3,
-        mb: 3
+        mb: 3,
+        width: '100%'
       }}>
         <Typography 
           variant={isSmallMobile ? "h6" : "h5"} 

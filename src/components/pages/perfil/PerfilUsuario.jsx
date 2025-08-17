@@ -258,25 +258,31 @@ const PerfilUsuario = () => {
 
   // Render principal
   return (
-    <Box sx={{ 
-      width: '100%', 
-      px: { xs: 1, sm: 2, md: 3 }, 
-      py: { xs: 2, sm: 3, md: 4 },
-      bgcolor: 'background.default'
-    }}>
+    <Box 
+      className="page-container"
+      sx={{ 
+        width: '100%', 
+        bgcolor: 'background.default'
+      }}
+    >
       {/* Contenedor principal con Box de MUI */}
-      <Box sx={{
-        bgcolor: 'background.paper',
-        borderRadius: 3,
-        border: `1px solid ${alpha(theme.palette.divider, 0.3)}`,
-        boxShadow: '0 4px 16px rgba(0,0,0,0.08)',
-        overflow: 'hidden'
-      }}>
+      <Box 
+        className="content-container"
+        sx={{
+          bgcolor: 'background.paper',
+          borderRadius: 0,
+          border: 'none',
+          boxShadow: 'none',
+          overflow: 'hidden',
+          flex: 1
+        }}
+      >
         {/* Header del perfil con Card */}
         <Box sx={{
-          p: isSmallMobile ? 3 : 4,
+          p: { xs: 2, sm: 3, md: 4 },
           background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.1)}, ${alpha(theme.palette.primary.main, 0.05)})`,
-          borderBottom: `1px solid ${alpha(theme.palette.divider, 0.2)}`
+          borderBottom: `1px solid ${alpha(theme.palette.divider, 0.2)}`,
+          width: '100%'
         }}>
           {userProfile ? (
             <Box sx={{ 
@@ -360,7 +366,8 @@ const PerfilUsuario = () => {
         {/* Sección de habilitaciones con Card */}
         <Box sx={{
           p: isSmallMobile ? 3 : 4,
-          bgcolor: 'background.paper'
+          bgcolor: 'background.paper',
+          width: '100%'
         }}>
           <Typography 
             variant={isSmallMobile ? "h6" : "h5"} 
@@ -586,10 +593,10 @@ const PerfilUsuario = () => {
           {/* Contenido principal */}
           <Box 
             ref={contentRef}
+            className="form-container"
             sx={{ 
               flex: 1, 
-              minWidth: 0,
-              p: isSmallMobile ? 3 : 4
+              minWidth: 0
             }}
           >
             {selectedSection === 'empresas' && (

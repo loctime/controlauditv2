@@ -398,7 +398,8 @@ function Dashboard() {
   };
 
   return (
-    <Box sx={{ padding: { xs: 1, sm: 2, md: 3 } }}>
+    <Box className="page-container">
+      <Box className="content-container">
       <Typography variant="h4" gutterBottom>Dashboard Dueño del Sistema</Typography>
       
       <Tabs value={tabValue} onChange={handleTabChange} sx={{ mb: 3 }}>
@@ -593,6 +594,7 @@ function Dashboard() {
           </Paper>
         </Grid>
       </Grid>
+      </Box>
     </Box>
   );
 }

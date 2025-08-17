@@ -359,12 +359,11 @@ const EditarFormulario = () => {
   }
 
   return (
-    <Box sx={{ 
-      p: isSmallMobile ? 1 : 3,
+    <Box className="content-container" sx={{ 
       bgcolor: 'background.paper',
-      borderRadius: 3,
-      border: `1px solid ${alpha(theme.palette.divider, 0.3)}`,
-      boxShadow: '0 2px 12px rgba(0,0,0,0.08)'
+      borderRadius: { xs: 0, sm: 3 },
+      border: { xs: 'none', sm: `1px solid ${alpha(theme.palette.divider, 0.3)}` },
+      boxShadow: { xs: 'none', sm: '0 2px 12px rgba(0,0,0,0.08)' }
     }}>
       <style>
         {`

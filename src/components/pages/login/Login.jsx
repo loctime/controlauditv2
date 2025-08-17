@@ -78,6 +78,7 @@ const Login = () => {
 
   return (
     <Box
+      className="page-container"
       sx={{
         width: '100%',
         minHeight: '100vh',
@@ -86,15 +87,16 @@ const Login = () => {
         alignItems: 'center',
         flexDirection: 'column',
         background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.1)} 0%, ${alpha(theme.palette.secondary.main, 0.1)} 100%)`,
-        p: isSmallMobile ? 2 : 4,
+        padding: 0,
       }}
     >
       <Card
+        className="content-container"
         sx={{
           bgcolor: 'background.paper',
-          borderRadius: 4,
-          border: `1px solid ${alpha(theme.palette.divider, 0.3)}`,
-          boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
+          borderRadius: { xs: 0, sm: 4 },
+          border: { xs: 'none', sm: `1px solid ${alpha(theme.palette.divider, 0.3)}` },
+          boxShadow: { xs: 'none', sm: '0 8px 32px rgba(0,0,0,0.12)' },
           maxWidth: isMobile ? '100%' : 450,
           width: '100%',
           overflow: 'hidden',
