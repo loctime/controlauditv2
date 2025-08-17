@@ -133,19 +133,24 @@ function Navbar(props) {
         position="fixed" 
         sx={{ 
           width: "100%", 
-          minHeight: { xs: 32, sm: 40 }, 
-          height: { xs: 32, sm: 40 },
-          zIndex: theme.zIndex.drawer + 1
+          minHeight: { xs: 56, sm: 64 }, 
+          height: { xs: 56, sm: 64 },
+          zIndex: theme.zIndex.drawer + 1,
+          // Ajustar para safe areas en móvil
+          top: { xs: `env(safe-area-inset-top, 0px)`, sm: 0 },
+          height: { xs: `calc(56px + env(safe-area-inset-top, 0px))`, sm: 64 }
         }}
       >
         <Toolbar sx={{
           gap: { xs: 1, sm: 2 },
           display: "flex",
           justifyContent: "space-between",
-          minHeight: { xs: 32, sm: 40 },
-          height: { xs: 32, sm: 40 },
+          minHeight: { xs: 56, sm: 64 },
+          height: { xs: 56, sm: 64 },
           px: { xs: 0.5, sm: 1 },
           py: 0,
+          // Ajustar padding superior para safe areas
+          paddingTop: { xs: `env(safe-area-inset-top, 0px)`, sm: 0 }
         }}>
           {/* Navegación principal - oculta en móvil */}
           <Box sx={{ 
@@ -284,7 +289,8 @@ function Navbar(props) {
           width: "100%", 
           minHeight: "100vh", 
           px: { xs: 0.5, sm: 1, md: 2 },
-          mt: { xs: 0, sm: 1 } // Sin margen superior en móvil
+          // Ajustar margen superior para considerar AppBar con safe areas
+          mt: { xs: `calc(56px + env(safe-area-inset-top, 0px))`, sm: 64, md: 64 }
         }}
       >
         <Outlet />

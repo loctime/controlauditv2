@@ -33,11 +33,21 @@ a{
     background-color: rgba(255, 255, 255, 0.1) !important;
   }
   
-  /* Mejorar el AppBar en móvil */
+  /* Mejorar el AppBar en móvil - respetar safe areas */
   .MuiAppBar-root {
     /* Asegurar que la barra se vea bien */
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
+    /* Posicionar correctamente debajo de la barra de estado */
+    top: env(safe-area-inset-top, 0px) !important;
+    height: calc(56px + env(safe-area-inset-top, 0px)) !important;
+  }
+  
+  /* Ajustar el Toolbar para safe areas */
+  .MuiToolbar-root {
+    padding-top: env(safe-area-inset-top, 0px) !important;
+    min-height: calc(56px + env(safe-area-inset-top, 0px)) !important;
+    height: calc(56px + env(safe-area-inset-top, 0px)) !important;
   }
   
   /* Mejorar los botones en móvil */
@@ -107,23 +117,23 @@ a{
   }
 }
 
-/* Estilos específicos para móvil - reducir espacio superior */
+/* Estilos específicos para móvil - ajustar AppBar con safe areas */
 @media (max-width: 768px) {
-  /* Reducir espacio superior en móvil */
+  /* Ajustar AppBar para safe areas */
   .MuiAppBar-root {
-    min-height: 32px !important;
-    height: 32px !important;
+    top: env(safe-area-inset-top, 0px) !important;
+    height: calc(56px + env(safe-area-inset-top, 0px)) !important;
   }
   
   .MuiToolbar-root {
-    min-height: 32px !important;
-    height: 32px !important;
-    padding: 0 4px !important;
+    padding-top: env(safe-area-inset-top, 0px) !important;
+    min-height: calc(56px + env(safe-area-inset-top, 0px)) !important;
+    height: calc(56px + env(safe-area-inset-top, 0px)) !important;
   }
   
-  /* Reducir margen superior del contenido principal */
+  /* Ajustar margen superior del contenido principal */
   main {
-    margin-top: 0 !important;
+    margin-top: calc(56px + env(safe-area-inset-top, 0px)) !important;
     padding-top: 0 !important;
   }
   

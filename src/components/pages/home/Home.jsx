@@ -37,125 +37,132 @@ const Home = () => {
   }
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      display: 'flex',
-      alignItems: 'flex-start',
-      justifyContent: 'center',
-      background: 'linear-gradient(120deg, #f5f7fa 0%, #c3cfe2 100%)',
-      padding: '20px 0',
-      // Safe areas para móviles
-      paddingTop: 'calc(20px + env(safe-area-inset-top, 0px))',
-      paddingBottom: 'calc(20px + env(safe-area-inset-bottom, 0px))',
-      paddingLeft: 'calc(20px + env(safe-area-inset-left, 0px))',
-      paddingRight: 'calc(20px + env(safe-area-inset-right, 0px))',
-      boxSizing: 'border-box'
-    }}>
-      <div className="home-card">
-        <Typography variant="h3" component="h1" align="center" gutterBottom fontWeight={700}>
-          ¡Bienvenido a <span style={{ color: theme.palette.primary.light }}>Tu Control de Auditoría</span>
-        </Typography>
-        <Typography variant="h6" align="center" gutterBottom sx={{ opacity: 0.85 }}>
-          Optimiza tus auditorías con nuestra plataforma profesional.
-        </Typography>
+    <div 
+      className="home-container"
+      style={{
+        minHeight: '100vh',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'flex-start',
+        background: 'linear-gradient(120deg, #f5f7fa 0%, #c3cfe2 100%)',
+        padding: 0,
+        // Safe areas para móviles - padding mínimo con espacio lateral
+        paddingTop: 'calc(4px + env(safe-area-inset-top, 0px))',
+        paddingBottom: 'calc(16px + env(safe-area-inset-bottom, 0px))',
+        paddingLeft: 'calc(12px + env(safe-area-inset-left, 0px))',
+        paddingRight: 'calc(12px + env(safe-area-inset-right, 0px))',
+        boxSizing: 'border-box',
+        width: '100vw',
+        margin: 0,
+        overflowY: 'auto',
+        WebkitOverflowScrolling: 'touch'
+      }}
+    >
+      <Typography variant="h3" component="h1" align="center" gutterBottom fontWeight={700} sx={{ mb: 2, mt: 1 }}>
+        ¡Bienvenido a <span style={{ color: theme.palette.primary.light }}>Tu Control de Auditoría</span>
+      </Typography>
+      <Typography variant="h6" align="center" gutterBottom sx={{ opacity: 0.85, mb: 4 }}>
+        Optimiza tus auditorías con nuestra plataforma profesional.
+      </Typography>
 
-        <Divider sx={{ my: 3, bgcolor: isDark ? '#333' : '#ddd' }} />
+      <Divider sx={{ my: 3, bgcolor: isDark ? '#333' : '#ddd', width: '100%' }} />
 
-        <Grid container spacing={3}>
-          <Grid item xs={12} md={6}>
-            <Typography variant="h5" gutterBottom fontWeight={600}>
-              Características
-            </Typography>
-            <List>
-              {features.map((f, i) => (
-                <ListItem key={i}>
-                  <ListItemIcon sx={{ minWidth: 36 }}>{f.icon}</ListItemIcon>
-                  <ListItemText primary={f.text} />
-                </ListItem>
-              ))}
-            </List>
-          </Grid>
-          <Grid item xs={12} md={6}>
-            <Typography variant="h5" gutterBottom fontWeight={600}>
-              Cómo Funciona
-            </Typography>
-            <List>
-              {steps.map((s, i) => (
-                <ListItem key={i}>
-                  <ListItemIcon sx={{ minWidth: 36 }}>{s.icon}</ListItemIcon>
-                  <ListItemText primary={s.text} />
-                </ListItem>
-              ))}
-            </List>
-          </Grid>
+      <Grid container spacing={1} sx={{ width: '100%', maxWidth: '100%', margin: 0, padding: 0 }}>
+        <Grid item xs={12} md={6}>
+          <Typography variant="h5" gutterBottom fontWeight={600} align="center">
+            Características
+          </Typography>
+          <List sx={{ paddingLeft: 0, paddingRight: 0, margin: 0, width: '100%' }}>
+            {features.map((f, i) => (
+              <ListItem key={i} sx={{ paddingLeft: 0, paddingRight: 0, justifyContent: 'center', width: '100%' }}>
+                <ListItemIcon sx={{ minWidth: 32 }}>{f.icon}</ListItemIcon>
+                <ListItemText primary={f.text} sx={{ textAlign: 'center', width: '100%' }} />
+              </ListItem>
+            ))}
+          </List>
         </Grid>
+        <Grid item xs={12} md={6}>
+          <Typography variant="h5" gutterBottom fontWeight={600} align="center">
+            Cómo Funciona
+          </Typography>
+          <List sx={{ paddingLeft: 0, paddingRight: 0, margin: 0, width: '100%' }}>
+            {steps.map((s, i) => (
+              <ListItem key={i} sx={{ paddingLeft: 0, paddingRight: 0, justifyContent: 'center', width: '100%' }}>
+                <ListItemIcon sx={{ minWidth: 32 }}>{s.icon}</ListItemIcon>
+                <ListItemText primary={s.text} sx={{ textAlign: 'center', width: '100%' }} />
+              </ListItem>
+            ))}
+          </List>
+        </Grid>
+      </Grid>
 
-        <div style={{ textAlign: 'center', marginTop: 32 }}>
-          <Button
-            component={Link}
-            to="/auditoria"
-            variant="contained"
-            size="large"
-            endIcon={<ArrowForwardIcon />}
-            sx={{
+      <div style={{ textAlign: 'center', marginTop: 32, width: '100%', maxWidth: '100%' }}>
+        <Button
+          component={Link}
+          to="/auditoria"
+          variant="contained"
+          size="large"
+          endIcon={<ArrowForwardIcon />}
+          sx={{
+            background: isDark
+              ? 'linear-gradient(90deg, #222 0%, #666 100%)'
+              : 'linear-gradient(90deg, #90caf9 0%, #1976d2 100%)',
+            color: isDark ? '#fff' : '#222',
+            fontWeight: 700,
+            px: 5,
+            py: 1.5,
+            borderRadius: 3,
+            boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+            '&:hover': {
               background: isDark
-                ? 'linear-gradient(90deg, #222 0%, #666 100%)'
-                : 'linear-gradient(90deg, #90caf9 0%, #1976d2 100%)',
-              color: isDark ? '#fff' : '#222',
-              fontWeight: 700,
-              px: 5,
-              py: 1.5,
-              borderRadius: 3,
-              boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-              '&:hover': {
-                background: isDark
-                  ? 'linear-gradient(90deg, #333 0%, #888 100%)'
-                  : 'linear-gradient(90deg, #1976d2 0%, #1565c0 100%)',
-              },
-              transition: 'background 0.3s, color 0.3s',
-              mb: 2
-            }}
-          >
-            Comenzar
-          </Button>
-          
-          {/* Botón de prueba de safe areas */}
-          <Button
-            variant="outlined"
-            size="medium"
-            onClick={() => setShowSafeAreaTest(true)}
-            sx={{
-              borderColor: isDark ? '#666' : '#1976d2',
-              color: isDark ? '#fff' : '#1976d2',
-              '&:hover': {
-                borderColor: isDark ? '#888' : '#1565c0',
-                backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(25,118,210,0.1)',
-              },
-              mt: 1
-            }}
-          >
-            🧪 Probar Safe Areas
-          </Button>
-          
-          {/* Sección de descarga de APK */}
-          <Box mt={4} p={3} sx={{ 
-            background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.02)',
-            borderRadius: 2,
-            border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`
-          }}>
-            <Typography variant="h6" gutterBottom fontWeight={600}>
-              📱 Aplicación Móvil
-            </Typography>
-            <Typography variant="body2" color="text.secondary" mb={2}>
-              Descarga nuestra aplicación móvil para realizar auditorías desde tu dispositivo Android
-            </Typography>
-            <DownloadAPK variant="outlined" size="large" showInfo={true} />
-          </Box>
-        </div>
-        <Divider sx={{ mb: 2, mt: 4 }} />
-        <div className="home-contact">
-          Contacto: <a href="mailto:licvidalfernando@gmail.com" style={{ color: "#1976d2", textDecoration: "none" }}>licvidalfernando@gmail.com</a>
-        </div>
+                ? 'linear-gradient(90deg, #333 0%, #888 100%)'
+                : 'linear-gradient(90deg, #1976d2 0%, #1565c0 100%)',
+            },
+            transition: 'background 0.3s, color 0.3s',
+            mb: 2
+          }}
+        >
+          Comenzar
+        </Button>
+        
+        {/* Botón de prueba de safe areas */}
+        <Button
+          variant="outlined"
+          size="medium"
+          onClick={() => setShowSafeAreaTest(true)}
+          sx={{
+            borderColor: isDark ? '#666' : '#1976d2',
+            color: isDark ? '#fff' : '#1976d2',
+            '&:hover': {
+              borderColor: isDark ? '#888' : '#1565c0',
+              backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(25,118,210,0.1)',
+            },
+            mt: 1
+          }}
+        >
+          🧪 Probar Safe Areas
+        </Button>
+        
+        {/* Sección de descarga de APK */}
+        <Box mt={4} p={3} sx={{ 
+          background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.02)',
+          borderRadius: 2,
+          border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`,
+          width: '100%'
+        }}>
+          <Typography variant="h6" gutterBottom fontWeight={600}>
+            📱 Aplicación Móvil
+          </Typography>
+          <Typography variant="body2" color="text.secondary" mb={2}>
+            Descarga nuestra aplicación móvil para realizar auditorías desde tu dispositivo Android
+          </Typography>
+          <DownloadAPK variant="outlined" size="large" showInfo={true} />
+        </Box>
+      </div>
+      <Divider sx={{ mb: 2, mt: 4, width: '100%' }} />
+      <div className="home-contact">
+        Contacto: <a href="mailto:licvidalfernando@gmail.com" style={{ color: "#1976d2", textDecoration: "none" }}>licvidalfernando@gmail.com</a>
       </div>
     </div>
   );

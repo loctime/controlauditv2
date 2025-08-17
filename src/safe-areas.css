@@ -20,7 +20,7 @@
   /* Configuración del body */
   body {
     /* Aplicar padding para respetar las safe areas usando env() directamente */
-    padding-top: env(safe-area-inset-top, 0px);
+    padding-top: 0;
     padding-bottom: env(safe-area-inset-bottom, 0px);
     padding-left: env(safe-area-inset-left, 0px);
     padding-right: env(safe-area-inset-right, 0px);
@@ -41,10 +41,17 @@
     padding-bottom: env(safe-area-inset-bottom, 0px);
   }
   
-  /* Configuración para elementos con posición fija */
+  /* Configuración para elementos con posición fija - AppBar */
   .MuiAppBar-root {
-    padding-top: env(safe-area-inset-top, 0px);
-    height: calc(56px + env(safe-area-inset-top, 0px));
+    top: env(safe-area-inset-top, 0px) !important;
+    height: calc(56px + env(safe-area-inset-top, 0px)) !important;
+  }
+  
+  /* Configuración para toolbars */
+  .MuiToolbar-root {
+    padding-top: env(safe-area-inset-top, 0px) !important;
+    min-height: calc(56px + env(safe-area-inset-top, 0px)) !important;
+    height: calc(56px + env(safe-area-inset-top, 0px)) !important;
   }
   
   /* Configuración para botones flotantes */
@@ -75,32 +82,26 @@
     padding-bottom: env(safe-area-inset-bottom, 0px);
     height: calc(56px + env(safe-area-inset-bottom, 0px));
   }
-  
-  /* Configuración para toolbars */
-  .MuiToolbar-root {
-    padding-top: env(safe-area-inset-top, 0px);
-    min-height: calc(56px + env(safe-area-inset-top, 0px));
-  }
 }
 
 /* Configuraciones específicas para pantallas muy pequeñas */
 @media (max-width: 480px) {
   body {
     /* Reducir padding en pantallas muy pequeñas */
-    padding-top: calc(var(--safe-area-inset-top) * 0.5);
+    padding-top: 0;
     padding-bottom: calc(var(--safe-area-inset-bottom) * 0.5);
     padding-left: calc(var(--safe-area-inset-left) * 0.5);
     padding-right: calc(var(--safe-area-inset-right) * 0.5);
   }
   
   .MuiAppBar-root {
-    padding-top: calc(var(--safe-area-inset-top) * 0.5);
-    height: calc(48px + var(--safe-area-inset-top) * 0.5);
+    top: var(--safe-area-inset-top) !important;
+    height: calc(48px + var(--safe-area-inset-top)) !important;
   }
   
   .MuiToolbar-root {
-    padding-top: calc(var(--safe-area-inset-top) * 0.5);
-    min-height: calc(48px + var(--safe-area-inset-top) * 0.5);
+    padding-top: var(--safe-area-inset-top) !important;
+    min-height: calc(48px + var(--safe-area-inset-top)) !important;
   }
 }
 
@@ -108,18 +109,18 @@
 @media (max-width: 768px) and (orientation: landscape) {
   body {
     /* Ajustar para orientación landscape */
-    padding-top: calc(var(--safe-area-inset-top) * 0.3);
+    padding-top: 0;
     padding-bottom: calc(var(--safe-area-inset-bottom) * 0.3);
   }
   
   .MuiAppBar-root {
-    padding-top: calc(var(--safe-area-inset-top) * 0.3);
-    height: calc(48px + var(--safe-area-inset-top) * 0.3);
+    top: calc(var(--safe-area-inset-top) * 0.3) !important;
+    height: calc(48px + var(--safe-area-inset-top) * 0.3) !important;
   }
   
   .MuiToolbar-root {
-    padding-top: calc(var(--safe-area-inset-top) * 0.3);
-    min-height: calc(48px + var(--safe-area-inset-top) * 0.3);
+    padding-top: calc(var(--safe-area-inset-top) * 0.3) !important;
+    min-height: calc(48px + var(--safe-area-inset-top) * 0.3) !important;
   }
 }
 
@@ -127,7 +128,7 @@
 @supports (padding: max(0px)) {
   @media (max-width: 768px) {
     body {
-      padding-top: max(var(--safe-area-inset-top), 0px);
+      padding-top: 0;
       padding-bottom: max(var(--safe-area-inset-bottom), 0px);
       padding-left: max(var(--safe-area-inset-left), 0px);
       padding-right: max(var(--safe-area-inset-right), 0px);

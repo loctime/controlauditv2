@@ -53,11 +53,19 @@
   margin: 0;
   padding: 0;
   box-sizing: border-box;
+  /* Permitir zoom en todos los elementos */
+  -webkit-text-size-adjust: auto;
+  -ms-text-size-adjust: auto;
+  text-size-adjust: auto;
 }
 
 html, body {
   height: 100%;
   overflow-x: hidden;
+  /* Permitir zoom en toda la aplicación */
+  -webkit-text-size-adjust: auto;
+  -ms-text-size-adjust: auto;
+  text-size-adjust: auto;
 }
 
 #root {
@@ -170,10 +178,10 @@ body {
   /* Asegurar escalado consistente */
   font-size: 16px;
   line-height: 1.5;
-  /* Prevenir escalado no deseado en algunos navegadores */
-  -webkit-text-size-adjust: 100%;
-  -ms-text-size-adjust: 100%;
-  text-size-adjust: 100%;
+  /* Permitir escalado de texto para mejor accesibilidad */
+  -webkit-text-size-adjust: auto;
+  -ms-text-size-adjust: auto;
+  text-size-adjust: auto;
   overflow-x: hidden; /* Evita scroll horizontal */
 }
 
@@ -285,6 +293,20 @@ th {
 
 /* Configuraciones específicas para safe areas en dispositivos móviles */
 @media (max-width: 768px) {
+  /* Permitir zoom en dispositivos móviles */
+  html {
+    -webkit-text-size-adjust: auto;
+    -ms-text-size-adjust: auto;
+    text-size-adjust: auto;
+  }
+  
+  /* Permitir zoom en elementos interactivos */
+  input, select, textarea, button {
+    font-size: 16px !important;
+    -webkit-text-size-adjust: auto;
+    -ms-text-size-adjust: auto;
+    text-size-adjust: auto;
+  }
   /* Asegurar que el body respete las safe areas usando env() directamente */
   body {
     padding-bottom: env(safe-area-inset-bottom, 0px);
