@@ -63,6 +63,16 @@ npm run die "Cualquier mensaje"
 | `npm run cap:run:android` | Ejecuta en Android |
 | `npm run build:full` | Build + sync completo |
 
+### **🔧 Scripts de Keystore (Nuevos)**
+| Comando | Descripción |
+|---------|-------------|
+| `cd android && .\generate-debug-keystore.bat` | Genera keystore de debug (Windows CMD) |
+| `cd android && .\generate-debug-keystore.ps1` | Genera keystore de debug (Windows PowerShell) |
+| `cd android && ./generate-debug-keystore.sh` | Genera keystore de debug (Linux/Mac) |
+| `cd android && .\build-with-keystore.bat` | Build con keystore automático (Windows CMD) |
+| `cd android && .\build-with-keystore.ps1` | Build con keystore automático (Windows PowerShell) |
+| `cd android && ./build-with-keystore.sh` | Build con keystore automático (Linux/Mac) |
+
 ---
 
 ## 🏗️ **Comandos de Build**

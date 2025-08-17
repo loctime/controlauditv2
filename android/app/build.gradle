@@ -24,11 +24,18 @@ android {
     }
     signingConfigs {
         debug {
-            // Usa el debug.keystore global de Android (~/.android/debug.keystore)
-            storeFile file(System.properties['user.home'] + '/.android/debug.keystore')
-            storePassword 'android'
-            keyAlias 'androiddebugkey'
-            keyPassword 'android'
+            // Verificar si existe el debug.keystore antes de usarlo
+            def debugKeystoreFile = file(System.properties['user.home'] + '/.android/debug.keystore')
+            if (debugKeystoreFile.exists()) {
+                storeFile debugKeystoreFile
+                storePassword 'android'
+                keyAlias 'androiddebugkey'
+                keyPassword 'android'
+            } else {
+                println "⚠️  Debug keystore no encontrado en ${debugKeystoreFile.absolutePath}"
+                println "🔧 Ejecuta el script generate-debug-keystore.bat (Windows) o generate-debug-keystore.sh (Linux/Mac)"
+                println "📝 O ejecuta manualmente: keytool -genkey -v -keystore ~/.android/debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname 'CN=Android Debug,O=Android,C=US'"
+            }
         }
 
         // release debe apuntar a tu keystore de producción (NO el de debug)
