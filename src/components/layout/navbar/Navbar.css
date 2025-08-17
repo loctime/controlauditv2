@@ -33,14 +33,15 @@ a{
     background-color: rgba(255, 255, 255, 0.1) !important;
   }
   
-  /* Mejorar el AppBar en móvil - respetar safe areas */
+  /* Mejorar el AppBar en móvil - extender hasta arriba */
   .MuiAppBar-root {
     /* Asegurar que la barra se vea bien */
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
-    /* Posicionar correctamente debajo de la barra de estado */
-    top: env(safe-area-inset-top, 0px) !important;
+    /* Extender hasta arriba para cubrir la barra de estado */
+    top: 0 !important;
     height: calc(56px + env(safe-area-inset-top, 0px)) !important;
+    background-color: #1976d2 !important;
   }
   
   /* Ajustar el Toolbar para safe areas */
@@ -117,12 +118,13 @@ a{
   }
 }
 
-/* Estilos específicos para móvil - ajustar AppBar con safe areas */
+/* Estilos específicos para móvil - extender AppBar hasta arriba */
 @media (max-width: 768px) {
-  /* Ajustar AppBar para safe areas */
+  /* Ajustar AppBar para extender hasta arriba */
   .MuiAppBar-root {
-    top: env(safe-area-inset-top, 0px) !important;
+    top: 0 !important;
     height: calc(56px + env(safe-area-inset-top, 0px)) !important;
+    background-color: #1976d2 !important;
   }
   
   .MuiToolbar-root {

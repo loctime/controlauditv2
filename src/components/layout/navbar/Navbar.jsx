@@ -17,6 +17,8 @@ import { Link, useNavigate, Outlet } from "react-router-dom";
 import "./Navbar.css";
 import { useState } from "react";
 import LogoutIcon from "@mui/icons-material/Logout";
+import ChecklistIcon from "@mui/icons-material/Checklist";
+import PersonIcon from "@mui/icons-material/Person";
 import { getMenuItems } from "../../../router/navigation";
 import { logout } from "../../../firebaseConfig";
 import { useAuth } from "../../context/AuthContext";
@@ -38,6 +40,31 @@ function Navbar(props) {
 
   // Obtener menú dinámico basado en rol y permisos
   const menuItems = getMenuItems(role, permisos);
+  
+  // Elementos adicionales para el drawer móvil (siempre disponibles)
+  const mobileAdditionalItems = [
+    {
+      id: "auditoria-mobile",
+      path: "/auditoria",
+      title: "Auditoría",
+      Icon: ChecklistIcon
+    },
+    {
+      id: "perfil-mobile",
+      path: "/perfil",
+      title: "Mi Perfil",
+      Icon: PersonIcon
+    }
+  ];
+  
+  // Verificar qué elementos adicionales no están ya en el menú dinámico
+  const existingPaths = menuItems.map(item => item.path);
+  const missingItems = mobileAdditionalItems.filter(item => 
+    !existingPaths.includes(item.path)
+  );
+  
+  // Combinar menú dinámico con elementos faltantes
+  const uniqueMenuItems = [...menuItems, ...missingItems];
 
   // ✅ Función para obtener la ruta del dashboard según el rol
   const getDashboardRoute = () => {
@@ -71,8 +98,10 @@ function Navbar(props) {
   console.log('=== INFORMACIÓN DE NAVEGACIÓN ===');
   console.log('Rol:', role);
   console.log('Permisos:', permisos);
-  console.log('Menú generado:', menuItems.map(item => item.title));
-  console.log('Total de items en menú:', menuItems.length);
+  console.log('Menú dinámico:', menuItems.map(item => item.title));
+  console.log('Elementos agregados para móvil:', missingItems.map(item => item.title));
+  console.log('Menú completo (móvil):', uniqueMenuItems.map(item => item.title));
+  console.log('Total de items en menú:', uniqueMenuItems.length);
   console.log('Dashboard route:', getDashboardRoute());
   console.log('Dashboard text:', getDashboardText());
   console.log('==================================');
@@ -98,7 +127,7 @@ function Navbar(props) {
         </Box>
       )}
       <List>
-        {menuItems.map(({ id, path, title, Icon }) => (
+        {uniqueMenuItems.map(({ id, path, title, Icon }) => (
           <Link key={id} to={path} style={{ textDecoration: 'none' }}>
             <ListItem disablePadding>
               <ListItemButton onClick={() => setMobileOpen(false)}>
@@ -136,22 +165,26 @@ function Navbar(props) {
           minHeight: { xs: 56, sm: 64 }, 
           height: { xs: 56, sm: 64 },
           zIndex: theme.zIndex.drawer + 1,
-          // Ajustar para safe areas en móvil
-          top: { xs: `env(safe-area-inset-top, 0px)`, sm: 0 },
-          height: { xs: `calc(56px + env(safe-area-inset-top, 0px))`, sm: 64 }
+          // Extender hasta arriba en móvil para cubrir la barra de estado
+          top: 0,
+          height: { xs: `calc(56px + env(safe-area-inset-top, 0px))`, sm: 64 },
+          backgroundColor: '#1976d2'
         }}
       >
-        <Toolbar sx={{
-          gap: { xs: 1, sm: 2 },
-          display: "flex",
-          justifyContent: "space-between",
-          minHeight: { xs: 56, sm: 64 },
-          height: { xs: 56, sm: 64 },
-          px: { xs: 0.5, sm: 1 },
-          py: 0,
-          // Ajustar padding superior para safe areas
-          paddingTop: { xs: `env(safe-area-inset-top, 0px)`, sm: 0 }
-        }}>
+                                   <Toolbar sx={{
+            gap: { xs: 1, sm: 2 },
+            display: "flex",
+            justifyContent: "space-between",
+            minHeight: { xs: 56, sm: 64 },
+            height: { xs: 56, sm: 64 },
+            px: { xs: 0, sm: 1 }, // Sin padding horizontal en móvil
+            py: 0,
+            pr: { xs: 0, sm: 1 }, // Sin padding derecho en móvil
+            // Ajustar padding superior para safe areas
+            paddingTop: { xs: `env(safe-area-inset-top, 0px)`, sm: 0 },
+            minHeight: { xs: `calc(56px + env(safe-area-inset-top, 0px))`, sm: 64 }
+          }}>
+           
           {/* Navegación principal - oculta en móvil */}
           <Box sx={{ 
             display: { xs: 'none', md: 'flex' }, 
@@ -208,51 +241,103 @@ function Navbar(props) {
             </Link>
           </Box>
 
-          {/* Título en móvil */}
-          <Box sx={{ 
-            display: { xs: 'block', md: 'none' }, 
-            flex: 1,
-            textAlign: 'center'
-          }}>
-            <Link to={getDashboardRoute()} style={{ 
-              color: "whitesmoke", 
-              textDecoration: "none", 
-              fontSize: '1rem',
-              fontWeight: 500
+                     {/* Navegación móvil - título y botones adicionales */}
+                       <Box sx={{ 
+              display: { xs: 'flex', md: 'none' }, 
+              flex: 1,
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: { xs: 1.5, sm: 2.5 }
             }}>
-              {getDashboardText()}
-            </Link>
-          </Box>
+                           <Link to={getDashboardRoute()} style={{ 
+                color: "whitesmoke", 
+                textDecoration: "none", 
+                fontSize: { xs: '0.9rem', sm: '1rem' },
+                fontWeight: 500,
+                display: 'flex',
+                alignItems: 'center',
+                padding: { xs: '3px 6px', sm: '4px 8px' },
+                borderRadius: '4px',
+                transition: 'background-color 0.2s',
+                '&:hover': {
+                  backgroundColor: 'rgba(255,255,255,0.1)'
+                }
+              }}>
+                {getDashboardText()}
+              </Link>
+             
+                           {/* Botones adicionales en móvil */}
+                             <Link to="/auditoria" style={{ 
+                 color: "whitesmoke", 
+                 textDecoration: "none", 
+                 fontSize: { xs: '0.7rem', sm: '0.8rem' },
+                 padding: { xs: '3px 6px', sm: '4px 8px' },
+                 borderRadius: '4px',
+                 transition: 'background-color 0.2s',
+                 display: 'flex',
+                 alignItems: 'center',
+                 gap: { xs: 0.3, sm: 0.5 },
+                 '&:hover': {
+                   backgroundColor: 'rgba(255,255,255,0.1)'
+                 }
+               }}>
+                 <ChecklistIcon sx={{ fontSize: { xs: '0.9rem', sm: '1rem' } }} />
+                 <span>Auditoría</span>
+               </Link>
+              
+                             <Link to="/perfil" style={{ 
+                 color: "whitesmoke", 
+                 textDecoration: "none", 
+                 fontSize: { xs: '0.7rem', sm: '0.8rem' },
+                 padding: { xs: '3px 6px', sm: '4px 8px' },
+                 borderRadius: '4px',
+                 transition: 'background-color 0.2s',
+                 display: 'flex',
+                 alignItems: 'center',
+                 gap: { xs: 0.3, sm: 0.5 },
+                 '&:hover': {
+                   backgroundColor: 'rgba(255,255,255,0.1)'
+                 }
+               }}>
+                 <PersonIcon sx={{ fontSize: { xs: '0.9rem', sm: '1rem' } }} />
+                 <span>Perfil</span>
+               </Link>
+           </Box>
 
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, sm: 2 } }}>
-            {/* Switch de modo claro/oscuro - oculto en móvil muy pequeño */}
-            <Box sx={{ display: { xs: 'none', sm: 'flex' }, alignItems: 'center', gap: 1 }}>
-              <IconButton onClick={toggleColorMode} color="inherit" aria-label="Alternar modo claro/oscuro">
-                {mode === 'dark' ? <Brightness7Icon /> : <Brightness4Icon />}
-              </IconButton>
-              <Switch
-                checked={mode === 'dark'}
-                onChange={toggleColorMode}
-                color="default"
-                inputProps={{ 'aria-label': 'switch modo claro/oscuro' }}
-                sx={{ my: 0 }}
-              />
+                                           <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, sm: 2 } }}>
+              {/* Switch de modo claro/oscuro - oculto en móvil muy pequeño */}
+              <Box sx={{ display: { xs: 'none', sm: 'flex' }, alignItems: 'center', gap: 1 }}>
+                <IconButton onClick={toggleColorMode} color="inherit" aria-label="Alternar modo claro/oscuro">
+                  {mode === 'dark' ? <Brightness7Icon /> : <Brightness4Icon />}
+                </IconButton>
+                <Switch
+                  checked={mode === 'dark'}
+                  onChange={toggleColorMode}
+                  color="default"
+                  inputProps={{ 'aria-label': 'switch modo claro/oscuro' }}
+                  sx={{ my: 0 }}
+                />
+              </Box>
+              
+                                            {/* Botón de menú - lado derecho en móvil */}
+                <Box sx={{ display: { xs: 'flex', md: 'none' } }}>
+                  <IconButton
+                    color="inherit"
+                    aria-label="open drawer"
+                    edge="end"
+                    onClick={handleDrawerToggle}
+                    sx={{ 
+                      my: 0,
+                      ml: { xs: 1, sm: 2 },
+                      mr: 0, // Pegado al borde derecho
+                      pr: 0, // Sin padding derecho
+                      pl: { xs: 0, sm: 0 } // Sin padding izquierdo en móvil
+                    }}
+                  >
+                    <MenuIcon />
+                  </IconButton>
+                </Box>
             </Box>
-            
-            {/* Botón de menú */}
-            <IconButton
-              color="inherit"
-              aria-label="open drawer"
-              edge="end"
-              onClick={handleDrawerToggle}
-              sx={{ 
-                my: 0,
-                ml: { xs: 1, sm: 2 }
-              }}
-            >
-              <MenuIcon />
-            </IconButton>
-          </Box>
         </Toolbar>
       </AppBar>
       

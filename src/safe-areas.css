@@ -43,8 +43,9 @@
   
   /* Configuración para elementos con posición fija - AppBar */
   .MuiAppBar-root {
-    top: env(safe-area-inset-top, 0px) !important;
+    top: 0 !important;
     height: calc(56px + env(safe-area-inset-top, 0px)) !important;
+    background-color: #1976d2 !important;
   }
   
   /* Configuración para toolbars */

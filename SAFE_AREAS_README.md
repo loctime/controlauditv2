@@ -44,11 +44,25 @@ En `capacitor.config.ts`:
 
 ```typescript
 StatusBar: {
-  style: 'dark',
+  style: 'light',
   backgroundColor: '#1976d2',
-  overlaysWebView: false
+  overlaysWebView: true
 }
 ```
+
+**Nota importante:** La configuración `overlaysWebView: true` permite que la barra de estado se superponga al contenido web, lo que significa que la barra de navegación de la aplicación se extiende hasta arriba para cubrir el área de la barra de estado del sistema, creando una experiencia más inmersiva.
+
+### 5. Configuración de la Barra de Estado
+
+La barra de estado está configurada para:
+- **Color de fondo:** `#1976d2` (azul Material-UI)
+- **Estilo de texto:** `light` (texto claro sobre fondo oscuro)
+- **Superposición:** `true` (la barra se superpone al contenido web)
+
+Esto significa que:
+1. La barra de estado del sistema tendrá el mismo color que la barra de navegación de la app
+2. La barra de navegación se extiende hasta arriba para cubrir el área de la barra de estado
+3. El contenido de la app se posiciona correctamente debajo de la barra de navegación extendida
 
 ## Componentes y Hooks
 
