@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Button, CircularProgress, Alert, Box, Typography, Chip } from '@mui/material';
 import { Download, Android, Info } from '@mui/icons-material';
-import { getBackendUrl } from '../../config/environment.js';
+import { getBackendUrl, getEnvironment } from '../../config/environment.js';
 
 const DownloadAPK = ({ variant = 'contained', size = 'medium', showInfo = true }) => {
   const [apkInfo, setApkInfo] = useState(null);
@@ -20,8 +20,13 @@ const DownloadAPK = ({ variant = 'contained', size = 'medium', showInfo = true }
       // Obtener URL del backend desde la configuración
       const backendUrl = getBackendUrl();
       console.log('🔗 Backend URL detectada:', backendUrl);
+      console.log('🌐 Hostname actual:', window.location.hostname);
+      console.log('🔧 Entorno detectado:', getEnvironment());
       
-      const response = await fetch(`${backendUrl}/api/latest-apk`);
+      const apiUrl = `${backendUrl}/api/latest-apk`;
+      console.log('📡 Llamando a:', apiUrl);
+      
+      const response = await fetch(apiUrl);
       
       if (!response.ok) {
         if (response.status === 404) {
