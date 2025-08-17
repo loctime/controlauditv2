@@ -54,8 +54,22 @@ app.get('/api/latest-apk', async (req, res) => {
     const repoOwner = 'loctime'; // Usuario de GitHub
     const repoName = 'controlauditv2';
     
+    // Token de GitHub para repositorio privado
+    const githubToken = process.env.GITHUB_TOKEN;
+    
+    const headers = {
+      'Accept': 'application/vnd.github.v3+json'
+    };
+    
+    // Agregar token si está disponible
+    if (githubToken) {
+      headers['Authorization'] = `token ${githubToken}`;
+    }
+    
     // Obtener la última release de GitHub
-    const response = await fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/releases/latest`);
+    const response = await fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/releases/latest`, {
+      headers
+    });
     
     if (!response.ok) {
       throw new Error('No se pudo obtener la información de la última release');

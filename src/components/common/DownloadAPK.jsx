@@ -16,46 +16,31 @@ const DownloadAPK = ({ variant = 'contained', size = 'medium', showInfo = true }
       setLoading(true);
       setError(null);
       
-             // Configuración del repositorio
-       const repoOwner = 'loctime'; // Usuario de GitHub
-       const repoName = 'controlauditv2'; // Nombre del repositorio
-      
-      const response = await fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/releases/latest`);
+      // Usar el backend como proxy para evitar problemas de CORS y autenticación
+      const backendUrl = process.env.REACT_APP_BACKEND_URL || 'http://localhost:4000';
+      const response = await fetch(`${backendUrl}/api/latest-apk`);
       
       if (!response.ok) {
-        throw new Error('No se pudo obtener la información de la última release');
+        if (response.status === 404) {
+          throw new Error('APK no encontrada o repositorio privado');
+        }
+        throw new Error(`Error ${response.status}: ${response.statusText}`);
       }
       
-      const release = await response.json();
+      const data = await response.json();
       
-             // Buscar el asset de la APK (buscar cualquier APK en la release)
-       const apkAsset = release.assets.find(asset => 
-         asset.name.endsWith('.apk')
-       );
-      
-      if (!apkAsset) {
-        throw new Error('APK no encontrada en la última release');
+      if (!data.success) {
+        throw new Error(data.error || 'Error obteniendo información de APK');
       }
       
       setApkInfo({
-        apk: {
-          name: apkAsset.name,
-          download_url: apkAsset.browser_download_url,
-          size: apkAsset.size,
-          download_count: apkAsset.download_count,
-          created_at: apkAsset.created_at
-        },
-        release: {
-          tag_name: release.tag_name,
-          name: release.name,
-          published_at: release.published_at,
-          body: release.body
-        }
+        apk: data.apk,
+        release: data.release
       });
       
     } catch (err) {
       console.error('Error obteniendo información de APK:', err);
-      setError('No se pudo obtener la información de la APK');
+      setError(err.message);
     } finally {
       setLoading(false);
     }
@@ -99,7 +84,12 @@ const DownloadAPK = ({ variant = 'contained', size = 'medium', showInfo = true }
   if (error) {
     return (
       <Alert severity="warning" icon={<Info />}>
-        {error}
+        <Typography variant="body2">
+          {error}
+        </Typography>
+        <Typography variant="caption" display="block" mt={1}>
+          Para repositorios privados, configura REACT_APP_GITHUB_TOKEN en tu .env
+        </Typography>
       </Alert>
     );
   }
