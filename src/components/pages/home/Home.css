@@ -45,6 +45,7 @@
     max-width: 1200px;
     margin: 0 auto;
     align-items: center;
+    padding: 16px 0; /* Reducir padding en desktop */
   }
 }
 
@@ -62,14 +63,21 @@
   align-items: center;
   /* Centrar en pantallas grandes */
   @media (min-width: 769px) {
-    max-width: 800px;
+    max-width: 700px; /* Reducir ancho máximo */
     margin: 0 auto;
+    padding: 32px 40px 24px 40px; /* Reducir padding en desktop */
+    border-radius: 24px; /* Reducir border radius */
   }
 }
 
 .home-card .MuiGrid-root {
   margin-top: 32px;
   margin-bottom: 32px;
+  /* Reducir márgenes en desktop */
+  @media (min-width: 769px) {
+    margin-top: 20px;
+    margin-bottom: 20px;
+  }
 }
 
 .home-contact {
@@ -78,8 +86,170 @@
   font-size: 15px;
   letter-spacing: 1px;
   text-align: center;
+  /* Reducir margen en desktop */
+  @media (min-width: 769px) {
+    margin-top: 20px;
+    font-size: 14px;
+  }
 }
 /* --- FIN NUEVOS ESTILOS --- */
+
+/* Estilos específicos para desktop - diseño compacto */
+@media (min-width: 769px) {
+  /* Reducir tamaño de títulos en desktop */
+  .home-card .MuiTypography-h3 {
+    font-size: 2.2rem !important;
+    line-height: 1.2 !important;
+    margin-bottom: 12px !important;
+    margin-top: 0 !important;
+  }
+  
+  .home-card .MuiTypography-h6 {
+    font-size: 1rem !important;
+    margin-bottom: 20px !important;
+    opacity: 0.85;
+  }
+  
+  .home-card .MuiTypography-h5 {
+    font-size: 1.3rem !important;
+    margin-bottom: 12px !important;
+  }
+  
+  /* Reducir espaciado en listas */
+  .home-card .MuiList-root {
+    padding: 0 !important;
+  }
+  
+  .home-card .MuiListItem-root {
+    padding: 4px 0 !important;
+    min-height: 36px !important;
+  }
+  
+  .home-card .MuiListItemIcon-root {
+    min-width: 28px !important;
+  }
+  
+  /* Reducir espaciado en grid */
+  .home-card .MuiGrid-container {
+    gap: 16px !important;
+  }
+  
+  /* Reducir espaciado en botones */
+  .home-card .MuiButton-root {
+    margin-bottom: 8px !important;
+  }
+  
+  /* Reducir espaciado en divider */
+  .home-card .MuiDivider-root {
+    margin: 16px 0 !important;
+  }
+  
+  /* Reducir espaciado en sección de APK */
+  .home-card .MuiBox-root {
+    margin-top: 20px !important;
+  }
+  
+  /* Optimizar grid para visualización lado a lado */
+  .home-card .MuiGrid-container {
+    gap: 16px !important;
+    align-items: flex-start !important;
+  }
+  
+  .home-card .MuiGrid-item {
+    display: flex !important;
+    flex-direction: column !important;
+    height: auto !important;
+  }
+  
+  /* Asegurar que las listas tengan la misma altura */
+  .home-card .MuiList-root {
+    flex: 1 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: flex-start !important;
+  }
+  
+  /* Optimizar espaciado entre elementos de lista */
+  .home-card .MuiListItem-root {
+    flex-shrink: 0 !important;
+  }
+}
+
+/* Estilos para pantallas muy grandes - diseño ultra compacto */
+@media (min-width: 1200px) {
+  .home-card {
+    max-width: 600px !important; /* Reducir aún más el ancho */
+    padding: 24px 32px 20px 32px !important; /* Reducir más el padding */
+  }
+  
+  .home-card .MuiTypography-h3 {
+    font-size: 1.8rem !important; /* Reducir más el título */
+    margin-bottom: 8px !important;
+  }
+  
+  .home-card .MuiTypography-h6 {
+    font-size: 0.9rem !important;
+    margin-bottom: 16px !important;
+  }
+  
+  .home-card .MuiTypography-h5 {
+    font-size: 1.1rem !important;
+    margin-bottom: 8px !important;
+  }
+  
+  .home-card .MuiListItem-root {
+    padding: 2px 0 !important;
+    min-height: 32px !important;
+  }
+  
+  .home-card .MuiGrid-container {
+    gap: 12px !important;
+  }
+  
+  .home-card .MuiGrid-root {
+    margin-top: 16px !important;
+    margin-bottom: 16px !important;
+  }
+  
+  .home-card .MuiDivider-root {
+    margin: 12px 0 !important;
+  }
+  
+  .home-card .MuiBox-root {
+    margin-top: 16px !important;
+  }
+  
+  .home-contact {
+    margin-top: 16px !important;
+    font-size: 13px !important;
+  }
+  
+  /* Optimizar grid para pantallas muy grandes */
+  .home-card .MuiGrid-container {
+    gap: 20px !important;
+    align-items: stretch !important;
+  }
+  
+  .home-card .MuiGrid-item {
+    display: flex !important;
+    flex-direction: column !important;
+    min-height: 200px !important;
+  }
+  
+  /* Asegurar que las listas tengan altura uniforme */
+  .home-card .MuiList-root {
+    flex: 1 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important;
+  }
+  
+  /* Optimizar títulos de secciones */
+  .home-card .MuiTypography-h5 {
+    margin-bottom: 12px !important;
+    font-size: 1.2rem !important;
+  }
+}
 
 /* Permitir zoom en móviles */
 * {
@@ -125,6 +295,82 @@ html, body {
   text-align: center !important;
 }
 
+/* Estilos específicos para forzar layout lado a lado en desktop */
+@media (min-width: 600px) {
+  .home-card .MuiGrid-container {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: wrap !important;
+    gap: 16px !important;
+    align-items: stretch !important;
+  }
+  
+  .home-card .MuiGrid-item {
+    flex: 1 1 calc(50% - 8px) !important;
+    max-width: calc(50% - 8px) !important;
+    min-width: calc(50% - 8px) !important;
+    display: flex !important;
+    flex-direction: column !important;
+  }
+  
+  .home-card .MuiList-root {
+    flex: 1 !important;
+    display: flex !important;
+    flex-direction: column !important;
+  }
+}
+
+/* Refuerzo adicional para pantallas medianas */
+@media (min-width: 769px) {
+  .home-card .MuiGrid-container {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    gap: 24px !important;
+    align-items: flex-start !important;
+  }
+  
+  .home-card .MuiGrid-item {
+    flex: 1 1 50% !important;
+    max-width: 50% !important;
+    min-width: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+  }
+}
+
+/* Refuerzo para pantallas muy grandes */
+@media (min-width: 1200px) {
+  .home-card .MuiGrid-container {
+    gap: 32px !important;
+  }
+  
+  .home-card .MuiGrid-item {
+    flex: 1 1 50% !important;
+    max-width: 50% !important;
+  }
+}
+
+/* Regla específica para forzar layout lado a lado - sobrescribe todo */
+.home-card .MuiGrid-container {
+  display: flex !important;
+  flex-direction: row !important;
+  flex-wrap: wrap !important;
+}
+
+.home-card .MuiGrid-item {
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+@media (min-width: 600px) {
+  .home-card .MuiGrid-item {
+    flex: 1 1 50% !important;
+    max-width: 50% !important;
+    min-width: 50% !important;
+  }
+}
+
 /* Asegurar que el contenedor principal ocupe toda la pantalla */
 .home-container {
   width: 100vw !important;
@@ -156,7 +402,7 @@ html, body {
 }
 
 /* Optimización para móviles - diseño centrado */
-@media (max-width: 600px) {
+@media (max-width: 599px) {
   /* Permitir zoom en inputs y elementos interactivos */
   input, select, textarea {
     font-size: 16px !important;
@@ -281,6 +527,94 @@ html, body {
   .MuiListItem-root {
     padding: 0 !important;
     margin: 0 !important;
+  }
+}
+
+/* ===== SOLUCIÓN DEFINITIVA PARA LAYOUT LADO A LADO ===== */
+/* Forzar layout horizontal en desktop - sobrescribe TODO */
+@media (min-width: 600px) {
+  .home-card .MuiGrid-container {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    gap: 20px !important;
+    align-items: stretch !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+  
+  .home-card .MuiGrid-item {
+    flex: 1 1 50% !important;
+    max-width: 50% !important;
+    min-width: 0 !important;
+    width: 50% !important;
+    display: flex !important;
+    flex-direction: column !important;
+  }
+  
+  .home-card .MuiList-root {
+    flex: 1 !important;
+    display: flex !important;
+    flex-direction: column !important;
+  }
+}
+
+/* Refuerzo adicional para pantallas medianas */
+@media (min-width: 769px) {
+  .home-card .MuiGrid-container {
+    gap: 24px !important;
+  }
+}
+
+/* Refuerzo para pantallas muy grandes */
+@media (min-width: 1200px) {
+  .home-card .MuiGrid-container {
+    gap: 32px !important;
+  }
+}
+
+/* Regla global para forzar flex en grid container */
+.home-card .MuiGrid-container {
+  display: flex !important;
+  flex-direction: row !important;
+  flex-wrap: wrap !important;
+}
+
+.home-card .MuiGrid-item {
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+/* ===== SOBRESCRIBIR ESTILOS DE WEB-OPTIMIZATION.CSS ===== */
+/* Sobrescribir específicamente los estilos que interfieren */
+.home-card .MuiGrid-container {
+  justify-content: flex-start !important; /* Sobrescribir center */
+  max-width: 100% !important;
+  display: flex !important;
+  flex-direction: row !important;
+  flex-wrap: nowrap !important;
+}
+
+.home-card .MuiGrid-item {
+  display: flex !important;
+  justify-content: flex-start !important; /* Sobrescribir center */
+  flex-direction: column !important;
+}
+
+/* Forzar layout lado a lado en desktop */
+@media (min-width: 600px) {
+  .home-card .MuiGrid-container {
+    justify-content: space-between !important;
+    align-items: stretch !important;
+    gap: 20px !important;
+  }
+  
+  .home-card .MuiGrid-item {
+    flex: 1 1 50% !important;
+    max-width: 50% !important;
+    min-width: 0 !important;
+    width: 50% !important;
+    justify-content: flex-start !important;
   }
 }
   

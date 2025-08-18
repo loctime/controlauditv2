@@ -58,14 +58,37 @@ const Home = () => {
       <Typography variant="h3" component="h1" align="center" gutterBottom fontWeight={700} sx={{ mb: 2, mt: 1 }}>
         ¡Bienvenido a <span style={{ color: theme.palette.primary.light }}>Tu Control de Auditoría</span>
       </Typography>
-      <Typography variant="h6" align="center" gutterBottom sx={{ opacity: 0.85, mb: 4 }}>
+      <Typography variant="h6" align="center" gutterBottom sx={{ opacity: 0.85, mb: 3 }}>
         Optimiza tus auditorías con nuestra plataforma profesional.
       </Typography>
 
-      <Divider sx={{ my: 3, bgcolor: isDark ? '#333' : '#ddd', width: '100%' }} />
+      <Divider sx={{ my: 2, bgcolor: isDark ? '#333' : '#ddd', width: '100%' }} />
 
-      <Grid container spacing={1} sx={{ width: '100%', maxWidth: '100%', margin: 0, padding: 0 }}>
-        <Grid item xs={12} md={6}>
+      <Grid 
+        container 
+        spacing={2} 
+        sx={{ 
+          width: '100%', 
+          maxWidth: '100%', 
+          margin: 0, 
+          padding: 0,
+          display: 'flex',
+          flexDirection: { xs: 'column', sm: 'row' },
+          flexWrap: 'nowrap',
+          gap: { xs: 1, sm: 2 },
+          alignItems: 'stretch'
+        }}
+      >
+        <Grid 
+          item 
+          xs={12} 
+          sm={6}
+          sx={{
+            flex: { sm: '1 1 50%' },
+            maxWidth: { sm: '50%' },
+            minWidth: { sm: '50%' }
+          }}
+        >
           <Typography variant="h5" gutterBottom fontWeight={600} align="center">
             Características
           </Typography>
@@ -78,7 +101,16 @@ const Home = () => {
             ))}
           </List>
         </Grid>
-        <Grid item xs={12} md={6}>
+        <Grid 
+          item 
+          xs={12} 
+          sm={6}
+          sx={{
+            flex: { sm: '1 1 50%' },
+            maxWidth: { sm: '50%' },
+            minWidth: { sm: '50%' }
+          }}
+        >
           <Typography variant="h5" gutterBottom fontWeight={600} align="center">
             Cómo Funciona
           </Typography>
@@ -93,7 +125,7 @@ const Home = () => {
         </Grid>
       </Grid>
 
-      <Box sx={{ textAlign: 'center', marginTop: 32, width: '100%', maxWidth: '100%' }}>
+      <Box sx={{ textAlign: 'center', marginTop: 24, width: '100%', maxWidth: '100%' }}>
         <Button
           component={Link}
           to="/auditoria"
@@ -141,7 +173,7 @@ const Home = () => {
         </Button>
         
         {/* Sección de descarga de APK */}
-        <Box mt={4} p={3} sx={{ 
+        <Box mt={3} p={2} sx={{ 
           background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.02)',
           borderRadius: 2,
           border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`,
@@ -156,7 +188,7 @@ const Home = () => {
           <DownloadAPK variant="outlined" size="large" showInfo={true} />
         </Box>
       </Box>
-      <Divider sx={{ mb: 2, mt: 4, width: '100%' }} />
+      <Divider sx={{ mb: 2, mt: 3, width: '100%' }} />
       <Box className="home-contact">
         Contacto: <a href="mailto:licvidalfernando@gmail.com" style={{ color: "#1976d2", textDecoration: "none" }}>licvidalfernando@gmail.com</a>
       </Box>
