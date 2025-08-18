@@ -398,7 +398,7 @@ function Dashboard() {
   };
 
   return (
-    <Box className="page-container">
+    <Box className="page-container dashboard-container">
       <Box className="content-container">
       <Typography variant="h4" gutterBottom>Dashboard Dueño del Sistema</Typography>
       

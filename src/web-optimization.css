@@ -336,6 +336,30 @@
     text-align: center;
   }
 
+  /* Excepción para auditoría - no centrar, permitir uso completo del espacio */
+  .auditoria-container .content-container {
+    align-items: stretch !important;
+    text-align: left !important;
+  }
+
+  .auditoria-container .form-container {
+    align-items: stretch !important;
+    justify-content: flex-start !important;
+  }
+
+  .auditoria-container .MuiGrid-container {
+    justify-content: flex-start !important;
+  }
+
+  .auditoria-container .MuiGrid-item {
+    justify-content: flex-start !important;
+    align-items: flex-start !important;
+  }
+
+  .auditoria-container .MuiBox-root {
+    align-items: stretch !important;
+  }
+
   /* Centrar elementos de la página de inicio */
   .page-container .MuiTypography-root {
     text-align: center !important;

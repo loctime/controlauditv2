@@ -259,7 +259,7 @@ const PerfilUsuario = () => {
   // Render principal
   return (
     <Box 
-      className="page-container"
+      className="page-container perfil-container"
       sx={{ 
         width: '100%', 
         bgcolor: 'background.default'

@@ -1,0 +1,453 @@
+/* ===== OPTIMIZACIONES ESPECÍFICAS PARA DESKTOP WEB ===== */
+
+/* Solo aplicar estas optimizaciones en pantallas grandes (no móviles) */
+@media (min-width: 769px) {
+  
+  /* ===== OPTIMIZACIONES GENERALES ===== */
+  
+  /* Contenedor principal más compacto */
+  .page-container {
+    max-width: 1400px !important;
+    margin: 0 auto !important;
+    padding: 20px !important;
+  }
+  
+  .content-container {
+    max-width: 1200px !important;
+    margin: 0 auto !important;
+    padding: 24px !important;
+  }
+  
+  /* Reducir espaciado general */
+  .MuiBox-root {
+    margin: 8px 0 !important;
+  }
+  
+  .MuiPaper-root {
+    margin: 8px 0 !important;
+  }
+  
+  /* ===== DASHBOARD OPTIMIZACIONES ===== */
+  
+  /* Dashboard más compacto */
+  .dashboard-container .MuiTypography-h4 {
+    font-size: 1.8rem !important;
+    margin-bottom: 16px !important;
+  }
+  
+  .dashboard-container .MuiTabs-root {
+    margin-bottom: 16px !important;
+  }
+  
+  .dashboard-container .MuiGrid-container {
+    gap: 16px !important;
+  }
+  
+  .dashboard-container .MuiGrid-item {
+    padding: 8px !important;
+  }
+  
+  .dashboard-container .MuiPaper-root {
+    padding: 16px !important;
+  }
+  
+  .dashboard-container .MuiCard-root {
+    margin-bottom: 12px !important;
+  }
+  
+  .dashboard-container .MuiCardContent-root {
+    padding: 16px !important;
+  }
+  
+  .dashboard-container .MuiTypography-h6 {
+    font-size: 1.1rem !important;
+    margin-bottom: 12px !important;
+  }
+  
+  .dashboard-container .MuiTypography-h4 {
+    font-size: 1.6rem !important;
+  }
+  
+  /* Tabla más compacta */
+  .dashboard-container .MuiTable-root {
+    font-size: 0.9rem !important;
+  }
+  
+  .dashboard-container .MuiTableCell-root {
+    padding: 8px 12px !important;
+  }
+  
+  /* ===== AUDITORIA OPTIMIZACIONES ===== */
+  
+  /* Auditoria más compacta */
+  .auditoria-container .MuiTypography-h4 {
+    font-size: 1.8rem !important;
+    margin-bottom: 16px !important;
+  }
+  
+  .auditoria-container .MuiStepper-root {
+    margin-bottom: 20px !important;
+  }
+  
+  .auditoria-container .MuiCard-root {
+    margin-bottom: 12px !important;
+    padding: 16px !important;
+  }
+  
+  .auditoria-container .MuiGrid-container {
+    gap: 16px !important;
+  }
+  
+  .auditoria-container .MuiGrid-item {
+    padding: 8px !important;
+  }
+  
+  /* Formularios más compactos */
+  .auditoria-container .MuiTextField-root {
+    margin-bottom: 12px !important;
+  }
+  
+  .auditoria-container .MuiButton-root {
+    margin: 4px !important;
+  }
+
+  /* Optimizaciones específicas para desktop */
+  @media (min-width: 1024px) {
+    .auditoria-container {
+      max-width: 1400px !important;
+      margin: 0 auto !important;
+      padding: 0 16px !important;
+    }
+    
+    .auditoria-container .MuiContainer-root {
+      max-width: 100% !important;
+      padding-left: 0 !important;
+      padding-right: 0 !important;
+    }
+    
+    /* Optimizar el grid del stepper */
+    .auditoria-container .form-container .MuiGrid-container {
+      gap: 24px !important;
+    }
+    
+    /* Barra lateral más eficiente */
+    .auditoria-container .form-container .MuiGrid-item:first-child {
+      flex: 0 0 auto !important;
+      max-width: 200px !important;
+    }
+    
+    /* Contenido principal que aprovecha el espacio */
+    .auditoria-container .form-container .MuiGrid-item:last-child {
+      flex: 1 !important;
+      min-width: 0 !important;
+    }
+    
+    /* Reducir padding en componentes internos */
+    .auditoria-container .MuiPaper-root {
+      padding: 20px !important;
+    }
+    
+    /* Optimizar espaciado en formularios */
+    .auditoria-container .MuiFormControl-root {
+      margin-bottom: 16px !important;
+    }
+    
+    /* Botones más compactos */
+    .auditoria-container .MuiButton-root {
+      padding: 8px 16px !important;
+      font-size: 0.875rem !important;
+    }
+  }
+
+  /* Optimizaciones para pantallas muy grandes */
+  @media (min-width: 1400px) {
+    .auditoria-container {
+      max-width: 1600px !important;
+    }
+    
+    .auditoria-container .form-container .MuiGrid-item:first-child {
+      max-width: 220px !important;
+    }
+  }
+  
+  /* ===== PERFIL OPTIMIZACIONES ===== */
+  
+  /* Perfil más compacto */
+  .perfil-container .MuiTypography-h4 {
+    font-size: 1.8rem !important;
+    margin-bottom: 16px !important;
+  }
+  
+  .perfil-container .MuiTabs-root {
+    margin-bottom: 16px !important;
+  }
+  
+  .perfil-container .MuiCard-root {
+    margin-bottom: 12px !important;
+    padding: 16px !important;
+  }
+  
+  .perfil-container .MuiGrid-container {
+    gap: 16px !important;
+  }
+  
+  .perfil-container .MuiGrid-item {
+    padding: 8px !important;
+  }
+  
+  /* Sidebar más compacta */
+  .perfil-container .MuiDrawer-paper {
+    width: 280px !important;
+  }
+  
+  .perfil-container .MuiListItem-root {
+    padding: 8px 16px !important;
+  }
+  
+  /* ===== FORMULARIOS OPTIMIZACIONES ===== */
+  
+  /* Formularios más compactos */
+  .formulario-container .MuiTypography-h4 {
+    font-size: 1.8rem !important;
+    margin-bottom: 16px !important;
+  }
+  
+  .formulario-container .MuiTextField-root {
+    margin-bottom: 12px !important;
+  }
+  
+  .formulario-container .MuiButton-root {
+    margin: 4px !important;
+  }
+  
+  .formulario-container .MuiCard-root {
+    margin-bottom: 12px !important;
+    padding: 16px !important;
+  }
+  
+  /* ===== ADMIN OPTIMIZACIONES ===== */
+  
+  /* Admin más compacto */
+  .admin-container .MuiTypography-h4 {
+    font-size: 1.8rem !important;
+    margin-bottom: 16px !important;
+  }
+  
+  .admin-container .MuiTabs-root {
+    margin-bottom: 16px !important;
+  }
+  
+  .admin-container .MuiCard-root {
+    margin-bottom: 12px !important;
+    padding: 16px !important;
+  }
+  
+  .admin-container .MuiGrid-container {
+    gap: 16px !important;
+  }
+  
+  .admin-container .MuiGrid-item {
+    padding: 8px !important;
+  }
+  
+  /* ===== TABLAS OPTIMIZACIONES ===== */
+  
+  /* Todas las tablas más compactas */
+  .MuiTable-root {
+    font-size: 0.9rem !important;
+  }
+  
+  .MuiTableCell-root {
+    padding: 8px 12px !important;
+  }
+  
+  .MuiTableHead-root .MuiTableCell-root {
+    font-weight: 600 !important;
+    font-size: 0.85rem !important;
+  }
+  
+  /* ===== DIALOGS OPTIMIZACIONES ===== */
+  
+  /* Diálogos más compactos */
+  .MuiDialog-paper {
+    max-width: 600px !important;
+    margin: 16px !important;
+  }
+  
+  .MuiDialogTitle-root {
+    padding: 16px 24px 8px 24px !important;
+  }
+  
+  .MuiDialogContent-root {
+    padding: 8px 24px 16px 24px !important;
+  }
+  
+  .MuiDialogActions-root {
+    padding: 8px 24px 16px 24px !important;
+  }
+  
+  /* ===== BOTONES OPTIMIZACIONES ===== */
+  
+  /* Botones más compactos */
+  .MuiButton-root {
+    padding: 6px 16px !important;
+    font-size: 0.9rem !important;
+  }
+  
+  .MuiButton-sizeLarge {
+    padding: 8px 20px !important;
+    font-size: 1rem !important;
+  }
+  
+  /* ===== TIPOGRAFÍA OPTIMIZACIONES ===== */
+  
+  /* Tipografía más compacta */
+  .MuiTypography-h1 {
+    font-size: 2.2rem !important;
+    line-height: 1.2 !important;
+  }
+  
+  .MuiTypography-h2 {
+    font-size: 1.8rem !important;
+    line-height: 1.2 !important;
+  }
+  
+  .MuiTypography-h3 {
+    font-size: 1.6rem !important;
+    line-height: 1.2 !important;
+  }
+  
+  .MuiTypography-h4 {
+    font-size: 1.4rem !important;
+    line-height: 1.2 !important;
+  }
+  
+  .MuiTypography-h5 {
+    font-size: 1.2rem !important;
+    line-height: 1.2 !important;
+  }
+  
+  .MuiTypography-h6 {
+    font-size: 1.1rem !important;
+    line-height: 1.2 !important;
+  }
+  
+  /* ===== ESPACIADO OPTIMIZACIONES ===== */
+  
+  /* Reducir espaciado general */
+  .MuiBox-root {
+    margin: 4px 0 !important;
+  }
+  
+  .MuiPaper-root {
+    margin: 4px 0 !important;
+  }
+  
+  .MuiCard-root {
+    margin: 4px 0 !important;
+  }
+  
+  /* ===== GRID OPTIMIZACIONES ===== */
+  
+  /* Grid más compacto */
+  .MuiGrid-container {
+    gap: 12px !important;
+  }
+  
+  .MuiGrid-item {
+    padding: 6px !important;
+  }
+  
+  /* ===== FORMULARIOS OPTIMIZACIONES ===== */
+  
+  /* Campos de formulario más compactos */
+  .MuiTextField-root {
+    margin-bottom: 8px !important;
+  }
+  
+  .MuiFormControl-root {
+    margin-bottom: 8px !important;
+  }
+  
+  /* ===== ALERTS OPTIMIZACIONES ===== */
+  
+  /* Alertas más compactas */
+  .MuiAlert-root {
+    margin: 4px 0 !important;
+    padding: 8px 12px !important;
+  }
+  
+  /* ===== CHIPS OPTIMIZACIONES ===== */
+  
+  /* Chips más compactos */
+  .MuiChip-root {
+    height: 28px !important;
+    font-size: 0.8rem !important;
+  }
+  
+  /* ===== AVATARS OPTIMIZACIONES ===== */
+  
+  /* Avatares más compactos */
+  .MuiAvatar-root {
+    width: 32px !important;
+    height: 32px !important;
+  }
+  
+  .MuiAvatar-large {
+    width: 40px !important;
+    height: 40px !important;
+  }
+}
+
+/* ===== OPTIMIZACIONES PARA PANTALLAS MUY GRANDES ===== */
+@media (min-width: 1200px) {
+  
+  /* Contenedor principal más ancho */
+  .page-container {
+    max-width: 1600px !important;
+  }
+  
+  .content-container {
+    max-width: 1400px !important;
+  }
+  
+  /* Grid de 3 columnas en pantallas muy grandes */
+  .dashboard-container .MuiGrid-item {
+    flex-basis: 33.333% !important;
+    max-width: 33.333% !important;
+  }
+  
+  /* Tablas más anchas */
+  .MuiTableContainer-root {
+    max-width: 100% !important;
+  }
+  
+  /* Diálogos más anchos */
+  .MuiDialog-paper {
+    max-width: 800px !important;
+  }
+}
+
+/* ===== OPTIMIZACIONES PARA PANTALLAS ULTRA GRANDES ===== */
+@media (min-width: 1600px) {
+  
+  /* Contenedor principal ultra ancho */
+  .page-container {
+    max-width: 1800px !important;
+  }
+  
+  .content-container {
+    max-width: 1600px !important;
+  }
+  
+  /* Grid de 4 columnas en pantallas ultra grandes */
+  .dashboard-container .MuiGrid-item {
+    flex-basis: 25% !important;
+    max-width: 25% !important;
+  }
+  
+  /* Diálogos ultra anchos */
+  .MuiDialog-paper {
+    max-width: 1000px !important;
+  }
+}

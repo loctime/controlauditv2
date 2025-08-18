@@ -89,7 +89,7 @@ const Formulario = () => {
   };
 
   return (
-    <Box className="content-container">
+    <Box className="content-container formulario-container">
       {/* Botón para galería de formularios públicos */}
       <Box sx={{ mb: 3, display: 'flex', alignItems: 'center', gap: 2 }}>
         <Button

@@ -920,12 +920,25 @@ const AuditoriaRefactorizada = () => {
   ];
 
   return (
-    <Box className="page-container">
-      <Container maxWidth="xl" className="content-container">
+    <Box className="page-container auditoria-container">
+      <Container 
+        maxWidth={false} 
+        className="content-container"
+        sx={{ 
+          px: isMobile ? 2 : 1, // Reducir padding horizontal en desktop
+          maxWidth: '100%',
+          // Optimizar para pantallas grandes
+          '@media (min-width: 1200px)': {
+            px: 0,
+            maxWidth: '1400px', // Limitar el ancho máximo
+            mx: 'auto'
+          }
+        }}
+      >
       {/* Header con navegación y progreso */}
-      <Box sx={{ mb: isMobile ? 1 : 3 }}>
-        <Box display="flex" alignItems="center" justifyContent="space-between" mb={isMobile ? 0.5 : 2}>
-          <Box display="flex" alignItems="center" gap={isMobile ? 0.5 : 2}>
+      <Box sx={{ mb: isMobile ? 1 : 2 }}>
+        <Box display="flex" alignItems="center" justifyContent="space-between" mb={isMobile ? 0.5 : 1.5}>
+          <Box display="flex" alignItems="center" gap={isMobile ? 0.5 : 1.5}>
             <Button
               onClick={() => {
                 // Navegar dinámicamente basado en el origen
@@ -942,8 +955,8 @@ const AuditoriaRefactorizada = () => {
                 borderRadius: 2,
                 textTransform: 'none',
                 fontWeight: 600,
-                px: isMobile ? 1 : 2,
-                py: isMobile ? 0.5 : 1
+                px: isMobile ? 1 : 1.5,
+                py: isMobile ? 0.5 : 0.75
               }}
             >
               Volver
@@ -954,7 +967,7 @@ const AuditoriaRefactorizada = () => {
               backgroundClip: 'text',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
-              fontSize: isMobile ? '1.1rem' : undefined
+              fontSize: isMobile ? '1.1rem' : '1.8rem'
             }}>
               Nueva Auditoría
             </Typography>
@@ -974,11 +987,11 @@ const AuditoriaRefactorizada = () => {
           variant="determinate" 
           value={calcularProgreso()} 
           sx={{ 
-            height: isMobile ? 4 : 8, 
-            borderRadius: 4,
+            height: isMobile ? 4 : 6, 
+            borderRadius: 3,
             backgroundColor: alpha(theme.palette.primary.main, 0.1),
             '& .MuiLinearProgress-bar': {
-              borderRadius: 4,
+              borderRadius: 3,
               background: `linear-gradient(90deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`
             }
           }} 
@@ -990,7 +1003,7 @@ const AuditoriaRefactorizada = () => {
             <Alert 
               severity="warning" 
               sx={{ 
-                mt: isMobile ? 0.5 : 2, 
+                mt: isMobile ? 0.5 : 1.5, 
                 borderRadius: 2,
                 '& .MuiAlert-message': {
                   width: '100%'
@@ -1060,7 +1073,7 @@ const AuditoriaRefactorizada = () => {
       {/* Reporte */}
       {mostrarReporte && (
         <Zoom in={true} timeout={800}>
-          <Paper elevation={6} sx={{ p: 4, mt: 4, borderRadius: 3 }}>
+          <Paper elevation={6} sx={{ p: 3, mt: 3, borderRadius: 3 }}>
             <ReporteConImpresion 
               empresa={empresaSeleccionada} 
               sucursal={sucursalSeleccionada} 

@@ -53,6 +53,18 @@
     align-items: center;
   }
 
+  /* Excepción para auditoría - permitir más espacio en desktop */
+  .auditoria-container .content-container {
+    max-width: 100% !important;
+    align-items: stretch !important;
+  }
+
+  .auditoria-container .form-container {
+    width: 100% !important;
+    max-width: 100% !important;
+    align-items: stretch !important;
+  }
+
   /* El navbar debe ocupar todo el ancho en web */
   .MuiAppBar-root {
     width: 100% !important;

@@ -7,6 +7,7 @@ import './safe-areas.css'; // Importar configuraciones de safe areas
 import './mobile-optimization.css'; // Importar optimizaciones para móviles
 import './web-optimization.css'; // Importar optimizaciones para web/PC
 import './centering-fixes.css'; // Importar fixes para centrado en web
+import './desktop-optimization.css'; // Importar optimizaciones específicas para desktop
 import { ColorModeProvider } from "./components/context/ColorModeContext";
 import AuthContextComponent from "./components/context/AuthContext";
 import AppRouter from "./router/AppRouter";
