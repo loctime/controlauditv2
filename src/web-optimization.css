@@ -360,6 +360,21 @@
     align-items: stretch !important;
   }
 
+  /* Forzar alineación a la izquierda del botón Volver específicamente */
+  .auditoria-container .MuiBox-root:first-child {
+    display: block !important;
+    text-align: left !important;
+    align-items: flex-start !important;
+  }
+
+  .auditoria-container .MuiBox-root:first-child .MuiButton-root {
+    margin: 0 !important;
+    margin-left: 0 !important;
+    margin-right: auto !important;
+    float: left !important;
+    align-self: flex-start !important;
+  }
+
   /* Centrar elementos de la página de inicio */
   .page-container .MuiTypography-root {
     text-align: center !important;

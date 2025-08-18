@@ -937,50 +937,65 @@ const AuditoriaRefactorizada = () => {
       >
       {/* Header con navegación y progreso */}
       <Box sx={{ mb: isMobile ? 1 : 2 }}>
-        <Box display="flex" alignItems="center" justifyContent="space-between" mb={isMobile ? 0.5 : 1.5}>
-          <Box display="flex" alignItems="center" gap={isMobile ? 0.5 : 1.5}>
-            <Button
-              onClick={() => {
-                // Navegar dinámicamente basado en el origen
-                if (location.state?.from === 'perfil') {
-                  navigate('/perfil');
-                } else {
-                  navigate('/cliente-dashboard');
-                }
-              }}
-              variant="outlined"
-              startIcon={<ArrowBackIcon />}
-              size="small"
-              sx={{ 
-                borderRadius: 2,
-                textTransform: 'none',
-                fontWeight: 600,
-                px: isMobile ? 1 : 1.5,
-                py: isMobile ? 0.5 : 0.75
-              }}
-            >
-              Volver
-            </Button>
-            <Typography variant={isMobile ? "h6" : "h4"} sx={{ 
-              fontWeight: 700,
-              background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
-              backgroundClip: 'text',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              fontSize: isMobile ? '1.1rem' : '1.8rem'
-            }}>
-              Nueva Auditoría
-            </Typography>
-          </Box>
-          
-          <Chip 
-            label={`${calcularProgreso()}%`}
-            color="primary"
-            variant="filled"
+        {/* Header con botón, título y progreso en la misma línea */}
+        <Box sx={{ 
+          mb: isMobile ? 0.5 : 1,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          width: '100%',
+          gap: 1
+          }}>
+          {/* Lado izquierdo: Botón Volver */}
+          <Button
+            onClick={() => {
+              // Navegar dinámicamente basado en el origen
+              if (location.state?.from === 'perfil') {
+                navigate('/perfil');
+              } else {
+                navigate('/cliente-dashboard');
+              }
+            }}
+            variant="outlined"
+            startIcon={<ArrowBackIcon />}
             size="small"
-            sx={{ fontWeight: 600 }}
-          />
+            sx={{ 
+              borderRadius: 2,
+              textTransform: 'none',
+              fontWeight: 600,
+              px: isMobile ? 1 : 1.5,
+              py: isMobile ? 0.5 : 0.75,
+              flexShrink: 0
+            }}
+          >
+            Volver
+          </Button>
+          
+          {/* Centro: Título */}
+          
+                     <Typography variant={isMobile ? "h6" : "h4"} sx={{ 
+             fontWeight: 700,
+             color: '#000000',
+             fontSize: isMobile ? '1.1rem' : '1.8rem',
+             flex: 1,
+             textAlign: 'center'
+           }}>
+             Nueva Auditoría <Chip 
+             label={`${calcularProgreso()}%`}
+             color="primary"
+             variant="filled"
+             size="small"
+             sx={{ 
+               fontWeight: 600,
+               flexShrink: 0
+             }}
+           />
+           </Typography>
+          
+          {/* Lado derecho: Progreso */}
+         
         </Box>
+
         
         {/* Barra de progreso */}
         <LinearProgress 

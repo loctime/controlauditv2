@@ -157,6 +157,18 @@
       padding: 8px 16px !important;
       font-size: 0.875rem !important;
     }
+
+    /* Forzar alineación a la izquierda del botón Volver */
+    .auditoria-container .MuiBox-root:first-child {
+      display: block !important;
+      text-align: left !important;
+    }
+
+    .auditoria-container .MuiBox-root:first-child .MuiButton-root {
+      margin-left: 0 !important;
+      margin-right: auto !important;
+      float: left !important;
+    }
   }
 
   /* Optimizaciones para pantallas muy grandes */
