@@ -144,3 +144,99 @@ a{
     padding: 4px !important;
   }
 }
+
+/* Estilos específicos para web/PC - centrar navbar */
+@media (min-width: 769px) {
+  /* El AppBar debe ocupar todo el ancho en web */
+  .MuiAppBar-root {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    left: 0 !important;
+    transform: none !important;
+  }
+  
+  /* El Toolbar debe ocupar todo el ancho */
+  .MuiToolbar-root {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 24px !important;
+  }
+  
+  /* Centrar el drawer */
+  .MuiDrawer-paper {
+    width: 240px;
+  }
+  
+  /* Ajustar el contenido principal para el navbar */
+  main {
+    margin-top: 64px !important;
+    padding-top: 0 !important;
+  }
+  
+  /* Centrar el contenido principal */
+  .main-app-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+  }
+}
+
+/* Optimizaciones para pantallas muy grandes */
+@media (min-width: 1200px) {
+  .MuiAppBar-root {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+  
+  .MuiToolbar-root {
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 0 32px !important;
+  }
+  
+  .main-app-container {
+    max-width: 1400px;
+  }
+}
+
+/* Optimizaciones para pantallas ultra grandes */
+@media (min-width: 1600px) {
+  .MuiAppBar-root {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+  
+  .MuiToolbar-root {
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 0 40px !important;
+  }
+  
+  .main-app-container {
+    max-width: 1600px;
+  }
+}
+
+/* Optimizaciones específicas para enlaces del navbar en web */
+@media (min-width: 769px) {
+  /* Asegurar que los enlaces del navbar se muestren en línea horizontal */
+  .MuiToolbar-root a {
+    display: inline-flex !important;
+    align-items: center !important;
+    white-space: nowrap !important;
+  }
+  
+  /* Asegurar que los contenedores de navegación se muestren correctamente */
+  .MuiToolbar-root .MuiBox-root {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+  }
+  
+  /* Asegurar que los enlaces tengan el espaciado correcto */
+  .MuiToolbar-root .MuiBox-root a {
+    margin: 0 8px !important;
+  }
+}

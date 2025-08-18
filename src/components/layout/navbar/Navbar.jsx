@@ -168,7 +168,14 @@ function Navbar(props) {
           // Extender hasta arriba en móvil para cubrir la barra de estado
           top: 0,
           height: { xs: `calc(56px + env(safe-area-inset-top, 0px))`, sm: 64 },
-          backgroundColor: '#1976d2'
+          backgroundColor: '#1976d2',
+          // Asegurar que ocupe todo el ancho en web
+          '@media (min-width: 769px)': {
+            width: '100%',
+            maxWidth: '100%',
+            left: 0,
+            transform: 'none'
+          }
         }}
       >
                                    <Toolbar sx={{
@@ -182,7 +189,13 @@ function Navbar(props) {
             pr: { xs: 0, sm: 1 }, // Sin padding derecho en móvil
             // Ajustar padding superior para safe areas
             paddingTop: { xs: `env(safe-area-inset-top, 0px)`, sm: 0 },
-            minHeight: { xs: `calc(56px + env(safe-area-inset-top, 0px))`, sm: 64 }
+            minHeight: { xs: `calc(56px + env(safe-area-inset-top, 0px))`, sm: 64 },
+            // Asegurar que ocupe todo el ancho en web
+            '@media (min-width: 769px)': {
+              width: '100%',
+              maxWidth: '100%',
+              padding: '0 24px'
+            }
           }}>
            
           {/* Navegación principal - oculta en móvil */}

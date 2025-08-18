@@ -79,6 +79,12 @@ html, body {
   display: flex;
   flex-direction: column;
   overflow-x: hidden;
+  /* Centrar en pantallas grandes */
+  @media (min-width: 769px) {
+    align-items: center;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
 }
 
 /* Responsive adjustments */

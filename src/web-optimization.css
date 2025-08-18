@@ -1,0 +1,379 @@
+/* Optimizaciones específicas para diseño web/PC */
+
+/* Solo aplicar estas optimizaciones en pantallas grandes (no móviles) */
+@media (min-width: 769px) {
+  /* Contenedor principal centrado para web */
+  .main-app-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100vh;
+    width: 100%;
+    max-width: 1200px; /* Limitar el ancho máximo en pantallas grandes */
+    margin: 0 auto; /* Centrar horizontalmente */
+    padding: 0;
+  }
+
+  /* Contenedor de páginas centrado */
+  .page-container {
+    width: 100%;
+    max-width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100vh;
+    padding: 0;
+    margin: 0;
+  }
+
+  /* Contenedor de contenido centrado */
+  .content-container {
+    width: 100%;
+    max-width: 800px; /* Ancho máximo para el contenido en web */
+    margin: 0 auto;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  /* El navbar debe ocupar todo el ancho en web */
+  .MuiAppBar-root {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+  }
+
+  /* Optimizar el drawer para web */
+  .MuiDrawer-paper {
+    width: 240px;
+  }
+
+  /* Optimizar contenedores de Material-UI para web */
+  .MuiContainer-root {
+    max-width: 800px !important;
+    margin: 0 auto !important;
+    padding: 20px !important;
+  }
+
+  .MuiBox-root {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  /* Optimizar cards para web */
+  .MuiCard-root {
+    max-width: 100%;
+    margin: 0 auto 16px auto;
+  }
+
+  /* Optimizar grids para web */
+  .MuiGrid-container {
+    justify-content: center;
+    max-width: 100%;
+  }
+
+  .MuiGrid-item {
+    display: flex;
+    justify-content: center;
+  }
+
+  /* Optimizar formularios para web */
+  .form-container {
+    max-width: 600px;
+    margin: 0 auto;
+    width: 100%;
+  }
+
+  /* Optimizar diálogos para web */
+  .MuiDialog-paper {
+    max-width: 600px;
+    margin: 0 auto;
+  }
+
+  /* Optimizar toolbars para web */
+  .MuiToolbar-root {
+    max-width: 1200px;
+    margin: 0 auto;
+    width: 100%;
+  }
+
+  /* Optimizar tipografía para web */
+  .MuiTypography-root {
+    text-align: center;
+  }
+
+  /* Optimizar listas para web */
+  .MuiList-root {
+    max-width: 100%;
+    margin: 0 auto;
+  }
+
+  .MuiListItem-root {
+    justify-content: center;
+  }
+
+  /* Optimizar botones para web */
+  .MuiButton-root {
+    margin: 8px auto;
+  }
+
+  /* Optimizar inputs para web */
+  .MuiTextField-root {
+    max-width: 100%;
+    margin: 8px auto;
+  }
+
+  /* Optimizar selects para web */
+  .MuiSelect-root {
+    max-width: 100%;
+  }
+
+  /* Optimizar chips para web */
+  .MuiChip-root {
+    margin: 4px;
+  }
+
+  /* Optimizar alerts para web */
+  .MuiAlert-root {
+    max-width: 100%;
+    margin: 8px auto;
+  }
+
+  /* Optimizar tabs para web */
+  .MuiTabs-root {
+    max-width: 100%;
+    margin: 0 auto;
+  }
+
+  /* Optimizar avatars para web */
+  .MuiAvatar-root {
+    margin: 8px auto;
+  }
+
+  /* Optimizar iconos para web */
+  .MuiSvgIcon-root {
+    margin: 4px;
+  }
+
+  /* Optimizar espaciado para web */
+  .MuiStack-root {
+    align-items: center;
+    max-width: 100%;
+  }
+
+  /* Optimizar dividers para web */
+  .MuiDivider-root {
+    width: 100%;
+    max-width: 100%;
+    margin: 16px auto;
+  }
+
+  /* Optimizar paper para web */
+  .MuiPaper-root {
+    max-width: 100%;
+    margin: 0 auto;
+  }
+
+  /* Optimizar modal para web */
+  .MuiModal-root .MuiBox-root {
+    max-width: 600px;
+    margin: 0 auto;
+  }
+
+  /* Optimizar snackbar para web */
+  .MuiSnackbar-root {
+    max-width: 400px;
+    margin: 0 auto;
+  }
+
+  /* Optimizar tooltip para web */
+  .MuiTooltip-popper {
+    max-width: 300px;
+  }
+
+  /* Optimizar menu para web */
+  .MuiMenu-paper {
+    max-width: 300px;
+    margin: 0 auto;
+  }
+
+  /* Optimizar checkbox y radio para web */
+  .MuiCheckbox-root,
+  .MuiRadio-root {
+    margin: 4px;
+  }
+
+  /* Optimizar switch para web */
+  .MuiSwitch-root {
+    margin: 8px;
+  }
+
+  /* Optimizar slider para web */
+  .MuiSlider-root {
+    max-width: 100%;
+    margin: 16px auto;
+  }
+
+  /* Optimizar rating para web */
+  .MuiRating-root {
+    margin: 8px auto;
+  }
+
+  /* Optimizar skeleton para web */
+  .MuiSkeleton-root {
+    margin: 8px auto;
+  }
+
+  /* Optimizar progress para web */
+  .MuiLinearProgress-root {
+    max-width: 100%;
+    margin: 8px auto;
+  }
+
+  /* Optimizar circular progress para web */
+  .MuiCircularProgress-root {
+    margin: 16px auto;
+  }
+
+  /* Optimizar badge para web */
+  .MuiBadge-root {
+    margin: 8px auto;
+  }
+
+  /* Optimizar speed dial para web */
+  .MuiSpeedDial-root {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+  }
+
+  /* Optimizar fab para web */
+  .MuiFab-root {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+  }
+
+  /* Optimizar back to top para web */
+  .back-to-top {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+  }
+}
+
+/* Optimizaciones específicas para pantallas muy grandes */
+@media (min-width: 1200px) {
+  .main-app-container {
+    max-width: 1400px;
+  }
+
+  .content-container {
+    max-width: 1000px;
+  }
+
+  .MuiContainer-root {
+    max-width: 1000px !important;
+  }
+
+  .form-container {
+    max-width: 800px;
+  }
+
+  .MuiDialog-paper {
+    max-width: 800px;
+  }
+
+  .MuiAppBar-root {
+    max-width: 1400px;
+  }
+
+  .MuiToolbar-root {
+    max-width: 1400px;
+  }
+}
+
+/* Optimizaciones específicas para pantallas ultra grandes */
+@media (min-width: 1600px) {
+  .main-app-container {
+    max-width: 1600px;
+  }
+
+  .content-container {
+    max-width: 1200px;
+  }
+
+  .MuiContainer-root {
+    max-width: 1200px !important;
+  }
+
+  .form-container {
+    max-width: 1000px;
+  }
+
+  .MuiDialog-paper {
+    max-width: 1000px;
+  }
+
+  .MuiAppBar-root {
+    max-width: 1600px;
+  }
+
+  .MuiToolbar-root {
+    max-width: 1600px;
+  }
+}
+
+/* Asegurar que el contenido esté centrado en todas las pantallas grandes */
+@media (min-width: 769px) {
+  /* Forzar centrado en elementos específicos de la página de inicio */
+  .page-container .content-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    text-align: center;
+  }
+
+  /* Centrar elementos de la página de inicio */
+  .page-container .MuiTypography-root {
+    text-align: center !important;
+  }
+
+  .page-container .MuiGrid-container {
+    justify-content: center !important;
+  }
+
+  .page-container .MuiGrid-item {
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+  }
+
+  .page-container .MuiList-root {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+  }
+
+  .page-container .MuiListItem-root {
+    justify-content: center !important;
+    text-align: center !important;
+  }
+
+  .page-container .MuiListItemText-root {
+    text-align: center !important;
+  }
+
+  .page-container .MuiButton-root {
+    margin: 8px auto !important;
+  }
+
+  .page-container .MuiBox-root {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    width: 100% !important;
+  }
+}

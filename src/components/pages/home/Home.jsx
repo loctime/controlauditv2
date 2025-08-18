@@ -38,7 +38,7 @@ const Home = () => {
 
   return (
     <Box 
-      className="page-container"
+      className="page-container home-main-container"
       sx={{
         background: 'linear-gradient(120deg, #f5f7fa 0%, #c3cfe2 100%)',
         minHeight: '100vh',
@@ -47,13 +47,14 @@ const Home = () => {
         alignItems: 'center',
         justifyContent: 'flex-start',
         padding: 0,
-        width: '100vw',
+        width: '100%',
+        maxWidth: '100%',
         margin: 0,
         overflowY: 'auto',
         WebkitOverflowScrolling: 'touch'
       }}
     >
-      <Box className="content-container">
+      <Box className="content-container home-card">
       <Typography variant="h3" component="h1" align="center" gutterBottom fontWeight={700} sx={{ mb: 2, mt: 1 }}>
         ¡Bienvenido a <span style={{ color: theme.palette.primary.light }}>Tu Control de Auditoría</span>
       </Typography>

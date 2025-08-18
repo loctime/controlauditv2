@@ -40,6 +40,12 @@
   padding-left: calc(20px + env(safe-area-inset-left, 0px));
   padding-right: calc(20px + env(safe-area-inset-right, 0px));
   box-sizing: border-box;
+  /* Centrar en pantallas grandes */
+  @media (min-width: 769px) {
+    max-width: 1200px;
+    margin: 0 auto;
+    align-items: center;
+  }
 }
 
 .home-card {
@@ -54,6 +60,11 @@
   display: flex;
   flex-direction: column;
   align-items: center;
+  /* Centrar en pantallas grandes */
+  @media (min-width: 769px) {
+    max-width: 800px;
+    margin: 0 auto;
+  }
 }
 
 .home-card .MuiGrid-root {

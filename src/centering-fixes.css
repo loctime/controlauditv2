@@ -1,0 +1,381 @@
+/* Fixes específicos para centrar el contenido en web */
+
+/* Solo aplicar en pantallas grandes (no móviles) */
+@media (min-width: 769px) {
+  /* Asegurar que el body esté centrado */
+  body {
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    min-height: 100vh;
+    margin: 0;
+    padding: 0;
+  }
+
+  /* Asegurar que el #root esté centrado */
+  #root {
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+  }
+
+  /* Asegurar que el contenedor principal esté centrado */
+  .main-app-container {
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100vh;
+  }
+
+  /* Asegurar que las páginas estén centradas */
+  .page-container {
+    width: 100%;
+    max-width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100vh;
+  }
+
+  /* Asegurar que el contenido esté centrado */
+  .content-container {
+    width: 100%;
+    max-width: 800px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  /* El navbar debe ocupar todo el ancho en web */
+  .MuiAppBar-root {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    left: 0 !important;
+    transform: none !important;
+  }
+
+  /* El toolbar debe ocupar todo el ancho */
+  .MuiToolbar-root {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 24px !important;
+  }
+
+  /* Asegurar que el drawer esté bien posicionado */
+  .MuiDrawer-root {
+    width: 240px;
+  }
+
+  .MuiDrawer-paper {
+    width: 240px;
+  }
+
+  /* Asegurar que el contenido principal tenga el margen correcto */
+  main {
+    margin-top: 64px;
+    width: 100%;
+    max-width: 1200px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  /* Asegurar que los contenedores de Material-UI estén centrados */
+  .MuiContainer-root {
+    max-width: 800px !important;
+    margin: 0 auto !important;
+    padding: 20px !important;
+  }
+
+  .MuiBox-root {
+    width: 100%;
+    max-width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  /* Asegurar que las cards estén centradas */
+  .MuiCard-root {
+    width: 100%;
+    max-width: 100%;
+    margin: 0 auto 16px auto;
+  }
+
+  /* Asegurar que los grids estén centrados */
+  .MuiGrid-container {
+    width: 100%;
+    max-width: 100%;
+    justify-content: center;
+    margin: 0 auto;
+  }
+
+  .MuiGrid-item {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+
+  /* Asegurar que las listas estén centradas */
+  .MuiList-root {
+    width: 100%;
+    max-width: 100%;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .MuiListItem-root {
+    width: 100%;
+    justify-content: center;
+    text-align: center;
+  }
+
+  .MuiListItemText-root {
+    text-align: center;
+  }
+
+  /* Asegurar que los botones estén centrados */
+  .MuiButton-root {
+    margin: 8px auto;
+  }
+
+  /* Asegurar que la tipografía esté centrada */
+  .MuiTypography-root {
+    text-align: center;
+  }
+
+  /* Asegurar que los formularios estén centrados */
+  .form-container {
+    width: 100%;
+    max-width: 600px;
+    margin: 0 auto;
+  }
+
+  /* Asegurar que los diálogos estén centrados */
+  .MuiDialog-paper {
+    max-width: 600px;
+    margin: 0 auto;
+  }
+
+  /* Asegurar que los alerts estén centrados */
+  .MuiAlert-root {
+    width: 100%;
+    max-width: 100%;
+    margin: 8px auto;
+  }
+
+  /* Asegurar que los chips estén centrados */
+  .MuiChip-root {
+    margin: 4px;
+  }
+
+  /* Asegurar que los avatars estén centrados */
+  .MuiAvatar-root {
+    margin: 8px auto;
+  }
+
+  /* Asegurar que los iconos estén centrados */
+  .MuiSvgIcon-root {
+    margin: 4px;
+  }
+
+  /* Asegurar que los dividers estén centrados */
+  .MuiDivider-root {
+    width: 100%;
+    max-width: 100%;
+    margin: 16px auto;
+  }
+
+  /* Asegurar que el paper esté centrado */
+  .MuiPaper-root {
+    width: 100%;
+    max-width: 100%;
+    margin: 0 auto;
+  }
+
+  /* Asegurar que los modales estén centrados */
+  .MuiModal-root .MuiBox-root {
+    max-width: 600px;
+    margin: 0 auto;
+  }
+
+  /* Asegurar que los snackbars estén centrados */
+  .MuiSnackbar-root {
+    max-width: 400px;
+    margin: 0 auto;
+  }
+
+  /* Asegurar que los tooltips estén centrados */
+  .MuiTooltip-popper {
+    max-width: 300px;
+  }
+
+  /* Asegurar que los menus estén centrados */
+  .MuiMenu-paper {
+    max-width: 300px;
+    margin: 0 auto;
+  }
+
+  /* Asegurar que los selects estén centrados */
+  .MuiSelect-root {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  /* Asegurar que los textfields estén centrados */
+  .MuiTextField-root {
+    width: 100%;
+    max-width: 100%;
+    margin: 8px auto;
+  }
+
+  /* Asegurar que los inputs estén centrados */
+  .MuiInputBase-root {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  /* Asegurar que los tabs estén centrados */
+  .MuiTabs-root {
+    width: 100%;
+    max-width: 100%;
+    margin: 0 auto;
+  }
+
+  /* Asegurar que los stacks estén centrados */
+  .MuiStack-root {
+    width: 100%;
+    max-width: 100%;
+    align-items: center;
+  }
+
+  /* Asegurar que los skeletons estén centrados */
+  .MuiSkeleton-root {
+    margin: 8px auto;
+  }
+
+  /* Asegurar que los progress estén centrados */
+  .MuiLinearProgress-root {
+    width: 100%;
+    max-width: 100%;
+    margin: 8px auto;
+  }
+
+  .MuiCircularProgress-root {
+    margin: 16px auto;
+  }
+
+  /* Asegurar que los badges estén centrados */
+  .MuiBadge-root {
+    margin: 8px auto;
+  }
+
+  /* Asegurar que los speed dials estén bien posicionados */
+  .MuiSpeedDial-root {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+  }
+
+  /* Asegurar que los FABs estén bien posicionados */
+  .MuiFab-root {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+  }
+
+  /* Asegurar que los back to top estén bien posicionados */
+  .back-to-top {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+  }
+}
+
+/* Optimizaciones para pantallas muy grandes */
+@media (min-width: 1200px) {
+  #root {
+    max-width: 1400px;
+  }
+
+  .main-app-container {
+    max-width: 1400px;
+  }
+
+  .MuiAppBar-root {
+    max-width: 1400px;
+  }
+
+  .MuiToolbar-root {
+    max-width: 1400px;
+  }
+
+  main {
+    max-width: 1400px;
+  }
+
+  .content-container {
+    max-width: 1000px;
+  }
+
+  .MuiContainer-root {
+    max-width: 1000px !important;
+  }
+
+  .form-container {
+    max-width: 800px;
+  }
+
+  .MuiDialog-paper {
+    max-width: 800px;
+  }
+}
+
+/* Optimizaciones para pantallas ultra grandes */
+@media (min-width: 1600px) {
+  #root {
+    max-width: 1600px;
+  }
+
+  .main-app-container {
+    max-width: 1600px;
+  }
+
+  .MuiAppBar-root {
+    max-width: 1600px;
+  }
+
+  .MuiToolbar-root {
+    max-width: 1600px;
+  }
+
+  main {
+    max-width: 1600px;
+  }
+
+  .content-container {
+    max-width: 1200px;
+  }
+
+  .MuiContainer-root {
+    max-width: 1200px !important;
+  }
+
+  .form-container {
+    max-width: 1000px;
+  }
+
+  .MuiDialog-paper {
+    max-width: 1000px;
+  }
+}
