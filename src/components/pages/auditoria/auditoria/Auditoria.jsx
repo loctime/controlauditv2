@@ -921,22 +921,21 @@ const AuditoriaRefactorizada = () => {
 
   return (
     <Box className="page-container auditoria-container">
-      <Container 
-        maxWidth={false} 
+      <Box 
         className="content-container"
         sx={{ 
-          px: isMobile ? 2 : 1, // Reducir padding horizontal en desktop
+          px: isMobile ? 2 : 1,
           maxWidth: '100%',
           // Optimizar para pantallas grandes
           '@media (min-width: 1200px)': {
             px: 0,
-            maxWidth: '1400px', // Limitar el ancho máximo
+            maxWidth: '1400px',
             mx: 'auto'
           }
         }}
       >
       {/* Header con navegación y progreso */}
-      <Box sx={{ mb: isMobile ? 1 : 2 }}>
+      <Box sx={{ mb: isMobile ? 0.5 : 1 }}>
         {/* Header con botón, título y progreso en la misma línea */}
         <Box sx={{ 
           mb: isMobile ? 0.5 : 1,
@@ -1138,7 +1137,7 @@ const AuditoriaRefactorizada = () => {
           {snackbarMsg}
         </MuiAlert>
       </Snackbar>
-      </Container>
+      </Box>
     </Box>
   );
 };

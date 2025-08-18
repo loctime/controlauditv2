@@ -53,6 +53,13 @@
     align-items: center;
   }
 
+  /* Excepción para perfil - mantener layout horizontal */
+  .perfil-container .content-container {
+    flex-direction: row !important;
+    align-items: flex-start !important;
+    justify-content: flex-start !important;
+  }
+
   /* Excepción para auditoría - permitir más espacio en desktop */
   .auditoria-container .content-container {
     max-width: 100% !important;
@@ -63,6 +70,33 @@
     width: 100% !important;
     max-width: 100% !important;
     align-items: stretch !important;
+  }
+
+  /* Excepción para perfil - permitir más espacio en desktop */
+  .perfil-container .content-container {
+    max-width: 100% !important;
+    align-items: stretch !important;
+    width: 100% !important;
+  }
+
+  .perfil-container .form-container {
+    width: 100% !important;
+    max-width: 100% !important;
+    align-items: stretch !important;
+  }
+
+  /* Forzar layout horizontal en header del perfil */
+  .perfil-container .content-container > .MuiBox-root {
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    flex-wrap: wrap !important;
+  }
+
+  .perfil-container .content-container > .MuiBox-root > .MuiBox-root {
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
   }
 
   /* El navbar debe ocupar todo el ancho en web */
@@ -134,6 +168,42 @@
     display: flex;
     justify-content: center;
     align-items: center;
+  }
+
+  /* Excepción para perfil - no centrar elementos automáticamente */
+  .perfil-container .MuiGrid-container {
+    justify-content: flex-start !important;
+    margin: 0 !important;
+  }
+
+  .perfil-container .MuiGrid-item {
+    justify-content: flex-start !important;
+    align-items: flex-start !important;
+  }
+
+  .perfil-container .MuiBox-root {
+    align-items: flex-start !important;
+  }
+
+  /* Forzar layout horizontal en perfil */
+  .perfil-container .MuiBox-root {
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+  }
+
+  .perfil-container .MuiTypography-root {
+    text-align: left !important;
+  }
+
+  .perfil-container .MuiButton-root {
+    margin: 4px !important;
+    display: inline-block !important;
+  }
+
+  .perfil-container .MuiChip-root {
+    margin: 2px !important;
+    display: inline-block !important;
   }
 
   /* Asegurar que las listas estén centradas */

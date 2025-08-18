@@ -5,28 +5,14 @@ import {
   useTheme, 
   alpha,
   Typography,
-  Button,
-  Chip,
-  Avatar,
-  IconButton,
-  Tooltip
+  Button
 } from "@mui/material";
-import PersonIcon from '@mui/icons-material/Person';
-import EmailIcon from '@mui/icons-material/Email';
-import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
-import BusinessIcon from '@mui/icons-material/Business';
-import AssignmentIcon from '@mui/icons-material/Assignment';
-import GroupIcon from '@mui/icons-material/Group';
-import SettingsIcon from '@mui/icons-material/Settings';
-import DrawIcon from '@mui/icons-material/Draw';
-import InfoIcon from '@mui/icons-material/Info';
 import { useAuth } from "../../context/AuthContext";
 import Swal from 'sweetalert2';
 import { db } from '../../../firebaseConfig';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import { useLocation, useNavigate } from 'react-router-dom';
 // Componentes modulares
-import PerfilHeader from './PerfilHeader';
 import PerfilSidebar from './PerfilSidebar';
 import PerfilFormularios from './PerfilFormularios';
 import PerfilEmpresas from './PerfilEmpresas';
@@ -36,9 +22,10 @@ import PerfilFirma from './PerfilFirma';
 import PerfilInfoSistema from './PerfilInfoSistema';
 import PerfilDialogs from './PerfilDialogs';
 
+
 const PerfilUsuario = () => {
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const isSmallMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const location = useLocation();
   const navigate = useNavigate();
@@ -149,475 +136,218 @@ const PerfilUsuario = () => {
 
   const handleGestionarEmpresas = () => {
     setSelectedSection('empresas');
-    
-    // Scroll automático hacia el contenido principal después de un pequeño delay
     setTimeout(() => {
       if (contentRef.current) {
-        contentRef.current.scrollIntoView({ 
-          behavior: 'smooth', 
-          block: 'start' 
-        });
+        contentRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }
     }, 100);
   };
 
   const handleGestionarUsuarios = () => {
     setSelectedSection('usuarios');
-    
-    // Scroll automático hacia el contenido principal después de un pequeño delay
     setTimeout(() => {
       if (contentRef.current) {
-        contentRef.current.scrollIntoView({ 
-          behavior: 'smooth', 
-          block: 'start' 
-        });
+        contentRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }
     }, 100);
   };
 
   const handleAgregarUsuario = () => {
     setSelectedSection('usuarios');
-    
-    // Scroll automático hacia el contenido principal después de un pequeño delay
     setTimeout(() => {
       if (contentRef.current) {
-        contentRef.current.scrollIntoView({ 
-          behavior: 'smooth', 
-          block: 'start' 
-        });
+        contentRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }
     }, 100);
   };
 
   const handleEliminarUsuario = () => {
     setSelectedSection('usuarios');
-    
-    // Scroll automático hacia el contenido principal después de un pequeño delay
     setTimeout(() => {
       if (contentRef.current) {
-        contentRef.current.scrollIntoView({ 
-          behavior: 'smooth', 
-          block: 'start' 
-        });
+        contentRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }
     }, 100);
   };
 
   const handleVerSistema = () => {
     setSelectedSection('info');
-    
-    // Scroll automático hacia el contenido principal después de un pequeño delay
     setTimeout(() => {
       if (contentRef.current) {
-        contentRef.current.scrollIntoView({ 
-          behavior: 'smooth', 
-          block: 'start' 
-        });
+        contentRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }
     }, 100);
   };
 
   const handleGestionarSistema = () => {
     setSelectedSection('configuracion');
-    
-    // Scroll automático hacia el contenido principal después de un pequeño delay
     setTimeout(() => {
       if (contentRef.current) {
-        contentRef.current.scrollIntoView({ 
-          behavior: 'smooth', 
-          block: 'start' 
-        });
+        contentRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }
     }, 100);
   };
 
   const handleCompartir = () => {
-    // Navegar a la sección de formularios públicos
     navigate('/formularios-publicos');
   };
 
   const handleMisFormularios = () => {
-    // Navegar a la sección de formularios
     setSelectedSection('formularios');
-    
-    // Scroll automático hacia el contenido principal después de un pequeño delay
     setTimeout(() => {
       if (contentRef.current) {
-        contentRef.current.scrollIntoView({ 
-          behavior: 'smooth', 
-          block: 'start' 
-        });
+        contentRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }
     }, 100);
   };
 
-  // Línea sutil de separación
-  const separador = (
-    <Box sx={{ width: '100%', borderBottom: { xs: 'none', sm: '1px solid', md: '1px solid' }, borderColor: 'divider', mb: { xs: 0.5, md: 1 } }} />
-  );
-
   // Render principal
   return (
-    <Box 
-      className="page-container perfil-container"
-      sx={{ 
-        width: '100%', 
-        bgcolor: 'background.default'
-      }}
-    >
-      {/* Contenedor principal con Box de MUI */}
-      <Box 
-        className="content-container"
-        sx={{
-          bgcolor: 'background.paper',
-          borderRadius: 0,
-          border: 'none',
-          boxShadow: 'none',
-          overflow: 'hidden',
-          flex: 1
-        }}
-      >
-        {/* Header del perfil con Card */}
-        <Box sx={{
-          p: { xs: 2, sm: 3, md: 4 },
-          background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.1)}, ${alpha(theme.palette.primary.main, 0.05)})`,
-          borderBottom: `1px solid ${alpha(theme.palette.divider, 0.2)}`,
-          width: '100%'
+    <Box className="perfil-usuario-container" sx={{ 
+      width: '100%', 
+      minHeight: '100vh', 
+      bgcolor: 'background.default',
+      display: 'flex',
+      flexDirection: 'column'
+    }}>
+
+      
+      {/* Segundo header - Mis Habilitaciones */}
+      <Box sx={{
+        p: 2,
+        background: `linear-gradient(135deg, ${alpha(theme.palette.secondary.main, 0.1)}, ${alpha(theme.palette.secondary.main, 0.05)})`,
+        borderBottom: `1px solid ${alpha(theme.palette.divider, 0.2)}`,
+        width: '100%'
+      }}>
+        <Typography variant="h6" sx={{ 
+          fontWeight: 600, 
+          color: 'secondary.main', 
+          mb: 2, 
+          textAlign: 'center',
+          fontSize: { xs: '1rem', md: '1.25rem' }
         }}>
-          {userProfile ? (
-            <Box sx={{ 
-              display: 'flex', 
-              flexDirection: isMobile ? 'column' : 'row',
-              alignItems: isMobile ? 'center' : 'flex-start',
-              gap: isSmallMobile ? 2 : 3
-            }}>
-              {/* Avatar */}
-              <Box sx={{ 
-                display: 'flex', 
-                justifyContent: 'center',
-                mb: isMobile ? 2 : 0
-              }}>
-                <Avatar sx={{ 
-                  bgcolor: 'primary.main', 
-                  width: isSmallMobile ? 80 : 100, 
-                  height: isSmallMobile ? 80 : 100,
-                  fontSize: isSmallMobile ? '2rem' : '2.5rem'
-                }}>
-                  <PersonIcon fontSize="large" />
-                </Avatar>
-              </Box>
-              
-              {/* Información del usuario */}
-              <Box sx={{ 
-                flex: 1,
-                textAlign: isMobile ? 'center' : 'left'
-              }}>
-                <Typography 
-                  variant={isSmallMobile ? "h5" : "h4"} 
-                  sx={{ 
-                    fontWeight: 700, 
-                    color: 'primary.main',
-                    mb: 1
-                  }}
-                >
-                  {userProfile.displayName || 'Usuario'}
-                </Typography>
-                
-                <Box sx={{ 
-                  display: 'flex', 
-                  flexDirection: isMobile ? 'column' : 'row',
-                  alignItems: 'center',
-                  gap: isSmallMobile ? 1 : 2,
-                  flexWrap: 'wrap'
-                }}>
-                  <Box sx={{ 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    gap: 0.5 
-                  }}>
-                    <EmailIcon sx={{ fontSize: isSmallMobile ? 16 : 20, color: 'text.secondary' }} />
-                    <Typography variant="body2" color="text.secondary">
-                      {userProfile.email}
-                    </Typography>
-                  </Box>
-                  
-                  <Box sx={{ 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    gap: 0.5 
-                  }}>
-                    <CalendarTodayIcon sx={{ fontSize: isSmallMobile ? 16 : 20, color: 'text.secondary' }} />
-                    <Typography variant="body2" color="text.secondary">
-                      Miembro desde: {new Date(userProfile.createdAt?.seconds * 1000).toLocaleDateString()}
-                    </Typography>
-                  </Box>
-                </Box>
-              </Box>
-            </Box>
-          ) : (
-            <Box sx={{ textAlign: 'center', py: 4 }}>
-              <Typography variant="h6" color="text.secondary">
-                Cargando perfil...
-              </Typography>
-            </Box>
+          🔧 Mis Habilitaciones
+        </Typography>
+        
+        <Box sx={{ 
+          display: 'flex', 
+          flexWrap: 'wrap', 
+          gap: 1, 
+          justifyContent: 'center',
+          maxWidth: '1200px',
+          margin: '0 auto'
+        }}>
+          {/* Auditorías */}
+          {permisos?.puedeCrearAuditorias && (
+            <>
+              <Button variant="contained" color="primary" size="small" onClick={handleCrearAuditoria}>
+                📋 Reportes
+              </Button>
+              <Button variant="contained" color="primary" size="small" onClick={handleCrearAuditoriaNueva}>
+                📋 Crear auditoria
+              </Button>
+              <Button variant="outlined" color="primary" size="small" onClick={handleMisFormularios}>
+                📋 Mis Formularios
+              </Button>
+            </>
+          )}
+          
+          {/* Empresas */}
+          {permisos?.puedeCrearEmpresas && (
+            <>
+              <Button variant="contained" color="success" size="small" onClick={handleCrearEmpresa}>
+                🏢 Crear Empresa
+              </Button>
+              <Button variant="outlined" color="success" size="small" onClick={handleGestionarEmpresas}>
+                🏢 Gestionar Empresas
+              </Button>
+            </>
+          )}
+          
+          {/* Usuarios */}
+          {permisos?.puedeGestionarUsuarios && (
+            <Button variant="contained" color="warning" size="small" onClick={handleGestionarUsuarios}>
+              👥 Gestionar Usuarios
+            </Button>
+          )}
+          {permisos?.puedeAgregarSocios && (
+            <Button variant="outlined" color="warning" size="small" onClick={handleAgregarUsuario}>
+              👥 Agregar Usuario
+            </Button>
+          )}
+          {permisos?.puedeEliminarUsuarios && (
+            <Button variant="outlined" color="error" size="small" onClick={handleEliminarUsuario}>
+              👥 Eliminar Usuario
+            </Button>
+          )}
+          
+          {/* Sistema */}
+          {permisos?.puedeVerLogs && (
+            <Button variant="contained" color="info" size="small" onClick={handleVerSistema}>
+              ⚙️ Ver Sistema
+            </Button>
+          )}
+          {permisos?.puedeGestionarSistema && (
+            <Button variant="outlined" color="info" size="small" onClick={handleGestionarSistema}>
+              ⚙️ Gestionar Sistema
+            </Button>
+          )}
+          
+          {/* Otros */}
+          {permisos?.puedeCompartirFormularios && (
+            <Button variant="contained" color="secondary" size="small" onClick={handleCompartir}>
+              🔗 Compartir
+            </Button>
           )}
         </Box>
-        
-        {/* Sección de habilitaciones con Card */}
-        <Box sx={{
-          p: isSmallMobile ? 3 : 4,
-          bgcolor: 'background.paper',
-          width: '100%'
-        }}>
-          <Typography 
-            variant={isSmallMobile ? "h6" : "h5"} 
-            sx={{ 
-              fontWeight: 600, 
-              color: 'primary.main',
-              mb: isSmallMobile ? 2 : 3,
-              textAlign: 'center'
-            }}
-          >
-            🔧 Mis Habilitaciones
-          </Typography>
-          
-          <Box sx={{ 
-            display: 'grid',
-            gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(250px, 1fr))',
-            gap: isSmallMobile ? 2 : 3
-          }}>
-                         {/* Auditorías */}
-             <Box sx={{
-               bgcolor: alpha(theme.palette.primary.main, 0.05),
-               borderRadius: 2,
-               p: isSmallMobile ? 2 : 3,
-               border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}`
-             }}>
-               <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1, color: 'primary.main' }}>
-                 📋 Auditorías
-               </Typography>
-               {permisos?.puedeCrearAuditorias && (
-                 <Button
-                   variant="contained"
-                   color="primary"
-                   size={isSmallMobile ? "small" : "medium"}
-                   fullWidth
-                   sx={{ mb: 1 }}
-                   onClick={handleCrearAuditoria}
-                 >
-                   Reportes
-                 </Button>
-               )}
-               {permisos?.puedeCrearAuditorias && (
-                 <Button
-                   variant="contained"
-                   color="primary"
-                   size={isSmallMobile ? "small" : "medium"}
-                   fullWidth
-                   sx={{ mb: 1 }}
-                   onClick={handleCrearAuditoriaNueva}
-                 >
-                   Crear auditoria
-                 </Button>
-               )}
-               {permisos?.puedeCrearAuditorias && (
-                 <Button
-                   variant="outlined"
-                   color="primary"
-                   size={isSmallMobile ? "small" : "medium"}
-                   fullWidth
-                   sx={{ mb: 1 }}
-                   onClick={handleMisFormularios}
-                 >
-                   Mis Formularios
-                 </Button>
-               )}
-             </Box>
-            
-                         {/* Empresas */}
-             <Box sx={{
-               bgcolor: alpha(theme.palette.success.main, 0.05),
-               borderRadius: 2,
-               p: isSmallMobile ? 2 : 3,
-               border: `1px solid ${alpha(theme.palette.success.main, 0.1)}`
-             }}>
-               <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1, color: 'success.main' }}>
-                 🏢 Empresas
-               </Typography>
-               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                 {permisos?.puedeCrearEmpresas && (
-                   <Button
-                     variant="contained"
-                     color="success"
-                     size={isSmallMobile ? "small" : "medium"}
-                     fullWidth
-                     onClick={handleCrearEmpresa}
-                   >
-                     Crear Empresa
-                   </Button>
-                 )}
-                 {permisos?.puedeCrearEmpresas && (
-                   <Button
-                     variant="outlined"
-                     color="success"
-                     size={isSmallMobile ? "small" : "medium"}
-                     fullWidth
-                     onClick={handleGestionarEmpresas}
-                   >
-                     Gestionar Empresas
-                   </Button>
-                 )}
-               </Box>
-             </Box>
-            
-                         {/* Usuarios */}
-             <Box sx={{
-               bgcolor: alpha(theme.palette.warning.main, 0.05),
-               borderRadius: 2,
-               p: isSmallMobile ? 2 : 3,
-               border: `1px solid ${alpha(theme.palette.warning.main, 0.1)}`
-             }}>
-               <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1, color: 'warning.main' }}>
-                 👥 Usuarios
-               </Typography>
-               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                 {permisos?.puedeGestionarUsuarios && (
-                   <Button
-                     variant="contained"
-                     color="warning"
-                     size={isSmallMobile ? "small" : "medium"}
-                     fullWidth
-                     onClick={handleGestionarUsuarios}
-                   >
-                     Gestionar Usuarios
-                   </Button>
-                 )}
-                 {permisos?.puedeAgregarSocios && (
-                   <Button
-                     variant="outlined"
-                     color="warning"
-                     size={isSmallMobile ? "small" : "medium"}
-                     fullWidth
-                     onClick={handleAgregarUsuario}
-                   >
-                     Agregar Usuario
-                   </Button>
-                 )}
-                 {permisos?.puedeEliminarUsuarios && (
-                   <Button
-                     variant="outlined"
-                     color="error"
-                     size={isSmallMobile ? "small" : "medium"}
-                     fullWidth
-                     onClick={handleEliminarUsuario}
-                   >
-                     Eliminar Usuario
-                   </Button>
-                 )}
-               </Box>
-             </Box>
-            
-                         {/* Sistema */}
-             <Box sx={{
-               bgcolor: alpha(theme.palette.info.main, 0.05),
-               borderRadius: 2,
-               p: isSmallMobile ? 2 : 3,
-               border: `1px solid ${alpha(theme.palette.info.main, 0.1)}`
-             }}>
-               <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1, color: 'info.main' }}>
-                 ⚙️ Sistema
-               </Typography>
-               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                 {permisos?.puedeVerLogs && (
-                   <Button
-                     variant="contained"
-                     color="info"
-                     size={isSmallMobile ? "small" : "medium"}
-                     fullWidth
-                     onClick={handleVerSistema}
-                   >
-                     Ver Sistema
-                   </Button>
-                 )}
-                 {permisos?.puedeGestionarSistema && (
-                   <Button
-                     variant="outlined"
-                     color="info"
-                     size={isSmallMobile ? "small" : "medium"}
-                     fullWidth
-                     onClick={handleGestionarSistema}
-                   >
-                     Gestionar Sistema
-                   </Button>
-                 )}
-               </Box>
-             </Box>
-            
-                         {/* Otros */}
-             <Box sx={{
-               bgcolor: alpha(theme.palette.secondary.main, 0.05),
-               borderRadius: 2,
-               p: isSmallMobile ? 2 : 3,
-               border: `1px solid ${alpha(theme.palette.secondary.main, 0.1)}`
-             }}>
-               <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1, color: 'secondary.main' }}>
-                 🔗 Otros
-               </Typography>
-               {permisos?.puedeCompartirFormularios && (
-                 <Button
-                   variant="contained"
-                   color="secondary"
-                   size={isSmallMobile ? "small" : "medium"}
-                   fullWidth
-                   onClick={handleCompartir}
-                 >
-                   Compartir
-                 </Button>
-               )}
-             </Box>
-          </Box>
-        </Box>
-        
-        {/* Contenido principal */}
+      </Box>
+      
+      {/* Contenido principal */}
+      <Box sx={{ 
+        display: 'flex', 
+        width: '100%',
+        flex: 1,
+        flexDirection: 'row',
+        gap: 3,
+        alignItems: 'flex-start'
+      }}>
+        {/* Sidebar */}
         <Box sx={{ 
-          display: { xs: 'block', md: 'flex' }, 
-          alignItems: 'flex-start', 
-          width: '100%' 
+          flexShrink: 0,
+          width: 'auto'
         }}>
-          {/* Sidebar */}
           <PerfilSidebar 
             selectedSection={selectedSection} 
             onSelectSection={setSelectedSection} 
+            userProfile={userProfile}
           />
-          
-          {/* Contenido principal */}
-          <Box 
-            ref={contentRef}
-            className="form-container"
-            sx={{ 
-              flex: 1, 
-              minWidth: 0
-            }}
-          >
-            {selectedSection === 'empresas' && (
-              <PerfilEmpresas empresas={userEmpresas} loading={loadingEmpresas} />
-            )}
-            {selectedSection === 'formularios' && (
-              <PerfilFormularios formularios={formularios} loading={loadingFormularios} />
-            )}
-            {selectedSection === 'usuarios' && (
-              <PerfilUsuarios usuariosCreados={usuariosCreados} loading={loadingUsuariosCreados} clienteAdminId={userProfile?.clienteAdminId || userProfile?.uid} />
-            )}
-            {selectedSection === 'configuracion' && (
-                              <PerfilConfiguracion userProfile={userProfile} />
-            )}
-            {selectedSection === 'firma' && (
-              <PerfilFirma />
-            )}
-            {selectedSection === 'info' && (
-              <PerfilInfoSistema />
-            )}
-          </Box>
+        </Box>
+        
+        {/* Contenido principal */}
+        <Box ref={contentRef} sx={{ 
+          flex: 1, 
+          p: 3,
+          minWidth: 0, // Importante para que flex funcione correctamente
+          width: '100%'
+        }}>
+          {selectedSection === 'empresas' && (
+            <PerfilEmpresas empresas={userEmpresas} loading={loadingEmpresas} />
+          )}
+          {selectedSection === 'formularios' && (
+            <PerfilFormularios formularios={formularios} loading={loadingFormularios} />
+          )}
+          {selectedSection === 'usuarios' && (
+            <PerfilUsuarios usuariosCreados={usuariosCreados} loading={loadingUsuariosCreados} clienteAdminId={userProfile?.clienteAdminId || userProfile?.uid} />
+          )}
+          {selectedSection === 'configuracion' && (
+            <PerfilConfiguracion userProfile={userProfile} />
+          )}
+          {selectedSection === 'firma' && (
+            <PerfilFirma />
+          )}
+          {selectedSection === 'info' && (
+            <PerfilInfoSistema />
+          )}
         </Box>
       </Box>
       
