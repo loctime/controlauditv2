@@ -230,75 +230,140 @@ const PerfilUsuario = () => {
         </Typography>
         
         <Box sx={{ 
-          display: 'flex', 
-          flexWrap: 'wrap', 
-          gap: 1, 
-          justifyContent: 'center',
-          maxWidth: '1200px',
-          margin: '0 auto'
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+          gap: 2,
+          maxWidth: '1400px',
+          margin: '0 auto',
+          p: 2
         }}>
-          {/* Auditorías */}
-          {permisos?.puedeCrearAuditorias && (
-            <>
-              <Button variant="contained" color="primary" size="small" onClick={handleCrearAuditoria}>
-                📋 Reportes
-              </Button>
-              <Button variant="contained" color="primary" size="small" onClick={handleCrearAuditoriaNueva}>
-                📋 Crear auditoria
-              </Button>
-              <Button variant="outlined" color="primary" size="small" onClick={handleMisFormularios}>
-                📋 Mis Formularios
-              </Button>
-            </>
-          )}
+          {/* Categoría: Auditorías */}
+          <Box sx={{ 
+            display: 'flex', 
+            flexDirection: 'column', 
+            gap: 1,
+            p: 2,
+            borderRadius: 2,
+            bgcolor: alpha(theme.palette.primary.main, 0.05),
+            border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}`
+          }}>
+            <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'primary.main', mb: 1 }}>
+              📋 Auditorías
+            </Typography>
+            {permisos?.puedeCrearAuditorias && (
+              <>
+                <Button variant="contained" color="primary" size="small" onClick={handleCrearAuditoria} fullWidth>
+                  📋 Reportes
+                </Button>
+                <Button variant="contained" color="primary" size="small" onClick={handleCrearAuditoriaNueva} fullWidth>
+                  📋 Crear auditoria
+                </Button>
+                <Button variant="outlined" color="primary" size="small" onClick={handleMisFormularios} fullWidth>
+                  📋 Mis Formularios
+                </Button>
+              </>
+            )}
+          </Box>
           
-          {/* Empresas */}
-          {permisos?.puedeCrearEmpresas && (
-            <>
-              <Button variant="contained" color="success" size="small" onClick={handleCrearEmpresa}>
-                🏢 Crear Empresa
+          {/* Categoría: Empresas */}
+          <Box sx={{ 
+            display: 'flex', 
+            flexDirection: 'column', 
+            gap: 1,
+            p: 2,
+            borderRadius: 2,
+            bgcolor: alpha(theme.palette.success.main, 0.05),
+            border: `1px solid ${alpha(theme.palette.success.main, 0.1)}`
+          }}>
+            <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'success.main', mb: 1 }}>
+              🏢 Empresas
+            </Typography>
+            {permisos?.puedeCrearEmpresas && (
+              <>
+                <Button variant="contained" color="success" size="small" onClick={handleCrearEmpresa} fullWidth>
+                  🏢 Crear Empresa
+                </Button>
+                <Button variant="outlined" color="success" size="small" onClick={handleGestionarEmpresas} fullWidth>
+                  🏢 Gestionar Empresas
+                </Button>
+              </>
+            )}
+          </Box>
+          
+          {/* Categoría: Usuarios */}
+          <Box sx={{ 
+            display: 'flex', 
+            flexDirection: 'column', 
+            gap: 1,
+            p: 2,
+            borderRadius: 2,
+            bgcolor: alpha(theme.palette.warning.main, 0.05),
+            border: `1px solid ${alpha(theme.palette.warning.main, 0.1)}`
+          }}>
+            <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'warning.main', mb: 1 }}>
+              👥 Usuarios
+            </Typography>
+            {permisos?.puedeGestionarUsuarios && (
+              <Button variant="contained" color="warning" size="small" onClick={handleGestionarUsuarios} fullWidth>
+                👥 Gestionar Usuarios
               </Button>
-              <Button variant="outlined" color="success" size="small" onClick={handleGestionarEmpresas}>
-                🏢 Gestionar Empresas
+            )}
+            {permisos?.puedeAgregarSocios && (
+              <Button variant="outlined" color="warning" size="small" onClick={handleAgregarUsuario} fullWidth>
+                👥 Agregar Usuario
               </Button>
-            </>
-          )}
+            )}
+            {permisos?.puedeEliminarUsuarios && (
+              <Button variant="outlined" color="error" size="small" onClick={handleEliminarUsuario} fullWidth>
+                👥 Eliminar Usuario
+              </Button>
+            )}
+          </Box>
           
-          {/* Usuarios */}
-          {permisos?.puedeGestionarUsuarios && (
-            <Button variant="contained" color="warning" size="small" onClick={handleGestionarUsuarios}>
-              👥 Gestionar Usuarios
-            </Button>
-          )}
-          {permisos?.puedeAgregarSocios && (
-            <Button variant="outlined" color="warning" size="small" onClick={handleAgregarUsuario}>
-              👥 Agregar Usuario
-            </Button>
-          )}
-          {permisos?.puedeEliminarUsuarios && (
-            <Button variant="outlined" color="error" size="small" onClick={handleEliminarUsuario}>
-              👥 Eliminar Usuario
-            </Button>
-          )}
+          {/* Categoría: Sistema */}
+          <Box sx={{ 
+            display: 'flex', 
+            flexDirection: 'column', 
+            gap: 1,
+            p: 2,
+            borderRadius: 2,
+            bgcolor: alpha(theme.palette.info.main, 0.05),
+            border: `1px solid ${alpha(theme.palette.info.main, 0.1)}`
+          }}>
+            <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'info.main', mb: 1 }}>
+              ⚙️ Sistema
+            </Typography>
+            {permisos?.puedeVerLogs && (
+              <Button variant="contained" color="info" size="small" onClick={handleVerSistema} fullWidth>
+                ⚙️ Ver Sistema
+              </Button>
+            )}
+            {permisos?.puedeGestionarSistema && (
+              <Button variant="outlined" color="info" size="small" onClick={handleGestionarSistema} fullWidth>
+                ⚙️ Gestionar Sistema
+              </Button>
+            )}
+          </Box>
           
-          {/* Sistema */}
-          {permisos?.puedeVerLogs && (
-            <Button variant="contained" color="info" size="small" onClick={handleVerSistema}>
-              ⚙️ Ver Sistema
-            </Button>
-          )}
-          {permisos?.puedeGestionarSistema && (
-            <Button variant="outlined" color="info" size="small" onClick={handleGestionarSistema}>
-              ⚙️ Gestionar Sistema
-            </Button>
-          )}
-          
-          {/* Otros */}
-          {permisos?.puedeCompartirFormularios && (
-            <Button variant="contained" color="secondary" size="small" onClick={handleCompartir}>
-              🔗 Compartir
-            </Button>
-          )}
+          {/* Categoría: Otros */}
+          <Box sx={{ 
+            display: 'flex', 
+            flexDirection: 'column', 
+            gap: 1,
+            p: 2,
+            borderRadius: 2,
+            bgcolor: alpha(theme.palette.secondary.main, 0.05),
+            border: `1px solid ${alpha(theme.palette.secondary.main, 0.1)}`
+          }}>
+            <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'secondary.main', mb: 1 }}>
+              🔗 Otros
+            </Typography>
+            {permisos?.puedeCompartirFormularios && (
+              <Button variant="contained" color="secondary" size="small" onClick={handleCompartir} fullWidth>
+                🔗 Compartir
+              </Button>
+            )}
+          </Box>
         </Box>
       </Box>
       
