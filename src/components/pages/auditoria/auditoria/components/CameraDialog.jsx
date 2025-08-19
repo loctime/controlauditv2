@@ -458,9 +458,11 @@ const CameraDialog = ({
         
         console.log('✅ Foto procesada y guardada exitosamente');
         
+        // Cerrar automáticamente la cámara después de tomar la foto
         setTimeout(() => {
           setCompressionProgress(0);
-        }, 2000);
+          onClose();
+        }, 1500);
       }
     } catch (error) {
       console.error('❌ Error al tomar foto con Capacitor:', error);
@@ -543,10 +545,12 @@ const CameraDialog = ({
         
         console.log('✅ Foto capturada y guardada exitosamente');
         
+        // Cerrar automáticamente la cámara después de tomar la foto
         setTimeout(() => {
           setPhotoQuality(null);
           setCompressionProgress(0);
-        }, 2000);
+          onClose();
+        }, 1500);
       }, 'image/jpeg', 0.6);
       
     } catch (error) {
@@ -596,9 +600,11 @@ const CameraDialog = ({
         
         console.log('✅ Imagen procesada y guardada exitosamente');
         
+        // Cerrar automáticamente la cámara después de seleccionar imagen
         setTimeout(() => {
           setCompressionProgress(0);
-        }, 2000);
+          onClose();
+        }, 1500);
       }
     } catch (error) {
       console.error('❌ Error al seleccionar imagen con Capacitor:', error);
@@ -696,7 +702,18 @@ const CameraDialog = ({
         </Typography>
         <Button 
           onClick={onClose} 
-          sx={{ color: 'white', minWidth: 'auto' }}
+          sx={{ 
+            color: 'white', 
+            minWidth: 'auto',
+            fontSize: '1.2rem',
+            padding: '8px 12px',
+            borderRadius: '50%',
+            minHeight: '40px',
+            minWidth: '40px',
+            '&:hover': {
+              backgroundColor: 'rgba(255,255,255,0.1)'
+            }
+          }}
         >
           ✕
         </Button>

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Button, CircularProgress, Alert, Box, Typography } from '@mui/material';
 import { Download, Android } from '@mui/icons-material';
+import { getBackendUrl } from '../../config/environment.js';
 
 const DownloadAPK = ({ version = 'latest' }) => {
   const [loading, setLoading] = useState(false);
@@ -11,17 +12,16 @@ const DownloadAPK = ({ version = 'latest' }) => {
     setError(null);
 
     try {
-      // Opción 1: Descarga directa desde GitHub Releases (requiere repositorio público)
-      const githubUrl = `https://github.com/loctime/controlauditv2/releases/${version}/download/ControlAudit-release.apk`;
+      // Usar el backend como proxy para evitar problemas de CORS
+      const backendUrl = `${getBackendUrl()}/api/download-apk?version=${version}`;
       
-      // Opción 2: Si el repositorio es privado, usar GitHub API con token
-      // const token = 'tu_github_token'; // Configurar en variables de entorno
-      // const apiUrl = `https://api.github.com/repos/loctime/controlauditv2/releases/${version}/assets`;
+      console.log('🔗 Intentando descargar APK desde:', backendUrl);
       
-      const response = await fetch(githubUrl);
+      const response = await fetch(backendUrl);
       
       if (!response.ok) {
-        throw new Error(`Error ${response.status}: ${response.statusText}`);
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `Error ${response.status}: ${response.statusText}`);
       }
 
       const blob = await response.blob();
@@ -34,9 +34,19 @@ const DownloadAPK = ({ version = 'latest' }) => {
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
 
+      console.log('✅ APK descargada exitosamente');
+
     } catch (err) {
-      console.error('Error descargando APK:', err);
-      setError('No se pudo descargar la APK. Verifica que el repositorio sea público o contacta al administrador.');
+      console.error('❌ Error descargando APK:', err);
+      
+      // Mensaje de error más específico
+      if (err.message.includes('CORS') || err.message.includes('Failed to fetch')) {
+        setError('Error de conexión. Verifica que el backend esté funcionando o contacta al administrador.');
+      } else if (err.message.includes('404')) {
+        setError('APK no encontrada. Verifica que exista una versión disponible o contacta al administrador.');
+      } else {
+        setError(`Error al descargar: ${err.message}`);
+      }
     } finally {
       setLoading(false);
     }
@@ -71,9 +81,9 @@ const DownloadAPK = ({ version = 'latest' }) => {
       </Typography>
       
       <Typography variant="caption" display="block" sx={{ mt: 1 }}>
-        💡 Si tienes problemas para descargar, el repositorio puede ser privado.
+        💡 La descarga se realiza a través del backend para evitar problemas de CORS.
         <br />
-        Contacta al administrador para obtener acceso.
+        Si tienes problemas, verifica que el backend esté funcionando.
       </Typography>
     </Box>
   );

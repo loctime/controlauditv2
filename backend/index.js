@@ -307,6 +307,53 @@ app.delete('/api/delete-user/:uid', verificarTokenAdmin, async (req, res) => {
 
 
 
+// Endpoint para descargar APK (acceso público)
+app.get('/api/download-apk', async (req, res) => {
+  try {
+    const { version = 'latest' } = req.query;
+    
+    console.log(`📱 Descargando APK versión: ${version}`);
+    
+    // URL del APK en GitHub Releases
+    const githubUrl = `https://github.com/loctime/controlauditv2/releases/${version}/download/ControlAudit-release.apk`;
+    
+    console.log(`🔗 Intentando descargar desde: ${githubUrl}`);
+    
+    // Intentar descargar desde GitHub
+    const response = await fetch(githubUrl);
+    
+    if (!response.ok) {
+      console.error(`❌ Error ${response.status}: ${response.statusText}`);
+      return res.status(404).json({
+        success: false,
+        error: 'APK no encontrada o repositorio privado',
+        message: 'Para repositorios privados, configura un token de GitHub o haz el repositorio público'
+      });
+    }
+
+    // Obtener el archivo como buffer
+    const buffer = await response.arrayBuffer();
+    
+    console.log(`✅ APK descargada exitosamente, tamaño: ${buffer.byteLength} bytes`);
+    
+    // Configurar headers para descarga
+    res.setHeader('Content-Type', 'application/vnd.android.package-archive');
+    res.setHeader('Content-Disposition', `attachment; filename="ControlAudit-${version}.apk"`);
+    res.setHeader('Content-Length', buffer.byteLength);
+    
+    // Enviar el archivo
+    res.send(Buffer.from(buffer));
+    
+  } catch (error) {
+    console.error('❌ Error descargando APK:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Error interno del servidor',
+      message: error.message
+    });
+  }
+});
+
 app.use('/api/set-role', setRoleRouter); // Solo para superadmin, uso administrativo
 
 // Iniciar servidor con configuración flexible
