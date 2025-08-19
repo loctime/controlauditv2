@@ -19,6 +19,9 @@ import ZoomOutIcon from '@mui/icons-material/ZoomOut';
 import CameraFrontIcon from '@mui/icons-material/CameraFront';
 import CameraRearIcon from '@mui/icons-material/CameraRear';
 
+// Importar utilidades de Capacitor
+import { cameraUtils } from '../../../../../utils/capacitorOptimization';
+
 // Función para comprimir imágenes
 const comprimirImagen = (file, maxWidth = 800, quality = 0.7) => {
   return new Promise((resolve) => {
@@ -154,6 +157,19 @@ const evaluatePhotoQuality = (imageData) => {
   });
 };
 
+// Función para convertir URI de Capacitor a File
+const uriToFile = async (uri) => {
+  try {
+    const response = await fetch(uri);
+    const blob = await response.blob();
+    const file = new File([blob], `foto_${Date.now()}.jpg`, { type: 'image/jpeg' });
+    return file;
+  } catch (error) {
+    console.error('Error al convertir URI a File:', error);
+    throw error;
+  }
+};
+
 const CameraDialog = ({ 
   open, 
   onClose, 
@@ -174,9 +190,27 @@ const CameraDialog = ({
   const [photoQuality, setPhotoQuality] = useState(null);
   const [cameraZoom, setCameraZoom] = useState(1);
   const [maxZoom, setMaxZoom] = useState(4);
+  const [isCapacitorAvailable, setIsCapacitorAvailable] = useState(false);
   
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
+
+  // Verificar si Capacitor está disponible
+  useEffect(() => {
+    const checkCapacitor = async () => {
+      try {
+        // Verificar si estamos en un entorno Capacitor
+        const isCapacitor = window.Capacitor && window.Capacitor.isNative;
+        setIsCapacitorAvailable(isCapacitor);
+        console.log('🔍 Capacitor disponible:', isCapacitor);
+      } catch (error) {
+        console.log('🔍 Capacitor no disponible, usando API web');
+        setIsCapacitorAvailable(false);
+      }
+    };
+    
+    checkCapacitor();
+  }, []);
 
   // Verificar compatibilidad del navegador
   const checkBrowserCompatibility = () => {
@@ -216,17 +250,22 @@ const CameraDialog = ({
   // Verificar compatibilidad al abrir el diálogo
   useEffect(() => {
     if (open) {
-      const isCompatible = checkBrowserCompatibility();
-      if (!isCompatible) {
-        alert('Tu navegador no es compatible con la funcionalidad de cámara. Usa Chrome, Firefox o Safari actualizado.');
-        onClose();
+      if (isCapacitorAvailable) {
+        console.log('📱 Usando cámara nativa de Capacitor');
+        setCameraStatus('ready');
+      } else {
+        const isCompatible = checkBrowserCompatibility();
+        if (!isCompatible) {
+          alert('Tu navegador no es compatible con la funcionalidad de cámara. Usa Chrome, Firefox o Safari actualizado.');
+          onClose();
+        }
       }
     }
-  }, [open, onClose]);
+  }, [open, onClose, isCapacitorAvailable]);
 
-  // Automáticamente iniciar la cámara trasera cuando se abre el diálogo
+  // Automáticamente iniciar la cámara trasera cuando se abre el diálogo (solo para web)
   useEffect(() => {
-    if (open) {
+    if (open && !isCapacitorAvailable) {
       // Asegurar que siempre inicie con la cámara trasera (evita selfies)
       setCurrentCamera('environment');
       // Iniciar la cámara automáticamente después de un breve delay
@@ -236,9 +275,9 @@ const CameraDialog = ({
       
       return () => clearTimeout(timer);
     }
-  }, [open]);
+  }, [open, isCapacitorAvailable]);
 
-  // Detectar cámaras disponibles
+  // Detectar cámaras disponibles (solo para web)
   const detectAvailableCameras = async () => {
     try {
       await navigator.mediaDevices.getUserMedia({ video: true });
@@ -261,8 +300,13 @@ const CameraDialog = ({
   };
 
   const startCamera = async () => {
+    if (isCapacitorAvailable) {
+      console.log('📱 Cámara nativa de Capacitor - no necesita iniciar stream');
+      return;
+    }
+
     try {
-      console.log('🔄 Iniciando cámara...');
+      console.log('🔄 Iniciando cámara web...');
       setCameraStatus('starting');
       setCameraError(null);
       
@@ -313,7 +357,7 @@ const CameraDialog = ({
         videoRef.current.srcObject = stream;
         
         videoRef.current.onloadedmetadata = () => {
-          console.log('✅ Cámara iniciada correctamente');
+          console.log('✅ Cámara web iniciada correctamente');
           console.log(`📐 Dimensiones del video: ${videoRef.current.videoWidth}x${videoRef.current.videoHeight}`);
           setCameraStatus('ready');
           
@@ -348,25 +392,88 @@ const CameraDialog = ({
         errorMessage = 'Permiso denegado. Por favor, permite el acceso a la cámara y recarga la página.';
       } else if (error.name === 'NotFoundError') {
         errorMessage = 'No se encontró ninguna cámara en tu dispositivo.';
-      } else if (error.name === 'NotSupportedError') {
-        errorMessage = 'Tu navegador no soporta el acceso a la cámara.';
       } else if (error.name === 'NotReadableError') {
         errorMessage = 'La cámara está siendo usada por otra aplicación.';
       } else if (error.name === 'OverconstrainedError') {
-        errorMessage = 'La configuración de la cámara no es compatible con tu dispositivo.';
+        errorMessage = 'La cámara no soporta la configuración solicitada.';
       } else if (error.name === 'TypeError') {
-        errorMessage = 'Error de configuración de la cámara.';
+        errorMessage = 'Error de tipo en la configuración de la cámara.';
       }
       
       alert(errorMessage);
-      setCameraStream(null);
     }
   };
 
-  const capturePhoto = async () => {
-    if (!videoRef.current || !canvasRef.current) {
-      console.error('❌ Referencias de video o canvas no disponibles');
-      alert('Error: No se puede acceder a la cámara. Intenta activar la cámara primero.');
+  const takePhoto = async () => {
+    if (isCapacitorAvailable) {
+      await takePhotoCapacitor();
+    } else {
+      await takePhotoWeb();
+    }
+  };
+
+  // Tomar foto usando Capacitor
+  const takePhotoCapacitor = async () => {
+    try {
+      console.log('📱 Tomando foto con Capacitor...');
+      setCompressionProgress(20);
+      
+      // Verificar permisos
+      const permissions = await cameraUtils.checkPermissions();
+      if (permissions.camera !== 'granted') {
+        console.log('🔐 Solicitando permisos de cámara...');
+        const requestResult = await cameraUtils.requestPermissions();
+        if (requestResult.camera !== 'granted') {
+          alert('Se requieren permisos de cámara para tomar fotos.');
+          return;
+        }
+      }
+      
+      setCompressionProgress(40);
+      
+      // Tomar foto
+      const photo = await cameraUtils.takePicture({
+        quality: 90,
+        allowEditing: false,
+        resultType: 'uri',
+        source: 'CAMERA'
+      });
+      
+      setCompressionProgress(60);
+      
+      if (photo && photo.webPath) {
+        console.log('📸 Foto tomada con Capacitor:', photo.webPath);
+        
+        // Convertir URI a File
+        const file = await uriToFile(photo.webPath);
+        
+        setCompressionProgress(80);
+        
+        // Comprimir imagen
+        const compressedFile = await comprimirImagen(file);
+        
+        setCompressionProgress(100);
+        
+        onPhotoCapture(compressedFile);
+        
+        console.log('✅ Foto procesada y guardada exitosamente');
+        
+        setTimeout(() => {
+          setCompressionProgress(0);
+        }, 2000);
+      }
+    } catch (error) {
+      console.error('❌ Error al tomar foto con Capacitor:', error);
+      alert('Error al tomar la foto. Intenta de nuevo.');
+      setCompressionProgress(0);
+    }
+  };
+
+  // Tomar foto usando API web
+  const takePhotoWeb = async () => {
+    if (!cameraStream || !videoRef.current) {
+      console.error('❌ Cámara no está lista');
+      alert('La cámara no está lista. Espera un momento e intenta de nuevo.');
       return;
     }
 
@@ -381,7 +488,7 @@ const CameraDialog = ({
     }
     
     try {
-      console.log('📸 Capturando foto...');
+      console.log('📸 Capturando foto web...');
       
       const maxWidth = 800;
       const maxHeight = 800;
@@ -443,13 +550,69 @@ const CameraDialog = ({
       }, 'image/jpeg', 0.6);
       
     } catch (error) {
-      console.error('❌ Error al capturar foto:', error);
+      console.error('❌ Error al capturar foto web:', error);
       alert('Error al capturar la foto. Intenta de nuevo.');
       setCompressionProgress(0);
     }
   };
 
+  const selectFromGallery = async () => {
+    if (isCapacitorAvailable) {
+      await selectFromGalleryCapacitor();
+    } else {
+      onSelectFromGallery();
+    }
+  };
+
+  // Seleccionar de galería usando Capacitor
+  const selectFromGalleryCapacitor = async () => {
+    try {
+      console.log('📱 Seleccionando imagen de galería con Capacitor...');
+      setCompressionProgress(20);
+      
+      const photo = await cameraUtils.pickImage({
+        quality: 90,
+        allowEditing: false,
+        resultType: 'uri',
+        source: 'PHOTOLIBRARY'
+      });
+      
+      setCompressionProgress(60);
+      
+      if (photo && photo.webPath) {
+        console.log('🖼️ Imagen seleccionada con Capacitor:', photo.webPath);
+        
+        // Convertir URI a File
+        const file = await uriToFile(photo.webPath);
+        
+        setCompressionProgress(80);
+        
+        // Comprimir imagen
+        const compressedFile = await comprimirImagen(file);
+        
+        setCompressionProgress(100);
+        
+        onPhotoCapture(compressedFile);
+        
+        console.log('✅ Imagen procesada y guardada exitosamente');
+        
+        setTimeout(() => {
+          setCompressionProgress(0);
+        }, 2000);
+      }
+    } catch (error) {
+      console.error('❌ Error al seleccionar imagen con Capacitor:', error);
+      alert('Error al seleccionar la imagen. Intenta de nuevo.');
+      setCompressionProgress(0);
+    }
+  };
+
   const switchCamera = async () => {
+    if (isCapacitorAvailable) {
+      console.log('📱 Capacitor maneja el cambio de cámara automáticamente');
+      return;
+    }
+
     if (cameraStream) {
       cameraStream.getTracks().forEach(track => track.stop());
       setCameraStream(null);
@@ -468,64 +631,38 @@ const CameraDialog = ({
   };
 
   const increaseZoom = async () => {
+    if (isCapacitorAvailable) {
+      console.log('📱 Zoom manejado por Capacitor');
+      return;
+    }
+
     if (cameraZoom < maxZoom) {
       const newZoom = Math.min(cameraZoom + 0.5, maxZoom);
       setCameraZoom(newZoom);
       
-      if (cameraStream) {
-        const videoTrack = cameraStream.getVideoTracks()[0];
-        if (videoTrack && videoTrack.getCapabilities) {
-          const capabilities = videoTrack.getCapabilities();
-          if (capabilities.zoom) {
-            try {
-              await videoTrack.applyConstraints({
-                advanced: [{ zoom: newZoom }]
-              });
-            } catch (error) {
-              console.log('Zoom no soportado en este dispositivo');
-              if (videoRef.current) {
-                videoRef.current.style.transform = `scale(${newZoom})`;
-                videoRef.current.style.transformOrigin = 'center center';
-              }
-            }
-          } else {
-            if (videoRef.current) {
-              videoRef.current.style.transform = `scale(${newZoom})`;
-              videoRef.current.style.transformOrigin = 'center center';
-            }
-          }
-        }
+      if (videoRef.current) {
+        videoRef.current.style.transform = `scale(${newZoom})`;
+        videoRef.current.style.transformOrigin = 'center center';
       }
     }
   };
 
   const decreaseZoom = async () => {
+    if (isCapacitorAvailable) {
+      console.log('📱 Zoom manejado por Capacitor');
+      return;
+    }
+
     if (cameraZoom > 1) {
       const newZoom = Math.max(cameraZoom - 0.5, 1);
       setCameraZoom(newZoom);
       
-      if (cameraStream) {
-        const videoTrack = cameraStream.getVideoTracks()[0];
-        if (videoTrack && videoTrack.getCapabilities) {
-          const capabilities = videoTrack.getCapabilities();
-          if (capabilities.zoom) {
-            try {
-              await videoTrack.applyConstraints({
-                advanced: [{ zoom: newZoom }]
-              });
-            } catch (error) {
-              console.log('Zoom no soportado en este dispositivo');
-              if (videoRef.current) {
-                videoRef.current.style.transform = newZoom === 1 ? 'none' : `scale(${newZoom})`;
-                videoRef.current.style.transformOrigin = 'center center';
-              }
-            }
-          } else {
-            if (videoRef.current) {
-              videoRef.current.style.transform = newZoom === 1 ? 'none' : `scale(${newZoom})`;
-              videoRef.current.style.transformOrigin = 'center center';
-            }
-          }
+      if (videoRef.current) {
+        if (newZoom === 1) {
+          videoRef.current.style.transform = 'none';
+        } else {
+          videoRef.current.style.transform = `scale(${newZoom})`;
+          videoRef.current.style.transformOrigin = 'center center';
         }
       }
     }
@@ -535,472 +672,429 @@ const CameraDialog = ({
     <Dialog 
       open={open} 
       onClose={onClose}
-      maxWidth={isMobile ? "sm" : "md"}
-      fullWidth={true}
-      fullScreen={false}
+      maxWidth="md"
+      fullWidth
+      fullScreen={isMobile}
       PaperProps={{
-        sx: isMobile ? {
-          margin: 2,
-          borderRadius: 2,
-          height: 'calc(100vh - 4rem)',
-          maxHeight: 'calc(100vh - 4rem)',
-          width: 'calc(100vw - 2rem)',
-          maxWidth: 'calc(100vw - 2rem)'
-        } : {}
+        sx: {
+          borderRadius: isMobile ? 0 : 2,
+          height: isMobile ? '100vh' : 'auto',
+          maxHeight: isMobile ? '100vh' : '80vh'
+        }
       }}
     >
-      {/* Header para móvil */}
-      {isMobile && (
-        <Box sx={{ 
-          position: 'absolute', 
-          top: 0, 
-          left: 0, 
-          right: 0, 
-          zIndex: 10,
-          background: 'linear-gradient(to bottom, rgba(0,0,0,0.7) 0%, transparent 100%)',
-          p: 2,
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center'
-        }}>
-          <Button
-            onClick={onClose}
-            sx={{ 
-              color: 'white', 
-              minWidth: 'auto',
-              p: 1,
-              borderRadius: '50%',
-              backgroundColor: 'rgba(0,0,0,0.3)',
-              '&:hover': { backgroundColor: 'rgba(0,0,0,0.5)' }
-            }}
-          >
-            ✕
-          </Button>
-          
-          {cameraStream && (
-            <Box sx={{ display: 'flex', gap: 1 }}>
-              <Button
-                onClick={decreaseZoom}
-                disabled={cameraZoom <= 1}
-                sx={{ 
-                  color: 'white', 
-                  minWidth: 'auto',
-                  p: 1,
-                  borderRadius: '50%',
-                  backgroundColor: 'rgba(0,0,0,0.3)',
-                  '&:hover': { backgroundColor: 'rgba(0,0,0,0.5)' },
-                  '&:disabled': { opacity: 0.5 }
-                }}
-              >
-                <ZoomOutIcon />
-              </Button>
-              <Button
-                onClick={increaseZoom}
-                disabled={cameraZoom >= maxZoom}
-                sx={{ 
-                  color: 'white', 
-                  minWidth: 'auto',
-                  p: 1,
-                  borderRadius: '50%',
-                  backgroundColor: 'rgba(0,0,0,0.3)',
-                  '&:hover': { backgroundColor: 'rgba(0,0,0,0.5)' },
-                  '&:disabled': { opacity: 0.5 }
-                }}
-              >
-                <ZoomInIcon />
-              </Button>
-            </Box>
-          )}
-          
-          {availableCameras.length > 1 && (
-            <Button
-              onClick={switchCamera}
-              disabled={!cameraStream}
-              sx={{ 
-                color: 'white', 
-                minWidth: 'auto',
-                p: 1,
-                borderRadius: '50%',
-                backgroundColor: 'rgba(0,0,0,0.3)',
-                '&:hover': { backgroundColor: 'rgba(0,0,0,0.5)' }
-              }}
-            >
-              {currentCamera === 'environment' ? <CameraRearIcon /> : <CameraFrontIcon />}
-            </Button>
-          )}
-        </Box>
-      )}
-
-      {/* Contenido principal */}
-      <Box sx={{ 
-        height: isMobile ? 'calc(100vh - 4rem)' : 'auto',
-        display: 'flex',
-        flexDirection: 'column',
-        position: 'relative'
+      <DialogTitle sx={{ 
+        pb: 1, 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center',
+        backgroundColor: theme.palette.primary.main,
+        color: 'white'
       }}>
-        {/* Video de la cámara */}
-        <Box sx={{ 
-          position: 'relative', 
-          width: '100%', 
-          height: isMobile ? 'calc(100% - 120px)' : '400px',
-          backgroundColor: '#000',
-          overflow: 'hidden'
-        }}>
-          {cameraStatus === 'starting' && (
-            <Box
-              sx={{
-                position: 'absolute',
-                top: '50%',
-                left: '50%',
-                transform: 'translate(-50%, -50%)',
-                zIndex: 10,
-                textAlign: 'center',
-                color: 'white'
-              }}
-            >
-              <Box sx={{ mb: 2 }}>
-                <CircularProgress color="inherit" />
+        <Typography variant="h6" sx={{ fontWeight: 600 }}>
+          📸 {isCapacitorAvailable ? 'Cámara Nativa' : 'Cámara Web'}
+        </Typography>
+        <Button 
+          onClick={onClose} 
+          sx={{ color: 'white', minWidth: 'auto' }}
+        >
+          ✕
+        </Button>
+      </DialogTitle>
+
+      <DialogContent sx={{ p: 0, position: 'relative', overflow: 'hidden' }}>
+        {isCapacitorAvailable ? (
+          // Interfaz para Capacitor
+          <Box sx={{ 
+            height: isMobile ? 'calc(100vh - 140px)' : '400px',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center',
+            alignItems: 'center',
+            backgroundColor: '#000',
+            color: 'white',
+            textAlign: 'center',
+            p: 3
+          }}>
+            {compressionProgress > 0 ? (
+              <Box sx={{ textAlign: 'center' }}>
+                <CircularProgress 
+                  variant="determinate" 
+                  value={compressionProgress} 
+                  size={60}
+                  sx={{ mb: 2 }}
+                />
+                <Typography variant="h6" gutterBottom>
+                  Procesando imagen...
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  {compressionProgress}% completado
+                </Typography>
               </Box>
-              <Typography variant="body2">
-                Iniciando cámara...
-              </Typography>
-            </Box>
-          )}
-
-          {cameraStatus === 'error' && (
-            <Box
-              sx={{
-                position: 'absolute',
-                top: '50%',
-                left: '50%',
-                transform: 'translate(-50%, -50%)',
-                zIndex: 10,
-                textAlign: 'center',
-                color: 'white',
-                p: 2
-              }}
-            >
-              <WarningIcon sx={{ fontSize: 48, mb: 2 }} />
-              <Typography variant="h6" sx={{ mb: 1 }}>
-                Error de Cámara
-              </Typography>
-              <Typography variant="body2" sx={{ mb: 2 }}>
-                {cameraError || 'No se pudo acceder a la cámara'}
-              </Typography>
-              <Button
-                variant="contained"
-                onClick={startCamera}
-                sx={{ mr: 1 }}
-              >
-                Reintentar
-              </Button>
-              <Button
-                variant="outlined"
-                onClick={onSelectFromGallery}
-              >
-                Usar Galería
-              </Button>
-            </Box>
-          )}
-
-          <video
-            ref={videoRef}
-            autoPlay
-            playsInline
-            muted
-            style={{ 
-              width: '100%', 
-              height: '100%',
-              objectFit: 'cover',
-              opacity: cameraStatus === 'ready' ? 1 : 0.3
-            }}
-          />
-          <canvas
-            ref={canvasRef}
-            style={{ display: 'none' }}
-          />
-          
-          {photoQuality && (
-            <Box
-              sx={{
-                position: 'absolute',
-                top: isMobile ? 80 : 8,
-                right: 8,
-                backgroundColor: photoQuality === 'excellent' ? '#4caf50' : 
-                              photoQuality === 'good' ? '#ff9800' : '#f44336',
-                color: 'white',
-                px: 1.5,
-                py: 0.5,
-                borderRadius: 1,
-                fontSize: '0.7rem',
-                fontWeight: 'bold',
-                zIndex: 5
-              }}
-            >
-              {photoQuality === 'excellent' ? '⭐' : 
-               photoQuality === 'good' ? '✅' : '⚠️'}
-            </Box>
-          )}
-
-          {cameraStream && cameraZoom > 1 && (
-            <Box
-              sx={{
-                position: 'absolute',
-                top: isMobile ? 120 : 48,
-                right: 8,
-                backgroundColor: 'rgba(0,0,0,0.7)',
-                color: 'white',
-                px: 1.5,
-                py: 0.5,
-                borderRadius: 1,
-                fontSize: '0.7rem',
-                fontWeight: 'bold',
-                zIndex: 5,
-                display: 'flex',
-                alignItems: 'center',
-                gap: 0.5
-              }}
-            >
-              <ZoomInIcon sx={{ fontSize: '0.8rem' }} />
-              {cameraZoom.toFixed(1)}x
-            </Box>
-          )}
-
-          {/* Botones flotantes en móvil */}
-          {isMobile && (
-            <Box sx={{ 
-              position: 'absolute', 
-              bottom: 'env(safe-area-inset-bottom, 20px)',
-              left: 0, 
-              right: 0,
-              background: 'linear-gradient(to top, rgba(0,0,0,0.8) 0%, transparent 100%)',
-              p: 2,
-              pb: 3,
-              display: 'flex',
-              justifyContent: 'center',
-              alignItems: 'center',
-              gap: 2,
-              minHeight: '80px'
-            }}>
-              <Button
-                variant="contained"
-                onClick={onSelectFromGallery}
-                sx={{ 
-                  borderRadius: '50%',
-                  minWidth: '60px',
-                  width: '60px',
-                  height: '60px',
-                  backgroundColor: 'rgba(255,255,255,0.2)',
-                  '&:hover': { backgroundColor: 'rgba(255,255,255,0.3)' }
-                }}
-              >
-                <PhotoLibraryIcon />
-              </Button>
-
-              {cameraStream && cameraStatus === 'ready' ? (
-                <Button
-                  variant="contained"
-                  onClick={capturePhoto}
-                  disabled={compressionProgress > 0}
-                  sx={{ 
-                    borderRadius: '50%',
-                    minWidth: '80px',
-                    width: '80px',
-                    height: '80px',
-                    backgroundColor: 'white',
-                    color: 'black',
-                    '&:hover': { backgroundColor: 'rgba(255,255,255,0.9)' },
-                    '&:disabled': { backgroundColor: 'rgba(255,255,255,0.5)' }
-                  }}
-                >
-                  📸
-                </Button>
-              ) : cameraStatus === 'error' ? (
-                <Button
-                  variant="contained"
-                  onClick={startCamera}
-                  sx={{ 
-                    borderRadius: '50%',
-                    minWidth: '80px',
-                    width: '80px',
-                    height: '80px',
-                    backgroundColor: '#f44336',
-                    color: 'white',
-                    '&:hover': { backgroundColor: '#d32f2f' }
-                  }}
-                >
-                  🔄
-                </Button>
-              ) : (
-                <Button
-                  variant="contained"
-                  onClick={startCamera}
-                  disabled={cameraStatus === 'starting'}
-                  sx={{ 
-                    borderRadius: '50%',
-                    minWidth: '80px',
-                    width: '80px',
-                    height: '80px',
-                    backgroundColor: 'white',
-                    color: 'black',
-                    '&:hover': { backgroundColor: 'rgba(255,255,255,0.9)' },
-                    '&:disabled': { backgroundColor: 'rgba(255,255,255,0.5)' }
-                  }}
-                >
-                  <CameraAltIcon />
-                </Button>
-              )}
-
-              <Box sx={{ width: '60px' }} />
-            </Box>
-          )}
-        </Box>
-
-        {/* Contenido para desktop */}
-        {!isMobile && (
-          <>
-            <DialogTitle sx={{ fontWeight: 'bold', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span>Tomar Foto</span>
-              <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-                {cameraStream && (
-                  <Box sx={{ display: 'flex', gap: 0.5 }}>
-                    <Button
-                      variant="outlined"
-                      size="small"
-                      onClick={decreaseZoom}
-                      disabled={cameraZoom <= 1}
-                      sx={{ minWidth: 'auto', p: 0.5 }}
-                    >
-                      <ZoomOutIcon sx={{ fontSize: '1rem' }} />
-                    </Button>
-                    <Button
-                      variant="outlined"
-                      size="small"
-                      onClick={increaseZoom}
-                      disabled={cameraZoom >= maxZoom}
-                      sx={{ minWidth: 'auto', p: 0.5 }}
-                    >
-                      <ZoomInIcon sx={{ fontSize: '1rem' }} />
-                    </Button>
-                  </Box>
-                )}
+            ) : (
+              <>
+                <CameraAltIcon sx={{ fontSize: 80, mb: 2, opacity: 0.7 }} />
+                <Typography variant="h5" gutterBottom>
+                  Cámara Nativa
+                </Typography>
+                <Typography variant="body1" sx={{ mb: 3, opacity: 0.8 }}>
+                  Usa los botones de abajo para tomar una foto o seleccionar de la galería
+                </Typography>
                 
-                {availableCameras.length > 1 && (
-                  <Button
-                    variant="outlined"
-                    size="small"
-                    onClick={switchCamera}
-                    disabled={!cameraStream}
-                    sx={{ fontSize: '0.75rem' }}
-                    startIcon={currentCamera === 'environment' ? <CameraRearIcon /> : <CameraFrontIcon />}
-                  >
-                    {currentCamera === 'environment' ? 'Trasera' : 'Frontal'}
-                  </Button>
-                )}
-              </Box>
-            </DialogTitle>
-            
-            <DialogContent sx={{ p: 3 }}>
-              {compressionProgress > 0 && (
-                <Box sx={{ width: '100%', mb: 2 }}>
-                  <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: 'block' }}>
-                    Procesando imagen...
-                  </Typography>
-                  <Box sx={{ width: '100%', bgcolor: 'grey.200', borderRadius: 1, height: 6 }}>
-                    <Box
-                      sx={{
-                        width: `${compressionProgress}%`,
-                        bgcolor: 'primary.main',
-                        height: '100%',
-                        borderRadius: 1,
-                        transition: 'width 0.3s ease'
-                      }}
-                    />
-                  </Box>
-                </Box>
-              )}
-              
-              <Box sx={{ 
-                display: 'flex', 
-                gap: 2, 
-                justifyContent: 'center',
-                width: '100%'
-              }}>
-                {!cameraStream && cameraStatus !== 'error' && (
+                <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', justifyContent: 'center' }}>
                   <Button
                     variant="contained"
                     startIcon={<CameraAltIcon />}
-                    onClick={startCamera}
-                    disabled={cameraStatus === 'starting'}
-                    size="medium"
-                    sx={{ minWidth: '140px' }}
+                    onClick={takePhoto}
+                    sx={{ 
+                      minWidth: 140,
+                      py: 1.5,
+                      px: 3,
+                      borderRadius: 2
+                    }}
                   >
-                    {cameraStatus === 'starting' ? 'Iniciando...' : 'Activar Cámara'}
+                    Tomar Foto
                   </Button>
-                )}
-                
-                {cameraStatus === 'error' && (
+                  
                   <Button
-                    variant="contained"
-                    color="error"
-                    startIcon={<WarningIcon />}
-                    onClick={startCamera}
-                    size="medium"
-                    sx={{ minWidth: '140px' }}
+                    variant="outlined"
+                    startIcon={<PhotoLibraryIcon />}
+                    onClick={selectFromGallery}
+                    sx={{ 
+                      minWidth: 140,
+                      py: 1.5,
+                      px: 3,
+                      borderRadius: 2,
+                      borderColor: 'white',
+                      color: 'white',
+                      '&:hover': {
+                        borderColor: 'white',
+                        backgroundColor: 'rgba(255,255,255,0.1)'
+                      }
+                    }}
                   >
-                    Reintentar Cámara
+                    Galería
                   </Button>
-                )}
-                
-                {cameraStream && cameraStatus === 'ready' && (
-                  <Button
-                    variant="contained"
-                    color="secondary"
-                    onClick={capturePhoto}
-                    disabled={compressionProgress > 0}
-                    size="medium"
-                    sx={{ minWidth: '140px' }}
-                  >
-                    📸 Capturar Foto
-                  </Button>
-                )}
-                
+                </Box>
+              </>
+            )}
+          </Box>
+        ) : (
+          // Interfaz para web
+          <Box sx={{ 
+            height: isMobile ? 'calc(100vh - 140px)' : '400px',
+            position: 'relative',
+            backgroundColor: '#000',
+            overflow: 'hidden'
+          }}>
+            {cameraStatus === 'starting' && (
+              <Box sx={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'center',
+                alignItems: 'center',
+                backgroundColor: 'rgba(0,0,0,0.8)',
+                color: 'white',
+                zIndex: 10
+              }}>
+                <CircularProgress size={60} sx={{ mb: 2 }} />
+                <Typography variant="h6">Iniciando cámara...</Typography>
+              </Box>
+            )}
+
+            {cameraStatus === 'error' && (
+              <Box sx={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'center',
+                alignItems: 'center',
+                backgroundColor: 'rgba(0,0,0,0.8)',
+                color: 'white',
+                zIndex: 10,
+                p: 3,
+                textAlign: 'center'
+              }}>
+                <WarningIcon sx={{ fontSize: 60, mb: 2, color: 'error.main' }} />
+                <Typography variant="h6" gutterBottom>
+                  Error de Cámara
+                </Typography>
+                <Typography variant="body1" sx={{ mb: 2 }}>
+                  {cameraError || 'No se pudo acceder a la cámara'}
+                </Typography>
                 <Button
-                  variant="outlined"
-                  startIcon={<PhotoLibraryIcon />}
-                  onClick={onSelectFromGallery}
-                  size="medium"
-                  sx={{ minWidth: '140px' }}
+                  variant="contained"
+                  onClick={startCamera}
+                  sx={{ mt: 2 }}
                 >
-                  Elegir de Galería
+                  Reintentar
                 </Button>
               </Box>
-              
-              <Typography variant="caption" color="text.secondary" sx={{ textAlign: 'center', mt: 1, display: 'block' }}>
-                💡 Puedes tomar múltiples fotos
-              </Typography>
-              
-              <Box sx={{ mt: 2, p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
-                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
-                  <strong>Requisitos para la cámara:</strong>
+            )}
+
+            {compressionProgress > 0 && (
+              <Box sx={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'center',
+                alignItems: 'center',
+                backgroundColor: 'rgba(0,0,0,0.8)',
+                color: 'white',
+                zIndex: 10
+              }}>
+                <CircularProgress 
+                  variant="determinate" 
+                  value={compressionProgress} 
+                  size={60}
+                  sx={{ mb: 2 }}
+                />
+                <Typography variant="h6" gutterBottom>
+                  Procesando imagen...
                 </Typography>
-                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', fontSize: '0.7rem' }}>
-                  • Conexión HTTPS (excepto en localhost)<br/>
-                  • Navegador compatible (Chrome, Firefox, Safari)<br/>
-                  • Permisos de cámara habilitados<br/>
-                  • Cámara disponible en el dispositivo
+                <Typography variant="body2" color="text.secondary">
+                  {compressionProgress}% completado
                 </Typography>
               </Box>
-            </DialogContent>
+            )}
+
+            <video
+              ref={videoRef}
+              autoPlay
+              playsInline
+              muted
+              style={{ 
+                width: '100%', 
+                height: '100%',
+                objectFit: 'cover',
+                opacity: cameraStatus === 'ready' ? 1 : 0.3
+              }}
+            />
+            <canvas
+              ref={canvasRef}
+              style={{ display: 'none' }}
+            />
             
-            <DialogActions>
-              <Button onClick={onClose}>
-                Cerrar
-              </Button>
-            </DialogActions>
-          </>
+            {photoQuality && (
+              <Box
+                sx={{
+                  position: 'absolute',
+                  top: isMobile ? 80 : 8,
+                  right: 8,
+                  backgroundColor: photoQuality === 'excellent' ? '#4caf50' : 
+                                photoQuality === 'good' ? '#ff9800' : '#f44336',
+                  color: 'white',
+                  px: 1.5,
+                  py: 0.5,
+                  borderRadius: 1,
+                  fontSize: '0.7rem',
+                  fontWeight: 'bold',
+                  zIndex: 5
+                }}
+              >
+                {photoQuality === 'excellent' ? '⭐' : 
+                 photoQuality === 'good' ? '✅' : '⚠️'}
+              </Box>
+            )}
+
+            {cameraStream && cameraZoom > 1 && (
+              <Box
+                sx={{
+                  position: 'absolute',
+                  top: isMobile ? 120 : 48,
+                  right: 8,
+                  backgroundColor: 'rgba(0,0,0,0.7)',
+                  color: 'white',
+                  px: 1.5,
+                  py: 0.5,
+                  borderRadius: 1,
+                  fontSize: '0.7rem',
+                  fontWeight: 'bold',
+                  zIndex: 5,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 0.5
+                }}
+              >
+                <ZoomInIcon sx={{ fontSize: '0.8rem' }} />
+                {cameraZoom.toFixed(1)}x
+              </Box>
+            )}
+
+            {/* Botones flotantes en móvil */}
+            {isMobile && cameraStatus === 'ready' && (
+              <Box sx={{
+                position: 'absolute',
+                bottom: 20,
+                left: 0,
+                right: 0,
+                display: 'flex',
+                justifyContent: 'center',
+                gap: 2,
+                zIndex: 5
+              }}>
+                <Button
+                  variant="contained"
+                  onClick={decreaseZoom}
+                  disabled={cameraZoom <= 1}
+                  sx={{
+                    minWidth: 50,
+                    width: 50,
+                    height: 50,
+                    borderRadius: '50%',
+                    backgroundColor: 'rgba(0,0,0,0.7)',
+                    '&:hover': {
+                      backgroundColor: 'rgba(0,0,0,0.8)'
+                    }
+                  }}
+                >
+                  <ZoomOutIcon />
+                </Button>
+                
+                <Button
+                  variant="contained"
+                  onClick={takePhoto}
+                  sx={{
+                    minWidth: 80,
+                    width: 80,
+                    height: 80,
+                    borderRadius: '50%',
+                    backgroundColor: 'white',
+                    color: 'black',
+                    '&:hover': {
+                      backgroundColor: 'rgba(255,255,255,0.9)'
+                    }
+                  }}
+                >
+                  <CameraAltIcon sx={{ fontSize: 32 }} />
+                </Button>
+                
+                <Button
+                  variant="contained"
+                  onClick={increaseZoom}
+                  disabled={cameraZoom >= maxZoom}
+                  sx={{
+                    minWidth: 50,
+                    width: 50,
+                    height: 50,
+                    borderRadius: '50%',
+                    backgroundColor: 'rgba(0,0,0,0.7)',
+                    '&:hover': {
+                      backgroundColor: 'rgba(0,0,0,0.8)'
+                    }
+                  }}
+                >
+                  <ZoomInIcon />
+                </Button>
+              </Box>
+            )}
+
+            {/* Botones de control en desktop */}
+            {!isMobile && cameraStatus === 'ready' && (
+              <Box sx={{
+                position: 'absolute',
+                bottom: 20,
+                left: 20,
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 1,
+                zIndex: 5
+              }}>
+                <Button
+                  variant="contained"
+                  onClick={switchCamera}
+                  startIcon={currentCamera === 'environment' ? <CameraFrontIcon /> : <CameraRearIcon />}
+                  sx={{
+                    backgroundColor: 'rgba(0,0,0,0.7)',
+                    '&:hover': {
+                      backgroundColor: 'rgba(0,0,0,0.8)'
+                    }
+                  }}
+                >
+                  {currentCamera === 'environment' ? 'Frontal' : 'Trasera'}
+                </Button>
+                
+                <Button
+                  variant="contained"
+                  onClick={decreaseZoom}
+                  disabled={cameraZoom <= 1}
+                  sx={{
+                    backgroundColor: 'rgba(0,0,0,0.7)',
+                    '&:hover': {
+                      backgroundColor: 'rgba(0,0,0,0.8)'
+                    }
+                  }}
+                >
+                  <ZoomOutIcon />
+                </Button>
+                
+                <Button
+                  variant="contained"
+                  onClick={increaseZoom}
+                  disabled={cameraZoom >= maxZoom}
+                  sx={{
+                    backgroundColor: 'rgba(0,0,0,0.7)',
+                    '&:hover': {
+                      backgroundColor: 'rgba(0,0,0,0.8)'
+                    }
+                  }}
+                >
+                  <ZoomInIcon />
+                </Button>
+              </Box>
+            )}
+          </Box>
         )}
-      </Box>
+      </DialogContent>
+
+      <DialogActions sx={{ 
+        p: 2, 
+        justifyContent: 'space-between',
+        backgroundColor: theme.palette.grey[50]
+      }}>
+        <Button
+          onClick={onSelectFromGallery}
+          startIcon={<PhotoLibraryIcon />}
+          variant="outlined"
+          sx={{ minWidth: 120 }}
+        >
+          Galería
+        </Button>
+        
+        <Box sx={{ display: 'flex', gap: 1 }}>
+          <Button
+            onClick={onClose}
+            variant="outlined"
+            sx={{ minWidth: 80 }}
+          >
+            Cancelar
+          </Button>
+          
+          {!isCapacitorAvailable && cameraStatus === 'ready' && (
+            <Button
+              onClick={takePhoto}
+              variant="contained"
+              startIcon={<CameraAltIcon />}
+              sx={{ minWidth: 120 }}
+            >
+              Tomar Foto
+            </Button>
+          )}
+        </Box>
+      </DialogActions>
     </Dialog>
   );
 };

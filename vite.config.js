@@ -9,22 +9,43 @@ export default defineConfig({
     port: 5173,
     host: true
   },
-           build: {
-           outDir: 'dist',
-           sourcemap: false,
-           minify: 'terser',
-           terserOptions: {
-             compress: {
-               drop_console: true,
-               drop_debugger: true,
-               pure_funcs: ['console.log', 'console.info', 'console.debug', 'console.warn']
-             }
-           },
-           commonjsOptions: {
-             include: [/node_modules/],
-             transformMixedEsModules: true
-           },
+  build: {
+    outDir: 'dist',
+    sourcemap: false,
+    minify: 'terser',
+    terserOptions: {
+      compress: {
+        drop_console: true,
+        drop_debugger: true,
+        pure_funcs: ['console.log', 'console.info', 'console.debug', 'console.warn']
+      }
+    },
+    commonjsOptions: {
+      include: [/node_modules/],
+      transformMixedEsModules: true
+    },
     rollupOptions: {
+      // Excluir módulos de Capacitor del build
+      external: [
+        '@capacitor/core',
+        '@capacitor/app',
+        '@capacitor/browser',
+        '@capacitor/camera',
+        '@capacitor/device',
+        '@capacitor/filesystem',
+        '@capacitor/geolocation',
+        '@capacitor/haptics',
+        '@capacitor/keyboard',
+        '@capacitor/local-notifications',
+        '@capacitor/network',
+        '@capacitor/push-notifications',
+        '@capacitor/screen-reader',
+        '@capacitor/share',
+        '@capacitor/splash-screen',
+        '@capacitor/status-bar',
+        '@capacitor/storage',
+        '@capacitor/toast'
+      ],
       output: {
         manualChunks: {
           // Core React
@@ -59,7 +80,7 @@ export default defineConfig({
           'notifications': ['react-notifications-component', 'notistack', 'react-toastify', 'sweetalert2'],
           
           // Firebase
-                         // 'firebase': ['firebase'], // Comentado temporalmente por problemas de resolución
+          // 'firebase': ['firebase'], // Comentado temporalmente por problemas de resolución
           
           // Payment
           'payment': ['@mercadopago/sdk-react'],
@@ -79,11 +100,11 @@ export default defineConfig({
     host: true
   },
   // Optimización de resolución de módulos
-           resolve: {
-           alias: {
-             '@': resolve(__dirname, 'src')
-           }
-         },
+  resolve: {
+    alias: {
+      '@': resolve(__dirname, 'src')
+    }
+  },
   // Optimización de assets
   assetsInclude: ['**/*.png', '**/*.jpg', '**/*.jpeg', '**/*.gif', '**/*.svg', '**/*.woff', '**/*.woff2'],
   // Optimización de CSS
