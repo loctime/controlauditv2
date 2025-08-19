@@ -28,7 +28,7 @@ const DownloadAPK = ({ version = 'latest' }) => {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `ControlAudit-${version}.apk`;
+      a.download = `ControlAudit-debug-${version}.apk`;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);

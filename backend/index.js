@@ -314,20 +314,40 @@ app.get('/api/download-apk', async (req, res) => {
     
     console.log(`📱 Descargando APK versión: ${version}`);
     
-    // URL del APK en GitHub Releases
-    const githubUrl = `https://github.com/loctime/controlauditv2/releases/${version}/download/ControlAudit-release.apk`;
+    // Intentar diferentes nombres de archivo
+    const possibleNames = [
+      'ControlAudit-debug.apk',
+      'ControlAudit-release.apk',
+      'app-debug.apk',
+      'app-release.apk'
+    ];
     
-    console.log(`🔗 Intentando descargar desde: ${githubUrl}`);
+    let response = null;
+    let successfulUrl = null;
     
-    // Intentar descargar desde GitHub
-    const response = await fetch(githubUrl);
+    // Probar cada nombre de archivo
+    for (const fileName of possibleNames) {
+      const githubUrl = `https://github.com/loctime/controlauditv2/releases/${version}/download/${fileName}`;
+      console.log(`🔗 Intentando: ${githubUrl}`);
+      
+      try {
+        response = await fetch(githubUrl);
+        if (response.ok) {
+          successfulUrl = githubUrl;
+          console.log(`✅ APK encontrada: ${fileName}`);
+          break;
+        }
+      } catch (error) {
+        console.log(`❌ Error con ${fileName}: ${error.message}`);
+      }
+    }
     
-    if (!response.ok) {
-      console.error(`❌ Error ${response.status}: ${response.statusText}`);
+    if (!response || !response.ok) {
+      console.error(`❌ No se pudo encontrar la APK en el release ${version}`);
       return res.status(404).json({
         success: false,
-        error: 'APK no encontrada o repositorio privado',
-        message: 'Para repositorios privados, configura un token de GitHub o haz el repositorio público'
+        error: 'APK no encontrada',
+        message: `No se encontró ninguna APK en el release ${version}. Verifica que el release contenga un archivo APK.`
       });
     }
 
@@ -336,9 +356,12 @@ app.get('/api/download-apk', async (req, res) => {
     
     console.log(`✅ APK descargada exitosamente, tamaño: ${buffer.byteLength} bytes`);
     
+    // Extraer el nombre del archivo de la URL exitosa
+    const fileName = successfulUrl.split('/').pop();
+    
     // Configurar headers para descarga
     res.setHeader('Content-Type', 'application/vnd.android.package-archive');
-    res.setHeader('Content-Disposition', `attachment; filename="ControlAudit-${version}.apk"`);
+    res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
     res.setHeader('Content-Length', buffer.byteLength);
     
     // Enviar el archivo
