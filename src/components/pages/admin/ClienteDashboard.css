@@ -1,109 +1,322 @@
 /* Estilos específicos para el Dashboard de Administrador */
 
-/* Layout horizontal para desktop */
+/* Layout principal del dashboard */
+.page-container.admin-container {
+  width: 100% !important;
+  max-width: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.page-container.admin-container .content-container {
+  width: 100% !important;
+  max-width: 100% !important;
+  margin: 0 !important;
+  padding: 8px !important;
+}
+
+/* Layout para desktop - optimizado para una fila */
 @media (min-width: 769px) {
-  /* Forzar layout horizontal para admin container */
-  .page-container.admin-container {
-    width: 100% !important;
-    max-width: 100% !important;
-    display: flex !important;
-    flex-direction: column !important;
-    align-items: stretch !important;
-    justify-content: flex-start !important;
-  }
-
-  /* Forzar layout horizontal para content container en admin */
-  .page-container.admin-container .content-container {
-    width: 100% !important;
-    max-width: 100% !important;
-    display: flex !important;
-    flex-direction: column !important;
-    align-items: stretch !important;
-    justify-content: flex-start !important;
-    text-align: left !important;
-  }
-
-  .admin-container .MuiBox-root {
-    width: 100% !important;
-    max-width: 100% !important;
-    display: flex !important;
-    flex-direction: column !important;
-    align-items: stretch !important;
-    justify-content: flex-start !important;
-  }
-
   .admin-container .MuiGrid-container {
-    justify-content: flex-start !important;
-    align-items: stretch !important;
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    justify-content: space-between !important;
+    align-items: flex-start !important;
+    width: 100% !important;
+    margin: 0 !important;
+    gap: 12px !important;
   }
 
   .admin-container .MuiGrid-item {
     display: flex !important;
+    flex-direction: column !important;
     justify-content: flex-start !important;
+    align-items: stretch !important;
+  }
+
+  /* Calendario en la columna izquierda - tamaño más compacto */
+  .admin-container .MuiGrid-item:first-child {
+    flex: 0 0 auto !important;
+    max-width: 320px !important;
+    width: 320px !important;
+    display: flex !important;
+    justify-content: center !important;
     align-items: flex-start !important;
   }
 
-  .admin-container .MuiPaper-root {
-    width: 100% !important;
-    max-width: 100% !important;
-  }
-
-  .admin-container .MuiTypography-root {
-    text-align: left !important;
-  }
-
-  /* Asegurar que los botones se alineen correctamente */
-  .admin-container .MuiButton-root {
-    align-self: flex-start !important;
-  }
-
-  /* Asegurar que las pestañas se alineen correctamente */
-  .admin-container .MuiTabs-root {
-    justify-content: center !important;
-  }
-
-  /* Asegurar que el contenido de las pestañas use todo el ancho */
-  .admin-container .MuiBox-root > .MuiBox-root {
-    width: 100% !important;
-    max-width: 100% !important;
-  }
-
-  /* Asegurar que el grid use todo el ancho disponible */
-  .admin-container .MuiGrid-container {
-    width: 100% !important;
-    max-width: 100% !important;
-    margin: 0 !important;
-  }
-
-  /* Asegurar que los items del grid se distribuyan correctamente */
-  .admin-container .MuiGrid-item {
-    width: 100% !important;
-    max-width: 100% !important;
-  }
-
-  /* Asegurar que el contenido de las pestañas no esté centrado */
-  .admin-container .MuiBox-root {
-    text-align: left !important;
-  }
-
-  /* Asegurar que los componentes hijos usen todo el ancho */
-  .admin-container .MuiPaper-root,
-  .admin-container .MuiCard-root {
-    width: 100% !important;
-    max-width: 100% !important;
+  /* Columna derecha - espacio restante con componentes apilados */
+  .admin-container .MuiGrid-item:last-child {
+    flex: 1 !important;
+    max-width: none !important;
+    width: auto !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 12px !important;
   }
 }
 
-/* Layout móvil - mantener el diseño actual */
+/* Layout móvil - mantener diseño vertical */
 @media (max-width: 768px) {
-  .admin-container {
-    width: 100% !important;
-    max-width: 100% !important;
+  .admin-container .MuiGrid-container {
+    flex-direction: column !important;
+    flex-wrap: wrap !important;
+    gap: 12px !important;
   }
 
-  .admin-container .content-container {
-    width: 100% !important;
+  .admin-container .MuiGrid-item {
+    flex: 0 0 100% !important;
     max-width: 100% !important;
-    padding: 8px !important;
+    width: 100% !important;
+  }
+
+  /* En móvil, botones y pestañas en columnas separadas */
+  .admin-container .MuiPaper-root .MuiBox-root {
+    flex-direction: column !important;
+  }
+
+  .admin-container .MuiPaper-root .MuiBox-root > .MuiBox-root:first-child {
+    order: 1 !important;
+    margin-bottom: 8px !important;
+    width: 100% !important;
+    justify-content: center !important;
+  }
+
+  .admin-container .MuiPaper-root .MuiBox-root > .MuiBox-root:last-child {
+    order: 0 !important;
+    width: 100% !important;
+  }
+
+
+}
+
+/* Optimización para pantallas medianas */
+@media (min-width: 769px) and (max-width: 1200px) {
+  .admin-container .MuiGrid-item:first-child {
+    max-width: 300px !important;
+    width: 300px !important;
+  }
+}
+
+/* Optimización para pantallas grandes */
+@media (min-width: 1201px) and (max-width: 1600px) {
+  .admin-container .MuiGrid-item:first-child {
+    max-width: 320px !important;
+    width: 320px !important;
+  }
+}
+
+/* Calendario - tamaño más compacto */
+.admin-container .CalendarioAuditorias {
+  display: flex !important;
+  justify-content: center !important;
+  align-items: flex-start !important;
+  width: auto !important;
+  max-width: 320px !important;
+}
+
+.admin-container .CalendarioAuditorias .MuiPaper-root {
+  width: 300px !important;
+  max-width: 300px !important;
+  min-width: 300px !important;
+  height: auto !important;
+  padding: 12px !important;
+  margin: 0 !important;
+  flex-shrink: 0 !important;
+}
+
+/* Grid del calendario - no estirar */
+.admin-container .CalendarioAuditorias .MuiGrid-container {
+  width: 100% !important;
+  max-width: 100% !important;
+  gap: 1px !important;
+}
+
+/* Celdas del calendario - tamaño fijo */
+.admin-container .CalendarioAuditorias .MuiGrid-item {
+  width: calc(100% / 7) !important;
+  max-width: calc(100% / 7) !important;
+  min-width: calc(100% / 7) !important;
+  padding: 1px !important;
+}
+
+/* Días de la semana */
+.admin-container .CalendarioAuditorias .MuiGrid-item:nth-child(-n+7) .MuiBox-root {
+  font-size: 0.65rem !important;
+  font-weight: bold !important;
+  padding: 4px 1px !important;
+  text-align: center !important;
+  height: 28px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+/* Números de los días */
+.admin-container .CalendarioAuditorias .MuiGrid-item:nth-child(n+8) .MuiBox-root {
+  min-height: 36px !important;
+  max-height: 36px !important;
+  padding: 2px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+}
+
+.admin-container .CalendarioAuditorias .MuiGrid-item:nth-child(n+8) .MuiTypography-body2 {
+  font-size: 0.7rem !important;
+  font-weight: bold !important;
+  line-height: 1 !important;
+  text-align: center !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* Título del calendario */
+.admin-container .CalendarioAuditorias .MuiTypography-h6 {
+  font-size: 0.9rem !important;
+  line-height: 1.2 !important;
+  margin: 0 0 8px 0 !important;
+}
+
+/* Navegación del mes */
+.admin-container .CalendarioAuditorias .MuiTypography-h6[component="span"] {
+  font-size: 0.8rem !important;
+  line-height: 1 !important;
+}
+
+/* Chips de auditorías */
+.admin-container .CalendarioAuditorias .MuiChip-root {
+  font-size: 0.45rem !important;
+  height: 12px !important;
+  min-width: 14px !important;
+  margin-top: 2px !important;
+}
+
+.admin-container .CalendarioAuditorias .MuiChip-label {
+  font-size: 0.45rem !important;
+  padding: 0 1px !important;
+  line-height: 1 !important;
+}
+
+/* Responsive para pantallas más grandes */
+@media (min-width: 1200px) {
+  .admin-container .CalendarioAuditorias .MuiPaper-root {
+    width: 350px !important;
+    max-width: 350px !important;
+    min-width: 350px !important;
+  }
+  
+  .admin-container .MuiGrid-item:first-child {
+    max-width: 350px !important;
+    width: 350px !important;
+  }
+}
+
+@media (min-width: 1600px) {
+  .admin-container .CalendarioAuditorias .MuiPaper-root {
+    width: 380px !important;
+    max-width: 380px !important;
+    min-width: 380px !important;
+  }
+  
+  .admin-container .MuiGrid-item:first-child {
+    max-width: 380px !important;
+    width: 380px !important;
+  }
+}
+
+/* Componentes de auditorías - ocupar espacio restante */
+.admin-container .AuditoriasDelDia {
+  padding: 12px !important;
+  margin-bottom: 0 !important;
+  flex: 1 !important;
+  height: 100% !important;
+}
+
+.admin-container .AuditoriasDelDia .MuiPaper-root {
+  padding: 16px !important;
+  height: 100% !important;
+  min-height: 180px !important;
+}
+
+.admin-container .AuditoriasDelDia .MuiTypography-h6 {
+  font-size: 1rem !important;
+  margin-bottom: 12px !important;
+}
+
+.admin-container .AuditoriasDelDia .MuiTypography-body2 {
+  font-size: 0.9rem !important;
+}
+
+/* Secciones de auditorías */
+.admin-container .ProximasAuditorias {
+  padding: 12px !important;
+  margin-bottom: 0 !important;
+  flex: 1 !important;
+  height: 100% !important;
+}
+
+.admin-container .ResumenGeneral {
+  padding: 12px !important;
+  margin-top: 0 !important;
+  flex: 1 !important;
+}
+
+.admin-container .ProximasAuditorias .MuiPaper-root,
+.admin-container .ResumenGeneral .MuiPaper-root {
+  padding: 16px !important;
+  height: 100% !important;
+  min-height: 140px !important;
+}
+
+.admin-container .ProximasAuditorias .MuiTypography-h6,
+.admin-container .ResumenGeneral .MuiTypography-h6 {
+  font-size: 1rem !important;
+  margin-bottom: 12px !important;
+}
+
+/* Botones y pestañas */
+.admin-container .MuiButton-root {
+  padding: 6px 12px !important;
+  font-size: 0.85rem !important;
+  min-height: 32px !important;
+}
+
+.admin-container .MuiTabs-root {
+  min-height: 40px !important;
+}
+
+.admin-container .MuiTab-root {
+  min-height: 40px !important;
+  padding: 8px 16px !important;
+  font-size: 0.85rem !important;
+}
+
+/* Título principal */
+.admin-container .MuiTypography-h4 {
+  font-size: 1.6rem !important;
+  margin-bottom: 12px !important;
+}
+
+/* Optimización para pantallas muy grandes */
+@media (min-width: 1920px) {
+  .page-container.admin-container .content-container {
+    padding: 16px !important;
+  }
+  
+  .admin-container .MuiGrid-container {
+    gap: 20px !important;
+  }
+  
+  .admin-container .CalendarioAuditorias .MuiPaper-root {
+    width: 400px !important;
+    max-width: 400px !important;
+    min-width: 400px !important;
+  }
+  
+  .admin-container .MuiGrid-item:first-child {
+    max-width: 400px !important;
+    width: 400px !important;
   }
 }

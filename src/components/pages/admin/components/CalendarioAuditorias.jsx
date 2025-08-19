@@ -3,13 +3,13 @@ import React, { useState, useMemo, useCallback } from "react";
 import { 
   Typography, 
   Box, 
-  Grid, 
   Paper, 
   IconButton,
   Chip,
   useTheme
 } from "@mui/material";
 import { CalendarToday } from "@mui/icons-material";
+import "./CalendarioAuditorias.css";
 
 const CalendarioAuditorias = React.memo(({ 
   auditorias, 
@@ -80,9 +80,15 @@ const CalendarioAuditorias = React.memo(({
   const weekDays = useMemo(() => ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'], []);
 
   return (
-    <Paper elevation={2} sx={{ p: 3 }}>
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-        <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+    <Paper elevation={2} className="calendar-wrapper" sx={{ 
+      p: 2, 
+      maxWidth: '400px', 
+      width: '100%',
+      margin: '0 auto',
+      overflow: 'hidden'
+    }}>
+      <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
+        <Typography variant="h6" className="calendar-title" sx={{ display: 'flex', alignItems: 'center', gap: 1, fontSize: '1.1rem' }}>
           <CalendarToday color="primary" />
           Calendario de Auditorías
         </Typography>
@@ -90,7 +96,7 @@ const CalendarioAuditorias = React.memo(({
           <IconButton onClick={prevMonth} size="small">
             <Typography variant="h6">‹</Typography>
           </IconButton>
-          <Typography variant="h6" component="span" sx={{ mx: 2 }}>
+          <Typography variant="h6" component="span" sx={{ mx: 1, fontSize: '1rem' }}>
             {monthNames[currentMonth.getMonth()]} {currentMonth.getFullYear()}
           </Typography>
           <IconButton onClick={nextMonth} size="small">
@@ -99,20 +105,26 @@ const CalendarioAuditorias = React.memo(({
         </Box>
       </Box>
 
-      <Grid container spacing={1}>
+      <Box className="calendar-grid" sx={{ 
+        display: 'flex',
+        flexWrap: 'wrap',
+        gap: 0.25,
+        maxWidth: '100%',
+        overflow: 'hidden'
+      }}>
         {weekDays.map(day => (
-          <Grid item xs={12/7} key={day}>
-            <Box sx={{ 
-              p: 1, 
-              textAlign: 'center', 
-              fontWeight: 'bold',
-              bgcolor: theme.palette.mode === 'dark' ? theme.palette.grey[800] : 'grey.100',
-              color: theme.palette.mode === 'dark' ? 'text.primary' : 'text.primary',
-              borderRadius: 1
-            }}>
-              {day}
-            </Box>
-          </Grid>
+          <Box key={day} sx={{ 
+            p: 0.5, 
+            textAlign: 'center', 
+            fontWeight: 'bold',
+            bgcolor: theme.palette.mode === 'dark' ? theme.palette.grey[800] : 'grey.100',
+            color: theme.palette.mode === 'dark' ? 'text.primary' : 'text.primary',
+            borderRadius: 1,
+            fontSize: '0.8rem',
+            maxWidth: '100%'
+          }}>
+            {day}
+          </Box>
         ))}
         
         {days.map((day, index) => {
@@ -121,74 +133,75 @@ const CalendarioAuditorias = React.memo(({
             day.toDateString() === selectedDate.toDateString();
           
           return (
-            <Grid item xs={12/7} key={index}>
-              <Box
-                onClick={() => day && canAgendarAuditorias && onSelectDate(day)}
-                sx={{
-                  p: 1,
-                  minHeight: 60,
-                  minWidth: '40px',
-                  border: day ? `1px solid ${theme.palette.divider}` : 'none',
-                  borderRadius: 1,
-                  cursor: day && canAgendarAuditorias ? 'pointer' : 'default',
-                  bgcolor: isSelected ? 'primary.light' : 'transparent',
-                  color: isSelected ? 'white' : 'text.primary',
-                  '&:hover': day && canAgendarAuditorias ? {
-                    bgcolor: isSelected ? 'primary.main' : theme.palette.mode === 'dark' ? 'grey.700' : 'grey.100'
-                  } : {},
-                  position: 'relative',
-                  opacity: day && !canAgendarAuditorias ? 0.6 : 1,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'flex-start',
-                  alignItems: 'center'
-                }}
-              >
-                {day && (
-                  <>
-                    <Typography 
-                      variant="body2" 
-                      sx={{ 
-                        fontWeight: 'bold',
-                        textAlign: 'center',
-                        display: 'flex',
-                        justifyContent: 'center',
-                        alignItems: 'center',
-                        minHeight: '24px',
-                        fontSize: '0.875rem',
-                        lineHeight: 1,
-                        whiteSpace: 'nowrap',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis'
-                      }}
-                    >
-                      {day.getDate()}
-                    </Typography>
-                    {auditoriasDelDia.length > 0 && (
-                      <Box sx={{ mt: 0.5 }}>
-                        <Chip
-                          label={`${auditoriasDelDia.length} auditoría${auditoriasDelDia.length > 1 ? 's' : ''}`}
-                          size="small"
-                          color={auditoriasDelDia.some(a => a.estado === 'completada') ? 'success' : 'warning'}
-                          sx={{ 
-                            fontSize: '0.7rem', 
-                            height: 20,
-                            '& .MuiChip-label': {
-                              whiteSpace: 'nowrap',
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis'
-                            }
-                          }}
-                        />
-                      </Box>
-                    )}
-                  </>
-                )}
-              </Box>
-            </Grid>
+            <Box
+              key={index}
+              onClick={() => day && canAgendarAuditorias && onSelectDate(day)}
+              className="calendar-day-button"
+              sx={{
+                p: 0.25,
+                minHeight: 35,
+                width: '100%',
+                maxWidth: '100%',
+                border: day ? `1px solid ${theme.palette.divider}` : 'none',
+                borderRadius: 1,
+                cursor: day && canAgendarAuditorias ? 'pointer' : 'default',
+                bgcolor: isSelected ? 'primary.light' : 'transparent',
+                color: isSelected ? 'white' : 'text.primary',
+                '&:hover': day && canAgendarAuditorias ? {
+                  bgcolor: isSelected ? 'primary.main' : theme.palette.mode === 'dark' ? 'grey.700' : 'grey.100'
+                } : {},
+                position: 'relative',
+                opacity: day && !canAgendarAuditorias ? 0.6 : 1,
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'flex-start',
+                alignItems: 'center',
+                overflow: 'hidden'
+              }}
+            >
+              {day && (
+                <>
+                  <Typography 
+                    variant="body2" 
+                    className="calendar-day-number"
+                    sx={{ 
+                      fontWeight: 'bold',
+                      display: 'flex',
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      minHeight: '16px',
+                      fontSize: '0.7rem',
+                      lineHeight: 1
+                    }}
+                  >
+                    {day.getDate()}
+                  </Typography>
+                  {auditoriasDelDia.length > 0 && (
+                    <Box sx={{ mt: 0.5 }}>
+                      <Chip
+                        label={`${auditoriasDelDia.length}`}
+                        size="small"
+                        color={auditoriasDelDia.some(a => a.estado === 'completada') ? 'success' : 'warning'}
+                        sx={{ 
+                          fontSize: '0.5rem', 
+                          height: 14,
+                          minWidth: '16px',
+                          '& .MuiChip-label': {
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            padding: '0 2px'
+                          }
+                        }}
+                      />
+                    </Box>
+                  )}
+                </>
+              )}
+            </Box>
           );
         })}
-      </Grid>
+      </Box>
     </Paper>
   );
 });

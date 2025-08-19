@@ -1,0 +1,251 @@
+/* ========================================
+   ESTILOS PRINCIPALES UNIFICADOS
+   ======================================== */
+
+/* 1. VARIABLES GLOBALES */
+:root {
+  /* Colores modo claro */
+  --color-bg: #f5f5f5;
+  --color-bg-paper: #fff;
+  --color-text: #222;
+  --color-text-secondary: #444;
+  --color-link: #1976d2;
+  --color-scrollbar: #888;
+  --color-scrollbar-track: #f1f1f1;
+  --color-scrollbar-hover: #555;
+  --color-error-bg: #ffebee;
+  --color-error-text: #d32f2f;
+  --color-error-border: #ffcdd2;
+  --color-success-bg: #e8f5e8;
+  --color-success-text: #2e7d32;
+  --color-success-border: #c8e6c9;
+  --color-table-header: #f2f2f2;
+  
+  /* Safe area variables */
+  --safe-area-inset-top: env(safe-area-inset-top, 0px);
+  --safe-area-inset-right: env(safe-area-inset-right, 0px);
+  --safe-area-inset-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-area-inset-left: env(safe-area-inset-left, 0px);
+}
+
+/* Modo oscuro */
+[data-theme="dark"] {
+  --color-bg: #111;
+  --color-bg-paper: #222;
+  --color-text: #fff;
+  --color-text-secondary: #bbb;
+  --color-link: #90caf9;
+  --color-scrollbar: #444;
+  --color-scrollbar-track: #222;
+  --color-scrollbar-hover: #888;
+  --color-error-bg: #2d1a1a;
+  --color-error-text: #ff8a80;
+  --color-error-border: #ff5252;
+  --color-success-bg: #1b2b1b;
+  --color-success-text: #b9f6ca;
+  --color-success-border: #69f0ae;
+  --color-table-header: #222;
+}
+
+/* 2. RESET Y BASE */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  -webkit-text-size-adjust: auto;
+  -ms-text-size-adjust: auto;
+  text-size-adjust: auto;
+}
+
+html, body {
+  height: 100%;
+  overflow-x: hidden;
+  background-color: var(--color-bg);
+  color: var(--color-text);
+}
+
+#root {
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* 3. CONTENEDOR PRINCIPAL */
+.main-app-container {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow-x: hidden;
+  background-color: var(--color-bg);
+}
+
+/* 4. RESPONSIVE DESIGN */
+/* Móviles (hasta 768px) */
+@media (max-width: 768px) {
+  .main-app-container {
+    padding: var(--safe-area-inset-top) var(--safe-area-inset-right) var(--safe-area-inset-bottom) var(--safe-area-inset-left);
+  }
+  
+  /* Optimizaciones móviles */
+  .mobile-optimized {
+    font-size: 16px; /* Evita zoom en iOS */
+    touch-action: manipulation;
+  }
+}
+
+/* Tablets (769px - 1024px) */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .main-app-container {
+    max-width: 100%;
+    margin: 0 auto;
+  }
+}
+
+/* Desktop (más de 1024px) */
+@media (min-width: 1025px) {
+  .main-app-container {
+    align-items: center;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 20px;
+  }
+  
+  /* Centrado para desktop */
+  .desktop-centered {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+}
+
+/* 5. UTILIDADES GLOBALES */
+.text-center { text-align: center; }
+.text-left { text-align: left; }
+.text-right { text-align: right; }
+
+.d-flex { display: flex; }
+.d-block { display: block; }
+.d-none { display: none; }
+
+.justify-center { justify-content: center; }
+.align-center { align-items: center; }
+
+.w-100 { width: 100%; }
+.h-100 { height: 100%; }
+
+.m-0 { margin: 0; }
+.p-0 { padding: 0; }
+
+/* 6. COMPONENTES ESPECÍFICOS */
+.signature-canvas {
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  cursor: crosshair;
+}
+
+.signature-canvas:focus {
+  outline: 2px solid var(--color-link);
+  outline-offset: 2px;
+}
+
+@media (max-width: 768px) {
+  .signature-canvas {
+    width: 100% !important;
+    height: 150px !important;
+  }
+}
+
+/* 7. COMPONENTES ESPECÍFICOS - CALENDARIO */
+.calendar-container {
+  overflow: visible !important;
+  word-wrap: break-word;
+  word-break: break-word;
+}
+
+/* Responsive para calendario */
+@media (max-width: 768px) {
+  .calendar-container {
+    max-width: 100% !important;
+    padding: 1rem !important;
+  }
+  
+  .calendar-text {
+    font-size: 0.9rem !important;
+    line-height: 1.2 !important;
+  }
+  
+  .calendar-status-text {
+    font-size: 0.8rem !important;
+    line-height: 1.3 !important;
+  }
+}
+
+@media (min-width: 769px) and (max-width: 1024px) {
+  .calendar-container {
+    max-width: 90% !important;
+  }
+}
+
+@media (min-width: 1025px) {
+  .calendar-container {
+    max-width: 400px !important;
+  }
+}
+
+.calendar-text {
+  white-space: normal !important;
+  word-wrap: break-word !important;
+  overflow-wrap: break-word !important;
+  text-overflow: unset !important;
+  overflow: visible !important;
+}
+
+.calendar-day-text {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.calendar-status-text {
+  white-space: normal !important;
+  word-wrap: break-word !important;
+  overflow-wrap: break-word !important;
+  line-height: 1.4 !important;
+  max-width: 100%;
+  overflow: visible !important;
+}
+
+/* Fix para textos cortados en calendario */
+.MuiTypography-root {
+  white-space: normal !important;
+  word-wrap: break-word !important;
+  overflow-wrap: break-word !important;
+}
+
+.MuiPaper-root {
+  overflow: visible !important;
+}
+
+/* Fix específico para contenedores de calendario */
+.MuiBox-root {
+  overflow: visible !important;
+}
+
+/* 8. SCROLLBARS PERSONALIZADAS */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-scrollbar-track);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-scrollbar);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-scrollbar-hover);
+}

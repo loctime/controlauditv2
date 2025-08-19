@@ -363,11 +363,27 @@
 
   .admin-container .MuiGrid-container {
     justify-content: flex-start !important;
+    flex-direction: row !important;
+    display: flex !important;
+    flex-wrap: wrap !important;
+    width: 100% !important;
+    margin: 0 !important;
   }
 
   .admin-container .MuiGrid-item {
     justify-content: flex-start !important;
     align-items: flex-start !important;
+  }
+
+  /* Forzar layout horizontal específico para admin */
+  .admin-container .MuiGrid-item:first-child {
+    flex: 0 0 41.666667% !important;
+    max-width: 41.666667% !important;
+  }
+
+  .admin-container .MuiGrid-item:last-child {
+    flex: 0 0 58.333333% !important;
+    max-width: 58.333333% !important;
   }
 
   .admin-container .MuiBox-root {

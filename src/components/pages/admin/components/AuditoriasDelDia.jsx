@@ -26,6 +26,7 @@ import {
 } from "@mui/icons-material";
 import { IconButton } from "@mui/material";
 import { useNavigate } from "react-router-dom";
+import "./CalendarioAuditorias.css";
 
 const AuditoriasDelDia = ({ 
   selectedDate, 
@@ -56,7 +57,7 @@ const AuditoriasDelDia = ({
   };
 
   return (
-    <Paper elevation={2} sx={{ 
+    <Paper elevation={2} className="calendar-wrapper" sx={{ 
       p: { xs: 2, sm: 3 }, 
       mb: 3,
       borderRadius: { xs: 1, sm: 2 }
@@ -66,7 +67,7 @@ const AuditoriasDelDia = ({
         gap: { xs: 1, sm: 0 },
         alignItems: { xs: 'stretch', sm: 'center' }
       }}>
-        <Typography variant="h6" sx={{ 
+        <Typography variant="h6" className="calendar-title" sx={{ 
           display: 'flex', 
           alignItems: 'center', 
           gap: 1,
@@ -95,7 +96,7 @@ const AuditoriasDelDia = ({
       </Box>
       
       {!selectedDate ? (
-        <Typography variant="body2" color="text.secondary">
+        <Typography variant="body2" className="calendar-status-message" color="text.secondary">
           Selecciona una fecha en el calendario para ver las auditorías
         </Typography>
       ) : auditoriasDelDia.length === 0 ? (
@@ -114,7 +115,7 @@ const AuditoriasDelDia = ({
             gap: 1,
             textAlign: 'center'
           }}>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+            <Typography variant="body2" className="calendar-status-message" color="text.secondary" sx={{ mb: 1 }}>
               No hay auditorías agendadas para este día
             </Typography>
             {canAgendarAuditorias && (

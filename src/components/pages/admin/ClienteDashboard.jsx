@@ -29,6 +29,7 @@ import AgendarAuditoriaDialog from "./components/AgendarAuditoriaDialog";
 import AuditoriasDelDia from "./components/AuditoriasDelDia";
 import ProximasAuditorias from "./components/ProximasAuditorias";
 import ResumenGeneral from "./components/ResumenGeneral";
+import ResumenTarjetas from "./components/ResumenTarjetas";
 import HistorialAuditorias from "./HistorialAuditorias";
 import LoadingSkeleton from "./components/LoadingSkeleton";
 import PermissionAlert from "./components/PermissionAlert";
@@ -99,8 +100,9 @@ const ClienteDashboard = React.memo(() => {
     if (currentTab === 0) {
       return (
         <Box>
-          <Grid container spacing={3}>
-            <Grid item xs={12} lg={6}>
+          <Grid container spacing={2}>
+            {/* Columna izquierda: Calendario */}
+            <Grid item xs={12} md={4} lg={3} xl={2}>
               <CalendarioAuditorias 
                 auditorias={auditorias}
                 onSelectDate={setSelectedDate}
@@ -108,21 +110,24 @@ const ClienteDashboard = React.memo(() => {
                 canAgendarAuditorias={canAgendarAuditorias}
               />
             </Grid>
-            <Grid item xs={12} lg={6}>
-              <AuditoriasDelDia
-                selectedDate={selectedDate}
-                auditoriasDelDia={auditoriasDelDiaSeleccionado}
-                onAgendar={handleOpenDialog}
-                onCompletar={handleCompletarAuditoria}
-                onEliminar={handleEliminarAuditoria}
-                canAgendarAuditorias={canAgendarAuditorias}
-              />
-              <ProximasAuditorias auditoriasPendientes={proximasAuditorias} />
-              <ResumenGeneral
-                auditoriasPendientes={auditoriasPendientes}
-                auditoriasCompletadas={auditoriasCompletadas}
-                auditorias={auditorias}
-              />
+            {/* Columna derecha: Auditorías del día y Próximas auditorías en la misma fila, Resumen general debajo */}
+            <Grid item xs={12} md={8} lg={9} xl={10}>
+              {/* Primera fila: Auditorías del día y Próximas auditorías */}
+              <Grid container spacing={2}>
+                <Grid item xs={12} md={6}>
+                  <AuditoriasDelDia
+                    selectedDate={selectedDate}
+                    auditoriasDelDia={auditoriasDelDiaSeleccionado}
+                    onAgendar={handleOpenDialog}
+                    onCompletar={handleCompletarAuditoria}
+                    onEliminar={handleEliminarAuditoria}
+                    canAgendarAuditorias={canAgendarAuditorias}
+                  />
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <ProximasAuditorias auditoriasPendientes={proximasAuditorias} />
+                </Grid>
+              </Grid>
             </Grid>
           </Grid>
         </Box>
@@ -253,14 +258,54 @@ const ClienteDashboard = React.memo(() => {
 
       {/* Pestañas */}
       <Paper elevation={2} sx={{ mb: 3 }}>
-        <Box display="flex" flexDirection={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems="center" sx={{ px: 2, py: 1 }}>
-          {/* Botones en fila para móvil */}
-          <Box display="flex" gap={1} sx={{ mb: { xs: 1, sm: 0 }, width: { xs: '100%', sm: 'auto' }, justifyContent: { xs: 'center', sm: 'flex-start' } }}>
+        <Box 
+          display="flex" 
+          flexDirection={{ xs: 'column', md: 'row' }} 
+          justifyContent="space-between" 
+          alignItems="center" 
+          sx={{ px: 2, py: 1 }}
+        >
+          {/* Botones */}
+          <Box 
+            display="flex" 
+            gap={1} 
+            sx={{ 
+              mb: { xs: 1, md: 0 }, 
+              width: { xs: '100%', md: 'auto' }, 
+              justifyContent: { xs: 'center', md: 'flex-start' },
+              order: { xs: 1, md: 0 }
+            }}
+          >
             {agendarButton}
             {auditarButton}
           </Box>
+          
+          {/* Resumen General en el medio */}
+          <Box 
+            sx={{ 
+              flex: 1, 
+              display: 'flex', 
+              justifyContent: 'center',
+              order: { xs: 2, md: 1 },
+              mb: { xs: 1, md: 0 }
+            }}
+          >
+            <ResumenTarjetas
+              auditoriasPendientes={auditoriasPendientes}
+              auditoriasCompletadas={auditoriasCompletadas}
+              auditorias={auditorias}
+            />
+          </Box>
+          
           {/* Tabs centrados */}
-          <Box sx={{ flex: 1, display: 'flex', justifyContent: 'center' }}>
+          <Box 
+            sx={{ 
+              flex: 1, 
+              display: 'flex', 
+              justifyContent: 'center',
+              order: { xs: 0, md: 2 }
+            }}
+          >
             {tabs}
           </Box>
         </Box>

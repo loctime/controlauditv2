@@ -3,11 +3,7 @@ import React, { useEffect } from "react";
 import { BrowserRouter } from "react-router-dom";
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import './safe-areas.css'; // Importar configuraciones de safe areas
-import './mobile-optimization.css'; // Importar optimizaciones para móviles
-import './web-optimization.css'; // Importar optimizaciones para web/PC
-import './centering-fixes.css'; // Importar fixes para centrado en web
-import './desktop-optimization.css'; // Importar optimizaciones específicas para desktop
+import './styles/main.css'; // Estilos principales unificados
 import { ColorModeProvider } from "./components/context/ColorModeContext";
 import AuthContextComponent from "./components/context/AuthContext";
 import AppRouter from "./router/AppRouter";
