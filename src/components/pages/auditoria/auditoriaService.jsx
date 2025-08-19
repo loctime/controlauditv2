@@ -250,11 +250,17 @@ class AuditoriaService {
 
       // Preparar datos para Firestore
       const datosCompletos = {
+        // Agregar objeto empresa completo para compatibilidad con metadatos
+        empresa: datosAuditoria.empresa || { id: datosAuditoria.empresaId, nombre: datosAuditoria.empresaNombre },
         empresaId: datosAuditoria.empresa?.id || null,
         empresaNombre: datosAuditoria.empresa?.nombre || null,
         sucursal: datosAuditoria.sucursal || "Casa Central",
+        // Agregar objeto formulario completo para compatibilidad con metadatos
+        formulario: datosAuditoria.formulario || { id: datosAuditoria.formularioId, nombre: datosAuditoria.nombreForm },
         formularioId: datosAuditoria.formulario?.id || null,
         nombreForm: datosAuditoria.formulario?.nombre || null,
+        // Agregar formularioNombre para compatibilidad con metadatos
+        formularioNombre: datosAuditoria.formulario?.nombre || datosAuditoria.formularioNombre || null,
         // Guardar como arrays de objetos por sección para evitar arrays anidados
         respuestas: this.anidarAObjetosPorSeccion(datosAuditoria.respuestas),
         comentarios: this.anidarAObjetosPorSeccion(datosAuditoria.comentarios),
@@ -293,6 +299,10 @@ class AuditoriaService {
         creadoPor: userProfile?.uid || null,
         creadoPorEmail: userProfile?.email || null,
         clienteAdminId: userProfile?.clienteAdminId || userProfile?.uid || null,
+        // Agregar campo auditor para mostrar en reportes
+        auditor: userProfile?.displayName || userProfile?.nombre || userProfile?.email || 'Auditor no especificado',
+        // Mantener compatibilidad con usuarioId si viene de metadatos
+        usuarioId: datosAuditoria.usuarioId || userProfile?.uid || null,
         timestamp: serverTimestamp(),
         fechaCreacion: new Date().toISOString(),
         version: "2.0",
@@ -351,7 +361,7 @@ class AuditoriaService {
       // Aplicar filtros según el rol del usuario
       if (userProfile.role === 'operario') {
         q = query(q, 
-          where("creadoPor", "==", userProfile.uid),
+          where("usuarioId", "==", userProfile.uid),
           orderBy("timestamp", "desc")
         );
       } else if (userProfile.role === 'max') {

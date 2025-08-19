@@ -1,155 +1,80 @@
-import React, { useState, useEffect } from 'react';
-import { Button, CircularProgress, Alert, Box, Typography, Chip } from '@mui/material';
-import { Download, Android, Info } from '@mui/icons-material';
-import { getBackendUrl, getEnvironment } from '../../config/environment.js';
+import React, { useState } from 'react';
+import { Button, CircularProgress, Alert, Box, Typography } from '@mui/material';
+import { Download, Android } from '@mui/icons-material';
 
-const DownloadAPK = ({ variant = 'contained', size = 'medium', showInfo = true }) => {
-  const [apkInfo, setApkInfo] = useState(null);
-  const [loading, setLoading] = useState(true);
+const DownloadAPK = ({ version = 'latest' }) => {
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  useEffect(() => {
-    fetchAPKInfo();
-  }, []);
+  const downloadAPK = async () => {
+    setLoading(true);
+    setError(null);
 
-  const fetchAPKInfo = async () => {
     try {
-      setLoading(true);
-      setError(null);
+      // Opción 1: Descarga directa desde GitHub Releases (requiere repositorio público)
+      const githubUrl = `https://github.com/loctime/controlauditv2/releases/${version}/download/ControlAudit-release.apk`;
       
-      // Obtener URL del backend desde la configuración
-      const backendUrl = getBackendUrl();
-      console.log('🔗 Backend URL detectada:', backendUrl);
-      console.log('🌐 Hostname actual:', window.location.hostname);
-      console.log('🔧 Entorno detectado:', getEnvironment());
+      // Opción 2: Si el repositorio es privado, usar GitHub API con token
+      // const token = 'tu_github_token'; // Configurar en variables de entorno
+      // const apiUrl = `https://api.github.com/repos/loctime/controlauditv2/releases/${version}/assets`;
       
-      const apiUrl = `${backendUrl}/api/latest-apk`;
-      console.log('📡 Llamando a:', apiUrl);
-      
-      const response = await fetch(apiUrl);
+      const response = await fetch(githubUrl);
       
       if (!response.ok) {
-        if (response.status === 404) {
-          throw new Error('APK no encontrada o repositorio privado');
-        }
         throw new Error(`Error ${response.status}: ${response.statusText}`);
       }
-      
-      const data = await response.json();
-      
-      if (!data.success) {
-        throw new Error(data.error || 'Error obteniendo información de APK');
-      }
-      
-      setApkInfo({
-        apk: data.apk,
-        release: data.release
-      });
-      
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `ControlAudit-${version}.apk`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
     } catch (err) {
-      console.error('Error obteniendo información de APK:', err);
-      setError(err.message);
+      console.error('Error descargando APK:', err);
+      setError('No se pudo descargar la APK. Verifica que el repositorio sea público o contacta al administrador.');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleDownload = () => {
-    if (apkInfo?.apk?.download_url) {
-      window.open(apkInfo.apk.download_url, '_blank');
-    }
-  };
-
-  const formatFileSize = (bytes) => {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-  };
-
-  const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString('es-ES', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
-
-  if (loading) {
-    return (
-      <Box display="flex" alignItems="center" gap={1}>
-        <CircularProgress size={20} />
-        <Typography variant="body2" color="text.secondary">
-          Cargando APK...
-        </Typography>
-      </Box>
-    );
-  }
-
-  if (error) {
-    return (
-      <Alert severity="warning" icon={<Info />}>
-        <Typography variant="body2">
-          {error}
-        </Typography>
-        <Typography variant="caption" display="block" mt={1}>
-          Para repositorios privados, configura REACT_APP_GITHUB_TOKEN en tu .env
-        </Typography>
-      </Alert>
-    );
-  }
-
-  if (!apkInfo) {
-    return null;
-  }
-
   return (
-    <Box>
-      <Button
-        variant={variant}
-        size={size}
-        startIcon={<Android />}
-        endIcon={<Download />}
-        onClick={handleDownload}
-        sx={{
-          background: 'linear-gradient(45deg, #2196F3 30%, #21CBF3 90%)',
-          color: 'white',
-          '&:hover': {
-            background: 'linear-gradient(45deg, #1976D2 30%, #00BCD4 90%)',
-          }
-        }}
-      >
-        Descargar APK
-      </Button>
+    <Box sx={{ textAlign: 'center', p: 2 }}>
+      <Typography variant="h6" gutterBottom>
+        📱 Descargar ControlAudit APK
+      </Typography>
       
-      {showInfo && apkInfo && (
-        <Box mt={1} display="flex" flexDirection="column" gap={0.5}>
-          <Box display="flex" alignItems="center" gap={1}>
-            <Chip 
-              label={`v${apkInfo.release.tag_name}`} 
-              size="small" 
-              color="primary" 
-              variant="outlined"
-            />
-            <Typography variant="caption" color="text.secondary">
-              {formatFileSize(apkInfo.apk.size)}
-            </Typography>
-          </Box>
-          
-          <Typography variant="caption" color="text.secondary">
-            Actualizado: {formatDate(apkInfo.release.published_at)}
-          </Typography>
-          
-          {apkInfo.apk.download_count > 0 && (
-            <Typography variant="caption" color="text.secondary">
-              {apkInfo.apk.download_count} descarga{apkInfo.apk.download_count !== 1 ? 's' : ''}
-            </Typography>
-          )}
-        </Box>
+      <Button
+        variant="contained"
+        color="primary"
+        size="large"
+        startIcon={loading ? <CircularProgress size={20} /> : <Download />}
+        onClick={downloadAPK}
+        disabled={loading}
+        sx={{ mb: 2 }}
+      >
+        {loading ? 'Descargando...' : 'Descargar APK'}
+      </Button>
+
+      {error && (
+        <Alert severity="error" sx={{ mt: 2 }}>
+          {error}
+        </Alert>
       )}
+
+      <Typography variant="body2" color="text.secondary">
+        Versión: {version}
+      </Typography>
+      
+      <Typography variant="caption" display="block" sx={{ mt: 1 }}>
+        💡 Si tienes problemas para descargar, el repositorio puede ser privado.
+        <br />
+        Contacta al administrador para obtener acceso.
+      </Typography>
     </Box>
   );
 };

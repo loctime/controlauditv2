@@ -1,3 +1,21 @@
+# ControlAudit v2
+
+## 📱 Descargar APK
+
+### Para usuarios finales:
+1. Ve a [GitHub Releases](https://github.com/loctime/controlauditv2/releases)
+2. Descarga el archivo `ControlAudit-release.apk` de la versión más reciente
+3. Instala en tu dispositivo Android
+
+### Para desarrolladores:
+```bash
+# Generar nueva versión y APK automáticamente
+npm run die "Descripción de los cambios"
+
+# Solo build local (sin release)
+npm run fer
+```
+
 # 🏢 Sistema de Auditorías Multi-Tenant
 
 Sistema completo de auditorías empresariales con arquitectura multi-tenant, roles de usuario y gestión integral de formularios.
