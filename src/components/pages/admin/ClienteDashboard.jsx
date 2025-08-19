@@ -2,6 +2,7 @@
 // Dashboard para Clientes Administradores
 import React, { useState, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
+import "./ClienteDashboard.css";
 import { 
   Typography, 
   Box, 

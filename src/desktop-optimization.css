@@ -239,27 +239,47 @@
   
   /* ===== ADMIN OPTIMIZACIONES ===== */
   
-  /* Admin más compacto */
+    /* Admin más compacto */
   .admin-container .MuiTypography-h4 {
     font-size: 1.8rem !important;
     margin-bottom: 16px !important;
   }
-  
+
   .admin-container .MuiTabs-root {
     margin-bottom: 16px !important;
   }
-  
+
   .admin-container .MuiCard-root {
     margin-bottom: 12px !important;
     padding: 16px !important;
   }
-  
+
   .admin-container .MuiGrid-container {
     gap: 16px !important;
   }
-  
+
   .admin-container .MuiGrid-item {
     padding: 8px !important;
+  }
+
+  /* Dashboard de administrador - layout horizontal */
+  .admin-container .page-container {
+    align-items: stretch !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  .admin-container .content-container {
+    align-items: stretch !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    flex-direction: column !important;
+    justify-content: flex-start !important;
+  }
+
+  .admin-container .MuiBox-root {
+    align-items: stretch !important;
+    width: 100% !important;
   }
   
   /* ===== TABLAS OPTIMIZACIONES ===== */

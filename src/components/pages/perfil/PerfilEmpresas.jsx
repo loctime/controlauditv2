@@ -8,6 +8,7 @@ import { Business as BusinessIcon, ExpandMore as ExpandMoreIcon, Store as StoreI
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { db } from '../../../firebaseConfig';
 import { useNavigate } from 'react-router-dom';
+import './PerfilEmpresas.css';
 
 // Componente para mostrar sucursales de una empresa
 const SucursalesEmpresa = ({ empresaId }) => {
@@ -50,63 +51,85 @@ const SucursalesEmpresa = ({ empresaId }) => {
     </Box>
   );
 
-  return (
-    <Box sx={{ 
-      display: 'flex', 
-      flexDirection: 'column', 
-      gap: 1 
-    }}>
-      {sucursales.map(sucursal => (
-        <Box key={sucursal.id} sx={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: isSmallMobile ? 1 : 2,
-          p: isSmallMobile ? 1.5 : 2,
-          bgcolor: alpha(theme.palette.background.paper, 0.5),
-          borderRadius: 2,
-          border: `1px solid ${alpha(theme.palette.divider, 0.2)}`,
-          '&:hover': {
-            bgcolor: alpha(theme.palette.primary.main, 0.05),
-            borderColor: alpha(theme.palette.primary.main, 0.3),
-            transition: 'all 0.2s ease'
-          },
-          transition: 'all 0.2s ease'
-        }}>
-          <Avatar sx={{ 
-            width: isSmallMobile ? 32 : 40, 
-            height: isSmallMobile ? 32 : 40,
-            bgcolor: 'secondary.main'
-          }}>
-            <StoreIcon fontSize="small" />
-          </Avatar>
-          
-          <Box sx={{ flex: 1 }}>
-            <Typography 
-              variant="body2" 
-              sx={{ 
-                fontWeight: 600,
-                color: 'text.primary'
-              }}
-            >
-              {sucursal.nombre}
-            </Typography>
-            {sucursal.direccion && (
-              <Typography 
-                variant="caption" 
-                color="text.secondary"
-                sx={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  gap: 0.5 
-                }}
-              >
-                <LocationOn sx={{ fontSize: 12 }} />
-                {sucursal.direccion}
-              </Typography>
-            )}
-          </Box>
-        </Box>
-      ))}
+     return (
+     <Box sx={{ 
+       display: 'flex', 
+       flexDirection: 'column', 
+       gap: 0.5 
+     }}>
+             {sucursales.map(sucursal => (
+         <Box key={sucursal.id} sx={{
+           display: 'flex',
+           alignItems: 'center',
+           gap: 0.75,
+           p: isSmallMobile ? 1 : 1.25,
+           bgcolor: alpha(theme.palette.background.paper, 0.9),
+           borderRadius: 1.5,
+           border: `1px solid ${alpha(theme.palette.divider, 0.08)}`,
+           boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+           '&:hover': {
+             bgcolor: alpha(theme.palette.primary.main, 0.03),
+             borderColor: alpha(theme.palette.primary.main, 0.2),
+             transform: 'translateY(-1px)',
+             boxShadow: '0 2px 6px rgba(0,0,0,0.08)',
+             transition: 'all 0.2s ease'
+           },
+           transition: 'all 0.2s ease'
+         }}>
+           <Avatar sx={{ 
+             width: isSmallMobile ? 24 : 28, 
+             height: isSmallMobile ? 24 : 28,
+             bgcolor: 'secondary.main',
+             border: `1px solid ${alpha(theme.palette.secondary.main, 0.2)}`,
+             boxShadow: '0 1px 3px rgba(0,0,0,0.08)'
+           }}>
+             <StoreIcon sx={{ fontSize: isSmallMobile ? 14 : 16 }} />
+           </Avatar>
+           
+           <Box sx={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
+             <Typography 
+               className="sucursal-nombre"
+               variant="body2" 
+               sx={{ 
+                 fontWeight: 600,
+                 color: 'text.primary',
+                 wordBreak: 'break-word',
+                 whiteSpace: 'normal',
+                 overflowWrap: 'break-word',
+                 lineHeight: 1.2,
+                 mb: 0.25,
+                 fontSize: isSmallMobile ? '0.8rem' : '0.85rem'
+               }}
+             >
+               {sucursal.nombre}
+             </Typography>
+             {sucursal.direccion && (
+               <Box sx={{
+                 display: 'flex',
+                 alignItems: 'center',
+                 gap: 0.25
+               }}>
+                 <LocationOn sx={{ fontSize: 12, color: 'text.secondary', flexShrink: 0 }} />
+                 <Typography 
+                   className="sucursal-direccion"
+                   variant="caption" 
+                   color="text.secondary"
+                   sx={{ 
+                     wordBreak: 'break-word',
+                     whiteSpace: 'normal',
+                     overflowWrap: 'break-word',
+                     lineHeight: 1.2,
+                     fontWeight: 500,
+                     fontSize: '0.7rem'
+                   }}
+                 >
+                   {sucursal.direccion}
+                 </Typography>
+               </Box>
+             )}
+           </Box>
+         </Box>
+       ))}
     </Box>
   );
 };
@@ -121,8 +144,8 @@ const PerfilEmpresas = ({ empresas, loading }) => {
   const navigate = useNavigate();
 
   return (
-    <Box sx={{ 
-      p: isSmallMobile ? 1 : 3,
+    <Box className="perfil-empresas-container" sx={{ 
+      p: isSmallMobile ? 1 : 2,
       bgcolor: 'background.paper',
       borderRadius: 0,
       border: 'none',
@@ -134,9 +157,9 @@ const PerfilEmpresas = ({ empresas, loading }) => {
         display: 'flex', 
         justifyContent: 'space-between', 
         alignItems: 'center', 
-        mb: isSmallMobile ? 3 : 4,
+        mb: isSmallMobile ? 2.5 : 3,
         flexDirection: isMobile ? 'column' : 'row',
-        gap: isSmallMobile ? 2 : 3
+        gap: isSmallMobile ? 1.5 : 2
       }}>
         <Box sx={{ textAlign: isMobile ? 'center' : 'left' }}>
           <Typography 
@@ -181,187 +204,221 @@ const PerfilEmpresas = ({ empresas, loading }) => {
       
       {/* Contenido de empresas */}
       {loading ? (
-        <Box sx={{
-          bgcolor: alpha(theme.palette.info.main, 0.05),
-          borderRadius: 2,
-          p: isSmallMobile ? 3 : 4,
-          border: `1px solid ${alpha(theme.palette.info.main, 0.1)}`,
-          textAlign: 'center'
+        <Card sx={{
+          bgcolor: 'background.paper',
+          borderRadius: 4,
+          border: 'none',
+          boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+          position: 'relative',
+          overflow: 'hidden',
+          '&::before': {
+            content: '""',
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            height: '4px',
+            background: `linear-gradient(90deg, ${theme.palette.info.main}, ${theme.palette.primary.main})`,
+          }
         }}>
-          <CircularProgress size={24} sx={{ mb: 2 }} />
-          <Typography variant="body1" color="info.main">
-            Cargando empresas...
-          </Typography>
-        </Box>
+          <CardContent sx={{
+            p: isSmallMobile ? 4 : 6,
+            textAlign: 'center',
+            background: `linear-gradient(135deg, ${alpha(theme.palette.info.main, 0.05)}, ${alpha(theme.palette.primary.main, 0.05)})`
+          }}>
+            <CircularProgress size={32} sx={{ mb: 3, color: 'info.main' }} />
+            <Typography variant="h6" color="info.main" sx={{ mb: 1, fontWeight: 600 }}>
+              Cargando empresas...
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Obteniendo información de tus empresas
+            </Typography>
+          </CardContent>
+        </Card>
       ) : empresas.length === 0 ? (
-        <Box sx={{
-          bgcolor: alpha(theme.palette.warning.main, 0.05),
-          borderRadius: 2,
-          p: isSmallMobile ? 3 : 4,
-          border: `1px solid ${alpha(theme.palette.warning.main, 0.1)}`,
-          textAlign: 'center'
+        <Card sx={{
+          bgcolor: 'background.paper',
+          borderRadius: 4,
+          border: 'none',
+          boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+          position: 'relative',
+          overflow: 'hidden',
+          '&::before': {
+            content: '""',
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            height: '4px',
+            background: `linear-gradient(90deg, ${theme.palette.warning.main}, ${theme.palette.orange.main})`,
+          }
         }}>
-          <BusinessIcon sx={{ fontSize: 48, color: 'warning.main', mb: 2 }} />
-          <Typography variant="h6" color="warning.main" sx={{ mb: 1 }}>
-            No tienes empresas registradas
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            Comienza creando tu primera empresa para gestionar auditorías
-          </Typography>
-        </Box>
+          <CardContent sx={{
+            p: isSmallMobile ? 4 : 6,
+            textAlign: 'center',
+            background: `linear-gradient(135deg, ${alpha(theme.palette.warning.main, 0.05)}, ${alpha(theme.palette.orange.main, 0.05)})`
+          }}>
+            <Box sx={{
+              width: 80,
+              height: 80,
+              borderRadius: '50%',
+              bgcolor: alpha(theme.palette.warning.main, 0.1),
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              margin: '0 auto 2rem auto'
+            }}>
+              <BusinessIcon sx={{ fontSize: 40, color: 'warning.main' }} />
+            </Box>
+            <Typography variant="h5" color="warning.main" sx={{ mb: 2, fontWeight: 700 }}>
+              No tienes empresas registradas
+            </Typography>
+            <Typography variant="body1" color="text.secondary" sx={{ mb: 3, maxWidth: 400, margin: '0 auto' }}>
+              Comienza creando tu primera empresa para gestionar auditorías y organizar tu negocio
+            </Typography>
+            <Button
+              variant="contained"
+              color="primary"
+              onClick={() => navigate('/establecimiento')}
+              sx={{
+                py: 1.5,
+                px: 3,
+                fontSize: '1rem',
+                fontWeight: 600,
+                borderRadius: 2,
+                boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                '&:hover': {
+                  transform: 'translateY(-1px)',
+                  boxShadow: '0 6px 16px rgba(0,0,0,0.2)',
+                  transition: 'all 0.2s ease'
+                },
+                transition: 'all 0.2s ease'
+              }}
+            >
+              🏢 Crear Primera Empresa
+            </Button>
+          </CardContent>
+        </Card>
       ) : (
         <Box sx={{ 
           display: 'flex', 
           flexDirection: 'column', 
-          gap: isSmallMobile ? 2 : 3 
+          gap: isSmallMobile ? 1.5 : 2 
         }}>
           {empresas.map((empresa) => (
             <Card key={empresa.id} sx={{
               bgcolor: 'background.paper',
               borderRadius: 3,
-              border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}`,
-              boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+              border: 'none',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+              position: 'relative',
+              overflow: 'hidden',
               '&:hover': {
                 transform: 'translateY(-2px)',
-                boxShadow: '0 4px 16px rgba(0,0,0,0.12)',
-                transition: 'all 0.3s ease'
+                boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
+                transition: 'all 0.2s ease'
               },
-              transition: 'all 0.3s ease'
+              transition: 'all 0.2s ease'
             }}>
-              <CardContent sx={{ p: isSmallMobile ? 2 : 4 }}>
-                {/* Header de la empresa */}
-                <Box sx={{ 
-                  display: 'flex', 
+              <CardContent sx={{ p: 0 }}>
+                {/* Layout principal: Empresa a la izquierda, Sucursales a la derecha */}
+                <Box sx={{
+                  display: 'flex',
                   flexDirection: isMobile ? 'column' : 'row',
-                  alignItems: isMobile ? 'center' : 'flex-start',
-                  gap: isSmallMobile ? 2 : 3,
-                  mb: isSmallMobile ? 2 : 3
+                  minHeight: 120
                 }}>
-                  <Box sx={{ 
-                    display: 'flex', 
-                    justifyContent: 'center',
-                    mb: isMobile ? 2 : 0
-                  }}>
-                    <Avatar 
-                      src={empresa.logo || undefined}
-                      sx={{ 
-                        width: isSmallMobile ? 60 : 80, 
-                        height: isSmallMobile ? 60 : 80,
-                        bgcolor: 'primary.main'
-                      }}
-                    >
-                      {!empresa.logo && <BusinessIcon fontSize="large" />}
-                    </Avatar>
-                  </Box>
-                  
-                  <Box sx={{ 
-                    flex: 1,
-                    textAlign: isMobile ? 'center' : 'left',
-                    minWidth: 0 // Evita que el contenido se desborde
-                  }}>
-                    <Typography 
-                      variant={isSmallMobile ? "h6" : "h5"} 
-                      sx={{ 
-                        fontWeight: 600, 
-                        color: 'primary.main',
-                        mb: 1,
-                        wordBreak: 'break-word' // Permite que el texto se rompa en palabras largas
-                      }}
-                    >
-                      {empresa.nombre}
-                    </Typography>
+                                     {/* Lado izquierdo: Logo y nombre de empresa */}
+                   <Box sx={{
+                     display: 'flex',
+                     flexDirection: 'column',
+                     alignItems: 'center',
+                     justifyContent: 'center',
+                     p: isSmallMobile ? 1.5 : 2,
+                     minWidth: isMobile ? 'auto' : 120,
+                     maxWidth: isMobile ? 'auto' : 120,
+                     bgcolor: alpha(theme.palette.primary.main, 0.05),
+                     borderRight: isMobile ? 'none' : `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+                     borderBottom: isMobile ? `1px solid ${alpha(theme.palette.divider, 0.1)}` : 'none'
+                   }}>
+                                         {/* Logo/Avatar */}
+                     <Avatar 
+                       src={empresa.logo || undefined}
+                       sx={{ 
+                         width: isSmallMobile ? 35 : 45, 
+                         height: isSmallMobile ? 35 : 45,
+                         bgcolor: 'primary.main',
+                         border: `2px solid ${theme.palette.background.paper}`,
+                         boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                         mb: 0.75
+                       }}
+                     >
+                       {!empresa.logo && <BusinessIcon sx={{ fontSize: isSmallMobile ? 18 : 22 }} />}
+                     </Avatar>
                     
-                    <Box sx={{ 
-                      display: 'flex', 
-                      flexDirection: 'column',
-                      gap: isSmallMobile ? 1 : 2,
-                      alignItems: isMobile ? 'center' : 'flex-start'
-                    }}>
-                      {empresa.direccion && (
-                        <Box sx={{ 
-                          display: 'flex', 
-                          alignItems: 'center', 
-                          gap: 0.5,
-                          flexWrap: 'wrap',
-                          justifyContent: isMobile ? 'center' : 'flex-start'
-                        }}>
-                          <LocationOn sx={{ fontSize: 16, color: 'text.secondary' }} />
-                          <Typography 
-                            variant="body2" 
-                            color="text.secondary"
-                            sx={{ 
-                              wordBreak: 'break-word',
-                              textAlign: isMobile ? 'center' : 'left'
-                            }}
-                          >
-                            {empresa.direccion}
-                          </Typography>
-                        </Box>
-                      )}
-                      
-                      {empresa.telefono && (
-                        <Box sx={{ 
-                          display: 'flex', 
-                          alignItems: 'center', 
-                          gap: 0.5,
-                          justifyContent: isMobile ? 'center' : 'flex-start'
-                        }}>
-                          <Phone sx={{ fontSize: 16, color: 'text.secondary' }} />
-                          <Typography 
-                            variant="body2" 
-                            color="text.secondary"
-                            sx={{ 
-                              wordBreak: 'break-word',
-                              textAlign: isMobile ? 'center' : 'left'
-                            }}
-                          >
-                            {empresa.telefono}
-                          </Typography>
-                        </Box>
-                      )}
-                    </Box>
-                  </Box>
-                  
-                  <Box sx={{ 
-                    display: 'flex', 
-                    justifyContent: 'center',
-                    mt: isMobile ? 2 : 0
-                  }}>
+                                         {/* Nombre de la empresa */}
+                     <Typography 
+                       className="empresa-nombre"
+                       variant={isSmallMobile ? "body1" : "h6"} 
+                       sx={{ 
+                         fontWeight: 600, 
+                         color: 'primary.main',
+                         textAlign: 'center',
+                         wordBreak: 'break-word',
+                         whiteSpace: 'normal',
+                         overflowWrap: 'break-word',
+                         lineHeight: 1.2,
+                         mb: 0.5,
+                         fontSize: isSmallMobile ? '0.9rem' : '1rem'
+                       }}
+                     >
+                       {empresa.nombre}
+                     </Typography>
+                    
+                    {/* Chip de propietario */}
                     <Chip 
                       label="Propietario" 
-                      size={isSmallMobile ? "small" : "medium"}
+                      size="small"
                       color="primary" 
+                      variant="outlined"
                       sx={{ 
-                        fontWeight: 600,
-                        '& .MuiChip-label': {
-                          px: isSmallMobile ? 1 : 1.5
-                        }
+                        fontWeight: 500,
+                        fontSize: '0.7rem',
+                        height: 20
                       }}
                     />
                   </Box>
-                </Box>
-                
-                {/* Sucursales */}
-                <Box sx={{
-                  bgcolor: alpha(theme.palette.primary.main, 0.03),
-                  borderRadius: 2,
-                  p: isSmallMobile ? 2 : 3,
-                  border: `1px solid ${alpha(theme.palette.primary.main, 0.08)}`
-                }}>
-                  <Typography 
-                    variant="subtitle1" 
-                    sx={{ 
-                      fontWeight: 600, 
-                      mb: 2, 
-                      color: 'primary.main',
+                  
+                  {/* Lado derecho: Sucursales */}
+                  <Box sx={{
+                    flex: 1,
+                    p: isSmallMobile ? 2 : 3,
+                    display: 'flex',
+                    flexDirection: 'column'
+                  }}>
+                    {/* Título de sucursales */}
+                    <Box sx={{
                       display: 'flex',
                       alignItems: 'center',
-                      gap: 0.5
-                    }}
-                  >
-                    🏪 Sucursales
-                  </Typography>
-                  <SucursalesEmpresa empresaId={empresa.id} />
+                      gap: 1,
+                      mb: 2,
+                      justifyContent: isMobile ? 'center' : 'flex-start'
+                    }}>
+                      <StoreIcon sx={{ fontSize: 20, color: 'secondary.main' }} />
+                      <Typography 
+                        variant="h6" 
+                        sx={{ 
+                          fontWeight: 600, 
+                          color: 'text.primary',
+                          fontSize: '1rem'
+                        }}
+                      >
+                        Sucursales
+                      </Typography>
+                    </Box>
+                    
+                    {/* Lista de sucursales */}
+                    <SucursalesEmpresa empresaId={empresa.id} />
+                  </Box>
                 </Box>
               </CardContent>
             </Card>

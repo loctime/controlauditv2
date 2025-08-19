@@ -347,6 +347,33 @@
     justify-content: flex-start !important;
   }
 
+  /* Excepción para dashboard de administrador - no centrar, permitir layout horizontal */
+  .admin-container .content-container {
+    align-items: stretch !important;
+    text-align: left !important;
+    max-width: 100% !important;
+    flex-direction: column !important;
+    justify-content: flex-start !important;
+  }
+
+  .admin-container .page-container {
+    align-items: stretch !important;
+    text-align: left !important;
+  }
+
+  .admin-container .MuiGrid-container {
+    justify-content: flex-start !important;
+  }
+
+  .admin-container .MuiGrid-item {
+    justify-content: flex-start !important;
+    align-items: flex-start !important;
+  }
+
+  .admin-container .MuiBox-root {
+    align-items: stretch !important;
+  }
+
   .auditoria-container .MuiGrid-container {
     justify-content: flex-start !important;
   }

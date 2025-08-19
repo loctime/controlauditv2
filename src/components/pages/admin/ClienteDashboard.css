@@ -1,0 +1,109 @@
+/* Estilos específicos para el Dashboard de Administrador */
+
+/* Layout horizontal para desktop */
+@media (min-width: 769px) {
+  /* Forzar layout horizontal para admin container */
+  .page-container.admin-container {
+    width: 100% !important;
+    max-width: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    justify-content: flex-start !important;
+  }
+
+  /* Forzar layout horizontal para content container en admin */
+  .page-container.admin-container .content-container {
+    width: 100% !important;
+    max-width: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    justify-content: flex-start !important;
+    text-align: left !important;
+  }
+
+  .admin-container .MuiBox-root {
+    width: 100% !important;
+    max-width: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    justify-content: flex-start !important;
+  }
+
+  .admin-container .MuiGrid-container {
+    justify-content: flex-start !important;
+    align-items: stretch !important;
+  }
+
+  .admin-container .MuiGrid-item {
+    display: flex !important;
+    justify-content: flex-start !important;
+    align-items: flex-start !important;
+  }
+
+  .admin-container .MuiPaper-root {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  .admin-container .MuiTypography-root {
+    text-align: left !important;
+  }
+
+  /* Asegurar que los botones se alineen correctamente */
+  .admin-container .MuiButton-root {
+    align-self: flex-start !important;
+  }
+
+  /* Asegurar que las pestañas se alineen correctamente */
+  .admin-container .MuiTabs-root {
+    justify-content: center !important;
+  }
+
+  /* Asegurar que el contenido de las pestañas use todo el ancho */
+  .admin-container .MuiBox-root > .MuiBox-root {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  /* Asegurar que el grid use todo el ancho disponible */
+  .admin-container .MuiGrid-container {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+  }
+
+  /* Asegurar que los items del grid se distribuyan correctamente */
+  .admin-container .MuiGrid-item {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  /* Asegurar que el contenido de las pestañas no esté centrado */
+  .admin-container .MuiBox-root {
+    text-align: left !important;
+  }
+
+  /* Asegurar que los componentes hijos usen todo el ancho */
+  .admin-container .MuiPaper-root,
+  .admin-container .MuiCard-root {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+}
+
+/* Layout móvil - mantener el diseño actual */
+@media (max-width: 768px) {
+  .admin-container {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  .admin-container .content-container {
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 8px !important;
+  }
+}

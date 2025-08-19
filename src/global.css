@@ -59,6 +59,21 @@
   text-size-adjust: auto;
 }
 
+/* Fix para problemas de texto vertical */
+* {
+  white-space: normal !important;
+  word-break: normal !important;
+  overflow-wrap: normal !important;
+}
+
+/* Asegurar que el texto se muestre horizontalmente */
+p, h1, h2, h3, h4, h5, h6, span, div, button, input, textarea, label {
+  white-space: normal !important;
+  word-break: normal !important;
+  overflow-wrap: break-word !important;
+  line-height: normal !important;
+}
+
 html, body {
   height: 100%;
   overflow-x: hidden;

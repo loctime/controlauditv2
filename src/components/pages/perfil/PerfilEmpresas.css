@@ -1,0 +1,62 @@
+/* Fix para problemas de texto vertical en PerfilEmpresas */
+.perfil-empresas-container * {
+  white-space: normal !important;
+  word-break: normal !important;
+  overflow-wrap: break-word !important;
+}
+
+.perfil-empresas-container .MuiTypography-root {
+  white-space: normal !important;
+  word-break: normal !important;
+  overflow-wrap: break-word !important;
+  line-height: normal !important;
+  display: block !important;
+}
+
+.perfil-empresas-container .MuiBox-root {
+  white-space: normal !important;
+  word-break: normal !important;
+  overflow-wrap: break-word !important;
+}
+
+/* Asegurar que el texto de las empresas se muestre correctamente */
+.empresa-nombre {
+  white-space: normal !important;
+  word-break: normal !important;
+  overflow-wrap: break-word !important;
+  line-height: 1.2 !important;
+  display: block !important;
+}
+
+.empresa-direccion {
+  white-space: normal !important;
+  word-break: normal !important;
+  overflow-wrap: break-word !important;
+  line-height: 1.3 !important;
+  display: block !important;
+}
+
+.empresa-telefono {
+  white-space: normal !important;
+  word-break: normal !important;
+  overflow-wrap: break-word !important;
+  line-height: 1.3 !important;
+  display: block !important;
+}
+
+/* Fix para sucursales */
+.sucursal-nombre {
+  white-space: normal !important;
+  word-break: normal !important;
+  overflow-wrap: break-word !important;
+  line-height: 1.2 !important;
+  display: block !important;
+}
+
+.sucursal-direccion {
+  white-space: normal !important;
+  word-break: normal !important;
+  overflow-wrap: break-word !important;
+  line-height: 1.3 !important;
+  display: block !important;
+}

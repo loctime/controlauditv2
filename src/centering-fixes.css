@@ -85,6 +85,20 @@
     align-items: stretch !important;
   }
 
+  /* Excepción para dashboard de administrador - permitir layout horizontal */
+  .admin-container .content-container {
+    max-width: 100% !important;
+    align-items: stretch !important;
+    width: 100% !important;
+    flex-direction: row !important;
+    justify-content: flex-start !important;
+  }
+
+  .admin-container .page-container {
+    align-items: stretch !important;
+    width: 100% !important;
+  }
+
   /* Forzar layout horizontal en header del perfil */
   .perfil-container .content-container > .MuiBox-root {
     flex-direction: row !important;
