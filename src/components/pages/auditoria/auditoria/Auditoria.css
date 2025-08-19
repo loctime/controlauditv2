@@ -1,0 +1,285 @@
+/* ========================================
+   ESTILOS ESPECÍFICOS PARA LA PÁGINA DE AUDITORÍA
+   ========================================
+   
+   Este archivo contiene estilos específicos para la página de auditoría
+   - Optimizaciones para pantalla completa en móvil
+   - Estilos responsivos para web
+   - Safe areas para dispositivos móviles
+   ======================================== */
+
+/* Contenedor principal de auditoría */
+.auditoria-container {
+  width: 100%;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Contenedor de contenido */
+.auditoria-container .content-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+/* Header de auditoría */
+.auditoria-container .header-section {
+  flex-shrink: 0;
+  padding: 16px 20px;
+  background: #fff;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+/* Stepper de auditoría */
+.auditoria-container .stepper-section {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 20px;
+}
+
+/* Contenido del stepper */
+.auditoria-container .step-content {
+  width: 100%;
+  max-width: 100%;
+}
+
+/* ========================================
+   OPTIMIZACIONES PARA MÓVIL (≤768px)
+   ======================================== */
+@media (max-width: 768px) {
+  /* Contenedor principal - pantalla completa */
+  .auditoria-container {
+    width: 100vw !important;
+    max-width: 100vw !important;
+    min-height: 100vh !important;
+    min-height: calc(100vh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)) !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+  }
+
+  /* Contenedor de contenido - pantalla completa */
+  .auditoria-container .content-container {
+    width: 100vw !important;
+    max-width: 100vw !important;
+    min-height: 100vh !important;
+    min-height: calc(100vh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)) !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    flex: 1 !important;
+  }
+
+  /* Header - más compacto con espacio lateral */
+  .auditoria-container .header-section {
+    padding: 12px 16px !important;
+    padding-top: calc(12px + env(safe-area-inset-top, 0px)) !important;
+    padding-left: calc(16px + env(safe-area-inset-left, 0px)) !important;
+    padding-right: calc(16px + env(safe-area-inset-right, 0px)) !important;
+    flex-shrink: 0 !important;
+    background: #fff !important;
+    border-bottom: 1px solid #e0e0e0 !important;
+  }
+
+  /* Stepper - ocupar espacio restante con espacio lateral */
+  .auditoria-container .stepper-section {
+    flex: 1 !important;
+    padding: 12px 16px !important;
+    padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px)) !important;
+    padding-left: calc(16px + env(safe-area-inset-left, 0px)) !important;
+    padding-right: calc(16px + env(safe-area-inset-right, 0px)) !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+  }
+
+  /* Contenido del stepper - pantalla completa */
+  .auditoria-container .step-content {
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 0 !important;
+  }
+
+  /* Componentes dentro del stepper */
+  .auditoria-container .MuiCard-root,
+  .auditoria-container .MuiPaper-root {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    margin-bottom: 12px !important;
+    border-radius: 12px !important;
+  }
+
+  /* Botones - más compactos */
+  .auditoria-container .MuiButton-root {
+    padding: 10px 18px !important;
+    font-size: 0.9rem !important;
+    min-height: 44px !important;
+    border-radius: 10px !important;
+  }
+
+  /* Títulos - más compactos */
+  .auditoria-container .MuiTypography-h6 {
+    font-size: 1rem !important;
+    line-height: 1.2 !important;
+    margin-bottom: 8px !important;
+  }
+
+  .auditoria-container .MuiTypography-h4 {
+    font-size: 1.2rem !important;
+    line-height: 1.3 !important;
+  }
+
+  /* Stepper - más compacto */
+  .auditoria-container .MuiStepper-root {
+    padding: 12px 0 !important;
+  }
+
+  .auditoria-container .MuiStepLabel-root {
+    padding: 6px 0 !important;
+  }
+
+  .auditoria-container .MuiStepLabel-label {
+    font-size: 0.85rem !important;
+  }
+
+  /* Contenido de pasos */
+  .auditoria-container .MuiStepContent-root {
+    padding: 12px 0 !important;
+    margin-left: 0 !important;
+  }
+
+  /* Formularios */
+  .auditoria-container .MuiTextField-root {
+    margin-bottom: 16px !important;
+  }
+
+  .auditoria-container .MuiFormControl-root {
+    width: 100% !important;
+    margin-bottom: 16px !important;
+  }
+
+  /* Grids */
+  .auditoria-container .MuiGrid-container {
+    margin: 0 !important;
+    width: 100% !important;
+  }
+
+  .auditoria-container .MuiGrid-item {
+    padding: 6px !important;
+  }
+
+  /* Chips */
+  .auditoria-container .MuiChip-root {
+    font-size: 0.75rem !important;
+    height: 24px !important;
+  }
+
+  /* Alertas */
+  .auditoria-container .MuiAlert-root {
+    margin-bottom: 12px !important;
+    font-size: 0.85rem !important;
+    border-radius: 10px !important;
+  }
+
+  /* Progress bar */
+  .auditoria-container .MuiLinearProgress-root {
+    height: 6px !important;
+    border-radius: 3px !important;
+  }
+
+  /* Snackbars */
+  .auditoria-container .MuiSnackbar-root {
+    bottom: calc(16px + env(safe-area-inset-bottom, 0px)) !important;
+    left: 16px !important;
+    right: 16px !important;
+  }
+}
+
+/* ========================================
+   OPTIMIZACIONES PARA WEB (≥769px)
+   ======================================== */
+@media (min-width: 769px) {
+  .auditoria-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 24px 32px;
+  }
+
+  .auditoria-container .content-container {
+    padding: 24px 32px;
+  }
+
+  .auditoria-container .header-section {
+    padding: 24px 32px;
+    border-radius: 12px;
+    margin-bottom: 24px;
+  }
+
+  .auditoria-container .stepper-section {
+    padding: 24px 32px;
+  }
+
+  .auditoria-container .step-content {
+    max-width: 900px;
+    margin: 0 auto;
+  }
+}
+
+/* ========================================
+   OPTIMIZACIONES PARA TABLETS (769px - 1024px)
+   ======================================== */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .auditoria-container {
+    padding: 20px 24px;
+  }
+
+  .auditoria-container .content-container {
+    padding: 20px 24px;
+  }
+
+  .auditoria-container .header-section {
+    padding: 20px 24px;
+  }
+
+  .auditoria-container .stepper-section {
+    padding: 20px 24px;
+  }
+}
+
+/* ========================================
+   ESTADOS ESPECIALES
+   ======================================== */
+
+/* Auditoría completada */
+.auditoria-container.auditoria-completada {
+  background: linear-gradient(135deg, #4caf50, #66bb6a);
+  color: white;
+}
+
+/* Auditoría en progreso */
+.auditoria-container.auditoria-progreso {
+  background: #f5f5f5;
+}
+
+/* Modo oscuro */
+@media (prefers-color-scheme: dark) {
+  .auditoria-container {
+    background: #121212;
+    color: #fff;
+  }
+
+  .auditoria-container .header-section {
+    background: #1e1e1e;
+    border-bottom-color: #333;
+  }
+
+  .auditoria-container .MuiCard-root,
+  .auditoria-container .MuiPaper-root {
+    background: #1e1e1e;
+    color: #fff;
+  }
+}

@@ -1,3 +1,13 @@
+/* ========================================
+   ESTILOS ESPECÍFICOS PARA EL DASHBOARD DE ADMINISTRADOR
+   ========================================
+   
+   Este archivo contiene estilos específicos para el ClienteDashboard
+   - Los estilos base están en mobile-optimization.css y web-optimization.css
+   - Aquí puedes agregar estilos específicos del componente
+   - Usa media queries para separar móvil vs web
+   ======================================== */
+
 /* Estilos específicos para el Dashboard de Administrador */
 
 /* Layout principal del dashboard */
