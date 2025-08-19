@@ -8,8 +8,8 @@ const getEnvironmentConfig = () => {
     // URLs del backend por entorno
     backend: {
       development: 'http://localhost:4000',
-      production: 'https://controlaudit-backend.onrender.com',
-      staging: 'https://controlaudit-backend-staging.onrender.com'
+      production: 'https://controlauditv2.onrender.com',
+      staging: 'https://controlauditv2-staging.onrender.com'
     },
     
     // Configuración de la aplicación
