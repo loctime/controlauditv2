@@ -54,7 +54,7 @@ const Login = () => {
     try {
       const result = await onSignIn(values);
       handleLogin(result.user);
-      navigate("/");
+      navigate("/auditoria");
     } catch (error) {
       console.error(error);
       let errorMessage = 'Correo electrónico o contraseña incorrectos';

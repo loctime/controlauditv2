@@ -68,6 +68,12 @@ function Navbar(props) {
 
   // ✅ Función para obtener la ruta del dashboard según el rol
   const getDashboardRoute = () => {
+    // En móvil, siempre redirigir a auditoría
+    if (isMobile) {
+      return '/auditoria';
+    }
+    
+    // En web, usar las rutas específicas por rol
     switch (role) {
       case 'supermax':
         return '/dashboard';
@@ -82,6 +88,12 @@ function Navbar(props) {
 
   // ✅ Función para obtener el texto del dashboard según el rol
   const getDashboardText = () => {
+    // En móvil, siempre mostrar "Auditoría"
+    if (isMobile) {
+      return 'Auditoría';
+    }
+    
+    // En web, usar los textos específicos por rol
     switch (role) {
       case 'supermax':
         return 'Panel de Control';
@@ -254,66 +266,31 @@ function Navbar(props) {
             </Link>
           </Box>
 
-                     {/* Navegación móvil - título y botones adicionales */}
+                     {/* Navegación móvil - solo Auditoría */}
                        <Box sx={{ 
               display: { xs: 'flex', md: 'none' }, 
               flex: 1,
               alignItems: 'center',
-              justifyContent: 'center',
-              gap: { xs: 1.5, sm: 2.5 }
+              justifyContent: 'center'
             }}>
-                           <Link to={getDashboardRoute()} style={{ 
-                color: "whitesmoke", 
-                textDecoration: "none", 
-                fontSize: { xs: '0.9rem', sm: '1rem' },
-                fontWeight: 500,
-                display: 'flex',
-                alignItems: 'center',
-                padding: { xs: '3px 6px', sm: '4px 8px' },
-                borderRadius: '4px',
-                transition: 'background-color 0.2s',
-                '&:hover': {
-                  backgroundColor: 'rgba(255,255,255,0.1)'
-                }
-              }}>
-                {getDashboardText()}
-              </Link>
-             
-                           {/* Botones adicionales en móvil */}
+                           {/* Solo mostrar Auditoría en móvil */}
                              <Link to="/auditoria" style={{ 
                  color: "whitesmoke", 
                  textDecoration: "none", 
-                 fontSize: { xs: '0.7rem', sm: '0.8rem' },
-                 padding: { xs: '3px 6px', sm: '4px 8px' },
-                 borderRadius: '4px',
+                 fontSize: { xs: '1rem', sm: '1.1rem' },
+                 fontWeight: 500,
+                 padding: { xs: '6px 12px', sm: '8px 16px' },
+                 borderRadius: '6px',
                  transition: 'background-color 0.2s',
                  display: 'flex',
                  alignItems: 'center',
-                 gap: { xs: 0.3, sm: 0.5 },
+                 gap: { xs: 0.5, sm: 0.8 },
                  '&:hover': {
                    backgroundColor: 'rgba(255,255,255,0.1)'
                  }
                }}>
-                 <ChecklistIcon sx={{ fontSize: { xs: '0.9rem', sm: '1rem' } }} />
+                 <ChecklistIcon sx={{ fontSize: { xs: '1.1rem', sm: '1.2rem' } }} />
                  <span>Auditoría</span>
-               </Link>
-              
-                             <Link to="/perfil" style={{ 
-                 color: "whitesmoke", 
-                 textDecoration: "none", 
-                 fontSize: { xs: '0.7rem', sm: '0.8rem' },
-                 padding: { xs: '3px 6px', sm: '4px 8px' },
-                 borderRadius: '4px',
-                 transition: 'background-color 0.2s',
-                 display: 'flex',
-                 alignItems: 'center',
-                 gap: { xs: 0.3, sm: 0.5 },
-                 '&:hover': {
-                   backgroundColor: 'rgba(255,255,255,0.1)'
-                 }
-               }}>
-                 <PersonIcon sx={{ fontSize: { xs: '0.9rem', sm: '1rem' } }} />
-                 <span>Perfil</span>
                </Link>
            </Box>
 
