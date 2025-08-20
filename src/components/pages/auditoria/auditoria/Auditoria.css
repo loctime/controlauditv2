@@ -14,6 +14,7 @@
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  align-items: center; /* Centrar horizontalmente */
 }
 
 /* Contenedor de contenido */
@@ -22,6 +23,8 @@
   display: flex;
   flex-direction: column;
   width: 100%;
+  max-width: 100%; /* Asegurar que no exceda el ancho de la pantalla */
+  align-items: center; /* Centrar horizontalmente */
 }
 
 /* Header de auditoría */
@@ -30,6 +33,11 @@
   padding: 16px 20px;
   background: #fff;
   border-bottom: 1px solid #e0e0e0;
+  width: 100%;
+  max-width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center; /* Centrar contenido del header */
 }
 
 /* Stepper de auditoría */
@@ -37,19 +45,27 @@
   flex: 1;
   overflow-y: auto;
   padding: 16px 20px;
+  width: 100%;
+  max-width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center; /* Centrar contenido del stepper */
 }
 
 /* Contenido del stepper */
 .auditoria-container .step-content {
   width: 100%;
   max-width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center; /* Centrar contenido de los pasos */
 }
 
 /* ========================================
    OPTIMIZACIONES PARA MÓVIL (≤768px)
    ======================================== */
 @media (max-width: 768px) {
-  /* Contenedor principal - pantalla completa */
+  /* Contenedor principal - pantalla completa y centrado */
   .auditoria-container {
     width: 100vw !important;
     max-width: 100vw !important;
@@ -59,9 +75,10 @@
     padding: 0 !important;
     display: flex !important;
     flex-direction: column !important;
+    align-items: center !important; /* Centrar horizontalmente */
   }
 
-  /* Contenedor de contenido - pantalla completa */
+  /* Contenedor de contenido - pantalla completa y centrado */
   .auditoria-container .content-container {
     width: 100vw !important;
     max-width: 100vw !important;
@@ -72,9 +89,10 @@
     display: flex !important;
     flex-direction: column !important;
     flex: 1 !important;
+    align-items: center !important; /* Centrar horizontalmente */
   }
 
-  /* Header - más compacto con espacio lateral */
+  /* Header - más compacto con espacio lateral y centrado */
   .auditoria-container .header-section {
     padding: 12px 16px !important;
     padding-top: calc(12px + env(safe-area-inset-top, 0px)) !important;
@@ -83,9 +101,14 @@
     flex-shrink: 0 !important;
     background: #fff !important;
     border-bottom: 1px solid #e0e0e0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important; /* Centrar contenido del header */
   }
 
-  /* Stepper - ocupar espacio restante con espacio lateral */
+  /* Stepper - ocupar espacio restante con espacio lateral y centrado */
   .auditoria-container .stepper-section {
     flex: 1 !important;
     padding: 12px 16px !important;
@@ -94,16 +117,24 @@
     padding-right: calc(16px + env(safe-area-inset-right, 0px)) !important;
     overflow-y: auto !important;
     overflow-x: hidden !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important; /* Centrar contenido del stepper */
   }
 
-  /* Contenido del stepper - pantalla completa */
+  /* Contenido del stepper - pantalla completa y centrado */
   .auditoria-container .step-content {
     width: 100% !important;
     max-width: 100% !important;
     padding: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important; /* Centrar contenido de los pasos */
   }
 
-  /* Componentes dentro del stepper */
+  /* Componentes dentro del stepper - centrados */
   .auditoria-container .MuiCard-root,
   .auditoria-container .MuiPaper-root {
     width: 100% !important;
@@ -111,91 +142,150 @@
     margin: 0 !important;
     margin-bottom: 12px !important;
     border-radius: 12px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important; /* Centrar contenido de las tarjetas */
   }
 
-  /* Botones - más compactos */
+  /* Contenido de las tarjetas - centrado */
+  .auditoria-container .MuiCardContent-root {
+    width: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important; /* Centrar contenido de las tarjetas */
+  }
+
+  /* Botones - más compactos y centrados */
   .auditoria-container .MuiButton-root {
     padding: 10px 18px !important;
     font-size: 0.9rem !important;
     min-height: 44px !important;
     border-radius: 10px !important;
+    align-self: center !important; /* Centrar botones */
   }
 
-  /* Títulos - más compactos */
+  /* Títulos - más compactos y centrados */
   .auditoria-container .MuiTypography-h6 {
     font-size: 1rem !important;
     line-height: 1.2 !important;
     margin-bottom: 8px !important;
+    text-align: center !important; /* Centrar títulos */
   }
 
   .auditoria-container .MuiTypography-h4 {
     font-size: 1.2rem !important;
     line-height: 1.3 !important;
+    text-align: center !important; /* Centrar títulos */
   }
 
-  /* Stepper - más compacto */
+  /* Stepper - más compacto y centrado */
   .auditoria-container .MuiStepper-root {
     padding: 12px 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important; /* Centrar stepper */
   }
 
   .auditoria-container .MuiStepLabel-root {
     padding: 6px 0 !important;
+    text-align: center !important; /* Centrar etiquetas de pasos */
   }
 
   .auditoria-container .MuiStepLabel-label {
     font-size: 0.85rem !important;
+    text-align: center !important; /* Centrar texto de etiquetas */
   }
 
-  /* Contenido de pasos */
+  /* Contenido de pasos - centrado */
   .auditoria-container .MuiStepContent-root {
     padding: 12px 0 !important;
     margin-left: 0 !important;
+    width: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important; /* Centrar contenido de pasos */
   }
 
-  /* Formularios */
+  /* Formularios - centrados */
   .auditoria-container .MuiTextField-root {
     margin-bottom: 16px !important;
+    width: 100% !important;
+    max-width: 100% !important;
   }
 
   .auditoria-container .MuiFormControl-root {
     width: 100% !important;
+    max-width: 100% !important;
     margin-bottom: 16px !important;
   }
 
-  /* Grids */
+  /* Grids - centrados */
   .auditoria-container .MuiGrid-container {
     margin: 0 !important;
     width: 100% !important;
+    max-width: 100% !important;
+    justify-content: center !important; /* Centrar grids */
   }
 
   .auditoria-container .MuiGrid-item {
     padding: 6px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important; /* Centrar elementos de grid */
   }
 
-  /* Chips */
+  /* Chips - centrados */
   .auditoria-container .MuiChip-root {
     font-size: 0.75rem !important;
     height: 24px !important;
+    align-self: center !important; /* Centrar chips */
   }
 
-  /* Alertas */
+  /* Alertas - centradas */
   .auditoria-container .MuiAlert-root {
     margin-bottom: 12px !important;
     font-size: 0.85rem !important;
     border-radius: 10px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    text-align: center !important; /* Centrar texto de alertas */
   }
 
-  /* Progress bar */
+  /* Progress bar - centrado */
   .auditoria-container .MuiLinearProgress-root {
     height: 6px !important;
     border-radius: 3px !important;
+    width: 100% !important;
+    max-width: 100% !important;
   }
 
-  /* Snackbars */
+  /* Snackbars - centrados */
   .auditoria-container .MuiSnackbar-root {
     bottom: calc(16px + env(safe-area-inset-bottom, 0px)) !important;
     left: 16px !important;
     right: 16px !important;
+    display: flex !important;
+    justify-content: center !important; /* Centrar snackbars */
+  }
+
+  /* Contenedores de selección - centrados */
+  .auditoria-container .seleccion-container {
+    width: 100% !important;
+    max-width: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important; /* Centrar contenedores de selección */
+  }
+
+  /* Contenido de preguntas - centrado */
+  .auditoria-container .preguntas-container {
+    width: 100% !important;
+    max-width: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important; /* Centrar contenedor de preguntas */
   }
 }
 
@@ -281,5 +371,754 @@
   .auditoria-container .MuiPaper-root {
     background: #1e1e1e;
     color: #fff;
+  }
+}
+
+/* ========================================
+   ESTILOS ADICIONALES PARA CENTRADO EN APK
+   ======================================== */
+
+/* Centrado general para todos los componentes de auditoría */
+.auditoria-container * {
+  box-sizing: border-box;
+}
+
+/* Contenedores de selección específicos */
+.auditoria-container .empresa-seleccion-container,
+.auditoria-container .sucursal-seleccion-container,
+.auditoria-container .formulario-seleccion-container {
+  width: 100% !important;
+  max-width: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+/* Contenedores de formularios */
+.auditoria-container .formulario-container {
+  width: 100% !important;
+  max-width: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+/* Contenedores de preguntas */
+.auditoria-container .pregunta-container {
+  width: 100% !important;
+  max-width: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  margin-bottom: 16px !important;
+}
+
+/* Contenedores de firmas */
+.auditoria-container .firma-container {
+  width: 100% !important;
+  max-width: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+/* Contenedores de reporte */
+.auditoria-container .reporte-container {
+  width: 100% !important;
+  max-width: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+/* Optimizaciones específicas para móviles - centrado mejorado */
+@media (max-width: 768px) {
+  /* Asegurar que todos los contenedores estén centrados */
+  .auditoria-container > *,
+  .auditoria-container .content-container > *,
+  .auditoria-container .header-section > *,
+  .auditoria-container .stepper-section > * {
+    width: 100% !important;
+    max-width: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+  }
+
+  /* Centrado específico para componentes de Material-UI */
+  .auditoria-container .MuiBox-root {
+    width: 100% !important;
+    max-width: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+  }
+
+  /* Centrado para contenedores de Grid */
+  .auditoria-container .MuiGrid-root {
+    width: 100% !important;
+    max-width: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+  }
+
+  /* Centrado para contenedores de Paper */
+  .auditoria-container .MuiPaper-root {
+    width: 100% !important;
+    max-width: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+  }
+
+  /* Centrado para contenedores de Card */
+  .auditoria-container .MuiCard-root {
+    width: 100% !important;
+    max-width: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+  }
+
+  /* Centrado para formularios y campos de entrada */
+  .auditoria-container .MuiFormControl-root,
+  .auditoria-container .MuiTextField-root,
+  .auditoria-container .MuiSelect-root {
+    width: 100% !important;
+    max-width: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+  }
+
+  /* Centrado para botones */
+  .auditoria-container .MuiButton-root {
+    align-self: center !important;
+    justify-self: center !important;
+  }
+
+  /* Centrado para chips y badges */
+  .auditoria-container .MuiChip-root,
+  .auditoria-container .MuiBadge-root {
+    align-self: center !important;
+    justify-self: center !important;
+  }
+
+  /* Centrado para alertas y notificaciones */
+  .auditoria-container .MuiAlert-root,
+  .auditoria-container .MuiSnackbar-root {
+    width: 100% !important;
+    max-width: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+  }
+
+  /* Centrado para barras de progreso */
+  .auditoria-container .MuiLinearProgress-root {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  /* Centrado para steppers */
+  .auditoria-container .MuiStepper-root {
+    width: 100% !important;
+    max-width: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+  }
+
+  /* Centrado para contenido de pasos */
+  .auditoria-container .MuiStepContent-root {
+    width: 100% !important;
+    max-width: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+  }
+
+  /* Centrado para etiquetas de pasos */
+  .auditoria-container .MuiStepLabel-root {
+    width: 100% !important;
+    max-width: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    text-align: center !important;
+  }
+
+  /* Centrado para iconos de pasos */
+  .auditoria-container .MuiStepIcon-root {
+    align-self: center !important;
+  }
+
+  /* Centrado para contenido de tarjetas */
+  .auditoria-container .MuiCardContent-root {
+    width: 100% !important;
+    max-width: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    text-align: center !important;
+  }
+
+  /* Centrado para acciones de tarjetas */
+  .auditoria-container .MuiCardActions-root {
+    width: 100% !important;
+    max-width: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+
+  /* Centrado para contenedores de imágenes */
+  .auditoria-container .imagen-container {
+    width: 100% !important;
+    max-width: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+  }
+
+  /* Centrado para contenedores de comentarios */
+  .auditoria-container .comentario-container {
+    width: 100% !important;
+    max-width: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+  }
+
+  /* Centrado para contenedores de respuestas */
+  .auditoria-container .respuesta-container {
+    width: 100% !important;
+    max-width: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+  }
+}
+
+/* ========================================
+   OPTIMIZACIONES PARA PANTALLAS MUY PEQUEÑAS (≤480px)
+   ======================================== */
+@media (max-width: 480px) {
+  .auditoria-container {
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  .auditoria-container .header-section {
+    padding: 8px 12px !important;
+    padding-top: calc(8px + env(safe-area-inset-top, 0px)) !important;
+    padding-left: calc(12px + env(safe-area-inset-left, 0px)) !important;
+    padding-right: calc(12px + env(safe-area-inset-right, 0px)) !important;
+  }
+
+  .auditoria-container .stepper-section {
+    padding: 8px 12px !important;
+    padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px)) !important;
+    padding-left: calc(12px + env(safe-area-inset-left, 0px)) !important;
+    padding-right: calc(12px + env(safe-area-inset-right, 0px)) !important;
+  }
+
+  /* Reducir tamaños de fuente para pantallas muy pequeñas */
+  .auditoria-container .MuiTypography-h4 {
+    font-size: 1rem !important;
+  }
+
+  .auditoria-container .MuiTypography-h6 {
+    font-size: 0.9rem !important;
+  }
+
+  .auditoria-container .MuiButton-root {
+    font-size: 0.8rem !important;
+    padding: 8px 16px !important;
+    min-height: 40px !important;
+  }
+
+  .auditoria-container .MuiStepLabel-label {
+    font-size: 0.75rem !important;
+  }
+}
+
+/* ========================================
+   ESTILOS ESPECÍFICOS PARA AUDITORIA STEPPER
+   ======================================== */
+
+/* Contenedor principal del stepper */
+.auditoria-container .auditoria-stepper-container {
+  width: 100% !important;
+  max-width: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+}
+
+/* Grid container del stepper */
+.auditoria-container .MuiGrid-container {
+  width: 100% !important;
+  max-width: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+/* Grid items del stepper */
+.auditoria-container .MuiGrid-item {
+  width: 100% !important;
+  max-width: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+}
+
+/* Sidebar del stepper en desktop */
+.auditoria-container .stepper-sidebar {
+  width: 100% !important;
+  max-width: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+}
+
+/* Contenido principal del stepper */
+.auditoria-container .stepper-content {
+  width: 100% !important;
+  max-width: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+}
+
+/* Optimizaciones específicas para móviles - Stepper */
+@media (max-width: 768px) {
+  /* Contenedor principal del stepper en móvil */
+  .auditoria-container .auditoria-stepper-container {
+    width: 100vw !important;
+    max-width: 100vw !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+  }
+
+  /* Grid container en móvil */
+  .auditoria-container .MuiGrid-container {
+    width: 100vw !important;
+    max-width: 100vw !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+  }
+
+  /* Grid items en móvil */
+  .auditoria-container .MuiGrid-item {
+    width: 100vw !important;
+    max-width: 100vw !important;
+    padding: 8px 12px !important;
+    padding-left: calc(12px + env(safe-area-inset-left, 0px)) !important;
+    padding-right: calc(12px + env(safe-area-inset-right, 0px)) !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+  }
+
+  /* Sidebar en móvil (oculto o compacto) */
+  .auditoria-container .stepper-sidebar {
+    width: 100% !important;
+    max-width: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    margin-bottom: 12px !important;
+  }
+
+  /* Contenido principal en móvil */
+  .auditoria-container .stepper-content {
+    width: 100% !important;
+    max-width: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+  }
+
+  /* Paper del contenido en móvil */
+  .auditoria-container .stepper-content .MuiPaper-root {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 16px !important;
+    border-radius: 12px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+  }
+
+  /* Header del contenido en móvil */
+  .auditoria-container .stepper-content .MuiPaper-root .MuiBox-root {
+    width: 100% !important;
+    max-width: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    text-align: center !important;
+  }
+
+  /* Títulos en móvil */
+  .auditoria-container .stepper-content .MuiTypography-h6 {
+    width: 100% !important;
+    max-width: 100% !important;
+    text-align: center !important;
+    font-size: 1rem !important;
+    line-height: 1.2 !important;
+  }
+
+  /* Descripciones en móvil */
+  .auditoria-container .stepper-content .MuiTypography-body2 {
+    width: 100% !important;
+    max-width: 100% !important;
+    text-align: center !important;
+    font-size: 0.85rem !important;
+  }
+
+  /* Contenido de pasos en móvil */
+  .auditoria-container .stepper-content .MuiBox-root {
+    width: 100% !important;
+    max-width: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+  }
+
+  /* Botones de navegación en móvil */
+  .auditoria-container .stepper-content .MuiBox-root:last-child {
+    width: 100% !important;
+    max-width: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    gap: 12px !important;
+  }
+
+  /* Botones individuales en móvil */
+  .auditoria-container .stepper-content .MuiButton-root {
+    width: 100% !important;
+    max-width: 100% !important;
+    align-self: center !important;
+    justify-self: center !important;
+    margin: 4px 0 !important;
+  }
+
+  /* Alertas en móvil */
+  .auditoria-container .stepper-content .MuiAlert-root {
+    width: 100% !important;
+    max-width: 100% !important;
+    text-align: center !important;
+    font-size: 0.75rem !important;
+  }
+
+  /* Mobile header del stepper */
+  .auditoria-container .mobile-header {
+    width: 100% !important;
+    max-width: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    text-align: center !important;
+    margin-bottom: 12px !important;
+  }
+
+  /* Stepper vertical en móvil */
+  .auditoria-container .MuiStepper-root {
+    width: 100% !important;
+    max-width: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+  }
+
+  /* Pasos del stepper en móvil */
+  .auditoria-container .MuiStep-root {
+    width: 100% !important;
+    max-width: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+  }
+
+  /* Etiquetas de pasos en móvil */
+  .auditoria-container .MuiStepLabel-root {
+    width: 100% !important;
+    max-width: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    text-align: center !important;
+  }
+
+  /* Iconos de pasos en móvil */
+  .auditoria-container .MuiStepIcon-root {
+    align-self: center !important;
+  }
+
+  /* Contenido de pasos en móvil */
+  .auditoria-container .MuiStepContent-root {
+    width: 100% !important;
+    max-width: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    padding: 12px 0 !important;
+  }
+}
+
+/* ========================================
+   OPTIMIZACIONES PARA PANTALLAS MUY PEQUEÑAS - STEPPER
+   ======================================== */
+@media (max-width: 480px) {
+  /* Contenedor principal del stepper en pantallas muy pequeñas */
+  .auditoria-container .auditoria-stepper-container {
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  /* Grid items en pantallas muy pequeñas */
+  .auditoria-container .MuiGrid-item {
+    padding: 6px 8px !important;
+    padding-left: calc(8px + env(safe-area-inset-left, 0px)) !important;
+    padding-right: calc(8px + env(safe-area-inset-right, 0px)) !important;
+  }
+
+  /* Paper del contenido en pantallas muy pequeñas */
+  .auditoria-container .stepper-content .MuiPaper-root {
+    padding: 12px !important;
+    border-radius: 8px !important;
+  }
+
+  /* Títulos en pantallas muy pequeñas */
+  .auditoria-container .stepper-content .MuiTypography-h6 {
+    font-size: 0.9rem !important;
+  }
+
+  /* Descripciones en pantallas muy pequeñas */
+  .auditoria-container .stepper-content .MuiTypography-body2 {
+    font-size: 0.75rem !important;
+  }
+
+  /* Botones en pantallas muy pequeñas */
+  .auditoria-container .stepper-content .MuiButton-root {
+    font-size: 0.8rem !important;
+    padding: 8px 12px !important;
+    min-height: 36px !important;
+  }
+
+  /* Alertas en pantallas muy pequeñas */
+  .auditoria-container .stepper-content .MuiAlert-root {
+    font-size: 0.7rem !important;
+    padding: 8px !important;
+  }
+}
+
+/* ========================================
+   ESTILOS ESPECÍFICOS PARA COMPONENTES DE SELECCIÓN
+   ======================================== */
+
+/* Contenedores de selección de empresa */
+.auditoria-container .empresa-seleccion-container,
+.auditoria-container .sucursal-seleccion-container,
+.auditoria-container .formulario-seleccion-container {
+  width: 100% !important;
+  max-width: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  margin-bottom: 16px !important;
+}
+
+/* Contenedores de selección específicos */
+.auditoria-container .seleccion-empresa-container,
+.auditoria-container .seleccion-sucursal-container,
+.auditoria-container .seleccion-formulario-container {
+  width: 100% !important;
+  max-width: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 16px !important;
+  border-radius: 12px !important;
+  background: white !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
+  margin-bottom: 16px !important;
+}
+
+/* Títulos de selección */
+.auditoria-container .seleccion-titulo {
+  width: 100% !important;
+  max-width: 100% !important;
+  text-align: center !important;
+  font-weight: 600 !important;
+  margin-bottom: 16px !important;
+  color: #1976d2 !important;
+}
+
+/* Campos de selección */
+.auditoria-container .seleccion-campo {
+  width: 100% !important;
+  max-width: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+/* Formularios de selección */
+.auditoria-container .seleccion-formulario {
+  width: 100% !important;
+  max-width: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+/* Optimizaciones específicas para móviles - Componentes de selección */
+@media (max-width: 768px) {
+  /* Contenedores de selección en móvil */
+  .auditoria-container .empresa-seleccion-container,
+  .auditoria-container .sucursal-seleccion-container,
+  .auditoria-container .formulario-seleccion-container {
+    width: 100vw !important;
+    max-width: 100vw !important;
+    padding: 12px !important;
+    padding-left: calc(12px + env(safe-area-inset-left, 0px)) !important;
+    padding-right: calc(12px + env(safe-area-inset-right, 0px)) !important;
+    margin-bottom: 12px !important;
+  }
+
+  /* Contenedores específicos en móvil */
+  .auditoria-container .seleccion-empresa-container,
+  .auditoria-container .seleccion-sucursal-container,
+  .auditoria-container .seleccion-formulario-container {
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 12px !important;
+    border-radius: 8px !important;
+    margin-bottom: 12px !important;
+  }
+
+  /* Títulos de selección en móvil */
+  .auditoria-container .seleccion-titulo {
+    font-size: 1rem !important;
+    line-height: 1.2 !important;
+    margin-bottom: 12px !important;
+  }
+
+  /* Campos de selección en móvil */
+  .auditoria-container .seleccion-campo {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  /* Formularios de selección en móvil */
+  .auditoria-container .seleccion-formulario {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  /* Campos de entrada en móvil */
+  .auditoria-container .MuiTextField-root,
+  .auditoria-container .MuiFormControl-root,
+  .auditoria-container .MuiSelect-root {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin-bottom: 12px !important;
+  }
+
+  /* Labels en móvil */
+  .auditoria-container .MuiFormLabel-root {
+    font-size: 0.9rem !important;
+    text-align: center !important;
+  }
+
+  /* Inputs en móvil */
+  .auditoria-container .MuiInputBase-root {
+    width: 100% !important;
+    max-width: 100% !important;
+    font-size: 0.9rem !important;
+  }
+
+  /* Selects en móvil */
+  .auditoria-container .MuiSelect-select {
+    width: 100% !important;
+    max-width: 100% !important;
+    text-align: center !important;
+    font-size: 0.9rem !important;
+  }
+}
+
+/* ========================================
+   OPTIMIZACIONES PARA PANTALLAS MUY PEQUEÑAS - COMPONENTES DE SELECCIÓN
+   ======================================== */
+@media (max-width: 480px) {
+  /* Contenedores de selección en pantallas muy pequeñas */
+  .auditoria-container .empresa-seleccion-container,
+  .auditoria-container .sucursal-seleccion-container,
+  .auditoria-container .formulario-seleccion-container {
+    padding: 8px !important;
+    padding-left: calc(8px + env(safe-area-inset-left, 0px)) !important;
+    padding-right: calc(8px + env(safe-area-inset-right, 0px)) !important;
+    margin-bottom: 8px !important;
+  }
+
+  /* Contenedores específicos en pantallas muy pequeñas */
+  .auditoria-container .seleccion-empresa-container,
+  .auditoria-container .seleccion-sucursal-container,
+  .auditoria-container .seleccion-formulario-container {
+    padding: 8px !important;
+    border-radius: 6px !important;
+    margin-bottom: 8px !important;
+  }
+
+  /* Títulos de selección en pantallas muy pequeñas */
+  .auditoria-container .seleccion-titulo {
+    font-size: 0.9rem !important;
+    margin-bottom: 8px !important;
+  }
+
+  /* Campos de entrada en pantallas muy pequeñas */
+  .auditoria-container .MuiTextField-root,
+  .auditoria-container .MuiFormControl-root,
+  .auditoria-container .MuiSelect-root {
+    margin-bottom: 8px !important;
+  }
+
+  /* Labels en pantallas muy pequeñas */
+  .auditoria-container .MuiFormLabel-root {
+    font-size: 0.8rem !important;
+  }
+
+  /* Inputs en pantallas muy pequeñas */
+  .auditoria-container .MuiInputBase-root {
+    font-size: 0.8rem !important;
+  }
+
+  /* Selects en pantallas muy pequeñas */
+  .auditoria-container .MuiSelect-select {
+    font-size: 0.8rem !important;
   }
 }
