@@ -1,0 +1,98 @@
+import { lazy } from 'react';
+
+// Lazy loading de componentes para web (excluyendo auditoría)
+const Home = lazy(() => import("../components/pages/home/Home"));
+const EstablecimientosContainer = lazy(() => import("../components/pages/establecimiento/EstablecimientosContainer"));
+const SucursalContainer = lazy(() => import("../components/pages/SucursalContainer.jsx/SucursalContainer"));
+const Formulario = lazy(() => import("../components/pages/formulario/Formulario"));
+const EditarFormulario = lazy(() => import("../components/pages/editar/EditarFormulario"));
+const Informe = lazy(() => import("../components/pages/auditoria/Informe"));
+const ReportesPage = lazy(() => import("../components/pages/auditoria/reporte/ReportesPage"));
+const PerfilUsuario = lazy(() => import("../components/pages/perfil/PerfilUsuario"));
+const LogsOperarios = lazy(() => import('../components/pages/usuarios').then(module => ({ default: module.LogsOperarios })));
+const Dashboard = lazy(() => import("../components/pages/dashboard/Dashboard"));
+const ClienteDashboard = lazy(() => import("../components/pages/admin/ClienteDashboard"));
+const OperarioDashboard = lazy(() => import("../components/pages/user/OperarioDashboard"));
+const PermissionsDebug = lazy(() => import("../components/pages/debug/PermissionsDebug"));
+const GaleriaFormulariosPublicos = lazy(() => import('../components/pages/formulario/GaleriaFormulariosPublicos'));
+const ConfiguracionPage = lazy(() => import('../components/pages/configuracion/ConfiguracionPage'));
+
+export const routesWeb = [
+  {
+    id: "dashboard",
+    path: "/dashboard",
+    Element: Dashboard,
+  },
+  {
+    id: "cliente-dashboard",
+    path: "/cliente-dashboard",
+    Element: ClienteDashboard,
+  },
+  {
+    id: "operario-dashboard",
+    path: "/operario-dashboard",
+    Element: OperarioDashboard,
+  },
+  {
+    id: "home",
+    path: "/",
+    Element: Home,
+  },
+  {
+    id: "establecimiento",
+    path: "/establecimiento",
+    Element: EstablecimientosContainer,
+  },
+  {
+    id: "sucursal",
+    path: "/sucursales",
+    Element: SucursalContainer,
+  },
+  {
+    id: "sucursal-empresa",
+    path: "/sucursales/:empresaId",
+    Element: SucursalContainer,
+  },
+  {
+    id: "formulario",
+    path: "/formulario",
+    Element: Formulario,
+  },
+  {
+    id: "editar",
+    path: "/editar",
+    Element: EditarFormulario,
+  },
+  {
+    id: "reporte",
+    path: "/reporte",
+    Element: ReportesPage,
+  },
+  {
+    id: "perfil",
+    path: "/perfil",
+    Element: PerfilUsuario,
+  },
+  {
+    id: "debug",
+    path: "/debug",
+    Element: PermissionsDebug,
+  },
+  {
+    id: "logs",
+    path: "/usuarios/logs",
+    Element: LogsOperarios,
+    protected: true,
+    roles: ['max', 'supermax']
+  },
+  {
+    id: "formularios-publicos",
+    path: "/formularios-publicos",
+    Element: GaleriaFormulariosPublicos,
+  },
+  {
+    id: "configuracion",
+    path: "/configuracion",
+    Element: ConfiguracionPage,
+  }
+];

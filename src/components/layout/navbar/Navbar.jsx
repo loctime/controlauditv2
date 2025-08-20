@@ -26,6 +26,7 @@ import Brightness4Icon from '@mui/icons-material/Brightness4';
 import Brightness7Icon from '@mui/icons-material/Brightness7';
 import Switch from '@mui/material/Switch';
 import { useColorMode } from '../../context/ColorModeContext';
+import { usePlatform } from '../../../hooks/usePlatform';
 
 const drawerWidth = 240;
 
@@ -37,18 +38,18 @@ function Navbar(props) {
   const { mode, toggleColorMode } = useColorMode();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const { isAPK } = usePlatform();
 
-  // Obtener menú dinámico basado en rol y permisos
+  // Si estamos en APK, no mostrar navbar
+  if (isAPK) {
+    return <Outlet />;
+  }
+
+  // Obtener menú dinámico basado en rol y permisos (solo para web)
   const menuItems = getMenuItems(role, permisos);
   
-  // Elementos adicionales para el drawer móvil (siempre disponibles)
+  // Elementos adicionales para el drawer móvil (solo para web)
   const mobileAdditionalItems = [
-    {
-      id: "auditoria-mobile",
-      path: "/auditoria",
-      title: "Auditoría",
-      Icon: ChecklistIcon
-    },
     {
       id: "perfil-mobile",
       path: "/perfil",
@@ -66,13 +67,8 @@ function Navbar(props) {
   // Combinar menú dinámico con elementos faltantes
   const uniqueMenuItems = [...menuItems, ...missingItems];
 
-  // ✅ Función para obtener la ruta del dashboard según el rol
+  // ✅ Función para obtener la ruta del dashboard según el rol (solo para web)
   const getDashboardRoute = () => {
-    // En móvil, siempre redirigir a auditoría
-    if (isMobile) {
-      return '/auditoria';
-    }
-    
     // En web, usar las rutas específicas por rol
     switch (role) {
       case 'supermax':
@@ -86,23 +82,18 @@ function Navbar(props) {
     }
   };
 
-  // ✅ Función para obtener el texto del dashboard según el rol
+  // ✅ Función para obtener el texto del dashboard según el rol (solo para web)
   const getDashboardText = () => {
-    // En móvil, siempre mostrar "Auditoría"
-    if (isMobile) {
-      return 'Auditoría';
-    }
-    
     // En web, usar los textos específicos por rol
     switch (role) {
       case 'supermax':
         return 'Panel de Control';
       case 'max':
-        return 'Calendario';
+        return 'Dashboard Cliente';
       case 'operario':
-        return 'Mi Dashboard';
+        return 'Dashboard Operario';
       default:
-        return 'Dashboard';
+        return 'Inicio';
     }
   };
 

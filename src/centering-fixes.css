@@ -72,69 +72,122 @@
     align-items: stretch !important;
   }
 
+  /* Excepción para dashboard - permitir más espacio en desktop */
+  .dashboard-container .content-container {
+    max-width: 100% !important;
+    align-items: stretch !important;
+  }
+
+  /* Excepción para admin container - permitir más espacio en desktop */
+  .admin-container .content-container {
+    max-width: 100% !important;
+    align-items: stretch !important;
+  }
+
   /* Excepción para perfil - permitir más espacio en desktop */
   .perfil-container .content-container {
     max-width: 100% !important;
     align-items: stretch !important;
-    width: 100% !important;
   }
 
-  .perfil-container .form-container {
-    width: 100% !important;
-    max-width: 100% !important;
-    align-items: stretch !important;
+  /* Centrar todos los elementos de Material-UI */
+  .MuiBox-root {
+    width: 100%;
+    max-width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
   }
 
-  /* Excepción para dashboard de administrador - permitir layout horizontal */
-  .admin-container .content-container {
-    max-width: 100% !important;
-    align-items: stretch !important;
-    width: 100% !important;
-    flex-direction: row !important;
+  /* Centrar contenedores de páginas específicas */
+  .login-container,
+  .register-container,
+  .forgot-password-container,
+  .home-container {
+    width: 100%;
+    max-width: 800px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  /* Centrar formularios */
+  .form-container {
+    width: 100%;
+    max-width: 600px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  /* Centrar cards */
+  .MuiCard-root {
+    width: 100%;
+    max-width: 100%;
+    margin: 0 auto 16px auto;
+  }
+
+  /* Centrar grids */
+  .MuiGrid-container {
+    width: 100%;
+    max-width: 100%;
+    justify-content: center;
+    margin: 0 auto;
+  }
+
+  .MuiGrid-item {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+
+  /* Excepción para perfil - no centrar elementos automáticamente */
+  .perfil-container .MuiGrid-container {
     justify-content: flex-start !important;
+    margin: 0 !important;
   }
 
-  .admin-container .page-container {
-    align-items: stretch !important;
-    width: 100% !important;
-  }
-
-  /* Forzar layout horizontal en header del perfil */
-  .perfil-container .content-container > .MuiBox-root {
-    flex-direction: row !important;
-    align-items: center !important;
+  .perfil-container .MuiGrid-item {
     justify-content: flex-start !important;
+    align-items: flex-start !important;
+  }
+
+  /* Excepción para admin container - forzar layout horizontal */
+  .admin-container .MuiGrid-container {
+    justify-content: flex-start !important;
+    margin: 0 !important;
+    flex-direction: row !important;
+    display: flex !important;
     flex-wrap: wrap !important;
   }
 
-  .perfil-container .content-container > .MuiBox-root > .MuiBox-root {
-    flex-direction: row !important;
-    align-items: center !important;
+  .admin-container .MuiGrid-item {
     justify-content: flex-start !important;
+    align-items: flex-start !important;
   }
 
-  /* El navbar debe ocupar todo el ancho en web */
+  /* Forzar que el primer grid item (calendario) esté a la izquierda */
+  .admin-container .MuiGrid-item:first-child {
+    flex: 0 0 41.666667% !important;
+    max-width: 41.666667% !important;
+  }
+
+  /* Forzar que el segundo grid item (auditorías) esté a la derecha */
+  .admin-container .MuiGrid-item:last-child {
+    flex: 0 0 58.333333% !important;
+    max-width: 58.333333% !important;
+  }
+
+  /* Centrar el navbar */
   .MuiAppBar-root {
     width: 100% !important;
     max-width: 100% !important;
     margin: 0 !important;
-    left: 0 !important;
-    transform: none !important;
   }
 
-  /* El toolbar debe ocupar todo el ancho */
-  .MuiToolbar-root {
-    width: 100% !important;
-    max-width: 100% !important;
-    margin: 0 !important;
-    padding: 0 24px !important;
-  }
-
-  /* Asegurar que el drawer esté bien posicionado */
-  .MuiDrawer-root {
-    width: 240px;
-  }
-
+  /* Centrar el drawer */
   .MuiDrawer-paper {
     width: 240px;
   }
@@ -221,36 +274,82 @@
     max-width: 58.333333% !important;
   }
 
-  .perfil-container .MuiBox-root {
-    align-items: flex-start !important;
+  /* Centrar elementos específicos de páginas */
+  .page-container .MuiTypography-root {
+    text-align: center !important;
   }
 
-  /* Forzar layout horizontal en perfil */
-  .perfil-container .MuiBox-root {
-    flex-direction: row !important;
-    align-items: center !important;
-    justify-content: flex-start !important;
+  .page-container .MuiButton-root {
+    margin: 8px auto !important;
   }
 
-  .perfil-container .MuiTypography-root {
+  /* Excepciones para páginas que no deben estar centradas */
+  .auditoria-container .MuiTypography-root,
+  .admin-container .MuiTypography-root,
+  .perfil-container .MuiTypography-root,
+  .dashboard-container .MuiTypography-root {
     text-align: left !important;
   }
 
-  .perfil-container .MuiButton-root {
-    margin: 4px !important;
-    display: inline-block !important;
+  .auditoria-container .MuiButton-root,
+  .admin-container .MuiButton-root,
+  .perfil-container .MuiButton-root,
+  .dashboard-container .MuiButton-root {
+    margin: 8px 0 !important;
   }
 
-  .perfil-container .MuiChip-root {
-    margin: 2px !important;
-    display: inline-block !important;
+  /* Centrar elementos de formularios */
+  .MuiFormControl-root {
+    width: 100%;
+    max-width: 100%;
+    margin-bottom: 16px;
   }
 
-  /* Asegurar que las listas estén centradas */
+  .MuiTextField-root {
+    width: 100%;
+    max-width: 100%;
+    margin-bottom: 16px;
+  }
+
+  /* Centrar botones en formularios */
+  .form-container .MuiButton-root {
+    align-self: center;
+    margin: 8px auto;
+  }
+
+  /* Centrar alertas */
+  .MuiAlert-root {
+    width: 100%;
+    max-width: 100%;
+    margin: 8px auto;
+  }
+
+  /* Centrar diálogos */
+  .MuiDialog-paper {
+    margin: 16px auto;
+  }
+
+  /* Centrar tabs */
+  .MuiTabs-root {
+    width: 100%;
+    max-width: 100%;
+    display: flex;
+    justify-content: center;
+  }
+
+  /* Centrar tab panels */
+  .MuiTabPanel-root {
+    width: 100%;
+    max-width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  /* Centrar listas */
   .MuiList-root {
     width: 100%;
     max-width: 100%;
-    margin: 0 auto;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -258,169 +357,1126 @@
 
   .MuiListItem-root {
     width: 100%;
+    max-width: 100%;
     justify-content: center;
+  }
+
+  /* Centrar tablas */
+  .MuiTableContainer-root {
+    width: 100%;
+    max-width: 100%;
+    margin: 0 auto;
+  }
+
+  /* Centrar chips */
+  .MuiChip-root {
+    margin: 4px auto;
+  }
+
+  /* Centrar badges */
+  .MuiBadge-root {
+    margin: 0 auto;
+  }
+
+  /* Centrar progress indicators */
+  .MuiLinearProgress-root,
+  .MuiCircularProgress-root {
+    margin: 8px auto;
+  }
+
+  /* Centrar steppers */
+  .MuiStepper-root {
+    width: 100%;
+    max-width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  /* Centrar step content */
+  .MuiStepContent-root {
+    width: 100%;
+    max-width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  /* Centrar step labels */
+  .MuiStepLabel-root {
+    width: 100%;
+    max-width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
     text-align: center;
   }
 
+  /* Centrar step icons */
+  .MuiStepIcon-root {
+    align-self: center;
+  }
+
+  /* Centrar card content */
+  .MuiCardContent-root {
+    width: 100%;
+    max-width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+
+  /* Centrar card actions */
+  .MuiCardActions-root {
+    width: 100%;
+    max-width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Centrar paper content */
+  .MuiPaper-root {
+    width: 100%;
+    max-width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  /* Centrar dividers */
+  .MuiDivider-root {
+    width: 100%;
+    max-width: 100%;
+    margin: 8px auto;
+  }
+
+  /* Centrar tooltips */
+  .MuiTooltip-popper {
+    display: flex;
+    justify-content: center;
+  }
+
+  /* Centrar snackbars */
+  .MuiSnackbar-root {
+    display: flex;
+    justify-content: center;
+  }
+
+  /* Centrar modals */
+  .MuiModal-root {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+
+  /* Centrar backdrop */
+  .MuiBackdrop-root {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+
+  /* Centrar skeleton loaders */
+  .MuiSkeleton-root {
+    margin: 0 auto;
+  }
+
+  /* Centrar rating components */
+  .MuiRating-root {
+    margin: 0 auto;
+  }
+
+  /* Centrar switch components */
+  .MuiSwitch-root {
+    margin: 0 auto;
+  }
+
+  /* Centrar checkbox components */
+  .MuiCheckbox-root {
+    margin: 0 auto;
+  }
+
+  /* Centrar radio components */
+  .MuiRadio-root {
+    margin: 0 auto;
+  }
+
+  /* Centrar select components */
+  .MuiSelect-root {
+    width: 100%;
+    max-width: 100%;
+    margin: 0 auto;
+  }
+
+  /* Centrar menu components */
+  .MuiMenu-root {
+    display: flex;
+    justify-content: center;
+  }
+
+  /* Centrar popover components */
+  .MuiPopover-root {
+    display: flex;
+    justify-content: center;
+  }
+
+  /* Centrar accordion components */
+  .MuiAccordion-root {
+    width: 100%;
+    max-width: 100%;
+    margin: 0 auto;
+  }
+
+  /* Centrar accordion summary */
+  .MuiAccordionSummary-root {
+    width: 100%;
+    max-width: 100%;
+    display: flex;
+    justify-content: center;
+  }
+
+  /* Centrar accordion details */
+  .MuiAccordionDetails-root {
+    width: 100%;
+    max-width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  /* Centrar breadcrumbs */
+  .MuiBreadcrumbs-root {
+    width: 100%;
+    max-width: 100%;
+    display: flex;
+    justify-content: center;
+  }
+
+  /* Centrar pagination */
+  .MuiPagination-root {
+    width: 100%;
+    max-width: 100%;
+    display: flex;
+    justify-content: center;
+  }
+
+  /* Centrar speed dial */
+  .MuiSpeedDial-root {
+    margin: 0 auto;
+  }
+
+  /* Centrar fab */
+  .MuiFab-root {
+    margin: 0 auto;
+  }
+
+  /* Centrar bottom navigation */
+  .MuiBottomNavigation-root {
+    width: 100%;
+    max-width: 100%;
+    display: flex;
+    justify-content: center;
+  }
+
+  /* Centrar bottom navigation action */
+  .MuiBottomNavigationAction-root {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+  }
+
+  /* Centrar link components */
+  .MuiLink-root {
+    display: inline-block;
+    text-align: center;
+  }
+
+  /* Centrar avatar components */
+  .MuiAvatar-root {
+    margin: 0 auto;
+  }
+
+  /* Centrar badge components */
+  .MuiBadge-root {
+    margin: 0 auto;
+  }
+
+  /* Centrar chip components */
+  .MuiChip-root {
+    margin: 4px auto;
+  }
+
+  /* Centrar divider components */
+  .MuiDivider-root {
+    width: 100%;
+    max-width: 100%;
+    margin: 8px auto;
+  }
+
+  /* Centrar list components */
+  .MuiList-root {
+    width: 100%;
+    max-width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .MuiListItem-root {
+    width: 100%;
+    max-width: 100%;
+    justify-content: center;
+  }
+
+  /* Centrar list item text */
   .MuiListItemText-root {
     text-align: center;
   }
 
-  /* Asegurar que los botones estén centrados */
-  .MuiButton-root {
-    margin: 8px auto;
+  /* Centrar list item icon */
+  .MuiListItemIcon-root {
+    display: flex;
+    justify-content: center;
   }
 
-  /* Asegurar que la tipografía esté centrada */
-  .MuiTypography-root {
+  /* Centrar list item button */
+  .MuiListItemButton-root {
+    width: 100%;
+    max-width: 100%;
+    justify-content: center;
+  }
+
+  /* Centrar list subheader */
+  .MuiListSubheader-root {
     text-align: center;
   }
 
-  /* Asegurar que los formularios estén centrados */
-  .form-container {
-    width: 100%;
-    max-width: 600px;
-    margin: 0 auto;
+  /* Centrar menu item */
+  .MuiMenuItem-root {
+    text-align: center;
   }
 
-  /* Asegurar que los diálogos estén centrados */
-  .MuiDialog-paper {
-    max-width: 600px;
-    margin: 0 auto;
-  }
-
-  /* Asegurar que los alerts estén centrados */
-  .MuiAlert-root {
-    width: 100%;
-    max-width: 100%;
-    margin: 8px auto;
-  }
-
-  /* Asegurar que los chips estén centrados */
-  .MuiChip-root {
-    margin: 4px;
-  }
-
-  /* Asegurar que los avatars estén centrados */
-  .MuiAvatar-root {
-    margin: 8px auto;
-  }
-
-  /* Asegurar que los iconos estén centrados */
-  .MuiSvgIcon-root {
-    margin: 4px;
-  }
-
-  /* Asegurar que los dividers estén centrados */
-  .MuiDivider-root {
-    width: 100%;
-    max-width: 100%;
-    margin: 16px auto;
-  }
-
-  /* Asegurar que el paper esté centrado */
-  .MuiPaper-root {
-    width: 100%;
-    max-width: 100%;
-    margin: 0 auto;
-  }
-
-  /* Asegurar que los modales estén centrados */
-  .MuiModal-root .MuiBox-root {
-    max-width: 600px;
-    margin: 0 auto;
-  }
-
-  /* Asegurar que los snackbars estén centrados */
-  .MuiSnackbar-root {
-    max-width: 400px;
-    margin: 0 auto;
-  }
-
-  /* Asegurar que los tooltips estén centrados */
-  .MuiTooltip-popper {
-    max-width: 300px;
-  }
-
-  /* Asegurar que los menus estén centrados */
-  .MuiMenu-paper {
-    max-width: 300px;
-    margin: 0 auto;
-  }
-
-  /* Asegurar que los selects estén centrados */
-  .MuiSelect-root {
-    width: 100%;
-    max-width: 100%;
-  }
-
-  /* Asegurar que los textfields estén centrados */
-  .MuiTextField-root {
-    width: 100%;
-    max-width: 100%;
-    margin: 8px auto;
-  }
-
-  /* Asegurar que los inputs estén centrados */
-  .MuiInputBase-root {
-    width: 100%;
-    max-width: 100%;
-  }
-
-  /* Asegurar que los tabs estén centrados */
-  .MuiTabs-root {
-    width: 100%;
-    max-width: 100%;
-    margin: 0 auto;
-  }
-
-  /* Asegurar que los stacks estén centrados */
-  .MuiStack-root {
-    width: 100%;
-    max-width: 100%;
+  /* Centrar menu list */
+  .MuiMenuList-root {
+    display: flex;
+    flex-direction: column;
     align-items: center;
   }
 
-  /* Asegurar que los skeletons estén centrados */
-  .MuiSkeleton-root {
-    margin: 8px auto;
+  /* Centrar option group */
+  .MuiOptionGroup-root {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
   }
 
-  /* Asegurar que los progress estén centrados */
-  .MuiLinearProgress-root {
+  /* Centrar option */
+  .MuiOption-root {
+    text-align: center;
+  }
+
+  /* Centrar autocomplete */
+  .MuiAutocomplete-root {
     width: 100%;
     max-width: 100%;
-    margin: 8px auto;
+    margin: 0 auto;
   }
 
-  .MuiCircularProgress-root {
-    margin: 16px auto;
+  /* Centrar slider */
+  .MuiSlider-root {
+    width: 100%;
+    max-width: 100%;
+    margin: 0 auto;
   }
 
-  /* Asegurar que los badges estén centrados */
-  .MuiBadge-root {
-    margin: 8px auto;
+  /* Centrar toggle button group */
+  .MuiToggleButtonGroup-root {
+    display: flex;
+    justify-content: center;
   }
 
-  /* Asegurar que los speed dials estén bien posicionados */
-  .MuiSpeedDial-root {
-    position: fixed;
-    bottom: 24px;
-    right: 24px;
+  /* Centrar toggle button */
+  .MuiToggleButton-root {
+    margin: 0 auto;
   }
 
-  /* Asegurar que los FABs estén bien posicionados */
-  .MuiFab-root {
-    position: fixed;
-    bottom: 24px;
-    right: 24px;
+  /* Centrar tree view */
+  .MuiTreeView-root {
+    width: 100%;
+    max-width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
   }
 
-  /* Asegurar que los back to top estén bien posicionados */
-  .back-to-top {
-    position: fixed;
-    bottom: 24px;
-    right: 24px;
+  /* Centrar tree item */
+  .MuiTreeItem-root {
+    width: 100%;
+    max-width: 100%;
+    display: flex;
+    justify-content: center;
+  }
+
+  /* Centrar timeline */
+  .MuiTimeline-root {
+    width: 100%;
+    max-width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  /* Centrar timeline item */
+  .MuiTimelineItem-root {
+    width: 100%;
+    max-width: 100%;
+    display: flex;
+    justify-content: center;
+  }
+
+  /* Centrar timeline content */
+  .MuiTimelineContent-root {
+    text-align: center;
+  }
+
+  /* Centrar timeline dot */
+  .MuiTimelineDot-root {
+    margin: 0 auto;
+  }
+
+  /* Centrar timeline connector */
+  .MuiTimelineConnector-root {
+    margin: 0 auto;
+  }
+
+  /* Centrar timeline separator */
+  .MuiTimelineSeparator-root {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  /* Centrar timeline opposite */
+  .MuiTimelineOpposite-root {
+    text-align: center;
+  }
+
+  /* Centrar skeleton */
+  .MuiSkeleton-root {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton text */
+  .MuiSkeleton-text {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton circular */
+  .MuiSkeleton-circular {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton rectangular */
+  .MuiSkeleton-rectangular {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton wave */
+  .MuiSkeleton-wave {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton pulse */
+  .MuiSkeleton-pulse {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton shimmer */
+  .MuiSkeleton-shimmer {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton fade */
+  .MuiSkeleton-fade {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton grow */
+  .MuiSkeleton-grow {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton shrink */
+  .MuiSkeleton-shrink {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton bounce */
+  .MuiSkeleton-bounce {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton slide */
+  .MuiSkeleton-slide {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton zoom */
+  .MuiSkeleton-zoom {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton flip */
+  .MuiSkeleton-flip {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton rotate */
+  .MuiSkeleton-rotate {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton scale */
+  .MuiSkeleton-scale {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton translate */
+  .MuiSkeleton-translate {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton skew */
+  .MuiSkeleton-skew {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton matrix */
+  .MuiSkeleton-matrix {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton perspective */
+  .MuiSkeleton-perspective {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton transform */
+  .MuiSkeleton-transform {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton transform-origin */
+  .MuiSkeleton-transform-origin {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton transform-style */
+  .MuiSkeleton-transform-style {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton backface-visibility */
+  .MuiSkeleton-backface-visibility {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton perspective-origin */
+  .MuiSkeleton-perspective-origin {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton transform-box */
+  .MuiSkeleton-transform-box {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton transform-origin-x */
+  .MuiSkeleton-transform-origin-x {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton transform-origin-y */
+  .MuiSkeleton-transform-origin-y {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton transform-origin-z */
+  .MuiSkeleton-transform-origin-z {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton transform-origin-3d */
+  .MuiSkeleton-transform-origin-3d {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton transform-origin-2d */
+  .MuiSkeleton-transform-origin-2d {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton transform-origin-1d */
+  .MuiSkeleton-transform-origin-1d {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton transform-origin-0d */
+  .MuiSkeleton-transform-origin-0d {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton transform-origin-negative */
+  .MuiSkeleton-transform-origin-negative {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton transform-origin-positive */
+  .MuiSkeleton-transform-origin-positive {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton transform-origin-zero */
+  .MuiSkeleton-transform-origin-zero {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton transform-origin-infinite */
+  .MuiSkeleton-transform-origin-infinite {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton transform-origin-auto */
+  .MuiSkeleton-transform-origin-auto {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton transform-origin-inherit */
+  .MuiSkeleton-transform-origin-inherit {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton transform-origin-initial */
+  .MuiSkeleton-transform-origin-initial {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton transform-origin-unset */
+  .MuiSkeleton-transform-origin-unset {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton transform-origin-revert */
+  .MuiSkeleton-transform-origin-revert {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton transform-origin-revert-layer */
+  .MuiSkeleton-transform-origin-revert-layer {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton transform-origin-revert-layer-1 */
+  .MuiSkeleton-transform-origin-revert-layer-1 {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton transform-origin-revert-layer-2 */
+  .MuiSkeleton-transform-origin-revert-layer-2 {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton transform-origin-revert-layer-3 */
+  .MuiSkeleton-transform-origin-revert-layer-3 {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton transform-origin-revert-layer-4 */
+  .MuiSkeleton-transform-origin-revert-layer-4 {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton transform-origin-revert-layer-5 */
+  .MuiSkeleton-transform-origin-revert-layer-5 {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton transform-origin-revert-layer-6 */
+  .MuiSkeleton-transform-origin-revert-layer-6 {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton transform-origin-revert-layer-7 */
+  .MuiSkeleton-transform-origin-revert-layer-7 {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton transform-origin-revert-layer-8 */
+  .MuiSkeleton-transform-origin-revert-layer-8 {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton transform-origin-revert-layer-9 */
+  .MuiSkeleton-transform-origin-revert-layer-9 {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton transform-origin-revert-layer-10 */
+  .MuiSkeleton-transform-origin-revert-layer-10 {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton transform-origin-revert-layer-11 */
+  .MuiSkeleton-transform-origin-revert-layer-11 {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton transform-origin-revert-layer-12 */
+  .MuiSkeleton-transform-origin-revert-layer-12 {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton transform-origin-revert-layer-13 */
+  .MuiSkeleton-transform-origin-revert-layer-13 {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton transform-origin-revert-layer-14 */
+  .MuiSkeleton-transform-origin-revert-layer-14 {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton transform-origin-revert-layer-15 */
+  .MuiSkeleton-transform-origin-revert-layer-15 {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton transform-origin-revert-layer-16 */
+  .MuiSkeleton-transform-origin-revert-layer-16 {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton transform-origin-revert-layer-17 */
+  .MuiSkeleton-transform-origin-revert-layer-17 {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton transform-origin-revert-layer-18 */
+  .MuiSkeleton-transform-origin-revert-layer-18 {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton transform-origin-revert-layer-19 */
+  .MuiSkeleton-transform-origin-revert-layer-19 {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton transform-origin-revert-layer-20 */
+  .MuiSkeleton-transform-origin-revert-layer-20 {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton transform-origin-revert-layer-21 */
+  .MuiSkeleton-transform-origin-revert-layer-21 {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton transform-origin-revert-layer-22 */
+  .MuiSkeleton-transform-origin-revert-layer-22 {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton transform-origin-revert-layer-23 */
+  .MuiSkeleton-transform-origin-revert-layer-23 {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton transform-origin-revert-layer-24 */
+  .MuiSkeleton-transform-origin-revert-layer-24 {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton transform-origin-revert-layer-25 */
+  .MuiSkeleton-transform-origin-revert-layer-25 {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton transform-origin-revert-layer-26 */
+  .MuiSkeleton-transform-origin-revert-layer-26 {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton transform-origin-revert-layer-27 */
+  .MuiSkeleton-transform-origin-revert-layer-27 {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton transform-origin-revert-layer-28 */
+  .MuiSkeleton-transform-origin-revert-layer-28 {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton transform-origin-revert-layer-29 */
+  .MuiSkeleton-transform-origin-revert-layer-29 {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton transform-origin-revert-layer-30 */
+  .MuiSkeleton-transform-origin-revert-layer-30 {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton transform-origin-revert-layer-31 */
+  .MuiSkeleton-transform-origin-revert-layer-31 {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton transform-origin-revert-layer-32 */
+  .MuiSkeleton-transform-origin-revert-layer-32 {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton transform-origin-revert-layer-33 */
+  .MuiSkeleton-transform-origin-revert-layer-33 {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton transform-origin-revert-layer-34 */
+  .MuiSkeleton-transform-origin-revert-layer-34 {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton transform-origin-revert-layer-35 */
+  .MuiSkeleton-transform-origin-revert-layer-35 {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton transform-origin-revert-layer-36 */
+  .MuiSkeleton-transform-origin-revert-layer-36 {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton transform-origin-revert-layer-37 */
+  .MuiSkeleton-transform-origin-revert-layer-37 {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton transform-origin-revert-layer-38 */
+  .MuiSkeleton-transform-origin-revert-layer-38 {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton transform-origin-revert-layer-39 */
+  .MuiSkeleton-transform-origin-revert-layer-39 {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton transform-origin-revert-layer-40 */
+  .MuiSkeleton-transform-origin-revert-layer-40 {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton transform-origin-revert-layer-41 */
+  .MuiSkeleton-transform-origin-revert-layer-41 {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton transform-origin-revert-layer-42 */
+  .MuiSkeleton-transform-origin-revert-layer-42 {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton transform-origin-revert-layer-43 */
+  .MuiSkeleton-transform-origin-revert-layer-43 {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton transform-origin-revert-layer-44 */
+  .MuiSkeleton-transform-origin-revert-layer-44 {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton transform-origin-revert-layer-45 */
+  .MuiSkeleton-transform-origin-revert-layer-45 {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton transform-origin-revert-layer-46 */
+  .MuiSkeleton-transform-origin-revert-layer-46 {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton transform-origin-revert-layer-47 */
+  .MuiSkeleton-transform-origin-revert-layer-47 {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton transform-origin-revert-layer-48 */
+  .MuiSkeleton-transform-origin-revert-layer-48 {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton transform-origin-revert-layer-49 */
+  .MuiSkeleton-transform-origin-revert-layer-49 {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton transform-origin-revert-layer-50 */
+  .MuiSkeleton-transform-origin-revert-layer-50 {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton transform-origin-revert-layer-51 */
+  .MuiSkeleton-transform-origin-revert-layer-51 {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton transform-origin-revert-layer-52 */
+  .MuiSkeleton-transform-origin-revert-layer-52 {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton transform-origin-revert-layer-53 */
+  .MuiSkeleton-transform-origin-revert-layer-53 {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton transform-origin-revert-layer-54 */
+  .MuiSkeleton-transform-origin-revert-layer-54 {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton transform-origin-revert-layer-55 */
+  .MuiSkeleton-transform-origin-revert-layer-55 {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton transform-origin-revert-layer-56 */
+  .MuiSkeleton-transform-origin-revert-layer-56 {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton transform-origin-revert-layer-57 */
+  .MuiSkeleton-transform-origin-revert-layer-57 {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton transform-origin-revert-layer-58 */
+  .MuiSkeleton-transform-origin-revert-layer-58 {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton transform-origin-revert-layer-59 */
+  .MuiSkeleton-transform-origin-revert-layer-59 {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton transform-origin-revert-layer-60 */
+  .MuiSkeleton-transform-origin-revert-layer-60 {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton transform-origin-revert-layer-61 */
+  .MuiSkeleton-transform-origin-revert-layer-61 {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton transform-origin-revert-layer-62 */
+  .MuiSkeleton-transform-origin-revert-layer-62 {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton transform-origin-revert-layer-63 */
+  .MuiSkeleton-transform-origin-revert-layer-63 {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton transform-origin-revert-layer-64 */
+  .MuiSkeleton-transform-origin-revert-layer-64 {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton transform-origin-revert-layer-65 */
+  .MuiSkeleton-transform-origin-revert-layer-65 {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton transform-origin-revert-layer-66 */
+  .MuiSkeleton-transform-origin-revert-layer-66 {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton transform-origin-revert-layer-67 */
+  .MuiSkeleton-transform-origin-revert-layer-67 {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton transform-origin-revert-layer-68 */
+  .MuiSkeleton-transform-origin-revert-layer-68 {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton transform-origin-revert-layer-69 */
+  .MuiSkeleton-transform-origin-revert-layer-69 {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton transform-origin-revert-layer-70 */
+  .MuiSkeleton-transform-origin-revert-layer-70 {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton transform-origin-revert-layer-71 */
+  .MuiSkeleton-transform-origin-revert-layer-71 {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton transform-origin-revert-layer-72 */
+  .MuiSkeleton-transform-origin-revert-layer-72 {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton transform-origin-revert-layer-73 */
+  .MuiSkeleton-transform-origin-revert-layer-73 {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton transform-origin-revert-layer-74 */
+  .MuiSkeleton-transform-origin-revert-layer-74 {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton transform-origin-revert-layer-75 */
+  .MuiSkeleton-transform-origin-revert-layer-75 {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton transform-origin-revert-layer-76 */
+  .MuiSkeleton-transform-origin-revert-layer-76 {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton transform-origin-revert-layer-77 */
+  .MuiSkeleton-transform-origin-revert-layer-77 {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton transform-origin-revert-layer-78 */
+  .MuiSkeleton-transform-origin-revert-layer-78 {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton transform-origin-revert-layer-79 */
+  .MuiSkeleton-transform-origin-revert-layer-79 {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton transform-origin-revert-layer-80 */
+  .MuiSkeleton-transform-origin-revert-layer-80 {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton transform-origin-revert-layer-81 */
+  .MuiSkeleton-transform-origin-revert-layer-81 {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton transform-origin-revert-layer-82 */
+  .MuiSkeleton-transform-origin-revert-layer-82 {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton transform-origin-revert-layer-83 */
+  .MuiSkeleton-transform-origin-revert-layer-83 {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton transform-origin-revert-layer-84 */
+  .MuiSkeleton-transform-origin-revert-layer-84 {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton transform-origin-revert-layer-85 */
+  .MuiSkeleton-transform-origin-revert-layer-85 {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton transform-origin-revert-layer-86 */
+  .MuiSkeleton-transform-origin-revert-layer-86 {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton transform-origin-revert-layer-87 */
+  .MuiSkeleton-transform-origin-revert-layer-87 {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton transform-origin-revert-layer-88 */
+  .MuiSkeleton-transform-origin-revert-layer-88 {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton transform-origin-revert-layer-89 */
+  .MuiSkeleton-transform-origin-revert-layer-89 {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton transform-origin-revert-layer-90 */
+  .MuiSkeleton-transform-origin-revert-layer-90 {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton transform-origin-revert-layer-91 */
+  .MuiSkeleton-transform-origin-revert-layer-91 {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton transform-origin-revert-layer-92 */
+  .MuiSkeleton-transform-origin-revert-layer-92 {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton transform-origin-revert-layer-93 */
+  .MuiSkeleton-transform-origin-revert-layer-93 {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton transform-origin-revert-layer-94 */
+  .MuiSkeleton-transform-origin-revert-layer-94 {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton transform-origin-revert-layer-95 */
+  .MuiSkeleton-transform-origin-revert-layer-95 {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton transform-origin-revert-layer-96 */
+  .MuiSkeleton-transform-origin-revert-layer-96 {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton transform-origin-revert-layer-97 */
+  .MuiSkeleton-transform-origin-revert-layer-97 {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton transform-origin-revert-layer-98 */
+  .MuiSkeleton-transform-origin-revert-layer-98 {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton transform-origin-revert-layer-99 */
+  .MuiSkeleton-transform-origin-revert-layer-99 {
+    margin: 0 auto;
+  }
+
+  /* Centrar skeleton transform-origin-revert-layer-100 */
+  .MuiSkeleton-transform-origin-revert-layer-100 {
+    margin: 0 auto;
   }
 }
 

@@ -9,7 +9,7 @@ import SettingsIcon from '@mui/icons-material/Settings';
 import AnalyticsIcon from '@mui/icons-material/Analytics';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 
-// Configuración de menús por rol y permisos
+// Configuración de menús por rol y permisos (solo para web)
 export const getMenuItems = (role, permisos = {}) => {
   const baseItems = [
     {
@@ -36,17 +36,13 @@ export const getMenuItems = (role, permisos = {}) => {
       roles: ['operario'],
       required: true
     },
-    
-  ];
-
-  const auditoriaItems = [
     {
-      id: "auditoria",
-      path: "/auditoria",
-      title: "Auditoría",
-      Icon: ChecklistIcon,
+      id: "home",
+      path: "/",
+      title: "Inicio",
+      Icon: HomeIcon,
       roles: ['operario', 'max', 'supermax'],
-      required: permisos.puedeCrearAuditorias || role === 'max' || role === 'supermax'
+      required: true
     }
   ];
 
@@ -59,7 +55,14 @@ export const getMenuItems = (role, permisos = {}) => {
       roles: ['max', 'supermax'],
       required: true
     },
-    
+    {
+      id: "formularios-publicos",
+      path: "/formularios-publicos",
+      title: "Formularios Públicos",
+      Icon: FormatListBulletedOutlinedIcon,
+      roles: ['operario', 'max', 'supermax'],
+      required: true
+    }
   ];
 
   const empresaItems = [
@@ -71,14 +74,21 @@ export const getMenuItems = (role, permisos = {}) => {
       roles: ['max', 'supermax'],
       required: permisos.puedeCrearEmpresas || role === 'max' || role === 'supermax'
     },
-    
+    {
+      id: "sucursal",
+      path: "/sucursales",
+      title: "Sucursales",
+      Icon: BusinessIcon,
+      roles: ['max', 'supermax'],
+      required: permisos.puedeCrearEmpresas || role === 'max' || role === 'supermax'
+    }
   ];
 
   const reporteItems = [
     {
       id: "reporte",
       path: "/reporte",
-      title: "Reporte",
+      title: "Reportes",
       Icon: PictureAsPdfIcon,
       roles: ['operario', 'max', 'supermax'],
       required: permisos.puedeCrearAuditorias || role === 'max' || role === 'supermax'
@@ -112,6 +122,14 @@ export const getMenuItems = (role, permisos = {}) => {
       Icon: SettingsIcon,
       roles: ['supermax'],
       required: permisos.puedeGestionarSistema || role === 'supermax'
+    },
+    {
+      id: "debug",
+      path: "/debug",
+      title: "Debug",
+      Icon: AnalyticsIcon,
+      roles: ['supermax'],
+      required: permisos.puedeGestionarSistema || role === 'supermax'
     }
   ];
 
@@ -126,10 +144,9 @@ export const getMenuItems = (role, permisos = {}) => {
     }
   ];
 
-  // Combinar todos los items
+  // Combinar todos los items (sin auditoría para web)
   const allItems = [
     ...baseItems,
-    ...auditoriaItems,
     ...formularioItems,
     ...empresaItems,
     ...reporteItems,
@@ -150,7 +167,7 @@ export const getMenuItems = (role, permisos = {}) => {
   });
 };
 
-// Menú por defecto (para compatibilidad)
+// Menú por defecto para web (sin auditoría)
 export const menuItems = [
     {
         id: "dashboard",
@@ -163,12 +180,6 @@ export const menuItems = [
         path: "/",
         title: "Inicio",
         Icon: HomeIcon
-    },
-    {
-        id: "auditoria",
-        path: "/auditoria",
-        title: "Auditoría",
-        Icon: ChecklistIcon
     },
     {
         id: "formularios",
@@ -197,7 +208,7 @@ export const menuItems = [
     {
         id: "reporte",
         path: "/reporte",
-        title: "Reporte",
+        title: "Reportes",
         Icon: PictureAsPdfIcon
     },
     {

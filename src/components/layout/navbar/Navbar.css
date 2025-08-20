@@ -33,35 +33,51 @@ a{
     background-color: rgba(255, 255, 255, 0.1) !important;
   }
   
-  /* Mejorar el AppBar en móvil - extender hasta arriba */
+  /* Mejorar el AppBar en móvil - extender hasta arriba y hacer más grande */
   .MuiAppBar-root {
     /* Asegurar que la barra se vea bien */
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
     /* Extender hasta arriba para cubrir la barra de estado */
     top: 0 !important;
-    height: calc(56px + env(safe-area-inset-top, 0px)) !important;
+    /* Hacer el navbar más grande para evitar que la barra de estado lo tape */
+    height: calc(72px + env(safe-area-inset-top, 0px)) !important;
     background-color: #1976d2 !important;
+    /* Asegurar que esté por encima de la barra de estado */
+    z-index: 1200 !important;
   }
   
-  /* Ajustar el Toolbar para safe areas */
+  /* Ajustar el Toolbar para safe areas y hacer más grande */
   .MuiToolbar-root {
     padding-top: env(safe-area-inset-top, 0px) !important;
-    min-height: calc(56px + env(safe-area-inset-top, 0px)) !important;
-    height: calc(56px + env(safe-area-inset-top, 0px)) !important;
+    /* Hacer el toolbar más grande */
+    min-height: calc(72px + env(safe-area-inset-top, 0px)) !important;
+    height: calc(72px + env(safe-area-inset-top, 0px)) !important;
+    /* Asegurar que el contenido esté bien centrado */
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
   }
   
-  /* Mejorar los botones en móvil */
+  /* Mejorar los botones en móvil - hacer más grandes */
   .MuiIconButton-root {
-    min-width: 44px !important;
-    min-height: 44px !important;
-    /* Tamaño mínimo para toque */
+    min-width: 48px !important;
+    min-height: 48px !important;
+    /* Tamaño mínimo para toque más grande */
+    padding: 12px !important;
   }
   
-  /* Mejorar el texto en móvil */
+  /* Mejorar el texto en móvil - hacer más grande */
   .MuiTypography-root {
-    font-size: 14px !important;
+    font-size: 16px !important;
     line-height: 1.4 !important;
+    font-weight: 500 !important;
+  }
+  
+  /* Hacer el logo/título más grande */
+  .MuiTypography-h6 {
+    font-size: 18px !important;
+    font-weight: 600 !important;
   }
 }
 
@@ -72,12 +88,24 @@ a{
   }
   
   .MuiToolbar-root {
-    padding-left: 8px !important;
-    padding-right: 8px !important;
+    padding-left: 12px !important;
+    padding-right: 12px !important;
   }
   
   .MuiIconButton-root {
-    padding: 8px !important;
+    padding: 10px !important;
+    min-width: 44px !important;
+    min-height: 44px !important;
+  }
+  
+  /* Hacer el navbar aún más grande en pantallas muy pequeñas */
+  .MuiAppBar-root {
+    height: calc(80px + env(safe-area-inset-top, 0px)) !important;
+  }
+  
+  .MuiToolbar-root {
+    min-height: calc(80px + env(safe-area-inset-top, 0px)) !important;
+    height: calc(80px + env(safe-area-inset-top, 0px)) !important;
   }
 }
 
@@ -103,8 +131,8 @@ a{
 @media (max-width: 768px) {
   /* Asegurar que los elementos sean tocables */
   button, a, [role="button"] {
-    min-height: 44px;
-    min-width: 44px;
+    min-height: 48px;
+    min-width: 48px;
   }
   
   /* Mejorar el contraste */
@@ -118,30 +146,53 @@ a{
   }
 }
 
-/* Estilos específicos para móvil - extender AppBar hasta arriba */
+/* Estilos específicos para móvil - extender AppBar hasta arriba y hacer más grande */
 @media (max-width: 768px) {
-  /* Ajustar AppBar para extender hasta arriba */
+  /* Ajustar AppBar para extender hasta arriba y ser más grande */
   .MuiAppBar-root {
     top: 0 !important;
-    height: calc(56px + env(safe-area-inset-top, 0px)) !important;
+    /* Hacer el navbar más grande */
+    height: calc(72px + env(safe-area-inset-top, 0px)) !important;
     background-color: #1976d2 !important;
+    /* Asegurar que esté por encima de todo */
+    z-index: 1200 !important;
   }
   
   .MuiToolbar-root {
     padding-top: env(safe-area-inset-top, 0px) !important;
-    min-height: calc(56px + env(safe-area-inset-top, 0px)) !important;
-    height: calc(56px + env(safe-area-inset-top, 0px)) !important;
+    /* Hacer el toolbar más grande */
+    min-height: calc(72px + env(safe-area-inset-top, 0px)) !important;
+    height: calc(72px + env(safe-area-inset-top, 0px)) !important;
+    /* Mejorar el espaciado */
+    padding-left: 16px !important;
+    padding-right: 16px !important;
   }
   
-  /* Ajustar margen superior del contenido principal */
+  /* Ajustar margen superior del contenido principal para el navbar más grande */
   main {
-    margin-top: calc(56px + env(safe-area-inset-top, 0px)) !important;
+    margin-top: calc(72px + env(safe-area-inset-top, 0px)) !important;
     padding-top: 0 !important;
   }
   
   /* Reducir padding del contenido */
   .main-app-container {
     padding: 4px !important;
+  }
+}
+
+/* Estilos específicos para pantallas muy pequeñas - navbar aún más grande */
+@media (max-width: 480px) {
+  .MuiAppBar-root {
+    height: calc(80px + env(safe-area-inset-top, 0px)) !important;
+  }
+  
+  .MuiToolbar-root {
+    min-height: calc(80px + env(safe-area-inset-top, 0px)) !important;
+    height: calc(80px + env(safe-area-inset-top, 0px)) !important;
+  }
+  
+  main {
+    margin-top: calc(80px + env(safe-area-inset-top, 0px)) !important;
   }
 }
 

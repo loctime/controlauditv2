@@ -4,6 +4,10 @@ import { BrowserRouter } from "react-router-dom";
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import './styles/main.css'; // Estilos principales unificados
+import './centering-fixes.css'; // Fixes para centrar contenido en web
+import './web-optimization.css'; // Optimizaciones específicas para web
+import './mobile-optimization.css'; // Optimizaciones específicas para móvil
+import './safe-areas.css'; // Safe areas para móvil
 import { ColorModeProvider } from "./components/context/ColorModeContext";
 import AuthContextComponent from "./components/context/AuthContext";
 import AppRouter from "./router/AppRouter";

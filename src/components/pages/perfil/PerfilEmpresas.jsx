@@ -250,13 +250,13 @@ const PerfilEmpresas = ({ empresas, loading }) => {
             left: 0,
             right: 0,
             height: '4px',
-            background: `linear-gradient(90deg, ${theme.palette.warning.main}, ${theme.palette.orange.main})`,
+            background: `linear-gradient(90deg, ${theme.palette.warning.main}, ${theme.palette.error.main})`,
           }
         }}>
           <CardContent sx={{
             p: isSmallMobile ? 4 : 6,
             textAlign: 'center',
-            background: `linear-gradient(135deg, ${alpha(theme.palette.warning.main, 0.05)}, ${alpha(theme.palette.orange.main, 0.05)})`
+            background: `linear-gradient(135deg, ${alpha(theme.palette.warning.main, 0.05)}, ${alpha(theme.palette.error.main, 0.05)})`
           }}>
             <Box sx={{
               width: 80,

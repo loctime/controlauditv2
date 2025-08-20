@@ -617,4 +617,181 @@ html, body {
     justify-content: flex-start !important;
   }
 }
+
+/* ===== NUEVOS ESTILOS ESPECÍFICOS PARA DESKTOP ===== */
+/* Optimizaciones específicas para pantallas de escritorio */
+@media (min-width: 769px) {
+  /* Contenedor principal más ancho y centrado */
+  .home-main-container {
+    max-width: 1200px !important;
+    margin: 0 auto !important;
+    padding: 40px 20px !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+  
+  /* Card principal más ancho y mejor espaciado */
+  .home-card {
+    max-width: 900px !important;
+    width: 100% !important;
+    padding: 40px 60px !important;
+    border-radius: 20px !important;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.1) !important;
+  }
+  
+  /* Títulos más grandes y mejor espaciados */
+  .home-card .MuiTypography-h3 {
+    font-size: 2.5rem !important;
+    line-height: 1.2 !important;
+    margin-bottom: 16px !important;
+    margin-top: 0 !important;
+  }
+  
+  .home-card .MuiTypography-h6 {
+    font-size: 1.2rem !important;
+    margin-bottom: 32px !important;
+    opacity: 0.8 !important;
+  }
+  
+  .home-card .MuiTypography-h5 {
+    font-size: 1.4rem !important;
+    margin-bottom: 16px !important;
+    font-weight: 600 !important;
+  }
+  
+  /* Grid con mejor espaciado y layout */
+  .home-card .MuiGrid-container {
+    margin-top: 40px !important;
+    margin-bottom: 40px !important;
+    gap: 40px !important;
+    align-items: stretch !important;
+  }
+  
+  .home-card .MuiGrid-item {
+    flex: 1 1 50% !important;
+    max-width: 50% !important;
+    min-width: 0 !important;
+  }
+  
+  /* Listas con mejor espaciado */
+  .home-card .MuiList-root {
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+  
+  .home-card .MuiListItem-root {
+    padding: 8px 0 !important;
+    min-height: 48px !important;
+    justify-content: flex-start !important;
+    text-align: left !important;
+  }
+  
+  .home-card .MuiListItemIcon-root {
+    min-width: 36px !important;
+    margin-right: 12px !important;
+  }
+  
+  .home-card .MuiListItemText-root {
+    text-align: left !important;
+  }
+  
+  .home-card .MuiListItemText-primary {
+    text-align: left !important;
+    font-size: 1rem !important;
+    line-height: 1.4 !important;
+  }
+  
+  /* Botones más grandes y mejor espaciados */
+  .home-card .MuiButton-root {
+    margin-bottom: 16px !important;
+    padding: 12px 32px !important;
+    font-size: 1.1rem !important;
+    min-height: 48px !important;
+  }
+  
+  /* Sección de APK con mejor diseño */
+  .home-card .MuiBox-root {
+    margin-top: 32px !important;
+    padding: 24px !important;
+    border-radius: 12px !important;
+  }
+  
+  /* Divider con mejor espaciado */
+  .home-card .MuiDivider-root {
+    margin: 24px 0 !important;
+  }
+  
+  /* Contacto con mejor espaciado */
+  .home-contact {
+    margin-top: 24px !important;
+    font-size: 0.9rem !important;
+  }
+}
+
+/* Optimizaciones para pantallas muy grandes */
+@media (min-width: 1200px) {
+  .home-card {
+    max-width: 1000px !important;
+    padding: 50px 80px !important;
+  }
+  
+  .home-card .MuiTypography-h3 {
+    font-size: 2.8rem !important;
+  }
+  
+  .home-card .MuiTypography-h6 {
+    font-size: 1.3rem !important;
+  }
+  
+  .home-card .MuiGrid-container {
+    gap: 50px !important;
+  }
+  
+  .home-card .MuiListItemText-primary {
+    font-size: 1.1rem !important;
+  }
+}
+
+/* ===== SOBRESCRIBIR ESTILOS MÓVILES EN DESKTOP ===== */
+/* Asegurar que los estilos móviles no interfieran en desktop */
+@media (min-width: 769px) {
+  /* Eliminar cualquier estilo móvil que pueda estar interfiriendo */
+  .home-card .MuiTypography-root {
+    text-align: left !important;
+  }
+  
+  .home-card .MuiListItem-root {
+    justify-content: flex-start !important;
+    text-align: left !important;
+  }
+  
+  .home-card .MuiListItemText-root {
+    text-align: left !important;
+  }
+  
+  .home-card .MuiListItemText-primary {
+    text-align: left !important;
+  }
+  
+  .home-card .MuiGrid-item {
+    text-align: left !important;
+  }
+  
+  /* Solo centrar el título principal y subtítulo */
+  .home-card .MuiTypography-h3,
+  .home-card .MuiTypography-h6 {
+    text-align: center !important;
+  }
+  
+  /* Centrar los títulos de secciones */
+  .home-card .MuiTypography-h5 {
+    text-align: center !important;
+  }
+  
+  /* Centrar botones y sección de APK */
+  .home-card .MuiButton-root,
+  .home-card .MuiBox-root {
+    text-align: center !important;
+  }
+}
   
