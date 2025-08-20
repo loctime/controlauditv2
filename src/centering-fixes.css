@@ -54,7 +54,8 @@
   }
 
   /* Excepción para perfil - mantener layout horizontal */
-  .perfil-container .content-container {
+  .perfil-container .content-container,
+  .perfil-usuario-container .content-container {
     flex-direction: row !important;
     align-items: flex-start !important;
     justify-content: flex-start !important;
@@ -85,7 +86,8 @@
   }
 
   /* Excepción para perfil - permitir más espacio en desktop */
-  .perfil-container .content-container {
+  .perfil-container .content-container,
+  .perfil-usuario-container .content-container {
     max-width: 100% !important;
     align-items: stretch !important;
   }
@@ -1477,6 +1479,322 @@
   /* Centrar skeleton transform-origin-revert-layer-100 */
   .MuiSkeleton-transform-origin-revert-layer-100 {
     margin: 0 auto;
+  }
+
+  /* ========================================
+     ESTILOS ESPECÍFICOS PARA PERFIL
+     ======================================== */
+  
+  /* Asegurar que el contenedor de perfil mantenga layout horizontal */
+  .perfil-usuario-container {
+    width: 100% !important;
+    max-width: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+
+  /* Asegurar que el contenido del perfil mantenga layout horizontal */
+  .perfil-usuario-container .content-container {
+    width: 100% !important;
+    max-width: 100% !important;
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: flex-start !important;
+    justify-content: flex-start !important;
+  }
+
+  /* Asegurar que el sidebar del perfil esté a la izquierda */
+  .perfil-usuario-container .MuiBox-root {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: flex-start !important;
+    justify-content: flex-start !important;
+  }
+
+  /* Asegurar que el sidebar tenga el ancho correcto */
+  .perfil-usuario-container .MuiPaper-root {
+    width: 280px !important;
+    min-width: 250px !important;
+    max-width: 320px !important;
+    margin-right: 24px !important;
+    flex-shrink: 0 !important;
+  }
+
+  /* Asegurar que el contenido principal del perfil ocupe el espacio restante */
+  .perfil-usuario-container .MuiBox-root:last-child {
+    flex: 1 !important;
+    min-width: 0 !important;
+  }
+
+  /* Asegurar que los grids del perfil no se centren */
+  .perfil-usuario-container .MuiGrid-container {
+    justify-content: flex-start !important;
+    margin: 0 !important;
+  }
+
+  .perfil-usuario-container .MuiGrid-item {
+    justify-content: flex-start !important;
+    align-items: flex-start !important;
+  }
+
+  /* Asegurar que los elementos de texto del perfil no se centren */
+  .perfil-usuario-container .MuiTypography-root {
+    text-align: left !important;
+  }
+
+  /* Asegurar que los botones del perfil no se centren */
+  .perfil-usuario-container .MuiButton-root {
+    margin: 8px 0 !important;
+  }
+
+  /* Asegurar que el sidebar del perfil mantenga su posición */
+  .perfil-usuario-container .MuiPaper-root[class*="PerfilSidebar"] {
+    position: sticky !important;
+    top: 20px !important;
+    height: fit-content !important;
+    width: 280px !important;
+    min-width: 250px !important;
+    max-width: 320px !important;
+    margin-right: 24px !important;
+    flex-shrink: 0 !important;
+    display: block !important;
+  }
+
+  /* Asegurar que el contenedor principal del perfil tenga el layout correcto */
+  .perfil-usuario-container > .MuiBox-root:last-child {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: flex-start !important;
+    justify-content: flex-start !important;
+    width: 100% !important;
+    gap: 24px !important;
+  }
+
+  /* Asegurar que el contenido principal del perfil ocupe el espacio restante */
+  .perfil-usuario-container > .MuiBox-root:last-child > .MuiBox-root:last-child {
+    flex: 1 !important;
+    min-width: 0 !important;
+    width: auto !important;
+  }
+
+  /* ========================================
+     ESTILOS ESPECÍFICOS PARA "MIS HABILITACIONES"
+     ======================================== */
+  
+  /* Asegurar que el header de habilitaciones se vea correctamente */
+  .perfil-usuario-container .MuiBox-root:nth-child(2) {
+    width: 100% !important;
+    max-width: 100% !important;
+    display: block !important;
+    flex-direction: unset !important;
+    align-items: unset !important;
+    justify-content: unset !important;
+  }
+
+  /* Asegurar que el título de habilitaciones esté centrado */
+  .perfil-usuario-container .MuiTypography-h6 {
+    text-align: center !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  /* Asegurar que el grid de habilitaciones se vea correctamente */
+  .perfil-usuario-container .MuiBox-root:nth-child(2) .MuiBox-root {
+    width: 100% !important;
+    max-width: 100% !important;
+    display: grid !important;
+    flex-direction: unset !important;
+    align-items: unset !important;
+    justify-content: unset !important;
+  }
+
+  /* Asegurar que los botones de habilitaciones se vean correctamente */
+  .perfil-usuario-container .MuiBox-root:nth-child(2) .MuiButton-root {
+    margin: 4px 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  /* Asegurar que las categorías de habilitaciones se vean correctamente */
+  .perfil-usuario-container .MuiBox-root:nth-child(2) .MuiBox-root > .MuiBox-root {
+    width: 100% !important;
+    max-width: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    justify-content: flex-start !important;
+  }
+
+  /* ========================================
+     ESTILOS ESPECÍFICOS PARA EL CONTENIDO PRINCIPAL
+     ======================================== */
+  
+  /* Asegurar que el contenedor principal tenga el ancho correcto */
+  .perfil-usuario-container > .MuiBox-root:last-child {
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 0 24px !important;
+  }
+
+  /* Asegurar que el contenido principal tenga el ancho correcto */
+  .perfil-usuario-container > .MuiBox-root:last-child > .MuiBox-root:last-child {
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 0 !important;
+  }
+
+  /* Asegurar que los títulos del contenido principal se vean correctamente */
+  .perfil-usuario-container > .MuiBox-root:last-child .MuiTypography-h4,
+  .perfil-usuario-container > .MuiBox-root:last-child .MuiTypography-h5,
+  .perfil-usuario-container > .MuiBox-root:last-child .MuiTypography-h6 {
+    text-align: left !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  /* Asegurar que las cards del contenido principal se vean correctamente */
+  .perfil-usuario-container > .MuiBox-root:last-child .MuiCard-root {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 16px 0 !important;
+  }
+
+  /* Asegurar que los botones del contenido principal se vean correctamente */
+  .perfil-usuario-container > .MuiBox-root:last-child .MuiButton-root {
+    margin: 8px 0 !important;
+    width: auto !important;
+    max-width: none !important;
+  }
+
+  /* Asegurar que los grids del contenido principal se vean correctamente */
+  .perfil-usuario-container > .MuiBox-root:last-child .MuiGrid-container {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    justify-content: flex-start !important;
+  }
+
+  .perfil-usuario-container > .MuiBox-root:last-child .MuiGrid-item {
+    width: 100% !important;
+    max-width: 100% !important;
+    justify-content: flex-start !important;
+    align-items: flex-start !important;
+  }
+
+  /* ========================================
+     ESTILOS ESPECÍFICOS PARA COMPONENTES DE PERFIL
+     ======================================== */
+  
+  /* Asegurar que PerfilEmpresas se vea correctamente */
+  .perfil-usuario-container .MuiBox-root:last-child > .MuiBox-root:last-child > div {
+    width: 100% !important;
+    max-width: 100% !important;
+    display: block !important;
+    flex-direction: unset !important;
+    align-items: unset !important;
+    justify-content: unset !important;
+  }
+
+  /* Asegurar que PerfilFormularios se vea correctamente */
+  .perfil-usuario-container .MuiBox-root:last-child > .MuiBox-root:last-child > div > div {
+    width: 100% !important;
+    max-width: 100% !important;
+    display: block !important;
+    flex-direction: unset !important;
+    align-items: unset !important;
+    justify-content: unset !important;
+  }
+
+  /* Asegurar que PerfilUsuarios se vea correctamente */
+  .perfil-usuario-container .MuiBox-root:last-child > .MuiBox-root:last-child > div > div > div {
+    width: 100% !important;
+    max-width: 100% !important;
+    display: block !important;
+    flex-direction: unset !important;
+    align-items: unset !important;
+    justify-content: unset !important;
+  }
+
+  /* Asegurar que PerfilConfiguracion se vea correctamente */
+  .perfil-usuario-container .MuiBox-root:last-child > .MuiBox-root:last-child > div > div > div > div {
+    width: 100% !important;
+    max-width: 100% !important;
+    display: block !important;
+    flex-direction: unset !important;
+    align-items: unset !important;
+    justify-content: unset !important;
+  }
+
+  /* Asegurar que PerfilFirma se vea correctamente */
+  .perfil-usuario-container .MuiBox-root:last-child > .MuiBox-root:last-child > div > div > div > div > div {
+    width: 100% !important;
+    max-width: 100% !important;
+    display: block !important;
+    flex-direction: unset !important;
+    align-items: unset !important;
+    justify-content: unset !important;
+  }
+
+  /* Asegurar que PerfilInfoSistema se vea correctamente */
+  .perfil-usuario-container .MuiBox-root:last-child > .MuiBox-root:last-child > div > div > div > div > div > div {
+    width: 100% !important;
+    max-width: 100% !important;
+    display: block !important;
+    flex-direction: unset !important;
+    align-items: unset !important;
+    justify-content: unset !important;
+  }
+
+  /* ========================================
+     OVERRIDE GENERAL PARA PERFIL
+     ======================================== */
+  
+  /* Override general para todos los elementos de perfil que no deben estar centrados */
+  .perfil-usuario-container * {
+    box-sizing: border-box !important;
+  }
+
+  /* Override para elementos específicos que necesitan ancho completo */
+  .perfil-usuario-container .MuiBox-root,
+  .perfil-usuario-container .MuiPaper-root,
+  .perfil-usuario-container .MuiCard-root,
+  .perfil-usuario-container .MuiGrid-root,
+  .perfil-usuario-container .MuiTypography-root,
+  .perfil-usuario-container .MuiButton-root {
+    box-sizing: border-box !important;
+  }
+
+  /* Asegurar que el contenedor principal tenga el ancho correcto */
+  .perfil-usuario-container {
+    width: 100vw !important;
+    max-width: 100vw !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Asegurar que el contenido principal tenga el ancho correcto */
+  .perfil-usuario-container > .MuiBox-root:last-child {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 24px !important;
+  }
+
+  /* Asegurar que el sidebar tenga el ancho correcto */
+  .perfil-usuario-container > .MuiBox-root:last-child > .MuiBox-root:first-child {
+    width: 280px !important;
+    min-width: 280px !important;
+    max-width: 280px !important;
+    flex-shrink: 0 !important;
+  }
+
+  /* Asegurar que el contenido principal tenga el ancho correcto */
+  .perfil-usuario-container > .MuiBox-root:last-child > .MuiBox-root:last-child {
+    width: calc(100% - 304px) !important;
+    max-width: calc(100% - 304px) !important;
+    flex: 1 !important;
+    min-width: 0 !important;
   }
 }
 
