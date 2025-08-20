@@ -1,0 +1,170 @@
+/* ========================================
+   OVERRIDES ESPECÍFICOS PARA COMPONENTES
+   ========================================
+   
+   Reglas específicas que complementan la estrategia responsiva
+   ======================================== */
+
+/* ========================================
+   AUDITORÍA - SIEMPRE MÓVIL OPTIMIZADA
+   ======================================== */
+
+/* Forzar diseño móvil para auditoría en todas las pantallas */
+.auditoria-page {
+    max-width: 480px !important;
+    margin: 0 auto !important;
+    padding: 16px !important;
+  }
+  
+  .auditoria-page .MuiContainer-root,
+  .auditoria-page .MuiBox-root,
+  .auditoria-page .MuiCard-root,
+  .auditoria-page .MuiPaper-root {
+    max-width: 100% !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+  }
+  
+  .auditoria-page .MuiGrid-container {
+    justify-content: center !important;
+    max-width: 100% !important;
+  }
+  
+  .auditoria-page .MuiGrid-item {
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+  }
+  
+  .auditoria-page .MuiTypography-root {
+    text-align: center !important;
+  }
+  
+  .auditoria-page .MuiButton-root {
+    width: 100% !important;
+    max-width: 300px !important;
+    margin: 8px auto !important;
+  }
+  
+  /* ========================================
+     DASHBOARD - SIEMPRE DESKTOP OPTIMIZADO
+     ======================================== */
+  
+  /* Forzar diseño desktop para dashboard */
+  .admin-page,
+  .dashboard-page {
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+  }
+  
+  .admin-page .MuiContainer-root,
+  .dashboard-page .MuiContainer-root,
+  .admin-page .MuiBox-root,
+  .dashboard-page .MuiBox-root {
+    max-width: none !important;
+    width: 100% !important;
+    margin: 0 !important;
+  }
+  
+  .admin-page .MuiGrid-container,
+  .dashboard-page .MuiGrid-container {
+    width: 100% !important;
+    max-width: none !important;
+    justify-content: flex-start !important;
+  }
+  
+  .admin-page .MuiGrid-item,
+  .dashboard-page .MuiGrid-item {
+    justify-content: flex-start !important;
+    align-items: flex-start !important;
+  }
+  
+  .admin-page .MuiTypography-root,
+  .dashboard-page .MuiTypography-root {
+    text-align: left !important;
+  }
+  
+  /* ========================================
+     OVERRIDES PARA MATERIAL-UI ESPECÍFICOS
+     ======================================== */
+  
+  /* Auditoría - Componentes centrados */
+  .auditoria-page .MuiStepper-root {
+    max-width: 100% !important;
+    margin: 0 auto !important;
+  }
+  
+  .auditoria-page .MuiStep-root {
+    padding: 4px !important;
+  }
+  
+  .auditoria-page .MuiStepLabel-root {
+    text-align: center !important;
+  }
+  
+  .auditoria-page .MuiTextField-root,
+  .auditoria-page .MuiSelect-root,
+  .auditoria-page .MuiFormControl-root {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 8px 0 !important;
+  }
+  
+  /* Dashboard - Componentes expandidos */
+  .admin-page .MuiTabs-root,
+  .dashboard-page .MuiTabs-root {
+    width: 100% !important;
+    max-width: none !important;
+  }
+  
+  .admin-page .MuiTab-root,
+  .dashboard-page .MuiTab-root {
+    min-width: auto !important;
+    flex: 1 !important;
+  }
+  
+  .admin-page .MuiPaper-root,
+  .dashboard-page .MuiPaper-root {
+    width: 100% !important;
+    max-width: none !important;
+  }
+  
+  /* ========================================
+     RESPONSIVE BREAKPOINTS ESPECÍFICOS
+     ======================================== */
+  
+  /* En móvil, mantener auditoría centrada */
+  @media (max-width: 768px) {
+    .auditoria-page {
+      padding: 12px !important;
+      max-width: 100% !important;
+    }
+  
+    .auditoria-page .MuiButton-root {
+      max-width: 100% !important;
+    }
+  }
+  
+  /* En desktop, expandir dashboard completamente */
+  @media (min-width: 769px) {
+    .admin-page,
+    .dashboard-page {
+      padding: 24px !important;
+    }
+  
+    .admin-page .content-container,
+    .dashboard-page .content-container {
+      max-width: none !important;
+      width: 100% !important;
+    }
+  }
+  
+  /* En pantallas muy grandes, mantener proporciones */
+  @media (min-width: 1200px) {
+    .admin-page,
+    .dashboard-page {
+      padding: 32px !important;
+    }
+  }
+  

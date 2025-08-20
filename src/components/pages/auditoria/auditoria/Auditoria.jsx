@@ -421,7 +421,7 @@ const AuditoriaRefactorizada = () => {
   ];
 
   return (
-    <Box className="page-container auditoria-container">
+    <Box className="page-container auditoria-container auditoria-page mobile-priority">
       <Box className="content-container">
         {/* Header con navegación y progreso */}
         <Box className="header-section">

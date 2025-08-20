@@ -237,7 +237,7 @@ const ClienteDashboard = React.memo(() => {
   }
 
   return (
-    <Box className="page-container admin-container">
+    <Box className="page-container admin-container admin-page desktop-priority">
       <Box className="content-container">
       <Typography variant="h4" gutterBottom sx={{ 
         display: 'flex', 

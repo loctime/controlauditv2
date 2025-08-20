@@ -9,7 +9,8 @@ import './web-optimization.css'; // Optimizaciones específicas para web
 import './mobile-optimization.css'; // Optimizaciones específicas para móvil
 import './safe-areas.css'; // Safe areas para móvil
 import './web-priority.css'; // Prioridad web - override de optimizaciones móviles
-import './desktop-layout-fix.css'; // Fix para layout horizontal en desktop
+import './responsive-strategy.css'; // Estrategia responsiva inteligente
+import './responsive-overrides.css'; // Overrides específicos para componentes
 import { ColorModeProvider } from "./components/context/ColorModeContext";
 import AuthContextComponent from "./components/context/AuthContext";
 import AppRouter from "./router/AppRouter";

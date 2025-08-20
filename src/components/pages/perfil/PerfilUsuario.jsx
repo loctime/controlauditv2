@@ -204,7 +204,7 @@ const PerfilUsuario = () => {
 
   // Render principal
   return (
-    <Box className="perfil-usuario-container perfil-container" sx={{ 
+    <Box className="perfil-usuario-container perfil-container perfil-page adaptive-priority" sx={{ 
       width: '100%', 
       minHeight: '100vh', 
       bgcolor: 'background.default',
@@ -215,7 +215,7 @@ const PerfilUsuario = () => {
       
       {/* Segundo header - Mis Habilitaciones */}
       <Box sx={{
-        p: { xs: 1, md: 0.5 },
+        p: { xs: 1, md: '8px 16px' },
         background: `linear-gradient(135deg, ${alpha(theme.palette.secondary.main, 0.1)}, ${alpha(theme.palette.secondary.main, 0.05)})`,
         borderBottom: `1px solid ${alpha(theme.palette.divider, 0.2)}`,
         width: '100%'
@@ -225,29 +225,29 @@ const PerfilUsuario = () => {
           color: 'secondary.main', 
           mb: { xs: 1, md: 0.5 }, 
           textAlign: 'center',
-          fontSize: { xs: '0.9rem', md: '0.9rem' }
+          fontSize: { xs: '0.9rem', md: '0.85rem' }
         }}>
           🔧 Mis Habilitaciones
         </Typography>
         
-        <Box sx={{ 
-          display: 'grid',
-          gridTemplateColumns: { xs: 'repeat(auto-fit, minmax(160px, 1fr))', md: 'repeat(auto-fit, minmax(140px, 1fr))' },
-          gap: { xs: 1, md: 0.5 },
-          maxWidth: '100%',
-          margin: '0 auto',
-          p: { xs: 0.5, md: 0.25 }
-        }}>
-          {/* Categoría: Auditorías */}
-          <Box sx={{ 
-            display: 'flex', 
-            flexDirection: 'column', 
-            gap: 0.5,
-            p: 1.5,
-            borderRadius: 1.5,
-            bgcolor: alpha(theme.palette.primary.main, 0.05),
-            border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}`
-          }}>
+                 <Box sx={{ 
+           display: 'grid',
+           gridTemplateColumns: { xs: 'repeat(auto-fit, minmax(160px, 1fr))', md: 'repeat(auto-fit, minmax(120px, 1fr))' },
+           gap: { xs: 1, md: 0.25 },
+           maxWidth: '100%',
+           margin: '0 auto',
+           p: { xs: 0.5, md: 0.25 }
+         }}>
+                     {/* Categoría: Auditorías */}
+           <Box sx={{ 
+             display: 'flex', 
+             flexDirection: 'column', 
+             gap: { xs: 0.5, md: 0.25 },
+             p: { xs: 1.5, md: 0.75 },
+             borderRadius: 1.5,
+             bgcolor: alpha(theme.palette.primary.main, 0.05),
+             border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}`
+           }}>
             <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'primary.main', mb: { xs: 0.5, md: 0.25 }, fontSize: { xs: '0.8rem', md: '0.75rem' } }}>
               📋 Auditorías
             </Typography>
@@ -266,16 +266,16 @@ const PerfilUsuario = () => {
             )}
           </Box>
           
-          {/* Categoría: Empresas */}
-          <Box sx={{ 
-            display: 'flex', 
-            flexDirection: 'column', 
-            gap: 0.5,
-            p: 1.5,
-            borderRadius: 1.5,
-            bgcolor: alpha(theme.palette.success.main, 0.05),
-            border: `1px solid ${alpha(theme.palette.success.main, 0.1)}`
-          }}>
+                     {/* Categoría: Empresas */}
+           <Box sx={{ 
+             display: 'flex', 
+             flexDirection: 'column', 
+             gap: { xs: 0.5, md: 0.25 },
+             p: { xs: 1.5, md: 0.75 },
+             borderRadius: 1.5,
+             bgcolor: alpha(theme.palette.success.main, 0.05),
+             border: `1px solid ${alpha(theme.palette.success.main, 0.1)}`
+           }}>
             <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'success.main', mb: { xs: 0.5, md: 0.25 }, fontSize: { xs: '0.8rem', md: '0.75rem' } }}>
               🏢 Empresas
             </Typography>
@@ -291,16 +291,16 @@ const PerfilUsuario = () => {
             )}
           </Box>
           
-          {/* Categoría: Usuarios */}
-          <Box sx={{ 
-            display: 'flex', 
-            flexDirection: 'column', 
-            gap: 0.5,
-            p: 1.5,
-            borderRadius: 1.5,
-            bgcolor: alpha(theme.palette.warning.main, 0.05),
-            border: `1px solid ${alpha(theme.palette.warning.main, 0.1)}`
-          }}>
+                     {/* Categoría: Usuarios */}
+           <Box sx={{ 
+             display: 'flex', 
+             flexDirection: 'column', 
+             gap: { xs: 0.5, md: 0.25 },
+             p: { xs: 1.5, md: 0.75 },
+             borderRadius: 1.5,
+             bgcolor: alpha(theme.palette.warning.main, 0.05),
+             border: `1px solid ${alpha(theme.palette.warning.main, 0.1)}`
+           }}>
             <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'warning.main', mb: { xs: 0.5, md: 0.25 }, fontSize: { xs: '0.8rem', md: '0.75rem' } }}>
               👥 Usuarios
             </Typography>
@@ -321,16 +321,16 @@ const PerfilUsuario = () => {
             )}
           </Box>
           
-          {/* Categoría: Sistema */}
-          <Box sx={{ 
-            display: 'flex', 
-            flexDirection: 'column', 
-            gap: 0.5,
-            p: 1.5,
-            borderRadius: 1.5,
-            bgcolor: alpha(theme.palette.info.main, 0.05),
-            border: `1px solid ${alpha(theme.palette.info.main, 0.1)}`
-          }}>
+                     {/* Categoría: Sistema */}
+           <Box sx={{ 
+             display: 'flex', 
+             flexDirection: 'column', 
+             gap: { xs: 0.5, md: 0.25 },
+             p: { xs: 1.5, md: 0.75 },
+             borderRadius: 1.5,
+             bgcolor: alpha(theme.palette.info.main, 0.05),
+             border: `1px solid ${alpha(theme.palette.info.main, 0.1)}`
+           }}>
             <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'info.main', mb: { xs: 0.5, md: 0.25 }, fontSize: { xs: '0.8rem', md: '0.75rem' } }}>
               ⚙️ Sistema
             </Typography>
@@ -346,16 +346,16 @@ const PerfilUsuario = () => {
             )}
           </Box>
           
-          {/* Categoría: Otros */}
-          <Box sx={{ 
-            display: 'flex', 
-            flexDirection: 'column', 
-            gap: 0.5,
-            p: 1.5,
-            borderRadius: 1.5,
-            bgcolor: alpha(theme.palette.secondary.main, 0.05),
-            border: `1px solid ${alpha(theme.palette.secondary.main, 0.1)}`
-          }}>
+                     {/* Categoría: Otros */}
+           <Box sx={{ 
+             display: 'flex', 
+             flexDirection: 'column', 
+             gap: { xs: 0.5, md: 0.25 },
+             p: { xs: 1.5, md: 0.75 },
+             borderRadius: 1.5,
+             bgcolor: alpha(theme.palette.secondary.main, 0.05),
+             border: `1px solid ${alpha(theme.palette.secondary.main, 0.1)}`
+           }}>
             <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'secondary.main', mb: { xs: 0.5, md: 0.25 }, fontSize: { xs: '0.8rem', md: '0.75rem' } }}>
               🔗 Otros
             </Typography>

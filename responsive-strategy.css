@@ -1,0 +1,181 @@
+/* ========================================
+   ESTRATEGIA RESPONSIVA INTELIGENTE
+   ========================================
+   
+   Sistema que permite coexistencia perfecta entre:
+   - Diseño web desktop optimizado
+   - Diseño móvil/APK optimizado
+   - Página de auditoría móvil-first
+   ======================================== */
+
+/* ========================================
+   VARIABLES CSS PARA CONTROL DINÁMICO
+   ======================================== */
+   :root {
+    /* Breakpoints */
+    --mobile-max: 768px;
+    --tablet-min: 769px;
+    --desktop-min: 1024px;
+  
+    /* Espaciado adaptativo */
+    --spacing-mobile: 16px;
+    --spacing-tablet: 24px;
+    --spacing-desktop: 32px;
+  
+    /* Contenedores adaptativos */
+    --container-mobile: 100%;
+    --container-tablet: 100%;
+    --container-desktop: 100%;
+  }
+  
+  /* ========================================
+     ESTRATEGIA BASE - MOBILE FIRST
+     ======================================== */
+  
+  /* Base móvil para todos los componentes */
+  .responsive-container {
+    width: 100%;
+    max-width: var(--container-mobile);
+    margin: 0 auto;
+    padding: var(--spacing-mobile);
+    box-sizing: border-box;
+  }
+  
+  /* ========================================
+     CLASES ESPECÍFICAS POR CONTEXTO
+     ======================================== */
+  
+  /* Para páginas que DEBEN ser móvil-first (como auditoría) */
+  .mobile-priority {
+    /* Siempre optimizado para móvil, incluso en desktop */
+    max-width: 480px !important;
+    margin: 0 auto !important;
+    padding: var(--spacing-mobile) !important;
+  }
+  
+  /* Para páginas que DEBEN ser desktop-first (como admin) */
+  .desktop-priority {
+    /* En móvil se adapta, en desktop se expande */
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+  }
+  
+  /* Para páginas que se adaptan completamente */
+  .adaptive-priority {
+    /* Comportamiento completamente responsivo */
+    width: 100%;
+    max-width: var(--container-mobile);
+  }
+  
+  /* ========================================
+     RESPONSIVE BREAKPOINTS
+     ======================================== */
+  
+  /* Tablet y superior */
+  @media (min-width: 769px) {
+    :root {
+      --spacing-mobile: var(--spacing-tablet);
+      --container-mobile: var(--container-tablet);
+    }
+  
+    .responsive-container {
+      padding: var(--spacing-tablet);
+    }
+  
+    .adaptive-priority {
+      max-width: var(--container-tablet);
+    }
+  
+    .desktop-priority {
+      padding: var(--spacing-tablet) !important;
+    }
+  }
+  
+  /* Desktop y superior */
+  @media (min-width: 1024px) {
+    :root {
+      --spacing-mobile: var(--spacing-desktop);
+      --container-mobile: var(--container-desktop);
+    }
+  
+    .responsive-container {
+      padding: var(--spacing-desktop);
+    }
+  
+    .adaptive-priority {
+      max-width: var(--container-desktop);
+    }
+  
+    .desktop-priority {
+      padding: var(--spacing-desktop) !important;
+    }
+  }
+  
+  /* ========================================
+     OVERRIDES ESPECÍFICOS POR PÁGINA
+     ======================================== */
+  
+  /* Auditoría - SIEMPRE móvil-optimizada */
+  .auditoria-page {
+    /* Forzar diseño móvil incluso en desktop */
+    max-width: 480px !important;
+    margin: 0 auto !important;
+    padding: 16px !important;
+  }
+  
+  .auditoria-page .MuiContainer-root,
+  .auditoria-page .MuiBox-root,
+  .auditoria-page .MuiCard-root {
+    max-width: 100% !important;
+    margin: 0 auto !important;
+  }
+  
+  /* Admin/Dashboard - SIEMPRE desktop-optimizado */
+  .admin-page,
+  .dashboard-page {
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+  }
+  
+  .admin-page .MuiContainer-root,
+  .dashboard-page .MuiContainer-root {
+    max-width: none !important;
+    width: 100% !important;
+  }
+  
+  /* ========================================
+     SISTEMA DE CLASES UTILITARIAS
+     ======================================== */
+  
+  /* Forzar móvil */
+  .force-mobile {
+    max-width: 480px !important;
+    margin: 0 auto !important;
+    padding: 16px !important;
+  }
+  
+  /* Forzar desktop */
+  .force-desktop {
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+  }
+  
+  /* Adaptativo inteligente */
+  .smart-adaptive {
+    width: 100%;
+    max-width: 480px;
+    margin: 0 auto;
+    padding: 16px;
+  }
+  
+  @media (min-width: 769px) {
+    .smart-adaptive {
+      max-width: 100%;
+      margin: 0;
+      padding: 24px;
+    }
+  }
+  
