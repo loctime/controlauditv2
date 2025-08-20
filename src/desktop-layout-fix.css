@@ -1,0 +1,323 @@
+/* ========================================
+   FIX PARA LAYOUT HORIZONTAL EN DESKTOP
+   ========================================
+   
+   Este archivo corrige el problema de layout vertical
+   forzando un diseño horizontal apropiado para desktop
+   ======================================== */
+
+/* Solo aplicar en pantallas desktop (≥769px) */
+@media (min-width: 769px) {
+  /* ========================================
+     OVERRIDE DE CONTENEDORES PRINCIPALES
+     ======================================== */
+  
+  /* Forzar layout horizontal en el contenedor principal */
+  .main-app-container {
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+
+  /* Forzar layout horizontal en páginas */
+  .page-container {
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+
+  /* Forzar layout horizontal en contenido */
+  .content-container {
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 24px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+
+  /* ========================================
+     FIX ESPECÍFICO PARA DASHBOARD ADMIN
+     ======================================== */
+  
+  /* Forzar layout horizontal en el dashboard admin */
+  .admin-container .MuiGrid-container {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    gap: 16px !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Columna izquierda - Calendario */
+  .admin-container .MuiGrid-item:first-child {
+    flex: 0 0 350px !important;
+    max-width: 350px !important;
+    width: 350px !important;
+    min-width: 350px !important;
+  }
+
+  /* Columna derecha - Contenido principal */
+  .admin-container .MuiGrid-item:last-child {
+    flex: 1 !important;
+    max-width: none !important;
+    width: auto !important;
+    min-width: 0 !important;
+  }
+
+  /* Grid interno para auditorías del día y próximas auditorías */
+  .admin-container .MuiGrid-item:last-child .MuiGrid-container {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: wrap !important;
+    gap: 16px !important;
+  }
+
+  .admin-container .MuiGrid-item:last-child .MuiGrid-item {
+    flex: 1 !important;
+    min-width: 300px !important;
+  }
+
+  /* ========================================
+     FIX PARA CALENDARIO
+     ======================================== */
+  
+  /* Forzar que el calendario mantenga su grid horizontal */
+  .calendar-grid {
+    display: grid !important;
+    grid-template-columns: repeat(7, 1fr) !important;
+    gap: 2px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  .calendar-day-button {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: auto !important;
+    height: 35px !important;
+    min-height: 35px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+    align-items: center !important;
+  }
+
+  /* ========================================
+     FIX PARA MATERIAL-UI COMPONENTS
+     ======================================== */
+  
+  /* Forzar que los contenedores de Material-UI usen todo el ancho */
+  .MuiContainer-root {
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 24px !important;
+    width: 100% !important;
+  }
+
+  .MuiBox-root {
+    width: 100% !important;
+    max-width: none !important;
+  }
+
+  /* Forzar que las cards usen todo el ancho */
+  .MuiCard-root {
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 0 16px 0 !important;
+  }
+
+  /* Forzar que los grids usen todo el ancho */
+  .MuiGrid-container {
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    gap: 16px !important;
+  }
+
+  .MuiGrid-item {
+    display: flex !important;
+    justify-content: flex-start !important;
+    align-items: flex-start !important;
+    padding: 8px !important;
+  }
+
+  /* ========================================
+     FIX PARA PERFIL
+     ======================================== */
+  
+  /* Forzar layout horizontal en el perfil */
+  .perfil-container .MuiGrid-container {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: wrap !important;
+    gap: 16px !important;
+    width: 100% !important;
+    margin: 0 !important;
+  }
+
+  .perfil-container .MuiGrid-item {
+    flex: 1 !important;
+    min-width: 300px !important;
+    max-width: none !important;
+  }
+
+  /* Layout específico para perfil usuario */
+  .perfil-usuario-container {
+    display: flex !important;
+    flex-direction: column !important;
+    width: 100% !important;
+    min-height: 100vh !important;
+  }
+
+  /* Header de habilitaciones - compacto */
+  .perfil-usuario-container > .MuiBox-root:first-of-type {
+    padding: 8px 16px !important;
+    min-height: auto !important;
+  }
+
+  /* Contenedor principal del perfil - horizontal */
+  .perfil-usuario-container > .MuiBox-root:last-of-type {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    gap: 16px !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 16px !important;
+    flex: 1 !important;
+  }
+
+  /* Sidebar del perfil */
+  .perfil-sidebar {
+    flex: 0 0 280px !important;
+    max-width: 280px !important;
+    width: 280px !important;
+    min-width: 280px !important;
+  }
+
+  /* Contenido principal del perfil */
+  .perfil-content {
+    flex: 1 !important;
+    max-width: none !important;
+    width: auto !important;
+    min-width: 0 !important;
+  }
+
+  /* Grid de habilitaciones - horizontal */
+  .perfil-usuario-container .MuiBox-root .MuiBox-root {
+    display: grid !important;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)) !important;
+    gap: 12px !important;
+    width: 100% !important;
+  }
+
+  /* ========================================
+     FIX PARA NAVBAR
+     ======================================== */
+  
+  /* Asegurar que el navbar use todo el ancho */
+  .MuiAppBar-root {
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+  }
+
+  /* Asegurar que el drawer tenga el ancho correcto */
+  .MuiDrawer-paper {
+    width: 240px !important;
+  }
+
+  /* ========================================
+     FIX PARA FORMULARIOS
+     ======================================== */
+  
+  /* Forzar que los formularios usen todo el ancho */
+  .form-container {
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+  }
+
+  /* Forzar que los inputs usen todo el ancho */
+  .MuiTextField-root {
+    width: 100% !important;
+    max-width: none !important;
+    margin: 8px 0 !important;
+  }
+
+  /* ========================================
+     FIX PARA BOTONES Y ELEMENTOS INTERACTIVOS
+     ======================================== */
+  
+  /* Forzar que los botones no se centren automáticamente */
+  .MuiButton-root {
+    margin: 8px 0 !important;
+  }
+
+  /* Forzar que los textos no se centren automáticamente */
+  .MuiTypography-root {
+    text-align: left !important;
+  }
+
+  /* ========================================
+     FIX PARA ESPACIADO Y MÁRGENES
+     ======================================== */
+  
+  /* Asegurar espaciado consistente */
+  .MuiBox-root {
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Asegurar que los contenedores no tengan padding innecesario */
+  .page-container .content-container {
+    padding: 24px !important;
+  }
+
+  /* ========================================
+     FIX PARA RESPONSIVE DESIGN
+     ======================================== */
+  
+  /* Asegurar que los breakpoints funcionen correctamente */
+  @media (min-width: 1200px) {
+    .admin-container .MuiGrid-item:first-child {
+      flex: 0 0 400px !important;
+      max-width: 400px !important;
+      width: 400px !important;
+      min-width: 400px !important;
+    }
+  }
+
+  @media (min-width: 1600px) {
+    .admin-container .MuiGrid-item:first-child {
+      flex: 0 0 450px !important;
+      max-width: 450px !important;
+      width: 450px !important;
+      min-width: 450px !important;
+    }
+  }
+}
+
+/* ========================================
+   FIX PARA PANTALLAS MUY GRANDES
+   ======================================== */
+@media (min-width: 1920px) {
+  .admin-container .MuiGrid-item:first-child {
+    flex: 0 0 500px !important;
+    max-width: 500px !important;
+    width: 500px !important;
+    min-width: 500px !important;
+  }
+}

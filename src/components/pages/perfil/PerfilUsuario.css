@@ -1,5 +1,5 @@
 /* ========================================
-   ESTILOS OPTIMIZADOS PARA PERFIL EMPRESAS
+   ESTILOS OPTIMIZADOS PARA PERFIL USUARIO
    ========================================
    
    Optimización del espacio disponible para web y móviles
@@ -10,44 +10,43 @@
    ======================================== */
 
 @media (min-width: 769px) {
-  .perfil-empresas-container {
+  .perfil-usuario-container {
     width: 100% !important;
     max-width: none !important;
     margin: 0 !important;
-    padding: 24px !important;
+    padding: 0 !important;
   }
 
-  .perfil-empresas-container .MuiGrid-container {
+  .perfil-usuario-container .MuiBox-root {
     width: 100% !important;
     max-width: none !important;
-    margin: 0 !important;
-    gap: 16px !important;
   }
 
-  .perfil-empresas-container .MuiGrid-item {
-    padding: 8px !important;
+  /* Optimizaciones para el sidebar */
+  .perfil-sidebar {
+    width: 280px !important;
+    flex-shrink: 0 !important;
+  }
+
+  /* Optimizaciones para el contenido principal */
+  .perfil-content {
+    flex: 1 !important;
+    min-width: 0 !important;
+    max-width: none !important;
   }
 }
 
 /* Optimizaciones para pantallas grandes */
 @media (min-width: 1200px) {
-  .perfil-empresas-container {
-    padding: 32px !important;
-  }
-
-  .perfil-empresas-container .MuiGrid-container {
-    gap: 20px !important;
+  .perfil-sidebar {
+    width: 300px !important;
   }
 }
 
 /* Optimizaciones para pantallas muy grandes */
 @media (min-width: 1600px) {
-  .perfil-empresas-container {
-    padding: 40px !important;
-  }
-
-  .perfil-empresas-container .MuiGrid-container {
-    gap: 24px !important;
+  .perfil-sidebar {
+    width: 320px !important;
   }
 }
 
@@ -57,22 +56,14 @@
 
 /* Optimizaciones para móviles */
 @media (max-width: 768px) {
-  .perfil-empresas-container {
-    padding: 4px !important;
-  }
-
-  .perfil-empresas-container .MuiGrid-container {
-    gap: 12px !important;
+  .perfil-usuario-container {
+    padding: 0 !important;
   }
 }
 
 /* Optimizaciones para pantallas muy pequeñas */
 @media (max-width: 480px) {
-  .perfil-empresas-container {
-    padding: 2px !important;
-  }
-
-  .perfil-empresas-container .MuiGrid-container {
-    gap: 8px !important;
+  .perfil-usuario-container {
+    padding: 0 !important;
   }
 }

@@ -21,6 +21,7 @@ import PerfilConfiguracion from './PerfilConfiguracion';
 import PerfilFirma from './PerfilFirma';
 import PerfilInfoSistema from './PerfilInfoSistema';
 import PerfilDialogs from './PerfilDialogs';
+import './PerfilUsuario.css';
 
 
 const PerfilUsuario = () => {
@@ -203,7 +204,7 @@ const PerfilUsuario = () => {
 
   // Render principal
   return (
-    <Box className="perfil-usuario-container" sx={{ 
+    <Box className="perfil-usuario-container perfil-container" sx={{ 
       width: '100%', 
       minHeight: '100vh', 
       bgcolor: 'background.default',
@@ -214,7 +215,7 @@ const PerfilUsuario = () => {
       
       {/* Segundo header - Mis Habilitaciones */}
       <Box sx={{
-        p: 1,
+        p: { xs: 1, md: 0.5 },
         background: `linear-gradient(135deg, ${alpha(theme.palette.secondary.main, 0.1)}, ${alpha(theme.palette.secondary.main, 0.05)})`,
         borderBottom: `1px solid ${alpha(theme.palette.divider, 0.2)}`,
         width: '100%'
@@ -222,20 +223,20 @@ const PerfilUsuario = () => {
         <Typography variant="h6" sx={{ 
           fontWeight: 600, 
           color: 'secondary.main', 
-          mb: 1, 
+          mb: { xs: 1, md: 0.5 }, 
           textAlign: 'center',
-          fontSize: { xs: '0.9rem', md: '1.1rem' }
+          fontSize: { xs: '0.9rem', md: '0.9rem' }
         }}>
           🔧 Mis Habilitaciones
         </Typography>
         
         <Box sx={{ 
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-          gap: 1,
-          maxWidth: '1400px',
+          gridTemplateColumns: { xs: 'repeat(auto-fit, minmax(160px, 1fr))', md: 'repeat(auto-fit, minmax(140px, 1fr))' },
+          gap: { xs: 1, md: 0.5 },
+          maxWidth: '100%',
           margin: '0 auto',
-          p: 1
+          p: { xs: 0.5, md: 0.25 }
         }}>
           {/* Categoría: Auditorías */}
           <Box sx={{ 
@@ -247,18 +248,18 @@ const PerfilUsuario = () => {
             bgcolor: alpha(theme.palette.primary.main, 0.05),
             border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}`
           }}>
-            <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'primary.main', mb: 0.5, fontSize: '0.8rem' }}>
+            <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'primary.main', mb: { xs: 0.5, md: 0.25 }, fontSize: { xs: '0.8rem', md: '0.75rem' } }}>
               📋 Auditorías
             </Typography>
             {permisos?.puedeCrearAuditorias && (
               <>
-                <Button variant="contained" color="primary" size="small" onClick={handleCrearAuditoria} fullWidth sx={{ py: 0.5, fontSize: '0.75rem' }}>
+                <Button variant="contained" color="primary" size="small" onClick={handleCrearAuditoria} fullWidth sx={{ py: { xs: 0.5, md: 0.25 }, fontSize: { xs: '0.75rem', md: '0.7rem' } }}>
                   📋 Reportes
                 </Button>
-                <Button variant="contained" color="primary" size="small" onClick={handleCrearAuditoriaNueva} fullWidth sx={{ py: 0.5, fontSize: '0.75rem' }}>
+                <Button variant="contained" color="primary" size="small" onClick={handleCrearAuditoriaNueva} fullWidth sx={{ py: { xs: 0.5, md: 0.25 }, fontSize: { xs: '0.75rem', md: '0.7rem' } }}>
                   📋 Crear auditoria
                 </Button>
-                <Button variant="outlined" color="primary" size="small" onClick={handleMisFormularios} fullWidth sx={{ py: 0.5, fontSize: '0.75rem' }}>
+                <Button variant="outlined" color="primary" size="small" onClick={handleMisFormularios} fullWidth sx={{ py: { xs: 0.5, md: 0.25 }, fontSize: { xs: '0.75rem', md: '0.7rem' } }}>
                   📋 Mis Formularios
                 </Button>
               </>
@@ -275,15 +276,15 @@ const PerfilUsuario = () => {
             bgcolor: alpha(theme.palette.success.main, 0.05),
             border: `1px solid ${alpha(theme.palette.success.main, 0.1)}`
           }}>
-            <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'success.main', mb: 0.5, fontSize: '0.8rem' }}>
+            <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'success.main', mb: { xs: 0.5, md: 0.25 }, fontSize: { xs: '0.8rem', md: '0.75rem' } }}>
               🏢 Empresas
             </Typography>
             {permisos?.puedeCrearEmpresas && (
               <>
-                <Button variant="contained" color="success" size="small" onClick={handleCrearEmpresa} fullWidth sx={{ py: 0.5, fontSize: '0.75rem' }}>
+                <Button variant="contained" color="success" size="small" onClick={handleCrearEmpresa} fullWidth sx={{ py: { xs: 0.5, md: 0.25 }, fontSize: { xs: '0.75rem', md: '0.7rem' } }}>
                   🏢 Crear Empresa
                 </Button>
-                <Button variant="outlined" color="success" size="small" onClick={handleGestionarEmpresas} fullWidth sx={{ py: 0.5, fontSize: '0.75rem' }}>
+                <Button variant="outlined" color="success" size="small" onClick={handleGestionarEmpresas} fullWidth sx={{ py: { xs: 0.5, md: 0.25 }, fontSize: { xs: '0.75rem', md: '0.7rem' } }}>
                   🏢 Gestionar Empresas
                 </Button>
               </>
@@ -300,21 +301,21 @@ const PerfilUsuario = () => {
             bgcolor: alpha(theme.palette.warning.main, 0.05),
             border: `1px solid ${alpha(theme.palette.warning.main, 0.1)}`
           }}>
-            <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'warning.main', mb: 0.5, fontSize: '0.8rem' }}>
+            <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'warning.main', mb: { xs: 0.5, md: 0.25 }, fontSize: { xs: '0.8rem', md: '0.75rem' } }}>
               👥 Usuarios
             </Typography>
             {permisos?.puedeGestionarUsuarios && (
-              <Button variant="contained" color="warning" size="small" onClick={handleGestionarUsuarios} fullWidth sx={{ py: 0.5, fontSize: '0.75rem' }}>
+              <Button variant="contained" color="warning" size="small" onClick={handleGestionarUsuarios} fullWidth sx={{ py: { xs: 0.5, md: 0.25 }, fontSize: { xs: '0.75rem', md: '0.7rem' } }}>
                 👥 Gestionar Usuarios
               </Button>
             )}
             {permisos?.puedeAgregarSocios && (
-              <Button variant="outlined" color="warning" size="small" onClick={handleAgregarUsuario} fullWidth sx={{ py: 0.5, fontSize: '0.75rem' }}>
+              <Button variant="outlined" color="warning" size="small" onClick={handleAgregarUsuario} fullWidth sx={{ py: { xs: 0.5, md: 0.25 }, fontSize: { xs: '0.75rem', md: '0.7rem' } }}>
                 👥 Agregar Usuario
               </Button>
             )}
             {permisos?.puedeEliminarUsuarios && (
-              <Button variant="outlined" color="error" size="small" onClick={handleEliminarUsuario} fullWidth sx={{ py: 0.5, fontSize: '0.75rem' }}>
+              <Button variant="outlined" color="error" size="small" onClick={handleEliminarUsuario} fullWidth sx={{ py: { xs: 0.5, md: 0.25 }, fontSize: { xs: '0.75rem', md: '0.7rem' } }}>
                 👥 Eliminar Usuario
               </Button>
             )}
@@ -330,16 +331,16 @@ const PerfilUsuario = () => {
             bgcolor: alpha(theme.palette.info.main, 0.05),
             border: `1px solid ${alpha(theme.palette.info.main, 0.1)}`
           }}>
-            <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'info.main', mb: 0.5, fontSize: '0.8rem' }}>
+            <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'info.main', mb: { xs: 0.5, md: 0.25 }, fontSize: { xs: '0.8rem', md: '0.75rem' } }}>
               ⚙️ Sistema
             </Typography>
             {permisos?.puedeVerLogs && (
-              <Button variant="contained" color="info" size="small" onClick={handleVerSistema} fullWidth sx={{ py: 0.5, fontSize: '0.75rem' }}>
+              <Button variant="contained" color="info" size="small" onClick={handleVerSistema} fullWidth sx={{ py: { xs: 0.5, md: 0.25 }, fontSize: { xs: '0.75rem', md: '0.7rem' } }}>
                 ⚙️ Ver Sistema
               </Button>
             )}
             {permisos?.puedeGestionarSistema && (
-              <Button variant="outlined" color="info" size="small" onClick={handleGestionarSistema} fullWidth sx={{ py: 0.5, fontSize: '0.75rem' }}>
+              <Button variant="outlined" color="info" size="small" onClick={handleGestionarSistema} fullWidth sx={{ py: { xs: 0.5, md: 0.25 }, fontSize: { xs: '0.75rem', md: '0.7rem' } }}>
                 ⚙️ Gestionar Sistema
               </Button>
             )}
@@ -355,11 +356,11 @@ const PerfilUsuario = () => {
             bgcolor: alpha(theme.palette.secondary.main, 0.05),
             border: `1px solid ${alpha(theme.palette.secondary.main, 0.1)}`
           }}>
-            <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'secondary.main', mb: 0.5, fontSize: '0.8rem' }}>
+            <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'secondary.main', mb: { xs: 0.5, md: 0.25 }, fontSize: { xs: '0.8rem', md: '0.75rem' } }}>
               🔗 Otros
             </Typography>
             {permisos?.puedeCompartirFormularios && (
-              <Button variant="contained" color="secondary" size="small" onClick={handleCompartir} fullWidth sx={{ py: 0.5, fontSize: '0.75rem' }}>
+              <Button variant="contained" color="secondary" size="small" onClick={handleCompartir} fullWidth sx={{ py: { xs: 0.5, md: 0.25 }, fontSize: { xs: '0.75rem', md: '0.7rem' } }}>
                 🔗 Compartir
               </Button>
             )}
@@ -377,7 +378,7 @@ const PerfilUsuario = () => {
         alignItems: 'flex-start'
       }}>
         {/* Sidebar */}
-        <Box sx={{ 
+        <Box className="perfil-sidebar" sx={{ 
           flexShrink: 0,
           width: 'auto'
         }}>
@@ -389,11 +390,12 @@ const PerfilUsuario = () => {
         </Box>
         
         {/* Contenido principal */}
-        <Box ref={contentRef} sx={{ 
+        <Box ref={contentRef} className="perfil-content" sx={{ 
           flex: 1, 
-          p: 3,
+          p: isMobile ? 1 : 2,
           minWidth: 0, // Importante para que flex funcione correctamente
-          width: '100%'
+          width: '100%',
+          maxWidth: '100%'
         }}>
           {selectedSection === 'empresas' && (
             <PerfilEmpresas empresas={userEmpresas} loading={loadingEmpresas} />

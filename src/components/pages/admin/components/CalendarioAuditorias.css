@@ -98,27 +98,32 @@
   width: 100% !important;
 }
 
-/* Flexbox para calendario */
-.calendar-grid {
-  display: flex !important;
-  flex-wrap: wrap !important;
-  gap: 2px !important;
-  max-width: 100% !important;
-  width: 100% !important;
-  overflow: hidden !important;
+/* Flexbox para calendario - solo en móvil */
+@media (max-width: 768px) {
+  .calendar-grid {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 2px !important;
+    max-width: 100% !important;
+    width: 100% !important;
+    overflow: hidden !important;
+  }
 }
 
-.calendar-day-button {
-  width: calc(100% / 7) !important;
-  max-width: calc(100% / 7) !important;
-  min-width: calc(100% / 7) !important;
-  overflow: hidden !important;
-  min-height: 35px !important;
-  display: flex !important;
-  flex-direction: column !important;
-  justify-content: center !important;
-  align-items: center !important;
-  flex: 0 0 calc(100% / 7) !important;
+/* Estilos de botones del calendario - solo en móvil */
+@media (max-width: 768px) {
+  .calendar-day-button {
+    width: calc(100% / 7) !important;
+    max-width: calc(100% / 7) !important;
+    min-width: calc(100% / 7) !important;
+    overflow: hidden !important;
+    min-height: 35px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+    align-items: center !important;
+    flex: 0 0 calc(100% / 7) !important;
+  }
 }
 
 .MuiGrid-item {
@@ -136,13 +141,15 @@
 .MuiBox-root {
   overflow: visible !important;
 }
-/* Asegurar que todos los elementos del calendario tengan el tamaño correcto */
-.calendar-grid > * {
-  width: calc(100% / 7) !important;
-  max-width: calc(100% / 7) !important;
-  min-width: calc(100% / 7) !important;
-  flex: 0 0 calc(100% / 7) !important;
-  min-height: 35px !important;
+/* Asegurar que todos los elementos del calendario tengan el tamaño correcto - solo en móvil */
+@media (max-width: 768px) {
+  .calendar-grid > * {
+    width: calc(100% / 7) !important;
+    max-width: calc(100% / 7) !important;
+    min-width: calc(100% / 7) !important;
+    flex: 0 0 calc(100% / 7) !important;
+    min-height: 35px !important;
+  }
 }
 
 

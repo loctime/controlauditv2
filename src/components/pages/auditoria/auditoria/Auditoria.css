@@ -294,28 +294,124 @@
    ======================================== */
 @media (min-width: 769px) {
   .auditoria-container {
-    max-width: 1200px;
+    max-width: 95vw; /* Usar más ancho de pantalla */
     margin: 0 auto;
-    padding: 24px 32px;
+    padding: 16px 24px; /* Reducir padding */
   }
 
   .auditoria-container .content-container {
-    padding: 24px 32px;
+    padding: 16px 24px; /* Reducir padding */
+    max-width: 95vw; /* Usar más ancho */
   }
 
   .auditoria-container .header-section {
-    padding: 24px 32px;
+    padding: 20px 24px; /* Reducir padding */
     border-radius: 12px;
-    margin-bottom: 24px;
+    margin-bottom: 20px; /* Reducir margen */
+    max-width: 95vw; /* Usar más ancho */
   }
 
   .auditoria-container .stepper-section {
-    padding: 24px 32px;
+    padding: 20px 24px; /* Reducir padding */
+    max-width: 95vw; /* Usar más ancho */
   }
 
   .auditoria-container .step-content {
-    max-width: 900px;
+    max-width: 95vw; /* Usar más ancho */
     margin: 0 auto;
+  }
+}
+
+/* ========================================
+   OPTIMIZACIONES PARA PANTALLAS GRANDES (≥1200px)
+   ======================================== */
+@media (min-width: 1200px) {
+  .auditoria-container {
+    max-width: 98vw; /* Usar casi todo el ancho disponible */
+    padding: 12px 16px; /* Reducir aún más el padding */
+  }
+
+  .auditoria-container .content-container {
+    padding: 12px 16px; /* Reducir aún más el padding */
+    max-width: 98vw; /* Usar casi todo el ancho */
+  }
+
+  .auditoria-container .header-section {
+    padding: 16px 20px; /* Reducir aún más el padding */
+    margin-bottom: 16px; /* Reducir margen */
+    max-width: 98vw; /* Usar casi todo el ancho */
+  }
+
+  .auditoria-container .stepper-section {
+    padding: 16px 20px; /* Reducir aún más el padding */
+    max-width: 98vw; /* Usar casi todo el ancho */
+  }
+
+  .auditoria-container .step-content {
+    max-width: 98vw; /* Usar casi todo el ancho */
+  }
+
+  /* Mejorar layout de grid para pantallas grandes */
+  .auditoria-container .MuiGrid-container {
+    max-width: 98vw !important;
+    margin: 0 auto !important;
+  }
+
+  .auditoria-container .MuiGrid-item {
+    padding: 8px 12px !important; /* Aumentar padding entre elementos */
+  }
+
+  /* Mejorar layout de stepper para pantallas grandes */
+  .auditoria-container .MuiStepper-root {
+    max-width: 98vw !important;
+    margin: 0 auto !important;
+  }
+
+  /* Mejorar layout de cards para pantallas grandes */
+  .auditoria-container .MuiCard-root,
+  .auditoria-container .MuiPaper-root {
+    max-width: 98vw !important;
+    margin: 0 auto 16px auto !important;
+  }
+}
+
+/* ========================================
+   OPTIMIZACIONES PARA PANTALLAS MUY GRANDES (≥1600px)
+   ======================================== */
+@media (min-width: 1600px) {
+  .auditoria-container {
+    max-width: 99vw; /* Usar prácticamente todo el ancho */
+    padding: 8px 12px; /* Mínimo padding */
+  }
+
+  .auditoria-container .content-container {
+    padding: 8px 12px; /* Mínimo padding */
+    max-width: 99vw; /* Usar prácticamente todo el ancho */
+  }
+
+  .auditoria-container .header-section {
+    padding: 12px 16px; /* Mínimo padding */
+    margin-bottom: 12px; /* Mínimo margen */
+    max-width: 99vw; /* Usar prácticamente todo el ancho */
+  }
+
+  .auditoria-container .stepper-section {
+    padding: 12px 16px; /* Mínimo padding */
+    max-width: 99vw; /* Usar prácticamente todo el ancho */
+  }
+
+  .auditoria-container .step-content {
+    max-width: 99vw; /* Usar prácticamente todo el ancho */
+  }
+
+  /* Layout de grid optimizado para pantallas muy grandes */
+  .auditoria-container .MuiGrid-container {
+    max-width: 99vw !important;
+    gap: 16px !important; /* Aumentar gap entre elementos */
+  }
+
+  .auditoria-container .MuiGrid-item {
+    padding: 12px 16px !important; /* Más padding para mejor distribución */
   }
 }
 
@@ -324,19 +420,27 @@
    ======================================== */
 @media (min-width: 769px) and (max-width: 1024px) {
   .auditoria-container {
-    padding: 20px 24px;
+    padding: 16px 20px; /* Padding intermedio */
+    max-width: 96vw; /* Ancho intermedio */
   }
 
   .auditoria-container .content-container {
-    padding: 20px 24px;
+    padding: 16px 20px; /* Padding intermedio */
+    max-width: 96vw; /* Ancho intermedio */
   }
 
   .auditoria-container .header-section {
-    padding: 20px 24px;
+    padding: 18px 22px; /* Padding intermedio */
+    max-width: 96vw; /* Ancho intermedio */
   }
 
   .auditoria-container .stepper-section {
-    padding: 20px 24px;
+    padding: 18px 22px; /* Padding intermedio */
+    max-width: 96vw; /* Ancho intermedio */
+  }
+
+  .auditoria-container .step-content {
+    max-width: 96vw; /* Ancho intermedio */
   }
 }
 
@@ -1120,5 +1224,97 @@
   /* Selects en pantallas muy pequeñas */
   .auditoria-container .MuiSelect-select {
     font-size: 0.8rem !important;
+  }
+}
+
+/* ========================================
+   OPTIMIZACIONES ADICIONALES PARA MEJOR USO DEL ESPACIO
+   ======================================== */
+
+/* Optimizaciones para pantallas grandes - mejor distribución del contenido */
+@media (min-width: 1200px) {
+  /* Mejorar el layout de los componentes de selección */
+  .auditoria-container .MuiFormControl-root {
+    margin-bottom: 20px !important;
+  }
+
+  /* Optimizar el espacio de los grids */
+  .auditoria-container .MuiGrid-container {
+    margin: 0 !important;
+    width: 100% !important;
+  }
+
+  /* Mejorar el espaciado entre elementos */
+  .auditoria-container .MuiBox-root {
+    width: 100% !important;
+  }
+
+  /* Optimizar el contenido de las cards */
+  .auditoria-container .MuiCardContent-root {
+    padding: 24px !important;
+  }
+
+  /* Mejorar el layout de los formularios */
+  .auditoria-container .MuiTextField-root,
+  .auditoria-container .MuiFormControl-root {
+    margin-bottom: 20px !important;
+  }
+}
+
+/* Optimizaciones para pantallas muy grandes */
+@media (min-width: 1600px) {
+  /* Usar más espacio horizontal */
+  .auditoria-container .MuiGrid-container {
+    gap: 24px !important;
+  }
+
+  /* Mejorar el padding de las cards */
+  .auditoria-container .MuiCardContent-root {
+    padding: 32px !important;
+  }
+
+  /* Optimizar el espacio de los formularios */
+  .auditoria-container .MuiTextField-root,
+  .auditoria-container .MuiFormControl-root {
+    margin-bottom: 24px !important;
+  }
+
+  /* Mejorar el layout del stepper */
+  .auditoria-container .MuiStepper-root {
+    padding: 24px 0 !important;
+  }
+
+  /* Optimizar el contenido de los pasos */
+  .auditoria-container .MuiStepContent-root {
+    padding: 24px 0 !important;
+  }
+}
+
+/* Optimizaciones específicas para el contenido de preguntas */
+@media (min-width: 1200px) {
+  .auditoria-container .preguntas-container {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  .auditoria-container .pregunta-container {
+    margin-bottom: 24px !important;
+    padding: 20px !important;
+  }
+}
+
+/* Optimizaciones para el contenido de firmas */
+@media (min-width: 1200px) {
+  .auditoria-container .firma-container {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+}
+
+/* Optimizaciones para el contenido de reportes */
+@media (min-width: 1200px) {
+  .auditoria-container .reporte-container {
+    width: 100% !important;
+    max-width: 100% !important;
   }
 }

@@ -106,8 +106,9 @@ const CalendarioAuditorias = React.memo(({
       </Box>
 
       <Box className="calendar-grid" sx={{ 
-        display: 'flex',
-        flexWrap: 'wrap',
+        display: { xs: 'flex', md: 'grid' },
+        flexWrap: { xs: 'wrap', md: 'nowrap' },
+        gridTemplateColumns: { md: 'repeat(7, 1fr)' },
         gap: 0.25,
         maxWidth: '100%',
         overflow: 'hidden'
@@ -121,7 +122,8 @@ const CalendarioAuditorias = React.memo(({
             color: theme.palette.mode === 'dark' ? 'text.primary' : 'text.primary',
             borderRadius: 1,
             fontSize: '0.8rem',
-            maxWidth: '100%'
+            width: { xs: 'calc(100% / 7)', md: '100%' },
+            maxWidth: { xs: 'calc(100% / 7)', md: '100%' }
           }}>
             {day}
           </Box>
@@ -140,8 +142,8 @@ const CalendarioAuditorias = React.memo(({
               sx={{
                 p: 0.25,
                 minHeight: 35,
-                width: '100%',
-                maxWidth: '100%',
+                width: { xs: 'calc(100% / 7)', md: '100%' },
+                maxWidth: { xs: 'calc(100% / 7)', md: '100%' },
                 border: day ? `1px solid ${theme.palette.divider}` : 'none',
                 borderRadius: 1,
                 cursor: day && canAgendarAuditorias ? 'pointer' : 'default',

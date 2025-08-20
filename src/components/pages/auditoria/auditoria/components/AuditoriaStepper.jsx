@@ -318,14 +318,14 @@ const AuditoriaStepper = ({
         </Box>
       ) : (
         // Layout desktop optimizado: barra lateral más eficiente + contenido principal
-        <Grid container spacing={2} className="stepper-grid-container">
-          {/* Barra lateral de progreso - más compacta */}
-          <Grid item xs={12} sm={2} md={2} lg={1.5} xl={1.2} className="stepper-sidebar">
+        <Grid container spacing={isLargeScreen ? 3 : 2} className="stepper-grid-container">
+          {/* Barra lateral de progreso - más compacta en pantallas grandes */}
+          <Grid item xs={12} sm={2} md={2} lg={1.8} xl={1.5} className="stepper-sidebar">
             <DesktopSidebar />
           </Grid>
           
           {/* Contenido principal - aprovecha mejor el espacio */}
-          <Grid item xs={12} sm={10} md={10} lg={10.5} xl={10.8} className="stepper-content">
+          <Grid item xs={12} sm={10} md={10} lg={10.2} xl={10.5} className="stepper-content">
             <Paper 
               elevation={2} 
               sx={{ 

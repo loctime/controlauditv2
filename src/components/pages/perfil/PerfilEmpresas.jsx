@@ -138,6 +138,7 @@ const PerfilEmpresas = ({ empresas, loading }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const isSmallMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const isLargeScreen = useMediaQuery(theme.breakpoints.up('lg'));
   
   // Log de depuración
   console.debug('[PerfilEmpresas] empresas:', empresas);
@@ -145,45 +146,48 @@ const PerfilEmpresas = ({ empresas, loading }) => {
 
   return (
     <Box className="perfil-empresas-container" sx={{ 
-      p: isSmallMobile ? 1 : 2,
+      p: isSmallMobile ? 1 : (isLargeScreen ? 1 : 2),
       bgcolor: 'background.paper',
       borderRadius: 0,
       border: 'none',
       boxShadow: 'none',
-      width: '100%'
+      width: '100%',
+      maxWidth: '100%'
     }}>
       {/* Header con título y botón de gestión */}
-      <Box sx={{ 
+      <Box className="empresas-header" sx={{ 
         display: 'flex', 
         justifyContent: 'space-between', 
         alignItems: 'center', 
-        mb: isSmallMobile ? 2.5 : 3,
+        mb: isSmallMobile ? 2 : 3,
         flexDirection: isMobile ? 'column' : 'row',
-        gap: isSmallMobile ? 1.5 : 2
+        gap: isSmallMobile ? 2 : 3
       }}>
         <Box sx={{ textAlign: isMobile ? 'center' : 'left' }}>
           <Typography 
+            className="empresas-titulo"
             variant={isSmallMobile ? "h5" : "h4"} 
             sx={{ 
               fontWeight: 700, 
               color: 'primary.main',
-              mb: 1
+              mb: 1,
+              whiteSpace: 'normal',
+              wordBreak: 'normal',
+              overflowWrap: 'break-word'
             }}
           >
             🏢 Mis Empresas
           </Typography>
-          <Typography variant="body2" color="text.secondary">
+          <Typography className="empresas-subtitulo" variant="body2" color="text.secondary">
             {empresas.length} empresa(s) registrada(s)
           </Typography>
         </Box>
         
         <Button
+          className="empresas-boton"
           variant="contained"
           color="primary"
-          onClick={() => {
-            console.log('[PerfilEmpresas] Navegando a /establecimiento');
-            navigate('/establecimiento');
-          }}
+          onClick={() => navigate('/establecimiento')}
           sx={{ 
             py: isSmallMobile ? 1.5 : 2,
             px: isSmallMobile ? 3 : 4,
@@ -303,7 +307,7 @@ const PerfilEmpresas = ({ empresas, loading }) => {
         <Box sx={{ 
           display: 'flex', 
           flexDirection: 'column', 
-          gap: isSmallMobile ? 1.5 : 2 
+          gap: isSmallMobile ? 1 : 1.5 
         }}>
           {empresas.map((empresa) => (
             <Card key={empresa.id} sx={{
@@ -391,7 +395,7 @@ const PerfilEmpresas = ({ empresas, loading }) => {
                   {/* Lado derecho: Sucursales */}
                   <Box sx={{
                     flex: 1,
-                    p: isSmallMobile ? 2 : 3,
+                    p: isSmallMobile ? 2 : 2.5,
                     display: 'flex',
                     flexDirection: 'column'
                   }}>
@@ -400,7 +404,7 @@ const PerfilEmpresas = ({ empresas, loading }) => {
                       display: 'flex',
                       alignItems: 'center',
                       gap: 1,
-                      mb: 2,
+                      mb: 1.5,
                       justifyContent: isMobile ? 'center' : 'flex-start'
                     }}>
                       <StoreIcon sx={{ fontSize: 20, color: 'secondary.main' }} />

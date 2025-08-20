@@ -1,0 +1,366 @@
+/* ========================================
+   ESTILOS ESPECÍFICOS PARA PERFIL FORMULARIOS
+   ========================================
+   
+   Este archivo contiene estilos específicos para el componente PerfilFormularios
+   - Corrección de problemas de texto vertical
+   - Optimización del layout para diferentes tamaños de pantalla
+   - Mejora del uso del espacio disponible
+   ======================================== */
+
+/* Fix para problemas de texto vertical en PerfilFormularios */
+.perfil-formularios-container * {
+  white-space: normal !important;
+  word-break: normal !important;
+  overflow-wrap: break-word !important;
+}
+
+.perfil-formularios-container .MuiTypography-root {
+  white-space: normal !important;
+  word-break: normal !important;
+  overflow-wrap: break-word !important;
+  line-height: normal !important;
+  display: block !important;
+}
+
+.perfil-formularios-container .MuiBox-root {
+  white-space: normal !important;
+  word-break: normal !important;
+  overflow-wrap: break-word !important;
+}
+
+/* Asegurar que el texto de los formularios se muestre correctamente */
+.formulario-nombre {
+  white-space: normal !important;
+  word-break: normal !important;
+  overflow-wrap: break-word !important;
+  line-height: 1.2 !important;
+  display: block !important;
+}
+
+.formulario-descripcion {
+  white-space: normal !important;
+  word-break: normal !important;
+  overflow-wrap: break-word !important;
+  line-height: 1.4 !important;
+  display: block !important;
+}
+
+/* ========================================
+   OPTIMIZACIONES PARA WEB (≥769px)
+   ======================================== */
+
+@media (min-width: 769px) {
+  .perfil-formularios-container {
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 24px !important;
+  }
+
+  .perfil-formularios-container .MuiGrid-container {
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    gap: 16px !important;
+  }
+
+  .perfil-formularios-container .MuiGrid-item {
+    padding: 8px !important;
+  }
+
+  .perfil-formularios-container .MuiCard-root {
+    height: auto !important;
+    display: flex !important;
+    flex-direction: row !important;
+  }
+
+  .perfil-formularios-container .MuiCardContent-root {
+    height: auto !important;
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+  }
+}
+
+/* Optimizaciones para pantallas grandes */
+@media (min-width: 1200px) {
+  .perfil-formularios-container {
+    padding: 32px !important;
+  }
+
+  .perfil-formularios-container .MuiGrid-container {
+    gap: 20px !important;
+  }
+}
+
+/* Optimizaciones para pantallas muy grandes */
+@media (min-width: 1600px) {
+  .perfil-formularios-container {
+    padding: 40px !important;
+  }
+
+  .perfil-formularios-container .MuiGrid-container {
+    gap: 24px !important;
+  }
+}
+
+/* ========================================
+   OPTIMIZACIONES PARA MÓVILES (≤768px)
+   ======================================== */
+
+/* Optimizaciones para móviles */
+@media (max-width: 768px) {
+  .perfil-formularios-container {
+    padding: 4px !important;
+  }
+
+  .perfil-formularios-container .MuiGrid-container {
+    gap: 12px !important;
+  }
+
+  .perfil-formularios-container .MuiCard-root {
+    margin-bottom: 12px !important;
+  }
+}
+
+/* Optimizaciones para pantallas muy pequeñas */
+@media (max-width: 480px) {
+  .perfil-formularios-container {
+    padding: 2px !important;
+  }
+
+  .perfil-formularios-container .MuiGrid-container {
+    gap: 8px !important;
+  }
+
+  .perfil-formularios-container .MuiCard-root {
+    margin-bottom: 8px !important;
+  }
+}
+
+/* Mejoras específicas para las cards de formularios - Layout Horizontal */
+.formulario-card {
+  height: auto !important;
+  display: flex !important;
+  flex-direction: row !important;
+  transition: all 0.3s ease !important;
+  min-height: 80px !important;
+}
+
+.formulario-card:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.12) !important;
+}
+
+.formulario-card-content {
+  height: auto !important;
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  padding: 16px !important;
+  width: 100% !important;
+  gap: 16px !important;
+}
+
+.formulario-header {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  gap: 16px !important;
+  width: 100% !important;
+}
+
+.formulario-info {
+  flex: 1 !important;
+  min-width: 0 !important;
+  text-align: left !important;
+}
+
+.formulario-actions {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 4px !important;
+  flex-shrink: 0 !important;
+  background: none !important;
+  border: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+/* Mejoras para los botones de acciones - Layout Horizontal */
+.formulario-actions .MuiButton-root {
+  width: auto !important;
+  margin-bottom: 0 !important;
+  padding: 4px 8px !important;
+  font-size: 0.7rem !important;
+  font-weight: 500 !important;
+  min-width: 32px !important;
+  height: 32px !important;
+}
+
+.formulario-actions .MuiButton-root:last-child {
+  margin-bottom: 0 !important;
+}
+
+/* Mejoras para los chips de estado */
+.formulario-chips {
+  display: flex !important;
+  flex-direction: row !important;
+  gap: 4px !important;
+  flex-wrap: wrap !important;
+  margin-top: 4px !important;
+}
+
+.formulario-chips .MuiChip-root {
+  font-size: 0.65rem !important;
+  height: 20px !important;
+  font-weight: 600 !important;
+}
+
+/* Mejoras para el avatar del formulario - Layout Horizontal */
+.formulario-avatar {
+  width: 56px !important;
+  height: 56px !important;
+  background-color: #1976d2 !important;
+  flex-shrink: 0 !important;
+}
+
+@media (max-width: 768px) {
+  .formulario-avatar {
+    width: 50px !important;
+    height: 50px !important;
+  }
+}
+
+/* Mejoras para el título del formulario */
+.formulario-titulo {
+  font-weight: 600 !important;
+  color: #1976d2 !important;
+  margin-bottom: 4px !important;
+  white-space: normal !important;
+  word-break: normal !important;
+  overflow-wrap: break-word !important;
+  line-height: 1.2 !important;
+  font-size: 1rem !important;
+}
+
+/* Mejoras para la descripción del formulario */
+.formulario-descripcion {
+  color: #666 !important;
+  margin-bottom: 8px !important;
+  white-space: normal !important;
+  word-break: normal !important;
+  overflow-wrap: break-word !important;
+  line-height: 1.4 !important;
+}
+
+/* Mejoras para las estadísticas del formulario - Layout Horizontal */
+.formulario-stats {
+  display: flex !important;
+  flex-direction: row !important;
+  gap: 16px !important;
+  align-items: center !important;
+  margin-bottom: 8px !important;
+}
+
+.formulario-stats .MuiTypography-root {
+  color: #666 !important;
+  font-size: 0.75rem !important;
+}
+
+/* Mejoras para el header principal */
+.formularios-header {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  margin-bottom: 20px !important;
+  flex-direction: row !important;
+}
+
+@media (max-width: 768px) {
+  .formularios-header {
+    flex-direction: column !important;
+    gap: 12px !important;
+    text-align: center !important;
+  }
+}
+
+.formularios-titulo {
+  font-weight: 700 !important;
+  color: #1976d2 !important;
+  margin-bottom: 8px !important;
+  white-space: normal !important;
+  word-break: normal !important;
+  overflow-wrap: break-word !important;
+}
+
+.formularios-subtitulo {
+  color: #666 !important;
+  font-size: 0.875rem !important;
+}
+
+.formularios-boton {
+  padding: 12px 24px !important;
+  font-size: 1rem !important;
+  font-weight: 600 !important;
+  border-radius: 8px !important;
+  transition: all 0.2s ease !important;
+}
+
+.formularios-boton:hover {
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important;
+}
+
+/* Mejoras para el estado vacío */
+.formularios-vacio {
+  background-color: rgba(255, 193, 7, 0.05) !important;
+  border-radius: 8px !important;
+  padding: 32px !important;
+  border: 1px solid rgba(255, 193, 7, 0.1) !important;
+  text-align: center !important;
+}
+
+.formularios-vacio .MuiTypography-root {
+  color: #f57c00 !important;
+  margin-bottom: 8px !important;
+}
+
+/* Mejoras para el estado de carga */
+.formularios-carga {
+  background-color: rgba(33, 150, 243, 0.05) !important;
+  border-radius: 8px !important;
+  padding: 32px !important;
+  border: 1px solid rgba(33, 150, 243, 0.1) !important;
+  text-align: center !important;
+}
+
+.formularios-carga .MuiTypography-root {
+  color: #1976d2 !important;
+}
+
+/* Optimizaciones específicas para pantallas pequeñas */
+@media (max-width: 600px) {
+  .formulario-card-content {
+    padding: 12px !important;
+    gap: 12px !important;
+  }
+  
+  .formulario-stats {
+    flex-direction: column !important;
+    gap: 4px !important;
+    align-items: flex-start !important;
+  }
+  
+  .formulario-actions {
+    gap: 2px !important;
+  }
+  
+  .formulario-actions .MuiButton-root {
+    padding: 2px 6px !important;
+    font-size: 0.65rem !important;
+    min-width: 28px !important;
+    height: 28px !important;
+  }
+}

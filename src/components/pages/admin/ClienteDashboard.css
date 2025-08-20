@@ -27,17 +27,19 @@
 
 /* Layout para desktop - optimizado para una fila */
 @media (min-width: 769px) {
+  /* Forzar que el grid principal use flexbox horizontal */
   .admin-container .MuiGrid-container {
     display: flex !important;
     flex-direction: row !important;
     flex-wrap: nowrap !important;
-    justify-content: space-between !important;
+    justify-content: flex-start !important;
     align-items: flex-start !important;
     width: 100% !important;
     margin: 0 !important;
-    gap: 12px !important;
+    gap: 16px !important;
   }
 
+  /* Forzar que los grid items usen flexbox vertical */
   .admin-container .MuiGrid-item {
     display: flex !important;
     flex-direction: column !important;
@@ -45,24 +47,36 @@
     align-items: stretch !important;
   }
 
-  /* Calendario en la columna izquierda - tamaño más compacto */
+  /* Calendario en la columna izquierda - tamaño fijo */
   .admin-container .MuiGrid-item:first-child {
-    flex: 0 0 auto !important;
-    max-width: 320px !important;
-    width: 320px !important;
-    display: flex !important;
-    justify-content: center !important;
-    align-items: flex-start !important;
+    flex: 0 0 350px !important;
+    max-width: 350px !important;
+    width: 350px !important;
+    min-width: 350px !important;
   }
 
-  /* Columna derecha - espacio restante con componentes apilados */
+  /* Columna derecha - espacio restante */
   .admin-container .MuiGrid-item:last-child {
     flex: 1 !important;
     max-width: none !important;
     width: auto !important;
+    min-width: 0 !important;
+  }
+
+  /* Grid interno para auditorías del día y próximas auditorías */
+  .admin-container .MuiGrid-item:last-child .MuiGrid-container {
     display: flex !important;
-    flex-direction: column !important;
-    gap: 12px !important;
+    flex-direction: row !important;
+    flex-wrap: wrap !important;
+    gap: 16px !important;
+    width: 100% !important;
+    margin: 0 !important;
+  }
+
+  .admin-container .MuiGrid-item:last-child .MuiGrid-item {
+    flex: 1 !important;
+    min-width: 300px !important;
+    max-width: none !important;
   }
 }
 

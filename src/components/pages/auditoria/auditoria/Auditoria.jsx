@@ -66,6 +66,7 @@ const AuditoriaRefactorizada = () => {
   const location = useLocation();
   const { userProfile, userEmpresas, userFormularios } = useAuth();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const isLargeScreen = useMediaQuery(theme.breakpoints.up('lg'));
 
   // Estados para autoguardado
   const [isSaving, setIsSaving] = useState(false);
@@ -288,8 +289,8 @@ const AuditoriaRefactorizada = () => {
       content: (
         <MuiFade in={true} timeout={800}>
           <Box>
-            <Grid container spacing={isMobile ? 1 : 3}>
-              <Grid item xs={12} md={6}>
+            <Grid container spacing={isMobile ? 1 : (isLargeScreen ? 4 : 3)}>
+              <Grid item xs={12} md={6} lg={5}>
                 <SeleccionEmpresa
                   empresas={empresas}
                   empresaSeleccionada={empresaSeleccionada}
@@ -299,7 +300,7 @@ const AuditoriaRefactorizada = () => {
               </Grid>
               
               {empresaSeleccionada && (
-                <Grid item xs={12} md={6}>
+                <Grid item xs={12} md={6} lg={7}>
                   {sucursales.length > 0 ? (
                     <SeleccionSucursal
                       sucursales={sucursales}

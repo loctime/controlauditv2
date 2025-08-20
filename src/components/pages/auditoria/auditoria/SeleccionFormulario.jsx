@@ -32,7 +32,7 @@ const SeleccionFormulario = ({ formularios, formularioSeleccionadoId, onChange, 
   const formularioAgendado = formularios.find(f => f.id === formularioAgendadoId);
 
   return (
-    <Box>
+    <Box sx={{ width: '100%', maxWidth: '100%' }}>
       {/* Texto informativo del formulario agendado */}
       <Typography variant="subtitle2" sx={{ mb: 1 }}>
         Formulario agendado: {formularioAgendado ? formularioAgendado.nombre : "ninguno"}
@@ -49,7 +49,7 @@ const SeleccionFormulario = ({ formularios, formularioSeleccionadoId, onChange, 
         Seleccionar Formulario
       </Typography>
       
-      <FormControl fullWidth size="large" disabled={disabled}>
+      <FormControl fullWidth size="large" disabled={disabled} sx={{ width: '100%', maxWidth: '100%' }}>
         <InputLabel sx={{ fontSize: '1.1rem', fontWeight: 500 }}>
           Formulario de Auditoría
         </InputLabel>
@@ -58,6 +58,8 @@ const SeleccionFormulario = ({ formularios, formularioSeleccionadoId, onChange, 
           onChange={handleChange}
           sx={{ 
             minHeight: '56px',
+            width: '100%',
+            maxWidth: '100%',
             '& .MuiSelect-select': {
               fontSize: '1rem',
               padding: '16px 14px'

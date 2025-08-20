@@ -1,0 +1,326 @@
+/* ========================================
+   PRIORIDAD WEB - OVERRIDE DE OPTIMIZACIONES MÓVILES
+   ========================================
+   
+   Este archivo asegura que las optimizaciones web tengan prioridad
+   sobre las optimizaciones móviles problemáticas
+   ======================================== */
+
+/* Solo aplicar en pantallas web (≥769px) */
+@media (min-width: 769px) {
+  /* ========================================
+     OVERRIDE DE CONTENEDORES PRINCIPALES
+     ======================================== */
+  
+  /* Forzar que el contenedor principal use todo el ancho */
+  .main-app-container {
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow-x: visible !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+
+  /* Forzar que las páginas usen todo el ancho */
+  .page-container {
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+
+  /* Forzar que el contenido use todo el ancho */
+  .content-container {
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 24px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+
+  /* ========================================
+     OVERRIDE DE MATERIAL-UI
+     ======================================== */
+  
+  /* Forzar que todos los contenedores de Material-UI usen todo el ancho */
+  .MuiContainer-root {
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 24px !important;
+    width: 100% !important;
+  }
+
+  .MuiBox-root {
+    width: 100% !important;
+    max-width: none !important;
+  }
+
+  /* Forzar que las cards usen todo el ancho */
+  .MuiCard-root {
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 0 16px 0 !important;
+  }
+
+  /* Forzar que los grids usen todo el ancho */
+  .MuiGrid-container {
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    gap: 16px !important;
+  }
+
+  .MuiGrid-item {
+    display: flex !important;
+    justify-content: flex-start !important;
+    align-items: flex-start !important;
+    padding: 8px !important;
+  }
+
+  /* Forzar que los formularios usen todo el ancho */
+  .form-container {
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+  }
+
+  /* Forzar que los inputs usen todo el ancho */
+  .MuiTextField-root {
+    width: 100% !important;
+    max-width: none !important;
+    margin: 8px 0 !important;
+  }
+
+  /* Forzar que los selects usen todo el ancho */
+  .MuiSelect-root {
+    width: 100% !important;
+    max-width: none !important;
+  }
+
+  /* Forzar que las listas usen todo el ancho */
+  .MuiList-root {
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+  }
+
+  .MuiListItem-root {
+    justify-content: flex-start !important;
+    text-align: left !important;
+  }
+
+  /* Forzar que los alerts usen todo el ancho */
+  .MuiAlert-root {
+    width: 100% !important;
+    max-width: none !important;
+    margin: 8px 0 !important;
+  }
+
+  /* Forzar que los tabs usen todo el ancho */
+  .MuiTabs-root {
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+  }
+
+  /* Forzar que los dividers usen todo el ancho */
+  .MuiDivider-root {
+    width: 100% !important;
+    max-width: none !important;
+    margin: 16px 0 !important;
+  }
+
+  /* Forzar que los paper usen todo el ancho */
+  .MuiPaper-root {
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+  }
+
+  /* Forzar que los sliders usen todo el ancho */
+  .MuiSlider-root {
+    width: 100% !important;
+    max-width: none !important;
+    margin: 16px 0 !important;
+  }
+
+  /* Forzar que los progress usen todo el ancho */
+  .MuiLinearProgress-root {
+    width: 100% !important;
+    max-width: none !important;
+    margin: 8px 0 !important;
+  }
+
+  /* ========================================
+     OVERRIDE DE TIPOGRAFÍA
+     ======================================== */
+  
+  /* Forzar alineación natural del texto */
+  .MuiTypography-root {
+    text-align: left !important;
+  }
+
+  /* ========================================
+     OVERRIDE DE BOTONES
+     ======================================== */
+  
+  /* Forzar alineación natural de botones */
+  .MuiButton-root {
+    margin: 8px 0 !important;
+  }
+
+  /* ========================================
+     OVERRIDE DE STACKS
+     ======================================== */
+  
+  /* Forzar alineación natural de stacks */
+  .MuiStack-root {
+    align-items: flex-start !important;
+    width: 100% !important;
+    max-width: none !important;
+  }
+
+  /* ========================================
+     OVERRIDE DE NAVBAR
+     ======================================== */
+  
+  /* Forzar que el navbar use todo el ancho */
+  .MuiAppBar-root {
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+  }
+
+  /* Forzar que el toolbar use todo el ancho */
+  .MuiToolbar-root {
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 24px !important;
+  }
+
+  /* ========================================
+     OVERRIDE DE PERFIL ESPECÍFICO
+     ======================================== */
+  
+  /* Forzar que el perfil use todo el ancho */
+  .perfil-usuario-container {
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .perfil-formularios-container {
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 24px !important;
+  }
+
+  .perfil-empresas-container {
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 24px !important;
+  }
+
+  /* Forzar que los grids del perfil usen todo el ancho */
+  .perfil-formularios-container .MuiGrid-container,
+  .perfil-empresas-container .MuiGrid-container {
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    gap: 16px !important;
+  }
+
+  .perfil-formularios-container .MuiGrid-item,
+  .perfil-empresas-container .MuiGrid-item {
+    padding: 8px !important;
+  }
+
+  /* ========================================
+     OVERRIDE DE PÁGINAS ESPECÍFICAS
+     ======================================== */
+  
+  /* Forzar que la auditoría use todo el ancho */
+  .auditoria-container .content-container {
+    align-items: stretch !important;
+    text-align: left !important;
+  }
+
+  .auditoria-container .MuiTypography-root {
+    text-align: left !important;
+  }
+
+  .auditoria-container .MuiGrid-container {
+    justify-content: flex-start !important;
+  }
+
+  .auditoria-container .MuiGrid-item {
+    justify-content: flex-start !important;
+    align-items: flex-start !important;
+  }
+
+  /* Forzar que el admin use todo el ancho */
+  .admin-container .content-container {
+    align-items: stretch !important;
+    text-align: left !important;
+    max-width: none !important;
+  }
+
+  .admin-container .MuiTypography-root {
+    text-align: left !important;
+  }
+
+  .admin-container .MuiGrid-container {
+    justify-content: flex-start !important;
+    width: 100% !important;
+    max-width: none !important;
+  }
+
+  .admin-container .MuiGrid-item {
+    justify-content: flex-start !important;
+    align-items: flex-start !important;
+  }
+}
+
+/* Optimizaciones específicas para pantallas muy grandes */
+@media (min-width: 1200px) {
+  .content-container {
+    padding: 32px !important;
+  }
+
+  .MuiContainer-root {
+    padding: 32px !important;
+  }
+
+  .perfil-formularios-container,
+  .perfil-empresas-container {
+    padding: 32px !important;
+  }
+}
+
+/* Optimizaciones específicas para pantallas ultra grandes */
+@media (min-width: 1600px) {
+  .content-container {
+    padding: 40px !important;
+  }
+
+  .MuiContainer-root {
+    padding: 40px !important;
+  }
+
+  .perfil-formularios-container,
+  .perfil-empresas-container {
+    padding: 40px !important;
+  }
+}
