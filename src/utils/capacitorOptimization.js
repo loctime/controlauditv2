@@ -1,436 +1,309 @@
-// Optimización de importaciones de Capacitor
-// Importar solo los componentes necesarios para reducir el tamaño del bundle
+// Optimización de importaciones de Capacitor - Versión Web
+// Este archivo proporciona stubs para funcionalidades de Capacitor en web
 
-// Función para cargar Capacitor Core de forma lazy
+// Función para cargar Capacitor Core de forma lazy (stub para web)
 export const loadCapacitorCore = async () => {
-  const { Capacitor } = await import('@capacitor/core');
-  return Capacitor;
-};
-
-// Función para cargar plugins de Capacitor de forma lazy
-export const loadCapacitorPlugins = async () => {
-  const [
-    { App },
-    { Browser },
-    { Camera },
-    { Device },
-    { Filesystem },
-    { Geolocation },
-    { Haptics },
-    { Keyboard },
-    { LocalNotifications },
-    { Network },
-    { PushNotifications },
-    { ScreenReader },
-    { Share },
-    { SplashScreen },
-    { StatusBar },
-    { Storage },
-    { Toast }
-  ] = await Promise.all([
-    import('@capacitor/app'),
-    import('@capacitor/browser'),
-    import('@capacitor/camera'),
-    import('@capacitor/device'),
-    import('@capacitor/filesystem'),
-    import('@capacitor/geolocation'),
-    import('@capacitor/haptics'),
-    import('@capacitor/keyboard'),
-    import('@capacitor/local-notifications'),
-    import('@capacitor/network'),
-    import('@capacitor/push-notifications'),
-    import('@capacitor/screen-reader'),
-    import('@capacitor/share'),
-    import('@capacitor/splash-screen'),
-    import('@capacitor/status-bar'),
-    import('@capacitor/storage'),
-    import('@capacitor/toast')
-  ]);
-
+  // En web, retornamos un stub
   return {
-    App,
-    Browser,
-    Camera,
-    Device,
-    Filesystem,
-    Geolocation,
-    Haptics,
-    Keyboard,
-    LocalNotifications,
-    Network,
-    PushNotifications,
-    ScreenReader,
-    Share,
-    SplashScreen,
-    StatusBar,
-    Storage,
-    Toast
+    isNative: false,
+    getPlatform: () => 'web',
+    isPluginAvailable: () => false
   };
 };
 
-// Configuración optimizada para Capacitor
+// Función para cargar plugins de Capacitor de forma lazy (stub para web)
+export const loadCapacitorPlugins = async () => {
+  // En web, retornamos stubs para todos los plugins
+  return {
+    App: {
+      minimizeApp: async () => console.log('App.minimizeApp not available in web'),
+      exitApp: async () => console.log('App.exitApp not available in web')
+    },
+    Browser: {
+      open: async () => console.log('Browser.open not available in web'),
+      close: async () => console.log('Browser.close not available in web')
+    },
+    Camera: {
+      getPhoto: async () => {
+        console.log('Camera.getPhoto not available in web');
+        throw new Error('Camera not available in web');
+      },
+      checkPermissions: async () => ({ camera: 'denied' }),
+      requestPermissions: async () => ({ camera: 'denied' })
+    },
+    Device: {
+      getInfo: async () => ({ platform: 'web' }),
+      getLanguageCode: async () => 'es'
+    },
+    Filesystem: {
+      readFile: async () => {
+        console.log('Filesystem.readFile not available in web');
+        throw new Error('Filesystem not available in web');
+      },
+      writeFile: async () => {
+        console.log('Filesystem.writeFile not available in web');
+        throw new Error('Filesystem not available in web');
+      },
+      deleteFile: async () => {
+        console.log('Filesystem.deleteFile not available in web');
+        throw new Error('Filesystem not available in web');
+      },
+      mkdir: async () => {
+        console.log('Filesystem.mkdir not available in web');
+        throw new Error('Filesystem not available in web');
+      },
+      readdir: async () => {
+        console.log('Filesystem.readdir not available in web');
+        throw new Error('Filesystem not available in web');
+      },
+      rmdir: async () => {
+        console.log('Filesystem.rmdir not available in web');
+        throw new Error('Filesystem not available in web');
+      }
+    },
+    Geolocation: {
+      getCurrentPosition: async () => {
+        console.log('Geolocation.getCurrentPosition not available in web');
+        throw new Error('Geolocation not available in web');
+      },
+      addWatcher: async () => {
+        console.log('Geolocation.addWatcher not available in web');
+        throw new Error('Geolocation not available in web');
+      }
+    },
+    Haptics: {
+      impact: async () => console.log('Haptics.impact not available in web'),
+      vibrate: async () => console.log('Haptics.vibrate not available in web')
+    },
+    Keyboard: {
+      show: async () => console.log('Keyboard.show not available in web'),
+      hide: async () => console.log('Keyboard.hide not available in web'),
+      setAccessoryBarVisible: async () => console.log('Keyboard.setAccessoryBarVisible not available in web')
+    },
+    LocalNotifications: {
+      schedule: async () => {
+        console.log('LocalNotifications.schedule not available in web');
+        throw new Error('LocalNotifications not available in web');
+      }
+    },
+    Network: {
+      getStatus: async () => ({ connected: true, connectionType: 'wifi' }),
+      addListener: async () => console.log('Network.addListener not available in web')
+    },
+    PushNotifications: {
+      register: async () => {
+        console.log('PushNotifications.register not available in web');
+        throw new Error('PushNotifications not available in web');
+      },
+      addListener: async () => console.log('PushNotifications.addListener not available in web')
+    },
+    ScreenReader: {
+      speak: async () => console.log('ScreenReader.speak not available in web')
+    },
+    Share: {
+      share: async () => {
+        console.log('Share.share not available in web');
+        throw new Error('Share not available in web');
+      }
+    },
+    SplashScreen: {
+      show: async () => console.log('SplashScreen.show not available in web'),
+      hide: async () => console.log('SplashScreen.hide not available in web')
+    },
+    StatusBar: {
+      setStyle: async () => console.log('StatusBar.setStyle not available in web'),
+      setBackgroundColor: async () => console.log('StatusBar.setBackgroundColor not available in web')
+    },
+    Storage: {
+      get: async () => ({ value: null }),
+      set: async () => console.log('Storage.set not available in web'),
+      remove: async () => console.log('Storage.remove not available in web'),
+      clear: async () => console.log('Storage.clear not available in web'),
+      keys: async () => ({ keys: [] })
+    },
+    Toast: {
+      show: async () => console.log('Toast.show not available in web')
+    }
+  };
+};
+
+// Configuración optimizada para Capacitor (stub para web)
 export const getCapacitorConfig = async (options = {}) => {
-  const Capacitor = await loadCapacitorCore();
-  
-  const defaultConfig = {
+  return {
     plugins: {
       SplashScreen: {
         launchShowDuration: 3000,
         backgroundColor: '#ffffffff',
-        androidSplashResourceName: 'splash',
-        androidScaleType: 'CENTER_CROP',
         showSpinner: true,
-        androidSpinnerStyle: 'large',
-        iosSpinnerStyle: 'small',
         spinnerColor: '#999999',
         splashFullScreen: true,
-        splashImmersive: true,
-        layoutName: 'launch_screen',
-        layoutNameDark: 'launch_screen_dark'
+        splashImmersive: true
       },
       StatusBar: {
         style: 'light',
         backgroundColor: '#1976d2',
         overlaysWebView: true
       }
-    }
+    },
+    ...options
   };
-
-  return { ...defaultConfig, ...options };
 };
 
 // Verificar si estamos en un entorno Capacitor
 export const isCapacitorAvailable = () => {
-  return typeof window !== 'undefined' && 
-         window.Capacitor && 
-         window.Capacitor.isNative;
+  return false; // En web siempre es false
 };
 
 // Verificar si estamos en Android
 export const isAndroid = () => {
-  return typeof window !== 'undefined' && 
-         window.Capacitor && 
-         window.Capacitor.getPlatform() === 'android';
+  return false; // En web siempre es false
 };
 
 // Verificar si estamos en iOS
 export const isIOS = () => {
-  return typeof window !== 'undefined' && 
-         window.Capacitor && 
-         window.Capacitor.getPlatform() === 'ios';
+  return false; // En web siempre es false
 };
 
 // Verificar si estamos en web
 export const isWeb = () => {
-  return typeof window !== 'undefined' && 
-         (!window.Capacitor || !window.Capacitor.isNative);
+  return true; // En web siempre es true
 };
 
-// Utilidades para la aplicación
+// Utilidades para la aplicación (stubs)
 export const appUtils = {
-  // Minimizar la aplicación
   minimizeApp: async () => {
-    const { App } = await loadCapacitorPlugins();
-    return await App.minimizeApp();
+    console.log('App.minimizeApp not available in web');
   }
 };
 
-// Utilidades para la cámara
+// Utilidades para la cámara (stubs)
 export const cameraUtils = {
-  // Tomar foto
-  takePicture: async (options = {}) => {
-    const { Camera } = await loadCapacitorPlugins();
-    const defaultOptions = {
-      quality: 90,
-      allowEditing: false,
-      resultType: 'uri',
-      source: 'CAMERA',
-      ...options
-    };
-    return await Camera.getPhoto(defaultOptions);
+  takePicture: async () => {
+    console.log('Camera.takePicture not available in web');
+    throw new Error('Camera not available in web');
   },
-  
-  // Seleccionar imagen de la galería
-  pickImage: async (options = {}) => {
-    const { Camera } = await loadCapacitorPlugins();
-    const defaultOptions = {
-      quality: 90,
-      allowEditing: false,
-      resultType: 'uri',
-      source: 'PHOTOLIBRARY',
-      ...options
-    };
-    return await Camera.getPhoto(defaultOptions);
+  pickImage: async () => {
+    console.log('Camera.pickImage not available in web');
+    throw new Error('Camera not available in web');
   },
-  
-  // Verificar permisos de cámara
-  checkPermissions: async () => {
-    const { Camera } = await loadCapacitorPlugins();
-    return await Camera.checkPermissions();
-  },
-  
-  // Solicitar permisos de cámara
-  requestPermissions: async () => {
-    const { Camera } = await loadCapacitorPlugins();
-    return await Camera.requestPermissions();
-  }
+  checkPermissions: async () => ({ camera: 'denied' }),
+  requestPermissions: async () => ({ camera: 'denied' })
 };
 
-// Utilidades para archivos
+// Utilidades para archivos (stubs)
 export const filesystemUtils = {
-  // Leer archivo
-  readFile: async (path, options = {}) => {
-    const { Filesystem } = await loadCapacitorPlugins();
-    const defaultOptions = {
-      encoding: 'utf8',
-      ...options
-    };
-    return await Filesystem.readFile({ path, ...defaultOptions });
+  readFile: async () => {
+    console.log('Filesystem.readFile not available in web');
+    throw new Error('Filesystem not available in web');
   },
-  
-  // Escribir archivo
-  writeFile: async (path, data, options = {}) => {
-    const { Filesystem } = await loadCapacitorPlugins();
-    const defaultOptions = {
-      encoding: 'utf8',
-      recursive: false,
-      ...options
-    };
-    return await Filesystem.writeFile({ path, data, ...defaultOptions });
+  writeFile: async () => {
+    console.log('Filesystem.writeFile not available in web');
+    throw new Error('Filesystem not available in web');
   },
-  
-  // Eliminar archivo
-  deleteFile: async (path) => {
-    const { Filesystem } = await loadCapacitorPlugins();
-    return await Filesystem.deleteFile({ path });
+  deleteFile: async () => {
+    console.log('Filesystem.deleteFile not available in web');
+    throw new Error('Filesystem not available in web');
   },
-  
-  // Crear directorio
-  mkdir: async (path, options = {}) => {
-    const { Filesystem } = await loadCapacitorPlugins();
-    const defaultOptions = {
-      recursive: false,
-      ...options
-    };
-    return await Filesystem.mkdir({ path, ...defaultOptions });
+  mkdir: async () => {
+    console.log('Filesystem.mkdir not available in web');
+    throw new Error('Filesystem not available in web');
   },
-  
-  // Leer directorio
-  readdir: async (path) => {
-    const { Filesystem } = await loadCapacitorPlugins();
-    return await Filesystem.readdir({ path });
+  readdir: async () => {
+    console.log('Filesystem.readdir not available in web');
+    throw new Error('Filesystem not available in web');
   },
-  
-  // Eliminar directorio
-  rmdir: async (path, options = {}) => {
-    const { Filesystem } = await loadCapacitorPlugins();
-    const defaultOptions = {
-      recursive: false,
-      ...options
-    };
-    return await Filesystem.rmdir({ path, ...defaultOptions });
+  rmdir: async () => {
+    console.log('Filesystem.rmdir not available in web');
+    throw new Error('Filesystem not available in web');
   }
 };
 
-// Utilidades para notificaciones
+// Utilidades para notificaciones (stubs)
 export const notificationUtils = {
-  // Mostrar toast
-  showToast: async (message, duration = 'short') => {
-    const { Toast } = await loadCapacitorPlugins();
-    return await Toast.show({
-      text: message,
-      duration: duration,
-      position: 'bottom'
-    });
+  showToast: async () => {
+    console.log('Toast.show not available in web');
   },
-  
-  // Mostrar notificación local
-  scheduleNotification: async (notification) => {
-    const { LocalNotifications } = await loadCapacitorPlugins();
-    return await LocalNotifications.schedule({ notifications: [notification] });
+  scheduleNotification: async () => {
+    console.log('LocalNotifications.schedule not available in web');
+    throw new Error('LocalNotifications not available in web');
   }
 };
 
-// Utilidades para el dispositivo
+// Utilidades para el dispositivo (stubs)
 export const deviceUtils = {
-  // Obtener información del dispositivo
-  getInfo: async () => {
-    const { Device } = await loadCapacitorPlugins();
-    return await Device.getInfo();
-  },
-  
-  // Obtener idioma del dispositivo
-  getLanguageCode: async () => {
-    const { Device } = await loadCapacitorPlugins();
-    return await Device.getLanguageCode();
-  }
+  getInfo: async () => ({ platform: 'web' }),
+  getLanguageCode: async () => 'es'
 };
 
-// Utilidades para el teclado
+// Utilidades para el teclado (stubs)
 export const keyboardUtils = {
-  // Mostrar teclado
-  show: async () => {
-    const { Keyboard } = await loadCapacitorPlugins();
-    return await Keyboard.show();
-  },
-  
-  // Ocultar teclado
-  hide: async () => {
-    const { Keyboard } = await loadCapacitorPlugins();
-    return await Keyboard.hide();
-  },
-  
-  // Configurar teclado
-  setAccessoryBarVisible: async (isVisible) => {
-    const { Keyboard } = await loadCapacitorPlugins();
-    return await Keyboard.setAccessoryBarVisible({ isVisible });
-  }
+  show: async () => console.log('Keyboard.show not available in web'),
+  hide: async () => console.log('Keyboard.hide not available in web'),
+  setAccessoryBarVisible: async () => console.log('Keyboard.setAccessoryBarVisible not available in web')
 };
 
-// Utilidades para el estado de la red
+// Utilidades para el estado de la red (stubs)
 export const networkUtils = {
-  // Obtener estado de la red
-  getStatus: async () => {
-    const { Network } = await loadCapacitorPlugins();
-    return await Network.getStatus();
-  },
-  
-  // Agregar listener de cambios de red
-  addListener: async (callback) => {
-    const { Network } = await loadCapacitorPlugins();
-    return await Network.addListener('networkStatusChange', callback);
-  }
+  getStatus: async () => ({ connected: true, connectionType: 'wifi' }),
+  addListener: async () => console.log('Network.addListener not available in web')
 };
 
-// Utilidades para el almacenamiento
+// Utilidades para el almacenamiento (stubs)
 export const storageUtils = {
-  // Obtener valor
-  get: async (key) => {
-    const { Storage } = await loadCapacitorPlugins();
-    const result = await Storage.get({ key });
-    return result.value;
-  },
-  
-  // Establecer valor
-  set: async (key, value) => {
-    const { Storage } = await loadCapacitorPlugins();
-    return await Storage.set({ key, value });
-  },
-  
-  // Eliminar valor
-  remove: async (key) => {
-    const { Storage } = await loadCapacitorPlugins();
-    return await Storage.remove({ key });
-  },
-  
-  // Limpiar todo
-  clear: async () => {
-    const { Storage } = await loadCapacitorPlugins();
-    return await Storage.clear();
-  },
-  
-  // Obtener todas las claves
-  keys: async () => {
-    const { Storage } = await loadCapacitorPlugins();
-    const result = await Storage.keys();
-    return result.keys;
-  }
+  get: async () => null,
+  set: async () => console.log('Storage.set not available in web'),
+  remove: async () => console.log('Storage.remove not available in web'),
+  clear: async () => console.log('Storage.clear not available in web'),
+  keys: async () => []
 };
 
-// Utilidades para el navegador
+// Utilidades para el navegador (stubs)
 export const browserUtils = {
-  // Abrir URL
-  open: async (url, options = {}) => {
-    const { Browser } = await loadCapacitorPlugins();
-    const defaultOptions = {
-      url: url,
-      windowName: '_blank',
-      presentationStyle: 'popover',
-      ...options
-    };
-    return await Browser.open(defaultOptions);
+  open: async () => {
+    console.log('Browser.open not available in web');
+    throw new Error('Browser not available in web');
   },
-  
-  // Cerrar navegador
-  close: async () => {
-    const { Browser } = await loadCapacitorPlugins();
-    return await Browser.close();
-  }
+  close: async () => console.log('Browser.close not available in web')
 };
 
-// Utilidades para compartir
+// Utilidades para compartir (stubs)
 export const shareUtils = {
-  // Compartir contenido
-  share: async (options) => {
-    const { Share } = await loadCapacitorPlugins();
-    return await Share.share(options);
+  share: async () => {
+    console.log('Share.share not available in web');
+    throw new Error('Share not available in web');
   }
 };
 
-// Utilidades para haptics
+// Utilidades para haptics (stubs)
 export const hapticsUtils = {
-  // Vibración corta
-  impact: async (style = 'medium') => {
-    const { Haptics } = await loadCapacitorPlugins();
-    return await Haptics.impact({ style });
-  },
-  
-  // Vibración larga
-  vibrate: async (duration = 300) => {
-    const { Haptics } = await loadCapacitorPlugins();
-    return await Haptics.vibrate({ duration });
-  }
+  impact: async () => console.log('Haptics.impact not available in web'),
+  vibrate: async () => console.log('Haptics.vibrate not available in web')
 };
 
-// Utilidades para geolocalización
+// Utilidades para geolocalización (stubs)
 export const geolocationUtils = {
-  // Obtener posición actual
-  getCurrentPosition: async (options = {}) => {
-    const { Geolocation } = await loadCapacitorPlugins();
-    const defaultOptions = {
-      enableHighAccuracy: true,
-      timeout: 10000,
-      maximumAge: 300000,
-      ...options
-    };
-    return await Geolocation.getCurrentPosition(defaultOptions);
+  getCurrentPosition: async () => {
+    console.log('Geolocation.getCurrentPosition not available in web');
+    throw new Error('Geolocation not available in web');
   },
-  
-  // Agregar listener de posición
-  addWatcher: async (options, callback) => {
-    const { Geolocation } = await loadCapacitorPlugins();
-    const defaultOptions = {
-      enableHighAccuracy: true,
-      timeout: 10000,
-      maximumAge: 300000,
-      ...options
-    };
-    return await Geolocation.addWatcher(defaultOptions, callback);
+  addWatcher: async () => {
+    console.log('Geolocation.addWatcher not available in web');
+    throw new Error('Geolocation not available in web');
   }
 };
 
-// Utilidades para el lector de pantalla
+// Utilidades para el lector de pantalla (stubs)
 export const screenReaderUtils = {
-  // Habilitar lector de pantalla
-  speak: async (options) => {
-    const { ScreenReader } = await loadCapacitorPlugins();
-    return await ScreenReader.speak(options);
-  }
+  speak: async () => console.log('ScreenReader.speak not available in web')
 };
 
-// Utilidades para notificaciones push
+// Utilidades para notificaciones push (stubs)
 export const pushNotificationUtils = {
-  // Registrar para notificaciones push
   register: async () => {
-    const { PushNotifications } = await loadCapacitorPlugins();
-    return await PushNotifications.register();
+    console.log('PushNotifications.register not available in web');
+    throw new Error('PushNotifications not available in web');
   },
-  
-  // Agregar listener de registro
-  addListener: async (eventName, callback) => {
-    const { PushNotifications } = await loadCapacitorPlugins();
-    return await PushNotifications.addListener(eventName, callback);
-  }
+  addListener: async () => console.log('PushNotifications.addListener not available in web')
 };
 
 // Exportar todas las utilidades

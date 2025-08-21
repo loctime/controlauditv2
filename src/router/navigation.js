@@ -8,6 +8,7 @@ import PersonIcon from '@mui/icons-material/Person';
 import SettingsIcon from '@mui/icons-material/Settings';
 import AnalyticsIcon from '@mui/icons-material/Analytics';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
+import AssignmentIcon from '@mui/icons-material/Assignment';
 
 // Configuración de menús por rol y permisos (solo para web)
 export const getMenuItems = (role, permisos = {}) => {
@@ -84,6 +85,17 @@ export const getMenuItems = (role, permisos = {}) => {
     }
   ];
 
+  const auditoriaItems = [
+    {
+      id: "auditoria",
+      path: "/auditoria",
+      title: "Realizar Auditoría",
+      Icon: AssignmentIcon,
+      roles: ['operario', 'max', 'supermax'],
+      required: permisos.puedeCrearAuditorias || role === 'max' || role === 'supermax'
+    }
+  ];
+
   const reporteItems = [
     {
       id: "reporte",
@@ -144,11 +156,12 @@ export const getMenuItems = (role, permisos = {}) => {
     }
   ];
 
-  // Combinar todos los items (sin auditoría para web)
+  // Combinar todos los items (incluyendo auditoría para web)
   const allItems = [
     ...baseItems,
     ...formularioItems,
     ...empresaItems,
+    ...auditoriaItems,
     ...reporteItems,
     ...adminItems,
     ...developerItems,
@@ -167,7 +180,7 @@ export const getMenuItems = (role, permisos = {}) => {
   });
 };
 
-// Menú por defecto para web (sin auditoría)
+// Menú por defecto para web (incluyendo auditoría)
 export const menuItems = [
     {
         id: "dashboard",
@@ -192,6 +205,12 @@ export const menuItems = [
         path: "/editar",
         title: "Editar Formulario",
         Icon: FormatListBulletedOutlinedIcon
+    },
+    {
+        id: "auditoria",
+        path: "/auditoria",
+        title: "Realizar Auditoría",
+        Icon: AssignmentIcon
     },
     {
         id: "establecimiento",

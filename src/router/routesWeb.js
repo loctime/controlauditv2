@@ -1,9 +1,10 @@
 import { lazy } from 'react';
 
-// Lazy loading de componentes para web (excluyendo auditoría)
+// Lazy loading de componentes para web (incluyendo auditoría)
 const Home = lazy(() => import("../components/pages/home/Home"));
 const EstablecimientosContainer = lazy(() => import("../components/pages/establecimiento/EstablecimientosContainer"));
 const SucursalContainer = lazy(() => import("../components/pages/SucursalContainer.jsx/SucursalContainer"));
+const Auditoria = lazy(() => import("../components/pages/auditoria/auditoria/Auditoria"));
 const Formulario = lazy(() => import("../components/pages/formulario/Formulario"));
 const EditarFormulario = lazy(() => import("../components/pages/editar/EditarFormulario"));
 const Informe = lazy(() => import("../components/pages/auditoria/Informe"));
@@ -52,6 +53,11 @@ export const routesWeb = [
     id: "sucursal-empresa",
     path: "/sucursales/:empresaId",
     Element: SucursalContainer,
+  },
+  {
+    id: "auditoria",
+    path: "/auditoria",
+    Element: Auditoria,
   },
   {
     id: "formulario",

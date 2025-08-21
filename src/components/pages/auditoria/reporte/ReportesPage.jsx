@@ -146,7 +146,7 @@ const ReportesPage = () => {
 
   // Función para obtener el color del estado del reporte
   const getEstadoColor = (reporte) => {
-    if (reporte.estado === 'completado') return 'success';
+    if (reporte.estado === 'completado' || reporte.estado === 'completada') return 'success';
     if (reporte.estado === 'en_progreso') return 'warning';
     if (reporte.estado === 'pendiente') return 'info';
     return 'default';
@@ -154,7 +154,7 @@ const ReportesPage = () => {
 
   // Función para obtener el texto del estado
   const getEstadoText = (reporte) => {
-    if (reporte.estado === 'completado') return 'Completado';
+    if (reporte.estado === 'completado' || reporte.estado === 'completada') return 'Completado';
     if (reporte.estado === 'en_progreso') return 'En Progreso';
     if (reporte.estado === 'pendiente') return 'Pendiente';
     return 'Sin Estado';
@@ -183,19 +183,60 @@ const ReportesPage = () => {
     
     try {
       console.log('[DEBUG] Iniciando fetch de reportes con multi-tenant...');
+      console.log('[DEBUG] userProfile:', userProfile);
       
-      let q = query(
-        collection(db, "reportes"),
-        orderBy("fechaCreacion", "desc"),
-        limit(100)
-      );
-
-      // Aplicar filtros de multi-tenant si el usuario no es supermax
-      if (userProfile?.role !== 'supermax') {
+      let q; // Declarar la variable q
+      
+      // Aplicar filtros de multi-tenant según el rol del usuario (igual que AuditoriaService)
+      if (userProfile?.role === 'operario') {
+        q = query(
+          collection(db, "reportes"),
+          where("usuarioId", "==", userProfile.uid),
+          orderBy("fechaCreacion", "desc"),
+          limit(100)
+        );
+        console.log('[DEBUG] Filtro para operario: usuarioId ==', userProfile.uid);
+      } else if (userProfile?.role === 'max') {
+        q = query(
+          collection(db, "reportes"),
+          where("clienteAdminId", "==", userProfile.uid),
+          orderBy("fechaCreacion", "desc"),
+          limit(100)
+        );
+        console.log('[DEBUG] Filtro para max: clienteAdminId ==', userProfile.uid);
+      } else if (userProfile?.role === 'supermax') {
+        // Para supermax, no aplicar filtros (puede ver todo)
+        q = query(
+          collection(db, "reportes"),
+          orderBy("fechaCreacion", "desc"),
+          limit(100)
+        );
+        console.log('[DEBUG] Sin filtros para supermax');
+      } else {
+        // Para otros roles, usar clienteAdminId si existe
         if (userProfile?.clienteAdminId) {
-          q = query(q, where("clienteAdminId", "==", userProfile.clienteAdminId));
+          q = query(
+            collection(db, "reportes"),
+            where("clienteAdminId", "==", userProfile.clienteAdminId),
+            orderBy("fechaCreacion", "desc"),
+            limit(100)
+          );
+          console.log('[DEBUG] Filtro por clienteAdminId:', userProfile.clienteAdminId);
         } else if (userProfile?.empresaId) {
-          q = query(q, where("empresaId", "==", userProfile.empresaId));
+          q = query(
+            collection(db, "reportes"),
+            where("empresaId", "==", userProfile.empresaId),
+            orderBy("fechaCreacion", "desc"),
+            limit(100)
+          );
+          console.log('[DEBUG] Filtro por empresaId:', userProfile.empresaId);
+        } else {
+          // Consulta por defecto sin filtros
+          q = query(
+            collection(db, "reportes"),
+            orderBy("fechaCreacion", "desc"),
+            limit(100)
+          );
         }
       }
 
@@ -306,6 +347,44 @@ const ReportesPage = () => {
     navigate('/perfil');
   };
 
+  // Función de debug temporal
+  const handleDebugReportes = async () => {
+    try {
+      console.log('[DEBUG] === INICIANDO DEBUG DE REPORTES ===');
+      
+      // 1. Consultar TODOS los reportes sin filtros
+      const todosLosReportes = await getDocs(collection(db, "reportes"));
+      console.log('[DEBUG] Total de reportes en la base de datos:', todosLosReportes.size);
+      
+      // 2. Mostrar los primeros 5 reportes
+      todosLosReportes.docs.slice(0, 5).forEach((doc, index) => {
+        const data = doc.data();
+        console.log(`[DEBUG] Reporte ${index + 1}:`, {
+          id: doc.id,
+          empresa: data.empresaNombre || data.empresa?.nombre,
+          formulario: data.nombreForm || data.formulario?.nombre,
+          estado: data.estado,
+          fechaCreacion: data.fechaCreacion,
+          usuarioId: data.usuarioId,
+          clienteAdminId: data.clienteAdminId,
+          auditor: data.auditor
+        });
+      });
+      
+      // 3. Mostrar información del usuario actual
+      console.log('[DEBUG] Usuario actual:', {
+        uid: userProfile?.uid,
+        role: userProfile?.role,
+        clienteAdminId: userProfile?.clienteAdminId,
+        empresaId: userProfile?.empresaId
+      });
+      
+      console.log('[DEBUG] === FIN DEBUG DE REPORTES ===');
+    } catch (error) {
+      console.error('[DEBUG] Error en debug:', error);
+    }
+  };
+
   // Renderizado condicional para móvil vs desktop
   const renderMobileView = () => (
     <Box sx={{ 
@@ -317,7 +396,23 @@ const ReportesPage = () => {
       {filteredReportes.map((reporte) => (
         <Card 
           key={reporte.id}
-          sx={mobileBoxStyle}
+          className="reporte-card-mobile"
+          sx={{
+            bgcolor: 'background.paper',
+            border: `1px solid ${alpha(theme.palette.divider, 0.3)}`,
+            boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+            overflow: 'hidden',
+            minHeight: isMobile ? '120px' : '140px',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'space-between',
+            '&:hover': {
+              transform: 'translateY(-2px)',
+              boxShadow: '0 8px 25px rgba(0,0,0,0.12)',
+              transition: 'all 0.3s ease'
+            },
+            transition: 'all 0.3s ease'
+          }}
         >
           <CardContent sx={{ 
             p: isSmallMobile ? 2 : 3,
@@ -402,10 +497,9 @@ const ReportesPage = () => {
               fullWidth
               startIcon={<VisibilityIcon />}
               onClick={() => handleSelectReporte(reporte)}
+              className="reportes-button-mobile"
               sx={{ 
-                mt: 'auto',
-                py: isSmallMobile ? 1 : 1.5,
-                fontSize: isSmallMobile ? '0.875rem' : '1rem'
+                mt: 'auto'
               }}
             >
               Ver Detalles
@@ -417,7 +511,7 @@ const ReportesPage = () => {
   );
 
   const renderDesktopView = () => (
-    <TableContainer component={Paper} sx={{ borderRadius: 3, overflow: 'hidden' }}>
+    <TableContainer component={Paper} className="reportes-table">
       <Table>
         <TableHead>
           <TableRow sx={{ bgcolor: alpha(theme.palette.primary.main, 0.1) }}>
@@ -451,6 +545,8 @@ const ReportesPage = () => {
                   size="small"
                   startIcon={<VisibilityIcon />}
                   onClick={() => handleSelectReporte(reporte)}
+                  className="reportes-button"
+                  sx={{ minWidth: 'auto' }}
                 >
                   Ver
                 </Button>
@@ -464,16 +560,9 @@ const ReportesPage = () => {
 
   // Renderizado principal
   return (
-    <Box sx={{ 
-      p: isSmallMobile ? 2 : 4,
-      maxWidth: 1200,
-      mx: 'auto'
-    }}>
+    <Box className="reportes-container">
       {/* Header */}
-      <Box sx={{ 
-        textAlign: 'center', 
-        mb: isSmallMobile ? 4 : 6 
-      }}>
+      <Box className="reportes-header">
         {/* Botón de volver si viene del perfil */}
         {vieneDelPerfil && (
           <Box sx={{ 
@@ -485,11 +574,8 @@ const ReportesPage = () => {
               variant="outlined"
               color="primary"
               onClick={handleVolver}
+              className="volver-button"
               sx={{
-                borderRadius: 2,
-                px: 3,
-                py: 1,
-                fontWeight: 600,
                 '&:hover': {
                   bgcolor: alpha(theme.palette.primary.main, 0.1)
                 }
@@ -499,32 +585,45 @@ const ReportesPage = () => {
             </Button>
           </Box>
         )}
+
+        {/* Botón de debug temporal */}
+        <Box sx={{ 
+          display: 'flex', 
+          justifyContent: 'center', 
+          mb: 2 
+        }}>
+          <Button
+            variant="outlined"
+            color="secondary"
+            onClick={handleDebugReportes}
+            size="small"
+            sx={{
+              '&:hover': {
+                bgcolor: alpha(theme.palette.secondary.main, 0.1)
+              }
+            }}
+          >
+            🔍 Debug Reportes
+          </Button>
+        </Box>
         
         <Typography 
           variant={isSmallMobile ? "h5" : "h4"} 
-          sx={{ 
-            fontWeight: 700, 
-            color: 'primary.main',
-            mb: 2,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 2
-          }}
+          className="reportes-title"
         >
           📊 Reportes de Auditoría
         </Typography>
         <Typography 
           variant="body1" 
           color="text.secondary"
-          sx={{ lineHeight: 1.6 }}
+          className="reportes-subtitle"
         >
           Gestiona y visualiza todos los reportes de auditoría del sistema
         </Typography>
       </Box>
 
       {/* Filtros */}
-      <Box sx={{ mb: 4 }}>
+      <Box className="filtros-reportes-container">
         <FiltrosReportes
           empresas={empresasDeReportes}
           formularios={formulariosDeReportes}
@@ -557,12 +656,7 @@ const ReportesPage = () => {
             {error}
           </Alert>
         ) : filteredReportes.length === 0 ? (
-          <Box sx={{ 
-            display: 'flex', 
-            justifyContent: 'center', 
-            alignItems: 'center', 
-            minHeight: '300px' 
-          }}>
+          <Box className="reportes-empty-state">
             <Box sx={{ 
               display: 'flex', 
               flexDirection: 'column', 
@@ -581,7 +675,7 @@ const ReportesPage = () => {
               }}>
                 <AssignmentIcon 
                   color="info" 
-                  sx={{ fontSize: isSmallMobile ? 40 : 48 }} 
+                  className="reportes-empty-icon"
                 />
               </Box>
               <Typography 
