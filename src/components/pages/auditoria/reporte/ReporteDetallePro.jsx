@@ -221,83 +221,175 @@ function generarContenidoImpresion({empresa, sucursal, formulario, fecha, respue
       <meta charset="UTF-8">
       <title>Reporte de Auditoría</title>
       <style>
-        body { font-family: Arial, sans-serif; margin: 0; padding: 24px; }
-        h1, h2, h3 { color: #1976d2; }
-        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #1976d2; padding-bottom: 12px; margin-bottom: 24px; }
-        .logo { height: 60px; }
-        .section { margin-bottom: 24px; }
-        .firma-img { max-width: 300px; max-height: 100px; border: 2px solid #43a047; border-radius: 8px; margin-top: 8px; }
-        .imagenes-table { width: 100%; border-collapse: collapse; margin-top: 16px; }
-        .imagenes-table th, .imagenes-table td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+        @page {
+          size: A4;
+          margin: 2cm;
+        }
+        body { 
+          font-family: Arial, sans-serif; 
+          margin: 0; 
+          padding: 0; 
+          font-size: 12px;
+          line-height: 1.4;
+        }
+        h1 { 
+          color: #1976d2; 
+          font-size: 24px;
+          margin: 0 0 20px 0;
+          text-align: center;
+        }
+        h2 { 
+          color: #1976d2; 
+          font-size: 16px;
+          margin: 0 0 10px 0;
+          border-bottom: 1px solid #1976d2;
+          padding-bottom: 5px;
+        }
+        h3 { 
+          color: #1976d2; 
+          font-size: 14px;
+          margin: 15px 0 8px 0;
+        }
+        .header { 
+          text-align: center; 
+          border-bottom: 2px solid #1976d2; 
+          padding-bottom: 15px; 
+          margin-bottom: 20px; 
+        }
+        .logo { height: 50px; }
+        .section { margin-bottom: 20px; }
+        .info-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 20px;
+          margin-bottom: 20px;
+        }
+        .info-box {
+          border: 1px solid #ddd;
+          padding: 15px;
+          border-radius: 5px;
+          background-color: #f9f9f9;
+        }
+        .info-box h2 {
+          margin-top: 0;
+          font-size: 14px;
+        }
+        .info-item {
+          margin: 5px 0;
+          font-size: 11px;
+        }
+        .firma-img { 
+          max-width: 200px; 
+          max-height: 80px; 
+          border: 1px solid #43a047; 
+          border-radius: 5px; 
+          margin-top: 5px; 
+        }
+        .imagenes-table { 
+          width: 100%; 
+          border-collapse: collapse; 
+          margin-top: 10px; 
+          font-size: 10px;
+        }
+        .imagenes-table th, .imagenes-table td { 
+          border: 1px solid #ccc; 
+          padding: 5px; 
+          text-align: left; 
+        }
         .imagenes-table th { background: #f5f5f5; }
-        .img-preview { max-width: 100px; max-height: 80px; }
+        .img-preview { max-width: 80px; max-height: 60px; }
         .firma-label { color: #1976d2; font-weight: bold; margin-bottom: 4px; }
-        .firma-aclaracion { color: #333; font-size: 15px; margin-top: 4px; }
-                 .footer { margin-top: 32px; text-align: center; color: #888; font-size: 13px; }
-         @media print { 
-           .no-print { display: none !important; } 
-         }
+        .firma-aclaracion { color: #333; font-size: 12px; margin-top: 4px; }
+        .footer { 
+          margin-top: 30px; 
+          text-align: center; 
+          color: #888; 
+          font-size: 10px; 
+          border-top: 1px solid #ddd;
+          padding-top: 10px;
+        }
+        .pregunta-item {
+          margin: 8px 0;
+          padding: 8px;
+          border-left: 3px solid #1976d2;
+          background-color: #f8f9fa;
+        }
+        .pregunta-texto {
+          font-weight: bold;
+          margin-bottom: 3px;
+        }
+        .respuesta-texto {
+          color: #333;
+        }
+        .comentario-texto {
+          color: #666;
+          font-style: italic;
+          margin-top: 3px;
+        }
+        @media print { 
+          .no-print { display: none !important; } 
+          body { -webkit-print-color-adjust: exact; }
+        }
       </style>
-         </head>
-     <body>
-       <div class="header">
+    </head>
+    <body>
+      <div class="header">
         <h1>Reporte de Auditoría</h1>
         ${empresa.logo ? `<img src="${empresa.logo}" alt="Logo" class="logo" />` : ''}
       </div>
-      <div class="section">
-        <h2>Datos de la Empresa</h2>
-        <p><strong>Empresa:</strong> ${empresa.nombre || ''}</p>
-        <p><strong>Sucursal:</strong> ${sucursal || ''}</p>
-        <p><strong>Formulario:</strong> ${formulario.nombre || ''}</p>
-        <p><strong>Fecha:</strong> ${fecha}</p>
-      </div>
-      <div class="section">
-        <h2>Resumen de Respuestas</h2>
-        <ul>
-          <li><strong>Total de preguntas:</strong> ${totalPreguntas}</li>
-          <li><strong>Conforme:</strong> ${conforme}</li>
-          <li><strong>No conforme:</strong> ${noConforme}</li>
-          <li><strong>Necesita mejora:</strong> ${necesitaMejora}</li>
-          <li><strong>No aplica:</strong> ${noAplica}</li>
-        </ul>
-      </div>
-      <div class="section">
-        <h2>Gráfico de Respuestas</h2>
-        ${chartImgDataUrl ? `<img src="${chartImgDataUrl}" style="max-width:400px;" />` : ''}
-      </div>
-      ${sectionChartsImgDataUrl && sectionChartsImgDataUrl.length > 0 ? `
-        <div class="section">
-          <h2>Distribución por sección</h2>
-          ${sectionChartsImgDataUrl.map((img, idx) => img ? `<div style='margin-bottom:16px;'><b>${secciones[idx]?.nombre || `Sección ${idx+1}`}</b><br/><img src='${img}' style='max-width:350px;max-height:220px;'/></div>` : '').join('')}
+      
+      <div class="info-grid">
+        <div class="info-box">
+          <h2>Datos de la Empresa</h2>
+          <div class="info-item"><strong>Empresa:</strong> ${empresa.nombre || ''}</div>
+          <div class="info-item"><strong>Sucursal:</strong> ${sucursal || ''}</div>
+          <div class="info-item"><strong>Formulario:</strong> ${formulario.nombre || ''}</div>
+          <div class="info-item"><strong>Fecha:</strong> ${fecha}</div>
+          <div class="info-item"><strong>Auditor:</strong> ${nombreAuditor}</div>
         </div>
-      ` : ''}
+        
+        <div class="info-box">
+          <h2>Resumen de Respuestas</h2>
+          <div class="info-item"><strong>Total de preguntas:</strong> ${totalPreguntas}</div>
+          <div class="info-item"><strong>Conforme:</strong> ${conforme}</div>
+          <div class="info-item"><strong>No conforme:</strong> ${noConforme}</div>
+          <div class="info-item"><strong>Necesita mejora:</strong> ${necesitaMejora}</div>
+          <div class="info-item"><strong>No aplica:</strong> ${noAplica}</div>
+        </div>
+      </div>
+      
       <div class="section">
         <h2>Preguntas y Respuestas</h2>
         ${secciones.map((seccion, sIdx) => `
-          <div style="margin-bottom: 12px;">
+          <div style="margin-bottom: 15px;">
             <h3>${seccion.nombre}</h3>
-            <ul>
-              ${seccion.preguntas.map((pregunta, pIdx) => `
-                <li>
-                  <strong>${pregunta}</strong><br/>
-                  Respuesta: ${respuestas[sIdx]?.[pIdx] || 'Sin responder'}<br/>
-                  ${comentarios[sIdx]?.[pIdx] ? `Comentario: ${comentarios[sIdx][pIdx]}` : ''}
-                  ${imagenes[sIdx]?.[pIdx] ? `<br/><img src="${imagenes[sIdx][pIdx]}" class="img-preview" alt="Imagen" />` : ''}
-                </li>
-              `).join('')}
-            </ul>
+            ${seccion.preguntas.map((pregunta, pIdx) => `
+              <div class="pregunta-item">
+                <div class="pregunta-texto">${pregunta}</div>
+                <div class="respuesta-texto"><strong>Respuesta:</strong> ${respuestas[sIdx]?.[pIdx] || 'Sin responder'}</div>
+                ${comentarios[sIdx]?.[pIdx] ? `<div class="comentario-texto"><strong>Comentario:</strong> ${comentarios[sIdx][pIdx]}</div>` : ''}
+                ${imagenes[sIdx]?.[pIdx] ? `<div style="margin-top: 5px;"><img src="${imagenes[sIdx][pIdx]}" class="img-preview" alt="Imagen" /></div>` : ''}
+              </div>
+            `).join('')}
           </div>
         `).join('')}
       </div>
+      
       <div class="section">
-        <h2>Firma del Auditor</h2>
-        ${firmaAuditor ? `<img src="${firmaAuditor}" class="firma-img" alt="Firma del auditor" />` : '<p>No hay firma registrada.</p>'}
-        <div class="firma-aclaracion">${nombreAuditor}</div>
+        <h2>Firmas</h2>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+          <div>
+            <div class="firma-label">Firma del Auditor</div>
+            ${firmaAuditor ? `<img src="${firmaAuditor}" class="firma-img" alt="Firma del auditor" />` : '<p style="font-size: 11px; color: #666;">No hay firma registrada.</p>'}
+            <div class="firma-aclaracion">${nombreAuditor}</div>
+          </div>
+          <div>
+            <div class="firma-label">Firma de la Empresa</div>
+            ${firmaResponsable ? `<img src="${firmaResponsable}" class="firma-img" alt="Firma de la empresa" />` : '<p style="font-size: 11px; color: #666;">No hay firma registrada.</p>'}
+          </div>
+        </div>
       </div>
-      <div class="section">
-        <h2>Firma de la Empresa</h2>
-        ${firmaResponsable ? `<img src="${firmaResponsable}" class="firma-img" alt="Firma de la empresa" />` : '<p>No hay firma registrada.</p>'}
-      </div>
+      
       <div class="footer">
         Reporte generado el ${new Date().toLocaleString('es-ES')}
       </div>
