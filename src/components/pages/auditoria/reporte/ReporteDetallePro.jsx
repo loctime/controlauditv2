@@ -700,13 +700,32 @@ const ReporteDetallePro = forwardRef(({ open = false, onClose = () => {}, report
       firmaResponsable: firmaResponsableFinal // Añadir firmaResponsable a la función de impresión
     });
     
-    // Crear una nueva ventana temporal para imprimir
-    const printWindow = window.open('', '_blank', 'width=900,height=700');
-    printWindow.document.write(html);
-    printWindow.document.close();
+    // Crear un iframe oculto para imprimir
+    const printFrame = document.createElement('iframe');
+    printFrame.style.position = 'fixed';
+    printFrame.style.right = '0';
+    printFrame.style.bottom = '0';
+    printFrame.style.width = '0';
+    printFrame.style.height = '0';
+    printFrame.style.border = '0';
+    printFrame.style.visibility = 'hidden';
     
-    // Imprimir directamente sin esperar
-    printWindow.print();
+    document.body.appendChild(printFrame);
+    
+    // Escribir el contenido en el iframe
+    printFrame.contentDocument.write(html);
+    printFrame.contentDocument.close();
+    
+    // Imprimir y luego remover el iframe
+    printFrame.contentWindow.focus();
+    printFrame.contentWindow.print();
+    
+    // Remover el iframe después de un breve delay
+    setTimeout(() => {
+      if (document.body.contains(printFrame)) {
+        document.body.removeChild(printFrame);
+      }
+    }, 1000);
   };
 
   // En el modal, eliminar la firma del responsable y mostrar aclaración solo en la firma del auditor
