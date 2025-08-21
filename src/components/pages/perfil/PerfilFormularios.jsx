@@ -83,6 +83,15 @@ const PerfilFormularios = ({ formularios, loading }) => {
     return { secciones, preguntas };
   };
 
+  // Obtener las secciones del formulario con sus preguntas
+  const getSeccionesFormulario = (form) => {
+    if (!Array.isArray(form.secciones)) return [];
+    return form.secciones.map((seccion, index) => ({
+      nombre: seccion.nombre || `Sección ${index + 1}`,
+      preguntas: Array.isArray(seccion.preguntas) ? seccion.preguntas.length : 0
+    }));
+  };
+
   if (loading) {
     return (
       <div style={{ 
@@ -202,23 +211,76 @@ const PerfilFormularios = ({ formularios, loading }) => {
                 }}>
                   <tbody>
                     <tr>
-                      {/* Icono del formulario */}
+                      {/* Botones de acción (antes era el icono) */}
                       <td style={{ 
                         width: '60px', 
                         verticalAlign: 'top',
                         paddingRight: '16px'
                       }}>
-                        <div style={{
-                          width: '60px',
-                          height: '60px',
-                          borderRadius: '8px',
-                          backgroundColor: alpha(theme.palette.primary.main, 0.1),
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          border: `2px solid ${alpha(theme.palette.primary.main, 0.2)}`
+                        <Typography variant="subtitle2" style={{ 
+                          fontWeight: 600, 
+                          marginBottom: '8px',
+                          color: theme.palette.text.primary,
+                          fontSize: '0.7rem'
                         }}>
-                          <DrawIcon style={{ fontSize: 28, color: theme.palette.primary.main }} />
+                          🔧 Acciones
+                        </Typography>
+                        <div style={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '4px'
+                        }}>
+                          <Button
+                            variant="outlined"
+                            color="primary"
+                            size="small"
+                            onClick={() => handleCompartir(form)}
+                            disabled={!canCompartirFormularios || form.formularioOriginalId}
+                            style={{ 
+                              padding: '2px 6px',
+                              fontSize: '0.65rem',
+                              minWidth: 'auto',
+                              justifyContent: 'flex-start',
+                              height: '24px'
+                            }}
+                            startIcon={<ShareIcon style={{ fontSize: 12 }} />}
+                          >
+                            COMPARTIR
+                          </Button>
+                          
+                          <Button
+                            variant="outlined"
+                            color="secondary"
+                            size="small"
+                            onClick={() => navigate(`/editar/${form.id}`)}
+                            style={{ 
+                              padding: '2px 6px',
+                              fontSize: '0.65rem',
+                              minWidth: 'auto',
+                              justifyContent: 'flex-start',
+                              height: '24px'
+                            }}
+                            startIcon={<EditIcon style={{ fontSize: 12 }} />}
+                          >
+                            EDITAR
+                          </Button>
+                          
+                          <Button
+                            variant="outlined"
+                            color="error"
+                            size="small"
+                            onClick={() => handleEliminarFormulario(form)}
+                            style={{ 
+                              padding: '2px 6px',
+                              fontSize: '0.65rem',
+                              minWidth: 'auto',
+                              justifyContent: 'flex-start',
+                              height: '24px'
+                            }}
+                            startIcon={<DeleteIcon style={{ fontSize: 12 }} />}
+                          >
+                            ELIMINAR
+                          </Button>
                         </div>
                       </td>
                       
@@ -245,29 +307,49 @@ const PerfilFormularios = ({ formularios, loading }) => {
                           </Typography>
                         </div>
 
-                        {/* Estadísticas */}
+                        {/* Secciones individuales */}
                         <div style={{
                           display: 'flex',
                           flexDirection: 'column',
-                          gap: '4px',
+                          gap: '2px',
                           marginBottom: '8px'
                         }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <span style={{ 
-                              fontSize: '0.75rem',
-                              color: theme.palette.text.secondary,
-                              fontWeight: 500
-                            }}>
-                              📊 Secciones: {stats.secciones}
-                            </span>
-                            <span style={{ 
-                              fontSize: '0.75rem',
-                              color: theme.palette.text.secondary,
-                              fontWeight: 500
-                            }}>
-                              ❓ Preguntas: {stats.preguntas}
-                            </span>
-                          </div>
+                          {(() => {
+                            const secciones = getSeccionesFormulario(form);
+                            const seccionesAMostrar = secciones.slice(0, 4);
+                            const hayMasSecciones = secciones.length > 4;
+                            
+                            return (
+                              <>
+                                {seccionesAMostrar.map((seccion, index) => (
+                                  <div key={index} style={{ 
+                                    display: 'flex', 
+                                    alignItems: 'center', 
+                                    gap: '8px',
+                                    fontSize: '0.75rem',
+                                    color: theme.palette.text.secondary,
+                                    fontWeight: 500
+                                  }}>
+                                    <span>📊 {seccion.nombre}: preguntas {seccion.preguntas}</span>
+                                  </div>
+                                ))}
+                                {hayMasSecciones && (
+                                  <div style={{ 
+                                    display: 'flex', 
+                                    alignItems: 'center', 
+                                    gap: '8px',
+                                    fontSize: '0.75rem',
+                                    color: theme.palette.primary.main,
+                                    fontWeight: 600,
+                                    cursor: 'pointer',
+                                    textDecoration: 'underline'
+                                  }}>
+                                    Ver más ({secciones.length - 4} secciones más)
+                                  </div>
+                                )}
+                              </>
+                            );
+                          })()}
                         </div>
 
                         {/* Chips de estado */}
@@ -303,72 +385,12 @@ const PerfilFormularios = ({ formularios, loading }) => {
                         </div>
                       </td>
                       
-                      {/* Acciones */}
+                      {/* Columna vacía (antes era acciones) */}
                       <td style={{ 
                         verticalAlign: 'top',
                         width: '40%'
                       }}>
-                        <Typography variant="subtitle2" style={{ 
-                          fontWeight: 600, 
-                          marginBottom: '8px',
-                          color: theme.palette.text.primary
-                        }}>
-                          🔧 Acciones
-                        </Typography>
-                        <div style={{
-                          display: 'flex',
-                          flexDirection: 'column',
-                          gap: '6px'
-                        }}>
-                          <Button
-                            variant="outlined"
-                            color="primary"
-                            size="small"
-                            onClick={() => handleCompartir(form)}
-                            disabled={!canCompartirFormularios || form.formularioOriginalId}
-                            style={{ 
-                              padding: '4px 8px',
-                              fontSize: '0.7rem',
-                              minWidth: 'auto',
-                              justifyContent: 'flex-start'
-                            }}
-                            startIcon={<ShareIcon style={{ fontSize: 14 }} />}
-                          >
-                            Compartir
-                          </Button>
-                          
-                          <Button
-                            variant="outlined"
-                            color="secondary"
-                            size="small"
-                            onClick={() => navigate(`/editar/${form.id}`)}
-                            style={{ 
-                              padding: '4px 8px',
-                              fontSize: '0.7rem',
-                              minWidth: 'auto',
-                              justifyContent: 'flex-start'
-                            }}
-                            startIcon={<EditIcon style={{ fontSize: 14 }} />}
-                          >
-                            Editar
-                          </Button>
-                          
-                          <Button
-                            variant="outlined"
-                            color="error"
-                            size="small"
-                            onClick={() => handleEliminarFormulario(form)}
-                            style={{ 
-                              padding: '4px 8px',
-                              fontSize: '0.7rem',
-                              minWidth: 'auto',
-                              justifyContent: 'flex-start'
-                            }}
-                            startIcon={<DeleteIcon style={{ fontSize: 14 }} />}
-                          >
-                            Eliminar
-                          </Button>
-                        </div>
+                        {/* Esta columna ahora está vacía */}
                       </td>
                     </tr>
                   </tbody>
