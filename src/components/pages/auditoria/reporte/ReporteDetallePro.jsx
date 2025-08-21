@@ -1,5 +1,4 @@
 import React, { useRef, useState, forwardRef, useImperativeHandle } from "react";
-import ResumenRespuestas from "./ResumenRespuestas";
 import ImagenesTable from "./ImagenesTable";
 import PreguntasRespuestasList from "../../../common/PreguntasRespuestasList";
 import { Typography, Grid, Box, Button, Paper, Dialog, DialogTitle, DialogContent, DialogActions, IconButton, TextField, Alert, Snackbar, Switch, FormControlLabel } from "@mui/material";
@@ -234,12 +233,14 @@ function generarContenidoImpresion({empresa, sucursal, formulario, fecha, respue
         .img-preview { max-width: 100px; max-height: 80px; }
         .firma-label { color: #1976d2; font-weight: bold; margin-bottom: 4px; }
         .firma-aclaracion { color: #333; font-size: 15px; margin-top: 4px; }
-        .footer { margin-top: 32px; text-align: center; color: #888; font-size: 13px; }
-        @media print { .no-print { display: none !important; } }
+                 .footer { margin-top: 32px; text-align: center; color: #888; font-size: 13px; }
+         @media print { 
+           .no-print { display: none !important; } 
+         }
       </style>
-    </head>
-    <body>
-      <div class="header">
+         </head>
+     <body>
+       <div class="header">
         <h1>Reporte de Auditoría</h1>
         ${empresa.logo ? `<img src="${empresa.logo}" alt="Logo" class="logo" />` : ''}
       </div>
@@ -498,6 +499,8 @@ const ReporteDetallePro = forwardRef(({ open = false, onClose = () => {}, report
   console.debug('[ReporteDetallePro] respuestasNormalizadas:', respuestasNormalizadas);
   console.debug('[ReporteDetallePro] comentariosNormalizados:', comentariosNormalizados);
   console.debug('[ReporteDetallePro] imagenesNormalizadas:', imagenesNormalizadas);
+  console.debug('[ReporteDetallePro] reporte.estadisticas:', reporte.estadisticas);
+  console.debug('[ReporteDetallePro] reporte.estadisticas?.conteo:', reporte.estadisticas?.conteo);
 
   // Función de debug temporal
   const debugImagenes = () => {
@@ -604,53 +607,74 @@ const ReporteDetallePro = forwardRef(({ open = false, onClose = () => {}, report
       nombreAuditor, // Añadir nombreAuditor a la función de impresión
       firmaResponsable: firmaResponsableFinal // Añadir firmaResponsable a la función de impresión
     });
+    
+    // Crear una nueva ventana temporal para imprimir
     const printWindow = window.open('', '_blank', 'width=900,height=700');
     printWindow.document.write(html);
     printWindow.document.close();
-    printWindow.focus();
-    printWindow.onload = () => {
-      const imgs = printWindow.document.images;
-      let loaded = 0;
-      if (imgs.length === 0) {
-        printWindow.print();
-        return;
-      }
-      for (let img of imgs) {
-        img.onload = img.onerror = () => {
-          loaded++;
-          if (loaded === imgs.length) {
-            setTimeout(() => printWindow.print(), 300);
-          }
-        };
-      }
-    };
+    
+    // Imprimir directamente sin esperar
+    printWindow.print();
   };
 
   // En el modal, eliminar la firma del responsable y mostrar aclaración solo en la firma del auditor
   console.log('[ReporteDetallePro] Renderizando modal...');
   if (modo === 'modal') {
     return (
-      <Dialog open={open} onClose={onClose} maxWidth="lg" fullWidth>
-        <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          Detalle de Auditoría
-          <IconButton onClick={onClose} size="small"><CloseIcon /></IconButton>
-        </DialogTitle>
-        <DialogContent>
-          <Box p={3}>
-            <Typography variant="h5" gutterBottom>Datos del Reporte</Typography>
-            <Typography variant="body1"><b>Empresa:</b> {empresa.nombre}</Typography>
-            <Typography variant="body1"><b>Sucursal:</b> {sucursal || 'Casa Central'}</Typography>
-            <Typography variant="body1"><b>Formulario:</b> {formulario.nombre}</Typography>
-            <Typography variant="body1"><b>Fecha:</b> {fecha}</Typography>
-            <Typography variant="body1"><b>Auditor:</b> {nombreAuditor}</Typography>
+      <Dialog 
+        open={open} 
+        onClose={onClose} 
+        maxWidth="xl" 
+        fullWidth
+        fullScreen={window.innerWidth < 768}
+        sx={{
+          '& .MuiDialog-paper': {
+            maxHeight: '90vh',
+            overflow: 'hidden'
+          }
+        }}
+      >
+        <DialogTitle sx={{ 
+          display: 'none'
+        }} />
+        <DialogContent sx={{ p: { xs: 2, sm: 3 } }}>
+          <Box>
+                         {/* Header con datos del reporte y estadísticas */}
+             <Box sx={{ 
+               mb: 3, 
+               p: 2, 
+               bgcolor: 'background.paper', 
+               borderRadius: 2, 
+               border: '1px solid',
+               borderColor: 'divider',
+               boxShadow: 1
+             }}>
+               <Typography variant="h6" gutterBottom sx={{ color: 'primary.main', fontWeight: 600 }}>
+                 📊 Datos del Reporte
+               </Typography>
+               <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 1, mb: 2 }}>
+                 <Typography variant="body2"><b>🏢 Empresa:</b> {empresa.nombre}</Typography>
+                 <Typography variant="body2"><b>📍 Sucursal:</b> {sucursal || 'Casa Central'}</Typography>
+                 <Typography variant="body2"><b>📋 Formulario:</b> {formulario.nombre}</Typography>
+                 <Typography variant="body2"><b>📅 Fecha:</b> {fecha}</Typography>
+                 <Typography variant="body2"><b>👤 Auditor:</b> {nombreAuditor}</Typography>
+               </Box>
+               
+               
+             </Box>
             
-            <Box mt={3}>
-              <Typography variant="h6" gutterBottom>Resumen de Respuestas</Typography>
-              <ResumenRespuestas respuestas={respuestasNormalizadas} secciones={secciones} />
-            </Box>
-            
-            <Box mt={3}>
-              <Typography variant="h6" gutterBottom>Preguntas y Respuestas</Typography>
+            <Box sx={{ 
+              mb: 3, 
+              p: 2, 
+              bgcolor: 'background.paper', 
+              borderRadius: 2, 
+              border: '1px solid',
+              borderColor: 'divider',
+              boxShadow: 1
+            }}>
+              <Typography variant="h6" gutterBottom sx={{ color: 'primary.main', fontWeight: 600 }}>
+                ❓ Preguntas y Respuestas
+              </Typography>
               <PreguntasRespuestasList
                 secciones={secciones}
                 respuestas={respuestasNormalizadas}
@@ -660,21 +684,51 @@ const ReporteDetallePro = forwardRef(({ open = false, onClose = () => {}, report
             </Box>
           </Box>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={onClose} variant="contained" color="primary">
+        <DialogActions sx={{ 
+          p: { xs: 1.5, sm: 2 }, 
+          gap: { xs: 1, sm: 2 },
+          flexWrap: 'wrap',
+          justifyContent: 'center'
+        }}>
+          <Button 
+            onClick={onClose} 
+            variant="contained" 
+            color="primary"
+            size="medium"
+            sx={{ minWidth: { xs: '80px', sm: '100px' } }}
+          >
             Cerrar
           </Button>
-          <Button onClick={handleImprimir} variant="outlined" color="secondary" startIcon={<PrintIcon />}>
+          <Button 
+            onClick={handleImprimir} 
+            variant="outlined" 
+            color="secondary" 
+            startIcon={<PrintIcon />}
+            size="medium"
+            sx={{ minWidth: { xs: '80px', sm: '100px' } }}
+          >
             Imprimir
           </Button>
           {process.env.NODE_ENV === 'development' && (
-            <Button onClick={debugImagenes} variant="outlined" color="warning">
-              Debug Imágenes
+            <Button 
+              onClick={debugImagenes} 
+              variant="outlined" 
+              color="warning"
+              size="small"
+              sx={{ minWidth: { xs: '70px', sm: '90px' } }}
+            >
+              Debug
             </Button>
           )}
           {process.env.NODE_ENV === 'development' && (
-            <Button onClick={probarCargaImagenes} variant="outlined" color="info">
-              Probar Carga
+            <Button 
+              onClick={probarCargaImagenes} 
+              variant="outlined" 
+              color="info"
+              size="small"
+              sx={{ minWidth: { xs: '70px', sm: '90px' } }}
+            >
+              Probar
             </Button>
           )}
         </DialogActions>
@@ -720,8 +774,6 @@ const ReporteDetallePro = forwardRef(({ open = false, onClose = () => {}, report
       <Typography variant="body1">Sucursal: {sucursal}</Typography>
       <Typography variant="body1">Formulario: {formulario.nombre}</Typography>
       <Typography variant="body1">Fecha: {fecha}</Typography>
-      {/* Resumen avanzado de respuestas */}
-      <ResumenRespuestas respuestas={respuestasNormalizadas} secciones={secciones} />
       {/* Gráfico general de respuestas */}
       {reporte.estadisticas && reporte.estadisticas.conteo && (
         <Box mt={3}>

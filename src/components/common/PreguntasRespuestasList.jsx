@@ -37,7 +37,7 @@ const PreguntasRespuestasList = ({ secciones = [], respuestas = [], comentarios 
     }
 
     // Si es un objeto con URL
-    if (typeof imagen === 'object' && imagen.url) {
+    if (typeof imagen === 'object' && imagen.url && imagen.url.trim() !== '') {
       console.debug(`[PreguntasRespuestasList] Imagen con URL: ${imagen.url}`);
       return imagen.url;
     }
@@ -53,14 +53,14 @@ const PreguntasRespuestasList = ({ secciones = [], respuestas = [], comentarios 
       console.debug(`[PreguntasRespuestasList] Array de imágenes:`, imagen);
       // Tomar la primera imagen del array
       const primeraImagen = imagen[0];
-      if (typeof primeraImagen === 'object' && primeraImagen.url) {
+      if (typeof primeraImagen === 'object' && primeraImagen.url && primeraImagen.url.trim() !== '') {
         return primeraImagen.url;
-      } else if (typeof primeraImagen === 'string') {
+      } else if (typeof primeraImagen === 'string' && primeraImagen.trim() !== '') {
         return primeraImagen;
       }
     }
 
-    console.debug(`[PreguntasRespuestasList] Formato de imagen no reconocido:`, imagen);
+    console.debug(`[PreguntasRespuestasList] Formato de imagen no reconocido o URL vacía:`, imagen);
     return null;
   };
 
@@ -91,20 +91,22 @@ const PreguntasRespuestasList = ({ secciones = [], respuestas = [], comentarios 
               });
 
               return (
-                <Box key={pIdx} sx={{ mb: 2, pl: 1, borderLeft: '3px solid #1976d2' }}>
-                  <Typography variant="subtitle1" fontWeight={600}>
-                    {pIdx + 1}. {pregunta}
+                <Box key={pIdx} sx={{ mb: 1.5, pl: 1, borderLeft: '3px solid #1976d2' }}>
+                  {/* Pregunta y respuesta en formato horizontal */}
+                  <Typography variant="body1" sx={{ mb: 0.5 }}>
+                    <strong>{pIdx + 1}. {pregunta}</strong> : {mostrarRespuesta}
                   </Typography>
-                  <Typography variant="body2" sx={{ mb: 0.5 }}>
-                    <strong>Respuesta:</strong> {mostrarRespuesta}
-                  </Typography>
+                  
+                  {/* Comentario si existe */}
                   {comentario && comentario.trim() !== "" && (
-                    <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic', mb: 0.5 }}>
+                    <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic', ml: 2, mb: 0.5 }}>
                       <strong>Comentario:</strong> {comentario}
                     </Typography>
                   )}
-                  {imagenProcesada && (
-                    <Box sx={{ mt: 1, mb: 1 }}>
+                  
+                  {/* Imagen si existe */}
+                  {imagenProcesada && imagenProcesada.trim() !== "" && (
+                    <Box sx={{ mt: 1, mb: 1, ml: 2 }}>
                       <img
                         src={imagenProcesada}
                         alt={`Imagen pregunta ${pIdx + 1}`}
@@ -119,7 +121,6 @@ const PreguntasRespuestasList = ({ secciones = [], respuestas = [], comentarios 
                       />
                     </Box>
                   )}
-                  
                 </Box>
               );
             })

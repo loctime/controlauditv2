@@ -62,23 +62,50 @@ const EstadisticasChart = forwardRef(({ estadisticas, title, height = 320, width
   };
 
   useEffect(() => {
+    console.log('[EstadisticasChart] Iniciando carga de gráficos...');
+    console.log('[EstadisticasChart] estadisticas:', estadisticas);
+    console.log('[EstadisticasChart] title:', title);
+    
     const loadGoogleCharts = () => {
+      // Verificar si ya está cargado
+      if (window.google && window.google.charts) {
+        console.log('[EstadisticasChart] Google Charts ya cargado');
+        drawCharts();
+        return;
+      }
+      
       const script = document.createElement('script');
       script.src = 'https://www.gstatic.com/charts/loader.js';
       script.onload = () => {
+        console.log('[EstadisticasChart] Script de Google Charts cargado');
         window.google.charts.load('current', { packages: ['corechart'] });
         window.google.charts.setOnLoadCallback(() => {
-          if (Array.isArray(estadisticas)) {
-            estadisticas.forEach((item, idx) => {
-              drawChart(`donutchart-${idx}`, item.estadisticas, item.title);
-            });
-          } else {
-            drawChart('donutchart-main', estadisticas, title);
-          }
+          console.log('[EstadisticasChart] Google Charts inicializado');
+          drawCharts();
         });
+      };
+      script.onerror = (error) => {
+        console.error('[EstadisticasChart] Error cargando Google Charts:', error);
       };
       document.body.appendChild(script);
     };
+    
+    const drawCharts = () => {
+      try {
+        if (Array.isArray(estadisticas)) {
+          console.log('[EstadisticasChart] Dibujando múltiples gráficos');
+          estadisticas.forEach((item, idx) => {
+            drawChart(`donutchart-${idx}`, item.estadisticas, item.title);
+          });
+        } else {
+          console.log('[EstadisticasChart] Dibujando gráfico único');
+          drawChart('donutchart-main', estadisticas, title);
+        }
+      } catch (error) {
+        console.error('[EstadisticasChart] Error dibujando gráficos:', error);
+      }
+    };
+    
     loadGoogleCharts();
     // eslint-disable-next-line
   }, [estadisticas, title]);
