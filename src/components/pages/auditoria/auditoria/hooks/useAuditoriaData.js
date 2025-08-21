@@ -12,13 +12,18 @@ export const useAuditoriaData = (
   userEmpresas,
   userFormularios
 ) => {
+  const { recargarEmpresas } = useAuth();
+  
   // Cargar empresas desde el contexto
   useEffect(() => {
     if (userEmpresas && userEmpresas.length > 0) {
       setEmpresas(userEmpresas);
       console.log('[DEBUG Auditoria] Empresas desde contexto:', userEmpresas);
+    } else if (userProfile?.uid && (!userEmpresas || userEmpresas.length === 0)) {
+      console.log('[DEBUG Auditoria] No hay empresas en contexto, recargando...');
+      recargarEmpresas();
     }
-  }, [userEmpresas, setEmpresas]);
+  }, [userEmpresas, setEmpresas, userProfile?.uid, recargarEmpresas]);
 
   // Cargar sucursales cuando cambie la empresa
   useEffect(() => {

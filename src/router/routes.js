@@ -13,6 +13,7 @@ import Dashboard from "../components/pages/dashboard/Dashboard";
 import ClienteDashboard from "../components/pages/admin/ClienteDashboard";
 import OperarioDashboard from "../components/pages/user/OperarioDashboard";
 import PermissionsDebug from "../components/pages/debug/PermissionsDebug";
+import EmpresasDebug from "../components/pages/debug/EmpresasDebug";
 import GaleriaFormulariosPublicos from '../components/pages/formulario/GaleriaFormulariosPublicos';
 import ConfiguracionPage from '../components/pages/configuracion/ConfiguracionPage';
 
@@ -81,6 +82,11 @@ export const routes = [
     id: "debug",
     path: "/debug",
     Element: PermissionsDebug,
+  },
+  {
+    id: "debug-empresas",
+    path: "/debug-empresas",
+    Element: EmpresasDebug,
   },
   {
     id: "logs",

@@ -64,7 +64,7 @@ const AuditoriaRefactorizada = () => {
   const theme = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
-  const { userProfile, userEmpresas, userFormularios } = useAuth();
+  const { userProfile, userEmpresas, userFormularios, recargarEmpresas } = useAuth();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const isLargeScreen = useMediaQuery(theme.breakpoints.up('lg'));
 
@@ -117,6 +117,14 @@ const AuditoriaRefactorizada = () => {
     userEmpresas,
     userFormularios
   );
+
+  // Recargar empresas cuando se monta el componente si no están cargadas
+  useEffect(() => {
+    if (userProfile?.uid && (!userEmpresas || userEmpresas.length === 0)) {
+      console.log('[Auditoria] Recargando empresas al montar componente...');
+      recargarEmpresas();
+    }
+  }, [userProfile?.uid, userEmpresas, recargarEmpresas]);
 
   // Funciones básicas
   const handleEmpresaChange = (selectedEmpresa) => {

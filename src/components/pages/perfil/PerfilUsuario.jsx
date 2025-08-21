@@ -40,7 +40,8 @@ const PerfilUsuario = () => {
     updateUserProfile,
     loadingEmpresas,
     role,
-    permisos
+    permisos,
+    recargarEmpresas
   } = useAuth();
 
   // Agregar logs de depuración
@@ -68,6 +69,14 @@ const PerfilUsuario = () => {
       console.debug('[PerfilUsuario] Tab seleccionado desde URL:', tab);
     }
   }, [location.search]);
+
+  // Recargar empresas cuando se monta el componente
+  useEffect(() => {
+    if (userProfile?.uid && (!userEmpresas || userEmpresas.length === 0)) {
+      console.log('[PerfilUsuario] Recargando empresas al montar componente...');
+      recargarEmpresas();
+    }
+  }, [userProfile?.uid, userEmpresas, recargarEmpresas]);
 
   useEffect(() => {
     const fetchUsuariosCreados = async () => {
@@ -218,10 +227,10 @@ const PerfilUsuario = () => {
     }}>
 
       
-            {/* Sección Mis Habilitaciones - NUEVA VERSIÓN */}
+            {/* Sección Mis Habilitaciones - COMPACTA */}
       <div style={{
         width: '100%',
-        padding: '20px',
+        padding: '12px',
         background: `linear-gradient(135deg, ${alpha(theme.palette.secondary.main, 0.1)}, ${alpha(theme.palette.secondary.main, 0.05)})`,
         borderBottom: `1px solid ${alpha(theme.palette.divider, 0.2)}`,
         boxSizing: 'border-box'
@@ -230,15 +239,15 @@ const PerfilUsuario = () => {
         {/* Título principal */}
         <div style={{
           textAlign: 'center',
-          marginBottom: '20px',
+          marginBottom: '12px',
           width: '100%'
         }}>
-          <Typography variant="h5" sx={{ 
+          <Typography variant="h6" sx={{ 
             fontWeight: 600, 
             color: 'secondary.main', 
-            fontSize: { xs: '1.3rem', md: '1.5rem' },
+            fontSize: { xs: '1.1rem', md: '1.2rem' },
             borderBottom: `2px solid ${alpha(theme.palette.secondary.main, 0.3)}`,
-            paddingBottom: '10px',
+            paddingBottom: '6px',
             display: 'inline-block'
           }}>
             🔧 Mis Habilitaciones
@@ -248,40 +257,34 @@ const PerfilUsuario = () => {
         {/* Subtítulo */}
         <div style={{
           textAlign: 'center',
-          marginBottom: '30px'
+          marginBottom: '16px'
         }}>
-          <Typography variant="h6" sx={{ 
-            fontWeight: 500, 
-            color: 'text.primary', 
-            fontSize: { xs: '1rem', md: '1.1rem' }
-          }}>
-            📋 Categorías de Acceso
-          </Typography>
+         
         </div>
         
         {/* Grid de categorías */}
         <div style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-          gap: '20px',
-          maxWidth: '1200px',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+          gap: '12px',
+          maxWidth: '1000px',
           margin: '0 auto',
-          padding: '0 10px'
+          padding: '0 8px'
         }}>
           
-          {/* Categoría: Auditorías */}
-          <div style={{
-            background: alpha(theme.palette.primary.main, 0.05),
-            border: `1px solid ${alpha(theme.palette.primary.main, 0.12)}`,
-            borderRadius: '12px',
-            padding: '20px',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-            transition: 'all 0.2s ease-in-out',
-            minHeight: '180px',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '12px'
-          }}
+                     {/* Categoría: Auditorías */}
+           <div style={{
+             background: alpha(theme.palette.primary.main, 0.05),
+             border: `1px solid ${alpha(theme.palette.primary.main, 0.12)}`,
+             borderRadius: '8px',
+             padding: '12px',
+             boxShadow: '0 2px 6px rgba(0,0,0,0.1)',
+             transition: 'all 0.2s ease-in-out',
+             minHeight: '140px',
+             display: 'flex',
+             flexDirection: 'column',
+             gap: '8px'
+           }}
           onMouseEnter={(e) => {
             e.target.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
             e.target.style.transform = 'translateY(-2px)';
@@ -302,43 +305,43 @@ const PerfilUsuario = () => {
             
             {permisos?.puedeCrearAuditorias ? (
               <>
-                <Button 
-                  variant="contained" 
-                  color="primary" 
-                  onClick={handleCrearAuditoria} 
-                  fullWidth 
-                  sx={{ 
-                    py: 1, 
-                    fontSize: '0.9rem',
-                    fontWeight: 500
-                  }}
-                >
-                  📋 Reportes
-                </Button>
-                <Button 
-                  variant="contained" 
-                  color="primary" 
-                  onClick={handleCrearAuditoriaNueva} 
-                  fullWidth 
-                  sx={{ 
-                    py: 1, 
-                    fontSize: '0.9rem',
-                    fontWeight: 500
-                  }}
-                >
-                  📋 Crear auditoria
-                </Button>
-                <Button 
-                  variant="outlined" 
-                  color="primary" 
-                  onClick={handleMisFormularios} 
-                  fullWidth 
-                  sx={{ 
-                    py: 1, 
-                    fontSize: '0.9rem',
-                    fontWeight: 500
-                  }}
-                >
+                                 <Button 
+                   variant="contained" 
+                   color="primary" 
+                   onClick={handleCrearAuditoria} 
+                   fullWidth 
+                   sx={{ 
+                     py: 0.75, 
+                     fontSize: '0.85rem',
+                     fontWeight: 500
+                   }}
+                 >
+                   📋 Reportes
+                 </Button>
+                 <Button 
+                   variant="contained" 
+                   color="primary" 
+                   onClick={handleCrearAuditoriaNueva} 
+                   fullWidth 
+                   sx={{ 
+                     py: 0.75, 
+                     fontSize: '0.85rem',
+                     fontWeight: 500
+                   }}
+                 >
+                   📋 Crear auditoria
+                 </Button>
+                 <Button 
+                   variant="outlined" 
+                   color="primary" 
+                   onClick={handleMisFormularios} 
+                   fullWidth 
+                   sx={{ 
+                     py: 0.75, 
+                     fontSize: '0.85rem',
+                     fontWeight: 500
+                   }}
+                 >
                   📋 Mis Formularios
                 </Button>
               </>
@@ -355,19 +358,19 @@ const PerfilUsuario = () => {
             )}
           </div>
           
-          {/* Categoría: Empresas */}
-          <div style={{
-            background: alpha(theme.palette.success.main, 0.05),
-            border: `1px solid ${alpha(theme.palette.success.main, 0.12)}`,
-            borderRadius: '12px',
-            padding: '20px',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-            transition: 'all 0.2s ease-in-out',
-            minHeight: '180px',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '12px'
-          }}
+                     {/* Categoría: Empresas */}
+           <div style={{
+             background: alpha(theme.palette.success.main, 0.05),
+             border: `1px solid ${alpha(theme.palette.success.main, 0.12)}`,
+             borderRadius: '8px',
+             padding: '12px',
+             boxShadow: '0 2px 6px rgba(0,0,0,0.1)',
+             transition: 'all 0.2s ease-in-out',
+             minHeight: '140px',
+             display: 'flex',
+             flexDirection: 'column',
+             gap: '8px'
+           }}
           onMouseEnter={(e) => {
             e.target.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
             e.target.style.transform = 'translateY(-2px)';
@@ -388,30 +391,30 @@ const PerfilUsuario = () => {
             
             {permisos?.puedeCrearEmpresas ? (
               <>
-                <Button 
-                  variant="contained" 
-                  color="success" 
-                  onClick={handleCrearEmpresa} 
-                  fullWidth 
-                  sx={{ 
-                    py: 1, 
-                    fontSize: '0.9rem',
-                    fontWeight: 500
-                  }}
-                >
-                  🏢 Crear Empresa
-                </Button>
-                <Button 
-                  variant="outlined" 
-                  color="success" 
-                  onClick={handleGestionarEmpresas} 
-                  fullWidth 
-                  sx={{ 
-                    py: 1, 
-                    fontSize: '0.9rem',
-                    fontWeight: 500
-                  }}
-                >
+                                 <Button 
+                   variant="contained" 
+                   color="success" 
+                   onClick={handleCrearEmpresa} 
+                   fullWidth 
+                   sx={{ 
+                     py: 0.75, 
+                     fontSize: '0.85rem',
+                     fontWeight: 500
+                   }}
+                 >
+                   🏢 Crear Empresa
+                 </Button>
+                 <Button 
+                   variant="outlined" 
+                   color="success" 
+                   onClick={handleGestionarEmpresas} 
+                   fullWidth 
+                   sx={{ 
+                     py: 0.75, 
+                     fontSize: '0.85rem',
+                     fontWeight: 500
+                   }}
+                 >
                   🏢 Gestionar Empresas
                 </Button>
               </>
@@ -428,19 +431,19 @@ const PerfilUsuario = () => {
             )}
           </div>
           
-          {/* Categoría: Usuarios */}
-          <div style={{
-            background: alpha(theme.palette.warning.main, 0.05),
-            border: `1px solid ${alpha(theme.palette.warning.main, 0.12)}`,
-            borderRadius: '12px',
-            padding: '20px',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-            transition: 'all 0.2s ease-in-out',
-            minHeight: '180px',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '12px'
-          }}
+                     {/* Categoría: Usuarios */}
+           <div style={{
+             background: alpha(theme.palette.warning.main, 0.05),
+             border: `1px solid ${alpha(theme.palette.warning.main, 0.12)}`,
+             borderRadius: '8px',
+             padding: '12px',
+             boxShadow: '0 2px 6px rgba(0,0,0,0.1)',
+             transition: 'all 0.2s ease-in-out',
+             minHeight: '140px',
+             display: 'flex',
+             flexDirection: 'column',
+             gap: '8px'
+           }}
           onMouseEnter={(e) => {
             e.target.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
             e.target.style.transform = 'translateY(-2px)';
@@ -460,47 +463,47 @@ const PerfilUsuario = () => {
             </Typography>
             
             {permisos?.puedeGestionarUsuarios && (
-              <Button 
-                variant="contained" 
-                color="warning" 
-                onClick={handleGestionarUsuarios} 
-                fullWidth 
-                sx={{ 
-                  py: 1, 
-                  fontSize: '0.9rem',
-                  fontWeight: 500
-                }}
-              >
-                👥 Gestionar Usuarios
-              </Button>
-            )}
-            {permisos?.puedeAgregarSocios && (
-              <Button 
-                variant="outlined" 
-                color="warning" 
-                onClick={handleAgregarUsuario} 
-                fullWidth 
-                sx={{ 
-                  py: 1, 
-                  fontSize: '0.9rem',
-                  fontWeight: 500
-                }}
-              >
-                👥 Agregar Usuario
-              </Button>
-            )}
-            {permisos?.puedeEliminarUsuarios && (
-              <Button 
-                variant="outlined" 
-                color="error" 
-                onClick={handleEliminarUsuario} 
-                fullWidth 
-                sx={{ 
-                  py: 1, 
-                  fontSize: '0.9rem',
-                  fontWeight: 500
-                }}
-              >
+                             <Button 
+                 variant="contained" 
+                 color="warning" 
+                 onClick={handleGestionarUsuarios} 
+                 fullWidth 
+                 sx={{ 
+                   py: 0.75, 
+                   fontSize: '0.85rem',
+                   fontWeight: 500
+                 }}
+               >
+                 👥 Gestionar Usuarios
+               </Button>
+             )}
+             {permisos?.puedeAgregarSocios && (
+               <Button 
+                 variant="outlined" 
+                 color="warning" 
+                 onClick={handleAgregarUsuario} 
+                 fullWidth 
+                 sx={{ 
+                   py: 0.75, 
+                   fontSize: '0.85rem',
+                   fontWeight: 500
+                 }}
+               >
+                 👥 Agregar Usuario
+               </Button>
+             )}
+             {permisos?.puedeEliminarUsuarios && (
+               <Button 
+                 variant="outlined" 
+                 color="error" 
+                 onClick={handleEliminarUsuario} 
+                 fullWidth 
+                 sx={{ 
+                   py: 0.75, 
+                   fontSize: '0.85rem',
+                   fontWeight: 500
+                 }}
+               >
                 👥 Eliminar Usuario
               </Button>
             )}
@@ -517,19 +520,19 @@ const PerfilUsuario = () => {
             )}
           </div>
           
-          {/* Categoría: Sistema */}
-          <div style={{
-            background: alpha(theme.palette.info.main, 0.05),
-            border: `1px solid ${alpha(theme.palette.info.main, 0.12)}`,
-            borderRadius: '12px',
-            padding: '20px',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-            transition: 'all 0.2s ease-in-out',
-            minHeight: '180px',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '12px'
-          }}
+                     {/* Categoría: Sistema */}
+           <div style={{
+             background: alpha(theme.palette.info.main, 0.05),
+             border: `1px solid ${alpha(theme.palette.info.main, 0.12)}`,
+             borderRadius: '8px',
+             padding: '12px',
+             boxShadow: '0 2px 6px rgba(0,0,0,0.1)',
+             transition: 'all 0.2s ease-in-out',
+             minHeight: '140px',
+             display: 'flex',
+             flexDirection: 'column',
+             gap: '8px'
+           }}
           onMouseEnter={(e) => {
             e.target.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
             e.target.style.transform = 'translateY(-2px)';
@@ -549,32 +552,32 @@ const PerfilUsuario = () => {
             </Typography>
             
             {permisos?.puedeVerLogs && (
-              <Button 
-                variant="contained" 
-                color="info" 
-                onClick={handleVerSistema} 
-                fullWidth 
-                sx={{ 
-                  py: 1, 
-                  fontSize: '0.9rem',
-                  fontWeight: 500
-                }}
-              >
-                ⚙️ Ver Sistema
-              </Button>
-            )}
-            {permisos?.puedeGestionarSistema && (
-              <Button 
-                variant="outlined" 
-                color="info" 
-                onClick={handleGestionarSistema} 
-                fullWidth 
-                sx={{ 
-                  py: 1, 
-                  fontSize: '0.9rem',
-                  fontWeight: 500
-                }}
-              >
+                             <Button 
+                 variant="contained" 
+                 color="info" 
+                 onClick={handleVerSistema} 
+                 fullWidth 
+                 sx={{ 
+                   py: 0.75, 
+                   fontSize: '0.85rem',
+                   fontWeight: 500
+                 }}
+               >
+                 ⚙️ Ver Sistema
+               </Button>
+             )}
+             {permisos?.puedeGestionarSistema && (
+               <Button 
+                 variant="outlined" 
+                 color="info" 
+                 onClick={handleGestionarSistema} 
+                 fullWidth 
+                 sx={{ 
+                   py: 0.75, 
+                   fontSize: '0.85rem',
+                   fontWeight: 500
+                 }}
+               >
                 ⚙️ Gestionar Sistema
               </Button>
             )}
@@ -595,29 +598,29 @@ const PerfilUsuario = () => {
           <div style={{
             background: alpha(theme.palette.secondary.main, 0.05),
             border: `1px solid ${alpha(theme.palette.secondary.main, 0.12)}`,
-            borderRadius: '12px',
-            padding: '20px',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+            borderRadius: '8px',
+            padding: '12px',
+            boxShadow: '0 2px 6px rgba(0,0,0,0.1)',
             transition: 'all 0.2s ease-in-out',
-            minHeight: '180px',
+            minHeight: '140px',
             display: 'flex',
             flexDirection: 'column',
-            gap: '12px'
+            gap: '8px'
           }}
           onMouseEnter={(e) => {
             e.target.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
             e.target.style.transform = 'translateY(-2px)';
           }}
           onMouseLeave={(e) => {
-            e.target.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)';
+            e.target.style.boxShadow = '0 2px 6px rgba(0,0,0,0.1)';
             e.target.style.transform = 'translateY(0)';
           }}>
             
             <Typography variant="h6" sx={{ 
               fontWeight: 600, 
               color: 'secondary.main', 
-              fontSize: '1.1rem',
-              marginBottom: '8px'
+              fontSize: '1rem',
+              marginBottom: '6px'
             }}>
               🔗 Otros
             </Typography>
@@ -629,8 +632,8 @@ const PerfilUsuario = () => {
                 onClick={handleCompartir} 
                 fullWidth 
                 sx={{ 
-                  py: 1, 
-                  fontSize: '0.9rem',
+                  py: 0.75, 
+                  fontSize: '0.85rem',
                   fontWeight: 500
                 }}
               >
@@ -642,7 +645,7 @@ const PerfilUsuario = () => {
                 fontStyle: 'italic', 
                 textAlign: 'center', 
                 marginTop: 'auto',
-                paddingTop: '20px'
+                paddingTop: '16px'
               }}>
                 Sin permisos
               </Typography>

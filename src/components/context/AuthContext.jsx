@@ -132,8 +132,17 @@ const AuthContextComponent = ({ children }) => {
       setLoadingEmpresas(false);
       return;
     }
+    
+    console.log('[AuthContext] Configurando listener de empresas para:', {
+      uid: userProfile.uid,
+      role: role,
+      clienteAdminId: userProfile.clienteAdminId
+    });
+    
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      setUserEmpresas(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      const empresas = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      console.log('[AuthContext] Empresas cargadas desde listener:', empresas.length);
+      setUserEmpresas(empresas);
       setLoadingEmpresas(false);
     }, (error) => {
       console.error('[AuthContext] Error en onSnapshot de empresas:', error);
@@ -402,12 +411,31 @@ const AuthContextComponent = ({ children }) => {
         ...doc.data()
       }));
       
+      console.log('[AuthContext] Empresas cargadas manualmente:', empresas.length);
       setUserEmpresas(empresas);
       return empresas;
     } catch (error) {
       console.error("Error al obtener empresas del usuario:", error);
       setUserEmpresas([]);
       return [];
+    }
+  };
+
+  // Función para forzar la recarga de empresas
+  const recargarEmpresas = async () => {
+    if (!userProfile?.uid) {
+      console.log('[AuthContext] No se puede recargar empresas: no hay usuario');
+      return;
+    }
+    
+    console.log('[AuthContext] Forzando recarga de empresas...');
+    setLoadingEmpresas(true);
+    try {
+      await getUserEmpresas(userProfile.uid);
+    } catch (error) {
+      console.error('[AuthContext] Error al recargar empresas:', error);
+    } finally {
+      setLoadingEmpresas(false);
     }
   };
 
@@ -959,6 +987,7 @@ const AuthContextComponent = ({ children }) => {
     getUserAuditorias: () => getUserAuditorias(user?.uid),
     // Eliminada función getUserSocios. Usar solo usuarios.
     getAuditoriasCompartidas: () => getAuditoriasCompartidas(user?.uid),
+    recargarEmpresas,
     role,
     permisos,
     crearOperario,
