@@ -246,10 +246,14 @@ const AuthContextComponent = ({ children }) => {
 
       if (userSnap.exists()) {
         const profileData = userSnap.data();
-        setUserProfile(profileData);
-        setRole(profileData.role || null); // NUEVO
-        setPermisos(profileData.permisos || {}); // NUEVO
-        return profileData;
+        
+        // Asegurar que los permisos estén correctamente asignados según el rol
+        const permisosActualizados = await ensureUserPermissions(profileData);
+        
+        setUserProfile(permisosActualizados);
+        setRole(permisosActualizados.role || null);
+        setPermisos(permisosActualizados.permisos || {});
+        return permisosActualizados;
       } else {
         // Crear nuevo perfil de usuario
         const newProfile = {
@@ -290,6 +294,68 @@ const AuthContextComponent = ({ children }) => {
       console.error("Error al crear/obtener perfil de usuario:", error);
       return null;
     }
+  };
+
+  // Función para asegurar que los permisos estén correctamente asignados
+  const ensureUserPermissions = async (profileData) => {
+    const role = profileData.role || 'operario';
+    const currentPermisos = profileData.permisos || {};
+    
+    // Definir permisos por defecto según el rol
+    const defaultPermissions = {
+      operario: {
+        puedeCrearEmpresas: false,
+        puedeCrearSucursales: false,
+        puedeCrearAuditorias: true,
+        puedeCompartirFormularios: false,
+        puedeAgregarSocios: false,
+        puedeGestionarUsuarios: false,
+        puedeVerLogs: false,
+        puedeGestionarSistema: false,
+        puedeEliminarUsuarios: false
+      },
+      max: {
+        puedeCrearEmpresas: true,
+        puedeCrearSucursales: true,
+        puedeCrearAuditorias: true,
+        puedeCompartirFormularios: true,
+        puedeAgregarSocios: true,
+        puedeGestionarUsuarios: true,
+        puedeVerLogs: true,
+        puedeGestionarSistema: true,
+        puedeEliminarUsuarios: true
+      },
+      supermax: {
+        puedeCrearEmpresas: true,
+        puedeCrearSucursales: true,
+        puedeCrearAuditorias: true,
+        puedeCompartirFormularios: true,
+        puedeAgregarSocios: true,
+        puedeGestionarUsuarios: true,
+        puedeVerLogs: true,
+        puedeGestionarSistema: true,
+        puedeEliminarUsuarios: true
+      }
+    };
+
+    const defaultPerms = defaultPermissions[role] || defaultPermissions.operario;
+    const updatedPermisos = { ...defaultPerms, ...currentPermisos };
+    
+    // Si los permisos han cambiado, actualizar en la base de datos
+    if (JSON.stringify(currentPermisos) !== JSON.stringify(updatedPermisos)) {
+      try {
+        const userRef = doc(db, "usuarios", profileData.uid);
+        await updateDoc(userRef, { permisos: updatedPermisos });
+        console.log('[AuthContext] Permisos actualizados para usuario:', profileData.uid);
+      } catch (error) {
+        console.error('[AuthContext] Error al actualizar permisos:', error);
+      }
+    }
+    
+    return {
+      ...profileData,
+      permisos: updatedPermisos
+    };
   };
 
   // Función para obtener empresas del usuario (multi-tenant)

@@ -43,6 +43,11 @@ const PerfilUsuario = () => {
     permisos
   } = useAuth();
 
+  // Agregar logs de depuración
+  console.log('[PerfilUsuario] Debug - Role:', role);
+  console.log('[PerfilUsuario] Debug - Permisos:', permisos);
+  console.log('[PerfilUsuario] Debug - UserProfile:', userProfile);
+
   const validTabs = ['empresas', 'formularios', 'usuarios', 'configuracion', 'firma', 'info'];
   const [selectedSection, setSelectedSection] = useState('empresas');
   const [emailSocio, setEmailSocio] = useState("");
@@ -213,160 +218,439 @@ const PerfilUsuario = () => {
     }}>
 
       
-      {/* Segundo header - Mis Habilitaciones */}
-      <Box sx={{
-        p: { xs: 1, md: '8px 16px' },
+            {/* Sección Mis Habilitaciones - NUEVA VERSIÓN */}
+      <div style={{
+        width: '100%',
+        padding: '20px',
         background: `linear-gradient(135deg, ${alpha(theme.palette.secondary.main, 0.1)}, ${alpha(theme.palette.secondary.main, 0.05)})`,
         borderBottom: `1px solid ${alpha(theme.palette.divider, 0.2)}`,
-        width: '100%'
+        boxSizing: 'border-box'
       }}>
-        <Typography variant="h6" sx={{ 
-          fontWeight: 600, 
-          color: 'secondary.main', 
-          mb: { xs: 1, md: 0.5 }, 
-          textAlign: 'center',
-          fontSize: { xs: '0.9rem', md: '0.85rem' }
-        }}>
-          🔧 Mis Habilitaciones
-        </Typography>
         
-                 <Box sx={{ 
-           display: 'grid',
-           gridTemplateColumns: { xs: 'repeat(auto-fit, minmax(160px, 1fr))', md: 'repeat(auto-fit, minmax(120px, 1fr))' },
-           gap: { xs: 1, md: 0.25 },
-           maxWidth: '100%',
-           margin: '0 auto',
-           p: { xs: 0.5, md: 0.25 }
-         }}>
-                     {/* Categoría: Auditorías */}
-           <Box sx={{ 
-             display: 'flex', 
-             flexDirection: 'column', 
-             gap: { xs: 0.5, md: 0.25 },
-             p: { xs: 1.5, md: 0.75 },
-             borderRadius: 1.5,
-             bgcolor: alpha(theme.palette.primary.main, 0.05),
-             border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}`
-           }}>
-            <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'primary.main', mb: { xs: 0.5, md: 0.25 }, fontSize: { xs: '0.8rem', md: '0.75rem' } }}>
+        {/* Título principal */}
+        <div style={{
+          textAlign: 'center',
+          marginBottom: '20px',
+          width: '100%'
+        }}>
+          <Typography variant="h5" sx={{ 
+            fontWeight: 600, 
+            color: 'secondary.main', 
+            fontSize: { xs: '1.3rem', md: '1.5rem' },
+            borderBottom: `2px solid ${alpha(theme.palette.secondary.main, 0.3)}`,
+            paddingBottom: '10px',
+            display: 'inline-block'
+          }}>
+            🔧 Mis Habilitaciones
+          </Typography>
+        </div>
+        
+        {/* Subtítulo */}
+        <div style={{
+          textAlign: 'center',
+          marginBottom: '30px'
+        }}>
+          <Typography variant="h6" sx={{ 
+            fontWeight: 500, 
+            color: 'text.primary', 
+            fontSize: { xs: '1rem', md: '1.1rem' }
+          }}>
+            📋 Categorías de Acceso
+          </Typography>
+        </div>
+        
+        {/* Grid de categorías */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+          gap: '20px',
+          maxWidth: '1200px',
+          margin: '0 auto',
+          padding: '0 10px'
+        }}>
+          
+          {/* Categoría: Auditorías */}
+          <div style={{
+            background: alpha(theme.palette.primary.main, 0.05),
+            border: `1px solid ${alpha(theme.palette.primary.main, 0.12)}`,
+            borderRadius: '12px',
+            padding: '20px',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+            transition: 'all 0.2s ease-in-out',
+            minHeight: '180px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '12px'
+          }}
+          onMouseEnter={(e) => {
+            e.target.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
+            e.target.style.transform = 'translateY(-2px)';
+          }}
+          onMouseLeave={(e) => {
+            e.target.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)';
+            e.target.style.transform = 'translateY(0)';
+          }}>
+            
+            <Typography variant="h6" sx={{ 
+              fontWeight: 600, 
+              color: 'primary.main', 
+              fontSize: '1.1rem',
+              marginBottom: '8px'
+            }}>
               📋 Auditorías
             </Typography>
-            {permisos?.puedeCrearAuditorias && (
+            
+            {permisos?.puedeCrearAuditorias ? (
               <>
-                <Button variant="contained" color="primary" size="small" onClick={handleCrearAuditoria} fullWidth sx={{ py: { xs: 0.5, md: 0.25 }, fontSize: { xs: '0.75rem', md: '0.7rem' } }}>
+                <Button 
+                  variant="contained" 
+                  color="primary" 
+                  onClick={handleCrearAuditoria} 
+                  fullWidth 
+                  sx={{ 
+                    py: 1, 
+                    fontSize: '0.9rem',
+                    fontWeight: 500
+                  }}
+                >
                   📋 Reportes
                 </Button>
-                <Button variant="contained" color="primary" size="small" onClick={handleCrearAuditoriaNueva} fullWidth sx={{ py: { xs: 0.5, md: 0.25 }, fontSize: { xs: '0.75rem', md: '0.7rem' } }}>
+                <Button 
+                  variant="contained" 
+                  color="primary" 
+                  onClick={handleCrearAuditoriaNueva} 
+                  fullWidth 
+                  sx={{ 
+                    py: 1, 
+                    fontSize: '0.9rem',
+                    fontWeight: 500
+                  }}
+                >
                   📋 Crear auditoria
                 </Button>
-                <Button variant="outlined" color="primary" size="small" onClick={handleMisFormularios} fullWidth sx={{ py: { xs: 0.5, md: 0.25 }, fontSize: { xs: '0.75rem', md: '0.7rem' } }}>
+                <Button 
+                  variant="outlined" 
+                  color="primary" 
+                  onClick={handleMisFormularios} 
+                  fullWidth 
+                  sx={{ 
+                    py: 1, 
+                    fontSize: '0.9rem',
+                    fontWeight: 500
+                  }}
+                >
                   📋 Mis Formularios
                 </Button>
               </>
+            ) : (
+              <Typography variant="body2" sx={{ 
+                color: 'text.secondary', 
+                fontStyle: 'italic', 
+                textAlign: 'center', 
+                marginTop: 'auto',
+                paddingTop: '20px'
+              }}>
+                Sin permisos
+              </Typography>
             )}
-          </Box>
+          </div>
           
-                     {/* Categoría: Empresas */}
-           <Box sx={{ 
-             display: 'flex', 
-             flexDirection: 'column', 
-             gap: { xs: 0.5, md: 0.25 },
-             p: { xs: 1.5, md: 0.75 },
-             borderRadius: 1.5,
-             bgcolor: alpha(theme.palette.success.main, 0.05),
-             border: `1px solid ${alpha(theme.palette.success.main, 0.1)}`
-           }}>
-            <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'success.main', mb: { xs: 0.5, md: 0.25 }, fontSize: { xs: '0.8rem', md: '0.75rem' } }}>
+          {/* Categoría: Empresas */}
+          <div style={{
+            background: alpha(theme.palette.success.main, 0.05),
+            border: `1px solid ${alpha(theme.palette.success.main, 0.12)}`,
+            borderRadius: '12px',
+            padding: '20px',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+            transition: 'all 0.2s ease-in-out',
+            minHeight: '180px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '12px'
+          }}
+          onMouseEnter={(e) => {
+            e.target.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
+            e.target.style.transform = 'translateY(-2px)';
+          }}
+          onMouseLeave={(e) => {
+            e.target.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)';
+            e.target.style.transform = 'translateY(0)';
+          }}>
+            
+            <Typography variant="h6" sx={{ 
+              fontWeight: 600, 
+              color: 'success.main', 
+              fontSize: '1.1rem',
+              marginBottom: '8px'
+            }}>
               🏢 Empresas
             </Typography>
-            {permisos?.puedeCrearEmpresas && (
+            
+            {permisos?.puedeCrearEmpresas ? (
               <>
-                <Button variant="contained" color="success" size="small" onClick={handleCrearEmpresa} fullWidth sx={{ py: { xs: 0.5, md: 0.25 }, fontSize: { xs: '0.75rem', md: '0.7rem' } }}>
+                <Button 
+                  variant="contained" 
+                  color="success" 
+                  onClick={handleCrearEmpresa} 
+                  fullWidth 
+                  sx={{ 
+                    py: 1, 
+                    fontSize: '0.9rem',
+                    fontWeight: 500
+                  }}
+                >
                   🏢 Crear Empresa
                 </Button>
-                <Button variant="outlined" color="success" size="small" onClick={handleGestionarEmpresas} fullWidth sx={{ py: { xs: 0.5, md: 0.25 }, fontSize: { xs: '0.75rem', md: '0.7rem' } }}>
+                <Button 
+                  variant="outlined" 
+                  color="success" 
+                  onClick={handleGestionarEmpresas} 
+                  fullWidth 
+                  sx={{ 
+                    py: 1, 
+                    fontSize: '0.9rem',
+                    fontWeight: 500
+                  }}
+                >
                   🏢 Gestionar Empresas
                 </Button>
               </>
+            ) : (
+              <Typography variant="body2" sx={{ 
+                color: 'text.secondary', 
+                fontStyle: 'italic', 
+                textAlign: 'center', 
+                marginTop: 'auto',
+                paddingTop: '20px'
+              }}>
+                Sin permisos
+              </Typography>
             )}
-          </Box>
+          </div>
           
-                     {/* Categoría: Usuarios */}
-           <Box sx={{ 
-             display: 'flex', 
-             flexDirection: 'column', 
-             gap: { xs: 0.5, md: 0.25 },
-             p: { xs: 1.5, md: 0.75 },
-             borderRadius: 1.5,
-             bgcolor: alpha(theme.palette.warning.main, 0.05),
-             border: `1px solid ${alpha(theme.palette.warning.main, 0.1)}`
-           }}>
-            <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'warning.main', mb: { xs: 0.5, md: 0.25 }, fontSize: { xs: '0.8rem', md: '0.75rem' } }}>
+          {/* Categoría: Usuarios */}
+          <div style={{
+            background: alpha(theme.palette.warning.main, 0.05),
+            border: `1px solid ${alpha(theme.palette.warning.main, 0.12)}`,
+            borderRadius: '12px',
+            padding: '20px',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+            transition: 'all 0.2s ease-in-out',
+            minHeight: '180px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '12px'
+          }}
+          onMouseEnter={(e) => {
+            e.target.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
+            e.target.style.transform = 'translateY(-2px)';
+          }}
+          onMouseLeave={(e) => {
+            e.target.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)';
+            e.target.style.transform = 'translateY(0)';
+          }}>
+            
+            <Typography variant="h6" sx={{ 
+              fontWeight: 600, 
+              color: 'warning.main', 
+              fontSize: '1.1rem',
+              marginBottom: '8px'
+            }}>
               👥 Usuarios
             </Typography>
+            
             {permisos?.puedeGestionarUsuarios && (
-              <Button variant="contained" color="warning" size="small" onClick={handleGestionarUsuarios} fullWidth sx={{ py: { xs: 0.5, md: 0.25 }, fontSize: { xs: '0.75rem', md: '0.7rem' } }}>
+              <Button 
+                variant="contained" 
+                color="warning" 
+                onClick={handleGestionarUsuarios} 
+                fullWidth 
+                sx={{ 
+                  py: 1, 
+                  fontSize: '0.9rem',
+                  fontWeight: 500
+                }}
+              >
                 👥 Gestionar Usuarios
               </Button>
             )}
             {permisos?.puedeAgregarSocios && (
-              <Button variant="outlined" color="warning" size="small" onClick={handleAgregarUsuario} fullWidth sx={{ py: { xs: 0.5, md: 0.25 }, fontSize: { xs: '0.75rem', md: '0.7rem' } }}>
+              <Button 
+                variant="outlined" 
+                color="warning" 
+                onClick={handleAgregarUsuario} 
+                fullWidth 
+                sx={{ 
+                  py: 1, 
+                  fontSize: '0.9rem',
+                  fontWeight: 500
+                }}
+              >
                 👥 Agregar Usuario
               </Button>
             )}
             {permisos?.puedeEliminarUsuarios && (
-              <Button variant="outlined" color="error" size="small" onClick={handleEliminarUsuario} fullWidth sx={{ py: { xs: 0.5, md: 0.25 }, fontSize: { xs: '0.75rem', md: '0.7rem' } }}>
+              <Button 
+                variant="outlined" 
+                color="error" 
+                onClick={handleEliminarUsuario} 
+                fullWidth 
+                sx={{ 
+                  py: 1, 
+                  fontSize: '0.9rem',
+                  fontWeight: 500
+                }}
+              >
                 👥 Eliminar Usuario
               </Button>
             )}
-          </Box>
+            {!permisos?.puedeGestionarUsuarios && !permisos?.puedeAgregarSocios && !permisos?.puedeEliminarUsuarios && (
+              <Typography variant="body2" sx={{ 
+                color: 'text.secondary', 
+                fontStyle: 'italic', 
+                textAlign: 'center', 
+                marginTop: 'auto',
+                paddingTop: '20px'
+              }}>
+                Sin permisos
+              </Typography>
+            )}
+          </div>
           
-                     {/* Categoría: Sistema */}
-           <Box sx={{ 
-             display: 'flex', 
-             flexDirection: 'column', 
-             gap: { xs: 0.5, md: 0.25 },
-             p: { xs: 1.5, md: 0.75 },
-             borderRadius: 1.5,
-             bgcolor: alpha(theme.palette.info.main, 0.05),
-             border: `1px solid ${alpha(theme.palette.info.main, 0.1)}`
-           }}>
-            <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'info.main', mb: { xs: 0.5, md: 0.25 }, fontSize: { xs: '0.8rem', md: '0.75rem' } }}>
+          {/* Categoría: Sistema */}
+          <div style={{
+            background: alpha(theme.palette.info.main, 0.05),
+            border: `1px solid ${alpha(theme.palette.info.main, 0.12)}`,
+            borderRadius: '12px',
+            padding: '20px',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+            transition: 'all 0.2s ease-in-out',
+            minHeight: '180px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '12px'
+          }}
+          onMouseEnter={(e) => {
+            e.target.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
+            e.target.style.transform = 'translateY(-2px)';
+          }}
+          onMouseLeave={(e) => {
+            e.target.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)';
+            e.target.style.transform = 'translateY(0)';
+          }}>
+            
+            <Typography variant="h6" sx={{ 
+              fontWeight: 600, 
+              color: 'info.main', 
+              fontSize: '1.1rem',
+              marginBottom: '8px'
+            }}>
               ⚙️ Sistema
             </Typography>
+            
             {permisos?.puedeVerLogs && (
-              <Button variant="contained" color="info" size="small" onClick={handleVerSistema} fullWidth sx={{ py: { xs: 0.5, md: 0.25 }, fontSize: { xs: '0.75rem', md: '0.7rem' } }}>
+              <Button 
+                variant="contained" 
+                color="info" 
+                onClick={handleVerSistema} 
+                fullWidth 
+                sx={{ 
+                  py: 1, 
+                  fontSize: '0.9rem',
+                  fontWeight: 500
+                }}
+              >
                 ⚙️ Ver Sistema
               </Button>
             )}
             {permisos?.puedeGestionarSistema && (
-              <Button variant="outlined" color="info" size="small" onClick={handleGestionarSistema} fullWidth sx={{ py: { xs: 0.5, md: 0.25 }, fontSize: { xs: '0.75rem', md: '0.7rem' } }}>
+              <Button 
+                variant="outlined" 
+                color="info" 
+                onClick={handleGestionarSistema} 
+                fullWidth 
+                sx={{ 
+                  py: 1, 
+                  fontSize: '0.9rem',
+                  fontWeight: 500
+                }}
+              >
                 ⚙️ Gestionar Sistema
               </Button>
             )}
-          </Box>
+            {!permisos?.puedeVerLogs && !permisos?.puedeGestionarSistema && (
+              <Typography variant="body2" sx={{ 
+                color: 'text.secondary', 
+                fontStyle: 'italic', 
+                textAlign: 'center', 
+                marginTop: 'auto',
+                paddingTop: '20px'
+              }}>
+                Sin permisos
+              </Typography>
+            )}
+          </div>
           
-                     {/* Categoría: Otros */}
-           <Box sx={{ 
-             display: 'flex', 
-             flexDirection: 'column', 
-             gap: { xs: 0.5, md: 0.25 },
-             p: { xs: 1.5, md: 0.75 },
-             borderRadius: 1.5,
-             bgcolor: alpha(theme.palette.secondary.main, 0.05),
-             border: `1px solid ${alpha(theme.palette.secondary.main, 0.1)}`
-           }}>
-            <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'secondary.main', mb: { xs: 0.5, md: 0.25 }, fontSize: { xs: '0.8rem', md: '0.75rem' } }}>
+          {/* Categoría: Otros */}
+          <div style={{
+            background: alpha(theme.palette.secondary.main, 0.05),
+            border: `1px solid ${alpha(theme.palette.secondary.main, 0.12)}`,
+            borderRadius: '12px',
+            padding: '20px',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+            transition: 'all 0.2s ease-in-out',
+            minHeight: '180px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '12px'
+          }}
+          onMouseEnter={(e) => {
+            e.target.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
+            e.target.style.transform = 'translateY(-2px)';
+          }}
+          onMouseLeave={(e) => {
+            e.target.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)';
+            e.target.style.transform = 'translateY(0)';
+          }}>
+            
+            <Typography variant="h6" sx={{ 
+              fontWeight: 600, 
+              color: 'secondary.main', 
+              fontSize: '1.1rem',
+              marginBottom: '8px'
+            }}>
               🔗 Otros
             </Typography>
-            {permisos?.puedeCompartirFormularios && (
-              <Button variant="contained" color="secondary" size="small" onClick={handleCompartir} fullWidth sx={{ py: { xs: 0.5, md: 0.25 }, fontSize: { xs: '0.75rem', md: '0.7rem' } }}>
+            
+            {permisos?.puedeCompartirFormularios ? (
+              <Button 
+                variant="contained" 
+                color="secondary" 
+                onClick={handleCompartir} 
+                fullWidth 
+                sx={{ 
+                  py: 1, 
+                  fontSize: '0.9rem',
+                  fontWeight: 500
+                }}
+              >
                 🔗 Compartir
               </Button>
+            ) : (
+              <Typography variant="body2" sx={{ 
+                color: 'text.secondary', 
+                fontStyle: 'italic', 
+                textAlign: 'center', 
+                marginTop: 'auto',
+                paddingTop: '20px'
+              }}>
+                Sin permisos
+              </Typography>
             )}
-          </Box>
-        </Box>
-      </Box>
+          </div>
+          
+        </div>
+      </div>
       
       {/* Contenido principal */}
       <Box sx={{ 
