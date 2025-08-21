@@ -15,9 +15,7 @@ const PerfilFormularios = ({ formularios: formulariosProp, loading }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const navigate = useNavigate();
-  const [openShareId, setOpenShareId] = useState(null);
-  const [shareLink, setShareLink] = useState('');
-  const [copying, setCopying] = useState(false);
+
   const [seccionSeleccionada, setSeccionSeleccionada] = useState({}); // {formId: seccionIndex}
   const [modoEdicion, setModoEdicion] = useState({}); // {formId: seccionIndex: boolean}
   const [preguntasEditadas, setPreguntasEditadas] = useState({}); // {formId: {seccionIndex: [preguntas]}}
@@ -72,8 +70,83 @@ const PerfilFormularios = ({ formularios: formulariosProp, loading }) => {
         updateFormularioLocal(form.id, { esPublico: true, publicSharedId });
         
         const url = `${window.location.origin}/formularios/public/${publicSharedId}`;
-        setShareLink(url);
-        setOpenShareId(form.id);
+        
+                 // Mostrar modal con SweetAlert2
+         Swal.fire({
+           title: '¡Formulario Compartido!',
+           html: `
+             <div style="text-align: left; margin-bottom: 16px;">
+               <p style="margin-bottom: 12px; font-weight: 500;">Comparte este link con otros administradores:</p>
+               <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+                 <input 
+                   id="shareLinkInput" 
+                   value="${url}" 
+                   readonly 
+                   style="
+                     flex: 1; 
+                     padding: 8px 12px; 
+                     border: 1px solid #ddd; 
+                     border-radius: 4px; 
+                     font-size: 0.875rem; 
+                     background-color: #f5f5f5;
+                     font-family: monospace;
+                   "
+                 />
+                 <button 
+                   id="copyButton" 
+                   style="
+                     padding: 8px 16px; 
+                     background-color: #1976d2; 
+                     color: white; 
+                     border: none; 
+                     border-radius: 4px; 
+                     cursor: pointer;
+                     font-size: 0.875rem;
+                   "
+                 >
+                   Copiar
+                 </button>
+               </div>
+               <p style="font-size: 0.875rem; color: #666; margin: 0;">
+                 Cualquier administrador podrá ver y copiar este formulario a su sistema.
+               </p>
+             </div>
+           `,
+           icon: 'success',
+           showConfirmButton: true,
+           confirmButtonText: 'Cerrar',
+           confirmButtonColor: '#1976d2',
+           width: '500px',
+           allowOutsideClick: false,
+           allowEscapeKey: false,
+           timer: undefined,
+           timerProgressBar: false,
+           didOpen: () => {
+             // Agregar funcionalidad de copiar
+             const copyButton = document.getElementById('copyButton');
+             const shareLinkInput = document.getElementById('shareLinkInput');
+             
+             copyButton.addEventListener('click', async () => {
+               try {
+                 await navigator.clipboard.writeText(url);
+                 copyButton.textContent = '¡Copiado!';
+                 copyButton.style.backgroundColor = '#4caf50';
+                 setTimeout(() => {
+                   copyButton.textContent = 'Copiar';
+                   copyButton.style.backgroundColor = '#1976d2';
+                 }, 2000);
+               } catch (error) {
+                 console.error('Error al copiar:', error);
+                 copyButton.textContent = 'Error';
+                 copyButton.style.backgroundColor = '#f44336';
+                 setTimeout(() => {
+                   copyButton.textContent = 'Copiar';
+                   copyButton.style.backgroundColor = '#1976d2';
+                 }, 2000);
+               }
+             });
+           }
+         });
       }
     } catch (error) {
       console.error('Error al cambiar estado de compartir:', error);
@@ -83,11 +156,7 @@ const PerfilFormularios = ({ formularios: formulariosProp, loading }) => {
     }
   };
 
-  const handleCopy = async () => {
-    setCopying(true);
-    await navigator.clipboard.writeText(shareLink);
-    setTimeout(() => setCopying(false), 1000);
-  };
+
 
   const handleEliminarFormulario = async (form) => {
     const result = await Swal.fire({
@@ -755,82 +824,9 @@ const PerfilFormularios = ({ formularios: formulariosProp, loading }) => {
             </div>
           );
         })}
-      </div>
-
-      {/* Diálogo para compartir */}
-      {openShareId && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(0,0,0,0.5)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1000
-        }}>
-          <div style={{
-            backgroundColor: theme.palette.background.paper,
-            borderRadius: '8px',
-            padding: '24px',
-            maxWidth: '500px',
-            width: '90%',
-            boxShadow: '0 4px 20px rgba(0,0,0,0.3)'
-          }}>
-            <Typography variant="h6" style={{ marginBottom: '16px', fontWeight: 600 }}>
-              Compartir Formulario
-            </Typography>
-            <Typography style={{ marginBottom: '16px' }}>
-              ¡Listo! Comparte este link con otros administradores:
-            </Typography>
-            <div style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              gap: '8px',
-              marginBottom: '16px'
-            }}>
-              <input
-                value={shareLink}
-                readOnly
-                style={{
-                  flex: 1,
-                  padding: '8px 12px',
-                  border: `1px solid ${theme.palette.divider}`,
-                  borderRadius: '4px',
-                  fontSize: '0.875rem',
-                  backgroundColor: theme.palette.background.default
-                }}
-              />
-              <Button
-                onClick={handleCopy}
-                variant="contained"
-                color="primary"
-                size="small"
-                disabled={copying}
-                style={{ padding: '8px 16px' }}
-              >
-                {copying ? 'Copiado!' : 'Copiar'}
-              </Button>
-            </div>
-            <Typography variant="body2" color="text.secondary" style={{ marginBottom: '16px' }}>
-              Cualquier administrador podrá ver y copiar este formulario a su sistema.
-            </Typography>
-            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-              <Button
-                onClick={() => setOpenShareId(null)}
-                variant="outlined"
-                color="primary"
-              >
-                Cerrar
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-};
+             </div>
+     </div>
+   );
+ };
 
 export default PerfilFormularios;
