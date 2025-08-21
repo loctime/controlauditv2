@@ -18,6 +18,7 @@ const PerfilFormularios = ({ formularios, loading }) => {
   const [openShareId, setOpenShareId] = useState(null);
   const [shareLink, setShareLink] = useState('');
   const [copying, setCopying] = useState(false);
+  const [seccionSeleccionada, setSeccionSeleccionada] = useState({}); // {formId: seccionIndex}
   const { canCompartirFormularios } = usePermissions();
 
   const handleCompartir = async (form) => {
@@ -88,7 +89,30 @@ const PerfilFormularios = ({ formularios, loading }) => {
     if (!Array.isArray(form.secciones)) return [];
     return form.secciones.map((seccion, index) => ({
       nombre: seccion.nombre || `Sección ${index + 1}`,
-      preguntas: Array.isArray(seccion.preguntas) ? seccion.preguntas.length : 0
+      preguntas: Array.isArray(seccion.preguntas) ? seccion.preguntas.length : 0,
+      preguntasList: Array.isArray(seccion.preguntas) ? seccion.preguntas : []
+    }));
+  };
+
+  // Obtener las preguntas de la sección seleccionada
+  const getPreguntasSeccion = (form) => {
+    if (!seccionSeleccionada[form.id] && seccionSeleccionada[form.id] !== 0) return [];
+    
+    const secciones = getSeccionesFormulario(form);
+    const seccionIndex = seccionSeleccionada[form.id];
+    
+    if (seccionIndex >= 0 && seccionIndex < secciones.length) {
+      return secciones[seccionIndex].preguntasList.slice(0, 4); // Máximo 4 preguntas
+    }
+    
+    return [];
+  };
+
+  // Manejar click en sección
+  const handleSeccionClick = (formId, seccionIndex) => {
+    setSeccionSeleccionada(prev => ({
+      ...prev,
+      [formId]: prev[formId] === seccionIndex ? null : seccionIndex // Toggle: si ya está seleccionada, la deselecciona
     }));
   };
 
@@ -322,14 +346,37 @@ const PerfilFormularios = ({ formularios, loading }) => {
                             return (
                               <>
                                 {seccionesAMostrar.map((seccion, index) => (
-                                  <div key={index} style={{ 
-                                    display: 'flex', 
-                                    alignItems: 'center', 
-                                    gap: '8px',
-                                    fontSize: '0.75rem',
-                                    color: theme.palette.text.secondary,
-                                    fontWeight: 500
-                                  }}>
+                                  <div 
+                                    key={index} 
+                                    style={{ 
+                                      display: 'flex', 
+                                      alignItems: 'center', 
+                                      gap: '8px',
+                                      fontSize: '0.75rem',
+                                      color: seccionSeleccionada[form.id] === index 
+                                        ? theme.palette.primary.main 
+                                        : theme.palette.text.secondary,
+                                      fontWeight: seccionSeleccionada[form.id] === index ? 600 : 500,
+                                      cursor: 'pointer',
+                                      padding: '2px 4px',
+                                      borderRadius: '4px',
+                                      backgroundColor: seccionSeleccionada[form.id] === index 
+                                        ? alpha(theme.palette.primary.main, 0.1) 
+                                        : 'transparent',
+                                      transition: 'all 0.2s ease'
+                                    }}
+                                    onClick={() => handleSeccionClick(form.id, index)}
+                                    onMouseEnter={(e) => {
+                                      if (seccionSeleccionada[form.id] !== index) {
+                                        e.target.style.backgroundColor = alpha(theme.palette.primary.main, 0.05);
+                                      }
+                                    }}
+                                    onMouseLeave={(e) => {
+                                      if (seccionSeleccionada[form.id] !== index) {
+                                        e.target.style.backgroundColor = 'transparent';
+                                      }
+                                    }}
+                                  >
                                     <span>📊 {seccion.nombre}: preguntas {seccion.preguntas}</span>
                                   </div>
                                 ))}
@@ -385,12 +432,83 @@ const PerfilFormularios = ({ formularios, loading }) => {
                         </div>
                       </td>
                       
-                      {/* Columna vacía (antes era acciones) */}
+                      {/* Tercera columna - Preguntas de la sección seleccionada */}
                       <td style={{ 
                         verticalAlign: 'top',
                         width: '40%'
                       }}>
-                        {/* Esta columna ahora está vacía */}
+                        {(() => {
+                          const preguntas = getPreguntasSeccion(form);
+                          const seccionSeleccionadaIndex = seccionSeleccionada[form.id];
+                          const secciones = getSeccionesFormulario(form);
+                          const seccionActual = seccionSeleccionadaIndex >= 0 && seccionSeleccionadaIndex < secciones.length 
+                            ? secciones[seccionSeleccionadaIndex] 
+                            : null;
+
+                          if (!seccionActual || preguntas.length === 0) {
+                            return (
+                              <div style={{
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                minHeight: '80px',
+                                color: theme.palette.text.secondary,
+                                fontSize: '0.75rem',
+                                textAlign: 'center'
+                              }}>
+                                <span>📝 Haz clic en una sección para ver sus preguntas</span>
+                              </div>
+                            );
+                          }
+
+                          return (
+                            <div>
+                              <Typography variant="subtitle2" style={{ 
+                                fontWeight: 600, 
+                                marginBottom: '8px',
+                                color: theme.palette.primary.main,
+                                fontSize: '0.7rem'
+                              }}>
+                                ❓ Preguntas de {seccionActual.nombre}
+                              </Typography>
+                              <div style={{
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: '4px'
+                              }}>
+                                                                 {preguntas.map((pregunta, index) => (
+                                   <div 
+                                     key={index}
+                                     style={{
+                                       fontSize: '0.7rem',
+                                       color: theme.palette.text.secondary,
+                                       padding: '4px 6px',
+                                       backgroundColor: alpha(theme.palette.background.default, 0.5),
+                                       borderRadius: '4px',
+                                       border: `1px solid ${alpha(theme.palette.divider, 0.3)}`,
+                                       wordBreak: 'break-word'
+                                     }}
+                                   >
+                                     <strong>{index + 1}.</strong> {typeof pregunta === 'string' ? pregunta : pregunta.texto || pregunta.pregunta || `Pregunta ${index + 1}`}
+                                   </div>
+                                 ))}
+                                {seccionActual.preguntas > 4 && (
+                                  <div style={{
+                                    fontSize: '0.65rem',
+                                    color: theme.palette.primary.main,
+                                    fontWeight: 600,
+                                    textAlign: 'center',
+                                    padding: '2px',
+                                    fontStyle: 'italic'
+                                  }}>
+                                    ... y {seccionActual.preguntas - 4} preguntas más
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })()}
                       </td>
                     </tr>
                   </tbody>
