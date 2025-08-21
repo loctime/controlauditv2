@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import {
   Typography, Chip, CircularProgress, Button,
-  useTheme, useMediaQuery, alpha
+  useTheme, useMediaQuery, alpha, TextField
 } from '@mui/material';
-import { Draw as DrawIcon, Share as ShareIcon, Edit as EditIcon, Delete as DeleteIcon } from '@mui/icons-material';
+import { Draw as DrawIcon, Share as ShareIcon, Edit as EditIcon, Delete as DeleteIcon, Save as SaveIcon, Cancel as CancelIcon } from '@mui/icons-material';
 import { doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../../../firebaseConfig';
 import { v4 as uuidv4 } from 'uuid';
@@ -19,6 +19,9 @@ const PerfilFormularios = ({ formularios, loading }) => {
   const [shareLink, setShareLink] = useState('');
   const [copying, setCopying] = useState(false);
   const [seccionSeleccionada, setSeccionSeleccionada] = useState({}); // {formId: seccionIndex}
+  const [modoEdicion, setModoEdicion] = useState({}); // {formId: seccionIndex: boolean}
+  const [preguntasEditadas, setPreguntasEditadas] = useState({}); // {formId: {seccionIndex: [preguntas]}}
+  const [guardando, setGuardando] = useState({}); // {formId: boolean}
   const { canCompartirFormularios } = usePermissions();
 
   const handleCompartir = async (form) => {
@@ -114,6 +117,121 @@ const PerfilFormularios = ({ formularios, loading }) => {
       ...prev,
       [formId]: prev[formId] === seccionIndex ? null : seccionIndex // Toggle: si ya está seleccionada, la deselecciona
     }));
+  };
+
+  // Manejar inicio de edición
+  const handleIniciarEdicion = (formId, seccionIndex) => {
+    const form = formularios.find(f => f.id === formId);
+    if (!form || !form.secciones || !form.secciones[seccionIndex]) return;
+
+    const seccion = form.secciones[seccionIndex];
+    const preguntasActuales = Array.isArray(seccion.preguntas) ? seccion.preguntas : [];
+    
+    // Inicializar las preguntas editadas con las actuales
+    setPreguntasEditadas(prev => ({
+      ...prev,
+      [formId]: {
+        ...prev[formId],
+        [seccionIndex]: [...preguntasActuales]
+      }
+    }));
+    
+    // Activar modo edición
+    setModoEdicion(prev => ({
+      ...prev,
+      [formId]: {
+        ...prev[formId],
+        [seccionIndex]: true
+      }
+    }));
+  };
+
+  // Manejar cambio en pregunta editada
+  const handlePreguntaChange = (formId, seccionIndex, preguntaIndex, nuevoTexto) => {
+    setPreguntasEditadas(prev => ({
+      ...prev,
+      [formId]: {
+        ...prev[formId],
+        [seccionIndex]: prev[formId]?.[seccionIndex]?.map((pregunta, index) => 
+          index === preguntaIndex ? nuevoTexto : pregunta
+        ) || []
+      }
+    }));
+  };
+
+  // Manejar cancelar edición
+  const handleCancelarEdicion = (formId, seccionIndex) => {
+    setModoEdicion(prev => ({
+      ...prev,
+      [formId]: {
+        ...prev[formId],
+        [seccionIndex]: false
+      }
+    }));
+    
+    // Limpiar preguntas editadas
+    setPreguntasEditadas(prev => {
+      const nuevo = { ...prev };
+      if (nuevo[formId]) {
+        delete nuevo[formId][seccionIndex];
+        if (Object.keys(nuevo[formId]).length === 0) {
+          delete nuevo[formId];
+        }
+      }
+      return nuevo;
+    });
+  };
+
+  // Manejar guardar edición
+  const handleGuardarEdicion = async (formId, seccionIndex) => {
+    const form = formularios.find(f => f.id === formId);
+    if (!form) return;
+
+    setGuardando(prev => ({ ...prev, [formId]: true }));
+
+    try {
+      const preguntasActualizadas = [...form.secciones];
+      preguntasActualizadas[seccionIndex] = {
+        ...preguntasActualizadas[seccionIndex],
+        preguntas: preguntasEditadas[formId][seccionIndex]
+      };
+
+      await updateDoc(doc(db, 'formularios', formId), {
+        secciones: preguntasActualizadas,
+        ultimaModificacion: new Date()
+      });
+
+      // Desactivar modo edición
+      setModoEdicion(prev => ({
+        ...prev,
+        [formId]: {
+          ...prev[formId],
+          [seccionIndex]: false
+        }
+      }));
+
+      // Limpiar preguntas editadas
+      setPreguntasEditadas(prev => {
+        const nuevo = { ...prev };
+        if (nuevo[formId]) {
+          delete nuevo[formId][seccionIndex];
+          if (Object.keys(nuevo[formId]).length === 0) {
+            delete nuevo[formId];
+          }
+        }
+        return nuevo;
+      });
+
+      Swal.fire('Éxito', 'Preguntas actualizadas correctamente', 'success');
+      
+      // Recargar la página para mostrar los cambios
+      window.location.reload();
+    } catch (error) {
+      console.error('Error al guardar preguntas:', error);
+      Swal.fire('Error', 'No se pudieron guardar las preguntas', 'error');
+    } finally {
+      setGuardando(prev => ({ ...prev, [formId]: false }));
+    }
   };
 
   if (loading) {
@@ -472,28 +590,111 @@ const PerfilFormularios = ({ formularios, loading }) => {
                               }}>
                                 ❓ Preguntas de {seccionActual.nombre}
                               </Typography>
+                              
+                              {/* Botones de edición */}
+                              {!modoEdicion[form.id]?.[seccionSeleccionadaIndex] ? (
+                                <Button
+                                  variant="outlined"
+                                  color="primary"
+                                  size="small"
+                                  onClick={() => handleIniciarEdicion(form.id, seccionSeleccionadaIndex)}
+                                  style={{ 
+                                    marginBottom: '8px',
+                                    padding: '2px 8px',
+                                    fontSize: '0.65rem',
+                                    height: '24px'
+                                  }}
+                                  startIcon={<EditIcon style={{ fontSize: 12 }} />}
+                                >
+                                  EDITAR PREGUNTAS
+                                </Button>
+                              ) : (
+                                <div style={{ 
+                                  display: 'flex', 
+                                  gap: '4px', 
+                                  marginBottom: '8px' 
+                                }}>
+                                  <Button
+                                    variant="contained"
+                                    color="success"
+                                    size="small"
+                                    onClick={() => handleGuardarEdicion(form.id, seccionSeleccionadaIndex)}
+                                    disabled={guardando[form.id]}
+                                    style={{ 
+                                      padding: '2px 8px',
+                                      fontSize: '0.65rem',
+                                      height: '24px'
+                                    }}
+                                    startIcon={<SaveIcon style={{ fontSize: 12 }} />}
+                                  >
+                                    {guardando[form.id] ? 'GUARDANDO...' : 'GUARDAR'}
+                                  </Button>
+                                  <Button
+                                    variant="outlined"
+                                    color="error"
+                                    size="small"
+                                    onClick={() => handleCancelarEdicion(form.id, seccionSeleccionadaIndex)}
+                                    disabled={guardando[form.id]}
+                                    style={{ 
+                                      padding: '2px 8px',
+                                      fontSize: '0.65rem',
+                                      height: '24px'
+                                    }}
+                                    startIcon={<CancelIcon style={{ fontSize: 12 }} />}
+                                  >
+                                    CANCELAR
+                                  </Button>
+                                </div>
+                              )}
+                              
                               <div style={{
                                 display: 'flex',
                                 flexDirection: 'column',
                                 gap: '4px'
                               }}>
-                                                                 {preguntas.map((pregunta, index) => (
-                                   <div 
-                                     key={index}
-                                     style={{
-                                       fontSize: '0.7rem',
-                                       color: theme.palette.text.secondary,
-                                       padding: '4px 6px',
-                                       backgroundColor: alpha(theme.palette.background.default, 0.5),
-                                       borderRadius: '4px',
-                                       border: `1px solid ${alpha(theme.palette.divider, 0.3)}`,
-                                       wordBreak: 'break-word'
-                                     }}
-                                   >
-                                     <strong>{index + 1}.</strong> {typeof pregunta === 'string' ? pregunta : pregunta.texto || pregunta.pregunta || `Pregunta ${index + 1}`}
-                                   </div>
-                                 ))}
-                                {seccionActual.preguntas > 4 && (
+                                {(() => {
+                                  const preguntasAMostrar = modoEdicion[form.id]?.[seccionSeleccionadaIndex] 
+                                    ? preguntasEditadas[form.id]?.[seccionSeleccionadaIndex] || []
+                                    : preguntas;
+                                  
+                                  return preguntasAMostrar.map((pregunta, index) => (
+                                    <div 
+                                      key={index}
+                                      style={{
+                                        fontSize: '0.7rem',
+                                        color: theme.palette.text.secondary,
+                                        padding: '4px 6px',
+                                        backgroundColor: alpha(theme.palette.background.default, 0.5),
+                                        borderRadius: '4px',
+                                        border: `1px solid ${alpha(theme.palette.divider, 0.3)}`,
+                                        wordBreak: 'break-word'
+                                      }}
+                                    >
+                                      {modoEdicion[form.id]?.[seccionSeleccionadaIndex] ? (
+                                        <TextField
+                                          fullWidth
+                                          size="small"
+                                          value={pregunta || ''}
+                                          onChange={(e) => handlePreguntaChange(form.id, seccionSeleccionadaIndex, index, e.target.value)}
+                                          variant="outlined"
+                                          style={{
+                                            fontSize: '0.7rem'
+                                          }}
+                                          InputProps={{
+                                            style: {
+                                              fontSize: '0.7rem',
+                                              padding: '2px 4px'
+                                            }
+                                          }}
+                                        />
+                                      ) : (
+                                        <><strong>{index + 1}.</strong> {typeof pregunta === 'string' ? pregunta : pregunta.texto || pregunta.pregunta || `Pregunta ${index + 1}`}</>
+                                      )}
+                                    </div>
+                                  ));
+                                })()}
+                                
+                                {seccionActual.preguntas > 4 && !modoEdicion[form.id]?.[seccionSeleccionadaIndex] && (
                                   <div style={{
                                     fontSize: '0.65rem',
                                     color: theme.palette.primary.main,
