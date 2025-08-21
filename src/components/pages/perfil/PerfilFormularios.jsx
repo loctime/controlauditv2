@@ -1,18 +1,12 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
-  Box, Typography, ListItem, ListItemAvatar, Avatar, ListItemText, Alert,
-  Accordion, AccordionSummary, AccordionDetails, Chip, Button, Tooltip, Dialog, DialogTitle, DialogContent, DialogActions, TextField,
-  useTheme, useMediaQuery, alpha, Card, CardContent, IconButton, Grid
+  Typography, Chip, CircularProgress, Button,
+  useTheme, useMediaQuery, alpha
 } from '@mui/material';
-import './PerfilFormularios.css';
-import { Draw as DrawIcon, ExpandMore as ExpandMoreIcon } from '@mui/icons-material';
-import ShareIcon from '@mui/icons-material/Share';
-import { useState } from 'react';
+import { Draw as DrawIcon, Share as ShareIcon, Edit as EditIcon, Delete as DeleteIcon } from '@mui/icons-material';
 import { doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../../../firebaseConfig';
 import { v4 as uuidv4 } from 'uuid';
-import ContentCopyIcon from '@mui/icons-material/ContentCopy';
-import DeleteForeverIcon from '@mui/icons-material/DeleteForever';
 import { usePermissions } from '../admin/hooks/usePermissions';
 import { useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
@@ -20,16 +14,11 @@ import Swal from 'sweetalert2';
 const PerfilFormularios = ({ formularios, loading }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-  const isSmallMobile = useMediaQuery(theme.breakpoints.down('sm'));
-  const isLargeScreen = useMediaQuery(theme.breakpoints.up('lg'));
-  
-  // Log de depuración
-  console.debug('[PerfilFormularios] formularios:', formularios);
+  const navigate = useNavigate();
   const [openShareId, setOpenShareId] = useState(null);
   const [shareLink, setShareLink] = useState('');
   const [copying, setCopying] = useState(false);
   const { canCompartirFormularios } = usePermissions();
-  const navigate = useNavigate();
 
   const handleCompartir = async (form) => {
     if (!canCompartirFormularios) return;
@@ -85,309 +74,384 @@ const PerfilFormularios = ({ formularios, loading }) => {
     }
   };
 
+  // Calcular estadísticas del formulario
+  const getFormularioStats = (form) => {
+    const secciones = Array.isArray(form.secciones) ? form.secciones.length : 0;
+    const preguntas = Array.isArray(form.secciones) 
+      ? form.secciones.reduce((acc, s) => acc + (Array.isArray(s.preguntas) ? s.preguntas.length : 0), 0) 
+      : 0;
+    return { secciones, preguntas };
+  };
+
+  if (loading) {
+    return (
+      <div style={{ 
+        display: 'flex', 
+        flexDirection: 'column', 
+        alignItems: 'center', 
+        justifyContent: 'center',
+        padding: '64px 16px',
+        gap: '16px'
+      }}>
+        <CircularProgress size={48} />
+        <Typography variant="h6" color="primary.main">
+          Cargando formularios...
+        </Typography>
+      </div>
+    );
+  }
+
+  if (!formularios || formularios.length === 0) {
+    return (
+      <div style={{ 
+        display: 'flex', 
+        flexDirection: 'column', 
+        alignItems: 'center', 
+        justifyContent: 'center',
+        padding: '64px 16px',
+        gap: '24px'
+      }}>
+        <DrawIcon style={{ fontSize: 64, color: theme.palette.text.secondary }} />
+        <Typography variant="h5" color="text.secondary" style={{ textAlign: 'center' }}>
+          No tienes formularios registrados
+        </Typography>
+        <Typography variant="body1" color="text.secondary" style={{ textAlign: 'center', maxWidth: 400 }}>
+          Comienza creando tu primer formulario para realizar auditorías
+        </Typography>
+        <Button
+          variant="contained"
+          color="primary"
+          onClick={() => navigate('/editar')}
+          style={{ marginTop: '16px' }}
+        >
+          📋 Crear Primer Formulario
+        </Button>
+      </div>
+    );
+  }
+
   return (
-    <Box className="perfil-formularios-container" sx={{ 
-      p: isSmallMobile ? 1 : (isLargeScreen ? 1 : 2),
-      bgcolor: 'background.paper',
-      borderRadius: 0,
-      border: 'none',
-      boxShadow: 'none',
-      width: '100%',
-      maxWidth: '100%'
-    }}>
-      {/* Header con título y botón de gestión */}
-      <Box className="formularios-header" sx={{ 
+    <div style={{ width: '100%', maxWidth: '100%' }}>
+      {/* Header */}
+      <div style={{ 
         display: 'flex', 
         justifyContent: 'space-between', 
         alignItems: 'center', 
-        mb: isSmallMobile ? 2 : 3,
+        marginBottom: '24px',
         flexDirection: isMobile ? 'column' : 'row',
-        gap: isSmallMobile ? 2 : 3
+        gap: '16px'
       }}>
-        <Box sx={{ textAlign: isMobile ? 'center' : 'left' }}>
-          <Typography 
-            className="formularios-titulo"
-            variant={isSmallMobile ? "h5" : "h4"} 
-            sx={{ 
-              fontWeight: 700, 
-              color: 'primary.main',
-              mb: 1,
-              whiteSpace: 'normal',
-              wordBreak: 'normal',
-              overflowWrap: 'break-word'
-            }}
-          >
+        <div>
+          <Typography variant="h4" style={{ 
+            fontWeight: 700, 
+            color: theme.palette.primary.main, 
+            marginBottom: '8px' 
+          }}>
             📋 Mis Formularios
           </Typography>
-          <Typography className="formularios-subtitulo" variant="body2" color="text.secondary">
+          <Typography variant="body1" color="text.secondary">
             {formularios.length} formulario(s) registrado(s)
           </Typography>
-        </Box>
+        </div>
         
         <Button
-          className="formularios-boton"
           variant="contained"
           color="primary"
-          onClick={() => {
-            console.log('[PerfilFormularios] Navegando a /editar');
-            navigate('/editar');
-          }}
-          sx={{ 
-            py: isSmallMobile ? 1.5 : 2,
-            px: isSmallMobile ? 3 : 4,
-            fontSize: isSmallMobile ? '0.875rem' : '1rem',
+          onClick={() => navigate('/editar')}
+          style={{ 
+            padding: '12px 24px',
             fontWeight: 600,
-            borderRadius: 2,
-            '&:hover': {
-              transform: 'translateY(-1px)',
-              boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-              transition: 'all 0.2s ease'
-            },
-            transition: 'all 0.2s ease'
+            borderRadius: '8px'
           }}
         >
           🔧 Gestionar Formularios
         </Button>
-      </Box>
-      
-      {/* Contenido de formularios */}
-      {loading ? (
-        <Box className="formularios-carga" sx={{
-          bgcolor: alpha(theme.palette.info.main, 0.05),
-          borderRadius: 2,
-          p: isSmallMobile ? 3 : 4,
-          border: `1px solid ${alpha(theme.palette.info.main, 0.1)}`,
-          textAlign: 'center'
-        }}>
-          <Typography variant="body1" color="info.main">
-            Cargando formularios...
-          </Typography>
-        </Box>
-      ) : formularios.length === 0 ? (
-        <Box className="formularios-vacio" sx={{
-          bgcolor: alpha(theme.palette.warning.main, 0.05),
-          borderRadius: 2,
-          p: isSmallMobile ? 3 : 4,
-          border: `1px solid ${alpha(theme.palette.warning.main, 0.1)}`,
-          textAlign: 'center'
-        }}>
-          <DrawIcon sx={{ fontSize: 48, color: 'warning.main', mb: 2 }} />
-          <Typography variant="h6" color="warning.main" sx={{ mb: 1 }}>
-            No tienes formularios registrados
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            Comienza creando tu primer formulario para realizar auditorías
-          </Typography>
-        </Box>
-      ) : (
-        <Grid container spacing={isLargeScreen ? 2 : 1.5}>
-          {formularios.map((form) => (
-            <Grid item xs={12} sm={6} md={6} lg={4} xl={3} key={form.id}>
-              <Card className="formulario-card" sx={{
-                bgcolor: 'background.paper',
-                borderRadius: 3,
-                border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}`,
-                boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
-                height: 'auto',
-                display: 'flex',
-                flexDirection: 'row',
-                '&:hover': {
-                  transform: 'translateY(-2px)',
-                  boxShadow: '0 4px 16px rgba(0,0,0,0.12)',
-                  transition: 'all 0.3s ease'
-                },
-                transition: 'all 0.3s ease'
-              }}>
-                <CardContent className="formulario-card-content" sx={{ 
-                  p: isSmallMobile ? 2 : 2.5,
-                  display: 'flex',
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  width: '100%',
-                  gap: 2
+        
+      </div>
+
+      {/* Lista de formularios */}
+      <div style={{ 
+        display: 'flex', 
+        flexDirection: 'column', 
+        gap: '16px' 
+      }}>
+        {formularios.map((form) => {
+          const stats = getFormularioStats(form);
+          return (
+            <div key={form.id} style={{
+              backgroundColor: theme.palette.background.paper,
+              borderRadius: '8px',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+              border: 'none',
+              overflow: 'hidden',
+              transition: 'all 0.2s ease'
+            }}
+            onMouseEnter={(e) => {
+              e.target.style.boxShadow = '0 4px 16px rgba(0,0,0,0.15)';
+              e.target.style.transform = 'translateY(-1px)';
+            }}
+            onMouseLeave={(e) => {
+              e.target.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)';
+              e.target.style.transform = 'translateY(0)';
+            }}>
+              <div style={{ padding: '24px' }}>
+                {/* Estructura usando tabla CSS con 3 columnas */}
+                <table style={{ 
+                  width: '100%', 
+                  borderCollapse: 'collapse'
                 }}>
-                  {/* Avatar del formulario */}
-                  <Avatar 
-                    className="formulario-avatar"
-                    sx={{ 
-                      width: isSmallMobile ? 50 : 56, 
-                      height: isSmallMobile ? 50 : 56,
-                      bgcolor: 'primary.main',
-                      flexShrink: 0
-                    }}
-                  >
-                    <DrawIcon fontSize="medium" />
-                  </Avatar>
-                  
-                  {/* Información del formulario */}
-                  <Box className="formulario-info" sx={{ 
-                    flex: 1,
-                    minWidth: 0
-                  }}>
-                    <Typography 
-                      className="formulario-nombre"
-                      variant={isSmallMobile ? "h6" : "h6"} 
-                      sx={{ 
-                        fontWeight: 600, 
-                        color: 'primary.main',
-                        mb: 0.5,
-                        whiteSpace: 'normal',
-                        wordBreak: 'normal',
-                        overflowWrap: 'break-word',
-                        lineHeight: 1.2
-                      }}
-                    >
-                      {form.nombre}
-                    </Typography>
-                    
-                    <Box className="formulario-stats" sx={{ 
-                      display: 'flex', 
-                      flexDirection: 'row',
-                      gap: 2,
-                      alignItems: 'center',
-                      mb: 1
-                    }}>
-                      <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
-                        <strong>Secciones:</strong> {Array.isArray(form.secciones) ? form.secciones.length : 0}
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
-                        <strong>Preguntas:</strong> {Array.isArray(form.secciones) ? form.secciones.reduce((acc, s) => acc + (Array.isArray(s.preguntas) ? s.preguntas.length : 0), 0) : 0}
-                      </Typography>
-                    </Box>
-                    
-                    <Box className="formulario-chips" sx={{ 
-                      display: 'flex', 
-                      flexDirection: 'row',
-                      gap: 0.5,
-                      flexWrap: 'wrap'
-                    }}>
-                      {form.formularioOriginalId && (
-                        <Chip 
-                          label="Copia" 
-                          size="small"
-                          color="warning" 
-                          sx={{ fontWeight: 600, height: '20px', fontSize: '0.65rem' }}
-                        />
-                      )}
-                      {form.esPublico && (
-                        <Chip 
-                          label="Público" 
-                          size="small"
-                          color="success" 
-                          sx={{ fontWeight: 600, height: '20px', fontSize: '0.65rem' }}
-                        />
-                      )}
-                      {Array.isArray(form.compartidoCon) && form.compartidoCon.length > 0 && (
-                        <Chip 
-                          label="Compartido" 
-                          size="small"
-                          color="info" 
-                          sx={{ fontWeight: 600, height: '20px', fontSize: '0.65rem' }}
-                        />
-                      )}
-                    </Box>
-                  </Box>
-                  
-                  {/* Acciones del formulario */}
-                  <Box className="formulario-actions" sx={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: 0.5,
-                    flexShrink: 0
-                  }}>
-                    <Tooltip title={form.formularioOriginalId ? 'No puedes compartir un formulario copiado' : 'Compartir formulario'}>
-                      <span>
-                        <Button
-                          variant="outlined"
-                          color="primary"
-                          size="small"
-                          onClick={() => handleCompartir(form)}
-                          disabled={!canCompartirFormularios || form.formularioOriginalId}
-                          sx={{ 
-                            py: 0.5,
-                            px: 1,
-                            fontSize: '0.7rem',
-                            minWidth: 'auto'
-                          }}
-                        >
-                          📤
-                        </Button>
-                      </span>
-                    </Tooltip>
-                    
-                    <Button
-                      variant="outlined"
-                      color="secondary"
-                      size="small"
-                      onClick={() => navigate(`/editar/${form.id}`)}
-                      sx={{ 
-                        py: 0.5,
-                        px: 1,
-                        fontSize: '0.7rem',
-                        minWidth: 'auto'
-                      }}
-                    >
-                      ✏️
-                    </Button>
-                    
-                    <Tooltip title="Eliminar formulario">
-                      <span>
-                        <Button
-                          variant="outlined"
-                          color="error"
-                          size="small"
-                          onClick={() => handleEliminarFormulario(form)}
-                          sx={{ 
-                            py: 0.5,
-                            px: 1,
-                            fontSize: '0.7rem',
-                            minWidth: 'auto'
-                          }}
-                        >
-                          🗑️
-                        </Button>
-                      </span>
-                    </Tooltip>
-                  </Box>
-                </CardContent>
-              </Card>
-            </Grid>
-          ))}
-        </Grid>
-      )}
-      
+                  <tbody>
+                    <tr>
+                      {/* Icono del formulario */}
+                      <td style={{ 
+                        width: '60px', 
+                        verticalAlign: 'top',
+                        paddingRight: '16px'
+                      }}>
+                        <div style={{
+                          width: '60px',
+                          height: '60px',
+                          borderRadius: '8px',
+                          backgroundColor: alpha(theme.palette.primary.main, 0.1),
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          border: `2px solid ${alpha(theme.palette.primary.main, 0.2)}`
+                        }}>
+                          <DrawIcon style={{ fontSize: 28, color: theme.palette.primary.main }} />
+                        </div>
+                      </td>
+                      
+                      {/* Información principal */}
+                      <td style={{ 
+                        verticalAlign: 'top',
+                        paddingRight: '24px',
+                        width: '50%'
+                      }}>
+                        <div style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          marginBottom: '8px',
+                          flexWrap: 'wrap'
+                        }}>
+                          <Typography variant="h6" style={{ 
+                            fontWeight: 600, 
+                            color: theme.palette.primary.main,
+                            flex: 1,
+                            minWidth: 0
+                          }}>
+                            {form.nombre}
+                          </Typography>
+                        </div>
+
+                        {/* Estadísticas */}
+                        <div style={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '4px',
+                          marginBottom: '8px'
+                        }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <span style={{ 
+                              fontSize: '0.75rem',
+                              color: theme.palette.text.secondary,
+                              fontWeight: 500
+                            }}>
+                              📊 Secciones: {stats.secciones}
+                            </span>
+                            <span style={{ 
+                              fontSize: '0.75rem',
+                              color: theme.palette.text.secondary,
+                              fontWeight: 500
+                            }}>
+                              ❓ Preguntas: {stats.preguntas}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Chips de estado */}
+                        <div style={{
+                          display: 'flex',
+                          gap: '4px',
+                          flexWrap: 'wrap'
+                        }}>
+                          {form.formularioOriginalId && (
+                            <Chip 
+                              label="Copia" 
+                              size="small"
+                              color="warning" 
+                              style={{ fontWeight: 600, height: '20px', fontSize: '0.65rem' }}
+                            />
+                          )}
+                          {form.esPublico && (
+                            <Chip 
+                              label="Público" 
+                              size="small"
+                              color="success" 
+                              style={{ fontWeight: 600, height: '20px', fontSize: '0.65rem' }}
+                            />
+                          )}
+                          {Array.isArray(form.compartidoCon) && form.compartidoCon.length > 0 && (
+                            <Chip 
+                              label="Compartido" 
+                              size="small"
+                              color="info" 
+                              style={{ fontWeight: 600, height: '20px', fontSize: '0.65rem' }}
+                            />
+                          )}
+                        </div>
+                      </td>
+                      
+                      {/* Acciones */}
+                      <td style={{ 
+                        verticalAlign: 'top',
+                        width: '40%'
+                      }}>
+                        <Typography variant="subtitle2" style={{ 
+                          fontWeight: 600, 
+                          marginBottom: '8px',
+                          color: theme.palette.text.primary
+                        }}>
+                          🔧 Acciones
+                        </Typography>
+                        <div style={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '6px'
+                        }}>
+                          <Button
+                            variant="outlined"
+                            color="primary"
+                            size="small"
+                            onClick={() => handleCompartir(form)}
+                            disabled={!canCompartirFormularios || form.formularioOriginalId}
+                            style={{ 
+                              padding: '4px 8px',
+                              fontSize: '0.7rem',
+                              minWidth: 'auto',
+                              justifyContent: 'flex-start'
+                            }}
+                            startIcon={<ShareIcon style={{ fontSize: 14 }} />}
+                          >
+                            Compartir
+                          </Button>
+                          
+                          <Button
+                            variant="outlined"
+                            color="secondary"
+                            size="small"
+                            onClick={() => navigate(`/editar/${form.id}`)}
+                            style={{ 
+                              padding: '4px 8px',
+                              fontSize: '0.7rem',
+                              minWidth: 'auto',
+                              justifyContent: 'flex-start'
+                            }}
+                            startIcon={<EditIcon style={{ fontSize: 14 }} />}
+                          >
+                            Editar
+                          </Button>
+                          
+                          <Button
+                            variant="outlined"
+                            color="error"
+                            size="small"
+                            onClick={() => handleEliminarFormulario(form)}
+                            style={{ 
+                              padding: '4px 8px',
+                              fontSize: '0.7rem',
+                              minWidth: 'auto',
+                              justifyContent: 'flex-start'
+                            }}
+                            startIcon={<DeleteIcon style={{ fontSize: 14 }} />}
+                          >
+                            Eliminar
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
       {/* Diálogo para compartir */}
-      <Dialog open={openShareId !== null} onClose={() => setOpenShareId(null)}>
-        <DialogTitle>Compartir Formulario</DialogTitle>
-        <DialogContent>
-          <Typography>
-            ¡Listo! Comparte este link con otros administradores:
-          </Typography>
-          <Box sx={{ display: 'flex', alignItems: 'center', mt: 2 }}>
-            <TextField
-              value={shareLink}
-              fullWidth
-              InputProps={{ readOnly: true }}
-              size="small"
-            />
-            <Button
-              onClick={handleCopy}
-              startIcon={<ContentCopyIcon />}
-              sx={{ ml: 1 }}
-              disabled={copying}
-            >
-              {copying ? 'Copiado!' : 'Copiar'}
-            </Button>
-          </Box>
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
-            Cualquier administrador podrá ver y copiar este formulario a su sistema.
-          </Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setOpenShareId(null)}>Cerrar</Button>
-        </DialogActions>
-      </Dialog>
-    </Box>
+      {openShareId && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{
+            backgroundColor: theme.palette.background.paper,
+            borderRadius: '8px',
+            padding: '24px',
+            maxWidth: '500px',
+            width: '90%',
+            boxShadow: '0 4px 20px rgba(0,0,0,0.3)'
+          }}>
+            <Typography variant="h6" style={{ marginBottom: '16px', fontWeight: 600 }}>
+              Compartir Formulario
+            </Typography>
+            <Typography style={{ marginBottom: '16px' }}>
+              ¡Listo! Comparte este link con otros administradores:
+            </Typography>
+            <div style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '8px',
+              marginBottom: '16px'
+            }}>
+              <input
+                value={shareLink}
+                readOnly
+                style={{
+                  flex: 1,
+                  padding: '8px 12px',
+                  border: `1px solid ${theme.palette.divider}`,
+                  borderRadius: '4px',
+                  fontSize: '0.875rem',
+                  backgroundColor: theme.palette.background.default
+                }}
+              />
+              <Button
+                onClick={handleCopy}
+                variant="contained"
+                color="primary"
+                size="small"
+                disabled={copying}
+                style={{ padding: '8px 16px' }}
+              >
+                {copying ? 'Copiado!' : 'Copiar'}
+              </Button>
+            </div>
+            <Typography variant="body2" color="text.secondary" style={{ marginBottom: '16px' }}>
+              Cualquier administrador podrá ver y copiar este formulario a su sistema.
+            </Typography>
+            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+              <Button
+                onClick={() => setOpenShareId(null)}
+                variant="outlined"
+                color="primary"
+              >
+                Cerrar
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   );
 };
 

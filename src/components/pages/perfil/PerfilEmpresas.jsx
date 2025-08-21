@@ -8,7 +8,7 @@ import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { db } from '../../../firebaseConfig';
 import { useNavigate } from 'react-router-dom';
 
-// Componente simple para mostrar sucursales
+// Componente simple para mostrar sucursales en 2 columnas
 const SucursalesList = ({ empresaId }) => {
   const [sucursales, setSucursales] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -57,31 +57,55 @@ const SucursalesList = ({ empresaId }) => {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+    <div style={{ 
+      display: 'grid', 
+      gridTemplateColumns: 'repeat(2, 1fr)', 
+      gap: '6px',
+      maxHeight: '120px',
+      overflowY: 'auto'
+    }}>
       {sucursales.map(sucursal => (
         <div key={sucursal.id} style={{
           display: 'flex',
           alignItems: 'center',
           gap: '4px',
-          padding: '4px 8px',
+          padding: '6px 8px',
           backgroundColor: alpha(theme.palette.background.paper, 0.5),
-          borderRadius: '4px',
+          borderRadius: '6px',
           border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
-          fontSize: '0.75rem'
+          fontSize: '0.7rem',
+          minHeight: '32px'
         }}>
-          <StoreIcon style={{ fontSize: 12, color: theme.palette.secondary.main }} />
-          <span style={{ fontWeight: 500, color: theme.palette.text.primary }}>
-            {sucursal.nombre}
-          </span>
-          {sucursal.direccion && (
+          <StoreIcon style={{ fontSize: 12, color: theme.palette.secondary.main, flexShrink: 0 }} />
+          <div style={{ 
+            display: 'flex', 
+            flexDirection: 'column', 
+            gap: '2px',
+            minWidth: 0,
+            flex: 1
+          }}>
             <span style={{ 
-              marginLeft: 'auto',
-              color: theme.palette.text.secondary,
-              fontSize: '0.7rem'
+              fontWeight: 500, 
+              color: theme.palette.text.primary,
+              fontSize: '0.7rem',
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis'
             }}>
-              {sucursal.direccion}
+              {sucursal.nombre}
             </span>
-          )}
+            {sucursal.direccion && (
+              <span style={{ 
+                color: theme.palette.text.secondary,
+                fontSize: '0.65rem',
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis'
+              }}>
+                {sucursal.direccion}
+              </span>
+            )}
+          </div>
         </div>
       ))}
     </div>
@@ -202,11 +226,10 @@ const PerfilEmpresas = ({ empresas, loading }) => {
             e.target.style.transform = 'translateY(0)';
           }}>
             <div style={{ padding: '24px' }}>
-              {/* Estructura usando tabla CSS para evitar conflictos de flexbox */}
+              {/* Estructura usando tabla CSS con 3 columnas - más espacio para sucursales */}
               <table style={{ 
                 width: '100%', 
-                borderCollapse: 'collapse',
-                marginBottom: '16px'
+                borderCollapse: 'collapse'
               }}>
                 <tbody>
                   <tr>
@@ -244,7 +267,11 @@ const PerfilEmpresas = ({ empresas, loading }) => {
                     </td>
                     
                     {/* Información principal */}
-                    <td style={{ verticalAlign: 'top' }}>
+                    <td style={{ 
+                      verticalAlign: 'top',
+                      paddingRight: '24px',
+                      width: '35%'
+                    }}>
                       <div style={{
                         display: 'flex',
                         alignItems: 'center',
@@ -299,24 +326,24 @@ const PerfilEmpresas = ({ empresas, loading }) => {
                         </Typography>
                       </div>
                     </td>
+                    
+                    {/* Sucursales - más espacio */}
+                    <td style={{ 
+                      verticalAlign: 'top',
+                      width: '55%'
+                    }}>
+                      <Typography variant="subtitle2" style={{ 
+                        fontWeight: 600, 
+                        marginBottom: '8px',
+                        color: theme.palette.text.primary
+                      }}>
+                        📍 Sucursales
+                      </Typography>
+                      <SucursalesList empresaId={empresa.id} />
+                    </td>
                   </tr>
                 </tbody>
               </table>
-
-              {/* Segunda fila: Sucursales */}
-              <div style={{
-                borderTop: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
-                paddingTop: '16px'
-              }}>
-                <Typography variant="subtitle2" style={{ 
-                  fontWeight: 600, 
-                  marginBottom: '8px',
-                  color: theme.palette.text.primary
-                }}>
-                  📍 Sucursales
-                </Typography>
-                <SucursalesList empresaId={empresa.id} />
-              </div>
             </div>
           </div>
         ))}
