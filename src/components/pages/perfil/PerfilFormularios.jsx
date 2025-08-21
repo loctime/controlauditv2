@@ -11,7 +11,7 @@ import { usePermissions } from '../admin/hooks/usePermissions';
 import { useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
 
-const PerfilFormularios = ({ formularios, loading }) => {
+const PerfilFormularios = ({ formularios: formulariosProp, loading }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const navigate = useNavigate();
@@ -22,9 +22,23 @@ const PerfilFormularios = ({ formularios, loading }) => {
   const [modoEdicion, setModoEdicion] = useState({}); // {formId: seccionIndex: boolean}
   const [preguntasEditadas, setPreguntasEditadas] = useState({}); // {formId: {seccionIndex: [preguntas]}}
   const [guardando, setGuardando] = useState({}); // {formId: boolean}
+  const [compartiendo, setCompartiendo] = useState({}); // {formId: boolean}
+  const [formularios, setFormularios] = useState(formulariosProp || []); // Estado local para formularios
   const { canCompartirFormularios } = usePermissions();
 
-  const handleCompartir = async (form) => {
+  // Actualizar formularios cuando cambien las props
+  React.useEffect(() => {
+    setFormularios(formulariosProp || []);
+  }, [formulariosProp]);
+
+  // Función para actualizar un formulario específico en el estado local
+  const updateFormularioLocal = (formId, updates) => {
+    setFormularios(prev => prev.map(form => 
+      form.id === formId ? { ...form, ...updates } : form
+    ));
+  };
+
+    const handleCompartir = async (form) => {
     if (!canCompartirFormularios) return;
     
     // Verificar si el formulario es propio (no copiado)
@@ -33,18 +47,40 @@ const PerfilFormularios = ({ formularios, loading }) => {
       return;
     }
     
-    let publicSharedId = form.publicSharedId;
-    if (!form.esPublico || !form.publicSharedId) {
-      publicSharedId = uuidv4();
-      await updateDoc(doc(db, 'formularios', form.id), {
-        esPublico: true,
-        publicSharedId
-      });
-      console.debug('[CompartirFormulario] Formulario actualizado como público:', form.id, publicSharedId);
+    setCompartiendo(prev => ({ ...prev, [form.id]: true }));
+    
+    try {
+      if (form.esPublico && form.publicSharedId) {
+        // Si ya está compartido, desactivar el compartir
+        await updateDoc(doc(db, 'formularios', form.id), {
+          esPublico: false,
+          publicSharedId: null
+        });
+        console.debug('[PerfilFormularios] Formulario desactivado como público:', form.id);
+        // Actualizar estado local reactivamente
+        updateFormularioLocal(form.id, { esPublico: false, publicSharedId: null });
+        Swal.fire('Éxito', 'El formulario ya no es público', 'success');
+      } else {
+        // Si no está compartido, activar el compartir
+        const publicSharedId = uuidv4();
+        await updateDoc(doc(db, 'formularios', form.id), {
+          esPublico: true,
+          publicSharedId
+        });
+        console.debug('[CompartirFormulario] Formulario actualizado como público:', form.id, publicSharedId);
+        // Actualizar estado local reactivamente
+        updateFormularioLocal(form.id, { esPublico: true, publicSharedId });
+        
+        const url = `${window.location.origin}/formularios/public/${publicSharedId}`;
+        setShareLink(url);
+        setOpenShareId(form.id);
+      }
+    } catch (error) {
+      console.error('Error al cambiar estado de compartir:', error);
+      Swal.fire('Error', 'No se pudo cambiar el estado del formulario', 'error');
+    } finally {
+      setCompartiendo(prev => ({ ...prev, [form.id]: false }));
     }
-    const url = `${window.location.origin}/formularios/public/${publicSharedId}`;
-    setShareLink(url);
-    setOpenShareId(form.id);
   };
 
   const handleCopy = async () => {
@@ -68,9 +104,9 @@ const PerfilFormularios = ({ formularios, loading }) => {
     if (result.isConfirmed) {
       try {
         await deleteDoc(doc(db, 'formularios', form.id));
+        // Actualizar estado local reactivamente
+        setFormularios(prev => prev.filter(f => f.id !== form.id));
         Swal.fire('Eliminado', 'El formulario ha sido eliminado exitosamente.', 'success');
-        // Recargar la página para actualizar la lista
-        window.location.reload();
       } catch (error) {
         console.error('Error al eliminar formulario:', error);
         Swal.fire('Error', 'No se pudo eliminar el formulario.', 'error');
@@ -201,6 +237,9 @@ const PerfilFormularios = ({ formularios, loading }) => {
         ultimaModificacion: new Date()
       });
 
+      // Actualizar estado local reactivamente
+      updateFormularioLocal(formId, { secciones: preguntasActualizadas, ultimaModificacion: new Date() });
+
       // Desactivar modo edición
       setModoEdicion(prev => ({
         ...prev,
@@ -223,9 +262,6 @@ const PerfilFormularios = ({ formularios, loading }) => {
       });
 
       Swal.fire('Éxito', 'Preguntas actualizadas correctamente', 'success');
-      
-      // Recargar la página para mostrar los cambios
-      window.location.reload();
     } catch (error) {
       console.error('Error al guardar preguntas:', error);
       Swal.fire('Error', 'No se pudieron guardar las preguntas', 'error');
@@ -373,21 +409,22 @@ const PerfilFormularios = ({ formularios, loading }) => {
                           gap: '4px'
                         }}>
                           <Button
-                            variant="outlined"
-                            color="primary"
+                            variant={form.esPublico && form.publicSharedId ? "contained" : "outlined"}
+                            color={form.esPublico && form.publicSharedId ? "success" : "primary"}
                             size="small"
                             onClick={() => handleCompartir(form)}
-                            disabled={!canCompartirFormularios || form.formularioOriginalId}
+                            disabled={!canCompartirFormularios || form.formularioOriginalId || compartiendo[form.id]}
                             style={{ 
                               padding: '2px 6px',
                               fontSize: '0.65rem',
                               minWidth: 'auto',
                               justifyContent: 'flex-start',
-                              height: '24px'
+                              height: '24px',
+                              fontWeight: form.esPublico && form.publicSharedId ? 600 : 400
                             }}
-                            startIcon={<ShareIcon style={{ fontSize: 12 }} />}
+                            startIcon={compartiendo[form.id] ? <CircularProgress size={10} /> : <ShareIcon style={{ fontSize: 12 }} />}
                           >
-                            COMPARTIR
+                            {compartiendo[form.id] ? 'PROCESANDO...' : (form.esPublico && form.publicSharedId ? 'COMPARTIDO' : 'COMPARTIR')}
                           </Button>
                           
                           <Button
