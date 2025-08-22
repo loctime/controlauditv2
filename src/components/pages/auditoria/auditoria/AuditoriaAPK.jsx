@@ -129,24 +129,6 @@ const AuditoriaAPK = () => {
                 ControlAudit
               </Typography>
             </Box>
-
-            {/* Botón de menú hamburguesa */}
-            <IconButton
-              onClick={handleDrawerToggle}
-              sx={{
-                position: 'absolute',
-                right: 16,
-                top: '50%',
-                transform: 'translateY(-50%)',
-                color: 'white',
-                backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                '&:hover': {
-                  backgroundColor: 'rgba(255, 255, 255, 0.2)'
-                }
-              }}
-            >
-              <MenuIcon />
-            </IconButton>
           
                      {/* Botones en la parte inferior */}
            <Box sx={{ 
@@ -154,7 +136,8 @@ const AuditoriaAPK = () => {
              gap: 1.5, // Reducido el gap entre botones
              justifyContent: 'center',
              alignItems: 'center',
-             mb: isMobile ? 1 : 0 // Agregar margen inferior para subirlos
+             mb: isMobile ? 1 : 0, // Agregar margen inferior para subirlos
+             position: 'relative' // Para posicionar el botón de menú
            }}>
              <Button
                variant={isAuditoria ? "contained" : "outlined"}
@@ -197,6 +180,21 @@ const AuditoriaAPK = () => {
              >
                {isMobile ? 'Reportes' : 'Ver Reportes'}
              </Button>
+
+             {/* Botón de menú hamburguesa en la misma fila */}
+             <IconButton
+               onClick={handleDrawerToggle}
+               sx={{
+                 color: 'white',
+                 backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                 ml: 1, // Margen izquierdo para separarlo de los botones
+                 '&:hover': {
+                   backgroundColor: 'rgba(255, 255, 255, 0.2)'
+                 }
+               }}
+             >
+               <MenuIcon />
+             </IconButton>
            </Box>
         </Toolbar>
       </AppBar>
