@@ -210,11 +210,13 @@ const ReportesAPK = () => {
         open={drawerOpen}
         onClose={handleDrawerToggle}
         sx={{
+          zIndex: 9999, // Asegurar que esté por encima de todo
           '& .MuiDrawer-paper': {
             width: '50vw',
             maxWidth: '300px',
             backgroundColor: theme.palette.background.paper,
-            boxShadow: '-4px 0 8px rgba(0,0,0,0.15)'
+            boxShadow: '-4px 0 8px rgba(0,0,0,0.15)',
+            zIndex: 9999 // Asegurar que el papel del drawer esté por encima
           }
         }}
       >
