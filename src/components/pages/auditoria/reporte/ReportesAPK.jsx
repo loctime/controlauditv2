@@ -53,12 +53,12 @@ const ReportesAPK = () => {
           // Agregar padding superior para separar de la barra de estado
           pt: isMobile ? 'env(safe-area-inset-top, 20px)' : 0,
           // Agregar altura explícita para que se vea el cambio
-          height: isMobile ? '100px' : '90px',
-          minHeight: isMobile ? '100px' : '90px'
+          height: isMobile ? '120px' : '110px',
+          minHeight: isMobile ? '120px' : '110px'
         }}
       >
         <Toolbar sx={{ 
-          minHeight: isMobile ? '100px' : '90px', // Reducido a la mitad
+          minHeight: isMobile ? '120px' : '110px', // Aumentado un poco
           px: isMobile ? 3 : 4, // Aumentado padding horizontal
           py: isMobile ? 2 : 2.5, // Aumentado padding vertical
           // Agregar padding superior adicional para móvil
@@ -73,7 +73,9 @@ const ReportesAPK = () => {
             display: 'flex', 
             justifyContent: 'center', 
             alignItems: 'center',
-            flex: 1
+            flex: 1,
+            // Agregar margen superior para evitar la cámara frontal
+            mt: isMobile ? 2 : 0
           }}>
             <Typography 
               variant={isMobile ? "h4" : "h3"}
@@ -90,9 +92,10 @@ const ReportesAPK = () => {
           {/* Botones en la parte inferior */}
           <Box sx={{ 
             display: 'flex', 
-            gap: 2, 
+            gap: 1.5, // Reducido el gap entre botones
             justifyContent: 'center',
-            alignItems: 'center'
+            alignItems: 'center',
+            mb: isMobile ? 1 : 0 // Agregar margen inferior para subirlos
           }}>
             <Button
               variant={isAuditoria ? "contained" : "outlined"}
@@ -100,13 +103,13 @@ const ReportesAPK = () => {
               onClick={handleNavigateToAuditoria}
               sx={{
                 minWidth: 'auto',
-                px: isMobile ? 2 : 3, // Aumentado padding horizontal
-                py: isMobile ? 1 : 1.5, // Aumentado padding vertical
-                fontSize: isMobile ? '0.75rem' : '0.85rem', // Aumentado ligeramente
+                px: isMobile ? 1.5 : 2.5, // Reducido padding horizontal
+                py: isMobile ? 0.75 : 1, // Reducido padding vertical
+                fontSize: isMobile ? '0.7rem' : '0.8rem', // Reducido tamaño de fuente
                 bgcolor: isAuditoria ? 'white' : 'transparent',
                 color: isAuditoria ? 'primary.main' : 'white',
                 borderColor: 'white',
-                borderRadius: 2,
+                borderRadius: 1.5, // Reducido border radius
                 '&:hover': {
                   bgcolor: isAuditoria ? alpha(theme.palette.common.white, 0.9) : alpha(theme.palette.common.white, 0.1)
                 }
@@ -121,13 +124,13 @@ const ReportesAPK = () => {
               onClick={handleNavigateToReportes}
               sx={{
                 minWidth: 'auto',
-                px: isMobile ? 2 : 3, // Aumentado padding horizontal
-                py: isMobile ? 1 : 1.5, // Aumentado padding vertical
-                fontSize: isMobile ? '0.75rem' : '0.85rem', // Aumentado ligeramente
+                px: isMobile ? 1.5 : 2.5, // Reducido padding horizontal
+                py: isMobile ? 0.75 : 1, // Reducido padding vertical
+                fontSize: isMobile ? '0.7rem' : '0.8rem', // Reducido tamaño de fuente
                 bgcolor: isReportes ? 'white' : 'transparent',
                 color: isReportes ? 'primary.main' : 'white',
                 borderColor: 'white',
-                borderRadius: 2,
+                borderRadius: 1.5, // Reducido border radius
                 '&:hover': {
                   bgcolor: isReportes ? alpha(theme.palette.common.white, 0.9) : alpha(theme.palette.common.white, 0.1)
                 }
