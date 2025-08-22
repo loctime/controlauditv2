@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { 
   AppBar, 
@@ -12,10 +12,10 @@ import {
 } from '@mui/material';
 import AssessmentIcon from '@mui/icons-material/Assessment';
 import AssignmentIcon from '@mui/icons-material/Assignment';
-import Auditoria from './Auditoria';
+import ReportesPage from './ReportesPage';
 
-// Componente wrapper para auditoría en APK con navegación
-const AuditoriaAPK = () => {
+// Componente wrapper para reportes en APK con navegación
+const ReportesAPK = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const theme = useTheme();
@@ -61,16 +61,16 @@ const AuditoriaAPK = () => {
           // Agregar padding superior adicional para móvil
           paddingTop: isMobile ? 'calc(env(safe-area-inset-top, 20px) + 16px)' : undefined
         }}>
-                                             <Typography 
-               variant={isMobile ? "h4" : "h3"} // Aumentado de h5/h4 a h4/h3
-               sx={{ 
-                 flexGrow: 1,
-                 fontWeight: 600,
-                 fontSize: isMobile ? '1.3rem' : '1.6rem' // Aumentado tamaño de fuente
-               }}
-             >
-               ControlAudit
-             </Typography>
+          <Typography 
+            variant={isMobile ? "h4" : "h3"} // Aumentado de h5/h4 a h4/h3
+            sx={{ 
+              flexGrow: 1,
+              fontWeight: 600,
+              fontSize: isMobile ? '1.3rem' : '1.6rem' // Aumentado tamaño de fuente
+            }}
+          >
+            ControlAudit
+          </Typography>
           
           <Box sx={{ display: 'flex', gap: 2 }}> {/* Aumentado gap entre botones */}
             <Button
@@ -119,11 +119,11 @@ const AuditoriaAPK = () => {
       </AppBar>
 
       {/* Contenido principal */}
-      <Box sx={{ flex: 1, overflow: 'hidden' }}>
-        <Auditoria />
+      <Box sx={{ flex: 1, overflow: 'auto' }}>
+        <ReportesPage />
       </Box>
     </div>
   );
 };
 
-export default AuditoriaAPK;
+export default ReportesAPK;
