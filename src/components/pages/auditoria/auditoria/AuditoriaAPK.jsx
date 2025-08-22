@@ -46,7 +46,7 @@ const AuditoriaAPK = () => {
   const userRole = userProfile?.role || 'user';
 
   const handleNavigateToReportes = () => {
-    navigate('/reportes');
+    navigate('/reportes-apk');
   };
 
   const handleNavigateToAuditoria = () => {

@@ -1,6 +1,7 @@
 import { Route, Routes } from "react-router-dom";
 import React, { Suspense } from "react";
 import Navbar from "../components/layout/navbar/Navbar";
+import APKNavigation from "../components/layout/navbar/APKNavigation";
 import { routesWeb } from "./routesWeb";
 import { routesAPK } from "./routesAPK";
 import Login from "../components/pages/login/Login";
@@ -40,9 +41,11 @@ const AppRouter = () => {
               path={path} 
               element={
                 isLogged ? (
-                  <Suspense fallback={<LazyLoader message={`Cargando auditoría...`} />}>
-                    <Element />
-                  </Suspense>
+                  <APKNavigation>
+                    <Suspense fallback={<LazyLoader message={`Cargando ${id}...`} />}>
+                      <Element />
+                    </Suspense>
+                  </APKNavigation>
                 ) : (
                   <Login />
                 )
