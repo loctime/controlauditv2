@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { 
   AppBar, 
@@ -8,10 +8,24 @@ import {
   Box,
   useTheme,
   useMediaQuery,
-  alpha
+  alpha,
+  IconButton,
+  Drawer,
+  List,
+  ListItem,
+  ListItemIcon,
+  ListItemText,
+  Divider,
+  Avatar
 } from '@mui/material';
 import AssessmentIcon from '@mui/icons-material/Assessment';
 import AssignmentIcon from '@mui/icons-material/Assignment';
+import MenuIcon from '@mui/icons-material/Menu';
+import DashboardIcon from '@mui/icons-material/Dashboard';
+import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
+import PersonIcon from '@mui/icons-material/Person';
+import LogoutIcon from '@mui/icons-material/Logout';
+import EmailIcon from '@mui/icons-material/Email';
 import ReportesPage from './ReportesPage';
 
 // Componente wrapper para reportes en APK con navegación
@@ -20,9 +34,14 @@ const ReportesAPK = () => {
   const location = useLocation();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const [drawerOpen, setDrawerOpen] = useState(false);
   
   const isAuditoria = location.pathname === '/' || location.pathname === '/auditoria';
   const isReportes = location.pathname === '/reportes';
+
+  // Obtener datos del usuario del localStorage
+  const userEmail = localStorage.getItem('userEmail') || 'Usuario';
+  const userRole = localStorage.getItem('userRole') || 'user';
 
   const handleNavigateToReportes = () => {
     navigate('/reportes');
@@ -30,6 +49,28 @@ const ReportesAPK = () => {
 
   const handleNavigateToAuditoria = () => {
     navigate('/');
+  };
+
+  const handleDrawerToggle = () => {
+    setDrawerOpen(!drawerOpen);
+  };
+
+  const handleMenuClick = (action) => {
+    setDrawerOpen(false);
+    switch (action) {
+      case 'dashboard':
+        navigate('/dashboard');
+        break;
+      case 'profile':
+        navigate('/perfil');
+        break;
+      case 'logout':
+        localStorage.clear();
+        navigate('/login');
+        break;
+      default:
+        break;
+    }
   };
 
   return (
@@ -88,6 +129,24 @@ const ReportesAPK = () => {
               ControlAudit
             </Typography>
           </Box>
+
+          {/* Botón de menú hamburguesa */}
+          <IconButton
+            onClick={handleDrawerToggle}
+            sx={{
+              position: 'absolute',
+              right: 16,
+              top: '50%',
+              transform: 'translateY(-50%)',
+              color: 'white',
+              backgroundColor: 'rgba(255, 255, 255, 0.1)',
+              '&:hover': {
+                backgroundColor: 'rgba(255, 255, 255, 0.2)'
+              }
+            }}
+          >
+            <MenuIcon />
+          </IconButton>
           
           {/* Botones en la parte inferior */}
           <Box sx={{ 
@@ -146,6 +205,126 @@ const ReportesAPK = () => {
       <Box sx={{ flex: 1, overflow: 'auto' }}>
         <ReportesPage />
       </Box>
+
+      {/* Drawer del menú */}
+      <Drawer
+        anchor="right"
+        open={drawerOpen}
+        onClose={handleDrawerToggle}
+        sx={{
+          '& .MuiDrawer-paper': {
+            width: '50vw',
+            maxWidth: '300px',
+            backgroundColor: theme.palette.background.paper,
+            boxShadow: '-4px 0 8px rgba(0,0,0,0.15)'
+          }
+        }}
+      >
+        <Box sx={{ p: 2, pt: 4 }}>
+          {/* Header del drawer */}
+          <Box sx={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            mb: 3,
+            pb: 2,
+            borderBottom: `1px solid ${theme.palette.divider}`
+          }}>
+            <Avatar sx={{ 
+              bgcolor: theme.palette.primary.main, 
+              mr: 2,
+              width: 48,
+              height: 48
+            }}>
+              <PersonIcon />
+            </Avatar>
+            <Box>
+              <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                {userEmail}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                {userRole === 'admin' ? 'Administrador' : 'Usuario'}
+              </Typography>
+            </Box>
+          </Box>
+
+          {/* Lista de opciones del menú */}
+          <List>
+            {/* Email del login */}
+            <ListItem button sx={{ mb: 1, borderRadius: 1 }}>
+              <ListItemIcon>
+                <EmailIcon color="primary" />
+              </ListItemIcon>
+              <ListItemText 
+                primary="Email" 
+                secondary={userEmail}
+                primaryTypographyProps={{ fontSize: '0.9rem' }}
+                secondaryTypographyProps={{ fontSize: '0.8rem' }}
+              />
+            </ListItem>
+
+            <Divider sx={{ my: 2 }} />
+
+            {/* Calendario/Dashboard según rol */}
+            <ListItem 
+              button 
+              onClick={() => handleMenuClick('dashboard')}
+              sx={{ mb: 1, borderRadius: 1 }}
+            >
+              <ListItemIcon>
+                {userRole === 'admin' ? (
+                  <DashboardIcon color="primary" />
+                ) : (
+                  <CalendarTodayIcon color="primary" />
+                )}
+              </ListItemIcon>
+              <ListItemText 
+                primary={userRole === 'admin' ? 'Dashboard' : 'Calendario'}
+                primaryTypographyProps={{ fontSize: '0.9rem' }}
+              />
+            </ListItem>
+
+            {/* Perfil */}
+            <ListItem 
+              button 
+              onClick={() => handleMenuClick('profile')}
+              sx={{ mb: 1, borderRadius: 1 }}
+            >
+              <ListItemIcon>
+                <PersonIcon color="primary" />
+              </ListItemIcon>
+              <ListItemText 
+                primary="Perfil"
+                primaryTypographyProps={{ fontSize: '0.9rem' }}
+              />
+            </ListItem>
+
+            <Divider sx={{ my: 2 }} />
+
+            {/* Cerrar sesión */}
+            <ListItem 
+              button 
+              onClick={() => handleMenuClick('logout')}
+              sx={{ 
+                mb: 1, 
+                borderRadius: 1,
+                backgroundColor: 'error.light',
+                color: 'error.contrastText',
+                '&:hover': {
+                  backgroundColor: 'error.main'
+                }
+              }}
+            >
+              <ListItemIcon>
+                <LogoutIcon sx={{ color: 'inherit' }} />
+              </ListItemIcon>
+              <ListItemText 
+                primary="Cerrar Sesión"
+                primaryTypographyProps={{ fontSize: '0.9rem' }}
+              />
+            </ListItem>
+          </List>
+        </Box>
+      </Drawer>
     </div>
   );
 };

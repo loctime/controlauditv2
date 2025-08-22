@@ -55,8 +55,8 @@ npm run die "Cualquier mensaje"
 
 | Comando | Descripción |
 |---------|-------------|
-| `npm run fer` | **Build + sync + clean Android** (recomendado) |
-| `npm run android:build` | Build + sync + clean Android |
+| `npm run fer` | **Build + sync + clean + APK Android** (recomendado) |
+| `npm run android:build` | Build + sync + clean + APK Android |
 | `npm run android:clean` | Solo clean de Android |
 | `npm run android:dev` | Build + sync + run Android |
 | `npm run cap:sync` | Solo sync con Capacitor |
@@ -129,8 +129,17 @@ npm run die "Nueva funcionalidad"
 ### **3. Solo Android:**
 ```bash
 npm run fer
-# Build + sync + clean Android (recomendado)
+# Build + sync + clean + APK Android (recomendado)
 ```
+
+**¿Qué hace `npm run fer`?**
+1. **Build React:** Compila el código JavaScript/React
+2. **Clean Android:** Limpia archivos temporales de Android
+3. **Sync Capacitor:** Copia archivos web a Android
+4. **Fix Java:** Corrige versiones de Java
+5. **Generate APK:** Crea la APK final lista para instalar
+
+**Resultado:** APK lista en `android/app/build/outputs/apk/debug/app-debug.apk`
 
 ### **4. Solo Web:**
 ```bash
