@@ -53,29 +53,47 @@ const ReportesAPK = () => {
           // Agregar padding superior para separar de la barra de estado
           pt: isMobile ? 'env(safe-area-inset-top, 20px)' : 0,
           // Agregar altura explícita para que se vea el cambio
-          height: isMobile ? '200px' : '180px',
-          minHeight: isMobile ? '200px' : '180px'
+          height: isMobile ? '100px' : '90px',
+          minHeight: isMobile ? '100px' : '90px'
         }}
       >
         <Toolbar sx={{ 
-          minHeight: isMobile ? '200px' : '180px', // Duplicado el tamaño - el doble de grande
+          minHeight: isMobile ? '100px' : '90px', // Reducido a la mitad
           px: isMobile ? 3 : 4, // Aumentado padding horizontal
           py: isMobile ? 2 : 2.5, // Aumentado padding vertical
           // Agregar padding superior adicional para móvil
-          paddingTop: isMobile ? 'calc(env(safe-area-inset-top, 20px) + 16px)' : undefined
+          paddingTop: isMobile ? 'calc(env(safe-area-inset-top, 20px) + 16px)' : undefined,
+          // Cambiar layout para poner botones abajo
+          flexDirection: 'column',
+          justifyContent: 'space-between',
+          alignItems: 'stretch'
         }}>
-          <Typography 
-            variant={isMobile ? "h4" : "h3"} // Aumentado de h5/h4 a h4/h3
-            sx={{ 
-              flexGrow: 1,
-              fontWeight: 600,
-              fontSize: isMobile ? '1.3rem' : '1.6rem' // Aumentado tamaño de fuente
-            }}
-          >
-            ControlAudit
-          </Typography>
+          {/* Título en la parte superior */}
+          <Box sx={{ 
+            display: 'flex', 
+            justifyContent: 'center', 
+            alignItems: 'center',
+            flex: 1
+          }}>
+            <Typography 
+              variant={isMobile ? "h4" : "h3"}
+              sx={{ 
+                fontWeight: 600,
+                fontSize: isMobile ? '1.3rem' : '1.6rem',
+                textAlign: 'center'
+              }}
+            >
+              ControlAudit
+            </Typography>
+          </Box>
           
-          <Box sx={{ display: 'flex', gap: 2 }}> {/* Aumentado gap entre botones */}
+          {/* Botones en la parte inferior */}
+          <Box sx={{ 
+            display: 'flex', 
+            gap: 2, 
+            justifyContent: 'center',
+            alignItems: 'center'
+          }}>
             <Button
               variant={isAuditoria ? "contained" : "outlined"}
               startIcon={<AssignmentIcon />}

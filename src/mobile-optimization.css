@@ -613,9 +613,9 @@
     top: 0 !important;
     left: 0 !important;
     right: 0 !important;
-    /* Hacer el navbar más grande para evitar que la barra de estado lo tape */
-    height: calc(200px + env(safe-area-inset-top, 0px)) !important;
-    min-height: calc(200px + env(safe-area-inset-top, 0px)) !important;
+    /* Hacer el navbar más compacto */
+    height: calc(100px + env(safe-area-inset-top, 0px)) !important;
+    min-height: calc(100px + env(safe-area-inset-top, 0px)) !important;
     /* Asegurar que esté por encima de todo */
     z-index: 1200 !important;
     /* Mejorar la apariencia */
@@ -626,9 +626,9 @@
 
   /* Ajustar el toolbar del navbar */
   .MuiToolbar-root {
-    /* Hacer el toolbar más grande */
-    min-height: calc(200px + env(safe-area-inset-top, 0px)) !important;
-    height: calc(200px + env(safe-area-inset-top, 0px)) !important;
+    /* Hacer el toolbar más compacto */
+    min-height: calc(100px + env(safe-area-inset-top, 0px)) !important;
+    height: calc(100px + env(safe-area-inset-top, 0px)) !important;
     /* Asegurar que el contenido esté bien centrado */
     display: flex !important;
     align-items: center !important;
@@ -661,9 +661,9 @@
     font-weight: 600 !important;
   }
 
-  /* Ajustar el contenido principal para el navbar más grande */
+  /* Ajustar el contenido principal para el navbar más compacto */
   main {
-    margin-top: calc(200px + env(safe-area-inset-top, 0px)) !important;
+    margin-top: calc(100px + env(safe-area-inset-top, 0px)) !important;
     padding-top: 0 !important;
   }
 
@@ -695,22 +695,22 @@
 
 /* Optimizaciones específicas para pantallas muy pequeñas */
 @media (max-width: 480px) {
-  /* Hacer el navbar aún más grande en pantallas muy pequeñas */
+  /* Hacer el navbar más compacto en pantallas muy pequeñas */
   .MuiAppBar-root {
-    height: calc(200px + env(safe-area-inset-top, 0px)) !important;
-    min-height: calc(200px + env(safe-area-inset-top, 0px)) !important;
+    height: calc(100px + env(safe-area-inset-top, 0px)) !important;
+    min-height: calc(100px + env(safe-area-inset-top, 0px)) !important;
   }
 
   .MuiToolbar-root {
-    min-height: calc(200px + env(safe-area-inset-top, 0px)) !important;
-    height: calc(200px + env(safe-area-inset-top, 0px)) !important;
+    min-height: calc(100px + env(safe-area-inset-top, 0px)) !important;
+    height: calc(100px + env(safe-area-inset-top, 0px)) !important;
     padding-left: 12px !important;
     padding-right: 12px !important;
   }
 
   /* Ajustar el contenido principal */
   main {
-    margin-top: calc(200px + env(safe-area-inset-top, 0px)) !important;
+    margin-top: calc(100px + env(safe-area-inset-top, 0px)) !important;
   }
 
   /* Hacer los botones aún más grandes */
@@ -728,20 +728,20 @@
 
 /* Optimizaciones específicas para pantallas ultra pequeñas */
 @media (max-width: 360px) {
-  /* Hacer el navbar aún más grande */
+  /* Hacer el navbar más compacto */
   .MuiAppBar-root {
-    height: calc(200px + env(safe-area-inset-top, 0px)) !important;
-    min-height: calc(200px + env(safe-area-inset-top, 0px)) !important;
+    height: calc(100px + env(safe-area-inset-top, 0px)) !important;
+    min-height: calc(100px + env(safe-area-inset-top, 0px)) !important;
   }
 
   .MuiToolbar-root {
-    min-height: calc(200px + env(safe-area-inset-top, 0px)) !important;
-    height: calc(200px + env(safe-area-inset-top, 0px)) !important;
+    min-height: calc(100px + env(safe-area-inset-top, 0px)) !important;
+    height: calc(100px + env(safe-area-inset-top, 0px)) !important;
   }
 
   /* Ajustar el contenido principal */
   main {
-    margin-top: calc(200px + env(safe-area-inset-top, 0px)) !important;
+    margin-top: calc(100px + env(safe-area-inset-top, 0px)) !important;
   }
 }
 
