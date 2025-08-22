@@ -27,6 +27,7 @@ import PersonIcon from '@mui/icons-material/Person';
 import LogoutIcon from '@mui/icons-material/Logout';
 import EmailIcon from '@mui/icons-material/Email';
 import Auditoria from './Auditoria';
+import { useAuth } from '../../../context/AuthContext';
 
 // Componente wrapper para auditoría en APK con navegación
 const AuditoriaAPK = () => {
@@ -35,13 +36,14 @@ const AuditoriaAPK = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const { user, userProfile, logoutContext } = useAuth();
   
   const isAuditoria = location.pathname === '/' || location.pathname === '/auditoria';
   const isReportes = location.pathname === '/reportes';
 
-  // Obtener datos del usuario del localStorage
-  const userEmail = localStorage.getItem('userEmail') || 'Usuario';
-  const userRole = localStorage.getItem('userRole') || 'user';
+  // Obtener datos del usuario del contexto de autenticación
+  const userEmail = user?.email || userProfile?.email || 'Usuario';
+  const userRole = userProfile?.role || 'user';
 
   const handleNavigateToReportes = () => {
     navigate('/reportes');
@@ -55,7 +57,7 @@ const AuditoriaAPK = () => {
     setDrawerOpen(!drawerOpen);
   };
 
-  const handleMenuClick = (action) => {
+  const handleMenuClick = async (action) => {
     setDrawerOpen(false);
     switch (action) {
       case 'dashboard':
@@ -65,7 +67,7 @@ const AuditoriaAPK = () => {
         navigate('/perfil');
         break;
       case 'logout':
-        localStorage.clear();
+        await logoutContext();
         navigate('/login');
         break;
       default:

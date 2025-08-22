@@ -208,16 +208,30 @@ const AuthContextComponent = ({ children }) => {
     localStorage.setItem("isLogged", JSON.stringify(true));
   };
 
-  const logoutContext = () => {
-    setUser(null);
-    setUserProfile(null);
-    setIsLogged(false);
-    setUserEmpresas([]);
-    setUserAuditorias([]);
-    // setSocios([]); // Eliminado: socios
-    setAuditoriasCompartidas([]);
-    localStorage.removeItem("userInfo");
-    localStorage.removeItem("isLogged");
+  const logoutContext = async () => {
+    try {
+      // Cerrar sesión de Firebase
+      await auth.signOut();
+      
+      // Limpiar estado local
+      setUser(null);
+      setUserProfile(null);
+      setIsLogged(false);
+      setUserEmpresas([]);
+      setUserAuditorias([]);
+      // setSocios([]); // Eliminado: socios
+      setAuditoriasCompartidas([]);
+      setRole(null);
+      setPermisos({});
+      setBloqueado(false);
+      setMotivoBloqueo('');
+      
+      // Limpiar localStorage
+      localStorage.removeItem("userInfo");
+      localStorage.removeItem("isLogged");
+    } catch (error) {
+      console.error('Error al cerrar sesión:', error);
+    }
   };
 
   // Función para actualizar perfil del usuario

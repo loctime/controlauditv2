@@ -11,30 +11,47 @@ import DashboardProtected from "./DashboardProtected";
 import VistaFormularioPublico from '../components/pages/formulario/VistaFormularioPublico';
 import LazyLoader from '../components/common/LazyLoader';
 import { usePlatform } from '../hooks/usePlatform';
+import { useAuth } from '../components/context/AuthContext';
 
 const AppRouter = () => {
   const { isAPK, isWeb, isLoading } = usePlatform();
+  const { isLogged, loading: authLoading } = useAuth();
 
   // Mostrar loader mientras se detecta la plataforma
-  if (isLoading) {
+  if (isLoading || authLoading) {
     return <LazyLoader message="Detectando plataforma..." />;
   }
 
-  // Si es APK, mostrar solo la auditoría sin navbar
+  // Si es APK, mostrar rutas con protección de autenticación
   if (isAPK) {
     return (
       <Routes>
-        {routesAPK.map(({ id, path, Element }) => (
-          <Route 
-            key={id} 
-            path={path} 
-            element={
-              <Suspense fallback={<LazyLoader message={`Cargando auditoría...`} />}>
-                <Element />
-              </Suspense>
-            } 
-          />
-        ))}
+        {/* Rutas públicas de autenticación */}
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        
+        {/* Rutas protegidas - redirigir a login si no está autenticado */}
+        {routesAPK
+          .filter(route => !['login', 'register', 'forgot-password'].includes(route.id))
+          .map(({ id, path, Element }) => (
+            <Route 
+              key={id} 
+              path={path} 
+              element={
+                isLogged ? (
+                  <Suspense fallback={<LazyLoader message={`Cargando auditoría...`} />}>
+                    <Element />
+                  </Suspense>
+                ) : (
+                  <Login />
+                )
+              } 
+            />
+          ))}
+        
+        {/* Redirigir rutas no encontradas a login si no está autenticado */}
+        <Route path="*" element={isLogged ? <h1>Página no encontrada</h1> : <Login />} />
       </Routes>
     );
   }
