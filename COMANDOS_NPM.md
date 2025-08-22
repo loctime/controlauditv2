@@ -55,7 +55,9 @@ npm run die "Cualquier mensaje"
 
 | Comando | Descripción |
 |---------|-------------|
-| `npm run fer` | Solo build + sync Android |
+| `npm run fer` | **Build + sync + clean Android** (recomendado) |
+| `npm run android:build` | Build + sync + clean Android |
+| `npm run android:clean` | Solo clean de Android |
 | `npm run android:dev` | Build + sync + run Android |
 | `npm run cap:sync` | Solo sync con Capacitor |
 | `npm run cap:build` | Build + sync |
@@ -127,7 +129,7 @@ npm run die "Nueva funcionalidad"
 ### **3. Solo Android:**
 ```bash
 npm run fer
-# Build + sync Android
+# Build + sync + clean Android (recomendado)
 ```
 
 ### **4. Solo Web:**

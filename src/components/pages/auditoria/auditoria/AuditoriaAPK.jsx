@@ -51,11 +51,14 @@ const AuditoriaAPK = () => {
           bgcolor: theme.palette.primary.main,
           boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
           // Agregar padding superior para separar de la barra de estado
-          pt: isMobile ? 'env(safe-area-inset-top, 20px)' : 0
+          pt: isMobile ? 'env(safe-area-inset-top, 20px)' : 0,
+          // Agregar altura explícita para que se vea el cambio
+          height: isMobile ? '200px' : '180px',
+          minHeight: isMobile ? '200px' : '180px'
         }}
       >
         <Toolbar sx={{ 
-          minHeight: isMobile ? '100px' : '90px', // Aumentado significativamente
+          minHeight: isMobile ? '200px' : '180px', // Duplicado el tamaño - el doble de grande
           px: isMobile ? 3 : 4, // Aumentado padding horizontal
           py: isMobile ? 2 : 2.5, // Aumentado padding vertical
           // Agregar padding superior adicional para móvil
