@@ -29,6 +29,8 @@ Sistema completo de auditorías empresariales con arquitectura multi-tenant, rol
 - ✅ **Reportes PDF**: Generación automática de reportes profesionales
 - ✅ **Dashboard Intuitivo**: Interfaz moderna y responsiva
 - ✅ **Gestión de Usuarios**: Control granular de permisos
+- ✅ **App Móvil**: Optimizada para Android con Capacitor
+- ✅ **Navegación Segura**: Autoguardado y prevención de pérdida de datos
 
 ## 📋 **Instalación Rápida**
 
@@ -68,6 +70,206 @@ npm run dev
 - **Administrador**: `AUDITORIA2024`
 - **Super Administrador**: `SUPERMAX2024`
 
+## 📱 **Configuración Móvil (Capacitor)**
+
+### **Estado Actual**
+✅ Tu aplicación web React ya está configurada con Capacitor y lista para convertirse en una app móvil nativa.
+
+### **Requisitos del Sistema**
+- **Para Android**: Android Studio, Android SDK, variables de entorno configuradas
+- **Para iOS**: Xcode, CocoaPods (solo macOS)
+
+### **Flujo de Desarrollo**
+```bash
+# 1. Desarrollo web normal
+npm run dev
+
+# 2. Construir para móvil
+npm run build
+npm run cap:sync
+
+# 3. Probar en móvil
+npm run cap:open:android
+npm run cap:run:android
+```
+
+### **Arquitectura CSS Multi-Entorno**
+
+El proyecto maneja **dos entornos de desarrollo separados**:
+- **Web/PC**: Optimizado para navegadores de escritorio
+- **APK/Móvil**: Optimizado para dispositivos Android
+
+### **Separación Web vs APK**
+
+#### **Versión Web**
+- **Propósito**: Gestión administrativa y configuración
+- **Funcionalidades**: Gestión de formularios, administración, reportes, usuarios, dashboard
+
+#### **Versión APK**
+- **Propósito**: Realización de auditorías en campo
+- **Funcionalidades**: Solo auditoría, sin navbar, pantalla completa
+
+#### **Detección Automática**
+```jsx
+// src/hooks/usePlatform.js
+import { usePlatform } from '../hooks/usePlatform';
+
+const MyComponent = () => {
+  const { isAPK, isWeb } = usePlatform();
+  // isAPK = true/false, isWeb = true/false
+};
+```
+
+#### **Rutas Específicas**
+- **Web**: `src/router/routesWeb.js` (sin auditoría en menú)
+- **APK**: `src/router/routesAPK.js` (solo auditoría)
+- **Router**: `src/router/AppRouter.jsx` (decide qué rutas usar)
+
+#### **Archivos CSS Principales**
+```
+src/
+├── global.css                    # Estilos base globales
+├── mobile-optimization.css       # Optimizaciones específicas para móvil
+├── web-optimization.css          # Optimizaciones específicas para web
+├── centering-fixes.css           # Fixes para centrado en web
+├── safe-areas.css               # Configuraciones de safe areas
+└── components/
+    └── layout/
+        └── navbar/
+            └── Navbar.css        # Estilos específicos del navbar
+```
+
+#### **Estrategia de Media Queries**
+```css
+/* Móvil: 0px - 768px */
+@media (max-width: 768px) {
+  /* Estilos móviles */
+}
+
+/* Web: 769px+ */
+@media (min-width: 769px) {
+  /* Estilos web */
+}
+```
+
+### **Safe Areas (Áreas Seguras)**
+
+#### **Variables CSS Globales**
+```css
+:root {
+  --safe-area-inset-top: env(safe-area-inset-top, 0px);
+  --safe-area-inset-right: env(safe-area-inset-right, 0px);
+  --safe-area-inset-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-area-inset-left: env(safe-area-inset-left, 0px);
+}
+```
+
+#### **Configuración de Capacitor**
+```typescript
+// capacitor.config.ts
+StatusBar: {
+  style: 'light',
+  backgroundColor: '#1976d2',
+  overlaysWebView: true
+}
+```
+
+#### **Componentes de Safe Area**
+```jsx
+import SafeAreaContainer from '../common/SafeAreaContainer';
+
+// Uso básico
+<SafeAreaContainer fullHeight={true} respectSafeArea={true}>
+  <div>Mi contenido</div>
+</SafeAreaContainer>
+```
+
+### **Configuración Android**
+
+#### **Configuración de Firma**
+- **Debug (Desarrollo)**: Automático con debug.keystore global
+- **Release (Producción)**: Requiere keystore específico
+
+#### **Generar Keystore de Release**
+```bash
+cd android
+chmod +x generate-release-keystore.sh
+./generate-release-keystore.sh
+```
+
+#### **Configurar Propiedades**
+Edita `android/gradle.properties`:
+```properties
+MYAPP_UPLOAD_STORE_FILE=keystore/controlaudit-release.jks
+MYAPP_UPLOAD_STORE_PASSWORD=tu_password_del_keystore
+MYAPP_UPLOAD_KEY_ALIAS=controlaudit_key
+MYAPP_UPLOAD_KEY_PASSWORD=tu_password_de_la_clave
+```
+
+#### **Build de APKs**
+```bash
+# Debug APK
+npm run fer
+
+# Release APK
+cd android
+./gradlew assembleRelease
+```
+
+#### **Sincronización con Android Studio**
+```bash
+# Hacer cambios en el código
+npm run fer
+
+# Abrir Android Studio
+npm run cap:open:android
+
+# Ejecutar en dispositivo/emulador
+npm run android:dev
+```
+
+#### **⚠️ Importante**
+- **Nunca subas el keystore al repositorio**
+- **Guarda el keystore en un lugar seguro**
+- **Recuerda las contraseñas**
+- **El mismo keystore es necesario para actualizar la app en Google Play**
+
+## 🛡️ **Sistema de Navegación Guardada**
+
+### **Características**
+- ✅ **Prevención de Pérdida de Datos**: Detecta salidas accidentales
+- ✅ **Autoguardado Inteligente**: Guarda automáticamente cada 30 segundos
+- ✅ **Restauración Automática**: Recupera datos al volver
+- ✅ **Confirmaciones Claras**: Opciones de guardar, descartar o cancelar
+
+### **Componentes Principales**
+```jsx
+// Hook principal
+import { useNavigationGuard } from './hooks/useNavigationGuard';
+
+// Componentes visuales
+import AutoSaveAlert from './components/AutoSaveAlert';
+import ExitConfirmation from './components/ExitConfirmation';
+```
+
+### **Uso Básico**
+```jsx
+const Auditoria = () => {
+  const navigationGuard = useNavigationGuard({
+    hasUnsavedChanges: checkUnsavedChanges,
+    onSave: handleAutoSave,
+    onDiscard: handleDiscardChanges
+  });
+
+  return (
+    <div>
+      <AutoSaveAlert isSaving={isSaving} lastSaved={lastSaved} />
+      {/* Contenido de la auditoría */}
+    </div>
+  );
+};
+```
+
 ## 📚 **Documentación Completa**
 
 Para información detallada sobre:
@@ -79,9 +281,22 @@ Para información detallada sobre:
 
 📖 **Ver [Documentación Consolidada](DOCUMENTACION_CONSOLIDADA.md)**
 
-📱 **Ver [Configuración Capacitor](CAPACITOR_SETUP.md)**
-
 📋 **Ver [Changelog](CHANGELOG.md)** - Historial de cambios y versiones
+
+### **🔧 Soluciones Técnicas Específicas**
+- **Centrado en APK**: [SOLUCION_CENTRADO_APK.md](SOLUCION_CENTRADO_APK.md)
+- **CORS para Descarga**: [SOLUCION_CORS_APK.md](SOLUCION_CORS_APK.md)
+- **Descarga de APK**: [SOLUCION_DESCARGA_APK.md](SOLUCION_DESCARGA_APK.md)
+- **Reportes de Auditoría**: [SOLUCION_REPORTES_AUDITORIA.md](SOLUCION_REPORTES_AUDITORIA.md)
+- **Keystore**: [SOLUCION_KEYSTORE_COMPLETADA.md](SOLUCION_KEYSTORE_COMPLETADA.md)
+- **Funcionalidad de Cámara**: [CAMERA_FUNCTIONALITY.md](CAMERA_FUNCTIONALITY.md)
+- **Separación Web/APK**: Información consolidada en README principal
+- **Zoom Habilitado**: [ZOOM_HABILITADO.md](ZOOM_HABILITADO.md)
+
+### **📚 Documentación Técnica**
+- **Configuración de Entornos**: [docs/CONFIGURACION_ENTORNOS.md](docs/CONFIGURACION_ENTORNOS.md)
+- **Estructura CSS**: [docs/ESTRUCTURA_CSS.md](docs/ESTRUCTURA_CSS.md)
+- **Metadata**: [docs/metadata.md](docs/metadata.md)
 
 ## 🛠️ **Tecnologías**
 
@@ -112,24 +327,61 @@ src/
 
 ## 🚀 **Comandos Útiles**
 
+### **Comandos Principales**
 ```bash
-# Desarrollo
+# Desarrollo completo (Web + backend + Android)
 npm run dev
 
-# Construir para producción
+# Release completo (commit + build + APK + GitHub)
+npm run die "Descripción de los cambios"
+
+# Solo desarrollo web
+npm run dev:web
+
+# Solo backend local
+npm run backend:dev
+```
+
+### **Comandos de Android**
+```bash
+# Build + sync + clean + APK Android (recomendado)
+npm run fer
+
+# Build + sync + run Android
+npm run android:dev
+
+# Solo sync con Capacitor
+npm run cap:sync
+
+# Abrir Android Studio
+npm run cap:open:android
+
+# Ejecutar en Android
+npm run cap:run:android
+```
+
+### **Comandos de Build**
+```bash
+# Build de producción
 npm run build
 
-# Previsualizar build
+# Preview del build
 npm run preview
 
-# Linting
-npm run lint
+# Análisis del bundle
+npm run analyze
 
-# Capacitor - App Móvil
-npm run cap:build          # Construir y sincronizar con móvil
-npm run cap:sync           # Sincronizar cambios
-npm run cap:open:android   # Abrir en Android Studio
-npm run cap:run:android    # Ejecutar en Android
+# Clean de archivos temporales
+npm run clean
+```
+
+### **Scripts de Keystore**
+```bash
+# Generar keystore de debug (Windows)
+cd android && .\generate-debug-keystore.bat
+
+# Build con keystore automático (Windows)
+cd android && .\build-with-keystore.bat
 ```
 
 ## 🔧 **Configuración Avanzada**
@@ -155,6 +407,7 @@ VITE_B2_BUCKET_NAME=tu_bucket_name
 - ✅ **Auditorías**: Flujo completo implementado
 - ✅ **Reportes**: Generación de PDF funcional
 - ✅ **App Móvil**: Capacitor configurado y listo
+- ✅ **Navegación Segura**: Autoguardado implementado
 - 🔄 **Mejoras**: En desarrollo continuo
 
 ## 🤝 **Contribución**
