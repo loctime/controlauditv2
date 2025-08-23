@@ -147,7 +147,7 @@ const APKNavigation = ({ children }) => {
                                       <Toolbar sx={{ 
              display: 'flex', 
              flexDirection: 'column',
-             justifyContent: 'space-between',
+             justifyContent: 'flex-start',
              alignItems: 'stretch',
              height: '100%',
              py: 0.5
@@ -158,7 +158,9 @@ const APKNavigation = ({ children }) => {
                justifyContent: 'space-between',
                alignItems: 'center',
                width: '100%',
-               position: 'relative'
+               position: 'relative',
+               mb: 0.25,
+               mt: 2
              }}>
                {/* Espacio vacío para balance */}
                <Box sx={{ width: 48 }} />
@@ -190,7 +192,7 @@ const APKNavigation = ({ children }) => {
                justifyContent: 'space-between',
                alignItems: 'center',
                width: '100%',
-               mt: 0.5
+               mt: 1
              }}>
               {/* Lado izquierdo: Botón hamburguesa */}
               <IconButton
