@@ -14,7 +14,8 @@ import {
   Divider,
   Box,
   useTheme,
-  useMediaQuery
+  useMediaQuery,
+  Button
 } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
 import DashboardIcon from '@mui/icons-material/Dashboard';
@@ -129,56 +130,116 @@ const APKNavigation = ({ children }) => {
       }}
     >
       {/* Header de navegación */}
-      <AppBar 
-        position="fixed" 
-        sx={{ 
-          bgcolor: theme.palette.primary.main,
-          boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-          pt: isMobile ? 'env(safe-area-inset-top, 20px)' : 0,
-          height: isMobile ? '120px' : '110px',
-          minHeight: isMobile ? '120px' : '110px',
-          top: 0,
-          left: 0,
-          right: 0,
-          zIndex: 1200
-        }}
-      >
-        <Toolbar sx={{ 
-          display: 'flex', 
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          height: '100%'
-        }}>
-          <Box sx={{ display: 'flex', alignItems: 'center' }}>
-            <IconButton
-              color="inherit"
-              aria-label="open drawer"
-              edge="start"
-              onClick={handleDrawerToggle}
-              sx={{ mr: 2 }}
-            >
-              <MenuIcon />
-            </IconButton>
-            <Typography variant="h6" noWrap component="div">
-              Control Audit APK
-            </Typography>
-          </Box>
-          
-          <Box sx={{ display: 'flex', alignItems: 'center' }}>
-            <Typography variant="body2" sx={{ mr: 2, display: { xs: 'none', sm: 'block' } }}>
-              {userEmail}
-            </Typography>
-            <Typography variant="caption" sx={{ 
-              bgcolor: 'rgba(255,255,255,0.2)', 
-              px: 1, 
-              py: 0.5, 
-              borderRadius: 1,
-              fontSize: '0.7rem'
-            }}>
-              {userRole}
-            </Typography>
-          </Box>
-        </Toolbar>
+             <AppBar 
+         position="fixed" 
+         sx={{ 
+           bgcolor: theme.palette.primary.main,
+           boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+           pt: isMobile ? 'env(safe-area-inset-top, 20px)' : 0,
+           height: isMobile ? '140px' : '130px',
+           minHeight: isMobile ? '140px' : '130px',
+           top: 0,
+           left: 0,
+           right: 0,
+           zIndex: 1200
+         }}
+       >
+                                      <Toolbar sx={{ 
+             display: 'flex', 
+             flexDirection: 'column',
+             justifyContent: 'space-between',
+             alignItems: 'stretch',
+             height: '100%',
+             py: 0.5
+           }}>
+                         {/* Fila superior: Título centrado y usuario */}
+             <Box sx={{ 
+               display: 'flex', 
+               justifyContent: 'space-between',
+               alignItems: 'center',
+               width: '100%',
+               position: 'relative'
+             }}>
+               {/* Espacio vacío para balance */}
+               <Box sx={{ width: 48 }} />
+               
+               {/* Título centrado */}
+               <Typography 
+                 variant="h6" 
+                 noWrap 
+                 component="div"
+                 sx={{
+                   position: 'absolute',
+                   left: '50%',
+                   transform: 'translateX(-50%)'
+                 }}
+               >
+                 ControlAudit
+               </Typography>
+               
+               <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                 <Typography variant="body2" sx={{ display: { xs: 'none', sm: 'block' } }}>
+                   {userEmail}
+                 </Typography>
+               </Box>
+             </Box>
+            
+                         {/* Fila inferior: Botón hamburguesa y botones de navegación */}
+             <Box sx={{ 
+               display: 'flex', 
+               justifyContent: 'space-between',
+               alignItems: 'center',
+               width: '100%',
+               mt: 0.5
+             }}>
+              {/* Lado izquierdo: Botón hamburguesa */}
+              <IconButton
+                color="inherit"
+                aria-label="open drawer"
+                edge="start"
+                onClick={handleDrawerToggle}
+              >
+                <MenuIcon />
+              </IconButton>
+              
+              {/* Centro: Botones de navegación */}
+              <Box sx={{ display: 'flex', gap: 2 }}>
+                <Button
+                  color="inherit"
+                  onClick={() => handleMenuClick('auditoria')}
+                  sx={{ 
+                    textTransform: 'none',
+                    fontSize: { xs: '0.9rem', sm: '1rem' },
+                    px: { xs: 2, sm: 3 },
+                    py: 0.5,
+                    '&:hover': {
+                      bgcolor: 'rgba(255,255,255,0.1)'
+                    }
+                  }}
+                >
+                  Auditoría
+                </Button>
+                <Button
+                  color="inherit"
+                  onClick={() => handleMenuClick('reporte')}
+                  sx={{ 
+                    textTransform: 'none',
+                    fontSize: { xs: '0.9rem', sm: '1rem' },
+                    px: { xs: 2, sm: 3 },
+                    py: 0.5,
+                    '&:hover': {
+                      bgcolor: 'rgba(255,255,255,0.1)'
+                    }
+                  }}
+                >
+                  Reportes
+                </Button>
+              </Box>
+              
+              {/* Lado derecho: Espacio vacío para balance */}
+              <Box sx={{ width: 48 }} />
+            </Box>
+          </Toolbar>
       </AppBar>
 
       {/* Drawer de navegación */}
@@ -248,19 +309,19 @@ const APKNavigation = ({ children }) => {
       </Drawer>
 
       {/* Contenido principal */}
-      <Box 
-        className="apk-content-container flex-scroll-content"
-        sx={{ 
-          flex: 1, 
-          overflow: 'auto',
-          overflowY: 'scroll',
-          WebkitOverflowScrolling: 'touch',
-          pt: isMobile ? 'calc(120px + env(safe-area-inset-top, 20px))' : '110px',
-          pb: isMobile ? 'env(safe-area-inset-bottom, 20px)' : 0,
-          minHeight: 0,
-          marginTop: 0
-        }}
-      >
+               <Box 
+           className="apk-content-container flex-scroll-content"
+           sx={{ 
+             flex: 1, 
+             overflow: 'auto',
+             overflowY: 'scroll',
+             WebkitOverflowScrolling: 'touch',
+             pt: isMobile ? 'calc(140px + env(safe-area-inset-top, 20px))' : '130px',
+             pb: isMobile ? 'env(safe-area-inset-bottom, 20px)' : 0,
+             minHeight: 0,
+             marginTop: 0
+           }}
+         >
         {children}
       </Box>
     </div>
