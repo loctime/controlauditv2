@@ -33,14 +33,25 @@
 .filtros-reportes-container {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  padding: 16px;
+  gap: 12px;
+  padding: 12px;
   background: #f8f9fa;
   border-radius: 12px;
-  margin-bottom: 24px;
+  margin-bottom: 20px;
 }
 
-/* Grid responsivo para filtros */
+/* Layout compacto para filtros en APK */
+.filtros-compactos {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.filtro-row {
+  width: 100%;
+}
+
+/* Grid responsivo para filtros (mantener para compatibilidad) */
 .filtros-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -60,6 +71,35 @@
 
 .filtro-field .MuiTextField-root {
   width: 100%;
+}
+
+/* Estilos para chips compactos */
+.filtro-chips-compactos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+  max-height: 60px;
+  overflow-y: auto;
+}
+
+.filtro-chip-compacto {
+  font-size: 11px;
+  height: 20px;
+  max-width: 120px;
+}
+
+/* Estilos para chips de selección (mantener para compatibilidad) */
+.filtro-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.filtro-chip {
+  font-size: 12px;
+  height: 24px;
 }
 
 /* Estilos para botones responsivos */
@@ -82,19 +122,6 @@
   text-transform: none;
   font-size: 13px;
   margin: 6px 0;
-}
-
-/* Estilos para chips de selección */
-.filtro-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 8px;
-}
-
-.filtro-chip {
-  font-size: 12px;
-  height: 24px;
 }
 
 /* Estilos para checkboxes */
@@ -182,8 +209,12 @@
 
 @media (max-width: 768px) {
   .filtros-reportes-container {
-    padding: 12px;
-    gap: 12px;
+    padding: 8px;
+    gap: 8px;
+  }
+  
+  .filtros-compactos {
+    gap: 8px;
   }
   
   .filtros-grid {
@@ -211,12 +242,22 @@
   .reporte-card-mobile {
     margin-bottom: 12px;
   }
+  
+  .filtro-chip-compacto {
+    font-size: 10px;
+    height: 18px;
+    max-width: 100px;
+  }
 }
 
 @media (max-width: 480px) {
   .filtros-reportes-container {
-    padding: 8px;
-    gap: 8px;
+    padding: 6px;
+    gap: 6px;
+  }
+  
+  .filtros-compactos {
+    gap: 6px;
   }
   
   .reportes-container {
@@ -243,6 +284,12 @@
   .filtro-chip {
     font-size: 11px;
     height: 20px;
+  }
+  
+  .filtro-chip-compacto {
+    font-size: 9px;
+    height: 16px;
+    max-width: 80px;
   }
 }
 
