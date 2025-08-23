@@ -88,7 +88,7 @@ html, body {
   /* Optimizaciones móviles */
   .mobile-optimized {
     font-size: 16px; /* Evita zoom en iOS */
-    touch-action: manipulation;
+    touch-action: pan-x pan-y; /* Permitir zoom */
   }
 }
 

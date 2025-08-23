@@ -1,0 +1,163 @@
+/* ========================================
+   SOPORTE PARA ZOOM EN APK
+   ========================================
+   
+   Este archivo habilita el zoom en toda la aplicación
+   para mejorar la accesibilidad en dispositivos móviles
+   ======================================== */
+
+/* Habilitar zoom en toda la aplicación */
+* {
+  touch-action: pan-x pan-y pinch-zoom !important;
+}
+
+/* Permitir zoom en contenedores principales */
+body,
+html,
+#root,
+.main-app-container,
+.page-container,
+.content-container {
+  touch-action: pan-x pan-y pinch-zoom !important;
+  -webkit-user-select: auto !important;
+  -moz-user-select: auto !important;
+  -ms-user-select: auto !important;
+  user-select: auto !important;
+}
+
+/* Permitir zoom en contenido de texto */
+p, h1, h2, h3, h4, h5, h6, span, div {
+  touch-action: pan-x pan-y pinch-zoom !important;
+}
+
+/* Permitir zoom en formularios */
+input, textarea, select {
+  touch-action: pan-x pan-y pinch-zoom !important;
+  font-size: 16px !important; /* Evita zoom automático en iOS */
+}
+
+/* Permitir zoom en tablas */
+table, tr, td, th {
+  touch-action: pan-x pan-y pinch-zoom !important;
+}
+
+/* Permitir zoom en imágenes */
+img {
+  touch-action: pan-x pan-y pinch-zoom !important;
+  max-width: 100% !important;
+  height: auto !important;
+}
+
+/* Permitir zoom en canvas de firmas */
+.sigCanvas,
+.signature-canvas,
+.drawing-canvas {
+  touch-action: pan-x pan-y pinch-zoom !important;
+}
+
+/* Botones y elementos interactivos - permitir zoom pero mantener respuesta táctil */
+button,
+.MuiButton-root,
+.MuiIconButton-root,
+.MuiListItemButton-root,
+.MuiFab-root {
+  touch-action: pan-x pan-y !important;
+}
+
+/* Permitir zoom en contenedores de auditoría */
+.auditoria-container,
+.auditoria-container * {
+  touch-action: pan-x pan-y pinch-zoom !important;
+}
+
+/* Permitir zoom en steppers */
+.MuiStepper-root,
+.MuiStep-root,
+.MuiStepLabel-root {
+  touch-action: pan-x pan-y pinch-zoom !important;
+}
+
+/* Permitir zoom en cards y papers */
+.MuiCard-root,
+.MuiPaper-root {
+  touch-action: pan-x pan-y pinch-zoom !important;
+}
+
+/* Permitir zoom en grids */
+.MuiGrid-container,
+.MuiGrid-item {
+  touch-action: pan-x pan-y pinch-zoom !important;
+}
+
+/* Permitir zoom en formularios de Material-UI */
+.MuiTextField-root,
+.MuiFormControl-root,
+.MuiSelect-root {
+  touch-action: pan-x pan-y pinch-zoom !important;
+}
+
+/* Permitir zoom en alertas y notificaciones */
+.MuiAlert-root,
+.MuiSnackbar-root {
+  touch-action: pan-x pan-y pinch-zoom !important;
+}
+
+/* Permitir zoom en barras de progreso */
+.MuiLinearProgress-root {
+  touch-action: pan-x pan-y pinch-zoom !important;
+}
+
+/* Permitir zoom en chips y badges */
+.MuiChip-root,
+.MuiBadge-root {
+  touch-action: pan-x pan-y pinch-zoom !important;
+}
+
+/* Permitir zoom en contenedores de selección */
+.empresa-seleccion-container,
+.sucursal-seleccion-container,
+.formulario-seleccion-container {
+  touch-action: pan-x pan-y pinch-zoom !important;
+}
+
+/* Permitir zoom en contenedores de preguntas */
+.preguntas-container,
+.pregunta-container {
+  touch-action: pan-x pan-y pinch-zoom !important;
+}
+
+/* Permitir zoom en contenedores de firmas */
+.firma-container {
+  touch-action: pan-x pan-y pinch-zoom !important;
+}
+
+/* Permitir zoom en contenedores de reportes */
+.reporte-container {
+  touch-action: pan-x pan-y pinch-zoom !important;
+}
+
+/* Optimizaciones específicas para móviles */
+@media (max-width: 768px) {
+  /* Asegurar que el zoom funcione en móviles */
+  * {
+    touch-action: pan-x pan-y pinch-zoom !important;
+  }
+  
+  /* Permitir zoom en elementos específicos de móvil */
+  .mobile-optimized {
+    touch-action: pan-x pan-y pinch-zoom !important;
+  }
+  
+  /* Permitir zoom en contenedores de contenido móvil */
+  .content-container {
+    touch-action: pan-x pan-y pinch-zoom !important;
+  }
+}
+
+/* Optimizaciones específicas para pantallas muy pequeñas */
+@media (max-width: 480px) {
+  /* Asegurar que el zoom funcione en pantallas muy pequeñas */
+  * {
+    touch-action: pan-x pan-y pinch-zoom !important;
+  }
+}

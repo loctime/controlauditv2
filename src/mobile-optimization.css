@@ -11,6 +11,30 @@
    - Usa !important solo cuando sea necesario
    ======================================== */
 
+/* ========================================
+   HABILITAR ZOOM EN TODA LA APLICACIÓN
+   ======================================== */
+
+/* Habilitar zoom en toda la aplicación */
+* {
+  touch-action: pan-x pan-y pinch-zoom !important;
+}
+
+/* Excepciones para elementos que necesitan touch-action específico */
+.sigCanvas,
+.signature-canvas,
+.drawing-canvas {
+  touch-action: pan-x pan-y pinch-zoom !important;
+}
+
+/* Botones y elementos interactivos */
+button,
+.MuiButton-root,
+.MuiIconButton-root,
+.MuiListItemButton-root {
+  touch-action: pan-x pan-y !important;
+}
+
 /* Optimizaciones específicas para dispositivos móviles */
 
 /* Configuraciones para pantalla completa en móviles */
@@ -671,8 +695,8 @@
     min-width: 48px !important;
     min-height: 48px !important;
     padding: 12px !important;
-    /* Mejorar la accesibilidad táctil */
-    touch-action: manipulation !important;
+    /* Permitir zoom pero mantener buena respuesta táctil */
+    touch-action: pan-x pan-y !important;
   }
 
   /* Hacer el texto del navbar más grande */
@@ -715,8 +739,8 @@
     margin: 2px 8px !important;
     border-radius: 8px !important;
     min-height: 48px !important;
-    /* Mejorar la accesibilidad táctil */
-    touch-action: manipulation !important;
+    /* Permitir zoom pero mantener buena respuesta táctil */
+    touch-action: pan-x pan-y !important;
   }
 }
 

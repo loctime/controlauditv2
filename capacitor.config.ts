@@ -19,6 +19,14 @@ const config: CapacitorConfig = {
       backgroundColor: '#1976d2',
       overlaysWebView: true
     }
+  },
+  android: {
+    webContentsDebuggingEnabled: true,
+    allowMixedContent: true
+  },
+  ios: {
+    webContentsDebuggingEnabled: true,
+    allowsLinkPreview: true
   }
 };
 
