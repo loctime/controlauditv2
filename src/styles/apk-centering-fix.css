@@ -1,0 +1,456 @@
+/* ========================================
+   FIX ESPECÍFICO PARA CENTRADO EN APK MÓVIL
+   ========================================
+   
+   Este archivo corrige específicamente el problema de centrado
+   en la página de auditoría en la APK móvil.
+   
+   El problema: margen desigual (un lado con margen, otro cortado)
+   La solución: reset completo de márgenes y padding, centrado perfecto
+   ======================================== */
+
+/* ========================================
+   RESET COMPLETO PARA APK MÓVIL
+   ======================================== */
+
+/* Reset del viewport para APK */
+@media (max-width: 768px) {
+  /* Reset del body para APK */
+  body {
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100vw !important;
+    max-width: 100vw !important;
+    overflow-x: hidden !important;
+    position: relative !important;
+  }
+
+  /* Reset del html para APK */
+  html {
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100vw !important;
+    max-width: 100vw !important;
+    overflow-x: hidden !important;
+  }
+
+  /* Reset del root para APK */
+  #root {
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100vw !important;
+    max-width: 100vw !important;
+    overflow-x: hidden !important;
+    position: relative !important;
+  }
+
+  /* Reset del contenedor principal para APK */
+  .main-app-container {
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100vw !important;
+    max-width: 100vw !important;
+    overflow-x: hidden !important;
+    position: relative !important;
+  }
+}
+
+/* ========================================
+   FIX ESPECÍFICO PARA PÁGINA DE AUDITORÍA EN APK
+   ======================================== */
+
+/* Reset completo del contenedor de auditoría */
+@media (max-width: 768px) {
+  .auditoria-container {
+    /* Reset de dimensiones */
+    width: 100vw !important;
+    max-width: 100vw !important;
+    min-height: 100vh !important;
+    min-height: calc(100vh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)) !important;
+    
+    /* Reset de márgenes y padding */
+    margin: 0 !important;
+    padding: 0 !important;
+    
+    /* Reset de posicionamiento */
+    position: relative !important;
+    left: 0 !important;
+    right: 0 !important;
+    top: 0 !important;
+    bottom: 0 !important;
+    
+    /* Reset de transformaciones */
+    transform: none !important;
+    translate: none !important;
+    
+    /* Layout flexbox centrado */
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    
+    /* Control de overflow */
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    
+    /* Box model */
+    box-sizing: border-box !important;
+  }
+
+  /* Reset del contenedor de contenido */
+  .auditoria-container .content-container {
+    /* Reset de dimensiones */
+    width: 100vw !important;
+    max-width: 100vw !important;
+    min-height: 100vh !important;
+    min-height: calc(100vh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)) !important;
+    
+    /* Reset de márgenes y padding */
+    margin: 0 !important;
+    padding: 0 !important;
+    
+    /* Reset de posicionamiento */
+    position: relative !important;
+    left: 0 !important;
+    right: 0 !important;
+    
+    /* Reset de transformaciones */
+    transform: none !important;
+    translate: none !important;
+    
+    /* Layout flexbox centrado */
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    
+    /* Control de overflow */
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    
+    /* Box model */
+    box-sizing: border-box !important;
+  }
+
+  /* Reset del header */
+  .auditoria-container .header-section {
+    /* Reset de dimensiones */
+    width: 100vw !important;
+    max-width: 100vw !important;
+    
+    /* Reset de márgenes */
+    margin: 0 !important;
+    
+    /* Padding con safe areas */
+    padding: 12px 16px !important;
+    padding-top: calc(12px + env(safe-area-inset-top, 0px)) !important;
+    padding-left: calc(16px + env(safe-area-inset-left, 0px)) !important;
+    padding-right: calc(16px + env(safe-area-inset-right, 0px)) !important;
+    
+    /* Layout flexbox centrado */
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    
+    /* Estilos visuales */
+    background: #fff !important;
+    border-bottom: 1px solid #e0e0e0 !important;
+    flex-shrink: 0 !important;
+    
+    /* Box model */
+    box-sizing: border-box !important;
+  }
+
+  /* Reset del stepper */
+  .auditoria-container .stepper-section {
+    /* Reset de dimensiones */
+    width: 100vw !important;
+    max-width: 100vw !important;
+    
+    /* Reset de márgenes */
+    margin: 0 !important;
+    
+    /* Padding con safe areas */
+    padding: 12px 16px !important;
+    padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px)) !important;
+    padding-left: calc(16px + env(safe-area-inset-left, 0px)) !important;
+    padding-right: calc(16px + env(safe-area-inset-right, 0px)) !important;
+    
+    /* Layout flexbox centrado */
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    
+    /* Control de overflow */
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    
+    /* Flex grow */
+    flex: 1 !important;
+    
+    /* Box model */
+    box-sizing: border-box !important;
+  }
+
+  /* Reset del contenido de pasos */
+  .auditoria-container .step-content {
+    /* Reset de dimensiones */
+    width: 100% !important;
+    max-width: 100% !important;
+    
+    /* Reset de márgenes y padding */
+    margin: 0 !important;
+    padding: 0 !important;
+    
+    /* Layout flexbox centrado */
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    
+    /* Box model */
+    box-sizing: border-box !important;
+  }
+}
+
+/* ========================================
+   FIX PARA COMPONENTES MATERIAL-UI EN APK
+   ======================================== */
+
+@media (max-width: 768px) {
+  /* Reset de todos los componentes Material-UI */
+  .auditoria-container .MuiBox-root,
+  .auditoria-container .MuiCard-root,
+  .auditoria-container .MuiPaper-root,
+  .auditoria-container .MuiGrid-container,
+  .auditoria-container .MuiStepper-root,
+  .auditoria-container .MuiStepContent-root,
+  .auditoria-container .MuiStep-root,
+  .auditoria-container .MuiStepLabel-root {
+    /* Reset de dimensiones */
+    width: 100% !important;
+    max-width: 100% !important;
+    
+    /* Reset de márgenes */
+    margin: 0 !important;
+    
+    /* Layout flexbox centrado */
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    
+    /* Box model */
+    box-sizing: border-box !important;
+  }
+
+  /* Reset específico para contenedores de selección */
+  .auditoria-container .empresa-seleccion-container,
+  .auditoria-container .sucursal-seleccion-container,
+  .auditoria-container .formulario-seleccion-container,
+  .auditoria-container .preguntas-container,
+  .auditoria-container .firma-container,
+  .auditoria-container .reporte-container,
+  .auditoria-container .seleccion-empresa-container,
+  .auditoria-container .seleccion-sucursal-container,
+  .auditoria-container .seleccion-formulario-container {
+    /* Reset de dimensiones */
+    width: 100% !important;
+    max-width: 100% !important;
+    
+    /* Reset de márgenes y padding */
+    margin: 0 !important;
+    padding: 0 !important;
+    
+    /* Layout flexbox centrado */
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    
+    /* Box model */
+    box-sizing: border-box !important;
+  }
+
+  /* Reset para formularios y campos */
+  .auditoria-container .MuiTextField-root,
+  .auditoria-container .MuiFormControl-root,
+  .auditoria-container .MuiSelect-root,
+  .auditoria-container .MuiInputBase-root {
+    /* Reset de dimensiones */
+    width: 100% !important;
+    max-width: 100% !important;
+    
+    /* Márgenes controlados */
+    margin: 0 0 16px 0 !important;
+    
+    /* Box model */
+    box-sizing: border-box !important;
+  }
+
+  /* Reset para botones */
+  .auditoria-container .MuiButton-root {
+    /* Reset de dimensiones */
+    width: 100% !important;
+    max-width: 100% !important;
+    
+    /* Márgenes controlados */
+    margin: 8px 0 !important;
+    
+    /* Centrado */
+    align-self: center !important;
+    
+    /* Box model */
+    box-sizing: border-box !important;
+  }
+
+  /* Reset para alertas */
+  .auditoria-container .MuiAlert-root {
+    /* Reset de dimensiones */
+    width: 100% !important;
+    max-width: 100% !important;
+    
+    /* Márgenes controlados */
+    margin: 8px 0 !important;
+    
+    /* Box model */
+    box-sizing: border-box !important;
+  }
+
+  /* Reset para chips */
+  .auditoria-container .MuiChip-root {
+    /* Centrado */
+    align-self: center !important;
+    
+    /* Márgenes controlados */
+    margin: 4px !important;
+    
+    /* Box model */
+    box-sizing: border-box !important;
+  }
+
+  /* Reset para títulos */
+  .auditoria-container .MuiTypography-root {
+    /* Reset de dimensiones */
+    width: 100% !important;
+    max-width: 100% !important;
+    
+    /* Centrado de texto */
+    text-align: center !important;
+    
+    /* Box model */
+    box-sizing: border-box !important;
+  }
+}
+
+/* ========================================
+   FIX PARA PANTALLAS MUY PEQUEÑAS EN APK
+   ======================================== */
+
+@media (max-width: 480px) {
+  /* Reset aún más agresivo para pantallas muy pequeñas */
+  .auditoria-container {
+    width: 100vw !important;
+    max-width: 100vw !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .auditoria-container .header-section {
+    padding: 8px 12px !important;
+    padding-top: calc(8px + env(safe-area-inset-top, 0px)) !important;
+    padding-left: calc(12px + env(safe-area-inset-left, 0px)) !important;
+    padding-right: calc(12px + env(safe-area-inset-right, 0px)) !important;
+  }
+
+  .auditoria-container .stepper-section {
+    padding: 8px 12px !important;
+    padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px)) !important;
+    padding-left: calc(12px + env(safe-area-inset-left, 0px)) !important;
+    padding-right: calc(12px + env(safe-area-inset-right, 0px)) !important;
+  }
+
+  /* Reducir márgenes en componentes */
+  .auditoria-container .MuiTextField-root,
+  .auditoria-container .MuiFormControl-root {
+    margin: 0 0 12px 0 !important;
+  }
+
+  .auditoria-container .MuiButton-root {
+    margin: 6px 0 !important;
+  }
+
+  .auditoria-container .MuiAlert-root {
+    margin: 6px 0 !important;
+  }
+}
+
+/* ========================================
+   OVERRIDE FINAL PARA GARANTIZAR CENTRADO PERFECTO
+   ======================================== */
+
+/* Regla final que sobrescribe cualquier otra regla */
+@media (max-width: 768px) {
+  .auditoria-container,
+  .auditoria-container .content-container {
+    /* Forzar centrado perfecto */
+    transform: translateX(0) !important;
+    translate: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    
+    /* Asegurar que no haya scroll horizontal */
+    overflow-x: hidden !important;
+    
+    /* Asegurar que el contenido esté centrado */
+    align-items: center !important;
+  }
+}
+
+/* ========================================
+   FIX ESPECÍFICO PARA EL PROBLEMA DE MARGEN DESIGUAL
+   ======================================== */
+
+/* Este fix específico corrige el problema donde un lado tiene margen y otro se corta */
+@media (max-width: 768px) {
+  /* Reset completo del viewport */
+  html, body, #root, .main-app-container {
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100vw !important;
+    max-width: 100vw !important;
+    overflow-x: hidden !important;
+  }
+
+  /* Reset específico para la página de auditoría */
+  .auditoria-container {
+    /* Forzar centrado perfecto */
+    margin: 0 auto !important;
+    padding: 0 !important;
+    width: 100vw !important;
+    max-width: 100vw !important;
+    
+    /* Asegurar que esté centrado */
+    position: relative !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    
+    /* Control de overflow */
+    overflow-x: hidden !important;
+  }
+
+  /* Reset del contenido */
+  .auditoria-container .content-container {
+    /* Forzar centrado perfecto */
+    margin: 0 auto !important;
+    padding: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    
+    /* Asegurar que esté centrado */
+    position: relative !important;
+    
+    /* Control de overflow */
+    overflow-x: hidden !important;
+  }
+}
