@@ -151,223 +151,215 @@ const FiltrosReportes = ({
 
       {/* Fila 2: Selector de empresas - Selector de formularios */}
       <Box className="filtro-row">
-        <Grid container spacing={2}>
-          <Grid item xs={12} sm={6}>
-            <FormControl size="small" sx={{ width: '50%' }}>
-              <InputLabel id="empresas-multi-label">Empresas ({empresasFiltradas.length})</InputLabel>
-              <Select
-                labelId="empresas-multi-label"
-                multiple
-                open={openEmpresas}
-                onOpen={() => setOpenEmpresas(true)}
-                onClose={() => setOpenEmpresas(false)}
-                value={empresasSeleccionadas}
-                onChange={handleEmpresasChange}
-                label={`Empresas (${empresasFiltradas.length})`}
-                renderValue={(selected) => (
-                  <Box className="filtro-chips-compactos">
-                    {selected.length === 0 ? (
-                      <Chip label="Todas las empresas" size="small" color="primary" className="filtro-chip-compacto" />
-                    ) : (
-                      <>
-                        {selected.slice(0, 2).map((id) => {
-                          const emp = empresas.find(e => e.id === id);
-                          return (
-                            <Chip 
-                              key={id} 
-                              label={emp ? emp.nombre : id} 
-                              size="small"
-                              className="filtro-chip-compacto"
-                            />
-                          );
-                        })}
-                        {selected.length > 2 && (
+        <Box sx={{ display: 'flex', gap: 2, width: '100%' }}>
+          <FormControl size="small" sx={{ flex: 1 }}>
+            <InputLabel id="empresas-multi-label">Empresas ({empresasFiltradas.length})</InputLabel>
+            <Select
+              labelId="empresas-multi-label"
+              multiple
+              open={openEmpresas}
+              onOpen={() => setOpenEmpresas(true)}
+              onClose={() => setOpenEmpresas(false)}
+              value={empresasSeleccionadas}
+              onChange={handleEmpresasChange}
+              label={`Empresas (${empresasFiltradas.length})`}
+              renderValue={(selected) => (
+                <Box className="filtro-chips-compactos">
+                  {selected.length === 0 ? (
+                    <Chip label="Todas las empresas" size="small" color="primary" className="filtro-chip-compacto" />
+                  ) : (
+                    <>
+                      {selected.slice(0, 2).map((id) => {
+                        const emp = empresas.find(e => e.id === id);
+                        return (
                           <Chip 
-                            label={`+${selected.length - 2} más`} 
+                            key={id} 
+                            label={emp ? emp.nombre : id} 
                             size="small"
                             className="filtro-chip-compacto"
-                            color="secondary"
                           />
-                        )}
-                        <Tooltip title="Limpiar todas las empresas">
+                        );
+                      })}
+                      {selected.length > 2 && (
+                        <Chip 
+                          label={`+${selected.length - 2} más`} 
+                          size="small"
+                          className="filtro-chip-compacto"
+                          color="secondary"
+                        />
+                      )}
+                      <Tooltip title="Limpiar todas las empresas">
+                        <IconButton 
+                          size="small" 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleClearEmpresas();
+                          }}
+                          sx={{ ml: 0.5 }}
+                        >
+                          <Clear fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    </>
+                  )}
+                </Box>
+              )}
+            >
+              <MenuItem key="todos-empresas" value="todos">
+                <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
+                  ✓ Todos los reportes
+                </Typography>
+              </MenuItem>
+              <Divider />
+              {empresasFiltradas.length === 0 ? (
+                <MenuItem key="no-empresas" disabled>No hay empresas disponibles</MenuItem>
+              ) : (
+                empresasFiltradas.map((empresa) => (
+                  <MenuItem key={empresa.id} value={empresa.id}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                        <Business fontSize="small" sx={{ mr: 1 }} />
+                        {empresa.nombre}
+                      </Box>
+                      {empresasSeleccionadas.includes(empresa.id) && (
+                        <Tooltip title="Eliminar empresa">
                           <IconButton 
                             size="small" 
                             onClick={(e) => {
                               e.stopPropagation();
-                              handleClearEmpresas();
+                              handleRemoveEmpresa(empresa.id);
                             }}
-                            sx={{ ml: 0.5 }}
+                            sx={{ ml: 1 }}
                           >
                             <Clear fontSize="small" />
                           </IconButton>
                         </Tooltip>
-                      </>
-                    )}
-                  </Box>
-                )}
-              >
-                <MenuItem key="todos-empresas" value="todos">
-                  <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
-                    ✓ Todos los reportes
-                  </Typography>
-                </MenuItem>
-                <Divider />
-                {empresasFiltradas.length === 0 ? (
-                  <MenuItem key="no-empresas" disabled>No hay empresas disponibles</MenuItem>
-                ) : (
-                  empresasFiltradas.map((empresa) => (
-                    <MenuItem key={empresa.id} value={empresa.id}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
-                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                          <Business fontSize="small" sx={{ mr: 1 }} />
-                          {empresa.nombre}
-                        </Box>
-                        {empresasSeleccionadas.includes(empresa.id) && (
-                          <Tooltip title="Eliminar empresa">
-                            <IconButton 
-                              size="small" 
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleRemoveEmpresa(empresa.id);
-                              }}
-                              sx={{ ml: 1 }}
-                            >
-                              <Clear fontSize="small" />
-                            </IconButton>
-                          </Tooltip>
-                        )}
-                      </Box>
-                    </MenuItem>
-                  ))
-                )}
-              </Select>
-            </FormControl>
-            <FormControl size="small" sx={{ width: '50%' }}>
-              <InputLabel id="formularios-multi-label">Formularios ({formulariosFiltrados.length})</InputLabel>
-              <Select
-                labelId="formularios-multi-label"
-                multiple
-                open={openFormularios}
-                onOpen={() => setOpenFormularios(true)}
-                onClose={() => setOpenFormularios(false)}
-                value={formulariosSeleccionados}
-                onChange={handleFormulariosChange}
-                label={`Formularios (${formulariosFiltrados.length})`}
-                renderValue={(selected) => (
-                  <Box className="filtro-chips-compactos">
-                    {selected.length === 0 ? (
-                      <Chip label="Todos los formularios" size="small" color="primary" className="filtro-chip-compacto" />
-                    ) : (
-                      <>
-                        {selected.slice(0, 2).map((id) => {
-                          const form = formularios.find(f => f.id === id);
-                          return (
-                            <Chip 
-                              key={id} 
-                              label={form ? form.nombre : id} 
-                              size="small"
-                              className="filtro-chip-compacto"
-                            />
-                          );
-                        })}
-                        {selected.length > 2 && (
-                          <Chip 
-                            label={`+${selected.length - 2} más`} 
-                            size="small"
-                            className="filtro-chip-compacto"
-                            color="secondary"
-                          />
-                        )}
-                        <Tooltip title="Limpiar todos los formularios">
-                          <IconButton 
-                            size="small" 
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleClearFormularios();
-                            }}
-                            sx={{ ml: 0.5 }}
-                          >
-                            <Clear fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                      </>
-                    )}
-                  </Box>
-                )}
-              >
-                <MenuItem key="todos-formularios" value="todos">
-                  <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
-                    ✓ Todos los formularios
-                  </Typography>
-                </MenuItem>
-                <Divider />
-                {formulariosFiltrados.length === 0 ? (
-                  <MenuItem key="no-formularios" disabled>No hay formularios disponibles</MenuItem>
-                ) : (
-                  formulariosFiltrados.map((formulario) => (
-                    <MenuItem key={formulario.id} value={formulario.id}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
-                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                          <Assignment fontSize="small" sx={{ mr: 1 }} />
-                          {formulario.nombre}
-                        </Box>
-                        {formulariosSeleccionados.includes(formulario.id) && (
-                          <Tooltip title="Eliminar formulario">
-                            <IconButton 
-                              size="small" 
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleRemoveFormulario(formulario.id);
-                              }}
-                              sx={{ ml: 1 }}
-                            >
-                              <Clear fontSize="small" />
-                            </IconButton>
-                          </Tooltip>
-                        )}
-                      </Box>
-                    </MenuItem>
-                  ))
-                )}
-              </Select>
-            </FormControl>
-
-
-          </Grid>
+                      )}
+                    </Box>
+                  </MenuItem>
+                ))
+              )}
+            </Select>
+          </FormControl>
           
-        </Grid>
+          <FormControl size="small" sx={{ flex: 1 }}>
+            <InputLabel id="formularios-multi-label">Formularios ({formulariosFiltrados.length})</InputLabel>
+            <Select
+              labelId="formularios-multi-label"
+              multiple
+              open={openFormularios}
+              onOpen={() => setOpenFormularios(true)}
+              onClose={() => setOpenFormularios(false)}
+              value={formulariosSeleccionados}
+              onChange={handleFormulariosChange}
+              label={`Formularios (${formulariosFiltrados.length})`}
+              renderValue={(selected) => (
+                <Box className="filtro-chips-compactos">
+                  {selected.length === 0 ? (
+                    <Chip label="Todos los formularios" size="small" color="primary" className="filtro-chip-compacto" />
+                  ) : (
+                    <>
+                      {selected.slice(0, 2).map((id) => {
+                        const form = formularios.find(f => f.id === id);
+                        return (
+                          <Chip 
+                            key={id} 
+                            label={form ? form.nombre : id} 
+                            size="small"
+                            className="filtro-chip-compacto"
+                          />
+                        );
+                      })}
+                      {selected.length > 2 && (
+                        <Chip 
+                          label={`+${selected.length - 2} más`} 
+                          size="small"
+                          className="filtro-chip-compacto"
+                          color="secondary"
+                        />
+                      )}
+                      <Tooltip title="Limpiar todos los formularios">
+                        <IconButton 
+                          size="small" 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleClearFormularios();
+                          }}
+                          sx={{ ml: 0.5 }}
+                        >
+                          <Clear fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    </>
+                  )}
+                </Box>
+              )}
+            >
+              <MenuItem key="todos-formularios" value="todos">
+                <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
+                  ✓ Todos los formularios
+                </Typography>
+              </MenuItem>
+              <Divider />
+              {formulariosFiltrados.length === 0 ? (
+                <MenuItem key="no-formularios" disabled>No hay formularios disponibles</MenuItem>
+              ) : (
+                formulariosFiltrados.map((formulario) => (
+                  <MenuItem key={formulario.id} value={formulario.id}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                        <Assignment fontSize="small" sx={{ mr: 1 }} />
+                        {formulario.nombre}
+                      </Box>
+                      {formulariosSeleccionados.includes(formulario.id) && (
+                        <Tooltip title="Eliminar formulario">
+                          <IconButton 
+                            size="small" 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleRemoveFormulario(formulario.id);
+                            }}
+                            sx={{ ml: 1 }}
+                          >
+                            <Clear fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      )}
+                    </Box>
+                  </MenuItem>
+                ))
+              )}
+            </Select>
+          </FormControl>
+        </Box>
       </Box>
 
       {/* Fila 3: Desde - Hasta */}
       <Box className="filtro-row">
-        <Grid container spacing={2}>
-          <Grid item xs={12} sm={6}>
-            <DatePicker
-              label="Desde"
-              value={fechaDesde}
-              onChange={onChangeFechaDesde}
-              slotProps={{ 
-                textField: { 
-                  size: 'small', 
-                  sx: { width: '50%' } 
-                } 
-              }}
-            />
-            <DatePicker
-              label="Hasta"
-              value={fechaHasta}
-              onChange={onChangeFechaHasta}
-              slotProps={{ 
-                textField: { 
-                  size: 'small', 
-                  sx: { width: '50%' }
-                } 
-              }}
-            />
-          </Grid>
-          
-          
-        </Grid>
+        <Box sx={{ display: 'flex', gap: 2, width: '100%' }}>
+          <DatePicker
+            label="Desde"
+            value={fechaDesde}
+            onChange={onChangeFechaDesde}
+            slotProps={{ 
+              textField: { 
+                size: 'small', 
+                sx: { flex: 1 } 
+              } 
+            }}
+          />
+          <DatePicker
+            label="Hasta"
+            value={fechaHasta}
+            onChange={onChangeFechaHasta}
+            slotProps={{ 
+              textField: { 
+                size: 'small', 
+                sx: { flex: 1 } 
+              } 
+            }}
+          />
+        </Box>
       </Box>
 
       {/* Botón de refresh (opcional) */}
