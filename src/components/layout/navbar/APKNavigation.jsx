@@ -160,7 +160,7 @@ const APKNavigation = ({ children }) => {
                width: '100%',
                position: 'relative',
                mb: 0.25,
-               mt: 2
+               mt: 2.5
              }}>
                {/* Espacio vacío para balance */}
                <Box sx={{ width: 48 }} />
@@ -192,7 +192,7 @@ const APKNavigation = ({ children }) => {
                justifyContent: 'space-between',
                alignItems: 'center',
                width: '100%',
-               mt: 1
+               mt: 0.5
              }}>
               {/* Lado izquierdo: Botón hamburguesa */}
               <IconButton
