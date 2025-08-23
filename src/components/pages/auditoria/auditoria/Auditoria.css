@@ -15,6 +15,9 @@
   display: flex;
   flex-direction: column;
   align-items: center; /* Centrar horizontalmente */
+  justify-content: center; /* Centrar verticalmente */
+  margin: 0 auto; /* Centrar el contenedor */
+  padding: 0; /* Eliminar padding por defecto */
 }
 
 /* Contenedor de contenido */
@@ -25,6 +28,9 @@
   width: 100%;
   max-width: 100%; /* Asegurar que no exceda el ancho de la pantalla */
   align-items: center; /* Centrar horizontalmente */
+  justify-content: center; /* Centrar verticalmente */
+  margin: 0 auto; /* Centrar el contenedor */
+  padding: 0; /* Eliminar padding por defecto */
 }
 
 /* Header de auditoría */
@@ -38,6 +44,8 @@
   display: flex;
   flex-direction: column;
   align-items: center; /* Centrar contenido del header */
+  justify-content: center; /* Centrar verticalmente */
+  margin: 0 auto; /* Centrar el header */
 }
 
 /* Stepper de auditoría */
@@ -50,6 +58,8 @@
   display: flex;
   flex-direction: column;
   align-items: center; /* Centrar contenido del stepper */
+  justify-content: center; /* Centrar verticalmente */
+  margin: 0 auto; /* Centrar el stepper */
 }
 
 /* Contenido del stepper */
@@ -59,6 +69,31 @@
   display: flex;
   flex-direction: column;
   align-items: center; /* Centrar contenido de los pasos */
+  justify-content: center; /* Centrar verticalmente */
+  margin: 0 auto; /* Centrar el contenido */
+}
+
+/* ========================================
+   REGLAS GLOBALES DE CENTRADO
+   ======================================== */
+
+/* Asegurar que todos los elementos estén centrados */
+.auditoria-container,
+.auditoria-container * {
+  box-sizing: border-box;
+}
+
+/* Centrado global para todos los contenedores */
+.auditoria-container > *,
+.auditoria-container .content-container > *,
+.auditoria-container .header-section > *,
+.auditoria-container .stepper-section > * {
+  margin-left: auto !important;
+  margin-right: auto !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
 }
 
 /* ========================================
@@ -71,11 +106,12 @@
     max-width: 100vw !important;
     min-height: 100vh !important;
     min-height: calc(100vh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)) !important;
-    margin: 0 !important;
+    margin: 0 auto !important; /* Centrar el contenedor */
     padding: 0 !important;
     display: flex !important;
     flex-direction: column !important;
     align-items: center !important; /* Centrar horizontalmente */
+    justify-content: center !important; /* Centrar verticalmente */
   }
 
   /* Contenedor de contenido - pantalla completa y centrado */
@@ -84,12 +120,13 @@
     max-width: 100vw !important;
     min-height: 100vh !important;
     min-height: calc(100vh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)) !important;
-    margin: 0 !important;
+    margin: 0 auto !important; /* Centrar el contenedor */
     padding: 0 !important;
     display: flex !important;
     flex-direction: column !important;
     flex: 1 !important;
     align-items: center !important; /* Centrar horizontalmente */
+    justify-content: center !important; /* Centrar verticalmente */
   }
 
   /* Header - más compacto con espacio lateral y centrado */
@@ -139,12 +176,13 @@
   .auditoria-container .MuiPaper-root {
     width: 100% !important;
     max-width: 100% !important;
-    margin: 0 !important;
+    margin: 0 auto !important; /* Centrar las tarjetas */
     margin-bottom: 12px !important;
     border-radius: 12px !important;
     display: flex !important;
     flex-direction: column !important;
     align-items: center !important; /* Centrar contenido de las tarjetas */
+    justify-content: center !important; /* Centrar verticalmente */
   }
 
   /* Contenido de las tarjetas - centrado */
@@ -183,9 +221,11 @@
     padding: 12px 0 !important;
     width: 100% !important;
     max-width: 100% !important;
+    margin: 0 auto !important; /* Centrar el stepper */
     display: flex !important;
     flex-direction: column !important;
     align-items: center !important; /* Centrar stepper */
+    justify-content: center !important; /* Centrar verticalmente */
   }
 
   .auditoria-container .MuiStepLabel-root {
@@ -287,6 +327,38 @@
     flex-direction: column !important;
     align-items: center !important; /* Centrar contenedor de preguntas */
   }
+}
+
+/* ========================================
+   REGLAS ADICIONALES DE CENTRADO
+   ======================================== */
+
+/* Asegurar que el contenido principal esté centrado en todas las pantallas */
+.auditoria-container .main-content,
+.auditoria-container .auditoria-content,
+.auditoria-container .step-content > * {
+  margin-left: auto !important;
+  margin-right: auto !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+/* Centrado específico para contenedores de formularios */
+.auditoria-container .form-container,
+.auditoria-container .formulario-container,
+.auditoria-container .preguntas-container {
+  margin-left: auto !important;
+  margin-right: auto !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 100% !important;
+  max-width: 100% !important;
 }
 
 /* ========================================
