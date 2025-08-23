@@ -166,11 +166,10 @@ function Navbar(props) {
         sx={{ 
           width: "100%", 
           minHeight: { xs: 56, sm: 64 }, 
-          height: { xs: 56, sm: 64 },
+          height: { xs: `calc(56px + env(safe-area-inset-top, 0px))`, sm: 64 },
           zIndex: theme.zIndex.drawer + 1,
           // Extender hasta arriba en móvil para cubrir la barra de estado
           top: 0,
-          height: { xs: `calc(56px + env(safe-area-inset-top, 0px))`, sm: 64 },
           backgroundColor: '#1976d2',
           // Asegurar que ocupe todo el ancho en web
           '@media (min-width: 769px)': {
@@ -185,14 +184,13 @@ function Navbar(props) {
             gap: { xs: 1, sm: 2 },
             display: "flex",
             justifyContent: "space-between",
-            minHeight: { xs: 56, sm: 64 },
-            height: { xs: 56, sm: 64 },
+            minHeight: { xs: `calc(56px + env(safe-area-inset-top, 0px))`, sm: 64 },
+            height: { xs: `calc(56px + env(safe-area-inset-top, 0px))`, sm: 64 },
             px: { xs: 0, sm: 1 }, // Sin padding horizontal en móvil
             py: 0,
             pr: { xs: 0, sm: 1 }, // Sin padding derecho en móvil
             // Ajustar padding superior para safe areas
             paddingTop: { xs: `env(safe-area-inset-top, 0px)`, sm: 0 },
-            minHeight: { xs: `calc(56px + env(safe-area-inset-top, 0px))`, sm: 64 },
             // Asegurar que ocupe todo el ancho en web
             '@media (min-width: 769px)': {
               width: '100%',

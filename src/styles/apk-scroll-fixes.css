@@ -1,0 +1,171 @@
+/* ========================================
+   FIXES ESPECÍFICOS PARA SCROLL EN APK
+   ======================================== */
+
+/* Asegurar que el body permita scroll */
+body {
+  -webkit-overflow-scrolling: touch !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  position: relative !important;
+  height: 100% !important;
+}
+
+/* Asegurar que el html permita scroll */
+html {
+  -webkit-overflow-scrolling: touch !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  height: 100% !important;
+}
+
+/* Asegurar que el root permita scroll */
+#root {
+  -webkit-overflow-scrolling: touch !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  min-height: 100vh !important;
+  position: relative !important;
+}
+
+/* Contenedor principal de la aplicación */
+.main-app-container {
+  -webkit-overflow-scrolling: touch !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  min-height: 100vh !important;
+  position: relative !important;
+}
+
+/* Fixes específicos para APK Navigation */
+.apk-navigation-container {
+  -webkit-overflow-scrolling: touch !important;
+  overflow: visible !important;
+  position: relative !important;
+  height: 100vh !important;
+  width: 100vw !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+.apk-content-container {
+  -webkit-overflow-scrolling: touch !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  flex: 1 !important;
+  min-height: 0 !important;
+  position: relative !important;
+}
+
+/* Mejorar scroll en contenedores flex */
+.flex-scroll-container {
+  display: flex !important;
+  flex-direction: column !important;
+  min-height: 0 !important;
+  overflow: visible !important;
+  -webkit-overflow-scrolling: touch !important;
+}
+
+.flex-scroll-content {
+  flex: 1 !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  -webkit-overflow-scrolling: touch !important;
+  min-height: 0 !important;
+  position: relative !important;
+}
+
+/* Asegurar que los contenedores de páginas permitan scroll */
+.page-container {
+  -webkit-overflow-scrolling: touch !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  min-height: 100vh !important;
+  position: relative !important;
+}
+
+/* Asegurar que los contenedores de contenido permitan scroll */
+.content-container {
+  -webkit-overflow-scrolling: touch !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  position: relative !important;
+}
+
+/* Fix para Material-UI Box con scroll */
+.MuiBox-root {
+  -webkit-overflow-scrolling: touch !important;
+}
+
+/* Fix para contenedores con overflow auto */
+[style*="overflow: auto"] {
+  -webkit-overflow-scrolling: touch !important;
+}
+
+[style*="overflow-y: auto"] {
+  -webkit-overflow-scrolling: touch !important;
+}
+
+/* Asegurar que los elementos con posición fija no interfieran */
+.MuiAppBar-root {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  z-index: 1200 !important;
+}
+
+/* Asegurar que el drawer no interfiera con el scroll */
+.MuiDrawer-root {
+  position: fixed !important;
+  z-index: 1300 !important;
+}
+
+/* Mejorar scroll en dispositivos móviles */
+@media (max-width: 768px) {
+  body {
+    -webkit-overflow-scrolling: touch !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    position: relative !important;
+    height: 100% !important;
+    width: 100% !important;
+  }
+  
+  html {
+    -webkit-overflow-scrolling: touch !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    height: 100% !important;
+    width: 100% !important;
+  }
+  
+  #root {
+    -webkit-overflow-scrolling: touch !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    min-height: 100vh !important;
+    width: 100% !important;
+    position: relative !important;
+  }
+  
+  .main-app-container {
+    -webkit-overflow-scrolling: touch !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    min-height: 100vh !important;
+    width: 100% !important;
+    position: relative !important;
+  }
+}
+
+/* Fix específico para WebView de Android */
+@media screen and (-webkit-min-device-pixel-ratio: 0) {
+  body {
+    -webkit-overflow-scrolling: touch !important;
+  }
+  
+  .flex-scroll-content {
+    -webkit-overflow-scrolling: touch !important;
+  }
+}

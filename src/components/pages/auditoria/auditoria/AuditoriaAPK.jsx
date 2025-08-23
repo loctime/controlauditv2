@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import '../../../../styles/apk-scroll-fixes.css';
 import { 
   AppBar, 
   Toolbar, 
@@ -76,20 +77,23 @@ const AuditoriaAPK = () => {
   };
 
   return (
-    <div style={{ 
-      width: '100vw', 
-      height: '100vh', 
-      overflow: 'hidden',
-      position: 'fixed',
-      top: 0,
-      left: 0,
-      zIndex: 9999,
-      display: 'flex',
-      flexDirection: 'column'
-    }}>
+    <div 
+      className="apk-navigation-container flex-scroll-container"
+      style={{ 
+        width: '100vw', 
+        height: '100vh', 
+        overflow: 'visible',
+        position: 'relative',
+        top: 0,
+        left: 0,
+        zIndex: 1,
+        display: 'flex',
+        flexDirection: 'column'
+      }}
+    >
       {/* Header de navegación */}
              <AppBar 
-         position="static" 
+         position="fixed" 
          sx={{ 
            bgcolor: theme.palette.primary.main,
            boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
@@ -97,7 +101,11 @@ const AuditoriaAPK = () => {
            pt: isMobile ? 'env(safe-area-inset-top, 20px)' : 0,
            // Agregar altura explícita para que se vea el cambio
            height: isMobile ? '120px' : '110px',
-           minHeight: isMobile ? '120px' : '110px'
+           minHeight: isMobile ? '120px' : '110px',
+           top: 0,
+           left: 0,
+           right: 0,
+           zIndex: 1200
          }}
        >
          <Toolbar sx={{ 
@@ -202,7 +210,18 @@ const AuditoriaAPK = () => {
       </AppBar>
 
              {/* Contenido principal */}
-       <Box sx={{ flex: 1, overflow: 'hidden' }}>
+       <Box 
+         className="apk-content-container flex-scroll-content"
+         sx={{ 
+           flex: 1, 
+           overflow: 'auto',
+           overflowY: 'scroll',
+           WebkitOverflowScrolling: 'touch',
+           pt: isMobile ? 'calc(120px + env(safe-area-inset-top, 20px))' : '110px',
+           pb: isMobile ? 'env(safe-area-inset-bottom, 20px)' : 0,
+           minHeight: 0
+         }}
+       >
          <Auditoria />
        </Box>
 

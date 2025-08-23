@@ -479,6 +479,33 @@
     background: rgba(0, 0, 0, 0.3);
   }
 
+  /* Mejorar scroll táctil */
+  body {
+    -webkit-overflow-scrolling: touch;
+    overflow-x: hidden;
+  }
+
+  /* Asegurar que los contenedores con scroll funcionen correctamente */
+  .scrollable-container {
+    -webkit-overflow-scrolling: touch;
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+
+  /* Mejorar scroll en contenedores flex */
+  .flex-scroll-container {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .flex-scroll-content {
+    flex: 1;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
   /* Optimizar focus */
   *:focus {
     outline: 2px solid #1976d2;
