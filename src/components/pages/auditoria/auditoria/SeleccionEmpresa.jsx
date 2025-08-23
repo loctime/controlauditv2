@@ -69,17 +69,7 @@ const SeleccionEmpresa = ({ empresas, empresaSeleccionada, onChange }) => {
             alignItems: 'center',
             justifyContent: 'center'
           }}>
-            {hasSelectedEmpresa ? (
-              <CheckCircleIcon 
-                color="success" 
-                sx={{ fontSize: isMobile ? 14 : 20 }} 
-              />
-            ) : (
-              <BusinessIcon 
-                color="primary" 
-                sx={{ fontSize: isMobile ? 14 : 20 }} 
-              />
-            )}
+            
           </Box>
                      <Typography 
              variant={isMobile ? "body2" : "h6"} 
@@ -193,43 +183,18 @@ const SeleccionEmpresa = ({ empresas, empresaSeleccionada, onChange }) => {
                   }
                 }}
               >
-                {empresa.logo && empresa.logo.trim() !== "" ? (
-                  <Avatar
-                    src={empresa.logo}
-                    alt={`${empresa.nombre} logo`}
-                    sx={{ 
-                      width: isMobile ? 24 : 32, 
-                      height: isMobile ? 24 : 32,
-                      border: `1px solid ${alpha(theme.palette.primary.main, 0.15)}`
-                    }}
-                  />
-                ) : (
-                  <Avatar 
-                    sx={{ 
-                      width: isMobile ? 24 : 32, 
-                      height: isMobile ? 24 : 32,
-                      bgcolor: alpha(theme.palette.primary.main, 0.08),
-                      color: theme.palette.primary.main,
-                      fontSize: isMobile ? '0.7rem' : '0.875rem'
-                    }}
-                  >
-                    {empresa.nombre.charAt(0).toUpperCase()}
-                  </Avatar>
-                )}
-                <Box sx={{ flex: 1, minWidth: 0 }}>
-                  <Typography 
-                    variant="body1" 
-                    sx={{ 
-                      fontWeight: 600,
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                      overflow: 'hidden'
-                    }}
-                  >
-                    {empresa.nombre}
-                  </Typography>
-                  
-                </Box>
+                <Typography 
+                  variant="body1" 
+                  sx={{ 
+                    fontWeight: 600,
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden'
+                  }}
+                >
+                  {empresa.nombre}
+                </Typography>
+
                
               </MenuItem>
             ))}

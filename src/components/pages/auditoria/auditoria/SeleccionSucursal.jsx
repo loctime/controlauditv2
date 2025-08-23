@@ -47,17 +47,7 @@ const SeleccionSucursal = ({ sucursales, sucursalSeleccionada, onChange }) => {
           alignItems: 'center',
           justifyContent: 'center'
         }}>
-          {hasSelectedSucursal ? (
-            <CheckCircleIcon 
-              color="success" 
-              sx={{ fontSize: isMobile ? 14 : 20 }} 
-            />
-          ) : (
-            <LocationOnIcon 
-              color="primary" 
-              sx={{ fontSize: isMobile ? 14 : 20 }} 
-            />
-          )}
+          
         </Box>
                  
       </Box>
@@ -129,16 +119,9 @@ const SeleccionSucursal = ({ sucursales, sucursalSeleccionada, onChange }) => {
           </MenuItem>
           {sucursales.map((sucursal) => (
             <MenuItem key={sucursal.id} value={sucursal.nombre} sx={{ py: 1.5 }}>
-              <Box display="flex" alignItems="center" sx={{ width: '100%' }}>
-                <LocationOnIcon color="primary" sx={{ mr: 2 }} />
-                <Box flex={1}>
-                  <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                    {sucursal.nombre}
-                  </Typography>
-                  
-                </Box>
-                
-              </Box>
+              <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                {sucursal.nombre}
+              </Typography>
             </MenuItem>
           ))}
         </Select>
