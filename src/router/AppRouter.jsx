@@ -10,6 +10,7 @@ import ForgotPassword from "../components/pages/forgotPassword/ForgotPassword";
 import ProtectedUsers from "./ProtectedUsers";
 import DashboardProtected from "./DashboardProtected";
 import VistaFormularioPublico from '../components/pages/formulario/VistaFormularioPublico';
+import AppLoader from '../components/common/AppLoader';
 import LazyLoader from '../components/common/LazyLoader';
 import { usePlatform } from '../hooks/usePlatform';
 import { useAuth } from '../components/context/AuthContext';
@@ -20,7 +21,7 @@ const AppRouter = () => {
 
   // Mostrar loader mientras se detecta la plataforma
   if (isLoading || authLoading) {
-    return <LazyLoader message="Detectando plataforma..." />;
+    return <AppLoader message="Inicializando Control de Auditoría..." />;
   }
 
   // Si es APK, mostrar rutas con protección de autenticación
