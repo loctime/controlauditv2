@@ -6,6 +6,7 @@ import PrintIcon from '@mui/icons-material/Print';
 import EmailIcon from '@mui/icons-material/Email';
 import CloseIcon from '@mui/icons-material/Close';
 import EstadisticasChart from './EstadisticasChart';
+import AuditoriaPieChart from './AuditoriaPieChart';
 import { useAuth } from '../../../context/AuthContext';
 
 // Normaliza respuestas a array de arrays de strings
@@ -401,6 +402,7 @@ function generarContenidoImpresion({empresa, sucursal, formulario, fecha, respue
 
 const ReporteDetallePro = forwardRef(({ open = false, onClose = () => {}, reporte = null, modo = 'modal', firmaResponsable, onPrint }, ref) => {
   const { userProfile } = useAuth();
+  const [useNewChart, setUseNewChart] = useState(false);
   
   console.log('[ReporteDetallePro] Props recibidas:', { open, reporte, modo, firmaResponsable, onPrint });
   console.log('[ReporteDetallePro] reporte completo:', reporte);
@@ -888,11 +890,39 @@ const ReporteDetallePro = forwardRef(({ open = false, onClose = () => {}, report
       {/* Gráfico general de respuestas */}
       {reporte.estadisticas && reporte.estadisticas.conteo && (
         <Box mt={3}>
-          <EstadisticasChart
-            ref={chartRef}
-            estadisticas={reporte.estadisticas.conteo}
-            title="Distribución general de respuestas"
-          />
+          {/* Opción para alternar entre gráficos */}
+          <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 2 }}>
+            <Typography variant="h6" gutterBottom>
+              📊 Gráfico de Distribución
+            </Typography>
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={useNewChart}
+                  onChange={(e) => setUseNewChart(e.target.checked)}
+                  size="small"
+                />
+              }
+              label={useNewChart ? "Nuevo Gráfico de Torta" : "Gráfico Donut Original"}
+            />
+          </Box>
+          
+          {useNewChart ? (
+            <AuditoriaPieChart
+              estadisticas={reporte.estadisticas.conteo}
+              title="Distribución de Respuestas de Auditoría"
+              height={400}
+              showLegend={true}
+              showTooltips={true}
+              variant="pie"
+            />
+          ) : (
+            <EstadisticasChart
+              ref={chartRef}
+              estadisticas={reporte.estadisticas.conteo}
+              title="Distribución general de respuestas"
+            />
+          )}
         </Box>
       )}
       {/* Gráficos por sección */}

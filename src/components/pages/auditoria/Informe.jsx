@@ -1,6 +1,6 @@
 import React from "react";
-import { Typography } from "@mui/material";
-import { Pie } from "react-chartjs-2";
+import { Typography, Box } from "@mui/material";
+import AuditoriaPieChart from "./reporte/AuditoriaPieChart";
 
 const Informe = ({ empresa, sucursal, respuestas, secciones, nombreFormulario }) => {
   // Calcula los datos para el gráfico de torta
@@ -10,33 +10,12 @@ const Informe = ({ empresa, sucursal, respuestas, secciones, nombreFormulario })
   const necesitaMejora = respuestas.flat().filter(r => r === "Necesita mejora").length;
   const noAplica = respuestas.flat().filter(r => r === "No aplica").length;
 
-  const data = {
-    labels: ["Conforme", "No conforme", "Necesita mejora", "No aplica"],
-    datasets: [
-      {
-        data: [conformes, noConformes, necesitaMejora, noAplica],
-        backgroundColor: ["#4caf50", "#f44336", "#ff9800", "#9e9e9e"],
-      },
-    ],
-  };
-
-  const options = {
-    responsive: true,
-    plugins: {
-      legend: {
-        position: "bottom",
-      },
-      tooltip: {
-        callbacks: {
-          label: function (context) {
-            const label = context.label || "";
-            const value = context.raw || 0;
-            const percentage = ((value / totalPreguntas) * 100).toFixed(2) + "%";
-            return `${label}: ${value} (${percentage})`;
-          },
-        },
-      },
-    },
+  // Preparar estadísticas en el formato esperado
+  const estadisticas = {
+    'Conforme': conformes,
+    'No conforme': noConformes,
+    'Necesita mejora': necesitaMejora,
+    'No aplica': noAplica
   };
 
   return (
@@ -57,9 +36,18 @@ const Informe = ({ empresa, sucursal, respuestas, secciones, nombreFormulario })
         <Typography variant="body1" gutterBottom>
           Preguntas respondidas: {totalPreguntas}
         </Typography>
-        <div className="grafico-container">
-          <Pie data={data} options={options} />
-        </div>
+        
+        <Box sx={{ mt: 3, mb: 3 }}>
+          <AuditoriaPieChart
+            estadisticas={estadisticas}
+            title="Distribución de Respuestas de Auditoría"
+            height={400}
+            showLegend={true}
+            showTooltips={true}
+            variant="pie"
+          />
+        </Box>
+        
         {/* Aquí puedes incluir el resto de la información del informe */}
       </div>
     </div>

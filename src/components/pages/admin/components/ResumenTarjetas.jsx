@@ -20,124 +20,80 @@ const ResumenTarjetas = ({ auditoriasPendientes, auditoriasCompletadas, auditori
   return (
     <Box sx={{ 
       display: 'flex', 
-      gap: 0.5,
+      flexDirection: 'row',
+      gap: 1,
       alignItems: 'center',
-      flexWrap: 'nowrap',
-      overflow: 'hidden'
+      justifyContent: 'center',
+      flexWrap: 'nowrap'
     }}>
       {/* Tarjeta Pendientes */}
-      <Box sx={{ 
-        bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.warning.main, 0.1) : '#fff3e0', 
-        textAlign: 'center',
-        p: 0.5,
-        borderRadius: 1,
-        border: `1px solid ${alpha(theme.palette.warning.main, 0.2)}`,
-        minWidth: 40,
-        maxWidth: 60,
+      <Box sx={{
         display: 'flex',
-        flexDirection: 'column',
+        alignItems: 'center',
         justifyContent: 'center',
+        padding: '2px 4px',
+        borderRadius: '3px',
+        width: '20px',
+        height: '20px',
+        bgcolor: '#fff3e0',
+        border: '1px solid #ffb74d',
+        boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
         flexShrink: 0
       }}>
-        <Typography 
-          variant="body2" 
-          color="warning.main"
-          sx={{ 
-            fontWeight: 600,
-            fontSize: '0.6rem',
-            mb: 0.25,
-            lineHeight: 1
-          }}
-        >
-          Pendientes
-        </Typography>
-        <Typography 
-          variant="h6"
-          sx={{ 
-            fontWeight: 700,
-            fontSize: '1rem',
-            color: 'text.primary',
-            lineHeight: 1
-          }}
-        >
+        <Typography sx={{ 
+          fontSize: '0.65rem',
+          fontWeight: 700,
+          lineHeight: 1,
+          color: '#f57c00'
+        }}>
           {auditoriasPendientes.length}
         </Typography>
       </Box>
 
       {/* Tarjeta Completadas */}
-      <Box sx={{ 
-        bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.success.main, 0.1) : '#e8f5e8', 
-        textAlign: 'center',
-        p: 0.5,
-        borderRadius: 1,
-        border: `1px solid ${alpha(theme.palette.success.main, 0.2)}`,
-        minWidth: 40,
-        maxWidth: 60,
+      <Box sx={{
         display: 'flex',
-        flexDirection: 'column',
+        alignItems: 'center',
         justifyContent: 'center',
+        padding: '2px 4px',
+        borderRadius: '3px',
+        width: '20px',
+        height: '20px',
+        bgcolor: '#e8f5e8',
+        border: '1px solid #81c784',
+        boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
         flexShrink: 0
       }}>
-        <Typography 
-          variant="body2" 
-          color="success.main"
-          sx={{ 
-            fontWeight: 600,
-            fontSize: '0.6rem',
-            mb: 0.25,
-            lineHeight: 1
-          }}
-        >
-          Completadas
-        </Typography>
-        <Typography 
-          variant="h6"
-          sx={{ 
-            fontWeight: 700,
-            fontSize: '1rem',
-            color: 'text.primary',
-            lineHeight: 1
-          }}
-        >
+        <Typography sx={{ 
+          fontSize: '0.65rem',
+          fontWeight: 700,
+          lineHeight: 1,
+          color: '#388e3c'
+        }}>
           {auditoriasCompletadas.length}
         </Typography>
       </Box>
 
       {/* Tarjeta Este Mes */}
-      <Box sx={{ 
-        bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.info.main, 0.1) : '#e3f2fd', 
-        textAlign: 'center',
-        p: 0.5,
-        borderRadius: 1,
-        border: `1px solid ${alpha(theme.palette.info.main, 0.2)}`,
-        minWidth: 40,
-        maxWidth: 60,
+      <Box sx={{
         display: 'flex',
-        flexDirection: 'column',
+        alignItems: 'center',
         justifyContent: 'center',
+        padding: '2px 4px',
+        borderRadius: '3px',
+        width: '20px',
+        height: '20px',
+        bgcolor: '#e3f2fd',
+        border: '1px solid #64b5f6',
+        boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
         flexShrink: 0
       }}>
-        <Typography 
-          variant="body2" 
-          color="info.main"
-          sx={{ 
-            fontWeight: 600,
-            fontSize: '0.6rem',
-            mb: 0.25,
-            lineHeight: 1
-          }}
-        >
-          Este Mes
-        </Typography>
-        <Typography 
-          variant="h6"
-          sx={{ 
-            fontWeight: 700,
-            fontSize: '1rem',
-            color: 'text.primary',
-            lineHeight: 1
-          }}
-        >
+        <Typography sx={{ 
+          fontSize: '0.65rem',
+          fontWeight: 700,
+          lineHeight: 1,
+          color: '#1976d2'
+        }}>
           {auditoriasEsteMes}
         </Typography>
       </Box>
