@@ -20,28 +20,33 @@ const ResumenTarjetas = ({ auditoriasPendientes, auditoriasCompletadas, auditori
   return (
     <Box sx={{ 
       display: 'flex', 
-      gap: 1,
-      alignItems: 'center'
+      gap: 0.5,
+      alignItems: 'center',
+      flexWrap: 'nowrap',
+      overflow: 'hidden'
     }}>
       {/* Tarjeta Pendientes */}
       <Box sx={{ 
         bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.warning.main, 0.1) : '#fff3e0', 
         textAlign: 'center',
-        p: 1,
+        p: 0.5,
         borderRadius: 1,
         border: `1px solid ${alpha(theme.palette.warning.main, 0.2)}`,
-        minWidth: 50,
+        minWidth: 40,
+        maxWidth: 60,
         display: 'flex',
         flexDirection: 'column',
-        justifyContent: 'center'
+        justifyContent: 'center',
+        flexShrink: 0
       }}>
         <Typography 
           variant="body2" 
           color="warning.main"
           sx={{ 
             fontWeight: 600,
-            fontSize: '0.7rem',
-            mb: 0.5
+            fontSize: '0.6rem',
+            mb: 0.25,
+            lineHeight: 1
           }}
         >
           Pendientes
@@ -50,8 +55,9 @@ const ResumenTarjetas = ({ auditoriasPendientes, auditoriasCompletadas, auditori
           variant="h6"
           sx={{ 
             fontWeight: 700,
-            fontSize: '1.2rem',
-            color: 'text.primary'
+            fontSize: '1rem',
+            color: 'text.primary',
+            lineHeight: 1
           }}
         >
           {auditoriasPendientes.length}
@@ -62,21 +68,24 @@ const ResumenTarjetas = ({ auditoriasPendientes, auditoriasCompletadas, auditori
       <Box sx={{ 
         bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.success.main, 0.1) : '#e8f5e8', 
         textAlign: 'center',
-        p: 1,
+        p: 0.5,
         borderRadius: 1,
         border: `1px solid ${alpha(theme.palette.success.main, 0.2)}`,
-        minWidth: 50,
+        minWidth: 40,
+        maxWidth: 60,
         display: 'flex',
         flexDirection: 'column',
-        justifyContent: 'center'
+        justifyContent: 'center',
+        flexShrink: 0
       }}>
         <Typography 
           variant="body2" 
           color="success.main"
           sx={{ 
             fontWeight: 600,
-            fontSize: '0.7rem',
-            mb: 0.5
+            fontSize: '0.6rem',
+            mb: 0.25,
+            lineHeight: 1
           }}
         >
           Completadas
@@ -85,8 +94,9 @@ const ResumenTarjetas = ({ auditoriasPendientes, auditoriasCompletadas, auditori
           variant="h6"
           sx={{ 
             fontWeight: 700,
-            fontSize: '1.2rem',
-            color: 'text.primary'
+            fontSize: '1rem',
+            color: 'text.primary',
+            lineHeight: 1
           }}
         >
           {auditoriasCompletadas.length}
@@ -97,21 +107,24 @@ const ResumenTarjetas = ({ auditoriasPendientes, auditoriasCompletadas, auditori
       <Box sx={{ 
         bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.info.main, 0.1) : '#e3f2fd', 
         textAlign: 'center',
-        p: 1,
+        p: 0.5,
         borderRadius: 1,
         border: `1px solid ${alpha(theme.palette.info.main, 0.2)}`,
-        minWidth: 50,
+        minWidth: 40,
+        maxWidth: 60,
         display: 'flex',
         flexDirection: 'column',
-        justifyContent: 'center'
+        justifyContent: 'center',
+        flexShrink: 0
       }}>
         <Typography 
           variant="body2" 
           color="info.main"
           sx={{ 
             fontWeight: 600,
-            fontSize: '0.7rem',
-            mb: 0.5
+            fontSize: '0.6rem',
+            mb: 0.25,
+            lineHeight: 1
           }}
         >
           Este Mes
@@ -120,8 +133,9 @@ const ResumenTarjetas = ({ auditoriasPendientes, auditoriasCompletadas, auditori
           variant="h6"
           sx={{ 
             fontWeight: 700,
-            fontSize: '1.2rem',
-            color: 'text.primary'
+            fontSize: '1rem',
+            color: 'text.primary',
+            lineHeight: 1
           }}
         >
           {auditoriasEsteMes}

@@ -163,10 +163,12 @@ const ClienteDashboard = React.memo(() => {
         startIcon={<Add />}
         onClick={() => handleOpenDialog()}
         sx={{ 
-          fontSize: { xs: '0.75rem', sm: '0.85rem' },
-          px: { xs: 1, sm: 2 },
+          fontSize: '0.75rem',
+          px: 1,
+          py: 0.5,
           borderRadius: '20px',
-          minWidth: { xs: 'auto', sm: 'auto' }
+          minWidth: 'auto',
+          height: '32px'
         }}
       >
         Agendar
@@ -188,10 +190,12 @@ const ClienteDashboard = React.memo(() => {
         startIcon={<Assignment />}
         onClick={() => navigate('/auditoria')}
         sx={{ 
-          fontSize: { xs: '0.75rem', sm: '0.85rem' },
-          px: { xs: 1, sm: 2 },
+          fontSize: '0.75rem',
+          px: 1,
+          py: 0.5,
           borderRadius: '20px',
-          minWidth: { xs: 'auto', sm: 'auto' }
+          minWidth: 'auto',
+          height: '32px'
         }}
       >
         Auditar
@@ -203,9 +207,9 @@ const ClienteDashboard = React.memo(() => {
   const tabs = useMemo(() => (
     <Tabs value={currentTab} onChange={handleTabChange} centered sx={{ 
       '& .MuiTab-root': {
-        fontSize: { xs: '0.75rem', sm: '0.875rem' },
-        minHeight: { xs: 32, sm: 48 },
-        padding: { xs: '4px 8px', sm: '6px 16px' }
+        fontSize: '0.75rem',
+        minHeight: 32,
+        padding: '4px 8px'
       }
     }}>
       <Tab 
@@ -256,60 +260,66 @@ const ClienteDashboard = React.memo(() => {
         canCrearEmpresas={canCrearEmpresas}
       />
 
-      {/* Pestañas */}
-      <Paper elevation={2} sx={{ mb: 3 }}>
-        <Box 
-          display="flex" 
-          flexDirection={{ xs: 'column', md: 'row' }} 
-          justifyContent="space-between" 
-          alignItems="center" 
-          sx={{ px: 2, py: 1 }}
-        >
-          {/* Botones */}
-          <Box 
-            display="flex" 
-            gap={1} 
-            sx={{ 
-              mb: { xs: 1, md: 0 }, 
-              width: { xs: '100%', md: 'auto' }, 
-              justifyContent: { xs: 'center', md: 'flex-start' },
-              order: { xs: 1, md: 0 }
-            }}
-          >
-            {agendarButton}
-            {auditarButton}
-          </Box>
-          
-          {/* Resumen General en el medio */}
-          <Box 
-            sx={{ 
-              flex: 1, 
-              display: 'flex', 
-              justifyContent: 'center',
-              order: { xs: 2, md: 1 },
-              mb: { xs: 1, md: 0 }
-            }}
-          >
-            <ResumenTarjetas
-              auditoriasPendientes={auditoriasPendientes}
-              auditoriasCompletadas={auditoriasCompletadas}
-              auditorias={auditorias}
-            />
-          </Box>
-          
-          {/* Tabs centrados */}
-          <Box 
-            sx={{ 
-              flex: 1, 
-              display: 'flex', 
-              justifyContent: 'center',
-              order: { xs: 0, md: 2 }
-            }}
-          >
-            {tabs}
-          </Box>
-        </Box>
-      </Paper>
+             {/* Header con todos los elementos en línea */}
+       <Paper elevation={2} sx={{ mb: 3 }}>
+         <Box 
+           display="flex" 
+           flexDirection="row"
+           justifyContent="space-between" 
+           alignItems="center" 
+           sx={{ 
+             px: 2, 
+             py: 1,
+             flexWrap: 'nowrap',
+             gap: 1,
+             overflow: 'hidden',
+             minHeight: '40px'
+           }}
+         >
+           {/* Botones */}
+           <Box 
+             display="flex" 
+             flexDirection="row"
+             gap={0.5} 
+             sx={{ 
+               flexShrink: 0,
+               minWidth: 'fit-content'
+             }}
+           >
+             {agendarButton}
+             {auditarButton}
+           </Box>
+           
+           {/* Resumen General en el medio */}
+           <Box 
+             sx={{ 
+               display: 'flex', 
+               justifyContent: 'center',
+               flex: 1,
+               minWidth: 0,
+               overflow: 'hidden'
+             }}
+           >
+             <ResumenTarjetas
+               auditoriasPendientes={auditoriasPendientes}
+               auditoriasCompletadas={auditoriasCompletadas}
+               auditorias={auditorias}
+             />
+           </Box>
+           
+           {/* Tabs */}
+           <Box 
+             sx={{ 
+               display: 'flex', 
+               justifyContent: 'flex-end',
+               flexShrink: 0,
+               minWidth: 'fit-content'
+             }}
+           >
+             {tabs}
+           </Box>
+         </Box>
+       </Paper>
 
       {/* Contenido de las pestañas */}
       {tabContent}
