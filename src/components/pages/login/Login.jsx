@@ -24,6 +24,7 @@ import { Formik, Form, Field, ErrorMessage } from 'formik';
 import * as Yup from 'yup';
 import { useAuth } from '../../context/AuthContext';
 import SmartAPKDownload from '../../common/SmartAPKDownload.jsx';
+import { usePlatform } from '../../hooks/usePlatform.js';
 
 const Login = () => {
   const theme = useTheme();
@@ -35,6 +36,7 @@ const Login = () => {
   const [error, setError] = useState('');
   const navigate = useNavigate();
   const { handleLogin } = useAuth();
+  const { isAPK } = usePlatform();
 
   const handleClickShowPassword = () => setShowPassword(!showPassword);
 
@@ -110,21 +112,25 @@ const Login = () => {
       >
         <CardContent sx={{ p: isSmallMobile ? 4 : 6 }}>
           {/* Sección de descarga de APK - MOVIDA ARRIBA */}
-          <Box sx={{ textAlign: 'center', mb: isSmallMobile ? 4 : 5 }}>
-            <Typography 
-              variant={isSmallMobile ? "h6" : "h5"} 
-              color="text.secondary" 
-              sx={{ 
-                mb: 2,
-                fontWeight: 600,
-                lineHeight: 1.4
-              }}
-            >
-              📱 Descarga nuestra aplicación móvil
-            </Typography>
-            <SmartAPKDownload variant="outlined" size="large" showInfo={false} />
-          </Box>
-
+          {/* Solo mostrar en web */}
+          {!isAPK && (
+            <Box sx={{ textAlign: 'center', mb: isSmallMobile ? 4 : 5 }}>
+              <Typography 
+                variant={isSmallMobile ? "h6" : "h5"} 
+                color="text.secondary" 
+                sx={{ 
+                  mb: 2,
+                  fontWeight: 600,
+                  lineHeight: 1.4
+                }}
+              >
+                📱 Descarga nuestra aplicación móvil
+              </Typography>
+              <SmartAPKDownload variant="outlined" size="large" showInfo={false} />
+            </Box>
+          )}
+          
+          {/* Título principal - siempre visible */}
           <Box sx={{ textAlign: 'center', mb: isSmallMobile ? 5 : 6 }}>
             <Typography 
               variant={isSmallMobile ? "h4" : "h3"} 
@@ -136,7 +142,7 @@ const Login = () => {
                 lineHeight: 1.2
               }}
             >
-              🔐 Iniciar Sesión
+              Control Audit
             </Typography>
             <Typography 
               variant={isSmallMobile ? "h6" : "h5"} 
