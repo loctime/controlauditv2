@@ -10,7 +10,7 @@ import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import BusinessIcon from '@mui/icons-material/Business';
 import FormatListBulletedOutlinedIcon from '@mui/icons-material/FormatListBulletedOutlined';
 import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
-import DownloadAPK from '../../common/DownloadAPK';
+import SmartAPKDownload from '../../common/SmartAPKDownload.jsx';
 import SafeAreaContainer from '../../common/SafeAreaContainer';
 import SafeAreaTest from '../../common/SafeAreaTest';
 
@@ -416,7 +416,7 @@ const Home = () => {
             >
               Descarga nuestra aplicación móvil para realizar auditorías desde tu dispositivo Android
             </Typography>
-            <DownloadAPK variant="outlined" size="large" showInfo={true} />
+            <SmartAPKDownload variant="outlined" size="large" showInfo={true} />
           </Box>
         </Box>
         <Divider sx={{ mb: 2, mt: isDesktop ? 4 : 3, width: '100%' }} />

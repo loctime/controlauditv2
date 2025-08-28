@@ -32,6 +32,7 @@ import PublicIcon from '@mui/icons-material/Public';
 import SettingsIcon from '@mui/icons-material/Settings';
 import LogoutIcon from '@mui/icons-material/Logout';
 import { useAuth } from '../../context/AuthContext';
+import UpdateNotification from '../../common/UpdateNotification.jsx';
 
 const APKNavigation = ({ children }) => {
   const navigate = useNavigate();
@@ -129,6 +130,8 @@ const APKNavigation = ({ children }) => {
         flexDirection: 'column'
       }}
     >
+      {/* Notificación de actualización */}
+      <UpdateNotification />
       {/* Header de navegación */}
              <AppBar 
          position="fixed" 

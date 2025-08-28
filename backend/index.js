@@ -379,6 +379,30 @@ app.get('/api/download-apk', async (req, res) => {
 
 app.use('/api/set-role', setRoleRouter); // Solo para superadmin, uso administrativo
 
+// Endpoint para obtener la versión actual de la aplicación
+app.get('/api/current-version', async (req, res) => {
+  try {
+    // Leer la versión desde package.json
+    const fs = require('fs');
+    const path = require('path');
+    const packageJsonPath = path.join(__dirname, '../package.json');
+    const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+    
+    res.json({
+      success: true,
+      version: packageJson.version,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Error obteniendo versión actual:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Error interno del servidor',
+      message: error.message
+    });
+  }
+});
+
 // Iniciar servidor con configuración flexible
 const PORT = process.env.PORT || config.server.port;
 const HOST = '0.0.0.0'; // Para Render, usar 0.0.0.0 en lugar de localhost

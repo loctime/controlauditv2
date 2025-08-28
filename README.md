@@ -1,20 +1,43 @@
 # ControlAudit v2
 
-## 📱 Descargar APK
+## 📱 Sistema de Actualizaciones de APK
 
-### Para usuarios finales:
-1. Ve a [GitHub Releases](https://github.com/loctime/controlauditv2/releases)
-2. Descarga el archivo `ControlAudit-release.apk` de la versión más reciente
+### 🎯 **Sistema Inteligente de Actualizaciones**
+
+El sistema ahora detecta automáticamente si estás en **web** o **APK** y muestra la interfaz apropiada:
+
+- ✅ **En Web**: Botón de descarga de APK siempre visible
+- ✅ **En APK**: Solo muestra actualización cuando hay una nueva versión
+- ✅ **Verificación automática**: Cada 30 minutos en APK
+- ✅ **Notificaciones**: Banner en la parte superior cuando hay actualización
+
+### 📥 **Para usuarios finales:**
+
+#### **Desde Web:**
+1. Ve a la página de inicio o login
+2. Haz clic en "Descargar APK"
 3. Instala en tu dispositivo Android
 
-### Para desarrolladores:
+#### **Desde APK:**
+1. Si hay una actualización, verás una notificación
+2. Haz clic en "Actualizar" para descargar la nueva versión
+3. Sigue las instrucciones de instalación
+
+### 🛠️ **Para desarrolladores:**
 ```bash
 # Generar nueva versión y APK automáticamente
 npm run die "Descripción de los cambios"
 
 # Solo build local (sin release)
 npm run fer
+
+# Verificar estado del sistema
+curl http://localhost:3001/api/current-version
+curl http://localhost:3001/api/latest-apk
 ```
+
+### 📋 **Documentación Completa:**
+Ver [SISTEMA_ACTUALIZACIONES_APK.md](./SISTEMA_ACTUALIZACIONES_APK.md) para detalles técnicos completos.
 
 # 🏢 Sistema de Auditorías Multi-Tenant
 

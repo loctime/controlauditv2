@@ -23,7 +23,7 @@ import { onSignIn } from '../../../firebaseConfig';
 import { Formik, Form, Field, ErrorMessage } from 'formik';
 import * as Yup from 'yup';
 import { useAuth } from '../../context/AuthContext';
-import DownloadAPK from '../../common/DownloadAPK';
+import SmartAPKDownload from '../../common/SmartAPKDownload.jsx';
 
 const Login = () => {
   const theme = useTheme();
@@ -122,7 +122,7 @@ const Login = () => {
             >
               📱 Descarga nuestra aplicación móvil
             </Typography>
-            <DownloadAPK variant="outlined" size="large" showInfo={false} />
+            <SmartAPKDownload variant="outlined" size="large" showInfo={false} />
           </Box>
 
           <Box sx={{ textAlign: 'center', mb: isSmallMobile ? 5 : 6 }}>
