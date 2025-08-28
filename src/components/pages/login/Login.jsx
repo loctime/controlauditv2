@@ -24,7 +24,7 @@ import { Formik, Form, Field, ErrorMessage } from 'formik';
 import * as Yup from 'yup';
 import { useAuth } from '../../context/AuthContext';
 import SmartAPKDownload from '../../common/SmartAPKDownload.jsx';
-import { usePlatform } from '../../hooks/usePlatform.js';
+import { usePlatform } from '../../../hooks/usePlatform.js';
 
 const Login = () => {
   const theme = useTheme();
