@@ -50,61 +50,114 @@ const EstadisticasChartSimple = forwardRef(({ estadisticas, title, height = 320,
         return canvas.toDataURL('image/png');
       }
       
-      // Fallback: crear una imagen simple usando Canvas API
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-      const { total, porcentajes } = calcularPorcentajes(estadisticas);
-      
-      canvas.width = 600;
-      canvas.height = 400;
-      
-      // Fondo
-      ctx.fillStyle = '#f5f7fa';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      
-      // Título
-      ctx.fillStyle = '#1976d2';
-      ctx.font = 'bold 20px Arial';
-      ctx.textAlign = 'center';
-      ctx.fillText(title || 'Distribución de Respuestas', canvas.width / 2, 30);
-      
-      // Gráfico de barras
-      const barHeight = 30;
-      const barSpacing = 40;
-      const startY = 80;
-      let currentY = startY;
-      
-      Object.entries(estadisticas).forEach(([categoria, valor], index) => {
-        if (valor === 0) return;
-        
-        const porcentaje = porcentajes[categoria];
-        const color = COLOR_MAP[categoria] || '#666';
-        
-        // Etiqueta
-        ctx.fillStyle = color;
-        ctx.font = 'bold 14px Arial';
-        ctx.textAlign = 'left';
-        ctx.fillText(categoria, 20, currentY + 20);
-        
-        // Barra
-        const barWidth = (porcentaje / 100) * 400;
-        ctx.fillStyle = color;
-        ctx.fillRect(150, currentY, barWidth, barHeight);
-        
-        // Texto del valor
-        ctx.fillStyle = '#000';
-        ctx.font = '12px Arial';
-        ctx.textAlign = 'left';
-        ctx.fillText(`${valor} (${porcentaje}%)`, 160 + barWidth, currentY + 20);
-        
-        currentY += barSpacing;
-      });
-      
-      // Total
-      ctx.fillStyle = '#000';
-      ctx.font = 'bold 16px Arial';
-      ctx.textAlign = 'center';
-      ctx.fillText(`Total: ${total} respuestas`, canvas.width / 2, currentY + 30);
+        // Fallback: crear una imagen simple usando Canvas API
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+  const { total, porcentajes } = calcularPorcentajes(estadisticas);
+  
+  canvas.width = 800;
+  canvas.height = 500;
+  
+  // Fondo con gradiente
+  const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+  gradient.addColorStop(0, '#ffffff');
+  gradient.addColorStop(1, '#f8f9fa');
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  
+  // Título con sombra
+  ctx.shadowColor = 'rgba(0,0,0,0.1)';
+  ctx.shadowBlur = 4;
+  ctx.shadowOffsetX = 2;
+  ctx.shadowOffsetY = 2;
+  ctx.fillStyle = '#2c3e50';
+  ctx.font = 'bold 24px Arial';
+  ctx.textAlign = 'center';
+  ctx.fillText(title || 'Distribución de Respuestas', canvas.width / 2, 40);
+  
+  // Resetear sombra
+  ctx.shadowColor = 'transparent';
+  ctx.shadowBlur = 0;
+  ctx.shadowOffsetX = 0;
+  ctx.shadowOffsetY = 0;
+  
+  // Gráfico de barras mejorado
+  const barHeight = 35;
+  const barSpacing = 50;
+  const startY = 100;
+  const maxBarWidth = 500;
+  let currentY = startY;
+  
+  // Dibujar líneas de fondo
+  ctx.strokeStyle = '#e9ecef';
+  ctx.lineWidth = 1;
+  for (let i = 0; i <= 10; i++) {
+    const y = startY + (i * barSpacing);
+    ctx.beginPath();
+    ctx.moveTo(200, y);
+    ctx.lineTo(750, y);
+    ctx.stroke();
+  }
+  
+  Object.entries(estadisticas).forEach(([categoria, valor], index) => {
+    if (valor === 0) return;
+    
+    const porcentaje = porcentajes[categoria];
+    const color = COLOR_MAP[categoria] || '#666';
+    
+    // Etiqueta con mejor formato
+    ctx.fillStyle = '#2c3e50';
+    ctx.font = 'bold 16px Arial';
+    ctx.textAlign = 'left';
+    ctx.fillText(categoria, 20, currentY + 25);
+    
+    // Barra con gradiente
+    const barWidth = (porcentaje / 100) * maxBarWidth;
+    const barGradient = ctx.createLinearGradient(200, currentY, 200 + barWidth, currentY);
+    barGradient.addColorStop(0, color);
+    barGradient.addColorStop(1, color + '80');
+    
+    // Sombra de la barra
+    ctx.shadowColor = 'rgba(0,0,0,0.2)';
+    ctx.shadowBlur = 6;
+    ctx.shadowOffsetX = 2;
+    ctx.shadowOffsetY = 2;
+    
+    ctx.fillStyle = barGradient;
+    ctx.fillRect(200, currentY, barWidth, barHeight);
+    
+    // Resetear sombra
+    ctx.shadowColor = 'transparent';
+    ctx.shadowBlur = 0;
+    ctx.shadowOffsetX = 0;
+    ctx.shadowOffsetY = 0;
+    
+    // Borde de la barra
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2;
+    ctx.strokeRect(200, currentY, barWidth, barHeight);
+    
+    // Texto del valor con mejor formato
+    ctx.fillStyle = '#2c3e50';
+    ctx.font = 'bold 14px Arial';
+    ctx.textAlign = 'left';
+    ctx.fillText(`${valor} (${porcentaje}%)`, 210 + barWidth, currentY + 25);
+    
+    currentY += barSpacing;
+  });
+  
+  // Total con mejor formato
+  ctx.fillStyle = '#2c3e50';
+  ctx.font = 'bold 20px Arial';
+  ctx.textAlign = 'center';
+  ctx.fillText(`Total: ${total} respuestas`, canvas.width / 2, currentY + 40);
+  
+  // Leyenda
+  const legendY = currentY + 70;
+  ctx.fillStyle = '#6c757d';
+  ctx.font = '12px Arial';
+  ctx.textAlign = 'center';
+  ctx.fillText('Distribución de respuestas por categoría', canvas.width / 2, legendY);
       
       return canvas.toDataURL('image/png');
     } catch (error) {
