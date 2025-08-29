@@ -1,8 +1,8 @@
-# 🍰 Nuevo Gráfico de Torta para Auditorías
+# 🍰 Sistema de Gráficos para Reportes de Auditoría
 
 ## 📋 Descripción
 
-Se ha agregado un nuevo componente de gráfico de torta moderno y responsivo para los reportes de auditorías. Este gráfico utiliza Chart.js y Material-UI para proporcionar una visualización clara y profesional de las estadísticas de auditorías.
+El sistema de reportes de auditoría utiliza gráficos de Google Charts para proporcionar una visualización clara y profesional de las estadísticas de auditorías. El formato de impresión replica el diseño "Urquiza" con un layout compacto y profesional.
 
 ## 🎨 Características
 
@@ -21,34 +21,31 @@ Se ha agregado un nuevo componente de gráfico de torta moderno y responsivo par
 - **Dos variantes**: Torta (pie) y Donut (doughnut)
 - **Resumen numérico** debajo del gráfico
 
-## 📁 Archivos Creados
+## 📁 Archivos del Sistema
 
-### 1. `AuditoriaPieChart.jsx`
-Componente principal del gráfico de torta.
+### 1. `EstadisticasChart.jsx`
+Componente principal del gráfico de donut usando Google Charts.
 
 **Props:**
 - `estadisticas`: Objeto con las estadísticas `{ 'Conforme': 15, 'No conforme': 3, ... }`
 - `title`: Título del gráfico (opcional)
-- `height`: Altura del gráfico (por defecto: 400px)
+- `height`: Altura del gráfico (por defecto: 320px)
 - `width`: Ancho del gráfico (por defecto: '100%')
-- `showLegend`: Mostrar/ocultar leyenda (por defecto: true)
-- `showTooltips`: Mostrar/ocultar tooltips (por defecto: true)
-- `variant`: Tipo de gráfico - 'pie' o 'doughnut' (por defecto: 'pie')
 
-### 2. `DemoAuditoriaPieChart.jsx`
-Componente de demostración con controles interactivos para probar el gráfico.
+### 2. `ReporteDetallePro.jsx` (Actualizado)
+Componente principal del reporte con formato estilo "Urquiza" optimizado para impresión.
 
 ### 3. `Informe.jsx` (Actualizado)
-Se actualizó para usar el nuevo gráfico de torta.
+Se actualizó para usar el gráfico de Google Charts.
 
-### 4. `ReporteDetallePro.jsx` (Actualizado)
-Se agregó un switch para alternar entre el gráfico original y el nuevo.
+### 4. `DemoReporteUrquiza.jsx`
+Componente de demostración para probar el nuevo formato de reporte.
 
 ## 🚀 Cómo Usar
 
 ### Uso Básico
 ```jsx
-import AuditoriaPieChart from './AuditoriaPieChart';
+import EstadisticasChart from './EstadisticasChart';
 
 const estadisticas = {
   'Conforme': 15,
@@ -57,53 +54,44 @@ const estadisticas = {
   'No aplica': 5
 };
 
-<AuditoriaPieChart
+<EstadisticasChart
   estadisticas={estadisticas}
   title="Distribución de Respuestas"
-  height={400}
+  height={320}
 />
 ```
 
-### Uso Avanzado
+### Uso en Reportes
 ```jsx
-<AuditoriaPieChart
-  estadisticas={estadisticas}
-  title="Resultados de Auditoría"
-  height={500}
-  showLegend={true}
-  showTooltips={true}
-  variant="doughnut"
-  width="80%"
+import ReporteDetallePro from './ReporteDetallePro';
+
+<ReporteDetallePro
+  reporte={datosReporte}
+  modo="modal"
+  open={true}
+  onClose={handleClose}
 />
 ```
 
-## 🔧 Integración en Reportes Existentes
+## 🔧 Integración en Reportes
 
 ### En ReporteDetallePro.jsx
-Se agregó un switch para alternar entre gráficos:
+El componente usa automáticamente el gráfico de Google Charts:
 ```jsx
-<FormControlLabel
-  control={
-    <Switch
-      checked={useNewChart}
-      onChange={(e) => setUseNewChart(e.target.checked)}
-      size="small"
-    />
-  }
-  label={useNewChart ? "Nuevo Gráfico de Torta" : "Gráfico Donut Original"}
+<EstadisticasChart
+  ref={chartRef}
+  estadisticas={reporte.estadisticas.conteo}
+  title="Distribución general de respuestas"
 />
 ```
 
 ### En Informe.jsx
-Se reemplazó el gráfico anterior con el nuevo:
+Se usa el gráfico de Google Charts:
 ```jsx
-<AuditoriaPieChart
+<EstadisticasChart
   estadisticas={estadisticas}
   title="Distribución de Respuestas de Auditoría"
-  height={400}
-  showLegend={true}
-  showTooltips={true}
-  variant="pie"
+  height={320}
 />
 ```
 
@@ -128,52 +116,39 @@ El componente espera recibir las estadísticas en este formato:
 5. **Personalizable**: Múltiples opciones de configuración
 6. **Moderno**: Diseño actualizado con Material-UI
 
-## 🔄 Migración
+## 🎯 Características del Formato Urquiza
 
-Para migrar reportes existentes al nuevo gráfico:
+El nuevo formato de reporte incluye:
 
-1. **Reemplazar import:**
-   ```jsx
-   // Antes
-   import { Pie } from "react-chartjs-2";
-   
-   // Después
-   import AuditoriaPieChart from './AuditoriaPieChart';
-   ```
-
-2. **Actualizar componente:**
-   ```jsx
-   // Antes
-   <Pie data={data} options={options} />
-   
-   // Después
-   <AuditoriaPieChart estadisticas={estadisticas} />
-   ```
-
-3. **Eliminar configuración manual:**
-   - No es necesario configurar colores manualmente
-   - No es necesario configurar tooltips manualmente
-   - No es necesario configurar leyendas manualmente
+1. **Cabecera compacta** con logo y datos del establecimiento
+2. **Tabla de resumen** con badges de colores y porcentajes
+3. **Gráfico donut** integrado usando Google Charts
+4. **Secciones numeradas** (1.1, 1.2, etc.)
+5. **Metadatos por sección** con conteos
+6. **Firmas mejoradas** con mejor layout
+7. **Comentarios generales** al final
+8. **Geolocalización** opcional
+9. **Optimizado para impresión** A4
 
 ## 🧪 Testing
 
-Para probar el nuevo gráfico:
+Para probar el nuevo formato:
 
 1. Navegar a la página de reportes de auditorías
 2. Abrir un reporte detallado
-3. Usar el switch para alternar entre gráficos
-4. Probar diferentes configuraciones en el demo
+3. Usar el botón "Imprimir" para ver el formato final
+4. Probar el demo en `DemoReporteUrquiza.jsx`
 
 ## 📝 Notas Técnicas
 
-- **Dependencias**: Chart.js, react-chartjs-2, Material-UI
+- **Dependencias**: Google Charts, Material-UI
 - **Compatibilidad**: Funciona con datos existentes sin cambios
-- **Performance**: Optimizado con useMemo para re-renders
+- **Performance**: Optimizado para impresión
 - **Accesibilidad**: Incluye labels y descripciones apropiadas
 
 ## 🎨 Personalización
 
-Para personalizar colores o estilos, modificar las constantes en `AuditoriaPieChart.jsx`:
+Para personalizar colores o estilos, modificar las constantes en `EstadisticasChart.jsx`:
 
 ```javascript
 const COLOR_MAP = {

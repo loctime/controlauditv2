@@ -1,6 +1,6 @@
 import React from "react";
 import { Typography, Box } from "@mui/material";
-import AuditoriaPieChart from "./reporte/AuditoriaPieChart";
+import EstadisticasChart from "./reporte/EstadisticasChart";
 
 const Informe = ({ empresa, sucursal, respuestas, secciones, nombreFormulario }) => {
   // Calcula los datos para el gráfico de torta
@@ -38,13 +38,10 @@ const Informe = ({ empresa, sucursal, respuestas, secciones, nombreFormulario })
         </Typography>
         
         <Box sx={{ mt: 3, mb: 3 }}>
-          <AuditoriaPieChart
+          <EstadisticasChart
             estadisticas={estadisticas}
             title="Distribución de Respuestas de Auditoría"
-            height={400}
-            showLegend={true}
-            showTooltips={true}
-            variant="pie"
+            height={320}
           />
         </Box>
         

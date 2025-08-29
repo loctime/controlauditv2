@@ -1,12 +1,9 @@
-import React, { useRef, useState, forwardRef, useImperativeHandle } from "react";
-import ImagenesTable from "./ImagenesTable";
+import React, { useRef, forwardRef, useImperativeHandle } from "react";
 import PreguntasRespuestasList from "../../../common/PreguntasRespuestasList";
-import { Typography, Grid, Box, Button, Paper, Dialog, DialogTitle, DialogContent, DialogActions, IconButton, TextField, Alert, Snackbar, Switch, FormControlLabel } from "@mui/material";
+import { Typography, Box, Button, Dialog, DialogTitle, DialogContent, DialogActions, IconButton, Alert } from "@mui/material";
 import PrintIcon from '@mui/icons-material/Print';
-import EmailIcon from '@mui/icons-material/Email';
 import CloseIcon from '@mui/icons-material/Close';
 import EstadisticasChart from './EstadisticasChart';
-import AuditoriaPieChart from './AuditoriaPieChart';
 import { useAuth } from '../../../context/AuthContext';
 
 // Normaliza respuestas a array de arrays de strings
@@ -207,202 +204,387 @@ const normalizarComentarios = (comentariosFirestore, secciones) => {
   return secciones.map((_, idx) => []);
 };
 
-function generarContenidoImpresion({empresa, sucursal, formulario, fecha, respuestas, secciones, comentarios, imagenes, firmaAuditor, chartImgDataUrl, sectionChartsImgDataUrl, nombreAuditor, firmaResponsable}) {
-  // Resumen de respuestas
-  const totalPreguntas = respuestas.flat().length;
-  const conforme = respuestas.flat().filter(r => r === 'Conforme').length;
-  const noConforme = respuestas.flat().filter(r => r === 'No conforme').length;
-  const necesitaMejora = respuestas.flat().filter(r => r === 'Necesita mejora').length;
-  const noAplica = respuestas.flat().filter(r => r === 'No aplica').length;
+function generarContenidoImpresion({
+  empresa,
+  sucursal,
+  formulario,
+  fecha, // string dd/mm/aaaa (o similar)
+  respuestas, // array de arrays (ya normalizado)
+  secciones,  // [{ nombre, preguntas: [...] }, ...]
+  comentarios, // array de arrays (ya normalizado)
+  imagenes, // array de arrays (urls o vacío)
+  firmaAuditor,
+  chartImgDataUrl, // dataURL del gráfico general (Google Charts)
+  sectionChartsImgDataUrl = [], // opcional, dataURL por sección
+  nombreAuditor,
+  firmaResponsable,
+  auditorTelefono = "",
+  geolocalizacion = null, // { lat, lng } opcional
+  fechaInicio = "", // opcional, p.ej. "04/09/2021 - 10:04:56"
+  fechaFin = "" // opcional
+}) {
+  // ===== Resumen general =====
+  const flat = (respuestas || []).flat();
+  const total = flat.length || 0;
 
-  let html = `
-    <!DOCTYPE html>
-    <html lang="es">
-    <head>
-      <meta charset="UTF-8">
-      <title>Reporte de Auditoría</title>
-      <style>
-        @page {
-          size: A4;
-          margin: 2cm;
-        }
-        body { 
-          font-family: Arial, sans-serif; 
-          margin: 0; 
-          padding: 0; 
-          font-size: 12px;
-          line-height: 1.4;
-        }
-        h1 { 
-          color: #1976d2; 
-          font-size: 24px;
-          margin: 0 0 20px 0;
-          text-align: center;
-        }
-        h2 { 
-          color: #1976d2; 
-          font-size: 16px;
-          margin: 0 0 10px 0;
-          border-bottom: 1px solid #1976d2;
-          padding-bottom: 5px;
-        }
-        h3 { 
-          color: #1976d2; 
-          font-size: 14px;
-          margin: 15px 0 8px 0;
-        }
-        .header { 
-          text-align: center; 
-          border-bottom: 2px solid #1976d2; 
-          padding-bottom: 15px; 
-          margin-bottom: 20px; 
-        }
-        .logo { height: 50px; }
-        .section { margin-bottom: 20px; }
-        .info-grid {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 20px;
-          margin-bottom: 20px;
-        }
-        .info-box {
-          border: 1px solid #ddd;
-          padding: 15px;
-          border-radius: 5px;
-          background-color: #f9f9f9;
-        }
-        .info-box h2 {
-          margin-top: 0;
-          font-size: 14px;
-        }
-        .info-item {
-          margin: 5px 0;
-          font-size: 11px;
-        }
-        .firma-img { 
-          max-width: 200px; 
-          max-height: 80px; 
-          border: 1px solid #43a047; 
-          border-radius: 5px; 
-          margin-top: 5px; 
-        }
-        .imagenes-table { 
-          width: 100%; 
-          border-collapse: collapse; 
-          margin-top: 10px; 
-          font-size: 10px;
-        }
-        .imagenes-table th, .imagenes-table td { 
-          border: 1px solid #ccc; 
-          padding: 5px; 
-          text-align: left; 
-        }
-        .imagenes-table th { background: #f5f5f5; }
-        .img-preview { max-width: 80px; max-height: 60px; }
-        .firma-label { color: #1976d2; font-weight: bold; margin-bottom: 4px; }
-        .firma-aclaracion { color: #333; font-size: 12px; margin-top: 4px; }
-        .footer { 
-          margin-top: 30px; 
-          text-align: center; 
-          color: #888; 
-          font-size: 10px; 
-          border-top: 1px solid #ddd;
-          padding-top: 10px;
-        }
-        .pregunta-item {
-          margin: 8px 0;
-          padding: 8px;
-          border-left: 3px solid #1976d2;
-          background-color: #f8f9fa;
-        }
-        .pregunta-texto {
-          font-weight: bold;
-          margin-bottom: 3px;
-        }
-        .respuesta-texto {
-          color: #333;
-        }
-        .comentario-texto {
-          color: #666;
-          font-style: italic;
-          margin-top: 3px;
-        }
-        @media print { 
-          .no-print { display: none !important; } 
-          body { -webkit-print-color-adjust: exact; }
-        }
-      </style>
-    </head>
-    <body>
-      <div class="header">
-        <h1>Reporte de Auditoría</h1>
-        ${empresa.logo ? `<img src="${empresa.logo}" alt="Logo" class="logo" />` : ''}
+  const contar = (valor) => flat.filter(v => v === valor).length;
+  const C = contar('Conforme');
+  const NC = contar('No conforme');
+  const NM = contar('Necesita mejora');
+  const NA = contar('No aplica');
+
+  const pct = (n) => total > 0 ? ((n / total) * 100).toFixed(2) : "0.00";
+
+  // Para numeración 1.1, 1.2, etc.
+  const num = (sIdx, pIdx) => `${sIdx + 1}.${pIdx + 1})`;
+
+  // Helpers seguros
+  const val = (x) => (x ?? "").toString();
+  const _empresa = empresa || {};
+  const empresaNombre = val(_empresa.nombre);
+  const empresaDir = val(_empresa.direccion);
+  const empresaTel = val(_empresa.telefono);
+  const formNombre = val(formulario?.nombre);
+
+  const geo = geolocalizacion && (geolocalizacion.lat || geolocalizacion.lng)
+      ? `Latitud: ${geolocalizacion.lat} &nbsp; Longitud: ${geolocalizacion.lng}`
+      : "";
+
+  // ===== HTML + CSS estilo "Urquiza" =====
+  return `
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<title>Reporte de Auditoría</title>
+<style>
+  @page { size: A4; margin: 18mm 16mm; }
+  * { box-sizing: border-box; }
+  body {
+    font-family: Arial, Helvetica, sans-serif;
+    color: #111;
+    font-size: 12px;
+    line-height: 1.35;
+    margin: 0;
+  }
+
+  /* Cabecera */
+  .header {
+    border-bottom: 2px solid #1976d2;
+    padding-bottom: 6px;
+    margin-bottom: 12px;
+  }
+  .row { display: flex; flex-wrap: wrap; }
+  .col { padding: 4px 6px; }
+  .col-50 { width: 50%; }
+  .col-33 { width: 33.3333%; }
+  .col-25 { width: 25%; }
+  .col-100 { width: 100%; }
+
+  .tit {
+    font-size: 16px;
+    color: #1976d2;
+    font-weight: bold;
+    margin: 2px 0 6px;
+  }
+  .subtit {
+    font-size: 13px;
+    color: #1976d2;
+    font-weight: bold;
+    margin: 10px 0 6px;
+  }
+
+  /* Bloques compactos con línea superior */
+  .block {
+    border-top: 1px solid #1976d2;
+    padding-top: 8px;
+    margin-top: 10px;
+  }
+
+  /* Etiqueta + dato en una misma línea */
+  .kv { margin: 0 0 4px; }
+  .kv b { color: #000; }
+
+  /* Tabla resumen porcentajes */
+  table {
+    border-collapse: collapse;
+    width: 100%;
+  }
+  .t-resumen {
+    margin-top: 6px;
+    margin-bottom: 8px;
+    font-size: 12px;
+  }
+  .t-resumen th,
+  .t-resumen td {
+    border: 1px solid #ccc;
+    padding: 6px 8px;
+    text-align: left;
+    vertical-align: top;
+  }
+  .t-resumen th {
+    background: #f2f4f7;
+    color: #222;
+    font-weight: 700;
+  }
+  .badge {
+    display: inline-block;
+    min-width: 18px;
+    padding: 2px 6px;
+    border-radius: 10px;
+    font-size: 11px;
+    color: #fff;
+    text-align: center;
+  }
+  .b-conforme { background: #43a047; }
+  .b-nc { background: #e53935; }
+  .b-nm { background: #fbc02d; color: #000; }
+  .b-na { background: #1976d2; }
+
+  /* Gráfico */
+  .chart-wrap {
+    text-align: center;
+    margin: 6px 0 2px;
+  }
+  .chart {
+    display: inline-block;
+    width: 420px;
+    height: 260px;
+    object-fit: contain;
+    border: 1px solid #e5e7eb;
+    padding: 6px;
+    border-radius: 4px;
+    background: #fff;
+  }
+  .legend-hint {
+    text-align: center;
+    font-size: 11px;
+    color: #666;
+    margin-top: 2px;
+  }
+
+  /* Secciones e ítems */
+  .sec-title {
+    margin: 14px 0 6px;
+    font-size: 14px;
+    color: #000;
+    font-weight: 700;
+  }
+  .sec-meta { font-size: 11px; color: #333; margin-bottom: 4px; }
+
+  .item {
+    border-left: 3px solid #1976d2;
+    background: #f8f9fa;
+    padding: 6px 8px;
+    margin: 6px 0;
+  }
+  .item-title { font-weight: 700; margin-bottom: 4px; }
+  .item-line { margin: 0 0 2px; }
+  .item-line b { color: #000; }
+  .thumb {
+    margin-top: 4px;
+    border: 1px solid #ddd;
+    border-radius: 3px;
+    max-width: 110px;
+    max-height: 80px;
+  }
+
+  /* Firmas */
+  .firmas {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-top: 12px;
+  }
+  .firma-box { text-align: center; }
+  .firma-label {
+    color: #1976d2;
+    font-weight: 700;
+    margin-bottom: 6px;
+  }
+  .firma-img {
+    max-width: 240px;
+    max-height: 90px;
+    border: 1px solid #43a047;
+    border-radius: 4px;
+    background: #fff;
+  }
+  .firma-aclaracion { margin-top: 4px; font-size: 12px; }
+
+  /* Comentarios generales */
+  .comentarios {
+    border-top: 1px solid #ddd;
+    padding-top: 8px;
+    margin-top: 12px;
+    font-size: 12px;
+  }
+
+  /* Footer */
+  .footer {
+    margin-top: 12px;
+    border-top: 1px solid #ddd;
+    padding-top: 6px;
+    text-align: center;
+    color: #888;
+    font-size: 10px;
+  }
+
+  /* Evitar cortes feos */
+  .avoid-break { page-break-inside: avoid; }
+</style>
+</head>
+<body>
+
+  <!-- CABECERA -->
+  <div class="header">
+    <div class="row">
+      <div class="col col-50">
+        <div class="tit">ESTABLECIMIENTO</div>
+        <div class="kv"><b>${empresaNombre}</b></div>
       </div>
-      
-      <div class="info-grid">
-        <div class="info-box">
-          <h2>Datos de la Empresa</h2>
-          <div class="info-item"><strong>Empresa:</strong> ${empresa.nombre || ''}</div>
-          <div class="info-item"><strong>Sucursal:</strong> ${sucursal || ''}</div>
-          <div class="info-item"><strong>Formulario:</strong> ${formulario.nombre || ''}</div>
-          <div class="info-item"><strong>Fecha:</strong> ${fecha}</div>
-          <div class="info-item"><strong>Auditor:</strong> ${nombreAuditor}</div>
-        </div>
-        
-        <div class="info-box">
-          <h2>Resumen de Respuestas</h2>
-          <div class="info-item"><strong>Total de preguntas:</strong> ${totalPreguntas}</div>
-          <div class="info-item"><strong>Conforme:</strong> ${conforme}</div>
-          <div class="info-item"><strong>No conforme:</strong> ${noConforme}</div>
-          <div class="info-item"><strong>Necesita mejora:</strong> ${necesitaMejora}</div>
-          <div class="info-item"><strong>No aplica:</strong> ${noAplica}</div>
-        </div>
+      <div class="col col-50">
+        ${empresa?.logo ? `<img src="${empresa.logo}" alt="Logo" style="height:50px; float:right;" />` : ``}
       </div>
-      
-      <div class="section">
-        <h2>Preguntas y Respuestas</h2>
-        ${secciones.map((seccion, sIdx) => `
-          <div style="margin-bottom: 15px;">
-            <h3>${seccion.nombre}</h3>
-            ${seccion.preguntas.map((pregunta, pIdx) => `
-              <div class="pregunta-item">
-                <div class="pregunta-texto">${pregunta}</div>
-                <div class="respuesta-texto"><strong>Respuesta:</strong> ${respuestas[sIdx]?.[pIdx] || 'Sin responder'}</div>
-                ${comentarios[sIdx]?.[pIdx] ? `<div class="comentario-texto"><strong>Comentario:</strong> ${comentarios[sIdx][pIdx]}</div>` : ''}
-                ${imagenes[sIdx]?.[pIdx] ? `<div style="margin-top: 5px;"><img src="${imagenes[sIdx][pIdx]}" class="img-preview" alt="Imagen" /></div>` : ''}
-              </div>
-            `).join('')}
+    </div>
+
+    <div class="row">
+      <div class="col col-33">
+        <div class="tit">AUDITORÍA</div>
+        <div class="kv">${formNombre || ''}</div>
+      </div>
+      <div class="col col-33">
+        <div class="tit">INICIO AUDITORÍA</div>
+        <div class="kv">${fechaInicio || ''}</div>
+      </div>
+      <div class="col col-33">
+        <div class="tit">FIN DE AUDITORÍA</div>
+        <div class="kv">${fechaFin || ''}</div>
+      </div>
+    </div>
+
+    <div class="row block">
+      <div class="col col-50">
+        <div class="kv"><b>DIRECCIÓN:</b> ${empresaDir}</div>
+        <div class="kv"><b>TELÉFONO DEL ESTABLECIMIENTO:</b> ${empresaTel}</div>
+      </div>
+      <div class="col col-50">
+        <div class="kv"><b>AUDITOR:</b> ${nombreAuditor || ''}</div>
+        <div class="kv"><b>TEL. DE AUDITOR:</b> ${auditorTelefono}</div>
+      </div>
+      ${geo ? `<div class="col col-100"><div class="kv"><b>GEOLOCALIZACIÓN</b> &nbsp; ${geo}</div></div>` : ``}
+    </div>
+  </div>
+
+  <!-- RESUMEN + GRÁFICO -->
+  <div class="block avoid-break">
+    <div class="subtit">Puntaje Auditoría &nbsp;&nbsp; | &nbsp;&nbsp; Peso &nbsp;&nbsp; | &nbsp;&nbsp; Ítems</div>
+    <table class="t-resumen">
+      <thead>
+        <tr>
+          <th>Conforme</th>
+          <th>No Conforme</th>
+          <th>Necesita Mejora</th>
+          <th>No Aplica</th>
+          <th>Total de Ítems</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="badge b-conforme">${C}</span> &nbsp; ${pct(C)}%</td>
+          <td><span class="badge b-nc">${NC}</span> &nbsp; ${pct(NC)}%</td>
+          <td><span class="badge b-nm">${NM}</span> &nbsp; ${pct(NM)}%</td>
+          <td><span class="badge b-na">${NA}</span> &nbsp; ${pct(NA)}%</td>
+          <td><b>${total}</b></td>
+        </tr>
+      </tbody>
+    </table>
+
+    ${chartImgDataUrl
+      ? `<div class="chart-wrap">
+          <img class="chart" src="${chartImgDataUrl}" alt="Distribución general" />
+          <div class="legend-hint">Distribución general de respuestas (12 meses / actual)</div>
+        </div>`
+      : ``}
+  </div>
+
+  <!-- SECCIONES E ÍTEMS -->
+  <div class="block">
+    ${secciones.map((sec, sIdx) => {
+      const preguntas = Array.isArray(sec.preguntas) ? sec.preguntas : [];
+      // Conteo por sección (por si querés usar mini donuts exportados)
+      const local = (respuestas[sIdx] || []);
+      const lc = {
+        C: local.filter(x => x === 'Conforme').length,
+        NC: local.filter(x => x === 'No conforme').length,
+        NM: local.filter(x => x === 'Necesita mejora').length,
+        NA: local.filter(x => x === 'No aplica').length,
+        T: local.length
+      };
+
+      const miniChart = sectionChartsImgDataUrl[sIdx]
+        ? `<div class="chart-wrap" style="margin:8px 0;"><img class="chart" style="width:320px;height:200px;" src="${sectionChartsImgDataUrl[sIdx]}" alt="Sección ${sIdx+1}" /></div>`
+        : ``;
+
+      return `
+        <div class="avoid-break">
+          <div class="sec-title">${sIdx + 1}) Sección: ${sec.nombre || ('Sección ' + (sIdx + 1))}</div>
+          <div class="sec-meta">
+            <b>Conforme:</b> ${lc.C} &nbsp;|&nbsp;
+            <b>No Conforme:</b> ${lc.NC} &nbsp;|&nbsp;
+            <b>Necesita Mejora:</b> ${lc.NM} &nbsp;|&nbsp;
+            <b>No Aplica:</b> ${lc.NA} &nbsp;|&nbsp;
+            <b>Total:</b> ${lc.T}
           </div>
-        `).join('')}
-      </div>
-      
-      <div class="section">
-        <h2>Firmas</h2>
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-          <div>
-            <div class="firma-label">Firma del Auditor</div>
-            ${firmaAuditor ? `<img src="${firmaAuditor}" class="firma-img" alt="Firma del auditor" />` : '<p style="font-size: 11px; color: #666;">No hay firma registrada.</p>'}
-            <div class="firma-aclaracion">${nombreAuditor}</div>
-          </div>
-          <div>
-            <div class="firma-label">Firma de la Empresa</div>
-            ${firmaResponsable ? `<img src="${firmaResponsable}" class="firma-img" alt="Firma de la empresa" />` : '<p style="font-size: 11px; color: #666;">No hay firma registrada.</p>'}
-          </div>
+          ${miniChart}
+          ${
+            preguntas.map((text, pIdx) => {
+              const r = val(respuestas[sIdx]?.[pIdx]) || 'Sin responder';
+              const c = val(comentarios[sIdx]?.[pIdx]);
+              const img = val(imagenes[sIdx]?.[pIdx]);
+              return `
+                <div class="item">
+                  <div class="item-title">${num(sIdx, pIdx)} ${text || 'Ítem'}</div>
+                  <p class="item-line"><b>Resultado:</b> ${r}</p>
+                  ${c ? `<p class="item-line"><b>Comentario:</b> ${c}</p>` : ``}
+                  ${img ? `<img class="thumb" src="${img}" alt="Evidencia" />` : ``}
+                </div>
+              `;
+            }).join('')
+          }
         </div>
-      </div>
-      
-      <div class="footer">
-        Reporte generado el ${new Date().toLocaleString('es-ES')}
-      </div>
-    </body>
-    </html>
+      `;
+    }).join('')}
+  </div>
+
+  <!-- FIRMAS -->
+  <div class="block firmas avoid-break">
+    <div class="firma-box">
+      <div class="firma-label">FIRMA DEL AUDITOR</div>
+      ${firmaAuditor ? `<img class="firma-img" src="${firmaAuditor}" alt="Firma Auditor" />` : `<div style="font-size:11px;color:#666;">No hay firma registrada.</div>`}
+      <div class="firma-aclaracion">${nombreAuditor || ''}</div>
+    </div>
+    <div class="firma-box">
+      <div class="firma-label">FIRMA DE LA EMPRESA</div>
+      ${firmaResponsable ? `<img class="firma-img" src="${firmaResponsable}" alt="Firma Empresa" />` : `<div style="font-size:11px;color:#666;">No hay firma registrada.</div>`}
+    </div>
+  </div>
+
+  <!-- COMENTARIOS GENERALES -->
+  <div class="comentarios">
+    <div class="subtit" style="margin:0 0 6px;">COMENTARIOS GENERALES</div>
+    <div>El personal toma, en forma positiva, las propuestas, a fin de trabajar en la mejora continua.</div>
+  </div>
+
+  <div class="footer">
+    Reporte generado el ${new Date().toLocaleString('es-AR')} &nbsp;|&nbsp; ${sucursal ? `Sucursal: ${sucursal} &nbsp;|&nbsp;` : ""} Fecha de auditoría: ${fecha || ""}
+  </div>
+</body>
+</html>
   `;
-  return html;
 }
 
 const ReporteDetallePro = forwardRef(({ open = false, onClose = () => {}, reporte = null, modo = 'modal', firmaResponsable, onPrint }, ref) => {
   const { userProfile } = useAuth();
-  const [useNewChart, setUseNewChart] = useState(false);
   
   console.log('[ReporteDetallePro] Props recibidas:', { open, reporte, modo, firmaResponsable, onPrint });
   console.log('[ReporteDetallePro] reporte completo:', reporte);
@@ -696,10 +878,14 @@ const ReporteDetallePro = forwardRef(({ open = false, onClose = () => {}, report
       comentarios: comentariosNormalizados,
       imagenes: imagenesNormalizadas,
       firmaAuditor: reporte.firmaAuditor,
-      chartImgDataUrl, // Gráfico principal
+      chartImgDataUrl, // Gráfico principal (Google Charts)
       sectionChartsImgDataUrl, // Array de gráficos por sección
-      nombreAuditor, // Añadir nombreAuditor a la función de impresión
-      firmaResponsable: firmaResponsableFinal // Añadir firmaResponsable a la función de impresión
+      nombreAuditor,
+      firmaResponsable: firmaResponsableFinal,
+      auditorTelefono: reporte.auditorTelefono || userProfile?.telefono || "",
+      geolocalizacion: reporte.geolocalizacion || null,
+      fechaInicio: reporte.fechaInicio || "",
+      fechaFin: reporte.fechaFin || ""
     });
     
     // Crear un iframe oculto para imprimir
@@ -852,79 +1038,31 @@ const ReporteDetallePro = forwardRef(({ open = false, onClose = () => {}, report
   // Si no es modal, renderiza el contenido suelto (por si acaso)
   return (
     <Box p={3}>
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-        <Typography variant="h4" gutterBottom>
-          Reporte de Auditoría de Higiene y Seguridad
+      <Typography variant="h4" gutterBottom color="primary" textAlign="center">
+        🖨️ Reporte de Auditoría - Estilo Urquiza
+      </Typography>
+      
+      <Alert severity="info" sx={{ mb: 3 }}>
+        <Typography variant="body2">
+          Este reporte usa el nuevo formato profesional estilo "Urquiza" con diseño optimizado para impresión.
         </Typography>
-        {empresa.logo && empresa.logo.trim() !== "" ? (
-          <img
-            src={empresa.logo}
-            alt="Logo de la empresa"
-            style={{ height: '60px' }}
-            onError={e => { e.target.style.display = 'none'; }}
-          />
-        ) : (
-          <Box
-            sx={{
-              width: "60px",
-              height: "60px",
-              backgroundColor: "#f0f0f0",
-              borderRadius: "4px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontSize: "18px",
-              color: "#666",
-              border: "1px solid #ccc"
-            }}
-          >
-            {empresa.nombre ? empresa.nombre.charAt(0).toUpperCase() : '?'}
-          </Box>
-        )}
-      </Box>
-      <Typography variant="h6" gutterBottom>Datos de la Empresa</Typography>
-      <Typography variant="body1">Empresa: {empresa.nombre}</Typography>
-      <Typography variant="body1">Sucursal: {sucursal}</Typography>
-      <Typography variant="body1">Formulario: {formulario.nombre}</Typography>
-      <Typography variant="body1">Fecha: {fecha}</Typography>
+      </Alert>
+
       {/* Gráfico general de respuestas */}
       {reporte.estadisticas && reporte.estadisticas.conteo && (
         <Box mt={3}>
-          {/* Opción para alternar entre gráficos */}
-          <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 2 }}>
-            <Typography variant="h6" gutterBottom>
-              📊 Gráfico de Distribución
-            </Typography>
-            <FormControlLabel
-              control={
-                <Switch
-                  checked={useNewChart}
-                  onChange={(e) => setUseNewChart(e.target.checked)}
-                  size="small"
-                />
-              }
-              label={useNewChart ? "Nuevo Gráfico de Torta" : "Gráfico Donut Original"}
-            />
-          </Box>
+          <Typography variant="h6" gutterBottom>
+            📊 Gráfico de Distribución
+          </Typography>
           
-          {useNewChart ? (
-            <AuditoriaPieChart
-              estadisticas={reporte.estadisticas.conteo}
-              title="Distribución de Respuestas de Auditoría"
-              height={400}
-              showLegend={true}
-              showTooltips={true}
-              variant="pie"
-            />
-          ) : (
-            <EstadisticasChart
-              ref={chartRef}
-              estadisticas={reporte.estadisticas.conteo}
-              title="Distribución general de respuestas"
-            />
-          )}
+          <EstadisticasChart
+            ref={chartRef}
+            estadisticas={reporte.estadisticas.conteo}
+            title="Distribución general de respuestas"
+          />
         </Box>
       )}
+
       {/* Gráficos por sección */}
       {secciones && secciones.length > 1 && respuestasNormalizadas.length === secciones.length && (
         <Box mt={3}>
@@ -953,8 +1091,12 @@ const ReporteDetallePro = forwardRef(({ open = false, onClose = () => {}, report
           })}
         </Box>
       )}
+
       {/* Preguntas, respuestas, comentarios e imágenes */}
       <Box mt={3}>
+        <Typography variant="h6" gutterBottom>
+          ❓ Preguntas y Respuestas
+        </Typography>
         <PreguntasRespuestasList
           secciones={secciones}
           respuestas={respuestasNormalizadas}
@@ -962,7 +1104,8 @@ const ReporteDetallePro = forwardRef(({ open = false, onClose = () => {}, report
           imagenes={imagenesNormalizadas}
         />
       </Box>
-      {/* Firma del Auditor con aclaración y Firma de la Empresa solo imagen en la vista suelta */}
+
+      {/* Firmas */}
       <Box mt={3} display="flex" flexDirection={{ xs: 'column', md: 'row' }} gap={4} justifyContent="center" alignItems="flex-start">
         <Box flex={1} textAlign="center">
           <Typography variant="subtitle1" color="primary" fontWeight={600} gutterBottom>
@@ -984,13 +1127,8 @@ const ReporteDetallePro = forwardRef(({ open = false, onClose = () => {}, report
           <Typography variant="body2" sx={{ mt: 1 }}>
             {nombreAuditor}
           </Typography>
-          {(!reporte.firmaAuditor || typeof reporte.firmaAuditor !== 'string' || reporte.firmaAuditor.length < 10) && (
-            <Typography variant="caption" color="error">
-              [ADVERTENCIA] La firma no está disponible o es inválida.
-            </Typography>
-          )}
         </Box>
-        {/* Firma de la Empresa solo imagen */}
+        
         <Box flex={1} textAlign="center">
           <Typography variant="subtitle1" color="primary" fontWeight={600} gutterBottom>
             Firma de la Empresa

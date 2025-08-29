@@ -70,26 +70,48 @@ export const useUpdateChecker = () => {
       const current = await getCurrentAPKVersion();
       setCurrentVersion(current);
       
-      // Obtener última versión desde el backend
-      const backendUrl = `${getBackendUrl()}/api/latest-apk`;
-      const response = await fetch(backendUrl);
+      // Para pruebas: simular una versión más nueva
+      // En producción, esto vendría del backend
+      const testLatestVersion = '0.0.38'; // Versión de prueba más nueva
+      setLatestVersion(testLatestVersion);
       
-      if (!response.ok) {
-        throw new Error('No se pudo obtener información de la última versión');
-      }
+      // Simular release info
+      const testRelease = {
+        tag_name: testLatestVersion,
+        name: 'Test Release',
+        body: 'Esta es una versión de prueba para verificar el sistema de actualizaciones.',
+        published_at: new Date().toISOString()
+      };
+      setLatestRelease(testRelease);
       
-      const data = await response.json();
+      // Verificar si hay actualización disponible
+      const hasNewVersion = isNewerVersion(testLatestVersion, current);
+      setHasUpdate(hasNewVersion);
       
-      if (data.success && data.release) {
-        const latest = data.release.tag_name;
-        setLatestVersion(latest);
-        setLatestRelease(data.release);
-        
-        // Verificar si hay actualización disponible
-        const hasNewVersion = isNewerVersion(latest, current);
-        setHasUpdate(hasNewVersion);
-        
-        console.log(`📱 Versión actual: ${current}, Última: ${latest}, Actualización disponible: ${hasNewVersion}`);
+      console.log(`📱 Versión actual: ${current}, Última: ${testLatestVersion}, Actualización disponible: ${hasNewVersion}`);
+      
+      // Si no hay actualización, intentar obtener la info real del backend
+      if (!hasNewVersion) {
+        try {
+          const backendUrl = `${getBackendUrl()}/api/latest-apk`;
+          const response = await fetch(backendUrl);
+          
+          if (response.ok) {
+            const data = await response.json();
+            if (data.success && data.release) {
+              const latest = data.release.tag_name;
+              setLatestVersion(latest);
+              setLatestRelease(data.release);
+              
+              const hasRealUpdate = isNewerVersion(latest, current);
+              setHasUpdate(hasRealUpdate);
+              
+              console.log(`📱 Versión real: ${current}, Última: ${latest}, Actualización disponible: ${hasRealUpdate}`);
+            }
+          }
+        } catch (backendError) {
+          console.log('Backend no disponible, usando versión de prueba:', backendError.message);
+        }
       }
       
     } catch (error) {

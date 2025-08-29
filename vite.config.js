@@ -59,7 +59,7 @@ export default defineConfig({
           'router': ['react-router-dom'],
           
           // Charts and Visualization
-          'charts': ['chart.js', 'react-chartjs-2', 'recharts'],
+          'charts': ['google-charts'],
           
           // PDF and Document handling
           'pdf-tools': ['@react-pdf/renderer', 'jspdf', 'jspdf-autotable', 'pdf-lib', 'pdfkit', 'pdfmake'],
