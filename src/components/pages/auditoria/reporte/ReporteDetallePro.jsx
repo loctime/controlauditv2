@@ -463,11 +463,26 @@ function generarContenidoImpresion({
     box-shadow: 0 2px 8px rgba(0,0,0,0.08);
   }
   
-  .chart-image {
-    max-width: 100%;
-    height: auto;
-    border-radius: 4px;
-  }
+     .chart-image {
+     max-width: 100%;
+     height: auto;
+     border-radius: 4px;
+     display: block;
+     margin: 0 auto;
+     object-fit: contain;
+   }
+   
+   /* Asegurar que las imágenes se muestren en impresión */
+   @media print {
+     .chart-image {
+       max-width: 90%;
+       height: auto;
+       page-break-inside: avoid;
+       display: block !important;
+       visibility: visible !important;
+       opacity: 1 !important;
+     }
+   }
 
   /* Secciones */
   .sections-container {
@@ -801,20 +816,34 @@ function generarContenidoImpresion({
       </div>
     </div>
 
-    ${chartImgDataUrl ? `
-    <div class="chart-section">
-      <div class="chart-container">
-        <img class="chart-image" src="${chartImgDataUrl}" alt="Distribución general de respuestas" style="max-width: 100%; height: auto; border: 2px solid #3498db; border-radius: 8px;" />
-      </div>
-    </div>
-    ` : `
-    <div class="chart-section">
-      <div class="chart-container" style="border: 2px dashed #e74c3c; padding: 20px; text-align: center;">
-        <p style="color: #e74c3c; font-weight: bold;">⚠️ GRÁFICO NO DISPONIBLE</p>
-        <p style="color: #7f8c8d; font-size: 12px;">No se pudo generar la imagen del gráfico</p>
-      </div>
-    </div>
-    `}
+         ${chartImgDataUrl && chartImgDataUrl.length > 1000 && chartImgDataUrl.startsWith('data:image') ? `
+     <div class="chart-section">
+       <div class="chart-container">
+         <img class="chart-image" 
+              src="${chartImgDataUrl}" 
+              alt="Distribución general de respuestas" 
+              style="max-width: 100%; height: auto; border: 2px solid #3498db; border-radius: 8px; min-height: 200px; display: block;" 
+              onerror="this.style.display='none'; this.nextElementSibling.style.display='block'; console.error('Error cargando imagen del gráfico principal');" 
+              onload="console.log('Imagen del gráfico principal cargada exitosamente');" />
+         <div style="display: none; border: 2px dashed #e74c3c; padding: 20px; text-align: center; background: #fff5f5; min-height: 200px;">
+           <p style="color: #e74c3c; font-weight: bold; margin: 0;">⚠️ GRÁFICO NO DISPONIBLE</p>
+           <p style="color: #7f8c8d; font-size: 12px; margin: 5px 0 0 0;">Error al cargar la imagen del gráfico</p>
+           <p style="color: #7f8c8d; font-size: 10px; margin: 5px 0 0 0;">Formato: ${chartImgDataUrl.startsWith('data:image/png') ? 'PNG' : chartImgDataUrl.startsWith('data:image/jpeg') ? 'JPEG' : 'Desconocido'}</p>
+           <p style="color: #7f8c8d; font-size: 10px; margin: 5px 0 0 0;">Tamaño: ${(chartImgDataUrl.length / 1024).toFixed(1)} KB</p>
+         </div>
+       </div>
+     </div>
+     ` : `
+     <div class="chart-section">
+       <div class="chart-container" style="border: 2px dashed #e74c3c; padding: 20px; text-align: center; background: #fff5f5; min-height: 200px;">
+         <p style="color: #e74c3c; font-weight: bold; margin: 0;">⚠️ GRÁFICO NO DISPONIBLE</p>
+         <p style="color: #7f8c8d; font-size: 12px; margin: 5px 0 0 0;">No se pudo generar la imagen del gráfico</p>
+         <p style="color: #7f8c8d; font-size: 10px; margin: 5px 0 0 0;">Tamaño de imagen: ${chartImgDataUrl ? chartImgDataUrl.length : 0} bytes</p>
+         <p style="color: #7f8c8d; font-size: 10px; margin: 5px 0 0 0;">Formato: ${chartImgDataUrl ? (chartImgDataUrl.startsWith('data:image') ? 'Válido' : 'Inválido') : 'N/A'}</p>
+         <p style="color: #7f8c8d; font-size: 10px; margin: 5px 0 0 0;">Debug: chartImgDataUrl = ${chartImgDataUrl ? 'Presente' : 'Ausente'}</p>
+       </div>
+     </div>
+     `}
   </div>
 
   <!-- SECCIONES -->
@@ -830,8 +859,17 @@ function generarContenidoImpresion({
         T: local.length
       };
 
-      const miniChart = sectionChartsImgDataUrl[sIdx]
-        ? `<div class="section-chart"><img src="${sectionChartsImgDataUrl[sIdx]}" alt="Sección ${sIdx+1}" /></div>`
+      const miniChart = sectionChartsImgDataUrl[sIdx] && sectionChartsImgDataUrl[sIdx].length > 1000 && sectionChartsImgDataUrl[sIdx].startsWith('data:image')
+        ? `<div class="section-chart">
+             <img src="${sectionChartsImgDataUrl[sIdx]}" 
+                  alt="Sección ${sIdx+1}" 
+                  style="max-width: 300px; height: auto; border-radius: 4px; border: 1px solid #3498db;"
+                  onerror="this.style.display='none'; this.nextElementSibling.style.display='block';"
+                  onload="console.log('Imagen de sección ${sIdx+1} cargada exitosamente');" />
+             <div style="display: none; border: 2px dashed #e74c3c; padding: 10px; text-align: center; background: #fff5f5; margin: 10px 0;">
+               <p style="color: #e74c3c; font-weight: bold; margin: 0; font-size: 12px;">⚠️ GRÁFICO SECCIÓN ${sIdx+1} NO DISPONIBLE</p>
+             </div>
+           </div>`
         : '';
 
       return `
@@ -1219,44 +1257,73 @@ const ReporteDetallePro = forwardRef(({ open = false, onClose = () => {}, report
   const nombreAuditor = reporte?.auditorNombre || userProfile?.nombre || userProfile?.displayName || userProfile?.email || 'Nombre no disponible';
 
   const handleImprimir = async () => {
+    console.log('[ReporteDetallePro] Iniciando proceso de impresión...');
+    
+    // Esperar un poco para que los gráficos se rendericen completamente
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    
     // Obtener imagen del gráfico principal
     let chartImgDataUrl = '';
     if (chartRef.current && chartRef.current.getImage) {
       try {
+        console.log('[ReporteDetallePro] Generando imagen del gráfico principal...');
         chartImgDataUrl = await chartRef.current.getImage();
-        console.log('Imagen del gráfico principal generada:', chartImgDataUrl ? 'Sí' : 'No');
+        console.log('[ReporteDetallePro] Imagen del gráfico principal generada:', chartImgDataUrl ? 'Sí' : 'No');
+        console.log('[ReporteDetallePro] Tamaño de imagen principal:', chartImgDataUrl ? chartImgDataUrl.length : 0);
+        console.log('[ReporteDetallePro] Formato de imagen principal:', chartImgDataUrl ? (chartImgDataUrl.startsWith('data:image') ? 'Válido' : 'Inválido') : 'N/A');
       } catch (error) {
-        console.error('Error obteniendo imagen del gráfico principal:', error);
+        console.error('[ReporteDetallePro] Error obteniendo imagen del gráfico principal:', error);
       }
+    } else {
+      console.warn('[ReporteDetallePro] chartRef.current no disponible o no tiene getImage');
     }
     
     // Obtener imágenes de los gráficos por sección
     let sectionChartsImgDataUrl = [];
     if (sectionChartRefs.current && sectionChartRefs.current.length > 0) {
       try {
+        console.log('[ReporteDetallePro] Generando imágenes de gráficos por sección...');
         sectionChartsImgDataUrl = await Promise.all(
-          sectionChartRefs.current.map(async (ref) => {
+          sectionChartRefs.current.map(async (ref, index) => {
             if (ref && ref.getImage) {
               try {
-                return await ref.getImage();
+                const imageUrl = await ref.getImage();
+                console.log(`[ReporteDetallePro] Imagen de sección ${index} generada:`, imageUrl ? 'Sí' : 'No');
+                return imageUrl;
               } catch (error) {
-                console.error('Error obteniendo imagen de gráfico por sección:', error);
+                console.error(`[ReporteDetallePro] Error obteniendo imagen de gráfico por sección ${index}:`, error);
                 return '';
               }
             }
             return '';
           })
         );
-        console.log('Imágenes de gráficos por sección generadas:', sectionChartsImgDataUrl.filter(url => url).length);
+        console.log('[ReporteDetallePro] Imágenes de gráficos por sección generadas:', sectionChartsImgDataUrl.filter(url => url).length);
       } catch (error) {
-        console.error('Error obteniendo imágenes de gráficos por sección:', error);
+        console.error('[ReporteDetallePro] Error obteniendo imágenes de gráficos por sección:', error);
       }
     }
     // Debug: verificar si tenemos la imagen del gráfico
     console.log('=== DEBUG IMPRESIÓN ===');
     console.log('chartImgDataUrl length:', chartImgDataUrl ? chartImgDataUrl.length : 0);
     console.log('chartImgDataUrl starts with data:', chartImgDataUrl ? chartImgDataUrl.startsWith('data:image') : false);
-    console.log('sectionChartsImgDataUrl count:', sectionChartsImgDataUrl.filter(url => url).length);
+    console.log('chartImgDataUrl valid:', chartImgDataUrl && chartImgDataUrl.length > 1000 && chartImgDataUrl.startsWith('data:image'));
+    console.log('sectionChartsImgDataUrl count:', sectionChartsImgDataUrl.filter(url => url && url.length > 1000 && url.startsWith('data:image')).length);
+    
+    // Verificar que las imágenes sean válidas antes de continuar
+    if (!chartImgDataUrl || !chartImgDataUrl.startsWith('data:image') || chartImgDataUrl.length < 1000) {
+      console.warn('[ReporteDetallePro] Imagen del gráfico principal no válida, intentando regenerar...');
+      // Intentar regenerar la imagen una vez más
+      if (chartRef.current && chartRef.current.getImage) {
+        try {
+          await new Promise(resolve => setTimeout(resolve, 2000)); // Esperar 2 segundos más
+          chartImgDataUrl = await chartRef.current.getImage();
+          console.log('[ReporteDetallePro] Reintento - Imagen regenerada:', chartImgDataUrl ? 'Sí' : 'No');
+        } catch (error) {
+          console.error('[ReporteDetallePro] Error en reintento de generación de imagen:', error);
+        }
+      }
+    }
     
     // Generar el HTML de impresión, incluyendo firmas y gráficos
     const html = generarContenidoImpresion({
@@ -1476,6 +1543,51 @@ const ReporteDetallePro = forwardRef(({ open = false, onClose = () => {}, report
           >
             Imprimir
           </Button>
+          {process.env.NODE_ENV === 'development' && (
+            <Button 
+              onClick={async () => {
+                console.log('[DEBUG] Probando generación de imagen del gráfico...');
+                if (chartRef.current && chartRef.current.getImage) {
+                  try {
+                    console.log('[DEBUG] chartRef.current.getImage disponible');
+                    const imageUrl = await chartRef.current.getImage();
+                    console.log('[DEBUG] Imagen generada:', imageUrl ? 'Sí' : 'No');
+                    console.log('[DEBUG] Tamaño:', imageUrl ? imageUrl.length : 0);
+                    console.log('[DEBUG] Formato válido:', imageUrl ? imageUrl.startsWith('data:image') : false);
+                    console.log('[DEBUG] Primeros 100 caracteres:', imageUrl ? imageUrl.substring(0, 100) : 'N/A');
+                    
+                    // Crear una ventana de prueba para ver la imagen
+                    const testWindow = window.open('', '_blank');
+                    testWindow.document.write(`
+                      <html>
+                        <head><title>Test Gráfico</title></head>
+                        <body>
+                          <h2>Test de Imagen del Gráfico</h2>
+                          <img src="${imageUrl}" style="max-width: 100%; border: 2px solid red;" />
+                          <p>Tamaño: ${imageUrl ? imageUrl.length : 0} bytes</p>
+                          <p>Formato: ${imageUrl ? (imageUrl.startsWith('data:image') ? 'Válido' : 'Inválido') : 'N/A'}</p>
+                          <p>Primeros 100 chars: ${imageUrl ? imageUrl.substring(0, 100) : 'N/A'}</p>
+                        </body>
+                      </html>
+                    `);
+                    testWindow.document.close();
+                  } catch (error) {
+                    console.error('[DEBUG] Error generando imagen:', error);
+                    alert('Error generando imagen: ' + error.message);
+                  }
+                } else {
+                  console.error('[DEBUG] chartRef.current.getImage no disponible');
+                  alert('chartRef.current.getImage no disponible');
+                }
+              }}
+              variant="outlined" 
+              color="warning" 
+              size="medium"
+              sx={{ minWidth: { xs: '80px', sm: '100px' } }}
+            >
+              Test Gráfico
+            </Button>
+          )}
           {process.env.NODE_ENV === 'development' && (
             <Button 
               onClick={debugImagenes} 

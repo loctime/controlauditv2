@@ -34,135 +34,155 @@ const EstadisticasChartSimple = forwardRef(({ estadisticas, title, height = 320,
   // Función para generar imagen del gráfico
   const generateChartImage = async () => {
     if (!hasValidData(estadisticas)) {
+      console.log('[EstadisticasChartSimple] No hay datos válidos para generar imagen');
       return null;
     }
 
     try {
-      // Usar html2canvas para convertir el elemento a imagen
-      if (window.html2canvas && chartRef.current) {
-        const canvas = await window.html2canvas(chartRef.current, {
-          backgroundColor: '#ffffff',
-          scale: 2,
-          useCORS: true,
-          allowTaint: true,
-          logging: false
-        });
-        return canvas.toDataURL('image/png');
-      }
+      console.log('[EstadisticasChartSimple] Generando imagen con Canvas API...');
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      const { total, porcentajes } = calcularPorcentajes(estadisticas);
       
-        // Fallback: crear una imagen simple usando Canvas API
-  const canvas = document.createElement('canvas');
-  const ctx = canvas.getContext('2d');
-  const { total, porcentajes } = calcularPorcentajes(estadisticas);
-  
-  canvas.width = 800;
-  canvas.height = 500;
-  
-  // Fondo con gradiente
-  const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
-  gradient.addColorStop(0, '#ffffff');
-  gradient.addColorStop(1, '#f8f9fa');
-  ctx.fillStyle = gradient;
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-  
-  // Título con sombra
-  ctx.shadowColor = 'rgba(0,0,0,0.1)';
-  ctx.shadowBlur = 4;
-  ctx.shadowOffsetX = 2;
-  ctx.shadowOffsetY = 2;
-  ctx.fillStyle = '#2c3e50';
-  ctx.font = 'bold 24px Arial';
-  ctx.textAlign = 'center';
-  ctx.fillText(title || 'Distribución de Respuestas', canvas.width / 2, 40);
-  
-  // Resetear sombra
-  ctx.shadowColor = 'transparent';
-  ctx.shadowBlur = 0;
-  ctx.shadowOffsetX = 0;
-  ctx.shadowOffsetY = 0;
-  
-  // Gráfico de barras mejorado
-  const barHeight = 35;
-  const barSpacing = 50;
-  const startY = 100;
-  const maxBarWidth = 500;
-  let currentY = startY;
-  
-  // Dibujar líneas de fondo
-  ctx.strokeStyle = '#e9ecef';
-  ctx.lineWidth = 1;
-  for (let i = 0; i <= 10; i++) {
-    const y = startY + (i * barSpacing);
-    ctx.beginPath();
-    ctx.moveTo(200, y);
-    ctx.lineTo(750, y);
-    ctx.stroke();
-  }
-  
-  Object.entries(estadisticas).forEach(([categoria, valor], index) => {
-    if (valor === 0) return;
-    
-    const porcentaje = porcentajes[categoria];
-    const color = COLOR_MAP[categoria] || '#666';
-    
-    // Etiqueta con mejor formato
-    ctx.fillStyle = '#2c3e50';
-    ctx.font = 'bold 16px Arial';
-    ctx.textAlign = 'left';
-    ctx.fillText(categoria, 20, currentY + 25);
-    
-    // Barra con gradiente
-    const barWidth = (porcentaje / 100) * maxBarWidth;
-    const barGradient = ctx.createLinearGradient(200, currentY, 200 + barWidth, currentY);
-    barGradient.addColorStop(0, color);
-    barGradient.addColorStop(1, color + '80');
-    
-    // Sombra de la barra
-    ctx.shadowColor = 'rgba(0,0,0,0.2)';
-    ctx.shadowBlur = 6;
-    ctx.shadowOffsetX = 2;
-    ctx.shadowOffsetY = 2;
-    
-    ctx.fillStyle = barGradient;
-    ctx.fillRect(200, currentY, barWidth, barHeight);
-    
-    // Resetear sombra
-    ctx.shadowColor = 'transparent';
-    ctx.shadowBlur = 0;
-    ctx.shadowOffsetX = 0;
-    ctx.shadowOffsetY = 0;
-    
-    // Borde de la barra
-    ctx.strokeStyle = color;
-    ctx.lineWidth = 2;
-    ctx.strokeRect(200, currentY, barWidth, barHeight);
-    
-    // Texto del valor con mejor formato
-    ctx.fillStyle = '#2c3e50';
-    ctx.font = 'bold 14px Arial';
-    ctx.textAlign = 'left';
-    ctx.fillText(`${valor} (${porcentaje}%)`, 210 + barWidth, currentY + 25);
-    
-    currentY += barSpacing;
-  });
-  
-  // Total con mejor formato
-  ctx.fillStyle = '#2c3e50';
-  ctx.font = 'bold 20px Arial';
-  ctx.textAlign = 'center';
-  ctx.fillText(`Total: ${total} respuestas`, canvas.width / 2, currentY + 40);
-  
-  // Leyenda
-  const legendY = currentY + 70;
-  ctx.fillStyle = '#6c757d';
-  ctx.font = '12px Arial';
-  ctx.textAlign = 'center';
-  ctx.fillText('Distribución de respuestas por categoría', canvas.width / 2, legendY);
+      // Tamaño optimizado para PDF
+      canvas.width = 600;
+      canvas.height = 400;
+      
+      // Fondo blanco con borde
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.strokeStyle = '#3498db';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(0, 0, canvas.width, canvas.height);
+      
+      // Título
+      ctx.fillStyle = '#2c3e50';
+      ctx.font = 'bold 18px Arial';
+      ctx.textAlign = 'center';
+      ctx.fillText(title || 'Distribución de Respuestas', canvas.width / 2, 30);
+      
+      // Gráfico de barras horizontal
+      const barHeight = 30;
+      const barSpacing = 45;
+      const startY = 70;
+      const maxBarWidth = 350;
+      const barStartX = 30;
+      let currentY = startY;
+      
+      Object.entries(estadisticas).forEach(([categoria, valor], index) => {
+        if (valor === 0) return;
+        
+        const porcentaje = porcentajes[categoria];
+        const color = COLOR_MAP[categoria] || '#666';
+        
+        // Etiqueta
+        ctx.fillStyle = '#2c3e50';
+        ctx.font = 'bold 14px Arial';
+        ctx.textAlign = 'left';
+        ctx.fillText(categoria, barStartX, currentY + 20);
+        
+        // Barra
+        const barWidth = (porcentaje / 100) * maxBarWidth;
+        ctx.fillStyle = color;
+        ctx.fillRect(barStartX + 150, currentY, barWidth, barHeight);
+        
+        // Borde de la barra
+        ctx.strokeStyle = '#000';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(barStartX + 150, currentY, barWidth, barHeight);
+        
+        // Texto del valor
+        ctx.fillStyle = '#2c3e50';
+        ctx.font = 'bold 12px Arial';
+        ctx.textAlign = 'left';
+        ctx.fillText(`${valor} (${porcentaje}%)`, barStartX + 160 + barWidth, currentY + 20);
+        
+        currentY += barSpacing;
+      });
+      
+      // Total
+      ctx.fillStyle = '#2c3e50';
+      ctx.font = 'bold 16px Arial';
+      ctx.textAlign = 'center';
+      ctx.fillText(`Total: ${total} respuestas`, canvas.width / 2, currentY + 30);
+      
+      // Gráfico de torta en la parte derecha
+      const pieCenterX = 500;
+      const pieCenterY = 250;
+      const pieRadius = 60;
+      
+      let currentAngle = 0;
+      Object.entries(estadisticas).forEach(([categoria, valor]) => {
+        if (valor === 0) return;
+        
+        const color = COLOR_MAP[categoria] || '#666';
+        const sliceAngle = (valor / total) * 2 * Math.PI;
+        
+        // Dibujar sector del gráfico de torta
+        ctx.beginPath();
+        ctx.moveTo(pieCenterX, pieCenterY);
+        ctx.arc(pieCenterX, pieCenterY, pieRadius, currentAngle, currentAngle + sliceAngle);
+        ctx.closePath();
+        ctx.fillStyle = color;
+        ctx.fill();
+        ctx.strokeStyle = '#000';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+        
+        currentAngle += sliceAngle;
+      });
+      
+      // Centro del gráfico de torta
+      ctx.beginPath();
+      ctx.arc(pieCenterX, pieCenterY, 20, 0, 2 * Math.PI);
+      ctx.fillStyle = '#fff';
+      ctx.fill();
+      ctx.strokeStyle = '#000';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+      
+      // Total en el centro
+      ctx.fillStyle = '#2c3e50';
+      ctx.font = 'bold 14px Arial';
+      ctx.textAlign = 'center';
+      ctx.fillText(total.toString(), pieCenterX, pieCenterY + 4);
+      
+      // Leyenda
+      const legendY = currentY + 50;
+      ctx.fillStyle = '#6c757d';
+      ctx.font = '12px Arial';
+      ctx.textAlign = 'center';
+      ctx.fillText('Gráfico de Barras y Torta - Distribución de respuestas', canvas.width / 2, legendY);
+      
+      console.log('[EstadisticasChartSimple] Imagen generada exitosamente con Canvas API');
+      const dataUrl = canvas.toDataURL('image/png', 0.9);
+      console.log('[EstadisticasChartSimple] Tamaño de imagen generada:', dataUrl.length, 'bytes');
+      return dataUrl;
+    } catch (error) {
+      console.error('[EstadisticasChartSimple] Error generando imagen del gráfico:', error);
+      
+      // Fallback final: imagen de error
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      canvas.width = 400;
+      canvas.height = 200;
+      
+      ctx.fillStyle = '#fff5f5';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.strokeStyle = '#e74c3c';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(0, 0, canvas.width, canvas.height);
+      
+      ctx.fillStyle = '#e74c3c';
+      ctx.font = 'bold 16px Arial';
+      ctx.textAlign = 'center';
+      ctx.fillText('⚠️ Error al generar gráfico', canvas.width / 2, 80);
+      
+      ctx.fillStyle = '#7f8c8d';
+      ctx.font = '12px Arial';
+      ctx.fillText('Los datos están disponibles en formato de tabla', canvas.width / 2, 110);
       
       return canvas.toDataURL('image/png');
-    } catch (error) {
-      console.error('Error generando imagen del gráfico:', error);
-      return null;
     }
   };
 
