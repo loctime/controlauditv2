@@ -701,7 +701,9 @@ function generarContenidoImpresion({
   <div class="header-main">
     <div class="header-content">
       <div class="logo-section">
-        <div class="logo">CA</div>
+        <div class="logo">
+          <img src="/vite.svg" alt="ControlAudit" style="width: 40px; height: 40px; filter: brightness(0) invert(1);" />
+        </div>
         <div class="company-info">
           <h1>ControlAudit</h1>
           <p>Sistema de Auditorías Profesionales</p>
@@ -1339,7 +1341,14 @@ const ReporteDetallePro = forwardRef(({ open = false, onClose = () => {}, report
              </Box>
             
                          {/* Gráfico general de respuestas */}
-             {estadisticasCalculadas && estadisticasCalculadas.conteo && (
+             {(() => {
+               console.log('[ReporteDetallePro] Renderizando gráfico:', {
+                 estadisticasCalculadas: !!estadisticasCalculadas,
+                 conteo: estadisticasCalculadas?.conteo,
+                 tieneDatos: estadisticasCalculadas && estadisticasCalculadas.conteo
+               });
+               return estadisticasCalculadas && estadisticasCalculadas.conteo;
+             })() && (
                <Box sx={{ 
                  mb: 3, 
                  p: 2, 

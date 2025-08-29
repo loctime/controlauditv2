@@ -194,11 +194,17 @@ const EstadisticasChartSimple = forwardRef(({ estadisticas, title, height = 320,
   }, [estadisticas, title]);
 
   // Verificar si hay datos válidos
+  console.log('[EstadisticasChartSimple] estadisticas:', estadisticas);
+  console.log('[EstadisticasChartSimple] hasValidData:', hasValidData(estadisticas));
+  
   if (!hasValidData(estadisticas)) {
     return (
       <Box sx={{ p: 2, textAlign: 'center' }}>
         <Typography variant="body2" color="text.secondary">
           No hay datos suficientes para mostrar gráficos.
+        </Typography>
+        <Typography variant="caption" color="text.secondary">
+          Datos recibidos: {JSON.stringify(estadisticas)}
         </Typography>
       </Box>
     );
