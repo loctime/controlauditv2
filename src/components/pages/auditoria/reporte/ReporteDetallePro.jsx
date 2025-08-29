@@ -1,4 +1,4 @@
-import React, { useRef, forwardRef, useImperativeHandle } from "react";
+import React, { useRef, forwardRef, useImperativeHandle, useMemo } from "react";
 import PreguntasRespuestasList from "../../../common/PreguntasRespuestasList";
 import { Typography, Box, Button, Dialog, DialogTitle, DialogContent, DialogActions, IconButton, Alert } from "@mui/material";
 import PrintIcon from '@mui/icons-material/Print';
@@ -778,6 +778,45 @@ const ReporteDetallePro = forwardRef(({ open = false, onClose = () => {}, report
   console.debug('[ReporteDetallePro] reporte.estadisticas:', reporte.estadisticas);
   console.debug('[ReporteDetallePro] reporte.estadisticas?.conteo:', reporte.estadisticas?.conteo);
 
+  // Calcular estadísticas si no están disponibles
+  const estadisticasCalculadas = useMemo(() => {
+    if (reporte.estadisticas && reporte.estadisticas.conteo) {
+      return reporte.estadisticas;
+    }
+    
+    // Calcular estadísticas desde las respuestas normalizadas
+    if (respuestasNormalizadas && respuestasNormalizadas.length > 0) {
+      const respuestasPlanas = respuestasNormalizadas.flat();
+      const estadisticas = {
+        Conforme: respuestasPlanas.filter(r => r === "Conforme").length,
+        "No conforme": respuestasPlanas.filter(r => r === "No conforme").length,
+        "Necesita mejora": respuestasPlanas.filter(r => r === "Necesita mejora").length,
+        "No aplica": respuestasPlanas.filter(r => r === "No aplica").length,
+      };
+
+      const total = respuestasPlanas.length;
+      const porcentajes = {};
+      
+      Object.keys(estadisticas).forEach(key => {
+        porcentajes[key] = total > 0 ? ((estadisticas[key] / total) * 100).toFixed(2) : 0;
+      });
+
+      return {
+        conteo: estadisticas,
+        porcentajes,
+        total,
+        sinNoAplica: {
+          ...estadisticas,
+          "No aplica": 0
+        }
+      };
+    }
+    
+    return null;
+  }, [reporte.estadisticas, respuestasNormalizadas]);
+
+  console.debug('[ReporteDetallePro] estadisticasCalculadas:', estadisticasCalculadas);
+
   // Función de debug temporal
   const debugImagenes = () => {
     console.log('=== DEBUG IMÁGENES ===');
@@ -1049,7 +1088,7 @@ const ReporteDetallePro = forwardRef(({ open = false, onClose = () => {}, report
       </Alert>
 
       {/* Gráfico general de respuestas */}
-      {reporte.estadisticas && reporte.estadisticas.conteo && (
+      {estadisticasCalculadas && estadisticasCalculadas.conteo && (
         <Box mt={3}>
           <Typography variant="h6" gutterBottom>
             📊 Gráfico de Distribución
@@ -1057,7 +1096,7 @@ const ReporteDetallePro = forwardRef(({ open = false, onClose = () => {}, report
           
           <EstadisticasChart
             ref={chartRef}
-            estadisticas={reporte.estadisticas.conteo}
+            estadisticas={estadisticasCalculadas.conteo}
             title="Distribución general de respuestas"
           />
         </Box>
