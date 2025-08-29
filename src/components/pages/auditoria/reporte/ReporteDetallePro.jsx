@@ -4,6 +4,7 @@ import { Typography, Box, Button, Dialog, DialogTitle, DialogContent, DialogActi
 import PrintIcon from '@mui/icons-material/Print';
 import CloseIcon from '@mui/icons-material/Close';
 import EstadisticasChart from './EstadisticasChart';
+import EstadisticasChartSimple from './EstadisticasChartSimple';
 import { useAuth } from '../../../context/AuthContext';
 
 // Normaliza respuestas a array de arrays de strings
@@ -1001,25 +1002,87 @@ const ReporteDetallePro = forwardRef(({ open = false, onClose = () => {}, report
                
              </Box>
             
-            <Box sx={{ 
-              mb: 3, 
-              p: 2, 
-              bgcolor: 'background.paper', 
-              borderRadius: 2, 
-              border: '1px solid',
-              borderColor: 'divider',
-              boxShadow: 1
-            }}>
-              <Typography variant="h6" gutterBottom sx={{ color: 'primary.main', fontWeight: 600 }}>
-                ❓ Preguntas y Respuestas
-              </Typography>
-              <PreguntasRespuestasList
-                secciones={secciones}
-                respuestas={respuestasNormalizadas}
-                comentarios={comentariosNormalizados}
-                imagenes={imagenesNormalizadas}
-              />
-            </Box>
+                         {/* Gráfico general de respuestas */}
+             {estadisticasCalculadas && estadisticasCalculadas.conteo && (
+               <Box sx={{ 
+                 mb: 3, 
+                 p: 2, 
+                 bgcolor: 'background.paper', 
+                 borderRadius: 2, 
+                 border: '1px solid',
+                 borderColor: 'divider',
+                 boxShadow: 1
+               }}>
+                 <Typography variant="h6" gutterBottom sx={{ color: 'primary.main', fontWeight: 600 }}>
+                   📊 Gráfico de Distribución
+                 </Typography>
+                 
+                 <EstadisticasChartSimple
+                   ref={chartRef}
+                   estadisticas={estadisticasCalculadas.conteo}
+                   title="Distribución general de respuestas"
+                 />
+               </Box>
+             )}
+
+             {/* Gráficos por sección */}
+             {secciones && secciones.length > 1 && respuestasNormalizadas.length === secciones.length && (
+               <Box sx={{ 
+                 mb: 3, 
+                 p: 2, 
+                 bgcolor: 'background.paper', 
+                 borderRadius: 2, 
+                 border: '1px solid',
+                 borderColor: 'divider',
+                 boxShadow: 1
+               }}>
+                 <Typography variant="h6" gutterBottom sx={{ color: 'primary.main', fontWeight: 600 }}>
+                   📊 Distribución por Sección
+                 </Typography>
+                 {secciones.map((seccion, idx) => {
+                   // Calcular conteo por sección
+                   const conteo = { 'Conforme': 0, 'No conforme': 0, 'Necesita mejora': 0, 'No aplica': 0 };
+                   (respuestasNormalizadas[idx] || []).forEach(r => {
+                     if (conteo[r] !== undefined) conteo[r]++;
+                   });
+                   // Solo mostrar si hay respuestas
+                   const total = Object.values(conteo).reduce((a, b) => a + b, 0);
+                   if (total === 0) return null;
+                   // Asignar ref dinámico
+                   if (!sectionChartRefs.current[idx]) sectionChartRefs.current[idx] = React.createRef();
+                   return (
+                     <Box key={idx} mt={2}>
+                       <Typography variant="subtitle1" gutterBottom>{seccion.nombre}</Typography>
+                       <EstadisticasChartSimple
+                         ref={sectionChartRefs.current[idx]}
+                         estadisticas={conteo}
+                         title={`Sección: ${seccion.nombre}`}
+                       />
+                     </Box>
+                   );
+                 })}
+               </Box>
+             )}
+
+             <Box sx={{ 
+               mb: 3, 
+               p: 2, 
+               bgcolor: 'background.paper', 
+               borderRadius: 2, 
+               border: '1px solid',
+               borderColor: 'divider',
+               boxShadow: 1
+             }}>
+               <Typography variant="h6" gutterBottom sx={{ color: 'primary.main', fontWeight: 600 }}>
+                 ❓ Preguntas y Respuestas
+               </Typography>
+               <PreguntasRespuestasList
+                 secciones={secciones}
+                 respuestas={respuestasNormalizadas}
+                 comentarios={comentariosNormalizados}
+                 imagenes={imagenesNormalizadas}
+               />
+             </Box>
           </Box>
         </DialogContent>
         <DialogActions sx={{ 
@@ -1094,11 +1157,11 @@ const ReporteDetallePro = forwardRef(({ open = false, onClose = () => {}, report
             📊 Gráfico de Distribución
           </Typography>
           
-          <EstadisticasChart
-            ref={chartRef}
-            estadisticas={estadisticasCalculadas.conteo}
-            title="Distribución general de respuestas"
-          />
+                     <EstadisticasChartSimple
+             ref={chartRef}
+             estadisticas={estadisticasCalculadas.conteo}
+             title="Distribución general de respuestas"
+           />
         </Box>
       )}
 
@@ -1120,11 +1183,11 @@ const ReporteDetallePro = forwardRef(({ open = false, onClose = () => {}, report
             return (
               <Box key={idx} mt={2}>
                 <Typography variant="subtitle1" gutterBottom>{seccion.nombre}</Typography>
-                <EstadisticasChart
-                  ref={sectionChartRefs.current[idx]}
-                  estadisticas={conteo}
-                  title={`Sección: ${seccion.nombre}`}
-                />
+                                 <EstadisticasChartSimple
+                   ref={sectionChartRefs.current[idx]}
+                   estadisticas={conteo}
+                   title={`Sección: ${seccion.nombre}`}
+                 />
               </Box>
             );
           })}
