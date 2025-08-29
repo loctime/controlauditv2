@@ -704,12 +704,11 @@ const CameraDialog = ({
           onClick={onClose} 
           sx={{ 
             color: 'white', 
-            minWidth: 'auto',
+            minWidth: '40px',
             fontSize: '1.2rem',
             padding: '8px 12px',
             borderRadius: '50%',
             minHeight: '40px',
-            minWidth: '40px',
             '&:hover': {
               backgroundColor: 'rgba(255,255,255,0.1)'
             }

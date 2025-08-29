@@ -59,7 +59,7 @@ export default defineConfig({
           'router': ['react-router-dom'],
           
           // Charts and Visualization
-          'charts': ['google-charts'],
+          // 'charts': ['google-charts'], // Comentado porque se carga dinámicamente desde CDN
           
           // PDF and Document handling
           'pdf-tools': ['@react-pdf/renderer', 'jspdf', 'jspdf-autotable', 'pdf-lib', 'pdfkit', 'pdfmake'],
