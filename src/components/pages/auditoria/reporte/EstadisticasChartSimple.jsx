@@ -225,30 +225,51 @@ const EstadisticasChartSimple = forwardRef(({ estadisticas, title, height = 320,
         p: 3, 
         borderRadius: 2,
         background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)',
-        border: '2px solid #28a745',
-        position: 'relative'
+        border: '3px solid #28a745',
+        position: 'relative',
+        minHeight: '400px',
+        width: '100%'
       }}
     >
-      {/* Indicador de debug */}
+      {/* Indicador de debug más visible */}
       <Box sx={{ 
         position: 'absolute', 
-        top: 5, 
-        right: 5, 
+        top: 10, 
+        right: 10, 
         backgroundColor: '#28a745', 
         color: 'white', 
-        px: 1, 
-        py: 0.5, 
-        borderRadius: 1, 
-        fontSize: '10px',
-        fontWeight: 'bold'
+        px: 2, 
+        py: 1, 
+        borderRadius: 2, 
+        fontSize: '12px',
+        fontWeight: 'bold',
+        zIndex: 10
       }}>
-        ✅ GRÁFICO VÁLIDO
+        ✅ GRÁFICO VÁLIDO - {total} DATOS
       </Box>
       {title && (
-        <Typography variant="h6" gutterBottom align="center" sx={{ fontWeight: 600, color: '#1976d2' }}>
+        <Typography variant="h6" gutterBottom align="center" sx={{ fontWeight: 600, color: '#1976d2', mb: 3 }}>
           {title}
         </Typography>
       )}
+      
+      {/* Indicador visual de que el componente está funcionando */}
+      <Box sx={{ 
+        mb: 3, 
+        p: 2, 
+        backgroundColor: '#e8f5e8', 
+        borderRadius: 2, 
+        border: '2px solid #4caf50',
+        textAlign: 'center'
+      }}>
+        <Typography variant="body1" sx={{ color: '#2e7d32', fontWeight: 600 }}>
+          🎯 GRÁFICO FUNCIONANDO - Total: {total} respuestas
+        </Typography>
+        <Typography variant="body2" sx={{ color: '#388e3c', mt: 1 }}>
+          Conforme: {estadisticas['Conforme']} | No Conforme: {estadisticas['No conforme']} | 
+          Necesita Mejora: {estadisticas['Necesita mejora']} | No Aplica: {estadisticas['No aplica']}
+        </Typography>
+      </Box>
 
       {/* Gráfico de barras */}
       <Box sx={{ mb: 3 }}>

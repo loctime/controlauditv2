@@ -804,10 +804,17 @@ function generarContenidoImpresion({
     ${chartImgDataUrl ? `
     <div class="chart-section">
       <div class="chart-container">
-        <img class="chart-image" src="${chartImgDataUrl}" alt="Distribución general de respuestas" />
+        <img class="chart-image" src="${chartImgDataUrl}" alt="Distribución general de respuestas" style="max-width: 100%; height: auto; border: 2px solid #3498db; border-radius: 8px;" />
       </div>
     </div>
-    ` : ''}
+    ` : `
+    <div class="chart-section">
+      <div class="chart-container" style="border: 2px dashed #e74c3c; padding: 20px; text-align: center;">
+        <p style="color: #e74c3c; font-weight: bold;">⚠️ GRÁFICO NO DISPONIBLE</p>
+        <p style="color: #7f8c8d; font-size: 12px;">No se pudo generar la imagen del gráfico</p>
+      </div>
+    </div>
+    `}
   </div>
 
   <!-- SECCIONES -->
@@ -1245,6 +1252,12 @@ const ReporteDetallePro = forwardRef(({ open = false, onClose = () => {}, report
         console.error('Error obteniendo imágenes de gráficos por sección:', error);
       }
     }
+    // Debug: verificar si tenemos la imagen del gráfico
+    console.log('=== DEBUG IMPRESIÓN ===');
+    console.log('chartImgDataUrl length:', chartImgDataUrl ? chartImgDataUrl.length : 0);
+    console.log('chartImgDataUrl starts with data:', chartImgDataUrl ? chartImgDataUrl.startsWith('data:image') : false);
+    console.log('sectionChartsImgDataUrl count:', sectionChartsImgDataUrl.filter(url => url).length);
+    
     // Generar el HTML de impresión, incluyendo firmas y gráficos
     const html = generarContenidoImpresion({
       empresa,
