@@ -898,14 +898,35 @@ const ReporteDetallePro = forwardRef(({ open = false, onClose = () => {}, report
     // Obtener imagen del gráfico principal
     let chartImgDataUrl = '';
     if (chartRef.current && chartRef.current.getImage) {
-      chartImgDataUrl = chartRef.current.getImage();
+      try {
+        chartImgDataUrl = await chartRef.current.getImage();
+        console.log('Imagen del gráfico principal generada:', chartImgDataUrl ? 'Sí' : 'No');
+      } catch (error) {
+        console.error('Error obteniendo imagen del gráfico principal:', error);
+      }
     }
+    
     // Obtener imágenes de los gráficos por sección
     let sectionChartsImgDataUrl = [];
     if (sectionChartRefs.current && sectionChartRefs.current.length > 0) {
-      sectionChartsImgDataUrl = sectionChartRefs.current.map(ref =>
-        ref && ref.getImage ? ref.getImage() : ''
-      );
+      try {
+        sectionChartsImgDataUrl = await Promise.all(
+          sectionChartRefs.current.map(async (ref) => {
+            if (ref && ref.getImage) {
+              try {
+                return await ref.getImage();
+              } catch (error) {
+                console.error('Error obteniendo imagen de gráfico por sección:', error);
+                return '';
+              }
+            }
+            return '';
+          })
+        );
+        console.log('Imágenes de gráficos por sección generadas:', sectionChartsImgDataUrl.filter(url => url).length);
+      } catch (error) {
+        console.error('Error obteniendo imágenes de gráficos por sección:', error);
+      }
     }
     // Generar el HTML de impresión, incluyendo firmas y gráficos
     const html = generarContenidoImpresion({

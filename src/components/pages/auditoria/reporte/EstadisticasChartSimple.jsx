@@ -1,4 +1,4 @@
-import React, { forwardRef, useImperativeHandle } from 'react';
+import React, { forwardRef, useImperativeHandle, useRef, useEffect } from 'react';
 import { Box, Typography, Paper } from '@mui/material';
 
 // Mapeo de colores por categoría
@@ -10,6 +10,9 @@ const COLOR_MAP = {
 };
 
 const EstadisticasChartSimple = forwardRef(({ estadisticas, title, height = 320, width = '100%' }, ref) => {
+  const chartRef = useRef(null);
+  const [imageDataUrl, setImageDataUrl] = React.useState('');
+
   // Verificar si hay datos válidos
   const hasValidData = (data) => {
     if (!data) return false;
@@ -28,13 +31,114 @@ const EstadisticasChartSimple = forwardRef(({ estadisticas, title, height = 320,
     return { total, porcentajes };
   };
 
-  // Exponer métodos a través del ref
-  useImperativeHandle(ref, () => ({
-    getImage: () => {
-      // Para este componente simple, retornamos null ya que no generamos imagen
+  // Función para generar imagen del gráfico
+  const generateChartImage = async () => {
+    if (!hasValidData(estadisticas)) {
       return null;
     }
+
+    try {
+      // Usar html2canvas para convertir el elemento a imagen
+      if (window.html2canvas && chartRef.current) {
+        const canvas = await window.html2canvas(chartRef.current, {
+          backgroundColor: '#ffffff',
+          scale: 2,
+          useCORS: true,
+          allowTaint: true,
+          logging: false
+        });
+        return canvas.toDataURL('image/png');
+      }
+      
+      // Fallback: crear una imagen simple usando Canvas API
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      const { total, porcentajes } = calcularPorcentajes(estadisticas);
+      
+      canvas.width = 600;
+      canvas.height = 400;
+      
+      // Fondo
+      ctx.fillStyle = '#f5f7fa';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      
+      // Título
+      ctx.fillStyle = '#1976d2';
+      ctx.font = 'bold 20px Arial';
+      ctx.textAlign = 'center';
+      ctx.fillText(title || 'Distribución de Respuestas', canvas.width / 2, 30);
+      
+      // Gráfico de barras
+      const barHeight = 30;
+      const barSpacing = 40;
+      const startY = 80;
+      let currentY = startY;
+      
+      Object.entries(estadisticas).forEach(([categoria, valor], index) => {
+        if (valor === 0) return;
+        
+        const porcentaje = porcentajes[categoria];
+        const color = COLOR_MAP[categoria] || '#666';
+        
+        // Etiqueta
+        ctx.fillStyle = color;
+        ctx.font = 'bold 14px Arial';
+        ctx.textAlign = 'left';
+        ctx.fillText(categoria, 20, currentY + 20);
+        
+        // Barra
+        const barWidth = (porcentaje / 100) * 400;
+        ctx.fillStyle = color;
+        ctx.fillRect(150, currentY, barWidth, barHeight);
+        
+        // Texto del valor
+        ctx.fillStyle = '#000';
+        ctx.font = '12px Arial';
+        ctx.textAlign = 'left';
+        ctx.fillText(`${valor} (${porcentaje}%)`, 160 + barWidth, currentY + 20);
+        
+        currentY += barSpacing;
+      });
+      
+      // Total
+      ctx.fillStyle = '#000';
+      ctx.font = 'bold 16px Arial';
+      ctx.textAlign = 'center';
+      ctx.fillText(`Total: ${total} respuestas`, canvas.width / 2, currentY + 30);
+      
+      return canvas.toDataURL('image/png');
+    } catch (error) {
+      console.error('Error generando imagen del gráfico:', error);
+      return null;
+    }
+  };
+
+  // Exponer métodos a través del ref
+  useImperativeHandle(ref, () => ({
+    getImage: async () => {
+      if (imageDataUrl) {
+        return imageDataUrl;
+      }
+      return await generateChartImage();
+    }
   }));
+
+  // Generar imagen cuando cambien los datos
+  useEffect(() => {
+    if (hasValidData(estadisticas)) {
+      const generateImage = async () => {
+        try {
+          const imageUrl = await generateChartImage();
+          if (imageUrl) {
+            setImageDataUrl(imageUrl);
+          }
+        } catch (error) {
+          console.error('Error generando imagen en useEffect:', error);
+        }
+      };
+      generateImage();
+    }
+  }, [estadisticas, title]);
 
   // Verificar si hay datos válidos
   if (!hasValidData(estadisticas)) {
@@ -51,6 +155,7 @@ const EstadisticasChartSimple = forwardRef(({ estadisticas, title, height = 320,
 
   return (
     <Paper 
+      ref={chartRef}
       elevation={2}
       sx={{ 
         p: 3, 
