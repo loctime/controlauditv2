@@ -196,15 +196,20 @@ const EstadisticasChartSimple = forwardRef(({ estadisticas, title, height = 320,
   // Verificar si hay datos válidos
   console.log('[EstadisticasChartSimple] estadisticas:', estadisticas);
   console.log('[EstadisticasChartSimple] hasValidData:', hasValidData(estadisticas));
+  console.log('[EstadisticasChartSimple] title:', title);
   
+  // Siempre mostrar algo para debug
   if (!hasValidData(estadisticas)) {
     return (
-      <Box sx={{ p: 2, textAlign: 'center' }}>
-        <Typography variant="body2" color="text.secondary">
-          No hay datos suficientes para mostrar gráficos.
+      <Box sx={{ p: 2, textAlign: 'center', border: '2px dashed red', backgroundColor: '#fff3cd' }}>
+        <Typography variant="h6" color="error" gutterBottom>
+          ⚠️ DEBUG: No hay datos válidos
         </Typography>
-        <Typography variant="caption" color="text.secondary">
+        <Typography variant="body2" color="text.secondary">
           Datos recibidos: {JSON.stringify(estadisticas)}
+        </Typography>
+        <Typography variant="body2" color="text.secondary">
+          hasValidData: {hasValidData(estadisticas).toString()}
         </Typography>
       </Box>
     );
@@ -220,9 +225,25 @@ const EstadisticasChartSimple = forwardRef(({ estadisticas, title, height = 320,
         p: 3, 
         borderRadius: 2,
         background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)',
-        border: '1px solid #e0e0e0'
+        border: '2px solid #28a745',
+        position: 'relative'
       }}
     >
+      {/* Indicador de debug */}
+      <Box sx={{ 
+        position: 'absolute', 
+        top: 5, 
+        right: 5, 
+        backgroundColor: '#28a745', 
+        color: 'white', 
+        px: 1, 
+        py: 0.5, 
+        borderRadius: 1, 
+        fontSize: '10px',
+        fontWeight: 'bold'
+      }}>
+        ✅ GRÁFICO VÁLIDO
+      </Box>
       {title && (
         <Typography variant="h6" gutterBottom align="center" sx={{ fontWeight: 600, color: '#1976d2' }}>
           {title}

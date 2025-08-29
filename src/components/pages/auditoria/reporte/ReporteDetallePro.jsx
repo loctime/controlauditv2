@@ -1347,7 +1347,8 @@ const ReporteDetallePro = forwardRef(({ open = false, onClose = () => {}, report
                  conteo: estadisticasCalculadas?.conteo,
                  tieneDatos: estadisticasCalculadas && estadisticasCalculadas.conteo
                });
-               return estadisticasCalculadas && estadisticasCalculadas.conteo;
+               // Siempre mostrar el gráfico para debug
+               return true;
              })() && (
                <Box sx={{ 
                  mb: 3, 
@@ -1362,9 +1363,16 @@ const ReporteDetallePro = forwardRef(({ open = false, onClose = () => {}, report
                    📊 Gráfico de Distribución
                  </Typography>
                  
+                 {/* Debug info */}
+                 <Box sx={{ mb: 2, p: 2, backgroundColor: '#e3f2fd', borderRadius: 1, border: '1px solid #2196f3' }}>
+                   <Typography variant="caption" color="primary" fontWeight="bold">
+                     🔍 DEBUG: estadisticasCalculadas = {JSON.stringify(estadisticasCalculadas?.conteo)}
+                   </Typography>
+                 </Box>
+                 
                  <EstadisticasChartSimple
                    ref={chartRef}
-                   estadisticas={estadisticasCalculadas.conteo}
+                   estadisticas={estadisticasCalculadas?.conteo || { 'Conforme': 0, 'No conforme': 0, 'Necesita mejora': 0, 'No aplica': 0 }}
                    title="Distribución general de respuestas"
                  />
                </Box>
