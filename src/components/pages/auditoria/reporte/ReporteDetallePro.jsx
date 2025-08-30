@@ -1,4 +1,4 @@
-import React, { useRef, forwardRef, useImperativeHandle, useMemo } from "react";
+import React, { useRef, forwardRef, useImperativeHandle, useMemo, useState, useEffect } from "react";
 import PreguntasRespuestasList from "../../../common/PreguntasRespuestasList";
 import { Typography, Box, Button, Dialog, DialogTitle, DialogContent, DialogActions, IconButton, Alert } from "@mui/material";
 import PrintIcon from '@mui/icons-material/Print';
@@ -1252,31 +1252,124 @@ const ReporteDetallePro = forwardRef(({ open = false, onClose = () => {}, report
   const chartRef = useRef();
   // Refs para los gráficos por sección
   const sectionChartRefs = useRef([]);
+  // Estado para controlar si el gráfico está listo
+  const [isChartReady, setIsChartReady] = useState(false);
 
   // Obtener nombre del auditor para aclaración
   const nombreAuditor = reporte?.auditorNombre || userProfile?.nombre || userProfile?.displayName || userProfile?.email || 'Nombre no disponible';
+  
+  // Verificar si el gráfico está listo periódicamente
+  useEffect(() => {
+    const checkChartReady = () => {
+      if (chartRef.current && chartRef.current.isReady) {
+        const ready = chartRef.current.isReady();
+        setIsChartReady(ready);
+        
+        // Si está listo, log para debug
+        if (ready) {
+          console.log('[ReporteDetallePro] ✅ Gráfico listo para impresión');
+        }
+      }
+    };
+    
+    // Verificar cada 200ms para ser más responsivo
+    const interval = setInterval(checkChartReady, 200);
+    
+    return () => clearInterval(interval);
+  }, []);
 
   const handleImprimir = async () => {
     console.log('[ReporteDetallePro] Iniciando proceso de impresión...');
     
-    // Esperar un poco para que los gráficos se rendericen completamente
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    // Deshabilitar el botón inmediatamente para evitar múltiples clics
+    setIsChartReady(false);
     
-    // Obtener imagen del gráfico principal
-    let chartImgDataUrl = '';
-    if (chartRef.current && chartRef.current.getImage) {
-      try {
-        console.log('[ReporteDetallePro] Generando imagen del gráfico principal...');
-        chartImgDataUrl = await chartRef.current.getImage();
-        console.log('[ReporteDetallePro] Imagen del gráfico principal generada:', chartImgDataUrl ? 'Sí' : 'No');
-        console.log('[ReporteDetallePro] Tamaño de imagen principal:', chartImgDataUrl ? chartImgDataUrl.length : 0);
-        console.log('[ReporteDetallePro] Formato de imagen principal:', chartImgDataUrl ? (chartImgDataUrl.startsWith('data:image') ? 'Válido' : 'Inválido') : 'N/A');
-      } catch (error) {
-        console.error('[ReporteDetallePro] Error obteniendo imagen del gráfico principal:', error);
-      }
-    } else {
-      console.warn('[ReporteDetallePro] chartRef.current no disponible o no tiene getImage');
+    // Esperar a que el componente esté completamente renderizado
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    // Verificar que el gráfico esté listo antes de continuar
+    if (!chartRef.current) {
+      console.error('[ReporteDetallePro] ❌ chartRef.current no disponible');
+      alert('Error: El gráfico no está listo. Por favor, espere un momento y vuelva a intentar.');
+      setIsChartReady(true); // Rehabilitar el botón
+      return;
     }
+    
+    // Verificar si el gráfico está listo usando el método isReady
+    if (chartRef.current.isReady && !chartRef.current.isReady()) {
+      console.log('[ReporteDetallePro] ⏳ Gráfico no está listo, esperando...');
+      
+      // Esperar hasta que esté listo o timeout
+      let waitCount = 0;
+      const maxWait = 50; // 25 segundos máximo (50 * 500ms)
+      
+      while (!chartRef.current.isReady() && waitCount < maxWait) {
+        await new Promise(resolve => setTimeout(resolve, 500));
+        waitCount++;
+        console.log(`[ReporteDetallePro] Esperando gráfico... ${waitCount}/${maxWait}`);
+        
+        // Forzar regeneración de imagen cada 10 intentos
+        if (waitCount % 10 === 0 && chartRef.current.getImage) {
+          console.log('[ReporteDetallePro] 🔄 Forzando regeneración de imagen...');
+          try {
+            await chartRef.current.getImage();
+          } catch (error) {
+            console.error('[ReporteDetallePro] Error forzando regeneración:', error);
+          }
+        }
+      }
+      
+      if (!chartRef.current.isReady()) {
+        console.error('[ReporteDetallePro] ❌ Timeout esperando que el gráfico esté listo');
+        alert('Error: El gráfico tardó demasiado en generarse. Por favor, intente nuevamente.');
+        setIsChartReady(true); // Rehabilitar el botón
+        return;
+      }
+      
+      console.log('[ReporteDetallePro] ✅ Gráfico listo después de esperar');
+    }
+    
+         // Obtener imagen del gráfico principal con reintentos mejorados
+     let chartImgDataUrl = '';
+     let retryCount = 0;
+     const maxRetries = 10; // Aumentar intentos
+     
+     while (retryCount < maxRetries && (!chartImgDataUrl || chartImgDataUrl.length < 1000)) {
+       if (chartRef.current && chartRef.current.getImage) {
+         try {
+           console.log(`[ReporteDetallePro] Intento ${retryCount + 1}: Generando imagen del gráfico principal...`);
+           
+           // Esperar un poco más entre intentos para dar tiempo al renderizado
+           if (retryCount > 0) {
+             await new Promise(resolve => setTimeout(resolve, 2000));
+           }
+           
+           chartImgDataUrl = await chartRef.current.getImage();
+           console.log('[ReporteDetallePro] Imagen del gráfico principal generada:', chartImgDataUrl ? 'Sí' : 'No');
+           console.log('[ReporteDetallePro] Tamaño de imagen principal:', chartImgDataUrl ? chartImgDataUrl.length : 0);
+           console.log('[ReporteDetallePro] Formato de imagen principal:', chartImgDataUrl ? (chartImgDataUrl.startsWith('data:image') ? 'Válido' : 'Inválido') : 'N/A');
+           
+           if (chartImgDataUrl && chartImgDataUrl.length > 1000 && chartImgDataUrl.startsWith('data:image')) {
+             console.log('[ReporteDetallePro] ✅ Imagen válida obtenida en intento', retryCount + 1);
+             break;
+           } else {
+             console.warn(`[ReporteDetallePro] ⚠️ Imagen no válida en intento ${retryCount + 1}, reintentando...`);
+           }
+         } catch (error) {
+           console.error(`[ReporteDetallePro] Error en intento ${retryCount + 1}:`, error);
+         }
+       } else {
+         console.warn('[ReporteDetallePro] chartRef.current no disponible o no tiene getImage');
+         break;
+       }
+       retryCount++;
+     }
+     
+     if (!chartImgDataUrl || chartImgDataUrl.length < 1000) {
+       console.error('[ReporteDetallePro] ❌ No se pudo obtener una imagen válida después de', maxRetries, 'intentos');
+       setIsChartReady(true); // Rehabilitar el botón en caso de error
+       return;
+     }
     
     // Obtener imágenes de los gráficos por sección
     let sectionChartsImgDataUrl = [];
@@ -1310,20 +1403,10 @@ const ReporteDetallePro = forwardRef(({ open = false, onClose = () => {}, report
     console.log('chartImgDataUrl valid:', chartImgDataUrl && chartImgDataUrl.length > 1000 && chartImgDataUrl.startsWith('data:image'));
     console.log('sectionChartsImgDataUrl count:', sectionChartsImgDataUrl.filter(url => url && url.length > 1000 && url.startsWith('data:image')).length);
     
-    // Verificar que las imágenes sean válidas antes de continuar
-    if (!chartImgDataUrl || !chartImgDataUrl.startsWith('data:image') || chartImgDataUrl.length < 1000) {
-      console.warn('[ReporteDetallePro] Imagen del gráfico principal no válida, intentando regenerar...');
-      // Intentar regenerar la imagen una vez más
-      if (chartRef.current && chartRef.current.getImage) {
-        try {
-          await new Promise(resolve => setTimeout(resolve, 2000)); // Esperar 2 segundos más
-          chartImgDataUrl = await chartRef.current.getImage();
-          console.log('[ReporteDetallePro] Reintento - Imagen regenerada:', chartImgDataUrl ? 'Sí' : 'No');
-        } catch (error) {
-          console.error('[ReporteDetallePro] Error en reintento de generación de imagen:', error);
-        }
-      }
-    }
+         // Verificar que las imágenes sean válidas antes de continuar
+     if (!chartImgDataUrl || !chartImgDataUrl.startsWith('data:image') || chartImgDataUrl.length < 1000) {
+       console.warn('[ReporteDetallePro] ⚠️ Imagen del gráfico principal no válida después de reintentos');
+     }
     
     // Generar el HTML de impresión, incluyendo firmas y gráficos
     const html = generarContenidoImpresion({
@@ -1346,32 +1429,69 @@ const ReporteDetallePro = forwardRef(({ open = false, onClose = () => {}, report
       fechaFin: reporte.fechaFin || ""
     });
     
-    // Crear un iframe oculto para imprimir
-    const printFrame = document.createElement('iframe');
-    printFrame.style.position = 'fixed';
-    printFrame.style.right = '0';
-    printFrame.style.bottom = '0';
-    printFrame.style.width = '0';
-    printFrame.style.height = '0';
-    printFrame.style.border = '0';
-    printFrame.style.visibility = 'hidden';
-    
-    document.body.appendChild(printFrame);
-    
-    // Escribir el contenido en el iframe
-    printFrame.contentDocument.write(html);
-    printFrame.contentDocument.close();
-    
-    // Imprimir y luego remover el iframe
-    printFrame.contentWindow.focus();
-    printFrame.contentWindow.print();
-    
-    // Remover el iframe después de un breve delay
-    setTimeout(() => {
-      if (document.body.contains(printFrame)) {
-        document.body.removeChild(printFrame);
-      }
-    }, 1000);
+         // Función para imprimir con reintento automático
+     const printWithRetry = async (retryCount = 0) => {
+       const maxPrintRetries = 2;
+       
+       try {
+         // Crear un iframe oculto para imprimir
+         const printFrame = document.createElement('iframe');
+         printFrame.style.position = 'fixed';
+         printFrame.style.right = '0';
+         printFrame.style.bottom = '0';
+         printFrame.style.width = '0';
+         printFrame.style.height = '0';
+         printFrame.style.border = '0';
+         printFrame.style.visibility = 'hidden';
+         
+         document.body.appendChild(printFrame);
+         
+         // Escribir el contenido en el iframe
+         printFrame.contentDocument.write(html);
+         printFrame.contentDocument.close();
+         
+         // Esperar a que el contenido se cargue completamente
+         await new Promise(resolve => setTimeout(resolve, 2000));
+         
+         // Imprimir
+         printFrame.contentWindow.focus();
+         printFrame.contentWindow.print();
+         
+         // Remover el iframe después de un delay
+         setTimeout(() => {
+           if (document.body.contains(printFrame)) {
+             document.body.removeChild(printFrame);
+           }
+         }, 1000);
+         
+         console.log(`[ReporteDetallePro] ✅ Impresión completada (intento ${retryCount + 1})`);
+         
+         // Si es el primer intento, mostrar mensaje de éxito
+         if (retryCount === 0) {
+           alert('✅ Impresión iniciada. Si el gráfico no aparece, se realizará un reintento automático.');
+         }
+         
+       } catch (error) {
+         console.error(`[ReporteDetallePro] Error en impresión (intento ${retryCount + 1}):`, error);
+         
+         if (retryCount < maxPrintRetries) {
+           console.log(`[ReporteDetallePro] 🔄 Reintentando impresión... (${retryCount + 1}/${maxPrintRetries})`);
+           alert(`⚠️ Error en impresión. Reintentando automáticamente... (${retryCount + 1}/${maxPrintRetries})`);
+           
+           // Esperar antes del reintento
+           await new Promise(resolve => setTimeout(resolve, 3000));
+           
+           // Reintentar
+           await printWithRetry(retryCount + 1);
+         } else {
+           console.error('[ReporteDetallePro] ❌ Máximo de reintentos alcanzado');
+           alert('❌ Error: No se pudo completar la impresión después de varios intentos.');
+         }
+       }
+     };
+     
+     // Iniciar impresión con reintento automático
+     await printWithRetry();
   };
 
   // En el modal, eliminar la firma del responsable y mostrar aclaración solo en la firma del auditor
@@ -1394,8 +1514,17 @@ const ReporteDetallePro = forwardRef(({ open = false, onClose = () => {}, report
         <DialogTitle sx={{ 
           display: 'none'
         }} />
-        <DialogContent sx={{ p: { xs: 2, sm: 3 } }}>
-          <Box>
+                 <DialogContent sx={{ p: { xs: 2, sm: 3 } }}>
+           <style>
+             {`
+               @keyframes pulse {
+                 0% { opacity: 1; transform: scale(1); }
+                 50% { opacity: 0.5; transform: scale(1.2); }
+                 100% { opacity: 1; transform: scale(1); }
+               }
+             `}
+           </style>
+           <Box>
                          {/* Header con datos del reporte y estadísticas */}
              <Box sx={{ 
                mb: 3, 
@@ -1533,16 +1662,57 @@ const ReporteDetallePro = forwardRef(({ open = false, onClose = () => {}, report
           >
             Cerrar
           </Button>
-          <Button 
-            onClick={handleImprimir} 
-            variant="outlined" 
-            color="secondary" 
-            startIcon={<PrintIcon />}
-            size="medium"
-            sx={{ minWidth: { xs: '80px', sm: '100px' } }}
-          >
-            Imprimir
-          </Button>
+                                           <Button 
+              onClick={handleImprimir} 
+              variant="outlined" 
+              color={isChartReady ? "secondary" : "warning"}
+              startIcon={<PrintIcon />}
+              size="medium"
+              disabled={!isChartReady}
+              sx={{ 
+                minWidth: { xs: '80px', sm: '100px' },
+                position: 'relative'
+              }}
+            >
+              {isChartReady ? 'Imprimir' : 'Preparando...'}
+              {!isChartReady && (
+                <Box sx={{
+                  position: 'absolute',
+                  top: -8,
+                  right: -8,
+                  width: 16,
+                  height: 16,
+                  borderRadius: '50%',
+                  backgroundColor: '#ff9800',
+                  animation: 'pulse 1.5s infinite'
+                }} />
+              )}
+            </Button>
+            
+            {/* Botón para forzar regeneración del gráfico */}
+            <Button 
+              onClick={async () => {
+                console.log('[ReporteDetallePro] Forzando regeneración del gráfico...');
+                setIsChartReady(false);
+                
+                if (chartRef.current && chartRef.current.getImage) {
+                  try {
+                    await chartRef.current.getImage();
+                    console.log('[ReporteDetallePro] ✅ Gráfico regenerado exitosamente');
+                    alert('✅ Gráfico regenerado. Ahora puede intentar imprimir nuevamente.');
+                  } catch (error) {
+                    console.error('[ReporteDetallePro] Error regenerando gráfico:', error);
+                    alert('❌ Error regenerando gráfico: ' + error.message);
+                  }
+                }
+              }}
+              variant="outlined" 
+              color="info"
+              size="medium"
+              sx={{ minWidth: { xs: '80px', sm: '100px' } }}
+            >
+              Regenerar Gráfico
+            </Button>
           {process.env.NODE_ENV === 'development' && (
             <Button 
               onClick={async () => {

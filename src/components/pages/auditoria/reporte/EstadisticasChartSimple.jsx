@@ -1,4 +1,4 @@
-import React, { forwardRef, useImperativeHandle, useRef, useEffect } from 'react';
+import React, { forwardRef, useImperativeHandle, useRef, useEffect, useState } from 'react';
 import { Box, Typography, Paper } from '@mui/material';
 
 // Mapeo de colores por categoría
@@ -11,7 +11,8 @@ const COLOR_MAP = {
 
 const EstadisticasChartSimple = forwardRef(({ estadisticas, title, height = 320, width = '100%' }, ref) => {
   const chartRef = useRef(null);
-  const [imageDataUrl, setImageDataUrl] = React.useState('');
+  const [imageDataUrl, setImageDataUrl] = useState('');
+  const [isGenerating, setIsGenerating] = useState(false);
 
   // Verificar si hay datos válidos
   const hasValidData = (data) => {
@@ -189,24 +190,81 @@ const EstadisticasChartSimple = forwardRef(({ estadisticas, title, height = 320,
   // Exponer métodos a través del ref
   useImperativeHandle(ref, () => ({
     getImage: async () => {
-      if (imageDataUrl) {
+      // Si ya tenemos la imagen generada y es válida, la devolvemos
+      if (imageDataUrl && imageDataUrl.length > 1000 && imageDataUrl.startsWith('data:image')) {
+        console.log('[EstadisticasChartSimple] ✅ Devolviendo imagen ya generada');
         return imageDataUrl;
       }
-      return await generateChartImage();
+      
+      // Si está generándose, esperar un poco
+      if (isGenerating) {
+        console.log('[EstadisticasChartSimple] ⏳ Esperando que termine la generación...');
+        let waitCount = 0;
+        while (isGenerating && waitCount < 10) {
+          await new Promise(resolve => setTimeout(resolve, 500));
+          waitCount++;
+        }
+        
+        // Si después de esperar tenemos una imagen válida, la devolvemos
+        if (imageDataUrl && imageDataUrl.length > 1000 && imageDataUrl.startsWith('data:image')) {
+          console.log('[EstadisticasChartSimple] ✅ Imagen generada después de esperar');
+          return imageDataUrl;
+        }
+      }
+      
+      // Si no tenemos imagen válida, generamos una nueva
+      console.log('[EstadisticasChartSimple] 🔄 Generando nueva imagen...');
+      const newImageUrl = await generateChartImage();
+      if (newImageUrl && newImageUrl.length > 1000 && newImageUrl.startsWith('data:image')) {
+        setImageDataUrl(newImageUrl);
+        console.log('[EstadisticasChartSimple] ✅ Nueva imagen generada y guardada');
+        return newImageUrl;
+      } else {
+        console.error('[EstadisticasChartSimple] ❌ Error: No se pudo generar una imagen válida');
+        return null;
+      }
+    },
+    
+    // Método para verificar si está listo
+    isReady: () => {
+      return !isGenerating && imageDataUrl && imageDataUrl.length > 1000 && imageDataUrl.startsWith('data:image');
     }
   }));
 
-  // Generar imagen cuando cambien los datos
+  // Generar imagen inmediatamente cuando cambien los datos
   useEffect(() => {
-    if (hasValidData(estadisticas)) {
+    if (hasValidData(estadisticas) && !isGenerating) {
+      setIsGenerating(true);
       const generateImage = async () => {
         try {
+          console.log('[EstadisticasChartSimple] Generando imagen en useEffect...');
+          
+          // Pequeño delay para asegurar que el componente esté completamente renderizado
+          await new Promise(resolve => setTimeout(resolve, 100));
+          
           const imageUrl = await generateChartImage();
-          if (imageUrl) {
+          if (imageUrl && imageUrl.length > 1000 && imageUrl.startsWith('data:image')) {
             setImageDataUrl(imageUrl);
+            console.log('[EstadisticasChartSimple] ✅ Imagen guardada en estado:', imageUrl.length, 'bytes');
+          } else {
+            console.warn('[EstadisticasChartSimple] ⚠️ Imagen generada no válida, reintentando...');
+            // Reintentar después de un delay
+            setTimeout(async () => {
+              try {
+                const retryImageUrl = await generateChartImage();
+                if (retryImageUrl && retryImageUrl.length > 1000 && retryImageUrl.startsWith('data:image')) {
+                  setImageDataUrl(retryImageUrl);
+                  console.log('[EstadisticasChartSimple] ✅ Imagen de reintento guardada:', retryImageUrl.length, 'bytes');
+                }
+              } catch (retryError) {
+                console.error('[EstadisticasChartSimple] Error en reintento:', retryError);
+              }
+            }, 1000);
           }
         } catch (error) {
-          console.error('Error generando imagen en useEffect:', error);
+          console.error('[EstadisticasChartSimple] Error generando imagen en useEffect:', error);
+        } finally {
+          setIsGenerating(false);
         }
       };
       generateImage();
@@ -217,6 +275,7 @@ const EstadisticasChartSimple = forwardRef(({ estadisticas, title, height = 320,
   console.log('[EstadisticasChartSimple] estadisticas:', estadisticas);
   console.log('[EstadisticasChartSimple] hasValidData:', hasValidData(estadisticas));
   console.log('[EstadisticasChartSimple] title:', title);
+  console.log('[EstadisticasChartSimple] imageDataUrl length:', imageDataUrl ? imageDataUrl.length : 0);
   
   // Siempre mostrar algo para debug
   if (!hasValidData(estadisticas)) {
@@ -267,6 +326,24 @@ const EstadisticasChartSimple = forwardRef(({ estadisticas, title, height = 320,
       }}>
         ✅ GRÁFICO VÁLIDO - {total} DATOS
       </Box>
+      
+      {/* Indicador de estado de imagen */}
+      <Box sx={{ 
+        position: 'absolute', 
+        top: 10, 
+        left: 10, 
+        backgroundColor: imageDataUrl ? '#4caf50' : '#ff9800', 
+        color: 'white', 
+        px: 2, 
+        py: 1, 
+        borderRadius: 2, 
+        fontSize: '12px',
+        fontWeight: 'bold',
+        zIndex: 10
+      }}>
+        {imageDataUrl ? `🖼️ IMAGEN: ${(imageDataUrl.length / 1024).toFixed(1)}KB` : '⏳ GENERANDO...'}
+      </Box>
+      
       {title && (
         <Typography variant="h6" gutterBottom align="center" sx={{ fontWeight: 600, color: '#1976d2', mb: 3 }}>
           {title}
@@ -288,6 +365,9 @@ const EstadisticasChartSimple = forwardRef(({ estadisticas, title, height = 320,
         <Typography variant="body2" sx={{ color: '#388e3c', mt: 1 }}>
           Conforme: {estadisticas['Conforme']} | No Conforme: {estadisticas['No conforme']} | 
           Necesita Mejora: {estadisticas['Necesita mejora']} | No Aplica: {estadisticas['No aplica']}
+        </Typography>
+        <Typography variant="body2" sx={{ color: '#388e3c', mt: 1, fontWeight: 'bold' }}>
+          Estado imagen: {imageDataUrl ? '✅ Generada' : '⏳ Generando...'}
         </Typography>
       </Box>
 
