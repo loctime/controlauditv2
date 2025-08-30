@@ -35,6 +35,8 @@ El gráfico no aparece en la **primera impresión** del PDF, pero sí aparece en
 - **Deshabilitación preventiva**: El botón de imprimir se deshabilita inmediatamente al hacer clic para evitar múltiples clics
 - **Rehabilitación automática**: El botón se rehabilita automáticamente en caso de error
 - **Delay de carga**: 2 segundos de espera para que el contenido del iframe se cargue completamente antes de imprimir
+- **Loader visual**: Indicador de "Procesando..." durante todo el proceso de impresión
+- **Sin interrupciones**: Eliminación de avisos molestos durante el proceso automático
 
 ## Archivos Modificados
 
@@ -45,6 +47,9 @@ El gráfico no aparece en la **primera impresión** del PDF, pero sí aparece en
 - **Reintentos de impresión**: Sistema de reintento automático con hasta 2 intentos
 - **Botón de regeneración**: Nuevo botón para forzar regeneración manual
 - **Control de estado**: Mejor manejo del estado `isChartReady`
+- **Estado de procesamiento**: Nuevo estado `isProcessing` para controlar el loader
+- **Loader visual**: Indicador de "Procesando..." con animación durante la impresión
+- **Eliminación de avisos**: Removidos los alert() molestos durante el proceso automático
 
 ### `src/components/pages/auditoria/reporte/EstadisticasChartSimple.jsx`
 - **Validación mejorada**: Verificación más estricta de imágenes válidas

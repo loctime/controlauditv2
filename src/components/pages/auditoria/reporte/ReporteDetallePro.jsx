@@ -1254,6 +1254,8 @@ const ReporteDetallePro = forwardRef(({ open = false, onClose = () => {}, report
   const sectionChartRefs = useRef([]);
   // Estado para controlar si el gráfico está listo
   const [isChartReady, setIsChartReady] = useState(false);
+  // Estado para controlar si está procesando la impresión
+  const [isProcessing, setIsProcessing] = useState(false);
 
   // Obtener nombre del auditor para aclaración
   const nombreAuditor = reporte?.auditorNombre || userProfile?.nombre || userProfile?.displayName || userProfile?.email || 'Nombre no disponible';
@@ -1281,19 +1283,21 @@ const ReporteDetallePro = forwardRef(({ open = false, onClose = () => {}, report
   const handleImprimir = async () => {
     console.log('[ReporteDetallePro] Iniciando proceso de impresión...');
     
-    // Deshabilitar el botón inmediatamente para evitar múltiples clics
+    // Activar el loader y deshabilitar el botón
+    setIsProcessing(true);
     setIsChartReady(false);
     
     // Esperar a que el componente esté completamente renderizado
     await new Promise(resolve => setTimeout(resolve, 1000));
     
     // Verificar que el gráfico esté listo antes de continuar
-    if (!chartRef.current) {
-      console.error('[ReporteDetallePro] ❌ chartRef.current no disponible');
-      alert('Error: El gráfico no está listo. Por favor, espere un momento y vuelva a intentar.');
-      setIsChartReady(true); // Rehabilitar el botón
-      return;
-    }
+          if (!chartRef.current) {
+        console.error('[ReporteDetallePro] ❌ chartRef.current no disponible');
+        alert('Error: El gráfico no está listo. Por favor, espere un momento y vuelva a intentar.');
+        setIsChartReady(true); // Rehabilitar el botón
+        setIsProcessing(false); // Desactivar el loader
+        return;
+      }
     
     // Verificar si el gráfico está listo usando el método isReady
     if (chartRef.current.isReady && !chartRef.current.isReady()) {
@@ -1319,12 +1323,13 @@ const ReporteDetallePro = forwardRef(({ open = false, onClose = () => {}, report
         }
       }
       
-      if (!chartRef.current.isReady()) {
-        console.error('[ReporteDetallePro] ❌ Timeout esperando que el gráfico esté listo');
-        alert('Error: El gráfico tardó demasiado en generarse. Por favor, intente nuevamente.');
-        setIsChartReady(true); // Rehabilitar el botón
-        return;
-      }
+              if (!chartRef.current.isReady()) {
+          console.error('[ReporteDetallePro] ❌ Timeout esperando que el gráfico esté listo');
+          alert('Error: El gráfico tardó demasiado en generarse. Por favor, intente nuevamente.');
+          setIsChartReady(true); // Rehabilitar el botón
+          setIsProcessing(false); // Desactivar el loader
+          return;
+        }
       
       console.log('[ReporteDetallePro] ✅ Gráfico listo después de esperar');
     }
@@ -1365,11 +1370,12 @@ const ReporteDetallePro = forwardRef(({ open = false, onClose = () => {}, report
        retryCount++;
      }
      
-     if (!chartImgDataUrl || chartImgDataUrl.length < 1000) {
-       console.error('[ReporteDetallePro] ❌ No se pudo obtener una imagen válida después de', maxRetries, 'intentos');
-       setIsChartReady(true); // Rehabilitar el botón en caso de error
-       return;
-     }
+           if (!chartImgDataUrl || chartImgDataUrl.length < 1000) {
+        console.error('[ReporteDetallePro] ❌ No se pudo obtener una imagen válida después de', maxRetries, 'intentos');
+        setIsChartReady(true); // Rehabilitar el botón en caso de error
+        setIsProcessing(false); // Desactivar el loader
+        return;
+      }
     
     // Obtener imágenes de los gráficos por sección
     let sectionChartsImgDataUrl = [];
@@ -1466,32 +1472,35 @@ const ReporteDetallePro = forwardRef(({ open = false, onClose = () => {}, report
          
          console.log(`[ReporteDetallePro] ✅ Impresión completada (intento ${retryCount + 1})`);
          
-         // Si es el primer intento, mostrar mensaje de éxito
-         if (retryCount === 0) {
-           alert('✅ Impresión iniciada. Si el gráfico no aparece, se realizará un reintento automático.');
-         }
+                   // Si es el primer intento, no mostrar mensaje para evitar interrupciones
+          if (retryCount === 0) {
+            console.log('[ReporteDetallePro] ✅ Impresión iniciada exitosamente');
+          }
          
        } catch (error) {
          console.error(`[ReporteDetallePro] Error en impresión (intento ${retryCount + 1}):`, error);
          
-         if (retryCount < maxPrintRetries) {
-           console.log(`[ReporteDetallePro] 🔄 Reintentando impresión... (${retryCount + 1}/${maxPrintRetries})`);
-           alert(`⚠️ Error en impresión. Reintentando automáticamente... (${retryCount + 1}/${maxPrintRetries})`);
-           
-           // Esperar antes del reintento
-           await new Promise(resolve => setTimeout(resolve, 3000));
-           
-           // Reintentar
-           await printWithRetry(retryCount + 1);
-         } else {
-           console.error('[ReporteDetallePro] ❌ Máximo de reintentos alcanzado');
-           alert('❌ Error: No se pudo completar la impresión después de varios intentos.');
-         }
+                   if (retryCount < maxPrintRetries) {
+            console.log(`[ReporteDetallePro] 🔄 Reintentando impresión... (${retryCount + 1}/${maxPrintRetries})`);
+            
+            // Esperar antes del reintento
+            await new Promise(resolve => setTimeout(resolve, 3000));
+            
+            // Reintentar
+            await printWithRetry(retryCount + 1);
+          } else {
+            console.error('[ReporteDetallePro] ❌ Máximo de reintentos alcanzado');
+            alert('❌ Error: No se pudo completar la impresión después de varios intentos.');
+            setIsChartReady(true); // Rehabilitar el botón en caso de error final
+          }
        }
      };
      
-     // Iniciar impresión con reintento automático
-     await printWithRetry();
+           // Iniciar impresión con reintento automático
+      await printWithRetry();
+      
+      // Desactivar el loader al finalizar el proceso
+      setIsProcessing(false);
   };
 
   // En el modal, eliminar la firma del responsable y mostrar aclaración solo en la firma del auditor
@@ -1515,26 +1524,50 @@ const ReporteDetallePro = forwardRef(({ open = false, onClose = () => {}, report
           display: 'none'
         }} />
                  <DialogContent sx={{ p: { xs: 2, sm: 3 } }}>
-           <style>
-             {`
-               @keyframes pulse {
-                 0% { opacity: 1; transform: scale(1); }
-                 50% { opacity: 0.5; transform: scale(1.2); }
-                 100% { opacity: 1; transform: scale(1); }
-               }
-             `}
-           </style>
-           <Box>
-                         {/* Header con datos del reporte y estadísticas */}
-             <Box sx={{ 
-               mb: 3, 
-               p: 2, 
-               bgcolor: 'background.paper', 
-               borderRadius: 2, 
-               border: '1px solid',
-               borderColor: 'divider',
-               boxShadow: 1
-             }}>
+                       <style>
+              {`
+                @keyframes pulse {
+                  0% { opacity: 1; transform: scale(1); }
+                  50% { opacity: 0.5; transform: scale(1.2); }
+                  100% { opacity: 1; transform: scale(1); }
+                }
+                @keyframes spin {
+                  0% { transform: rotate(0deg); }
+                  100% { transform: rotate(360deg); }
+                }
+              `}
+            </style>
+                       <Box>
+              {/* Indicador de procesamiento */}
+              {isProcessing && (
+                <Box sx={{ 
+                  mb: 2, 
+                  p: 2, 
+                  bgcolor: '#fff3cd', 
+                  borderRadius: 2, 
+                  border: '2px solid #ffc107',
+                  textAlign: 'center',
+                  animation: 'pulse 2s infinite'
+                }}>
+                  <Typography variant="body1" sx={{ color: '#856404', fontWeight: 600 }}>
+                    ⏳ Procesando impresión... Por favor espere
+                  </Typography>
+                  <Typography variant="caption" sx={{ color: '#856404' }}>
+                    El sistema está generando el PDF y manejando los reintentos automáticamente
+                  </Typography>
+                </Box>
+              )}
+              
+              {/* Header con datos del reporte y estadísticas */}
+              <Box sx={{ 
+                mb: 3, 
+                p: 2, 
+                bgcolor: 'background.paper', 
+                borderRadius: 2, 
+                border: '1px solid',
+                borderColor: 'divider',
+                boxShadow: 1
+              }}>
                <Typography variant="h6" gutterBottom sx={{ color: 'primary.main', fontWeight: 600 }}>
                  📊 Datos del Reporte
                </Typography>
@@ -1665,17 +1698,17 @@ const ReporteDetallePro = forwardRef(({ open = false, onClose = () => {}, report
                                            <Button 
               onClick={handleImprimir} 
               variant="outlined" 
-              color={isChartReady ? "secondary" : "warning"}
-              startIcon={<PrintIcon />}
+              color={isProcessing ? "warning" : (isChartReady ? "secondary" : "warning")}
+              startIcon={isProcessing ? null : <PrintIcon />}
               size="medium"
-              disabled={!isChartReady}
+              disabled={!isChartReady || isProcessing}
               sx={{ 
                 minWidth: { xs: '80px', sm: '100px' },
                 position: 'relative'
               }}
             >
-              {isChartReady ? 'Imprimir' : 'Preparando...'}
-              {!isChartReady && (
+              {isProcessing ? 'Procesando...' : (isChartReady ? 'Imprimir' : 'Preparando...')}
+              {(isProcessing || !isChartReady) && (
                 <Box sx={{
                   position: 'absolute',
                   top: -8,
@@ -1683,9 +1716,17 @@ const ReporteDetallePro = forwardRef(({ open = false, onClose = () => {}, report
                   width: 16,
                   height: 16,
                   borderRadius: '50%',
-                  backgroundColor: '#ff9800',
-                  animation: 'pulse 1.5s infinite'
-                }} />
+                  backgroundColor: isProcessing ? '#ff9800' : '#ff9800',
+                  animation: isProcessing ? 'spin 1s linear infinite' : 'pulse 1.5s infinite',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '8px',
+                  color: 'white',
+                  fontWeight: 'bold'
+                }}>
+                  {isProcessing ? '⏳' : '●'}
+                </Box>
               )}
             </Button>
             
