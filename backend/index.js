@@ -16,6 +16,7 @@ import multer from 'multer';
 import admin from './firebaseAdmin.js';
 import setRoleRouter from './routes/setRole.js';
 import { config, getEnvironmentInfo } from './config/environment.js';
+import { loggingMiddleware, logInfo, logSuccess, logError, logErrorWithContext } from './utils/logger.js';
 import fetch from 'node-fetch';
 
 const app = express();
@@ -42,12 +43,8 @@ const upload = multer({
   }
 });
 
-// Middleware de logging
-app.use((req, res, next) => {
-  const envInfo = getEnvironmentInfo();
-  console.log(`[${new Date().toISOString()}] ${req.method} ${req.path} - ${envInfo.nodeEnv} - ${req.ip}`);
-  next();
-});
+// Middleware de logging mejorado
+app.use(loggingMiddleware);
 
 app.get('/', (req, res) => {
   const envInfo = getEnvironmentInfo();
@@ -80,15 +77,15 @@ app.get('/api/health', (req, res) => {
 // Endpoint para probar Firebase
 app.get('/api/test-firebase', async (req, res) => {
   try {
-    console.log('🧪 Probando conectividad con Firebase...');
+    logInfo('Probando conectividad con Firebase...');
     
     // Probar Auth
     const auth = admin.auth();
-    console.log('✅ Firebase Auth disponible');
+    logSuccess('Firebase Auth disponible');
     
     // Probar Firestore
     const firestore = admin.firestore();
-    console.log('✅ Firebase Firestore disponible');
+    logSuccess('Firebase Firestore disponible');
     
     // Intentar una operación simple en Firestore
     const testDoc = firestore.collection('test').doc('connection-test');
@@ -98,15 +95,15 @@ app.get('/api/test-firebase', async (req, res) => {
       message: 'Conexión exitosa'
     });
     
-    console.log('✅ Escritura en Firestore exitosa');
+    logSuccess('Escritura en Firestore exitosa');
     
     // Leer el documento
     const doc = await testDoc.get();
-    console.log('✅ Lectura en Firestore exitosa');
+    logSuccess('Lectura en Firestore exitosa');
     
     // Limpiar el documento de prueba
     await testDoc.delete();
-    console.log('✅ Limpieza de prueba exitosa');
+    logSuccess('Limpieza de prueba exitosa');
     
     res.json({
       success: true,
@@ -834,6 +831,39 @@ app.get('/api/current-version', async (req, res) => {
       message: error.message
     });
   }
+});
+
+// Endpoint para ver logs en tiempo real (solo en desarrollo)
+if (getEnvironmentInfo().nodeEnv === 'development') {
+  app.get('/api/logs', (req, res) => {
+    res.json({
+      message: 'Endpoint de logs disponible solo en desarrollo',
+      environment: getEnvironmentInfo().nodeEnv,
+      timestamp: new Date().toISOString()
+    });
+  });
+}
+
+// Endpoint para verificar estado del sistema
+app.get('/api/status', (req, res) => {
+  const envInfo = getEnvironmentInfo();
+  const status = {
+    status: 'OK',
+    environment: envInfo.nodeEnv,
+    timestamp: new Date().toISOString(),
+    services: {
+      server: 'running',
+      firebase: 'configured',
+      cors: 'enabled'
+    },
+    config: {
+      port: envInfo.port,
+      corsOrigins: envInfo.corsOrigins.length
+    }
+  };
+  
+  console.log('Status check realizado', status); // Changed from log to console.log for consistency
+  res.json(status);
 });
 
 // Iniciar servidor con configuración flexible
