@@ -35,7 +35,8 @@ export const getEnvironment = () => {
       return 'development';
     }
     
-    if (hostname.endsWith('controldoc.app')) {
+    // Detectar producción en controldoc.app
+    if (hostname.endsWith('controldoc.app') || hostname.includes('vercel.app') || hostname.includes('render.com')) {
       return 'production';
     }
   }
@@ -55,8 +56,9 @@ export const getEnvironmentConfig = () => {
     };
   }
   
+  // En producción, usar la API de ControlFile
   return {
-    baseURL: API_CONFIG.baseURL,
+    baseURL: 'https://api.controlfile.app', // API de ControlFile en producción
     timeout: API_CONFIG.timeout
   };
 };
