@@ -982,4 +982,4 @@ const InfoSistema = () => {
   );
 };
 
-export default InfoSistema; 
+export default InfoSistema;

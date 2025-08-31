@@ -84,9 +84,7 @@ const UpdateNotification = () => {
             🔄 Nueva actualización disponible
           </AlertTitle>
           
-          <Typography variant="body2" sx={{ mb: 1 }}>
-            Hay una nueva versión de la aplicación disponible: <strong>v{latestVersion}</strong>
-          </Typography>
+       
 
           {showDetails && (
             <Box sx={{ mt: 2, p: 2, bgcolor: 'rgba(255,255,255,0.1)', borderRadius: 1 }}>
