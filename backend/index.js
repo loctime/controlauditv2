@@ -22,14 +22,58 @@ import fetch from 'node-fetch';
 const app = express();
 
 // Configuración de CORS dinámica según el entorno
+console.log('🔧 Configurando CORS con orígenes:', config.cors.origin);
 app.use(cors({
-  origin: config.cors.origin,
+  origin: function (origin, callback) {
+    // Permitir requests sin origin (como mobile apps)
+    if (!origin) return callback(null, true);
+    
+    console.log('🌐 Request desde origen:', origin);
+    
+    // Verificar si el origen está en la lista permitida
+    const isAllowed = config.cors.origin.some(allowedOrigin => {
+      // Si el origen permitido tiene wildcard, verificar el dominio base
+      if (allowedOrigin.includes('*')) {
+        const baseDomain = allowedOrigin.replace('*', '');
+        return origin.startsWith(baseDomain);
+      }
+      return origin === allowedOrigin;
+    });
+    
+    console.log('✅ Origen permitido:', isAllowed);
+    
+    if (isAllowed) {
+      callback(null, true);
+    } else {
+      console.log('❌ Origen bloqueado:', origin);
+      callback(new Error('No permitido por CORS'));
+    }
+  },
   credentials: config.cors.credentials,
   methods: config.cors.methods,
   allowedHeaders: config.cors.allowedHeaders
 }));
 
 app.use(express.json());
+
+// Middleware adicional para CORS preflight - Configuración temporal más permisiva
+app.use((req, res, next) => {
+  // Permitir todos los orígenes temporalmente para solucionar el problema de CORS
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+  
+  console.log('🌐 Request CORS desde:', req.headers.origin);
+  console.log('📋 Método:', req.method);
+  
+  // Manejar preflight requests
+  if (req.method === 'OPTIONS') {
+    console.log('✅ Respondiendo a preflight request');
+    res.sendStatus(200);
+  } else {
+    next();
+  }
+});
 
 // Configurar multer para manejo de archivos
 const upload = multer({

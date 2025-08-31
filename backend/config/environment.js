@@ -57,7 +57,10 @@ const getEnvironmentConfig = () => {
           'http://127.0.0.1:3000',
           'http://127.0.0.1:5173',
           'https://auditoria.controldoc.app',
-          'https://controlauditv2.onrender.com'
+          'https://controlauditv2.onrender.com',
+          'https://*.controldoc.app',
+          'https://*.vercel.app',
+          'https://*.onrender.com'
         ]
       },
       logging: {
@@ -97,7 +100,10 @@ const getEnvironmentConfig = () => {
           'https://cliente.controlaudit.app',
           'https://demo.controlaudit.app',
           'https://auditoria.controldoc.app',
-          'https://controlauditv2.onrender.com'
+          'https://controlauditv2.onrender.com',
+          'https://*.controldoc.app',
+          'https://*.vercel.app',
+          'https://*.onrender.com'
         ]
       },
       logging: {
