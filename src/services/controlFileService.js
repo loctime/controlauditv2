@@ -46,6 +46,41 @@ class ControlFileService {
     }
   }
 
+  // Verificar si los endpoints de ControlFile están implementados
+  async areControlFileEndpointsAvailable() {
+    try {
+      // Verificar endpoint de perfil
+      const profileResponse = await fetch(`${this.baseURL}/api/user/profile`, {
+        method: 'GET',
+        signal: AbortSignal.timeout(5000)
+      });
+      
+      // Verificar endpoint de presign
+      const presignResponse = await fetch(`${this.baseURL}/api/uploads/presign`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          fileName: 'test.jpg',
+          fileSize: 12345,
+          mimeType: 'image/jpeg'
+        }),
+        signal: AbortSignal.timeout(5000)
+      });
+
+      const profileOk = profileResponse.ok || profileResponse.status === 401; // 401 significa que el endpoint existe pero necesita auth
+      const presignOk = presignResponse.ok || presignResponse.status === 401;
+
+      console.log(`🔍 Endpoints ControlFile - Profile: ${profileOk ? '✅' : '❌'} (${profileResponse.status}), Presign: ${presignOk ? '✅' : '❌'} (${presignResponse.status})`);
+
+      return profileOk && presignOk;
+    } catch (error) {
+      console.log('❌ Error verificando endpoints de ControlFile:', error.message);
+      return false;
+    }
+  }
+
   // Obtener token de Firebase
   async getAuthToken() {
     if (!auth.currentUser) {
@@ -226,6 +261,13 @@ class ControlFileService {
         throw new Error('No se puede conectar con ControlFile API. Verifica la URL y tu conexión a internet.');
       }
       
+      // Verificar si los endpoints están implementados
+      const endpointsAvailable = await this.areControlFileEndpointsAvailable();
+      if (!endpointsAvailable) {
+        console.log('⚠️ Endpoints de ControlFile no están implementados, usando fallback al backend local');
+        throw new Error('Endpoints de ControlFile no están implementados aún. Usando modo fallback.');
+      }
+      
       // 1. Crear sesión de subida en ControlFile
       const session = await this.createUploadSession({
         name: file.name,
@@ -255,6 +297,29 @@ class ControlFileService {
       
     } catch (error) {
       console.error('❌ Error en subida completa a ControlFile:', error);
+      
+      // Si es un error de endpoints no implementados, usar fallback automáticamente
+      if (error.message.includes('Endpoints de ControlFile no están implementados') || 
+          error.message.includes('404') || 
+          error.message.includes('500')) {
+        
+        console.log('🔄 Intentando fallback al backend local...');
+        
+        try {
+          // Usar el backend local como fallback
+          const fallbackResult = await this.simulateUpload(file, metadata);
+          console.log('✅ Fallback exitoso:', fallbackResult);
+          
+          return {
+            ...fallbackResult,
+            fallbackUsed: true,
+            originalError: error.message
+          };
+        } catch (fallbackError) {
+          console.error('❌ Fallback también falló:', fallbackError);
+          throw new Error(`Error en subida a ControlFile: ${error.message}. Fallback también falló: ${fallbackError.message}`);
+        }
+      }
       
       // Proporcionar información de diagnóstico
       const diagnosticInfo = {
@@ -289,6 +354,13 @@ class ControlFileService {
         return false;
       }
 
+      // Verificar si los endpoints están implementados
+      const endpointsAvailable = await this.areControlFileEndpointsAvailable();
+      if (!endpointsAvailable) {
+        console.log('⚠️ Endpoints de ControlFile no están implementados, usando modo local');
+        return false;
+      }
+
       // Intentar verificar la cuenta del usuario en ControlFile
       try {
         const token = await this.getAuthToken();
@@ -305,6 +377,9 @@ class ControlFileService {
           const userData = await response.json();
           console.log('✅ Usuario tiene cuenta en ControlFile:', userData);
           return true;
+        } else if (response.status === 404) {
+          console.log('⚠️ Endpoint de perfil no implementado en ControlFile (404)');
+          return false;
         } else {
           console.log('⚠️ Usuario no tiene cuenta en ControlFile (status:', response.status, ')');
           return false;
@@ -327,6 +402,7 @@ class ControlFileService {
   // Obtener información de diagnóstico
   async getDiagnosticInfo() {
     const isAvailable = await this.isControlFileAvailable();
+    const endpointsAvailable = await this.areControlFileEndpointsAvailable();
     const hasAccount = await this.checkUserAccount();
     
     return {
@@ -334,6 +410,7 @@ class ControlFileService {
       environment: import.meta.env.MODE,
       isDevelopment: import.meta.env.DEV || window.location.hostname === 'localhost',
       serviceAvailable: isAvailable,
+      endpointsAvailable: endpointsAvailable,
       userHasAccount: hasAccount,
       timestamp: new Date().toISOString(),
       userAgent: navigator.userAgent,

@@ -228,21 +228,24 @@ const InfoSistema = () => {
             </Typography>
           </Box>
 
-          <Alert severity={getStatusColor()} sx={{ mb: 2 }}>
-            <Typography variant="body2">
-              {controlFileStatus === 'connected' && 
-                '✅ Tu cuenta está conectada a ControlFile real. Las imágenes se almacenan de forma segura en files.controldoc.app.'
-              }
-              {controlFileStatus === 'not-connected' && 
-                diagnosticInfo?.serviceAvailable ? 
-                  '⚠️ Tu cuenta se auto-provisionará en ControlFile real cuando subas tu primera imagen.' :
-                  '❌ El servicio ControlFile real no está disponible. Usando backend local para las pruebas.'
-              }
-              {controlFileStatus === 'error' && 
-                '❌ Error al verificar la conexión con ControlFile real. Verifica tu conexión a internet y la configuración.'
-              }
-            </Typography>
-          </Alert>
+                     <Alert severity={getStatusColor()} sx={{ mb: 2 }}>
+             <Typography variant="body2">
+               {controlFileStatus === 'connected' && 
+                 '✅ Tu cuenta está conectada a ControlFile real. Las imágenes se almacenan de forma segura en files.controldoc.app.'
+               }
+               {controlFileStatus === 'not-connected' && 
+                 diagnosticInfo?.serviceAvailable ? 
+                   (diagnosticInfo?.endpointsAvailable ? 
+                     '⚠️ Tu cuenta se auto-provisionará en ControlFile real cuando subas tu primera imagen.' :
+                     '⚠️ ControlFile está disponible pero los endpoints no están implementados aún. Usando modo fallback automático.'
+                   ) :
+                   '❌ El servicio ControlFile real no está disponible. Usando backend local para las pruebas.'
+               }
+               {controlFileStatus === 'error' && 
+                 '❌ Error al verificar la conexión con ControlFile real. Verifica tu conexión a internet y la configuración.'
+               }
+             </Typography>
+           </Alert>
 
           {/* Información de Diagnóstico */}
           {diagnosticInfo && (
@@ -250,14 +253,15 @@ const InfoSistema = () => {
               <Typography variant="subtitle2" gutterBottom>
                 Información de Diagnóstico - ControlFile Real:
               </Typography>
-              <Typography variant="body2" component="div" sx={{ fontFamily: 'monospace', fontSize: '0.8rem' }}>
-                <div>🌐 URL: {diagnosticInfo.baseURL}</div>
-                <div>🔧 Entorno: {diagnosticInfo.environment} {diagnosticInfo.isDevelopment ? '(Desarrollo)' : '(Producción)'}</div>
-                <div>📡 Servicio: {diagnosticInfo.serviceAvailable ? '✅ Disponible' : '❌ No disponible'}</div>
-                <div>👤 Usuario: {diagnosticInfo.hasAuth ? diagnosticInfo.authUid : 'No autenticado'}</div>
-                <div>📋 Cuenta ControlFile: {diagnosticInfo.userHasAccount ? '✅ Tiene cuenta' : '⚠️ Sin cuenta (se creará automáticamente)'}</div>
-                <div>⏰ Timestamp: {diagnosticInfo.timestamp}</div>
-              </Typography>
+                             <Typography variant="body2" component="div" sx={{ fontFamily: 'monospace', fontSize: '0.8rem' }}>
+                 <div>🌐 URL: {diagnosticInfo.baseURL}</div>
+                 <div>🔧 Entorno: {diagnosticInfo.environment} {diagnosticInfo.isDevelopment ? '(Desarrollo)' : '(Producción)'}</div>
+                 <div>📡 Servicio: {diagnosticInfo.serviceAvailable ? '✅ Disponible' : '❌ No disponible'}</div>
+                 <div>🔌 Endpoints: {diagnosticInfo.endpointsAvailable ? '✅ Implementados' : '⚠️ No implementados'}</div>
+                 <div>👤 Usuario: {diagnosticInfo.hasAuth ? diagnosticInfo.authUid : 'No autenticado'}</div>
+                 <div>📋 Cuenta ControlFile: {diagnosticInfo.userHasAccount ? '✅ Tiene cuenta' : '⚠️ Sin cuenta (se creará automáticamente)'}</div>
+                 <div>⏰ Timestamp: {diagnosticInfo.timestamp}</div>
+               </Typography>
             </Box>
           )}
 
@@ -325,22 +329,28 @@ const InfoSistema = () => {
             </Button>
           )}
 
-          {uploadResult && (
-            <Alert severity={uploadResult.simulated ? "warning" : "success"} sx={{ mb: 2 }}>
-              <Typography variant="body2">
-                <strong>{uploadResult.simulated ? '⚠️ Logo subido (modo simulado)!' : '✅ Logo subido exitosamente!'}</strong><br />
-                <strong>File ID:</strong> {uploadResult.fileId}<br />
-                <strong>Nombre:</strong> {testImage?.name}<br />
-                <strong>Tamaño:</strong> {(testImage?.size / 1024 / 1024).toFixed(2)} MB<br />
-                <strong>Tipo:</strong> {testImage?.type}<br />
-                {uploadResult.simulated && (
-                  <span style={{ color: 'orange' }}>⚠️ Modo simulado (API no disponible)</span>
-                )}
-                {uploadResult.simulated && <br />}
-                <strong>URL:</strong> <a href={uploadResult.url} target="_blank" rel="noopener noreferrer" style={{ color: 'inherit' }}>
-                  Ver logo
-                </a>
-              </Typography>
+                     {uploadResult && (
+             <Alert severity={uploadResult.simulated || uploadResult.fallbackUsed ? "warning" : "success"} sx={{ mb: 2 }}>
+               <Typography variant="body2">
+                 <strong>
+                   {uploadResult.fallbackUsed ? '⚠️ Logo subido (modo fallback)!' : 
+                    uploadResult.simulated ? '⚠️ Logo subido (modo simulado)!' : 
+                    '✅ Logo subido exitosamente!'}
+                 </strong><br />
+                 <strong>File ID:</strong> {uploadResult.fileId}<br />
+                 <strong>Nombre:</strong> {testImage?.name}<br />
+                 <strong>Tamaño:</strong> {(testImage?.size / 1024 / 1024).toFixed(2)} MB<br />
+                 <strong>Tipo:</strong> {testImage?.type}<br />
+                 {(uploadResult.simulated || uploadResult.fallbackUsed) && (
+                   <span style={{ color: 'orange' }}>
+                     ⚠️ {uploadResult.fallbackUsed ? 'Modo fallback (endpoints no implementados)' : 'Modo simulado (API no disponible)'}
+                   </span>
+                 )}
+                 {(uploadResult.simulated || uploadResult.fallbackUsed) && <br />}
+                 <strong>URL:</strong> <a href={uploadResult.url} target="_blank" rel="noopener noreferrer" style={{ color: 'inherit' }}>
+                   Ver logo
+                 </a>
+               </Typography>
               
               {/* Mostrar preview del logo */}
               {uploadResult.url && (
