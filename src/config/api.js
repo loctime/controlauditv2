@@ -56,9 +56,9 @@ export const getEnvironmentConfig = () => {
     };
   }
   
-  // En producción, usar la API de ControlFile
+  // En producción, usar tu propio backend
   return {
-    baseURL: 'https://api.controlfile.app', // API de ControlFile en producción
+    baseURL: 'https://controlauditv2.onrender.com', // Tu backend en Render
     timeout: API_CONFIG.timeout
   };
 };
