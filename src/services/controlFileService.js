@@ -48,18 +48,33 @@ class ControlFileService {
   // Verificar si los endpoints de ControlFile están implementados
   async areControlFileEndpointsAvailable() {
     try {
+      // Obtener token de autenticación si está disponible
+      let authToken = null;
+      let authHeaders = {};
+      
+      try {
+        if (auth.currentUser) {
+          authToken = await this.getAuthToken();
+          authHeaders = {
+            'Authorization': `Bearer ${authToken}`,
+            'Content-Type': 'application/json',
+          };
+        }
+      } catch (authError) {
+        console.log('⚠️ No se pudo obtener token de autenticación para verificación de endpoints:', authError.message);
+      }
+      
       // Verificar endpoint de perfil
       const profileResponse = await fetch(`${this.baseURL}/api/user/profile`, {
         method: 'GET',
+        headers: authHeaders,
         signal: AbortSignal.timeout(5000)
       });
       
       // Verificar endpoint de presign
       const presignResponse = await fetch(`${this.baseURL}/api/uploads/presign`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: authHeaders,
         body: JSON.stringify({
           fileName: 'test.jpg',
           fileSize: 12345,
@@ -68,10 +83,17 @@ class ControlFileService {
         signal: AbortSignal.timeout(5000)
       });
 
-      const profileOk = profileResponse.ok || profileResponse.status === 401; // 401 significa que el endpoint existe pero necesita auth
-      const presignOk = presignResponse.ok || presignResponse.status === 401;
+      // Considerar exitoso si responde 200 (auth exitosa), 401 (endpoint existe pero requiere auth), o 404 (endpoint no implementado)
+      // 401 significa que el endpoint existe pero la autenticación falló
+      const profileOk = profileResponse.ok || profileResponse.status === 401 || profileResponse.status === 404;
+      const presignOk = presignResponse.ok || presignResponse.status === 401 || presignResponse.status === 404;
 
       console.log(`🔍 Endpoints ControlFile - Profile: ${profileOk ? '✅' : '❌'} (${profileResponse.status}), Presign: ${presignOk ? '✅' : '❌'} (${presignResponse.status})`);
+      
+      // Si recibimos 401, significa que el endpoint existe pero necesitamos autenticación válida
+      if (profileResponse.status === 401 || presignResponse.status === 401) {
+        console.log('⚠️ Endpoints requieren autenticación válida (401)');
+      }
 
       return profileOk && presignOk;
     } catch (error) {
@@ -427,6 +449,33 @@ class ControlFileService {
         } else if (response.status === 404) {
           console.log('⚠️ Endpoint de perfil no implementado en ControlFile (404)');
           return false;
+        } else if (response.status === 401) {
+          console.log('⚠️ Error de autenticación (401) - Token inválido o expirado');
+          // Intentar obtener un nuevo token y reintentar
+          try {
+            console.log('🔄 Intentando obtener nuevo token...');
+            const newToken = await this.getAuthToken();
+            const retryResponse = await fetch(`${this.baseURL}/api/user/profile`, {
+              method: 'GET',
+              headers: {
+                'Authorization': `Bearer ${newToken}`,
+                'Content-Type': 'application/json',
+              },
+              signal: AbortSignal.timeout(10000)
+            });
+            
+            if (retryResponse.ok) {
+              const userData = await retryResponse.json();
+              console.log('✅ Usuario tiene cuenta en ControlFile (reintento exitoso):', userData);
+              return true;
+            } else {
+              console.log('⚠️ Reintento falló (status:', retryResponse.status, ')');
+              return false;
+            }
+          } catch (retryError) {
+            console.log('⚠️ Error en reintento:', retryError.message);
+            return false;
+          }
         } else {
           console.log('⚠️ Usuario no tiene cuenta en ControlFile (status:', response.status, ')');
           return false;
