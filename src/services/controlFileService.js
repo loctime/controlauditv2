@@ -2,15 +2,15 @@ import { auth } from '../firebaseConfig';
 
 class ControlFileService {
   constructor() {
-    // Usar backend local tanto en desarrollo como en producción hasta que ControlFile esté listo
+    // Configuración de ControlFile real
     const isDevelopment = import.meta.env.DEV || window.location.hostname === 'localhost';
     this.baseURL = isDevelopment 
       ? 'http://localhost:4000' 
-      : 'https://controlauditv2.onrender.com'; // Usar el backend local en producción
+      : 'https://controlfile.onrender.com'; // URL correcta de ControlFile real
     
     console.log('🔧 ControlFile Service inicializado con URL:', this.baseURL);
     console.log('🌍 Entorno:', isDevelopment ? 'development' : 'production');
-    console.log('⚠️ Usando backend local en producción hasta que ControlFile esté implementado');
+    console.log('✅ Usando ControlFile real en producción');
   }
 
   // Verificar si ControlFile está disponible

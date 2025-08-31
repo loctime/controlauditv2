@@ -145,15 +145,29 @@ const AuthDiagnostico = () => {
         }
       }
 
-      // 6. Diagnóstico de ControlFile
-      console.log('🔧 Diagnóstico de ControlFile...');
-      try {
-        const controlFileInfo = await controlFileService.getDiagnosticInfo();
-        resultados.controlFile = controlFileInfo;
-      } catch (controlFileError) {
-        console.error('❌ Error en ControlFile:', controlFileError);
-        resultados.controlFile.error = controlFileError.message;
-      }
+             // 6. Diagnóstico de ControlFile
+       console.log('🔧 Diagnóstico de ControlFile...');
+       try {
+         const controlFileInfo = await controlFileService.getDiagnosticInfo();
+         resultados.controlFile = controlFileInfo;
+         
+         // Verificar conectividad directa con ControlFile real
+         console.log('🌐 Probando conectividad directa con ControlFile...');
+         try {
+           const controlFileResponse = await fetch('https://controlfile.onrender.com/');
+           resultados.controlFile.directConnectivity = {
+             status: controlFileResponse.status,
+             ok: controlFileResponse.ok
+           };
+         } catch (directError) {
+           resultados.controlFile.directConnectivity = {
+             error: directError.message
+           };
+         }
+       } catch (controlFileError) {
+         console.error('❌ Error en ControlFile:', controlFileError);
+         resultados.controlFile.error = controlFileError.message;
+       }
 
       setDiagnostico(resultados);
       console.log('✅ Diagnóstico completado:', resultados);
@@ -463,12 +477,27 @@ const AuthDiagnostico = () => {
                   />
                 </ListItem>
                 
-                <ListItem>
-                  <ListItemText 
-                    primary="Entorno"
-                    secondary={diagnostico.controlFile.environment}
-                  />
-                </ListItem>
+                                 <ListItem>
+                   <ListItemText 
+                     primary="Entorno"
+                     secondary={diagnostico.controlFile.environment}
+                   />
+                 </ListItem>
+                 
+                 {diagnostico.controlFile.directConnectivity && (
+                   <ListItem>
+                     <ListItemText 
+                       primary="Conectividad Directa con ControlFile"
+                       secondary={
+                         <Chip 
+                           label={diagnostico.controlFile.directConnectivity.ok ? '✅ Conectado' : '❌ Error'} 
+                           color={diagnostico.controlFile.directConnectivity.ok ? 'success' : 'error'}
+                           size="small"
+                         />
+                       }
+                     />
+                   </ListItem>
+                 )}
                 
                 {diagnostico.controlFile.error && (
                   <ListItem>
