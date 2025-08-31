@@ -98,6 +98,31 @@ npm run dev
 ### **Estado Actual**
 ✅ Tu aplicación web React ya está configurada con Capacitor y lista para convertirse en una app móvil nativa.
 
+## 🌐 **API Backend**
+
+### **URLs de Producción**
+- **Backend Principal**: `https://controlauditv2.onrender.com`
+- **Health Check**: `https://controlauditv2.onrender.com/health`
+- **API Status**: `https://controlauditv2.onrender.com/api/status`
+
+### **Autenticación**
+La API utiliza Firebase Authentication con ID Tokens:
+```
+Authorization: Bearer <FIREBASE_ID_TOKEN>
+```
+
+### **Endpoints Principales**
+- `GET /api/user/profile` - Perfil del usuario
+- `POST /api/upload` - Subida simplificada de archivos
+- `POST /api/uploads/presign` - Crear sesión de subida
+- `POST /api/uploads/complete/{uploadId}` - Completar subida
+- `GET /api/latest-apk` - Información de APK
+- `GET /api/download-apk` - Descargar APK
+
+### **Documentación Completa**
+- [📋 README_API.md](./README_API.md) - Documentación completa de la API
+- [🔧 CONTROLFILE_API_INTEGRATION.md](./docs/CONTROLFILE_API_INTEGRATION.md) - Integración desde el frontend
+
 ### **Requisitos del Sistema**
 - **Para Android**: Android Studio, Android SDK, variables de entorno configuradas
 - **Para iOS**: Xcode, CocoaPods (solo macOS)

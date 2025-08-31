@@ -527,16 +527,43 @@ app.post('/api/uploads/complete/:uploadId', verificarTokenUsuario, async (req, r
       });
     }
     
-    // Aquí procesarías el archivo subido
-    // Por ahora, solo marcamos como completada
+    // Generar fileId único
+    const fileId = `cf_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    
+    // Crear registro del archivo en Firestore
+    const fileData = {
+      fileId,
+      uploadId,
+      userId: uid,
+      fileName: sessionData.fileName,
+      fileSize: sessionData.fileSize,
+      mimeType: sessionData.mimeType,
+      url: `https://example.com/files/${fileId}`, // En producción, esto sería la URL real del archivo
+      metadata: {
+        uploadedAt: new Date(),
+        originalName: sessionData.fileName,
+        size: sessionData.fileSize,
+        mimeType: sessionData.mimeType
+      },
+      createdAt: new Date()
+    };
+    
+    // Guardar archivo en Firestore
+    await admin.firestore().collection('files').doc(fileId).set(fileData);
+    
+    // Marcar sesión como completada
     await admin.firestore().collection('uploadSessions').doc(uploadId).update({
       status: 'completed',
-      completedAt: new Date()
+      completedAt: new Date(),
+      fileId: fileId
     });
     
     res.json({
       success: true,
       message: 'Subida completada exitosamente',
+      fileId,
+      url: fileData.url,
+      metadata: fileData.metadata,
       uploadId,
       fileName: sessionData.fileName
     });
