@@ -44,10 +44,12 @@ const PerfilUsuario = () => {
     recargarEmpresas
   } = useAuth();
 
-  // Agregar logs de depuración
-  console.log('[PerfilUsuario] Debug - Role:', role);
-  console.log('[PerfilUsuario] Debug - Permisos:', permisos);
-  console.log('[PerfilUsuario] Debug - UserProfile:', userProfile);
+  // Agregar logs de depuración (solo en desarrollo)
+  if (process.env.NODE_ENV === 'development') {
+    console.log('[PerfilUsuario] Debug - Role:', role);
+    console.log('[PerfilUsuario] Debug - Permisos:', permisos);
+    console.log('[PerfilUsuario] Debug - UserProfile:', userProfile);
+  }
 
   const validTabs = ['empresas', 'formularios', 'usuarios', 'configuracion', 'firma', 'info'];
   const [selectedSection, setSelectedSection] = useState('empresas');
@@ -70,13 +72,17 @@ const PerfilUsuario = () => {
     }
   }, [location.search]);
 
-  // Recargar empresas cuando se monta el componente
+  // Estado para controlar si ya se intentó cargar empresas
+  const [empresasCargadas, setEmpresasCargadas] = useState(false);
+
+  // Recargar empresas cuando se monta el componente (solo una vez)
   useEffect(() => {
-    if (userProfile?.uid && (!userEmpresas || userEmpresas.length === 0)) {
+    if (userProfile?.uid && !empresasCargadas) {
       console.log('[PerfilUsuario] Recargando empresas al montar componente...');
+      setEmpresasCargadas(true);
       recargarEmpresas();
     }
-  }, [userProfile?.uid, userEmpresas, recargarEmpresas]);
+  }, [userProfile?.uid, empresasCargadas, recargarEmpresas]);
 
   useEffect(() => {
     const fetchUsuariosCreados = async () => {
@@ -186,12 +192,7 @@ const PerfilUsuario = () => {
   };
 
   const handleVerSistema = () => {
-    setSelectedSection('info');
-    setTimeout(() => {
-      if (contentRef.current) {
-        contentRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }
-    }, 100);
+    navigate('/info-sistema');
   };
 
   const handleGestionarSistema = () => {

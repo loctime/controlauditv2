@@ -97,17 +97,19 @@ function Navbar(props) {
     }
   };
 
-  // Log de información de navegación
-  console.log('=== INFORMACIÓN DE NAVEGACIÓN ===');
-  console.log('Rol:', role);
-  console.log('Permisos:', permisos);
-  console.log('Menú dinámico:', menuItems.map(item => item.title));
-  console.log('Elementos agregados para móvil:', missingItems.map(item => item.title));
-  console.log('Menú completo (móvil):', uniqueMenuItems.map(item => item.title));
-  console.log('Total de items en menú:', uniqueMenuItems.length);
-  console.log('Dashboard route:', getDashboardRoute());
-  console.log('Dashboard text:', getDashboardText());
-  console.log('==================================');
+  // Log de información de navegación (solo en desarrollo)
+  if (process.env.NODE_ENV === 'development') {
+    console.log('=== INFORMACIÓN DE NAVEGACIÓN ===');
+    console.log('Rol:', role);
+    console.log('Permisos:', permisos);
+    console.log('Menú dinámico:', menuItems.map(item => item.title));
+    console.log('Elementos agregados para móvil:', missingItems.map(item => item.title));
+    console.log('Menú completo (móvil):', uniqueMenuItems.map(item => item.title));
+    console.log('Total de items en menú:', uniqueMenuItems.length);
+    console.log('Dashboard route:', getDashboardRoute());
+    console.log('Dashboard text:', getDashboardText());
+    console.log('==================================');
+  }
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);

@@ -33,6 +33,7 @@ import Swal from 'sweetalert2';
 import { useAuth } from "../../context/AuthContext";
 import EditarEmpresaModal from "./EditarEmpresa";
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import { controlFileService } from '../../../services/controlFileService';
 
 const EstablecimientosContainer = () => {
   const { userProfile, userEmpresas, crearEmpresa, verificarYCorregirEmpresas, getUserEmpresas, updateEmpresa } = useAuth();
@@ -115,9 +116,12 @@ const EstablecimientosContainer = () => {
     try {
       let logoURL = "";
       if (empresa.logo) {
-        const storageRef = ref(storage, `empresas/${Date.now()}_${empresa.logo.name}`);
-        const snapshot = await uploadBytes(storageRef, empresa.logo);
-        logoURL = await getDownloadURL(snapshot.ref);
+        // ✅ Usar ControlFile en lugar de Firebase Storage
+        const uploadResult = await controlFileService.uploadFileComplete(empresa.logo, {
+          tipo: 'empresa_logo',
+          app: 'controlaudit'
+        });
+        logoURL = uploadResult.url;
       }
 
       await crearEmpresa({
@@ -224,9 +228,12 @@ const EstablecimientosContainer = () => {
     try {
       let logoURL = empresaEdit.logoURL || "";
       if (empresaEdit.logo && empresaEdit.logo instanceof File) {
-        const storageRef = ref(storage, `empresas/${Date.now()}_${empresaEdit.logo.name}`);
-        const snapshot = await uploadBytes(storageRef, empresaEdit.logo);
-        logoURL = await getDownloadURL(snapshot.ref);
+        // ✅ Usar ControlFile en lugar de Firebase Storage
+        const uploadResult = await controlFileService.uploadFileComplete(empresaEdit.logo, {
+          tipo: 'empresa_logo',
+          app: 'controlaudit'
+        });
+        logoURL = uploadResult.url;
       }
 
       await updateEmpresa(empresaEdit.id, {

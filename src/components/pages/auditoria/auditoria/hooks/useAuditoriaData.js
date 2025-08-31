@@ -18,12 +18,11 @@ export const useAuditoriaData = (
   useEffect(() => {
     if (userEmpresas && userEmpresas.length > 0) {
       setEmpresas(userEmpresas);
-      console.log('[DEBUG Auditoria] Empresas desde contexto:', userEmpresas);
-    } else if (userProfile?.uid && (!userEmpresas || userEmpresas.length === 0)) {
-      console.log('[DEBUG Auditoria] No hay empresas en contexto, recargando...');
-      recargarEmpresas();
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[DEBUG Auditoria] Empresas desde contexto:', userEmpresas);
+      }
     }
-  }, [userEmpresas, setEmpresas, userProfile?.uid, recargarEmpresas]);
+  }, [userEmpresas, setEmpresas]);
 
   // Cargar sucursales cuando cambie la empresa
   useEffect(() => {

@@ -6,6 +6,7 @@ import { doc, getDoc, setDoc, updateDoc, collection, query, where, getDocs, addD
 import { registrarLogOperario, registrarAccionSistema } from '../../utils/firestoreUtils'; // NUEVO: función para logs
 import { getUserRole } from '../../config/admin'; // ✅ Importar configuración del administrador
 import userService from '../../services/userService';
+import { controlFileService } from '../../services/controlFileService';
 
 // Definimos y exportamos el contexto
 export const AuthContext = createContext();
@@ -46,6 +47,22 @@ const AuthContextComponent = ({ children }) => {
           const profile = await createOrGetUserProfile(firebaseUser);
           
           if (profile) {
+            // ✅ Verificar si el usuario tiene cuenta en ControlFile
+            if (!profile.controlFileLinked) {
+              try {
+                const hasControlFileAccount = await controlFileService.checkUserAccount();
+                if (hasControlFileAccount) {
+                  // Actualizar perfil para marcar que ya tiene cuenta en ControlFile
+                  await updateUserProfile({ controlFileLinked: true });
+                  console.log('✅ Usuario ya tiene cuenta en ControlFile');
+                } else {
+                  console.log('🔄 Usuario no tiene cuenta en ControlFile, se auto-provisionará en la primera subida');
+                }
+              } catch (error) {
+                console.log('🔄 Error verificando cuenta de ControlFile, se auto-provisionará en la primera subida:', error.message);
+              }
+            }
+            
             // Registrar log de inicio de sesión
             await registrarAccionSistema(
               firebaseUser.uid,
@@ -69,21 +86,7 @@ const AuthContextComponent = ({ children }) => {
             ]);
           }
         } else {
-          // Registrar log de cierre de sesión si había un usuario
-          if (user) {
-            await registrarAccionSistema(
-              user.uid,
-              `Cierre de sesión`,
-              { 
-                email: user.email,
-                displayName: user.displayName
-              },
-              'logout',
-              'usuario',
-              user.uid
-            );
-          }
-          
+          // Usuario no autenticado
           setUser(null);
           setUserProfile(null);
           setIsLogged(false);
@@ -91,20 +94,26 @@ const AuthContextComponent = ({ children }) => {
           setUserAuditorias([]);
           // setSocios([]); // Eliminado: socios
           setAuditoriasCompartidas([]);
+          setRole(null);
+          setPermisos({});
+          setBloqueado(false);
+          setMotivoBloqueo('');
+          
+          // Limpiar localStorage
           localStorage.removeItem("userInfo");
           localStorage.removeItem("isLogged");
         }
       } catch (error) {
-        console.error('AuthContext error in onAuthStateChanged:', error);
+        console.error("Error en onAuthStateChanged:", error);
       } finally {
-        clearTimeout(timeoutId); // Limpiar timeout
         setLoading(false);
+        clearTimeout(timeoutId);
       }
     });
 
     return () => {
-      clearTimeout(timeoutId);
       unsubscribe();
+      clearTimeout(timeoutId);
     };
   }, []);
 
@@ -141,7 +150,9 @@ const AuthContextComponent = ({ children }) => {
     
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const empresas = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      console.log('[AuthContext] Empresas cargadas desde listener:', empresas.length);
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[AuthContext] Empresas cargadas desde listener:', empresas.length);
+      }
       setUserEmpresas(empresas);
       setLoadingEmpresas(false);
     }, (error) => {
@@ -237,7 +248,13 @@ const AuthContextComponent = ({ children }) => {
   // Función para actualizar perfil del usuario
   const updateUserProfile = async (updates) => {
     try {
-      const userRef = doc(db, "usuarios", user.uid);
+      // Usar userProfile.uid si user.uid no está disponible
+      const uid = user?.uid || userProfile?.uid;
+      if (!uid) {
+        throw new Error('No se puede actualizar perfil: UID no disponible');
+      }
+      
+      const userRef = doc(db, "usuarios", uid);
       await updateDoc(userRef, updates);
       
       // Actualizar estado local
@@ -246,12 +263,12 @@ const AuthContextComponent = ({ children }) => {
       
       // Registrar log de la acción
       await registrarAccionSistema(
-        user.uid,
+        uid,
         `Actualizar perfil de usuario`,
         { updates },
         'editar',
         'usuario',
-        user.uid
+        uid
       );
       
       return true;
@@ -290,6 +307,7 @@ const AuthContextComponent = ({ children }) => {
           empresas: [], // IDs de empresas que el usuario puede ver
           auditorias: [], // IDs de auditorías que el usuario puede ver
           // Eliminado: socios. Usar solo usuarios.
+          controlFileLinked: false, // ✅ Marcar que aún no tiene cuenta en ControlFile
           permisos: {
             puedeCrearEmpresas: true,
             puedeCrearSucursales: true,
@@ -425,7 +443,9 @@ const AuthContextComponent = ({ children }) => {
         ...doc.data()
       }));
       
-      console.log('[AuthContext] Empresas cargadas manualmente:', empresas.length);
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[AuthContext] Empresas cargadas manualmente:', empresas.length);
+      }
       setUserEmpresas(empresas);
       return empresas;
     } catch (error) {
@@ -442,7 +462,9 @@ const AuthContextComponent = ({ children }) => {
       return;
     }
     
-    console.log('[AuthContext] Forzando recarga de empresas...');
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[AuthContext] Forzando recarga de empresas...');
+    }
     setLoadingEmpresas(true);
     try {
       await getUserEmpresas(userProfile.uid);

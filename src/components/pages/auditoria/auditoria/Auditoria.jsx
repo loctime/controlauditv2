@@ -118,13 +118,17 @@ const AuditoriaRefactorizada = () => {
     userFormularios
   );
 
-  // Recargar empresas cuando se monta el componente si no están cargadas
+  // Estado para controlar si ya se intentó cargar empresas
+  const [empresasCargadas, setEmpresasCargadas] = useState(false);
+
+  // Recargar empresas cuando se monta el componente (solo una vez)
   useEffect(() => {
-    if (userProfile?.uid && (!userEmpresas || userEmpresas.length === 0)) {
+    if (userProfile?.uid && !empresasCargadas) {
       console.log('[Auditoria] Recargando empresas al montar componente...');
+      setEmpresasCargadas(true);
       recargarEmpresas();
     }
-  }, [userProfile?.uid, userEmpresas, recargarEmpresas]);
+  }, [userProfile?.uid, empresasCargadas, recargarEmpresas]);
 
   // Funciones básicas
   const handleEmpresaChange = (selectedEmpresa) => {

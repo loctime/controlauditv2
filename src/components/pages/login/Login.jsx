@@ -15,11 +15,13 @@ import {
   useMediaQuery,
   alpha,
   Card,
-  CardContent
+  CardContent,
+  Divider
 } from '@mui/material';
+import { Google as GoogleIcon } from '@mui/icons-material';
 import { Link, useNavigate } from 'react-router-dom';
 import { Visibility, VisibilityOff } from '@mui/icons-material';
-import { onSignIn } from '../../../firebaseConfig';
+import { onSignIn, signInWithGoogle } from '../../../firebaseConfig';
 import { Formik, Form, Field, ErrorMessage } from 'formik';
 import * as Yup from 'yup';
 import { useAuth } from '../../context/AuthContext';
@@ -78,246 +80,176 @@ const Login = () => {
     setSubmitting(false);
   };
 
+  // Agregar función para Google Auth
+  const handleGoogleSignIn = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const result = await signInWithGoogle();
+      handleLogin(result.user);
+      navigate("/auditoria");
+    } catch (error) {
+      console.error('Error en Google Auth:', error);
+      let errorMessage = 'Error al iniciar sesión con Google';
+      
+      if (error.code === 'auth/popup-closed-by-user') {
+        errorMessage = 'Inicio de sesión cancelado';
+      } else if (error.code === 'auth/popup-blocked') {
+        errorMessage = 'Popup bloqueado. Permite popups para este sitio';
+      }
+      
+      setError(errorMessage);
+    }
+    setLoading(false);
+  };
+
   return (
     <Box
       className="page-container"
       sx={{
-        width: '100%',
         minHeight: '100vh',
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        flexDirection: 'column',
         background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.1)} 0%, ${alpha(theme.palette.secondary.main, 0.1)} 100%)`,
-        padding: 0,
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        p: 2
       }}
     >
-      <Card
-        className="content-container"
-        sx={{
-          bgcolor: 'background.paper',
-          borderRadius: { xs: 0, sm: 4 },
-          border: { xs: 'none', sm: `1px solid ${alpha(theme.palette.divider, 0.3)}` },
-          boxShadow: { xs: 'none', sm: '0 8px 32px rgba(0,0,0,0.12)' },
-          maxWidth: isMobile ? '100%' : 450,
-          width: '100%',
-          overflow: 'hidden',
-          '&:hover': {
-            transform: 'translateY(-2px)',
-            boxShadow: '0 12px 40px rgba(0,0,0,0.15)',
-            transition: 'all 0.3s ease'
-          },
-          transition: 'all 0.3s ease'
-        }}
-      >
-        <CardContent sx={{ p: isSmallMobile ? 4 : 6 }}>
-          {/* Sección de descarga de APK - MOVIDA ARRIBA */}
-          {/* Solo mostrar en web */}
-          {!isAPK && (
-            <Box sx={{ textAlign: 'center', mb: isSmallMobile ? 4 : 5 }}>
-              <Typography 
-                variant={isSmallMobile ? "h6" : "h5"} 
-                color="text.secondary" 
-                sx={{ 
-                  mb: 2,
-                  fontWeight: 600,
-                  lineHeight: 1.4
-                }}
-              >
-                📱 Descarga nuestra aplicación móvil
-              </Typography>
-              <SmartAPKDownload variant="outlined" size="large" showInfo={false} />
-            </Box>
-          )}
+      <SmartAPKDownload />
+      
+      <Card sx={{ 
+        maxWidth: 400, 
+        width: '100%', 
+        mx: 'auto',
+        mt: isSmallMobile ? 2 : 8,
+        boxShadow: 3
+      }}>
+        <CardContent sx={{ p: 4 }}>
+          <Typography variant="h4" component="h1" gutterBottom align="center" sx={{ mb: 3 }}>
+            ControlAudit
+          </Typography>
           
-          {/* Título principal - siempre visible */}
-          <Box sx={{ textAlign: 'center', mb: isSmallMobile ? 5 : 6 }}>
-            <Typography 
-              variant={isSmallMobile ? "h4" : "h3"} 
-              component="h1" 
-              sx={{ 
-                fontWeight: 700, 
-                color: 'primary.main',
-                mb: 3,
-                lineHeight: 1.2
-              }}
-            >
-              Control Audit
-            </Typography>
-            <Typography 
-              variant={isSmallMobile ? "h6" : "h5"} 
-              color="text.secondary"
-              sx={{ 
-                lineHeight: 1.5,
-                mb: 2
-              }}
-            >
-              Accede a tu cuenta de Control de Auditorías
-            </Typography>
-          </Box>
-        
-        {error && (
-          <Alert 
-            severity="error" 
-            sx={{ 
-              mb: 4,
-              borderRadius: 2,
-              '& .MuiAlert-icon': {
-                alignItems: 'center'
-              }
-            }}
-          >
-            {error}
-          </Alert>
-        )}
+          {error && (
+            <Alert severity="error" sx={{ mb: 3 }}>
+              {error}
+            </Alert>
+          )}
 
-        <Formik
-          initialValues={initialValues}
-          validationSchema={validationSchema}
-          onSubmit={handleSubmit}
-        >
-          {({ isSubmitting, errors, touched }) => (
-            <Form>
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: isSmallMobile ? 4 : 5 }}>
-                {/* Campo de email */}
-                <Box>
-                  <Field 
-                    as={TextField} 
-                    name="email" 
-                    label="📧 Correo Electrónico" 
-                    fullWidth 
-                    disabled={isSubmitting || loading}
-                    error={touched.email && Boolean(errors.email)}
-                    helperText={touched.email && errors.email}
-                    size="large"
-                    sx={{
-                      '& .MuiOutlinedInput-root': {
-                        borderRadius: 3,
-                        '&:hover': {
-                          '& .MuiOutlinedInput-notchedOutline': {
-                            borderColor: theme.palette.primary.main,
-                          }
-                        }
-                      },
-                      '& .MuiInputLabel-root': {
-                        fontSize: isSmallMobile ? '1rem' : '1.1rem'
-                      },
-                      '& .MuiInputBase-input': {
-                        fontSize: isSmallMobile ? '1rem' : '1.1rem',
-                        padding: isSmallMobile ? '16px 18px' : '20px 18px'
-                      }
-                    }}
+          {/* Botón de Google */}
+          <Box sx={{ textAlign: 'center', mb: 3 }}>
+            <Button
+              fullWidth
+              variant="outlined"
+              startIcon={<GoogleIcon />}
+              onClick={handleGoogleSignIn}
+              disabled={loading}
+              sx={{ 
+                mb: 3,
+                py: 1.5,
+                borderColor: 'grey.300',
+                color: 'text.primary',
+                '&:hover': {
+                  borderColor: 'grey.400',
+                  backgroundColor: 'grey.50'
+                }
+              }}
+            >
+              Continuar con Google
+            </Button>
+            
+            <Divider sx={{ my: 2 }}>
+              <Typography variant="body2" color="text.secondary">
+                o
+              </Typography>
+            </Divider>
+          </Box>
+
+          <Formik
+            initialValues={initialValues}
+            validationSchema={validationSchema}
+            onSubmit={handleSubmit}
+          >
+            {({ values, errors, touched, handleChange, handleBlur, isSubmitting }) => (
+              <Form>
+                <TextField
+                  fullWidth
+                  name="email"
+                  label="Correo Electrónico"
+                  value={values.email}
+                  onChange={handleChange}
+                  onBlur={handleBlur}
+                  error={touched.email && Boolean(errors.email)}
+                  helperText={touched.email && errors.email}
+                  margin="normal"
+                  variant="outlined"
+                  disabled={loading}
+                />
+
+                <FormControl fullWidth margin="normal" variant="outlined">
+                  <InputLabel htmlFor="password">Contraseña</InputLabel>
+                  <OutlinedInput
+                    id="password"
+                    name="password"
+                    type={showPassword ? 'text' : 'password'}
+                    value={values.password}
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                    error={touched.password && Boolean(errors.password)}
+                    disabled={loading}
+                    endAdornment={
+                      <InputAdornment position="end">
+                        <IconButton
+                          aria-label="toggle password visibility"
+                          onClick={handleClickShowPassword}
+                          edge="end"
+                        >
+                          {showPassword ? <VisibilityOff /> : <Visibility />}
+                        </IconButton>
+                      </InputAdornment>
+                    }
+                    label="Contraseña"
                   />
-                </Box>
-                
-                {/* Campo de contraseña */}
-                <Box>
-                  <FormControl variant="outlined" fullWidth>
-                    <InputLabel 
-                      htmlFor="outlined-adornment-password"
-                      sx={{ fontSize: isSmallMobile ? '1rem' : '1.1rem' }}
-                    >
-                      🔒 Contraseña
-                    </InputLabel>
-                    <Field
-                      as={OutlinedInput}
-                      name="password"
-                      id="outlined-adornment-password"
-                      type={showPassword ? 'text' : 'password'}
-                      size="large"
-                      endAdornment={
-                        <InputAdornment position="end">
-                          <IconButton
-                            aria-label="toggle password visibility"
-                            onClick={handleClickShowPassword}
-                            edge="end"
-                            sx={{ color: 'primary.main' }}
-                          >
-                            {showPassword ? (
-                              <VisibilityOff />
-                            ) : (
-                              <Visibility />
-                            )}
-                          </IconButton>
-                        </InputAdornment>
-                      }
-                      label="🔒 Contraseña"
-                      disabled={isSubmitting || loading}
-                      error={touched.password && Boolean(errors.password)}
-                      sx={{
-                        borderRadius: 3,
-                        '&:hover': {
-                          '& .MuiOutlinedInput-notchedOutline': {
-                            borderColor: theme.palette.primary.main,
-                          }
-                        },
-                        '& .MuiInputBase-input': {
-                          fontSize: isSmallMobile ? '1rem' : '1.1rem',
-                          padding: isSmallMobile ? '16px 18px' : '20px 18px'
-                        }
-                      }}
-                    />
-                  </FormControl>
                   {touched.password && errors.password && (
                     <Typography color="error" variant="caption" sx={{ mt: 1, display: 'block' }}>
                       {errors.password}
                     </Typography>
                   )}
-                </Box>
-                
-                {/* Link de olvidé contraseña */}
-                <Box sx={{ textAlign: 'center', mt: 2 }}>
-                  <Link
-                    to="/forgot-password"
-                    style={{ 
-                      color: theme.palette.primary.main, 
-                      textDecoration: 'none',
-                      fontWeight: 600,
-                      fontSize: isSmallMobile ? '1rem' : '1.1rem',
-                      lineHeight: 1.5
-                    }}
-                  >
-                    🔑 ¿Olvidaste tu contraseña?
-                  </Link>
-                </Box>
-                
-                {/* Botón de ingresar */}
-                <Box sx={{ mt: 3 }}>
-                  <Button
-                    variant="contained"
-                    fullWidth
-                    type="submit"
-                    disabled={isSubmitting || loading}
-                    size="large"
-                    sx={{
-                      color: 'white',
-                      textTransform: 'none',
-                      py: isSmallMobile ? 2 : 2.5,
-                      px: isSmallMobile ? 4 : 5,
-                      fontSize: isSmallMobile ? '1.1rem' : '1.2rem',
-                      fontWeight: 600,
-                      borderRadius: 3,
-                      background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`,
-                      '&:hover': {
-                        background: `linear-gradient(135deg, ${theme.palette.primary.dark} 0%, ${theme.palette.primary.main} 100%)`,
-                        transform: 'translateY(-1px)',
-                        boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-                        transition: 'all 0.2s ease'
-                      },
-                      transition: 'all 0.2s ease'
-                    }}
-                  >
-                    {loading ? '⏳ Cargando...' : '🚀 Ingresar'}
-                  </Button>
-                </Box>
-              </Box>
-            </Form>
-          )}
-        </Formik>
-          </CardContent>
-        </Card>
-      </Box>
-    );
-  };
+                </FormControl>
+
+                <Button
+                  type="submit"
+                  fullWidth
+                  variant="contained"
+                  disabled={loading || isSubmitting}
+                  sx={{ 
+                    mt: 3, 
+                    mb: 2,
+                    py: 1.5,
+                    backgroundColor: theme.palette.primary.main,
+                    '&:hover': {
+                      backgroundColor: theme.palette.primary.dark,
+                    }
+                  }}
+                >
+                  {loading ? 'Iniciando sesión...' : 'Iniciar Sesión'}
+                </Button>
+              </Form>
+            )}
+          </Formik>
+
+          <Box sx={{ textAlign: 'center', mt: 2 }}>
+            <Typography variant="body2" color="text.secondary">
+              ¿No tienes cuenta?{' '}
+              <Link to="/register" style={{ color: theme.palette.primary.main, textDecoration: 'none' }}>
+                Regístrate aquí
+              </Link>
+            </Typography>
+          </Box>
+        </CardContent>
+      </Card>
+    </Box>
+  );
+};
 
 export default Login;

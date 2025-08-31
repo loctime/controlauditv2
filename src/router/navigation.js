@@ -9,6 +9,7 @@ import SettingsIcon from '@mui/icons-material/Settings';
 import AnalyticsIcon from '@mui/icons-material/Analytics';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import AssignmentIcon from '@mui/icons-material/Assignment';
+import InfoIcon from '@mui/icons-material/Info';
 
 // Configuración de menús por rol y permisos (solo para web)
 export const getMenuItems = (role, permisos = {}) => {
@@ -241,5 +242,11 @@ export const menuItems = [
         path: "/perfil",
         title: "Mi Perfil",
         Icon: PersonIcon
+    },
+    {
+        id: "info-sistema",
+        path: "/info-sistema",
+        title: "Info Sistema",
+        Icon: InfoIcon
     }
 ];

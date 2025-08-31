@@ -5,6 +5,8 @@ import {
   signOut,
   createUserWithEmailAndPassword,
   sendPasswordResetEmail,
+  GoogleAuthProvider, // ✅ Agregar Google Auth
+  signInWithPopup,    // ✅ Agregar popup
 } from "firebase/auth";
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -42,14 +44,18 @@ export const onSignIn = async ({ email, password }) => {
 
 // cierre de sesión
 export const logout = () => {
-  signOut(auth)
-    .then(() => {
-      console.log("Usuario cerró sesión exitosamente.");
-    })
-    .catch((error) => {
-      console.error("Error al cerrar sesión:", error);
-      // Maneja el error apropiadamente
+  signOut(auth).then(() => {
+    console.log("Cierre de sesión exitoso");
+    localStorage.removeItem("userInfo");
+    localStorage.removeItem("isLogged");
+    toast.success("Sesión cerrada exitosamente!", {
+      position: "top-left",
+      autoClose: 3000,
     });
+  }).catch((error) => {
+    console.error("Error al cerrar sesión:", error);
+    // Maneja el error apropiadamente
+  });
 };
 
 // registro
@@ -82,6 +88,22 @@ export const signUp = async ({ email, password }) => {
 // olvidar contraseña
 export const forgotPassword = async (email) => {
   await sendPasswordResetEmail(auth, email);
+};
+
+// ✅ Agregar función de Google Auth
+export const signInWithGoogle = async () => {
+  try {
+    const provider = new GoogleAuthProvider();
+    provider.addScope('email');
+    provider.addScope('profile');
+    
+    const result = await signInWithPopup(auth, provider);
+    console.log("Inicio de sesión con Google exitoso:", result);
+    return result;
+  } catch (error) {
+    console.error("Error al iniciar sesión con Google:", error);
+    throw error;
+  }
 };
 
 export { db, storage, auth }; // Exporta auth junto con db y storage

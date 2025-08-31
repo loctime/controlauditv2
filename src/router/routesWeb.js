@@ -17,6 +17,7 @@ const OperarioDashboard = lazy(() => import("../components/pages/user/OperarioDa
 const PermissionsDebug = lazy(() => import("../components/pages/debug/PermissionsDebug"));
 const GaleriaFormulariosPublicos = lazy(() => import('../components/pages/formulario/GaleriaFormulariosPublicos'));
 const ConfiguracionPage = lazy(() => import('../components/pages/configuracion/ConfiguracionPage'));
+const InfoSistema = lazy(() => import('../components/pages/perfil/InfoSistema'));
 
 export const routesWeb = [
   {
@@ -100,5 +101,10 @@ export const routesWeb = [
     id: "configuracion",
     path: "/configuracion",
     Element: ConfiguracionPage,
+  },
+  {
+    id: "info-sistema",
+    path: "/info-sistema",
+    Element: InfoSistema,
   }
 ];

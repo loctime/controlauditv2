@@ -17,6 +17,7 @@ import AppRouter from "./router/AppRouter";
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { initializeSafeAreas } from './utils/safeAreaUtils';
+import ControlFileInfo from './components/common/ControlFileInfo';
 
 const App = () => {
   // Inicializar safe areas cuando se monta la aplicación
@@ -43,6 +44,8 @@ const App = () => {
                 pauseOnHover
                 theme="light"
               />
+              {/* ✅ Footer con información de ControlFile */}
+              <ControlFileInfo variant="footer" />
             </div>
           </BrowserRouter>
         </LocalizationProvider>

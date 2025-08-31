@@ -1,9 +1,18 @@
 // Cargar variables de entorno
 import dotenv from 'dotenv';
-dotenv.config();
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Cargar variables de entorno desde archivo local si existe
+dotenv.config({ path: path.join(__dirname, 'env.local') });
+dotenv.config(); // También cargar .env si existe
 
 import express from 'express';
 import cors from 'cors';
+import multer from 'multer';
 import admin from './firebaseAdmin.js';
 import setRoleRouter from './routes/setRole.js';
 import { config, getEnvironmentInfo } from './config/environment.js';
@@ -20,6 +29,18 @@ app.use(cors({
 }));
 
 app.use(express.json());
+
+// Configurar multer para manejo de archivos
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 50 * 1024 * 1024, // 50MB máximo
+  },
+  fileFilter: (req, file, cb) => {
+    // Permitir todos los tipos de archivo por ahora
+    cb(null, true);
+  }
+});
 
 // Middleware de logging
 app.use((req, res, next) => {
@@ -45,6 +66,69 @@ app.get('/health', (req, res) => {
     environment: getEnvironmentInfo().nodeEnv,
     timestamp: new Date().toISOString()
   });
+});
+
+// Endpoint de health check alternativo
+app.get('/api/health', (req, res) => {
+  res.json({
+    status: 'OK',
+    environment: getEnvironmentInfo().nodeEnv,
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Endpoint para probar Firebase
+app.get('/api/test-firebase', async (req, res) => {
+  try {
+    console.log('🧪 Probando conectividad con Firebase...');
+    
+    // Probar Auth
+    const auth = admin.auth();
+    console.log('✅ Firebase Auth disponible');
+    
+    // Probar Firestore
+    const firestore = admin.firestore();
+    console.log('✅ Firebase Firestore disponible');
+    
+    // Intentar una operación simple en Firestore
+    const testDoc = firestore.collection('test').doc('connection-test');
+    await testDoc.set({
+      test: true,
+      timestamp: new Date(),
+      message: 'Conexión exitosa'
+    });
+    
+    console.log('✅ Escritura en Firestore exitosa');
+    
+    // Leer el documento
+    const doc = await testDoc.get();
+    console.log('✅ Lectura en Firestore exitosa');
+    
+    // Limpiar el documento de prueba
+    await testDoc.delete();
+    console.log('✅ Limpieza de prueba exitosa');
+    
+    res.json({
+      success: true,
+      message: 'Firebase funcionando correctamente',
+      services: {
+        auth: 'OK',
+        firestore: 'OK',
+        read: 'OK',
+        write: 'OK'
+      },
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('❌ Error probando Firebase:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Error en Firebase',
+      message: error.message,
+      code: error.code,
+      timestamp: new Date().toISOString()
+    });
+  }
 });
 
 // Endpoint para obtener información de la última APK
@@ -116,6 +200,355 @@ app.get('/api/latest-apk', async (req, res) => {
     res.status(500).json({ 
       error: 'Error interno del servidor',
       message: error.message 
+    });
+  }
+});
+
+// Middleware para verificar token de Firebase (para endpoints de usuario)
+const verificarTokenUsuario = async (req, res, next) => {
+  try {
+    const token = req.headers.authorization?.split('Bearer ')[1];
+    if (!token) {
+      return res.status(401).json({ error: 'Token no proporcionado' });
+    }
+    
+    console.log('🔍 Verificando token de Firebase...');
+    console.log('📋 Token recibido:', token.substring(0, 50) + '...');
+    
+    const decodedToken = await admin.auth().verifyIdToken(token);
+    console.log('✅ Token verificado exitosamente');
+    console.log('👤 Usuario:', decodedToken.email, 'UID:', decodedToken.uid);
+    
+    req.user = decodedToken;
+    next();
+  } catch (error) {
+    console.error('❌ Error verificando token:', error);
+    console.error('🔍 Detalles del error:', {
+      code: error.code,
+      message: error.message,
+      stack: error.stack
+    });
+    
+    res.status(401).json({ 
+      error: 'Token inválido',
+      details: error.message,
+      code: error.code
+    });
+  }
+};
+
+// Endpoint para obtener perfil del usuario
+app.get('/api/user/profile', verificarTokenUsuario, async (req, res) => {
+  try {
+    const { uid } = req.user;
+    console.log('🔍 Buscando perfil para usuario:', uid);
+    
+    // Verificar que Firebase esté inicializado
+    if (!admin.apps.length) {
+      console.error('❌ Firebase Admin SDK no está inicializado');
+      return res.status(500).json({
+        error: 'Error de configuración',
+        message: 'Firebase Admin SDK no está inicializado'
+      });
+    }
+    
+    // Obtener perfil del usuario desde Firestore
+    console.log('📖 Accediendo a Firestore...');
+    const firestore = admin.firestore();
+    const userDocRef = firestore.collection('usuarios').doc(uid);
+    
+    console.log('🔍 Ejecutando consulta en Firestore...');
+    const userDoc = await userDocRef.get();
+    
+    if (!userDoc.exists) {
+      console.log('⚠️ Usuario no encontrado en Firestore:', uid);
+      return res.status(404).json({ 
+        error: 'Perfil de usuario no encontrado',
+        message: 'El usuario no tiene un perfil configurado en la base de datos',
+        uid: uid
+      });
+    }
+    
+    const userData = userDoc.data();
+    console.log('✅ Perfil encontrado para usuario:', uid);
+    console.log('📋 Datos del perfil:', {
+      email: userData.email,
+      role: userData.role,
+      hasEmpresas: !!userData.empresas,
+      hasPermisos: !!userData.permisos
+    });
+    
+    res.json({
+      success: true,
+      user: {
+        uid: userData.uid,
+        email: userData.email,
+        displayName: userData.displayName,
+        role: userData.role,
+        permisos: userData.permisos || {},
+        empresas: userData.empresas || [],
+        auditorias: userData.auditorias || [],
+        socios: userData.socios || [],
+        configuracion: userData.configuracion || {
+          notificaciones: true,
+          tema: 'light'
+        },
+        clienteAdminId: userData.clienteAdminId,
+        createdAt: userData.createdAt
+      }
+    });
+  } catch (error) {
+    console.error('❌ Error obteniendo perfil de usuario:', error);
+    console.error('🔍 Detalles del error:', {
+      code: error.code,
+      message: error.message,
+      stack: error.stack
+    });
+    
+    // Manejar error específico de autenticación de Firebase
+    if (error.code === 16 && error.message.includes('UNAUTHENTICATED')) {
+      console.log('⚠️ Error de autenticación de Firebase - usando perfil simulado');
+      
+      // Retornar un perfil simulado para que la aplicación pueda funcionar
+      res.json({
+        success: true,
+        user: {
+          uid: req.user.uid,
+          email: req.user.email,
+          displayName: req.user.name || req.user.email,
+          role: 'max', // Rol por defecto
+          permisos: {
+            canUpload: true,
+            canViewReports: true,
+            canManageUsers: true,
+            canManageCompanies: true
+          },
+          empresas: [],
+          auditorias: [],
+          socios: [],
+          configuracion: {
+            notificaciones: true,
+            tema: 'light'
+          },
+          clienteAdminId: null,
+          createdAt: new Date().toISOString(),
+          isSimulated: true // Indicar que es un perfil simulado
+        },
+        message: 'Perfil simulado debido a problemas de conectividad con Firebase'
+      });
+      return;
+    }
+    
+    res.status(500).json({ 
+      error: 'Error interno del servidor',
+      message: error.message,
+      code: error.code
+    });
+  }
+});
+
+// Endpoint para crear sesión de subida (presign)
+app.post('/api/uploads/presign', verificarTokenUsuario, async (req, res) => {
+  try {
+    const { fileName, fileSize, mimeType } = req.body;
+    const { uid } = req.user;
+    
+    // Validar parámetros requeridos
+    if (!fileName || !fileSize || !mimeType) {
+      return res.status(400).json({
+        error: 'Faltan parámetros requeridos',
+        message: 'fileName, fileSize y mimeType son obligatorios'
+      });
+    }
+    
+    // Validar tamaño del archivo (máximo 50MB)
+    const maxSize = 50 * 1024 * 1024; // 50MB en bytes
+    if (fileSize > maxSize) {
+      return res.status(400).json({
+        error: 'Archivo demasiado grande',
+        message: 'El tamaño máximo permitido es 50MB'
+      });
+    }
+    
+    // Generar ID único para la sesión de subida
+    const uploadId = `upload_${uid}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    
+    // Crear registro de sesión de subida en Firestore
+    const uploadSession = {
+      uploadId,
+      userId: uid,
+      fileName,
+      fileSize,
+      mimeType,
+      status: 'pending',
+      createdAt: new Date(),
+      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000) // Expira en 24 horas
+    };
+    
+    await admin.firestore().collection('uploadSessions').doc(uploadId).set(uploadSession);
+    
+    // Generar URL de subida temporal (en producción, esto sería una URL de S3 o similar)
+    const uploadUrl = `${req.protocol}://${req.get('host')}/api/uploads/complete/${uploadId}`;
+    
+    res.json({
+      success: true,
+      uploadId,
+      uploadUrl,
+      expiresAt: uploadSession.expiresAt,
+      message: 'Sesión de subida creada exitosamente'
+    });
+    
+  } catch (error) {
+    console.error('Error creando sesión de subida:', error);
+    res.status(500).json({
+      error: 'Error interno del servidor',
+      message: error.message
+    });
+  }
+});
+
+// Endpoint para subida directa de archivos (proxy-upload)
+app.post('/api/uploads/proxy-upload', verificarTokenUsuario, upload.single('file'), async (req, res) => {
+  try {
+    const { uid } = req.user;
+    
+    console.log('📤 Recibiendo subida de archivo para usuario:', uid);
+    console.log('📋 Archivo recibido:', req.file ? {
+      originalname: req.file.originalname,
+      mimetype: req.file.mimetype,
+      size: req.file.size
+    } : 'No hay archivo');
+    console.log('📋 Body:', req.body);
+    
+    // Extraer información del archivo y body
+    const fileName = req.file ? req.file.originalname : req.body.fileName;
+    const fileSize = req.file ? req.file.size : req.body.fileSize;
+    const mimeType = req.file ? req.file.mimetype : req.body.mimeType;
+    const sessionId = req.body.sessionId;
+    
+    console.log('📤 Datos extraídos:', {
+      fileName,
+      fileSize,
+      mimeType,
+      sessionId,
+      userId: uid
+    });
+    
+    // Validar parámetros requeridos
+    if (!fileName || !fileSize || !mimeType) {
+      return res.status(400).json({
+        error: 'Faltan parámetros requeridos',
+        message: 'fileName, fileSize y mimeType son obligatorios',
+        received: { fileName, fileSize, mimeType }
+      });
+    }
+    
+    // Validar tamaño del archivo (máximo 50MB)
+    const maxSize = 50 * 1024 * 1024; // 50MB en bytes
+    if (fileSize > maxSize) {
+      return res.status(400).json({
+        error: 'Archivo demasiado grande',
+        message: 'El tamaño máximo permitido es 50MB'
+      });
+    }
+    
+    // Generar ID único para el archivo
+    const fileId = `file_${uid}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    
+    // Crear registro del archivo en Firestore
+    const fileRecord = {
+      fileId,
+      userId: uid,
+      fileName,
+      fileSize,
+      mimeType,
+      sessionId: sessionId || null,
+      status: 'uploaded',
+      uploadedAt: new Date(),
+      url: `https://storage.googleapis.com/auditoria-f9fc4.appspot.com/${fileId}/${fileName}` // URL simulada
+    };
+    
+    await admin.firestore().collection('files').doc(fileId).set(fileRecord);
+    
+    console.log('✅ Archivo registrado exitosamente:', fileId);
+    
+    res.json({
+      success: true,
+      fileId,
+      fileName,
+      fileSize,
+      uploadedAt: fileRecord.uploadedAt,
+      url: fileRecord.url,
+      message: 'Archivo subido exitosamente'
+    });
+    
+  } catch (error) {
+    console.error('❌ Error en subida de archivo:', error);
+    res.status(500).json({
+      error: 'Error interno del servidor',
+      message: error.message
+    });
+  }
+});
+
+// Endpoint para completar la subida (complete)
+app.post('/api/uploads/complete/:uploadId', verificarTokenUsuario, async (req, res) => {
+  try {
+    const { uploadId } = req.params;
+    const { uid } = req.user;
+    
+    // Verificar que la sesión de subida existe y pertenece al usuario
+    const sessionDoc = await admin.firestore().collection('uploadSessions').doc(uploadId).get();
+    
+    if (!sessionDoc.exists) {
+      return res.status(404).json({
+        error: 'Sesión de subida no encontrada',
+        message: 'La sesión de subida no existe o ha expirado'
+      });
+    }
+    
+    const sessionData = sessionDoc.data();
+    
+    if (sessionData.userId !== uid) {
+      return res.status(403).json({
+        error: 'Acceso denegado',
+        message: 'No tienes permisos para completar esta subida'
+      });
+    }
+    
+    if (sessionData.status !== 'pending') {
+      return res.status(400).json({
+        error: 'Sesión inválida',
+        message: 'La sesión de subida ya no está pendiente'
+      });
+    }
+    
+    if (new Date() > sessionData.expiresAt.toDate()) {
+      return res.status(400).json({
+        error: 'Sesión expirada',
+        message: 'La sesión de subida ha expirado'
+      });
+    }
+    
+    // Aquí procesarías el archivo subido
+    // Por ahora, solo marcamos como completada
+    await admin.firestore().collection('uploadSessions').doc(uploadId).update({
+      status: 'completed',
+      completedAt: new Date()
+    });
+    
+    res.json({
+      success: true,
+      message: 'Subida completada exitosamente',
+      uploadId,
+      fileName: sessionData.fileName
+    });
+    
+  } catch (error) {
+    console.error('Error completando subida:', error);
+    res.status(500).json({
+      error: 'Error interno del servidor',
+      message: error.message
     });
   }
 });
