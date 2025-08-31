@@ -7,7 +7,26 @@ export default defineConfig({
   plugins: [react()],
   server: {
     port: 5173,
-    host: true
+    host: true,
+    // Configuración de CORS para solucionar problemas de autenticación
+    cors: {
+      origin: [
+        'http://localhost:5173',
+        'http://localhost:3000',
+        'http://localhost:4000',
+        'https://auditoria-f9fc4.web.app',
+        'https://auditoria-f9fc4.firebaseapp.com'
+      ],
+      credentials: true
+    },
+    // Headers de seguridad para solucionar problemas de COOP
+    headers: {
+      'Cross-Origin-Opener-Policy': 'same-origin-allow-popups',
+      'Cross-Origin-Embedder-Policy': 'unsafe-none',
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization'
+    }
   },
   build: {
     outDir: 'dist',

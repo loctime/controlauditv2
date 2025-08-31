@@ -18,7 +18,7 @@ const api = axios.create({
 api.interceptors.request.use(async (config) => {
   try {
     // Verificar si hay usuario autenticado
-    if (auth.currentUser) {
+    if (auth && auth.currentUser) {
       console.log('🔑 Obteniendo token de Firebase para usuario:', auth.currentUser.uid);
       
       // Obtener token con force refresh para asegurar que esté actualizado
@@ -36,6 +36,7 @@ api.interceptors.request.use(async (config) => {
   } catch (error) {
     console.error('❌ Error obteniendo token de Firebase:', error);
     // No lanzar error para evitar que se rompa la petición
+    // En su lugar, continuar sin token
   }
   return config;
 });
