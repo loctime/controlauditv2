@@ -7,7 +7,7 @@ const getEnvironmentConfig = () => {
   const baseConfig = {
     // URLs del backend por entorno
     backend: {
-      development: 'http://localhost:4000',
+      development: 'https://controlauditv2.onrender.com', // ✅ Forzar producción
       production: 'https://controlauditv2.onrender.com',
       staging: 'https://controlauditv2-staging.onrender.com'
     },
@@ -24,7 +24,7 @@ const getEnvironmentConfig = () => {
     return {
       ...baseConfig,
       environment: 'development',
-      backendUrl: baseConfig.backend.development
+      backendUrl: baseConfig.backend.development // ✅ Usar producción incluso en localhost
     };
   }
   

@@ -95,7 +95,7 @@ const InfoSistema = () => {
 
   const handleUploadTest = async (isLogo = false) => {
     if (!testImage) {
-      alert('Por favor selecciona una imagen primero');
+      setUploadError('Por favor selecciona un archivo primero');
       return;
     }
 
@@ -103,23 +103,23 @@ const InfoSistema = () => {
     setUploadError(null);
     setUploadResult(null);
 
-    try {
-      // Configurar metadatos según el tipo de subida
-      const metadata = isLogo ? {
-        tipo: 'logo_sistema',
-        app: 'controlaudit',
-        userId: userProfile?.uid,
-        categoria: 'branding',
-        uso: 'logo_principal',
-        empresa: userProfile?.displayName || 'Sistema',
-        test: false
-      } : {
-        tipo: 'test_upload',
-        app: 'controlaudit',
-        userId: userProfile?.uid,
-        test: true
-      };
+    // Configurar metadatos según el tipo de subida (mover fuera del try)
+    const metadata = isLogo ? {
+      tipo: 'logo_sistema',
+      app: 'controlaudit',
+      userId: userProfile?.uid,
+      categoria: 'branding',
+      uso: 'logo_principal',
+      empresa: userProfile?.displayName || 'Sistema',
+      test: false
+    } : {
+      tipo: 'test_upload',
+      app: 'controlaudit',
+      userId: userProfile?.uid,
+      test: true
+    };
 
+    try {
       // Intentar subida real primero
       const result = await controlFileService.uploadFileComplete(testImage, metadata);
 
