@@ -15,6 +15,7 @@ import 'react-toastify/dist/ReactToastify.css';
 import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage"; // Importa getStorage
 import { isCapacitor, getAuthConfig } from './utils/capacitorUtils';
+import { getImprovedAuthConfig, getAuthEnvironmentInfo } from './utils/authUtils';
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
@@ -120,21 +121,19 @@ export const signInWithGoogle = async () => {
     provider.addScope('email');
     provider.addScope('profile');
     
-    // Obtener configuración de autenticación basada en el dispositivo
-    const authConfig = getAuthConfig();
-    console.log("🔧 Configuración de autenticación:", authConfig);
+    console.log("🌐 Intentando signInWithPopup (navegador web)");
     
-    // Si estamos en Capacitor o no soportamos popups, usar redirect
-    if (authConfig.useRedirect) {
-      console.log("📱 Usando signInWithRedirect (Capacitor o popups no soportados)");
-      await signInWithRedirect(auth, provider);
-      // El resultado se manejará en handleRedirectResult cuando la app vuelva
-      return { user: null, pendingRedirect: true };
-    } else {
-      console.log("🌐 Usando signInWithPopup (navegador web)");
+    // Intentar popup primero
+    try {
       const result = await signInWithPopup(auth, provider);
       console.log("Inicio de sesión con Google exitoso (popup):", result);
       return result;
+    } catch (popupError) {
+      console.log("❌ Error con popup, cambiando automáticamente a redirect:", popupError);
+      
+      // Si falla el popup por cualquier razón, automáticamente usar redirect
+      await signInWithRedirect(auth, provider);
+      return { user: null, pendingRedirect: true };
     }
   } catch (error) {
     console.error("Error al iniciar sesión con Google:", error);

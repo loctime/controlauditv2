@@ -88,31 +88,20 @@ const Login = () => {
     try {
       const result = await signInWithGoogle();
       
-      // Si es redirect (Capacitor), no navegar inmediatamente
+      // Si es redirect, no navegar inmediatamente
       if (result.pendingRedirect) {
         console.log("🔄 Redirect iniciado, esperando resultado...");
-        // El AuthContext manejará el resultado del redirect
         return;
       }
       
-      // Si es popup (web), navegar inmediatamente
+      // Si es popup, navegar inmediatamente
       if (result.user) {
         handleLogin(result.user);
         navigate("/auditoria");
       }
     } catch (error) {
       console.error('Error en Google Auth:', error);
-      let errorMessage = 'Error al iniciar sesión con Google';
-      
-      if (error.code === 'auth/popup-closed-by-user') {
-        errorMessage = 'Inicio de sesión cancelado';
-      } else if (error.code === 'auth/popup-blocked') {
-        errorMessage = 'Popup bloqueado. Permite popups para este sitio';
-      } else if (error.code === 'auth/redirect-cancelled-by-user') {
-        errorMessage = 'Inicio de sesión cancelado';
-      }
-      
-      setError(errorMessage);
+      setError('Error al iniciar sesión con Google. Inténtalo de nuevo.');
     }
     setLoading(false);
   };

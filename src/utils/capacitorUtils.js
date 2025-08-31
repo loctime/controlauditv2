@@ -74,6 +74,29 @@ export const supportsPopups = () => {
       return false;
     }
     
+    // Verificar políticas de seguridad que bloquean popups
+    const hasStrictPolicy = 
+      document.head.querySelector('meta[http-equiv="Cross-Origin-Opener-Policy"]') ||
+      document.head.querySelector('meta[http-equiv="Cross-Origin-Embedder-Policy"]');
+    
+    if (hasStrictPolicy) {
+      console.log('🔒 Políticas de seguridad estrictas detectadas, usando redirect');
+      return false;
+    }
+    
+    // Verificar si estamos en un iframe (los popups no funcionan bien)
+    if (window !== window.top) {
+      console.log('🖼️ Detectado iframe, usando redirect');
+      return false;
+    }
+    
+    // Verificar User Agent para navegadores móviles
+    const isMobileBrowser = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    if (isMobileBrowser) {
+      console.log('📱 Navegador móvil detectado, usando redirect');
+      return false;
+    }
+    
     // En web, verificar si el navegador soporta popups
     const testPopup = window.open('', '_blank', 'width=1,height=1');
     if (testPopup) {

@@ -1,17 +1,34 @@
 import React from 'react';
 import { Box, Typography, Chip, Alert } from '@mui/material';
-import { getAuthConfig } from '../../utils/capacitorUtils';
+import { getAuthEnvironmentInfo } from '../../utils/authUtils';
 
 const AuthMethodInfo = () => {
-  const authConfig = getAuthConfig();
+  const envInfo = getAuthEnvironmentInfo();
   
-  if (!authConfig.deviceInfo.isCapacitor) {
-    return null; // No mostrar en web
+  // Mostrar información solo si hay problemas detectados o es Capacitor
+  if (!envInfo.isCapacitor && !envInfo.hasPopupIssues) {
+    return null; // No mostrar en web sin problemas
   }
+  
+  const getSeverity = () => {
+    if (envInfo.isCapacitor) return 'info';
+    if (envInfo.hasPopupIssues) return 'warning';
+    return 'info';
+  };
+  
+  const getMessage = () => {
+    if (envInfo.isCapacitor) {
+      return "Se abrirá el navegador para completar el inicio de sesión con Google";
+    }
+    if (envInfo.hasPopupIssues) {
+      return `Se usará redirección debido a: ${envInfo.reason}`;
+    }
+    return "Se abrirá una ventana emergente para el inicio de sesión";
+  };
   
   return (
     <Alert 
-      severity="info" 
+      severity={getSeverity()} 
       sx={{ 
         mb: 2,
         '& .MuiAlert-message': {
@@ -21,20 +38,24 @@ const AuthMethodInfo = () => {
     >
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
         <Typography variant="body2" fontWeight="medium">
-          📱 Autenticación optimizada para {authConfig.platform}
+          {envInfo.isCapacitor ? '📱' : '🔒'} Autenticación optimizada para {envInfo.platform}
         </Typography>
         <Chip 
-          label={authConfig.useRedirect ? "Redirect" : "Popup"} 
+          label={envInfo.recommendedMethod === 'redirect' ? "Redirect" : "Popup"} 
           size="small" 
-          color={authConfig.useRedirect ? "primary" : "secondary"}
+          color={envInfo.recommendedMethod === 'redirect' ? "primary" : "secondary"}
         />
       </Box>
       <Typography variant="body2" color="text.secondary">
-        {authConfig.useRedirect 
-          ? "Se abrirá el navegador para completar el inicio de sesión con Google"
-          : "Se abrirá una ventana emergente para el inicio de sesión"
-        }
+        {getMessage()}
       </Typography>
+      {envInfo.hasPopupIssues && !envInfo.isCapacitor && (
+        <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+          Detalles: {envInfo.hasStrictPolicies ? 'Políticas de seguridad estrictas' : ''}
+          {envInfo.isInIframe ? ' (en iframe)' : ''}
+          {envInfo.isMobileBrowser ? ' (navegador móvil)' : ''}
+        </Typography>
+      )}
     </Alert>
   );
 };
