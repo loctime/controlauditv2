@@ -2,11 +2,11 @@ import { auth } from '../firebaseConfig';
 
 class ControlFileService {
   constructor() {
-    // Usar backend local en desarrollo, ControlFile en producción
+    // Usar ControlFile real en producción, backend local en desarrollo
     const isDevelopment = import.meta.env.DEV || window.location.hostname === 'localhost';
     this.baseURL = isDevelopment 
       ? 'http://localhost:4000' 
-      : (import.meta.env.VITE_CONTROLFILE_API_URL || 'https://files.controldoc.app');
+      : 'https://files.controldoc.app';
     
     console.log('🔧 ControlFile Service inicializado con URL:', this.baseURL);
     console.log('🌍 Entorno:', isDevelopment ? 'development' : 'production');
@@ -98,20 +98,25 @@ class ControlFileService {
     }
   }
 
-  // Crear sesión de subida
+  // Crear sesión de subida en ControlFile real
   async createUploadSession(fileData) {
     try {
       const token = await this.getAuthToken();
-      console.log('🔑 Token obtenido, creando sesión...');
+      console.log('🔑 Token obtenido, creando sesión en ControlFile...');
       
       const requestBody = {
         fileName: fileData.name,
         fileSize: fileData.size,
         mimeType: fileData.type,
-        parentId: fileData.parentId || null
+        parentId: fileData.parentId || null,
+        metadata: {
+          app: 'controlaudit',
+          userId: auth.currentUser?.uid,
+          uploadedAt: new Date().toISOString()
+        }
       };
 
-      console.log('📤 Enviando request a:', `${this.baseURL}/api/uploads/presign`);
+      console.log('📤 Enviando request a ControlFile:', `${this.baseURL}/api/uploads/presign`);
       console.log('📋 Datos:', requestBody);
 
       const response = await fetch(`${this.baseURL}/api/uploads/presign`, {
@@ -128,12 +133,12 @@ class ControlFileService {
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('❌ Error en respuesta:', errorText);
-        throw new Error(`Error al crear sesión: ${response.status} - ${errorText}`);
+        console.error('❌ Error en respuesta de ControlFile:', errorText);
+        throw new Error(`Error al crear sesión en ControlFile: ${response.status} - ${errorText}`);
       }
 
       const result = await response.json();
-      console.log('✅ Sesión creada exitosamente:', result);
+      console.log('✅ Sesión creada exitosamente en ControlFile:', result);
       return result;
     } catch (error) {
       console.error('❌ Error en createUploadSession:', error);
@@ -141,11 +146,11 @@ class ControlFileService {
     }
   }
 
-  // Subir archivo
+  // Subir archivo a ControlFile real
   async uploadFile(file, sessionId) {
     try {
       const token = await this.getAuthToken();
-      console.log('📤 Subiendo archivo con sessionId:', sessionId);
+      console.log('📤 Subiendo archivo a ControlFile con sessionId:', sessionId);
       
       const formData = new FormData();
       formData.append('file', file);
@@ -160,16 +165,16 @@ class ControlFileService {
         signal: AbortSignal.timeout(60000) // 60 segundos timeout para archivos grandes
       });
 
-      console.log('📥 Respuesta de subida:', response.status, response.statusText);
+      console.log('📥 Respuesta de subida de ControlFile:', response.status, response.statusText);
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('❌ Error en subida:', errorText);
-        throw new Error(`Error al subir archivo: ${response.status} - ${errorText}`);
+        console.error('❌ Error en subida a ControlFile:', errorText);
+        throw new Error(`Error al subir archivo a ControlFile: ${response.status} - ${errorText}`);
       }
 
       const result = await response.json();
-      console.log('✅ Archivo subido exitosamente:', result);
+      console.log('✅ Archivo subido exitosamente a ControlFile:', result);
       return result;
     } catch (error) {
       console.error('❌ Error en uploadFile:', error);
@@ -177,11 +182,11 @@ class ControlFileService {
     }
   }
 
-  // Confirmar subida
+  // Confirmar subida en ControlFile real
   async confirmUpload(uploadSessionId) {
     try {
       const token = await this.getAuthToken();
-      console.log('✅ Confirmando subida con sessionId:', uploadSessionId);
+      console.log('✅ Confirmando subida en ControlFile con sessionId:', uploadSessionId);
       
       const response = await fetch(`${this.baseURL}/api/uploads/complete/${uploadSessionId}`, {
         method: 'POST',
@@ -192,16 +197,16 @@ class ControlFileService {
         signal: AbortSignal.timeout(30000)
       });
 
-      console.log('📥 Respuesta de confirmación:', response.status, response.statusText);
+      console.log('📥 Respuesta de confirmación de ControlFile:', response.status, response.statusText);
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('❌ Error en confirmación:', errorText);
-        throw new Error(`Error al confirmar subida: ${response.status} - ${errorText}`);
+        console.error('❌ Error en confirmación de ControlFile:', errorText);
+        throw new Error(`Error al confirmar subida en ControlFile: ${response.status} - ${errorText}`);
       }
 
       const result = await response.json();
-      console.log('✅ Subida confirmada exitosamente:', result);
+      console.log('✅ Subida confirmada exitosamente en ControlFile:', result);
       return result;
     } catch (error) {
       console.error('❌ Error en confirmUpload:', error);
@@ -209,10 +214,10 @@ class ControlFileService {
     }
   }
 
-  // Subida completa en un solo método
+  // Subida completa en un solo método con ControlFile real
   async uploadFileComplete(file, metadata = {}) {
     try {
-      console.log('🔄 Iniciando subida completa a ControlFile:', file.name);
+      console.log('🔄 Iniciando subida completa a ControlFile real:', file.name);
       console.log('📊 Metadatos:', metadata);
       
       // Verificar conectividad primero
@@ -221,7 +226,7 @@ class ControlFileService {
         throw new Error('No se puede conectar con ControlFile API. Verifica la URL y tu conexión a internet.');
       }
       
-      // 1. Crear sesión de subida
+      // 1. Crear sesión de subida en ControlFile
       const session = await this.createUploadSession({
         name: file.name,
         size: file.size,
@@ -229,21 +234,23 @@ class ControlFileService {
         parentId: metadata.parentId
       });
       
-      console.log('✅ Sesión creada:', session.uploadId);
+      console.log('✅ Sesión creada en ControlFile:', session.uploadId);
       
-      // 2. Subir archivo
+      // 2. Subir archivo a ControlFile
       const uploadResult = await this.uploadFile(file, session.uploadId);
-      console.log('✅ Archivo subido:', uploadResult);
+      console.log('✅ Archivo subido a ControlFile:', uploadResult);
       
-      // 3. Confirmar subida
+      // 3. Confirmar subida en ControlFile
       const confirmResult = await this.confirmUpload(session.uploadId);
-      console.log('✅ Subida confirmada:', confirmResult);
+      console.log('✅ Subida confirmada en ControlFile:', confirmResult);
       
       return {
         success: true,
         fileId: confirmResult.fileId,
         url: confirmResult.url,
-        metadata: confirmResult.metadata
+        metadata: confirmResult.metadata,
+        controlFileId: confirmResult.controlFileId, // ID específico de ControlFile
+        uploadedToControlFile: true
       };
       
     } catch (error) {
@@ -282,11 +289,30 @@ class ControlFileService {
         return false;
       }
 
-      // Como el endpoint /api/user/profile no existe, asumimos que el usuario no tiene cuenta
-      // hasta que se implemente correctamente el endpoint
-      console.log('⚠️ Endpoint /api/user/profile no implementado en ControlFile');
-      console.log('⚠️ Asumiendo que el usuario no tiene cuenta en ControlFile');
-      return false;
+      // Intentar verificar la cuenta del usuario en ControlFile
+      try {
+        const token = await this.getAuthToken();
+        const response = await fetch(`${this.baseURL}/api/user/profile`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          signal: AbortSignal.timeout(10000)
+        });
+
+        if (response.ok) {
+          const userData = await response.json();
+          console.log('✅ Usuario tiene cuenta en ControlFile:', userData);
+          return true;
+        } else {
+          console.log('⚠️ Usuario no tiene cuenta en ControlFile (status:', response.status, ')');
+          return false;
+        }
+      } catch (error) {
+        console.log('⚠️ Error verificando cuenta en ControlFile:', error.message);
+        return false;
+      }
       
     } catch (error) {
       console.log('❌ Error verificando cuenta de ControlFile:', error.message);
@@ -301,11 +327,14 @@ class ControlFileService {
   // Obtener información de diagnóstico
   async getDiagnosticInfo() {
     const isAvailable = await this.isControlFileAvailable();
+    const hasAccount = await this.checkUserAccount();
+    
     return {
       baseURL: this.baseURL,
       environment: import.meta.env.MODE,
       isDevelopment: import.meta.env.DEV || window.location.hostname === 'localhost',
       serviceAvailable: isAvailable,
+      userHasAccount: hasAccount,
       timestamp: new Date().toISOString(),
       userAgent: navigator.userAgent,
       hasAuth: !!auth.currentUser,
@@ -342,7 +371,7 @@ class ControlFileService {
   // Métodos de prueba para endpoints de API
   async testProfile() {
     try {
-      console.log('🧪 Probando endpoint /api/user/profile...');
+      console.log('🧪 Probando endpoint /api/user/profile en ControlFile...');
       const token = await this.getAuthToken();
       
       const response = await fetch(`${this.baseURL}/api/user/profile`, {
@@ -354,7 +383,7 @@ class ControlFileService {
         signal: AbortSignal.timeout(10000)
       });
 
-      console.log('📥 Respuesta de perfil:', response.status, response.statusText);
+      console.log('📥 Respuesta de perfil de ControlFile:', response.status, response.statusText);
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -362,23 +391,27 @@ class ControlFileService {
       }
 
       const result = await response.json();
-      console.log('✅ Prueba de perfil exitosa:', result);
+      console.log('✅ Prueba de perfil de ControlFile exitosa:', result);
       return result;
     } catch (error) {
-      console.error('❌ Error en prueba de perfil:', error);
+      console.error('❌ Error en prueba de perfil de ControlFile:', error);
       throw error;
     }
   }
 
   async testPresign(uploadId = '') {
     try {
-      console.log('🧪 Probando endpoint /api/uploads/presign...');
+      console.log('🧪 Probando endpoint /api/uploads/presign en ControlFile...');
       const token = await this.getAuthToken();
       
       const requestBody = {
         fileName: 'test.jpg',
         fileSize: 12345,
-        mimeType: 'image/jpeg'
+        mimeType: 'image/jpeg',
+        metadata: {
+          app: 'controlaudit',
+          test: true
+        }
       };
 
       const response = await fetch(`${this.baseURL}/api/uploads/presign`, {
@@ -391,7 +424,7 @@ class ControlFileService {
         signal: AbortSignal.timeout(10000)
       });
 
-      console.log('📥 Respuesta de presign:', response.status, response.statusText);
+      console.log('📥 Respuesta de presign de ControlFile:', response.status, response.statusText);
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -399,24 +432,24 @@ class ControlFileService {
       }
 
       const result = await response.json();
-      console.log('✅ Prueba de presign exitosa:', result);
+      console.log('✅ Prueba de presign de ControlFile exitosa:', result);
       return result;
     } catch (error) {
-      console.error('❌ Error en prueba de presign:', error);
+      console.error('❌ Error en prueba de presign de ControlFile:', error);
       throw error;
     }
   }
 
   async testCompleteUpload() {
     try {
-      console.log('🧪 Probando endpoint /api/uploads/complete...');
+      console.log('🧪 Probando endpoint /api/uploads/complete en ControlFile...');
       const token = await this.getAuthToken();
       
       // Primero crear una sesión de presign
       const presignResult = await this.testPresign();
       
       if (!presignResult.uploadId) {
-        throw new Error('No se pudo obtener uploadId del presign');
+        throw new Error('No se pudo obtener uploadId del presign de ControlFile');
       }
 
       // Luego completar la subida
@@ -430,7 +463,7 @@ class ControlFileService {
         signal: AbortSignal.timeout(10000)
       });
 
-      console.log('📥 Respuesta de complete:', response.status, response.statusText);
+      console.log('📥 Respuesta de complete de ControlFile:', response.status, response.statusText);
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -438,13 +471,13 @@ class ControlFileService {
       }
 
       const result = await response.json();
-      console.log('✅ Prueba de complete exitosa:', result);
+      console.log('✅ Prueba de complete de ControlFile exitosa:', result);
       return {
         presign: presignResult,
         complete: result
       };
     } catch (error) {
-      console.error('❌ Error en prueba de complete:', error);
+      console.error('❌ Error en prueba de complete de ControlFile:', error);
       throw error;
     }
   }

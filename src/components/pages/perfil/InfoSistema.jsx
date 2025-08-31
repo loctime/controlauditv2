@@ -214,7 +214,7 @@ const InfoSistema = () => {
         <CardContent>
           <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
             <CloudIcon sx={{ mr: 1, color: 'primary.main' }} />
-            <Typography variant="h6">Estado de ControlFile</Typography>
+            <Typography variant="h6">Estado de ControlFile Real</Typography>
           </Box>
           
           <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
@@ -228,37 +228,38 @@ const InfoSistema = () => {
             </Typography>
           </Box>
 
-                     <Alert severity={getStatusColor()} sx={{ mb: 2 }}>
-             <Typography variant="body2">
-               {controlFileStatus === 'connected' && 
-                 'Tu cuenta está conectada a ControlFile. Las imágenes se almacenan de forma segura.'
-               }
-               {controlFileStatus === 'not-connected' && 
-                 diagnosticInfo?.serviceAvailable ? 
-                   'Tu cuenta se auto-provisionará en ControlFile cuando subas tu primera imagen.' :
-                   'El servicio ControlFile no está disponible. Usando backend local para las pruebas.'
-               }
-               {controlFileStatus === 'error' && 
-                 'Error al verificar la conexión con ControlFile. Verifica tu conexión a internet y la configuración.'
-               }
-             </Typography>
-           </Alert>
+          <Alert severity={getStatusColor()} sx={{ mb: 2 }}>
+            <Typography variant="body2">
+              {controlFileStatus === 'connected' && 
+                '✅ Tu cuenta está conectada a ControlFile real. Las imágenes se almacenan de forma segura en files.controldoc.app.'
+              }
+              {controlFileStatus === 'not-connected' && 
+                diagnosticInfo?.serviceAvailable ? 
+                  '⚠️ Tu cuenta se auto-provisionará en ControlFile real cuando subas tu primera imagen.' :
+                  '❌ El servicio ControlFile real no está disponible. Usando backend local para las pruebas.'
+              }
+              {controlFileStatus === 'error' && 
+                '❌ Error al verificar la conexión con ControlFile real. Verifica tu conexión a internet y la configuración.'
+              }
+            </Typography>
+          </Alert>
 
-                     {/* Información de Diagnóstico */}
-           {diagnosticInfo && (
-             <Box sx={{ mb: 2, p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
-               <Typography variant="subtitle2" gutterBottom>
-                 Información de Diagnóstico:
-               </Typography>
-               <Typography variant="body2" component="div" sx={{ fontFamily: 'monospace', fontSize: '0.8rem' }}>
-                 <div>URL: {diagnosticInfo.baseURL}</div>
-                 <div>Entorno: {diagnosticInfo.environment} {diagnosticInfo.isDevelopment ? '(Desarrollo)' : '(Producción)'}</div>
-                 <div>Servicio: {diagnosticInfo.serviceAvailable ? '✅ Disponible' : '❌ No disponible'}</div>
-                 <div>Usuario: {diagnosticInfo.hasAuth ? diagnosticInfo.authUid : 'No autenticado'}</div>
-                 <div>Timestamp: {diagnosticInfo.timestamp}</div>
-               </Typography>
-             </Box>
-           )}
+          {/* Información de Diagnóstico */}
+          {diagnosticInfo && (
+            <Box sx={{ mb: 2, p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
+              <Typography variant="subtitle2" gutterBottom>
+                Información de Diagnóstico - ControlFile Real:
+              </Typography>
+              <Typography variant="body2" component="div" sx={{ fontFamily: 'monospace', fontSize: '0.8rem' }}>
+                <div>🌐 URL: {diagnosticInfo.baseURL}</div>
+                <div>🔧 Entorno: {diagnosticInfo.environment} {diagnosticInfo.isDevelopment ? '(Desarrollo)' : '(Producción)'}</div>
+                <div>📡 Servicio: {diagnosticInfo.serviceAvailable ? '✅ Disponible' : '❌ No disponible'}</div>
+                <div>👤 Usuario: {diagnosticInfo.hasAuth ? diagnosticInfo.authUid : 'No autenticado'}</div>
+                <div>📋 Cuenta ControlFile: {diagnosticInfo.userHasAccount ? '✅ Tiene cuenta' : '⚠️ Sin cuenta (se creará automáticamente)'}</div>
+                <div>⏰ Timestamp: {diagnosticInfo.timestamp}</div>
+              </Typography>
+            </Box>
+          )}
 
           <Button 
             variant="outlined" 
@@ -508,16 +509,16 @@ const InfoSistema = () => {
              {/* Pruebas de API */}
        <Card sx={{ mb: 3 }}>
          <CardContent>
-           <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-             <ApiIcon sx={{ mr: 1, color: 'primary.main' }} />
-             <Typography variant="h6">Pruebas de API Backend</Typography>
-           </Box>
-           
-           <Alert severity="info" sx={{ mb: 2 }}>
-             <Typography variant="body2">
-               Prueba los endpoints del backend que implementamos. Estos tests verifican la funcionalidad de autenticación y subida de archivos.
-             </Typography>
-           </Alert>
+          <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+            <ApiIcon sx={{ mr: 1, color: 'primary.main' }} />
+            <Typography variant="h6">Pruebas de API ControlFile Real</Typography>
+          </Box>
+          
+          <Alert severity="info" sx={{ mb: 2 }}>
+            <Typography variant="body2">
+              Prueba los endpoints de ControlFile real (files.controldoc.app). Estos tests verifican la funcionalidad de autenticación y subida de archivos directamente en ControlFile.
+            </Typography>
+          </Alert>
 
            <Accordion defaultExpanded>
              <AccordionSummary
@@ -527,7 +528,7 @@ const InfoSistema = () => {
              >
                <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
                  <PersonIcon sx={{ mr: 1, color: 'primary.main' }} />
-                 <Typography>GET /api/user/profile</Typography>
+                 <Typography>GET /api/user/profile (ControlFile)</Typography>
                  <Box sx={{ ml: 'auto' }}>
                    {apiTests.profile.loading && <CircularProgress size={16} />}
                    {apiTests.profile.result && <CheckCircleIcon color="success" />}
@@ -537,7 +538,7 @@ const InfoSistema = () => {
              </AccordionSummary>
              <AccordionDetails>
                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                 Prueba el endpoint que obtiene el perfil del usuario autenticado desde Firestore.
+                 Prueba el endpoint que obtiene el perfil del usuario autenticado desde ControlFile real.
                </Typography>
                
                <Button
@@ -592,7 +593,7 @@ const InfoSistema = () => {
              >
                <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
                  <UploadIcon sx={{ mr: 1, color: 'primary.main' }} />
-                 <Typography>POST /api/uploads/presign</Typography>
+                 <Typography>POST /api/uploads/presign (ControlFile)</Typography>
                  <Box sx={{ ml: 'auto' }}>
                    {apiTests.presign.loading && <CircularProgress size={16} />}
                    {apiTests.presign.result && <CheckCircleIcon color="success" />}
@@ -602,7 +603,7 @@ const InfoSistema = () => {
              </AccordionSummary>
              <AccordionDetails>
                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                 Prueba el endpoint que crea una sesión de subida (presign) para archivos.
+                 Prueba el endpoint que crea una sesión de subida (presign) para archivos en ControlFile real.
                </Typography>
                
                <Button
@@ -656,7 +657,7 @@ const InfoSistema = () => {
              >
                <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
                  <CloudIcon sx={{ mr: 1, color: 'primary.main' }} />
-                 <Typography>POST /api/uploads/complete/:uploadId</Typography>
+                 <Typography>POST /api/uploads/complete/:uploadId (ControlFile)</Typography>
                  <Box sx={{ ml: 'auto' }}>
                    {apiTests.complete.loading && <CircularProgress size={16} />}
                    {apiTests.complete.result && <CheckCircleIcon color="success" />}
@@ -666,7 +667,7 @@ const InfoSistema = () => {
              </AccordionSummary>
              <AccordionDetails>
                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                 Prueba el endpoint que completa la subida de archivos (proxy-upload). Este test ejecuta primero presign y luego complete.
+                 Prueba el endpoint que completa la subida de archivos en ControlFile real. Este test ejecuta primero presign y luego complete.
                </Typography>
                
                <Button
@@ -727,7 +728,7 @@ const InfoSistema = () => {
              </AccordionSummary>
              <AccordionDetails>
                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                 Puedes probar estos endpoints directamente desde la terminal usando curl:
+                 Puedes probar estos endpoints de ControlFile real directamente desde la terminal usando curl:
                </Typography>
                
                                <Box sx={{ bgcolor: 'grey.100', p: 2, borderRadius: 1, mb: 2 }}>
@@ -735,7 +736,7 @@ const InfoSistema = () => {
                     Probar perfil de usuario:
                   </Typography>
                   <Typography variant="body2" component="pre" sx={{ fontFamily: 'monospace', fontSize: '0.8rem' }}>
-{`curl -i ${diagnosticInfo?.baseURL || 'http://localhost:4000'}/api/user/profile \\
+{`curl -i ${diagnosticInfo?.baseURL || 'https://files.controldoc.app'}/api/user/profile \\
   -H "Authorization: Bearer {TU_ID_TOKEN}"`}
                   </Typography>
                 </Box>
@@ -745,7 +746,7 @@ const InfoSistema = () => {
                     Crear sesión de subida:
                   </Typography>
                   <Typography variant="body2" component="pre" sx={{ fontFamily: 'monospace', fontSize: '0.8rem' }}>
-{`curl -i ${diagnosticInfo?.baseURL || 'http://localhost:4000'}/api/uploads/presign \\
+{`curl -i ${diagnosticInfo?.baseURL || 'https://files.controldoc.app'}/api/uploads/presign \\
   -H "Authorization: Bearer {TU_ID_TOKEN}" \\
   -H "Content-Type: application/json" \\
   -d '{"fileName":"test.jpg","fileSize":12345,"mimeType":"image/jpeg"}'`}
@@ -757,7 +758,7 @@ const InfoSistema = () => {
                     Completar subida:
                   </Typography>
                   <Typography variant="body2" component="pre" sx={{ fontFamily: 'monospace', fontSize: '0.8rem' }}>
-{`curl -i ${diagnosticInfo?.baseURL || 'http://localhost:4000'}/api/uploads/complete/{UPLOAD_ID} \\
+{`curl -i ${diagnosticInfo?.baseURL || 'https://files.controldoc.app'}/api/uploads/complete/{UPLOAD_ID} \\
   -H "Authorization: Bearer {TU_ID_TOKEN}" \\
   -H "Content-Type: application/json" \\
   -d '{}'`}
