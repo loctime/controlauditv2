@@ -23,7 +23,8 @@ import {
   Group as GroupIcon, 
   Info as InfoIcon,
   Person as PersonIcon,
-  CalendarToday as CalendarIcon
+  CalendarToday as CalendarIcon,
+  Api as ApiIcon
 } from '@mui/icons-material';
 
 const sidebarItems = [
@@ -33,6 +34,7 @@ const sidebarItems = [
   { label: 'Usuarios', icon: <GroupIcon />, key: 'usuarios' },
   { label: 'Firma', icon: <DrawIcon />, key: 'firma' },
   { label: 'Sistema', icon: <InfoIcon />, key: 'info' },
+  { label: 'API Test', icon: <ApiIcon />, key: 'api-test' },
 ];
 
 const PerfilSidebar = ({ selectedSection, onSelectSection, userProfile }) => {

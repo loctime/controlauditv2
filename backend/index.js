@@ -809,6 +809,54 @@ app.get('/api/download-apk', async (req, res) => {
 
 app.use('/api/set-role', setRoleRouter); // Solo para superadmin, uso administrativo
 
+// Endpoint simple de upload para la nueva API
+app.post('/api/upload', verificarTokenUsuario, upload.single('file'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        error: 'No se proporcionó ningún archivo'
+      });
+    }
+
+    const { uid } = req.user;
+    const file = req.file;
+    
+    // Obtener metadatos del formulario
+    const metadata = {
+      tipo: req.body.tipo || 'general',
+      app: req.body.app || 'controlaudit',
+      userId: uid,
+      originalName: file.originalname,
+      size: file.size,
+      mimeType: file.mimetype,
+      uploadedAt: new Date().toISOString()
+    };
+
+    // Simular subida exitosa (aquí podrías integrar con ControlFile)
+    const fileId = `cf_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const url = `https://example.com/files/${fileId}`;
+
+    console.log(`✅ Archivo subido exitosamente: ${file.originalname} (${file.size} bytes)`);
+
+    res.json({
+      success: true,
+      fileId: fileId,
+      url: url,
+      metadata: metadata,
+      message: 'Archivo subido exitosamente'
+    });
+
+  } catch (error) {
+    console.error('❌ Error en upload:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Error interno del servidor',
+      message: error.message
+    });
+  }
+});
+
 // Endpoint para obtener la versión actual de la aplicación
 app.get('/api/current-version', async (req, res) => {
   try {

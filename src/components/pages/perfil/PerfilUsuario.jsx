@@ -21,6 +21,7 @@ import PerfilConfiguracion from './PerfilConfiguracion';
 import PerfilFirma from './PerfilFirma';
 import PerfilInfoSistema from './PerfilInfoSistema';
 import PerfilDialogs from './PerfilDialogs';
+import ApiTest from '../../common/ApiTest';
 import './PerfilUsuario.css';
 
 
@@ -51,7 +52,7 @@ const PerfilUsuario = () => {
     console.log('[PerfilUsuario] Debug - UserProfile:', userProfile);
   }
 
-  const validTabs = ['empresas', 'formularios', 'usuarios', 'configuracion', 'firma', 'info'];
+  const validTabs = ['empresas', 'formularios', 'usuarios', 'configuracion', 'firma', 'info', 'api-test'];
   const [selectedSection, setSelectedSection] = useState('empresas');
   const [emailSocio, setEmailSocio] = useState("");
   const [openDialogSocio, setOpenDialogSocio] = useState(false);
@@ -702,6 +703,9 @@ const PerfilUsuario = () => {
           )}
           {selectedSection === 'info' && (
             <PerfilInfoSistema />
+          )}
+          {selectedSection === 'api-test' && (
+            <ApiTest />
           )}
         </Box>
       </Box>
