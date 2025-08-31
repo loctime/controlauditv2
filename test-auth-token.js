@@ -1,91 +1,121 @@
-#!/usr/bin/env node
+// Script para diagnosticar el problema de autenticación
+import { initializeApp } from 'firebase/app';
+import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
 
-/**
- * Script para probar la autenticación y el token de Firebase
- * Uso: node test-auth-token.js
- */
+// Configuración de Firebase
+const firebaseConfig = {
+  apiKey: "AIzaSyD7pmD_EVRf0dJcocynpaXAdu3tveycrzg",
+  authDomain: "auditoria-f9fc4.firebaseapp.com",
+  projectId: "auditoria-f9fc4",
+  storageBucket: "auditoria-f9fc4.appspot.com",
+  messagingSenderId: "156800340171",
+  appId: "1:156800340171:web:fbe017105fd68b0f114b4e"
+};
 
-import { auth } from './src/firebaseConfig.js';
+// Inicializar Firebase
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
 
 async function testAuthToken() {
-  console.log('🧪 Probando autenticación y token de Firebase...');
+  console.log('🔍 Diagnóstico de autenticación con Firebase');
+  console.log('🌐 URL del backend:', 'https://controlauditv2.onrender.com');
+  console.log('⏰ Timestamp:', new Date().toISOString());
   console.log('');
 
   try {
-    // Verificar si hay usuario autenticado
-    console.log('🔍 Verificando usuario autenticado...');
-    
-    if (!auth.currentUser) {
-      console.log('❌ No hay usuario autenticado');
-      console.log('💡 Solución: Inicia sesión en la aplicación primero');
+    // 1. Verificar si hay un usuario autenticado
+    console.log('1️⃣ Verificando estado de autenticación...');
+    const currentUser = auth.currentUser;
+    console.log('   Usuario actual:', currentUser ? {
+      uid: currentUser.uid,
+      email: currentUser.email,
+      emailVerified: currentUser.emailVerified
+    } : 'No hay usuario autenticado');
+    console.log('');
+
+    // 2. Si no hay usuario, intentar autenticarse
+    if (!currentUser) {
+      console.log('2️⃣ No hay usuario autenticado, intentando autenticarse...');
+      console.log('   ⚠️ Necesitas proporcionar credenciales válidas');
+      console.log('   💡 Para probar, puedes usar las credenciales de desarrollo');
+      console.log('');
       return;
     }
 
-    console.log('✅ Usuario autenticado encontrado');
-    console.log('👤 UID:', auth.currentUser.uid);
-    console.log('📧 Email:', auth.currentUser.email);
-    console.log('📛 Display Name:', auth.currentUser.displayName);
+    // 3. Obtener token de Firebase
+    console.log('3️⃣ Obteniendo token de Firebase...');
+    const token = await currentUser.getIdToken(true); // Forzar refresh
+    console.log('   Token obtenido:', token ? '✅ Sí' : '❌ No');
+    console.log('   Longitud del token:', token ? token.length : 0);
+    console.log('   Preview del token:', token ? token.substring(0, 50) + '...' : 'N/A');
     console.log('');
 
-    // Obtener token
-    console.log('🔑 Obteniendo token de Firebase...');
-    
-    const token = await auth.currentUser.getIdToken(true);
-    
     if (!token) {
-      console.log('❌ No se pudo obtener el token');
+      console.log('❌ No se pudo obtener el token de Firebase');
       return;
     }
 
-    console.log('✅ Token obtenido exitosamente');
-    console.log('📏 Longitud del token:', token.length, 'caracteres');
-    console.log('🔑 Token preview:', token.substring(0, 50) + '...');
-    console.log('');
-
-    // Probar el token con el backend
-    console.log('🌐 Probando token con el backend...');
-    
-    const backendUrl = 'https://controlauditv2.onrender.com';
-    
-    const response = await fetch(`${backendUrl}/api/user/profile`, {
+    // 4. Probar endpoint de perfil con el token
+    console.log('4️⃣ Probando endpoint de perfil con token...');
+    const profileResponse = await fetch('https://controlauditv2.onrender.com/api/user/profile', {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
+        'Content-Type': 'application/json'
       }
     });
-
-    console.log('📥 Respuesta del backend:', response.status, response.statusText);
     
-    if (response.ok) {
-      const data = await response.json();
-      console.log('✅ Token válido - Perfil obtenido exitosamente');
-      console.log('📋 Datos del perfil:', {
-        uid: data.user?.uid,
-        email: data.user?.email,
-        role: data.user?.role
+    console.log('   Status:', profileResponse.status);
+    console.log('   Headers:', Object.fromEntries(profileResponse.headers.entries()));
+    
+    if (profileResponse.ok) {
+      const profileData = await profileResponse.json();
+      console.log('   ✅ Perfil obtenido exitosamente');
+      console.log('   Datos del perfil:', {
+        uid: profileData.user?.uid,
+        email: profileData.user?.email,
+        role: profileData.user?.role
       });
     } else {
-      const errorText = await response.text();
-      console.log('❌ Error con el token:', errorText);
-      
-      if (response.status === 401) {
-        console.log('💡 El token puede haber expirado. Intenta:');
-        console.log('   1. Cerrar sesión en la aplicación');
-        console.log('   2. Volver a iniciar sesión');
-        console.log('   3. Probar nuevamente');
-      }
+      const errorText = await profileResponse.text();
+      console.log('   ❌ Error obteniendo perfil:', errorText);
     }
+    console.log('');
+
+    // 5. Probar endpoint de presign con el token
+    console.log('5️⃣ Probando endpoint de presign con token...');
+    const presignResponse = await fetch('https://controlauditv2.onrender.com/api/uploads/presign', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        fileName: 'test.jpg',
+        fileSize: 1024,
+        mimeType: 'image/jpeg'
+      })
+    });
+    
+    console.log('   Status:', presignResponse.status);
+    console.log('   Headers:', Object.fromEntries(presignResponse.headers.entries()));
+    
+    if (presignResponse.ok) {
+      const presignData = await presignResponse.json();
+      console.log('   ✅ Presign creado exitosamente');
+      console.log('   Upload ID:', presignData.uploadId);
+    } else {
+      const errorText = await presignResponse.text();
+      console.log('   ❌ Error creando presign:', errorText);
+    }
+    console.log('');
 
   } catch (error) {
-    console.error('💥 Error en la prueba:', error);
-    console.error('🔍 Detalles:', {
-      code: error.code,
-      message: error.message,
-      stack: error.stack
-    });
+    console.error('❌ Error en el diagnóstico:', error);
   }
+
+  console.log('✅ Diagnóstico completado');
 }
 
-// Ejecutar la prueba
+// Ejecutar el diagnóstico
 testAuthToken();

@@ -17,12 +17,25 @@ const api = axios.create({
 // Interceptor para agregar token de Firebase automáticamente
 api.interceptors.request.use(async (config) => {
   try {
-    const token = await auth.currentUser?.getIdToken();
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+    // Verificar si hay usuario autenticado
+    if (auth.currentUser) {
+      console.log('🔑 Obteniendo token de Firebase para usuario:', auth.currentUser.uid);
+      
+      // Obtener token con force refresh para asegurar que esté actualizado
+      const token = await auth.currentUser.getIdToken(true);
+      
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+        console.log('✅ Token agregado al header Authorization');
+      } else {
+        console.warn('⚠️ No se pudo obtener token de Firebase');
+      }
+    } else {
+      console.warn('⚠️ No hay usuario autenticado en Firebase');
     }
   } catch (error) {
-    console.error('Error obteniendo token:', error);
+    console.error('❌ Error obteniendo token de Firebase:', error);
+    // No lanzar error para evitar que se rompa la petición
   }
   return config;
 });
@@ -40,7 +53,11 @@ api.interceptors.response.use(
     }
     
     if (error.response?.status === 401) {
-      console.error('Error de autenticación');
+      console.error('Error de autenticación - Token inválido o expirado');
+      // Limpiar datos de autenticación y redirigir al login
+      localStorage.removeItem('userInfo');
+      localStorage.removeItem('isLogged');
+      window.location.href = '/login';
       throw new Error('Sesión expirada. Por favor, inicia sesión nuevamente.');
     }
     

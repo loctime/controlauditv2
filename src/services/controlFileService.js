@@ -112,6 +112,15 @@ class ControlFileService {
         userExists: !!auth.currentUser,
         userUid: auth.currentUser?.uid
       });
+      
+      // Si es un error de token expirado, intentar limpiar la sesión
+      if (error.code === 'auth/user-token-expired' || error.message.includes('token')) {
+        console.log('🔄 Token expirado, limpiando sesión...');
+        localStorage.removeItem('userInfo');
+        localStorage.removeItem('isLogged');
+        window.location.href = '/login';
+      }
+      
       throw error;
     }
   }

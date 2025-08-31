@@ -24,6 +24,7 @@ const OperarioDashboard = lazy(() => import("../components/pages/user/OperarioDa
 const PermissionsDebug = lazy(() => import("../components/pages/debug/PermissionsDebug"));
 const GaleriaFormulariosPublicos = lazy(() => import('../components/pages/formulario/GaleriaFormulariosPublicos'));
 const ConfiguracionPage = lazy(() => import('../components/pages/configuracion/ConfiguracionPage'));
+const AuthDiagnostico = lazy(() => import('../components/pages/diagnostico/AuthDiagnostico'));
 
 export const routesAPK = [
   // Rutas de autenticación
@@ -140,5 +141,10 @@ export const routesAPK = [
     id: "configuracion",
     path: "/configuracion",
     Element: ConfiguracionPage,
+  },
+  {
+    id: "auth-diagnostico",
+    path: "/auth-diagnostico",
+    Element: AuthDiagnostico,
   }
 ];
