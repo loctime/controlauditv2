@@ -4,7 +4,7 @@ class ControlFileService {
   constructor() {
     // Configuración de ControlFile real
     const isDevelopment = import.meta.env.DEV || window.location.hostname === 'localhost';
-    this.baseURL = 'https://controlauditv2.onrender.com'; // ✅ Usar siempre la URL de producción
+    this.baseURL = 'https://controlfile.onrender.com'; // ✅ URL correcta de ControlFile
     
     console.log('🔧 ControlFile Service inicializado con URL:', this.baseURL);
     console.log('🌍 Entorno:', isDevelopment ? 'development' : 'production');
