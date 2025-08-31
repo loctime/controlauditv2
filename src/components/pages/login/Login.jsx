@@ -26,6 +26,7 @@ import { Formik, Form, Field, ErrorMessage } from 'formik';
 import * as Yup from 'yup';
 import { useAuth } from '../../context/AuthContext';
 import SmartAPKDownload from '../../common/SmartAPKDownload.jsx';
+import AuthMethodInfo from '../../common/AuthMethodInfo';
 import { usePlatform } from '../../../hooks/usePlatform.js';
 
 const Login = () => {
@@ -80,14 +81,25 @@ const Login = () => {
     setSubmitting(false);
   };
 
-  // Agregar función para Google Auth
+  // Agregar función para Google Auth mejorada para Capacitor
   const handleGoogleSignIn = async () => {
     setLoading(true);
     setError('');
     try {
       const result = await signInWithGoogle();
-      handleLogin(result.user);
-      navigate("/auditoria");
+      
+      // Si es redirect (Capacitor), no navegar inmediatamente
+      if (result.pendingRedirect) {
+        console.log("🔄 Redirect iniciado, esperando resultado...");
+        // El AuthContext manejará el resultado del redirect
+        return;
+      }
+      
+      // Si es popup (web), navegar inmediatamente
+      if (result.user) {
+        handleLogin(result.user);
+        navigate("/auditoria");
+      }
     } catch (error) {
       console.error('Error en Google Auth:', error);
       let errorMessage = 'Error al iniciar sesión con Google';
@@ -96,6 +108,8 @@ const Login = () => {
         errorMessage = 'Inicio de sesión cancelado';
       } else if (error.code === 'auth/popup-blocked') {
         errorMessage = 'Popup bloqueado. Permite popups para este sitio';
+      } else if (error.code === 'auth/redirect-cancelled-by-user') {
+        errorMessage = 'Inicio de sesión cancelado';
       }
       
       setError(errorMessage);
@@ -135,6 +149,9 @@ const Login = () => {
               {error}
             </Alert>
           )}
+
+          {/* Información del método de autenticación */}
+          <AuthMethodInfo />
 
           {/* Botón de Google */}
           <Box sx={{ textAlign: 'center', mb: 3 }}>

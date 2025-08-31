@@ -7,11 +7,14 @@ import {
   sendPasswordResetEmail,
   GoogleAuthProvider, // ✅ Agregar Google Auth
   signInWithPopup,    // ✅ Agregar popup
+  signInWithRedirect, // ✅ Agregar redirect para Capacitor
+  getRedirectResult,  // ✅ Para manejar el resultado del redirect
 } from "firebase/auth";
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage"; // Importa getStorage
+import { isCapacitor, getAuthConfig } from './utils/capacitorUtils';
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
@@ -90,16 +93,49 @@ export const forgotPassword = async (email) => {
   await sendPasswordResetEmail(auth, email);
 };
 
-// ✅ Agregar función de Google Auth
+// ✅ Función para detectar si estamos en Capacitor (usando utilidad)
+// const isCapacitor = () => {
+//   return window.Capacitor && window.Capacitor.isNative;
+// };
+
+// ✅ Función para obtener el resultado del redirect (llamar al inicio de la app)
+export const handleRedirectResult = async () => {
+  try {
+    const result = await getRedirectResult(auth);
+    if (result) {
+      console.log("Inicio de sesión con Google exitoso (redirect):", result);
+      return result;
+    }
+  } catch (error) {
+    console.error("Error al procesar redirect de Google:", error);
+    throw error;
+  }
+  return null;
+};
+
+// ✅ Agregar función de Google Auth mejorada para Capacitor
 export const signInWithGoogle = async () => {
   try {
     const provider = new GoogleAuthProvider();
     provider.addScope('email');
     provider.addScope('profile');
     
-    const result = await signInWithPopup(auth, provider);
-    console.log("Inicio de sesión con Google exitoso:", result);
-    return result;
+    // Obtener configuración de autenticación basada en el dispositivo
+    const authConfig = getAuthConfig();
+    console.log("🔧 Configuración de autenticación:", authConfig);
+    
+    // Si estamos en Capacitor o no soportamos popups, usar redirect
+    if (authConfig.useRedirect) {
+      console.log("📱 Usando signInWithRedirect (Capacitor o popups no soportados)");
+      await signInWithRedirect(auth, provider);
+      // El resultado se manejará en handleRedirectResult cuando la app vuelva
+      return { user: null, pendingRedirect: true };
+    } else {
+      console.log("🌐 Usando signInWithPopup (navegador web)");
+      const result = await signInWithPopup(auth, provider);
+      console.log("Inicio de sesión con Google exitoso (popup):", result);
+      return result;
+    }
   } catch (error) {
     console.error("Error al iniciar sesión con Google:", error);
     throw error;

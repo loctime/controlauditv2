@@ -1,6 +1,6 @@
 // src/components/context/AuthContext.jsx
 import { createContext, useState, useEffect, useContext } from "react";
-import { auth, db } from "../../firebaseConfig";
+import { auth, db, handleRedirectResult } from "../../firebaseConfig";
 import { onAuthStateChanged } from "firebase/auth";
 import { doc, getDoc, setDoc, updateDoc, collection, query, where, getDocs, addDoc, onSnapshot } from "firebase/firestore";
 import { registrarLogOperario, registrarAccionSistema } from '../../utils/firestoreUtils'; // NUEVO: función para logs
@@ -27,6 +27,22 @@ const AuthContextComponent = ({ children }) => {
   const [motivoBloqueo, setMotivoBloqueo] = useState('');
 
   useEffect(() => {
+    
+    // ✅ Manejar resultado del redirect de Google Auth (para Capacitor)
+    const handleGoogleRedirect = async () => {
+      try {
+        const result = await handleRedirectResult();
+        if (result) {
+          console.log("✅ Redirect de Google procesado exitosamente");
+          // El onAuthStateChanged se encargará del resto
+        }
+      } catch (error) {
+        console.error("❌ Error procesando redirect de Google:", error);
+      }
+    };
+    
+    // Procesar redirect al inicio
+    handleGoogleRedirect();
     
     // Timeout de seguridad para evitar loading infinito
     const timeoutId = setTimeout(() => {

@@ -5,14 +5,17 @@ const config: CapacitorConfig = {
   appName: 'ControlAudit',
   webDir: 'dist',
   server: {
-    androidScheme: 'https'
+    androidScheme: 'https',
+    cleartext: true // Permitir contenido no cifrado para desarrollo
   },
   plugins: {
     SplashScreen: {
-      launchShowDuration: 3000,
+      launchShowDuration: 2000, // Reducir tiempo de splash
       backgroundColor: "#1976d2",
       showSpinner: true,
-      spinnerColor: "#ffffff"
+      spinnerColor: "#ffffff",
+      splashFullScreen: true,
+      splashImmersive: true
     },
     StatusBar: {
       style: 'light',
@@ -22,11 +25,14 @@ const config: CapacitorConfig = {
   },
   android: {
     webContentsDebuggingEnabled: true,
-    allowMixedContent: true
+    allowMixedContent: true,
+    captureInput: true, // Mejorar captura de input
+    webContentsDebuggingEnabled: true
   },
   ios: {
     webContentsDebuggingEnabled: true,
-    allowsLinkPreview: true
+    allowsLinkPreview: true,
+    scrollEnabled: true
   }
 };
 

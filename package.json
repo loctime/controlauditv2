@@ -30,6 +30,7 @@
     "cap:run:android": "npx cap run android",
     "cap:run:ios": "npx cap run ios",
     "fer": "npm run build && cd android && gradlew clean && cd .. && npx cap sync && android\\auto-fix-java.bat && cd android && gradlew assembleDebug && cd ..",
+    "fer:fast": "node scripts/build-apk-optimized.js",
     "die": "node scripts/release.js",
     "android:dev": "npm run build && npx cap sync && android\\auto-fix-java.bat && npx cap run android",
     "android:build": "npm run build && cd android && gradlew clean && cd .. && npx cap sync && android\\auto-fix-java.bat && cd android && gradlew assembleDebug && cd ..",
