@@ -84,10 +84,36 @@ class ControlFileService {
 
   // Obtener token de Firebase
   async getAuthToken() {
-    if (!auth.currentUser) {
-      throw new Error('Usuario no autenticado');
+    try {
+      if (!auth.currentUser) {
+        console.error('❌ No hay usuario autenticado en Firebase');
+        throw new Error('Usuario no autenticado');
+      }
+      
+      console.log('🔍 Obteniendo token de Firebase para usuario:', auth.currentUser.uid);
+      console.log('📧 Email del usuario:', auth.currentUser.email);
+      
+      // Forzar refresh del token para asegurar que esté actualizado
+      const token = await auth.currentUser.getIdToken(true);
+      
+      if (!token) {
+        throw new Error('No se pudo obtener el token de Firebase');
+      }
+      
+      console.log('✅ Token obtenido exitosamente (longitud:', token.length, 'caracteres)');
+      console.log('🔑 Token preview:', token.substring(0, 50) + '...');
+      
+      return token;
+    } catch (error) {
+      console.error('❌ Error obteniendo token de Firebase:', error);
+      console.error('🔍 Detalles del error:', {
+        code: error.code,
+        message: error.message,
+        userExists: !!auth.currentUser,
+        userUid: auth.currentUser?.uid
+      });
+      throw error;
     }
-    return await auth.currentUser.getIdToken();
   }
 
   // Verificar conectividad con ControlFile
@@ -154,6 +180,7 @@ class ControlFileService {
 
       console.log('📤 Enviando request a ControlFile:', `${this.baseURL}/api/uploads/presign`);
       console.log('📋 Datos:', requestBody);
+      console.log('🔑 Token header:', `Bearer ${token.substring(0, 20)}...`);
 
       const response = await fetch(`${this.baseURL}/api/uploads/presign`, {
         method: 'POST',
@@ -170,6 +197,18 @@ class ControlFileService {
       if (!response.ok) {
         const errorText = await response.text();
         console.error('❌ Error en respuesta de ControlFile:', errorText);
+        console.error('🔍 Detalles del error 401:', {
+          status: response.status,
+          statusText: response.statusText,
+          url: response.url,
+          headers: Object.fromEntries(response.headers.entries())
+        });
+        
+        // Si es error 401, puede ser problema de token
+        if (response.status === 401) {
+          throw new Error(`Error de autenticación (401): El token de Firebase puede haber expirado. Por favor, cierra sesión y vuelve a iniciar. Detalles: ${errorText}`);
+        }
+        
         throw new Error(`Error al crear sesión en ControlFile: ${response.status} - ${errorText}`);
       }
 

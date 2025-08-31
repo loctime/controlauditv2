@@ -36,10 +36,12 @@ import {
   Api as ApiIcon,
   ExpandMore as ExpandMoreIcon,
   PlayArrow as PlayArrowIcon,
-  Code as CodeIcon
+  Code as CodeIcon,
+  Refresh as RefreshIcon
 } from "@mui/icons-material";
 import { controlFileService } from '../../../services/controlFileService';
 import { useAuth } from '../../context/AuthContext';
+import { auth } from '../../../firebaseConfig';
 
 const InfoSistema = () => {
   const { userProfile, user } = useAuth();
@@ -265,14 +267,39 @@ const InfoSistema = () => {
             </Box>
           )}
 
-          <Button 
-            variant="outlined" 
-            onClick={checkControlFileStatus}
-            disabled={controlFileStatus === 'checking'}
-            startIcon={<CloudIcon />}
-          >
-            Verificar Conexión
-          </Button>
+          <Box sx={{ display: 'flex', gap: 2 }}>
+            <Button 
+              variant="outlined" 
+              onClick={checkControlFileStatus}
+              disabled={controlFileStatus === 'checking'}
+              startIcon={<CloudIcon />}
+            >
+              Verificar Conexión
+            </Button>
+            
+            <Button 
+              variant="outlined" 
+              color="warning"
+              onClick={async () => {
+                try {
+                  console.log('🔄 Forzando refresh del token de Firebase...');
+                  if (auth.currentUser) {
+                    await auth.currentUser.getIdToken(true);
+                    console.log('✅ Token refrescado exitosamente');
+                    alert('Token refrescado. Intenta subir la imagen nuevamente.');
+                  } else {
+                    alert('No hay usuario autenticado. Por favor, inicia sesión.');
+                  }
+                } catch (error) {
+                  console.error('❌ Error refrescando token:', error);
+                  alert('Error refrescando token. Por favor, cierra sesión y vuelve a iniciar.');
+                }
+              }}
+              startIcon={<RefreshIcon />}
+            >
+              Refresh Token
+            </Button>
+          </Box>
         </CardContent>
       </Card>
 
