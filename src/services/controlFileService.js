@@ -14,14 +14,34 @@ class ControlFileService {
 
   // Verificar si ControlFile está disponible
   async isControlFileAvailable() {
+    // Si ya sabemos que no está disponible, retornar false inmediatamente
+    if (this.serviceUnavailable) {
+      return false;
+    }
+
+    // Si no hay baseURL (servicio deshabilitado), retornar false
+    if (!this.baseURL) {
+      return false;
+    }
+
     try {
-      const response = await fetch(`${this.baseURL}/health`, {
+      // Intentar con el endpoint raíz primero (que sabemos que funciona)
+      const response = await fetch(`${this.baseURL}/`, {
         method: 'GET',
         signal: AbortSignal.timeout(5000)
       });
-      return response.ok;
+      
+      if (response.ok) {
+        console.log('✅ ControlFile está disponible (endpoint raíz responde)');
+        return true;
+      } else {
+        console.log('⚠️ ControlFile endpoint raíz falló con status:', response.status);
+        this.serviceUnavailable = true;
+        return false;
+      }
     } catch (error) {
       console.log('❌ ControlFile no disponible:', error.message);
+      this.serviceUnavailable = true;
       return false;
     }
   }
@@ -36,43 +56,44 @@ class ControlFileService {
 
   // Verificar conectividad con ControlFile
   async checkConnectivity() {
+    // Si ya sabemos que no está disponible, retornar false inmediatamente
+    if (this.serviceUnavailable) {
+      return false;
+    }
+
     try {
       console.log('🔍 Verificando conectividad con ControlFile...');
       
-      // Intentar con health check primero
+      // Verificar que el servicio base esté disponible usando /api/health
       let response = await fetch(`${this.baseURL}/api/health`, {
         method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         signal: AbortSignal.timeout(5000)
       });
 
       if (response.ok) {
-        console.log('✅ ControlFile API está disponible');
+        console.log('✅ ControlFile API está disponible (/api/health responde)');
         return true;
       }
 
-      // Si health check falla, intentar con profile
-      console.log('⚠️ Health check falló, intentando con profile...');
-      const token = await this.getAuthToken();
-      response = await fetch(`${this.baseURL}/api/user/profile`, {
+      // Si /api/health falla, intentar con el endpoint raíz
+      console.log('⚠️ /api/health falló, intentando con endpoint raíz...');
+      response = await fetch(`${this.baseURL}/`, {
         method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
         signal: AbortSignal.timeout(5000)
       });
 
-      if (response.ok || response.status === 401) {
-        console.log('✅ ControlFile API responde (status:', response.status, ')');
+      if (response.ok) {
+        console.log('✅ ControlFile base está disponible (endpoint raíz responde)');
         return true;
       }
 
-      console.log('❌ ControlFile API no responde');
+      console.log('❌ ControlFile no responde en ningún endpoint');
+      this.serviceUnavailable = true;
       return false;
+
     } catch (error) {
       console.error('❌ Error de conectividad con ControlFile:', error);
+      this.serviceUnavailable = true;
       return false;
     }
   }
@@ -248,6 +269,12 @@ class ControlFileService {
   // Verificar si el usuario tiene cuenta en ControlFile
   async checkUserAccount() {
     try {
+      // Si ya sabemos que el servicio no está disponible, retornar false inmediatamente
+      if (this.serviceUnavailable) {
+        console.log('⚠️ ControlFile no está disponible, usando modo local');
+        return false;
+      }
+
       // Primero verificar si el servicio está disponible
       const isAvailable = await this.isControlFileAvailable();
       if (!isAvailable) {
@@ -255,31 +282,18 @@ class ControlFileService {
         return false;
       }
 
-      const token = await this.getAuthToken();
-      console.log('🔍 Verificando cuenta de usuario en ControlFile...');
+      // Como el endpoint /api/user/profile no existe, asumimos que el usuario no tiene cuenta
+      // hasta que se implemente correctamente el endpoint
+      console.log('⚠️ Endpoint /api/user/profile no implementado en ControlFile');
+      console.log('⚠️ Asumiendo que el usuario no tiene cuenta en ControlFile');
+      return false;
       
-      const response = await fetch(`${this.baseURL}/api/user/profile`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-        signal: AbortSignal.timeout(10000)
-      });
-
-      console.log('📥 Respuesta de verificación de cuenta:', response.status);
-
-      if (response.ok) {
-        console.log('✅ Usuario tiene cuenta en ControlFile');
-        return true;
-      } else if (response.status === 401) {
-        console.log('⚠️ Usuario no autenticado en ControlFile');
-        return false;
-      } else {
-        console.log('⚠️ Usuario no tiene cuenta en ControlFile aún');
-        return false;
-      }
     } catch (error) {
       console.log('❌ Error verificando cuenta de ControlFile:', error.message);
+      // Marcar el servicio como no disponible si hay errores de conectividad
+      if (error.message.includes('fetch') || error.message.includes('network') || error.message.includes('timeout')) {
+        this.serviceUnavailable = true;
+      }
       return false;
     }
   }
