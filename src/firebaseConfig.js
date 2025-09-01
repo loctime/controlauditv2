@@ -34,6 +34,12 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const storage = getStorage(app); // Inicializa el almacenamiento
 
+// Hacer auth disponible globalmente para debugging
+if (typeof window !== 'undefined') {
+  window.auth = auth;
+  console.log('🔧 Auth disponible globalmente como window.auth');
+}
+
 // inicio de sesión
 export const onSignIn = async ({ email, password }) => {
   try {
