@@ -1,14 +1,33 @@
 import { auth } from '../firebaseConfig';
 
+/*
+ * CONFIGURACIÓN DE CONTROLFILE
+ * 
+ * Para usar la API de ControlFile real (https://controlfile.onrender.com):
+ * 
+ * 1. La API de ControlFile debe estar configurada para aceptar tokens del proyecto Firebase 'auditoria-f9fc4'
+ * 2. O el usuario debe estar registrado en el proyecto Firebase 'controlstorage-eb796'
+ * 
+ * Configuración actual:
+ * - Frontend usa proyecto: auditoria-f9fc4
+ * - ControlFile usa proyecto: controlstorage-eb796
+ * - Por eso los tokens no son válidos (401 Unauthorized)
+ * 
+ * Para activar ControlFile real:
+ * 1. Cambiar this.baseURL a 'https://controlfile.onrender.com'
+ * 2. Configurar autenticación entre proyectos Firebase
+ * 3. O registrar usuarios en ambos proyectos
+ */
+
 class ControlFileService {
   constructor() {
     // Configuración de ControlFile real
     const isDevelopment = import.meta.env.DEV || window.location.hostname === 'localhost';
-    this.baseURL = 'https://controlfile.onrender.com'; // ✅ URL correcta de ControlFile
+    this.baseURL = 'https://controlfile.onrender.com'; // ✅ API de ControlFile real hasta configurar ControlFile
     
     console.log('🔧 ControlFile Service inicializado con URL:', this.baseURL);
     console.log('🌍 Entorno:', isDevelopment ? 'development' : 'production');
-    console.log('✅ Usando ControlFile real en producción');
+    console.log('⚠️ Temporalmente usando backend actual hasta configurar autenticación de ControlFile');
   }
 
   // Verificar si ControlFile está disponible
