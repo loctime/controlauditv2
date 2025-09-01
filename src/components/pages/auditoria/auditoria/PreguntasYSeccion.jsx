@@ -12,6 +12,7 @@ import PreguntaItem from './components/PreguntaItem';
 // Importar utilidades
 import { obtenerPreguntasNoContestadas } from './utils/respuestaUtils.jsx';
 import { comprimirImagen, validarArchivoImagen } from './utils/imageUtils';
+import { useControlFile } from '../../../../hooks/useControlFile.js';
 
 const PreguntasYSeccion = ({ 
   secciones: seccionesObj = {}, 
@@ -135,6 +136,9 @@ const PreguntasYSeccion = ({
     setComentario("");
   };
 
+  // ✅ USAR HOOK DE CONTROLFILE
+  const { isAvailable: controlFileAvailable, uploadFile: controlFileUpload } = useControlFile();
+
   const handleFileChange = async (seccionIndex, preguntaIndex, event) => {
     const file = event.target.files[0];
     
@@ -157,13 +161,43 @@ const PreguntasYSeccion = ({
       // Comprimir imagen antes de guardar
       const compressedFile = await comprimirImagen(file);
       
+      // ✅ INTEGRACIÓN CON CONTROLFILE USANDO HOOK
+      let controlFileData = null;
+      
+      if (controlFileAvailable) {
+        try {
+          console.log('📤 Subiendo imagen a ControlFile...');
+          
+          const uploadResult = await controlFileUpload(compressedFile, {
+            parentId: null // Se autocreará carpeta raíz "controlaudit"
+          });
+          
+          controlFileData = {
+            controlFileId: uploadResult.fileId,
+            controlFileUrl: uploadResult.downloadUrl,
+            bucketKey: uploadResult.bucketKey,
+            etag: uploadResult.etag
+          };
+          
+          console.log('✅ Imagen subida a ControlFile:', uploadResult.fileId);
+        } catch (controlFileError) {
+          console.warn('⚠️ Error con ControlFile, usando modo local:', controlFileError.message);
+          // Continuar con modo local si falla ControlFile
+        }
+      }
+      
       // Soportar múltiples imágenes por pregunta
       const nuevasImagenes = imagenes.map((img, index) => {
         if (index === seccionIndex) {
           const currentImages = img[preguntaIndex] || [];
+          const imageData = {
+            ...compressedFile,
+            ...(controlFileData && { controlFileData }) // Agregar datos de ControlFile si están disponibles
+          };
+          
           const updatedImages = Array.isArray(currentImages) 
-            ? [...currentImages, compressedFile]
-            : [compressedFile];
+            ? [...currentImages, imageData]
+            : [imageData];
           
           return [...img.slice(0, preguntaIndex), updatedImages, ...img.slice(preguntaIndex + 1)];
         }
@@ -173,7 +207,11 @@ const PreguntasYSeccion = ({
       setImagenes(nuevasImagenes);
       guardarImagenes(nuevasImagenes);
       
-      console.log(`✅ Imagen optimizada y guardada para pregunta ${preguntaIndex} de sección ${seccionIndex}`);
+      if (controlFileData) {
+        console.log(`✅ Imagen optimizada y subida a ControlFile: ${controlFileData.controlFileId}`);
+      } else {
+        console.log(`✅ Imagen optimizada y guardada localmente para pregunta ${preguntaIndex} de sección ${seccionIndex}`);
+      }
     } catch (error) {
       console.error('❌ Error al procesar imagen:', error);
       
