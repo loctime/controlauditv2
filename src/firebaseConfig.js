@@ -17,12 +17,13 @@ import { getStorage } from "firebase/storage"; // Importa getStorage
 import { isCapacitor, getAuthConfig } from './utils/capacitorUtils';
 import { getImprovedAuthConfig, getAuthEnvironmentInfo } from './utils/authUtils';
 
-// Your web app's Firebase configuration
+// ✅ Configuración para proyecto central de Auth (controlstorage-eb796)
+// Según la guía de integración de ControlFile
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSyD7pmD_EVRf0dJcocynpaXAdu3tveycrzg",
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "auditoria-f9fc4.firebaseapp.com",
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "auditoria-f9fc4",
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "auditoria-f9fc4.appspot.com",
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "controlstorage-eb796.firebaseapp.com",
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "controlstorage-eb796",
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "controlstorage-eb796.appspot.com",
   messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "156800340171",
   appId: import.meta.env.VITE_FIREBASE_APP_ID || "1:156800340171:web:fbe017105fd68b0f114b4e"
 };

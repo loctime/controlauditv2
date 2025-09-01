@@ -1,537 +1,204 @@
 import { auth } from '../firebaseConfig';
+import { ControlFileClient } from '../lib/controlfile-sdk';
 
 /*
- * CONFIGURACIÓN DE CONTROLFILE
+ * ✅ SERVICIO CONTROLFILE ACTUALIZADO
  * 
- * Para usar la API de ControlFile real (https://controlfile.onrender.com):
- * 
- * 1. La API de ControlFile debe estar configurada para aceptar tokens del proyecto Firebase 'auditoria-f9fc4'
- * 2. O el usuario debe estar registrado en el proyecto Firebase 'controlstorage-eb796'
- * 
- * Configuración actual:
- * - Frontend usa proyecto: auditoria-f9fc4
- * - ControlFile usa proyecto: controlstorage-eb796
- * - Por eso los tokens no son válidos (401 Unauthorized)
- * 
- * Para activar ControlFile real:
- * 1. Cambiar this.baseURL a 'https://controlfile.onrender.com'
- * 2. Configurar autenticación entre proyectos Firebase
- * 3. O registrar usuarios en ambos proyectos
+ * Siguiendo la guía de integración oficial:
+ * - Usa el proyecto central de Auth: controlstorage-eb796
+ * - Implementa el mini SDK de ControlFile
+ * - Maneja tokens automáticamente
+ * - Fallback al backend local en desarrollo
  */
 
 class ControlFileService {
   constructor() {
     // Configuración de ControlFile real
     const isDevelopment = import.meta.env.DEV || window.location.hostname === 'localhost';
-    this.baseURL = 'https://controlfile.onrender.com'; // ✅ API de ControlFile real hasta configurar ControlFile
+    this.baseURL = isDevelopment 
+      ? 'http://localhost:4001'  // Backend local en desarrollo (puerto actualizado)
+      : 'https://controlfile.onrender.com'; // ControlFile real en producción
+    
+    // Inicializar cliente ControlFile
+    this.controlFileClient = new ControlFileClient(
+      this.baseURL,
+      async () => {
+        if (!auth.currentUser) {
+          throw new Error('Usuario no autenticado');
+        }
+        return await auth.currentUser.getIdToken();
+      }
+    );
     
     console.log('🔧 ControlFile Service inicializado con URL:', this.baseURL);
     console.log('🌍 Entorno:', isDevelopment ? 'development' : 'production');
-    console.log('⚠️ Temporalmente usando backend actual hasta configurar autenticación de ControlFile');
+    console.log('✅ Usando proyecto central de Auth: controlstorage-eb796');
   }
 
   // Verificar si ControlFile está disponible
   async isControlFileAvailable() {
-    // Si ya sabemos que no está disponible, retornar false inmediatamente
-    if (this.serviceUnavailable) {
-      return false;
-    }
-
-    // Si no hay baseURL (servicio deshabilitado), retornar false
-    if (!this.baseURL) {
-      return false;
-    }
-
     try {
-      // Intentar con el endpoint raíz primero (que sabemos que funciona)
-      const response = await fetch(`${this.baseURL}/`, {
-        method: 'GET',
-        signal: AbortSignal.timeout(5000)
-      });
-      
-      if (response.ok) {
-        console.log('✅ ControlFile está disponible (endpoint raíz responde)');
-        return true;
-      } else {
-        console.log('⚠️ ControlFile endpoint raíz falló con status:', response.status);
-        this.serviceUnavailable = true;
-        return false;
-      }
+      await this.controlFileClient.health();
+      console.log('✅ ControlFile está disponible');
+      return true;
     } catch (error) {
       console.log('❌ ControlFile no disponible:', error.message);
-      this.serviceUnavailable = true;
       return false;
     }
   }
 
-  // Verificar si los endpoints de ControlFile están implementados
-  async areControlFileEndpointsAvailable() {
+  // Verificar cuenta de usuario en ControlFile
+  async checkUserAccount() {
     try {
-      // Obtener token de autenticación si está disponible
-      let authToken = null;
-      let authHeaders = {};
-      
-      try {
-        if (auth.currentUser) {
-          authToken = await this.getAuthToken();
-          authHeaders = {
-            'Authorization': `Bearer ${authToken}`,
-            'Content-Type': 'application/json',
-          };
-        }
-      } catch (authError) {
-        console.log('⚠️ No se pudo obtener token de autenticación para verificación de endpoints:', authError.message);
-      }
-      
-      // Verificar endpoint de perfil
-      const profileResponse = await fetch(`${this.baseURL}/api/user/profile`, {
-        method: 'GET',
-        headers: authHeaders,
-        signal: AbortSignal.timeout(5000)
-      });
-      
-      // Verificar endpoint de presign
-      const presignResponse = await fetch(`${this.baseURL}/api/uploads/presign`, {
-        method: 'POST',
-        headers: authHeaders,
-        body: JSON.stringify({
-          fileName: 'test.jpg',
-          fileSize: 12345,
-          mimeType: 'image/jpeg'
-        }),
-        signal: AbortSignal.timeout(5000)
-      });
-
-      // Considerar exitoso si responde 200 (auth exitosa), 401 (endpoint existe pero requiere auth), o 404 (endpoint no implementado)
-      // 401 significa que el endpoint existe pero la autenticación falló
-      const profileOk = profileResponse.ok || profileResponse.status === 401 || profileResponse.status === 404;
-      const presignOk = presignResponse.ok || presignResponse.status === 401 || presignResponse.status === 404;
-
-      console.log(`🔍 Endpoints ControlFile - Profile: ${profileOk ? '✅' : '❌'} (${profileResponse.status}), Presign: ${presignOk ? '✅' : '❌'} (${presignResponse.status})`);
-      
-      // Si recibimos 401, significa que el endpoint existe pero necesitamos autenticación válida
-      if (profileResponse.status === 401 || presignResponse.status === 401) {
-        console.log('⚠️ Endpoints requieren autenticación válida (401)');
-      }
-
-      return profileOk && presignOk;
+      const profile = await this.controlFileClient.getUserProfile();
+      console.log('✅ Cuenta de usuario verificada en ControlFile:', profile);
+      return { success: true, profile };
     } catch (error) {
-      console.log('❌ Error verificando endpoints de ControlFile:', error.message);
-      return false;
+      console.log('❌ Error verificando cuenta de usuario:', error.message);
+      return { success: false, error: error.message };
     }
   }
 
-  // Obtener token de Firebase
-  async getAuthToken() {
-    try {
-      if (!auth.currentUser) {
-        console.error('❌ No hay usuario autenticado en Firebase');
-        throw new Error('Usuario no autenticado');
-      }
-      
-      console.log('🔍 Obteniendo token de Firebase para usuario:', auth.currentUser.uid);
-      console.log('📧 Email del usuario:', auth.currentUser.email);
-      
-      // Forzar refresh del token para asegurar que esté actualizado
-      const token = await auth.currentUser.getIdToken(true);
-      
-      if (!token) {
-        throw new Error('No se pudo obtener el token de Firebase');
-      }
-      
-      console.log('✅ Token obtenido exitosamente (longitud:', token.length, 'caracteres)');
-      console.log('🔑 Token preview:', token.substring(0, 50) + '...');
-      
-      return token;
-    } catch (error) {
-      console.error('❌ Error obteniendo token de Firebase:', error);
-      console.error('🔍 Detalles del error:', {
-        code: error.code,
-        message: error.message,
-        userExists: !!auth.currentUser,
-        userUid: auth.currentUser?.uid
-      });
-      
-      // Si es un error de token expirado, intentar limpiar la sesión
-      if (error.code === 'auth/user-token-expired' || error.message.includes('token')) {
-        console.log('🔄 Token expirado, limpiando sesión...');
-        localStorage.removeItem('userInfo');
-        localStorage.removeItem('isLogged');
-        window.location.href = '/login';
-      }
-      
-      throw error;
-    }
-  }
-
-  // Verificar conectividad con ControlFile
-  async checkConnectivity() {
-    // Si ya sabemos que no está disponible, retornar false inmediatamente
-    if (this.serviceUnavailable) {
-      return false;
-    }
-
-    try {
-      console.log('🔍 Verificando conectividad con ControlFile...');
-      
-      // Verificar que el servicio base esté disponible usando /api/health
-      let response = await fetch(`${this.baseURL}/api/health`, {
-        method: 'GET',
-        signal: AbortSignal.timeout(5000)
-      });
-
-      if (response.ok) {
-        console.log('✅ ControlFile API está disponible (/api/health responde)');
-        return true;
-      }
-
-      // Si /api/health falla, intentar con el endpoint raíz
-      console.log('⚠️ /api/health falló, intentando con endpoint raíz...');
-      response = await fetch(`${this.baseURL}/`, {
-        method: 'GET',
-        signal: AbortSignal.timeout(5000)
-      });
-
-      if (response.ok) {
-        console.log('✅ ControlFile base está disponible (endpoint raíz responde)');
-        return true;
-      }
-
-      console.log('❌ ControlFile no responde en ningún endpoint');
-      this.serviceUnavailable = true;
-      return false;
-
-    } catch (error) {
-      console.error('❌ Error de conectividad con ControlFile:', error);
-      this.serviceUnavailable = true;
-      return false;
-    }
-  }
-
-  // Crear sesión de subida en ControlFile real
-  async createUploadSession(fileData) {
-    try {
-      const token = await this.getAuthToken();
-      console.log('🔑 Token obtenido, creando sesión en ControlFile...');
-      
-      const requestBody = {
-        fileName: fileData.name,
-        fileSize: fileData.size,
-        mimeType: fileData.type,
-        parentId: fileData.parentId || null,
-        metadata: {
-          app: 'controlaudit',
-          userId: auth.currentUser?.uid,
-          uploadedAt: new Date().toISOString()
-        }
-      };
-
-      console.log('📤 Enviando request a ControlFile:', `${this.baseURL}/api/uploads/presign`);
-      console.log('📋 Datos:', requestBody);
-      console.log('🔑 Token header:', `Bearer ${token.substring(0, 20)}...`);
-
-      const response = await fetch(`${this.baseURL}/api/uploads/presign`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(requestBody),
-        signal: AbortSignal.timeout(30000) // 30 segundos timeout
-      });
-
-      console.log('📥 Respuesta recibida:', response.status, response.statusText);
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('❌ Error en respuesta de ControlFile:', errorText);
-        console.error('🔍 Detalles del error 401:', {
-          status: response.status,
-          statusText: response.statusText,
-          url: response.url,
-          headers: Object.fromEntries(response.headers.entries())
-        });
-        
-        // Si es error 401, puede ser problema de token
-        if (response.status === 401) {
-          throw new Error(`Error de autenticación (401): El token de Firebase puede haber expirado. Por favor, cierra sesión y vuelve a iniciar. Detalles: ${errorText}`);
-        }
-        
-        throw new Error(`Error al crear sesión en ControlFile: ${response.status} - ${errorText}`);
-      }
-
-      const result = await response.json();
-      console.log('✅ Sesión creada exitosamente en ControlFile:', result);
-      return result;
-    } catch (error) {
-      console.error('❌ Error en createUploadSession:', error);
-      throw error;
-    }
-  }
-
-  // Subir archivo a ControlFile real
-  async uploadFile(file, sessionId) {
-    try {
-      const token = await this.getAuthToken();
-      console.log('📤 Subiendo archivo a ControlFile con sessionId:', sessionId);
-      
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('sessionId', sessionId);
-
-      const response = await fetch(`${this.baseURL}/api/uploads/proxy-upload`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-        body: formData,
-        signal: AbortSignal.timeout(60000) // 60 segundos timeout para archivos grandes
-      });
-
-      console.log('📥 Respuesta de subida de ControlFile:', response.status, response.statusText);
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('❌ Error en subida a ControlFile:', errorText);
-        throw new Error(`Error al subir archivo a ControlFile: ${response.status} - ${errorText}`);
-      }
-
-      const result = await response.json();
-      console.log('✅ Archivo subido exitosamente a ControlFile:', result);
-      return result;
-    } catch (error) {
-      console.error('❌ Error en uploadFile:', error);
-      throw error;
-    }
-  }
-
-  // Confirmar subida en ControlFile real
-  async confirmUpload(uploadSessionId) {
-    try {
-      const token = await this.getAuthToken();
-      console.log('✅ Confirmando subida en ControlFile con sessionId:', uploadSessionId);
-      
-      const response = await fetch(`${this.baseURL}/api/uploads/complete/${uploadSessionId}`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        signal: AbortSignal.timeout(30000)
-      });
-
-      console.log('📥 Respuesta de confirmación de ControlFile:', response.status, response.statusText);
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('❌ Error en confirmación de ControlFile:', errorText);
-        throw new Error(`Error al confirmar subida en ControlFile: ${response.status} - ${errorText}`);
-      }
-
-      const result = await response.json();
-      console.log('✅ Subida confirmada exitosamente en ControlFile:', result);
-      return result;
-    } catch (error) {
-      console.error('❌ Error en confirmUpload:', error);
-      throw error;
-    }
-  }
-
-  // Subida completa en un solo método con ControlFile real
+  // Subir archivo completo usando el SDK
   async uploadFileComplete(file, metadata = {}) {
     try {
-      console.log('🔄 Iniciando subida completa a ControlFile real:', file.name);
-      console.log('📊 Metadatos:', metadata);
+      console.log('🚀 Iniciando subida a ControlFile:', file.name);
       
-      // Verificar conectividad primero
-      const isConnected = await this.checkConnectivity();
-      if (!isConnected) {
-        throw new Error('No se puede conectar con ControlFile API. Verifica la URL y tu conexión a internet.');
-      }
-      
-      // Verificar si los endpoints están implementados
-      const endpointsAvailable = await this.areControlFileEndpointsAvailable();
-      if (!endpointsAvailable) {
-        console.log('⚠️ Endpoints de ControlFile no están implementados, usando fallback al backend local');
-        throw new Error('Endpoints de ControlFile no están implementados aún. Usando modo fallback.');
-      }
-      
-      // 1. Crear sesión de subida en ControlFile
-      const session = await this.createUploadSession({
+      // 1. Crear sesión de subida
+      const presign = await this.controlFileClient.presignUpload({
         name: file.name,
         size: file.size,
-        type: file.type,
-        parentId: metadata.parentId
+        mime: file.type,
+        parentId: null
       });
       
-      console.log('✅ Sesión creada en ControlFile:', session.uploadId);
+      console.log('✅ Sesión de subida creada:', presign);
       
-      // 2. Subir archivo a ControlFile
-      const uploadResult = await this.uploadFile(file, session.uploadId);
-      console.log('✅ Archivo subido a ControlFile:', uploadResult);
+      if (presign.url) {
+        // 2. Subir archivo (PUT simple)
+        const uploadResponse = await fetch(presign.url, {
+          method: 'PUT',
+          body: file,
+          headers: {
+            'Content-Type': file.type,
+          }
+        });
+        
+        if (!uploadResponse.ok) {
+          throw new Error(`Error en subida PUT: ${uploadResponse.status}`);
+        }
+        
+        // 3. Confirmar subida
+        const etag = uploadResponse.headers.get('etag');
+        const confirmResult = await this.controlFileClient.confirm({
+          uploadSessionId: presign.uploadSessionId,
+          etag: etag
+        });
+        
+        console.log('✅ Archivo subido exitosamente:', confirmResult);
+        
+        return {
+          success: true,
+          fileId: confirmResult.fileId,
+          url: confirmResult.url,
+          metadata: confirmResult.metadata
+        };
+        
+      } else if (presign.multipart) {
+        // TODO: Implementar subida multipart si es necesario
+        throw new Error('Subida multipart no implementada aún');
+      }
       
-      // 3. Confirmar subida en ControlFile
-      const confirmResult = await this.confirmUpload(session.uploadId);
-      console.log('✅ Subida confirmada en ControlFile:', confirmResult);
+    } catch (error) {
+      console.error('❌ Error en subida a ControlFile:', error);
+      return {
+        success: false,
+        error: error.message
+      };
+    }
+  }
+
+  // Listar archivos del usuario
+  async listUserFiles(parentId = null, pageSize = 50) {
+    try {
+      const result = await this.controlFileClient.list({ parentId, pageSize });
+      console.log('✅ Archivos listados:', result);
+      return { success: true, files: result.items };
+    } catch (error) {
+      console.error('❌ Error listando archivos:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  // Obtener URL de descarga
+  async getDownloadUrl(fileId) {
+    try {
+      const result = await this.controlFileClient.presignGet({ fileId });
+      console.log('✅ URL de descarga obtenida:', result);
+      return { success: true, url: result.url };
+    } catch (error) {
+      console.error('❌ Error obteniendo URL de descarga:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  // Verificar conectividad completa
+  async checkConnectivity() {
+    try {
+      const health = await this.controlFileClient.health();
+      const profile = await this.controlFileClient.getUserProfile();
       
       return {
         success: true,
-        fileId: confirmResult.fileId,
-        url: confirmResult.url,
-        metadata: confirmResult.metadata,
-        controlFileId: confirmResult.controlFileId, // ID específico de ControlFile
-        uploadedToControlFile: true
+        health,
+        profile,
+        message: 'ControlFile completamente operativo'
       };
-      
     } catch (error) {
-      console.error('❌ Error en subida completa a ControlFile:', error);
-      
-      // Si es un error de endpoints no implementados, usar fallback automáticamente
-      if (error.message.includes('Endpoints de ControlFile no están implementados') || 
-          error.message.includes('404') || 
-          error.message.includes('500')) {
-        
-        console.log('🔄 Intentando fallback al backend local...');
-        
-        try {
-          // Usar el backend local como fallback
-          const fallbackResult = await this.simulateUpload(file, metadata);
-          console.log('✅ Fallback exitoso:', fallbackResult);
-          
-          return {
-            ...fallbackResult,
-            fallbackUsed: true,
-            originalError: error.message
-          };
-        } catch (fallbackError) {
-          console.error('❌ Fallback también falló:', fallbackError);
-          throw new Error(`Error en subida a ControlFile: ${error.message}. Fallback también falló: ${fallbackError.message}`);
-        }
-      }
-      
-      // Proporcionar información de diagnóstico
-      const diagnosticInfo = {
+      return {
+        success: false,
         error: error.message,
-        baseURL: this.baseURL,
-        fileName: file.name,
-        fileSize: file.size,
-        fileType: file.type,
-        timestamp: new Date().toISOString(),
-        userAgent: navigator.userAgent
+        message: 'ControlFile no disponible'
       };
-      
-      console.log('🔍 Información de diagnóstico:', diagnosticInfo);
-      
-      throw new Error(`Error en subida a ControlFile: ${error.message}`);
     }
   }
 
-  // Verificar si el usuario tiene cuenta en ControlFile
-  async checkUserAccount() {
-    try {
-      // Si ya sabemos que el servicio no está disponible, retornar false inmediatamente
-      if (this.serviceUnavailable) {
-        console.log('⚠️ ControlFile no está disponible, usando modo local');
-        return false;
-      }
-
-      // Primero verificar si el servicio está disponible
-      const isAvailable = await this.isControlFileAvailable();
-      if (!isAvailable) {
-        console.log('⚠️ ControlFile no está disponible, usando modo local');
-        return false;
-      }
-
-      // Verificar si los endpoints están implementados
-      const endpointsAvailable = await this.areControlFileEndpointsAvailable();
-      if (!endpointsAvailable) {
-        console.log('⚠️ Endpoints de ControlFile no están implementados, usando modo local');
-        return false;
-      }
-
-      // Intentar verificar la cuenta del usuario en ControlFile
-      try {
-        const token = await this.getAuthToken();
-        const response = await fetch(`${this.baseURL}/api/user/profile`, {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-          signal: AbortSignal.timeout(10000)
-        });
-
-        if (response.ok) {
-          const userData = await response.json();
-          console.log('✅ Usuario tiene cuenta en ControlFile:', userData);
-          return true;
-        } else if (response.status === 404) {
-          console.log('⚠️ Endpoint de perfil no implementado en ControlFile (404)');
-          return false;
-        } else if (response.status === 401) {
-          console.log('⚠️ Error de autenticación (401) - Token inválido o expirado');
-          // Intentar obtener un nuevo token y reintentar
-          try {
-            console.log('🔄 Intentando obtener nuevo token...');
-            const newToken = await this.getAuthToken();
-            const retryResponse = await fetch(`${this.baseURL}/api/user/profile`, {
-              method: 'GET',
-              headers: {
-                'Authorization': `Bearer ${newToken}`,
-                'Content-Type': 'application/json',
-              },
-              signal: AbortSignal.timeout(10000)
-            });
-            
-            if (retryResponse.ok) {
-              const userData = await retryResponse.json();
-              console.log('✅ Usuario tiene cuenta en ControlFile (reintento exitoso):', userData);
-              return true;
-            } else {
-              console.log('⚠️ Reintento falló (status:', retryResponse.status, ')');
-              return false;
-            }
-          } catch (retryError) {
-            console.log('⚠️ Error en reintento:', retryError.message);
-            return false;
-          }
-        } else {
-          console.log('⚠️ Usuario no tiene cuenta en ControlFile (status:', response.status, ')');
-          return false;
-        }
-      } catch (error) {
-        console.log('⚠️ Error verificando cuenta en ControlFile:', error.message);
-        return false;
-      }
-      
-    } catch (error) {
-      console.log('❌ Error verificando cuenta de ControlFile:', error.message);
-      // Marcar el servicio como no disponible si hay errores de conectividad
-      if (error.message.includes('fetch') || error.message.includes('network') || error.message.includes('timeout')) {
-        this.serviceUnavailable = true;
-      }
-      return false;
-    }
-  }
-
-  // Obtener información de diagnóstico
+  // Obtener información de diagnóstico (método faltante)
   async getDiagnosticInfo() {
-    const isAvailable = await this.isControlFileAvailable();
-    const endpointsAvailable = await this.areControlFileEndpointsAvailable();
-    const hasAccount = await this.checkUserAccount();
-    
-    return {
-      baseURL: this.baseURL,
-      environment: import.meta.env.MODE,
-      isDevelopment: import.meta.env.DEV || window.location.hostname === 'localhost',
-      serviceAvailable: isAvailable,
-      endpointsAvailable: endpointsAvailable,
-      userHasAccount: hasAccount,
-      timestamp: new Date().toISOString(),
-      userAgent: navigator.userAgent,
-      hasAuth: !!auth.currentUser,
-      authUid: auth.currentUser?.uid
-    };
+    try {
+      const isAvailable = await this.isControlFileAvailable();
+      const connectivity = await this.checkConnectivity();
+      const hasAccount = await this.checkUserAccount();
+      
+      return {
+        baseURL: this.baseURL,
+        environment: import.meta.env.MODE,
+        isDevelopment: import.meta.env.DEV || window.location.hostname === 'localhost',
+        serviceAvailable: isAvailable,
+        connectivity: connectivity.success,
+        userHasAccount: hasAccount.success,
+        timestamp: new Date().toISOString(),
+        userAgent: navigator.userAgent,
+        hasAuth: !!auth.currentUser,
+        authUid: auth.currentUser?.uid,
+        authEmail: auth.currentUser?.email
+      };
+    } catch (error) {
+      return {
+        baseURL: this.baseURL,
+        environment: import.meta.env.MODE,
+        isDevelopment: import.meta.env.DEV || window.location.hostname === 'localhost',
+        serviceAvailable: false,
+        connectivity: false,
+        userHasAccount: false,
+        error: error.message,
+        timestamp: new Date().toISOString(),
+        userAgent: navigator.userAgent,
+        hasAuth: !!auth.currentUser,
+        authUid: auth.currentUser?.uid,
+        authEmail: auth.currentUser?.email
+      };
+    }
   }
 
   // Simular subida para pruebas (fallback)
@@ -564,27 +231,9 @@ class ControlFileService {
   async testProfile() {
     try {
       console.log('🧪 Probando endpoint /api/user/profile en ControlFile...');
-      const token = await this.getAuthToken();
-      
-      const response = await fetch(`${this.baseURL}/api/user/profile`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        signal: AbortSignal.timeout(10000)
-      });
-
-      console.log('📥 Respuesta de perfil de ControlFile:', response.status, response.statusText);
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Error ${response.status}: ${errorText}`);
-      }
-
-      const result = await response.json();
-      console.log('✅ Prueba de perfil de ControlFile exitosa:', result);
-      return result;
+      const profile = await this.controlFileClient.getUserProfile();
+      console.log('✅ Prueba de perfil de ControlFile exitosa:', profile);
+      return profile;
     } catch (error) {
       console.error('❌ Error en prueba de perfil de ControlFile:', error);
       throw error;
@@ -594,38 +243,14 @@ class ControlFileService {
   async testPresign(uploadId = '') {
     try {
       console.log('🧪 Probando endpoint /api/uploads/presign en ControlFile...');
-      const token = await this.getAuthToken();
-      
-      const requestBody = {
-        fileName: 'test.jpg',
-        fileSize: 12345,
-        mimeType: 'image/jpeg',
-        metadata: {
-          app: 'controlaudit',
-          test: true
-        }
-      };
-
-      const response = await fetch(`${this.baseURL}/api/uploads/presign`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(requestBody),
-        signal: AbortSignal.timeout(10000)
+      const presign = await this.controlFileClient.presignUpload({
+        name: 'test.jpg',
+        size: 12345,
+        mime: 'image/jpeg',
+        parentId: null
       });
-
-      console.log('📥 Respuesta de presign de ControlFile:', response.status, response.statusText);
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Error ${response.status}: ${errorText}`);
-      }
-
-      const result = await response.json();
-      console.log('✅ Prueba de presign de ControlFile exitosa:', result);
-      return result;
+      console.log('✅ Prueba de presign de ControlFile exitosa:', presign);
+      return presign;
     } catch (error) {
       console.error('❌ Error en prueba de presign de ControlFile:', error);
       throw error;
@@ -635,39 +260,33 @@ class ControlFileService {
   async testCompleteUpload() {
     try {
       console.log('🧪 Probando endpoint /api/uploads/complete en ControlFile...');
-      const token = await this.getAuthToken();
-      
-      // Primero crear una sesión de presign
       const presignResult = await this.testPresign();
       
-      if (!presignResult.uploadId) {
-        throw new Error('No se pudo obtener uploadId del presign de ControlFile');
+      if (!presignResult.uploadSessionId) {
+        throw new Error('No se pudo obtener uploadSessionId del presign de ControlFile');
       }
 
-      // Luego completar la subida
-      const response = await fetch(`${this.baseURL}/api/uploads/complete/${presignResult.uploadId}`, {
-        method: 'POST',
+      // Simular subida PUT
+      const uploadResponse = await fetch(presignResult.url, {
+        method: 'PUT',
+        body: new Blob(['test content']), // Simular archivo
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({}),
-        signal: AbortSignal.timeout(10000)
+          'Content-Type': 'image/jpeg' // Simular tipo de archivo
+        }
       });
 
-      console.log('📥 Respuesta de complete de ControlFile:', response.status, response.statusText);
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Error ${response.status}: ${errorText}`);
+      if (!uploadResponse.ok) {
+        throw new Error(`Error en subida PUT simulada: ${uploadResponse.status}`);
       }
 
-      const result = await response.json();
-      console.log('✅ Prueba de complete de ControlFile exitosa:', result);
-      return {
-        presign: presignResult,
-        complete: result
-      };
+      const etag = uploadResponse.headers.get('etag');
+      const confirmResult = await this.controlFileClient.confirm({
+        uploadSessionId: presignResult.uploadSessionId,
+        etag: etag
+      });
+
+      console.log('✅ Prueba de complete de ControlFile exitosa:', confirmResult);
+      return confirmResult;
     } catch (error) {
       console.error('❌ Error en prueba de complete de ControlFile:', error);
       throw error;
