@@ -33,7 +33,9 @@ const config: CapacitorConfig = {
     webContentsDebuggingEnabled: true,
     allowsLinkPreview: true,
     scrollEnabled: true
-  }
+  },
+  // ✅ Configuración para Google OAuth en APK
+  scheme: 'com.controlaudit.app'
 };
 
 export default config;

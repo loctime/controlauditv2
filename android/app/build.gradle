@@ -1,4 +1,8 @@
-apply plugin: 'com.android.application'
+plugins {
+    id 'com.android.application'
+    // Add the Google services Gradle plugin
+    id 'com.google.gms.google-services'
+}
 
 android {
     namespace "com.controlaudit.app"
@@ -74,6 +78,16 @@ repositories {
 }
 
 dependencies {
+    // Import the Firebase BoM
+    implementation platform('com.google.firebase:firebase-bom:34.2.0')
+    
+    // Firebase Authentication
+    implementation 'com.google.firebase:firebase-auth'
+    
+    // Firebase Analytics (opcional)
+    implementation 'com.google.firebase:firebase-analytics'
+    
+    // Dependencias existentes
     implementation fileTree(include: ['*.jar'], dir: 'libs')
     implementation "androidx.appcompat:appcompat:$androidxAppCompatVersion"
     implementation "androidx.coordinatorlayout:coordinatorlayout:$androidxCoordinatorLayoutVersion"
@@ -95,11 +109,13 @@ android {
     }
 }
 
+// Verificar si existe google-services.json
 try {
     def servicesJSON = file('google-services.json')
-    if (servicesJSON.text) {
-        apply plugin: 'com.google.gms.google-services'
+    if (!servicesJSON.exists()) {
+        logger.warn("⚠️  google-services.json not found. Firebase services won't work properly.")
+        logger.info("📝 Download google-services.json from Firebase Console and place it in android/app/")
     }
 } catch(Exception e) {
-    logger.info("google-services.json not found, google-services plugin not applied. Push Notifications won't work")
+    logger.warn("⚠️  Error checking google-services.json: ${e.message}")
 }

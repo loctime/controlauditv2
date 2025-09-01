@@ -41,7 +41,9 @@
     "analyze": "npm run build && npx vite-bundle-analyzer dist",
     "clean": "rm -rf dist node_modules/.vite",
     "optimize": "npm run clean && npm run build",
-    "setup:repo": "node scripts/setup-public-repo.js"
+    "setup:repo": "node scripts/setup-public-repo.js",
+    "setup:google-oauth": "node scripts/setup-google-oauth.js",
+    "setup:java": "scripts\\setup-java-env.bat"
   },
   "dependencies": {
     "@capacitor/android": "^7.4.2",

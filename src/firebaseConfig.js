@@ -128,12 +128,31 @@ export const signInWithGoogle = async () => {
     provider.addScope('email');
     provider.addScope('profile');
     
+    // ✅ Configurar URIs de redirección específicas para diferentes entornos
+    const hostname = window.location.hostname;
+    const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1';
+    const isCapacitor = window.Capacitor && window.Capacitor.isNative;
+    
+    console.log("🌐 Entorno detectado:", {
+      hostname,
+      isLocalhost,
+      isCapacitor,
+      userAgent: navigator.userAgent
+    });
+    
+    // Para Capacitor (APK), usar redirect automáticamente
+    if (isCapacitor) {
+      console.log("📱 Detectado Capacitor, usando signInWithRedirect");
+      await signInWithRedirect(auth, provider);
+      return { user: null, pendingRedirect: true };
+    }
+    
+    // Para navegador web, intentar popup primero
     console.log("🌐 Intentando signInWithPopup (navegador web)");
     
-    // Intentar popup primero
     try {
       const result = await signInWithPopup(auth, provider);
-      console.log("Inicio de sesión con Google exitoso (popup):", result);
+      console.log("✅ Inicio de sesión con Google exitoso (popup):", result);
       return result;
     } catch (popupError) {
       console.log("❌ Error con popup, cambiando automáticamente a redirect:", popupError);
@@ -143,7 +162,22 @@ export const signInWithGoogle = async () => {
       return { user: null, pendingRedirect: true };
     }
   } catch (error) {
-    console.error("Error al iniciar sesión con Google:", error);
+    console.error("❌ Error al iniciar sesión con Google:", error);
+    
+    // ✅ Mostrar mensaje específico para el error de redirect_uri_mismatch
+    if (error.code === 'auth/unauthorized-domain' || 
+        error.message.includes('redirect_uri_mismatch')) {
+      toast.error("Error de configuración de Google OAuth. Contacta al administrador.", {
+        position: "top-left",
+        autoClose: 5000,
+      });
+    } else {
+      toast.error("Error al iniciar sesión con Google. Inténtalo de nuevo.", {
+        position: "top-left",
+        autoClose: 3000,
+      });
+    }
+    
     throw error;
   }
 };
