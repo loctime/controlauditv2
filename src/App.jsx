@@ -17,6 +17,7 @@ import AppRouter from "./router/AppRouter";
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { initializeSafeAreas } from './utils/safeAreaUtils';
+import { Box, Typography } from '@mui/material';
 // ControlFileInfo obsoleto - ahora se usa backend compartido
 
 const App = () => {
