@@ -17,7 +17,7 @@ import AppRouter from "./router/AppRouter";
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { initializeSafeAreas } from './utils/safeAreaUtils';
-import ControlFileInfo from './components/common/ControlFileInfo';
+// ControlFileInfo obsoleto - ahora se usa backend compartido
 
 const App = () => {
   // Inicializar safe areas cuando se monta la aplicación
@@ -44,8 +44,12 @@ const App = () => {
                 pauseOnHover
                 theme="light"
               />
-              {/* ✅ Footer con información de ControlFile */}
-              <ControlFileInfo variant="footer" />
+                      {/* ✅ Footer con información del sistema */}
+        <Box sx={{ textAlign: 'center', py: 2, color: 'text.secondary' }}>
+          <Typography variant="body2">
+            ControlAudit v2 - Sistema de Auditorías Multi-Tenant
+          </Typography>
+        </Box>
             </div>
           </BrowserRouter>
         </LocalizationProvider>

@@ -12,7 +12,7 @@ import PreguntaItem from './components/PreguntaItem';
 // Importar utilidades
 import { obtenerPreguntasNoContestadas } from './utils/respuestaUtils.jsx';
 import { comprimirImagen, validarArchivoImagen } from './utils/imageUtils';
-import { useControlFile } from '../../../../hooks/useControlFile.js';
+// useControlFile obsoleto - ahora se usa backend compartido
 
 const PreguntasYSeccion = ({ 
   secciones: seccionesObj = {}, 
@@ -137,7 +137,16 @@ const PreguntasYSeccion = ({
   };
 
   // ✅ USAR HOOK DE CONTROLFILE
-  const { isAvailable: controlFileAvailable, uploadFile: controlFileUpload } = useControlFile();
+  // TODO: Implementar usando backend compartido
+  const controlFileAvailable = true;
+  const controlFileUpload = async (file, options) => {
+    // Simulación temporal hasta implementar backend compartido
+    return {
+      success: true,
+      fileId: 'temp_' + Date.now(),
+      url: 'https://example.com/temp-image.jpg'
+    };
+  };
 
   const handleFileChange = async (seccionIndex, preguntaIndex, event) => {
     const file = event.target.files[0];

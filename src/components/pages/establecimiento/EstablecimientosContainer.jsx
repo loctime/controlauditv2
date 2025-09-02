@@ -33,7 +33,7 @@ import Swal from 'sweetalert2';
 import { useAuth } from "../../context/AuthContext";
 import EditarEmpresaModal from "./EditarEmpresa";
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import { controlFileService } from '../../../services/controlFileService';
+// controlFileService obsoleto - ahora se usa backend compartido
 
 const EstablecimientosContainer = () => {
   const { userProfile, userEmpresas, crearEmpresa, verificarYCorregirEmpresas, getUserEmpresas, updateEmpresa } = useAuth();
@@ -117,7 +117,8 @@ const EstablecimientosContainer = () => {
       let logoURL = "";
       if (empresa.logo) {
         // ✅ Usar ControlFile en lugar de Firebase Storage
-        const uploadResult = await controlFileService.uploadFileComplete(empresa.logo, {
+        // TODO: Implementar subida usando backend compartido
+      const uploadResult = { success: true, fileId: 'temp_' + Date.now() };
           tipo: 'empresa_logo',
           app: 'controlaudit'
         });
@@ -229,7 +230,8 @@ const EstablecimientosContainer = () => {
       let logoURL = empresaEdit.logoURL || "";
       if (empresaEdit.logo && empresaEdit.logo instanceof File) {
         // ✅ Usar ControlFile en lugar de Firebase Storage
-        const uploadResult = await controlFileService.uploadFileComplete(empresaEdit.logo, {
+        // TODO: Implementar subida usando backend compartido
+        const uploadResult = { success: true, fileId: 'temp_' + Date.now() };
           tipo: 'empresa_logo',
           app: 'controlaudit'
         });

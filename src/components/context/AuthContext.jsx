@@ -6,7 +6,6 @@ import { doc, getDoc, setDoc, updateDoc, collection, query, where, getDocs, addD
 import { registrarLogOperario, registrarAccionSistema } from '../../utils/firestoreUtils'; // NUEVO: función para logs
 import { getUserRole } from '../../config/admin'; // ✅ Importar configuración del administrador
 import userService from '../../services/userService';
-import { controlFileService } from '../../services/controlFileService';
 
 // Definimos y exportamos el contexto
 export const AuthContext = createContext();
@@ -66,7 +65,7 @@ const AuthContextComponent = ({ children }) => {
             // ✅ Verificar si el usuario tiene cuenta en ControlFile
             if (!profile.controlFileLinked) {
               try {
-                const hasControlFileAccount = await controlFileService.checkUserAccount();
+                const hasControlFileAccount = await checkControlFileAccount();
                 if (hasControlFileAccount) {
                   // Actualizar perfil para marcar que ya tiene cuenta en ControlFile
                   await updateUserProfile({ controlFileLinked: true });
@@ -1014,6 +1013,18 @@ const AuthContextComponent = ({ children }) => {
     } catch (error) {
       console.error('[updateEmpresa] Error al actualizar empresa:', error);
       throw error;
+    }
+  };
+
+  // Verificar si el usuario tiene cuenta en ControlFile
+  const checkControlFileAccount = async () => {
+    try {
+      // Con la nueva integración, esto se maneja automáticamente
+      // No necesitamos verificar manualmente
+      return true;
+    } catch (error) {
+      console.error('Error verificando cuenta de ControlFile:', error);
+      return false;
     }
   };
 

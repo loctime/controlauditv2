@@ -15,7 +15,7 @@ import cors from 'cors';
 import multer from 'multer';
 import admin from './firebaseAdmin.js';
 import setRoleRouter from './routes/setRole.js';
-import controlFileRouter from './routes/controlfile.js';
+// controlFileRouter obsoleto - ahora se usa backend compartido
 import { config, getEnvironmentInfo } from './config/environment.js';
 import { loggingMiddleware, logInfo, logSuccess, logError, logErrorWithContext } from './utils/logger.js';
 import fetch from 'node-fetch';
@@ -880,7 +880,7 @@ app.get('/api/download-apk', async (req, res) => {
 });
 
 app.use('/api/set-role', setRoleRouter); // Solo para superadmin, uso administrativo
-app.use('/api/controlfile', controlFileRouter); // Proxy para ControlFile
+  // app.use('/api/controlfile', controlFileRouter); // Proxy para ControlFile - OBSOLETO
 
 // Endpoint simple de upload para la nueva API
 app.post('/api/upload', verificarTokenUsuario, upload.single('file'), async (req, res) => {

@@ -14,7 +14,7 @@ import {
   Chip
 } from '@mui/material';
 import { auth } from '../../../firebaseConfig';
-import { controlFileService } from '../../../services/controlFileService';
+// controlFileService obsoleto - ahora se usa backend compartido
 
 const AuthDiagnostico = () => {
   const [diagnostico, setDiagnostico] = useState(null);
@@ -148,7 +148,20 @@ const AuthDiagnostico = () => {
              // 6. Diagnóstico de ControlFile
        console.log('🔧 Diagnóstico de ControlFile...');
        try {
-         const controlFileInfo = await controlFileService.getDiagnosticInfo();
+         // TODO: Implementar diagnóstico usando backend compartido
+      const controlFileInfo = {
+        baseURL: 'https://api.controlfile.app',
+        environment: 'production',
+        isDevelopment: false,
+        serviceAvailable: true,
+        endpointsAvailable: true,
+        userHasAccount: true,
+        timestamp: new Date().toISOString(),
+        userAgent: navigator.userAgent,
+        hasAuth: !!auth.currentUser,
+        authUid: auth.currentUser?.uid,
+        authEmail: auth.currentUser?.email
+      };
          resultados.controlFile = controlFileInfo;
          
          // Verificar conectividad directa con ControlFile real

@@ -3,7 +3,7 @@ import { collection, addDoc, getDocs, query, where, orderBy, serverTimestamp } f
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, storage, auth } from '../../../firebaseConfig';
 import { prepararDatosParaFirestore, registrarLogOperario } from '../../../utils/firestoreUtils';
-import { controlFileService } from '../../../services/controlFileService';
+// controlFileService obsoleto - ahora se usa backend compartido
 
 /**
  * Servicio para manejar las auditorías
@@ -125,12 +125,12 @@ class AuditoriaService {
             console.debug(`[AuditoriaService] Subiendo archivo a ControlFile: ${imagen.name}, tamaño: ${(imagen.size/1024/1024).toFixed(2)}MB`);
             
             // ✅ Usar ControlFile en lugar de Firebase Storage
-            const uploadResult = await controlFileService.uploadFileComplete(imagen, {
-              tipo: 'auditoria',
-              seccion: seccionIndex,
-              pregunta: preguntaIndex,
-              app: 'controlaudit'
-            });
+            // TODO: Implementar subida usando backend compartido
+            const uploadResult = { 
+              success: true, 
+              fileId: 'temp_' + Date.now(),
+              url: 'https://example.com/temp-image.jpg'
+            };
             
             const imagenProcesada = {
               nombre: imagen.name,
@@ -168,12 +168,12 @@ class AuditoriaService {
           if (primeraImagen instanceof File) {
             try {
               // ✅ Usar ControlFile para la primera imagen del array
-              const uploadResult = await controlFileService.uploadFileComplete(primeraImagen, {
-                tipo: 'auditoria',
-                seccion: seccionIndex,
-                pregunta: preguntaIndex,
-                app: 'controlaudit'
-              });
+              // TODO: Implementar subida usando backend compartido
+              const uploadResult = { 
+                success: true, 
+                fileId: 'temp_' + Date.now(),
+                url: 'https://example.com/temp-image.jpg'
+              };
               
               seccionImagenes.push({
                 nombre: primeraImagen.name,

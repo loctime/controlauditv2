@@ -1,7 +1,7 @@
-// Configuración simplificada de API para ControlFile
+// Configuración de API para ControlAudit
 export const API_CONFIG = {
-  // ControlFile como API principal
-  baseURL: (typeof import.meta !== 'undefined' && import.meta.env?.VITE_CONTROLFILE_API_URL) || 'http://localhost:4000',
+  // Backend compartido como API principal
+  baseURL: (typeof import.meta !== 'undefined' && import.meta.env?.VITE_BACKEND_URL) || 'http://localhost:4000',
   
   // Endpoints simplificados
   endpoints: {
