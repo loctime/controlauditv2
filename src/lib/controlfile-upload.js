@@ -12,7 +12,7 @@ import { buildControlFileUrl, buildDownloadUrl, validateFileForControlFile } fro
  * @returns {Promise<Object>} Resultado de la subida con fileId
  */
 export async function uploadToControlFile(params) {
-  const { baseUrl, idToken, file, parentId = null } = params;
+  const { idToken, file, parentId = null } = params;
   
   // ✅ Validar archivo antes de subir
   const validation = validateFileForControlFile(file);
@@ -40,12 +40,19 @@ export async function uploadToControlFile(params) {
         name: file.name,
         size: file.size,
         mime: file.type,
-        parentId,
+        parentId: null, // ControlFile creará carpeta automáticamente o subirá a la raíz
       }),
     });
 
     if (!presignRes.ok) {
       const errorText = await presignRes.text();
+      console.error('❌ Error detallado del servidor:', {
+        status: presignRes.status,
+        statusText: presignRes.statusText,
+        headers: Object.fromEntries(presignRes.headers.entries()),
+        body: errorText,
+        url: presignRes.url
+      });
       throw new Error(`Error en presign: ${presignRes.status} - ${errorText}`);
     }
 
@@ -107,19 +114,7 @@ export async function uploadToControlFile(params) {
   }
 }
 
-/**
- * Helper para obtener la URL base según el entorno
- * @returns {string} URL base del backend
- */
-export function getControlFileBaseUrl() {
-  // En desarrollo, usar el backend local
-  if (import.meta.env.DEV || window.location.hostname === 'localhost') {
-    return 'http://localhost:4000';
-  }
-  
-  // En producción, usar el backend de ControlAudit
-  return 'https://controlauditv2.onrender.com';
-}
+
 
 /**
  * Helper para subir archivos con configuración automática
@@ -129,10 +124,8 @@ export function getControlFileBaseUrl() {
  * @returns {Promise<Object>} Resultado de la subida
  */
 export async function uploadFile(file, idToken, parentId = null) {
-  const baseUrl = getControlFileBaseUrl();
-  
+  // Usar la configuración centralizada de controlfile.js
   return uploadToControlFile({
-    baseUrl,
     idToken,
     file,
     parentId

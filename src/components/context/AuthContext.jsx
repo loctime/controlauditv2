@@ -79,26 +79,34 @@ const AuthContextComponent = ({ children }) => {
             }
             
             // Registrar log de inicio de sesión
-            await registrarAccionSistema(
-              firebaseUser.uid,
-              `Inicio de sesión`,
-              { 
-                email: firebaseUser.email,
-                displayName: firebaseUser.displayName,
-                role: profile.role
-              },
-              'login',
-              'usuario',
-              firebaseUser.uid
-            );
+            try {
+              await registrarAccionSistema(
+                firebaseUser.uid,
+                `Inicio de sesión`,
+                { 
+                  email: firebaseUser.email,
+                  displayName: firebaseUser.displayName,
+                  role: profile.role
+                },
+                'login',
+                'usuario',
+                firebaseUser.uid
+              );
+            } catch (error) {
+              console.warn('[AuthContext] No se pudo registrar log de inicio de sesión:', error.message);
+            }
             
             // Cargar datos del usuario
-            await Promise.all([
-              getUserEmpresas(firebaseUser.uid),
-              getUserAuditorias(firebaseUser.uid),
-              // getUserSocios(firebaseUser.uid), // Eliminado: socios
-              getAuditoriasCompartidas(firebaseUser.uid)
-            ]);
+            try {
+              await Promise.all([
+                getUserEmpresas(firebaseUser.uid),
+                getUserAuditorias(firebaseUser.uid),
+                // getUserSocios(firebaseUser.uid), // Eliminado: socios
+                getAuditoriasCompartidas(firebaseUser.uid)
+              ]);
+            } catch (error) {
+              console.warn('[AuthContext] Error al cargar datos del usuario:', error.message);
+            }
           }
         } else {
           // Usuario no autenticado
@@ -300,10 +308,39 @@ const AuthContextComponent = ({ children }) => {
       const userSnap = await getDoc(userRef);
 
       if (userSnap.exists()) {
-        const profileData = userSnap.data();
+        const rawData = userSnap.data();
+        console.log('[AuthContext] Datos raw del usuario:', {
+          uid: firebaseUser.uid,
+          rawDataKeys: Object.keys(rawData),
+          hasRole: !!rawData.role,
+          role: rawData.role
+        });
+        
+        const profileData = {
+          ...rawData,
+          uid: firebaseUser.uid // ✅ Agregar el UID del documento
+        };
+        
+        console.log('[AuthContext] ProfileData preparado:', {
+          uid: profileData.uid,
+          role: profileData.role,
+          hasUid: !!profileData.uid
+        });
         
         // Asegurar que los permisos estén correctamente asignados según el rol
         const permisosActualizados = await ensureUserPermissions(profileData);
+        
+        // Validar que se obtuvieron los permisos correctamente
+        if (!permisosActualizados) {
+          console.error('[AuthContext] Error: No se pudieron obtener los permisos del usuario');
+          return null;
+        }
+        
+        console.log('[AuthContext] Estableciendo estado del usuario:', {
+          role: permisosActualizados.role,
+          hasPermisos: !!permisosActualizados.permisos,
+          permisosKeys: Object.keys(permisosActualizados.permisos || {})
+        });
         
         setUserProfile(permisosActualizados);
         setRole(permisosActualizados.role || null);
@@ -354,6 +391,20 @@ const AuthContextComponent = ({ children }) => {
 
   // Función para asegurar que los permisos estén correctamente asignados
   const ensureUserPermissions = async (profileData) => {
+    // Validar que profileData y uid existan
+    if (!profileData) {
+      console.error('[AuthContext] Error: profileData no definido');
+      return null;
+    }
+    
+    if (!profileData.uid) {
+      console.error('[AuthContext] Error: uid no definido en profileData:', {
+        profileDataKeys: Object.keys(profileData),
+        profileData: profileData
+      });
+      return null;
+    }
+
     const role = profileData.role || 'operario';
     const currentPermisos = profileData.permisos || {};
     

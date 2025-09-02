@@ -100,6 +100,12 @@ export const reconstruirDatosDesdeFirestore = (datosFirestore) => {
  */
 export const registrarLogOperario = async (userId, accion, detalles = {}, metadata = {}) => {
   try {
+    // Validar parámetros requeridos
+    if (!userId || !accion) {
+      console.warn('[firestoreUtils] Parámetros inválidos para registrarLogOperario:', { userId, accion });
+      return;
+    }
+
     // Obtener información del navegador
     const userAgent = navigator.userAgent;
     const browser = userAgent.includes('Chrome') ? 'Chrome' : 
@@ -139,7 +145,12 @@ export const registrarLogOperario = async (userId, accion, detalles = {}, metada
       timestamp: new Date().toISOString()
     });
   } catch (error) {
-    console.error('Error al registrar log de operario:', error);
+    // Manejar específicamente errores de permisos
+    if (error.code === 'permission-denied') {
+      console.warn('[firestoreUtils] Permisos insuficientes para registrar log:', error.message);
+    } else {
+      console.error('[firestoreUtils] Error al registrar log de operario:', error);
+    }
   }
 };
 
