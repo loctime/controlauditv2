@@ -42,6 +42,7 @@ import {
 import { controlFileService } from '../../../services/controlFileService';
 import { useAuth } from '../../context/AuthContext';
 import { auth } from '../../../firebaseConfig';
+import ControlFileStatus from '../../common/ControlFileStatus';
 
 const InfoSistema = () => {
   const { userProfile, user } = useAuth();
@@ -219,6 +220,11 @@ const InfoSistema = () => {
             <Typography variant="h6">Estado de ControlFile Real</Typography>
           </Box>
           
+          {/* ✅ NUEVO: Componente de Estado en Tiempo Real */}
+          <Box sx={{ mb: 2 }}>
+            <ControlFileStatus showDetails={true} />
+          </Box>
+          
           <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
             {getStatusIcon()}
             <Typography 
@@ -230,24 +236,24 @@ const InfoSistema = () => {
             </Typography>
           </Box>
 
-                     <Alert severity={getStatusColor()} sx={{ mb: 2 }}>
-             <Typography variant="body2">
-               {controlFileStatus === 'connected' && 
-                 '✅ Tu cuenta está conectada a ControlFile real. Las imágenes se almacenan de forma segura en files.controldoc.app.'
-               }
-               {controlFileStatus === 'not-connected' && 
-                 diagnosticInfo?.serviceAvailable ? 
-                   (diagnosticInfo?.endpointsAvailable ? 
-                     '⚠️ Tu cuenta se auto-provisionará en ControlFile real cuando subas tu primera imagen.' :
-                     '⚠️ ControlFile está disponible pero los endpoints no están implementados aún. Usando modo fallback automático.'
-                   ) :
-                   '❌ El servicio ControlFile real no está disponible. Usando backend local para las pruebas.'
-               }
-               {controlFileStatus === 'error' && 
-                 '❌ Error al verificar la conexión con ControlFile real. Verifica tu conexión a internet y la configuración.'
-               }
-             </Typography>
-           </Alert>
+          <Alert severity={getStatusColor()} sx={{ mb: 2 }}>
+            <Typography variant="body2">
+              {controlFileStatus === 'connected' && 
+                '✅ Tu cuenta está conectada a ControlFile real. Las imágenes se almacenan de forma segura en files.controldoc.app.'
+              }
+              {controlFileStatus === 'not-connected' && 
+                diagnosticInfo?.serviceAvailable ? 
+                  (diagnosticInfo?.endpointsAvailable ? 
+                    '⚠️ Tu cuenta se auto-provisionará en ControlFile real cuando subas tu primera imagen.' :
+                    '⚠️ ControlFile está disponible pero los endpoints no están implementados aún. Usando modo fallback automático.'
+                  ) :
+                  '❌ El servicio ControlFile real no está disponible. Usando backend local para las pruebas.'
+              }
+              {controlFileStatus === 'error' && 
+                '❌ Error al verificar la conexión con ControlFile real. Verifica tu conexión a internet y la configuración.'
+              }
+            </Typography>
+          </Alert>
 
           {/* Información de Diagnóstico */}
           {diagnosticInfo && (
