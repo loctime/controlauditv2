@@ -55,7 +55,7 @@ const AgendarAuditoriaDialog = ({ open, onClose, onSave, empresas, sucursales, f
       
       // Query para obtener usuarios operarios del mismo cliente
       const q = query(
-        collection(db, "usuarios"),
+        collection(db, "users"),
         where("clienteAdminId", "==", userProfile.clienteAdminId || userProfile.uid),
         where("role", "==", "operario")
       );

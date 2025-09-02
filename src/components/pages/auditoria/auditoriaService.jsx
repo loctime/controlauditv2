@@ -126,9 +126,10 @@ class AuditoriaService {
             console.debug(`[AuditoriaService] Subiendo archivo a ControlFile: ${imagen.name}, tamaño: ${(imagen.size/1024/1024).toFixed(2)}MB`);
             
             // ✅ Usar ControlFile en lugar de Firebase Storage
+            let uploadResult;
             try {
               const idToken = await auth.currentUser.getIdToken();
-              const uploadResult = await uploadFile(imagen, idToken, 'auditoria_imagenes');
+              uploadResult = await uploadFile(imagen, idToken, 'auditoria_imagenes');
               
               if (uploadResult.success) {
                 console.log('✅ Imagen de auditoría subida exitosamente:', uploadResult.fileId);
@@ -144,7 +145,7 @@ class AuditoriaService {
               nombre: imagen.name,
               tipo: imagen.type,
               tamaño: imagen.size,
-              url: uploadResult.url,
+              url: `https://files.controldoc.app/${uploadResult.fileId}`,
               fileId: uploadResult.fileId, // ✅ Guardar ID de ControlFile
               timestamp: Date.now()
             };
@@ -176,9 +177,10 @@ class AuditoriaService {
           if (primeraImagen instanceof File) {
             try {
               // ✅ Usar ControlFile para la primera imagen del array
+              let uploadResult;
               try {
                 const idToken = await auth.currentUser.getIdToken();
-                const uploadResult = await uploadFile(primeraImagen, idToken, 'auditoria_imagenes');
+                uploadResult = await uploadFile(primeraImagen, idToken, 'auditoria_imagenes');
                 
                 if (uploadResult.success) {
                   console.log('✅ Primera imagen del array subida exitosamente:', uploadResult.fileId);
@@ -188,13 +190,13 @@ class AuditoriaService {
               } catch (error) {
                 console.error('❌ Error subiendo imagen del array:', error);
                 throw error;
-              }
+            }
               
               seccionImagenes.push({
                 nombre: primeraImagen.name,
                 tipo: primeraImagen.type,
                 tamaño: primeraImagen.size,
-                url: uploadResult.url,
+                url: `https://files.controldoc.app/${uploadResult.fileId}`,
                 fileId: uploadResult.fileId,
                 timestamp: Date.now()
               });

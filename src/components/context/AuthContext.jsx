@@ -269,7 +269,7 @@ const AuthContextComponent = ({ children }) => {
         throw new Error('No se puede actualizar perfil: UID no disponible');
       }
       
-      const userRef = doc(db, "usuarios", uid);
+      const userRef = doc(db, "users", uid);
       await updateDoc(userRef, updates);
       
       // Actualizar estado local
@@ -296,7 +296,7 @@ const AuthContextComponent = ({ children }) => {
   // Función para crear o obtener el perfil del usuario
   const createOrGetUserProfile = async (firebaseUser) => {
     try {
-      const userRef = doc(db, "usuarios", firebaseUser.uid);
+      const userRef = doc(db, "users", firebaseUser.uid);
       const userSnap = await getDoc(userRef);
 
       if (userSnap.exists()) {
@@ -400,7 +400,7 @@ const AuthContextComponent = ({ children }) => {
     // Si los permisos han cambiado, actualizar en la base de datos
     if (JSON.stringify(currentPermisos) !== JSON.stringify(updatedPermisos)) {
       try {
-        const userRef = doc(db, "usuarios", profileData.uid);
+        const userRef = doc(db, "users", profileData.uid);
         await updateDoc(userRef, { permisos: updatedPermisos });
         console.log('[AuthContext] Permisos actualizados para usuario:', profileData.uid);
       } catch (error) {
@@ -437,7 +437,7 @@ const AuthContextComponent = ({ children }) => {
       }
       // Si es operario, ve empresas de su cliente admin
       else {
-        const userRef = doc(db, "usuarios", userId);
+        const userRef = doc(db, "users", userId);
         const userSnap = await getDoc(userRef);
         if (userSnap.exists()) {
           const userData = userSnap.data();
@@ -507,7 +507,7 @@ const AuthContextComponent = ({ children }) => {
         const snapshotPropias = await getDocs(qPropias);
         
         // Obtener auditorías de sus operarios
-        const usuariosRef = collection(db, "usuarios");
+        const usuariosRef = collection(db, "users");
         const qOperarios = query(usuariosRef, where("clienteAdminId", "==", userId));
         const snapshotOperarios = await getDocs(qOperarios);
         const operariosIds = snapshotOperarios.docs.map(doc => doc.id);
@@ -570,7 +570,7 @@ const AuthContextComponent = ({ children }) => {
   const compartirAuditoria = async (auditoriaId, emailUsuario) => {
     try {
       // Buscar usuario por email
-      const usuariosRef = collection(db, "usuarios");
+      const usuariosRef = collection(db, "users");
       const q = query(usuariosRef, where("email", "==", emailUsuario));
       const snapshot = await getDocs(q);
       
@@ -630,7 +630,7 @@ const AuthContextComponent = ({ children }) => {
         propietarioId = userProfile.clienteAdminId;
         
         // Obtener email del cliente admin
-        const adminRef = doc(db, "usuarios", userProfile.clienteAdminId);
+        const adminRef = doc(db, "users", userProfile.clienteAdminId);
         const adminSnap = await getDoc(adminRef);
         propietarioEmail = adminSnap.exists() ? adminSnap.data().email : 'admin@empresa.com';
         propietarioRole = 'max';
@@ -666,7 +666,7 @@ const AuthContextComponent = ({ children }) => {
       const docRef = await addDoc(empresaRef, nuevaEmpresa);
       
       // Actualizar perfil del propietario (cliente admin)
-      const propietarioRef = doc(db, "usuarios", propietarioId);
+      const propietarioRef = doc(db, "users", propietarioId);
       const propietarioSnap = await getDoc(propietarioRef);
       
       if (propietarioSnap.exists()) {
@@ -710,13 +710,13 @@ const AuthContextComponent = ({ children }) => {
   const crearOperario = async (email, displayName = "Operario") => {
     try {
       // Verificar límite de usuarios
-      const usuariosRef = collection(db, "usuarios");
+      const usuariosRef = collection(db, "users");
       const qOperarios = query(usuariosRef, where("clienteAdminId", "==", user.uid));
       const snapshotOperarios = await getDocs(qOperarios);
       const usuariosActuales = snapshotOperarios.size;
       
       // Obtener límite del cliente admin
-      const userRef = doc(db, "usuarios", user.uid);
+      const userRef = doc(db, "users", user.uid);
       const userSnap = await getDoc(userRef);
       const limiteUsuarios = userSnap.data()?.limiteUsuarios || 10;
       
@@ -760,7 +760,7 @@ const AuthContextComponent = ({ children }) => {
   // NUEVO: Editar permisos de operario
   const editarPermisosOperario = async (userId, nuevosPermisos) => {
     try {
-      const userRef = doc(db, "usuarios", userId);
+      const userRef = doc(db, "users", userId);
       await updateDoc(userRef, { permisos: nuevosPermisos });
       await registrarLogOperario(userId, 'editarPermisos', { nuevosPermisos });
       await registrarAccionSistema(
@@ -790,7 +790,7 @@ const AuthContextComponent = ({ children }) => {
   // Función para asignar usuario operario a cliente administrador
   const asignarUsuarioAClienteAdmin = async (userId, clienteAdminId) => {
     try {
-      const userRef = doc(db, "usuarios", userId);
+      const userRef = doc(db, "users", userId);
       await updateDoc(userRef, {
         clienteAdminId: clienteAdminId,
         ultimaModificacion: new Date()
@@ -814,7 +814,7 @@ const AuthContextComponent = ({ children }) => {
   // Función para obtener usuarios de un cliente administrador
   const getUsuariosDeClienteAdmin = async (clienteAdminId) => {
     try {
-      const usuariosRef = collection(db, "usuarios");
+      const usuariosRef = collection(db, "users");
       const q = query(usuariosRef, where("clienteAdminId", "==", clienteAdminId));
       const snapshot = await getDocs(q);
       

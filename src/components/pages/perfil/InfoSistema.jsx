@@ -41,10 +41,14 @@ import {
 } from "@mui/icons-material";
 import { useAuth } from '../../context/AuthContext';
 import { auth } from '../../../firebaseConfig';
+import { uploadFile } from '../../../lib/controlfile-upload';
+import Swal from 'sweetalert2';
 
 const InfoSistema = () => {
   const { userProfile, user } = useAuth();
   const [currentLogo, setCurrentLogo] = useState(null);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [uploadedLogoUrl, setUploadedLogoUrl] = useState(null);
   
   // Estados para información del sistema
   const [systemInfo, setSystemInfo] = useState({
@@ -68,6 +72,58 @@ const InfoSistema = () => {
 
   const clearLogo = () => {
     setCurrentLogo(null);
+  };
+
+  const handleUploadLogo = async () => {
+    if (!currentLogo) {
+      Swal.fire('Error', 'Por favor selecciona un logo antes de subir', 'error');
+      return;
+    }
+
+    setUploadingLogo(true);
+    try {
+      // Obtener token de autenticación
+      const idToken = await auth.currentUser.getIdToken();
+      
+      // Subir logo a ControlFile
+      const uploadResult = await uploadFile(currentLogo, idToken, 'sistema_logos');
+      
+      if (uploadResult.success) {
+        const logoUrl = `https://files.controldoc.app/${uploadResult.fileId}`;
+        setUploadedLogoUrl(logoUrl);
+        
+        // Limpiar archivo seleccionado
+        setCurrentLogo(null);
+        
+        // Mostrar mensaje de éxito
+        Swal.fire({
+          icon: 'success',
+          title: '¡Logo subido exitosamente!',
+          text: `El logo del sistema se ha subido a ControlFile y está disponible en: ${logoUrl}`,
+          confirmButtonText: 'Perfecto'
+        });
+        
+        console.log('✅ Logo del sistema subido exitosamente:', {
+          fileId: uploadResult.fileId,
+          url: logoUrl,
+          fileName: uploadResult.fileName,
+          fileSize: uploadResult.fileSize
+        });
+        
+      } else {
+        throw new Error('Error en la subida del logo');
+      }
+    } catch (error) {
+      console.error('❌ Error subiendo logo del sistema:', error);
+      Swal.fire({
+        icon: 'error',
+        title: 'Error al subir logo',
+        text: `No se pudo subir el logo: ${error.message}`,
+        confirmButtonText: 'Entendido'
+      });
+    } finally {
+      setUploadingLogo(false);
+    }
   };
 
   const getEnvironmentInfo = () => {
@@ -201,7 +257,7 @@ const InfoSistema = () => {
           </Typography>
           
           <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            Sube el logo de tu empresa o sistema. Esta imagen se almacenará en el sistema de archivos compartido.
+            Sube el logo de tu empresa o sistema. Esta imagen se almacenará en el sistema de archivos compartido de ControlFile.
           </Typography>
           
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
@@ -209,6 +265,7 @@ const InfoSistema = () => {
               variant="contained"
               component="label"
               startIcon={<UploadIcon />}
+              disabled={uploadingLogo}
             >
               Seleccionar Logo
               <input
@@ -229,12 +286,40 @@ const InfoSistema = () => {
                   color="error"
                   onClick={clearLogo}
                   startIcon={<DeleteIcon />}
+                  disabled={uploadingLogo}
                 >
                   Limpiar
                 </Button>
               </>
             )}
           </Box>
+          
+          {/* Botón de subida */}
+          {currentLogo && (
+            <Box sx={{ mb: 2 }}>
+              <Button
+                variant="contained"
+                color="primary"
+                onClick={handleUploadLogo}
+                disabled={uploadingLogo}
+                startIcon={uploadingLogo ? <CircularProgress size={20} /> : <CloudIcon />}
+                sx={{ minWidth: 200 }}
+              >
+                {uploadingLogo ? 'Subiendo...' : 'Subir a ControlFile'}
+              </Button>
+            </Box>
+          )}
+          
+          {/* Logo subido exitosamente */}
+          {uploadedLogoUrl && (
+            <Alert severity="success" sx={{ mt: 2 }}>
+              <Typography variant="body2">
+                <strong>✅ Logo subido exitosamente a ControlFile</strong><br />
+                <strong>URL:</strong> <a href={uploadedLogoUrl} target="_blank" rel="noopener noreferrer">{uploadedLogoUrl}</a><br />
+                <strong>Nota:</strong> Este logo está ahora disponible en el sistema de archivos compartido.
+              </Typography>
+            </Alert>
+          )}
           
           {currentLogo && (
             <Alert severity="info" sx={{ mt: 2 }}>
@@ -249,7 +334,7 @@ const InfoSistema = () => {
           
           <Alert severity="info" sx={{ mt: 2 }}>
             <Typography variant="body2">
-              <strong>Nota:</strong> El logo se almacenará en el sistema de archivos compartido de forma segura y podrás usarlo en toda la aplicación.
+              <strong>Nota:</strong> El logo se almacenará en el sistema de archivos compartido de ControlFile de forma segura y podrás usarlo en toda la aplicación.
             </Typography>
           </Alert>
         </CardContent>

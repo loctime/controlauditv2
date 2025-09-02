@@ -1,10 +1,11 @@
 // Helper para subir archivos a ControlFile vía backend compartido
 // Basado en la documentación del equipo de ControlFile
+import { buildControlFileUrl, buildDownloadUrl, validateFileForControlFile } from '../config/controlfile.js';
 
 /**
  * Sube un archivo a ControlFile usando el flujo de 3 pasos
  * @param {Object} params - Parámetros de la subida
- * @param {string} params.baseUrl - URL del backend (dev: http://localhost:4000, prod: https://controlfile.onrender.com)
+ * @param {string} params.baseUrl - URL del backend (dev: http://localhost:4000, prod: https://controlauditv2.onrender.com)
  * @param {string} params.idToken - Firebase ID token del usuario autenticado
  * @param {File} params.file - Archivo a subir
  * @param {string|null} params.parentId - ID de la carpeta destino (opcional)
@@ -12,6 +13,12 @@
  */
 export async function uploadToControlFile(params) {
   const { baseUrl, idToken, file, parentId = null } = params;
+  
+  // ✅ Validar archivo antes de subir
+  const validation = validateFileForControlFile(file);
+  if (!validation.isValid) {
+    throw new Error(`Archivo no válido: ${validation.errors.join(', ')}`);
+  }
 
   try {
     console.log('🚀 Iniciando subida a ControlFile:', {
@@ -23,7 +30,7 @@ export async function uploadToControlFile(params) {
 
     // 1) Presign - Iniciar sesión de subida
     console.log('📤 Paso 1: Presign...');
-    const presignRes = await fetch(`${baseUrl}/api/uploads/presign`, {
+    const presignRes = await fetch(buildControlFileUrl('/api/uploads/presign'), {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${idToken}`,
@@ -51,7 +58,7 @@ export async function uploadToControlFile(params) {
     form.append('file', file);
     form.append('sessionId', presign.uploadSessionId);
 
-    const uploadRes = await fetch(`${baseUrl}/api/uploads/proxy-upload`, {
+    const uploadRes = await fetch(buildControlFileUrl('/api/uploads/proxy-upload'), {
       method: 'POST',
       headers: { Authorization: `Bearer ${idToken}` },
       body: form,
@@ -67,7 +74,7 @@ export async function uploadToControlFile(params) {
 
     // 3) Confirmación
     console.log('📤 Paso 3: Confirmación...');
-    const confirmRes = await fetch(`${baseUrl}/api/uploads/confirm`, {
+    const confirmRes = await fetch(buildControlFileUrl('/api/uploads/confirm'), {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${idToken}`,
@@ -110,8 +117,8 @@ export function getControlFileBaseUrl() {
     return 'http://localhost:4000';
   }
   
-  // En producción, usar el backend de ControlFile
-  return 'https://controlfile.onrender.com';
+  // En producción, usar el backend de ControlAudit
+  return 'https://controlauditv2.onrender.com';
 }
 
 /**

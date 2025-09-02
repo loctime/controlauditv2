@@ -42,7 +42,7 @@ export const useClienteDashboard = () => {
         }));
 
         // Cargar usuarios operarios y sus empresas en paralelo
-        const usuariosRef = collection(db, "usuarios");
+        const usuariosRef = collection(db, "users");
         const usuariosQuery = query(usuariosRef, where("clienteAdminId", "==", userProfile.uid));
         const usuariosSnapshot = await getDocs(usuariosQuery);
         const usuariosOperarios = usuariosSnapshot.docs.map(doc => doc.id);
@@ -133,7 +133,7 @@ export const useClienteDashboard = () => {
         }));
 
         // Cargar usuarios operarios
-        const usuariosRef = collection(db, "usuarios");
+        const usuariosRef = collection(db, "users");
         const usuariosQuery = query(usuariosRef, where("clienteAdminId", "==", userProfile.uid));
         const usuariosSnapshot = await getDocs(usuariosQuery);
         const usuariosOperarios = usuariosSnapshot.docs.map(doc => doc.id);
@@ -258,7 +258,7 @@ export const useClienteDashboard = () => {
         }));
 
         // Cargar usuarios operarios
-        const usuariosRef = collection(db, "usuarios");
+        const usuariosRef = collection(db, "users");
         const usuariosQuery = query(usuariosRef, where("clienteAdminId", "==", userProfile.uid));
         const usuariosSnapshot = await getDocs(usuariosQuery);
         const usuariosOperarios = usuariosSnapshot.docs.map(doc => doc.id);
@@ -301,7 +301,7 @@ export const useClienteDashboard = () => {
       let encargadoInfo = null;
       if (formData.encargado) {
         try {
-          const usuarioRef = doc(db, 'usuarios', formData.encargado);
+          const usuarioRef = doc(db, 'users', formData.encargado);
           const usuarioDoc = await getDoc(usuarioRef);
           if (usuarioDoc.exists()) {
             encargadoInfo = {

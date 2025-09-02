@@ -11,7 +11,7 @@ async function testControlFileConnection() {
     console.log('🔗 Probando conexión a ControlFile...');
     
     // Verificar si el servicio está disponible
-    const response = await fetch('https://controlfile.onrender.com/api/health', {
+    const response = await fetch('https://controlauditv2.onrender.com/api/health', {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json'

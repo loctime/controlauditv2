@@ -167,7 +167,7 @@ const AuthDiagnostico = () => {
          // Verificar conectividad directa con ControlFile real
          console.log('🌐 Probando conectividad directa con ControlFile...');
          try {
-           const controlFileResponse = await fetch('https://controlfile.onrender.com/');
+           const controlFileResponse = await fetch('https://controlauditv2.onrender.com/');
            resultados.controlFile.directConnectivity = {
              status: controlFileResponse.status,
              ok: controlFileResponse.ok

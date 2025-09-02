@@ -93,7 +93,7 @@ const HistorialAuditorias = () => {
         }));
 
         // Obtener usuarios operarios del cliente administrador
-        const usuariosRef = collection(db, "usuarios");
+        const usuariosRef = collection(db, "users");
         const usuariosQuery = query(usuariosRef, where("clienteAdminId", "==", userProfile.uid));
         const usuariosSnapshot = await getDocs(usuariosQuery);
         const usuariosOperarios = usuariosSnapshot.docs.map(doc => doc.id);
