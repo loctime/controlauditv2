@@ -144,16 +144,6 @@ export const signInWithGoogle = async () => {
     const isCapacitor = window.Capacitor && window.Capacitor.isNative;
     const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
     
-    // ✅ Configurar redirect URL para APK
-    if (isCapacitor) {
-      // Para APK, usar el dominio de Firebase para el redirect
-      const redirectUrl = 'https://controlstorage-eb796.firebaseapp.com/__/auth/handler';
-      provider.setCustomParameters({
-        redirect_uri: redirectUrl
-      });
-      console.log('📱 APK: Configurando redirect a Firebase:', redirectUrl);
-    }
-    
     console.log("🌐 Entorno detectado:", {
       hostname,
       isLocalhost,
@@ -165,10 +155,13 @@ export const signInWithGoogle = async () => {
     // Para móviles/APK, usar redirect automáticamente
     if (isMobile || isCapacitor) {
       console.log("📱 Detectado móvil/APK, usando signInWithRedirect");
-      console.log("🔗 Provider configurado:", {
-        scopes: provider.scopes,
-        customParameters: provider.customParameters
-      });
+      
+      // ✅ Para APK, configurar listener de app state para detectar cuando vuelve del navegador
+      if (isCapacitor) {
+        console.log('📱 Configurando listener de app state para APK...');
+        setupAppStateListener();
+      }
+      
       await signInWithRedirect(auth, provider);
       return { user: null, pendingRedirect: true };
     }
@@ -215,6 +208,96 @@ export const signInWithGoogle = async () => {
     }
     
     throw error;
+  }
+};
+
+// ✅ Función para configurar listener de app state en APK
+let appStateListener = null;
+let urlChangeListener = null;
+
+const setupAppStateListener = async () => {
+  try {
+    // Solo configurar si estamos en Capacitor
+    if (!window.Capacitor || !window.Capacitor.isNative) {
+      return;
+    }
+    
+    // Importar dinámicamente para evitar errores en web
+    const { App } = await import('@capacitor/app');
+    
+    if (appStateListener) {
+      appStateListener.remove();
+    }
+    
+    appStateListener = App.addListener('appStateChange', async ({ isActive }) => {
+      console.log('📱 App state changed:', { isActive });
+      
+      if (isActive) {
+        // App volvió al primer plano, verificar si hay resultado de redirect
+        console.log('📱 App volvió al primer plano, verificando redirect...');
+        
+        try {
+          const result = await getRedirectResult(auth);
+          if (result) {
+            console.log('✅ Redirect procesado exitosamente en APK:', result);
+            // El onAuthStateChanged se encargará del resto
+          }
+        } catch (error) {
+          console.error('❌ Error procesando redirect en APK:', error);
+        }
+      }
+    });
+    
+    // ✅ También configurar listener de cambios de URL
+    if (urlChangeListener) {
+      urlChangeListener.remove();
+    }
+    
+    urlChangeListener = App.addListener('appUrlOpen', async (data) => {
+      console.log('📱 App URL opened:', data);
+      
+      // Si la URL contiene el handler de Firebase, procesar el redirect
+      if (data.url && data.url.includes('__/auth/handler')) {
+        console.log('📱 Firebase auth handler detectado, procesando redirect...');
+        
+        try {
+          const result = await getRedirectResult(auth);
+          if (result) {
+            console.log('✅ Redirect procesado exitosamente en APK:', result);
+            // El onAuthStateChanged se encargará del resto
+          }
+        } catch (error) {
+          console.error('❌ Error procesando redirect en APK:', error);
+        }
+      }
+    });
+    
+    console.log('📱 Listeners de app state y URL configurados para APK');
+  } catch (error) {
+    console.error('❌ Error configurando listeners de APK:', error);
+  }
+};
+
+// ✅ Función para limpiar listeners
+export const cleanupAppStateListener = () => {
+  if (appStateListener) {
+    try {
+      appStateListener.remove();
+      appStateListener = null;
+      console.log('📱 Listener de app state limpiado');
+    } catch (error) {
+      console.error('❌ Error limpiando listener de app state:', error);
+    }
+  }
+  
+  if (urlChangeListener) {
+    try {
+      urlChangeListener.remove();
+      urlChangeListener = null;
+      console.log('📱 Listener de URL limpiado');
+    } catch (error) {
+      console.error('❌ Error limpiando listener de URL:', error);
+    }
   }
 };
 
