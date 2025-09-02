@@ -21,13 +21,30 @@ const config: CapacitorConfig = {
       style: 'light',
       backgroundColor: '#1976d2',
       overlaysWebView: true
+    },
+    // ✅ Configuración específica para OAuth y Firebase
+    OAuth2Client: {
+      clientId: '909876364192-0b45053d7f5667fda79ac5.apps.googleusercontent.com',
+      redirectUri: 'com.controlaudit.app://',
+      responseType: 'code',
+      scope: 'openid email profile'
     }
   },
   android: {
     webContentsDebuggingEnabled: true,
     allowMixedContent: true,
     captureInput: true, // Mejorar captura de input
-    webContentsDebuggingEnabled: true
+    webContentsDebuggingEnabled: true,
+    // ✅ Configuración específica para OAuth en Android
+    intentFilters: [
+      {
+        action: 'android.intent.action.VIEW',
+        categories: ['android.intent.category.DEFAULT', 'android.intent.category.BROWSABLE'],
+        data: {
+          scheme: 'com.controlaudit.app'
+        }
+      }
+    ]
   },
   ios: {
     webContentsDebuggingEnabled: true,

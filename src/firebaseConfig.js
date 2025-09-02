@@ -18,6 +18,7 @@ import { isCapacitor, getAuthConfig } from './utils/capacitorUtils';
 import { getImprovedAuthConfig, getAuthEnvironmentInfo } from './utils/authUtils';
 import { FIREBASE_CONFIG } from './config/environment';
 
+
 // ✅ Configuración para proyecto ControlFile (controlstorage-eb796)
 // Según la guía de integración de ControlFile
 const firebaseConfig = {
@@ -156,9 +157,21 @@ export const signInWithGoogle = async () => {
     if (isMobile || isCapacitor) {
       console.log("📱 Detectado móvil/APK, usando signInWithRedirect");
       
-      // ✅ Para APK, configurar listener de app state para detectar cuando vuelve del navegador
+      // ✅ Para APK, configurar OAuth específicamente
       if (isCapacitor) {
-        console.log('📱 Configurando listener de app state para APK...');
+        console.log('📱 Configurando OAuth específico para APK...');
+        
+        // ✅ Configurar el provider para usar el esquema personalizado de la APK
+        // Esto es crucial para evitar que redirija a localhost
+        provider.setCustomParameters({
+          redirect_uri: 'com.controlaudit.app://',
+          prompt: 'select_account',
+          response_type: 'code'
+        });
+        
+        console.log('📱 Provider configurado con redirect_uri personalizado para APK');
+        
+        // ✅ Configurar listener de app state para detectar cuando vuelve del navegador
         setupAppStateListener();
       }
       
