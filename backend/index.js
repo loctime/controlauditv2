@@ -119,6 +119,17 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+// Test route without auth
+app.post('/api/test-upload', (req, res) => {
+  console.log('🧪 Test upload endpoint - Headers:', req.headers);
+  console.log('🧪 Test upload endpoint - Body:', req.body);
+  res.json({ 
+    success: true, 
+    body: req.body, 
+    headers: req.headers 
+  });
+});
+
 // Endpoint para probar Firebase
 app.get('/api/test-firebase', async (req, res) => {
   try {

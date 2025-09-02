@@ -8,6 +8,14 @@ export default defineConfig({
   server: {
     port: 5173,
     host: true,
+    // Proxy de API para desarrollo - evita problemas de CORS
+    proxy: {
+      '/api': {
+        target: 'http://localhost:4000', // Backend local
+        changeOrigin: true,
+        secure: false,
+      },
+    },
     // Configuración de CORS para solucionar problemas de autenticación
     cors: {
       origin: [

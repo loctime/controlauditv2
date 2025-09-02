@@ -12,6 +12,8 @@ import PreguntaItem from './components/PreguntaItem';
 // Importar utilidades
 import { obtenerPreguntasNoContestadas } from './utils/respuestaUtils.jsx';
 import { comprimirImagen, validarArchivoImagen } from './utils/imageUtils';
+import { uploadFile } from '../../../../lib/controlfile-upload';
+import { auth } from '../../../../firebaseConfig';
 // useControlFile obsoleto - ahora se usa backend compartido
 
 const PreguntasYSeccion = ({ 
@@ -136,16 +138,29 @@ const PreguntasYSeccion = ({
     setComentario("");
   };
 
-  // ✅ USAR HOOK DE CONTROLFILE
-  // TODO: Implementar usando backend compartido
+  // ✅ USAR BACKEND COMPARTIDO PARA CONTROLFILE
   const controlFileAvailable = true;
   const controlFileUpload = async (file, options) => {
-    // Simulación temporal hasta implementar backend compartido
-    return {
-      success: true,
-      fileId: 'temp_' + Date.now(),
-      url: 'https://example.com/temp-image.jpg'
-    };
+    try {
+      const idToken = await auth.currentUser.getIdToken();
+      const uploadResult = await uploadFile(file, idToken, 'preguntas_imagenes');
+      
+      if (uploadResult.success) {
+        console.log('✅ Imagen de pregunta subida exitosamente:', uploadResult.fileId);
+        return {
+          success: true,
+          fileId: uploadResult.fileId,
+          downloadUrl: `https://files.controldoc.app/${uploadResult.fileId}`,
+          bucketKey: uploadResult.uploadSessionId,
+          etag: uploadResult.etag || 'uploaded'
+        };
+      } else {
+        throw new Error('Error en la subida de la imagen');
+      }
+    } catch (error) {
+      console.error('❌ Error subiendo imagen de pregunta:', error);
+      throw error;
+    }
   };
 
   const handleFileChange = async (seccionIndex, preguntaIndex, event) => {

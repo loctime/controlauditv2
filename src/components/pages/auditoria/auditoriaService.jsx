@@ -3,7 +3,8 @@ import { collection, addDoc, getDocs, query, where, orderBy, serverTimestamp } f
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, storage, auth } from '../../../firebaseConfig';
 import { prepararDatosParaFirestore, registrarLogOperario } from '../../../utils/firestoreUtils';
-// controlFileService obsoleto - ahoara se usa backend compartido
+import { uploadFile } from '../../../lib/controlfile-upload';
+// controlFileService obsoleto - ahora se usa backend compartido
 
 /**
  * Servicio para manejar las auditorías
@@ -125,12 +126,19 @@ class AuditoriaService {
             console.debug(`[AuditoriaService] Subiendo archivo a ControlFile: ${imagen.name}, tamaño: ${(imagen.size/1024/1024).toFixed(2)}MB`);
             
             // ✅ Usar ControlFile en lugar de Firebase Storage
-            // TODO: Implementar subida usando backend compartido
-            const uploadResult = { 
-              success: true, 
-              fileId: 'temp_' + Date.now(),
-              url: 'https://example.com/temp-image.jpg'
-            };
+            try {
+              const idToken = await auth.currentUser.getIdToken();
+              const uploadResult = await uploadFile(imagen, idToken, 'auditoria_imagenes');
+              
+              if (uploadResult.success) {
+                console.log('✅ Imagen de auditoría subida exitosamente:', uploadResult.fileId);
+              } else {
+                throw new Error('Error en la subida de la imagen');
+              }
+            } catch (error) {
+              console.error('❌ Error subiendo imagen de auditoría:', error);
+              throw error;
+            }
             
             const imagenProcesada = {
               nombre: imagen.name,
@@ -168,12 +176,19 @@ class AuditoriaService {
           if (primeraImagen instanceof File) {
             try {
               // ✅ Usar ControlFile para la primera imagen del array
-              // TODO: Implementar subida usando backend compartido
-              const uploadResult = { 
-                success: true, 
-                fileId: 'temp_' + Date.now(),
-                url: 'https://example.com/temp-image.jpg'
-              };
+              try {
+                const idToken = await auth.currentUser.getIdToken();
+                const uploadResult = await uploadFile(primeraImagen, idToken, 'auditoria_imagenes');
+                
+                if (uploadResult.success) {
+                  console.log('✅ Primera imagen del array subida exitosamente:', uploadResult.fileId);
+                } else {
+                  throw new Error('Error en la subida de la imagen del array');
+                }
+              } catch (error) {
+                console.error('❌ Error subiendo imagen del array:', error);
+                throw error;
+              }
               
               seccionImagenes.push({
                 nombre: primeraImagen.name,

@@ -33,6 +33,8 @@ import Swal from 'sweetalert2';
 import { useAuth } from "../../context/AuthContext";
 import EditarEmpresaModal from "./EditarEmpresa";
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import { uploadFile } from '../../../lib/controlfile-upload';
+import { auth } from '../../../firebaseConfig';
 // controlFileService obsoleto - ahora se usa backend compartido
 
 const EstablecimientosContainer = () => {
@@ -117,12 +119,25 @@ const EstablecimientosContainer = () => {
       let logoURL = "";
       if (empresa.logo) {
         // ✅ Usar ControlFile en lugar de Firebase Storage
-        // TODO: Implementar subida usando backend compartido
-      const uploadResult = { success: true, fileId: 'temp_' + Date.now() };
-          tipo: 'empresa_logo',
-          app: 'controlaudit'
-        });
-        logoURL = uploadResult.url;
+        try {
+          const idToken = await auth.currentUser.getIdToken();
+          const uploadResult = await uploadFile(empresa.logo, idToken, 'empresa_logos');
+          
+          if (uploadResult.success) {
+            console.log('✅ Logo subido exitosamente:', uploadResult.fileId);
+            logoURL = `https://files.controldoc.app/${uploadResult.fileId}`;
+          } else {
+            throw new Error('Error en la subida del logo');
+          }
+        } catch (error) {
+          console.error('❌ Error subiendo logo:', error);
+          Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Error al subir el logo de la empresa'
+          });
+          return;
+        }
       }
 
       await crearEmpresa({
@@ -230,12 +245,25 @@ const EstablecimientosContainer = () => {
       let logoURL = empresaEdit.logoURL || "";
       if (empresaEdit.logo && empresaEdit.logo instanceof File) {
         // ✅ Usar ControlFile en lugar de Firebase Storage
-        // TODO: Implementar subida usando backend compartido
-        const uploadResult = { success: true, fileId: 'temp_' + Date.now() };
-          tipo: 'empresa_logo',
-          app: 'controlaudit'
-        });
-        logoURL = uploadResult.url;
+        try {
+          const idToken = await auth.currentUser.getIdToken();
+          const uploadResult = await uploadFile(empresaEdit.logo, idToken, 'empresa_logos');
+          
+          if (uploadResult.success) {
+            console.log('✅ Logo actualizado exitosamente:', uploadResult.fileId);
+            logoURL = `https://files.controldoc.app/${uploadResult.fileId}`;
+          } else {
+            throw new Error('Error en la actualización del logo');
+          }
+        } catch (error) {
+          console.error('❌ Error actualizando logo:', error);
+          Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Error al actualizar el logo de la empresa'
+          });
+          return;
+        }
       }
 
       await updateEmpresa(empresaEdit.id, {
