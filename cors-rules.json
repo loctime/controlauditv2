@@ -1,0 +1,21 @@
+[
+  {
+    "corsRuleName": "AllowControlFile",
+    "allowedOrigins": [
+      "http://localhost:5173",
+      "http://localhost:3000",
+      "https://auditoria.controldoc.app",
+      "https://controlaudit.vercel.app",
+      "https://files.controldoc.app"
+    ],
+    "allowedHeaders": ["*"],
+    "allowedOperations": [
+      "s3_put",
+      "s3_post",
+      "s3_head",
+      "s3_get"
+    ],
+    "maxAgeSeconds": 3600
+  }
+]
+  

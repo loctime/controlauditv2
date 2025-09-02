@@ -86,7 +86,7 @@ const InfoSistema = () => {
       const idToken = await auth.currentUser.getIdToken();
       
       // Subir logo a ControlFile
-      const uploadResult = await uploadFile(currentLogo, idToken, 'sistema_logos');
+      const uploadResult = await uploadFile(currentLogo, idToken, null); // Usar null para carpeta raíz por defecto
       
       if (uploadResult.success) {
         const logoUrl = `https://files.controldoc.app/${uploadResult.fileId}`;

@@ -121,7 +121,9 @@ export const registrarLogOperario = async (userId, accion, detalles = {}, metada
     const logData = {
       userId,
       accion,
-      detalles,
+      detalles: Object.fromEntries(
+        Object.entries(detalles).filter(([_, value]) => value !== undefined)
+      ),
       fecha: Timestamp.now(),
       // Información del sistema
       userAgent,
@@ -129,7 +131,9 @@ export const registrarLogOperario = async (userId, accion, detalles = {}, metada
       currentUrl,
       referrer,
       // Metadatos adicionales
-      ...metadata,
+      ...Object.fromEntries(
+        Object.entries(metadata).filter(([_, value]) => value !== undefined)
+      ),
       // Información de sesión
       sessionId: sessionStorage.getItem('sessionId') || 'no-session',
       timestamp: Date.now()

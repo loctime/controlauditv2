@@ -56,9 +56,9 @@ export const getEnvironmentConfig = () => {
     };
   }
   
-  // En producción, usar tu propio backend
+  // En producción, usar la configuración de ControlFile
   return {
-    baseURL: 'https://controlauditv2.onrender.com', // Tu backend en Render
+    baseURL: (typeof import.meta !== 'undefined' && import.meta.env?.VITE_APP_BACKEND_URL) || 'https://api.controldoc.app',
     timeout: API_CONFIG.timeout
   };
 };

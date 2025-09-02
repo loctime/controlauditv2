@@ -410,6 +410,9 @@ app.post('/api/uploads/presign', verificarTokenUsuario, async (req, res) => {
     const { fileName, fileSize, mimeType, parentId } = req.body;
     const { uid } = req.user;
     
+    console.log('📤 [PRESIGN] Iniciando sesión de subida para usuario:', uid);
+    console.log('📋 [PRESIGN] Parámetros recibidos:', { fileName, fileSize, mimeType, parentId });
+    
     // Validar parámetros requeridos
     if (!fileName || !fileSize || !mimeType) {
       return res.status(400).json({
@@ -424,6 +427,27 @@ app.post('/api/uploads/presign', verificarTokenUsuario, async (req, res) => {
       return res.status(400).json({
         error: 'Archivo demasiado grande',
         message: 'El tamaño máximo permitido es 50MB'
+      });
+    }
+
+    // Verificar que Firebase Admin esté inicializado
+    if (!admin.apps.length) {
+      console.error('❌ [PRESIGN] Firebase Admin SDK no está inicializado');
+      return res.status(500).json({
+        error: 'Error de configuración',
+        message: 'Firebase Admin SDK no está inicializado'
+      });
+    }
+
+    // Verificar que Firestore esté disponible
+    try {
+      const firestore = admin.firestore();
+      console.log('✅ [PRESIGN] Firestore disponible');
+    } catch (firestoreError) {
+      console.error('❌ [PRESIGN] Error accediendo a Firestore:', firestoreError);
+      return res.status(500).json({
+        error: 'Error de base de datos',
+        message: 'No se puede acceder a la base de datos'
       });
     }
 

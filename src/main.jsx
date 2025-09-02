@@ -5,5 +5,6 @@ import "./zoom-support.css";
 import "./styles/apk-centering-fix.css";
 import "./styles/apk-viewport-fix.css";
 import "./styles/apk-margin-fix.css";
+import './utils/debug-env.js';
 
 ReactDOM.createRoot(document.getElementById("root")).render(<App />);

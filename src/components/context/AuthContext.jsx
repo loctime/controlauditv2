@@ -1079,6 +1079,40 @@ const AuthContextComponent = ({ children }) => {
     }
   };
 
+  // Función para forzar la actualización del rol del usuario actual
+  const forceUpdateUserRole = async () => {
+    try {
+      if (!userProfile?.uid) {
+        console.error('[AuthContext] No hay usuario para actualizar rol');
+        return false;
+      }
+      
+      console.log('[AuthContext] Forzando actualización de rol para usuario:', userProfile.uid);
+      
+      // Obtener el rol por defecto basado en el email
+      const defaultRole = getUserRole(userProfile.email) || 'max';
+      
+      // Actualizar en la base de datos
+      const userRef = doc(db, "users", userProfile.uid);
+      await updateDoc(userRef, { 
+        role: defaultRole,
+        clienteAdminId: defaultRole === 'max' ? userProfile.uid : null
+      });
+      
+      // Actualizar estado local
+      const updatedProfile = { ...userProfile, role: defaultRole };
+      setUserProfile(updatedProfile);
+      setRole(defaultRole);
+      
+      console.log('[AuthContext] Rol actualizado exitosamente:', defaultRole);
+      return true;
+      
+    } catch (error) {
+      console.error('[AuthContext] Error forzando actualización de rol:', error);
+      return false;
+    }
+  };
+
   // Los valores disponibles en el contexto
   const data = {
     user,
@@ -1113,7 +1147,8 @@ const AuthContextComponent = ({ children }) => {
     verificarYCorregirEmpresas,
     updateEmpresa,
     bloqueado,
-    motivoBloqueo
+    motivoBloqueo,
+    forceUpdateUserRole
   };
 
   return <AuthContext.Provider value={data}>{children}</AuthContext.Provider>;

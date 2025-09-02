@@ -1,91 +1,62 @@
-import React, { useState } from 'react';
-import { auth } from '../firebaseConfig';
+import React, { useContext } from 'react';
+import { AuthContext } from './context/AuthContext';
 
 const TestToken = () => {
-  const [token, setToken] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-
-  const testToken = async () => {
-    setLoading(true);
-    setError('');
-    setToken('');
-
-    try {
-      if (!auth.currentUser) {
-        setError('❌ No hay usuario autenticado. Inicia sesión primero.');
-        return;
-      }
-
-      console.log('✅ Usuario autenticado:', auth.currentUser.email);
-      console.log('🆔 UID:', auth.currentUser.uid);
-
-      const tokenResult = await auth.currentUser.getIdToken(true);
-      
-      setToken(tokenResult);
-      console.log('🔑 Token obtenido:', tokenResult);
-      console.log('📏 Longitud:', tokenResult.length);
-      console.log('🔍 Primeros 50 caracteres:', tokenResult.substring(0, 50) + '...');
-      
-    } catch (err) {
-      setError('❌ Error obteniendo token: ' + err.message);
-      console.error('Error:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const { user, userProfile, role, permisos } = useContext(AuthContext);
 
   return (
-    <div style={{ padding: '20px', maxWidth: '600px', margin: '0 auto' }}>
-      <h2>🧪 Prueba de Token de Firebase</h2>
+    <div style={{ padding: '20px', border: '1px solid #ccc', margin: '10px' }}>
+      <h3>🔧 Debug de Autenticación</h3>
       
-      <button 
-        onClick={testToken} 
-        disabled={loading}
-        style={{
-          padding: '10px 20px',
-          fontSize: '16px',
-          backgroundColor: '#1976d2',
-          color: 'white',
-          border: 'none',
-          borderRadius: '4px',
-          cursor: loading ? 'not-allowed' : 'pointer'
-        }}
-      >
-        {loading ? '⏳ Obteniendo token...' : '🔑 Probar Token'}
-      </button>
-
-      {error && (
-        <div style={{ 
-          marginTop: '10px', 
-          padding: '10px', 
-          backgroundColor: '#ffebee', 
-          color: '#c62828',
-          borderRadius: '4px'
-        }}>
-          {error}
-        </div>
-      )}
-
-      {token && (
-        <div style={{ marginTop: '20px' }}>
-          <h3>✅ Token Obtenido:</h3>
-          <div style={{ 
-            backgroundColor: '#f5f5f5', 
-            padding: '10px', 
-            borderRadius: '4px',
-            wordBreak: 'break-all',
-            fontSize: '12px',
-            fontFamily: 'monospace'
-          }}>
-            <strong>Longitud:</strong> {token.length} caracteres<br/>
-            <strong>Primeros 50:</strong> {token.substring(0, 50)}...<br/>
-            <strong>Últimos 50:</strong> ...{token.substring(token.length - 50)}<br/>
-            <strong>Token completo:</strong><br/>
-            {token}
+      <div style={{ marginBottom: '10px' }}>
+        <strong>Usuario:</strong> {user ? '✅ Autenticado' : '❌ No autenticado'}
+      </div>
+      
+      {user && (
+        <>
+          <div style={{ marginBottom: '10px' }}>
+            <strong>UID:</strong> {user.uid}
           </div>
-        </div>
+          <div style={{ marginBottom: '10px' }}>
+            <strong>Email:</strong> {user.email}
+          </div>
+          <div style={{ marginBottom: '10px' }}>
+            <strong>Email Verificado:</strong> {user.emailVerified ? '✅' : '❌'}
+          </div>
+        </>
       )}
+      
+      <div style={{ marginBottom: '10px' }}>
+        <strong>UserProfile:</strong> {userProfile ? '✅ Existe' : '❌ No existe'}
+      </div>
+      
+      {userProfile && (
+        <>
+          <div style={{ marginBottom: '10px' }}>
+            <strong>Profile UID:</strong> {userProfile.uid}
+          </div>
+          <div style={{ marginBottom: '10px' }}>
+            <strong>Profile Role:</strong> {userProfile.role || '❌ NULL'}
+          </div>
+          <div style={{ marginBottom: '10px' }}>
+            <strong>Profile Email:</strong> {userProfile.email}
+          </div>
+        </>
+      )}
+      
+      <div style={{ marginBottom: '10px' }}>
+        <strong>Context Role:</strong> {role || '❌ NULL'}
+      </div>
+      
+      <div style={{ marginBottom: '10px' }}>
+        <strong>Permisos:</strong> {Object.keys(permisos || {}).length} permisos
+      </div>
+      
+      <div style={{ marginTop: '20px', padding: '10px', backgroundColor: '#f0f0f0' }}>
+        <h4>📋 Información de Debug:</h4>
+        <p>Si el rol es NULL, el usuario no podrá usar ControlFile correctamente.</p>
+        <p>Para solucionarlo, recarga la página o contacta al administrador.</p>
+      </div>
     </div>
   );
 };

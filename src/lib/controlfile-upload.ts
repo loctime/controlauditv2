@@ -4,52 +4,157 @@ import { getAuth } from 'firebase/auth';
 import { getBackendUrl } from '../config/environment';
 
 async function authFetch<T = any>(path: string, init: RequestInit = {}) {
-  const token = await getAuth().currentUser!.getIdToken();
-  const headers = new Headers(init.headers || {});
-  headers.set('Authorization', `Bearer ${token}`);
-  if (init.body && !headers.has('Content-Type')) headers.set('Content-Type', 'application/json');
-  const res = await fetch(getBackendUrl(path), { ...init, headers });
-  if (!res.ok) throw await res.json().catch(() => ({ error: res.statusText }));
-  return res.json() as Promise<T>;
+  try {
+    const auth = getAuth();
+    const currentUser = auth.currentUser;
+    
+    if (!currentUser) {
+      console.error('❌ [controlfile-upload] Usuario no autenticado');
+      throw new Error('Usuario no autenticado');
+    }
+    
+    console.log('🔐 [controlfile-upload] Usuario autenticado:', {
+      uid: currentUser.uid,
+      email: currentUser.email,
+      emailVerified: currentUser.emailVerified
+    });
+    
+    const token = await currentUser.getIdToken(true); // Forzar refresh del token
+    
+    if (!token) {
+      console.error('❌ [controlfile-upload] No se pudo obtener token de autenticación');
+      throw new Error('Token de autenticación no disponible');
+    }
+    
+    console.log('🔑 [controlfile-upload] Token obtenido:', token.substring(0, 20) + '...');
+    
+    const headers = new Headers(init.headers || {});
+    headers.set('Authorization', `Bearer ${token}`);
+    if (init.body && !headers.has('Content-Type')) headers.set('Content-Type', 'application/json');
+    
+    const url = getBackendUrl(path);
+    console.log('🌐 [controlfile-upload] Haciendo request a:', url);
+    console.log('📋 [controlfile-upload] Headers:', Object.fromEntries(headers.entries()));
+    
+    const res = await fetch(url, { ...init, headers });
+    
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => ({ error: res.statusText }));
+      console.error('❌ [controlfile-upload] Error en request:', {
+        status: res.status,
+        statusText: res.statusText,
+        url,
+        errorData
+      });
+      throw errorData;
+    }
+    
+    const result = await res.json();
+    console.log('✅ [controlfile-upload] Request exitoso:', result);
+    return result as Promise<T>;
+    
+  } catch (error) {
+    console.error('❌ [controlfile-upload] Error en authFetch:', error);
+    throw error;
+  }
 }
 
 export async function subirArchivoDirectoCF(file: File, parentId: string | null = null) {
-  // 1) Presign
-  const presign = await authFetch<PresignResponse>('/api/uploads/presign', {
-    method: 'POST',
-    body: JSON.stringify({ name: file.name, size: file.size, mime: file.type, parentId }),
-  });
-
-  // 2) Upload
-  if (presign.multipart) {
-    const parts = presign.multipart.parts;
-    const chunkSize = Math.ceil(file.size / parts.length);
-    const etags: Array<{ PartNumber: number; ETag: string }> = [];
-    for (let i = 0; i < parts.length; i++) {
-      const start = i * chunkSize;
-      const end = Math.min(start + chunkSize, file.size);
-      const chunk = file.slice(start, end);
-      const put = await fetch(parts[i].url, { method: 'PUT', body: chunk });
-      if (!put.ok) throw new Error(`Fallo subiendo parte ${i + 1}`);
-      const etag = put.headers.get('ETag')?.replace(/"/g, '');
-      if (!etag) throw new Error(`ETag faltante en parte ${i + 1}`);
-      etags.push({ PartNumber: i + 1, ETag: etag });
+  try {
+    console.log('🚀 [controlfile-upload] Iniciando subida a ControlFile usando flujo estándar');
+    
+    // 1) Obtener URL presignada del backend de ControlFile
+    const presignResponse = await authFetch<PresignResponse>('/api/uploads/presign', {
+      method: 'POST',
+      body: JSON.stringify({ 
+        name: file.name, 
+        size: file.size, 
+        mime: file.type, 
+        parentId 
+      }),
+    });
+    
+    console.log('✅ [controlfile-upload] Presign exitoso:', presignResponse);
+    
+    // 2) Subir archivo directamente a S3/Backblaze usando la URL presignada
+    if (!presignResponse.url) {
+      throw new Error('URL presignada no disponible en la respuesta');
     }
-    // 3) Confirm (multipart)
-    return authFetch('/api/uploads/confirm', {
+    
+    console.log('🌐 [controlfile-upload] Subiendo archivo a S3/Backblaze:', presignResponse.url);
+    
+    // Usar XMLHttpRequest para evitar problemas de CORS
+    const uploadResult = await uploadToS3WithXHR(presignResponse.url, file);
+    
+    if (!uploadResult.success) {
+      throw new Error(`Error en subida a S3: ${uploadResult.error}`);
+    }
+    
+    console.log('✅ [controlfile-upload] Archivo subido exitosamente a S3/Backblaze');
+    
+    // 3) Confirmar la subida en ControlFile
+    console.log('🔗 [controlfile-upload] Confirmando subida en ControlFile...');
+    
+    const confirmResponse = await authFetch('/api/uploads/confirm', {
       method: 'POST',
-      body: JSON.stringify({ uploadSessionId: presign.uploadSessionId, parts: etags }),
+      body: JSON.stringify({ 
+        uploadSessionId: presignResponse.uploadSessionId 
+      }),
     });
-  } else {
-    if (!presign.url) throw new Error('URL presignada faltante');
-    const put = await fetch(presign.url, { method: 'PUT', body: file, headers: { 'Content-Type': file.type } });
-    if (!put.ok) throw new Error('Fallo subiendo archivo');
-    // 3) Confirm (single)
-    return authFetch('/api/uploads/confirm', {
-      method: 'POST',
-      body: JSON.stringify({ uploadSessionId: presign.uploadSessionId }),
-    });
+    
+    console.log('✅ [controlfile-upload] Subida confirmada en ControlFile:', confirmResponse);
+    
+    return {
+      success: true,
+      fileId: confirmResponse.fileId || presignResponse.uploadSessionId,
+      uploadSessionId: presignResponse.uploadSessionId,
+      fileName: file.name,
+      fileSize: file.size,
+      fileType: file.type,
+      key: presignResponse.key,
+      ...confirmResponse
+    };
+    
+  } catch (error) {
+    console.error('❌ [controlfile-upload] Error en subirArchivoDirectoCF:', error);
+    throw error;
   }
+}
+
+// Función auxiliar para subir archivos a S3 usando XMLHttpRequest (evita problemas de CORS)
+function uploadToS3WithXHR(url: string, file: File): Promise<{ success: boolean; error?: string }> {
+  return new Promise((resolve) => {
+    const xhr = new XMLHttpRequest();
+    
+    xhr.open('PUT', url, true);
+    xhr.setRequestHeader('Content-Type', file.type);
+    
+    xhr.onload = function() {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        console.log('✅ [XHR] Subida exitosa a S3:', xhr.status);
+        resolve({ success: true });
+      } else {
+        console.error('❌ [XHR] Error en subida a S3:', xhr.status, xhr.statusText);
+        resolve({ success: false, error: `HTTP ${xhr.status}: ${xhr.statusText}` });
+      }
+    };
+    
+    xhr.onerror = function() {
+      console.error('❌ [XHR] Error de red en subida a S3');
+      resolve({ success: false, error: 'Error de red' });
+    };
+    
+    xhr.ontimeout = function() {
+      console.error('❌ [XHR] Timeout en subida a S3');
+      resolve({ success: false, error: 'Timeout' });
+    };
+    
+    // Configurar timeout de 60 segundos
+    xhr.timeout = 60000;
+    
+    // Enviar el archivo
+    xhr.send(file);
+  });
 }
 
 // Función de compatibilidad para mantener la API existente

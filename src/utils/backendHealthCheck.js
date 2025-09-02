@@ -1,6 +1,6 @@
 // src/utils/backendHealthCheck.js
 import axios from 'axios';
-import { getBackendUrl, getEnvironmentInfo } from '../config/environment.js';
+import { getBackendUrl, getEnvironmentInfo } from '../config/environment.ts';
 
 class BackendHealthCheck {
   constructor() {

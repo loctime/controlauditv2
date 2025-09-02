@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Button, CircularProgress, Alert, Box, Typography } from '@mui/material';
 import { Download, Android } from '@mui/icons-material';
-import { getBackendUrl } from '../../config/environment.js';
+import { getBackendUrl } from '../../config/environment.ts';
 
 const DownloadAPK = ({ version = 'latest' }) => {
   const [loading, setLoading] = useState(false);

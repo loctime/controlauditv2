@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { usePlatform } from './usePlatform.js';
-import { getBackendUrl } from '../config/environment.js';
+import { getBackendUrl } from '../config/environment.ts';
 
 export const useUpdateChecker = () => {
   const { isAPK, isWeb } = usePlatform();

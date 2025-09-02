@@ -16,6 +16,11 @@ export const isSuperAdmin = (userProfile) => {
 
 // Función para obtener el rol del usuario
 export const getUserRole = (userEmail) => {
+  if (!userEmail) {
+    console.warn('getUserRole: Email no proporcionado, usando rol por defecto');
+    return 'operario';
+  }
+  
   // Por defecto, usuarios nuevos tienen rol 'max' (cliente administrador)
   // con todos los permisos habilitados
   return 'max';

@@ -1,11 +1,12 @@
 // Configuración centralizada para ControlFile
 // Este archivo centraliza todas las URLs y configuraciones relacionadas con ControlFile
+import { getBackendUrl } from './environment.ts';
 
 export const CONTROLFILE_CONFIG = {
   // URLs base según el entorno
   urls: {
-    development: 'http://localhost:4000',  // Tu backend local
-    production: 'https://controlauditv2.onrender.com'    // Tu backend en producción
+    development: 'https://controlfile.onrender.com',  // Backend de ControlFile en desarrollo
+    production: 'https://controlfile.onrender.com'    // Backend oficial de ControlFile
   },
   
   // Endpoints de la API
@@ -49,14 +50,11 @@ export const CONTROLFILE_CONFIG = {
 
 /**
  * Obtiene la URL base según el entorno
- * @returns {string} URL base del backend proxy
+ * @returns {string} URL base del backend de ControlFile
  */
 export function getControlFileBaseUrl() {
-  // Usar tu backend como proxy para ControlFile
-  if (import.meta.env.DEV || window.location.hostname === 'localhost') {
-    return 'http://localhost:4000';
-  }
-  return 'https://controlauditv2.onrender.com';
+  // Usar la nueva configuración de entorno
+  return getBackendUrl('');
 }
 
 /**
