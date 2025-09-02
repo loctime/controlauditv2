@@ -25,7 +25,9 @@ const getEnvironmentConfig = () => {
     
     // Configuración de CORS
     cors: {
-      origin: [],
+      origin: process.env.CORS_ORIGIN ? 
+        process.env.CORS_ORIGIN.split(',').map(origin => origin.trim()) : 
+        ['http://localhost:3000', 'http://localhost:5173'],
       credentials: true,
       methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
       allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
@@ -49,20 +51,6 @@ const getEnvironmentConfig = () => {
   if (nodeEnv === 'development') {
     return {
       ...baseConfig,
-      cors: {
-        ...baseConfig.cors,
-        origin: [
-          'http://localhost:3000',
-          'http://localhost:5173',
-          'http://127.0.0.1:3000',
-          'http://127.0.0.1:5173',
-          'https://auditoria.controldoc.app',
-          'https://controlauditv2.onrender.com',
-          'https://*.controldoc.app',
-          'https://*.vercel.app',
-          'https://*.onrender.com'
-        ]
-      },
       logging: {
         ...baseConfig.logging,
         level: 'debug',
@@ -74,13 +62,6 @@ const getEnvironmentConfig = () => {
   if (nodeEnv === 'staging') {
     return {
       ...baseConfig,
-      cors: {
-        ...baseConfig.cors,
-        origin: [
-          'https://controlaudit.vercel.app',
-          'https://demo.controlaudit.app'
-        ]
-      },
       logging: {
         ...baseConfig.logging,
         level: 'info',
@@ -92,20 +73,6 @@ const getEnvironmentConfig = () => {
   if (nodeEnv === 'production') {
     return {
       ...baseConfig,
-      cors: {
-        ...baseConfig.cors,
-        origin: [
-          'https://controlaudit.app',
-          'https://www.controlaudit.app',
-          'https://cliente.controlaudit.app',
-          'https://demo.controlaudit.app',
-          'https://auditoria.controldoc.app',
-          'https://controlauditv2.onrender.com',
-          'https://*.controldoc.app',
-          'https://*.vercel.app',
-          'https://*.onrender.com'
-        ]
-      },
       logging: {
         ...baseConfig.logging,
         level: 'warn',

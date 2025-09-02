@@ -403,7 +403,7 @@ app.get('/api/user/profile', verificarTokenUsuario, async (req, res) => {
 // Endpoint para crear sesión de subida (presign)
 app.post('/api/uploads/presign', verificarTokenUsuario, async (req, res) => {
   try {
-    const { fileName, fileSize, mimeType } = req.body;
+    const { fileName, fileSize, mimeType, parentId } = req.body;
     const { uid } = req.user;
     
     // Validar parámetros requeridos
@@ -446,6 +446,7 @@ app.post('/api/uploads/presign', verificarTokenUsuario, async (req, res) => {
     res.json({
       success: true,
       uploadId,
+      uploadSessionId: uploadId, // Agregar para compatibilidad con el frontend
       uploadUrl,
       expiresAt: uploadSession.expiresAt,
       message: 'Sesión de subida creada exitosamente'
@@ -537,6 +538,102 @@ app.post('/api/uploads/proxy-upload', verificarTokenUsuario, upload.single('file
     
   } catch (error) {
     console.error('❌ Error en subida de archivo:', error);
+    res.status(500).json({
+      error: 'Error interno del servidor',
+      message: error.message
+    });
+  }
+});
+
+// Endpoint para confirmar la subida (confirm)
+app.post('/api/uploads/confirm', verificarTokenUsuario, async (req, res) => {
+  try {
+    const { uploadSessionId } = req.body;
+    const { uid } = req.user;
+    
+    if (!uploadSessionId) {
+      return res.status(400).json({
+        error: 'Falta uploadSessionId',
+        message: 'uploadSessionId es obligatorio'
+      });
+    }
+    
+    // Verificar que la sesión de subida existe y pertenece al usuario
+    const sessionDoc = await admin.firestore().collection('uploadSessions').doc(uploadSessionId).get();
+    
+    if (!sessionDoc.exists) {
+      return res.status(404).json({
+        error: 'Sesión de subida no encontrada',
+        message: 'La sesión de subida no existe o ha expirado'
+      });
+    }
+    
+    const sessionData = sessionDoc.data();
+    
+    if (sessionData.userId !== uid) {
+      return res.status(403).json({
+        error: 'Acceso denegado',
+        message: 'No tienes permisos para confirmar esta subida'
+      });
+    }
+    
+    if (sessionData.status !== 'pending') {
+      return res.status(400).json({
+        error: 'Sesión inválida',
+        message: 'La sesión de subida ya no está pendiente'
+      });
+    }
+    
+    if (new Date() > sessionData.expiresAt.toDate()) {
+      return res.status(400).json({
+        error: 'Sesión expirada',
+        message: 'La sesión de subida ha expirado'
+      });
+    }
+    
+    // Generar fileId único para ControlFile
+    const fileId = `cf_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    
+    // Crear registro del archivo en Firestore
+    const fileData = {
+      fileId,
+      uploadSessionId,
+      userId: uid,
+      fileName: sessionData.fileName,
+      fileSize: sessionData.fileSize,
+      mimeType: sessionData.mimeType,
+      url: `https://files.controldoc.app/${fileId}`, // URL de ControlFile
+      metadata: {
+        uploadedAt: new Date(),
+        originalName: sessionData.fileName,
+        size: sessionData.fileSize,
+        mimeType: sessionData.mimeType
+      },
+      createdAt: new Date()
+    };
+    
+    // Guardar archivo en Firestore
+    await admin.firestore().collection('files').doc(fileId).set(fileData);
+    
+    // Marcar sesión como completada
+    await admin.firestore().collection('uploadSessions').doc(uploadSessionId).update({
+      status: 'completed',
+      completedAt: new Date(),
+      fileId: fileId
+    });
+    
+    res.json({
+      success: true,
+      message: 'Subida confirmada exitosamente',
+      fileId,
+      url: fileData.url,
+      metadata: fileData.metadata,
+      uploadSessionId,
+      fileName: sessionData.fileName
+    });
+    
+  } catch (error) {
+    console.error('Error confirmando subida:', error);
     res.status(500).json({
       error: 'Error interno del servidor',
       message: error.message

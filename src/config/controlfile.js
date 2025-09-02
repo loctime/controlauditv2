@@ -4,8 +4,8 @@
 export const CONTROLFILE_CONFIG = {
   // URLs base según el entorno
   urls: {
-    development: 'https://controlfile.onrender.com',  // Backend directo de ControlFile
-    production: 'https://controlfile.onrender.com'    // Backend directo de ControlFile
+    development: 'http://localhost:4000',  // Tu backend local
+    production: 'https://controlauditv2.onrender.com'    // Tu backend en producción
   },
   
   // Endpoints de la API
@@ -49,11 +49,14 @@ export const CONTROLFILE_CONFIG = {
 
 /**
  * Obtiene la URL base según el entorno
- * @returns {string} URL base del backend directo de ControlFile
+ * @returns {string} URL base del backend proxy
  */
 export function getControlFileBaseUrl() {
-  // Siempre usar el backend directo de ControlFile
-  return 'https://controlfile.onrender.com';
+  // Usar tu backend como proxy para ControlFile
+  if (import.meta.env.DEV || window.location.hostname === 'localhost') {
+    return 'http://localhost:4000';
+  }
+  return 'https://controlauditv2.onrender.com';
 }
 
 /**

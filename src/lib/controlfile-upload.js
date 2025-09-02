@@ -37,9 +37,9 @@ export async function uploadToControlFile(params) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        name: file.name,
-        size: file.size,
-        mime: file.type,
+        fileName: file.name,
+        fileSize: file.size,
+        mimeType: file.type,
         parentId: null, // ControlFile creará carpeta automáticamente o subirá a la raíz
       }),
     });
