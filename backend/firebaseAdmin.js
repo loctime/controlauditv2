@@ -16,7 +16,7 @@ dotenv.config();
 const getServiceAccount = async () => {
   // Si tenemos las variables de entorno de Firebase Admin SDK
   if (process.env.FIREBASE_PROJECT_ID && process.env.FIREBASE_CLIENT_EMAIL && process.env.FIREBASE_PRIVATE_KEY) {
-    console.log('🔧 Usando credenciales de Firebase desde variables de entorno');
+    console.log('🔧 Usando credenciales de Firebase desde variables de entorno individuales');
     console.log('📋 Project ID:', process.env.FIREBASE_PROJECT_ID);
     console.log('👤 Client Email:', process.env.FIREBASE_CLIENT_EMAIL);
     
@@ -32,6 +32,24 @@ const getServiceAccount = async () => {
       auth_provider_x509_cert_url: "https://www.googleapis.com/oauth2/v1/certs",
       client_x509_cert_url: `https://www.googleapis.com/robot/v1/metadata/x509/${process.env.FIREBASE_CLIENT_EMAIL}`
     };
+  }
+  
+  // Si tenemos FB_ADMIN_IDENTITY o FB_ADMIN_APPDATA
+  if (process.env.FB_ADMIN_IDENTITY || process.env.FB_ADMIN_APPDATA) {
+    const identityData = process.env.FB_ADMIN_IDENTITY || process.env.FB_ADMIN_APPDATA;
+    console.log('🔧 Usando credenciales de Firebase desde FB_ADMIN_IDENTITY/FB_ADMIN_APPDATA');
+    
+    try {
+      const serviceAccount = JSON.parse(identityData);
+      console.log('✅ Credenciales de Firebase parseadas exitosamente');
+      console.log('👤 Client Email:', serviceAccount.client_email);
+      console.log('🏢 Project ID:', serviceAccount.project_id);
+      
+      return serviceAccount;
+    } catch (error) {
+      console.error('❌ Error parseando FB_ADMIN_IDENTITY/FB_ADMIN_APPDATA:', error.message);
+      throw new Error('Error parseando credenciales de Firebase');
+    }
   }
   
   // Fallback para desarrollo local
@@ -71,8 +89,9 @@ const getServiceAccount = async () => {
     console.error('📁 Directorio actual:', __dirname);
     console.error('💡 Opciones:');
     console.error('   1. Configura las variables de entorno FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL y FIREBASE_PRIVATE_KEY');
-    console.error('   2. O asegúrate de que el archivo serviceAccountKey.json esté en el directorio backend/');
-    console.error('   3. Verifica que el archivo serviceAccountKey.json tenga el formato correcto');
+    console.error('   2. O configura FB_ADMIN_IDENTITY o FB_ADMIN_APPDATA con las credenciales completas');
+    console.error('   3. O asegúrate de que el archivo serviceAccountKey.json esté en el directorio backend/');
+    console.error('   4. Verifica que el archivo serviceAccountKey.json tenga el formato correcto');
     process.exit(1);
   }
 };
