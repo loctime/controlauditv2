@@ -1,9 +1,9 @@
 // utils/controlfile-upload.ts (en controlAudit)
 // Subida directa a ControlFile usando el backend oficial
 import { getAuth } from 'firebase/auth';
-import { getBackendUrl } from '../config/environment';
+import { getBackendUrl, getLocalBackendUrl, getControlFileUrl } from '../config/environment';
 
-async function authFetch<T = any>(path: string, init: RequestInit = {}) {
+async function authFetch<T = any>(path: string, init: RequestInit = {}, operation: 'controlfile' | 'local' = 'local') {
   try {
     const auth = getAuth();
     const currentUser = auth.currentUser;
@@ -32,7 +32,8 @@ async function authFetch<T = any>(path: string, init: RequestInit = {}) {
     headers.set('Authorization', `Bearer ${token}`);
     if (init.body && !headers.has('Content-Type')) headers.set('Content-Type', 'application/json');
     
-    const url = getBackendUrl(path);
+    // Usar URL según el tipo de operación
+    const url = operation === 'controlfile' ? getControlFileUrl(path) : getLocalBackendUrl(path);
     console.log('🌐 [controlfile-upload] Haciendo request a:', url);
     console.log('📋 [controlfile-upload] Headers:', Object.fromEntries(headers.entries()));
     
@@ -63,6 +64,15 @@ export async function subirArchivoDirectoCF(file: File, parentId: string | null 
   try {
     console.log('🚀 [controlfile-upload] Iniciando subida a ControlFile usando flujo estándar');
     
+    // 🔧 INICIALIZAR ControlAudit si no hay parentId
+    let effectiveParentId = parentId;
+    if (!effectiveParentId) {
+      console.log('🔧 [controlfile-upload] No hay parentId, inicializando ControlAudit...');
+      const rootFolder = await initializeControlAudit();
+      effectiveParentId = rootFolder.folderId;
+      console.log('✅ [controlfile-upload] Usando carpeta raíz:', effectiveParentId);
+    }
+    
     // 1) Obtener URL presignada del backend de ControlFile
     const presignResponse = await authFetch<PresignResponse>('/api/uploads/presign', {
       method: 'POST',
@@ -70,9 +80,9 @@ export async function subirArchivoDirectoCF(file: File, parentId: string | null 
         name: file.name, 
         size: file.size, 
         mime: file.type, 
-        parentId 
+        parentId: effectiveParentId // Usar el parentId efectivo
       }),
-    });
+    }, 'controlfile'); // Usar backend de ControlFile para subida de archivos
     
     console.log('✅ [controlfile-upload] Presign exitoso:', presignResponse);
     
@@ -100,7 +110,7 @@ export async function subirArchivoDirectoCF(file: File, parentId: string | null 
       body: JSON.stringify({ 
         uploadSessionId: presignResponse.uploadSessionId 
       }),
-    });
+    }, 'controlfile'); // Usar backend de ControlFile para confirmación
     
     console.log('✅ [controlfile-upload] Subida confirmada en ControlFile:', confirmResponse);
     
@@ -200,6 +210,219 @@ export async function uploadFile(file: File, idToken: string, parentId: string |
     file,
     parentId
   });
+}
+
+// Función para crear o obtener la carpeta raíz de ControlAudit
+export async function getOrCreateControlAuditRootFolder() {
+  try {
+    console.log('📁 [controlfile-upload] Obteniendo/creando carpeta raíz de ControlAudit...');
+    
+    const response = await authFetch<{
+      success: boolean;
+      folderId: string;
+      name: string;
+      path: string;
+      message: string;
+    }>('/api/folders/root', {
+      method: 'GET'
+    }, 'local'); // Usar backend local para gestión de carpetas
+    
+    if (response.success) {
+      console.log('✅ [controlfile-upload] Carpeta raíz obtenida:', response.folderId);
+      return {
+        success: true,
+        folderId: response.folderId,
+        name: response.name,
+        path: response.path
+      };
+    } else {
+      throw new Error('No se pudo obtener la carpeta raíz');
+    }
+    
+  } catch (error) {
+    console.error('❌ [controlfile-upload] Error obteniendo carpeta raíz:', error);
+    throw error;
+  }
+}
+
+// Función para pinear la carpeta ControlAudit en la barra de tareas
+export async function pinControlAuditToTaskbar(folderId: string) {
+  try {
+    console.log('📌 [controlfile-upload] Pineando ControlAudit en taskbar...');
+    
+    // 1. Leer items actuales del taskbar
+    const currentItems = await authFetch<{ items: any[] }>('/api/user/taskbar', {
+      method: 'GET'
+    }, 'local'); // Usar backend local para taskbar
+    
+    console.log('📋 [controlfile-upload] Items actuales del taskbar:', currentItems.items?.length || 0);
+    
+    // 2. Verificar si ya existe el item de ControlAudit
+    const existingItem = currentItems.items?.find(item => 
+      item.id === folderId || item.name === 'ControlAudit'
+    );
+    
+    if (existingItem) {
+      console.log('✅ [controlfile-upload] ControlAudit ya está pineado en taskbar');
+      return existingItem;
+    }
+    
+    // 3. Crear nuevo item para ControlAudit
+    const newItem = {
+      id: folderId,
+      name: 'ControlAudit',
+      icon: 'Folder',
+      color: 'text-purple-600',
+      type: 'folder' as const,
+      isCustom: true
+    };
+    
+    // 4. Agregar el nuevo item al array existente
+    const updatedItems = [...(currentItems.items || []), newItem];
+    
+    // 5. Guardar items actualizados
+    const saveResponse = await authFetch('/api/user/taskbar', {
+      method: 'POST',
+      body: JSON.stringify({ items: updatedItems })
+    }, 'local'); // Usar backend local para taskbar
+    
+    console.log('✅ [controlfile-upload] ControlAudit pineado exitosamente en taskbar');
+    
+    return newItem;
+    
+  } catch (error) {
+    console.error('❌ [controlfile-upload] Error pineando en taskbar:', error);
+    // No fallar la subida si falla el taskbar
+    return null;
+  }
+}
+
+// Función para inicializar ControlAudit (carpeta raíz + taskbar)
+export async function initializeControlAudit() {
+  try {
+    console.log('🚀 [controlfile-upload] Inicializando ControlAudit...');
+    
+    // 1. Crear/obtener carpeta raíz
+    const rootFolder = await getOrCreateControlAuditRootFolder();
+    
+    // 2. Pinear en taskbar
+    await pinControlAuditToTaskbar(rootFolder.folderId);
+    
+    console.log('✅ [controlfile-upload] ControlAudit inicializado correctamente');
+    
+    return rootFolder;
+    
+  } catch (error) {
+    console.error('❌ [controlfile-upload] Error inicializando ControlAudit:', error);
+    throw error;
+  }
+}
+
+// Función para crear una subcarpeta dentro de ControlAudit
+export async function createControlAuditSubfolder(folderName: string, parentId?: string | null) {
+  try {
+    console.log('📁 [controlfile-upload] Creando subcarpeta:', { folderName, parentId });
+    
+    // Si no hay parentId, obtener la carpeta raíz
+    let effectiveParentId = parentId;
+    if (!effectiveParentId) {
+      const rootFolder = await getOrCreateControlAuditRootFolder();
+      effectiveParentId = rootFolder.folderId;
+    }
+    
+    const response = await authFetch<{
+      success: boolean;
+      folderId: string;
+      name: string;
+      parentId: string;
+      path: string;
+    }>('/api/folders/create', {
+      method: 'POST',
+      body: JSON.stringify({
+        name: folderName,
+        parentId: effectiveParentId
+      })
+    }, 'local'); // Usar backend local para gestión de carpetas
+    
+    if (response.success) {
+      console.log('✅ [controlfile-upload] Subcarpeta creada:', response.folderId);
+      return {
+        success: true,
+        folderId: response.folderId,
+        name: response.name,
+        parentId: response.parentId,
+        path: response.path
+      };
+    } else {
+      throw new Error('No se pudo crear la subcarpeta');
+    }
+    
+  } catch (error) {
+    console.error('❌ [controlfile-upload] Error creando subcarpeta:', error);
+    throw error;
+  }
+}
+
+// Función mejorada para subir archivos con manejo automático de carpetas
+export async function subirArchivoConCarpeta(file: File, folderName?: string, parentId?: string | null) {
+  try {
+    console.log('🚀 [controlfile-upload] Iniciando subida con manejo de carpetas:', {
+      fileName: file.name,
+      folderName,
+      parentId
+    });
+    
+    // 🔧 INICIALIZAR ControlAudit ANTES de cualquier subida
+    console.log('🔧 [controlfile-upload] Inicializando ControlAudit...');
+    await initializeControlAudit();
+    console.log('✅ [controlfile-upload] ControlAudit inicializado');
+    
+    let effectiveParentId = parentId;
+    
+    // Si se especifica un nombre de carpeta, crearla o usarla
+    if (folderName) {
+      try {
+        const subfolder = await createControlAuditSubfolder(folderName, parentId);
+        effectiveParentId = subfolder.folderId;
+        console.log('✅ [controlfile-upload] Usando subcarpeta:', effectiveParentId);
+      } catch (error) {
+        console.warn('⚠️ [controlfile-upload] No se pudo crear subcarpeta, usando carpeta raíz:', error);
+        // Continuar con la carpeta raíz si falla la creación de subcarpeta
+      }
+    }
+    
+    // Si aún no hay parentId, usar la carpeta raíz
+    if (!effectiveParentId) {
+      const rootFolder = await getOrCreateControlAuditRootFolder();
+      effectiveParentId = rootFolder.folderId;
+      console.log('✅ [controlfile-upload] Usando carpeta raíz:', effectiveParentId);
+    }
+    
+    // Subir archivo con el parentId correcto
+    const result = await subirArchivoDirectoCF(file, effectiveParentId);
+    
+    console.log('✅ [controlfile-upload] Archivo subido exitosamente con parentId:', effectiveParentId);
+    
+    return {
+      ...result,
+      parentId: effectiveParentId,
+      folderName: folderName || 'raíz'
+    };
+    
+  } catch (error) {
+    console.error('❌ [controlfile-upload] Error en subida con carpeta:', error);
+    throw error;
+  }
+}
+
+// Función para subir archivo a una carpeta específica por nombre
+export async function subirArchivoACarpeta(file: File, folderName: string) {
+  return subirArchivoConCarpeta(file, folderName);
+}
+
+// Función para subir archivo a la carpeta raíz
+export async function subirArchivoARaiz(file: File) {
+  return subirArchivoConCarpeta(file);
 }
 
 // Tipos TypeScript

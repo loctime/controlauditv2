@@ -43,6 +43,24 @@ try {
 }
 ```
 
+### **Manejo Automático de Carpetas** 🆕
+```typescript
+import { 
+  subirArchivoACarpeta,
+  subirArchivoARaiz,
+  subirArchivoConCarpeta 
+} from '../lib/controlfile-upload';
+
+// ✅ Subida a carpeta raíz (parentId automático)
+const result1 = await subirArchivoARaiz(file);
+
+// ✅ Subida a carpeta específica (se crea automáticamente)
+const result2 = await subirArchivoACarpeta(file, 'MiCarpeta');
+
+// ✅ Subida con control total de carpetas
+const result3 = await subirArchivoConCarpeta(file, 'Auditorias', parentIdExistente);
+```
+
 ### **Soporte Multipart para Archivos Grandes**
 - ✅ **Archivos pequeños:** Subida directa vía PUT
 - ✅ **Archivos grandes:** División automática en chunks
@@ -74,6 +92,35 @@ POST /api/uploads/presign
 }
 ```
 
+## 📁 **Manejo de Carpetas** 🆕
+
+### **Estructura Automática**
+```typescript
+// Se crea automáticamente:
+// ControlAudit/
+// ├── Archivo1.jpg (parentId: "root_uid_controlaudit")
+// ├── MiCarpeta/
+// │   ├── Archivo2.jpg (parentId: "folder_uid_timestamp_random")
+// │   └── Archivo3.jpg (parentId: "folder_uid_timestamp_random")
+// └── Auditorias/
+//     └── 2024/
+//         └── Enero/
+//             └── Archivo4.jpg (parentId: "folder_uid_timestamp_random")
+```
+
+### **Funciones de Carpeta**
+```typescript
+import { 
+  getOrCreateControlAuditRootFolder,
+  createControlAuditSubfolder 
+} from '../lib/controlfile-upload';
+
+// Crear estructura de carpetas
+const root = await getOrCreateControlAuditRootFolder();
+const auditorias = await createControlAuditSubfolder('Auditorias', root.folderId);
+const year2024 = await createControlAuditSubfolder('2024', auditorias.folderId);
+```
+
 ### **2. Upload (Subida del Archivo)**
 - **Archivo pequeño:** PUT directo a URL presignada
 - **Archivo grande:** División en chunks + PUT múltiple
@@ -96,6 +143,9 @@ POST /api/uploads/confirm
 - 🎯 **URLs configurables** por entorno
 - 📝 **TypeScript completo** con tipos
 - 🔄 **API compatible** con código existente
+- 📂 **Manejo automático de carpetas** con parentId correcto
+- 🗂️ **Organización automática** de archivos en ControlFile
+- 🔗 **Estructura jerárquica** compatible 100% con ControlFile
 
 ### **❌ Desventajas:**
 - 🔧 **Requiere configuración** de variables de entorno
@@ -166,6 +216,34 @@ echo "VITE_APP_BACKEND_URL=https://api.controldoc.app" > .env
 - **ControlFile API:** `https://api.controldoc.app`
 - **Archivos servidos:** `https://files.controldoc.app/{fileId}`
 - **Documentación:** Ver `docs/INTEGRACION_CONTROLFILE_AUDITORIA.md`
+- **Manejo de Carpetas:** Ver `CONTROLFILE_CARPETAS.md` 🆕
+- **Ejemplos Prácticos:** Ver `src/utils/controlfile-examples.js` 🆕
+
+## 🎯 **Ejemplos de Uso Rápido**
+
+### **Subida Simple a Carpeta Raíz**
+```typescript
+import { subirArchivoARaiz } from '../lib/controlfile-upload';
+
+const result = await subirArchivoARaiz(file);
+console.log('Archivo subido con parentId:', result.parentId);
+```
+
+### **Subida a Carpeta Específica**
+```typescript
+import { subirArchivoACarpeta } from '../lib/controlfile-upload';
+
+const result = await subirArchivoACarpeta(file, 'Evidencias_Auditoria');
+console.log('Archivo en carpeta:', result.folderName);
+```
+
+### **Crear Estructura de Carpetas**
+```typescript
+import { ejemploEstructuraCarpetas } from '../utils/controlfile-examples';
+
+const estructura = await ejemploEstructuraCarpetas();
+console.log('Carpeta Enero creada:', estructura.enero.folderId);
+```
 
 ---
 

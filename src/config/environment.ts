@@ -1,34 +1,49 @@
 // Configuración de entorno para ControlFile
 export const ENV_CONFIG = {
-  // Backend de ControlFile
-  BACKEND_URL: (import.meta as any).env?.VITE_APP_BACKEND_URL || 'https://controlfile.onrender.com',
+  // Backend de ControlFile (solo para subida de archivos)
+  CONTROLFILE_BACKEND_URL: (import.meta as any).env?.VITE_APP_BACKEND_URL || 'https://controlfile.onrender.com',
+  
+  // Backend local (para gestión de carpetas y taskbar)
+  LOCAL_BACKEND_URL: (import.meta as any).env?.VITE_APP_LOCAL_BACKEND_URL || 'http://localhost:4000',
   
   // Entorno
   IS_DEV: (import.meta as any).env?.DEV || false,
   IS_PROD: (import.meta as any).env?.PROD || false,
   
   // URLs por defecto según entorno
-  get BACKEND_BASE_URL() {
-    // Debug: Log de configuración
-    console.log('🔧 Configuración de entorno:', {
-      VITE_APP_BACKEND_URL: (import.meta as any).env?.VITE_APP_BACKEND_URL,
-      IS_DEV: this.IS_DEV,
-      IS_PROD: this.IS_PROD,
-      BACKEND_URL: this.BACKEND_URL,
-      'import.meta.env keys': Object.keys((import.meta as any).env || {}),
-      'import.meta.env values': Object.fromEntries(
-        Object.entries((import.meta as any).env || {}).filter(([key]) => key.startsWith('VITE_'))
-      )
-    });
-    
-    // Siempre usar el backend remoto de ControlFile
-    return this.BACKEND_URL;
+  get CONTROLFILE_BASE_URL() {
+    // Para subida de archivos, usar ControlFile
+    return this.CONTROLFILE_BACKEND_URL;
+  },
+  
+  get LOCAL_BASE_URL() {
+    // Para gestión de carpetas y taskbar, usar backend local
+    if (this.IS_DEV) {
+      return this.LOCAL_BACKEND_URL;
+    }
+    // En producción, usar el mismo backend de ControlFile
+    return this.CONTROLFILE_BACKEND_URL;
   }
 };
 
-// Función helper para obtener la URL del backend
-export function getBackendUrl(path: string = ''): string {
-  const baseUrl = ENV_CONFIG.BACKEND_BASE_URL.replace(/\/$/, '');
+// Función helper para obtener la URL del backend de ControlFile (subida de archivos)
+export function getControlFileUrl(path: string = ''): string {
+  const baseUrl = ENV_CONFIG.CONTROLFILE_BASE_URL.replace(/\/$/, '');
   const cleanPath = path.startsWith('/') ? path : `/${path}`;
   return `${baseUrl}${cleanPath}`;
+}
+
+// Función helper para obtener la URL del backend local (gestión de carpetas)
+export function getLocalBackendUrl(path: string = ''): string {
+  const baseUrl = ENV_CONFIG.LOCAL_BASE_URL.replace(/\/$/, '');
+  const cleanPath = path.startsWith('/') ? path : `/${path}`;
+  return `${baseUrl}${cleanPath}`;
+}
+
+// Función helper para obtener la URL del backend según el tipo de operación
+export function getBackendUrl(path: string = '', operation: 'controlfile' | 'local' = 'local'): string {
+  if (operation === 'controlfile') {
+    return getControlFileUrl(path);
+  }
+  return getLocalBackendUrl(path);
 }
