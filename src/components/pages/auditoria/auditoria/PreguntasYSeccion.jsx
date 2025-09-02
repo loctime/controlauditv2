@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Button, Box, Typography, Stack, useTheme, useMediaQuery } from "@mui/material";
+import { Button, Box, Typography, Stack, useTheme, useMediaQuery, Snackbar, Alert } from "@mui/material";
 import WarningIcon from '@mui/icons-material/Warning';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 
@@ -57,6 +57,27 @@ const PreguntasYSeccion = ({
   const [currentImageSeccion, setCurrentImageSeccion] = useState(null);
   const [currentImagePregunta, setCurrentImagePregunta] = useState(null);
   const [openPreguntasNoContestadas, setOpenPreguntasNoContestadas] = useState(false);
+  
+  // Estado para notificaciones
+  const [notification, setNotification] = useState({ open: false, message: '', severity: 'info' });
+
+  // Función para mostrar notificaciones
+  const showNotification = (message, severity = 'info') => {
+    setNotification({ open: true, message, severity });
+  };
+
+  // Función para cerrar notificaciones
+  const closeNotification = () => {
+    setNotification({ ...notification, open: false });
+  };
+
+  // Exponer la función globalmente para uso en otros componentes
+  useEffect(() => {
+    window.showNotification = showNotification;
+    return () => {
+      delete window.showNotification;
+    };
+  }, []);
 
   const secciones = Object.values(seccionesObj);
 
@@ -138,27 +159,67 @@ const PreguntasYSeccion = ({
     setComentario("");
   };
 
-  // ✅ USAR BACKEND COMPARTIDO PARA CONTROLFILE
+  // ✅ INTEGRACIÓN OPTIMIZADA CON CONTROLFILE
   const controlFileAvailable = true;
-  const controlFileUpload = async (file, options) => {
+  const controlFileUpload = async (file, options = {}) => {
     try {
+      console.log('🚀 Iniciando subida a ControlFile:', {
+        fileName: file.name,
+        fileSize: file.size,
+        fileType: file.type,
+        options
+      });
+
       const idToken = await auth.currentUser.getIdToken();
-      const uploadResult = await uploadFile(file, idToken, 'preguntas_imagenes');
+      
+      // Usar la función optimizada de uploadFile
+      const uploadResult = await uploadFile(file, idToken, options.parentId);
       
       if (uploadResult.success) {
-        console.log('✅ Imagen de pregunta subida exitosamente:', uploadResult.fileId);
+        console.log('✅ Imagen subida exitosamente a ControlFile:', {
+          fileId: uploadResult.fileId,
+          url: uploadResult.url,
+          size: file.size
+        });
+        
         return {
           success: true,
           fileId: uploadResult.fileId,
-          downloadUrl: `https://files.controldoc.app/${uploadResult.fileId}`,
+          downloadUrl: uploadResult.url || `https://files.controldoc.app/${uploadResult.fileId}`,
           bucketKey: uploadResult.uploadSessionId,
-          etag: uploadResult.etag || 'uploaded'
+          etag: uploadResult.etag || 'uploaded',
+          metadata: uploadResult.metadata
         };
       } else {
-        throw new Error('Error en la subida de la imagen');
+        throw new Error('Error en la subida de la imagen a ControlFile');
       }
     } catch (error) {
-      console.error('❌ Error subiendo imagen de pregunta:', error);
+      console.error('❌ Error subiendo imagen a ControlFile:', error);
+      
+      // Reintentar una vez más si es un error de red
+      if (error.name === 'TypeError' || error.message.includes('fetch')) {
+        console.log('🔄 Reintentando subida a ControlFile...');
+        try {
+          await new Promise(resolve => setTimeout(resolve, 1000)); // Esperar 1 segundo
+          const idToken = await auth.currentUser.getIdToken();
+          const uploadResult = await uploadFile(file, idToken, options.parentId);
+          
+          if (uploadResult.success) {
+            console.log('✅ Reintento exitoso a ControlFile:', uploadResult.fileId);
+            return {
+              success: true,
+              fileId: uploadResult.fileId,
+              downloadUrl: uploadResult.url || `https://files.controldoc.app/${uploadResult.fileId}`,
+              bucketKey: uploadResult.uploadSessionId,
+              etag: uploadResult.etag || 'uploaded',
+              metadata: uploadResult.metadata
+            };
+          }
+        } catch (retryError) {
+          console.error('❌ Error en reintento a ControlFile:', retryError);
+        }
+      }
+      
       throw error;
     }
   };
@@ -184,9 +245,11 @@ const PreguntasYSeccion = ({
       
       // Comprimir imagen antes de guardar
       const compressedFile = await comprimirImagen(file);
+      console.log(`✅ Imagen comprimida: ${(compressedFile.size/1024/1024).toFixed(2)}MB`);
       
-      // ✅ INTEGRACIÓN CON CONTROLFILE USANDO HOOK
+      // ✅ INTEGRACIÓN CON CONTROLFILE OPTIMIZADA
       let controlFileData = null;
+      let uploadSuccess = false;
       
       if (controlFileAvailable) {
         try {
@@ -200,63 +263,115 @@ const PreguntasYSeccion = ({
             controlFileId: uploadResult.fileId,
             controlFileUrl: uploadResult.downloadUrl,
             bucketKey: uploadResult.bucketKey,
-            etag: uploadResult.etag
+            etag: uploadResult.etag,
+            metadata: uploadResult.metadata
           };
           
-          console.log('✅ Imagen subida a ControlFile:', uploadResult.fileId);
+          uploadSuccess = true;
+          console.log('✅ Imagen subida exitosamente a ControlFile:', {
+            fileId: uploadResult.fileId,
+            url: uploadResult.downloadUrl,
+            size: compressedFile.size
+          });
+          
         } catch (controlFileError) {
           console.warn('⚠️ Error con ControlFile, usando modo local:', controlFileError.message);
+          
+          // Mostrar alerta al usuario sobre el fallo de ControlFile
+          if (controlFileError.message.includes('network') || controlFileError.message.includes('fetch')) {
+            showNotification('⚠️ No se pudo conectar con ControlFile. La imagen se guardará localmente.', 'warning');
+          } else {
+            showNotification('⚠️ Error al subir a ControlFile. La imagen se guardará localmente.', 'warning');
+          }
+          
           // Continuar con modo local si falla ControlFile
         }
       }
       
-      // Soportar múltiples imágenes por pregunta
-      const nuevasImagenes = imagenes.map((img, index) => {
-        if (index === seccionIndex) {
-          const currentImages = img[preguntaIndex] || [];
-          const imageData = {
-            ...compressedFile,
-            ...(controlFileData && { controlFileData }) // Agregar datos de ControlFile si están disponibles
-          };
+                // Soportar múltiples imágenes por pregunta
+          const nuevasImagenes = imagenes.map((img, index) => {
+            if (index === seccionIndex) {
+              const currentImages = img[preguntaIndex] || [];
+              
+              // Crear objeto de imagen con metadatos mejorados
+              const imageData = {
+                ...compressedFile,
+                // Agregar metadatos de ControlFile si están disponibles
+                ...(controlFileData && { 
+                  controlFileData,
+                  uploadedToControlFile: true,
+                  controlFileTimestamp: new Date().toISOString()
+                }),
+                // Metadatos locales
+                localTimestamp: new Date().toISOString(),
+                seccionIndex,
+                preguntaIndex,
+                originalSize: file.size,
+                compressedSize: compressedFile.size,
+                compressionRatio: ((1 - compressedFile.size/file.size) * 100).toFixed(1)
+              };
+              
+              const updatedImages = Array.isArray(currentImages) 
+                ? [...currentImages, imageData]
+                : [imageData];
+              
+              return [...img.slice(0, preguntaIndex), updatedImages, ...img.slice(preguntaIndex + 1)];
+            }
+            return img;
+          });
+      
+                setImagenes(nuevasImagenes);
+          guardarImagenes(nuevasImagenes);
           
-          const updatedImages = Array.isArray(currentImages) 
-            ? [...currentImages, imageData]
-            : [imageData];
-          
-          return [...img.slice(0, preguntaIndex), updatedImages, ...img.slice(preguntaIndex + 1)];
+          // Mostrar mensaje de éxito
+          if (uploadSuccess) {
+            console.log(`🎉 Imagen procesada y subida exitosamente a ControlFile: ${controlFileData.controlFileId}`);
+            showNotification('✅ Imagen guardada en ControlFile', 'success');
+          } else {
+            console.log(`✅ Imagen procesada y guardada localmente para pregunta ${preguntaIndex} de sección ${seccionIndex}`);
+            showNotification('⚠️ Imagen guardada localmente (ControlFile no disponible)', 'warning');
+          }
+          } catch (error) {
+        console.error('❌ Error al procesar imagen:', error);
+        
+        // Mostrar error al usuario
+        let errorMessage = 'Error al procesar la imagen.';
+        
+        if (error.message.includes('compresión')) {
+          errorMessage = 'Error al comprimir la imagen. Intenta con una imagen más pequeña.';
+        } else if (error.message.includes('ControlFile')) {
+          errorMessage = 'Error al subir a ControlFile. La imagen se guardará localmente.';
+        } else if (error.message.includes('red')) {
+          errorMessage = 'Error de conexión. Verifica tu internet e intenta de nuevo.';
         }
-        return img;
-      });
-      
-      setImagenes(nuevasImagenes);
-      guardarImagenes(nuevasImagenes);
-      
-      if (controlFileData) {
-        console.log(`✅ Imagen optimizada y subida a ControlFile: ${controlFileData.controlFileId}`);
-      } else {
-        console.log(`✅ Imagen optimizada y guardada localmente para pregunta ${preguntaIndex} de sección ${seccionIndex}`);
-      }
-    } catch (error) {
-      console.error('❌ Error al procesar imagen:', error);
-      
-      // Fallback: usar imagen original si falla la compresión
-      const nuevasImagenes = imagenes.map((img, index) => {
-        if (index === seccionIndex) {
-          const currentImages = img[preguntaIndex] || [];
-          const updatedImages = Array.isArray(currentImages) 
-            ? [...currentImages, file]
-            : [file];
+        
+        showNotification(`❌ ${errorMessage}`, 'error');
+        
+        // Fallback: usar imagen original si falla todo
+        try {
+          const nuevasImagenes = imagenes.map((img, index) => {
+            if (index === seccionIndex) {
+              const currentImages = img[preguntaIndex] || [];
+              const updatedImages = Array.isArray(currentImages) 
+                ? [...currentImages, file]
+                : [file];
+              
+              return [...img.slice(0, preguntaIndex), updatedImages, ...img.slice(preguntaIndex + 1)];
+            }
+            return img;
+          });
           
-          return [...img.slice(0, preguntaIndex), updatedImages, ...img.slice(preguntaIndex + 1)];
+          setImagenes(nuevasImagenes);
+          guardarImagenes(nuevasImagenes);
+          
+          console.log('⚠️ Usando imagen original sin optimizar como fallback');
+          showNotification('✅ Imagen guardada sin optimizar como respaldo.', 'info');
+          
+        } catch (fallbackError) {
+          console.error('❌ Error crítico en fallback:', fallbackError);
+          showNotification('❌ Error crítico al guardar la imagen. Contacta al soporte.', 'error');
         }
-        return img;
-      });
-      
-      setImagenes(nuevasImagenes);
-      guardarImagenes(nuevasImagenes);
-      
-      console.log('⚠️ Usando imagen original sin optimizar');
-    } finally {
+      } finally {
       // Ocultar indicador de procesamiento
       setProcesandoImagen(prev => ({ ...prev, [key]: false }));
     }
@@ -273,8 +388,30 @@ const PreguntasYSeccion = ({
     setOpenCameraDialog(false);
   };
 
-  const handlePhotoCapture = (compressedFile) => {
-    handleFileChange(currentImageSeccion, currentImagePregunta, { target: { files: [compressedFile] } });
+  const handlePhotoCapture = async (compressedFile) => {
+    try {
+      console.log('📸 Procesando foto capturada desde cámara:', {
+        fileName: compressedFile.name,
+        fileSize: compressedFile.size,
+        fileType: compressedFile.type
+      });
+      
+      // Crear un evento simulado para usar handleFileChange
+      const simulatedEvent = {
+        target: { 
+          files: [compressedFile] 
+        }
+      };
+      
+      // Usar la función optimizada de handleFileChange
+      await handleFileChange(currentImageSeccion, currentImagePregunta, simulatedEvent);
+      
+      console.log('✅ Foto de cámara procesada exitosamente');
+      
+    } catch (error) {
+      console.error('❌ Error procesando foto de cámara:', error);
+      showNotification('Error al procesar la foto de la cámara. Intenta de nuevo.', 'error');
+    }
   };
 
   const handleSelectFromGallery = () => {
@@ -445,6 +582,13 @@ const PreguntasYSeccion = ({
         preguntasNoContestadas={preguntasNoContestadas}
         onNavigateToQuestion={navegarAPregunta}
       />
+
+      {/* Snackbar para notificaciones */}
+      <Snackbar open={notification.open} autoHideDuration={6000} onClose={closeNotification}>
+        <Alert onClose={closeNotification} severity={notification.severity} sx={{ width: '100%' }}>
+          {notification.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };
