@@ -33,6 +33,28 @@ const firebaseConfig = {
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
+
+// ✅ Configuración específica para APK para evitar redirección a localhost
+const isCapacitorAPK = typeof window !== 'undefined' && window.Capacitor && window.Capacitor.isNative;
+if (isCapacitorAPK) {
+  console.log('📱 Configurando Firebase Auth para APK...');
+  
+  // ✅ Configurar el redirect_uri para la APK
+  if (auth.config) {
+    auth.config.redirectUri = 'com.controlaudit.app://';
+  }
+  
+  // ✅ Configurar en el objeto de configuración global
+  if (typeof window !== 'undefined') {
+    window.FIREBASE_APK_CONFIG = {
+      redirectUri: 'com.controlaudit.app://',
+      authDomain: 'controlstorage-eb796.firebaseapp.com',
+      scheme: 'com.controlaudit.app'
+    };
+    console.log('📱 Configuración global de Firebase para APK establecida');
+  }
+}
+
 const db = getFirestore(app);
 const storage = getStorage(app); // Inicializa el almacenamiento
 
