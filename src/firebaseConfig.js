@@ -128,21 +128,23 @@ export const signInWithGoogle = async () => {
     provider.addScope('email');
     provider.addScope('profile');
     
-    // ✅ Configurar URIs de redirección específicas para diferentes entornos
+    // ✅ Detectar si estamos en móvil/APK
     const hostname = window.location.hostname;
     const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1';
     const isCapacitor = window.Capacitor && window.Capacitor.isNative;
+    const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
     
     console.log("🌐 Entorno detectado:", {
       hostname,
       isLocalhost,
       isCapacitor,
+      isMobile,
       userAgent: navigator.userAgent
     });
     
-    // Para Capacitor (APK), usar redirect automáticamente
-    if (isCapacitor) {
-      console.log("📱 Detectado Capacitor, usando signInWithRedirect");
+    // Para móviles/APK, usar redirect automáticamente
+    if (isMobile || isCapacitor) {
+      console.log("📱 Detectado móvil/APK, usando signInWithRedirect");
       await signInWithRedirect(auth, provider);
       return { user: null, pendingRedirect: true };
     }
@@ -170,6 +172,16 @@ export const signInWithGoogle = async () => {
       toast.error("Error de configuración de Google OAuth. Contacta al administrador.", {
         position: "top-left",
         autoClose: 5000,
+      });
+    } else if (error.code === 'auth/popup-closed-by-user') {
+      toast.error("Ventana cerrada por el usuario", {
+        position: "top-left",
+        autoClose: 3000,
+      });
+    } else if (error.code === 'auth/popup-blocked') {
+      toast.error("El popup fue bloqueado por el navegador. Permite popups para este sitio", {
+        position: "top-left",
+        autoClose: 3000,
       });
     } else {
       toast.error("Error al iniciar sesión con Google. Inténtalo de nuevo.", {

@@ -26,17 +26,24 @@ const AuthContextComponent = ({ children }) => {
   const [motivoBloqueo, setMotivoBloqueo] = useState('');
 
   useEffect(() => {
+    let isMounted = true;
     
     // ✅ Manejar resultado del redirect de Google Auth (para Capacitor)
     const handleGoogleRedirect = async () => {
       try {
         const result = await handleRedirectResult();
         if (result) {
-          console.log("✅ Redirect de Google procesado exitosamente");
+          console.log("✅ Redirect de Google procesado exitosamente:", {
+            uid: result.user?.uid,
+            email: result.user?.email,
+            providerId: result.providerId
+          });
           // El onAuthStateChanged se encargará del resto
         }
       } catch (error) {
         console.error("❌ Error procesando redirect de Google:", error);
+        // Asegurar que no quede en loading si hubo error en el redirect
+        setLoading(false);
       }
     };
     
@@ -45,8 +52,11 @@ const AuthContextComponent = ({ children }) => {
     
     // Timeout de seguridad para evitar loading infinito
     const timeoutId = setTimeout(() => {
-      setLoading(false);
-    }, 5000); // 5 segundos máximo
+      if (isMounted) {
+        console.log("⚠️ Timeout de seguridad: forzando fin de loading");
+        setLoading(false);
+      }
+    }, 10000); // 10 segundos máximo para APK
     
     // Escuchar cambios en el estado de autenticación de Firebase
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
