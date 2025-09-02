@@ -1,5 +1,5 @@
 // Test de conectividad con ControlFile API (con autenticación)
-import { auth } from '../config/firebaseConfig';
+import { auth } from '../firebaseConfig';
 
 // Función para obtener token de Firebase
 async function getFirebaseToken() {
