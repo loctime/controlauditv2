@@ -506,34 +506,16 @@ app.post('/api/uploads/proxy-upload', verificarTokenUsuario, upload.single('file
       });
     }
     
-    // Generar ID único para el archivo
-    const fileId = `file_${uid}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    
-    // Crear registro del archivo en Firestore
-    const fileRecord = {
-      fileId,
-      userId: uid,
-      fileName,
-      fileSize,
-      mimeType,
-      sessionId: sessionId || null,
-      status: 'uploaded',
-      uploadedAt: new Date(),
-      url: `https://storage.googleapis.com/auditoria-f9fc4.appspot.com/${fileId}/${fileName}` // URL simulada
-    };
-    
-    await admin.firestore().collection('files').doc(fileId).set(fileRecord);
-    
-    console.log('✅ Archivo registrado exitosamente:', fileId);
+    // Solo procesar el archivo, NO crear registro en Firestore
+    // El registro se creará únicamente en el endpoint de confirmación
+    console.log('✅ Archivo procesado exitosamente, esperando confirmación');
     
     res.json({
       success: true,
-      fileId,
+      message: 'Archivo procesado exitosamente, esperando confirmación',
       fileName,
       fileSize,
-      uploadedAt: fileRecord.uploadedAt,
-      url: fileRecord.url,
-      message: 'Archivo subido exitosamente'
+      mimeType
     });
     
   } catch (error) {
