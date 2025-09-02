@@ -3,7 +3,7 @@ import { collection, addDoc, getDocs, query, where, orderBy, serverTimestamp } f
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, storage, auth } from '../../../firebaseConfig';
 import { prepararDatosParaFirestore, registrarLogOperario } from '../../../utils/firestoreUtils';
-// controlFileService obsoleto - ahora se usa backend compartido
+// controlFileService obsoleto - ahoara se usa backend compartido
 
 /**
  * Servicio para manejar las auditorías
