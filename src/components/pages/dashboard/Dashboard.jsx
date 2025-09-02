@@ -12,6 +12,7 @@ import { getEnvironmentInfo } from "../../../config/environment.js";
 import BackendHealthCheck from "../../../utils/backendHealthCheck.js";
 import BackendStatus from "../../../utils/backendStatus.js";
 import { ProductionDiagnostics } from "../../../utils/productionDiagnostics.js";
+import { runAllTests, testBasicConnectivity } from "../../../utils/test-controlfile-api.js";
 
 // Datos de ejemplo (se mantienen como fallback)
 const empresasEjemplo = [
@@ -311,6 +312,40 @@ function Dashboard() {
     }
   };
 
+  // Función para testear ControlFile API
+  const testearControlFileAPI = async () => {
+    try {
+      setLoading(true);
+      console.log('🧪 Iniciando test de ControlFile API...');
+      
+      await runAllTests();
+      
+      toast.success('✅ Test de ControlFile API completado. Revisa la consola.');
+    } catch (error) {
+      toast.error('❌ Error en test de ControlFile API');
+      console.error('Error en test:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Función para testear conectividad básica
+  const testearConectividadBasica = async () => {
+    try {
+      setLoading(true);
+      console.log('🌐 Iniciando test de conectividad básica...');
+      
+      await testBasicConnectivity();
+      
+      toast.success('✅ Test de conectividad completado. Revisa la consola.');
+    } catch (error) {
+      toast.error('❌ Error en test de conectividad');
+      console.error('Error en test:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -428,6 +463,24 @@ function Dashboard() {
               disabled={loading}
             >
               🔍 Diagnosticar Backend
+            </Button>
+            <Button 
+              variant="outlined" 
+              color="info" 
+              onClick={testearControlFileAPI}
+              disabled={loading}
+              sx={{ ml: 1 }}
+            >
+              🧪 Test ControlFile API
+            </Button>
+            <Button 
+              variant="outlined" 
+              color="success" 
+              onClick={testearConectividadBasica}
+              disabled={loading}
+              sx={{ ml: 1 }}
+            >
+              🌐 Test Conectividad
             </Button>
           </Box>
         </>
