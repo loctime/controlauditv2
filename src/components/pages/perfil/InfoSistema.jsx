@@ -85,8 +85,30 @@ const InfoSistema = () => {
       // Obtener token de autenticación
       const idToken = await auth.currentUser.getIdToken();
       
+      // Obtener o crear la carpeta raíz de ControlAudit
+      let parentId = null;
+      try {
+        const rootFolderResponse = await fetch('https://controlfile.onrender.com/api/folders/root?name=ControlAudit&pin=1', {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${idToken}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        if (rootFolderResponse.ok) {
+          const rootFolderData = await rootFolderResponse.json();
+          parentId = rootFolderData.folderId;
+          console.log('✅ Carpeta raíz de ControlAudit obtenida:', parentId);
+        } else {
+          console.warn('⚠️ No se pudo obtener carpeta raíz, usando carpeta por defecto');
+        }
+      } catch (error) {
+        console.warn('⚠️ Error obteniendo carpeta raíz, usando carpeta por defecto:', error);
+      }
+      
       // Subir logo a ControlFile
-      const uploadResult = await uploadFile(currentLogo, idToken, null); // Usar null para carpeta raíz por defecto
+      const uploadResult = await uploadFile(currentLogo, idToken, parentId);
       
       if (uploadResult.success) {
         const logoUrl = `https://files.controldoc.app/${uploadResult.fileId}`;
@@ -107,7 +129,8 @@ const InfoSistema = () => {
           fileId: uploadResult.fileId,
           url: logoUrl,
           fileName: uploadResult.fileName,
-          fileSize: uploadResult.fileSize
+          fileSize: uploadResult.fileSize,
+          parentId: parentId || 'carpeta por defecto'
         });
         
       } else {
