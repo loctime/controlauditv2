@@ -138,8 +138,13 @@ export const signInWithGoogle = async () => {
     provider.addScope('email');
     provider.addScope('profile');
     
-    // ✅ Configurar redirect URL para APK
+    // ✅ Detectar si estamos en móvil/APK
+    const hostname = window.location.hostname;
+    const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1';
     const isCapacitor = window.Capacitor && window.Capacitor.isNative;
+    const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+    
+    // ✅ Configurar redirect URL para APK
     if (isCapacitor) {
       // Para APK, usar el dominio de Firebase para el redirect
       const redirectUrl = 'https://controlstorage-eb796.firebaseapp.com/__/auth/handler';
@@ -148,12 +153,6 @@ export const signInWithGoogle = async () => {
       });
       console.log('📱 APK: Configurando redirect a Firebase:', redirectUrl);
     }
-    
-    // ✅ Detectar si estamos en móvil/APK
-    const hostname = window.location.hostname;
-    const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1';
-    const isCapacitor = window.Capacitor && window.Capacitor.isNative;
-    const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
     
     console.log("🌐 Entorno detectado:", {
       hostname,
