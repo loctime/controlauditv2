@@ -67,3 +67,27 @@ export function getEnvironmentInfo() {
     localBackendUrl: ENV_CONFIG.LOCAL_BACKEND_URL
   };
 }
+
+// Configuración de Firebase para ControlFile
+export const FIREBASE_CONFIG = {
+  API_KEY: import.meta.env?.VITE_FIREBASE_API_KEY || 'AIzaSyB_hwQZapca3Y2cBP5rkmdoJy3tAdNB9Ro',
+  AUTH_DOMAIN: import.meta.env?.VITE_FIREBASE_AUTH_DOMAIN || 'controlstorage-eb796.firebaseapp.com',
+  PROJECT_ID: import.meta.env?.VITE_FIREBASE_PROJECT_ID || 'controlstorage-eb796',
+  STORAGE_BUCKET: import.meta.env?.VITE_FIREBASE_STORAGE_BUCKET || 'controlstorage-eb796.firebasestorage.app',
+  MESSAGING_SENDER_ID: import.meta.env?.VITE_FIREBASE_MESSAGING_SENDER_ID || '909876364192',
+  APP_ID: import.meta.env?.VITE_FIREBASE_APP_ID || '1:909876364192:android:0b45053d7f5667fda79ac5'
+};
+
+// Función para debug de configuración de Firebase
+export const logFirebaseConfig = () => {
+  console.log('🔥 Configuración de Firebase detectada:', {
+    platform: typeof window !== 'undefined' && window.Capacitor && window.Capacitor.isNative ? 'APK' : 'Web',
+    config: FIREBASE_CONFIG,
+    hasViteEnv: typeof import.meta !== 'undefined' && !!import.meta.env,
+    hasCapacitor: typeof window !== 'undefined' && !!window.Capacitor,
+    viteEnv: typeof import.meta !== 'undefined' ? Object.keys(import.meta.env).filter(key => key.startsWith('VITE_FIREBASE_')) : []
+  });
+};
+
+// Log automático al importar
+logFirebaseConfig();

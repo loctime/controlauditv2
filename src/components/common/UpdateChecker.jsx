@@ -24,7 +24,7 @@ import {
   NewReleases
 } from '@mui/icons-material';
 import { useUpdateChecker } from '../../hooks/useUpdateChecker.js';
-import { getBackendUrl } from '../../config/environment.ts';
+import { getBackendUrl } from '../../config/environment.js';
 
 const UpdateChecker = ({ variant = 'contained', size = 'medium', showInfo = false }) => {
   const {
