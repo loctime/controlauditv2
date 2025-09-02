@@ -72,6 +72,9 @@ const AuditoriaRefactorizada = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  
+  // ✅ NUEVO: Estado para el ID de la auditoría en ControlFile
+  const [auditoriaId, setAuditoriaId] = useState(null);
 
   // Hook para manejar todo el estado
   const auditoriaState = useAuditoriaState();
@@ -129,6 +132,21 @@ const AuditoriaRefactorizada = () => {
       recargarEmpresas();
     }
   }, [userProfile?.uid, empresasCargadas, recargarEmpresas]);
+
+  // ✅ NUEVO: Generar ID de auditoría cuando se selecciona formulario
+  useEffect(() => {
+    if (formularioSeleccionadoId && secciones.length > 0 && !auditoriaId) {
+      const nuevoId = `aud_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      setAuditoriaId(nuevoId);
+      console.log('[Auditoria] ID de auditoría generado para ControlFile:', nuevoId);
+    }
+  }, [formularioSeleccionadoId, secciones, auditoriaId]);
+
+  // ✅ NUEVO: Limpiar ID de auditoría al reiniciar
+  const handleReiniciarAuditoria = () => {
+    reiniciarAuditoria();
+    setAuditoriaId(null);
+  };
 
   // Funciones básicas
   const handleEmpresaChange = (selectedEmpresa) => {
@@ -378,6 +396,8 @@ const AuditoriaRefactorizada = () => {
               respuestasExistentes={respuestas}
               comentariosExistentes={comentarios}
               imagenesExistentes={imagenes}
+              // ✅ NUEVO: Pasar el ID de la auditoría para ControlFile
+              auditoriaId={auditoriaId}
             />
           </Box>
         </MuiFade>

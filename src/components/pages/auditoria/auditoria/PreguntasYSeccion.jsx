@@ -458,6 +458,72 @@ const PreguntasYSeccion = ({
     }, 150);
   };
 
+  // ✅ NUEVA FUNCIÓN: Eliminar imagen
+  const handleDeleteImagen = (imagen, seccionIndex, preguntaIndex) => {
+    try {
+      console.log('[PreguntasYSeccion] Eliminando imagen:', {
+        seccionIndex,
+        preguntaIndex,
+        imagen
+      });
+
+      const nuevasImagenes = imagenes.map((img, index) => {
+        if (index === seccionIndex) {
+          const currentImages = img[preguntaIndex] || [];
+          
+          if (Array.isArray(currentImages)) {
+            // Filtrar la imagen a eliminar
+            const updatedImages = currentImages.filter((img, imgIndex) => {
+              // Si es la misma imagen (comparar por timestamp o nombre)
+              if (img.timestamp === imagen.timestamp || 
+                  img.nombre === imagen.nombre ||
+                  img === imagen) {
+                console.log('[PreguntasYSeccion] Imagen eliminada:', img);
+                return false;
+              }
+              return true;
+            });
+            
+            return [...img.slice(0, preguntaIndex), updatedImages, ...img.slice(preguntaIndex + 1)];
+          } else {
+            // Si no es array, eliminar la imagen
+            return [...img.slice(0, preguntaIndex), [], ...img.slice(preguntaIndex + 1)];
+          }
+        }
+        return img;
+      });
+
+      setImagenes(nuevasImagenes);
+      guardarImagenes(nuevasImagenes);
+      
+      console.log('[PreguntasYSeccion] Imagen eliminada exitosamente');
+      showNotification('✅ Imagen eliminada', 'success');
+      
+    } catch (error) {
+      console.error('[PreguntasYSeccion] Error eliminando imagen:', error);
+      showNotification('❌ Error al eliminar la imagen', 'error');
+    }
+  };
+
+  // ✅ NUEVA FUNCIÓN: Descargar imagen
+  const handleDownloadImagen = (imagen, seccionIndex, preguntaIndex) => {
+    try {
+      console.log('[PreguntasYSeccion] Descargando imagen:', {
+        seccionIndex,
+        preguntaIndex,
+        imagen
+      });
+
+      // La descarga se maneja en el componente ImagenAuditoria
+      // Aquí solo registramos la acción
+      showNotification('✅ Descarga iniciada', 'info');
+      
+    } catch (error) {
+      console.error('[PreguntasYSeccion] Error descargando imagen:', error);
+      showNotification('❌ Error al descargar la imagen', 'error');
+    }
+  };
+
   if (!Array.isArray(secciones)) {
     return (
       <Box sx={mobileBoxStyle}>
@@ -528,6 +594,9 @@ const PreguntasYSeccion = ({
                 onOpenModal={handleOpenModal}
                 onOpenCameraDialog={handleOpenCameraDialog}
                 procesandoImagen={procesandoImagen}
+                // ✅ NUEVAS PROPS para manejo de imágenes
+                onDeleteImagen={handleDeleteImagen}
+                onDownloadImagen={handleDownloadImagen}
               />
             ))}
           </Stack>

@@ -19,6 +19,7 @@ import {
   obtenerIconoRespuesta, 
   preguntaContestada 
 } from '../utils/respuestaUtils.jsx';
+import ImagenAuditoria from './ImagenAuditoria';
 
 const PreguntaItem = ({
   seccionIndex,
@@ -32,9 +33,71 @@ const PreguntaItem = ({
   onRespuestaChange,
   onOpenModal,
   onOpenCameraDialog,
-  procesandoImagen
+  procesandoImagen,
+  // ✅ NUEVAS PROPS para manejo de imágenes
+  onDeleteImagen,
+  onDownloadImagen
 }) => {
   const theme = useTheme();
+
+  // ✅ FUNCIÓN para eliminar imagen
+  const handleDeleteImagen = (imagen, seccionIdx, preguntaIdx) => {
+    if (onDeleteImagen) {
+      onDeleteImagen(imagen, seccionIdx, preguntaIdx);
+    }
+  };
+
+  // ✅ FUNCIÓN para descargar imagen
+  const handleDownloadImagen = (imagen, seccionIdx, preguntaIdx) => {
+    if (onDownloadImagen) {
+      onDownloadImagen(imagen, seccionIdx, preguntaIdx);
+    }
+  };
+
+  // ✅ FUNCIÓN para renderizar imágenes con el nuevo componente
+  const renderImagenes = () => {
+    if (!imagenes || imagenes.length === 0) {
+      return null;
+    }
+
+    // Si es un array de imágenes
+    if (Array.isArray(imagenes)) {
+      return (
+        <Box sx={{ 
+          display: 'flex', 
+          gap: 1, 
+          flexWrap: 'wrap',
+          mt: isMobile ? 1 : 1.5
+        }}>
+          {imagenes.map((imagen, imgIndex) => (
+            <ImagenAuditoria
+              key={imgIndex}
+              imagen={imagen}
+              seccionIndex={seccionIndex}
+              preguntaIndex={preguntaIndex}
+              onDelete={handleDeleteImagen}
+              onDownload={handleDownloadImagen}
+              showMetadata={!isMobile} // Solo mostrar metadatos en desktop
+            />
+          ))}
+        </Box>
+      );
+    }
+
+    // Si es una sola imagen
+    return (
+      <Box sx={{ mt: isMobile ? 1 : 1.5 }}>
+        <ImagenAuditoria
+          imagen={imagenes}
+          seccionIndex={seccionIndex}
+          preguntaIndex={preguntaIndex}
+          onDelete={handleDeleteImagen}
+          onDownload={handleDownloadImagen}
+          showMetadata={!isMobile}
+        />
+      </Box>
+    );
+  };
 
   return (
     <Box 
@@ -99,75 +162,66 @@ const PreguntaItem = ({
             // Si hay una respuesta seleccionada, solo mostrar esa
             if (respuestaSeleccionada && respuestaSeleccionada.trim() !== '') {
               return (
-                <Button
+                <Chip
                   key={respuestaSeleccionada}
-                  variant="contained"
-                  startIcon={obtenerIconoRespuesta(respuestaSeleccionada)}
-                  onClick={() => onRespuestaChange(seccionIndex, preguntaIndex, respuestaSeleccionada)}
+                  label={respuestaSeleccionada}
+                  icon={obtenerIconoRespuesta(respuestaSeleccionada)}
+                  color={obtenerColorRespuesta(respuestaSeleccionada).color}
+                  variant="filled"
+                  size={isMobile ? "small" : "medium"}
                   sx={{ 
-                    minWidth: isMobile ? 80 : 120,
                     fontSize: isMobile ? '0.75rem' : '0.875rem',
-                    py: isMobile ? 0.5 : 1,
-                    px: isMobile ? 1 : 2,
-                    ...obtenerColorRespuesta(respuestaSeleccionada),
-                    animation: 'fadeIn 0.3s ease-in',
-                    '@keyframes fadeIn': {
-                      from: { opacity: 0, transform: 'scale(0.9)' },
-                      to: { opacity: 1, transform: 'scale(1)' }
-                    }
+                    cursor: 'pointer'
                   }}
-                >
-                  {respuestaSeleccionada}
-                </Button>
+                  onClick={() => onRespuestaChange(seccionIndex, preguntaIndex, '')}
+                />
               );
             }
             
             // Si no hay respuesta seleccionada, mostrar todas las opciones
-            return respuestasPosibles.map((respuestaOption, index) => (
-              <Button
-                key={index}
+            return respuestasPosibles.map((opcion) => (
+              <Chip
+                key={opcion}
+                label={opcion}
+                icon={obtenerIconoRespuesta(opcion)}
+                color={obtenerColorRespuesta(opcion).color}
                 variant="outlined"
-                startIcon={obtenerIconoRespuesta(respuestaOption)}
-                onClick={() => onRespuestaChange(seccionIndex, preguntaIndex, respuestaOption)}
+                size={isMobile ? "small" : "medium"}
                 sx={{ 
-                  minWidth: isMobile ? 80 : 120,
                   fontSize: isMobile ? '0.75rem' : '0.875rem',
-                  py: isMobile ? 0.5 : 1,
-                  px: isMobile ? 1 : 2,
-                  borderColor: obtenerColorRespuesta(respuestaOption).backgroundColor,
-                  color: obtenerColorRespuesta(respuestaOption).backgroundColor,
+                  cursor: 'pointer',
                   '&:hover': {
-                    backgroundColor: obtenerColorRespuesta(respuestaOption).backgroundColor,
-                    color: 'white',
-                    borderColor: obtenerColorRespuesta(respuestaOption).backgroundColor,
+                    backgroundColor: obtenerColorRespuesta(opcion).backgroundColor,
+                    color: obtenerColorRespuesta(opcion).color === 'default' ? 'white' : 'white'
                   }
                 }}
-              >
-                {respuestaOption}
-              </Button>
+                onClick={() => onRespuestaChange(seccionIndex, preguntaIndex, opcion)}
+              />
             ));
           })()}
         </Stack>
         
-        <Button
-          variant="outlined"
-          startIcon={<CommentIcon />}
-          onClick={() => onOpenModal(seccionIndex, preguntaIndex)}
-          sx={{ 
-            minWidth: isMobile ? 80 : 120,
-            fontSize: isMobile ? '0.75rem' : '0.875rem',
-            py: isMobile ? 0.5 : 1,
-            px: isMobile ? 1 : 2
-          }}
-        >
-          Comentario
-        </Button>
-        
+        {/* Botones de comentario y cámara */}
         <Stack 
           direction="row" 
           spacing={isMobile ? 0.5 : 1}
           sx={{ gap: isMobile ? 0.5 : 1 }}
         >
+          <Button
+            variant="outlined"
+            component="span"
+            startIcon={<CommentIcon />}
+            onClick={() => onOpenModal(seccionIndex, preguntaIndex)}
+            sx={{ 
+              minWidth: isMobile ? 80 : 120,
+              fontSize: isMobile ? '0.75rem' : '0.875rem',
+              py: isMobile ? 0.5 : 1,
+              px: isMobile ? 1 : 2
+            }}
+          >
+            Comentario
+          </Button>
+          
           <Button
             variant="outlined"
             component="span"
@@ -181,7 +235,7 @@ const PreguntaItem = ({
               px: isMobile ? 1 : 2
             }}
           >
-            {procesandoImagen[`${seccionIndex}-${preguntaIndex}`] ? 'Procesando...' : 'Camara'}
+            {procesandoImagen[`${seccionIndex}-${preguntaIndex}`] ? 'Procesando...' : 'Cámara'}
           </Button>
           
           <label htmlFor={`upload-gallery-${seccionIndex}-${preguntaIndex}`}>
@@ -203,61 +257,31 @@ const PreguntaItem = ({
         </Stack>
       </Stack>
       
-      {/* Comentario y foto debajo, bien separados */}
-      <Box 
-        mt={isMobile ? 1.5 : 2} 
-        display="flex" 
-        alignItems="center" 
-        gap={isMobile ? 2 : 3} 
-        flexWrap="wrap"
-      >
-        <Typography 
-          variant="body2" 
-          color="text.secondary" 
-          sx={{ 
-            fontStyle: 'italic',
-            fontSize: isMobile ? '0.75rem' : '0.875rem'
-          }}
+      {/* Comentario */}
+      {comentario && (
+        <Box 
+          mt={isMobile ? 1.5 : 2} 
+          p={isMobile ? 1 : 1.5}
+          bgcolor="grey.50"
+          borderRadius={1}
+          border="1px solid"
+          borderColor="grey.200"
         >
-          {comentario ? `Comentario: ${comentario}` : "Sin comentario"}
-        </Typography>
-        
-        {imagenes && (
-          <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-            {Array.isArray(imagenes) 
-              ? imagenes.map((imagen, imgIndex) => (
-                  <img
-                    key={imgIndex}
-                    src={URL.createObjectURL(imagen)}
-                    alt={`Imagen ${imgIndex + 1} de la pregunta ${preguntaIndex}`}
-                    style={{ 
-                      maxWidth: isMobile ? '60px' : '80px', 
-                      maxHeight: isMobile ? '60px' : '80px', 
-                      borderRadius: 8, 
-                      border: '1px solid #eee',
-                      cursor: 'pointer'
-                    }}
-                    onClick={() => {
-                      window.open(URL.createObjectURL(imagen), '_blank');
-                    }}
-                  />
-                ))
-              : (
-                  <img
-                    src={URL.createObjectURL(imagenes)}
-                    alt={`Imagen de la pregunta ${preguntaIndex}`}
-                    style={{ 
-                      maxWidth: isMobile ? '80px' : '100px', 
-                      maxHeight: isMobile ? '80px' : '100px', 
-                      borderRadius: 8, 
-                      border: '1px solid #eee' 
-                    }}
-                  />
-                )
-            }
-          </Box>
-        )}
-      </Box>
+          <Typography 
+            variant="body2" 
+            color="text.secondary" 
+            sx={{ 
+              fontStyle: 'italic',
+              fontSize: isMobile ? '0.75rem' : '0.875rem'
+            }}
+          >
+            {comentario}
+          </Typography>
+        </Box>
+      )}
+      
+      {/* ✅ NUEVO: Imágenes usando el componente ImagenAuditoria */}
+      {renderImagenes()}
     </Box>
   );
 };
