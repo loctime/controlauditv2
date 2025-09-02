@@ -656,22 +656,28 @@ app.post('/api/uploads/confirm', verificarTokenUsuario, async (req, res) => {
     // Generar fileId único para ControlFile
     const fileId = `cf_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     
-    // Crear registro del archivo en Firestore
+    // Crear registro del archivo en Firestore con esquema compatible de ControlFile
     const fileData = {
-      fileId,
-      uploadSessionId,
+      id: fileId,
       userId: uid,
-      fileName: sessionData.fileName,
-      fileSize: sessionData.fileSize,
-      mimeType: sessionData.mimeType,
+      name: sessionData.fileName,
+      size: sessionData.fileSize,
+      mime: sessionData.mimeType,
+      parentId: sessionData.parentId, // Usar el parentId de la sesión
       url: `https://files.controldoc.app/${fileId}`, // URL de ControlFile
+      appCode: APP_CODE, // Agregar appCode para identificar la app
+      ancestors: [], // Opcional: cópialo de la carpeta si lo manejas
+      isDeleted: false,
+      deletedAt: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
       metadata: {
         uploadedAt: new Date(),
         originalName: sessionData.fileName,
         size: sessionData.fileSize,
-        mimeType: sessionData.mimeType
-      },
-      createdAt: new Date()
+        mimeType: sessionData.mimeType,
+        uploadSessionId: uploadSessionId
+      }
     };
     
     // Guardar archivo en Firestore
@@ -691,7 +697,8 @@ app.post('/api/uploads/confirm', verificarTokenUsuario, async (req, res) => {
       url: fileData.url,
       metadata: fileData.metadata,
       uploadSessionId,
-      fileName: sessionData.fileName
+      fileName: sessionData.fileName,
+      parentId: sessionData.parentId // Devolver el parentId usado
     });
     
   } catch (error) {
