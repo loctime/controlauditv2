@@ -20,6 +20,10 @@ import { config, getEnvironmentInfo } from './config/environment.js';
 import { loggingMiddleware, logInfo, logSuccess, logError, logErrorWithContext } from './utils/logger.js';
 import fetch from 'node-fetch';
 
+// Configuración de la aplicación
+const APP_CODE = process.env.APP_CODE || 'controlaudit';
+const APP_DISPLAY_NAME = process.env.APP_DISPLAY_NAME || 'ControlAudit';
+
 const app = express();
 
 // Configuración de CORS dinámica según el entorno
@@ -422,6 +426,69 @@ app.post('/api/uploads/presign', verificarTokenUsuario, async (req, res) => {
         message: 'El tamaño máximo permitido es 50MB'
       });
     }
+
+    // OBTENER O CREAR carpeta raíz de ControlAudit
+    const folderId = `root_${uid}_${APP_CODE}`;
+    const ref = admin.firestore().collection('folders').doc(folderId);
+    
+    let effectiveParentId = parentId; // Usar parentId si se proporciona
+    
+    try {
+      const snap = await ref.get();
+      
+      if (!snap.exists) {
+        // Crear la carpeta raíz si no existe
+        const data = {
+          id: folderId,
+          userId: uid,
+          name: APP_DISPLAY_NAME,
+          parentId: null,
+          path: `/${APP_CODE}`,
+          appCode: APP_CODE,
+          ancestors: [],
+          type: 'folder',
+          metadata: { 
+            isMainFolder: true, 
+            isDefault: true, 
+            icon: 'Folder', 
+            color: 'text-purple-600' 
+          },
+          createdAt: new Date(),
+          modifiedAt: new Date(),
+        };
+        
+        await ref.set(data);
+        console.log('✅ Carpeta raíz de ControlAudit creada para usuario:', uid);
+      } else {
+        console.log('✅ Carpeta raíz de ControlAudit ya existe para usuario:', uid);
+      }
+      
+      // SIEMPRE usar el ID de la carpeta raíz como parentId por defecto
+      effectiveParentId = effectiveParentId || ref.id;
+      
+      // Agregar acceso a la barra de tareas solo si no existe
+      const settingsRef = admin.firestore().collection('userSettings').doc(uid);
+      await admin.firestore().runTransaction(async (t) => {
+        const snap = await t.get(settingsRef);
+        const data = snap.exists ? snap.data() : {};
+        const items = Array.isArray(data.taskbarItems) ? data.taskbarItems : [];
+        if (!items.some(it => it && it.id === ref.id)) {
+          items.push({ 
+            id: ref.id, 
+            name: APP_DISPLAY_NAME, 
+            icon: 'Folder', 
+            color: 'text-purple-600', 
+            type: 'folder' 
+          });
+          t.set(settingsRef, { taskbarItems: items, updatedAt: new Date() }, { merge: true });
+        }
+      });
+      console.log('✅ Acceso agregado a la barra de tareas de ControlFile');
+      
+    } catch (folderError) {
+      console.error('❌ Error con carpeta raíz:', folderError);
+      // Continuar con la subida aunque falle la gestión de carpeta
+    }
     
     // Generar ID único para la sesión de subida
     const uploadId = `upload_${uid}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -433,6 +500,7 @@ app.post('/api/uploads/presign', verificarTokenUsuario, async (req, res) => {
       fileName,
       fileSize,
       mimeType,
+      parentId: effectiveParentId, // Usar el parentId efectivo
       status: 'pending',
       createdAt: new Date(),
       expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000) // Expira en 24 horas
@@ -440,15 +508,27 @@ app.post('/api/uploads/presign', verificarTokenUsuario, async (req, res) => {
     
     await admin.firestore().collection('uploadSessions').doc(uploadId).set(uploadSession);
     
+    // Incrementar pendingBytes en las cuotas del usuario
+    try {
+      await admin.firestore().collection('users').doc(uid).update({
+        pendingBytes: admin.firestore.FieldValue.increment(fileSize)
+      });
+      console.log('✅ Cuotas actualizadas - pendingBytes incrementado para usuario:', uid);
+    } catch (quotaError) {
+      console.warn('⚠️ No se pudieron actualizar cuotas:', quotaError.message);
+      // Continuar aunque falle la actualización de cuotas
+    }
+    
     // Generar URL de subida temporal (en producción, esto sería una URL de S3 o similar)
     const uploadUrl = `${req.protocol}://${req.get('host')}/api/uploads/complete/${uploadId}`;
     
     res.json({
       success: true,
       uploadId,
-      uploadSessionId: uploadId, // Agregar para compatibilidad con el frontend
+      uploadSessionId: uploadId,
       uploadUrl,
       expiresAt: uploadSession.expiresAt,
+      effectiveParentId, // Devolver el parentId efectivo usado
       message: 'Sesión de subida creada exitosamente'
     });
     
@@ -665,22 +745,28 @@ app.post('/api/uploads/complete/:uploadId', verificarTokenUsuario, async (req, r
     // Generar fileId único
     const fileId = `cf_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     
-    // Crear registro del archivo en Firestore
+    // Crear registro del archivo en Firestore con esquema compatible de ControlFile
     const fileData = {
-      fileId,
-      uploadId,
+      id: fileId,
       userId: uid,
-      fileName: sessionData.fileName,
-      fileSize: sessionData.fileSize,
-      mimeType: sessionData.mimeType,
+      name: sessionData.fileName,
+      size: sessionData.fileSize,
+      mime: sessionData.mimeType,
+      parentId: sessionData.parentId, // Usar el parentId de la sesión
       url: `https://example.com/files/${fileId}`, // En producción, esto sería la URL real del archivo
+      appCode: APP_CODE, // Agregar appCode para identificar la app
+      ancestors: [], // Opcional: cópialo de la carpeta si lo manejas
+      isDeleted: false,
+      deletedAt: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
       metadata: {
         uploadedAt: new Date(),
         originalName: sessionData.fileName,
         size: sessionData.fileSize,
-        mimeType: sessionData.mimeType
-      },
-      createdAt: new Date()
+        mimeType: sessionData.mimeType,
+        uploadId: uploadId
+      }
     };
     
     // Guardar archivo en Firestore
@@ -693,6 +779,18 @@ app.post('/api/uploads/complete/:uploadId', verificarTokenUsuario, async (req, r
       fileId: fileId
     });
     
+    // Actualizar cuotas del usuario: decrementar pendingBytes e incrementar usedBytes
+    try {
+      await admin.firestore().collection('users').doc(uid).update({
+        usedBytes: admin.firestore.FieldValue.increment(sessionData.fileSize),
+        pendingBytes: admin.firestore.FieldValue.increment(-sessionData.fileSize)
+      });
+      console.log('✅ Cuotas actualizadas - usedBytes incrementado y pendingBytes decrementado para usuario:', uid);
+    } catch (quotaError) {
+      console.warn('⚠️ No se pudieron actualizar cuotas:', quotaError.message);
+      // Continuar aunque falle la actualización de cuotas
+    }
+    
     res.json({
       success: true,
       message: 'Subida completada exitosamente',
@@ -700,11 +798,160 @@ app.post('/api/uploads/complete/:uploadId', verificarTokenUsuario, async (req, r
       url: fileData.url,
       metadata: fileData.metadata,
       uploadId,
-      fileName: sessionData.fileName
+      fileName: sessionData.fileName,
+      parentId: sessionData.parentId // Devolver el parentId usado
     });
     
   } catch (error) {
     console.error('Error completando subida:', error);
+    res.status(500).json({
+      error: 'Error interno del servidor',
+      message: error.message
+    });
+  }
+});
+
+// Endpoint para crear carpetas (compatible con ControlFile)
+app.post('/api/folders/create', verificarTokenUsuario, async (req, res) => {
+  try {
+    const { name, parentId } = req.body;
+    const { uid } = req.user;
+    
+    // Validar parámetros requeridos
+    if (!name) {
+      return res.status(400).json({
+        error: 'Falta parámetro requerido',
+        message: 'name es obligatorio'
+      });
+    }
+    
+    // Si no hay parentId, usar la carpeta raíz de ControlAudit
+    let effectiveParentId = parentId;
+    
+    if (!parentId) {
+      const folderId = `root_${uid}_${APP_CODE}`;
+      const rootRef = admin.firestore().collection('folders').doc(folderId);
+      const rootSnap = await rootRef.get();
+      
+      if (!rootSnap.exists) {
+        return res.status(400).json({
+          error: 'Carpeta raíz no encontrada',
+          message: 'Primero debes subir un archivo para crear la carpeta raíz'
+        });
+      }
+      
+      effectiveParentId = rootRef.id;
+    }
+    
+    // Generar ID único para la carpeta
+    const folderId = `folder_${uid}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    
+    // Crear registro de la carpeta en Firestore con esquema compatible de ControlFile
+    const folderData = {
+      id: folderId,
+      userId: uid,
+      name: name,
+      parentId: effectiveParentId,
+      path: `/${APP_CODE}/${name}`, // Path simplificado
+      appCode: APP_CODE,
+      ancestors: [effectiveParentId], // Agregar parentId a ancestros
+      type: 'folder',
+      metadata: { 
+        icon: 'Folder', 
+        color: 'text-blue-600',
+        createdBy: 'controlaudit'
+      },
+      createdAt: new Date(),
+      modifiedAt: new Date(),
+    };
+    
+    // Guardar carpeta en Firestore
+    await admin.firestore().collection('folders').doc(folderId).set(folderData);
+    
+    console.log('✅ Carpeta creada exitosamente:', folderId);
+    
+    res.json({
+      success: true,
+      message: 'Carpeta creada exitosamente',
+      folderId,
+      name: folderData.name,
+      parentId: folderData.parentId,
+      path: folderData.path
+    });
+    
+  } catch (error) {
+    console.error('Error creando carpeta:', error);
+    res.status(500).json({
+      error: 'Error interno del servidor',
+      message: error.message
+    });
+  }
+});
+
+// Endpoint para obtener el ID de la carpeta raíz de ControlAudit
+app.get('/api/folders/root', verificarTokenUsuario, async (req, res) => {
+  try {
+    const { uid } = req.user;
+    
+    // Obtener o crear la carpeta raíz de ControlAudit
+    const folderId = `root_${uid}_${APP_CODE}`;
+    const ref = admin.firestore().collection('folders').doc(folderId);
+    
+    const snap = await ref.get();
+    
+    if (!snap.exists) {
+      // Crear la carpeta raíz si no existe
+      const data = {
+        id: folderId,
+        userId: uid,
+        name: APP_DISPLAY_NAME,
+        parentId: null,
+        path: `/${APP_CODE}`,
+        appCode: APP_CODE,
+        ancestors: [],
+        type: 'folder',
+        metadata: { 
+          isMainFolder: true, 
+          isDefault: true, 
+          icon: 'Folder', 
+          color: 'text-purple-600' 
+        },
+        createdAt: new Date(),
+        modifiedAt: new Date(),
+      };
+      
+      await ref.set(data);
+      console.log('✅ Carpeta raíz de ControlAudit creada para usuario:', uid);
+      
+      // Agregar acceso a la barra de tareas
+      const settingsRef = admin.firestore().collection('userSettings').doc(uid);
+      await admin.firestore().runTransaction(async (t) => {
+        const snap = await t.get(settingsRef);
+        const data = snap.exists ? snap.data() : {};
+        const items = Array.isArray(data.taskbarItems) ? data.taskbarItems : [];
+        if (!items.some(it => it && it.id === ref.id)) {
+          items.push({ 
+            id: ref.id, 
+            name: APP_DISPLAY_NAME, 
+            icon: 'Folder', 
+            color: 'text-purple-600', 
+            type: 'folder' 
+          });
+          t.set(settingsRef, { taskbarItems: items, updatedAt: new Date() }, { merge: true });
+        }
+      });
+    }
+    
+    res.json({
+      success: true,
+      folderId: ref.id,
+      name: APP_DISPLAY_NAME,
+      path: `/${APP_CODE}`,
+      message: 'Carpeta raíz obtenida/creada exitosamente'
+    });
+    
+  } catch (error) {
+    console.error('Error obteniendo carpeta raíz:', error);
     res.status(500).json({
       error: 'Error interno del servidor',
       message: error.message
