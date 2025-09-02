@@ -68,14 +68,34 @@ export function getEnvironmentInfo() {
   };
 }
 
-// Configuración de Firebase para ControlFile
+// ✅ Configuración de Firebase inteligente que detecta APK vs Web
 export const FIREBASE_CONFIG = {
   API_KEY: import.meta.env?.VITE_FIREBASE_API_KEY || 'AIzaSyB_hwQZapca3Y2cBP5rkmdoJy3tAdNB9Ro',
   AUTH_DOMAIN: import.meta.env?.VITE_FIREBASE_AUTH_DOMAIN || 'controlstorage-eb796.firebaseapp.com',
   PROJECT_ID: import.meta.env?.VITE_FIREBASE_PROJECT_ID || 'controlstorage-eb796',
   STORAGE_BUCKET: import.meta.env?.VITE_FIREBASE_STORAGE_BUCKET || 'controlstorage-eb796.firebasestorage.app',
   MESSAGING_SENDER_ID: import.meta.env?.VITE_FIREBASE_MESSAGING_SENDER_ID || '909876364192',
-  APP_ID: import.meta.env?.VITE_FIREBASE_APP_ID || '1:909876364192:android:0b45053d7f5667fda79ac5'
+  
+  // ✅ APP_ID inteligente: detecta si es APK o Web
+  get APP_ID() {
+    // Si hay variable de entorno, usarla
+    if (import.meta.env?.VITE_FIREBASE_APP_ID) {
+      return import.meta.env.VITE_FIREBASE_APP_ID;
+    }
+    
+    // Si no hay variable, detectar plataforma automáticamente
+    const isCapacitor = typeof window !== 'undefined' && window.Capacitor && window.Capacitor.isNative;
+    
+    if (isCapacitor) {
+      // ✅ Para APK: usar configuración de Android
+      console.log('📱 Firebase configurado para APK (Android)');
+      return '1:909876364192:android:0b45053d7f5667fda79ac5';
+    } else {
+      // ✅ Para Web: usar configuración de Web
+      console.log('🌐 Firebase configurado para Web');
+      return '1:909876364192:web:8c4a1fa2d1d86f46a79ac5';
+    }
+  }
 };
 
 // Función para debug de configuración de Firebase
