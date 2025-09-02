@@ -50,10 +50,19 @@ export function getBackendUrl(path = '', operation = 'local') {
 
 // Función para obtener información del entorno (compatibilidad con backend)
 export function getEnvironmentInfo() {
+  const hostname = window.location.hostname;
+  const protocol = window.location.protocol;
+  const port = window.location.port;
+  
   return {
     nodeEnv: import.meta.env?.MODE || 'production',
     isDev: import.meta.env?.DEV || false,
     isProd: import.meta.env?.PROD || false,
+    hostname,
+    protocol,
+    port,
+    environment: hostname === 'localhost' || hostname === '127.0.0.1' ? 'development' : 'production',
+    backendUrl: ENV_CONFIG.CONTROLFILE_BACKEND_URL,
     controlfileBackendUrl: ENV_CONFIG.CONTROLFILE_BACKEND_URL,
     localBackendUrl: ENV_CONFIG.LOCAL_BACKEND_URL
   };

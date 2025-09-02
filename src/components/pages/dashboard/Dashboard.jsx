@@ -11,6 +11,7 @@ import userService from "../../../services/userService";
 import { getEnvironmentInfo } from "../../../config/environment.js";
 import BackendHealthCheck from "../../../utils/backendHealthCheck.js";
 import BackendStatus from "../../../utils/backendStatus.js";
+import { ProductionDiagnostics } from "../../../utils/productionDiagnostics.js";
 
 // Datos de ejemplo (se mantienen como fallback)
 const empresasEjemplo = [
@@ -257,12 +258,19 @@ function Dashboard() {
       const healthChecker = new BackendHealthCheck();
       const diagnostico = await healthChecker.runFullDiagnostic();
       
+      // Diagnóstico de producción
+      const productionDiagnostics = new ProductionDiagnostics();
+      const productionReport = await productionDiagnostics.runFullDiagnosis();
+      
+      console.log('🔍 Diagnóstico de producción:', productionReport);
+      
       return {
         success: diagnostico.connectivity.success,
         message: diagnostico.connectivity.success ? 'Backend funcionando correctamente' : 'Error de conectividad',
         details: {
           ...diagnostico,
-          statusReport
+          statusReport,
+          productionReport
         }
       };
     } catch (error) {
