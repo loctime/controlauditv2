@@ -16,7 +16,7 @@ class BackendHealthCheck {
     try {
       console.log('🔍 Verificando conectividad con:', this.baseURL);
       
-      const response = await this.api.get('/health');
+      const response = await this.api.get('/api/health');
       console.log('✅ Backend respondió:', response.data);
       
       return {

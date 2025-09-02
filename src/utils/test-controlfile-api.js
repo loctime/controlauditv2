@@ -1,6 +1,21 @@
 // Test de conectividad con ControlFile API (con autenticación)
 import { auth } from '../firebaseConfig';
 
+// Función para logging robusto en producción
+function log(message, data = null) {
+  // Usar console.log para desarrollo y producción
+  if (data) {
+    console.log(`🔍 ${message}`, data);
+  } else {
+    console.log(`🔍 ${message}`);
+  }
+  
+  // También mostrar en la UI si es posible
+  if (typeof window !== 'undefined' && window.showNotification) {
+    window.showNotification(message);
+  }
+}
+
 // Función para obtener token de Firebase
 async function getFirebaseToken() {
   try {
@@ -11,7 +26,7 @@ async function getFirebaseToken() {
     
     // Obtener token fresco (forceRefresh: true para evitar tokens expirados)
     const token = await user.getIdToken(true);
-    console.log('🔑 Token obtenido:', token.substring(0, 50) + '...');
+    log('Token obtenido:', token.substring(0, 50) + '...');
     return token;
   } catch (error) {
     console.error('❌ Error obteniendo token:', error);
@@ -42,22 +57,23 @@ export async function testControlFileAPI() {
     }
   ];
 
-  console.group('🧪 TESTING CONTROLFILE API CONNECTIVITY');
+  log('🧪 INICIANDO TESTS DE CONTROLFILE API');
   
   // Obtener token una sola vez
   let authToken = null;
   try {
     authToken = await getFirebaseToken();
+    log('✅ Token de autenticación obtenido');
   } catch (error) {
-    console.warn('⚠️ No se pudo obtener token de Firebase, algunos tests fallarán');
+    log('⚠️ No se pudo obtener token de Firebase, algunos tests fallarán');
   }
   
   for (const test of tests) {
     try {
-      console.log(`\n🔍 Testing: ${test.name}`);
-      console.log(`📍 URL: ${test.url}`);
-      console.log(`📝 Method: ${test.method}`);
-      console.log(`🔐 Requires Auth: ${test.requiresAuth}`);
+      log(`\n🔍 Testing: ${test.name}`);
+      log(`📍 URL: ${test.url}`);
+      log(`📝 Method: ${test.method}`);
+      log(`🔐 Requires Auth: ${test.requiresAuth}`);
       
       // Preparar headers
       const headers = {
@@ -67,9 +83,9 @@ export async function testControlFileAPI() {
       // Agregar token si es requerido
       if (test.requiresAuth && authToken) {
         headers['Authorization'] = `Bearer ${authToken}`;
-        console.log('🔑 Using Bearer token');
+        log('🔑 Using Bearer token');
       } else if (test.requiresAuth && !authToken) {
-        console.log('⚠️ Test requiere auth pero no hay token, saltando...');
+        log('⚠️ Test requiere auth pero no hay token, saltando...');
         continue;
       }
       
@@ -90,59 +106,58 @@ export async function testControlFileAPI() {
       
       const response = await fetch(test.url, fetchOptions);
       
-      console.log(`✅ Status: ${response.status} ${response.statusText}`);
+      log(`✅ Status: ${response.status} ${response.statusText}`);
       
       if (response.ok) {
         const data = await response.text();
-        console.log(`📄 Response: ${data.substring(0, 200)}...`);
+        log(`📄 Response: ${data.substring(0, 200)}...`);
       } else {
         const errorText = await response.text();
-        console.log(`❌ Error Response: ${errorText}`);
+        log(`❌ Error Response: ${errorText}`);
         
         // Análisis específico de errores de ControlFile
         if (response.status === 401) {
           if (errorText.includes('AUTH_TOKEN_MISSING')) {
-            console.log('🔍 Error: Token de autenticación faltante');
+            log('🔍 Error: Token de autenticación faltante');
           } else if (errorText.includes('AUTH_TOKEN_EXPIRED')) {
-            console.log('🔍 Error: Token expirado, intenta renovar');
+            log('🔍 Error: Token expirado, intenta renovar');
           } else if (errorText.includes('APP_FORBIDDEN')) {
-            console.log('🔍 Error: Usuario no tiene acceso a ControlFile');
+            log('🔍 Error: Usuario no tiene acceso a ControlFile');
           }
         }
       }
       
     } catch (error) {
-      console.error(`❌ Failed: ${error.message}`);
+      log(`❌ Failed: ${error.message}`);
     }
   }
   
-  console.groupEnd();
+  log('✅ TESTS DE CONTROLFILE API COMPLETADOS');
   
   return 'Test completed. Check console for results.';
 }
 
 // Test específico para folders/root con autenticación
 export async function testFoldersRoot() {
-  console.group('📁 TESTING FOLDERS ROOT ENDPOINT (AUTHENTICATED)');
+  log('📁 INICIANDO TEST DE FOLDERS ROOT (AUTHENTICATED)');
   
   try {
     // Verificar autenticación
     const user = auth.currentUser;
     if (!user) {
-      console.error('❌ No hay usuario autenticado en Firebase');
-      console.log('💡 Debes hacer login primero');
-      console.groupEnd();
+      log('❌ No hay usuario autenticado en Firebase');
+      log('💡 Debes hacer login primero');
       return;
     }
     
-    console.log(`👤 Usuario autenticado: ${user.email}`);
+    log(`👤 Usuario autenticado: ${user.email}`);
     
     // Obtener token
     const token = await getFirebaseToken();
     
     const url = 'https://controlfile.onrender.com/api/folders/root?name=ControlAudit&pin=1';
-    console.log(`📍 Testing: ${url}`);
-    console.log(`🔑 Token: ${token.substring(0, 50)}...`);
+    log(`📍 Testing: ${url}`);
+    log(`🔑 Token: ${token.substring(0, 50)}...`);
     
     const response = await fetch(url, {
       method: 'GET',
@@ -153,83 +168,82 @@ export async function testFoldersRoot() {
       }
     });
     
-    console.log(`📊 Status: ${response.status} ${response.statusText}`);
-    console.log(`📋 Headers:`, Object.fromEntries(response.headers.entries()));
+    log(`📊 Status: ${response.status} ${response.statusText}`);
     
     if (response.ok) {
       const data = await response.json();
-      console.log(`✅ Success:`, data);
+      log(`✅ Success:`, data);
       
       // Verificar si la carpeta se creó correctamente
       if (data.folderId) {
-        console.log(`📁 Carpeta raíz creada/obtenida: ${data.folderId}`);
-        console.log(`📌 Pinneada en taskbar: ${data.pinned ? 'Sí' : 'No'}`);
+        log(`📁 Carpeta raíz creada/obtenida: ${data.folderId}`);
+        log(`📌 Pinneada en taskbar: ${data.pinned ? 'Sí' : 'No'}`);
       }
     } else {
       const errorText = await response.text();
-      console.log(`❌ Error Response:`, errorText);
+      log(`❌ Error Response:`, errorText);
       
       // Análisis detallado del error
       if (response.status === 401) {
-        console.log('🔍 Error 401 - Problemas de autenticación:');
+        log('🔍 Error 401 - Problemas de autenticación:');
         if (errorText.includes('AUTH_TOKEN_MISSING')) {
-          console.log('  • Token de autenticación faltante');
+          log('  • Token de autenticación faltante');
         } else if (errorText.includes('AUTH_TOKEN_EXPIRED')) {
-          console.log('  • Token expirado');
+          log('  • Token expirado');
         } else if (errorText.includes('APP_FORBIDDEN')) {
-          console.log('  • Usuario no tiene acceso a ControlFile');
-          console.log('  • Verificar claim allowedApps en Firebase');
+          log('  • Usuario no tiene acceso a ControlFile');
+          log('  • Verificar claim allowedApps en Firebase');
         }
       } else if (response.status === 404) {
-        console.log('🔍 Error 404 - Endpoint no encontrado');
-        console.log('  • Verificar que /api/folders/root esté implementado en ControlFile');
+        log('🔍 Error 404 - Endpoint no encontrado');
+        log('  • Verificar que /api/folders/root esté implementado en ControlFile');
       }
     }
     
   } catch (error) {
-    console.error(`❌ Fetch Error:`, error);
+    log(`❌ Fetch Error:`, error);
   }
   
-  console.groupEnd();
+  log('✅ TEST DE FOLDERS ROOT COMPLETADO');
 }
 
 // Función para ejecutar todos los tests
 export async function runAllTests() {
-  console.log('🚀 Starting ControlFile API Tests...');
+  log('🚀 INICIANDO TESTS COMPLETOS DE CONTROLFILE');
   
   // Verificar autenticación primero
   const user = auth.currentUser;
   if (!user) {
-    console.error('❌ No hay usuario autenticado en Firebase');
-    console.log('💡 Debes hacer login primero para ejecutar tests autenticados');
+    log('❌ No hay usuario autenticado en Firebase');
+    log('💡 Debes hacer login primero para ejecutar tests autenticados');
     return;
   }
   
-  console.log(`👤 Usuario autenticado: ${user.email}`);
+  log(`👤 Usuario autenticado: ${user.email}`);
   
   await testControlFileAPI();
   await testFoldersRoot();
   
-  console.log('✅ All tests completed!');
+  log('✅ TODOS LOS TESTS COMPLETADOS!');
 }
 
 // Función para testear solo conectividad básica (sin auth)
 export async function testBasicConnectivity() {
-  console.group('🌐 TESTING BASIC CONNECTIVITY (NO AUTH)');
+  log('🌐 INICIANDO TEST DE CONECTIVIDAD BÁSICA (NO AUTH)');
   
   try {
     const response = await fetch('https://controlfile.onrender.com/api/health');
-    console.log(`📊 Health Check Status: ${response.status} ${response.statusText}`);
+    log(`📊 Health Check Status: ${response.status} ${response.statusText}`);
     
     if (response.ok) {
       const data = await response.text();
-      console.log(`✅ ControlFile responde: ${data}`);
+      log(`✅ ControlFile responde: ${data}`);
     } else {
-      console.log(`❌ ControlFile no responde correctamente`);
+      log(`❌ ControlFile no responde correctamente`);
     }
   } catch (error) {
-    console.error(`❌ Error de conectividad: ${error.message}`);
+    log(`❌ Error de conectividad: ${error.message}`);
   }
   
-  console.groupEnd();
+  log('✅ TEST DE CONECTIVIDAD COMPLETADO');
 }

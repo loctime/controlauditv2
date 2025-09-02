@@ -176,7 +176,7 @@ export const userService = {
   // Verificar conectividad con el backend
   async checkBackendHealth() {
     try {
-      const response = await api.get('/health');
+      const response = await api.get('/api/health');
       return response.data;
     } catch (error) {
       console.error('Error verificando salud del backend:', error);
