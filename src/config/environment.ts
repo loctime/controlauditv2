@@ -1,49 +1,54 @@
-// Configuración de entorno para ControlFile
-export const ENV_CONFIG = {
-  // Backend de ControlFile (solo para subida de archivos)
-  CONTROLFILE_BACKEND_URL: (import.meta as any).env?.VITE_APP_BACKEND_URL || 'https://controlfile.onrender.com',
-  
-  // Backend local (para gestión de carpetas y taskbar)
-  LOCAL_BACKEND_URL: (import.meta as any).env?.VITE_APP_LOCAL_BACKEND_URL || 'http://localhost:4000',
-  
-  // Entorno
-  IS_DEV: (import.meta as any).env?.DEV || false,
-  IS_PROD: (import.meta as any).env?.PROD || false,
-  
-  // URLs por defecto según entorno
-  get CONTROLFILE_BASE_URL() {
-    // Para subida de archivos, usar ControlFile
-    return this.CONTROLFILE_BACKEND_URL;
-  },
-  
-  get LOCAL_BASE_URL() {
-    // Para gestión de carpetas y taskbar, usar backend local
-    if (this.IS_DEV) {
-      return this.LOCAL_BACKEND_URL;
-    }
-    // En producción, usar el mismo backend de ControlFile
-    return this.CONTROLFILE_BACKEND_URL;
+// Configuración de entorno para ControlAudit
+// Funciona tanto en web (Vite) como en APK (Capacitor)
+
+interface EnvironmentConfig {
+  FIREBASE_API_KEY: string;
+  FIREBASE_AUTH_DOMAIN: string;
+  FIREBASE_PROJECT_ID: string;
+  FIREBASE_STORAGE_BUCKET: string;
+  FIREBASE_MESSAGING_SENDER_ID: string;
+  FIREBASE_APP_ID: string;
+}
+
+// Función para obtener variables de entorno según la plataforma
+const getEnvironmentVariable = (key: string, defaultValue: string): string => {
+  // En web, usar variables de Vite
+  if (typeof import.meta !== 'undefined' && import.meta.env) {
+    return import.meta.env[key] || defaultValue;
   }
+  
+  // En APK, usar variables de Capacitor o valores por defecto
+  if (typeof window !== 'undefined' && window.Capacitor && window.Capacitor.isNative) {
+    // Aquí podrías usar Capacitor Preferences o Storage para variables de entorno
+    // Por ahora, usamos los valores por defecto del proyecto ControlFile
+    return defaultValue;
+  }
+  
+  return defaultValue;
 };
 
-// Función helper para obtener la URL del backend de ControlFile (subida de archivos)
-export function getControlFileUrl(path: string = ''): string {
-  const baseUrl = ENV_CONFIG.CONTROLFILE_BASE_URL.replace(/\/$/, '');
-  const cleanPath = path.startsWith('/') ? path : `/${path}`;
-  return `${baseUrl}${cleanPath}`;
-}
+// Configuración del proyecto ControlFile
+export const environment: EnvironmentConfig = {
+  FIREBASE_API_KEY: getEnvironmentVariable('VITE_FIREBASE_API_KEY', 'AIzaSyB_hwQZapca3Y2cBP5rkmdoJy3tAdNB9Ro'),
+  FIREBASE_AUTH_DOMAIN: getEnvironmentVariable('VITE_FIREBASE_AUTH_DOMAIN', 'controlstorage-eb796.firebaseapp.com'),
+  FIREBASE_PROJECT_ID: getEnvironmentVariable('VITE_FIREBASE_PROJECT_ID', 'controlstorage-eb796'),
+  FIREBASE_STORAGE_BUCKET: getEnvironmentVariable('VITE_FIREBASE_STORAGE_BUCKET', 'controlstorage-eb796.firebasestorage.app'),
+  FIREBASE_MESSAGING_SENDER_ID: getEnvironmentVariable('VITE_FIREBASE_MESSAGING_SENDER_ID', '909876364192'),
+  FIREBASE_APP_ID: getEnvironmentVariable('VITE_FIREBASE_APP_ID', '1:909876364192:android:0b45053d7f5667fda79ac5')
+};
 
-// Función helper para obtener la URL del backend local (gestión de carpetas)
-export function getLocalBackendUrl(path: string = ''): string {
-  const baseUrl = ENV_CONFIG.LOCAL_BASE_URL.replace(/\/$/, '');
-  const cleanPath = path.startsWith('/') ? path : `/${path}`;
-  return `${baseUrl}${cleanPath}`;
-}
+// Función para debug de configuración
+export const logEnvironmentConfig = () => {
+  console.log('🌐 Configuración de entorno detectada:', {
+    platform: typeof window !== 'undefined' && window.Capacitor && window.Capacitor.isNative ? 'APK' : 'Web',
+    config: environment,
+    hasViteEnv: typeof import.meta !== 'undefined' && !!import.meta.env,
+    hasCapacitor: typeof window !== 'undefined' && !!window.Capacitor,
+    viteEnv: typeof import.meta !== 'undefined' ? Object.keys(import.meta.env).filter(key => key.startsWith('VITE_')) : []
+  });
+};
 
-// Función helper para obtener la URL del backend según el tipo de operación
-export function getBackendUrl(path: string = '', operation: 'controlfile' | 'local' = 'local'): string {
-  if (operation === 'controlfile') {
-    return getControlFileUrl(path);
-  }
-  return getLocalBackendUrl(path);
-}
+// Log automático al importar
+logEnvironmentConfig();
+
+export default environment;

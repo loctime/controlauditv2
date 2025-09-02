@@ -26,7 +26,7 @@ import { Formik, Form, Field, ErrorMessage } from 'formik';
 import * as Yup from 'yup';
 import { useAuth } from '../../context/AuthContext';
 import SmartAPKDownload from '../../common/SmartAPKDownload.jsx';
-import AuthMethodInfo from '../../common/AuthMethodInfo';
+
 import { usePlatform } from '../../../hooks/usePlatform.js';
 
 const Login = () => {
@@ -139,8 +139,7 @@ const Login = () => {
             </Alert>
           )}
 
-          {/* Información del método de autenticación */}
-          <AuthMethodInfo />
+
 
           {/* Botón de Google */}
           <Box sx={{ textAlign: 'center', mb: 3 }}>

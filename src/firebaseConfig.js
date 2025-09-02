@@ -16,16 +16,17 @@ import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage"; // Importa getStorage
 import { isCapacitor, getAuthConfig } from './utils/capacitorUtils';
 import { getImprovedAuthConfig, getAuthEnvironmentInfo } from './utils/authUtils';
+import environment from './config/environment';
 
-// ✅ Configuración para proyecto central de Auth (controlstorage-eb796)
+// ✅ Configuración para proyecto ControlFile (controlstorage-eb796)
 // Según la guía de integración de ControlFile
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSyD7pmD_EVRf0dJcocynpaXAdu3tveycrzg",
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "controlstorage-eb796.firebaseapp.com",
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "controlstorage-eb796",
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "controlstorage-eb796.appspot.com",
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "156800340171",
-  appId: import.meta.env.VITE_FIREBASE_APP_ID || "1:156800340171:web:fbe017105fd68b0f114b4e"
+  apiKey: environment.FIREBASE_API_KEY,
+  authDomain: environment.FIREBASE_AUTH_DOMAIN,
+  projectId: environment.FIREBASE_PROJECT_ID,
+  storageBucket: environment.FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: environment.FIREBASE_MESSAGING_SENDER_ID,
+  appId: environment.FIREBASE_APP_ID
 };
 
 // Initialize Firebase
@@ -33,6 +34,15 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 const storage = getStorage(app); // Inicializa el almacenamiento
+
+// Log de configuración para debug
+console.log('🔥 Firebase configurado con:', {
+  projectId: firebaseConfig.projectId,
+  authDomain: firebaseConfig.authDomain,
+  messagingSenderId: firebaseConfig.messagingSenderId,
+  appId: firebaseConfig.appId,
+  isCapacitor: typeof window !== 'undefined' && window.Capacitor && window.Capacitor.isNative
+});
 
 // Hacer auth disponible globalmente para debugging
 if (typeof window !== 'undefined') {
