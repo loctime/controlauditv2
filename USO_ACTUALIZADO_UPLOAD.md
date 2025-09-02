@@ -1,12 +1,12 @@
-# Uso Actualizado de Upload con ControlFile
+# Integración ControlFile - ControlAudit
 
-## 🎯 **Cambios implementados:**
+## 🎯 **Descripción**
 
-Ahora **TODOS los archivos se suben CON parentId** usando el ID de la carpeta raíz de ControlAudit.
+ControlAudit está completamente integrado con ControlFile para la gestión de archivos. Todos los archivos subidos se organizan automáticamente en una estructura de carpetas compatible con ControlFile.
 
-## 📁 **Endpoints disponibles:**
+## 📁 **Endpoints Disponibles**
 
-### 1. **GET /api/folders/root** - Obtener ID de carpeta raíz
+### **1. GET /api/folders/root** - Obtener ID de carpeta raíz
 ```javascript
 const response = await fetch('/api/folders/root', {
   method: 'GET',
@@ -17,7 +17,7 @@ const { folderId } = await response.json();
 // folderId = "root_xEZYF8vqf4bM9hWXk3qKKjtJrgg2_controlaudit"
 ```
 
-### 2. **POST /api/uploads/presign** - Crear sesión de subida
+### **2. POST /api/uploads/presign** - Crear sesión de subida
 ```javascript
 // OPCIÓN A: Sin parentId (usa carpeta raíz automáticamente)
 const response = await fetch('/api/uploads/presign', {
@@ -44,7 +44,7 @@ const response = await fetch('/api/uploads/presign', {
 });
 ```
 
-### 3. **POST /api/folders/create** - Crear subcarpetas
+### **3. POST /api/folders/create** - Crear subcarpetas
 ```javascript
 const response = await fetch('/api/folders/create', {
   method: 'POST',
@@ -56,7 +56,7 @@ const response = await fetch('/api/folders/create', {
 });
 ```
 
-## 🚀 **Flujo recomendado:**
+## 🚀 **Flujo Recomendado**
 
 ### **Paso 1: Obtener ID de carpeta raíz**
 ```javascript
@@ -109,14 +109,14 @@ const handleFileSelect = async (event) => {
 };
 ```
 
-## 🎉 **Resultado:**
+## 🎉 **Resultado**
 
 - **Todos los archivos tendrán parentId** correcto
 - **Estructura perfecta** en ControlFile
 - **Organización automática** en la carpeta "ControlAudit"
 - **Esquema 100% compatible** con ControlFile
 
-## 📋 **Estructura de datos en Firestore:**
+## 📋 **Estructura de Datos en Firestore**
 
 ```
 folders/
@@ -138,11 +138,44 @@ files/
     └── appCode: "controlaudit"
 ```
 
-## 🔍 **Verificación:**
+## 🔍 **Verificación**
 
 En ControlFile verás:
 - Una carpeta "ControlAudit" en la barra de tareas
 - Todos los archivos organizados en esa carpeta
 - Estructura de datos perfectamente compatible
+
+## ⚙️ **Configuración**
+
+### **Variables de Entorno:**
+```bash
+APP_CODE=controlaudit
+APP_DISPLAY_NAME=ControlAudit
+```
+
+### **Esquema de Archivos:**
+```javascript
+{
+  id: "cf_timestamp_random",
+  userId: "uid_del_usuario",
+  name: "nombre_archivo.ext",
+  size: 1024000,
+  mime: "image/png",
+  parentId: "root_uid_controlaudit", // ✅ SIEMPRE presente
+  url: "https://files.controldoc.app/cf_id",
+  appCode: "controlaudit",
+  ancestors: [],
+  isDeleted: false,
+  deletedAt: null,
+  createdAt: new Date(),
+  updatedAt: new Date(),
+  metadata: {
+    uploadedAt: new Date(),
+    originalName: "nombre_original.ext",
+    size: 1024000,
+    mimeType: "image/png"
+  }
+}
+```
 
 ¡Listo para usar! 🚀
