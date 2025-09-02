@@ -1,6 +1,6 @@
 // Configuración centralizada para ControlFile
 // Este archivo centraliza todas las URLs y configuraciones relacionadas con ControlFile
-import { getBackendUrl } from './environment.ts';
+import { getBackendUrl } from './environment.js';
 
 export const CONTROLFILE_CONFIG = {
   // URLs base según el entorno

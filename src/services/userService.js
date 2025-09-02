@@ -1,7 +1,7 @@
 // src/services/userService.js
 import axios from 'axios';
 import { auth } from '../firebaseConfig';
-import { getBackendUrl } from '../config/environment.ts';
+import { getBackendUrl } from '../config/environment.js';
 import { doc, setDoc, collection, getDocs, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../firebaseConfig';
 

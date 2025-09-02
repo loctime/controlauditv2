@@ -1,5 +1,5 @@
 // src/utils/backendStatus.js
-import { getBackendUrl, getEnvironmentInfo } from '../config/environment.ts';
+import { getBackendUrl, getEnvironmentInfo } from '../config/environment.js';
 
 export class BackendStatus {
   constructor() {
