@@ -1,19 +1,51 @@
 // Google Auth nativo para APK usando @southdevs/capacitor-google-auth
-import { Capacitor } from '@capacitor/core';
-import { GoogleAuth } from '@southdevs/capacitor-google-auth';
+let Capacitor;
+let GoogleAuth;
+
+// Importación condicional para evitar errores en web
+try {
+  if (typeof window !== 'undefined' && window.Capacitor) {
+    // Si estamos en Capacitor (APK)
+    Capacitor = window.Capacitor;
+  } else {
+    // Importación dinámica solo si es necesario
+    Capacitor = require('@capacitor/core');
+  }
+} catch (error) {
+  console.warn('⚠️ Capacitor no disponible en este entorno:', error);
+  Capacitor = { isNativePlatform: () => false };
+}
+
+try {
+  if (typeof window !== 'undefined' && window.GoogleAuth) {
+    GoogleAuth = window.GoogleAuth;
+  } else {
+    GoogleAuth = require('@southdevs/capacitor-google-auth');
+  }
+} catch (error) {
+  console.warn('⚠️ GoogleAuth no disponible en este entorno:', error);
+  GoogleAuth = null;
+}
+
 import { getAuth, GoogleAuthProvider, signInWithCredential } from 'firebase/auth';
 import { auth } from '../firebaseConfig';
 
 // Función para inicializar Google Auth
 export const initializeGoogleAuth = async () => {
   try {
+    // En web, no hacer nada
+    if (typeof window !== 'undefined' && !window.Capacitor) {
+      console.log('🌐 Web detectado, Google Auth nativo no disponible');
+      return;
+    }
+    
     if (Capacitor.isNativePlatform()) {
       console.log('📱 Inicializando Google Auth nativo para APK...');
       
       // Inicializar con el Client ID de Web (no Android)
       await GoogleAuth.initialize({
         clientId: '909876364192-akleu8n2p915ovgum0jsnuhcckeavp9t.apps.googleusercontent.com',
-        scopes: ['email', 'profile']
+        scopes: ['email', 'postMessage']
       });
       
       console.log('✅ Google Auth nativo inicializado correctamente');
@@ -27,6 +59,11 @@ export const initializeGoogleAuth = async () => {
 // Función para login con Google nativo
 export const signInWithGoogleNative = async () => {
   try {
+    // En web, no hacer nada
+    if (typeof window !== 'undefined' && !window.Capacitor) {
+      throw new Error('Google Sign-In nativo solo está disponible en dispositivos móviles');
+    }
+    
     // Verificar si estamos en APK
     if (!Capacitor.isNativePlatform()) {
       throw new Error('Google Sign-In nativo solo está disponible en APK');
@@ -75,6 +112,14 @@ export const signInWithGoogleNative = async () => {
 // Función para cerrar sesión de Google
 export const signOutGoogle = async () => {
   try {
+    // En web, solo cerrar sesión de Firebase
+    if (typeof window !== 'undefined' && !window.Capacitor) {
+      console.log('🌐 Web detectado, cerrando solo sesión de Firebase...');
+      await auth.signOut();
+      console.log('✅ Sesión de Firebase cerrada');
+      return;
+    }
+    
     if (Capacitor.isNativePlatform()) {
       console.log('📱 Cerrando sesión de Google nativo...');
       
@@ -95,7 +140,12 @@ export const signOutGoogle = async () => {
 // Función para verificar si Google Auth está disponible
 export const isGoogleAuthNativeAvailable = () => {
   try {
-    return Capacitor.isNativePlatform() && typeof GoogleAuth !== 'undefined';
+    // En web, siempre retornar false
+    if (typeof window !== 'undefined' && !window.Capacitor) {
+      return false;
+    }
+    
+    return Capacitor && Capacitor.isNativePlatform() && typeof GoogleAuth !== 'undefined';
   } catch (error) {
     console.warn('Error verificando disponibilidad:', error);
     return false;
@@ -105,6 +155,20 @@ export const isGoogleAuthNativeAvailable = () => {
 // Función para obtener información del usuario actual de Google
 export const getCurrentGoogleUser = async () => {
   try {
+    // En web, usar Firebase Auth
+    if (typeof window !== 'undefined' && !window.Capacitor) {
+      const user = auth.currentUser;
+      if (user) {
+        return {
+          uid: user.uid,
+          email: user.email,
+          displayName: user.displayName,
+          photoURL: user.photoURL
+        };
+      }
+      return null;
+    }
+    
     if (Capacitor.isNativePlatform()) {
       // Verificar si hay sesión activa
       const user = auth.currentUser;
@@ -127,6 +191,12 @@ export const getCurrentGoogleUser = async () => {
 // Función para verificar permisos
 export const checkGoogleAuthPermissions = async () => {
   try {
+    // En web, no hay permisos específicos de Google Auth
+    if (typeof window !== 'undefined' && !window.Capacitor) {
+      console.log('🌐 Web detectado, no hay permisos específicos de Google Auth');
+      return null;
+    }
+    
     if (Capacitor.isNativePlatform()) {
       const permissions = await GoogleAuth.permissions();
       console.log('📱 Permisos de Google Auth:', permissions);
