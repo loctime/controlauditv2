@@ -38,6 +38,7 @@ import { Formik, Form, Field, ErrorMessage } from 'formik';
 import * as Yup from 'yup';
 import { useAuth } from '../../context/AuthContext';
 import SmartAPKDownload from '../../common/SmartAPKDownload.jsx';
+import FirebaseDiagnosticButton from '../../common/FirebaseDiagnosticButton';
 
 import { usePlatform } from '../../../hooks/usePlatform.js';
 import LoadingScreen from '../../common/LoadingScreen';
@@ -340,6 +341,22 @@ const Login = () => {
             >
               Continuar con Google
             </Button>
+            
+            {/* ✅ Botón de Diagnóstico de Firebase */}
+            <Box sx={{ mb: 2, textAlign: 'center' }}>
+              <FirebaseDiagnosticButton
+                variant="text"
+                size="small"
+                sx={{ 
+                  color: 'text.secondary',
+                  fontSize: '0.75rem',
+                  minWidth: 'auto',
+                  px: 1
+                }}
+              >
+                🔍 Diagnóstico Firebase
+              </FirebaseDiagnosticButton>
+            </Box>
             
             <Divider sx={{ my: 2 }}>
               <Typography variant="body2" color="text.secondary">

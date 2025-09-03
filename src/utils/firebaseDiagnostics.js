@@ -3,12 +3,23 @@
 
 import { FIREBASE_APK_CONFIG } from '../config/firebaseAPK';
 import { FIREBASE_CONFIG } from '../config/environment';
+import { detectPlatform, getPlatformInfo } from './platformDetection';
 
 // Función para ejecutar diagnóstico completo de Firebase
 export const runFirebaseDiagnostics = () => {
+  console.log('🔍 Iniciando diagnóstico de Firebase...');
+  
+  // ✅ Obtener información detallada de la plataforma
+  const platformInfo = getPlatformInfo();
+  console.log('📱 Información de plataforma:', platformInfo);
+  
+  const platform = detectPlatform();
+  console.log('📱 Plataforma detectada:', platform);
+  
   const diagnostics = {
     timestamp: new Date().toISOString(),
-    platform: detectPlatform(),
+    platform: platform,
+    platformInfo: platformInfo,
     firebaseConfig: getFirebaseConfig(),
     oauthConfig: getOAuthConfig(),
     environmentVariables: getEnvironmentVariables(),

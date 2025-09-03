@@ -20,26 +20,47 @@ import { FIREBASE_CONFIG } from './config/environment';
 import { FIREBASE_APK_CONFIG, validateAPKConfig } from './config/firebaseAPK';
 // import { nativeGoogleSignIn, isNativeGoogleSignInAvailable } from './utils/nativeGoogleAuth';
 
-
-// ✅ Configuración para proyecto ControlFile (controlstorage-eb796)
-// Según la guía de integración de ControlFile
-const firebaseConfig = {
-  apiKey: FIREBASE_CONFIG.API_KEY,
-  authDomain: FIREBASE_CONFIG.AUTH_DOMAIN,
-  projectId: FIREBASE_CONFIG.PROJECT_ID,
-  storageBucket: FIREBASE_CONFIG.STORAGE_BUCKET,
-  messagingSenderId: FIREBASE_CONFIG.MESSAGING_SENDER_ID,
-  appId: FIREBASE_CONFIG.APP_ID
-};
-
-// ✅ Verificar configuración de APK si estamos en Capacitor
+// ✅ Detectar si estamos en APK
 const isCapacitorAPK = typeof window !== 'undefined' && window.Capacitor && window.Capacitor.isNative;
+
+// ✅ Configuración de Firebase según plataforma
+let firebaseConfig;
+
 if (isCapacitorAPK) {
-  console.log('📱 Verificando configuración de Firebase APK...');
+  // ✅ Para APK: usar configuración específica de Android (hardcodeada)
+  console.log('📱 APK detectado, usando configuración de Firebase para APK...');
+  firebaseConfig = {
+    apiKey: FIREBASE_APK_CONFIG.apiKey,
+    authDomain: FIREBASE_APK_CONFIG.authDomain,
+    projectId: FIREBASE_APK_CONFIG.projectId,
+    storageBucket: FIREBASE_APK_CONFIG.storageBucket,
+    messagingSenderId: FIREBASE_APK_CONFIG.messagingSenderId,
+    appId: FIREBASE_APK_CONFIG.appId
+  };
+  
+  // ✅ Verificar configuración de APK
   validateAPKConfig();
+} else {
+  // ✅ Para Web: usar configuración estándar (con variables de entorno)
+  console.log('🌐 Web detectado, usando configuración de Firebase para Web...');
+  firebaseConfig = {
+    apiKey: FIREBASE_CONFIG.API_KEY,
+    authDomain: FIREBASE_CONFIG.AUTH_DOMAIN,
+    projectId: FIREBASE_CONFIG.PROJECT_ID,
+    storageBucket: FIREBASE_CONFIG.STORAGE_BUCKET,
+    messagingSenderId: FIREBASE_CONFIG.MESSAGING_SENDER_ID,
+    appId: FIREBASE_CONFIG.APP_ID
+  };
 }
 
-// Initialize Firebase
+// ✅ Log de configuración para debug
+console.log('🔥 Configuración de Firebase seleccionada:', {
+  platform: isCapacitorAPK ? 'APK' : 'Web',
+  config: firebaseConfig,
+  isCapacitor: isCapacitorAPK
+});
+
+// ✅ Initialize Firebase con la configuración correcta
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 
@@ -66,12 +87,12 @@ const db = getFirestore(app);
 const storage = getStorage(app); // Inicializa el almacenamiento
 
 // Log de configuración para debug
-console.log('🔥 Firebase configurado con:', {
+console.log('🔥 Firebase inicializado correctamente:', {
   projectId: firebaseConfig.projectId,
   authDomain: firebaseConfig.authDomain,
   messagingSenderId: firebaseConfig.messagingSenderId,
   appId: firebaseConfig.appId,
-  isCapacitor: typeof window !== 'undefined' && window.Capacitor && window.Capacitor.isNative
+  isCapacitor: isCapacitorAPK
 });
 
 // Hacer auth disponible globalmente para debugging

@@ -1,16 +1,14 @@
 // src/config/firebaseAPK.js
-// Configuración específica de Firebase para la APK
+// Configuración específica de Firebase para la APK (hardcodeada)
 
 // ✅ Configuración de Firebase específica para APK
 export const FIREBASE_APK_CONFIG = {
-  // Configuración estándar - valores hardcodeados para APK
+  // ✅ Valores hardcodeados del google-services.json
   apiKey: 'AIzaSyB_hwQZapca3Y2cBP5rkmdoJy3tAdNB9Ro',
   authDomain: 'controlstorage-eb796.firebaseapp.com',
   projectId: 'controlstorage-eb796',
   storageBucket: 'controlstorage-eb796.firebasestorage.app',
   messagingSenderId: '909876364192',
-  
-  // ✅ APP_ID específico para Android (del google-services.json)
   appId: '1:909876364192:android:0b45053d7f5667fda79ac5',
   
   // ✅ Configuración específica para OAuth en APK
@@ -23,7 +21,7 @@ export const FIREBASE_APK_CONFIG = {
   }
 };
 
-// Función para verificar la configuración de la APK
+// ✅ Función para verificar la configuración de la APK
 export const validateAPKConfig = () => {
   const requiredKeys = [
     'apiKey',
@@ -42,10 +40,16 @@ export const validateAPKConfig = () => {
   }
 
   console.log('✅ Configuración de Firebase APK válida');
+  console.log('📱 Configuración APK:', {
+    projectId: FIREBASE_APK_CONFIG.projectId,
+    authDomain: FIREBASE_APK_CONFIG.authDomain,
+    appId: FIREBASE_APK_CONFIG.appId
+  });
+  
   return true;
 };
 
-// Función para obtener información del entorno de la APK
+// ✅ Función para obtener información del entorno de la APK
 export const getAPKEnvironmentInfo = () => {
   return {
     platform: 'APK',
@@ -58,7 +62,7 @@ export const getAPKEnvironmentInfo = () => {
   };
 };
 
-// Log automático de configuración
+// ✅ Log automático de configuración
 console.log('📱 Firebase APK configurado:', {
   projectId: FIREBASE_APK_CONFIG.projectId,
   authDomain: FIREBASE_APK_CONFIG.authDomain,
