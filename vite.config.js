@@ -11,7 +11,7 @@ export default defineConfig({
     // Proxy de API para desarrollo - evita problemas de CORS
     proxy: {
       '/api': {
-        target: 'http://localhost:4000', // Backend local
+        target: 'https://controlfile.onrender.com', // Backend de producción
         changeOrigin: true,
         secure: false,
       },
@@ -19,9 +19,9 @@ export default defineConfig({
     // Configuración de CORS para solucionar problemas de autenticación
     cors: {
       origin: [
-        'http://localhost:5173',
-        'http://localhost:3000',
-        'http://localhost:4000',
+              'https://auditoria.controldoc.app',
+      'https://controlfile.onrender.com',
+      'https://controlaudit.vercel.app',
         'https://auditoria-f9fc4.web.app',
         'https://auditoria-f9fc4.firebaseapp.com'
       ],

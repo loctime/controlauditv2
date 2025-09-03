@@ -214,7 +214,7 @@ const CameraDialog = ({
 
   // Verificar compatibilidad del navegador
   const checkBrowserCompatibility = () => {
-    const isHTTPS = window.location.protocol === 'https:' || window.location.hostname === 'localhost';
+    const isHTTPS = window.location.protocol === 'https:'; // Forzamos HTTPS para producción
     const hasGetUserMedia = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
     const hasEnumerateDevices = !!(navigator.mediaDevices && navigator.mediaDevices.enumerateDevices);
     

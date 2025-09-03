@@ -53,7 +53,7 @@ const InfoSistema = () => {
   // Estados para información del sistema
   const [systemInfo, setSystemInfo] = useState({
     environment: import.meta.env.MODE,
-    isDevelopment: import.meta.env.DEV || window.location.hostname === 'localhost',
+    isDevelopment: false, // Forzamos producción para APK
     userAgent: navigator.userAgent,
     timestamp: new Date().toISOString(),
     hasAuth: !!auth.currentUser,
@@ -152,7 +152,7 @@ const InfoSistema = () => {
   const getEnvironmentInfo = () => {
     return {
       environment: import.meta.env.MODE,
-      isDevelopment: import.meta.env.DEV || window.location.hostname === 'localhost',
+      isDevelopment: false, // Forzamos producción para APK
       hostname: window.location.hostname,
       protocol: window.location.protocol,
       port: window.location.port,

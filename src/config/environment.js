@@ -4,7 +4,7 @@ export const ENV_CONFIG = {
   CONTROLFILE_BACKEND_URL: import.meta.env?.VITE_APP_BACKEND_URL || 'https://controlfile.onrender.com',
   
   // Backend local (para gestión de carpetas y taskbar)
-  LOCAL_BACKEND_URL: import.meta.env?.VITE_APP_LOCAL_BACKEND_URL || 'http://localhost:4000',
+  LOCAL_BACKEND_URL: import.meta.env?.VITE_APP_LOCAL_BACKEND_URL || 'https://controlfile.onrender.com',
   
   // Entorno
   IS_DEV: import.meta.env?.DEV || false,
@@ -61,7 +61,7 @@ export function getEnvironmentInfo() {
     hostname,
     protocol,
     port,
-    environment: hostname === 'localhost' || hostname === '127.0.0.1' ? 'development' : 'production',
+    environment: 'production', // Forzamos producción para APK
     backendUrl: ENV_CONFIG.CONTROLFILE_BACKEND_URL,
     controlfileBackendUrl: ENV_CONFIG.CONTROLFILE_BACKEND_URL,
     localBackendUrl: ENV_CONFIG.LOCAL_BACKEND_URL

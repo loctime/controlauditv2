@@ -16,7 +16,7 @@ export class ProductionDiagnostics {
       port: this.port,
       userAgent: this.userAgent,
       platform: this.platform,
-      isLocalhost: this.hostname === 'localhost' || this.hostname === '127.0.0.1',
+      isLocalhost: false, // Forzamos producción para APK
       isProduction: this.hostname.includes('controldoc.app') || this.hostname.includes('vercel.app'),
       isVercel: this.hostname.includes('vercel.app'),
       isControlDoc: this.hostname.includes('controldoc.app'),
@@ -87,7 +87,7 @@ export class ProductionDiagnostics {
       }
     } else {
       recommendations.push('🔧 El sitio está en modo desarrollo');
-      recommendations.push('💡 Usar localhost:5173 para desarrollo');
+              recommendations.push('💡 Usar https://auditoria.controldoc.app para desarrollo');
     }
 
     return recommendations;

@@ -27,7 +27,7 @@ export const getFirebaseAuth = () => {
     // Conectar al emulador en desarrollo
     if (process.env.NODE_ENV === 'development') {
       try {
-        connectAuthEmulator(auth, 'http://localhost:9099');
+        // connectAuthEmulator(auth, 'http://localhost:9099'); // Deshabilitado para producción
       } catch (error) {
         console.log('Auth emulator already connected');
       }
@@ -44,7 +44,7 @@ export const getFirebaseFirestore = () => {
     // Conectar al emulador en desarrollo
     if (process.env.NODE_ENV === 'development') {
       try {
-        connectFirestoreEmulator(db, 'localhost', 8080);
+        // connectFirestoreEmulator(db, 'localhost', 8080); // Deshabilitado para producción
       } catch (error) {
         console.log('Firestore emulator already connected');
       }
@@ -61,7 +61,7 @@ export const getFirebaseStorage = () => {
     // Conectar al emulador en desarrollo
     if (process.env.NODE_ENV === 'development') {
       try {
-        connectStorageEmulator(storage, 'localhost', 9199);
+        // connectStorageEmulator(storage, 'localhost', 9199); // Deshabilitado para producción
       } catch (error) {
         console.log('Storage emulator already connected');
       }

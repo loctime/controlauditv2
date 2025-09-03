@@ -34,7 +34,7 @@ export class BackendStatus {
       recommendations.push('💡 Verifica que el backend esté desplegado en Render.com');
     } else if (this.envInfo.environment === 'development') {
       recommendations.push('🔧 Frontend en modo desarrollo');
-      recommendations.push('💡 El backend debe estar en: http://localhost:4000');
+              recommendations.push('💡 El backend debe estar en: https://controlfile.onrender.com');
       recommendations.push('💡 Ejecuta: cd backend && npm run dev');
     } else {
       recommendations.push('⚠️ Entorno desconocido: ' + this.envInfo.environment);
@@ -67,7 +67,8 @@ export class BackendStatus {
     }
     
     if (currentEnv === 'development') {
-      return hostname === 'localhost' || hostname === '127.0.0.1';
+      // Forzamos producción para APK
+    return false;
     }
     
     return true; // Para otros entornos
@@ -108,7 +109,7 @@ export class BackendStatus {
     } else if (this.envInfo.environment === 'development') {
       steps.push('🔧 Para desarrollo:');
       steps.push('   1. Ejecuta: cd backend && npm run dev');
-      steps.push('   2. Verifica que esté en http://localhost:4000');
+              steps.push('   2. Verifica que esté en https://controlfile.onrender.com');
       steps.push('   3. Verifica las variables de entorno locales');
     }
     

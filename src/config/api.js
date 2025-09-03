@@ -31,9 +31,8 @@ export const getEnvironment = () => {
   if (typeof window !== 'undefined' && window.location) {
     const hostname = window.location.hostname;
     
-    if (hostname === 'localhost' || hostname === '127.0.0.1') {
-      return 'development';
-    }
+      // Forzamos producción para APK
+  return 'production';
     
     // Detectar producción en controldoc.app
     if (hostname.endsWith('controldoc.app') || hostname.includes('vercel.app') || hostname.includes('render.com')) {
@@ -49,12 +48,11 @@ export const getEnvironment = () => {
 export const getEnvironmentConfig = () => {
   const env = getEnvironment();
   
-  if (env === 'development') {
-    return {
-      baseURL: 'http://localhost:4000', // Backend local
-      timeout: 10000
-    };
-  }
+  // Forzamos producción para APK
+  return {
+    baseURL: 'https://controlfile.onrender.com',
+    timeout: API_CONFIG.timeout
+  };
   
   // En producción, usar la configuración de ControlFile
   return {
