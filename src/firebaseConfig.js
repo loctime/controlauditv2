@@ -17,7 +17,7 @@ import { getStorage } from "firebase/storage"; // Importa getStorage
 import { isCapacitor, getAuthConfig } from './utils/capacitorUtils';
 import { getImprovedAuthConfig, getAuthEnvironmentInfo } from './utils/authUtils';
 import { FIREBASE_CONFIG } from './config/environment';
-import { nativeGoogleSignIn, isNativeGoogleSignInAvailable } from './utils/nativeGoogleAuth';
+// import { nativeGoogleSignIn, isNativeGoogleSignInAvailable } from './utils/nativeGoogleAuth';
 
 
 // ✅ Configuración para proyecto ControlFile (controlstorage-eb796)
@@ -159,6 +159,8 @@ export const handleRedirectResult = async () => {
 export const signInWithGoogle = async () => {
   try {
     // ✅ PRIORIDAD 1: Si estamos en APK y el nativo está disponible, usarlo
+    // TEMPORALMENTE COMENTADO PARA DEBUG
+    /*
     if (window.Capacitor && window.Capacitor.isNative && isNativeGoogleSignInAvailable()) {
       console.log("📱 APK detectado, usando Google Sign-In nativo...");
       
@@ -171,6 +173,7 @@ export const signInWithGoogle = async () => {
         // Si falla el nativo, continuar con el flujo web
       }
     }
+    */
     
     // ✅ PRIORIDAD 2: Flujo web (para navegador o si falla el nativo)
     const provider = new GoogleAuthProvider();

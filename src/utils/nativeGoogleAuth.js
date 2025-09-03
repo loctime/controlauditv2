@@ -1,15 +1,6 @@
 // Wrapper para Google Sign-In nativo en APK
 import { Capacitor } from '@capacitor/core';
 
-// Función para obtener el plugin nativo personalizado
-const getNativePlugin = () => {
-  // Verificar si nuestro plugin personalizado está disponible
-  if (window.Capacitor?.Plugins?.GoogleSignIn) {
-    return window.Capacitor.Plugins.GoogleSignIn;
-  }
-  return null;
-};
-
 // Función para Google Sign-In nativo
 export const nativeGoogleSignIn = async () => {
   try {
@@ -20,25 +11,16 @@ export const nativeGoogleSignIn = async () => {
 
     console.log('📱 Iniciando Google Sign-In nativo...');
     
-    // Usar nuestra implementación personalizada
-    return await customNativeGoogleSignIn();
+    // Verificar si el plugin está disponible
+    if (!window.Capacitor?.Plugins?.GoogleSignIn) {
+      throw new Error('Plugin nativo de Google Sign-In no está disponible');
+    }
     
-  } catch (error) {
-    console.error('❌ Error en Google Sign-In nativo:', error);
-    throw error;
-  }
-};
-
-// Implementación personalizada usando el plugin nativo que creamos
-const customNativeGoogleSignIn = async () => {
-  try {
-    console.log('📱 Usando implementación personalizada de Google Sign-In...');
-    
-    // Llamar al plugin nativo personalizado
+    // Llamar al plugin nativo
     const result = await window.Capacitor.Plugins.GoogleSignIn.signIn();
     
     if (result.success) {
-      console.log('✅ Google Sign-In nativo exitoso (personalizado):', result);
+      console.log('✅ Google Sign-In nativo exitoso:', result);
       
       // Crear objeto de usuario compatible con Firebase
       const user = {
@@ -55,7 +37,7 @@ const customNativeGoogleSignIn = async () => {
     }
     
   } catch (error) {
-    console.error('❌ Error en implementación personalizada:', error);
+    console.error('❌ Error en Google Sign-In nativo:', error);
     throw error;
   }
 };
@@ -69,10 +51,10 @@ export const nativeGoogleSignOut = async () => {
 
     console.log('📱 Cerrando sesión de Google nativo...');
     
-    // Usar nuestra implementación personalizada
-    await window.Capacitor.Plugins.GoogleSignIn.signOut();
-    
-    console.log('✅ Sesión de Google cerrada exitosamente');
+    if (window.Capacitor?.Plugins?.GoogleSignIn) {
+      await window.Capacitor.Plugins.GoogleSignIn.signOut();
+      console.log('✅ Sesión de Google cerrada exitosamente');
+    }
     
   } catch (error) {
     console.error('❌ Error cerrando sesión de Google nativo:', error);
@@ -82,7 +64,11 @@ export const nativeGoogleSignOut = async () => {
 
 // Función para verificar si Google Sign-In nativo está disponible
 export const isNativeGoogleSignInAvailable = () => {
-  return Capacitor.isNativePlatform() && 
-         (window.Capacitor?.Plugins?.GoogleSignIn || 
-          typeof window.Capacitor?.Plugins?.GoogleSignIn !== 'undefined');
+  try {
+    return Capacitor.isNativePlatform() && 
+           !!window.Capacitor?.Plugins?.GoogleSignIn;
+  } catch (error) {
+    console.warn('Error verificando disponibilidad del plugin nativo:', error);
+    return false;
+  }
 };
