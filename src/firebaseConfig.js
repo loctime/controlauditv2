@@ -206,12 +206,16 @@ export const signInWithGoogleSimple = async () => {
       console.log('📱 APK detectado, usando redirect...');
       
       // ✅ Para APK: usar redirect con URI específico
-      const redirectUri = `${FIREBASE_APK_CONFIG.authDomain}/__/auth/handler`;
-      console.log('📱 Redirect URI:', redirectUri);
+      // IMPORTANTE: Usar el dominio exacto de Firebase, NO localhost
+      const redirectUri = 'https://controlstorage-eb796.firebaseapp.com/__/auth/handler';
+      console.log('📱 Redirect URI configurado:', redirectUri);
       
+      // ✅ Configurar provider con parámetros específicos para APK
       provider.setCustomParameters({
         prompt: 'select_account',
-        redirect_uri: redirectUri
+        redirect_uri: redirectUri,
+        // ✅ Usar el mismo client ID que está en capacitor.config.ts
+        client_id: '909876364192-dhqhd9k0h0qkidt4p4pv4ck3utgob7pt.apps.googleusercontent.com'
       });
       
       // ✅ Iniciar redirect
@@ -288,6 +292,68 @@ export const checkGoogleRedirectResult = async () => {
     
   } catch (error) {
     console.error('❌ Error verificando redirect de Google:', error);
+    return null;
+  }
+};
+
+// ✅ Función específica para manejar redirect en APK
+export const handleAPKGoogleRedirect = async () => {
+  try {
+    console.log('📱 Manejando redirect de Google en APK...');
+    
+    // ✅ Verificar si estamos en APK
+    if (!isAPK()) {
+      console.log('❌ No estamos en APK, saltando manejo de redirect');
+      return null;
+    }
+    
+    // ✅ Verificar resultado del redirect
+    const result = await checkGoogleRedirectResult();
+    
+    if (result && result.user) {
+      console.log('✅ Usuario autenticado en APK:', result.user.uid);
+      
+      // ✅ Configurar listener para cambios de estado de la app
+      if (window.Capacitor && window.Capacitor.App) {
+        console.log('📱 Configurando listener de estado de app para APK...');
+        
+        window.Capacitor.App.addListener('appStateChange', ({ isActive }) => {
+          console.log('📱 Estado de app cambiado:', isActive ? 'Activa' : 'Inactiva');
+          
+          if (isActive) {
+            // ✅ Cuando la app vuelve a estar activa, verificar el redirect
+            console.log('📱 App activa, verificando redirect...');
+            checkGoogleRedirectResult().then(redirectResult => {
+              if (redirectResult && redirectResult.user) {
+                console.log('✅ Redirect procesado después de activar app:', redirectResult.user.uid);
+                // Aquí podrías emitir un evento o callback para manejar el login
+              }
+            });
+          }
+        });
+        
+        window.Capacitor.App.addListener('appUrlOpen', (data) => {
+          console.log('📱 URL abierta en app:', data.url);
+          // ✅ Manejar URL de retorno de Google OAuth
+          if (data.url && data.url.includes('__/auth/handler')) {
+            console.log('📱 URL de auth handler detectada, procesando...');
+            checkGoogleRedirectResult().then(redirectResult => {
+              if (redirectResult && redirectResult.user) {
+                console.log('✅ Redirect procesado desde URL:', redirectResult.user.uid);
+                // Aquí podrías emitir un evento o callback para manejar el login
+              }
+            });
+          }
+        });
+      }
+      
+      return result;
+    }
+    
+    return null;
+    
+  } catch (error) {
+    console.error('❌ Error manejando redirect de Google en APK:', error);
     return null;
   }
 };

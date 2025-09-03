@@ -30,7 +30,7 @@ import {
 import { Google as GoogleIcon, CheckCircle, Error, Warning, Info } from '@mui/icons-material';
 import { Link, useNavigate } from 'react-router-dom';
 import { Visibility, VisibilityOff } from '@mui/icons-material';
-import { onSignIn, signInWithGoogleSimple, checkGoogleRedirectResult } from '../../../firebaseConfig';
+import { onSignIn, signInWithGoogleSimple, checkGoogleRedirectResult, handleAPKGoogleRedirect } from '../../../firebaseConfig';
 import { runSimpleDiagnostics } from '../../../utils/simpleDiagnostics';
 import { Formik, Form, Field, ErrorMessage } from 'formik';
 import * as Yup from 'yup';
@@ -63,18 +63,34 @@ const Login = () => {
       try {
         console.log('🚀 Inicializando Google Auth...');
         
-        // ✅ Verificar si hay un redirect pendiente de Google
-        console.log('🔍 Verificando redirect pendiente de Google...');
-        try {
-          const result = await checkGoogleRedirectResult();
-          if (result && result.user) {
-            console.log('✅ Redirect de Google detectado, procesando...');
-            handleLogin(result.user);
-            navigate("/auditoria");
-            return;
+        // ✅ Para APK: usar función específica de manejo de redirect
+        if (isAPK) {
+          console.log('📱 APK detectado, usando manejo específico de redirect...');
+          try {
+            const result = await handleAPKGoogleRedirect();
+            if (result && result.user) {
+              console.log('✅ Usuario autenticado en APK, procesando login...');
+              handleLogin(result.user);
+              navigate("/auditoria");
+              return;
+            }
+          } catch (error) {
+            console.warn('⚠️ Error en manejo específico de APK:', error);
           }
-        } catch (error) {
-          console.warn('⚠️ Error verificando redirect de Google:', error);
+        } else {
+          // ✅ Para Web: verificar redirect estándar
+          console.log('🌐 Web detectado, usando verificación estándar...');
+          try {
+            const result = await checkGoogleRedirectResult();
+            if (result && result.user) {
+              console.log('✅ Redirect de Google detectado, procesando...');
+              handleLogin(result.user);
+              navigate("/auditoria");
+              return;
+            }
+          } catch (error) {
+            console.warn('⚠️ Error verificando redirect de Google:', error);
+          }
         }
         
         console.log('✅ Google Auth inicializado correctamente');
@@ -93,7 +109,7 @@ const Login = () => {
     }, 1000);
 
     return () => clearTimeout(timer);
-  }, []);
+  }, [isAPK]);
 
   const handleClickShowPassword = () => setShowPassword(!showPassword);
 
