@@ -21,7 +21,8 @@ import {
 import { Google as GoogleIcon } from '@mui/icons-material';
 import { Link, useNavigate } from 'react-router-dom';
 import { Visibility, VisibilityOff } from '@mui/icons-material';
-import { onSignIn, signInWithGoogle } from '../../../firebaseConfig';
+import { onSignIn } from '../../../firebaseConfig';
+import { signInWithGoogleNative, isGoogleAuthNativeAvailable } from '../../../utils/googleAuthNative';
 import { Formik, Form, Field, ErrorMessage } from 'formik';
 import * as Yup from 'yup';
 import { useAuth } from '../../context/AuthContext';
@@ -81,21 +82,24 @@ const Login = () => {
     setSubmitting(false);
   };
 
-  // Agregar función para Google Auth mejorada para Capacitor
+  // Función para Google Auth - Nativo en APK, Web en navegador
   const handleGoogleSignIn = async () => {
     setLoading(true);
     setError('');
     try {
-      const result = await signInWithGoogle();
+      let result;
       
-      // Si es redirect, no navegar inmediatamente
-      if (result.pendingRedirect) {
-        console.log("🔄 Redirect iniciado, esperando resultado...");
-        return;
+      // En APK, usar Google Auth nativo
+      if (isAPK && isGoogleAuthNativeAvailable()) {
+        console.log('📱 Usando Google Auth nativo en APK...');
+        result = await signInWithGoogleNative();
+      } else {
+        // En web, usar el flujo web (temporalmente deshabilitado)
+        throw new Error('Google Sign-In web temporalmente deshabilitado. Usa email y contraseña.');
       }
       
-      // Si es popup, navegar inmediatamente
-      if (result.user) {
+      // Procesar resultado
+      if (result && result.user) {
         handleLogin(result.user);
         navigate("/auditoria");
       }
@@ -141,34 +145,45 @@ const Login = () => {
 
 
 
-          {/* Botón de Google */}
-          <Box sx={{ textAlign: 'center', mb: 3 }}>
-            <Button
-              fullWidth
-              variant="outlined"
-              startIcon={<GoogleIcon />}
-              onClick={handleGoogleSignIn}
-              disabled={loading}
-              sx={{ 
-                mb: 3,
-                py: 1.5,
-                borderColor: 'grey.300',
-                color: 'text.primary',
-                '&:hover': {
-                  borderColor: 'grey.400',
-                  backgroundColor: 'grey.50'
-                }
-              }}
-            >
-              Continuar con Google
-            </Button>
-            
-            <Divider sx={{ my: 2 }}>
-              <Typography variant="body2" color="text.secondary">
-                o
+          {/* Botón de Google - Solo mostrar en APK cuando esté disponible */}
+          {isAPK && isGoogleAuthNativeAvailable() && (
+            <Box sx={{ textAlign: 'center', mb: 3 }}>
+              <Button
+                fullWidth
+                variant="outlined"
+                startIcon={<GoogleIcon />}
+                onClick={handleGoogleSignIn}
+                disabled={loading}
+                sx={{ 
+                  mb: 3,
+                  py: 1.5,
+                  borderColor: 'grey.300',
+                  color: 'text.primary',
+                  '&:hover': {
+                    borderColor: 'grey.400',
+                    backgroundColor: 'grey.50'
+                  }
+                }}
+              >
+                Continuar con Google
+              </Button>
+              
+              <Divider sx={{ my: 2 }}>
+                <Typography variant="body2" color="text.secondary">
+                  o
+                </Typography>
+              </Divider>
+            </Box>
+          )}
+          
+          {/* Mensaje para APK sin Google Auth */}
+          {isAPK && !isGoogleAuthNativeAvailable() && (
+            <Box sx={{ textAlign: 'center', mb: 3 }}>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                📱 En la aplicación móvil, usa tu email y contraseña para acceder
               </Typography>
-            </Divider>
-          </Box>
+            </Box>
+          )}
 
           <Formik
             initialValues={initialValues}
