@@ -37,20 +37,36 @@ export const runGoogleAuthDiagnostics = async () => {
     // 3. Verificar Google Auth nativo
     try {
       if (isAPK()) {
-        const { GoogleAuth } = await import('@southdevs/capacitor-google-auth');
-        diagnostics.googleAuthAvailable = true;
-        console.log('✅ Google Auth nativo disponible');
-        
-        // Verificar configuración
+        // ✅ Importar de forma segura
+        let GoogleAuth;
         try {
-          await GoogleAuth.initialize({
-            clientId: '909876364192-dhqhd9k0h0qkidt4p4pv4ck3utgob7pt.apps.googleusercontent.com',
-            scopes: ['email', 'profile']
-          });
-          console.log('✅ Google Auth inicializado correctamente');
-        } catch (error) {
-          console.error('❌ Error inicializando Google Auth:', error);
-          diagnostics.errors.push(`Error inicializando Google Auth: ${error.message}`);
+          const module = await import('@southdevs/capacitor-google-auth');
+          GoogleAuth = module.GoogleAuth;
+          
+          if (GoogleAuth) {
+            diagnostics.googleAuthAvailable = true;
+            console.log('✅ Google Auth nativo disponible');
+            
+            // Verificar configuración
+            try {
+              await GoogleAuth.initialize({
+                clientId: '909876364192-dhqhd9k0h0qkidt4p4pv4ck3utgob7pt.apps.googleusercontent.com',
+                scopes: ['email', 'profile']
+              });
+              console.log('✅ Google Auth inicializado correctamente');
+            } catch (error) {
+              console.error('❌ Error inicializando Google Auth:', error);
+              diagnostics.errors.push(`Error inicializando Google Auth: ${error.message}`);
+            }
+          } else {
+            diagnostics.googleAuthAvailable = false;
+            console.log('❌ GoogleAuth no disponible en el módulo');
+            diagnostics.errors.push('GoogleAuth no disponible en el módulo');
+          }
+        } catch (importError) {
+          diagnostics.googleAuthAvailable = false;
+          console.error('❌ Error importando Google Auth:', importError);
+          diagnostics.errors.push(`Error importando Google Auth: ${importError.message}`);
         }
       } else {
         diagnostics.googleAuthAvailable = false;
