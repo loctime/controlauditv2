@@ -11,12 +11,10 @@ export const FIREBASE_APK_CONFIG = {
   messagingSenderId: '909876364192',
   appId: '1:909876364192:android:0b45053d7f5667fda79ac5',
   
-  // ✅ Configuración específica para OAuth en APK
+  // ✅ Configuración específica para OAuth en APK (SOLO plugin oficial)
   oauth: {
     scheme: 'com.controlaudit.app',
-    // ✅ Client ID de Android (del google-services.json)
-    androidClientId: '909876364192-fqea0cj8m5sccqhghl5vbkhgbtkjc3je.apps.googleusercontent.com',
-    // ✅ Client ID del SDK web de Firebase Auth
+    // ✅ SOLO Web Client ID para el plugin oficial de Capacitor
     webClientId: '909876364192-dhqhd9k0h0qkidt4p4pv4ck3utgob7pt.apps.googleusercontent.com'
   }
 };
@@ -68,7 +66,6 @@ console.log('📱 Firebase APK configurado:', {
   authDomain: FIREBASE_APK_CONFIG.authDomain,
   appId: FIREBASE_APK_CONFIG.appId,
   oauthScheme: FIREBASE_APK_CONFIG.oauth.scheme,
-  androidClientId: FIREBASE_APK_CONFIG.oauth.androidClientId,
   webClientId: FIREBASE_APK_CONFIG.oauth.webClientId
 });
 

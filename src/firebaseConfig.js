@@ -183,7 +183,7 @@ export const handleRedirectResult = async () => {
   return null;
 };
 
-// ✅ Función SIMPLE y NUEVA para Google Auth (evitar errores)
+// ✅ Función SIMPLE y LIMPIA para Google Auth (SOLO plugin oficial)
 export const signInWithGoogleSimple = async () => {
   console.log('🚀 signInWithGoogleSimple iniciada...');
   
@@ -198,26 +198,17 @@ export const signInWithGoogleSimple = async () => {
     console.log('📱 ¿Es APK?', isAPKPlatform);
     
     if (isAPKPlatform) {
-      console.log('📱 APK detectado, usando Google Auth nativo...');
+      console.log('📱 APK detectado, usando plugin oficial de Capacitor...');
       
-      // ✅ Para APK: usar el plugin nativo de Capacitor
       try {
-        // Importar dinámicamente para evitar errores en web
+        // ✅ Importar SOLO el plugin oficial de Capacitor
         const { GoogleAuth } = await import('@southdevs/capacitor-google-auth');
         
-        // ✅ Importar configuración de APK para obtener el Web Client ID correcto
-        const { FIREBASE_APK_CONFIG } = await import('./config/firebaseAPK');
-        const webClientId = FIREBASE_APK_CONFIG.oauth.webClientId;
+        // ✅ Inicializar Google Auth (la configuración viene de capacitor.config.ts)
+        await GoogleAuth.initialize();
+        console.log('✅ Google Auth inicializado correctamente');
         
-        console.log('📱 Web Client ID configurado:', webClientId);
-        
-        // Inicializar Google Auth
-        await GoogleAuth.initialize({
-          clientId: webClientId,
-          scopes: ['email', 'profile']
-        });
-        
-        // Iniciar sesión nativa
+        // ✅ Iniciar sesión nativa
         const result = await GoogleAuth.signIn();
         console.log('📱 Resultado de Google Auth nativo:', result);
         
@@ -240,13 +231,15 @@ export const signInWithGoogleSimple = async () => {
         }
         
       } catch (error) {
-        console.error('❌ Error con Google Auth nativo:', error);
+        console.error('❌ Error con plugin oficial de Capacitor:', error);
         
-        // ✅ Fallback: mostrar error específico
+        // ✅ Manejar errores específicos del plugin oficial
         if (error.message.includes('DEVELOPER_ERROR')) {
           throw new Error('Error de configuración de Google OAuth. Verifica el Client ID y SHA-1 en Firebase Console.');
         } else if (error.message.includes('Sign in failed')) {
           throw new Error('Error al iniciar sesión con Google. Verifica tu conexión a internet.');
+        } else if (error.message.includes('User cancelled')) {
+          throw new Error('Usuario canceló la autenticación');
         } else {
           throw new Error(`Error de autenticación: ${error.message}`);
         }
@@ -287,16 +280,10 @@ export const signInWithGoogleSimple = async () => {
       errorMessage = 'Popup bloqueado por el navegador';
     } else if (error.message.includes('unauthorized-domain')) {
       errorMessage = 'Dominio no autorizado para Google OAuth';
+    } else if (error.message.includes('User cancelled')) {
+      errorMessage = 'Usuario canceló la autenticación';
     } else if (error.message) {
       errorMessage = error.message;
-    }
-    
-    // ✅ Mostrar error con toast si está disponible
-    if (typeof toast !== 'undefined') {
-      toast.error(errorMessage, {
-        position: "top-left",
-        autoClose: 5000,
-      });
     }
     
     throw new Error(errorMessage);
@@ -329,156 +316,9 @@ export const checkGoogleRedirectResult = async () => {
   }
 };
 
-// ✅ Función específica para manejar redirect en APK
-export const handleAPKGoogleRedirect = async () => {
-  try {
-    console.log('📱 Manejando redirect de Google en APK...');
-    
-    // ✅ Verificar si estamos en APK
-    if (!isAPK()) {
-      console.log('❌ No estamos en APK, saltando manejo de redirect');
-      return null;
-    }
-    
-    // ✅ Verificar resultado del redirect
-    const result = await checkGoogleRedirectResult();
-    
-    if (result && result.user) {
-      console.log('✅ Usuario autenticado en APK:', result.user.uid);
-      
-      // ✅ Configurar listener para cambios de estado de la app
-      if (window.Capacitor && window.Capacitor.App) {
-        console.log('📱 Configurando listener de estado de app para APK...');
-        
-        window.Capacitor.App.addListener('appStateChange', ({ isActive }) => {
-          console.log('📱 Estado de app cambiado:', isActive ? 'Activa' : 'Inactiva');
-          
-          if (isActive) {
-            // ✅ Cuando la app vuelve a estar activa, verificar el redirect
-            console.log('📱 App activa, verificando redirect...');
-            checkGoogleRedirectResult().then(redirectResult => {
-              if (redirectResult && redirectResult.user) {
-                console.log('✅ Redirect procesado después de activar app:', redirectResult.user.uid);
-                // Aquí podrías emitir un evento o callback para manejar el login
-              }
-            });
-          }
-        });
-        
-        window.Capacitor.App.addListener('appUrlOpen', (data) => {
-          console.log('📱 URL abierta en app:', data.url);
-          // ✅ Manejar URL de retorno de Google OAuth
-          if (data.url && data.url.includes('__/auth/handler')) {
-            console.log('📱 URL de auth handler detectada, procesando...');
-            checkGoogleRedirectResult().then(redirectResult => {
-              if (redirectResult && redirectResult.user) {
-                console.log('✅ Redirect procesado desde URL:', redirectResult.user.uid);
-                // Aquí podrías emitir un evento o callback para manejar el login
-              }
-            });
-          }
-        });
-      }
-      
-      return result;
-    }
-    
-    return null;
-    
-  } catch (error) {
-    console.error('❌ Error manejando redirect de Google en APK:', error);
-    return null;
-  }
-};
-
-// ✅ Función para configurar listener de app state en APK
-let appStateListener = null;
-let urlChangeListener = null;
-
-const setupAppStateListener = async () => {
-  try {
-    // Solo configurar si estamos en APK usando la función robusta
-    if (!isAPK()) {
-      return;
-    }
-    
-    // Importar dinámicamente para evitar errores en web
-    const { App } = await import('@capacitor/app');
-    
-    if (appStateListener) {
-      appStateListener.remove();
-    }
-    
-    appStateListener = App.addListener('appStateChange', async ({ isActive }) => {
-      console.log('📱 App state changed:', { isActive });
-      
-      if (isActive) {
-        // App volvió al primer plano, verificar si hay resultado de redirect
-        console.log('📱 App volvió al primer plano, verificando redirect...');
-        
-        try {
-          const result = await getRedirectResult(auth);
-          if (result) {
-            console.log('✅ Redirect procesado exitosamente en APK:', result);
-            // El onAuthStateChanged se encargará del resto
-          }
-        } catch (error) {
-          console.error('❌ Error procesando redirect en APK:', error);
-        }
-      }
-    });
-    
-    // ✅ También configurar listener de cambios de URL
-    if (urlChangeListener) {
-      urlChangeListener.remove();
-    }
-    
-    urlChangeListener = App.addListener('appUrlOpen', async (data) => {
-      console.log('📱 App URL opened:', data);
-      
-      // Si la URL contiene el handler de Firebase, procesar el redirect
-      if (data.url && data.url.includes('__/auth/handler')) {
-        console.log('📱 Firebase auth handler detectado, procesando redirect...');
-        
-        try {
-          const result = await getRedirectResult(auth);
-          if (result) {
-            console.log('✅ Redirect procesado exitosamente en APK:', result);
-            // El onAuthStateChanged se encargará del resto
-          }
-        } catch (error) {
-          console.error('❌ Error procesando redirect en APK:', error);
-        }
-      }
-    });
-    
-    console.log('📱 Listeners de app state y URL configurados para APK');
-  } catch (error) {
-    console.error('❌ Error configurando listeners de APK:', error);
-  }
-};
-
-// ✅ Función para limpiar listeners
+// ✅ Función para limpiar listeners (mantener por compatibilidad)
 export const cleanupAppStateListener = () => {
-  if (appStateListener) {
-    try {
-      appStateListener.remove();
-      appStateListener = null;
-      console.log('📱 Listener de app state limpiado');
-    } catch (error) {
-      console.error('❌ Error limpiando listener de app state:', error);
-    }
-  }
-  
-  if (urlChangeListener) {
-    try {
-      urlChangeListener.remove();
-      urlChangeListener = null;
-      console.log('📱 Listener de URL limpiado');
-    } catch (error) {
-      console.error('❌ Error limpiando listener de URL:', error);
-    }
-  }
+  console.log('📱 No hay listeners que limpiar en la nueva implementación');
 };
 
 export { db, storage, auth }; // Exporta auth junto con db y storage

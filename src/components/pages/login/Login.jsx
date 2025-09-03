@@ -30,8 +30,9 @@ import {
 import { Google as GoogleIcon, CheckCircle, Error, Warning, Info } from '@mui/icons-material';
 import { Link, useNavigate } from 'react-router-dom';
 import { Visibility, VisibilityOff } from '@mui/icons-material';
-import { onSignIn, signInWithGoogleSimple, checkGoogleRedirectResult, handleAPKGoogleRedirect } from '../../../firebaseConfig';
+import { onSignIn, signInWithGoogleSimple } from '../../../firebaseConfig';
 import { runSimpleDiagnostics } from '../../../utils/simpleDiagnostics';
+import { runGoogleAuthTest } from '../../../utils/googleAuthTest';
 import { Formik, Form, Field, ErrorMessage } from 'formik';
 import * as Yup from 'yup';
 import { useAuth } from '../../context/AuthContext';
@@ -57,48 +58,19 @@ const Login = () => {
   const { handleLogin } = useAuth();
   const { isAPK } = usePlatform();
 
-  // ✅ Inicializar y verificar redirect de Google cuando se carga el componente
+  // ✅ Inicialización simplificada - no hay redirect que verificar
   useEffect(() => {
     const initGoogleAuth = async () => {
       try {
         console.log('🚀 Inicializando Google Auth...');
         
-        // ✅ Para APK: usar función específica de manejo de redirect
-        if (isAPK) {
-          console.log('📱 APK detectado, usando manejo específico de redirect...');
-          try {
-            const result = await handleAPKGoogleRedirect();
-            if (result && result.user) {
-              console.log('✅ Usuario autenticado en APK, procesando login...');
-              handleLogin(result.user);
-              navigate("/auditoria");
-              return;
-            }
-          } catch (error) {
-            console.warn('⚠️ Error en manejo específico de APK:', error);
-          }
-        } else {
-          // ✅ Para Web: verificar redirect estándar
-          console.log('🌐 Web detectado, usando verificación estándar...');
-          try {
-            const result = await checkGoogleRedirectResult();
-            if (result && result.user) {
-              console.log('✅ Redirect de Google detectado, procesando...');
-              handleLogin(result.user);
-              navigate("/auditoria");
-              return;
-            }
-          } catch (error) {
-            console.warn('⚠️ Error verificando redirect de Google:', error);
-          }
-        }
-        
+        // ✅ No hay redirect que verificar en la nueva implementación
         console.log('✅ Google Auth inicializado correctamente');
         
       } catch (error) {
         console.warn('⚠️ Error inicializando Google Auth:', error);
       } finally {
-        // Siempre marcar como inicializado, incluso si falla
+        // Siempre marcar como inicializado
         setIsInitializing(false);
       }
     };
@@ -109,7 +81,7 @@ const Login = () => {
     }, 1000);
 
     return () => clearTimeout(timer);
-  }, [isAPK]);
+  }, []);
 
   const handleClickShowPassword = () => setShowPassword(!showPassword);
 
@@ -142,6 +114,23 @@ const Login = () => {
     } catch (error) {
       console.error('Error en verificación rápida:', error);
       setError(`Error en verificación rápida: ${error.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ✅ Función para probar Google Auth específicamente
+  const handleGoogleAuthTest = async () => {
+    try {
+      setError('');
+      setLoading(true);
+      console.log('🔐 Probando Google Auth...');
+      const testResult = await runGoogleAuthTest();
+      setDiagnosticInfo(testResult);
+      setShowDiagnosticModal(true);
+    } catch (error) {
+      console.error('Error probando Google Auth:', error);
+      setError(`Error probando Google Auth: ${error.message}`);
     } finally {
       setLoading(false);
     }
@@ -267,7 +256,7 @@ const Login = () => {
               <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
                 Herramientas de diagnóstico (APK)
               </Typography>
-              <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center' }}>
+              <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center', flexWrap: 'wrap' }}>
                 <Button
                   size="small"
                   variant="outlined"
@@ -283,6 +272,15 @@ const Login = () => {
                   sx={{ fontSize: '0.75rem' }}
                 >
                   Diagnóstico Completo
+                </Button>
+                <Button
+                  size="small"
+                  variant="outlined"
+                  onClick={handleGoogleAuthTest}
+                  sx={{ fontSize: '0.75rem' }}
+                  color="success"
+                >
+                  Test Google Auth
                 </Button>
               </Box>
             </Box>

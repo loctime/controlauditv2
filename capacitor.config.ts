@@ -22,10 +22,10 @@ const config: CapacitorConfig = {
       backgroundColor: '#1976d2',
       overlaysWebView: true
     },
-    // ✅ Configuración del plugin de Google Auth
+    // ✅ Configuración CORRECTA del plugin oficial de Google Auth
     GoogleAuth: {
       scopes: ['profile', 'email'],
-      // ✅ Client ID del SDK web de Firebase Auth (NO del Android)
+      // ✅ IMPORTANTE: Usar Web Client ID, NO Android Client ID
       serverClientId: '909876364192-dhqhd9k0h0qkidt4p4pv4ck3utgob7pt.apps.googleusercontent.com',
       forceCodeForRefreshToken: true
     }
