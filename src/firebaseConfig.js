@@ -179,19 +179,17 @@ export const signInWithGoogle = async () => {
     if (isMobile || isCapacitor) {
       console.log("📱 Detectado móvil/APK, usando signInWithRedirect");
       
-      // ✅ Para APK, configurar OAuth específicamente
-      if (isCapacitor) {
-        console.log('📱 Configurando OAuth específico para APK...');
-        
-        // ✅ Configurar el provider para usar el esquema personalizado de la APK
-        // Esto es crucial para evitar que redirija a localhost
-        provider.setCustomParameters({
-          redirect_uri: 'com.controlaudit.app://',
-          prompt: 'select_account',
-          response_type: 'code'
-        });
-        
-        console.log('📱 Provider configurado con redirect_uri personalizado para APK');
+              // ✅ Para APK, configurar OAuth específicamente
+        if (isCapacitor) {
+          console.log('📱 Configurando OAuth específico para APK...');
+          
+          // ✅ Para APK, NO configurar redirect_uri personalizado
+          // Firebase usará automáticamente las URLs autorizadas
+          provider.setCustomParameters({
+            prompt: 'select_account'
+          });
+          
+          console.log('📱 Provider configurado para APK (sin redirect_uri personalizado)');
         
         // ✅ Configurar listener de app state para detectar cuando vuelve del navegador
         setupAppStateListener();
