@@ -87,6 +87,9 @@ dependencies {
     // Firebase Analytics (opcional)
     implementation 'com.google.firebase:firebase-analytics'
     
+    // Google Sign-In para Android
+    implementation 'com.google.android.gms:play-services-auth:20.7.0'
+    
     // Dependencias existentes
     implementation fileTree(include: ['*.jar'], dir: 'libs')
     implementation "androidx.appcompat:appcompat:$androidxAppCompatVersion"

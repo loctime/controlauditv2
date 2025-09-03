@@ -17,6 +17,7 @@ import { getStorage } from "firebase/storage"; // Importa getStorage
 import { isCapacitor, getAuthConfig } from './utils/capacitorUtils';
 import { getImprovedAuthConfig, getAuthEnvironmentInfo } from './utils/authUtils';
 import { FIREBASE_CONFIG } from './config/environment';
+import { nativeGoogleSignIn, isNativeGoogleSignInAvailable } from './utils/nativeGoogleAuth';
 
 
 // ✅ Configuración para proyecto ControlFile (controlstorage-eb796)
@@ -157,6 +158,21 @@ export const handleRedirectResult = async () => {
 // ✅ Agregar función de Google Auth mejorada para Capacitor
 export const signInWithGoogle = async () => {
   try {
+    // ✅ PRIORIDAD 1: Si estamos en APK y el nativo está disponible, usarlo
+    if (window.Capacitor && window.Capacitor.isNative && isNativeGoogleSignInAvailable()) {
+      console.log("📱 APK detectado, usando Google Sign-In nativo...");
+      
+      try {
+        const result = await nativeGoogleSignIn();
+        console.log("✅ Google Sign-In nativo exitoso:", result);
+        return result;
+      } catch (nativeError) {
+        console.warn("⚠️ Google Sign-In nativo falló, cambiando a web:", nativeError);
+        // Si falla el nativo, continuar con el flujo web
+      }
+    }
+    
+    // ✅ PRIORIDAD 2: Flujo web (para navegador o si falla el nativo)
     const provider = new GoogleAuthProvider();
     provider.addScope('email');
     provider.addScope('profile');
@@ -179,17 +195,17 @@ export const signInWithGoogle = async () => {
     if (isMobile || isCapacitor) {
       console.log("📱 Detectado móvil/APK, usando signInWithRedirect");
       
-              // ✅ Para APK, configurar OAuth específicamente
-        if (isCapacitor) {
-          console.log('📱 Configurando OAuth específico para APK...');
-          
-          // ✅ Para APK, NO configurar redirect_uri personalizado
-          // Firebase usará automáticamente las URLs autorizadas
-          provider.setCustomParameters({
-            prompt: 'select_account'
-          });
-          
-          console.log('📱 Provider configurado para APK (sin redirect_uri personalizado)');
+      // ✅ Para APK, configurar OAuth específicamente
+      if (isCapacitor) {
+        console.log('📱 Configurando OAuth específico para APK...');
+        
+        // ✅ Para APK, NO configurar redirect_uri personalizado
+        // Firebase usará automáticamente las URLs autorizadas
+        provider.setCustomParameters({
+          prompt: 'select_account'
+        });
+        
+        console.log('📱 Provider configurado para APK (sin redirect_uri personalizado)');
         
         // ✅ Configurar listener de app state para detectar cuando vuelve del navegador
         setupAppStateListener();
