@@ -23,6 +23,8 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Visibility, VisibilityOff } from '@mui/icons-material';
 import { onSignIn, signInWithGoogle } from '../../../firebaseConfig';
 import { signInWithGoogleNative, initializeGoogleAuth, isGoogleAuthNativeAvailable } from '../../../utils/googleAuthNative';
+import { signInWithGoogleAPK, handleGoogleRedirectResultAPK, isAPK } from '../../../utils/googleAuthAPK';
+import { runFirebaseDiagnostics, quickCheck } from '../../../utils/firebaseDiagnostics';
 import { Formik, Form, Field, ErrorMessage } from 'formik';
 import * as Yup from 'yup';
 import { useAuth } from '../../context/AuthContext';
@@ -40,6 +42,7 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [isInitializing, setIsInitializing] = useState(true);
+  const [showDiagnostics, setShowDiagnostics] = useState(false);
   const navigate = useNavigate();
   const { handleLogin } = useAuth();
   const { isAPK } = usePlatform();
@@ -52,6 +55,21 @@ const Login = () => {
           console.log('📱 Inicializando Google Auth nativo al cargar...');
           await initializeGoogleAuth();
           console.log('✅ Google Auth nativo inicializado correctamente');
+        }
+        
+        // ✅ Para APK, también verificar si hay un redirect pendiente de Google
+        if (isAPK()) {
+          console.log('📱 Verificando redirect pendiente de Google...');
+          try {
+            const result = await handleGoogleRedirectResultAPK();
+            if (result && result.user) {
+              console.log('✅ Redirect de Google detectado, procesando...');
+              handleLogin(result.user);
+              navigate("/auditoria");
+            }
+          } catch (error) {
+            console.warn('⚠️ Error verificando redirect de Google:', error);
+          }
         }
       } catch (error) {
         console.warn('⚠️ Error inicializando Google Auth nativo:', error);
@@ -70,6 +88,30 @@ const Login = () => {
   }, [isAPK]);
 
   const handleClickShowPassword = () => setShowPassword(!showPassword);
+
+  // Función para ejecutar diagnóstico
+  const handleDiagnostics = async () => {
+    try {
+      setError('');
+      console.log('🔍 Ejecutando diagnóstico de Firebase...');
+      await runFirebaseDiagnostics();
+    } catch (error) {
+      console.error('Error ejecutando diagnóstico:', error);
+      setError('Error ejecutando diagnóstico. Revisa la consola.');
+    }
+  };
+
+  // Función para verificación rápida
+  const handleQuickCheck = () => {
+    try {
+      setError('');
+      console.log('⚡ Ejecutando verificación rápida...');
+      quickCheck();
+    } catch (error) {
+      console.error('Error en verificación rápida:', error);
+      setError('Error en verificación rápida. Revisa la consola.');
+    }
+  };
 
   // Mostrar pantalla de carga mientras se inicializa
   if (isInitializing) {
@@ -152,12 +194,24 @@ const Login = () => {
       
       // ✅ PRIORIDAD 2: Flujo web (para navegador o si falla el nativo)
       console.log('🌐 Iniciando Google Sign-In web...');
-      const result = await signInWithGoogle();
+      
+      // ✅ Para APK, usar función específica
+      let result;
+      if (isAPK()) {
+        console.log('📱 Usando Google Sign-In específico para APK...');
+        result = await signInWithGoogleAPK();
+      } else {
+        console.log('🌐 Usando Google Sign-In web estándar...');
+        result = await signInWithGoogle();
+      }
       
       // Procesar resultado
       if (result && result.user) {
         handleLogin(result.user);
         navigate("/auditoria");
+      } else if (result && result.pendingRedirect) {
+        console.log('📱 Redirect iniciado, esperando resultado...');
+        setError('Redireccionando a Google... Por favor, completa la autenticación.');
       }
     } catch (error) {
       console.error('Error en Google Auth:', error);
@@ -197,6 +251,33 @@ const Login = () => {
             <Alert severity="error" sx={{ mb: 3 }}>
               {error}
             </Alert>
+          )}
+
+          {/* Botones de diagnóstico para APK */}
+          {isAPK && (
+            <Box sx={{ mb: 3, textAlign: 'center' }}>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                Herramientas de diagnóstico (APK)
+              </Typography>
+              <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center' }}>
+                <Button
+                  size="small"
+                  variant="outlined"
+                  onClick={handleQuickCheck}
+                  sx={{ fontSize: '0.75rem' }}
+                >
+                  Verificación Rápida
+                </Button>
+                <Button
+                  size="small"
+                  variant="outlined"
+                  onClick={handleDiagnostics}
+                  sx={{ fontSize: '0.75rem' }}
+                >
+                  Diagnóstico Completo
+                </Button>
+              </Box>
+            </Box>
           )}
 
 

@@ -1,6 +1,7 @@
 // src/components/context/AuthContext.jsx
 import { createContext, useState, useEffect, useContext } from "react";
 import { auth, db, handleRedirectResult } from "../../firebaseConfig";
+import { handleGoogleRedirectResultAPK, isAPK } from "../../utils/googleAuthAPK";
 import { onAuthStateChanged } from "firebase/auth";
 import { doc, getDoc, setDoc, updateDoc, collection, query, where, getDocs, addDoc, onSnapshot } from "firebase/firestore";
 import { registrarLogOperario, registrarAccionSistema } from '../../utils/firestoreUtils'; // NUEVO: función para logs
@@ -31,7 +32,16 @@ const AuthContextComponent = ({ children }) => {
     // ✅ Manejar resultado del redirect de Google Auth (para Capacitor)
     const handleGoogleRedirect = async () => {
       try {
-        const result = await handleRedirectResult();
+        // ✅ Para APK, usar función específica
+        let result;
+        if (isAPK()) {
+          console.log("📱 Procesando redirect de Google para APK...");
+          result = await handleGoogleRedirectResultAPK();
+        } else {
+          console.log("🌐 Procesando redirect de Google para web...");
+          result = await handleRedirectResult();
+        }
+        
         if (result) {
           console.log("✅ Redirect de Google procesado exitosamente:", {
             uid: result.user?.uid,

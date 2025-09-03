@@ -17,6 +17,7 @@ import { getStorage } from "firebase/storage"; // Importa getStorage
 import { isCapacitor, getAuthConfig } from './utils/capacitorUtils';
 import { getImprovedAuthConfig, getAuthEnvironmentInfo } from './utils/authUtils';
 import { FIREBASE_CONFIG } from './config/environment';
+import { FIREBASE_APK_CONFIG, validateAPKConfig } from './config/firebaseAPK';
 // import { nativeGoogleSignIn, isNativeGoogleSignInAvailable } from './utils/nativeGoogleAuth';
 
 
@@ -31,24 +32,27 @@ const firebaseConfig = {
   appId: FIREBASE_CONFIG.APP_ID
 };
 
+// ✅ Verificar configuración de APK si estamos en Capacitor
+const isCapacitorAPK = typeof window !== 'undefined' && window.Capacitor && window.Capacitor.isNative;
+if (isCapacitorAPK) {
+  console.log('📱 Verificando configuración de Firebase APK...');
+  validateAPKConfig();
+}
+
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 
 // ✅ Configuración específica para APK para evitar redirección a localhost
-const isCapacitorAPK = typeof window !== 'undefined' && window.Capacitor && window.Capacitor.isNative;
 if (isCapacitorAPK) {
   console.log('📱 Configurando Firebase Auth para APK...');
   
-  // ✅ Configurar el redirect_uri para la APK
-  if (auth.config) {
-    auth.config.redirectUri = 'com.controlaudit.app://';
-  }
+  // ✅ NO configurar redirect_uri personalizado en auth.config
+  // Firebase usará automáticamente las URLs autorizadas del proyecto
   
-  // ✅ Configurar en el objeto de configuración global
+  // ✅ Configurar en el objeto de configuración global para referencia
   if (typeof window !== 'undefined') {
     window.FIREBASE_APK_CONFIG = {
-      redirectUri: 'com.controlaudit.app://',
       authDomain: 'controlstorage-eb796.firebaseapp.com',
       scheme: 'com.controlaudit.app'
     };
@@ -203,7 +207,7 @@ export const signInWithGoogle = async () => {
         console.log('📱 Configurando OAuth específico para APK...');
         
         // ✅ Para APK, NO configurar redirect_uri personalizado
-        // Firebase usará automáticamente las URLs autorizadas
+        // Firebase usará automáticamente las URLs autorizadas del proyecto
         provider.setCustomParameters({
           prompt: 'select_account'
         });
