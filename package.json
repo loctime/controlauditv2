@@ -63,6 +63,7 @@
     "@mui/material": "^5.16.6",
     "@mui/x-date-pickers": "^8.8.0",
     "@react-pdf/renderer": "^3.4.4",
+    "@southdevs/capacitor-google-auth": "^7.0.0",
     "axios": "^1.10.0",
     "bootstrap": "^5.3.3",
     "date-fns": "^3.6.0",

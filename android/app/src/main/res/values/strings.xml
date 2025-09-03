@@ -1,7 +1,8 @@
-<?xml version='1.0' encoding='utf-8'?>
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">ControlAudit</string>
     <string name="title_activity_main">ControlAudit</string>
-    <string name="package_name">com.controlaudit.app</string>
-    <string name="custom_url_scheme">com.controlaudit.app</string>
+    
+    <!-- Google Auth Configuration -->
+    <string name="default_web_client_id">909876364192-akleu8n2p915ovgum0jsnuhcckeavp9t.apps.googleusercontent.com</string>
 </resources>

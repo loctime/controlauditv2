@@ -22,6 +22,7 @@ import { Google as GoogleIcon } from '@mui/icons-material';
 import { Link, useNavigate } from 'react-router-dom';
 import { Visibility, VisibilityOff } from '@mui/icons-material';
 import { onSignIn, signInWithGoogle } from '../../../firebaseConfig';
+import { signInWithGoogleNative, initializeGoogleAuth, isGoogleAuthNativeAvailable } from '../../../utils/googleAuthNative';
 import { Formik, Form, Field, ErrorMessage } from 'formik';
 import * as Yup from 'yup';
 import { useAuth } from '../../context/AuthContext';
@@ -40,6 +41,23 @@ const Login = () => {
   const navigate = useNavigate();
   const { handleLogin } = useAuth();
   const { isAPK } = usePlatform();
+
+  // Inicializar Google Auth nativo cuando se carga el componente
+  useEffect(() => {
+    const initGoogleAuth = async () => {
+      if (isAPK && isGoogleAuthNativeAvailable()) {
+        try {
+          console.log('📱 Inicializando Google Auth nativo al cargar...');
+          await initializeGoogleAuth();
+          console.log('✅ Google Auth nativo inicializado correctamente');
+        } catch (error) {
+          console.warn('⚠️ Error inicializando Google Auth nativo:', error);
+        }
+      }
+    };
+
+    initGoogleAuth();
+  }, [isAPK]);
 
   const handleClickShowPassword = () => setShowPassword(!showPassword);
 
@@ -81,11 +99,37 @@ const Login = () => {
     setSubmitting(false);
   };
 
-  // Función para Google Auth - Web (funcional)
+  // Función para Google Auth - Inteligente (APK vs Web)
   const handleGoogleSignIn = async () => {
     setLoading(true);
     setError('');
     try {
+      // ✅ PRIORIDAD 1: Si estamos en APK, usar autenticación nativa
+      if (isAPK && isGoogleAuthNativeAvailable()) {
+        console.log('📱 APK detectado, usando Google Sign-In nativo...');
+        
+        try {
+          // Inicializar Google Auth nativo
+          await initializeGoogleAuth();
+          
+          // Iniciar sesión nativa
+          const result = await signInWithGoogleNative();
+          
+          if (result && result.user) {
+            console.log('✅ Google Sign-In nativo exitoso:', result.user.uid);
+            handleLogin(result.user);
+            navigate("/auditoria");
+            return;
+          }
+        } catch (nativeError) {
+          console.warn('⚠️ Google Sign-In nativo falló, cambiando a web:', nativeError);
+          setError(`Error nativo: ${nativeError.message}. Cambiando a web...`);
+          
+          // Si falla el nativo, continuar con el flujo web
+        }
+      }
+      
+      // ✅ PRIORIDAD 2: Flujo web (para navegador o si falla el nativo)
       console.log('🌐 Iniciando Google Sign-In web...');
       const result = await signInWithGoogle();
       
