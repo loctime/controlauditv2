@@ -1,30 +1,18 @@
-// Google Auth nativo usando @codetrix-studio/capacitor-google-auth
+// Google Auth nativo personalizado para Capacitor 7
 import { Capacitor } from '@capacitor/core';
-import { GoogleAuth } from '@codetrix-studio/capacitor-google-auth';
-import { getAuth, GoogleAuthProvider, signInWithCredential } from 'firebase/auth';
 
-// Configuración de Google Auth
-const GOOGLE_AUTH_CONFIG = {
-  clientId: '909876364192-akleu8n2p915ovgum0jsnuhcckeavp9t.apps.googleusercontent.com', // Client ID Web
-  scopes: ['email', 'profile'],
-  serverClientId: '909876364192-akleu8n2p915ovgum0jsnuhcckeavp9t.apps.googleusercontent.com', // Mismo Client ID
-  forceCodeForRefreshToken: true
-};
-
-// Inicializar Google Auth
+// Función para inicializar Google Auth (placeholder para compatibilidad)
 export const initializeGoogleAuth = async () => {
   try {
     if (Capacitor.isNativePlatform()) {
-      console.log('📱 Inicializando Google Auth nativo...');
-      await GoogleAuth.initialize(GOOGLE_AUTH_CONFIG);
-      console.log('✅ Google Auth nativo inicializado');
+      console.log('📱 Google Auth nativo personalizado disponible');
     }
   } catch (error) {
-    console.error('❌ Error inicializando Google Auth nativo:', error);
+    console.error('❌ Error inicializando Google Auth:', error);
   }
 };
 
-// Función para login con Google nativo
+// Función para login con Google nativo personalizado
 export const signInWithGoogleNative = async () => {
   try {
     // Verificar si estamos en APK
@@ -32,25 +20,32 @@ export const signInWithGoogleNative = async () => {
       throw new Error('Google Sign-In nativo solo está disponible en APK');
     }
 
-    console.log('📱 Iniciando Google Sign-In nativo...');
+    console.log('📱 Iniciando Google Sign-In nativo personalizado...');
     
-    // Hacer login con Google
-    const result = await GoogleAuth.signIn();
-    console.log('✅ Google Sign-In exitoso:', result);
-    
-    // Verificar que tenemos el idToken
-    const idToken = result?.authentication?.idToken;
-    if (!idToken) {
-      throw new Error('No se obtuvo idToken de Google');
+    // Verificar si nuestro plugin personalizado está disponible
+    if (!window.Capacitor?.Plugins?.GoogleSignIn) {
+      throw new Error('Plugin nativo de Google Sign-In no está disponible. Revisa la configuración de Android.');
     }
     
-    // Autenticar con Firebase
-    const auth = getAuth();
-    const credential = GoogleAuthProvider.credential(idToken);
-    const userCredential = await signInWithCredential(auth, credential);
+    // Llamar al plugin nativo personalizado
+    const result = await window.Capacitor.Plugins.GoogleSignIn.signIn();
     
-    console.log('✅ Firebase Auth exitoso:', userCredential.user);
-    return userCredential;
+    if (result.success) {
+      console.log('✅ Google Sign-In nativo exitoso:', result);
+      
+      // Crear objeto de usuario compatible con Firebase
+      const user = {
+        uid: result.uid,
+        email: result.email,
+        displayName: result.displayName,
+        photoURL: result.photoURL,
+        providerId: 'google.com'
+      };
+      
+      return { user, credential: null };
+    } else {
+      throw new Error(result.error || 'Google Sign-In falló');
+    }
     
   } catch (error) {
     console.error('❌ Error en Google Sign-In nativo:', error);
@@ -63,8 +58,11 @@ export const signOutGoogle = async () => {
   try {
     if (Capacitor.isNativePlatform()) {
       console.log('📱 Cerrando sesión de Google nativo...');
-      await GoogleAuth.signOut();
-      console.log('✅ Sesión de Google cerrada');
+      
+      if (window.Capacitor?.Plugins?.GoogleSignIn) {
+        await window.Capacitor.Plugins.GoogleSignIn.signOut();
+        console.log('✅ Sesión de Google cerrada');
+      }
     }
   } catch (error) {
     console.error('❌ Error cerrando sesión de Google:', error);
@@ -73,15 +71,21 @@ export const signOutGoogle = async () => {
 
 // Función para verificar si Google Auth nativo está disponible
 export const isGoogleAuthNativeAvailable = () => {
-  return Capacitor.isNativePlatform() && typeof GoogleAuth !== 'undefined';
+  try {
+    return Capacitor.isNativePlatform() && 
+           !!window.Capacitor?.Plugins?.GoogleSignIn;
+  } catch (error) {
+    console.warn('Error verificando disponibilidad del plugin nativo:', error);
+    return false;
+  }
 };
 
 // Función para obtener información del usuario actual de Google
 export const getCurrentGoogleUser = async () => {
   try {
-    if (Capacitor.isNativePlatform()) {
-      const user = await GoogleAuth.getCurrentUser();
-      return user;
+    if (Capacitor.isNativePlatform() && window.Capacitor?.Plugins?.GoogleSignIn) {
+      // Implementar si es necesario
+      return null;
     }
     return null;
   } catch (error) {
