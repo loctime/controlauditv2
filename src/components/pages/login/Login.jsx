@@ -82,17 +82,24 @@ const Login = () => {
     setSubmitting(false);
   };
 
-  // Función para Google Auth - Nativo en APK, Web en navegador
+  // Función para Google Auth - Navegador externo en APK
   const handleGoogleSignIn = async () => {
     setLoading(true);
     setError('');
     try {
       let result;
       
-      // En APK, usar Google Auth nativo
+      // En APK, usar navegador externo + deep link
       if (isAPK && isGoogleAuthNativeAvailable()) {
-        console.log('📱 Usando Google Auth nativo en APK...');
+        console.log('📱 Usando navegador externo para Google Auth en APK...');
         result = await signInWithGoogleNative();
+        
+        // Si se abrió el navegador externo
+        if (result.pendingExternalBrowser) {
+          setError('Se abrió el navegador. Completa el login allí y regresa a la app.');
+          setLoading(false);
+          return;
+        }
       } else {
         // En web, usar el flujo web (temporalmente deshabilitado)
         throw new Error('Google Sign-In web temporalmente deshabilitado. Usa email y contraseña.');
