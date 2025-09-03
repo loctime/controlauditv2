@@ -30,9 +30,7 @@ import {
 import { Google as GoogleIcon, CheckCircle, Error, Warning, Info } from '@mui/icons-material';
 import { Link, useNavigate } from 'react-router-dom';
 import { Visibility, VisibilityOff } from '@mui/icons-material';
-import { onSignIn, signInWithGoogle } from '../../../firebaseConfig';
-import { signInWithGoogleNative, initializeGoogleAuth, isGoogleAuthNativeAvailable } from '../../../utils/googleAuthNative';
-import { signInWithGoogleAPK, handleGoogleRedirectResultAPK, isAPK } from '../../../utils/googleAuthAPK';
+import { onSignIn, signInWithGoogleSimple, checkGoogleRedirectResult } from '../../../firebaseConfig';
 import { runSimpleDiagnostics } from '../../../utils/simpleDiagnostics';
 import { Formik, Form, Field, ErrorMessage } from 'formik';
 import * as Yup from 'yup';
@@ -59,32 +57,30 @@ const Login = () => {
   const { handleLogin } = useAuth();
   const { isAPK } = usePlatform();
 
-  // Inicializar Google Auth nativo cuando se carga el componente
+  // ✅ Inicializar y verificar redirect de Google cuando se carga el componente
   useEffect(() => {
     const initGoogleAuth = async () => {
       try {
-        if (isAPK && isGoogleAuthNativeAvailable()) {
-          console.log('📱 Inicializando Google Auth nativo al cargar...');
-          await initializeGoogleAuth();
-          console.log('✅ Google Auth nativo inicializado correctamente');
+        console.log('🚀 Inicializando Google Auth...');
+        
+        // ✅ Verificar si hay un redirect pendiente de Google
+        console.log('🔍 Verificando redirect pendiente de Google...');
+        try {
+          const result = await checkGoogleRedirectResult();
+          if (result && result.user) {
+            console.log('✅ Redirect de Google detectado, procesando...');
+            handleLogin(result.user);
+            navigate("/auditoria");
+            return;
+          }
+        } catch (error) {
+          console.warn('⚠️ Error verificando redirect de Google:', error);
         }
         
-        // ✅ Para APK, también verificar si hay un redirect pendiente de Google
-        if (isAPK()) {
-          console.log('📱 Verificando redirect pendiente de Google...');
-          try {
-            const result = await handleGoogleRedirectResultAPK();
-            if (result && result.user) {
-              console.log('✅ Redirect de Google detectado, procesando...');
-              handleLogin(result.user);
-              navigate("/auditoria");
-            }
-          } catch (error) {
-            console.warn('⚠️ Error verificando redirect de Google:', error);
-          }
-        }
+        console.log('✅ Google Auth inicializado correctamente');
+        
       } catch (error) {
-        console.warn('⚠️ Error inicializando Google Auth nativo:', error);
+        console.warn('⚠️ Error inicializando Google Auth:', error);
       } finally {
         // Siempre marcar como inicializado, incluso si falla
         setIsInitializing(false);
@@ -97,7 +93,7 @@ const Login = () => {
     }, 1000);
 
     return () => clearTimeout(timer);
-  }, [isAPK]);
+  }, []);
 
   const handleClickShowPassword = () => setShowPassword(!showPassword);
 
@@ -184,78 +180,36 @@ const Login = () => {
     setSubmitting(false);
   };
 
-  // Función para Google Auth - Inteligente (APK vs Web)
+  // ✅ Función SIMPLE y NUEVA para Google Auth
   const handleGoogleSignIn = async () => {
     setLoading(true);
     setError('');
+    
     try {
-      // ✅ PRIORIDAD 1: Si estamos en APK, usar autenticación nativa
-      if (isAPK && isGoogleAuthNativeAvailable()) {
-        console.log('📱 APK detectado, usando Google Sign-In nativo...');
-        
-        try {
-          // Inicializar Google Auth nativo
-          await initializeGoogleAuth();
-          
-          // Iniciar sesión nativa
-          const result = await signInWithGoogleNative();
-          
-          if (result && result.user) {
-            console.log('✅ Google Sign-In nativo exitoso:', result.user.uid);
-            handleLogin(result.user);
-            navigate("/auditoria");
-            return;
-          }
-        } catch (nativeError) {
-          console.warn('⚠️ Google Sign-In nativo falló, cambiando a web:', nativeError);
-          setError(`Error nativo: ${nativeError.message}. Cambiando a web...`);
-          
-          // Si falla el nativo, continuar con el flujo web
+      console.log('🚀 Iniciando Google Auth con función simple...');
+      
+      // ✅ Usar la nueva función simple
+      const result = await signInWithGoogleSimple();
+      
+      if (result.success) {
+        if (result.pendingRedirect) {
+          // ✅ Redirect iniciado
+          console.log('📱 Redirect iniciado, esperando resultado...');
+          setError('Redireccionando a Google... Por favor, completa la autenticación.');
+        } else if (result.user) {
+          // ✅ Usuario autenticado
+          console.log('✅ Google Auth exitoso:', result.user.uid);
+          handleLogin(result.user);
+          navigate("/auditoria");
         }
       }
       
-      // ✅ PRIORIDAD 2: Flujo web (para navegador o si falla el nativo)
-      console.log('🌐 Iniciando Google Sign-In web...');
-      
-      // ✅ Para APK, usar función específica
-      let result;
-      if (isAPK()) {
-        console.log('📱 Usando Google Sign-In específico para APK...');
-        result = await signInWithGoogleAPK();
-      } else {
-        console.log('🌐 Usando Google Sign-In web estándar...');
-        result = await signInWithGoogle();
-      }
-      
-      // Procesar resultado
-      if (result && result.user) {
-        handleLogin(result.user);
-        navigate("/auditoria");
-      } else if (result && result.pendingRedirect) {
-        console.log('📱 Redirect iniciado, esperando resultado...');
-        setError('Redireccionando a Google... Por favor, completa la autenticación.');
-      }
     } catch (error) {
-      console.error('Error en Google Auth:', error);
-      
-      // Mostrar error más específico
-      let errorMessage = 'Error al iniciar sesión con Google. Inténtalo de nuevo.';
-      
-      if (error.code === 'auth/unauthorized-domain') {
-        errorMessage = 'Dominio no autorizado para Google OAuth. Verifica la configuración de Firebase.';
-      } else if (error.code === 'auth/network-request-failed') {
-        errorMessage = 'Error de red. Verifica tu conexión a internet.';
-      } else if (error.code === 'auth/popup-closed-by-user') {
-        errorMessage = 'Ventana de autenticación cerrada. Inténtalo de nuevo.';
-      } else if (error.code === 'auth/popup-blocked') {
-        errorMessage = 'Popup bloqueado por el navegador. Permite popups para este sitio.';
-      } else if (error.message) {
-        errorMessage = `Error: ${error.message}`;
-      }
-      
-      setError(errorMessage);
+      console.error('❌ Error en Google Auth simple:', error);
+      setError(error.message || 'Error al iniciar sesión con Google');
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   return (
