@@ -183,9 +183,9 @@ export const handleRedirectResult = async () => {
   return null;
 };
 
-// ✅ Función SIMPLE y NUEVA para Google Auth (evitar errores)
+// ✅ Función SIMPLE y DIRECTA para Google Auth (sin complicaciones)
 export const signInWithGoogleSimple = async () => {
-  console.log('🚀 signInWithGoogleSimple iniciada...');
+  console.log('🚀 Iniciando Google Auth simple...');
   
   try {
     // ✅ Verificar que Firebase esté disponible
@@ -203,104 +203,59 @@ export const signInWithGoogleSimple = async () => {
     console.log('📱 ¿Es APK?', isAPKPlatform);
     
     if (isAPKPlatform) {
-      console.log('📱 APK detectado, usando redirect...');
+      console.log('📱 APK detectado, usando popup...');
       
-      // ✅ Para APK: usar redirect con URI específico
-      // IMPORTANTE: Usar un URI que NO sea localhost y que sea específico para tu app
-      const redirectUri = 'https://controlstorage-eb796.firebaseapp.com/__/auth/handler';
-      console.log('📱 Redirect URI configurado:', redirectUri);
-      
-      // ✅ Configurar provider con parámetros específicos para APK
-      provider.setCustomParameters({
-        prompt: 'select_account',
-        redirect_uri: redirectUri,
-        // ✅ Usar el mismo client ID que está en capacitor.config.ts
-        client_id: '909876364192-dhqhd9k0h0qkidt4p4pv4ck3utgob7pt.apps.googleusercontent.com',
-        // ✅ Agregar parámetros adicionales para evitar localhost
-        response_type: 'code',
-        access_type: 'offline'
-      });
-      
-      // ✅ Iniciar redirect
-      await signInWithRedirect(auth, provider);
-      console.log('📱 Redirect iniciado correctamente');
-      
-      return { 
-        success: true, 
-        message: 'Redireccionando a Google...',
-        pendingRedirect: true 
-      };
+      // ✅ Para APK: usar popup (evita localhost completamente)
+      try {
+        const result = await signInWithPopup(auth, provider);
+        console.log('✅ Google Auth exitoso con popup en APK:', result);
+        
+        return { 
+          success: true, 
+          user: result.user,
+          pendingRedirect: false 
+        };
+        
+      } catch (popupError) {
+        console.error('❌ Popup falló en APK:', popupError);
+        throw new Error('Popup de Google falló. Intenta nuevamente.');
+      }
       
     } else {
       console.log('🌐 Web detectado, usando popup...');
       
-      // ✅ Para Web: usar popup
-      const result = await signInWithPopup(auth, provider);
-      console.log('✅ Google Auth exitoso (popup):', result);
-      
-      return { 
-        success: true, 
-        user: result.user,
-        pendingRedirect: false 
-      };
+      // ✅ Para Web: usar popup también
+      try {
+        const result = await signInWithPopup(auth, provider);
+        console.log('✅ Google Auth exitoso con popup en Web:', result);
+        
+        return { 
+          success: true, 
+          user: result.user,
+          pendingRedirect: false 
+        };
+        
+      } catch (popupError) {
+        console.log('⚠️ Popup falló en Web, intentando redirect...', popupError);
+        
+        // ✅ Si falla popup, usar redirect como fallback
+        await signInWithRedirect(auth, provider);
+        
+        return { 
+          success: true, 
+          message: 'Redireccionando a Google...',
+          pendingRedirect: true 
+        };
+      }
     }
     
   } catch (error) {
     console.error('❌ Error en signInWithGoogleSimple:', error);
-    
-    // ✅ Manejar errores específicos
-    let errorMessage = 'Error al iniciar sesión con Google';
-    
-    if (error.code === 'auth/popup-closed-by-user') {
-      errorMessage = 'Ventana cerrada por el usuario';
-    } else if (error.code === 'auth/popup-blocked') {
-      errorMessage = 'Popup bloqueado por el navegador';
-    } else if (error.code === 'auth/unauthorized-domain') {
-      errorMessage = 'Dominio no autorizado para Google OAuth';
-    } else if (error.message) {
-      errorMessage = error.message;
-    }
-    
-    // ✅ Mostrar error con toast
-    if (typeof toast !== 'undefined') {
-      toast.error(errorMessage, {
-        position: "top-left",
-        autoClose: 5000,
-      });
-    }
-    
-    throw new Error(errorMessage);
+    throw error;
   }
 };
 
-// ✅ Función centralizada para verificar resultado del redirect
-export const checkGoogleRedirectResult = async () => {
-  try {
-    console.log('🔍 Verificando resultado de redirect de Google...');
-    
-    if (!auth) {
-      console.log('❌ Firebase Auth no disponible');
-      return null;
-    }
-    
-    // ✅ IMPORTANTE: Solo llamar getRedirectResult UNA vez por sesión
-    const result = await getRedirectResult(auth);
-    
-    if (result) {
-      console.log('✅ Redirect de Google procesado exitosamente:', result);
-      return result;
-    } else {
-      console.log('📱 No hay resultado de redirect pendiente');
-      return null;
-    }
-    
-  } catch (error) {
-    console.error('❌ Error verificando redirect de Google:', error);
-    return null;
-  }
-};
-
-// ✅ Función para verificar redirect al INICIO de la app (solo una vez)
+// ✅ Función simple para verificar redirect al inicio
 export const checkGoogleRedirectOnAppStart = async () => {
   try {
     console.log('🚀 Verificando redirect de Google al iniciar la app...');
@@ -310,144 +265,19 @@ export const checkGoogleRedirectOnAppStart = async () => {
       return null;
     }
     
-    // ✅ IMPORTANTE: Esta función se debe llamar SOLO al inicio de la app
     const result = await getRedirectResult(auth);
     
     if (result && result.user) {
-      console.log('✅ Usuario autenticado desde redirect al iniciar app:', result.user.uid);
+      console.log('✅ Usuario autenticado desde redirect:', result.user.uid);
       return result;
     }
     
-    console.log('📱 No hay redirect pendiente al iniciar la app');
+    console.log('📱 No hay redirect pendiente');
     return null;
     
   } catch (error) {
-    console.error('❌ Error verificando redirect al iniciar app:', error);
+    console.error('❌ Error verificando redirect:', error);
     return null;
-  }
-};
-
-// ✅ Función específica para manejar redirect en APK
-export const handleAPKGoogleRedirect = async () => {
-  try {
-    console.log('📱 Manejando redirect de Google en APK...');
-    
-    // ✅ Verificar si estamos en APK
-    if (!isAPK()) {
-      console.log('❌ No estamos en APK, saltando manejo de redirect');
-      return null;
-    }
-    
-    // ✅ IMPORTANTE: Verificar resultado del redirect usando getRedirectResult directamente
-    console.log('🔍 Verificando resultado de redirect con getRedirectResult...');
-    
-    if (!auth) {
-      console.log('❌ Firebase Auth no disponible');
-      return null;
-    }
-    
-    const result = await getRedirectResult(auth);
-    
-    if (result && result.user) {
-      console.log('✅ Usuario autenticado en APK:', result.user.uid);
-      
-      // ✅ Configurar listener para cambios de estado de la app
-      if (window.Capacitor && window.Capacitor.App) {
-        console.log('📱 Configurando listener de estado de app para APK...');
-        
-        window.Capacitor.App.addListener('appStateChange', ({ isActive }) => {
-          console.log('📱 Estado de app cambiado:', isActive ? 'Activa' : 'Inactiva');
-          
-          if (isActive) {
-            // ✅ Cuando la app vuelve a estar activa, verificar el redirect
-            console.log('📱 App activa, verificando redirect...');
-            getRedirectResult(auth).then(redirectResult => {
-              if (redirectResult && redirectResult.user) {
-                console.log('✅ Redirect procesado después de activar app:', redirectResult.user.uid);
-                // Aquí podrías emitir un evento o callback para manejar el login
-              }
-            });
-          }
-        });
-        
-        window.Capacitor.App.addListener('appUrlOpen', (data) => {
-          console.log('📱 URL abierta en app:', data.url);
-          // ✅ Manejar URL de retorno de Google OAuth
-          if (data.url && data.url.includes('__/auth/handler')) {
-            console.log('📱 URL de auth handler detectada, procesando...');
-            getRedirectResult(auth).then(redirectResult => {
-              if (redirectResult && redirectResult.user) {
-                console.log('✅ Redirect procesado desde URL:', redirectResult.user.uid);
-                // Aquí podrías emitir un evento o callback para manejar el login
-              }
-            });
-          }
-        });
-      }
-      
-      return result;
-    } else {
-      console.log('📱 No hay resultado de redirect pendiente');
-    }
-    
-    return null;
-    
-  } catch (error) {
-    console.error('❌ Error manejando redirect de Google en APK:', error);
-    return null;
-  }
-};
-
-// ✅ Función ALTERNATIVA para APK que evita completamente el redirect
-export const signInWithGoogleAPKAlternative = async () => {
-  try {
-    console.log('📱 Iniciando Google Auth APK (método alternativo)...');
-    
-    if (!auth) {
-      throw new Error('Firebase Auth no está disponible');
-    }
-    
-    // ✅ IMPORTANTE: Verificar si ya hay un redirect pendiente ANTES de iniciar uno nuevo
-    console.log('🔍 Verificando si hay redirect pendiente...');
-    const pendingResult = await getRedirectResult(auth);
-    if (pendingResult) {
-      console.log('✅ Redirect pendiente detectado, procesando...');
-      return { 
-        success: true, 
-        user: pendingResult.user,
-        pendingRedirect: false 
-      };
-    }
-    
-    // ✅ Crear provider de Google
-    const provider = new GoogleAuthProvider();
-    provider.addScope('email');
-    provider.addScope('profile');
-    
-    // ✅ Para APK: usar SOLO popup para evitar localhost completamente
-    console.log('📱 APK detectado, usando SOLO popup (sin redirect)...');
-    
-    try {
-      // ✅ Intentar popup (único método para APK)
-      const result = await signInWithPopup(auth, provider);
-      console.log('✅ Google Auth exitoso con popup en APK:', result);
-      
-      return { 
-        success: true, 
-        user: result.user,
-        pendingRedirect: false 
-      };
-      
-    } catch (popupError) {
-      console.error('❌ Popup falló en APK:', popupError);
-      
-      // ✅ NO usar redirect como fallback - solo popup
-      throw new Error('Popup de Google falló. Intenta nuevamente o verifica tu conexión.');
-    }
-    
-  } catch (error) {
-    console.error('❌ Error en signInWithGoogleAPKAlternative:', error);
-    throw error;
   }
 };
 
