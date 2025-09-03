@@ -16,27 +16,39 @@ export const runGoogleAuthDiagnostics = async () => {
 
   try {
     // 1. Verificar plataforma
-    if (isAPK()) {
-      diagnostics.platform = 'APK';
-      console.log('📱 Plataforma detectada: APK');
-    } else {
-      diagnostics.platform = 'Web';
-      console.log('🌐 Plataforma detectada: Web');
+    try {
+      if (isAPK()) {
+        diagnostics.platform = 'APK';
+        console.log('📱 Plataforma detectada: APK');
+      } else {
+        diagnostics.platform = 'Web';
+        console.log('🌐 Plataforma detectada: Web');
+      }
+    } catch (error) {
+      diagnostics.platform = 'Error';
+      console.error('❌ Error detectando plataforma:', error);
+      diagnostics.errors.push(`Error detectando plataforma: ${error.message}`);
     }
 
     // 2. Verificar Capacitor
-    if (typeof window !== 'undefined' && window.Capacitor) {
-      diagnostics.capacitorAvailable = true;
-      console.log('✅ Capacitor disponible');
-    } else {
+    try {
+      if (typeof window !== 'undefined' && window.Capacitor) {
+        diagnostics.capacitorAvailable = true;
+        console.log('✅ Capacitor disponible');
+      } else {
+        diagnostics.capacitorAvailable = false;
+        console.log('❌ Capacitor no disponible');
+        diagnostics.errors.push('Capacitor no está disponible');
+      }
+    } catch (error) {
       diagnostics.capacitorAvailable = false;
-      console.log('❌ Capacitor no disponible');
-      diagnostics.errors.push('Capacitor no está disponible');
+      console.error('❌ Error verificando Capacitor:', error);
+      diagnostics.errors.push(`Error verificando Capacitor: ${error.message}`);
     }
 
     // 3. Verificar Google Auth nativo
     try {
-      if (isAPK()) {
+      if (diagnostics.platform === 'APK') {
         // ✅ Importar de forma segura
         let GoogleAuth;
         try {
@@ -97,13 +109,17 @@ export const runGoogleAuthDiagnostics = async () => {
     }
 
     // 5. Verificar configuración
-    diagnostics.configuration = {
-      clientId: '909876364192-dhqhd9k0h0qkidt4p4pv4ck3utgob7pt.apps.googleusercontent.com',
-      appId: 'com.controlaudit.app',
-      scheme: 'com.controlaudit.app://'
-    };
-
-    console.log('📋 Configuración:', diagnostics.configuration);
+    try {
+      diagnostics.configuration = {
+        clientId: '909876364192-dhqhd9k0h0qkidt4p4pv4ck3utgob7pt.apps.googleusercontent.com',
+        appId: 'com.controlaudit.app',
+        scheme: 'com.controlaudit.app://'
+      };
+      console.log('📋 Configuración:', diagnostics.configuration);
+    } catch (error) {
+      console.error('❌ Error configurando diagnóstico:', error);
+      diagnostics.errors.push(`Error configurando diagnóstico: ${error.message}`);
+    }
 
   } catch (error) {
     console.error('❌ Error en diagnóstico:', error);

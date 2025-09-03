@@ -6,9 +6,14 @@ import { auth } from '../firebaseConfig';
 
 // Función para detectar si estamos en APK
 export const isAPK = () => {
-  return typeof window !== 'undefined' && 
-         window.Capacitor && 
-         window.Capacitor.isNative;
+  try {
+    return typeof window !== 'undefined' && 
+           window.Capacitor && 
+           window.Capacitor.isNative === true;
+  } catch (error) {
+    console.warn('⚠️ Error verificando si es APK:', error);
+    return false;
+  }
 };
 
 // Función para configurar el provider de Google para APK
