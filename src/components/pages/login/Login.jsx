@@ -30,7 +30,7 @@ import {
 import { Google as GoogleIcon, CheckCircle, Error, Warning, Info } from '@mui/icons-material';
 import { Link, useNavigate } from 'react-router-dom';
 import { Visibility, VisibilityOff } from '@mui/icons-material';
-import { onSignIn, signInWithGoogleSimple, checkGoogleRedirectResult, handleAPKGoogleRedirect } from '../../../firebaseConfig';
+import { onSignIn, signInWithGoogleSimple, checkGoogleRedirectOnAppStart, handleAPKGoogleRedirect, signInWithGoogleAPKAlternative } from '../../../firebaseConfig';
 import { runSimpleDiagnostics } from '../../../utils/simpleDiagnostics';
 import { Formik, Form, Field, ErrorMessage } from 'formik';
 import * as Yup from 'yup';
@@ -81,7 +81,7 @@ const Login = () => {
           // ✅ Para Web: verificar redirect estándar
           console.log('🌐 Web detectado, usando verificación estándar...');
           try {
-            const result = await checkGoogleRedirectResult();
+            const result = await checkGoogleRedirectOnAppStart();
             if (result && result.user) {
               console.log('✅ Redirect de Google detectado, procesando...');
               handleLogin(result.user);
@@ -202,10 +202,19 @@ const Login = () => {
     setError('');
     
     try {
-      console.log('🚀 Iniciando Google Auth con función simple...');
+      console.log('🚀 Iniciando Google Auth...');
       
-      // ✅ Usar la nueva función simple
-      const result = await signInWithGoogleSimple();
+      let result;
+      
+      // ✅ Para APK: usar función alternativa que evita localhost
+      if (isAPK) {
+        console.log('📱 APK detectado, usando método alternativo...');
+        result = await signInWithGoogleAPKAlternative();
+      } else {
+        // ✅ Para Web: usar función simple estándar
+        console.log('🌐 Web detectado, usando método estándar...');
+        result = await signInWithGoogleSimple();
+      }
       
       if (result.success) {
         if (result.pendingRedirect) {
@@ -221,7 +230,7 @@ const Login = () => {
       }
       
     } catch (error) {
-      console.error('❌ Error en Google Auth simple:', error);
+      console.error('❌ Error en Google Auth:', error);
       setError(error.message || 'Error al iniciar sesión con Google');
     } finally {
       setLoading(false);
