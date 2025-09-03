@@ -27,7 +27,7 @@ const getEnvironmentConfig = () => {
     cors: {
       origin: process.env.CORS_ORIGIN ? 
         process.env.CORS_ORIGIN.split(',').map(origin => origin.trim()) : 
-        ['http://localhost:3000', 'http://localhost:5173'],
+        ['http://localhost:3000', 'http://localhost:5173', 'https://controlfile.onrender.com', 'https://auditoria.controldoc.app'],
       credentials: true,
       methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
       allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']

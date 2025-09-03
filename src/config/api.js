@@ -1,7 +1,7 @@
 // Configuración de API para ControlAudit
 export const API_CONFIG = {
   // Backend compartido como API principal
-  baseURL: (typeof import.meta !== 'undefined' && import.meta.env?.VITE_BACKEND_URL) || 'http://localhost:4000',
+  baseURL: (typeof import.meta !== 'undefined' && import.meta.env?.VITE_BACKEND_URL) || 'https://controlfile.onrender.com',
   
   // Endpoints simplificados
   endpoints: {
@@ -58,7 +58,7 @@ export const getEnvironmentConfig = () => {
   
   // En producción, usar la configuración de ControlFile
   return {
-    baseURL: (typeof import.meta !== 'undefined' && import.meta.env?.VITE_APP_BACKEND_URL) || 'https://api.controldoc.app',
+    baseURL: (typeof import.meta !== 'undefined' && import.meta.env?.VITE_APP_BACKEND_URL) || 'https://controlfile.onrender.com',
     timeout: API_CONFIG.timeout
   };
 };
