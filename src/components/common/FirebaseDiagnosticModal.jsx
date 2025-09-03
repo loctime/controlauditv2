@@ -27,6 +27,7 @@ import {
 } from '@mui/icons-material';
 import { FIREBASE_APK_CONFIG } from '../../config/firebaseAPK';
 import { FIREBASE_CONFIG } from '../../config/environment';
+import { isAPK, detectPlatform, getPlatformInfo } from '../../utils/platformDetection';
 
 const FirebaseDiagnosticModal = ({ open, onClose }) => {
   const [diagnosticData, setDiagnosticData] = useState(null);
@@ -37,15 +38,41 @@ const FirebaseDiagnosticModal = ({ open, onClose }) => {
     setLoading(true);
     
     try {
-      // ✅ Detectar plataforma
+      // ✅ Detectar plataforma con más información de debug
+      console.log('🔍 DEBUG: Iniciando detección de plataforma...');
+      console.log('🔍 DEBUG: window.Capacitor:', !!window.Capacitor);
+      console.log('🔍 DEBUG: window.Capacitor.isNative:', window.Capacitor?.isNative);
+      console.log('🔍 DEBUG: window.Capacitor.getPlatform:', window.Capacitor?.getPlatform?.());
+      console.log('🔍 DEBUG: navigator.userAgent:', navigator.userAgent);
+      console.log('🔍 DEBUG: window.location.hostname:', window.location.hostname);
+      console.log('🔍 DEBUG: window.location.protocol:', window.location.protocol);
+      
       const isCapacitorAPK = typeof window !== 'undefined' && window.Capacitor && window.Capacitor.isNative;
+      console.log('🔍 DEBUG: isCapacitorAPK (simple):', isCapacitorAPK);
+      
+      // ✅ Usar la función robusta de detección
+      const robustIsAPK = isAPK();
+      const platform = detectPlatform();
+      const platformInfo = getPlatformInfo();
+      
+      console.log('🔍 DEBUG: isAPK (robusta):', robustIsAPK);
+      console.log('🔍 DEBUG: platform detectado:', platform);
+      console.log('🔍 DEBUG: platformInfo completo:', platformInfo);
       
       // ✅ Obtener información de Capacitor
       const capacitorInfo = {
         available: typeof window !== 'undefined' && !!window.Capacitor,
         isNative: window.Capacitor?.isNative || false,
         platform: window.Capacitor?.getPlatform?.() || 'No disponible',
-        version: window.Capacitor?.getVersion?.() || 'No disponible'
+        version: window.Capacitor?.getVersion?.() || 'No disponible',
+        // ✅ Información adicional de debug
+        debug: {
+          hasCapacitor: typeof window !== 'undefined' && !!window.Capacitor,
+          capacitorObject: window.Capacitor,
+          isNativeValue: window.Capacitor?.isNative,
+          getPlatformResult: window.Capacitor?.getPlatform?.(),
+          getVersionResult: window.Capacitor?.getVersion?.()
+        }
       };
       
       // ✅ Obtener información del entorno
@@ -54,14 +81,20 @@ const FirebaseDiagnosticModal = ({ open, onClose }) => {
         hostname: window.location.hostname,
         protocol: window.location.protocol,
         isAndroid: /Android/i.test(navigator.userAgent),
-        isMobile: /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
+        isMobile: /Android|iPhone|iPad|iPod/i.test(navigator.userAgent),
+        // ✅ Información adicional de debug
+        debug: {
+          userAgentLength: navigator.userAgent.length,
+          hostnameType: typeof window.location.hostname,
+          protocolType: typeof window.location.protocol
+        }
       };
       
       // ✅ Obtener configuración de Firebase
       let firebaseConfig;
       let configSource;
       
-      if (isCapacitorAPK) {
+      if (robustIsAPK) {
         firebaseConfig = FIREBASE_APK_CONFIG;
         configSource = 'APK (Hardcodeada)';
       } else {
@@ -85,10 +118,10 @@ const FirebaseDiagnosticModal = ({ open, onClose }) => {
       
       // ✅ Generar resumen
       const summary = {
-        platform: isCapacitorAPK ? 'APK' : 'Web',
+        platform: robustIsAPK ? 'APK' : 'Web',
         criticalProblems: 0,
         warnings: 0,
-        oauthStatus: isCapacitorAPK && firebaseConfig.oauth ? 'Configurado' : 'Desconocido',
+        oauthStatus: robustIsAPK && firebaseConfig.oauth ? 'Configurado' : 'Desconocido',
         networkConnectivity: '100%' // Asumimos conectividad
       };
       
@@ -97,18 +130,24 @@ const FirebaseDiagnosticModal = ({ open, onClose }) => {
         summary.criticalProblems++;
       }
       
-      if (isCapacitorAPK && !capacitorInfo.available) {
+      if (robustIsAPK && !capacitorInfo.available) {
         summary.criticalProblems++;
       }
       
       const missingEnvVars = Object.values(envVars).filter(value => value === 'Faltante').length;
-      if (missingEnvVars > 0 && !isCapacitorAPK) {
+      if (missingEnvVars > 0 && !robustIsAPK) {
         summary.warnings += missingEnvVars;
       }
       
       const data = {
         timestamp: new Date().toLocaleString('es-ES'),
-        platform: isCapacitorAPK ? 'APK' : 'Web',
+        platform: robustIsAPK ? 'APK' : 'Web',
+        platformDetection: {
+          simple: isCapacitorAPK,
+          robust: robustIsAPK,
+          detectedPlatform: platform,
+          platformInfo: platformInfo
+        },
         capacitorInfo,
         environmentInfo,
         firebaseConfig,
@@ -227,9 +266,50 @@ const FirebaseDiagnosticModal = ({ open, onClose }) => {
               </Box>
             </Box>
 
-            <Divider sx={{ my: 2 }} />
+                         <Divider sx={{ my: 2 }} />
 
-            {/* Información de Capacitor */}
+             {/* ✅ Nueva sección: Debug de Detección de Plataforma */}
+             {diagnosticData.platformDetection && (
+               <>
+                 <Box mb={3}>
+                   <Typography variant="h6" gutterBottom>
+                     🔍 Debug de Detección de Plataforma
+                   </Typography>
+                   <List dense>
+                     <ListItem>
+                       <ListItemIcon>
+                         <Info color="info" />
+                       </ListItemIcon>
+                       <ListItemText 
+                         primary="Detección Simple (window.Capacitor.isNative)" 
+                         secondary={diagnosticData.platformDetection.simple ? 'Sí' : 'No'} 
+                       />
+                     </ListItem>
+                     <ListItem>
+                       <ListItemIcon>
+                         <Info color="info" />
+                       </ListItemIcon>
+                       <ListItemText 
+                         primary="Detección Robusta (isAPK())" 
+                         secondary={diagnosticData.platformDetection.robust ? 'Sí' : 'No'} 
+                       />
+                     </ListItem>
+                     <ListItem>
+                       <ListItemIcon>
+                         <Info color="info" />
+                       </ListItemIcon>
+                       <ListItemText 
+                         primary="Plataforma Detectada" 
+                         secondary={diagnosticData.platformDetection.detectedPlatform} 
+                       />
+                     </ListItem>
+                   </List>
+                 </Box>
+                 <Divider sx={{ my: 2 }} />
+               </>
+             )}
+
+             {/* Información de Capacitor */}
             <Box mb={3}>
               <Typography variant="h6" gutterBottom>
                 Capacitor

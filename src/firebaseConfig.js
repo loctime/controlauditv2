@@ -18,10 +18,11 @@ import { isCapacitor, getAuthConfig } from './utils/capacitorUtils';
 import { getImprovedAuthConfig, getAuthEnvironmentInfo } from './utils/authUtils';
 import { FIREBASE_CONFIG } from './config/environment';
 import { FIREBASE_APK_CONFIG, validateAPKConfig } from './config/firebaseAPK';
+import { isAPK } from './utils/platformDetection';
 // import { nativeGoogleSignIn, isNativeGoogleSignInAvailable } from './utils/nativeGoogleAuth';
 
-// ✅ Detectar si estamos en APK
-const isCapacitorAPK = typeof window !== 'undefined' && window.Capacitor && window.Capacitor.isNative;
+// ✅ Detectar si estamos en APK usando la función robusta
+const isCapacitorAPK = isAPK();
 
 // ✅ Configuración de Firebase según plataforma
 let firebaseConfig;
