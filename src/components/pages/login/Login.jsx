@@ -18,11 +18,10 @@ import {
   CardContent,
   Divider
 } from '@mui/material';
-// import { Google as GoogleIcon } from '@mui/icons-material';
+import { Google as GoogleIcon } from '@mui/icons-material';
 import { Link, useNavigate } from 'react-router-dom';
 import { Visibility, VisibilityOff } from '@mui/icons-material';
-import { onSignIn } from '../../../firebaseConfig';
-// import { signInWithGoogleNative, isGoogleAuthNativeAvailable } from '../../../utils/googleAuthNative';
+import { onSignIn, signInWithGoogle } from '../../../firebaseConfig';
 import { Formik, Form, Field, ErrorMessage } from 'formik';
 import * as Yup from 'yup';
 import { useAuth } from '../../context/AuthContext';
@@ -82,29 +81,13 @@ const Login = () => {
     setSubmitting(false);
   };
 
-  // Función para Google Auth - TEMPORALMENTE DESHABILITADA
-  /*
+  // Función para Google Auth - Web (funcional)
   const handleGoogleSignIn = async () => {
     setLoading(true);
     setError('');
     try {
-      let result;
-      
-      // En APK, usar navegador externo + deep link
-      if (isAPK && isGoogleAuthNativeAvailable()) {
-        console.log('📱 Usando navegador externo para Google Auth en APK...');
-        result = await signInWithGoogleNative();
-        
-        // Si se abrió el navegador externo
-        if (result.pendingExternalBrowser) {
-          setError('Se abrió el navegador. Completa el login allí y regresa a la app.');
-          setLoading(false);
-          return;
-        }
-      } else {
-        // En web, usar el flujo web (temporalmente deshabilitado)
-        throw new Error('Google Sign-In web temporalmente deshabilitado. Usa email y contraseña.');
-      }
+      console.log('🌐 Iniciando Google Sign-In web...');
+      const result = await signInWithGoogle();
       
       // Procesar resultado
       if (result && result.user) {
@@ -117,7 +100,6 @@ const Login = () => {
     }
     setLoading(false);
   };
-  */
 
   return (
     <Box
@@ -154,46 +136,34 @@ const Login = () => {
 
 
 
-          {/* Botón de Google - TEMPORALMENTE DESHABILITADO */}
-          {/*
-          {isAPK && isGoogleAuthNativeAvailable() && (
-            <Box sx={{ textAlign: 'center', mb: 3 }}>
-              <Button
-                fullWidth
-                variant="outlined"
-                startIcon={<GoogleIcon />}
-                onClick={handleGoogleSignIn}
-                disabled={loading}
-                sx={{ 
-                  mb: 3,
-                  py: 1.5,
-                  borderColor: 'grey.300',
-                  color: 'text.primary',
-                  '&:hover': {
-                    borderColor: 'grey.400',
-                    backgroundColor: 'grey.50'
-                  }
-                }}
-              >
-                Continuar con Google
-              </Button>
-              
-              <Divider sx={{ my: 2 }}>
-                <Typography variant="body2" color="text.secondary">
-                  o
-                </Typography>
-              </Divider>
-            </Box>
-          )}
-          
-          {isAPK && !isGoogleAuthNativeAvailable() && (
-            <Box sx={{ textAlign: 'center', mb: 3 }}>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                📱 En la aplicación móvil, usa tu email y contraseña para acceder
+          {/* Botón de Google - Web (funcional) */}
+          <Box sx={{ textAlign: 'center', mb: 3 }}>
+            <Button
+              fullWidth
+              variant="outlined"
+              startIcon={<GoogleIcon />}
+              onClick={handleGoogleSignIn}
+              disabled={loading}
+              sx={{ 
+                mb: 3,
+                py: 1.5,
+                borderColor: 'grey.300',
+                color: 'text.primary',
+                '&:hover': {
+                  borderColor: 'grey.400',
+                  backgroundColor: 'grey.50'
+                }
+              }}
+            >
+              Continuar con Google
+            </Button>
+            
+            <Divider sx={{ my: 2 }}>
+              <Typography variant="body2" color="text.secondary">
+                o
               </Typography>
-            </Box>
-          )}
-          */}
+            </Divider>
+          </Box>
 
           <Formik
             initialValues={initialValues}
