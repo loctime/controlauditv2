@@ -185,6 +185,13 @@ export const handleRedirectResult = async () => {
 
 // ✅ Agregar función de Google Auth mejorada para Capacitor
 export const signInWithGoogle = async () => {
+  console.log('🚀 signInWithGoogle iniciada...');
+  console.log('🔍 Verificando imports...');
+  console.log('- GoogleAuthProvider:', typeof GoogleAuthProvider);
+  console.log('- signInWithRedirect:', typeof signInWithRedirect);
+  console.log('- signInWithPopup:', typeof signInWithPopup);
+  console.log('- auth:', typeof auth);
+  
   try {
     // ✅ PRIORIDAD 1: Si estamos en APK y el nativo está disponible, usarlo
     // TEMPORALMENTE COMENTADO PARA DEBUG
@@ -208,35 +215,38 @@ export const signInWithGoogle = async () => {
     provider.addScope('email');
     provider.addScope('profile');
     
-    // ✅ Detectar si estamos en móvil/APK
+    // ✅ Detectar si estamos en móvil/APK usando la función robusta
     const hostname = window.location.hostname;
     const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1';
-    const isCapacitor = window.Capacitor && window.Capacitor.isNative;
+    const isAPKPlatform = isAPK(); // ✅ Usar la función robusta
     const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
     
     console.log("🌐 Entorno detectado:", {
       hostname,
       isLocalhost,
-      isCapacitor,
+      isAPK: isAPKPlatform,
       isMobile,
       userAgent: navigator.userAgent
     });
     
     // Para móviles/APK, usar redirect automáticamente
-    if (isMobile || isCapacitor) {
+    if (isMobile || isAPKPlatform) {
       console.log("📱 Detectado móvil/APK, usando signInWithRedirect");
       
       // ✅ Para APK, configurar OAuth específicamente
-      if (isCapacitor) {
+      if (isAPKPlatform) {
         console.log('📱 Configurando OAuth específico para APK...');
         
-        // ✅ Para APK, NO configurar redirect_uri personalizado
-        // Firebase usará automáticamente las URLs autorizadas del proyecto
+        // ✅ Para APK, configurar redirect_uri específico
+        const redirectUri = `${FIREBASE_APK_CONFIG.authDomain}/__/auth/handler`;
+        console.log('📱 Redirect URI configurado para APK:', redirectUri);
+        
         provider.setCustomParameters({
-          prompt: 'select_account'
+          prompt: 'select_account',
+          redirect_uri: redirectUri
         });
         
-        console.log('📱 Provider configurado para APK (sin redirect_uri personalizado)');
+        console.log('📱 Provider configurado para APK con redirect_uri personalizado');
         
         // ✅ Configurar listener de app state para detectar cuando vuelve del navegador
         setupAppStateListener();
@@ -297,8 +307,8 @@ let urlChangeListener = null;
 
 const setupAppStateListener = async () => {
   try {
-    // Solo configurar si estamos en Capacitor
-    if (!window.Capacitor || !window.Capacitor.isNative) {
+    // Solo configurar si estamos en APK usando la función robusta
+    if (!isAPK()) {
       return;
     }
     
