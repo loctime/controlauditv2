@@ -6,9 +6,9 @@ import "./styles/apk-centering-fix.css";
 import "./styles/apk-viewport-fix.css";
 import "./styles/apk-margin-fix.css";
 import './utils/debug-env.js';
-import { initializeGoogleAuth } from './utils/googleAuthNative';
+// import { initializeGoogleAuth } from './utils/googleAuthNative';
 
-// Inicializar Google Auth nativo
-initializeGoogleAuth();
+// Inicializar Google Auth nativo - TEMPORALMENTE DESHABILITADO
+// initializeGoogleAuth();
 
 ReactDOM.createRoot(document.getElementById("root")).render(<App />);

@@ -18,11 +18,11 @@ import {
   CardContent,
   Divider
 } from '@mui/material';
-import { Google as GoogleIcon } from '@mui/icons-material';
+// import { Google as GoogleIcon } from '@mui/icons-material';
 import { Link, useNavigate } from 'react-router-dom';
 import { Visibility, VisibilityOff } from '@mui/icons-material';
 import { onSignIn } from '../../../firebaseConfig';
-import { signInWithGoogleNative, isGoogleAuthNativeAvailable } from '../../../utils/googleAuthNative';
+// import { signInWithGoogleNative, isGoogleAuthNativeAvailable } from '../../../utils/googleAuthNative';
 import { Formik, Form, Field, ErrorMessage } from 'formik';
 import * as Yup from 'yup';
 import { useAuth } from '../../context/AuthContext';
@@ -82,7 +82,8 @@ const Login = () => {
     setSubmitting(false);
   };
 
-  // Función para Google Auth - Navegador externo en APK
+  // Función para Google Auth - TEMPORALMENTE DESHABILITADA
+  /*
   const handleGoogleSignIn = async () => {
     setLoading(true);
     setError('');
@@ -116,6 +117,7 @@ const Login = () => {
     }
     setLoading(false);
   };
+  */
 
   return (
     <Box
@@ -152,7 +154,8 @@ const Login = () => {
 
 
 
-          {/* Botón de Google - Solo mostrar en APK cuando esté disponible */}
+          {/* Botón de Google - TEMPORALMENTE DESHABILITADO */}
+          {/*
           {isAPK && isGoogleAuthNativeAvailable() && (
             <Box sx={{ textAlign: 'center', mb: 3 }}>
               <Button
@@ -183,7 +186,6 @@ const Login = () => {
             </Box>
           )}
           
-          {/* Mensaje para APK sin Google Auth */}
           {isAPK && !isGoogleAuthNativeAvailable() && (
             <Box sx={{ textAlign: 'center', mb: 3 }}>
               <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
@@ -191,6 +193,7 @@ const Login = () => {
               </Typography>
             </Box>
           )}
+          */}
 
           <Formik
             initialValues={initialValues}
