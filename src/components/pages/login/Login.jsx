@@ -16,15 +16,24 @@ import {
   alpha,
   Card,
   CardContent,
-  Divider
+  Divider,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  List,
+  ListItem,
+  ListItemText,
+  ListItemIcon,
+  Chip
 } from '@mui/material';
-import { Google as GoogleIcon } from '@mui/icons-material';
+import { Google as GoogleIcon, CheckCircle, Error, Warning, Info } from '@mui/icons-material';
 import { Link, useNavigate } from 'react-router-dom';
 import { Visibility, VisibilityOff } from '@mui/icons-material';
 import { onSignIn, signInWithGoogle } from '../../../firebaseConfig';
 import { signInWithGoogleNative, initializeGoogleAuth, isGoogleAuthNativeAvailable } from '../../../utils/googleAuthNative';
 import { signInWithGoogleAPK, handleGoogleRedirectResultAPK, isAPK } from '../../../utils/googleAuthAPK';
-import { runFirebaseDiagnostics, quickCheck } from '../../../utils/firebaseDiagnostics';
+import { runSimpleDiagnostics } from '../../../utils/simpleDiagnostics';
 import { Formik, Form, Field, ErrorMessage } from 'formik';
 import * as Yup from 'yup';
 import { useAuth } from '../../context/AuthContext';
@@ -43,6 +52,8 @@ const Login = () => {
   const [error, setError] = useState('');
   const [isInitializing, setIsInitializing] = useState(true);
   const [showDiagnostics, setShowDiagnostics] = useState(false);
+  const [diagnosticInfo, setDiagnosticInfo] = useState(null);
+  const [showDiagnosticModal, setShowDiagnosticModal] = useState(false);
   const navigate = useNavigate();
   const { handleLogin } = useAuth();
   const { isAPK } = usePlatform();
@@ -93,23 +104,33 @@ const Login = () => {
   const handleDiagnostics = async () => {
     try {
       setError('');
-      console.log('🔍 Ejecutando diagnóstico de Firebase...');
-      await runFirebaseDiagnostics();
+      setLoading(true);
+      console.log('🔍 Ejecutando diagnóstico completo...');
+      const diagnostics = await runSimpleDiagnostics();
+      setDiagnosticInfo(diagnostics);
+      setShowDiagnosticModal(true);
     } catch (error) {
       console.error('Error ejecutando diagnóstico:', error);
-      setError('Error ejecutando diagnóstico. Revisa la consola.');
+      setError(`Error ejecutando diagnóstico: ${error.message}`);
+    } finally {
+      setLoading(false);
     }
   };
 
   // Función para verificación rápida
-  const handleQuickCheck = () => {
+  const handleQuickCheck = async () => {
     try {
       setError('');
+      setLoading(true);
       console.log('⚡ Ejecutando verificación rápida...');
-      quickCheck();
+      const diagnostics = await runSimpleDiagnostics();
+      setDiagnosticInfo(diagnostics);
+      setShowDiagnosticModal(true);
     } catch (error) {
       console.error('Error en verificación rápida:', error);
-      setError('Error en verificación rápida. Revisa la consola.');
+      setError(`Error en verificación rápida: ${error.message}`);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -215,7 +236,23 @@ const Login = () => {
       }
     } catch (error) {
       console.error('Error en Google Auth:', error);
-      setError('Error al iniciar sesión con Google. Inténtalo de nuevo.');
+      
+      // Mostrar error más específico
+      let errorMessage = 'Error al iniciar sesión con Google. Inténtalo de nuevo.';
+      
+      if (error.code === 'auth/unauthorized-domain') {
+        errorMessage = 'Dominio no autorizado para Google OAuth. Verifica la configuración de Firebase.';
+      } else if (error.code === 'auth/network-request-failed') {
+        errorMessage = 'Error de red. Verifica tu conexión a internet.';
+      } else if (error.code === 'auth/popup-closed-by-user') {
+        errorMessage = 'Ventana de autenticación cerrada. Inténtalo de nuevo.';
+      } else if (error.code === 'auth/popup-blocked') {
+        errorMessage = 'Popup bloqueado por el navegador. Permite popups para este sitio.';
+      } else if (error.message) {
+        errorMessage = `Error: ${error.message}`;
+      }
+      
+      setError(errorMessage);
     }
     setLoading(false);
   };
@@ -394,6 +431,304 @@ const Login = () => {
           </Box>
         </CardContent>
       </Card>
+
+      {/* Modal de Diagnóstico */}
+      <Dialog 
+        open={showDiagnosticModal} 
+        onClose={() => setShowDiagnosticModal(false)}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>
+          🔍 Diagnóstico de Firebase - {diagnosticInfo?.platform || 'Desconocido'}
+        </DialogTitle>
+        <DialogContent>
+          {diagnosticInfo && (
+            <Box>
+              {/* Información básica */}
+              <Typography variant="h6" gutterBottom>
+                Información del Sistema
+              </Typography>
+              <Box sx={{ mb: 2 }}>
+                <Chip 
+                  label={`Plataforma: ${diagnosticInfo.platform}`} 
+                  color="primary" 
+                  sx={{ mr: 1, mb: 1 }}
+                />
+                <Chip 
+                  label={`Timestamp: ${new Date(diagnosticInfo.timestamp).toLocaleString()}`} 
+                  variant="outlined" 
+                  sx={{ mr: 1, mb: 1 }}
+                />
+              </Box>
+
+              {/* Configuración de Firebase */}
+              {diagnosticInfo.basicConfig?.checks?.firebase && (
+                <>
+                  <Typography variant="h6" gutterBottom>
+                    Configuración de Firebase
+                  </Typography>
+                  <List dense>
+                    <ListItem>
+                      <ListItemIcon>
+                        {diagnosticInfo.basicConfig.checks.firebase.projectId !== 'No configurado' ? <CheckCircle color="success" /> : <Error color="error" />}
+                      </ListItemIcon>
+                      <ListItemText 
+                        primary="Project ID" 
+                        secondary={diagnosticInfo.basicConfig.checks.firebase.projectId} 
+                      />
+                    </ListItem>
+                    <ListItem>
+                      <ListItemIcon>
+                        {diagnosticInfo.basicConfig.checks.firebase.authDomain !== 'No configurado' ? <CheckCircle color="success" /> : <Error color="error" />}
+                      </ListItemIcon>
+                      <ListItemText 
+                        primary="Auth Domain" 
+                        secondary={diagnosticInfo.basicConfig.checks.firebase.authDomain} 
+                      />
+                    </ListItem>
+                    <ListItem>
+                      <ListItemIcon>
+                        {diagnosticInfo.basicConfig.checks.firebase.appId !== 'No configurado' ? <CheckCircle color="success" /> : <Error color="error" />}
+                      </ListItemIcon>
+                      <ListItemText 
+                        primary="App ID" 
+                        secondary={diagnosticInfo.basicConfig.checks.firebase.appId} 
+                      />
+                    </ListItem>
+                    <ListItem>
+                      <ListItemIcon>
+                        {diagnosticInfo.basicConfig.checks.firebase.hasOAuth ? <CheckCircle color="success" /> : <Warning color="warning" />}
+                      </ListItemIcon>
+                      <ListItemText 
+                        primary="OAuth Configurado" 
+                        secondary={diagnosticInfo.basicConfig.checks.firebase.hasOAuth ? 'Sí' : 'No'} 
+                      />
+                    </ListItem>
+                  </List>
+                </>
+              )}
+
+              {/* Capacitor */}
+              {diagnosticInfo.basicConfig?.checks?.capacitor && (
+                <>
+                  <Typography variant="h6" gutterBottom>
+                    Capacitor
+                  </Typography>
+                  <List dense>
+                    <ListItem>
+                      <ListItemIcon>
+                        {diagnosticInfo.basicConfig.checks.capacitor.isNative ? <CheckCircle color="success" /> : <Warning color="warning" />}
+                      </ListItemIcon>
+                      <ListItemText 
+                        primary="Nativo" 
+                        secondary={diagnosticInfo.basicConfig.checks.capacitor.isNative ? 'Sí' : 'No'} 
+                      />
+                    </ListItem>
+                    <ListItem>
+                      <ListItemIcon>
+                        <Info color="info" />
+                      </ListItemIcon>
+                      <ListItemText 
+                        primary="Plataforma" 
+                        secondary={diagnosticInfo.basicConfig.checks.capacitor.platform} 
+                      />
+                    </ListItem>
+                  </List>
+                </>
+              )}
+
+              {/* Variables de entorno */}
+              {diagnosticInfo.basicConfig?.checks?.envVars && (
+                <>
+                  <Typography variant="h6" gutterBottom>
+                    Variables de Entorno
+                  </Typography>
+                  <List dense>
+                    {Object.entries(diagnosticInfo.basicConfig.checks.envVars).map(([key, value]) => (
+                      <ListItem key={key}>
+                        <ListItemIcon>
+                          {value ? <CheckCircle color="success" /> : <Warning color="warning" />}
+                        </ListItemIcon>
+                        <ListItemText 
+                          primary={key} 
+                          secondary={value ? 'Configurada' : 'Faltante'} 
+                        />
+                      </ListItem>
+                    ))}
+                  </List>
+                </>
+              )}
+
+              {/* Errores */}
+              {diagnosticInfo.basicConfig?.summary?.criticalIssues && diagnosticInfo.basicConfig.summary.criticalIssues.length > 0 && (
+                <>
+                  <Typography variant="h6" color="error" gutterBottom>
+                    ❌ Errores Críticos
+                  </Typography>
+                  <List dense>
+                    {diagnosticInfo.basicConfig.summary.criticalIssues.map((error, index) => (
+                      <ListItem key={index}>
+                        <ListItemIcon>
+                          <Error color="error" />
+                        </ListItemIcon>
+                        <ListItemText primary={error} />
+                      </ListItem>
+                    ))}
+                  </List>
+                </>
+              )}
+
+              {/* Advertencias */}
+              {diagnosticInfo.warnings && diagnosticInfo.warnings.length > 0 && (
+                <>
+                  <Typography variant="h6" color="warning.main" gutterBottom>
+                    ⚠️ Advertencias
+                  </Typography>
+                  <List dense>
+                    {diagnosticInfo.warnings.map((warning, index) => (
+                      <ListItem key={index}>
+                        <ListItemIcon>
+                          <Warning color="warning" />
+                        </ListItemIcon>
+                        <ListItemText primary={warning} />
+                      </ListItem>
+                    ))}
+                  </List>
+                </>
+              )}
+
+              {/* Recomendaciones */}
+              {diagnosticInfo.recommendations && diagnosticInfo.recommendations.length > 0 && (
+                <>
+                  <Typography variant="h6" color="info.main" gutterBottom>
+                    💡 Recomendaciones
+                  </Typography>
+                  <List dense>
+                    {diagnosticInfo.recommendations.map((rec, index) => (
+                      <ListItem key={index}>
+                        <ListItemIcon>
+                          <Info color="info" />
+                        </ListItemIcon>
+                        <ListItemText primary={rec} />
+                      </ListItem>
+                    ))}
+                  </List>
+                </>
+              )}
+
+              {/* Estado de OAuth */}
+              {diagnosticInfo.oauthConfig && (
+                <>
+                  <Typography variant="h6" gutterBottom>
+                    Estado de OAuth
+                  </Typography>
+                  <Box sx={{ mb: 2 }}>
+                    <Chip 
+                      label={diagnosticInfo.oauthConfig.status} 
+                      color={diagnosticInfo.oauthConfig.issues?.length > 0 ? 'error' : 'success'} 
+                      sx={{ mr: 1, mb: 1 }}
+                    />
+                  </Box>
+                  {diagnosticInfo.oauthConfig.oauth && (
+                    <List dense>
+                      <ListItem>
+                        <ListItemIcon>
+                          {diagnosticInfo.oauthConfig.oauth.hasScheme ? <CheckCircle color="success" /> : <Error color="error" />}
+                        </ListItemIcon>
+                        <ListItemText 
+                          primary="Scheme" 
+                          secondary={diagnosticInfo.oauthConfig.oauth.scheme} 
+                        />
+                      </ListItem>
+                      <ListItem>
+                        <ListItemIcon>
+                          {diagnosticInfo.oauthConfig.oauth.hasClientId ? <CheckCircle color="success" /> : <Error color="error" />}
+                        </ListItemIcon>
+                        <ListItemText 
+                          primary="Client ID" 
+                          secondary={diagnosticInfo.oauthConfig.oauth.clientId} 
+                        />
+                      </ListItem>
+                    </List>
+                  )}
+                  {diagnosticInfo.oauthConfig.issues && diagnosticInfo.oauthConfig.issues.length > 0 && (
+                    <List dense>
+                      {diagnosticInfo.oauthConfig.issues.map((issue, index) => (
+                        <ListItem key={index}>
+                          <ListItemIcon>
+                            <Warning color="warning" />
+                          </ListItemIcon>
+                          <ListItemText primary={issue} />
+                        </ListItem>
+                      ))}
+                    </List>
+                  )}
+                </>
+              )}
+
+              {/* Conectividad de Red */}
+              {diagnosticInfo.networkConfig && (
+                <>
+                  <Typography variant="h6" gutterBottom>
+                    Conectividad de Red
+                  </Typography>
+                  <Box sx={{ mb: 2 }}>
+                    <Chip 
+                      label={`Conectividad: ${diagnosticInfo.networkConfig.summary?.connectivityPercentage || 0}%`} 
+                      color={diagnosticInfo.networkConfig.summary?.connectivityPercentage === 100 ? 'success' : 'warning'} 
+                      sx={{ mr: 1, mb: 1 }}
+                    />
+                  </Box>
+                  {diagnosticInfo.networkConfig.checks && (
+                    <List dense>
+                      {Object.entries(diagnosticInfo.networkConfig.checks).map(([service, check]) => (
+                        <ListItem key={service}>
+                          <ListItemIcon>
+                            {check.accessible ? <CheckCircle color="success" /> : <Error color="error" />}
+                          </ListItemIcon>
+                          <ListItemText 
+                            primary={service} 
+                            secondary={check.accessible ? 'Accesible' : `No accesible: ${check.error || 'Error desconocido'}`} 
+                          />
+                        </ListItem>
+                      ))}
+                    </List>
+                  )}
+                </>
+              )}
+
+              {/* Resumen General */}
+              {diagnosticInfo.summary && (
+                <>
+                  <Typography variant="h6" gutterBottom>
+                    Resumen General
+                  </Typography>
+                  <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                    <Chip 
+                      label={`Problemas Críticos: ${diagnosticInfo.summary.criticalIssuesCount || 0}`} 
+                      color={diagnosticInfo.summary.criticalIssuesCount > 0 ? 'error' : 'success'} 
+                    />
+                    <Chip 
+                      label={`OAuth: ${diagnosticInfo.summary.oauthStatus}`} 
+                      color={diagnosticInfo.summary.oauthStatus?.includes('✅') ? 'success' : 'error'} 
+                    />
+                    <Chip 
+                      label={`Red: ${diagnosticInfo.summary.networkConnectivity}%`} 
+                      color={diagnosticInfo.summary.networkConnectivity === 100 ? 'success' : 'warning'} 
+                    />
+                  </Box>
+                </>
+              )}
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowDiagnosticModal(false)}>
+            Cerrar
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };
