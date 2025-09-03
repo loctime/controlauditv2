@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Configuración de OAuth para Google Auth -->
+    <string name="oauth_redirect_scheme" translatable="false">com.controlaudit.app</string>
+    <string name="oauth_redirect_host" translatable="false">oauth</string>
+    <string name="oauth_redirect_path" translatable="false">/callback</string>
+    
+    <!-- Configuración de Google Auth -->
+    <string name="google_web_client_id" translatable="false">909876364192-dhqhd9k0h0qkidt4p4pv4ck3utgob7pt.apps.googleusercontent.com</string>
+    <string name="google_oauth_client_id" translatable="false">909876364192-dhqhd9k0h0qkidt4p4pv4ck3utgob7pt.apps.googleusercontent.com</string>
+    
+    <!-- URLs de OAuth -->
+    <string name="oauth_authorization_url" translatable="false">https://accounts.google.com/o/oauth2/auth</string>
+    <string name="oauth_token_url" translatable="false">https://oauth2.googleapis.com/token</string>
+    <string name="oauth_userinfo_url" translatable="false">https://www.googleapis.com/oauth2/v2/userinfo</string>
+</resources>

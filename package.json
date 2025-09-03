@@ -9,6 +9,7 @@
     "dev:staging": "vite --mode staging",
     "dev:production": "vite --mode production",
     "build": "vite build",
+    "build:capacitor": "vite build --config vite.capacitor.config.js",
     "build:staging": "vite build --mode staging",
     "build:production": "vite build --mode production",
     "preview": "vite preview",
@@ -29,10 +30,10 @@
     "cap:open:ios": "npx cap open ios",
     "cap:run:android": "npx cap run android",
     "cap:run:ios": "npx cap run ios",
-    "fer": "npm run build && cd android && gradlew clean && cd .. && npx cap sync && android\\auto-fix-java.bat && cd android && gradlew assembleDebug && cd ..",
+    "fer": "npm run build:capacitor && cd android && gradlew clean && cd .. && npx cap sync && android\\auto-fix-java.bat && cd android && gradlew assembleDebug && cd ..",
     "fer:fast": "node scripts/build-apk-optimized.js",
     "die": "node scripts/release.js",
-    "android:dev": "npm run build && npx cap sync && android\\auto-fix-java.bat && npx cap run android",
+    "android:dev": "npm run build:capacitor && npx cap sync && android\\auto-fix-java.bat && npx cap run android",
     "android:build": "npm run build && cd android && gradlew clean && cd .. && npx cap sync && android\\auto-fix-java.bat && cd android && gradlew assembleDebug && cd ..",
     "android:clean": "cd android && gradlew clean && cd ..",
     "dev:web": "vite",
@@ -43,7 +44,8 @@
     "optimize": "npm run clean && npm run build",
     "setup:repo": "node scripts/setup-public-repo.js",
     "setup:google-oauth": "node scripts/setup-google-oauth.js",
-    "setup:java": "scripts\\setup-java-env.bat"
+    "setup:java": "scripts\\setup-java-env.bat",
+    "fix:capacitor": "node scripts/fix-capacitor-modules.js"
   },
   "dependencies": {
     "@capacitor/android": "^7.4.2",

@@ -201,21 +201,17 @@ export const signInWithGoogleSimple = async () => {
       console.log('📱 APK detectado, usando plugin oficial de Capacitor...');
       
       try {
-        // ✅ Importar SOLO el plugin oficial de Capacitor
-        const { GoogleAuth } = await import('@southdevs/capacitor-google-auth');
+        // ✅ Usar la nueva utilidad específica para Capacitor
+        const { signInWithCapacitorGoogle } = await import('./utils/capacitorGoogleAuth');
         
-        // ✅ Inicializar Google Auth (la configuración viene de capacitor.config.ts)
-        await GoogleAuth.initialize();
-        console.log('✅ Google Auth inicializado correctamente');
-        
-        // ✅ Iniciar sesión nativa
-        const result = await GoogleAuth.signIn();
+        // ✅ Ejecutar inicio de sesión nativo
+        const result = await signInWithCapacitorGoogle();
         console.log('📱 Resultado de Google Auth nativo:', result);
         
-        if (result?.authentication?.idToken) {
+        if (result?.idToken) {
           // ✅ Crear credencial de Firebase con el idToken
           const { GoogleAuthProvider, signInWithCredential } = await import('firebase/auth');
-          const credential = GoogleAuthProvider.credential(result.authentication.idToken);
+          const credential = GoogleAuthProvider.credential(result.idToken);
           
           // ✅ Iniciar sesión en Firebase
           const firebaseResult = await signInWithCredential(auth, credential);

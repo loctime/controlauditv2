@@ -3,6 +3,14 @@
     <string name="app_name">ControlAudit</string>
     <string name="title_activity_main">ControlAudit</string>
     
-    <!-- Google Auth Configuration -->
-    <string name="default_web_client_id">909876364192-akleu8n2p915ovgum0jsnuhcckeavp9t.apps.googleusercontent.com</string>
+    <!-- Configuración de Google Auth -->
+    <string name="default_web_client_id">909876364192-dhqhd9k0h0qkidt4p4pv4ck3utgob7pt.apps.googleusercontent.com</string>
+    <string name="google_app_id">1:909876364192:android:your_android_app_id</string>
+    
+    <!-- Configuración de OAuth -->
+    <string name="oauth_redirect_scheme">com.controlaudit.app</string>
+    <string name="oauth_redirect_host">oauth</string>
+    
+    <!-- Configuración específica para Capacitor -->
+    <string name="capacitor_google_auth_client_id">909876364192-dhqhd9k0h0qkidt4p4pv4ck3utgob7pt.apps.googleusercontent.com</string>
 </resources>

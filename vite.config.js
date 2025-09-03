@@ -56,29 +56,18 @@ export default defineConfig(({ command, mode }) => {
         include: [/node_modules/],
         transformMixedEsModules: true
       },
+      // Configuración específica para Capacitor
+      target: 'es2020',
+      modulePreload: false,
       rollupOptions: {
-        // Solo excluir módulos de Capacitor en producción, no en desarrollo
-        external: isProduction ? [
-          '@capacitor/core',
-          '@capacitor/app',
-          '@capacitor/browser',
-          '@capacitor/camera',
-          '@capacitor/device',
-          '@capacitor/filesystem',
-          '@capacitor/geolocation',
-          '@capacitor/haptics',
-          '@capacitor/keyboard',
-          '@capacitor/local-notifications',
-          '@capacitor/network',
-          '@capacitor/push-notifications',
-          '@capacitor/screen-reader',
-          '@capacitor/share',
-          '@capacitor/splash-screen',
-          '@capacitor/status-bar',
-          '@capacitor/storage',
-          '@capacitor/toast'
-        ] : [],
+        // No excluir módulos de Capacitor para evitar problemas en APK
+        external: [],
         output: {
+          // Configuración específica para Capacitor
+          format: 'es',
+          entryFileNames: '[name]-[hash].js',
+          chunkFileNames: '[name]-[hash].js',
+          assetFileNames: '[name]-[hash].[ext]',
           manualChunks: {
             // Core React
             'react-vendor': ['react', 'react-dom'],
@@ -135,7 +124,9 @@ export default defineConfig(({ command, mode }) => {
     resolve: {
       alias: {
         '@': resolve(__dirname, 'src')
-      }
+      },
+      // Resolver módulos de Capacitor correctamente
+      dedupe: ['@capacitor/core']
     },
     // Optimización de assets
     assetsInclude: ['**/*.png', '**/*.jpg', '**/*.jpeg', '**/*.gif', '**/*.svg', '**/*.woff', '**/*.woff2'],
