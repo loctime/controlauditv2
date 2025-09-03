@@ -332,14 +332,7 @@ const Login = () => {
               <Button
                 variant="text"
                 size="small"
-                onClick={async () => {
-                  try {
-                    const { logGoogleAuthDiagnostics } = await import('../../../utils/googleAuthDiagnostics');
-                    await logGoogleAuthDiagnostics();
-                  } catch (error) {
-                    console.error('Error ejecutando diagnóstico de Google Auth:', error);
-                  }
-                }}
+                onClick={() => setShowGoogleAuthModal(true)}
                 sx={{ 
                   color: 'text.secondary',
                   fontSize: '0.75rem',
