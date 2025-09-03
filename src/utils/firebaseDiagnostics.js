@@ -1,259 +1,225 @@
 // src/utils/firebaseDiagnostics.js
-// Utilidades de diagnóstico para Firebase en APK
+// Diagnóstico completo de Firebase para APK y Web
 
-import { FIREBASE_APK_CONFIG, validateAPKConfig } from '../config/firebaseAPK';
+import { FIREBASE_APK_CONFIG } from '../config/firebaseAPK';
+import { FIREBASE_CONFIG } from '../config/environment';
 
-// Función para detectar si estamos en APK
-export const isAPK = () => {
-  return typeof window !== 'undefined' && 
-         window.Capacitor && 
-         window.Capacitor.isNative;
-};
-
-// Función para verificar la configuración completa de Firebase
-export const runFirebaseDiagnostics = async () => {
-  console.log('🔍 Iniciando diagnóstico de Firebase...');
-  
+// Función para ejecutar diagnóstico completo de Firebase
+export const runFirebaseDiagnostics = () => {
   const diagnostics = {
     timestamp: new Date().toISOString(),
-    platform: isAPK() ? 'APK' : 'Web',
-    firebaseConfig: {},
-    errors: [],
-    warnings: [],
+    platform: detectPlatform(),
+    firebaseConfig: getFirebaseConfig(),
+    oauthConfig: getOAuthConfig(),
+    environmentVariables: getEnvironmentVariables(),
+    issues: [],
     recommendations: []
   };
-  
-  try {
-    // 1. Verificar configuración básica
-    console.log('📋 Verificando configuración básica...');
-    const configValid = validateAPKConfig();
-    if (!configValid) {
-      diagnostics.errors.push('Configuración de Firebase APK inválida');
-    } else {
-      diagnostics.firebaseConfig = {
-        projectId: FIREBASE_APK_CONFIG.projectId,
-        authDomain: FIREBASE_APK_CONFIG.authDomain,
-        appId: FIREBASE_APK_CONFIG.appId,
-        hasOAuth: !!FIREBASE_APK_CONFIG.oauth
-      };
-    }
-    
-    // 2. Verificar Capacitor
-    console.log('📱 Verificando Capacitor...');
-    if (isAPK()) {
-      if (window.Capacitor) {
-        diagnostics.firebaseConfig.capacitor = {
-          version: window.Capacitor.getVersion(),
-          isNative: window.Capacitor.isNative,
-          platform: window.Capacitor.getPlatform()
-        };
-      } else {
-        diagnostics.errors.push('Capacitor no está disponible');
-      }
-    }
-    
-    // 3. Verificar variables de entorno
-    console.log('🌍 Verificando variables de entorno...');
-    const envVars = {
-      VITE_FIREBASE_API_KEY: !!import.meta.env?.VITE_FIREBASE_API_KEY,
-      VITE_FIREBASE_AUTH_DOMAIN: !!import.meta.env?.VITE_FIREBASE_AUTH_DOMAIN,
-      VITE_FIREBASE_PROJECT_ID: !!import.meta.env?.VITE_FIREBASE_PROJECT_ID,
-      VITE_FIREBASE_APP_ID: !!import.meta.env?.VITE_FIREBASE_APP_ID
-    };
-    
-    diagnostics.firebaseConfig.envVars = envVars;
-    
-    const missingEnvVars = Object.entries(envVars)
-      .filter(([key, value]) => !value)
-      .map(([key]) => key);
-    
-    if (missingEnvVars.length > 0) {
-      diagnostics.warnings.push(`Variables de entorno faltantes: ${missingEnvVars.join(', ')}`);
-    }
-    
-    // 4. Verificar Firebase Auth
-    console.log('🔥 Verificando Firebase Auth...');
-    try {
-      const { getAuth } = await import('firebase/auth');
-      const { auth } = await import('../firebaseConfig');
-      
-      if (auth) {
-        diagnostics.firebaseConfig.auth = {
-          isInitialized: !!auth,
-          currentUser: auth.currentUser ? 'Sí' : 'No',
-          config: auth.config ? 'Configurado' : 'No configurado'
-        };
-      } else {
-        diagnostics.errors.push('Firebase Auth no está inicializado');
-      }
-    } catch (error) {
-      diagnostics.errors.push(`Error verificando Firebase Auth: ${error.message}`);
-    }
-    
-    // 5. Verificar OAuth
-    console.log('🔐 Verificando configuración OAuth...');
-    if (isAPK()) {
-      const oauthConfig = FIREBASE_APK_CONFIG.oauth;
-      if (oauthConfig) {
-        diagnostics.firebaseConfig.oauth = {
-          scheme: oauthConfig.scheme,
-          clientId: oauthConfig.clientId ? 'Configurado' : 'No configurado'
-        };
-        
-        if (!oauthConfig.clientId) {
-          diagnostics.warnings.push('Client ID de OAuth no configurado');
-        }
-      } else {
-        diagnostics.warnings.push('Configuración OAuth no encontrada');
-      }
-    }
-    
-    // 6. Generar recomendaciones
-    console.log('💡 Generando recomendaciones...');
-    if (diagnostics.errors.length > 0) {
-      diagnostics.recommendations.push('Revisa los errores críticos antes de continuar');
-    }
-    
-    if (diagnostics.warnings.length > 0) {
-      diagnostics.recommendations.push('Considera resolver las advertencias para mejor funcionamiento');
-    }
-    
-    if (isAPK() && !diagnostics.firebaseConfig.oauth?.clientId) {
-      diagnostics.recommendations.push('Configura el Client ID de OAuth en firebaseAPK.js');
-    }
-    
-    if (missingEnvVars.length > 0) {
-      diagnostics.recommendations.push('Configura las variables de entorno faltantes en .env.local');
-    }
-    
-    // 7. Verificar red
-    console.log('🌐 Verificando conectividad...');
-    try {
-      const response = await fetch('https://www.googleapis.com/discovery/v1/apis');
-      if (response.ok) {
-        diagnostics.firebaseConfig.network = 'Conectado a Google APIs';
-      } else {
-        diagnostics.warnings.push('Problemas de conectividad con Google APIs');
-      }
-    } catch (error) {
-      diagnostics.warnings.push(`Error de red: ${error.message}`);
-    }
-    
-  } catch (error) {
-    diagnostics.errors.push(`Error durante el diagnóstico: ${error.message}`);
-  }
-  
+
+  // Analizar configuración
+  analyzeConfiguration(diagnostics);
+
   // Mostrar resultados
-  console.log('📊 Resultados del diagnóstico de Firebase:');
-  console.table(diagnostics);
+  displayDiagnostics(diagnostics);
+
+  return diagnostics;
+};
+
+// Detectar plataforma
+const detectPlatform = () => {
+  if (typeof window !== 'undefined') {
+    if (window.Capacitor && window.Capacitor.isNative) {
+      return 'APK';
+    } else if (/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+      return 'Mobile Web';
+    } else {
+      return 'Desktop Web';
+    }
+  }
+  return 'Unknown';
+};
+
+// Obtener configuración de Firebase
+const getFirebaseConfig = () => {
+  const platform = detectPlatform();
   
-  if (diagnostics.errors.length > 0) {
-    console.error('❌ Errores críticos:', diagnostics.errors);
+  if (platform === 'APK') {
+    return {
+      apiKey: FIREBASE_APK_CONFIG.apiKey,
+      authDomain: FIREBASE_APK_CONFIG.authDomain,
+      projectId: FIREBASE_APK_CONFIG.projectId,
+      storageBucket: FIREBASE_APK_CONFIG.storageBucket,
+      messagingSenderId: FIREBASE_APK_CONFIG.messagingSenderId,
+      appId: FIREBASE_APK_CONFIG.appId
+    };
+  } else {
+    return {
+      apiKey: FIREBASE_CONFIG.API_KEY,
+      authDomain: FIREBASE_CONFIG.AUTH_DOMAIN,
+      projectId: FIREBASE_CONFIG.PROJECT_ID,
+      storageBucket: FIREBASE_CONFIG.STORAGE_BUCKET,
+      messagingSenderId: FIREBASE_CONFIG.MESSAGING_SENDER_ID,
+      appId: FIREBASE_CONFIG.APP_ID
+    };
+  }
+};
+
+// Obtener configuración de OAuth
+const getOAuthConfig = () => {
+  const platform = detectPlatform();
+  
+  if (platform === 'APK') {
+    return {
+      scheme: FIREBASE_APK_CONFIG.oauth.scheme,
+      androidClientId: FIREBASE_APK_CONFIG.oauth.androidClientId,
+      webClientId: FIREBASE_APK_CONFIG.oauth.webClientId
+    };
+  } else {
+    return {
+      platform: 'Web',
+      note: 'OAuth configurado automáticamente por Firebase'
+    };
+  }
+};
+
+// Obtener variables de entorno
+const getEnvironmentVariables = () => {
+  const vars = {};
+  
+  if (typeof import.meta !== 'undefined' && import.meta.env) {
+    const firebaseVars = Object.keys(import.meta.env).filter(key => 
+      key.startsWith('VITE_FIREBASE_')
+    );
+    
+    firebaseVars.forEach(key => {
+      vars[key] = import.meta.env[key] || 'Faltante';
+    });
   }
   
-  if (diagnostics.warnings.length > 0) {
-    console.warn('⚠️ Advertencias:', diagnostics.warnings);
+  return vars;
+};
+
+// Analizar configuración
+const analyzeConfiguration = (diagnostics) => {
+  const platform = diagnostics.platform;
+  
+  if (platform === 'APK') {
+    // Verificar configuración de APK
+    const requiredKeys = ['apiKey', 'authDomain', 'projectId', 'appId'];
+    const missingKeys = requiredKeys.filter(key => !diagnostics.firebaseConfig[key]);
+    
+    if (missingKeys.length > 0) {
+      diagnostics.issues.push(`Variables de Firebase faltantes: ${missingKeys.join(', ')}`);
+      diagnostics.recommendations.push('Verificar configuración en firebaseAPK.js');
+    }
+    
+    // Verificar OAuth
+    if (!diagnostics.oauthConfig.androidClientId || !diagnostics.oauthConfig.webClientId) {
+      diagnostics.issues.push('Configuración de OAuth incompleta');
+      diagnostics.recommendations.push('Verificar Client IDs en firebaseAPK.js');
+    }
+    
+  } else {
+    // Verificar configuración web
+    const envVars = Object.values(diagnostics.environmentVariables);
+    const missingVars = envVars.filter(value => value === 'Faltante');
+    
+    if (missingVars.length > 0) {
+      diagnostics.issues.push(`${missingVars.length} variables de entorno faltantes`);
+      diagnostics.recommendations.push('Verificar archivo .env');
+    }
+  }
+  
+  // Verificar conectividad
+  if (platform === 'APK') {
+    diagnostics.recommendations.push('Verificar que google-services.json esté actualizado');
+    diagnostics.recommendations.push('Verificar huellas SHA-1/SHA-256 en Firebase Console');
+  }
+};
+
+// Mostrar diagnóstico
+const displayDiagnostics = (diagnostics) => {
+  console.group('🔍 Diagnóstico de Firebase');
+  console.log('📱 Plataforma:', diagnostics.platform);
+  console.log('⏰ Timestamp:', diagnostics.timestamp);
+  
+  console.group('🔥 Configuración de Firebase');
+  console.table(diagnostics.firebaseConfig);
+  console.groupEnd();
+  
+  console.group('🔐 Configuración de OAuth');
+  console.table(diagnostics.oauthConfig);
+  console.groupEnd();
+  
+  if (Object.keys(diagnostics.environmentVariables).length > 0) {
+    console.group('🌍 Variables de Entorno');
+    console.table(diagnostics.environmentVariables);
+    console.groupEnd();
+  }
+  
+  if (diagnostics.issues.length > 0) {
+    console.group('❌ Problemas Detectados');
+    diagnostics.issues.forEach(issue => console.warn(issue));
+    console.groupEnd();
   }
   
   if (diagnostics.recommendations.length > 0) {
-    console.log('💡 Recomendaciones:', diagnostics.recommendations);
+    console.group('💡 Recomendaciones');
+    diagnostics.recommendations.forEach(rec => console.info(rec));
+    console.groupEnd();
   }
   
-  return diagnostics;
+  console.groupEnd();
 };
 
-// Función para verificar configuración específica de OAuth
-export const checkOAuthConfiguration = () => {
-  console.log('🔐 Verificando configuración OAuth...');
+// Función para verificar conectividad
+export const checkConnectivity = async () => {
+  const endpoints = [
+    { name: 'googleAPIs', url: 'https://www.googleapis.com' },
+    { name: 'firebase', url: 'https://firebase.google.com' }
+  ];
   
-  const checks = {
-    isAPK: isAPK(),
-    hasOAuthConfig: !!FIREBASE_APK_CONFIG.oauth,
-    hasClientId: !!FIREBASE_APK_CONFIG.oauth?.clientId,
-    hasScheme: !!FIREBASE_APK_CONFIG.oauth?.scheme,
-    schemeValue: FIREBASE_APK_CONFIG.oauth?.scheme || 'No configurado',
-    clientIdValue: FIREBASE_APK_CONFIG.oauth?.clientId || 'No configurado'
+  const results = [];
+  
+  for (const endpoint of endpoints) {
+    try {
+      const response = await fetch(endpoint.url, { 
+        method: 'HEAD',
+        mode: 'no-cors'
+      });
+      results.push({
+        name: endpoint.name,
+        status: 'Accesible',
+        accessible: true
+      });
+    } catch (error) {
+      results.push({
+        name: endpoint.name,
+        status: 'No accesible: Failed to fetch',
+        accessible: false,
+        error: error.message
+      });
+    }
+  }
+  
+  return results;
+};
+
+// Función para obtener resumen general
+export const getGeneralSummary = (diagnostics, connectivityResults) => {
+  const criticalProblems = diagnostics.issues.length;
+  const networkConnectivity = connectivityResults ? 
+    Math.round((connectivityResults.filter(r => r.accessible).length / connectivityResults.length) * 100) : 0;
+  
+  const oauthStatus = diagnostics.platform === 'APK' && 
+    diagnostics.oauthConfig.androidClientId && 
+    diagnostics.oauthConfig.webClientId ? 'Configurado' : 'Desconocido';
+  
+  return {
+    criticalProblems,
+    networkConnectivity: `${networkConnectivity}%`,
+    oauthStatus
   };
-  
-  console.table(checks);
-  
-  if (!checks.isAPK) {
-    console.log('ℹ️ No estás en APK, OAuth no es necesario');
-    return checks;
-  }
-  
-  if (!checks.hasOAuthConfig) {
-    console.error('❌ Configuración OAuth no encontrada');
-    return checks;
-  }
-  
-  if (!checks.hasClientId) {
-    console.error('❌ Client ID de OAuth no configurado');
-    return checks;
-  }
-  
-  if (!checks.hasScheme) {
-    console.error('❌ Scheme de OAuth no configurado');
-    return checks;
-  }
-  
-  console.log('✅ Configuración OAuth válida');
-  return checks;
 };
 
-// Función para exportar diagnóstico como JSON
-export const exportDiagnostics = async () => {
-  const diagnostics = await runFirebaseDiagnostics();
-  const jsonString = JSON.stringify(diagnostics, null, 2);
-  
-  // Crear blob para descarga
-  const blob = new Blob([jsonString], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  
-  // Crear enlace de descarga
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `firebase-diagnostics-${new Date().toISOString().split('T')[0]}.json`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  
-  // Limpiar URL
-  URL.revokeObjectURL(url);
-  
-  console.log('📥 Diagnóstico exportado como JSON');
-  return diagnostics;
-};
-
-// Función para verificación rápida
-export const quickCheck = () => {
-  console.log('⚡ Verificación rápida de Firebase...');
-  
-  const quickResults = {
-    platform: isAPK() ? 'APK' : 'Web',
-    hasConfig: validateAPKConfig(),
-    hasOAuth: !!FIREBASE_APK_CONFIG.oauth,
-    hasCapacitor: !!(typeof window !== 'undefined' && window.Capacitor)
-  };
-  
-  console.table(quickResults);
-  
-  if (quickResults.platform === 'APK' && !quickResults.hasConfig) {
-    console.error('❌ APK detectada pero configuración inválida');
-  }
-  
-  if (quickResults.platform === 'APK' && !quickResults.hasOAuth) {
-    console.error('❌ APK detectada pero OAuth no configurado');
-  }
-  
-  return quickResults;
-};
-
-// Exportar funciones principales
-export default {
-  runFirebaseDiagnostics,
-  checkOAuthConfiguration,
-  exportDiagnostics,
-  quickCheck,
-  isAPK
-};
+export default runFirebaseDiagnostics;

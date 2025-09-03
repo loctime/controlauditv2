@@ -53,8 +53,10 @@ if (isCapacitorAPK) {
   // ✅ Configurar en el objeto de configuración global para referencia
   if (typeof window !== 'undefined') {
     window.FIREBASE_APK_CONFIG = {
-      authDomain: 'controlstorage-eb796.firebaseapp.com',
-      scheme: 'com.controlaudit.app'
+      authDomain: FIREBASE_APK_CONFIG.authDomain,
+      scheme: FIREBASE_APK_CONFIG.oauth.scheme,
+      androidClientId: FIREBASE_APK_CONFIG.oauth.androidClientId,
+      webClientId: FIREBASE_APK_CONFIG.oauth.webClientId
     };
     console.log('📱 Configuración global de Firebase para APK establecida');
   }
