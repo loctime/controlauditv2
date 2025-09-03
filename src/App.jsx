@@ -18,6 +18,7 @@ import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { initializeSafeAreas } from './utils/safeAreaUtils';
 import { Box, Typography } from '@mui/material';
+import ErrorBoundary from './components/common/ErrorBoundary';
 // ControlFileInfo obsoleto - ahora se usa backend compartido
 
 const App = () => {
@@ -27,35 +28,37 @@ const App = () => {
   }, []);
 
   return (
-    <ColorModeProvider>
-      <AuthContextComponent>
-        <LocalizationProvider dateAdapter={AdapterDayjs}>
-          <BrowserRouter>
-            <div className="main-app-container">
-              <AppRouter />
-              <ToastContainer
-                position="top-right"
-                autoClose={5000}
-                hideProgressBar={false}
-                newestOnTop={false}
-                closeOnClick
-                rtl={false}
-                pauseOnFocusLoss
-                draggable
-                pauseOnHover
-                theme="light"
-              />
-                      {/* ✅ Footer con información del sistema */}
-        <Box sx={{ textAlign: 'center', py: 2, color: 'text.secondary' }}>
-          <Typography variant="body2">
-            ControlAudit v2 - Sistema de Auditorías Multi-Tenant
-          </Typography>
-        </Box>
-            </div>
-          </BrowserRouter>
-        </LocalizationProvider>
-      </AuthContextComponent>
-    </ColorModeProvider>
+    <ErrorBoundary>
+      <ColorModeProvider>
+        <AuthContextComponent>
+          <LocalizationProvider dateAdapter={AdapterDayjs}>
+            <BrowserRouter>
+              <div className="main-app-container">
+                <AppRouter />
+                <ToastContainer
+                  position="top-right"
+                  autoClose={5000}
+                  hideProgressBar={false}
+                  newestOnTop={false}
+                  closeOnClick
+                  rtl={false}
+                  pauseOnFocusLoss
+                  draggable
+                  pauseOnHover
+                  theme="light"
+                />
+                        {/* ✅ Footer con información del sistema */}
+          <Box sx={{ textAlign: 'center', py: 2, color: 'text.secondary' }}>
+            <Typography variant="body2">
+              ControlAudit v2 - Sistema de Auditorías Multi-Tenant
+            </Typography>
+          </Box>
+              </div>
+            </BrowserRouter>
+          </LocalizationProvider>
+        </AuthContextComponent>
+      </ColorModeProvider>
+    </ErrorBoundary>
   );
 };
 

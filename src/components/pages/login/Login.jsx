@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Box, 
   Button, 
@@ -29,6 +29,7 @@ import { useAuth } from '../../context/AuthContext';
 import SmartAPKDownload from '../../common/SmartAPKDownload.jsx';
 
 import { usePlatform } from '../../../hooks/usePlatform.js';
+import LoadingScreen from '../../common/LoadingScreen';
 
 const Login = () => {
   const theme = useTheme();
@@ -38,6 +39,7 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [isInitializing, setIsInitializing] = useState(true);
   const navigate = useNavigate();
   const { handleLogin } = useAuth();
   const { isAPK } = usePlatform();
@@ -45,21 +47,40 @@ const Login = () => {
   // Inicializar Google Auth nativo cuando se carga el componente
   useEffect(() => {
     const initGoogleAuth = async () => {
-      if (isAPK && isGoogleAuthNativeAvailable()) {
-        try {
+      try {
+        if (isAPK && isGoogleAuthNativeAvailable()) {
           console.log('📱 Inicializando Google Auth nativo al cargar...');
           await initializeGoogleAuth();
           console.log('✅ Google Auth nativo inicializado correctamente');
-        } catch (error) {
-          console.warn('⚠️ Error inicializando Google Auth nativo:', error);
         }
+      } catch (error) {
+        console.warn('⚠️ Error inicializando Google Auth nativo:', error);
+      } finally {
+        // Siempre marcar como inicializado, incluso si falla
+        setIsInitializing(false);
       }
     };
 
-    initGoogleAuth();
+    // Simular un tiempo mínimo de carga para evitar parpadeos
+    const timer = setTimeout(() => {
+      initGoogleAuth();
+    }, 1000);
+
+    return () => clearTimeout(timer);
   }, [isAPK]);
 
   const handleClickShowPassword = () => setShowPassword(!showPassword);
+
+  // Mostrar pantalla de carga mientras se inicializa
+  if (isInitializing) {
+    return (
+      <LoadingScreen 
+        message="Inicializando ControlAudit..." 
+        showProgress={true}
+        progress={50}
+      />
+    );
+  }
 
   const initialValues = {
     email: '',

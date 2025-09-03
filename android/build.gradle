@@ -7,7 +7,7 @@ buildscript {
         mavenCentral()
     }
     dependencies {
-        classpath 'com.android.tools.build:gradle:8.12.1'
+        classpath 'com.android.tools.build:gradle:8.12.2'
         // Actualizar a la versión más reciente de Google Services
         classpath 'com.google.gms:google-services:4.4.3'
 
