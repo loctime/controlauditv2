@@ -321,11 +321,34 @@ const Login = () => {
                   color: 'text.secondary',
                   fontSize: '0.75rem',
                   minWidth: 'auto',
-                  px: 1
+                  px: 1,
+                  mr: 1
                 }}
               >
                 🔍 Diagnóstico Firebase
               </FirebaseDiagnosticButton>
+              
+              {/* ✅ Botón de Diagnóstico de Google Auth */}
+              <Button
+                variant="text"
+                size="small"
+                onClick={async () => {
+                  try {
+                    const { logGoogleAuthDiagnostics } = await import('../../../utils/googleAuthDiagnostics');
+                    await logGoogleAuthDiagnostics();
+                  } catch (error) {
+                    console.error('Error ejecutando diagnóstico de Google Auth:', error);
+                  }
+                }}
+                sx={{ 
+                  color: 'text.secondary',
+                  fontSize: '0.75rem',
+                  minWidth: 'auto',
+                  px: 1
+                }}
+              >
+                🔐 Diagnóstico Google Auth
+              </Button>
             </Box>
             
             <Divider sx={{ my: 2 }}>

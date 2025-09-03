@@ -193,45 +193,74 @@ export const signInWithGoogleSimple = async () => {
       throw new Error('Firebase Auth no está disponible');
     }
     
-    // ✅ Crear provider de Google
-    const provider = new GoogleAuthProvider();
-    provider.addScope('email');
-    provider.addScope('profile');
-    
     // ✅ Detectar plataforma
     const isAPKPlatform = isAPK();
     console.log('📱 ¿Es APK?', isAPKPlatform);
     
     if (isAPKPlatform) {
-      console.log('📱 APK detectado, usando redirect...');
+      console.log('📱 APK detectado, usando Google Auth nativo...');
       
-      // ✅ Para APK: usar redirect con URI específico
-      // IMPORTANTE: Usar el dominio exacto de Firebase, NO localhost
-      const redirectUri = 'https://controlstorage-eb796.firebaseapp.com/__/auth/handler';
-      console.log('📱 Redirect URI configurado:', redirectUri);
-      
-      // ✅ Configurar provider con parámetros específicos para APK
-      provider.setCustomParameters({
-        prompt: 'select_account',
-        redirect_uri: redirectUri,
-        // ✅ Usar el mismo client ID que está en capacitor.config.ts
-        client_id: '909876364192-dhqhd9k0h0qkidt4p4pv4ck3utgob7pt.apps.googleusercontent.com'
-      });
-      
-      // ✅ Iniciar redirect
-      await signInWithRedirect(auth, provider);
-      console.log('📱 Redirect iniciado correctamente');
-      
-      return { 
-        success: true, 
-        message: 'Redireccionando a Google...',
-        pendingRedirect: true 
-      };
+      // ✅ Para APK: usar el plugin nativo de Capacitor
+      try {
+        // Importar dinámicamente para evitar errores en web
+        const { GoogleAuth } = await import('@southdevs/capacitor-google-auth');
+        
+        // ✅ Importar configuración de APK para obtener el Web Client ID correcto
+        const { FIREBASE_APK_CONFIG } = await import('./config/firebaseAPK');
+        const webClientId = FIREBASE_APK_CONFIG.oauth.webClientId;
+        
+        console.log('📱 Web Client ID configurado:', webClientId);
+        
+        // Inicializar Google Auth
+        await GoogleAuth.initialize({
+          clientId: webClientId,
+          scopes: ['email', 'profile']
+        });
+        
+        // Iniciar sesión nativa
+        const result = await GoogleAuth.signIn();
+        console.log('📱 Resultado de Google Auth nativo:', result);
+        
+        if (result?.authentication?.idToken) {
+          // ✅ Crear credencial de Firebase con el idToken
+          const { GoogleAuthProvider, signInWithCredential } = await import('firebase/auth');
+          const credential = GoogleAuthProvider.credential(result.authentication.idToken);
+          
+          // ✅ Iniciar sesión en Firebase
+          const firebaseResult = await signInWithCredential(auth, credential);
+          console.log('✅ Usuario autenticado en Firebase:', firebaseResult);
+          
+          return { 
+            success: true, 
+            user: firebaseResult.user,
+            pendingRedirect: false 
+          };
+        } else {
+          throw new Error('No se obtuvo idToken de Google');
+        }
+        
+      } catch (error) {
+        console.error('❌ Error con Google Auth nativo:', error);
+        
+        // ✅ Fallback: mostrar error específico
+        if (error.message.includes('DEVELOPER_ERROR')) {
+          throw new Error('Error de configuración de Google OAuth. Verifica el Client ID y SHA-1 en Firebase Console.');
+        } else if (error.message.includes('Sign in failed')) {
+          throw new Error('Error al iniciar sesión con Google. Verifica tu conexión a internet.');
+        } else {
+          throw new Error(`Error de autenticación: ${error.message}`);
+        }
+      }
       
     } else {
       console.log('🌐 Web detectado, usando popup...');
       
-      // ✅ Para Web: usar popup
+      // ✅ Para Web: usar popup con Firebase
+      const { GoogleAuthProvider, signInWithPopup } = await import('firebase/auth');
+      const provider = new GoogleAuthProvider();
+      provider.addScope('email');
+      provider.addScope('profile');
+      
       const result = await signInWithPopup(auth, provider);
       console.log('✅ Google Auth exitoso (popup):', result);
       
@@ -248,17 +277,21 @@ export const signInWithGoogleSimple = async () => {
     // ✅ Manejar errores específicos
     let errorMessage = 'Error al iniciar sesión con Google';
     
-    if (error.code === 'auth/popup-closed-by-user') {
+    if (error.message.includes('DEVELOPER_ERROR')) {
+      errorMessage = 'Error de configuración de Google OAuth. Verifica el Client ID y SHA-1 en Firebase Console.';
+    } else if (error.message.includes('Sign in failed')) {
+      errorMessage = 'Error al iniciar sesión con Google. Verifica tu conexión a internet.';
+    } else if (error.message.includes('popup-closed-by-user')) {
       errorMessage = 'Ventana cerrada por el usuario';
-    } else if (error.code === 'auth/popup-blocked') {
+    } else if (error.message.includes('popup-blocked')) {
       errorMessage = 'Popup bloqueado por el navegador';
-    } else if (error.code === 'auth/unauthorized-domain') {
+    } else if (error.message.includes('unauthorized-domain')) {
       errorMessage = 'Dominio no autorizado para Google OAuth';
     } else if (error.message) {
       errorMessage = error.message;
     }
     
-    // ✅ Mostrar error con toast
+    // ✅ Mostrar error con toast si está disponible
     if (typeof toast !== 'undefined') {
       toast.error(errorMessage, {
         position: "top-left",
