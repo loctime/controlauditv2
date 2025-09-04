@@ -16,19 +16,20 @@ export const initializeCapacitorGoogleAuth = async () => {
   try {
     console.log('📱 Inicializando Google Auth de Capacitor...');
     
-    // Importación dinámica para evitar problemas de resolución
     const module = await import('@southdevs/capacitor-google-auth');
-    
     if (!module.GoogleAuth) {
       throw new Error('GoogleAuth no disponible en el módulo');
     }
 
-    // Inicializar con configuración específica
-    await module.GoogleAuth.initialize({
+    // Intentar leer IDs desde capacitor.config.ts expuesto por el plugin
+    const clientConfig = {
       scopes: ['profile', 'email'],
       serverClientId: '909876364192-dhqhd9k0h0qkidt4p4pv4ck3utgob7pt.apps.googleusercontent.com',
       forceCodeForRefreshToken: true
-    });
+    };
+
+    console.log('🧩 GoogleAuth.initialize config:', clientConfig);
+    await module.GoogleAuth.initialize(clientConfig);
 
     console.log('✅ Google Auth de Capacitor inicializado correctamente');
     return { success: true };
@@ -52,16 +53,15 @@ export const initializeCapacitorGoogleAuth = async () => {
  */
 export const signInWithCapacitorGoogle = async () => {
   if (!isAPK()) {
-    throw new Error('Google Auth de Capacitor solo disponible en APK');
+    const e = new Error('Google Auth de Capacitor solo disponible en APK');
+    e.code = 'not-apk';
+    throw e;
   }
 
   try {
     console.log('📱 Iniciando sesión con Google Auth de Capacitor...');
-    
-    // Importación dinámica
     const { GoogleAuth } = await import('@southdevs/capacitor-google-auth');
-    
-    // Verificar que esté inicializado
+
     const initResult = await initializeCapacitorGoogleAuth();
     if (!initResult.success) {
       const e = new Error(`Error de inicialización: ${initResult.error}`);
@@ -70,7 +70,6 @@ export const signInWithCapacitorGoogle = async () => {
       throw e;
     }
 
-    // Ejecutar inicio de sesión
     const result = await GoogleAuth.signIn();
     console.log('📱 Resultado de Google Auth:', result);
 
@@ -90,22 +89,13 @@ export const signInWithCapacitorGoogle = async () => {
   } catch (error) {
     console.error('❌ Error en signInWithCapacitorGoogle:', error);
     
-    // Manejar errores específicos
     let errorMessage = 'Error al iniciar sesión con Google';
-    
-    if (error.message.includes('DEVELOPER_ERROR')) {
-      errorMessage = 'Error de configuración de Google OAuth. Verifica el Client ID y SHA-1.';
-    } else if (error.message.includes('Sign in failed')) {
-      errorMessage = 'Error al iniciar sesión con Google. Verifica tu conexión.';
-    } else if (error.message.includes('User cancelled')) {
-      errorMessage = 'Usuario canceló la autenticación';
-    } else if (error.message.includes('NETWORK_ERROR')) {
-      errorMessage = 'Error de red. Verifica tu conexión a internet.';
-    } else if (error.message.includes('INVALID_ACCOUNT')) {
-      errorMessage = 'Cuenta de Google inválida';
-    } else {
-      errorMessage = error.message;
-    }
+    if (error.message?.includes('DEVELOPER_ERROR')) errorMessage = 'Error de configuración de Google OAuth. Verifica el Client ID y SHA-1.';
+    else if (error.message?.includes('Sign in failed')) errorMessage = 'Error al iniciar sesión con Google. Verifica tu conexión.';
+    else if (error.message?.includes('User cancelled')) errorMessage = 'Usuario canceló la autenticación';
+    else if (error.message?.includes('NETWORK_ERROR')) errorMessage = 'Error de red. Verifica tu conexión a internet.';
+    else if (error.message?.includes('INVALID_ACCOUNT')) errorMessage = 'Cuenta de Google inválida';
+    else errorMessage = error.message || errorMessage;
     
     const e = new Error(errorMessage);
     e.code = error.code;
