@@ -30,6 +30,4 @@ backend/.env.*
 
 # Android keystores y archivos de firma
 android/keystore/
-android/app/debug.keystore
 *.jks
-*.keystore

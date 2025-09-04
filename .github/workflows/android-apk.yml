@@ -49,27 +49,37 @@ jobs:
       - name: Sync Capacitor
         run: npx cap sync android
 
+      - name: Decode Keystore
+        run: echo "${{ secrets.DEBUG_KEYSTORE_FILE }}" | base64 --decode > android/debug.keystore
+
       - name: Set Gradle wrapper permissions
         working-directory: android
         run: chmod +x ./gradlew
 
-      - name: Generate debug keystore
+      - name: Verify Keystore
         working-directory: android
         run: |
-          chmod +x ./generate-keystore.sh
-          ./generate-keystore.sh
+          ls -l debug.keystore
+          keytool -list -v -keystore debug.keystore -storepass android
 
-      - name: Build Android APK (Release)
+      - name: Prepare Signing Config
         working-directory: android
         run: |
-          # Configurar variables de entorno para el build
+          echo "signing.storeFile=debug.keystore" >> gradle.properties
+          echo "signing.storePassword=android" >> gradle.properties
+          echo "signing.keyAlias=androiddebugkey" >> gradle.properties
+          echo "signing.keyPassword=android" >> gradle.properties
+
+      - name: Modify Gradle Config for Signing
+        working-directory: android
+        run: |
+          sed -i 's/signingConfig signingConfigs.debug/signingConfig signingConfigs.debug\n            signingConfig signingConfigs.release/' app/build.gradle
+
+      - name: Rebuild Android APK with Signing
+        working-directory: android
+        run: |
           export GRADLE_OPTS="-Dorg.gradle.daemon=false -Dorg.gradle.parallel=true -Dorg.gradle.jvmargs=-Xmx2048m -XX:+HeapDumpOnOutOfMemoryError"
-          
-          # Limpiar build anterior
-          ./gradlew clean
-          
-          # Construir APK de debug (más fácil de instalar)
-          ./gradlew assembleDebug --no-daemon --parallel
+          ./gradlew clean assembleDebug --no-daemon --parallel
 
       - name: Verify APK exists
         run: |
