@@ -3,13 +3,17 @@
 
 import { GoogleAuthProvider, signInWithRedirect, getRedirectResult } from 'firebase/auth';
 import { auth } from '../firebaseConfig';
+import { Capacitor } from '@capacitor/core';
 
 // Función para detectar si estamos en APK
 export const isAPK = () => {
   try {
-    return typeof window !== 'undefined' && 
-           window.Capacitor && 
-           window.Capacitor.isNative === true;
+    // Detección robusta basada en Capacitor v7
+    if (Capacitor?.isNativePlatform?.()) return true;
+    const platform = Capacitor?.getPlatform?.();
+    if (platform === 'android' || platform === 'ios') return true;
+    // Fallback por si la API no está disponible aún
+    return typeof window !== 'undefined' && !!window.Capacitor && (window.Capacitor.isNative === true || window.Capacitor.getPlatform?.() === 'android');
   } catch (error) {
     console.warn('⚠️ Error verificando si es APK:', error);
     return false;
