@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Box, 
   Button, 
@@ -18,13 +18,15 @@ import { onSignIn, signInWithGoogleSimple } from '../../../firebaseConfig';
 import { useAuth } from '../../context/AuthContext';
 import SmartAPKDownload from '../../common/SmartAPKDownload.jsx';
 import { formatAuthError } from '../../../utils/errorFormat';
+import { toast } from 'react-toastify';
 
-const Login = () => {
+export const Login = () => {
   const theme = useTheme();
   const isSmallMobile = useMediaQuery(theme.breakpoints.down('sm'));
   
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [detailedError, setDetailedError] = useState(null);
   const navigate = useNavigate();
   const { handleLogin } = useAuth();
 
@@ -74,11 +76,36 @@ const Login = () => {
         console.log('✅ Google Auth exitoso:', result.user.uid);
         handleLogin(result.user);
         navigate("/auditoria");
+        toast.success('Inicio de sesión exitoso');
       }
       
     } catch (error) {
       console.error('❌ Error en Google Auth:', error);
       setError(formatAuthError(error));
+      // Capturar detalles completos del error
+      console.error('Error de autenticación completo:', error);
+      
+      // Mensaje de error para el usuario
+      const errorMessage = error.message || 'Error al iniciar sesión';
+      setError(errorMessage);
+      
+      // Capturar detalles técnicos
+      setDetailedError({
+        message: errorMessage,
+        code: error.code,
+        cause: error.cause ? JSON.stringify(error.cause) : null,
+        data: error.data ? JSON.stringify(error.data) : null
+      });
+
+      // Notificación de error
+      toast.error(errorMessage, {
+        position: "top-right",
+        autoClose: 5000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true
+      });
     } finally {
       setLoading(false);
     }
@@ -199,6 +226,14 @@ const Login = () => {
           </Box>
         </CardContent>
       </Card>
+      
+      {/* Mostrar detalles de error si existen */}
+      {detailedError && (
+        <div className="error-details">
+          <h3>Detalles del Error:</h3>
+          <pre>{JSON.stringify(detailedError, null, 2)}</pre>
+        </div>
+      )}
     </Box>
   );
 };

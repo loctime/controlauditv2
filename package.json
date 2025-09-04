@@ -45,7 +45,9 @@
     "setup:repo": "node scripts/setup-public-repo.js",
     "setup:google-oauth": "node scripts/setup-google-oauth.js",
     "setup:java": "scripts\\setup-java-env.bat",
-    "fix:capacitor": "node scripts/fix-capacitor-modules.js"
+    "fix:capacitor": "node scripts/fix-capacitor-modules.js",
+    "diagnose:google-auth": "node --experimental-modules scripts/google-auth-diagnostics.js",
+    "diagnose:device": "node --experimental-modules scripts/device-info-diagnostics.js"
   },
   "dependencies": {
     "@capacitor/android": "^7.4.2",
