@@ -41,8 +41,6 @@ android {
             }
         }
 
-        // release debe apuntar a tu keystore de producción (NO el de debug)
-        // Dejalo opcional con propiedades para no romper el debug:
         release {
             // Si no hay keystore de release, usar el de debug
             if (project.hasProperty('MYAPP_UPLOAD_STORE_FILE')) {
@@ -71,9 +69,7 @@ android {
         }
         release {
             // Solo firmará si pusiste las props arriba; si no, no validará nada.
-            if (signingConfigs.release.storeFile != null) {
-                signingConfig signingConfigs.release
-            }
+            signingConfig signingConfigs.release
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
             // Configurar nombre del APK

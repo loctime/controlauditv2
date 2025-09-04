@@ -50,7 +50,10 @@ jobs:
         run: npx cap sync android
 
       - name: Decode Keystore
-        run: echo "${{ secrets.DEBUG_KEYSTORE_FILE }}" | base64 --decode > android/debug.keystore
+        run: |
+          echo "${{ secrets.DEBUG_KEYSTORE_FILE }}" | base64 --decode > debug.keystore
+          mkdir -p android/app
+          cp debug.keystore android/app/debug.keystore
 
       - name: Set Gradle wrapper permissions
         working-directory: android
@@ -65,7 +68,7 @@ jobs:
       - name: Prepare Signing Config
         working-directory: android
         run: |
-          echo "MYAPP_UPLOAD_STORE_FILE=debug.keystore" >> gradle.properties
+          echo "MYAPP_UPLOAD_STORE_FILE=app/debug.keystore" >> gradle.properties
           echo "MYAPP_UPLOAD_STORE_PASSWORD=android" >> gradle.properties
           echo "MYAPP_UPLOAD_KEY_ALIAS=androiddebugkey" >> gradle.properties
           echo "MYAPP_UPLOAD_KEY_PASSWORD=android" >> gradle.properties
