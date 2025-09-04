@@ -37,7 +37,7 @@ android {
                 keyPassword 'android'
             } else {
                 println "⚠️  Keystore de debug fijo no encontrado en ${repoDebugKeystore.absolutePath}"
-                println "🔧 Genera uno con: %JAVA_HOME%/bin/keytool -genkey -v -keystore android/debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname 'CN=Android Debug,O=Android,C=US'"
+                println "🔧 Genera uno con: scripts/generate-repo-debug-keystore.bat"
             }
         }
 
