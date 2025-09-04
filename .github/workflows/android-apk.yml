@@ -50,10 +50,9 @@ jobs:
         run: npx cap sync android
 
       - name: Decode Keystore
+        working-directory: android/app
         run: |
           echo "${{ secrets.DEBUG_KEYSTORE_FILE }}" | base64 --decode > debug.keystore
-          mkdir -p android/app
-          cp debug.keystore android/app/debug.keystore
 
       - name: Set Gradle wrapper permissions
         working-directory: android
