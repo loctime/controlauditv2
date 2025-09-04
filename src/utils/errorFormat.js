@@ -9,13 +9,24 @@ export const formatAuthError = (error) => {
     const causeMessage = error.cause?.message || null;
 
     let extra = '';
-    // Capturar mensajes comunes del plugin o Firebase
     if (error?.data && typeof error.data === 'object') {
       extra = JSON.stringify(error.data);
     } else if (error?.stack && typeof error.stack === 'string') {
-      // Evitar imprimir stack completo; recortar
       const firstLine = error.stack.split('\n')[0];
       extra = firstLine.includes(baseMessage) ? '' : firstLine;
+    }
+
+    // Si no hay nada útil aún, incluir un volcado compacto del objeto de error
+    if (!code && !extra) {
+      try {
+        const shallow = {};
+        for (const k of Object.keys(error)) {
+          if (['stack'].includes(k)) continue;
+          shallow[k] = error[k];
+        }
+        const json = JSON.stringify(shallow);
+        if (json && json !== '{}') extra = json;
+      } catch (_) {}
     }
 
     const parts = [baseMessage];

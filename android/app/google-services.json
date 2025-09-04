@@ -14,11 +14,11 @@
       },
       "oauth_client": [
         {
-          "client_id": "909876364192-fqea0cj8m5sccqhghl5vbkhgbtkjc3je.apps.googleusercontent.com",
+          "client_id": "909876364192-l3sjir3ql806s9pmbl14eb2fsmim4afm.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
             "package_name": "com.controlaudit.app",
-            "certificate_hash": "546eee38535b8f458f6294ef28616ef1c30541e3"
+            "certificate_hash": "98c8e338c7b2ab2379494f5559e1c3524bf72e45"
           }
         },
         {
