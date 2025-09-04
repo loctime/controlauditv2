@@ -282,7 +282,12 @@ export const signInWithGoogleSimple = async () => {
       errorMessage = error.message;
     }
     
-    throw new Error(errorMessage);
+    // Propagar detalles para la UI (code/data)
+    const e = new Error(errorMessage);
+    e.code = error.code;
+    e.data = error.data;
+    e.cause = error;
+    throw e;
   }
 };
 

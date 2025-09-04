@@ -2,6 +2,7 @@
 // Utilidad específica para manejar Google Auth en Capacitor
 
 import { isAPK } from './googleAuthAPK';
+import { Capacitor } from '@capacitor/core';
 
 /**
  * Inicializa Google Auth de manera segura en Capacitor
@@ -33,10 +34,15 @@ export const initializeCapacitorGoogleAuth = async () => {
     return { success: true };
     
   } catch (error) {
-    console.error('❌ Error inicializando Google Auth de Capacitor:', error);
+    console.error('❌ Error inicializando Google Auth de Capacitor:', error, {
+      platform: Capacitor?.getPlatform?.(),
+      isNative: Capacitor?.isNativePlatform?.(),
+    });
     return { 
       success: false, 
-      error: error.message || 'Error desconocido' 
+      error: error.message || 'Error desconocido',
+      code: error.code,
+      data: error.data,
     };
   }
 };
@@ -58,7 +64,10 @@ export const signInWithCapacitorGoogle = async () => {
     // Verificar que esté inicializado
     const initResult = await initializeCapacitorGoogleAuth();
     if (!initResult.success) {
-      throw new Error(`Error de inicialización: ${initResult.error}`);
+      const e = new Error(`Error de inicialización: ${initResult.error}`);
+      e.code = initResult.code;
+      e.data = initResult.data;
+      throw e;
     }
 
     // Ejecutar inicio de sesión
@@ -66,7 +75,9 @@ export const signInWithCapacitorGoogle = async () => {
     console.log('📱 Resultado de Google Auth:', result);
 
     if (!result?.authentication?.idToken) {
-      throw new Error('No se obtuvo idToken de Google');
+      const e = new Error('No se obtuvo idToken de Google');
+      e.data = result;
+      throw e;
     }
 
     return {
@@ -96,7 +107,10 @@ export const signInWithCapacitorGoogle = async () => {
       errorMessage = error.message;
     }
     
-    throw new Error(errorMessage);
+    const e = new Error(errorMessage);
+    e.code = error.code;
+    e.data = error.data;
+    throw e;
   }
 };
 

@@ -17,6 +17,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { onSignIn, signInWithGoogleSimple } from '../../../firebaseConfig';
 import { useAuth } from '../../context/AuthContext';
 import SmartAPKDownload from '../../common/SmartAPKDownload.jsx';
+import { formatAuthError } from '../../../utils/errorFormat';
 
 const Login = () => {
   const theme = useTheme();
@@ -77,7 +78,7 @@ const Login = () => {
       
     } catch (error) {
       console.error('❌ Error en Google Auth:', error);
-      setError(error.message || 'Error al iniciar sesión con Google');
+      setError(formatAuthError(error));
     } finally {
       setLoading(false);
     }
