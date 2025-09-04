@@ -65,10 +65,10 @@ jobs:
       - name: Prepare Signing Config
         working-directory: android
         run: |
-          echo "signing.storeFile=debug.keystore" >> gradle.properties
-          echo "signing.storePassword=android" >> gradle.properties
-          echo "signing.keyAlias=androiddebugkey" >> gradle.properties
-          echo "signing.keyPassword=android" >> gradle.properties
+          echo "MYAPP_UPLOAD_STORE_FILE=debug.keystore" >> gradle.properties
+          echo "MYAPP_UPLOAD_STORE_PASSWORD=android" >> gradle.properties
+          echo "MYAPP_UPLOAD_KEY_ALIAS=androiddebugkey" >> gradle.properties
+          echo "MYAPP_UPLOAD_KEY_PASSWORD=android" >> gradle.properties
 
       - name: Modify Gradle Config for Signing
         working-directory: android
@@ -79,7 +79,7 @@ jobs:
         working-directory: android
         run: |
           export GRADLE_OPTS="-Dorg.gradle.daemon=false -Dorg.gradle.parallel=true -Dorg.gradle.jvmargs=-Xmx2048m -XX:+HeapDumpOnOutOfMemoryError"
-          ./gradlew clean assembleDebug --no-daemon --parallel
+          ./gradlew clean assembleDebug assembleRelease --no-daemon --parallel
 
       - name: Verify APK exists
         run: |
