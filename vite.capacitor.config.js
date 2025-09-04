@@ -62,8 +62,8 @@ export default defineConfig({
           // Payment
           'payment': ['@mercadopago/sdk-react'],
           
-          // Other tools
-          'other-tools': ['html2canvas', 'html2pdf.js', 'react-signature-canvas', 'react-toastify', 'react-to-print', 'emailjs-com', 'docx']
+                      // Other tools
+            'other-tools': ['html2canvas', 'html2pdf.js', 'react-signature-canvas', 'react-to-print', 'emailjs-com', 'docx']
         }
       }
     },
