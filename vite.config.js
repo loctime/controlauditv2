@@ -60,8 +60,8 @@ export default defineConfig(({ command, mode }) => {
       target: 'es2020',
       modulePreload: false,
       rollupOptions: {
-        // No excluir módulos de Capacitor para evitar problemas en APK
-        external: [],
+        // Excluir específicamente el módulo de Google Auth
+        external: ['@southdevs/capacitor-google-auth'],
         output: {
           // Configuración específica para Capacitor
           format: 'es',
