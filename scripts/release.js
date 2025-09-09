@@ -143,7 +143,14 @@ function main() {
 
   // 8. Crear tag
   log(`🏷️  Paso 7: Creando tag v${newVersion}...`, 'yellow');
-  executeCommandWithOutput(`git tag v${newVersion}`);
+  try {
+    executeCommand(`git tag v${newVersion}`);
+    log(`✅ Tag v${newVersion} creado`, 'green');
+  } catch (error) {
+    log(`⚠️  Tag v${newVersion} ya existe, eliminando y recreando...`, 'yellow');
+    executeCommand(`git tag -d v${newVersion}`);
+    executeCommandWithOutput(`git tag v${newVersion}`);
+  }
 
   // 9. Push de commits y tags
   log('📤 Paso 8: Subiendo cambios a GitHub...', 'yellow');
