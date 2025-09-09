@@ -195,7 +195,7 @@ const PreguntasYSeccion = ({
       
       console.log('⚠️ Usando imagen original sin optimizar');
     } finally {
-      // Ocultar indicador de procesamiento
+      // Ocultar indicador ade procesamiento
       setProcesandoImagen(prev => ({ ...prev, [key]: false }));
     }
   };
