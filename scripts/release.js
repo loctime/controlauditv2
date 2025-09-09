@@ -153,6 +153,12 @@ function main() {
     } catch (deleteError) {
       // Ignorar error si el tag no existe localmente
     }
+    try {
+      execSync(`git push origin :refs/tags/v${newVersion}`, { stdio: 'pipe' });
+      log(`✅ Tag remoto v${newVersion} eliminado`, 'green');
+    } catch (remoteDeleteError) {
+      // Ignorar error si el tag no existe remotamente
+    }
     executeCommandWithOutput(`git tag v${newVersion}`);
   }
 
