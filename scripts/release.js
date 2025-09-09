@@ -144,11 +144,15 @@ function main() {
   // 8. Crear tag
   log(`🏷️  Paso 7: Creando tag v${newVersion}...`, 'yellow');
   try {
-    executeCommand(`git tag v${newVersion}`);
+    execSync(`git tag v${newVersion}`, { stdio: 'pipe' });
     log(`✅ Tag v${newVersion} creado`, 'green');
   } catch (error) {
     log(`⚠️  Tag v${newVersion} ya existe, eliminando y recreando...`, 'yellow');
-    executeCommand(`git tag -d v${newVersion}`);
+    try {
+      execSync(`git tag -d v${newVersion}`, { stdio: 'pipe' });
+    } catch (deleteError) {
+      // Ignorar error si el tag no existe localmente
+    }
     executeCommandWithOutput(`git tag v${newVersion}`);
   }
 
