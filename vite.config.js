@@ -25,6 +25,13 @@ export default defineConfig({
              transformMixedEsModules: true
            },
     rollupOptions: {
+      external: (id) => {
+        // Externalizar módulos de Capacitor para el build web
+        if (id.includes('@capacitor/')) {
+          return true;
+        }
+        return false;
+      },
       output: {
         manualChunks: {
           // Core React

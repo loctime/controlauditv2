@@ -23,8 +23,15 @@ export const useBackButton = () => {
           return; // Solo funciona en Android nativo
         }
 
-        // Importar App de Capacitor
-        const { App } = await import('@capacitor/app');
+        // Importar App de Capacitor solo si está disponible
+        let App;
+        try {
+          const appModule = await import('@capacitor/app');
+          App = appModule.App;
+        } catch (error) {
+          console.log('Capacitor App no disponible en esta plataforma');
+          return;
+        }
 
         // Función para mostrar diálogo de confirmación
         const showExitConfirmation = () => {
