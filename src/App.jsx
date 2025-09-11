@@ -8,8 +8,12 @@ import AuthContextComponent from "./components/context/AuthContext";
 import AppRouter from "./router/AppRouter";
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
+import { useBackButton } from './hooks/useBackButton';
 
 const App = () => {
+  // Hook para manejar el botón atrás de Android
+  useBackButton();
+
   return (
     <ColorModeProvider>
       <AuthContextComponent>

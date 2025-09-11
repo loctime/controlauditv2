@@ -16,6 +16,9 @@ const config: CapacitorConfig = {
     },
     StatusBar: {
       style: 'dark'
+    },
+    Camera: {
+      permissions: ["camera", "photos"]
     }
   }
 };
