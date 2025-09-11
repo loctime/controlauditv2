@@ -25,6 +25,28 @@ export default defineConfig({
              transformMixedEsModules: true
            },
     rollupOptions: {
+      external: [
+        '@capacitor/app',
+        '@capacitor/core',
+        '@capacitor/android',
+        '@capacitor/ios',
+        '@capacitor/browser',
+        '@capacitor/camera',
+        '@capacitor/device',
+        '@capacitor/filesystem',
+        '@capacitor/geolocation',
+        '@capacitor/haptics',
+        '@capacitor/keyboard',
+        '@capacitor/local-notifications',
+        '@capacitor/network',
+        '@capacitor/push-notifications',
+        '@capacitor/screen-reader',
+        '@capacitor/share',
+        '@capacitor/splash-screen',
+        '@capacitor/status-bar',
+        '@capacitor/storage',
+        '@capacitor/toast'
+      ],
       output: {
         manualChunks: {
           // Core React
