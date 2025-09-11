@@ -9,7 +9,11 @@ import {
   Typography, 
   CircularProgress, 
   useTheme, 
-  useMediaQuery 
+  useMediaQuery,
+  IconButton,
+  Fab,
+  Chip,
+  LinearProgress
 } from "@mui/material";
 import CameraAltIcon from '@mui/icons-material/CameraAlt';
 import PhotoLibraryIcon from '@mui/icons-material/PhotoLibrary';
@@ -18,6 +22,11 @@ import ZoomInIcon from '@mui/icons-material/ZoomIn';
 import ZoomOutIcon from '@mui/icons-material/ZoomOut';
 import CameraFrontIcon from '@mui/icons-material/CameraFront';
 import CameraRearIcon from '@mui/icons-material/CameraRear';
+import CloseIcon from '@mui/icons-material/Close';
+import FlashOnIcon from '@mui/icons-material/FlashOn';
+import FlashOffIcon from '@mui/icons-material/FlashOff';
+import GridOnIcon from '@mui/icons-material/GridOn';
+import GridOffIcon from '@mui/icons-material/GridOff';
 
 // Función para comprimir imágenes
 const comprimirImagen = (file, maxWidth = 800, quality = 0.7) => {
@@ -174,6 +183,9 @@ const CameraDialog = ({
   const [photoQuality, setPhotoQuality] = useState(null);
   const [cameraZoom, setCameraZoom] = useState(1);
   const [maxZoom, setMaxZoom] = useState(4);
+  const [flashEnabled, setFlashEnabled] = useState(false);
+  const [gridEnabled, setGridEnabled] = useState(false);
+  const [captureAnimation, setCaptureAnimation] = useState(false);
   
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
@@ -383,6 +395,10 @@ const CameraDialog = ({
     try {
       console.log('📸 Capturando foto...');
       
+      // Animación de captura
+      setCaptureAnimation(true);
+      setTimeout(() => setCaptureAnimation(false), 200);
+      
       const maxWidth = 800;
       const maxHeight = 800;
       
@@ -537,19 +553,25 @@ const CameraDialog = ({
       onClose={onClose}
       maxWidth={isMobile ? "sm" : "md"}
       fullWidth={true}
-      fullScreen={false}
+      fullScreen={isMobile}
       PaperProps={{
         sx: isMobile ? {
-          margin: 2,
-          borderRadius: 2,
-          height: 'calc(100vh - 4rem)',
-          maxHeight: 'calc(100vh - 4rem)',
-          width: 'calc(100vw - 2rem)',
-          maxWidth: 'calc(100vw - 2rem)'
-        } : {}
+          margin: 0,
+          borderRadius: 0,
+          height: '100vh',
+          maxHeight: '100vh',
+          width: '100vw',
+          maxWidth: '100vw',
+          backgroundColor: '#000'
+        } : {
+          borderRadius: 3,
+          overflow: 'hidden',
+          boxShadow: '0 20px 40px rgba(0,0,0,0.3)',
+          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+        }
       }}
     >
-      {/* Header para móvil */}
+      {/* Header moderno para móvil */}
       {isMobile && (
         <Box sx={{ 
           position: 'absolute', 
@@ -557,95 +579,144 @@ const CameraDialog = ({
           left: 0, 
           right: 0, 
           zIndex: 10,
-          background: 'linear-gradient(to bottom, rgba(0,0,0,0.7) 0%, transparent 100%)',
+          background: 'linear-gradient(to bottom, rgba(0,0,0,0.8) 0%, transparent 100%)',
           p: 2,
           display: 'flex',
           justifyContent: 'space-between',
-          alignItems: 'center'
+          alignItems: 'center',
+          backdropFilter: 'blur(10px)'
         }}>
-          <Button
+          <IconButton
             onClick={onClose}
             sx={{ 
               color: 'white', 
-              minWidth: 'auto',
-              p: 1,
-              borderRadius: '50%',
-              backgroundColor: 'rgba(0,0,0,0.3)',
-              '&:hover': { backgroundColor: 'rgba(0,0,0,0.5)' }
+              backgroundColor: 'rgba(255,255,255,0.1)',
+              backdropFilter: 'blur(10px)',
+              border: '1px solid rgba(255,255,255,0.2)',
+              '&:hover': { 
+                backgroundColor: 'rgba(255,255,255,0.2)',
+                transform: 'scale(1.05)'
+              },
+              transition: 'all 0.2s ease'
             }}
           >
-            ✕
-          </Button>
+            <CloseIcon />
+          </IconButton>
           
           {cameraStream && (
             <Box sx={{ display: 'flex', gap: 1 }}>
-              <Button
+              <IconButton
                 onClick={decreaseZoom}
                 disabled={cameraZoom <= 1}
                 sx={{ 
                   color: 'white', 
-                  minWidth: 'auto',
-                  p: 1,
-                  borderRadius: '50%',
-                  backgroundColor: 'rgba(0,0,0,0.3)',
-                  '&:hover': { backgroundColor: 'rgba(0,0,0,0.5)' },
-                  '&:disabled': { opacity: 0.5 }
+                  backgroundColor: 'rgba(255,255,255,0.1)',
+                  backdropFilter: 'blur(10px)',
+                  border: '1px solid rgba(255,255,255,0.2)',
+                  '&:hover': { 
+                    backgroundColor: 'rgba(255,255,255,0.2)',
+                    transform: 'scale(1.05)'
+                  },
+                  '&:disabled': { opacity: 0.5 },
+                  transition: 'all 0.2s ease'
                 }}
               >
                 <ZoomOutIcon />
-              </Button>
-              <Button
+              </IconButton>
+              <IconButton
                 onClick={increaseZoom}
                 disabled={cameraZoom >= maxZoom}
                 sx={{ 
                   color: 'white', 
-                  minWidth: 'auto',
-                  p: 1,
-                  borderRadius: '50%',
-                  backgroundColor: 'rgba(0,0,0,0.3)',
-                  '&:hover': { backgroundColor: 'rgba(0,0,0,0.5)' },
-                  '&:disabled': { opacity: 0.5 }
+                  backgroundColor: 'rgba(255,255,255,0.1)',
+                  backdropFilter: 'blur(10px)',
+                  border: '1px solid rgba(255,255,255,0.2)',
+                  '&:hover': { 
+                    backgroundColor: 'rgba(255,255,255,0.2)',
+                    transform: 'scale(1.05)'
+                  },
+                  '&:disabled': { opacity: 0.5 },
+                  transition: 'all 0.2s ease'
                 }}
               >
                 <ZoomInIcon />
-              </Button>
+              </IconButton>
             </Box>
           )}
           
           {availableCameras.length > 1 && (
-            <Button
+            <IconButton
               onClick={switchCamera}
               disabled={!cameraStream}
               sx={{ 
                 color: 'white', 
-                minWidth: 'auto',
-                p: 1,
-                borderRadius: '50%',
-                backgroundColor: 'rgba(0,0,0,0.3)',
-                '&:hover': { backgroundColor: 'rgba(0,0,0,0.5)' }
+                backgroundColor: 'rgba(255,255,255,0.1)',
+                backdropFilter: 'blur(10px)',
+                border: '1px solid rgba(255,255,255,0.2)',
+                '&:hover': { 
+                  backgroundColor: 'rgba(255,255,255,0.2)',
+                  transform: 'scale(1.05)'
+                },
+                transition: 'all 0.2s ease'
               }}
             >
               {currentCamera === 'environment' ? <CameraRearIcon /> : <CameraFrontIcon />}
-            </Button>
+            </IconButton>
           )}
         </Box>
       )}
 
       {/* Contenido principal */}
       <Box sx={{ 
-        height: isMobile ? 'calc(100vh - 4rem)' : 'auto',
+        height: isMobile ? '100vh' : 'auto',
         display: 'flex',
         flexDirection: 'column',
         position: 'relative'
       }}>
-        {/* Video de la cámara */}
+        {/* Video de la cámara con overlay moderno */}
         <Box sx={{ 
           position: 'relative', 
           width: '100%', 
-          height: isMobile ? 'calc(100% - 120px)' : '400px',
+          height: isMobile ? '100vh' : '500px',
           backgroundColor: '#000',
           overflow: 'hidden'
         }}>
+          {/* Overlay de captura */}
+          {captureAnimation && (
+            <Box
+              sx={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                backgroundColor: 'rgba(255,255,255,0.8)',
+                zIndex: 20,
+                animation: 'flash 0.2s ease-out'
+              }}
+            />
+          )}
+
+          {/* Grid overlay */}
+          {gridEnabled && (
+            <Box
+              sx={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                zIndex: 5,
+                backgroundImage: `
+                  linear-gradient(rgba(255,255,255,0.3) 1px, transparent 1px),
+                  linear-gradient(90deg, rgba(255,255,255,0.3) 1px, transparent 1px)
+                `,
+                backgroundSize: '33.33% 33.33%',
+                pointerEvents: 'none'
+              }}
+            />
+          )}
+
           {cameraStatus === 'starting' && (
             <Box
               sx={{
@@ -659,9 +730,18 @@ const CameraDialog = ({
               }}
             >
               <Box sx={{ mb: 2 }}>
-                <CircularProgress color="inherit" />
+                <CircularProgress 
+                  color="inherit" 
+                  size={60}
+                  thickness={4}
+                  sx={{
+                    '& .MuiCircularProgress-circle': {
+                      strokeLinecap: 'round',
+                    }
+                  }}
+                />
               </Box>
-              <Typography variant="body2">
+              <Typography variant="h6" sx={{ fontWeight: 500 }}>
                 Iniciando cámara...
               </Typography>
             </Box>
@@ -677,29 +757,54 @@ const CameraDialog = ({
                 zIndex: 10,
                 textAlign: 'center',
                 color: 'white',
-                p: 2
+                p: 3,
+                backgroundColor: 'rgba(0,0,0,0.8)',
+                borderRadius: 3,
+                backdropFilter: 'blur(10px)',
+                border: '1px solid rgba(255,255,255,0.1)'
               }}
             >
-              <WarningIcon sx={{ fontSize: 48, mb: 2 }} />
-              <Typography variant="h6" sx={{ mb: 1 }}>
+              <WarningIcon sx={{ fontSize: 64, mb: 2, color: '#ff6b6b' }} />
+              <Typography variant="h5" sx={{ mb: 1, fontWeight: 600 }}>
                 Error de Cámara
               </Typography>
-              <Typography variant="body2" sx={{ mb: 2 }}>
+              <Typography variant="body1" sx={{ mb: 3, opacity: 0.8 }}>
                 {cameraError || 'No se pudo acceder a la cámara'}
               </Typography>
-              <Button
-                variant="contained"
-                onClick={startCamera}
-                sx={{ mr: 1 }}
-              >
-                Reintentar
-              </Button>
-              <Button
-                variant="outlined"
-                onClick={onSelectFromGallery}
-              >
-                Usar Galería
-              </Button>
+              <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center' }}>
+                <Button
+                  variant="contained"
+                  onClick={startCamera}
+                  sx={{ 
+                    borderRadius: 2,
+                    px: 3,
+                    py: 1,
+                    background: 'linear-gradient(45deg, #667eea 30%, #764ba2 90%)',
+                    '&:hover': {
+                      background: 'linear-gradient(45deg, #5a6fd8 30%, #6a4190 90%)',
+                    }
+                  }}
+                >
+                  Reintentar
+                </Button>
+                <Button
+                  variant="outlined"
+                  onClick={onSelectFromGallery}
+                  sx={{ 
+                    borderRadius: 2,
+                    px: 3,
+                    py: 1,
+                    borderColor: 'rgba(255,255,255,0.3)',
+                    color: 'white',
+                    '&:hover': {
+                      borderColor: 'rgba(255,255,255,0.5)',
+                      backgroundColor: 'rgba(255,255,255,0.1)'
+                    }
+                  }}
+                >
+                  Usar Galería
+                </Button>
+              </Box>
             </Box>
           )}
 
@@ -712,7 +817,9 @@ const CameraDialog = ({
               width: '100%', 
               height: '100%',
               objectFit: 'cover',
-              opacity: cameraStatus === 'ready' ? 1 : 0.3
+              opacity: cameraStatus === 'ready' ? 1 : 0.3,
+              filter: captureAnimation ? 'brightness(1.2)' : 'none',
+              transition: 'all 0.2s ease'
             }}
           />
           <canvas
@@ -720,138 +827,163 @@ const CameraDialog = ({
             style={{ display: 'none' }}
           />
           
+          {/* Indicadores modernos */}
           {photoQuality && (
-            <Box
+            <Chip
+              icon={
+                <Box sx={{ fontSize: '1rem' }}>
+                  {photoQuality === 'excellent' ? '⭐' : 
+                   photoQuality === 'good' ? '✅' : '⚠️'}
+                </Box>
+              }
+              label={photoQuality === 'excellent' ? 'Excelente' : 
+                     photoQuality === 'good' ? 'Buena' : 'Regular'}
               sx={{
                 position: 'absolute',
-                top: isMobile ? 80 : 8,
-                right: 8,
+                top: isMobile ? 80 : 16,
+                right: 16,
                 backgroundColor: photoQuality === 'excellent' ? '#4caf50' : 
                               photoQuality === 'good' ? '#ff9800' : '#f44336',
                 color: 'white',
-                px: 1.5,
-                py: 0.5,
-                borderRadius: 1,
-                fontSize: '0.7rem',
-                fontWeight: 'bold',
+                fontWeight: 600,
+                backdropFilter: 'blur(10px)',
+                border: '1px solid rgba(255,255,255,0.2)',
                 zIndex: 5
               }}
-            >
-              {photoQuality === 'excellent' ? '⭐' : 
-               photoQuality === 'good' ? '✅' : '⚠️'}
-            </Box>
+            />
           )}
 
           {cameraStream && cameraZoom > 1 && (
-            <Box
+            <Chip
+              icon={<ZoomInIcon />}
+              label={`${cameraZoom.toFixed(1)}x`}
               sx={{
                 position: 'absolute',
-                top: isMobile ? 120 : 48,
-                right: 8,
+                top: isMobile ? 130 : 66,
+                right: 16,
                 backgroundColor: 'rgba(0,0,0,0.7)',
                 color: 'white',
-                px: 1.5,
-                py: 0.5,
-                borderRadius: 1,
-                fontSize: '0.7rem',
-                fontWeight: 'bold',
-                zIndex: 5,
-                display: 'flex',
-                alignItems: 'center',
-                gap: 0.5
+                fontWeight: 600,
+                backdropFilter: 'blur(10px)',
+                border: '1px solid rgba(255,255,255,0.2)',
+                zIndex: 5
               }}
-            >
-              <ZoomInIcon sx={{ fontSize: '0.8rem' }} />
-              {cameraZoom.toFixed(1)}x
-            </Box>
+            />
           )}
 
-          {/* Botones flotantes en móvil */}
+          {/* Controles flotantes modernos en móvil */}
           {isMobile && (
             <Box sx={{ 
               position: 'absolute', 
               bottom: 'env(safe-area-inset-bottom, 20px)',
               left: 0, 
               right: 0,
-              background: 'linear-gradient(to top, rgba(0,0,0,0.8) 0%, transparent 100%)',
-              p: 2,
-              pb: 3,
+              background: 'linear-gradient(to top, rgba(0,0,0,0.9) 0%, transparent 100%)',
+              p: 3,
+              pb: 4,
               display: 'flex',
               justifyContent: 'center',
               alignItems: 'center',
-              gap: 2,
-              minHeight: '80px'
+              gap: 3,
+              minHeight: '120px'
             }}>
-              <Button
-                variant="contained"
+              <Fab
                 onClick={onSelectFromGallery}
                 sx={{ 
-                  borderRadius: '50%',
-                  minWidth: '60px',
-                  width: '60px',
-                  height: '60px',
-                  backgroundColor: 'rgba(255,255,255,0.2)',
-                  '&:hover': { backgroundColor: 'rgba(255,255,255,0.3)' }
+                  backgroundColor: 'rgba(255,255,255,0.15)',
+                  backdropFilter: 'blur(10px)',
+                  border: '1px solid rgba(255,255,255,0.2)',
+                  color: 'white',
+                  '&:hover': { 
+                    backgroundColor: 'rgba(255,255,255,0.25)',
+                    transform: 'scale(1.05)'
+                  },
+                  transition: 'all 0.2s ease'
                 }}
               >
                 <PhotoLibraryIcon />
-              </Button>
+              </Fab>
 
               {cameraStream && cameraStatus === 'ready' ? (
-                <Button
-                  variant="contained"
+                <Fab
                   onClick={capturePhoto}
                   disabled={compressionProgress > 0}
                   sx={{ 
-                    borderRadius: '50%',
-                    minWidth: '80px',
-                    width: '80px',
-                    height: '80px',
+                    width: 80,
+                    height: 80,
                     backgroundColor: 'white',
                     color: 'black',
-                    '&:hover': { backgroundColor: 'rgba(255,255,255,0.9)' },
-                    '&:disabled': { backgroundColor: 'rgba(255,255,255,0.5)' }
+                    boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
+                    '&:hover': { 
+                      backgroundColor: 'rgba(255,255,255,0.9)',
+                      transform: 'scale(1.05)'
+                    },
+                    '&:disabled': { 
+                      backgroundColor: 'rgba(255,255,255,0.5)',
+                      transform: 'scale(0.95)'
+                    },
+                    transition: 'all 0.2s ease'
                   }}
                 >
-                  📸
-                </Button>
+                  <CameraAltIcon sx={{ fontSize: 32 }} />
+                </Fab>
               ) : cameraStatus === 'error' ? (
-                <Button
-                  variant="contained"
+                <Fab
                   onClick={startCamera}
                   sx={{ 
-                    borderRadius: '50%',
-                    minWidth: '80px',
-                    width: '80px',
-                    height: '80px',
-                    backgroundColor: '#f44336',
+                    width: 80,
+                    height: 80,
+                    backgroundColor: '#ff6b6b',
                     color: 'white',
-                    '&:hover': { backgroundColor: '#d32f2f' }
+                    '&:hover': { 
+                      backgroundColor: '#ff5252',
+                      transform: 'scale(1.05)'
+                    },
+                    transition: 'all 0.2s ease'
                   }}
                 >
                   🔄
-                </Button>
+                </Fab>
               ) : (
-                <Button
-                  variant="contained"
+                <Fab
                   onClick={startCamera}
                   disabled={cameraStatus === 'starting'}
                   sx={{ 
-                    borderRadius: '50%',
-                    minWidth: '80px',
-                    width: '80px',
-                    height: '80px',
+                    width: 80,
+                    height: 80,
                     backgroundColor: 'white',
                     color: 'black',
-                    '&:hover': { backgroundColor: 'rgba(255,255,255,0.9)' },
-                    '&:disabled': { backgroundColor: 'rgba(255,255,255,0.5)' }
+                    '&:hover': { 
+                      backgroundColor: 'rgba(255,255,255,0.9)',
+                      transform: 'scale(1.05)'
+                    },
+                    '&:disabled': { 
+                      backgroundColor: 'rgba(255,255,255,0.5)',
+                      transform: 'scale(0.95)'
+                    },
+                    transition: 'all 0.2s ease'
                   }}
                 >
-                  <CameraAltIcon />
-                </Button>
+                  <CameraAltIcon sx={{ fontSize: 32 }} />
+                </Fab>
               )}
 
-              <Box sx={{ width: '60px' }} />
+              <Fab
+                onClick={() => setGridEnabled(!gridEnabled)}
+                sx={{ 
+                  backgroundColor: gridEnabled ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.15)',
+                  backdropFilter: 'blur(10px)',
+                  border: '1px solid rgba(255,255,255,0.2)',
+                  color: 'white',
+                  '&:hover': { 
+                    backgroundColor: 'rgba(255,255,255,0.25)',
+                    transform: 'scale(1.05)'
+                  },
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                {gridEnabled ? <GridOnIcon /> : <GridOffIcon />}
+              </Fab>
             </Box>
           )}
         </Box>
@@ -859,29 +991,45 @@ const CameraDialog = ({
         {/* Contenido para desktop */}
         {!isMobile && (
           <>
-            <DialogTitle sx={{ fontWeight: 'bold', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span>Tomar Foto</span>
+            <DialogTitle sx={{ 
+              fontWeight: 700, 
+              display: 'flex', 
+              justifyContent: 'space-between', 
+              alignItems: 'center',
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              color: 'white',
+              p: 3
+            }}>
+              <Typography variant="h5" sx={{ fontWeight: 700 }}>
+                📸 Cámara
+              </Typography>
               <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
                 {cameraStream && (
                   <Box sx={{ display: 'flex', gap: 0.5 }}>
-                    <Button
-                      variant="outlined"
-                      size="small"
+                    <IconButton
                       onClick={decreaseZoom}
                       disabled={cameraZoom <= 1}
-                      sx={{ minWidth: 'auto', p: 0.5 }}
+                      sx={{ 
+                        color: 'white',
+                        backgroundColor: 'rgba(255,255,255,0.1)',
+                        '&:hover': { backgroundColor: 'rgba(255,255,255,0.2)' },
+                        '&:disabled': { opacity: 0.5 }
+                      }}
                     >
-                      <ZoomOutIcon sx={{ fontSize: '1rem' }} />
-                    </Button>
-                    <Button
-                      variant="outlined"
-                      size="small"
+                      <ZoomOutIcon />
+                    </IconButton>
+                    <IconButton
                       onClick={increaseZoom}
                       disabled={cameraZoom >= maxZoom}
-                      sx={{ minWidth: 'auto', p: 0.5 }}
+                      sx={{ 
+                        color: 'white',
+                        backgroundColor: 'rgba(255,255,255,0.1)',
+                        '&:hover': { backgroundColor: 'rgba(255,255,255,0.2)' },
+                        '&:disabled': { opacity: 0.5 }
+                      }}
                     >
-                      <ZoomInIcon sx={{ fontSize: '1rem' }} />
-                    </Button>
+                      <ZoomInIcon />
+                    </IconButton>
                   </Box>
                 )}
                 
@@ -891,8 +1039,15 @@ const CameraDialog = ({
                     size="small"
                     onClick={switchCamera}
                     disabled={!cameraStream}
-                    sx={{ fontSize: '0.75rem' }}
                     startIcon={currentCamera === 'environment' ? <CameraRearIcon /> : <CameraFrontIcon />}
+                    sx={{ 
+                      color: 'white',
+                      borderColor: 'rgba(255,255,255,0.3)',
+                      '&:hover': {
+                        borderColor: 'rgba(255,255,255,0.5)',
+                        backgroundColor: 'rgba(255,255,255,0.1)'
+                      }
+                    }}
                   >
                     {currentCamera === 'environment' ? 'Trasera' : 'Frontal'}
                   </Button>
@@ -900,23 +1055,25 @@ const CameraDialog = ({
               </Box>
             </DialogTitle>
             
-            <DialogContent sx={{ p: 3 }}>
+            <DialogContent sx={{ p: 3, backgroundColor: '#f8f9fa' }}>
               {compressionProgress > 0 && (
-                <Box sx={{ width: '100%', mb: 2 }}>
-                  <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: 'block' }}>
+                <Box sx={{ width: '100%', mb: 3 }}>
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 1, fontWeight: 500 }}>
                     Procesando imagen...
                   </Typography>
-                  <Box sx={{ width: '100%', bgcolor: 'grey.200', borderRadius: 1, height: 6 }}>
-                    <Box
-                      sx={{
-                        width: `${compressionProgress}%`,
-                        bgcolor: 'primary.main',
-                        height: '100%',
-                        borderRadius: 1,
-                        transition: 'width 0.3s ease'
-                      }}
-                    />
-                  </Box>
+                  <LinearProgress 
+                    variant="determinate" 
+                    value={compressionProgress}
+                    sx={{
+                      height: 8,
+                      borderRadius: 4,
+                      backgroundColor: 'rgba(0,0,0,0.1)',
+                      '& .MuiLinearProgress-bar': {
+                        borderRadius: 4,
+                        background: 'linear-gradient(45deg, #667eea 30%, #764ba2 90%)'
+                      }
+                    }}
+                  />
                 </Box>
               )}
               
@@ -924,7 +1081,8 @@ const CameraDialog = ({
                 display: 'flex', 
                 gap: 2, 
                 justifyContent: 'center',
-                width: '100%'
+                width: '100%',
+                mb: 3
               }}>
                 {!cameraStream && cameraStatus !== 'error' && (
                   <Button
@@ -932,8 +1090,16 @@ const CameraDialog = ({
                     startIcon={<CameraAltIcon />}
                     onClick={startCamera}
                     disabled={cameraStatus === 'starting'}
-                    size="medium"
-                    sx={{ minWidth: '140px' }}
+                    size="large"
+                    sx={{ 
+                      minWidth: '160px',
+                      py: 1.5,
+                      borderRadius: 2,
+                      background: 'linear-gradient(45deg, #667eea 30%, #764ba2 90%)',
+                      '&:hover': {
+                        background: 'linear-gradient(45deg, #5a6fd8 30%, #6a4190 90%)',
+                      }
+                    }}
                   >
                     {cameraStatus === 'starting' ? 'Iniciando...' : 'Activar Cámara'}
                   </Button>
@@ -945,8 +1111,12 @@ const CameraDialog = ({
                     color="error"
                     startIcon={<WarningIcon />}
                     onClick={startCamera}
-                    size="medium"
-                    sx={{ minWidth: '140px' }}
+                    size="large"
+                    sx={{ 
+                      minWidth: '160px',
+                      py: 1.5,
+                      borderRadius: 2
+                    }}
                   >
                     Reintentar Cámara
                   </Button>
@@ -955,11 +1125,18 @@ const CameraDialog = ({
                 {cameraStream && cameraStatus === 'ready' && (
                   <Button
                     variant="contained"
-                    color="secondary"
                     onClick={capturePhoto}
                     disabled={compressionProgress > 0}
-                    size="medium"
-                    sx={{ minWidth: '140px' }}
+                    size="large"
+                    sx={{ 
+                      minWidth: '160px',
+                      py: 1.5,
+                      borderRadius: 2,
+                      background: 'linear-gradient(45deg, #4caf50 30%, #45a049 90%)',
+                      '&:hover': {
+                        background: 'linear-gradient(45deg, #45a049 30%, #3d8b40 90%)',
+                      }
+                    }}
                   >
                     📸 Capturar Foto
                   </Button>
@@ -969,38 +1146,70 @@ const CameraDialog = ({
                   variant="outlined"
                   startIcon={<PhotoLibraryIcon />}
                   onClick={onSelectFromGallery}
-                  size="medium"
-                  sx={{ minWidth: '140px' }}
+                  size="large"
+                  sx={{ 
+                    minWidth: '160px',
+                    py: 1.5,
+                    borderRadius: 2,
+                    borderColor: '#667eea',
+                    color: '#667eea',
+                    '&:hover': {
+                      borderColor: '#5a6fd8',
+                      backgroundColor: 'rgba(102, 126, 234, 0.04)'
+                    }
+                  }}
                 >
                   Elegir de Galería
                 </Button>
               </Box>
               
-              <Typography variant="caption" color="text.secondary" sx={{ textAlign: 'center', mt: 1, display: 'block' }}>
-                💡 Puedes tomar múltiples fotos
+              <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', mb: 2, fontStyle: 'italic' }}>
+                💡 Puedes tomar múltiples fotos para documentar mejor
               </Typography>
               
-              <Box sx={{ mt: 2, p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
-                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
-                  <strong>Requisitos para la cámara:</strong>
+              <Box sx={{ 
+                p: 2, 
+                backgroundColor: 'white', 
+                borderRadius: 2,
+                border: '1px solid #e0e0e0',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+              }}>
+                <Typography variant="subtitle2" color="text.primary" sx={{ mb: 1, fontWeight: 600 }}>
+                  📋 Requisitos para la cámara:
                 </Typography>
-                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', fontSize: '0.7rem' }}>
-                  • Conexión HTTPS (excepto en localhost)<br/>
-                  • Navegador compatible (Chrome, Firefox, Safari)<br/>
-                  • Permisos de cámara habilitados<br/>
-                  • Cámara disponible en el dispositivo
-                </Typography>
+                <Box component="ul" sx={{ m: 0, pl: 2, '& li': { mb: 0.5, fontSize: '0.875rem' } }}>
+                  <li>Conexión HTTPS (excepto en localhost)</li>
+                  <li>Navegador compatible (Chrome, Firefox, Safari)</li>
+                  <li>Permisos de cámara habilitados</li>
+                  <li>Cámara disponible en el dispositivo</li>
+                </Box>
               </Box>
             </DialogContent>
             
-            <DialogActions>
-              <Button onClick={onClose}>
+            <DialogActions sx={{ p: 3, backgroundColor: '#f8f9fa' }}>
+              <Button 
+                onClick={onClose}
+                sx={{ 
+                  borderRadius: 2,
+                  px: 3,
+                  py: 1
+                }}
+              >
                 Cerrar
               </Button>
             </DialogActions>
           </>
         )}
       </Box>
+
+      {/* Estilos CSS para animaciones */}
+      <style jsx>{`
+        @keyframes flash {
+          0% { opacity: 0; }
+          50% { opacity: 1; }
+          100% { opacity: 0; }
+        }
+      `}</style>
     </Dialog>
   );
 };
