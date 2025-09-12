@@ -7,39 +7,31 @@ export const loadCapacitorCore = async () => {
   return Capacitor;
 };
 
-// Función para cargar Capacitor Android de forma lazy
+// Función para cargar Capacitor Android de forma lazy (solo en Android)
 export const loadCapacitorAndroid = async () => {
-  const { Capacitor } = await import('@capacitor/android');
-  return Capacitor;
+  try {
+    const { Capacitor } = await import('@capacitor/android');
+    return Capacitor;
+  } catch (error) {
+    console.warn('@capacitor/android no disponible en esta plataforma');
+    return null;
+  }
 };
 
-// Función para cargar Capacitor iOS de forma lazy
+// Función para cargar Capacitor iOS de forma lazy (solo en iOS)
 export const loadCapacitorIOS = async () => {
-  const { Capacitor } = await import('@capacitor/ios');
-  return Capacitor;
+  try {
+    const { Capacitor } = await import('@capacitor/ios');
+    return Capacitor;
+  } catch (error) {
+    console.warn('@capacitor/ios no disponible en esta plataforma');
+    return null;
+  }
 };
 
 // Función para cargar plugins de Capacitor de forma lazy
 export const loadCapacitorPlugins = async () => {
-  const [
-    { App },
-    { Browser },
-    { Camera },
-    { Device },
-    { Filesystem },
-    { Geolocation },
-    { Haptics },
-    { Keyboard },
-    { LocalNotifications },
-    { Network },
-    { PushNotifications },
-    { ScreenReader },
-    { Share },
-    { SplashScreen },
-    { StatusBar },
-    { Storage },
-    { Toast }
-  ] = await Promise.all([
+  const pluginImports = await Promise.allSettled([
     import('@capacitor/app'),
     import('@capacitor/browser'),
     import('@capacitor/camera'),
@@ -59,25 +51,29 @@ export const loadCapacitorPlugins = async () => {
     import('@capacitor/toast')
   ]);
 
-  return {
-    App,
-    Browser,
-    Camera,
-    Device,
-    Filesystem,
-    Geolocation,
-    Haptics,
-    Keyboard,
-    LocalNotifications,
-    Network,
-    PushNotifications,
-    ScreenReader,
-    Share,
-    SplashScreen,
-    StatusBar,
-    Storage,
-    Toast
-  };
+  const plugins = {};
+  const pluginNames = [
+    'App', 'Browser', 'Camera', 'Device', 'Filesystem', 'Geolocation',
+    'Haptics', 'Keyboard', 'LocalNotifications', 'Network', 'PushNotifications',
+    'ScreenReader', 'Share', 'SplashScreen', 'StatusBar', 'Storage', 'Toast'
+  ];
+
+  pluginImports.forEach((result, index) => {
+    if (result.status === 'fulfilled') {
+      plugins[pluginNames[index]] = result.value[pluginNames[index]];
+    } else {
+      console.warn(`Plugin ${pluginNames[index]} no disponible:`, result.reason);
+      // Crear mock para plugins no disponibles
+      plugins[pluginNames[index]] = {
+        // Mock básico para evitar errores
+        getInfo: () => Promise.resolve({}),
+        checkPermissions: () => Promise.resolve({ granted: false }),
+        requestPermissions: () => Promise.resolve({ granted: false })
+      };
+    }
+  });
+
+  return plugins;
 };
 
 // Configuración optimizada para Capacitor
