@@ -20,29 +20,64 @@ export const useAuditoriaData = (
     }
   }, [userEmpresas, setEmpresas]);
 
-  // Cargar sucursales cuando cambie la empresa
+  // Cargar todas las sucursales disponibles al inicio
   useEffect(() => {
-    const obtenerSucursales = async () => {
-      if (empresaSeleccionada) {
-        try {
+    const cargarTodasLasSucursales = async () => {
+      if (!userProfile || !userEmpresas || userEmpresas.length === 0) {
+        setSucursales([]);
+        return;
+      }
+
+      try {
+        let sucursalesData = [];
+        
+        if (userProfile.role === 'supermax') {
+          // Supermax ve todas las sucursales
           const sucursalesCollection = collection(db, "sucursales");
-          const q = query(sucursalesCollection, where("empresa", "==", empresaSeleccionada.nombre));
-          const snapshot = await getDocs(q);
-          const sucursalesData = snapshot.docs.map((doc) => ({
+          const snapshot = await getDocs(sucursalesCollection);
+          sucursalesData = snapshot.docs.map((doc) => ({
             id: doc.id,
             nombre: doc.data().nombre,
+            empresa: doc.data().empresa,
+            empresaId: doc.data().empresaId
           }));
-          setSucursales(sucursalesData);
-        } catch (error) {
-          console.error("Error al obtener sucursales:", error);
+        } else {
+          // Para max y operario, cargar sucursales de sus empresas
+          const empresasIds = userEmpresas.map(emp => emp.id);
+          
+          // Firestore limita 'in' queries a 10 elementos, dividir en chunks si es necesario
+          const chunkSize = 10;
+          const empresasChunks = [];
+          for (let i = 0; i < empresasIds.length; i += chunkSize) {
+            empresasChunks.push(empresasIds.slice(i, i + chunkSize));
+          }
+
+          const sucursalesPromises = empresasChunks.map(async (chunk) => {
+            const sucursalesRef = collection(db, "sucursales");
+            const sucursalesQuery = query(sucursalesRef, where("empresaId", "in", chunk));
+            const sucursalesSnapshot = await getDocs(sucursalesQuery);
+            return sucursalesSnapshot.docs.map(doc => ({
+              id: doc.id,
+              nombre: doc.data().nombre,
+              empresa: doc.data().empresa,
+              empresaId: doc.data().empresaId
+            }));
+          });
+
+          const sucursalesArrays = await Promise.all(sucursalesPromises);
+          sucursalesData = sucursalesArrays.flat();
         }
-      } else {
+
+        setSucursales(sucursalesData);
+        console.log(`[DEBUG Auditoria] Sucursales cargadas: ${sucursalesData.length}`);
+      } catch (error) {
+        console.error("Error al obtener sucursales:", error);
         setSucursales([]);
       }
     };
 
-    obtenerSucursales();
-  }, [empresaSeleccionada, setSucursales]);
+    cargarTodasLasSucursales();
+  }, [userProfile, userEmpresas, setSucursales]);
 
   // Cargar formularios desde el contexto o Firestore
   useEffect(() => {
