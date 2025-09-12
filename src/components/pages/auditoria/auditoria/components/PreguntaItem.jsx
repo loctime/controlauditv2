@@ -32,6 +32,7 @@ const PreguntaItem = ({
   onRespuestaChange,
   onOpenModal,
   onOpenCameraDialog,
+  onDeleteImage,
   procesandoImagen
 }) => {
   const theme = useTheme();
@@ -223,38 +224,105 @@ const PreguntaItem = ({
         </Typography>
         
         {imagenes && (
-          <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+          <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', alignItems: 'center' }}>
             {Array.isArray(imagenes) 
               ? imagenes.map((imagen, imgIndex) => (
-                  <img
-                    key={imgIndex}
-                    src={URL.createObjectURL(imagen)}
-                    alt={`Imagen ${imgIndex + 1} de la pregunta ${preguntaIndex}`}
-                    style={{ 
-                      maxWidth: isMobile ? '60px' : '80px', 
-                      maxHeight: isMobile ? '60px' : '80px', 
-                      borderRadius: 8, 
-                      border: '1px solid #eee',
-                      cursor: 'pointer'
-                    }}
-                    onClick={() => {
-                      window.open(URL.createObjectURL(imagen), '_blank');
-                    }}
-                  />
+                  <Box key={imgIndex} sx={{ position: 'relative' }}>
+                    <img
+                      src={URL.createObjectURL(imagen)}
+                      alt={`Imagen ${imgIndex + 1} de la pregunta ${preguntaIndex}`}
+                      style={{ 
+                        maxWidth: isMobile ? '60px' : '80px', 
+                        maxHeight: isMobile ? '60px' : '80px', 
+                        borderRadius: 8, 
+                        border: '1px solid #eee',
+                        cursor: 'pointer'
+                      }}
+                      onClick={() => {
+                        window.open(URL.createObjectURL(imagen), '_blank');
+                      }}
+                    />
+                    <Button
+                      size="small"
+                      sx={{
+                        position: 'absolute',
+                        top: -8,
+                        right: -8,
+                        minWidth: 'auto',
+                        width: 20,
+                        height: 20,
+                        borderRadius: '50%',
+                        backgroundColor: '#f44336',
+                        color: 'white',
+                        fontSize: '12px',
+                        padding: 0,
+                        '&:hover': {
+                          backgroundColor: '#d32f2f'
+                        }
+                      }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        // Función para eliminar imagen
+                        if (typeof onDeleteImage === 'function') {
+                          onDeleteImage(seccionIndex, preguntaIndex, imgIndex);
+                        }
+                      }}
+                    >
+                      ×
+                    </Button>
+                  </Box>
                 ))
               : (
-                  <img
-                    src={URL.createObjectURL(imagenes)}
-                    alt={`Imagen de la pregunta ${preguntaIndex}`}
-                    style={{ 
-                      maxWidth: isMobile ? '80px' : '100px', 
-                      maxHeight: isMobile ? '80px' : '100px', 
-                      borderRadius: 8, 
-                      border: '1px solid #eee' 
-                    }}
-                  />
+                  <Box sx={{ position: 'relative' }}>
+                    <img
+                      src={URL.createObjectURL(imagenes)}
+                      alt={`Imagen de la pregunta ${preguntaIndex}`}
+                      style={{ 
+                        maxWidth: isMobile ? '80px' : '100px', 
+                        maxHeight: isMobile ? '80px' : '100px', 
+                        borderRadius: 8, 
+                        border: '1px solid #eee' 
+                      }}
+                    />
+                    <Button
+                      size="small"
+                      sx={{
+                        position: 'absolute',
+                        top: -8,
+                        right: -8,
+                        minWidth: 'auto',
+                        width: 20,
+                        height: 20,
+                        borderRadius: '50%',
+                        backgroundColor: '#f44336',
+                        color: 'white',
+                        fontSize: '12px',
+                        padding: 0,
+                        '&:hover': {
+                          backgroundColor: '#d32f2f'
+                        }
+                      }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        // Función para eliminar imagen
+                        if (typeof onDeleteImage === 'function') {
+                          onDeleteImage(seccionIndex, preguntaIndex, 0);
+                        }
+                      }}
+                    >
+                      ×
+                    </Button>
+                  </Box>
                 )
             }
+            {Array.isArray(imagenes) && imagenes.length > 1 && (
+              <Chip
+                label={`${imagenes.length} fotos`}
+                size="small"
+                color="primary"
+                sx={{ fontSize: '0.7rem', height: 20 }}
+              />
+            )}
           </Box>
         )}
       </Box>
