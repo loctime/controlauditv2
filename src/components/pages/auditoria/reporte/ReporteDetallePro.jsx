@@ -1287,51 +1287,85 @@ const ReporteDetallePro = forwardRef(({ open = false, onClose = () => {}, report
            ('ontouchstart' in window);
   };
 
-  // Función para generar y descargar PDF en móviles
-  const generateAndDownloadPDF = async (html) => {
+  // Función para impresión optimizada en móviles
+  const printMobileOptimized = async (html) => {
     try {
-      console.log('[ReporteDetallePro] Generando PDF para móvil...');
+      console.log('[ReporteDetallePro] Iniciando impresión optimizada para móvil...');
       
-      // Importar html2pdf dinámicamente
-      const html2pdf = (await import('html2pdf.js')).default;
+      // Crear un iframe optimizado para móviles
+      const printFrame = document.createElement('iframe');
+      printFrame.style.position = 'fixed';
+      printFrame.style.right = '0';
+      printFrame.style.bottom = '0';
+      printFrame.style.width = '100vw';
+      printFrame.style.height = '100vh';
+      printFrame.style.border = '0';
+      printFrame.style.zIndex = '9999';
+      printFrame.style.backgroundColor = 'white';
       
-      // Crear un elemento temporal con el HTML
-      const tempDiv = document.createElement('div');
-      tempDiv.innerHTML = html;
-      tempDiv.style.position = 'absolute';
-      tempDiv.style.left = '-9999px';
-      tempDiv.style.top = '-9999px';
-      document.body.appendChild(tempDiv);
+      document.body.appendChild(printFrame);
       
-      // Configuración para PDF
-      const opt = {
-        margin: [0.5, 0.5, 0.5, 0.5],
-        filename: `Reporte_Auditoria_${empresa.nombre}_${fecha.replace(/\//g, '-')}.pdf`,
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { 
-          scale: 2,
-          useCORS: true,
-          allowTaint: true,
-          logging: false
-        },
-        jsPDF: { 
-          unit: 'in', 
-          format: 'a4', 
-          orientation: 'portrait' 
-        }
-      };
+      // Escribir el contenido HTML con estilos optimizados para móvil
+      const mobileOptimizedHTML = html.replace(
+        '<style>',
+        `<style>
+          @media print {
+            body { 
+              font-size: 12px !important;
+              margin: 0 !important;
+              padding: 10px !important;
+            }
+            .header-main { 
+              padding: 15px !important;
+              margin-bottom: 15px !important;
+            }
+            .stats-grid { 
+              grid-template-columns: repeat(2, 1fr) !important;
+              gap: 10px !important;
+            }
+            .question { 
+              margin-bottom: 15px !important;
+              padding: 10px !important;
+            }
+            .signatures-grid { 
+              grid-template-columns: 1fr !important;
+              gap: 20px !important;
+            }
+          }
+          @media screen {
+            body { 
+              font-size: 14px;
+              margin: 0;
+              padding: 20px;
+            }
+          }
+        `
+      );
       
-      // Generar y descargar PDF
-      await html2pdf().set(opt).from(tempDiv).save();
+      printFrame.contentDocument.write(mobileOptimizedHTML);
+      printFrame.contentDocument.close();
       
-      // Limpiar elemento temporal
-      document.body.removeChild(tempDiv);
+      // Esperar a que el contenido se cargue completamente
+      await new Promise(resolve => setTimeout(resolve, 2000));
       
-      console.log('[ReporteDetallePro] ✅ PDF generado y descargado exitosamente');
+      // Mostrar el iframe temporalmente para que el usuario vea el contenido
+      setTimeout(() => {
+        // Imprimir
+        printFrame.contentWindow.focus();
+        printFrame.contentWindow.print();
+        
+        // Remover el iframe después de la impresión
+        setTimeout(() => {
+          if (document.body.contains(printFrame)) {
+            document.body.removeChild(printFrame);
+          }
+        }, 1000);
+      }, 1000);
+      
+      console.log('[ReporteDetallePro] ✅ Impresión móvil iniciada');
       
     } catch (error) {
-      console.error('[ReporteDetallePro] ❌ Error generando PDF:', error);
-      alert('❌ Error generando PDF: ' + error.message);
+      console.error('[ReporteDetallePro] ❌ Error en impresión móvil:', error);
       throw error;
     }
   };
@@ -1562,8 +1596,8 @@ const ReporteDetallePro = forwardRef(({ open = false, onClose = () => {}, report
     console.log('[ReporteDetallePro] Es dispositivo móvil:', isMobile);
     
     if (isMobile) {
-      // En móviles, generar PDF real y descargarlo directamente
-      await generateAndDownloadPDF(html);
+      // En móviles, usar impresión optimizada
+      await printMobileOptimized(html);
     } else {
       // En desktop, usar la impresión tradicional con iframe
       await printWithIframe(html);
@@ -1620,11 +1654,11 @@ const ReporteDetallePro = forwardRef(({ open = false, onClose = () => {}, report
                   animation: 'pulse 2s infinite'
                 }}>
                   <Typography variant="body1" sx={{ color: isMobileDevice() ? '#1976d2' : '#856404', fontWeight: 600 }}>
-                    {isMobileDevice() ? '📱 Generando PDF para descarga...' : '⏳ Procesando impresión...'} Por favor espere
+                    {isMobileDevice() ? '📱 Preparando impresión para móvil...' : '⏳ Procesando impresión...'} Por favor espere
                   </Typography>
                   <Typography variant="caption" sx={{ color: isMobileDevice() ? '#1976d2' : '#856404' }}>
                     {isMobileDevice() 
-                      ? 'En dispositivos móviles se genera un PDF real que se descarga directamente'
+                      ? 'En móviles se abre una vista optimizada que permite guardar como PDF desde el navegador'
                       : 'El sistema está generando el PDF y manejando los reintentos automáticamente'
                     }
                   </Typography>
@@ -1780,7 +1814,7 @@ const ReporteDetallePro = forwardRef(({ open = false, onClose = () => {}, report
                 position: 'relative'
               }}
             >
-              {isProcessing ? 'Procesando...' : (isChartReady ? (isMobileDevice() ? 'Descargar PDF' : 'Imprimir') : 'Preparando...')}
+              {isProcessing ? 'Procesando...' : (isChartReady ? 'Imprimir' : 'Preparando...')}
               {(isProcessing || !isChartReady) && (
                 <Box sx={{
                   position: 'absolute',

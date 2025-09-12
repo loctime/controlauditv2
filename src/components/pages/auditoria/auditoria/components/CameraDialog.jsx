@@ -452,10 +452,12 @@ const CameraDialog = ({
         
         console.log('✅ Foto capturada y guardada exitosamente');
         
+        // Cerrar cámara automáticamente después de capturar
         setTimeout(() => {
           setPhotoQuality(null);
           setCompressionProgress(0);
-        }, 2000);
+          onClose(); // Cerrar la cámara automáticamente
+        }, 1000);
       }, 'image/jpeg', 0.6);
       
     } catch (error) {
@@ -679,7 +681,10 @@ const CameraDialog = ({
           width: '100%', 
           height: isMobile ? '100vh' : '500px',
           backgroundColor: '#000',
-          overflow: 'hidden'
+          overflow: 'hidden',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center'
         }}>
           {/* Overlay de captura */}
           {captureAnimation && (
@@ -819,7 +824,10 @@ const CameraDialog = ({
               objectFit: 'cover',
               opacity: cameraStatus === 'ready' ? 1 : 0.3,
               filter: captureAnimation ? 'brightness(1.2)' : 'none',
-              transition: 'all 0.2s ease'
+              transition: 'all 0.2s ease',
+              position: 'absolute',
+              top: 0,
+              left: 0
             }}
           />
           <canvas
@@ -875,17 +883,18 @@ const CameraDialog = ({
           {isMobile && (
             <Box sx={{ 
               position: 'absolute', 
-              bottom: 'env(safe-area-inset-bottom, 20px)',
+              bottom: 0,
               left: 0, 
               right: 0,
               background: 'linear-gradient(to top, rgba(0,0,0,0.9) 0%, transparent 100%)',
-              p: 3,
-              pb: 4,
+              p: 2,
+              pb: 'max(20px, env(safe-area-inset-bottom))',
               display: 'flex',
               justifyContent: 'center',
               alignItems: 'center',
-              gap: 3,
-              minHeight: '120px'
+              gap: 2,
+              minHeight: '100px',
+              width: '100%'
             }}>
               <Fab
                 onClick={onSelectFromGallery}

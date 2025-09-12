@@ -224,6 +224,26 @@ const PreguntasYSeccion = ({
     handleCloseCameraDialog();
   };
 
+  const handleDeleteImage = (seccionIndex, preguntaIndex, imageIndex) => {
+    const nuevasImagenes = imagenes.map((img, index) => {
+      if (index === seccionIndex) {
+        const currentImages = img[preguntaIndex];
+        if (Array.isArray(currentImages)) {
+          const updatedImages = currentImages.filter((_, idx) => idx !== imageIndex);
+          return [...img.slice(0, preguntaIndex), updatedImages.length > 0 ? updatedImages : null, ...img.slice(preguntaIndex + 1)];
+        } else {
+          // Si es una sola imagen, la eliminamos
+          return [...img.slice(0, preguntaIndex), null, ...img.slice(preguntaIndex + 1)];
+        }
+      }
+      return img;
+    });
+    
+    setImagenes(nuevasImagenes);
+    guardarImagenes(nuevasImagenes);
+    console.log(`🗑️ Imagen eliminada de pregunta ${preguntaIndex} de sección ${seccionIndex}`);
+  };
+
   // Función para navegar a una pregunta específica
   const navegarAPregunta = (seccionIndex, preguntaIndex) => {
     setTimeout(() => {
@@ -328,6 +348,7 @@ const PreguntasYSeccion = ({
                 onRespuestaChange={handleRespuestaChange}
                 onOpenModal={handleOpenModal}
                 onOpenCameraDialog={handleOpenCameraDialog}
+                onDeleteImage={handleDeleteImage}
                 procesandoImagen={procesandoImagen}
               />
             ))}

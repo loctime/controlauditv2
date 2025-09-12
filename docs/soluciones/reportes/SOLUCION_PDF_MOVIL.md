@@ -26,43 +26,51 @@ const isMobileDevice = () => {
 };
 ```
 
-### 2. Estrategia Dual
+### 2. Estrategia Optimizada
 
 **Para Móviles:**
-- Usa `html2pdf.js` para generar PDF real
-- Descarga directamente el archivo PDF
-- Botón cambia a "Descargar PDF"
+- Usa iframe optimizado para móviles con estilos específicos
+- Aplica CSS responsive para mejor renderizado
+- Mantiene la funcionalidad de impresión del navegador pero optimizada
 
 **Para Desktop:**
 - Mantiene la impresión tradicional con iframe
-- Botón muestra "Imprimir"
+- Sin cambios en la funcionalidad existente
 
 ### 3. Implementación Técnica
 
 ```javascript
-// En móviles: generar PDF real
-const generateAndDownloadPDF = async (html) => {
-  const html2pdf = (await import('html2pdf.js')).default;
-  const opt = {
-    margin: [0.5, 0.5, 0.5, 0.5],
-    filename: `Reporte_Auditoria_${empresa.nombre}_${fecha}.pdf`,
-    image: { type: 'jpeg', quality: 0.98 },
-    html2canvas: { scale: 2, useCORS: true },
-    jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
-  };
-  await html2pdf().set(opt).from(tempDiv).save();
+// En móviles: impresión optimizada
+const printMobileOptimized = async (html) => {
+  // Crear iframe optimizado para móviles
+  const printFrame = document.createElement('iframe');
+  printFrame.style.width = '100vw';
+  printFrame.style.height = '100vh';
+  
+  // Aplicar estilos optimizados para móvil
+  const mobileOptimizedHTML = html.replace('<style>', `
+    <style>
+      @media print {
+        body { font-size: 12px !important; }
+        .stats-grid { grid-template-columns: repeat(2, 1fr) !important; }
+        .signatures-grid { grid-template-columns: 1fr !important; }
+      }
+    `);
+  
+  printFrame.contentDocument.write(mobileOptimizedHTML);
+  printFrame.contentWindow.print();
 };
 ```
 
 ### 4. UX Mejorada
 
 - **Indicadores visuales:** Mensajes específicos para móvil vs desktop
-- **Texto del botón:** "Descargar PDF" en móviles, "Imprimir" en desktop
+- **Estilos optimizados:** Layout responsive para mejor impresión en móviles
 - **Colores diferenciados:** Azul para móvil, amarillo para desktop
 
 ## Resultado
 
-✅ **Móviles:** PDF real descargado directamente
+✅ **Móviles:** Vista de impresión optimizada que permite guardar PDF correctamente
 ✅ **Desktop:** Impresión tradicional mantenida
 ✅ **UX:** Experiencia optimizada para cada plataforma
 
@@ -70,7 +78,6 @@ const generateAndDownloadPDF = async (html) => {
 
 - `src/components/pages/auditoria/reporte/ReporteDetallePro.jsx`
 
-## Dependencias
+## Nota Importante
 
-- `html2pdf.js` (ya incluida en package.json)
-- `jspdf` (ya incluida en package.json)
+La solución final usa la funcionalidad nativa de impresión del navegador pero con optimizaciones específicas para móviles, ya que `html2pdf.js` presentaba problemas con el contenido dinámico y las imágenes de los gráficos.
