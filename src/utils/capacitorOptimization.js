@@ -1,79 +1,131 @@
-// Optimización de importaciones de Capacitor
-// Importar solo los componentes necesarios para reducir el tamaño del bundle
+// Optimización de importaciones de Capacitor - MODO WEB
+// Versión simplificada para desarrollo web sin Capacitor
 
 // Función para cargar Capacitor Core de forma lazy
 export const loadCapacitorCore = async () => {
-  const { Capacitor } = await import('@capacitor/core');
-  return Capacitor;
+  // Mock para desarrollo web
+  return {
+    isNativePlatform: () => false,
+    getPlatform: () => 'web'
+  };
 };
 
-// Función para cargar Capacitor Android de forma lazy (solo en Android)
+// Función para cargar Capacitor Android de forma lazy (deshabilitado)
 export const loadCapacitorAndroid = async () => {
-  try {
-    const { Capacitor } = await import('@capacitor/android');
-    return Capacitor;
-  } catch (error) {
-    console.warn('@capacitor/android no disponible en esta plataforma');
-    return null;
-  }
+  console.warn('Capacitor Android deshabilitado para desarrollo web');
+  return null;
 };
 
-// Función para cargar Capacitor iOS de forma lazy (solo en iOS)
+// Función para cargar Capacitor iOS de forma lazy (deshabilitado)
 export const loadCapacitorIOS = async () => {
-  try {
-    const { Capacitor } = await import('@capacitor/ios');
-    return Capacitor;
-  } catch (error) {
-    console.warn('@capacitor/ios no disponible en esta plataforma');
-    return null;
-  }
+  console.warn('Capacitor iOS deshabilitado para desarrollo web');
+  return null;
 };
 
-// Función para cargar plugins de Capacitor de forma lazy
+// Función para cargar plugins de Capacitor de forma lazy (MODO WEB)
 export const loadCapacitorPlugins = async () => {
-  const pluginImports = await Promise.allSettled([
-    import('@capacitor/app'),
-    import('@capacitor/browser'),
-    import('@capacitor/camera'),
-    import('@capacitor/device'),
-    import('@capacitor/filesystem'),
-    import('@capacitor/geolocation'),
-    import('@capacitor/haptics'),
-    import('@capacitor/keyboard'),
-    import('@capacitor/local-notifications'),
-    import('@capacitor/network'),
-    import('@capacitor/push-notifications'),
-    import('@capacitor/screen-reader'),
-    import('@capacitor/share'),
-    import('@capacitor/splash-screen'),
-    import('@capacitor/status-bar'),
-    import('@capacitor/storage'),
-    import('@capacitor/toast')
-  ]);
-
-  const plugins = {};
-  const pluginNames = [
-    'App', 'Browser', 'Camera', 'Device', 'Filesystem', 'Geolocation',
-    'Haptics', 'Keyboard', 'LocalNotifications', 'Network', 'PushNotifications',
-    'ScreenReader', 'Share', 'SplashScreen', 'StatusBar', 'Storage', 'Toast'
-  ];
-
-  pluginImports.forEach((result, index) => {
-    if (result.status === 'fulfilled') {
-      plugins[pluginNames[index]] = result.value[pluginNames[index]];
-    } else {
-      console.warn(`Plugin ${pluginNames[index]} no disponible:`, result.reason);
-      // Crear mock para plugins no disponibles
-      plugins[pluginNames[index]] = {
-        // Mock básico para evitar errores
-        getInfo: () => Promise.resolve({}),
-        checkPermissions: () => Promise.resolve({ granted: false }),
-        requestPermissions: () => Promise.resolve({ granted: false })
-      };
+  console.warn('Capacitor plugins deshabilitados para desarrollo web');
+  
+  // Retornar mocks para todos los plugins
+  return {
+    App: {
+      getInfo: () => Promise.resolve({ name: 'Web App', version: '1.0.0' }),
+      getState: () => Promise.resolve({ isActive: true }),
+      addListener: () => ({ remove: () => {} }),
+      exitApp: () => Promise.resolve(),
+      minimizeApp: () => Promise.resolve()
+    },
+    Browser: {
+      open: () => Promise.resolve(),
+      close: () => Promise.resolve()
+    },
+    Camera: {
+      getPhoto: () => Promise.resolve({ webPath: 'mock-image.jpg' }),
+      checkPermissions: () => Promise.resolve({ camera: 'granted', photos: 'granted' }),
+      requestPermissions: () => Promise.resolve({ camera: 'granted', photos: 'granted' })
+    },
+    Device: {
+      getInfo: () => Promise.resolve({ platform: 'web', model: 'Web Browser' }),
+      getBatteryInfo: () => Promise.resolve({ batteryLevel: 1, isCharging: false }),
+      getLanguageCode: () => Promise.resolve({ value: 'es' }),
+      getLanguageTag: () => Promise.resolve({ value: 'es-ES' })
+    },
+    Filesystem: {
+      readFile: () => Promise.resolve({ data: 'mock-data' }),
+      writeFile: () => Promise.resolve({ uri: 'mock-uri' }),
+      deleteFile: () => Promise.resolve(),
+      mkdir: () => Promise.resolve(),
+      readdir: () => Promise.resolve({ files: [] }),
+      rmdir: () => Promise.resolve(),
+      stat: () => Promise.resolve({ type: 'file', size: 0 }),
+      copy: () => Promise.resolve(),
+      rename: () => Promise.resolve()
+    },
+    Geolocation: {
+      getCurrentPosition: () => Promise.resolve({ coords: { latitude: 0, longitude: 0 } }),
+      watchPosition: () => Promise.resolve({ callbackId: 'mock-id' }),
+      checkPermissions: () => Promise.resolve({ location: 'granted' }),
+      requestPermissions: () => Promise.resolve({ location: 'granted' })
+    },
+    Haptics: {
+      vibrate: () => Promise.resolve(),
+      impact: () => Promise.resolve(),
+      notification: () => Promise.resolve(),
+      selection: () => Promise.resolve()
+    },
+    Keyboard: {
+      show: () => Promise.resolve(),
+      hide: () => Promise.resolve(),
+      setStyle: () => Promise.resolve(),
+      setResizeMode: () => Promise.resolve(),
+      addListener: () => ({ remove: () => {} })
+    },
+    LocalNotifications: {
+      schedule: () => Promise.resolve(),
+      cancel: () => Promise.resolve(),
+      getPending: () => Promise.resolve({ notifications: [] }),
+      checkPermissions: () => Promise.resolve({ display: 'granted' }),
+      requestPermissions: () => Promise.resolve({ display: 'granted' })
+    },
+    Network: {
+      getStatus: () => Promise.resolve({ connected: true, connectionType: 'wifi' }),
+      addListener: () => ({ remove: () => {} })
+    },
+    PushNotifications: {
+      register: () => Promise.resolve(),
+      unregister: () => Promise.resolve(),
+      getDeliveredNotifications: () => Promise.resolve({ notifications: [] }),
+      removeAllDeliveredNotifications: () => Promise.resolve(),
+      addListener: () => ({ remove: () => {} })
+    },
+    ScreenReader: {
+      isEnabled: () => Promise.resolve({ value: false }),
+      speak: () => Promise.resolve()
+    },
+    Share: {
+      share: () => Promise.resolve()
+    },
+    SplashScreen: {
+      show: () => Promise.resolve(),
+      hide: () => Promise.resolve()
+    },
+    StatusBar: {
+      show: () => Promise.resolve(),
+      hide: () => Promise.resolve(),
+      setStyle: () => Promise.resolve(),
+      setBackgroundColor: () => Promise.resolve()
+    },
+    Storage: {
+      get: () => Promise.resolve({ value: null }),
+      set: () => Promise.resolve(),
+      remove: () => Promise.resolve(),
+      clear: () => Promise.resolve(),
+      keys: () => Promise.resolve({ keys: [] })
+    },
+    Toast: {
+      show: () => Promise.resolve()
     }
-  });
-
-  return plugins;
+  };
 };
 
 // Configuración optimizada para Capacitor
