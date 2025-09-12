@@ -115,7 +115,7 @@ export const loadCapacitorPlugins = async () => {
       setStyle: () => Promise.resolve(),
       setBackgroundColor: () => Promise.resolve()
     },
-    Storage: {
+    Preferences: {
       get: () => Promise.resolve({ value: null }),
       set: () => Promise.resolve(),
       remove: () => Promise.resolve(),
@@ -453,33 +453,33 @@ export const notificationUtils = {
 export const storageUtils = {
   // Obtener valor
   get: async (key) => {
-    const { Storage } = await loadCapacitorPlugins();
-    const result = await Storage.get({ key });
+    const { Preferences } = await loadCapacitorPlugins();
+    const result = await Preferences.get({ key });
     return result.value;
   },
   
   // Establecer valor
   set: async (key, value) => {
-    const { Storage } = await loadCapacitorPlugins();
-    return await Storage.set({ key, value });
+    const { Preferences } = await loadCapacitorPlugins();
+    return await Preferences.set({ key, value });
   },
   
   // Eliminar valor
   remove: async (key) => {
-    const { Storage } = await loadCapacitorPlugins();
-    return await Storage.remove({ key });
+    const { Preferences } = await loadCapacitorPlugins();
+    return await Preferences.remove({ key });
   },
   
   // Limpiar almacenamiento
   clear: async () => {
-    const { Storage } = await loadCapacitorPlugins();
-    return await Storage.clear();
+    const { Preferences } = await loadCapacitorPlugins();
+    return await Preferences.clear();
   },
   
   // Obtener claves
   keys: async () => {
-    const { Storage } = await loadCapacitorPlugins();
-    const result = await Storage.keys();
+    const { Preferences } = await loadCapacitorPlugins();
+    const result = await Preferences.keys();
     return result.keys;
   }
 };
