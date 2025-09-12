@@ -1,12 +1,10 @@
-import React, { useRef, useState, forwardRef, useImperativeHandle } from "react";
-import ResumenRespuestas from "./ResumenRespuestas";
-import ImagenesTable from "./ImagenesTable";
+import React, { useRef, forwardRef, useImperativeHandle, useMemo, useState, useEffect } from "react";
 import PreguntasRespuestasList from "../../../common/PreguntasRespuestasList";
-import { Typography, Grid, Box, Button, Paper, Dialog, DialogTitle, DialogContent, DialogActions, IconButton, TextField, Alert, Snackbar, Switch, FormControlLabel } from "@mui/material";
+import { Typography, Box, Button, Dialog, DialogTitle, DialogContent, DialogActions, IconButton, Alert } from "@mui/material";
 import PrintIcon from '@mui/icons-material/Print';
-import EmailIcon from '@mui/icons-material/Email';
 import CloseIcon from '@mui/icons-material/Close';
 import EstadisticasChart from './EstadisticasChart';
+import EstadisticasChartSimple from './EstadisticasChartSimple';
 import { useAuth } from '../../../context/AuthContext';
 
 // Normaliza respuestas a array de arrays de strings
@@ -207,103 +205,745 @@ const normalizarComentarios = (comentariosFirestore, secciones) => {
   return secciones.map((_, idx) => []);
 };
 
-function generarContenidoImpresion({empresa, sucursal, formulario, fecha, respuestas, secciones, comentarios, imagenes, firmaAuditor, chartImgDataUrl, sectionChartsImgDataUrl, nombreAuditor, firmaResponsable}) {
-  // Resumen de respuestas
-  const totalPreguntas = respuestas.flat().length;
-  const conforme = respuestas.flat().filter(r => r === 'Conforme').length;
-  const noConforme = respuestas.flat().filter(r => r === 'No conforme').length;
-  const necesitaMejora = respuestas.flat().filter(r => r === 'Necesita mejora').length;
-  const noAplica = respuestas.flat().filter(r => r === 'No aplica').length;
+function generarContenidoImpresion({
+  empresa,
+  sucursal,
+  formulario,
+  fecha, // string dd/mm/aaaa (o similar)
+  respuestas, // array de arrays (ya normalizado)
+  secciones,  // [{ nombre, preguntas: [...] }, ...]
+  comentarios, // array de arrays (ya normalizado)
+  imagenes, // array de arrays (urls o vacío)
+  firmaAuditor,
+  chartImgDataUrl, // dataURL del gráfico general (Google Charts)
+  sectionChartsImgDataUrl = [], // opcional, dataURL por sección
+  nombreAuditor,
+  firmaResponsable,
+  auditorTelefono = "",
+  geolocalizacion = null, // { lat, lng } opcional
+  fechaInicio = "", // opcional, p.ej. "04/09/2021 - 10:04:56"
+  fechaFin = "" // opcional
+}) {
+  // ===== Resumen general =====
+  const flat = (respuestas || []).flat();
+  const total = flat.length || 0;
 
-  let html = `
-    <!DOCTYPE html>
-    <html lang="es">
-    <head>
-      <meta charset="UTF-8">
-      <title>Reporte de Auditoría</title>
-      <style>
-        body { font-family: Arial, sans-serif; margin: 0; padding: 24px; }
-        h1, h2, h3 { color: #1976d2; }
-        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #1976d2; padding-bottom: 12px; margin-bottom: 24px; }
-        .logo { height: 60px; }
-        .section { margin-bottom: 24px; }
-        .firma-img { max-width: 300px; max-height: 100px; border: 2px solid #43a047; border-radius: 8px; margin-top: 8px; }
-        .imagenes-table { width: 100%; border-collapse: collapse; margin-top: 16px; }
-        .imagenes-table th, .imagenes-table td { border: 1px solid #ccc; padding: 8px; text-align: left; }
-        .imagenes-table th { background: #f5f5f5; }
-        .img-preview { max-width: 100px; max-height: 80px; }
-        .firma-label { color: #1976d2; font-weight: bold; margin-bottom: 4px; }
-        .firma-aclaracion { color: #333; font-size: 15px; margin-top: 4px; }
-        .footer { margin-top: 32px; text-align: center; color: #888; font-size: 13px; }
-        @media print { .no-print { display: none !important; } }
-      </style>
-    </head>
-    <body>
-      <div class="header">
-        <h1>Reporte de Auditoría</h1>
-        ${empresa.logo ? `<img src="${empresa.logo}" alt="Logo" class="logo" />` : ''}
-      </div>
-      <div class="section">
-        <h2>Datos de la Empresa</h2>
-        <p><strong>Empresa:</strong> ${empresa.nombre || ''}</p>
-        <p><strong>Sucursal:</strong> ${sucursal || ''}</p>
-        <p><strong>Formulario:</strong> ${formulario.nombre || ''}</p>
-        <p><strong>Fecha:</strong> ${fecha}</p>
-      </div>
-      <div class="section">
-        <h2>Resumen de Respuestas</h2>
-        <ul>
-          <li><strong>Total de preguntas:</strong> ${totalPreguntas}</li>
-          <li><strong>Conforme:</strong> ${conforme}</li>
-          <li><strong>No conforme:</strong> ${noConforme}</li>
-          <li><strong>Necesita mejora:</strong> ${necesitaMejora}</li>
-          <li><strong>No aplica:</strong> ${noAplica}</li>
-        </ul>
-      </div>
-      <div class="section">
-        <h2>Gráfico de Respuestas</h2>
-        ${chartImgDataUrl ? `<img src="${chartImgDataUrl}" style="max-width:400px;" />` : ''}
-      </div>
-      ${sectionChartsImgDataUrl && sectionChartsImgDataUrl.length > 0 ? `
-        <div class="section">
-          <h2>Distribución por sección</h2>
-          ${sectionChartsImgDataUrl.map((img, idx) => img ? `<div style='margin-bottom:16px;'><b>${secciones[idx]?.nombre || `Sección ${idx+1}`}</b><br/><img src='${img}' style='max-width:350px;max-height:220px;'/></div>` : '').join('')}
+  const contar = (valor) => flat.filter(v => v === valor).length;
+  const C = contar('Conforme');
+  const NC = contar('No conforme');
+  const NM = contar('Necesita mejora');
+  const NA = contar('No aplica');
+
+  const pct = (n) => total > 0 ? ((n / total) * 100).toFixed(1) : "0.0";
+
+  // Para numeración 1.1, 1.2, etc.
+  const num = (sIdx, pIdx) => `${sIdx + 1}.${pIdx + 1}`;
+
+  // Helpers seguros
+  const val = (x) => (x ?? "").toString();
+  const _empresa = empresa || {};
+  const empresaNombre = val(_empresa.nombre);
+  const empresaDir = val(_empresa.direccion);
+  const empresaTel = val(_empresa.telefono);
+  const formNombre = val(formulario?.nombre);
+
+  const geo = geolocalizacion && (geolocalizacion.lat || geolocalizacion.lng)
+      ? `Latitud: ${geolocalizacion.lat} | Longitud: ${geolocalizacion.lng}`
+      : "";
+
+  // ===== HTML + CSS estilo PROFESIONAL =====
+  return `
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<title>Reporte de Auditoría - ${empresaNombre}</title>
+<style>
+  @page { 
+    size: A4; 
+    margin: 15mm 12mm; 
+  }
+  * { 
+    box-sizing: border-box; 
+    margin: 0;
+    padding: 0;
+  }
+  body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    color: #2c3e50;
+    font-size: 11px;
+    line-height: 1.4;
+    background: #ffffff;
+  }
+
+  /* Header principal */
+  .header-main {
+    background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+    color: white;
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  }
+  
+  .header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  
+  .logo-section {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+  }
+  
+  .logo {
+    width: 60px;
+    height: 60px;
+    background: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 18px;
+    color: #1e3c72;
+  }
+  
+  .company-info h1 {
+    font-size: 24px;
+    font-weight: 700;
+    margin-bottom: 5px;
+  }
+  
+  .company-info p {
+    font-size: 14px;
+    opacity: 0.9;
+  }
+  
+  .audit-info {
+    text-align: right;
+  }
+  
+  .audit-info h2 {
+    font-size: 18px;
+    margin-bottom: 8px;
+  }
+  
+  .audit-info p {
+    font-size: 12px;
+    margin-bottom: 3px;
+  }
+
+  /* Información de la auditoría */
+  .audit-details {
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 6px;
+    padding: 15px;
+    margin-bottom: 20px;
+  }
+  
+  .details-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+  }
+  
+  .detail-item {
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .detail-label {
+    font-weight: 600;
+    color: #495057;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 3px;
+  }
+  
+  .detail-value {
+    font-size: 12px;
+    color: #2c3e50;
+    font-weight: 500;
+  }
+
+  /* Resumen estadístico */
+  .stats-summary {
+    background: white;
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 25px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  }
+  
+  .stats-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: #2c3e50;
+    margin-bottom: 15px;
+    text-align: center;
+    border-bottom: 2px solid #3498db;
+    padding-bottom: 8px;
+  }
+  
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 15px;
+    margin-bottom: 20px;
+  }
+  
+  .stat-card {
+    text-align: center;
+    padding: 12px 8px;
+    border-radius: 6px;
+    border: 1px solid #e9ecef;
+  }
+  
+  .stat-card.conforme {
+    background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+    border-color: #28a745;
+  }
+  
+  .stat-card.no-conforme {
+    background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
+    border-color: #dc3545;
+  }
+  
+  .stat-card.mejora {
+    background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+    border-color: #ffc107;
+  }
+  
+  .stat-card.no-aplica {
+    background: linear-gradient(135deg, #d1ecf1 0%, #bee5eb 100%);
+    border-color: #17a2b8;
+  }
+  
+  .stat-card.total {
+    background: linear-gradient(135deg, #e2e3e5 0%, #d6d8db 100%);
+    border-color: #6c757d;
+  }
+  
+  .stat-number {
+    font-size: 20px;
+    font-weight: 700;
+    margin-bottom: 3px;
+  }
+  
+  .stat-label {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+  }
+  
+  .stat-percentage {
+    font-size: 12px;
+    font-weight: 500;
+    margin-top: 2px;
+  }
+
+  /* Gráfico */
+  .chart-section {
+    text-align: center;
+    margin: 20px 0;
+  }
+  
+  .chart-container {
+    display: inline-block;
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    padding: 15px;
+    background: white;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  }
+  
+     .chart-image {
+     max-width: 100%;
+     height: auto;
+     border-radius: 4px;
+     display: block;
+     margin: 0 auto;
+     object-fit: contain;
+   }
+   
+   /* Asegurar que las imágenes se muestren en impresión */
+   @media print {
+     .chart-image {
+       max-width: 90%;
+       height: auto;
+       page-break-inside: avoid;
+       display: block !important;
+       visibility: visible !important;
+       opacity: 1 !important;
+     }
+   }
+
+  /* Secciones */
+  .sections-container {
+    margin-top: 25px;
+  }
+  
+  .section {
+    margin-bottom: 30px;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  }
+  
+  .section-header {
+    background: linear-gradient(135deg, #495057 0%, #6c757d 100%);
+    color: white;
+    padding: 12px 20px;
+    font-size: 14px;
+    font-weight: 600;
+  }
+  
+  .section-stats {
+    background: #f8f9fa;
+    padding: 10px 20px;
+    border-bottom: 1px solid #e9ecef;
+    font-size: 11px;
+    color: #6c757d;
+  }
+  
+  .section-chart {
+    text-align: center;
+    padding: 15px;
+    background: white;
+    border-bottom: 1px solid #e9ecef;
+  }
+  
+  .section-chart img {
+    max-width: 300px;
+    height: auto;
+    border-radius: 4px;
+  }
+
+  /* Preguntas */
+  .questions-container {
+    padding: 20px;
+  }
+  
+  .question {
+    margin-bottom: 20px;
+    border-left: 4px solid #3498db;
+    background: #f8f9fa;
+    border-radius: 0 6px 6px 0;
+    padding: 15px;
+  }
+  
+  .question-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+  }
+  
+  .question-number {
+    font-weight: 700;
+    color: #2c3e50;
+    font-size: 12px;
+  }
+  
+  .question-status {
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+  }
+  
+  .status-conforme {
+    background: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+  }
+  
+  .status-no-conforme {
+    background: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+  }
+  
+  .status-mejora {
+    background: #fff3cd;
+    color: #856404;
+    border: 1px solid #ffeaa7;
+  }
+  
+  .status-no-aplica {
+    background: #d1ecf1;
+    color: #0c5460;
+    border: 1px solid #bee5eb;
+  }
+  
+  .question-text {
+    font-size: 12px;
+    color: #2c3e50;
+    margin-bottom: 8px;
+    line-height: 1.4;
+  }
+  
+  .question-comment {
+    background: white;
+    border: 1px solid #e9ecef;
+    border-radius: 4px;
+    padding: 8px 12px;
+    margin-top: 8px;
+    font-size: 11px;
+    color: #6c757d;
+    font-style: italic;
+  }
+  
+  .question-image {
+    margin-top: 10px;
+    text-align: center;
+  }
+  
+  .question-image img {
+    max-width: 150px;
+    max-height: 100px;
+    border-radius: 4px;
+    border: 1px solid #e9ecef;
+  }
+
+  /* Firmas */
+  .signatures-section {
+    margin-top: 40px;
+    padding: 25px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border: 1px solid #e9ecef;
+  }
+  
+  .signatures-title {
+    text-align: center;
+    font-size: 16px;
+    font-weight: 700;
+    color: #2c3e50;
+    margin-bottom: 20px;
+    border-bottom: 2px solid #3498db;
+    padding-bottom: 8px;
+  }
+  
+  .signatures-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 30px;
+  }
+  
+  .signature-box {
+    text-align: center;
+  }
+  
+  .signature-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #495057;
+    margin-bottom: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  
+  .signature-image {
+    border: 2px solid #3498db;
+    border-radius: 6px;
+    padding: 10px;
+    background: white;
+    margin-bottom: 8px;
+    min-height: 80px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .signature-image img {
+    max-width: 100%;
+    max-height: 70px;
+    object-fit: contain;
+  }
+  
+  .signature-name {
+    font-size: 11px;
+    color: #6c757d;
+    font-weight: 500;
+  }
+
+  /* Footer */
+  .footer {
+    margin-top: 30px;
+    padding: 15px;
+    background: #2c3e50;
+    color: white;
+    text-align: center;
+    border-radius: 6px;
+  }
+  
+  .footer-content {
+    font-size: 10px;
+    opacity: 0.8;
+  }
+
+  /* Utilidades */
+  .text-center { text-align: center; }
+  .text-right { text-align: right; }
+  .mb-10 { margin-bottom: 10px; }
+  .mb-15 { margin-bottom: 15px; }
+  .mt-20 { margin-top: 20px; }
+  
+  /* Evitar cortes feos */
+  .avoid-break { page-break-inside: avoid; }
+  
+  /* Responsive para impresión */
+  @media print {
+    body { font-size: 10px; }
+    .header-main { padding: 15px; }
+    .stats-grid { gap: 10px; }
+    .question { margin-bottom: 15px; }
+  }
+</style>
+</head>
+<body>
+
+  <!-- HEADER PRINCIPAL -->
+  <div class="header-main">
+    <div class="header-content">
+      <div class="logo-section">
+        <div class="logo">
+          <img src="/vite.svg" alt="ControlAudit" style="width: 40px; height: 40px; filter: brightness(0) invert(1);" />
         </div>
+        <div class="company-info">
+          <h1>ControlAudit</h1>
+          <p>Sistema de Auditorías Profesionales</p>
+        </div>
+      </div>
+      <div class="audit-info">
+        <h2>REPORTE DE AUDITORÍA</h2>
+        <p>Fecha: ${fecha}</p>
+        <p>Auditor: ${nombreAuditor}</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- INFORMACIÓN DE LA AUDITORÍA -->
+  <div class="audit-details">
+    <div class="details-grid">
+      <div class="detail-item">
+        <span class="detail-label">Empresa</span>
+        <span class="detail-value">${empresaNombre}</span>
+      </div>
+      <div class="detail-item">
+        <span class="detail-label">Sucursal</span>
+        <span class="detail-value">${sucursal || 'Casa Central'}</span>
+      </div>
+      <div class="detail-item">
+        <span class="detail-label">Formulario</span>
+        <span class="detail-value">${formNombre}</span>
+      </div>
+      <div class="detail-item">
+        <span class="detail-label">Teléfono Auditor</span>
+        <span class="detail-value">${auditorTelefono || 'No especificado'}</span>
+      </div>
+      ${empresaDir ? `
+      <div class="detail-item">
+        <span class="detail-label">Dirección</span>
+        <span class="detail-value">${empresaDir}</span>
+      </div>
       ` : ''}
-      <div class="section">
-        <h2>Preguntas y Respuestas</h2>
-        ${secciones.map((seccion, sIdx) => `
-          <div style="margin-bottom: 12px;">
-            <h3>${seccion.nombre}</h3>
-            <ul>
-              ${seccion.preguntas.map((pregunta, pIdx) => `
-                <li>
-                  <strong>${pregunta}</strong><br/>
-                  Respuesta: ${respuestas[sIdx]?.[pIdx] || 'Sin responder'}<br/>
-                  ${comentarios[sIdx]?.[pIdx] ? `Comentario: ${comentarios[sIdx][pIdx]}` : ''}
-                  ${imagenes[sIdx]?.[pIdx] ? `<br/><img src="${imagenes[sIdx][pIdx]}" class="img-preview" alt="Imagen" />` : ''}
-                </li>
-              `).join('')}
-            </ul>
+      ${empresaTel ? `
+      <div class="detail-item">
+        <span class="detail-label">Teléfono Empresa</span>
+        <span class="detail-value">${empresaTel}</span>
+      </div>
+      ` : ''}
+      ${geo ? `
+      <div class="detail-item">
+        <span class="detail-label">Geolocalización</span>
+        <span class="detail-value">${geo}</span>
+      </div>
+      ` : ''}
+      ${fechaInicio ? `
+      <div class="detail-item">
+        <span class="detail-label">Inicio Auditoría</span>
+        <span class="detail-value">${fechaInicio}</span>
+      </div>
+      ` : ''}
+      ${fechaFin ? `
+      <div class="detail-item">
+        <span class="detail-label">Fin Auditoría</span>
+        <span class="detail-value">${fechaFin}</span>
+      </div>
+      ` : ''}
+    </div>
+  </div>
+
+  <!-- RESUMEN ESTADÍSTICO -->
+  <div class="stats-summary">
+    <div class="stats-title">📊 RESUMEN ESTADÍSTICO DE LA AUDITORÍA</div>
+    
+    <div class="stats-grid">
+      <div class="stat-card conforme">
+        <div class="stat-number">${C}</div>
+        <div class="stat-label">Conforme</div>
+        <div class="stat-percentage">${pct(C)}%</div>
+      </div>
+      <div class="stat-card no-conforme">
+        <div class="stat-number">${NC}</div>
+        <div class="stat-label">No Conforme</div>
+        <div class="stat-percentage">${pct(NC)}%</div>
+      </div>
+      <div class="stat-card mejora">
+        <div class="stat-number">${NM}</div>
+        <div class="stat-label">Necesita Mejora</div>
+        <div class="stat-percentage">${pct(NM)}%</div>
+      </div>
+      <div class="stat-card no-aplica">
+        <div class="stat-number">${NA}</div>
+        <div class="stat-label">No Aplica</div>
+        <div class="stat-percentage">${pct(NA)}%</div>
+      </div>
+      <div class="stat-card total">
+        <div class="stat-number">${total}</div>
+        <div class="stat-label">Total</div>
+        <div class="stat-percentage">100%</div>
+      </div>
+    </div>
+
+         ${chartImgDataUrl && chartImgDataUrl.length > 1000 && chartImgDataUrl.startsWith('data:image') ? `
+     <div class="chart-section">
+       <div class="chart-container">
+         <img class="chart-image" 
+              src="${chartImgDataUrl}" 
+              alt="Distribución general de respuestas" 
+              style="max-width: 100%; height: auto; border: 2px solid #3498db; border-radius: 8px; min-height: 200px; display: block;" 
+              onerror="this.style.display='none'; this.nextElementSibling.style.display='block'; console.error('Error cargando imagen del gráfico principal');" 
+              onload="console.log('Imagen del gráfico principal cargada exitosamente');" />
+         <div style="display: none; border: 2px dashed #e74c3c; padding: 20px; text-align: center; background: #fff5f5; min-height: 200px;">
+           <p style="color: #e74c3c; font-weight: bold; margin: 0;">⚠️ GRÁFICO NO DISPONIBLE</p>
+           <p style="color: #7f8c8d; font-size: 12px; margin: 5px 0 0 0;">Error al cargar la imagen del gráfico</p>
+           <p style="color: #7f8c8d; font-size: 10px; margin: 5px 0 0 0;">Formato: ${chartImgDataUrl.startsWith('data:image/png') ? 'PNG' : chartImgDataUrl.startsWith('data:image/jpeg') ? 'JPEG' : 'Desconocido'}</p>
+           <p style="color: #7f8c8d; font-size: 10px; margin: 5px 0 0 0;">Tamaño: ${(chartImgDataUrl.length / 1024).toFixed(1)} KB</p>
+         </div>
+       </div>
+     </div>
+     ` : `
+     <div class="chart-section">
+       <div class="chart-container" style="border: 2px dashed #e74c3c; padding: 20px; text-align: center; background: #fff5f5; min-height: 200px;">
+         <p style="color: #e74c3c; font-weight: bold; margin: 0;">⚠️ GRÁFICO NO DISPONIBLE</p>
+         <p style="color: #7f8c8d; font-size: 12px; margin: 5px 0 0 0;">No se pudo generar la imagen del gráfico</p>
+         <p style="color: #7f8c8d; font-size: 10px; margin: 5px 0 0 0;">Tamaño de imagen: ${chartImgDataUrl ? chartImgDataUrl.length : 0} bytes</p>
+         <p style="color: #7f8c8d; font-size: 10px; margin: 5px 0 0 0;">Formato: ${chartImgDataUrl ? (chartImgDataUrl.startsWith('data:image') ? 'Válido' : 'Inválido') : 'N/A'}</p>
+         <p style="color: #7f8c8d; font-size: 10px; margin: 5px 0 0 0;">Debug: chartImgDataUrl = ${chartImgDataUrl ? 'Presente' : 'Ausente'}</p>
+       </div>
+     </div>
+     `}
+  </div>
+
+  <!-- SECCIONES -->
+  <div class="sections-container">
+    ${secciones.map((sec, sIdx) => {
+      const preguntas = Array.isArray(sec.preguntas) ? sec.preguntas : [];
+      const local = (respuestas[sIdx] || []);
+      const lc = {
+        C: local.filter(x => x === 'Conforme').length,
+        NC: local.filter(x => x === 'No conforme').length,
+        NM: local.filter(x => x === 'Necesita mejora').length,
+        NA: local.filter(x => x === 'No aplica').length,
+        T: local.length
+      };
+
+      const miniChart = sectionChartsImgDataUrl[sIdx] && sectionChartsImgDataUrl[sIdx].length > 1000 && sectionChartsImgDataUrl[sIdx].startsWith('data:image')
+        ? `<div class="section-chart">
+             <img src="${sectionChartsImgDataUrl[sIdx]}" 
+                  alt="Sección ${sIdx+1}" 
+                  style="max-width: 300px; height: auto; border-radius: 4px; border: 1px solid #3498db;"
+                  onerror="this.style.display='none'; this.nextElementSibling.style.display='block';"
+                  onload="console.log('Imagen de sección ${sIdx+1} cargada exitosamente');" />
+             <div style="display: none; border: 2px dashed #e74c3c; padding: 10px; text-align: center; background: #fff5f5; margin: 10px 0;">
+               <p style="color: #e74c3c; font-weight: bold; margin: 0; font-size: 12px;">⚠️ GRÁFICO SECCIÓN ${sIdx+1} NO DISPONIBLE</p>
+             </div>
+           </div>`
+        : '';
+
+      return `
+        <div class="section avoid-break">
+          <div class="section-header">
+            📋 Sección ${sIdx + 1}: ${sec.nombre || ('Sección ' + (sIdx + 1))}
           </div>
-        `).join('')}
+          <div class="section-stats">
+            <strong>Estadísticas:</strong> Conforme: ${lc.C} | No Conforme: ${lc.NC} | Necesita Mejora: ${lc.NM} | No Aplica: ${lc.NA} | Total: ${lc.T}
+          </div>
+          ${miniChart}
+          <div class="questions-container">
+            ${preguntas.map((text, pIdx) => {
+              const r = val(respuestas[sIdx]?.[pIdx]) || 'Sin responder';
+              const c = val(comentarios[sIdx]?.[pIdx]);
+              const img = val(imagenes[sIdx]?.[pIdx]);
+              
+              let statusClass = 'status-conforme';
+              if (r === 'No conforme') statusClass = 'status-no-conforme';
+              else if (r === 'Necesita mejora') statusClass = 'status-mejora';
+              else if (r === 'No aplica') statusClass = 'status-no-aplica';
+              
+              return `
+                <div class="question">
+                  <div class="question-header">
+                    <span class="question-number">${num(sIdx, pIdx)}</span>
+                    <span class="question-status ${statusClass}">${r}</span>
+                  </div>
+                  <div class="question-text">${text || 'Ítem sin descripción'}</div>
+                  ${c ? `<div class="question-comment">💬 ${c}</div>` : ''}
+                  ${img ? `<div class="question-image"><img src="${img}" alt="Evidencia" /></div>` : ''}
+                </div>
+              `;
+            }).join('')}
+          </div>
+        </div>
+      `;
+    }).join('')}
+  </div>
+
+  <!-- FIRMAS -->
+  <div class="signatures-section avoid-break">
+    <div class="signatures-title">✍️ FIRMAS</div>
+    <div class="signatures-grid">
+      <div class="signature-box">
+        <div class="signature-label">Firma del Auditor</div>
+        <div class="signature-image">
+          ${firmaAuditor ? `<img src="${firmaAuditor}" alt="Firma Auditor" />` : `<span style="color: #6c757d; font-size: 12px;">No hay firma registrada</span>`}
+        </div>
+        <div class="signature-name">${nombreAuditor || ''}</div>
       </div>
-      <div class="section">
-        <h2>Firma del Auditor</h2>
-        ${firmaAuditor ? `<img src="${firmaAuditor}" class="firma-img" alt="Firma del auditor" />` : '<p>No hay firma registrada.</p>'}
-        <div class="firma-aclaracion">${nombreAuditor}</div>
+      <div class="signature-box">
+        <div class="signature-label">Firma de la Empresa</div>
+        <div class="signature-image">
+          ${firmaResponsable ? `<img src="${firmaResponsable}" alt="Firma Empresa" />` : `<span style="color: #6c757d; font-size: 12px;">No hay firma registrada</span>`}
+        </div>
+        <div class="signature-name">Representante de ${empresaNombre}</div>
       </div>
-      <div class="section">
-        <h2>Firma de la Empresa</h2>
-        ${firmaResponsable ? `<img src="${firmaResponsable}" class="firma-img" alt="Firma de la empresa" />` : '<p>No hay firma registrada.</p>'}
-      </div>
-      <div class="footer">
-        Reporte generado el ${new Date().toLocaleString('es-ES')}
-      </div>
-    </body>
-    </html>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <div class="footer">
+    <div class="footer-content">
+      <strong>ControlAudit</strong> - Sistema de Auditorías Profesionales<br>
+      Reporte generado el ${new Date().toLocaleString('es-AR')} | 
+      ${sucursal ? `Sucursal: ${sucursal} | ` : ""} 
+      Fecha de auditoría: ${fecha || ""}
+    </div>
+  </div>
+
+</body>
+</html>
   `;
-  return html;
 }
 
 const ReporteDetallePro = forwardRef(({ open = false, onClose = () => {}, reporte = null, modo = 'modal', firmaResponsable, onPrint }, ref) => {
@@ -498,6 +1138,47 @@ const ReporteDetallePro = forwardRef(({ open = false, onClose = () => {}, report
   console.debug('[ReporteDetallePro] respuestasNormalizadas:', respuestasNormalizadas);
   console.debug('[ReporteDetallePro] comentariosNormalizados:', comentariosNormalizados);
   console.debug('[ReporteDetallePro] imagenesNormalizadas:', imagenesNormalizadas);
+  console.debug('[ReporteDetallePro] reporte.estadisticas:', reporte.estadisticas);
+  console.debug('[ReporteDetallePro] reporte.estadisticas?.conteo:', reporte.estadisticas?.conteo);
+
+  // Calcular estadísticas si no están disponibles
+  const estadisticasCalculadas = useMemo(() => {
+    if (reporte.estadisticas && reporte.estadisticas.conteo) {
+      return reporte.estadisticas;
+    }
+    
+    // Calcular estadísticas desde las respuestas normalizadas
+    if (respuestasNormalizadas && respuestasNormalizadas.length > 0) {
+      const respuestasPlanas = respuestasNormalizadas.flat();
+      const estadisticas = {
+        Conforme: respuestasPlanas.filter(r => r === "Conforme").length,
+        "No conforme": respuestasPlanas.filter(r => r === "No conforme").length,
+        "Necesita mejora": respuestasPlanas.filter(r => r === "Necesita mejora").length,
+        "No aplica": respuestasPlanas.filter(r => r === "No aplica").length,
+      };
+
+      const total = respuestasPlanas.length;
+      const porcentajes = {};
+      
+      Object.keys(estadisticas).forEach(key => {
+        porcentajes[key] = total > 0 ? ((estadisticas[key] / total) * 100).toFixed(2) : 0;
+      });
+
+      return {
+        conteo: estadisticas,
+        porcentajes,
+        total,
+        sinNoAplica: {
+          ...estadisticas,
+          "No aplica": 0
+        }
+      };
+    }
+    
+    return null;
+  }, [reporte.estadisticas, respuestasNormalizadas]);
+
+  console.debug('[ReporteDetallePro] estadisticasCalculadas:', estadisticasCalculadas);
 
   // Función de debug temporal
   const debugImagenes = () => {
@@ -571,23 +1252,168 @@ const ReporteDetallePro = forwardRef(({ open = false, onClose = () => {}, report
   const chartRef = useRef();
   // Refs para los gráficos por sección
   const sectionChartRefs = useRef([]);
+  // Estado para controlar si el gráfico está listo
+  const [isChartReady, setIsChartReady] = useState(false);
+  // Estado para controlar si está procesando la impresión
+  const [isProcessing, setIsProcessing] = useState(false);
 
   // Obtener nombre del auditor para aclaración
   const nombreAuditor = reporte?.auditorNombre || userProfile?.nombre || userProfile?.displayName || userProfile?.email || 'Nombre no disponible';
+  
+  // Verificar si el gráfico está listo periódicamente
+  useEffect(() => {
+    const checkChartReady = () => {
+      if (chartRef.current && chartRef.current.isReady) {
+        const ready = chartRef.current.isReady();
+        setIsChartReady(ready);
+        
+        // Si está listo, log para debug
+        if (ready) {
+          console.log('[ReporteDetallePro] ✅ Gráfico listo para impresión');
+        }
+      }
+    };
+    
+    // Verificar cada 200ms para ser más responsivo
+    const interval = setInterval(checkChartReady, 200);
+    
+    return () => clearInterval(interval);
+  }, []);
 
   const handleImprimir = async () => {
-    // Obtener imagen del gráfico principal
-    let chartImgDataUrl = '';
-    if (chartRef.current && chartRef.current.getImage) {
-      chartImgDataUrl = chartRef.current.getImage();
+    console.log('[ReporteDetallePro] Iniciando proceso de impresión...');
+    
+    // Activar el loader y deshabilitar el botón
+    setIsProcessing(true);
+    setIsChartReady(false);
+    
+    // Esperar a que el componente esté completamente renderizado
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    // Verificar que el gráfico esté listo antes de continuar
+          if (!chartRef.current) {
+        console.error('[ReporteDetallePro] ❌ chartRef.current no disponible');
+        alert('Error: El gráfico no está listo. Por favor, espere un momento y vuelva a intentar.');
+        setIsChartReady(true); // Rehabilitar el botón
+        setIsProcessing(false); // Desactivar el loader
+        return;
+      }
+    
+    // Verificar si el gráfico está listo usando el método isReady
+    if (chartRef.current.isReady && !chartRef.current.isReady()) {
+      console.log('[ReporteDetallePro] ⏳ Gráfico no está listo, esperando...');
+      
+      // Esperar hasta que esté listo o timeout
+      let waitCount = 0;
+      const maxWait = 50; // 25 segundos máximo (50 * 500ms)
+      
+      while (!chartRef.current.isReady() && waitCount < maxWait) {
+        await new Promise(resolve => setTimeout(resolve, 500));
+        waitCount++;
+        console.log(`[ReporteDetallePro] Esperando gráfico... ${waitCount}/${maxWait}`);
+        
+        // Forzar regeneración de imagen cada 10 intentos
+        if (waitCount % 10 === 0 && chartRef.current.getImage) {
+          console.log('[ReporteDetallePro] 🔄 Forzando regeneración de imagen...');
+          try {
+            await chartRef.current.getImage();
+          } catch (error) {
+            console.error('[ReporteDetallePro] Error forzando regeneración:', error);
+          }
+        }
+      }
+      
+              if (!chartRef.current.isReady()) {
+          console.error('[ReporteDetallePro] ❌ Timeout esperando que el gráfico esté listo');
+          alert('Error: El gráfico tardó demasiado en generarse. Por favor, intente nuevamente.');
+          setIsChartReady(true); // Rehabilitar el botón
+          setIsProcessing(false); // Desactivar el loader
+          return;
+        }
+      
+      console.log('[ReporteDetallePro] ✅ Gráfico listo después de esperar');
     }
+    
+         // Obtener imagen del gráfico principal con reintentos mejorados
+     let chartImgDataUrl = '';
+     let retryCount = 0;
+     const maxRetries = 10; // Aumentar intentos
+     
+     while (retryCount < maxRetries && (!chartImgDataUrl || chartImgDataUrl.length < 1000)) {
+       if (chartRef.current && chartRef.current.getImage) {
+         try {
+           console.log(`[ReporteDetallePro] Intento ${retryCount + 1}: Generando imagen del gráfico principal...`);
+           
+           // Esperar un poco más entre intentos para dar tiempo al renderizado
+           if (retryCount > 0) {
+             await new Promise(resolve => setTimeout(resolve, 2000));
+           }
+           
+           chartImgDataUrl = await chartRef.current.getImage();
+           console.log('[ReporteDetallePro] Imagen del gráfico principal generada:', chartImgDataUrl ? 'Sí' : 'No');
+           console.log('[ReporteDetallePro] Tamaño de imagen principal:', chartImgDataUrl ? chartImgDataUrl.length : 0);
+           console.log('[ReporteDetallePro] Formato de imagen principal:', chartImgDataUrl ? (chartImgDataUrl.startsWith('data:image') ? 'Válido' : 'Inválido') : 'N/A');
+           
+           if (chartImgDataUrl && chartImgDataUrl.length > 1000 && chartImgDataUrl.startsWith('data:image')) {
+             console.log('[ReporteDetallePro] ✅ Imagen válida obtenida en intento', retryCount + 1);
+             break;
+           } else {
+             console.warn(`[ReporteDetallePro] ⚠️ Imagen no válida en intento ${retryCount + 1}, reintentando...`);
+           }
+         } catch (error) {
+           console.error(`[ReporteDetallePro] Error en intento ${retryCount + 1}:`, error);
+         }
+       } else {
+         console.warn('[ReporteDetallePro] chartRef.current no disponible o no tiene getImage');
+         break;
+       }
+       retryCount++;
+     }
+     
+           if (!chartImgDataUrl || chartImgDataUrl.length < 1000) {
+        console.error('[ReporteDetallePro] ❌ No se pudo obtener una imagen válida después de', maxRetries, 'intentos');
+        setIsChartReady(true); // Rehabilitar el botón en caso de error
+        setIsProcessing(false); // Desactivar el loader
+        return;
+      }
+    
     // Obtener imágenes de los gráficos por sección
     let sectionChartsImgDataUrl = [];
     if (sectionChartRefs.current && sectionChartRefs.current.length > 0) {
-      sectionChartsImgDataUrl = sectionChartRefs.current.map(ref =>
-        ref && ref.getImage ? ref.getImage() : ''
-      );
+      try {
+        console.log('[ReporteDetallePro] Generando imágenes de gráficos por sección...');
+        sectionChartsImgDataUrl = await Promise.all(
+          sectionChartRefs.current.map(async (ref, index) => {
+            if (ref && ref.getImage) {
+              try {
+                const imageUrl = await ref.getImage();
+                console.log(`[ReporteDetallePro] Imagen de sección ${index} generada:`, imageUrl ? 'Sí' : 'No');
+                return imageUrl;
+              } catch (error) {
+                console.error(`[ReporteDetallePro] Error obteniendo imagen de gráfico por sección ${index}:`, error);
+                return '';
+              }
+            }
+            return '';
+          })
+        );
+        console.log('[ReporteDetallePro] Imágenes de gráficos por sección generadas:', sectionChartsImgDataUrl.filter(url => url).length);
+      } catch (error) {
+        console.error('[ReporteDetallePro] Error obteniendo imágenes de gráficos por sección:', error);
+      }
     }
+    // Debug: verificar si tenemos la imagen del gráfico
+    console.log('=== DEBUG IMPRESIÓN ===');
+    console.log('chartImgDataUrl length:', chartImgDataUrl ? chartImgDataUrl.length : 0);
+    console.log('chartImgDataUrl starts with data:', chartImgDataUrl ? chartImgDataUrl.startsWith('data:image') : false);
+    console.log('chartImgDataUrl valid:', chartImgDataUrl && chartImgDataUrl.length > 1000 && chartImgDataUrl.startsWith('data:image'));
+    console.log('sectionChartsImgDataUrl count:', sectionChartsImgDataUrl.filter(url => url && url.length > 1000 && url.startsWith('data:image')).length);
+    
+         // Verificar que las imágenes sean válidas antes de continuar
+     if (!chartImgDataUrl || !chartImgDataUrl.startsWith('data:image') || chartImgDataUrl.length < 1000) {
+       console.warn('[ReporteDetallePro] ⚠️ Imagen del gráfico principal no válida después de reintentos');
+     }
+    
     // Generar el HTML de impresión, incluyendo firmas y gráficos
     const html = generarContenidoImpresion({
       empresa,
@@ -599,82 +1425,400 @@ const ReporteDetallePro = forwardRef(({ open = false, onClose = () => {}, report
       comentarios: comentariosNormalizados,
       imagenes: imagenesNormalizadas,
       firmaAuditor: reporte.firmaAuditor,
-      chartImgDataUrl, // Gráfico principal
+      chartImgDataUrl, // Gráfico principal (Google Charts)
       sectionChartsImgDataUrl, // Array de gráficos por sección
-      nombreAuditor, // Añadir nombreAuditor a la función de impresión
-      firmaResponsable: firmaResponsableFinal // Añadir firmaResponsable a la función de impresión
+      nombreAuditor,
+      firmaResponsable: firmaResponsableFinal,
+      auditorTelefono: reporte.auditorTelefono || userProfile?.telefono || "",
+      geolocalizacion: reporte.geolocalizacion || null,
+      fechaInicio: reporte.fechaInicio || "",
+      fechaFin: reporte.fechaFin || ""
     });
-    const printWindow = window.open('', '_blank', 'width=900,height=700');
-    printWindow.document.write(html);
-    printWindow.document.close();
-    printWindow.focus();
-    printWindow.onload = () => {
-      const imgs = printWindow.document.images;
-      let loaded = 0;
-      if (imgs.length === 0) {
-        printWindow.print();
-        return;
-      }
-      for (let img of imgs) {
-        img.onload = img.onerror = () => {
-          loaded++;
-          if (loaded === imgs.length) {
-            setTimeout(() => printWindow.print(), 300);
+    
+         // Función para imprimir con reintento automático
+     const printWithRetry = async (retryCount = 0) => {
+       const maxPrintRetries = 2;
+       
+       try {
+         // Crear un iframe oculto para imprimir
+         const printFrame = document.createElement('iframe');
+         printFrame.style.position = 'fixed';
+         printFrame.style.right = '0';
+         printFrame.style.bottom = '0';
+         printFrame.style.width = '0';
+         printFrame.style.height = '0';
+         printFrame.style.border = '0';
+         printFrame.style.visibility = 'hidden';
+         
+         document.body.appendChild(printFrame);
+         
+         // Escribir el contenido en el iframe
+         printFrame.contentDocument.write(html);
+         printFrame.contentDocument.close();
+         
+         // Esperar a que el contenido se cargue completamente
+         await new Promise(resolve => setTimeout(resolve, 2000));
+         
+         // Imprimir
+         printFrame.contentWindow.focus();
+         printFrame.contentWindow.print();
+         
+         // Remover el iframe después de un delay
+         setTimeout(() => {
+           if (document.body.contains(printFrame)) {
+             document.body.removeChild(printFrame);
+           }
+         }, 1000);
+         
+         console.log(`[ReporteDetallePro] ✅ Impresión completada (intento ${retryCount + 1})`);
+         
+                   // Si es el primer intento, no mostrar mensaje para evitar interrupciones
+          if (retryCount === 0) {
+            console.log('[ReporteDetallePro] ✅ Impresión iniciada exitosamente');
           }
-        };
-      }
-    };
+         
+       } catch (error) {
+         console.error(`[ReporteDetallePro] Error en impresión (intento ${retryCount + 1}):`, error);
+         
+                   if (retryCount < maxPrintRetries) {
+            console.log(`[ReporteDetallePro] 🔄 Reintentando impresión... (${retryCount + 1}/${maxPrintRetries})`);
+            
+            // Esperar antes del reintento
+            await new Promise(resolve => setTimeout(resolve, 3000));
+            
+            // Reintentar
+            await printWithRetry(retryCount + 1);
+          } else {
+            console.error('[ReporteDetallePro] ❌ Máximo de reintentos alcanzado');
+            alert('❌ Error: No se pudo completar la impresión después de varios intentos.');
+            setIsChartReady(true); // Rehabilitar el botón en caso de error final
+          }
+       }
+     };
+     
+           // Iniciar impresión con reintento automático
+      await printWithRetry();
+      
+      // Desactivar el loader al finalizar el proceso
+      setIsProcessing(false);
   };
 
   // En el modal, eliminar la firma del responsable y mostrar aclaración solo en la firma del auditor
   console.log('[ReporteDetallePro] Renderizando modal...');
   if (modo === 'modal') {
     return (
-      <Dialog open={open} onClose={onClose} maxWidth="lg" fullWidth>
-        <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          Detalle de Auditoría
-          <IconButton onClick={onClose} size="small"><CloseIcon /></IconButton>
-        </DialogTitle>
-        <DialogContent>
-          <Box p={3}>
-            <Typography variant="h5" gutterBottom>Datos del Reporte</Typography>
-            <Typography variant="body1"><b>Empresa:</b> {empresa.nombre}</Typography>
-            <Typography variant="body1"><b>Sucursal:</b> {sucursal || 'Casa Central'}</Typography>
-            <Typography variant="body1"><b>Formulario:</b> {formulario.nombre}</Typography>
-            <Typography variant="body1"><b>Fecha:</b> {fecha}</Typography>
-            <Typography variant="body1"><b>Auditor:</b> {nombreAuditor}</Typography>
+      <Dialog 
+        open={open} 
+        onClose={onClose} 
+        maxWidth="xl" 
+        fullWidth
+        fullScreen={window.innerWidth < 768}
+        sx={{
+          '& .MuiDialog-paper': {
+            maxHeight: '90vh',
+            overflow: 'hidden'
+          }
+        }}
+      >
+        <DialogTitle sx={{ 
+          display: 'none'
+        }} />
+                 <DialogContent sx={{ p: { xs: 2, sm: 3 } }}>
+                       <style>
+              {`
+                @keyframes pulse {
+                  0% { opacity: 1; transform: scale(1); }
+                  50% { opacity: 0.5; transform: scale(1.2); }
+                  100% { opacity: 1; transform: scale(1); }
+                }
+                @keyframes spin {
+                  0% { transform: rotate(0deg); }
+                  100% { transform: rotate(360deg); }
+                }
+              `}
+            </style>
+                       <Box>
+              {/* Indicador de procesamiento */}
+              {isProcessing && (
+                <Box sx={{ 
+                  mb: 2, 
+                  p: 2, 
+                  bgcolor: '#fff3cd', 
+                  borderRadius: 2, 
+                  border: '2px solid #ffc107',
+                  textAlign: 'center',
+                  animation: 'pulse 2s infinite'
+                }}>
+                  <Typography variant="body1" sx={{ color: '#856404', fontWeight: 600 }}>
+                    ⏳ Procesando impresión... Por favor espere
+                  </Typography>
+                  <Typography variant="caption" sx={{ color: '#856404' }}>
+                    El sistema está generando el PDF y manejando los reintentos automáticamente
+                  </Typography>
+                </Box>
+              )}
+              
+              {/* Header con datos del reporte y estadísticas */}
+              <Box sx={{ 
+                mb: 3, 
+                p: 2, 
+                bgcolor: 'background.paper', 
+                borderRadius: 2, 
+                border: '1px solid',
+                borderColor: 'divider',
+                boxShadow: 1
+              }}>
+               <Typography variant="h6" gutterBottom sx={{ color: 'primary.main', fontWeight: 600 }}>
+                 📊 Datos del Reporte
+               </Typography>
+               <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 1, mb: 2 }}>
+                 <Typography variant="body2"><b>🏢 Empresa:</b> {empresa.nombre}</Typography>
+                 <Typography variant="body2"><b>📍 Sucursal:</b> {sucursal || 'Casa Central'}</Typography>
+                 <Typography variant="body2"><b>📋 Formulario:</b> {formulario.nombre}</Typography>
+                 <Typography variant="body2"><b>📅 Fecha:</b> {fecha}</Typography>
+                 <Typography variant="body2"><b>👤 Auditor:</b> {nombreAuditor}</Typography>
+               </Box>
+               
+               
+             </Box>
             
-            <Box mt={3}>
-              <Typography variant="h6" gutterBottom>Resumen de Respuestas</Typography>
-              <ResumenRespuestas respuestas={respuestasNormalizadas} secciones={secciones} />
-            </Box>
-            
-            <Box mt={3}>
-              <Typography variant="h6" gutterBottom>Preguntas y Respuestas</Typography>
-              <PreguntasRespuestasList
-                secciones={secciones}
-                respuestas={respuestasNormalizadas}
-                comentarios={comentariosNormalizados}
-                imagenes={imagenesNormalizadas}
-              />
-            </Box>
+                         {/* Gráfico general de respuestas */}
+             {(() => {
+               console.log('[ReporteDetallePro] Renderizando gráfico:', {
+                 estadisticasCalculadas: !!estadisticasCalculadas,
+                 conteo: estadisticasCalculadas?.conteo,
+                 tieneDatos: estadisticasCalculadas && estadisticasCalculadas.conteo
+               });
+               // Siempre mostrar el gráfico para debug
+               return true;
+             })() && (
+               <Box sx={{ 
+                 mb: 3, 
+                 p: 2, 
+                 bgcolor: 'background.paper', 
+                 borderRadius: 2, 
+                 border: '1px solid',
+                 borderColor: 'divider',
+                 boxShadow: 1
+               }}>
+                 <Typography variant="h6" gutterBottom sx={{ color: 'primary.main', fontWeight: 600 }}>
+                   📊 Gráfico de Distribución
+                 </Typography>
+                 
+                 {/* Debug info */}
+                 <Box sx={{ mb: 2, p: 2, backgroundColor: '#e3f2fd', borderRadius: 1, border: '1px solid #2196f3' }}>
+                   <Typography variant="caption" color="primary" fontWeight="bold">
+                     🔍 DEBUG: estadisticasCalculadas = {JSON.stringify(estadisticasCalculadas?.conteo)}
+                   </Typography>
+                 </Box>
+                 
+                 <EstadisticasChartSimple
+                   ref={chartRef}
+                   estadisticas={estadisticasCalculadas?.conteo || { 'Conforme': 0, 'No conforme': 0, 'Necesita mejora': 0, 'No aplica': 0 }}
+                   title="Distribución general de respuestas"
+                 />
+               </Box>
+             )}
+
+             {/* Gráficos por sección */}
+             {secciones && secciones.length > 1 && respuestasNormalizadas.length === secciones.length && (
+               <Box sx={{ 
+                 mb: 3, 
+                 p: 2, 
+                 bgcolor: 'background.paper', 
+                 borderRadius: 2, 
+                 border: '1px solid',
+                 borderColor: 'divider',
+                 boxShadow: 1
+               }}>
+                 <Typography variant="h6" gutterBottom sx={{ color: 'primary.main', fontWeight: 600 }}>
+                   📊 Distribución por Sección
+                 </Typography>
+                 {secciones.map((seccion, idx) => {
+                   // Calcular conteo por sección
+                   const conteo = { 'Conforme': 0, 'No conforme': 0, 'Necesita mejora': 0, 'No aplica': 0 };
+                   (respuestasNormalizadas[idx] || []).forEach(r => {
+                     if (conteo[r] !== undefined) conteo[r]++;
+                   });
+                   // Solo mostrar si hay respuestas
+                   const total = Object.values(conteo).reduce((a, b) => a + b, 0);
+                   if (total === 0) return null;
+                   // Asignar ref dinámico
+                   if (!sectionChartRefs.current[idx]) sectionChartRefs.current[idx] = React.createRef();
+                   return (
+                     <Box key={idx} mt={2}>
+                       <Typography variant="subtitle1" gutterBottom>{seccion.nombre}</Typography>
+                       <EstadisticasChartSimple
+                         ref={sectionChartRefs.current[idx]}
+                         estadisticas={conteo}
+                         title={`Sección: ${seccion.nombre}`}
+                       />
+                     </Box>
+                   );
+                 })}
+               </Box>
+             )}
+
+             <Box sx={{ 
+               mb: 3, 
+               p: 2, 
+               bgcolor: 'background.paper', 
+               borderRadius: 2, 
+               border: '1px solid',
+               borderColor: 'divider',
+               boxShadow: 1
+             }}>
+               <Typography variant="h6" gutterBottom sx={{ color: 'primary.main', fontWeight: 600 }}>
+                 ❓ Preguntas y Respuestas
+               </Typography>
+               <PreguntasRespuestasList
+                 secciones={secciones}
+                 respuestas={respuestasNormalizadas}
+                 comentarios={comentariosNormalizados}
+                 imagenes={imagenesNormalizadas}
+               />
+             </Box>
           </Box>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={onClose} variant="contained" color="primary">
+        <DialogActions sx={{ 
+          p: { xs: 1.5, sm: 2 }, 
+          gap: { xs: 1, sm: 2 },
+          flexWrap: 'wrap',
+          justifyContent: 'center'
+        }}>
+          <Button 
+            onClick={onClose} 
+            variant="contained" 
+            color="primary"
+            size="medium"
+            sx={{ minWidth: { xs: '80px', sm: '100px' } }}
+          >
             Cerrar
           </Button>
-          <Button onClick={handleImprimir} variant="outlined" color="secondary" startIcon={<PrintIcon />}>
-            Imprimir
-          </Button>
+                                           <Button 
+              onClick={handleImprimir} 
+              variant="outlined" 
+              color={isProcessing ? "warning" : (isChartReady ? "secondary" : "warning")}
+              startIcon={isProcessing ? null : <PrintIcon />}
+              size="medium"
+              disabled={!isChartReady || isProcessing}
+              sx={{ 
+                minWidth: { xs: '80px', sm: '100px' },
+                position: 'relative'
+              }}
+            >
+              {isProcessing ? 'Procesando...' : (isChartReady ? 'Imprimir' : 'Preparando...')}
+              {(isProcessing || !isChartReady) && (
+                <Box sx={{
+                  position: 'absolute',
+                  top: -8,
+                  right: -8,
+                  width: 16,
+                  height: 16,
+                  borderRadius: '50%',
+                  backgroundColor: isProcessing ? '#ff9800' : '#ff9800',
+                  animation: isProcessing ? 'spin 1s linear infinite' : 'pulse 1.5s infinite',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '8px',
+                  color: 'white',
+                  fontWeight: 'bold'
+                }}>
+                  {isProcessing ? '⏳' : '●'}
+                </Box>
+              )}
+            </Button>
+            
+            {/* Botón para forzar regeneración del gráfico */}
+            <Button 
+              onClick={async () => {
+                console.log('[ReporteDetallePro] Forzando regeneración del gráfico...');
+                setIsChartReady(false);
+                
+                if (chartRef.current && chartRef.current.getImage) {
+                  try {
+                    await chartRef.current.getImage();
+                    console.log('[ReporteDetallePro] ✅ Gráfico regenerado exitosamente');
+                    alert('✅ Gráfico regenerado. Ahora puede intentar imprimir nuevamente.');
+                  } catch (error) {
+                    console.error('[ReporteDetallePro] Error regenerando gráfico:', error);
+                    alert('❌ Error regenerando gráfico: ' + error.message);
+                  }
+                }
+              }}
+              variant="outlined" 
+              color="info"
+              size="medium"
+              sx={{ minWidth: { xs: '80px', sm: '100px' } }}
+            >
+              Regenerar Gráfico
+            </Button>
           {process.env.NODE_ENV === 'development' && (
-            <Button onClick={debugImagenes} variant="outlined" color="warning">
-              Debug Imágenes
+            <Button 
+              onClick={async () => {
+                console.log('[DEBUG] Probando generación de imagen del gráfico...');
+                if (chartRef.current && chartRef.current.getImage) {
+                  try {
+                    console.log('[DEBUG] chartRef.current.getImage disponible');
+                    const imageUrl = await chartRef.current.getImage();
+                    console.log('[DEBUG] Imagen generada:', imageUrl ? 'Sí' : 'No');
+                    console.log('[DEBUG] Tamaño:', imageUrl ? imageUrl.length : 0);
+                    console.log('[DEBUG] Formato válido:', imageUrl ? imageUrl.startsWith('data:image') : false);
+                    console.log('[DEBUG] Primeros 100 caracteres:', imageUrl ? imageUrl.substring(0, 100) : 'N/A');
+                    
+                    // Crear una ventana de prueba para ver la imagen
+                    const testWindow = window.open('', '_blank');
+                    testWindow.document.write(`
+                      <html>
+                        <head><title>Test Gráfico</title></head>
+                        <body>
+                          <h2>Test de Imagen del Gráfico</h2>
+                          <img src="${imageUrl}" style="max-width: 100%; border: 2px solid red;" />
+                          <p>Tamaño: ${imageUrl ? imageUrl.length : 0} bytes</p>
+                          <p>Formato: ${imageUrl ? (imageUrl.startsWith('data:image') ? 'Válido' : 'Inválido') : 'N/A'}</p>
+                          <p>Primeros 100 chars: ${imageUrl ? imageUrl.substring(0, 100) : 'N/A'}</p>
+                        </body>
+                      </html>
+                    `);
+                    testWindow.document.close();
+                  } catch (error) {
+                    console.error('[DEBUG] Error generando imagen:', error);
+                    alert('Error generando imagen: ' + error.message);
+                  }
+                } else {
+                  console.error('[DEBUG] chartRef.current.getImage no disponible');
+                  alert('chartRef.current.getImage no disponible');
+                }
+              }}
+              variant="outlined" 
+              color="warning" 
+              size="medium"
+              sx={{ minWidth: { xs: '80px', sm: '100px' } }}
+            >
+              Test Gráfico
             </Button>
           )}
           {process.env.NODE_ENV === 'development' && (
-            <Button onClick={probarCargaImagenes} variant="outlined" color="info">
-              Probar Carga
+            <Button 
+              onClick={debugImagenes} 
+              variant="outlined" 
+              color="warning"
+              size="small"
+              sx={{ minWidth: { xs: '70px', sm: '90px' } }}
+            >
+              Debug
+            </Button>
+          )}
+          {process.env.NODE_ENV === 'development' && (
+            <Button 
+              onClick={probarCargaImagenes} 
+              variant="outlined" 
+              color="info"
+              size="small"
+              sx={{ minWidth: { xs: '70px', sm: '90px' } }}
+            >
+              Probar
             </Button>
           )}
         </DialogActions>
@@ -685,53 +1829,31 @@ const ReporteDetallePro = forwardRef(({ open = false, onClose = () => {}, report
   // Si no es modal, renderiza el contenido suelto (por si acaso)
   return (
     <Box p={3}>
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-        <Typography variant="h4" gutterBottom>
-          Reporte de Auditoría de Higiene y Seguridad
+      <Typography variant="h4" gutterBottom color="primary" textAlign="center">
+        🖨️ Reporte de Auditoría - Estilo Urquiza
+      </Typography>
+      
+      <Alert severity="info" sx={{ mb: 3 }}>
+        <Typography variant="body2">
+          Este reporte usa el nuevo formato profesional estilo "Urquiza" con diseño optimizado para impresión.
         </Typography>
-        {empresa.logo && empresa.logo.trim() !== "" ? (
-          <img
-            src={empresa.logo}
-            alt="Logo de la empresa"
-            style={{ height: '60px' }}
-            onError={e => { e.target.style.display = 'none'; }}
-          />
-        ) : (
-          <Box
-            sx={{
-              width: "60px",
-              height: "60px",
-              backgroundColor: "#f0f0f0",
-              borderRadius: "4px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontSize: "18px",
-              color: "#666",
-              border: "1px solid #ccc"
-            }}
-          >
-            {empresa.nombre ? empresa.nombre.charAt(0).toUpperCase() : '?'}
-          </Box>
-        )}
-      </Box>
-      <Typography variant="h6" gutterBottom>Datos de la Empresa</Typography>
-      <Typography variant="body1">Empresa: {empresa.nombre}</Typography>
-      <Typography variant="body1">Sucursal: {sucursal}</Typography>
-      <Typography variant="body1">Formulario: {formulario.nombre}</Typography>
-      <Typography variant="body1">Fecha: {fecha}</Typography>
-      {/* Resumen avanzado de respuestas */}
-      <ResumenRespuestas respuestas={respuestasNormalizadas} secciones={secciones} />
+      </Alert>
+
       {/* Gráfico general de respuestas */}
-      {reporte.estadisticas && reporte.estadisticas.conteo && (
+      {estadisticasCalculadas && estadisticasCalculadas.conteo && (
         <Box mt={3}>
-          <EstadisticasChart
-            ref={chartRef}
-            estadisticas={reporte.estadisticas.conteo}
-            title="Distribución general de respuestas"
-          />
+          <Typography variant="h6" gutterBottom>
+            📊 Gráfico de Distribución
+          </Typography>
+          
+                     <EstadisticasChartSimple
+             ref={chartRef}
+             estadisticas={estadisticasCalculadas.conteo}
+             title="Distribución general de respuestas"
+           />
         </Box>
       )}
+
       {/* Gráficos por sección */}
       {secciones && secciones.length > 1 && respuestasNormalizadas.length === secciones.length && (
         <Box mt={3}>
@@ -750,18 +1872,22 @@ const ReporteDetallePro = forwardRef(({ open = false, onClose = () => {}, report
             return (
               <Box key={idx} mt={2}>
                 <Typography variant="subtitle1" gutterBottom>{seccion.nombre}</Typography>
-                <EstadisticasChart
-                  ref={sectionChartRefs.current[idx]}
-                  estadisticas={conteo}
-                  title={`Sección: ${seccion.nombre}`}
-                />
+                                 <EstadisticasChartSimple
+                   ref={sectionChartRefs.current[idx]}
+                   estadisticas={conteo}
+                   title={`Sección: ${seccion.nombre}`}
+                 />
               </Box>
             );
           })}
         </Box>
       )}
+
       {/* Preguntas, respuestas, comentarios e imágenes */}
       <Box mt={3}>
+        <Typography variant="h6" gutterBottom>
+          ❓ Preguntas y Respuestas
+        </Typography>
         <PreguntasRespuestasList
           secciones={secciones}
           respuestas={respuestasNormalizadas}
@@ -769,7 +1895,8 @@ const ReporteDetallePro = forwardRef(({ open = false, onClose = () => {}, report
           imagenes={imagenesNormalizadas}
         />
       </Box>
-      {/* Firma del Auditor con aclaración y Firma de la Empresa solo imagen en la vista suelta */}
+
+      {/* Firmas */}
       <Box mt={3} display="flex" flexDirection={{ xs: 'column', md: 'row' }} gap={4} justifyContent="center" alignItems="flex-start">
         <Box flex={1} textAlign="center">
           <Typography variant="subtitle1" color="primary" fontWeight={600} gutterBottom>
@@ -791,13 +1918,8 @@ const ReporteDetallePro = forwardRef(({ open = false, onClose = () => {}, report
           <Typography variant="body2" sx={{ mt: 1 }}>
             {nombreAuditor}
           </Typography>
-          {(!reporte.firmaAuditor || typeof reporte.firmaAuditor !== 'string' || reporte.firmaAuditor.length < 10) && (
-            <Typography variant="caption" color="error">
-              [ADVERTENCIA] La firma no está disponible o es inválida.
-            </Typography>
-          )}
         </Box>
-        {/* Firma de la Empresa solo imagen */}
+        
         <Box flex={1} textAlign="center">
           <Typography variant="subtitle1" color="primary" fontWeight={600} gutterBottom>
             Firma de la Empresa
