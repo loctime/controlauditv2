@@ -109,15 +109,6 @@ export const useNavigationGuard = ({
 
   // Prevenir navegación con botón atrás/adelante del navegador
   useEffect(() => {
-    const handleBeforeUnload = (event) => {
-      if (checkUnsavedChanges()) {
-        const message = '⚠️ Tienes cambios sin guardar. ¿Estás seguro de que quieres salir?';
-        event.preventDefault();
-        event.returnValue = message;
-        return message;
-      }
-    };
-
     const handlePopState = async (event) => {
       if (checkUnsavedChanges()) {
         event.preventDefault();
@@ -146,15 +137,13 @@ export const useNavigationGuard = ({
       }
     };
 
-    // Agregar event listeners
-    window.addEventListener('beforeunload', handleBeforeUnload);
+    // Agregar event listener solo para popstate
     window.addEventListener('popstate', handlePopState);
 
     // Agregar estado al historial para poder detectar navegación
     window.history.pushState(null, '', window.location.href);
 
     return () => {
-      window.removeEventListener('beforeunload', handleBeforeUnload);
       window.removeEventListener('popstate', handlePopState);
     };
   }, [checkUnsavedChanges, showExitConfirmation, onSave]);

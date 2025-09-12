@@ -183,6 +183,10 @@ const ReportesPage = () => {
     
     try {
       console.log('[DEBUG] Iniciando fetch de reportes con multi-tenant...');
+      console.log('[DEBUG] userProfile:', userProfile);
+      console.log('[DEBUG] userProfile.role:', userProfile?.role);
+      console.log('[DEBUG] userProfile.clienteAdminId:', userProfile?.clienteAdminId);
+      console.log('[DEBUG] userProfile.empresaId:', userProfile?.empresaId);
       
       let q = query(
         collection(db, "reportes"),
@@ -193,10 +197,16 @@ const ReportesPage = () => {
       // Aplicar filtros de multi-tenant si el usuario no es supermax
       if (userProfile?.role !== 'supermax') {
         if (userProfile?.clienteAdminId) {
+          console.log('[DEBUG] Aplicando filtro por clienteAdminId:', userProfile.clienteAdminId);
           q = query(q, where("clienteAdminId", "==", userProfile.clienteAdminId));
         } else if (userProfile?.empresaId) {
+          console.log('[DEBUG] Aplicando filtro por empresaId:', userProfile.empresaId);
           q = query(q, where("empresaId", "==", userProfile.empresaId));
+        } else {
+          console.log('[DEBUG] ⚠️ Usuario sin clienteAdminId ni empresaId - no se aplicarán filtros');
         }
+      } else {
+        console.log('[DEBUG] Usuario supermax - sin filtros aplicados');
       }
 
       const querySnapshot = await getDocs(q);
@@ -207,6 +217,21 @@ const ReportesPage = () => {
 
       console.log('[DEBUG]', reportesData.length, 'reportes cargados con multi-tenant');
       console.log('[DEBUG] Primeros 3 reportes:', reportesData.slice(0, 3));
+      
+      // Debug adicional: mostrar todos los reportes si hay alguno
+      if (reportesData.length > 0) {
+        console.log('[DEBUG] Todos los reportes encontrados:');
+        reportesData.forEach((reporte, index) => {
+          console.log(`[DEBUG] Reporte ${index + 1}:`, {
+            id: reporte.id,
+            clienteAdminId: reporte.clienteAdminId,
+            empresaId: reporte.empresaId,
+            empresaNombre: reporte.empresaNombre,
+            fechaCreacion: reporte.fechaCreacion
+          });
+        });
+      }
+      
       setReportes(reportesData);
       setFilteredReportes(reportesData);
     } catch (error) {
