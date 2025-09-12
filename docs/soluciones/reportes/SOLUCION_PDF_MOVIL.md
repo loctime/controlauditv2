@@ -29,35 +29,38 @@ const isMobileDevice = () => {
 ### 2. Estrategia Optimizada
 
 **Para Móviles:**
-- Usa iframe optimizado para móviles con estilos específicos
-- Aplica CSS responsive para mejor renderizado
-- Mantiene la funcionalidad de impresión del navegador pero optimizada
+- Usa iframe optimizado para móviles (pantalla completa)
+- **MISMO contenido HTML** que desktop (sin modificaciones)
+- Mantiene la funcionalidad nativa de impresión del navegador
 
 **Para Desktop:**
-- Mantiene la impresión tradicional con iframe
+- Mantiene la impresión tradicional con iframe oculto
+- **MISMO contenido HTML** que móvil (sin modificaciones)
 - Sin cambios en la funcionalidad existente
 
 ### 3. Implementación Técnica
 
 ```javascript
-// En móviles: impresión optimizada
+// En móviles: impresión optimizada (MISMO contenido que desktop)
 const printMobileOptimized = async (html) => {
   // Crear iframe optimizado para móviles
   const printFrame = document.createElement('iframe');
   printFrame.style.width = '100vw';
   printFrame.style.height = '100vh';
   
-  // Aplicar estilos optimizados para móvil
-  const mobileOptimizedHTML = html.replace('<style>', `
-    <style>
-      @media print {
-        body { font-size: 12px !important; }
-        .stats-grid { grid-template-columns: repeat(2, 1fr) !important; }
-        .signatures-grid { grid-template-columns: 1fr !important; }
-      }
-    `);
+  // Usar el MISMO HTML que desktop - sin modificaciones
+  printFrame.contentDocument.write(html);
+  printFrame.contentWindow.print();
+};
+
+// En desktop: impresión tradicional (MISMO contenido que móvil)
+const printWithIframe = async (html) => {
+  const printFrame = document.createElement('iframe');
+  printFrame.style.width = '0';  // Oculto
+  printFrame.style.height = '0'; // Oculto
   
-  printFrame.contentDocument.write(mobileOptimizedHTML);
+  // Usar el MISMO HTML que móvil - sin modificaciones
+  printFrame.contentDocument.write(html);
   printFrame.contentWindow.print();
 };
 ```
@@ -65,13 +68,14 @@ const printMobileOptimized = async (html) => {
 ### 4. UX Mejorada
 
 - **Indicadores visuales:** Mensajes específicos para móvil vs desktop
-- **Estilos optimizados:** Layout responsive para mejor impresión en móviles
+- **Contenido idéntico:** Mismo PDF en ambas plataformas
 - **Colores diferenciados:** Azul para móvil, amarillo para desktop
 
 ## Resultado
 
 ✅ **Móviles:** Vista de impresión optimizada que permite guardar PDF correctamente
 ✅ **Desktop:** Impresión tradicional mantenida
+✅ **Contenido:** **MISMO PDF** en ambas plataformas
 ✅ **UX:** Experiencia optimizada para cada plataforma
 
 ## Archivos Modificados

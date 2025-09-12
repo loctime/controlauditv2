@@ -1287,10 +1287,10 @@ const ReporteDetallePro = forwardRef(({ open = false, onClose = () => {}, report
            ('ontouchstart' in window);
   };
 
-  // Función para impresión optimizada en móviles
+  // Función para impresión en móviles (mismo contenido que desktop)
   const printMobileOptimized = async (html) => {
     try {
-      console.log('[ReporteDetallePro] Iniciando impresión optimizada para móvil...');
+      console.log('[ReporteDetallePro] Iniciando impresión para móvil...');
       
       // Crear un iframe optimizado para móviles
       const printFrame = document.createElement('iframe');
@@ -1305,44 +1305,8 @@ const ReporteDetallePro = forwardRef(({ open = false, onClose = () => {}, report
       
       document.body.appendChild(printFrame);
       
-      // Escribir el contenido HTML con estilos optimizados para móvil
-      const mobileOptimizedHTML = html.replace(
-        '<style>',
-        `<style>
-          @media print {
-            body { 
-              font-size: 12px !important;
-              margin: 0 !important;
-              padding: 10px !important;
-            }
-            .header-main { 
-              padding: 15px !important;
-              margin-bottom: 15px !important;
-            }
-            .stats-grid { 
-              grid-template-columns: repeat(2, 1fr) !important;
-              gap: 10px !important;
-            }
-            .question { 
-              margin-bottom: 15px !important;
-              padding: 10px !important;
-            }
-            .signatures-grid { 
-              grid-template-columns: 1fr !important;
-              gap: 20px !important;
-            }
-          }
-          @media screen {
-            body { 
-              font-size: 14px;
-              margin: 0;
-              padding: 20px;
-            }
-          }
-        `
-      );
-      
-      printFrame.contentDocument.write(mobileOptimizedHTML);
+      // Usar el MISMO HTML que desktop - sin modificaciones de contenido
+      printFrame.contentDocument.write(html);
       printFrame.contentDocument.close();
       
       // Esperar a que el contenido se cargue completamente
@@ -1654,11 +1618,11 @@ const ReporteDetallePro = forwardRef(({ open = false, onClose = () => {}, report
                   animation: 'pulse 2s infinite'
                 }}>
                   <Typography variant="body1" sx={{ color: isMobileDevice() ? '#1976d2' : '#856404', fontWeight: 600 }}>
-                    {isMobileDevice() ? '📱 Preparando impresión para móvil...' : '⏳ Procesando impresión...'} Por favor espere
+                    {isMobileDevice() ? '📱 Preparando impresión...' : '⏳ Procesando impresión...'} Por favor espere
                   </Typography>
                   <Typography variant="caption" sx={{ color: isMobileDevice() ? '#1976d2' : '#856404' }}>
                     {isMobileDevice() 
-                      ? 'En móviles se abre una vista optimizada que permite guardar como PDF desde el navegador'
+                      ? 'Se abre la vista de impresión optimizada para móviles'
                       : 'El sistema está generando el PDF y manejando los reintentos automáticamente'
                     }
                   </Typography>
