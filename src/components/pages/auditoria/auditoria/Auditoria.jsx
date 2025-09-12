@@ -679,13 +679,20 @@ const AuditoriaRefactorizada = () => {
               
               {empresaSeleccionada && (
                 <Grid item xs={12} md={6}>
-                  {sucursales.length > 0 ? (
-                    <SeleccionSucursal
-                      sucursales={sucursales}
-                      sucursalSeleccionada={sucursalSeleccionada}
-                      onChange={bloquearDatosAgenda ? () => setOpenAlertaEdicion(true) : handleSucursalChange}
-                      disabled={bloquearDatosAgenda}
-                    />
+                  {(() => {
+                    // Filtrar sucursales por la empresa seleccionada
+                    const sucursalesFiltradas = sucursales.filter(sucursal => 
+                      sucursal.empresa === empresaSeleccionada.nombre || 
+                      sucursal.empresaId === empresaSeleccionada.id
+                    );
+                    
+                    return sucursalesFiltradas.length > 0 ? (
+                      <SeleccionSucursal
+                        sucursales={sucursalesFiltradas}
+                        sucursalSeleccionada={sucursalSeleccionada}
+                        onChange={bloquearDatosAgenda ? () => setOpenAlertaEdicion(true) : handleSucursalChange}
+                        disabled={bloquearDatosAgenda}
+                      />
                   ) : (
                     <Card sx={{ 
                       height: '100%', 
@@ -703,7 +710,8 @@ const AuditoriaRefactorizada = () => {
                         </Typography>
                       </CardContent>
                     </Card>
-                  )}
+                  );
+                  })()}
                 </Grid>
               )}
             </Grid>
