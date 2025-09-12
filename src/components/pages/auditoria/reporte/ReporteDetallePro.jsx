@@ -1280,6 +1280,128 @@ const ReporteDetallePro = forwardRef(({ open = false, onClose = () => {}, report
     return () => clearInterval(interval);
   }, []);
 
+  // Función para detectar si es dispositivo móvil
+  const isMobileDevice = () => {
+    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+           (window.innerWidth <= 768) ||
+           ('ontouchstart' in window);
+  };
+
+  // Función para generar y descargar PDF en móviles
+  const generateAndDownloadPDF = async (html) => {
+    try {
+      console.log('[ReporteDetallePro] Generando PDF para móvil...');
+      
+      // Importar html2pdf dinámicamente
+      const html2pdf = (await import('html2pdf.js')).default;
+      
+      // Crear un elemento temporal con el HTML
+      const tempDiv = document.createElement('div');
+      tempDiv.innerHTML = html;
+      tempDiv.style.position = 'absolute';
+      tempDiv.style.left = '-9999px';
+      tempDiv.style.top = '-9999px';
+      document.body.appendChild(tempDiv);
+      
+      // Configuración para PDF
+      const opt = {
+        margin: [0.5, 0.5, 0.5, 0.5],
+        filename: `Reporte_Auditoria_${empresa.nombre}_${fecha.replace(/\//g, '-')}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { 
+          scale: 2,
+          useCORS: true,
+          allowTaint: true,
+          logging: false
+        },
+        jsPDF: { 
+          unit: 'in', 
+          format: 'a4', 
+          orientation: 'portrait' 
+        }
+      };
+      
+      // Generar y descargar PDF
+      await html2pdf().set(opt).from(tempDiv).save();
+      
+      // Limpiar elemento temporal
+      document.body.removeChild(tempDiv);
+      
+      console.log('[ReporteDetallePro] ✅ PDF generado y descargado exitosamente');
+      
+    } catch (error) {
+      console.error('[ReporteDetallePro] ❌ Error generando PDF:', error);
+      alert('❌ Error generando PDF: ' + error.message);
+      throw error;
+    }
+  };
+
+  // Función para impresión tradicional en desktop
+  const printWithIframe = async (html) => {
+    const maxPrintRetries = 2;
+    
+    const printWithRetry = async (retryCount = 0) => {
+      try {
+        // Crear un iframe oculto para imprimir
+        const printFrame = document.createElement('iframe');
+        printFrame.style.position = 'fixed';
+        printFrame.style.right = '0';
+        printFrame.style.bottom = '0';
+        printFrame.style.width = '0';
+        printFrame.style.height = '0';
+        printFrame.style.border = '0';
+        printFrame.style.visibility = 'hidden';
+        
+        document.body.appendChild(printFrame);
+        
+        // Escribir el contenido en el iframe
+        printFrame.contentDocument.write(html);
+        printFrame.contentDocument.close();
+        
+        // Esperar a que el contenido se cargue completamente
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        // Imprimir
+        printFrame.contentWindow.focus();
+        printFrame.contentWindow.print();
+        
+        // Remover el iframe después de un delay
+        setTimeout(() => {
+          if (document.body.contains(printFrame)) {
+            document.body.removeChild(printFrame);
+          }
+        }, 1000);
+        
+        console.log(`[ReporteDetallePro] ✅ Impresión completada (intento ${retryCount + 1})`);
+        
+        // Si es el primer intento, no mostrar mensaje para evitar interrupciones
+        if (retryCount === 0) {
+          console.log('[ReporteDetallePro] ✅ Impresión iniciada exitosamente');
+        }
+        
+      } catch (error) {
+        console.error(`[ReporteDetallePro] Error en impresión (intento ${retryCount + 1}):`, error);
+        
+        if (retryCount < maxPrintRetries) {
+          console.log(`[ReporteDetallePro] 🔄 Reintentando impresión... (${retryCount + 1}/${maxPrintRetries})`);
+          
+          // Esperar antes del reintento
+          await new Promise(resolve => setTimeout(resolve, 3000));
+          
+          // Reintentar
+          await printWithRetry(retryCount + 1);
+        } else {
+          console.error('[ReporteDetallePro] ❌ Máximo de reintentos alcanzado');
+          alert('❌ Error: No se pudo completar la impresión después de varios intentos.');
+          setIsChartReady(true); // Rehabilitar el botón en caso de error final
+        }
+      }
+    };
+    
+    // Iniciar impresión con reintento automático
+    await printWithRetry();
+  };
+
   const handleImprimir = async () => {
     console.log('[ReporteDetallePro] Iniciando proceso de impresión...');
     
@@ -1435,69 +1557,17 @@ const ReporteDetallePro = forwardRef(({ open = false, onClose = () => {}, report
       fechaFin: reporte.fechaFin || ""
     });
     
-         // Función para imprimir con reintento automático
-     const printWithRetry = async (retryCount = 0) => {
-       const maxPrintRetries = 2;
-       
-       try {
-         // Crear un iframe oculto para imprimir
-         const printFrame = document.createElement('iframe');
-         printFrame.style.position = 'fixed';
-         printFrame.style.right = '0';
-         printFrame.style.bottom = '0';
-         printFrame.style.width = '0';
-         printFrame.style.height = '0';
-         printFrame.style.border = '0';
-         printFrame.style.visibility = 'hidden';
-         
-         document.body.appendChild(printFrame);
-         
-         // Escribir el contenido en el iframe
-         printFrame.contentDocument.write(html);
-         printFrame.contentDocument.close();
-         
-         // Esperar a que el contenido se cargue completamente
-         await new Promise(resolve => setTimeout(resolve, 2000));
-         
-         // Imprimir
-         printFrame.contentWindow.focus();
-         printFrame.contentWindow.print();
-         
-         // Remover el iframe después de un delay
-         setTimeout(() => {
-           if (document.body.contains(printFrame)) {
-             document.body.removeChild(printFrame);
-           }
-         }, 1000);
-         
-         console.log(`[ReporteDetallePro] ✅ Impresión completada (intento ${retryCount + 1})`);
-         
-                   // Si es el primer intento, no mostrar mensaje para evitar interrupciones
-          if (retryCount === 0) {
-            console.log('[ReporteDetallePro] ✅ Impresión iniciada exitosamente');
-          }
-         
-       } catch (error) {
-         console.error(`[ReporteDetallePro] Error en impresión (intento ${retryCount + 1}):`, error);
-         
-                   if (retryCount < maxPrintRetries) {
-            console.log(`[ReporteDetallePro] 🔄 Reintentando impresión... (${retryCount + 1}/${maxPrintRetries})`);
-            
-            // Esperar antes del reintento
-            await new Promise(resolve => setTimeout(resolve, 3000));
-            
-            // Reintentar
-            await printWithRetry(retryCount + 1);
-          } else {
-            console.error('[ReporteDetallePro] ❌ Máximo de reintentos alcanzado');
-            alert('❌ Error: No se pudo completar la impresión después de varios intentos.');
-            setIsChartReady(true); // Rehabilitar el botón en caso de error final
-          }
-       }
-     };
-     
-           // Iniciar impresión con reintento automático
-      await printWithRetry();
+    // Detectar si es dispositivo móvil
+    const isMobile = isMobileDevice();
+    console.log('[ReporteDetallePro] Es dispositivo móvil:', isMobile);
+    
+    if (isMobile) {
+      // En móviles, generar PDF real y descargarlo directamente
+      await generateAndDownloadPDF(html);
+    } else {
+      // En desktop, usar la impresión tradicional con iframe
+      await printWithIframe(html);
+    }
       
       // Desactivar el loader al finalizar el proceso
       setIsProcessing(false);
@@ -1543,17 +1613,20 @@ const ReporteDetallePro = forwardRef(({ open = false, onClose = () => {}, report
                 <Box sx={{ 
                   mb: 2, 
                   p: 2, 
-                  bgcolor: '#fff3cd', 
+                  bgcolor: isMobileDevice() ? '#e3f2fd' : '#fff3cd', 
                   borderRadius: 2, 
-                  border: '2px solid #ffc107',
+                  border: `2px solid ${isMobileDevice() ? '#2196f3' : '#ffc107'}`,
                   textAlign: 'center',
                   animation: 'pulse 2s infinite'
                 }}>
-                  <Typography variant="body1" sx={{ color: '#856404', fontWeight: 600 }}>
-                    ⏳ Procesando impresión... Por favor espere
+                  <Typography variant="body1" sx={{ color: isMobileDevice() ? '#1976d2' : '#856404', fontWeight: 600 }}>
+                    {isMobileDevice() ? '📱 Generando PDF para descarga...' : '⏳ Procesando impresión...'} Por favor espere
                   </Typography>
-                  <Typography variant="caption" sx={{ color: '#856404' }}>
-                    El sistema está generando el PDF y manejando los reintentos automáticamente
+                  <Typography variant="caption" sx={{ color: isMobileDevice() ? '#1976d2' : '#856404' }}>
+                    {isMobileDevice() 
+                      ? 'En dispositivos móviles se genera un PDF real que se descarga directamente'
+                      : 'El sistema está generando el PDF y manejando los reintentos automáticamente'
+                    }
                   </Typography>
                 </Box>
               )}
@@ -1707,7 +1780,7 @@ const ReporteDetallePro = forwardRef(({ open = false, onClose = () => {}, report
                 position: 'relative'
               }}
             >
-              {isProcessing ? 'Procesando...' : (isChartReady ? 'Imprimir' : 'Preparando...')}
+              {isProcessing ? 'Procesando...' : (isChartReady ? (isMobileDevice() ? 'Descargar PDF' : 'Imprimir') : 'Preparando...')}
               {(isProcessing || !isChartReady) && (
                 <Box sx={{
                   position: 'absolute',
