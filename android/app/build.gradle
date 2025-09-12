@@ -3,6 +3,12 @@ apply plugin: 'com.android.application'
 android {
     namespace "com.controlaudit.app"
     compileSdk rootProject.ext.compileSdkVersion
+    
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+    
     defaultConfig {
         applicationId "com.controlaudit.app"
         minSdkVersion rootProject.ext.minSdkVersion
@@ -36,8 +42,8 @@ android {
         }
         debug {
             signingConfig signingConfigs.release
-            // Configurar nombre del APK para debug también
-            setArchivesBaseName("ControlAudit-debug")
+            // Mantener nombre por defecto para compatibilidad con Capacitor
+            // setArchivesBaseName("ControlAudit-debug")
         }
     }
 }

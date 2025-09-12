@@ -1,5 +1,5 @@
-const express = require('express');
-const admin = require('../firebaseAdmin');
+import express from 'express';
+import admin from '../firebaseAdmin.js';
 
 const router = express.Router();
 
@@ -36,4 +36,4 @@ router.post('/', verificarSuperAdmin, async (req, res) => {
   }
 });
 
-module.exports = router;
+export default router;

@@ -1,8 +1,8 @@
 // backend/firebaseAdmin.js
-const admin = require('firebase-admin');
+import admin from 'firebase-admin';
 
 // Configuración para Render - usar variables de entorno
-const getServiceAccount = () => {
+const getServiceAccount = async () => {
   // Si tenemos las variables de entorno de Firebase Admin SDK
   if (process.env.FIREBASE_PROJECT_ID && process.env.FIREBASE_CLIENT_EMAIL && process.env.FIREBASE_PRIVATE_KEY) {
     return {
@@ -21,7 +21,9 @@ const getServiceAccount = () => {
   
   // Fallback para desarrollo local
   try {
-    return require('./serviceAccountKey.json');
+    const fs = await import('fs');
+    const serviceAccountData = fs.readFileSync('./serviceAccountKey.json', 'utf8');
+    return JSON.parse(serviceAccountData);
   } catch (error) {
     console.error('Error: No se encontraron credenciales de Firebase Admin SDK');
     console.error('Configura las variables de entorno FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL y FIREBASE_PRIVATE_KEY');
@@ -29,12 +31,19 @@ const getServiceAccount = () => {
   }
 };
 
-// Inicializar solo si no está inicializado
-if (!admin.apps.length) {
-  admin.initializeApp({
-    credential: admin.credential.cert(getServiceAccount()),
-    projectId: process.env.FIREBASE_PROJECT_ID
-  });
-}
+// Función para inicializar Firebase Admin
+const initializeFirebase = async () => {
+  if (!admin.apps.length) {
+    const serviceAccount = await getServiceAccount();
+    admin.initializeApp({
+      credential: admin.credential.cert(serviceAccount),
+      projectId: process.env.FIREBASE_PROJECT_ID
+    });
+  }
+  return admin;
+};
 
-module.exports = admin; 
+// Inicializar inmediatamente
+const firebaseAdmin = await initializeFirebase();
+
+export default firebaseAdmin; 

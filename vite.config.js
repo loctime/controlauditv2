@@ -9,6 +9,11 @@ export default defineConfig({
     port: 5173,
     host: true
   },
+  // Configuración para optimizar el desarrollo
+  optimizeDeps: {
+    exclude: ['@capacitor/ios', '@capacitor/android'],
+    include: ['@capacitor/core', '@capacitor/app']
+  },
            build: {
            outDir: 'dist',
            sourcemap: false,
@@ -104,7 +109,9 @@ export default defineConfig({
            resolve: {
            alias: {
              '@': resolve(__dirname, 'src')
-           }
+           },
+           // Excluir paquetes de Capacitor que no se usan en desarrollo web
+           dedupe: ['@capacitor/ios']
          },
   // Optimización de assets
   assetsInclude: ['**/*.png', '**/*.jpg', '**/*.jpeg', '**/*.gif', '**/*.svg', '**/*.woff', '**/*.woff2'],

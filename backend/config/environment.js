@@ -145,7 +145,7 @@ const getEnvironmentInfo = () => {
   };
 };
 
-module.exports = {
+export {
   config,
   getConfig,
   isEnvironment,
