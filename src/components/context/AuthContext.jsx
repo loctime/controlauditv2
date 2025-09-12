@@ -249,6 +249,7 @@ const AuthContextComponent = ({ children }) => {
         setUserProfile(profileData);
         setRole(profileData.role || null); // NUEVO
         setPermisos(profileData.permisos || {}); // NUEVO
+        console.log('Usuario existente - Rol:', profileData.role, 'Permisos:', profileData.permisos);
         return profileData;
       } else {
         // Crear nuevo perfil de usuario
@@ -284,6 +285,7 @@ const AuthContextComponent = ({ children }) => {
         setUserProfile(newProfile);
         setRole(newProfile.role);
         setPermisos(newProfile.permisos);
+        console.log('Usuario nuevo creado - Rol:', newProfile.role, 'Permisos:', newProfile.permisos);
         return newProfile;
       }
     } catch (error) {
