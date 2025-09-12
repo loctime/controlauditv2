@@ -199,11 +199,15 @@ const ReportesPage = () => {
         if (userProfile?.clienteAdminId) {
           console.log('[DEBUG] Aplicando filtro por clienteAdminId:', userProfile.clienteAdminId);
           q = query(q, where("clienteAdminId", "==", userProfile.clienteAdminId));
+        } else if (userProfile?.uid) {
+          // Si no hay clienteAdminId, buscar por creadoPor (UID del usuario)
+          console.log('[DEBUG] Aplicando filtro por creadoPor (UID):', userProfile.uid);
+          q = query(q, where("creadoPor", "==", userProfile.uid));
         } else if (userProfile?.empresaId) {
           console.log('[DEBUG] Aplicando filtro por empresaId:', userProfile.empresaId);
           q = query(q, where("empresaId", "==", userProfile.empresaId));
         } else {
-          console.log('[DEBUG] ⚠️ Usuario sin clienteAdminId ni empresaId - no se aplicarán filtros');
+          console.log('[DEBUG] ⚠️ Usuario sin clienteAdminId, UID ni empresaId - no se aplicarán filtros');
         }
       } else {
         console.log('[DEBUG] Usuario supermax - sin filtros aplicados');
