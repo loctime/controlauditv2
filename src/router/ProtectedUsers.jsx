@@ -4,7 +4,10 @@ import { Outlet, Navigate } from "react-router-dom";
 import { Box, CircularProgress, Typography, Alert, Button } from "@mui/material";
 
 const ProtectedUsers = () => {
-  const { isLogged, loading, bloqueado, motivoBloqueo, userProfile, logoutContext } = useAuth();
+  const { isLogged, loading, bloqueado, motivoBloqueo, userProfile, logoutContext, role, permisos } = useAuth();
+  
+  // Debug: mostrar información del usuario
+  console.log('ProtectedUsers - isLogged:', isLogged, 'loading:', loading, 'bloqueado:', bloqueado, 'role:', role, 'permisos:', permisos);
 
   if (loading) {
     return (

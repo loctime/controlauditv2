@@ -16,6 +16,11 @@ export const isSuperAdmin = (userProfile) => {
 
 // Función para obtener el rol del usuario
 export const getUserRole = (userEmail) => {
+  // Verificar si es supermax por email específico
+  if (userEmail === '1@gmail.com') {
+    return 'supermax';
+  }
+  
   // Por defecto, usuarios nuevos tienen rol 'max' (cliente administrador)
   // con todos los permisos habilitados
   return 'max';

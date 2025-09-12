@@ -8,6 +8,9 @@ const DashboardProtected = ({ children }) => {
   const { userProfile, role, permisos } = useAuth();
   const navigate = useNavigate();
 
+  // Debug: mostrar información del rol
+  console.log('DashboardProtected - role:', role, 'userProfile:', userProfile, 'permisos:', permisos);
+
   // Verificar si el usuario puede acceder al dashboard
   const canAccessDashboard = () => {
     // Solo supermax puede acceder al dashboard
