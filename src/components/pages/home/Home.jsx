@@ -32,13 +32,40 @@ const Home = () => {
     <div className="home-main-container">
       <div className="home-card">
         <Typography variant="h3" component="h1" align="center" gutterBottom fontWeight={700}>
-          Bienvenido a <span style={{ color: theme.palette.primary.light }}>Tu Control de Auditoría</span>
+          Bienvenido a <span style={{ color: theme.palette.primary.light }}>Control-Audit</span>
         </Typography>
         <Typography variant="h6" align="center" gutterBottom sx={{ opacity: 0.85 }}>
           Optimiza tus auditorías con nuestra plataforma profesional.
         </Typography>
 
-        <Divider sx={{ my: 3, bgcolor: isDark ? '#333' : '#ddd' }} />
+        <div style={{ textAlign: 'center', marginTop: 24, marginBottom: 16 }}>
+          <Button
+            component={Link}
+            to="/auditoria"
+            variant="contained"
+            size="large"
+            endIcon={<ArrowForwardIcon />}
+            sx={{
+              background: isDark
+                ? 'linear-gradient(90deg, #222 0%, #666 100%)'
+                : 'linear-gradient(90deg, #90caf9 0%, #1976d2 100%)',
+              color: isDark ? '#fff' : '#222',
+              fontWeight: 700,
+              px: 5,
+              py: 1.5,
+              borderRadius: 3,
+              boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+              '&:hover': {
+                background: isDark
+                  ? 'linear-gradient(90deg, #333 0%, #888 100%)'
+                  : 'linear-gradient(90deg, #1976d2 0%, #1565c0 100%)',
+              },
+              transition: 'background 0.3s, color 0.3s',
+            }}
+          >
+            Comenzar
+          </Button>
+        </div>
 
         <Grid container spacing={3}>
           <Grid item xs={12} md={6}>
@@ -70,33 +97,6 @@ const Home = () => {
         </Grid>
 
         <div style={{ textAlign: 'center', marginTop: 32 }}>
-          <Button
-            component={Link}
-            to="/auditoria"
-            variant="contained"
-            size="large"
-            endIcon={<ArrowForwardIcon />}
-            sx={{
-              background: isDark
-                ? 'linear-gradient(90deg, #222 0%, #666 100%)'
-                : 'linear-gradient(90deg, #90caf9 0%, #1976d2 100%)',
-              color: isDark ? '#fff' : '#222',
-              fontWeight: 700,
-              px: 5,
-              py: 1.5,
-              borderRadius: 3,
-              boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-              '&:hover': {
-                background: isDark
-                  ? 'linear-gradient(90deg, #333 0%, #888 100%)'
-                  : 'linear-gradient(90deg, #1976d2 0%, #1565c0 100%)',
-              },
-              transition: 'background 0.3s, color 0.3s',
-            }}
-          >
-            Comenzar
-          </Button>
-          
           {/* Sección de descarga de APK */}
           <Box mt={4} p={3} sx={{ 
             background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.02)',
