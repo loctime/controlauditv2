@@ -45,12 +45,12 @@ const CameraControls = ({
         right: 0,
         background: 'linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.7) 50%, transparent 100%)',
         p: 3,
-        pb: 'max(40px, env(safe-area-inset-bottom) + 20px)',
+        pb: 'max(80px, env(safe-area-inset-bottom) + 60px)',
         display: 'flex',
         justifyContent: 'center',
         alignItems: 'center',
         gap: 3,
-        minHeight: '140px',
+        minHeight: '180px',
         width: '100%',
         // Asegurar que esté por encima de las barras de navegación
         zIndex: 10
@@ -82,17 +82,18 @@ const CameraControls = ({
             onClick={onCapturePhoto}
             disabled={compressionProgress > 0}
             sx={{ 
-              width: 90,
-              height: 90,
+              width: 100,
+              height: 100,
               backgroundColor: 'white',
               color: 'black',
-              fontSize: '2rem',
-              boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
-              border: '3px solid rgba(255,255,255,0.8)',
+              fontSize: '2.5rem',
+              boxShadow: '0 12px 40px rgba(0,0,0,0.6)',
+              border: '4px solid rgba(255,255,255,0.9)',
+              borderRadius: '50%',
               '&:hover': { 
                 backgroundColor: 'rgba(255,255,255,0.95)',
-                transform: 'scale(1.1)',
-                boxShadow: '0 12px 40px rgba(0,0,0,0.5)'
+                transform: 'scale(1.15)',
+                boxShadow: '0 16px 50px rgba(0,0,0,0.7)'
               },
               '&:disabled': { 
                 backgroundColor: 'rgba(255,255,255,0.5)',
@@ -108,15 +109,20 @@ const CameraControls = ({
           <IconButton
             onClick={() => window.location.reload()}
             sx={{ 
-              width: 80,
-              height: 80,
+              width: 100,
+              height: 100,
               backgroundColor: '#ff6b6b',
               color: 'white',
+              fontSize: '2.5rem',
+              borderRadius: '50%',
+              boxShadow: '0 12px 40px rgba(0,0,0,0.6)',
+              border: '4px solid rgba(255,255,255,0.9)',
               '&:hover': { 
                 backgroundColor: '#ff5252',
-                transform: 'scale(1.05)'
+                transform: 'scale(1.15)',
+                boxShadow: '0 16px 50px rgba(0,0,0,0.7)'
               },
-              transition: 'all 0.2s ease'
+              transition: 'all 0.3s ease'
             }}
           >
             🔄
@@ -125,19 +131,25 @@ const CameraControls = ({
           <IconButton
             disabled={cameraStatus === 'starting'}
             sx={{ 
-              width: 80,
-              height: 80,
+              width: 100,
+              height: 100,
               backgroundColor: 'white',
               color: 'black',
+              fontSize: '2.5rem',
+              borderRadius: '50%',
+              boxShadow: '0 12px 40px rgba(0,0,0,0.6)',
+              border: '4px solid rgba(255,255,255,0.9)',
               '&:hover': { 
-                backgroundColor: 'rgba(255,255,255,0.9)',
-                transform: 'scale(1.05)'
+                backgroundColor: 'rgba(255,255,255,0.95)',
+                transform: 'scale(1.15)',
+                boxShadow: '0 16px 50px rgba(0,0,0,0.7)'
               },
               '&:disabled': { 
                 backgroundColor: 'rgba(255,255,255,0.5)',
-                transform: 'scale(0.95)'
+                transform: 'scale(0.9)',
+                opacity: 0.7
               },
-              transition: 'all 0.2s ease'
+              transition: 'all 0.3s ease'
             }}
           >
             📸
