@@ -539,12 +539,12 @@ const AuditoriaRefactorizada = () => {
         </MuiAlert>
       </Snackbar>
       
-      {/* Alerta de autoguardado */}
+      {/* Alerta de autoguardado - Deshabilitada para no interferir con la cámara */}
       <AutoSaveAlert
         isSaving={isSaving}
         lastSaved={lastSaved}
         hasUnsavedChanges={hasUnsavedChanges}
-        showAlert={true}
+        showAlert={false}
       />
 
       <Snackbar open={snackbarOpen} autoHideDuration={6000} onClose={() => setSnackbarOpen(false)}>
