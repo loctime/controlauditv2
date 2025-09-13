@@ -205,6 +205,151 @@ const CameraPreview = ({
         </Box>
       )}
 
+      {/* Footer duplicado para móvil - MISMA BARRA QUE ARRIBA */}
+      {isMobile && (
+        <Box sx={{ 
+          position: 'absolute', 
+          bottom: 0, 
+          left: 0, 
+          right: 0, 
+          zIndex: 10,
+          background: 'linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.7) 50%, transparent 100%)',
+          p: 2,
+          pb: 'max(80px, env(safe-area-inset-bottom) + 70px)',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          backdropFilter: 'blur(15px)',
+          minHeight: '120px'
+        }}>
+          <IconButton
+            onClick={onClose}
+            sx={{ 
+              color: 'white', 
+              backgroundColor: 'rgba(255,255,255,0.2)',
+              backdropFilter: 'blur(15px)',
+              border: '2px solid rgba(255,255,255,0.3)',
+              width: 50,
+              height: 50,
+              boxShadow: '0 4px 20px rgba(0,0,0,0.3)',
+              '&:hover': { 
+                backgroundColor: 'rgba(255,255,255,0.3)',
+                transform: 'scale(1.1)',
+                boxShadow: '0 6px 25px rgba(0,0,0,0.4)'
+              },
+              transition: 'all 0.3s ease'
+            }}
+          >
+            <CloseIcon />
+          </IconButton>
+          
+          {cameraStream && (
+            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+              <IconButton
+                onClick={onZoomOut}
+                disabled={cameraZoom <= 1}
+                sx={{ 
+                  color: 'white', 
+                  backgroundColor: 'rgba(255,255,255,0.2)',
+                  backdropFilter: 'blur(15px)',
+                  border: '2px solid rgba(255,255,255,0.3)',
+                  width: 45,
+                  height: 45,
+                  boxShadow: '0 4px 20px rgba(0,0,0,0.3)',
+                  '&:hover': { 
+                    backgroundColor: 'rgba(255,255,255,0.3)',
+                    transform: 'scale(1.1)',
+                    boxShadow: '0 6px 25px rgba(0,0,0,0.4)'
+                  },
+                  '&:disabled': { opacity: 0.5, transform: 'scale(0.9)' },
+                  transition: 'all 0.3s ease'
+                }}
+              >
+                <ZoomOutIcon />
+              </IconButton>
+              
+              {/* BOTÓN DE CAPTURA PRINCIPAL ABAJO */}
+              <IconButton
+                onClick={onCapturePhoto}
+                disabled={compressionProgress > 0}
+                sx={{ 
+                  width: 70,
+                  height: 70,
+                  backgroundColor: '#ff4444',
+                  color: 'white',
+                  fontSize: '2rem',
+                  boxShadow: '0 8px 30px rgba(0,0,0,0.6)',
+                  border: '4px solid white',
+                  borderRadius: '50%',
+                  fontWeight: 'bold',
+                  '&:hover': { 
+                    backgroundColor: '#ff3333',
+                    transform: 'scale(1.15)',
+                    boxShadow: '0 12px 40px rgba(0,0,0,0.8)'
+                  },
+                  '&:disabled': { 
+                    backgroundColor: 'rgba(255,68,68,0.5)',
+                    transform: 'scale(0.9)',
+                    opacity: 0.7
+                  },
+                  transition: 'all 0.3s ease'
+                }}
+              >
+                📸
+              </IconButton>
+              
+              <IconButton
+                onClick={onZoomIn}
+                disabled={cameraZoom >= 4}
+                sx={{ 
+                  color: 'white', 
+                  backgroundColor: 'rgba(255,255,255,0.2)',
+                  backdropFilter: 'blur(15px)',
+                  border: '2px solid rgba(255,255,255,0.3)',
+                  width: 45,
+                  height: 45,
+                  boxShadow: '0 4px 20px rgba(0,0,0,0.3)',
+                  '&:hover': { 
+                    backgroundColor: 'rgba(255,255,255,0.3)',
+                    transform: 'scale(1.1)',
+                    boxShadow: '0 6px 25px rgba(0,0,0,0.4)'
+                  },
+                  '&:disabled': { opacity: 0.5, transform: 'scale(0.9)' },
+                  transition: 'all 0.3s ease'
+                }}
+              >
+                <ZoomInIcon />
+              </IconButton>
+            </Box>
+          )}
+          
+          {availableCameras.length > 1 && (
+            <IconButton
+              onClick={onSwitchCamera}
+              disabled={!cameraStream}
+              sx={{ 
+                color: 'white', 
+                backgroundColor: 'rgba(255,255,255,0.2)',
+                backdropFilter: 'blur(15px)',
+                border: '2px solid rgba(255,255,255,0.3)',
+                width: 50,
+                height: 50,
+                boxShadow: '0 4px 20px rgba(0,0,0,0.3)',
+                '&:hover': { 
+                  backgroundColor: 'rgba(255,255,255,0.3)',
+                  transform: 'scale(1.1)',
+                  boxShadow: '0 6px 25px rgba(0,0,0,0.4)'
+                },
+                '&:disabled': { opacity: 0.5, transform: 'scale(0.9)' },
+                transition: 'all 0.3s ease'
+              }}
+            >
+              {currentCamera === 'environment' ? <CameraRearIcon /> : <CameraFrontIcon />}
+            </IconButton>
+          )}
+        </Box>
+      )}
+
       {/* Overlay de captura */}
       {captureAnimation && (
         <Box
