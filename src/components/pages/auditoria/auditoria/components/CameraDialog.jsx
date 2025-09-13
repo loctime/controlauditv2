@@ -402,6 +402,8 @@ const CameraDialog = ({
           onZoomIn={increaseZoom}
           onZoomOut={decreaseZoom}
           onSwitchCamera={switchCamera}
+          onCapturePhoto={capturePhoto}
+          compressionProgress={compressionProgress}
           currentCamera={currentCamera}
           availableCameras={availableCameras}
         />
