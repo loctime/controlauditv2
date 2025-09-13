@@ -366,7 +366,10 @@ const CameraDialog = ({
           maxHeight: '100vh',
           width: '100vw',
           maxWidth: '100vw',
-          backgroundColor: '#000'
+          backgroundColor: '#000',
+          // Asegurar que ocupe toda la pantalla incluyendo áreas seguras
+          minHeight: '100vh',
+          minWidth: '100vw'
         } : {
           borderRadius: 3,
           overflow: 'hidden',

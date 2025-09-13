@@ -43,28 +43,35 @@ const CameraControls = ({
         bottom: 0,
         left: 0, 
         right: 0,
-        background: 'linear-gradient(to top, rgba(0,0,0,0.9) 0%, transparent 100%)',
-        p: 2,
-        pb: 'max(20px, env(safe-area-inset-bottom))',
+        background: 'linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.7) 50%, transparent 100%)',
+        p: 3,
+        pb: 'max(40px, env(safe-area-inset-bottom) + 20px)',
         display: 'flex',
         justifyContent: 'center',
         alignItems: 'center',
-        gap: 2,
-        minHeight: '100px',
-        width: '100%'
+        gap: 3,
+        minHeight: '140px',
+        width: '100%',
+        // Asegurar que esté por encima de las barras de navegación
+        zIndex: 10
       }}>
         <IconButton
           onClick={onSelectFromGallery}
           sx={{ 
-            backgroundColor: 'rgba(255,255,255,0.15)',
-            backdropFilter: 'blur(10px)',
-            border: '1px solid rgba(255,255,255,0.2)',
+            width: 60,
+            height: 60,
+            backgroundColor: 'rgba(255,255,255,0.2)',
+            backdropFilter: 'blur(15px)',
+            border: '2px solid rgba(255,255,255,0.3)',
             color: 'white',
+            fontSize: '1.5rem',
+            boxShadow: '0 4px 20px rgba(0,0,0,0.3)',
             '&:hover': { 
-              backgroundColor: 'rgba(255,255,255,0.25)',
-              transform: 'scale(1.05)'
+              backgroundColor: 'rgba(255,255,255,0.3)',
+              transform: 'scale(1.1)',
+              boxShadow: '0 6px 25px rgba(0,0,0,0.4)'
             },
-            transition: 'all 0.2s ease'
+            transition: 'all 0.3s ease'
           }}
         >
           📷
@@ -75,20 +82,24 @@ const CameraControls = ({
             onClick={onCapturePhoto}
             disabled={compressionProgress > 0}
             sx={{ 
-              width: 80,
-              height: 80,
+              width: 90,
+              height: 90,
               backgroundColor: 'white',
               color: 'black',
-              boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
+              fontSize: '2rem',
+              boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+              border: '3px solid rgba(255,255,255,0.8)',
               '&:hover': { 
-                backgroundColor: 'rgba(255,255,255,0.9)',
-                transform: 'scale(1.05)'
+                backgroundColor: 'rgba(255,255,255,0.95)',
+                transform: 'scale(1.1)',
+                boxShadow: '0 12px 40px rgba(0,0,0,0.5)'
               },
               '&:disabled': { 
                 backgroundColor: 'rgba(255,255,255,0.5)',
-                transform: 'scale(0.95)'
+                transform: 'scale(0.9)',
+                opacity: 0.7
               },
-              transition: 'all 0.2s ease'
+              transition: 'all 0.3s ease'
             }}
           >
             📸
@@ -136,15 +147,20 @@ const CameraControls = ({
         <IconButton
           onClick={onToggleGrid}
           sx={{ 
-            backgroundColor: gridEnabled ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.15)',
-            backdropFilter: 'blur(10px)',
-            border: '1px solid rgba(255,255,255,0.2)',
+            width: 60,
+            height: 60,
+            backgroundColor: gridEnabled ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.2)',
+            backdropFilter: 'blur(15px)',
+            border: '2px solid rgba(255,255,255,0.3)',
             color: 'white',
+            fontSize: '1.5rem',
+            boxShadow: '0 4px 20px rgba(0,0,0,0.3)',
             '&:hover': { 
-              backgroundColor: 'rgba(255,255,255,0.25)',
-              transform: 'scale(1.05)'
+              backgroundColor: 'rgba(255,255,255,0.4)',
+              transform: 'scale(1.1)',
+              boxShadow: '0 6px 25px rgba(0,0,0,0.4)'
             },
-            transition: 'all 0.2s ease'
+            transition: 'all 0.3s ease'
           }}
         >
           {gridEnabled ? <GridOnIcon /> : <GridOffIcon />}
