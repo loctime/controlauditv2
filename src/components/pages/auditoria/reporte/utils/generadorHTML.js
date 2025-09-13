@@ -56,9 +56,64 @@ function generarContenidoImpresion({
 <title>Reporte de Auditoría - ${empresaNombre}</title>
 <style>
 ${estilosCSS}
+
+/* Estilos para el botón de imprimir */
+.print-button-container {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 1000;
+  background: white;
+  padding: 10px;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  border: 1px solid #ddd;
+}
+
+.print-button {
+  background: #1976d2;
+  color: white;
+  border: none;
+  padding: 12px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: background-color 0.2s;
+}
+
+.print-button:hover {
+  background: #1565c0;
+}
+
+.print-button:active {
+  background: #0d47a1;
+}
+
+.print-icon {
+  font-size: 16px;
+}
+
+/* Ocultar botón al imprimir */
+@media print {
+  .print-button-container {
+    display: none !important;
+  }
+}
 </style>
 </head>
 <body>
+
+  <!-- Botón de imprimir flotante -->
+  <div class="print-button-container">
+    <button class="print-button" onclick="window.print()">
+      <span class="print-icon">🖨️</span>
+      Imprimir / Guardar PDF
+    </button>
+  </div>
 
   ${generarHeader({ empresa, fecha, nombreAuditor })}
 
@@ -93,6 +148,63 @@ ${estilosCSS}
   ${generarFirmas({ firmaAuditor, firmaResponsable, nombreAuditor, empresa })}
 
   ${generarFooter({ sucursal, fecha })}
+
+  <script>
+    // Función para imprimir con mejor experiencia
+    function imprimirReporte() {
+      // Mostrar mensaje de ayuda
+      const mensaje = document.createElement('div');
+      mensaje.style.cssText = \`
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: #1976d2;
+        color: white;
+        padding: 20px;
+        border-radius: 8px;
+        z-index: 10000;
+        font-family: Arial, sans-serif;
+        text-align: center;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+      \`;
+      mensaje.innerHTML = \`
+        <h3>🖨️ Imprimiendo Reporte</h3>
+        <p>En el diálogo de impresión:</p>
+        <p><strong>• Selecciona "Guardar como PDF" para crear un archivo PDF</strong></p>
+        <p>• O elige tu impresora para imprimir en papel</p>
+        <button onclick="this.parentElement.remove(); window.print();" 
+                style="background: white; color: #1976d2; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; margin-top: 10px;">
+          Continuar
+        </button>
+      \`;
+      document.body.appendChild(mensaje);
+      
+      // Auto-remover mensaje después de 5 segundos
+      setTimeout(() => {
+        if (mensaje.parentElement) {
+          mensaje.remove();
+          window.print();
+        }
+      }, 5000);
+    }
+    
+    // Reemplazar la función onclick del botón
+    document.addEventListener('DOMContentLoaded', function() {
+      const printButton = document.querySelector('.print-button');
+      if (printButton) {
+        printButton.onclick = imprimirReporte;
+      }
+    });
+    
+    // Agregar atajo de teclado Ctrl+P
+    document.addEventListener('keydown', function(e) {
+      if (e.ctrlKey && e.key === 'p') {
+        e.preventDefault();
+        imprimirReporte();
+      }
+    });
+  </script>
 
 </body>
 </html>
