@@ -33,6 +33,8 @@ const CameraPreview = ({
   onZoomIn,
   onZoomOut,
   onSwitchCamera,
+  onCapturePhoto,
+  compressionProgress,
   currentCamera,
   availableCameras
 }) => {
@@ -97,7 +99,7 @@ const CameraPreview = ({
           </IconButton>
           
           {cameraStream && (
-            <Box sx={{ display: 'flex', gap: 1 }}>
+            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
               <IconButton
                 onClick={onZoomOut}
                 disabled={cameraZoom <= 1}
@@ -120,6 +122,37 @@ const CameraPreview = ({
               >
                 <ZoomOutIcon />
               </IconButton>
+              
+              {/* BOTÓN DE CAPTURA PRINCIPAL ARRIBA */}
+              <IconButton
+                onClick={onCapturePhoto}
+                disabled={compressionProgress > 0}
+                sx={{ 
+                  width: 70,
+                  height: 70,
+                  backgroundColor: '#ff4444',
+                  color: 'white',
+                  fontSize: '2rem',
+                  boxShadow: '0 8px 30px rgba(0,0,0,0.6)',
+                  border: '4px solid white',
+                  borderRadius: '50%',
+                  fontWeight: 'bold',
+                  '&:hover': { 
+                    backgroundColor: '#ff3333',
+                    transform: 'scale(1.15)',
+                    boxShadow: '0 12px 40px rgba(0,0,0,0.8)'
+                  },
+                  '&:disabled': { 
+                    backgroundColor: 'rgba(255,68,68,0.5)',
+                    transform: 'scale(0.9)',
+                    opacity: 0.7
+                  },
+                  transition: 'all 0.3s ease'
+                }}
+              >
+                📸
+              </IconButton>
+              
               <IconButton
                 onClick={onZoomIn}
                 disabled={cameraZoom >= 4}
