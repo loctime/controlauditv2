@@ -300,7 +300,7 @@ const ReporteDetallePro = forwardRef(({ open = false, onClose = () => {}, report
               position: 'relative'
             }}
           >
-            {isProcessing ? (isSavingPdf ? 'Guardando PDF...' : 'Procesando...') : (isChartReady ? 'Imprimir' : 'Preparando...')}
+            {isProcessing ? (isSavingPdf ? 'Generando PDF...' : 'Procesando...') : (isChartReady ? (isMobileDevice() ? 'Generar PDF' : 'Imprimir') : 'Preparando...')}
             {(isProcessing || !isChartReady) && (
               <Box sx={{
                 position: 'absolute',

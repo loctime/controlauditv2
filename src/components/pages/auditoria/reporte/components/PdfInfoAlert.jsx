@@ -52,7 +52,10 @@ const PdfInfoAlert = ({ pdfUrl, fechaPdfGenerado, onDownload }) => {
         
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <Typography variant="caption" color="text.secondary">
-            El reporte se guardó localmente en tu navegador
+            {/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 768
+              ? 'El reporte se guardó localmente - descarga el archivo para verlo'
+              : 'El reporte se guardó localmente en tu navegador'
+            }
           </Typography>
         </Box>
       </Box>

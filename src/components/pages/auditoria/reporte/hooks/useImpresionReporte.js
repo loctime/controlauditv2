@@ -278,8 +278,11 @@ export const useImpresionReporte = () => {
     console.log('[useImpresionReporte] Es dispositivo móvil:', isMobile);
     
     if (isMobile) {
-      await printMobileOptimized(html);
+      // En móviles, solo generar el PDF sin abrir diálogo de impresión
+      console.log('[useImpresionReporte] Dispositivo móvil detectado - solo generando PDF');
+      // No llamar a printMobileOptimized, solo generar el PDF
     } else {
+      // En desktop, usar el método normal de impresión
       await printWithIframe(html);
     }
     
