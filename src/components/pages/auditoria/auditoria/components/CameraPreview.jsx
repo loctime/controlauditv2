@@ -209,18 +209,18 @@ const CameraPreview = ({
       {isMobile && (
         <Box sx={{ 
           position: 'absolute', 
-          bottom: 0, 
+          bottom: '120px', 
           left: 0, 
           right: 0, 
           zIndex: 10,
           background: 'linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.7) 50%, transparent 100%)',
           p: 2,
-          pb: 'max(80px, env(safe-area-inset-bottom) + 70px)',
+          pb: 'max(20px, env(safe-area-inset-bottom) + 10px)',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
           backdropFilter: 'blur(15px)',
-          minHeight: '120px'
+          minHeight: '80px'
         }}>
           <IconButton
             onClick={onClose}
