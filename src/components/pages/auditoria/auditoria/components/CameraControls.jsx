@@ -45,12 +45,12 @@ const CameraControls = ({
         right: 0,
         background: 'linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.7) 50%, transparent 100%)',
         p: 3,
-        pb: 'max(80px, env(safe-area-inset-bottom) + 60px)',
+        pb: 'max(150px, env(safe-area-inset-bottom) + 130px)',
         display: 'flex',
         justifyContent: 'center',
         alignItems: 'center',
         gap: 3,
-        minHeight: '180px',
+        minHeight: '250px',
         width: '100%',
         // Asegurar que esté por encima de las barras de navegación
         zIndex: 10
@@ -82,21 +82,22 @@ const CameraControls = ({
             onClick={onCapturePhoto}
             disabled={compressionProgress > 0}
             sx={{ 
-              width: 100,
-              height: 100,
-              backgroundColor: 'white',
-              color: 'black',
-              fontSize: '2.5rem',
-              boxShadow: '0 12px 40px rgba(0,0,0,0.6)',
-              border: '4px solid rgba(255,255,255,0.9)',
+              width: 120,
+              height: 120,
+              backgroundColor: '#ff4444',
+              color: 'white',
+              fontSize: '3rem',
+              boxShadow: '0 16px 50px rgba(0,0,0,0.8)',
+              border: '6px solid white',
               borderRadius: '50%',
+              fontWeight: 'bold',
               '&:hover': { 
-                backgroundColor: 'rgba(255,255,255,0.95)',
-                transform: 'scale(1.15)',
-                boxShadow: '0 16px 50px rgba(0,0,0,0.7)'
+                backgroundColor: '#ff3333',
+                transform: 'scale(1.2)',
+                boxShadow: '0 20px 60px rgba(0,0,0,0.9)'
               },
               '&:disabled': { 
-                backgroundColor: 'rgba(255,255,255,0.5)',
+                backgroundColor: 'rgba(255,68,68,0.5)',
                 transform: 'scale(0.9)',
                 opacity: 0.7
               },
@@ -109,18 +110,19 @@ const CameraControls = ({
           <IconButton
             onClick={() => window.location.reload()}
             sx={{ 
-              width: 100,
-              height: 100,
+              width: 120,
+              height: 120,
               backgroundColor: '#ff6b6b',
               color: 'white',
-              fontSize: '2.5rem',
+              fontSize: '3rem',
               borderRadius: '50%',
-              boxShadow: '0 12px 40px rgba(0,0,0,0.6)',
-              border: '4px solid rgba(255,255,255,0.9)',
+              boxShadow: '0 16px 50px rgba(0,0,0,0.8)',
+              border: '6px solid white',
+              fontWeight: 'bold',
               '&:hover': { 
                 backgroundColor: '#ff5252',
-                transform: 'scale(1.15)',
-                boxShadow: '0 16px 50px rgba(0,0,0,0.7)'
+                transform: 'scale(1.2)',
+                boxShadow: '0 20px 60px rgba(0,0,0,0.9)'
               },
               transition: 'all 0.3s ease'
             }}
@@ -131,21 +133,22 @@ const CameraControls = ({
           <IconButton
             disabled={cameraStatus === 'starting'}
             sx={{ 
-              width: 100,
-              height: 100,
-              backgroundColor: 'white',
-              color: 'black',
-              fontSize: '2.5rem',
+              width: 120,
+              height: 120,
+              backgroundColor: '#ff4444',
+              color: 'white',
+              fontSize: '3rem',
               borderRadius: '50%',
-              boxShadow: '0 12px 40px rgba(0,0,0,0.6)',
-              border: '4px solid rgba(255,255,255,0.9)',
+              boxShadow: '0 16px 50px rgba(0,0,0,0.8)',
+              border: '6px solid white',
+              fontWeight: 'bold',
               '&:hover': { 
-                backgroundColor: 'rgba(255,255,255,0.95)',
-                transform: 'scale(1.15)',
-                boxShadow: '0 16px 50px rgba(0,0,0,0.7)'
+                backgroundColor: '#ff3333',
+                transform: 'scale(1.2)',
+                boxShadow: '0 20px 60px rgba(0,0,0,0.9)'
               },
               '&:disabled': { 
-                backgroundColor: 'rgba(255,255,255,0.5)',
+                backgroundColor: 'rgba(255,68,68,0.5)',
                 transform: 'scale(0.9)',
                 opacity: 0.7
               },
