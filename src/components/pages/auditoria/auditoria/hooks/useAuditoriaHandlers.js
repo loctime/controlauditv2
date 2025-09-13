@@ -81,22 +81,22 @@ export const useAuditoriaHandlers = ({
   }, [setImagenes]);
 
   // Handlers de firmas
-  const handleSaveFirmaAuditor = useCallback((firmaURL) => {
-    console.log('[DEBUG] handleSaveFirmaAuditor llamado con:', firmaURL);
-    setFirmaAuditor(firmaURL);
-    verificarFirmasCompletadas();
-  }, [setFirmaAuditor]);
-
-  const handleSaveFirmaResponsable = useCallback((firmaURL) => {
-    setFirmaResponsable(firmaURL);
-    verificarFirmasCompletadas();
-  }, [setFirmaResponsable]);
-
-  const verificarFirmasCompletadas = useCallback(() => {
+  const verificarFirmasCompletadasLocal = useCallback(() => {
     const completadas = verificarFirmasCompletadas(firmaAuditor, firmaResponsable);
     console.log('[DEBUG] Verificando firmas (opcionales):', { firmaAuditor, firmaResponsable, completadas });
     setFirmasCompletadas(completadas);
   }, [firmaAuditor, firmaResponsable, setFirmasCompletadas]);
+
+  const handleSaveFirmaAuditor = useCallback((firmaURL) => {
+    console.log('[DEBUG] handleSaveFirmaAuditor llamado con:', firmaURL);
+    setFirmaAuditor(firmaURL);
+    verificarFirmasCompletadasLocal();
+  }, [setFirmaAuditor, verificarFirmasCompletadasLocal]);
+
+  const handleSaveFirmaResponsable = useCallback((firmaURL) => {
+    setFirmaResponsable(firmaURL);
+    verificarFirmasCompletadasLocal();
+  }, [setFirmaResponsable, verificarFirmasCompletadasLocal]);
 
   // Handlers de autoguardado
   const checkUnsavedChanges = useCallback(() => {
@@ -263,7 +263,7 @@ export const useAuditoriaHandlers = ({
     // Handlers de firmas
     handleSaveFirmaAuditor,
     handleSaveFirmaResponsable,
-    verificarFirmasCompletadas,
+    verificarFirmasCompletadas: verificarFirmasCompletadasLocal,
     
     // Handlers de autoguardado
     checkUnsavedChanges,
