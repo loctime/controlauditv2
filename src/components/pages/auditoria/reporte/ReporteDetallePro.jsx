@@ -3,6 +3,7 @@ import PreguntasRespuestasList from "../../../common/PreguntasRespuestasList";
 import { Typography, Box, Button, Dialog, DialogTitle, DialogContent, DialogActions, IconButton, Alert } from "@mui/material";
 import PrintIcon from '@mui/icons-material/Print';
 import CloseIcon from '@mui/icons-material/Close';
+import DownloadIcon from '@mui/icons-material/Download';
 import { useAuth } from '../../../context/AuthContext';
 
 // Importar utilidades y componentes separados
@@ -15,10 +16,12 @@ import {
   normalizarFormularioCompleto
 } from './utils/normalizadores';
 import { useImpresionReporte } from './hooks/useImpresionReporte';
+import { descargarPdf, obtenerPdfGuardado } from './utils/pdfStorageServiceSimple';
 import HeaderReporte from './components/HeaderReporte';
 import EstadisticasReporte from './components/EstadisticasReporte';
 import FirmasReporte from './components/FirmasReporte';
 import ProcesamientoAlert from './components/ProcesamientoAlert';
+import PdfInfoAlert from './components/PdfInfoAlert';
 
 
 
@@ -32,7 +35,9 @@ const ReporteDetallePro = forwardRef(({ open = false, onClose = () => {}, report
     chartRef, 
     sectionChartRefs, 
     handleImprimir: handleImprimirHook,
-    isMobileDevice 
+    isMobileDevice,
+    pdfUrl,
+    isSavingPdf
   } = useImpresionReporte();
   
   // Exponer métodos a través del ref
@@ -148,8 +153,24 @@ const ReporteDetallePro = forwardRef(({ open = false, onClose = () => {}, report
       fechaFin: reporte.fechaFin || ""
     };
     
-    await handleImprimirHook(datosReporte);
+    // Pasar el ID del reporte para guardar el PDF
+    const reporteId = reporte.id || reporte.uid || `reporte-${Date.now()}`;
+    await handleImprimirHook(datosReporte, reporteId);
   };
+
+  // Función para descargar PDF
+  const handleDescargarPdf = () => {
+    const urlPdf = pdfUrl || reporte.pdfUrl || pdfLocalStorage;
+    if (urlPdf) {
+      const fileName = `reporte-${empresa?.nombre || 'auditoria'}-${fecha || new Date().toLocaleDateString()}.html`;
+      descargarPdf(urlPdf, fileName);
+    }
+  };
+
+  // Verificar si hay PDF disponible (del hook, del reporte o localStorage)
+  const reporteId = reporte.id || reporte.uid;
+  const pdfLocalStorage = reporteId ? obtenerPdfGuardado(reporteId) : null;
+  const tienePdfDisponible = pdfUrl || reporte.pdfUrl || pdfLocalStorage;
 
   // En el modal, eliminar la firma del responsable y mostrar aclaración solo en la firma del auditor
   console.log('[ReporteDetallePro] Renderizando modal...');
@@ -189,6 +210,13 @@ const ReporteDetallePro = forwardRef(({ open = false, onClose = () => {}, report
                        <Box>
               {/* Indicador de procesamiento */}
             <ProcesamientoAlert isProcessing={isProcessing} isMobileDevice={isMobileDevice} />
+            
+            {/* Información del PDF guardado */}
+            <PdfInfoAlert 
+              pdfUrl={tienePdfDisponible} 
+              fechaPdfGenerado={reporte.fechaPdfGenerado}
+              onDownload={handleDescargarPdf}
+            />
             
             {/* Header con datos del reporte */}
             <HeaderReporte 
@@ -245,40 +273,55 @@ const ReporteDetallePro = forwardRef(({ open = false, onClose = () => {}, report
           >
             Cerrar
           </Button>
-                                           <Button 
-              onClick={handleImprimir} 
+          
+          {/* Botón de descarga PDF */}
+          {tienePdfDisponible && (
+            <Button 
+              onClick={handleDescargarPdf} 
               variant="outlined" 
-              color={isProcessing ? "warning" : (isChartReady ? "secondary" : "warning")}
-              startIcon={isProcessing ? null : <PrintIcon />}
+              color="success"
+              startIcon={<DownloadIcon />}
               size="medium"
-              disabled={!isChartReady || isProcessing}
-              sx={{ 
-                minWidth: { xs: '80px', sm: '100px' },
-                position: 'relative'
-              }}
+              sx={{ minWidth: { xs: '80px', sm: '100px' } }}
             >
-              {isProcessing ? 'Procesando...' : (isChartReady ? 'Imprimir' : 'Preparando...')}
-              {(isProcessing || !isChartReady) && (
-                <Box sx={{
-                  position: 'absolute',
-                  top: -8,
-                  right: -8,
-                  width: 16,
-                  height: 16,
-                  borderRadius: '50%',
-                  backgroundColor: isProcessing ? '#ff9800' : '#ff9800',
-                  animation: isProcessing ? 'spin 1s linear infinite' : 'pulse 1.5s infinite',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '8px',
-                  color: 'white',
-                  fontWeight: 'bold'
-                }}>
-                  {isProcessing ? '⏳' : '●'}
-                </Box>
-              )}
+              Descargar PDF
             </Button>
+          )}
+          
+          <Button 
+            onClick={handleImprimir} 
+            variant="outlined" 
+            color={isProcessing ? "warning" : (isChartReady ? "secondary" : "warning")}
+            startIcon={isProcessing ? null : <PrintIcon />}
+            size="medium"
+            disabled={!isChartReady || isProcessing}
+            sx={{ 
+              minWidth: { xs: '80px', sm: '100px' },
+              position: 'relative'
+            }}
+          >
+            {isProcessing ? (isSavingPdf ? 'Guardando PDF...' : 'Procesando...') : (isChartReady ? 'Imprimir' : 'Preparando...')}
+            {(isProcessing || !isChartReady) && (
+              <Box sx={{
+                position: 'absolute',
+                top: -8,
+                right: -8,
+                width: 16,
+                height: 16,
+                borderRadius: '50%',
+                backgroundColor: isProcessing ? '#ff9800' : '#ff9800',
+                animation: isProcessing ? 'spin 1s linear infinite' : 'pulse 1.5s infinite',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '8px',
+                color: 'white',
+                fontWeight: 'bold'
+              }}>
+                {isProcessing ? '⏳' : '●'}
+              </Box>
+            )}
+          </Button>
             
         </DialogActions>
       </Dialog>

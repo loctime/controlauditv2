@@ -1,10 +1,13 @@
 import { useState, useRef, useEffect } from 'react';
 import generarContenidoImpresion from '../utils/generadorHTML';
+import { generarYGuardarPdf } from '../utils/pdfStorageServiceSimple';
 
 // Hook personalizado para manejar la lógica de impresión de reportes
 export const useImpresionReporte = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [isChartReady, setIsChartReady] = useState(false);
+  const [pdfUrl, setPdfUrl] = useState(null);
+  const [isSavingPdf, setIsSavingPdf] = useState(false);
   const chartRef = useRef();
   const sectionChartRefs = useRef([]);
 
@@ -123,11 +126,12 @@ export const useImpresionReporte = () => {
   };
 
   // Función principal de impresión
-  const handleImprimir = async (datosReporte) => {
+  const handleImprimir = async (datosReporte, reporteId = null) => {
     console.log('[useImpresionReporte] Iniciando proceso de impresión...');
     
     setIsProcessing(true);
     setIsChartReady(false);
+    setIsSavingPdf(false);
     
     await new Promise(resolve => setTimeout(resolve, 1000));
     
@@ -246,6 +250,29 @@ export const useImpresionReporte = () => {
       sectionChartsImgDataUrl
     });
     
+    // Guardar PDF en Storage si se proporciona reporteId
+    if (reporteId) {
+      try {
+        setIsSavingPdf(true);
+        console.log('[useImpresionReporte] Guardando PDF en Storage...');
+        
+        const pdfUrl = await generarYGuardarPdf(reporteId, {
+          ...datosReporte,
+          chartImgDataUrl,
+          sectionChartsImgDataUrl
+        });
+        
+        setPdfUrl(pdfUrl);
+        console.log('[useImpresionReporte] ✅ PDF guardado exitosamente:', pdfUrl);
+        
+      } catch (error) {
+        console.error('[useImpresionReporte] ❌ Error guardando PDF:', error);
+        // No interrumpir la impresión si falla el guardado
+      } finally {
+        setIsSavingPdf(false);
+      }
+    }
+    
     // Detectar si es dispositivo móvil y usar el método apropiado
     const isMobile = isMobileDevice();
     console.log('[useImpresionReporte] Es dispositivo móvil:', isMobile);
@@ -265,6 +292,8 @@ export const useImpresionReporte = () => {
     chartRef,
     sectionChartRefs,
     handleImprimir,
-    isMobileDevice
+    isMobileDevice,
+    pdfUrl,
+    isSavingPdf
   };
 };
