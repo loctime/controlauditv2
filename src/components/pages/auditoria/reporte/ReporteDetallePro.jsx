@@ -1801,7 +1801,7 @@ const ReporteDetallePro = forwardRef(({ open = false, onClose = () => {}, report
               )}
             </Button>
             
-            {/* Botón para forzar regeneración del gráfico */}
+            {/* .Botón para forzar regeneración del gráfico */}
             <Button 
               onClick={async () => {
                 console.log('[ReporteDetallePro] Forzando regeneración del gráfico...');
