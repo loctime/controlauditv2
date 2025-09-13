@@ -10,6 +10,7 @@ import {
   generarFirmas, 
   generarFooter 
 } from './templatesReporte.js';
+import estilosCSS from './estilosReporte.css?raw';
 
 function generarContenidoImpresion({
   empresa,
@@ -53,7 +54,9 @@ function generarContenidoImpresion({
 <head>
 <meta charset="UTF-8" />
 <title>Reporte de Auditoría - ${empresaNombre}</title>
-<link rel="stylesheet" href="./estilosReporte.css">
+<style>
+${estilosCSS}
+</style>
 </head>
 <body>
 
