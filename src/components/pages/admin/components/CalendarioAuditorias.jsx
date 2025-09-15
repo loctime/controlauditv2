@@ -159,61 +159,55 @@ const CalendarioAuditorias = React.memo(({
     >
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
         <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <CalendarToday color="primary" />
-          Calendario de Auditorías
-        </Typography>
-        <Box display="flex" flexDirection="column" alignItems="center" gap={0.5}>
-          <Box display="flex" alignItems="center" gap={0.5}>
-            <IconButton onClick={prevMonth} size="medium" sx={{ p: 1.5 }}>
-              <Typography variant="h5" sx={{ fontWeight: 'bold' }}>‹</Typography>
-            </IconButton>
-            <Box sx={{ minWidth: '120px', textAlign: 'center' }}>
-              <Typography 
-                variant="h6" 
-                component="span" 
-                onClick={handleMonthClick}
-                sx={{ 
-                  cursor: 'pointer', 
-                  '&:hover': { color: 'primary.main' },
-                  borderBottom: '1px dashed transparent',
-                  '&:hover': { borderBottom: '1px dashed currentColor' }
-                }}
-              >
-                {monthNames[currentMonth.getMonth()]}
-              </Typography>
-              <Typography 
-                variant="h6" 
-                component="span" 
-                onClick={handleYearClick}
-                sx={{ 
-                  cursor: 'pointer', 
-                  ml: 0.5,
-                  '&:hover': { color: 'primary.main' },
-                  borderBottom: '1px dashed transparent',
-                  '&:hover': { borderBottom: '1px dashed currentColor' }
-                }}
-              >
-                {currentMonth.getFullYear()}
-              </Typography>
-            </Box>
-            <IconButton onClick={nextMonth} size="medium" sx={{ p: 1.5 }}>
-              <Typography variant="h5" sx={{ fontWeight: 'bold' }}>›</Typography>
-            </IconButton>
-          </Box>
-          <IconButton 
-            onClick={resetToToday} 
-            size="small" 
+          <CalendarToday 
+            color="primary" 
+            onClick={resetToToday}
             sx={{ 
-              p: 0.5,
-              color: 'primary.main',
+              cursor: 'pointer',
               '&:hover': { 
-                backgroundColor: 'primary.light',
-                color: 'white'
+                transform: 'scale(1.1)',
+                transition: 'transform 0.2s'
               }
             }}
             title="Volver al mes actual"
-          >
-            <Today fontSize="small" />
+          />
+          Calendario de Auditorías
+        </Typography>
+        <Box display="flex" alignItems="center" gap={0.5}>
+          <IconButton onClick={prevMonth} size="medium" sx={{ p: 1.5 }}>
+            <Typography variant="h5" sx={{ fontWeight: 'bold' }}>‹</Typography>
+          </IconButton>
+          <Box sx={{ minWidth: '120px', textAlign: 'center' }}>
+            <Typography 
+              variant="h6" 
+              component="span" 
+              onClick={handleMonthClick}
+              sx={{ 
+                cursor: 'pointer', 
+                '&:hover': { color: 'primary.main' },
+                borderBottom: '1px dashed transparent',
+                '&:hover': { borderBottom: '1px dashed currentColor' }
+              }}
+            >
+              {monthNames[currentMonth.getMonth()]}
+            </Typography>
+            <Typography 
+              variant="h6" 
+              component="span" 
+              onClick={handleYearClick}
+              sx={{ 
+                cursor: 'pointer', 
+                ml: 0.5,
+                '&:hover': { color: 'primary.main' },
+                borderBottom: '1px dashed transparent',
+                '&:hover': { borderBottom: '1px dashed currentColor' }
+              }}
+            >
+              {currentMonth.getFullYear()}
+            </Typography>
+          </Box>
+          <IconButton onClick={nextMonth} size="medium" sx={{ p: 1.5 }}>
+            <Typography variant="h5" sx={{ fontWeight: 'bold' }}>›</Typography>
           </IconButton>
         </Box>
       </Box>
