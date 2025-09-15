@@ -75,6 +75,7 @@ html, body {
   .MuiContainer-root {
     padding-left: 2px !important;
     padding-right: 2px !important;
+    max-width: none !important;
   }
   
   .MuiBox-root {
@@ -99,6 +100,7 @@ html, body {
   .MuiContainer-root {
     padding-left: 1px !important;
     padding-right: 1px !important;
+    max-width: none !important;
   }
   
   .MuiBox-root {

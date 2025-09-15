@@ -425,7 +425,7 @@ const AuditoriaRefactorizada = () => {
   });
 
   return (
-    <Container maxWidth="xl" sx={{ py: isMobile ? 1 : 4 }}>
+    <Container maxWidth={isMobile ? false : "xl"} sx={{ py: isMobile ? 1 : 4, px: isMobile ? 0 : 2 }}>
       {/* Header con navegación y progreso */}
       <AuditoriaHeader
         navigate={navigate}
