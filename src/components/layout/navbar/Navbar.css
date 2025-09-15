@@ -50,9 +50,9 @@ a{
   
   /* Mejorar los botones en móvil */
   .MuiIconButton-root {
-    min-width: 44px !important;
-    min-height: 44px !important;
-    /* Tamaño mínimo para toque */
+    min-width: 32px !important;
+    min-height: 32px !important;
+    /* Tamaño ajustado para navbar */
   }
   
   /* Mejorar el texto en móvil */

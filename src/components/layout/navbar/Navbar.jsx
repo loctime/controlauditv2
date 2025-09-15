@@ -217,22 +217,24 @@ function Navbar(props) {
             <Link to={getDashboardRoute()} style={{ 
               color: "whitesmoke", 
               textDecoration: "none", 
-              fontSize: '0.9rem',
+              fontSize: '0.8rem',
               fontWeight: 500,
-              padding: '4px 8px',
-              borderRadius: '4px',
-              transition: 'background-color 0.2s'
+              padding: '2px 6px',
+              borderRadius: '3px',
+              transition: 'background-color 0.2s',
+              lineHeight: 1.2
             }}>
               Dashboard
             </Link>
             <Link to="/auditoria" style={{ 
               color: "whitesmoke", 
               textDecoration: "none", 
-              fontSize: '0.9rem',
+              fontSize: '0.8rem',
               fontWeight: 500,
-              padding: '4px 8px',
-              borderRadius: '4px',
-              transition: 'background-color 0.2s'
+              padding: '2px 6px',
+              borderRadius: '3px',
+              transition: 'background-color 0.2s',
+              lineHeight: 1.2
             }}>
               Auditoria
             </Link>
@@ -268,7 +270,12 @@ function Navbar(props) {
               right: { xs: 4, sm: 8 },
               top: '50%',
               transform: 'translateY(-50%)',
-              my: 0
+              my: 0,
+              width: { xs: 32, sm: 36 },
+              height: { xs: 32, sm: 36 },
+              '& .MuiSvgIcon-root': {
+                fontSize: { xs: '1.2rem', sm: '1.4rem' }
+              }
             }}
           >
             <MenuIcon />
