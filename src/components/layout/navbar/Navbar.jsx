@@ -144,11 +144,13 @@ function Navbar(props) {
         <Toolbar sx={{
           gap: { xs: 1, sm: 2 },
           display: "flex",
-          justifyContent: "space-between",
+          justifyContent: "center",
+          alignItems: "center",
           minHeight: { xs: 32, sm: 40 },
           height: { xs: 32, sm: 40 },
           px: { xs: 0.5, sm: 1 },
           py: 0,
+          position: "relative"
         }}>
           {/* Navegación principal - oculta en móvil */}
           <Box sx={{ 
@@ -209,8 +211,6 @@ function Navbar(props) {
           {/* Navegación en móvil */}
           <Box sx={{ 
             display: { xs: 'flex', md: 'none' }, 
-            flex: 1,
-            justifyContent: 'center',
             gap: 2,
             alignItems: 'center'
           }}>
@@ -238,35 +238,41 @@ function Navbar(props) {
             </Link>
           </Box>
 
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, sm: 2 } }}>
-            {/* Switch de modo claro/oscuro - oculto en móvil muy pequeño */}
-            <Box sx={{ display: { xs: 'none', sm: 'flex' }, alignItems: 'center', gap: 1 }}>
-              <IconButton onClick={toggleColorMode} color="inherit" aria-label="Alternar modo claro/oscuro">
-                {mode === 'dark' ? <Brightness7Icon /> : <Brightness4Icon />}
-              </IconButton>
-              <Switch
-                checked={mode === 'dark'}
-                onChange={toggleColorMode}
-                color="default"
-                inputProps={{ 'aria-label': 'switch modo claro/oscuro' }}
-                sx={{ my: 0 }}
-              />
-            </Box>
-            
-            {/* Botón de menú */}
-            <IconButton
-              color="inherit"
-              aria-label="open drawer"
-              edge="end"
-              onClick={handleDrawerToggle}
-              sx={{ 
-                my: 0,
-                ml: { xs: 1, sm: 2 }
-              }}
-            >
-              <MenuIcon />
+          {/* Switch de modo claro/oscuro - oculto en móvil muy pequeño */}
+          <Box sx={{ 
+            display: { xs: 'none', sm: 'flex' }, 
+            alignItems: 'center', 
+            gap: 1,
+            position: 'absolute',
+            right: { xs: 8, sm: 16 }
+          }}>
+            <IconButton onClick={toggleColorMode} color="inherit" aria-label="Alternar modo claro/oscuro">
+              {mode === 'dark' ? <Brightness7Icon /> : <Brightness4Icon />}
             </IconButton>
+            <Switch
+              checked={mode === 'dark'}
+              onChange={toggleColorMode}
+              color="default"
+              inputProps={{ 'aria-label': 'switch modo claro/oscuro' }}
+              sx={{ my: 0 }}
+            />
           </Box>
+          
+          {/* Botón de menú */}
+          <IconButton
+            color="inherit"
+            aria-label="open drawer"
+            onClick={handleDrawerToggle}
+            sx={{ 
+              position: 'absolute',
+              right: { xs: 4, sm: 8 },
+              top: '50%',
+              transform: 'translateY(-50%)',
+              my: 0
+            }}
+          >
+            <MenuIcon />
+          </IconButton>
         </Toolbar>
       </AppBar>
       
