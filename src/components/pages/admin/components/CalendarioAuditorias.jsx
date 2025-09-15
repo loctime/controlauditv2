@@ -7,7 +7,10 @@ import {
   Paper, 
   IconButton,
   Chip,
-  useTheme
+  useTheme,
+  Menu,
+  MenuItem,
+  ListItemText
 } from "@mui/material";
 import { CalendarToday } from "@mui/icons-material";
 
@@ -19,6 +22,10 @@ const CalendarioAuditorias = React.memo(({
 }) => {
   const theme = useTheme();
   const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [monthMenuAnchor, setMonthMenuAnchor] = useState(null);
+  const [yearMenuAnchor, setYearMenuAnchor] = useState(null);
+  const [touchStart, setTouchStart] = useState(null);
+  const [touchEnd, setTouchEnd] = useState(null);
   
   // ✅ Memoizar el cálculo de días del mes
   const days = useMemo(() => {
@@ -70,29 +77,120 @@ const CalendarioAuditorias = React.memo(({
     setCurrentMonth(prev => new Date(prev.getFullYear(), prev.getMonth() - 1, 1));
   }, []);
 
+  // ✅ Funciones para manejar menús
+  const handleMonthClick = useCallback((event) => {
+    setMonthMenuAnchor(event.currentTarget);
+  }, []);
+
+  const handleYearClick = useCallback((event) => {
+    setYearMenuAnchor(event.currentTarget);
+  }, []);
+
+  const handleMonthSelect = useCallback((monthIndex) => {
+    setCurrentMonth(prev => new Date(prev.getFullYear(), monthIndex, 1));
+    setMonthMenuAnchor(null);
+  }, []);
+
+  const handleYearSelect = useCallback((year) => {
+    setCurrentMonth(prev => new Date(year, prev.getMonth(), 1));
+    setYearMenuAnchor(null);
+  }, []);
+
+  const handleCloseMenus = useCallback(() => {
+    setMonthMenuAnchor(null);
+    setYearMenuAnchor(null);
+  }, []);
+
+  // ✅ Funciones para manejar swipe
+  const handleTouchStart = useCallback((e) => {
+    setTouchEnd(null);
+    setTouchStart(e.targetTouches[0].clientX);
+  }, []);
+
+  const handleTouchMove = useCallback((e) => {
+    setTouchEnd(e.targetTouches[0].clientX);
+  }, []);
+
+  const handleTouchEnd = useCallback(() => {
+    if (!touchStart || !touchEnd) return;
+    
+    const distance = touchStart - touchEnd;
+    const isLeftSwipe = distance > 50;
+    const isRightSwipe = distance < -50;
+
+    if (isLeftSwipe) {
+      nextMonth();
+    }
+    if (isRightSwipe) {
+      prevMonth();
+    }
+  }, [touchStart, touchEnd, nextMonth, prevMonth]);
+
   // ✅ Memoizar nombres de meses
   const monthNames = useMemo(() => [
     "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
     "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
   ], []);
 
+  // ✅ Generar años disponibles (año actual ± 5 años)
+  const availableYears = useMemo(() => {
+    const currentYear = new Date().getFullYear();
+    const years = [];
+    for (let i = currentYear - 5; i <= currentYear + 5; i++) {
+      years.push(i);
+    }
+    return years;
+  }, []);
+
   // ✅ Memoizar días de la semana
   const weekDays = useMemo(() => ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'], []);
 
   return (
-    <Paper elevation={2} sx={{ p: 3 }}>
+    <Paper 
+      elevation={2} 
+      sx={{ p: 3 }}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+    >
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
         <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <CalendarToday color="primary" />
           Calendario de Auditorías
         </Typography>
-        <Box display="flex" alignItems="center">
+        <Box display="flex" alignItems="center" gap={0.5}>
           <IconButton onClick={prevMonth} size="small">
             <Typography variant="h6">‹</Typography>
           </IconButton>
-          <Typography variant="h6" component="span" sx={{ mx: 2, minWidth: '120px', textAlign: 'center' }}>
-            {monthNames[currentMonth.getMonth()]} {currentMonth.getFullYear()}
-          </Typography>
+          <Box sx={{ minWidth: '120px', textAlign: 'center' }}>
+            <Typography 
+              variant="h6" 
+              component="span" 
+              onClick={handleMonthClick}
+              sx={{ 
+                cursor: 'pointer', 
+                '&:hover': { color: 'primary.main' },
+                borderBottom: '1px dashed transparent',
+                '&:hover': { borderBottom: '1px dashed currentColor' }
+              }}
+            >
+              {monthNames[currentMonth.getMonth()]}
+            </Typography>
+            <Typography 
+              variant="h6" 
+              component="span" 
+              onClick={handleYearClick}
+              sx={{ 
+                cursor: 'pointer', 
+                ml: 0.5,
+                '&:hover': { color: 'primary.main' },
+                borderBottom: '1px dashed transparent',
+                '&:hover': { borderBottom: '1px dashed currentColor' }
+              }}
+            >
+              {currentMonth.getFullYear()}
+            </Typography>
+          </Box>
           <IconButton onClick={nextMonth} size="small">
             <Typography variant="h6">›</Typography>
           </IconButton>
@@ -189,6 +287,51 @@ const CalendarioAuditorias = React.memo(({
           );
         })}
       </Grid>
+
+      {/* Menús para seleccionar mes y año */}
+      <Menu
+        anchorEl={monthMenuAnchor}
+        open={Boolean(monthMenuAnchor)}
+        onClose={handleCloseMenus}
+        PaperProps={{
+          style: {
+            maxHeight: 300,
+            width: 200,
+          },
+        }}
+      >
+        {monthNames.map((month, index) => (
+          <MenuItem 
+            key={index} 
+            onClick={() => handleMonthSelect(index)}
+            selected={index === currentMonth.getMonth()}
+          >
+            <ListItemText primary={month} />
+          </MenuItem>
+        ))}
+      </Menu>
+
+      <Menu
+        anchorEl={yearMenuAnchor}
+        open={Boolean(yearMenuAnchor)}
+        onClose={handleCloseMenus}
+        PaperProps={{
+          style: {
+            maxHeight: 300,
+            width: 150,
+          },
+        }}
+      >
+        {availableYears.map((year) => (
+          <MenuItem 
+            key={year} 
+            onClick={() => handleYearSelect(year)}
+            selected={year === currentMonth.getFullYear()}
+          >
+            <ListItemText primary={year.toString()} />
+          </MenuItem>
+        ))}
+      </Menu>
     </Paper>
   );
 });
