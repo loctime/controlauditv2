@@ -251,14 +251,9 @@ const ClienteDashboard = React.memo(() => {
 
       {/* Pestañas */}
       <Paper elevation={2} sx={{ mb: 3 }}>
-        <Box display="flex" flexDirection={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems="center" sx={{ px: 2, py: 1 }}>
-          {/* Botones en fila para móvil */}
-          <Box display="flex" gap={1} sx={{ mb: { xs: 1, sm: 0 }, width: { xs: '100%', sm: 'auto' }, justifyContent: { xs: 'center', sm: 'flex-start' } }}>
-            {agendarButton}
-            {auditarButton}
-          </Box>
+        <Box sx={{ px: 2, py: 1 }}>
           {/* Tabs centrados */}
-          <Box sx={{ flex: 1, display: 'flex', justifyContent: 'center' }}>
+          <Box sx={{ display: 'flex', justifyContent: 'center' }}>
             {tabs}
           </Box>
         </Box>
