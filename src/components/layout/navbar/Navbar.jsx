@@ -326,10 +326,10 @@ function Navbar(props) {
         component="main" 
         sx={{ 
           flexGrow: 1, 
-          py: { xs: 0.5, sm: 1, md: 2 }, 
+          py: { xs: 0.2, sm: 1, md: 2 }, 
           width: "100%", 
           minHeight: "100vh", 
-          px: { xs: 0.5, sm: 1, md: 2 },
+          px: { xs: 0.2, sm: 1, md: 2 },
           mt: { xs: 0, sm: 1 } // Sin margen superior en móvil
         }}
       >
