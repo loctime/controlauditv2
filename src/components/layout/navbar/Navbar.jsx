@@ -136,9 +136,13 @@ function Navbar(props) {
           minHeight: { xs: 48, sm: 56 }, 
           height: { xs: 48, sm: 56 },
           zIndex: theme.zIndex.drawer + 1,
-          borderRadius: 0,
-          boxShadow: 'none',
-          borderBottom: '1px solid rgba(255,255,255,0.1)'
+          borderRadius: '0 !important',
+          boxShadow: 'none !important',
+          borderBottom: '1px solid rgba(255,255,255,0.1)',
+          '&.MuiAppBar-root': {
+            borderRadius: '0 !important',
+            boxShadow: 'none !important'
+          }
         }}
       >
         <Toolbar sx={{

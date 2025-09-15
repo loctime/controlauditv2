@@ -9,6 +9,14 @@ a{
     box-shadow: none !important;
 }
 
+/* Estilos más específicos para asegurar que no haya bordes redondeados */
+.MuiAppBar-root,
+.MuiAppBar-root.MuiAppBar-colorPrimary,
+.MuiAppBar-root.MuiAppBar-positionFixed {
+    border-radius: 0 !important;
+    box-shadow: none !important;
+}
+
 /* Estilos para mejorar la experiencia móvil */
 @media (max-width: 768px) {
   /* Mejorar la barra de direcciones del navegador */
