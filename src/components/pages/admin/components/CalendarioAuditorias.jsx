@@ -160,21 +160,33 @@ const CalendarioAuditorias = React.memo(({
       onTouchEnd={handleTouchEnd}
     >
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-        <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <CalendarToday 
-            color="primary" 
-            onClick={resetToToday}
-            sx={{ 
-              cursor: 'pointer',
-              '&:hover': { 
+        <Button
+          variant="text"
+          onClick={resetToToday}
+          sx={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: 1,
+            p: 0,
+            minWidth: 'auto',
+            textTransform: 'none',
+            fontSize: '1.25rem',
+            fontWeight: 600,
+            color: 'text.primary',
+            '&:hover': { 
+              backgroundColor: 'transparent',
+              color: 'primary.main',
+              '& .MuiSvgIcon-root': {
                 transform: 'scale(1.1)',
                 transition: 'transform 0.2s'
               }
-            }}
-            title="Volver al mes actual"
-          />
-          Calendario de Auditorías
-        </Typography>
+            }
+          }}
+          title="Volver al mes actual"
+        >
+          <CalendarToday color="primary" />
+          Calendario - Volver a HOY
+        </Button>
         <Box display="flex" flexDirection="column" alignItems="center" gap={1}>
           <Box display="flex" alignItems="center" gap={0.5}>
             <IconButton onClick={prevMonth} size="medium" sx={{ p: 1.5 }}>
