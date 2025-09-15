@@ -162,48 +162,49 @@ const CalendarioAuditorias = React.memo(({
           <CalendarToday color="primary" />
           Calendario de Auditorías
         </Typography>
-        <Box display="flex" alignItems="center" gap={0.5}>
-          <IconButton onClick={prevMonth} size="medium" sx={{ p: 1.5 }}>
-            <Typography variant="h5" sx={{ fontWeight: 'bold' }}>‹</Typography>
-          </IconButton>
-          <Box sx={{ minWidth: '120px', textAlign: 'center' }}>
-            <Typography 
-              variant="h6" 
-              component="span" 
-              onClick={handleMonthClick}
-              sx={{ 
-                cursor: 'pointer', 
-                '&:hover': { color: 'primary.main' },
-                borderBottom: '1px dashed transparent',
-                '&:hover': { borderBottom: '1px dashed currentColor' }
-              }}
-            >
-              {monthNames[currentMonth.getMonth()]}
-            </Typography>
-            <Typography 
-              variant="h6" 
-              component="span" 
-              onClick={handleYearClick}
-              sx={{ 
-                cursor: 'pointer', 
-                ml: 0.5,
-                '&:hover': { color: 'primary.main' },
-                borderBottom: '1px dashed transparent',
-                '&:hover': { borderBottom: '1px dashed currentColor' }
-              }}
-            >
-              {currentMonth.getFullYear()}
-            </Typography>
+        <Box display="flex" flexDirection="column" alignItems="center" gap={0.5}>
+          <Box display="flex" alignItems="center" gap={0.5}>
+            <IconButton onClick={prevMonth} size="medium" sx={{ p: 1.5 }}>
+              <Typography variant="h5" sx={{ fontWeight: 'bold' }}>‹</Typography>
+            </IconButton>
+            <Box sx={{ minWidth: '120px', textAlign: 'center' }}>
+              <Typography 
+                variant="h6" 
+                component="span" 
+                onClick={handleMonthClick}
+                sx={{ 
+                  cursor: 'pointer', 
+                  '&:hover': { color: 'primary.main' },
+                  borderBottom: '1px dashed transparent',
+                  '&:hover': { borderBottom: '1px dashed currentColor' }
+                }}
+              >
+                {monthNames[currentMonth.getMonth()]}
+              </Typography>
+              <Typography 
+                variant="h6" 
+                component="span" 
+                onClick={handleYearClick}
+                sx={{ 
+                  cursor: 'pointer', 
+                  ml: 0.5,
+                  '&:hover': { color: 'primary.main' },
+                  borderBottom: '1px dashed transparent',
+                  '&:hover': { borderBottom: '1px dashed currentColor' }
+                }}
+              >
+                {currentMonth.getFullYear()}
+              </Typography>
+            </Box>
+            <IconButton onClick={nextMonth} size="medium" sx={{ p: 1.5 }}>
+              <Typography variant="h5" sx={{ fontWeight: 'bold' }}>›</Typography>
+            </IconButton>
           </Box>
-          <IconButton onClick={nextMonth} size="medium" sx={{ p: 1.5 }}>
-            <Typography variant="h5" sx={{ fontWeight: 'bold' }}>›</Typography>
-          </IconButton>
           <IconButton 
             onClick={resetToToday} 
             size="small" 
             sx={{ 
-              p: 1, 
-              ml: 0.5,
+              p: 0.5,
               color: 'primary.main',
               '&:hover': { 
                 backgroundColor: 'primary.light',
