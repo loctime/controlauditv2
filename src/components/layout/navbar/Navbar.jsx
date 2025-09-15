@@ -133,8 +133,8 @@ function Navbar(props) {
         position="fixed" 
         sx={{ 
           width: "100%", 
-          minHeight: { xs: 32, sm: 40 }, 
-          height: { xs: 32, sm: 40 },
+          minHeight: { xs: 48, sm: 56 }, 
+          height: { xs: 48, sm: 56 },
           zIndex: theme.zIndex.drawer + 1,
           borderRadius: 0,
           boxShadow: 'none',
@@ -146,8 +146,8 @@ function Navbar(props) {
           display: "flex",
           justifyContent: "center",
           alignItems: "center",
-          minHeight: { xs: 32, sm: 40 },
-          height: { xs: 32, sm: 40 },
+          minHeight: { xs: 48, sm: 56 },
+          height: { xs: 48, sm: 56 },
           px: { xs: 0.5, sm: 1 },
           py: 0,
           position: "relative"

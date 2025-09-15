@@ -113,13 +113,13 @@ a{
 @media (max-width: 768px) {
   /* Reducir espacio superior en móvil */
   .MuiAppBar-root {
-    min-height: 32px !important;
-    height: 32px !important;
+    min-height: 48px !important;
+    height: 48px !important;
   }
   
   .MuiToolbar-root {
-    min-height: 32px !important;
-    height: 32px !important;
+    min-height: 48px !important;
+    height: 48px !important;
     padding: 0 4px !important;
   }
   
