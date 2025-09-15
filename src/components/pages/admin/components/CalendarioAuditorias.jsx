@@ -84,13 +84,13 @@ const CalendarioAuditorias = React.memo(({
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
         <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <CalendarToday color="primary" />
-          Calendario
+          Calendario de Auditorías
         </Typography>
-        <Box>
+        <Box display="flex" alignItems="center">
           <IconButton onClick={prevMonth} size="small">
             <Typography variant="h6">‹</Typography>
           </IconButton>
-          <Typography variant="h6" component="span" sx={{ mx: 2 }}>
+          <Typography variant="h6" component="span" sx={{ mx: 2, minWidth: '120px', textAlign: 'center' }}>
             {monthNames[currentMonth.getMonth()]} {currentMonth.getFullYear()}
           </Typography>
           <IconButton onClick={nextMonth} size="small">
