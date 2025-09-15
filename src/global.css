@@ -64,31 +64,7 @@ html, body {
 /* Responsive adjustments */
 @media (max-width: 600px) {
   .main-app-container {
-    padding: 8px;
-  }
-  
-  .card {
-    padding: 12px;
-    margin-bottom: 12px;
-  }
-  
-  .MuiContainer-root {
-    padding-left: 8px !important;
-    padding-right: 8px !important;
-  }
-  
-  .MuiBox-root {
-    padding: 12px !important;
-  }
-  
-  .MuiPaper-root {
-    padding: 12px !important;
-  }
-}
-
-@media (max-width: 480px) {
-  .main-app-container {
-    padding: 4px;
+    padding: 2px;
   }
   
   .card {
@@ -97,8 +73,8 @@ html, body {
   }
   
   .MuiContainer-root {
-    padding-left: 4px !important;
-    padding-right: 4px !important;
+    padding-left: 2px !important;
+    padding-right: 2px !important;
   }
   
   .MuiBox-root {
@@ -107,6 +83,30 @@ html, body {
   
   .MuiPaper-root {
     padding: 8px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .main-app-container {
+    padding: 1px;
+  }
+  
+  .card {
+    padding: 6px;
+    margin-bottom: 6px;
+  }
+  
+  .MuiContainer-root {
+    padding-left: 1px !important;
+    padding-right: 1px !important;
+  }
+  
+  .MuiBox-root {
+    padding: 6px !important;
+  }
+  
+  .MuiPaper-root {
+    padding: 6px !important;
   }
 }
 
