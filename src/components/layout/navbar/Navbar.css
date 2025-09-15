@@ -38,6 +38,8 @@ a{
     /* Asegurar que la barra se vea bien */
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
+    border-radius: 0 !important;
+    box-shadow: none !important;
   }
   
   /* Mejorar los botones en móvil */
