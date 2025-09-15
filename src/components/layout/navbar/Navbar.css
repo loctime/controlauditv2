@@ -3,6 +3,12 @@ a{
     color: black;
 }
 
+/* Estilos globales para AppBar - sin bordes redondeados */
+.MuiAppBar-root {
+    border-radius: 0 !important;
+    box-shadow: none !important;
+}
+
 /* Estilos para mejorar la experiencia móvil */
 @media (max-width: 768px) {
   /* Mejorar la barra de direcciones del navegador */
