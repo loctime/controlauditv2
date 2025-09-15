@@ -226,7 +226,9 @@ function Navbar(props) {
               padding: '2px 6px',
               borderRadius: '3px',
               transition: 'background-color 0.2s',
-              lineHeight: 1.2
+              lineHeight: 1.2,
+              outline: 'none',
+              WebkitTapHighlightColor: 'transparent'
             }}>
               Dashboard
             </Link>
@@ -238,7 +240,9 @@ function Navbar(props) {
               padding: '2px 6px',
               borderRadius: '3px',
               transition: 'background-color 0.2s',
-              lineHeight: 1.2
+              lineHeight: 1.2,
+              outline: 'none',
+              WebkitTapHighlightColor: 'transparent'
             }}>
               Auditoria
             </Link>
@@ -279,6 +283,12 @@ function Navbar(props) {
               height: { xs: 32, sm: 36 },
               '& .MuiSvgIcon-root': {
                 fontSize: { xs: '1.2rem', sm: '1.4rem' }
+              },
+              '&:focus': {
+                outline: 'none'
+              },
+              '&:active': {
+                backgroundColor: 'transparent'
               }
             }}
           >

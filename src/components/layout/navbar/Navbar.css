@@ -17,6 +17,16 @@ a{
     box-shadow: none !important;
 }
 
+/* Quitar efectos de selección en botones del navbar */
+.MuiAppBar-root a:focus,
+.MuiAppBar-root a:active,
+.MuiAppBar-root .MuiIconButton-root:focus,
+.MuiAppBar-root .MuiIconButton-root:active {
+    outline: none !important;
+    -webkit-tap-highlight-color: transparent !important;
+    background-color: transparent !important;
+}
+
 /* Estilos para mejorar la experiencia móvil */
 @media (max-width: 768px) {
   /* Mejorar la barra de direcciones del navegador */
