@@ -12,7 +12,7 @@ import {
   MenuItem,
   ListItemText
 } from "@mui/material";
-import { CalendarToday } from "@mui/icons-material";
+import { CalendarToday, Today } from "@mui/icons-material";
 
 const CalendarioAuditorias = React.memo(({ 
   auditorias, 
@@ -75,6 +75,10 @@ const CalendarioAuditorias = React.memo(({
 
   const prevMonth = useCallback(() => {
     setCurrentMonth(prev => new Date(prev.getFullYear(), prev.getMonth() - 1, 1));
+  }, []);
+
+  const resetToToday = useCallback(() => {
+    setCurrentMonth(new Date());
   }, []);
 
   // ✅ Funciones para manejar menús
@@ -159,8 +163,8 @@ const CalendarioAuditorias = React.memo(({
           Calendario de Auditorías
         </Typography>
         <Box display="flex" alignItems="center" gap={0.5}>
-          <IconButton onClick={prevMonth} size="small">
-            <Typography variant="h6">‹</Typography>
+          <IconButton onClick={prevMonth} size="medium" sx={{ p: 1.5 }}>
+            <Typography variant="h5" sx={{ fontWeight: 'bold' }}>‹</Typography>
           </IconButton>
           <Box sx={{ minWidth: '120px', textAlign: 'center' }}>
             <Typography 
@@ -191,8 +195,24 @@ const CalendarioAuditorias = React.memo(({
               {currentMonth.getFullYear()}
             </Typography>
           </Box>
-          <IconButton onClick={nextMonth} size="small">
-            <Typography variant="h6">›</Typography>
+          <IconButton onClick={nextMonth} size="medium" sx={{ p: 1.5 }}>
+            <Typography variant="h5" sx={{ fontWeight: 'bold' }}>›</Typography>
+          </IconButton>
+          <IconButton 
+            onClick={resetToToday} 
+            size="small" 
+            sx={{ 
+              p: 1, 
+              ml: 0.5,
+              color: 'primary.main',
+              '&:hover': { 
+                backgroundColor: 'primary.light',
+                color: 'white'
+              }
+            }}
+            title="Volver al mes actual"
+          >
+            <Today fontSize="small" />
           </IconButton>
         </Box>
       </Box>
