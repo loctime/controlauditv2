@@ -84,7 +84,7 @@ const CalendarioAuditorias = React.memo(({
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
         <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <CalendarToday color="primary" />
-          Calendario de Auditorías
+          Calendario
         </Typography>
         <Box>
           <IconButton onClick={prevMonth} size="small">

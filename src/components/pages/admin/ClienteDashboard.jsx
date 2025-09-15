@@ -198,8 +198,8 @@ const ClienteDashboard = React.memo(() => {
     <Tabs value={currentTab} onChange={handleTabChange} centered sx={{ 
       '& .MuiTab-root': {
         fontSize: { xs: '0.75rem', sm: '0.875rem' },
-        minHeight: { xs: 32, sm: 48 },
-        padding: { xs: '4px 8px', sm: '6px 16px' }
+        minHeight: { xs: 24, sm: 32 },
+        padding: { xs: '2px 6px', sm: '4px 12px' }
       }
     }}>
       <Tab 
@@ -250,8 +250,8 @@ const ClienteDashboard = React.memo(() => {
       />
 
       {/* Pestañas */}
-      <Paper elevation={2} sx={{ mb: 3 }}>
-        <Box sx={{ px: 2, py: 1 }}>
+      <Paper elevation={2} sx={{ mb: 1 }}>
+        <Box sx={{ px: 2, py: 0.5 }}>
           {/* Tabs centrados */}
           <Box sx={{ display: 'flex', justifyContent: 'center' }}>
             {tabs}
