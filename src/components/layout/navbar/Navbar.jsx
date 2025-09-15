@@ -203,19 +203,35 @@ function Navbar(props) {
             </Link>
           </Box>
 
-          {/* Título en móvil */}
+          {/* Navegación en móvil */}
           <Box sx={{ 
-            display: { xs: 'block', md: 'none' }, 
+            display: { xs: 'flex', md: 'none' }, 
             flex: 1,
-            textAlign: 'center'
+            justifyContent: 'center',
+            gap: 2,
+            alignItems: 'center'
           }}>
             <Link to={getDashboardRoute()} style={{ 
               color: "whitesmoke", 
               textDecoration: "none", 
-              fontSize: '1rem',
-              fontWeight: 500
+              fontSize: '0.9rem',
+              fontWeight: 500,
+              padding: '4px 8px',
+              borderRadius: '4px',
+              transition: 'background-color 0.2s'
             }}>
-              {getDashboardText()}
+              Dashboard
+            </Link>
+            <Link to="/auditoria" style={{ 
+              color: "whitesmoke", 
+              textDecoration: "none", 
+              fontSize: '0.9rem',
+              fontWeight: 500,
+              padding: '4px 8px',
+              borderRadius: '4px',
+              transition: 'background-color 0.2s'
+            }}>
+              Auditoria
             </Link>
           </Box>
 
