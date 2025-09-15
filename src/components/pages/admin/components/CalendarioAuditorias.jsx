@@ -10,15 +10,17 @@ import {
   useTheme,
   Menu,
   MenuItem,
-  ListItemText
+  ListItemText,
+  Button
 } from "@mui/material";
-import { CalendarToday, Today } from "@mui/icons-material";
+import { CalendarToday, Today, Add } from "@mui/icons-material";
 
 const CalendarioAuditorias = React.memo(({ 
   auditorias, 
   onSelectDate, 
   selectedDate,
-  canAgendarAuditorias = true // ✅ Prop para validar permisos
+  canAgendarAuditorias = true, // ✅ Prop para validar permisos
+  onAgendar // ✅ Prop para la función de agendar
 }) => {
   const theme = useTheme();
   const [currentMonth, setCurrentMonth] = useState(new Date());
@@ -173,42 +175,61 @@ const CalendarioAuditorias = React.memo(({
           />
           Calendario de Auditorías
         </Typography>
-        <Box display="flex" alignItems="center" gap={0.5}>
-          <IconButton onClick={prevMonth} size="medium" sx={{ p: 1.5 }}>
-            <Typography variant="h5" sx={{ fontWeight: 'bold' }}>‹</Typography>
-          </IconButton>
-          <Box sx={{ minWidth: '120px', textAlign: 'center' }}>
-            <Typography 
-              variant="h6" 
-              component="span" 
-              onClick={handleMonthClick}
-              sx={{ 
-                cursor: 'pointer', 
-                '&:hover': { color: 'primary.main' },
-                borderBottom: '1px dashed transparent',
-                '&:hover': { borderBottom: '1px dashed currentColor' }
-              }}
-            >
-              {monthNames[currentMonth.getMonth()]}
-            </Typography>
-            <Typography 
-              variant="h6" 
-              component="span" 
-              onClick={handleYearClick}
-              sx={{ 
-                cursor: 'pointer', 
-                ml: 0.5,
-                '&:hover': { color: 'primary.main' },
-                borderBottom: '1px dashed transparent',
-                '&:hover': { borderBottom: '1px dashed currentColor' }
-              }}
-            >
-              {currentMonth.getFullYear()}
-            </Typography>
+        <Box display="flex" flexDirection="column" alignItems="center" gap={1}>
+          <Box display="flex" alignItems="center" gap={0.5}>
+            <IconButton onClick={prevMonth} size="medium" sx={{ p: 1.5 }}>
+              <Typography variant="h5" sx={{ fontWeight: 'bold' }}>‹</Typography>
+            </IconButton>
+            <Box sx={{ minWidth: '120px', textAlign: 'center' }}>
+              <Typography 
+                variant="h6" 
+                component="span" 
+                onClick={handleMonthClick}
+                sx={{ 
+                  cursor: 'pointer', 
+                  '&:hover': { color: 'primary.main' },
+                  borderBottom: '1px dashed transparent',
+                  '&:hover': { borderBottom: '1px dashed currentColor' }
+                }}
+              >
+                {monthNames[currentMonth.getMonth()]}
+              </Typography>
+              <Typography 
+                variant="h6" 
+                component="span" 
+                onClick={handleYearClick}
+                sx={{ 
+                  cursor: 'pointer', 
+                  ml: 0.5,
+                  '&:hover': { color: 'primary.main' },
+                  borderBottom: '1px dashed transparent',
+                  '&:hover': { borderBottom: '1px dashed currentColor' }
+                }}
+              >
+                {currentMonth.getFullYear()}
+              </Typography>
+            </Box>
+            <IconButton onClick={nextMonth} size="medium" sx={{ p: 1.5 }}>
+              <Typography variant="h5" sx={{ fontWeight: 'bold' }}>›</Typography>
+            </IconButton>
           </Box>
-          <IconButton onClick={nextMonth} size="medium" sx={{ p: 1.5 }}>
-            <Typography variant="h5" sx={{ fontWeight: 'bold' }}>›</Typography>
-          </IconButton>
+          {canAgendarAuditorias && onAgendar && (
+            <Button
+              variant="contained"
+              color="primary"
+              size="small"
+              startIcon={<Add />}
+              onClick={() => onAgendar(new Date().toISOString().split('T')[0])}
+              sx={{ 
+                fontSize: '0.75rem',
+                px: 2,
+                borderRadius: '20px',
+                minWidth: 'auto'
+              }}
+            >
+              Agendar
+            </Button>
+          )}
         </Box>
       </Box>
 

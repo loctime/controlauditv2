@@ -105,6 +105,7 @@ const ClienteDashboard = React.memo(() => {
                 onSelectDate={setSelectedDate}
                 selectedDate={selectedDate}
                 canAgendarAuditorias={canAgendarAuditorias}
+                onAgendar={handleOpenDialog}
               />
             </Grid>
             <Grid item xs={12} lg={6}>
