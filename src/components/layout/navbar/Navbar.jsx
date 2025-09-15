@@ -135,7 +135,10 @@ function Navbar(props) {
           width: "100%", 
           minHeight: { xs: 32, sm: 40 }, 
           height: { xs: 32, sm: 40 },
-          zIndex: theme.zIndex.drawer + 1
+          zIndex: theme.zIndex.drawer + 1,
+          borderRadius: 0,
+          boxShadow: 'none',
+          borderBottom: '1px solid rgba(255,255,255,0.1)'
         }}
       >
         <Toolbar sx={{
