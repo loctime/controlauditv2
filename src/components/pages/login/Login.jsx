@@ -23,7 +23,6 @@ import { onSignIn } from '../../../firebaseConfig';
 import { Formik, Form, Field, ErrorMessage } from 'formik';
 import * as Yup from 'yup';
 import { useAuth } from '../../context/AuthContext';
-import DownloadAPK from '../../common/DownloadAPK';
 
 const Login = () => {
   const theme = useTheme();
@@ -287,29 +286,6 @@ const Login = () => {
                   </Button>
                 </Box>
                 
-                {/* Separador */}
-                <Box sx={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  my: 3,
-                  '&::before, &::after': {
-                    content: '""',
-                    flex: 1,
-                    borderBottom: `1px solid ${alpha(theme.palette.divider, 0.3)}`
-                  }
-                }}>
-                  <Typography variant="body2" sx={{ px: 2, color: 'text.secondary' }}>
-                    o
-                  </Typography>
-                </Box>
-                
-                {/* Sección de descarga de APK */}
-                <Box sx={{ textAlign: 'center' }}>
-                  <Typography variant="body2" color="text.secondary" mb={2}>
-                    📱 Descarga nuestra aplicación móvil
-                  </Typography>
-                  <DownloadAPK variant="outlined" size="medium" showInfo={false} />
-                </Box>
                 
 
               </Box>
