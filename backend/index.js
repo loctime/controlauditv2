@@ -109,6 +109,16 @@ app.get('/api/latest-apk', async (req, res) => {
 // Middleware para verificar token de Firebase (solo admins pueden gestionar usuarios)
 const verificarTokenAdmin = async (req, res, next) => {
   try {
+    // Verificar si Firebase Admin está disponible
+    if (!admin) {
+      console.error('❌ Firebase Admin SDK no está disponible');
+      return res.status(503).json({ 
+        error: 'Servicio temporalmente no disponible',
+        message: 'Firebase Admin SDK no está configurado. Usando modo fallback.',
+        fallback: true
+      });
+    }
+
     const token = req.headers.authorization?.split('Bearer ')[1];
     if (!token) {
       return res.status(401).json({ error: 'Token no proporcionado' });
@@ -134,6 +144,7 @@ const verificarTokenAdmin = async (req, res, next) => {
     req.user = decodedToken;
     next();
   } catch (error) {
+    console.error('Error verificando token:', error);
     res.status(401).json({ error: 'Token inválido' });
   }
 };
@@ -147,6 +158,16 @@ app.post('/api/create-user', verificarTokenAdmin, async (req, res) => {
   }
 
   try {
+    // Verificar si Firebase Admin está disponible
+    if (!admin) {
+      console.log('⚠️ Firebase Admin no disponible, retornando error para activar fallback');
+      return res.status(503).json({ 
+        error: 'Firebase Admin SDK no disponible',
+        message: 'Usando modo fallback - el frontend creará el usuario en Firestore directamente',
+        fallback: true
+      });
+    }
+
     // 1. Crear usuario en Firebase Auth
     const userRecord = await admin.auth().createUser({
       email,
@@ -187,6 +208,17 @@ app.post('/api/create-user', verificarTokenAdmin, async (req, res) => {
     });
   } catch (error) {
     console.error('Error al crear usuario:', error);
+    
+    // Si es un error de credenciales, activar fallback
+    if (error.code === 'app/invalid-credential') {
+      console.log('⚠️ Error de credenciales, activando fallback');
+      return res.status(503).json({ 
+        error: 'Credenciales de Firebase inválidas',
+        message: 'Usando modo fallback - el frontend creará el usuario en Firestore directamente',
+        fallback: true
+      });
+    }
+    
     res.status(500).json({ error: error.message });
   }
 });
