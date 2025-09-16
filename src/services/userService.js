@@ -17,12 +17,23 @@ const api = axios.create({
 // Interceptor para agregar token de Firebase automáticamente
 api.interceptors.request.use(async (config) => {
   try {
-    const token = await auth.currentUser?.getIdToken();
+    // Verificar que el usuario esté autenticado
+    if (!auth.currentUser) {
+      console.error('❌ No hay usuario autenticado');
+      throw new Error('Usuario no autenticado');
+    }
+    
+    const token = await auth.currentUser.getIdToken(true); // Forzar refresh del token
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+      console.log('✅ Token agregado a la petición');
+    } else {
+      console.error('❌ No se pudo obtener token');
+      throw new Error('No se pudo obtener token de autenticación');
     }
   } catch (error) {
     console.error('Error obteniendo token:', error);
+    throw new Error('Error de autenticación: ' + error.message);
   }
   return config;
 });
@@ -111,6 +122,12 @@ export const userService = {
       return response.data;
     } catch (error) {
       console.error('Error creando usuario con backend:', error);
+      
+      // Si es un error de autenticación (401), intentar con Firebase directamente
+      if (error.response?.status === 401 || error.message.includes('autenticación') || error.message.includes('Usuario no autenticado')) {
+        console.log('🔄 Error de autenticación, intentando con Firebase directamente...');
+        return await createUserWithFirebase(userData);
+      }
       
       // Si es un error de red, intentar con Firebase directamente
       if (error.code === 'ERR_NETWORK' || error.message.includes('conectividad')) {
