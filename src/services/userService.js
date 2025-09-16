@@ -123,6 +123,12 @@ export const userService = {
     } catch (error) {
       console.error('Error creando usuario con backend:', error);
       
+      // Si es un error de servicio no disponible (503) - Firebase Admin no configurado
+      if (error.response?.status === 503 && error.response?.data?.fallback) {
+        console.log('🔄 Backend en modo fallback, creando usuario en Firestore directamente...');
+        return await createUserWithFirebase(userData);
+      }
+      
       // Si es un error de autenticación (401), intentar con Firebase directamente
       if (error.response?.status === 401 || error.message.includes('autenticación') || error.message.includes('Usuario no autenticado')) {
         console.log('🔄 Error de autenticación, intentando con Firebase directamente...');
