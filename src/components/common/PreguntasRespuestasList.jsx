@@ -108,7 +108,7 @@ const PreguntasRespuestasList = ({ secciones = [], respuestas = [], comentarios 
                       <img
                         src={imagenProcesada}
                         alt={`Imagen pregunta ${pIdx + 1}`}
-                        style={{ maxWidth: '180px', maxHeight: '120px', borderRadius: 4, border: '1px solid #ccc' }}
+                        style={{ maxWidth: '400px', maxHeight: '300px', borderRadius: 4, border: '1px solid #ccc' }}
                         onError={(e) => { 
                           console.error(`[PreguntasRespuestasList] Error cargando imagen: ${imagenProcesada}`, e);
                           e.target.style.display = 'none'; 
