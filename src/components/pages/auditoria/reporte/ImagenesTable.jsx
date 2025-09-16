@@ -94,7 +94,7 @@ const ImagenesTable = ({ secciones, imagenes, comentarios }) => {
                       <img 
                         src={imagenProcesada} 
                         alt="Imagen" 
-                        style={{ width: "100px" }}
+                        style={{ width: "400px", height: "auto" }}
                         onError={(e) => { 
                           console.error(`[ImagenesTable] Error cargando imagen: ${imagenProcesada}`, e);
                           e.target.style.display = 'none'; 
