@@ -39,19 +39,28 @@ const Login = () => {
 
   const initialValues = {
     email: '',
-    password: ''
+    password: '',
+    tenant: ''
   };
 
   const validationSchema = Yup.object().shape({
     email: Yup.string().email('Correo electrónico inválido').required('Ingresa el correo electronico'),
-    password: Yup.string().required('Ingresa la Contraseña')
+    password: Yup.string().required('Ingresa la Contraseña'),
+    tenant: Yup.string().required('Ingresa el nombre de la empresa')
   });
 
   const handleSubmit = async (values, { setSubmitting, setErrors }) => {
     setLoading(true);
     setError('');
     try {
-      const result = await onSignIn(values);
+      // Guardar tenant en localStorage para PWA
+      localStorage.setItem('tenant', values.tenant);
+      
+      // Solo pasar email y password a onSignIn
+      const result = await onSignIn({ 
+        email: values.email, 
+        password: values.password 
+      });
       handleLogin(result.user);
       navigate("/");
     } catch (error) {
@@ -154,6 +163,37 @@ const Login = () => {
           {({ isSubmitting, errors, touched }) => (
             <Form>
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: isSmallMobile ? 3 : 4 }}>
+                {/* Campo de tenant/empresa */}
+                <Box>
+                  <Field 
+                    as={TextField} 
+                    name="tenant" 
+                    label="🏢 Nombre de la Empresa" 
+                    fullWidth 
+                    disabled={isSubmitting || loading}
+                    error={touched.tenant && Boolean(errors.tenant)}
+                    helperText={touched.tenant && errors.tenant}
+                    size={isSmallMobile ? "small" : "medium"}
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        borderRadius: 2,
+                        '&:hover': {
+                          '& .MuiOutlinedInput-notchedOutline': {
+                            borderColor: theme.palette.primary.main,
+                          }
+                        }
+                      },
+                      '& .MuiInputLabel-root': {
+                        fontSize: isSmallMobile ? '0.875rem' : '1rem'
+                      },
+                      '& .MuiInputBase-input': {
+                        fontSize: isSmallMobile ? '0.875rem' : '1rem',
+                        padding: isSmallMobile ? '12px 14px' : '16px 14px'
+                      }
+                    }}
+                  />
+                </Box>
+                
                 {/* Campo de email */}
                 <Box>
                   <Field 
