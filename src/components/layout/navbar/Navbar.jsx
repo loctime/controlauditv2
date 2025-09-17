@@ -123,14 +123,7 @@ function Navbar(props) {
         {/* Botones PWA - solo si se puede instalar */}
         {canInstall && (
           <>
-            <ListItem disablePadding>
-              <ListItemButton onClick={handleInstall}>
-                <ListItemIcon>
-                  <GetAppIcon sx={{ color: "whitesmoke" }} />
-                </ListItemIcon>
-                <ListItemText primary={"Instalar App"} sx={{ color: "whitesmoke" }} />
-              </ListItemButton>
-            </ListItem>
+            
             <ListItem disablePadding>
               <ListItemButton onClick={handleShowInfo}>
                 <ListItemIcon>
