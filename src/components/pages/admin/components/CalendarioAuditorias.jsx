@@ -159,90 +159,74 @@ const CalendarioAuditorias = React.memo(({
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
     >
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+      <Box display="flex" justifyContent="space-between" alignItems="center" mb={2} sx={{ gap: 2 }}>
         <Button
           variant="text"
           onClick={resetToToday}
           sx={{ 
             display: 'flex', 
             alignItems: 'center', 
-            gap: 1,
-            p: 0,
+            gap: 0.5,
+            p: 0.5,
             minWidth: 'auto',
             textTransform: 'none',
-            fontSize: '1.25rem',
-            fontWeight: 600,
+            fontSize: '0.875rem',
+            fontWeight: 500,
             color: 'text.primary',
             '&:hover': { 
               backgroundColor: 'transparent',
-              color: 'primary.main',
-              '& .MuiSvgIcon-root': {
-                transform: 'scale(1.1)',
-                transition: 'transform 0.2s'
-              }
+              color: 'primary.main'
             }
           }}
           title="Volver al mes actual"
         >
-          <CalendarToday color="primary" />
-          Calendario - Volver a HOY
+          <Today sx={{ fontSize: '1rem' }} />
+          HOY
         </Button>
-        <Box display="flex" flexDirection="column" alignItems="center" gap={1}>
-          <Box display="flex" alignItems="center" gap={0.5}>
-            <IconButton onClick={prevMonth} size="medium" sx={{ p: 1.5 }}>
-              <Typography variant="h5" sx={{ fontWeight: 'bold' }}>‹</Typography>
-            </IconButton>
-            <Box sx={{ minWidth: '120px', textAlign: 'center' }}>
-              <Typography 
-                variant="h6" 
-                component="span" 
-                onClick={handleMonthClick}
-                sx={{ 
-                  cursor: 'pointer', 
-                  '&:hover': { color: 'primary.main' },
-                  borderBottom: '1px dashed transparent',
-                  '&:hover': { borderBottom: '1px dashed currentColor' }
-                }}
-              >
-                {monthNames[currentMonth.getMonth()]}
-              </Typography>
-              <Typography 
-                variant="h6" 
-                component="span" 
-                onClick={handleYearClick}
-                sx={{ 
-                  cursor: 'pointer', 
-                  ml: 0.5,
-                  '&:hover': { color: 'primary.main' },
-                  borderBottom: '1px dashed transparent',
-                  '&:hover': { borderBottom: '1px dashed currentColor' }
-                }}
-              >
-                {currentMonth.getFullYear()}
-              </Typography>
-            </Box>
-            <IconButton onClick={nextMonth} size="medium" sx={{ p: 1.5 }}>
-              <Typography variant="h5" sx={{ fontWeight: 'bold' }}>›</Typography>
-            </IconButton>
-          </Box>
-          {canAgendarAuditorias && onAgendar && (
-            <Button
-              variant="contained"
-              color="primary"
-              size="small"
-              startIcon={<Add />}
-              onClick={() => onAgendar(new Date().toISOString().split('T')[0])}
+        
+        <Box display="flex" alignItems="center" gap={0.5}>
+          <IconButton onClick={prevMonth} size="small" sx={{ p: 0.5 }}>
+            <Typography variant="h6" sx={{ fontWeight: 'bold', fontSize: '1.2rem' }}>‹</Typography>
+          </IconButton>
+          <Box sx={{ minWidth: '100px', textAlign: 'center' }}>
+            <Typography 
+              variant="body1" 
+              component="span" 
+              onClick={handleMonthClick}
               sx={{ 
-                fontSize: '0.75rem',
-                px: 2,
-                borderRadius: '20px',
-                minWidth: 'auto'
+                cursor: 'pointer', 
+                fontSize: '0.875rem',
+                fontWeight: 500,
+                '&:hover': { color: 'primary.main' }
               }}
             >
-              Agendar
-            </Button>
-          )}
+              {monthNames[currentMonth.getMonth()]} {currentMonth.getFullYear()}
+            </Typography>
+          </Box>
+          <IconButton onClick={nextMonth} size="small" sx={{ p: 0.5 }}>
+            <Typography variant="h6" sx={{ fontWeight: 'bold', fontSize: '1.2rem' }}>›</Typography>
+          </IconButton>
         </Box>
+
+        {canAgendarAuditorias && onAgendar && (
+          <Button
+            variant="contained"
+            color="primary"
+            size="small"
+            startIcon={<Add sx={{ fontSize: '1rem' }} />}
+            onClick={() => onAgendar(new Date().toISOString().split('T')[0])}
+            sx={{ 
+              fontSize: '0.75rem',
+              px: 1.5,
+              py: 0.5,
+              borderRadius: '16px',
+              minWidth: 'auto',
+              height: '32px'
+            }}
+          >
+            Agendar
+          </Button>
+        )}
       </Box>
 
       <Grid container spacing={1}>
