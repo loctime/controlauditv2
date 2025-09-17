@@ -8,6 +8,7 @@ import AuthContextComponent from "./components/context/AuthContext";
 import AppRouter from "./router/AppRouter";
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
+import PWAInstallPrompt from './components/common/PWAInstallPrompt';
 // import { useBackButton } from './hooks/useBackButton'; // Deshabilitado para web
 
 const App = () => {
@@ -21,6 +22,7 @@ const App = () => {
           <BrowserRouter>
             <div className="main-app-container">
               <AppRouter />
+              <PWAInstallPrompt />
               <ToastContainer
                 position="top-right"
                 autoClose={5000}

@@ -1,5 +1,5 @@
 {
-  "name": "Control de Auditorías",
+  "name": "ControlAudit",
   "short_name": "ControlAudit",
   "description": "Sistema de control y gestión de auditorías para empresas",
   "start_url": "/",
@@ -9,13 +9,21 @@
   "orientation": "portrait-primary",
   "icons": [
     {
-      "src": "/vite.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
+      "src": "/loguitoaudit.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/loguitoaudit.png",
+      "sizes": "512x512",
+      "type": "image/png",
       "purpose": "any maskable"
     }
   ],
   "categories": ["business", "productivity"],
   "lang": "es",
-  "dir": "ltr"
+  "dir": "ltr",
+  "scope": "/",
+  "prefer_related_applications": false
 }
