@@ -37,12 +37,12 @@ const PWAInstallPrompt = () => {
       e.preventDefault();
       setDeferredPrompt(e);
       
-      // Mostrar el diálogo de instalación después de un delay
-      setTimeout(() => {
-        if (!isInstalled) {
-          setShowInstallDialog(true);
-        }
-      }, 3000);
+      // No mostrar diálogo automático - solo el botón flotante
+      // setTimeout(() => {
+      //   if (!isInstalled) {
+      //     setShowInstallDialog(true);
+      //   }
+      // }, 3000);
     };
 
     // Escuchar cuando se instala la PWA
@@ -55,12 +55,19 @@ const PWAInstallPrompt = () => {
       updateManifestWithTenant();
     };
 
+    // Escuchar evento personalizado para mostrar información
+    const handleShowPWAInfo = () => {
+      setShowInstallDialog(true);
+    };
+
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
     window.addEventListener('appinstalled', handleAppInstalled);
+    window.addEventListener('showPWAInfo', handleShowPWAInfo);
 
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
       window.removeEventListener('appinstalled', handleAppInstalled);
+      window.removeEventListener('showPWAInfo', handleShowPWAInfo);
     };
   }, [isInstalled]);
 
@@ -133,7 +140,8 @@ const PWAInstallPrompt = () => {
     setShowInstallDialog(false);
   };
 
-  if (isInstalled) {
+  // Solo mostrar si no está instalado Y se solicita explícitamente
+  if (isInstalled || !showInstallDialog) {
     return null;
   }
 
