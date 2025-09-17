@@ -278,7 +278,7 @@ function Navbar(props) {
             alignItems: 'center', 
             gap: 1,
             position: 'absolute',
-            right: { xs: 8, sm: 16 }
+            right: { xs: 8, sm: 60 }
           }}>
             <IconButton onClick={toggleColorMode} color="inherit" aria-label="Alternar modo claro/oscuro">
               {mode === 'dark' ? <Brightness7Icon /> : <Brightness4Icon />}
