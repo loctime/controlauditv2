@@ -159,74 +159,155 @@ const CalendarioAuditorias = React.memo(({
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
     >
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={2} sx={{ gap: 2 }}>
-        <Button
-          variant="text"
-          onClick={resetToToday}
-          sx={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            gap: 0.5,
-            p: 0.5,
-            minWidth: 'auto',
-            textTransform: 'none',
-            fontSize: '0.875rem',
-            fontWeight: 500,
-            color: 'text.primary',
-            '&:hover': { 
-              backgroundColor: 'transparent',
-              color: 'primary.main'
-            }
-          }}
-          title="Volver al mes actual"
+      <Box mb={2}>
+        {/* Desktop layout */}
+        <Box 
+          display={{ xs: 'none', sm: 'flex' }} 
+          justifyContent="space-between" 
+          alignItems="center" 
+          sx={{ gap: 2 }}
         >
-          <Today sx={{ fontSize: '1rem' }} />
-          HOY
-        </Button>
-        
-        <Box display="flex" alignItems="center" gap={0.5}>
-          <IconButton onClick={prevMonth} size="small" sx={{ p: 0.5 }}>
-            <Typography variant="h6" sx={{ fontWeight: 'bold', fontSize: '1.2rem' }}>‹</Typography>
-          </IconButton>
-          <Box sx={{ minWidth: '100px', textAlign: 'center' }}>
-            <Typography 
-              variant="body1" 
-              component="span" 
-              onClick={handleMonthClick}
+          <Button
+            variant="text"
+            onClick={resetToToday}
+            sx={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: 0.5,
+              p: 0.5,
+              minWidth: 'auto',
+              textTransform: 'none',
+              fontSize: '0.875rem',
+              fontWeight: 500,
+              color: 'text.primary',
+              '&:hover': { 
+                backgroundColor: 'transparent',
+                color: 'primary.main'
+              }
+            }}
+            title="Volver al mes actual"
+          >
+            <Today sx={{ fontSize: '1rem' }} />
+            HOY
+          </Button>
+          
+          <Box display="flex" alignItems="center" gap={0.5}>
+            <IconButton onClick={prevMonth} size="small" sx={{ p: 0.5 }}>
+              <Typography variant="h6" sx={{ fontWeight: 'bold', fontSize: '1.2rem' }}>‹</Typography>
+            </IconButton>
+            <Box sx={{ minWidth: '100px', textAlign: 'center' }}>
+              <Typography 
+                variant="body1" 
+                component="span" 
+                onClick={handleMonthClick}
+                sx={{ 
+                  cursor: 'pointer', 
+                  fontSize: '0.875rem',
+                  fontWeight: 500,
+                  '&:hover': { color: 'primary.main' }
+                }}
+              >
+                {monthNames[currentMonth.getMonth()]} {currentMonth.getFullYear()}
+              </Typography>
+            </Box>
+            <IconButton onClick={nextMonth} size="small" sx={{ p: 0.5 }}>
+              <Typography variant="h6" sx={{ fontWeight: 'bold', fontSize: '1.2rem' }}>›</Typography>
+            </IconButton>
+          </Box>
+
+          {canAgendarAuditorias && onAgendar && (
+            <Button
+              variant="contained"
+              color="primary"
+              size="small"
+              startIcon={<Add sx={{ fontSize: '0.8rem' }} />}
+              onClick={() => onAgendar((selectedDate || new Date()).toISOString().split('T')[0])}
               sx={{ 
-                cursor: 'pointer', 
-                fontSize: '0.875rem',
-                fontWeight: 500,
-                '&:hover': { color: 'primary.main' }
+                fontSize: '0.7rem',
+                px: 1,
+                py: 0.25,
+                borderRadius: '12px',
+                minWidth: 'auto',
+                height: '24px'
               }}
             >
-              {monthNames[currentMonth.getMonth()]} {currentMonth.getFullYear()}
-            </Typography>
-          </Box>
-          <IconButton onClick={nextMonth} size="small" sx={{ p: 0.5 }}>
-            <Typography variant="h6" sx={{ fontWeight: 'bold', fontSize: '1.2rem' }}>›</Typography>
-          </IconButton>
+              Agendar {selectedDate ? `${selectedDate.getDate()}/${selectedDate.getMonth() + 1}` : `${new Date().getDate()}/${new Date().getMonth() + 1}`}
+            </Button>
+          )}
         </Box>
 
-        {canAgendarAuditorias && onAgendar && (
-          <Button
-            variant="contained"
-            color="primary"
-            size="small"
-            startIcon={<Add sx={{ fontSize: '1rem' }} />}
-            onClick={() => onAgendar(new Date().toISOString().split('T')[0])}
-            sx={{ 
-              fontSize: '0.75rem',
-              px: 1.5,
-              py: 0.5,
-              borderRadius: '16px',
-              minWidth: 'auto',
-              height: '32px'
-            }}
-          >
-            Agendar
-          </Button>
-        )}
+        {/* Mobile layout */}
+        <Box display={{ xs: 'block', sm: 'none' }}>
+          <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
+            <Button
+              variant="text"
+              onClick={resetToToday}
+              sx={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: 0.5,
+                p: 0.5,
+                minWidth: 'auto',
+                textTransform: 'none',
+                fontSize: '0.875rem',
+                fontWeight: 500,
+                color: 'text.primary',
+                '&:hover': { 
+                  backgroundColor: 'transparent',
+                  color: 'primary.main'
+                }
+              }}
+              title="Volver al mes actual"
+            >
+              <Today sx={{ fontSize: '1rem' }} />
+              HOY
+            </Button>
+
+            {canAgendarAuditorias && onAgendar && (
+              <Button
+                variant="contained"
+                color="primary"
+                size="small"
+                startIcon={<Add sx={{ fontSize: '0.8rem' }} />}
+                onClick={() => onAgendar((selectedDate || new Date()).toISOString().split('T')[0])}
+                sx={{ 
+                  fontSize: '0.7rem',
+                  px: 1,
+                  py: 0.25,
+                  borderRadius: '12px',
+                  minWidth: 'auto',
+                  height: '24px'
+                }}
+              >
+                Agendar {selectedDate ? `${selectedDate.getDate()}/${selectedDate.getMonth() + 1}` : `${new Date().getDate()}/${new Date().getMonth() + 1}`}
+              </Button>
+            )}
+          </Box>
+          
+          <Box display="flex" alignItems="center" justifyContent="center" gap={0.5}>
+            <IconButton onClick={prevMonth} size="small" sx={{ p: 0.5 }}>
+              <Typography variant="h6" sx={{ fontWeight: 'bold', fontSize: '1.2rem' }}>‹</Typography>
+            </IconButton>
+            <Box sx={{ minWidth: '100px', textAlign: 'center' }}>
+              <Typography 
+                variant="body1" 
+                component="span" 
+                onClick={handleMonthClick}
+                sx={{ 
+                  cursor: 'pointer', 
+                  fontSize: '0.875rem',
+                  fontWeight: 500,
+                  '&:hover': { color: 'primary.main' }
+                }}
+              >
+                {monthNames[currentMonth.getMonth()]} {currentMonth.getFullYear()}
+              </Typography>
+            </Box>
+            <IconButton onClick={nextMonth} size="small" sx={{ p: 0.5 }}>
+              <Typography variant="h6" sx={{ fontWeight: 'bold', fontSize: '1.2rem' }}>›</Typography>
+            </IconButton>
+          </Box>
+        </Box>
       </Box>
 
       <Grid container spacing={1}>
