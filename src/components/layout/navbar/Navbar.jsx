@@ -24,6 +24,9 @@ import Brightness4Icon from '@mui/icons-material/Brightness4';
 import Brightness7Icon from '@mui/icons-material/Brightness7';
 import Switch from '@mui/material/Switch';
 import { useColorMode } from '../../context/ColorModeContext';
+import { usePWAInstall } from '../../../hooks/usePWAInstall';
+import GetAppIcon from '@mui/icons-material/GetApp';
+import InfoIcon from '@mui/icons-material/Info';
 
 const drawerWidth = 240;
 
@@ -35,6 +38,12 @@ function Navbar(props) {
   const { mode, toggleColorMode } = useColorMode();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const { canInstall, handleInstall, handleShowInfo } = usePWAInstall();
+  
+  // Debug PWA
+  console.log('=== DEBUG PWA ===');
+  console.log('canInstall:', canInstall);
+  console.log('==================');
 
   // Obtener menú dinámico basado en rol y permisos
   const menuItems = getMenuItems(role, permisos);
@@ -110,6 +119,28 @@ function Navbar(props) {
             </ListItem>
           </Link>
         ))}
+
+        {/* Botones PWA - solo si se puede instalar */}
+        {canInstall && (
+          <>
+            <ListItem disablePadding>
+              <ListItemButton onClick={handleInstall}>
+                <ListItemIcon>
+                  <GetAppIcon sx={{ color: "whitesmoke" }} />
+                </ListItemIcon>
+                <ListItemText primary={"Instalar App"} sx={{ color: "whitesmoke" }} />
+              </ListItemButton>
+            </ListItem>
+            <ListItem disablePadding>
+              <ListItemButton onClick={handleShowInfo}>
+                <ListItemIcon>
+                  <InfoIcon sx={{ color: "whitesmoke" }} />
+                </ListItemIcon>
+                <ListItemText primary={"Info App"} sx={{ color: "whitesmoke" }} />
+              </ListItemButton>
+            </ListItem>
+          </>
+        )}
 
         <ListItem disablePadding>
           <ListItemButton onClick={handleLogout}>

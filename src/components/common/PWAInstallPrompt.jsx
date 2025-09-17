@@ -154,46 +154,54 @@ const PWAInstallPrompt = () => {
       fullScreen={isMobile}
       PaperProps={{
         sx: {
-          borderRadius: isMobile ? 0 : 3,
-          background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.05)} 0%, ${alpha(theme.palette.secondary.main, 0.05)} 100%)`,
-          border: `1px solid ${alpha(theme.palette.divider, 0.2)}`
+          borderRadius: isMobile ? 0 : 2,
+          backgroundColor: theme.palette.background.paper,
+          border: `2px solid ${theme.palette.primary.main}`,
+          boxShadow: '0 8px 32px rgba(0,0,0,0.3)'
         }
       }}
     >
-      <DialogTitle sx={{ textAlign: 'center', pb: 1 }}>
+      <DialogTitle sx={{ 
+        textAlign: 'center', 
+        pb: 2,
+        backgroundColor: theme.palette.primary.main,
+        color: 'white',
+        borderRadius: '8px 8px 0 0'
+      }}>
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 2 }}>
           <img 
             src="/loguitoaudit.png" 
             alt="ControlAudit" 
-            style={{ width: 48, height: 48 }}
+            style={{ width: 40, height: 40, filter: 'brightness(0) invert(1)' }}
           />
-          <Typography variant="h5" component="h2" sx={{ fontWeight: 700, color: 'primary.main' }}>
+          <Typography variant="h5" component="h2" sx={{ fontWeight: 700, color: 'white' }}>
             Instalar ControlAudit
           </Typography>
         </Box>
       </DialogTitle>
       
-      <DialogContent sx={{ textAlign: 'center', py: 3 }}>
-        <Typography variant="body1" color="text.secondary" sx={{ mb: 2, lineHeight: 1.6 }}>
+      <DialogContent sx={{ textAlign: 'center', py: 3, px: 3 }}>
+        <Typography variant="body1" sx={{ mb: 3, lineHeight: 1.6, color: theme.palette.text.primary }}>
           📱 Instala ControlAudit en tu dispositivo para un acceso más rápido y una mejor experiencia.
         </Typography>
         
         <Box sx={{ 
-          bgcolor: alpha(theme.palette.primary.main, 0.1), 
+          backgroundColor: theme.palette.grey[100],
           borderRadius: 2, 
           p: 2, 
-          mb: 2 
+          mb: 2,
+          border: `1px solid ${theme.palette.grey[300]}`
         }}>
-          <Typography variant="body2" sx={{ fontWeight: 600, color: 'primary.main' }}>
+          <Typography variant="body2" sx={{ fontWeight: 600, color: theme.palette.text.primary, mb: 1 }}>
             ✅ Acceso directo desde el escritorio
           </Typography>
-          <Typography variant="body2" sx={{ fontWeight: 600, color: 'primary.main' }}>
+          <Typography variant="body2" sx={{ fontWeight: 600, color: theme.palette.text.primary, mb: 1 }}>
             ✅ Funciona sin conexión a internet
           </Typography>
-          <Typography variant="body2" sx={{ fontWeight: 600, color: 'primary.main' }}>
+          <Typography variant="body2" sx={{ fontWeight: 600, color: theme.palette.text.primary, mb: 1 }}>
             ✅ Notificaciones push
           </Typography>
-          <Typography variant="body2" sx={{ fontWeight: 600, color: 'primary.main' }}>
+          <Typography variant="body2" sx={{ fontWeight: 600, color: theme.palette.text.primary }}>
             ✅ Experiencia de app nativa
           </Typography>
         </Box>
@@ -208,7 +216,13 @@ const PWAInstallPrompt = () => {
             flex: 1,
             borderRadius: 2,
             textTransform: 'none',
-            fontWeight: 600
+            fontWeight: 600,
+            borderColor: theme.palette.grey[400],
+            color: theme.palette.text.primary,
+            '&:hover': {
+              borderColor: theme.palette.grey[600],
+              backgroundColor: theme.palette.grey[50]
+            }
           }}
         >
           Ahora no
@@ -222,9 +236,9 @@ const PWAInstallPrompt = () => {
             borderRadius: 2,
             textTransform: 'none',
             fontWeight: 600,
-            background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`,
+            backgroundColor: theme.palette.primary.main,
             '&:hover': {
-              background: `linear-gradient(135deg, ${theme.palette.primary.dark} 0%, ${theme.palette.primary.main} 100%)`
+              backgroundColor: theme.palette.primary.dark
             }
           }}
         >

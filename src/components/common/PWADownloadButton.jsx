@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { 
   Fab, 
   Tooltip, 
@@ -8,73 +8,16 @@ import {
 } from '@mui/material';
 import { Download, GetApp, Info } from '@mui/icons-material';
 import { useLocation } from 'react-router-dom';
+import { usePWAInstall } from '../../hooks/usePWAInstall';
 
 const PWADownloadButton = () => {
-  const [deferredPrompt, setDeferredPrompt] = useState(null);
-  const [isInstalled, setIsInstalled] = useState(false);
-  const [showButton, setShowButton] = useState(false);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const location = useLocation();
+  const { canInstall, handleInstall, handleShowInfo } = usePWAInstall();
 
-  useEffect(() => {
-    // Verificar si ya está instalado
-    const checkIfInstalled = () => {
-      if (window.matchMedia('(display-mode: standalone)').matches || 
-          window.navigator.standalone === true) {
-        setIsInstalled(true);
-        return;
-      }
-    };
-
-    checkIfInstalled();
-
-    // Escuchar el evento beforeinstallprompt
-    const handleBeforeInstallPrompt = (e) => {
-      e.preventDefault();
-      setDeferredPrompt(e);
-      setShowButton(true);
-    };
-
-    // Escuchar cuando se instala la PWA
-    const handleAppInstalled = () => {
-      setIsInstalled(true);
-      setShowButton(false);
-      setDeferredPrompt(null);
-    };
-
-    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-    window.addEventListener('appinstalled', handleAppInstalled);
-
-    return () => {
-      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-      window.removeEventListener('appinstalled', handleAppInstalled);
-    };
-  }, []);
-
-  const handleInstall = async () => {
-    if (deferredPrompt) {
-      deferredPrompt.prompt();
-      const { outcome } = await deferredPrompt.userChoice;
-      
-      if (outcome === 'accepted') {
-        console.log('PWA instalada por el usuario');
-      } else {
-        console.log('PWA no instalada por el usuario');
-      }
-      
-      setDeferredPrompt(null);
-      setShowButton(false);
-    }
-  };
-
-  const handleShowInfo = () => {
-    // Disparar evento personalizado para mostrar el diálogo
-    window.dispatchEvent(new CustomEvent('showPWAInfo'));
-  };
-
-  // No mostrar si ya está instalado, no hay prompt disponible, o no estamos en la página de inicio
-  if (isInstalled || !showButton || !deferredPrompt || location.pathname !== '/') {
+  // No mostrar si no se puede instalar o no estamos en la página de inicio
+  if (!canInstall || location.pathname !== '/') {
     return null;
   }
 
