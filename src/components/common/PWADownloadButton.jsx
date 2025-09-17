@@ -7,6 +7,7 @@ import {
   alpha
 } from '@mui/material';
 import { Download, GetApp, Info } from '@mui/icons-material';
+import { useLocation } from 'react-router-dom';
 
 const PWADownloadButton = () => {
   const [deferredPrompt, setDeferredPrompt] = useState(null);
@@ -14,6 +15,7 @@ const PWADownloadButton = () => {
   const [showButton, setShowButton] = useState(false);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const location = useLocation();
 
   useEffect(() => {
     // Verificar si ya está instalado
@@ -71,8 +73,8 @@ const PWADownloadButton = () => {
     window.dispatchEvent(new CustomEvent('showPWAInfo'));
   };
 
-  // No mostrar si ya está instalado o no hay prompt disponible
-  if (isInstalled || !showButton || !deferredPrompt) {
+  // No mostrar si ya está instalado, no hay prompt disponible, o no estamos en la página de inicio
+  if (isInstalled || !showButton || !deferredPrompt || location.pathname !== '/') {
     return null;
   }
 
