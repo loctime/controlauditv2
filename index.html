@@ -11,27 +11,38 @@
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="msapplication-TileColor" content="#1976d2" />
     <meta name="msapplication-tap-highlight" content="no" />
-    <link rel="icon" type="image/png" href="/loguitoaudit.png" />
-    <link rel="icon" type="image/png" sizes="32x32" href="/loguitoaudit.png" />
-    <link rel="icon" type="image/png" sizes="16x16" href="/loguitoaudit.png" />
-    <link rel="apple-touch-icon" href="/loguitoaudit.png" />
-    <link rel="apple-touch-icon" sizes="180x180" href="/loguitoaudit.png" />
-    <link rel="apple-touch-icon" sizes="152x152" href="/loguitoaudit.png" />
-    <link rel="apple-touch-icon" sizes="144x144" href="/loguitoaudit.png" />
-    <link rel="apple-touch-icon" sizes="120x120" href="/loguitoaudit.png" />
-    <link rel="apple-touch-icon" sizes="114x114" href="/loguitoaudit.png" />
-    <link rel="apple-touch-icon" sizes="76x76" href="/loguitoaudit.png" />
-    <link rel="apple-touch-icon" sizes="72x72" href="/loguitoaudit.png" />
-    <link rel="apple-touch-icon" sizes="60x60" href="/loguitoaudit.png" />
-    <link rel="apple-touch-icon" sizes="57x57" href="/loguitoaudit.png" />
-    <link rel="manifest" href="/manifest.json" />
+    <link rel="icon" type="image/png" href="/icons/icon-192x192.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/icons/icon-48x48.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/icons/icon-48x48.png" />
+    <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/icons/icon-192x192.png" />
+    <link rel="apple-touch-icon" sizes="152x152" href="/icons/icon-144x144.png" />
+    <link rel="apple-touch-icon" sizes="144x144" href="/icons/icon-144x144.png" />
+    <link rel="apple-touch-icon" sizes="120x120" href="/icons/icon-144x144.png" />
+    <link rel="apple-touch-icon" sizes="114x114" href="/icons/icon-144x144.png" />
+    <link rel="apple-touch-icon" sizes="76x76" href="/icons/icon-72x72.png" />
+    <link rel="apple-touch-icon" sizes="72x72" href="/icons/icon-72x72.png" />
+    <link rel="apple-touch-icon" sizes="60x60" href="/icons/icon-72x72.png" />
+    <link rel="apple-touch-icon" sizes="57x57" href="/icons/icon-72x72.png" />
+    <link rel="manifest" href="/manifest.json?v=5" />
     <script>
-      // Registrar Service Worker
+      // Limpiar cache y registrar Service Worker
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/sw.js')
+          // Limpiar cache existente
+          caches.keys().then((cacheNames) => {
+            cacheNames.forEach((cacheName) => {
+              console.log('Eliminando cache:', cacheName);
+              caches.delete(cacheName);
+            });
+          });
+          
+          // Registrar nuevo Service Worker
+          navigator.serviceWorker.register('/sw.js?v=' + Date.now())
             .then((registration) => {
               console.log('SW registrado: ', registration);
+              // Forzar actualización
+              registration.update();
             })
             .catch((registrationError) => {
               console.log('SW registro falló: ', registrationError);

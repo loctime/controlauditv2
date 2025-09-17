@@ -1,10 +1,15 @@
 // Service Worker para ControlAudit PWA
-const CACHE_NAME = 'controlaudit-v3';
+const CACHE_NAME = 'controlaudit-v5';
 const urlsToCache = [
   '/',
   '/index.html',
   '/manifest.json',
-  '/loguitoaudit.png',
+  '/icons/icon-48x48.png',
+  '/icons/icon-72x72.png',
+  '/icons/icon-96x96.png',
+  '/icons/icon-144x144.png',
+  '/icons/icon-192x192.png',
+  '/icons/icon-512x512.png',
   '/vite.svg'
 ];
 
@@ -25,12 +30,13 @@ self.addEventListener('activate', (event) => {
     caches.keys().then((cacheNames) => {
       return Promise.all(
         cacheNames.map((cacheName) => {
-          if (cacheName !== CACHE_NAME) {
-            console.log('Eliminando cache antigua:', cacheName);
-            return caches.delete(cacheName);
-          }
+          console.log('Eliminando cache:', cacheName);
+          return caches.delete(cacheName);
         })
       );
+    }).then(() => {
+      // Forzar recarga del manifest
+      return self.clients.claim();
     })
   );
 });
