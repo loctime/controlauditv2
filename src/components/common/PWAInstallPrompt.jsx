@@ -105,7 +105,7 @@ const PWAInstallPrompt = () => {
       // Actualizar el link del manifest
       const manifestLink = document.querySelector('link[rel="manifest"]');
       if (manifestLink) {
-        manifestLink.href = manifestURL;
+        manifestLink.href = manifestURL + '?v=' + Date.now();
       }
       
       // También actualizar el título de la página

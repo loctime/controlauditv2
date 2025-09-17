@@ -1,5 +1,5 @@
 // Service Worker para ControlAudit PWA
-const CACHE_NAME = 'controlaudit-v2';
+const CACHE_NAME = 'controlaudit-v3';
 const urlsToCache = [
   '/',
   '/index.html',
