@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { collection, getDocs, query, where } from "firebase/firestore";
 import { db } from "../../../../../firebaseConfig";
+import { storageUtils } from "../../../../../utils/utilitiesOptimization";
 import { useAuth } from "../../../../context/AuthContext";
 
 export const useAuditoriaData = (
@@ -204,38 +205,86 @@ export const useAuditoriaData = (
       const obtenerFormularios = async () => {
         try {
           if (!userProfile) return;
-          const formulariosCollection = collection(db, "formularios");
-          const snapshot = await getDocs(formulariosCollection);
-          const todosLosFormularios = snapshot.docs.map((doc) => ({
-            id: doc.id,
-            nombre: doc.data().nombre,
-            secciones: doc.data().secciones,
-            creadorId: doc.data().creadorId,
-            creadorEmail: doc.data().creadorEmail,
-            esPublico: doc.data().esPublico,
-            permisos: doc.data().permisos,
-            clienteAdminId: doc.data().clienteAdminId
-          }));
           
-          // Filtrar formularios por permisos multi-tenant
-          const formulariosPermitidos = todosLosFormularios.filter(formulario => {
-            if (userProfile.role === 'supermax') return true;
-            if (userProfile.role === 'max') {
-              return formulario.clienteAdminId === userProfile.uid || 
-                     formulario.creadorId === userProfile.uid;
+          // Verificar conectividad
+          const isOnline = navigator.onLine;
+          
+          if (isOnline) {
+            // Cargar desde Firestore cuando hay conectividad
+            const formulariosCollection = collection(db, "formularios");
+            const snapshot = await getDocs(formulariosCollection);
+            const todosLosFormularios = snapshot.docs.map((doc) => ({
+              id: doc.id,
+              nombre: doc.data().nombre,
+              secciones: doc.data().secciones,
+              creadorId: doc.data().creadorId,
+              creadorEmail: doc.data().creadorEmail,
+              esPublico: doc.data().esPublico,
+              permisos: doc.data().permisos,
+              clienteAdminId: doc.data().clienteAdminId
+            }));
+            
+            // Filtrar formularios por permisos multi-tenant
+            const formulariosPermitidos = todosLosFormularios.filter(formulario => {
+              if (userProfile.role === 'supermax') return true;
+              if (userProfile.role === 'max') {
+                return formulario.clienteAdminId === userProfile.uid || 
+                       formulario.creadorId === userProfile.uid;
+              }
+              if (userProfile.role === 'operario') {
+                return formulario.creadorId === userProfile.uid ||
+                       formulario.clienteAdminId === userProfile.clienteAdminId ||
+                       formulario.esPublico ||
+                       formulario.permisos?.puedeVer?.includes(userProfile.uid);
+              }
+              return false;
+            });
+            
+            // Guardar en cache para uso offline
+            storageUtils.set('formularios_cache', {
+              formularios: formulariosPermitidos,
+              timestamp: Date.now(),
+              userId: userProfile.uid
+            });
+            
+            setFormularios(formulariosPermitidos);
+            console.log(`[DEBUG Auditoria] Formularios cargados desde Firestore: ${formulariosPermitidos.length} de ${todosLosFormularios.length}`);
+          } else {
+            // Cargar desde cache cuando está offline
+            console.log('[DEBUG Auditoria] Sin conectividad, cargando formularios desde cache...');
+            const cacheData = storageUtils.get('formularios_cache');
+            
+            if (cacheData && cacheData.formularios && cacheData.userId === userProfile.uid) {
+              // Verificar que el cache no esté muy antiguo (máximo 24 horas)
+              const cacheAge = Date.now() - cacheData.timestamp;
+              const maxCacheAge = 24 * 60 * 60 * 1000; // 24 horas
+              
+              if (cacheAge < maxCacheAge) {
+                setFormularios(cacheData.formularios);
+                console.log(`[DEBUG Auditoria] Formularios cargados desde cache offline: ${cacheData.formularios.length}`);
+              } else {
+                console.log('[DEBUG Auditoria] Cache de formularios expirado');
+                setFormularios([]);
+              }
+            } else {
+              console.log('[DEBUG Auditoria] No hay cache de formularios disponible');
+              setFormularios([]);
             }
-            if (userProfile.role === 'operario') {
-              return formulario.creadorId === userProfile.uid ||
-                     formulario.clienteAdminId === userProfile.clienteAdminId ||
-                     formulario.esPublico ||
-                     formulario.permisos?.puedeVer?.includes(userProfile.uid);
-            }
-            return false;
-          });
-          setFormularios(formulariosPermitidos);
-          console.log(`[DEBUG Auditoria] Formularios permitidos: ${formulariosPermitidos.length} de ${todosLosFormularios.length}`);
+          }
         } catch (error) {
           console.error("Error al obtener formularios:", error);
+          
+          // Fallback: intentar cargar desde cache en caso de error
+          try {
+            const cacheData = storageUtils.get('formularios_cache');
+            if (cacheData && cacheData.formularios) {
+              setFormularios(cacheData.formularios);
+              console.log('[DEBUG Auditoria] Fallback: formularios cargados desde cache tras error');
+            }
+          } catch (cacheError) {
+            console.error("Error al cargar desde cache:", cacheError);
+            setFormularios([]);
+          }
         }
       };
       obtenerFormularios();
