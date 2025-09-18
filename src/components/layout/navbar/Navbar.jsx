@@ -28,6 +28,7 @@ import { usePWAInstall } from '../../../hooks/usePWAInstall';
 import GetAppIcon from '@mui/icons-material/GetApp';
 import InfoIcon from '@mui/icons-material/Info';
 import OfflineIndicator from '../../common/OfflineIndicator';
+import OfflineIndicatorMobile from '../../common/OfflineIndicatorMobile';
 
 const drawerWidth = 240;
 
@@ -240,8 +241,9 @@ function Navbar(props) {
           {/* Navegación en móvil */}
           <Box sx={{ 
             display: { xs: 'flex', md: 'none' }, 
-            gap: 2,
-            alignItems: 'center'
+            gap: 1,
+            alignItems: 'center',
+            flex: 1
           }}>
             <Link to={getDashboardRoute()} style={{ 
               color: "whitesmoke", 
@@ -271,6 +273,13 @@ function Navbar(props) {
             }}>
               Auditoria
             </Link>
+            
+            {/* Indicador offline para móvil */}
+            {userProfile && (
+              <Box sx={{ ml: 'auto', mr: 1 }}>
+                <OfflineIndicatorMobile userProfile={userProfile} />
+              </Box>
+            )}
           </Box>
 
           {/* Switch de modo claro/oscuro - oculto en móvil muy pequeño */}
