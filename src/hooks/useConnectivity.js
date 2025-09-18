@@ -19,6 +19,28 @@ export const useConnectivity = () => {
     }
   }, []);
 
+  // Función para verificar conectividad real (ping a un endpoint)
+  const checkRealConnectivity = useCallback(async () => {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 3000); // 3 segundos timeout
+
+      // Usar un endpoint más confiable para móvil
+      const response = await fetch('https://www.google.com/favicon.ico', {
+        method: 'HEAD',
+        signal: controller.signal,
+        cache: 'no-cache',
+        mode: 'no-cors' // Para evitar problemas CORS en móvil
+      });
+
+      clearTimeout(timeoutId);
+      return true; // Si no hay error, asumimos conectividad
+    } catch (error) {
+      console.log('🔍 Verificación de conectividad falló:', error.message);
+      return false;
+    }
+  }, []);
+
   // Manejar cambios de conectividad
   const handleOnline = useCallback(async () => {
     console.log('🌐 Conexión restaurada');
@@ -76,28 +98,6 @@ export const useConnectivity = () => {
       }
     };
   }, [handleOnline, handleOffline, detectConnectionType, checkRealConnectivity]);
-
-  // Función para verificar conectividad real (ping a un endpoint)
-  const checkRealConnectivity = useCallback(async () => {
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 3000); // 3 segundos timeout
-
-      // Usar un endpoint más confiable para móvil
-      const response = await fetch('https://www.google.com/favicon.ico', {
-        method: 'HEAD',
-        signal: controller.signal,
-        cache: 'no-cache',
-        mode: 'no-cors' // Para evitar problemas CORS en móvil
-      });
-
-      clearTimeout(timeoutId);
-      return true; // Si no hay error, asumimos conectividad
-    } catch (error) {
-      console.log('🔍 Verificación de conectividad falló:', error.message);
-      return false;
-    }
-  }, []);
 
   // Función para obtener información detallada de la conexión
   const getConnectionInfo = useCallback(() => {
