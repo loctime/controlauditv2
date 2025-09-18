@@ -43,6 +43,21 @@ self.addEventListener('activate', (event) => {
 
 // Interceptar requests
 self.addEventListener('fetch', (event) => {
+  // Excluir ciertos dominios y tipos de requests
+  const url = new URL(event.request.url);
+  const isExternalAPI = url.hostname.includes('firestore.googleapis.com') || 
+                       url.hostname.includes('googleapis.com') ||
+                       url.hostname.includes('google.com') ||
+                       url.hostname.includes('gstatic.com');
+  
+  const isChromeExtension = url.protocol === 'chrome-extension:';
+  const isDataURL = url.protocol === 'data:';
+  
+  // No interceptar requests externos, extensiones o data URLs
+  if (isExternalAPI || isChromeExtension || isDataURL) {
+    return;
+  }
+
   event.respondWith(
     caches.match(event.request)
       .then((response) => {
@@ -58,17 +73,29 @@ self.addEventListener('fetch', (event) => {
               return response;
             }
 
+            // Solo cachear requests del mismo origen
+            if (url.origin !== location.origin) {
+              return response;
+            }
+
             // Clonar la respuesta
             const responseToCache = response.clone();
 
             caches.open(CACHE_NAME)
               .then((cache) => {
                 cache.put(event.request, responseToCache);
+              })
+              .catch((error) => {
+                console.warn('Error al cachear:', error);
               });
 
             return response;
           }
-        );
+        ).catch((error) => {
+          console.warn('Error en fetch:', error);
+          // Devolver una respuesta de error básica
+          return new Response('Error de red', { status: 408, statusText: 'Request Timeout' });
+        });
       })
   );
 });
