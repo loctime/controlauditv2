@@ -27,6 +27,7 @@ import { useColorMode } from '../../context/ColorModeContext';
 import { usePWAInstall } from '../../../hooks/usePWAInstall';
 import GetAppIcon from '@mui/icons-material/GetApp';
 import InfoIcon from '@mui/icons-material/Info';
+import OfflineIndicator from '../../common/OfflineIndicator';
 
 const drawerWidth = 240;
 
@@ -34,7 +35,7 @@ function Navbar(props) {
   const { window } = props;
   const [mobileOpen, setMobileOpen] = useState(false);
   const navigate = useNavigate();
-  const { logoutContext, user, role, permisos } = useAuth();
+  const { logoutContext, user, role, permisos, userProfile } = useAuth();
   const { mode, toggleColorMode } = useColorMode();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
@@ -280,6 +281,11 @@ function Navbar(props) {
             position: 'absolute',
             right: { xs: 8, sm: 60 }
           }}>
+            {/* Indicador offline */}
+            {userProfile && (
+              <OfflineIndicator userProfile={userProfile} />
+            )}
+
             <IconButton onClick={toggleColorMode} color="inherit" aria-label="Alternar modo claro/oscuro">
               {mode === 'dark' ? <Brightness7Icon /> : <Brightness4Icon />}
             </IconButton>
