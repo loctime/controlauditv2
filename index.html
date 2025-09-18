@@ -37,6 +37,16 @@
             });
           });
           
+          // Eliminar Service Worker existente y deshabilitar registro
+          if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistrations().then(function(registrations) {
+              for(let registration of registrations) {
+                console.log('Eliminando SW existente:', registration.scope);
+                registration.unregister();
+              }
+            });
+          }
+          
           // Service Worker temporalmente deshabilitado para resolver errores de conectividad
           // navigator.serviceWorker.register('/sw.js?v=' + Date.now())
           //   .then((registration) => {
