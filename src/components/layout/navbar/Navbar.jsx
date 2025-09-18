@@ -180,7 +180,11 @@ function Navbar(props) {
           height: { xs: 48, sm: 56 },
           px: { xs: 1, sm: 1 },
           py: 0,
-          position: "relative"
+          position: "relative",
+          '& > *': {
+            display: 'flex',
+            alignItems: 'center'
+          }
         }}>
           {/* Navegación principal - oculta en móvil */}
           <Box sx={{ 
@@ -242,19 +246,23 @@ function Navbar(props) {
           <Box sx={{ 
             display: { xs: 'flex', md: 'none' }, 
             gap: 1,
-            alignItems: 'center'
+            alignItems: 'center',
+            height: '100%'
           }}>
             <Link to={getDashboardRoute()} style={{ 
               color: "whitesmoke", 
               textDecoration: "none", 
               fontSize: '0.8rem',
               fontWeight: 500,
-              padding: '2px 6px',
+              padding: '4px 8px',
               borderRadius: '3px',
               transition: 'background-color 0.2s',
-              lineHeight: 1.2,
+              lineHeight: 1,
               outline: 'none',
-              WebkitTapHighlightColor: 'transparent'
+              WebkitTapHighlightColor: 'transparent',
+              display: 'flex',
+              alignItems: 'center',
+              height: '100%'
             }}>
               Dashboard
             </Link>
@@ -263,12 +271,15 @@ function Navbar(props) {
               textDecoration: "none", 
               fontSize: '0.8rem',
               fontWeight: 500,
-              padding: '2px 6px',
+              padding: '4px 8px',
               borderRadius: '3px',
               transition: 'background-color 0.2s',
-              lineHeight: 1.2,
+              lineHeight: 1,
               outline: 'none',
-              WebkitTapHighlightColor: 'transparent'
+              WebkitTapHighlightColor: 'transparent',
+              display: 'flex',
+              alignItems: 'center',
+              height: '100%'
             }}>
               Auditoria
             </Link>
@@ -303,7 +314,8 @@ function Navbar(props) {
           <Box sx={{ 
             display: { xs: 'flex', sm: 'none' }, 
             alignItems: 'center', 
-            gap: 1
+            gap: 1,
+            height: '100%'
           }}>
             {/* Indicador offline para móvil */}
             {userProfile && (

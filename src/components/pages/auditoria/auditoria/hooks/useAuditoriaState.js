@@ -36,7 +36,7 @@ export const useAuditoriaState = () => {
   // Estados de firmas
   const [firmaAuditor, setFirmaAuditor] = useState(null);
   const [firmaResponsable, setFirmaResponsable] = useState(null);
-  const [firmasCompletadas, setFirmasCompletadas] = useState(false);
+  const [firmasCompletadas, setFirmasCompletadas] = useState(true);
   const [auditoriaHash, setAuditoriaHash] = useState('');
   const [firmasValidas, setFirmasValidas] = useState(false);
   const [mostrarAlertaReinicio, setMostrarAlertaReinicio] = useState(false);
@@ -106,7 +106,7 @@ export const useAuditoriaState = () => {
     setActiveStep(0);
     setFirmaAuditor(null);
     setFirmaResponsable(null);
-    setFirmasCompletadas(false);
+    setFirmasCompletadas(true);
     setAuditoriaHash('');
     setFirmasValidas(false);
     setMostrarAlertaReinicio(false);
