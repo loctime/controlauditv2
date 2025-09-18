@@ -1,84 +1,8 @@
-import { openDB, DBSchema } from 'idb';
+import { openDB } from 'idb';
 
 /**
- * Esquema de base de datos IndexedDB para funcionalidad offline
+ * Configuración de base de datos IndexedDB para funcionalidad offline
  */
-interface AuditDB extends DBSchema {
-  auditorias: {
-    key: string;
-    value: {
-      id: string;
-      empresa: object;
-      sucursal: string;
-      formulario: object;
-      secciones: array;
-      respuestas: array;
-      comentarios: array;
-      imagenes: array;
-      firmaAuditor: string;
-      firmaResponsable: string;
-      createdAt: number;
-      updatedAt: number;
-      status: 'draft' | 'pending_sync' | 'synced' | 'error';
-      userId: string;
-      sessionId: string;
-      lastModified: Date;
-      autoSaved: boolean;
-    };
-    indexes: {
-      'by-updatedAt': number;
-      'by-status': string;
-      'by-userId': string;
-    };
-  };
-  fotos: {
-    key: string;
-    value: {
-      id: string;
-      auditoriaId: string;
-      seccionIndex: number;
-      preguntaIndex: number;
-      blob: Blob;
-      mime: string;
-      width: number;
-      height: number;
-      size: number;
-      createdAt: number;
-      originalName: string;
-    };
-    indexes: {
-      'by-auditoriaId': string;
-      'by-createdAt': number;
-    };
-  };
-  syncQueue: {
-    key: string;
-    value: {
-      id: string;
-      type: 'CREATE_AUDITORIA' | 'UPLOAD_PHOTO' | 'UPDATE_AUDITORIA';
-      auditoriaId: string;
-      payload: object;
-      retries: number;
-      lastError: string;
-      createdAt: number;
-      nextRetry: number;
-      priority: number;
-    };
-    indexes: {
-      'by-createdAt': number;
-      'by-nextRetry': number;
-      'by-priority': number;
-    };
-  };
-  settings: {
-    key: string;
-    value: {
-      key: string;
-      value: any;
-      updatedAt: number;
-    };
-  };
-}
 
 /**
  * Configuración de la base de datos offline
@@ -91,7 +15,7 @@ const DB_VERSION = 1;
  */
 export const initOfflineDatabase = async () => {
   try {
-    const db = await openDB<AuditDB>(DB_NAME, DB_VERSION, {
+    const db = await openDB(DB_NAME, DB_VERSION, {
       upgrade(db) {
         console.log('🔄 Inicializando base de datos offline...');
 
@@ -132,7 +56,7 @@ export const initOfflineDatabase = async () => {
  */
 export const getOfflineDatabase = async () => {
   try {
-    return await openDB<AuditDB>(DB_NAME, DB_VERSION);
+    return await openDB(DB_NAME, DB_VERSION);
   } catch (error) {
     console.error('❌ Error al obtener base de datos offline:', error);
     throw error;
