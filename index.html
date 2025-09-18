@@ -47,16 +47,25 @@
             });
           }
           
-          // Service Worker temporalmente deshabilitado para resolver errores de conectividad
-          // navigator.serviceWorker.register('/sw.js?v=' + Date.now())
-          //   .then((registration) => {
-          //     console.log('SW registrado: ', registration);
-          //     // Forzar actualización
-          //     registration.update();
-          //   })
-          //   .catch((registrationError) => {
-          //     console.log('SW registro falló: ', registrationError);
-          //   });
+          // Registrar Service Worker mejorado
+          navigator.serviceWorker.register('/sw.js?v=6')
+            .then((registration) => {
+              console.log('✅ Service Worker registrado:', registration.scope);
+              
+              // Verificar actualizaciones
+              registration.addEventListener('updatefound', () => {
+                const newWorker = registration.installing;
+                newWorker.addEventListener('statechange', () => {
+                  if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                    console.log('🔄 Nueva versión disponible, recargando...');
+                    window.location.reload();
+                  }
+                });
+              });
+            })
+            .catch((error) => {
+              console.error('❌ Error al registrar Service Worker:', error);
+            });
         });
       }
     </script>
