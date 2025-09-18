@@ -37,16 +37,16 @@
             });
           });
           
-          // Registrar nuevo Service Worker
-          navigator.serviceWorker.register('/sw.js?v=' + Date.now())
-            .then((registration) => {
-              console.log('SW registrado: ', registration);
-              // Forzar actualización
-              registration.update();
-            })
-            .catch((registrationError) => {
-              console.log('SW registro falló: ', registrationError);
-            });
+          // Service Worker temporalmente deshabilitado para resolver errores de conectividad
+          // navigator.serviceWorker.register('/sw.js?v=' + Date.now())
+          //   .then((registration) => {
+          //     console.log('SW registrado: ', registration);
+          //     // Forzar actualización
+          //     registration.update();
+          //   })
+          //   .catch((registrationError) => {
+          //     console.log('SW registro falló: ', registrationError);
+          //   });
         });
       }
     </script>
