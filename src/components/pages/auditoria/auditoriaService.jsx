@@ -3,6 +3,8 @@ import { collection, addDoc, getDocs, query, where, orderBy, serverTimestamp } f
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, storage } from '../../../firebaseConfig';
 import { prepararDatosParaFirestore, registrarLogOperario } from '../../../utils/firestoreUtils';
+import { getOfflineDatabase, generateOfflineId } from '../../../services/offlineDatabase';
+import syncQueueService from '../../../services/syncQueue';
 
 /**
  * Servicio centralizado para operaciones de auditoría
@@ -227,12 +229,32 @@ class AuditoriaService {
   }
 
   /**
-   * Guarda una auditoría en Firestore
+   * Guarda una auditoría (online/offline automático)
    * @param {Object} datosAuditoria - Datos de la auditoría
    * @param {Object} userProfile - Perfil del usuario
    * @returns {Promise<string>} ID del documento guardado
    */
   static async guardarAuditoria(datosAuditoria, userProfile) {
+    // Verificar conectividad
+    if (!navigator.onLine) {
+      return await this.guardarAuditoriaOffline(datosAuditoria, userProfile);
+    }
+
+    try {
+      return await this.guardarAuditoriaOnline(datosAuditoria, userProfile);
+    } catch (error) {
+      console.error('❌ Error en guardado online, fallback a offline:', error);
+      return await this.guardarAuditoriaOffline(datosAuditoria, userProfile);
+    }
+  }
+
+  /**
+   * Guarda una auditoría online en Firestore
+   * @param {Object} datosAuditoria - Datos de la auditoría
+   * @param {Object} userProfile - Perfil del usuario
+   * @returns {Promise<string>} ID del documento guardado
+   */
+  static async guardarAuditoriaOnline(datosAuditoria, userProfile) {
     try {
       // Validar datos requeridos
       if (!datosAuditoria.empresa || !datosAuditoria.formulario) {
@@ -333,7 +355,122 @@ class AuditoriaService {
       return docRef.id;
 
     } catch (error) {
-      console.error("❌ Error al guardar auditoría:", error);
+      console.error("❌ Error al guardar auditoría online:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Guarda una auditoría offline en IndexedDB
+   * @param {Object} datosAuditoria - Datos de la auditoría
+   * @param {Object} userProfile - Perfil del usuario
+   * @returns {Promise<string>} ID del documento guardado
+   */
+  static async guardarAuditoriaOffline(datosAuditoria, userProfile) {
+    try {
+      // Validar datos requeridos
+      if (!datosAuditoria.empresa || !datosAuditoria.formulario) {
+        throw new Error("Faltan datos requeridos para guardar la auditoría");
+      }
+
+      // Inicializar base de datos offline
+      const db = await getOfflineDatabase();
+      if (!db) {
+        throw new Error('No se pudo inicializar la base de datos offline');
+      }
+
+      // Generar ID único para la auditoría offline
+      const auditoriaId = generateOfflineId();
+      
+      // Preparar datos para IndexedDB
+      const saveData = {
+        id: auditoriaId,
+        ...datosAuditoria,
+        userId: userProfile?.uid,
+        userEmail: userProfile?.email,
+        clienteAdminId: userProfile?.clienteAdminId || userProfile?.uid,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+        status: 'pending_sync',
+        // Generar estadísticas
+        estadisticas: this.generarEstadisticas(datosAuditoria.respuestas),
+        // Generar nombre de archivo
+        nombreArchivo: this.generarNombreArchivo(
+          datosAuditoria.empresa, 
+          datosAuditoria.sucursal, 
+          userProfile
+        )
+      };
+
+      // Guardar auditoría en IndexedDB
+      await db.put('auditorias', saveData);
+
+      // Procesar y guardar fotos si existen
+      if (datosAuditoria.imagenes && datosAuditoria.imagenes.length > 0) {
+        await this.guardarFotosOffline(datosAuditoria.imagenes, auditoriaId, db);
+      }
+
+      // Encolar para sincronización
+      await syncQueueService.enqueueAuditoria(saveData, 1);
+
+      console.log(`✅ Auditoría guardada offline: ${auditoriaId}`);
+      return auditoriaId;
+
+    } catch (error) {
+      console.error("❌ Error al guardar auditoría offline:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Guarda fotos offline en IndexedDB
+   * @param {Array} imagenes - Array de imágenes
+   * @param {string} auditoriaId - ID de la auditoría
+   * @param {Object} db - Instancia de IndexedDB
+   */
+  static async guardarFotosOffline(imagenes, auditoriaId, db) {
+    try {
+      for (let seccionIndex = 0; seccionIndex < imagenes.length; seccionIndex++) {
+        const seccionImagenes = imagenes[seccionIndex];
+        
+        if (!Array.isArray(seccionImagenes)) continue;
+
+        for (let preguntaIndex = 0; preguntaIndex < seccionImagenes.length; preguntaIndex++) {
+          const imagen = seccionImagenes[preguntaIndex];
+          
+          if (imagen instanceof File) {
+            // Convertir File a Blob y guardar en IndexedDB
+            const fotoId = generateOfflineId();
+            const fotoData = {
+              id: fotoId,
+              auditoriaId: auditoriaId,
+              seccionIndex: seccionIndex,
+              preguntaIndex: preguntaIndex,
+              blob: imagen,
+              mime: imagen.type,
+              width: 0, // Se puede calcular si es necesario
+              height: 0,
+              size: imagen.size,
+              createdAt: Date.now(),
+              originalName: imagen.name
+            };
+
+            await db.put('fotos', fotoData);
+            
+            // Actualizar referencia en la auditoría
+            seccionImagenes[preguntaIndex] = {
+              id: fotoId,
+              offline: true,
+              originalName: imagen.name,
+              size: imagen.size
+            };
+
+            console.log(`📸 Foto guardada offline: ${fotoId}`);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('❌ Error al guardar fotos offline:', error);
       throw error;
     }
   }

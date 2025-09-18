@@ -1,11 +1,44 @@
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { db } from '../../../../../firebaseConfig';
+import { getOfflineDatabase, generateOfflineId, checkStorageLimit } from '../../../../../services/offlineDatabase';
+import syncQueueService from '../../../../../services/syncQueue';
 
 class AutoSaveService {
   constructor() {
     this.storageKey = 'auditoria_autosave';
     this.lastSaveTime = null;
     this.isSaving = false;
+    this.isOnline = navigator.onLine;
+    this.offlineDb = null;
+    
+    // Configurar listeners de conectividad
+    this.setupConnectivityListeners();
+  }
+
+  // Configurar listeners de conectividad
+  setupConnectivityListeners() {
+    window.addEventListener('online', () => {
+      this.isOnline = true;
+      console.log('🌐 AutoSaveService: Conexión restaurada');
+    });
+    
+    window.addEventListener('offline', () => {
+      this.isOnline = false;
+      console.log('📴 AutoSaveService: Conexión perdida');
+    });
+  }
+
+  // Inicializar base de datos offline
+  async initOfflineDatabase() {
+    if (!this.offlineDb) {
+      try {
+        this.offlineDb = await getOfflineDatabase();
+        console.log('✅ AutoSaveService: Base de datos offline inicializada');
+      } catch (error) {
+        console.error('❌ AutoSaveService: Error al inicializar base de datos offline:', error);
+      }
+    }
+    return this.offlineDb;
   }
 
   // Generar ID único para la sesión de auditoría
@@ -55,8 +88,8 @@ class AutoSaveService {
     }
   }
 
-  // Guardar en Firestore
-  async saveToFirestore(userId, auditoriaData) {
+  // Guardar auditoría (online/offline automático)
+  async saveAuditoria(userId, auditoriaData) {
     if (this.isSaving) {
       console.log('⏳ Ya hay un guardado en progreso...');
       return false;
@@ -64,6 +97,20 @@ class AutoSaveService {
 
     this.isSaving = true;
     
+    try {
+      // Verificar conectividad
+      if (this.isOnline) {
+        return await this.saveToFirestore(userId, auditoriaData);
+      } else {
+        return await this.saveOffline(userId, auditoriaData);
+      }
+    } finally {
+      this.isSaving = false;
+    }
+  }
+
+  // Guardar en Firestore (online)
+  async saveToFirestore(userId, auditoriaData) {
     try {
       const sessionId = this.generateSessionId();
       const saveData = {
@@ -88,12 +135,116 @@ class AutoSaveService {
     } catch (error) {
       console.error('❌ Error en autoguardado Firestore:', error);
       
+      // Fallback a offline
+      console.log('🔄 Fallback a guardado offline...');
+      return await this.saveOffline(userId, auditoriaData);
+    }
+  }
+
+  // Guardar offline en IndexedDB
+  async saveOffline(userId, auditoriaData) {
+    try {
+      // Verificar límites de almacenamiento
+      const storageCheck = await checkStorageLimit();
+      if (!storageCheck.canStore) {
+        throw new Error(`Límite de almacenamiento alcanzado: ${storageCheck.reason}`);
+      }
+
+      // Inicializar base de datos offline
+      const db = await this.initOfflineDatabase();
+      if (!db) {
+        throw new Error('No se pudo inicializar la base de datos offline');
+      }
+
+      // Generar ID único para la auditoría offline
+      const auditoriaId = generateOfflineId();
+      
+      // Preparar datos para IndexedDB
+      const saveData = {
+        id: auditoriaId,
+        ...auditoriaData,
+        userId,
+        sessionId: this.generateSessionId(),
+        lastModified: new Date(),
+        autoSaved: true,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+        status: 'pending_sync'
+      };
+
+      // Guardar auditoría en IndexedDB
+      await db.put('auditorias', saveData);
+
+      // Procesar y guardar fotos si existen
+      if (auditoriaData.imagenes && auditoriaData.imagenes.length > 0) {
+        await this.saveOfflineImages(auditoriaData.imagenes, auditoriaId, db);
+      }
+
+      // Encolar para sincronización
+      await syncQueueService.enqueueAuditoria(saveData, 1);
+
+      // También guardar en localStorage como respaldo
+      this.saveToLocalStorage(saveData);
+
+      this.lastSaveTime = Date.now();
+      console.log('✅ Autoguardado completado offline:', auditoriaId);
+      
+      return true;
+    } catch (error) {
+      console.error('❌ Error en autoguardado offline:', error);
+      
       // Fallback a localStorage
       this.saveToLocalStorage(auditoriaData);
       
       return false;
-    } finally {
-      this.isSaving = false;
+    }
+  }
+
+  // Guardar fotos offline en IndexedDB
+  async saveOfflineImages(imagenes, auditoriaId, db) {
+    try {
+      for (let seccionIndex = 0; seccionIndex < imagenes.length; seccionIndex++) {
+        const seccionImagenes = imagenes[seccionIndex];
+        
+        if (!Array.isArray(seccionImagenes)) continue;
+
+        for (let preguntaIndex = 0; preguntaIndex < seccionImagenes.length; preguntaIndex++) {
+          const imagen = seccionImagenes[preguntaIndex];
+          
+          if (imagen instanceof File) {
+            // Convertir File a Blob y guardar en IndexedDB
+            const fotoId = generateOfflineId();
+            const fotoData = {
+              id: fotoId,
+              auditoriaId: auditoriaId,
+              seccionIndex: seccionIndex,
+              preguntaIndex: preguntaIndex,
+              blob: imagen,
+              mime: imagen.type,
+              width: 0, // Se puede calcular si es necesario
+              height: 0,
+              size: imagen.size,
+              createdAt: Date.now(),
+              originalName: imagen.name
+            };
+
+            await db.put('fotos', fotoData);
+            
+            // Actualizar referencia en la auditoría
+            seccionImagenes[preguntaIndex] = {
+              id: fotoId,
+              offline: true,
+              originalName: imagen.name,
+              size: imagen.size
+            };
+
+            console.log(`📸 Foto guardada offline: ${fotoId}`);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('❌ Error al guardar fotos offline:', error);
+      throw error;
     }
   }
 
@@ -165,9 +316,20 @@ class AutoSaveService {
   // Restaurar auditoría desde datos guardados
   async restoreAuditoria(userId) {
     try {
-      // Primero intentar cargar desde localStorage
+      // Primero intentar cargar desde IndexedDB (offline)
+      const db = await this.initOfflineDatabase();
+      if (db) {
+        const offlineData = await db.getAllFromIndex('auditorias', 'by-userId', userId);
+        if (offlineData && offlineData.length > 0) {
+          // Obtener la más reciente
+          const latestOffline = offlineData.sort((a, b) => b.updatedAt - a.updatedAt)[0];
+          console.log('🔄 Restaurando auditoría desde IndexedDB:', latestOffline.id);
+          return latestOffline;
+        }
+      }
+
+      // Fallback a localStorage
       const localData = this.loadFromLocalStorage();
-      
       if (localData && localData.userId === userId) {
         console.log('🔄 Restaurando auditoría desde localStorage');
         return localData;
@@ -179,6 +341,51 @@ class AutoSaveService {
       return null;
     } catch (error) {
       console.error('❌ Error al restaurar auditoría:', error);
+      return null;
+    }
+  }
+
+  // Obtener auditorías offline pendientes
+  async getOfflineAuditorias(userId) {
+    try {
+      const db = await this.initOfflineDatabase();
+      if (!db) return [];
+
+      const offlineAuditorias = await db.getAllFromIndex('auditorias', 'by-userId', userId);
+      return offlineAuditorias.filter(a => a.status === 'pending_sync');
+    } catch (error) {
+      console.error('❌ Error al obtener auditorías offline:', error);
+      return [];
+    }
+  }
+
+  // Obtener estadísticas de almacenamiento offline
+  async getOfflineStats() {
+    try {
+      const db = await this.initOfflineDatabase();
+      if (!db) return null;
+
+      const auditorias = await db.getAll('auditorias');
+      const fotos = await db.getAll('fotos');
+      const queueStats = await syncQueueService.getQueueStats();
+
+      const totalSize = fotos.reduce((sum, foto) => sum + (foto.size || 0), 0);
+
+      return {
+        auditorias: {
+          total: auditorias.length,
+          pending: auditorias.filter(a => a.status === 'pending_sync').length,
+          synced: auditorias.filter(a => a.status === 'synced').length,
+          failed: auditorias.filter(a => a.status === 'error').length
+        },
+        fotos: {
+          total: fotos.length,
+          totalSize: totalSize
+        },
+        queue: queueStats
+      };
+    } catch (error) {
+      console.error('❌ Error al obtener estadísticas offline:', error);
       return null;
     }
   }
