@@ -20,12 +20,16 @@ export const useConnectivity = () => {
   }, []);
 
   // Manejar cambios de conectividad
-  const handleOnline = useCallback(() => {
+  const handleOnline = useCallback(async () => {
     console.log('🌐 Conexión restaurada');
-    setIsOnline(true);
-    setLastOnlineTime(Date.now());
+    // Verificar conectividad real en móvil
+    const realConnectivity = await checkRealConnectivity();
+    setIsOnline(realConnectivity);
+    if (realConnectivity) {
+      setLastOnlineTime(Date.now());
+    }
     detectConnectionType();
-  }, [detectConnectionType]);
+  }, [detectConnectionType, checkRealConnectivity]);
 
   const handleOffline = useCallback(() => {
     console.log('📴 Conexión perdida');
@@ -38,6 +42,20 @@ export const useConnectivity = () => {
     // Detectar tipo de conexión inicial
     detectConnectionType();
 
+    // Verificación inicial de conectividad real (especialmente para móvil)
+    const initialConnectivityCheck = async () => {
+      if (navigator.onLine) {
+        const realConnectivity = await checkRealConnectivity();
+        if (!realConnectivity) {
+          console.log('📱 Móvil: navigator.onLine dice online pero no hay conectividad real');
+          setIsOnline(false);
+        }
+      }
+    };
+
+    // Ejecutar verificación inicial después de un breve delay
+    const timeoutId = setTimeout(initialConnectivityCheck, 1000);
+
     // Listeners para cambios de conectividad
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
@@ -49,6 +67,7 @@ export const useConnectivity = () => {
 
     // Cleanup
     return () => {
+      clearTimeout(timeoutId);
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
       
@@ -56,22 +75,24 @@ export const useConnectivity = () => {
         navigator.connection.removeEventListener('change', detectConnectionType);
       }
     };
-  }, [handleOnline, handleOffline, detectConnectionType]);
+  }, [handleOnline, handleOffline, detectConnectionType, checkRealConnectivity]);
 
   // Función para verificar conectividad real (ping a un endpoint)
   const checkRealConnectivity = useCallback(async () => {
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 segundos timeout
+      const timeoutId = setTimeout(() => controller.abort(), 3000); // 3 segundos timeout
 
-      const response = await fetch('/ping', {
+      // Usar un endpoint más confiable para móvil
+      const response = await fetch('https://www.google.com/favicon.ico', {
         method: 'HEAD',
         signal: controller.signal,
-        cache: 'no-cache'
+        cache: 'no-cache',
+        mode: 'no-cors' // Para evitar problemas CORS en móvil
       });
 
       clearTimeout(timeoutId);
-      return response.ok;
+      return true; // Si no hay error, asumimos conectividad
     } catch (error) {
       console.log('🔍 Verificación de conectividad falló:', error.message);
       return false;
