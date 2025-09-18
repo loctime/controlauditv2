@@ -174,11 +174,11 @@ function Navbar(props) {
         <Toolbar sx={{
           gap: { xs: 1, sm: 2 },
           display: "flex",
-          justifyContent: "center",
+          justifyContent: { xs: "space-between", md: "center" },
           alignItems: "center",
           minHeight: { xs: 48, sm: 56 },
           height: { xs: 48, sm: 56 },
-          px: { xs: 0.5, sm: 1 },
+          px: { xs: 1, sm: 1 },
           py: 0,
           position: "relative"
         }}>
@@ -238,12 +238,11 @@ function Navbar(props) {
             </Link>
           </Box>
 
-          {/* Navegación en móvil */}
+          {/* Navegación en móvil - lado izquierdo */}
           <Box sx={{ 
             display: { xs: 'flex', md: 'none' }, 
             gap: 1,
-            alignItems: 'center',
-            flex: 1
+            alignItems: 'center'
           }}>
             <Link to={getDashboardRoute()} style={{ 
               color: "whitesmoke", 
@@ -273,16 +272,9 @@ function Navbar(props) {
             }}>
               Auditoria
             </Link>
-            
-            {/* Indicador offline para móvil */}
-            {userProfile && (
-              <Box sx={{ ml: 'auto', mr: 1 }}>
-                <OfflineIndicatorMobile userProfile={userProfile} />
-              </Box>
-            )}
           </Box>
 
-          {/* Switch de modo claro/oscuro - oculto en móvil muy pequeño */}
+          {/* Controles del lado derecho - desktop */}
           <Box sx={{ 
             display: { xs: 'none', sm: 'flex' }, 
             alignItems: 'center', 
@@ -306,33 +298,57 @@ function Navbar(props) {
               sx={{ my: 0 }}
             />
           </Box>
-          
-          {/* Botón de menú */}
-          <IconButton
-            color="inherit"
-            aria-label="open drawer"
-            onClick={handleDrawerToggle}
-            sx={{ 
-              position: 'absolute',
-              right: { xs: 4, sm: 8 },
-              top: '50%',
-              transform: 'translateY(-50%)',
-              my: 0,
-              width: { xs: 32, sm: 36 },
-              height: { xs: 32, sm: 36 },
-              '& .MuiSvgIcon-root': {
-                fontSize: { xs: '1.2rem', sm: '1.4rem' }
-              },
-              '&:focus': {
-                outline: 'none'
-              },
-              '&:active': {
-                backgroundColor: 'transparent'
-              }
-            }}
-          >
-            <MenuIcon />
-          </IconButton>
+
+          {/* Controles del lado derecho - móvil */}
+          <Box sx={{ 
+            display: { xs: 'flex', sm: 'none' }, 
+            alignItems: 'center', 
+            gap: 1
+          }}>
+            {/* Indicador offline para móvil */}
+            {userProfile && (
+              <OfflineIndicatorMobile userProfile={userProfile} />
+            )}
+
+            {/* Switch de tema para móvil */}
+            <IconButton 
+              onClick={toggleColorMode} 
+              color="inherit" 
+              aria-label="Alternar modo claro/oscuro"
+              size="small"
+              sx={{ 
+                width: 32,
+                height: 32,
+                '& .MuiSvgIcon-root': {
+                  fontSize: '1.1rem'
+                }
+              }}
+            >
+              {mode === 'dark' ? <Brightness7Icon /> : <Brightness4Icon />}
+            </IconButton>
+            
+            {/* Botón de menú hamburguesa */}
+            <IconButton
+              color="inherit"
+              aria-label="open drawer"
+              onClick={handleDrawerToggle}
+              sx={{ 
+                width: 32,
+                height: 32,
+                '& .MuiSvgIcon-root': {
+                  fontSize: '1.2rem'
+                },
+                '&:focus': {
+                  outline: 'none'
+                },
+                '&:active': {
+                  backgroundColor: 'transparent'
+                }
+              }}
+            >
+              <MenuIcon />
+            </IconButton>
+          </Box>
         </Toolbar>
       </AppBar>
       
