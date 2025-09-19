@@ -48,6 +48,45 @@ const AuthContextComponent = ({ children }) => {
       setLoading(false);
     }, 5000); // 5 segundos máximo
     
+    // Función para cargar usuario desde cache offline
+    const loadUserFromCache = async () => {
+      try {
+        if (!window.indexedDB) return null;
+        
+        const request = indexedDB.open('controlaudit_offline_v1', 2);
+        const cachedUser = await new Promise((resolve, reject) => {
+          request.onsuccess = function(event) {
+            const db = event.target.result;
+            
+            if (!db.objectStoreNames.contains('settings')) {
+              resolve(null);
+              return;
+            }
+            
+            const transaction = db.transaction(['settings'], 'readonly');
+            const store = transaction.objectStore('settings');
+            
+            store.get('complete_user_cache').onsuccess = function(e) {
+              const cached = e.target.result;
+              if (cached && cached.value && cached.value.userProfile) {
+                resolve(cached.value.userProfile);
+              } else {
+                resolve(null);
+              }
+            };
+          };
+          request.onerror = function(event) {
+            reject(event.target.error);
+          };
+        });
+        
+        return cachedUser;
+      } catch (error) {
+        console.error('Error al cargar usuario desde cache:', error);
+        return null;
+      }
+    };
+    
     // Escuchar cambios en el estado de autenticación de Firebase
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       
@@ -92,28 +131,75 @@ const AuthContextComponent = ({ children }) => {
             }
           }
         } else {
-          // Registrar log de cierre de sesión si había un usuario
-          if (user) {
-            await registrarAccionSistema(
-              user.uid,
-              `Cierre de sesión`,
-              { 
-                email: user.email,
-                displayName: user.displayName
-              },
-              'logout',
-              'usuario',
-              user.uid
-            );
+          // Si no hay usuario de Firebase, verificar si estamos offline y hay cache
+          if (!navigator.onLine) {
+            console.log('🔌 Sin conexión, verificando cache offline...');
+            const cachedUser = await loadUserFromCache();
+            
+            if (cachedUser) {
+              console.log('✅ Usuario encontrado en cache offline:', cachedUser.uid);
+              
+              // Crear un objeto usuario simulado para el cache
+              const simulatedUser = {
+                uid: cachedUser.uid,
+                email: cachedUser.email,
+                displayName: cachedUser.displayName || cachedUser.email,
+                emailVerified: true,
+                isAnonymous: false,
+                metadata: {
+                  creationTime: cachedUser.createdAt || new Date().toISOString(),
+                  lastSignInTime: new Date().toISOString()
+                }
+              };
+              
+              setUser(simulatedUser);
+              setIsLogged(true);
+              localStorage.setItem("userInfo", JSON.stringify(simulatedUser));
+              localStorage.setItem("isLogged", JSON.stringify(true));
+              
+              // Cargar datos del cache
+              if (cachedUser.empresas) {
+                setUserEmpresas(cachedUser.empresas);
+              }
+              if (cachedUser.auditorias) {
+                setUserAuditorias(cachedUser.auditorias);
+              }
+              
+              console.log('✅ Usuario offline cargado desde cache');
+            } else {
+              console.log('❌ No hay usuario en cache offline');
+              setUser(null);
+              setIsLogged(false);
+              setUserEmpresas([]);
+              setUserAuditorias([]);
+              setAuditoriasCompartidas([]);
+              localStorage.removeItem("userInfo");
+              localStorage.removeItem("isLogged");
+            }
+          } else {
+            // Registrar log de cierre de sesión si había un usuario
+            if (user) {
+              await registrarAccionSistema(
+                user.uid,
+                `Cierre de sesión`,
+                { 
+                  email: user.email,
+                  displayName: user.displayName
+                },
+                'logout',
+                'usuario',
+                user.uid
+              );
+            }
+            
+            setUser(null);
+            setIsLogged(false);
+            setUserEmpresas([]);
+            setUserAuditorias([]);
+            setAuditoriasCompartidas([]);
+            localStorage.removeItem("userInfo");
+            localStorage.removeItem("isLogged");
           }
-          
-          setUser(null);
-          setIsLogged(false);
-          setUserEmpresas([]);
-          setUserAuditorias([]);
-          setAuditoriasCompartidas([]);
-          localStorage.removeItem("userInfo");
-          localStorage.removeItem("isLogged");
         }
       } catch (error) {
         console.error('AuthContext error in onAuthStateChanged:', error);
