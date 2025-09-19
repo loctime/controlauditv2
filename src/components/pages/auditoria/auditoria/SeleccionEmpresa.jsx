@@ -172,7 +172,7 @@ const SeleccionEmpresa = ({ empresas, empresaSeleccionada, onChange }) => {
             </MenuItem>
             {empresas.map((empresa) => (
               <MenuItem 
-                key={empresa.nombre} 
+                key={empresa.id || empresa.nombre} 
                 value={empresa.nombre} 
                 sx={{
                   display: 'flex',
