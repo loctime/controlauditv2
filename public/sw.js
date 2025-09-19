@@ -1,7 +1,7 @@
 // Service Worker para ControlAudit PWA
-const CACHE_NAME = 'controlaudit-v8';
-const STATIC_CACHE = 'controlaudit-static-v8';
-const DYNAMIC_CACHE = 'controlaudit-dynamic-v8';
+const CACHE_NAME = 'controlaudit-v9';
+const STATIC_CACHE = 'controlaudit-static-v9';
+const DYNAMIC_CACHE = 'controlaudit-dynamic-v9';
 
 // Recursos críticos que deben estar siempre en cache
 const urlsToCache = [
@@ -43,6 +43,36 @@ const shouldCache = (url) => {
   
   // Cachear si coincide con algún patrón
   return CACHE_PATTERNS.some(pattern => pattern.test(urlObj.pathname));
+};
+
+// Función para crear respuestas offline
+const createOfflineResponse = (request) => {
+  const url = new URL(request.url);
+  const pathname = url.pathname;
+  
+  if (pathname.includes('.js')) {
+    return new Response('// Recurso no disponible offline', {
+      status: 200,
+      statusText: 'OK',
+      headers: { 'Content-Type': 'application/javascript' }
+    });
+  } else if (pathname.includes('.css')) {
+    return new Response('/* Recurso no disponible offline */', {
+      status: 200,
+      statusText: 'OK',
+      headers: { 'Content-Type': 'text/css' }
+    });
+  } else if (pathname.match(/\.(png|jpg|jpeg|gif|svg)$/)) {
+    return new Response('', {
+      status: 404,
+      statusText: 'Not Found'
+    });
+  }
+  
+  return new Response('Recurso no disponible offline', { 
+    status: 404, 
+    statusText: 'Not Found' 
+  });
 };
 
 // Instalación del Service Worker
@@ -117,39 +147,32 @@ self.addEventListener('fetch', (event) => {
             return response;
           }
 
-          return fetch(event.request)
-            .then((response) => {
-              if (!response || response.status !== 200 || response.type !== 'basic') {
+          // Solo intentar fetch si estamos online
+          if (navigator.onLine) {
+            return fetch(event.request)
+              .then((response) => {
+                if (!response || response.status !== 200 || response.type !== 'basic') {
+                  return response;
+                }
+
+                const responseToCache = response.clone();
+                caches.open(DYNAMIC_CACHE)
+                  .then((cache) => {
+                    cache.put(event.request, responseToCache);
+                    console.log('💾 Recurso estático cacheado:', event.request.url);
+                  });
+
                 return response;
-              }
-
-              const responseToCache = response.clone();
-              caches.open(DYNAMIC_CACHE)
-                .then((cache) => {
-                  cache.put(event.request, responseToCache);
-                  console.log('💾 Recurso estático cacheado:', event.request.url);
-                });
-
-              return response;
-            })
-            .catch((error) => {
-              console.warn('❌ Error en fetch estático:', error);
-              // Para recursos estáticos, devolver una respuesta válida
-              if (event.request.url.includes('.js') || event.request.url.includes('.css')) {
-                return new Response('// Recurso no disponible offline', {
-                  status: 200,
-                  statusText: 'OK',
-                  headers: {
-                    'Content-Type': event.request.url.includes('.js') ? 'application/javascript' : 'text/css'
-                  }
-                });
-              }
-              // Para otros recursos, devolver 404
-              return new Response('Recurso no disponible offline', { 
-                status: 404, 
-                statusText: 'Not Found' 
+              })
+              .catch((error) => {
+                console.warn('❌ Error en fetch estático:', error);
+                return createOfflineResponse(event.request);
               });
-            });
+          } else {
+            // Si estamos offline, devolver respuesta offline directamente
+            console.log('📱 Offline - devolviendo respuesta offline para:', event.request.url);
+            return createOfflineResponse(event.request);
+          }
         })
     );
     return;
@@ -158,33 +181,47 @@ self.addEventListener('fetch', (event) => {
   // Estrategia Network First para navegación
   if (event.request.mode === 'navigate') {
     event.respondWith(
-      fetch(event.request)
+      caches.match(event.request)
         .then((response) => {
-          // Cachear la respuesta de navegación
-          const responseToCache = response.clone();
-          caches.open(DYNAMIC_CACHE)
-            .then((cache) => {
-              cache.put(event.request, responseToCache);
-            });
-          return response;
-        })
-        .catch((error) => {
-          console.warn('❌ Error en navegación:', error);
-          // Intentar servir index.html desde cache
-          return caches.match('/index.html')
-            .then((response) => {
-              if (response) {
+          if (response) {
+            console.log('📦 Cache hit (navigate):', event.request.url);
+            return response;
+          }
+
+          // Solo intentar fetch si estamos online
+          if (navigator.onLine) {
+            return fetch(event.request)
+              .then((response) => {
+                // Cachear la respuesta de navegación
+                const responseToCache = response.clone();
+                caches.open(DYNAMIC_CACHE)
+                  .then((cache) => {
+                    cache.put(event.request, responseToCache);
+                  });
                 return response;
-              }
-              // Si no hay index.html en cache, devolver una respuesta básica
-              return new Response('<!DOCTYPE html><html><head><title>ControlAudit</title></head><body><h1>ControlAudit Offline</h1><p>La aplicación no está disponible offline. Conecta a internet para continuar.</p></body></html>', {
-                status: 200,
-                statusText: 'OK',
-                headers: {
-                  'Content-Type': 'text/html'
-                }
+              })
+              .catch((error) => {
+                console.warn('❌ Error en navegación:', error);
+                return caches.match('/index.html');
               });
-            });
+          } else {
+            // Si estamos offline, intentar servir index.html desde cache
+            console.log('📱 Offline - intentando servir index.html desde cache');
+            return caches.match('/index.html')
+              .then((response) => {
+                if (response) {
+                  return response;
+                }
+                // Si no hay index.html en cache, devolver una respuesta básica
+                return new Response('<!DOCTYPE html><html><head><title>ControlAudit</title></head><body><h1>ControlAudit Offline</h1><p>La aplicación no está disponible offline. Conecta a internet para continuar.</p></body></html>', {
+                  status: 200,
+                  statusText: 'OK',
+                  headers: {
+                    'Content-Type': 'text/html'
+                  }
+                });
+              });
+          }
         })
     );
     return;
@@ -199,51 +236,32 @@ self.addEventListener('fetch', (event) => {
           return response;
         }
 
-        return fetch(event.request)
-          .then((response) => {
-            if (!response || response.status !== 200 || response.type !== 'basic') {
+        // Solo intentar fetch si estamos online
+        if (navigator.onLine) {
+          return fetch(event.request)
+            .then((response) => {
+              if (!response || response.status !== 200 || response.type !== 'basic') {
+                return response;
+              }
+
+              const responseToCache = response.clone();
+              caches.open(DYNAMIC_CACHE)
+                .then((cache) => {
+                  cache.put(event.request, responseToCache);
+                  console.log('💾 Recurso cacheado:', event.request.url);
+                });
+
               return response;
-            }
-
-            const responseToCache = response.clone();
-            caches.open(DYNAMIC_CACHE)
-              .then((cache) => {
-                cache.put(event.request, responseToCache);
-                console.log('💾 Recurso cacheado:', event.request.url);
-              });
-
-            return response;
-          })
-          .catch((error) => {
-            console.warn('❌ Error en fetch:', error);
-            // Devolver una respuesta válida según el tipo de recurso
-            const url = new URL(event.request.url);
-            const pathname = url.pathname;
-            
-            if (pathname.includes('.js')) {
-              return new Response('// Recurso no disponible offline', {
-                status: 200,
-                statusText: 'OK',
-                headers: { 'Content-Type': 'application/javascript' }
-              });
-            } else if (pathname.includes('.css')) {
-              return new Response('/* Recurso no disponible offline */', {
-                status: 200,
-                statusText: 'OK',
-                headers: { 'Content-Type': 'text/css' }
-              });
-            } else if (pathname.match(/\.(png|jpg|jpeg|gif|svg)$/)) {
-              return new Response('', {
-                status: 404,
-                statusText: 'Not Found'
-              });
-            }
-            
-            return new Response('Recurso no disponible offline', { 
-              status: 404, 
-              statusText: 'Not Found' 
+            })
+            .catch((error) => {
+              console.warn('❌ Error en fetch:', error);
+              return createOfflineResponse(event.request);
             });
-          });
+        } else {
+          // Si estamos offline, devolver respuesta offline directamente
+          console.log('📱 Offline - devolviendo respuesta offline para:', event.request.url);
+          return createOfflineResponse(event.request);
+        }
       })
   );
 });
