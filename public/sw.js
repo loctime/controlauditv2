@@ -1,7 +1,7 @@
 // Service Worker para ControlAudit PWA
-const CACHE_NAME = 'controlaudit-v6';
-const STATIC_CACHE = 'controlaudit-static-v6';
-const DYNAMIC_CACHE = 'controlaudit-dynamic-v6';
+const CACHE_NAME = 'controlaudit-v7';
+const STATIC_CACHE = 'controlaudit-static-v7';
+const DYNAMIC_CACHE = 'controlaudit-dynamic-v7';
 
 // Recursos críticos que deben estar siempre en cache
 const urlsToCache = [
@@ -15,7 +15,8 @@ const urlsToCache = [
   '/icons/icon-192x192.png',
   '/icons/icon-512x512.png',
   '/vite.svg',
-  '/loguitoaudit.png'
+  '/loguitoaudit.png',
+  '/clear-cache.js'
 ];
 
 // Patrones de recursos que deben ser cacheados dinámicamente
@@ -30,6 +31,19 @@ const CACHE_PATTERNS = [
   /\.ttf$/,
   /\.eot$/
 ];
+
+// Función para verificar si un recurso debe ser cacheado
+const shouldCache = (url) => {
+  const urlObj = new URL(url);
+  
+  // Solo cachear recursos del mismo origen
+  if (urlObj.origin !== location.origin) {
+    return false;
+  }
+  
+  // Cachear si coincide con algún patrón
+  return CACHE_PATTERNS.some(pattern => pattern.test(urlObj.pathname));
+};
 
 // Instalación del Service Worker
 self.addEventListener('install', (event) => {
@@ -93,53 +107,90 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // Estrategia Cache First para recursos estáticos
+  if (shouldCache(event.request.url)) {
+    event.respondWith(
+      caches.match(event.request)
+        .then((response) => {
+          if (response) {
+            console.log('📦 Cache hit (static):', event.request.url);
+            return response;
+          }
+
+          return fetch(event.request)
+            .then((response) => {
+              if (!response || response.status !== 200 || response.type !== 'basic') {
+                return response;
+              }
+
+              const responseToCache = response.clone();
+              caches.open(DYNAMIC_CACHE)
+                .then((cache) => {
+                  cache.put(event.request, responseToCache);
+                  console.log('💾 Recurso estático cacheado:', event.request.url);
+                });
+
+              return response;
+            })
+            .catch((error) => {
+              console.warn('❌ Error en fetch estático:', error);
+              return new Response('Recurso no disponible offline', { 
+                status: 503, 
+                statusText: 'Service Unavailable' 
+              });
+            });
+        })
+    );
+    return;
+  }
+
+  // Estrategia Network First para navegación
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => {
+          // Cachear la respuesta de navegación
+          const responseToCache = response.clone();
+          caches.open(DYNAMIC_CACHE)
+            .then((cache) => {
+              cache.put(event.request, responseToCache);
+            });
+          return response;
+        })
+        .catch((error) => {
+          console.warn('❌ Error en navegación:', error);
+          return caches.match('/index.html');
+        })
+    );
+    return;
+  }
+
+  // Para otros requests, usar estrategia por defecto
   event.respondWith(
     caches.match(event.request)
       .then((response) => {
-        // Cache hit - devolver respuesta
         if (response) {
           console.log('📦 Cache hit:', event.request.url);
           return response;
         }
 
-        // Cache miss - intentar fetch
         return fetch(event.request)
           .then((response) => {
-            // Verificar si recibimos una respuesta válida
             if (!response || response.status !== 200 || response.type !== 'basic') {
               return response;
             }
 
-            // Determinar qué cache usar
-            const shouldCache = CACHE_PATTERNS.some(pattern => pattern.test(url.pathname));
-            if (!shouldCache) {
-              return response;
-            }
-
-            // Clonar la respuesta para cachear
             const responseToCache = response.clone();
-
-            // Cachear en cache dinámico
             caches.open(DYNAMIC_CACHE)
               .then((cache) => {
                 cache.put(event.request, responseToCache);
-                console.log('💾 Recurso cacheados:', event.request.url);
-              })
-              .catch((error) => {
-                console.warn('⚠️ Error al cachear:', error);
+                console.log('💾 Recurso cacheado:', event.request.url);
               });
 
             return response;
           })
           .catch((error) => {
             console.warn('❌ Error en fetch:', error);
-            
-            // Para rutas de la app, devolver index.html (SPA fallback)
-            if (event.request.mode === 'navigate') {
-              return caches.match('/index.html');
-            }
-            
-            // Para otros recursos, devolver respuesta de error
             return new Response('Recurso no disponible offline', { 
               status: 503, 
               statusText: 'Service Unavailable' 

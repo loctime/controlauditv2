@@ -7,6 +7,7 @@ import { useUserProfile } from '../../hooks/useUserProfile';
 import { useUserManagement } from '../../hooks/useUserManagement';
 import { empresaService } from '../../services/empresaService';
 import { auditoriaService } from '../../services/auditoriaService';
+import { saveCompleteUserCache } from '../../services/completeOfflineCache';
 
 // Definimos y exportamos el contexto
 export const AuthContext = createContext();
@@ -81,6 +82,14 @@ const AuthContextComponent = ({ children }) => {
               loadUserAuditorias(firebaseUser.uid),
               loadAuditoriasCompartidas(firebaseUser.uid)
             ]);
+
+            // Guardar cache completo para funcionamiento offline
+            try {
+              await saveCompleteUserCache(profile);
+              console.log('✅ Cache completo guardado para usuario:', firebaseUser.uid);
+            } catch (error) {
+              console.warn('⚠️ Error guardando cache completo:', error);
+            }
           }
         } else {
           // Registrar log de cierre de sesión si había un usuario

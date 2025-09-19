@@ -11,6 +11,7 @@ import userService from "../../../services/userService";
 import { getEnvironmentInfo } from "../../../config/environment.js";
 import BackendHealthCheck from "../../../utils/backendHealthCheck.js";
 import BackendStatus from "../../../utils/backendStatus.js";
+import CacheManager from "../../common/CacheManager";
 
 // Datos de ejemplo (se mantienen como fallback)
 const empresasEjemplo = [
@@ -520,6 +521,9 @@ function Dashboard() {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Cache Manager */}
+      <CacheManager />
 
       <Grid container spacing={3}>
         {/* Resumen de pagos */}

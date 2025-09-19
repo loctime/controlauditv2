@@ -26,29 +26,11 @@
     <link rel="apple-touch-icon" sizes="57x57" href="/icons/icon-72x72.png" />
     <link rel="manifest" href="/manifest.json?v=5" />
     <script>
-      // Limpiar cache y registrar Service Worker
+      // Registrar Service Worker mejorado
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
-          // Limpiar cache existente
-          caches.keys().then((cacheNames) => {
-            cacheNames.forEach((cacheName) => {
-              console.log('Eliminando cache:', cacheName);
-              caches.delete(cacheName);
-            });
-          });
-          
-          // Eliminar Service Worker existente y deshabilitar registro
-          if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.getRegistrations().then(function(registrations) {
-              for(let registration of registrations) {
-                console.log('Eliminando SW existente:', registration.scope);
-                registration.unregister();
-              }
-            });
-          }
-          
-          // Registrar Service Worker mejorado
-          navigator.serviceWorker.register('/sw.js?v=6')
+          // Registrar Service Worker
+          navigator.serviceWorker.register('/sw.js?v=7')
             .then((registration) => {
               console.log('✅ Service Worker registrado:', registration.scope);
               
@@ -69,6 +51,9 @@
         });
       }
     </script>
+    
+    <!-- Script para limpiar cache (ejecutar en consola si es necesario) -->
+    <script src="/clear-cache.js"></script>
     <!-- <link rel="preconnect" href="https://fonts.googleapis.com"> -->
     <!-- <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin> -->
   </head>

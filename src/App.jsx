@@ -47,12 +47,8 @@ const App = () => {
     }
   };
 
-  // Mostrar fallback offline solo en la carga inicial sin conexión
-  if (isInitialLoad) {
-    return <div>Cargando...</div>;
-  }
-
-  if (!isOnline && !hasLoadedOnce) {
+  // Mostrar fallback offline solo si nunca se cargó y no hay conexión
+  if (!isInitialLoad && !isOnline && !hasLoadedOnce) {
     return <OfflineFallback onRetry={handleRetry} />;
   }
 
