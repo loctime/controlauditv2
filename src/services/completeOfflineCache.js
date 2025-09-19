@@ -20,6 +20,7 @@ export const saveCompleteUserCache = async (userProfile) => {
       throw new Error('No hay usuario autenticado');
     }
 
+
     const offlineDb = await getOfflineDatabase();
     const cacheData = {
       userId: userProfile.uid,
@@ -32,108 +33,38 @@ export const saveCompleteUserCache = async (userProfile) => {
       version: CACHE_VERSION
     };
 
-    // Obtener y cachear empresas del usuario (filtrar según rol)
+    // Obtener y cachear empresas del usuario
     try {
-      let empresasData = [];
-      
-      if (userProfile.role === 'supermax') {
-        // Supermax ve todas las empresas
-        const empresasSnapshot = await getDocs(collection(db, 'empresas'));
-        empresasData = empresasSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
-      } else if (userProfile.role === 'max') {
-        // Max ve solo sus empresas
-        const empresasQuery = query(
-          collection(db, 'empresas'),
-          where('propietarioId', '==', userProfile.uid)
-        );
-        const empresasSnapshot = await getDocs(empresasQuery);
-        empresasData = empresasSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
-      } else if (userProfile.role === 'cliente') {
-        // Cliente ve empresas de su clienteAdminId
-        const empresasQuery = query(
-          collection(db, 'empresas'),
-          where('clienteAdminId', '==', userProfile.clienteAdminId || userProfile.uid)
-        );
-        const empresasSnapshot = await getDocs(empresasQuery);
-        empresasData = empresasSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
-      } else {
-        // Operario ve empresas de su clienteAdminId
-        const empresasQuery = query(
-          collection(db, 'empresas'),
-          where('clienteAdminId', '==', userProfile.clienteAdminId || userProfile.uid)
-        );
-        const empresasSnapshot = await getDocs(empresasQuery);
-        empresasData = empresasSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
-      }
-      
-      cacheData.empresas = empresasData;
-      console.log('✅ Empresas cacheadas (filtradas por rol):', cacheData.empresas.length);
+      const empresasSnapshot = await getDocs(collection(db, 'empresas'));
+      cacheData.empresas = empresasSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      console.log('✅ Empresas cacheadas:', cacheData.empresas.length);
     } catch (error) {
       console.warn('⚠️ Error cacheando empresas:', error);
     }
 
-    // Obtener y cachear formularios del usuario (filtrar según permisos)
+    // Obtener y cachear formularios del usuario
     try {
-      let formulariosData = [];
-      
-      if (userProfile.role === 'supermax') {
-        // Supermax ve todos los formularios
-        const formulariosSnapshot = await getDocs(collection(db, 'formularios'));
-        formulariosData = formulariosSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
-      } else {
-        // Otros roles ven formularios según clienteAdminId
-        const formulariosQuery = query(
-          collection(db, 'formularios'),
-          where('clienteAdminId', '==', userProfile.clienteAdminId || userProfile.uid)
-        );
-        const formulariosSnapshot = await getDocs(formulariosQuery);
-        formulariosData = formulariosSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
-      }
-      
-      cacheData.formularios = formulariosData;
-      console.log('✅ Formularios cacheados (filtrados por rol):', cacheData.formularios.length);
+      const formulariosSnapshot = await getDocs(collection(db, 'formularios'));
+      cacheData.formularios = formulariosSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      console.log('✅ Formularios cacheados:', cacheData.formularios.length);
     } catch (error) {
       console.warn('⚠️ Error cacheando formularios:', error);
     }
 
-    // Obtener y cachear sucursales (filtrar según empresas del usuario)
+    // Obtener y cachear sucursales
     try {
-      let sucursalesData = [];
-      
-      if (cacheData.empresas && cacheData.empresas.length > 0) {
-        // Filtrar sucursales solo de las empresas del usuario
-        const empresaIds = cacheData.empresas.map(empresa => empresa.id);
-        const sucursalesQuery = query(
-          collection(db, 'sucursales'),
-          where('empresaId', 'in', empresaIds)
-        );
-        const sucursalesSnapshot = await getDocs(sucursalesQuery);
-        sucursalesData = sucursalesSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
-      }
-      
-      cacheData.sucursales = sucursalesData;
-      console.log('✅ Sucursales cacheadas (filtradas por empresas):', cacheData.sucursales.length);
+      const sucursalesSnapshot = await getDocs(collection(db, 'sucursales'));
+      cacheData.sucursales = sucursalesSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      console.log('✅ Sucursales cacheadas:', cacheData.sucursales.length);
     } catch (error) {
       console.warn('⚠️ Error cacheando sucursales:', error);
     }
