@@ -213,9 +213,18 @@ self.addEventListener('fetch', (event) => {
                 return createOfflineResponse(event.request);
               });
           } else {
-            // Si estamos offline, devolver respuesta offline directamente
-            console.log('📱 Offline - devolviendo respuesta offline para:', event.request.url);
-            return createOfflineResponse(event.request);
+            // Si estamos offline, intentar desde cache primero
+            console.log('📱 Offline - buscando en cache para:', event.request.url);
+            return caches.match(event.request)
+              .then((cachedResponse) => {
+                if (cachedResponse) {
+                  console.log('📦 Cache hit (offline):', event.request.url);
+                  return cachedResponse;
+                } else {
+                  console.log('❌ No encontrado en cache, devolviendo respuesta offline para:', event.request.url);
+                  return createOfflineResponse(event.request);
+                }
+              });
           }
         })
     );
