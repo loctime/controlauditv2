@@ -8,6 +8,9 @@ const ProtectedUsers = () => {
   
   // Debug: mostrar información del usuario
   console.log('ProtectedUsers - isLogged:', isLogged, 'loading:', loading, 'bloqueado:', bloqueado, 'role:', role, 'permisos:', permisos);
+  
+  // Verificar si hay usuario en cache offline
+  const hasOfflineUser = localStorage.getItem("isLogged") === "true" && localStorage.getItem("userInfo");
 
   if (loading) {
     return (
@@ -131,7 +134,8 @@ const ProtectedUsers = () => {
   }
 
   // Si está al día o no tiene estado de pago, navegación normal
-  return isLogged ? <Outlet /> : <Navigate to="/login" />;
+  // Permitir acceso si está logueado O si hay usuario en cache offline
+  return (isLogged || hasOfflineUser) ? <Outlet /> : <Navigate to="/login" />;
 };
 
 export default ProtectedUsers;
