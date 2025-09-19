@@ -45,10 +45,24 @@ const BotonGenerarReporte = ({
       if (!currentUserProfile) {
         console.log('[BotonGenerarReporte] userProfile no disponible, buscando en cache...');
         try {
+          // Verificar si IndexedDB está disponible
+          if (!window.indexedDB) {
+            console.warn('[BotonGenerarReporte] IndexedDB no está disponible');
+            throw new Error('IndexedDB no disponible');
+          }
+
           const request = indexedDB.open('controlaudit_offline_v1', 2);
           const cachedUser = await new Promise((resolve, reject) => {
             request.onsuccess = function(event) {
               const db = event.target.result;
+              
+              // Verificar si la object store 'settings' existe
+              if (!db.objectStoreNames.contains('settings')) {
+                console.warn('[BotonGenerarReporte] Object store "settings" no existe');
+                resolve(null);
+                return;
+              }
+              
               const transaction = db.transaction(['settings'], 'readonly');
               const store = transaction.objectStore('settings');
               
@@ -60,18 +74,33 @@ const BotonGenerarReporte = ({
                   resolve(null);
                 }
               };
+              
+              store.get('complete_user_cache').onerror = function(e) {
+                console.error('[BotonGenerarReporte] Error al obtener cache:', e.target.error);
+                resolve(null);
+              };
             };
+            
             request.onerror = function(event) {
+              console.error('[BotonGenerarReporte] Error al abrir IndexedDB:', event.target.error);
               reject(event.target.error);
+            };
+            
+            request.onupgradeneeded = function(event) {
+              console.log('[BotonGenerarReporte] IndexedDB necesita actualización');
+              // No hacer nada aquí, solo para evitar errores
             };
           });
           
           if (cachedUser) {
             currentUserProfile = cachedUser;
             console.log('[BotonGenerarReporte] Usuario encontrado en cache:', currentUserProfile.uid);
+          } else {
+            console.log('[BotonGenerarReporte] No se encontró usuario en cache');
           }
         } catch (error) {
           console.error('[BotonGenerarReporte] Error al obtener usuario del cache:', error);
+          // Continuar sin userProfile del cache
         }
       }
 
