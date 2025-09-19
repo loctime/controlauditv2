@@ -1,7 +1,7 @@
 // Service Worker para ControlAudit PWA
-const CACHE_NAME = 'controlaudit-v11';
-const STATIC_CACHE = 'controlaudit-static-v11';
-const DYNAMIC_CACHE = 'controlaudit-dynamic-v11';
+const CACHE_NAME = 'controlaudit-v12';
+const STATIC_CACHE = 'controlaudit-static-v12';
+const DYNAMIC_CACHE = 'controlaudit-dynamic-v12';
 
 // Recursos críticos que deben estar siempre en cache
 const urlsToCache = [
@@ -73,6 +73,36 @@ const createOfflineResponse = (request) => {
       statusText: 'OK',
       headers: { 
         'Content-Type': 'text/css',
+        'Cache-Control': 'no-cache'
+      }
+    });
+  } else if (pathname.includes('manifest.json')) {
+    // Para manifest.json, devolver un manifest válido básico
+    const basicManifest = {
+      "name": "ControlAudit",
+      "short_name": "ControlAudit",
+      "start_url": "/",
+      "display": "standalone",
+      "background_color": "#ffffff",
+      "theme_color": "#000000",
+      "icons": [
+        {
+          "src": "/icons/icon-192x192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        },
+        {
+          "src": "/icons/icon-512x512.png",
+          "sizes": "512x512",
+          "type": "image/png"
+        }
+      ]
+    };
+    return new Response(JSON.stringify(basicManifest), {
+      status: 200,
+      statusText: 'OK',
+      headers: { 
+        'Content-Type': 'application/json',
         'Cache-Control': 'no-cache'
       }
     });
