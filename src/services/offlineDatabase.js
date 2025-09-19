@@ -8,7 +8,7 @@ import { openDB } from 'idb';
  * Configuración de la base de datos offline
  */
 const DB_NAME = 'controlaudit_offline_v1';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
 /**
  * Inicializar y configurar la base de datos IndexedDB
@@ -38,6 +38,23 @@ export const initOfflineDatabase = async () => {
 
         // Store para configuraciones
         db.createObjectStore('settings', { keyPath: 'key' });
+
+        // Store para perfil de usuario
+        const userProfileStore = db.createObjectStore('userProfile', { keyPath: 'uid' });
+        userProfileStore.createIndex('by-email', 'email');
+        userProfileStore.createIndex('by-role', 'role');
+
+        // Store para empresas
+        const empresasStore = db.createObjectStore('empresas', { keyPath: 'id' });
+        empresasStore.createIndex('by-propietarioId', 'propietarioId');
+        empresasStore.createIndex('by-creadorId', 'creadorId');
+        empresasStore.createIndex('by-nombre', 'nombre');
+
+        // Store para formularios
+        const formulariosStore = db.createObjectStore('formularios', { keyPath: 'id' });
+        formulariosStore.createIndex('by-creadorId', 'creadorId');
+        formulariosStore.createIndex('by-clienteAdminId', 'clienteAdminId');
+        formulariosStore.createIndex('by-nombre', 'nombre');
 
         console.log('✅ Base de datos offline inicializada correctamente');
       },
