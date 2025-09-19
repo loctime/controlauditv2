@@ -388,6 +388,7 @@ class AuditoriaService {
         ...datosAuditoria,
         userId: userProfile?.uid,
         userEmail: userProfile?.email,
+        usuarioEmail: userProfile?.email, // Campo adicional para compatibilidad
         clienteAdminId: userProfile?.clienteAdminId || userProfile?.uid,
         createdAt: Date.now(),
         updatedAt: Date.now(),

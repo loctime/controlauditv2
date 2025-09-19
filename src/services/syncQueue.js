@@ -268,7 +268,7 @@ class SyncQueueService {
     const auditoriaData = item.payload;
     const userProfile = {
       uid: auditoriaData.userId,
-      email: auditoriaData.userEmail || 'usuario@ejemplo.com',
+      email: auditoriaData.userEmail || auditoriaData.usuarioEmail || 'usuario@ejemplo.com',
       clienteAdminId: auditoriaData.clienteAdminId
     };
 
