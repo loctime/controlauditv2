@@ -35,6 +35,7 @@ export const useOfflineData = () => {
 
     // 1. Intentar cargar desde cache offline
     try {
+      console.log('🔍 Intentando cargar cache offline para usuario:', user.uid);
       cachedData = await getCompleteUserCache(user.uid);
       if (cachedData) {
         setProfile(cachedData.userProfile);
@@ -42,7 +43,12 @@ export const useOfflineData = () => {
         setFormularios(cachedData.formularios || []);
         setAuditorias(cachedData.auditorias || []);
         setCacheLoaded(true);
-        console.log('✅ Datos cargados desde cache offline.');
+        console.log('✅ Datos cargados desde cache offline:', {
+          empresas: (cachedData.empresas || []).length,
+          formularios: (cachedData.formularios || []).length
+        });
+      } else {
+        console.log('⚠️ No hay datos en cache offline para usuario:', user.uid);
       }
     } catch (err) {
       console.warn('⚠️ Error al cargar datos desde cache offline:', err);
