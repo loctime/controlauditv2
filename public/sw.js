@@ -1,7 +1,7 @@
 // Service Worker para ControlAudit PWA
-const CACHE_NAME = 'controlaudit-v12';
-const STATIC_CACHE = 'controlaudit-static-v12';
-const DYNAMIC_CACHE = 'controlaudit-dynamic-v12';
+const CACHE_NAME = 'controlaudit-v13';
+const STATIC_CACHE = 'controlaudit-static-v13';
+const DYNAMIC_CACHE = 'controlaudit-dynamic-v13';
 
 // Recursos críticos que deben estar siempre en cache
 const urlsToCache = [
@@ -23,7 +23,14 @@ const urlsToCache = [
   '/establecimientos',
   '/formularios',
   '/reportes',
-  '/perfil'
+  '/perfil',
+  // Páginas adicionales para carga de datos
+  '/establecimientos/',
+  '/formularios/',
+  '/auditoria/',
+  '/dashboard/',
+  '/reportes/',
+  '/perfil/'
 ];
 
 // Patrones de recursos que deben ser cacheados dinámicamente
