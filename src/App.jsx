@@ -59,8 +59,13 @@ const App = () => {
           <BrowserRouter>
             <div className="main-app-container">
               <AppRouter />
-              <PWAInstallPrompt />
-              <PWADownloadButton />
+              {/* Solo mostrar componentes PWA cuando no esté en loading inicial */}
+              {!isInitialLoad && (
+                <>
+                  <PWAInstallPrompt />
+                  <PWADownloadButton />
+                </>
+              )}
               <ToastContainer
                 position="top-right"
                 autoClose={5000}
