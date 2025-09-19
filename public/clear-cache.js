@@ -58,7 +58,30 @@ window.clearCache = function() {
   }, 2000);
 };
 
+// Función para forzar actualización del Service Worker
+window.forceUpdate = function() {
+  console.log('🔄 Forzando actualización del Service Worker...');
+  
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.getRegistrations().then(function(registrations) {
+      registrations.forEach(function(registration) {
+        registration.update();
+        console.log('🔄 Service Worker actualizado');
+      });
+    });
+  }
+  
+  // Recargar después de 1 segundo
+  setTimeout(() => {
+    window.location.reload();
+  }, 1000);
+};
+
 // Ejecutar automáticamente si se llama directamente
 if (window.location.search.includes('clear-cache')) {
   window.clearCache();
+}
+
+if (window.location.search.includes('force-update')) {
+  window.forceUpdate();
 }

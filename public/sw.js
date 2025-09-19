@@ -1,7 +1,7 @@
 // Service Worker para ControlAudit PWA
-const CACHE_NAME = 'controlaudit-v9';
-const STATIC_CACHE = 'controlaudit-static-v9';
-const DYNAMIC_CACHE = 'controlaudit-dynamic-v9';
+const CACHE_NAME = 'controlaudit-v10';
+const STATIC_CACHE = 'controlaudit-static-v10';
+const DYNAMIC_CACHE = 'controlaudit-dynamic-v10';
 
 // Recursos críticos que deben estar siempre en cache
 const urlsToCache = [
@@ -51,16 +51,23 @@ const createOfflineResponse = (request) => {
   const pathname = url.pathname;
   
   if (pathname.includes('.js')) {
-    return new Response('// Recurso no disponible offline', {
+    // Para archivos JS, devolver un módulo vacío válido
+    return new Response('export {};', {
       status: 200,
       statusText: 'OK',
-      headers: { 'Content-Type': 'application/javascript' }
+      headers: { 
+        'Content-Type': 'application/javascript',
+        'Cache-Control': 'no-cache'
+      }
     });
   } else if (pathname.includes('.css')) {
     return new Response('/* Recurso no disponible offline */', {
       status: 200,
       statusText: 'OK',
-      headers: { 'Content-Type': 'text/css' }
+      headers: { 
+        'Content-Type': 'text/css',
+        'Cache-Control': 'no-cache'
+      }
     });
   } else if (pathname.match(/\.(png|jpg|jpeg|gif|svg)$/)) {
     return new Response('', {
