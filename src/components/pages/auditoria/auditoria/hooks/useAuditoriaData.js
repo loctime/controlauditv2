@@ -17,8 +17,13 @@ export const useAuditoriaData = (
   // Función para cargar datos del cache offline
   const cargarDatosDelCache = async () => {
     try {
-      console.log('[DEBUG Auditoria] Intentando cargar datos del cache offline...');
-      const cacheData = await getCompleteUserCache();
+      if (!userProfile?.uid) {
+        console.log('[DEBUG Auditoria] No hay usuario autenticado para cargar cache');
+        return null;
+      }
+
+      console.log('[DEBUG Auditoria] Intentando cargar datos del cache offline para usuario:', userProfile.uid);
+      const cacheData = await getCompleteUserCache(userProfile.uid);
       
       if (cacheData && cacheData.empresas && cacheData.empresas.length > 0) {
         console.log('[DEBUG Auditoria] Empresas encontradas en cache:', cacheData.empresas.length);
