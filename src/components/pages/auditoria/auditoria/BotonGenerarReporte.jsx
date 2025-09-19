@@ -39,6 +39,42 @@ const BotonGenerarReporte = ({
 
     setGuardando(true);
     try {
+      // Obtener userProfile del cache si no está disponible (modo offline)
+      let currentUserProfile = userProfile;
+      
+      if (!currentUserProfile) {
+        console.log('[BotonGenerarReporte] userProfile no disponible, buscando en cache...');
+        try {
+          const request = indexedDB.open('controlaudit_offline_v1', 2);
+          const cachedUser = await new Promise((resolve, reject) => {
+            request.onsuccess = function(event) {
+              const db = event.target.result;
+              const transaction = db.transaction(['settings'], 'readonly');
+              const store = transaction.objectStore('settings');
+              
+              store.get('complete_user_cache').onsuccess = function(e) {
+                const cached = e.target.result;
+                if (cached && cached.value && cached.value.userProfile) {
+                  resolve(cached.value.userProfile);
+                } else {
+                  resolve(null);
+                }
+              };
+            };
+            request.onerror = function(event) {
+              reject(event.target.error);
+            };
+          });
+          
+          if (cachedUser) {
+            currentUserProfile = cachedUser;
+            console.log('[BotonGenerarReporte] Usuario encontrado en cache:', currentUserProfile.uid);
+          }
+        } catch (error) {
+          console.error('[BotonGenerarReporte] Error al obtener usuario del cache:', error);
+        }
+      }
+
       // Construir l metadatos consistentes y multi-tenant
       const datosAuditoria = buildReporteMetadata({
         empresa,
@@ -51,15 +87,15 @@ const BotonGenerarReporte = ({
         firmaAuditor,
         firmaResponsable,
         // Multi-tenant
-        clienteAdminId: userProfile?.clienteAdminId || userProfile?.uid,
-        usuarioId: userProfile?.uid,
-        usuarioEmail: userProfile?.email,
+        clienteAdminId: currentUserProfile?.clienteAdminId || currentUserProfile?.uid,
+        usuarioId: currentUserProfile?.uid,
+        usuarioEmail: currentUserProfile?.email,
         fechaGuardado: new Date(),
       });
       console.debug('[BotonGenerarReporte] Guardando auditoría con metadatos:', datosAuditoria);
 
       // Usar el servicio centralizado para guardar
-      const auditoriaId = await AuditoriaService.guardarAuditoria(datosAuditoria, userProfile);
+      const auditoriaId = await AuditoriaService.guardarAuditoria(datosAuditoria, currentUserProfile);
       
       setGuardadoExitoso(true);
       const tipoUbicacion = sucursal && sucursal.trim() !== "" ? "Sucursal" : "Casa Central";
