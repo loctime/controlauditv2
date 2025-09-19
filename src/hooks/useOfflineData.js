@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { loadCompleteUserCache, saveCompleteUserCache } from '../services/completeOfflineCache';
+import { getCompleteUserCache, saveCompleteUserCache } from '../services/completeOfflineCache';
 import { useAuth } from '../components/context/AuthContext';
 import { collection, getDocs, query, where, orderBy, limit } from 'firebase/firestore';
 import { db } from '../firebaseConfig';
@@ -35,7 +35,7 @@ export const useOfflineData = () => {
 
     // 1. Intentar cargar desde cache offline
     try {
-      cachedData = await loadCompleteUserCache(user.uid);
+      cachedData = await getCompleteUserCache(user.uid);
       if (cachedData) {
         setProfile(cachedData.userProfile);
         setEmpresas(cachedData.empresas || []);
