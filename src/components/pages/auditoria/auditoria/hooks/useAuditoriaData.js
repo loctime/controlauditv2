@@ -76,6 +76,8 @@ export const useAuditoriaData = (
   // Cargar empresas desde el contexto, cache offline o Firestore como fallback
   useEffect(() => {
     const cargarEmpresas = async () => {
+      console.log('[DEBUG Auditoria] Iniciando carga de empresas...');
+      
       // Prioridad 1: Datos del contexto (online)
       if (userEmpresas && userEmpresas.length > 0) {
         setEmpresas(userEmpresas);
@@ -269,6 +271,8 @@ export const useAuditoriaData = (
   // Cargar formularios desde el contexto, cache offline o Firestore
   useEffect(() => {
     const cargarFormularios = async () => {
+      console.log('[DEBUG Auditoria] Iniciando carga de formularios...');
+      
       // Prioridad 1: Datos del contexto (online)
       if (userFormularios && userFormularios.length > 0) {
         setFormularios(userFormularios);
