@@ -11,6 +11,7 @@ import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import PWAInstallPrompt from './components/common/PWAInstallPrompt';
 import PWADownloadButton from './components/common/PWADownloadButton';
 import OfflineFallback from './components/common/OfflineFallback';
+import MobileDebug from './components/common/MobileDebug';
 import { useConnectivity } from './hooks/useConnectivity';
 // import { useBackButton } from './hooks/useBackButton'; // Deshabilitado para web
 
@@ -59,6 +60,8 @@ const App = () => {
           <BrowserRouter>
             <div className="main-app-container">
               <AppRouter />
+              {/* Debug móvil temporal */}
+              <MobileDebug />
               {/* Solo mostrar componentes PWA cuando no esté en loading inicial */}
               {!isInitialLoad && (
                 <>
