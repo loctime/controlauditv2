@@ -87,8 +87,9 @@ const AuthContextComponent = ({ children }) => {
             
             store.get('complete_user_cache').onsuccess = function(e) {
               const cached = e.target.result;
-              if (cached && cached.value && cached.value.userProfile) {
-                resolve(cached.value.userProfile);
+              if (cached && cached.value) {
+                // Devolver todo el cache, no solo userProfile
+                resolve(cached.value);
               } else {
                 resolve(null);
               }
@@ -159,18 +160,19 @@ const AuthContextComponent = ({ children }) => {
           if (wasLoggedIn) {
             const cachedUser = await loadUserFromCache();
             
-            if (cachedUser) {
-              console.log('✅ Usuario encontrado en cache offline:', cachedUser.uid);
+            if (cachedUser && cachedUser.userProfile) {
+              const userProfile = cachedUser.userProfile;
+              console.log('✅ Usuario encontrado en cache offline:', userProfile.uid);
               
               // Crear un objeto usuario simulado para el cache
               const simulatedUser = {
-                uid: cachedUser.uid,
-                email: cachedUser.email,
-                displayName: cachedUser.displayName || cachedUser.email,
+                uid: userProfile.uid,
+                email: userProfile.email,
+                displayName: userProfile.displayName || userProfile.email,
                 emailVerified: true,
                 isAnonymous: false,
                 metadata: {
-                  creationTime: cachedUser.createdAt || new Date().toISOString(),
+                  creationTime: userProfile.createdAt || new Date().toISOString(),
                   lastSignInTime: new Date().toISOString()
                 }
               };
@@ -181,10 +183,12 @@ const AuthContextComponent = ({ children }) => {
               localStorage.setItem("isLogged", JSON.stringify(true));
               
               // Cargar datos del cache
-              if (cachedUser.empresas) {
+              if (cachedUser.empresas && cachedUser.empresas.length > 0) {
+                console.log('✅ Empresas cargadas desde cache offline:', cachedUser.empresas.length);
                 setUserEmpresas(cachedUser.empresas);
               }
-              if (cachedUser.auditorias) {
+              if (cachedUser.auditorias && cachedUser.auditorias.length > 0) {
+                console.log('✅ Auditorías cargadas desde cache offline:', cachedUser.auditorias.length);
                 setUserAuditorias(cachedUser.auditorias);
               }
               
