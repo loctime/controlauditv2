@@ -389,6 +389,8 @@ class AuditoriaService {
         userId: userProfile?.uid,
         userEmail: userProfile?.email,
         usuarioEmail: userProfile?.email, // Campo adicional para compatibilidad
+        userDisplayName: userProfile?.displayName, // Campo adicional para sincronización
+        userRole: userProfile?.role, // Campo adicional para sincronización
         clienteAdminId: userProfile?.clienteAdminId || userProfile?.uid,
         createdAt: Date.now(),
         updatedAt: Date.now(),

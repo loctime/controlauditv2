@@ -48,6 +48,13 @@ ControlAudit v2 ahora incluye **funcionalidad offline completa** que permite rea
 - ✅ **Firebase bloqueado** por SW resuelto
 - ✅ **Configuración optimizada** para producción
 - ✅ **Headers CORS** configurados correctamente
+
+### **Cache de Datos por Rol**
+- ✅ **Empresas filtradas** según rol del usuario (supermax/max/cliente/operario)
+- ✅ **Formularios filtrados** por clienteAdminId
+- ✅ **Sucursales filtradas** por empresas del usuario
+- ✅ **Metadatos de usuario** preservados en sincronización offline
+- ✅ **clienteAdminId y creadoPorEmail** corregidos en reportes
 - ✅ **MIME type errors** solucionados con respuestas válidas
 - ✅ **Manifest.json errors** corregidos
 
