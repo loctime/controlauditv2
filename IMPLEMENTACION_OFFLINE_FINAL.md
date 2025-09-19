@@ -48,12 +48,24 @@ ControlAudit v2 ahora incluye **funcionalidad offline completa** que permite rea
 - ✅ **Firebase bloqueado** por SW resuelto
 - ✅ **Configuración optimizada** para producción
 - ✅ **Headers CORS** configurados correctamente
+- ✅ **MIME type errors** solucionados con respuestas válidas
+- ✅ **Manifest.json errors** corregidos
 
 ### **Detección Móvil**
 - ✅ **navigator.onLine poco confiable** en móvil solucionado
 - ✅ **Verificación real** con ping implementada
 - ✅ **Timeout optimizado** (3 segundos)
 - ✅ **Modo no-cors** para evitar bloqueos
+
+### **IndexedDB Issues**
+- ✅ **ConstraintError en object stores** solucionado con verificaciones
+- ✅ **Versión de DB** incrementada correctamente
+- ✅ **Object stores duplicados** evitados con `contains()` checks
+
+### **Firebase Offline Issues**
+- ✅ **Firebase Auth offline** manejado con cache de usuario
+- ✅ **Collection references** corregidos en completeOfflineCache
+- ✅ **Usuario autenticado offline** recuperado desde cache
 
 ### **Despliegue Vercel**
 - ✅ **Build exitoso** sin errores
@@ -84,7 +96,7 @@ ControlAudit v2 ahora incluye **funcionalidad offline completa** que permite rea
 ## 📊 **Esquema de Base de Datos**
 
 ```javascript
-// IndexedDB: controlaudit_offline_v1
+// IndexedDB: controlaudit_offline_v1 (Versión 2)
 {
   auditorias: {
     id, empresa, sucursal, formulario, secciones,
@@ -101,7 +113,30 @@ ControlAudit v2 ahora incluye **funcionalidad offline completa** que permite rea
   },
   settings: {
     key, value, updatedAt
+  },
+  userProfile: {
+    uid, email, role, permisos, clienteAdminId
+  },
+  empresas: {
+    id, nombre, direccion, telefono, email, propietarioId
+  },
+  formularios: {
+    id, nombre, secciones, creadorId, clienteAdminId, esPublico
   }
+}
+```
+
+### **⚠️ Importante para Desarrolladores**
+
+**Al crear object stores en IndexedDB, SIEMPRE verificar si ya existen:**
+
+```javascript
+// ❌ INCORRECTO - Causa ConstraintError
+const store = db.createObjectStore('miStore', { keyPath: 'id' });
+
+// ✅ CORRECTO - Verificar antes de crear
+if (!db.objectStoreNames.contains('miStore')) {
+  const store = db.createObjectStore('miStore', { keyPath: 'id' });
 }
 ```
 
@@ -181,6 +216,110 @@ VITE_BACKEND_URL=https://api.controlaudit.app
 - **Offline Storage**: Hasta 3GB
 - **Sync Time**: < 30 segundos
 
+## 🛠️ **Guía para Desarrolladores**
+
+### **Errores Comunes y Soluciones**
+
+#### **1. IndexedDB ConstraintError**
+```javascript
+// Error: Failed to execute 'createObjectStore' on 'IDBDatabase': An object store with the specified name already exists.
+
+// Solución: Verificar antes de crear
+if (!db.objectStoreNames.contains('miStore')) {
+  const store = db.createObjectStore('miStore', { keyPath: 'id' });
+}
+```
+
+#### **2. Firebase Collection Reference Error**
+```javascript
+// Error: Expected first argument to collection() to be a CollectionReference
+
+// ❌ INCORRECTO
+const empresasSnapshot = await getDocs(collection(db.firestore, 'empresas'));
+
+// ✅ CORRECTO
+const empresasSnapshot = await getDocs(collection(db, 'empresas'));
+```
+
+#### **3. Service Worker MIME Type Errors**
+```javascript
+// Error: Expected a JavaScript-or-Wasm module script but the server responded with a MIME type of "text/html"
+
+// Solución: Retornar respuestas válidas para JS/CSS
+if (url.pathname.endsWith('.js')) {
+  return new Response('export {};', {
+    headers: { 'Content-Type': 'application/javascript' }
+  });
+}
+```
+
+#### **4. Usuario Offline No Encontrado**
+```javascript
+// Problema: userProfile es null cuando está offline
+
+// Solución: Buscar usuario en cache
+if (!userProfile?.uid) {
+  const cachedUser = await getCachedUser();
+  if (cachedUser) {
+    userId = cachedUser.uid;
+  }
+}
+```
+
+### **Patrones de Implementación**
+
+#### **Hook para Datos Offline**
+```javascript
+export const useOfflineData = () => {
+  const [data, setData] = useState([]);
+  
+  useEffect(() => {
+    const loadData = async () => {
+      // Prioridad 1: Contexto (online)
+      if (onlineData?.length > 0) {
+        setData(onlineData);
+        return;
+      }
+      
+      // Prioridad 2: Cache offline
+      const cachedData = await getCachedData();
+      if (cachedData?.length > 0) {
+        setData(cachedData);
+        return;
+      }
+      
+      // Prioridad 3: Firestore (fallback)
+      if (navigator.onLine) {
+        const firestoreData = await getFirestoreData();
+        setData(firestoreData);
+      }
+    };
+    
+    loadData();
+  }, [onlineData]);
+  
+  return data;
+};
+```
+
+#### **Cache Completo de Usuario**
+```javascript
+export const saveCompleteUserCache = async (userProfile) => {
+  const cacheData = {
+    userId: userProfile.uid,
+    userProfile,
+    empresas: await getEmpresas(),
+    formularios: await getFormularios(),
+    timestamp: Date.now()
+  };
+  
+  await offlineDb.put('settings', {
+    key: 'complete_user_cache',
+    value: cacheData
+  });
+};
+```
+
 ## 🎯 **Próximos Pasos (Fase 2)**
 
 ### **Optimizaciones Pendientes**
@@ -218,6 +357,22 @@ VITE_BACKEND_URL=https://api.controlaudit.app
 - ✅ **Compatibilidad total** con sistema existente
 - ✅ **PWA móvil** optimizada
 - ✅ **Despliegue en producción** exitoso
+- ✅ **Cache completo de usuario** funcionando
+- ✅ **46 empresas, 21 formularios, 21 sucursales** disponibles offline
+- ✅ **Funciona sin internet** después de cargar una vez online
+
+### **📋 Checklist de Implementación**
+
+Para implementar un sistema similar, asegúrate de:
+
+- [ ] **IndexedDB** con verificaciones de object stores existentes
+- [ ] **Service Worker** con respuestas válidas para JS/CSS
+- [ ] **Cache completo** de datos críticos del usuario
+- [ ] **Detección de conectividad** real (no solo navigator.onLine)
+- [ ] **Hooks personalizados** para datos offline con prioridades
+- [ ] **Manejo de usuario offline** desde cache
+- [ ] **Sincronización automática** con cola de reintentos
+- [ ] **Testing en dispositivos reales** (especialmente móviles)
 
 ---
 
