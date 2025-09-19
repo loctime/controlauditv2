@@ -28,14 +28,10 @@ export const useAuditoriaData = (
       else if (offlineEmpresas && offlineEmpresas.length > 0) {
         setEmpresas(offlineEmpresas);
         console.log('[DEBUG Auditoria] Empresas desde cache offline:', offlineEmpresas.length, 'empresas');
-      } else {
-        console.log('[DEBUG Auditoria] No hay empresas en cache offline:', {
-          offlineEmpresas: offlineEmpresas,
-          length: offlineEmpresas?.length || 0
-        });
-      }
+      } 
       // Prioridad 3: Cargar desde Firestore (solo si hay conexión)
       else if (userProfile && userProfile.uid && navigator.onLine) {
+        console.log('[DEBUG Auditoria] No hay empresas en cache offline, cargando desde Firestore...');
         // Fallback: cargar empresas desde Firestore si no están en el contexto
         try {
           console.log('[DEBUG Auditoria] Cargando empresas desde Firestore como fallback...');
