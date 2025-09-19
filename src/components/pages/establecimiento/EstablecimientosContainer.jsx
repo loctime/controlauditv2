@@ -83,7 +83,7 @@ const EstablecimientosContainer = () => {
 
   const handleCloseModal = () => {
     setOpenModal(false);
-    // No necesitamos llamar obtenerEmpresas() porque userEmpresas se actualiza automáticamente
+    // No necesitamos llamara obtenerEmpresas() porque userEmpresas se actualiza automáticamente
   };
 
   const handleInputChange = (e) => {
