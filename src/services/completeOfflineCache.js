@@ -20,7 +20,7 @@ export const saveCompleteUserCache = async (userProfile) => {
       throw new Error('No hay usuario autenticado');
     }
 
-    const db = await getOfflineDatabase();
+    const offlineDb = await getOfflineDatabase();
     const cacheData = {
       userId: userProfile.uid,
       userProfile,
@@ -34,7 +34,7 @@ export const saveCompleteUserCache = async (userProfile) => {
 
     // Obtener y cachear empresas del usuario
     try {
-      const empresasSnapshot = await getDocs(collection(db.firestore, 'empresas'));
+      const empresasSnapshot = await getDocs(collection(db, 'empresas'));
       cacheData.empresas = empresasSnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
@@ -46,7 +46,7 @@ export const saveCompleteUserCache = async (userProfile) => {
 
     // Obtener y cachear formularios del usuario
     try {
-      const formulariosSnapshot = await getDocs(collection(db.firestore, 'formularios'));
+      const formulariosSnapshot = await getDocs(collection(db, 'formularios'));
       cacheData.formularios = formulariosSnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
@@ -58,7 +58,7 @@ export const saveCompleteUserCache = async (userProfile) => {
 
     // Obtener y cachear sucursales
     try {
-      const sucursalesSnapshot = await getDocs(collection(db.firestore, 'sucursales'));
+      const sucursalesSnapshot = await getDocs(collection(db, 'sucursales'));
       cacheData.sucursales = sucursalesSnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
@@ -71,7 +71,7 @@ export const saveCompleteUserCache = async (userProfile) => {
     // Obtener y cachear auditorías del usuario
     try {
       const auditoriasQuery = query(
-        collection(db.firestore, 'auditorias'),
+        collection(db, 'auditorias'),
         where('userId', '==', userProfile.uid)
       );
       const auditoriasSnapshot = await getDocs(auditoriasQuery);
@@ -85,7 +85,7 @@ export const saveCompleteUserCache = async (userProfile) => {
     }
 
     // Guardar en IndexedDB
-    await db.put('settings', {
+    await offlineDb.put('settings', {
       key: 'complete_user_cache',
       value: cacheData,
       updatedAt: Date.now()

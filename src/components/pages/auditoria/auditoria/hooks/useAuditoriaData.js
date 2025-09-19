@@ -17,12 +17,43 @@ export const useAuditoriaData = (
   // Función para cargar datos del cache offline
   const cargarDatosDelCache = async () => {
     try {
-      if (!userProfile?.uid) {
-        console.log('[DEBUG Auditoria] No hay usuario autenticado para cargar cache');
-        return null;
+      // Si no hay userProfile (offline), intentar obtener el usuario del cache
+      let userId = userProfile?.uid;
+      
+      if (!userId) {
+        console.log('[DEBUG Auditoria] No hay usuario en contexto, buscando en cache...');
+        // Buscar el último usuario en el cache
+        const request = indexedDB.open('controlaudit_offline_v1', 2);
+        const cachedUser = await new Promise((resolve, reject) => {
+          request.onsuccess = function(event) {
+            const db = event.target.result;
+            const transaction = db.transaction(['settings'], 'readonly');
+            const store = transaction.objectStore('settings');
+            
+            store.get('complete_user_cache').onsuccess = function(e) {
+              const cached = e.target.result;
+              if (cached && cached.value && cached.value.userId) {
+                resolve(cached.value.userId);
+              } else {
+                resolve(null);
+              }
+            };
+          };
+          request.onerror = function(event) {
+            reject(event.target.error);
+          };
+        });
+        
+        if (cachedUser) {
+          userId = cachedUser;
+          console.log('[DEBUG Auditoria] Usuario encontrado en cache:', userId);
+        } else {
+          console.log('[DEBUG Auditoria] No hay usuario en cache');
+          return null;
+        }
       }
 
-      console.log('[DEBUG Auditoria] Intentando cargar datos del cache offline para usuario:', userProfile.uid);
+      console.log('[DEBUG Auditoria] Intentando cargar datos del cache offline para usuario:', userId);
       
       // Abrir IndexedDB directamente
       const request = indexedDB.open('controlaudit_offline_v1', 2);
