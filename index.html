@@ -26,13 +26,11 @@
     <link rel="apple-touch-icon" sizes="57x57" href="/icons/icon-72x72.png" />
     <link rel="manifest" href="/manifest.json?v=5" />
     <script>
-      // Service Worker DESHABILITADO temporalmente - causa pantalla en blanco
-      // Registrar Service Worker para producción
-      /*
+      // Service Worker HABILITADO para modo offline
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
           // Registrar Service Worker
-          navigator.serviceWorker.register('/sw.js?v=12')
+          navigator.serviceWorker.register('/sw.js?v=13')
             .then((registration) => {
               console.log('✅ Service Worker registrado:', registration.scope);
               
@@ -52,8 +50,7 @@
             });
         });
       }
-      */
-      console.log('🔧 Service Worker deshabilitado - causa pantalla en blanco');
+      console.log('🔧 Service Worker habilitado para modo offline');
     </script>
     
     <!-- Script para limpiar cache (ejecutar en consola si es necesario) -->
