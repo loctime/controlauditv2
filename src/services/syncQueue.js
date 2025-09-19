@@ -269,13 +269,23 @@ class SyncQueueService {
     const userProfile = {
       uid: auditoriaData.userId,
       email: auditoriaData.userEmail || auditoriaData.usuarioEmail || 'usuario@ejemplo.com',
-      clienteAdminId: auditoriaData.clienteAdminId
+      clienteAdminId: auditoriaData.clienteAdminId,
+      displayName: auditoriaData.userDisplayName || auditoriaData.userEmail || 'Usuario',
+      role: auditoriaData.userRole || 'operario'
     };
 
     // Procesar imágenes si existen
     if (auditoriaData.imagenes && auditoriaData.imagenes.length > 0) {
       auditoriaData.imagenes = await this.processOfflineImages(auditoriaData.imagenes, auditoriaData.id);
     }
+
+    // Log para debugging
+    console.log('[SyncQueue] Sincronizando auditoría con datos:', {
+      auditoriaId: auditoriaData.id,
+      empresa: auditoriaData.empresa,
+      formulario: auditoriaData.formulario,
+      userProfile: userProfile
+    });
 
     // Guardar en Firebase
     const auditoriaId = await AuditoriaService.guardarAuditoria(auditoriaData, userProfile);
