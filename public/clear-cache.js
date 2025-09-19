@@ -1,5 +1,5 @@
 // Script para limpiar cache y forzar actualización del Service Worker
-(function() {
+window.clearCache = function() {
   console.log('🧹 Limpiando cache y Service Worker...');
   
   // Limpiar todos los caches
@@ -40,5 +40,25 @@
     localStorage.removeItem(key);
   });
   
+  // Limpiar IndexedDB
+  if ('indexedDB' in window) {
+    try {
+      indexedDB.deleteDatabase('controlaudit_offline_v1');
+      console.log('🗑️ IndexedDB eliminado');
+    } catch (error) {
+      console.warn('⚠️ Error eliminando IndexedDB:', error);
+    }
+  }
+  
   console.log('✅ Limpieza completada. Recarga la página.');
-})();
+  
+  // Recargar automáticamente después de 2 segundos
+  setTimeout(() => {
+    window.location.reload();
+  }, 2000);
+};
+
+// Ejecutar automáticamente si se llama directamente
+if (window.location.search.includes('clear-cache')) {
+  window.clearCache();
+}

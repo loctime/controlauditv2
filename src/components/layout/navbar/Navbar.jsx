@@ -361,6 +361,36 @@ function Navbar(props) {
               <MenuIcon />
             </IconButton>
           </Box>
+
+          {/* Botón de menú hamburguesa para desktop */}
+          <Box sx={{ 
+            display: { xs: 'none', sm: 'flex' }, 
+            alignItems: 'center', 
+            gap: 1,
+            position: 'absolute',
+            right: 8
+          }}>
+            <IconButton
+              color="inherit"
+              aria-label="open drawer"
+              onClick={handleDrawerToggle}
+              sx={{ 
+                width: 40,
+                height: 40,
+                '& .MuiSvgIcon-root': {
+                  fontSize: '1.4rem'
+                },
+                '&:focus': {
+                  outline: 'none'
+                },
+                '&:active': {
+                  backgroundColor: 'transparent'
+                }
+              }}
+            >
+              <MenuIcon />
+            </IconButton>
+          </Box>
         </Toolbar>
       </AppBar>
       
@@ -375,7 +405,7 @@ function Navbar(props) {
             keepMounted: true, // Mejor rendimiento en móvil
           }}
           sx={{
-            display: { xs: "block" },
+            display: { xs: "block", sm: "block" },
             "& .MuiDrawer-paper": {
               boxSizing: "border-box",
               width: { xs: '85vw', sm: drawerWidth },

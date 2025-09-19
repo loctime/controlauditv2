@@ -1,7 +1,7 @@
 // Service Worker para ControlAudit PWA
-const CACHE_NAME = 'controlaudit-v7';
-const STATIC_CACHE = 'controlaudit-static-v7';
-const DYNAMIC_CACHE = 'controlaudit-dynamic-v7';
+const CACHE_NAME = 'controlaudit-v8';
+const STATIC_CACHE = 'controlaudit-static-v8';
+const DYNAMIC_CACHE = 'controlaudit-dynamic-v8';
 
 // Recursos críticos que deben estar siempre en cache
 const urlsToCache = [
@@ -134,9 +134,20 @@ self.addEventListener('fetch', (event) => {
             })
             .catch((error) => {
               console.warn('❌ Error en fetch estático:', error);
+              // Para recursos estáticos, devolver una respuesta válida
+              if (event.request.url.includes('.js') || event.request.url.includes('.css')) {
+                return new Response('// Recurso no disponible offline', {
+                  status: 200,
+                  statusText: 'OK',
+                  headers: {
+                    'Content-Type': event.request.url.includes('.js') ? 'application/javascript' : 'text/css'
+                  }
+                });
+              }
+              // Para otros recursos, devolver 404
               return new Response('Recurso no disponible offline', { 
-                status: 503, 
-                statusText: 'Service Unavailable' 
+                status: 404, 
+                statusText: 'Not Found' 
               });
             });
         })
@@ -159,7 +170,21 @@ self.addEventListener('fetch', (event) => {
         })
         .catch((error) => {
           console.warn('❌ Error en navegación:', error);
-          return caches.match('/index.html');
+          // Intentar servir index.html desde cache
+          return caches.match('/index.html')
+            .then((response) => {
+              if (response) {
+                return response;
+              }
+              // Si no hay index.html en cache, devolver una respuesta básica
+              return new Response('<!DOCTYPE html><html><head><title>ControlAudit</title></head><body><h1>ControlAudit Offline</h1><p>La aplicación no está disponible offline. Conecta a internet para continuar.</p></body></html>', {
+                status: 200,
+                statusText: 'OK',
+                headers: {
+                  'Content-Type': 'text/html'
+                }
+              });
+            });
         })
     );
     return;
@@ -191,9 +216,32 @@ self.addEventListener('fetch', (event) => {
           })
           .catch((error) => {
             console.warn('❌ Error en fetch:', error);
+            // Devolver una respuesta válida según el tipo de recurso
+            const url = new URL(event.request.url);
+            const pathname = url.pathname;
+            
+            if (pathname.includes('.js')) {
+              return new Response('// Recurso no disponible offline', {
+                status: 200,
+                statusText: 'OK',
+                headers: { 'Content-Type': 'application/javascript' }
+              });
+            } else if (pathname.includes('.css')) {
+              return new Response('/* Recurso no disponible offline */', {
+                status: 200,
+                statusText: 'OK',
+                headers: { 'Content-Type': 'text/css' }
+              });
+            } else if (pathname.match(/\.(png|jpg|jpeg|gif|svg)$/)) {
+              return new Response('', {
+                status: 404,
+                statusText: 'Not Found'
+              });
+            }
+            
             return new Response('Recurso no disponible offline', { 
-              status: 503, 
-              statusText: 'Service Unavailable' 
+              status: 404, 
+              statusText: 'Not Found' 
             });
           });
       })
