@@ -16,45 +16,53 @@ const DB_VERSION = 2;
 export const initOfflineDatabase = async () => {
   try {
     const db = await openDB(DB_NAME, DB_VERSION, {
-      upgrade(db) {
+      upgrade(db, oldVersion) {
         console.log('🔄 Inicializando base de datos offline...');
 
-        // Store para auditorías
-        const auditoriasStore = db.createObjectStore('auditorias', { keyPath: 'id' });
-        auditoriasStore.createIndex('by-updatedAt', 'updatedAt');
-        auditoriasStore.createIndex('by-status', 'status');
-        auditoriasStore.createIndex('by-userId', 'userId');
+        // Solo crear stores si no existen
+        if (!db.objectStoreNames.contains('auditorias')) {
+          const auditoriasStore = db.createObjectStore('auditorias', { keyPath: 'id' });
+          auditoriasStore.createIndex('by-updatedAt', 'updatedAt');
+          auditoriasStore.createIndex('by-status', 'status');
+          auditoriasStore.createIndex('by-userId', 'userId');
+        }
 
-        // Store para fotos (Blobs)
-        const fotosStore = db.createObjectStore('fotos', { keyPath: 'id' });
-        fotosStore.createIndex('by-auditoriaId', 'auditoriaId');
-        fotosStore.createIndex('by-createdAt', 'createdAt');
+        if (!db.objectStoreNames.contains('fotos')) {
+          const fotosStore = db.createObjectStore('fotos', { keyPath: 'id' });
+          fotosStore.createIndex('by-auditoriaId', 'auditoriaId');
+          fotosStore.createIndex('by-createdAt', 'createdAt');
+        }
 
-        // Store para cola de sincronización
-        const syncQueueStore = db.createObjectStore('syncQueue', { keyPath: 'id' });
-        syncQueueStore.createIndex('by-createdAt', 'createdAt');
-        syncQueueStore.createIndex('by-nextRetry', 'nextRetry');
-        syncQueueStore.createIndex('by-priority', 'priority');
+        if (!db.objectStoreNames.contains('syncQueue')) {
+          const syncQueueStore = db.createObjectStore('syncQueue', { keyPath: 'id' });
+          syncQueueStore.createIndex('by-createdAt', 'createdAt');
+          syncQueueStore.createIndex('by-nextRetry', 'nextRetry');
+          syncQueueStore.createIndex('by-priority', 'priority');
+        }
 
-        // Store para configuraciones
-        db.createObjectStore('settings', { keyPath: 'key' });
+        if (!db.objectStoreNames.contains('settings')) {
+          db.createObjectStore('settings', { keyPath: 'key' });
+        }
 
-        // Store para perfil de usuario
-        const userProfileStore = db.createObjectStore('userProfile', { keyPath: 'uid' });
-        userProfileStore.createIndex('by-email', 'email');
-        userProfileStore.createIndex('by-role', 'role');
+        if (!db.objectStoreNames.contains('userProfile')) {
+          const userProfileStore = db.createObjectStore('userProfile', { keyPath: 'uid' });
+          userProfileStore.createIndex('by-email', 'email');
+          userProfileStore.createIndex('by-role', 'role');
+        }
 
-        // Store para empresas
-        const empresasStore = db.createObjectStore('empresas', { keyPath: 'id' });
-        empresasStore.createIndex('by-propietarioId', 'propietarioId');
-        empresasStore.createIndex('by-creadorId', 'creadorId');
-        empresasStore.createIndex('by-nombre', 'nombre');
+        if (!db.objectStoreNames.contains('empresas')) {
+          const empresasStore = db.createObjectStore('empresas', { keyPath: 'id' });
+          empresasStore.createIndex('by-propietarioId', 'propietarioId');
+          empresasStore.createIndex('by-creadorId', 'creadorId');
+          empresasStore.createIndex('by-nombre', 'nombre');
+        }
 
-        // Store para formularios
-        const formulariosStore = db.createObjectStore('formularios', { keyPath: 'id' });
-        formulariosStore.createIndex('by-creadorId', 'creadorId');
-        formulariosStore.createIndex('by-clienteAdminId', 'clienteAdminId');
-        formulariosStore.createIndex('by-nombre', 'nombre');
+        if (!db.objectStoreNames.contains('formularios')) {
+          const formulariosStore = db.createObjectStore('formularios', { keyPath: 'id' });
+          formulariosStore.createIndex('by-creadorId', 'creadorId');
+          formulariosStore.createIndex('by-clienteAdminId', 'clienteAdminId');
+          formulariosStore.createIndex('by-nombre', 'nombre');
+        }
 
         console.log('✅ Base de datos offline inicializada correctamente');
       },
