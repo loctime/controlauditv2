@@ -23,19 +23,50 @@ export const useAuditoriaData = (
       }
 
       console.log('[DEBUG Auditoria] Intentando cargar datos del cache offline para usuario:', userProfile.uid);
-      const cacheData = await getCompleteUserCache(userProfile.uid);
       
-      if (cacheData && cacheData.empresas && cacheData.empresas.length > 0) {
-        console.log('[DEBUG Auditoria] Empresas encontradas en cache:', cacheData.empresas.length);
-        setEmpresas(cacheData.empresas);
-      }
+      // Abrir IndexedDB directamente
+      const request = indexedDB.open('controlaudit_offline_v1', 2);
       
-      if (cacheData && cacheData.formularios && cacheData.formularios.length > 0) {
-        console.log('[DEBUG Auditoria] Formularios encontrados en cache:', cacheData.formularios.length);
-        setFormularios(cacheData.formularios);
-      }
+      return new Promise((resolve, reject) => {
+        request.onsuccess = function(event) {
+          const db = event.target.result;
+          const transaction = db.transaction(['settings'], 'readonly');
+          const store = transaction.objectStore('settings');
+          
+          store.get('complete_user_cache').onsuccess = function(e) {
+            const cached = e.target.result;
+            
+            if (!cached || !cached.value) {
+              console.log('[DEBUG Auditoria] No hay cache completo disponible');
+              resolve(null);
+              return;
+            }
+
+            const cacheData = cached.value;
+            console.log('[DEBUG Auditoria] Cache encontrado:', cacheData);
+            
+            if (cacheData.empresas && cacheData.empresas.length > 0) {
+              console.log('[DEBUG Auditoria] Empresas encontradas en cache:', cacheData.empresas.length);
+              console.log('[DEBUG Auditoria] Empresas cargadas desde cache offline:', cacheData.empresas.length, 'empresas');
+              setEmpresas(cacheData.empresas);
+            }
+            
+            if (cacheData.formularios && cacheData.formularios.length > 0) {
+              console.log('[DEBUG Auditoria] Formularios encontrados en cache:', cacheData.formularios.length);
+              console.log('[DEBUG Auditoria] Formularios cargados desde cache offline:', cacheData.formularios.length, 'formularios');
+              setFormularios(cacheData.formularios);
+            }
+            
+            resolve(cacheData);
+          };
+        };
+        
+        request.onerror = function(event) {
+          console.error('[DEBUG Auditoria] Error al abrir IndexedDB:', event.target.error);
+          reject(event.target.error);
+        };
+      });
       
-      return cacheData;
     } catch (error) {
       console.error('[DEBUG Auditoria] Error al cargar cache offline:', error);
       return null;
