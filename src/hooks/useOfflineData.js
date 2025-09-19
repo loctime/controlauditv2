@@ -1,147 +1,176 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { loadCompleteUserCache, saveCompleteUserCache } from '../services/completeOfflineCache';
 import { useAuth } from '../components/context/AuthContext';
-import { useConnectivity } from './useConnectivity';
-import { 
-  getCompleteUserCache, 
-  hasCompleteCache 
-} from '../services/completeOfflineCache';
+import { collection, getDocs, query, where, orderBy, limit } from 'firebase/firestore';
 import { db } from '../firebaseConfig';
-import { collection, getDocs, query, where } from 'firebase/firestore';
 
 /**
- * Hook para manejar datos offline usando cache completo
- * Automáticamente usa cache cuando no hay conexión
+ * Hook para cargar datos de la aplicación, priorizando el cache offline
+ * y actualizando desde la red cuando sea necesario.
  */
 export const useOfflineData = () => {
-  const { userProfile, userEmpresas, userFormularios } = useAuth();
-  const { isOnline } = useConnectivity();
-  const [offlineData, setOfflineData] = useState({
-    empresas: [],
-    formularios: [],
-    sucursales: [],
-    auditorias: [],
-    loaded: false
-  });
+  const { user, userProfile: authUserProfile, isOnline } = useAuth();
+  const [profile, setProfile] = useState(authUserProfile);
+  const [empresas, setEmpresas] = useState([]);
+  const [formularios, setFormularios] = useState([]);
+  const [auditorias, setAuditorias] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [cacheLoaded, setCacheLoaded] = useState(false);
 
-  // Cargar datos offline cuando no hay conexión
-  useEffect(() => {
-    if (!isOnline && userProfile?.uid) {
-      loadOfflineData();
+  const fetchData = useCallback(async () => {
+    if (!user?.uid) {
+      setProfile(null);
+      setEmpresas([]);
+      setFormularios([]);
+      setAuditorias([]);
+      setLoading(false);
+      setCacheLoaded(false);
+      return;
     }
-  }, [isOnline, userProfile?.uid]);
 
-  // Cargar datos offline
-  const loadOfflineData = async () => {
+    setLoading(true);
+    setError(null);
+    let cachedData = null;
+
+    // 1. Intentar cargar desde cache offline
     try {
-      console.log('📱 Cargando datos offline...');
-      const cache = await getCompleteUserCache(userProfile.uid);
-      
-      if (cache) {
-        setOfflineData({
-          empresas: cache.empresas || [],
-          formularios: cache.formularios || [],
-          sucursales: cache.sucursales || [],
-          auditorias: cache.auditorias || [],
-          loaded: true
-        });
-        console.log('✅ Datos offline cargados:', {
-          empresas: cache.empresas?.length || 0,
-          formularios: cache.formularios?.length || 0,
-          sucursales: cache.sucursales?.length || 0,
-          auditorias: cache.auditorias?.length || 0
-        });
-      } else {
-        console.log('⚠️ No hay cache offline disponible');
-        setOfflineData({
-          empresas: [],
-          formularios: [],
-          sucursales: [],
-          auditorias: [],
-          loaded: true
-        });
+      cachedData = await loadCompleteUserCache(user.uid);
+      if (cachedData) {
+        setProfile(cachedData.userProfile);
+        setEmpresas(cachedData.empresas || []);
+        setFormularios(cachedData.formularios || []);
+        setAuditorias(cachedData.auditorias || []);
+        setCacheLoaded(true);
+        console.log('✅ Datos cargados desde cache offline.');
       }
-    } catch (error) {
-      console.error('❌ Error cargando datos offline:', error);
-      setOfflineData({
-        empresas: [],
-        formularios: [],
-        sucursales: [],
-        auditorias: [],
-        loaded: true
-      });
+    } catch (err) {
+      console.warn('⚠️ Error al cargar datos desde cache offline:', err);
     }
-  };
 
-  // Obtener empresas (online o offline)
-  const getEmpresas = () => {
+    // 2. Si hay conexión, intentar cargar desde la red y actualizar cache
     if (isOnline) {
-      return userEmpresas || [];
+      console.log('🌐 Cargando datos desde la red...');
+      try {
+        // Cargar empresas
+        const empresasRef = collection(db, 'empresas');
+        let qEmpresas;
+        
+        if (authUserProfile?.role === 'supermax') {
+          qEmpresas = query(empresasRef);
+        } else if (authUserProfile?.role === 'max') {
+          // Cargar empresas propias
+          const empresasPropias = query(empresasRef, where('propietarioId', '==', user.uid));
+          const empresasPropiasSnapshot = await getDocs(empresasPropias);
+          const misEmpresas = empresasPropiasSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+          // Cargar usuarios operarios y sus empresas
+          const usuariosRef = collection(db, 'usuarios');
+          const usuariosQuery = query(usuariosRef, where('clienteAdminId', '==', user.uid));
+          const usuariosSnapshot = await getDocs(usuariosQuery);
+          const usuariosOperarios = usuariosSnapshot.docs.map(doc => doc.id);
+
+          // Cargar empresas de operarios
+          const empresasOperariosPromises = usuariosOperarios.map(async (operarioId) => {
+            const operarioEmpresasQuery = query(empresasRef, where('propietarioId', '==', operarioId));
+            const operarioEmpresasSnapshot = await getDocs(operarioEmpresasQuery);
+            return operarioEmpresasSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+          });
+
+          const empresasOperariosArrays = await Promise.all(empresasOperariosPromises);
+          const empresasOperarios = empresasOperariosArrays.flat();
+          
+          const onlineEmpresas = [...misEmpresas, ...empresasOperarios];
+          setEmpresas(onlineEmpresas);
+        } else if (authUserProfile?.role === 'operario' && authUserProfile?.clienteAdminId) {
+          qEmpresas = query(empresasRef, where('propietarioId', '==', authUserProfile.clienteAdminId));
+        } else {
+          qEmpresas = query(empresasRef, where('usuarios', 'array-contains', user.uid));
+        }
+
+        if (qEmpresas) {
+          const empresasSnapshot = await getDocs(qEmpresas);
+          const onlineEmpresas = empresasSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+          setEmpresas(onlineEmpresas);
+        }
+
+        // Cargar formularios
+        const formulariosRef = collection(db, 'formularios');
+        let qFormularios;
+        
+        if (authUserProfile?.role === 'admin' || authUserProfile?.role === 'superAdmin') {
+          qFormularios = query(formulariosRef, where('clienteAdminId', '==', user.uid));
+        } else {
+          // Para operarios, cargar formularios de sus empresas asignadas
+          const empresaIds = empresas.map(emp => emp.id);
+          if (empresaIds.length > 0) {
+            qFormularios = query(formulariosRef, where('empresaId', 'in', empresaIds));
+          } else {
+            qFormularios = query(formulariosRef, where('clienteAdminId', '==', 'NO_CLIENTE_ADMIN')); // Query que no devuelve nada
+          }
+        }
+        
+        if (qFormularios) {
+          const formulariosSnapshot = await getDocs(qFormularios);
+          const onlineFormularios = formulariosSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+          setFormularios(onlineFormularios);
+        }
+
+        // Cargar auditorías recientes
+        const auditoriasRef = collection(db, 'auditorias');
+        const qAuditorias = query(
+          auditoriasRef, 
+          where('userId', '==', user.uid), 
+          orderBy('createdAt', 'desc'), 
+          limit(20)
+        );
+        const auditoriasSnapshot = await getDocs(qAuditorias);
+        const onlineAuditorias = auditoriasSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        setAuditorias(onlineAuditorias);
+
+        setCacheLoaded(true);
+
+        // Guardar en cache offline para futuras cargas
+        if (authUserProfile) {
+          await saveCompleteUserCache({
+            ...authUserProfile,
+            empresas: onlineEmpresas,
+            formularios: onlineFormularios,
+            auditorias: onlineAuditorias
+          });
+          console.log('✅ Datos cargados desde la red y guardados en cache offline.');
+        }
+
+      } catch (err) {
+        console.error('❌ Error al cargar datos desde la red:', err);
+        setError('Error al cargar datos desde la red. Intenta nuevamente.');
+        // Si falla la carga online y no hay cache, limpiar estados
+        if (!cachedData) {
+          setProfile(null);
+          setEmpresas([]);
+          setFormularios([]);
+          setAuditorias([]);
+        }
+      }
+    } else if (!cachedData) {
+      setError('No hay conexión a internet y no se encontraron datos en cache offline.');
     }
-    return offlineData.empresas || [];
-  };
 
-  // Obtener formularios (online o offline)
-  const getFormularios = () => {
-    if (isOnline) {
-      return userFormularios || [];
-    }
-    return offlineData.formularios || [];
-  };
+    setLoading(false);
+  }, [user?.uid, isOnline, authUserProfile, empresas]);
 
-  // Obtener sucursales (online o offline)
-  const getSucursales = () => {
-    if (isOnline) {
-      // En modo online, obtener de Firebase
-      return [];
-    }
-    return offlineData.sucursales || [];
-  };
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
-  // Obtener auditorías (online o offline)
-  const getAuditorias = () => {
-    if (isOnline) {
-      // En modo online, obtener de Firebase
-      return [];
-    }
-    return offlineData.auditorias || [];
-  };
-
-  // Verificar si hay datos disponibles
-  const hasData = () => {
-    if (isOnline) {
-      return (userEmpresas?.length > 0) || (userFormularios?.length > 0);
-    }
-    return offlineData.loaded && (
-      offlineData.empresas.length > 0 || 
-      offlineData.formularios.length > 0
-    );
-  };
-
-  // Verificar si está en modo offline
-  const isOfflineMode = () => {
-    return !isOnline && offlineData.loaded;
-  };
-
-  return {
-    // Datos
-    empresas: getEmpresas(),
-    formularios: getFormularios(),
-    sucursales: getSucursales(),
-    auditorias: getAuditorias(),
-    
-    // Estado
-    loaded: offlineData.loaded,
-    hasData: hasData(),
-    isOfflineMode: isOfflineMode(),
-    isOnline,
-    
-    // Funciones
-    loadOfflineData,
-    getEmpresas,
-    getFormularios,
-    getSucursales,
-    getAuditorias
+  return { 
+    profile, 
+    empresas, 
+    formularios, 
+    auditorias, 
+    loading, 
+    error, 
+    cacheLoaded, 
+    refetchData: fetchData 
   };
 };
-
-export default useOfflineData;

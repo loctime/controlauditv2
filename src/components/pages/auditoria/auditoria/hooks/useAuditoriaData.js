@@ -3,6 +3,7 @@ import { collection, getDocs, query, where } from "firebase/firestore";
 import { db } from "../../../../../firebaseConfig";
 import { storageUtils } from "../../../../../utils/utilitiesOptimization";
 import { useAuth } from "../../../../context/AuthContext";
+import { useOfflineData } from "../../../../../hooks/useOfflineData";
 
 export const useAuditoriaData = (
   setEmpresas,
@@ -13,13 +14,23 @@ export const useAuditoriaData = (
   userEmpresas,
   userFormularios
 ) => {
-  // Cargar empresas desde el contexto o Firestore como fallback
+  // Usar el hook de datos offline
+  const { empresas: offlineEmpresas, formularios: offlineFormularios, loading: offlineLoading } = useOfflineData();
+  // Cargar empresas desde el contexto, cache offline o Firestore como fallback
   useEffect(() => {
     const cargarEmpresas = async () => {
+      // Prioridad 1: Datos del contexto (online)
       if (userEmpresas && userEmpresas.length > 0) {
         setEmpresas(userEmpresas);
         console.log('[DEBUG Auditoria] Empresas desde contexto:', userEmpresas);
-      } else if (userProfile && userProfile.uid) {
+      } 
+      // Prioridad 2: Datos del cache offline
+      else if (offlineEmpresas && offlineEmpresas.length > 0) {
+        setEmpresas(offlineEmpresas);
+        console.log('[DEBUG Auditoria] Empresas desde cache offline:', offlineEmpresas);
+      }
+      // Prioridad 3: Cargar desde Firestore (solo si hay conexión)
+      else if (userProfile && userProfile.uid && navigator.onLine) {
         // Fallback: cargar empresas desde Firestore si no están en el contexto
         try {
           console.log('[DEBUG Auditoria] Cargando empresas desde Firestore como fallback...');
@@ -84,7 +95,7 @@ export const useAuditoriaData = (
     };
 
     cargarEmpresas();
-  }, [userProfile, userEmpresas, setEmpresas]);
+  }, [userProfile, userEmpresas, offlineEmpresas, setEmpresas]);
 
   // Cargar todas las sucursales disponibles al inicio
   useEffect(() => {
@@ -191,17 +202,23 @@ export const useAuditoriaData = (
     cargarTodasLasSucursales();
   }, [userProfile, userEmpresas, setSucursales]);
 
-  // Cargar formularios desde el contexto o Firestore
+  // Cargar formularios desde el contexto, cache offline o Firestore
   useEffect(() => {
+    // Prioridad 1: Datos del contexto (online)
     if (userFormularios && userFormularios.length > 0) {
       setFormularios(userFormularios);
       console.log('[DEBUG Auditoria] Formularios desde contexto:', userFormularios);
+    } 
+    // Prioridad 2: Datos del cache offline
+    else if (offlineFormularios && offlineFormularios.length > 0) {
+      setFormularios(offlineFormularios);
+      console.log('[DEBUG Auditoria] Formularios desde cache offline:', offlineFormularios);
     }
-  }, [userFormularios, setFormularios]);
+  }, [userFormularios, offlineFormularios, setFormularios]);
 
-  // Cargar formularios desde Firestore si no están en el contexto
+  // Cargar formularios desde Firestore si no están en el contexto ni en cache offline
   useEffect(() => {
-    if (!userFormularios || userFormularios.length === 0) {
+    if ((!userFormularios || userFormularios.length === 0) && (!offlineFormularios || offlineFormularios.length === 0)) {
       const obtenerFormularios = async () => {
         try {
           if (!userProfile) return;
@@ -289,5 +306,5 @@ export const useAuditoriaData = (
       };
       obtenerFormularios();
     }
-  }, [userProfile, userFormularios, setFormularios]);
+  }, [userProfile, userFormularios, offlineFormularios, setFormularios]);
 }; 
