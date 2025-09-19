@@ -26,7 +26,9 @@
     <link rel="apple-touch-icon" sizes="57x57" href="/icons/icon-72x72.png" />
     <link rel="manifest" href="/manifest.json?v=5" />
     <script>
+      // Service Worker DESHABILITADO temporalmente para debugging
       // Registrar Service Worker mejorado
+      /*
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
           // Registrar Service Worker
@@ -50,6 +52,8 @@
             });
         });
       }
+      */
+      console.log('🔧 Service Worker deshabilitado para debugging');
     </script>
     
     <!-- Script para limpiar cache (ejecutar en consola si es necesario) -->
