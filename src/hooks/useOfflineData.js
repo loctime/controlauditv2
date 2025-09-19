@@ -107,12 +107,11 @@ export const useOfflineData = () => {
         if (authUserProfile?.role === 'admin' || authUserProfile?.role === 'superAdmin') {
           qFormularios = query(formulariosRef, where('clienteAdminId', '==', user.uid));
         } else {
-          // Para operarios, cargar formularios de sus empresas asignadas
-          const empresaIds = empresas.map(emp => emp.id);
-          if (empresaIds.length > 0) {
-            qFormularios = query(formulariosRef, where('empresaId', 'in', empresaIds));
+          // Para operarios, cargar formularios públicos o del cliente admin
+          if (authUserProfile?.clienteAdminId) {
+            qFormularios = query(formulariosRef, where('clienteAdminId', '==', authUserProfile.clienteAdminId));
           } else {
-            qFormularios = query(formulariosRef, where('clienteAdminId', '==', 'NO_CLIENTE_ADMIN')); // Query que no devuelve nada
+            qFormularios = query(formulariosRef, where('esPublico', '==', true));
           }
         }
         
@@ -140,9 +139,9 @@ export const useOfflineData = () => {
         if (authUserProfile) {
           await saveCompleteUserCache({
             ...authUserProfile,
-            empresas: onlineEmpresas,
-            formularios: onlineFormularios,
-            auditorias: onlineAuditorias
+            empresas: empresas, // Usar el estado actual de empresas
+            formularios: formularios, // Usar el estado actual de formularios
+            auditorias: auditorias // Usar el estado actual de auditorias
           });
           console.log('✅ Datos cargados desde la red y guardados en cache offline.');
         }
@@ -163,7 +162,7 @@ export const useOfflineData = () => {
     }
 
     setLoading(false);
-  }, [user?.uid, isOnline, authUserProfile, empresas]);
+  }, [user?.uid, isOnline, authUserProfile]);
 
   useEffect(() => {
     fetchData();
