@@ -47,7 +47,7 @@ const AuthContextComponent = ({ children }) => {
     const timeoutId = setTimeout(() => {
       console.log('⏰ Timeout de seguridad - deteniendo loading');
       setLoading(false);
-    }, 3000); // 3 segundos máximo
+    }, 1500); // 1.5 segundos máximo
     
     // Listener para detectar cambios de conectividad
     const handleOnline = () => {
@@ -150,58 +150,47 @@ const AuthContextComponent = ({ children }) => {
             }
           }
         } else {
-          // Si no hay usuario de Firebase, verificar si estamos offline y hay cache
-          if (!navigator.onLine) {
-            console.log('🔌 Sin conexión, verificando cache offline...');
+          // Si no hay usuario de Firebase, verificar si hay cache offline
+          console.log('🔌 Sin usuario de Firebase, verificando cache offline...');
+          
+          // Solo cargar del cache si había un usuario autenticado previamente
+          const wasLoggedIn = localStorage.getItem("isLogged") === "true";
+          
+          if (wasLoggedIn) {
+            const cachedUser = await loadUserFromCache();
             
-            // Solo cargar del cache si había un usuario autenticado previamente
-            const wasLoggedIn = localStorage.getItem("isLogged") === "true";
-            
-            if (wasLoggedIn) {
-              const cachedUser = await loadUserFromCache();
+            if (cachedUser) {
+              console.log('✅ Usuario encontrado en cache offline:', cachedUser.uid);
               
-              if (cachedUser) {
-                console.log('✅ Usuario encontrado en cache offline:', cachedUser.uid);
-                
-                // Crear un objeto usuario simulado para el cache
-                const simulatedUser = {
-                  uid: cachedUser.uid,
-                  email: cachedUser.email,
-                  displayName: cachedUser.displayName || cachedUser.email,
-                  emailVerified: true,
-                  isAnonymous: false,
-                  metadata: {
-                    creationTime: cachedUser.createdAt || new Date().toISOString(),
-                    lastSignInTime: new Date().toISOString()
-                  }
-                };
-                
-                setUser(simulatedUser);
-                setIsLogged(true);
-                localStorage.setItem("userInfo", JSON.stringify(simulatedUser));
-                localStorage.setItem("isLogged", JSON.stringify(true));
-                
-                // Cargar datos del cache
-                if (cachedUser.empresas) {
-                  setUserEmpresas(cachedUser.empresas);
+              // Crear un objeto usuario simulado para el cache
+              const simulatedUser = {
+                uid: cachedUser.uid,
+                email: cachedUser.email,
+                displayName: cachedUser.displayName || cachedUser.email,
+                emailVerified: true,
+                isAnonymous: false,
+                metadata: {
+                  creationTime: cachedUser.createdAt || new Date().toISOString(),
+                  lastSignInTime: new Date().toISOString()
                 }
-                if (cachedUser.auditorias) {
-                  setUserAuditorias(cachedUser.auditorias);
-                }
-                
-                console.log('✅ Usuario offline cargado desde cache');
-              } else {
-                console.log('❌ No hay usuario en cache offline');
-                setUser(null);
-                setIsLogged(false);
-                setUserEmpresas([]);
-                setUserAuditorias([]);
-                setAuditoriasCompartidas([]);
-                localStorage.removeItem("userInfo");
-                localStorage.removeItem("isLogged");
+              };
+              
+              setUser(simulatedUser);
+              setIsLogged(true);
+              localStorage.setItem("userInfo", JSON.stringify(simulatedUser));
+              localStorage.setItem("isLogged", JSON.stringify(true));
+              
+              // Cargar datos del cache
+              if (cachedUser.empresas) {
+                setUserEmpresas(cachedUser.empresas);
               }
+              if (cachedUser.auditorias) {
+                setUserAuditorias(cachedUser.auditorias);
+              }
+              
+              console.log('✅ Usuario offline cargado desde cache');
             } else {
-              console.log('❌ Usuario no estaba autenticado previamente');
+              console.log('❌ No hay usuario en cache offline');
               setUser(null);
               setIsLogged(false);
               setUserEmpresas([]);
