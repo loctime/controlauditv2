@@ -252,9 +252,14 @@ export const useAuditoriaData = (
           console.log('[DEBUG Auditoria] No hay empresas en contexto, cargando desde cache offline...');
           const cacheData = await cargarDatosDelCache();
           
+          console.log('[DEBUG Auditoria] Cache data encontrado:', cacheData);
+          
           if (cacheData && cacheData.empresas && cacheData.empresas.length > 0) {
             console.log('[DEBUG Auditoria] Empresas cargadas desde cache offline:', cacheData.empresas.length, 'empresas');
+            console.log('[DEBUG Auditoria] Empresas del cache:', cacheData.empresas);
             setEmpresas(cacheData.empresas);
+          } else {
+            console.log('[DEBUG Auditoria] No hay empresas en cache offline');
           }
           // Prioridad 3: Cargar desde Firestore (solo si hay conexión)
           else if (userProfile && userProfile.uid && navigator.onLine) {
@@ -298,9 +303,21 @@ export const useAuditoriaData = (
             empresaId: doc.data().empresaId
           }));
         } else {
-          // Para max y operario, usar solo userEmpresas (no cargar desde Firestore)
-          if (userEmpresas && userEmpresas.length > 0) {
-            const empresasIds = userEmpresas.map(emp => emp.id);
+          // Para max y operario, usar userEmpresas o cache offline
+          let empresasParaSucursales = userEmpresas;
+          
+          // Si no hay userEmpresas, intentar cargar desde cache offline
+          if (!empresasParaSucursales || empresasParaSucursales.length === 0) {
+            console.log('[DEBUG Auditoria] No hay userEmpresas, cargando desde cache para sucursales...');
+            const cacheData = await cargarDatosDelCache();
+            if (cacheData && cacheData.empresas && cacheData.empresas.length > 0) {
+              empresasParaSucursales = cacheData.empresas;
+              console.log('[DEBUG Auditoria] Empresas cargadas desde cache para sucursales:', empresasParaSucursales.length);
+            }
+          }
+          
+          if (empresasParaSucursales && empresasParaSucursales.length > 0) {
+            const empresasIds = empresasParaSucursales.map(emp => emp.id);
             
             // Firestore limita 'in' queries a 10 elementos, dividir en chunks si es necesario
             const chunkSize = 10;
