@@ -48,54 +48,46 @@ const OfflineDebugInfo = () => {
           });
           return;
         }
-          
-          const transaction = db.transaction(['settings'], 'readonly');
-          const store = transaction.objectStore('settings');
-          
-          store.get('complete_user_cache').onsuccess = function(e) {
-            const cached = e.target.result;
-            if (cached && cached.value) {
-              const cacheData = cached.value;
-              const userProfile = cacheData.userProfile;
-              
-              resolve({
-                hasCache: true,
-                cacheTimestamp: new Date(cacheData.timestamp).toLocaleString(),
-                cacheAge: Math.round((Date.now() - cacheData.timestamp) / (1000 * 60 * 60 * 24) * 100) / 100,
-                userProfile: userProfile ? {
-                  uid: userProfile.uid,
-                  email: userProfile.email,
-                  displayName: userProfile.displayName,
-                  role: userProfile.role,
-                  clienteAdminId: userProfile.clienteAdminId,
-                  clienteAdminIdFallback: userProfile.clienteAdminId || userProfile.uid
-                } : null,
-                cacheStats: {
-                  empresas: cacheData.empresas?.length || 0,
-                  formularios: cacheData.formularios?.length || 0,
-                  sucursales: cacheData.sucursales?.length || 0,
-                  auditorias: cacheData.auditorias?.length || 0
-                }
-              });
-            } else {
-              resolve({
-                error: 'No hay cache completo disponible',
-                hasCache: false
-              });
-            }
-          };
-          
-          store.get('complete_user_cache').onerror = function(e) {
+        
+        const transaction = db.transaction(['settings'], 'readonly');
+        const store = transaction.objectStore('settings');
+        
+        store.get('complete_user_cache').onsuccess = function(e) {
+          const cached = e.target.result;
+          if (cached && cached.value) {
+            const cacheData = cached.value;
+            const userProfile = cacheData.userProfile;
+            
             resolve({
-              error: 'Error al obtener cache',
+              hasCache: true,
+              cacheTimestamp: new Date(cacheData.timestamp).toLocaleString(),
+              cacheAge: Math.round((Date.now() - cacheData.timestamp) / (1000 * 60 * 60 * 24) * 100) / 100,
+              userProfile: userProfile ? {
+                uid: userProfile.uid,
+                email: userProfile.email,
+                displayName: userProfile.displayName,
+                role: userProfile.role,
+                clienteAdminId: userProfile.clienteAdminId,
+                clienteAdminIdFallback: userProfile.clienteAdminId || userProfile.uid
+              } : null,
+              cacheStats: {
+                empresas: cacheData.empresas?.length || 0,
+                formularios: cacheData.formularios?.length || 0,
+                sucursales: cacheData.sucursales?.length || 0,
+                auditorias: cacheData.auditorias?.length || 0
+              }
+            });
+          } else {
+            resolve({
+              error: 'No hay cache completo disponible',
               hasCache: false
             });
-          };
+          }
         };
         
-        request.onerror = function(event) {
+        store.get('complete_user_cache').onerror = function(e) {
           resolve({
-            error: 'Error al abrir IndexedDB',
+            error: 'Error al obtener cache',
             hasCache: false
           });
         };
