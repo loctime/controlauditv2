@@ -19,18 +19,35 @@ const OfflineDebugInfo = () => {
         return;
       }
 
-      const request = indexedDB.open('controlaudit_offline_v1', 2);
+      // Importar la función de inicialización
+      const { initOfflineDatabase } = await import('../../services/offlineDatabase');
+      
+      // Inicializar la base de datos si no existe
+      let db;
+      try {
+        db = await initOfflineDatabase();
+      } catch (error) {
+        console.warn('Error al inicializar base de datos:', error);
+        // Intentar abrir sin inicialización
+        const request = indexedDB.open('controlaudit_offline_v1', 2);
+        db = await new Promise((resolve, reject) => {
+          request.onsuccess = function(event) {
+            resolve(event.target.result);
+          };
+          request.onerror = function(event) {
+            reject(event.target.error);
+          };
+        });
+      }
+
       const cachedData = await new Promise((resolve, reject) => {
-        request.onsuccess = function(event) {
-          const db = event.target.result;
-          
-          if (!db.objectStoreNames.contains('settings')) {
-            resolve({
-              error: 'Object store "settings" no existe',
-              hasCache: false
-            });
-            return;
-          }
+        if (!db.objectStoreNames.contains('settings')) {
+          resolve({
+            error: 'Object store "settings" no existe - Base de datos no inicializada',
+            hasCache: false
+          });
+          return;
+        }
           
           const transaction = db.transaction(['settings'], 'readonly');
           const store = transaction.objectStore('settings');
