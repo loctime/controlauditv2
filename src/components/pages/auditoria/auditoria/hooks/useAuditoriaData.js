@@ -298,53 +298,9 @@ export const useAuditoriaData = (
             empresaId: doc.data().empresaId
           }));
         } else {
-          // Para max y operario, cargar sucursales de sus empresas
-          // Usar userEmpresas si están disponibles, sino cargar desde Firestore
-          let empresasParaSucursales = userEmpresas;
-          
-          if (!empresasParaSucursales || empresasParaSucursales.length === 0) {
-            // Cargar empresas para obtener sucursales
-            if (userProfile.role === 'max') {
-              const empresasRef = collection(db, "empresas");
-              const empresasQuery = query(empresasRef, where("propietarioId", "==", userProfile.uid));
-              const empresasSnapshot = await getDocs(empresasQuery);
-              const misEmpresas = empresasSnapshot.docs.map(doc => ({
-                id: doc.id,
-                ...doc.data()
-              }));
-
-              // Cargar empresas de operarios
-              const usuariosRef = collection(db, "usuarios");
-              const usuariosQuery = query(usuariosRef, where("clienteAdminId", "==", userProfile.uid));
-              const usuariosSnapshot = await getDocs(usuariosQuery);
-              const usuariosOperarios = usuariosSnapshot.docs.map(doc => doc.id);
-
-              const empresasOperariosPromises = usuariosOperarios.map(async (operarioId) => {
-                const operarioEmpresasQuery = query(empresasRef, where("propietarioId", "==", operarioId));
-                const operarioEmpresasSnapshot = await getDocs(operarioEmpresasQuery);
-                return operarioEmpresasSnapshot.docs.map(doc => ({
-                  id: doc.id,
-                  ...doc.data()
-                }));
-              });
-
-              const empresasOperariosArrays = await Promise.all(empresasOperariosPromises);
-              const empresasOperarios = empresasOperariosArrays.flat();
-
-              empresasParaSucursales = [...misEmpresas, ...empresasOperarios];
-            } else if (userProfile.role === 'operario' && userProfile.clienteAdminId) {
-              const empresasRef = collection(db, "empresas");
-              const empresasQuery = query(empresasRef, where("propietarioId", "==", userProfile.clienteAdminId));
-              const empresasSnapshot = await getDocs(empresasQuery);
-              empresasParaSucursales = empresasSnapshot.docs.map(doc => ({
-                id: doc.id,
-                ...doc.data()
-              }));
-            }
-          }
-
-          if (empresasParaSucursales && empresasParaSucursales.length > 0) {
-            const empresasIds = empresasParaSucursales.map(emp => emp.id);
+          // Para max y operario, usar solo userEmpresas (no cargar desde Firestore)
+          if (userEmpresas && userEmpresas.length > 0) {
+            const empresasIds = userEmpresas.map(emp => emp.id);
             
             // Firestore limita 'in' queries a 10 elementos, dividir en chunks si es necesario
             const chunkSize = 10;
