@@ -1,11 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { Box, Typography, Paper, Chip, IconButton, Collapse } from '@mui/material';
 import { ExpandMore, ExpandLess, BugReport } from '@mui/icons-material';
+import { useAuth } from '../context/AuthContext';
 
 const OfflineDebugInfo = () => {
+  const { userProfile } = useAuth();
   const [debugInfo, setDebugInfo] = useState(null);
   const [expanded, setExpanded] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  // Solo mostrar para supermax
+  if (!userProfile || userProfile.role !== 'supermax') {
+    return null;
+  }
 
   const loadDebugInfo = async () => {
     setLoading(true);
