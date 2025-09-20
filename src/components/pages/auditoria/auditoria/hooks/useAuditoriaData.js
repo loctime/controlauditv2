@@ -104,51 +104,6 @@ export const useAuditoriaData = (
     }
   };
 
-  // Función para filtrar empresas que tienen sucursales
-  const filtrarEmpresasConSucursales = async (empresasData) => {
-    if (!empresasData || empresasData.length === 0) return [];
-    
-    try {
-      // Obtener todas las sucursales para las empresas
-      const empresasIds = empresasData.map(emp => emp.id);
-      
-      // Firestore limita 'in' queries a 10 elementos, dividir en chunks si es necesario
-      const chunkSize = 10;
-      const empresasChunks = [];
-      for (let i = 0; i < empresasIds.length; i += chunkSize) {
-        empresasChunks.push(empresasIds.slice(i, i + chunkSize));
-      }
-
-      const sucursalesPromises = empresasChunks.map(async (chunk) => {
-        const sucursalesRef = collection(db, "sucursales");
-        const sucursalesQuery = query(sucursalesRef, where("empresaId", "in", chunk));
-        const sucursalesSnapshot = await getDocs(sucursalesQuery);
-        return sucursalesSnapshot.docs.map(doc => ({
-          id: doc.id,
-          empresaId: doc.data().empresaId,
-          ...doc.data()
-        }));
-      });
-
-      const sucursalesArrays = await Promise.all(sucursalesPromises);
-      const todasLasSucursales = sucursalesArrays.flat();
-      
-      // Obtener IDs únicos de empresas que tienen sucursales
-      const empresasConSucursales = [...new Set(todasLasSucursales.map(s => s.empresaId))];
-      
-      // Filtrar empresas que tienen sucursales
-      const empresasFiltradas = empresasData.filter(empresa => 
-        empresasConSucursales.includes(empresa.id)
-      );
-      
-      console.log(`[DEBUG Auditoria] Empresas filtradas con sucursales: ${empresasFiltradas.length} de ${empresasData.length}`);
-      return empresasFiltradas;
-    } catch (error) {
-      console.error("Error al filtrar empresas con sucursales:", error);
-      return empresasData; // En caso de error, devolver todas las empresas
-    }
-  };
-
   // Cargar empresas desde el contexto, cache offline o Firestore como fallback
   useEffect(() => {
     const cargarEmpresas = async () => {
@@ -156,10 +111,8 @@ export const useAuditoriaData = (
       
       // Prioridad 1: Datos del contexto (online)
       if (userEmpresas && userEmpresas.length > 0) {
-        // Filtrar empresas que tienen sucursales
-        const empresasConSucursales = await filtrarEmpresasConSucursales(userEmpresas);
-        setEmpresas(empresasConSucursales);
-        console.log('[DEBUG Auditoria] Empresas desde contexto (filtradas):', empresasConSucursales.length, 'empresas');
+        setEmpresas(userEmpresas);
+        console.log('[DEBUG Auditoria] Empresas desde contexto:', userEmpresas.length, 'empresas');
       } 
       // Prioridad 2: Datos del cache offline
       else {
@@ -167,10 +120,8 @@ export const useAuditoriaData = (
         const cacheData = await cargarDatosDelCache();
         
         if (cacheData && cacheData.empresas && cacheData.empresas.length > 0) {
-          // Filtrar empresas que tienen sucursales
-          const empresasConSucursales = await filtrarEmpresasConSucursales(cacheData.empresas);
-          setEmpresas(empresasConSucursales);
-          console.log('[DEBUG Auditoria] Empresas cargadas desde cache offline (filtradas):', empresasConSucursales.length, 'empresas');
+          console.log('[DEBUG Auditoria] Empresas cargadas desde cache offline:', cacheData.empresas.length, 'empresas');
+          setEmpresas(cacheData.empresas);
         }
         // Prioridad 3: Cargar desde Firestore (solo si hay conexión)
         else if (userProfile && userProfile.uid && navigator.onLine) {
@@ -227,10 +178,8 @@ export const useAuditoriaData = (
               }));
             }
 
-            // Filtrar empresas que tienen sucursales
-            const empresasConSucursales = await filtrarEmpresasConSucursales(empresasData);
-            setEmpresas(empresasConSucursales);
-            console.log(`[DEBUG Auditoria] Empresas cargadas desde Firestore (filtradas): ${empresasConSucursales.length} de ${empresasData.length}`);
+            setEmpresas(empresasData);
+            console.log(`[DEBUG Auditoria] Empresas cargadas desde Firestore: ${empresasData.length}`);
           } catch (error) {
             console.error("Error al cargar empresas desde Firestore:", error);
             setEmpresas([]);
