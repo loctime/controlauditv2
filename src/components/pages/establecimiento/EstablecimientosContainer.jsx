@@ -35,7 +35,7 @@ import EditarEmpresaModal from "./EditarEmpresa";
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 
 const EstablecimientosContainer = () => {
-  const { userProfile, userEmpresas, crearEmpresa, verificarYCorregirEmpresas, getUserEmpresas, updateEmpresa } = useAuth();
+  const { userProfile, userEmpresas, crearEmpresa, verificarYCorregirEmpresas, getUserEmpresas, updateEmpresa, forceRefreshCache } = useAuth();
   const navigate = useNavigate();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
@@ -260,6 +260,28 @@ const EstablecimientosContainer = () => {
     navigate(`/sucursales/${empresaId}`);
   };
 
+  const handleForceRefreshCache = async () => {
+    try {
+      setCargandoEmpresas(true);
+      await forceRefreshCache();
+      await getUserEmpresas(userProfile.uid);
+      Swal.fire({
+        icon: 'success',
+        title: 'Cache actualizado',
+        text: 'El cache offline se ha actualizado correctamente'
+      });
+    } catch (error) {
+      console.error('Error actualizando cache:', error);
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: 'Error al actualizar el cache offline'
+      });
+    } finally {
+      setCargandoEmpresas(false);
+    }
+  };
+
   return (
     <Box sx={{ p: isSmallMobile ? 2 : 4 }}>
       {/* Header */}
@@ -301,6 +323,15 @@ const EstablecimientosContainer = () => {
             size={isSmallMobile ? "small" : "medium"}
           >
             {verificando ? "Verificando..." : "Verificar"}
+          </Button>
+          <Button
+            variant="outlined"
+            onClick={handleForceRefreshCache}
+            disabled={cargandoEmpresas}
+            startIcon={cargandoEmpresas ? <CircularProgress size={16} /> : <ExpandMoreIcon />}
+            size={isSmallMobile ? "small" : "medium"}
+          >
+            {cargandoEmpresas ? "Actualizando..." : "Actualizar Cache"}
           </Button>
           <Button
             variant="contained"

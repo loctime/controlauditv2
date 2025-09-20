@@ -41,6 +41,7 @@ export const saveCompleteUserCache = async (userProfile) => {
         ...doc.data()
       }));
       console.log('✅ Empresas cacheadas:', cacheData.empresas.length);
+      console.log('✅ Empresas cacheadas (detalle):', cacheData.empresas.map(e => ({ id: e.id, nombre: e.nombre, propietarioId: e.propietarioId })));
     } catch (error) {
       console.warn('⚠️ Error cacheando empresas:', error);
     }

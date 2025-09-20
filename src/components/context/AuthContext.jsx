@@ -144,8 +144,13 @@ const AuthContextComponent = ({ children }) => {
 
             // Guardar cache completo para funcionamiento offline
             try {
-              await saveCompleteUserCache(profile);
+              const cacheResult = await saveCompleteUserCache(profile);
               console.log('✅ Cache completo guardado para usuario:', firebaseUser.uid);
+              console.log('✅ Cache guardado con:', {
+                empresas: cacheResult?.empresas?.length || 0,
+                formularios: cacheResult?.formularios?.length || 0,
+                sucursales: cacheResult?.sucursales?.length || 0
+              });
             } catch (error) {
               console.warn('⚠️ Error guardando cache completo:', error);
             }
@@ -185,11 +190,28 @@ const AuthContextComponent = ({ children }) => {
               // Cargar datos del cache
               if (cachedUser.empresas && cachedUser.empresas.length > 0) {
                 console.log('✅ Empresas cargadas desde cache offline:', cachedUser.empresas.length);
-                setUserEmpresas(cachedUser.empresas);
+                console.log('✅ Empresas del cache:', cachedUser.empresas.map(e => ({ id: e.id, nombre: e.nombre })));
+                
+                // Aplicar filtrado multi-tenant si es necesario
+                let empresasFiltradas = cachedUser.empresas;
+                if (userProfile.role !== 'supermax') {
+                  empresasFiltradas = cachedUser.empresas.filter(empresa => {
+                    return empresa.propietarioId === userProfile.uid || 
+                           empresa.creadorId === userProfile.uid ||
+                           empresa.clienteAdminId === userProfile.clienteAdminId;
+                  });
+                  console.log('✅ Empresas filtradas por rol:', empresasFiltradas.length);
+                }
+                
+                setUserEmpresas(empresasFiltradas);
+              } else {
+                console.log('⚠️ No hay empresas en cache offline');
               }
               if (cachedUser.auditorias && cachedUser.auditorias.length > 0) {
                 console.log('✅ Auditorías cargadas desde cache offline:', cachedUser.auditorias.length);
                 setUserAuditorias(cachedUser.auditorias);
+              } else {
+                console.log('⚠️ No hay auditorías en cache offline');
               }
               
               console.log('✅ Usuario offline cargado desde cache');
@@ -338,6 +360,24 @@ const AuthContextComponent = ({ children }) => {
     return true;
   };
 
+  const forceRefreshCache = async () => {
+    if (userProfile) {
+      try {
+        console.log('🔄 Forzando actualización del cache...');
+        const cacheResult = await saveCompleteUserCache(userProfile);
+        console.log('✅ Cache actualizado:', {
+          empresas: cacheResult?.empresas?.length || 0,
+          formularios: cacheResult?.formularios?.length || 0,
+          sucursales: cacheResult?.sucursales?.length || 0
+        });
+        return cacheResult;
+      } catch (error) {
+        console.error('❌ Error actualizando cache:', error);
+        throw error;
+      }
+    }
+  };
+
   // Los valores disponibles en el contexto
   const data = {
     user,
@@ -368,6 +408,7 @@ const AuthContextComponent = ({ children }) => {
     verificarYCorregirEmpresas,
     updateEmpresa,
     compartirAuditoria,
+    forceRefreshCache,
     bloqueado,
     motivoBloqueo
   };
