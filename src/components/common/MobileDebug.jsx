@@ -1,8 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { Box, Typography, Button, Paper } from '@mui/material';
+import { useAuth } from '../context/AuthContext';
 
 const MobileDebug = () => {
+  const { userProfile } = useAuth();
   const [debugInfo, setDebugInfo] = useState({});
+
+  // Solo mostrar para supermax
+  if (!userProfile || userProfile.role !== 'supermax') {
+    return null;
+  }
 
   useEffect(() => {
     const info = {
