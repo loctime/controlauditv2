@@ -266,22 +266,37 @@ class SyncQueueService {
     const { default: AuditoriaService } = await import('../components/pages/auditoria/auditoriaService');
     
     const auditoriaData = item.payload;
+    
+    // Log para debugging - verificar qué datos tenemos
+    console.log('[SyncQueue] Datos de auditoría recibidos:', {
+      userId: auditoriaData.userId,
+      userEmail: auditoriaData.userEmail,
+      usuarioEmail: auditoriaData.usuarioEmail,
+      userDisplayName: auditoriaData.userDisplayName,
+      userRole: auditoriaData.userRole,
+      clienteAdminId: auditoriaData.clienteAdminId,
+      creadoPor: auditoriaData.creadoPor,
+      creadoPorEmail: auditoriaData.creadoPorEmail
+    });
+    
     // Asegurar que tenemos todos los datos de auth necesarios
     const userProfile = {
-      uid: auditoriaData.userId,
-      email: auditoriaData.userEmail || auditoriaData.usuarioEmail || 'usuario@ejemplo.com',
+      uid: auditoriaData.userId || auditoriaData.creadoPor,
+      email: auditoriaData.userEmail || auditoriaData.usuarioEmail || auditoriaData.creadoPorEmail || 'usuario@ejemplo.com',
       clienteAdminId: auditoriaData.clienteAdminId || auditoriaData.userId, // Fallback al uid si no hay clienteAdminId
       displayName: auditoriaData.userDisplayName || auditoriaData.userEmail || 'Usuario',
       role: auditoriaData.userRole || 'operario'
     };
 
     // Asegurar que los datos de auditoría también tengan los metadatos correctos
-    auditoriaData.userId = auditoriaData.userId || userProfile.uid;
-    auditoriaData.userEmail = auditoriaData.userEmail || auditoriaData.usuarioEmail || userProfile.email;
-    auditoriaData.usuarioEmail = auditoriaData.usuarioEmail || auditoriaData.userEmail || userProfile.email;
+    auditoriaData.userId = auditoriaData.userId || auditoriaData.creadoPor || userProfile.uid;
+    auditoriaData.userEmail = auditoriaData.userEmail || auditoriaData.usuarioEmail || auditoriaData.creadoPorEmail || userProfile.email;
+    auditoriaData.usuarioEmail = auditoriaData.usuarioEmail || auditoriaData.userEmail || auditoriaData.creadoPorEmail || userProfile.email;
     auditoriaData.userDisplayName = auditoriaData.userDisplayName || userProfile.displayName;
     auditoriaData.userRole = auditoriaData.userRole || userProfile.role;
     auditoriaData.clienteAdminId = auditoriaData.clienteAdminId || userProfile.clienteAdminId;
+    auditoriaData.creadoPor = auditoriaData.creadoPor || userProfile.uid;
+    auditoriaData.creadoPorEmail = auditoriaData.creadoPorEmail || userProfile.email;
 
     // Procesar imágenes si existen
     if (auditoriaData.imagenes && auditoriaData.imagenes.length > 0) {
@@ -301,7 +316,9 @@ class SyncQueueService {
         usuarioEmail: auditoriaData.usuarioEmail,
         userDisplayName: auditoriaData.userDisplayName,
         userRole: auditoriaData.userRole,
-        clienteAdminId: auditoriaData.clienteAdminId
+        clienteAdminId: auditoriaData.clienteAdminId,
+        creadoPor: auditoriaData.creadoPor,
+        creadoPorEmail: auditoriaData.creadoPorEmail
       }
     });
 

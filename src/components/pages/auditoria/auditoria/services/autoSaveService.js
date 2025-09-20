@@ -156,14 +156,71 @@ class AutoSaveService {
         throw new Error('No se pudo inicializar la base de datos offline');
       }
 
+      // Obtener datos completos del usuario del cache
+      let userProfile = null;
+      try {
+        const request = indexedDB.open('controlaudit_offline_v1', 2);
+        const cachedUser = await new Promise((resolve, reject) => {
+          request.onsuccess = function(event) {
+            const db = event.target.result;
+            
+            if (!db.objectStoreNames.contains('settings')) {
+              resolve(null);
+              return;
+            }
+            
+            const transaction = db.transaction(['settings'], 'readonly');
+            const store = transaction.objectStore('settings');
+            
+            store.get('complete_user_cache').onsuccess = function(e) {
+              const cached = e.target.result;
+              if (cached && cached.value && cached.value.userProfile) {
+                resolve(cached.value.userProfile);
+              } else {
+                resolve(null);
+              }
+            };
+            
+            store.get('complete_user_cache').onerror = function(e) {
+              resolve(null);
+            };
+          };
+          
+          request.onerror = function(event) {
+            resolve(null);
+          };
+        });
+        
+        if (cachedUser) {
+          userProfile = cachedUser;
+          console.log('[AutoSaveService] Usuario encontrado en cache:', {
+            uid: userProfile.uid,
+            email: userProfile.email,
+            displayName: userProfile.displayName,
+            role: userProfile.role,
+            clienteAdminId: userProfile.clienteAdminId
+          });
+        }
+      } catch (error) {
+        console.warn('[AutoSaveService] Error al obtener usuario del cache:', error);
+      }
+
       // Generar ID único para la auditoría offline
       const auditoriaId = generateOfflineId();
       
-      // Preparar datos para IndexedDB
+      // Preparar datos para IndexedDB con información completa del usuario
       const saveData = {
         id: auditoriaId,
         ...auditoriaData,
         userId,
+        // Incluir datos completos del usuario para sincronización
+        userEmail: userProfile?.email || 'usuario@ejemplo.com',
+        usuarioEmail: userProfile?.email || 'usuario@ejemplo.com',
+        userDisplayName: userProfile?.displayName || userProfile?.email || 'Usuario',
+        userRole: userProfile?.role || 'operario',
+        clienteAdminId: userProfile?.clienteAdminId || userProfile?.uid || userId,
+        creadoPor: userProfile?.uid || userId,
+        creadoPorEmail: userProfile?.email || 'usuario@ejemplo.com',
         sessionId: this.generateSessionId(),
         lastModified: new Date(),
         autoSaved: true,
