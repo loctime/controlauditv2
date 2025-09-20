@@ -9,6 +9,16 @@ const OfflineDebugInfo = () => {
 
   const loadDebugInfo = async () => {
     setLoading(true);
+    
+    // Timeout de seguridad para evitar loading infinito
+    const timeoutId = setTimeout(() => {
+      setLoading(false);
+      setDebugInfo({
+        error: 'Timeout al cargar información',
+        hasCache: false
+      });
+    }, 5000);
+    
     try {
       // Verificar si IndexedDB está disponible
       if (!window.indexedDB) {
@@ -16,6 +26,8 @@ const OfflineDebugInfo = () => {
           error: 'IndexedDB no disponible',
           hasCache: false
         });
+        setLoading(false);
+        clearTimeout(timeoutId);
         return;
       }
 
@@ -94,13 +106,15 @@ const OfflineDebugInfo = () => {
       });
       
       setDebugInfo(cachedData);
+      setLoading(false);
+      clearTimeout(timeoutId);
     } catch (error) {
       setDebugInfo({
         error: `Error: ${error.message}`,
         hasCache: false
       });
-    } finally {
       setLoading(false);
+      clearTimeout(timeoutId);
     }
   };
 
