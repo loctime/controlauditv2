@@ -292,7 +292,7 @@ const EstablecimientosContainer = () => {
 
   return (
     <Box sx={{ p: isSmallMobile ? 2 : 4 }}>
-      {/* Header */}
+      {/* Header., */}
       <Box sx={{ 
         display: 'flex', 
         flexDirection: isSmallMobile ? 'column' : 'row',
