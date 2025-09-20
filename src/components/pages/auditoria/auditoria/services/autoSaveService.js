@@ -165,6 +165,7 @@ class AutoSaveService {
             const db = event.target.result;
             
             if (!db.objectStoreNames.contains('settings')) {
+              console.warn('[AutoSaveService] Object store "settings" no existe');
               resolve(null);
               return;
             }
@@ -177,17 +178,30 @@ class AutoSaveService {
               if (cached && cached.value && cached.value.userProfile) {
                 resolve(cached.value.userProfile);
               } else {
+                console.warn('[AutoSaveService] No hay userProfile en cache');
                 resolve(null);
               }
             };
             
             store.get('complete_user_cache').onerror = function(e) {
+              console.warn('[AutoSaveService] Error al obtener cache:', e.target.error);
               resolve(null);
             };
           };
           
           request.onerror = function(event) {
+            console.warn('[AutoSaveService] Error al abrir IndexedDB:', event.target.error);
             resolve(null);
+          };
+          
+          request.onupgradeneeded = function(event) {
+            const db = event.target.result;
+            console.log('[AutoSaveService] Inicializando base de datos...');
+            
+            if (!db.objectStoreNames.contains('settings')) {
+              db.createObjectStore('settings', { keyPath: 'key' });
+              console.log('[AutoSaveService] Object store "settings" creado');
+            }
           };
         });
         
@@ -200,6 +214,8 @@ class AutoSaveService {
             role: userProfile.role,
             clienteAdminId: userProfile.clienteAdminId
           });
+        } else {
+          console.warn('[AutoSaveService] No se encontró usuario en cache');
         }
       } catch (error) {
         console.warn('[AutoSaveService] Error al obtener usuario del cache:', error);
@@ -228,6 +244,26 @@ class AutoSaveService {
         updatedAt: Date.now(),
         status: 'pending_sync'
       };
+
+      // Log para debugging
+      console.log('[AutoSaveService] Datos que se van a guardar:', {
+        auditoriaId: saveData.id,
+        userId: saveData.userId,
+        userEmail: saveData.userEmail,
+        usuarioEmail: saveData.usuarioEmail,
+        userDisplayName: saveData.userDisplayName,
+        userRole: saveData.userRole,
+        clienteAdminId: saveData.clienteAdminId,
+        creadoPor: saveData.creadoPor,
+        creadoPorEmail: saveData.creadoPorEmail,
+        userProfileFromCache: userProfile ? {
+          uid: userProfile.uid,
+          email: userProfile.email,
+          displayName: userProfile.displayName,
+          role: userProfile.role,
+          clienteAdminId: userProfile.clienteAdminId
+        } : null
+      });
 
       // Guardar auditoría en IndexedDB
       await db.put('auditorias', saveData);

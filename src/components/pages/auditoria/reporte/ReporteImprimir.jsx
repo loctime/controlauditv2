@@ -39,6 +39,87 @@ const BotonGenerarReporte = ({
 
     setGuardando(true);
     try {
+      // Obtener userProfile del cache si no está disponible (modo offline)
+      let currentUserProfile = userProfile;
+      
+      if (!currentUserProfile) {
+        console.log('[ReporteImprimir] userProfile no disponible, buscando en cache...');
+        try {
+          // Verificar si IndexedDB está disponible
+          if (!window.indexedDB) {
+            console.warn('[ReporteImprimir] IndexedDB no está disponible');
+            throw new Error('IndexedDB no disponible');
+          }
+
+          const request = indexedDB.open('controlaudit_offline_v1', 2);
+          const cachedUser = await new Promise((resolve, reject) => {
+            request.onsuccess = function(event) {
+              const db = event.target.result;
+              
+              // Verificar si la object store 'settings' existe
+              if (!db.objectStoreNames.contains('settings')) {
+                console.warn('[ReporteImprimir] Object store "settings" no existe');
+                resolve(null);
+                return;
+              }
+              
+              const transaction = db.transaction(['settings'], 'readonly');
+              const store = transaction.objectStore('settings');
+              
+              store.get('complete_user_cache').onsuccess = function(e) {
+                const cached = e.target.result;
+                if (cached && cached.value && cached.value.userProfile) {
+                  resolve(cached.value.userProfile);
+                } else {
+                  resolve(null);
+                }
+              };
+              
+              store.get('complete_user_cache').onerror = function(e) {
+                console.error('[ReporteImprimir] Error al obtener cache:', e.target.error);
+                resolve(null);
+              };
+            };
+            
+            request.onerror = function(event) {
+              console.error('[ReporteImprimir] Error al abrir IndexedDB:', event.target.error);
+              reject(event.target.error);
+            };
+            
+            request.onupgradeneeded = function(event) {
+              console.log('[ReporteImprimir] IndexedDB necesita actualización');
+              // No hacer nada aquí, solo para evitar errores
+            };
+          });
+          
+          if (cachedUser) {
+            currentUserProfile = cachedUser;
+            console.log('[ReporteImprimir] Usuario encontrado en cache:', {
+              uid: currentUserProfile.uid,
+              email: currentUserProfile.email,
+              displayName: currentUserProfile.displayName,
+              role: currentUserProfile.role,
+              clienteAdminId: currentUserProfile.clienteAdminId,
+              clienteAdminIdFallback: currentUserProfile.clienteAdminId || currentUserProfile.uid
+            });
+          } else {
+            console.log('[ReporteImprimir] No se encontró usuario en cache');
+          }
+        } catch (error) {
+          console.error('[ReporteImprimir] Error al obtener usuario del cache:', error);
+          // Continuar sin userProfile del cache
+        }
+      }
+
+      // Asegurar que tenemos los datos de auth correctos
+      const authData = {
+        clienteAdminId: currentUserProfile?.clienteAdminId || currentUserProfile?.uid,
+        usuarioId: currentUserProfile?.uid,
+        usuarioEmail: currentUserProfile?.email,
+        userDisplayName: currentUserProfile?.displayName,
+        userRole: currentUserProfile?.role
+      };
+
       // Construir l metadatos consistentes y multi-tenant
       const datosAuditoria = buildReporteMetadata({
         empresa,
@@ -50,16 +131,22 @@ const BotonGenerarReporte = ({
         secciones,
         firmaAuditor,
         firmaResponsable,
-        // Multi-tenant
-        clienteAdminId: userProfile?.clienteAdminId || userProfile?.uid,
-        usuarioId: userProfile?.uid,
-        usuarioEmail: userProfile?.email,
+        // Multi-tenant - asegurar que siempre tengamos estos datos
+        ...authData,
         fechaGuardado: new Date(),
       });
       console.debug('[ReporteImprimir] Guardando auditoría con metadatos:', datosAuditoria);
+      console.log('[ReporteImprimir] userProfile final que se pasa al servicio:', {
+        uid: currentUserProfile?.uid,
+        email: currentUserProfile?.email,
+        displayName: currentUserProfile?.displayName,
+        role: currentUserProfile?.role,
+        clienteAdminId: currentUserProfile?.clienteAdminId,
+        clienteAdminIdFallback: currentUserProfile?.clienteAdminId || currentUserProfile?.uid
+      });
 
       // Usar el servicio centralizado para guardar
-      const auditoriaId = await AuditoriaService.guardarAuditoria(datosAuditoria, userProfile);
+      const auditoriaId = await AuditoriaService.guardarAuditoria(datosAuditoria, currentUserProfile);
       
       setGuardadoExitoso(true);
       const tipoUbicacion = sucursal && sucursal.trim() !== "" ? "Sucursal" : "Casa Central";

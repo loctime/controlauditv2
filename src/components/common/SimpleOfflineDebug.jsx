@@ -165,6 +165,21 @@ const SimpleOfflineDebug = () => {
                 <strong>Role:</strong> {debugInfo.role}
               </Typography>
               
+              <Box sx={{ mt: 1, p: 1, backgroundColor: '#e8f5e8', borderRadius: 1 }}>
+                <Typography variant="caption" fontWeight="bold" display="block" gutterBottom>
+                  Status:
+                </Typography>
+                <Typography variant="caption" display="block">
+                  <strong>Cache:</strong> {debugInfo.hasCache ? '✅ OK' : '❌ Error'}
+                </Typography>
+                <Typography variant="caption" display="block">
+                  <strong>ClienteAdminId:</strong> {debugInfo.clienteAdminId !== 'NULL' ? '✅ OK' : '❌ NULL'}
+                </Typography>
+                <Typography variant="caption" display="block">
+                  <strong>Email:</strong> {debugInfo.creadoPorEmail !== 'NULL' ? '✅ OK' : '❌ NULL'}
+                </Typography>
+              </Box>
+              
               <Typography 
                 variant="caption" 
                 sx={{ 

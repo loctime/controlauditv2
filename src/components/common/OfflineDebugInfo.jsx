@@ -240,9 +240,27 @@ const OfflineDebugInfo = () => {
                     <strong>ClienteAdminId Fallback:</strong> {debugInfo.userProfile.clienteAdminIdFallback}
                   </Typography>
                   
-                  <Typography variant="caption" display="block" color={debugInfo.userProfile.email ? 'success.main' : 'error.main'}>
-                    <strong>CreadoPorEmail:</strong> {debugInfo.userProfile.email || 'NULL'}
-                  </Typography>
+              <Typography variant="caption" display="block" color={debugInfo.userProfile.email ? 'success.main' : 'error.main'}>
+                <strong>CreadoPorEmail:</strong> {debugInfo.userProfile.email || 'NULL'}
+              </Typography>
+              
+              <Box sx={{ mt: 1, p: 1, backgroundColor: '#e3f2fd', borderRadius: 1 }}>
+                <Typography variant="caption" fontWeight="bold" display="block" gutterBottom>
+                  Debug Info:
+                </Typography>
+                <Typography variant="caption" display="block">
+                  <strong>Cache Status:</strong> {debugInfo.hasCache ? '✅ Disponible' : '❌ No disponible'}
+                </Typography>
+                <Typography variant="caption" display="block">
+                  <strong>UserProfile:</strong> {debugInfo.userProfile ? '✅ Cargado' : '❌ No cargado'}
+                </Typography>
+                <Typography variant="caption" display="block">
+                  <strong>ClienteAdminId:</strong> {debugInfo.userProfile?.clienteAdminId ? '✅ Tiene valor' : '❌ NULL'}
+                </Typography>
+                <Typography variant="caption" display="block">
+                  <strong>Email:</strong> {debugInfo.userProfile?.email ? '✅ Tiene valor' : '❌ NULL'}
+                </Typography>
+              </Box>
                 </Box>
               )}
               
