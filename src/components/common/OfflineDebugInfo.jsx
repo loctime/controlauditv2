@@ -31,25 +31,48 @@ const OfflineDebugInfo = () => {
         return;
       }
 
-      // Importar la función de inicialización
-      const { initOfflineDatabase } = await import('../../services/offlineDatabase');
-      
-      // Inicializar la base de datos si no existe
+      // Inicializar la base de datos directamente
       let db;
       try {
-        db = await initOfflineDatabase();
-      } catch (error) {
-        console.warn('Error al inicializar base de datos:', error);
-        // Intentar abrir sin inicialización
-        const request = indexedDB.open('controlaudit_offline_v1', 2);
-        db = await new Promise((resolve, reject) => {
-          request.onsuccess = function(event) {
-            resolve(event.target.result);
-          };
-          request.onerror = function(event) {
-            reject(event.target.error);
-          };
+        // Usar openDB directamente para asegurar que se cree la estructura
+        const { openDB } = await import('idb');
+        db = await openDB('controlaudit_offline_v1', 2, {
+          upgrade(db, oldVersion) {
+            console.log('🔄 Inicializando base de datos offline desde debug...');
+            
+            // Crear object store 'settings' si no existe
+            if (!db.objectStoreNames.contains('settings')) {
+              db.createObjectStore('settings', { keyPath: 'key' });
+              console.log('✅ Object store "settings" creado');
+            }
+            
+            // Crear otras object stores necesarias
+            if (!db.objectStoreNames.contains('auditorias')) {
+              const auditoriasStore = db.createObjectStore('auditorias', { keyPath: 'id' });
+              auditoriasStore.createIndex('by-updatedAt', 'updatedAt');
+              auditoriasStore.createIndex('by-status', 'status');
+              auditoriasStore.createIndex('by-userId', 'userId');
+            }
+            
+            if (!db.objectStoreNames.contains('fotos')) {
+              const fotosStore = db.createObjectStore('fotos', { keyPath: 'id' });
+              fotosStore.createIndex('by-auditoriaId', 'auditoriaId');
+              fotosStore.createIndex('by-createdAt', 'createdAt');
+            }
+            
+            if (!db.objectStoreNames.contains('syncQueue')) {
+              const syncQueueStore = db.createObjectStore('syncQueue', { keyPath: 'id' });
+              syncQueueStore.createIndex('by-createdAt', 'createdAt');
+              syncQueueStore.createIndex('by-nextRetry', 'nextRetry');
+              syncQueueStore.createIndex('by-priority', 'priority');
+            }
+            
+            console.log('✅ Base de datos offline inicializada desde debug');
+          }
         });
+      } catch (error) {
+        console.error('Error al inicializar base de datos:', error);
+        throw error;
       }
 
       const cachedData = await new Promise((resolve, reject) => {
