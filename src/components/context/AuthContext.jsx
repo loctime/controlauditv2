@@ -205,11 +205,18 @@ const AuthContextComponent = ({ children }) => {
                 let empresasFiltradas = cachedUser.empresas;
                 if (userProfile.role !== 'supermax') {
                   empresasFiltradas = cachedUser.empresas.filter(empresa => {
-                    return empresa.propietarioId === userProfile.uid || 
-                           empresa.creadorId === userProfile.uid ||
-                           empresa.clienteAdminId === userProfile.clienteAdminId;
+                    const esPropietario = empresa.propietarioId === userProfile.uid;
+                    const esCreador = empresa.creadorId === userProfile.uid;
+                    const esDelClienteAdmin = empresa.clienteAdminId === userProfile.clienteAdminId;
+                    const esDelUsuario = empresa.clienteAdminId === userProfile.uid; // Para usuarios 'max'
+                    
+                    return esPropietario || esCreador || esDelClienteAdmin || esDelUsuario;
                   });
                   console.log('✅ Empresas filtradas por rol:', empresasFiltradas.length);
+                  console.log('✅ Empresas originales:', cachedUser.empresas.length);
+                  console.log('✅ userProfile.uid:', userProfile.uid);
+                  console.log('✅ userProfile.clienteAdminId:', userProfile.clienteAdminId);
+                  console.log('✅ userProfile.role:', userProfile.role);
                 }
                 
                 setUserEmpresas(empresasFiltradas);

@@ -263,8 +263,16 @@ const EstablecimientosContainer = () => {
   const handleForceRefreshCache = async () => {
     try {
       setCargandoEmpresas(true);
+      setEmpresasCargadas(false); // Resetear el estado de empresas cargadas
+      
+      // Forzar actualización del cache
       await forceRefreshCache();
+      
+      // Recargar empresas
       await getUserEmpresas(userProfile.uid);
+      
+      setEmpresasCargadas(true);
+      
       Swal.fire({
         icon: 'success',
         title: 'Cache actualizado',
