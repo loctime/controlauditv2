@@ -40,6 +40,7 @@ import AutoSaveAlert from "./components/AutoSaveAlert";
 import AuditoriaHeader from "./components/AuditoriaHeader";
 import { createAuditoriaSteps } from "./components/AuditoriaSteps";
 import SimpleOfflineDebug from "../../../common/SimpleOfflineDebug";
+import AuditoriaDebugInfo from "../../../common/AuditoriaDebugInfo";
 
 // Servicios
 import AuditoriaService from "../auditoriaService";
@@ -556,6 +557,9 @@ const AuditoriaRefactorizada = () => {
 
       {/* Debug offline para verificar datos del usuario */}
       <SimpleOfflineDebug />
+      
+      {/* Debug específico para auditorías */}
+      <AuditoriaDebugInfo />
     </Container>
   );
 };
