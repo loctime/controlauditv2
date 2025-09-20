@@ -3,7 +3,9 @@ import {
   Box,
   Chip,
   Tooltip,
-  IconButton
+  IconButton,
+  Snackbar,
+  Alert
 } from '@mui/material';
 import {
   WifiOff,
@@ -23,6 +25,9 @@ const OfflineIndicatorMobile = ({ userProfile }) => {
   const { isOnline, timeOffline } = useConnectivity();
   const [queueStats, setQueueStats] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [showSnackbar, setShowSnackbar] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState('');
+  const [snackbarSeverity, setSnackbarSeverity] = useState('info');
 
   // Actualizar estadísticas de cola
   useEffect(() => {
@@ -55,6 +60,43 @@ const OfflineIndicatorMobile = ({ userProfile }) => {
 
     return removeListener;
   }, []);
+
+  // Función para sincronizar manualmente
+  const handleManualSync = async () => {
+    if (!isOnline) {
+      setSnackbarMessage('Sin conexión a internet');
+      setSnackbarSeverity('error');
+      setShowSnackbar(true);
+      return;
+    }
+
+    if (isProcessing) {
+      setSnackbarMessage('Ya se está sincronizando...');
+      setSnackbarSeverity('info');
+      setShowSnackbar(true);
+      return;
+    }
+
+    try {
+      setIsProcessing(true);
+      setSnackbarMessage('Iniciando sincronización...');
+      setSnackbarSeverity('info');
+      setShowSnackbar(true);
+      
+      await syncQueueService.processQueue();
+      
+      setSnackbarMessage('Sincronización completada');
+      setSnackbarSeverity('success');
+      setShowSnackbar(true);
+    } catch (error) {
+      console.error('Error en sincronización manual:', error);
+      setSnackbarMessage('Error en sincronización');
+      setSnackbarSeverity('error');
+      setShowSnackbar(true);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
 
   // Determinar el estado y color del indicador
   const getIndicatorState = () => {
@@ -92,38 +134,63 @@ const OfflineIndicatorMobile = ({ userProfile }) => {
   const indicatorState = getIndicatorState();
 
   return (
-    <Tooltip title={indicatorState.tooltip}>
-      <IconButton
-        size="small"
-        sx={{
-          p: 0.5,
-          minWidth: 'auto',
-          width: 24,
-          height: 24,
-          '&:hover': {
-            backgroundColor: 'rgba(255,255,255,0.1)'
-          }
-        }}
-      >
-        <Box
+    <>
+      <Tooltip title={indicatorState.tooltip}>
+        <IconButton
+          size="small"
+          onClick={handleManualSync}
+          disabled={!isOnline && !queueStats?.total}
           sx={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            width: 20,
-            height: 20,
-            borderRadius: '50%',
-            backgroundColor: `${indicatorState.color}.main`,
-            color: 'white',
+            p: 0.5,
+            minWidth: 'auto',
+            width: 24,
+            height: 24,
+            cursor: (isOnline || queueStats?.total) ? 'pointer' : 'default',
             '&:hover': {
-              backgroundColor: `${indicatorState.color}.dark`
+              backgroundColor: 'rgba(255,255,255,0.1)'
+            },
+            '&:disabled': {
+              opacity: 0.6,
+              cursor: 'not-allowed'
             }
           }}
         >
-          {indicatorState.icon}
-        </Box>
-      </IconButton>
-    </Tooltip>
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: 20,
+              height: 20,
+              borderRadius: '50%',
+              backgroundColor: `${indicatorState.color}.main`,
+              color: 'white',
+              '&:hover': {
+                backgroundColor: `${indicatorState.color}.dark`
+              }
+            }}
+          >
+            {indicatorState.icon}
+          </Box>
+        </IconButton>
+      </Tooltip>
+
+      {/* Snackbar para notificaciones */}
+      <Snackbar
+        open={showSnackbar}
+        autoHideDuration={3000}
+        onClose={() => setShowSnackbar(false)}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+      >
+        <Alert 
+          onClose={() => setShowSnackbar(false)} 
+          severity={snackbarSeverity}
+          sx={{ width: '100%' }}
+        >
+          {snackbarMessage}
+        </Alert>
+      </Snackbar>
+    </>
   );
 };
 
