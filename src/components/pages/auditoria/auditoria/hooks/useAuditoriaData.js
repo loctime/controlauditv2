@@ -258,9 +258,7 @@ export const useAuditoriaData = (
             console.log('[DEBUG Auditoria] Empresas cargadas desde cache offline:', cacheData.empresas.length, 'empresas');
             console.log('[DEBUG Auditoria] Empresas del cache:', cacheData.empresas);
             setEmpresas(cacheData.empresas);
-          } else {
-            console.log('[DEBUG Auditoria] No hay empresas en cache offline');
-          }
+          } 
           // Prioridad 3: Cargar desde Firestore (solo si hay conexión)
           else if (userProfile && userProfile.uid && navigator.onLine) {
             console.log('[DEBUG Auditoria] No hay empresas en cache offline, cargando desde Firestore...');
