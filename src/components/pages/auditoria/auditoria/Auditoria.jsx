@@ -39,6 +39,7 @@ import AuditoriaCompletada from "./components/AuditoriaCompletada";
 import AutoSaveAlert from "./components/AutoSaveAlert";
 import AuditoriaHeader from "./components/AuditoriaHeader";
 import { createAuditoriaSteps } from "./components/AuditoriaSteps";
+import SimpleOfflineDebug from "../../../common/SimpleOfflineDebug";
 
 // Servicios
 import AuditoriaService from "../auditoriaService";
@@ -552,6 +553,9 @@ const AuditoriaRefactorizada = () => {
           {snackbarMsg}
         </MuiAlert>
       </Snackbar>
+
+      {/* Debug offline para verificar datos del usuario */}
+      <SimpleOfflineDebug />
     </Container>
   );
 };
