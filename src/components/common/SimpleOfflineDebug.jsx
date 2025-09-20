@@ -9,6 +9,10 @@ const SimpleOfflineDebug = () => {
   const [expanded, setExpanded] = useState(false);
 
   // Solo mostrar para supermax
+  console.log('[SimpleOfflineDebug] userProfile:', userProfile);
+  console.log('[SimpleOfflineDebug] role:', userProfile?.role);
+  console.log('[SimpleOfflineDebug] should show:', userProfile?.role === 'supermax');
+  
   if (!userProfile || userProfile.role !== 'supermax') {
     return null;
   }

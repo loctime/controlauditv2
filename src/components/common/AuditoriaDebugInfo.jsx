@@ -10,6 +10,10 @@ const AuditoriaDebugInfo = () => {
   const [loading, setLoading] = useState(false);
 
   // Solo mostrar para supermax
+  console.log('[AuditoriaDebugInfo] userProfile:', userProfile);
+  console.log('[AuditoriaDebugInfo] role:', userProfile?.role);
+  console.log('[AuditoriaDebugInfo] should show:', userProfile?.role === 'supermax');
+  
   if (!userProfile || userProfile.role !== 'supermax') {
     return null;
   }
