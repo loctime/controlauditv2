@@ -266,13 +266,22 @@ class SyncQueueService {
     const { default: AuditoriaService } = await import('../components/pages/auditoria/auditoriaService');
     
     const auditoriaData = item.payload;
+    // Asegurar que tenemos todos los datos de auth necesarios
     const userProfile = {
       uid: auditoriaData.userId,
       email: auditoriaData.userEmail || auditoriaData.usuarioEmail || 'usuario@ejemplo.com',
-      clienteAdminId: auditoriaData.clienteAdminId,
+      clienteAdminId: auditoriaData.clienteAdminId || auditoriaData.userId, // Fallback al uid si no hay clienteAdminId
       displayName: auditoriaData.userDisplayName || auditoriaData.userEmail || 'Usuario',
       role: auditoriaData.userRole || 'operario'
     };
+
+    // Asegurar que los datos de auditoría también tengan los metadatos correctos
+    auditoriaData.userId = auditoriaData.userId || userProfile.uid;
+    auditoriaData.userEmail = auditoriaData.userEmail || auditoriaData.usuarioEmail || userProfile.email;
+    auditoriaData.usuarioEmail = auditoriaData.usuarioEmail || auditoriaData.userEmail || userProfile.email;
+    auditoriaData.userDisplayName = auditoriaData.userDisplayName || userProfile.displayName;
+    auditoriaData.userRole = auditoriaData.userRole || userProfile.role;
+    auditoriaData.clienteAdminId = auditoriaData.clienteAdminId || userProfile.clienteAdminId;
 
     // Procesar imágenes si existen
     if (auditoriaData.imagenes && auditoriaData.imagenes.length > 0) {
@@ -284,7 +293,16 @@ class SyncQueueService {
       auditoriaId: auditoriaData.id,
       empresa: auditoriaData.empresa,
       formulario: auditoriaData.formulario,
-      userProfile: userProfile
+      userProfile: userProfile,
+      auditoriaDataKeys: Object.keys(auditoriaData),
+      auditoriaDataUserFields: {
+        userId: auditoriaData.userId,
+        userEmail: auditoriaData.userEmail,
+        usuarioEmail: auditoriaData.usuarioEmail,
+        userDisplayName: auditoriaData.userDisplayName,
+        userRole: auditoriaData.userRole,
+        clienteAdminId: auditoriaData.clienteAdminId
+      }
     });
 
     // Guardar en Firebase

@@ -144,7 +144,16 @@ const AuthContextComponent = ({ children }) => {
 
             // Guardar cache completo para funcionamiento offline
             try {
-              const cacheResult = await saveCompleteUserCache(profile);
+              // Asegurar que el profile tenga todos los datos necesarios
+              const completeProfile = {
+                ...profile,
+                clienteAdminId: profile.clienteAdminId || profile.uid, // Fallback al uid si no hay clienteAdminId
+                email: profile.email || firebaseUser.email,
+                displayName: profile.displayName || firebaseUser.displayName || firebaseUser.email,
+                role: profile.role || 'operario'
+              };
+              
+              const cacheResult = await saveCompleteUserCache(completeProfile);
               console.log('✅ Cache completo guardado para usuario:', firebaseUser.uid);
               console.log('✅ Cache guardado con:', {
                 empresas: cacheResult?.empresas?.length || 0,
