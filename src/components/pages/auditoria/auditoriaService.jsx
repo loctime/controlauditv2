@@ -382,16 +382,21 @@ class AuditoriaService {
       // Generar ID único para la auditoría offline
       const auditoriaId = generateOfflineId();
       
+      // Asegurar que tenemos los datos de auth correctos
+      const authData = {
+        userId: userProfile?.uid || datosAuditoria.usuarioId,
+        userEmail: userProfile?.email || datosAuditoria.usuarioEmail || 'usuario@ejemplo.com',
+        usuarioEmail: userProfile?.email || datosAuditoria.usuarioEmail || 'usuario@ejemplo.com',
+        userDisplayName: userProfile?.displayName || userProfile?.email || 'Usuario',
+        userRole: userProfile?.role || 'operario',
+        clienteAdminId: userProfile?.clienteAdminId || datosAuditoria.clienteAdminId || userProfile?.uid || datosAuditoria.usuarioId
+      };
+
       // Preparar datos para IndexedDB
       const saveData = {
         id: auditoriaId,
         ...datosAuditoria,
-        userId: userProfile?.uid,
-        userEmail: userProfile?.email,
-        usuarioEmail: userProfile?.email, // Campo adicional para compatibilidad
-        userDisplayName: userProfile?.displayName, // Campo adicional para sincronización
-        userRole: userProfile?.role, // Campo adicional para sincronización
-        clienteAdminId: userProfile?.clienteAdminId || userProfile?.uid,
+        ...authData, // Incluir todos los datos de auth
         createdAt: Date.now(),
         updatedAt: Date.now(),
         status: 'pending_sync',

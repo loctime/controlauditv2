@@ -94,7 +94,14 @@ const BotonGenerarReporte = ({
           
           if (cachedUser) {
             currentUserProfile = cachedUser;
-            console.log('[BotonGenerarReporte] Usuario encontrado en cache:', currentUserProfile.uid);
+            console.log('[BotonGenerarReporte] Usuario encontrado en cache:', {
+              uid: currentUserProfile.uid,
+              email: currentUserProfile.email,
+              displayName: currentUserProfile.displayName,
+              role: currentUserProfile.role,
+              clienteAdminId: currentUserProfile.clienteAdminId,
+              clienteAdminIdFallback: currentUserProfile.clienteAdminId || currentUserProfile.uid
+            });
           } else {
             console.log('[BotonGenerarReporte] No se encontró usuario en cache');
           }
@@ -103,6 +110,15 @@ const BotonGenerarReporte = ({
           // Continuar sin userProfile del cache
         }
       }
+
+      // Asegurar que tenemos los datos de auth correctos
+      const authData = {
+        clienteAdminId: currentUserProfile?.clienteAdminId || currentUserProfile?.uid,
+        usuarioId: currentUserProfile?.uid,
+        usuarioEmail: currentUserProfile?.email,
+        userDisplayName: currentUserProfile?.displayName,
+        userRole: currentUserProfile?.role
+      };
 
       // Construir l metadatos consistentes y multi-tenant
       const datosAuditoria = buildReporteMetadata({
@@ -115,13 +131,19 @@ const BotonGenerarReporte = ({
         secciones,
         firmaAuditor,
         firmaResponsable,
-        // Multi-tenant
-        clienteAdminId: currentUserProfile?.clienteAdminId || currentUserProfile?.uid,
-        usuarioId: currentUserProfile?.uid,
-        usuarioEmail: currentUserProfile?.email,
+        // Multi-tenant - asegurar que siempre tengamos estos datos
+        ...authData,
         fechaGuardado: new Date(),
       });
       console.debug('[BotonGenerarReporte] Guardando auditoría con metadatos:', datosAuditoria);
+      console.log('[BotonGenerarReporte] userProfile final que se pasa al servicio:', {
+        uid: currentUserProfile?.uid,
+        email: currentUserProfile?.email,
+        displayName: currentUserProfile?.displayName,
+        role: currentUserProfile?.role,
+        clienteAdminId: currentUserProfile?.clienteAdminId,
+        clienteAdminIdFallback: currentUserProfile?.clienteAdminId || currentUserProfile?.uid
+      });
 
       // Usar el servicio centralizado para guardar
       const auditoriaId = await AuditoriaService.guardarAuditoria(datosAuditoria, currentUserProfile);

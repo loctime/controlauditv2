@@ -33,6 +33,16 @@ export const saveCompleteUserCache = async (userProfile) => {
       version: CACHE_VERSION
     };
 
+    // Log para debugging del userProfile que se guarda en cache
+    console.log('🔍 [CompleteOfflineCache] Guardando userProfile en cache:', {
+      uid: userProfile.uid,
+      email: userProfile.email,
+      displayName: userProfile.displayName,
+      role: userProfile.role,
+      clienteAdminId: userProfile.clienteAdminId,
+      clienteAdminIdFallback: userProfile.clienteAdminId || userProfile.uid
+    });
+
     // Obtener y cachear empresas del usuario
     try {
       const empresasSnapshot = await getDocs(collection(db, 'empresas'));
