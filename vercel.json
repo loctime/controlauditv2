@@ -1,7 +1,7 @@
 {
   "rewrites": [
     {
-      "source": "/(.*)",
+      "source": "/((?!assets|icons|sw.js|manifest.json|clear-cache.js).*)",
       "destination": "/index.html"
     }
   ],
@@ -50,6 +50,32 @@
         {
           "key": "Content-Type",
           "value": "application/manifest+json"
+        }
+      ]
+    },
+    {
+      "source": "/assets/(.*\\.js)",
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "application/javascript; charset=utf-8"
+        },
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000"
+        }
+      ]
+    },
+    {
+      "source": "/assets/(.*\\.css)",
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "text/css; charset=utf-8"
+        },
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000"
         }
       ]
     }
