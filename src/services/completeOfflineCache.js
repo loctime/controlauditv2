@@ -43,14 +43,60 @@ export const saveCompleteUserCache = async (userProfile) => {
       clienteAdminIdFallback: userProfile.clienteAdminId || userProfile.uid
     });
 
-    // Obtener y cachear empresas del usuario
+    // Obtener y cachear empresas del usuario (con filtrado multi-tenant)
     try {
-      const empresasSnapshot = await getDocs(collection(db, 'empresas'));
-      cacheData.empresas = empresasSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-      console.log('✅ Empresas cacheadas:', cacheData.empresas.length);
+      let empresasData = [];
+      
+      if (userProfile.role === 'supermax') {
+        // Supermax ve todas las empresas
+        const empresasSnapshot = await getDocs(collection(db, 'empresas'));
+        empresasData = empresasSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+      } else if (userProfile.role === 'max') {
+        // Cargar empresas propias
+        const empresasRef = collection(db, "empresas");
+        const empresasQuery = query(empresasRef, where("propietarioId", "==", userProfile.uid));
+        const empresasSnapshot = await getDocs(empresasQuery);
+        const misEmpresas = empresasSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+
+        // Cargar usuarios operarios y sus empresas
+        const usuariosRef = collection(db, "usuarios");
+        const usuariosQuery = query(usuariosRef, where("clienteAdminId", "==", userProfile.uid));
+        const usuariosSnapshot = await getDocs(usuariosQuery);
+        const usuariosOperarios = usuariosSnapshot.docs.map(doc => doc.id);
+
+        // Cargar empresas de operarios
+        const empresasOperariosPromises = usuariosOperarios.map(async (operarioId) => {
+          const operarioEmpresasQuery = query(empresasRef, where("propietarioId", "==", operarioId));
+          const operarioEmpresasSnapshot = await getDocs(operarioEmpresasQuery);
+          return operarioEmpresasSnapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          }));
+        });
+
+        const empresasOperariosArrays = await Promise.all(empresasOperariosPromises);
+        const empresasOperarios = empresasOperariosArrays.flat();
+
+        empresasData = [...misEmpresas, ...empresasOperarios];
+      } else if (userProfile.role === 'operario' && userProfile.clienteAdminId) {
+        // Operario ve empresas de su cliente admin
+        const empresasRef = collection(db, "empresas");
+        const empresasQuery = query(empresasRef, where("propietarioId", "==", userProfile.clienteAdminId));
+        const empresasSnapshot = await getDocs(empresasQuery);
+        empresasData = empresasSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+      }
+      
+      cacheData.empresas = empresasData;
+      console.log('✅ Empresas cacheadas (filtradas):', cacheData.empresas.length);
       console.log('✅ Empresas cacheadas (detalle):', cacheData.empresas.map(e => ({ id: e.id, nombre: e.nombre, propietarioId: e.propietarioId })));
     } catch (error) {
       console.warn('⚠️ Error cacheando empresas:', error);
