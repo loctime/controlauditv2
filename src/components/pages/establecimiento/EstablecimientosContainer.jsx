@@ -66,8 +66,9 @@ const EstablecimientosContainer = () => {
     console.log('userProfile:', userProfile);
     console.log('userEmpresas (filtradas):', userEmpresas);
     console.log('Cantidad de empresas filtradas:', userEmpresas?.length || 0);
+    console.log('empresasCargadas:', empresasCargadas);
     console.log('=== FIN DEBUG ===');
-  }, [userProfile, userEmpresas]);
+  }, [userProfile, userEmpresas, empresasCargadas]);
 
   // Recargar empresas cuando el componente se monta
   useEffect(() => {
@@ -79,7 +80,7 @@ const EstablecimientosContainer = () => {
         setEmpresasCargadas(true);
       });
     }
-  }, [userProfile?.uid, empresasCargadas]); // Solo depende del uid del usuario y si ya se cargaron
+  }, [userProfile?.uid]); // Solo depende del uid del usuario
 
   const handleCloseModal = () => {
     setOpenModal(false);
@@ -316,14 +317,21 @@ const EstablecimientosContainer = () => {
       {isMobile ? (
         // Vista móvil con Stack
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-          {cargandoEmpresas && (!userEmpresas || userEmpresas.length === 0) ? (
+          {cargandoEmpresas ? (
             <Box sx={{ textAlign: 'center', py: 4 }}>
               <CircularProgress sx={{ mb: 2 }} />
               <Typography variant="h6" color="text.secondary">
                 Cargando empresas...
               </Typography>
             </Box>
-          ) : userEmpresas?.length === 0 ? (
+          ) : !empresasCargadas ? (
+            <Box sx={{ textAlign: 'center', py: 4 }}>
+              <CircularProgress sx={{ mb: 2 }} />
+              <Typography variant="h6" color="text.secondary">
+                Preparando empresas...
+              </Typography>
+            </Box>
+          ) : (userEmpresas || []).length === 0 ? (
             <Box sx={{ textAlign: 'center', py: 4 }}>
               <Typography variant="h6" color="text.secondary">
                 No hay empresas registradas
@@ -333,7 +341,7 @@ const EstablecimientosContainer = () => {
               </Typography>
             </Box>
           ) : (
-            userEmpresas?.filter(empresa => empresa && empresa.id && empresa.nombre).map((empresa) => (
+            (userEmpresas || []).filter(empresa => empresa && empresa.id && empresa.nombre).map((empresa) => (
               <Box
                 key={empresa.id}
                 sx={{
@@ -526,7 +534,7 @@ const EstablecimientosContainer = () => {
       ) : (
         // Vista desktop con Grid tradicional
         <Grid container spacing={4}>
-          {cargandoEmpresas && (!userEmpresas || userEmpresas.length === 0) ? (
+          {cargandoEmpresas ? (
             <Grid item xs={12}>
               <Box sx={{ textAlign: 'center', py: 4 }}>
                 <CircularProgress sx={{ mb: 2 }} />
@@ -535,7 +543,16 @@ const EstablecimientosContainer = () => {
                 </Typography>
               </Box>
             </Grid>
-          ) : userEmpresas?.length === 0 ? (
+          ) : !empresasCargadas ? (
+            <Grid item xs={12}>
+              <Box sx={{ textAlign: 'center', py: 4 }}>
+                <CircularProgress sx={{ mb: 2 }} />
+                <Typography variant="h6" color="text.secondary">
+                  Preparando empresas...
+                </Typography>
+              </Box>
+            </Grid>
+          ) : (userEmpresas || []).length === 0 ? (
             <Grid item xs={12}>
               <Box sx={{ textAlign: 'center', py: 4 }}>
                 <Typography variant="h6" color="text.secondary">
@@ -547,7 +564,7 @@ const EstablecimientosContainer = () => {
               </Box>
             </Grid>
           ) : (
-            userEmpresas?.filter(empresa => empresa && empresa.id && empresa.nombre).map((empresa) => (
+            (userEmpresas || []).filter(empresa => empresa && empresa.id && empresa.nombre).map((empresa) => (
               <Grid item xs={12} sm={6} md={4} lg={3} key={empresa.id}>
                 <Card sx={{ 
                   height: '100%', 
