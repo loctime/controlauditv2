@@ -104,90 +104,163 @@ export const useAuditoriaData = (
     }
   };
 
-  // Cargar empresas desde el contexto, cache offline o Firestore como fallback
+  // Función para obtener empresas que tienen sucursales
+  const obtenerEmpresasConSucursales = async () => {
+    try {
+      if (!userProfile) return [];
+      
+      let sucursalesData = [];
+      
+      // Obtener sucursales según el rol del usuario
+      if (userProfile.role === 'supermax') {
+        const sucursalesCollection = collection(db, "sucursales");
+        const snapshot = await getDocs(sucursalesCollection);
+        sucursalesData = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+      } else if (userProfile.role === 'max') {
+        // Cargar sucursales de empresas propias
+        const empresasRef = collection(db, "empresas");
+        const empresasQuery = query(empresasRef, where("propietarioId", "==", userProfile.uid));
+        const empresasSnapshot = await getDocs(empresasQuery);
+        const misEmpresas = empresasSnapshot.docs.map(doc => doc.id);
+
+        // Cargar usuarios operarios y sus empresas
+        const usuariosRef = collection(db, "usuarios");
+        const usuariosQuery = query(usuariosRef, where("clienteAdminId", "==", userProfile.uid));
+        const usuariosSnapshot = await getDocs(usuariosQuery);
+        const usuariosOperarios = usuariosSnapshot.docs.map(doc => doc.id);
+
+        // Cargar empresas de operarios
+        const empresasOperariosPromises = usuariosOperarios.map(async (operarioId) => {
+          const operarioEmpresasQuery = query(empresasRef, where("propietarioId", "==", operarioId));
+          const operarioEmpresasSnapshot = await getDocs(operarioEmpresasQuery);
+          return operarioEmpresasSnapshot.docs.map(doc => doc.id);
+        });
+
+        const empresasOperariosArrays = await Promise.all(empresasOperariosPromises);
+        const empresasOperarios = empresasOperariosArrays.flat();
+        const todasLasEmpresas = [...misEmpresas, ...empresasOperarios];
+
+        // Cargar sucursales de todas las empresas
+        if (todasLasEmpresas.length > 0) {
+          const chunkSize = 10;
+          const empresasChunks = [];
+          for (let i = 0; i < todasLasEmpresas.length; i += chunkSize) {
+            empresasChunks.push(todasLasEmpresas.slice(i, i + chunkSize));
+          }
+
+          const sucursalesPromises = empresasChunks.map(async (chunk) => {
+            const sucursalesRef = collection(db, "sucursales");
+            const sucursalesQuery = query(sucursalesRef, where("empresaId", "in", chunk));
+            const sucursalesSnapshot = await getDocs(sucursalesQuery);
+            return sucursalesSnapshot.docs.map(doc => ({
+              id: doc.id,
+              ...doc.data()
+            }));
+          });
+
+          const sucursalesArrays = await Promise.all(sucursalesPromises);
+          sucursalesData = sucursalesArrays.flat();
+        }
+      } else if (userProfile.role === 'operario' && userProfile.clienteAdminId) {
+        // Operario ve sucursales de su cliente admin
+        const empresasRef = collection(db, "empresas");
+        const empresasQuery = query(empresasRef, where("propietarioId", "==", userProfile.clienteAdminId));
+        const empresasSnapshot = await getDocs(empresasQuery);
+        const empresasIds = empresasSnapshot.docs.map(doc => doc.id);
+
+        if (empresasIds.length > 0) {
+          const chunkSize = 10;
+          const empresasChunks = [];
+          for (let i = 0; i < empresasIds.length; i += chunkSize) {
+            empresasChunks.push(empresasIds.slice(i, i + chunkSize));
+          }
+
+          const sucursalesPromises = empresasChunks.map(async (chunk) => {
+            const sucursalesRef = collection(db, "sucursales");
+            const sucursalesQuery = query(sucursalesRef, where("empresaId", "in", chunk));
+            const sucursalesSnapshot = await getDocs(sucursalesQuery);
+            return sucursalesSnapshot.docs.map(doc => ({
+              id: doc.id,
+              ...doc.data()
+            }));
+          });
+
+          const sucursalesArrays = await Promise.all(sucursalesPromises);
+          sucursalesData = sucursalesArrays.flat();
+        }
+      }
+
+      // Obtener IDs únicos de empresas que tienen sucursales
+      const empresasConSucursales = [...new Set(sucursalesData.map(s => s.empresaId))];
+      
+      if (empresasConSucursales.length > 0) {
+        // Cargar datos completos de las empresas
+        const empresasRef = collection(db, "empresas");
+        const empresasQuery = query(empresasRef, where("__name__", "in", empresasConSucursales));
+        const empresasSnapshot = await getDocs(empresasQuery);
+        const empresasData = empresasSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+        
+        console.log('[DEBUG Auditoria] Empresas con sucursales encontradas:', empresasData.length);
+        return empresasData;
+      }
+      
+      return [];
+    } catch (error) {
+      console.error("Error al obtener empresas con sucursales:", error);
+      return [];
+    }
+  };
+
+  // Cargar empresas desde sucursales existentes
   useEffect(() => {
     const cargarEmpresas = async () => {
-      console.log('[DEBUG Auditoria] Iniciando carga de empresas...');
+      console.log('[DEBUG Auditoria] Iniciando carga de empresas desde sucursales...');
       
-      // Prioridad 1: Datos del contexto (online)
-      if (userEmpresas && userEmpresas.length > 0) {
-        setEmpresas(userEmpresas);
-        console.log('[DEBUG Auditoria] Empresas desde contexto:', userEmpresas.length, 'empresas');
-      } 
-      // Prioridad 2: Datos del cache offline
-      else {
-        console.log('[DEBUG Auditoria] No hay empresas en contexto, cargando desde cache offline...');
-        const cacheData = await cargarDatosDelCache();
-        
-        if (cacheData && cacheData.empresas && cacheData.empresas.length > 0) {
-          console.log('[DEBUG Auditoria] Empresas cargadas desde cache offline:', cacheData.empresas.length, 'empresas');
-          setEmpresas(cacheData.empresas);
-        }
-        // Prioridad 3: Cargar desde Firestore (solo si hay conexión)
-        else if (userProfile && userProfile.uid && navigator.onLine) {
-          console.log('[DEBUG Auditoria] No hay empresas en cache offline, cargando desde Firestore...');
-          // Fallback: cargar empresas desde Firestore si no están en el contexto
-          try {
-            console.log('[DEBUG Auditoria] Cargando empresas desde Firestore como fallback...');
-            let empresasData = [];
-            
-            if (userProfile.role === 'supermax') {
-              const empresasSnapshot = await getDocs(collection(db, 'empresas'));
-              empresasData = empresasSnapshot.docs.map(doc => ({
-                id: doc.id,
-                ...doc.data()
-              }));
-            } else if (userProfile.role === 'max') {
-              // Cargar empresas propias
-              const empresasRef = collection(db, "empresas");
-              const empresasQuery = query(empresasRef, where("propietarioId", "==", userProfile.uid));
-              const empresasSnapshot = await getDocs(empresasQuery);
-              const misEmpresas = empresasSnapshot.docs.map(doc => ({
-                id: doc.id,
-                ...doc.data()
-              }));
-
-              // Cargar usuarios operarios y sus empresas
-              const usuariosRef = collection(db, "usuarios");
-              const usuariosQuery = query(usuariosRef, where("clienteAdminId", "==", userProfile.uid));
-              const usuariosSnapshot = await getDocs(usuariosQuery);
-              const usuariosOperarios = usuariosSnapshot.docs.map(doc => doc.id);
-
-              // Cargar empresas de operarios
-              const empresasOperariosPromises = usuariosOperarios.map(async (operarioId) => {
-                const operarioEmpresasQuery = query(empresasRef, where("propietarioId", "==", operarioId));
-                const operarioEmpresasSnapshot = await getDocs(operarioEmpresasQuery);
-                return operarioEmpresasSnapshot.docs.map(doc => ({
-                  id: doc.id,
-                  ...doc.data()
-                }));
-              });
-
-              const empresasOperariosArrays = await Promise.all(empresasOperariosPromises);
-              const empresasOperarios = empresasOperariosArrays.flat();
-
-              empresasData = [...misEmpresas, ...empresasOperarios];
-            } else if (userProfile.role === 'operario' && userProfile.clienteAdminId) {
-              // Operario ve empresas de su cliente admin
-              const empresasRef = collection(db, "empresas");
-              const empresasQuery = query(empresasRef, where("propietarioId", "==", userProfile.clienteAdminId));
-              const empresasSnapshot = await getDocs(empresasQuery);
-              empresasData = empresasSnapshot.docs.map(doc => ({
-                id: doc.id,
-                ...doc.data()
-              }));
-            }
-
-            setEmpresas(empresasData);
-            console.log(`[DEBUG Auditoria] Empresas cargadas desde Firestore: ${empresasData.length}`);
-          } catch (error) {
-            console.error("Error al cargar empresas desde Firestore:", error);
+      try {
+        // Prioridad 1: Datos del contexto (online) - pero filtrar por sucursales
+        if (userEmpresas && userEmpresas.length > 0) {
+          // Verificar que las empresas del contexto tengan sucursales
+          const empresasConSucursales = await obtenerEmpresasConSucursales();
+          const empresasFiltradas = userEmpresas.filter(empresa => 
+            empresasConSucursales.some(emp => emp.id === empresa.id)
+          );
+          setEmpresas(empresasFiltradas);
+          console.log('[DEBUG Auditoria] Empresas desde contexto (filtradas por sucursales):', empresasFiltradas.length, 'empresas');
+        } 
+        // Prioridad 2: Datos del cache offline
+        else {
+          console.log('[DEBUG Auditoria] No hay empresas en contexto, cargando desde cache offline...');
+          const cacheData = await cargarDatosDelCache();
+          
+          if (cacheData && cacheData.empresas && cacheData.empresas.length > 0) {
+            // Verificar que las empresas del cache tengan sucursales
+            const empresasConSucursales = await obtenerEmpresasConSucursales();
+            const empresasFiltradas = cacheData.empresas.filter(empresa => 
+              empresasConSucursales.some(emp => emp.id === empresa.id)
+            );
+            setEmpresas(empresasFiltradas);
+            console.log('[DEBUG Auditoria] Empresas cargadas desde cache offline (filtradas por sucursales):', empresasFiltradas.length, 'empresas');
+          }
+          // Prioridad 3: Cargar desde Firestore (solo si hay conexión)
+          else if (userProfile && userProfile.uid && navigator.onLine) {
+            console.log('[DEBUG Auditoria] No hay empresas en cache offline, cargando desde Firestore...');
+            const empresasConSucursales = await obtenerEmpresasConSucursales();
+            setEmpresas(empresasConSucursales);
+            console.log('[DEBUG Auditoria] Empresas cargadas desde Firestore (con sucursales):', empresasConSucursales.length, 'empresas');
+          } else {
+            console.log('[DEBUG Auditoria] No hay empresas en cache offline ni conexión para cargar desde Firestore.');
             setEmpresas([]);
           }
-        } else {
-          console.log('[DEBUG Auditoria] No hay empresas en cache offline ni conexión para cargar desde Firestore.');
-          setEmpresas([]);
         }
+      } catch (error) {
+        console.error("Error al cargar empresas:", error);
+        setEmpresas([]);
       }
     };
 
