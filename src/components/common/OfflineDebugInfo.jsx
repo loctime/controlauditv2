@@ -10,6 +10,10 @@ const OfflineDebugInfo = () => {
   const [loading, setLoading] = useState(false);
 
   // Solo mostrar para supermax
+  console.log('[OfflineDebugInfo] userProfile:', userProfile);
+  console.log('[OfflineDebugInfo] role:', userProfile?.role);
+  console.log('[OfflineDebugInfo] should show:', userProfile?.role === 'supermax');
+  
   if (!userProfile || userProfile.role !== 'supermax') {
     return null;
   }
