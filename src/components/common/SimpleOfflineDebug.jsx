@@ -1,10 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { Box, Typography, Paper, Chip, IconButton, Collapse } from '@mui/material';
 import { ExpandMore, ExpandLess, BugReport } from '@mui/icons-material';
+import { useAuth } from '../context/AuthContext';
 
 const SimpleOfflineDebug = () => {
+  const { userProfile } = useAuth();
   const [debugInfo, setDebugInfo] = useState(null);
   const [expanded, setExpanded] = useState(false);
+
+  // Solo mostrar para supermax
+  if (!userProfile || userProfile.role !== 'supermax') {
+    return null;
+  }
 
   const loadDebugInfo = async () => {
     // Timeout más corto para el componente simple
