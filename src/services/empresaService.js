@@ -14,6 +14,51 @@ import { db } from '../firebaseConfig';
 import { registrarAccionSistema } from '../utils/firestoreUtils';
 
 export const empresaService = {
+  // Función para filtrar empresas que tienen sucursales
+  async filtrarEmpresasConSucursales(empresasData) {
+    if (!empresasData || empresasData.length === 0) return [];
+    
+    try {
+      // Obtener todas las sucursales para las empresas
+      const empresasIds = empresasData.map(emp => emp.id);
+      
+      // Firestore limita 'in' queries a 10 elementos, dividir en chunks si es necesario
+      const chunkSize = 10;
+      const empresasChunks = [];
+      for (let i = 0; i < empresasIds.length; i += chunkSize) {
+        empresasChunks.push(empresasIds.slice(i, i + chunkSize));
+      }
+
+      const sucursalesPromises = empresasChunks.map(async (chunk) => {
+        const sucursalesRef = collection(db, "sucursales");
+        const sucursalesQuery = query(sucursalesRef, where("empresaId", "in", chunk));
+        const sucursalesSnapshot = await getDocs(sucursalesQuery);
+        return sucursalesSnapshot.docs.map(doc => ({
+          id: doc.id,
+          empresaId: doc.data().empresaId,
+          ...doc.data()
+        }));
+      });
+
+      const sucursalesArrays = await Promise.all(sucursalesPromises);
+      const todasLasSucursales = sucursalesArrays.flat();
+      
+      // Obtener IDs únicos de empresas que tienen sucursales
+      const empresasConSucursales = [...new Set(todasLasSucursales.map(s => s.empresaId))];
+      
+      // Filtrar empresas que tienen sucursales
+      const empresasFiltradas = empresasData.filter(empresa => 
+        empresasConSucursales.includes(empresa.id)
+      );
+      
+      console.log(`[empresaService] Empresas filtradas con sucursales: ${empresasFiltradas.length} de ${empresasData.length}`);
+      return empresasFiltradas;
+    } catch (error) {
+      console.error("Error al filtrar empresas con sucursales:", error);
+      return empresasData; // En caso de error, devolver todas las empresas
+    }
+  },
+
   // Obtener empresas del usuario (multi-tenant)
   async getUserEmpresas(userId, role, clienteAdminId) {
     try {
@@ -44,10 +89,14 @@ export const empresaService = {
         }
       }
 
-      return snapshot.docs.map(doc => ({
+      const empresasData = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       }));
+
+      // Filtrar empresas que tienen sucursales
+      const empresasConSucursales = await this.filtrarEmpresasConSucursales(empresasData);
+      return empresasConSucursales;
     } catch (error) {
       console.error("Error al obtener empresas del usuario:", error);
       return [];
@@ -78,8 +127,12 @@ export const empresaService = {
       return () => {};
     }
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      setUserEmpresas(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    const unsubscribe = onSnapshot(q, async (snapshot) => {
+      const empresasData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      
+      // Filtrar empresas que tienen sucursales
+      const empresasConSucursales = await this.filtrarEmpresasConSucursales(empresasData);
+      setUserEmpresas(empresasConSucursales);
       setLoadingEmpresas(false);
     }, (error) => {
       console.error('[empresaService] Error en onSnapshot de empresas:', error);
