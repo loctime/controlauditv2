@@ -39,33 +39,28 @@ const SimpleOfflineDebug = () => {
           resolve({ error: 'Base de datos no inicializada' });
           return;
         }
-          
-          const transaction = db.transaction(['settings'], 'readonly');
-          const store = transaction.objectStore('settings');
-          
-          store.get('complete_user_cache').onsuccess = function(e) {
-            const cached = e.target.result;
-            if (cached && cached.value && cached.value.userProfile) {
-              const userProfile = cached.value.userProfile;
-              resolve({
-                hasCache: true,
-                clienteAdminId: userProfile.clienteAdminId || 'NULL',
-                creadoPorEmail: userProfile.email || 'NULL',
-                uid: userProfile.uid,
-                role: userProfile.role
-              });
-            } else {
-              resolve({ error: 'No hay usuario en cache' });
-            }
-          };
-          
-          store.get('complete_user_cache').onerror = function() {
-            resolve({ error: 'Error al obtener cache' });
-          };
+        
+        const transaction = db.transaction(['settings'], 'readonly');
+        const store = transaction.objectStore('settings');
+        
+        store.get('complete_user_cache').onsuccess = function(e) {
+          const cached = e.target.result;
+          if (cached && cached.value && cached.value.userProfile) {
+            const userProfile = cached.value.userProfile;
+            resolve({
+              hasCache: true,
+              clienteAdminId: userProfile.clienteAdminId || 'NULL',
+              creadoPorEmail: userProfile.email || 'NULL',
+              uid: userProfile.uid,
+              role: userProfile.role
+            });
+          } else {
+            resolve({ error: 'No hay usuario en cache' });
+          }
         };
         
-        request.onerror = function() {
-          resolve({ error: 'Error al abrir IndexedDB' });
+        store.get('complete_user_cache').onerror = function() {
+          resolve({ error: 'Error al obtener cache' });
         };
       });
       
