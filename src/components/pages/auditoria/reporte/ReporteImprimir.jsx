@@ -88,7 +88,7 @@ const BotonGenerarReporte = ({
             
             request.onupgradeneeded = function(event) {
               console.log('[ReporteImprimir] IndexedDB necesita actualización');
-              // No hacer nada aquí, solo para evitar errores
+              // .No hacer nada aquí, solo para evitar errores
             };
           });
           
