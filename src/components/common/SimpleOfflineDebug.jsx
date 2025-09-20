@@ -70,7 +70,7 @@ const SimpleOfflineDebug = () => {
       sx={{ 
         position: 'fixed', 
         bottom: 10, 
-        left: 10, 
+        right: 10, 
         zIndex: 9999,
         maxWidth: 250,
         backgroundColor: '#f8f9fa',

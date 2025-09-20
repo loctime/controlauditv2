@@ -115,7 +115,7 @@ const OfflineDebugInfo = () => {
       elevation={2} 
       sx={{ 
         position: 'fixed', 
-        top: 10, 
+        top: 60, 
         right: 10, 
         zIndex: 9999,
         maxWidth: 300,
