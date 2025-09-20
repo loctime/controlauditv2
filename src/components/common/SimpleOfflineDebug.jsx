@@ -7,19 +7,34 @@ const SimpleOfflineDebug = () => {
   const [expanded, setExpanded] = useState(false);
 
   const loadDebugInfo = async () => {
+    // Timeout más corto para el componente simple
+    const timeoutId = setTimeout(() => {
+      setDebugInfo({ error: 'Timeout (10s)' });
+    }, 10000);
+
     try {
       if (!window.indexedDB) {
         setDebugInfo({ error: 'IndexedDB no disponible' });
+        clearTimeout(timeoutId);
         return;
       }
 
-      // Inicializar la base de datos directamente
+      // Intentar abrir la base de datos directamente
       let db;
       try {
-        // Usar openDB directamente para asegurar que se cree la estructura
-        const { openDB } = await import('idb');
-        db = await openDB('controlaudit_offline_v1', 2, {
-          upgrade(db, oldVersion) {
+        const request = indexedDB.open('controlaudit_offline_v1', 2);
+        
+        db = await new Promise((resolve, reject) => {
+          request.onsuccess = function(event) {
+            resolve(event.target.result);
+          };
+          
+          request.onerror = function(event) {
+            reject(event.target.error);
+          };
+          
+          request.onupgradeneeded = function(event) {
+            const db = event.target.result;
             console.log('🔄 Inicializando base de datos offline desde debug simple...');
             
             // Crear object store 'settings' si no existe
@@ -28,19 +43,11 @@ const SimpleOfflineDebug = () => {
               console.log('✅ Object store "settings" creado');
             }
             
-            // Crear otras object stores básicas
-            if (!db.objectStoreNames.contains('auditorias')) {
-              const auditoriasStore = db.createObjectStore('auditorias', { keyPath: 'id' });
-              auditoriasStore.createIndex('by-updatedAt', 'updatedAt');
-              auditoriasStore.createIndex('by-status', 'status');
-              auditoriasStore.createIndex('by-userId', 'userId');
-            }
-            
             console.log('✅ Base de datos offline inicializada desde debug simple');
-          }
+          };
         });
       } catch (error) {
-        console.error('Error al inicializar base de datos:', error);
+        console.error('Error al abrir base de datos:', error);
         throw error;
       }
 
@@ -75,8 +82,10 @@ const SimpleOfflineDebug = () => {
       });
       
       setDebugInfo(cachedData);
+      clearTimeout(timeoutId);
     } catch (error) {
       setDebugInfo({ error: error.message });
+      clearTimeout(timeoutId);
     }
   };
 
