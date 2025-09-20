@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import syncQueueService from '../services/syncQueue';
 
 /**
  * Hook para detectar el estado de conectividad
@@ -8,6 +9,8 @@ export const useConnectivity = () => {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [connectionType, setConnectionType] = useState('unknown');
   const [lastOnlineTime, setLastOnlineTime] = useState(Date.now());
+  const [autoSyncTriggered, setAutoSyncTriggered] = useState(false);
+  const [lastSyncAttempt, setLastSyncAttempt] = useState(0);
 
   // Detectar tipo de conexión si está disponible
   const detectConnectionType = useCallback(() => {
@@ -41,6 +44,45 @@ export const useConnectivity = () => {
     }
   }, []);
 
+  // Función para activar sincronización automática con debounce
+  const triggerAutoSync = useCallback(async () => {
+    const now = Date.now();
+    const DEBOUNCE_TIME = 10000; // 10 segundos entre intentos
+    
+    // Verificar debounce - evitar múltiples sincronizaciones muy seguidas
+    if (now - lastSyncAttempt < DEBOUNCE_TIME) {
+      console.log('⏳ Sincronización automática en cooldown, esperando...');
+      return;
+    }
+    
+    try {
+      setLastSyncAttempt(now);
+      
+      // Verificar si hay items pendientes de sincronización
+      const queueStats = await syncQueueService.getQueueStats();
+      
+      if (queueStats && queueStats.total > 0) {
+        console.log('🔄 Activando sincronización automática - items pendientes:', queueStats.total);
+        
+        // Pequeño delay para asegurar que la conexión esté estable
+        setTimeout(async () => {
+          try {
+            await syncQueueService.processQueue();
+            console.log('✅ Sincronización automática completada');
+          } catch (error) {
+            console.error('❌ Error en sincronización automática:', error);
+          }
+        }, 2000); // 2 segundos de delay
+        
+        setAutoSyncTriggered(true);
+      } else {
+        console.log('📭 No hay items pendientes para sincronizar');
+      }
+    } catch (error) {
+      console.error('❌ Error al verificar cola de sincronización:', error);
+    }
+  }, [lastSyncAttempt]);
+
   // Manejar cambios de conectividad
   const handleOnline = useCallback(async () => {
     console.log('🌐 Conexión restaurada');
@@ -49,13 +91,19 @@ export const useConnectivity = () => {
     setIsOnline(realConnectivity);
     if (realConnectivity) {
       setLastOnlineTime(Date.now());
+      // Activar sincronización automática si no se ha activado ya
+      if (!autoSyncTriggered) {
+        await triggerAutoSync();
+      }
     }
     detectConnectionType();
-  }, [detectConnectionType, checkRealConnectivity]);
+  }, [detectConnectionType, checkRealConnectivity, autoSyncTriggered, triggerAutoSync]);
 
   const handleOffline = useCallback(() => {
     console.log('📴 Conexión perdida');
     setIsOnline(false);
+    setAutoSyncTriggered(false); // Reset para permitir nueva sincronización automática
+    setLastSyncAttempt(0); // Reset del debounce
     detectConnectionType();
   }, [detectConnectionType]);
 
@@ -122,6 +170,9 @@ export const useConnectivity = () => {
     lastOnlineTime,
     checkRealConnectivity,
     getConnectionInfo,
+    triggerAutoSync,
+    autoSyncTriggered,
+    lastSyncAttempt,
     // Helpers
     isSlowConnection: connectionType === 'slow-2g' || connectionType === '2g',
     isFastConnection: connectionType === '4g' || connectionType === '5g',
