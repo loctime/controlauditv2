@@ -22,7 +22,7 @@ import syncQueueService from '../../services/syncQueue';
  * Versión simplificada del indicador principal
  */
 const OfflineIndicatorMobile = ({ userProfile }) => {
-  const { isOnline, timeOffline } = useConnectivity();
+  const { isOnline, timeOffline, autoSyncTriggered } = useConnectivity();
   const [queueStats, setQueueStats] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [showSnackbar, setShowSnackbar] = useState(false);
@@ -120,7 +120,7 @@ const OfflineIndicatorMobile = ({ userProfile }) => {
       return {
         color: 'info',
         icon: <CloudOff sx={{ fontSize: '0.8rem' }} />,
-        tooltip: `${queueStats.total} items pendientes`
+        tooltip: `${queueStats.total} items pendientes${autoSyncTriggered ? ' (auto-sync activado)' : ''}`
       };
     }
 
