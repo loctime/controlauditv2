@@ -6,19 +6,97 @@
  * @param {string} url - URL del PDF
  * @param {string} fileName - Nombre del archivo para descarga
  */
-export const descargarPdf = (url, fileName = 'reporte-auditoria.html') => {
+export const descargarPdf = async (url, fileName = 'reporte-auditoria.html') => {
   try {
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = fileName;
-    link.target = '_blank';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    console.log('[pdfStorageServiceSimple] 🚀 Iniciando descarga:', fileName);
     
-    console.log('[pdfStorageServiceSimple] ✅ Descarga iniciada:', fileName);
+    // Detectar si estamos en una PWA instalada
+    const isPWA = window.matchMedia('(display-mode: standalone)').matches || 
+                  window.navigator.standalone === true;
+    
+    console.log('[pdfStorageServiceSimple] PWA detectada:', isPWA);
+    
+    if (isPWA) {
+      // En PWA, usar fetch para descargar y mostrar notificación
+      try {
+        const response = await fetch(url);
+        const blob = await response.blob();
+        
+        // Crear URL del blob
+        const blobUrl = URL.createObjectURL(blob);
+        
+        // Crear enlace de descarga
+        const link = document.createElement('a');
+        link.href = blobUrl;
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        // Limpiar URL del blob después de un tiempo
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+        
+        // Mostrar notificación de éxito
+        setTimeout(() => {
+          const abrirArchivo = confirm(
+            '✅ ¡Reporte descargado exitosamente!\n\n' +
+            `Archivo: ${fileName}\n` +
+            '¿Quieres abrir el archivo ahora?'
+          );
+          
+          if (abrirArchivo) {
+            // Intentar abrir el archivo
+            const openLink = document.createElement('a');
+            openLink.href = blobUrl;
+            openLink.target = '_blank';
+            document.body.appendChild(openLink);
+            openLink.click();
+            document.body.removeChild(openLink);
+          }
+        }, 500);
+        
+        console.log('[pdfStorageServiceSimple] ✅ Descarga completada en PWA:', fileName);
+        
+      } catch (fetchError) {
+        console.warn('[pdfStorageServiceSimple] Error con fetch, usando método tradicional:', fetchError);
+        
+        // Fallback al método tradicional
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = fileName;
+        link.target = '_blank';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        // Notificación básica
+        setTimeout(() => {
+          alert('✅ ¡Reporte descargado exitosamente!\n\n' + fileName);
+        }, 500);
+      }
+    } else {
+      // En navegador normal, usar método tradicional
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = fileName;
+      link.target = '_blank';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      // Notificación básica para navegador
+      setTimeout(() => {
+        alert('✅ ¡Reporte descargado exitosamente!\n\n' + fileName);
+      }, 500);
+      
+      console.log('[pdfStorageServiceSimple] ✅ Descarga completada en navegador:', fileName);
+    }
+    
   } catch (error) {
     console.error('[pdfStorageServiceSimple] ❌ Error descargando PDF:', error);
+    
+    // Notificación de error
+    alert('❌ Error al descargar el reporte. Intenta nuevamente.');
     throw error;
   }
 };
