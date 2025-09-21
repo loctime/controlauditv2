@@ -385,20 +385,24 @@ const AuthContextComponent = ({ children }) => {
       }
 
       console.log('🔄 [AuthContext] Cargando sucursales para', userEmpresas.length, 'empresas');
+      console.log('🔄 [AuthContext] IDs de empresas:', userEmpresas.map(emp => emp.id));
       setLoadingSucursales(true);
 
       let sucursalesData = [];
       
       if (role === 'supermax') {
         // Supermax ve todas las sucursales
+        console.log('🔄 [AuthContext] Supermax - cargando todas las sucursales');
         const sucursalesSnapshot = await getDocs(collection(db, 'sucursales'));
         sucursalesData = sucursalesSnapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data()
         }));
+        console.log('✅ [AuthContext] Supermax - sucursales cargadas:', sucursalesData.length);
       } else {
         // Para max y operario: cargar sucursales de sus empresas
         const empresasIds = userEmpresas.map(emp => emp.id);
+        console.log('🔄 [AuthContext] Cargando sucursales para empresas:', empresasIds);
         
         // Firestore limita 'in' queries a 10 elementos, dividir en chunks si es necesario
         const chunkSize = 10;
@@ -419,10 +423,12 @@ const AuthContextComponent = ({ children }) => {
 
         const sucursalesArrays = await Promise.all(sucursalesPromises);
         sucursalesData = sucursalesArrays.flat();
+        console.log('✅ [AuthContext] Sucursales cargadas para empresas:', sucursalesData.length);
       }
       
       setUserSucursales(sucursalesData);
       setLoadingSucursales(false);
+      console.log('✅ [AuthContext] Total sucursales cargadas:', sucursalesData.length);
       return sucursalesData;
     } catch (error) {
       console.warn('⚠️ [AuthContext] Error cargando sucursales desde Firestore, intentando cache offline:', error);
@@ -473,54 +479,27 @@ const AuthContextComponent = ({ children }) => {
           ...doc.data()
         }));
       } else if (role === 'max') {
-        // Max ve formularios de sus empresas
-        const empresasIds = userEmpresas.map(emp => emp.id);
-        
-        if (empresasIds.length > 0) {
-          // Firestore limita 'in' queries a 10 elementos, dividir en chunks si es necesario
-          const chunkSize = 10;
-          const empresasChunks = [];
-          for (let i = 0; i < empresasIds.length; i += chunkSize) {
-            empresasChunks.push(empresasIds.slice(i, i + chunkSize));
-          }
-
-          const formulariosPromises = empresasChunks.map(async (chunk) => {
-            const formulariosRef = collection(db, "formularios");
-            const formulariosQuery = query(formulariosRef, where("empresaId", "in", chunk));
-            const formulariosSnapshot = await getDocs(formulariosQuery);
-            return formulariosSnapshot.docs.map(doc => ({
-              id: doc.id,
-              ...doc.data()
-            }));
-          });
-
-          const formulariosArrays = await Promise.all(formulariosPromises);
-          formulariosData = formulariosArrays.flat();
-        }
+        // Max ve formularios donde es el clienteAdminId
+        const formulariosQuery = query(
+          collection(db, "formularios"), 
+          where("clienteAdminId", "==", userProfile.uid)
+        );
+        const formulariosSnapshot = await getDocs(formulariosQuery);
+        formulariosData = formulariosSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
       } else if (role === 'operario' && userProfile.clienteAdminId) {
         // Operario ve formularios de su cliente admin
-        const empresasIds = userEmpresas.map(emp => emp.id);
-        
-        if (empresasIds.length > 0) {
-          const chunkSize = 10;
-          const empresasChunks = [];
-          for (let i = 0; i < empresasIds.length; i += chunkSize) {
-            empresasChunks.push(empresasIds.slice(i, i + chunkSize));
-          }
-
-          const formulariosPromises = empresasChunks.map(async (chunk) => {
-            const formulariosRef = collection(db, "formularios");
-            const formulariosQuery = query(formulariosRef, where("empresaId", "in", chunk));
-            const formulariosSnapshot = await getDocs(formulariosQuery);
-            return formulariosSnapshot.docs.map(doc => ({
-              id: doc.id,
-              ...doc.data()
-            }));
-          });
-
-          const formulariosArrays = await Promise.all(formulariosPromises);
-          formulariosData = formulariosArrays.flat();
-        }
+        const formulariosQuery = query(
+          collection(db, "formularios"), 
+          where("clienteAdminId", "==", userProfile.clienteAdminId)
+        );
+        const formulariosSnapshot = await getDocs(formulariosQuery);
+        formulariosData = formulariosSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
       }
       
       setUserFormularios(formulariosData);

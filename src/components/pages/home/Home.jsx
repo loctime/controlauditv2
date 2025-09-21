@@ -62,20 +62,41 @@ const Home = () => {
       setErrorCarga(null);
       
       try {
-        // Cargar todos los datos en paralelo
+        // Cargar todos los datos necesarios para TODAS las páginas
+        console.log('🔄 [Home] Cargando datos para todas las páginas...');
         const promesas = [
           getUserEmpresas(),
           getUserSucursales(),
           getUserFormularios()
         ];
+        
+        // Esperar a que todas las promesas se resuelvan
+        console.log('⏳ [Home] Esperando a que se carguen todos los datos...');
 
-        await Promise.allSettled(promesas);
+        const resultados = await Promise.allSettled(promesas);
+        
+        console.log('📊 [Home] Resultados de carga:', {
+          empresas: resultados[0]?.status,
+          sucursales: resultados[1]?.status,
+          formularios: resultados[2]?.status
+        });
         
         console.log('✅ [Home] Datos cargados:', {
           empresas: userEmpresas?.length || 0,
           sucursales: userSucursales?.length || 0,
           formularios: userFormularios?.length || 0
         });
+        
+        // Verificar si realmente se cargaron los datos
+        if ((userEmpresas?.length || 0) === 0) {
+          console.warn('⚠️ [Home] No se cargaron empresas');
+        }
+        if ((userSucursales?.length || 0) === 0) {
+          console.warn('⚠️ [Home] No se cargaron sucursales');
+        }
+        if ((userFormularios?.length || 0) === 0) {
+          console.warn('⚠️ [Home] No se cargaron formularios');
+        }
 
         setDatosCargados({
           empresas: (userEmpresas?.length || 0) > 0,
