@@ -113,36 +113,33 @@ export const saveCompleteUserCache = async (userProfile) => {
           id: doc.id,
           ...doc.data()
         }));
-      } else {
-        // Para max y operario: cargar formularios de sus empresas
-        const empresasIds = cacheData.empresas.map(emp => emp.id);
-        
-        if (empresasIds.length > 0) {
-          // Firestore limita 'in' queries a 10 elementos, dividir en chunks si es necesario
-          const chunkSize = 10;
-          const empresasChunks = [];
-          for (let i = 0; i < empresasIds.length; i += chunkSize) {
-            empresasChunks.push(empresasIds.slice(i, i + chunkSize));
-          }
-
-          const formulariosPromises = empresasChunks.map(async (chunk) => {
-            const formulariosRef = collection(db, "formularios");
-            const formulariosQuery = query(formulariosRef, where("empresaId", "in", chunk));
-            const formulariosSnapshot = await getDocs(formulariosQuery);
-            return formulariosSnapshot.docs.map(doc => ({
-              id: doc.id,
-              ...doc.data()
-            }));
-          });
-
-          const formulariosArrays = await Promise.all(formulariosPromises);
-          formulariosData = formulariosArrays.flat();
-        }
+      } else if (userProfile.role === 'max') {
+        // Max ve formularios donde es el clienteAdminId
+        const formulariosQuery = query(
+          collection(db, "formularios"), 
+          where("clienteAdminId", "==", userProfile.uid)
+        );
+        const formulariosSnapshot = await getDocs(formulariosQuery);
+        formulariosData = formulariosSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+      } else if (userProfile.role === 'operario' && userProfile.clienteAdminId) {
+        // Operario ve formularios de su cliente admin
+        const formulariosQuery = query(
+          collection(db, "formularios"), 
+          where("clienteAdminId", "==", userProfile.clienteAdminId)
+        );
+        const formulariosSnapshot = await getDocs(formulariosQuery);
+        formulariosData = formulariosSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
       }
       
       cacheData.formularios = formulariosData;
       console.log('✅ Formularios cacheados (filtrados):', cacheData.formularios.length);
-      console.log('✅ Formularios cacheados (detalle):', cacheData.formularios.map(f => ({ id: f.id, nombre: f.nombre, empresaId: f.empresaId })));
+      console.log('✅ Formularios cacheados (detalle):', cacheData.formularios.map(f => ({ id: f.id, nombre: f.nombre, clienteAdminId: f.clienteAdminId })));
     } catch (error) {
       console.warn('⚠️ Error cacheando formularios:', error);
     }
