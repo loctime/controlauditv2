@@ -18,23 +18,34 @@ export const useAuditoriaData = (
   // Usar datos del contexto como fuente principal
   useEffect(() => {
     console.log('[DEBUG Auditoria] Usando datos del contexto...');
+    console.log('[DEBUG Auditoria] userEmpresas:', userEmpresas?.length || 0);
+    console.log('[DEBUG Auditoria] userFormularios:', userFormularios?.length || 0);
+    console.log('[DEBUG Auditoria] userSucursales:', userSucursales?.length || 0);
     
     // Usar empresas del contexto
     if (userEmpresas && userEmpresas.length > 0) {
-      console.log('[DEBUG Auditoria] Empresas del contexto:', userEmpresas.length);
+      console.log('[DEBUG Auditoria] ✅ Empresas del contexto:', userEmpresas.length);
       setEmpresas(userEmpresas);
+    } else {
+      console.log('[DEBUG Auditoria] ❌ No hay empresas en contexto');
     }
     
     // Usar formularios del contexto
     if (userFormularios && userFormularios.length > 0) {
-      console.log('[DEBUG Auditoria] Formularios del contexto:', userFormularios.length);
+      console.log('[DEBUG Auditoria] ✅ Formularios del contexto:', userFormularios.length);
+      console.log('[DEBUG Auditoria] Formularios:', userFormularios.map(f => f.nombre));
       setFormularios(userFormularios);
+    } else {
+      console.log('[DEBUG Auditoria] ❌ No hay formularios en contexto');
+      console.log('[DEBUG Auditoria] userFormularios value:', userFormularios);
     }
     
     // Usar sucursales del contexto
     if (userSucursales && userSucursales.length > 0) {
-      console.log('[DEBUG Auditoria] Sucursales del contexto:', userSucursales.length);
+      console.log('[DEBUG Auditoria] ✅ Sucursales del contexto:', userSucursales.length);
       setSucursales(userSucursales);
+    } else {
+      console.log('[DEBUG Auditoria] ❌ No hay sucursales en contexto');
     }
     
     // Si no hay datos del contexto, intentar cargar desde cache offline
@@ -42,6 +53,12 @@ export const useAuditoriaData = (
         (!userFormularios || userFormularios.length === 0) && 
         (!userSucursales || userSucursales.length === 0)) {
       console.log('[DEBUG Auditoria] No hay datos del contexto, intentando cargar desde cache offline...');
+      cargarDatosDelCache();
+    }
+    
+    // Verificar específicamente si faltan formularios
+    if (!userFormularios || userFormularios.length === 0) {
+      console.log('[DEBUG Auditoria] ⚠️ Formularios faltantes, intentando cargar desde cache...');
       cargarDatosDelCache();
     }
   }, [userEmpresas, userFormularios, userSucursales, setEmpresas, setFormularios, setSucursales]);
@@ -54,6 +71,21 @@ export const useAuditoriaData = (
       cargarDatosDelCache();
     }
   }, [userProfile]);
+
+  // Efecto adicional con delay para verificar datos después de que se estabilice el contexto
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      console.log('[DEBUG Auditoria] Verificación tardía de datos...');
+      console.log('[DEBUG Auditoria] userFormularios después del delay:', userFormularios?.length || 0);
+      
+      if (!userFormularios || userFormularios.length === 0) {
+        console.log('[DEBUG Auditoria] ⚠️ Formularios aún faltantes después del delay, cargando desde cache...');
+        cargarDatosDelCache();
+      }
+    }, 2000); // 2 segundos de delay
+    
+    return () => clearTimeout(timer);
+  }, [userFormularios]);
 
   // Función para cargar datos del cache offline (como fallback)
   const cargarDatosDelCache = async () => {
