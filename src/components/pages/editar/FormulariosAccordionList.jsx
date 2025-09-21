@@ -26,6 +26,7 @@ import SearchIcon from '@mui/icons-material/Search';
 import { doc, updateDoc } from "firebase/firestore";
 import { db } from "../../../firebaseConfig";
 import EditarFormularioModal from "./EditarFormularioModal";
+import { useAuth } from "../../context/AuthContext";
 
 /**
  * Lista de formularios en modo acordeón expandible.
@@ -38,6 +39,7 @@ const FormulariosAccordionList = ({ formularios, onEditar, formularioSeleccionad
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const isSmallMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const { getUserFormularios } = useAuth();
   
   const lastClickedRef = useRef(null);
   const [busqueda, setBusqueda] = useState("");
@@ -95,6 +97,51 @@ const FormulariosAccordionList = ({ formularios, onEditar, formularioSeleccionad
         esPublico: formularioEdit.esPublico,
         ultimaModificacion: new Date()
       });
+
+      // Invalidar cache offline después de editar formulario
+      try {
+        if (window.indexedDB) {
+          const request = indexedDB.open('controlaudit_offline_v1', 2);
+          await new Promise((resolve, reject) => {
+            request.onsuccess = function(event) {
+              const db = event.target.result;
+              if (!db.objectStoreNames.contains('settings')) {
+                resolve();
+                return;
+              }
+              
+              const transaction = db.transaction(['settings'], 'readwrite');
+              const store = transaction.objectStore('settings');
+              
+              store.get('complete_user_cache').onsuccess = function(e) {
+                const cached = e.target.result;
+                if (cached && cached.value) {
+                  cached.value.formulariosTimestamp = 0;
+                  cached.value.timestamp = Date.now();
+                  store.put(cached).onsuccess = () => resolve();
+                } else {
+                  resolve();
+                }
+              };
+            };
+            request.onerror = function(event) {
+              reject(event.target.error);
+            };
+          });
+          console.log('✅ Cache de formularios invalidado después de editar formulario');
+        }
+      } catch (cacheError) {
+        console.warn('⚠️ Error invalidando cache de formularios:', cacheError);
+      }
+
+      // Recargar formularios del contexto después de un pequeño delay
+      setTimeout(async () => {
+        try {
+          await getUserFormularios();
+        } catch (error) {
+          console.warn('⚠️ Error recargando formularios del contexto:', error);
+        }
+      }, 1000);
 
       setError(null);
       setOpenEditModal(false);

@@ -9,7 +9,7 @@ import { useNavigate } from "react-router-dom";
 import PublicIcon from '@mui/icons-material/Public';
 
 const Formulario = () => {
-  const { user, userProfile } = useAuth();
+  const { user, userProfile, getUserFormularios } = useAuth();
   const navigate = useNavigate();
   const [nombreFormulario, setNombreFormulario] = useState("");
   const [secciones, setSecciones] = useState([{ nombre: "", preguntas: "" }]);
@@ -76,6 +76,51 @@ const Formulario = () => {
       
       const docRef = await addDoc(collection(db, "formularios"), formularioData);
       console.log("Formulario creado con ID: ", docRef.id);
+      
+      // Invalidar cache offline para forzar recarga de formularios
+      try {
+        if (window.indexedDB) {
+          const request = indexedDB.open('controlaudit_offline_v1', 2);
+          await new Promise((resolve, reject) => {
+            request.onsuccess = function(event) {
+              const db = event.target.result;
+              if (!db.objectStoreNames.contains('settings')) {
+                resolve();
+                return;
+              }
+              
+              const transaction = db.transaction(['settings'], 'readwrite');
+              const store = transaction.objectStore('settings');
+              
+              store.get('complete_user_cache').onsuccess = function(e) {
+                const cached = e.target.result;
+                if (cached && cached.value) {
+                  cached.value.formulariosTimestamp = 0;
+                  cached.value.timestamp = Date.now();
+                  store.put(cached).onsuccess = () => resolve();
+                } else {
+                  resolve();
+                }
+              };
+            };
+            request.onerror = function(event) {
+              reject(event.target.error);
+            };
+          });
+          console.log('✅ Cache de formularios invalidado después de crear formulario');
+        }
+      } catch (cacheError) {
+        console.warn('⚠️ Error invalidando cache de formularios:', cacheError);
+      }
+      
+      // Recargar formularios del contexto después de un pequeño delay
+      setTimeout(async () => {
+        try {
+          await getUserFormularios();
+        } catch (error) {
+          console.warn('⚠️ Error recargando formularios del contexto:', error);
+        }
+      }, 1000);
       
       Swal.fire("Éxito", "Formulario creado exitosamente.", "success");
       
