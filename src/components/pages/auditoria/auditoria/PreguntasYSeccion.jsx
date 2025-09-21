@@ -157,15 +157,11 @@ const PreguntasYSeccion = ({
       // Comprimir imagen antes de guardar
       const compressedFile = await comprimirImagen(file);
       
-      // Soportar múltiples imágenes por pregunta
+      // Solo permitir una imagen por pregunta
       const nuevasImagenes = imagenes.map((img, index) => {
         if (index === seccionIndex) {
-          const currentImages = img[preguntaIndex] || [];
-          const updatedImages = Array.isArray(currentImages) 
-            ? [...currentImages, compressedFile]
-            : [compressedFile];
-          
-          return [...img.slice(0, preguntaIndex), updatedImages, ...img.slice(preguntaIndex + 1)];
+          // Reemplazar cualquier imagen existente con la nueva
+          return [...img.slice(0, preguntaIndex), compressedFile, ...img.slice(preguntaIndex + 1)];
         }
         return img;
       });
@@ -180,12 +176,8 @@ const PreguntasYSeccion = ({
       // Fallback: usar imagen original si falla la compresión
       const nuevasImagenes = imagenes.map((img, index) => {
         if (index === seccionIndex) {
-          const currentImages = img[preguntaIndex] || [];
-          const updatedImages = Array.isArray(currentImages) 
-            ? [...currentImages, file]
-            : [file];
-          
-          return [...img.slice(0, preguntaIndex), updatedImages, ...img.slice(preguntaIndex + 1)];
+          // Reemplazar cualquier imagen existente con la nueva
+          return [...img.slice(0, preguntaIndex), file, ...img.slice(preguntaIndex + 1)];
         }
         return img;
       });
@@ -227,14 +219,8 @@ const PreguntasYSeccion = ({
   const handleDeleteImage = (seccionIndex, preguntaIndex, imageIndex) => {
     const nuevasImagenes = imagenes.map((img, index) => {
       if (index === seccionIndex) {
-        const currentImages = img[preguntaIndex];
-        if (Array.isArray(currentImages)) {
-          const updatedImages = currentImages.filter((_, idx) => idx !== imageIndex);
-          return [...img.slice(0, preguntaIndex), updatedImages.length > 0 ? updatedImages : null, ...img.slice(preguntaIndex + 1)];
-        } else {
-          // Si es una sola imagen, la eliminamos
-          return [...img.slice(0, preguntaIndex), null, ...img.slice(preguntaIndex + 1)];
-        }
+        // Eliminar la imagen (solo hay una por pregunta)
+        return [...img.slice(0, preguntaIndex), null, ...img.slice(preguntaIndex + 1)];
       }
       return img;
     });
