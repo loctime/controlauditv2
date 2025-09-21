@@ -15,118 +15,74 @@ export const useAuditoriaData = (
   userFormularios,
   userSucursales
 ) => {
-  // Usar datos del contexto como fuente principal
+  // Cargar datos SIEMPRE al montar el componente
   useEffect(() => {
-    console.log('[DEBUG Auditoria] Usando datos del contexto...');
+    console.log('[DEBUG Auditoria] ========== INICIANDO CARGA DE DATOS ==========');
+    console.log('[DEBUG Auditoria] userProfile:', !!userProfile);
     console.log('[DEBUG Auditoria] userEmpresas:', userEmpresas?.length || 0);
     console.log('[DEBUG Auditoria] userFormularios:', userFormularios?.length || 0);
     console.log('[DEBUG Auditoria] userSucursales:', userSucursales?.length || 0);
     
-    // Usar empresas del contexto
-    if (userEmpresas && userEmpresas.length > 0) {
-      console.log('[DEBUG Auditoria] ✅ Empresas del contexto:', userEmpresas.length);
-      setEmpresas(userEmpresas);
-    } else {
-      console.log('[DEBUG Auditoria] ❌ No hay empresas en contexto');
-    }
-    
-    // Usar formularios del contexto
-    if (userFormularios && userFormularios.length > 0) {
-      console.log('[DEBUG Auditoria] ✅ Formularios del contexto:', userFormularios.length);
-      console.log('[DEBUG Auditoria] Formularios:', userFormularios.map(f => f.nombre));
-      setFormularios(userFormularios);
-    } else {
-      console.log('[DEBUG Auditoria] ❌ No hay formularios en contexto');
-      console.log('[DEBUG Auditoria] userFormularios value:', userFormularios);
-    }
-    
-    // Usar sucursales del contexto
-    if (userSucursales && userSucursales.length > 0) {
-      console.log('[DEBUG Auditoria] ✅ Sucursales del contexto:', userSucursales.length);
-      setSucursales(userSucursales);
-    } else {
-      console.log('[DEBUG Auditoria] ❌ No hay sucursales en contexto');
-    }
-    
-    // Si no hay datos del contexto, intentar cargar desde cache offline
-    if ((!userEmpresas || userEmpresas.length === 0) && 
-        (!userFormularios || userFormularios.length === 0) && 
-        (!userSucursales || userSucursales.length === 0)) {
-      console.log('[DEBUG Auditoria] No hay datos del contexto, intentando cargar desde cache offline...');
-      cargarDatosDelCache();
-    }
-    
-    // Verificar específicamente si faltan formularios
-    if (!userFormularios || userFormularios.length === 0) {
-      console.log('[DEBUG Auditoria] ⚠️ Formularios faltantes, intentando cargar desde cache...');
-      cargarDatosDelCache();
-    }
-  }, [userEmpresas, userFormularios, userSucursales, setEmpresas, setFormularios, setSucursales]);
-
-  // Efecto adicional para manejar modo offline puro
-  useEffect(() => {
-    // Si no hay userProfile pero hay datos en localStorage (modo offline)
-    if (!userProfile && localStorage.getItem("isLogged") === "true") {
-      console.log('[DEBUG Auditoria] Modo offline detectado, cargando datos desde cache...');
-      cargarDatosDelCache();
-    }
-  }, [userProfile]);
-
-  // Efecto adicional con delay para verificar datos después de que se estabilice el contexto
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      console.log('[DEBUG Auditoria] Verificación tardía de datos...');
-      console.log('[DEBUG Auditoria] userFormularios después del delay:', userFormularios?.length || 0);
+    const cargarDatos = async () => {
+      // 1. Intentar usar datos del contexto primero
+      let datosCargados = false;
       
-      if (!userFormularios || userFormularios.length === 0) {
-        console.log('[DEBUG Auditoria] ⚠️ Formularios aún faltantes después del delay, cargando desde cache...');
-        cargarDatosDelCache();
+      if (userEmpresas && userEmpresas.length > 0) {
+        console.log('[DEBUG Auditoria] ✅ Usando empresas del contexto:', userEmpresas.length);
+        setEmpresas(userEmpresas);
+        datosCargados = true;
       }
-    }, 2000); // 2 segundos de delay
+      
+      if (userFormularios && userFormularios.length > 0) {
+        console.log('[DEBUG Auditoria] ✅ Usando formularios del contexto:', userFormularios.length);
+        setFormularios(userFormularios);
+        datosCargados = true;
+      }
+      
+      if (userSucursales && userSucursales.length > 0) {
+        console.log('[DEBUG Auditoria] ✅ Usando sucursales del contexto:', userSucursales.length);
+        setSucursales(userSucursales);
+        datosCargados = true;
+      }
+      
+      // 2. Si faltan datos, cargar desde cache SIEMPRE
+      if (!datosCargados || 
+          !userEmpresas || userEmpresas.length === 0 ||
+          !userFormularios || userFormularios.length === 0 ||
+          !userSucursales || userSucursales.length === 0) {
+        
+        console.log('[DEBUG Auditoria] ⚠️ Datos faltantes, cargando desde cache offline...');
+        await cargarDatosDelCache();
+      }
+    };
     
-    return () => clearTimeout(timer);
-  }, [userFormularios]);
+    cargarDatos();
+  }, []); // Solo se ejecuta una vez al montar
+
+  // Efecto para recargar datos si cambian en el contexto
+  useEffect(() => {
+    console.log('[DEBUG Auditoria] Datos del contexto cambiaron...');
+    
+    if (userEmpresas && userEmpresas.length > 0) {
+      console.log('[DEBUG Auditoria] ✅ Actualizando empresas del contexto:', userEmpresas.length);
+      setEmpresas(userEmpresas);
+    }
+    
+    if (userFormularios && userFormularios.length > 0) {
+      console.log('[DEBUG Auditoria] ✅ Actualizando formularios del contexto:', userFormularios.length);
+      setFormularios(userFormularios);
+    }
+    
+    if (userSucursales && userSucursales.length > 0) {
+      console.log('[DEBUG Auditoria] ✅ Actualizando sucursales del contexto:', userSucursales.length);
+      setSucursales(userSucursales);
+    }
+  }, [userEmpresas, userFormularios, userSucursales]);
 
   // Función para cargar datos del cache offline (como fallback)
   const cargarDatosDelCache = async () => {
     try {
-      // Si no hay userProfile (offline), intentar obtener el usuario del cache
-      let userId = userProfile?.uid;
-      
-      if (!userId) {
-        console.log('[DEBUG Auditoria] No hay usuario en contexto, buscando en cache...');
-        // Buscar el último usuario en el cache
-        const request = indexedDB.open('controlaudit_offline_v1', 2);
-        const cachedUser = await new Promise((resolve, reject) => {
-          request.onsuccess = function(event) {
-            const db = event.target.result;
-            const transaction = db.transaction(['settings'], 'readonly');
-            const store = transaction.objectStore('settings');
-            
-            store.get('complete_user_cache').onsuccess = function(e) {
-              const cached = e.target.result;
-              if (cached && cached.value && cached.value.userId) {
-                resolve(cached.value.userId);
-              } else {
-                resolve(null);
-              }
-            };
-          };
-          request.onerror = function(event) {
-            reject(event.target.error);
-          };
-        });
-        
-        if (cachedUser) {
-          userId = cachedUser;
-          console.log('[DEBUG Auditoria] Usuario encontrado en cache:', userId);
-        } else {
-          console.log('[DEBUG Auditoria] No hay usuario en cache');
-          return null;
-        }
-      }
-
-      console.log('[DEBUG Auditoria] Intentando cargar datos del cache offline para usuario:', userId);
+      console.log('[DEBUG Auditoria] ========== CARGANDO DESDE CACHE OFFLINE ==========');
       
       // Abrir IndexedDB directamente
       const request = indexedDB.open('controlaudit_offline_v1', 2);
@@ -141,33 +97,49 @@ export const useAuditoriaData = (
             const cached = e.target.result;
             
             if (!cached || !cached.value) {
-              console.log('[DEBUG Auditoria] No hay cache completo disponible');
+              console.log('[DEBUG Auditoria] ❌ No hay cache completo disponible');
               resolve(null);
               return;
             }
 
             const cacheData = cached.value;
-            console.log('[DEBUG Auditoria] Cache encontrado:', cacheData);
+            console.log('[DEBUG Auditoria] ✅ Cache encontrado:', {
+              userId: cacheData.userId,
+              empresas: cacheData.empresas?.length || 0,
+              formularios: cacheData.formularios?.length || 0,
+              sucursales: cacheData.sucursales?.length || 0
+            });
             
+            // Cargar empresas
             if (cacheData.empresas && cacheData.empresas.length > 0) {
-              console.log('[DEBUG Auditoria] Empresas encontradas en cache:', cacheData.empresas.length);
-              console.log('[DEBUG Auditoria] Empresas cargadas desde cache offline:', cacheData.empresas.length, 'empresas');
+              console.log('[DEBUG Auditoria] ✅ Cargando empresas desde cache:', cacheData.empresas.length);
               setEmpresas(cacheData.empresas);
+            } else {
+              console.log('[DEBUG Auditoria] ❌ No hay empresas en cache');
             }
             
+            // Cargar formularios
             if (cacheData.formularios && cacheData.formularios.length > 0) {
-              console.log('[DEBUG Auditoria] Formularios encontrados en cache:', cacheData.formularios.length);
-              console.log('[DEBUG Auditoria] Formularios cargados desde cache offline:', cacheData.formularios.length, 'formularios');
+              console.log('[DEBUG Auditoria] ✅ Cargando formularios desde cache:', cacheData.formularios.length);
               setFormularios(cacheData.formularios);
+            } else {
+              console.log('[DEBUG Auditoria] ❌ No hay formularios en cache');
             }
             
+            // Cargar sucursales
             if (cacheData.sucursales && cacheData.sucursales.length > 0) {
-              console.log('[DEBUG Auditoria] Sucursales encontradas en cache:', cacheData.sucursales.length);
-              console.log('[DEBUG Auditoria] Sucursales cargadas desde cache offline:', cacheData.sucursales.length, 'sucursales');
+              console.log('[DEBUG Auditoria] ✅ Cargando sucursales desde cache:', cacheData.sucursales.length);
               setSucursales(cacheData.sucursales);
+            } else {
+              console.log('[DEBUG Auditoria] ❌ No hay sucursales en cache');
             }
             
             resolve(cacheData);
+          };
+          
+          store.get('complete_user_cache').onerror = function(e) {
+            console.error('[DEBUG Auditoria] Error leyendo cache:', e.target.error);
+            reject(e.target.error);
           };
         };
         

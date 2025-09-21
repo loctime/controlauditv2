@@ -486,6 +486,28 @@ const AuditoriaRefactorizada = () => {
         </Alert>
       )}
       
+      {/* Debug info */}
+      <Alert severity="info" sx={{ mb: 2 }}>
+        <Typography variant="body2">
+          <strong>Debug Info:</strong>
+          <br />
+          📊 Empresas: {userEmpresas?.length || 0}
+          <br />
+          🏢 Sucursales: {userSucursales?.length || 0}
+          <br />
+          📋 Formularios: {userFormularios?.length || 0}
+          <br />
+          👤 Usuario: {userProfile?.email || 'Sin usuario'}
+        </Typography>
+        <Button 
+          size="small" 
+          onClick={() => window.location.reload()} 
+          sx={{ mt: 1 }}
+        >
+          🔄 Recargar página
+        </Button>
+      </Alert>
+      
       {/* Header con navegación y progreso */}
       <AuditoriaHeader
         navigate={navigate}
