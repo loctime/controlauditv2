@@ -60,24 +60,124 @@ export const usePWAInstall = () => {
   }, []);
 
   const handleInstall = async () => {
-    if (deferredPrompt) {
-      deferredPrompt.prompt();
-      const { outcome } = await deferredPrompt.userChoice;
+    // Detectar navegador
+    const isEdge = navigator.userAgent.includes('Edg');
+    const isChrome = navigator.userAgent.includes('Chrome') && !navigator.userAgent.includes('Edg');
+    
+    console.log('=== INSTALACIÓN PWA ===');
+    console.log('Navegador actual:', isEdge ? 'Edge' : isChrome ? 'Chrome' : 'Otro');
+    
+    if (isChrome) {
+      // Si es Chrome, redirigir a Edge
+      console.log('Redirigiendo a Edge para mejor experiencia...');
       
-      if (outcome === 'accepted') {
-        console.log('PWA instalada por el usuario');
-      } else {
-        console.log('PWA no instalada por el usuario');
+      // Crear URL para Edge con la misma página
+      const currentUrl = window.location.href;
+      const edgeUrl = `microsoft-edge:${currentUrl}`;
+      
+      try {
+        // Intentar abrir en Edge
+        window.open(edgeUrl, '_blank');
+        
+        // Mostrar mensaje al usuario
+        alert(
+          '🚀 Abriendo en Microsoft Edge para mejor experiencia!\n\n' +
+          'Edge maneja mejor:\n' +
+          '• ✅ Modo offline\n' +
+          '• ✅ Instalación de PWA\n' +
+          '• ✅ Cache de datos\n\n' +
+          'Si no se abre automáticamente, copia la URL y ábrela en Edge.'
+        );
+        
+        // También intentar el prompt normal como fallback
+        if (deferredPrompt) {
+          deferredPrompt.prompt();
+          const { outcome } = await deferredPrompt.userChoice;
+          
+          if (outcome === 'accepted') {
+            console.log('PWA instalada en Chrome como fallback');
+          } else {
+            console.log('PWA no instalada en Chrome');
+          }
+          
+          setDeferredPrompt(null);
+          setShowButton(false);
+        }
+      } catch (error) {
+        console.warn('No se pudo abrir Edge, usando instalación normal:', error);
+        
+        // Fallback a instalación normal
+        if (deferredPrompt) {
+          deferredPrompt.prompt();
+          const { outcome } = await deferredPrompt.userChoice;
+          
+          if (outcome === 'accepted') {
+            console.log('PWA instalada por el usuario');
+          } else {
+            console.log('PWA no instalada por el usuario');
+          }
+          
+          setDeferredPrompt(null);
+          setShowButton(false);
+        }
       }
-      
-      setDeferredPrompt(null);
-      setShowButton(false);
+    } else {
+      // Si es Edge o otro navegador, usar instalación normal
+      if (deferredPrompt) {
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        
+        if (outcome === 'accepted') {
+          console.log('PWA instalada por el usuario');
+        } else {
+          console.log('PWA no instalada por el usuario');
+        }
+        
+        setDeferredPrompt(null);
+        setShowButton(false);
+      }
     }
   };
 
   const handleShowInfo = () => {
-    // Disparar evento personalizado para mostrar el diálogo
-    window.dispatchEvent(new CustomEvent('showPWAInfo'));
+    // Detectar navegador
+    const isEdge = navigator.userAgent.includes('Edg');
+    const isChrome = navigator.userAgent.includes('Chrome') && !navigator.userAgent.includes('Edg');
+    
+    console.log('=== INFO PWA ===');
+    console.log('Navegador actual:', isEdge ? 'Edge' : isChrome ? 'Chrome' : 'Otro');
+    
+    if (isChrome) {
+      // Si es Chrome, mostrar información sobre Edge y opción de redirigir
+      const userWantsEdge = confirm(
+        'Para la mejor experiencia offline, te recomendamos usar Microsoft Edge.\n\n' +
+        'Edge maneja mejor:\n' +
+        '• Modo offline\n' +
+        '• Instalación de PWA\n' +
+        '• Cache de datos\n\n' +
+        '¿Quieres abrir la app en Edge?'
+      );
+      
+      if (userWantsEdge) {
+        const currentUrl = window.location.href;
+        const edgeUrl = `microsoft-edge:${currentUrl}`;
+        
+        try {
+          window.open(edgeUrl, '_blank');
+          alert('La app se abrirá en Microsoft Edge para mejor experiencia offline.');
+        } catch (error) {
+          console.warn('No se pudo abrir Edge:', error);
+          alert('No se pudo abrir Edge. Usando la información normal de la app.');
+          window.dispatchEvent(new CustomEvent('showPWAInfo'));
+        }
+      } else {
+        // Mostrar información normal
+        window.dispatchEvent(new CustomEvent('showPWAInfo'));
+      }
+    } else {
+      // Si es Edge o otro navegador, mostrar información normal
+      window.dispatchEvent(new CustomEvent('showPWAInfo'));
+    }
   };
 
   // Para testing: forzar mostrar botón si no está instalado
