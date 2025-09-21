@@ -12,9 +12,50 @@ export const useAuditoriaData = (
   empresaSeleccionada,
   userProfile,
   userEmpresas,
-  userFormularios
+  userFormularios,
+  userSucursales
 ) => {
-  // Función para cargar datos del cache offline
+  // Usar datos del contexto como fuente principal
+  useEffect(() => {
+    console.log('[DEBUG Auditoria] Usando datos del contexto...');
+    
+    // Usar empresas del contexto
+    if (userEmpresas && userEmpresas.length > 0) {
+      console.log('[DEBUG Auditoria] Empresas del contexto:', userEmpresas.length);
+      setEmpresas(userEmpresas);
+    }
+    
+    // Usar formularios del contexto
+    if (userFormularios && userFormularios.length > 0) {
+      console.log('[DEBUG Auditoria] Formularios del contexto:', userFormularios.length);
+      setFormularios(userFormularios);
+    }
+    
+    // Usar sucursales del contexto
+    if (userSucursales && userSucursales.length > 0) {
+      console.log('[DEBUG Auditoria] Sucursales del contexto:', userSucursales.length);
+      setSucursales(userSucursales);
+    }
+    
+    // Si no hay datos del contexto, intentar cargar desde cache offline
+    if ((!userEmpresas || userEmpresas.length === 0) && 
+        (!userFormularios || userFormularios.length === 0) && 
+        (!userSucursales || userSucursales.length === 0)) {
+      console.log('[DEBUG Auditoria] No hay datos del contexto, intentando cargar desde cache offline...');
+      cargarDatosDelCache();
+    }
+  }, [userEmpresas, userFormularios, userSucursales, setEmpresas, setFormularios, setSucursales]);
+
+  // Efecto adicional para manejar modo offline puro
+  useEffect(() => {
+    // Si no hay userProfile pero hay datos en localStorage (modo offline)
+    if (!userProfile && localStorage.getItem("isLogged") === "true") {
+      console.log('[DEBUG Auditoria] Modo offline detectado, cargando datos desde cache...');
+      cargarDatosDelCache();
+    }
+  }, [userProfile]);
+
+  // Función para cargar datos del cache offline (como fallback)
   const cargarDatosDelCache = async () => {
     try {
       // Si no hay userProfile (offline), intentar obtener el usuario del cache
@@ -86,6 +127,12 @@ export const useAuditoriaData = (
               console.log('[DEBUG Auditoria] Formularios encontrados en cache:', cacheData.formularios.length);
               console.log('[DEBUG Auditoria] Formularios cargados desde cache offline:', cacheData.formularios.length, 'formularios');
               setFormularios(cacheData.formularios);
+            }
+            
+            if (cacheData.sucursales && cacheData.sucursales.length > 0) {
+              console.log('[DEBUG Auditoria] Sucursales encontradas en cache:', cacheData.sucursales.length);
+              console.log('[DEBUG Auditoria] Sucursales cargadas desde cache offline:', cacheData.sucursales.length, 'sucursales');
+              setSucursales(cacheData.sucursales);
             }
             
             resolve(cacheData);

@@ -89,7 +89,7 @@ const AuditoriaRefactorizada = () => {
   const theme = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
-  const { userProfile, userEmpresas, userFormularios } = useAuth();
+  const { userProfile, userEmpresas, userFormularios, userSucursales } = useAuth();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
   // Estados para autoguardado
@@ -139,7 +139,8 @@ const AuditoriaRefactorizada = () => {
     empresaSeleccionada,
     userProfile,
     userEmpresas,
-    userFormularios
+    userFormularios,
+    userSucursales
   );
 
   // Hook para manejar todos los handlers
