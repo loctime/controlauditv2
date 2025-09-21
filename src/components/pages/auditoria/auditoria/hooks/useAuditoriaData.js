@@ -83,9 +83,11 @@ export const useAuditoriaData = (
   const cargarDatosDelCache = async () => {
     try {
       console.log('[DEBUG Auditoria] ========== CARGANDO DESDE CACHE OFFLINE ==========');
+      console.log('[DEBUG Auditoria] Navegador detectado:', navigator.userAgent.includes('Edg') ? 'Edge' : 'Chrome/Firefox');
       
-      // Abrir IndexedDB directamente
-      const request = indexedDB.open('controlaudit_offline_v1', 2);
+      // Intentar IndexedDB primero
+      try {
+        const request = indexedDB.open('controlaudit_offline_v1', 2);
       
       return new Promise((resolve, reject) => {
         request.onsuccess = function(event) {
@@ -148,6 +150,35 @@ export const useAuditoriaData = (
           reject(event.target.error);
         };
       });
+      
+      } catch (indexedDBError) {
+        console.warn('[DEBUG Auditoria] IndexedDB falló, intentando localStorage:', indexedDBError);
+        
+        // Fallback a localStorage
+        try {
+          const cacheData = JSON.parse(localStorage.getItem('complete_user_cache') || '{}');
+          
+          if (cacheData.empresas && cacheData.empresas.length > 0) {
+            console.log('[DEBUG Auditoria] ✅ Cargando empresas desde localStorage:', cacheData.empresas.length);
+            setEmpresas(cacheData.empresas);
+          }
+          
+          if (cacheData.formularios && cacheData.formularios.length > 0) {
+            console.log('[DEBUG Auditoria] ✅ Cargando formularios desde localStorage:', cacheData.formularios.length);
+            setFormularios(cacheData.formularios);
+          }
+          
+          if (cacheData.sucursales && cacheData.sucursales.length > 0) {
+            console.log('[DEBUG Auditoria] ✅ Cargando sucursales desde localStorage:', cacheData.sucursales.length);
+            setSucursales(cacheData.sucursales);
+          }
+          
+          return cacheData;
+        } catch (localStorageError) {
+          console.error('[DEBUG Auditoria] localStorage también falló:', localStorageError);
+          return null;
+        }
+      }
       
     } catch (error) {
       console.error('[DEBUG Auditoria] Error al cargar cache offline:', error);

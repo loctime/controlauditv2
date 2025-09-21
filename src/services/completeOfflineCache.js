@@ -211,6 +211,14 @@ export const saveCompleteUserCache = async (userProfile) => {
       value: cacheData,
       updatedAt: Date.now()
     });
+    
+    // También guardar en localStorage como backup para Chrome
+    try {
+      localStorage.setItem('complete_user_cache', JSON.stringify(cacheData));
+      console.log('✅ Cache también guardado en localStorage como backup');
+    } catch (localStorageError) {
+      console.warn('⚠️ No se pudo guardar en localStorage:', localStorageError);
+    }
 
     console.log('✅ Cache completo guardado para usuario:', userProfile.uid);
     return cacheData;
