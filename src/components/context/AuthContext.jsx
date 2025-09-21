@@ -334,8 +334,19 @@ const AuthContextComponent = ({ children }) => {
   // Funciones de carga de datos
   const loadUserEmpresas = async (userId) => {
     try {
+      // Asegurar que tenemos los datos necesarios
+      if (!role || !userProfile) {
+        console.warn('⚠️ [AuthContext] Role o userProfile no disponibles, esperando...');
+        // Esperar un poco y reintentar
+        setTimeout(() => loadUserEmpresas(userId), 1000);
+        return [];
+      }
+
+      console.log('🔄 [AuthContext] Cargando empresas para usuario:', userId, 'rol:', role);
       const empresas = await empresaService.getUserEmpresas(userId, role, userProfile?.clienteAdminId);
+      console.log('✅ [AuthContext] Empresas cargadas desde Firestore:', empresas.length);
       setUserEmpresas(empresas);
+      setLoadingEmpresas(false);
       return empresas;
     } catch (error) {
       console.warn('⚠️ [AuthContext] Error cargando empresas desde Firestore, intentando cache offline:', error);
@@ -346,6 +357,7 @@ const AuthContextComponent = ({ children }) => {
         if (cachedData?.empresas && cachedData.empresas.length > 0) {
           console.log('✅ [AuthContext] Empresas cargadas desde cache offline como fallback:', cachedData.empresas.length);
           setUserEmpresas(cachedData.empresas);
+          setLoadingEmpresas(false);
           return cachedData.empresas;
         }
       } catch (cacheError) {
@@ -353,17 +365,27 @@ const AuthContextComponent = ({ children }) => {
       }
       
       setUserEmpresas([]);
+      setLoadingEmpresas(false);
       return [];
     }
   };
 
   const loadUserSucursales = async (userId) => {
     try {
-      if (!userProfile || !userEmpresas || userEmpresas.length === 0) {
-        setUserSucursales([]);
-        setLoadingSucursales(false);
+      if (!userProfile) {
+        console.warn('⚠️ [AuthContext] userProfile no disponible para cargar sucursales, esperando...');
+        setTimeout(() => loadUserSucursales(userId), 1000);
         return [];
       }
+
+      if (!userEmpresas || userEmpresas.length === 0) {
+        console.warn('⚠️ [AuthContext] No hay empresas disponibles para cargar sucursales, esperando...');
+        setTimeout(() => loadUserSucursales(userId), 1000);
+        return [];
+      }
+
+      console.log('🔄 [AuthContext] Cargando sucursales para', userEmpresas.length, 'empresas');
+      setLoadingSucursales(true);
 
       let sucursalesData = [];
       
@@ -427,10 +449,19 @@ const AuthContextComponent = ({ children }) => {
   const loadUserFormularios = async (userId) => {
     try {
       if (!userProfile) {
-        setUserFormularios([]);
-        setLoadingFormularios(false);
+        console.warn('⚠️ [AuthContext] userProfile no disponible para cargar formularios, esperando...');
+        setTimeout(() => loadUserFormularios(userId), 1000);
         return [];
       }
+
+      if (!userEmpresas || userEmpresas.length === 0) {
+        console.warn('⚠️ [AuthContext] No hay empresas disponibles para cargar formularios, esperando...');
+        setTimeout(() => loadUserFormularios(userId), 1000);
+        return [];
+      }
+
+      console.log('🔄 [AuthContext] Cargando formularios para', userEmpresas.length, 'empresas');
+      setLoadingFormularios(true);
 
       let formulariosData = [];
       

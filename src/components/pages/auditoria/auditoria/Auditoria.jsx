@@ -89,13 +89,60 @@ const AuditoriaRefactorizada = () => {
   const theme = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
-  const { userProfile, userEmpresas, userFormularios, userSucursales } = useAuth();
+  const { 
+    userProfile, 
+    userEmpresas, 
+    userFormularios, 
+    userSucursales,
+    getUserEmpresas,
+    getUserSucursales,
+    getUserFormularios
+  } = useAuth();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
   // Estados para autoguardado
   const [isSaving, setIsSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  
+  // Estado para carga de datos de respaldo
+  const [cargandoDatosRespaldo, setCargandoDatosRespaldo] = useState(false);
+
+  // Cargar datos de respaldo si no están disponibles
+  useEffect(() => {
+    const cargarDatosRespaldo = async () => {
+      if (!userProfile) return;
+      
+      // Verificar si faltan datos críticos
+      const faltanDatos = (
+        (!userEmpresas || userEmpresas.length === 0) ||
+        (!userSucursales || userSucursales.length === 0) ||
+        (!userFormularios || userFormularios.length === 0)
+      );
+      
+      if (faltanDatos) {
+        console.log('🔄 [Auditoria] Datos faltantes detectados, cargando de respaldo...');
+        setCargandoDatosRespaldo(true);
+        
+        try {
+          await Promise.allSettled([
+            getUserEmpresas(),
+            getUserSucursales(),
+            getUserFormularios()
+          ]);
+          console.log('✅ [Auditoria] Datos de respaldo cargados');
+        } catch (error) {
+          console.warn('⚠️ [Auditoria] Error cargando datos de respaldo:', error);
+        } finally {
+          setCargandoDatosRespaldo(false);
+        }
+      }
+    };
+
+    // Esperar un poco para que el contexto se estabilice
+    const timer = setTimeout(cargarDatosRespaldo, 1000);
+    return () => clearTimeout(timer);
+  }, [userProfile, userEmpresas, userSucursales, userFormularios, getUserEmpresas, getUserSucursales, getUserFormularios]);
 
   // Hook para manejar todo el estado
   const auditoriaState = useAuditoriaState();
@@ -429,6 +476,16 @@ const AuditoriaRefactorizada = () => {
 
   return (
     <Container maxWidth={isMobile ? false : "xl"} sx={{ py: isMobile ? 1 : 4, px: isMobile ? 0 : 2 }}>
+      {/* Indicador de carga de datos de respaldo */}
+      {cargandoDatosRespaldo && (
+        <Alert severity="info" sx={{ mb: 2 }}>
+          <Typography variant="body2">
+            🔄 Cargando datos necesarios para crear auditorías...
+          </Typography>
+          <LinearProgress sx={{ mt: 1 }} />
+        </Alert>
+      )}
+      
       {/* Header con navegación y progreso */}
       <AuditoriaHeader
         navigate={navigate}
