@@ -25,19 +25,19 @@ const getSafeValue = (val) => {
 const procesarImagen = (imagen, seccionIndex, preguntaIndex) => {
   console.debug(`[ImagenesTable] Procesando imagen para sección ${seccionIndex}, pregunta ${preguntaIndex}:`, imagen);
   
-  if (!imagen) {
+  if (!imagen || imagen === null || imagen === undefined) {
     console.debug(`[ImagenesTable] No hay imagen para sección ${seccionIndex}, pregunta ${preguntaIndex}`);
     return null;
   }
 
   // Si es un objeto con URL
-  if (typeof imagen === 'object' && imagen.url) {
+  if (typeof imagen === 'object' && imagen.url && typeof imagen.url === 'string') {
     console.debug(`[ImagenesTable] Imagen con URL: ${imagen.url}`);
     return imagen.url;
   }
 
   // Si es una string (URL directa)
-  if (typeof imagen === 'string' && imagen.trim() !== '') {
+  if (typeof imagen === 'string' && imagen.trim() !== '' && imagen !== '[object Object]') {
     console.debug(`[ImagenesTable] Imagen como string: ${imagen}`);
     return imagen;
   }
@@ -47,11 +47,17 @@ const procesarImagen = (imagen, seccionIndex, preguntaIndex) => {
     console.debug(`[ImagenesTable] Array de imágenes:`, imagen);
     // Tomar la primera imagen del array
     const primeraImagen = imagen[0];
-    if (typeof primeraImagen === 'object' && primeraImagen.url) {
+    if (typeof primeraImagen === 'object' && primeraImagen.url && typeof primeraImagen.url === 'string') {
       return primeraImagen.url;
-    } else if (typeof primeraImagen === 'string') {
+    } else if (typeof primeraImagen === 'string' && primeraImagen !== '[object Object]') {
       return primeraImagen;
     }
+  }
+
+  // Si es "[object Object]", es una imagen corrupta
+  if (typeof imagen === 'string' && imagen === '[object Object]') {
+    console.warn(`[ImagenesTable] Imagen corrupta "[object Object]" para sección ${seccionIndex}, pregunta ${preguntaIndex}`);
+    return null;
   }
 
   console.debug(`[ImagenesTable] Formato de imagen no reconocido:`, imagen);

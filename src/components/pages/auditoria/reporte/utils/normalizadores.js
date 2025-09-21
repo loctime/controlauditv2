@@ -97,13 +97,27 @@ export const normalizarImagenes = (imagenesFirestore, secciones) => {
       
       const imagenesSeccion = imgSec.valores.map(val => {
         console.debug(`[normalizarImagenes] Procesando valor:`, val);
-        if (val && typeof val === "object" && val.url) {
+        
+        // Si es un objeto con URL válida
+        if (val && typeof val === "object" && val.url && typeof val.url === 'string') {
           console.debug(`[normalizarImagenes] Encontrada URL: ${val.url}`);
           return val.url;
-        } else if (typeof val === "string") {
+        } 
+        
+        // Si es string válido (no "[object Object]")
+        else if (typeof val === "string" && val.trim() !== '' && val !== '[object Object]') {
           console.debug(`[normalizarImagenes] Encontrada string: ${val}`);
           return val;
-        } else {
+        } 
+        
+        // Si es "[object Object]", es una imagen corrupta
+        else if (typeof val === "string" && val === '[object Object]') {
+          console.warn(`[normalizarImagenes] Imagen corrupta "[object Object]" detectada`);
+          return "";
+        }
+        
+        // Cualquier otro caso
+        else {
           console.debug(`[normalizarImagenes] Valor no válido:`, val);
           return "";
         }
@@ -125,9 +139,9 @@ export const normalizarImagenes = (imagenesFirestore, secciones) => {
       if (!Array.isArray(seccionImagenes)) return [];
       
       return seccionImagenes.map(img => {
-        if (img && typeof img === "object" && img.url) {
+        if (img && typeof img === "object" && img.url && typeof img.url === 'string') {
           return img.url;
-        } else if (typeof img === "string") {
+        } else if (typeof img === "string" && img.trim() !== '' && img !== '[object Object]') {
           return img;
         } else {
           return "";
@@ -150,9 +164,9 @@ export const normalizarImagenes = (imagenesFirestore, secciones) => {
       
       if (Array.isArray(seccionImagenes)) {
         return seccionImagenes.map(img => {
-          if (img && typeof img === "object" && img.url) {
+          if (img && typeof img === "object" && img.url && typeof img.url === 'string') {
             return img.url;
-          } else if (typeof img === "string") {
+          } else if (typeof img === "string" && img.trim() !== '' && img !== '[object Object]') {
             return img;
           } else {
             return "";
@@ -163,9 +177,9 @@ export const normalizarImagenes = (imagenesFirestore, secciones) => {
         const imagenes = [];
         Object.keys(seccionImagenes).forEach(key => {
           const img = seccionImagenes[key];
-          if (img && typeof img === "object" && img.url) {
+          if (img && typeof img === "object" && img.url && typeof img.url === 'string') {
             imagenes.push(img.url);
-          } else if (typeof img === "string") {
+          } else if (typeof img === "string" && img.trim() !== '' && img !== '[object Object]') {
             imagenes.push(img);
           }
         });
