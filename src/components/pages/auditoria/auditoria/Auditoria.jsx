@@ -236,7 +236,7 @@ const AuditoriaRefactorizada = () => {
       try {
         const savedData = await autoSaveService.restoreAuditoria(userProfile.uid);
         if (savedData && !location.state?.auditoriaId) {
-          // Mostrar confirmación para restaurar
+          // M.ostrar confirmación para restaurar
           const shouldRestore = await Swal.fire({
             title: '🔄 Auditoría encontrada',
             text: 'Se encontró una auditoría guardada automáticamente. ¿Quieres restaurarla?',
