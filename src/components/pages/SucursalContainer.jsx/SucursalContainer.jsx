@@ -8,6 +8,50 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 
+// Función para invalidar cache de sucursales
+const invalidateSucursalesCache = async () => {
+  try {
+    if (!window.indexedDB) return;
+    
+    const request = indexedDB.open('controlaudit_offline_v1', 2);
+    await new Promise((resolve, reject) => {
+      request.onsuccess = function(event) {
+        const db = event.target.result;
+        if (!db.objectStoreNames.contains('settings')) {
+          resolve();
+          return;
+        }
+        
+        const transaction = db.transaction(['settings'], 'readwrite');
+        const store = transaction.objectStore('settings');
+        
+        // Obtener cache actual
+        store.get('complete_user_cache').onsuccess = function(e) {
+          const cached = e.target.result;
+          if (cached && cached.value) {
+            // Marcar sucursales como inválidas (timestamp muy antiguo)
+            cached.value.sucursalesTimestamp = 0;
+            cached.value.timestamp = Date.now(); // Actualizar timestamp general
+            
+            // Guardar cache actualizado
+            store.put(cached).onsuccess = () => {
+              console.log('✅ Cache de sucursales invalidado');
+              resolve();
+            };
+          } else {
+            resolve();
+          }
+        };
+      };
+      request.onerror = function(event) {
+        reject(event.target.error);
+      };
+    });
+  } catch (error) {
+    console.warn('⚠️ Error invalidando cache de sucursales:', error);
+  }
+};
+
 const SucursalContainer = () => {
   const { empresaId } = useParams();
   const navigate = useNavigate();
@@ -18,7 +62,7 @@ const SucursalContainer = () => {
   const [empresa, setEmpresa] = useState(null);
   const [canAccessEmpresa, setCanAccessEmpresa] = useState(false);
   const [loadingEmpresa, setLoadingEmpresa] = useState(true);
-  const { userProfile, role, canViewEmpresa } = useAuth();
+  const { userProfile, role, canViewEmpresa, getUserSucursales } = useAuth();
 
   useEffect(() => {
     const fetchEmpresa = async () => {
@@ -90,6 +134,18 @@ const SucursalContainer = () => {
         creadoPorEmail: userProfile?.email,
         clienteAdminId: userProfile?.clienteAdminId || userProfile?.uid
       });
+      
+      // Invalidar cache offline para forzar recarga de sucursales
+      await invalidateSucursalesCache();
+      
+      // Recargar sucursales del contexto
+      setTimeout(async () => {
+        try {
+          await getUserSucursales();
+        } catch (error) {
+          console.warn('⚠️ Error recargando sucursales del contexto:', error);
+        }
+      }, 1000);
       
       setSuccess(`Sucursal "${sucursal.nombre}" agregada exitosamente.`);
       setRefreshList(!refreshList);

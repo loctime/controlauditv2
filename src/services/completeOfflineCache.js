@@ -114,14 +114,47 @@ export const saveCompleteUserCache = async (userProfile) => {
       console.warn('⚠️ Error cacheando formularios:', error);
     }
 
-    // Obtener y cachear sucursales
+    // Obtener y cachear sucursales (filtradas por rol)
     try {
-      const sucursalesSnapshot = await getDocs(collection(db, 'sucursales'));
-      cacheData.sucursales = sucursalesSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-      console.log('✅ Sucursales cacheadas:', cacheData.sucursales.length);
+      let sucursalesData = [];
+      
+      if (userProfile.role === 'supermax') {
+        // Supermax ve todas las sucursales
+        const sucursalesSnapshot = await getDocs(collection(db, 'sucursales'));
+        sucursalesData = sucursalesSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+      } else {
+        // Para max y operario: cargar sucursales de sus empresas
+        const empresasIds = cacheData.empresas.map(emp => emp.id);
+        
+        if (empresasIds.length > 0) {
+          // Firestore limita 'in' queries a 10 elementos, dividir en chunks si es necesario
+          const chunkSize = 10;
+          const empresasChunks = [];
+          for (let i = 0; i < empresasIds.length; i += chunkSize) {
+            empresasChunks.push(empresasIds.slice(i, i + chunkSize));
+          }
+
+          const sucursalesPromises = empresasChunks.map(async (chunk) => {
+            const sucursalesRef = collection(db, "sucursales");
+            const sucursalesQuery = query(sucursalesRef, where("empresaId", "in", chunk));
+            const sucursalesSnapshot = await getDocs(sucursalesQuery);
+            return sucursalesSnapshot.docs.map(doc => ({
+              id: doc.id,
+              ...doc.data()
+            }));
+          });
+
+          const sucursalesArrays = await Promise.all(sucursalesPromises);
+          sucursalesData = sucursalesArrays.flat();
+        }
+      }
+      
+      cacheData.sucursales = sucursalesData;
+      console.log('✅ Sucursales cacheadas (filtradas):', cacheData.sucursales.length);
+      console.log('✅ Sucursales cacheadas (detalle):', cacheData.sucursales.map(s => ({ id: s.id, nombre: s.nombre, empresaId: s.empresaId })));
     } catch (error) {
       console.warn('⚠️ Error cacheando sucursales:', error);
     }

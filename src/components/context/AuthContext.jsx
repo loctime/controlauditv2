@@ -1,7 +1,8 @@
 // src/components/context/AuthContext.jsx
 import { createContext, useState, useEffect, useContext } from "react";
-import { auth } from "../../firebaseConfig";
+import { auth, db } from "../../firebaseConfig";
 import { onAuthStateChanged } from "firebase/auth";
+import { collection, getDocs, query, where } from "firebase/firestore";
 import { registrarAccionSistema } from '../../utils/firestoreUtils';
 import { useUserProfile } from '../../hooks/useUserProfile';
 import { useUserManagement } from '../../hooks/useUserManagement';
@@ -18,6 +19,8 @@ const AuthContextComponent = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [userEmpresas, setUserEmpresas] = useState([]);
   const [loadingEmpresas, setLoadingEmpresas] = useState(true);
+  const [userSucursales, setUserSucursales] = useState([]);
+  const [loadingSucursales, setLoadingSucursales] = useState(true);
   const [userAuditorias, setUserAuditorias] = useState([]);
   const [auditoriasCompartidas, setAuditoriasCompartidas] = useState([]);
 
@@ -47,7 +50,7 @@ const AuthContextComponent = ({ children }) => {
     const timeoutId = setTimeout(() => {
       console.log('⏰ Timeout de seguridad - deteniendo loading');
       setLoading(false);
-    }, 1500); // 1.5 segundos máximo
+    }, 3000); // 3 segundos máximo (aumentado para dar tiempo a cargar empresas)
     
     // Listener para detectar cambios de conectividad
     const handleOnline = () => {
@@ -57,6 +60,10 @@ const AuthContextComponent = ({ children }) => {
         loadUserEmpresas(user.uid);
         loadUserAuditorias(user.uid);
         loadAuditoriasCompartidas(user.uid);
+        // Recargar sucursales después de un pequeño delay
+        setTimeout(() => {
+          loadUserSucursales(user.uid);
+        }, 1500);
       }
     };
     
@@ -141,6 +148,11 @@ const AuthContextComponent = ({ children }) => {
               loadUserAuditorias(firebaseUser.uid),
               loadAuditoriasCompartidas(firebaseUser.uid)
             ]);
+
+            // Cargar sucursales después de que las empresas estén disponibles
+            setTimeout(async () => {
+              await loadUserSucursales(firebaseUser.uid);
+            }, 1000); // Pequeño delay para asegurar que las empresas estén cargadas
 
             // Guardar cache completo para funcionamiento offline
             try {
@@ -313,9 +325,95 @@ const AuthContextComponent = ({ children }) => {
 
   // Funciones de carga de datos
   const loadUserEmpresas = async (userId) => {
-    const empresas = await empresaService.getUserEmpresas(userId, role, userProfile?.clienteAdminId);
-    setUserEmpresas(empresas);
-    return empresas;
+    try {
+      const empresas = await empresaService.getUserEmpresas(userId, role, userProfile?.clienteAdminId);
+      setUserEmpresas(empresas);
+      return empresas;
+    } catch (error) {
+      console.warn('⚠️ [AuthContext] Error cargando empresas desde Firestore, intentando cache offline:', error);
+      
+      // Fallback al cache offline si falla la carga desde Firestore
+      try {
+        const cachedData = await loadUserFromCache();
+        if (cachedData?.empresas && cachedData.empresas.length > 0) {
+          console.log('✅ [AuthContext] Empresas cargadas desde cache offline como fallback:', cachedData.empresas.length);
+          setUserEmpresas(cachedData.empresas);
+          return cachedData.empresas;
+        }
+      } catch (cacheError) {
+        console.error('❌ [AuthContext] Error cargando desde cache offline:', cacheError);
+      }
+      
+      setUserEmpresas([]);
+      return [];
+    }
+  };
+
+  const loadUserSucursales = async (userId) => {
+    try {
+      if (!userProfile || !userEmpresas || userEmpresas.length === 0) {
+        setUserSucursales([]);
+        setLoadingSucursales(false);
+        return [];
+      }
+
+      let sucursalesData = [];
+      
+      if (role === 'supermax') {
+        // Supermax ve todas las sucursales
+        const sucursalesSnapshot = await getDocs(collection(db, 'sucursales'));
+        sucursalesData = sucursalesSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+      } else {
+        // Para max y operario: cargar sucursales de sus empresas
+        const empresasIds = userEmpresas.map(emp => emp.id);
+        
+        // Firestore limita 'in' queries a 10 elementos, dividir en chunks si es necesario
+        const chunkSize = 10;
+        const empresasChunks = [];
+        for (let i = 0; i < empresasIds.length; i += chunkSize) {
+          empresasChunks.push(empresasIds.slice(i, i + chunkSize));
+        }
+
+        const sucursalesPromises = empresasChunks.map(async (chunk) => {
+          const sucursalesRef = collection(db, "sucursales");
+          const sucursalesQuery = query(sucursalesRef, where("empresaId", "in", chunk));
+          const sucursalesSnapshot = await getDocs(sucursalesQuery);
+          return sucursalesSnapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          }));
+        });
+
+        const sucursalesArrays = await Promise.all(sucursalesPromises);
+        sucursalesData = sucursalesArrays.flat();
+      }
+      
+      setUserSucursales(sucursalesData);
+      setLoadingSucursales(false);
+      return sucursalesData;
+    } catch (error) {
+      console.warn('⚠️ [AuthContext] Error cargando sucursales desde Firestore, intentando cache offline:', error);
+      
+      // Fallback al cache offline si falla la carga desde Firestore
+      try {
+        const cachedData = await loadUserFromCache();
+        if (cachedData?.sucursales && cachedData.sucursales.length > 0) {
+          console.log('✅ [AuthContext] Sucursales cargadas desde cache offline como fallback:', cachedData.sucursales.length);
+          setUserSucursales(cachedData.sucursales);
+          setLoadingSucursales(false);
+          return cachedData.sucursales;
+        }
+      } catch (cacheError) {
+        console.error('❌ [AuthContext] Error cargando sucursales desde cache offline:', cacheError);
+      }
+      
+      setUserSucursales([]);
+      setLoadingSucursales(false);
+      return [];
+    }
   };
 
   const loadUserAuditorias = async (userId) => {
@@ -402,6 +500,8 @@ const AuthContextComponent = ({ children }) => {
     loading,
     userEmpresas,
     loadingEmpresas,
+    userSucursales,
+    loadingSucursales,
     userAuditorias,
     auditoriasCompartidas,
     handleLogin,
@@ -411,6 +511,7 @@ const AuthContextComponent = ({ children }) => {
     canViewEmpresa: (empresaId) => empresaService.canViewEmpresa(empresaId, userProfile),
     canViewAuditoria: (auditoriaId) => auditoriaService.canViewAuditoria(auditoriaId, userProfile, auditoriasCompartidas),
     getUserEmpresas: () => loadUserEmpresas(user?.uid),
+    getUserSucursales: () => loadUserSucursales(user?.uid),
     getUserAuditorias: () => loadUserAuditorias(user?.uid),
     getAuditoriasCompartidas: () => loadAuditoriasCompartidas(user?.uid),
     role,
