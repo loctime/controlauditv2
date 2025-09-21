@@ -102,14 +102,47 @@ export const saveCompleteUserCache = async (userProfile) => {
       console.warn('⚠️ Error cacheando empresas:', error);
     }
 
-    // Obtener y cachear formularios del usuario
+    // Obtener y cachear formularios del usuario (filtrados por rol)
     try {
-      const formulariosSnapshot = await getDocs(collection(db, 'formularios'));
-      cacheData.formularios = formulariosSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-      console.log('✅ Formularios cacheados:', cacheData.formularios.length);
+      let formulariosData = [];
+      
+      if (userProfile.role === 'supermax') {
+        // Supermax ve todos los formularios
+        const formulariosSnapshot = await getDocs(collection(db, 'formularios'));
+        formulariosData = formulariosSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+      } else {
+        // Para max y operario: cargar formularios de sus empresas
+        const empresasIds = cacheData.empresas.map(emp => emp.id);
+        
+        if (empresasIds.length > 0) {
+          // Firestore limita 'in' queries a 10 elementos, dividir en chunks si es necesario
+          const chunkSize = 10;
+          const empresasChunks = [];
+          for (let i = 0; i < empresasIds.length; i += chunkSize) {
+            empresasChunks.push(empresasIds.slice(i, i + chunkSize));
+          }
+
+          const formulariosPromises = empresasChunks.map(async (chunk) => {
+            const formulariosRef = collection(db, "formularios");
+            const formulariosQuery = query(formulariosRef, where("empresaId", "in", chunk));
+            const formulariosSnapshot = await getDocs(formulariosQuery);
+            return formulariosSnapshot.docs.map(doc => ({
+              id: doc.id,
+              ...doc.data()
+            }));
+          });
+
+          const formulariosArrays = await Promise.all(formulariosPromises);
+          formulariosData = formulariosArrays.flat();
+        }
+      }
+      
+      cacheData.formularios = formulariosData;
+      console.log('✅ Formularios cacheados (filtrados):', cacheData.formularios.length);
+      console.log('✅ Formularios cacheados (detalle):', cacheData.formularios.map(f => ({ id: f.id, nombre: f.nombre, empresaId: f.empresaId })));
     } catch (error) {
       console.warn('⚠️ Error cacheando formularios:', error);
     }

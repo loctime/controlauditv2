@@ -21,6 +21,8 @@ const AuthContextComponent = ({ children }) => {
   const [loadingEmpresas, setLoadingEmpresas] = useState(true);
   const [userSucursales, setUserSucursales] = useState([]);
   const [loadingSucursales, setLoadingSucursales] = useState(true);
+  const [userFormularios, setUserFormularios] = useState([]);
+  const [loadingFormularios, setLoadingFormularios] = useState(true);
   const [userAuditorias, setUserAuditorias] = useState([]);
   const [auditoriasCompartidas, setAuditoriasCompartidas] = useState([]);
 
@@ -60,9 +62,12 @@ const AuthContextComponent = ({ children }) => {
         loadUserEmpresas(user.uid);
         loadUserAuditorias(user.uid);
         loadAuditoriasCompartidas(user.uid);
-        // Recargar sucursales después de un pequeño delay
-        setTimeout(() => {
-          loadUserSucursales(user.uid);
+        // Recargar sucursales y formularios después de un pequeño delay
+        setTimeout(async () => {
+          await Promise.all([
+            loadUserSucursales(user.uid),
+            loadUserFormularios(user.uid)
+          ]);
         }, 1500);
       }
     };
@@ -149,9 +154,12 @@ const AuthContextComponent = ({ children }) => {
               loadAuditoriasCompartidas(firebaseUser.uid)
             ]);
 
-            // Cargar sucursales después de que las empresas estén disponibles
+            // Cargar sucursales y formularios después de que las empresas estén disponibles
             setTimeout(async () => {
-              await loadUserSucursales(firebaseUser.uid);
+              await Promise.all([
+                loadUserSucursales(firebaseUser.uid),
+                loadUserFormularios(firebaseUser.uid)
+              ]);
             }, 1000); // Pequeño delay para asegurar que las empresas estén cargadas
 
             // Guardar cache completo para funcionamiento offline
@@ -416,6 +424,99 @@ const AuthContextComponent = ({ children }) => {
     }
   };
 
+  const loadUserFormularios = async (userId) => {
+    try {
+      if (!userProfile) {
+        setUserFormularios([]);
+        setLoadingFormularios(false);
+        return [];
+      }
+
+      let formulariosData = [];
+      
+      if (role === 'supermax') {
+        // Supermax ve todos los formularios
+        const formulariosSnapshot = await getDocs(collection(db, 'formularios'));
+        formulariosData = formulariosSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+      } else if (role === 'max') {
+        // Max ve formularios de sus empresas
+        const empresasIds = userEmpresas.map(emp => emp.id);
+        
+        if (empresasIds.length > 0) {
+          // Firestore limita 'in' queries a 10 elementos, dividir en chunks si es necesario
+          const chunkSize = 10;
+          const empresasChunks = [];
+          for (let i = 0; i < empresasIds.length; i += chunkSize) {
+            empresasChunks.push(empresasIds.slice(i, i + chunkSize));
+          }
+
+          const formulariosPromises = empresasChunks.map(async (chunk) => {
+            const formulariosRef = collection(db, "formularios");
+            const formulariosQuery = query(formulariosRef, where("empresaId", "in", chunk));
+            const formulariosSnapshot = await getDocs(formulariosQuery);
+            return formulariosSnapshot.docs.map(doc => ({
+              id: doc.id,
+              ...doc.data()
+            }));
+          });
+
+          const formulariosArrays = await Promise.all(formulariosPromises);
+          formulariosData = formulariosArrays.flat();
+        }
+      } else if (role === 'operario' && userProfile.clienteAdminId) {
+        // Operario ve formularios de su cliente admin
+        const empresasIds = userEmpresas.map(emp => emp.id);
+        
+        if (empresasIds.length > 0) {
+          const chunkSize = 10;
+          const empresasChunks = [];
+          for (let i = 0; i < empresasIds.length; i += chunkSize) {
+            empresasChunks.push(empresasIds.slice(i, i + chunkSize));
+          }
+
+          const formulariosPromises = empresasChunks.map(async (chunk) => {
+            const formulariosRef = collection(db, "formularios");
+            const formulariosQuery = query(formulariosRef, where("empresaId", "in", chunk));
+            const formulariosSnapshot = await getDocs(formulariosQuery);
+            return formulariosSnapshot.docs.map(doc => ({
+              id: doc.id,
+              ...doc.data()
+            }));
+          });
+
+          const formulariosArrays = await Promise.all(formulariosPromises);
+          formulariosData = formulariosArrays.flat();
+        }
+      }
+      
+      setUserFormularios(formulariosData);
+      setLoadingFormularios(false);
+      return formulariosData;
+    } catch (error) {
+      console.warn('⚠️ [AuthContext] Error cargando formularios desde Firestore, intentando cache offline:', error);
+      
+      // Fallback al cache offline si falla la carga desde Firestore
+      try {
+        const cachedData = await loadUserFromCache();
+        if (cachedData?.formularios && cachedData.formularios.length > 0) {
+          console.log('✅ [AuthContext] Formularios cargados desde cache offline como fallback:', cachedData.formularios.length);
+          setUserFormularios(cachedData.formularios);
+          setLoadingFormularios(false);
+          return cachedData.formularios;
+        }
+      } catch (cacheError) {
+        console.error('❌ [AuthContext] Error cargando formularios desde cache offline:', cacheError);
+      }
+      
+      setUserFormularios([]);
+      setLoadingFormularios(false);
+      return [];
+    }
+  };
+
   const loadUserAuditorias = async (userId) => {
     const auditorias = await auditoriaService.getUserAuditorias(userId, role);
     setUserAuditorias(auditorias);
@@ -502,6 +603,8 @@ const AuthContextComponent = ({ children }) => {
     loadingEmpresas,
     userSucursales,
     loadingSucursales,
+    userFormularios,
+    loadingFormularios,
     userAuditorias,
     auditoriasCompartidas,
     handleLogin,
@@ -512,6 +615,7 @@ const AuthContextComponent = ({ children }) => {
     canViewAuditoria: (auditoriaId) => auditoriaService.canViewAuditoria(auditoriaId, userProfile, auditoriasCompartidas),
     getUserEmpresas: () => loadUserEmpresas(user?.uid),
     getUserSucursales: () => loadUserSucursales(user?.uid),
+    getUserFormularios: () => loadUserFormularios(user?.uid),
     getUserAuditorias: () => loadUserAuditorias(user?.uid),
     getAuditoriasCompartidas: () => loadAuditoriasCompartidas(user?.uid),
     role,
