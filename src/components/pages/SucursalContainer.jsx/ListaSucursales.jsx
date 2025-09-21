@@ -26,9 +26,9 @@ const ListaSucursales = ({ empresaId }) => {
   const [openEditModal, setOpenEditModal] = useState(false);
   const [sucursalEdit, setSucursalEdit] = useState(null);
   const [editLoading, setEditLoading] = useState(false);
-  const { userProfile, userEmpresas, role } = useAuth();
+  const { userProfile, userEmpresas, userSucursales, loadingSucursales, role } = useAuth();
 
-  // Suscripción reactiva a sucursales multi-tenant
+  // Usar sucursales del contexto (ya cargadas automáticamente)
   useEffect(() => {
     if (!userProfile) {
       setSucursales([]);
@@ -37,67 +37,83 @@ const ListaSucursales = ({ empresaId }) => {
       return;
     }
 
-    setLoading(true);
+    setLoading(loadingSucursales);
     setError(null);
     
-    let empresasDisponibles = userEmpresas || [];
-    
-    if (empresasDisponibles.length === 0) {
-      setSucursales([]);
-      setLoading(false);
-      setError("No hay empresas disponibles para este usuario");
+    if (!userSucursales || userSucursales.length === 0) {
+      if (!loadingSucursales) {
+        setSucursales([]);
+        setError("No hay sucursales disponibles para este usuario");
+      }
       return;
     }
 
-    let empresasAConsultar = empresasDisponibles;
+    // Filtrar sucursales por empresa si se especifica una empresaId
+    let sucursalesFiltradas = userSucursales;
     if (empresaId) {
-      const empresaEspecifica = empresasDisponibles.find(e => e.id === empresaId);
-      if (empresaEspecifica) {
-        empresasAConsultar = [empresaEspecifica];
-      } else {
+      sucursalesFiltradas = userSucursales.filter(s => s.empresaId === empresaId);
+      
+      if (sucursalesFiltradas.length === 0) {
         setSucursales([]);
         setLoading(false);
-        setError(`No tienes acceso a la empresa con ID: ${empresaId}`);
+        setError(`No hay sucursales para la empresa con ID: ${empresaId}`);
         return;
       }
     }
 
-    const empresasIds = empresasAConsultar.map(e => e.id);
-    
-    if (empresasIds.length === 0) {
-      setSucursales([]);
-      setLoading(false);
-      setError("No hay empresas válidas para consultar");
-      return;
-    }
+    // Procesar fechas de creación
+    const sucursalesConFechas = sucursalesFiltradas.map(sucursal => ({
+      ...sucursal,
+      fechaCreacion: sucursal.fechaCreacion?.toDate?.() || new Date()
+    }));
 
-    const sucursalesRef = collection(db, "sucursales");
-    const sucursalesQuery = query(sucursalesRef, where("empresaId", "in", empresasIds));
-    
-    const unsubscribe = onSnapshot(sucursalesQuery, (snapshot) => {
-      const sucursalesData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        fechaCreacion: doc.data().fechaCreacion?.toDate?.() || new Date()
-      }));
-      setSucursales(sucursalesData);
-      setLoading(false);
-      setError(null);
-    }, (error) => {
-      console.error('[ListaSucursales] Error en onSnapshot:', error);
-      setError("Error al cargar las sucursales: " + error.message);
-      setLoading(false);
-    });
+    setSucursales(sucursalesConFechas);
+    setLoading(false);
+    setError(null);
+  }, [empresaId, userProfile, userSucursales, loadingSucursales]);
 
-    return () => {
-      unsubscribe();
-    };
-  }, [empresaId, userProfile, userEmpresas, role]);
 
   const handleEliminar = async (sucursalId, nombreSucursal) => {
     if (window.confirm(`¿Está seguro de que desea eliminar la sucursal "${nombreSucursal}"?`)) {
       try {
         await deleteDoc(doc(db, "sucursales", sucursalId));
+        
+        // Invalidar cache offline después de eliminar
+        try {
+          if (window.indexedDB) {
+            const request = indexedDB.open('controlaudit_offline_v1', 2);
+            await new Promise((resolve, reject) => {
+              request.onsuccess = function(event) {
+                const db = event.target.result;
+                if (!db.objectStoreNames.contains('settings')) {
+                  resolve();
+                  return;
+                }
+                
+                const transaction = db.transaction(['settings'], 'readwrite');
+                const store = transaction.objectStore('settings');
+                
+                store.get('complete_user_cache').onsuccess = function(e) {
+                  const cached = e.target.result;
+                  if (cached && cached.value) {
+                    cached.value.sucursalesTimestamp = 0;
+                    cached.value.timestamp = Date.now();
+                    store.put(cached).onsuccess = () => resolve();
+                  } else {
+                    resolve();
+                  }
+                };
+              };
+              request.onerror = function(event) {
+                reject(event.target.error);
+              };
+            });
+            console.log('✅ Cache invalidado después de eliminar sucursal');
+          }
+        } catch (cacheError) {
+          console.warn('⚠️ Error invalidando cache:', cacheError);
+        }
+        
         // La suscripción onSnapshot ya maneja la actualización en tiempo real
       } catch (error) {
         console.error("[ListaSucursales] Error al eliminar sucursal:", error);

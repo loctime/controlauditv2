@@ -92,7 +92,7 @@ export const useClienteDashboard = () => {
 
         const sucursalesPromises = empresasChunks.map(async (chunk) => {
           const sucursalesRef = collection(db, "sucursales");
-          const sucursalesQuery = query(sucursalesRef, where("empresa", "in", chunk));
+          const sucursalesQuery = query(sucursalesRef, where("empresaId", "in", chunk));
           const sucursalesSnapshot = await getDocs(sucursalesQuery);
           return sucursalesSnapshot.docs.map(doc => ({
             id: doc.id,
