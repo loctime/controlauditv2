@@ -159,11 +159,20 @@ const ReporteDetallePro = forwardRef(({ open = false, onClose = () => {}, report
   };
 
   // Función para descargar PDF
-  const handleDescargarPdf = () => {
+  const handleDescargarPdf = async () => {
     const urlPdf = pdfUrl || reporte.pdfUrl || pdfLocalStorage;
     if (urlPdf) {
       const fileName = `reporte-${empresa?.nombre || 'auditoria'}-${fecha || new Date().toLocaleDateString()}.html`;
-      descargarPdf(urlPdf, fileName);
+      
+      // Mostrar indicador de carga
+      const loadingAlert = alert('📥 Descargando reporte...\n\nPor favor espera un momento.');
+      
+      try {
+        await descargarPdf(urlPdf, fileName);
+      } catch (error) {
+        console.error('Error al descargar PDF:', error);
+        alert('❌ Error al descargar el reporte. Intenta nuevamente.');
+      }
     }
   };
 
