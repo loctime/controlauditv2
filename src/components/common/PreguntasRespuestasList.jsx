@@ -31,19 +31,19 @@ const PreguntasRespuestasList = ({ secciones = [], respuestas = [], comentarios 
   const procesarImagen = (imagen, seccionIndex, preguntaIndex) => {
     console.debug(`[PreguntasRespuestasList] Procesando imagen para sección ${seccionIndex}, pregunta ${preguntaIndex}:`, imagen);
     
-    if (!imagen) {
+    if (!imagen || imagen === null || imagen === undefined) {
       console.debug(`[PreguntasRespuestasList] No hay imagen para sección ${seccionIndex}, pregunta ${preguntaIndex}`);
       return null;
     }
 
     // Si es un objeto con URL
-    if (typeof imagen === 'object' && imagen.url) {
+    if (typeof imagen === 'object' && imagen.url && typeof imagen.url === 'string') {
       console.debug(`[PreguntasRespuestasList] Imagen con URL: ${imagen.url}`);
       return imagen.url;
     }
 
     // Si es una string (URL directa)
-    if (typeof imagen === 'string' && imagen.trim() !== '') {
+    if (typeof imagen === 'string' && imagen.trim() !== '' && imagen !== '[object Object]') {
       console.debug(`[PreguntasRespuestasList] Imagen como string: ${imagen}`);
       return imagen;
     }
@@ -53,11 +53,17 @@ const PreguntasRespuestasList = ({ secciones = [], respuestas = [], comentarios 
       console.debug(`[PreguntasRespuestasList] Array de imágenes:`, imagen);
       // Tomar la primera imagen del array
       const primeraImagen = imagen[0];
-      if (typeof primeraImagen === 'object' && primeraImagen.url) {
+      if (typeof primeraImagen === 'object' && primeraImagen.url && typeof primeraImagen.url === 'string') {
         return primeraImagen.url;
-      } else if (typeof primeraImagen === 'string') {
+      } else if (typeof primeraImagen === 'string' && primeraImagen !== '[object Object]') {
         return primeraImagen;
       }
+    }
+
+    // Si es "[object Object]", intentar extraer la URL si es posible
+    if (typeof imagen === 'string' && imagen === '[object Object]') {
+      console.warn(`[PreguntasRespuestasList] Imagen corrupta "[object Object]" para sección ${seccionIndex}, pregunta ${preguntaIndex}`);
+      return null;
     }
 
     console.debug(`[PreguntasRespuestasList] Formato de imagen no reconocido:`, imagen);

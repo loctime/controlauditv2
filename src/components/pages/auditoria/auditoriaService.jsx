@@ -191,10 +191,19 @@ class AuditoriaService {
             if (Array.isArray(item)) {
               return item.join(', '); // Convertir arrays anidados a string
             }
+            // Si es un objeto de imagen, mantenerlo como objeto
+            if (item && typeof item === 'object' && item.url && typeof item.url === 'string') {
+              return item; // Mantener objeto de imagen intacto
+            }
             return this.limpiarArraysAnidados(item);
           });
         } else {
-          objLimpio[key] = this.limpiarArraysAnidados(valor);
+          // Si es un objeto de imagen, mantenerlo como objeto
+          if (valor && typeof valor === 'object' && valor.url && typeof valor.url === 'string') {
+            objLimpio[key] = valor; // Mantener objeto de imagen intacto
+          } else {
+            objLimpio[key] = this.limpiarArraysAnidados(valor);
+          }
         }
       });
       return objLimpio;
@@ -215,6 +224,24 @@ class AuditoriaService {
           if (Array.isArray(valor)) {
             return valor.join(', '); // Convertir array a string
           }
+          
+          // Si es un objeto (como imagen), mantenerlo como objeto pero asegurar que sea serializable
+          if (valor && typeof valor === 'object' && !(valor instanceof File)) {
+            // Si es un objeto de imagen con URL, mantenerlo como objeto
+            if (valor.url && typeof valor.url === 'string') {
+              return {
+                url: valor.url,
+                nombre: valor.nombre || 'imagen',
+                tipo: valor.tipo || 'image/*',
+                tamaño: valor.tamaño || 0,
+                timestamp: valor.timestamp || Date.now()
+              };
+            }
+            // Si es otro tipo de objeto, convertirlo a string solo si es necesario
+            return valor;
+          }
+          
+          // Para strings y otros tipos primitivos, mantener como están
           return valor;
         });
       } else if (valores !== null && valores !== undefined) {
