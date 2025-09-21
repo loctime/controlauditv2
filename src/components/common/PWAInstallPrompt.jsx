@@ -121,18 +121,152 @@ const PWAInstallPrompt = () => {
   };
 
   const handleInstall = async () => {
-    if (deferredPrompt) {
-      deferredPrompt.prompt();
-      const { outcome } = await deferredPrompt.userChoice;
+    // Detectar navegador
+    const isEdge = navigator.userAgent.includes('Edg');
+    const isChrome = navigator.userAgent.includes('Chrome') && !navigator.userAgent.includes('Edg');
+    
+    console.log('=== INSTALACIÓN DESDE MODAL ===');
+    console.log('Navegador actual:', isEdge ? 'Edge' : isChrome ? 'Chrome' : 'Otro');
+    
+    if (isChrome) {
+      // Si es Chrome, redirigir a Edge
+      const currentUrl = window.location.href;
+      const edgeUrl = `microsoft-edge:${currentUrl}`;
       
-      if (outcome === 'accepted') {
-        console.log('PWA instalada por el usuario');
+      // Detectar si es móvil
+      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      console.log('Dispositivo móvil detectado:', isMobile);
+      
+      if (isMobile) {
+        // En móvil, mostrar mensaje explicativo antes de abrir
+        const userWantsEdge = confirm(
+          '📱 Instalar en Edge para mejor experiencia\n\n' +
+          'Edge maneja mejor:\n' +
+          '• ✅ Modo offline\n' +
+          '• ✅ Instalación de PWA\n' +
+          '• ✅ Cache de datos\n\n' +
+          'Se abrirá un selector de navegadores.\n' +
+          'Selecciona "Microsoft Edge" si está disponible.'
+        );
+        
+        if (userWantsEdge) {
+          try {
+            // Intentar abrir en Edge (esto mostrará el selector en móvil)
+            window.open(edgeUrl, '_blank');
+            
+            // Cerrar el modal
+            setShowInstallDialog(false);
+            
+            // Mensaje adicional después de intentar abrir
+            setTimeout(() => {
+              alert(
+                '🚀 Si Edge se abrió:\n' +
+                '• Instala la PWA desde Edge\n' +
+                '• Tendrás mejor experiencia offline\n\n' +
+                'Si no se abrió, Edge no está instalado en tu dispositivo.'
+              );
+            }, 1000);
+            
+          } catch (error) {
+            console.warn('No se pudo abrir Edge:', error);
+            alert('Edge no está disponible. Usando instalación normal en Chrome.');
+            
+            // Fallback: intentar instalación normal
+            if (deferredPrompt) {
+              deferredPrompt.prompt();
+              const { outcome } = await deferredPrompt.userChoice;
+              
+              if (outcome === 'accepted') {
+                console.log('PWA instalada por el usuario');
+              } else {
+                console.log('PWA no instalada por el usuario');
+              }
+              
+              setDeferredPrompt(null);
+              setShowInstallDialog(false);
+            } else {
+              alert('Para instalar esta app, usa el menú de tu navegador:\n\n• Chrome: Menú ⋮ > Instalar app\n• Edge: Menú ⋯ > Aplicaciones > Instalar esta aplicación\n• Safari: Compartir > Añadir a pantalla de inicio');
+              setShowInstallDialog(false);
+            }
+          }
+        } else {
+          // Usuario no quiere Edge, usar instalación normal
+          if (deferredPrompt) {
+            deferredPrompt.prompt();
+            const { outcome } = await deferredPrompt.userChoice;
+            
+            if (outcome === 'accepted') {
+              console.log('PWA instalada por el usuario');
+            } else {
+              console.log('PWA no instalada por el usuario');
+            }
+            
+            setDeferredPrompt(null);
+            setShowInstallDialog(false);
+          } else {
+            alert('Para instalar esta app, usa el menú de tu navegador:\n\n• Chrome: Menú ⋮ > Instalar app\n• Edge: Menú ⋯ > Aplicaciones > Instalar esta aplicación\n• Safari: Compartir > Añadir a pantalla de inicio');
+            setShowInstallDialog(false);
+          }
+        }
       } else {
-        console.log('PWA no instalada por el usuario');
+        // En escritorio, comportamiento normal
+        try {
+          // Intentar abrir en Edge
+          window.open(edgeUrl, '_blank');
+          
+          // Mostrar mensaje al usuario
+          alert(
+            '🚀 Abriendo en Microsoft Edge para mejor experiencia!\n\n' +
+            'Edge maneja mejor:\n' +
+            '• ✅ Modo offline\n' +
+            '• ✅ Instalación de PWA\n' +
+            '• ✅ Cache de datos\n\n' +
+            'Si no se abre automáticamente, copia la URL y ábrela en Edge.'
+          );
+          
+          // Cerrar el modal
+          setShowInstallDialog(false);
+          
+        } catch (error) {
+          console.warn('No se pudo abrir Edge:', error);
+          // Fallback: intentar instalación normal
+          if (deferredPrompt) {
+            deferredPrompt.prompt();
+            const { outcome } = await deferredPrompt.userChoice;
+            
+            if (outcome === 'accepted') {
+              console.log('PWA instalada por el usuario');
+            } else {
+              console.log('PWA no instalada por el usuario');
+            }
+            
+            setDeferredPrompt(null);
+            setShowInstallDialog(false);
+          } else {
+            alert('Para instalar esta app, usa el menú de tu navegador:\n\n• Chrome: Menú ⋮ > Instalar app\n• Edge: Menú ⋯ > Aplicaciones > Instalar esta aplicación\n• Safari: Compartir > Añadir a pantalla de inicio');
+            setShowInstallDialog(false);
+          }
+        }
       }
-      
-      setDeferredPrompt(null);
-      setShowInstallDialog(false);
+    } else {
+      // Si es Edge o otro navegador, proceder con instalación normal
+      if (deferredPrompt) {
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        
+        if (outcome === 'accepted') {
+          console.log('PWA instalada por el usuario');
+        } else {
+          console.log('PWA no instalada por el usuario');
+        }
+        
+        setDeferredPrompt(null);
+        setShowInstallDialog(false);
+      } else {
+        // Fallback para navegadores que no soportan beforeinstallprompt
+        alert('Para instalar esta app, usa el menú de tu navegador:\n\n• Chrome: Menú ⋮ > Instalar app\n• Edge: Menú ⋯ > Aplicaciones > Instalar esta aplicación\n• Safari: Compartir > Añadir a pantalla de inicio');
+        setShowInstallDialog(false);
+      }
     }
   };
 
