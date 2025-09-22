@@ -28,7 +28,7 @@ const Home = () => {
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
   
-  // Estados para carga de datos offline
+  // E.stados para carga de datos offline
   const [cargandoDatosOffline, setCargandoDatosOffline] = useState(true);
   const [datosCargados, setDatosCargados] = useState({
     empresas: false,
