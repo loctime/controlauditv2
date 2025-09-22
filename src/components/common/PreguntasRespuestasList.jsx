@@ -2,7 +2,7 @@ import React from "react";
 import { Box, Typography, Paper, Divider } from "@mui/material";
 
 /**
- * Componente reutilizable para mostrar preguntas, respuestas, comentarios e imágenes agrupadas por sección.
+ * .Componente reutilizable para mostrar preguntas, respuestas, comentarios e imágenes agrupadas por sección.
  * Props:
  * - secciones: array de objetos { nombre, preguntas }
  * - respuestas: array de arrays de string
