@@ -11,9 +11,42 @@ export const usePWAInstall = () => {
     const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
     
     if (isAndroid) {
-      window.open('https://play.google.com/store/apps/details?id=com.microsoft.emmx', '_blank');
+      // Intentar abrir Google Play Store directamente
+      const playStoreUrl = 'market://details?id=com.microsoft.emmx';
+      const playStoreWebUrl = 'https://play.google.com/store/apps/details?id=com.microsoft.emmx';
+      
+      // Crear un enlace temporal para probar si la app está instalada
+      const link = document.createElement('a');
+      link.href = playStoreUrl;
+      link.style.display = 'none';
+      document.body.appendChild(link);
+      
+      try {
+        link.click();
+        // Si no se abre la app, abrir la web
+        setTimeout(() => {
+          window.open(playStoreWebUrl, '_blank');
+        }, 1000);
+      } catch (error) {
+        // Fallback a la web
+        window.open(playStoreWebUrl, '_blank');
+      } finally {
+        document.body.removeChild(link);
+      }
     } else if (isIOS) {
-      window.open('https://apps.apple.com/app/microsoft-edge/id1288723196', '_blank');
+      // Para iOS, usar el esquema de App Store
+      const appStoreUrl = 'itms-apps://itunes.apple.com/app/id1288723196';
+      const appStoreWebUrl = 'https://apps.apple.com/app/microsoft-edge/id1288723196';
+      
+      try {
+        window.location.href = appStoreUrl;
+        // Fallback después de un tiempo
+        setTimeout(() => {
+          window.open(appStoreWebUrl, '_blank');
+        }, 2000);
+      } catch (error) {
+        window.open(appStoreWebUrl, '_blank');
+      }
     } else {
       alert('Para instalar Edge, visita: https://www.microsoft.com/edge');
     }
