@@ -96,9 +96,25 @@ const AuditoriaRefactorizada = () => {
     userSucursales,
     getUserEmpresas,
     getUserSucursales,
-    getUserFormularios
+    getUserFormularios,
+    role,
+    loading
   } = useAuth();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+
+  // Verificar si el contexto está cargando
+  if (loading) {
+    return (
+      <Container maxWidth="xl" sx={{ py: 4, px: 2 }}>
+        <Box display="flex" flexDirection="column" alignItems="center" justifyContent="center" minHeight="50vh">
+          <LinearProgress sx={{ width: '100%', mb: 2 }} />
+          <Typography variant="h6" color="text.secondary">
+            Cargando datos de autenticación...
+          </Typography>
+        </Box>
+      </Container>
+    );
+  }
 
   // Estados para autoguardado
   const [isSaving, setIsSaving] = useState(false);
@@ -107,11 +123,12 @@ const AuditoriaRefactorizada = () => {
   
   // Estado para carga de datos de respaldo
   const [cargandoDatosRespaldo, setCargandoDatosRespaldo] = useState(false);
+  const [datosRespaldoCargados, setDatosRespaldoCargados] = useState(false);
 
-  // Cargar datos de respaldo si no están disponibles
+  // Cargar datos de respaldo si no están disponibles (solo una vez)
   useEffect(() => {
     const cargarDatosRespaldo = async () => {
-      if (!userProfile) return;
+      if (!userProfile || datosRespaldoCargados) return;
       
       // Verificar si faltan datos críticos
       const faltanDatos = (
@@ -123,6 +140,7 @@ const AuditoriaRefactorizada = () => {
       if (faltanDatos) {
         console.log('🔄 [Auditoria] Datos faltantes detectados, cargando de respaldo...');
         setCargandoDatosRespaldo(true);
+        setDatosRespaldoCargados(true);
         
         try {
           await Promise.allSettled([
@@ -136,13 +154,15 @@ const AuditoriaRefactorizada = () => {
         } finally {
           setCargandoDatosRespaldo(false);
         }
+      } else {
+        setDatosRespaldoCargados(true);
       }
     };
 
     // Esperar un poco para que el contexto se estabilice
     const timer = setTimeout(cargarDatosRespaldo, 1000);
     return () => clearTimeout(timer);
-  }, [userProfile, userEmpresas, userSucursales, userFormularios, getUserEmpresas, getUserSucursales, getUserFormularios]);
+  }, [userProfile, datosRespaldoCargados]);
 
   // Hook para manejar todo el estado
   const auditoriaState = useAuditoriaState();
@@ -486,31 +506,33 @@ const AuditoriaRefactorizada = () => {
         </Alert>
       )}
       
-      {/* Debug info */}
-      <Alert severity="info" sx={{ mb: 2 }}>
-        <Typography variant="body2">
-          <strong>Debug Info:</strong>
-          <br />
-          🌐 Navegador: {navigator.userAgent.includes('Edg') ? 'Edge' : 'Chrome/Firefox'}
-          <br />
-          📊 Empresas: {userEmpresas?.length || 0}
-          <br />
-          🏢 Sucursales: {userSucursales?.length || 0}
-          <br />
-          📋 Formularios: {userFormularios?.length || 0}
-          <br />
-          👤 Usuario: {userProfile?.email || 'Sin usuario'}
-          <br />
-          💾 Cache localStorage: {localStorage.getItem('complete_user_cache') ? 'Disponible' : 'No disponible'}
-        </Typography>
-        <Button 
-          size="small" 
-          onClick={() => window.location.reload()} 
-          sx={{ mt: 1 }}
-        >
-          🔄 Recargar página
-        </Button>
-      </Alert>
+      {/* Debug info - solo para supermax */}
+      {role === 'supermax' && (
+        <Alert severity="info" sx={{ mb: 2 }}>
+          <Typography variant="body2">
+            <strong>Debug Info:</strong>
+            <br />
+            🌐 Navegador: {navigator.userAgent.includes('Edg') ? 'Edge' : 'Chrome/Firefox'}
+            <br />
+            📊 Empresas: {userEmpresas?.length || 0}
+            <br />
+            🏢 Sucursales: {userSucursales?.length || 0}
+            <br />
+            📋 Formularios: {userFormularios?.length || 0}
+            <br />
+            👤 Usuario: {userProfile?.email || 'Sin usuario'}
+            <br />
+            💾 Cache localStorage: {localStorage.getItem('complete_user_cache') ? 'Disponible' : 'No disponible'}
+          </Typography>
+          <Button 
+            size="small" 
+            onClick={() => window.location.reload()} 
+            sx={{ mt: 1 }}
+          >
+            🔄 Recargar página
+          </Button>
+        </Alert>
+      )}
       
       {/* Header con navegación y progreso */}
       <AuditoriaHeader

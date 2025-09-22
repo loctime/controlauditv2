@@ -148,12 +148,10 @@ const Home = () => {
   return (
     <div className="home-main-container">
       <div className="home-card">
-        <Typography variant="h3" component="h1" align="center" gutterBottom fontWeight={700}>
-          Bienvenido a <span style={{ color: theme.palette.primary.light }}>Control-Audit</span>
+          <Typography variant="h1" component="h1" align="center" gutterBottom fontWeight={700}>
+          <span style={{ color: theme.palette.primary.light }}>Control-Audit</span>
         </Typography>
-        <Typography variant="h6" align="center" gutterBottom sx={{ opacity: 0.85 }}>
-          Optimiza tus auditorías con nuestra plataforma profesional.
-        </Typography>
+        
 
         {/* Indicador de datos cargados para modo offline */}
         {userProfile && (
@@ -163,17 +161,13 @@ const Home = () => {
               sx={{ mb: 2 }}
             >
               <Typography variant="body2">
-                <strong>Estado de datos offline:</strong>
+                <strong>Estado de  offline:</strong>
                 <br />
-                📊 Empresas: {datosCargados.empresas ? `✅ ${userEmpresas?.length || 0} cargadas` : "❌ No cargadas"}
-                <br />
-                🏢 Sucursales: {datosCargados.sucursales ? `✅ ${userSucursales?.length || 0} cargadas` : "❌ No cargadas"}
-                <br />
-                📋 Formularios: {datosCargados.formularios ? `✅ ${userFormularios?.length || 0} cargados` : "❌ No cargados"}
+                📊 Empresas: {datosCargados.empresas ? `✅` : "❌"}     📋 Formularios: {datosCargados.formularios ? `✅` : "❌"}
                 {isChrome && (
                   <>
                     <br />
-                    🌐 Navegador: Chrome detectado
+                    🌐 Navegador: Chrome
                     <br />
                     {isPreloading ? (
                       <>⚡ Precargando páginas para optimización...</>
@@ -275,7 +269,9 @@ const Home = () => {
             Comenzar
           </Button>
         </div>
-
+        <Typography variant="h6" align="center" gutterBottom sx={{ opacity: 0.85 }}>
+          Optimiza tus auditorías con nuestra plataforma profesional.
+        </Typography>
         <Grid container spacing={3}>
           <Grid item xs={12} md={6}>
             <Typography variant="h5" gutterBottom fontWeight={600}>

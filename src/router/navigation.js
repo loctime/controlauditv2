@@ -13,6 +13,14 @@ import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 export const getMenuItems = (role, permisos = {}) => {
   const baseItems = [
     {
+      id: "home",
+      path: "/",
+      title: "Home",
+      Icon: HomeIcon,
+      roles: ['operario', 'max', 'supermax'],
+      required: true
+    },
+    {
       id: "dashboard",
       path: "/dashboard",
       title: "Panel de Control",
