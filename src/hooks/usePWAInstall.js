@@ -139,7 +139,53 @@ export const usePWAInstall = () => {
         );
         
         if (userChoice) {
-          // Usuario quiere Edge - intentar abrir directamente
+          // Usuario quiere Edge - mostrar loader mientras verifica
+          const loader = document.createElement('div');
+          loader.innerHTML = `
+            <div style="
+              position: fixed;
+              top: 0;
+              left: 0;
+              width: 100%;
+              height: 100%;
+              background: rgba(0,0,0,0.7);
+              display: flex;
+              justify-content: center;
+              align-items: center;
+              z-index: 9999;
+              font-family: Arial, sans-serif;
+            ">
+              <div style="
+                background: white;
+                padding: 30px;
+                border-radius: 10px;
+                text-align: center;
+                box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+              ">
+                <div style="
+                  width: 40px;
+                  height: 40px;
+                  border: 4px solid #f3f3f3;
+                  border-top: 4px solid #1976d2;
+                  border-radius: 50%;
+                  animation: spin 1s linear infinite;
+                  margin: 0 auto 20px;
+                "></div>
+                <p style="margin: 0; font-size: 16px; color: #333;">
+                  Verificando Edge...
+                </p>
+              </div>
+            </div>
+            <style>
+              @keyframes spin {
+                0% { transform: rotate(0deg); }
+                100% { transform: rotate(360deg); }
+              }
+            </style>
+          `;
+          document.body.appendChild(loader);
+          
+          // Intentar abrir Edge
           try {
             const iframe = document.createElement('iframe');
             iframe.style.display = 'none';
@@ -148,6 +194,8 @@ export const usePWAInstall = () => {
             
             setTimeout(() => {
               document.body.removeChild(iframe);
+              document.body.removeChild(loader);
+              
               // Si no se abrió Edge, ofrecer ir a tienda
               const goToStore = confirm(
                 '¿Ir a la tienda para instalar Edge?'
@@ -158,7 +206,8 @@ export const usePWAInstall = () => {
             }, 2000);
             
           } catch (error) {
-            // Si hay error, ir directamente a tienda
+            // Si hay error, quitar loader y ir directamente a tienda
+            document.body.removeChild(loader);
             openAppStore();
           }
         } else {
