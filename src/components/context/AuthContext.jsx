@@ -332,14 +332,22 @@ const AuthContextComponent = ({ children }) => {
   };
 
   // Funciones de carga de datos
-  const loadUserEmpresas = async (userId) => {
+  const loadUserEmpresas = async (userId, retryCount = 0) => {
+    const MAX_RETRIES = 3;
+    
     try {
       // Asegurar que tenemos los datos necesarios
       if (!role || !userProfile) {
-        console.warn('⚠️ [AuthContext] Role o userProfile no disponibles, esperando...');
-        // Esperar un poco y reintentar
-        setTimeout(() => loadUserEmpresas(userId), 1000);
-        return [];
+        if (retryCount < MAX_RETRIES) {
+          console.warn(`⚠️ [AuthContext] Role o userProfile no disponibles, reintentando (${retryCount + 1}/${MAX_RETRIES})...`);
+          setTimeout(() => loadUserEmpresas(userId, retryCount + 1), 1000);
+          return [];
+        } else {
+          console.error('❌ [AuthContext] Máximo de reintentos alcanzado para loadUserEmpresas');
+          setUserEmpresas([]);
+          setLoadingEmpresas(false);
+          return [];
+        }
       }
 
       console.log('🔄 [AuthContext] Cargando empresas para usuario:', userId, 'rol:', role);
@@ -370,18 +378,34 @@ const AuthContextComponent = ({ children }) => {
     }
   };
 
-  const loadUserSucursales = async (userId) => {
+  const loadUserSucursales = async (userId, retryCount = 0) => {
+    const MAX_RETRIES = 3;
+    
     try {
       if (!userProfile) {
-        console.warn('⚠️ [AuthContext] userProfile no disponible para cargar sucursales, esperando...');
-        setTimeout(() => loadUserSucursales(userId), 1000);
-        return [];
+        if (retryCount < MAX_RETRIES) {
+          console.warn(`⚠️ [AuthContext] userProfile no disponible para cargar sucursales, reintentando (${retryCount + 1}/${MAX_RETRIES})...`);
+          setTimeout(() => loadUserSucursales(userId, retryCount + 1), 1000);
+          return [];
+        } else {
+          console.error('❌ [AuthContext] Máximo de reintentos alcanzado para loadUserSucursales');
+          setUserSucursales([]);
+          setLoadingSucursales(false);
+          return [];
+        }
       }
 
       if (!userEmpresas || userEmpresas.length === 0) {
-        console.warn('⚠️ [AuthContext] No hay empresas disponibles para cargar sucursales, esperando...');
-        setTimeout(() => loadUserSucursales(userId), 1000);
-        return [];
+        if (retryCount < MAX_RETRIES) {
+          console.warn(`⚠️ [AuthContext] No hay empresas disponibles para cargar sucursales, reintentando (${retryCount + 1}/${MAX_RETRIES})...`);
+          setTimeout(() => loadUserSucursales(userId, retryCount + 1), 1000);
+          return [];
+        } else {
+          console.error('❌ [AuthContext] Máximo de reintentos alcanzado para loadUserSucursales (sin empresas)');
+          setUserSucursales([]);
+          setLoadingSucursales(false);
+          return [];
+        }
       }
 
       console.log('🔄 [AuthContext] Cargando sucursales para', userEmpresas.length, 'empresas');
@@ -452,18 +476,34 @@ const AuthContextComponent = ({ children }) => {
     }
   };
 
-  const loadUserFormularios = async (userId) => {
+  const loadUserFormularios = async (userId, retryCount = 0) => {
+    const MAX_RETRIES = 3;
+    
     try {
       if (!userProfile) {
-        console.warn('⚠️ [AuthContext] userProfile no disponible para cargar formularios, esperando...');
-        setTimeout(() => loadUserFormularios(userId), 1000);
-        return [];
+        if (retryCount < MAX_RETRIES) {
+          console.warn(`⚠️ [AuthContext] userProfile no disponible para cargar formularios, reintentando (${retryCount + 1}/${MAX_RETRIES})...`);
+          setTimeout(() => loadUserFormularios(userId, retryCount + 1), 1000);
+          return [];
+        } else {
+          console.error('❌ [AuthContext] Máximo de reintentos alcanzado para loadUserFormularios');
+          setUserFormularios([]);
+          setLoadingFormularios(false);
+          return [];
+        }
       }
 
       if (!userEmpresas || userEmpresas.length === 0) {
-        console.warn('⚠️ [AuthContext] No hay empresas disponibles para cargar formularios, esperando...');
-        setTimeout(() => loadUserFormularios(userId), 1000);
-        return [];
+        if (retryCount < MAX_RETRIES) {
+          console.warn(`⚠️ [AuthContext] No hay empresas disponibles para cargar formularios, reintentando (${retryCount + 1}/${MAX_RETRIES})...`);
+          setTimeout(() => loadUserFormularios(userId, retryCount + 1), 1000);
+          return [];
+        } else {
+          console.error('❌ [AuthContext] Máximo de reintentos alcanzado para loadUserFormularios (sin empresas)');
+          setUserFormularios([]);
+          setLoadingFormularios(false);
+          return [];
+        }
       }
 
       console.log('🔄 [AuthContext] Cargando formularios para', userEmpresas.length, 'empresas');
@@ -651,6 +691,8 @@ const AuthContextComponent = ({ children }) => {
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
+    console.error("useAuth debe ser usado dentro de un AuthContextProvider");
+    console.error("Stack trace:", new Error().stack);
     throw new Error("useAuth debe ser usado dentro de un AuthContextProvider");
   }
   return context;
