@@ -131,121 +131,59 @@ export const usePWAInstall = () => {
       console.log('Dispositivo móvil detectado:', isMobile);
       
       if (isMobile) {
-        // En móvil, mostrar opciones al usuario
+        // En móvil, mostrar mensaje simple y claro
         const userChoice = confirm(
-          '📱 ¿Cómo quieres instalar la app?\n\n' +
-          '✅ Edge (Recomendado):\n' +
-          '• Mejor experiencia offline\n' +
-          '• Navegación automática\n' +
-          '• Memoria de datos optimizada\n\n' +
-          '✅ Chrome (Actual):\n' +
-          '• Instalación directa\n' +
-          '• Sin cambios de navegador\n\n' +
-          'Aceptar = Probar Edge\n' +
-          'Cancelar = Instalar en Chrome'
+          '📱 Instalar en Edge para un correcto funcionamiento\n\n' +
+          'Aceptar = Abrir en Edge (o ir a tienda)\n' +
+          'Cancelar = Continuar en actual'
         );
         
         if (userChoice) {
-          // Usuario quiere Edge - verificar si está instalado primero
-          const edgeInstalled = confirm(
-            '📱 ¿Tienes Microsoft Edge instalado en tu dispositivo?\n\n' +
-            '• Sí = Te abriré la app en Edge\n' +
-            '• No = Te llevaré a instalarlo'
-          );
-          
-          if (edgeInstalled) {
-            // Intentar abrir en Edge usando diferentes métodos
-            try {
-              // Método 1: Intentar con esquema personalizado
-              const iframe = document.createElement('iframe');
-              iframe.style.display = 'none';
-              iframe.src = edgeUrl;
-              document.body.appendChild(iframe);
-              
-              setTimeout(() => {
-                document.body.removeChild(iframe);
-                // Si llegamos aquí, Edge no se abrió
-                alert(
-                  '❌ No se pudo abrir Edge automáticamente.\n\n' +
-                  'Por favor:\n' +
-                  '1. Abre Edge manualmente\n' +
-                  '2. Ve a: auditoria.controldoc.app\n' +
-                  '3. Instala la PWA desde Edge'
-                );
-              }, 2000);
-              
-            } catch (error) {
-              console.warn('No se pudo abrir Edge:', error);
-              alert(
-                '❌ No se pudo abrir Edge automáticamente.\n\n' +
-                'Por favor:\n' +
-                '1. Abre Edge manualmente\n' +
-                '2. Ve a: auditoria.controldoc.app\n' +
-                '3. Instala la PWA desde Edge'
-              );
-            }
-          } else {
-            // Edge no está instalado, ofrecer instalarlo
-            const installEdge = confirm(
-              '📱 Edge no está instalado\n\n' +
-              '¿Quieres instalarlo desde la tienda?\n\n' +
-              '• Sí = Abrir tienda de aplicaciones\n' +
-              '• No = Instalar en Chrome'
-            );
+          // Usuario quiere Edge - intentar abrir directamente
+          try {
+            const iframe = document.createElement('iframe');
+            iframe.style.display = 'none';
+            iframe.src = edgeUrl;
+            document.body.appendChild(iframe);
             
-            if (installEdge) {
-              openAppStore();
-            } else {
-              installInChrome();
-            }
+            setTimeout(() => {
+              document.body.removeChild(iframe);
+              // Si no se abrió Edge, ofrecer ir a tienda
+              const goToStore = confirm(
+                '¿Ir a la tienda para instalar Edge?'
+              );
+              if (goToStore) {
+                openAppStore();
+              }
+            }, 2000);
+            
+          } catch (error) {
+            // Si hay error, ir directamente a tienda
+            openAppStore();
           }
         } else {
-          // Usuario prefiere Chrome
+          // Usuario prefiere continuar en Chrome
           installInChrome();
         }
       } else {
-        // En escritorio, mostrar opciones al usuario
+        // En escritorio, mostrar mensaje simple y claro
         const userChoice = confirm(
-          '💻 ¿Cómo quieres instalar la app?\n\n' +
-          '✅ Edge (Recomendado):\n' +
-          '• Mejor experiencia offline\n' +
-          '• Instalación de PWA optimizada\n' +
-          '• Cache de datos mejorado\n\n' +
-          '✅ Chrome (Actual):\n' +
-          '• Instalación directa\n' +
-          '• Sin cambios de navegador\n\n' +
+          '💻 Instalar en Edge para un correcto funcionamiento\n\n' +
           'Aceptar = Abrir en Edge\n' +
-          'Cancelar = Instalar en Chrome'
+          'Cancelar = Continuar en actual'
         );
         
         if (userChoice) {
           // Usuario quiere Edge
           try {
             window.open(edgeUrl, '_blank');
-            
-            alert(
-              '🚀 Abriendo en Microsoft Edge para mejor experiencia!\n\n' +
-              'Si no se abre automáticamente, copia la URL y ábrela en Edge.'
-            );
-            
           } catch (error) {
             console.warn('No se pudo abrir Edge:', error);
-            // Edge no está disponible, ofrecer instalarlo
-            const installEdge = confirm(
-              '💻 Edge no está disponible\n\n' +
-              '¿Quieres instalarlo?\n\n' +
-              '• Sí = Abrir página de descarga\n' +
-              '• No = Instalar en Chrome'
-            );
-            
-            if (installEdge) {
-              window.open('https://www.microsoft.com/edge', '_blank');
-            } else {
-              installInChrome();
-            }
+            // Si no se puede abrir Edge, ir a descarga
+            window.open('https://www.microsoft.com/edge', '_blank');
           }
         } else {
-          // Usuario prefiere Chrome
+          // Usuario prefiere continuar en Chrome
           installInChrome();
         }
       }
