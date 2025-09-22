@@ -8,6 +8,7 @@ import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import AssessmentIcon from '@mui/icons-material/Assessment';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import { useAuth } from '../../context/AuthContext';
+import { useChromePreload } from '../../hooks/useChromePreload';
 
 const features = [
   { icon: <CheckCircleIcon color="success" />, text: 'Gestión completa de formularios' },
@@ -49,6 +50,9 @@ const Home = () => {
     getUserSucursales,
     getUserFormularios
   } = useAuth();
+
+  // Hook para precarga automática en Chrome
+  const { isChrome, isPreloading, startPreload } = useChromePreload();
 
   // Forzar carga de todos los datos necesarios para modo offline
   useEffect(() => {
@@ -104,6 +108,15 @@ const Home = () => {
           formularios: (userFormularios?.length || 0) > 0
         });
         
+        // Si es Chrome y los datos se cargaron correctamente, iniciar precarga automática
+        if (isChrome && Object.values(datosCargados).every(Boolean)) {
+          console.log('🚀 [Home] Datos cargados, iniciando precarga automática para Chrome...');
+          // Esperar un poco más para que la UI se estabilice
+          setTimeout(() => {
+            startPreload();
+          }, 3000);
+        }
+        
       } catch (error) {
         console.error('❌ [Home] Error cargando datos offline:', error);
         setErrorCarga('Error cargando datos para modo offline');
@@ -157,6 +170,18 @@ const Home = () => {
                 🏢 Sucursales: {datosCargados.sucursales ? `✅ ${userSucursales?.length || 0} cargadas` : "❌ No cargadas"}
                 <br />
                 📋 Formularios: {datosCargados.formularios ? `✅ ${userFormularios?.length || 0} cargados` : "❌ No cargados"}
+                {isChrome && (
+                  <>
+                    <br />
+                    🌐 Navegador: Chrome detectado
+                    <br />
+                    {isPreloading ? (
+                      <>⚡ Precargando páginas para optimización...</>
+                    ) : (
+                      <>✅ Precarga automática disponible</>
+                    )}
+                  </>
+                )}
               </Typography>
             </Alert>
             
@@ -173,9 +198,9 @@ const Home = () => {
               </Alert>
             )}
             
-            {/* Botón para forzar recarga de datos */}
+            {/* Botones para recarga de datos y precarga */}
             {userProfile && (
-              <Box sx={{ textAlign: 'center', mb: 2 }}>
+              <Box sx={{ textAlign: 'center', mb: 2, display: 'flex', gap: 2, justifyContent: 'center', flexWrap: 'wrap' }}>
                 <Button
                   variant="outlined"
                   size="small"
@@ -203,6 +228,20 @@ const Home = () => {
                 >
                   {cargandoDatosOffline ? 'Cargando...' : '🔄 Recargar Datos'}
                 </Button>
+                
+                {isChrome && !isPreloading && (
+                  <Button
+                    variant="contained"
+                    size="small"
+                    onClick={startPreload}
+                    sx={{ 
+                      background: 'linear-gradient(90deg, #1976d2, #42a5f5)',
+                      '&:hover': { background: 'linear-gradient(90deg, #1565c0, #1976d2)' }
+                    }}
+                  >
+                    ⚡ Precargar Páginas
+                  </Button>
+                )}
               </Box>
             )}
           </Box>
