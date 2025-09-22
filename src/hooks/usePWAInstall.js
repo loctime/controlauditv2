@@ -11,28 +11,11 @@ export const usePWAInstall = () => {
     const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
     
     if (isAndroid) {
-      // Intentar abrir Google Play Store directamente
-      const playStoreUrl = 'market://details?id=com.microsoft.emmx';
-      const playStoreWebUrl = 'https://play.google.com/store/apps/details?id=com.microsoft.emmx';
+      // Usar el enlace directo de Google Play Store
+      const playStoreUrl = 'https://play.google.com/store/apps/details?id=com.microsoft.emmx';
       
-      // Crear un enlace temporal para probar si la app está instalada
-      const link = document.createElement('a');
-      link.href = playStoreUrl;
-      link.style.display = 'none';
-      document.body.appendChild(link);
-      
-      try {
-        link.click();
-        // Si no se abre la app, abrir la web
-        setTimeout(() => {
-          window.open(playStoreWebUrl, '_blank');
-        }, 1000);
-      } catch (error) {
-        // Fallback a la web
-        window.open(playStoreWebUrl, '_blank');
-      } finally {
-        document.body.removeChild(link);
-      }
+      // Intentar abrir directamente en Google Play Store
+      window.open(playStoreUrl, '_blank');
     } else if (isIOS) {
       // Para iOS, usar el esquema de App Store
       const appStoreUrl = 'itms-apps://itunes.apple.com/app/id1288723196';
@@ -163,40 +146,48 @@ export const usePWAInstall = () => {
         );
         
         if (userChoice) {
-          // Usuario quiere Edge - intentar abrir
-          try {
-            window.open(edgeUrl, '_blank');
-            
-            // Verificar si Edge se abrió correctamente
-            setTimeout(() => {
-              const edgeInstalled = confirm(
-                '🚀 ¿Se abrió Edge correctamente?\n\n' +
-                '• Sí = Instala la PWA desde Edge\n' +
-                '• No = Edge no está instalado'
-              );
+          // Usuario quiere Edge - verificar si está instalado primero
+          const edgeInstalled = confirm(
+            '📱 ¿Tienes Microsoft Edge instalado en tu dispositivo?\n\n' +
+            '• Sí = Te abriré la app en Edge\n' +
+            '• No = Te llevaré a instalarlo'
+          );
+          
+          if (edgeInstalled) {
+            // Intentar abrir en Edge usando diferentes métodos
+            try {
+              // Método 1: Intentar con esquema personalizado
+              const iframe = document.createElement('iframe');
+              iframe.style.display = 'none';
+              iframe.src = edgeUrl;
+              document.body.appendChild(iframe);
               
-              if (!edgeInstalled) {
-                // Edge no está instalado, ofrecer instalarlo
-                const installEdge = confirm(
-                  '📱 Edge no está instalado\n\n' +
-                  '¿Quieres instalarlo desde la tienda?\n\n' +
-                  '• Sí = Abrir tienda de aplicaciones\n' +
-                  '• No = Instalar en Chrome'
+              setTimeout(() => {
+                document.body.removeChild(iframe);
+                // Si llegamos aquí, Edge no se abrió
+                alert(
+                  '❌ No se pudo abrir Edge automáticamente.\n\n' +
+                  'Por favor:\n' +
+                  '1. Abre Edge manualmente\n' +
+                  '2. Ve a: auditoria.controldoc.app\n' +
+                  '3. Instala la PWA desde Edge'
                 );
-                
-                if (installEdge) {
-                  openAppStore();
-                } else {
-                  installInChrome();
-                }
-              }
-            }, 1000);
-            
-          } catch (error) {
-            console.warn('No se pudo abrir Edge:', error);
-            // Edge no está disponible, ofrecer instalarlo
+              }, 2000);
+              
+            } catch (error) {
+              console.warn('No se pudo abrir Edge:', error);
+              alert(
+                '❌ No se pudo abrir Edge automáticamente.\n\n' +
+                'Por favor:\n' +
+                '1. Abre Edge manualmente\n' +
+                '2. Ve a: auditoria.controldoc.app\n' +
+                '3. Instala la PWA desde Edge'
+              );
+            }
+          } else {
+            // Edge no está instalado, ofrecer instalarlo
             const installEdge = confirm(
-              '📱 Edge no está disponible\n\n' +
+              '📱 Edge no está instalado\n\n' +
               '¿Quieres instalarlo desde la tienda?\n\n' +
               '• Sí = Abrir tienda de aplicaciones\n' +
               '• No = Instalar en Chrome'
