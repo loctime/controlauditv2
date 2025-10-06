@@ -266,50 +266,25 @@ self.addEventListener('fetch', (event) => {
 
   // Estrategia Network First para navegación/documentos
   if (event.request.mode === 'navigate' || event.request.destination === 'document') {
-    event.respondWith(
-      caches.match(event.request)
-        .then((response) => {
-          if (response) {
-            console.log('📦 Cache hit (navigate):', event.request.url);
-            return response;
-          }
-
-          // Solo intentar fetch si estamos online
-          if (navigator.onLine) {
-            return fetch(event.request)
-              .then((response) => {
-                // Cachear la respuesta de navegación
-                const responseToCache = response.clone();
-                caches.open(DYNAMIC_CACHE)
-                  .then((cache) => {
-                    cache.put(event.request, responseToCache);
-                  });
-                return response;
-              })
-              .catch((error) => {
-                console.warn('❌ Error en navegación:', error);
-                return caches.match('/index.html');
-              });
-          } else {
-            // Si estamos offline, intentar servir index.html desde cache
-            console.log('📱 Offline - intentando servir index.html desde cache');
-            return caches.match('/index.html')
-              .then((response) => {
-                if (response) {
-                  return response;
-                }
-                // Si no hay index.html en cache, devolver una respuesta básica
-                return new Response('<!DOCTYPE html><html><head><title>ControlAudit</title></head><body><h1>ControlAudit Offline</h1><p>La aplicación no está disponible offline. Conecta a internet para continuar.</p></body></html>', {
-                  status: 200,
-                  statusText: 'OK',
-                  headers: {
-                    'Content-Type': 'text/html'
-                  }
-                });
-              });
-          }
-        })
-    );
+    event.respondWith((async () => {
+      try {
+        const networkResponse = await fetch(event.request, { cache: 'no-store' });
+        const cache = await caches.open(DYNAMIC_CACHE);
+        cache.put(event.request, networkResponse.clone());
+        return networkResponse;
+      } catch (error) {
+        console.warn('❌ Error en navegación, usando caché si disponible:', error);
+        const cached = await caches.match(event.request);
+        if (cached) return cached;
+        const cachedIndex = await caches.match('/index.html');
+        if (cachedIndex) return cachedIndex;
+        return new Response('<!DOCTYPE html><html><head><title>ControlAudit</title></head><body><h1>ControlAudit Offline</h1><p>La aplicación no está disponible offline. Conecta a internet para continuar.</p></body></html>', {
+          status: 200,
+          statusText: 'OK',
+          headers: { 'Content-Type': 'text/html' }
+        });
+      }
+    })());
     return;
   }
 
