@@ -8,15 +8,14 @@ const AuditoriaDebugInfo = () => {
   const [debugInfo, setDebugInfo] = useState(null);
   const [expanded, setExpanded] = useState(false);
   const [loading, setLoading] = useState(false);
+  const isSupermax = !!userProfile && userProfile.role === 'supermax';
 
   // Solo mostrar para supermax
   console.log('[AuditoriaDebugInfo] userProfile:', userProfile);
   console.log('[AuditoriaDebugInfo] role:', userProfile?.role);
   console.log('[AuditoriaDebugInfo] should show:', userProfile?.role === 'supermax');
   
-  if (!userProfile || userProfile.role !== 'supermax') {
-    return null;
-  }
+  // Render condicional post-hooks
 
   const loadDebugInfo = async () => {
     setLoading(true);
@@ -115,6 +114,7 @@ const AuditoriaDebugInfo = () => {
     loadDebugInfo();
   }, []);
 
+  if (!isSupermax) return null;
   if (!debugInfo && !loading) {
     return null;
   }
