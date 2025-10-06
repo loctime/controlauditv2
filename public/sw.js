@@ -1,7 +1,7 @@
 // Service Worker para ControlAudit PWA
-const CACHE_NAME = 'controlaudit-v13';
-const STATIC_CACHE = 'controlaudit-static-v13';
-const DYNAMIC_CACHE = 'controlaudit-dynamic-v13';
+const CACHE_NAME = 'controlaudit-v14';
+const STATIC_CACHE = 'controlaudit-static-v14';
+const DYNAMIC_CACHE = 'controlaudit-dynamic-v14';
 
 // Recursos críticos que deben estar siempre en cache
 const urlsToCache = [
@@ -33,10 +33,8 @@ const urlsToCache = [
   '/perfil/'
 ];
 
-// Patrones de recursos que deben ser cacheados dinámicamente
-const CACHE_PATTERNS = [
-  /\.js$/,
-  /\.css$/,
+// Patrones de recursos cacheables de forma estática (NO incluyen JS/CSS)
+const STATIC_ASSET_PATTERNS = [
   /\.png$/,
   /\.jpg$/,
   /\.jpeg$/,
@@ -46,8 +44,8 @@ const CACHE_PATTERNS = [
   /\.eot$/
 ];
 
-// Función para verificar si un recurso debe ser cacheado
-const shouldCache = (url) => {
+// Función para verificar si un recurso estático (no JS/CSS) debe ser cacheado
+const shouldCacheStatic = (url) => {
   const urlObj = new URL(url);
   
   // Solo cachear recursos del mismo origen
@@ -55,8 +53,8 @@ const shouldCache = (url) => {
     return false;
   }
   
-  // Cachear si coincide con algún patrón
-  return CACHE_PATTERNS.some(pattern => pattern.test(urlObj.pathname));
+  // Cachear si coincide con algún patrón de activos estáticos
+  return STATIC_ASSET_PATTERNS.some(pattern => pattern.test(urlObj.pathname));
 };
 
 // Función para crear respuestas offline
@@ -188,8 +186,36 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Estrategia Cache First para recursos estáticos
-  if (shouldCache(event.request.url)) {
+  // Network First para archivos JS y CSS (evita servir chunks obsoletos)
+  if (url.pathname.endsWith('.js') || url.pathname.endsWith('.css')) {
+    event.respondWith(
+      (async () => {
+        if (navigator.onLine) {
+          try {
+            const networkResponse = await fetch(event.request);
+            if (networkResponse && networkResponse.status === 200) {
+              const responseToCache = networkResponse.clone();
+              const cache = await caches.open(DYNAMIC_CACHE);
+              cache.put(event.request, responseToCache);
+            }
+            return networkResponse;
+          } catch (error) {
+            const cached = await caches.match(event.request);
+            if (cached) return cached;
+            return createOfflineResponse(event.request);
+          }
+        } else {
+          const cached = await caches.match(event.request);
+          if (cached) return cached;
+          return createOfflineResponse(event.request);
+        }
+      })()
+    );
+    return;
+  }
+
+  // Estrategia Cache First para recursos estáticos (imágenes, fuentes, etc.)
+  if (shouldCacheStatic(event.request.url)) {
     event.respondWith(
       caches.match(event.request)
         .then((response) => {
@@ -238,8 +264,8 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Estrategia Network First para navegación
-  if (event.request.mode === 'navigate') {
+  // Estrategia Network First para navegación/documentos
+  if (event.request.mode === 'navigate' || event.request.destination === 'document') {
     event.respondWith(
       caches.match(event.request)
         .then((response) => {
