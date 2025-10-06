@@ -7,15 +7,14 @@ const SimpleOfflineDebug = () => {
   const { userProfile } = useAuth();
   const [debugInfo, setDebugInfo] = useState(null);
   const [expanded, setExpanded] = useState(false);
+  const isSupermax = !!userProfile && userProfile.role === 'supermax';
 
   // Solo mostrar para supermax
   console.log('[SimpleOfflineDebug] userProfile:', userProfile);
   console.log('[SimpleOfflineDebug] role:', userProfile?.role);
   console.log('[SimpleOfflineDebug] should show:', userProfile?.role === 'supermax');
   
-  if (!userProfile || userProfile.role !== 'supermax') {
-    return null;
-  }
+  // Render condicional post-hooks
 
   const loadDebugInfo = async () => {
     // Timeout más corto para el componente simple
@@ -104,6 +103,7 @@ const SimpleOfflineDebug = () => {
     loadDebugInfo();
   }, []);
 
+  if (!isSupermax) return null;
   if (!debugInfo) return null;
 
   return (

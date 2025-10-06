@@ -5,11 +5,7 @@ import { useAuth } from '../context/AuthContext';
 const MobileDebug = () => {
   const { userProfile } = useAuth();
   const [debugInfo, setDebugInfo] = useState({});
-
-  // Solo mostrar para supermax
-  if (!userProfile || userProfile.role !== 'supermax') {
-    return null;
-  }
+  const isSupermax = !!userProfile && userProfile.role === 'supermax';
 
   useEffect(() => {
     const info = {
@@ -29,6 +25,8 @@ const MobileDebug = () => {
     localStorage.clear();
     window.location.reload();
   };
+
+  if (!isSupermax) return null;
 
   return (
     <Paper sx={{ p: 2, m: 2, backgroundColor: '#f5f5f5' }}>
