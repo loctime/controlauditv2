@@ -12,6 +12,7 @@ const ReportesPage = lazy(() => import("../components/pages/auditoria/reporte/Re
 const PerfilUsuario = lazy(() => import("../components/pages/perfil/PerfilUsuario"));
 const LogsOperarios = lazy(() => import('../components/pages/usuarios').then(module => ({ default: module.LogsOperarios })));
 const Dashboard = lazy(() => import("../components/pages/dashboard/Dashboard"));
+const DashboardSeguridad = lazy(() => import("../components/pages/dashboard/DashboardSeguridad"));
 const ClienteDashboard = lazy(() => import("../components/pages/admin/ClienteDashboard"));
 const OperarioDashboard = lazy(() => import("../components/pages/user/OperarioDashboard"));
 const PermissionsDebug = lazy(() => import("../components/pages/debug/PermissionsDebug"));
@@ -23,6 +24,11 @@ export const routes = [
     id: "dashboard",
     path: "/dashboard",
     Element: Dashboard,
+  },
+  {
+    id: "dashboard-seguridad",
+    path: "/dashboard-seguridad",
+    Element: DashboardSeguridad,
   },
   {
     id: "cliente-dashboard",

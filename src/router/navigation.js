@@ -8,6 +8,7 @@ import PersonIcon from '@mui/icons-material/Person';
 import SettingsIcon from '@mui/icons-material/Settings';
 import AnalyticsIcon from '@mui/icons-material/Analytics';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
+import HealthAndSafetyIcon from '@mui/icons-material/HealthAndSafety';
 
 // Configuración de menús por rol y permisos
 export const getMenuItems = (role, permisos = {}) => {
@@ -26,6 +27,14 @@ export const getMenuItems = (role, permisos = {}) => {
       title: "Panel de Control",
       Icon: HomeIcon,
       roles: ['supermax'],
+      required: true
+    },
+    {
+      id: "dashboard-seguridad",
+      path: "/dashboard-seguridad",
+      title: "Dashboard Higiene y Seguridad",
+      Icon: HealthAndSafetyIcon,
+      roles: ['max', 'supermax'],
       required: true
     },
     {
