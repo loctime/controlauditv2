@@ -43,7 +43,7 @@ import AccidentesTab from "./tabs/AccidentesTab";
 import EmpresaStats from "./components/EmpresaStats";
 
 const EstablecimientosContainer = () => {
-  const { userProfile, userEmpresas, crearEmpresa, verificarYCorregirEmpresas, getUserEmpresas, updateEmpresa, forceRefreshCache } = useAuth();
+  const { userProfile, userEmpresas, loadingEmpresas, crearEmpresa, verificarYCorregirEmpresas, updateEmpresa } = useAuth();
   const navigate = useNavigate();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
@@ -63,34 +63,18 @@ const EstablecimientosContainer = () => {
   });
   const [loading, setLoading] = useState(false);
   const [verificando, setVerificando] = useState(false);
-  const [cargandoEmpresas, setCargandoEmpresas] = useState(false);
-  const [empresasCargadas, setEmpresasCargadas] = useState(false);
   const [openEditModal, setOpenEditModal] = useState(false);
   const [empresaEdit, setEmpresaEdit] = useState(null);
   const [expandedRows, setExpandedRows] = useState(new Set());
   const [empresasStats, setEmpresasStats] = useState({});
   const [activeTabPerEmpresa, setActiveTabPerEmpresa] = useState({});
 
+  // Cargar estadísticas cuando las empresas estén disponibles
   useEffect(() => {
-    if (userProfile && userProfile.uid && !empresasCargadas) {
-      setCargandoEmpresas(true);
-      forceRefreshCache().then(() => {
-        return getUserEmpresas(userProfile.uid);
-      }).then(() => {
-        setCargandoEmpresas(false);
-        setEmpresasCargadas(true);
-      }).catch(error => {
-        console.error('Error cargando empresas:', error);
-        setCargandoEmpresas(false);
-      });
-    }
-  }, [userProfile?.uid]);
-
-  useEffect(() => {
-    if (empresasCargadas && userEmpresas && userEmpresas.length > 0) {
+    if (userEmpresas && userEmpresas.length > 0) {
       loadEmpresasStats(userEmpresas);
     }
-  }, [empresasCargadas, userEmpresas]);
+  }, [userEmpresas]);
 
   const loadEmpresasStats = async (empresas) => {
     const stats = {};
@@ -234,14 +218,7 @@ const EstablecimientosContainer = () => {
   };
 
   const eliminarEmpresa = async () => {
-    try {
-      setCargandoEmpresas(true);
-      await getUserEmpresas(userProfile.uid);
-    } catch (error) {
-      console.error('Error al recargar empresas después de eliminar:', error);
-    } finally {
-      setCargandoEmpresas(false);
-    }
+    // Las empresas se recargarán automáticamente desde el contexto
   };
 
   const handleVerificarEmpresas = async () => {
@@ -396,18 +373,11 @@ const EstablecimientosContainer = () => {
       </Typography>
 
       {/* Contenido - Tabla Expandible */}
-      {cargandoEmpresas ? (
+      {loadingEmpresas ? (
         <Box sx={{ textAlign: 'center', py: 4 }}>
           <CircularProgress sx={{ mb: 2 }} />
           <Typography variant="h6" color="text.secondary">
             Cargando empresas...
-          </Typography>
-        </Box>
-      ) : !empresasCargadas ? (
-        <Box sx={{ textAlign: 'center', py: 4 }}>
-          <CircularProgress sx={{ mb: 2 }} />
-          <Typography variant="h6" color="text.secondary">
-            Preparando empresas...
           </Typography>
         </Box>
       ) : (userEmpresas || []).length === 0 ? (
