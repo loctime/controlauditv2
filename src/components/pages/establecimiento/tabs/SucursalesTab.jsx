@@ -2,21 +2,34 @@ import React, { useState, useEffect } from 'react';
 import {
   Box,
   Button,
-  Card,
-  CardContent,
   CircularProgress,
-  Grid,
   Paper,
-  Typography
+  Typography,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Collapse,
+  IconButton,
+  Grid
 } from '@mui/material';
 import StorefrontIcon from '@mui/icons-material/Storefront';
+import PeopleIcon from '@mui/icons-material/People';
+import SchoolIcon from '@mui/icons-material/School';
+import ReportProblemIcon from '@mui/icons-material/ReportProblem';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import { collection, getDocs, query, where, addDoc, Timestamp } from 'firebase/firestore';
 import { db } from '../../../../firebaseConfig';
 import { useAuth } from '../../../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
 
 const SucursalesTab = ({ empresaId, empresaNombre, userEmpresas, loadEmpresasStats }) => {
   const { userProfile } = useAuth();
+  const navigate = useNavigate();
   const [sucursales, setSucursales] = useState([]);
   const [loading, setLoading] = useState(false);
   const [openSucursalForm, setOpenSucursalForm] = useState(false);
@@ -25,6 +38,9 @@ const SucursalesTab = ({ empresaId, empresaNombre, userEmpresas, loadEmpresasSta
     direccion: '',
     telefono: ''
   });
+  const [expandedRows, setExpandedRows] = useState(new Set());
+  const [sucursalesStats, setSucursalesStats] = useState({});
+  const [activeTabPerSucursal, setActiveTabPerSucursal] = useState({});
 
   useEffect(() => {
     if (empresaId) {
@@ -42,11 +58,66 @@ const SucursalesTab = ({ empresaId, empresaNombre, userEmpresas, loadEmpresasSta
         ...doc.data()
       }));
       setSucursales(sucursalesData);
+      
+      // Cargar estadísticas de cada sucursal
+      await loadSucursalesStats(sucursalesData);
     } catch (error) {
       console.error('Error cargando sucursales:', error);
     } finally {
       setLoading(false);
     }
+  };
+
+  const loadSucursalesStats = async (sucursalesList) => {
+    const stats = {};
+    for (const sucursal of sucursalesList) {
+      try {
+        const [empleadosSnapshot, capacitacionesSnapshot, accidentesSnapshot] = await Promise.all([
+          getDocs(query(collection(db, 'empleados'), where('sucursalId', '==', sucursal.id))),
+          getDocs(query(collection(db, 'capacitaciones'), where('sucursalId', '==', sucursal.id))),
+          getDocs(query(collection(db, 'accidentes'), where('sucursalId', '==', sucursal.id)))
+        ]);
+        
+        stats[sucursal.id] = {
+          empleados: empleadosSnapshot.docs.length,
+          capacitaciones: capacitacionesSnapshot.docs.length,
+          capacitacionesCompletadas: capacitacionesSnapshot.docs.filter(doc => doc.data().estado === 'completada').length,
+          accidentes: accidentesSnapshot.docs.length,
+          accidentesAbiertos: accidentesSnapshot.docs.filter(doc => doc.data().estado === 'abierto').length
+        };
+      } catch (error) {
+        console.error(`Error cargando stats para sucursal ${sucursal.id}:`, error);
+        stats[sucursal.id] = { empleados: 0, capacitaciones: 0, capacitacionesCompletadas: 0, accidentes: 0, accidentesAbiertos: 0 };
+      }
+    }
+    setSucursalesStats(stats);
+  };
+
+  const toggleRow = (sucursalId, tab) => {
+    const newExpanded = new Set(expandedRows);
+    
+    // Si ya está expandido y es el mismo tab, colapsar
+    if (newExpanded.has(sucursalId) && activeTabPerSucursal[sucursalId] === tab) {
+      newExpanded.delete(sucursalId);
+    } else {
+      // Si no está expandido o es un tab diferente, expandir y cambiar tab
+      newExpanded.add(sucursalId);
+      setActiveTabPerSucursal(prev => ({
+        ...prev,
+        [sucursalId]: tab
+      }));
+    }
+    
+    setExpandedRows(newExpanded);
+  };
+
+  const getActiveTab = (sucursalId) => {
+    return activeTabPerSucursal[sucursalId] || 'empleados';
+  };
+
+  const navigateToPage = (page, sucursalId) => {
+    localStorage.setItem('selectedSucursal', sucursalId);
+    navigate(page);
   };
 
   const handleSucursalFormChange = (e) => {
@@ -125,30 +196,101 @@ const SucursalesTab = ({ empresaId, empresaNombre, userEmpresas, loadEmpresasSta
           </Typography>
         </Box>
       ) : (
-        <Grid container spacing={2}>
-          {sucursales.map((sucursal) => (
-            <Grid item xs={12} sm={6} md={4} key={sucursal.id}>
-              <Card>
-                <CardContent>
-                  <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 1 }}>
-                    {sucursal.nombre}
-                  </Typography>
-                  <Typography variant="body2" color="textSecondary" sx={{ mb: 0.5 }}>
-                    <strong>Dirección:</strong> {sucursal.direccion}
-                  </Typography>
-                  <Typography variant="body2" color="textSecondary" sx={{ mb: 1 }}>
-                    <strong>Teléfono:</strong> {sucursal.telefono}
-                  </Typography>
-                  <Typography variant="caption" color="textSecondary">
-                    Creada: {sucursal.fechaCreacion?.toDate?.()?.toLocaleDateString() || 'N/A'}
-                  </Typography>
-                </CardContent>
-              </Card>
-            </Grid>
-          ))}
-        </Grid>
+        <TableContainer component={Paper}>
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableCell><strong>Nombre</strong></TableCell>
+                <TableCell><strong>Dirección</strong></TableCell>
+                <TableCell><strong>Teléfono</strong></TableCell>
+                <TableCell align="center"><strong>Empleados</strong></TableCell>
+                <TableCell align="center"><strong>Capacitaciones</strong></TableCell>
+                <TableCell align="center"><strong>Accidentes</strong></TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {sucursales.map((sucursal) => {
+                const isExpanded = expandedRows.has(sucursal.id);
+                const stats = sucursalesStats[sucursal.id] || { empleados: 0, capacitaciones: 0, capacitacionesCompletadas: 0, accidentes: 0, accidentesAbiertos: 0 };
+
+                return (
+                  <React.Fragment key={sucursal.id}>
+                    <TableRow hover>
+                      <TableCell>{sucursal.nombre}</TableCell>
+                      <TableCell>{sucursal.direccion || 'N/A'}</TableCell>
+                      <TableCell>{sucursal.telefono || 'N/A'}</TableCell>
+                      <TableCell align="center">
+                        <Button
+                          variant="text"
+                          size="small"
+                          startIcon={<PeopleIcon />}
+                          onClick={() => toggleRow(sucursal.id, 'empleados')}
+                          sx={{ 
+                            textTransform: 'none',
+                            minWidth: '100px'
+                          }}
+                        >
+                          {stats.empleados}
+                          {isExpanded && getActiveTab(sucursal.id) === 'empleados' ? <ExpandLessIcon fontSize="small" sx={{ ml: 0.5 }} /> : <ExpandMoreIcon fontSize="small" sx={{ ml: 0.5 }} />}
+                        </Button>
+                      </TableCell>
+                      <TableCell align="center">
+                        <Button
+                          variant="text"
+                          size="small"
+                          startIcon={<SchoolIcon />}
+                          onClick={() => toggleRow(sucursal.id, 'capacitaciones')}
+                          sx={{ 
+                            textTransform: 'none',
+                            minWidth: '100px'
+                          }}
+                        >
+                          {stats.capacitacionesCompletadas}/{stats.capacitaciones}
+                          {isExpanded && getActiveTab(sucursal.id) === 'capacitaciones' ? <ExpandLessIcon fontSize="small" sx={{ ml: 0.5 }} /> : <ExpandMoreIcon fontSize="small" sx={{ ml: 0.5 }} />}
+                        </Button>
+                      </TableCell>
+                      <TableCell align="center">
+                        <Button
+                          variant="text"
+                          size="small"
+                          startIcon={<ReportProblemIcon />}
+                          onClick={() => toggleRow(sucursal.id, 'accidentes')}
+                          sx={{ 
+                            textTransform: 'none',
+                            minWidth: '100px'
+                          }}
+                        >
+                          {stats.accidentes}
+                          {isExpanded && getActiveTab(sucursal.id) === 'accidentes' ? <ExpandLessIcon fontSize="small" sx={{ ml: 0.5 }} /> : <ExpandMoreIcon fontSize="small" sx={{ ml: 0.5 }} />}
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell colSpan={6} sx={{ py: 0 }}>
+                        <Collapse in={isExpanded} timeout="auto" unmountOnExit>
+                          <Box sx={{ p: 3, backgroundColor: '#fafafa', borderTop: '1px solid #e0e0e0' }}>
+                            {getActiveTab(sucursal.id) === 'empleados' && (
+                              <EmpleadosContent sucursalId={sucursal.id} sucursalNombre={sucursal.nombre} navigateToPage={navigateToPage} />
+                            )}
+                            {getActiveTab(sucursal.id) === 'capacitaciones' && (
+                              <CapacitacionesContent sucursalId={sucursal.id} sucursalNombre={sucursal.nombre} navigateToPage={navigateToPage} />
+                            )}
+                            {getActiveTab(sucursal.id) === 'accidentes' && (
+                              <AccidentesContent sucursalId={sucursal.id} sucursalNombre={sucursal.nombre} navigateToPage={navigateToPage} />
+                            )}
+                          </Box>
+                        </Collapse>
+                      </TableCell>
+                    </TableRow>
+                  </React.Fragment>
+                );
+              })}
+            </TableBody>
+          </Table>
+        </TableContainer>
       )}
 
+      {/* Modal para agregar sucursal */}
       {openSucursalForm && (
         <Box
           sx={{
@@ -254,5 +396,246 @@ const SucursalesTab = ({ empresaId, empresaNombre, userEmpresas, loadEmpresasSta
   );
 };
 
-export default SucursalesTab;
+// Componente para mostrar empleados
+const EmpleadosContent = ({ sucursalId, sucursalNombre, navigateToPage }) => {
+  const [empleados, setEmpleados] = useState([]);
+  const [loading, setLoading] = useState(false);
 
+  useEffect(() => {
+    if (sucursalId) {
+      loadEmpleados();
+    }
+  }, [sucursalId]);
+
+  const loadEmpleados = async () => {
+    setLoading(true);
+    try {
+      const q = query(collection(db, 'empleados'), where('sucursalId', '==', sucursalId));
+      const snapshot = await getDocs(q);
+      const empleadosData = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setEmpleados(empleadosData);
+    } catch (error) {
+      console.error('Error cargando empleados:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Box>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+        <Typography variant="h6">Empleados de {sucursalNombre}</Typography>
+        <Button
+          variant="contained"
+          startIcon={<PeopleIcon />}
+          onClick={() => navigateToPage('/empleados', sucursalId)}
+          size="small"
+        >
+          Gestionar Empleados
+        </Button>
+      </Box>
+
+      {loading ? (
+        <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
+          <CircularProgress size={30} />
+        </Box>
+      ) : empleados.length === 0 ? (
+        <Typography variant="body2" color="textSecondary" sx={{ textAlign: 'center', py: 2 }}>
+          No hay empleados registrados
+        </Typography>
+      ) : (
+        <TableContainer component={Paper} sx={{ maxHeight: 400 }}>
+          <Table size="small">
+            <TableHead>
+              <TableRow>
+                <TableCell><strong>Nombre</strong></TableCell>
+                <TableCell><strong>DNI</strong></TableCell>
+                <TableCell><strong>Cargo</strong></TableCell>
+                <TableCell><strong>Estado</strong></TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {empleados.map((empleado) => (
+                <TableRow key={empleado.id} hover>
+                  <TableCell>{empleado.nombre}</TableCell>
+                  <TableCell>{empleado.dni}</TableCell>
+                  <TableCell>{empleado.cargo}</TableCell>
+                  <TableCell>{empleado.estado}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      )}
+    </Box>
+  );
+};
+
+// Componente para mostrar capacitaciones
+const CapacitacionesContent = ({ sucursalId, sucursalNombre, navigateToPage }) => {
+  const [capacitaciones, setCapacitaciones] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (sucursalId) {
+      loadCapacitaciones();
+    }
+  }, [sucursalId]);
+
+  const loadCapacitaciones = async () => {
+    setLoading(true);
+    try {
+      const q = query(collection(db, 'capacitaciones'), where('sucursalId', '==', sucursalId));
+      const snapshot = await getDocs(q);
+      const capacitacionesData = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setCapacitaciones(capacitacionesData);
+    } catch (error) {
+      console.error('Error cargando capacitaciones:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Box>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+        <Typography variant="h6">Capacitaciones de {sucursalNombre}</Typography>
+        <Button
+          variant="contained"
+          startIcon={<SchoolIcon />}
+          onClick={() => navigateToPage('/capacitaciones', sucursalId)}
+          size="small"
+        >
+          Gestionar Capacitaciones
+        </Button>
+      </Box>
+
+      {loading ? (
+        <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
+          <CircularProgress size={30} />
+        </Box>
+      ) : capacitaciones.length === 0 ? (
+        <Typography variant="body2" color="textSecondary" sx={{ textAlign: 'center', py: 2 }}>
+          No hay capacitaciones registradas
+        </Typography>
+      ) : (
+        <TableContainer component={Paper} sx={{ maxHeight: 400 }}>
+          <Table size="small">
+            <TableHead>
+              <TableRow>
+                <TableCell><strong>Nombre</strong></TableCell>
+                <TableCell><strong>Tipo</strong></TableCell>
+                <TableCell><strong>Estado</strong></TableCell>
+                <TableCell><strong>Fecha</strong></TableCell>
+                <TableCell align="center"><strong>Asistentes</strong></TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {capacitaciones.map((capacitacion) => (
+                <TableRow key={capacitacion.id} hover>
+                  <TableCell>{capacitacion.nombre}</TableCell>
+                  <TableCell>{capacitacion.tipo}</TableCell>
+                  <TableCell>{capacitacion.estado}</TableCell>
+                  <TableCell>
+                    {capacitacion.fechaRealizada?.toDate?.()?.toLocaleDateString() || 'N/A'}
+                  </TableCell>
+                  <TableCell align="center">{capacitacion.asistentes?.length || 0}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      )}
+    </Box>
+  );
+};
+
+// Componente para mostrar accidentes
+const AccidentesContent = ({ sucursalId, sucursalNombre, navigateToPage }) => {
+  const [accidentes, setAccidentes] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (sucursalId) {
+      loadAccidentes();
+    }
+  }, [sucursalId]);
+
+  const loadAccidentes = async () => {
+    setLoading(true);
+    try {
+      const q = query(collection(db, 'accidentes'), where('sucursalId', '==', sucursalId));
+      const snapshot = await getDocs(q);
+      const accidentesData = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setAccidentes(accidentesData);
+    } catch (error) {
+      console.error('Error cargando accidentes:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Box>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+        <Typography variant="h6">Accidentes de {sucursalNombre}</Typography>
+        <Button
+          variant="contained"
+          startIcon={<ReportProblemIcon />}
+          onClick={() => navigateToPage('/accidentes', sucursalId)}
+          size="small"
+        >
+          Gestionar Accidentes
+        </Button>
+      </Box>
+
+      {loading ? (
+        <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
+          <CircularProgress size={30} />
+        </Box>
+      ) : accidentes.length === 0 ? (
+        <Typography variant="body2" color="textSecondary" sx={{ textAlign: 'center', py: 2 }}>
+          No hay accidentes registrados
+        </Typography>
+      ) : (
+        <TableContainer component={Paper} sx={{ maxHeight: 400 }}>
+          <Table size="small">
+            <TableHead>
+              <TableRow>
+                <TableCell><strong>Tipo</strong></TableCell>
+                <TableCell><strong>Empleado</strong></TableCell>
+                <TableCell><strong>Gravedad</strong></TableCell>
+                <TableCell><strong>Fecha</strong></TableCell>
+                <TableCell><strong>Estado</strong></TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {accidentes.map((accidente) => (
+                <TableRow key={accidente.id} hover>
+                  <TableCell>{accidente.tipo}</TableCell>
+                  <TableCell>{accidente.empleadoNombre}</TableCell>
+                  <TableCell>{accidente.gravedad}</TableCell>
+                  <TableCell>
+                    {accidente.fechaHora?.toDate?.()?.toLocaleDateString() || 'N/A'}
+                  </TableCell>
+                  <TableCell>{accidente.estado}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      )}
+    </Box>
+  );
+};
+
+export default SucursalesTab;
