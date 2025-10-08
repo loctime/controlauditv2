@@ -115,9 +115,6 @@ export const usePWAInstall = () => {
     const isEdge = navigator.userAgent.includes('Edg');
     const isChrome = navigator.userAgent.includes('Chrome') && !navigator.userAgent.includes('Edg');
     
-    console.log('=== INSTALACIÓN PWA ===');
-    console.log('Navegador actual:', isEdge ? 'Edge' : isChrome ? 'Chrome' : 'Otro');
-    
     if (isChrome) {
       // Si es Chrome, redirigir a Edge
       console.log('Redirigiendo a Edge para mejor experiencia...');
@@ -128,7 +125,6 @@ export const usePWAInstall = () => {
       
       // Detectar si es móvil
       const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-      console.log('Dispositivo móvil detectado:', isMobile);
       
       if (isMobile) {
         // En móvil, mostrar mensaje simple y claro
@@ -258,9 +254,6 @@ export const usePWAInstall = () => {
     // Detectar navegador
     const isEdge = navigator.userAgent.includes('Edg');
     const isChrome = navigator.userAgent.includes('Chrome') && !navigator.userAgent.includes('Edg');
-    
-    console.log('=== INFO PWA ===');
-    console.log('Navegador actual:', isEdge ? 'Edge' : isChrome ? 'Chrome' : 'Otro');
     
     if (isChrome) {
       // Si es Chrome, mostrar información sobre Edge y opción de redirigir

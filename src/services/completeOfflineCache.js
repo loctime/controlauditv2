@@ -33,16 +33,6 @@ export const saveCompleteUserCache = async (userProfile) => {
       version: CACHE_VERSION
     };
 
-    // Log para debugging del userProfile que se guarda en cache
-    console.log('🔍 [CompleteOfflineCache] Guardando userProfile en cache:', {
-      uid: userProfile.uid,
-      email: userProfile.email,
-      displayName: userProfile.displayName,
-      role: userProfile.role,
-      clienteAdminId: userProfile.clienteAdminId,
-      clienteAdminIdFallback: userProfile.clienteAdminId || userProfile.uid
-    });
-
     // Obtener y cachear empresas del usuario (con filtrado multi-tenant)
     try {
       let empresasData = [];
@@ -96,10 +86,8 @@ export const saveCompleteUserCache = async (userProfile) => {
       }
       
       cacheData.empresas = empresasData;
-      console.log('✅ Empresas cacheadas (filtradas):', cacheData.empresas.length);
-      console.log('✅ Empresas cacheadas (detalle):', cacheData.empresas.map(e => ({ id: e.id, nombre: e.nombre, propietarioId: e.propietarioId })));
     } catch (error) {
-      console.warn('⚠️ Error cacheando empresas:', error);
+      console.error('Error cacheando empresas:', error);
     }
 
     // Obtener y cachear formularios del usuario (filtrados por rol)
@@ -138,10 +126,8 @@ export const saveCompleteUserCache = async (userProfile) => {
       }
       
       cacheData.formularios = formulariosData;
-      console.log('✅ Formularios cacheados (filtrados):', cacheData.formularios.length);
-      console.log('✅ Formularios cacheados (detalle):', cacheData.formularios.map(f => ({ id: f.id, nombre: f.nombre, clienteAdminId: f.clienteAdminId })));
     } catch (error) {
-      console.warn('⚠️ Error cacheando formularios:', error);
+      console.error('Error cacheando formularios:', error);
     }
 
     // Obtener y cachear sucursales (filtradas por rol)
@@ -183,10 +169,8 @@ export const saveCompleteUserCache = async (userProfile) => {
       }
       
       cacheData.sucursales = sucursalesData;
-      console.log('✅ Sucursales cacheadas (filtradas):', cacheData.sucursales.length);
-      console.log('✅ Sucursales cacheadas (detalle):', cacheData.sucursales.map(s => ({ id: s.id, nombre: s.nombre, empresaId: s.empresaId })));
     } catch (error) {
-      console.warn('⚠️ Error cacheando sucursales:', error);
+      console.error('Error cacheando sucursales:', error);
     }
 
     // Obtener y cachear auditorías del usuario
@@ -200,9 +184,8 @@ export const saveCompleteUserCache = async (userProfile) => {
         id: doc.id,
         ...doc.data()
       }));
-      console.log('✅ Auditorías cacheadas:', cacheData.auditorias.length);
     } catch (error) {
-      console.warn('⚠️ Error cacheando auditorías:', error);
+      console.error('Error cacheando auditorías:', error);
     }
 
     // Guardar en IndexedDB
@@ -215,15 +198,13 @@ export const saveCompleteUserCache = async (userProfile) => {
     // También guardar en localStorage como backup para Chrome
     try {
       localStorage.setItem('complete_user_cache', JSON.stringify(cacheData));
-      console.log('✅ Cache también guardado en localStorage como backup');
     } catch (localStorageError) {
-      console.warn('⚠️ No se pudo guardar en localStorage:', localStorageError);
+      console.error('No se pudo guardar en localStorage:', localStorageError);
     }
 
-    console.log('✅ Cache completo guardado para usuario:', userProfile.uid);
     return cacheData;
   } catch (error) {
-    console.error('❌ Error guardando cache completo:', error);
+    console.error('Error guardando cache completo:', error);
     throw error;
   }
 };
@@ -245,7 +226,6 @@ export const getCompleteUserCache = async (userId) => {
     
     // Verificar si el cache es del usuario correcto
     if (cacheData.userId !== userId) {
-      console.log('⚠️ Cache de usuario diferente, limpiando...');
       await clearCompleteUserCache();
       return null;
     }
@@ -255,22 +235,13 @@ export const getCompleteUserCache = async (userId) => {
     const cacheAgeDays = cacheAge / (1000 * 60 * 60 * 24);
     
     if (cacheAgeDays > CACHE_EXPIRY_DAYS) {
-      console.log('⏰ Cache expirado, limpiando...');
       await clearCompleteUserCache();
       return null;
     }
 
-    console.log('✅ Cache completo recuperado:', {
-      empresas: cacheData.empresas?.length || 0,
-      formularios: cacheData.formularios?.length || 0,
-      sucursales: cacheData.sucursales?.length || 0,
-      auditorias: cacheData.auditorias?.length || 0,
-      age: Math.round(cacheAgeDays * 100) / 100 + ' días'
-    });
-
     return cacheData;
   } catch (error) {
-    console.error('❌ Error obteniendo cache completo:', error);
+    console.error('Error obteniendo cache completo:', error);
     return null;
   }
 };
@@ -282,9 +253,8 @@ export const clearCompleteUserCache = async () => {
   try {
     const db = await getOfflineDatabase();
     await db.delete('settings', 'complete_user_cache');
-    console.log('🗑️ Cache completo limpiado');
   } catch (error) {
-    console.error('❌ Error limpiando cache completo:', error);
+    console.error('Error limpiando cache completo:', error);
   }
 };
 
@@ -296,7 +266,7 @@ export const hasCompleteCache = async (userId) => {
     const cache = await getCompleteUserCache(userId);
     return cache !== null;
   } catch (error) {
-    console.error('❌ Error verificando cache completo:', error);
+    console.error('Error verificando cache completo:', error);
     return false;
   }
 };
@@ -331,7 +301,7 @@ export const getCacheStats = async () => {
       version: cache.version
     };
   } catch (error) {
-    console.error('❌ Error obteniendo estadísticas de cache:', error);
+    console.error('Error obteniendo estadísticas de cache:', error);
     return {
       hasCache: false,
       empresas: 0,
@@ -352,15 +322,13 @@ export const refreshCompleteCache = async (userProfile) => {
       throw new Error('No hay usuario autenticado');
     }
 
-    console.log('🔄 Actualizando cache completo...');
     await clearCompleteUserCache();
     
     const cacheData = await saveCompleteUserCache(userProfile);
-    console.log('✅ Cache completo actualizado');
     
     return cacheData;
   } catch (error) {
-    console.error('❌ Error actualizando cache completo:', error);
+    console.error('Error actualizando cache completo:', error);
     throw error;
   }
 };

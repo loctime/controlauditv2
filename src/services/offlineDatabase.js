@@ -17,8 +17,6 @@ export const initOfflineDatabase = async () => {
   try {
     const db = await openDB(DB_NAME, DB_VERSION, {
       upgrade(db, oldVersion) {
-        console.log('🔄 Inicializando base de datos offline...');
-
         // Solo crear stores si no existen
         if (!db.objectStoreNames.contains('auditorias')) {
           const auditoriasStore = db.createObjectStore('auditorias', { keyPath: 'id' });
@@ -63,15 +61,12 @@ export const initOfflineDatabase = async () => {
           formulariosStore.createIndex('by-clienteAdminId', 'clienteAdminId');
           formulariosStore.createIndex('by-nombre', 'nombre');
         }
-
-        console.log('✅ Base de datos offline inicializada correctamente');
       },
     });
 
-    console.log('📊 Base de datos offline lista:', db.name, 'v' + db.version);
     return db;
   } catch (error) {
-    console.error('❌ Error al inicializar base de datos offline:', error);
+    console.error('Error al inicializar base de datos offline:', error);
     throw error;
   }
 };
@@ -83,7 +78,7 @@ export const getOfflineDatabase = async () => {
   try {
     return await openDB(DB_NAME, DB_VERSION);
   } catch (error) {
-    console.error('❌ Error al obtener base de datos offline:', error);
+    console.error('Error al obtener base de datos offline:', error);
     throw error;
   }
 };
@@ -113,7 +108,7 @@ export const getStorageInfo = async () => {
       percentage: Math.round(percentage * 100) / 100
     };
   } catch (error) {
-    console.error('❌ Error al obtener información de almacenamiento:', error);
+    console.error('Error al obtener información de almacenamiento:', error);
     return {
       quota: 0,
       usage: 0,
@@ -150,7 +145,7 @@ export const checkStorageLimit = async (estimatedSize = 100 * 1024 * 1024) => { 
       }
     };
   } catch (error) {
-    console.error('❌ Error al verificar límites de almacenamiento:', error);
+    console.error('Error al verificar límites de almacenamiento:', error);
     return {
       canStore: false,
       reason: 'error',
@@ -190,13 +185,12 @@ export const cleanupOldData = async () => {
       await db.delete('syncQueue', item.id);
     }
 
-    console.log(`🧹 Limpieza completada: ${syncedAuditorias.length} auditorías y ${queueToDelete.length} items de cola eliminados`);
     return {
       auditoriasDeleted: syncedAuditorias.length,
       queueItemsDeleted: queueToDelete.length
     };
   } catch (error) {
-    console.error('❌ Error en limpieza de datos antiguos:', error);
+    console.error('Error en limpieza de datos antiguos:', error);
     throw error;
   }
 };

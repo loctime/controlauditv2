@@ -10,13 +10,6 @@ const OfflineDebugInfo = () => {
   const [loading, setLoading] = useState(false);
   const isSupermax = !!userProfile && userProfile.role === 'supermax';
 
-  // Solo mostrar para supermax
-  console.log('[OfflineDebugInfo] userProfile:', userProfile);
-  console.log('[OfflineDebugInfo] role:', userProfile?.role);
-  console.log('[OfflineDebugInfo] should show:', userProfile?.role === 'supermax');
-  
-  // Render condicional post-hooks
-
   const loadDebugInfo = async () => {
     setLoading(true);
     
@@ -57,12 +50,10 @@ const OfflineDebugInfo = () => {
           
           request.onupgradeneeded = function(event) {
             const db = event.target.result;
-            console.log('🔄 Inicializando base de datos offline desde debug...');
             
             // Crear object store 'settings' si no existe
             if (!db.objectStoreNames.contains('settings')) {
               db.createObjectStore('settings', { keyPath: 'key' });
-              console.log('✅ Object store "settings" creado');
             }
             
             // Crear otras object stores básicas
@@ -72,8 +63,6 @@ const OfflineDebugInfo = () => {
               auditoriasStore.createIndex('by-status', 'status');
               auditoriasStore.createIndex('by-userId', 'userId');
             }
-            
-            console.log('✅ Base de datos offline inicializada desde debug');
           };
         });
       } catch (error) {

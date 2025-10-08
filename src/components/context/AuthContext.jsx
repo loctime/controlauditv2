@@ -50,13 +50,11 @@ const AuthContextComponent = ({ children }) => {
     
     // Timeout de seguridad para evitar loading infinito
     const timeoutId = setTimeout(() => {
-      console.log('⏰ Timeout de seguridad - deteniendo loading');
       setLoading(false);
     }, 3000); // 3 segundos máximo (aumentado para dar tiempo a cargar empresas)
     
     // Listener para detectar cambios de conectividad
     const handleOnline = () => {
-      console.log('🌐 Conexión restaurada - recargando datos...');
       // Recargar datos cuando se restaura la conexión
       if (user) {
         loadUserEmpresas(user.uid);
@@ -73,7 +71,7 @@ const AuthContextComponent = ({ children }) => {
     };
     
     const handleOffline = () => {
-      console.log('🔌 Conexión perdida - modo offline activado');
+      // Modo offline activado
     };
     
     window.addEventListener('online', handleOnline);
@@ -173,20 +171,13 @@ const AuthContextComponent = ({ children }) => {
                 role: profile.role || 'operario'
               };
               
-              const cacheResult = await saveCompleteUserCache(completeProfile);
-              console.log('✅ Cache completo guardado para usuario:', firebaseUser.uid);
-              console.log('✅ Cache guardado con:', {
-                empresas: cacheResult?.empresas?.length || 0,
-                formularios: cacheResult?.formularios?.length || 0,
-                sucursales: cacheResult?.sucursales?.length || 0
-              });
+              await saveCompleteUserCache(completeProfile);
             } catch (error) {
-              console.warn('⚠️ Error guardando cache completo:', error);
+              console.error('Error guardando cache completo:', error);
             }
           }
         } else {
           // Si no hay usuario de Firebase, verificar si hay cache offline
-          console.log('🔌 Sin usuario de Firebase, verificando cache offline...');
           
           // Solo cargar del cache si había un usuario autenticado previamente
           const wasLoggedIn = localStorage.getItem("isLogged") === "true";
@@ -196,7 +187,6 @@ const AuthContextComponent = ({ children }) => {
             
             if (cachedUser && cachedUser.userProfile) {
               const userProfile = cachedUser.userProfile;
-              console.log('✅ Usuario encontrado en cache offline:', userProfile.uid);
               
               // Crear un objeto usuario simulado para el cache
               const simulatedUser = {
@@ -218,9 +208,6 @@ const AuthContextComponent = ({ children }) => {
               
               // Cargar datos del cache
               if (cachedUser.empresas && cachedUser.empresas.length > 0) {
-                console.log('✅ Empresas cargadas desde cache offline:', cachedUser.empresas.length);
-                console.log('✅ Empresas del cache:', cachedUser.empresas.map(e => ({ id: e.id, nombre: e.nombre })));
-                
                 // Aplicar filtrado multi-tenant si es necesario
                 let empresasFiltradas = cachedUser.empresas;
                 if (userProfile.role !== 'supermax') {
@@ -232,27 +219,14 @@ const AuthContextComponent = ({ children }) => {
                     
                     return esPropietario || esCreador || esDelClienteAdmin || esDelUsuario;
                   });
-                  console.log('✅ Empresas filtradas por rol:', empresasFiltradas.length);
-                  console.log('✅ Empresas originales:', cachedUser.empresas.length);
-                  console.log('✅ userProfile.uid:', userProfile.uid);
-                  console.log('✅ userProfile.clienteAdminId:', userProfile.clienteAdminId);
-                  console.log('✅ userProfile.role:', userProfile.role);
                 }
                 
                 setUserEmpresas(empresasFiltradas);
-              } else {
-                console.log('⚠️ No hay empresas en cache offline');
               }
               if (cachedUser.auditorias && cachedUser.auditorias.length > 0) {
-                console.log('✅ Auditorías cargadas desde cache offline:', cachedUser.auditorias.length);
                 setUserAuditorias(cachedUser.auditorias);
-              } else {
-                console.log('⚠️ No hay auditorías en cache offline');
               }
-              
-              console.log('✅ Usuario offline cargado desde cache');
             } else {
-              console.log('❌ No hay usuario en cache offline');
               setUser(null);
               setIsLogged(false);
               setUserEmpresas([]);
@@ -350,26 +324,21 @@ const AuthContextComponent = ({ children }) => {
         }
       }
 
-      console.log('🔄 [AuthContext] Cargando empresas para usuario:', userId, 'rol:', role);
       const empresas = await empresaService.getUserEmpresas(userId, role, userProfile?.clienteAdminId);
-      console.log('✅ [AuthContext] Empresas cargadas desde Firestore:', empresas.length);
       setUserEmpresas(empresas);
       setLoadingEmpresas(false);
       return empresas;
     } catch (error) {
-      console.warn('⚠️ [AuthContext] Error cargando empresas desde Firestore, intentando cache offline:', error);
-      
       // Fallback al cache offline si falla la carga desde Firestore
       try {
         const cachedData = await loadUserFromCache();
         if (cachedData?.empresas && cachedData.empresas.length > 0) {
-          console.log('✅ [AuthContext] Empresas cargadas desde cache offline como fallback:', cachedData.empresas.length);
           setUserEmpresas(cachedData.empresas);
           setLoadingEmpresas(false);
           return cachedData.empresas;
         }
       } catch (cacheError) {
-        console.error('❌ [AuthContext] Error cargando desde cache offline:', cacheError);
+        console.error('Error cargando desde cache offline:', cacheError);
       }
       
       setUserEmpresas([]);
@@ -384,11 +353,9 @@ const AuthContextComponent = ({ children }) => {
     try {
       if (!userProfile) {
         if (retryCount < MAX_RETRIES) {
-          console.warn(`⚠️ [AuthContext] userProfile no disponible para cargar sucursales, reintentando (${retryCount + 1}/${MAX_RETRIES})...`);
           setTimeout(() => loadUserSucursales(userId, retryCount + 1), 1000);
           return [];
         } else {
-          console.error('❌ [AuthContext] Máximo de reintentos alcanzado para loadUserSucursales');
           setUserSucursales([]);
           setLoadingSucursales(false);
           return [];
@@ -397,36 +364,29 @@ const AuthContextComponent = ({ children }) => {
 
       if (!userEmpresas || userEmpresas.length === 0) {
         if (retryCount < MAX_RETRIES) {
-          console.warn(`⚠️ [AuthContext] No hay empresas disponibles para cargar sucursales, reintentando (${retryCount + 1}/${MAX_RETRIES})...`);
           setTimeout(() => loadUserSucursales(userId, retryCount + 1), 1000);
           return [];
         } else {
-          console.error('❌ [AuthContext] Máximo de reintentos alcanzado para loadUserSucursales (sin empresas)');
           setUserSucursales([]);
           setLoadingSucursales(false);
           return [];
         }
       }
 
-      console.log('🔄 [AuthContext] Cargando sucursales para', userEmpresas.length, 'empresas');
-      console.log('🔄 [AuthContext] IDs de empresas:', userEmpresas.map(emp => emp.id));
       setLoadingSucursales(true);
 
       let sucursalesData = [];
       
       if (role === 'supermax') {
         // Supermax ve todas las sucursales
-        console.log('🔄 [AuthContext] Supermax - cargando todas las sucursales');
         const sucursalesSnapshot = await getDocs(collection(db, 'sucursales'));
         sucursalesData = sucursalesSnapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data()
         }));
-        console.log('✅ [AuthContext] Supermax - sucursales cargadas:', sucursalesData.length);
       } else {
         // Para max y operario: cargar sucursales de sus empresas
         const empresasIds = userEmpresas.map(emp => emp.id);
-        console.log('🔄 [AuthContext] Cargando sucursales para empresas:', empresasIds);
         
         // Firestore limita 'in' queries a 10 elementos, dividir en chunks si es necesario
         const chunkSize = 10;
@@ -447,27 +407,22 @@ const AuthContextComponent = ({ children }) => {
 
         const sucursalesArrays = await Promise.all(sucursalesPromises);
         sucursalesData = sucursalesArrays.flat();
-        console.log('✅ [AuthContext] Sucursales cargadas para empresas:', sucursalesData.length);
       }
       
       setUserSucursales(sucursalesData);
       setLoadingSucursales(false);
-      console.log('✅ [AuthContext] Total sucursales cargadas:', sucursalesData.length);
       return sucursalesData;
     } catch (error) {
-      console.warn('⚠️ [AuthContext] Error cargando sucursales desde Firestore, intentando cache offline:', error);
-      
       // Fallback al cache offline si falla la carga desde Firestore
       try {
         const cachedData = await loadUserFromCache();
         if (cachedData?.sucursales && cachedData.sucursales.length > 0) {
-          console.log('✅ [AuthContext] Sucursales cargadas desde cache offline como fallback:', cachedData.sucursales.length);
           setUserSucursales(cachedData.sucursales);
           setLoadingSucursales(false);
           return cachedData.sucursales;
         }
       } catch (cacheError) {
-        console.error('❌ [AuthContext] Error cargando sucursales desde cache offline:', cacheError);
+        console.error('Error cargando sucursales desde cache offline:', cacheError);
       }
       
       setUserSucursales([]);
@@ -482,11 +437,9 @@ const AuthContextComponent = ({ children }) => {
     try {
       if (!userProfile) {
         if (retryCount < MAX_RETRIES) {
-          console.warn(`⚠️ [AuthContext] userProfile no disponible para cargar formularios, reintentando (${retryCount + 1}/${MAX_RETRIES})...`);
           setTimeout(() => loadUserFormularios(userId, retryCount + 1), 1000);
           return [];
         } else {
-          console.error('❌ [AuthContext] Máximo de reintentos alcanzado para loadUserFormularios');
           setUserFormularios([]);
           setLoadingFormularios(false);
           return [];
@@ -495,18 +448,15 @@ const AuthContextComponent = ({ children }) => {
 
       if (!userEmpresas || userEmpresas.length === 0) {
         if (retryCount < MAX_RETRIES) {
-          console.warn(`⚠️ [AuthContext] No hay empresas disponibles para cargar formularios, reintentando (${retryCount + 1}/${MAX_RETRIES})...`);
           setTimeout(() => loadUserFormularios(userId, retryCount + 1), 1000);
           return [];
         } else {
-          console.error('❌ [AuthContext] Máximo de reintentos alcanzado para loadUserFormularios (sin empresas)');
           setUserFormularios([]);
           setLoadingFormularios(false);
           return [];
         }
       }
 
-      console.log('🔄 [AuthContext] Cargando formularios para', userEmpresas.length, 'empresas');
       setLoadingFormularios(true);
 
       let formulariosData = [];
@@ -546,19 +496,16 @@ const AuthContextComponent = ({ children }) => {
       setLoadingFormularios(false);
       return formulariosData;
     } catch (error) {
-      console.warn('⚠️ [AuthContext] Error cargando formularios desde Firestore, intentando cache offline:', error);
-      
       // Fallback al cache offline si falla la carga desde Firestore
       try {
         const cachedData = await loadUserFromCache();
         if (cachedData?.formularios && cachedData.formularios.length > 0) {
-          console.log('✅ [AuthContext] Formularios cargados desde cache offline como fallback:', cachedData.formularios.length);
           setUserFormularios(cachedData.formularios);
           setLoadingFormularios(false);
           return cachedData.formularios;
         }
       } catch (cacheError) {
-        console.error('❌ [AuthContext] Error cargando formularios desde cache offline:', cacheError);
+        console.error('Error cargando formularios desde cache offline:', cacheError);
       }
       
       setUserFormularios([]);
@@ -628,16 +575,10 @@ const AuthContextComponent = ({ children }) => {
   const forceRefreshCache = async () => {
     if (userProfile) {
       try {
-        console.log('🔄 Forzando actualización del cache...');
         const cacheResult = await saveCompleteUserCache(userProfile);
-        console.log('✅ Cache actualizado:', {
-          empresas: cacheResult?.empresas?.length || 0,
-          formularios: cacheResult?.formularios?.length || 0,
-          sucursales: cacheResult?.sucursales?.length || 0
-        });
         return cacheResult;
       } catch (error) {
-        console.error('❌ Error actualizando cache:', error);
+        console.error('Error actualizando cache:', error);
         throw error;
       }
     }
