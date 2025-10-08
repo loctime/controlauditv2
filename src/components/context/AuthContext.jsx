@@ -147,7 +147,7 @@ const AuthContextComponent = ({ children }) => {
             
             // Cargar datos del usuario
             await Promise.all([
-              loadUserEmpresas(firebaseUser.uid),
+              loadUserEmpresas(firebaseUser.uid, profile, profile.role),
               loadUserAuditorias(firebaseUser.uid),
               loadAuditoriasCompartidas(firebaseUser.uid)
             ]);
@@ -306,25 +306,20 @@ const AuthContextComponent = ({ children }) => {
   };
 
   // Funciones de carga de datos
-  const loadUserEmpresas = async (userId, retryCount = 0) => {
-    const MAX_RETRIES = 3;
-    
+  const loadUserEmpresas = async (userId, providedProfile = null, providedRole = null) => {
     try {
+      // Usar los parámetros provistos o los del estado
+      const profileToUse = providedProfile || userProfile;
+      const roleToUse = providedRole || role;
+
       // Asegurar que tenemos los datos necesarios
-      if (!role || !userProfile) {
-        if (retryCount < MAX_RETRIES) {
-          console.warn(`⚠️ [AuthContext] Role o userProfile no disponibles, reintentando (${retryCount + 1}/${MAX_RETRIES})...`);
-          setTimeout(() => loadUserEmpresas(userId, retryCount + 1), 1000);
-          return [];
-        } else {
-          console.error('❌ [AuthContext] Máximo de reintentos alcanzado para loadUserEmpresas');
-          setUserEmpresas([]);
-          setLoadingEmpresas(false);
-          return [];
-        }
+      if (!roleToUse || !profileToUse) {
+        console.warn('⚠️ [AuthContext] Role o userProfile no disponibles aún');
+        setLoadingEmpresas(false);
+        return [];
       }
 
-      const empresas = await empresaService.getUserEmpresas(userId, role, userProfile?.clienteAdminId);
+      const empresas = await empresaService.getUserEmpresas(userId, roleToUse, profileToUse?.clienteAdminId);
       setUserEmpresas(empresas);
       setLoadingEmpresas(false);
       return empresas;
