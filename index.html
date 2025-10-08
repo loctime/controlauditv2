@@ -26,38 +26,33 @@
     <link rel="apple-touch-icon" sizes="57x57" href="/icons/icon-72x72.png" />
     <link rel="manifest" href="/manifest.json?v=5" />
     <script>
-      // Service Worker HABILITADO para modo offline
+      // ⚠️ Service Worker DESHABILITADO TEMPORALMENTE para debug
       if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-          // Registrar Service Worker
-          navigator.serviceWorker.register('/sw.js?v=14')
-            .then((registration) => {
-              console.log('✅ Service Worker registrado:', registration.scope);
-              
-              // Verificar actualizaciones
-              registration.addEventListener('updatefound', () => {
-                const newWorker = registration.installing;
-                newWorker.addEventListener('statechange', () => {
-                  if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                    console.log('🔄 Nueva versión disponible, recargando...');
-                    window.location.reload();
-                  }
-                });
-              });
-
-              // Forzar verificación inmediata de actualización
-              try {
-                registration.update();
-              } catch (e) {
-                // ignore
+        window.addEventListener('load', async () => {
+          try {
+            // Eliminar TODOS los service workers existentes
+            const registrations = await navigator.serviceWorker.getRegistrations();
+            for (let registration of registrations) {
+              await registration.unregister();
+              console.log('🗑️ Service Worker eliminado:', registration.scope);
+            }
+            
+            // Limpiar TODOS los caches
+            if ('caches' in window) {
+              const cacheNames = await caches.keys();
+              for (let cacheName of cacheNames) {
+                await caches.delete(cacheName);
+                console.log('🗑️ Cache eliminado:', cacheName);
               }
-            })
-            .catch((error) => {
-              console.error('❌ Error al registrar Service Worker:', error);
-            });
+            }
+            
+            console.log('✅ Service Worker DESHABILITADO - Sin cache');
+          } catch (error) {
+            console.error('❌ Error al limpiar:', error);
+          }
         });
       }
-      console.log('🔧 Service Worker habilitado para modo offline');
+      console.log('⚠️ Service Worker DESHABILITADO TEMPORALMENTE');
     </script>
     
     <!-- Script para limpiar cache (ejecutar en consola si es necesario) -->
