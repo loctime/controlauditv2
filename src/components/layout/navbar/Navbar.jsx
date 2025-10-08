@@ -41,11 +41,6 @@ function Navbar(props) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const { canInstall, handleInstall, handleShowInfo } = usePWAInstall();
-  
-  // Debug PWA
-  console.log('=== DEBUG PWA ===');
-  console.log('canInstall:', canInstall);
-  console.log('==================');
 
   // Obtener menú dinámico basado en rol y permisos
   const menuItems = getMenuItems(role, permisos);
@@ -77,16 +72,6 @@ function Navbar(props) {
         return 'Dashboard';
     }
   };
-
-  // Log de información de navegación
-  console.log('=== INFORMACIÓN DE NAVEGACIÓN ===');
-  console.log('Rol:', role);
-  console.log('Permisos:', permisos);
-  console.log('Menú generado:', menuItems.map(item => item.title));
-  console.log('Total de items en menú:', menuItems.length);
-  console.log('Dashboard route:', getDashboardRoute());
-  console.log('Dashboard text:', getDashboardText());
-  console.log('==================================');
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);

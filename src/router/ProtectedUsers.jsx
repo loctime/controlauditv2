@@ -6,9 +6,6 @@ import { Box, CircularProgress, Typography, Alert, Button } from "@mui/material"
 const ProtectedUsers = () => {
   const { isLogged, loading, bloqueado, motivoBloqueo, userProfile, logoutContext, role, permisos } = useAuth();
   
-  // Debug: mostrar información del usuario
-  console.log('ProtectedUsers - isLogged:', isLogged, 'loading:', loading, 'bloqueado:', bloqueado, 'role:', role, 'permisos:', permisos);
-  
   // Verificar si hay usuario en cache offline
   const hasOfflineUser = localStorage.getItem("isLogged") === "true" && localStorage.getItem("userInfo");
 

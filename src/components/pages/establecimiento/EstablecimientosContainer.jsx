@@ -60,20 +60,9 @@ const EstablecimientosContainer = () => {
   const [openEditModal, setOpenEditModal] = useState(false);
   const [empresaEdit, setEmpresaEdit] = useState(null);
 
-  // Debug logs para verificar el filtrado multi-tenant
-  useEffect(() => {
-    console.log('=== DEBUG Multi-Tenant Filtrado ===');
-    console.log('userProfile:', userProfile);
-    console.log('userEmpresas (filtradas):', userEmpresas);
-    console.log('Cantidad de empresas filtradas:', userEmpresas?.length || 0);
-    console.log('empresasCargadas:', empresasCargadas);
-    console.log('=== FIN DEBUG ===');
-  }, [userProfile, userEmpresas, empresasCargadas]);
-
   // Recargar empresas cuando el componente se monta
   useEffect(() => {
     if (userProfile && userProfile.uid && !empresasCargadas) {
-      console.log('Recargando empresas al montar componente...');
       setCargandoEmpresas(true);
       getUserEmpresas(userProfile.uid).finally(() => {
         setCargandoEmpresas(false);
@@ -256,7 +245,6 @@ const EstablecimientosContainer = () => {
   };
 
   const handleNavigateToSucursales = (empresaId) => {
-    console.log('[EstablecimientosContainer] Navegando a sucursales de empresa:', empresaId);
     navigate(`/sucursales/${empresaId}`);
   };
 
