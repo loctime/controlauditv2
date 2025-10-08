@@ -33,7 +33,7 @@ import { useAuth } from '../../context/AuthContext';
 import EmpleadoForm from './EmpleadoForm';
 
 export default function Empleados() {
-  const { userProfile, userSucursales } = useAuth();
+  const { userProfile, userSucursales, loadingSucursales } = useAuth();
   const [empleados, setEmpleados] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -44,10 +44,30 @@ export default function Empleados() {
   const [openForm, setOpenForm] = useState(false);
   const [selectedEmpleado, setSelectedEmpleado] = useState(null);
 
-  // Establecer sucursal inicial
+  // Establecer sucursal inicial (desde localStorage o primera disponible)
   useEffect(() => {
     if (userSucursales && userSucursales.length > 0 && !selectedSucursal) {
-      setSelectedSucursal(userSucursales[0].id);
+      // Primero intentar usar la sucursal guardada en localStorage
+      const savedSucursal = localStorage.getItem('selectedSucursal');
+      const savedEmpresa = localStorage.getItem('selectedEmpresa');
+      
+      if (savedSucursal && userSucursales.find(s => s.id === savedSucursal)) {
+        setSelectedSucursal(savedSucursal);
+        // Limpiar localStorage después de usar
+        localStorage.removeItem('selectedSucursal');
+      } else if (savedEmpresa) {
+        // Si hay empresa preseleccionada, filtrar sucursales de esa empresa
+        const sucursalesEmpresa = userSucursales.filter(s => s.empresaId === savedEmpresa);
+        if (sucursalesEmpresa.length > 0) {
+          setSelectedSucursal(sucursalesEmpresa[0].id);
+        } else {
+          setSelectedSucursal(userSucursales[0].id);
+        }
+        // Limpiar localStorage después de usar
+        localStorage.removeItem('selectedEmpresa');
+      } else {
+        setSelectedSucursal(userSucursales[0].id);
+      }
     }
   }, [userSucursales, selectedSucursal]);
 
@@ -121,6 +141,17 @@ export default function Empleados() {
 
   // Obtener cargos únicos para el filtro
   const uniqueCargos = [...new Set(empleados.map(emp => emp.cargo))].filter(Boolean);
+
+  // Mostrar loading mientras se cargan las sucursales
+  if (loadingSucursales) {
+    return (
+      <Container maxWidth="xl" sx={{ py: 3 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
+          <CircularProgress />
+        </Box>
+      </Container>
+    );
+  }
 
   if (!userSucursales || userSucursales.length === 0) {
     return (

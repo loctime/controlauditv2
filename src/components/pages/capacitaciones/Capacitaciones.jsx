@@ -30,7 +30,7 @@ import { useNavigate } from 'react-router-dom';
 import CapacitacionForm from './CapacitacionForm';
 
 export default function Capacitaciones() {
-  const { userProfile, userSucursales } = useAuth();
+  const { userProfile, userSucursales, loadingSucursales } = useAuth();
   const navigate = useNavigate();
   const [capacitaciones, setCapacitaciones] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -39,9 +39,36 @@ export default function Capacitaciones() {
   const [selectedSucursal, setSelectedSucursal] = useState('');
   const [openForm, setOpenForm] = useState(false);
 
+  // Debug: ver qué está pasando con las sucursales
+  useEffect(() => {
+    console.log('[Capacitaciones] loadingSucursales:', loadingSucursales);
+    console.log('[Capacitaciones] userSucursales:', userSucursales);
+    console.log('[Capacitaciones] userSucursales.length:', userSucursales?.length);
+  }, [userSucursales, loadingSucursales]);
+
   useEffect(() => {
     if (userSucursales && userSucursales.length > 0 && !selectedSucursal) {
-      setSelectedSucursal(userSucursales[0].id);
+      // Primero intentar usar la sucursal guardada en localStorage
+      const savedSucursal = localStorage.getItem('selectedSucursal');
+      const savedEmpresa = localStorage.getItem('selectedEmpresa');
+      
+      if (savedSucursal && userSucursales.find(s => s.id === savedSucursal)) {
+        setSelectedSucursal(savedSucursal);
+        // Limpiar localStorage después de usar
+        localStorage.removeItem('selectedSucursal');
+      } else if (savedEmpresa) {
+        // Si hay empresa preseleccionada, filtrar sucursales de esa empresa
+        const sucursalesEmpresa = userSucursales.filter(s => s.empresaId === savedEmpresa);
+        if (sucursalesEmpresa.length > 0) {
+          setSelectedSucursal(sucursalesEmpresa[0].id);
+        } else {
+          setSelectedSucursal(userSucursales[0].id);
+        }
+        // Limpiar localStorage después de usar
+        localStorage.removeItem('selectedEmpresa');
+      } else {
+        setSelectedSucursal(userSucursales[0].id);
+      }
     }
   }, [userSucursales, selectedSucursal]);
 
@@ -128,6 +155,17 @@ export default function Capacitaciones() {
     const matchEstado = !filterEstado || cap.estado === filterEstado;
     return matchTipo && matchEstado;
   });
+
+  // Mostrar loading mientras se cargan las sucursales
+  if (loadingSucursales) {
+    return (
+      <Container maxWidth="xl" sx={{ py: 3 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
+          <CircularProgress />
+        </Box>
+      </Container>
+    );
+  }
 
   if (!userSucursales || userSucursales.length === 0) {
     return (

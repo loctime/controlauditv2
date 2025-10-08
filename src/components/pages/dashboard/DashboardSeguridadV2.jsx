@@ -23,7 +23,27 @@ export default function DashboardSeguridadV2() {
   // Establecer sucursal inicial cuando se cargan las sucursales
   useEffect(() => {
     if (userSucursales && userSucursales.length > 0 && !selectedSucursal) {
-      setSelectedSucursal(userSucursales[0].id);
+      // Primero intentar usar la sucursal guardada en localStorage
+      const savedSucursal = localStorage.getItem('selectedSucursal');
+      const savedEmpresa = localStorage.getItem('selectedEmpresa');
+      
+      if (savedSucursal && userSucursales.find(s => s.id === savedSucursal)) {
+        setSelectedSucursal(savedSucursal);
+        // Limpiar localStorage después de usar
+        localStorage.removeItem('selectedSucursal');
+      } else if (savedEmpresa) {
+        // Si hay empresa preseleccionada, filtrar sucursales de esa empresa
+        const sucursalesEmpresa = userSucursales.filter(s => s.empresaId === savedEmpresa);
+        if (sucursalesEmpresa.length > 0) {
+          setSelectedSucursal(sucursalesEmpresa[0].id);
+        } else {
+          setSelectedSucursal(userSucursales[0].id);
+        }
+        // Limpiar localStorage después de usar
+        localStorage.removeItem('selectedEmpresa');
+      } else {
+        setSelectedSucursal(userSucursales[0].id);
+      }
     }
   }, [userSucursales, selectedSucursal]);
 
