@@ -9,6 +9,9 @@ import SettingsIcon from '@mui/icons-material/Settings';
 import AnalyticsIcon from '@mui/icons-material/Analytics';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import HealthAndSafetyIcon from '@mui/icons-material/HealthAndSafety';
+import PeopleIcon from '@mui/icons-material/People';
+import SchoolIcon from '@mui/icons-material/School';
+import ReportProblemIcon from '@mui/icons-material/ReportProblem';
 
 // Configuración de menús por rol y permisos
 export const getMenuItems = (role, permisos = {}) => {
@@ -88,7 +91,33 @@ export const getMenuItems = (role, permisos = {}) => {
       roles: ['max', 'supermax'],
       required: permisos.puedeCrearEmpresas || role === 'max' || role === 'supermax'
     },
-    
+  ];
+
+  const seguridadItems = [
+    {
+      id: "empleados",
+      path: "/empleados",
+      title: "Empleados",
+      Icon: PeopleIcon,
+      roles: ['max', 'supermax'],
+      required: true
+    },
+    {
+      id: "capacitaciones",
+      path: "/capacitaciones",
+      title: "Capacitaciones",
+      Icon: SchoolIcon,
+      roles: ['max', 'supermax'],
+      required: true
+    },
+    {
+      id: "accidentes",
+      path: "/accidentes",
+      title: "Accidentes",
+      Icon: ReportProblemIcon,
+      roles: ['max', 'supermax'],
+      required: true
+    }
   ];
 
   const reporteItems = [
@@ -149,6 +178,7 @@ export const getMenuItems = (role, permisos = {}) => {
     ...auditoriaItems,
     ...formularioItems,
     ...empresaItems,
+    ...seguridadItems,
     ...reporteItems,
     ...adminItems,
     ...developerItems,

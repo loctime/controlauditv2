@@ -15,40 +15,56 @@ import { db } from '../firebaseConfig';
 
 export const safetyDashboardService = {
   // Obtener datos del dashboard desde datos reales
-  async getDashboardData(companyId, period = '2025-01') {
+  async getDashboardData(companyId, sucursalId, period = '2025-01') {
     try {
-      console.log(`🔍 [SafetyDashboard] Obteniendo datos para empresa ${companyId}, período ${period}`);
+      console.log(`🔍 [SafetyDashboard] Obteniendo datos para empresa ${companyId}, sucursal ${sucursalId}, período ${period}`);
       
       // Obtener datos de múltiples fuentes en paralelo
       const [
         auditoriasData,
         logsData,
-        formulariosData
+        formulariosData,
+        empleadosData,
+        capacitacionesData,
+        accidentesData
       ] = await Promise.all([
         this.getAuditoriasData(companyId, period),
         this.getLogsData(companyId, period),
-        this.getFormulariosData(companyId, period)
+        this.getFormulariosData(companyId, period),
+        this.getEmpleados(sucursalId),
+        this.getCapacitaciones(sucursalId, period),
+        this.getAccidentes(sucursalId, period)
       ]);
 
       // Calcular métricas de seguridad
-      const metrics = this.calculateSafetyMetrics(auditoriasData, logsData, formulariosData);
+      const metrics = this.calculateSafetyMetrics(
+        auditoriasData, 
+        logsData, 
+        formulariosData,
+        empleadosData,
+        capacitacionesData,
+        accidentesData
+      );
       
-      // Obtener información de la empresa
+      // Obtener información de la empresa y sucursal
       const companyInfo = await this.getCompanyInfo(companyId);
+      const sucursalInfo = await this.getSucursalInfo(sucursalId);
       
       return {
         companyId,
+        sucursalId,
         companyName: companyInfo?.nombre || 'Empresa',
+        sucursalName: sucursalInfo?.nombre || 'Sucursal',
         period,
         ...metrics,
-        alerts: this.generateAlerts(auditoriasData, logsData, formulariosData),
-        chartData: this.generateChartData(auditoriasData, logsData, period)
+        alerts: this.generateAlerts(auditoriasData, logsData, formulariosData, accidentesData),
+        chartData: this.generateChartData(auditoriasData, logsData, accidentesData, period)
       };
       
     } catch (error) {
       console.error('❌ [SafetyDashboard] Error obteniendo datos:', error);
       // Retornar datos por defecto en caso de error
-      return this.getDefaultData(companyId, period);
+      return this.getDefaultData(companyId, sucursalId, period);
     }
   },
 
@@ -162,41 +178,152 @@ export const safetyDashboardService = {
     }
   },
 
+  // Obtener información de la sucursal
+  async getSucursalInfo(sucursalId) {
+    try {
+      const sucursalRef = doc(db, 'sucursales', sucursalId);
+      const sucursalDoc = await getDoc(sucursalRef);
+      
+      if (sucursalDoc.exists()) {
+        return { id: sucursalDoc.id, ...sucursalDoc.data() };
+      }
+      
+      return null;
+    } catch (error) {
+      console.error('❌ [SafetyDashboard] Error obteniendo info sucursal:', error);
+      return null;
+    }
+  },
+
+  // Obtener empleados de una sucursal
+  async getEmpleados(sucursalId) {
+    try {
+      const empleadosRef = collection(db, 'empleados');
+      const q = query(
+        empleadosRef,
+        where('sucursalId', '==', sucursalId),
+        orderBy('nombre', 'asc')
+      );
+      
+      const snapshot = await getDocs(q);
+      const empleados = [];
+      
+      snapshot.forEach(doc => {
+        empleados.push({
+          id: doc.id,
+          ...doc.data()
+        });
+      });
+      
+      console.log(`👥 [SafetyDashboard] ${empleados.length} empleados encontrados`);
+      return empleados;
+      
+    } catch (error) {
+      console.error('❌ [SafetyDashboard] Error obteniendo empleados:', error);
+      return [];
+    }
+  },
+
+  // Obtener capacitaciones de una sucursal
+  async getCapacitaciones(sucursalId, period) {
+    try {
+      const capacitacionesRef = collection(db, 'capacitaciones');
+      const q = query(
+        capacitacionesRef,
+        where('sucursalId', '==', sucursalId),
+        orderBy('fechaRealizada', 'desc')
+      );
+      
+      const snapshot = await getDocs(q);
+      const capacitaciones = [];
+      
+      snapshot.forEach(doc => {
+        capacitaciones.push({
+          id: doc.id,
+          ...doc.data()
+        });
+      });
+      
+      console.log(`📚 [SafetyDashboard] ${capacitaciones.length} capacitaciones encontradas`);
+      return capacitaciones;
+      
+    } catch (error) {
+      console.error('❌ [SafetyDashboard] Error obteniendo capacitaciones:', error);
+      return [];
+    }
+  },
+
+  // Obtener accidentes de una sucursal
+  async getAccidentes(sucursalId, period) {
+    try {
+      const accidentesRef = collection(db, 'accidentes');
+      const q = query(
+        accidentesRef,
+        where('sucursalId', '==', sucursalId),
+        orderBy('fechaHora', 'desc')
+      );
+      
+      const snapshot = await getDocs(q);
+      const accidentes = [];
+      
+      snapshot.forEach(doc => {
+        accidentes.push({
+          id: doc.id,
+          ...doc.data()
+        });
+      });
+      
+      console.log(`🚨 [SafetyDashboard] ${accidentes.length} accidentes encontrados`);
+      return accidentes;
+      
+    } catch (error) {
+      console.error('❌ [SafetyDashboard] Error obteniendo accidentes:', error);
+      return [];
+    }
+  },
+
   // Calcular métricas de seguridad desde datos reales
-  calculateSafetyMetrics(auditorias, logs, formularios) {
-    // Contar accidentes e incidentes desde logs
-    const accidents = logs.filter(log => 
-      log.accion?.toLowerCase().includes('accidente') ||
-      log.detalles?.tipo === 'accidente'
-    );
-    
-    const incidents = logs.filter(log => 
-      log.accion?.toLowerCase().includes('incidente') ||
-      log.detalles?.tipo === 'incidente'
-    );
+  calculateSafetyMetrics(auditorias, logs, formularios, empleados, capacitaciones, accidentes) {
+    // Métricas de empleados (datos reales)
+    const empleadosActivos = empleados.filter(e => e.estado === 'activo');
+    const totalEmployees = empleadosActivos.length;
+    const operators = empleados.filter(e => e.tipo === 'operativo' && e.estado === 'activo').length;
+    const administrators = empleados.filter(e => e.tipo === 'administrativo' && e.estado === 'activo').length;
+    const hoursWorked = totalEmployees * 8 * 30; // 8 horas × 30 días
+
+    // Métricas de accidentes (datos reales de la nueva colección)
+    const accidents = accidentes.filter(a => a.tipo === 'accidente');
+    const incidents = accidentes.filter(a => a.tipo === 'incidente');
 
     // Calcular días sin accidentes
     const lastAccident = accidents.length > 0 ? 
-      new Date(accidents[0].fecha?.toDate?.() || accidents[0].fecha) : null;
+      new Date(accidents[0].fechaHora?.toDate?.() || accidents[0].fechaHora) : null;
     const daysWithoutAccidents = lastAccident ? 
       Math.floor((Date.now() - lastAccident.getTime()) / (1000 * 60 * 60 * 24)) : 0;
 
-    // Calcular índices de frecuencia y severidad (simplificados)
-    const totalEmployees = 50; // Esto debería venir de datos reales
-    const hoursWorked = totalEmployees * 8 * 30; // Estimación mensual
-    
-    const frequencyIndex = accidents.length > 0 ? 
+    // Calcular índices de frecuencia y severidad
+    const frequencyIndex = accidents.length > 0 && hoursWorked > 0 ? 
       (accidents.length * 1000000) / hoursWorked : 0;
     
-    const severityIndex = accidents.length > 0 ? 
-      (accidents.reduce((sum, acc) => sum + (acc.detalles?.diasPerdidos || 0), 0) * 1000000) / hoursWorked : 0;
+    const totalDaysLost = accidents.reduce((sum, acc) => sum + (acc.diasPerdidos || 0), 0);
+    const severityIndex = totalDaysLost > 0 && hoursWorked > 0 ? 
+      (totalDaysLost * 1000000) / hoursWorked : 0;
 
-    // Calcular capacitaciones desde formularios
-    const trainingForms = formularios.filter(f => 
-      f.nombre?.toLowerCase().includes('capacitación') ||
-      f.nombre?.toLowerCase().includes('entrenamiento') ||
-      f.nombre?.toLowerCase().includes('training')
-    );
+    // Métricas de capacitaciones (datos reales de la nueva colección)
+    const trainingsDone = capacitaciones.filter(c => c.estado === 'completada').length;
+    const trainingsPlanned = capacitaciones.filter(c => c.estado === 'activa').length;
+
+    // Capacitaciones por tipo
+    const charlas = capacitaciones.filter(c => c.tipo === 'charla');
+    const entrenamientos = capacitaciones.filter(c => c.tipo === 'entrenamiento');
+    const capacitacionesAvanzadas = capacitaciones.filter(c => c.tipo === 'capacitacion');
+
+    const charlasProgress = charlas.length > 0 ? 
+      Math.round((charlas.filter(c => c.estado === 'completada').length / charlas.length) * 100) : 0;
+    const entrenamientosProgress = entrenamientos.length > 0 ? 
+      Math.round((entrenamientos.filter(c => c.estado === 'completada').length / entrenamientos.length) * 100) : 0;
+    const capacitacionesProgress = capacitacionesAvanzadas.length > 0 ? 
+      Math.round((capacitacionesAvanzadas.filter(c => c.estado === 'completada').length / capacitacionesAvanzadas.length) * 100) : 0;
 
     // Calcular inspecciones desde auditorías
     const inspections = auditorias.filter(a => 
@@ -227,35 +354,46 @@ export const safetyDashboardService = {
       Math.round((conformes / totalAuditorias) * 100) : 100;
 
     return {
+      // Métricas de accidentes
       totalAccidents: accidents.length,
       totalIncidents: incidents.length,
       daysWithoutAccidents,
       frequencyIndex: Number(frequencyIndex.toFixed(1)),
       severityIndex: Number(severityIndex.toFixed(1)),
       accidentabilityIndex: Number((frequencyIndex + severityIndex).toFixed(1)),
-      trainingsDone: trainingForms.length,
-      trainingsPlanned: trainingForms.length + 2, // Estimación
+      
+      // Métricas de capacitaciones
+      trainingsDone,
+      trainingsPlanned,
+      
+      // Métricas de inspecciones
       inspectionsDone: inspections.length,
       inspectionsPlanned: inspections.length + 5, // Estimación
+      
+      // Métricas de desvíos
       deviationsFound: deviations,
       deviationsClosed: closedDeviations,
+      
+      // Métricas de cumplimiento
       eppDeliveryRate: Math.min(100, Math.max(80, 100 - (deviations * 2))),
       contractorCompliance: Math.min(100, Math.max(85, legalCompliance - 5)),
       legalCompliance,
-      // Métricas adicionales para el nuevo dashboard
-      totalEmployees: totalEmployees,
-      operators: Math.floor(totalEmployees * 0.75), // Estimación
-      administrators: Math.floor(totalEmployees * 0.25), // Estimación
-      hoursWorked: hoursWorked,
-      // Métricas de capacitación detalladas
-      charlasProgress: Math.min(100, Math.max(80, legalCompliance + 5)),
-      entrenamientosProgress: Math.min(100, Math.max(50, legalCompliance - 10)),
-      capacitacionesProgress: Math.min(100, Math.max(30, legalCompliance - 20))
+      
+      // Métricas de empleados (DATOS REALES)
+      totalEmployees,
+      operators,
+      administrators,
+      hoursWorked,
+      
+      // Métricas de capacitación detalladas (DATOS REALES)
+      charlasProgress,
+      entrenamientosProgress,
+      capacitacionesProgress
     };
   },
 
   // Generar alertas basadas en datos reales
-  generateAlerts(auditorias, logs, formularios) {
+  generateAlerts(auditorias, logs, formularios, accidentes) {
     const alerts = [];
     
     // Alertas por auditorías no conformes
@@ -279,19 +417,22 @@ export const safetyDashboardService = {
       alerts.push(`${oldTrainings.length} capacitación(es) requieren renovación`);
     }
 
-    // Alertas por accidentes recientes
-    const recentAccidents = logs.filter(log => {
-      if (!log.fecha) return false;
-      const accidentDate = log.fecha.toDate ? log.fecha.toDate() : new Date(log.fecha);
+    // Alertas por accidentes recientes (de la nueva colección)
+    const recentAccidents = accidentes.filter(acc => {
+      if (!acc.fechaHora) return false;
+      const accidentDate = acc.fechaHora.toDate ? acc.fechaHora.toDate() : new Date(acc.fechaHora);
       const daysDiff = (Date.now() - accidentDate.getTime()) / (1000 * 60 * 60 * 24);
-      return daysDiff < 30 && (
-        log.accion?.toLowerCase().includes('accidente') ||
-        log.detalles?.tipo === 'accidente'
-      );
+      return daysDiff < 30 && acc.tipo === 'accidente';
     });
     
     if (recentAccidents.length > 0) {
       alerts.push(`${recentAccidents.length} accidente(s) reportado(s) en los últimos 30 días`);
+    }
+
+    // Alertas por accidentes abiertos
+    const openAccidents = accidentes.filter(acc => acc.estado === 'abierto');
+    if (openAccidents.length > 0) {
+      alerts.push(`${openAccidents.length} accidente(s) en investigación`);
     }
 
     // Alertas por inspecciones pendientes
@@ -307,30 +448,24 @@ export const safetyDashboardService = {
   },
 
   // Generar datos para gráficos
-  generateChartData(auditorias, logs, period) {
-    // Datos de accidentes por mes (últimos 6 meses)
+  generateChartData(auditorias, logs, accidentes, period) {
+    // Datos de accidentes por mes (últimos 6 meses) - usar nueva colección
     const months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun'];
     const accidentsByMonth = months.map(month => {
-      const accidents = logs.filter(log => {
-        if (!log.fecha) return false;
-        const logDate = log.fecha.toDate ? log.fecha.toDate() : new Date(log.fecha);
-        const monthIndex = logDate.getMonth();
-        return monthIndex === months.indexOf(month) && (
-          log.accion?.toLowerCase().includes('accidente') ||
-          log.detalles?.tipo === 'accidente'
-        );
+      const accidents = accidentes.filter(acc => {
+        if (!acc.fechaHora) return false;
+        const accDate = acc.fechaHora.toDate ? acc.fechaHora.toDate() : new Date(acc.fechaHora);
+        const monthIndex = accDate.getMonth();
+        return monthIndex === months.indexOf(month) && acc.tipo === 'accidente';
       });
       return { month, accidents: accidents.length };
     });
 
-    // Datos de incidentes por tipo
+    // Datos de incidentes por tipo - usar nueva colección
     const incidentTypes = {};
-    logs.forEach(log => {
-      if (log.detalles?.tipo && (
-        log.accion?.toLowerCase().includes('incidente') ||
-        log.detalles?.tipo === 'incidente'
-      )) {
-        const type = log.detalles.tipo;
+    accidentes.forEach(acc => {
+      if (acc.tipo === 'incidente') {
+        const type = acc.gravedad || 'Otros';
         incidentTypes[type] = (incidentTypes[type] || 0) + 1;
       }
     });
@@ -402,10 +537,12 @@ export const safetyDashboardService = {
   },
 
   // Datos por defecto en caso de error
-  getDefaultData(companyId, period) {
+  getDefaultData(companyId, sucursalId, period) {
     return {
       companyId,
+      sucursalId,
       companyName: 'Empresa',
+      sucursalName: 'Sucursal',
       period,
       totalAccidents: 0,
       totalIncidents: 0,
@@ -421,6 +558,13 @@ export const safetyDashboardService = {
       eppDeliveryRate: 100,
       contractorCompliance: 100,
       legalCompliance: 100,
+      totalEmployees: 0,
+      operators: 0,
+      administrators: 0,
+      hoursWorked: 0,
+      charlasProgress: 0,
+      entrenamientosProgress: 0,
+      capacitacionesProgress: 0,
       alerts: ['Cargando datos del sistema...'],
       chartData: {
         accidentsByMonth: [],
@@ -432,6 +576,6 @@ export const safetyDashboardService = {
 };
 
 // Función de compatibilidad con la versión anterior
-export async function getSafetyDashboardData(companyId, period) {
-  return await safetyDashboardService.getDashboardData(companyId, period);
+export async function getSafetyDashboardData(companyId, sucursalId, period) {
+  return await safetyDashboardService.getDashboardData(companyId, sucursalId, period);
 }

@@ -5,6 +5,7 @@ import { useAuth } from "../../context/AuthContext";
 
 // Componentes nuevos
 import PeriodSelector from "../../dashboard-seguridad/PeriodSelector";
+import SucursalSelector from "../../dashboard-seguridad/SucursalSelector";
 import GaugeChart from "../../dashboard-seguridad/GaugeChart";
 import EmployeeMetrics from "../../dashboard-seguridad/EmployeeMetrics";
 import SafetyGoals from "../../dashboard-seguridad/SafetyGoals";
@@ -12,20 +13,34 @@ import TrainingMetrics from "../../dashboard-seguridad/TrainingMetrics";
 import SafetyCharts from "../../dashboard-seguridad/SafetyCharts";
 
 export default function DashboardSeguridadV2() {
-  const { userProfile } = useAuth();
+  const { userProfile, userSucursales } = useAuth();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
+  const [selectedSucursal, setSelectedSucursal] = useState(null);
+
+  // Establecer sucursal inicial cuando se cargan las sucursales
+  useEffect(() => {
+    if (userSucursales && userSucursales.length > 0 && !selectedSucursal) {
+      setSelectedSucursal(userSucursales[0].id);
+    }
+  }, [userSucursales, selectedSucursal]);
 
   useEffect(() => {
     const fetchData = async () => {
+      if (!selectedSucursal) return;
+      
       setLoading(true);
       try {
         const companyId = userProfile?.empresaId || userProfile?.uid || 'company-001';
         const currentPeriod = `${selectedYear}-${selectedMonth.toString().padStart(2, '0')}`;
         
-        const dashboardData = await safetyDashboardService.getDashboardData(companyId, currentPeriod);
+        const dashboardData = await safetyDashboardService.getDashboardData(
+          companyId, 
+          selectedSucursal,
+          currentPeriod
+        );
         setData(dashboardData);
       } catch (error) {
         console.error('Error al cargar datos del dashboard:', error);
@@ -34,7 +49,7 @@ export default function DashboardSeguridadV2() {
       }
     };
     fetchData();
-  }, [userProfile, selectedYear, selectedMonth]);
+  }, [userProfile, selectedYear, selectedMonth, selectedSucursal]);
 
   if (loading || !data) {
     return (
@@ -90,13 +105,24 @@ export default function DashboardSeguridadV2() {
         </Typography>
       </Paper>
 
-      {/* Selector de Período */}
-      <PeriodSelector
-        selectedYear={selectedYear}
-        selectedMonth={selectedMonth}
-        onYearChange={setSelectedYear}
-        onMonthChange={setSelectedMonth}
-      />
+      {/* Selectores de Período y Sucursal */}
+      <Grid container spacing={2} sx={{ mb: 3 }}>
+        <Grid item xs={12} md={6}>
+          <SucursalSelector
+            sucursales={userSucursales || []}
+            selectedSucursal={selectedSucursal}
+            onSucursalChange={setSelectedSucursal}
+          />
+        </Grid>
+        <Grid item xs={12} md={6}>
+          <PeriodSelector
+            selectedYear={selectedYear}
+            selectedMonth={selectedMonth}
+            onYearChange={setSelectedYear}
+            onMonthChange={setSelectedMonth}
+          />
+        </Grid>
+      </Grid>
 
       {/* Grid Principal */}
       <Grid container spacing={3}>

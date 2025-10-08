@@ -18,6 +18,10 @@ const OperarioDashboard = lazy(() => import("../components/pages/user/OperarioDa
 const PermissionsDebug = lazy(() => import("../components/pages/debug/PermissionsDebug"));
 const GaleriaFormulariosPublicos = lazy(() => import('../components/pages/formulario/GaleriaFormulariosPublicos'));
 const ConfiguracionPage = lazy(() => import('../components/pages/configuracion/ConfiguracionPage'));
+const Empleados = lazy(() => import('../components/pages/empleados/Empleados'));
+const Capacitaciones = lazy(() => import('../components/pages/capacitaciones/Capacitaciones'));
+const RegistrarAsistencia = lazy(() => import('../components/pages/capacitaciones/RegistrarAsistencia'));
+const Accidentes = lazy(() => import('../components/pages/accidentes/Accidentes'));
 
 export const routes = [
   {
@@ -106,5 +110,25 @@ export const routes = [
     id: "configuracion",
     path: "/configuracion",
     Element: ConfiguracionPage,
+  },
+  {
+    id: "empleados",
+    path: "/empleados",
+    Element: Empleados,
+  },
+  {
+    id: "capacitaciones",
+    path: "/capacitaciones",
+    Element: Capacitaciones,
+  },
+  {
+    id: "capacitacion-asistencia",
+    path: "/capacitacion/:capacitacionId/asistencia",
+    Element: RegistrarAsistencia,
+  },
+  {
+    id: "accidentes",
+    path: "/accidentes",
+    Element: Accidentes,
   }
 ];
