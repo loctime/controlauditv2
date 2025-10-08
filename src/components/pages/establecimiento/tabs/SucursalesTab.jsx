@@ -42,6 +42,13 @@ const SucursalesTab = ({ empresaId, empresaNombre, userEmpresas, loadEmpresasSta
   const [sucursalesStats, setSucursalesStats] = useState({});
   const [activeTabPerSucursal, setActiveTabPerSucursal] = useState({});
 
+  // Función para recargar estadísticas de sucursales
+  const reloadSucursalesStats = async () => {
+    if (sucursales && sucursales.length > 0) {
+      await loadSucursalesStats(sucursales);
+    }
+  };
+
   useEffect(() => {
     if (empresaId) {
       loadSucursales();
@@ -270,7 +277,14 @@ const SucursalesTab = ({ empresaId, empresaNombre, userEmpresas, loadEmpresasSta
                         <Collapse in={isExpanded} timeout="auto" unmountOnExit>
                           <Box sx={{ p: 3, backgroundColor: '#fafafa', borderTop: '1px solid #e0e0e0' }}>
                             {getActiveTab(sucursal.id) === 'empleados' && (
-                              <EmpleadosContent sucursalId={sucursal.id} sucursalNombre={sucursal.nombre} navigateToPage={navigateToPage} />
+                              <EmpleadosContent 
+                                sucursalId={sucursal.id} 
+                                sucursalNombre={sucursal.nombre} 
+                                navigateToPage={navigateToPage}
+                                reloadSucursalesStats={reloadSucursalesStats}
+                                loadEmpresasStats={loadEmpresasStats}
+                                userEmpresas={userEmpresas}
+                              />
                             )}
                             {getActiveTab(sucursal.id) === 'capacitaciones' && (
                               <CapacitacionesContent sucursalId={sucursal.id} sucursalNombre={sucursal.nombre} navigateToPage={navigateToPage} />
@@ -397,9 +411,21 @@ const SucursalesTab = ({ empresaId, empresaNombre, userEmpresas, loadEmpresasSta
 };
 
 // Componente para mostrar empleados
-const EmpleadosContent = ({ sucursalId, sucursalNombre, navigateToPage }) => {
+const EmpleadosContent = ({ sucursalId, sucursalNombre, navigateToPage, reloadSucursalesStats, loadEmpresasStats, userEmpresas }) => {
+  const { userProfile } = useAuth();
   const [empleados, setEmpleados] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [openEmpleadoForm, setOpenEmpleadoForm] = useState(false);
+  const [empleadoForm, setEmpleadoForm] = useState({
+    nombre: '',
+    apellido: '',
+    dni: '',
+    telefono: '',
+    email: '',
+    cargo: '',
+    area: '',
+    fechaIngreso: ''
+  });
 
   useEffect(() => {
     if (sucursalId) {
@@ -424,6 +450,76 @@ const EmpleadosContent = ({ sucursalId, sucursalNombre, navigateToPage }) => {
     }
   };
 
+  const handleEmpleadoFormChange = (e) => {
+    const { name, value } = e.target;
+    setEmpleadoForm(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handleAddEmpleado = async () => {
+    if (!empleadoForm.nombre.trim() || !empleadoForm.apellido.trim()) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: 'El nombre y apellido son requeridos'
+      });
+      return;
+    }
+
+    try {
+      await addDoc(collection(db, 'empleados'), {
+        ...empleadoForm,
+        sucursalId: sucursalId,
+        sucursalNombre: sucursalNombre,
+        estado: 'activo',
+        fechaCreacion: Timestamp.now(),
+        creadoPor: userProfile?.uid,
+        creadoPorEmail: userProfile?.email,
+        clienteAdminId: userProfile?.clienteAdminId || userProfile?.uid
+      });
+
+      setEmpleadoForm({
+        nombre: '',
+        apellido: '',
+        dni: '',
+        telefono: '',
+        email: '',
+        cargo: '',
+        area: '',
+        fechaIngreso: ''
+      });
+      setOpenEmpleadoForm(false);
+      
+      // Recargar lista de empleados
+      await loadEmpleados();
+
+      // Recargar estadísticas de la sucursal
+      if (typeof reloadSucursalesStats === 'function') {
+        await reloadSucursalesStats();
+      }
+
+      // Recargar estadísticas de la empresa completa
+      if (typeof loadEmpresasStats === 'function' && userEmpresas) {
+        await loadEmpresasStats(userEmpresas);
+      }
+
+      Swal.fire({
+        icon: 'success',
+        title: 'Éxito',
+        text: 'Empleado creado exitosamente'
+      });
+    } catch (error) {
+      console.error('Error creando empleado:', error);
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: 'Error al crear el empleado: ' + error.message
+      });
+    }
+  };
+
   return (
     <Box>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
@@ -431,10 +527,10 @@ const EmpleadosContent = ({ sucursalId, sucursalNombre, navigateToPage }) => {
         <Button
           variant="contained"
           startIcon={<PeopleIcon />}
-          onClick={() => navigateToPage('/empleados', sucursalId)}
+          onClick={() => setOpenEmpleadoForm(true)}
           size="small"
         >
-          Gestionar Empleados
+          Agregar Empleado
         </Button>
       </Box>
 
@@ -469,6 +565,228 @@ const EmpleadosContent = ({ sucursalId, sucursalNombre, navigateToPage }) => {
             </TableBody>
           </Table>
         </TableContainer>
+      )}
+
+      {/* Modal para agregar empleado */}
+      {openEmpleadoForm && (
+        <Box
+          sx={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0,0,0,0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1300
+          }}
+          onClick={() => setOpenEmpleadoForm(false)}
+        >
+          <Paper
+            sx={{ p: 3, maxWidth: 600, width: '90%', maxHeight: '90vh', overflow: 'auto' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <Typography variant="h6" sx={{ mb: 3 }}>
+              Agregar Empleado a {sucursalNombre}
+            </Typography>
+            
+            <Grid container spacing={2}>
+              {/* Nombre */}
+              <Grid item xs={12} sm={6}>
+                <Typography variant="body2" sx={{ mb: 1 }}>
+                  Nombre *
+                </Typography>
+                <input
+                  type="text"
+                  name="nombre"
+                  value={empleadoForm.nombre}
+                  onChange={handleEmpleadoFormChange}
+                  placeholder="Nombre del empleado"
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    border: '1px solid #ccc',
+                    borderRadius: '4px',
+                    fontSize: '14px',
+                    boxSizing: 'border-box'
+                  }}
+                />
+              </Grid>
+
+              {/* Apellido */}
+              <Grid item xs={12} sm={6}>
+                <Typography variant="body2" sx={{ mb: 1 }}>
+                  Apellido *
+                </Typography>
+                <input
+                  type="text"
+                  name="apellido"
+                  value={empleadoForm.apellido}
+                  onChange={handleEmpleadoFormChange}
+                  placeholder="Apellido del empleado"
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    border: '1px solid #ccc',
+                    borderRadius: '4px',
+                    fontSize: '14px',
+                    boxSizing: 'border-box'
+                  }}
+                />
+              </Grid>
+
+              {/* DNI */}
+              <Grid item xs={12} sm={6}>
+                <Typography variant="body2" sx={{ mb: 1 }}>
+                  DNI
+                </Typography>
+                <input
+                  type="text"
+                  name="dni"
+                  value={empleadoForm.dni}
+                  onChange={handleEmpleadoFormChange}
+                  placeholder="Número de DNI"
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    border: '1px solid #ccc',
+                    borderRadius: '4px',
+                    fontSize: '14px',
+                    boxSizing: 'border-box'
+                  }}
+                />
+              </Grid>
+
+              {/* Teléfono */}
+              <Grid item xs={12} sm={6}>
+                <Typography variant="body2" sx={{ mb: 1 }}>
+                  Teléfono
+                </Typography>
+                <input
+                  type="text"
+                  name="telefono"
+                  value={empleadoForm.telefono}
+                  onChange={handleEmpleadoFormChange}
+                  placeholder="Teléfono de contacto"
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    border: '1px solid #ccc',
+                    borderRadius: '4px',
+                    fontSize: '14px',
+                    boxSizing: 'border-box'
+                  }}
+                />
+              </Grid>
+
+              {/* Email */}
+              <Grid item xs={12}>
+                <Typography variant="body2" sx={{ mb: 1 }}>
+                  Email
+                </Typography>
+                <input
+                  type="email"
+                  name="email"
+                  value={empleadoForm.email}
+                  onChange={handleEmpleadoFormChange}
+                  placeholder="Email del empleado"
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    border: '1px solid #ccc',
+                    borderRadius: '4px',
+                    fontSize: '14px',
+                    boxSizing: 'border-box'
+                  }}
+                />
+              </Grid>
+
+              {/* Cargo */}
+              <Grid item xs={12} sm={6}>
+                <Typography variant="body2" sx={{ mb: 1 }}>
+                  Cargo
+                </Typography>
+                <input
+                  type="text"
+                  name="cargo"
+                  value={empleadoForm.cargo}
+                  onChange={handleEmpleadoFormChange}
+                  placeholder="Cargo o puesto"
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    border: '1px solid #ccc',
+                    borderRadius: '4px',
+                    fontSize: '14px',
+                    boxSizing: 'border-box'
+                  }}
+                />
+              </Grid>
+
+              {/* Área */}
+              <Grid item xs={12} sm={6}>
+                <Typography variant="body2" sx={{ mb: 1 }}>
+                  Área
+                </Typography>
+                <input
+                  type="text"
+                  name="area"
+                  value={empleadoForm.area}
+                  onChange={handleEmpleadoFormChange}
+                  placeholder="Área o departamento"
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    border: '1px solid #ccc',
+                    borderRadius: '4px',
+                    fontSize: '14px',
+                    boxSizing: 'border-box'
+                  }}
+                />
+              </Grid>
+
+              {/* Fecha de Ingreso */}
+              <Grid item xs={12}>
+                <Typography variant="body2" sx={{ mb: 1 }}>
+                  Fecha de Ingreso
+                </Typography>
+                <input
+                  type="date"
+                  name="fechaIngreso"
+                  value={empleadoForm.fechaIngreso}
+                  onChange={handleEmpleadoFormChange}
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    border: '1px solid #ccc',
+                    borderRadius: '4px',
+                    fontSize: '14px',
+                    boxSizing: 'border-box'
+                  }}
+                />
+              </Grid>
+            </Grid>
+
+            <Box sx={{ display: 'flex', gap: 2, mt: 3 }}>
+              <Button
+                variant="contained"
+                onClick={handleAddEmpleado}
+                sx={{ flex: 1 }}
+              >
+                Crear Empleado
+              </Button>
+              <Button
+                variant="outlined"
+                onClick={() => setOpenEmpleadoForm(false)}
+                sx={{ flex: 1 }}
+              >
+                Cancelar
+              </Button>
+            </Box>
+          </Paper>
+        </Box>
       )}
     </Box>
   );
