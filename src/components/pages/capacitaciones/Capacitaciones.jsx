@@ -25,7 +25,9 @@ import {
   ContentCopy as CopyIcon,
   People as PeopleIcon,
   Business as BusinessIcon,
-  Storefront as StorefrontIcon
+  Storefront as StorefrontIcon,
+  Edit as EditIcon,
+  CalendarMonth as CalendarIcon
 } from '@mui/icons-material';
 import { collection, query, where, getDocs, updateDoc, doc, addDoc, Timestamp } from 'firebase/firestore';
 import { db } from '../../../firebaseConfig';
@@ -44,12 +46,14 @@ export default function Capacitaciones() {
   
   // Estado para pestaña "Ver Capacitaciones"
   const [capacitaciones, setCapacitaciones] = useState([]);
+  const [planesAnuales, setPlanesAnuales] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filterTipo, setFilterTipo] = useState('');
   const [filterEstado, setFilterEstado] = useState('');
   const [selectedEmpresa, setSelectedEmpresa] = useState('');
   const [selectedSucursal, setSelectedSucursal] = useState('');
   const [openForm, setOpenForm] = useState(false);
+  const [editingPlanAnual, setEditingPlanAnual] = useState(null);
   
   // Estado para pestaña "Realizar Capacitación" (filtros independientes)
   const [realizarCapSelectedEmpresa, setRealizarCapSelectedEmpresa] = useState('');
@@ -61,6 +65,12 @@ export default function Capacitaciones() {
 
   // Usar sucursales locales si están disponibles, sino usar las del contexto
   const sucursalesDisponibles = localSucursales.length > 0 ? localSucursales : userSucursales;
+  
+  console.log('[Capacitaciones] sucursalesDisponibles calculado:', {
+    localSucursales: localSucursales.length,
+    userSucursales: userSucursales?.length || 0,
+    sucursalesDisponibles: sucursalesDisponibles?.length || 0
+  });
   
   // Filtrar sucursales por empresa seleccionada
   const sucursalesFiltradas = selectedEmpresa 
@@ -77,8 +87,117 @@ export default function Capacitaciones() {
       console.log('[Capacitaciones] 🎉 Sucursales encontradas:', userSucursales.map(s => s.nombre));
       // Guardar en estado local para evitar que se pierdan
       setLocalSucursales(userSucursales);
+    } else {
+      console.log('[Capacitaciones] ❌ Sucursales perdidas después de cargar');
     }
   }, [userSucursales, loadingSucursales]);
+
+  // Definir loadCapacitaciones ANTES de usarla en useEffect
+  const loadCapacitaciones = useCallback(async () => {
+    setLoading(true);
+    try {
+      console.log('[Capacitaciones] loadCapacitaciones iniciada con:', {
+        selectedEmpresa,
+        selectedSucursal,
+        sucursalesDisponibles: sucursalesDisponibles?.length || 0
+      });
+
+      // Cargar capacitaciones individuales
+      const capacitacionesRef = collection(db, 'capacitaciones');
+      let q;
+      
+      if (selectedSucursal) {
+        // Filtrar por sucursal específica
+        console.log('[Capacitaciones] Filtrando por sucursal:', selectedSucursal);
+        q = query(capacitacionesRef, where('sucursalId', '==', selectedSucursal));
+      } else if (selectedEmpresa) {
+        // Filtrar por todas las sucursales de la empresa seleccionada
+        const sucursalesEmpresa = sucursalesDisponibles.filter(s => s.empresaId === selectedEmpresa).map(s => s.id);
+        
+        console.log('[Capacitaciones] Sucursales de empresa:', sucursalesEmpresa);
+        
+        // Verificar que hay sucursales antes de hacer la query
+        if (sucursalesEmpresa.length === 0) {
+          console.log('[Capacitaciones] No hay sucursales para la empresa, retornando array vacío');
+          setCapacitaciones([]);
+          setPlanesAnuales([]);
+          setLoading(false);
+          return;
+        }
+        
+        q = query(capacitacionesRef, where('sucursalId', 'in', sucursalesEmpresa));
+      } else {
+        // Mostrar todas las capacitaciones del usuario
+        console.log('[Capacitaciones] Cargando todas las capacitaciones');
+        q = capacitacionesRef;
+      }
+      
+      const snapshot = await getDocs(q);
+      const capacitacionesData = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+        tipo: 'individual'
+      }));
+      
+      console.log('[Capacitaciones] Capacitaciones individuales encontradas:', capacitacionesData.length);
+      
+      // Cargar planes anuales
+      const planesRef = collection(db, 'planes_capacitaciones_anuales');
+      let planesQ;
+      
+      if (selectedSucursal) {
+        planesQ = query(
+          planesRef, 
+          where('sucursalId', '==', selectedSucursal),
+          where('año', '==', new Date().getFullYear())
+        );
+      } else if (selectedEmpresa) {
+        const sucursalesEmpresa = sucursalesDisponibles.filter(s => s.empresaId === selectedEmpresa).map(s => s.id);
+        if (sucursalesEmpresa.length > 0) {
+          planesQ = query(
+            planesRef,
+            where('empresaId', '==', selectedEmpresa),
+            where('año', '==', new Date().getFullYear())
+          );
+        }
+      } else {
+        planesQ = query(planesRef, where('año', '==', new Date().getFullYear()));
+      }
+      
+      if (planesQ) {
+        const planesSnapshot = await getDocs(planesQ);
+        const planesData = planesSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data(),
+          tipo: 'plan_anual'
+        }));
+        
+        console.log('[Capacitaciones] Planes anuales encontrados:', planesData.length);
+        setPlanesAnuales(planesData);
+      }
+      
+      // Ordenar capacitaciones por fecha más reciente
+      capacitacionesData.sort((a, b) => {
+        const dateA = a.fechaRealizada?.toDate?.() || new Date(a.fechaRealizada);
+        const dateB = b.fechaRealizada?.toDate?.() || new Date(b.fechaRealizada);
+        return dateB - dateA;
+      });
+      
+      setCapacitaciones(capacitacionesData);
+    } catch (error) {
+      console.error('Error al cargar capacitaciones:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [selectedEmpresa, selectedSucursal, sucursalesDisponibles]);
+
+  // Cargar capacitaciones cuando las sucursales estén disponibles
+  useEffect(() => {
+    if (sucursalesDisponibles && sucursalesDisponibles.length > 0) {
+      console.log('[Capacitaciones] Sucursales disponibles, cargando capacitaciones');
+      loadCapacitaciones();
+    }
+  }, [sucursalesDisponibles, loadCapacitaciones]);
 
   useEffect(() => {
     const sucursalesParaUsar = localSucursales.length > 0 ? localSucursales : userSucursales;
@@ -106,53 +225,6 @@ export default function Capacitaciones() {
       }
     }
   }, [userSucursales, localSucursales, selectedSucursal]);
-
-  const loadCapacitaciones = useCallback(async () => {
-    setLoading(true);
-    try {
-      const capacitacionesRef = collection(db, 'capacitaciones');
-      
-      let q;
-      if (selectedSucursal) {
-        // Filtrar por sucursal específica
-        q = query(capacitacionesRef, where('sucursalId', '==', selectedSucursal));
-      } else if (selectedEmpresa) {
-        // Filtrar por todas las sucursales de la empresa seleccionada
-        const sucursalesEmpresa = sucursalesDisponibles.filter(s => s.empresaId === selectedEmpresa).map(s => s.id);
-        
-        // Verificar que hay sucursales antes de hacer la query
-        if (sucursalesEmpresa.length === 0) {
-          setCapacitaciones([]);
-          setLoading(false);
-          return;
-        }
-        
-        q = query(capacitacionesRef, where('sucursalId', 'in', sucursalesEmpresa));
-      } else {
-        // Mostrar todas las capacitaciones del usuario
-        q = capacitacionesRef;
-      }
-      
-      const snapshot = await getDocs(q);
-      const capacitacionesData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-      
-      // Ordenar por fecha más reciente
-      capacitacionesData.sort((a, b) => {
-        const dateA = a.fechaRealizada?.toDate?.() || new Date(a.fechaRealizada);
-        const dateB = b.fechaRealizada?.toDate?.() || new Date(b.fechaRealizada);
-        return dateB - dateA;
-      });
-      
-      setCapacitaciones(capacitacionesData);
-    } catch (error) {
-      console.error('Error al cargar capacitaciones:', error);
-    } finally {
-      setLoading(false);
-    }
-  }, [selectedEmpresa, selectedSucursal, sucursalesDisponibles]);
 
   // Efecto para auto-seleccionar empresa si solo hay una
   useEffect(() => {
@@ -243,8 +315,22 @@ export default function Capacitaciones() {
     }
   };
 
-  const filteredCapacitaciones = capacitaciones.filter(cap => {
-    const matchTipo = !filterTipo || cap.tipo === filterTipo;
+  // Combinar capacitaciones individuales y planes anuales
+  const allCapacitaciones = [
+    ...capacitaciones,
+    ...planesAnuales.map(plan => ({
+      ...plan,
+      nombre: `Plan Anual: ${plan.nombre}`,
+      descripcion: `Plan anual con ${plan.capacitaciones?.length || 0} capacitaciones programadas`,
+      instructor: 'Plan Anual',
+      fechaRealizada: plan.createdAt,
+      empleados: plan.capacitaciones?.flatMap(cap => cap.empleadosAsistieron || []) || [],
+      estado: 'plan_anual'
+    }))
+  ];
+
+  const filteredCapacitaciones = allCapacitaciones.filter(cap => {
+    const matchTipo = !filterTipo || cap.tipo === filterTipo || cap.estado === filterTipo;
     const matchEstado = !filterEstado || cap.estado === filterEstado;
     return matchTipo && matchEstado;
   });
@@ -575,7 +661,33 @@ export default function Capacitaciones() {
                 </CardContent>
 
                 <CardActions sx={{ justifyContent: 'space-between', px: 2, pb: 2 }}>
-                  {capacitacion.estado === 'activa' ? (
+                  {capacitacion.estado === 'plan_anual' ? (
+                    <>
+                      <Button
+                        size="small"
+                        variant="contained"
+                        startIcon={<EditIcon />}
+                        onClick={() => {
+                          setEditingPlanAnual(capacitacion);
+                          setOpenPlanAnualModal(true);
+                        }}
+                      >
+                        Editar Plan
+                      </Button>
+                      <Button
+                        size="small"
+                        startIcon={<CalendarIcon />}
+                        onClick={() => {
+                          // Navegar a realizar capacitación con este plan preseleccionado
+                          setActiveTab(1);
+                          setRealizarCapSelectedEmpresa(capacitacion.empresaId);
+                          setRealizarCapSelectedSucursal(capacitacion.sucursalId);
+                        }}
+                      >
+                        Realizar Capacitación
+                      </Button>
+                    </>
+                  ) : capacitacion.estado === 'activa' ? (
                     <>
                       <Button
                         size="small"
@@ -636,11 +748,20 @@ export default function Capacitaciones() {
 
       <PlanAnualModal
         open={openPlanAnualModal}
-        onClose={() => setOpenPlanAnualModal(false)}
-        selectedEmpresa={selectedEmpresa}
-        selectedSucursal={selectedSucursal}
+        onClose={() => {
+          setOpenPlanAnualModal(false);
+          setEditingPlanAnual(null);
+        }}
+        selectedEmpresa={editingPlanAnual?.empresaId || selectedEmpresa}
+        selectedSucursal={editingPlanAnual?.sucursalId || selectedSucursal}
         userEmpresas={userEmpresas}
         userSucursales={userSucursales}
+        planToEdit={editingPlanAnual}
+        onSave={() => {
+          loadCapacitaciones();
+          setOpenPlanAnualModal(false);
+          setEditingPlanAnual(null);
+        }}
       />
     </Container>
   );

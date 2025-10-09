@@ -28,7 +28,7 @@ import {
   Business as BusinessIcon,
   Storefront as StorefrontIcon
 } from '@mui/icons-material';
-import { collection, addDoc, Timestamp } from 'firebase/firestore';
+import { collection, addDoc, updateDoc, doc, Timestamp } from 'firebase/firestore';
 import { db } from '../../../firebaseConfig';
 import { useAuth } from '../../context/AuthContext';
 import Swal from 'sweetalert2';
@@ -44,7 +44,9 @@ export default function PlanAnualModal({
   selectedEmpresa,
   selectedSucursal,
   userEmpresas,
-  userSucursales
+  userSucursales,
+  planToEdit = null,
+  onSave
 }) {
   const { userProfile } = useAuth();
   const [planData, setPlanData] = useState({
@@ -59,20 +61,37 @@ export default function PlanAnualModal({
   // Resetear estado cuando se abre el modal
   React.useEffect(() => {
     if (open) {
-      const empresaNombre = userEmpresas.find(e => e.id === selectedEmpresa)?.nombre || 'Todas las empresas';
-      const sucursalNombre = selectedSucursal ? 
-        (userSucursales.find(s => s.id === selectedSucursal)?.nombre || 'Sucursal no encontrada') : 'Todas las sucursales';
-      
-      setPlanData({
-        nombre: `Plan Anual ${new Date().getFullYear()} - ${sucursalNombre}`,
-        empresaId: selectedEmpresa,
-        sucursalId: selectedSucursal,
-        capacitaciones: {}
-      });
-      setColumnasCapacitaciones(2);
+      if (planToEdit) {
+        // Modo edición: cargar datos del plan existente
+        setPlanData({
+          nombre: planToEdit.nombre || '',
+          empresaId: planToEdit.empresaId || selectedEmpresa,
+          sucursalId: planToEdit.sucursalId || selectedSucursal,
+          capacitaciones: planToEdit.capacitaciones || {}
+        });
+        
+        // Calcular número de columnas basado en las capacitaciones existentes
+        const maxColumnas = Math.max(...Object.values(planToEdit.capacitaciones || {}).map(cap => 
+          Object.keys(cap || {}).length
+        ), 2);
+        setColumnasCapacitaciones(maxColumnas);
+      } else {
+        // Modo creación: inicializar con valores por defecto
+        const empresaNombre = userEmpresas.find(e => e.id === selectedEmpresa)?.nombre || 'Todas las empresas';
+        const sucursalNombre = selectedSucursal ? 
+          (userSucursales.find(s => s.id === selectedSucursal)?.nombre || 'Sucursal no encontrada') : 'Todas las sucursales';
+        
+        setPlanData({
+          nombre: `Plan Anual ${new Date().getFullYear()} - ${sucursalNombre}`,
+          empresaId: selectedEmpresa,
+          sucursalId: selectedSucursal,
+          capacitaciones: {}
+        });
+        setColumnasCapacitaciones(2);
+      }
       setErrores({});
     }
-  }, [open, selectedEmpresa, selectedSucursal, userEmpresas, userSucursales]);
+  }, [open, selectedEmpresa, selectedSucursal, userEmpresas, userSucursales, planToEdit]);
 
   const handleNombreChange = (e) => {
     setPlanData(prev => ({
@@ -135,7 +154,8 @@ export default function PlanAnualModal({
       nuevosErrores.nombre = 'El nombre del plan es requerido';
     }
 
-    // Validar capacitaciones
+    // Contar capacitaciones totales y validar duplicados
+    let totalCapacitaciones = 0;
     MESES.forEach(mes => {
       const capacitacionesMes = planData.capacitaciones[mes] || {};
       const nombresCapacitaciones = [];
@@ -144,6 +164,7 @@ export default function PlanAnualModal({
         const nombreCapacitacion = capacitacionesMes[i]?.trim();
         
         if (nombreCapacitacion) {
+          totalCapacitaciones++;
           // Verificar duplicados en el mismo mes
           if (nombresCapacitaciones.includes(nombreCapacitacion)) {
             nuevosErrores[`${mes}-${i}`] = 'No puede haber capacitaciones duplicadas en el mismo mes';
@@ -153,6 +174,11 @@ export default function PlanAnualModal({
         }
       }
     });
+
+    // Validar que haya al menos una capacitación
+    if (totalCapacitaciones === 0) {
+      nuevosErrores.general = 'Debe agregar al menos una capacitación';
+    }
 
     setErrores(nuevosErrores);
     return Object.keys(nuevosErrores).length === 0;
@@ -200,9 +226,19 @@ export default function PlanAnualModal({
         createdByEmail: userProfile?.email || 'unknown@example.com'
       };
 
-      await addDoc(collection(db, 'planes_capacitaciones_anuales'), planDocumento);
-
-      Swal.fire('Éxito', 'Plan anual creado correctamente', 'success');
+      if (planToEdit) {
+        // Modo edición: actualizar documento existente
+        await updateDoc(doc(db, 'planes_capacitaciones_anuales', planToEdit.id), planDocumento);
+        Swal.fire('Éxito', 'Plan anual actualizado correctamente', 'success');
+      } else {
+        // Modo creación: crear nuevo documento
+        await addDoc(collection(db, 'planes_capacitaciones_anuales'), planDocumento);
+        Swal.fire('Éxito', 'Plan anual creado correctamente', 'success');
+      }
+      
+      if (onSave) {
+        onSave();
+      }
       onClose();
       
     } catch (error) {
@@ -216,7 +252,9 @@ export default function PlanAnualModal({
       <DialogTitle>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <BusinessIcon color="primary" />
-          <Typography variant="h6">Crear Plan Anual de Capacitaciones</Typography>
+          <Typography variant="h6">
+            {planToEdit ? 'Editar Plan Anual de Capacitaciones' : 'Crear Plan Anual de Capacitaciones'}
+          </Typography>
         </Box>
       </DialogTitle>
       
@@ -229,6 +267,11 @@ export default function PlanAnualModal({
               <strong> Sucursal:</strong> {selectedSucursal ? userSucursales.find(s => s.id === selectedSucursal)?.nombre : 'Todas las sucursales'}
             </Typography>
           </Box>
+
+          {/* Error general */}
+          {errores.general && (
+            <Alert severity="error">{errores.general}</Alert>
+          )}
 
           {/* Nombre del plan */}
           <TextField
@@ -313,7 +356,7 @@ export default function PlanAnualModal({
           Cancelar
         </Button>
         <Button onClick={handleGuardar} variant="contained" color="primary">
-          Guardar Plan Anual
+          {planToEdit ? 'Actualizar Plan Anual' : 'Guardar Plan Anual'}
         </Button>
       </DialogActions>
     </Dialog>
