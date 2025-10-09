@@ -12,7 +12,7 @@ export default defineConfig({
   // Configuración para optimizar el desarrollo
   optimizeDeps: {
     exclude: ['@capacitor/ios', '@capacitor/android'],
-    include: ['@capacitor/core', '@capacitor/app']
+    include: ['@capacitor/core', '@capacitor/app', 'react', 'react-dom', '@emotion/react', '@emotion/styled']
   },
            build: {
            outDir: 'dist',
@@ -111,7 +111,7 @@ export default defineConfig({
              '@': resolve(__dirname, 'src')
            },
            // Excluir paquetes de Capacitor que no se usan en desarrollo web
-           dedupe: ['@capacitor/ios']
+           dedupe: ['@capacitor/ios', 'react', 'react-dom', '@emotion/react', '@emotion/styled']
          },
   // Optimización de assets
   assetsInclude: ['**/*.png', '**/*.jpg', '**/*.jpeg', '**/*.gif', '**/*.svg', '**/*.woff', '**/*.woff2'],
