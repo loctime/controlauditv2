@@ -20,13 +20,6 @@ import { useNavigate } from 'react-router-dom';
 
 const AccidentesTab = ({ empresaId, empresaNombre }) => {
   const navigate = useNavigate();
-  const [stats, setStats] = useState({
-    total: 0,
-    accidentes: 0,
-    incidentes: 0,
-    abiertos: 0,
-    cerrados: 0
-  });
   const [loading, setLoading] = useState(false);
   const [recentesAccidentes, setRecentesAccidentes] = useState([]);
 
@@ -43,7 +36,6 @@ const AccidentesTab = ({ empresaId, empresaNombre }) => {
       const sucursalesIds = sucursalesSnapshot.docs.map(doc => doc.id);
       
       if (sucursalesIds.length === 0) {
-        setStats({ total: 0, accidentes: 0, incidentes: 0, abiertos: 0, cerrados: 0 });
         setRecentesAccidentes([]);
         return;
       }
@@ -53,17 +45,6 @@ const AccidentesTab = ({ empresaId, empresaNombre }) => {
         id: doc.id,
         ...doc.data()
       }));
-
-      // Calcular estadísticas
-      const nuevasStats = {
-        total: accidentesData.length,
-        accidentes: accidentesData.filter(a => a.tipo === 'accidente').length,
-        incidentes: accidentesData.filter(a => a.tipo === 'incidente').length,
-        abiertos: accidentesData.filter(a => a.estado === 'abierto').length,
-        cerrados: accidentesData.filter(a => a.estado === 'cerrado').length
-      };
-      
-      setStats(nuevasStats);
 
       // Obtener 3 registros más recientes
       const ordenados = accidentesData
@@ -102,65 +83,6 @@ const AccidentesTab = ({ empresaId, empresaNombre }) => {
         </Box>
       ) : (
         <>
-          {/* Estadísticas */}
-          <Grid container spacing={2} sx={{ mb: 3 }}>
-            <Grid item xs={6} md={2.4}>
-              <Card sx={{ bgcolor: 'primary.light', color: 'white' }}>
-                <CardContent sx={{ textAlign: 'center' }}>
-                  <Typography variant="h4" sx={{ fontWeight: 'bold' }}>
-                    {stats.total}
-                  </Typography>
-                  <Typography variant="body2">Total</Typography>
-                </CardContent>
-              </Card>
-            </Grid>
-            
-            <Grid item xs={6} md={2.4}>
-              <Card sx={{ bgcolor: 'error.main', color: 'white' }}>
-                <CardContent sx={{ textAlign: 'center' }}>
-                  <Typography variant="h4" sx={{ fontWeight: 'bold' }}>
-                    {stats.accidentes}
-                  </Typography>
-                  <Typography variant="body2">Accidentes</Typography>
-                </CardContent>
-              </Card>
-            </Grid>
-            
-            <Grid item xs={6} md={2.4}>
-              <Card sx={{ bgcolor: 'warning.main', color: 'white' }}>
-                <CardContent sx={{ textAlign: 'center' }}>
-                  <Typography variant="h4" sx={{ fontWeight: 'bold' }}>
-                    {stats.incidentes}
-                  </Typography>
-                  <Typography variant="body2">Incidentes</Typography>
-                </CardContent>
-              </Card>
-            </Grid>
-            
-            <Grid item xs={6} md={2.4}>
-              <Card sx={{ bgcolor: 'error.dark', color: 'white' }}>
-                <CardContent sx={{ textAlign: 'center' }}>
-                  <Typography variant="h4" sx={{ fontWeight: 'bold' }}>
-                    {stats.abiertos}
-                  </Typography>
-                  <Typography variant="body2">Abiertos</Typography>
-                </CardContent>
-              </Card>
-            </Grid>
-            
-            <Grid item xs={6} md={2.4}>
-              <Card sx={{ bgcolor: 'success.main', color: 'white' }}>
-                <CardContent sx={{ textAlign: 'center' }}>
-                  <Typography variant="h4" sx={{ fontWeight: 'bold' }}>
-                    {stats.cerrados}
-                  </Typography>
-                  <Typography variant="body2">Cerrados</Typography>
-                </CardContent>
-              </Card>
-            </Grid>
-          </Grid>
-
-          <Divider sx={{ my: 2 }} />
 
           {/* Registros recientes */}
           <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mb: 2 }}>
