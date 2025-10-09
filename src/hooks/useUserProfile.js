@@ -141,6 +141,7 @@ export const useUserProfile = (firebaseUser) => {
 
   return {
     userProfile,
+    setUserProfile,
     role,
     permisos,
     bloqueado,
