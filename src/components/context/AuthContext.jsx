@@ -2,7 +2,7 @@
 import { createContext, useState, useEffect, useContext } from "react";
 import { auth, db } from "../../firebaseConfig";
 import { onAuthStateChanged } from "firebase/auth";
-import { collection, getDocs, query, where } from "firebase/firestore";
+import { collection, getDocs, query, where, onSnapshot } from "firebase/firestore";
 import { registrarAccionSistema } from '../../utils/firestoreUtils';
 import { useUserProfile } from '../../hooks/useUserProfile';
 import { useUserManagement } from '../../hooks/useUserManagement';
@@ -56,27 +56,10 @@ const AuthContextComponent = ({ children }) => {
     
     // Listener para detectar cambios de conectividad
     const handleOnline = () => {
-      // Recargar datos cuando se restaura la conexión
+      // Los listeners reactivos se encargarán de recargar automáticamente
       if (user) {
-        loadUserEmpresas(user.uid);
         loadUserAuditorias(user.uid);
         loadAuditoriasCompartidas(user.uid);
-        // Recargar sucursales y formularios después de que las empresas estén cargadas
-        setTimeout(async () => {
-          // Esperar a que userEmpresas esté disponible
-          let attempts = 0;
-          const maxAttempts = 10;
-          
-          while (attempts < maxAttempts && (!userEmpresas || userEmpresas.length === 0)) {
-            await new Promise(resolve => setTimeout(resolve, 200));
-            attempts++;
-          }
-          
-          await Promise.all([
-            loadUserSucursales(user.uid),
-            loadUserFormularios(user.uid)
-          ]);
-        }, 500); // Reducir delay inicial
       }
     };
     
@@ -158,15 +141,11 @@ const AuthContextComponent = ({ children }) => {
             // Establecer el perfil PRIMERO
             setUserProfile(profile);
             
-            // Cargar datos del usuario
+            // Cargar solo auditorías manualmente (empresas, sucursales y formularios usan listeners)
             await Promise.all([
-              loadUserEmpresas(firebaseUser.uid, profile, profile.role),
               loadUserAuditorias(firebaseUser.uid),
               loadAuditoriasCompartidas(firebaseUser.uid)
             ]);
-
-            // Las sucursales y formularios se cargarán cuando userProfile esté disponible
-            // Esto se maneja en el useEffect de abajo
 
             // Guardar cache completo para funcionamiento offline
             try {
@@ -284,22 +263,9 @@ const AuthContextComponent = ({ children }) => {
     };
   }, []);
 
-  // useEffect para cargar sucursales y formularios cuando userProfile y userEmpresas estén disponibles
-  useEffect(() => {
-    const loadSucursalesYFormularios = async () => {
-      if (user && userProfile && userEmpresas && userEmpresas.length > 0) {
-        console.log('🎯 [AuthContext] userProfile y userEmpresas disponibles, cargando sucursales...');
-        await Promise.all([
-          loadUserSucursales(user.uid),
-          loadUserFormularios(user.uid)
-        ]);
-      }
-    };
-
-    loadSucursalesYFormularios();
-  }, [user, userProfile, userEmpresas]);
-
-  // --- Listener reactivo para empresas del usuario (multi-tenant) ---
+  // --- Listeners reactivos para datos del usuario (multi-tenant) ---
+  
+  // Listener para empresas
   useEffect(() => {
     const unsubscribe = empresaService.subscribeToUserEmpresas(
       userProfile, 
@@ -307,6 +273,121 @@ const AuthContextComponent = ({ children }) => {
       setUserEmpresas, 
       setLoadingEmpresas
     );
+    return unsubscribe;
+  }, [userProfile?.uid, role, userProfile?.clienteAdminId]);
+
+  // Listener para sucursales (depende de que empresas estén cargadas)
+  useEffect(() => {
+    if (!userProfile || !role || !userEmpresas || userEmpresas.length === 0) {
+      setUserSucursales([]);
+      setLoadingSucursales(false);
+      return;
+    }
+
+    setLoadingSucursales(true);
+    const sucursalesRef = collection(db, 'sucursales');
+    let q;
+
+    if (role === 'supermax') {
+      q = sucursalesRef;
+    } else {
+      const empresasIds = userEmpresas.map(emp => emp.id);
+      // Firestore limita 'in' a 10 elementos, usar solo las primeras 10
+      const empresasIdsLimited = empresasIds.slice(0, 10);
+      q = query(sucursalesRef, where('empresaId', 'in', empresasIdsLimited));
+    }
+
+    const unsubscribe = onSnapshot(q, 
+      (snapshot) => {
+        const sucursalesData = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+        
+        // Si hay más de 10 empresas, cargar el resto manualmente
+        if (role !== 'supermax' && userEmpresas.length > 10) {
+          const empresasIds = userEmpresas.map(emp => emp.id);
+          const remainingIds = empresasIds.slice(10);
+          
+          const loadRemainingSucursales = async () => {
+            const chunks = [];
+            for (let i = 0; i < remainingIds.length; i += 10) {
+              chunks.push(remainingIds.slice(i, i + 10));
+            }
+            
+            const promises = chunks.map(chunk => 
+              getDocs(query(sucursalesRef, where('empresaId', 'in', chunk)))
+            );
+            
+            const snapshots = await Promise.all(promises);
+            const moreSucursales = snapshots.flatMap(snap => 
+              snap.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+            );
+            
+            setUserSucursales([...sucursalesData, ...moreSucursales]);
+            setLoadingSucursales(false);
+          };
+          
+          loadRemainingSucursales().catch(err => {
+            console.error('❌ Error cargando sucursales adicionales:', err);
+            setUserSucursales(sucursalesData);
+            setLoadingSucursales(false);
+          });
+        } else {
+          setUserSucursales(sucursalesData);
+          setLoadingSucursales(false);
+        }
+      },
+      (error) => {
+        console.error('❌ Error en listener de sucursales:', error);
+        setUserSucursales([]);
+        setLoadingSucursales(false);
+      }
+    );
+
+    return unsubscribe;
+  }, [userProfile?.uid, role, userEmpresas]);
+
+  // Listener para formularios
+  useEffect(() => {
+    if (!userProfile || !role) {
+      setUserFormularios([]);
+      setLoadingFormularios(false);
+      return;
+    }
+
+    setLoadingFormularios(true);
+    const formulariosRef = collection(db, 'formularios');
+    let q;
+
+    if (role === 'supermax') {
+      q = formulariosRef;
+    } else if (role === 'max') {
+      q = query(formulariosRef, where('clienteAdminId', '==', userProfile.uid));
+    } else if (role === 'operario' && userProfile.clienteAdminId) {
+      q = query(formulariosRef, where('clienteAdminId', '==', userProfile.clienteAdminId));
+    } else {
+      setUserFormularios([]);
+      setLoadingFormularios(false);
+      return;
+    }
+
+    const unsubscribe = onSnapshot(q,
+      (snapshot) => {
+        const formulariosData = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+        setUserFormularios(formulariosData);
+        setLoadingFormularios(false);
+      },
+      (error) => {
+        console.error('❌ Error en listener de formularios:', error);
+        setUserFormularios([]);
+        setLoadingFormularios(false);
+      }
+    );
+
     return unsubscribe;
   }, [userProfile?.uid, role, userProfile?.clienteAdminId]);
 
@@ -365,187 +446,7 @@ const AuthContextComponent = ({ children }) => {
     }
   };
 
-  const loadUserSucursales = async (userId, retryCount = 0) => {
-    const MAX_RETRIES = 5; // Aumentar reintentos
-    
-    console.log(`🔄 [AuthContext] loadUserSucursales - Intento ${retryCount + 1}/${MAX_RETRIES + 1}`);
-    console.log(`🔄 [AuthContext] userProfile:`, !!userProfile);
-    console.log(`🔄 [AuthContext] userEmpresas:`, userEmpresas?.length || 0);
-    
-    try {
-      if (!userProfile) {
-        console.log(`❌ [AuthContext] No hay userProfile, reintentando...`);
-        if (retryCount < MAX_RETRIES) {
-          setTimeout(() => loadUserSucursales(userId, retryCount + 1), 1500); // Aumentar delay
-          return [];
-        } else {
-          console.log(`❌ [AuthContext] Máximos reintentos alcanzados sin userProfile`);
-          setUserSucursales([]);
-          setLoadingSucursales(false);
-          return [];
-        }
-      }
-
-      if (!userEmpresas || userEmpresas.length === 0) {
-        console.log(`❌ [AuthContext] No hay userEmpresas, reintentando...`);
-        if (retryCount < MAX_RETRIES) {
-          setTimeout(() => loadUserSucursales(userId, retryCount + 1), 1500); // Aumentar delay
-          return [];
-        } else {
-          console.log(`❌ [AuthContext] Máximos reintentos alcanzados sin userEmpresas`);
-          setUserSucursales([]);
-          setLoadingSucursales(false);
-          return [];
-        }
-      }
-
-      setLoadingSucursales(true);
-
-      let sucursalesData = [];
-      
-      if (role === 'supermax') {
-        // Supermax ve todas las sucursales
-        const sucursalesSnapshot = await getDocs(collection(db, 'sucursales'));
-        sucursalesData = sucursalesSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
-      } else {
-        // Para max y operario: cargar sucursales de sus empresas
-        const empresasIds = userEmpresas.map(emp => emp.id);
-        
-        // Firestore limita 'in' queries a 10 elementos, dividir en chunks si es necesario
-        const chunkSize = 10;
-        const empresasChunks = [];
-        for (let i = 0; i < empresasIds.length; i += chunkSize) {
-          empresasChunks.push(empresasIds.slice(i, i + chunkSize));
-        }
-
-        const sucursalesPromises = empresasChunks.map(async (chunk) => {
-          const sucursalesRef = collection(db, "sucursales");
-          const sucursalesQuery = query(sucursalesRef, where("empresaId", "in", chunk));
-          const sucursalesSnapshot = await getDocs(sucursalesQuery);
-          return sucursalesSnapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data()
-          }));
-        });
-
-        const sucursalesArrays = await Promise.all(sucursalesPromises);
-        sucursalesData = sucursalesArrays.flat();
-      }
-      
-      console.log(`✅ [AuthContext] Sucursales cargadas exitosamente:`, sucursalesData.length);
-      console.log(`✅ [AuthContext] Sucursales:`, sucursalesData.map(s => s.nombre));
-      
-      setUserSucursales(sucursalesData);
-      setLoadingSucursales(false);
-      return sucursalesData;
-    } catch (error) {
-      console.error(`❌ [AuthContext] Error cargando sucursales:`, error);
-      
-      // Fallback al cache offline si falla la carga desde Firestore
-      try {
-        const cachedData = await loadUserFromCache();
-        if (cachedData?.sucursales && cachedData.sucursales.length > 0) {
-          console.log(`🔄 [AuthContext] Usando sucursales del cache offline:`, cachedData.sucursales.length);
-          setUserSucursales(cachedData.sucursales);
-          setLoadingSucursales(false);
-          return cachedData.sucursales;
-        }
-      } catch (cacheError) {
-        console.error('Error cargando sucursales desde cache offline:', cacheError);
-      }
-      
-      console.log(`❌ [AuthContext] No se pudieron cargar sucursales, estableciendo array vacío`);
-      setUserSucursales([]);
-      setLoadingSucursales(false);
-      return [];
-    }
-  };
-
-  const loadUserFormularios = async (userId, retryCount = 0) => {
-    const MAX_RETRIES = 3;
-    
-    try {
-      if (!userProfile) {
-        if (retryCount < MAX_RETRIES) {
-          setTimeout(() => loadUserFormularios(userId, retryCount + 1), 1000);
-          return [];
-        } else {
-          setUserFormularios([]);
-          setLoadingFormularios(false);
-          return [];
-        }
-      }
-
-      if (!userEmpresas || userEmpresas.length === 0) {
-        if (retryCount < MAX_RETRIES) {
-          setTimeout(() => loadUserFormularios(userId, retryCount + 1), 1000);
-          return [];
-        } else {
-          setUserFormularios([]);
-          setLoadingFormularios(false);
-          return [];
-        }
-      }
-
-      setLoadingFormularios(true);
-
-      let formulariosData = [];
-      
-      if (role === 'supermax') {
-        // Supermax ve todos los formularios
-        const formulariosSnapshot = await getDocs(collection(db, 'formularios'));
-        formulariosData = formulariosSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
-      } else if (role === 'max') {
-        // Max ve formularios donde es el clienteAdminId
-        const formulariosQuery = query(
-          collection(db, "formularios"), 
-          where("clienteAdminId", "==", userProfile.uid)
-        );
-        const formulariosSnapshot = await getDocs(formulariosQuery);
-        formulariosData = formulariosSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
-      } else if (role === 'operario' && userProfile.clienteAdminId) {
-        // Operario ve formularios de su cliente admin
-        const formulariosQuery = query(
-          collection(db, "formularios"), 
-          where("clienteAdminId", "==", userProfile.clienteAdminId)
-        );
-        const formulariosSnapshot = await getDocs(formulariosQuery);
-        formulariosData = formulariosSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
-      }
-      
-      setUserFormularios(formulariosData);
-      setLoadingFormularios(false);
-      return formulariosData;
-    } catch (error) {
-      // Fallback al cache offline si falla la carga desde Firestore
-      try {
-        const cachedData = await loadUserFromCache();
-        if (cachedData?.formularios && cachedData.formularios.length > 0) {
-          setUserFormularios(cachedData.formularios);
-          setLoadingFormularios(false);
-          return cachedData.formularios;
-        }
-      } catch (cacheError) {
-        console.error('Error cargando formularios desde cache offline:', cacheError);
-      }
-      
-      setUserFormularios([]);
-      setLoadingFormularios(false);
-      return [];
-    }
-  };
+  // Las funciones de carga manual fueron reemplazadas por listeners reactivos
 
   const loadUserAuditorias = async (userId) => {
     const auditorias = await auditoriaService.getUserAuditorias(userId, role);
@@ -638,8 +539,8 @@ const AuthContextComponent = ({ children }) => {
     canViewEmpresa: (empresaId) => empresaService.canViewEmpresa(empresaId, userProfile),
     canViewAuditoria: (auditoriaId) => auditoriaService.canViewAuditoria(auditoriaId, userProfile, auditoriasCompartidas),
     getUserEmpresas: () => loadUserEmpresas(user?.uid),
-    getUserSucursales: () => loadUserSucursales(user?.uid),
-    getUserFormularios: () => loadUserFormularios(user?.uid),
+    getUserSucursales: () => Promise.resolve(userSucursales), // Compatibilidad: Los listeners se encargan automáticamente
+    getUserFormularios: () => Promise.resolve(userFormularios), // Compatibilidad: Los listeners se encargan automáticamente
     getUserAuditorias: () => loadUserAuditorias(user?.uid),
     getAuditoriasCompartidas: () => loadAuditoriasCompartidas(user?.uid),
     role,
