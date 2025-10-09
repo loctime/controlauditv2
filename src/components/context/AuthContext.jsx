@@ -1,5 +1,5 @@
 // src/components/context/AuthContext.jsx
-import { createContext, useState, useEffect, useContext } from "react";
+import { createContext, useState, useEffect, useContext, useCallback } from "react";
 import { auth, db } from "../../firebaseConfig";
 import { onAuthStateChanged } from "firebase/auth";
 import { collection, getDocs, query, where, onSnapshot } from "firebase/firestore";
@@ -47,12 +47,51 @@ const AuthContextComponent = ({ children }) => {
     getFormulariosDeClienteAdmin
   } = useUserManagement(user, userProfile);
 
+  // Función para cargar usuario desde cache offline (useCallback para que esté disponible en listeners)
+  const loadUserFromCache = useCallback(async () => {
+    try {
+      if (!window.indexedDB) return null;
+      
+      const request = indexedDB.open('controlaudit_offline_v1', 2);
+      const cachedUser = await new Promise((resolve, reject) => {
+        request.onsuccess = function(event) {
+          const db = event.target.result;
+          
+          if (!db.objectStoreNames.contains('settings')) {
+            resolve(null);
+            return;
+          }
+          
+          const transaction = db.transaction(['settings'], 'readonly');
+          const store = transaction.objectStore('settings');
+          
+          store.get('complete_user_cache').onsuccess = function(e) {
+            const cached = e.target.result;
+            if (cached && cached.value) {
+              resolve(cached.value);
+            } else {
+              resolve(null);
+            }
+          };
+        };
+        request.onerror = function(event) {
+          reject(event.target.error);
+        };
+      });
+      
+      return cachedUser;
+    } catch (error) {
+      console.error('Error al cargar usuario desde cache:', error);
+      return null;
+    }
+  }, []);
+
   useEffect(() => {
     
     // Timeout de seguridad para evitar loading infinito
     const timeoutId = setTimeout(() => {
       setLoading(false);
-    }, 3000); // 3 segundos máximo (aumentado para dar tiempo a cargar empresas)
+    }, 3000);
     
     // Listener para detectar cambios de conectividad
     const handleOnline = () => {
@@ -69,46 +108,6 @@ const AuthContextComponent = ({ children }) => {
     
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
-    
-    // Función para cargar usuario desde cache offline
-    const loadUserFromCache = async () => {
-      try {
-        if (!window.indexedDB) return null;
-        
-        const request = indexedDB.open('controlaudit_offline_v1', 2);
-        const cachedUser = await new Promise((resolve, reject) => {
-          request.onsuccess = function(event) {
-            const db = event.target.result;
-            
-            if (!db.objectStoreNames.contains('settings')) {
-              resolve(null);
-              return;
-            }
-            
-            const transaction = db.transaction(['settings'], 'readonly');
-            const store = transaction.objectStore('settings');
-            
-            store.get('complete_user_cache').onsuccess = function(e) {
-              const cached = e.target.result;
-              if (cached && cached.value) {
-                // Devolver todo el cache, no solo userProfile
-                resolve(cached.value);
-              } else {
-                resolve(null);
-              }
-            };
-          };
-          request.onerror = function(event) {
-            reject(event.target.error);
-          };
-        });
-        
-        return cachedUser;
-      } catch (error) {
-        console.error('Error al cargar usuario desde cache:', error);
-        return null;
-      }
-    };
     
     // Escuchar cambios en el estado de autenticación de Firebase
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
@@ -275,7 +274,7 @@ const AuthContextComponent = ({ children }) => {
       loadUserFromCache // Pasar función de cache para fallback offline
     );
     return unsubscribe;
-  }, [userProfile?.uid, role, userProfile?.clienteAdminId]);
+  }, [userProfile?.uid, role, userProfile?.clienteAdminId, loadUserFromCache]);
 
   // Listener para sucursales (depende de que empresas estén cargadas)
   useEffect(() => {
@@ -361,7 +360,7 @@ const AuthContextComponent = ({ children }) => {
     );
 
     return unsubscribe;
-  }, [userProfile?.uid, role, userEmpresas]);
+  }, [userProfile?.uid, role, userEmpresas, loadUserFromCache]);
 
   // Listener para formularios
   useEffect(() => {
@@ -418,7 +417,7 @@ const AuthContextComponent = ({ children }) => {
     );
 
     return unsubscribe;
-  }, [userProfile?.uid, role, userProfile?.clienteAdminId]);
+  }, [userProfile?.uid, role, userProfile?.clienteAdminId, loadUserFromCache]);
 
 
   const handleLogin = (userLogged) => {
