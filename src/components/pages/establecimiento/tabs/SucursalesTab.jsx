@@ -140,10 +140,19 @@ const SucursalesTab = ({ empresaId, empresaNombre, userEmpresas, loadEmpresasSta
     return activeTabPerSucursal[sucursalId] || 'empleados';
   };
 
-  const navigateToPage = (page, sucursalId) => {
-    console.log('Navegando a:', page, 'con sucursalId:', sucursalId);
-    localStorage.setItem('selectedSucursal', sucursalId);
-    navigate(page);
+  const navigateToPage = (page, data) => {
+    if (typeof data === 'string') {
+      // Compatibilidad hacia atrás: si data es un string, es sucursalId
+      console.log('Navegando a:', page, 'con sucursalId:', data);
+      localStorage.setItem('selectedSucursal', data);
+      navigate(page);
+    } else if (typeof data === 'object') {
+      // Si data es un objeto con empresaId y sucursalId
+      console.log('Navegando a:', page, 'con empresaId:', data.empresaId, 'y sucursalId:', data.sucursalId);
+      navigate(page, { state: { empresaId: data.empresaId, sucursalId: data.sucursalId } });
+    } else {
+      navigate(page);
+    }
   };
 
   const handleSucursalFormChange = (e) => {
@@ -309,7 +318,7 @@ const SucursalesTab = ({ empresaId, empresaNombre, userEmpresas, loadEmpresasSta
                               <CapacitacionesContent sucursalId={sucursal.id} sucursalNombre={sucursal.nombre} navigateToPage={navigateToPage} />
                             )}
                             {getActiveTab(sucursal.id) === 'accidentes' && (
-                              <AccidentesContent sucursalId={sucursal.id} sucursalNombre={sucursal.nombre} navigateToPage={navigateToPage} />
+                              <AccidentesContent sucursalId={sucursal.id} sucursalNombre={sucursal.nombre} empresaId={empresaId} navigateToPage={navigateToPage} />
                             )}
                           </Box>
                         </Collapse>
