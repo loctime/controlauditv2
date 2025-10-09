@@ -30,7 +30,7 @@ import { useNavigate } from 'react-router-dom';
 import CapacitacionForm from './CapacitacionForm';
 
 export default function Capacitaciones() {
-  const { userProfile, userSucursales, loadingSucursales } = useAuth();
+  const { userProfile, userSucursales, loadingSucursales, getUserSucursales } = useAuth();
   const navigate = useNavigate();
   const [capacitaciones, setCapacitaciones] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -38,45 +38,68 @@ export default function Capacitaciones() {
   const [filterEstado, setFilterEstado] = useState('');
   const [selectedSucursal, setSelectedSucursal] = useState('');
   const [openForm, setOpenForm] = useState(false);
+  
+  // Estado local para mantener las sucursales una vez cargadas
+  const [localSucursales, setLocalSucursales] = useState([]);
 
   // Debug: ver qué está pasando con las sucursales
   useEffect(() => {
     console.log('[Capacitaciones] loadingSucursales:', loadingSucursales);
     console.log('[Capacitaciones] userSucursales:', userSucursales);
     console.log('[Capacitaciones] userSucursales.length:', userSucursales?.length);
+    
+    if (userSucursales && userSucursales.length > 0) {
+      console.log('[Capacitaciones] 🎉 Sucursales encontradas:', userSucursales.map(s => s.nombre));
+      // Guardar en estado local para evitar que se pierdan
+      setLocalSucursales(userSucursales);
+    }
   }, [userSucursales, loadingSucursales]);
 
   useEffect(() => {
-    if (userSucursales && userSucursales.length > 0 && !selectedSucursal) {
+    const sucursalesParaUsar = localSucursales.length > 0 ? localSucursales : userSucursales;
+    if (sucursalesParaUsar && sucursalesParaUsar.length > 0 && !selectedSucursal) {
       // Primero intentar usar la sucursal guardada en localStorage
       const savedSucursal = localStorage.getItem('selectedSucursal');
       const savedEmpresa = localStorage.getItem('selectedEmpresa');
       
-      if (savedSucursal && userSucursales.find(s => s.id === savedSucursal)) {
+      if (savedSucursal && sucursalesParaUsar.find(s => s.id === savedSucursal)) {
         setSelectedSucursal(savedSucursal);
         // Limpiar localStorage después de usar
         localStorage.removeItem('selectedSucursal');
       } else if (savedEmpresa) {
         // Si hay empresa preseleccionada, filtrar sucursales de esa empresa
-        const sucursalesEmpresa = userSucursales.filter(s => s.empresaId === savedEmpresa);
+        const sucursalesEmpresa = sucursalesParaUsar.filter(s => s.empresaId === savedEmpresa);
         if (sucursalesEmpresa.length > 0) {
           setSelectedSucursal(sucursalesEmpresa[0].id);
         } else {
-          setSelectedSucursal(userSucursales[0].id);
+          setSelectedSucursal(sucursalesParaUsar[0].id);
         }
         // Limpiar localStorage después de usar
         localStorage.removeItem('selectedEmpresa');
       } else {
-        setSelectedSucursal(userSucursales[0].id);
+        setSelectedSucursal(sucursalesParaUsar[0].id);
       }
     }
-  }, [userSucursales, selectedSucursal]);
+  }, [userSucursales, localSucursales, selectedSucursal]);
 
   useEffect(() => {
     if (selectedSucursal) {
       loadCapacitaciones();
     }
   }, [selectedSucursal]);
+
+  // Efecto para detectar cambios en las sucursales
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (userSucursales && userSucursales.length > 0) {
+        console.log('[Capacitaciones] ✅ Sucursales estables:', userSucursales.map(s => s.nombre));
+      } else if (!loadingSucursales) {
+        console.log('[Capacitaciones] ❌ Sucursales perdidas después de cargar');
+      }
+    }, 2000); // Esperar 2 segundos para ver si se mantienen
+
+    return () => clearTimeout(timer);
+  }, [userSucursales, loadingSucursales]);
 
   const loadCapacitaciones = async () => {
     setLoading(true);
@@ -167,7 +190,10 @@ export default function Capacitaciones() {
     );
   }
 
-  if (!userSucursales || userSucursales.length === 0) {
+  // Usar sucursales locales si están disponibles, sino usar las del contexto
+  const sucursalesDisponibles = localSucursales.length > 0 ? localSucursales : userSucursales;
+  
+  if (!sucursalesDisponibles || sucursalesDisponibles.length === 0) {
     return (
       <Container maxWidth="xl" sx={{ py: 3 }}>
         <Alert severity="warning">
@@ -183,19 +209,35 @@ export default function Capacitaciones() {
         <Typography variant="h4" sx={{ fontWeight: 'bold' }}>
           Gestión de Capacitaciones
         </Typography>
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={() => setOpenForm(true)}
-          sx={{
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-            '&:hover': {
-              background: 'linear-gradient(135deg, #5568d3 0%, #65408b 100%)',
-            }
-          }}
-        >
-          Nueva Capacitación
-        </Button>
+        <Box sx={{ display: 'flex', gap: 2 }}>
+          <Button
+            variant="outlined"
+            onClick={async () => {
+              console.log('🔄 Recargando sucursales...');
+              await getUserSucursales();
+              // Limpiar estado local para forzar recarga
+              setLocalSucursales([]);
+              console.log('✅ Sucursales recargadas');
+            }}
+            size="small"
+            disabled={loadingSucursales}
+          >
+            {loadingSucursales ? 'Cargando...' : 'Recargar Sucursales'}
+          </Button>
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={() => setOpenForm(true)}
+            sx={{
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              '&:hover': {
+                background: 'linear-gradient(135deg, #5568d3 0%, #65408b 100%)',
+              }
+            }}
+          >
+            Nueva Capacitación
+          </Button>
+        </Box>
       </Box>
 
       {/* Selector de Sucursal */}
@@ -207,7 +249,7 @@ export default function Capacitaciones() {
             label="Sucursal"
             onChange={(e) => setSelectedSucursal(e.target.value)}
           >
-            {userSucursales.map((sucursal) => (
+            {sucursalesDisponibles.map((sucursal) => (
               <MenuItem key={sucursal.id} value={sucursal.id}>
                 {sucursal.nombre}
               </MenuItem>
