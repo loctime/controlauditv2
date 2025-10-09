@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import './Home.css';
 import { Typography, Button, Grid, List, ListItem, ListItemIcon, ListItemText, Divider, useTheme, Box, LinearProgress, Alert } from '@mui/material';
 import { Link } from 'react-router-dom';
@@ -29,14 +29,18 @@ const Home = () => {
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
   
+  // Detectar si es PWA standalone
+  const isPWAStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+  
   // E.stados para carga de datos offline
-  const [cargandoDatosOffline, setCargandoDatosOffline] = useState(true);
+  const [cargandoDatosOffline, setCargandoDatosOffline] = useState(false);
   const [datosCargados, setDatosCargados] = useState({
     empresas: false,
     sucursales: false,
     formularios: false
   });
   const [errorCarga, setErrorCarga] = useState(null);
+  const hasCargadoDatos = useRef(false);
   
   const { 
     userProfile, 
@@ -51,23 +55,37 @@ const Home = () => {
     getUserFormularios
   } = useAuth();
 
-  // Hook para precarga automática en Chrome
-  const { isChrome, isPreloading, startPreload } = useChromePreload();
+  // Hook para precarga automática en PWA Chrome
+  const { shouldPreload, isPreloading, startPreload } = useChromePreload();
 
-  // Forzar carga de todos los datos necesarios para modo offline
+  // Forzar carga de datos SOLO en PWA y SOLO una vez
   useEffect(() => {
     const cargarDatosOffline = async () => {
-      if (!userProfile) {
-        setCargandoDatosOffline(false);
+      // Solo cargar en PWA standalone
+      if (!isPWAStandalone) {
+        console.log('ℹ️ [Home] No es PWA standalone, saltando carga automática');
         return;
       }
 
-      console.log('🚀 [Home] Iniciando carga forzada de datos para modo offline...');
+      // Solo ejecutar una vez
+      if (hasCargadoDatos.current) {
+        console.log('ℹ️ [Home] Datos ya cargados previamente');
+        return;
+      }
+
+      if (!userProfile) {
+        return;
+      }
+
+      hasCargadoDatos.current = true;
+      setCargandoDatosOffline(true);
+
+      console.log('🚀 [Home PWA] Iniciando carga forzada de datos para modo offline...');
       setErrorCarga(null);
       
       try {
         // Cargar todos los datos necesarios para TODAS las páginas
-        console.log('🔄 [Home] Cargando datos para todas las páginas...');
+        console.log('🔄 [Home PWA] Cargando datos para todas las páginas...');
         const promesas = [
           getUserEmpresas(),
           getUserSucursales(),
@@ -75,50 +93,30 @@ const Home = () => {
         ];
         
         // Esperar a que todas las promesas se resuelvan
-        console.log('⏳ [Home] Esperando a que se carguen todos los datos...');
+        console.log('⏳ [Home PWA] Esperando a que se carguen todos los datos...');
 
         const resultados = await Promise.allSettled(promesas);
         
-        console.log('📊 [Home] Resultados de carga:', {
+        console.log('📊 [Home PWA] Resultados de carga:', {
           empresas: resultados[0]?.status,
           sucursales: resultados[1]?.status,
           formularios: resultados[2]?.status
         });
         
-        console.log('✅ [Home] Datos cargados:', {
+        console.log('✅ [Home PWA] Datos cargados:', {
           empresas: userEmpresas?.length || 0,
           sucursales: userSucursales?.length || 0,
           formularios: userFormularios?.length || 0
         });
         
-        // Verificar si realmente se cargaron los datos
-        if ((userEmpresas?.length || 0) === 0) {
-          console.warn('⚠️ [Home] No se cargaron empresas');
-        }
-        if ((userSucursales?.length || 0) === 0) {
-          console.warn('⚠️ [Home] No se cargaron sucursales');
-        }
-        if ((userFormularios?.length || 0) === 0) {
-          console.warn('⚠️ [Home] No se cargaron formularios');
-        }
-
         setDatosCargados({
           empresas: (userEmpresas?.length || 0) > 0,
           sucursales: (userSucursales?.length || 0) > 0,
           formularios: (userFormularios?.length || 0) > 0
         });
         
-        // Si es Chrome y los datos se cargaron correctamente, iniciar precarga automática
-        if (isChrome && Object.values(datosCargados).every(Boolean)) {
-          console.log('🚀 [Home] Datos cargados, iniciando precarga automática para Chrome...');
-          // Esperar un poco más para que la UI se estabilice
-          setTimeout(() => {
-            startPreload();
-          }, 3000);
-        }
-        
       } catch (error) {
-        console.error('❌ [Home] Error cargando datos offline:', error);
+        console.error('❌ [Home PWA] Error cargando datos offline:', error);
         setErrorCarga('Error cargando datos para modo offline');
       } finally {
         setCargandoDatosOffline(false);
@@ -126,24 +124,10 @@ const Home = () => {
     };
 
     // Esperar un poco para que el contexto se inicialice
-    const timer = setTimeout(cargarDatosOffline, 2000);
+    const timer = setTimeout(cargarDatosOffline, 1500);
     return () => clearTimeout(timer);
-  }, [userProfile, getUserEmpresas, getUserSucursales, getUserFormularios]);
-
-  // Mostrar loading mientras se cargan los datos
-  if (cargandoDatosOffline && userProfile) {
-    return (
-      <Box sx={{ p: 4 }}>
-        <Typography variant="h4" gutterBottom align="center">
-          Preparando datos para modo offline...
-        </Typography>
-        <LinearProgress sx={{ mb: 2 }} />
-        <Typography variant="body2" align="center" color="text.secondary">
-          Cargando empresas, sucursales y formularios...
-        </Typography>
-      </Box>
-    );
-  }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userProfile]); // Solo depende de userProfile - ignoramos otras deps intencionalmente para evitar bucle
 
   return (
     <div className="home-main-container">
@@ -153,26 +137,26 @@ const Home = () => {
         </Typography>
         
 
-        {/* Indicador de datos cargados para modo offline */}
-        {userProfile && (
+        {/* Indicador de datos cargados para modo offline - SOLO EN PWA */}
+        {userProfile && isPWAStandalone && (
           <Box sx={{ mb: 3 }}>
             <Alert 
               severity={Object.values(datosCargados).every(Boolean) ? "success" : "info"}
               sx={{ mb: 2 }}
             >
               <Typography variant="body2">
-                <strong>Estado de  offline:</strong>
+                <strong>Estado offline PWA:</strong>
                 <br />
                 📊 Empresas: {datosCargados.empresas ? `✅` : "❌"}     📋 Formularios: {datosCargados.formularios ? `✅` : "❌"}
-                {isChrome && (
+                {shouldPreload && (
                   <>
                     <br />
-                    🌐 Navegador: Chrome
+                    📱 PWA Chrome detectado
                     <br />
                     {isPreloading ? (
                       <>⚡ Precargando páginas para optimización...</>
                     ) : (
-                      <>✅ Precarga automática disponible</>
+                      <>✅ Precarga disponible</>
                     )}
                   </>
                 )}
@@ -192,52 +176,50 @@ const Home = () => {
               </Alert>
             )}
             
-            {/* Botones para recarga de datos y precarga */}
-            {userProfile && (
-              <Box sx={{ textAlign: 'center', mb: 2, display: 'flex', gap: 2, justifyContent: 'center', flexWrap: 'wrap' }}>
+            {/* Botones para recarga de datos y precarga - SOLO EN PWA */}
+            <Box sx={{ textAlign: 'center', mb: 2, display: 'flex', gap: 2, justifyContent: 'center', flexWrap: 'wrap' }}>
+              <Button
+                variant="outlined"
+                size="small"
+                onClick={async () => {
+                  setCargandoDatosOffline(true);
+                  setErrorCarga(null);
+                  try {
+                    await Promise.all([
+                      getUserEmpresas(),
+                      getUserSucursales(),
+                      getUserFormularios()
+                    ]);
+                    setDatosCargados({
+                      empresas: (userEmpresas?.length || 0) > 0,
+                      sucursales: (userSucursales?.length || 0) > 0,
+                      formularios: (userFormularios?.length || 0) > 0
+                    });
+                  } catch (error) {
+                    setErrorCarga('Error al recargar datos');
+                  } finally {
+                    setCargandoDatosOffline(false);
+                  }
+                }}
+                disabled={cargandoDatosOffline}
+              >
+                {cargandoDatosOffline ? 'Cargando...' : '🔄 Recargar Datos'}
+              </Button>
+              
+              {shouldPreload && !isPreloading && (
                 <Button
-                  variant="outlined"
+                  variant="contained"
                   size="small"
-                  onClick={async () => {
-                    setCargandoDatosOffline(true);
-                    setErrorCarga(null);
-                    try {
-                      await Promise.all([
-                        getUserEmpresas(),
-                        getUserSucursales(),
-                        getUserFormularios()
-                      ]);
-                      setDatosCargados({
-                        empresas: (userEmpresas?.length || 0) > 0,
-                        sucursales: (userSucursales?.length || 0) > 0,
-                        formularios: (userFormularios?.length || 0) > 0
-                      });
-                    } catch (error) {
-                      setErrorCarga('Error al recargar datos');
-                    } finally {
-                      setCargandoDatosOffline(false);
-                    }
+                  onClick={startPreload}
+                  sx={{ 
+                    background: 'linear-gradient(90deg, #1976d2, #42a5f5)',
+                    '&:hover': { background: 'linear-gradient(90deg, #1565c0, #1976d2)' }
                   }}
-                  disabled={cargandoDatosOffline}
                 >
-                  {cargandoDatosOffline ? 'Cargando...' : '🔄 Recargar Datos'}
+                  ⚡ Precargar Páginas
                 </Button>
-                
-                {isChrome && !isPreloading && (
-                  <Button
-                    variant="contained"
-                    size="small"
-                    onClick={startPreload}
-                    sx={{ 
-                      background: 'linear-gradient(90deg, #1976d2, #42a5f5)',
-                      '&:hover': { background: 'linear-gradient(90deg, #1565c0, #1976d2)' }
-                    }}
-                  >
-                    ⚡ Precargar Páginas
-                  </Button>
-                )}
-              </Box>
-            )}
+              )}
+            </Box>
           </Box>
         )}
 

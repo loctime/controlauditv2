@@ -30,17 +30,26 @@ import { useNavigate } from 'react-router-dom';
 import CapacitacionForm from './CapacitacionForm';
 
 export default function Capacitaciones() {
-  const { userProfile, userSucursales, loadingSucursales, getUserSucursales } = useAuth();
+  const { userProfile, userSucursales, loadingSucursales, getUserSucursales, userEmpresas } = useAuth();
   const navigate = useNavigate();
   const [capacitaciones, setCapacitaciones] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filterTipo, setFilterTipo] = useState('');
   const [filterEstado, setFilterEstado] = useState('');
+  const [selectedEmpresa, setSelectedEmpresa] = useState('');
   const [selectedSucursal, setSelectedSucursal] = useState('');
   const [openForm, setOpenForm] = useState(false);
   
   // Estado local para mantener las sucursales una vez cargadas
   const [localSucursales, setLocalSucursales] = useState([]);
+
+  // Usar sucursales locales si están disponibles, sino usar las del contexto
+  const sucursalesDisponibles = localSucursales.length > 0 ? localSucursales : userSucursales;
+  
+  // Filtrar sucursales por empresa seleccionada
+  const sucursalesFiltradas = selectedEmpresa 
+    ? sucursalesDisponibles.filter(s => s.empresaId === selectedEmpresa)
+    : sucursalesDisponibles;
 
   // Debug: ver qué está pasando con las sucursales
   useEffect(() => {
@@ -81,6 +90,17 @@ export default function Capacitaciones() {
       }
     }
   }, [userSucursales, localSucursales, selectedSucursal]);
+
+  // Efecto para manejar cambio de empresa
+  useEffect(() => {
+    if (selectedEmpresa && sucursalesFiltradas.length > 0) {
+      // Si hay sucursales filtradas, seleccionar la primera
+      setSelectedSucursal(sucursalesFiltradas[0].id);
+    } else if (selectedEmpresa && sucursalesFiltradas.length === 0) {
+      // Si no hay sucursales para la empresa seleccionada, limpiar sucursal
+      setSelectedSucursal('');
+    }
+  }, [selectedEmpresa, sucursalesFiltradas]);
 
   useEffect(() => {
     if (selectedSucursal) {
@@ -190,55 +210,122 @@ export default function Capacitaciones() {
     );
   }
 
-  // Usar sucursales locales si están disponibles, sino usar las del contexto
-  const sucursalesDisponibles = localSucursales.length > 0 ? localSucursales : userSucursales;
-  
   if (!sucursalesDisponibles || sucursalesDisponibles.length === 0) {
     return (
       <Container maxWidth="xl" sx={{ py: 3 }}>
-        <Alert severity="warning">
+        <Alert severity="warning" sx={{ mb: 2 }}>
           No tienes sucursales asignadas. Contacta con el administrador.
         </Alert>
+        
+        {/* Debug info */}
+        <Paper sx={{ p: 2, mb: 2 }}>
+          <Typography variant="h6" sx={{ mb: 2 }}>🔍 Información de Debug:</Typography>
+          <Typography variant="body2">
+            <strong>userProfile:</strong> {userProfile ? '✅ Cargado' : '❌ No cargado'}<br/>
+            <strong>userEmpresas:</strong> {userEmpresas?.length || 0} empresas<br/>
+            <strong>userSucursales:</strong> {userSucursales?.length || 0} sucursales<br/>
+            <strong>loadingSucursales:</strong> {loadingSucursales ? '⏳ Cargando...' : '✅ Terminado'}<br/>
+            <strong>localSucursales:</strong> {localSucursales?.length || 0} sucursales locales
+          </Typography>
+        </Paper>
+        
+        <Box sx={{ display: 'flex', gap: 2 }}>
+          <Button
+            variant="contained"
+            onClick={() => window.location.reload()}
+          >
+            🔄 Recargar Página Completa
+          </Button>
+          <Button
+            variant="outlined"
+            onClick={() => {
+              console.log('🔍 Estado actual:', {
+                userProfile,
+                userEmpresas,
+                userSucursales,
+                localSucursales,
+                loadingSucursales
+              });
+            }}
+          >
+            📊 Ver Estado en Consola
+          </Button>
+        </Box>
       </Container>
     );
   }
 
   return (
     <Container maxWidth="xl" sx={{ py: 3 }}>
-      <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Typography variant="h4" sx={{ fontWeight: 'bold' }}>
-          Gestión de Capacitaciones
-        </Typography>
-        <Box sx={{ display: 'flex', gap: 2 }}>
-          <Button
-            variant="outlined"
-            onClick={async () => {
-              console.log('🔄 Recargando sucursales...');
-              await getUserSucursales();
-              // Limpiar estado local para forzar recarga
-              setLocalSucursales([]);
-              console.log('✅ Sucursales recargadas');
-            }}
-            size="small"
-            disabled={loadingSucursales}
-          >
-            {loadingSucursales ? 'Cargando...' : 'Recargar Sucursales'}
-          </Button>
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={() => setOpenForm(true)}
-            sx={{
-              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-              '&:hover': {
-                background: 'linear-gradient(135deg, #5568d3 0%, #65408b 100%)',
-              }
-            }}
-          >
-            Nueva Capacitación
-          </Button>
+      <Box sx={{ mb: 3 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+          <Typography variant="h4" sx={{ fontWeight: 'bold' }}>
+            Gestión de Capacitaciones
+          </Typography>
+          <Box sx={{ display: 'flex', gap: 2 }}>
+            <Button
+              variant="outlined"
+              onClick={() => {
+                console.log('🔄 Recargando página completa...');
+                window.location.reload();
+              }}
+              size="small"
+            >
+              Recargar Página
+            </Button>
+            <Button
+              variant="outlined"
+              onClick={async () => {
+                console.log('🔄 Recargando contexto...');
+                // Forzar recarga del contexto
+                await getUserSucursales();
+                setLocalSucursales([]);
+                console.log('✅ Contexto recargado');
+              }}
+              size="small"
+              disabled={loadingSucursales}
+            >
+              {loadingSucursales ? 'Cargando...' : 'Recargar Contexto'}
+            </Button>
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={() => setOpenForm(true)}
+              sx={{
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                '&:hover': {
+                  background: 'linear-gradient(135deg, #5568d3 0%, #65408b 100%)',
+                }
+              }}
+            >
+              Nueva Capacitación
+            </Button>
+          </Box>
         </Box>
       </Box>
+
+      {/* Selector de Empresa */}
+      {userEmpresas && userEmpresas.length > 1 && (
+        <Paper sx={{ p: 2, mb: 2 }}>
+          <FormControl fullWidth>
+            <InputLabel>Empresa</InputLabel>
+            <Select
+              value={selectedEmpresa}
+              label="Empresa"
+              onChange={(e) => setSelectedEmpresa(e.target.value)}
+            >
+              <MenuItem value="">
+                <em>Todas las empresas</em>
+              </MenuItem>
+              {userEmpresas.map((empresa) => (
+                <MenuItem key={empresa.id} value={empresa.id}>
+                  {empresa.nombre}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        </Paper>
+      )}
 
       {/* Selector de Sucursal */}
       <Paper sx={{ p: 2, mb: 3 }}>
@@ -249,9 +336,10 @@ export default function Capacitaciones() {
             label="Sucursal"
             onChange={(e) => setSelectedSucursal(e.target.value)}
           >
-            {sucursalesDisponibles.map((sucursal) => (
+            {sucursalesFiltradas.map((sucursal) => (
               <MenuItem key={sucursal.id} value={sucursal.id}>
                 {sucursal.nombre}
+                {!selectedEmpresa && ` - ${sucursal.empresaNombre}`}
               </MenuItem>
             ))}
           </Select>
