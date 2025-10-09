@@ -547,7 +547,7 @@ const AuthContextComponent = ({ children }) => {
     }
   };
 
-  // Los valores disponibles en el contexto
+  // .Los valores disponibles en el contexto
   const data = {
     user,
     userProfile,
@@ -585,7 +585,8 @@ const AuthContextComponent = ({ children }) => {
     compartirAuditoria,
     forceRefreshCache,
     bloqueado,
-    motivoBloqueo
+    motivoBloqueo,
+    loadUserFromCache
   };
 
   return <AuthContext.Provider value={data}>{children}</AuthContext.Provider>;
