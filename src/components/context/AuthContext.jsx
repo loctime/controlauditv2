@@ -271,7 +271,8 @@ const AuthContextComponent = ({ children }) => {
       userProfile, 
       role, 
       setUserEmpresas, 
-      setLoadingEmpresas
+      setLoadingEmpresas,
+      loadUserFromCache // Pasar función de cache para fallback offline
     );
     return unsubscribe;
   }, [userProfile?.uid, role, userProfile?.clienteAdminId]);
@@ -338,8 +339,22 @@ const AuthContextComponent = ({ children }) => {
           setLoadingSucursales(false);
         }
       },
-      (error) => {
+      async (error) => {
         console.error('❌ Error en listener de sucursales:', error);
+        
+        // Fallback al cache offline
+        try {
+          const cachedData = await loadUserFromCache();
+          if (cachedData?.sucursales && cachedData.sucursales.length > 0) {
+            console.log('🔄 [Offline] Usando sucursales del cache IndexedDB:', cachedData.sucursales.length);
+            setUserSucursales(cachedData.sucursales);
+            setLoadingSucursales(false);
+            return;
+          }
+        } catch (cacheError) {
+          console.error('Error cargando sucursales desde cache:', cacheError);
+        }
+        
         setUserSucursales([]);
         setLoadingSucursales(false);
       }
@@ -381,8 +396,22 @@ const AuthContextComponent = ({ children }) => {
         setUserFormularios(formulariosData);
         setLoadingFormularios(false);
       },
-      (error) => {
+      async (error) => {
         console.error('❌ Error en listener de formularios:', error);
+        
+        // Fallback al cache offline
+        try {
+          const cachedData = await loadUserFromCache();
+          if (cachedData?.formularios && cachedData.formularios.length > 0) {
+            console.log('🔄 [Offline] Usando formularios del cache IndexedDB:', cachedData.formularios.length);
+            setUserFormularios(cachedData.formularios);
+            setLoadingFormularios(false);
+            return;
+          }
+        } catch (cacheError) {
+          console.error('Error cargando formularios desde cache:', cacheError);
+        }
+        
         setUserFormularios([]);
         setLoadingFormularios(false);
       }
