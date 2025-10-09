@@ -91,7 +91,11 @@ const AuthContextComponent = ({ children }) => {
     // Timeout de seguridad para evitar loading infinito
     const timeoutId = setTimeout(() => {
       setLoading(false);
-    }, 3000);
+      setLoadingEmpresas(false);
+      setLoadingSucursales(false);
+      setLoadingFormularios(false);
+      console.log('⏱️ Timeout alcanzado, finalizando loaders');
+    }, 2500); // 2.5 segundos para móvil
     
     // Listener para detectar cambios de conectividad
     const handleOnline = () => {
@@ -181,17 +185,20 @@ const AuthContextComponent = ({ children }) => {
             const cachedUser = await loadUserFromCache();
             
             if (cachedUser && cachedUser.userProfile) {
-              const userProfile = cachedUser.userProfile;
+              const cachedProfile = cachedUser.userProfile;
+              
+              // Establecer el perfil del usuario
+              setUserProfile(cachedProfile);
               
               // Crear un objeto usuario simulado para el cache
               const simulatedUser = {
-                uid: userProfile.uid,
-                email: userProfile.email,
-                displayName: userProfile.displayName || userProfile.email,
+                uid: cachedProfile.uid,
+                email: cachedProfile.email,
+                displayName: cachedProfile.displayName || cachedProfile.email,
                 emailVerified: true,
                 isAnonymous: false,
                 metadata: {
-                  creationTime: userProfile.createdAt || new Date().toISOString(),
+                  creationTime: cachedProfile.createdAt || new Date().toISOString(),
                   lastSignInTime: new Date().toISOString()
                 }
               };
@@ -201,26 +208,43 @@ const AuthContextComponent = ({ children }) => {
               localStorage.setItem("userInfo", JSON.stringify(simulatedUser));
               localStorage.setItem("isLogged", JSON.stringify(true));
               
-              // Cargar datos del cache
+              // Cargar TODOS los datos del cache
               if (cachedUser.empresas && cachedUser.empresas.length > 0) {
-                // Aplicar filtrado multi-tenant si es necesario
                 let empresasFiltradas = cachedUser.empresas;
-                if (userProfile.role !== 'supermax') {
+                if (cachedProfile.role !== 'supermax') {
                   empresasFiltradas = cachedUser.empresas.filter(empresa => {
-                    const esPropietario = empresa.propietarioId === userProfile.uid;
-                    const esCreador = empresa.creadorId === userProfile.uid;
-                    const esDelClienteAdmin = empresa.clienteAdminId === userProfile.clienteAdminId;
-                    const esDelUsuario = empresa.clienteAdminId === userProfile.uid; // Para usuarios 'max'
+                    const esPropietario = empresa.propietarioId === cachedProfile.uid;
+                    const esCreador = empresa.creadorId === cachedProfile.uid;
+                    const esDelClienteAdmin = empresa.clienteAdminId === cachedProfile.clienteAdminId;
+                    const esDelUsuario = empresa.clienteAdminId === cachedProfile.uid;
                     
                     return esPropietario || esCreador || esDelClienteAdmin || esDelUsuario;
                   });
                 }
                 
                 setUserEmpresas(empresasFiltradas);
+                setLoadingEmpresas(false);
               }
+              
+              if (cachedUser.sucursales && cachedUser.sucursales.length > 0) {
+                setUserSucursales(cachedUser.sucursales);
+                setLoadingSucursales(false);
+              }
+              
+              if (cachedUser.formularios && cachedUser.formularios.length > 0) {
+                setUserFormularios(cachedUser.formularios);
+                setLoadingFormularios(false);
+              }
+              
               if (cachedUser.auditorias && cachedUser.auditorias.length > 0) {
                 setUserAuditorias(cachedUser.auditorias);
               }
+              
+              console.log('✅ Datos cargados desde cache offline:', {
+                empresas: empresasFiltradas?.length || 0,
+                sucursales: cachedUser.sucursales?.length || 0,
+                formularios: cachedUser.formularios?.length || 0
+              });
             } else {
               setUser(null);
               setIsLogged(false);
