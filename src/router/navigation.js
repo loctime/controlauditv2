@@ -33,8 +33,8 @@ export const getMenuItems = (role, permisos = {}) => {
       required: true
     },
     {
-      id: "dashboard-seguridad",
-      path: "/dashboard-seguridad",
+      id: "dashboard-higiene-seguridad",
+      path: "/dashboard-higiene-seguridad",
       title: "Dashboard Higiene y Seguridad",
       Icon: HealthAndSafetyIcon,
       roles: ['max', 'supermax'],
