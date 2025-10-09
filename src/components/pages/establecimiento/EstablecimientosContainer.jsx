@@ -498,7 +498,27 @@ const EstablecimientosContainer = () => {
                         </Typography>
                       </TableCell>
                       <TableCell>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Box 
+                          sx={{ 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            gap: 1,
+                            cursor: 'pointer',
+                            '&:hover': {
+                              backgroundColor: alpha(theme.palette.primary.main, 0.1),
+                              borderRadius: 1
+                            },
+                            p: 1,
+                            borderRadius: 1,
+                            transition: 'all 0.2s ease'
+                          }}
+                          onClick={() => {
+                            if (!isExpanded) {
+                              toggleRow(empresa.id);
+                            }
+                            setActiveTab(empresa.id, 'sucursales');
+                          }}
+                        >
                           <StorefrontIcon color="primary" fontSize="small" />
                           <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
                             {stats.sucursales}
@@ -506,7 +526,27 @@ const EstablecimientosContainer = () => {
                         </Box>
                       </TableCell>
                       <TableCell>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Box 
+                          sx={{ 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            gap: 1,
+                            cursor: 'pointer',
+                            '&:hover': {
+                              backgroundColor: alpha(theme.palette.primary.main, 0.1),
+                              borderRadius: 1
+                            },
+                            p: 1,
+                            borderRadius: 1,
+                            transition: 'all 0.2s ease'
+                          }}
+                          onClick={() => {
+                            if (!isExpanded) {
+                              toggleRow(empresa.id);
+                            }
+                            setActiveTab(empresa.id, 'empleados');
+                          }}
+                        >
                           <PeopleIcon color="primary" fontSize="small" />
                           <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
                             {stats.empleados}
@@ -514,7 +554,27 @@ const EstablecimientosContainer = () => {
                         </Box>
                       </TableCell>
                       <TableCell>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Box 
+                          sx={{ 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            gap: 1,
+                            cursor: 'pointer',
+                            '&:hover': {
+                              backgroundColor: alpha(theme.palette.secondary.main, 0.1),
+                              borderRadius: 1
+                            },
+                            p: 1,
+                            borderRadius: 1,
+                            transition: 'all 0.2s ease'
+                          }}
+                          onClick={() => {
+                            if (!isExpanded) {
+                              toggleRow(empresa.id);
+                            }
+                            setActiveTab(empresa.id, 'capacitaciones');
+                          }}
+                        >
                           <SchoolIcon color="secondary" fontSize="small" />
                           <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
                             {stats.capacitacionesCompletadas}/{stats.capacitaciones}
@@ -522,7 +582,27 @@ const EstablecimientosContainer = () => {
                         </Box>
                       </TableCell>
                       <TableCell>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Box 
+                          sx={{ 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            gap: 1,
+                            cursor: 'pointer',
+                            '&:hover': {
+                              backgroundColor: alpha(theme.palette.error.main, 0.1),
+                              borderRadius: 1
+                            },
+                            p: 1,
+                            borderRadius: 1,
+                            transition: 'all 0.2s ease'
+                          }}
+                          onClick={() => {
+                            if (!isExpanded) {
+                              toggleRow(empresa.id);
+                            }
+                            setActiveTab(empresa.id, 'accidentes');
+                          }}
+                        >
                           <ReportProblemIcon 
                             color={stats.accidentesAbiertos > 0 ? "error" : "action"} 
                             fontSize="small" 
@@ -565,70 +645,9 @@ const EstablecimientosContainer = () => {
                         <Collapse in={isExpanded} timeout="auto" unmountOnExit>
                           <Box sx={{ p: 1 , backgroundColor: '#f8f9fa', borderTop: '1px solid #e0e0e0' }}>
                             
-                            <Grid container spacing={2}>
-                              {/* Sucursales */}
-                              <Grid item xs={12} sm={6} md={3}>
-                                <Button
-                                  fullWidth
-                                  variant={getActiveTab(empresa.id) === 'sucursales' ? "contained" : "outlined"}
-                                  startIcon={<StorefrontIcon />}
-                                  onClick={() => setActiveTab(empresa.id, 'sucursales')}
-                                  sx={{ height: '60px', flexDirection: 'row', gap: 1, justifyContent: 'flex-start' }}
-                                >
-                                  <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
-                                    Sucursales: {stats.sucursales}
-                                  </Typography>
-                                </Button>
-                              </Grid>
-                              
-                              {/* Empleados */}
-                              <Grid item xs={12} sm={6} md={3}>
-                                <Button
-                                  fullWidth
-                                  variant={getActiveTab(empresa.id) === 'empleados' ? "contained" : "outlined"}
-                                  startIcon={<PeopleIcon />}
-                                  onClick={() => setActiveTab(empresa.id, 'empleados')}
-                                  sx={{ height: '60px', flexDirection: 'row', gap: 1, justifyContent: 'flex-start' }}
-                                >
-                                  <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
-                                    Empleados: {stats.empleados}
-                                  </Typography>
-                                </Button>
-                              </Grid>
-                              
-                              {/* Capacitaciones */}
-                              <Grid item xs={12} sm={6} md={3}>
-                                <Button
-                                  fullWidth
-                                  variant={getActiveTab(empresa.id) === 'capacitaciones' ? "contained" : "outlined"}
-                                  startIcon={<SchoolIcon />}
-                                  onClick={() => setActiveTab(empresa.id, 'capacitaciones')}
-                                  sx={{ height: '60px', flexDirection: 'row', gap: 1, justifyContent: 'flex-start' }}
-                                >
-                                  <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
-                                    Capacitaciones: {stats.capacitacionesCompletadas}/{stats.capacitaciones}
-                                  </Typography>
-                                </Button>
-                              </Grid>
-                              
-                              {/* Accidentes */}
-                              <Grid item xs={12} sm={6} md={3}>
-                                <Button
-                                  fullWidth
-                                  variant={getActiveTab(empresa.id) === 'accidentes' ? "contained" : "outlined"}
-                                  startIcon={<ReportProblemIcon />}
-                                  onClick={() => setActiveTab(empresa.id, 'accidentes')}
-                                  sx={{ height: '60px', flexDirection: 'row', gap: 1, justifyContent: 'flex-start' }}
-                                >
-                                  <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
-                                    Accidentes: {stats.accidentes}
-                                  </Typography>
-                                </Button>
-                              </Grid>
-                            </Grid>
 
                             {/* Contenido del tab activo */}
-                            <Box sx={{ mt: 3 }}>
+                            <Box>
                               {getActiveTab(empresa.id) === 'sucursales' && (
                                 <SucursalesTab 
                                   empresaId={empresa.id} 
