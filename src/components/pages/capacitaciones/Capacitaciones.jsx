@@ -319,13 +319,15 @@ export default function Capacitaciones() {
   const allCapacitaciones = [
     ...capacitaciones,
     ...planesAnuales.map(plan => ({
-      ...plan,
+      ...plan, // Preservar datos originales
       nombre: `Plan Anual: ${plan.nombre}`,
       descripcion: `Plan anual con ${plan.capacitaciones?.length || 0} capacitaciones programadas`,
       instructor: 'Plan Anual',
       fechaRealizada: plan.createdAt,
       empleados: plan.capacitaciones?.flatMap(cap => cap.empleadosAsistieron || []) || [],
-      estado: 'plan_anual'
+      estado: 'plan_anual',
+      // Preservar datos originales para edición
+      originalPlan: plan
     }))
   ];
 
@@ -668,7 +670,7 @@ export default function Capacitaciones() {
                         variant="contained"
                         startIcon={<EditIcon />}
                         onClick={() => {
-                          setEditingPlanAnual(capacitacion);
+                          setEditingPlanAnual(capacitacion.originalPlan || capacitacion);
                           setOpenPlanAnualModal(true);
                         }}
                       >
@@ -679,9 +681,10 @@ export default function Capacitaciones() {
                         startIcon={<CalendarIcon />}
                         onClick={() => {
                           // Navegar a realizar capacitación con este plan preseleccionado
+                          const originalPlan = capacitacion.originalPlan || capacitacion;
                           setActiveTab(1);
-                          setRealizarCapSelectedEmpresa(capacitacion.empresaId);
-                          setRealizarCapSelectedSucursal(capacitacion.sucursalId);
+                          setRealizarCapSelectedEmpresa(originalPlan.empresaId);
+                          setRealizarCapSelectedSucursal(originalPlan.sucursalId);
                         }}
                       >
                         Realizar Capacitación
