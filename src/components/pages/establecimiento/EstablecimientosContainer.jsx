@@ -356,6 +356,15 @@ const EstablecimientosContainer = () => {
             {verificando ? "Verificando..." : "Verificar"}
           </Button>
           <Button
+            variant="outlined"
+            color="error"
+            onClick={() => navigate('/accidentes')}
+            startIcon={<ReportProblemIcon />}
+            size={isSmallMobile ? "small" : "medium"}
+          >
+            Accidentes
+          </Button>
+          <Button
             variant="contained"
             onClick={() => setOpenModal(true)}
             startIcon={<BusinessIcon />}
@@ -538,7 +547,7 @@ const EstablecimientosContainer = () => {
                           <Tooltip title="Ver sucursales">
                             <IconButton 
                               size="small" 
-                              onClick={() => handleRowExpand(empresa.id)}
+                              onClick={() => toggleRow(empresa.id)}
                               color="secondary"
                             >
                               <StorefrontIcon />

@@ -145,8 +145,12 @@ const AuthContextComponent = ({ children }) => {
             setUserProfile(profile);
             
             // Cargar datos bloqueantes (esperar para el cache inicial)
+            const empresasCargadas = await loadUserEmpresas(firebaseUser.uid, profile, profile.role);
+            
+            console.log('🔍 Empresas cargadas antes de sucursales:', empresasCargadas?.length || 0);
+            
+            // Cargar auditorías en paralelo (no bloqueantes para sucursales)
             await Promise.all([
-              loadUserEmpresas(firebaseUser.uid, profile, profile.role),
               loadUserAuditorias(firebaseUser.uid),
               loadAuditoriasCompartidas(firebaseUser.uid)
             ]);
@@ -154,8 +158,8 @@ const AuthContextComponent = ({ children }) => {
             // Cargar sucursales y formularios después de que empresas estén listas
             setTimeout(async () => {
               const [sucursalesCargadas, formulariosCargados] = await Promise.all([
-                loadUserSucursales(firebaseUser.uid),
-                loadUserFormularios(firebaseUser.uid)
+                loadUserSucursales(firebaseUser.uid, empresasCargadas, profile),
+                loadUserFormularios(firebaseUser.uid, empresasCargadas, profile)
               ]);
 
               // Guardar cache DESPUÉS de cargar todos los datos - PASAR datos ya cargados
@@ -171,12 +175,12 @@ const AuthContextComponent = ({ children }) => {
                 // ✅ Pasar datos YA cargados para evitar queries duplicadas (problema Chrome)
                 await saveCompleteUserCache(
                   completeProfile, 
-                  userEmpresas, 
+                  empresasCargadas, 
                   sucursalesCargadas, 
                   formulariosCargados
                 );
                 console.log('✅ Cache guardado con datos completos:', {
-                  empresas: userEmpresas?.length || 0,
+                  empresas: empresasCargadas?.length || 0,
                   sucursales: sucursalesCargadas?.length || 0,
                   formularios: formulariosCargados?.length || 0
                 });
@@ -515,14 +519,30 @@ const AuthContextComponent = ({ children }) => {
     }
   };
 
-  const loadUserSucursales = async (userId) => {
+  const loadUserSucursales = async (userId, empresasParam = null, profileParam = null) => {
     try {
-      if (!userProfile || !userEmpresas || userEmpresas.length === 0) {
+      const profileToUse = profileParam || userProfile;
+      console.log('🔍 loadUserSucursales llamado con:', {
+        userId,
+        empresasParam: empresasParam?.length || 'null/undefined',
+        userEmpresas: userEmpresas?.length || 0,
+        userProfile: !!userProfile,
+        profileParam: !!profileParam
+      });
+      
+      const empresasToUse = empresasParam || userEmpresas;
+      
+      if (!profileToUse || !empresasToUse || empresasToUse.length === 0) {
+        console.log('⚠️ loadUserSucursales: No hay empresas disponibles', {
+          profileToUse: !!profileToUse,
+          empresasToUse: empresasToUse?.length || 0
+        });
         setUserSucursales([]);
         setLoadingSucursales(false);
         return [];
       }
 
+      console.log('🔍 loadUserSucursales: Cargando para', empresasToUse.length, 'empresas');
       setLoadingSucursales(true);
       let sucursalesData = [];
       
@@ -533,7 +553,7 @@ const AuthContextComponent = ({ children }) => {
           ...doc.data()
         }));
       } else {
-        const empresasIds = userEmpresas.map(emp => emp.id);
+        const empresasIds = empresasToUse.map(emp => emp.id);
         const chunkSize = 10;
         const empresasChunks = [];
         for (let i = 0; i < empresasIds.length; i += chunkSize) {
@@ -554,6 +574,7 @@ const AuthContextComponent = ({ children }) => {
         sucursalesData = sucursalesArrays.flat();
       }
       
+      console.log('✅ loadUserSucursales: Cargadas', sucursalesData.length, 'sucursales');
       setUserSucursales(sucursalesData);
       setLoadingSucursales(false);
       return sucursalesData;
@@ -577,14 +598,19 @@ const AuthContextComponent = ({ children }) => {
     }
   };
 
-  const loadUserFormularios = async (userId) => {
+  const loadUserFormularios = async (userId, empresasParam = null, profileParam = null) => {
     try {
-      if (!userProfile || !userEmpresas || userEmpresas.length === 0) {
+      const profileToUse = profileParam || userProfile;
+      const empresasToUse = empresasParam || userEmpresas;
+      
+      if (!profileToUse || !empresasToUse || empresasToUse.length === 0) {
+        console.log('⚠️ loadUserFormularios: No hay empresas disponibles');
         setUserFormularios([]);
         setLoadingFormularios(false);
         return [];
       }
 
+      console.log('🔍 loadUserFormularios: Cargando para', empresasToUse.length, 'empresas');
       setLoadingFormularios(true);
       let formulariosData = [];
       
@@ -597,17 +623,17 @@ const AuthContextComponent = ({ children }) => {
       } else if (role === 'max') {
         const formulariosQuery = query(
           collection(db, "formularios"), 
-          where("clienteAdminId", "==", userProfile.uid)
+          where("clienteAdminId", "==", profileToUse.uid)
         );
         const formulariosSnapshot = await getDocs(formulariosQuery);
         formulariosData = formulariosSnapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data()
         }));
-      } else if (role === 'operario' && userProfile.clienteAdminId) {
+      } else if (role === 'operario' && profileToUse.clienteAdminId) {
         const formulariosQuery = query(
           collection(db, "formularios"), 
-          where("clienteAdminId", "==", userProfile.clienteAdminId)
+          where("clienteAdminId", "==", profileToUse.clienteAdminId)
         );
         const formulariosSnapshot = await getDocs(formulariosQuery);
         formulariosData = formulariosSnapshot.docs.map(doc => ({

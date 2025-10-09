@@ -56,19 +56,31 @@ export default function RealizarCapacitacion({
   const [openConfirmacionModal, setOpenConfirmacionModal] = useState(false);
 
   // Filtrar sucursales por empresa seleccionada
-  const sucursalesDisponibles = userSucursales.filter(s => 
-    !selectedEmpresa || s.empresaId === selectedEmpresa
-  );
+  const sucursalesDisponibles = selectedEmpresa 
+    ? userSucursales.filter(s => s.empresaId === selectedEmpresa)
+    : userSucursales;
+  
+  console.log('[RealizarCapacitacion] userSucursales:', userSucursales.length);
+  console.log('[RealizarCapacitacion] selectedEmpresa:', selectedEmpresa);
+  console.log('[RealizarCapacitacion] sucursalesDisponibles:', sucursalesDisponibles.length);
 
-  // Cargar planes anuales cuando cambia la sucursal
+  // Cargar planes anuales cuando cambia la empresa o sucursal
   useEffect(() => {
-    if (selectedSucursal) {
+    if (selectedEmpresa && selectedSucursal) {
       loadPlanesAnuales();
     } else {
       setPlanesAnuales([]);
       setPlanAnualSeleccionado('');
+      setCapacitacionSeleccionada('');
     }
-  }, [selectedSucursal]);
+  }, [selectedEmpresa, selectedSucursal]);
+
+  // Resetear capacitación cuando cambia el plan anual
+  useEffect(() => {
+    if (!planAnualSeleccionado) {
+      setCapacitacionSeleccionada('');
+    }
+  }, [planAnualSeleccionado]);
 
   // Cargar empleados cuando cambia la sucursal
   useEffect(() => {
@@ -112,17 +124,25 @@ export default function RealizarCapacitacion({
   const loadPlanesAnuales = async () => {
     setLoading(true);
     try {
+      // Cargar planes específicos de la sucursal Y planes de "todas las sucursales" de la empresa
       const q = query(
         collection(db, 'planes_capacitaciones_anuales'),
-        where('sucursalId', '==', selectedSucursal),
+        where('empresaId', '==', selectedEmpresa),
         where('año', '==', new Date().getFullYear())
       );
       const snapshot = await getDocs(q);
-      const planes = snapshot.docs.map(doc => ({
+      const todosPlanes = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       }));
-      setPlanesAnuales(planes);
+      
+      // Filtrar planes que aplican a esta sucursal (sucursalId coincide O es null)
+      const planesFiltrados = todosPlanes.filter(plan => 
+        plan.sucursalId === selectedSucursal || plan.sucursalId === null
+      );
+      
+      console.log('[RealizarCapacitacion] Planes encontrados:', planesFiltrados.length);
+      setPlanesAnuales(planesFiltrados);
     } catch (error) {
       console.error('Error cargando planes anuales:', error);
       Swal.fire('Error', 'Error al cargar planes anuales', 'error');
@@ -323,6 +343,24 @@ export default function RealizarCapacitacion({
           </FormControl>
         </Box>
 
+        {/* Información contextual */}
+        {selectedEmpresa && selectedSucursal && (
+          <Box sx={{ mt: 2, p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
+            <Typography variant="body2" color="textSecondary">
+              <strong>Planes disponibles:</strong> {planesAnuales.length} | 
+              <strong> Capacitaciones:</strong> {planAnualSeleccionado ? 
+                (planesAnuales.find(p => p.id === planAnualSeleccionado)?.capacitaciones?.length || 0) : 
+                'Selecciona un plan'
+              }
+            </Typography>
+            {planesAnuales.length === 0 && (
+              <Typography variant="body2" color="warning.main" sx={{ mt: 1 }}>
+                ⚠️ No hay planes anuales creados para esta sucursal. Ve a la pestaña "Ver Capacitaciones" para crear un plan.
+              </Typography>
+            )}
+          </Box>
+        )}
+
         {/* Selectores de Plan y Capacitación */}
         <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
           <FormControl sx={{ minWidth: 200 }}>
@@ -334,8 +372,11 @@ export default function RealizarCapacitacion({
                 setPlanAnualSeleccionado(e.target.value);
                 setCapacitacionSeleccionada('');
               }}
-              disabled={!selectedSucursal}
+              disabled={!selectedEmpresa || !selectedSucursal || loading}
             >
+              <MenuItem value="" disabled>
+                <em>{loading ? 'Cargando planes...' : 'Seleccionar plan anual'}</em>
+              </MenuItem>
               {planesAnuales.map((plan) => (
                 <MenuItem key={plan.id} value={plan.id}>
                   {plan.nombre}
@@ -352,11 +393,17 @@ export default function RealizarCapacitacion({
               onChange={(e) => setCapacitacionSeleccionada(e.target.value)}
               disabled={!planAnualSeleccionado}
             >
-              {planesAnuales.find(p => p.id === planAnualSeleccionado)?.capacitaciones.map((cap) => (
-                <MenuItem key={cap.id} value={cap.id}>
-                  {cap.nombre} ({cap.mes})
-                </MenuItem>
-              ))}
+              <MenuItem value="">
+                <em>Seleccionar capacitación</em>
+              </MenuItem>
+              {(() => {
+                const planSeleccionado = planesAnuales.find(p => p.id === planAnualSeleccionado);
+                return planSeleccionado?.capacitaciones?.map((cap) => (
+                  <MenuItem key={cap.id} value={cap.id}>
+                    {cap.nombre} ({cap.mes})
+                  </MenuItem>
+                )) || [];
+              })()}
             </Select>
           </FormControl>
 

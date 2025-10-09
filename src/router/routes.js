@@ -14,6 +14,7 @@ import OperarioDashboard from "../components/pages/user/OperarioDashboard";
 import PermissionsDebug from "../components/pages/debug/PermissionsDebug";
 import GaleriaFormulariosPublicos from '../components/pages/formulario/GaleriaFormulariosPublicos';
 import ConfiguracionPage from '../components/pages/configuracion/ConfiguracionPage';
+import Accidentes from '../components/pages/accidentes/Accidentes';
 
 export const routes = [
   {
@@ -89,5 +90,10 @@ export const routes = [
     Element: ConfiguracionPage,
     protected: true,
     roles: ['supermax']
+  },
+  {
+    id: "accidentes",
+    path: "/accidentes",
+    Element: Accidentes,
   },
 ];

@@ -1,297 +1,253 @@
-// src/services/accidenteService.js
 import { 
   collection, 
-  doc, 
-  getDocs, 
   addDoc, 
+  getDocs, 
   updateDoc, 
-  deleteDoc, 
-  getDoc, 
+  doc, 
   query, 
-  where,
-  Timestamp 
+  where, 
+  orderBy,
+  Timestamp,
+  getDoc
 } from 'firebase/firestore';
-import { db } from '../firebaseConfig';
-import { registrarAccionSistema } from '../utils/firestoreUtils';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { db, storage } from '../firebaseConfig';
 
-export const accidenteService = {
-  /**
-   * Obtener accidentes de una empresa
-   * @param {string} empresaId - ID de la empresa
-   * @returns {Promise<Array>} Lista de accidentes
-   */
-  async getAccidentesByEmpresa(empresaId) {
-    try {
-      if (!empresaId) return [];
+/**
+ * Servicio para gestión de accidentes e incidentes
+ */
 
-      // 1. Obtener sucursales de la empresa
-      const sucursalesSnapshot = await getDocs(
-        query(collection(db, 'sucursales'), where('empresaId', '==', empresaId))
-      );
-      const sucursalesIds = sucursalesSnapshot.docs.map(doc => doc.id);
-      
-      if (sucursalesIds.length === 0) return [];
+// Crear un nuevo accidente
+export const crearAccidente = async (accidenteData, empleadosSeleccionados, imagenes = []) => {
+  try {
+    // Preparar datos de empleados involucrados
+    const empleadosInvolucrados = empleadosSeleccionados.map(emp => ({
+      empleadoId: emp.id,
+      empleadoNombre: emp.nombre,
+      conReposo: emp.conReposo || false,
+      fechaInicioReposo: emp.conReposo ? Timestamp.now() : null
+    }));
 
-      // 2. Obtener accidentes de esas sucursales
-      const accidentesData = [];
-      const chunkSize = 10;
-      
-      for (let i = 0; i < sucursalesIds.length; i += chunkSize) {
-        const chunk = sucursalesIds.slice(i, i + chunkSize);
-        const accidentesSnapshot = await getDocs(
-          query(collection(db, 'accidentes'), where('sucursalId', 'in', chunk))
-        );
-        
-        accidentesSnapshot.docs.forEach(doc => {
-          accidentesData.push({
-            id: doc.id,
-            ...doc.data()
-          });
-        });
+    // Crear documento del accidente
+    const accidenteDoc = {
+      empresaId: accidenteData.empresaId,
+      sucursalId: accidenteData.sucursalId,
+      tipo: 'accidente',
+      empleadosInvolucrados,
+      descripcion: accidenteData.descripcion || '',
+      imagenes: [],
+      fechaHora: Timestamp.now(),
+      createdAt: Timestamp.now(),
+      reportadoPor: accidenteData.reportadoPor,
+      estado: 'abierto'
+    };
+
+    const docRef = await addDoc(collection(db, 'accidentes'), accidenteDoc);
+
+    // Subir imágenes si existen
+    if (imagenes && imagenes.length > 0) {
+      const imagenesUrls = await subirImagenes(docRef.id, imagenes);
+      await updateDoc(docRef, { imagenes: imagenesUrls });
+    }
+
+    // Actualizar estado de empleados con días de reposo
+    for (const emp of empleadosSeleccionados) {
+      if (emp.conReposo) {
+        await actualizarEstadoEmpleado(emp.id, 'inactivo', Timestamp.now());
       }
-      
-      return accidentesData;
-    } catch (error) {
-      console.error('❌ Error obteniendo accidentes por empresa:', error);
-      return [];
     }
-  },
 
-  /**
-   * Obtener accidentes de una sucursal
-   * @param {string} sucursalId - ID de la sucursal
-   * @returns {Promise<Array>} Lista de accidentes
-   */
-  async getAccidentesBySucursal(sucursalId) {
-    try {
-      if (!sucursalId) return [];
-
-      const snapshot = await getDocs(
-        query(collection(db, 'accidentes'), where('sucursalId', '==', sucursalId))
-      );
-      
-      return snapshot.docs.map(doc => ({ 
-        id: doc.id, 
-        ...doc.data() 
-      }));
-    } catch (error) {
-      console.error('❌ Error obteniendo accidentes por sucursal:', error);
-      return [];
-    }
-  },
-
-  /**
-   * Obtener accidentes de múltiples sucursales
-   * @param {Array<string>} sucursalesIds - IDs de las sucursales
-   * @returns {Promise<Array>} Lista de accidentes
-   */
-  async getAccidentesBySucursales(sucursalesIds) {
-    try {
-      if (!sucursalesIds || sucursalesIds.length === 0) return [];
-
-      const accidentesData = [];
-      const chunkSize = 10;
-      
-      for (let i = 0; i < sucursalesIds.length; i += chunkSize) {
-        const chunk = sucursalesIds.slice(i, i + chunkSize);
-        const snapshot = await getDocs(
-          query(collection(db, 'accidentes'), where('sucursalId', 'in', chunk))
-        );
-        
-        snapshot.docs.forEach(doc => {
-          accidentesData.push({
-            id: doc.id,
-            ...doc.data()
-          });
-        });
-      }
-      
-      return accidentesData;
-    } catch (error) {
-      console.error('❌ Error obteniendo accidentes por sucursales:', error);
-      return [];
-    }
-  },
-
-  /**
-   * Obtener un accidente por ID
-   * @param {string} accidenteId - ID del accidente
-   * @returns {Promise<Object|null>} Datos del accidente o null
-   */
-  async getAccidenteById(accidenteId) {
-    try {
-      const accidenteDoc = await getDoc(doc(db, 'accidentes', accidenteId));
-      
-      if (accidenteDoc.exists()) {
-        return {
-          id: accidenteDoc.id,
-          ...accidenteDoc.data()
-        };
-      }
-      
-      return null;
-    } catch (error) {
-      console.error('❌ Error obteniendo accidente por ID:', error);
-      return null;
-    }
-  },
-
-  /**
-   * Crear un nuevo accidente
-   * @param {Object} accidenteData - Datos del accidente
-   * @param {Object} user - Usuario que reporta el accidente
-   * @returns {Promise<string>} ID del accidente creado
-   */
-  async crearAccidente(accidenteData, user) {
-    try {
-      const accidenteRef = await addDoc(collection(db, 'accidentes'), {
-        ...accidenteData,
-        fechaReporte: Timestamp.now(),
-        reportadoPor: user?.uid,
-        ultimaModificacion: Timestamp.now(),
-        estado: accidenteData.estado || 'abierto'
-      });
-
-      // Registrar acción
-      await registrarAccionSistema(
-        user?.uid,
-        'Accidente reportado',
-        { accidenteId: accidenteRef.id, tipo: accidenteData.tipo, gravedad: accidenteData.gravedad },
-        'create',
-        'accidente',
-        accidenteRef.id
-      );
-
-      return accidenteRef.id;
-    } catch (error) {
-      console.error('❌ Error creando accidente:', error);
-      throw error;
-    }
-  },
-
-  /**
-   * Actualizar un accidente
-   * @param {string} accidenteId - ID del accidente
-   * @param {Object} updateData - Datos a actualizar
-   * @param {Object} user - Usuario que actualiza
-   * @returns {Promise<boolean>} True si se actualizó correctamente
-   */
-  async updateAccidente(accidenteId, updateData, user) {
-    try {
-      await updateDoc(doc(db, 'accidentes', accidenteId), {
-        ...updateData,
-        ultimaModificacion: Timestamp.now(),
-        modificadoPor: user?.uid
-      });
-
-      // Registrar acción
-      await registrarAccionSistema(
-        user?.uid,
-        'Accidente actualizado',
-        { accidenteId, cambios: Object.keys(updateData) },
-        'update',
-        'accidente',
-        accidenteId
-      );
-
-      return true;
-    } catch (error) {
-      console.error('❌ Error actualizando accidente:', error);
-      throw error;
-    }
-  },
-
-  /**
-   * Cerrar un accidente
-   * @param {string} accidenteId - ID del accidente
-   * @param {Object} user - Usuario que cierra
-   * @param {string} notas - Notas de cierre
-   * @returns {Promise<boolean>} True si se cerró correctamente
-   */
-  async cerrarAccidente(accidenteId, user, notas = '') {
-    try {
-      await updateDoc(doc(db, 'accidentes', accidenteId), {
-        estado: 'cerrado',
-        fechaCierre: Timestamp.now(),
-        cerradoPor: user?.uid,
-        notasCierre: notas,
-        ultimaModificacion: Timestamp.now()
-      });
-
-      // Registrar acción
-      await registrarAccionSistema(
-        user?.uid,
-        'Accidente cerrado',
-        { accidenteId, notas },
-        'close',
-        'accidente',
-        accidenteId
-      );
-
-      return true;
-    } catch (error) {
-      console.error('❌ Error cerrando accidente:', error);
-      throw error;
-    }
-  },
-
-  /**
-   * Eliminar un accidente
-   * @param {string} accidenteId - ID del accidente
-   * @param {Object} user - Usuario que elimina
-   * @returns {Promise<boolean>} True si se eliminó correctamente
-   */
-  async deleteAccidente(accidenteId, user) {
-    try {
-      await deleteDoc(doc(db, 'accidentes', accidenteId));
-
-      // Registrar acción
-      await registrarAccionSistema(
-        user?.uid,
-        'Accidente eliminado',
-        { accidenteId },
-        'delete',
-        'accidente',
-        accidenteId
-      );
-
-      return true;
-    } catch (error) {
-      console.error('❌ Error eliminando accidente:', error);
-      throw error;
-    }
-  },
-
-  /**
-   * Obtener estadísticas de accidentes por empresa
-   * @param {string} empresaId - ID de la empresa
-   * @returns {Promise<Object>} Estadísticas de accidentes
-   */
-  async getEstadisticasAccidentes(empresaId) {
-    try {
-      const accidentes = await this.getAccidentesByEmpresa(empresaId);
-      
-      return {
-        total: accidentes.length,
-        abiertos: accidentes.filter(a => a.estado === 'abierto').length,
-        cerrados: accidentes.filter(a => a.estado === 'cerrado').length,
-        porGravedad: {
-          leve: accidentes.filter(a => a.gravedad === 'leve').length,
-          moderado: accidentes.filter(a => a.gravedad === 'moderado').length,
-          grave: accidentes.filter(a => a.gravedad === 'grave').length
-        },
-        diasPerdidosTotales: accidentes.reduce((sum, a) => sum + (a.diasPerdidos || 0), 0)
-      };
-    } catch (error) {
-      console.error('❌ Error obteniendo estadísticas de accidentes:', error);
-      return {
-        total: 0,
-        abiertos: 0,
-        cerrados: 0,
-        porGravedad: { leve: 0, moderado: 0, grave: 0 },
-        diasPerdidosTotales: 0
-      };
-    }
+    return { id: docRef.id, ...accidenteDoc };
+  } catch (error) {
+    console.error('Error al crear accidente:', error);
+    throw error;
   }
 };
 
+// Crear un nuevo incidente
+export const crearIncidente = async (incidenteData, testigos = [], imagenes = []) => {
+  try {
+    // Preparar datos de testigos
+    const testigosArray = testigos.map(emp => ({
+      empleadoId: emp.id,
+      empleadoNombre: emp.nombre
+    }));
+
+    // Crear documento del incidente
+    const incidenteDoc = {
+      empresaId: incidenteData.empresaId,
+      sucursalId: incidenteData.sucursalId,
+      tipo: 'incidente',
+      testigos: testigosArray,
+      empleadosInvolucrados: [], // Los incidentes no tienen empleados con reposo
+      descripcion: incidenteData.descripcion || '',
+      imagenes: [],
+      fechaHora: Timestamp.now(),
+      createdAt: Timestamp.now(),
+      reportadoPor: incidenteData.reportadoPor,
+      estado: 'abierto'
+    };
+
+    const docRef = await addDoc(collection(db, 'accidentes'), incidenteDoc);
+
+    // Subir imágenes si existen
+    if (imagenes && imagenes.length > 0) {
+      const imagenesUrls = await subirImagenes(docRef.id, imagenes);
+      await updateDoc(docRef, { imagenes: imagenesUrls });
+    }
+
+    return { id: docRef.id, ...incidenteDoc };
+  } catch (error) {
+    console.error('Error al crear incidente:', error);
+    throw error;
+  }
+};
+
+// Actualizar estado de empleado
+export const actualizarEstadoEmpleado = async (empleadoId, estado, fechaInicioReposo = null) => {
+  try {
+    const empleadoRef = doc(db, 'empleados', empleadoId);
+    const updateData = { estado };
+    
+    if (fechaInicioReposo) {
+      updateData.fechaInicioReposo = fechaInicioReposo;
+    }
+    
+    await updateDoc(empleadoRef, updateData);
+  } catch (error) {
+    console.error('Error al actualizar estado de empleado:', error);
+    throw error;
+  }
+};
+
+// Subir imágenes a Firebase Storage
+export const subirImagenes = async (accidenteId, imagenes) => {
+  try {
+    const urls = [];
+    
+    for (let i = 0; i < imagenes.length; i++) {
+      const imagen = imagenes[i];
+      const timestamp = Date.now();
+      const storageRef = ref(storage, `accidentes/${accidenteId}/${timestamp}_${i}_${imagen.name}`);
+      
+      const snapshot = await uploadBytes(storageRef, imagen);
+      const url = await getDownloadURL(snapshot.ref);
+      urls.push(url);
+    }
+    
+    return urls;
+  } catch (error) {
+    console.error('Error al subir imágenes:', error);
+    throw error;
+  }
+};
+
+// Obtener accidentes con filtros
+export const obtenerAccidentes = async (filtros = {}) => {
+  try {
+    let q = collection(db, 'accidentes');
+    const conditions = [];
+
+    if (filtros.empresaId) {
+      conditions.push(where('empresaId', '==', filtros.empresaId));
+    }
+
+    if (filtros.sucursalId) {
+      conditions.push(where('sucursalId', '==', filtros.sucursalId));
+    }
+
+    if (filtros.tipo) {
+      conditions.push(where('tipo', '==', filtros.tipo));
+    }
+
+    if (filtros.estado) {
+      conditions.push(where('estado', '==', filtros.estado));
+    }
+
+    if (conditions.length > 0) {
+      q = query(q, ...conditions, orderBy('fechaHora', 'desc'));
+    } else {
+      q = query(q, orderBy('fechaHora', 'desc'));
+    }
+
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }));
+  } catch (error) {
+    console.error('Error al obtener accidentes:', error);
+    throw error;
+  }
+};
+
+// Obtener un accidente específico
+export const obtenerAccidentePorId = async (accidenteId) => {
+  try {
+    const docRef = doc(db, 'accidentes', accidenteId);
+    const docSnap = await getDoc(docRef);
+    
+    if (docSnap.exists()) {
+      return { id: docSnap.id, ...docSnap.data() };
+    }
+    return null;
+  } catch (error) {
+    console.error('Error al obtener accidente:', error);
+    throw error;
+  }
+};
+
+// Actualizar estado de accidente/incidente
+export const actualizarEstadoAccidente = async (accidenteId, nuevoEstado) => {
+  try {
+    const accidenteRef = doc(db, 'accidentes', accidenteId);
+    await updateDoc(accidenteRef, { estado: nuevoEstado });
+  } catch (error) {
+    console.error('Error al actualizar estado de accidente:', error);
+    throw error;
+  }
+};
+
+// Obtener empleados por sucursal (para los selectores)
+export const obtenerEmpleadosPorSucursal = async (sucursalId) => {
+  try {
+    const q = query(
+      collection(db, 'empleados'),
+      where('sucursalId', '==', sucursalId),
+      where('estado', '==', 'activo')
+    );
+    
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }));
+  } catch (error) {
+    console.error('Error al obtener empleados:', error);
+    throw error;
+  }
+};
+
+// Obtener estadísticas de accidentes por empresa
+export const obtenerEstadisticas = async (empresaId) => {
+  try {
+    const q = query(
+      collection(db, 'accidentes'),
+      where('empresaId', '==', empresaId)
+    );
+    
+    const snapshot = await getDocs(q);
+    const accidentes = snapshot.docs.map(doc => doc.data());
+    
+    return {
+      total: accidentes.length,
+      accidentes: accidentes.filter(a => a.tipo === 'accidente').length,
+      incidentes: accidentes.filter(a => a.tipo === 'incidente').length,
+      abiertos: accidentes.filter(a => a.estado === 'abierto').length,
+      cerrados: accidentes.filter(a => a.estado === 'cerrado').length
+    };
+  } catch (error) {
+    console.error('Error al obtener estadísticas:', error);
+    throw error;
+  }
+};
