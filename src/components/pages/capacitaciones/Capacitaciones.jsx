@@ -21,7 +21,9 @@ import {
   Add as AddIcon,
   CheckCircle as CheckCircleIcon,
   ContentCopy as CopyIcon,
-  People as PeopleIcon
+  People as PeopleIcon,
+  Business as BusinessIcon,
+  Storefront as StorefrontIcon
 } from '@mui/icons-material';
 import { collection, query, where, getDocs, updateDoc, doc, addDoc, Timestamp } from 'firebase/firestore';
 import { db } from '../../../firebaseConfig';
@@ -91,22 +93,31 @@ export default function Capacitaciones() {
     }
   }, [userSucursales, localSucursales, selectedSucursal]);
 
+  // Efecto para auto-seleccionar empresa si solo hay una
+  useEffect(() => {
+    if (userEmpresas && userEmpresas.length === 1 && !selectedEmpresa) {
+      setSelectedEmpresa(userEmpresas[0].id);
+    }
+  }, [userEmpresas, selectedEmpresa]);
+
   // Efecto para manejar cambio de empresa
   useEffect(() => {
     if (selectedEmpresa && sucursalesFiltradas.length > 0) {
-      // Si hay sucursales filtradas, seleccionar la primera
-      setSelectedSucursal(sucursalesFiltradas[0].id);
+      // Si hay sucursales filtradas y no hay sucursal seleccionada, seleccionar la primera
+      if (!selectedSucursal) {
+        setSelectedSucursal(sucursalesFiltradas[0].id);
+      }
     } else if (selectedEmpresa && sucursalesFiltradas.length === 0) {
       // Si no hay sucursales para la empresa seleccionada, limpiar sucursal
       setSelectedSucursal('');
     }
-  }, [selectedEmpresa, sucursalesFiltradas]);
+  }, [selectedEmpresa, sucursalesFiltradas, selectedSucursal]);
 
   useEffect(() => {
-    if (selectedSucursal) {
+    if (selectedEmpresa || selectedSucursal) {
       loadCapacitaciones();
     }
-  }, [selectedSucursal]);
+  }, [selectedEmpresa, selectedSucursal, sucursalesFiltradas]);
 
   // Efecto para detectar cambios en las sucursales
   useEffect(() => {
@@ -125,10 +136,19 @@ export default function Capacitaciones() {
     setLoading(true);
     try {
       const capacitacionesRef = collection(db, 'capacitaciones');
-      const q = query(
-        capacitacionesRef,
-        where('sucursalId', '==', selectedSucursal)
-      );
+      
+      let q;
+      if (selectedSucursal) {
+        // Filtrar por sucursal específica
+        q = query(capacitacionesRef, where('sucursalId', '==', selectedSucursal));
+      } else if (selectedEmpresa) {
+        // Filtrar por todas las sucursales de la empresa seleccionada
+        const sucursalesEmpresa = sucursalesFiltradas.map(s => s.id);
+        q = query(capacitacionesRef, where('sucursalId', 'in', sucursalesEmpresa));
+      } else {
+        // Mostrar todas las capacitaciones del usuario
+        q = capacitacionesRef;
+      }
       
       const snapshot = await getDocs(q);
       const capacitacionesData = snapshot.docs.map(doc => ({
@@ -304,10 +324,18 @@ export default function Capacitaciones() {
         </Box>
       </Box>
 
-      {/* Selector de Empresa */}
-      {userEmpresas && userEmpresas.length > 1 && (
-        <Paper sx={{ p: 2, mb: 2 }}>
-          <FormControl fullWidth>
+      {/* Selectores de Empresa y Sucursal */}
+      <Paper sx={{ p: 2, mb: 3 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+          <BusinessIcon color="primary" />
+          <Typography variant="h6" sx={{ fontWeight: 'medium' }}>
+            Filtros de Capacitaciones
+          </Typography>
+        </Box>
+        
+        <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+          {/* Selector de Empresa */}
+          <FormControl sx={{ minWidth: 200, flex: 1 }}>
             <InputLabel>Empresa</InputLabel>
             <Select
               value={selectedEmpresa}
@@ -315,36 +343,92 @@ export default function Capacitaciones() {
               onChange={(e) => setSelectedEmpresa(e.target.value)}
             >
               <MenuItem value="">
-                <em>Todas las empresas</em>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <BusinessIcon fontSize="small" />
+                  <em>Todas las empresas</em>
+                </Box>
               </MenuItem>
-              {userEmpresas.map((empresa) => (
+              {userEmpresas?.map((empresa) => (
                 <MenuItem key={empresa.id} value={empresa.id}>
-                  {empresa.nombre}
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <BusinessIcon fontSize="small" />
+                    {empresa.nombre}
+                  </Box>
                 </MenuItem>
               ))}
             </Select>
           </FormControl>
+
+          {/* Selector de Sucursal */}
+          <FormControl sx={{ minWidth: 200, flex: 1 }}>
+            <InputLabel>Sucursal</InputLabel>
+            <Select
+              value={selectedSucursal}
+              label="Sucursal"
+              onChange={(e) => setSelectedSucursal(e.target.value)}
+            >
+              <MenuItem value="">
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <StorefrontIcon fontSize="small" />
+                  <em>Todas las sucursales</em>
+                </Box>
+              </MenuItem>
+              {sucursalesFiltradas.map((sucursal) => (
+                <MenuItem key={sucursal.id} value={sucursal.id}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <StorefrontIcon fontSize="small" />
+                    <Box>
+                      <Typography variant="body2">
+                        {sucursal.nombre}
+                      </Typography>
+                      {!selectedEmpresa && (
+                        <Typography variant="caption" color="textSecondary">
+                          {sucursal.empresaNombre}
+                        </Typography>
+                      )}
+                    </Box>
+                  </Box>
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        </Box>
+      </Paper>
+
+      {/* Información contextual */}
+      {(selectedEmpresa || selectedSucursal) && (
+        <Paper sx={{ p: 2, mb: 3, bgcolor: 'primary.50' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
+            <Typography variant="body2" color="textSecondary">
+              Mostrando capacitaciones de:
+            </Typography>
+            {selectedEmpresa && (
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <BusinessIcon color="primary" fontSize="small" />
+                <Typography variant="body2" color="primary">
+                  <strong>{userEmpresas?.find(e => e.id === selectedEmpresa)?.nombre}</strong>
+                </Typography>
+              </Box>
+            )}
+            {selectedEmpresa && selectedSucursal && (
+              <Typography variant="body2" color="textSecondary">→</Typography>
+            )}
+            {selectedSucursal && (
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <StorefrontIcon color="primary" fontSize="small" />
+                <Typography variant="body2" color="primary">
+                  <strong>{sucursalesFiltradas.find(s => s.id === selectedSucursal)?.nombre}</strong>
+                </Typography>
+              </Box>
+            )}
+            {!selectedEmpresa && !selectedSucursal && (
+              <Typography variant="body2" color="primary">
+                <strong>Todas las empresas y sucursales</strong>
+              </Typography>
+            )}
+          </Box>
         </Paper>
       )}
-
-      {/* Selector de Sucursal */}
-      <Paper sx={{ p: 2, mb: 3 }}>
-        <FormControl fullWidth>
-          <InputLabel>Sucursal</InputLabel>
-          <Select
-            value={selectedSucursal}
-            label="Sucursal"
-            onChange={(e) => setSelectedSucursal(e.target.value)}
-          >
-            {sucursalesFiltradas.map((sucursal) => (
-              <MenuItem key={sucursal.id} value={sucursal.id}>
-                {sucursal.nombre}
-                {!selectedEmpresa && ` - ${sucursal.empresaNombre}`}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-      </Paper>
 
       {/* Filtros */}
       <Paper sx={{ p: 2, mb: 3 }}>

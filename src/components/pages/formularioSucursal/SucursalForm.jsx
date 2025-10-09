@@ -79,7 +79,7 @@ const SucursalForm = ({ agregarSucursal, empresaId }) => {
       const empresa = empresas.find(e => e.nombre === value);
       setEmpresaSeleccionada(empresa);
       if (empresa && empresa.id !== empresaId) {
-        navigate(`/sucursales/${empresa.id}`);
+        navigate(`/establecimiento`);
       }
     }
   };

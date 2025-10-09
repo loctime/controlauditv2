@@ -21,7 +21,6 @@ export const useChromePreload = () => {
   const pagesToPreload = [
     { path: '/auditoria', name: 'Auditoría' },
     { path: '/formulario', name: 'Formularios' },
-    { path: '/sucursales', name: 'Sucursales' },
     { path: '/editar', name: 'Editar' },
     { path: '/reporte', name: 'Reportes' }
   ];

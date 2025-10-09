@@ -236,12 +236,6 @@ export const menuItems = [
         Icon: BusinessIcon
     },
     {
-        id: "sucursal",
-        path: "/sucursales",
-        title: "Sucursales",
-        Icon: BusinessIcon
-    },
-    {
         id: "reporte",
         path: "/reporte",
         title: "Reporte",
