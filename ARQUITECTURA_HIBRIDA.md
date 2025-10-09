@@ -180,7 +180,7 @@ function EmpleadosTab({ empresaId }) {
 }
 ```
 
-## 🔄 Flujo de Datos al Hacer Login
+## 🔄 Flujo de Datos al Hacer Login (Sistema Híbrido)
 
 ```
 1. Usuario hace login
@@ -191,14 +191,25 @@ function EmpleadosTab({ empresaId }) {
    ↓
 4. setUserProfile(profile) ← Disponible inmediatamente
    ↓
-5. Listeners reactivos se activan automáticamente:
-   - empresaService.subscribeToUserEmpresas() → userEmpresas
-   - Listener de sucursales → userSucursales
-   - Listener de formularios → userFormularios
+5. CARGA MANUAL (bloqueante - para cache inicial):
+   - await loadUserEmpresas() → Espera ~1-2 seg
+   - await loadUserAuditorias()
+   - await loadAuditoriasCompartidas()
    ↓
-6. Auditorías se cargan manualmente (Promise.all)
+6. setTimeout 1.5 seg → ESPERA que empresas estén listas
    ↓
-7. ✅ Toda la app tiene datos disponibles
+7. CARGA MANUAL (bloqueante - para cache inicial):
+   - await loadUserSucursales() → Espera ~1-2 seg
+   - await loadUserFormularios()
+   ↓
+8. await saveCompleteUserCache() ← Cache CON datos completos
+   ↓
+9. EN PARALELO: Listeners reactivos ya activos:
+   - empresaService.subscribeToUserEmpresas() → Actualizaciones tiempo real
+   - Listener de sucursales → Actualizaciones tiempo real
+   - Listener de formularios → Actualizaciones tiempo real
+   ↓
+10. ✅ App funciona OFFLINE + actualizaciones en TIEMPO REAL
 ```
 
 ## ✅ PWA Offline Funcionando Correctamente

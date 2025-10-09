@@ -140,27 +140,36 @@ const AuthContextComponent = ({ children }) => {
             // Establecer el perfil PRIMERO
             setUserProfile(profile);
             
-            // Cargar solo auditorías manualmente (empresas, sucursales y formularios usan listeners)
+            // Cargar datos bloqueantes (esperar para el cache inicial)
             await Promise.all([
+              loadUserEmpresas(firebaseUser.uid, profile, profile.role),
               loadUserAuditorias(firebaseUser.uid),
               loadAuditoriasCompartidas(firebaseUser.uid)
             ]);
 
-            // Guardar cache completo para funcionamiento offline
-            try {
-              // Asegurar que el profile tenga todos los datos necesarios
-              const completeProfile = {
-                ...profile,
-                clienteAdminId: profile.clienteAdminId || profile.uid, // Fallback al uid si no hay clienteAdminId
-                email: profile.email || firebaseUser.email,
-                displayName: profile.displayName || firebaseUser.displayName || firebaseUser.email,
-                role: profile.role || 'operario'
-              };
-              
-              await saveCompleteUserCache(completeProfile);
-            } catch (error) {
-              console.error('Error guardando cache completo:', error);
-            }
+            // Cargar sucursales y formularios después de que empresas estén listas
+            setTimeout(async () => {
+              await Promise.all([
+                loadUserSucursales(firebaseUser.uid),
+                loadUserFormularios(firebaseUser.uid)
+              ]);
+
+              // Guardar cache DESPUÉS de cargar todos los datos
+              try {
+                const completeProfile = {
+                  ...profile,
+                  clienteAdminId: profile.clienteAdminId || profile.uid,
+                  email: profile.email || firebaseUser.email,
+                  displayName: profile.displayName || firebaseUser.displayName || firebaseUser.email,
+                  role: profile.role || 'operario'
+                };
+                
+                await saveCompleteUserCache(completeProfile);
+                console.log('✅ Cache guardado con datos completos');
+              } catch (error) {
+                console.error('Error guardando cache completo:', error);
+              }
+            }, 1500);
           }
         } else {
           // Si no hay usuario de Firebase, verificar si hay cache offline
@@ -437,16 +446,13 @@ const AuthContextComponent = ({ children }) => {
     localStorage.removeItem("isLogged");
   };
 
-  // Funciones de carga de datos
+  // Funciones de carga de datos (usadas al login para cache inicial)
   const loadUserEmpresas = async (userId, providedProfile = null, providedRole = null) => {
     try {
-      // Usar los parámetros provistos o los del estado
       const profileToUse = providedProfile || userProfile;
       const roleToUse = providedRole || role;
 
-      // Asegurar que tenemos los datos necesarios
       if (!roleToUse || !profileToUse) {
-        console.warn('⚠️ [AuthContext] Role o userProfile no disponibles aún');
         setLoadingEmpresas(false);
         return [];
       }
@@ -456,7 +462,8 @@ const AuthContextComponent = ({ children }) => {
       setLoadingEmpresas(false);
       return empresas;
     } catch (error) {
-      // Fallback al cache offline si falla la carga desde Firestore
+      console.error('❌ Error cargando empresas:', error);
+      
       try {
         const cachedData = await loadUserFromCache();
         if (cachedData?.empresas && cachedData.empresas.length > 0) {
@@ -465,7 +472,7 @@ const AuthContextComponent = ({ children }) => {
           return cachedData.empresas;
         }
       } catch (cacheError) {
-        console.error('Error cargando desde cache offline:', cacheError);
+        console.error('Error cargando desde cache:', cacheError);
       }
       
       setUserEmpresas([]);
@@ -474,18 +481,150 @@ const AuthContextComponent = ({ children }) => {
     }
   };
 
-  // Las funciones de carga manual fueron reemplazadas por listeners reactivos
+  const loadUserSucursales = async (userId) => {
+    try {
+      if (!userProfile || !userEmpresas || userEmpresas.length === 0) {
+        setUserSucursales([]);
+        setLoadingSucursales(false);
+        return [];
+      }
+
+      setLoadingSucursales(true);
+      let sucursalesData = [];
+      
+      if (role === 'supermax') {
+        const sucursalesSnapshot = await getDocs(collection(db, 'sucursales'));
+        sucursalesData = sucursalesSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+      } else {
+        const empresasIds = userEmpresas.map(emp => emp.id);
+        const chunkSize = 10;
+        const empresasChunks = [];
+        for (let i = 0; i < empresasIds.length; i += chunkSize) {
+          empresasChunks.push(empresasIds.slice(i, i + chunkSize));
+        }
+
+        const sucursalesPromises = empresasChunks.map(async (chunk) => {
+          const sucursalesRef = collection(db, "sucursales");
+          const sucursalesQuery = query(sucursalesRef, where("empresaId", "in", chunk));
+          const sucursalesSnapshot = await getDocs(sucursalesQuery);
+          return sucursalesSnapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          }));
+        });
+
+        const sucursalesArrays = await Promise.all(sucursalesPromises);
+        sucursalesData = sucursalesArrays.flat();
+      }
+      
+      setUserSucursales(sucursalesData);
+      setLoadingSucursales(false);
+      return sucursalesData;
+    } catch (error) {
+      console.error('❌ Error cargando sucursales:', error);
+      
+      try {
+        const cachedData = await loadUserFromCache();
+        if (cachedData?.sucursales && cachedData.sucursales.length > 0) {
+          setUserSucursales(cachedData.sucursales);
+          setLoadingSucursales(false);
+          return cachedData.sucursales;
+        }
+      } catch (cacheError) {
+        console.error('Error cargando sucursales desde cache:', cacheError);
+      }
+      
+      setUserSucursales([]);
+      setLoadingSucursales(false);
+      return [];
+    }
+  };
+
+  const loadUserFormularios = async (userId) => {
+    try {
+      if (!userProfile || !userEmpresas || userEmpresas.length === 0) {
+        setUserFormularios([]);
+        setLoadingFormularios(false);
+        return [];
+      }
+
+      setLoadingFormularios(true);
+      let formulariosData = [];
+      
+      if (role === 'supermax') {
+        const formulariosSnapshot = await getDocs(collection(db, 'formularios'));
+        formulariosData = formulariosSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+      } else if (role === 'max') {
+        const formulariosQuery = query(
+          collection(db, "formularios"), 
+          where("clienteAdminId", "==", userProfile.uid)
+        );
+        const formulariosSnapshot = await getDocs(formulariosQuery);
+        formulariosData = formulariosSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+      } else if (role === 'operario' && userProfile.clienteAdminId) {
+        const formulariosQuery = query(
+          collection(db, "formularios"), 
+          where("clienteAdminId", "==", userProfile.clienteAdminId)
+        );
+        const formulariosSnapshot = await getDocs(formulariosQuery);
+        formulariosData = formulariosSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+      }
+      
+      setUserFormularios(formulariosData);
+      setLoadingFormularios(false);
+      return formulariosData;
+    } catch (error) {
+      console.error('❌ Error cargando formularios:', error);
+      
+      try {
+        const cachedData = await loadUserFromCache();
+        if (cachedData?.formularios && cachedData.formularios.length > 0) {
+          setUserFormularios(cachedData.formularios);
+          setLoadingFormularios(false);
+          return cachedData.formularios;
+        }
+      } catch (cacheError) {
+        console.error('Error cargando formularios desde cache:', cacheError);
+      }
+      
+      setUserFormularios([]);
+      setLoadingFormularios(false);
+      return [];
+    }
+  };
 
   const loadUserAuditorias = async (userId) => {
-    const auditorias = await auditoriaService.getUserAuditorias(userId, role);
-    setUserAuditorias(auditorias);
-    return auditorias;
+    try {
+      const auditorias = await auditoriaService.getUserAuditorias(userId, role);
+      setUserAuditorias(auditorias);
+      return auditorias;
+    } catch (error) {
+      console.error('❌ Error cargando auditorías:', error);
+      return [];
+    }
   };
 
   const loadAuditoriasCompartidas = async (userId) => {
-    const auditorias = await auditoriaService.getAuditoriasCompartidas(userId);
-    setAuditoriasCompartidas(auditorias);
-    return auditorias;
+    try {
+      const auditorias = await auditoriaService.getAuditoriasCompartidas(userId);
+      setAuditoriasCompartidas(auditorias);
+      return auditorias;
+    } catch (error) {
+      console.error('❌ Error cargando auditorías compartidas:', error);
+      return [];
+    }
   };
 
 
@@ -567,8 +706,8 @@ const AuthContextComponent = ({ children }) => {
     canViewEmpresa: (empresaId) => empresaService.canViewEmpresa(empresaId, userProfile),
     canViewAuditoria: (auditoriaId) => auditoriaService.canViewAuditoria(auditoriaId, userProfile, auditoriasCompartidas),
     getUserEmpresas: () => loadUserEmpresas(user?.uid),
-    getUserSucursales: () => Promise.resolve(userSucursales), // Compatibilidad: Los listeners se encargan automáticamente
-    getUserFormularios: () => Promise.resolve(userFormularios), // Compatibilidad: Los listeners se encargan automáticamente
+    getUserSucursales: () => loadUserSucursales(user?.uid),
+    getUserFormularios: () => loadUserFormularios(user?.uid),
     getUserAuditorias: () => loadUserAuditorias(user?.uid),
     getAuditoriasCompartidas: () => loadAuditoriasCompartidas(user?.uid),
     role,
