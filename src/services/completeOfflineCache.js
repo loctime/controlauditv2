@@ -13,13 +13,16 @@ const CACHE_EXPIRY_DAYS = 7; // Los datos se consideran válidos por 7 días
 
 /**
  * Guardar datos completos del usuario para funcionamiento offline
+ * @param {Object} userProfile - Perfil del usuario
+ * @param {Array} empresas - Empresas ya cargadas (opcional, hace query si no se pasa)
+ * @param {Array} sucursales - Sucursales ya cargadas (opcional)
+ * @param {Array} formularios - Formularios ya cargados (opcional)
  */
-export const saveCompleteUserCache = async (userProfile) => {
+export const saveCompleteUserCache = async (userProfile, empresas = null, sucursales = null, formularios = null) => {
   try {
     if (!userProfile?.uid) {
       throw new Error('No hay usuario autenticado');
     }
-
 
     const offlineDb = await getOfflineDatabase();
     const cacheData = {
@@ -33,11 +36,15 @@ export const saveCompleteUserCache = async (userProfile) => {
       version: CACHE_VERSION
     };
 
-    // Obtener y cachear empresas del usuario (con filtrado multi-tenant)
+    // Usar empresas pasadas como parámetro o hacer query
     try {
       let empresasData = [];
       
-      if (userProfile.role === 'supermax') {
+      if (empresas && empresas.length > 0) {
+        // ✅ Usar empresas ya cargadas (más rápido y confiable)
+        empresasData = empresas;
+        console.log('✅ Usando empresas ya cargadas en memoria:', empresasData.length);
+      } else if (userProfile.role === 'supermax') {
         // Supermax ve todas las empresas
         const empresasSnapshot = await getDocs(collection(db, 'empresas'));
         empresasData = empresasSnapshot.docs.map(doc => ({
@@ -90,19 +97,21 @@ export const saveCompleteUserCache = async (userProfile) => {
       console.error('Error cacheando empresas:', error);
     }
 
-    // Obtener y cachear formularios del usuario (filtrados por rol)
+    // Usar formularios pasados como parámetro o hacer query
     try {
       let formulariosData = [];
       
-      if (userProfile.role === 'supermax') {
-        // Supermax ve todos los formularios
+      if (formularios && formularios.length > 0) {
+        // ✅ Usar formularios ya cargados (más rápido y confiable)
+        formulariosData = formularios;
+        console.log('✅ Usando formularios ya cargados en memoria:', formulariosData.length);
+      } else if (userProfile.role === 'supermax') {
         const formulariosSnapshot = await getDocs(collection(db, 'formularios'));
         formulariosData = formulariosSnapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data()
         }));
       } else if (userProfile.role === 'max') {
-        // Max ve formularios donde es el clienteAdminId
         const formulariosQuery = query(
           collection(db, "formularios"), 
           where("clienteAdminId", "==", userProfile.uid)
@@ -113,7 +122,6 @@ export const saveCompleteUserCache = async (userProfile) => {
           ...doc.data()
         }));
       } else if (userProfile.role === 'operario' && userProfile.clienteAdminId) {
-        // Operario ve formularios de su cliente admin
         const formulariosQuery = query(
           collection(db, "formularios"), 
           where("clienteAdminId", "==", userProfile.clienteAdminId)
@@ -130,12 +138,15 @@ export const saveCompleteUserCache = async (userProfile) => {
       console.error('Error cacheando formularios:', error);
     }
 
-    // Obtener y cachear sucursales (filtradas por rol)
+    // Usar sucursales pasadas como parámetro o hacer query
     try {
       let sucursalesData = [];
       
-      if (userProfile.role === 'supermax') {
-        // Supermax ve todas las sucursales
+      if (sucursales && sucursales.length > 0) {
+        // ✅ Usar sucursales ya cargadas (más rápido y confiable)
+        sucursalesData = sucursales;
+        console.log('✅ Usando sucursales ya cargadas en memoria:', sucursalesData.length);
+      } else if (userProfile.role === 'supermax') {
         const sucursalesSnapshot = await getDocs(collection(db, 'sucursales'));
         sucursalesData = sucursalesSnapshot.docs.map(doc => ({
           id: doc.id,
@@ -146,7 +157,6 @@ export const saveCompleteUserCache = async (userProfile) => {
         const empresasIds = cacheData.empresas.map(emp => emp.id);
         
         if (empresasIds.length > 0) {
-          // Firestore limita 'in' queries a 10 elementos, dividir en chunks si es necesario
           const chunkSize = 10;
           const empresasChunks = [];
           for (let i = 0; i < empresasIds.length; i += chunkSize) {

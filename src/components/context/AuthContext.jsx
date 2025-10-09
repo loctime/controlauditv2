@@ -153,12 +153,12 @@ const AuthContextComponent = ({ children }) => {
 
             // Cargar sucursales y formularios después de que empresas estén listas
             setTimeout(async () => {
-              await Promise.all([
+              const [sucursalesCargadas, formulariosCargados] = await Promise.all([
                 loadUserSucursales(firebaseUser.uid),
                 loadUserFormularios(firebaseUser.uid)
               ]);
 
-              // Guardar cache DESPUÉS de cargar todos los datos
+              // Guardar cache DESPUÉS de cargar todos los datos - PASAR datos ya cargados
               try {
                 const completeProfile = {
                   ...profile,
@@ -168,8 +168,18 @@ const AuthContextComponent = ({ children }) => {
                   role: profile.role || 'operario'
                 };
                 
-                await saveCompleteUserCache(completeProfile);
-                console.log('✅ Cache guardado con datos completos');
+                // ✅ Pasar datos YA cargados para evitar queries duplicadas (problema Chrome)
+                await saveCompleteUserCache(
+                  completeProfile, 
+                  userEmpresas, 
+                  sucursalesCargadas, 
+                  formulariosCargados
+                );
+                console.log('✅ Cache guardado con datos completos:', {
+                  empresas: userEmpresas?.length || 0,
+                  sucursales: sucursalesCargadas?.length || 0,
+                  formularios: formulariosCargados?.length || 0
+                });
               } catch (error) {
                 console.error('Error guardando cache completo:', error);
               }
@@ -700,7 +710,13 @@ const AuthContextComponent = ({ children }) => {
   const forceRefreshCache = async () => {
     if (userProfile) {
       try {
-        const cacheResult = await saveCompleteUserCache(userProfile);
+        // Pasar datos ya cargados
+        const cacheResult = await saveCompleteUserCache(
+          userProfile, 
+          userEmpresas, 
+          userSucursales, 
+          userFormularios
+        );
         return cacheResult;
       } catch (error) {
         console.error('Error actualizando cache:', error);
