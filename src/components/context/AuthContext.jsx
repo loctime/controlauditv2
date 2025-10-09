@@ -29,6 +29,7 @@ const AuthContextComponent = ({ children }) => {
   // Usar hooks personalizados
   const {
     userProfile,
+    setUserProfile,
     role,
     permisos,
     bloqueado,
@@ -154,6 +155,9 @@ const AuthContextComponent = ({ children }) => {
               firebaseUser.uid
             );
             
+            // Establecer el perfil PRIMERO
+            setUserProfile(profile);
+            
             // Cargar datos del usuario
             await Promise.all([
               loadUserEmpresas(firebaseUser.uid, profile, profile.role),
@@ -161,13 +165,8 @@ const AuthContextComponent = ({ children }) => {
               loadAuditoriasCompartidas(firebaseUser.uid)
             ]);
 
-            // Cargar sucursales y formularios después de que las empresas estén disponibles
-            setTimeout(async () => {
-              await Promise.all([
-                loadUserSucursales(firebaseUser.uid),
-                loadUserFormularios(firebaseUser.uid)
-              ]);
-            }, 1000); // Pequeño delay para asegurar que las empresas estén cargadas
+            // Las sucursales y formularios se cargarán cuando userProfile esté disponible
+            // Esto se maneja en el useEffect de abajo
 
             // Guardar cache completo para funcionamiento offline
             try {
@@ -285,6 +284,21 @@ const AuthContextComponent = ({ children }) => {
     };
   }, []);
 
+  // useEffect para cargar sucursales y formularios cuando userProfile y userEmpresas estén disponibles
+  useEffect(() => {
+    const loadSucursalesYFormularios = async () => {
+      if (user && userProfile && userEmpresas && userEmpresas.length > 0) {
+        console.log('🎯 [AuthContext] userProfile y userEmpresas disponibles, cargando sucursales...');
+        await Promise.all([
+          loadUserSucursales(user.uid),
+          loadUserFormularios(user.uid)
+        ]);
+      }
+    };
+
+    loadSucursalesYFormularios();
+  }, [user, userProfile, userEmpresas]);
+
   // --- Listener reactivo para empresas del usuario (multi-tenant) ---
   useEffect(() => {
     const unsubscribe = empresaService.subscribeToUserEmpresas(
@@ -352,7 +366,7 @@ const AuthContextComponent = ({ children }) => {
   };
 
   const loadUserSucursales = async (userId, retryCount = 0) => {
-    const MAX_RETRIES = 3;
+    const MAX_RETRIES = 5; // Aumentar reintentos
     
     console.log(`🔄 [AuthContext] loadUserSucursales - Intento ${retryCount + 1}/${MAX_RETRIES + 1}`);
     console.log(`🔄 [AuthContext] userProfile:`, !!userProfile);
@@ -362,7 +376,7 @@ const AuthContextComponent = ({ children }) => {
       if (!userProfile) {
         console.log(`❌ [AuthContext] No hay userProfile, reintentando...`);
         if (retryCount < MAX_RETRIES) {
-          setTimeout(() => loadUserSucursales(userId, retryCount + 1), 1000);
+          setTimeout(() => loadUserSucursales(userId, retryCount + 1), 1500); // Aumentar delay
           return [];
         } else {
           console.log(`❌ [AuthContext] Máximos reintentos alcanzados sin userProfile`);
@@ -375,7 +389,7 @@ const AuthContextComponent = ({ children }) => {
       if (!userEmpresas || userEmpresas.length === 0) {
         console.log(`❌ [AuthContext] No hay userEmpresas, reintentando...`);
         if (retryCount < MAX_RETRIES) {
-          setTimeout(() => loadUserSucursales(userId, retryCount + 1), 1000);
+          setTimeout(() => loadUserSucursales(userId, retryCount + 1), 1500); // Aumentar delay
           return [];
         } else {
           console.log(`❌ [AuthContext] Máximos reintentos alcanzados sin userEmpresas`);
