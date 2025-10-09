@@ -55,7 +55,7 @@ export const empresaService = {
   },
 
   // Listener reactivo para empresas
-  subscribeToUserEmpresas(userProfile, role, setUserEmpresas, setLoadingEmpresas) {
+  subscribeToUserEmpresas(userProfile, role, setUserEmpresas, setLoadingEmpresas, loadUserFromCache = null) {
     if (!userProfile?.uid || !role) {
       setUserEmpresas([]);
       setLoadingEmpresas(false);
@@ -78,14 +78,33 @@ export const empresaService = {
       return () => {};
     }
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      setUserEmpresas(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-      setLoadingEmpresas(false);
-    }, (error) => {
-      console.error('[empresaService] Error en onSnapshot de empresas:', error);
-      setUserEmpresas([]);
-      setLoadingEmpresas(false);
-    });
+    const unsubscribe = onSnapshot(q, 
+      (snapshot) => {
+        setUserEmpresas(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+        setLoadingEmpresas(false);
+      }, 
+      async (error) => {
+        console.error('❌ Error en listener de empresas:', error);
+        
+        // Fallback al cache offline
+        if (loadUserFromCache) {
+          try {
+            const cachedData = await loadUserFromCache();
+            if (cachedData?.empresas && cachedData.empresas.length > 0) {
+              console.log('🔄 [Offline] Usando empresas del cache IndexedDB:', cachedData.empresas.length);
+              setUserEmpresas(cachedData.empresas);
+              setLoadingEmpresas(false);
+              return;
+            }
+          } catch (cacheError) {
+            console.error('Error cargando empresas desde cache:', cacheError);
+          }
+        }
+        
+        setUserEmpresas([]);
+        setLoadingEmpresas(false);
+      }
+    );
 
     return unsubscribe;
   },

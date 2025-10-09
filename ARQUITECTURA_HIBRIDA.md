@@ -201,13 +201,47 @@ function EmpleadosTab({ empresaId }) {
 7. ✅ Toda la app tiene datos disponibles
 ```
 
-## ⚠️ Consideraciones PWA Offline
+## ✅ PWA Offline Funcionando Correctamente
 
 Los listeners reactivos incluyen:
-- ✅ Manejo de errores con fallback a cache
-- ✅ Compatible con IndexedDB offline
-- ✅ Los datos se guardan en `completeOfflineCache.js`
-- ✅ Funciona sin conexión si ya se cargó antes
+- ✅ **Fallback automático al cache IndexedDB** en caso de error
+- ✅ Compatible con `offlineDatabase.js` y `completeOfflineCache.js`
+- ✅ Los datos se guardan al login vía `saveCompleteUserCache()`
+- ✅ **Funciona sin conexión** si ya se cargó antes
+
+### Flujo Offline:
+```
+1. Usuario va offline
+   ↓
+2. onSnapshot falla (no hay conexión)
+   ↓
+3. Error handler detecta el fallo
+   ↓
+4. loadUserFromCache() carga desde IndexedDB
+   ↓
+5. ✅ App funciona con datos en cache
+```
+
+### Error Handlers con Fallback:
+```javascript
+// Empresas
+async (error) => {
+  const cachedData = await loadUserFromCache();
+  if (cachedData?.empresas) setUserEmpresas(cachedData.empresas);
+}
+
+// Sucursales
+async (error) => {
+  const cachedData = await loadUserFromCache();
+  if (cachedData?.sucursales) setUserSucursales(cachedData.sucursales);
+}
+
+// Formularios
+async (error) => {
+  const cachedData = await loadUserFromCache();
+  if (cachedData?.formularios) setUserFormularios(cachedData.formularios);
+}
+```
 
 ## 🚀 Mejoras Futuras Sugeridas
 
