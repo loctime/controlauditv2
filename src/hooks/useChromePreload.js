@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 export const useChromePreload = () => {
@@ -6,9 +6,16 @@ export const useChromePreload = () => {
   const [currentPage, setCurrentPage] = useState('');
   const [preloadProgress, setPreloadProgress] = useState(0);
   const navigate = useNavigate();
+  const hasPreloaded = useRef(false);
 
-  // Detectar si es Chrome
+  // Detectar si está en PWA standalone
+  const isPWAStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+  
+  // Detectar si es Chrome (no Edge)
   const isChrome = navigator.userAgent.includes('Chrome') && !navigator.userAgent.includes('Edg');
+  
+  // Solo debe ejecutarse en PWA standalone con Chrome
+  const shouldPreload = isPWAStandalone && isChrome;
   
   // Páginas a precargar en orden
   const pagesToPreload = [
@@ -20,7 +27,9 @@ export const useChromePreload = () => {
   ];
 
   const startPreload = async () => {
-    if (!isChrome || isPreloading) return;
+    if (!shouldPreload || isPreloading || hasPreloaded.current) return;
+    
+    hasPreloaded.current = true;
 
     console.log('🚀 [ChromePreload] Iniciando precarga automática para Chrome...');
     setIsPreloading(true);
@@ -145,7 +154,7 @@ export const useChromePreload = () => {
   };
 
   return {
-    isChrome,
+    shouldPreload,
     isPreloading,
     currentPage,
     preloadProgress,
