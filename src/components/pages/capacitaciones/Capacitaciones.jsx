@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Container,
   Paper,
@@ -93,46 +93,7 @@ export default function Capacitaciones() {
     }
   }, [userSucursales, localSucursales, selectedSucursal]);
 
-  // Efecto para auto-seleccionar empresa si solo hay una
-  useEffect(() => {
-    if (userEmpresas && userEmpresas.length === 1 && !selectedEmpresa) {
-      setSelectedEmpresa(userEmpresas[0].id);
-    }
-  }, [userEmpresas, selectedEmpresa]);
-
-  // Efecto para manejar cambio de empresa
-  useEffect(() => {
-    if (selectedEmpresa && sucursalesFiltradas.length > 0) {
-      // Si hay sucursales filtradas y no hay sucursal seleccionada, seleccionar la primera
-      if (!selectedSucursal) {
-        setSelectedSucursal(sucursalesFiltradas[0].id);
-      }
-    } else if (selectedEmpresa && sucursalesFiltradas.length === 0) {
-      // Si no hay sucursales para la empresa seleccionada, limpiar sucursal
-      setSelectedSucursal('');
-    }
-  }, [selectedEmpresa, sucursalesFiltradas, selectedSucursal]);
-
-  useEffect(() => {
-    if (selectedEmpresa || selectedSucursal) {
-      loadCapacitaciones();
-    }
-  }, [selectedEmpresa, selectedSucursal, sucursalesFiltradas]);
-
-  // Efecto para detectar cambios en las sucursales
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (userSucursales && userSucursales.length > 0) {
-        console.log('[Capacitaciones] ✅ Sucursales estables:', userSucursales.map(s => s.nombre));
-      } else if (!loadingSucursales) {
-        console.log('[Capacitaciones] ❌ Sucursales perdidas después de cargar');
-      }
-    }, 2000); // Esperar 2 segundos para ver si se mantienen
-
-    return () => clearTimeout(timer);
-  }, [userSucursales, loadingSucursales]);
-
-  const loadCapacitaciones = async () => {
+  const loadCapacitaciones = useCallback(async () => {
     setLoading(true);
     try {
       const capacitacionesRef = collection(db, 'capacitaciones');
@@ -143,7 +104,7 @@ export default function Capacitaciones() {
         q = query(capacitacionesRef, where('sucursalId', '==', selectedSucursal));
       } else if (selectedEmpresa) {
         // Filtrar por todas las sucursales de la empresa seleccionada
-        const sucursalesEmpresa = sucursalesFiltradas.map(s => s.id);
+        const sucursalesEmpresa = sucursalesDisponibles.filter(s => s.empresaId === selectedEmpresa).map(s => s.id);
         q = query(capacitacionesRef, where('sucursalId', 'in', sucursalesEmpresa));
       } else {
         // Mostrar todas las capacitaciones del usuario
@@ -169,7 +130,50 @@ export default function Capacitaciones() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedEmpresa, selectedSucursal, sucursalesDisponibles]);
+
+  // Efecto para auto-seleccionar empresa si solo hay una
+  useEffect(() => {
+    if (userEmpresas && userEmpresas.length === 1 && !selectedEmpresa) {
+      setSelectedEmpresa(userEmpresas[0].id);
+    }
+  }, [userEmpresas, selectedEmpresa]);
+
+  // Efecto para manejar cambio de empresa
+  useEffect(() => {
+    if (selectedEmpresa) {
+      const sucursalesEmpresa = sucursalesDisponibles.filter(s => s.empresaId === selectedEmpresa);
+      
+      if (sucursalesEmpresa.length > 0) {
+        // Si hay sucursales filtradas y no hay sucursal seleccionada, seleccionar la primera
+        if (!selectedSucursal) {
+          setSelectedSucursal(sucursalesEmpresa[0].id);
+        }
+      } else {
+        // Si no hay sucursales para la empresa seleccionada, limpiar sucursal
+        setSelectedSucursal('');
+      }
+    }
+  }, [selectedEmpresa, sucursalesDisponibles, selectedSucursal]);
+
+  useEffect(() => {
+    if (selectedEmpresa || selectedSucursal) {
+      loadCapacitaciones();
+    }
+  }, [selectedEmpresa, selectedSucursal, loadCapacitaciones]);
+
+  // Efecto para detectar cambios en las sucursales
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (userSucursales && userSucursales.length > 0) {
+        console.log('[Capacitaciones] ✅ Sucursales estables:', userSucursales.map(s => s.nombre));
+      } else if (!loadingSucursales) {
+        console.log('[Capacitaciones] ❌ Sucursales perdidas después de cargar');
+      }
+    }, 2000); // Esperar 2 segundos para ver si se mantienen
+
+    return () => clearTimeout(timer);
+  }, [userSucursales, loadingSucursales]);
 
   const handleRegistrarAsistencia = (capacitacionId) => {
     navigate(`/capacitacion/${capacitacionId}/asistencia`);
@@ -393,74 +397,73 @@ export default function Capacitaciones() {
             </Select>
           </FormControl>
         </Box>
-      </Paper>
-
-      {/* Información contextual */}
-      {(selectedEmpresa || selectedSucursal) && (
-        <Paper sx={{ p: 2, mb: 3, bgcolor: 'primary.50' }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
-            <Typography variant="body2" color="textSecondary">
-              Mostrando capacitaciones de:
-            </Typography>
-            {selectedEmpresa && (
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <BusinessIcon color="primary" fontSize="small" />
-                <Typography variant="body2" color="primary">
-                  <strong>{userEmpresas?.find(e => e.id === selectedEmpresa)?.nombre}</strong>
-                </Typography>
-              </Box>
-            )}
-            {selectedEmpresa && selectedSucursal && (
-              <Typography variant="body2" color="textSecondary">→</Typography>
-            )}
-            {selectedSucursal && (
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <StorefrontIcon color="primary" fontSize="small" />
-                <Typography variant="body2" color="primary">
-                  <strong>{sucursalesFiltradas.find(s => s.id === selectedSucursal)?.nombre}</strong>
-                </Typography>
-              </Box>
-            )}
-            {!selectedEmpresa && !selectedSucursal && (
-              <Typography variant="body2" color="primary">
-                <strong>Todas las empresas y sucursales</strong>
+        
+        {/* Información contextual y filtros */}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap', mt: 2 }}>
+          {(selectedEmpresa || selectedSucursal) && (
+            <>
+              <Typography variant="body2" color="textSecondary">
+                Mostrando capacitaciones de:
               </Typography>
-            )}
+              {selectedEmpresa && (
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <BusinessIcon color="primary" fontSize="small" />
+                  <Typography variant="body2" color="primary">
+                    <strong>{userEmpresas?.find(e => e.id === selectedEmpresa)?.nombre}</strong>
+                  </Typography>
+                </Box>
+              )}
+              {selectedEmpresa && selectedSucursal && (
+                <Typography variant="body2" color="textSecondary">→</Typography>
+              )}
+              {selectedSucursal && (
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <StorefrontIcon color="primary" fontSize="small" />
+                  <Typography variant="body2" color="primary">
+                    <strong>{sucursalesFiltradas.find(s => s.id === selectedSucursal)?.nombre}</strong>
+                  </Typography>
+                </Box>
+              )}
+              {!selectedEmpresa && !selectedSucursal && (
+                <Typography variant="body2" color="primary">
+                  <strong>Todas las empresas y sucursales</strong>
+                </Typography>
+              )}
+            </>
+          )}
+          
+          {/* Filtros en la misma línea */}
+          <Box sx={{ display: 'flex', gap: 2, ml: 'auto' }}>
+            <FormControl size="small" sx={{ minWidth: 150 }}>
+              <InputLabel>Tipo</InputLabel>
+              <Select
+                value={filterTipo}
+                label="Tipo"
+                onChange={(e) => setFilterTipo(e.target.value)}
+              >
+                <MenuItem value="">Todos</MenuItem>
+                <MenuItem value="charla">Charla</MenuItem>
+                <MenuItem value="entrenamiento">Entrenamiento</MenuItem>
+                <MenuItem value="capacitacion">Capacitación</MenuItem>
+              </Select>
+            </FormControl>
+
+            <FormControl size="small" sx={{ minWidth: 150 }}>
+              <InputLabel>Estado</InputLabel>
+              <Select
+                value={filterEstado}
+                label="Estado"
+                onChange={(e) => setFilterEstado(e.target.value)}
+              >
+                <MenuItem value="">Todos</MenuItem>
+                <MenuItem value="activa">Activa</MenuItem>
+                <MenuItem value="completada">Completada</MenuItem>
+              </Select>
+            </FormControl>
           </Box>
-        </Paper>
-      )}
-
-      {/* Filtros */}
-      <Paper sx={{ p: 2, mb: 3 }}>
-        <Box sx={{ display: 'flex', gap: 2 }}>
-          <FormControl size="small" sx={{ minWidth: 200 }}>
-            <InputLabel>Tipo</InputLabel>
-            <Select
-              value={filterTipo}
-              label="Tipo"
-              onChange={(e) => setFilterTipo(e.target.value)}
-            >
-              <MenuItem value="">Todos</MenuItem>
-              <MenuItem value="charla">Charla</MenuItem>
-              <MenuItem value="entrenamiento">Entrenamiento</MenuItem>
-              <MenuItem value="capacitacion">Capacitación</MenuItem>
-            </Select>
-          </FormControl>
-
-          <FormControl size="small" sx={{ minWidth: 200 }}>
-            <InputLabel>Estado</InputLabel>
-            <Select
-              value={filterEstado}
-              label="Estado"
-              onChange={(e) => setFilterEstado(e.target.value)}
-            >
-              <MenuItem value="">Todos</MenuItem>
-              <MenuItem value="activa">Activa</MenuItem>
-              <MenuItem value="completada">Completada</MenuItem>
-            </Select>
-          </FormControl>
         </Box>
       </Paper>
+
 
       {/* Grid de Capacitaciones */}
       {loading ? (
