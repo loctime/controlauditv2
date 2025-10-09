@@ -129,6 +129,21 @@ const Home = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userProfile]); // Solo depende de userProfile - ignoramos otras deps intencionalmente para evitar bucle
 
+  // Ejecutar precarga automática en Chrome PWA (necesario para Chrome)
+  useEffect(() => {
+    if (shouldPreload && !isPreloading && isPWAStandalone && userProfile && userEmpresas?.length > 0) {
+      console.log('🚀 [Chrome PWA] Detectado - Ejecutando precarga automática en 3 segundos...');
+      
+      const preloadTimer = setTimeout(() => {
+        console.log('🔄 [Chrome PWA] Iniciando precarga de páginas para cachear correctamente...');
+        startPreload();
+      }, 3000);
+      
+      return () => clearTimeout(preloadTimer);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shouldPreload, isPWAStandalone, userProfile, userEmpresas]);
+
   return (
     <div className="home-main-container">
       <div className="home-card">
