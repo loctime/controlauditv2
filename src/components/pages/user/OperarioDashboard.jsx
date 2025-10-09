@@ -400,10 +400,10 @@ const OperarioDashboard = () => {
               variant="outlined"
               fullWidth
               startIcon={<LocationOn />}
-              onClick={() => navigate('/sucursales')}
+              onClick={() => navigate('/establecimiento')}
               sx={{ py: 2 }}
             >
-              Sucursales
+              Establecimientos
             </Button>
           </Grid>
         </Grid>

@@ -324,7 +324,7 @@ export const useAuditoriaData = (
       console.log('[DEBUG Auditoria] Iniciando carga de empresas desde sucursales...');
       
       try {
-        // Prioridad 1: Usar userEmpresas del contexto (igual que /sucursales)
+        // Prioridad 1: Usar userEmpresas del contexto (igual que /establecimiento)
         if (userEmpresas && userEmpresas.length > 0) {
           console.log('[DEBUG Auditoria] Usando empresas del contexto:', userEmpresas.length, 'empresas');
           setEmpresas(userEmpresas);

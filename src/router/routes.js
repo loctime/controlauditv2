@@ -1,6 +1,5 @@
 import Home from "../components/pages/home/Home";
 import EstablecimientosContainer from "../components/pages/establecimiento/EstablecimientosContainer";
-import SucursalContainer from "../components/pages/SucursalContainer.jsx/SucursalContainer";
 import Auditoria from "../components/pages/auditoria/auditoria/Auditoria";
 import Formulario from "../components/pages/formulario/Formulario";
 import EditarFormulario from "../components/pages/editar/EditarFormulario";
@@ -41,16 +40,6 @@ export const routes = [
     id: "establecimiento",
     path: "/establecimiento",
     Element: EstablecimientosContainer,
-  },
-  {
-    id: "sucursal",
-    path: "/sucursales",
-    Element: SucursalContainer,
-  },
-  {
-    id: "sucursal-empresa",
-    path: "/sucursales/:empresaId",
-    Element: SucursalContainer,
   },
   {
     id: "auditoria",

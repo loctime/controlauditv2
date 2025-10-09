@@ -311,9 +311,7 @@ const EstablecimientosContainer = () => {
     }
   };
 
-  const handleNavigateToSucursales = (empresaId) => {
-    navigate(`/sucursales/${empresaId}`);
-  };
+  // Ya no se usa navegación a sucursales, todo se maneja aquí con tabs expandibles
 
   return (
     <Box sx={{ p: isSmallMobile ? 2 : 4 }}>
@@ -540,7 +538,7 @@ const EstablecimientosContainer = () => {
                           <Tooltip title="Ver sucursales">
                             <IconButton 
                               size="small" 
-                              onClick={() => handleNavigateToSucursales(empresa.id)}
+                              onClick={() => handleRowExpand(empresa.id)}
                               color="secondary"
                             >
                               <StorefrontIcon />

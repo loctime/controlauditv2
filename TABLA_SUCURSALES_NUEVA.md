@@ -2,7 +2,7 @@
 
 ## ✅ ¿Qué se cambió?
 
-La página `/sucursales` ahora muestra una **tabla expandible** en lugar de tarjetas, con funcionalidad completa de gestión por sucursal.
+**ACTUALIZADO:** La página `/sucursales` ha sido eliminada. Toda la funcionalidad ahora está integrada en `/establecimiento` con **tabs expandibles** que muestran sucursales, empleados, capacitaciones y accidentes para cada empresa.
 
 ---
 
@@ -108,13 +108,13 @@ Sucursales → Clic en flecha → Clic en botón → Página específica
 ## 🔄 Flujo de Trabajo
 
 ### **Para Administradores**
-1. **Ir a `/sucursales`**
-2. **Ver todas las sucursales** en tabla compacta
-3. **Expandir sucursal** que quiera gestionar
-4. **Ver estadísticas** en tiempo real
-5. **Clic en botón** para ir a gestión específica
-6. **Gestionar** empleados/capacitaciones/accidentes
-7. **Volver a sucursales** y ver estadísticas actualizadas
+1. **Ir a `/establecimiento`**
+2. **Ver todas las empresas** en tabla compacta
+3. **Expandir empresa** que quiera gestionar
+4. **Ver tabs**: Sucursales, Empleados, Capacitaciones, Accidentes
+5. **Navegar entre tabs** para gestión específica
+6. **Ver estadísticas** en tiempo real para cada empresa
+7. **Todo centralizado** en una sola página
 
 ### **Ventajas**
 - ✅ **Vista general** de todas las sucursales
@@ -157,10 +157,10 @@ query(collection(db, 'accidentes'), where('sucursalId', '==', sucursalId))
 ## 🎯 Casos de Uso
 
 ### **Caso 1: Ver Estado General**
-1. Admin entra a `/sucursales`
-2. Ve tabla con todas las sucursales
+1. Admin entra a `/establecimiento`
+2. Ve tabla con todas las empresas
 3. Observa estadísticas sin expandir
-4. Identifica sucursales que necesitan atención
+4. Identifica empresas/sucursales que necesitan atención
 
 ### **Caso 2: Gestionar Empleados**
 1. Admin expande sucursal "Planta Norte"
