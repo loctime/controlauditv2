@@ -577,7 +577,7 @@ const EstablecimientosContainer = () => {
                         >
                           <SchoolIcon color="secondary" fontSize="small" />
                           <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
-                            {stats.capacitacionesCompletadas}/{stats.capacitaciones}
+                            {stats.capacitaciones}
                           </Typography>
                         </Box>
                       </TableCell>

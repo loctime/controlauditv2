@@ -11,9 +11,7 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  Collapse,
-  IconButton,
-  Grid
+  Collapse
 } from '@mui/material';
 import StorefrontIcon from '@mui/icons-material/Storefront';
 import PeopleIcon from '@mui/icons-material/People';
@@ -26,6 +24,9 @@ import { db } from '../../../../firebaseConfig';
 import { useAuth } from '../../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
+import EmpleadosContent from './EmpleadosContent';
+import CapacitacionesContent from './CapacitacionesContent';
+import AccidentesContent from './AccidentesContent';
 
 const SucursalesTab = ({ empresaId, empresaNombre, userEmpresas, loadEmpresasStats }) => {
   const { userProfile } = useAuth();
@@ -79,16 +80,33 @@ const SucursalesTab = ({ empresaId, empresaNombre, userEmpresas, loadEmpresasSta
     const stats = {};
     for (const sucursal of sucursalesList) {
       try {
-        const [empleadosSnapshot, capacitacionesSnapshot, accidentesSnapshot] = await Promise.all([
+        const [empleadosSnapshot, capacitacionesSnapshot, planesSnapshot, accidentesSnapshot] = await Promise.all([
           getDocs(query(collection(db, 'empleados'), where('sucursalId', '==', sucursal.id))),
           getDocs(query(collection(db, 'capacitaciones'), where('sucursalId', '==', sucursal.id))),
+          getDocs(query(collection(db, 'planes_capacitaciones_anuales'), where('sucursalId', '==', sucursal.id))),
           getDocs(query(collection(db, 'accidentes'), where('sucursalId', '==', sucursal.id)))
         ]);
         
+        const capacitacionesData = capacitacionesSnapshot.docs.map(doc => doc.data());
+        const capacitacionesCompletadas = capacitacionesData.filter(cap => cap.estado === 'completada').length;
+        
+        // Contar capacitaciones de planes anuales
+        const planesData = planesSnapshot.docs.map(doc => doc.data());
+        const capacitacionesDePlanes = planesData.reduce((total, plan) => total + (plan.capacitaciones?.length || 0), 0);
+        
+        // Debug logs
+        console.log(`Sucursal ${sucursal.nombre}:`, {
+          totalCapacitaciones: capacitacionesSnapshot.docs.length,
+          capacitacionesCompletadas: capacitacionesCompletadas,
+          planesAnuales: planesSnapshot.docs.length,
+          capacitacionesDePlanes: capacitacionesDePlanes,
+          estados: capacitacionesData.map(cap => cap.estado)
+        });
+        
         stats[sucursal.id] = {
           empleados: empleadosSnapshot.docs.length,
-          capacitaciones: capacitacionesSnapshot.docs.length,
-          capacitacionesCompletadas: capacitacionesSnapshot.docs.filter(doc => doc.data().estado === 'completada').length,
+          capacitaciones: capacitacionesSnapshot.docs.length + capacitacionesDePlanes,
+          capacitacionesCompletadas: capacitacionesCompletadas,
           accidentes: accidentesSnapshot.docs.length,
           accidentesAbiertos: accidentesSnapshot.docs.filter(doc => doc.data().estado === 'abierto').length
         };
@@ -123,6 +141,7 @@ const SucursalesTab = ({ empresaId, empresaNombre, userEmpresas, loadEmpresasSta
   };
 
   const navigateToPage = (page, sucursalId) => {
+    console.log('Navegando a:', page, 'con sucursalId:', sucursalId);
     localStorage.setItem('selectedSucursal', sucursalId);
     navigate(page);
   };
@@ -252,7 +271,7 @@ const SucursalesTab = ({ empresaId, empresaNombre, userEmpresas, loadEmpresasSta
                             minWidth: '100px'
                           }}
                         >
-                          {stats.capacitacionesCompletadas}/{stats.capacitaciones}
+                          {stats.capacitaciones}
                           {isExpanded && getActiveTab(sucursal.id) === 'capacitaciones' ? <ExpandLessIcon fontSize="small" sx={{ ml: 0.5 }} /> : <ExpandMoreIcon fontSize="small" sx={{ ml: 0.5 }} />}
                         </Button>
                       </TableCell>
@@ -405,552 +424,6 @@ const SucursalesTab = ({ empresaId, empresaNombre, userEmpresas, loadEmpresasSta
             </Box>
           </Paper>
         </Box>
-      )}
-    </Box>
-  );
-};
-
-// Componente para mostrar empleados
-const EmpleadosContent = ({ sucursalId, sucursalNombre, navigateToPage, reloadSucursalesStats, loadEmpresasStats, userEmpresas }) => {
-  const { userProfile } = useAuth();
-  const [empleados, setEmpleados] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [openEmpleadoForm, setOpenEmpleadoForm] = useState(false);
-  const [empleadoForm, setEmpleadoForm] = useState({
-    nombre: '',
-    apellido: '',
-    dni: '',
-    telefono: '',
-    email: '',
-    cargo: '',
-    area: '',
-    fechaIngreso: ''
-  });
-
-  useEffect(() => {
-    if (sucursalId) {
-      loadEmpleados();
-    }
-  }, [sucursalId]);
-
-  const loadEmpleados = async () => {
-    setLoading(true);
-    try {
-      const q = query(collection(db, 'empleados'), where('sucursalId', '==', sucursalId));
-      const snapshot = await getDocs(q);
-      const empleadosData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-      setEmpleados(empleadosData);
-    } catch (error) {
-      console.error('Error cargando empleados:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleEmpleadoFormChange = (e) => {
-    const { name, value } = e.target;
-    setEmpleadoForm(prev => ({
-      ...prev,
-      [name]: value
-    }));
-  };
-
-  const handleAddEmpleado = async () => {
-    if (!empleadoForm.nombre.trim() || !empleadoForm.apellido.trim()) {
-      Swal.fire({
-        icon: 'error',
-        title: 'Error',
-        text: 'El nombre y apellido son requeridos'
-      });
-      return;
-    }
-
-    try {
-      await addDoc(collection(db, 'empleados'), {
-        ...empleadoForm,
-        sucursalId: sucursalId,
-        sucursalNombre: sucursalNombre,
-        estado: 'activo',
-        fechaCreacion: Timestamp.now(),
-        creadoPor: userProfile?.uid,
-        creadoPorEmail: userProfile?.email,
-        clienteAdminId: userProfile?.clienteAdminId || userProfile?.uid
-      });
-
-      setEmpleadoForm({
-        nombre: '',
-        apellido: '',
-        dni: '',
-        telefono: '',
-        email: '',
-        cargo: '',
-        area: '',
-        fechaIngreso: ''
-      });
-      setOpenEmpleadoForm(false);
-      
-      // Recargar lista de empleados
-      await loadEmpleados();
-
-      // Recargar estadísticas de la sucursal
-      if (typeof reloadSucursalesStats === 'function') {
-        await reloadSucursalesStats();
-      }
-
-      // Recargar estadísticas de la empresa completa
-      if (typeof loadEmpresasStats === 'function' && userEmpresas) {
-        await loadEmpresasStats(userEmpresas);
-      }
-
-      Swal.fire({
-        icon: 'success',
-        title: 'Éxito',
-        text: 'Empleado creado exitosamente'
-      });
-    } catch (error) {
-      console.error('Error creando empleado:', error);
-      Swal.fire({
-        icon: 'error',
-        title: 'Error',
-        text: 'Error al crear el empleado: ' + error.message
-      });
-    }
-  };
-
-  return (
-    <Box>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-        <Typography variant="h6">Empleados de {sucursalNombre}</Typography>
-        <Button
-          variant="contained"
-          startIcon={<PeopleIcon />}
-          onClick={() => setOpenEmpleadoForm(true)}
-          size="small"
-        >
-          Agregar Empleado
-        </Button>
-      </Box>
-
-      {loading ? (
-        <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
-          <CircularProgress size={30} />
-        </Box>
-      ) : empleados.length === 0 ? (
-        <Typography variant="body2" color="textSecondary" sx={{ textAlign: 'center', py: 2 }}>
-          No hay empleados registrados
-        </Typography>
-      ) : (
-        <TableContainer component={Paper} sx={{ maxHeight: 400 }}>
-          <Table size="small">
-            <TableHead>
-              <TableRow>
-                <TableCell><strong>Nombre</strong></TableCell>
-                <TableCell><strong>DNI</strong></TableCell>
-                <TableCell><strong>Cargo</strong></TableCell>
-                <TableCell><strong>Estado</strong></TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {empleados.map((empleado) => (
-                <TableRow key={empleado.id} hover>
-                  <TableCell>{empleado.nombre}</TableCell>
-                  <TableCell>{empleado.dni}</TableCell>
-                  <TableCell>{empleado.cargo}</TableCell>
-                  <TableCell>{empleado.estado}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      )}
-
-      {/* Modal para agregar empleado */}
-      {openEmpleadoForm && (
-        <Box
-          sx={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: 'rgba(0,0,0,0.5)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1300
-          }}
-          onClick={() => setOpenEmpleadoForm(false)}
-        >
-          <Paper
-            sx={{ p: 3, maxWidth: 600, width: '90%', maxHeight: '90vh', overflow: 'auto' }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <Typography variant="h6" sx={{ mb: 3 }}>
-              Agregar Empleado a {sucursalNombre}
-            </Typography>
-            
-            <Grid container spacing={2}>
-              {/* Nombre */}
-              <Grid item xs={12} sm={6}>
-                <Typography variant="body2" sx={{ mb: 1 }}>
-                  Nombre *
-                </Typography>
-                <input
-                  type="text"
-                  name="nombre"
-                  value={empleadoForm.nombre}
-                  onChange={handleEmpleadoFormChange}
-                  placeholder="Nombre del empleado"
-                  style={{
-                    width: '100%',
-                    padding: '10px 12px',
-                    border: '1px solid #ccc',
-                    borderRadius: '4px',
-                    fontSize: '14px',
-                    boxSizing: 'border-box'
-                  }}
-                />
-              </Grid>
-
-              {/* Apellido */}
-              <Grid item xs={12} sm={6}>
-                <Typography variant="body2" sx={{ mb: 1 }}>
-                  Apellido *
-                </Typography>
-                <input
-                  type="text"
-                  name="apellido"
-                  value={empleadoForm.apellido}
-                  onChange={handleEmpleadoFormChange}
-                  placeholder="Apellido del empleado"
-                  style={{
-                    width: '100%',
-                    padding: '10px 12px',
-                    border: '1px solid #ccc',
-                    borderRadius: '4px',
-                    fontSize: '14px',
-                    boxSizing: 'border-box'
-                  }}
-                />
-              </Grid>
-
-              {/* DNI */}
-              <Grid item xs={12} sm={6}>
-                <Typography variant="body2" sx={{ mb: 1 }}>
-                  DNI
-                </Typography>
-                <input
-                  type="text"
-                  name="dni"
-                  value={empleadoForm.dni}
-                  onChange={handleEmpleadoFormChange}
-                  placeholder="Número de DNI"
-                  style={{
-                    width: '100%',
-                    padding: '10px 12px',
-                    border: '1px solid #ccc',
-                    borderRadius: '4px',
-                    fontSize: '14px',
-                    boxSizing: 'border-box'
-                  }}
-                />
-              </Grid>
-
-              {/* Teléfono */}
-              <Grid item xs={12} sm={6}>
-                <Typography variant="body2" sx={{ mb: 1 }}>
-                  Teléfono
-                </Typography>
-                <input
-                  type="text"
-                  name="telefono"
-                  value={empleadoForm.telefono}
-                  onChange={handleEmpleadoFormChange}
-                  placeholder="Teléfono de contacto"
-                  style={{
-                    width: '100%',
-                    padding: '10px 12px',
-                    border: '1px solid #ccc',
-                    borderRadius: '4px',
-                    fontSize: '14px',
-                    boxSizing: 'border-box'
-                  }}
-                />
-              </Grid>
-
-              {/* Email */}
-              <Grid item xs={12}>
-                <Typography variant="body2" sx={{ mb: 1 }}>
-                  Email
-                </Typography>
-                <input
-                  type="email"
-                  name="email"
-                  value={empleadoForm.email}
-                  onChange={handleEmpleadoFormChange}
-                  placeholder="Email del empleado"
-                  style={{
-                    width: '100%',
-                    padding: '10px 12px',
-                    border: '1px solid #ccc',
-                    borderRadius: '4px',
-                    fontSize: '14px',
-                    boxSizing: 'border-box'
-                  }}
-                />
-              </Grid>
-
-              {/* Cargo */}
-              <Grid item xs={12} sm={6}>
-                <Typography variant="body2" sx={{ mb: 1 }}>
-                  Cargo
-                </Typography>
-                <input
-                  type="text"
-                  name="cargo"
-                  value={empleadoForm.cargo}
-                  onChange={handleEmpleadoFormChange}
-                  placeholder="Cargo o puesto"
-                  style={{
-                    width: '100%',
-                    padding: '10px 12px',
-                    border: '1px solid #ccc',
-                    borderRadius: '4px',
-                    fontSize: '14px',
-                    boxSizing: 'border-box'
-                  }}
-                />
-              </Grid>
-
-              {/* Área */}
-              <Grid item xs={12} sm={6}>
-                <Typography variant="body2" sx={{ mb: 1 }}>
-                  Área
-                </Typography>
-                <input
-                  type="text"
-                  name="area"
-                  value={empleadoForm.area}
-                  onChange={handleEmpleadoFormChange}
-                  placeholder="Área o departamento"
-                  style={{
-                    width: '100%',
-                    padding: '10px 12px',
-                    border: '1px solid #ccc',
-                    borderRadius: '4px',
-                    fontSize: '14px',
-                    boxSizing: 'border-box'
-                  }}
-                />
-              </Grid>
-
-              {/* Fecha de Ingreso */}
-              <Grid item xs={12}>
-                <Typography variant="body2" sx={{ mb: 1 }}>
-                  Fecha de Ingreso
-                </Typography>
-                <input
-                  type="date"
-                  name="fechaIngreso"
-                  value={empleadoForm.fechaIngreso}
-                  onChange={handleEmpleadoFormChange}
-                  style={{
-                    width: '100%',
-                    padding: '10px 12px',
-                    border: '1px solid #ccc',
-                    borderRadius: '4px',
-                    fontSize: '14px',
-                    boxSizing: 'border-box'
-                  }}
-                />
-              </Grid>
-            </Grid>
-
-            <Box sx={{ display: 'flex', gap: 2, mt: 3 }}>
-              <Button
-                variant="contained"
-                onClick={handleAddEmpleado}
-                sx={{ flex: 1 }}
-              >
-                Crear Empleado
-              </Button>
-              <Button
-                variant="outlined"
-                onClick={() => setOpenEmpleadoForm(false)}
-                sx={{ flex: 1 }}
-              >
-                Cancelar
-              </Button>
-            </Box>
-          </Paper>
-        </Box>
-      )}
-    </Box>
-  );
-};
-
-// Componente para mostrar capacitaciones
-const CapacitacionesContent = ({ sucursalId, sucursalNombre, navigateToPage }) => {
-  const [capacitaciones, setCapacitaciones] = useState([]);
-  const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    if (sucursalId) {
-      loadCapacitaciones();
-    }
-  }, [sucursalId]);
-
-  const loadCapacitaciones = async () => {
-    setLoading(true);
-    try {
-      const q = query(collection(db, 'capacitaciones'), where('sucursalId', '==', sucursalId));
-      const snapshot = await getDocs(q);
-      const capacitacionesData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-      setCapacitaciones(capacitacionesData);
-    } catch (error) {
-      console.error('Error cargando capacitaciones:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <Box>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-        <Typography variant="h6">Capacitaciones de {sucursalNombre}</Typography>
-        <Button
-          variant="contained"
-          startIcon={<SchoolIcon />}
-          onClick={() => navigateToPage('/capacitaciones', sucursalId)}
-          size="small"
-        >
-          Gestionar Capacitaciones
-        </Button>
-      </Box>
-
-      {loading ? (
-        <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
-          <CircularProgress size={30} />
-        </Box>
-      ) : capacitaciones.length === 0 ? (
-        <Typography variant="body2" color="textSecondary" sx={{ textAlign: 'center', py: 2 }}>
-          No hay capacitaciones registradas
-        </Typography>
-      ) : (
-        <TableContainer component={Paper} sx={{ maxHeight: 400 }}>
-          <Table size="small">
-            <TableHead>
-              <TableRow>
-                <TableCell><strong>Nombre</strong></TableCell>
-                <TableCell><strong>Tipo</strong></TableCell>
-                <TableCell><strong>Estado</strong></TableCell>
-                <TableCell><strong>Fecha</strong></TableCell>
-                <TableCell align="center"><strong>Asistentes</strong></TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {capacitaciones.map((capacitacion) => (
-                <TableRow key={capacitacion.id} hover>
-                  <TableCell>{capacitacion.nombre}</TableCell>
-                  <TableCell>{capacitacion.tipo}</TableCell>
-                  <TableCell>{capacitacion.estado}</TableCell>
-                  <TableCell>
-                    {capacitacion.fechaRealizada?.toDate?.()?.toLocaleDateString() || 'N/A'}
-                  </TableCell>
-                  <TableCell align="center">{capacitacion.asistentes?.length || 0}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      )}
-    </Box>
-  );
-};
-
-// Componente para mostrar accidentes
-const AccidentesContent = ({ sucursalId, sucursalNombre, navigateToPage }) => {
-  const [accidentes, setAccidentes] = useState([]);
-  const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    if (sucursalId) {
-      loadAccidentes();
-    }
-  }, [sucursalId]);
-
-  const loadAccidentes = async () => {
-    setLoading(true);
-    try {
-      const q = query(collection(db, 'accidentes'), where('sucursalId', '==', sucursalId));
-      const snapshot = await getDocs(q);
-      const accidentesData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-      setAccidentes(accidentesData);
-    } catch (error) {
-      console.error('Error cargando accidentes:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <Box>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-        <Typography variant="h6">Accidentes de {sucursalNombre}</Typography>
-        <Button
-          variant="contained"
-          startIcon={<ReportProblemIcon />}
-          onClick={() => navigateToPage('/accidentes', sucursalId)}
-          size="small"
-        >
-          Gestionar Accidentes
-        </Button>
-      </Box>
-
-      {loading ? (
-        <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
-          <CircularProgress size={30} />
-        </Box>
-      ) : accidentes.length === 0 ? (
-        <Typography variant="body2" color="textSecondary" sx={{ textAlign: 'center', py: 2 }}>
-          No hay accidentes registrados
-        </Typography>
-      ) : (
-        <TableContainer component={Paper} sx={{ maxHeight: 400 }}>
-          <Table size="small">
-            <TableHead>
-              <TableRow>
-                <TableCell><strong>Tipo</strong></TableCell>
-                <TableCell><strong>Empleado</strong></TableCell>
-                <TableCell><strong>Gravedad</strong></TableCell>
-                <TableCell><strong>Fecha</strong></TableCell>
-                <TableCell><strong>Estado</strong></TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {accidentes.map((accidente) => (
-                <TableRow key={accidente.id} hover>
-                  <TableCell>{accidente.tipo}</TableCell>
-                  <TableCell>{accidente.empleadoNombre}</TableCell>
-                  <TableCell>{accidente.gravedad}</TableCell>
-                  <TableCell>
-                    {accidente.fechaHora?.toDate?.()?.toLocaleDateString() || 'N/A'}
-                  </TableCell>
-                  <TableCell>{accidente.estado}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
       )}
     </Box>
   );
