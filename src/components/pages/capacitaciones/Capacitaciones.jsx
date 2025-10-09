@@ -15,7 +15,9 @@ import {
   Select,
   MenuItem,
   CircularProgress,
-  Alert
+  Alert,
+  Tabs,
+  Tab
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -30,10 +32,17 @@ import { db } from '../../../firebaseConfig';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import CapacitacionForm from './CapacitacionForm';
+import RealizarCapacitacion from './RealizarCapacitacion';
+import PlanAnualModal from './PlanAnualModal';
 
 export default function Capacitaciones() {
   const { userProfile, userSucursales, loadingSucursales, getUserSucursales, userEmpresas } = useAuth();
   const navigate = useNavigate();
+  
+  // Estado de pestañas
+  const [activeTab, setActiveTab] = useState(0);
+  
+  // Estado para pestaña "Ver Capacitaciones"
   const [capacitaciones, setCapacitaciones] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filterTipo, setFilterTipo] = useState('');
@@ -41,6 +50,11 @@ export default function Capacitaciones() {
   const [selectedEmpresa, setSelectedEmpresa] = useState('');
   const [selectedSucursal, setSelectedSucursal] = useState('');
   const [openForm, setOpenForm] = useState(false);
+  
+  // Estado para pestaña "Realizar Capacitación" (filtros independientes)
+  const [realizarCapSelectedEmpresa, setRealizarCapSelectedEmpresa] = useState('');
+  const [realizarCapSelectedSucursal, setRealizarCapSelectedSucursal] = useState('');
+  const [openPlanAnualModal, setOpenPlanAnualModal] = useState(false);
   
   // Estado local para mantener las sucursales una vez cargadas
   const [localSucursales, setLocalSucursales] = useState([]);
@@ -105,6 +119,14 @@ export default function Capacitaciones() {
       } else if (selectedEmpresa) {
         // Filtrar por todas las sucursales de la empresa seleccionada
         const sucursalesEmpresa = sucursalesDisponibles.filter(s => s.empresaId === selectedEmpresa).map(s => s.id);
+        
+        // Verificar que hay sucursales antes de hacer la query
+        if (sucursalesEmpresa.length === 0) {
+          setCapacitaciones([]);
+          setLoading(false);
+          return;
+        }
+        
         q = query(capacitacionesRef, where('sucursalId', 'in', sucursalesEmpresa));
       } else {
         // Mostrar todas las capacitaciones del usuario
@@ -177,6 +199,10 @@ export default function Capacitaciones() {
 
   const handleRegistrarAsistencia = (capacitacionId) => {
     navigate(`/capacitacion/${capacitacionId}/asistencia`);
+  };
+
+  const handleTabChange = (event, newValue) => {
+    setActiveTab(newValue);
   };
 
   const handleMarcarCompletada = async (capacitacionId) => {
@@ -311,25 +337,48 @@ export default function Capacitaciones() {
             >
               {loadingSucursales ? 'Cargando...' : 'Recargar Contexto'}
             </Button>
-            <Button
-              variant="contained"
-              startIcon={<AddIcon />}
-              onClick={() => setOpenForm(true)}
-              sx={{
-                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                '&:hover': {
-                  background: 'linear-gradient(135deg, #5568d3 0%, #65408b 100%)',
-                }
-              }}
-            >
-              Nueva Capacitación
-            </Button>
+            {activeTab === 0 && (
+              <>
+                <Button
+                  variant="outlined"
+                  startIcon={<AddIcon />}
+                  onClick={() => setOpenPlanAnualModal(true)}
+                  disabled={!selectedEmpresa}
+                >
+                  Crear Plan Anual
+                </Button>
+                <Button
+                  variant="contained"
+                  startIcon={<AddIcon />}
+                  onClick={() => setOpenForm(true)}
+                  sx={{
+                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                    '&:hover': {
+                      background: 'linear-gradient(135deg, #5568d3 0%, #65408b 100%)',
+                    }
+                  }}
+                >
+                  Nueva Capacitación
+                </Button>
+              </>
+            )}
           </Box>
+        </Box>
+
+        {/* Sistema de Pestañas */}
+        <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
+          <Tabs value={activeTab} onChange={handleTabChange}>
+            <Tab label="Ver Capacitaciones" />
+            <Tab label="Realizar Capacitación" />
+          </Tabs>
         </Box>
       </Box>
 
-      {/* Selectores de Empresa y Sucursal */}
-      <Paper sx={{ p: 2, mb: 3 }}>
+      {/* Contenido de las pestañas */}
+      {activeTab === 0 && (
+        <>
+          {/* Selectores de Empresa y Sucursal para pestaña "Ver Capacitaciones" */}
+          <Paper sx={{ p: 2, mb: 3, bgcolor: 'primary.50' }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
           <BusinessIcon color="primary" />
           <Typography variant="h6" sx={{ fontWeight: 'medium' }}>
@@ -557,8 +606,23 @@ export default function Capacitaciones() {
             </Grid>
           ))}
         </Grid>
+          )}
+        </>
       )}
 
+      {/* Pestaña "Realizar Capacitación" */}
+      {activeTab === 1 && (
+        <RealizarCapacitacion
+          selectedEmpresa={realizarCapSelectedEmpresa}
+          setSelectedEmpresa={setRealizarCapSelectedEmpresa}
+          selectedSucursal={realizarCapSelectedSucursal}
+          setSelectedSucursal={setRealizarCapSelectedSucursal}
+          userEmpresas={userEmpresas}
+          userSucursales={userSucursales}
+        />
+      )}
+
+      {/* Modales */}
       <CapacitacionForm
         open={openForm}
         onClose={() => setOpenForm(false)}
@@ -568,6 +632,15 @@ export default function Capacitaciones() {
         }}
         sucursalId={selectedSucursal}
         empresaId={userProfile?.empresaId || userProfile?.uid}
+      />
+
+      <PlanAnualModal
+        open={openPlanAnualModal}
+        onClose={() => setOpenPlanAnualModal(false)}
+        selectedEmpresa={selectedEmpresa}
+        selectedSucursal={selectedSucursal}
+        userEmpresas={userEmpresas}
+        userSucursales={userSucursales}
       />
     </Container>
   );
