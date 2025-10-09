@@ -16,7 +16,7 @@ import ReportProblemIcon from '@mui/icons-material/ReportProblem';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '../../../../firebaseConfig';
 
-const AccidentesContent = ({ sucursalId, sucursalNombre, navigateToPage }) => {
+const AccidentesContent = ({ sucursalId, sucursalNombre, empresaId, navigateToPage }) => {
   const [accidentes, setAccidentes] = useState([]);
   const [loading, setLoading] = useState(false);
 
@@ -50,7 +50,7 @@ const AccidentesContent = ({ sucursalId, sucursalNombre, navigateToPage }) => {
         <Button
           variant="contained"
           startIcon={<ReportProblemIcon />}
-          onClick={() => navigateToPage('/accidentes', sucursalId)}
+          onClick={() => navigateToPage('/accidentes', { empresaId, sucursalId })}
           size="small"
         >
           Gestionar Accidentes

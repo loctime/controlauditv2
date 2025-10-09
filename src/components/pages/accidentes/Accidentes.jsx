@@ -39,7 +39,7 @@ import {
   People as PeopleIcon
 } from '@mui/icons-material';
 import { useAuth } from '../../context/AuthContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import NuevoAccidenteModal from './NuevoAccidenteModal';
 import NuevoIncidenteModal from './NuevoIncidenteModal';
 import {
@@ -53,6 +53,7 @@ import Swal from 'sweetalert2';
 export default function Accidentes() {
   const { userProfile, userSucursales, userEmpresas } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [accidentes, setAccidentes] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -74,18 +75,30 @@ export default function Accidentes() {
     ? userSucursales?.filter(s => s.empresaId === selectedEmpresa) || []
     : userSucursales || [];
 
-  // Cargar primer empresa/sucursal al montar
+  // Cargar empresa/sucursal desde navegación o por defecto
   useEffect(() => {
     if (userEmpresas && userEmpresas.length > 0 && !selectedEmpresa) {
-      setSelectedEmpresa(userEmpresas[0].id);
+      // Verificar si viene de navegación con datos preseleccionados
+      const stateEmpresaId = location.state?.empresaId;
+      if (stateEmpresaId && userEmpresas.some(e => e.id === stateEmpresaId)) {
+        setSelectedEmpresa(stateEmpresaId);
+      } else {
+        setSelectedEmpresa(userEmpresas[0].id);
+      }
     }
-  }, [userEmpresas]);
+  }, [userEmpresas, location.state]);
 
   useEffect(() => {
     if (selectedEmpresa && sucursalesFiltradas.length > 0 && !selectedSucursal) {
-      setSelectedSucursal(sucursalesFiltradas[0].id);
+      // Verificar si viene de navegación con sucursal preseleccionada
+      const stateSucursalId = location.state?.sucursalId;
+      if (stateSucursalId && sucursalesFiltradas.some(s => s.id === stateSucursalId)) {
+        setSelectedSucursal(stateSucursalId);
+      } else {
+        setSelectedSucursal(sucursalesFiltradas[0].id);
+      }
     }
-  }, [selectedEmpresa, sucursalesFiltradas]);
+  }, [selectedEmpresa, sucursalesFiltradas, location.state]);
 
   // Cargar accidentes
   const loadAccidentes = useCallback(async () => {
