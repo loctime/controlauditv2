@@ -60,13 +60,22 @@ const AuthContextComponent = ({ children }) => {
         loadUserEmpresas(user.uid);
         loadUserAuditorias(user.uid);
         loadAuditoriasCompartidas(user.uid);
-        // Recargar sucursales y formularios después de un pequeño delay
+        // Recargar sucursales y formularios después de que las empresas estén cargadas
         setTimeout(async () => {
+          // Esperar a que userEmpresas esté disponible
+          let attempts = 0;
+          const maxAttempts = 10;
+          
+          while (attempts < maxAttempts && (!userEmpresas || userEmpresas.length === 0)) {
+            await new Promise(resolve => setTimeout(resolve, 200));
+            attempts++;
+          }
+          
           await Promise.all([
             loadUserSucursales(user.uid),
             loadUserFormularios(user.uid)
           ]);
-        }, 1500);
+        }, 500); // Reducir delay inicial
       }
     };
     
@@ -345,12 +354,18 @@ const AuthContextComponent = ({ children }) => {
   const loadUserSucursales = async (userId, retryCount = 0) => {
     const MAX_RETRIES = 3;
     
+    console.log(`🔄 [AuthContext] loadUserSucursales - Intento ${retryCount + 1}/${MAX_RETRIES + 1}`);
+    console.log(`🔄 [AuthContext] userProfile:`, !!userProfile);
+    console.log(`🔄 [AuthContext] userEmpresas:`, userEmpresas?.length || 0);
+    
     try {
       if (!userProfile) {
+        console.log(`❌ [AuthContext] No hay userProfile, reintentando...`);
         if (retryCount < MAX_RETRIES) {
           setTimeout(() => loadUserSucursales(userId, retryCount + 1), 1000);
           return [];
         } else {
+          console.log(`❌ [AuthContext] Máximos reintentos alcanzados sin userProfile`);
           setUserSucursales([]);
           setLoadingSucursales(false);
           return [];
@@ -358,10 +373,12 @@ const AuthContextComponent = ({ children }) => {
       }
 
       if (!userEmpresas || userEmpresas.length === 0) {
+        console.log(`❌ [AuthContext] No hay userEmpresas, reintentando...`);
         if (retryCount < MAX_RETRIES) {
           setTimeout(() => loadUserSucursales(userId, retryCount + 1), 1000);
           return [];
         } else {
+          console.log(`❌ [AuthContext] Máximos reintentos alcanzados sin userEmpresas`);
           setUserSucursales([]);
           setLoadingSucursales(false);
           return [];
@@ -404,14 +421,20 @@ const AuthContextComponent = ({ children }) => {
         sucursalesData = sucursalesArrays.flat();
       }
       
+      console.log(`✅ [AuthContext] Sucursales cargadas exitosamente:`, sucursalesData.length);
+      console.log(`✅ [AuthContext] Sucursales:`, sucursalesData.map(s => s.nombre));
+      
       setUserSucursales(sucursalesData);
       setLoadingSucursales(false);
       return sucursalesData;
     } catch (error) {
+      console.error(`❌ [AuthContext] Error cargando sucursales:`, error);
+      
       // Fallback al cache offline si falla la carga desde Firestore
       try {
         const cachedData = await loadUserFromCache();
         if (cachedData?.sucursales && cachedData.sucursales.length > 0) {
+          console.log(`🔄 [AuthContext] Usando sucursales del cache offline:`, cachedData.sucursales.length);
           setUserSucursales(cachedData.sucursales);
           setLoadingSucursales(false);
           return cachedData.sucursales;
@@ -420,6 +443,7 @@ const AuthContextComponent = ({ children }) => {
         console.error('Error cargando sucursales desde cache offline:', cacheError);
       }
       
+      console.log(`❌ [AuthContext] No se pudieron cargar sucursales, estableciendo array vacío`);
       setUserSucursales([]);
       setLoadingSucursales(false);
       return [];
