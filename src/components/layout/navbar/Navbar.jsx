@@ -272,7 +272,7 @@ function Navbar(props) {
               }}
               PaperProps={{
                 sx: {
-                  backgroundColor: '#1976d2',
+                  backgroundColor: theme.palette.primary.main,
                   color: 'whitesmoke',
                   '& .MuiMenuItem-root': {
                     color: 'whitesmoke',
@@ -338,7 +338,7 @@ function Navbar(props) {
               }}
               PaperProps={{
                 sx: {
-                  backgroundColor: '#1976d2',
+                  backgroundColor: theme.palette.primary.main,
                   color: 'whitesmoke',
                   '& .MuiMenuItem-root': {
                     color: 'whitesmoke',
@@ -560,7 +560,7 @@ function Navbar(props) {
               boxSizing: "border-box",
               width: { xs: '85vw', sm: drawerWidth },
               maxWidth: drawerWidth,
-              backgroundColor: "#1976d2",
+              backgroundColor: theme.palette.primary.main,
               borderLeft: '1px solid rgba(255,255,255,0.1)',
             },
           }}

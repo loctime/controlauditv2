@@ -112,7 +112,7 @@ const GraficoIndices = ({ datos, periodo }) => {
 
   return (
     <Box>
-      <Typography variant="h5" sx={{ fontWeight: 'bold', mb: 3, color: '#111827' }}>
+      <Typography variant="h5" sx={{ fontWeight: 'bold', mb: 3, color: 'text.primary' }}>
         📈 Análisis Gráfico de Índices
       </Typography>
 
@@ -121,7 +121,7 @@ const GraficoIndices = ({ datos, periodo }) => {
         <Grid item xs={12} lg={8}>
           <Card elevation={2} sx={{ borderRadius: 3, height: 400 }}>
             <CardContent sx={{ p: 3, height: '100%' }}>
-              <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, color: '#111827' }}>
+              <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, color: 'text.primary' }}>
                 Comparación de Índices de Seguridad
               </Typography>
               <ResponsiveContainer width="100%" height={300}>
@@ -151,7 +151,7 @@ const GraficoIndices = ({ datos, periodo }) => {
         <Grid item xs={12} lg={4}>
           <Card elevation={2} sx={{ borderRadius: 3, height: 400 }}>
             <CardContent sx={{ p: 3, height: '100%' }}>
-              <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, color: '#111827' }}>
+              <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, color: 'text.primary' }}>
                 Estado de Empleados
               </Typography>
               <ResponsiveContainer width="100%" height={300}>
@@ -181,7 +181,7 @@ const GraficoIndices = ({ datos, periodo }) => {
         <Grid item xs={12} md={6}>
           <Card elevation={2} sx={{ borderRadius: 3, height: 350 }}>
             <CardContent sx={{ p: 3, height: '100%' }}>
-              <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, color: '#111827' }}>
+              <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, color: 'text.primary' }}>
                 Distribución de Horas
               </Typography>
               <ResponsiveContainer width="100%" height={250}>
@@ -207,7 +207,7 @@ const GraficoIndices = ({ datos, periodo }) => {
         <Grid item xs={12} md={6}>
           <Card elevation={2} sx={{ borderRadius: 3, height: 350 }}>
             <CardContent sx={{ p: 3, height: '100%' }}>
-              <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, color: '#111827' }}>
+              <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, color: 'text.primary' }}>
                 Tendencia Mensual
               </Typography>
               <ResponsiveContainer width="100%" height={250}>

@@ -354,7 +354,7 @@ const DashboardHigieneSeguridad = () => {
 
       {/* Filtros */}
       <Paper elevation={2} sx={{ p: 1, mb: 4, borderRadius: 2 }}>
-         <Typography variant="h4" sx={{ fontWeight: 'bold', color: '#111827', mb: 1 }}>
+         <Typography variant="h4" sx={{ fontWeight: 'bold', color: 'text.primary', mb: 1 }}>
           🛡️ Dashboard Higiene y Seguridad
         </Typography>
         
@@ -479,7 +479,7 @@ const DashboardHigieneSeguridad = () => {
       <Divider sx={{ my: 4 }} />
 
       {/* Índices técnicos - Diseño compacto */}
-      <Typography variant="h5" sx={{ fontWeight: 'bold', mb: 3, color: '#111827' }}>
+      <Typography variant="h5" sx={{ fontWeight: 'bold', mb: 3, color: 'text.primary' }}>
         📊 Índices Técnicos de Seguridad
       </Typography>
 

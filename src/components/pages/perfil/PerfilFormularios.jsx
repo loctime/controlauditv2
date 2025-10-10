@@ -67,8 +67,8 @@ const PerfilFormularios = ({ formularios, loading }) => {
       text: `¿Quieres eliminar el formulario "${form.nombre}"? ¡Esta acción no se puede deshacer!`,
       icon: 'warning',
       showCancelButton: true,
-      confirmButtonColor: '#d33',
-      cancelButtonColor: '#3085d6',
+      confirmButtonColor: theme.palette.error.main,
+      cancelButtonColor: theme.palette.primary.main,
       confirmButtonText: 'Sí, eliminar',
       cancelButtonText: 'Cancelar'
     });
