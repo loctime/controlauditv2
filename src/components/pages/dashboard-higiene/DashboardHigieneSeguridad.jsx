@@ -442,45 +442,39 @@ const DashboardHigieneSeguridad = () => {
 
       
 
-      {/* Métricas básicas */}
-      <Grid container spacing={3} sx={{ mb: 4 }}>
-        <Grid item xs={12} sm={6} md={3}>
-          <MetricaCard
-            titulo="Total Empleados"
-            valor={datos.metricas.totalEmpleados}
-            icono={<PeopleIcon />}
-            color="#3b82f6"
-            subtitulo={`${datos.metricas.empleadosActivos} activos`}
+      {/* Métricas básicas - Chips compactos */}
+      <Box sx={{ mb: 4 }}>
+        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, alignItems: 'center' }}>
+          <Chip
+            icon={<PeopleIcon />}
+            label={`Total Empleados: ${datos.metricas.totalEmpleados}`}
+            color="primary"
+            variant="outlined"
+            sx={{ fontSize: '0.9rem', height: 36 }}
           />
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <MetricaCard
-            titulo="Empleados en Reposo"
-            valor={datos.metricas.empleadosEnReposo}
-            icono={<WarningIcon />}
-            color={datos.metricas.empleadosEnReposo > 0 ? "#ef4444" : "#22c55e"}
-            subtitulo="Por accidentes"
+          <Chip
+            icon={<WarningIcon />}
+            label={`En Reposo: ${datos.metricas.empleadosEnReposo}`}
+            color={datos.metricas.empleadosEnReposo > 0 ? "error" : "success"}
+            variant="outlined"
+            sx={{ fontSize: '0.9rem', height: 36 }}
           />
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <MetricaCard
-            titulo="Horas Trabajadas"
-            valor={datos.metricas.horasTrabajadas.toLocaleString()}
-            icono={<AccessTimeIcon />}
-            color="#10b981"
-            subtitulo={`${datos.metricas.horasPerdidas.toLocaleString()} perdidas`}
+          <Chip
+            icon={<AccessTimeIcon />}
+            label={`Horas: ${datos.metricas.horasTrabajadas.toLocaleString()}`}
+            color="info"
+            variant="outlined"
+            sx={{ fontSize: '0.9rem', height: 36 }}
           />
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <MetricaCard
-            titulo="Días Perdidos"
-            valor={datos.metricas.diasPerdidos}
-            icono={<ReportProblemIcon />}
-            color={datos.metricas.diasPerdidos > 0 ? "#ef4444" : "#22c55e"}
-            subtitulo="Por accidentes"
+          <Chip
+            icon={<ReportProblemIcon />}
+            label={`Días Perdidos: ${datos.metricas.diasPerdidos}`}
+            color={datos.metricas.diasPerdidos > 0 ? "error" : "success"}
+            variant="outlined"
+            sx={{ fontSize: '0.9rem', height: 36 }}
           />
-        </Grid>
-      </Grid>
+        </Box>
+      </Box>
 
       <Divider sx={{ my: 4 }} />
 
