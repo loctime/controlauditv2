@@ -265,16 +265,17 @@ const LogsOperarios = () => {
       </Box>
 
       {/* Filtros */}
-      <Card sx={{ mb: 3 }}>
-        <CardContent>
-          <Typography variant="h6" sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+      <Card sx={{ mb: 2 }}>
+        <CardContent sx={{ py: 2 }}>
+          <Typography variant="h6" sx={{ mb: 1.5, display: 'flex', alignItems: 'center', gap: 1, fontSize: '1rem' }}>
             <FilterIcon />
             Filtros
           </Typography>
-          <Grid container spacing={2}>
-            <Grid item xs={12} md={3}>
+          <Grid container spacing={1.5}>
+            <Grid item xs={12} md={4}>
               <TextField
                 fullWidth
+                size="small"
                 label="Buscar"
                 value={filtros.busqueda}
                 onChange={(e) => handleFiltroChange('busqueda', e.target.value)}
@@ -284,7 +285,7 @@ const LogsOperarios = () => {
               />
             </Grid>
             <Grid item xs={12} md={2}>
-              <FormControl fullWidth>
+              <FormControl fullWidth size="small">
                 <InputLabel>Tipo</InputLabel>
                 <Select
                   value={filtros.tipo}
@@ -301,7 +302,7 @@ const LogsOperarios = () => {
               </FormControl>
             </Grid>
             <Grid item xs={12} md={2}>
-              <FormControl fullWidth>
+              <FormControl fullWidth size="small">
                 <InputLabel>Entidad</InputLabel>
                 <Select
                   value={filtros.entidad}
@@ -318,7 +319,7 @@ const LogsOperarios = () => {
               </FormControl>
             </Grid>
             <Grid item xs={12} md={2}>
-              <FormControl fullWidth>
+              <FormControl fullWidth size="small">
                 <InputLabel>Severidad</InputLabel>
                 <Select
                   value={filtros.severidad}
@@ -332,9 +333,10 @@ const LogsOperarios = () => {
                 </Select>
               </FormControl>
             </Grid>
-            <Grid item xs={12} md={3}>
+            <Grid item xs={12} md={1}>
               <TextField
                 fullWidth
+                size="small"
                 type="date"
                 label="Desde"
                 value={filtros.fechaDesde}
@@ -342,9 +344,10 @@ const LogsOperarios = () => {
                 InputLabelProps={{ shrink: true }}
               />
             </Grid>
-            <Grid item xs={12} md={3}>
+            <Grid item xs={12} md={1}>
               <TextField
                 fullWidth
+                size="small"
                 type="date"
                 label="Hasta"
                 value={filtros.fechaHasta}
@@ -494,40 +497,60 @@ const LogsOperarios = () => {
                       <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={7}>
                         <Collapse in={expandedRows[log.id]} timeout="auto" unmountOnExit>
                           <Box sx={{ margin: 1 }}>
-                            <Accordion>
-                              <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                                <Typography variant="subtitle2">Detalles Completos</Typography>
-                              </AccordionSummary>
-                              <AccordionDetails>
+                            <Box sx={{ p: 2, backgroundColor: 'grey.50', borderRadius: 1 }}>
+                              <Typography variant="subtitle2" gutterBottom sx={{ mb: 2 }}>
+                                📋 Detalles del Log
+                              </Typography>
                                 <Grid container spacing={2}>
                                   <Grid item xs={12} md={6}>
-                                    <Typography variant="subtitle2" gutterBottom>
-                                      Información del Sistema:
+                                    <Typography variant="subtitle2" gutterBottom color="primary">
+                                      ℹ️ Información del Sistema
                                     </Typography>
-                                    <Typography variant="body2" color="textSecondary">
-                                      <strong>Navegador:</strong> {log.browser}<br/>
-                                      <strong>URL:</strong> {log.currentUrl}<br/>
-                                      <strong>Referrer:</strong> {log.referrer || 'N/A'}<br/>
-                                      <strong>Session ID:</strong> {log.sessionId}
-                                    </Typography>
-                                  </Grid>
-                                  <Grid item xs={12} md={6}>
-                                    <Typography variant="subtitle2" gutterBottom>
-                                      Detalles de la Acción:
-                                    </Typography>
-                                    <Box component="pre" sx={{
-                                      fontSize: '0.75rem',
-                                      backgroundColor: 'grey.100',
-                                      p: 1,
-                                      borderRadius: 1,
-                                      overflow: 'auto'
-                                    }}>
-                                      {JSON.stringify(log.detalles, null, 2)}
+                                    <Box sx={{ pl: 1 }}>
+                                      <Typography variant="body2" sx={{ mb: 1 }}>
+                                        <strong>Navegador:</strong> {log.browser || 'N/A'}
+                                      </Typography>
+                                      <Typography variant="body2" sx={{ mb: 1 }}>
+                                        <strong>URL:</strong> {log.currentUrl || 'N/A'}
+                                      </Typography>
+                                      <Typography variant="body2" sx={{ mb: 1 }}>
+                                        <strong>Referrer:</strong> {log.referrer || 'N/A'}
+                                      </Typography>
+                                      <Typography variant="body2">
+                                        <strong>Session ID:</strong> {log.sessionId || 'N/A'}
+                                      </Typography>
                                     </Box>
                                   </Grid>
-                                </Grid>
-                              </AccordionDetails>
-                            </Accordion>
+                                  <Grid item xs={12} md={6}>
+                                    <Typography variant="subtitle2" gutterBottom color="primary">
+                                      🔍 Detalles de la Acción
+                                    </Typography>
+                                    <Box sx={{ pl: 1 }}>
+                                    {log.detalles && Object.keys(log.detalles).length > 0 ? (
+                                      <Box sx={{
+                                        backgroundColor: 'white',
+                                        p: 1.5,
+                                        borderRadius: 1,
+                                        border: '1px solid',
+                                        borderColor: 'grey.300',
+                                        maxHeight: 150,
+                                        overflow: 'auto'
+                                      }}>
+                                        {Object.entries(log.detalles).map(([key, value]) => (
+                                          <Typography key={key} variant="body2" sx={{ mb: 0.5 }}>
+                                            <strong>{key}:</strong> {typeof value === 'object' ? JSON.stringify(value) : String(value)}
+                                          </Typography>
+                                        ))}
+                                      </Box>
+                                    ) : (
+                                      <Typography variant="body2" color="textSecondary">
+                                        No hay detalles adicionales
+                                      </Typography>
+                                    )}
+                                    </Box>
+                                  </Grid>
+                              </Grid>
+                            </Box>
                           </Box>
                         </Collapse>
                       </TableCell>
