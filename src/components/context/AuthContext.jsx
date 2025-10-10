@@ -127,20 +127,6 @@ const AuthContextComponent = ({ children }) => {
           const profile = await createOrGetUserProfile(firebaseUser);
           
           if (profile) {
-            // Registrar log de inicio de sesión
-            await registrarAccionSistema(
-              firebaseUser.uid,
-              `Inicio de sesión`,
-              { 
-                email: firebaseUser.email,
-                displayName: firebaseUser.displayName,
-                role: profile.role
-              },
-              'login',
-              'usuario',
-              firebaseUser.uid
-            );
-            
             // Establecer el perfil PRIMERO
             setUserProfile(profile);
             
@@ -269,21 +255,6 @@ const AuthContextComponent = ({ children }) => {
               localStorage.removeItem("isLogged");
             }
           } else {
-            // Registrar log de cierre de sesión si había un usuario
-            if (user) {
-              await registrarAccionSistema(
-                user.uid,
-                `Cierre de sesión`,
-                { 
-                  email: user.email,
-                  displayName: user.displayName
-                },
-                'logout',
-                'usuario',
-                user.uid
-              );
-            }
-            
             setUser(null);
             setIsLogged(false);
             setUserEmpresas([]);
