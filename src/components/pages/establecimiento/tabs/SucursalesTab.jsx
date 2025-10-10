@@ -11,7 +11,9 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  Collapse
+  Collapse,
+  IconButton,
+  Tooltip
 } from '@mui/material';
 import StorefrontIcon from '@mui/icons-material/Storefront';
 import PeopleIcon from '@mui/icons-material/People';
@@ -19,7 +21,9 @@ import SchoolIcon from '@mui/icons-material/School';
 import ReportProblemIcon from '@mui/icons-material/ReportProblem';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
-import { collection, getDocs, query, where, addDoc, Timestamp } from 'firebase/firestore';
+import EditIcon from '@mui/icons-material/Edit';
+import DeleteIcon from '@mui/icons-material/Delete';
+import { collection, getDocs, query, where, addDoc, updateDoc, deleteDoc, doc, Timestamp } from 'firebase/firestore';
 import { db } from '../../../../firebaseConfig';
 import { useAuth } from '../../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -37,11 +41,14 @@ const SucursalesTab = ({ empresaId, empresaNombre, userEmpresas, loadEmpresasSta
   const [sucursalForm, setSucursalForm] = useState({
     nombre: '',
     direccion: '',
-    telefono: ''
+    telefono: '',
+    horasSemanales: 40
   });
   const [expandedRows, setExpandedRows] = useState(new Set());
   const [sucursalesStats, setSucursalesStats] = useState({});
   const [activeTabPerSucursal, setActiveTabPerSucursal] = useState({});
+  const [openEditModal, setOpenEditModal] = useState(false);
+  const [sucursalEdit, setSucursalEdit] = useState(null);
 
   // Función para recargar estadísticas de sucursales
   const reloadSucursalesStats = async () => {
@@ -183,7 +190,7 @@ const SucursalesTab = ({ empresaId, empresaNombre, userEmpresas, loadEmpresasSta
         clienteAdminId: userProfile?.clienteAdminId || userProfile?.uid
       });
 
-      setSucursalForm({ nombre: '', direccion: '', telefono: '' });
+      setSucursalForm({ nombre: '', direccion: '', telefono: '', horasSemanales: 40 });
       setOpenSucursalForm(false);
       
       await loadSucursales();
@@ -204,6 +211,122 @@ const SucursalesTab = ({ empresaId, empresaNombre, userEmpresas, loadEmpresasSta
         title: 'Error',
         text: 'Error al crear la sucursal: ' + error.message
       });
+    }
+  };
+
+  const handleEditSucursal = (sucursal) => {
+    setSucursalEdit({
+      id: sucursal.id,
+      nombre: sucursal.nombre,
+      direccion: sucursal.direccion || '',
+      telefono: sucursal.telefono || '',
+      horasSemanales: sucursal.horasSemanales || 40
+    });
+    setOpenEditModal(true);
+  };
+
+  const handleEditFormChange = (e) => {
+    const { name, value } = e.target;
+    setSucursalEdit(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handleUpdateSucursal = async () => {
+    if (!sucursalEdit.nombre.trim()) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: 'El nombre de la sucursal es requerido'
+      });
+      return;
+    }
+
+    try {
+      await updateDoc(doc(db, 'sucursales', sucursalEdit.id), {
+        nombre: sucursalEdit.nombre,
+        direccion: sucursalEdit.direccion,
+        telefono: sucursalEdit.telefono,
+        horasSemanales: parseInt(sucursalEdit.horasSemanales),
+        fechaModificacion: Timestamp.now(),
+        modificadoPor: userProfile?.uid,
+        modificadoPorEmail: userProfile?.email
+      });
+
+      setSucursalEdit(null);
+      setOpenEditModal(false);
+      
+      await loadSucursales();
+      
+      if (typeof loadEmpresasStats === 'function') {
+        loadEmpresasStats(userEmpresas);
+      }
+
+      Swal.fire({
+        icon: 'success',
+        title: 'Éxito',
+        text: 'Sucursal actualizada exitosamente'
+      });
+    } catch (error) {
+      console.error('Error actualizando sucursal:', error);
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: 'Error al actualizar la sucursal: ' + error.message
+      });
+    }
+  };
+
+  const handleDeleteSucursal = async (sucursal) => {
+    const result = await Swal.fire({
+      title: '¿Estás seguro?',
+      text: `¿Deseas eliminar la sucursal "${sucursal.nombre}"? Esta acción no se puede deshacer.`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#3085d6',
+      confirmButtonText: 'Sí, eliminar',
+      cancelButtonText: 'Cancelar'
+    });
+
+    if (result.isConfirmed) {
+      try {
+        // Verificar si hay empleados asociados
+        const empleadosSnapshot = await getDocs(
+          query(collection(db, 'empleados'), where('sucursalId', '==', sucursal.id))
+        );
+
+        if (empleadosSnapshot.docs.length > 0) {
+          Swal.fire({
+            icon: 'error',
+            title: 'No se puede eliminar',
+            text: `La sucursal "${sucursal.nombre}" tiene ${empleadosSnapshot.docs.length} empleado(s) asociado(s). Elimina primero los empleados.`
+          });
+          return;
+        }
+
+        await deleteDoc(doc(db, 'sucursales', sucursal.id));
+
+        await loadSucursales();
+        
+        if (typeof loadEmpresasStats === 'function') {
+          loadEmpresasStats(userEmpresas);
+        }
+
+        Swal.fire({
+          icon: 'success',
+          title: 'Eliminado',
+          text: 'Sucursal eliminada exitosamente'
+        });
+      } catch (error) {
+        console.error('Error eliminando sucursal:', error);
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: 'Error al eliminar la sucursal: ' + error.message
+        });
+      }
     }
   };
 
@@ -238,9 +361,11 @@ const SucursalesTab = ({ empresaId, empresaNombre, userEmpresas, loadEmpresasSta
                 <TableCell><strong>Nombre</strong></TableCell>
                 <TableCell><strong>Dirección</strong></TableCell>
                 <TableCell><strong>Teléfono</strong></TableCell>
+                <TableCell align="center"><strong>Horas/Semana</strong></TableCell>
                 <TableCell align="center"><strong>Empleados</strong></TableCell>
                 <TableCell align="center"><strong>Capacitaciones</strong></TableCell>
                 <TableCell align="center"><strong>Accidentes</strong></TableCell>
+                <TableCell align="center"><strong>Acciones</strong></TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -254,6 +379,9 @@ const SucursalesTab = ({ empresaId, empresaNombre, userEmpresas, loadEmpresasSta
                       <TableCell>{sucursal.nombre}</TableCell>
                       <TableCell>{sucursal.direccion || 'N/A'}</TableCell>
                       <TableCell>{sucursal.telefono || 'N/A'}</TableCell>
+                      <TableCell align="center">
+                        {sucursal.horasSemanales || '40'}h
+                      </TableCell>
                       <TableCell align="center">
                         <Button
                           variant="text"
@@ -299,9 +427,31 @@ const SucursalesTab = ({ empresaId, empresaNombre, userEmpresas, loadEmpresasSta
                           {isExpanded && getActiveTab(sucursal.id) === 'accidentes' ? <ExpandLessIcon fontSize="small" sx={{ ml: 0.5 }} /> : <ExpandMoreIcon fontSize="small" sx={{ ml: 0.5 }} />}
                         </Button>
                       </TableCell>
+                      <TableCell align="center">
+                        <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center' }}>
+                          <Tooltip title="Editar sucursal">
+                            <IconButton 
+                              size="small" 
+                              color="primary"
+                              onClick={() => handleEditSucursal(sucursal)}
+                            >
+                              <EditIcon />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title="Eliminar sucursal">
+                            <IconButton 
+                              size="small" 
+                              color="error"
+                              onClick={() => handleDeleteSucursal(sucursal)}
+                            >
+                              <DeleteIcon />
+                            </IconButton>
+                          </Tooltip>
+                        </Box>
+                      </TableCell>
                     </TableRow>
                     <TableRow>
-                      <TableCell colSpan={6} sx={{ py: 0 }}>
+                      <TableCell colSpan={8} sx={{ py: 0 }}>
                         <Collapse in={isExpanded} timeout="auto" unmountOnExit>
                           <Box sx={{ p: 3, backgroundColor: '#fafafa', borderTop: '1px solid #e0e0e0' }}>
                             {getActiveTab(sucursal.id) === 'empleados' && (
@@ -414,6 +564,27 @@ const SucursalesTab = ({ empresaId, empresaNombre, userEmpresas, loadEmpresasSta
                   }}
                 />
               </Box>
+              <Box>
+                <Typography variant="body2" sx={{ mb: 1 }}>
+                  Horas Semanales
+                </Typography>
+                <input
+                  type="number"
+                  name="horasSemanales"
+                  value={sucursalForm.horasSemanales}
+                  onChange={handleSucursalFormChange}
+                  placeholder="40"
+                  min="1"
+                  max="168"
+                  style={{
+                    width: '100%',
+                    padding: '8px 12px',
+                    border: '1px solid #ccc',
+                    borderRadius: '4px',
+                    fontSize: '14px'
+                  }}
+                />
+              </Box>
               <Box sx={{ display: 'flex', gap: 2, mt: 2 }}>
                 <Button
                   variant="contained"
@@ -425,6 +596,130 @@ const SucursalesTab = ({ empresaId, empresaNombre, userEmpresas, loadEmpresasSta
                 <Button
                   variant="outlined"
                   onClick={() => setOpenSucursalForm(false)}
+                  sx={{ flex: 1 }}
+                >
+                  Cancelar
+                </Button>
+              </Box>
+            </Box>
+          </Paper>
+        </Box>
+      )}
+
+      {/* Modal para editar sucursal */}
+      {openEditModal && sucursalEdit && (
+        <Box
+          sx={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0,0,0,0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000
+          }}
+          onClick={() => setOpenEditModal(false)}
+        >
+          <Paper
+            sx={{ p: 3, maxWidth: 400, width: '90%' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <Typography variant="h6" sx={{ mb: 2 }}>
+              Editar Sucursal
+            </Typography>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <Box>
+                <Typography variant="body2" sx={{ mb: 1 }}>
+                  Nombre *
+                </Typography>
+                <input
+                  type="text"
+                  name="nombre"
+                  value={sucursalEdit.nombre}
+                  onChange={handleEditFormChange}
+                  placeholder="Nombre de la sucursal"
+                  style={{
+                    width: '100%',
+                    padding: '8px 12px',
+                    border: '1px solid #ccc',
+                    borderRadius: '4px',
+                    fontSize: '14px'
+                  }}
+                />
+              </Box>
+              <Box>
+                <Typography variant="body2" sx={{ mb: 1 }}>
+                  Dirección
+                </Typography>
+                <input
+                  type="text"
+                  name="direccion"
+                  value={sucursalEdit.direccion}
+                  onChange={handleEditFormChange}
+                  placeholder="Dirección de la sucursal"
+                  style={{
+                    width: '100%',
+                    padding: '8px 12px',
+                    border: '1px solid #ccc',
+                    borderRadius: '4px',
+                    fontSize: '14px'
+                  }}
+                />
+              </Box>
+              <Box>
+                <Typography variant="body2" sx={{ mb: 1 }}>
+                  Teléfono
+                </Typography>
+                <input
+                  type="text"
+                  name="telefono"
+                  value={sucursalEdit.telefono}
+                  onChange={handleEditFormChange}
+                  placeholder="Teléfono de la sucursal"
+                  style={{
+                    width: '100%',
+                    padding: '8px 12px',
+                    border: '1px solid #ccc',
+                    borderRadius: '4px',
+                    fontSize: '14px'
+                  }}
+                />
+              </Box>
+              <Box>
+                <Typography variant="body2" sx={{ mb: 1 }}>
+                  Horas Semanales
+                </Typography>
+                <input
+                  type="number"
+                  name="horasSemanales"
+                  value={sucursalEdit.horasSemanales}
+                  onChange={handleEditFormChange}
+                  placeholder="40"
+                  min="1"
+                  max="168"
+                  style={{
+                    width: '100%',
+                    padding: '8px 12px',
+                    border: '1px solid #ccc',
+                    borderRadius: '4px',
+                    fontSize: '14px'
+                  }}
+                />
+              </Box>
+              <Box sx={{ display: 'flex', gap: 2, mt: 2 }}>
+                <Button
+                  variant="contained"
+                  onClick={handleUpdateSucursal}
+                  sx={{ flex: 1 }}
+                >
+                  Actualizar
+                </Button>
+                <Button
+                  variant="outlined"
+                  onClick={() => setOpenEditModal(false)}
                   sx={{ flex: 1 }}
                 >
                   Cancelar
