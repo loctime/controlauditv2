@@ -362,6 +362,20 @@ function Dashboard() {
         plan: 'estandar',
       });
 
+      // Crear automáticamente sucursal "Casa Central"
+      const sucursalesRef = collection(db, 'sucursales');
+      await addDoc(sucursalesRef, {
+        nombre: "Casa Central",
+        empresaId: empresaRef.id,
+        direccion: "",
+        telefono: "",
+        horasSemanales: 40,
+        createdAt: new Date(),
+        propietarioId: userRes.uid,
+        creadorId: user.uid,
+        activa: true
+      });
+
       // 3. Actualizar usuario con información adicional usando Firestore directamente
       const userRef = doc(db, 'usuarios', userRes.uid);
       await updateDoc(userRef, {

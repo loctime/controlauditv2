@@ -152,6 +152,22 @@ export const empresaService = {
       
       const docRef = await addDoc(empresaRef, nuevaEmpresa);
       
+      // Crear automáticamente sucursal "Casa Central"
+      const sucursalesRef = collection(db, "sucursales");
+      const sucursalCasaCentral = {
+        nombre: "Casa Central",
+        empresaId: docRef.id,
+        direccion: empresaData.direccion || "",
+        telefono: empresaData.telefono || "",
+        horasSemanales: 40,
+        createdAt: new Date(),
+        propietarioId,
+        creadorId,
+        activa: true
+      };
+      
+      await addDoc(sucursalesRef, sucursalCasaCentral);
+      
       // Actualizar perfil del propietario
       const propietarioRef = doc(db, "usuarios", propietarioId);
       const propietarioSnap = await getDoc(propietarioRef);
