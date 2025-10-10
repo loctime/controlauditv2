@@ -478,69 +478,149 @@ const DashboardHigieneSeguridad = () => {
 
       <Divider sx={{ my: 4 }} />
 
-      {/* Índices técnicos */}
+      {/* Índices técnicos - Diseño compacto */}
       <Typography variant="h5" sx={{ fontWeight: 'bold', mb: 3, color: '#111827' }}>
         📊 Índices Técnicos de Seguridad
       </Typography>
 
-      <Grid container spacing={3} sx={{ mb: 4 }}>
-        <Grid item xs={12} md={6}>
-          <IndiceCard
-            titulo="Tasa de Ausentismo (TA)"
-            valor={datos.indices.tasaAusentismo}
-            unidad="%"
-            formula="(Horas Perdidas / Horas Hombre Programadas) × 100"
-            icono={<TrendingUpIcon />}
-            color={datos.indices.tasaAusentismo > 5 ? "#ef4444" : datos.indices.tasaAusentismo > 2 ? "#f59e0b" : "#22c55e"}
-            interpretacion={
-              datos.indices.tasaAusentismo > 5 ? "Crítico" : 
-              datos.indices.tasaAusentismo > 2 ? "Atención" : "Excelente"
-            }
-          />
+      <Box sx={{ mb: 4 }}>
+        <Grid container spacing={2}>
+          <Grid item xs={12} sm={6} md={3}>
+            <Paper 
+              elevation={1}
+              sx={{ 
+                p: 2, 
+                borderRadius: 2,
+                border: `2px solid ${datos.indices.tasaAusentismo > 5 ? "#ef4444" : datos.indices.tasaAusentismo > 2 ? "#f59e0b" : "#22c55e"}`,
+                backgroundColor: datos.indices.tasaAusentismo > 5 ? "#fef2f2" : datos.indices.tasaAusentismo > 2 ? "#fffbeb" : "#f0fdf4"
+              }}
+            >
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                <TrendingUpIcon sx={{ fontSize: 20, mr: 1, color: datos.indices.tasaAusentismo > 5 ? "#ef4444" : datos.indices.tasaAusentismo > 2 ? "#f59e0b" : "#22c55e" }} />
+                <Typography variant="body2" sx={{ fontWeight: 600, fontSize: '0.8rem' }}>
+                  Tasa de Ausentismo
+                </Typography>
+              </Box>
+              <Typography variant="h4" sx={{ fontWeight: 'bold', color: datos.indices.tasaAusentismo > 5 ? "#ef4444" : datos.indices.tasaAusentismo > 2 ? "#f59e0b" : "#22c55e", fontSize: '1.5rem' }}>
+                {datos.indices.tasaAusentismo.toFixed(2)}%
+              </Typography>
+              <Chip 
+                label={datos.indices.tasaAusentismo > 5 ? "Crítico" : datos.indices.tasaAusentismo > 2 ? "Atención" : "Excelente"}
+                size="small"
+                sx={{ 
+                  backgroundColor: datos.indices.tasaAusentismo > 5 ? "#ef4444" : datos.indices.tasaAusentismo > 2 ? "#f59e0b" : "#22c55e",
+                  color: 'white',
+                  fontSize: '0.7rem',
+                  height: 20,
+                  mt: 1
+                }}
+              />
+            </Paper>
+          </Grid>
+          
+          <Grid item xs={12} sm={6} md={3}>
+            <Paper 
+              elevation={1}
+              sx={{ 
+                p: 2, 
+                borderRadius: 2,
+                border: `2px solid ${datos.indices.indiceFrecuencia > 10 ? "#ef4444" : datos.indices.indiceFrecuencia > 5 ? "#f59e0b" : "#22c55e"}`,
+                backgroundColor: datos.indices.indiceFrecuencia > 10 ? "#fef2f2" : datos.indices.indiceFrecuencia > 5 ? "#fffbeb" : "#f0fdf4"
+              }}
+            >
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                <ReportProblemIcon sx={{ fontSize: 20, mr: 1, color: datos.indices.indiceFrecuencia > 10 ? "#ef4444" : datos.indices.indiceFrecuencia > 5 ? "#f59e0b" : "#22c55e" }} />
+                <Typography variant="body2" sx={{ fontWeight: 600, fontSize: '0.8rem' }}>
+                  Índice de Frecuencia
+                </Typography>
+              </Box>
+              <Typography variant="h4" sx={{ fontWeight: 'bold', color: datos.indices.indiceFrecuencia > 10 ? "#ef4444" : datos.indices.indiceFrecuencia > 5 ? "#f59e0b" : "#22c55e", fontSize: '1.5rem' }}>
+                {datos.indices.indiceFrecuencia.toFixed(2)}
+              </Typography>
+              <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.7rem' }}>acc/MMHH</Typography>
+              <Chip 
+                label={datos.indices.indiceFrecuencia > 10 ? "Alto riesgo" : datos.indices.indiceFrecuencia > 5 ? "Medio riesgo" : "Bajo riesgo"}
+                size="small"
+                sx={{ 
+                  backgroundColor: datos.indices.indiceFrecuencia > 10 ? "#ef4444" : datos.indices.indiceFrecuencia > 5 ? "#f59e0b" : "#22c55e",
+                  color: 'white',
+                  fontSize: '0.7rem',
+                  height: 20,
+                  mt: 1
+                }}
+              />
+            </Paper>
+          </Grid>
+          
+          <Grid item xs={12} sm={6} md={3}>
+            <Paper 
+              elevation={1}
+              sx={{ 
+                p: 2, 
+                borderRadius: 2,
+                border: `2px solid ${datos.indices.indiceIncidencia > 20 ? "#ef4444" : datos.indices.indiceIncidencia > 10 ? "#f59e0b" : "#22c55e"}`,
+                backgroundColor: datos.indices.indiceIncidencia > 20 ? "#fef2f2" : datos.indices.indiceIncidencia > 10 ? "#fffbeb" : "#f0fdf4"
+              }}
+            >
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                <PeopleIcon sx={{ fontSize: 20, mr: 1, color: datos.indices.indiceIncidencia > 20 ? "#ef4444" : datos.indices.indiceIncidencia > 10 ? "#f59e0b" : "#22c55e" }} />
+                <Typography variant="body2" sx={{ fontWeight: 600, fontSize: '0.8rem' }}>
+                  Índice de Incidencia
+                </Typography>
+              </Box>
+              <Typography variant="h4" sx={{ fontWeight: 'bold', color: datos.indices.indiceIncidencia > 20 ? "#ef4444" : datos.indices.indiceIncidencia > 10 ? "#f59e0b" : "#22c55e", fontSize: '1.5rem' }}>
+                {datos.indices.indiceIncidencia.toFixed(2)}
+              </Typography>
+              <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.7rem' }}>acc/MT</Typography>
+              <Chip 
+                label={datos.indices.indiceIncidencia > 20 ? "Crítico" : datos.indices.indiceIncidencia > 10 ? "Atención" : "Excelente"}
+                size="small"
+                sx={{ 
+                  backgroundColor: datos.indices.indiceIncidencia > 20 ? "#ef4444" : datos.indices.indiceIncidencia > 10 ? "#f59e0b" : "#22c55e",
+                  color: 'white',
+                  fontSize: '0.7rem',
+                  height: 20,
+                  mt: 1
+                }}
+              />
+            </Paper>
+          </Grid>
+          
+          <Grid item xs={12} sm={6} md={3}>
+            <Paper 
+              elevation={1}
+              sx={{ 
+                p: 2, 
+                borderRadius: 2,
+                border: `2px solid ${datos.indices.indiceGravedad > 50 ? "#ef4444" : datos.indices.indiceGravedad > 25 ? "#f59e0b" : "#22c55e"}`,
+                backgroundColor: datos.indices.indiceGravedad > 50 ? "#fef2f2" : datos.indices.indiceGravedad > 25 ? "#fffbeb" : "#f0fdf4"
+              }}
+            >
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                <TrendingDownIcon sx={{ fontSize: 20, mr: 1, color: datos.indices.indiceGravedad > 50 ? "#ef4444" : datos.indices.indiceGravedad > 25 ? "#f59e0b" : "#22c55e" }} />
+                <Typography variant="body2" sx={{ fontWeight: 600, fontSize: '0.8rem' }}>
+                  Índice de Gravedad
+                </Typography>
+              </Box>
+              <Typography variant="h4" sx={{ fontWeight: 'bold', color: datos.indices.indiceGravedad > 50 ? "#ef4444" : datos.indices.indiceGravedad > 25 ? "#f59e0b" : "#22c55e", fontSize: '1.5rem' }}>
+                {datos.indices.indiceGravedad.toFixed(2)}
+              </Typography>
+              <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.7rem' }}>días/MMHH</Typography>
+              <Chip 
+                label={datos.indices.indiceGravedad > 50 ? "Alta gravedad" : datos.indices.indiceGravedad > 25 ? "Media gravedad" : "Baja gravedad"}
+                size="small"
+                sx={{ 
+                  backgroundColor: datos.indices.indiceGravedad > 50 ? "#ef4444" : datos.indices.indiceGravedad > 25 ? "#f59e0b" : "#22c55e",
+                  color: 'white',
+                  fontSize: '0.7rem',
+                  height: 20,
+                  mt: 1
+                }}
+              />
+            </Paper>
+          </Grid>
         </Grid>
-        <Grid item xs={12} md={6}>
-          <IndiceCard
-            titulo="Índice de Frecuencia (IF)"
-            valor={datos.indices.indiceFrecuencia}
-            unidad="acc/MMHH"
-            formula="(Accidentes con Tiempo Perdido × 1,000,000) / Horas Hombre Trabajadas"
-            icono={<ReportProblemIcon />}
-            color={datos.indices.indiceFrecuencia > 10 ? "#ef4444" : datos.indices.indiceFrecuencia > 5 ? "#f59e0b" : "#22c55e"}
-            interpretacion={
-              datos.indices.indiceFrecuencia > 10 ? "Alto riesgo" : 
-              datos.indices.indiceFrecuencia > 5 ? "Medio riesgo" : "Bajo riesgo"
-            }
-          />
-        </Grid>
-        <Grid item xs={12} md={6}>
-          <IndiceCard
-            titulo="Índice de Incidencia (II)"
-            valor={datos.indices.indiceIncidencia}
-            unidad="acc/MT"
-            formula="(Accidentes con Tiempo Perdido × 1,000) / Promedio de Trabajadores"
-            icono={<PeopleIcon />}
-            color={datos.indices.indiceIncidencia > 20 ? "#ef4444" : datos.indices.indiceIncidencia > 10 ? "#f59e0b" : "#22c55e"}
-            interpretacion={
-              datos.indices.indiceIncidencia > 20 ? "Crítico" : 
-              datos.indices.indiceIncidencia > 10 ? "Atención" : "Excelente"
-            }
-          />
-        </Grid>
-        <Grid item xs={12} md={6}>
-          <IndiceCard
-            titulo="Índice de Gravedad (IG)"
-            valor={datos.indices.indiceGravedad}
-            unidad="días/MMHH"
-            formula="(Días Perdidos por Accidentes × 1,000) / Horas Hombre Trabajadas"
-            icono={<TrendingDownIcon />}
-            color={datos.indices.indiceGravedad > 50 ? "#ef4444" : datos.indices.indiceGravedad > 25 ? "#f59e0b" : "#22c55e"}
-            interpretacion={
-              datos.indices.indiceGravedad > 50 ? "Alta gravedad" : 
-              datos.indices.indiceGravedad > 25 ? "Media gravedad" : "Baja gravedad"
-            }
-          />
-        </Grid>
-      </Grid>
+      </Box>
 
       {/* Gráfico de índices */}
       <GraficoIndices datos={datos} periodo={selectedPeriodo} />
