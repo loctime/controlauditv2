@@ -5,7 +5,8 @@ import {
   Typography,
   Box,
   Grid,
-  Paper
+  Paper,
+  useTheme
 } from '@mui/material';
 import {
   BarChart,
@@ -26,6 +27,7 @@ import {
 } from 'recharts';
 
 const GraficoIndices = ({ datos, periodo }) => {
+  const theme = useTheme();
   // Datos para el gráfico de barras de índices
   const indicesData = [
     {
@@ -95,13 +97,84 @@ const GraficoIndices = ({ datos, periodo }) => {
   const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
       return (
-        <Paper sx={{ p: 2, backgroundColor: 'rgba(255,255,255,0.95)' }}>
-          <Typography variant="body2" sx={{ fontWeight: 600 }}>
+        <Paper sx={{ 
+          p: 2, 
+          backgroundColor: theme.palette.background.paper,
+          border: `1px solid ${theme.palette.divider}`,
+          boxShadow: theme.shadows[8]
+        }}>
+          <Typography variant="body2" sx={{ fontWeight: 600, color: theme.palette.text.primary }}>
             {label}
           </Typography>
           {payload.map((entry, index) => (
             <Typography key={index} variant="body2" sx={{ color: entry.color }}>
               {entry.name}: {entry.value} {entry.payload?.unidad || ''}
+            </Typography>
+          ))}
+        </Paper>
+      );
+    }
+    return null;
+  };
+
+  const CustomPieTooltip = ({ active, payload }) => {
+    if (active && payload && payload.length) {
+      return (
+        <Paper sx={{ 
+          p: 2, 
+          backgroundColor: theme.palette.background.paper,
+          border: `1px solid ${theme.palette.divider}`,
+          boxShadow: theme.shadows[8]
+        }}>
+          {payload.map((entry, index) => (
+            <Typography key={index} variant="body2" sx={{ color: theme.palette.text.primary }}>
+              {entry.name}: {entry.value}
+            </Typography>
+          ))}
+        </Paper>
+      );
+    }
+    return null;
+  };
+
+  const CustomAreaTooltip = ({ active, payload, label }) => {
+    if (active && payload && payload.length) {
+      return (
+        <Paper sx={{ 
+          p: 2, 
+          backgroundColor: theme.palette.background.paper,
+          border: `1px solid ${theme.palette.divider}`,
+          boxShadow: theme.shadows[8]
+        }}>
+          <Typography variant="body2" sx={{ fontWeight: 600, color: theme.palette.text.primary }}>
+            {label}
+          </Typography>
+          {payload.map((entry, index) => (
+            <Typography key={index} variant="body2" sx={{ color: entry.color }}>
+              {entry.name}: {entry.value.toLocaleString()} horas
+            </Typography>
+          ))}
+        </Paper>
+      );
+    }
+    return null;
+  };
+
+  const CustomLineTooltip = ({ active, payload, label }) => {
+    if (active && payload && payload.length) {
+      return (
+        <Paper sx={{ 
+          p: 2, 
+          backgroundColor: theme.palette.background.paper,
+          border: `1px solid ${theme.palette.divider}`,
+          boxShadow: theme.shadows[8]
+        }}>
+          <Typography variant="body2" sx={{ fontWeight: 600, color: theme.palette.text.primary }}>
+            {label}
+          </Typography>
+          {payload.map((entry, index) => (
+            <Typography key={index} variant="body2" sx={{ color: entry.color }}>
+              {entry.name}: {entry.value}
             </Typography>
           ))}
         </Paper>
@@ -126,15 +199,15 @@ const GraficoIndices = ({ datos, periodo }) => {
               </Typography>
               <ResponsiveContainer width="100%" height={300}>
                 <BarChart data={indicesData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                  <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.divider} />
                   <XAxis 
                     dataKey="name" 
-                    tick={{ fill: '#6b7280', fontSize: 12 }}
+                    tick={{ fill: theme.palette.text.secondary, fontSize: 12 }}
                     angle={-45}
                     textAnchor="end"
                     height={80}
                   />
-                  <YAxis tick={{ fill: '#6b7280', fontSize: 12 }} />
+                  <YAxis tick={{ fill: theme.palette.text.secondary, fontSize: 12 }} />
                   <Tooltip content={<CustomTooltip />} />
                   <Bar dataKey="valor" radius={[4, 4, 0, 0]}>
                     {indicesData.map((entry, index) => (
@@ -170,7 +243,7 @@ const GraficoIndices = ({ datos, periodo }) => {
                       <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
                   </Pie>
-                  <Tooltip />
+                  <Tooltip content={<CustomPieTooltip />} />
                 </PieChart>
               </ResponsiveContainer>
             </CardContent>
@@ -186,10 +259,10 @@ const GraficoIndices = ({ datos, periodo }) => {
               </Typography>
               <ResponsiveContainer width="100%" height={250}>
                 <AreaChart data={horasData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                  <XAxis dataKey="name" tick={{ fill: '#6b7280', fontSize: 12 }} />
-                  <YAxis tick={{ fill: '#6b7280', fontSize: 12 }} />
-                  <Tooltip formatter={(value) => [value.toLocaleString(), 'Horas']} />
+                  <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.divider} />
+                  <XAxis dataKey="name" tick={{ fill: theme.palette.text.secondary, fontSize: 12 }} />
+                  <YAxis tick={{ fill: theme.palette.text.secondary, fontSize: 12 }} />
+                  <Tooltip content={<CustomAreaTooltip />} />
                   <Area 
                     type="monotone" 
                     dataKey="valor" 
@@ -212,10 +285,10 @@ const GraficoIndices = ({ datos, periodo }) => {
               </Typography>
               <ResponsiveContainer width="100%" height={250}>
                 <LineChart data={tendenciaData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                  <XAxis dataKey="mes" tick={{ fill: '#6b7280', fontSize: 12 }} />
-                  <YAxis tick={{ fill: '#6b7280', fontSize: 12 }} />
-                  <Tooltip />
+                  <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.divider} />
+                  <XAxis dataKey="mes" tick={{ fill: theme.palette.text.secondary, fontSize: 12 }} />
+                  <YAxis tick={{ fill: theme.palette.text.secondary, fontSize: 12 }} />
+                  <Tooltip content={<CustomLineTooltip />} />
                   <Legend />
                   <Line 
                     type="monotone" 
