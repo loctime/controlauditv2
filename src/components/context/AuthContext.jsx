@@ -693,7 +693,7 @@ const AuthContextComponent = ({ children }) => {
   const crearEmpresa = async (empresaData) => {
     const empresaId = await empresaService.crearEmpresa(empresaData, user, role, userProfile);
     
-    // Actualizar estado local
+    // Actualización optimista para PWA offline
     const nuevaEmpresaConId = {
       id: empresaId,
       ...empresaData,
@@ -707,8 +707,11 @@ const AuthContextComponent = ({ children }) => {
       socios: [role === 'operario' && userProfile?.clienteAdminId ? userProfile.clienteAdminId : user.uid]
     };
     
-    setUserEmpresas(prevEmpresas => [...prevEmpresas, nuevaEmpresaConId]);
-    await loadUserEmpresas(user.uid);
+    // Solo agregar si no existe (evitar duplicados)
+    setUserEmpresas(prevEmpresas => {
+      const existe = prevEmpresas.some(emp => emp.id === empresaId);
+      return existe ? prevEmpresas : [...prevEmpresas, nuevaEmpresaConId];
+    });
     
     return empresaId;
   };
