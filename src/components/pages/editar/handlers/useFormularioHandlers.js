@@ -226,8 +226,8 @@ export const useFormularioHandlers = ({
       text: "¡No podrás recuperar este formulario!",
       icon: 'warning',
       showCancelButton: true,
-      confirmButtonColor: '#3085d6',
-      cancelButtonColor: '#d33',
+      confirmButtonColor: '#1976d2',
+      cancelButtonColor: '#d32f2f',
       confirmButtonText: 'Sí, eliminar'
     });
 
@@ -270,8 +270,8 @@ export const useFormularioHandlers = ({
       text: "¡No podrás recuperar esta sección y sus preguntas!",
       icon: 'warning',
       showCancelButton: true,
-      confirmButtonColor: '#3085d6',
-      cancelButtonColor: '#d33',
+      confirmButtonColor: '#1976d2',
+      cancelButtonColor: '#d32f2f',
       confirmButtonText: 'Sí, eliminar'
     });
 
@@ -310,8 +310,8 @@ export const useFormularioHandlers = ({
       text: "¡No podrás recuperar esta pregunta!",
       icon: 'warning',
       showCancelButton: true,
-      confirmButtonColor: '#3085d6',
-      cancelButtonColor: '#d33',
+      confirmButtonColor: '#1976d2',
+      cancelButtonColor: '#d32f2f',
       confirmButtonText: 'Sí, eliminar'
     });
 

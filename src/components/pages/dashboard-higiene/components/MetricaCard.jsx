@@ -5,18 +5,65 @@ import {
   Typography,
   Box,
   Avatar,
-  Chip
+  Chip,
+  useTheme
 } from '@mui/material';
 
 const MetricaCard = ({ titulo, valor, icono, color, subtitulo }) => {
+  const theme = useTheme();
+  const isDark = theme.palette.mode === 'dark';
+  
   const getColorScheme = (color) => {
-    switch (color) {
-      case '#ef4444': return { bg: '#fef2f2', border: '#fecaca', text: '#dc2626', light: '#fee2e2' };
-      case '#f59e0b': return { bg: '#fffbeb', border: '#fed7aa', text: '#d97706', light: '#fef3c7' };
-      case '#22c55e': return { bg: '#f0fdf4', border: '#bbf7d0', text: '#16a34a', light: '#dcfce7' };
-      case '#3b82f6': return { bg: '#eff6ff', border: '#bfdbfe', text: '#2563eb', light: '#dbeafe' };
-      case '#10b981': return { bg: '#ecfdf5', border: '#a7f3d0', text: '#059669', light: '#d1fae5' };
-      default: return { bg: '#f8fafc', border: '#e2e8f0', text: '#64748b', light: '#f1f5f9' };
+    if (isDark) {
+      // Esquemas para modo oscuro con fondos más oscuros
+      switch (color) {
+        case '#ef4444': return { 
+          bg: 'rgba(239, 68, 68, 0.08)', 
+          border: 'rgba(239, 68, 68, 0.2)', 
+          text: '#fca5a5', 
+          light: 'rgba(239, 68, 68, 0.05)' 
+        };
+        case '#f59e0b': return { 
+          bg: 'rgba(245, 158, 11, 0.08)', 
+          border: 'rgba(245, 158, 11, 0.2)', 
+          text: '#fbbf24', 
+          light: 'rgba(245, 158, 11, 0.05)' 
+        };
+        case '#22c55e': return { 
+          bg: 'rgba(34, 197, 94, 0.08)', 
+          border: 'rgba(34, 197, 94, 0.2)', 
+          text: '#86efac', 
+          light: 'rgba(34, 197, 94, 0.05)' 
+        };
+        case '#3b82f6': return { 
+          bg: 'rgba(59, 130, 246, 0.08)', 
+          border: 'rgba(59, 130, 246, 0.2)', 
+          text: '#93c5fd', 
+          light: 'rgba(59, 130, 246, 0.05)' 
+        };
+        case '#10b981': return { 
+          bg: 'rgba(16, 185, 129, 0.08)', 
+          border: 'rgba(16, 185, 129, 0.2)', 
+          text: '#6ee7b7', 
+          light: 'rgba(16, 185, 129, 0.05)' 
+        };
+        default: return { 
+          bg: theme.palette.background.paper, 
+          border: theme.palette.divider, 
+          text: theme.palette.text.primary, 
+          light: 'rgba(148, 163, 184, 0.03)' 
+        };
+      }
+    } else {
+      // Esquemas para modo claro (original)
+      switch (color) {
+        case '#ef4444': return { bg: '#fef2f2', border: '#fecaca', text: '#dc2626', light: '#fee2e2' };
+        case '#f59e0b': return { bg: '#fffbeb', border: '#fed7aa', text: '#d97706', light: '#fef3c7' };
+        case '#22c55e': return { bg: '#f0fdf4', border: '#bbf7d0', text: '#16a34a', light: '#dcfce7' };
+        case '#3b82f6': return { bg: '#eff6ff', border: '#bfdbfe', text: '#2563eb', light: '#dbeafe' };
+        case '#10b981': return { bg: '#ecfdf5', border: '#a7f3d0', text: '#059669', light: '#d1fae5' };
+        default: return { bg: '#f8fafc', border: '#e2e8f0', text: '#64748b', light: '#f1f5f9' };
+      }
     }
   };
 

@@ -13,7 +13,8 @@ import {
   TableRow,
   Collapse,
   IconButton,
-  Tooltip
+  Tooltip,
+  useTheme
 } from '@mui/material';
 import StorefrontIcon from '@mui/icons-material/Storefront';
 import PeopleIcon from '@mui/icons-material/People';
@@ -36,6 +37,7 @@ import { registrarAccionSistema } from '../../../../utils/firestoreUtils';
 const SucursalesTab = ({ empresaId, empresaNombre, userEmpresas, loadEmpresasStats }) => {
   const { userProfile } = useAuth();
   const navigate = useNavigate();
+  const theme = useTheme();
   const [sucursales, setSucursales] = useState([]);
   const [loading, setLoading] = useState(false);
   const [openSucursalForm, setOpenSucursalForm] = useState(false);
@@ -318,8 +320,8 @@ const SucursalesTab = ({ empresaId, empresaNombre, userEmpresas, loadEmpresasSta
       text: `¿Deseas eliminar la sucursal "${sucursal.nombre}"? Esta acción no se puede deshacer.`,
       icon: 'warning',
       showCancelButton: true,
-      confirmButtonColor: '#d33',
-      cancelButtonColor: '#3085d6',
+      confirmButtonColor: theme.palette.error.main,
+      cancelButtonColor: theme.palette.primary.main,
       confirmButtonText: 'Sí, eliminar',
       cancelButtonText: 'Cancelar'
     });
@@ -501,7 +503,7 @@ const SucursalesTab = ({ empresaId, empresaNombre, userEmpresas, loadEmpresasSta
                     <TableRow>
                       <TableCell colSpan={8} sx={{ py: 0 }}>
                         <Collapse in={isExpanded} timeout="auto" unmountOnExit>
-                          <Box sx={{ p: 3, backgroundColor: '#fafafa', borderTop: '1px solid #e0e0e0' }}>
+                          <Box sx={{ p: 3, backgroundColor: theme.palette.background.default, borderTop: `1px solid ${theme.palette.divider}` }}>
                             {getActiveTab(sucursal.id) === 'empleados' && (
                               <EmpleadosContent 
                                 sucursalId={sucursal.id} 
@@ -568,7 +570,7 @@ const SucursalesTab = ({ empresaId, empresaNombre, userEmpresas, loadEmpresasSta
                   style={{
                     width: '100%',
                     padding: '8px 12px',
-                    border: '1px solid #ccc',
+                    border: `1px solid ${theme.palette.divider}`,
                     borderRadius: '4px',
                     fontSize: '14px'
                   }}
@@ -587,7 +589,7 @@ const SucursalesTab = ({ empresaId, empresaNombre, userEmpresas, loadEmpresasSta
                   style={{
                     width: '100%',
                     padding: '8px 12px',
-                    border: '1px solid #ccc',
+                    border: `1px solid ${theme.palette.divider}`,
                     borderRadius: '4px',
                     fontSize: '14px'
                   }}
@@ -606,7 +608,7 @@ const SucursalesTab = ({ empresaId, empresaNombre, userEmpresas, loadEmpresasSta
                   style={{
                     width: '100%',
                     padding: '8px 12px',
-                    border: '1px solid #ccc',
+                    border: `1px solid ${theme.palette.divider}`,
                     borderRadius: '4px',
                     fontSize: '14px'
                   }}
@@ -627,7 +629,7 @@ const SucursalesTab = ({ empresaId, empresaNombre, userEmpresas, loadEmpresasSta
                   style={{
                     width: '100%',
                     padding: '8px 12px',
-                    border: '1px solid #ccc',
+                    border: `1px solid ${theme.palette.divider}`,
                     borderRadius: '4px',
                     fontSize: '14px'
                   }}
@@ -692,7 +694,7 @@ const SucursalesTab = ({ empresaId, empresaNombre, userEmpresas, loadEmpresasSta
                   style={{
                     width: '100%',
                     padding: '8px 12px',
-                    border: '1px solid #ccc',
+                    border: `1px solid ${theme.palette.divider}`,
                     borderRadius: '4px',
                     fontSize: '14px'
                   }}
@@ -711,7 +713,7 @@ const SucursalesTab = ({ empresaId, empresaNombre, userEmpresas, loadEmpresasSta
                   style={{
                     width: '100%',
                     padding: '8px 12px',
-                    border: '1px solid #ccc',
+                    border: `1px solid ${theme.palette.divider}`,
                     borderRadius: '4px',
                     fontSize: '14px'
                   }}
@@ -730,7 +732,7 @@ const SucursalesTab = ({ empresaId, empresaNombre, userEmpresas, loadEmpresasSta
                   style={{
                     width: '100%',
                     padding: '8px 12px',
-                    border: '1px solid #ccc',
+                    border: `1px solid ${theme.palette.divider}`,
                     borderRadius: '4px',
                     fontSize: '14px'
                   }}
@@ -751,7 +753,7 @@ const SucursalesTab = ({ empresaId, empresaNombre, userEmpresas, loadEmpresasSta
                   style={{
                     width: '100%',
                     padding: '8px 12px',
-                    border: '1px solid #ccc',
+                    border: `1px solid ${theme.palette.divider}`,
                     borderRadius: '4px',
                     fontSize: '14px'
                   }}

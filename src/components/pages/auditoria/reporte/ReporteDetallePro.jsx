@@ -1,6 +1,6 @@
 import React, { forwardRef, useImperativeHandle, useMemo } from "react";
 import PreguntasRespuestasList from "../../../common/PreguntasRespuestasList";
-import { Typography, Box, Button, Dialog, DialogTitle, DialogContent, DialogActions, IconButton, Alert } from "@mui/material";
+import { Typography, Box, Button, Dialog, DialogTitle, DialogContent, DialogActions, IconButton, Alert, useTheme } from "@mui/material";
 import PrintIcon from '@mui/icons-material/Print';
 import CloseIcon from '@mui/icons-material/Close';
 import DownloadIcon from '@mui/icons-material/Download';
@@ -27,6 +27,7 @@ import PdfInfoAlert from './components/PdfInfoAlert';
 
 const ReporteDetallePro = forwardRef(({ open = false, onClose = () => {}, reporte = null, modo = 'modal', firmaResponsable, onPrint }, ref) => {
   const { userProfile } = useAuth();
+  const theme = useTheme();
   
   // Usar el hook de impresión
   const { 
@@ -318,7 +319,7 @@ const ReporteDetallePro = forwardRef(({ open = false, onClose = () => {}, report
                 width: 16,
                 height: 16,
                 borderRadius: '50%',
-                backgroundColor: isProcessing ? '#ff9800' : '#ff9800',
+                backgroundColor: theme.palette.warning.main,
                 animation: isProcessing ? 'spin 1s linear infinite' : 'pulse 1.5s infinite',
                 display: 'flex',
                 alignItems: 'center',

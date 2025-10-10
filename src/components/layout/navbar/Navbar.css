@@ -124,7 +124,7 @@ a{
   
   /* Mejorar el contraste */
   .MuiAppBar-root {
-    background-color: #1976d2 !important;
+    /* Usar variable CSS del tema en lugar de color hardcodeado */
   }
   
   /* Mejorar la legibilidad del texto */

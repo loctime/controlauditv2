@@ -6,7 +6,8 @@ import {
   Box,
   Chip,
   Avatar,
-  Tooltip
+  Tooltip,
+  useTheme
 } from '@mui/material';
 import { Info as InfoIcon } from '@mui/icons-material';
 
@@ -19,12 +20,42 @@ const IndiceCard = ({
   color, 
   interpretacion 
 }) => {
+  const theme = useTheme();
+  const isDark = theme.palette.mode === 'dark';
+  
   const getColorIntensity = (color) => {
-    switch (color) {
-      case '#ef4444': return { bg: '#fef2f2', border: '#fecaca', text: '#dc2626' };
-      case '#f59e0b': return { bg: '#fffbeb', border: '#fed7aa', text: '#d97706' };
-      case '#22c55e': return { bg: '#f0fdf4', border: '#bbf7d0', text: '#16a34a' };
-      default: return { bg: '#f8fafc', border: '#e2e8f0', text: '#64748b' };
+    if (isDark) {
+      // Esquemas para modo oscuro con fondos más oscuros
+      switch (color) {
+        case '#ef4444': return { 
+          bg: 'rgba(239, 68, 68, 0.08)', 
+          border: 'rgba(239, 68, 68, 0.2)', 
+          text: '#fca5a5' 
+        };
+        case '#f59e0b': return { 
+          bg: 'rgba(245, 158, 11, 0.08)', 
+          border: 'rgba(245, 158, 11, 0.2)', 
+          text: '#fbbf24' 
+        };
+        case '#22c55e': return { 
+          bg: 'rgba(34, 197, 94, 0.08)', 
+          border: 'rgba(34, 197, 94, 0.2)', 
+          text: '#86efac' 
+        };
+        default: return { 
+          bg: theme.palette.background.paper, 
+          border: theme.palette.divider, 
+          text: theme.palette.text.primary 
+        };
+      }
+    } else {
+      // Esquemas para modo claro (original)
+      switch (color) {
+        case '#ef4444': return { bg: '#fef2f2', border: '#fecaca', text: '#dc2626' };
+        case '#f59e0b': return { bg: '#fffbeb', border: '#fed7aa', text: '#d97706' };
+        case '#22c55e': return { bg: '#f0fdf4', border: '#bbf7d0', text: '#16a34a' };
+        default: return { bg: '#f8fafc', border: '#e2e8f0', text: '#64748b' };
+      }
     }
   };
 
@@ -60,7 +91,7 @@ const IndiceCard = ({
               {icono}
             </Avatar>
             <Box>
-              <Typography variant="h6" sx={{ fontWeight: 600, color: '#111827', fontSize: '0.9rem' }}>
+              <Typography variant="h6" sx={{ fontWeight: 600, color: colorScheme.text, fontSize: '0.9rem' }}>
                 {titulo}
               </Typography>
               <Chip 
@@ -112,7 +143,7 @@ const IndiceCard = ({
           sx={{ 
             mt: 2,
             p: 2,
-            backgroundColor: 'rgba(255,255,255,0.7)',
+            backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.7)',
             borderRadius: 2,
             border: `1px solid ${colorScheme.border}`
           }}
