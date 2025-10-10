@@ -33,43 +33,42 @@ import { useAuth } from '../../context/AuthContext';
 import EmpleadoForm from './EmpleadoForm';
 
 export default function Empleados() {
-  const { userProfile, userSucursales, loadingSucursales } = useAuth();
+  const { userProfile, userSucursales, userEmpresas, loadingSucursales } = useAuth();
   const [empleados, setEmpleados] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCargo, setFilterCargo] = useState('');
   const [filterTipo, setFilterTipo] = useState('');
-  const [filterEstado, setFilterEstado] = useState('activo');
+  const [filterEstado, setFilterEstado] = useState('');
+  const [selectedEmpresa, setSelectedEmpresa] = useState('');
   const [selectedSucursal, setSelectedSucursal] = useState('');
   const [openForm, setOpenForm] = useState(false);
   const [selectedEmpleado, setSelectedEmpleado] = useState(null);
 
-  // Establecer sucursal inicial (desde localStorage o primera disponible)
+  // Filtrar sucursales por empresa seleccionada
+  const filteredSucursales = selectedEmpresa
+    ? userSucursales?.filter(s => s.empresaId === selectedEmpresa) || []
+    : userSucursales || [];
+
+  // Establecer empresa inicial
   useEffect(() => {
-    if (userSucursales && userSucursales.length > 0 && !selectedSucursal) {
-      // Primero intentar usar la sucursal guardada en localStorage
-      const savedSucursal = localStorage.getItem('selectedSucursal');
-      const savedEmpresa = localStorage.getItem('selectedEmpresa');
-      
-      if (savedSucursal && userSucursales.find(s => s.id === savedSucursal)) {
-        setSelectedSucursal(savedSucursal);
-        // Limpiar localStorage después de usar
-        localStorage.removeItem('selectedSucursal');
-      } else if (savedEmpresa) {
-        // Si hay empresa preseleccionada, filtrar sucursales de esa empresa
-        const sucursalesEmpresa = userSucursales.filter(s => s.empresaId === savedEmpresa);
-        if (sucursalesEmpresa.length > 0) {
-          setSelectedSucursal(sucursalesEmpresa[0].id);
-        } else {
-          setSelectedSucursal(userSucursales[0].id);
-        }
-        // Limpiar localStorage después de usar
-        localStorage.removeItem('selectedEmpresa');
-      } else {
-        setSelectedSucursal(userSucursales[0].id);
-      }
+    if (userEmpresas && userEmpresas.length > 0 && !selectedEmpresa) {
+      setSelectedEmpresa(userEmpresas[0].id);
     }
-  }, [userSucursales, selectedSucursal]);
+  }, [userEmpresas]);
+
+  // Establecer sucursal inicial cuando cambia la empresa
+  useEffect(() => {
+    if (filteredSucursales.length > 0) {
+      // Si hay sucursal seleccionada y pertenece a la empresa actual, mantenerla
+      const sucursalExiste = filteredSucursales.find(s => s.id === selectedSucursal);
+      if (!sucursalExiste) {
+        setSelectedSucursal(filteredSucursales[0].id);
+      }
+    } else {
+      setSelectedSucursal('');
+    }
+  }, [selectedEmpresa, filteredSucursales]);
 
   // Cargar empleados
   useEffect(() => {
@@ -130,8 +129,10 @@ export default function Empleados() {
 
   // Filtrar empleados
   const filteredEmpleados = empleados.filter(emp => {
-    const matchSearch = emp.nombre?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                       emp.dni?.includes(searchTerm);
+    const nombreCompleto = `${emp.nombre || ''} ${emp.apellido || ''}`.toLowerCase();
+    const matchSearch = nombreCompleto.includes(searchTerm.toLowerCase()) ||
+                       emp.dni?.includes(searchTerm) ||
+                       emp.email?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchCargo = !filterCargo || emp.cargo === filterCargo;
     const matchTipo = !filterTipo || emp.tipo === filterTipo;
     const matchEstado = !filterEstado || emp.estado === filterEstado;
@@ -185,29 +186,47 @@ export default function Empleados() {
         </Button>
       </Box>
 
-      {/* Selector de Sucursal */}
+      {/* Selectores de Empresa y Sucursal */}
       <Paper sx={{ p: 2, mb: 3 }}>
-        <FormControl fullWidth>
-          <InputLabel>Sucursal</InputLabel>
-          <Select
-            value={selectedSucursal}
-            label="Sucursal"
-            onChange={(e) => setSelectedSucursal(e.target.value)}
-          >
-            {userSucursales.map((sucursal) => (
-              <MenuItem key={sucursal.id} value={sucursal.id}>
-                {sucursal.nombre}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
+        <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+          <FormControl sx={{ flex: 1, minWidth: 250 }}>
+            <InputLabel>Empresa</InputLabel>
+            <Select
+              value={selectedEmpresa}
+              label="Empresa"
+              onChange={(e) => setSelectedEmpresa(e.target.value)}
+            >
+              {userEmpresas?.map((empresa) => (
+                <MenuItem key={empresa.id} value={empresa.id}>
+                  {empresa.nombre}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+
+          <FormControl sx={{ flex: 1, minWidth: 250 }}>
+            <InputLabel>Sucursal</InputLabel>
+            <Select
+              value={selectedSucursal}
+              label="Sucursal"
+              onChange={(e) => setSelectedSucursal(e.target.value)}
+              disabled={!selectedEmpresa || filteredSucursales.length === 0}
+            >
+              {filteredSucursales.map((sucursal) => (
+                <MenuItem key={sucursal.id} value={sucursal.id}>
+                  {sucursal.nombre}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        </Box>
       </Paper>
 
       {/* Filtros */}
       <Paper sx={{ p: 2, mb: 3 }}>
         <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
           <TextField
-            label="Buscar por nombre o DNI"
+            label="Buscar por nombre, DNI o email"
             variant="outlined"
             size="small"
             value={searchTerm}
@@ -215,7 +234,7 @@ export default function Empleados() {
             InputProps={{
               startAdornment: <SearchIcon sx={{ mr: 1, color: 'text.secondary' }} />
             }}
-            sx={{ minWidth: 250 }}
+            sx={{ minWidth: 280 }}
           />
           
           <FormControl size="small" sx={{ minWidth: 150 }}>
@@ -252,9 +271,15 @@ export default function Empleados() {
               label="Estado"
               onChange={(e) => setFilterEstado(e.target.value)}
             >
-              <MenuItem value="">Todos</MenuItem>
-              <MenuItem value="activo">Activo</MenuItem>
-              <MenuItem value="inactivo">Inactivo</MenuItem>
+              <MenuItem value="">
+                <Chip label="Todos" size="small" />
+              </MenuItem>
+              <MenuItem value="activo">
+                <Chip label="Activo" size="small" color="success" />
+              </MenuItem>
+              <MenuItem value="inactivo">
+                <Chip label="Inactivo" size="small" color="default" />
+              </MenuItem>
             </Select>
           </FormControl>
         </Box>
@@ -276,8 +301,10 @@ export default function Empleados() {
           <Table>
             <TableHead>
               <TableRow>
-                <TableCell><strong>Nombre</strong></TableCell>
+                <TableCell><strong>Nombre Completo</strong></TableCell>
                 <TableCell><strong>DNI</strong></TableCell>
+                <TableCell><strong>Email</strong></TableCell>
+                <TableCell><strong>Teléfono</strong></TableCell>
                 <TableCell><strong>Cargo</strong></TableCell>
                 <TableCell><strong>Área</strong></TableCell>
                 <TableCell><strong>Tipo</strong></TableCell>
@@ -288,20 +315,34 @@ export default function Empleados() {
             <TableBody>
               {filteredEmpleados.map((empleado) => (
                 <TableRow key={empleado.id} hover>
-                  <TableCell>{empleado.nombre}</TableCell>
-                  <TableCell>{empleado.dni}</TableCell>
-                  <TableCell>{empleado.cargo}</TableCell>
-                  <TableCell>{empleado.area}</TableCell>
+                  <TableCell>
+                    <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                      {empleado.nombre} {empleado.apellido}
+                    </Typography>
+                  </TableCell>
+                  <TableCell>{empleado.dni || '-'}</TableCell>
+                  <TableCell>
+                    <Typography variant="body2" color="text.secondary">
+                      {empleado.email || '-'}
+                    </Typography>
+                  </TableCell>
+                  <TableCell>
+                    <Typography variant="body2" color="text.secondary">
+                      {empleado.telefono || '-'}
+                    </Typography>
+                  </TableCell>
+                  <TableCell>{empleado.cargo || '-'}</TableCell>
+                  <TableCell>{empleado.area || '-'}</TableCell>
                   <TableCell>
                     <Chip
-                      label={empleado.tipo}
+                      label={empleado.tipo || 'N/A'}
                       size="small"
                       color={empleado.tipo === 'operativo' ? 'primary' : 'secondary'}
                     />
                   </TableCell>
                   <TableCell>
                     <Chip
-                      label={empleado.estado}
+                      label={empleado.estado || 'activo'}
                       size="small"
                       color={empleado.estado === 'activo' ? 'success' : 'default'}
                     />
@@ -317,7 +358,7 @@ export default function Empleados() {
                     <IconButton
                       size="small"
                       color="error"
-                      onClick={() => handleDeleteEmpleado(empleado.id, empleado.nombre)}
+                      onClick={() => handleDeleteEmpleado(empleado.id, `${empleado.nombre} ${empleado.apellido || ''}`)}
                     >
                       <DeleteIcon />
                     </IconButton>

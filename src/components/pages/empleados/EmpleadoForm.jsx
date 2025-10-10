@@ -19,7 +19,10 @@ export default function EmpleadoForm({ open, onClose, onSave, empleado, sucursal
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     nombre: '',
+    apellido: '',
     dni: '',
+    email: '',
+    telefono: '',
     cargo: '',
     area: '',
     tipo: 'operativo',
@@ -31,18 +34,24 @@ export default function EmpleadoForm({ open, onClose, onSave, empleado, sucursal
     if (empleado) {
       setFormData({
         nombre: empleado.nombre || '',
+        apellido: empleado.apellido || '',
         dni: empleado.dni || '',
+        email: empleado.email || '',
+        telefono: empleado.telefono || '',
         cargo: empleado.cargo || '',
         area: empleado.area || '',
         tipo: empleado.tipo || 'operativo',
         fechaIngreso: empleado.fechaIngreso?.toDate?.()?.toISOString().split('T')[0] || 
-                      new Date().toISOString().split('T')[0],
+                      empleado.fechaIngreso || new Date().toISOString().split('T')[0],
         estado: empleado.estado || 'activo'
       });
     } else {
       setFormData({
         nombre: '',
+        apellido: '',
         dni: '',
+        email: '',
+        telefono: '',
         cargo: '',
         area: '',
         tipo: 'operativo',
@@ -105,10 +114,11 @@ export default function EmpleadoForm({ open, onClose, onSave, empleado, sucursal
               <TextField
                 fullWidth
                 required
-                label="Nombre Completo"
+                label="Nombre"
                 name="nombre"
                 value={formData.nombre}
                 onChange={handleChange}
+                placeholder="Ej: Juan"
               />
             </Grid>
 
@@ -116,17 +126,51 @@ export default function EmpleadoForm({ open, onClose, onSave, empleado, sucursal
               <TextField
                 fullWidth
                 required
+                label="Apellido"
+                name="apellido"
+                value={formData.apellido}
+                onChange={handleChange}
+                placeholder="Ej: Pérez"
+              />
+            </Grid>
+
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
                 label="DNI"
                 name="dni"
                 value={formData.dni}
                 onChange={handleChange}
+                placeholder="12345678"
               />
             </Grid>
 
             <Grid item xs={12} md={6}>
               <TextField
                 fullWidth
-                required
+                label="Email"
+                name="email"
+                type="email"
+                value={formData.email}
+                onChange={handleChange}
+                placeholder="empleado@ejemplo.com"
+              />
+            </Grid>
+
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                label="Teléfono"
+                name="telefono"
+                value={formData.telefono}
+                onChange={handleChange}
+                placeholder="+54 11 1234-5678"
+              />
+            </Grid>
+
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
                 label="Cargo"
                 name="cargo"
                 value={formData.cargo}
@@ -138,7 +182,6 @@ export default function EmpleadoForm({ open, onClose, onSave, empleado, sucursal
             <Grid item xs={12} md={6}>
               <TextField
                 fullWidth
-                required
                 label="Área"
                 name="area"
                 value={formData.area}
@@ -147,10 +190,9 @@ export default function EmpleadoForm({ open, onClose, onSave, empleado, sucursal
               />
             </Grid>
 
-            <Grid item xs={12} md={4}>
+            <Grid item xs={12} md={6}>
               <TextField
                 fullWidth
-                required
                 select
                 label="Tipo"
                 name="tipo"
@@ -162,7 +204,7 @@ export default function EmpleadoForm({ open, onClose, onSave, empleado, sucursal
               </TextField>
             </Grid>
 
-            <Grid item xs={12} md={4}>
+            <Grid item xs={12} md={6}>
               <TextField
                 fullWidth
                 required
@@ -175,7 +217,7 @@ export default function EmpleadoForm({ open, onClose, onSave, empleado, sucursal
               />
             </Grid>
 
-            <Grid item xs={12} md={4}>
+            <Grid item xs={12} md={6}>
               <TextField
                 fullWidth
                 required

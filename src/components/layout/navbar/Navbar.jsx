@@ -12,6 +12,9 @@ import MenuIcon from "@mui/icons-material/Menu";
 import Toolbar from "@mui/material/Toolbar";
 import useMediaQuery from "@mui/material/useMediaQuery";
 import { useTheme } from "@mui/material/styles";
+import Menu from "@mui/material/Menu";
+import MenuItem from "@mui/material/MenuItem";
+import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 
 import { Link, useNavigate, Outlet } from "react-router-dom";
 import "./Navbar.css";
@@ -35,6 +38,8 @@ const drawerWidth = 240;
 function Navbar(props) {
   const { window } = props;
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [anchorElHigiene, setAnchorElHigiene] = useState(null);
+  const [anchorElEmpresarial, setAnchorElEmpresarial] = useState(null);
   const navigate = useNavigate();
   const { logoutContext, user, role, permisos, userProfile } = useAuth();
   const { mode, toggleColorMode } = useColorMode();
@@ -81,6 +86,22 @@ function Navbar(props) {
     logout();
     logoutContext();
     navigate("/login");
+  };
+
+  const handleHigieneMenuOpen = (event) => {
+    setAnchorElHigiene(event.currentTarget);
+  };
+
+  const handleHigieneMenuClose = () => {
+    setAnchorElHigiene(null);
+  };
+
+  const handleEmpresarialMenuOpen = (event) => {
+    setAnchorElEmpresarial(event.currentTarget);
+  };
+
+  const handleEmpresarialMenuClose = () => {
+    setAnchorElEmpresarial(null);
   };
 
   const drawer = (
@@ -214,6 +235,150 @@ function Navbar(props) {
             }}>
               Reporte
             </Link>
+
+            
+            <Box 
+              onClick={handleEmpresarialMenuOpen}
+              sx={{
+                color: "whitesmoke",
+                fontSize: '0.95rem',
+                padding: '8px 12px',
+                lineHeight: 1.2,
+                borderRadius: '4px',
+                transition: 'background-color 0.2s',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 0.5,
+                '&:hover': {
+                  backgroundColor: 'rgba(255,255,255,0.1)'
+                }
+              }}
+            >
+              Gestión Empresarial
+              <KeyboardArrowDownIcon sx={{ fontSize: '1rem' }} />
+            </Box>
+            <Menu
+              anchorEl={anchorElEmpresarial}
+              open={Boolean(anchorElEmpresarial)}
+              onClose={handleEmpresarialMenuClose}
+              anchorOrigin={{
+                vertical: 'bottom',
+                horizontal: 'left',
+              }}
+              transformOrigin={{
+                vertical: 'top',
+                horizontal: 'left',
+              }}
+              PaperProps={{
+                sx: {
+                  backgroundColor: '#1976d2',
+                  color: 'whitesmoke',
+                  '& .MuiMenuItem-root': {
+                    color: 'whitesmoke',
+                    '&:hover': {
+                      backgroundColor: 'rgba(255,255,255,0.1)',
+                    },
+                  },
+                },
+              }}
+            >
+              <MenuItem onClick={handleEmpresarialMenuClose}>
+                <Link to="/establecimiento" style={{ 
+                  color: 'whitesmoke', 
+                  textDecoration: 'none',
+                  width: '100%'
+                }}>
+                  Establecimiento
+                </Link>
+              </MenuItem>
+                            <MenuItem onClick={handleEmpresarialMenuClose}>
+                <Link to="/empleados" style={{ 
+                  color: 'whitesmoke', 
+                  textDecoration: 'none',
+                  width: '100%'
+                }}>
+                  Empleados
+                </Link>
+              </MenuItem>
+            </Menu>
+            
+            <Box 
+              onClick={handleHigieneMenuOpen}
+              sx={{
+                color: "whitesmoke",
+                fontSize: '0.95rem',
+                padding: '8px 12px',
+                lineHeight: 1.2,
+                borderRadius: '4px',
+                transition: 'background-color 0.2s',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 0.5,
+                '&:hover': {
+                  backgroundColor: 'rgba(255,255,255,0.1)'
+                }
+              }}
+            >
+              Dashboard Higiene y Seguridad
+              <KeyboardArrowDownIcon sx={{ fontSize: '1rem' }} />
+            </Box>
+            <Menu
+              anchorEl={anchorElHigiene}
+              open={Boolean(anchorElHigiene)}
+              onClose={handleHigieneMenuClose}
+              anchorOrigin={{
+                vertical: 'bottom',
+                horizontal: 'left',
+              }}
+              transformOrigin={{
+                vertical: 'top',
+                horizontal: 'left',
+              }}
+              PaperProps={{
+                sx: {
+                  backgroundColor: '#1976d2',
+                  color: 'whitesmoke',
+                  '& .MuiMenuItem-root': {
+                    color: 'whitesmoke',
+                    '&:hover': {
+                      backgroundColor: 'rgba(255,255,255,0.1)',
+                    },
+                  },
+                },
+              }}
+            >
+              <MenuItem onClick={handleHigieneMenuClose}>
+                <Link to="/dashboard-higiene-seguridad" style={{ 
+                  color: 'whitesmoke', 
+                  textDecoration: 'none',
+                  width: '100%'
+                }}>
+                  Dashboard
+                </Link>
+              </MenuItem>
+              <MenuItem onClick={handleHigieneMenuClose}>
+                <Link to="/capacitaciones" style={{ 
+                  color: 'whitesmoke', 
+                  textDecoration: 'none',
+                  width: '100%'
+                }}>
+                  Capacitaciones
+                </Link>
+              </MenuItem>
+              <MenuItem onClick={handleHigieneMenuClose}>
+                <Link to="/accidentes" style={{ 
+                  color: 'whitesmoke', 
+                  textDecoration: 'none',
+                  width: '100%'
+                }}>
+                  Accidentes
+                </Link>
+              </MenuItem>
+            </Menu>
+
+
             <Link to="/perfil" style={{ 
               color: "whitesmoke", 
               textDecoration: "none", 
