@@ -7,6 +7,7 @@ import { useAuth } from "../../context/AuthContext";
 import Swal from 'sweetalert2';
 import { useNavigate } from "react-router-dom";
 import PublicIcon from '@mui/icons-material/Public';
+import { registrarAccionSistema } from '../../../utils/firestoreUtils';
 
 const Formulario = () => {
   const { user, userProfile, getUserFormularios } = useAuth();
@@ -76,6 +77,20 @@ const Formulario = () => {
       
       const docRef = await addDoc(collection(db, "formularios"), formularioData);
       console.log("Formulario creado con ID: ", docRef.id);
+      
+      // Registrar log de creación
+      await registrarAccionSistema(
+        user.uid,
+        `Formulario creado: ${nombreFormulario}`,
+        {
+          formularioId: docRef.id,
+          nombre: nombreFormulario,
+          cantidadSecciones: secciones.length
+        },
+        'crear',
+        'formulario',
+        docRef.id
+      );
       
       // Invalidar cache offline para forzar recarga de formularios
       try {

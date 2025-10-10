@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import generarContenidoImpresion from '../utils/generadorHTML';
 import { generarYGuardarPdf } from '../utils/pdfStorageServiceSimple';
+import { registrarAccionSistema } from '../../../../../utils/firestoreUtils';
 
 // Hook personalizado para manejar la lógica de impresión de reportes
 export const useImpresionReporte = () => {
@@ -126,7 +127,7 @@ export const useImpresionReporte = () => {
   };
 
   // Función principal de impresión
-  const handleImprimir = async (datosReporte, reporteId = null) => {
+  const handleImprimir = async (datosReporte, reporteId = null, userId = null) => {
     console.log('[useImpresionReporte] Iniciando proceso de impresión...');
     
     setIsProcessing(true);
@@ -284,6 +285,29 @@ export const useImpresionReporte = () => {
     } else {
       // En desktop, usar el método normal de impresión
       await printWithIframe(html);
+    }
+    
+    // Registrar log de generación de reporte
+    if (userId && reporteId) {
+      try {
+        await registrarAccionSistema(
+          userId,
+          `Reporte generado/impreso: ${datosReporte.empresaNombre || 'Sin empresa'}`,
+          {
+            reporteId,
+            empresa: datosReporte.empresaNombre,
+            formulario: datosReporte.nombreForm,
+            sucursal: datosReporte.sucursal,
+            tipoDispositivo: isMobile ? 'móvil' : 'desktop'
+          },
+          'ver',
+          'reporte',
+          reporteId
+        );
+      } catch (error) {
+        console.error('[useImpresionReporte] Error registrando log:', error);
+        // No interrumpir el proceso si falla el log
+      }
     }
     
     setIsProcessing(false);
