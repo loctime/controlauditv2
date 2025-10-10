@@ -327,7 +327,7 @@ const PerfilFormularios = ({ formularios, loading }) => {
                           color="primary"
                           size={isSmallMobile ? "small" : "medium"}
                           onClick={() => handleCompartir(form)}
-                          disabled={!canCompartirFormularios || form.formularioOriginalId}
+                          disabled={Boolean(!canCompartirFormularios || form.formularioOriginalId)}
                           sx={{ 
                             minWidth: isMobile ? '100%' : 'auto',
                             py: isSmallMobile ? 1 : 1.5
