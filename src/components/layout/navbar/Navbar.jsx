@@ -571,13 +571,13 @@ function Navbar(props) {
       
       <Box 
         component="main" 
+        className="main-content-wrapper"
         sx={{ 
           flexGrow: 1, 
-          py: { xs: 0.2, sm: 1, md: 2 }, 
+          py: { xs: 1, sm: 2, md: 3 }, 
           width: "100%", 
           minHeight: "100vh", 
-          px: { xs: 0.2, sm: 1, md: 2 },
-          mt: { xs: 0, sm: 1 } // Sin margen superior en móvil
+          px: { xs: 1, sm: 2, md: 3 }
         }}
       >
         <Outlet />

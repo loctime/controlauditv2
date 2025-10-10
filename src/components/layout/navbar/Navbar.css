@@ -133,28 +133,13 @@ a{
   }
 }
 
-/* Estilos específicos para móvil - reducir espacio superior */
+/* SOLUCIÓN SIMPLE: Espaciado correcto para navbar fijo */
+.main-content-wrapper {
+  padding-top: 56px !important; /* Desktop */
+}
+
 @media (max-width: 768px) {
-  /* Reducir espacio superior en móvil */
-  .MuiAppBar-root {
-    min-height: 48px !important;
-    height: 48px !important;
-  }
-  
-  .MuiToolbar-root {
-    min-height: 48px !important;
-    height: 48px !important;
-    padding: 0 4px !important;
-  }
-  
-  /* Reducir margen superior del contenido principal */
-  main {
-    margin-top: 0 !important;
-    padding-top: 0 !important;
-  }
-  
-  /* Reducir padding del contenido */
-  .main-app-container {
-    padding: 4px !important;
+  .main-content-wrapper {
+    padding-top: 48px !important; /* Móvil */
   }
 }
