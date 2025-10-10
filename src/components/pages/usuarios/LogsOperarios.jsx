@@ -25,7 +25,8 @@ import {
   Tooltip,
   Accordion,
   AccordionSummary,
-  AccordionDetails
+  AccordionDetails,
+  TablePagination
 } from '@mui/material';
 import {
   Search as SearchIcon,
@@ -79,6 +80,8 @@ const LogsOperarios = () => {
     fechaHasta: ''
   });
   const [expandedRows, setExpandedRows] = useState({});
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(200);
 
   const fetchLogs = async () => {
     setLoading(true);
@@ -89,7 +92,7 @@ const LogsOperarios = () => {
       // Filtrar logs según el rol del usuario actual
       if (role === 'supermax') {
         // Super administradores ven todos los logs
-        qLogs = query(logsRef, orderBy('fecha', 'desc'), limit(200));
+        qLogs = query(logsRef, orderBy('fecha', 'desc'), limit(400));
       } else if (role === 'max') {
         // Clientes administradores ven sus logs y los de sus operarios
         // Primero obtener los IDs de sus operarios
@@ -106,7 +109,7 @@ const LogsOperarios = () => {
           logsRef, 
           where('userId', 'in', todosLosIds),
           orderBy('fecha', 'desc'), 
-          limit(200)
+          limit(400)
         );
       } else {
         // Operarios ven solo sus propios logs
@@ -114,7 +117,7 @@ const LogsOperarios = () => {
           logsRef, 
           where('userId', '==', userProfile?.uid),
           orderBy('fecha', 'desc'), 
-          limit(200)
+          limit(400)
         );
       }
       
@@ -152,6 +155,16 @@ const LogsOperarios = () => {
       </Box>
     );
   }
+
+  // Handlers para paginación
+  const handleChangePage = (event, newPage) => {
+    setPage(newPage);
+  };
+
+  const handleChangeRowsPerPage = (event) => {
+    setRowsPerPage(parseInt(event.target.value, 10));
+    setPage(0);
+  };
 
   // Filtrar logs según los filtros aplicados
   const logsFiltrados = logs.filter(log => {
@@ -420,7 +433,9 @@ const LogsOperarios = () => {
               </TableRow>
             </TableHead>
             <TableBody>
-              {logsFiltrados.map((log) => {
+              {logsFiltrados
+                .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+                .map((log) => {
                 const tipoAccion = getTipoAccion(log);
                 const entidadInfo = getEntidadInfo(log);
                 const usuarioNombre = usuarios[log.userId]?.displayName || log.userId;
@@ -531,6 +546,19 @@ const LogsOperarios = () => {
             </TableBody>
           </Table>
         </TableContainer>
+        
+        {/* Paginación */}
+        <TablePagination
+          component="div"
+          count={logsFiltrados.length}
+          page={page}
+          onPageChange={handleChangePage}
+          rowsPerPage={rowsPerPage}
+          onRowsPerPageChange={handleChangeRowsPerPage}
+          rowsPerPageOptions={[200]}
+          labelRowsPerPage="Registros por página:"
+          labelDisplayedRows={({ from, to, count }) => `${from}-${to} de ${count}`}
+        />
       )}
     </Box>
   );
