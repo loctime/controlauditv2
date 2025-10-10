@@ -184,3 +184,4 @@ Campos agregados:
 - Queries optimizadas con filtros compuestos
 
 
+

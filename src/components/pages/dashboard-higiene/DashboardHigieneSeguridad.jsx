@@ -42,6 +42,7 @@ const DashboardHigieneSeguridad = () => {
   const [selectedSucursal, setSelectedSucursal] = useState('');
   const [selectedPeriodo, setSelectedPeriodo] = useState('mes');
   
+  
   const [datos, setDatos] = useState({
     empleados: [],
     accidentes: [],
@@ -76,8 +77,17 @@ const DashboardHigieneSeguridad = () => {
   }, [userEmpresas]);
 
   useEffect(() => {
-    if (selectedEmpresa && sucursalesFiltradas.length > 0 && !selectedSucursal) {
-      setSelectedSucursal(sucursalesFiltradas[0].id);
+    if (selectedEmpresa && sucursalesFiltradas.length > 0) {
+      // Verificar si la sucursal actual pertenece a la empresa seleccionada
+      const sucursalValida = sucursalesFiltradas.find(s => s.id === selectedSucursal);
+      
+      // Si no hay sucursal válida, seleccionar la primera de la lista
+      if (!sucursalValida) {
+        setSelectedSucursal(sucursalesFiltradas[0].id);
+      }
+    } else if (selectedEmpresa && sucursalesFiltradas.length === 0) {
+      // Si no hay sucursales para la empresa, limpiar la selección
+      setSelectedSucursal('');
     }
   }, [selectedEmpresa, sucursalesFiltradas]);
 
@@ -304,7 +314,10 @@ const DashboardHigieneSeguridad = () => {
 
   // Cargar todos los datos
   const cargarDatos = useCallback(async () => {
-    if (!selectedSucursal) return;
+    if (!selectedSucursal || !selectedEmpresa) {
+      setLoading(false);
+      return;
+    }
 
     setLoading(true);
     try {
@@ -329,11 +342,14 @@ const DashboardHigieneSeguridad = () => {
     } finally {
       setLoading(false);
     }
-  }, [selectedSucursal, selectedPeriodo, cargarEmpleados, cargarAccidentes, cargarCapacitaciones, obtenerSucursalSeleccionada, calcularIndices]);
+  }, [selectedSucursal, selectedPeriodo, cargarEmpleados, cargarAccidentes, cargarCapacitaciones, obtenerSucursalSeleccionada, calcularIndices, selectedEmpresa]);
 
   useEffect(() => {
-    cargarDatos();
-  }, [cargarDatos]);
+    if (selectedSucursal && selectedEmpresa) {
+      cargarDatos();
+    }
+  }, [selectedSucursal, selectedEmpresa, cargarDatos]);
+
 
   const empresaSeleccionada = userEmpresas?.find(e => e.id === selectedEmpresa);
   const sucursalSeleccionada = userSucursales?.find(s => s.id === selectedSucursal);
@@ -344,6 +360,28 @@ const DashboardHigieneSeguridad = () => {
         <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
           <CircularProgress size={60} />
         </Box>
+      </Container>
+    );
+  }
+
+  // Validar si no hay sucursales disponibles
+  if (selectedEmpresa && sucursalesFiltradas.length === 0) {
+    return (
+      <Container maxWidth="xl" sx={{ py: 4 }}>
+        <Paper elevation={2} sx={{ p: 4, borderRadius: 2 }}>
+          <Typography variant="h4" sx={{ fontWeight: 'bold', mb: 2 }}>
+            🛡️ Dashboard Higiene y Seguridad
+          </Typography>
+          <Alert severity="warning" icon={<WarningIcon />}>
+            <Typography variant="h6" sx={{ mb: 1 }}>
+              No hay sucursales disponibles
+            </Typography>
+            <Typography>
+              La empresa <strong>{empresaSeleccionada?.nombre}</strong> no tiene sucursales asignadas. 
+              Por favor, crea una sucursal para poder utilizar el dashboard.
+            </Typography>
+          </Alert>
+        </Paper>
       </Container>
     );
   }
@@ -624,6 +662,7 @@ const DashboardHigieneSeguridad = () => {
 
       {/* Gráfico de índices */}
       <GraficoIndices datos={datos} periodo={selectedPeriodo} />
+
     </Container>
   );
 };
