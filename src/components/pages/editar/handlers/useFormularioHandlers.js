@@ -2,6 +2,7 @@ import { useCallback } from 'react';
 import { doc, updateDoc, deleteDoc } from "firebase/firestore";
 import { db } from "../../../../firebaseConfig";
 import Swal from 'sweetalert2';
+import { registrarAccionSistema } from '../../../../utils/firestoreUtils';
 
 export const useFormularioHandlers = ({
   formularioSeleccionado,
@@ -45,6 +46,23 @@ export const useFormularioHandlers = ({
         esPublico: nuevoEsPublico,
         ultimaModificacion: new Date()
       }));
+      
+      // Registrar log
+      await registrarAccionSistema(
+        user?.uid,
+        `Formulario editado: ${nuevoNombreFormulario}`,
+        {
+          formularioId: formularioSeleccionado.id,
+          nombreAnterior: formularioSeleccionado.nombre,
+          nombreNuevo: nuevoNombreFormulario,
+          estado: nuevoEstado,
+          version: nuevaVersion
+        },
+        'editar',
+        'formulario',
+        formularioSeleccionado.id
+      );
+      
       Swal.fire("Éxito", "Formulario actualizado exitosamente.", "success");
       setAccordionOpen(false);
     } catch (error) {
@@ -216,6 +234,20 @@ export const useFormularioHandlers = ({
     if (result.isConfirmed) {
       try {
         await deleteDoc(doc(db, "formularios", id));
+        
+        // Registrar log
+        await registrarAccionSistema(
+          user?.uid,
+          `Formulario eliminado: ${formularioSeleccionado?.nombre || 'Sin nombre'}`,
+          {
+            formularioId: id,
+            nombre: formularioSeleccionado?.nombre
+          },
+          'eliminar',
+          'formulario',
+          id
+        );
+        
         setFormularioSeleccionado(null);
         // Limpiar cache
         localStorage.removeItem(`formulario_${id}`);

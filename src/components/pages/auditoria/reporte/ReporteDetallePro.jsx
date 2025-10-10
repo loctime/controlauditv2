@@ -155,7 +155,7 @@ const ReporteDetallePro = forwardRef(({ open = false, onClose = () => {}, report
     
     // Pasar el ID del reporte para guardar el PDF
     const reporteId = reporte.id || reporte.uid || `reporte-${Date.now()}`;
-    await handleImprimirHook(datosReporte, reporteId);
+    await handleImprimirHook(datosReporte, reporteId, userProfile?.uid);
   };
 
   // Función para descargar PDF

@@ -31,6 +31,7 @@ import Swal from 'sweetalert2';
 import EmpleadosContent from './EmpleadosContent';
 import CapacitacionesContent from './CapacitacionesContent';
 import AccidentesContent from './AccidentesContent';
+import { registrarAccionSistema } from '../../../../utils/firestoreUtils';
 
 const SucursalesTab = ({ empresaId, empresaNombre, userEmpresas, loadEmpresasStats }) => {
   const { userProfile } = useAuth();
@@ -181,7 +182,7 @@ const SucursalesTab = ({ empresaId, empresaNombre, userEmpresas, loadEmpresasSta
     }
 
     try {
-      await addDoc(collection(db, 'sucursales'), {
+      const docRef = await addDoc(collection(db, 'sucursales'), {
         ...sucursalForm,
         empresaId: empresaId,
         fechaCreacion: Timestamp.now(),
@@ -189,6 +190,21 @@ const SucursalesTab = ({ empresaId, empresaNombre, userEmpresas, loadEmpresasSta
         creadoPorEmail: userProfile?.email,
         clienteAdminId: userProfile?.clienteAdminId || userProfile?.uid
       });
+
+      // Registrar log
+      await registrarAccionSistema(
+        userProfile?.uid,
+        `Sucursal creada: ${sucursalForm.nombre}`,
+        {
+          sucursalId: docRef.id,
+          nombre: sucursalForm.nombre,
+          empresaId: empresaId,
+          direccion: sucursalForm.direccion
+        },
+        'crear',
+        'sucursal',
+        docRef.id
+      );
 
       setSucursalForm({ nombre: '', direccion: '', telefono: '', horasSemanales: 40 });
       setOpenSucursalForm(false);
@@ -254,6 +270,24 @@ const SucursalesTab = ({ empresaId, empresaNombre, userEmpresas, loadEmpresasSta
         modificadoPorEmail: userProfile?.email
       });
 
+      // Registrar log
+      await registrarAccionSistema(
+        userProfile?.uid,
+        `Sucursal actualizada: ${sucursalEdit.nombre}`,
+        {
+          sucursalId: sucursalEdit.id,
+          nombre: sucursalEdit.nombre,
+          cambios: {
+            direccion: sucursalEdit.direccion,
+            telefono: sucursalEdit.telefono,
+            horasSemanales: sucursalEdit.horasSemanales
+          }
+        },
+        'editar',
+        'sucursal',
+        sucursalEdit.id
+      );
+
       setSucursalEdit(null);
       setOpenEditModal(false);
       
@@ -307,6 +341,20 @@ const SucursalesTab = ({ empresaId, empresaNombre, userEmpresas, loadEmpresasSta
         }
 
         await deleteDoc(doc(db, 'sucursales', sucursal.id));
+
+        // Registrar log
+        await registrarAccionSistema(
+          userProfile?.uid,
+          `Sucursal eliminada: ${sucursal.nombre}`,
+          {
+            sucursalId: sucursal.id,
+            nombre: sucursal.nombre,
+            empresaId: empresaId
+          },
+          'eliminar',
+          'sucursal',
+          sucursal.id
+        );
 
         await loadSucursales();
         

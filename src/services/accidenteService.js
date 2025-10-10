@@ -12,6 +12,7 @@ import {
 } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, storage } from '../firebaseConfig';
+import { registrarAccionSistema } from '../utils/firestoreUtils';
 
 /**
  * Servicio para gestión de accidentes e incidentes
@@ -57,6 +58,20 @@ export const crearAccidente = async (accidenteData, empleadosSeleccionados, imag
       }
     }
 
+    // Registrar log
+    await registrarAccionSistema(
+      accidenteData.reportadoPor,
+      `Accidente reportado: ${empleadosInvolucrados.length} empleado(s) involucrado(s)`,
+      {
+        accidenteId: docRef.id,
+        empleados: empleadosInvolucrados.map(e => e.empleadoNombre).join(', '),
+        descripcion: accidenteData.descripcion
+      },
+      'crear',
+      'accidente',
+      docRef.id
+    );
+
     return { id: docRef.id, ...accidenteDoc };
   } catch (error) {
     console.error('Error al crear accidente:', error);
@@ -95,6 +110,20 @@ export const crearIncidente = async (incidenteData, testigos = [], imagenes = []
       const imagenesUrls = await subirImagenes(docRef.id, imagenes);
       await updateDoc(docRef, { imagenes: imagenesUrls });
     }
+
+    // Registrar log
+    await registrarAccionSistema(
+      incidenteData.reportadoPor,
+      `Incidente reportado: ${testigosArray.length} testigo(s)`,
+      {
+        incidenteId: docRef.id,
+        testigos: testigosArray.map(t => t.empleadoNombre).join(', '),
+        descripcion: incidenteData.descripcion
+      },
+      'crear',
+      'incidente',
+      docRef.id
+    );
 
     return { id: docRef.id, ...incidenteDoc };
   } catch (error) {
@@ -198,10 +227,29 @@ export const obtenerAccidentePorId = async (accidenteId) => {
 };
 
 // Actualizar estado de accidente/incidente
-export const actualizarEstadoAccidente = async (accidenteId, nuevoEstado) => {
+export const actualizarEstadoAccidente = async (accidenteId, nuevoEstado, userId = null) => {
   try {
     const accidenteRef = doc(db, 'accidentes', accidenteId);
     await updateDoc(accidenteRef, { estado: nuevoEstado });
+
+    // Registrar log si hay userId
+    if (userId) {
+      const accidenteDoc = await getDoc(accidenteRef);
+      const tipo = accidenteDoc.data()?.tipo || 'accidente';
+      
+      await registrarAccionSistema(
+        userId,
+        `Estado de ${tipo} actualizado a: ${nuevoEstado}`,
+        {
+          accidenteId,
+          estadoAnterior: accidenteDoc.data()?.estado,
+          estadoNuevo: nuevoEstado
+        },
+        'editar',
+        tipo,
+        accidenteId
+      );
+    }
   } catch (error) {
     console.error('Error al actualizar estado de accidente:', error);
     throw error;

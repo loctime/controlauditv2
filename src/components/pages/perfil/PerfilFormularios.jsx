@@ -15,11 +15,14 @@ import DeleteForeverIcon from '@mui/icons-material/DeleteForever';
 import { usePermissions } from '../admin/hooks/usePermissions';
 import { useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
+import { registrarAccionSistema } from '../../../utils/firestoreUtils';
+import { useAuth } from '../../context/AuthContext';
 
 const PerfilFormularios = ({ formularios, loading }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const isSmallMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const { userProfile } = useAuth();
   
   // Log de depuración
   console.debug('[PerfilFormularios] formularios:', formularios);
@@ -73,6 +76,20 @@ const PerfilFormularios = ({ formularios, loading }) => {
     if (result.isConfirmed) {
       try {
         await deleteDoc(doc(db, 'formularios', form.id));
+        
+        // Registrar log
+        await registrarAccionSistema(
+          userProfile?.uid,
+          `Formulario eliminado: ${form.nombre}`,
+          {
+            formularioId: form.id,
+            nombre: form.nombre
+          },
+          'eliminar',
+          'formulario',
+          form.id
+        );
+        
         Swal.fire('Eliminado', 'El formulario ha sido eliminado exitosamente.', 'success');
         // Recargar la página para actualizar la lista
         window.location.reload();

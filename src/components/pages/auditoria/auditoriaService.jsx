@@ -2,7 +2,7 @@
 import { collection, addDoc, getDocs, query, where, orderBy, serverTimestamp } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, storage } from '../../../firebaseConfig';
-import { prepararDatosParaFirestore, registrarLogOperario } from '../../../utils/firestoreUtils';
+import { prepararDatosParaFirestore, registrarAccionSistema } from '../../../utils/firestoreUtils';
 import { getOfflineDatabase, generateOfflineId } from '../../../services/offlineDatabase';
 import syncQueueService from '../../../services/syncQueue';
 
@@ -367,15 +367,18 @@ class AuditoriaService {
       const docRef = await addDoc(collection(db, "reportes"), datosLimpios);
 
       // Registrar log de operación
-      await registrarLogOperario(
+      await registrarAccionSistema(
         userProfile?.uid,
-        'AUDITORIA_GUARDADA',
+        `Auditoría guardada: ${datosAuditoria.empresa?.nombre} - ${datosAuditoria.formulario?.nombre}`,
         {
           auditoriaId: docRef.id,
           empresa: datosAuditoria.empresa?.nombre,
           sucursal: datosAuditoria.sucursal,
           formulario: datosAuditoria.formulario?.nombre
-        }
+        },
+        'crear',
+        'auditoria',
+        docRef.id
       );
 
       console.log(`✅ Auditoría guardada exitosamente: ${docRef.id}`);
