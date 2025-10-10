@@ -129,19 +129,10 @@ const DashboardHigieneSeguridad = () => {
     }
   }, [selectedSucursal]);
 
-  // Cargar datos de sucursal
-  const cargarSucursal = useCallback(async () => {
-    if (!selectedSucursal) return null;
-
-    try {
-      const sucursalRef = doc(db, 'sucursales', selectedSucursal);
-      const sucursalDoc = await getDoc(sucursalRef);
-      return sucursalDoc.exists() ? { id: sucursalDoc.id, ...sucursalDoc.data() } : null;
-    } catch (error) {
-      console.error('Error cargando sucursal:', error);
-      return null;
-    }
-  }, [selectedSucursal]);
+  // Obtener datos de sucursal desde userSucursales (más eficiente)
+  const obtenerSucursalSeleccionada = useCallback(() => {
+    return userSucursales?.find(s => s.id === selectedSucursal) || null;
+  }, [userSucursales, selectedSucursal]);
 
   // Cargar datos de accidentes
   const cargarAccidentes = useCallback(async () => {
@@ -200,8 +191,38 @@ const DashboardHigieneSeguridad = () => {
   // Calcular índices técnicos
   const calcularIndices = useCallback((empleados, accidentes, periodo, sucursal) => {
     const { inicio, fin } = calcularPeriodo(periodo);
-    const diasLaborales = Math.ceil((fin - inicio) / (1000 * 60 * 60 * 24));
+    const diasTotales = Math.ceil((fin - inicio) / (1000 * 60 * 60 * 24));
+    
+    // Calcular días laborales según el período
+    let diasLaborales;
+    switch (periodo) {
+      case 'semana':
+        diasLaborales = 5; // 5 días laborales por semana
+        break;
+      case 'mes':
+        diasLaborales = Math.floor(diasTotales / 7) * 5; // 5 días por semana
+        break;
+      case 'trimestre':
+        diasLaborales = Math.floor(diasTotales / 7) * 5; // 5 días por semana
+        break;
+      case 'año':
+        diasLaborales = Math.floor(diasTotales / 7) * 5; // 5 días por semana
+        break;
+      default:
+        diasLaborales = Math.floor(diasTotales / 7) * 5;
+    }
+    
     const horasPorDia = sucursal?.horasSemanales ? sucursal.horasSemanales / 5 : 8; // 5 días laborales por semana
+
+    // Debug logs
+    console.log('📊 Cálculo de índices:', {
+      periodo,
+      diasTotales,
+      diasLaborales,
+      horasPorDia,
+      sucursalHorasSemanales: sucursal?.horasSemanales,
+      sucursalNombre: sucursal?.nombre
+    });
 
     // Métricas básicas
     const totalEmpleados = empleados.length;
@@ -247,6 +268,21 @@ const DashboardHigieneSeguridad = () => {
     // 4. Índice de Gravedad (IG)
     const indiceGravedad = horasTrabajadas > 0 ? (diasPerdidos * 1000) / horasTrabajadas : 0;
 
+    // Debug logs para métricas
+    console.log('📈 Métricas calculadas:', {
+      totalEmpleados,
+      empleadosActivos,
+      empleadosEnReposo,
+      horasTrabajadas,
+      horasPerdidas,
+      accidentesConTiempoPerdido,
+      diasPerdidos,
+      tasaAusentismo: Math.round(tasaAusentismo * 100) / 100,
+      indiceFrecuencia: Math.round(indiceFrecuencia * 100) / 100,
+      indiceIncidencia: Math.round(indiceIncidencia * 100) / 100,
+      indiceGravedad: Math.round(indiceGravedad * 100) / 100
+    });
+
     return {
       indices: {
         tasaAusentismo: Math.round(tasaAusentismo * 100) / 100,
@@ -272,13 +308,13 @@ const DashboardHigieneSeguridad = () => {
 
     setLoading(true);
     try {
-      const [empleados, accidentes, capacitaciones, sucursal] = await Promise.all([
+      const [empleados, accidentes, capacitaciones] = await Promise.all([
         cargarEmpleados(),
         cargarAccidentes(),
-        cargarCapacitaciones(),
-        cargarSucursal()
+        cargarCapacitaciones()
       ]);
 
+      const sucursal = obtenerSucursalSeleccionada();
       const { indices, metricas } = calcularIndices(empleados, accidentes, selectedPeriodo, sucursal);
 
       setDatos({
@@ -293,7 +329,7 @@ const DashboardHigieneSeguridad = () => {
     } finally {
       setLoading(false);
     }
-  }, [selectedSucursal, selectedPeriodo, cargarEmpleados, cargarAccidentes, cargarCapacitaciones, cargarSucursal, calcularIndices]);
+  }, [selectedSucursal, selectedPeriodo, cargarEmpleados, cargarAccidentes, cargarCapacitaciones, obtenerSucursalSeleccionada, calcularIndices]);
 
   useEffect(() => {
     cargarDatos();
