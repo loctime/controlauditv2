@@ -419,23 +419,24 @@ const LogsOperarios = () => {
           <CircularProgress />
         </Box>
       ) : (
-        <TableContainer component={Paper}>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell>Fecha</TableCell>
-                <TableCell>Usuario</TableCell>
-                <TableCell>Acción</TableCell>
-                <TableCell>Tipo</TableCell>
-                <TableCell>Entidad</TableCell>
-                <TableCell>Severidad</TableCell>
-                <TableCell>Detalles</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {logsFiltrados
-                .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-                .map((log) => {
+        <Box>
+          <TableContainer component={Paper}>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell>Fecha</TableCell>
+                  <TableCell>Usuario</TableCell>
+                  <TableCell>Acción</TableCell>
+                  <TableCell>Tipo</TableCell>
+                  <TableCell>Entidad</TableCell>
+                  <TableCell>Severidad</TableCell>
+                  <TableCell>Detalles</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {logsFiltrados
+                  .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+                  .map((log) => {
                 const tipoAccion = getTipoAccion(log);
                 const entidadInfo = getEntidadInfo(log);
                 const usuarioNombre = usuarios[log.userId]?.displayName || log.userId;
@@ -543,22 +544,23 @@ const LogsOperarios = () => {
                   </TableCell>
                 </TableRow>
               )}
-            </TableBody>
-          </Table>
-        </TableContainer>
-        
-        {/* Paginación */}
-        <TablePagination
-          component="div"
-          count={logsFiltrados.length}
-          page={page}
-          onPageChange={handleChangePage}
-          rowsPerPage={rowsPerPage}
-          onRowsPerPageChange={handleChangeRowsPerPage}
-          rowsPerPageOptions={[200]}
-          labelRowsPerPage="Registros por página:"
-          labelDisplayedRows={({ from, to, count }) => `${from}-${to} de ${count}`}
-        />
+              </TableBody>
+            </Table>
+          </TableContainer>
+          
+          {/* Paginación */}
+          <TablePagination
+            component="div"
+            count={logsFiltrados.length}
+            page={page}
+            onPageChange={handleChangePage}
+            rowsPerPage={rowsPerPage}
+            onRowsPerPageChange={handleChangeRowsPerPage}
+            rowsPerPageOptions={[200]}
+            labelRowsPerPage="Registros por página:"
+            labelDisplayedRows={({ from, to, count }) => `${from}-${to} de ${count}`}
+          />
+        </Box>
       )}
     </Box>
   );
