@@ -28,7 +28,7 @@ import {
   Business as BusinessIcon,
   Storefront as StorefrontIcon
 } from '@mui/icons-material';
-import { collection, getDocs, query, where, orderBy } from 'firebase/firestore';
+import { collection, getDocs, query, where, orderBy, doc, getDoc } from 'firebase/firestore';
 import { db } from '../../../firebaseConfig';
 import { useAuth } from '../../context/AuthContext';
 import IndiceCard from './components/IndiceCard';
@@ -106,7 +106,7 @@ const DashboardHigieneSeguridad = () => {
     return { inicio, fin: ahora };
   }, []);
 
-  // Cargar datos de empleados
+  // Cargar datos de empleados y sucursal
   const cargarEmpleados = useCallback(async () => {
     if (!selectedSucursal) return [];
 
@@ -126,6 +126,20 @@ const DashboardHigieneSeguridad = () => {
     } catch (error) {
       console.error('Error cargando empleados:', error);
       return [];
+    }
+  }, [selectedSucursal]);
+
+  // Cargar datos de sucursal
+  const cargarSucursal = useCallback(async () => {
+    if (!selectedSucursal) return null;
+
+    try {
+      const sucursalRef = doc(db, 'sucursales', selectedSucursal);
+      const sucursalDoc = await getDoc(sucursalRef);
+      return sucursalDoc.exists() ? { id: sucursalDoc.id, ...sucursalDoc.data() } : null;
+    } catch (error) {
+      console.error('Error cargando sucursal:', error);
+      return null;
     }
   }, [selectedSucursal]);
 
@@ -184,10 +198,10 @@ const DashboardHigieneSeguridad = () => {
   }, [selectedSucursal, selectedPeriodo, calcularPeriodo]);
 
   // Calcular índices técnicos
-  const calcularIndices = useCallback((empleados, accidentes, periodo) => {
+  const calcularIndices = useCallback((empleados, accidentes, periodo, sucursal) => {
     const { inicio, fin } = calcularPeriodo(periodo);
     const diasLaborales = Math.ceil((fin - inicio) / (1000 * 60 * 60 * 24));
-    const horasPorDia = 8;
+    const horasPorDia = sucursal?.horasSemanales ? sucursal.horasSemanales / 5 : 8; // 5 días laborales por semana
 
     // Métricas básicas
     const totalEmpleados = empleados.length;
@@ -258,13 +272,14 @@ const DashboardHigieneSeguridad = () => {
 
     setLoading(true);
     try {
-      const [empleados, accidentes, capacitaciones] = await Promise.all([
+      const [empleados, accidentes, capacitaciones, sucursal] = await Promise.all([
         cargarEmpleados(),
         cargarAccidentes(),
-        cargarCapacitaciones()
+        cargarCapacitaciones(),
+        cargarSucursal()
       ]);
 
-      const { indices, metricas } = calcularIndices(empleados, accidentes, selectedPeriodo);
+      const { indices, metricas } = calcularIndices(empleados, accidentes, selectedPeriodo, sucursal);
 
       setDatos({
         empleados,
@@ -278,7 +293,7 @@ const DashboardHigieneSeguridad = () => {
     } finally {
       setLoading(false);
     }
-  }, [selectedSucursal, selectedPeriodo, cargarEmpleados, cargarAccidentes, cargarCapacitaciones, calcularIndices]);
+  }, [selectedSucursal, selectedPeriodo, cargarEmpleados, cargarAccidentes, cargarCapacitaciones, cargarSucursal, calcularIndices]);
 
   useEffect(() => {
     cargarDatos();
@@ -374,7 +389,7 @@ const DashboardHigieneSeguridad = () => {
       {/* Información del contexto */}
       {empresaSeleccionada && sucursalSeleccionada && (
         <Alert severity="info" sx={{ mb: 4 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
             <BusinessIcon />
             <Typography variant="body1">
               <strong>{empresaSeleccionada.nombre}</strong> - {sucursalSeleccionada.nombre}
@@ -383,6 +398,11 @@ const DashboardHigieneSeguridad = () => {
               label={selectedPeriodo.charAt(0).toUpperCase() + selectedPeriodo.slice(1)} 
               size="small" 
               color="primary" 
+            />
+            <Chip 
+              label={`${sucursalSeleccionada.horasSemanales || 40}h/semana`}
+              size="small" 
+              color="secondary" 
             />
           </Box>
         </Alert>
