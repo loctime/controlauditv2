@@ -350,21 +350,39 @@ const DashboardHigieneSeguridad = () => {
 
   return (
     <Container maxWidth="xl" sx={{ py: 4 }}>
-      {/* Header */}
-      <Box sx={{ mb: 4 }}>
-        <Typography variant="h4" sx={{ fontWeight: 'bold', color: '#111827', mb: 1 }}>
-          🛡️ Dashboard Higiene y Seguridad
-        </Typography>
-        <Typography variant="subtitle1" color="textSecondary">
-          Análisis de índices técnicos y métricas de seguridad laboral
-        </Typography>
-      </Box>
+      
 
       {/* Filtros */}
-      <Paper elevation={2} sx={{ p: 3, mb: 4, borderRadius: 2 }}>
-        <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
-          Filtros de Análisis
+      <Paper elevation={2} sx={{ p: 1, mb: 4, borderRadius: 2 }}>
+         <Typography variant="h4" sx={{ fontWeight: 'bold', color: '#111827', mb: 1 }}>
+          🛡️ Dashboard Higiene y Seguridad
         </Typography>
+        
+        {/* Información del contexto */}
+      {empresaSeleccionada && sucursalSeleccionada && (
+        <Alert severity="info" sx={{ mb: 1 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
+            <BusinessIcon />
+           
+            <Typography variant="body1">
+              <strong>{empresaSeleccionada.nombre}</strong> - {sucursalSeleccionada.nombre}
+            </Typography>
+            <Chip 
+              label={selectedPeriodo.charAt(0).toUpperCase() + selectedPeriodo.slice(1)} 
+              size="small" 
+              color="primary" 
+            />
+            <Chip 
+              label={`${sucursalSeleccionada.horasSemanales || 40}h/semana`}
+              size="small" 
+              color="secondary" 
+            />
+             <Typography variant="subtitle1" color="textSecondary" sx={{ marginLeft: 'auto', textAlign: 'right', ml: 4 }}>
+          Análisis de índices técnicos y métricas de seguridad laboral
+        </Typography>
+          </Box>
+        </Alert>
+      )}
         <Grid container spacing={3}>
           <Grid item xs={12} md={4}>
             <FormControl fullWidth>
@@ -422,27 +440,7 @@ const DashboardHigieneSeguridad = () => {
         </Grid>
       </Paper>
 
-      {/* Información del contexto */}
-      {empresaSeleccionada && sucursalSeleccionada && (
-        <Alert severity="info" sx={{ mb: 4 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
-            <BusinessIcon />
-            <Typography variant="body1">
-              <strong>{empresaSeleccionada.nombre}</strong> - {sucursalSeleccionada.nombre}
-            </Typography>
-            <Chip 
-              label={selectedPeriodo.charAt(0).toUpperCase() + selectedPeriodo.slice(1)} 
-              size="small" 
-              color="primary" 
-            />
-            <Chip 
-              label={`${sucursalSeleccionada.horasSemanales || 40}h/semana`}
-              size="small" 
-              color="secondary" 
-            />
-          </Box>
-        </Alert>
-      )}
+      
 
       {/* Métricas básicas */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
