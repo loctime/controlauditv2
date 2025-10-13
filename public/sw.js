@@ -20,12 +20,12 @@ const urlsToCache = [
   // Páginas principales para funcionamiento offline
   '/dashboard',
   '/auditoria',
-  '/establecimientos',
+  '/establecimiento',
   '/formularios',
   '/reportes',
   '/perfil',
   // Páginas adicionales para carga de datos
-  '/establecimientos/',
+  '/establecimiento/',
   '/formularios/',
   '/auditoria/',
   '/dashboard/',
