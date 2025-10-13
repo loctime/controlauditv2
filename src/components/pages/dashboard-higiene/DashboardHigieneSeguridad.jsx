@@ -41,12 +41,6 @@ const DashboardHigieneSeguridad = () => {
   const { userProfile, userEmpresas, userSucursales } = useAuth();
   const [loading, setLoading] = useState(true);
   
-  // Debug inicial
-  console.log('🚀 Dashboard: Componente inicializado:', { 
-    userProfile: !!userProfile,
-    userEmpresas: userEmpresas?.length || 0,
-    userSucursales: userSucursales?.length || 0
-  });
   const [selectedEmpresa, setSelectedEmpresa] = useState('');
   const [selectedSucursal, setSelectedSucursal] = useState('');
   const [selectedPeriodo, setSelectedPeriodo] = useState('mes');
@@ -81,25 +75,7 @@ const DashboardHigieneSeguridad = () => {
 
   // Cargar datos iniciales
   useEffect(() => {
-    console.log('🏢 Dashboard: Verificando empresas:', { 
-      userEmpresas: userEmpresas?.length, 
-      selectedEmpresa,
-      empresas: userEmpresas?.map(e => ({ id: e.id, nombre: e.nombre }))
-    });
-    
     if (userEmpresas && userEmpresas.length > 0 && !selectedEmpresa) {
-      // Mostrar qué empresas tienen sucursales
-      const empresasConSucursales = userEmpresas.map(empresa => {
-        const sucursalesDeEmpresa = userSucursales?.filter(s => s.empresaId === empresa.id) || [];
-        return {
-          id: empresa.id,
-          nombre: empresa.nombre,
-          sucursales: sucursalesDeEmpresa.length
-        };
-      });
-      
-      console.log('🏢 Dashboard: Empresas y sus sucursales:', empresasConSucursales);
-      
       // Buscar una empresa que tenga sucursales
       const empresaConSucursales = userEmpresas.find(empresa => {
         const sucursalesDeEmpresa = userSucursales?.filter(s => s.empresaId === empresa.id) || [];
@@ -107,35 +83,24 @@ const DashboardHigieneSeguridad = () => {
       });
       
       if (empresaConSucursales) {
-        console.log('🏢 Dashboard: Seleccionando empresa con sucursales:', empresaConSucursales.id, empresaConSucursales.nombre);
         setSelectedEmpresa(empresaConSucursales.id);
       } else {
-        console.log('🏢 Dashboard: Seleccionando primera empresa (sin sucursales):', userEmpresas[0].id);
         setSelectedEmpresa(userEmpresas[0].id);
       }
     }
   }, [userEmpresas, userSucursales, selectedEmpresa]);
 
   useEffect(() => {
-    console.log('🏪 Dashboard: Verificando sucursales:', { 
-      selectedEmpresa,
-      sucursalesFiltradas: sucursalesFiltradas.length,
-      selectedSucursal,
-      sucursales: sucursalesFiltradas.map(s => ({ id: s.id, nombre: s.nombre, empresaId: s.empresaId }))
-    });
-    
     if (selectedEmpresa && sucursalesFiltradas.length > 0) {
       // Verificar si la sucursal actual pertenece a la empresa seleccionada
       const sucursalValida = sucursalesFiltradas.find(s => s.id === selectedSucursal);
       
       // Si no hay sucursal válida, seleccionar la primera de la lista
       if (!sucursalValida) {
-        console.log('🏪 Dashboard: Seleccionando primera sucursal:', sucursalesFiltradas[0].id);
         setSelectedSucursal(sucursalesFiltradas[0].id);
       }
     } else if (selectedEmpresa && sucursalesFiltradas.length === 0) {
       // Si no hay sucursales para la empresa, limpiar la selección
-      console.log('🏪 Dashboard: No hay sucursales para la empresa, limpiando selección');
       setSelectedSucursal('');
     }
   }, [selectedEmpresa, sucursalesFiltradas, selectedSucursal]);
@@ -170,7 +135,6 @@ const DashboardHigieneSeguridad = () => {
     if (!selectedSucursal) return [];
 
     try {
-      console.log('👥 Dashboard: Cargando empleados para sucursal:', selectedSucursal);
       const empleadosRef = collection(db, 'empleados');
       const q = query(
         empleadosRef,
@@ -179,15 +143,12 @@ const DashboardHigieneSeguridad = () => {
       );
       
       const snapshot = await getDocs(q);
-      const empleados = snapshot.docs.map(doc => ({
+      return snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       }));
-      
-      console.log('👥 Dashboard: Empleados cargados:', empleados.length);
-      return empleados;
     } catch (error) {
-      console.error('❌ Dashboard: Error cargando empleados:', error);
+      console.error('Error cargando empleados:', error);
       return [];
     }
   }, [selectedSucursal]);
@@ -202,7 +163,6 @@ const DashboardHigieneSeguridad = () => {
     if (!selectedSucursal) return [];
 
     try {
-      console.log('🚨 Dashboard: Cargando accidentes para sucursal:', selectedSucursal);
       const { inicio, fin } = calcularPeriodo(selectedPeriodo);
       
       const accidentesRef = collection(db, 'accidentes');
@@ -215,15 +175,12 @@ const DashboardHigieneSeguridad = () => {
       );
       
       const snapshot = await getDocs(q);
-      const accidentes = snapshot.docs.map(doc => ({
+      return snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       }));
-      
-      console.log('🚨 Dashboard: Accidentes cargados:', accidentes.length);
-      return accidentes;
     } catch (error) {
-      console.error('❌ Dashboard: Error cargando accidentes:', error);
+      console.error('Error cargando accidentes:', error);
       return [];
     }
   }, [selectedSucursal, selectedPeriodo, calcularPeriodo]);
@@ -233,7 +190,6 @@ const DashboardHigieneSeguridad = () => {
     if (!selectedSucursal) return [];
 
     try {
-      console.log('🎓 Dashboard: Cargando capacitaciones para sucursal:', selectedSucursal);
       const { inicio, fin } = calcularPeriodo(selectedPeriodo);
       
       const capacitacionesRef = collection(db, 'capacitaciones');
@@ -246,15 +202,12 @@ const DashboardHigieneSeguridad = () => {
       );
       
       const snapshot = await getDocs(q);
-      const capacitaciones = snapshot.docs.map(doc => ({
+      return snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       }));
-      
-      console.log('🎓 Dashboard: Capacitaciones cargadas:', capacitaciones.length);
-      return capacitaciones;
     } catch (error) {
-      console.error('❌ Dashboard: Error cargando capacitaciones:', error);
+      console.error('Error cargando capacitaciones:', error);
       return [];
     }
   }, [selectedSucursal, selectedPeriodo, calcularPeriodo]);
@@ -285,15 +238,6 @@ const DashboardHigieneSeguridad = () => {
     
     const horasPorDia = sucursal?.horasSemanales ? sucursal.horasSemanales / 5 : 8; // 5 días laborales por semana
 
-    // Debug logs
-    console.log('📊 Cálculo de índices:', {
-      periodo,
-      diasTotales,
-      diasLaborales,
-      horasPorDia,
-      sucursalHorasSemanales: sucursal?.horasSemanales,
-      sucursalNombre: sucursal?.nombre
-    });
 
     // Métricas básicas
     const totalEmpleados = empleados.length;
@@ -339,20 +283,6 @@ const DashboardHigieneSeguridad = () => {
     // 4. Índice de Gravedad (IG)
     const indiceGravedad = horasTrabajadas > 0 ? (diasPerdidos * 1000) / horasTrabajadas : 0;
 
-    // Debug logs para métricas
-    console.log('📈 Métricas calculadas:', {
-      totalEmpleados,
-      empleadosActivos,
-      empleadosEnReposo,
-      horasTrabajadas,
-      horasPerdidas,
-      accidentesConTiempoPerdido,
-      diasPerdidos,
-      tasaAusentismo: Math.round(tasaAusentismo * 100) / 100,
-      indiceFrecuencia: Math.round(indiceFrecuencia * 100) / 100,
-      indiceIncidencia: Math.round(indiceIncidencia * 100) / 100,
-      indiceGravedad: Math.round(indiceGravedad * 100) / 100
-    });
 
     return {
       indices: {
@@ -375,14 +305,33 @@ const DashboardHigieneSeguridad = () => {
 
   // Cargar todos los datos
   const cargarDatos = useCallback(async () => {
-    console.log('🔄 Dashboard: Iniciando carga de datos:', { 
-      selectedSucursal, 
-      selectedEmpresa, 
-      selectedPeriodo 
-    });
-    
-    if (!selectedSucursal || !selectedEmpresa) {
-      console.log('❌ Dashboard: No hay sucursal o empresa seleccionada, cancelando carga');
+    if (!selectedEmpresa) {
+      setLoading(false);
+      return;
+    }
+
+    // Si no hay sucursales, mostrar datos vacíos
+    if (!selectedSucursal) {
+      setDatos({
+        empleados: [],
+        accidentes: [],
+        capacitaciones: [],
+        indices: {
+          tasaAusentismo: 0,
+          indiceFrecuencia: 0,
+          indiceIncidencia: 0,
+          indiceGravedad: 0
+        },
+        metricas: {
+          totalEmpleados: 0,
+          empleadosActivos: 0,
+          empleadosEnReposo: 0,
+          horasTrabajadas: 0,
+          horasPerdidas: 0,
+          accidentesConTiempoPerdido: 0,
+          diasPerdidos: 0
+        }
+      });
       setLoading(false);
       return;
     }
@@ -392,50 +341,19 @@ const DashboardHigieneSeguridad = () => {
 
     // Timeout para evitar carga infinita
     const timeoutId = setTimeout(() => {
-      console.warn('⚠️ Timeout en carga de datos del dashboard');
       setLoadingTimeout(true);
       setLoading(false);
-    }, 15000); // 15 segundos timeout
+    }, 15000);
 
     try {
-      console.log('📊 Dashboard: Cargando datos de Firebase...');
-      
-      // Usar datos mock para probar si el problema está en Firebase
-      const useMockData = false; // Cambiar a true para usar datos de prueba
-      
-      let empleados, accidentes, capacitaciones;
-      
-      if (useMockData) {
-        console.log('🧪 Dashboard: Usando datos mock para prueba');
-        empleados = [
-          { id: '1', nombre: 'Juan Pérez', estado: 'activo', fechaIngreso: new Date() },
-          { id: '2', nombre: 'María García', estado: 'activo', fechaIngreso: new Date() },
-          { id: '3', nombre: 'Carlos López', estado: 'inactivo', fechaInicioReposo: new Date() }
-        ];
-        accidentes = [
-          { id: '1', tipo: 'accidente', fechaHora: new Date(), empleadosInvolucrados: [{ conReposo: true }] }
-        ];
-        capacitaciones = [
-          { id: '1', fechaRealizada: new Date() }
-        ];
-      } else {
-        [empleados, accidentes, capacitaciones] = await Promise.all([
-          cargarEmpleados(),
-          cargarAccidentes(),
-          cargarCapacitaciones()
-        ]);
-      }
-
-      console.log('📊 Dashboard: Datos cargados:', { 
-        empleados: empleados.length, 
-        accidentes: accidentes.length, 
-        capacitaciones: capacitaciones.length 
-      });
+      const [empleados, accidentes, capacitaciones] = await Promise.all([
+        cargarEmpleados(),
+        cargarAccidentes(),
+        cargarCapacitaciones()
+      ]);
 
       const sucursal = obtenerSucursalSeleccionada();
       const { indices, metricas } = calcularIndices(empleados, accidentes, selectedPeriodo, sucursal);
-
-      console.log('📊 Dashboard: Índices calculados:', { indices, metricas });
 
       setDatos({
         empleados,
@@ -444,19 +362,16 @@ const DashboardHigieneSeguridad = () => {
         indices,
         metricas
       });
-      
-      console.log('✅ Dashboard: Datos establecidos correctamente');
     } catch (error) {
-      console.error('❌ Dashboard: Error cargando datos:', error);
+      console.error('Error cargando datos:', error);
     } finally {
       clearTimeout(timeoutId);
       setLoading(false);
-      console.log('🏁 Dashboard: Carga de datos finalizada');
     }
   }, [selectedSucursal, selectedPeriodo, cargarEmpleados, cargarAccidentes, cargarCapacitaciones, obtenerSucursalSeleccionada, calcularIndices, selectedEmpresa]);
 
   useEffect(() => {
-    if (selectedSucursal && selectedEmpresa) {
+    if (selectedEmpresa) {
       cargarDatos();
     }
   }, [selectedSucursal, selectedEmpresa, cargarDatos]);
@@ -570,100 +485,11 @@ const DashboardHigieneSeguridad = () => {
           <Typography variant="caption" color="text.secondary" sx={{ mt: 2 }}>
             Empresa: {selectedEmpresa} | Sucursal: {selectedSucursal}
           </Typography>
-          <Button
-            variant="outlined"
-            size="small"
-            onClick={() => {
-              console.log('🧪 Forzando datos mock para prueba');
-              setDatos({
-                empleados: [
-                  { id: '1', nombre: 'Juan Pérez', estado: 'activo' },
-                  { id: '2', nombre: 'María García', estado: 'activo' },
-                  { id: '3', nombre: 'Carlos López', estado: 'inactivo', fechaInicioReposo: new Date() }
-                ],
-                accidentes: [
-                  { id: '1', tipo: 'accidente', fechaHora: new Date(), empleadosInvolucrados: [{ conReposo: true }] }
-                ],
-                capacitaciones: [
-                  { id: '1', fechaRealizada: new Date() }
-                ],
-                indices: {
-                  tasaAusentismo: 5.2,
-                  indiceFrecuencia: 12.5,
-                  indiceIncidencia: 8.3,
-                  indiceGravedad: 25.7
-                },
-                metricas: {
-                  totalEmpleados: 3,
-                  empleadosActivos: 2,
-                  empleadosEnReposo: 1,
-                  horasTrabajadas: 320,
-                  horasPerdidas: 160,
-                  accidentesConTiempoPerdido: 1,
-                  diasPerdidos: 5
-                }
-              });
-              setLoading(false);
-            }}
-            sx={{ mt: 2 }}
-          >
-            🧪 Usar Datos de Prueba
-          </Button>
         </Box>
       </Container>
     );
   }
 
-  // Validar si no hay sucursales disponibles
-  if (selectedEmpresa && sucursalesFiltradas.length === 0) {
-    return (
-      <Container maxWidth="xl" sx={{ py: 4 }}>
-        <Paper elevation={2} sx={{ p: 4, borderRadius: 2 }}>
-          <Typography variant="h4" sx={{ fontWeight: 'bold', mb: 2 }}>
-            🛡️ Dashboard Higiene y Seguridad
-          </Typography>
-          <Alert severity="warning" icon={<WarningIcon />}>
-            <Typography variant="h6" sx={{ mb: 1 }}>
-              No hay sucursales disponibles para esta empresa
-            </Typography>
-            <Typography sx={{ mb: 2 }}>
-              La empresa <strong>{empresaSeleccionada?.nombre}</strong> no tiene sucursales asignadas. 
-              Por favor, crea una sucursal para poder utilizar el dashboard.
-            </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              💡 <strong>Sugerencia:</strong> Verifica que las sucursales estén correctamente asociadas a esta empresa en la configuración.
-            </Typography>
-            <Button
-              variant="outlined"
-              onClick={() => {
-                // Buscar otra empresa que tenga sucursales
-                const empresaConSucursales = userEmpresas.find(empresa => {
-                  const sucursalesDeEmpresa = userSucursales?.filter(s => s.empresaId === empresa.id) || [];
-                  return sucursalesDeEmpresa.length > 0;
-                });
-                
-                if (empresaConSucursales) {
-                  console.log('🔄 Dashboard: Cambiando a empresa con sucursales:', empresaConSucursales.id);
-                  setSelectedEmpresa(empresaConSucursales.id);
-                } else {
-                  console.log('❌ Dashboard: No hay empresas con sucursales disponibles');
-                }
-              }}
-              sx={{ mr: 2 }}
-            >
-              🔄 Cambiar Empresa
-            </Button>
-            <Button
-              variant="outlined"
-              onClick={() => window.location.reload()}
-            >
-              🔄 Recargar
-            </Button>
-          </Alert>
-        </Paper>
-      </Container>
-    );
-  }
 
   return (
     <ErrorBoundary>
@@ -677,30 +503,42 @@ const DashboardHigieneSeguridad = () => {
         </Typography>
         
         {/* Información del contexto */}
-      {empresaSeleccionada && sucursalSeleccionada && (
-        <Alert severity="info" sx={{ mb: 1 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
-            <BusinessIcon />
-           
-            <Typography variant="body1">
-              <strong>{empresaSeleccionada.nombre}</strong> - {sucursalSeleccionada.nombre}
-            </Typography>
-            <Chip 
-              label={selectedPeriodo.charAt(0).toUpperCase() + selectedPeriodo.slice(1)} 
-              size="small" 
-              color="primary" 
-            />
-            <Chip 
-              label={`${sucursalSeleccionada.horasSemanales || 40}h/semana`}
-              size="small" 
-              color="secondary" 
-            />
-             <Typography variant="subtitle1" color="textSecondary" sx={{ marginLeft: 'auto', textAlign: 'right', ml: 4 }}>
-          Análisis de índices técnicos y métricas de seguridad laboral
-        </Typography>
-          </Box>
-        </Alert>
-      )}
+        {empresaSeleccionada && (
+          <Alert severity={sucursalSeleccionada ? "info" : "warning"} sx={{ mb: 1 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
+              <BusinessIcon />
+             
+              {sucursalSeleccionada ? (
+                <>
+                  <Typography variant="body1">
+                    <strong>{empresaSeleccionada.nombre}</strong> - {sucursalSeleccionada.nombre}
+                  </Typography>
+                  <Chip 
+                    label={selectedPeriodo.charAt(0).toUpperCase() + selectedPeriodo.slice(1)} 
+                    size="small" 
+                    color="primary" 
+                  />
+                  <Chip 
+                    label={`${sucursalSeleccionada.horasSemanales || 40}h/semana`}
+                    size="small" 
+                    color="secondary" 
+                  />
+                </>
+              ) : (
+                <Typography variant="body1">
+                  <strong>{empresaSeleccionada.nombre}</strong> - No hay sucursales disponibles
+                </Typography>
+              )}
+              
+              <Typography variant="subtitle1" color="textSecondary" sx={{ marginLeft: 'auto', textAlign: 'right', ml: 4 }}>
+                {sucursalSeleccionada 
+                  ? "Análisis de índices técnicos y métricas de seguridad laboral"
+                  : "Selecciona una sucursal para ver el análisis de seguridad"
+                }
+              </Typography>
+            </Box>
+          </Alert>
+        )}
         <Grid container spacing={3}>
           <Grid item xs={12} md={4}>
             <FormControl fullWidth>
@@ -762,36 +600,44 @@ const DashboardHigieneSeguridad = () => {
 
       {/* Métricas básicas - Chips compactos */}
       <Box sx={{ mb: 4 }}>
-        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, alignItems: 'center' }}>
-          <Chip
-            icon={<PeopleIcon />}
-            label={`Total Empleados: ${datos.metricas.totalEmpleados}`}
-            color="primary"
-            variant="outlined"
-            sx={{ fontSize: '0.9rem', height: 36 }}
-          />
-          <Chip
-            icon={<WarningIcon />}
-            label={`En Reposo: ${datos.metricas.empleadosEnReposo}`}
-            color={datos.metricas.empleadosEnReposo > 0 ? "error" : "success"}
-            variant="outlined"
-            sx={{ fontSize: '0.9rem', height: 36 }}
-          />
-          <Chip
-            icon={<AccessTimeIcon />}
-            label={`Horas: ${datos.metricas.horasTrabajadas.toLocaleString()}`}
-            color="info"
-            variant="outlined"
-            sx={{ fontSize: '0.9rem', height: 36 }}
-          />
-          <Chip
-            icon={<ReportProblemIcon />}
-            label={`Días Perdidos: ${datos.metricas.diasPerdidos}`}
-            color={datos.metricas.diasPerdidos > 0 ? "error" : "success"}
-            variant="outlined"
-            sx={{ fontSize: '0.9rem', height: 36 }}
-          />
-        </Box>
+        {!selectedSucursal ? (
+          <Alert severity="info" sx={{ mb: 2 }}>
+            <Typography variant="body1">
+              💡 Selecciona una sucursal para ver las métricas de empleados, accidentes y capacitaciones.
+            </Typography>
+          </Alert>
+        ) : (
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, alignItems: 'center' }}>
+            <Chip
+              icon={<PeopleIcon />}
+              label={`Total Empleados: ${datos.metricas.totalEmpleados}`}
+              color="primary"
+              variant="outlined"
+              sx={{ fontSize: '0.9rem', height: 36 }}
+            />
+            <Chip
+              icon={<WarningIcon />}
+              label={`En Reposo: ${datos.metricas.empleadosEnReposo}`}
+              color={datos.metricas.empleadosEnReposo > 0 ? "error" : "success"}
+              variant="outlined"
+              sx={{ fontSize: '0.9rem', height: 36 }}
+            />
+            <Chip
+              icon={<AccessTimeIcon />}
+              label={`Horas: ${datos.metricas.horasTrabajadas.toLocaleString()}`}
+              color="info"
+              variant="outlined"
+              sx={{ fontSize: '0.9rem', height: 36 }}
+            />
+            <Chip
+              icon={<ReportProblemIcon />}
+              label={`Días Perdidos: ${datos.metricas.diasPerdidos}`}
+              color={datos.metricas.diasPerdidos > 0 ? "error" : "success"}
+              variant="outlined"
+              sx={{ fontSize: '0.9rem', height: 36 }}
+            />
+          </Box>
+        )}
       </Box>
 
       <Divider sx={{ my: 4 }} />
@@ -801,8 +647,15 @@ const DashboardHigieneSeguridad = () => {
         📊 Índices Técnicos de Seguridad
       </Typography>
 
-      <Box sx={{ mb: 4 }}>
-        <Grid container spacing={2}>
+      {!selectedSucursal ? (
+        <Alert severity="info" sx={{ mb: 4 }}>
+          <Typography variant="body1">
+            📋 Los índices técnicos se calcularán una vez que selecciones una sucursal con datos de empleados y accidentes.
+          </Typography>
+        </Alert>
+      ) : (
+        <Box sx={{ mb: 4 }}>
+          <Grid container spacing={2}>
           <Grid item xs={12} sm={6} md={3}>
             <Paper 
               elevation={1}
@@ -937,11 +790,12 @@ const DashboardHigieneSeguridad = () => {
               />
             </Paper>
           </Grid>
-        </Grid>
-      </Box>
+          </Grid>
+        </Box>
+      )}
 
-        {/* Gráfico de índices */}
-        <GraficoIndices datos={datos} periodo={selectedPeriodo} />
+      {/* Gráfico de índices */}
+      {selectedSucursal && <GraficoIndices datos={datos} periodo={selectedPeriodo} />}
 
       </Container>
     </ErrorBoundary>
