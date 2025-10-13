@@ -39,7 +39,7 @@ import ErrorBoundary from '../../common/ErrorBoundary';
 
 const DashboardHigieneSeguridad = () => {
   const { userProfile, userEmpresas, userSucursales } = useAuth();
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   
   const [selectedEmpresa, setSelectedEmpresa] = useState('');
   const [selectedSucursal, setSelectedSucursal] = useState('');
@@ -78,6 +78,10 @@ const DashboardHigieneSeguridad = () => {
   useEffect(() => {
     if (userEmpresas !== undefined) {
       setEmpresasCargadas(true);
+      // Si no hay empresas, asegurar que loading esté en false
+      if (!userEmpresas || userEmpresas.length === 0) {
+        setLoading(false);
+      }
     }
   }, [userEmpresas]);
 
