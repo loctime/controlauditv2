@@ -523,9 +523,19 @@ const DashboardHigieneSeguridad = () => {
             <BusinessIcon />
            
             {!userEmpresas || userEmpresas.length === 0 ? (
-              <Typography variant="body1">
-                <strong>No hay empresas disponibles</strong> - Contacta al administrador
-              </Typography>
+              <>
+                <Typography variant="body1">
+                  <strong>No hay empresas disponibles</strong> - Contacta al administrador
+                </Typography>
+                <Button
+                  variant="outlined"
+                  size="small"
+                  onClick={() => window.location.href = '/establecimientos'}
+                  sx={{ ml: 2 }}
+                >
+                  🏢 Ir a Empresas
+                </Button>
+              </>
             ) : sucursalSeleccionada ? (
               <>
                 <Typography variant="body1">
@@ -543,9 +553,19 @@ const DashboardHigieneSeguridad = () => {
                 />
               </>
             ) : (
-              <Typography variant="body1">
-                <strong>{empresaSeleccionada?.nombre || 'Empresa'}</strong> - No hay sucursales disponibles
-              </Typography>
+              <>
+                <Typography variant="body1">
+                  <strong>{empresaSeleccionada?.nombre || 'Empresa'}</strong> - No hay sucursales disponibles
+                </Typography>
+                <Button
+                  variant="outlined"
+                  size="small"
+                  onClick={() => window.location.href = '/establecimientos'}
+                  sx={{ ml: 2 }}
+                >
+                  🏪 Ir a Sucursales
+                </Button>
+              </>
             )}
             
             <Typography variant="subtitle1" color="textSecondary" sx={{ marginLeft: 'auto', textAlign: 'right', ml: 4 }}>
@@ -624,15 +644,48 @@ const DashboardHigieneSeguridad = () => {
       <Box sx={{ mb: 4 }}>
         {!userEmpresas || userEmpresas.length === 0 ? (
           <Alert severity="error" sx={{ mb: 2 }}>
-            <Typography variant="body1">
-              🏢 No hay empresas disponibles. Contacta al administrador para asignar empresas a tu usuario.
-            </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2 }}>
+              <Typography variant="body1">
+                🏢 No hay empresas disponibles. Contacta al administrador para asignar empresas a tu usuario.
+              </Typography>
+              <Button
+                variant="contained"
+                size="small"
+                onClick={() => window.location.href = '/establecimientos'}
+              >
+                🏢 Crear Empresas
+              </Button>
+            </Box>
           </Alert>
         ) : !selectedSucursal ? (
           <Alert severity="info" sx={{ mb: 2 }}>
-            <Typography variant="body1">
-              💡 Selecciona una sucursal para ver las métricas de empleados, accidentes y capacitaciones.
-            </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2 }}>
+              <Typography variant="body1">
+                💡 Selecciona una sucursal para ver las métricas de empleados, accidentes y capacitaciones.
+              </Typography>
+              <Button
+                variant="contained"
+                size="small"
+                onClick={() => window.location.href = '/establecimientos'}
+              >
+                🏪 Crear Sucursales
+              </Button>
+            </Box>
+          </Alert>
+        ) : datos.metricas.totalEmpleados === 0 ? (
+          <Alert severity="warning" sx={{ mb: 2 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2 }}>
+              <Typography variant="body1">
+                👥 No hay empleados registrados en esta sucursal. Los índices técnicos requieren datos de empleados.
+              </Typography>
+              <Button
+                variant="contained"
+                size="small"
+                onClick={() => window.location.href = '/empleados'}
+              >
+                👥 Crear Empleados
+              </Button>
+            </Box>
           </Alert>
         ) : (
           <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, alignItems: 'center' }}>
@@ -677,15 +730,48 @@ const DashboardHigieneSeguridad = () => {
 
       {!userEmpresas || userEmpresas.length === 0 ? (
         <Alert severity="error" sx={{ mb: 4 }}>
-          <Typography variant="body1">
-            🏢 Los índices técnicos no están disponibles. Contacta al administrador para asignar empresas a tu usuario.
-          </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2 }}>
+            <Typography variant="body1">
+              🏢 Los índices técnicos no están disponibles. Contacta al administrador para asignar empresas a tu usuario.
+            </Typography>
+            <Button
+              variant="contained"
+              size="small"
+              onClick={() => window.location.href = '/establecimientos'}
+            >
+              🏢 Crear Empresas
+            </Button>
+          </Box>
         </Alert>
       ) : !selectedSucursal ? (
         <Alert severity="info" sx={{ mb: 4 }}>
-          <Typography variant="body1">
-            📋 Los índices técnicos se calcularán una vez que selecciones una sucursal con datos de empleados y accidentes.
-          </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2 }}>
+            <Typography variant="body1">
+              📋 Los índices técnicos se calcularán una vez que selecciones una sucursal con datos de empleados y accidentes.
+            </Typography>
+            <Button
+              variant="contained"
+              size="small"
+              onClick={() => window.location.href = '/establecimientos'}
+            >
+              🏪 Crear Sucursales
+            </Button>
+          </Box>
+        </Alert>
+      ) : datos.metricas.totalEmpleados === 0 ? (
+        <Alert severity="warning" sx={{ mb: 4 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2 }}>
+            <Typography variant="body1">
+              📊 Los índices técnicos requieren empleados registrados. Registra empleados para calcular los índices de seguridad.
+            </Typography>
+            <Button
+              variant="contained"
+              size="small"
+              onClick={() => window.location.href = '/empleados'}
+            >
+              👥 Crear Empleados
+            </Button>
+          </Box>
         </Alert>
       ) : (
         <Box sx={{ mb: 4 }}>
@@ -829,7 +915,7 @@ const DashboardHigieneSeguridad = () => {
       )}
 
       {/* Gráfico de índices */}
-      {userEmpresas && userEmpresas.length > 0 && selectedSucursal && <GraficoIndices datos={datos} periodo={selectedPeriodo} />}
+      {userEmpresas && userEmpresas.length > 0 && selectedSucursal && datos.metricas.totalEmpleados > 0 && <GraficoIndices datos={datos} periodo={selectedPeriodo} />}
 
       </Container>
     </ErrorBoundary>

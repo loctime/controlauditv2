@@ -35,7 +35,7 @@ import EmpleadoForm from './EmpleadoForm';
 export default function Empleados() {
   const { userProfile, userSucursales, userEmpresas, loadingSucursales } = useAuth();
   const [empleados, setEmpleados] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCargo, setFilterCargo] = useState('');
   const [filterTipo, setFilterTipo] = useState('');
@@ -44,18 +44,36 @@ export default function Empleados() {
   const [selectedSucursal, setSelectedSucursal] = useState('');
   const [openForm, setOpenForm] = useState(false);
   const [selectedEmpleado, setSelectedEmpleado] = useState(null);
+  const [empresasCargadas, setEmpresasCargadas] = useState(false);
 
   // Filtrar sucursales por empresa seleccionada
   const filteredSucursales = selectedEmpresa
     ? userSucursales?.filter(s => s.empresaId === selectedEmpresa) || []
     : userSucursales || [];
 
+  // Detectar cuando las empresas han sido cargadas
+  useEffect(() => {
+    if (userEmpresas !== undefined) {
+      setEmpresasCargadas(true);
+    }
+  }, [userEmpresas]);
+
   // Establecer empresa inicial
   useEffect(() => {
     if (userEmpresas && userEmpresas.length > 0 && !selectedEmpresa) {
-      setSelectedEmpresa(userEmpresas[0].id);
+      // Buscar una empresa que tenga sucursales
+      const empresaConSucursales = userEmpresas.find(empresa => {
+        const sucursalesDeEmpresa = userSucursales?.filter(s => s.empresaId === empresa.id) || [];
+        return sucursalesDeEmpresa.length > 0;
+      });
+      
+      if (empresaConSucursales) {
+        setSelectedEmpresa(empresaConSucursales.id);
+      } else {
+        setSelectedEmpresa(userEmpresas[0].id);
+      }
     }
-  }, [userEmpresas]);
+  }, [userEmpresas, userSucursales, selectedEmpresa]);
 
   // Establecer sucursal inicial cuando cambia la empresa
   useEffect(() => {
@@ -74,8 +92,12 @@ export default function Empleados() {
   useEffect(() => {
     if (selectedSucursal) {
       loadEmpleados();
+    } else if (empresasCargadas) {
+      // Si no hay sucursal seleccionada pero ya se cargaron las empresas, limpiar empleados
+      setEmpleados([]);
+      setLoading(false);
     }
-  }, [selectedSucursal]);
+  }, [selectedSucursal, empresasCargadas]);
 
   const loadEmpleados = async () => {
     setLoading(true);
@@ -144,22 +166,12 @@ export default function Empleados() {
   const uniqueCargos = [...new Set(empleados.map(emp => emp.cargo))].filter(Boolean);
 
   // Mostrar loading mientras se cargan las sucursales
-  if (loadingSucursales) {
+  if (loadingSucursales || !empresasCargadas) {
     return (
       <Container maxWidth="xl" sx={{ py: 3 }}>
         <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
           <CircularProgress />
         </Box>
-      </Container>
-    );
-  }
-
-  if (!userSucursales || userSucursales.length === 0) {
-    return (
-      <Container maxWidth="xl" sx={{ py: 3 }}>
-        <Alert severity="warning">
-          No tienes sucursales asignadas. Contacta con el administrador.
-        </Alert>
       </Container>
     );
   }
@@ -186,6 +198,39 @@ export default function Empleados() {
         </Button>
       </Box>
 
+      {/* Alertas de estado */}
+      {!userEmpresas || userEmpresas.length === 0 ? (
+        <Alert severity="error" sx={{ mb: 3 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2 }}>
+            <Typography variant="body1">
+              🏢 No hay empresas disponibles. Contacta al administrador para asignar empresas a tu usuario.
+            </Typography>
+            <Button
+              variant="contained"
+              size="small"
+              onClick={() => window.location.href = '/establecimientos'}
+            >
+              🏢 Ir a Empresas
+            </Button>
+          </Box>
+        </Alert>
+      ) : !selectedSucursal && filteredSucursales.length === 0 ? (
+        <Alert severity="warning" sx={{ mb: 3 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2 }}>
+            <Typography variant="body1">
+              🏪 No hay sucursales disponibles para la empresa seleccionada.
+            </Typography>
+            <Button
+              variant="contained"
+              size="small"
+              onClick={() => window.location.href = '/establecimientos'}
+            >
+              🏪 Crear Sucursales
+            </Button>
+          </Box>
+        </Alert>
+      ) : null}
+
       {/* Selectores de Empresa y Sucursal */}
       <Paper sx={{ p: 2, mb: 3 }}>
         <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
@@ -195,6 +240,7 @@ export default function Empleados() {
               value={selectedEmpresa}
               label="Empresa"
               onChange={(e) => setSelectedEmpresa(e.target.value)}
+              disabled={!userEmpresas || userEmpresas.length === 0}
             >
               {userEmpresas?.map((empresa) => (
                 <MenuItem key={empresa.id} value={empresa.id}>
@@ -210,7 +256,7 @@ export default function Empleados() {
               value={selectedSucursal}
               label="Sucursal"
               onChange={(e) => setSelectedSucursal(e.target.value)}
-              disabled={!selectedEmpresa || filteredSucursales.length === 0}
+              disabled={!selectedEmpresa || filteredSucursales.length === 0 || !userEmpresas || userEmpresas.length === 0}
             >
               {filteredSucursales.map((sucursal) => (
                 <MenuItem key={sucursal.id} value={sucursal.id}>
@@ -291,11 +337,26 @@ export default function Empleados() {
           <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
             <CircularProgress />
           </Box>
-        ) : filteredEmpleados.length === 0 ? (
+        ) : !userEmpresas || userEmpresas.length === 0 || !selectedSucursal ? (
           <Box sx={{ p: 4, textAlign: 'center' }}>
             <Typography color="text.secondary">
-              No hay empleados registrados
+              {!userEmpresas || userEmpresas.length === 0 
+                ? 'Selecciona una empresa para ver los empleados'
+                : 'Selecciona una sucursal para ver los empleados'}
             </Typography>
+          </Box>
+        ) : filteredEmpleados.length === 0 ? (
+          <Box sx={{ p: 4, textAlign: 'center' }}>
+            <Typography color="text.secondary" sx={{ mb: 2 }}>
+              No hay empleados registrados en esta sucursal
+            </Typography>
+            <Button
+              variant="outlined"
+              startIcon={<AddIcon />}
+              onClick={() => handleOpenForm()}
+            >
+              Registrar Primer Empleado
+            </Button>
           </Box>
         ) : (
           <Table>

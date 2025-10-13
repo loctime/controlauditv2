@@ -47,7 +47,7 @@ export default function Capacitaciones() {
   // Estado para pestaña "Ver Capacitaciones"
   const [capacitaciones, setCapacitaciones] = useState([]);
   const [planesAnuales, setPlanesAnuales] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [filterTipo, setFilterTipo] = useState('');
   const [filterEstado, setFilterEstado] = useState('');
   const [selectedEmpresa, setSelectedEmpresa] = useState('');
@@ -62,6 +62,7 @@ export default function Capacitaciones() {
   
   // Estado local para mantener las sucursales una vez cargadas
   const [localSucursales, setLocalSucursales] = useState([]);
+  const [empresasCargadas, setEmpresasCargadas] = useState(false);
 
   // Usar sucursales locales si están disponibles, sino usar las del contexto
   const sucursalesDisponibles = localSucursales.length > 0 ? localSucursales : userSucursales;
@@ -76,6 +77,13 @@ export default function Capacitaciones() {
   const sucursalesFiltradas = selectedEmpresa 
     ? sucursalesDisponibles.filter(s => s.empresaId === selectedEmpresa)
     : sucursalesDisponibles;
+
+  // Detectar cuando las empresas han sido cargadas
+  useEffect(() => {
+    if (userEmpresas !== undefined) {
+      setEmpresasCargadas(true);
+    }
+  }, [userEmpresas]);
 
   // Debug: ver qué está pasando con las sucursales
   useEffect(() => {
@@ -94,6 +102,17 @@ export default function Capacitaciones() {
 
   // Definir loadCapacitaciones ANTES de usarla en useEffect
   const loadCapacitaciones = useCallback(async () => {
+    if (!empresasCargadas) {
+      return;
+    }
+
+    if (!userEmpresas || userEmpresas.length === 0) {
+      setCapacitaciones([]);
+      setPlanesAnuales([]);
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     try {
       console.log('[Capacitaciones] loadCapacitaciones iniciada con:', {
@@ -189,7 +208,7 @@ export default function Capacitaciones() {
     } finally {
       setLoading(false);
     }
-  }, [selectedEmpresa, selectedSucursal, sucursalesDisponibles]);
+  }, [selectedEmpresa, selectedSucursal, sucursalesDisponibles, userEmpresas, empresasCargadas]);
 
   // Cargar capacitaciones cuando las sucursales estén disponibles
   useEffect(() => {
@@ -452,6 +471,39 @@ export default function Capacitaciones() {
             )}
           </Box>
         </Box>
+
+        {/* Alertas de estado */}
+        {!userEmpresas || userEmpresas.length === 0 ? (
+          <Alert severity="error" sx={{ mb: 3 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2 }}>
+              <Typography variant="body1">
+                🏢 No hay empresas disponibles. Contacta al administrador para asignar empresas a tu usuario.
+              </Typography>
+              <Button
+                variant="contained"
+                size="small"
+                onClick={() => window.location.href = '/establecimientos'}
+              >
+                🏢 Ir a Empresas
+              </Button>
+            </Box>
+          </Alert>
+        ) : !selectedSucursal && sucursalesFiltradas.length === 0 ? (
+          <Alert severity="warning" sx={{ mb: 3 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2 }}>
+              <Typography variant="body1">
+                🏪 No hay sucursales disponibles para la empresa seleccionada.
+              </Typography>
+              <Button
+                variant="contained"
+                size="small"
+                onClick={() => window.location.href = '/establecimientos'}
+              >
+                🏪 Crear Sucursales
+              </Button>
+            </Box>
+          </Alert>
+        ) : null}
 
         {/* Sistema de Pestañas */}
         <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>

@@ -545,6 +545,54 @@ const AuditoriaRefactorizada = () => {
         isMobile={isMobile}
       />
 
+      {/* Alertas de estado para datos faltantes */}
+      {!cargandoDatosRespaldo && !userEmpresas || userEmpresas?.length === 0 ? (
+        <Alert severity="error" sx={{ mb: 3 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2 }}>
+            <Typography variant="body1">
+              🏢 No hay empresas disponibles. No puedes crear auditorías sin empresas asignadas.
+            </Typography>
+            <Button
+              variant="contained"
+              size="small"
+              onClick={() => window.location.href = '/establecimientos'}
+            >
+              🏢 Ir a Empresas
+            </Button>
+          </Box>
+        </Alert>
+      ) : !cargandoDatosRespaldo && (!userSucursales || userSucursales?.length === 0) ? (
+        <Alert severity="warning" sx={{ mb: 3 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2 }}>
+            <Typography variant="body1">
+              🏪 No hay sucursales disponibles. Crea sucursales para poder auditar.
+            </Typography>
+            <Button
+              variant="contained"
+              size="small"
+              onClick={() => window.location.href = '/establecimientos'}
+            >
+              🏪 Crear Sucursales
+            </Button>
+          </Box>
+        </Alert>
+      ) : !cargandoDatosRespaldo && (!userFormularios || userFormularios?.length === 0) ? (
+        <Alert severity="info" sx={{ mb: 3 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2 }}>
+            <Typography variant="body1">
+              📋 No hay formularios disponibles. Crea o importa formularios para realizar auditorías.
+            </Typography>
+            <Button
+              variant="contained"
+              size="small"
+              onClick={() => window.location.href = '/formulario'}
+            >
+              📋 Ir a Formularios
+            </Button>
+          </Box>
+        </Alert>
+      ) : null}
+
       {/* Contenido principal */}
       {!auditoriaGenerada ? (
         <AuditoriaStepper
