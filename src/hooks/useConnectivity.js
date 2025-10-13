@@ -6,7 +6,8 @@ import syncQueueService from '../services/syncQueue';
  * Maneja tanto navigator.onLine como eventos de red
  */
 export const useConnectivity = () => {
-  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  // Verificar que estamos en el lado del cliente
+  const [isOnline, setIsOnline] = useState(typeof navigator !== 'undefined' ? navigator.onLine : true);
   const [connectionType, setConnectionType] = useState('unknown');
   const [lastOnlineTime, setLastOnlineTime] = useState(Date.now());
   const [autoSyncTriggered, setAutoSyncTriggered] = useState(false);
@@ -14,7 +15,7 @@ export const useConnectivity = () => {
 
   // Detectar tipo de conexión si está disponible
   const detectConnectionType = useCallback(() => {
-    if (navigator.connection) {
+    if (typeof navigator !== 'undefined' && navigator.connection) {
       const connection = navigator.connection;
       setConnectionType(connection.effectiveType || connection.type || 'unknown');
     } else {
@@ -25,6 +26,11 @@ export const useConnectivity = () => {
   // Función para verificar conectividad real (ping a un endpoint)
   const checkRealConnectivity = useCallback(async () => {
     try {
+      // Verificar que estamos en el lado del cliente
+      if (typeof window === 'undefined') {
+        return true;
+      }
+
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 3000); // 3 segundos timeout
 
@@ -46,16 +52,21 @@ export const useConnectivity = () => {
 
   // Función para activar sincronización automática con debounce
   const triggerAutoSync = useCallback(async () => {
-    const now = Date.now();
-    const DEBOUNCE_TIME = 10000; // 10 segundos entre intentos
-    
-    // Verificar debounce - evitar múltiples sincronizaciones muy seguidas
-    if (now - lastSyncAttempt < DEBOUNCE_TIME) {
-      console.log('⏳ Sincronización automática en cooldown, esperando...');
-      return;
-    }
-    
     try {
+      // Verificar que estamos en el lado del cliente
+      if (typeof window === 'undefined') {
+        return;
+      }
+
+      const now = Date.now();
+      const DEBOUNCE_TIME = 10000; // 10 segundos entre intentos
+      
+      // Verificar debounce - evitar múltiples sincronizaciones muy seguidas
+      if (now - lastSyncAttempt < DEBOUNCE_TIME) {
+        console.log('⏳ Sincronización automática en cooldown, esperando...');
+        return;
+      }
+      
       setLastSyncAttempt(now);
       
       // Verificar si hay items pendientes de sincronización
@@ -109,47 +120,56 @@ export const useConnectivity = () => {
 
   // Configurar listeners
   useEffect(() => {
-    // Detectar tipo de conexión inicial
-    detectConnectionType();
-
-    // Verificación inicial de conectividad real (especialmente para móvil)
-    const initialConnectivityCheck = async () => {
-      if (navigator.onLine) {
-        const realConnectivity = await checkRealConnectivity();
-        if (!realConnectivity) {
-          console.log('📱 Móvil: navigator.onLine dice online pero no hay conectividad real');
-          setIsOnline(false);
-        }
-      }
-    };
-
-    // Ejecutar verificación inicial después de un breve delay
-    const timeoutId = setTimeout(initialConnectivityCheck, 1000);
-
-    // Listeners para cambios de conectividad
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-
-    // Listener para cambios en el tipo de conexión
-    if (navigator.connection) {
-      navigator.connection.addEventListener('change', detectConnectionType);
+    // Verificar que estamos en el lado del cliente
+    if (typeof window === 'undefined') {
+      return;
     }
 
-    // Cleanup
-    return () => {
-      clearTimeout(timeoutId);
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-      
-      if (navigator.connection) {
-        navigator.connection.removeEventListener('change', detectConnectionType);
+    try {
+      // Detectar tipo de conexión inicial
+      detectConnectionType();
+
+      // Verificación inicial de conectividad real (especialmente para móvil)
+      const initialConnectivityCheck = async () => {
+        if (typeof navigator !== 'undefined' && navigator.onLine) {
+          const realConnectivity = await checkRealConnectivity();
+          if (!realConnectivity) {
+            console.log('📱 Móvil: navigator.onLine dice online pero no hay conectividad real');
+            setIsOnline(false);
+          }
+        }
+      };
+
+      // Ejecutar verificación inicial después de un breve delay
+      const timeoutId = setTimeout(initialConnectivityCheck, 1000);
+
+      // Listeners para cambios de conectividad
+      window.addEventListener('online', handleOnline);
+      window.addEventListener('offline', handleOffline);
+
+      // Listener para cambios en el tipo de conexión
+      if (typeof navigator !== 'undefined' && navigator.connection) {
+        navigator.connection.addEventListener('change', detectConnectionType);
       }
-    };
+
+      // Cleanup
+      return () => {
+        clearTimeout(timeoutId);
+        window.removeEventListener('online', handleOnline);
+        window.removeEventListener('offline', handleOffline);
+        
+        if (typeof navigator !== 'undefined' && navigator.connection) {
+          navigator.connection.removeEventListener('change', detectConnectionType);
+        }
+      };
+    } catch (error) {
+      console.error('❌ Error configurando listeners de conectividad:', error);
+    }
   }, [handleOnline, handleOffline, detectConnectionType, checkRealConnectivity]);
 
   // Función para obtener información detallada de la conexión
   const getConnectionInfo = useCallback(() => {
-    const connection = navigator.connection;
+    const connection = typeof navigator !== 'undefined' ? navigator.connection : null;
     
     return {
       isOnline,

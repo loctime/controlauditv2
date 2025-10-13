@@ -13,14 +13,15 @@ import PWADownloadButton from './components/common/PWADownloadButton';
 import OfflineFallback from './components/common/OfflineFallback';
 import MobileDebug from './components/common/MobileDebug';
 import OfflineDebugInfo from './components/common/OfflineDebugInfo';
-import { useConnectivity } from './hooks/useConnectivity';
+import ErrorBoundary from './components/common/ErrorBoundary';
+import { useConnectivitySimple } from './hooks/useConnectivitySimple';
 // import { useBackButton } from './hooks/useBackButton'; // Deshabilitado para web
 
 const App = () => {
   // Hook para manejar el botón atrás de Android - deshabilitado para web
   // useBackButton();
   
-  const { isOnline, checkRealConnectivity } = useConnectivity();
+  const { isOnline, checkRealConnectivity } = useConnectivitySimple();
   const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
 
@@ -35,60 +36,60 @@ const App = () => {
 
   // Marcar que la app se cargó exitosamente
   useEffect(() => {
-    if (isOnline && !hasLoadedOnce) {
+    if (!hasLoadedOnce) {
       localStorage.setItem('controlaudit_loaded_once', 'true');
       setHasLoadedOnce(true);
     }
-  }, [isOnline, hasLoadedOnce]);
+  }, [hasLoadedOnce]);
 
   // Función para reintentar conexión
   const handleRetry = async () => {
-    const realConnectivity = await checkRealConnectivity();
-    if (realConnectivity) {
-      window.location.reload();
-    }
+    window.location.reload();
   };
 
   // Mostrar fallback offline solo si nunca se cargó y no hay conexión
+  // Simplificado para evitar problemas de carga infinita
   if (!isInitialLoad && !isOnline && !hasLoadedOnce) {
     return <OfflineFallback onRetry={handleRetry} />;
   }
 
   return (
-    <ColorModeProvider>
-      <AuthContextComponent>
-        <LocalizationProvider dateAdapter={AdapterDayjs}>
-          <BrowserRouter>
-            <div className="main-app-container">
-              <AppRouter />
-              {/* Debug móvil temporal */}
-              <MobileDebug />
-              {/* Debug offline para verificar datos del usuario */}
-              <OfflineDebugInfo />
-              {/* Solo mostrar componentes PWA cuando no esté en loading inicial */}
-              {!isInitialLoad && (
-                <>
-                  <PWAInstallPrompt />
-                  <PWADownloadButton />
-                </>
-              )}
-              <ToastContainer
-                position="top-right"
-                autoClose={5000}
-                hideProgressBar={false}
-                newestOnTop={false}
-                closeOnClick
-                rtl={false}
-                pauseOnFocusLoss
-                draggable
-                pauseOnHover
-                theme="light"
-              />
-            </div>
-          </BrowserRouter>
-        </LocalizationProvider>
-      </AuthContextComponent>
-    </ColorModeProvider>
+    <ErrorBoundary>
+      <ColorModeProvider>
+        <AuthContextComponent>
+          <LocalizationProvider dateAdapter={AdapterDayjs}>
+            <BrowserRouter>
+              <div className="main-app-container">
+                <AppRouter />
+                {/* Debug móvil temporal */}
+                <MobileDebug />
+                {/* Debug offline para verificar datos del usuario */}
+                <OfflineDebugInfo />
+                {/* Solo mostrar componentes PWA cuando no esté en loading inicial */}
+                {!isInitialLoad && (
+                  <>
+                    <PWAInstallPrompt />
+                    <PWADownloadButton />
+                  </>
+                )}
+                <ToastContainer
+                  position="top-right"
+                  autoClose={5000}
+                  hideProgressBar={false}
+                  newestOnTop={false}
+                  closeOnClick
+                  rtl={false}
+                  pauseOnFocusLoss
+                  draggable
+                  pauseOnHover
+                  theme="light"
+                />
+              </div>
+            </BrowserRouter>
+          </LocalizationProvider>
+        </AuthContextComponent>
+      </ColorModeProvider>
+    </ErrorBoundary>
   );
 };
 

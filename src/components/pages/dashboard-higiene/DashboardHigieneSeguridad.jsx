@@ -14,7 +14,8 @@ import {
   Select,
   MenuItem,
   Chip,
-  Divider
+  Divider,
+  Button
 } from '@mui/material';
 import {
   TrendingUp as TrendingUpIcon,
@@ -34,6 +35,7 @@ import { useAuth } from '../../context/AuthContext';
 import IndiceCard from './components/IndiceCard';
 import MetricaCard from './components/MetricaCard';
 import GraficoIndices from './components/GraficoIndices';
+import ErrorBoundary from '../../common/ErrorBoundary';
 
 const DashboardHigieneSeguridad = () => {
   const { userProfile, userEmpresas, userSucursales } = useAuth();
@@ -41,6 +43,7 @@ const DashboardHigieneSeguridad = () => {
   const [selectedEmpresa, setSelectedEmpresa] = useState('');
   const [selectedSucursal, setSelectedSucursal] = useState('');
   const [selectedPeriodo, setSelectedPeriodo] = useState('mes');
+  const [loadingTimeout, setLoadingTimeout] = useState(false);
   
   
   const [datos, setDatos] = useState({
@@ -320,6 +323,15 @@ const DashboardHigieneSeguridad = () => {
     }
 
     setLoading(true);
+    setLoadingTimeout(false);
+
+    // Timeout para evitar carga infinita
+    const timeoutId = setTimeout(() => {
+      console.warn('⚠️ Timeout en carga de datos del dashboard');
+      setLoadingTimeout(true);
+      setLoading(false);
+    }, 15000); // 15 segundos timeout
+
     try {
       const [empleados, accidentes, capacitaciones] = await Promise.all([
         cargarEmpleados(),
@@ -340,6 +352,7 @@ const DashboardHigieneSeguridad = () => {
     } catch (error) {
       console.error('Error cargando datos:', error);
     } finally {
+      clearTimeout(timeoutId);
       setLoading(false);
     }
   }, [selectedSucursal, selectedPeriodo, cargarEmpleados, cargarAccidentes, cargarCapacitaciones, obtenerSucursalSeleccionada, calcularIndices, selectedEmpresa]);
@@ -354,11 +367,59 @@ const DashboardHigieneSeguridad = () => {
   const empresaSeleccionada = userEmpresas?.find(e => e.id === selectedEmpresa);
   const sucursalSeleccionada = userSucursales?.find(s => s.id === selectedSucursal);
 
+  // Pantalla de timeout
+  if (loadingTimeout) {
+    return (
+      <Container maxWidth="xl" sx={{ py: 4 }}>
+        <Paper elevation={2} sx={{ p: 4, borderRadius: 2 }}>
+          <Box display="flex" flexDirection="column" alignItems="center" textAlign="center">
+            <ErrorIcon sx={{ fontSize: 64, color: 'warning.main', mb: 2 }} />
+            <Typography variant="h5" sx={{ fontWeight: 'bold', mb: 2 }}>
+              ⏰ Tiempo de carga excedido
+            </Typography>
+            <Typography variant="body1" sx={{ mb: 3, color: 'text.secondary' }}>
+              El dashboard está tardando más de lo esperado en cargar. Esto puede deberse a:
+            </Typography>
+            <Box sx={{ textAlign: 'left', mb: 3 }}>
+              <Typography variant="body2" sx={{ mb: 1 }}>• Conexión lenta a la base de datos</Typography>
+              <Typography variant="body2" sx={{ mb: 1 }}>• Gran cantidad de datos para procesar</Typography>
+              <Typography variant="body2" sx={{ mb: 1 }}>• Problemas temporales del servidor</Typography>
+            </Box>
+            <Button
+              variant="contained"
+              color="primary"
+              onClick={() => {
+                setLoadingTimeout(false);
+                setLoading(true);
+                cargarDatos();
+              }}
+              sx={{ mb: 2 }}
+            >
+              🔄 Reintentar
+            </Button>
+            <Button
+              variant="outlined"
+              onClick={() => window.location.reload()}
+            >
+              🔄 Recargar Página
+            </Button>
+          </Box>
+        </Paper>
+      </Container>
+    );
+  }
+
   if (loading) {
     return (
       <Container maxWidth="xl" sx={{ py: 4 }}>
-        <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
-          <CircularProgress size={60} />
+        <Box display="flex" flexDirection="column" justifyContent="center" alignItems="center" minHeight="400px">
+          <CircularProgress size={60} sx={{ mb: 2 }} />
+          <Typography variant="h6" sx={{ mb: 1 }}>
+            Cargando Dashboard de Seguridad...
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            Obteniendo datos de empleados, accidentes y capacitaciones
+          </Typography>
         </Box>
       </Container>
     );
@@ -387,11 +448,12 @@ const DashboardHigieneSeguridad = () => {
   }
 
   return (
-    <Container maxWidth="xl" sx={{ py: 4 }}>
-      
+    <ErrorBoundary>
+      <Container maxWidth="xl" sx={{ py: 4 }}>
+        
 
-      {/* Filtros */}
-      <Paper elevation={2} sx={{ p: 1, mb: 4, borderRadius: 2 }}>
+        {/* Filtros */}
+        <Paper elevation={2} sx={{ p: 1, mb: 4, borderRadius: 2 }}>
          <Typography variant="h4" sx={{ fontWeight: 'bold', color: 'text.primary', mb: 1 }}>
           🛡️ Dashboard Higiene y Seguridad
         </Typography>
@@ -660,10 +722,11 @@ const DashboardHigieneSeguridad = () => {
         </Grid>
       </Box>
 
-      {/* Gráfico de índices */}
-      <GraficoIndices datos={datos} periodo={selectedPeriodo} />
+        {/* Gráfico de índices */}
+        <GraficoIndices datos={datos} periodo={selectedPeriodo} />
 
-    </Container>
+      </Container>
+    </ErrorBoundary>
   );
 };
 
