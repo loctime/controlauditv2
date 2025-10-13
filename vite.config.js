@@ -12,7 +12,11 @@ export default defineConfig({
   // Configuración para optimizar el desarrollo
   optimizeDeps: {
     exclude: ['@capacitor/ios', '@capacitor/android'],
-    include: ['@capacitor/core', '@capacitor/app', 'react', 'react-dom', '@emotion/react', '@emotion/styled']
+    include: ['@capacitor/core', '@capacitor/app'],
+    esbuildOptions: {
+      // Asegurar que solo hay una versión de React
+      inject: []
+    }
   },
            build: {
            outDir: 'dist',
@@ -106,13 +110,18 @@ export default defineConfig({
     host: true
   },
   // Optimización de resolución de módulos
-           resolve: {
-           alias: {
-             '@': resolve(__dirname, 'src')
-           },
-           // Excluir paquetes de Capacitor que no se usan en desarrollo web
-           dedupe: ['@capacitor/ios', 'react', 'react-dom', '@emotion/react', '@emotion/styled']
-         },
+  resolve: {
+    alias: {
+      '@': resolve(__dirname, 'src'),
+      // Forzar que todos los imports de React usen la misma instancia
+      'react': resolve(__dirname, './node_modules/react'),
+      'react-dom': resolve(__dirname, './node_modules/react-dom'),
+      '@emotion/react': resolve(__dirname, './node_modules/@emotion/react'),
+      '@emotion/styled': resolve(__dirname, './node_modules/@emotion/styled')
+    },
+    // Excluir paquetes de Capacitor que no se usan en desarrollo web
+    dedupe: ['react', 'react-dom', '@emotion/react', '@emotion/styled', '@emotion/cache']
+  },
   // Optimización de assets
   assetsInclude: ['**/*.png', '**/*.jpg', '**/*.jpeg', '**/*.gif', '**/*.svg', '**/*.woff', '**/*.woff2'],
   // Optimización de CSS
