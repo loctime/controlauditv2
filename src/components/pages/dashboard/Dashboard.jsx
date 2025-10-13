@@ -8,7 +8,7 @@ import { toast } from 'react-toastify';
 import { verifyAdminCode, verifySuperAdminCode } from "../../../config/admin";
 import GestionClientes from "./GestionClientes";
 import userService from "../../../services/userService";
-import { getEnvironmentInfo } from "../../../config/environment.js";
+import { getEnvironmentInfo, getBackendUrl } from "../../../config/environment.js";
 import BackendHealthCheck from "../../../utils/backendHealthCheck.js";
 import BackendStatus from "../../../utils/backendStatus.js";
 import CacheManager from "../../common/CacheManager";
@@ -325,6 +325,22 @@ function Dashboard() {
       
       // 1. Crear usuario principal usando el backend (sin desconectar)
       const password = form.password || 'Cambiar123!';
+      
+      // 🔍 DIAGNÓSTICO: Verificar configuración del backend
+      console.log('🔍 DIAGNÓSTICO DE BACKEND:');
+      console.log('   Backend URL:', getBackendUrl());
+      console.log('   Environment:', getEnvironmentInfo());
+      console.log('   Usuario autenticado:', auth.currentUser?.email);
+      
+      // Probar conectividad del backend
+      try {
+        const healthCheck = await fetch(`${getBackendUrl()}/health`);
+        const healthData = await healthCheck.json();
+        console.log('✅ Backend health check:', healthData);
+      } catch (error) {
+        console.error('❌ Backend health check falló:', error);
+      }
+      
       const userRes = await userService.createUser({
         email: form.email,
         password: password,
