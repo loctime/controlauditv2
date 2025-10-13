@@ -56,7 +56,7 @@ export default function Accidentes() {
   const location = useLocation();
 
   const [accidentes, setAccidentes] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [selectedEmpresa, setSelectedEmpresa] = useState('');
   const [selectedSucursal, setSelectedSucursal] = useState('');
   const [filterTipo, setFilterTipo] = useState('');
@@ -69,11 +69,19 @@ export default function Accidentes() {
   
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [empresasCargadas, setEmpresasCargadas] = useState(false);
 
   // Filtrar sucursales por empresa
   const sucursalesFiltradas = selectedEmpresa
     ? userSucursales?.filter(s => s.empresaId === selectedEmpresa) || []
     : userSucursales || [];
+
+  // Detectar cuando las empresas han sido cargadas
+  useEffect(() => {
+    if (userEmpresas !== undefined) {
+      setEmpresasCargadas(true);
+    }
+  }, [userEmpresas]);
 
   // Cargar empresa/sucursal desde navegación o por defecto
   useEffect(() => {
@@ -83,10 +91,20 @@ export default function Accidentes() {
       if (stateEmpresaId && userEmpresas.some(e => e.id === stateEmpresaId)) {
         setSelectedEmpresa(stateEmpresaId);
       } else {
-        setSelectedEmpresa(userEmpresas[0].id);
+        // Buscar una empresa que tenga sucursales
+        const empresaConSucursales = userEmpresas.find(empresa => {
+          const sucursalesDeEmpresa = userSucursales?.filter(s => s.empresaId === empresa.id) || [];
+          return sucursalesDeEmpresa.length > 0;
+        });
+        
+        if (empresaConSucursales) {
+          setSelectedEmpresa(empresaConSucursales.id);
+        } else {
+          setSelectedEmpresa(userEmpresas[0].id);
+        }
       }
     }
-  }, [userEmpresas, location.state]);
+  }, [userEmpresas, userSucursales, location.state, selectedEmpresa]);
 
   useEffect(() => {
     if (selectedEmpresa && sucursalesFiltradas.length > 0 && !selectedSucursal) {
@@ -102,7 +120,21 @@ export default function Accidentes() {
 
   // Cargar accidentes
   const loadAccidentes = useCallback(async () => {
-    if (!selectedEmpresa) return;
+    if (!empresasCargadas) {
+      return;
+    }
+
+    if (!userEmpresas || userEmpresas.length === 0) {
+      setAccidentes([]);
+      setLoading(false);
+      return;
+    }
+
+    if (!selectedEmpresa) {
+      setAccidentes([]);
+      setLoading(false);
+      return;
+    }
 
     setLoading(true);
     try {
@@ -130,7 +162,7 @@ export default function Accidentes() {
     } finally {
       setLoading(false);
     }
-  }, [selectedEmpresa, selectedSucursal, filterTipo, filterEstado]);
+  }, [selectedEmpresa, selectedSucursal, filterTipo, filterEstado, userEmpresas, empresasCargadas]);
 
   useEffect(() => {
     loadAccidentes();
@@ -230,6 +262,17 @@ export default function Accidentes() {
     return tipo === 'accidente' ? <AccidenteIcon /> : <IncidenteIcon />;
   };
 
+  // Mostrar loading mientras se cargan los datos
+  if (!empresasCargadas) {
+    return (
+      <Container maxWidth="xl" sx={{ py: 4 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
+          <CircularProgress />
+        </Box>
+      </Container>
+    );
+  }
+
   return (
     <Container maxWidth="xl" sx={{ py: 4 }}>
       <Paper sx={{ p: 3 }}>
@@ -247,7 +290,7 @@ export default function Accidentes() {
               color="error"
               startIcon={<AccidenteIcon />}
               onClick={() => setOpenAccidenteModal(true)}
-              disabled={!selectedSucursal}
+              disabled={!selectedSucursal || !userEmpresas || userEmpresas.length === 0}
             >
               Nuevo Accidente
             </Button>
@@ -256,12 +299,45 @@ export default function Accidentes() {
               color="warning"
               startIcon={<IncidenteIcon />}
               onClick={() => setOpenIncidenteModal(true)}
-              disabled={!selectedSucursal}
+              disabled={!selectedSucursal || !userEmpresas || userEmpresas.length === 0}
             >
               Nuevo Incidente
             </Button>
           </Box>
         </Box>
+
+        {/* Alertas de estado */}
+        {!userEmpresas || userEmpresas.length === 0 ? (
+          <Alert severity="error" sx={{ mb: 3 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2 }}>
+              <Typography variant="body1">
+                🏢 No hay empresas disponibles. Contacta al administrador para asignar empresas a tu usuario.
+              </Typography>
+              <Button
+                variant="contained"
+                size="small"
+                onClick={() => window.location.href = '/establecimientos'}
+              >
+                🏢 Ir a Empresas
+              </Button>
+            </Box>
+          </Alert>
+        ) : !selectedSucursal && sucursalesFiltradas.length === 0 ? (
+          <Alert severity="warning" sx={{ mb: 3 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2 }}>
+              <Typography variant="body1">
+                🏪 No hay sucursales disponibles para la empresa seleccionada.
+              </Typography>
+              <Button
+                variant="contained"
+                size="small"
+                onClick={() => window.location.href = '/establecimientos'}
+              >
+                🏪 Crear Sucursales
+              </Button>
+            </Box>
+          </Alert>
+        ) : null}
 
         {/* Filtros */}
         <Grid container spacing={2} sx={{ mb: 3 }}>
@@ -275,6 +351,7 @@ export default function Accidentes() {
                   setSelectedSucursal('');
                 }}
                 label="Empresa"
+                disabled={!userEmpresas || userEmpresas.length === 0}
               >
                 {userEmpresas?.map((empresa) => (
                   <MenuItem key={empresa.id} value={empresa.id}>
