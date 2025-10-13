@@ -482,7 +482,7 @@ export default function Capacitaciones() {
               <Button
                 variant="contained"
                 size="small"
-                onClick={() => window.location.href = '/establecimientos'}
+                onClick={() => window.location.href = '/establecimiento'}
               >
                 🏢 Ir a Empresas
               </Button>
@@ -497,7 +497,7 @@ export default function Capacitaciones() {
               <Button
                 variant="contained"
                 size="small"
-                onClick={() => window.location.href = '/establecimientos'}
+                onClick={() => window.location.href = '/establecimiento'}
               >
                 🏪 Crear Sucursales
               </Button>

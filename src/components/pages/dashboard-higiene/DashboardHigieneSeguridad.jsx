@@ -530,7 +530,7 @@ const DashboardHigieneSeguridad = () => {
                 <Button
                   variant="outlined"
                   size="small"
-                  onClick={() => window.location.href = '/establecimientos'}
+                  onClick={() => window.location.href = '/establecimiento'}
                   sx={{ ml: 2 }}
                 >
                   🏢 Ir a Empresas
@@ -560,7 +560,7 @@ const DashboardHigieneSeguridad = () => {
                 <Button
                   variant="outlined"
                   size="small"
-                  onClick={() => window.location.href = '/establecimientos'}
+                  onClick={() => window.location.href = '/establecimiento'}
                   sx={{ ml: 2 }}
                 >
                   🏪 Ir a Sucursales
@@ -651,7 +651,7 @@ const DashboardHigieneSeguridad = () => {
               <Button
                 variant="contained"
                 size="small"
-                onClick={() => window.location.href = '/establecimientos'}
+                onClick={() => window.location.href = '/establecimiento'}
               >
                 🏢 Crear Empresas
               </Button>
@@ -666,7 +666,7 @@ const DashboardHigieneSeguridad = () => {
               <Button
                 variant="contained"
                 size="small"
-                onClick={() => window.location.href = '/establecimientos'}
+                onClick={() => window.location.href = '/establecimiento'}
               >
                 🏪 Crear Sucursales
               </Button>
@@ -737,7 +737,7 @@ const DashboardHigieneSeguridad = () => {
             <Button
               variant="contained"
               size="small"
-              onClick={() => window.location.href = '/establecimientos'}
+              onClick={() => window.location.href = '/establecimiento'}
             >
               🏢 Crear Empresas
             </Button>
@@ -752,7 +752,7 @@ const DashboardHigieneSeguridad = () => {
             <Button
               variant="contained"
               size="small"
-              onClick={() => window.location.href = '/establecimientos'}
+              onClick={() => window.location.href = '/establecimiento'}
             >
               🏪 Crear Sucursales
             </Button>
