@@ -45,6 +45,7 @@ const DashboardHigieneSeguridad = () => {
   const [selectedSucursal, setSelectedSucursal] = useState('');
   const [selectedPeriodo, setSelectedPeriodo] = useState('mes');
   const [loadingTimeout, setLoadingTimeout] = useState(false);
+  const [empresasCargadas, setEmpresasCargadas] = useState(false);
   
   
   const [datos, setDatos] = useState({
@@ -72,6 +73,13 @@ const DashboardHigieneSeguridad = () => {
   const sucursalesFiltradas = selectedEmpresa
     ? userSucursales?.filter(s => s.empresaId === selectedEmpresa) || []
     : userSucursales || [];
+
+  // Detectar cuando las empresas han sido cargadas
+  useEffect(() => {
+    if (userEmpresas !== undefined) {
+      setEmpresasCargadas(true);
+    }
+  }, [userEmpresas]);
 
   // Cargar datos iniciales
   useEffect(() => {
@@ -305,7 +313,59 @@ const DashboardHigieneSeguridad = () => {
 
   // Cargar todos los datos
   const cargarDatos = useCallback(async () => {
+    // Si no hay empresas cargadas aún, esperar
+    if (!empresasCargadas) {
+      return;
+    }
+
+    // Si no hay empresas, mostrar datos vacíos
+    if (!userEmpresas || userEmpresas.length === 0) {
+      setDatos({
+        empleados: [],
+        accidentes: [],
+        capacitaciones: [],
+        indices: {
+          tasaAusentismo: 0,
+          indiceFrecuencia: 0,
+          indiceIncidencia: 0,
+          indiceGravedad: 0
+        },
+        metricas: {
+          totalEmpleados: 0,
+          empleadosActivos: 0,
+          empleadosEnReposo: 0,
+          horasTrabajadas: 0,
+          horasPerdidas: 0,
+          accidentesConTiempoPerdido: 0,
+          diasPerdidos: 0
+        }
+      });
+      setLoading(false);
+      return;
+    }
+
+    // Si no hay empresa seleccionada, mostrar datos vacíos
     if (!selectedEmpresa) {
+      setDatos({
+        empleados: [],
+        accidentes: [],
+        capacitaciones: [],
+        indices: {
+          tasaAusentismo: 0,
+          indiceFrecuencia: 0,
+          indiceIncidencia: 0,
+          indiceGravedad: 0
+        },
+        metricas: {
+          totalEmpleados: 0,
+          empleadosActivos: 0,
+          empleadosEnReposo: 0,
+          horasTrabajadas: 0,
+          horasPerdidas: 0,
+          accidentesConTiempoPerdido: 0,
+          diasPerdidos: 0
+        }
+      });
       setLoading(false);
       return;
     }
@@ -371,10 +431,10 @@ const DashboardHigieneSeguridad = () => {
   }, [selectedSucursal, selectedPeriodo, cargarEmpleados, cargarAccidentes, cargarCapacitaciones, obtenerSucursalSeleccionada, calcularIndices, selectedEmpresa]);
 
   useEffect(() => {
-    if (selectedEmpresa) {
+    if (empresasCargadas) {
       cargarDatos();
     }
-  }, [selectedSucursal, selectedEmpresa, cargarDatos]);
+  }, [empresasCargadas, selectedSucursal, selectedEmpresa, cargarDatos]);
 
 
   const empresaSeleccionada = userEmpresas?.find(e => e.id === selectedEmpresa);
@@ -422,54 +482,6 @@ const DashboardHigieneSeguridad = () => {
     );
   }
 
-  // Si no hay empresas o sucursales, mostrar mensaje de error
-  if (!userEmpresas || userEmpresas.length === 0) {
-    return (
-      <Container maxWidth="xl" sx={{ py: 4 }}>
-        <Paper elevation={2} sx={{ p: 4, borderRadius: 2 }}>
-          <Box display="flex" flexDirection="column" alignItems="center" textAlign="center">
-            <WarningIcon sx={{ fontSize: 64, color: 'warning.main', mb: 2 }} />
-            <Typography variant="h5" sx={{ fontWeight: 'bold', mb: 2 }}>
-              ⚠️ No hay empresas disponibles
-            </Typography>
-            <Typography variant="body1" sx={{ mb: 3, color: 'text.secondary' }}>
-              No se encontraron empresas asignadas a tu usuario. Contacta al administrador.
-            </Typography>
-            <Button
-              variant="contained"
-              onClick={() => window.location.reload()}
-            >
-              🔄 Recargar
-            </Button>
-          </Box>
-        </Paper>
-      </Container>
-    );
-  }
-
-  if (!userSucursales || userSucursales.length === 0) {
-    return (
-      <Container maxWidth="xl" sx={{ py: 4 }}>
-        <Paper elevation={2} sx={{ p: 4, borderRadius: 2 }}>
-          <Box display="flex" flexDirection="column" alignItems="center" textAlign="center">
-            <WarningIcon sx={{ fontSize: 64, color: 'warning.main', mb: 2 }} />
-            <Typography variant="h5" sx={{ fontWeight: 'bold', mb: 2 }}>
-              ⚠️ No hay sucursales disponibles
-            </Typography>
-            <Typography variant="body1" sx={{ mb: 3, color: 'text.secondary' }}>
-              No se encontraron sucursales asignadas a tu usuario. Contacta al administrador.
-            </Typography>
-            <Button
-              variant="contained"
-              onClick={() => window.location.reload()}
-            >
-              🔄 Recargar
-            </Button>
-          </Box>
-        </Paper>
-      </Container>
-    );
-  }
 
   if (loading) {
     return (
@@ -503,42 +515,49 @@ const DashboardHigieneSeguridad = () => {
         </Typography>
         
         {/* Información del contexto */}
-        {empresaSeleccionada && (
-          <Alert severity={sucursalSeleccionada ? "info" : "warning"} sx={{ mb: 1 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
-              <BusinessIcon />
-             
-              {sucursalSeleccionada ? (
-                <>
-                  <Typography variant="body1">
-                    <strong>{empresaSeleccionada.nombre}</strong> - {sucursalSeleccionada.nombre}
-                  </Typography>
-                  <Chip 
-                    label={selectedPeriodo.charAt(0).toUpperCase() + selectedPeriodo.slice(1)} 
-                    size="small" 
-                    color="primary" 
-                  />
-                  <Chip 
-                    label={`${sucursalSeleccionada.horasSemanales || 40}h/semana`}
-                    size="small" 
-                    color="secondary" 
-                  />
-                </>
-              ) : (
+        <Alert severity={
+          !userEmpresas || userEmpresas.length === 0 ? "error" :
+          sucursalSeleccionada ? "info" : "warning"
+        } sx={{ mb: 1 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
+            <BusinessIcon />
+           
+            {!userEmpresas || userEmpresas.length === 0 ? (
+              <Typography variant="body1">
+                <strong>No hay empresas disponibles</strong> - Contacta al administrador
+              </Typography>
+            ) : sucursalSeleccionada ? (
+              <>
                 <Typography variant="body1">
-                  <strong>{empresaSeleccionada.nombre}</strong> - No hay sucursales disponibles
+                  <strong>{empresaSeleccionada.nombre}</strong> - {sucursalSeleccionada.nombre}
                 </Typography>
-              )}
-              
-              <Typography variant="subtitle1" color="textSecondary" sx={{ marginLeft: 'auto', textAlign: 'right', ml: 4 }}>
-                {sucursalSeleccionada 
+                <Chip 
+                  label={selectedPeriodo.charAt(0).toUpperCase() + selectedPeriodo.slice(1)} 
+                  size="small" 
+                  color="primary" 
+                />
+                <Chip 
+                  label={`${sucursalSeleccionada.horasSemanales || 40}h/semana`}
+                  size="small" 
+                  color="secondary" 
+                />
+              </>
+            ) : (
+              <Typography variant="body1">
+                <strong>{empresaSeleccionada?.nombre || 'Empresa'}</strong> - No hay sucursales disponibles
+              </Typography>
+            )}
+            
+            <Typography variant="subtitle1" color="textSecondary" sx={{ marginLeft: 'auto', textAlign: 'right', ml: 4 }}>
+              {!userEmpresas || userEmpresas.length === 0 
+                ? "No se encontraron empresas asignadas a tu usuario"
+                : sucursalSeleccionada 
                   ? "Análisis de índices técnicos y métricas de seguridad laboral"
                   : "Selecciona una sucursal para ver el análisis de seguridad"
-                }
-              </Typography>
-            </Box>
-          </Alert>
-        )}
+              }
+            </Typography>
+          </Box>
+        </Alert>
         <Grid container spacing={3}>
           <Grid item xs={12} md={4}>
             <FormControl fullWidth>
@@ -547,6 +566,7 @@ const DashboardHigieneSeguridad = () => {
                 value={selectedEmpresa}
                 onChange={(e) => setSelectedEmpresa(e.target.value)}
                 label="Empresa"
+                disabled={!userEmpresas || userEmpresas.length === 0}
               >
                 {userEmpresas?.map(empresa => (
                   <MenuItem key={empresa.id} value={empresa.id}>
@@ -566,6 +586,7 @@ const DashboardHigieneSeguridad = () => {
                 value={selectedSucursal}
                 onChange={(e) => setSelectedSucursal(e.target.value)}
                 label="Sucursal"
+                disabled={!userEmpresas || userEmpresas.length === 0}
               >
                 {sucursalesFiltradas.map(sucursal => (
                   <MenuItem key={sucursal.id} value={sucursal.id}>
@@ -585,6 +606,7 @@ const DashboardHigieneSeguridad = () => {
                 value={selectedPeriodo}
                 onChange={(e) => setSelectedPeriodo(e.target.value)}
                 label="Período"
+                disabled={!userEmpresas || userEmpresas.length === 0}
               >
                 <MenuItem value="semana">Última semana</MenuItem>
                 <MenuItem value="mes">Mes actual</MenuItem>
@@ -600,7 +622,13 @@ const DashboardHigieneSeguridad = () => {
 
       {/* Métricas básicas - Chips compactos */}
       <Box sx={{ mb: 4 }}>
-        {!selectedSucursal ? (
+        {!userEmpresas || userEmpresas.length === 0 ? (
+          <Alert severity="error" sx={{ mb: 2 }}>
+            <Typography variant="body1">
+              🏢 No hay empresas disponibles. Contacta al administrador para asignar empresas a tu usuario.
+            </Typography>
+          </Alert>
+        ) : !selectedSucursal ? (
           <Alert severity="info" sx={{ mb: 2 }}>
             <Typography variant="body1">
               💡 Selecciona una sucursal para ver las métricas de empleados, accidentes y capacitaciones.
@@ -647,7 +675,13 @@ const DashboardHigieneSeguridad = () => {
         📊 Índices Técnicos de Seguridad
       </Typography>
 
-      {!selectedSucursal ? (
+      {!userEmpresas || userEmpresas.length === 0 ? (
+        <Alert severity="error" sx={{ mb: 4 }}>
+          <Typography variant="body1">
+            🏢 Los índices técnicos no están disponibles. Contacta al administrador para asignar empresas a tu usuario.
+          </Typography>
+        </Alert>
+      ) : !selectedSucursal ? (
         <Alert severity="info" sx={{ mb: 4 }}>
           <Typography variant="body1">
             📋 Los índices técnicos se calcularán una vez que selecciones una sucursal con datos de empleados y accidentes.
@@ -795,7 +829,7 @@ const DashboardHigieneSeguridad = () => {
       )}
 
       {/* Gráfico de índices */}
-      {selectedSucursal && <GraficoIndices datos={datos} periodo={selectedPeriodo} />}
+      {userEmpresas && userEmpresas.length > 0 && selectedSucursal && <GraficoIndices datos={datos} periodo={selectedPeriodo} />}
 
       </Container>
     </ErrorBoundary>
