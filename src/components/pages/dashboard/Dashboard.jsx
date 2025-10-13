@@ -388,7 +388,7 @@ function Dashboard() {
         horasSemanales: 40,
         createdAt: new Date(),
         propietarioId: userRes.uid,
-        creadorId: user.uid,
+        creadorId: auth.currentUser.uid,
         activa: true
       });
 
