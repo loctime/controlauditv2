@@ -345,11 +345,55 @@ export const useFormularioHandlers = ({
     }
   }, [puedeEliminar, seccionesNormalizadas, formularioSeleccionado.id, setFormularioSeleccionado]);
 
+  const handleAgregarSeccion = useCallback(async (nombreSeccion) => {
+    console.log('🔧 [DEBUG] handleAgregarSeccion llamado');
+    console.log('🔧 [DEBUG] puedeEditar:', puedeEditar);
+    console.log('🔧 [DEBUG] nombreSeccion:', nombreSeccion);
+    
+    if (!puedeEditar) {
+      console.log('🔧 [DEBUG] Usuario no tiene permisos para editar');
+      Swal.fire("Error", "No tienes permisos para agregar secciones.", "error");
+      return;
+    }
+
+    try {
+      if (!nombreSeccion || !nombreSeccion.trim()) {
+        Swal.fire("Error", "El nombre de la sección es requerido.", "error");
+        return;
+      }
+
+      const nuevaSeccion = {
+        nombre: nombreSeccion.trim(),
+        preguntas: []
+      };
+
+      const seccionesActualizadas = [...seccionesNormalizadas, nuevaSeccion];
+
+      console.log('🔧 [DEBUG] Secciones actualizadas:', seccionesActualizadas);
+      console.log('🔧 [DEBUG] Formulario ID:', formularioSeleccionado.id);
+
+      const formularioRef = doc(db, "formularios", formularioSeleccionado.id);
+      await updateDoc(formularioRef, { 
+        secciones: seccionesActualizadas,
+        ultimaModificacion: new Date()
+      });
+      
+      console.log('🔧 [DEBUG] Documento actualizado en Firestore exitosamente');
+      
+      setFormularioSeleccionado(prev => ({ ...prev, secciones: seccionesActualizadas }));
+      Swal.fire("Éxito", "Sección agregada exitosamente.", "success");
+    } catch (error) {
+      console.error("Error al agregar sección:", error);
+      Swal.fire("Error", "Error al agregar la sección.", "error");
+    }
+  }, [puedeEditar, seccionesNormalizadas, formularioSeleccionado.id, setFormularioSeleccionado]);
+
   return {
     handleGuardarCambiosFormulario,
     handleGuardarCambiosSeccion,
     handleGuardarCambiosPregunta,
     handleGuardarNuevaPregunta,
+    handleAgregarSeccion,
     handleEliminarFormulario,
     handleEliminarSeccion,
     handleEliminarPregunta

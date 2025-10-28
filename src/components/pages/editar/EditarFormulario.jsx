@@ -43,6 +43,7 @@ const EditarFormulario = () => {
   const [cargandoFormulario, setCargandoFormulario] = useState(false); // Nuevo estado
   const [recargando, setRecargando] = useState(false); // Estado para animación del botón
   const navigate = useNavigate();
+  const primerCarga = React.useRef(true);
 
   // Almacena detalles completos de formularios
   const [formulariosCompletos, setFormulariosCompletos] = useState([]);
@@ -137,8 +138,11 @@ const EditarFormulario = () => {
         return false;
       });
       setFormularios(formulariosPermitidos);
-      // Por defecto, selector en 'Todos'
-      setFormularioSeleccionado(null);
+      // Solo resetear formularioSeleccionado en la primera carga
+      if (primerCarga.current) {
+        setFormularioSeleccionado(null);
+        primerCarga.current = false;
+      }
       cargarDetallesFormularios(formulariosPermitidos);
       setLoading(false);
       console.debug(`[onSnapshot] ${formulariosPermitidos.length} formularios cargados en tiempo real`);
@@ -153,6 +157,24 @@ const EditarFormulario = () => {
   React.useEffect(() => {
     console.log('🔧 [DEBUG] Estado loading cambió:', loading);
   }, [loading]);
+
+  // ✅ Mantener el formulario seleccionado actualizado cuando cambian los datos
+  React.useEffect(() => {
+    if (formularioSeleccionado?.id && formulariosCompletos.length > 0) {
+      const formularioActualizado = formulariosCompletos.find(f => f.id === formularioSeleccionado.id);
+      if (formularioActualizado && formularioActualizado.secciones) {
+        // Solo actualizar si hay secciones nuevas (para no perder el estado de edición)
+        setFormularioSeleccionado(prev => ({
+          ...prev,
+          secciones: formularioActualizado.secciones,
+          estado: formularioActualizado.estado,
+          version: formularioActualizado.version,
+          esPublico: formularioActualizado.esPublico,
+          ultimaModificacion: formularioActualizado.ultimaModificacion
+        }));
+      }
+    }
+  }, [formulariosCompletos]);
 
   // Cuando el usuario selecciona un formulario, cargar el detalle solo si no está en cache
   const handleChangeFormulario = async (event) => {
