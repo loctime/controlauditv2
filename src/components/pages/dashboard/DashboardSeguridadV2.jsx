@@ -18,11 +18,11 @@ export default function DashboardSeguridadV2() {
   const [loading, setLoading] = useState(true);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
-  const [selectedSucursal, setSelectedSucursal] = useState(null);
+  const [selectedSucursal, setSelectedSucursal] = useState('todas');
 
   // Establecer sucursal inicial cuando se cargan las sucursales
   useEffect(() => {
-    if (userSucursales && userSucursales.length > 0 && !selectedSucursal) {
+    if (userSucursales && userSucursales.length > 0 && selectedSucursal === 'todas') {
       // Primero intentar usar la sucursal guardada en localStorage
       const savedSucursal = localStorage.getItem('selectedSucursal');
       const savedEmpresa = localStorage.getItem('selectedEmpresa');
@@ -36,21 +36,15 @@ export default function DashboardSeguridadV2() {
         const sucursalesEmpresa = userSucursales.filter(s => s.empresaId === savedEmpresa);
         if (sucursalesEmpresa.length > 0) {
           setSelectedSucursal(sucursalesEmpresa[0].id);
-        } else {
-          setSelectedSucursal(userSucursales[0].id);
         }
         // Limpiar localStorage después de usar
         localStorage.removeItem('selectedEmpresa');
-      } else {
-        setSelectedSucursal(userSucursales[0].id);
       }
     }
   }, [userSucursales, selectedSucursal]);
 
   useEffect(() => {
     const fetchData = async () => {
-      if (!selectedSucursal) return;
-      
       setLoading(true);
       try {
         const companyId = userProfile?.empresaId || userProfile?.uid || 'company-001';
@@ -58,7 +52,7 @@ export default function DashboardSeguridadV2() {
         
         const dashboardData = await safetyDashboardService.getDashboardData(
           companyId, 
-          selectedSucursal,
+          selectedSucursal === 'todas' ? 'todas' : selectedSucursal,
           currentPeriod
         );
         setData(dashboardData);

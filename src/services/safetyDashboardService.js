@@ -48,13 +48,13 @@ export const safetyDashboardService = {
       
       // Obtener información de la empresa y sucursal
       const companyInfo = await this.getCompanyInfo(companyId);
-      const sucursalInfo = await this.getSucursalInfo(sucursalId);
+      const sucursalInfo = sucursalId !== 'todas' ? await this.getSucursalInfo(sucursalId) : null;
       
       return {
         companyId,
         sucursalId,
         companyName: companyInfo?.nombre || 'Empresa',
-        sucursalName: sucursalInfo?.nombre || 'Sucursal',
+        sucursalName: sucursalId === 'todas' ? 'Todas las sucursales' : (sucursalInfo?.nombre || 'Sucursal'),
         period,
         ...metrics,
         alerts: this.generateAlerts(auditoriasData, logsData, formulariosData, accidentesData),
@@ -199,11 +199,17 @@ export const safetyDashboardService = {
   async getEmpleados(sucursalId) {
     try {
       const empleadosRef = collection(db, 'empleados');
-      const q = query(
-        empleadosRef,
-        where('sucursalId', '==', sucursalId),
-        orderBy('nombre', 'asc')
-      );
+      let q;
+      
+      if (sucursalId === 'todas') {
+        q = query(empleadosRef, orderBy('nombre', 'asc'));
+      } else {
+        q = query(
+          empleadosRef,
+          where('sucursalId', '==', sucursalId),
+          orderBy('nombre', 'asc')
+        );
+      }
       
       const snapshot = await getDocs(q);
       const empleados = [];
@@ -228,11 +234,17 @@ export const safetyDashboardService = {
   async getCapacitaciones(sucursalId, period) {
     try {
       const capacitacionesRef = collection(db, 'capacitaciones');
-      const q = query(
-        capacitacionesRef,
-        where('sucursalId', '==', sucursalId),
-        orderBy('fechaRealizada', 'desc')
-      );
+      let q;
+      
+      if (sucursalId === 'todas') {
+        q = query(capacitacionesRef, orderBy('fechaRealizada', 'desc'));
+      } else {
+        q = query(
+          capacitacionesRef,
+          where('sucursalId', '==', sucursalId),
+          orderBy('fechaRealizada', 'desc')
+        );
+      }
       
       const snapshot = await getDocs(q);
       const capacitaciones = [];
@@ -257,11 +269,17 @@ export const safetyDashboardService = {
   async getAccidentes(sucursalId, period) {
     try {
       const accidentesRef = collection(db, 'accidentes');
-      const q = query(
-        accidentesRef,
-        where('sucursalId', '==', sucursalId),
-        orderBy('fechaHora', 'desc')
-      );
+      let q;
+      
+      if (sucursalId === 'todas') {
+        q = query(accidentesRef, orderBy('fechaHora', 'desc'));
+      } else {
+        q = query(
+          accidentesRef,
+          where('sucursalId', '==', sucursalId),
+          orderBy('fechaHora', 'desc')
+        );
+      }
       
       const snapshot = await getDocs(q);
       const accidentes = [];
