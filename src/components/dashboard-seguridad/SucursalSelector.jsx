@@ -55,7 +55,7 @@ export default function SucursalSelector({
         </Typography>
         <FormControl fullWidth size="small">
           <Select
-            value={selectedSucursal || ''}
+            value={selectedSucursal || 'todas'}
             onChange={(e) => onSucursalChange(e.target.value)}
             sx={{
               '& .MuiOutlinedInput-notchedOutline': {
@@ -68,6 +68,11 @@ export default function SucursalSelector({
               }
             }}
           >
+            <MenuItem value="todas">
+              <Typography variant="body2" sx={{ fontWeight: 600, fontStyle: 'italic' }}>
+                Todas las sucursales
+              </Typography>
+            </MenuItem>
             {sucursales.map((sucursal) => (
               <MenuItem key={sucursal.id} value={sucursal.id}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
