@@ -84,15 +84,52 @@ const GraficoIndices = ({ datos, periodo }) => {
     }
   ];
 
-  // Datos para el gráfico de tendencia (simulado para el período)
-  const tendenciaData = [
-    { mes: 'Ene', accidentes: 0, capacitaciones: 2 },
-    { mes: 'Feb', accidentes: 1, capacitaciones: 3 },
-    { mes: 'Mar', accidentes: 0, capacitaciones: 1 },
-    { mes: 'Abr', accidentes: 1, capacitaciones: 4 },
-    { mes: 'May', accidentes: 0, capacitaciones: 2 },
-    { mes: 'Jun', accidentes: 0, capacitaciones: 3 }
-  ];
+  // Datos para el gráfico de tendencia (calculados desde datos reales)
+  const calcularTendenciaMensual = () => {
+    const months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun'];
+    const currentYear = new Date().getFullYear();
+    
+    // Inicializar datos por mes
+    const tendencia = months.map(month => ({
+      mes: month,
+      accidentes: 0,
+      capacitaciones: 0
+    }));
+    
+    // Contar accidentes por mes
+    if (datos.accidentes && datos.accidentes.length > 0) {
+      datos.accidentes.forEach(accidente => {
+        if (accidente.fechaHora) {
+          const fecha = accidente.fechaHora.toDate ? accidente.fechaHora.toDate() : new Date(accidente.fechaHora);
+          const monthIndex = fecha.getMonth();
+          
+          // Solo contar si es del año actual
+          if (fecha.getFullYear() === currentYear && monthIndex < months.length) {
+            tendencia[monthIndex].accidentes++;
+          }
+        }
+      });
+    }
+    
+    // Contar capacitaciones por mes
+    if (datos.capacitaciones && datos.capacitaciones.length > 0) {
+      datos.capacitaciones.forEach(capacitacion => {
+        if (capacitacion.fechaRealizada) {
+          const fecha = capacitacion.fechaRealizada.toDate ? capacitacion.fechaRealizada.toDate() : new Date(capacitacion.fechaRealizada);
+          const monthIndex = fecha.getMonth();
+          
+          // Solo contar si es del año actual
+          if (fecha.getFullYear() === currentYear && monthIndex < months.length) {
+            tendencia[monthIndex].capacitaciones++;
+          }
+        }
+      });
+    }
+    
+    return tendencia;
+  };
+  
+  const tendenciaData = calcularTendenciaMensual();
 
   const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
