@@ -57,8 +57,8 @@ export default function Accidentes() {
 
   const [accidentes, setAccidentes] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [selectedEmpresa, setSelectedEmpresa] = useState('');
-  const [selectedSucursal, setSelectedSucursal] = useState('');
+  const [selectedEmpresa, setSelectedEmpresa] = useState('todas');
+  const [selectedSucursal, setSelectedSucursal] = useState('todas');
   const [filterTipo, setFilterTipo] = useState('');
   const [filterEstado, setFilterEstado] = useState('');
   
@@ -85,38 +85,24 @@ export default function Accidentes() {
 
   // Cargar empresa/sucursal desde navegación o por defecto
   useEffect(() => {
-    if (userEmpresas && userEmpresas.length > 0 && !selectedEmpresa) {
+    if (userEmpresas && userEmpresas.length > 0 && selectedEmpresa === 'todas') {
       // Verificar si viene de navegación con datos preseleccionados
       const stateEmpresaId = location.state?.empresaId;
       if (stateEmpresaId && userEmpresas.some(e => e.id === stateEmpresaId)) {
         setSelectedEmpresa(stateEmpresaId);
-      } else {
-        // Buscar una empresa que tenga sucursales
-        const empresaConSucursales = userEmpresas.find(empresa => {
-          const sucursalesDeEmpresa = userSucursales?.filter(s => s.empresaId === empresa.id) || [];
-          return sucursalesDeEmpresa.length > 0;
-        });
-        
-        if (empresaConSucursales) {
-          setSelectedEmpresa(empresaConSucursales.id);
-        } else {
-          setSelectedEmpresa(userEmpresas[0].id);
-        }
       }
     }
-  }, [userEmpresas, userSucursales, location.state, selectedEmpresa]);
+  }, [userEmpresas, location.state, selectedEmpresa]);
 
   useEffect(() => {
-    if (selectedEmpresa && sucursalesFiltradas.length > 0 && !selectedSucursal) {
+    if (selectedEmpresa !== 'todas' && selectedSucursal === 'todas') {
       // Verificar si viene de navegación con sucursal preseleccionada
       const stateSucursalId = location.state?.sucursalId;
       if (stateSucursalId && sucursalesFiltradas.some(s => s.id === stateSucursalId)) {
         setSelectedSucursal(stateSucursalId);
-      } else {
-        setSelectedSucursal(sucursalesFiltradas[0].id);
       }
     }
-  }, [selectedEmpresa, sucursalesFiltradas, location.state]);
+  }, [selectedEmpresa, sucursalesFiltradas, location.state, selectedSucursal]);
 
   // Cargar accidentes
   const loadAccidentes = useCallback(async () => {
@@ -130,19 +116,16 @@ export default function Accidentes() {
       return;
     }
 
-    if (!selectedEmpresa) {
-      setAccidentes([]);
-      setLoading(false);
-      return;
-    }
-
     setLoading(true);
     try {
-      const filtros = {
-        empresaId: selectedEmpresa
-      };
+      const filtros = {};
 
-      if (selectedSucursal) {
+      // Solo agregar filtros si no están en "todas"
+      if (selectedEmpresa && selectedEmpresa !== 'todas') {
+        filtros.empresaId = selectedEmpresa;
+      }
+
+      if (selectedSucursal && selectedSucursal !== 'todas') {
         filtros.sucursalId = selectedSucursal;
       }
 
@@ -290,7 +273,7 @@ export default function Accidentes() {
               color="error"
               startIcon={<AccidenteIcon />}
               onClick={() => setOpenAccidenteModal(true)}
-              disabled={!selectedSucursal || !userEmpresas || userEmpresas.length === 0}
+              disabled={selectedSucursal === 'todas' || !userEmpresas || userEmpresas.length === 0}
             >
               Nuevo Accidente
             </Button>
@@ -299,7 +282,7 @@ export default function Accidentes() {
               color="warning"
               startIcon={<IncidenteIcon />}
               onClick={() => setOpenIncidenteModal(true)}
-              disabled={!selectedSucursal || !userEmpresas || userEmpresas.length === 0}
+              disabled={selectedSucursal === 'todas' || !userEmpresas || userEmpresas.length === 0}
             >
               Nuevo Incidente
             </Button>
@@ -322,7 +305,7 @@ export default function Accidentes() {
               </Button>
             </Box>
           </Alert>
-        ) : !selectedSucursal && sucursalesFiltradas.length === 0 ? (
+        ) : selectedEmpresa !== 'todas' && sucursalesFiltradas.length === 0 ? (
           <Alert severity="warning" sx={{ mb: 3 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2 }}>
               <Typography variant="body1">
@@ -348,11 +331,14 @@ export default function Accidentes() {
                 value={selectedEmpresa}
                 onChange={(e) => {
                   setSelectedEmpresa(e.target.value);
-                  setSelectedSucursal('');
+                  setSelectedSucursal('todas');
                 }}
                 label="Empresa"
                 disabled={!userEmpresas || userEmpresas.length === 0}
               >
+                <MenuItem value="todas">
+                  <em>Todas las empresas</em>
+                </MenuItem>
                 {userEmpresas?.map((empresa) => (
                   <MenuItem key={empresa.id} value={empresa.id}>
                     {empresa.nombre}
@@ -369,9 +355,11 @@ export default function Accidentes() {
                 value={selectedSucursal}
                 onChange={(e) => setSelectedSucursal(e.target.value)}
                 label="Sucursal"
-                disabled={!selectedEmpresa}
+                disabled={selectedEmpresa === 'todas'}
               >
-                <MenuItem value="">Todas</MenuItem>
+                <MenuItem value="todas">
+                  <em>Todas las sucursales</em>
+                </MenuItem>
                 {sucursalesFiltradas?.map((sucursal) => (
                   <MenuItem key={sucursal.id} value={sucursal.id}>
                     {sucursal.nombre}
@@ -578,8 +566,8 @@ export default function Accidentes() {
           open={openAccidenteModal}
           onClose={() => setOpenAccidenteModal(false)}
           onAccidenteCreado={handleCrearAccidente}
-          empresaId={selectedEmpresa}
-          sucursalId={selectedSucursal}
+          empresaId={selectedEmpresa === 'todas' ? null : selectedEmpresa}
+          sucursalId={selectedSucursal === 'todas' ? null : selectedSucursal}
           empresaNombre={empresaActual?.nombre}
           sucursalNombre={sucursalActual?.nombre}
         />
@@ -590,8 +578,8 @@ export default function Accidentes() {
           open={openIncidenteModal}
           onClose={() => setOpenIncidenteModal(false)}
           onIncidenteCreado={handleCrearIncidente}
-          empresaId={selectedEmpresa}
-          sucursalId={selectedSucursal}
+          empresaId={selectedEmpresa === 'todas' ? null : selectedEmpresa}
+          sucursalId={selectedSucursal === 'todas' ? null : selectedSucursal}
           empresaNombre={empresaActual?.nombre}
           sucursalNombre={sucursalActual?.nombre}
         />
