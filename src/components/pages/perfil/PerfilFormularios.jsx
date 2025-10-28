@@ -355,18 +355,18 @@ const PerfilFormularios = ({ formularios, loading }) => {
                       </span>
                     </Tooltip>
                     
-                                         <Button
-                       variant="outlined"
-                       color="secondary"
-                       size={isSmallMobile ? "small" : "medium"}
-                       onClick={() => navigate(`/editar/${form.id}`)}
-                       sx={{ 
-                         minWidth: isMobile ? '100%' : 'auto',
-                         py: isSmallMobile ? 1 : 1.5
-                       }}
-                     >
-                       ✏️ Editar
-                     </Button>
+                     <Button
+                      variant="outlined"
+                      color="secondary"
+                      size={isSmallMobile ? "small" : "medium"}
+                      onClick={() => navigate(`/editar?id=${form.id}`)}
+                      sx={{ 
+                        minWidth: isMobile ? '100%' : 'auto',
+                        py: isSmallMobile ? 1 : 1.5
+                      }}
+                    >
+                      ✏️ Editar
+                    </Button>
                      
                      <Tooltip title="Eliminar formulario">
                        <span>

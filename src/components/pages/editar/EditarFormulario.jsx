@@ -23,7 +23,7 @@ import RefreshIcon from '@mui/icons-material/Refresh';
 import EditarSeccionYPreguntas from "./EditarSeccionYPreguntas";
 import { useAuth } from "../../context/AuthContext";
 import Swal from 'sweetalert2';
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import PublicIcon from '@mui/icons-material/Public';
 import AddIcon from '@mui/icons-material/Add';
 import FormulariosAccordionList from "./FormulariosAccordionList";
@@ -35,6 +35,7 @@ const EditarFormulario = () => {
   const isSmallMobile = useMediaQuery(theme.breakpoints.down('sm'));
   
   const { user, userProfile } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [formularios, setFormularios] = useState([]); // Solo metadatos
   const [formularioSeleccionado, setFormularioSeleccionado] = useState(null);
   const [formulariosCache, setFormulariosCache] = useState({}); // id -> formulario completo
@@ -175,6 +176,20 @@ const EditarFormulario = () => {
       }
     }
   }, [formulariosCompletos]);
+
+  // ✅ Seleccionar formulario automáticamente desde query parameter
+  React.useEffect(() => {
+    const formularioId = searchParams.get('id');
+    if (formularioId && formulariosCompletos.length > 0 && !formularioSeleccionado) {
+      const detalle = formulariosCompletos.find(f => f.id === formularioId);
+      if (detalle) {
+        console.log('[DEBUG] Auto-seleccionando formulario desde query param:', formularioId);
+        setFormularioSeleccionado(detalle);
+        // Limpiar el query param después de seleccionar
+        setSearchParams({});
+      }
+    }
+  }, [formulariosCompletos, searchParams, formularioSeleccionado, setSearchParams]);
 
   // Cuando el usuario selecciona un formulario, cargar el detalle solo si no está en cache
   const handleChangeFormulario = async (event) => {
