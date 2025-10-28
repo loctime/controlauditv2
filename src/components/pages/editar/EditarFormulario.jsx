@@ -710,7 +710,6 @@ const EditarFormulario = () => {
                 <EditarSeccionYPreguntas
                   formularioSeleccionado={formularioSeleccionado}
                   setFormularioSeleccionado={setFormularioSeleccionado}
-                  handleReload={handleReload}
                   puedeEditar={formularioSeleccionado ? puedeEditarFormulario(formularioSeleccionado) : false}
                   puedeEliminar={formularioSeleccionado ? puedeEliminarFormulario(formularioSeleccionado) : false}
                 />
