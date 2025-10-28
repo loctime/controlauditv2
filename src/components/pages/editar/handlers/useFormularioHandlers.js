@@ -105,7 +105,7 @@ export const useFormularioHandlers = ({
       console.error("Error al actualizar sección:", error);
       Swal.fire("Error", "Error al actualizar la sección.", "error");
     }
-  }, [puedeEditar, seccionSeleccionada, seccionesNormalizadas, formularioSeleccionado.id, setFormularioSeleccionado]);
+  }, [puedeEditar, seccionesNormalizadas, formularioSeleccionado.id, setFormularioSeleccionado]);
 
   const handleGuardarCambiosPregunta = useCallback(async (
     preguntaSeleccionada,

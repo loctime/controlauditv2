@@ -5,7 +5,6 @@ import {
   Box,
   TextField,
   Button,
-  Alert,
   Chip,
   Accordion,
   AccordionSummary,
@@ -16,7 +15,6 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import DeleteForeverIcon from "@mui/icons-material/DeleteForever";
 import { useAuth } from "../../context/AuthContext";
 import SeccionItem from "./components/SeccionItem";
-import FormularioInfo from "./components/FormularioInfo";
 import { 
   useNormalizarSecciones, 
   useFormularioCache, 
@@ -197,7 +195,6 @@ const EditarSeccionYPreguntas = ({
   const handleEditarPregunta = useCallback((preguntaData) => {
     console.log('🔧 [DEBUG] handleEditarPregunta llamado con:', preguntaData);
     console.log('🔧 [DEBUG] puedeEditar:', puedeEditar);
-    console.log('🔧 [DEBUG] modalEditarPreguntaAbierto antes:', modalEditarPreguntaAbierto);
     
     setPreguntaSeleccionada(preguntaData);
     setNuevoTextoPregunta(preguntaData.pregunta);
@@ -206,7 +203,7 @@ const EditarSeccionYPreguntas = ({
     console.log('🔧 [DEBUG] Estados actualizados - preguntaSeleccionada:', preguntaData);
     console.log('🔧 [DEBUG] Estados actualizados - nuevoTextoPregunta:', preguntaData.pregunta);
     console.log('🔧 [DEBUG] Estados actualizados - modalEditarPreguntaAbierto: true');
-  }, [puedeEditar, modalEditarPreguntaAbierto]);
+  }, [puedeEditar]);
 
   return (
     <div>
@@ -216,29 +213,6 @@ const EditarSeccionYPreguntas = ({
           Editando: {formularioSeleccionado.nombre}
         </Typography>
       </Box>
-
-      {/* Alertas de permisos */}
-      {!puedeEditar && (
-        <Alert severity="warning" sx={{ mb: 2 }}>
-          <Typography variant="body2">
-            <strong>Modo de solo lectura:</strong> No puedes editar este formulario.
-          </Typography>
-        </Alert>
-      )}
-      {!puedeEliminar && (
-        <Alert severity="info" sx={{ mb: 2 }}>
-          <Typography variant="body2">
-            <strong>Permisos limitados:</strong> No puedes eliminar elementos de este formulario.
-          </Typography>
-        </Alert>
-      )}
-
-      {/* Información del formulario */}
-      <FormularioInfo 
-        formulario={formularioSeleccionado}
-        puedeEditar={puedeEditar}
-        puedeEliminar={puedeEliminar}
-      />
 
       {/* Accordion para edición de secciones y preguntas */}
       <Accordion expanded={accordionOpen} onChange={() => setAccordionOpen(!accordionOpen)} sx={{ mb: 2 }}>
