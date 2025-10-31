@@ -28,6 +28,11 @@ import {
   useFormularioStats 
 } from "./hooks/useFormularioCache";
 import { useFormularioHandlers } from "./handlers/useFormularioHandlers";
+import ModalEditarFormulario from "./components/ModalEditarFormulario";
+import ModalEditarSeccion from "./components/ModalEditarSeccion";
+import ModalEditarPregunta from "./components/ModalEditarPregunta";
+import ModalAgregarPregunta from "./components/ModalAgregarPregunta";
+import ModalAgregarSeccion from "./components/ModalAgregarSeccion";
 
 const ESTADOS = [
   { value: 'activo', label: 'Activo' },
@@ -187,6 +192,11 @@ const EditarSeccionYPreguntas = ({
 
   const handleAgregarSeccion = () => {
     handlers.handleAgregarSeccion(nuevaSeccion);
+    setModalAgregarSeccionAbierto(false);
+    setNuevaSeccion('');
+  };
+
+  const handleCloseModalAgregarSeccion = () => {
     setModalAgregarSeccionAbierto(false);
     setNuevaSeccion('');
   };
@@ -562,226 +572,47 @@ const EditarSeccionYPreguntas = ({
       )}
 
       {/* Modales de edición de secciones y preguntas */}
-      <Modal
+      <ModalEditarFormulario
         open={modalEditarFormularioAbierto}
         onClose={() => setModalEditarFormularioAbierto(false)}
-      >
-        <Box sx={modalStyle}>
-          <Typography variant="h5" fontWeight={700} mb={3} color="primary">
-            Editar Formulario
-          </Typography>
-          <TextField
-            fullWidth
-            label="Nombre del Formulario"
-            value={nuevoNombreFormulario}
-            onChange={(e) => setNuevoNombreFormulario(e.target.value)}
-            sx={{ mb: 3 }}
-            autoFocus
-          />
-          <Box display="flex" gap={2} justifyContent="flex-end">
-            <Button variant="outlined" onClick={() => setModalEditarFormularioAbierto(false)}>
-              Cancelar
-            </Button>
-            <Button 
-              variant="contained" 
-              onClick={handleGuardarCambiosFormulario}
-              sx={{
-                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                '&:hover': {
-                  background: 'linear-gradient(135deg, #5568d3 0%, #6a3f8f 100%)'
-                }
-              }}
-            >
-            Guardar Cambios
-          </Button>
-          </Box>
-        </Box>
-      </Modal>
+        nombreFormulario={nuevoNombreFormulario}
+        onNombreChange={setNuevoNombreFormulario}
+        onGuardar={handleGuardarCambiosFormulario}
+      />
 
-      <Modal
+      <ModalEditarSeccion
         open={modalEditarSeccionAbierto}
         onClose={() => setModalEditarSeccionAbierto(false)}
-      >
-        <Box sx={modalStyle}>
-          <Typography variant="h5" fontWeight={700} mb={3} color="primary">
-            Editar Sección
-          </Typography>
-          <TextField
-            fullWidth
-            label="Nombre de la Sección"
-            value={nuevoNombreSeccion}
-            onChange={(e) => setNuevoNombreSeccion(e.target.value)}
-            sx={{ mb: 3 }}
-            autoFocus
-          />
-          <Box display="flex" gap={2} justifyContent="flex-end">
-            <Button variant="outlined" onClick={() => setModalEditarSeccionAbierto(false)}>
-              Cancelar
-            </Button>
-            <Button 
-              variant="contained" 
-              onClick={handleGuardarCambiosSeccion}
-              sx={{
-                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                '&:hover': {
-                  background: 'linear-gradient(135deg, #5568d3 0%, #6a3f8f 100%)'
-                }
-              }}
-            >
-            Guardar Cambios
-          </Button>
-          </Box>
-        </Box>
-      </Modal>
+        nombreSeccion={nuevoNombreSeccion}
+        onNombreChange={setNuevoNombreSeccion}
+        onGuardar={handleGuardarCambiosSeccion}
+      />
 
-      <Modal
+      <ModalEditarPregunta
         open={modalEditarPreguntaAbierto}
-        onClose={() => {
-          console.log('🔧 [DEBUG] Cerrando modal editar pregunta');
-          setModalEditarPreguntaAbierto(false);
-        }}
-      >
-        <Box sx={modalStyle}>
-          <Box display="flex" alignItems="center" gap={2} mb={3}>
-            <QuestionAnswerIcon sx={{ fontSize: 32, color: 'primary.main' }} />
-            <Typography variant="h5" fontWeight={700} color="primary">
-              Editar Pregunta
-            </Typography>
-          </Box>
-          <TextField
-            fullWidth
-            label="Texto de la Pregunta"
-            value={nuevoTextoPregunta}
-            onChange={(e) => setNuevoTextoPregunta(e.target.value)}
-            sx={{ mb: 3 }}
-            autoFocus
-            multiline
-            rows={3}
-          />
-          <Box display="flex" gap={2} justifyContent="flex-end">
-            <Button variant="outlined" onClick={() => setModalEditarPreguntaAbierto(false)}>
-              Cancelar
-            </Button>
-            <Button 
-              variant="contained" 
-              onClick={handleGuardarCambiosPregunta}
-              sx={{
-                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                '&:hover': {
-                  background: 'linear-gradient(135deg, #5568d3 0%, #6a3f8f 100%)'
-                }
-              }}
-            >
-            Guardar Cambios
-          </Button>
-          </Box>
-        </Box>
-      </Modal>
+        onClose={() => setModalEditarPreguntaAbierto(false)}
+        textoPregunta={nuevoTextoPregunta}
+        onTextoChange={setNuevoTextoPregunta}
+        onGuardar={handleGuardarCambiosPregunta}
+      />
 
-      <Modal
+      <ModalAgregarPregunta
         open={modalAgregarPreguntaAbierto}
         onClose={() => setModalAgregarPreguntaAbierto(false)}
-      >
-        <Box sx={modalStyle}>
-          <Box display="flex" alignItems="center" gap={2} mb={3}>
-            <AddCircleOutlineIcon sx={{ fontSize: 32, color: 'primary.main' }} />
-            <Typography variant="h5" fontWeight={700} color="primary">
-              Agregar Pregunta
-            </Typography>
-          </Box>
-          <TextField
-            fullWidth
-            label="Texto de la Pregunta"
-            value={nuevaPregunta}
-            onChange={(e) => setNuevaPregunta(e.target.value)}
-            sx={{ mb: 3 }}
-            autoFocus
-            multiline
-            rows={3}
-          />
-          <Box display="flex" gap={2} justifyContent="flex-end">
-            <Button variant="outlined" onClick={() => setModalAgregarPreguntaAbierto(false)}>
-              Cancelar
-            </Button>
-            <Button 
-              variant="contained" 
-              onClick={handleGuardarNuevaPregunta}
-              sx={{
-                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                '&:hover': {
-                  background: 'linear-gradient(135deg, #5568d3 0%, #6a3f8f 100%)'
-                }
-              }}
-            >
-            Agregar Pregunta
-          </Button>
-          </Box>
-        </Box>
-      </Modal>
+        nuevaPregunta={nuevaPregunta}
+        onNuevaPreguntaChange={setNuevaPregunta}
+        onGuardar={handleGuardarNuevaPregunta}
+      />
 
-      <Modal
+      <ModalAgregarSeccion
         open={modalAgregarSeccionAbierto}
-        onClose={() => {
-          setModalAgregarSeccionAbierto(false);
-          setNuevaSeccion('');
-        }}
-      >
-        <Box sx={modalStyle}>
-          <Box display="flex" alignItems="center" gap={2} mb={3}>
-            <LabelIcon sx={{ fontSize: 32, color: 'primary.main' }} />
-            <Typography variant="h5" fontWeight={700} color="primary">
-              Agregar Sección
-            </Typography>
-          </Box>
-          <TextField
-            fullWidth
-            label="Nombre de la Sección"
-            value={nuevaSeccion}
-            onChange={(e) => setNuevaSeccion(e.target.value)}
-            sx={{ mb: 3 }}
-            autoFocus
-            placeholder="Ej: Información General, Seguridad, etc."
-          />
-          <Box display="flex" gap={2} justifyContent="flex-end">
-            <Button 
-              variant="outlined" 
-              onClick={() => {
-                setModalAgregarSeccionAbierto(false);
-                setNuevaSeccion('');
-              }}
-            >
-              Cancelar
-            </Button>
-            <Button 
-              variant="contained" 
-              onClick={handleAgregarSeccion}
-              sx={{
-                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                '&:hover': {
-                  background: 'linear-gradient(135deg, #5568d3 0%, #6a3f8f 100%)'
-                }
-              }}
-            >
-              Agregar Sección
-            </Button>
-          </Box>
-        </Box>
-      </Modal>
+        onClose={handleCloseModalAgregarSeccion}
+        nuevaSeccion={nuevaSeccion}
+        onNuevaSeccionChange={setNuevaSeccion}
+        onGuardar={handleAgregarSeccion}
+      />
     </Box>
   );
-};
-
-const modalStyle = {
-  position: 'absolute',
-  top: '50%',
-  left: '50%',
-  transform: 'translate(-50%, -50%)',
-  width: { xs: '90%', sm: 500 },
-  bgcolor: 'background.paper',
-  borderRadius: 3,
-  boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
-  p: 4,
-  outline: 'none'
 };
 
 export default memo(EditarSeccionYPreguntas);
