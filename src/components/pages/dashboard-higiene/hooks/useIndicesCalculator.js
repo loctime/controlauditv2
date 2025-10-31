@@ -22,6 +22,9 @@ export const useIndicesCalculator = () => {
       case 'año':
         inicio = new Date(ahora.getFullYear(), 0, 1);
         break;
+      case 'historico':
+        inicio = null; // null significa sin filtro de fecha
+        break;
       default:
         inicio = new Date(ahora.getFullYear(), ahora.getMonth(), 1);
     }
@@ -32,7 +35,7 @@ export const useIndicesCalculator = () => {
   // Calcular índices técnicos
   const calcularIndices = useCallback((empleados, accidentes, periodo, sucursales) => {
     const { inicio, fin } = calcularPeriodo(periodo);
-    const diasTotales = Math.ceil((fin - inicio) / (1000 * 60 * 60 * 24));
+    const diasTotales = inicio ? Math.ceil((fin - inicio) / (1000 * 60 * 60 * 24)) : 0;
     
     // Calcular días laborales según el período
     let diasLaborales;
@@ -48,6 +51,25 @@ export const useIndicesCalculator = () => {
         break;
       case 'año':
         diasLaborales = Math.floor(diasTotales / 7) * 5; // 5 días por semana
+        break;
+      case 'historico':
+        // Calcular días laborales basado en la primera fecha de los accidentes
+        if (accidentes.length > 0) {
+          const fechasAccidentes = accidentes
+            .map(a => a.fechaHora?.toDate ? a.fechaHora.toDate() : new Date(a.fechaHora))
+            .filter(f => !isNaN(f.getTime()))
+            .sort((a, b) => a - b);
+          
+          if (fechasAccidentes.length > 0) {
+            const primeraFecha = fechasAccidentes[0];
+            const diasTotalesHist = Math.ceil((fin - primeraFecha) / (1000 * 60 * 60 * 24));
+            diasLaborales = Math.floor(diasTotalesHist / 7) * 5;
+          } else {
+            diasLaborales = Math.floor(365 / 7) * 5; // Estimado: 1 año
+          }
+        } else {
+          diasLaborales = Math.floor(365 / 7) * 5; // Estimado: 1 año si no hay accidentes
+        }
         break;
       default:
         diasLaborales = Math.floor(diasTotales / 7) * 5;
