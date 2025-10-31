@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { collection, getDocs, query, where, orderBy } from 'firebase/firestore';
-import { db } from '../../../../firebaseConfig';
+import { db } from '../../../../firebaseConfig.js';
 
 /**
  * Hook para cargar datos del dashboard de seguridad
@@ -214,6 +214,12 @@ export const useDashboardDataFetch = (
     }
   }, [selectedSucursal, selectedPeriodo, calcularPeriodo, sucursalesFiltradas]);
 
+  // Memoizar IDs de sucursales para estabilizar dependencias
+  const sucursalesIdsString = useMemo(() => 
+    JSON.stringify(sucursalesFiltradas?.map(s => s.id).sort() || []),
+    [sucursalesFiltradas]
+  );
+
   // Recargar datos cuando cambian los parámetros
   useEffect(() => {
     let mounted = true;
@@ -259,7 +265,7 @@ export const useDashboardDataFetch = (
     return () => {
       mounted = false;
     };
-  }, [selectedEmpresa, selectedSucursal, selectedPeriodo, cargarEmpleados, cargarAccidentes, cargarCapacitaciones]);
+  }, [selectedEmpresa, selectedSucursal, selectedPeriodo, sucursalesIdsString, cargarEmpleados, cargarAccidentes, cargarCapacitaciones]);
 
   // Función manual para recargar (opcional, para usar desde fuera)
   const recargarDatos = useCallback(async () => {
