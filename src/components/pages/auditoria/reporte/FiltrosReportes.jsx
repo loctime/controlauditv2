@@ -158,9 +158,9 @@ const FiltrosReportes = ({
           renderValue={(selected) => (
             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, alignItems: 'center' }}>
               {selected.length === 0 ? (
-                <Chip label="Todas las empresas" size="small" color="primary" />
+                <Chip key="all-empresas" label="Todas las empresas" size="small" color="primary" />
               ) : (
-                <>
+                <React.Fragment key="selected-empresas">
                   {selected.map((id) => {
                     const emp = empresas.find(e => e.id === id);
                     return (
@@ -171,7 +171,7 @@ const FiltrosReportes = ({
                       />
                     );
                   })}
-                  <Tooltip title="Limpiar todas las empresas">
+                  <Tooltip key="clear-tooltip-empresas" title="Limpiar todas las empresas">
                     <IconButton 
                       size="small" 
                       onClick={(e) => {
@@ -183,7 +183,7 @@ const FiltrosReportes = ({
                       <Clear fontSize="small" />
                     </IconButton>
                   </Tooltip>
-                </>
+                </React.Fragment>
               )}
             </Box>
           )}
@@ -193,35 +193,34 @@ const FiltrosReportes = ({
               ✓ Todos los reportes
             </Typography>
           </MenuItem>
-          <Divider />
-          {empresasFiltradas.length === 0 ? (
-            <MenuItem key="no-empresas" disabled>No hay empresas disponibles</MenuItem>
-          ) : (
-            empresasFiltradas.map((empresa) => (
-              <MenuItem key={empresa.id} value={empresa.id}>
-                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                    <Business fontSize="small" sx={{ mr: 1 }} />
-                    {empresa.nombre}
-                  </Box>
-                  {empresasSeleccionadas.includes(empresa.id) && (
-                    <Tooltip title="Eliminar empresa">
-                      <IconButton 
-                        size="small" 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleRemoveEmpresa(empresa.id);
-                        }}
-                        sx={{ ml: 1 }}
-                      >
-                        <Clear fontSize="small" />
-                      </IconButton>
-                    </Tooltip>
-                  )}
-                </Box>
-              </MenuItem>
-            ))
+          <Divider key="divider-empresas" />
+          {empresasFiltradas.length === 0 && (
+            <MenuItem key="no-empresas" value="" disabled>No hay empresas disponibles</MenuItem>
           )}
+          {empresasFiltradas.map((empresa, index) => (
+            <MenuItem key={`empresa-${empresa.id}-${index}`} value={empresa.id}>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                  <Business fontSize="small" sx={{ mr: 1 }} />
+                  {empresa.nombre}
+                </Box>
+                {empresasSeleccionadas.includes(empresa.id) && (
+                  <Tooltip key={`tooltip-empresa-${empresa.id}`} title="Eliminar empresa">
+                    <IconButton 
+                      size="small" 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleRemoveEmpresa(empresa.id);
+                      }}
+                      sx={{ ml: 1 }}
+                    >
+                      <Clear fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
+                )}
+              </Box>
+            </MenuItem>
+          ))}
         </Select>
       </FormControl>
 
@@ -240,9 +239,9 @@ const FiltrosReportes = ({
           renderValue={(selected) => (
             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, alignItems: 'center' }}>
               {selected.length === 0 ? (
-                <Chip label="Todos los formularios" size="small" color="primary" />
+                <Chip key="all-formularios" label="Todos los formularios" size="small" color="primary" />
               ) : (
-                <>
+                <React.Fragment key="selected-formularios">
                   {selected.map((id) => {
                     const form = formularios.find(f => f.id === id);
                     return (
@@ -253,7 +252,7 @@ const FiltrosReportes = ({
                       />
                     );
                   })}
-                  <Tooltip title="Limpiar todos los formularios">
+                  <Tooltip key="clear-tooltip-formularios" title="Limpiar todos los formularios">
                     <IconButton 
                       size="small" 
                       onClick={(e) => {
@@ -265,7 +264,7 @@ const FiltrosReportes = ({
                       <Clear fontSize="small" />
                     </IconButton>
                   </Tooltip>
-                </>
+                </React.Fragment>
               )}
             </Box>
           )}
@@ -275,35 +274,34 @@ const FiltrosReportes = ({
               ✓ Todos los formularios
             </Typography>
           </MenuItem>
-          <Divider />
-          {formulariosFiltrados.length === 0 ? (
-            <MenuItem key="no-formularios" disabled>No hay formularios disponibles</MenuItem>
-          ) : (
-            formulariosFiltrados.map((formulario) => (
-              <MenuItem key={formulario.id} value={formulario.id}>
-                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                    <Assignment fontSize="small" sx={{ mr: 1 }} />
-                    {formulario.nombre}
-                  </Box>
-                  {formulariosSeleccionados.includes(formulario.id) && (
-                    <Tooltip title="Eliminar formulario">
-                      <IconButton 
-                        size="small" 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleRemoveFormulario(formulario.id);
-                        }}
-                        sx={{ ml: 1 }}
-                      >
-                        <Clear fontSize="small" />
-                      </IconButton>
-                    </Tooltip>
-                  )}
-                </Box>
-              </MenuItem>
-            ))
+          <Divider key="divider-formularios" />
+          {formulariosFiltrados.length === 0 && (
+            <MenuItem key="no-formularios" value="" disabled>No hay formularios disponibles</MenuItem>
           )}
+          {formulariosFiltrados.map((formulario, index) => (
+            <MenuItem key={`formulario-${formulario.id}-${index}`} value={formulario.id}>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                  <Assignment fontSize="small" sx={{ mr: 1 }} />
+                  {formulario.nombre}
+                </Box>
+                {formulariosSeleccionados.includes(formulario.id) && (
+                  <Tooltip key={`tooltip-${formulario.id}`} title="Eliminar formulario">
+                    <IconButton 
+                      size="small" 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleRemoveFormulario(formulario.id);
+                      }}
+                      sx={{ ml: 1 }}
+                    >
+                      <Clear fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
+                )}
+              </Box>
+            </MenuItem>
+          ))}
         </Select>
       </FormControl>
 
