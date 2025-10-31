@@ -168,6 +168,64 @@ Este documento cataloga todos los componentes reutilizables y hooks personalizad
 
 ---
 
+### **Gestión de Empresas**
+
+#### `EmpresasHeader.jsx`
+**Propósito:** Header de gestión con botones de acción  
+**Props:**
+- `totalEmpresas` (number)
+- `isSmallMobile` (boolean)
+- `onVerificar`, `onNavigateToAccidentes`, `onAddEmpresa` (func)
+- `verificando` (boolean)
+
+**Características:**
+- ✅ Optimizado con `React.memo`
+- ✅ Layout responsive
+- ✅ Botones contextuales
+
+---
+
+#### `EmpresaTableHeader.jsx`
+**Propósito:** Header de tabla de empresas  
+**Características:**
+- ✅ Optimizado con `React.memo`
+- ✅ Columnas organizadas
+
+---
+
+#### `EmpresaRow.jsx`
+**Propósito:** Fila principal de empresa con estadísticas  
+**Props:**
+- `empresa`, `stats` (object)
+- `isExpanded` (boolean)
+- `theme` (object)
+- Handlers: `onToggleRow`, `onTabChange`, `onEditClick` (func)
+- `formatearEmail` (func)
+- `EliminarEmpresaComponent` (component)
+
+**Características:**
+- ✅ Optimizado con `React.memo`
+- ✅ Logo fallback
+- ✅ Celdas clicables con estadísticas
+
+---
+
+#### `EmpresaTableCell.jsx`
+**Propósito:** Celda clicable con estadísticas  
+**Props:**
+- `icon` (component)
+- `value` (number)
+- `color` (string)
+- `onClick` (func)
+- `theme` (object)
+
+**Características:**
+- ✅ Optimizado con `React.memo`
+- ✅ Hover effects
+- ✅ Iconos dinámicos
+
+---
+
 ### **Accidentes e Incidentes**
 
 #### `AccidentesHeader.jsx`
@@ -425,6 +483,48 @@ Este documento cataloga todos los componentes reutilizables y hooks personalizad
 - ✅ Cálculos por hora según sucursal
 - ✅ Soporte para agregaciones múltiples
 - ✅ Thresholds configurables
+
+---
+
+### **Gestión de Empresas**
+
+#### `useEmpresasStats.js`
+**Propósito:** Carga de estadísticas de empresas  
+**Retorna:**
+- `empresasStats` (object)
+- `loadEmpresasStats` (func)
+
+**Características:**
+- ✅ Carga paralela con `Promise.all`
+- ✅ Estadísticas de sucursales, empleados, capacitaciones y accidentes
+- ✅ Manejo de errores por empresa
+
+---
+
+#### `useEmpresasHandlers.js`
+**Propósito:** Handlers para crear y editar empresas  
+**Retorna:**
+- Estados: `empresa`, `loading`
+- Handlers: `handleInputChange`, `handleLogoChange`, `handleAddEmpresa`
+- `resetEmpresa` (func)
+
+**Características:**
+- ✅ Optimizado con `useCallback`
+- ✅ Upload de logos a Firebase Storage
+- ✅ Validación y manejo de errores
+
+---
+
+#### `useEmpresasEditHandlers.js`
+**Propósito:** Handlers para editar empresas  
+**Retorna:**
+- Estados: `empresaEdit`, `loading`
+- Handlers: `handleEditInputChange`, `handleEditLogoChange`, `handleEditEmpresa`
+
+**Características:**
+- ✅ Optimizado con `useCallback`
+- ✅ Actualización de logos
+- ✅ Manejo de errores con Swal
 
 ---
 
@@ -865,6 +965,7 @@ src/utils/               # Utilidades
 | `EditarFormulario.jsx` | 800 | 249 | -69% ✅ |
 | `AuthContext.jsx` | 785 | 332 | -58% ✅ |
 | `Accidentes.jsx` | 715 | 177 | -75% ✅ |
+| `EstablecimientosContainer.jsx` | 710 | 286 | -60% ✅ |
 
 ### **Componentes Creados**
 - **Dashboard:** 4 componentes + 2 hooks
@@ -872,6 +973,7 @@ src/utils/               # Utilidades
 - **Auditoría:** 5 componentes
 - **Capacitaciones:** 4 componentes + 3 hooks ✅
 - **Accidentes:** 6 componentes + 3 hooks ✅
+- **Empresas:** 4 componentes + 3 hooks ✅
 - **Context:** 5 hooks ✅
 
 ---
