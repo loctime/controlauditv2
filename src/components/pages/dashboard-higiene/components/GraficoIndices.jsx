@@ -263,17 +263,17 @@ const GraficoIndices = ({ datos, periodo }) => {
         </Grid>
 
         {/* Gráfico de barras - Horas Trabajadas vs Perdidas */}
-        <Grid item xs={12} md={6}>
+        <Grid item xs={12} md={3}>
           <Card elevation={2} sx={{ borderRadius: 3, height: 280 }}>
             <CardContent sx={{ p: 3, height: '100%' }}>
-              <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, color: 'text.primary' }}>
+              <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, color: 'text.primary', fontSize: '1rem' }}>
                 Distribución de Horas
               </Typography>
               <ResponsiveContainer width="100%" height={180}>
                 <BarChart data={horasData}>
                   <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.divider} />
-                  <XAxis dataKey="name" tick={{ fill: theme.palette.text.secondary, fontSize: 12 }} />
-                  <YAxis tick={{ fill: theme.palette.text.secondary, fontSize: 12 }} />
+                  <XAxis dataKey="name" tick={{ fill: theme.palette.text.secondary, fontSize: 11 }} />
+                  <YAxis tick={{ fill: theme.palette.text.secondary, fontSize: 11 }} />
                   <Tooltip content={<CustomTooltip />} />
                   <Bar dataKey="valor" radius={[4, 4, 0, 0]}>
                     {horasData.map((entry, index) => (
@@ -287,7 +287,7 @@ const GraficoIndices = ({ datos, periodo }) => {
         </Grid>
 
         {/* Gráfico de línea - Tendencia */}
-        <Grid item xs={12} md={6}>
+        <Grid item xs={12} md={9}>
           <Card elevation={2} sx={{ borderRadius: 3, height: 350 }}>
             <CardContent sx={{ p: 3, height: '100%' }}>
               <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, color: 'text.primary' }}>

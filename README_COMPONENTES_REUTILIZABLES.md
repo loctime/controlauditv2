@@ -140,6 +140,34 @@ Este documento cataloga todos los componentes reutilizables y hooks personalizad
 
 ---
 
+#### `FormulariosHeader.jsx`
+**Propósito:** Header con controles de formularios  
+**Props:**
+- `isMobile`, `isSmallMobile` (boolean)
+- `formularios` (array)
+- `formularioSeleccionado` (object)
+- Handlers: `onFormularioChange`, `onCrear`, etc.
+
+**Características:**
+- ✅ Optimizado con `React.memo`
+- ✅ Comparación personalizada
+- ✅ Layout responsive
+
+---
+
+#### `FormularioDetalleCard.jsx`
+**Propósito:** Card con información detallada del formulario  
+**Props:**
+- `formulario` (object)
+- `isSmallMobile` (boolean)
+
+**Características:**
+- ✅ Optimizado con `React.memo`
+- ✅ Formateo automático de fechas
+- ✅ UI responsive
+
+---
+
 ### **Capacitaciones**
 
 #### `SelectoresCapacitaciones.jsx`
@@ -415,6 +443,46 @@ Este documento cataloga todos los componentes reutilizables y hooks personalizad
 
 ---
 
+#### `useFormulariosData.js`
+**Propósito:** Carga de formularios con cache y filtrado multi-tenant  
+**Retorna:**
+- `formularios`, `formulariosCompletos` (array)
+- `loading` (boolean)
+- `recargar` (func)
+
+**Características:**
+- ✅ Cache localStorage (10 min)
+- ✅ Suscripción reactiva onSnapshot
+- ✅ Filtrado multi-tenant
+- ✅ Cleanup automático
+
+---
+
+#### `useFormularioPermisos.js`
+**Propósito:** Verificar permisos de formularios  
+**Retorna:**
+- `puedeEditar`, `puedeEliminar`, `puedeVer` (func)
+
+**Características:**
+- ✅ Optimizado con `useCallback`
+- ✅ Lógica centralizada de permisos
+
+---
+
+#### `useFormularioSeleccionado.js`
+**Propósito:** Gestión de selección de formularios  
+**Retorna:**
+- `formularioSeleccionado`, `setFormularioSeleccionado`
+- `cargandoFormulario` (boolean)
+- `handleChangeFormulario` (func)
+
+**Características:**
+- ✅ Auto-selección desde query params
+- ✅ Sincronización con cache
+- ✅ Loading states
+
+---
+
 ### **Hooks Globales** (`src/hooks/`)
 
 #### `useUserProfile.js`
@@ -612,10 +680,11 @@ src/utils/               # Utilidades
 | `EditarSeccionYPreguntas.jsx` | 788 | 619 | -21% |
 | `Auditoria.jsx` | 721 | 639 | -11% |
 | `Capacitaciones.jsx` | 825 | 336 | -59% ✅ |
+| `EditarFormulario.jsx` | 800 | 249 | -69% ✅ |
 
 ### **Componentes Creados**
 - **Dashboard:** 4 componentes + 2 hooks
-- **Editor:** 7 componentes + 2 hooks
+- **Editor:** 12 componentes + 5 hooks ✅
 - **Auditoría:** 5 componentes
 - **Capacitaciones:** 4 componentes + 3 hooks ✅
 
