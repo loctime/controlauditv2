@@ -534,6 +534,62 @@ Este documento cataloga todos los componentes reutilizables y hooks personalizad
 
 ---
 
+### **Contexto de Autenticación**
+
+#### `useOfflineCache.js`
+**Propósito:** Manejo de cache offline IndexedDB  
+**Retorna:**
+- `loadUserFromCache` (func)
+
+**Características:**
+- ✅ Cache de datos completos
+- ✅ Fallback offline
+
+---
+
+#### `useUserDataLoaders.js`
+**Propósito:** Funciones de carga de datos del usuario  
+**Retorna:**
+- `loadUserEmpresas`, `loadUserSucursales`, `loadUserFormularios` (func)
+- `loadUserAuditorias`, `loadAuditoriasCompartidas` (func)
+
+**Características:**
+- ✅ Chunking para queries >10
+- ✅ Fallback a cache offline
+- ✅ Optimizado con `useCallback`
+
+---
+
+#### `useSucursalesListener.js`
+**Propósito:** Listener reactivo de sucursales  
+**Características:**
+- ✅ Chunking automático
+- ✅ Fallback offline
+- ✅ Cleanup automático
+
+---
+
+#### `useFormulariosListener.js`
+**Propósito:** Listener reactivo de formularios  
+**Características:**
+- ✅ Filtrado por rol
+- ✅ Fallback offline
+- ✅ Cleanup automático
+
+---
+
+#### `useContextActions.js`
+**Propósito:** Acciones wrapper del contexto  
+**Retorna:**
+- `crearEmpresa`, `updateEmpresa`, `verificarYCorregirEmpresas` (func)
+- `compartirAuditoria`, `forceRefreshCache` (func)
+
+**Características:**
+- ✅ Optimizado con `useCallback`
+- ✅ Actualizaciones optimistas
+
+---
+
 ## 🔧 Servicios
 
 ### `src/services/`
@@ -681,12 +737,14 @@ src/utils/               # Utilidades
 | `Auditoria.jsx` | 721 | 639 | -11% |
 | `Capacitaciones.jsx` | 825 | 336 | -59% ✅ |
 | `EditarFormulario.jsx` | 800 | 249 | -69% ✅ |
+| `AuthContext.jsx` | 785 | 332 | -58% ✅ |
 
 ### **Componentes Creados**
 - **Dashboard:** 4 componentes + 2 hooks
 - **Editor:** 12 componentes + 5 hooks ✅
 - **Auditoría:** 5 componentes
 - **Capacitaciones:** 4 componentes + 3 hooks ✅
+- **Context:** 5 hooks ✅
 
 ---
 

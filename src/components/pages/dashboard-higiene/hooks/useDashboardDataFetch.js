@@ -91,27 +91,46 @@ export const useDashboardDataFetch = (
           })));
         }
         
-        accidentesData = accidentesData.filter(a => {
-          const fecha = a.fechaHora?.toDate ? a.fechaHora.toDate() : new Date(0);
-          return fecha >= inicio && fecha <= fin;
-        }).sort((a, b) => {
+        // Si inicio es null (histórico), no filtrar por fecha
+        if (inicio) {
+          accidentesData = accidentesData.filter(a => {
+            const fecha = a.fechaHora?.toDate ? a.fechaHora.toDate() : new Date(0);
+            return fecha >= inicio && fecha <= fin;
+          });
+        }
+        
+        accidentesData = accidentesData.sort((a, b) => {
           const fechaA = a.fechaHora?.toDate ? a.fechaHora.toDate() : new Date(0);
           const fechaB = b.fechaHora?.toDate ? b.fechaHora.toDate() : new Date(0);
           return fechaB - fechaA;
         });
       } else {
-        const q = query(
-          accidentesRef,
-          where('sucursalId', '==', selectedSucursal),
-          where('fechaHora', '>=', inicio),
-          where('fechaHora', '<=', fin),
-          orderBy('fechaHora', 'desc')
-        );
-        const snapshot = await getDocs(q);
-        accidentesData = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
+        // Si inicio es null (histórico), no filtrar por fecha
+        if (inicio) {
+          const q = query(
+            accidentesRef,
+            where('sucursalId', '==', selectedSucursal),
+            where('fechaHora', '>=', inicio),
+            where('fechaHora', '<=', fin),
+            orderBy('fechaHora', 'desc')
+          );
+          const snapshot = await getDocs(q);
+          accidentesData = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          }));
+        } else {
+          const q = query(
+            accidentesRef,
+            where('sucursalId', '==', selectedSucursal),
+            orderBy('fechaHora', 'desc')
+          );
+          const snapshot = await getDocs(q);
+          accidentesData = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          }));
+        }
       }
       
       return accidentesData;
@@ -146,27 +165,46 @@ export const useDashboardDataFetch = (
           })));
         }
         
-        capacitacionesData = capacitacionesData.filter(c => {
-          const fecha = c.fechaRealizada?.toDate ? c.fechaRealizada.toDate() : new Date(0);
-          return fecha >= inicio && fecha <= fin;
-        }).sort((a, b) => {
+        // Si inicio es null (histórico), no filtrar por fecha
+        if (inicio) {
+          capacitacionesData = capacitacionesData.filter(c => {
+            const fecha = c.fechaRealizada?.toDate ? c.fechaRealizada.toDate() : new Date(0);
+            return fecha >= inicio && fecha <= fin;
+          });
+        }
+        
+        capacitacionesData = capacitacionesData.sort((a, b) => {
           const fechaA = a.fechaRealizada?.toDate ? a.fechaRealizada.toDate() : new Date(0);
           const fechaB = b.fechaRealizada?.toDate ? b.fechaRealizada.toDate() : new Date(0);
           return fechaB - fechaA;
         });
       } else {
-        const q = query(
-          capacitacionesRef,
-          where('sucursalId', '==', selectedSucursal),
-          where('fechaRealizada', '>=', inicio),
-          where('fechaRealizada', '<=', fin),
-          orderBy('fechaRealizada', 'desc')
-        );
-        const snapshot = await getDocs(q);
-        capacitacionesData = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
+        // Si inicio es null (histórico), no filtrar por fecha
+        if (inicio) {
+          const q = query(
+            capacitacionesRef,
+            where('sucursalId', '==', selectedSucursal),
+            where('fechaRealizada', '>=', inicio),
+            where('fechaRealizada', '<=', fin),
+            orderBy('fechaRealizada', 'desc')
+          );
+          const snapshot = await getDocs(q);
+          capacitacionesData = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          }));
+        } else {
+          const q = query(
+            capacitacionesRef,
+            where('sucursalId', '==', selectedSucursal),
+            orderBy('fechaRealizada', 'desc')
+          );
+          const snapshot = await getDocs(q);
+          capacitacionesData = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          }));
+        }
       }
       
       return capacitacionesData;

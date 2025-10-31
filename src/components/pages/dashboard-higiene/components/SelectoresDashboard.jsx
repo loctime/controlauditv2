@@ -84,6 +84,7 @@ const SelectoresDashboard = React.memo(({
             <MenuItem value="mes">Mes actual</MenuItem>
             <MenuItem value="trimestre">Último trimestre</MenuItem>
             <MenuItem value="año">Año actual</MenuItem>
+            <MenuItem value="historico">Histórico completo</MenuItem>
           </Select>
         </FormControl>
       </Grid>
