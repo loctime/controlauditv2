@@ -119,9 +119,11 @@ const AuthContextComponent = ({ children }) => {
       console.log('⏱️ Timeout alcanzado, finalizando loaders');
     }, 2500);
     
-    window.addEventListener('online', () => {
+    const handleOnline = () => {
       // Los listeners se encargarán automáticamente
-    });
+    };
+    
+    window.addEventListener('online', handleOnline);
     
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       try {
