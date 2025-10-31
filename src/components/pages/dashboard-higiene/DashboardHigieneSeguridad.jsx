@@ -24,6 +24,9 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import GraficoIndices from './components/GraficoIndices';
 import SelectoresDashboard from './components/SelectoresDashboard';
+import MetricChips from './components/MetricChips';
+import AlertState from './components/AlertState';
+import IndiceCardCompact from './components/IndiceCardCompact';
 import ErrorBoundary from '../../common/ErrorBoundary';
 import { useIndicesCalculator } from './hooks/useIndicesCalculator';
 import { useDashboardDataFetch } from './hooks/useDashboardDataFetch';
@@ -306,81 +309,28 @@ const DashboardHigieneSeguridad = () => {
       {/* Métricas básicas - Chips compactos */}
       <Box sx={{ mb: 4 }}>
         {!userEmpresas || userEmpresas.length === 0 ? (
-          <Alert severity="error" sx={{ mb: 2 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2 }}>
-              <Typography variant="body1">
-                🏢 No hay empresas disponibles. Contacta al administrador para asignar empresas a tu usuario.
-              </Typography>
-              <Button
-                variant="contained"
-                size="small"
-                onClick={() => window.location.href = '/establecimiento'}
-              >
-                🏢 Crear Empresas
-              </Button>
-            </Box>
-          </Alert>
+          <AlertState
+            severity="error"
+            message="🏢 No hay empresas disponibles. Contacta al administrador para asignar empresas a tu usuario."
+            actionLabel="🏢 Crear Empresas"
+            actionUrl="/establecimiento"
+          />
         ) : !selectedSucursal ? (
-          <Alert severity="info" sx={{ mb: 2 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2 }}>
-              <Typography variant="body1">
-                💡 Selecciona una sucursal para ver las métricas de empleados, accidentes y capacitaciones.
-              </Typography>
-              <Button
-                variant="contained"
-                size="small"
-                onClick={() => window.location.href = '/establecimiento'}
-              >
-                🏪 Crear Sucursales
-              </Button>
-            </Box>
-          </Alert>
+          <AlertState
+            severity="info"
+            message="💡 Selecciona una sucursal para ver las métricas de empleados, accidentes y capacitaciones."
+            actionLabel="🏪 Crear Sucursales"
+            actionUrl="/establecimiento"
+          />
         ) : datos.metricas.totalEmpleados === 0 ? (
-          <Alert severity="warning" sx={{ mb: 2 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2 }}>
-              <Typography variant="body1">
-                👥 No hay empleados registrados en esta sucursal. Los índices técnicos requieren datos de empleados.
-              </Typography>
-              <Button
-                variant="contained"
-                size="small"
-                onClick={() => window.location.href = '/empleados'}
-              >
-                👥 Crear Empleados
-              </Button>
-            </Box>
-          </Alert>
+          <AlertState
+            severity="warning"
+            message="👥 No hay empleados registrados en esta sucursal. Los índices técnicos requieren datos de empleados."
+            actionLabel="👥 Crear Empleados"
+            actionUrl="/empleados"
+          />
         ) : (
-          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, alignItems: 'center' }}>
-            <Chip
-              icon={<PeopleIcon />}
-              label={`Total Empleados: ${datos.metricas.totalEmpleados}`}
-              color="primary"
-              variant="outlined"
-              sx={{ fontSize: '0.9rem', height: 36 }}
-            />
-            <Chip
-              icon={<WarningIcon />}
-              label={`En Reposo: ${datos.metricas.empleadosEnReposo}`}
-              color={datos.metricas.empleadosEnReposo > 0 ? "error" : "success"}
-              variant="outlined"
-              sx={{ fontSize: '0.9rem', height: 36 }}
-            />
-            <Chip
-              icon={<AccessTimeIcon />}
-              label={`Horas: ${datos.metricas.horasTrabajadas.toLocaleString()}`}
-              color="info"
-              variant="outlined"
-              sx={{ fontSize: '0.9rem', height: 36 }}
-            />
-            <Chip
-              icon={<ReportProblemIcon />}
-              label={`Días Perdidos: ${datos.metricas.diasPerdidos}`}
-              color={datos.metricas.diasPerdidos > 0 ? "error" : "success"}
-              variant="outlined"
-              sx={{ fontSize: '0.9rem', height: 36 }}
-            />
-          </Box>
+          <MetricChips metricas={datos.metricas} />
         )}
       </Box>
 
@@ -392,187 +342,72 @@ const DashboardHigieneSeguridad = () => {
       </Typography>
 
       {!userEmpresas || userEmpresas.length === 0 ? (
-        <Alert severity="error" sx={{ mb: 4 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2 }}>
-            <Typography variant="body1">
-              🏢 Los índices técnicos no están disponibles. Contacta al administrador para asignar empresas a tu usuario.
-            </Typography>
-            <Button
-              variant="contained"
-              size="small"
-              onClick={() => window.location.href = '/establecimiento'}
-            >
-              🏢 Crear Empresas
-            </Button>
-          </Box>
-        </Alert>
+        <AlertState
+          severity="error"
+          message="🏢 Los índices técnicos no están disponibles. Contacta al administrador para asignar empresas a tu usuario."
+          actionLabel="🏢 Crear Empresas"
+          actionUrl="/establecimiento"
+        />
       ) : !selectedSucursal ? (
-        <Alert severity="info" sx={{ mb: 4 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2 }}>
-            <Typography variant="body1">
-              📋 Los índices técnicos se calcularán una vez que selecciones una sucursal con datos de empleados y accidentes.
-            </Typography>
-            <Button
-              variant="contained"
-              size="small"
-              onClick={() => window.location.href = '/establecimiento'}
-            >
-              🏪 Crear Sucursales
-            </Button>
-          </Box>
-        </Alert>
+        <AlertState
+          severity="info"
+          message="📋 Los índices técnicos se calcularán una vez que selecciones una sucursal con datos de empleados y accidentes."
+          actionLabel="🏪 Crear Sucursales"
+          actionUrl="/establecimiento"
+        />
       ) : datos.metricas.totalEmpleados === 0 ? (
-        <Alert severity="warning" sx={{ mb: 4 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2 }}>
-            <Typography variant="body1">
-              📊 Los índices técnicos requieren empleados registrados. Registra empleados para calcular los índices de seguridad.
-            </Typography>
-            <Button
-              variant="contained"
-              size="small"
-              onClick={() => window.location.href = '/empleados'}
-            >
-              👥 Crear Empleados
-            </Button>
-          </Box>
-        </Alert>
+        <AlertState
+          severity="warning"
+          message="📊 Los índices técnicos requieren empleados registrados. Registra empleados para calcular los índices de seguridad."
+          actionLabel="👥 Crear Empleados"
+          actionUrl="/empleados"
+        />
       ) : (
         <Box sx={{ mb: 4 }}>
           <Grid container spacing={2}>
-          <Grid item xs={12} sm={6} md={3}>
-            <Paper 
-              elevation={1}
-              sx={{ 
-                p: 2, 
-                borderRadius: 2,
-                border: `2px solid ${datos.indices.tasaAusentismo > 5 ? "#ef4444" : datos.indices.tasaAusentismo > 2 ? "#f59e0b" : "#22c55e"}`,
-                backgroundColor: datos.indices.tasaAusentismo > 5 ? "#fef2f2" : datos.indices.tasaAusentismo > 2 ? "#fffbeb" : "#f0fdf4"
-              }}
-            >
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                <TrendingUpIcon sx={{ fontSize: 20, mr: 1, color: datos.indices.tasaAusentismo > 5 ? "#ef4444" : datos.indices.tasaAusentismo > 2 ? "#f59e0b" : "#22c55e" }} />
-                <Typography variant="body2" sx={{ fontWeight: 600, fontSize: '0.8rem' }}>
-                  Tasa de Ausentismo
-                </Typography>
-              </Box>
-              <Typography variant="h4" sx={{ fontWeight: 'bold', color: datos.indices.tasaAusentismo > 5 ? "#ef4444" : datos.indices.tasaAusentismo > 2 ? "#f59e0b" : "#22c55e", fontSize: '1.5rem' }}>
-                {datos.indices.tasaAusentismo.toFixed(2)}%
-              </Typography>
-              <Chip 
-                label={datos.indices.tasaAusentismo > 5 ? "Crítico" : datos.indices.tasaAusentismo > 2 ? "Atención" : "Excelente"}
-                size="small"
-                sx={{ 
-                  backgroundColor: datos.indices.tasaAusentismo > 5 ? "#ef4444" : datos.indices.tasaAusentismo > 2 ? "#f59e0b" : "#22c55e",
-                  color: 'white',
-                  fontSize: '0.7rem',
-                  height: 20,
-                  mt: 1
-                }}
+            <Grid item xs={12} sm={6} md={3}>
+              <IndiceCardCompact
+                titulo="Tasa de Ausentismo"
+                valor={datos.indices.tasaAusentismo}
+                unidad="%"
+                icono={<TrendingUpIcon />}
+                labelChip={datos.indices.tasaAusentismo > 5 ? "Crítico" : datos.indices.tasaAusentismo > 2 ? "Atención" : "Excelente"}
+                color={{ high: 5, medium: 2 }}
               />
-            </Paper>
-          </Grid>
-          
-          <Grid item xs={12} sm={6} md={3}>
-            <Paper 
-              elevation={1}
-              sx={{ 
-                p: 2, 
-                borderRadius: 2,
-                border: `2px solid ${datos.indices.indiceFrecuencia > 10 ? "#ef4444" : datos.indices.indiceFrecuencia > 5 ? "#f59e0b" : "#22c55e"}`,
-                backgroundColor: datos.indices.indiceFrecuencia > 10 ? "#fef2f2" : datos.indices.indiceFrecuencia > 5 ? "#fffbeb" : "#f0fdf4"
-              }}
-            >
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                <ReportProblemIcon sx={{ fontSize: 20, mr: 1, color: datos.indices.indiceFrecuencia > 10 ? "#ef4444" : datos.indices.indiceFrecuencia > 5 ? "#f59e0b" : "#22c55e" }} />
-                <Typography variant="body2" sx={{ fontWeight: 600, fontSize: '0.8rem' }}>
-                  Índice de Frecuencia
-                </Typography>
-              </Box>
-              <Typography variant="h4" sx={{ fontWeight: 'bold', color: datos.indices.indiceFrecuencia > 10 ? "#ef4444" : datos.indices.indiceFrecuencia > 5 ? "#f59e0b" : "#22c55e", fontSize: '1.5rem' }}>
-                {datos.indices.indiceFrecuencia.toFixed(2)}
-              </Typography>
-              <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.7rem' }}>acc/MMHH</Typography>
-              <Chip 
-                label={datos.indices.indiceFrecuencia > 10 ? "Alto riesgo" : datos.indices.indiceFrecuencia > 5 ? "Medio riesgo" : "Bajo riesgo"}
-                size="small"
-                sx={{ 
-                  backgroundColor: datos.indices.indiceFrecuencia > 10 ? "#ef4444" : datos.indices.indiceFrecuencia > 5 ? "#f59e0b" : "#22c55e",
-                  color: 'white',
-                  fontSize: '0.7rem',
-                  height: 20,
-                  mt: 1
-                }}
+            </Grid>
+            
+            <Grid item xs={12} sm={6} md={3}>
+              <IndiceCardCompact
+                titulo="Índice de Frecuencia"
+                valor={datos.indices.indiceFrecuencia}
+                unidad="acc/MMHH"
+                icono={<ReportProblemIcon />}
+                labelChip={datos.indices.indiceFrecuencia > 10 ? "Alto riesgo" : datos.indices.indiceFrecuencia > 5 ? "Medio riesgo" : "Bajo riesgo"}
+                color={{ high: 10, medium: 5 }}
               />
-            </Paper>
-          </Grid>
-          
-          <Grid item xs={12} sm={6} md={3}>
-            <Paper 
-              elevation={1}
-              sx={{ 
-                p: 2, 
-                borderRadius: 2,
-                border: `2px solid ${datos.indices.indiceIncidencia > 20 ? "#ef4444" : datos.indices.indiceIncidencia > 10 ? "#f59e0b" : "#22c55e"}`,
-                backgroundColor: datos.indices.indiceIncidencia > 20 ? "#fef2f2" : datos.indices.indiceIncidencia > 10 ? "#fffbeb" : "#f0fdf4"
-              }}
-            >
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                <PeopleIcon sx={{ fontSize: 20, mr: 1, color: datos.indices.indiceIncidencia > 20 ? "#ef4444" : datos.indices.indiceIncidencia > 10 ? "#f59e0b" : "#22c55e" }} />
-                <Typography variant="body2" sx={{ fontWeight: 600, fontSize: '0.8rem' }}>
-                  Índice de Incidencia
-                </Typography>
-              </Box>
-              <Typography variant="h4" sx={{ fontWeight: 'bold', color: datos.indices.indiceIncidencia > 20 ? "#ef4444" : datos.indices.indiceIncidencia > 10 ? "#f59e0b" : "#22c55e", fontSize: '1.5rem' }}>
-                {datos.indices.indiceIncidencia.toFixed(2)}
-              </Typography>
-              <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.7rem' }}>acc/MT</Typography>
-              <Chip 
-                label={datos.indices.indiceIncidencia > 20 ? "Crítico" : datos.indices.indiceIncidencia > 10 ? "Atención" : "Excelente"}
-                size="small"
-                sx={{ 
-                  backgroundColor: datos.indices.indiceIncidencia > 20 ? "#ef4444" : datos.indices.indiceIncidencia > 10 ? "#f59e0b" : "#22c55e",
-                  color: 'white',
-                  fontSize: '0.7rem',
-                  height: 20,
-                  mt: 1
-                }}
+            </Grid>
+            
+            <Grid item xs={12} sm={6} md={3}>
+              <IndiceCardCompact
+                titulo="Índice de Incidencia"
+                valor={datos.indices.indiceIncidencia}
+                unidad="acc/MT"
+                icono={<PeopleIcon />}
+                labelChip={datos.indices.indiceIncidencia > 20 ? "Crítico" : datos.indices.indiceIncidencia > 10 ? "Atención" : "Excelente"}
+                color={{ high: 20, medium: 10 }}
               />
-            </Paper>
-          </Grid>
-          
-          <Grid item xs={12} sm={6} md={3}>
-            <Paper 
-              elevation={1}
-              sx={{ 
-                p: 2, 
-                borderRadius: 2,
-                border: `2px solid ${datos.indices.indiceGravedad > 50 ? "#ef4444" : datos.indices.indiceGravedad > 25 ? "#f59e0b" : "#22c55e"}`,
-                backgroundColor: datos.indices.indiceGravedad > 50 ? "#fef2f2" : datos.indices.indiceGravedad > 25 ? "#fffbeb" : "#f0fdf4"
-              }}
-            >
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                <TrendingDownIcon sx={{ fontSize: 20, mr: 1, color: datos.indices.indiceGravedad > 50 ? "#ef4444" : datos.indices.indiceGravedad > 25 ? "#f59e0b" : "#22c55e" }} />
-                <Typography variant="body2" sx={{ fontWeight: 600, fontSize: '0.8rem' }}>
-                  Índice de Gravedad
-                </Typography>
-              </Box>
-              <Typography variant="h4" sx={{ fontWeight: 'bold', color: datos.indices.indiceGravedad > 50 ? "#ef4444" : datos.indices.indiceGravedad > 25 ? "#f59e0b" : "#22c55e", fontSize: '1.5rem' }}>
-                {datos.indices.indiceGravedad.toFixed(2)}
-              </Typography>
-              <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.7rem' }}>días/MMHH</Typography>
-              <Chip 
-                label={datos.indices.indiceGravedad > 50 ? "Alta gravedad" : datos.indices.indiceGravedad > 25 ? "Media gravedad" : "Baja gravedad"}
-                size="small"
-                sx={{ 
-                  backgroundColor: datos.indices.indiceGravedad > 50 ? "#ef4444" : datos.indices.indiceGravedad > 25 ? "#f59e0b" : "#22c55e",
-                  color: 'white',
-                  fontSize: '0.7rem',
-                  height: 20,
-                  mt: 1
-                }}
+            </Grid>
+            
+            <Grid item xs={12} sm={6} md={3}>
+              <IndiceCardCompact
+                titulo="Índice de Gravedad"
+                valor={datos.indices.indiceGravedad}
+                unidad="días/MMHH"
+                icono={<TrendingDownIcon />}
+                labelChip={datos.indices.indiceGravedad > 50 ? "Alta gravedad" : datos.indices.indiceGravedad > 25 ? "Media gravedad" : "Baja gravedad"}
+                color={{ high: 50, medium: 25 }}
               />
-            </Paper>
-          </Grid>
+            </Grid>
           </Grid>
         </Box>
       )}
