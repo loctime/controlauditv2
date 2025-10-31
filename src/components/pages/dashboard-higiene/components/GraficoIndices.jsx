@@ -86,7 +86,7 @@ const GraficoIndices = ({ datos, periodo }) => {
 
   // Datos para el gráfico de tendencia (calculados desde datos reales)
   const calcularTendenciaMensual = () => {
-    const months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun'];
+    const months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
     const currentYear = new Date().getFullYear();
     
     // Inicializar datos por mes

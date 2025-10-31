@@ -104,12 +104,12 @@ const DashboardHigieneSeguridad = () => {
 
   useEffect(() => {
     if (selectedEmpresa && sucursalesFiltradas.length > 0) {
-      // Verificar si la sucursal actual pertenece a la empresa seleccionada
-      const sucursalValida = sucursalesFiltradas.find(s => s.id === selectedSucursal);
+      // Verificar si la sucursal actual es válida (incluye "todas")
+      const sucursalValida = selectedSucursal === 'todas' || sucursalesFiltradas.find(s => s.id === selectedSucursal);
       
-      // Si no hay sucursal válida, seleccionar la primera de la lista
+      // Si no hay sucursal válida, seleccionar "todas" por defecto
       if (!sucursalValida) {
-        setSelectedSucursal(sucursalesFiltradas[0].id);
+        setSelectedSucursal('todas');
       }
     } else if (selectedEmpresa && sucursalesFiltradas.length === 0) {
       // Si no hay sucursales para la empresa, limpiar la selección
@@ -144,26 +144,47 @@ const DashboardHigieneSeguridad = () => {
 
   // Cargar datos de empleados y sucursal
   const cargarEmpleados = useCallback(async () => {
-    if (!selectedSucursal) return [];
+    if (!selectedSucursal || !selectedEmpresa) return [];
 
     try {
       const empleadosRef = collection(db, 'empleados');
-      const q = query(
-        empleadosRef,
-        where('sucursalId', '==', selectedSucursal),
-        orderBy('fechaIngreso', 'desc')
-      );
       
-      const snapshot = await getDocs(q);
-      return snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
+      let empleados = [];
+      
+      if (selectedSucursal === 'todas') {
+        // Si es "todas", obtener empleados de todas las sucursales de la empresa
+        const snapshot = await getDocs(
+          query(empleadosRef, where('empresaId', '==', selectedEmpresa))
+        );
+        empleados = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+        // Ordenar en memoria
+        empleados.sort((a, b) => {
+          const fechaA = a.fechaIngreso?.toDate ? a.fechaIngreso.toDate() : new Date(0);
+          const fechaB = b.fechaIngreso?.toDate ? b.fechaIngreso.toDate() : new Date(0);
+          return fechaB - fechaA;
+        });
+      } else {
+        const q = query(
+          empleadosRef,
+          where('sucursalId', '==', selectedSucursal),
+          orderBy('fechaIngreso', 'desc')
+        );
+        const snapshot = await getDocs(q);
+        empleados = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+      }
+      
+      return empleados;
     } catch (error) {
       console.error('Error cargando empleados:', error);
       return [];
     }
-  }, [selectedSucursal]);
+  }, [selectedSucursal, selectedEmpresa]);
 
   // Obtener datos de sucursal desde userSucursales (más eficiente)
   const obtenerSucursalSeleccionada = useCallback(() => {
@@ -172,57 +193,113 @@ const DashboardHigieneSeguridad = () => {
 
   // Cargar datos de accidentes
   const cargarAccidentes = useCallback(async () => {
-    if (!selectedSucursal) return [];
+    if (!selectedSucursal || !selectedEmpresa) return [];
 
     try {
       const { inicio, fin } = calcularPeriodo(selectedPeriodo);
       
       const accidentesRef = collection(db, 'accidentes');
-      const q = query(
-        accidentesRef,
-        where('sucursalId', '==', selectedSucursal),
-        where('fechaHora', '>=', inicio),
-        where('fechaHora', '<=', fin),
-        orderBy('fechaHora', 'desc')
-      );
       
-      const snapshot = await getDocs(q);
-      return snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
+      let accidentes = [];
+      
+      if (selectedSucursal === 'todas') {
+        // Si es "todas", obtener accidentes de todas las sucursales de la empresa
+        const snapshot = await getDocs(
+          query(
+            accidentesRef,
+            where('empresaId', '==', selectedEmpresa)
+          )
+        );
+        accidentes = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+        // Filtrar por período y ordenar en memoria
+        accidentes = accidentes.filter(a => {
+          const fecha = a.fechaHora?.toDate ? a.fechaHora.toDate() : new Date(0);
+          return fecha >= inicio && fecha <= fin;
+        });
+        accidentes.sort((a, b) => {
+          const fechaA = a.fechaHora?.toDate ? a.fechaHora.toDate() : new Date(0);
+          const fechaB = b.fechaHora?.toDate ? b.fechaHora.toDate() : new Date(0);
+          return fechaB - fechaA;
+        });
+      } else {
+        const q = query(
+          accidentesRef,
+          where('sucursalId', '==', selectedSucursal),
+          where('fechaHora', '>=', inicio),
+          where('fechaHora', '<=', fin),
+          orderBy('fechaHora', 'desc')
+        );
+        const snapshot = await getDocs(q);
+        accidentes = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+      }
+      
+      return accidentes;
     } catch (error) {
       console.error('Error cargando accidentes:', error);
       return [];
     }
-  }, [selectedSucursal, selectedPeriodo, calcularPeriodo]);
+  }, [selectedSucursal, selectedEmpresa, selectedPeriodo, calcularPeriodo]);
 
   // Cargar datos de capacitaciones
   const cargarCapacitaciones = useCallback(async () => {
-    if (!selectedSucursal) return [];
+    if (!selectedSucursal || !selectedEmpresa) return [];
 
     try {
       const { inicio, fin } = calcularPeriodo(selectedPeriodo);
       
       const capacitacionesRef = collection(db, 'capacitaciones');
-      const q = query(
-        capacitacionesRef,
-        where('sucursalId', '==', selectedSucursal),
-        where('fechaRealizada', '>=', inicio),
-        where('fechaRealizada', '<=', fin),
-        orderBy('fechaRealizada', 'desc')
-      );
       
-      const snapshot = await getDocs(q);
-      return snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
+      let capacitaciones = [];
+      
+      if (selectedSucursal === 'todas') {
+        // Si es "todas", obtener capacitaciones de todas las sucursales de la empresa
+        const snapshot = await getDocs(
+          query(
+            capacitacionesRef,
+            where('empresaId', '==', selectedEmpresa)
+          )
+        );
+        capacitaciones = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+        // Filtrar por período y ordenar en memoria
+        capacitaciones = capacitaciones.filter(c => {
+          const fecha = c.fechaRealizada?.toDate ? c.fechaRealizada.toDate() : new Date(0);
+          return fecha >= inicio && fecha <= fin;
+        });
+        capacitaciones.sort((a, b) => {
+          const fechaA = a.fechaRealizada?.toDate ? a.fechaRealizada.toDate() : new Date(0);
+          const fechaB = b.fechaRealizada?.toDate ? b.fechaRealizada.toDate() : new Date(0);
+          return fechaB - fechaA;
+        });
+      } else {
+        const q = query(
+          capacitacionesRef,
+          where('sucursalId', '==', selectedSucursal),
+          where('fechaRealizada', '>=', inicio),
+          where('fechaRealizada', '<=', fin),
+          orderBy('fechaRealizada', 'desc')
+        );
+        const snapshot = await getDocs(q);
+        capacitaciones = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+      }
+      
+      return capacitaciones;
     } catch (error) {
       console.error('Error cargando capacitaciones:', error);
       return [];
     }
-  }, [selectedSucursal, selectedPeriodo, calcularPeriodo]);
+  }, [selectedSucursal, selectedEmpresa, selectedPeriodo, calcularPeriodo]);
 
   // Calcular índices técnicos
   const calcularIndices = useCallback((empleados, accidentes, periodo, sucursal) => {
@@ -374,7 +451,7 @@ const DashboardHigieneSeguridad = () => {
       return;
     }
 
-    // Si no hay sucursales, mostrar datos vacíos
+    // Si no hay sucursal seleccionada, mostrar datos vacíos
     if (!selectedSucursal) {
       setDatos({
         empleados: [],
@@ -521,7 +598,7 @@ const DashboardHigieneSeguridad = () => {
         {/* Información del contexto */}
         <Alert severity={
           !userEmpresas || userEmpresas.length === 0 ? "error" :
-          sucursalSeleccionada ? "info" : "warning"
+          (selectedSucursal === 'todas' || sucursalSeleccionada) ? "info" : "warning"
         } sx={{ mb: 1 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
             <BusinessIcon />
@@ -539,6 +616,17 @@ const DashboardHigieneSeguridad = () => {
                 >
                   🏢 Ir a Empresas
                 </Button>
+              </>
+            ) : selectedSucursal === 'todas' ? (
+              <>
+                <Typography variant="body1">
+                  <strong>{empresaSeleccionada.nombre}</strong> - Todas las sucursales
+                </Typography>
+                <Chip 
+                  label={selectedPeriodo.charAt(0).toUpperCase() + selectedPeriodo.slice(1)} 
+                  size="small" 
+                  color="primary" 
+                />
               </>
             ) : sucursalSeleccionada ? (
               <>
@@ -575,7 +663,7 @@ const DashboardHigieneSeguridad = () => {
             <Typography variant="subtitle1" color="textSecondary" sx={{ marginLeft: 'auto', textAlign: 'right', ml: 4 }}>
               {!userEmpresas || userEmpresas.length === 0 
                 ? "No se encontraron empresas asignadas a tu usuario"
-                : sucursalSeleccionada 
+                : (selectedSucursal === 'todas' || sucursalSeleccionada)
                   ? "Análisis de índices técnicos y métricas de seguridad laboral"
                   : "Selecciona una sucursal para ver el análisis de seguridad"
               }
@@ -612,6 +700,12 @@ const DashboardHigieneSeguridad = () => {
                 label="Sucursal"
                 disabled={!userEmpresas || userEmpresas.length === 0}
               >
+                <MenuItem value="todas">
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <StorefrontIcon sx={{ fontSize: 20 }} />
+                    Todas las sucursales
+                  </Box>
+                </MenuItem>
                 {sucursalesFiltradas.map(sucursal => (
                   <MenuItem key={sucursal.id} value={sucursal.id}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
