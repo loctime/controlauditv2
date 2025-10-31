@@ -74,7 +74,13 @@ const DashboardHigieneSeguridad = () => {
         setSelectedEmpresa(userEmpresas[0].id);
       }
     }
-  }, [userEmpresas, userSucursales, selectedEmpresa]);
+  }, [userEmpresas, userSucursales]);
+
+  // Memoizar IDs de sucursales para estabilizar
+  const sucursalesIdsString = useMemo(() => 
+    JSON.stringify(sucursalesFiltradas?.map(s => s.id).sort() || []),
+    [sucursalesFiltradas]
+  );
 
   useEffect(() => {
     if (selectedEmpresa && selectedEmpresa !== 'todas' && sucursalesFiltradas.length > 0) {
@@ -87,7 +93,8 @@ const DashboardHigieneSeguridad = () => {
     } else if (selectedEmpresa && selectedEmpresa !== 'todas' && sucursalesFiltradas.length === 0) {
       setSelectedSucursal('');
     }
-  }, [selectedEmpresa, sucursalesFiltradas, selectedSucursal]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedEmpresa, sucursalesIdsString]);
 
   // Calcular índices cuando cambian los datos
   const datos = useMemo(() => {
@@ -124,7 +131,7 @@ const DashboardHigieneSeguridad = () => {
       indices,
       metricas
     };
-  }, [empleados, accidentes, capacitaciones, selectedSucursal, selectedEmpresa, selectedPeriodo, sucursalesFiltradas, calcularIndices, userSucursales]);
+  }, [empleados, accidentes, capacitaciones, selectedSucursal, selectedEmpresa, selectedPeriodo, calcularIndices, userSucursales, sucursalesFiltradas]);
 
   // Timeout handling
   useEffect(() => {
