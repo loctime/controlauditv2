@@ -65,11 +65,15 @@ const DashboardHigieneSeguridad = () => {
     }
   });
 
-  // Filtrar sucursales por empresa seleccionada
+  // Filtrar sucursales por empresa seleccionada (incluye "todas")
   const sucursalesFiltradas = useMemo(() => {
+    if (selectedEmpresa === 'todas') {
+      // Si es "todas", devolver todas las sucursales del usuario
+      return userSucursales || [];
+    }
     return selectedEmpresa
       ? userSucursales?.filter(s => s.empresaId === selectedEmpresa) || []
-      : userSucursales || [];
+      : [];
   }, [selectedEmpresa, userSucursales]);
 
   // Detectar cuando las empresas han sido cargadas
@@ -101,7 +105,7 @@ const DashboardHigieneSeguridad = () => {
   }, [userEmpresas, userSucursales, selectedEmpresa]);
 
   useEffect(() => {
-    if (selectedEmpresa && sucursalesFiltradas.length > 0) {
+    if (selectedEmpresa && selectedEmpresa !== 'todas' && sucursalesFiltradas.length > 0) {
       // Verificar si la sucursal actual es válida (incluye "todas")
       const sucursalValida = selectedSucursal === 'todas' || sucursalesFiltradas.find(s => s.id === selectedSucursal);
       
@@ -109,7 +113,10 @@ const DashboardHigieneSeguridad = () => {
       if (!sucursalValida) {
         setSelectedSucursal('todas');
       }
-    } else if (selectedEmpresa && sucursalesFiltradas.length === 0) {
+    } else if (selectedEmpresa === 'todas' && sucursalesFiltradas.length > 0) {
+      // Si es "todas las empresas", forzar "todas las sucursales"
+      setSelectedSucursal('todas');
+    } else if (selectedEmpresa && selectedEmpresa !== 'todas' && sucursalesFiltradas.length === 0) {
       // Si no hay sucursales para la empresa, limpiar la selección
       setSelectedSucursal('');
     }
@@ -120,7 +127,7 @@ const DashboardHigieneSeguridad = () => {
 
   // Cargar datos de empleados y sucursal
   const cargarEmpleados = useCallback(async () => {
-    if (!selectedSucursal || !selectedEmpresa) return [];
+    if (!selectedSucursal) return [];
 
     try {
       const empleadosRef = collection(db, 'empleados');
@@ -128,7 +135,7 @@ const DashboardHigieneSeguridad = () => {
       let empleados = [];
       
       if (selectedSucursal === 'todas') {
-        // Si es "todas", obtener empleados de todas las sucursales de la empresa
+        // Si es "todas", obtener empleados de todas las sucursales filtradas
         const sucursalesIds = sucursalesFiltradas.map(s => s.id);
         
         if (sucursalesIds.length === 0) {
@@ -174,7 +181,7 @@ const DashboardHigieneSeguridad = () => {
       console.error('Error cargando empleados:', error);
       return [];
     }
-  }, [selectedSucursal, selectedEmpresa, sucursalesFiltradas]);
+  }, [selectedSucursal, sucursalesFiltradas]);
 
   // Obtener datos de sucursal desde userSucursales (más eficiente)
   const obtenerSucursalSeleccionada = useCallback(() => {
@@ -183,7 +190,7 @@ const DashboardHigieneSeguridad = () => {
 
   // Cargar datos de accidentes
   const cargarAccidentes = useCallback(async () => {
-    if (!selectedSucursal || !selectedEmpresa) return [];
+    if (!selectedSucursal) return [];
 
     try {
       const { inicio, fin } = calcularPeriodo(selectedPeriodo);
@@ -193,7 +200,7 @@ const DashboardHigieneSeguridad = () => {
       let accidentes = [];
       
       if (selectedSucursal === 'todas') {
-        // Si es "todas", obtener accidentes de todas las sucursales de la empresa
+        // Si es "todas", obtener accidentes de todas las sucursales filtradas
         const sucursalesIds = sucursalesFiltradas.map(s => s.id);
         
         if (sucursalesIds.length === 0) {
@@ -245,11 +252,11 @@ const DashboardHigieneSeguridad = () => {
       console.error('Error cargando accidentes:', error);
       return [];
     }
-  }, [selectedSucursal, selectedEmpresa, selectedPeriodo, calcularPeriodo, sucursalesFiltradas]);
+  }, [selectedSucursal, selectedPeriodo, calcularPeriodo, sucursalesFiltradas]);
 
   // Cargar datos de capacitaciones
   const cargarCapacitaciones = useCallback(async () => {
-    if (!selectedSucursal || !selectedEmpresa) return [];
+    if (!selectedSucursal) return [];
 
     try {
       const { inicio, fin } = calcularPeriodo(selectedPeriodo);
@@ -259,7 +266,7 @@ const DashboardHigieneSeguridad = () => {
       let capacitaciones = [];
       
       if (selectedSucursal === 'todas') {
-        // Si es "todas", obtener capacitaciones de todas las sucursales de la empresa
+        // Si es "todas", obtener capacitaciones de todas las sucursales filtradas
         const sucursalesIds = sucursalesFiltradas.map(s => s.id);
         
         if (sucursalesIds.length === 0) {
@@ -311,7 +318,7 @@ const DashboardHigieneSeguridad = () => {
       console.error('Error cargando capacitaciones:', error);
       return [];
     }
-  }, [selectedSucursal, selectedEmpresa, selectedPeriodo, calcularPeriodo, sucursalesFiltradas]);
+  }, [selectedSucursal, selectedPeriodo, calcularPeriodo, sucursalesFiltradas]);
 
 
   // Cargar todos los datos
@@ -539,6 +546,17 @@ const DashboardHigieneSeguridad = () => {
                 >
                   🏢 Ir a Empresas
                 </Button>
+              </>
+            ) : selectedEmpresa === 'todas' ? (
+              <>
+                <Typography variant="body1">
+                  <strong>Todas las empresas</strong> - Todas las sucursales
+                </Typography>
+                <Chip 
+                  label={selectedPeriodo.charAt(0).toUpperCase() + selectedPeriodo.slice(1)} 
+                  size="small" 
+                  color="primary" 
+                />
               </>
             ) : selectedSucursal === 'todas' ? (
               <>
