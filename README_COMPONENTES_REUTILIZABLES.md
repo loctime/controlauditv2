@@ -168,6 +168,88 @@ Este documento cataloga todos los componentes reutilizables y hooks personalizad
 
 ---
 
+### **Accidentes e Incidentes**
+
+#### `AccidentesHeader.jsx`
+**Propósito:** Header con título y botones de acción  
+**Props:**
+- `onCrearAccidente`, `onCrearIncidente` (func)
+- `canCreate` (boolean)
+- `isSmallMobile` (boolean)
+
+**Características:**
+- ✅ Optimizado con `React.memo`
+- ✅ Layout responsive
+- ✅ Botones contextuales
+
+---
+
+#### `AccidentesAlertas.jsx`
+**Propósito:** Alertas de estado  
+**Props:**
+- `userEmpresas`, `sucursalesFiltradas` (array)
+- `selectedEmpresa` (string)
+
+**Características:**
+- ✅ Optimizado con `React.memo`
+- ✅ Alertas contextuales con acciones
+- ✅ Botones de navegación integrados
+
+---
+
+#### `AccidentesFiltros.jsx`
+**Propósito:** Selectores de filtros  
+**Props:**
+- `selectedEmpresa`, `selectedSucursal`, `filterTipo`, `filterEstado` (string)
+- `setSelectedEmpresa`, `setSelectedSucursal`, `setFilterTipo`, `setFilterEstado` (func)
+- `userEmpresas`, `sucursalesFiltradas` (array)
+
+**Características:**
+- ✅ Optimizado con `React.memo`
+- ✅ Filtros deshabilitados según contexto
+- ✅ Layout responsive
+
+---
+
+#### `EstadisticasAccidentes.jsx`
+**Propósito:** Estadísticas de accidentes  
+**Props:**
+- `accidentes` (array)
+
+**Características:**
+- ✅ Optimizado con `React.memo`
+- ✅ Comparación personalizada
+- ✅ Cálculos optimizados con `useMemo`
+
+---
+
+#### `AccidentesTabla.jsx`
+**Propósito:** Tabla de accidentes con paginación  
+**Props:**
+- `accidentes`, `page`, `rowsPerPage` (array, number, number)
+- `onPageChange`, `onRowsPerPageChange` (func)
+- `onVerDetalle`, `onCerrarAccidente` (func)
+
+**Características:**
+- ✅ Optimizado con `React.memo`
+- ✅ Paginación integrada
+- ✅ Acciones contextuales
+
+---
+
+#### `AccidenteDetalleModal.jsx`
+**Propósito:** Modal de detalle de accidente  
+**Props:**
+- `open`, `onClose`, `accidente` (boolean, func, object)
+- `onCerrarCaso`, `actualizarEstadoAccidente` (func)
+
+**Características:**
+- ✅ Optimizado con `React.memo`
+- ✅ Gestión de imágenes
+- ✅ Acciones contextuales
+
+---
+
 ### **Capacitaciones**
 
 #### `SelectoresCapacitaciones.jsx`
@@ -343,6 +425,50 @@ Este documento cataloga todos los componentes reutilizables y hooks personalizad
 - ✅ Cálculos por hora según sucursal
 - ✅ Soporte para agregaciones múltiples
 - ✅ Thresholds configurables
+
+---
+
+### **Accidentes**
+
+#### `useAccidentesData.js`
+**Propósito:** Carga de accidentes e incidentes  
+**Retorna:**
+- `accidentes` (array)
+- `loading` (boolean)
+- `recargarAccidentes` (func)
+
+**Características:**
+- ✅ Filtrado dinámico por empresa/sucursal/tipo/estado
+- ✅ Manejo de errores con Swal
+- ✅ Cleanup optimizado
+
+---
+
+#### `useAccidentesFilters.js`
+**Propósito:** Gestión de filtros y selección  
+**Retorna:**
+- Estados: `selectedEmpresa`, `selectedSucursal`, `filterTipo`, `filterEstado`
+- Setters para cada estado
+- `sucursalesFiltradas`, `empresasCargadas`
+
+**Características:**
+- ✅ Auto-selección desde navegación
+- ✅ Memoización de sucursales filtradas
+- ✅ Detección de carga de empresas
+
+---
+
+#### `useAccidentesHandlers.js`
+**Propósito:** Handlers para acciones de accidentes  
+**Retorna:**
+- `handleCrearAccidente` (func)
+- `handleCrearIncidente` (func)
+- `handleCambiarEstado` (func)
+
+**Características:**
+- ✅ Optimizado con `useCallback`
+- ✅ Confirmaciones integradas
+- ✅ Manejo de errores
 
 ---
 
@@ -738,12 +864,14 @@ src/utils/               # Utilidades
 | `Capacitaciones.jsx` | 825 | 336 | -59% ✅ |
 | `EditarFormulario.jsx` | 800 | 249 | -69% ✅ |
 | `AuthContext.jsx` | 785 | 332 | -58% ✅ |
+| `Accidentes.jsx` | 715 | 177 | -75% ✅ |
 
 ### **Componentes Creados**
 - **Dashboard:** 4 componentes + 2 hooks
 - **Editor:** 12 componentes + 5 hooks ✅
 - **Auditoría:** 5 componentes
 - **Capacitaciones:** 4 componentes + 3 hooks ✅
+- **Accidentes:** 6 componentes + 3 hooks ✅
 - **Context:** 5 hooks ✅
 
 ---
