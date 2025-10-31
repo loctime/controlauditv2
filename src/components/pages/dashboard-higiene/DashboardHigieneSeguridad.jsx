@@ -1,18 +1,12 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Container,
   Grid,
   Paper,
   Typography,
   Box,
-  Card,
-  CardContent,
   CircularProgress,
   Alert,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
   Chip,
   Divider,
   Button
@@ -29,13 +23,15 @@ import {
   Business as BusinessIcon,
   Storefront as StorefrontIcon
 } from '@mui/icons-material';
-import { collection, getDocs, query, where, orderBy, doc, getDoc } from 'firebase/firestore';
+import { collection, getDocs, query, where, orderBy } from 'firebase/firestore';
 import { db } from '../../../firebaseConfig';
 import { useAuth } from '../../context/AuthContext';
 import IndiceCard from './components/IndiceCard';
 import MetricaCard from './components/MetricaCard';
 import GraficoIndices from './components/GraficoIndices';
+import SelectoresDashboard from './components/SelectoresDashboard';
 import ErrorBoundary from '../../common/ErrorBoundary';
+import { useIndicesCalculator } from './hooks/useIndicesCalculator';
 
 const DashboardHigieneSeguridad = () => {
   const { userProfile, userEmpresas, userSucursales } = useAuth();
@@ -70,9 +66,11 @@ const DashboardHigieneSeguridad = () => {
   });
 
   // Filtrar sucursales por empresa seleccionada
-  const sucursalesFiltradas = selectedEmpresa
-    ? userSucursales?.filter(s => s.empresaId === selectedEmpresa) || []
-    : userSucursales || [];
+  const sucursalesFiltradas = useMemo(() => {
+    return selectedEmpresa
+      ? userSucursales?.filter(s => s.empresaId === selectedEmpresa) || []
+      : userSucursales || [];
+  }, [selectedEmpresa, userSucursales]);
 
   // Detectar cuando las empresas han sido cargadas
   useEffect(() => {
@@ -117,30 +115,8 @@ const DashboardHigieneSeguridad = () => {
     }
   }, [selectedEmpresa, sucursalesFiltradas, selectedSucursal]);
 
-  // Calcular período de análisis
-  const calcularPeriodo = useCallback((tipo) => {
-    const ahora = new Date();
-    let inicio;
-
-    switch (tipo) {
-      case 'semana':
-        inicio = new Date(ahora.getTime() - 7 * 24 * 60 * 60 * 1000);
-        break;
-      case 'mes':
-        inicio = new Date(ahora.getFullYear(), ahora.getMonth(), 1);
-        break;
-      case 'trimestre':
-        inicio = new Date(ahora.getFullYear(), ahora.getMonth() - 2, 1);
-        break;
-      case 'año':
-        inicio = new Date(ahora.getFullYear(), 0, 1);
-        break;
-      default:
-        inicio = new Date(ahora.getFullYear(), ahora.getMonth(), 1);
-    }
-
-    return { inicio, fin: ahora };
-  }, []);
+  // Hook para calcular índices
+  const { calcularIndices: calcularIndicesHook, calcularPeriodo } = useIndicesCalculator();
 
   // Cargar datos de empleados y sucursal
   const cargarEmpleados = useCallback(async () => {
@@ -153,15 +129,29 @@ const DashboardHigieneSeguridad = () => {
       
       if (selectedSucursal === 'todas') {
         // Si es "todas", obtener empleados de todas las sucursales de la empresa
-        const snapshot = await getDocs(
-          query(empleadosRef, where('empresaId', '==', selectedEmpresa))
-        );
-        empleados = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
+        const sucursalesIds = sucursalesFiltradas.map(s => s.id);
+        
+        if (sucursalesIds.length === 0) {
+          return [];
+        }
+        
+        // Usar 'in' para obtener empleados de todas las sucursales (máximo 10 por query)
+        const chunkSize = 10;
+        const empleadosData = [];
+        
+        for (let i = 0; i < sucursalesIds.length; i += chunkSize) {
+          const chunk = sucursalesIds.slice(i, i + chunkSize);
+          const snapshot = await getDocs(
+            query(empleadosRef, where('sucursalId', 'in', chunk))
+          );
+          empleadosData.push(...snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          })));
+        }
+        
         // Ordenar en memoria
-        empleados.sort((a, b) => {
+        empleados = empleadosData.sort((a, b) => {
           const fechaA = a.fechaIngreso?.toDate ? a.fechaIngreso.toDate() : new Date(0);
           const fechaB = b.fechaIngreso?.toDate ? b.fechaIngreso.toDate() : new Date(0);
           return fechaB - fechaA;
@@ -184,7 +174,7 @@ const DashboardHigieneSeguridad = () => {
       console.error('Error cargando empleados:', error);
       return [];
     }
-  }, [selectedSucursal, selectedEmpresa]);
+  }, [selectedSucursal, selectedEmpresa, sucursalesFiltradas]);
 
   // Obtener datos de sucursal desde userSucursales (más eficiente)
   const obtenerSucursalSeleccionada = useCallback(() => {
@@ -204,18 +194,29 @@ const DashboardHigieneSeguridad = () => {
       
       if (selectedSucursal === 'todas') {
         // Si es "todas", obtener accidentes de todas las sucursales de la empresa
-        const snapshot = await getDocs(
-          query(
-            accidentesRef,
-            where('empresaId', '==', selectedEmpresa)
-          )
-        );
-        accidentes = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
+        const sucursalesIds = sucursalesFiltradas.map(s => s.id);
+        
+        if (sucursalesIds.length === 0) {
+          return [];
+        }
+        
+        // Usar 'in' para obtener accidentes de todas las sucursales (máximo 10 por query)
+        const chunkSize = 10;
+        const accidentesData = [];
+        
+        for (let i = 0; i < sucursalesIds.length; i += chunkSize) {
+          const chunk = sucursalesIds.slice(i, i + chunkSize);
+          const snapshot = await getDocs(
+            query(accidentesRef, where('sucursalId', 'in', chunk))
+          );
+          accidentesData.push(...snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          })));
+        }
+        
         // Filtrar por período y ordenar en memoria
-        accidentes = accidentes.filter(a => {
+        accidentes = accidentesData.filter(a => {
           const fecha = a.fechaHora?.toDate ? a.fechaHora.toDate() : new Date(0);
           return fecha >= inicio && fecha <= fin;
         });
@@ -244,7 +245,7 @@ const DashboardHigieneSeguridad = () => {
       console.error('Error cargando accidentes:', error);
       return [];
     }
-  }, [selectedSucursal, selectedEmpresa, selectedPeriodo, calcularPeriodo]);
+  }, [selectedSucursal, selectedEmpresa, selectedPeriodo, calcularPeriodo, sucursalesFiltradas]);
 
   // Cargar datos de capacitaciones
   const cargarCapacitaciones = useCallback(async () => {
@@ -259,18 +260,29 @@ const DashboardHigieneSeguridad = () => {
       
       if (selectedSucursal === 'todas') {
         // Si es "todas", obtener capacitaciones de todas las sucursales de la empresa
-        const snapshot = await getDocs(
-          query(
-            capacitacionesRef,
-            where('empresaId', '==', selectedEmpresa)
-          )
-        );
-        capacitaciones = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
+        const sucursalesIds = sucursalesFiltradas.map(s => s.id);
+        
+        if (sucursalesIds.length === 0) {
+          return [];
+        }
+        
+        // Usar 'in' para obtener capacitaciones de todas las sucursales (máximo 10 por query)
+        const chunkSize = 10;
+        const capacitacionesData = [];
+        
+        for (let i = 0; i < sucursalesIds.length; i += chunkSize) {
+          const chunk = sucursalesIds.slice(i, i + chunkSize);
+          const snapshot = await getDocs(
+            query(capacitacionesRef, where('sucursalId', 'in', chunk))
+          );
+          capacitacionesData.push(...snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          })));
+        }
+        
         // Filtrar por período y ordenar en memoria
-        capacitaciones = capacitaciones.filter(c => {
+        capacitaciones = capacitacionesData.filter(c => {
           const fecha = c.fechaRealizada?.toDate ? c.fechaRealizada.toDate() : new Date(0);
           return fecha >= inicio && fecha <= fin;
         });
@@ -299,98 +311,8 @@ const DashboardHigieneSeguridad = () => {
       console.error('Error cargando capacitaciones:', error);
       return [];
     }
-  }, [selectedSucursal, selectedEmpresa, selectedPeriodo, calcularPeriodo]);
+  }, [selectedSucursal, selectedEmpresa, selectedPeriodo, calcularPeriodo, sucursalesFiltradas]);
 
-  // Calcular índices técnicos
-  const calcularIndices = useCallback((empleados, accidentes, periodo, sucursal) => {
-    const { inicio, fin } = calcularPeriodo(periodo);
-    const diasTotales = Math.ceil((fin - inicio) / (1000 * 60 * 60 * 24));
-    
-    // Calcular días laborales según el período
-    let diasLaborales;
-    switch (periodo) {
-      case 'semana':
-        diasLaborales = 5; // 5 días laborales por semana
-        break;
-      case 'mes':
-        diasLaborales = Math.floor(diasTotales / 7) * 5; // 5 días por semana
-        break;
-      case 'trimestre':
-        diasLaborales = Math.floor(diasTotales / 7) * 5; // 5 días por semana
-        break;
-      case 'año':
-        diasLaborales = Math.floor(diasTotales / 7) * 5; // 5 días por semana
-        break;
-      default:
-        diasLaborales = Math.floor(diasTotales / 7) * 5;
-    }
-    
-    const horasPorDia = sucursal?.horasSemanales ? sucursal.horasSemanales / 5 : 8; // 5 días laborales por semana
-
-
-    // Métricas básicas
-    const totalEmpleados = empleados.length;
-    const empleadosActivos = empleados.filter(e => e.estado === 'activo').length;
-    const empleadosEnReposo = empleados.filter(e => e.estado === 'inactivo' && e.fechaInicioReposo).length;
-
-    // Calcular horas trabajadas
-    const horasTrabajadas = empleadosActivos * diasLaborales * horasPorDia;
-
-    // Calcular horas perdidas por reposo
-    const horasPerdidas = empleadosEnReposo * diasLaborales * horasPorDia;
-
-    // Accidentes con tiempo perdido
-    const accidentesConTiempoPerdido = accidentes.filter(a => 
-      a.tipo === 'accidente' && 
-      a.empleadosInvolucrados?.some(emp => emp.conReposo === true)
-    ).length;
-
-    // Calcular días perdidos por accidentes
-    let diasPerdidos = 0;
-    accidentes.forEach(accidente => {
-      if (accidente.tipo === 'accidente' && accidente.empleadosInvolucrados) {
-        accidente.empleadosInvolucrados.forEach(emp => {
-          if (emp.conReposo && accidente.fechaHora) {
-            const fechaAccidente = accidente.fechaHora.toDate ? accidente.fechaHora.toDate() : new Date(accidente.fechaHora);
-            const diasDesdeAccidente = Math.ceil((fin - fechaAccidente) / (1000 * 60 * 60 * 24));
-            diasPerdidos += Math.max(0, diasDesdeAccidente);
-          }
-        });
-      }
-    });
-
-    // 1. Tasa de Ausentismo (TA)
-    const tasaAusentismo = horasTrabajadas > 0 ? (horasPerdidas / (horasTrabajadas + horasPerdidas)) * 100 : 0;
-
-    // 2. Índice de Frecuencia (IF)
-    const indiceFrecuencia = horasTrabajadas > 0 ? (accidentesConTiempoPerdido * 1000000) / horasTrabajadas : 0;
-
-    // 3. Índice de Incidencia (II)
-    const promedioTrabajadores = empleadosActivos;
-    const indiceIncidencia = promedioTrabajadores > 0 ? (accidentesConTiempoPerdido * 1000) / promedioTrabajadores : 0;
-
-    // 4. Índice de Gravedad (IG)
-    const indiceGravedad = horasTrabajadas > 0 ? (diasPerdidos * 1000) / horasTrabajadas : 0;
-
-
-    return {
-      indices: {
-        tasaAusentismo: Math.round(tasaAusentismo * 100) / 100,
-        indiceFrecuencia: Math.round(indiceFrecuencia * 100) / 100,
-        indiceIncidencia: Math.round(indiceIncidencia * 100) / 100,
-        indiceGravedad: Math.round(indiceGravedad * 100) / 100
-      },
-      metricas: {
-        totalEmpleados,
-        empleadosActivos,
-        empleadosEnReposo,
-        horasTrabajadas,
-        horasPerdidas,
-        accidentesConTiempoPerdido,
-        diasPerdidos
-      }
-    };
-  }, [calcularPeriodo]);
 
   // Cargar todos los datos
   const cargarDatos = useCallback(async () => {
@@ -493,8 +415,9 @@ const DashboardHigieneSeguridad = () => {
         cargarCapacitaciones()
       ]);
 
-      const sucursal = obtenerSucursalSeleccionada();
-      const { indices, metricas } = calcularIndices(empleados, accidentes, selectedPeriodo, sucursal);
+      // Para el cálculo de índices, pasar todas las sucursales si es "todas"
+      const sucursalesParaCalculo = selectedSucursal === 'todas' ? sucursalesFiltradas : obtenerSucursalSeleccionada();
+      const { indices, metricas } = calcularIndicesHook(empleados, accidentes, selectedPeriodo, sucursalesParaCalculo);
 
       setDatos({
         empleados,
@@ -509,7 +432,7 @@ const DashboardHigieneSeguridad = () => {
       clearTimeout(timeoutId);
       setLoading(false);
     }
-  }, [selectedSucursal, selectedPeriodo, cargarEmpleados, cargarAccidentes, cargarCapacitaciones, obtenerSucursalSeleccionada, calcularIndices, selectedEmpresa]);
+  }, [selectedSucursal, selectedPeriodo, cargarEmpleados, cargarAccidentes, cargarCapacitaciones, obtenerSucursalSeleccionada, calcularIndicesHook, selectedEmpresa, sucursalesFiltradas]);
 
   useEffect(() => {
     if (empresasCargadas) {
@@ -670,70 +593,17 @@ const DashboardHigieneSeguridad = () => {
             </Typography>
           </Box>
         </Alert>
-        <Grid container spacing={3}>
-          <Grid item xs={12} md={4}>
-            <FormControl fullWidth>
-              <InputLabel>Empresa</InputLabel>
-              <Select
-                value={selectedEmpresa}
-                onChange={(e) => setSelectedEmpresa(e.target.value)}
-                label="Empresa"
-                disabled={!userEmpresas || userEmpresas.length === 0}
-              >
-                {userEmpresas?.map(empresa => (
-                  <MenuItem key={empresa.id} value={empresa.id}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <BusinessIcon sx={{ fontSize: 20 }} />
-                      {empresa.nombre}
-                    </Box>
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          </Grid>
-          <Grid item xs={12} md={4}>
-            <FormControl fullWidth>
-              <InputLabel>Sucursal</InputLabel>
-              <Select
-                value={selectedSucursal}
-                onChange={(e) => setSelectedSucursal(e.target.value)}
-                label="Sucursal"
-                disabled={!userEmpresas || userEmpresas.length === 0}
-              >
-                <MenuItem value="todas">
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <StorefrontIcon sx={{ fontSize: 20 }} />
-                    Todas las sucursales
-                  </Box>
-                </MenuItem>
-                {sucursalesFiltradas.map(sucursal => (
-                  <MenuItem key={sucursal.id} value={sucursal.id}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <StorefrontIcon sx={{ fontSize: 20 }} />
-                      {sucursal.nombre}
-                    </Box>
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          </Grid>
-          <Grid item xs={12} md={4}>
-            <FormControl fullWidth>
-              <InputLabel>Período</InputLabel>
-              <Select
-                value={selectedPeriodo}
-                onChange={(e) => setSelectedPeriodo(e.target.value)}
-                label="Período"
-                disabled={!userEmpresas || userEmpresas.length === 0}
-              >
-                <MenuItem value="semana">Última semana</MenuItem>
-                <MenuItem value="mes">Mes actual</MenuItem>
-                <MenuItem value="trimestre">Último trimestre</MenuItem>
-                <MenuItem value="año">Año actual</MenuItem>
-              </Select>
-            </FormControl>
-          </Grid>
-        </Grid>
+        <SelectoresDashboard
+          selectedEmpresa={selectedEmpresa}
+          selectedSucursal={selectedSucursal}
+          selectedPeriodo={selectedPeriodo}
+          onEmpresaChange={setSelectedEmpresa}
+          onSucursalChange={setSelectedSucursal}
+          onPeriodoChange={setSelectedPeriodo}
+          userEmpresas={userEmpresas}
+          sucursalesFiltradas={sucursalesFiltradas}
+          deshabilitado={false}
+        />
       </Paper>
 
       
