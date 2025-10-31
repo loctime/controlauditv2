@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   Container,
   Paper,
@@ -46,10 +46,18 @@ export default function Empleados() {
   const [selectedEmpleado, setSelectedEmpleado] = useState(null);
   const [empresasCargadas, setEmpresasCargadas] = useState(false);
 
-  // Filtrar sucursales por empresa seleccionada
-  const filteredSucursales = selectedEmpresa
-    ? userSucursales?.filter(s => s.empresaId === selectedEmpresa) || []
-    : userSucursales || [];
+  // Memoizar sucursales filtradas para evitar re-renders
+  const filteredSucursales = useMemo(() => {
+    return selectedEmpresa
+      ? userSucursales?.filter(s => s.empresaId === selectedEmpresa) || []
+      : userSucursales || [];
+  }, [selectedEmpresa, userSucursales]);
+
+  // Memoizar IDs de sucursales para estabilizar dependencias
+  const filteredSucursalesIds = useMemo(() => 
+    JSON.stringify(filteredSucursales.map(s => s.id).sort()),
+    [filteredSucursales]
+  );
 
   // Detectar cuando las empresas han sido cargadas
   useEffect(() => {
@@ -73,7 +81,8 @@ export default function Empleados() {
         setSelectedEmpresa(userEmpresas[0].id);
       }
     }
-  }, [userEmpresas, userSucursales, selectedEmpresa]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userEmpresas, userSucursales]);
 
   // Establecer sucursal inicial cuando cambia la empresa
   useEffect(() => {
@@ -86,20 +95,10 @@ export default function Empleados() {
     } else {
       setSelectedSucursal('');
     }
-  }, [selectedEmpresa, filteredSucursales]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedEmpresa, filteredSucursalesIds]);
 
-  // Cargar empleados
-  useEffect(() => {
-    if (selectedSucursal) {
-      loadEmpleados();
-    } else if (empresasCargadas) {
-      // Si no hay sucursal seleccionada pero ya se cargaron las empresas, limpiar empleados
-      setEmpleados([]);
-      setLoading(false);
-    }
-  }, [selectedSucursal, empresasCargadas]);
-
-  const loadEmpleados = async () => {
+  const loadEmpleados = useCallback(async () => {
     setLoading(true);
     try {
       const empleadosRef = collection(db, 'empleados');
@@ -120,7 +119,18 @@ export default function Empleados() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedSucursal]);
+
+  // Cargar empleados
+  useEffect(() => {
+    if (selectedSucursal) {
+      loadEmpleados();
+    } else if (empresasCargadas) {
+      // Si no hay sucursal seleccionada pero ya se cargaron las empresas, limpiar empleados
+      setEmpleados([]);
+      setLoading(false);
+    }
+  }, [selectedSucursal, empresasCargadas, loadEmpleados]);
 
   const handleOpenForm = (empleado = null) => {
     setSelectedEmpleado(empleado);

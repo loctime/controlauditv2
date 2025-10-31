@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { collection, getDocs, query, where, onSnapshot } from 'firebase/firestore';
 import { db } from '../../../firebaseConfig.js';
 
@@ -6,6 +6,12 @@ import { db } from '../../../firebaseConfig.js';
  * Hook para listener reactivo de sucursales con chunking y fallback offline
  */
 export const useSucursalesListener = (userProfile, role, userEmpresas, setUserSucursales, setLoadingSucursales, loadUserFromCache) => {
+  // Memoizar IDs de empresas para estabilizar dependencias
+  const empresasIdsString = useMemo(() => 
+    JSON.stringify((userEmpresas || []).map(emp => emp.id).sort()),
+    [userEmpresas]
+  );
+
   useEffect(() => {
     if (!userProfile || !role || !userEmpresas || userEmpresas.length === 0) {
       setUserSucursales([]);
@@ -86,6 +92,7 @@ export const useSucursalesListener = (userProfile, role, userEmpresas, setUserSu
     );
 
     return unsubscribe;
-  }, [userProfile?.uid, role, userEmpresas, loadUserFromCache]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userProfile?.uid, role, empresasIdsString]);
 };
 
