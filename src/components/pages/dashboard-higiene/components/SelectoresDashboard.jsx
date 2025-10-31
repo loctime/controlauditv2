@@ -4,8 +4,9 @@ import { Business as BusinessIcon, Storefront as StorefrontIcon } from '@mui/ico
 
 /**
  * Componente para los selectores del dashboard
+ * Optimizado con React.memo para evitar re-renders innecesarios
  */
-const SelectoresDashboard = ({
+const SelectoresDashboard = React.memo(({
   selectedEmpresa,
   selectedSucursal,
   selectedPeriodo,
@@ -88,7 +89,19 @@ const SelectoresDashboard = ({
       </Grid>
     </Grid>
   );
-};
+}, (prevProps, nextProps) => {
+  // Comparación personalizada para evitar re-renders innecesarios
+  return (
+    prevProps.selectedEmpresa === nextProps.selectedEmpresa &&
+    prevProps.selectedSucursal === nextProps.selectedSucursal &&
+    prevProps.selectedPeriodo === nextProps.selectedPeriodo &&
+    prevProps.deshabilitado === nextProps.deshabilitado &&
+    prevProps.userEmpresas?.length === nextProps.userEmpresas?.length &&
+    prevProps.sucursalesFiltradas?.length === nextProps.sucursalesFiltradas?.length
+  );
+});
+
+SelectoresDashboard.displayName = 'SelectoresDashboard';
 
 export default SelectoresDashboard;
 
