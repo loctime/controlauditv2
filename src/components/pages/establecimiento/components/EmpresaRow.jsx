@@ -6,7 +6,8 @@ import {
   IconButton,
   Typography,
   alpha,
-  Tooltip
+  Tooltip,
+  useTheme
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
@@ -24,13 +25,15 @@ const EmpresaRow = React.memo(({
   empresa,
   stats,
   isExpanded,
-  theme,
   onToggleRow,
   onTabChange,
   formatearEmail,
   onEditClick,
   EliminarEmpresaComponent
-}) => (
+}) => {
+  const theme = useTheme();
+  
+  return (
   <TableRow hover>
     <TableCell>
       <IconButton size="small" onClick={() => onToggleRow(empresa.id)}>
@@ -108,7 +111,6 @@ const EmpresaRow = React.memo(({
           }
           onTabChange(empresa.id, 'sucursales');
         }}
-        theme={theme}
       />
     </TableCell>
     <TableCell>
@@ -122,7 +124,6 @@ const EmpresaRow = React.memo(({
           }
           onTabChange(empresa.id, 'empleados');
         }}
-        theme={theme}
       />
     </TableCell>
     <TableCell>
@@ -136,7 +137,6 @@ const EmpresaRow = React.memo(({
           }
           onTabChange(empresa.id, 'capacitaciones');
         }}
-        theme={theme}
       />
     </TableCell>
     <TableCell>
@@ -150,7 +150,6 @@ const EmpresaRow = React.memo(({
           }
           onTabChange(empresa.id, 'accidentes');
         }}
-        theme={theme}
       />
     </TableCell>
     <TableCell>
@@ -169,7 +168,8 @@ const EmpresaRow = React.memo(({
       </Box>
     </TableCell>
   </TableRow>
-));
+  );
+});
 
 EmpresaRow.displayName = 'EmpresaRow';
 

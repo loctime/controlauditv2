@@ -99,6 +99,8 @@ const AuthContextComponent = ({ children }) => {
 
   // Listener de empresas (ya usa servicio)
   useEffect(() => {
+    if (!userProfile?.uid || !role) return;
+    
     const unsubscribe = empresaService.subscribeToUserEmpresas(
       userProfile, 
       role, 
@@ -107,7 +109,8 @@ const AuthContextComponent = ({ children }) => {
       loadUserFromCache
     );
     return unsubscribe;
-  }, [userProfile?.uid, role, userProfile?.clienteAdminId, loadUserFromCache]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userProfile?.uid, role, userProfile?.clienteAdminId]);
 
   // Efecto principal de autenticación
   useEffect(() => {
@@ -259,7 +262,8 @@ const AuthContextComponent = ({ children }) => {
       unsubscribe();
       window.removeEventListener('online', handleOnline);
     };
-  }, [createOrGetUserProfile, setUserProfile, loadUserEmpresas, loadUserSucursales, loadUserFormularios, loadUserAuditorias, loadAuditoriasCompartidas, loadUserFromCache, user]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.uid]);
 
   const handleLogin = (userLogged) => {
     setUser(userLogged);

@@ -206,7 +206,6 @@ const EstablecimientosContainer = () => {
                       empresa={empresa}
                       stats={stats}
                       isExpanded={isExpanded}
-                      theme={theme}
                       onToggleRow={toggleRow}
                       onTabChange={setActiveTab}
                       formatearEmail={formatearEmail}
