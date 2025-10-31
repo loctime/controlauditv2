@@ -1,8 +1,8 @@
 import { useCallback } from 'react';
 import { collection, getDocs, query, where } from 'firebase/firestore';
-import { db } from '../../../../firebaseConfig.js';
-import { empresaService } from '../../../../services/empresaService';
-import { auditoriaService } from '../../../../services/auditoriaService';
+import { db } from '../../../firebaseConfig.js';
+import { empresaService } from '../../../services/empresaService';
+import { auditoriaService } from '../../../services/auditoriaService';
 
 /**
  * Hook para funciones de carga de datos del usuario

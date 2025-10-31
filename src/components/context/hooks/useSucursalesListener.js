@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { collection, getDocs, query, where, onSnapshot } from 'firebase/firestore';
-import { db } from '../../../../firebaseConfig.js';
+import { db } from '../../../firebaseConfig.js';
 
 /**
  * Hook para listener reactivo de sucursales con chunking y fallback offline

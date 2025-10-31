@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
-import { db } from '../../../../firebaseConfig.js';
+import { db } from '../../../firebaseConfig.js';
 
 /**
  * Hook para listener reactivo de formularios con fallback offline
