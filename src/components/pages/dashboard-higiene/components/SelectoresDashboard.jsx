@@ -27,6 +27,12 @@ const SelectoresDashboard = ({
             label="Empresa"
             disabled={deshabilitado || !userEmpresas || userEmpresas.length === 0}
           >
+            <MenuItem value="todas">
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <BusinessIcon sx={{ fontSize: 20 }} />
+                Todas las empresas
+              </Box>
+            </MenuItem>
             {userEmpresas?.map(empresa => (
               <MenuItem key={empresa.id} value={empresa.id}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>

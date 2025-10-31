@@ -53,33 +53,35 @@ export const useIndicesCalculator = () => {
         diasLaborales = Math.floor(diasTotales / 7) * 5;
     }
     
-    // Si estamos agregando múltiples sucursales, calcular promedio de horas
-    let horasPorDia;
-    if (Array.isArray(sucursales) && sucursales.length > 0) {
-      // Calcular promedio de horas semanales entre sucursales
-      const totalHorasSemanales = sucursales.reduce((sum, s) => {
-        return sum + (s?.horasSemanales || 40);
-      }, 0);
-      const promedioHorasSemanales = totalHorasSemanales / sucursales.length;
-      horasPorDia = promedioHorasSemanales / 5; // 5 días laborales por semana
-    } else if (sucursales?.horasSemanales) {
-      // Una sola sucursal
-      horasPorDia = sucursales.horasSemanales / 5;
-    } else {
-      // Default
-      horasPorDia = 8;
-    }
-
     // Métricas básicas
     const totalEmpleados = empleados.length;
     const empleadosActivos = empleados.filter(e => e.estado === 'activo').length;
     const empleadosEnReposo = empleados.filter(e => e.estado === 'inactivo' && e.fechaInicioReposo).length;
 
-    // Calcular horas trabajadas
-    const horasTrabajadas = empleadosActivos * diasLaborales * horasPorDia;
-
-    // Calcular horas perdidas por reposo
-    const horasPerdidas = empleadosEnReposo * diasLaborales * horasPorDia;
+    // Calcular horas trabajadas y perdidas por empleado según su sucursal
+    let horasTrabajadas = 0;
+    let horasPerdidas = 0;
+    
+    // Crear mapa de sucursales para acceso rápido
+    const sucursalesMap = new Map();
+    if (Array.isArray(sucursales)) {
+      sucursales.forEach(s => sucursalesMap.set(s.id, s));
+    } else if (sucursales) {
+      sucursalesMap.set(sucursales.id, sucursales);
+    }
+    
+    // Calcular horas por cada empleado según su sucursal
+    empleados.forEach(empleado => {
+      const sucursal = sucursalesMap.get(empleado.sucursalId);
+      const horasSemanales = sucursal?.horasSemanales || 40;
+      const horasPorDiaEmpleado = horasSemanales / 5;
+      
+      if (empleado.estado === 'activo') {
+        horasTrabajadas += diasLaborales * horasPorDiaEmpleado;
+      } else if (empleado.estado === 'inactivo' && empleado.fechaInicioReposo) {
+        horasPerdidas += diasLaborales * horasPorDiaEmpleado;
+      }
+    });
 
     // Accidentes con tiempo perdido
     const accidentesConTiempoPerdido = accidentes.filter(a => 
