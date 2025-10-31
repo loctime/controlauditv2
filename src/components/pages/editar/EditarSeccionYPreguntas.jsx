@@ -116,6 +116,13 @@ const EditarSeccionYPreguntas = ({
     });
   }, [formularioSeleccionado, puedeEditar, puedeEliminar, seccionesNormalizadas]);
 
+  // ✅ Actualizar nombre del formulario cuando cambie
+  React.useEffect(() => {
+    if (formularioSeleccionado?.nombre) {
+      setNuevoNombreFormulario(formularioSeleccionado.nombre);
+    }
+  }, [formularioSeleccionado?.nombre]);
+
   // ✅ Validar que hay un formulario seleccionado
   if (!formularioSeleccionado || !formularioSeleccionado.id) {
     return (
@@ -150,6 +157,7 @@ const EditarSeccionYPreguntas = ({
       nuevoEsPublico,
       setAccordionOpen
     );
+    setModalEditarFormularioAbierto(false);
   };
 
   const handleGuardarCambiosSeccion = () => {
@@ -235,13 +243,37 @@ const EditarSeccionYPreguntas = ({
       >
         <Box display="flex" alignItems="center" gap={2} mb={2}>
           <LabelIcon sx={{ fontSize: 32 }} />
-          <Box>
-            <Typography variant="h4" fontWeight={700}>
-              {formularioSeleccionado.nombre}
-            </Typography>
+          <Box flex={1}>
+            <Box display="flex" alignItems="center" gap={1}>
+              <Typography variant="h4" fontWeight={700}>
+                {formularioSeleccionado.nombre}
+              </Typography>
+              {puedeEditar && (
+                <IconButton
+                  size="small"
+                  onClick={() => {
+                    setNuevoNombreFormulario(formularioSeleccionado.nombre);
+                    setModalEditarFormularioAbierto(true);
+                  }}
+                  sx={{ 
+                    color: 'white',
+                    background: 'rgba(255,255,255,0.15)',
+                    ml: 1,
+                    '&:hover': { 
+                      background: 'rgba(255,255,255,0.25)',
+                      transform: 'scale(1.1)'
+                    },
+                    transition: 'all 0.2s ease'
+                  }}
+                  title="Editar nombre del formulario"
+                >
+                  <EditIcon fontSize="small" />
+                </IconButton>
+              )}
+            </Box>
             <Typography variant="body2" sx={{ opacity: 0.9 }}>
               Edita el contenido de tu formulario
-        </Typography>
+            </Typography>
           </Box>
       </Box>
 
