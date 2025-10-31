@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
-import { empresaService } from '../../../../services/empresaService';
-import { auditoriaService } from '../../../../services/auditoriaService';
-import { saveCompleteUserCache } from '../../../../services/completeOfflineCache';
+import { empresaService } from '../../../services/empresaService';
+import { auditoriaService } from '../../../services/auditoriaService';
+import { saveCompleteUserCache } from '../../../services/completeOfflineCache';
 
 /**
  * Hook para acciones del contexto (wrapper functions)
