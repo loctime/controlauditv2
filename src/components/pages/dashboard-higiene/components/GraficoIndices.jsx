@@ -21,9 +21,7 @@ import {
   Legend,
   ResponsiveContainer,
   LineChart,
-  Line,
-  Area,
-  AreaChart
+  Line
 } from 'recharts';
 
 const GraficoIndices = ({ datos, periodo }) => {
@@ -174,29 +172,6 @@ const GraficoIndices = ({ datos, periodo }) => {
     return null;
   };
 
-  const CustomAreaTooltip = ({ active, payload, label }) => {
-    if (active && payload && payload.length) {
-      return (
-        <Paper sx={{ 
-          p: 2, 
-          backgroundColor: theme.palette.background.paper,
-          border: `1px solid ${theme.palette.divider}`,
-          boxShadow: theme.shadows[8]
-        }}>
-          <Typography variant="body2" sx={{ fontWeight: 600, color: theme.palette.text.primary }}>
-            {label}
-          </Typography>
-          {payload.map((entry, index) => (
-            <Typography key={index} variant="body2" sx={{ color: entry.color }}>
-              {entry.name}: {entry.value.toLocaleString()} horas
-            </Typography>
-          ))}
-        </Paper>
-      );
-    }
-    return null;
-  };
-
   const CustomLineTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
       return (
@@ -287,27 +262,25 @@ const GraficoIndices = ({ datos, periodo }) => {
           </Card>
         </Grid>
 
-        {/* Gráfico de área - Horas Trabajadas vs Perdidas */}
+        {/* Gráfico de barras - Horas Trabajadas vs Perdidas */}
         <Grid item xs={12} md={6}>
-          <Card elevation={2} sx={{ borderRadius: 3, height: 350 }}>
+          <Card elevation={2} sx={{ borderRadius: 3, height: 280 }}>
             <CardContent sx={{ p: 3, height: '100%' }}>
               <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, color: 'text.primary' }}>
                 Distribución de Horas
               </Typography>
-              <ResponsiveContainer width="100%" height={250}>
-                <AreaChart data={horasData}>
+              <ResponsiveContainer width="100%" height={180}>
+                <BarChart data={horasData}>
                   <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.divider} />
                   <XAxis dataKey="name" tick={{ fill: theme.palette.text.secondary, fontSize: 12 }} />
                   <YAxis tick={{ fill: theme.palette.text.secondary, fontSize: 12 }} />
-                  <Tooltip content={<CustomAreaTooltip />} />
-                  <Area 
-                    type="monotone" 
-                    dataKey="valor" 
-                    stroke="#3b82f6" 
-                    fill="#3b82f6" 
-                    fillOpacity={0.6}
-                  />
-                </AreaChart>
+                  <Tooltip content={<CustomTooltip />} />
+                  <Bar dataKey="valor" radius={[4, 4, 0, 0]}>
+                    {horasData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Bar>
+                </BarChart>
               </ResponsiveContainer>
             </CardContent>
           </Card>
@@ -320,7 +293,7 @@ const GraficoIndices = ({ datos, periodo }) => {
               <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, color: 'text.primary' }}>
                 Tendencia Mensual
               </Typography>
-              <ResponsiveContainer width="100%" height={250}>
+              <ResponsiveContainer width="100%" height={280}>
                 <LineChart data={tendenciaData}>
                   <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.divider} />
                   <XAxis dataKey="mes" tick={{ fill: theme.palette.text.secondary, fontSize: 12 }} />
