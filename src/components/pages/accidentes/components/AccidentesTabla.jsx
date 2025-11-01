@@ -110,7 +110,7 @@ const AccidentesTabla = React.memo(({
                       <Button
                         size="small"
                         color="success"
-                        onClick={() => onCerrarAccidente(accidente.id)}
+                        onClick={() => onCerrarAccidente(accidente.id, 'cerrado')}
                       >
                         Cerrar
                       </Button>

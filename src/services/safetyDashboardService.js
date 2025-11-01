@@ -9,7 +9,8 @@ import {
   limit,
   doc,
   getDoc,
-  Timestamp 
+  Timestamp,
+  onSnapshot 
 } from 'firebase/firestore';
 import { db } from '../firebaseConfig';
 
@@ -65,6 +66,182 @@ export const safetyDashboardService = {
       console.error('❌ [SafetyDashboard] Error obteniendo datos:', error);
       // Retornar datos por defecto en caso de error
       return this.getDefaultData(companyId, sucursalId, period);
+    }
+  },
+
+  // Listener en tiempo real para dashboard
+  subscribeToDashboard(companyId, sucursalId, period, callback, onError) {
+    console.log(`🔍 [SafetyDashboard] Suscribiéndose a dashboard en tiempo real para empresa ${companyId}, sucursal ${sucursalId}`);
+    
+    const unsubscribes = [];
+    let isLoading = false;
+    
+    // Función para recargar todos los datos del dashboard
+    const recargarDashboard = async () => {
+      if (isLoading) return; // Evitar múltiples recargas simultáneas
+      isLoading = true;
+      
+      try {
+        console.log('🔄 [SafetyDashboard] Recargando datos del dashboard...');
+        
+        const [
+          auditoriasData,
+          logsData,
+          formulariosData,
+          empleadosData,
+          capacitacionesData,
+          accidentesData
+        ] = await Promise.all([
+          this.getAuditoriasData(companyId, period),
+          this.getLogsData(companyId, period),
+          this.getFormulariosData(companyId, period),
+          this.getEmpleados(sucursalId),
+          this.getCapacitaciones(sucursalId, period),
+          this.getAccidentes(sucursalId, period)
+        ]);
+
+        const metrics = this.calculateSafetyMetrics(
+          auditoriasData,
+          logsData,
+          formulariosData,
+          empleadosData,
+          capacitacionesData,
+          accidentesData
+        );
+        
+        const companyInfo = await this.getCompanyInfo(companyId);
+        const sucursalInfo = sucursalId !== 'todas' ? await this.getSucursalInfo(sucursalId) : null;
+        
+        callback({
+          companyId,
+          sucursalId,
+          companyName: companyInfo?.nombre || 'Empresa',
+          sucursalName: sucursalId === 'todas' ? 'Todas las sucursales' : (sucursalInfo?.nombre || 'Sucursal'),
+          period,
+          ...metrics,
+          alerts: this.generateAlerts(auditoriasData, logsData, formulariosData, accidentesData),
+          chartData: this.generateChartData(auditoriasData, logsData, accidentesData, period)
+        });
+      } catch (error) {
+        console.error('❌ [SafetyDashboard] Error recalculando métricas:', error);
+        if (onError) onError(error);
+      } finally {
+        isLoading = false;
+      }
+    };
+    
+    try {
+      // Listener para accidentes
+      const accidentesRef = collection(db, 'accidentes');
+      let qAccidentes;
+      
+      if (sucursalId === 'todas') {
+        qAccidentes = query(accidentesRef, orderBy('fechaHora', 'desc'));
+      } else {
+        qAccidentes = query(
+          accidentesRef,
+          where('sucursalId', '==', sucursalId),
+          orderBy('fechaHora', 'desc')
+        );
+      }
+      
+      const unsubscribeAccidentes = onSnapshot(qAccidentes, 
+        (snapshot) => {
+          console.log(`🔄 [SafetyDashboard] Cambios detectados en accidentes: ${snapshot.docs.length} documentos`);
+          recargarDashboard();
+        },
+        (error) => {
+          console.error('❌ [SafetyDashboard] Error en listener de accidentes:', error);
+          if (onError) onError(error);
+        }
+      );
+      
+      unsubscribes.push(unsubscribeAccidentes);
+      
+      // Listener para capacitaciones
+      const capacitacionesRef = collection(db, 'capacitaciones');
+      let qCapacitaciones;
+      
+      if (sucursalId === 'todas') {
+        qCapacitaciones = query(capacitacionesRef, orderBy('fechaRealizada', 'desc'));
+      } else {
+        qCapacitaciones = query(
+          capacitacionesRef,
+          where('sucursalId', '==', sucursalId),
+          orderBy('fechaRealizada', 'desc')
+        );
+      }
+      
+      const unsubscribeCapacitaciones = onSnapshot(qCapacitaciones,
+        (snapshot) => {
+          console.log(`🔄 [SafetyDashboard] Cambios detectados en capacitaciones: ${snapshot.docs.length} documentos`);
+          recargarDashboard();
+        },
+        (error) => {
+          console.error('❌ [SafetyDashboard] Error en listener de capacitaciones:', error);
+          if (onError) onError(error);
+        }
+      );
+      
+      unsubscribes.push(unsubscribeCapacitaciones);
+      
+      // Listener para empleados
+      const empleadosRef = collection(db, 'empleados');
+      let qEmpleados;
+      
+      if (sucursalId === 'todas') {
+        qEmpleados = query(empleadosRef, orderBy('nombre', 'asc'));
+      } else {
+        qEmpleados = query(
+          empleadosRef,
+          where('sucursalId', '==', sucursalId),
+          orderBy('nombre', 'asc')
+        );
+      }
+      
+      const unsubscribeEmpleados = onSnapshot(qEmpleados,
+        (snapshot) => {
+          console.log(`🔄 [SafetyDashboard] Cambios detectados en empleados: ${snapshot.docs.length} documentos`);
+          recargarDashboard();
+        },
+        (error) => {
+          console.error('❌ [SafetyDashboard] Error en listener de empleados:', error);
+          if (onError) onError(error);
+        }
+      );
+      
+      unsubscribes.push(unsubscribeEmpleados);
+      
+      // Listener para auditorías
+      const auditoriasRef = collection(db, 'auditorias');
+      const qAuditorias = query(
+        auditoriasRef,
+        where('empresa', '==', companyId),
+        orderBy('fechaCreacion', 'desc')
+      );
+      
+      const unsubscribeAuditorias = onSnapshot(qAuditorias,
+        (snapshot) => {
+          console.log(`🔄 [SafetyDashboard] Cambios detectados en auditorías: ${snapshot.docs.length} documentos`);
+          recargarDashboard();
+        },
+        (error) => {
+          console.error('❌ [SafetyDashboard] Error en listener de auditorías:', error);
+          if (onError) onError(error);
+        }
+      );
+      
+      unsubscribes.push(unsubscribeAuditorias);
+      
+      // Retornar función para desuscribirse de todos los listeners
+      return () => {
+        unsubscribes.forEach(unsub => unsub());
+      };
+      
+    } catch (error) {
+      console.error('❌ [SafetyDashboard] Error configurando listeners:', error);
+      if (onError) onError(error);
+      return () => {};
     }
   },
 
