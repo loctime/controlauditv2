@@ -44,30 +44,7 @@ export default function DashboardSeguridadV2() {
     }
   }, [userSucursales, selectedSucursal]);
 
-  // Carga inicial de datos
-  useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      try {
-        const companyId = userProfile?.empresaId || userProfile?.uid || 'company-001';
-        const currentPeriod = `${selectedYear}-${selectedMonth.toString().padStart(2, '0')}`;
-        
-        const dashboardData = await safetyDashboardService.getDashboardData(
-          companyId, 
-          selectedSucursal === 'todas' ? 'todas' : selectedSucursal,
-          currentPeriod
-        );
-        setData(dashboardData);
-      } catch (error) {
-        console.error('Error al cargar datos del dashboard:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchData();
-  }, [userProfile, selectedYear, selectedMonth, selectedSucursal]);
-
-  // Listener en tiempo real para accidentes
+  // Listener en tiempo real - Optimizado: carga inicial y actualizaciones automáticas
   useEffect(() => {
     if (!userProfile) return;
 
@@ -79,9 +56,9 @@ export default function DashboardSeguridadV2() {
     const companyId = userProfile?.empresaId || userProfile?.uid || 'company-001';
     const currentPeriod = `${selectedYear}-${selectedMonth.toString().padStart(2, '0')}`;
     
-    console.log('🔄 [Dashboard] Configurando listener en tiempo real');
+    console.log('🔄 [Dashboard] Configurando listener en tiempo real optimizado');
     
-    // Configurar listener en tiempo real
+    // Configurar listener en tiempo real (ya incluye carga inicial)
     unsubscribeRef.current = safetyDashboardService.subscribeToDashboard(
       companyId,
       selectedSucursal === 'todas' ? 'todas' : selectedSucursal,

@@ -69,66 +69,92 @@ export const safetyDashboardService = {
     }
   },
 
-  // Listener en tiempo real para dashboard
+  // Listener en tiempo real para dashboard - Optimizado con debounce
   subscribeToDashboard(companyId, sucursalId, period, callback, onError) {
     console.log(`🔍 [SafetyDashboard] Suscribiéndose a dashboard en tiempo real para empresa ${companyId}, sucursal ${sucursalId}`);
     
     const unsubscribes = [];
     let isLoading = false;
+    let debounceTimer = null;
+    let isFirstLoad = true;
     
-    // Función para recargar todos los datos del dashboard
-    const recargarDashboard = async () => {
-      if (isLoading) return; // Evitar múltiples recargas simultáneas
-      isLoading = true;
+    // Función para recargar todos los datos del dashboard con debounce
+    const recargarDashboard = async (immediate = false) => {
+      // Cancelar debounce anterior si existe
+      if (debounceTimer) {
+        clearTimeout(debounceTimer);
+        debounceTimer = null;
+      }
       
-      try {
-        console.log('🔄 [SafetyDashboard] Recargando datos del dashboard...');
+      // Primera carga es inmediata
+      if (isFirstLoad) {
+        isFirstLoad = false;
+        immediate = true;
+      }
+      
+      const doReload = async () => {
+        if (isLoading) return;
+        isLoading = true;
         
-        const [
-          auditoriasData,
-          logsData,
-          formulariosData,
-          empleadosData,
-          capacitacionesData,
-          accidentesData
-        ] = await Promise.all([
-          this.getAuditoriasData(companyId, period),
-          this.getLogsData(companyId, period),
-          this.getFormulariosData(companyId, period),
-          this.getEmpleados(sucursalId),
-          this.getCapacitaciones(sucursalId, period),
-          this.getAccidentes(sucursalId, period)
-        ]);
+        try {
+          console.log('🔄 [SafetyDashboard] Recargando datos del dashboard...');
+          
+          const [
+            auditoriasData,
+            logsData,
+            formulariosData,
+            empleadosData,
+            capacitacionesData,
+            accidentesData
+          ] = await Promise.all([
+            this.getAuditoriasData(companyId, period),
+            this.getLogsData(companyId, period),
+            this.getFormulariosData(companyId, period),
+            this.getEmpleados(sucursalId),
+            this.getCapacitaciones(sucursalId, period),
+            this.getAccidentes(sucursalId, period)
+          ]);
 
-        const metrics = this.calculateSafetyMetrics(
-          auditoriasData,
-          logsData,
-          formulariosData,
-          empleadosData,
-          capacitacionesData,
-          accidentesData
-        );
-        
-        const companyInfo = await this.getCompanyInfo(companyId);
-        const sucursalInfo = sucursalId !== 'todas' ? await this.getSucursalInfo(sucursalId) : null;
-        
-        callback({
-          companyId,
-          sucursalId,
-          companyName: companyInfo?.nombre || 'Empresa',
-          sucursalName: sucursalId === 'todas' ? 'Todas las sucursales' : (sucursalInfo?.nombre || 'Sucursal'),
-          period,
-          ...metrics,
-          alerts: this.generateAlerts(auditoriasData, logsData, formulariosData, accidentesData),
-          chartData: this.generateChartData(auditoriasData, logsData, accidentesData, period)
-        });
-      } catch (error) {
-        console.error('❌ [SafetyDashboard] Error recalculando métricas:', error);
-        if (onError) onError(error);
-      } finally {
-        isLoading = false;
+          const metrics = this.calculateSafetyMetrics(
+            auditoriasData,
+            logsData,
+            formulariosData,
+            empleadosData,
+            capacitacionesData,
+            accidentesData
+          );
+          
+          const companyInfo = await this.getCompanyInfo(companyId);
+          const sucursalInfo = sucursalId !== 'todas' ? await this.getSucursalInfo(sucursalId) : null;
+          
+          callback({
+            companyId,
+            sucursalId,
+            companyName: companyInfo?.nombre || 'Empresa',
+            sucursalName: sucursalId === 'todas' ? 'Todas las sucursales' : (sucursalInfo?.nombre || 'Sucursal'),
+            period,
+            ...metrics,
+            alerts: this.generateAlerts(auditoriasData, logsData, formulariosData, accidentesData),
+            chartData: this.generateChartData(auditoriasData, logsData, accidentesData, period)
+          });
+        } catch (error) {
+          console.error('❌ [SafetyDashboard] Error recalculando métricas:', error);
+          if (onError) onError(error);
+        } finally {
+          isLoading = false;
+        }
+      };
+      
+      // Cargar inmediatamente o con debounce
+      if (immediate) {
+        doReload();
+      } else {
+        debounceTimer = setTimeout(doReload, 500); // 500ms debounce
       }
     };
+    
+    // Cargar datos iniciales inmediatamente
+    recargarDashboard(true);
     
     try {
       // Listener para accidentes
@@ -235,6 +261,7 @@ export const safetyDashboardService = {
       
       // Retornar función para desuscribirse de todos los listeners
       return () => {
+        if (debounceTimer) clearTimeout(debounceTimer);
         unsubscribes.forEach(unsub => unsub());
       };
       
@@ -339,13 +366,11 @@ export const safetyDashboardService = {
   // Obtener información de la empresa
   async getCompanyInfo(companyId) {
     try {
-      const empresasRef = collection(db, 'empresas');
-      const q = query(empresasRef, where('__name__', '==', companyId));
-      const snapshot = await getDocs(q);
+      const empresaRef = doc(db, 'empresas', companyId);
+      const empresaDoc = await getDoc(empresaRef);
       
-      if (!snapshot.empty) {
-        const doc = snapshot.docs[0];
-        return { id: doc.id, ...doc.data() };
+      if (empresaDoc.exists()) {
+        return { id: empresaDoc.id, ...empresaDoc.data() };
       }
       
       return null;
