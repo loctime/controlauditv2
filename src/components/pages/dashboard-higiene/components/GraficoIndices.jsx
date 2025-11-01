@@ -86,10 +86,61 @@ const GraficoIndices = ({ datos, periodo }) => {
   const calcularTendenciaMensual = () => {
     const months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
     const currentYear = new Date().getFullYear();
+    const currentMonth = new Date().getMonth();
+    
+    // Determinar qué meses mostrar según el período
+    let mesesAMostrar = [];
+    if (periodo === 'semana') {
+      // Últimas 4 semanas
+      const hoy = new Date();
+      mesesAMostrar = [];
+      for (let i = 3; i >= 0; i--) {
+        const fecha = new Date(hoy.getTime() - i * 7 * 24 * 60 * 60 * 1000);
+        mesesAMostrar.push({
+          mes: `${String(fecha.getDate()).padStart(2, '0')}/${String(fecha.getMonth() + 1).padStart(2, '0')}`,
+          monthIndex: fecha.getMonth(),
+          year: fecha.getFullYear()
+        });
+      }
+    } else if (periodo === 'mes') {
+      // Solo mes actual
+      mesesAMostrar = [{
+        mes: months[currentMonth],
+        monthIndex: currentMonth,
+        year: currentYear
+      }];
+    } else if (periodo === 'trimestre') {
+      // Últimos 3 meses
+      for (let i = 2; i >= 0; i--) {
+        const fecha = new Date(currentYear, currentMonth - i, 1);
+        mesesAMostrar.push({
+          mes: months[fecha.getMonth()],
+          monthIndex: fecha.getMonth(),
+          year: fecha.getFullYear()
+        });
+      }
+    } else if (periodo === 'año') {
+      // Últimos 12 meses
+      for (let i = 11; i >= 0; i--) {
+        const fecha = new Date(currentYear, currentMonth - i, 1);
+        mesesAMostrar.push({
+          mes: months[fecha.getMonth()],
+          monthIndex: fecha.getMonth(),
+          year: fecha.getFullYear()
+        });
+      }
+    } else {
+      // histórico: todos los meses del año
+      mesesAMostrar = months.map((m, idx) => ({
+        mes: m,
+        monthIndex: idx,
+        year: currentYear
+      }));
+    }
     
     // Inicializar datos por mes
-    const tendencia = months.map(month => ({
-      mes: month,
+    const tendencia = mesesAMostrar.map(item => ({
+      mes: item.mes,
       accidentes: 0,
       capacitaciones: 0
     }));
@@ -100,10 +151,12 @@ const GraficoIndices = ({ datos, periodo }) => {
         if (accidente.fechaHora) {
           const fecha = accidente.fechaHora.toDate ? accidente.fechaHora.toDate() : new Date(accidente.fechaHora);
           const monthIndex = fecha.getMonth();
+          const year = fecha.getFullYear();
           
-          // Solo contar si es del año actual
-          if (fecha.getFullYear() === currentYear && monthIndex < months.length) {
-            tendencia[monthIndex].accidentes++;
+          // Buscar el mes correspondiente en mesesAMostrar
+          const mesIdx = mesesAMostrar.findIndex(m => m.monthIndex === monthIndex && m.year === year);
+          if (mesIdx >= 0) {
+            tendencia[mesIdx].accidentes++;
           }
         }
       });
@@ -115,10 +168,12 @@ const GraficoIndices = ({ datos, periodo }) => {
         if (capacitacion.fechaRealizada) {
           const fecha = capacitacion.fechaRealizada.toDate ? capacitacion.fechaRealizada.toDate() : new Date(capacitacion.fechaRealizada);
           const monthIndex = fecha.getMonth();
+          const year = fecha.getFullYear();
           
-          // Solo contar si es del año actual
-          if (fecha.getFullYear() === currentYear && monthIndex < months.length) {
-            tendencia[monthIndex].capacitaciones++;
+          // Buscar el mes correspondiente en mesesAMostrar
+          const mesIdx = mesesAMostrar.findIndex(m => m.monthIndex === monthIndex && m.year === year);
+          if (mesIdx >= 0) {
+            tendencia[mesIdx].capacitaciones++;
           }
         }
       });
