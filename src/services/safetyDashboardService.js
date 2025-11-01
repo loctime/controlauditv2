@@ -44,7 +44,8 @@ export const safetyDashboardService = {
         formulariosData,
         empleadosData,
         capacitacionesData,
-        accidentesData
+        accidentesData,
+        period // Pasar período para cálculo correcto de índices
       );
       
       // Obtener información de la empresa y sucursal
@@ -121,7 +122,8 @@ export const safetyDashboardService = {
             formulariosData,
             empleadosData,
             capacitacionesData,
-            accidentesData
+            accidentesData,
+            period // Pasar período para cálculo correcto de índices
           );
           
           const companyInfo = await this.getCompanyInfo(companyId);
@@ -502,8 +504,14 @@ export const safetyDashboardService = {
     }
   },
 
-  // Calcular métricas de seguridad desde datos reales
-  calculateSafetyMetrics(auditorias, logs, formularios, empleados, capacitaciones, accidentes) {
+  // Calcular métricas de seguridad desde datos reales - CON LÓGICA ESTÁNDAR OSHA/ISO
+  calculateSafetyMetrics(auditorias, logs, formularios, empleados, capacitaciones, accidentes, period) {
+    // Parsear período YYYY-MM
+    const [year, month] = period ? period.split('-').map(Number) : [new Date().getFullYear(), new Date().getMonth() + 1];
+    const periodStart = new Date(year, month - 1, 1);
+    const periodEnd = new Date(year, month, 0, 23, 59, 59, 999); // Último día del mes
+    const now = new Date();
+    
     // Métricas de empleados (datos reales)
     const empleadosActivos = empleados.filter(e => e.estado === 'activo');
     const totalEmployees = empleadosActivos.length;
@@ -515,19 +523,59 @@ export const safetyDashboardService = {
     const accidents = accidentes.filter(a => a.tipo === 'accidente');
     const incidents = accidentes.filter(a => a.tipo === 'incidente');
 
+    // 🎯 FILTRAR ACCIDENTES DEL PERÍODO (para IF e II)
+    const accidentsInPeriod = accidents.filter(acc => {
+      const accidentDate = acc.fechaHora?.toDate ? acc.fechaHora.toDate() : new Date(acc.fechaHora);
+      return accidentDate >= periodStart && accidentDate <= periodEnd;
+    });
+
     // Calcular días sin accidentes
     const lastAccident = accidents.length > 0 ? 
       new Date(accidents[0].fechaHora?.toDate?.() || accidents[0].fechaHora) : null;
     const daysWithoutAccidents = lastAccident ? 
       Math.floor((Date.now() - lastAccident.getTime()) / (1000 * 60 * 60 * 24)) : 0;
 
-    // Calcular índices de frecuencia y severidad
-    const frequencyIndex = accidents.length > 0 && hoursWorked > 0 ? 
-      (accidents.length * 1000000) / hoursWorked : 0;
+    // 🎯 CÁLCULO CORRECTO DE ÍNDICES SEGÚN ESTÁNDARES OSHA/ISO 45001
     
-    const totalDaysLost = accidents.reduce((sum, acc) => sum + (acc.diasPerdidos || 0), 0);
+    // IF: SOLO accidentes ocurridos en el período
+    const frequencyIndex = accidentsInPeriod.length > 0 && hoursWorked > 0 ? 
+      (accidentsInPeriod.length * 1000000) / hoursWorked : 0;
+    
+    // IG: Suma TODOS los días perdidos del período
+    // Esto incluye días de accidentes del período + días continuos de accidentes anteriores
+    // 🎯 LÓGICA CORRECTA: Verificar empleados que AÚN ESTÁN en reposo usando la colección empleados
+    let totalDaysLost = 0;
+    
+    // Crear mapa de empleados en reposo por ID
+    const empleadosEnReposo = new Map();
+    empleados.forEach(emp => {
+      if (emp.estado === 'inactivo' && emp.fechaInicioReposo) {
+        empleadosEnReposo.set(emp.id, emp);
+      }
+    });
+    
+    // Calcular días perdidos solo para empleados que AÚN están en reposo
+    empleadosEnReposo.forEach(emp => {
+      const fechaInicioReposo = emp.fechaInicioReposo.toDate ? emp.fechaInicioReposo.toDate() : new Date(emp.fechaInicioReposo);
+      const fechaFinPeriodo = periodEnd > now ? now : periodEnd;
+      
+      // Si el reposo continúa en el período, calcular días
+      if (fechaInicioReposo < fechaFinPeriodo) {
+        const inicioCalculo = fechaInicioReposo > periodStart ? fechaInicioReposo : periodStart;
+        const diasEnPeriodo = Math.max(0, Math.ceil((fechaFinPeriodo - inicioCalculo) / (1000 * 60 * 60 * 24)));
+        totalDaysLost += diasEnPeriodo;
+      }
+    });
+    
     const severityIndex = totalDaysLost > 0 && hoursWorked > 0 ? 
       (totalDaysLost * 1000000) / hoursWorked : 0;
+    
+    // II: SOLO empleados accidentados en el período
+    const empleadosAccidentados = new Set(accidentsInPeriod.map(acc => 
+      acc.empleadosInvolucrados?.map(emp => emp.empleadoId)
+    ).flat().filter(Boolean));
+    const incidenceIndex = empleadosAccidentados.size > 0 && totalEmployees > 0 ? 
+      (empleadosAccidentados.size * 1000) / totalEmployees : 0;
 
     // Métricas de capacitaciones (datos reales de la nueva colección)
     const trainingsDone = capacitaciones.filter(c => c.estado === 'completada').length;
@@ -575,11 +623,12 @@ export const safetyDashboardService = {
 
     return {
       // Métricas de accidentes
-      totalAccidents: accidents.length,
+      totalAccidents: accidentsInPeriod.length, // Solo del período
       totalIncidents: incidents.length,
       daysWithoutAccidents,
       frequencyIndex: Number(frequencyIndex.toFixed(1)),
       severityIndex: Number(severityIndex.toFixed(1)),
+      incidenceIndex: Number(incidenceIndex.toFixed(1)), // Añadido: Índice de Incidencia
       accidentabilityIndex: Number((frequencyIndex + severityIndex).toFixed(1)),
       
       // Métricas de capacitaciones

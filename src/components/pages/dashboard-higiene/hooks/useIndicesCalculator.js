@@ -8,28 +8,35 @@ export const useIndicesCalculator = () => {
   const calcularPeriodo = useCallback((tipo) => {
     const ahora = new Date();
     let inicio;
+    let fin;
 
     switch (tipo) {
       case 'semana':
         inicio = new Date(ahora.getTime() - 7 * 24 * 60 * 60 * 1000);
+        fin = ahora;
         break;
       case 'mes':
         inicio = new Date(ahora.getFullYear(), ahora.getMonth(), 1);
+        fin = new Date(ahora.getFullYear(), ahora.getMonth() + 1, 0, 23, 59, 59, 999); // Último día del mes
         break;
       case 'trimestre':
         inicio = new Date(ahora.getFullYear(), ahora.getMonth() - 2, 1);
+        fin = ahora;
         break;
       case 'año':
         inicio = new Date(ahora.getFullYear(), 0, 1);
+        fin = ahora;
         break;
       case 'historico':
         inicio = null; // null significa sin filtro de fecha
+        fin = ahora;
         break;
       default:
         inicio = new Date(ahora.getFullYear(), ahora.getMonth(), 1);
+        fin = ahora;
     }
 
-    return { inicio, fin: ahora };
+    return { inicio, fin };
   }, []);
 
   // Calcular índices técnicos
@@ -105,23 +112,45 @@ export const useIndicesCalculator = () => {
       }
     });
 
-    // Accidentes con tiempo perdido
-    const accidentesConTiempoPerdido = accidentes.filter(a => 
+    // 🎯 FILTRAR ACCIDENTES DEL PERÍODO (para IF e II) - SEGÚN ESTÁNDARES OSHA
+    const accidentsInPeriod = inicio ? accidentes.filter(acc => {
+      const accidentDate = acc.fechaHora?.toDate ? acc.fechaHora.toDate() : new Date(acc.fechaHora);
+      return accidentDate >= inicio && accidentDate <= fin;
+    }) : accidentes;
+    
+    // IF e II: SOLO accidentes del período
+    const accidentesConTiempoPerdido = accidentsInPeriod.filter(a => 
       a.tipo === 'accidente' && 
       a.empleadosInvolucrados?.some(emp => emp.conReposo === true)
     ).length;
 
-    // Calcular días perdidos por accidentes
+    // IG: Calcular días perdidos CORRECTAMENTE según estándares OSHA
+    // Suma TODOS los días perdidos del período, incluso si el accidente fue antes
     let diasPerdidos = 0;
-    accidentes.forEach(accidente => {
-      if (accidente.tipo === 'accidente' && accidente.empleadosInvolucrados) {
-        accidente.empleadosInvolucrados.forEach(emp => {
-          if (emp.conReposo && accidente.fechaHora) {
-            const fechaAccidente = accidente.fechaHora.toDate ? accidente.fechaHora.toDate() : new Date(accidente.fechaHora);
-            const diasDesdeAccidente = Math.ceil((fin - fechaAccidente) / (1000 * 60 * 60 * 24));
-            diasPerdidos += Math.max(0, diasDesdeAccidente);
-          }
-        });
+    
+    // Crear mapa de empleados en reposo por ID
+    const empleadosEnReposoMap = new Map();
+    empleados.forEach(emp => {
+      if (emp.estado === 'inactivo' && emp.fechaInicioReposo) {
+        empleadosEnReposoMap.set(emp.id, emp);
+      }
+    });
+    
+    // Calcular días perdidos del período para empleados que AÚN están en reposo
+    empleadosEnReposoMap.forEach(emp => {
+      const fechaInicioReposo = emp.fechaInicioReposo.toDate ? emp.fechaInicioReposo.toDate() : new Date(emp.fechaInicioReposo);
+      const fechaFinPeriodo = fin > new Date() ? new Date() : fin;
+      
+      // Si el reposo continúa en el período, calcular días del período
+      if (inicio && fechaInicioReposo < fechaFinPeriodo) {
+        const inicioCalculo = fechaInicioReposo > inicio ? fechaInicioReposo : inicio;
+        const diasEnPeriodo = Math.max(0, Math.ceil((fechaFinPeriodo - inicioCalculo) / (1000 * 60 * 60 * 24)));
+        diasPerdidos += diasEnPeriodo;
+      } else if (!inicio) {
+        // Para histórico: desde inicio de reposo hasta fin
+        const fechaFinHistorico = fin > new Date() ? new Date() : fin;
+        const diasDesdeInicio = Math.ceil((fechaFinHistorico - fechaInicioReposo) / (1000 * 60 * 60 * 24));
+        diasPerdidos += Math.max(0, diasDesdeInicio);
       }
     });
 
@@ -135,8 +164,8 @@ export const useIndicesCalculator = () => {
     const promedioTrabajadores = empleadosActivos;
     const indiceIncidencia = promedioTrabajadores > 0 ? (accidentesConTiempoPerdido * 1000) / promedioTrabajadores : 0;
 
-    // 4. Índice de Gravedad (IG)
-    const indiceGravedad = horasTrabajadas > 0 ? (diasPerdidos * 1000) / horasTrabajadas : 0;
+    // 4. Índice de Gravedad (IG) - OSHA standard: (días perdidos × 1,000,000) / horas trabajadas
+    const indiceGravedad = horasTrabajadas > 0 ? (diasPerdidos * 1000000) / horasTrabajadas : 0;
 
     return {
       indices: {
