@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Container, Grid, Box, Typography, Paper } from "@mui/material";
 import { safetyDashboardService } from "../../../services/safetyDashboardService";
 import { useAuth } from "../../context/AuthContext";
@@ -19,6 +19,7 @@ export default function DashboardSeguridadV2() {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
   const [selectedSucursal, setSelectedSucursal] = useState('todas');
+  const unsubscribeRef = useRef(null);
 
   // Establecer sucursal inicial cuando se cargan las sucursales
   useEffect(() => {
@@ -43,6 +44,7 @@ export default function DashboardSeguridadV2() {
     }
   }, [userSucursales, selectedSucursal]);
 
+  // Carga inicial de datos
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
@@ -63,6 +65,46 @@ export default function DashboardSeguridadV2() {
       }
     };
     fetchData();
+  }, [userProfile, selectedYear, selectedMonth, selectedSucursal]);
+
+  // Listener en tiempo real para accidentes
+  useEffect(() => {
+    if (!userProfile) return;
+
+    // Desuscribirse de listeners anteriores
+    if (unsubscribeRef.current) {
+      unsubscribeRef.current();
+    }
+
+    const companyId = userProfile?.empresaId || userProfile?.uid || 'company-001';
+    const currentPeriod = `${selectedYear}-${selectedMonth.toString().padStart(2, '0')}`;
+    
+    console.log('🔄 [Dashboard] Configurando listener en tiempo real');
+    
+    // Configurar listener en tiempo real
+    unsubscribeRef.current = safetyDashboardService.subscribeToDashboard(
+      companyId,
+      selectedSucursal === 'todas' ? 'todas' : selectedSucursal,
+      currentPeriod,
+      (updatedData) => {
+        console.log('✅ [Dashboard] Datos actualizados en tiempo real');
+        setData(updatedData);
+        setLoading(false);
+      },
+      (error) => {
+        console.error('❌ [Dashboard] Error en listener:', error);
+        setLoading(false);
+      }
+    );
+
+    // Cleanup: desuscribirse cuando el componente se desmonte o cambien las dependencias
+    return () => {
+      if (unsubscribeRef.current) {
+        console.log('🛑 [Dashboard] Desuscribiéndose de listeners');
+        unsubscribeRef.current();
+        unsubscribeRef.current = null;
+      }
+    };
   }, [userProfile, selectedYear, selectedMonth, selectedSucursal]);
 
   if (loading || !data) {
