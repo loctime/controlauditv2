@@ -87,65 +87,99 @@ const GraficoIndices = ({ datos, periodo }) => {
     const months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
     const currentYear = new Date().getFullYear();
     const currentMonth = new Date().getMonth();
+    const today = new Date();
     
-    // Determinar qué meses mostrar según el período
-    let mesesAMostrar = [];
+    // Determinar qué períodos mostrar según el filtro
+    let periodosAMostrar = [];
+    
     if (periodo === 'semana') {
-      // Últimas 4 semanas
-      const hoy = new Date();
-      mesesAMostrar = [];
-      for (let i = 3; i >= 0; i--) {
-        const fecha = new Date(hoy.getTime() - i * 7 * 24 * 60 * 60 * 1000);
-        mesesAMostrar.push({
+      // Últimos 7 días
+      for (let i = 6; i >= 0; i--) {
+        const fecha = new Date(today.getTime() - i * 24 * 60 * 60 * 1000);
+        periodosAMostrar.push({
           mes: `${String(fecha.getDate()).padStart(2, '0')}/${String(fecha.getMonth() + 1).padStart(2, '0')}`,
           monthIndex: fecha.getMonth(),
-          year: fecha.getFullYear()
+          year: fecha.getFullYear(),
+          fecha: fecha
         });
       }
     } else if (periodo === 'mes') {
-      // Solo mes actual
-      mesesAMostrar = [{
-        mes: months[currentMonth],
-        monthIndex: currentMonth,
-        year: currentYear
-      }];
+      // 4 semanas del mes actual
+      for (let semana = 1; semana <= 4; semana++) {
+        periodosAMostrar.push({
+          mes: `Sem ${semana}`,
+          monthIndex: currentMonth,
+          year: currentYear,
+          semana: semana
+        });
+      }
     } else if (periodo === 'trimestre') {
       // Últimos 3 meses
       for (let i = 2; i >= 0; i--) {
         const fecha = new Date(currentYear, currentMonth - i, 1);
-        mesesAMostrar.push({
+        periodosAMostrar.push({
           mes: months[fecha.getMonth()],
           monthIndex: fecha.getMonth(),
-          year: fecha.getFullYear()
+          year: fecha.getFullYear(),
+          fecha: fecha
         });
       }
     } else if (periodo === 'año') {
       // Últimos 12 meses
       for (let i = 11; i >= 0; i--) {
         const fecha = new Date(currentYear, currentMonth - i, 1);
-        mesesAMostrar.push({
+        periodosAMostrar.push({
           mes: months[fecha.getMonth()],
           monthIndex: fecha.getMonth(),
-          year: fecha.getFullYear()
+          year: fecha.getFullYear(),
+          fecha: fecha
         });
       }
     } else {
-      // histórico: todos los meses del año
-      mesesAMostrar = months.map((m, idx) => ({
-        mes: m,
-        monthIndex: idx,
-        year: currentYear
-      }));
+      // histórico: por años
+      // Obtener el año más antiguo de los datos
+      let añoMinimo = currentYear;
+      let añoMaximo = currentYear;
+      
+      if (datos.accidentes && datos.accidentes.length > 0) {
+        datos.accidentes.forEach(acc => {
+          if (acc.fechaHora) {
+            const fecha = acc.fechaHora.toDate ? acc.fechaHora.toDate() : new Date(acc.fechaHora);
+            if (fecha.getFullYear() < añoMinimo) añoMinimo = fecha.getFullYear();
+            if (fecha.getFullYear() > añoMaximo) añoMaximo = fecha.getFullYear();
+          }
+        });
+      }
+      
+      if (datos.capacitaciones && datos.capacitaciones.length > 0) {
+        datos.capacitaciones.forEach(cap => {
+          if (cap.fechaRealizada) {
+            const fecha = cap.fechaRealizada.toDate ? cap.fechaRealizada.toDate() : new Date(cap.fechaRealizada);
+            if (fecha.getFullYear() < añoMinimo) añoMinimo = fecha.getFullYear();
+            if (fecha.getFullYear() > añoMaximo) añoMaximo = fecha.getFullYear();
+          }
+        });
+      }
+      
+      // Generar años desde el más antiguo hasta el actual
+      for (let year = añoMinimo; year <= añoMaximo; year++) {
+        periodosAMostrar.push({
+          mes: String(year),
+          monthIndex: 0,
+          year: year,
+          fecha: new Date(year, 0, 1)
+        });
+      }
     }
     
-    // Inicializar datos por mes
-    const tendencia = mesesAMostrar.map(item => ({
+    // Inicializar datos por período
+    const tendencia = periodosAMostrar.map(item => ({
       mes: item.mes,
       accidentes: 0,
       capacitaciones: 0
     }));
     
-    // Contar accidentes por mes
+    // Contar accidentes según el tipo de período
     if (datos.accidentes && datos.accidentes.length > 0) {
       datos.accidentes.forEach(accidente => {
         if (accidente.fechaHora) {
@@ -153,16 +187,35 @@ const GraficoIndices = ({ datos, periodo }) => {
           const monthIndex = fecha.getMonth();
           const year = fecha.getFullYear();
           
-          // Buscar el mes correspondiente en mesesAMostrar
-          const mesIdx = mesesAMostrar.findIndex(m => m.monthIndex === monthIndex && m.year === year);
-          if (mesIdx >= 0) {
-            tendencia[mesIdx].accidentes++;
+          if (periodo === 'semana') {
+            // Buscar por fecha exacta (día)
+            const mesIdx = periodosAMostrar.findIndex(p => 
+              p.fecha.getDate() === fecha.getDate() && 
+              p.fecha.getMonth() === fecha.getMonth() && 
+              p.fecha.getFullYear() === fecha.getFullYear()
+            );
+            if (mesIdx >= 0) tendencia[mesIdx].accidentes++;
+          } else if (periodo === 'mes') {
+            // Buscar por semana dentro del mes
+            const inicioMes = new Date(year, monthIndex, 1);
+            const diasDesdeInicio = Math.floor((fecha.getTime() - inicioMes.getTime()) / (24 * 60 * 60 * 1000));
+            const semanaNum = Math.floor(diasDesdeInicio / 7) + 1; // Semana 1-4
+            const mesIdx = periodosAMostrar.findIndex(p => p.semana === semanaNum && p.monthIndex === monthIndex && p.year === year);
+            if (mesIdx >= 0) tendencia[mesIdx].accidentes++;
+          } else if (periodo === 'historico') {
+            // Buscar por año
+            const añoIdx = periodosAMostrar.findIndex(p => p.year === year);
+            if (añoIdx >= 0) tendencia[añoIdx].accidentes++;
+          } else {
+            // Buscar por mes (trimestre, año)
+            const mesIdx = periodosAMostrar.findIndex(p => p.monthIndex === monthIndex && p.year === year);
+            if (mesIdx >= 0) tendencia[mesIdx].accidentes++;
           }
         }
       });
     }
     
-    // Contar capacitaciones por mes
+    // Contar capacitaciones según el tipo de período
     if (datos.capacitaciones && datos.capacitaciones.length > 0) {
       datos.capacitaciones.forEach(capacitacion => {
         if (capacitacion.fechaRealizada) {
@@ -170,10 +223,25 @@ const GraficoIndices = ({ datos, periodo }) => {
           const monthIndex = fecha.getMonth();
           const year = fecha.getFullYear();
           
-          // Buscar el mes correspondiente en mesesAMostrar
-          const mesIdx = mesesAMostrar.findIndex(m => m.monthIndex === monthIndex && m.year === year);
-          if (mesIdx >= 0) {
-            tendencia[mesIdx].capacitaciones++;
+          if (periodo === 'semana') {
+            const mesIdx = periodosAMostrar.findIndex(p => 
+              p.fecha.getDate() === fecha.getDate() && 
+              p.fecha.getMonth() === fecha.getMonth() && 
+              p.fecha.getFullYear() === fecha.getFullYear()
+            );
+            if (mesIdx >= 0) tendencia[mesIdx].capacitaciones++;
+          } else if (periodo === 'mes') {
+            const inicioMes = new Date(year, monthIndex, 1);
+            const diasDesdeInicio = Math.floor((fecha.getTime() - inicioMes.getTime()) / (24 * 60 * 60 * 1000));
+            const semanaNum = Math.floor(diasDesdeInicio / 7) + 1; // Semana 1-4
+            const mesIdx = periodosAMostrar.findIndex(p => p.semana === semanaNum && p.monthIndex === monthIndex && p.year === year);
+            if (mesIdx >= 0) tendencia[mesIdx].capacitaciones++;
+          } else if (periodo === 'historico') {
+            const añoIdx = periodosAMostrar.findIndex(p => p.year === year);
+            if (añoIdx >= 0) tendencia[añoIdx].capacitaciones++;
+          } else {
+            const mesIdx = periodosAMostrar.findIndex(p => p.monthIndex === monthIndex && p.year === year);
+            if (mesIdx >= 0) tendencia[mesIdx].capacitaciones++;
           }
         }
       });
