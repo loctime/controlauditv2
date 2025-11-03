@@ -58,6 +58,21 @@ const IndiceComparacion = React.memo(({
 
   const { variacion, anterior } = comparacionIndice;
 
+  // Si es un índice nuevo, mostrar solo el card sin badge
+  if (variacion.tipo === 'nuevo') {
+    return (
+      <IndiceCardCompact
+        titulo={titulo}
+        valor={valor}
+        unidad={unidad}
+        icono={icono}
+        labelChip={labelChip}
+        color={color}
+        descripcion={descripcion}
+      />
+    );
+  }
+
   // Determinar ícono y color según la variación
   let VariacionIcono = Remove;
   let colorVariacion = 'default';
@@ -71,10 +86,6 @@ const IndiceComparacion = React.memo(({
     VariacionIcono = TrendingUp; // ↑ empeora (mayor valor es peor)
     colorVariacion = 'error';
     textoVariacion = `Aumenta ${variacion.valor}% vs ${comparacion.añoAnterior}`;
-  } else if (variacion.tipo === 'nuevo') {
-    VariacionIcono = TrendingUp;
-    colorVariacion = 'info';
-    textoVariacion = `Nuevo en ${comparacion.añoActual}`;
   }
 
   // Renderizar el card con badge de comparación

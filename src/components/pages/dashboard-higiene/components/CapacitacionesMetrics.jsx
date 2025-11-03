@@ -239,3 +239,4 @@ CapacitacionesMetrics.displayName = 'CapacitacionesMetrics';
 
 export default CapacitacionesMetrics;
 
+

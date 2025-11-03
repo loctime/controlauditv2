@@ -109,3 +109,4 @@ export const useCapacitacionesMetrics = (capacitaciones, empleados, selectedYear
   return metrics;
 };
 
+
