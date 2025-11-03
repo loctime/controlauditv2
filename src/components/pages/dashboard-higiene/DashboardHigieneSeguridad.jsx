@@ -27,9 +27,16 @@ import SelectoresDashboard from './components/SelectoresDashboard';
 import MetricChips from './components/MetricChips';
 import AlertState from './components/AlertState';
 import IndiceCardCompact from './components/IndiceCardCompact';
+import IndiceComparacion from './components/IndiceComparacion';
+import CapacitacionesMetrics from './components/CapacitacionesMetrics';
+import AccidentesBreakdown from './components/AccidentesBreakdown';
+import AlertasPendientes from './components/AlertasPendientes';
 import ErrorBoundary from '../../common/ErrorBoundary';
 import { useIndicesCalculator } from './hooks/useIndicesCalculator';
 import { useDashboardDataFetch } from './hooks/useDashboardDataFetch';
+import { useCapacitacionesMetrics } from './hooks/useCapacitacionesMetrics';
+import { useAccidentesAnalysis } from './hooks/useAccidentesAnalysis';
+import { useIndicesComparacion } from './hooks/useIndicesComparacion';
 import { useGlobalSelection } from '../../../hooks/useGlobalSelection';
 
 const DashboardHigieneSeguridad = () => {
@@ -84,9 +91,27 @@ const DashboardHigieneSeguridad = () => {
       accidentes,
       capacitaciones,
       indices,
-      metricas
+      metricas,
+      sucursalesParaCalculo
     };
   }, [empleados, accidentes, capacitaciones, selectedSucursal, selectedEmpresa, selectedYear, calcularIndices, userSucursales, sucursalesFiltradas]);
+
+  // Calcular métricas adicionales con los nuevos hooks
+  const capacitacionesMetrics = useCapacitacionesMetrics(capacitaciones, empleados, selectedYear);
+  const accidentesAnalysis = useAccidentesAnalysis(accidentes, empleados, selectedYear);
+  
+  // Calcular sucursales para comparación
+  const sucursalesParaComparacion = useMemo(() => {
+    if (!selectedSucursal || !selectedEmpresa) return null;
+    return selectedSucursal === 'todas' ? sucursalesFiltradas : userSucursales?.find(s => s.id === selectedSucursal);
+  }, [selectedSucursal, selectedEmpresa, sucursalesFiltradas, userSucursales]);
+
+  const indicesComparacion = useIndicesComparacion(
+    empleados, 
+    accidentes, 
+    selectedYear, 
+    sucursalesParaComparacion
+  );
 
   // Timeout handling
   useEffect(() => {
@@ -322,9 +347,19 @@ const DashboardHigieneSeguridad = () => {
             actionUrl="/empleados"
           />
         ) : (
-          <MetricChips metricas={datos.metricas} />
+          <MetricChips metricas={datos.metricas} analysis={accidentesAnalysis} />
         )}
       </Box>
+
+      <Divider sx={{ my: 4 }} />
+
+      {/* Alertas Pendientes */}
+      {datos.metricas.totalEmpleados > 0 && (
+        <AlertasPendientes 
+          analysis={accidentesAnalysis} 
+          metrics={capacitacionesMetrics}
+        />
+      )}
 
       <Divider sx={{ my: 4 }} />
 
@@ -358,7 +393,7 @@ const DashboardHigieneSeguridad = () => {
         <Box sx={{ mb: 4 }}>
           <Grid container spacing={2}>
             <Grid item xs={12} sm={6} md={3}>
-              <IndiceCardCompact
+              <IndiceComparacion
                 titulo="Tasa de Ausentismo"
                 valor={datos.indices.tasaAusentismo}
                 unidad="%"
@@ -366,11 +401,12 @@ const DashboardHigieneSeguridad = () => {
                 labelChip={datos.indices.tasaAusentismo > 5 ? "Crítico" : datos.indices.tasaAusentismo > 2 ? "Atención" : "Excelente"}
                 color={{ high: 5, medium: 2 }}
                 descripcion="Porcentaje de horas perdidas por accidentes con tiempo perdido en relación al total de horas (trabajadas + perdidas). Calculado como: (Horas perdidas por accidentes / Horas totales) × 100. NOTA: Esta tasa refleja solo el ausentismo por accidentes, no incluye otras causas de ausentismo."
+                comparacion={indicesComparacion}
               />
             </Grid>
             
             <Grid item xs={12} sm={6} md={3}>
-              <IndiceCardCompact
+              <IndiceComparacion
                 titulo="Índice de Frecuencia"
                 valor={datos.indices.indiceFrecuencia}
                 unidad="acc/MMHH"
@@ -378,11 +414,12 @@ const DashboardHigieneSeguridad = () => {
                 labelChip={datos.indices.indiceFrecuencia > 10 ? "Alto riesgo" : datos.indices.indiceFrecuencia > 5 ? "Medio riesgo" : "Bajo riesgo"}
                 color={{ high: 10, medium: 5 }}
                 descripcion="Número de accidentes con tiempo perdido ocurridos por cada millón de horas hombre trabajadas. Calculado como: (Número de accidentes / Horas trabajadas) × 1,000,000"
+                comparacion={indicesComparacion}
               />
             </Grid>
             
             <Grid item xs={12} sm={6} md={3}>
-              <IndiceCardCompact
+              <IndiceComparacion
                 titulo="Índice de Incidencia"
                 valor={datos.indices.indiceIncidencia}
                 unidad="acc/MT"
@@ -390,11 +427,12 @@ const DashboardHigieneSeguridad = () => {
                 labelChip={datos.indices.indiceIncidencia > 20 ? "Crítico" : datos.indices.indiceIncidencia > 10 ? "Atención" : "Excelente"}
                 color={{ high: 20, medium: 10 }}
                 descripcion="Número de accidentes con tiempo perdido por cada mil trabajadores. Calculado como: (Número de accidentes / Total de trabajadores) × 1,000"
+                comparacion={indicesComparacion}
               />
             </Grid>
             
             <Grid item xs={12} sm={6} md={3}>
-              <IndiceCardCompact
+              <IndiceComparacion
                 titulo="Índice de Gravedad"
                 valor={datos.indices.indiceGravedad}
                 unidad="días/MMHH"
@@ -402,14 +440,36 @@ const DashboardHigieneSeguridad = () => {
                 labelChip={datos.indices.indiceGravedad > 50 ? "Alta gravedad" : datos.indices.indiceGravedad > 25 ? "Media gravedad" : "Baja gravedad"}
                 color={{ high: 50, medium: 25 }}
                 descripcion="Días perdidos por incapacidad temporal por cada millón de horas hombre trabajadas. Calculado como: (Días perdidos / Horas trabajadas) × 1,000,000"
+                comparacion={indicesComparacion}
               />
             </Grid>
           </Grid>
         </Box>
       )}
 
+      {/* Sección: Análisis de Accidentes e Incidentes */}
+      {userEmpresas && userEmpresas.length > 0 && selectedSucursal && datos.metricas.totalEmpleados > 0 && (
+        <>
+          <Divider sx={{ my: 4 }} />
+          <AccidentesBreakdown analysis={accidentesAnalysis} />
+        </>
+      )}
+
+      {/* Sección: Cumplimiento de Capacitaciones */}
+      {userEmpresas && userEmpresas.length > 0 && selectedSucursal && datos.metricas.totalEmpleados > 0 && (
+        <>
+          <Divider sx={{ my: 4 }} />
+          <CapacitacionesMetrics metrics={capacitacionesMetrics} />
+        </>
+      )}
+
       {/* Gráfico de índices */}
-      {userEmpresas && userEmpresas.length > 0 && selectedSucursal && datos.metricas.totalEmpleados > 0 && <GraficoIndices datos={datos} periodo={selectedYear} />}
+      {userEmpresas && userEmpresas.length > 0 && selectedSucursal && datos.metricas.totalEmpleados > 0 && (
+        <>
+          <Divider sx={{ my: 4 }} />
+          <GraficoIndices datos={datos} periodo={selectedYear} />
+        </>
+      )}
 
       </Container>
     </ErrorBoundary>

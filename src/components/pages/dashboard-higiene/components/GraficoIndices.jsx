@@ -187,6 +187,9 @@ const GraficoIndices = ({ datos, periodo }) => {
     const tendencia = periodosAMostrar.map(item => ({
       mes: item.mes,
       accidentes: 0,
+      incidentes: 0,
+      accidentesConTiempoPerdido: 0,
+      accidentesSinTiempoPerdido: 0,
       capacitaciones: 0
     }));
     
@@ -198,10 +201,24 @@ const GraficoIndices = ({ datos, periodo }) => {
           const monthIndex = fecha.getMonth();
           const year = fecha.getFullYear();
           
+          const tipoAccidente = accidente.tipo === 'accidente' ? 'accidentes' : 'incidentes';
+          const conTiempoPerdido = accidente.empleadosInvolucrados?.some(emp => emp.conReposo === true);
+          
           if (typeof periodo === 'number') {
             // Buscar por mes del año seleccionado
             const mesIdx = periodosAMostrar.findIndex(p => p.monthIndex === monthIndex && p.year === year);
-            if (mesIdx >= 0) tendencia[mesIdx].accidentes++;
+            if (mesIdx >= 0) {
+              if (tipoAccidente === 'accidentes') {
+                tendencia[mesIdx].accidentes++;
+                if (conTiempoPerdido) {
+                  tendencia[mesIdx].accidentesConTiempoPerdido++;
+                } else {
+                  tendencia[mesIdx].accidentesSinTiempoPerdido++;
+                }
+              } else {
+                tendencia[mesIdx].incidentes++;
+              }
+            }
           } else if (periodo === 'semana') {
             // Buscar por fecha exacta (día)
             const mesIdx = periodosAMostrar.findIndex(p => 
@@ -209,22 +226,66 @@ const GraficoIndices = ({ datos, periodo }) => {
               p.fecha.getMonth() === fecha.getMonth() && 
               p.fecha.getFullYear() === fecha.getFullYear()
             );
-            if (mesIdx >= 0) tendencia[mesIdx].accidentes++;
+            if (mesIdx >= 0) {
+              if (tipoAccidente === 'accidentes') {
+                tendencia[mesIdx].accidentes++;
+                if (conTiempoPerdido) {
+                  tendencia[mesIdx].accidentesConTiempoPerdido++;
+                } else {
+                  tendencia[mesIdx].accidentesSinTiempoPerdido++;
+                }
+              } else {
+                tendencia[mesIdx].incidentes++;
+              }
+            }
           } else if (periodo === 'mes') {
             // Buscar por semana dentro del mes
             const inicioMes = new Date(year, monthIndex, 1);
             const diasDesdeInicio = Math.floor((fecha.getTime() - inicioMes.getTime()) / (24 * 60 * 60 * 1000));
             const semanaNum = Math.floor(diasDesdeInicio / 7) + 1; // Semana 1-4
             const mesIdx = periodosAMostrar.findIndex(p => p.semana === semanaNum && p.monthIndex === monthIndex && p.year === year);
-            if (mesIdx >= 0) tendencia[mesIdx].accidentes++;
+            if (mesIdx >= 0) {
+              if (tipoAccidente === 'accidentes') {
+                tendencia[mesIdx].accidentes++;
+                if (conTiempoPerdido) {
+                  tendencia[mesIdx].accidentesConTiempoPerdido++;
+                } else {
+                  tendencia[mesIdx].accidentesSinTiempoPerdido++;
+                }
+              } else {
+                tendencia[mesIdx].incidentes++;
+              }
+            }
           } else if (periodo === 'historico') {
             // Buscar por año
             const añoIdx = periodosAMostrar.findIndex(p => p.year === year);
-            if (añoIdx >= 0) tendencia[añoIdx].accidentes++;
+            if (añoIdx >= 0) {
+              if (tipoAccidente === 'accidentes') {
+                tendencia[añoIdx].accidentes++;
+                if (conTiempoPerdido) {
+                  tendencia[añoIdx].accidentesConTiempoPerdido++;
+                } else {
+                  tendencia[añoIdx].accidentesSinTiempoPerdido++;
+                }
+              } else {
+                tendencia[añoIdx].incidentes++;
+              }
+            }
           } else {
             // Buscar por mes (trimestre, año)
             const mesIdx = periodosAMostrar.findIndex(p => p.monthIndex === monthIndex && p.year === year);
-            if (mesIdx >= 0) tendencia[mesIdx].accidentes++;
+            if (mesIdx >= 0) {
+              if (tipoAccidente === 'accidentes') {
+                tendencia[mesIdx].accidentes++;
+                if (conTiempoPerdido) {
+                  tendencia[mesIdx].accidentesConTiempoPerdido++;
+                } else {
+                  tendencia[mesIdx].accidentesSinTiempoPerdido++;
+                }
+              } else {
+                tendencia[mesIdx].incidentes++;
+              }
+            }
           }
         }
       });
@@ -452,6 +513,14 @@ const GraficoIndices = ({ datos, periodo }) => {
                   />
                   <Line 
                     type="monotone" 
+                    dataKey="incidentes" 
+                    stroke="#f59e0b" 
+                    strokeWidth={3}
+                    name="Incidentes"
+                    dot={{ fill: '#f59e0b', strokeWidth: 2, r: 4 }}
+                  />
+                  <Line 
+                    type="monotone" 
                     dataKey="capacitaciones" 
                     stroke="#22c55e" 
                     strokeWidth={3}
@@ -459,6 +528,50 @@ const GraficoIndices = ({ datos, periodo }) => {
                     dot={{ fill: '#22c55e', strokeWidth: 2, r: 4 }}
                   />
                 </LineChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        </Grid>
+
+        {/* Nuevo Gráfico: Distribución Accidentes por Tipo (Barras) */}
+        <Grid item xs={12} md={6}>
+          <Card elevation={2} sx={{ borderRadius: 3, height: 350 }}>
+            <CardContent sx={{ p: 3, height: '100%' }}>
+              <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, color: 'text.primary' }}>
+                Distribución por Tipo (Mensual)
+              </Typography>
+              <ResponsiveContainer width="100%" height={280}>
+                <BarChart data={tendenciaData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.divider} />
+                  <XAxis dataKey="mes" tick={{ fill: theme.palette.text.secondary, fontSize: 12 }} />
+                  <YAxis tick={{ fill: theme.palette.text.secondary, fontSize: 12 }} />
+                  <Tooltip content={<CustomLineTooltip />} />
+                  <Legend />
+                  <Bar dataKey="accidentes" stackId="tipo" fill="#ef4444" name="Accidentes" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="incidentes" stackId="tipo" fill="#f59e0b" name="Incidentes" radius={[0, 0, 4, 4]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        </Grid>
+
+        {/* Nuevo Gráfico: Accidentes con/sin Tiempo Perdido (Barras Apiladas) */}
+        <Grid item xs={12} md={6}>
+          <Card elevation={2} sx={{ borderRadius: 3, height: 350 }}>
+            <CardContent sx={{ p: 3, height: '100%' }}>
+              <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, color: 'text.primary' }}>
+                Accidentes con/sin Tiempo Perdido
+              </Typography>
+              <ResponsiveContainer width="100%" height={280}>
+                <BarChart data={tendenciaData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.divider} />
+                  <XAxis dataKey="mes" tick={{ fill: theme.palette.text.secondary, fontSize: 12 }} />
+                  <YAxis tick={{ fill: theme.palette.text.secondary, fontSize: 12 }} />
+                  <Tooltip content={<CustomLineTooltip />} />
+                  <Legend />
+                  <Bar dataKey="accidentesConTiempoPerdido" stackId="tiempo" fill="#ef4444" name="Con Tiempo Perdido" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="accidentesSinTiempoPerdido" stackId="tiempo" fill="#fbbf24" name="Sin Tiempo Perdido" radius={[0, 0, 4, 4]} />
+                </BarChart>
               </ResponsiveContainer>
             </CardContent>
           </Card>
