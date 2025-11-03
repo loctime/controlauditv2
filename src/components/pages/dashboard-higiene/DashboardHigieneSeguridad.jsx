@@ -70,7 +70,8 @@ const DashboardHigieneSeguridad = () => {
           horasTrabajadas: 0,
           horasPerdidas: 0,
           accidentesConTiempoPerdido: 0,
-          diasPerdidos: 0
+          diasPerdidos: 0,
+          diasSinAccidentes: 0
         }
       };
     }
@@ -364,7 +365,7 @@ const DashboardHigieneSeguridad = () => {
                 icono={<TrendingUpIcon />}
                 labelChip={datos.indices.tasaAusentismo > 5 ? "Crítico" : datos.indices.tasaAusentismo > 2 ? "Atención" : "Excelente"}
                 color={{ high: 5, medium: 2 }}
-                descripcion="Porcentaje de días perdidos por ausentismo laboral en relación al total de días disponibles. Calculado como: (Días perdidos / Días disponibles) × 100"
+                descripcion="Porcentaje de horas perdidas por accidentes con tiempo perdido en relación al total de horas (trabajadas + perdidas). Calculado como: (Horas perdidas por accidentes / Horas totales) × 100. NOTA: Esta tasa refleja solo el ausentismo por accidentes, no incluye otras causas de ausentismo."
               />
             </Grid>
             

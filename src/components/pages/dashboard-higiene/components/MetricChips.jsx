@@ -4,7 +4,8 @@ import {
   People as PeopleIcon,
   Warning as WarningIcon,
   AccessTime as AccessTimeIcon,
-  ReportProblem as ReportProblemIcon
+  ReportProblem as ReportProblemIcon,
+  CheckCircle as CheckCircleIcon
 } from '@mui/icons-material';
 
 /**
@@ -42,6 +43,11 @@ const MetricChips = React.memo(({ metricas }) => {
       icon: <ReportProblemIcon />,
       label: `Días Perdidos: ${metricas.diasPerdidos}`,
       color: metricas.diasPerdidos > 0 ? 'error' : 'success'
+    },
+    {
+      icon: <CheckCircleIcon />,
+      label: `Días sin Accidentes: ${metricas.diasSinAccidentes || 0}`,
+      color: (metricas.diasSinAccidentes || 0) > 30 ? 'success' : (metricas.diasSinAccidentes || 0) > 7 ? 'warning' : 'error'
     }
   ];
 
@@ -67,7 +73,8 @@ const MetricChips = React.memo(({ metricas }) => {
     prevProps.metricas.empleadosEnReposo === nextProps.metricas.empleadosEnReposo &&
     prevProps.metricas.horasTrabajadas === nextProps.metricas.horasTrabajadas &&
     prevProps.metricas.horasPerdidas === nextProps.metricas.horasPerdidas &&
-    prevProps.metricas.diasPerdidos === nextProps.metricas.diasPerdidos
+    prevProps.metricas.diasPerdidos === nextProps.metricas.diasPerdidos &&
+    prevProps.metricas.diasSinAccidentes === nextProps.metricas.diasSinAccidentes
   );
 });
 

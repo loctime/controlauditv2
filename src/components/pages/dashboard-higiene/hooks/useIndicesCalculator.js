@@ -41,10 +41,6 @@ export const useIndicesCalculator = () => {
     const empleadosActivos = empleados.filter(e => e.estado === 'activo').length;
     const empleadosEnReposo = empleados.filter(e => e.estado === 'inactivo' && e.fechaInicioReposo).length;
 
-    // Calcular horas trabajadas por empleado según su sucursal
-    // Las horas perdidas se calcularán históricamente desde los accidentes
-    let horasTrabajadas = 0;
-    
     // Crear mapa de sucursales para acceso rápido
     const sucursalesMap = new Map();
     if (Array.isArray(sucursales)) {
@@ -53,16 +49,70 @@ export const useIndicesCalculator = () => {
       sucursalesMap.set(sucursales.id, sucursales);
     }
     
-    // Calcular horas trabajadas por todos los empleados activos del período
-    // (No contamos horas perdidas aquí, las calcularemos desde los accidentes históricos)
+    // Calcular promedio mensual de trabajadores expuestos (para Índice de Incidencia)
+    // Según estándares OSHA/ILO: promedio de trabajadores que estuvieron expuestos durante el período
+    const calcularPromedioMensualTrabajadores = (empleados, inicio, fin) => {
+      if (!inicio) return empleados.length; // Si no hay período definido, usar total
+      
+      const meses = [];
+      const fechaInicio = new Date(inicio);
+      const fechaFin = new Date(fin);
+      
+      // Iterar mes por mes
+      let fechaActual = new Date(fechaInicio.getFullYear(), fechaInicio.getMonth(), 1);
+      
+      while (fechaActual <= fechaFin) {
+        const inicioMes = new Date(fechaActual.getFullYear(), fechaActual.getMonth(), 1);
+        const finMes = new Date(fechaActual.getFullYear(), fechaActual.getMonth() + 1, 0, 23, 59, 59);
+        
+        // Contar empleados que estaban activos en este mes (ingresaron antes o durante el mes)
+        const trabajadoresEnMes = empleados.filter(emp => {
+          const fechaIngreso = emp.fechaIngreso?.toDate 
+            ? emp.fechaIngreso.toDate() 
+            : (emp.fechaIngreso ? new Date(emp.fechaIngreso) : null);
+          
+          // El empleado cuenta si ingresó antes o durante este mes
+          // (No consideramos fecha de egreso porque no existe en el modelo actual)
+          return fechaIngreso && fechaIngreso <= finMes;
+        }).length;
+        
+        meses.push(trabajadoresEnMes);
+        fechaActual.setMonth(fechaActual.getMonth() + 1);
+      }
+      
+      // Calcular promedio
+      if (meses.length === 0) return empleados.length;
+      return meses.reduce((a, b) => a + b, 0) / meses.length;
+    };
+    
+    const promedioTrabajadores = calcularPromedioMensualTrabajadores(empleados, inicio, fin);
+    
+    // Calcular horas trabajadas REALES considerando fechas de ingreso y días perdidos por accidentes
+    // Primero necesitamos calcular días perdidos para saber qué descontar
+    let horasTrabajadas = 0;
+    
+    // Calcular horas trabajadas por cada empleado según su período de trabajo
     empleados.forEach(empleado => {
       const sucursal = sucursalesMap.get(empleado.sucursalId);
       const horasSemanales = sucursal?.horasSemanales || 40;
       const horasPorDiaEmpleado = horasSemanales / 5;
       
-      // Todos los empleados contribuyen a horas trabajadas del período
-      // Las horas perdidas se calcularán desde los accidentes históricos
-      horasTrabajadas += diasLaborales * horasPorDiaEmpleado;
+      const fechaIngreso = empleado.fechaIngreso?.toDate 
+        ? empleado.fechaIngreso.toDate() 
+        : (empleado.fechaIngreso ? new Date(empleado.fechaIngreso) : inicio);
+      
+      // Calcular días trabajados del empleado en el período
+      let diasTrabajados = diasLaborales;
+      
+      // Si ingresó después del inicio del período, reducir días
+      if (fechaIngreso > inicio) {
+        const diasDesdeIngreso = Math.ceil((fin - fechaIngreso) / (1000 * 60 * 60 * 24));
+        const diasLaboralesDesdeIngreso = Math.floor(diasDesdeIngreso / 7) * 5;
+        diasTrabajados = Math.max(0, diasLaboralesDesdeIngreso);
+      }
+      
+      // Las horas perdidas por accidentes se descontarán después cuando calculemos los días perdidos
+      horasTrabajadas += diasTrabajados * horasPorDiaEmpleado;
     });
 
     // 🎯 FILTRAR ACCIDENTES DEL PERÍODO (para IF, II, IG y TA) - SEGÚN ESTÁNDARES OSHA
@@ -70,6 +120,26 @@ export const useIndicesCalculator = () => {
       const accidentDate = acc.fechaHora?.toDate ? acc.fechaHora.toDate() : new Date(acc.fechaHora);
       return accidentDate >= inicio && accidentDate <= fin;
     }) : accidentes;
+    
+    // Calcular días sin accidentes (desde el último accidente hasta hoy)
+    const calcularDiasSinAccidentes = (accidentes) => {
+      if (!accidentes || accidentes.length === 0) {
+        // Si no hay accidentes, calcular días desde el inicio del período o desde que empezó el sistema
+        const fechaReferencia = inicio || new Date(2020, 0, 1); // Usar inicio del período o fecha por defecto
+        return Math.floor((new Date() - fechaReferencia) / (1000 * 60 * 60 * 24));
+      }
+      
+      // Buscar el último accidente (considerando todos los accidentes, no solo del período)
+      const ultimoAccidente = accidentes.reduce((masReciente, acc) => {
+        const fechaAcc = acc.fechaHora?.toDate ? acc.fechaHora.toDate() : new Date(acc.fechaHora);
+        return fechaAcc > masReciente ? fechaAcc : masReciente;
+      }, new Date(0));
+      
+      const diasTranscurridos = Math.floor((new Date() - ultimoAccidente) / (1000 * 60 * 60 * 24));
+      return Math.max(0, diasTranscurridos);
+    };
+    
+    const diasSinAccidentes = calcularDiasSinAccidentes(accidentes);
     
     // IF e II: SOLO accidentes del período
     const accidentesConTiempoPerdido = accidentsInPeriod.filter(a => 
@@ -123,7 +193,11 @@ export const useIndicesCalculator = () => {
               const sucursalEmp = sucursalesMap.get(empleadoCompleto.sucursalId);
               const horasSemanalesEmp = sucursalEmp?.horasSemanales || 40;
               const horasPorDiaEmp = horasSemanalesEmp / 5;
-              horasPerdidasPorAccidentes += diasPerdidosEmpleado * horasPorDiaEmp;
+              const horasPerdidasEmpleado = diasPerdidosEmpleado * horasPorDiaEmp;
+              horasPerdidasPorAccidentes += horasPerdidasEmpleado;
+              
+              // Descontar horas perdidas de horas trabajadas
+              horasTrabajadas -= horasPerdidasEmpleado;
             }
           }
         });
@@ -137,8 +211,7 @@ export const useIndicesCalculator = () => {
     // 2. Índice de Frecuencia (IF)
     const indiceFrecuencia = horasTrabajadas > 0 ? (accidentesConTiempoPerdido * 1000000) / horasTrabajadas : 0;
 
-    // 3. Índice de Incidencia (II)
-    const promedioTrabajadores = empleadosActivos;
+    // 3. Índice de Incidencia (II) - Usando promedio mensual de trabajadores expuestos
     const indiceIncidencia = promedioTrabajadores > 0 ? (accidentesConTiempoPerdido * 1000) / promedioTrabajadores : 0;
 
     // 4. Índice de Gravedad (IG) - OSHA standard: (días perdidos × 1,000,000) / horas trabajadas
@@ -155,10 +228,12 @@ export const useIndicesCalculator = () => {
         totalEmpleados,
         empleadosActivos,
         empleadosEnReposo,
-        horasTrabajadas,
-        horasPerdidas: horasPerdidasPorAccidentes,
+        promedioTrabajadores: Math.round(promedioTrabajadores * 100) / 100,
+        horasTrabajadas: Math.round(horasTrabajadas),
+        horasPerdidas: Math.round(horasPerdidasPorAccidentes),
         accidentesConTiempoPerdido,
-        diasPerdidos
+        diasPerdidos,
+        diasSinAccidentes
       }
     };
   }, [calcularPeriodo]);
