@@ -9,14 +9,21 @@ import { Business as BusinessIcon, Storefront as StorefrontIcon } from '@mui/ico
 const SelectoresDashboard = React.memo(({
   selectedEmpresa,
   selectedSucursal,
-  selectedPeriodo,
+  selectedYear,
   onEmpresaChange,
   onSucursalChange,
-  onPeriodoChange,
+  onYearChange,
   userEmpresas,
   sucursalesFiltradas,
   deshabilitado = false
 }) => {
+  // Generar años desde 2020 hasta el año actual + 1
+  const years = [];
+  const currentYear = new Date().getFullYear();
+  for (let year = currentYear; year >= 2020; year--) {
+    years.push(year);
+  }
+  
   return (
     <Grid container spacing={3}>
       <Grid item xs={12} md={4}>
@@ -73,18 +80,18 @@ const SelectoresDashboard = React.memo(({
       </Grid>
       <Grid item xs={12} md={4}>
         <FormControl fullWidth>
-          <InputLabel>Período</InputLabel>
+          <InputLabel>Año</InputLabel>
           <Select
-            value={selectedPeriodo}
-            onChange={(e) => onPeriodoChange(e.target.value)}
-            label="Período"
+            value={selectedYear}
+            onChange={(e) => onYearChange(e.target.value)}
+            label="Año"
             disabled={deshabilitado || !userEmpresas || userEmpresas.length === 0}
           >
-            <MenuItem value="semana">Última semana</MenuItem>
-            <MenuItem value="mes">Mes actual</MenuItem>
-            <MenuItem value="trimestre">Último trimestre</MenuItem>
-            <MenuItem value="año">Año actual</MenuItem>
-            <MenuItem value="historico">Histórico completo</MenuItem>
+            {years.map(year => (
+              <MenuItem key={year} value={year}>
+                {year}
+              </MenuItem>
+            ))}
           </Select>
         </FormControl>
       </Grid>
@@ -95,7 +102,7 @@ const SelectoresDashboard = React.memo(({
   return (
     prevProps.selectedEmpresa === nextProps.selectedEmpresa &&
     prevProps.selectedSucursal === nextProps.selectedSucursal &&
-    prevProps.selectedPeriodo === nextProps.selectedPeriodo &&
+    prevProps.selectedYear === nextProps.selectedYear &&
     prevProps.deshabilitado === nextProps.deshabilitado &&
     prevProps.userEmpresas?.length === nextProps.userEmpresas?.length &&
     prevProps.sucursalesFiltradas?.length === nextProps.sucursalesFiltradas?.length

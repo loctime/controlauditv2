@@ -8,7 +8,7 @@ import { db } from '../../../../firebaseConfig.js';
 export const useDashboardDataFetch = (
   selectedEmpresa,
   selectedSucursal,
-  selectedPeriodo,
+  selectedYear,
   sucursalesFiltradas,
   calcularPeriodo
 ) => {
@@ -71,7 +71,7 @@ export const useDashboardDataFetch = (
     if (!selectedSucursal) return [];
 
     try {
-      const { inicio, fin } = calcularPeriodo(selectedPeriodo);
+      const { inicio, fin } = calcularPeriodo(selectedYear);
       const accidentesRef = collection(db, 'accidentes');
       let accidentesData = [];
       
@@ -138,14 +138,14 @@ export const useDashboardDataFetch = (
       console.error('Error cargando accidentes:', error);
       return [];
     }
-  }, [selectedSucursal, selectedPeriodo, calcularPeriodo, sucursalesFiltradas]);
+  }, [selectedSucursal, selectedYear, calcularPeriodo, sucursalesFiltradas]);
 
   // Cargar datos de capacitaciones
   const cargarCapacitaciones = useCallback(async () => {
     if (!selectedSucursal) return [];
 
     try {
-      const { inicio, fin } = calcularPeriodo(selectedPeriodo);
+      const { inicio, fin } = calcularPeriodo(selectedYear);
       const capacitacionesRef = collection(db, 'capacitaciones');
       let capacitacionesData = [];
       
@@ -212,7 +212,7 @@ export const useDashboardDataFetch = (
       console.error('Error cargando capacitaciones:', error);
       return [];
     }
-  }, [selectedSucursal, selectedPeriodo, calcularPeriodo, sucursalesFiltradas]);
+  }, [selectedSucursal, selectedYear, calcularPeriodo, sucursalesFiltradas]);
 
   // Memoizar IDs de sucursales para estabilizar dependencias
   const sucursalesIdsString = useMemo(() => 
@@ -265,7 +265,7 @@ export const useDashboardDataFetch = (
     return () => {
       mounted = false;
     };
-  }, [selectedEmpresa, selectedSucursal, selectedPeriodo, sucursalesIdsString, cargarEmpleados, cargarAccidentes, cargarCapacitaciones]);
+  }, [selectedEmpresa, selectedSucursal, selectedYear, sucursalesIdsString, cargarEmpleados, cargarAccidentes, cargarCapacitaciones]);
 
   // Función manual para recargar (opcional, para usar desde fuera)
   const recargarDatos = useCallback(async () => {
