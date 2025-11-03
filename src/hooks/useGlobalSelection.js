@@ -1,5 +1,5 @@
-import { useEffect } from 'react';
-import { useAuth } from '../context/AuthContext';
+import { useEffect, useMemo } from 'react';
+import { useAuth } from '../components/context/AuthContext';
 
 /**
  * Hook global para manejar la selección de empresa y sucursal
@@ -31,12 +31,16 @@ export const useGlobalSelection = () => {
         setGlobalSelectedEmpresa(userEmpresas[0].id);
       }
     }
-  }, [userEmpresas, userSucursales, globalSelectedEmpresa]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userEmpresas, userSucursales]);
 
   // Filtrar sucursales por empresa seleccionada
-  const sucursalesFiltradas = globalSelectedEmpresa && globalSelectedEmpresa !== 'todas'
-    ? (userSucursales?.filter(s => s.empresaId === globalSelectedEmpresa) || [])
-    : (userSucursales || []);
+  const sucursalesFiltradas = useMemo(() => 
+    globalSelectedEmpresa && globalSelectedEmpresa !== 'todas'
+      ? (userSucursales?.filter(s => s.empresaId === globalSelectedEmpresa) || [])
+      : (userSucursales || []),
+    [globalSelectedEmpresa, userSucursales]
+  );
 
   // Auto-seleccionar primera sucursal si cambia la empresa
   useEffect(() => {
@@ -47,7 +51,7 @@ export const useGlobalSelection = () => {
         setGlobalSelectedSucursal(sucursalesFiltradas[0].id);
       }
     }
-  }, [globalSelectedEmpresa, sucursalesFiltradas]);
+  }, [globalSelectedEmpresa, sucursalesFiltradas, globalSelectedSucursal, setGlobalSelectedSucursal]);
 
   return {
     selectedEmpresa: globalSelectedEmpresa || 'todas',
