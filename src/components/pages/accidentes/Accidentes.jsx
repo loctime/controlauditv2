@@ -26,7 +26,7 @@ import AccidenteDetalleModal from './components/AccidenteDetalleModal';
 import { actualizarEstadoAccidente } from '../../../services/accidenteService';
 
 export default function Accidentes() {
-  const { userProfile, userSucursales, userEmpresas } = useAuth();
+  const { userProfile } = useAuth();
   const location = useLocation();
   const theme = useTheme();
   const isSmallMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -48,8 +48,10 @@ export default function Accidentes() {
     filterEstado,
     setFilterEstado,
     sucursalesFiltradas,
-    empresasCargadas
-  } = useAccidentesFilters(userEmpresas, userSucursales, location);
+    empresasCargadas,
+    userEmpresas,
+    userSucursales
+  } = useAccidentesFilters(location);
 
   const { accidentes, loading, recargarAccidentes } = useAccidentesData(
     selectedEmpresa,

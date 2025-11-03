@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { Container, Grid, Box, Typography, Paper } from "@mui/material";
 import { safetyDashboardService } from "../../../services/safetyDashboardService";
 import { useAuth } from "../../context/AuthContext";
+import { useGlobalSelection } from "../../../hooks/useGlobalSelection";
 
 // Componentes nuevos
 import PeriodSelector from "../../dashboard-seguridad/PeriodSelector";
@@ -13,36 +14,13 @@ import TrainingMetrics from "../../dashboard-seguridad/TrainingMetrics";
 import SafetyCharts from "../../dashboard-seguridad/SafetyCharts";
 
 export default function DashboardSeguridadV2() {
-  const { userProfile, userSucursales } = useAuth();
+  const { userProfile } = useAuth();
+  const { selectedSucursal, setSelectedSucursal, userSucursales } = useGlobalSelection();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
-  const [selectedSucursal, setSelectedSucursal] = useState('todas');
   const unsubscribeRef = useRef(null);
-
-  // Establecer sucursal inicial cuando se cargan las sucursales
-  useEffect(() => {
-    if (userSucursales && userSucursales.length > 0 && selectedSucursal === 'todas') {
-      // Primero intentar usar la sucursal guardada en localStorage
-      const savedSucursal = localStorage.getItem('selectedSucursal');
-      const savedEmpresa = localStorage.getItem('selectedEmpresa');
-      
-      if (savedSucursal && userSucursales.find(s => s.id === savedSucursal)) {
-        setSelectedSucursal(savedSucursal);
-        // Limpiar localStorage después de usar
-        localStorage.removeItem('selectedSucursal');
-      } else if (savedEmpresa) {
-        // Si hay empresa preseleccionada, filtrar sucursales de esa empresa
-        const sucursalesEmpresa = userSucursales.filter(s => s.empresaId === savedEmpresa);
-        if (sucursalesEmpresa.length > 0) {
-          setSelectedSucursal(sucursalesEmpresa[0].id);
-        }
-        // Limpiar localStorage después de usar
-        localStorage.removeItem('selectedEmpresa');
-      }
-    }
-  }, [userSucursales, selectedSucursal]);
 
   // Listener en tiempo real - Optimizado: carga inicial y actualizaciones automáticas
   useEffect(() => {
