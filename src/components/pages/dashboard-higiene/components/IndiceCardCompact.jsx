@@ -1,5 +1,6 @@
 import React from 'react';
-import { Paper, Typography, Box, Chip } from '@mui/material';
+import { Paper, Typography, Box, Chip, Tooltip, IconButton } from '@mui/material';
+import { Info as InfoIcon } from '@mui/icons-material';
 
 /**
  * Componente reutilizable para mostrar una tarjeta de índice técnico
@@ -11,7 +12,8 @@ const IndiceCardCompact = React.memo(({
   unidad = '', 
   icono, 
   labelChip,
-  color
+  color,
+  descripcion
 }) => {
   const getColorConfig = (valor, thresholds) => {
     if (valor > thresholds.high) {
@@ -41,13 +43,33 @@ const IndiceCardCompact = React.memo(({
         }
       }}
     >
-      <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-        {icono && React.cloneElement(icono, { 
-          sx: { fontSize: 20, mr: 1, color: colorConfig.color } 
-        })}
-        <Typography variant="body2" sx={{ fontWeight: 600, fontSize: '0.8rem' }}>
-          {titulo}
-        </Typography>
+      <Box sx={{ display: 'flex', alignItems: 'center', mb: 1, justifyContent: 'space-between' }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', flex: 1 }}>
+          {icono && React.cloneElement(icono, { 
+            sx: { fontSize: 20, mr: 1, color: colorConfig.color } 
+          })}
+          <Typography variant="body2" sx={{ fontWeight: 600, fontSize: '0.8rem' }}>
+            {titulo}
+          </Typography>
+        </Box>
+        {descripcion && (
+          <Tooltip title={descripcion} arrow placement="top">
+            <IconButton 
+              size="small" 
+              sx={{ 
+                p: 0.5, 
+                ml: 0.5,
+                color: 'text.secondary',
+                '&:hover': {
+                  color: 'primary.main',
+                  backgroundColor: 'action.hover'
+                }
+              }}
+            >
+              <InfoIcon sx={{ fontSize: 16 }} />
+            </IconButton>
+          </Tooltip>
+        )}
       </Box>
       <Typography 
         variant="h4" 

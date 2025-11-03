@@ -70,6 +70,10 @@ export default function Accidentes() {
     setOpenDetalleModal(true);
   };
 
+  const handleActualizarEstadoWrapper = async (accidenteId, nuevoEstado) => {
+    return actualizarEstadoAccidente(accidenteId, nuevoEstado, userProfile?.uid);
+  };
+
   const empresaActual = userEmpresas?.find(e => e.id === selectedEmpresa);
   const sucursalActual = sucursalesFiltradas?.find(s => s.id === selectedSucursal);
 
@@ -170,7 +174,7 @@ export default function Accidentes() {
         open={openDetalleModal}
         onClose={() => setOpenDetalleModal(false)}
         accidente={accidenteSeleccionado}
-        actualizarEstadoAccidente={actualizarEstadoAccidente}
+        actualizarEstadoAccidente={handleActualizarEstadoWrapper}
       />
     </Container>
   );

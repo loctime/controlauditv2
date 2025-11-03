@@ -230,13 +230,24 @@ export const obtenerAccidentePorId = async (accidenteId) => {
 export const actualizarEstadoAccidente = async (accidenteId, nuevoEstado, userId = null) => {
   try {
     const accidenteRef = doc(db, 'accidentes', accidenteId);
+    const accidenteDoc = await getDoc(accidenteRef);
+    const tipo = accidenteDoc.data()?.tipo || 'accidente';
+    
+    // Si se está cerrando un accidente y tiene empleados con reposo, reactivarlos
+    if (nuevoEstado === 'cerrado' && tipo === 'accidente') {
+      const empleadosInvolucrados = accidenteDoc.data()?.empleadosInvolucrados || [];
+      
+      for (const empleado of empleadosInvolucrados) {
+        if (empleado.conReposo) {
+          await actualizarEstadoEmpleado(empleado.empleadoId, 'activo');
+        }
+      }
+    }
+    
     await updateDoc(accidenteRef, { estado: nuevoEstado });
 
     // Registrar log si hay userId
     if (userId) {
-      const accidenteDoc = await getDoc(accidenteRef);
-      const tipo = accidenteDoc.data()?.tipo || 'accidente';
-      
       await registrarAccionSistema(
         userId,
         `Estado de ${tipo} actualizado a: ${nuevoEstado}`,

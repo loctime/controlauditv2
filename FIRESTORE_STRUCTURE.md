@@ -110,6 +110,7 @@ Almacena registro de accidentes e incidentes por sucursal. Sistema actualizado c
 - Los accidentes usan el campo `empleadosInvolucrados` con información de días de reposo
 - Los incidentes usan el campo `testigos` sin información de reposo
 - Cuando un empleado tiene `conReposo: true`, su estado en la colección `empleados` se actualiza a "inactivo"
+- Al cerrar un caso de accidente, los empleados con reposo se reactivan automáticamente a "activo"
 - Las imágenes se almacenan en Firebase Storage en `accidentes/{accidenteId}/`
 
 **Índices requeridos:**

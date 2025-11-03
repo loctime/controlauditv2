@@ -15,15 +15,9 @@ const SelectoresDashboard = React.memo(({
   onYearChange,
   userEmpresas,
   sucursalesFiltradas,
+  yearsAvailable = [],
   deshabilitado = false
 }) => {
-  // Generar años desde 2020 hasta el año actual + 1
-  const years = [];
-  const currentYear = new Date().getFullYear();
-  for (let year = currentYear; year >= 2020; year--) {
-    years.push(year);
-  }
-  
   return (
     <Grid container spacing={3}>
       <Grid item xs={12} md={4}>
@@ -87,7 +81,7 @@ const SelectoresDashboard = React.memo(({
             label="Año"
             disabled={deshabilitado || !userEmpresas || userEmpresas.length === 0}
           >
-            {years.map(year => (
+            {yearsAvailable.map(year => (
               <MenuItem key={year} value={year}>
                 {year}
               </MenuItem>
@@ -105,7 +99,8 @@ const SelectoresDashboard = React.memo(({
     prevProps.selectedYear === nextProps.selectedYear &&
     prevProps.deshabilitado === nextProps.deshabilitado &&
     prevProps.userEmpresas?.length === nextProps.userEmpresas?.length &&
-    prevProps.sucursalesFiltradas?.length === nextProps.sucursalesFiltradas?.length
+    prevProps.sucursalesFiltradas?.length === nextProps.sucursalesFiltradas?.length &&
+    JSON.stringify(prevProps.yearsAvailable) === JSON.stringify(nextProps.yearsAvailable)
   );
 });
 
