@@ -35,7 +35,7 @@ const DashboardHigieneSeguridad = () => {
   const { userEmpresas, userSucursales } = useAuth();
   const [selectedEmpresa, setSelectedEmpresa] = useState('');
   const [selectedSucursal, setSelectedSucursal] = useState('');
-  const [selectedPeriodo, setSelectedPeriodo] = useState('mes');
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [loadingTimeout, setLoadingTimeout] = useState(false);
   
   // Filtrar sucursales por empresa seleccionada (incluye "todas")
@@ -55,7 +55,7 @@ const DashboardHigieneSeguridad = () => {
   const { empleados, accidentes, capacitaciones, loading } = useDashboardDataFetch(
     selectedEmpresa,
     selectedSucursal,
-    selectedPeriodo,
+    selectedYear,
     sucursalesFiltradas,
     calcularPeriodo
   );
@@ -122,7 +122,7 @@ const DashboardHigieneSeguridad = () => {
     }
 
     const sucursalesParaCalculo = selectedSucursal === 'todas' ? sucursalesFiltradas : userSucursales?.find(s => s.id === selectedSucursal);
-    const { indices, metricas } = calcularIndices(empleados, accidentes, selectedPeriodo, sucursalesParaCalculo);
+    const { indices, metricas } = calcularIndices(empleados, accidentes, selectedYear, sucursalesParaCalculo);
 
     return {
       empleados,
@@ -131,7 +131,7 @@ const DashboardHigieneSeguridad = () => {
       indices,
       metricas
     };
-  }, [empleados, accidentes, capacitaciones, selectedSucursal, selectedEmpresa, selectedPeriodo, calcularIndices, userSucursales, sucursalesFiltradas]);
+  }, [empleados, accidentes, capacitaciones, selectedSucursal, selectedEmpresa, selectedYear, calcularIndices, userSucursales, sucursalesFiltradas]);
 
   // Timeout handling
   useEffect(() => {
@@ -241,7 +241,7 @@ const DashboardHigieneSeguridad = () => {
                   <strong>Todas las empresas</strong> - Todas las sucursales
                 </Typography>
                 <Chip 
-                  label={selectedPeriodo.charAt(0).toUpperCase() + selectedPeriodo.slice(1)} 
+                  label={selectedYear} 
                   size="small" 
                   color="primary" 
                 />
@@ -252,7 +252,7 @@ const DashboardHigieneSeguridad = () => {
                   <strong>{empresaSeleccionada.nombre}</strong> - Todas las sucursales
                 </Typography>
                 <Chip 
-                  label={selectedPeriodo.charAt(0).toUpperCase() + selectedPeriodo.slice(1)} 
+                  label={selectedYear} 
                   size="small" 
                   color="primary" 
                 />
@@ -263,7 +263,7 @@ const DashboardHigieneSeguridad = () => {
                   <strong>{empresaSeleccionada.nombre}</strong> - {sucursalSeleccionada.nombre}
                 </Typography>
                 <Chip 
-                  label={selectedPeriodo.charAt(0).toUpperCase() + selectedPeriodo.slice(1)} 
+                  label={selectedYear} 
                   size="small" 
                   color="primary" 
                 />
@@ -303,10 +303,10 @@ const DashboardHigieneSeguridad = () => {
         <SelectoresDashboard
           selectedEmpresa={selectedEmpresa}
           selectedSucursal={selectedSucursal}
-          selectedPeriodo={selectedPeriodo}
+          selectedYear={selectedYear}
           onEmpresaChange={setSelectedEmpresa}
           onSucursalChange={setSelectedSucursal}
-          onPeriodoChange={setSelectedPeriodo}
+          onYearChange={setSelectedYear}
           userEmpresas={userEmpresas}
           sucursalesFiltradas={sucursalesFiltradas}
           deshabilitado={false}
@@ -420,7 +420,7 @@ const DashboardHigieneSeguridad = () => {
       )}
 
       {/* Gráfico de índices */}
-      {userEmpresas && userEmpresas.length > 0 && selectedSucursal && datos.metricas.totalEmpleados > 0 && <GraficoIndices datos={datos} periodo={selectedPeriodo} />}
+      {userEmpresas && userEmpresas.length > 0 && selectedSucursal && datos.metricas.totalEmpleados > 0 && <GraficoIndices datos={datos} periodo={selectedYear} />}
 
       </Container>
     </ErrorBoundary>

@@ -4,83 +4,37 @@ import { useCallback } from 'react';
  * Hook para calcular índices técnicos de seguridad
  */
 export const useIndicesCalculator = () => {
-  // Calcular período de análisis
-  const calcularPeriodo = useCallback((tipo) => {
+  // Calcular período de análisis basado en año
+  const calcularPeriodo = useCallback((year) => {
     const ahora = new Date();
     let inicio;
     let fin;
 
-    switch (tipo) {
-      case 'semana':
-        inicio = new Date(ahora.getTime() - 7 * 24 * 60 * 60 * 1000);
+    // Si es un número, es un año
+    if (typeof year === 'number') {
+      inicio = new Date(year, 0, 1); // 1 de enero del año seleccionado
+      // Si es el año actual, usar fecha actual, sino usar fin de año
+      if (year === ahora.getFullYear()) {
         fin = ahora;
-        break;
-      case 'mes':
-        inicio = new Date(ahora.getFullYear(), ahora.getMonth(), 1);
-        fin = new Date(ahora.getFullYear(), ahora.getMonth() + 1, 0, 23, 59, 59, 999); // Último día del mes
-        break;
-      case 'trimestre':
-        inicio = new Date(ahora.getFullYear(), ahora.getMonth() - 2, 1);
-        fin = ahora;
-        break;
-      case 'año':
-        inicio = new Date(ahora.getFullYear(), 0, 1);
-        fin = ahora;
-        break;
-      case 'historico':
-        inicio = null; // null significa sin filtro de fecha
-        fin = ahora;
-        break;
-      default:
-        inicio = new Date(ahora.getFullYear(), ahora.getMonth(), 1);
-        fin = ahora;
+      } else {
+        fin = new Date(year, 11, 31, 23, 59, 59, 999); // 31 de diciembre del año seleccionado
+      }
+    } else {
+      // Fallback para compatibilidad (no debería usarse)
+      inicio = new Date(ahora.getFullYear(), 0, 1);
+      fin = ahora;
     }
 
     return { inicio, fin };
   }, []);
 
   // Calcular índices técnicos
-  const calcularIndices = useCallback((empleados, accidentes, periodo, sucursales) => {
-    const { inicio, fin } = calcularPeriodo(periodo);
-    const diasTotales = inicio ? Math.ceil((fin - inicio) / (1000 * 60 * 60 * 24)) : 0;
+  const calcularIndices = useCallback((empleados, accidentes, year, sucursales) => {
+    const { inicio, fin } = calcularPeriodo(year);
+    const diasTotales = Math.ceil((fin - inicio) / (1000 * 60 * 60 * 24));
     
-    // Calcular días laborales según el período
-    let diasLaborales;
-    switch (periodo) {
-      case 'semana':
-        diasLaborales = 5; // 5 días laborales por semana
-        break;
-      case 'mes':
-        diasLaborales = Math.floor(diasTotales / 7) * 5; // 5 días por semana
-        break;
-      case 'trimestre':
-        diasLaborales = Math.floor(diasTotales / 7) * 5; // 5 días por semana
-        break;
-      case 'año':
-        diasLaborales = Math.floor(diasTotales / 7) * 5; // 5 días por semana
-        break;
-      case 'historico':
-        // Calcular días laborales basado en la primera fecha de los accidentes
-        if (accidentes.length > 0) {
-          const fechasAccidentes = accidentes
-            .map(a => a.fechaHora?.toDate ? a.fechaHora.toDate() : new Date(a.fechaHora))
-            .filter(f => !isNaN(f.getTime()))
-            .sort((a, b) => a - b);
-          
-          if (fechasAccidentes.length > 0) {
-            const primeraFecha = fechasAccidentes[0];
-            const diasTotalesHist = Math.ceil((fin - primeraFecha) / (1000 * 60 * 60 * 24));
-            diasLaborales = Math.floor(diasTotalesHist / 7) * 5;
-          } else {
-            diasLaborales = Math.floor(365 / 7) * 5; // Estimado: 1 año
-          }
-        } else {
-          diasLaborales = Math.floor(365 / 7) * 5; // Estimado: 1 año si no hay accidentes
-        }
-        break;
-      default:
-        diasLaborales = Math.floor(diasTotales / 7) * 5;
-    }
+    // Calcular días laborales para el año seleccionado (5 días por semana)
+    const diasLaborales = Math.floor(diasTotales / 7) * 5;
     
     // Métricas básicas
     const totalEmpleados = empleados.length;

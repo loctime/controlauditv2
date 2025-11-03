@@ -92,7 +92,18 @@ const GraficoIndices = ({ datos, periodo }) => {
     // Determinar qué períodos mostrar según el filtro
     let periodosAMostrar = [];
     
-    if (periodo === 'semana') {
+    // Si periodo es un número, es un año - mostrar los 12 meses del año
+    if (typeof periodo === 'number') {
+      for (let i = 0; i < 12; i++) {
+        const fecha = new Date(periodo, i, 1);
+        periodosAMostrar.push({
+          mes: months[i],
+          monthIndex: i,
+          year: periodo,
+          fecha: fecha
+        });
+      }
+    } else if (periodo === 'semana') {
       // Últimos 7 días
       for (let i = 6; i >= 0; i--) {
         const fecha = new Date(today.getTime() - i * 24 * 60 * 60 * 1000);
@@ -187,7 +198,11 @@ const GraficoIndices = ({ datos, periodo }) => {
           const monthIndex = fecha.getMonth();
           const year = fecha.getFullYear();
           
-          if (periodo === 'semana') {
+          if (typeof periodo === 'number') {
+            // Buscar por mes del año seleccionado
+            const mesIdx = periodosAMostrar.findIndex(p => p.monthIndex === monthIndex && p.year === year);
+            if (mesIdx >= 0) tendencia[mesIdx].accidentes++;
+          } else if (periodo === 'semana') {
             // Buscar por fecha exacta (día)
             const mesIdx = periodosAMostrar.findIndex(p => 
               p.fecha.getDate() === fecha.getDate() && 
@@ -223,7 +238,11 @@ const GraficoIndices = ({ datos, periodo }) => {
           const monthIndex = fecha.getMonth();
           const year = fecha.getFullYear();
           
-          if (periodo === 'semana') {
+          if (typeof periodo === 'number') {
+            // Buscar por mes del año seleccionado
+            const mesIdx = periodosAMostrar.findIndex(p => p.monthIndex === monthIndex && p.year === year);
+            if (mesIdx >= 0) tendencia[mesIdx].capacitaciones++;
+          } else if (periodo === 'semana') {
             const mesIdx = periodosAMostrar.findIndex(p => 
               p.fecha.getDate() === fecha.getDate() && 
               p.fecha.getMonth() === fecha.getMonth() && 
