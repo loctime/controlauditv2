@@ -12,7 +12,7 @@ Sistema completo para el registro y gestión de accidentes e incidentes laborale
 - Al activar "días de reposo":
   - El empleado se marca como **inactivo** automáticamente
   - Se registra la fecha de inicio del reposo
-  - El administrador debe reactivarlo manualmente cuando regrese
+  - Se reactiva automáticamente al cerrar el caso
 - Campo de descripción detallada
 - Carga de múltiples imágenes (opcional, máx 5MB por imagen)
 
@@ -161,13 +161,11 @@ Campos agregados:
 1. Ver detalles del accidente/incidente
 2. Clic en "Cerrar Caso"
 3. El estado cambia a "cerrado"
+4. **Si es un accidente con empleados con reposo**, estos se reactivan automáticamente
 
 ### Reactivar Empleado
 
-1. Ir a la sección de empleados
-2. Buscar empleado inactivo
-3. Cambiar estado a "activo" manualmente
-4. (El campo `fechaInicioReposo` permanece como registro histórico)
+La reactivación se hace automáticamente al cerrar el caso de accidente. El campo `fechaInicioReposo` permanece como registro histórico.
 
 ## Acceso
 

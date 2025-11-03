@@ -58,7 +58,7 @@ export const useAccidentesHandlers = (userProfile, recargarAccidentes) => {
       });
 
       if (result.isConfirmed) {
-        await actualizarEstadoAccidente(accidenteId, nuevoEstado);
+        await actualizarEstadoAccidente(accidenteId, nuevoEstado, userProfile?.uid);
         Swal.fire('Éxito', 'Estado actualizado correctamente', 'success');
         recargarAccidentes();
       }
@@ -66,7 +66,7 @@ export const useAccidentesHandlers = (userProfile, recargarAccidentes) => {
       console.error('Error actualizando estado:', error);
       Swal.fire('Error', 'No se pudo actualizar el estado', 'error');
     }
-  }, [recargarAccidentes]);
+  }, [recargarAccidentes, userProfile]);
 
   return {
     handleCrearAccidente,

@@ -156,6 +156,35 @@ const DashboardHigieneSeguridad = () => {
     [userSucursales, selectedSucursal]
   );
 
+  // Calcular años disponibles basados en los datos
+  const yearsAvailable = useMemo(() => {
+    const currentYear = new Date().getFullYear();
+    const years = [currentYear];
+    
+    // Buscar años en accidentes y capacitaciones
+    const allDates = [
+      ...(accidentes || []).map(a => a.fechaHora?.toDate ? a.fechaHora.toDate() : new Date(a.fechaHora)),
+      ...(capacitaciones || []).map(c => c.fechaRealizada?.toDate ? c.fechaRealizada.toDate() : new Date(c.fechaRealizada))
+    ];
+    
+    const uniqueYears = [...new Set(allDates
+      .filter(d => d && !isNaN(d.getTime()))
+      .map(d => d.getFullYear())
+    )];
+    
+    // Combinar año actual con años encontrados, eliminar duplicados y ordenar desc
+    const allYears = [...new Set([...uniqueYears, currentYear])].sort((a, b) => b - a);
+    
+    return allYears;
+  }, [accidentes, capacitaciones]);
+
+  // Ajustar año seleccionado si no está en los años disponibles
+  useEffect(() => {
+    if (yearsAvailable.length > 0 && !yearsAvailable.includes(selectedYear)) {
+      setSelectedYear(yearsAvailable[0]);
+    }
+  }, [yearsAvailable, selectedYear]);
+
   // Pantalla de timeout
   if (loadingTimeout) {
     return (
@@ -309,6 +338,7 @@ const DashboardHigieneSeguridad = () => {
           onYearChange={setSelectedYear}
           userEmpresas={userEmpresas}
           sucursalesFiltradas={sucursalesFiltradas}
+          yearsAvailable={yearsAvailable}
           deshabilitado={false}
         />
       </Paper>
@@ -380,6 +410,7 @@ const DashboardHigieneSeguridad = () => {
                 icono={<TrendingUpIcon />}
                 labelChip={datos.indices.tasaAusentismo > 5 ? "Crítico" : datos.indices.tasaAusentismo > 2 ? "Atención" : "Excelente"}
                 color={{ high: 5, medium: 2 }}
+                descripcion="Porcentaje de días perdidos por ausentismo laboral en relación al total de días disponibles. Calculado como: (Días perdidos / Días disponibles) × 100"
               />
             </Grid>
             
@@ -391,6 +422,7 @@ const DashboardHigieneSeguridad = () => {
                 icono={<ReportProblemIcon />}
                 labelChip={datos.indices.indiceFrecuencia > 10 ? "Alto riesgo" : datos.indices.indiceFrecuencia > 5 ? "Medio riesgo" : "Bajo riesgo"}
                 color={{ high: 10, medium: 5 }}
+                descripcion="Número de accidentes con tiempo perdido ocurridos por cada millón de horas hombre trabajadas. Calculado como: (Número de accidentes / Horas trabajadas) × 1,000,000"
               />
             </Grid>
             
@@ -402,6 +434,7 @@ const DashboardHigieneSeguridad = () => {
                 icono={<PeopleIcon />}
                 labelChip={datos.indices.indiceIncidencia > 20 ? "Crítico" : datos.indices.indiceIncidencia > 10 ? "Atención" : "Excelente"}
                 color={{ high: 20, medium: 10 }}
+                descripcion="Número de accidentes con tiempo perdido por cada mil trabajadores. Calculado como: (Número de accidentes / Total de trabajadores) × 1,000"
               />
             </Grid>
             
@@ -413,6 +446,7 @@ const DashboardHigieneSeguridad = () => {
                 icono={<TrendingDownIcon />}
                 labelChip={datos.indices.indiceGravedad > 50 ? "Alta gravedad" : datos.indices.indiceGravedad > 25 ? "Media gravedad" : "Baja gravedad"}
                 color={{ high: 50, medium: 25 }}
+                descripcion="Días perdidos por incapacidad temporal por cada millón de horas hombre trabajadas. Calculado como: (Días perdidos / Horas trabajadas) × 1,000,000"
               />
             </Grid>
           </Grid>

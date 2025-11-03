@@ -19,14 +19,24 @@ const MetricChips = React.memo(({ metricas }) => {
       color: 'primary'
     },
     {
+      icon: <PeopleIcon />,
+      label: `Activos: ${metricas.empleadosActivos}`,
+      color: 'success'
+    },
+    {
       icon: <WarningIcon />,
       label: `En Reposo: ${metricas.empleadosEnReposo}`,
       color: metricas.empleadosEnReposo > 0 ? 'error' : 'success'
     },
     {
       icon: <AccessTimeIcon />,
-      label: `Horas: ${metricas.horasTrabajadas.toLocaleString()}`,
+      label: `Horas Trabajadas: ${metricas.horasTrabajadas.toLocaleString()}`,
       color: 'info'
+    },
+    {
+      icon: <AccessTimeIcon />,
+      label: `Horas Perdidas: ${metricas.horasPerdidas.toLocaleString()}`,
+      color: metricas.horasPerdidas > 0 ? 'warning' : 'success'
     },
     {
       icon: <ReportProblemIcon />,
@@ -53,8 +63,10 @@ const MetricChips = React.memo(({ metricas }) => {
   // Solo re-renderizar si las métricas cambian
   return (
     prevProps.metricas.totalEmpleados === nextProps.metricas.totalEmpleados &&
+    prevProps.metricas.empleadosActivos === nextProps.metricas.empleadosActivos &&
     prevProps.metricas.empleadosEnReposo === nextProps.metricas.empleadosEnReposo &&
     prevProps.metricas.horasTrabajadas === nextProps.metricas.horasTrabajadas &&
+    prevProps.metricas.horasPerdidas === nextProps.metricas.horasPerdidas &&
     prevProps.metricas.diasPerdidos === nextProps.metricas.diasPerdidos
   );
 });
