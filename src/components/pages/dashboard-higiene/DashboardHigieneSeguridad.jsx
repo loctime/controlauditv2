@@ -168,7 +168,7 @@ const DashboardHigieneSeguridad = () => {
   // Pantalla de timeout
   if (loadingTimeout) {
     return (
-      <Container maxWidth="xl" sx={{ py: 4 }}>
+      <Container maxWidth="xl" sx={{ py: 0, pt: 1, pb: 2 }}>
         <Paper elevation={2} sx={{ p: 4, borderRadius: 2 }}>
           <Box display="flex" flexDirection="column" alignItems="center" textAlign="center">
             <ErrorIcon sx={{ fontSize: 64, color: 'warning.main', mb: 2 }} />
@@ -199,7 +199,7 @@ const DashboardHigieneSeguridad = () => {
 
   if (loading) {
     return (
-      <Container maxWidth="xl" sx={{ py: 4 }}>
+      <Container maxWidth="xl" sx={{ py: 0, pt: 1, pb: 2 }}>
         <Box display="flex" flexDirection="column" justifyContent="center" alignItems="center" minHeight="400px">
           <CircularProgress size={60} sx={{ mb: 2 }} />
           <Typography variant="h6" sx={{ mb: 1 }}>
@@ -215,99 +215,92 @@ const DashboardHigieneSeguridad = () => {
 
   return (
     <ErrorBoundary>
-      <Container maxWidth="xl" sx={{ py: 4 }}>
+      <Container maxWidth="xl" sx={{ py: 0, pt: 1, pb: 2 }}>
         {/* Filtros */}
         <Paper elevation={2} sx={{ p: 1, mb: 4, borderRadius: 2 }}>
-         <Typography variant="h4" sx={{ fontWeight: 'bold', color: 'text.primary', mb: 1 }}>
-          🛡️ Dashboard Higiene y Seguridad
-        </Typography>
-        
-        {/* Información del contexto */}
-        <Alert severity={
-          !userEmpresas || userEmpresas.length === 0 ? "error" :
-          (selectedSucursal === 'todas' || sucursalSeleccionada) ? "info" : "warning"
-        } sx={{ mb: 1 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
-            <BusinessIcon />
-           
-            {!userEmpresas || userEmpresas.length === 0 ? (
-              <>
-                <Typography variant="body1">
-                  <strong>No hay empresas disponibles</strong> - Contacta al administrador
-                </Typography>
-                <Button
-                  variant="outlined"
-                  size="small"
-                  onClick={() => window.location.href = '/establecimiento'}
-                  sx={{ ml: 2 }}
-                >
-                  🏢 Ir a Empresas
-                </Button>
-              </>
-            ) : selectedEmpresa === 'todas' ? (
-              <>
-                <Typography variant="body1">
-                  <strong>Todas las empresas</strong> - Todas las sucursales
-                </Typography>
-                <Chip 
-                  label={selectedYear} 
-                  size="small" 
-                  color="primary" 
-                />
-              </>
-            ) : selectedSucursal === 'todas' ? (
-              <>
-                <Typography variant="body1">
-                  <strong>{empresaSeleccionada.nombre}</strong> - Todas las sucursales
-                </Typography>
-                <Chip 
-                  label={selectedYear} 
-                  size="small" 
-                  color="primary" 
-                />
-              </>
-            ) : sucursalSeleccionada ? (
-              <>
-                <Typography variant="body1">
-                  <strong>{empresaSeleccionada.nombre}</strong> - {sucursalSeleccionada.nombre}
-                </Typography>
-                <Chip 
-                  label={selectedYear} 
-                  size="small" 
-                  color="primary" 
-                />
-                <Chip 
-                  label={`${sucursalSeleccionada.horasSemanales || 40}h/semana`}
-                  size="small" 
-                  color="secondary" 
-                />
-              </>
-            ) : (
-              <>
-                <Typography variant="body1">
-                  <strong>{empresaSeleccionada?.nombre || 'Empresa'}</strong> - No hay sucursales disponibles
-                </Typography>
-                <Button
-                  variant="outlined"
-                  size="small"
-                  onClick={() => window.location.href = '/establecimiento'}
-                  sx={{ ml: 2 }}
-                >
-                  🏪 Ir a Sucursales
-                </Button>
-              </>
-            )}
-            
-            <Typography variant="subtitle1" color="textSecondary" sx={{ marginLeft: 'auto', textAlign: 'right', ml: 4 }}>
-              {!userEmpresas || userEmpresas.length === 0 
-                ? "No se encontraron empresas asignadas a tu usuario"
-                : (selectedSucursal === 'todas' || sucursalSeleccionada)
-                  ? "Análisis de índices técnicos y métricas de seguridad laboral"
-                  : "Selecciona una sucursal para ver el análisis de seguridad"
-              }
-            </Typography>
-          </Box>
-        </Alert>
+         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap', mb: 1 }}>
+          <Typography variant="h4" sx={{ fontWeight: 'bold', color: 'text.primary' }}>
+            🛡️ Dashboard Higiene y Seguridad
+          </Typography>
+          
+          {/* Información del contexto */}
+          <Alert severity={
+            !userEmpresas || userEmpresas.length === 0 ? "error" :
+            (selectedSucursal === 'todas' || sucursalSeleccionada) ? "info" : "warning"
+          } sx={{ flex: 1, minWidth: '300px' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
+              <BusinessIcon />
+             
+              {!userEmpresas || userEmpresas.length === 0 ? (
+                <>
+                  <Typography variant="body1">
+                    <strong>No hay empresas disponibles</strong> - Contacta al administrador
+                  </Typography>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    onClick={() => window.location.href = '/establecimiento'}
+                    sx={{ ml: 2 }}
+                  >
+                    🏢 Ir a Empresas
+                  </Button>
+                </>
+              ) : selectedEmpresa === 'todas' ? (
+                <>
+                  <Typography variant="body1">
+                    <strong>Todas las empresas</strong> - Todas las sucursales
+                  </Typography>
+                  <Chip 
+                    label={selectedYear} 
+                    size="small" 
+                    color="primary" 
+                  />
+                </>
+              ) : selectedSucursal === 'todas' ? (
+                <>
+                  <Typography variant="body1">
+                    <strong>{empresaSeleccionada.nombre}</strong> - Todas las sucursales
+                  </Typography>
+                  <Chip 
+                    label={selectedYear} 
+                    size="small" 
+                    color="primary" 
+                  />
+                </>
+              ) : sucursalSeleccionada ? (
+                <>
+                  <Typography variant="body1">
+                    <strong>{empresaSeleccionada.nombre}</strong> - {sucursalSeleccionada.nombre}
+                  </Typography>
+                  <Chip 
+                    label={selectedYear} 
+                    size="small" 
+                    color="primary" 
+                  />
+                  <Chip 
+                    label={`${sucursalSeleccionada.horasSemanales || 40}h/semana`}
+                    size="small" 
+                    color="secondary" 
+                  />
+                </>
+              ) : (
+                <>
+                  <Typography variant="body1">
+                    <strong>{empresaSeleccionada?.nombre || 'Empresa'}</strong> - No hay sucursales disponibles
+                  </Typography>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    onClick={() => window.location.href = '/establecimiento'}
+                    sx={{ ml: 2 }}
+                  >
+                    🏪 Ir a Sucursales
+                  </Button>
+                </>
+              )}
+            </Box>
+          </Alert>
+        </Box>
         
         <SelectoresDashboard
           selectedEmpresa={selectedEmpresa}
