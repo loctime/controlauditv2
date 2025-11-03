@@ -30,6 +30,10 @@ const AuthContextComponent = ({ children }) => {
   const [loadingFormularios, setLoadingFormularios] = useState(true);
   const [userAuditorias, setUserAuditorias] = useState([]);
   const [auditoriasCompartidas, setAuditoriasCompartidas] = useState([]);
+  
+  // Estados globales de selección
+  const [selectedEmpresa, setSelectedEmpresa] = useState('todas');
+  const [selectedSucursal, setSelectedSucursal] = useState('todas');
 
   // Usar hooks personalizados
   const {
@@ -295,6 +299,10 @@ const AuthContextComponent = ({ children }) => {
     loadingFormularios,
     userAuditorias,
     auditoriasCompartidas,
+    selectedEmpresa,
+    setSelectedEmpresa,
+    selectedSucursal,
+    setSelectedSucursal,
     handleLogin,
     logoutContext,
     crearEmpresa,

@@ -30,34 +30,32 @@ import {
 import { collection, query, where, getDocs, deleteDoc, doc } from 'firebase/firestore';
 import { db } from '../../../firebaseConfig';
 import { useAuth } from '../../context/AuthContext';
+import { useGlobalSelection } from '../../../hooks/useGlobalSelection';
 import EmpleadoForm from './EmpleadoForm';
 
 export default function Empleados() {
-  const { userProfile, userSucursales, userEmpresas, loadingSucursales } = useAuth();
+  const { userProfile, loadingSucursales } = useAuth();
+  
+  // Usar selección global
+  const {
+    selectedEmpresa,
+    selectedSucursal,
+    setSelectedEmpresa,
+    setSelectedSucursal,
+    sucursalesFiltradas: filteredSucursales,
+    userEmpresas,
+    userSucursales
+  } = useGlobalSelection();
+  
   const [empleados, setEmpleados] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCargo, setFilterCargo] = useState('');
   const [filterTipo, setFilterTipo] = useState('');
   const [filterEstado, setFilterEstado] = useState('');
-  const [selectedEmpresa, setSelectedEmpresa] = useState('');
-  const [selectedSucursal, setSelectedSucursal] = useState('');
   const [openForm, setOpenForm] = useState(false);
   const [selectedEmpleado, setSelectedEmpleado] = useState(null);
   const [empresasCargadas, setEmpresasCargadas] = useState(false);
-
-  // Memoizar sucursales filtradas para evitar re-renders
-  const filteredSucursales = useMemo(() => {
-    return selectedEmpresa
-      ? userSucursales?.filter(s => s.empresaId === selectedEmpresa) || []
-      : userSucursales || [];
-  }, [selectedEmpresa, userSucursales]);
-
-  // Memoizar IDs de sucursales para estabilizar dependencias
-  const filteredSucursalesIds = useMemo(() => 
-    JSON.stringify(filteredSucursales.map(s => s.id).sort()),
-    [filteredSucursales]
-  );
 
   // Detectar cuando las empresas han sido cargadas
   useEffect(() => {
@@ -65,38 +63,6 @@ export default function Empleados() {
       setEmpresasCargadas(true);
     }
   }, [userEmpresas]);
-
-  // Establecer empresa inicial
-  useEffect(() => {
-    if (userEmpresas && userEmpresas.length > 0 && !selectedEmpresa) {
-      // Buscar una empresa que tenga sucursales
-      const empresaConSucursales = userEmpresas.find(empresa => {
-        const sucursalesDeEmpresa = userSucursales?.filter(s => s.empresaId === empresa.id) || [];
-        return sucursalesDeEmpresa.length > 0;
-      });
-      
-      if (empresaConSucursales) {
-        setSelectedEmpresa(empresaConSucursales.id);
-      } else {
-        setSelectedEmpresa(userEmpresas[0].id);
-      }
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userEmpresas, userSucursales]);
-
-  // Establecer sucursal inicial cuando cambia la empresa
-  useEffect(() => {
-    if (filteredSucursales.length > 0) {
-      // Si hay sucursal seleccionada y pertenece a la empresa actual, mantenerla
-      const sucursalExiste = filteredSucursales.find(s => s.id === selectedSucursal);
-      if (!sucursalExiste) {
-        setSelectedSucursal(filteredSucursales[0].id);
-      }
-    } else {
-      setSelectedSucursal('');
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedEmpresa, filteredSucursalesIds]);
 
   const loadEmpleados = useCallback(async () => {
     setLoading(true);

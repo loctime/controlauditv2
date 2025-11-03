@@ -1,21 +1,24 @@
 import { useState, useEffect, useMemo } from 'react';
+import { useGlobalSelection } from '../../../../hooks/useGlobalSelection';
 
 /**
  * Hook para manejar filtros y selección
  */
-export const useAccidentesFilters = (userEmpresas, userSucursales, location) => {
-  const [selectedEmpresa, setSelectedEmpresa] = useState('todas');
-  const [selectedSucursal, setSelectedSucursal] = useState('todas');
+export const useAccidentesFilters = (location) => {
   const [filterTipo, setFilterTipo] = useState('');
   const [filterEstado, setFilterEstado] = useState('');
   const [empresasCargadas, setEmpresasCargadas] = useState(false);
 
-  const sucursalesFiltradas = useMemo(() => 
-    selectedEmpresa && selectedEmpresa !== 'todas'
-      ? userSucursales?.filter(s => s.empresaId === selectedEmpresa) || []
-      : userSucursales || [],
-    [selectedEmpresa, userSucursales]
-  );
+  // Usar selección global
+  const {
+    selectedEmpresa,
+    selectedSucursal,
+    setSelectedEmpresa,
+    setSelectedSucursal,
+    sucursalesFiltradas,
+    userEmpresas,
+    userSucursales
+  } = useGlobalSelection();
 
   useEffect(() => {
     if (userEmpresas !== undefined) {
@@ -51,7 +54,9 @@ export const useAccidentesFilters = (userEmpresas, userSucursales, location) => 
     filterEstado,
     setFilterEstado,
     sucursalesFiltradas,
-    empresasCargadas
+    empresasCargadas,
+    userEmpresas,
+    userSucursales
   };
 };
 

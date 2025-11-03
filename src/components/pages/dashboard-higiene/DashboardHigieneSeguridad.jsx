@@ -30,23 +30,13 @@ import IndiceCardCompact from './components/IndiceCardCompact';
 import ErrorBoundary from '../../common/ErrorBoundary';
 import { useIndicesCalculator } from './hooks/useIndicesCalculator';
 import { useDashboardDataFetch } from './hooks/useDashboardDataFetch';
+import { useGlobalSelection } from '../../../hooks/useGlobalSelection';
 
 const DashboardHigieneSeguridad = () => {
   const { userEmpresas, userSucursales } = useAuth();
-  const [selectedEmpresa, setSelectedEmpresa] = useState('');
-  const [selectedSucursal, setSelectedSucursal] = useState('');
+  const { selectedEmpresa, setSelectedEmpresa, selectedSucursal, setSelectedSucursal, sucursalesFiltradas } = useGlobalSelection();
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [loadingTimeout, setLoadingTimeout] = useState(false);
-  
-  // Filtrar sucursales por empresa seleccionada (incluye "todas")
-  const sucursalesFiltradas = useMemo(() => {
-    if (selectedEmpresa === 'todas') {
-      return userSucursales || [];
-    }
-    return selectedEmpresa
-      ? userSucursales?.filter(s => s.empresaId === selectedEmpresa) || []
-      : [];
-  }, [selectedEmpresa, userSucursales]);
 
   // Hook para calcular índices
   const { calcularIndices, calcularPeriodo } = useIndicesCalculator();
@@ -59,42 +49,6 @@ const DashboardHigieneSeguridad = () => {
     sucursalesFiltradas,
     calcularPeriodo
   );
-
-  // Cargar datos iniciales
-  useEffect(() => {
-    if (userEmpresas && userEmpresas.length > 0 && !selectedEmpresa) {
-      const empresaConSucursales = userEmpresas.find(empresa => {
-        const sucursalesDeEmpresa = userSucursales?.filter(s => s.empresaId === empresa.id) || [];
-        return sucursalesDeEmpresa.length > 0;
-      });
-      
-      if (empresaConSucursales) {
-        setSelectedEmpresa(empresaConSucursales.id);
-      } else {
-        setSelectedEmpresa(userEmpresas[0].id);
-      }
-    }
-  }, [userEmpresas, userSucursales]);
-
-  // Memoizar IDs de sucursales para estabilizar
-  const sucursalesIdsString = useMemo(() => 
-    JSON.stringify(sucursalesFiltradas?.map(s => s.id).sort() || []),
-    [sucursalesFiltradas]
-  );
-
-  useEffect(() => {
-    if (selectedEmpresa && selectedEmpresa !== 'todas' && sucursalesFiltradas.length > 0) {
-      const sucursalValida = selectedSucursal === 'todas' || sucursalesFiltradas.find(s => s.id === selectedSucursal);
-      if (!sucursalValida) {
-        setSelectedSucursal('todas');
-      }
-    } else if (selectedEmpresa === 'todas' && sucursalesFiltradas.length > 0) {
-      setSelectedSucursal('todas');
-    } else if (selectedEmpresa && selectedEmpresa !== 'todas' && sucursalesFiltradas.length === 0) {
-      setSelectedSucursal('');
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedEmpresa, sucursalesIdsString]);
 
   // Calcular índices cuando cambian los datos
   const datos = useMemo(() => {
