@@ -41,9 +41,9 @@ export const useIndicesCalculator = () => {
     const empleadosActivos = empleados.filter(e => e.estado === 'activo').length;
     const empleadosEnReposo = empleados.filter(e => e.estado === 'inactivo' && e.fechaInicioReposo).length;
 
-    // Calcular horas trabajadas y perdidas por empleado según su sucursal
+    // Calcular horas trabajadas por empleado según su sucursal
+    // Las horas perdidas se calcularán históricamente desde los accidentes
     let horasTrabajadas = 0;
-    let horasPerdidas = 0;
     
     // Crear mapa de sucursales para acceso rápido
     const sucursalesMap = new Map();
@@ -53,20 +53,19 @@ export const useIndicesCalculator = () => {
       sucursalesMap.set(sucursales.id, sucursales);
     }
     
-    // Calcular horas por cada empleado según su sucursal
+    // Calcular horas trabajadas por todos los empleados activos del período
+    // (No contamos horas perdidas aquí, las calcularemos desde los accidentes históricos)
     empleados.forEach(empleado => {
       const sucursal = sucursalesMap.get(empleado.sucursalId);
       const horasSemanales = sucursal?.horasSemanales || 40;
       const horasPorDiaEmpleado = horasSemanales / 5;
       
-      if (empleado.estado === 'activo') {
-        horasTrabajadas += diasLaborales * horasPorDiaEmpleado;
-      } else if (empleado.estado === 'inactivo' && empleado.fechaInicioReposo) {
-        horasPerdidas += diasLaborales * horasPorDiaEmpleado;
-      }
+      // Todos los empleados contribuyen a horas trabajadas del período
+      // Las horas perdidas se calcularán desde los accidentes históricos
+      horasTrabajadas += diasLaborales * horasPorDiaEmpleado;
     });
 
-    // 🎯 FILTRAR ACCIDENTES DEL PERÍODO (para IF e II) - SEGÚN ESTÁNDARES OSHA
+    // 🎯 FILTRAR ACCIDENTES DEL PERÍODO (para IF, II, IG y TA) - SEGÚN ESTÁNDARES OSHA
     const accidentsInPeriod = inicio ? accidentes.filter(acc => {
       const accidentDate = acc.fechaHora?.toDate ? acc.fechaHora.toDate() : new Date(acc.fechaHora);
       return accidentDate >= inicio && accidentDate <= fin;
@@ -78,38 +77,62 @@ export const useIndicesCalculator = () => {
       a.empleadosInvolucrados?.some(emp => emp.conReposo === true)
     ).length;
 
-    // IG: Calcular días perdidos CORRECTAMENTE según estándares OSHA
-    // Suma TODOS los días perdidos del período, incluso si el accidente fue antes
+    // IG y TA: Calcular días perdidos HISTÓRICAMENTE desde los accidentes del período
+    // Esto asegura que los índices reflejen la realidad del período, no el estado actual
     let diasPerdidos = 0;
+    let horasPerdidasPorAccidentes = 0;
     
-    // Crear mapa de empleados en reposo por ID
-    const empleadosEnReposoMap = new Map();
-    empleados.forEach(emp => {
-      if (emp.estado === 'inactivo' && emp.fechaInicioReposo) {
-        empleadosEnReposoMap.set(emp.id, emp);
-      }
-    });
-    
-    // Calcular días perdidos del período para empleados que AÚN están en reposo
-    empleadosEnReposoMap.forEach(emp => {
-      const fechaInicioReposo = emp.fechaInicioReposo.toDate ? emp.fechaInicioReposo.toDate() : new Date(emp.fechaInicioReposo);
-      const fechaFinPeriodo = fin > new Date() ? new Date() : fin;
-      
-      // Si el reposo continúa en el período, calcular días del período
-      if (inicio && fechaInicioReposo < fechaFinPeriodo) {
-        const inicioCalculo = fechaInicioReposo > inicio ? fechaInicioReposo : inicio;
-        const diasEnPeriodo = Math.max(0, Math.ceil((fechaFinPeriodo - inicioCalculo) / (1000 * 60 * 60 * 24)));
-        diasPerdidos += diasEnPeriodo;
-      } else if (!inicio) {
-        // Para histórico: desde inicio de reposo hasta fin
-        const fechaFinHistorico = fin > new Date() ? new Date() : fin;
-        const diasDesdeInicio = Math.ceil((fechaFinHistorico - fechaInicioReposo) / (1000 * 60 * 60 * 24));
-        diasPerdidos += Math.max(0, diasDesdeInicio);
+    // Calcular días perdidos desde los accidentes del período
+    accidentsInPeriod.forEach(accidente => {
+      if (accidente.tipo === 'accidente' && accidente.empleadosInvolucrados) {
+        const fechaAccidente = accidente.fechaHora?.toDate ? accidente.fechaHora.toDate() : new Date(accidente.fechaHora);
+        
+        accidente.empleadosInvolucrados.forEach(emp => {
+          if (emp.conReposo) {
+            let diasPerdidosEmpleado = 0;
+            
+            // Si el accidente ya tiene días perdidos guardados (cerrado), usarlos
+            if (emp.diasPerdidos !== undefined && emp.diasPerdidos !== null) {
+              diasPerdidosEmpleado = emp.diasPerdidos;
+            } else {
+              // Si no tiene días guardados (aún abierto o datos antiguos), calcularlos
+              const fechaInicioReposo = emp.fechaInicioReposo?.toDate 
+                ? emp.fechaInicioReposo.toDate() 
+                : new Date(emp.fechaInicioReposo || fechaAccidente);
+              
+              // Si está cerrado y tiene fechaFinReposo, usar esa fecha
+              if (emp.fechaFinReposo) {
+                const fechaFinReposo = emp.fechaFinReposo?.toDate 
+                  ? emp.fechaFinReposo.toDate() 
+                  : new Date(emp.fechaFinReposo);
+                diasPerdidosEmpleado = Math.max(0, Math.ceil((fechaFinReposo - fechaInicioReposo) / (1000 * 60 * 60 * 24)));
+              } else {
+                // Caso abierto: calcular hasta fin del período o fecha actual (lo que sea menor)
+                const fechaFinCalculo = fin > new Date() ? new Date() : fin;
+                const fechaInicioCalculo = fechaInicioReposo > inicio ? fechaInicioReposo : inicio;
+                diasPerdidosEmpleado = Math.max(0, Math.ceil((fechaFinCalculo - fechaInicioCalculo) / (1000 * 60 * 60 * 24)));
+              }
+            }
+            
+            diasPerdidos += diasPerdidosEmpleado;
+            
+            // Calcular horas perdidas por este empleado para Tasa de Ausentismo
+            // Necesitamos la sucursal del empleado para calcular horas
+            const empleadoCompleto = empleados.find(e => e.id === emp.empleadoId);
+            if (empleadoCompleto) {
+              const sucursalEmp = sucursalesMap.get(empleadoCompleto.sucursalId);
+              const horasSemanalesEmp = sucursalEmp?.horasSemanales || 40;
+              const horasPorDiaEmp = horasSemanalesEmp / 5;
+              horasPerdidasPorAccidentes += diasPerdidosEmpleado * horasPorDiaEmp;
+            }
+          }
+        });
       }
     });
 
-    // 1. Tasa de Ausentismo (TA)
-    const tasaAusentismo = horasTrabajadas > 0 ? (horasPerdidas / (horasTrabajadas + horasPerdidas)) * 100 : 0;
+    // 1. Tasa de Ausentismo (TA) - Usando horas perdidas históricas desde accidentes
+    const horasTotales = horasTrabajadas + horasPerdidasPorAccidentes;
+    const tasaAusentismo = horasTotales > 0 ? (horasPerdidasPorAccidentes / horasTotales) * 100 : 0;
 
     // 2. Índice de Frecuencia (IF)
     const indiceFrecuencia = horasTrabajadas > 0 ? (accidentesConTiempoPerdido * 1000000) / horasTrabajadas : 0;
@@ -133,7 +156,7 @@ export const useIndicesCalculator = () => {
         empleadosActivos,
         empleadosEnReposo,
         horasTrabajadas,
-        horasPerdidas,
+        horasPerdidas: horasPerdidasPorAccidentes,
         accidentesConTiempoPerdido,
         diasPerdidos
       }
