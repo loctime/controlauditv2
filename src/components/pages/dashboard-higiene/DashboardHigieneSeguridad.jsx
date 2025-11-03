@@ -9,7 +9,14 @@ import {
   Alert,
   Chip,
   Divider,
-  Button
+  Button,
+  IconButton,
+  Badge,
+  Popover,
+  List,
+  ListItem,
+  ListItemIcon,
+  ListItemText
 } from '@mui/material';
 import {
   TrendingUp as TrendingUpIcon,
@@ -19,7 +26,9 @@ import {
   People as PeopleIcon,
   ReportProblem as ReportProblemIcon,
   AccessTime as AccessTimeIcon,
-  Business as BusinessIcon
+  Business as BusinessIcon,
+  School as SchoolIcon,
+  Info as InfoIcon
 } from '@mui/icons-material';
 import { useAuth } from '../../context/AuthContext';
 import GraficoIndices from './components/GraficoIndices';
@@ -30,7 +39,6 @@ import IndiceCardCompact from './components/IndiceCardCompact';
 import IndiceComparacion from './components/IndiceComparacion';
 import CapacitacionesMetrics from './components/CapacitacionesMetrics';
 import AccidentesBreakdown from './components/AccidentesBreakdown';
-import AlertasPendientes from './components/AlertasPendientes';
 import ErrorBoundary from '../../common/ErrorBoundary';
 import { useIndicesCalculator } from './hooks/useIndicesCalculator';
 import { useDashboardDataFetch } from './hooks/useDashboardDataFetch';
@@ -44,6 +52,7 @@ const DashboardHigieneSeguridad = () => {
   const { selectedEmpresa, setSelectedEmpresa, selectedSucursal, setSelectedSucursal, sucursalesFiltradas } = useGlobalSelection();
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [loadingTimeout, setLoadingTimeout] = useState(false);
+  const [alertAnchorEl, setAlertAnchorEl] = useState(null);
 
   // Hook para calcular índices
   const { calcularIndices, calcularPeriodo } = useIndicesCalculator();
@@ -165,6 +174,73 @@ const DashboardHigieneSeguridad = () => {
     }
   }, [yearsAvailable, selectedYear]);
 
+  // Calcular alertas
+  const alertas = useMemo(() => {
+    const alertasList = [];
+    
+    if (!accidentesAnalysis || !capacitacionesMetrics) return alertasList;
+
+    // Alertas de accidentes abiertos
+    if (accidentesAnalysis.abiertos > 0) {
+      alertasList.push({
+        tipo: 'warning',
+        icono: <ReportProblemIcon />,
+        titulo: `${accidentesAnalysis.abiertos} Accidente(s) Abierto(s)`,
+        descripcion: 'Requieren atención y cierre. Revisa los casos pendientes.',
+        severidad: accidentesAnalysis.abiertos > 5 ? 'error' : 'warning'
+      });
+    }
+
+    // Alertas de capacitaciones vencidas
+    if (capacitacionesMetrics.capacitacionesVencidas > 0) {
+      alertasList.push({
+        tipo: 'info',
+        icono: <SchoolIcon />,
+        titulo: `${capacitacionesMetrics.capacitacionesVencidas} Empleado(s) con Capacitaciones Vencidas`,
+        descripcion: 'Más de 365 días sin renovar. Actualiza las capacitaciones.',
+        severidad: capacitacionesMetrics.capacitacionesVencidas > 10 ? 'warning' : 'info'
+      });
+    }
+
+    // Alertas de bajo cumplimiento de capacitaciones
+    if (capacitacionesMetrics.porcentajeCumplimiento < 60) {
+      alertasList.push({
+        tipo: 'warning',
+        icono: <SchoolIcon />,
+        titulo: 'Bajo Cumplimiento de Capacitaciones',
+        descripcion: `Solo el ${capacitacionesMetrics.porcentajeCumplimiento.toFixed(1)}% de empleados están capacitados.`,
+        severidad: capacitacionesMetrics.porcentajeCumplimiento < 40 ? 'error' : 'warning'
+      });
+    }
+
+    // Alertas de bajo ratio de incidentes
+    if (accidentesAnalysis.ratioIncidentes < 2) {
+      alertasList.push({
+        tipo: 'info',
+        icono: <InfoIcon />,
+        titulo: 'Mejorar Cultura de Reporte',
+        descripcion: `Ratio incidentes/accidentes: ${accidentesAnalysis.ratioIncidentes.toFixed(1)}:1. Se recomienda fomentar el reporte de incidentes.`,
+        severidad: 'info'
+      });
+    }
+
+    // Ordenar por severidad: error > warning > info
+    const ordenSeveridad = { error: 3, warning: 2, info: 1 };
+    alertasList.sort((a, b) => ordenSeveridad[b.severidad] - ordenSeveridad[a.severidad]);
+
+    return alertasList;
+  }, [accidentesAnalysis, capacitacionesMetrics]);
+
+  const handleAlertClick = (event) => {
+    setAlertAnchorEl(event.currentTarget);
+  };
+
+  const handleAlertClose = () => {
+    setAlertAnchorEl(null);
+  };
+
+  const openAlert = Boolean(alertAnchorEl);
+
   // Pantalla de timeout
   if (loadingTimeout) {
     return (
@@ -223,6 +299,21 @@ const DashboardHigieneSeguridad = () => {
             🛡️ Dashboard Higiene y Seguridad
           </Typography>
           
+          {/* Botón de alertas */}
+          {datos.metricas.totalEmpleados > 0 && alertas.length > 0 && (
+            <Badge badgeContent={alertas.length} color="error">
+              <IconButton 
+                onClick={handleAlertClick}
+                sx={{ 
+                  color: 'text.primary',
+                  '&:hover': { backgroundColor: 'action.hover' }
+                }}
+              >
+                <WarningIcon />
+              </IconButton>
+            </Badge>
+          )}
+
           {/* Información del contexto */}
           <Alert severity={
             !userEmpresas || userEmpresas.length === 0 ? "error" :
@@ -316,6 +407,61 @@ const DashboardHigieneSeguridad = () => {
         />
       </Paper>
 
+      {/* Popover de Alertas */}
+      <Popover
+        open={openAlert}
+        anchorEl={alertAnchorEl}
+        onClose={handleAlertClose}
+        anchorOrigin={{
+          vertical: 'bottom',
+          horizontal: 'left',
+        }}
+        transformOrigin={{
+          vertical: 'top',
+          horizontal: 'left',
+        }}
+      >
+        <Box sx={{ p: 2, minWidth: 400, maxWidth: 500 }}>
+          <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+            <WarningIcon sx={{ color: 'warning.main' }} />
+            Alertas y Pendientes ({alertas.length})
+          </Typography>
+          <List>
+            {alertas.map((alerta, index) => (
+              <ListItem key={index} sx={{ px: 0, py: 1.5, borderBottom: index < alertas.length - 1 ? '1px solid' : 'none', borderColor: 'divider' }}>
+                <ListItemIcon sx={{ minWidth: 40 }}>
+                  <Box sx={{ 
+                    color: alerta.severidad === 'error' ? 'error.main' : 
+                           alerta.severidad === 'warning' ? 'warning.main' : 'info.main'
+                  }}>
+                    {alerta.icono}
+                  </Box>
+                </ListItemIcon>
+                <ListItemText
+                  primary={
+                    <Typography 
+                      variant="body1" 
+                      sx={{ 
+                        fontWeight: 600,
+                        color: alerta.severidad === 'error' ? 'error.main' : 
+                               alerta.severidad === 'warning' ? 'warning.main' : 'info.main'
+                      }}
+                    >
+                      {alerta.titulo}
+                    </Typography>
+                  }
+                  secondary={
+                    <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                      {alerta.descripcion}
+                    </Typography>
+                  }
+                />
+              </ListItem>
+            ))}
+          </List>
+        </Box>
+      </Popover>
+
       {/* Métricas básicas - Chips compactos */}
       <Box sx={{ mb: 4 }}>
         {!userEmpresas || userEmpresas.length === 0 ? (
@@ -343,16 +489,6 @@ const DashboardHigieneSeguridad = () => {
           <MetricChips metricas={datos.metricas} analysis={accidentesAnalysis} />
         )}
       </Box>
-
-      <Divider sx={{ my: 4 }} />
-
-      {/* Alertas Pendientes */}
-      {datos.metricas.totalEmpleados > 0 && (
-        <AlertasPendientes 
-          analysis={accidentesAnalysis} 
-          metrics={capacitacionesMetrics}
-        />
-      )}
 
       <Divider sx={{ my: 4 }} />
 
