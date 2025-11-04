@@ -82,3 +82,4 @@ export const useIndicesComparacion = (empleados, accidentes, selectedYear, sucur
 };
 
 
+
