@@ -65,15 +65,21 @@ export const useIndicesCalculator = () => {
         const inicioMes = new Date(fechaActual.getFullYear(), fechaActual.getMonth(), 1);
         const finMes = new Date(fechaActual.getFullYear(), fechaActual.getMonth() + 1, 0, 23, 59, 59);
         
-        // Contar empleados que estaban activos en este mes (ingresaron antes o durante el mes)
+        // Contar empleados que estaban activos en este mes (se crearon antes o durante el mes)
+        // Usamos createdAt (fecha de creación del registro) en lugar de fechaIngreso
+        // para asegurar que solo contemos desde que tenemos datos reales del empleado
         const trabajadoresEnMes = empleados.filter(emp => {
-          const fechaIngreso = emp.fechaIngreso?.toDate 
-            ? emp.fechaIngreso.toDate() 
-            : (emp.fechaIngreso ? new Date(emp.fechaIngreso) : null);
+          // Priorizar createdAt, fallback a fechaIngreso solo para compatibilidad con datos antiguos
+          const fechaReferencia = emp.createdAt?.toDate 
+            ? emp.createdAt.toDate() 
+            : (emp.createdAt ? new Date(emp.createdAt) : null) ||
+              (emp.fechaIngreso?.toDate 
+                ? emp.fechaIngreso.toDate() 
+                : (emp.fechaIngreso ? new Date(emp.fechaIngreso) : null));
           
-          // El empleado cuenta si ingresó antes o durante este mes
+          // El empleado cuenta si se creó su registro antes o durante este mes
           // (No consideramos fecha de egreso porque no existe en el modelo actual)
-          return fechaIngreso && fechaIngreso <= finMes;
+          return fechaReferencia && fechaReferencia <= finMes;
         }).length;
         
         meses.push(trabajadoresEnMes);
@@ -87,7 +93,9 @@ export const useIndicesCalculator = () => {
     
     const promedioTrabajadores = calcularPromedioMensualTrabajadores(empleados, inicio, fin);
     
-    // Calcular horas trabajadas REALES considerando fechas de ingreso y días perdidos por accidentes
+    // Calcular horas trabajadas REALES considerando fecha de creación del registro y días perdidos por accidentes
+    // Usamos createdAt (fecha de creación) en lugar de fechaIngreso para asegurar que solo contemos
+    // desde que tenemos datos reales del empleado en el sistema
     // Primero necesitamos calcular días perdidos para saber qué descontar
     let horasTrabajadas = 0;
     
@@ -97,18 +105,24 @@ export const useIndicesCalculator = () => {
       const horasSemanales = sucursal?.horasSemanales || 40;
       const horasPorDiaEmpleado = horasSemanales / 5;
       
-      const fechaIngreso = empleado.fechaIngreso?.toDate 
-        ? empleado.fechaIngreso.toDate() 
-        : (empleado.fechaIngreso ? new Date(empleado.fechaIngreso) : inicio);
+      // Usar createdAt (fecha de creación del registro) como referencia principal
+      // Fallback a fechaIngreso solo para compatibilidad con datos antiguos
+      const fechaReferencia = empleado.createdAt?.toDate 
+        ? empleado.createdAt.toDate() 
+        : (empleado.createdAt ? new Date(empleado.createdAt) : null) ||
+          (empleado.fechaIngreso?.toDate 
+            ? empleado.fechaIngreso.toDate() 
+            : (empleado.fechaIngreso ? new Date(empleado.fechaIngreso) : inicio));
       
       // Calcular días trabajados del empleado en el período
       let diasTrabajados = diasLaborales;
       
-      // Si ingresó después del inicio del período, reducir días
-      if (fechaIngreso > inicio) {
-        const diasDesdeIngreso = Math.ceil((fin - fechaIngreso) / (1000 * 60 * 60 * 24));
-        const diasLaboralesDesdeIngreso = Math.floor(diasDesdeIngreso / 7) * 5;
-        diasTrabajados = Math.max(0, diasLaboralesDesdeIngreso);
+      // Si se creó el registro después del inicio del período, reducir días
+      // Esto asegura que no contemos días antes de tener datos reales del empleado
+      if (fechaReferencia > inicio) {
+        const diasDesdeCreacion = Math.ceil((fin - fechaReferencia) / (1000 * 60 * 60 * 24));
+        const diasLaboralesDesdeCreacion = Math.floor(diasDesdeCreacion / 7) * 5;
+        diasTrabajados = Math.max(0, diasLaboralesDesdeCreacion);
       }
       
       // Las horas perdidas por accidentes se descontarán después cuando calculemos los días perdidos
