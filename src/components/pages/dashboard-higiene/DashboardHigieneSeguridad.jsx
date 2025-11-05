@@ -28,7 +28,8 @@ import {
   AccessTime as AccessTimeIcon,
   Business as BusinessIcon,
   School as SchoolIcon,
-  Info as InfoIcon
+  Info as InfoIcon,
+  PictureAsPdf as PdfIcon
 } from '@mui/icons-material';
 import { useAuth } from '../../context/AuthContext';
 import GraficoIndices from './components/GraficoIndices';
@@ -46,6 +47,8 @@ import { useCapacitacionesMetrics } from './hooks/useCapacitacionesMetrics';
 import { useAccidentesAnalysis } from './hooks/useAccidentesAnalysis';
 import { useIndicesComparacion } from './hooks/useIndicesComparacion';
 import { useGlobalSelection } from '../../../hooks/useGlobalSelection';
+import { generarReporteDashboard } from '../../../utils/dashboardReportGenerator';
+import { toast } from 'react-toastify';
 
 const DashboardHigieneSeguridad = () => {
   const { userEmpresas, userSucursales } = useAuth();
@@ -53,6 +56,7 @@ const DashboardHigieneSeguridad = () => {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [loadingTimeout, setLoadingTimeout] = useState(false);
   const [alertAnchorEl, setAlertAnchorEl] = useState(null);
+  const [generandoReporte, setGenerandoReporte] = useState(false);
 
   // Hook para calcular índices
   const { calcularIndices, calcularPeriodo } = useIndicesCalculator();
@@ -405,6 +409,82 @@ const DashboardHigieneSeguridad = () => {
           yearsAvailable={yearsAvailable}
           deshabilitado={false}
         />
+
+        {/* Botón de Generar Reporte PDF */}
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2, mb: 1 }}>
+          <Button
+            variant="contained"
+            color="primary"
+            size="large"
+            startIcon={<PdfIcon />}
+            onClick={async () => {
+              if (!selectedEmpresa || !selectedSucursal || datos.metricas.totalEmpleados === 0) {
+                toast.warning('Selecciona una empresa, sucursal y asegúrate de tener datos para generar el reporte');
+                return;
+              }
+
+              try {
+                setGenerandoReporte(true);
+                const loadingToastId = toast.info('Generando reporte PDF... Por favor espera', {
+                  autoClose: false,
+                  isLoading: true
+                });
+
+                await generarReporteDashboard({
+                  empresa: selectedEmpresa,
+                  sucursal: selectedSucursal,
+                  año: selectedYear,
+                  datos,
+                  capacitacionesMetrics,
+                  accidentesAnalysis,
+                  indicesComparacion,
+                  empresaSeleccionada,
+                  sucursalSeleccionada,
+                  alertas,
+                  onProgress: (progress) => {
+                    console.log(`Generando reporte: ${progress}%`);
+                  }
+                });
+
+                toast.dismiss(loadingToastId);
+                toast.success('✅ Reporte PDF generado exitosamente');
+              } catch (error) {
+                console.error('Error al generar reporte:', error);
+                toast.dismiss();
+                toast.error('❌ Error al generar el reporte. Intenta nuevamente.');
+              } finally {
+                setGenerandoReporte(false);
+              }
+            }}
+            disabled={
+              loading || 
+              generandoReporte || 
+              !selectedEmpresa || 
+              !selectedSucursal || 
+              datos.metricas.totalEmpleados === 0
+            }
+            sx={{
+              minWidth: 220,
+              py: 1.5,
+              px: 3,
+              fontSize: '1rem',
+              fontWeight: 600,
+              textTransform: 'none',
+              borderRadius: 2,
+              boxShadow: 3,
+              '&:hover': {
+                boxShadow: 6,
+                transform: 'translateY(-2px)',
+                transition: 'all 0.2s ease-in-out'
+              },
+              '&:disabled': {
+                opacity: 0.6
+              }
+            }}
+          >
+            {generandoReporte ? 'Generando...' : '📄 Generar Reporte PDF'}
+          </Button>
+        </Box>
       </Paper>
 
       {/* Popover de Alertas */}
@@ -596,7 +676,9 @@ const DashboardHigieneSeguridad = () => {
       {userEmpresas && userEmpresas.length > 0 && selectedSucursal && datos.metricas.totalEmpleados > 0 && (
         <>
           <Divider sx={{ my: 4 }} />
-          <GraficoIndices datos={datos} periodo={selectedYear} />
+          <Box data-graficos-dashboard sx={{ backgroundColor: 'background.paper', p: 2, borderRadius: 2 }}>
+            <GraficoIndices datos={datos} periodo={selectedYear} />
+          </Box>
         </>
       )}
 
