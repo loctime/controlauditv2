@@ -20,6 +20,7 @@ import {
 import { Link, useNavigate } from 'react-router-dom';
 import { Visibility, VisibilityOff } from '@mui/icons-material';
 import { onSignIn } from '../../../firebaseConfig';
+import { syncUserToAuth } from '../../../services/authSyncService';
 import { Formik, Form, Field, ErrorMessage } from 'formik';
 import * as Yup from 'yup';
 import { useAuth } from '../../context/AuthContext';
@@ -51,15 +52,24 @@ const Login = () => {
     setLoading(true);
     setError('');
     try {
-      // Solo pasar email y password a onSignIn
-      const result = await onSignIn({ 
-        email: values.email, 
-        password: values.password 
-      });
-      handleLogin(result.user);
+      // Usar syncUserToAuth para auto-crear usuarios desde Firestore si no existen en Auth
+      let userCredential;
+      try {
+        userCredential = await syncUserToAuth(values.email, values.password);
+      } catch (syncError) {
+        // Si syncUserToAuth falla, intentar login normal como fallback
+        console.log('[Login] syncUserToAuth falló, intentando login normal...', syncError);
+        const result = await onSignIn({ 
+          email: values.email, 
+          password: values.password 
+        });
+        userCredential = result;
+      }
+      
+      handleLogin(userCredential.user);
       navigate("/");
     } catch (error) {
-      console.error(error);
+      console.error('[Login] Error en autenticación:', error);
       let errorMessage = 'Correo electrónico o contraseña incorrectos';
       
       if (error.code === 'auth/user-not-found') {
@@ -70,6 +80,8 @@ const Login = () => {
         errorMessage = 'Correo electrónico inválido';
       } else if (error.code === 'auth/too-many-requests') {
         errorMessage = 'Demasiados intentos fallidos. Intenta más tarde';
+      } else if (error.message) {
+        errorMessage = error.message;
       }
       
       setError(errorMessage);

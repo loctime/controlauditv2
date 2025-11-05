@@ -14,6 +14,7 @@ import { useUserDataLoaders } from './hooks/useUserDataLoaders';
 import { useSucursalesListener } from './hooks/useSucursalesListener';
 import { useFormulariosListener } from './hooks/useFormulariosListener';
 import { useContextActions } from './hooks/useContextActions';
+import { initializeControlFileFolders } from '../../services/controlFileInit';
 
 // Definimos y exportamos el contexto
 export const AuthContext = createContext();
@@ -177,6 +178,16 @@ const AuthContextComponent = ({ children }) => {
                 console.log('✅ Cache guardado');
               } catch (error) {
                 console.error('Error guardando cache:', error);
+              }
+              
+              // Inicializar carpetas de ControlFile después de autenticación exitosa
+              try {
+                console.log('[AuthContext] 🚀 Inicializando carpetas ControlFile...');
+                await initializeControlFileFolders();
+                console.log('[AuthContext] ✅ Carpetas ControlFile inicializadas');
+              } catch (error) {
+                console.error('[AuthContext] ⚠️ Error al inicializar carpetas ControlFile (no crítico):', error);
+                // No bloquear el flujo si falla la inicialización de carpetas
               }
             }, 1500);
           }

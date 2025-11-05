@@ -1,7 +1,8 @@
 // Servicio centralizado para operaciones de auditoría
 import { collection, addDoc, getDocs, query, where, orderBy, serverTimestamp } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { db, storage } from '../../../firebaseConfig';
+import { db } from '../../../firebaseConfig';
+import { uploadToControlFile, getDownloadUrl } from '../../../services/controlFileService';
+import { getControlFileFolders } from '../../../services/controlFileInit';
 import { prepararDatosParaFirestore, registrarAccionSistema } from '../../../utils/firestoreUtils';
 import { getOfflineDatabase, generateOfflineId } from '../../../services/offlineDatabase';
 import syncQueueService from '../../../services/syncQueue';
@@ -46,7 +47,7 @@ class AuditoriaService {
   }
 
   /**
-   * Procesa y sube imágenes a Firebase Storage
+   * Procesa y sube imágenes a ControlFile
    * @param {Array} imagenes - Array de archivos de imagen
    * @returns {Promise<Array>} URLs de las imágenes subidas
    */
@@ -56,6 +57,18 @@ class AuditoriaService {
     if (!Array.isArray(imagenes)) {
       console.warn('[AuditoriaService] imagenes no es un array:', imagenes);
       return [];
+    }
+    
+    // Obtener carpeta de auditorías desde ControlFile
+    let folderIdAuditorias = null;
+    try {
+      const folders = await getControlFileFolders();
+      folderIdAuditorias = folders.subFolders?.auditorias;
+      if (!folderIdAuditorias) {
+        console.warn('[AuditoriaService] ⚠️ No se encontró carpeta de auditorías, usando raíz');
+      }
+    } catch (error) {
+      console.error('[AuditoriaService] Error al obtener carpetas ControlFile:', error);
     }
     
     const imagenesProcesadas = [];
@@ -79,37 +92,36 @@ class AuditoriaService {
         
         if (imagen instanceof File) {
           try {
-            console.debug(`[AuditoriaService] Subiendo archivo: ${imagen.name}, tamaño: ${(imagen.size/1024/1024).toFixed(2)}MB`);
+            console.debug(`[AuditoriaService] Subiendo archivo a ControlFile: ${imagen.name}, tamaño: ${(imagen.size/1024/1024).toFixed(2)}MB`);
             
-            // Generar nombre único para la imagen
+            // Subir imagen a ControlFile
+            const fileId = await uploadToControlFile(imagen, folderIdAuditorias);
+            
+            // Obtener URL de descarga
+            const url = await getDownloadUrl(fileId);
+            
             const timestamp = Date.now();
-            const nombreArchivo = `auditoria_${timestamp}_${imagen.name}`;
-            const storageRef = ref(storage, `imagenes/auditorias/${nombreArchivo}`);
-            
-            // Subir imagen
-            await uploadBytes(storageRef, imagen);
-            const url = await getDownloadURL(storageRef);
-            
             const imagenProcesada = {
               nombre: imagen.name,
               tipo: imagen.type,
               tamaño: imagen.size,
               url: url,
+              fileId: fileId, // Guardar fileId para referencia futura
               timestamp: timestamp
             };
             
-            console.debug(`[AuditoriaService] Imagen subida exitosamente:`, imagenProcesada);
+            console.debug(`[AuditoriaService] Imagen subida exitosamente a ControlFile:`, imagenProcesada);
             seccionImagenes.push(imagenProcesada);
           } catch (error) {
             console.error(`[AuditoriaService] Error al procesar imagen:`, error);
             seccionImagenes.push(null);
           }
         } else if (imagen && typeof imagen === 'object' && imagen.url) {
-          // Si ya es un objeto con URL (ya procesada)
+          // Si ya es un objeto con URL (ya procesada - compatible con URLs antiguas de Storage)
           console.debug(`[AuditoriaService] Imagen ya procesada:`, imagen);
           seccionImagenes.push(imagen);
         } else if (typeof imagen === 'string' && imagen.trim() !== '') {
-          // Si es una URL directa
+          // Si es una URL directa (compatibilidad con URLs antiguas)
           console.debug(`[AuditoriaService] Imagen como URL:`, imagen);
           seccionImagenes.push({
             nombre: 'imagen_existente',
@@ -124,19 +136,16 @@ class AuditoriaService {
           const primeraImagen = imagen[0];
           if (primeraImagen instanceof File) {
             try {
-              const timestamp = Date.now();
-              const nombreArchivo = `auditoria_${timestamp}_${primeraImagen.name}`;
-              const storageRef = ref(storage, `imagenes/auditorias/${nombreArchivo}`);
-              
-              await uploadBytes(storageRef, primeraImagen);
-              const url = await getDownloadURL(storageRef);
+              const fileId = await uploadToControlFile(primeraImagen, folderIdAuditorias);
+              const url = await getDownloadUrl(fileId);
               
               seccionImagenes.push({
                 nombre: primeraImagen.name,
                 tipo: primeraImagen.type,
                 tamaño: primeraImagen.size,
                 url: url,
-                timestamp: timestamp
+                fileId: fileId,
+                timestamp: Date.now()
               });
             } catch (error) {
               console.error(`[AuditoriaService] Error al procesar primera imagen del array:`, error);

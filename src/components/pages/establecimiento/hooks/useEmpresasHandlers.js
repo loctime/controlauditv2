@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { storage } from '../../../../firebaseConfig';
 import Swal from 'sweetalert2';
+import { uploadToControlFile, getDownloadUrl } from '../../../../services/controlFileService';
+import { getControlFileFolders } from '../../../../services/controlFileInit';
 
 /**
  * Hook para handlers de empresas
@@ -44,9 +44,24 @@ export const useEmpresasHandlers = (crearEmpresa, updateEmpresa, onEmpresaCreate
     try {
       let logoURL = "";
       if (empresa.logo) {
-        const storageRef = ref(storage, `empresas/${Date.now()}_${empresa.logo.name}`);
-        const snapshot = await uploadBytes(storageRef, empresa.logo);
-        logoURL = await getDownloadURL(snapshot.ref);
+        try {
+          // Obtener carpeta de empresas desde ControlFile
+          const folders = await getControlFileFolders();
+          const folderIdEmpresas = folders.subFolders?.empresas;
+          
+          // Subir logo a ControlFile
+          const fileId = await uploadToControlFile(empresa.logo, folderIdEmpresas);
+          logoURL = await getDownloadUrl(fileId);
+          
+          console.log('[useEmpresasHandlers] ✅ Logo subido a ControlFile');
+        } catch (error) {
+          console.error('[useEmpresasHandlers] Error al subir logo:', error);
+          Swal.fire({
+            icon: 'warning',
+            title: 'Advertencia',
+            text: 'Error al subir el logo, pero la empresa se creará sin logo'
+          });
+        }
       }
 
       await crearEmpresa({
@@ -140,9 +155,24 @@ export const useEmpresasEditHandlers = (updateEmpresa) => {
     try {
       let logoURL = empresaEdit.logoURL || "";
       if (empresaEdit.logo && empresaEdit.logo instanceof File) {
-        const storageRef = ref(storage, `empresas/${Date.now()}_${empresaEdit.logo.name}`);
-        const snapshot = await uploadBytes(storageRef, empresaEdit.logo);
-        logoURL = await getDownloadURL(snapshot.ref);
+        try {
+          // Obtener carpeta de empresas desde ControlFile
+          const folders = await getControlFileFolders();
+          const folderIdEmpresas = folders.subFolders?.empresas;
+          
+          // Subir logo a ControlFile
+          const fileId = await uploadToControlFile(empresaEdit.logo, folderIdEmpresas);
+          logoURL = await getDownloadUrl(fileId);
+          
+          console.log('[useEmpresasHandlers] ✅ Logo actualizado en ControlFile');
+        } catch (error) {
+          console.error('[useEmpresasHandlers] Error al subir logo:', error);
+          Swal.fire({
+            icon: 'warning',
+            title: 'Advertencia',
+            text: 'Error al subir el logo, pero la empresa se actualizará con el logo anterior'
+          });
+        }
       }
 
       await updateEmpresa(empresaEdit.id, {
