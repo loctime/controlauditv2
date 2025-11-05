@@ -21,6 +21,45 @@ export const useUserProfile = (firebaseUser) => {
 
       if (userSnap.exists()) {
         const profileData = userSnap.data();
+        
+        // Verificar si hay datos antiguos aunque el perfil exista con el nuevo UID
+        // Si no tiene migratedFromUid, buscar por email para ver si hay un perfil antiguo
+        if (!profileData.migratedFromUid && firebaseUser.email) {
+          console.log('[useUserProfile] Perfil existe pero sin migratedFromUid, verificando si hay datos antiguos...');
+          const usuariosRef = collection(db, 'usuarios');
+          const emailQuery = query(usuariosRef, where('email', '==', firebaseUser.email));
+          const emailSnapshot = await getDocs(emailQuery);
+          
+          if (!emailSnapshot.empty) {
+            const usuariosConEmail = emailSnapshot.docs.filter(doc => doc.id !== firebaseUser.uid);
+            if (usuariosConEmail.length > 0) {
+              const oldUserDoc = usuariosConEmail[0];
+              const oldUid = oldUserDoc.id;
+              console.log('[useUserProfile] ⚠️ Encontrado usuario antiguo por email:', oldUid);
+              console.log('[useUserProfile] 🔄 Actualizando perfil con migratedFromUid y migrando datos...');
+              
+              // Actualizar el perfil actual con migratedFromUid
+              await updateDoc(userRef, {
+                migratedFromUid: oldUid,
+                lastUidUpdate: new Date()
+              });
+              
+              // Migrar todos los datos
+              try {
+                const { migrateAllUserData } = await import('../services/migrationService');
+                const migrationResult = await migrateAllUserData(oldUid, firebaseUser.uid);
+                console.log('[useUserProfile] ✅ Migración completa exitosa:', migrationResult);
+                
+                // Actualizar profileData con el migratedFromUid
+                profileData.migratedFromUid = oldUid;
+                profileData.lastUidUpdate = new Date();
+              } catch (migrationError) {
+                console.error('[useUserProfile] ⚠️ Error en migración completa (no crítico):', migrationError);
+              }
+            }
+          }
+        }
+        
         setUserProfile(profileData);
         setRole(profileData.role || null);
         setPermisos(profileData.permisos || {});

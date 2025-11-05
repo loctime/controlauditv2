@@ -13,36 +13,106 @@ import { registrarAccionSistema } from '../utils/firestoreUtils';
 
 export const auditoriaService = {
   // Obtener auditorías del usuario (multi-tenant)
-  async getUserAuditorias(userId, role) {
+  async getUserAuditorias(userId, role, userProfile = null) {
     try {
       const auditoriasRef = collection(db, "reportes");
+      let oldUid = userProfile?.migratedFromUid;
+      
+      // Si no hay migratedFromUid, buscar por email para encontrar datos antiguos
+      if (!oldUid && userProfile?.email) {
+        console.log('[auditoriaService] No hay migratedFromUid, buscando por email:', userProfile.email);
+        const usuariosRef = collection(db, 'usuarios');
+        const emailQuery = query(usuariosRef, where('email', '==', userProfile.email));
+        const emailSnapshot = await getDocs(emailQuery);
+        
+        if (!emailSnapshot.empty) {
+          const usuariosConEmail = emailSnapshot.docs.filter(doc => doc.id !== userId);
+          if (usuariosConEmail.length > 0) {
+            oldUid = usuariosConEmail[0].id;
+            console.log('[auditoriaService] ⚠️ Encontrado usuario antiguo por email:', oldUid);
+          }
+        }
+      }
+      
       let snapshot;
       
       if (role === 'supermax') {
         snapshot = await getDocs(auditoriasRef);
       } else if (role === 'max') {
-        // Obtener auditorías propias
-        const qPropias = query(auditoriasRef, where("usuarioId", "==", userId));
-        const snapshotPropias = await getDocs(qPropias);
+        // Buscar auditorías propias con ambos UIDs
+        const queriesPropias = [
+          query(auditoriasRef, where("usuarioId", "==", userId)),
+          query(auditoriasRef, where("creadoPor", "==", userId))
+        ];
         
-        // Obtener auditorías de sus operarios
-        const usuariosRef = collection(db, "usuarios");
-        const qOperarios = query(usuariosRef, where("clienteAdminId", "==", userId));
-        const snapshotOperarios = await getDocs(qOperarios);
-        const operariosIds = snapshotOperarios.docs.map(doc => doc.id);
-        
-        let auditoriasOperarios = [];
-        if (operariosIds.length > 0) {
-          const qAuditoriasOperarios = query(auditoriasRef, where("usuarioId", "in", operariosIds));
-          const snapshotAuditoriasOperarios = await getDocs(qAuditoriasOperarios);
-          auditoriasOperarios = snapshotAuditoriasOperarios.docs;
+        if (oldUid) {
+          queriesPropias.push(
+            query(auditoriasRef, where("usuarioId", "==", oldUid)),
+            query(auditoriasRef, where("creadoPor", "==", oldUid)),
+            query(auditoriasRef, where("clienteAdminId", "==", oldUid))
+          );
         }
         
-        const todasLasAuditorias = [...snapshotPropias.docs, ...auditoriasOperarios];
-        snapshot = { docs: todasLasAuditorias };
+        const snapshotsPropias = await Promise.all(queriesPropias.map(q => getDocs(q)));
+        const todasPropias = snapshotsPropias.flatMap(s => s.docs);
+        
+        // Obtener auditorías de sus operarios (con nuevo y antiguo UID)
+        const usuariosRef = collection(db, "usuarios");
+        const queriesOperarios = [
+          query(usuariosRef, where("clienteAdminId", "==", userId))
+        ];
+        
+        if (oldUid) {
+          queriesOperarios.push(
+            query(usuariosRef, where("clienteAdminId", "==", oldUid))
+          );
+        }
+        
+        const snapshotsOperarios = await Promise.all(queriesOperarios.map(q => getDocs(q)));
+        const todosOperariosIds = snapshotsOperarios.flatMap(s => s.docs.map(doc => doc.id));
+        
+        let auditoriasOperarios = [];
+        if (todosOperariosIds.length > 0) {
+          // Firestore solo permite "in" con hasta 10 elementos
+          const chunks = [];
+          for (let i = 0; i < todosOperariosIds.length; i += 10) {
+            chunks.push(todosOperariosIds.slice(i, i + 10));
+          }
+          
+          const operariosQueries = chunks.map(chunk => 
+            query(auditoriasRef, where("usuarioId", "in", chunk))
+          );
+          const operariosSnapshots = await Promise.all(operariosQueries.map(q => getDocs(q)));
+          auditoriasOperarios = operariosSnapshots.flatMap(s => s.docs);
+        }
+        
+        // Combinar y eliminar duplicados
+        const todasLasAuditorias = [...todasPropias, ...auditoriasOperarios];
+        const uniqueAuditorias = Array.from(
+          new Map(todasLasAuditorias.map(doc => [doc.id, doc])).values()
+        );
+        
+        snapshot = { docs: uniqueAuditorias };
       } else {
-        const q = query(auditoriasRef, where("usuarioId", "==", userId));
-        snapshot = await getDocs(q);
+        // Para operarios, buscar con ambos UIDs
+        const queries = [
+          query(auditoriasRef, where("usuarioId", "==", userId)),
+          query(auditoriasRef, where("creadoPor", "==", userId))
+        ];
+        
+        if (oldUid) {
+          queries.push(
+            query(auditoriasRef, where("usuarioId", "==", oldUid)),
+            query(auditoriasRef, where("creadoPor", "==", oldUid))
+          );
+        }
+        
+        const snapshots = await Promise.all(queries.map(q => getDocs(q)));
+        const allDocs = snapshots.flatMap(s => s.docs);
+        const uniqueDocs = Array.from(
+          new Map(allDocs.map(doc => [doc.id, doc])).values()
+        );
+        snapshot = { docs: uniqueDocs };
       }
       
       return snapshot.docs.map(doc => ({

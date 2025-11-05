@@ -20,9 +20,23 @@ export const useFormulariosListener = (userProfile, role, setUserFormularios, se
     if (role === 'supermax') {
       q = formulariosRef;
     } else if (role === 'max') {
-      q = query(formulariosRef, where('clienteAdminId', '==', userProfile.uid));
+      // Buscar por UID nuevo y antiguo (migración)
+      const oldUid = userProfile.migratedFromUid;
+      if (oldUid) {
+        // Si hay UID antiguo, buscar ambos (Firestore no soporta OR, así que usamos el listener completo)
+        // El filtrado se hará en el callback
+        q = formulariosRef;
+      } else {
+        q = query(formulariosRef, where('clienteAdminId', '==', userProfile.uid));
+      }
     } else if (role === 'operario' && userProfile.clienteAdminId) {
-      q = query(formulariosRef, where('clienteAdminId', '==', userProfile.clienteAdminId));
+      const oldClienteAdminId = userProfile.migratedFromUid;
+      if (oldClienteAdminId) {
+        // Buscar todos y filtrar después
+        q = formulariosRef;
+      } else {
+        q = query(formulariosRef, where('clienteAdminId', '==', userProfile.clienteAdminId));
+      }
     } else {
       setUserFormularios([]);
       setLoadingFormularios(false);
@@ -31,10 +45,37 @@ export const useFormulariosListener = (userProfile, role, setUserFormularios, se
 
     const unsubscribe = onSnapshot(q,
       (snapshot) => {
-        const formulariosData = snapshot.docs.map(doc => ({
+        let formulariosData = snapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data()
         }));
+
+        // Filtrar por UID antiguo si existe (migración)
+        const oldUid = userProfile.migratedFromUid;
+        if (oldUid && role === 'max') {
+          formulariosData = formulariosData.filter(form => 
+            form.clienteAdminId === userProfile.uid || 
+            form.clienteAdminId === oldUid ||
+            form.creadorId === userProfile.uid ||
+            form.creadorId === oldUid ||
+            form.permisos?.puedeEditar?.includes(userProfile.uid) ||
+            form.permisos?.puedeEditar?.includes(oldUid) ||
+            form.permisos?.puedeVer?.includes(userProfile.uid) ||
+            form.permisos?.puedeVer?.includes(oldUid)
+          );
+        } else if (oldUid && role === 'operario') {
+          const oldClienteAdminId = oldUid;
+          formulariosData = formulariosData.filter(form => 
+            form.clienteAdminId === userProfile.clienteAdminId ||
+            form.clienteAdminId === oldClienteAdminId ||
+            form.creadorId === userProfile.uid ||
+            form.creadorId === oldUid ||
+            form.esPublico ||
+            form.permisos?.puedeVer?.includes(userProfile.uid) ||
+            form.permisos?.puedeVer?.includes(oldUid)
+          );
+        }
+
         setUserFormularios(formulariosData);
         setLoadingFormularios(false);
       },

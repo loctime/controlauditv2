@@ -187,37 +187,130 @@ const ReportesPage = () => {
       console.log('[DEBUG] userProfile.role:', userProfile?.role);
       console.log('[DEBUG] userProfile.clienteAdminId:', userProfile?.clienteAdminId);
       console.log('[DEBUG] userProfile.empresaId:', userProfile?.empresaId);
+      console.log('[DEBUG] userProfile.migratedFromUid:', userProfile?.migratedFromUid);
       
-      let q = query(
-        collection(db, "reportes"),
-        orderBy("fechaCreacion", "desc"),
-        limit(100)
-      );
+      const oldUid = userProfile?.migratedFromUid;
+      let reportesData = [];
 
       // Aplicar filtros de multi-tenant si el usuario no es supermax
-      if (userProfile?.role !== 'supermax') {
+      if (userProfile?.role === 'supermax') {
+        console.log('[DEBUG] Usuario supermax - sin filtros aplicados');
+        const q = query(
+          collection(db, "reportes"),
+          orderBy("fechaCreacion", "desc"),
+          limit(100)
+        );
+        const querySnapshot = await getDocs(q);
+        reportesData = querySnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+      } else {
+        // Buscar con múltiples queries para incluir ambos UIDs (SIN orderBy para evitar índices compuestos)
+        const queries = [];
+        
         if (userProfile?.clienteAdminId) {
           console.log('[DEBUG] Aplicando filtro por clienteAdminId:', userProfile.clienteAdminId);
-          q = query(q, where("clienteAdminId", "==", userProfile.clienteAdminId));
-        } else if (userProfile?.uid) {
-          // Si no hay clienteAdminId, buscar por creadoPor (UID del usuario)
-          console.log('[DEBUG] Aplicando filtro por creadoPor (UID):', userProfile.uid);
-          q = query(q, where("creadoPor", "==", userProfile.uid));
-        } else if (userProfile?.empresaId) {
+          queries.push(query(
+            collection(db, "reportes"),
+            where("clienteAdminId", "==", userProfile.clienteAdminId)
+          ));
+          
+          if (oldUid) {
+            queries.push(query(
+              collection(db, "reportes"),
+              where("clienteAdminId", "==", oldUid)
+            ));
+          }
+        }
+        
+        if (userProfile?.uid) {
+          console.log('[DEBUG] Aplicando filtro por creadoPor/usuarioId (UID):', userProfile.uid);
+          queries.push(query(
+            collection(db, "reportes"),
+            where("creadoPor", "==", userProfile.uid)
+          ));
+          queries.push(query(
+            collection(db, "reportes"),
+            where("usuarioId", "==", userProfile.uid)
+          ));
+          
+          if (oldUid) {
+            queries.push(query(
+              collection(db, "reportes"),
+              where("creadoPor", "==", oldUid)
+            ));
+            queries.push(query(
+              collection(db, "reportes"),
+              where("usuarioId", "==", oldUid)
+            ));
+          }
+        }
+        
+        // También buscar por email si no hay migratedFromUid (para detectar datos antiguos)
+        if (!oldUid && userProfile?.email) {
+          console.log('[DEBUG] No hay migratedFromUid, buscando por email para detectar datos antiguos:', userProfile.email);
+          // Buscar usuarios con este email que tengan UID diferente
+          const usuariosRef = collection(db, 'usuarios');
+          const emailQuery = query(usuariosRef, where('email', '==', userProfile.email));
+          const emailSnapshot = await getDocs(emailQuery);
+          
+          if (!emailSnapshot.empty) {
+            const usuariosConEmail = emailSnapshot.docs.filter(doc => doc.id !== userProfile.uid);
+            if (usuariosConEmail.length > 0) {
+              const oldUidEncontrado = usuariosConEmail[0].id;
+              console.log('[DEBUG] ⚠️ Encontrado usuario antiguo por email:', oldUidEncontrado);
+              console.log('[DEBUG] 🔄 Este usuario necesita migración. Buscando reportes con UID antiguo...');
+              
+              queries.push(query(
+                collection(db, "reportes"),
+                where("creadoPor", "==", oldUidEncontrado)
+              ));
+              queries.push(query(
+                collection(db, "reportes"),
+                where("usuarioId", "==", oldUidEncontrado)
+              ));
+              queries.push(query(
+                collection(db, "reportes"),
+                where("clienteAdminId", "==", oldUidEncontrado)
+              ));
+            }
+          }
+        }
+        
+        if (userProfile?.empresaId) {
           console.log('[DEBUG] Aplicando filtro por empresaId:', userProfile.empresaId);
-          q = query(q, where("empresaId", "==", userProfile.empresaId));
-        } else {
+          queries.push(query(
+            collection(db, "reportes"),
+            where("empresaId", "==", userProfile.empresaId)
+          ));
+        }
+        
+        if (queries.length === 0) {
           console.log('[DEBUG] ⚠️ Usuario sin clienteAdminId, UID ni empresaId - no se aplicarán filtros');
         }
-      } else {
-        console.log('[DEBUG] Usuario supermax - sin filtros aplicados');
-      }
 
-      const querySnapshot = await getDocs(q);
-      const reportesData = querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
+        // Ejecutar todas las queries y combinar resultados
+        const snapshots = await Promise.all(queries.map(q => getDocs(q).catch(err => {
+          console.warn('[DEBUG] Error en query (ignorando):', err);
+          return { docs: [] };
+        })));
+        
+        const allReportes = snapshots.flatMap(snapshot => 
+          snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+        );
+        
+        // Eliminar duplicados y ordenar por fecha (en memoria, sin índice)
+        const uniqueReportes = Array.from(
+          new Map(allReportes.map(r => [r.id, r])).values()
+        );
+        
+        reportesData = uniqueReportes.sort((a, b) => {
+          const fechaA = a.fechaCreacion?.toDate?.() || new Date(a.fechaCreacion || 0);
+          const fechaB = b.fechaCreacion?.toDate?.() || new Date(b.fechaCreacion || 0);
+          return fechaB - fechaA;
+        }).slice(0, 100);
+      }
 
       console.log('[DEBUG]', reportesData.length, 'reportes cargados con multi-tenant');
       console.log('[DEBUG] Primeros 3 reportes:', reportesData.slice(0, 3));
