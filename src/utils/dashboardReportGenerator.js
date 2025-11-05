@@ -17,6 +17,12 @@ export const generarReporteDashboard = async ({
   empresaSeleccionada,
   sucursalSeleccionada,
   alertas = [],
+  opciones = {
+    comparacionAnoAnterior: true,
+    distribucionPorArea: true,
+    capacitacionesPorTipo: true,
+    horasSemanales: true
+  },
   onProgress
 }) => {
   const doc = new jsPDF('p', 'mm', 'a4');
@@ -53,8 +59,13 @@ export const generarReporteDashboard = async ({
   };
 
   // Función helper para agregar título de sección
-  const addSectionTitle = (title, size = 16) => {
-    checkPageBreak(20);
+  // Requiere espacio mínimo para evitar títulos huérfanos
+  const addSectionTitle = (title, size = 16, minSpaceAfter = 30) => {
+    // Verificar que haya espacio suficiente para el título + contenido mínimo
+    const spaceNeeded = 20 + minSpaceAfter; // Título + línea + espacio mínimo
+    if (yPosition + spaceNeeded > pageHeight - 30) {
+      addNewPage();
+    }
     doc.setFontSize(size);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(0, 0, 0);
@@ -94,6 +105,11 @@ export const generarReporteDashboard = async ({
     const maxLines = Math.max(infoLeft.length, infoRight.length);
     headerContentHeight += (maxLines * 6) + 2; // Info contacto
   }
+  // Agregar horas semanales si está habilitado
+  if (opciones.horasSemanales && sucursalSeleccionada?.horasSemanales) {
+    headerContentHeight += 6;
+  }
+  
   headerContentHeight += 8; // Año/Fecha
   
   const headerStartY = margin - 5;
@@ -154,6 +170,14 @@ export const generarReporteDashboard = async ({
     yPos = margin + 23; // Posición cuando no hay info de contacto
   }
   
+  // Horas semanales si está habilitado
+  if (opciones.horasSemanales && sucursalSeleccionada?.horasSemanales) {
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Horas Semanales: ${sucursalSeleccionada.horasSemanales}h`, margin + 8, yPos);
+    yPos += 6;
+  }
+  
   // Línea final: Período de análisis (lado a lado) - siempre visible
   doc.setFontSize(12);
   doc.setFont('helvetica', 'bold');
@@ -184,7 +208,8 @@ export const generarReporteDashboard = async ({
 
   // ========== RESUMEN EJECUTIVO ==========
   onProgress?.(15);
-  addSectionTitle('1. RESUMEN EJECUTIVO', 16);
+  // Estimar espacio para tabla (8 filas aprox * 8mm cada una + headers)
+  addSectionTitle('1. RESUMEN EJECUTIVO', 16, 70);
 
   doc.setFontSize(10);
   doc.setTextColor(0, 0, 0);
@@ -224,39 +249,73 @@ export const generarReporteDashboard = async ({
 
   // ========== ÍNDICES TÉCNICOS ==========
   onProgress?.(25);
-  addSectionTitle('2. ÍNDICES TÉCNICOS DE SEGURIDAD', 16);
+  // Estimar espacio para tabla (4 filas + descripciones + comparación si hay)
+  const espacioIndices = opciones.comparacionAnoAnterior && indicesComparacion?.tieneComparacion ? 100 : 80;
+  addSectionTitle('2. ÍNDICES TÉCNICOS DE SEGURIDAD', 16, espacioIndices);
+
+  // Determinar columnas según si hay comparación
+  const tieneComparacion = opciones.comparacionAnoAnterior && indicesComparacion?.tieneComparacion;
+  const columnasIndices = tieneComparacion ? ['Índice', 'Valor', 'Año Anterior', 'Variación', 'Estado'] : ['Índice', 'Valor', 'Estado'];
 
   const indicesData = [
     [
       'Tasa de Ausentismo',
       `${datos.indices.tasaAusentismo.toFixed(2)}%`,
+      indicesComparacion?.tasaAusentismo?.anterior !== null && indicesComparacion?.tasaAusentismo?.anterior !== undefined
+        ? `${indicesComparacion.tasaAusentismo.anterior.toFixed(2)}%`
+        : '-',
+      indicesComparacion?.tasaAusentismo?.variacion
+        ? `${indicesComparacion.tasaAusentismo.variacion.signo || ''}${indicesComparacion.tasaAusentismo.variacion.valor.toFixed(1)}%`
+        : '-',
       datos.indices.tasaAusentismo > 5 ? 'Crítico' : datos.indices.tasaAusentismo > 2 ? 'Atención' : 'Excelente',
       datos.indices.tasaAusentismo > 5 ? [244, 67, 54] : datos.indices.tasaAusentismo > 2 ? [255, 152, 0] : [76, 175, 80]
     ],
     [
       'Índice de Frecuencia',
       `${datos.indices.indiceFrecuencia.toFixed(2)} acc/MMHH`,
+      indicesComparacion?.indiceFrecuencia?.anterior !== null && indicesComparacion?.indiceFrecuencia?.anterior !== undefined
+        ? `${indicesComparacion.indiceFrecuencia.anterior.toFixed(2)} acc/MMHH`
+        : '-',
+      indicesComparacion?.indiceFrecuencia?.variacion
+        ? `${indicesComparacion.indiceFrecuencia.variacion.signo || ''}${indicesComparacion.indiceFrecuencia.variacion.valor.toFixed(1)}%`
+        : '-',
       datos.indices.indiceFrecuencia > 10 ? 'Alto riesgo' : datos.indices.indiceFrecuencia > 5 ? 'Medio riesgo' : 'Bajo riesgo',
       datos.indices.indiceFrecuencia > 10 ? [244, 67, 54] : datos.indices.indiceFrecuencia > 5 ? [255, 152, 0] : [76, 175, 80]
     ],
     [
       'Índice de Incidencia',
       `${datos.indices.indiceIncidencia.toFixed(2)} acc/MT`,
+      indicesComparacion?.indiceIncidencia?.anterior !== null && indicesComparacion?.indiceIncidencia?.anterior !== undefined
+        ? `${indicesComparacion.indiceIncidencia.anterior.toFixed(2)} acc/MT`
+        : '-',
+      indicesComparacion?.indiceIncidencia?.variacion
+        ? `${indicesComparacion.indiceIncidencia.variacion.signo || ''}${indicesComparacion.indiceIncidencia.variacion.valor.toFixed(1)}%`
+        : '-',
       datos.indices.indiceIncidencia > 20 ? 'Crítico' : datos.indices.indiceIncidencia > 10 ? 'Atención' : 'Excelente',
       datos.indices.indiceIncidencia > 20 ? [244, 67, 54] : datos.indices.indiceIncidencia > 10 ? [255, 152, 0] : [76, 175, 80]
     ],
     [
       'Índice de Gravedad',
       `${datos.indices.indiceGravedad.toFixed(2)} días/MMHH`,
+      indicesComparacion?.indiceGravedad?.anterior !== null && indicesComparacion?.indiceGravedad?.anterior !== undefined
+        ? `${indicesComparacion.indiceGravedad.anterior.toFixed(2)} días/MMHH`
+        : '-',
+      indicesComparacion?.indiceGravedad?.variacion
+        ? `${indicesComparacion.indiceGravedad.variacion.signo || ''}${indicesComparacion.indiceGravedad.variacion.valor.toFixed(1)}%`
+        : '-',
       datos.indices.indiceGravedad > 50 ? 'Alta gravedad' : datos.indices.indiceGravedad > 25 ? 'Media gravedad' : 'Baja gravedad',
       datos.indices.indiceGravedad > 50 ? [244, 67, 54] : datos.indices.indiceGravedad > 25 ? [255, 152, 0] : [76, 175, 80]
     ]
   ];
 
+  const bodyData = tieneComparacion
+    ? indicesData.map(row => [row[0], row[1], row[2], row[3], row[4]])
+    : indicesData.map(row => [row[0], row[1], row[4]]);
+
   doc.autoTable({
     startY: yPosition,
-    head: [['Índice', 'Valor', 'Estado']],
-    body: indicesData.map(row => [row[0], row[1], row[2]]),
+    head: [columnasIndices],
+    body: bodyData,
     theme: 'striped',
     headStyles: { 
       fillColor: false, 
@@ -267,16 +326,39 @@ export const generarReporteDashboard = async ({
     },
     bodyStyles: { fontSize: 10 },
     alternateRowStyles: { fillColor: false },
-    columnStyles: {
-      2: { cellWidth: 40 }
-    },
+    columnStyles: tieneComparacion
+      ? {
+          3: { cellWidth: 30 },
+          4: { cellWidth: 35 }
+        }
+      : {
+          2: { cellWidth: 40 }
+        },
     didParseCell: (data) => {
-      if (data.row.index >= 0 && data.column.index === 2) {
-        // Usar solo negrita para diferenciar estados críticos
+      if (data.row.index >= 0) {
         const rowData = indicesData[data.row.index];
-        if (rowData && rowData[3]) {
-          // Si es crítico (rojo), usar negrita y subrayado
-          if (rowData[2].includes('Crítico') || rowData[2].includes('Alto') || rowData[2].includes('Alta')) {
+        // Variación (columna 3 si hay comparación, o columna 2 si no)
+        const colVariacion = tieneComparacion ? 3 : -1;
+        if (colVariacion >= 0 && data.column.index === colVariacion && rowData[3] !== '-') {
+          const variacion = indicesComparacion?.[
+            rowData[0] === 'Tasa de Ausentismo' ? 'tasaAusentismo' :
+            rowData[0] === 'Índice de Frecuencia' ? 'indiceFrecuencia' :
+            rowData[0] === 'Índice de Incidencia' ? 'indiceIncidencia' :
+            'indiceGravedad'
+          ]?.variacion;
+          
+          if (variacion) {
+            if (variacion.tipo === 'mejora') {
+              data.cell.styles.fontStyle = 'bold';
+            } else if (variacion.tipo === 'empeora') {
+              data.cell.styles.fontStyle = 'bold';
+            }
+          }
+        }
+        // Estado (última columna)
+        const colEstado = tieneComparacion ? 4 : 2;
+        if (data.column.index === colEstado && rowData && rowData[5]) {
+          if (rowData[4].includes('Crítico') || rowData[4].includes('Alto') || rowData[4].includes('Alta')) {
             data.cell.styles.textColor = [0, 0, 0];
             data.cell.styles.fontStyle = 'bold';
           } else {
@@ -317,7 +399,8 @@ export const generarReporteDashboard = async ({
   // ========== ANÁLISIS DE ACCIDENTES ==========
   onProgress?.(40);
   if (accidentesAnalysis) {
-    addSectionTitle('3. ANÁLISIS DE ACCIDENTES E INCIDENTES', 16);
+    // Estimar espacio para tabla (7 filas aprox)
+    addSectionTitle('3. ANÁLISIS DE ACCIDENTES E INCIDENTES', 16, 60);
 
     const accidentesData = [
       ['Total de Accidentes', accidentesAnalysis.total],
@@ -363,12 +446,61 @@ export const generarReporteDashboard = async ({
 
     yPosition = doc.lastAutoTable.finalY + 15;
     checkPageBreak(40);
+    
+    // Distribución por área si está habilitado
+    if (opciones.distribucionPorArea && accidentesAnalysis.porArea && Object.keys(accidentesAnalysis.porArea).length > 0) {
+      const porAreaData = Object.entries(accidentesAnalysis.porArea)
+        .sort((a, b) => b[1].total - a[1].total)
+        .slice(0, 5)
+        .map(([area, datos]) => [
+          area || 'Sin área',
+          datos.accidentes || 0,
+          datos.incidentes || 0,
+          datos.total || 0
+        ]);
+      
+      if (porAreaData.length > 0) {
+        checkPageBreak(30);
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(0, 0, 0);
+        doc.text('Distribución por Área (Top 5)', margin, yPosition);
+        yPosition += 8;
+        
+        doc.autoTable({
+          startY: yPosition,
+          head: [['Área', 'Accidentes', 'Incidentes', 'Total']],
+          body: porAreaData,
+          theme: 'striped',
+          headStyles: { 
+            fillColor: false, 
+            textColor: 0, 
+            fontStyle: 'bold',
+            fontSize: 11,
+            lineWidth: 0.8
+          },
+          bodyStyles: { fontSize: 10 },
+          alternateRowStyles: { fillColor: false },
+          margin: { left: margin, right: margin },
+          styles: { cellPadding: 3, lineWidth: 0.3 },
+          columnStyles: {
+            1: { halign: 'center' },
+            2: { halign: 'center' },
+            3: { halign: 'center' }
+          }
+        });
+        
+        yPosition = doc.lastAutoTable.finalY + 15;
+        checkPageBreak(40);
+      }
+    }
   }
 
   // ========== CAPACITACIONES ==========
   onProgress?.(55);
   if (capacitacionesMetrics) {
-    addSectionTitle('4. CUMPLIMIENTO DE CAPACITACIONES', 16);
+    // Estimar espacio para tabla (4 filas aprox)
+    addSectionTitle('4. CUMPLIMIENTO DE CAPACITACIONES', 16, 50);
 
     const capacitacionesData = [
       ['Total de Capacitaciones', capacitacionesMetrics.total],
@@ -423,6 +555,46 @@ export const generarReporteDashboard = async ({
 
     yPosition = doc.lastAutoTable.finalY + 15;
     checkPageBreak(40);
+    
+    // Capacitaciones por tipo si está habilitado
+    if (opciones.capacitacionesPorTipo && capacitacionesMetrics?.porTipo) {
+      const porTipoData = [
+        ['Charlas', capacitacionesMetrics.porTipo.charlas || 0],
+        ['Entrenamientos', capacitacionesMetrics.porTipo.entrenamientos || 0],
+        ['Capacitaciones Formales', capacitacionesMetrics.porTipo.capacitaciones || 0]
+      ];
+      
+      checkPageBreak(30);
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(0, 0, 0);
+      doc.text('Capacitaciones por Tipo', margin, yPosition);
+      yPosition += 8;
+      
+      doc.autoTable({
+        startY: yPosition,
+        head: [['Tipo', 'Cantidad']],
+        body: porTipoData,
+        theme: 'striped',
+        headStyles: { 
+          fillColor: false, 
+          textColor: 0, 
+          fontStyle: 'bold',
+          fontSize: 11,
+          lineWidth: 0.8
+        },
+        bodyStyles: { fontSize: 10 },
+        alternateRowStyles: { fillColor: false },
+        margin: { left: margin, right: margin },
+        styles: { cellPadding: 3, lineWidth: 0.3 },
+        columnStyles: {
+          1: { halign: 'center' }
+        }
+      });
+      
+      yPosition = doc.lastAutoTable.finalY + 15;
+      checkPageBreak(40);
+    }
   }
 
   // ========== GRÁFICOS ==========
@@ -431,8 +603,6 @@ export const generarReporteDashboard = async ({
     // Buscar contenedor de gráficos
     const graficosContainer = document.querySelector('[data-graficos-dashboard]');
     if (graficosContainer) {
-      addSectionTitle('5. ANÁLISIS GRÁFICO', 16);
-
       // Esperar un momento para que los gráficos se rendericen
       await new Promise(resolve => setTimeout(resolve, 500));
 
@@ -449,21 +619,32 @@ export const generarReporteDashboard = async ({
       const imgWidth = contentWidth;
       const imgHeight = (canvas.height * imgWidth) / canvas.width;
 
-      checkPageBreak(imgHeight + 10);
+      // Calcular espacio necesario: título (20) + gráfico (imgHeight) + margen (15)
+      const spaceNeeded = 20 + imgHeight + 15;
+      
+      // Verificar espacio antes de agregar título
+      if (yPosition + spaceNeeded > pageHeight - 30) {
+        addNewPage();
+      }
+      
+      // Ahora agregar título y gráfico juntos
+      addSectionTitle('5. ANÁLISIS GRÁFICO', 16, imgHeight);
       
       doc.addImage(imgData, 'PNG', margin, yPosition, imgWidth, imgHeight);
       yPosition += imgHeight + 15;
     } else {
+      addSectionTitle('5. ANÁLISIS GRÁFICO', 16, 10);
       doc.setFontSize(10);
-      doc.setTextColor(128, 128, 128);
+      doc.setTextColor(0, 0, 0);
       doc.setFont('helvetica', 'italic');
       doc.text('Nota: Los gráficos no pudieron ser capturados en este momento.', margin, yPosition);
       yPosition += 8;
     }
   } catch (error) {
     console.warn('Error al generar gráficos:', error);
+    addSectionTitle('5. ANÁLISIS GRÁFICO', 16, 10);
     doc.setFontSize(10);
-    doc.setTextColor(128, 128, 128);
+    doc.setTextColor(0, 0, 0);
     doc.setFont('helvetica', 'italic');
     doc.text('Nota: No se pudieron incluir los gráficos en el reporte debido a un error técnico.', margin, yPosition);
     yPosition += 8;
@@ -471,8 +652,8 @@ export const generarReporteDashboard = async ({
 
   // ========== ALERTAS Y RECOMENDACIONES ==========
   onProgress?.(85);
-  checkPageBreak(50);
-  addSectionTitle('6. ALERTAS Y RECOMENDACIONES', 16);
+  // Estimar espacio para recomendaciones (múltiples líneas)
+  addSectionTitle('6. ALERTAS Y RECOMENDACIONES', 16, 60);
 
   doc.setFontSize(10);
   doc.setTextColor(0, 0, 0);
