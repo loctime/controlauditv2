@@ -45,6 +45,11 @@ const storeFolderIds = (folderIds) => {
 const findFolderByName = async (folderName, parentId = null) => {
   try {
     const files = await listFiles(parentId);
+    // Asegurar que files es un array
+    if (!Array.isArray(files)) {
+      console.warn('[controlFileInit] listFiles no devolvió un array:', typeof files, files);
+      return null;
+    }
     const folder = files.find(item => item.type === 'folder' && item.name === folderName);
     return folder ? folder.id : null;
   } catch (error) {

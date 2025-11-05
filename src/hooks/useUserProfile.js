@@ -1,6 +1,6 @@
 // src/hooks/useUserProfile.js
 import { useState, useEffect } from 'react';
-import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../firebaseConfig';
 import { getUserRole } from '../config/admin';
 import { registrarAccionSistema } from '../utils/firestoreUtils';
@@ -15,8 +15,9 @@ export const useUserProfile = (firebaseUser) => {
   // Crear o obtener perfil del usuario
   const createOrGetUserProfile = async (firebaseUser) => {
     try {
+      // 1. Intentar buscar por UID nuevo primero
       const userRef = doc(db, "usuarios", firebaseUser.uid);
-      const userSnap = await getDoc(userRef);
+      let userSnap = await getDoc(userRef);
 
       if (userSnap.exists()) {
         const profileData = userSnap.data();
@@ -24,40 +25,116 @@ export const useUserProfile = (firebaseUser) => {
         setRole(profileData.role || null);
         setPermisos(profileData.permisos || {});
         return profileData;
-      } else {
-        // Crear nuevo perfil de usuario
-        const newProfile = {
+      }
+
+      // 2. Si no existe por UID, buscar por email (migración desde Auth antiguo)
+      console.log('[useUserProfile] Usuario no encontrado por UID, buscando por email...');
+      const usuariosRef = collection(db, 'usuarios');
+      const emailQuery = query(usuariosRef, where('email', '==', firebaseUser.email));
+      const emailSnapshot = await getDocs(emailQuery);
+
+      if (!emailSnapshot.empty) {
+        // Usuario encontrado por email (perfil antiguo)
+        const oldUserDoc = emailSnapshot.docs[0];
+        const oldProfileData = oldUserDoc.data();
+        const oldUid = oldUserDoc.id;
+
+        console.log('[useUserProfile] ✅ Usuario encontrado por email con UID antiguo:', oldUid);
+        console.log('[useUserProfile] 🔄 Migrando perfil al nuevo UID:', firebaseUser.uid);
+
+        // Actualizar el documento con el nuevo UID
+        // Opción 1: Actualizar el documento existente con el nuevo UID en el campo uid
+        await updateDoc(doc(db, "usuarios", oldUid), {
+          uid: firebaseUser.uid,
+          lastUidUpdate: new Date(),
+          migratedFromUid: oldUid
+        });
+
+        // Opción 2: Crear un nuevo documento con el nuevo UID y copiar datos
+        const migratedProfile = {
+          ...oldProfileData,
           uid: firebaseUser.uid,
           email: firebaseUser.email,
-          displayName: firebaseUser.displayName || firebaseUser.email,
-          createdAt: new Date(),
-          role: getUserRole(firebaseUser.email),
-          clienteAdminId: getUserRole(firebaseUser.email) === 'max' ? firebaseUser.uid : null,
-          empresas: [],
-          auditorias: [],
-          permisos: {
-            puedeCrearEmpresas: true,
-            puedeCrearSucursales: true,
-            puedeCrearAuditorias: true,
-            puedeCompartirFormularios: true,
-            puedeAgregarSocios: true,
-            puedeGestionarUsuarios: true,
-            puedeVerLogs: true,
-            puedeGestionarSistema: true,
-            puedeEliminarUsuarios: true
-          },
-          configuracion: {
-            notificaciones: true,
-            tema: 'light'
-          }
+          displayName: firebaseUser.displayName || oldProfileData.displayName || firebaseUser.email,
+          lastUidUpdate: new Date(),
+          migratedFromUid: oldUid
         };
 
-        await setDoc(userRef, newProfile);
-        setUserProfile(newProfile);
-        setRole(newProfile.role);
-        setPermisos(newProfile.permisos);
-        return newProfile;
+        // Crear nuevo documento con nuevo UID
+        await setDoc(userRef, migratedProfile);
+
+        // Migrar TODOS los datos relacionados con el UID antiguo
+        console.log('[useUserProfile] 🔄 Migrando todos los datos al nuevo UID...');
+        try {
+          const { migrateAllUserData } = await import('../services/migrationService');
+          const migrationResult = await migrateAllUserData(oldUid, firebaseUser.uid);
+          console.log('[useUserProfile] ✅ Migración completa exitosa:', migrationResult);
+        } catch (migrationError) {
+          console.error('[useUserProfile] ⚠️ Error en migración completa (no crítico):', migrationError);
+          // Fallback: intentar migrar solo empresas (método anterior)
+          try {
+            const empresasRef = collection(db, 'empresas');
+            const empresasQueryResult = query(empresasRef, where('propietarioId', '==', oldUid));
+            const empresasSnapshot = await getDocs(empresasQueryResult);
+            
+            if (!empresasSnapshot.empty) {
+              console.log(`[useUserProfile] 📦 Fallback: Migrando ${empresasSnapshot.docs.length} empresas...`);
+              const empresasUpdatePromises = empresasSnapshot.docs.map(async (empresaDocSnap) => {
+                await updateDoc(doc(db, 'empresas', empresaDocSnap.id), {
+                  propietarioId: firebaseUser.uid,
+                  lastUidUpdate: new Date(),
+                  migratedFromUid: oldUid
+                });
+              });
+              await Promise.all(empresasUpdatePromises);
+              console.log('[useUserProfile] ✅ Empresas migradas (fallback)');
+            }
+          } catch (fallbackError) {
+            console.error('[useUserProfile] ❌ Error en migración fallback:', fallbackError);
+          }
+        }
+
+        console.log('[useUserProfile] ✅ Perfil migrado exitosamente');
+
+        setUserProfile(migratedProfile);
+        setRole(migratedProfile.role || null);
+        setPermisos(migratedProfile.permisos || {});
+        return migratedProfile;
       }
+
+      // 3. Si no existe por email tampoco, crear nuevo perfil
+      console.log('[useUserProfile] Usuario no encontrado, creando nuevo perfil...');
+      const newProfile = {
+        uid: firebaseUser.uid,
+        email: firebaseUser.email,
+        displayName: firebaseUser.displayName || firebaseUser.email,
+        createdAt: new Date(),
+        role: getUserRole(firebaseUser.email),
+        clienteAdminId: getUserRole(firebaseUser.email) === 'max' ? firebaseUser.uid : null,
+        empresas: [],
+        auditorias: [],
+        permisos: {
+          puedeCrearEmpresas: true,
+          puedeCrearSucursales: true,
+          puedeCrearAuditorias: true,
+          puedeCompartirFormularios: true,
+          puedeAgregarSocios: true,
+          puedeGestionarUsuarios: true,
+          puedeVerLogs: true,
+          puedeGestionarSistema: true,
+          puedeEliminarUsuarios: true
+        },
+        configuracion: {
+          notificaciones: true,
+          tema: 'light'
+        }
+      };
+
+      await setDoc(userRef, newProfile);
+      setUserProfile(newProfile);
+      setRole(newProfile.role);
+      setPermisos(newProfile.permisos);
+      return newProfile;
     } catch (error) {
       console.error("Error al crear/obtener perfil de usuario:", error);
       return null;
