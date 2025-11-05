@@ -822,7 +822,18 @@ const DashboardHigieneSeguridad = () => {
       {userEmpresas && userEmpresas.length > 0 && selectedSucursal && datos.metricas.totalEmpleados > 0 && (
         <>
           <Divider sx={{ my: 4 }} />
-          <Box data-graficos-dashboard sx={{ backgroundColor: 'background.paper', p: 2, borderRadius: 2 }}>
+          <Box 
+            data-graficos-dashboard 
+            sx={{ 
+              backgroundColor: 'background.paper', 
+              p: 2, 
+              borderRadius: 2,
+              overflow: 'visible',
+              width: '100%',
+              minHeight: 'auto',
+              position: 'relative'
+            }}
+          >
             <GraficoIndices datos={datos} periodo={selectedYear} />
           </Box>
         </>

@@ -196,13 +196,6 @@ export const generarReporteDashboard = async ({
   doc.setLineWidth(1);
   doc.line(margin, headerStartY + headerHeight, pageWidth - margin, headerStartY + headerHeight);
 
-  // Información técnica (más compacta)
-  doc.setFontSize(8);
-  doc.setTextColor(0, 0, 0);
-  doc.setFont('helvetica', 'italic');
-  doc.text('Información confidencial - Sistema de Control de Auditoría', 
-    pageWidth / 2, pageHeight - 10, { align: 'center' });
-
   // Continuar en la misma página con el contenido
   yPosition = headerStartY + headerHeight + 10;
 
@@ -603,17 +596,69 @@ export const generarReporteDashboard = async ({
     // Buscar contenedor de gráficos
     const graficosContainer = document.querySelector('[data-graficos-dashboard]');
     if (graficosContainer) {
-      // Esperar un momento para que los gráficos se rendericen
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // Scroll al contenedor para asegurar que esté visible
+      graficosContainer.scrollIntoView({ behavior: 'instant', block: 'start' });
+      
+      // Esperar más tiempo para que los gráficos se rendericen completamente
+      await new Promise(resolve => setTimeout(resolve, 1500));
+
+      // Forzar que el contenedor muestre todo su contenido
+      const originalOverflow = graficosContainer.style.overflow;
+      const originalHeight = graficosContainer.style.height;
+      graficosContainer.style.overflow = 'visible';
+      graficosContainer.style.height = 'auto';
+      
+      // Esperar un frame para que se apliquen los cambios
+      await new Promise(resolve => requestAnimationFrame(resolve));
+
+      // Obtener dimensiones reales del contenido incluyendo todos los hijos
+      const rect = graficosContainer.getBoundingClientRect();
+      let maxHeight = rect.height;
+      let maxWidth = rect.width;
+      
+      // Buscar el elemento más alto dentro del contenedor
+      const allChildren = graficosContainer.querySelectorAll('*');
+      allChildren.forEach(child => {
+        const childRect = child.getBoundingClientRect();
+        const relativeTop = childRect.top - rect.top + childRect.height;
+        if (relativeTop > maxHeight) {
+          maxHeight = relativeTop;
+        }
+        const relativeLeft = childRect.left - rect.left + childRect.width;
+        if (relativeLeft > maxWidth) {
+          maxWidth = relativeLeft;
+        }
+      });
+
+      const scrollWidth = Math.max(graficosContainer.scrollWidth, maxWidth, rect.width);
+      const scrollHeight = Math.max(graficosContainer.scrollHeight, maxHeight, rect.height);
 
       const canvas = await html2canvas(graficosContainer, {
         scale: 2,
         useCORS: true,
         logging: false,
         backgroundColor: '#ffffff',
-        windowWidth: graficosContainer.scrollWidth,
-        windowHeight: graficosContainer.scrollHeight
+        width: scrollWidth,
+        height: scrollHeight,
+        windowWidth: window.innerWidth,
+        windowHeight: window.innerHeight,
+        scrollX: -rect.left,
+        scrollY: -rect.top,
+        allowTaint: true,
+        removeContainer: false,
+        onclone: (clonedDoc) => {
+          // Asegurar que el clon también tenga overflow visible
+          const clonedContainer = clonedDoc.querySelector('[data-graficos-dashboard]');
+          if (clonedContainer) {
+            clonedContainer.style.overflow = 'visible';
+            clonedContainer.style.height = 'auto';
+          }
+        }
       });
+      
+      // Restaurar estilos originales
+      graficosContainer.style.overflow = originalOverflow;
+      graficosContainer.style.height = originalHeight;
 
       const imgData = canvas.toDataURL('image/png');
       const imgWidth = contentWidth;
@@ -741,12 +786,13 @@ export const generarReporteDashboard = async ({
     doc.setFontSize(8);
     doc.setTextColor(128, 128, 128);
     doc.setFont('helvetica', 'normal');
-    doc.text(
-      `Página ${i} de ${totalPages} - Generado el ${new Date().toLocaleDateString('es-AR')} - Sistema de Control de Auditoría`,
-      pageWidth / 2,
-      pageHeight - 10,
-      { align: 'center' }
-    );
+    
+    // Izquierda: Información confidencial
+    doc.text('Información confidencial', margin, pageHeight - 10);
+    
+    // Derecha: Página y sistema
+    const textoDerecha = `${i} / Sistema de Control de Auditoría - ControlAudit`;
+    doc.text(textoDerecha, pageWidth - margin, pageHeight - 10, { align: 'right' });
   }
 
   onProgress?.(100);
