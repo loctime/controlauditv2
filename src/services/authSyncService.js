@@ -3,8 +3,7 @@
 
 import { 
   signInWithEmailAndPassword, 
-  createUserWithEmailAndPassword,
-  getAuth 
+  createUserWithEmailAndPassword
 } from 'firebase/auth';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db, auth } from '../firebaseConfig';
