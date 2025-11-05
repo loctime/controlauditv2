@@ -16,10 +16,11 @@ import { getStorage } from "firebase/storage"; // Importa getStorage
 // ============================================
 
 // Configuración de Firebase Auth (compartido con ControlFile)
+// Usa las variables VITE_CONTROLFILE_* para Auth compartido
 const controlFileAuthConfig = {
-  apiKey: import.meta.env.VITE_CONTROLFILE_AUTH_API_KEY || import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSyD7pmD_EVRf0dJcocynpaXAdu3tveycrzg",
+  apiKey: import.meta.env.VITE_CONTROLFILE_API_KEY || import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSyD7pmD_EVRf0dJcocynpaXAdu3tveycrzg",
   authDomain: import.meta.env.VITE_CONTROLFILE_AUTH_DOMAIN || import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "auditoria-f9fc4.firebaseapp.com",
-  projectId: import.meta.env.VITE_CONTROLFILE_AUTH_PROJECT_ID || import.meta.env.VITE_FIREBASE_PROJECT_ID || "auditoria-f9fc4",
+  projectId: import.meta.env.VITE_CONTROLFILE_PROJECT_ID || import.meta.env.VITE_FIREBASE_PROJECT_ID || "auditoria-f9fc4",
   // No necesitamos storageBucket, messagingSenderId, appId para Auth
 };
 
