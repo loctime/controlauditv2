@@ -530,27 +530,87 @@ class AuditoriaService {
    */
   static async obtenerAuditorias(userProfile, filtros = {}) {
     try {
-      let q = collection(db, "reportes");
+      let oldUid = userProfile.migratedFromUid;
       
-      // Aplicar filtros según el rol del usuario
-      if (userProfile.role === 'operario') {
-        q = query(q, 
-          where("creadoPor", "==", userProfile.uid),
-          orderBy("timestamp", "desc")
-        );
-      } else if (userProfile.role === 'max') {
-        q = query(q,
-          where("clienteAdminId", "==", userProfile.uid),
-          orderBy("timestamp", "desc")
-        );
+      // Si no hay migratedFromUid, buscar por email para encontrar datos antiguos
+      if (!oldUid && userProfile.email) {
+        console.log('[auditoriaService.obtenerAuditorias] No hay migratedFromUid, buscando por email:', userProfile.email);
+        const usuariosRef = collection(db, 'usuarios');
+        const emailQuery = query(usuariosRef, where('email', '==', userProfile.email));
+        const emailSnapshot = await getDocs(emailQuery);
+        
+        if (!emailSnapshot.empty) {
+          const usuariosConEmail = emailSnapshot.docs.filter(doc => doc.id !== userProfile.uid);
+          if (usuariosConEmail.length > 0) {
+            oldUid = usuariosConEmail[0].id;
+            console.log('[auditoriaService.obtenerAuditorias] ⚠️ Encontrado usuario antiguo por email:', oldUid);
+          }
+        }
       }
-      // Para supermax, no aplicar filtros (puede ver todo)
-
-      const snapshot = await getDocs(q);
-      const auditorias = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
+      
+      let auditorias = [];
+      
+      // Aplicar filtros según el rol del usuario (SIN orderBy para evitar índices compuestos)
+      if (userProfile.role === 'operario') {
+        const queries = [
+          query(collection(db, "reportes"), where("creadoPor", "==", userProfile.uid)),
+          query(collection(db, "reportes"), where("usuarioId", "==", userProfile.uid))
+        ];
+        
+        if (oldUid) {
+          queries.push(
+            query(collection(db, "reportes"), where("creadoPor", "==", oldUid)),
+            query(collection(db, "reportes"), where("usuarioId", "==", oldUid))
+          );
+        }
+        
+        const snapshots = await Promise.all(queries.map(q => getDocs(q).catch(() => ({ docs: [] }))));
+        const allAuditorias = snapshots.flatMap(s => s.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+        const uniqueAuditorias = Array.from(new Map(allAuditorias.map(a => [a.id, a])).values());
+        
+        // Ordenar en memoria por timestamp
+        auditorias = uniqueAuditorias.sort((a, b) => {
+          const timestampA = a.timestamp?.toDate?.() || new Date(a.timestamp || 0);
+          const timestampB = b.timestamp?.toDate?.() || new Date(b.timestamp || 0);
+          return timestampB - timestampA;
+        });
+      } else if (userProfile.role === 'max') {
+        const queries = [
+          query(collection(db, "reportes"), where("clienteAdminId", "==", userProfile.uid)),
+          query(collection(db, "reportes"), where("creadoPor", "==", userProfile.uid)),
+          query(collection(db, "reportes"), where("usuarioId", "==", userProfile.uid))
+        ];
+        
+        if (oldUid) {
+          queries.push(
+            query(collection(db, "reportes"), where("clienteAdminId", "==", oldUid)),
+            query(collection(db, "reportes"), where("creadoPor", "==", oldUid)),
+            query(collection(db, "reportes"), where("usuarioId", "==", oldUid))
+          );
+        }
+        
+        const snapshots = await Promise.all(queries.map(q => getDocs(q).catch(() => ({ docs: [] }))));
+        const allAuditorias = snapshots.flatMap(s => s.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+        const uniqueAuditorias = Array.from(new Map(allAuditorias.map(a => [a.id, a])).values());
+        
+        // Ordenar en memoria por timestamp
+        auditorias = uniqueAuditorias.sort((a, b) => {
+          const timestampA = a.timestamp?.toDate?.() || new Date(a.timestamp || 0);
+          const timestampB = b.timestamp?.toDate?.() || new Date(b.timestamp || 0);
+          return timestampB - timestampA;
+        });
+      } else {
+        // Para supermax, no aplicar filtros (puede ver todo)
+        const snapshot = await getDocs(collection(db, "reportes"));
+        auditorias = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        })).sort((a, b) => {
+          const timestampA = a.timestamp?.toDate?.() || new Date(a.timestamp || 0);
+          const timestampB = b.timestamp?.toDate?.() || new Date(b.timestamp || 0);
+          return timestampB - timestampA;
+        });
+      }
 
       // Aplicar filtros adicionales en memoria
       let auditoriasFiltradas = auditorias;

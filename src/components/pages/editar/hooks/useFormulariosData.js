@@ -63,18 +63,33 @@ export const useFormulariosData = (user, userProfile) => {
 
   // Filtrar formularios por permisos multi-tenant
   const filtrarPorPermisos = useCallback((metadatos) => {
+    // Obtener UID antiguo si existe (para migración)
+    const oldUid = userProfile?.migratedFromUid;
+    
     return metadatos.filter(formulario => {
       if (userProfile?.role === 'supermax') return true;
       if (userProfile?.role === 'max') {
+        // Verificar con UID nuevo
         if (formulario.clienteAdminId === user.uid) return true;
         if (formulario.creadorId === user.uid) return true;
+        // Verificar con UID antiguo (migración)
+        if (oldUid && formulario.clienteAdminId === oldUid) return true;
+        if (oldUid && formulario.creadorId === oldUid) return true;
+        // Verificar en arrays de permisos
+        if (oldUid && formulario.permisos?.puedeEditar?.includes(oldUid)) return true;
+        if (oldUid && formulario.permisos?.puedeVer?.includes(oldUid)) return true;
         return false;
       }
       if (userProfile?.role === 'operario') {
+        // Verificar con UID nuevo
         if (formulario.creadorId === user.uid) return true;
         if (formulario.clienteAdminId === userProfile.clienteAdminId) return true;
         if (formulario.esPublico) return true;
         if (formulario.permisos?.puedeVer?.includes(user.uid)) return true;
+        // Verificar con UID antiguo (migración)
+        if (oldUid && formulario.creadorId === oldUid) return true;
+        if (oldUid && formulario.clienteAdminId === userProfile.migratedFromUid) return true;
+        if (oldUid && formulario.permisos?.puedeVer?.includes(oldUid)) return true;
         return false;
       }
       return false;
