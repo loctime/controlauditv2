@@ -16,7 +16,14 @@ import {
   List,
   ListItem,
   ListItemIcon,
-  ListItemText
+  ListItemText,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  FormGroup,
+  FormControlLabel,
+  Checkbox
 } from '@mui/material';
 import {
   TrendingUp as TrendingUpIcon,
@@ -28,7 +35,8 @@ import {
   AccessTime as AccessTimeIcon,
   Business as BusinessIcon,
   School as SchoolIcon,
-  Info as InfoIcon
+  Info as InfoIcon,
+  PictureAsPdf as PdfIcon
 } from '@mui/icons-material';
 import { useAuth } from '../../context/AuthContext';
 import GraficoIndices from './components/GraficoIndices';
@@ -46,6 +54,8 @@ import { useCapacitacionesMetrics } from './hooks/useCapacitacionesMetrics';
 import { useAccidentesAnalysis } from './hooks/useAccidentesAnalysis';
 import { useIndicesComparacion } from './hooks/useIndicesComparacion';
 import { useGlobalSelection } from '../../../hooks/useGlobalSelection';
+import { generarReporteDashboard } from '../../../utils/dashboardReportGenerator';
+import { toast } from 'react-toastify';
 
 const DashboardHigieneSeguridad = () => {
   const { userEmpresas, userSucursales } = useAuth();
@@ -53,6 +63,14 @@ const DashboardHigieneSeguridad = () => {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [loadingTimeout, setLoadingTimeout] = useState(false);
   const [alertAnchorEl, setAlertAnchorEl] = useState(null);
+  const [generandoReporte, setGenerandoReporte] = useState(false);
+  const [openOpcionesModal, setOpenOpcionesModal] = useState(false);
+  const [opcionesReporte, setOpcionesReporte] = useState({
+    comparacionAnoAnterior: true,
+    distribucionPorArea: true,
+    capacitacionesPorTipo: true,
+    horasSemanales: true
+  });
 
   // Hook para calcular índices
   const { calcularIndices, calcularPeriodo } = useIndicesCalculator();
@@ -405,6 +423,50 @@ const DashboardHigieneSeguridad = () => {
           yearsAvailable={yearsAvailable}
           deshabilitado={false}
         />
+
+        {/* Botón de Generar Reporte PDF */}
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2, mb: 1 }}>
+          <Button
+            variant="contained"
+            color="primary"
+            size="large"
+            startIcon={<PdfIcon />}
+            onClick={() => {
+              if (!selectedEmpresa || !selectedSucursal || datos.metricas.totalEmpleados === 0) {
+                toast.warning('Selecciona una empresa, sucursal y asegúrate de tener datos para generar el reporte');
+                return;
+              }
+              setOpenOpcionesModal(true);
+            }}
+            disabled={
+              loading || 
+              generandoReporte || 
+              !selectedEmpresa || 
+              !selectedSucursal || 
+              datos.metricas.totalEmpleados === 0
+            }
+            sx={{
+              minWidth: 220,
+              py: 1.5,
+              px: 3,
+              fontSize: '1rem',
+              fontWeight: 600,
+              textTransform: 'none',
+              borderRadius: 2,
+              boxShadow: 3,
+              '&:hover': {
+                boxShadow: 6,
+                transform: 'translateY(-2px)',
+                transition: 'all 0.2s ease-in-out'
+              },
+              '&:disabled': {
+                opacity: 0.6
+              }
+            }}
+          >
+            {generandoReporte ? 'Generando...' : '📄 Generar Reporte PDF'}
+          </Button>
+        </Box>
       </Paper>
 
       {/* Popover de Alertas */}
@@ -461,6 +523,170 @@ const DashboardHigieneSeguridad = () => {
           </List>
         </Box>
       </Popover>
+
+      {/* Modal de Opciones de Reporte */}
+      <Dialog 
+        open={openOpcionesModal} 
+        onClose={() => setOpenOpcionesModal(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <PdfIcon />
+            <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
+              Opciones del Reporte PDF
+            </Typography>
+          </Box>
+        </DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+            Selecciona las secciones adicionales que deseas incluir en el reporte:
+          </Typography>
+          
+          <FormGroup>
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={opcionesReporte.comparacionAnoAnterior}
+                  onChange={(e) => setOpcionesReporte({
+                    ...opcionesReporte,
+                    comparacionAnoAnterior: e.target.checked
+                  })}
+                  color="primary"
+                />
+              }
+              label={
+                <Box>
+                  <Typography variant="body1" sx={{ fontWeight: 600 }}>
+                    Comparación con Año Anterior
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    Muestra la variación de índices comparados con el año anterior
+                  </Typography>
+                </Box>
+              }
+            />
+            
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={opcionesReporte.distribucionPorArea}
+                  onChange={(e) => setOpcionesReporte({
+                    ...opcionesReporte,
+                    distribucionPorArea: e.target.checked
+                  })}
+                  color="primary"
+                />
+              }
+              label={
+                <Box>
+                  <Typography variant="body1" sx={{ fontWeight: 600 }}>
+                    Distribución de Accidentes por Área
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    Muestra las áreas con mayor cantidad de accidentes (Top 5)
+                  </Typography>
+                </Box>
+              }
+            />
+            
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={opcionesReporte.capacitacionesPorTipo}
+                  onChange={(e) => setOpcionesReporte({
+                    ...opcionesReporte,
+                    capacitacionesPorTipo: e.target.checked
+                  })}
+                  color="primary"
+                />
+              }
+              label={
+                <Box>
+                  <Typography variant="body1" sx={{ fontWeight: 600 }}>
+                    Capacitaciones por Tipo
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    Desglose detallado de charlas, entrenamientos y capacitaciones formales
+                  </Typography>
+                </Box>
+              }
+            />
+            
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={opcionesReporte.horasSemanales}
+                  onChange={(e) => setOpcionesReporte({
+                    ...opcionesReporte,
+                    horasSemanales: e.target.checked
+                  })}
+                  color="primary"
+                />
+              }
+              label={
+                <Box>
+                  <Typography variant="body1" sx={{ fontWeight: 600 }}>
+                    Horas Semanales en el Header
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    Incluye las horas semanales de la sucursal en el encabezado del reporte
+                  </Typography>
+                </Box>
+              }
+            />
+          </FormGroup>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={() => setOpenOpcionesModal(false)}>
+            Cancelar
+          </Button>
+          <Button
+            variant="contained"
+            onClick={async () => {
+              setOpenOpcionesModal(false);
+              
+              try {
+                setGenerandoReporte(true);
+                const loadingToastId = toast.info('Generando reporte PDF... Por favor espera', {
+                  autoClose: false,
+                  isLoading: true
+                });
+
+                await generarReporteDashboard({
+                  empresa: selectedEmpresa,
+                  sucursal: selectedSucursal,
+                  año: selectedYear,
+                  datos,
+                  capacitacionesMetrics,
+                  accidentesAnalysis,
+                  indicesComparacion,
+                  empresaSeleccionada,
+                  sucursalSeleccionada,
+                  alertas,
+                  opciones: opcionesReporte,
+                  onProgress: (progress) => {
+                    console.log(`Generando reporte: ${progress}%`);
+                  }
+                });
+
+                toast.dismiss(loadingToastId);
+                toast.success('✅ Reporte PDF generado exitosamente');
+              } catch (error) {
+                console.error('Error al generar reporte:', error);
+                toast.dismiss();
+                toast.error('❌ Error al generar el reporte. Intenta nuevamente.');
+              } finally {
+                setGenerandoReporte(false);
+              }
+            }}
+            startIcon={<PdfIcon />}
+          >
+            Generar Reporte
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {/* Métricas básicas - Chips compactos */}
       <Box sx={{ mb: 4 }}>
@@ -596,7 +822,20 @@ const DashboardHigieneSeguridad = () => {
       {userEmpresas && userEmpresas.length > 0 && selectedSucursal && datos.metricas.totalEmpleados > 0 && (
         <>
           <Divider sx={{ my: 4 }} />
-          <GraficoIndices datos={datos} periodo={selectedYear} />
+          <Box 
+            data-graficos-dashboard 
+            sx={{ 
+              backgroundColor: 'background.paper', 
+              p: 2, 
+              borderRadius: 2,
+              overflow: 'visible',
+              width: '100%',
+              minHeight: 'auto',
+              position: 'relative'
+            }}
+          >
+            <GraficoIndices datos={datos} periodo={selectedYear} />
+          </Box>
         </>
       )}
 
