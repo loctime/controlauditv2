@@ -37,6 +37,7 @@ export const saveCompleteUserCache = async (userProfile, empresas = null, sucurs
     };
 
     // Usar empresas pasadas como parámetro o hacer query
+    // ✅ Usar empresaService.getUserEmpresas que ya maneja migratedFromUid automáticamente
     try {
       let empresasData = [];
       
@@ -44,52 +45,15 @@ export const saveCompleteUserCache = async (userProfile, empresas = null, sucurs
         // ✅ Usar empresas ya cargadas (más rápido y confiable)
         empresasData = empresas;
         console.log('✅ Usando empresas ya cargadas en memoria:', empresasData.length);
-      } else if (userProfile.role === 'supermax') {
-        // Supermax ve todas las empresas
-        const empresasSnapshot = await getDocs(collection(db, 'empresas'));
-        empresasData = empresasSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
-      } else if (userProfile.role === 'max') {
-        // Cargar empresas propias
-        const empresasRef = collection(db, "empresas");
-        const empresasQuery = query(empresasRef, where("propietarioId", "==", userProfile.uid));
-        const empresasSnapshot = await getDocs(empresasQuery);
-        const misEmpresas = empresasSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
-
-        // Cargar usuarios operarios y sus empresas
-        const usuariosRef = collection(db, "usuarios");
-        const usuariosQuery = query(usuariosRef, where("clienteAdminId", "==", userProfile.uid));
-        const usuariosSnapshot = await getDocs(usuariosQuery);
-        const usuariosOperarios = usuariosSnapshot.docs.map(doc => doc.id);
-
-        // Cargar empresas de operarios
-        const empresasOperariosPromises = usuariosOperarios.map(async (operarioId) => {
-          const operarioEmpresasQuery = query(empresasRef, where("propietarioId", "==", operarioId));
-          const operarioEmpresasSnapshot = await getDocs(operarioEmpresasQuery);
-          return operarioEmpresasSnapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data()
-          }));
-        });
-
-        const empresasOperariosArrays = await Promise.all(empresasOperariosPromises);
-        const empresasOperarios = empresasOperariosArrays.flat();
-
-        empresasData = [...misEmpresas, ...empresasOperarios];
-      } else if (userProfile.role === 'operario' && userProfile.clienteAdminId) {
-        // Operario ve empresas de su cliente admin
-        const empresasRef = collection(db, "empresas");
-        const empresasQuery = query(empresasRef, where("propietarioId", "==", userProfile.clienteAdminId));
-        const empresasSnapshot = await getDocs(empresasQuery);
-        empresasData = empresasSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
+      } else {
+        // Usar el servicio que ya maneja migratedFromUid y busca con ambos UIDs
+        const { empresaService } = await import('./empresaService');
+        empresasData = await empresaService.getUserEmpresas(
+          userProfile.uid,
+          userProfile.role,
+          userProfile.clienteAdminId
+        );
+        console.log('✅ Empresas cargadas desde servicio (con migración):', empresasData.length);
       }
       
       cacheData.empresas = empresasData;
@@ -98,6 +62,7 @@ export const saveCompleteUserCache = async (userProfile, empresas = null, sucurs
     }
 
     // Usar formularios pasados como parámetro o hacer query
+    // ✅ Buscar con ambos UIDs (nuevo y antiguo) para incluir datos migrados
     try {
       let formulariosData = [];
       
@@ -105,32 +70,72 @@ export const saveCompleteUserCache = async (userProfile, empresas = null, sucurs
         // ✅ Usar formularios ya cargados (más rápido y confiable)
         formulariosData = formularios;
         console.log('✅ Usando formularios ya cargados en memoria:', formulariosData.length);
-      } else if (userProfile.role === 'supermax') {
-        const formulariosSnapshot = await getDocs(collection(db, 'formularios'));
-        formulariosData = formulariosSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
-      } else if (userProfile.role === 'max') {
-        const formulariosQuery = query(
-          collection(db, "formularios"), 
-          where("clienteAdminId", "==", userProfile.uid)
-        );
-        const formulariosSnapshot = await getDocs(formulariosQuery);
-        formulariosData = formulariosSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
-      } else if (userProfile.role === 'operario' && userProfile.clienteAdminId) {
-        const formulariosQuery = query(
-          collection(db, "formularios"), 
-          where("clienteAdminId", "==", userProfile.clienteAdminId)
-        );
-        const formulariosSnapshot = await getDocs(formulariosQuery);
-        formulariosData = formulariosSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
+      } else {
+        const oldUid = userProfile.migratedFromUid;
+        const formulariosQueries = [];
+        
+        if (userProfile.role === 'supermax') {
+          const formulariosSnapshot = await getDocs(collection(db, 'formularios'));
+          formulariosData = formulariosSnapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          }));
+        } else if (userProfile.role === 'max') {
+          // Buscar con ambos UIDs (nuevo y antiguo)
+          formulariosQueries.push(
+            query(collection(db, "formularios"), where("clienteAdminId", "==", userProfile.uid)),
+            query(collection(db, "formularios"), where("creadorId", "==", userProfile.uid))
+          );
+          
+          if (oldUid) {
+            formulariosQueries.push(
+              query(collection(db, "formularios"), where("clienteAdminId", "==", oldUid)),
+              query(collection(db, "formularios"), where("creadorId", "==", oldUid))
+            );
+          }
+          
+          // Ejecutar todas las queries y combinar resultados
+          const snapshots = await Promise.all(formulariosQueries.map(q => getDocs(q)));
+          const allFormularios = snapshots.flatMap(snapshot => 
+            snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+          );
+          
+          // Eliminar duplicados
+          formulariosData = Array.from(
+            new Map(allFormularios.map(f => [f.id, f])).values()
+          );
+        } else if (userProfile.role === 'operario' && userProfile.clienteAdminId) {
+          const clienteAdminId = userProfile.clienteAdminId;
+          formulariosQueries.push(
+            query(collection(db, "formularios"), where("clienteAdminId", "==", clienteAdminId))
+          );
+          
+          // También buscar por el clienteAdminId antiguo si existe
+          if (oldUid && userProfile.clienteAdminId === userProfile.uid) {
+            formulariosQueries.push(
+              query(collection(db, "formularios"), where("clienteAdminId", "==", oldUid))
+            );
+          }
+          
+          const snapshots = await Promise.all(formulariosQueries.map(q => getDocs(q)));
+          const allFormularios = snapshots.flatMap(snapshot => 
+            snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+          );
+          
+          // Eliminar duplicados y filtrar por permisos
+          const uniqueFormularios = Array.from(
+            new Map(allFormularios.map(f => [f.id, f])).values()
+          );
+          
+          formulariosData = uniqueFormularios.filter(form => {
+            if (form.esPublico) return true;
+            if (form.creadorId === userProfile.uid || (oldUid && form.creadorId === oldUid)) return true;
+            if (form.permisos?.puedeVer?.includes(userProfile.uid) || (oldUid && form.permisos?.puedeVer?.includes(oldUid))) return true;
+            return false;
+          });
+        }
+        
+        console.log('✅ Formularios cargados (con migración):', formulariosData.length);
       }
       
       cacheData.formularios = formulariosData;
@@ -183,19 +188,73 @@ export const saveCompleteUserCache = async (userProfile, empresas = null, sucurs
       console.error('Error cacheando sucursales:', error);
     }
 
-    // Obtener y cachear auditorías del usuario
+    // Obtener y cachear reportes/auditorías del usuario
+    // ✅ Buscar con ambos UIDs (nuevo y antiguo) para incluir datos migrados
     try {
-      const auditoriasQuery = query(
-        collection(db, 'auditorias'),
-        where('userId', '==', userProfile.uid)
-      );
-      const auditoriasSnapshot = await getDocs(auditoriasQuery);
-      cacheData.auditorias = auditoriasSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
+      const oldUid = userProfile.migratedFromUid;
+      const reportesQueries = [];
+      
+      if (userProfile.role === 'supermax') {
+        // Supermax ve todos los reportes
+        const reportesSnapshot = await getDocs(collection(db, 'reportes'));
+        cacheData.auditorias = reportesSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+      } else {
+        // Buscar reportes con ambos UIDs
+        if (userProfile.clienteAdminId) {
+          reportesQueries.push(
+            query(collection(db, "reportes"), where("clienteAdminId", "==", userProfile.clienteAdminId))
+          );
+          
+          if (oldUid) {
+            reportesQueries.push(
+              query(collection(db, "reportes"), where("clienteAdminId", "==", oldUid))
+            );
+          }
+        }
+        
+        if (userProfile.uid) {
+          reportesQueries.push(
+            query(collection(db, "reportes"), where("creadoPor", "==", userProfile.uid)),
+            query(collection(db, "reportes"), where("usuarioId", "==", userProfile.uid))
+          );
+          
+          if (oldUid) {
+            reportesQueries.push(
+              query(collection(db, "reportes"), where("creadoPor", "==", oldUid)),
+              query(collection(db, "reportes"), where("usuarioId", "==", oldUid))
+            );
+          }
+        }
+        
+        if (reportesQueries.length > 0) {
+          // Ejecutar todas las queries y combinar resultados
+          const snapshots = await Promise.all(
+            reportesQueries.map(q => getDocs(q).catch(err => {
+              console.warn('Error en query de reportes (ignorando):', err);
+              return { docs: [] };
+            }))
+          );
+          
+          const allReportes = snapshots.flatMap(snapshot => 
+            snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+          );
+          
+          // Eliminar duplicados
+          cacheData.auditorias = Array.from(
+            new Map(allReportes.map(r => [r.id, r])).values()
+          );
+        } else {
+          cacheData.auditorias = [];
+        }
+      }
+      
+      console.log('✅ Reportes/auditorías cargados (con migración):', cacheData.auditorias.length);
     } catch (error) {
       console.error('Error cacheando auditorías:', error);
+      cacheData.auditorias = [];
     }
 
     // Guardar en IndexedDB
