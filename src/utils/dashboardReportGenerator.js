@@ -36,11 +36,11 @@ export const generarReporteDashboard = async ({
 
   // Función helper para agregar header en cada página
   const addPageHeader = () => {
-    doc.setDrawColor(25, 118, 210);
+    doc.setDrawColor(0, 0, 0);
     doc.setLineWidth(0.5);
     doc.line(margin, 15, pageWidth - margin, 15);
     doc.setFontSize(10);
-    doc.setTextColor(128, 128, 128);
+    doc.setTextColor(0, 0, 0);
     const empresaNombre = empresaSeleccionada?.nombre || 'Todas las empresas';
     doc.text(empresaNombre, margin, 12);
   };
@@ -57,11 +57,11 @@ export const generarReporteDashboard = async ({
     checkPageBreak(20);
     doc.setFontSize(size);
     doc.setFont('helvetica', 'bold');
-    doc.setTextColor(25, 118, 210);
+    doc.setTextColor(0, 0, 0);
     doc.text(title, margin, yPosition);
     yPosition += 8;
-    doc.setDrawColor(200, 200, 200);
-    doc.setLineWidth(0.3);
+    doc.setDrawColor(0, 0, 0);
+    doc.setLineWidth(0.8);
     doc.line(margin, yPosition, pageWidth - margin, yPosition);
     yPosition += 5;
   };
@@ -69,60 +69,118 @@ export const generarReporteDashboard = async ({
   // ========== PORTADA ==========
   onProgress?.(5);
   
-  // Fondo con degradado simulado
-  doc.setFillColor(25, 118, 210);
-  doc.rect(0, 0, pageWidth, 70, 'F');
-  
-  // Logo/Icono (simulado con texto)
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(32);
-  doc.setFont('helvetica', 'bold');
-  doc.text('🛡️', pageWidth / 2, 35, { align: 'center' });
-  
-  doc.setFontSize(24);
-  doc.text('REPORTE DE SEGURIDAD', pageWidth / 2, 45, { align: 'center' });
-  doc.text('E HIGIENE LABORAL', pageWidth / 2, 52, { align: 'center' });
-  
-  doc.setFontSize(14);
-  doc.setFont('helvetica', 'normal');
-  doc.text(`${empresaSeleccionada?.nombre || 'Todas las empresas'}`, pageWidth / 2, 62, { align: 'center' });
-  
-  if (sucursal !== 'todas' && sucursalSeleccionada) {
-    doc.text(`${sucursalSeleccionada.nombre}`, pageWidth / 2, 68, { align: 'center' });
-  } else if (sucursal === 'todas') {
-    doc.text('Todas las sucursales', pageWidth / 2, 68, { align: 'center' });
-  }
-
-  // Información del período
-  doc.setFillColor(245, 245, 245);
-  doc.rect(margin, 80, contentWidth, 25, 'F');
-  
-  doc.setTextColor(0, 0, 0);
-  doc.setFontSize(12);
-  doc.setFont('helvetica', 'bold');
-  doc.text('Período de Análisis:', margin + 5, 88);
-  
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(11);
-  doc.text(`Año: ${año}`, margin + 5, 95);
-  doc.text(`Fecha de generación: ${new Date().toLocaleDateString('es-AR', { 
+  const fechaGeneracion = new Date().toLocaleDateString('es-AR', { 
     year: 'numeric', 
     month: 'long', 
     day: 'numeric',
     hour: '2-digit',
     minute: '2-digit'
-  })}`, margin + 5, 100);
+  });
+  
+  // Header optimizado con información lado a lado - marco grueso
+  doc.setTextColor(0, 0, 0);
+  
+  // Calcular altura del header dinámicamente
+  const tieneInfoEmpresa = empresaSeleccionada && (empresaSeleccionada.direccion || empresaSeleccionada.telefono || empresaSeleccionada.email);
+  
+  // Calcular altura necesaria
+  let headerContentHeight = 25; // Título + empresa/sucursal
+  if (tieneInfoEmpresa) {
+    const infoLeft = [];
+    const infoRight = [];
+    if (empresaSeleccionada.direccion) infoLeft.push(1);
+    if (empresaSeleccionada.telefono) infoLeft.push(1);
+    if (empresaSeleccionada.email) infoRight.push(1);
+    const maxLines = Math.max(infoLeft.length, infoRight.length);
+    headerContentHeight += (maxLines * 6) + 2; // Info contacto
+  }
+  headerContentHeight += 8; // Año/Fecha
+  
+  const headerStartY = margin - 5;
+  const headerHeight = headerContentHeight + 10; // Margen interno
+  
+  // Título principal - más grande y claro
+  doc.setFontSize(20);
+  doc.setFont('helvetica', 'bold');
+  doc.text('REPORTE DE SEGURIDAD E HIGIENE LABORAL', pageWidth / 2, margin + 8, { align: 'center' });
+  
+  // Línea 1: Empresa y Sucursal (lado a lado)
+  doc.setFontSize(13);
+  doc.setFont('helvetica', 'bold');
+  const empresaNombre = empresaSeleccionada?.nombre || 'Todas las empresas';
+  const sucursalNombre = sucursal !== 'todas' && sucursalSeleccionada 
+    ? sucursalSeleccionada.nombre 
+    : sucursal === 'todas' 
+      ? 'Todas las sucursales' 
+      : '';
+  
+  doc.text(`Empresa: ${empresaNombre}`, margin + 8, margin + 16);
+  if (sucursalNombre) {
+    doc.text(`Sucursal: ${sucursalNombre}`, pageWidth - margin - 8, margin + 16, { align: 'right' });
+  }
+  
+  // Línea 2: Información de contacto (lado a lado si hay)
+  let yPos = margin + 23;
+  
+  if (tieneInfoEmpresa) {
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'normal');
+    
+    const infoLeft = [];
+    const infoRight = [];
+    
+    if (empresaSeleccionada.direccion) {
+      infoLeft.push(`Dirección: ${empresaSeleccionada.direccion}`);
+    }
+    if (empresaSeleccionada.telefono) {
+      infoLeft.push(`Teléfono: ${empresaSeleccionada.telefono}`);
+    }
+    if (empresaSeleccionada.email) {
+      infoRight.push(`Email: ${empresaSeleccionada.email}`);
+    }
+    
+    // Mostrar información lado a lado
+    const maxLines = Math.max(infoLeft.length, infoRight.length);
+    for (let i = 0; i < maxLines; i++) {
+      if (infoLeft[i]) {
+        doc.text(infoLeft[i], margin + 8, yPos + (i * 6));
+      }
+      if (infoRight[i]) {
+        doc.text(infoRight[i], pageWidth - margin - 8, yPos + (i * 6), { align: 'right' });
+      }
+    }
+    yPos += (maxLines * 6) + 2;
+  } else {
+    yPos = margin + 23; // Posición cuando no hay info de contacto
+  }
+  
+  // Línea final: Período de análisis (lado a lado) - siempre visible
+  doc.setFontSize(12);
+  doc.setFont('helvetica', 'bold');
+  doc.text(`Año: ${año}`, margin + 8, yPos + 5);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(11);
+  doc.text(`Fecha: ${fechaGeneracion}`, pageWidth - margin - 8, yPos + 5, { align: 'right' });
+  
+  // Dibujar marco del header después de calcular la altura
+  doc.setDrawColor(0, 0, 0);
+  doc.setLineWidth(2);
+  doc.rect(margin, headerStartY, contentWidth, headerHeight, 'S'); // Solo borde, sin relleno
+  
+  // Línea divisoria debajo del header
+  doc.setDrawColor(0, 0, 0);
+  doc.setLineWidth(1);
+  doc.line(margin, headerStartY + headerHeight, pageWidth - margin, headerStartY + headerHeight);
 
-  // Información técnica
-  doc.setFontSize(9);
-  doc.setTextColor(128, 128, 128);
-  doc.text('Este reporte contiene información confidencial sobre seguridad e higiene laboral.', 
-    pageWidth / 2, pageHeight - 20, { align: 'center' });
-  doc.text('Generado mediante Sistema de Control de Auditoría', 
-    pageWidth / 2, pageHeight - 15, { align: 'center' });
+  // Información técnica (más compacta)
+  doc.setFontSize(8);
+  doc.setTextColor(0, 0, 0);
+  doc.setFont('helvetica', 'italic');
+  doc.text('Información confidencial - Sistema de Control de Auditoría', 
+    pageWidth / 2, pageHeight - 10, { align: 'center' });
 
-  yPosition = 115;
-  addNewPage();
+  // Continuar en la misma página con el contenido
+  yPosition = headerStartY + headerHeight + 10;
 
   // ========== RESUMEN EJECUTIVO ==========
   onProgress?.(15);
@@ -149,15 +207,16 @@ export const generarReporteDashboard = async ({
     body: resumenData,
     theme: 'striped',
     headStyles: { 
-      fillColor: [25, 118, 210], 
-      textColor: 255, 
+      fillColor: false, 
+      textColor: 0, 
       fontStyle: 'bold',
-      fontSize: 11
+      fontSize: 11,
+      lineWidth: 0.8
     },
     bodyStyles: { fontSize: 10 },
-    alternateRowStyles: { fillColor: [245, 245, 245] },
+    alternateRowStyles: { fillColor: false },
     margin: { left: margin, right: margin },
-    styles: { cellPadding: 3 }
+    styles: { cellPadding: 3, lineWidth: 0.3 }
   });
 
   yPosition = doc.lastAutoTable.finalY + 15;
@@ -200,27 +259,35 @@ export const generarReporteDashboard = async ({
     body: indicesData.map(row => [row[0], row[1], row[2]]),
     theme: 'striped',
     headStyles: { 
-      fillColor: [25, 118, 210], 
-      textColor: 255, 
+      fillColor: false, 
+      textColor: 0, 
       fontStyle: 'bold',
-      fontSize: 11
+      fontSize: 11,
+      lineWidth: 0.8
     },
     bodyStyles: { fontSize: 10 },
-    alternateRowStyles: { fillColor: [245, 245, 245] },
+    alternateRowStyles: { fillColor: false },
     columnStyles: {
       2: { cellWidth: 40 }
     },
     didParseCell: (data) => {
       if (data.row.index >= 0 && data.column.index === 2) {
+        // Usar solo negrita para diferenciar estados críticos
         const rowData = indicesData[data.row.index];
         if (rowData && rowData[3]) {
-          data.cell.styles.textColor = rowData[3];
-          data.cell.styles.fontStyle = 'bold';
+          // Si es crítico (rojo), usar negrita y subrayado
+          if (rowData[2].includes('Crítico') || rowData[2].includes('Alto') || rowData[2].includes('Alta')) {
+            data.cell.styles.textColor = [0, 0, 0];
+            data.cell.styles.fontStyle = 'bold';
+          } else {
+            data.cell.styles.textColor = [0, 0, 0];
+            data.cell.styles.fontStyle = 'normal';
+          }
         }
       }
     },
     margin: { left: margin, right: margin },
-    styles: { cellPadding: 3 }
+    styles: { cellPadding: 3, lineWidth: 0.3 }
   });
 
   yPosition = doc.lastAutoTable.finalY + 15;
@@ -228,7 +295,7 @@ export const generarReporteDashboard = async ({
 
   // Agregar descripciones de los índices
   doc.setFontSize(9);
-  doc.setTextColor(100, 100, 100);
+  doc.setTextColor(0, 0, 0);
   doc.setFont('helvetica', 'italic');
   
   const descripciones = [
@@ -268,23 +335,24 @@ export const generarReporteDashboard = async ({
       body: accidentesData,
       theme: 'striped',
       headStyles: { 
-        fillColor: [25, 118, 210], 
-        textColor: 255, 
+        fillColor: false, 
+        textColor: 0, 
         fontStyle: 'bold',
-        fontSize: 11
+        fontSize: 11,
+        lineWidth: 0.8
       },
       bodyStyles: { fontSize: 10 },
-      alternateRowStyles: { fillColor: [245, 245, 245] },
+      alternateRowStyles: { fillColor: false },
       margin: { left: margin, right: margin },
-      styles: { cellPadding: 3 },
+      styles: { cellPadding: 3, lineWidth: 0.3 },
       didParseCell: (data) => {
         if (data.row.index >= 0 && data.column.index === 1) {
-          // Resaltar valores críticos
+          // Resaltar valores críticos con negrita
           if (data.cell.text[0] && typeof data.cell.text[0] === 'string') {
             const valor = parseInt(data.cell.text[0]);
             if (!isNaN(valor)) {
               if (data.row.raw[0].includes('Abiertos') && valor > 0) {
-                data.cell.styles.textColor = [244, 67, 54];
+                data.cell.styles.textColor = [0, 0, 0];
                 data.cell.styles.fontStyle = 'bold';
               }
             }
@@ -315,35 +383,36 @@ export const generarReporteDashboard = async ({
       body: capacitacionesData,
       theme: 'striped',
       headStyles: { 
-        fillColor: [25, 118, 210], 
-        textColor: 255, 
+        fillColor: false, 
+        textColor: 0, 
         fontStyle: 'bold',
-        fontSize: 11
+        fontSize: 11,
+        lineWidth: 0.8
       },
       bodyStyles: { fontSize: 10 },
-      alternateRowStyles: { fillColor: [245, 245, 245] },
+      alternateRowStyles: { fillColor: false },
       margin: { left: margin, right: margin },
-      styles: { cellPadding: 3 },
+      styles: { cellPadding: 3, lineWidth: 0.3 },
       didParseCell: (data) => {
         if (data.row.index >= 0 && data.column.index === 1) {
           if (data.cell.text[0] && typeof data.cell.text[0] === 'string') {
-            // Resaltar porcentaje de cumplimiento
+            // Resaltar porcentaje de cumplimiento con negrita según nivel
             if (data.cell.text[0].includes('%')) {
               const porcentaje = parseFloat(data.cell.text[0]);
+              data.cell.styles.textColor = [0, 0, 0];
               if (porcentaje < 60) {
-                data.cell.styles.textColor = [244, 67, 54];
+                data.cell.styles.fontStyle = 'bold';
               } else if (porcentaje < 80) {
-                data.cell.styles.textColor = [255, 152, 0];
+                data.cell.styles.fontStyle = 'bold';
               } else {
-                data.cell.styles.textColor = [76, 175, 80];
+                data.cell.styles.fontStyle = 'normal';
               }
-              data.cell.styles.fontStyle = 'bold';
             }
-            // Resaltar capacitaciones vencidas
+            // Resaltar capacitaciones vencidas con negrita
             if (data.row.raw[0].includes('Vencidas')) {
               const valor = parseInt(data.cell.text[0]);
               if (!isNaN(valor) && valor > 0) {
-                data.cell.styles.textColor = [244, 67, 54];
+                data.cell.styles.textColor = [0, 0, 0];
                 data.cell.styles.fontStyle = 'bold';
               }
             }
