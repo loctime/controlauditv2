@@ -10,8 +10,9 @@ import {
   Timestamp,
   getDoc
 } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { db, storage } from '../firebaseConfig';
+import { db } from '../firebaseConfig';
+import { uploadToControlFile, getDownloadUrl } from './controlFileService';
+import { getControlFileFolders } from './controlFileInit';
 import { registrarAccionSistema } from '../utils/firestoreUtils';
 
 /**
@@ -149,24 +150,43 @@ export const actualizarEstadoEmpleado = async (empleadoId, estado, fechaInicioRe
   }
 };
 
-// Subir imágenes a Firebase Storage
+// Subir imágenes a ControlFile
 export const subirImagenes = async (accidenteId, imagenes) => {
   try {
+    // Obtener carpeta de accidentes desde ControlFile
+    let folderIdAccidentes = null;
+    try {
+      const folders = await getControlFileFolders();
+      folderIdAccidentes = folders.subFolders?.accidentes;
+      if (!folderIdAccidentes) {
+        console.warn('[accidenteService] ⚠️ No se encontró carpeta de accidentes, usando raíz');
+      }
+    } catch (error) {
+      console.error('[accidenteService] Error al obtener carpetas ControlFile:', error);
+    }
+    
     const urls = [];
     
     for (let i = 0; i < imagenes.length; i++) {
       const imagen = imagenes[i];
-      const timestamp = Date.now();
-      const storageRef = ref(storage, `accidentes/${accidenteId}/${timestamp}_${i}_${imagen.name}`);
-      
-      const snapshot = await uploadBytes(storageRef, imagen);
-      const url = await getDownloadURL(snapshot.ref);
-      urls.push(url);
+      try {
+        // Subir imagen a ControlFile
+        const fileId = await uploadToControlFile(imagen, folderIdAccidentes);
+        
+        // Obtener URL de descarga
+        const url = await getDownloadUrl(fileId);
+        urls.push(url);
+        
+        console.log(`[accidenteService] ✅ Imagen ${i + 1}/${imagenes.length} subida a ControlFile`);
+      } catch (error) {
+        console.error(`[accidenteService] Error al subir imagen ${i + 1}:`, error);
+        // Continuar con las demás imágenes aunque una falle
+      }
     }
     
     return urls;
   } catch (error) {
-    console.error('Error al subir imágenes:', error);
+    console.error('[accidenteService] Error al subir imágenes:', error);
     throw error;
   }
 };

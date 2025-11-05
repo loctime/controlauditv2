@@ -1,4 +1,4 @@
-import { initializeApp } from "firebase/app";
+import { initializeApp, getApps } from "firebase/app";
 import {
   signInWithEmailAndPassword,
   getAuth,
@@ -11,8 +11,20 @@ import 'react-toastify/dist/ReactToastify.css';
 import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage"; // Importa getStorage
 
-// Your web app's Firebase configuration
-const firebaseConfig = {
+// ============================================
+// CONFIGURACIÓN: Auth Compartido con ControlFile
+// ============================================
+
+// Configuración de Firebase Auth (compartido con ControlFile)
+const controlFileAuthConfig = {
+  apiKey: import.meta.env.VITE_CONTROLFILE_AUTH_API_KEY || import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSyD7pmD_EVRf0dJcocynpaXAdu3tveycrzg",
+  authDomain: import.meta.env.VITE_CONTROLFILE_AUTH_DOMAIN || import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "auditoria-f9fc4.firebaseapp.com",
+  projectId: import.meta.env.VITE_CONTROLFILE_AUTH_PROJECT_ID || import.meta.env.VITE_FIREBASE_PROJECT_ID || "auditoria-f9fc4",
+  // No necesitamos storageBucket, messagingSenderId, appId para Auth
+};
+
+// Configuración de Firestore propio (proyecto separado)
+const firestoreConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSyD7pmD_EVRf0dJcocynpaXAdu3tveycrzg",
   authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "auditoria-f9fc4.firebaseapp.com",
   projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "auditoria-f9fc4",
@@ -21,11 +33,40 @@ const firebaseConfig = {
   appId: import.meta.env.VITE_FIREBASE_APP_ID || "1:156800340171:web:fbe017105fd68b0f114b4e"
 };
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
-const storage = getStorage(app); // Inicializa el almacenamiento
+// URL del backend de ControlFile
+export const CONTROLFILE_BACKEND_URL = import.meta.env.VITE_CONTROLFILE_BACKEND_URL || "https://controlfile.onrender.com";
+
+// ============================================
+// INICIALIZACIÓN
+// ============================================
+
+// Inicializar Firebase Auth (compartido con ControlFile)
+// Usar nombre específico para evitar conflictos
+let authApp;
+const authAppName = 'controlfile-auth';
+const existingAuthApp = getApps().find(app => app.name === authAppName);
+
+if (existingAuthApp) {
+  authApp = existingAuthApp;
+} else {
+  authApp = initializeApp(controlFileAuthConfig, authAppName);
+}
+
+// Inicializar Firestore (proyecto propio)
+let firestoreApp;
+const firestoreAppName = 'controlaudit-firestore';
+const existingFirestoreApp = getApps().find(app => app.name === firestoreAppName);
+
+if (existingFirestoreApp) {
+  firestoreApp = existingFirestoreApp;
+} else {
+  firestoreApp = initializeApp(firestoreConfig, firestoreAppName);
+}
+
+// Obtener instancias
+const auth = getAuth(authApp);
+const db = getFirestore(firestoreApp);
+const storage = getStorage(firestoreApp); // Mantener Storage por compatibilidad temporal
 
 // inicio de sesión
 export const onSignIn = async ({ email, password }) => {
