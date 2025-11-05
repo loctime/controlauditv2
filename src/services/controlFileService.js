@@ -6,12 +6,29 @@ import { auth, CONTROLFILE_BACKEND_URL } from '../firebaseConfig';
 /**
  * Obtiene el token de autenticación de Firebase
  */
-const getToken = async () => {
+const getToken = async (forceRefresh = false) => {
   const user = auth.currentUser;
   if (!user) {
     throw new Error('No autenticado. Por favor inicia sesión.');
   }
-  return await user.getIdToken();
+  
+  // Obtener token (forzar refresh si es necesario)
+  const token = await user.getIdToken(forceRefresh);
+  
+  // Debug: verificar el proyecto del token (decodificar JWT)
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    console.log('[controlFileService] 🔑 Token info:', {
+      projectId: payload.aud,
+      email: payload.email,
+      uid: payload.user_id,
+      exp: new Date(payload.exp * 1000).toISOString()
+    });
+  } catch (e) {
+    // Ignorar errores de decodificación
+  }
+  
+  return token;
 };
 
 /**
@@ -22,7 +39,8 @@ const getToken = async () => {
  */
 export const createTaskbarFolder = async (appName) => {
   try {
-    const token = await getToken();
+    // Forzar refresh del token para asegurar que sea del proyecto correcto
+    const token = await getToken(true);
     
     const response = await fetch(`${CONTROLFILE_BACKEND_URL}/api/folders/create`, {
       method: 'POST',
@@ -272,7 +290,8 @@ export const getDownloadUrl = async (fileId) => {
  */
 export const listFiles = async (parentId = null, pageSize = 50) => {
   try {
-    const token = await getToken();
+    // Forzar refresh del token para asegurar que sea del proyecto correcto
+    const token = await getToken(true);
     const url = new URL(`${CONTROLFILE_BACKEND_URL}/api/files/list`);
     url.searchParams.set('parentId', parentId === null ? 'null' : parentId);
     url.searchParams.set('pageSize', pageSize.toString());

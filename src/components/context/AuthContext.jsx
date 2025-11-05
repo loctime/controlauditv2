@@ -181,15 +181,18 @@ const AuthContextComponent = ({ children }) => {
               }
               
               // Inicializar carpetas de ControlFile después de autenticación exitosa
+              // Esperar un poco más para asegurar que el token esté listo y sea del proyecto correcto
               try {
                 console.log('[AuthContext] 🚀 Inicializando carpetas ControlFile...');
+                // Esperar adicional para asegurar que el token esté actualizado
+                await new Promise(resolve => setTimeout(resolve, 500));
                 await initializeControlFileFolders();
                 console.log('[AuthContext] ✅ Carpetas ControlFile inicializadas');
               } catch (error) {
                 console.error('[AuthContext] ⚠️ Error al inicializar carpetas ControlFile (no crítico):', error);
                 // No bloquear el flujo si falla la inicialización de carpetas
               }
-            }, 1500);
+            }, 2000);
           }
         } else {
           const wasLoggedIn = localStorage.getItem("isLogged") === "true";
