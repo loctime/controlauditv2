@@ -1,14 +1,12 @@
 // Servicio para interactuar con ControlFile APIs
 // Maneja upload, download, listado y eliminación de archivos
 
-import { getAuth } from 'firebase/auth';
-import { CONTROLFILE_BACKEND_URL } from '../firebaseConfig';
+import { auth, CONTROLFILE_BACKEND_URL } from '../firebaseConfig';
 
 /**
  * Obtiene el token de autenticación de Firebase
  */
 const getToken = async () => {
-  const auth = getAuth();
   const user = auth.currentUser;
   if (!user) {
     throw new Error('No autenticado. Por favor inicia sesión.');
