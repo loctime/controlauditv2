@@ -24,6 +24,23 @@ const controlFileAuthConfig = {
   // No necesitamos storageBucket, messagingSenderId, appId para Auth
 };
 
+// Debug: Log de configuración de Auth (solo en desarrollo)
+if (import.meta.env.DEV) {
+  console.log('[firebaseConfig] 🔧 Configuración Auth ControlFile:', {
+    projectId: controlFileAuthConfig.projectId,
+    authDomain: controlFileAuthConfig.authDomain,
+    usingControlFileVars: {
+      hasApiKey: !!import.meta.env.VITE_CONTROLFILE_API_KEY,
+      hasAuthDomain: !!import.meta.env.VITE_CONTROLFILE_AUTH_DOMAIN,
+      hasProjectId: !!import.meta.env.VITE_CONTROLFILE_PROJECT_ID
+    },
+    fallback: {
+      usingFirebaseVars: !import.meta.env.VITE_CONTROLFILE_PROJECT_ID,
+      usingDefaults: !import.meta.env.VITE_FIREBASE_PROJECT_ID && !import.meta.env.VITE_CONTROLFILE_PROJECT_ID
+    }
+  });
+}
+
 // Configuración de Firestore propio (proyecto separado)
 const firestoreConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSyD7pmD_EVRf0dJcocynpaXAdu3tveycrzg",

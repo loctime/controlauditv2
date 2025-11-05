@@ -307,8 +307,22 @@ export const listFiles = async (parentId = null, pageSize = 50) => {
       throw new Error(error.error || 'Error al listar archivos');
     }
     
-    const { items } = await response.json();
-    return items;
+    const responseData = await response.json();
+    // El backend puede devolver diferentes formatos:
+    // - { items: [...] }
+    // - { success: true, data: [...] }
+    // - Array directo
+    // Asegurar que siempre devolvemos un array
+    if (Array.isArray(responseData)) {
+      return responseData;
+    } else if (responseData?.items && Array.isArray(responseData.items)) {
+      return responseData.items;
+    } else if (responseData?.data && Array.isArray(responseData.data)) {
+      return responseData.data;
+    } else {
+      console.warn('[controlFileService] Formato de respuesta inesperado:', responseData);
+      return [];
+    }
   } catch (error) {
     console.error('[controlFileService] ❌ Error al listar archivos:', error);
     throw error;

@@ -25,8 +25,101 @@ export const empresaService = {
       if (role === 'supermax') {
         snapshot = await getDocs(empresasRef);
       } else if (role === 'max') {
-        const q = query(empresasRef, where("propietarioId", "==", userId));
-        snapshot = await getDocs(q);
+        // Buscar empresas por el UID actual Y por el UID migrado (si existe)
+        const userRef = doc(db, "usuarios", userId);
+        const userSnap = await getDoc(userRef);
+        let migratedFromUid = null;
+        let userEmail = null;
+        
+        if (userSnap.exists()) {
+          const userData = userSnap.data();
+          migratedFromUid = userData.migratedFromUid;
+          userEmail = userData.email;
+        }
+        
+        // Si hay UID migrado, buscar empresas con ambos UIDs
+        if (migratedFromUid) {
+          console.log('[empresaService] 🔍 Buscando empresas con UID nuevo:', userId, 'y UID antiguo:', migratedFromUid);
+          const qNuevo = query(empresasRef, where("propietarioId", "==", userId));
+          const qAntiguo = query(empresasRef, where("propietarioId", "==", migratedFromUid));
+          
+          const [snapshotNuevo, snapshotAntiguo] = await Promise.all([
+            getDocs(qNuevo),
+            getDocs(qAntiguo)
+          ]);
+          
+          // Combinar resultados y eliminar duplicados
+          const empresasNuevas = snapshotNuevo.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+          const empresasAntiguas = snapshotAntiguo.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+          
+          // Si hay empresas antiguas, migrarlas automáticamente
+          if (empresasAntiguas.length > 0 && empresasNuevas.length === 0) {
+            console.log(`[empresaService] 🔄 Encontradas ${empresasAntiguas.length} empresas con UID antiguo, migrando...`);
+            const empresasUpdatePromises = empresasAntiguas.map(async (empresa) => {
+              await updateDoc(doc(db, "empresas", empresa.id), {
+                propietarioId: userId,
+                lastUidUpdate: new Date(),
+                migratedFromUid: migratedFromUid
+              });
+            });
+            await Promise.all(empresasUpdatePromises);
+            console.log('[empresaService] ✅ Empresas migradas automáticamente');
+            return empresasAntiguas;
+          }
+          
+          // Combinar sin duplicados
+          const todasEmpresas = [...empresasNuevas];
+          empresasAntiguas.forEach(emp => {
+            if (!todasEmpresas.find(e => e.id === emp.id)) {
+              todasEmpresas.push(emp);
+            }
+          });
+          
+          return todasEmpresas;
+        } else {
+          // Búsqueda normal por UID
+          const q = query(empresasRef, where("propietarioId", "==", userId));
+          snapshot = await getDocs(q);
+          
+          // Si no encuentra empresas y hay email, buscar por email del propietario (fallback)
+          if (snapshot.empty && userEmail) {
+            console.log('[empresaService] 🔍 No se encontraron empresas por UID, buscando por email del propietario...');
+            // Buscar usuarios con este email y obtener sus UIDs
+            const usuariosRef = collection(db, 'usuarios');
+            const emailQuery = query(usuariosRef, where('email', '==', userEmail));
+            const usuariosSnapshot = await getDocs(emailQuery);
+            
+            if (!usuariosSnapshot.empty) {
+              // Buscar empresas con todos los UIDs encontrados
+              const uidsEncontrados = usuariosSnapshot.docs.map(doc => doc.id);
+              console.log('[empresaService] 📋 UIDs encontrados para este email:', uidsEncontrados);
+              
+              const empresasPromises = uidsEncontrados.map(async (uid) => {
+                const qEmpresas = query(empresasRef, where("propietarioId", "==", uid));
+                const empresasSnap = await getDocs(qEmpresas);
+                return empresasSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+              });
+              
+              const empresasArrays = await Promise.all(empresasPromises);
+              const todasEmpresas = empresasArrays.flat();
+              
+              if (todasEmpresas.length > 0) {
+                console.log(`[empresaService] 📦 Encontradas ${todasEmpresas.length} empresas, migrando al nuevo UID...`);
+                // Migrar todas las empresas al nuevo UID
+                const empresasUpdatePromises = todasEmpresas.map(async (empresa) => {
+                  await updateDoc(doc(db, "empresas", empresa.id), {
+                    propietarioId: userId,
+                    lastUidUpdate: new Date(),
+                    migratedFromUid: empresa.propietarioId
+                  });
+                });
+                await Promise.all(empresasUpdatePromises);
+                console.log('[empresaService] ✅ Empresas migradas exitosamente');
+                return todasEmpresas;
+              }
+            }
+          }
+        }
       } else {
         const userRef = doc(db, "usuarios", userId);
         const userSnap = await getDoc(userRef);
@@ -44,10 +137,20 @@ export const empresaService = {
         }
       }
 
-      return snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
+      // Si snapshot es un objeto con docs (no es un array de empresas)
+      if (snapshot && snapshot.docs) {
+        return snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+      }
+      
+      // Si ya es un array (de la migración)
+      if (Array.isArray(snapshot)) {
+        return snapshot;
+      }
+      
+      return [];
     } catch (error) {
       console.error("Error al obtener empresas del usuario:", error);
       return [];

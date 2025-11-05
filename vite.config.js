@@ -24,9 +24,13 @@ export default defineConfig({
            minify: 'terser',
            terserOptions: {
              compress: {
-               drop_console: true,
+               // Habilitar logs en producción si VITE_ENABLE_LOGS=true
+               drop_console: process.env.VITE_ENABLE_LOGS !== 'true',
                drop_debugger: true,
-               pure_funcs: ['console.log', 'console.info', 'console.debug', 'console.warn']
+               // Solo eliminar console.log si los logs están deshabilitados
+               pure_funcs: process.env.VITE_ENABLE_LOGS === 'true' 
+                 ? [] 
+                 : ['console.log', 'console.info', 'console.debug', 'console.warn']
              }
            },
            commonjsOptions: {
