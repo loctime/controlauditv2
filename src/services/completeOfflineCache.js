@@ -257,6 +257,31 @@ export const saveCompleteUserCache = async (userProfile, empresas = null, sucurs
       cacheData.auditorias = [];
     }
 
+    // Verificar cuota disponible antes de guardar (especialmente importante en Chrome)
+    try {
+      if (navigator.storage && navigator.storage.estimate) {
+        const estimate = await navigator.storage.estimate();
+        const usage = estimate.usage || 0;
+        const quota = estimate.quota || 0;
+        const percentage = quota > 0 ? (usage / quota) * 100 : 0;
+        
+        // Estimar tamaño de cache (aproximado)
+        const cacheSize = JSON.stringify(cacheData).length;
+        const newUsage = usage + cacheSize;
+        const newPercentage = quota > 0 ? (newUsage / quota) * 100 : 0;
+        
+        if (newPercentage > 90) {
+          console.warn('⚠️ Cuota casi llena:', newPercentage.toFixed(1) + '%');
+          // Limpiar cache antiguo si es necesario
+          await clearOldCacheIfNeeded();
+        } else if (percentage > 80) {
+          console.log('📊 Cuota de almacenamiento:', percentage.toFixed(1) + '%');
+        }
+      }
+    } catch (quotaError) {
+      console.warn('No se pudo verificar cuota:', quotaError);
+    }
+    
     // Guardar en IndexedDB
     await offlineDb.put('settings', {
       key: 'complete_user_cache',
@@ -268,7 +293,22 @@ export const saveCompleteUserCache = async (userProfile, empresas = null, sucurs
     try {
       localStorage.setItem('complete_user_cache', JSON.stringify(cacheData));
     } catch (localStorageError) {
-      console.error('No se pudo guardar en localStorage:', localStorageError);
+      // Si localStorage está lleno, intentar limpiar y guardar solo lo esencial
+      if (localStorageError.name === 'QuotaExceededError') {
+        console.warn('⚠️ localStorage lleno, limpiando cache antiguo...');
+        try {
+          // Guardar solo datos esenciales (sin auditorías grandes)
+          const essentialCache = {
+            ...cacheData,
+            auditorias: [] // Las auditorías están en IndexedDB
+          };
+          localStorage.setItem('complete_user_cache', JSON.stringify(essentialCache));
+        } catch (e) {
+          console.error('No se pudo guardar en localStorage incluso después de limpiar:', e);
+        }
+      } else {
+        console.error('No se pudo guardar en localStorage:', localStorageError);
+      }
     }
 
     return cacheData;
@@ -322,8 +362,48 @@ export const clearCompleteUserCache = async () => {
   try {
     const db = await getOfflineDatabase();
     await db.delete('settings', 'complete_user_cache');
+    // También limpiar localStorage
+    try {
+      localStorage.removeItem('complete_user_cache');
+    } catch (e) {
+      // Ignorar errores de localStorage
+    }
   } catch (error) {
     console.error('Error limpiando cache completo:', error);
+  }
+};
+
+/**
+ * Limpiar cache antiguo si es necesario (optimización de cuota)
+ */
+const clearOldCacheIfNeeded = async () => {
+  try {
+    const db = await getOfflineDatabase();
+    const cached = await db.get('settings', 'complete_user_cache');
+    
+    if (cached && cached.value) {
+      const cacheAge = Date.now() - (cached.value.timestamp || 0);
+      const cacheAgeDays = cacheAge / (1000 * 60 * 60 * 24);
+      
+      // Si el cache tiene más de 7 días, limpiar auditorías antiguas del cache
+      if (cacheAgeDays > 7 && cached.value.auditorias) {
+        console.log('🧹 Limpiando auditorías antiguas del cache para liberar espacio...');
+        const updatedCache = {
+          ...cached.value,
+          auditorias: [] // Las auditorías están en su propio store de IndexedDB
+        };
+        
+        await db.put('settings', {
+          key: 'complete_user_cache',
+          value: updatedCache,
+          updatedAt: Date.now()
+        });
+        
+        console.log('✅ Cache optimizado');
+      }
+    }
+  } catch (error) {
+    console.warn('Error limpiando cache antiguo:', error);
   }
 };
 
