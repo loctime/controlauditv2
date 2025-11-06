@@ -128,7 +128,6 @@ export const useOfflineCache = () => {
       }
       
       // Último intento: localStorage (útil en Chrome cuando IndexedDB tiene problemas)
-      const isChrome = navigator.userAgent.includes('Chrome') && !navigator.userAgent.includes('Edg');
       if (isChrome) {
         const localCache = localStorage.getItem('complete_user_cache');
         if (localCache) {
