@@ -30,6 +30,7 @@ import {
   PhotoCamera,
   Assignment
 } from '@mui/icons-material';
+import Badge from '@mui/material/Badge';
 import { useConnectivity } from '../../hooks/useConnectivity';
 import autoSaveService from '../../components/pages/auditoria/auditoria/services/autoSaveService';
 import syncQueueService from '../../services/syncQueue';
@@ -142,26 +143,57 @@ const OfflineIndicator = ({ userProfile }) => {
   };
 
   const indicatorState = getIndicatorState();
+  const hasPendingItems = queueStats && queueStats.total > 0;
 
   return (
     <>
       {/* Indicador principal */}
       <Tooltip title={indicatorState.tooltip}>
-        <Chip
-          icon={indicatorState.icon}
-          label={indicatorState.text}
-          color={indicatorState.color}
-          size="small"
-          variant="outlined"
-          onClick={() => setShowDetails(true)}
+        <Badge 
+          badgeContent={hasPendingItems && !isProcessing ? queueStats.total : 0}
+          color="error"
+          invisible={!hasPendingItems || isProcessing}
           sx={{
-            cursor: 'pointer',
-            '&:hover': {
-              backgroundColor: `${indicatorState.color}.light`,
-              color: 'white'
+            '& .MuiBadge-badge': {
+              animation: hasPendingItems && !isProcessing ? 'pulse 2s infinite' : 'none',
+              '@keyframes pulse': {
+                '0%, 100%': {
+                  opacity: 1,
+                  transform: 'scale(1)'
+                },
+                '50%': {
+                  opacity: 0.8,
+                  transform: 'scale(1.1)'
+                }
+              }
             }
           }}
-        />
+        >
+          <Chip
+            icon={indicatorState.icon}
+            label={indicatorState.text}
+            color={indicatorState.color}
+            size="small"
+            variant="outlined"
+            onClick={() => setShowDetails(true)}
+            sx={{
+              cursor: 'pointer',
+              animation: hasPendingItems && !isProcessing ? 'pulseChip 2s infinite' : 'none',
+              '@keyframes pulseChip': {
+                '0%, 100%': {
+                  opacity: 1
+                },
+                '50%': {
+                  opacity: 0.8
+                }
+              },
+              '&:hover': {
+                backgroundColor: `${indicatorState.color}.light`,
+                color: 'white'
+              }
+            }}
+          />
+        </Badge>
       </Tooltip>
 
       {/* Barra de progreso si está sincronizando */}
@@ -286,25 +318,34 @@ const OfflineIndicator = ({ userProfile }) => {
           )}
 
           {/* Estadísticas de cola */}
-          {queueStats && queueStats.total > 0 && (
+          {queueStats && (queueStats.total > 0 || queueStats.failed > 0) && (
             <Box mb={2}>
               <Typography variant="subtitle2" gutterBottom>
                 <Sync sx={{ mr: 1, verticalAlign: 'middle' }} />
                 Cola de Sincronización
               </Typography>
-              <List dense>
-                {Object.entries(queueStats.byType).map(([type, count]) => (
-                  <ListItem key={type}>
-                    <ListItemIcon>
-                      {type === 'CREATE_AUDITORIA' ? <Assignment /> : <PhotoCamera />}
-                    </ListItemIcon>
-                    <ListItemText 
-                      primary={type.replace('_', ' ')} 
-                      secondary={count} 
-                    />
-                  </ListItem>
-                ))}
-              </List>
+              {queueStats.total > 0 && (
+                <List dense>
+                  {Object.entries(queueStats.byType).map(([type, count]) => (
+                    <ListItem key={type}>
+                      <ListItemIcon>
+                        {type === 'CREATE_AUDITORIA' ? <Assignment /> : <PhotoCamera />}
+                      </ListItemIcon>
+                      <ListItemText 
+                        primary={type.replace('_', ' ')} 
+                        secondary={`${count} pendiente${count > 1 ? 's' : ''}`} 
+                      />
+                    </ListItem>
+                  ))}
+                </List>
+              )}
+              {queueStats.failed > 0 && (
+                <Alert severity="error" sx={{ mt: 2 }}>
+                  <Typography variant="body2">
+                    <strong>{queueStats.failed} item(s) fallido(s)</strong> - Estos items no se pueden sincronizar y deben limpiarse manualmente.
+                  </Typography>
+                </Alert>
+              )}
             </Box>
           )}
 
@@ -333,13 +374,18 @@ const OfflineIndicator = ({ userProfile }) => {
               Sincronizar Ahora
             </Button>
           )}
-          {queueStats && queueStats.byRetries && Object.keys(queueStats.byRetries).some(retries => parseInt(retries) >= 5) && (
+          {queueStats && queueStats.failed > 0 && (
             <Button 
-              onClick={handleClearFailed}
+              onClick={async () => {
+                await handleClearFailed();
+                // Actualizar estadísticas después de limpiar
+                const updatedQueue = await syncQueueService.getQueueStats();
+                setQueueStats(updatedQueue);
+              }}
               color="error"
               startIcon={<SyncProblem />}
             >
-              Limpiar Fallidos
+              Limpiar {queueStats.failed} Fallido{queueStats.failed > 1 ? 's' : ''}
             </Button>
           )}
         </DialogActions>

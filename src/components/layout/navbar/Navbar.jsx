@@ -414,8 +414,86 @@ function Navbar(props) {
               alignItems: 'center',
               height: '100%'
             }}>
-              Dashboard
+              Calendario
             </Link>
+            <Box 
+              onClick={handleHigieneMenuOpen}
+              sx={{
+                color: "whitesmoke",
+                fontSize: '0.8rem',
+                fontWeight: 500,
+                padding: '4px 8px',
+                borderRadius: '3px',
+                transition: 'background-color 0.2s',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 0.25,
+                height: '100%',
+                lineHeight: 1,
+                outline: 'none',
+                WebkitTapHighlightColor: 'transparent',
+                '&:hover': {
+                  backgroundColor: 'rgba(255,255,255,0.1)'
+                }
+              }}
+            >
+              Dash
+              <KeyboardArrowDownIcon sx={{ fontSize: '0.75rem' }} />
+            </Box>
+            <Menu
+              anchorEl={anchorElHigiene}
+              open={Boolean(anchorElHigiene)}
+              onClose={handleHigieneMenuClose}
+              anchorOrigin={{
+                vertical: 'bottom',
+                horizontal: 'left',
+              }}
+              transformOrigin={{
+                vertical: 'top',
+                horizontal: 'left',
+              }}
+              PaperProps={{
+                sx: {
+                  backgroundColor: theme.palette.primary.main,
+                  color: 'whitesmoke',
+                  '& .MuiMenuItem-root': {
+                    color: 'whitesmoke',
+                    '&:hover': {
+                      backgroundColor: 'rgba(255,255,255,0.1)',
+                    },
+                  },
+                },
+              }}
+            >
+              <MenuItem onClick={handleHigieneMenuClose}>
+                <Link to="/dashboard-higiene-seguridad" style={{ 
+                  color: 'whitesmoke', 
+                  textDecoration: 'none',
+                  width: '100%'
+                }}>
+                  Dashboard
+                </Link>
+              </MenuItem>
+              <MenuItem onClick={handleHigieneMenuClose}>
+                <Link to="/capacitaciones" style={{ 
+                  color: 'whitesmoke', 
+                  textDecoration: 'none',
+                  width: '100%'
+                }}>
+                  Capacitaciones
+                </Link>
+              </MenuItem>
+              <MenuItem onClick={handleHigieneMenuClose}>
+                <Link to="/accidentes" style={{ 
+                  color: 'whitesmoke', 
+                  textDecoration: 'none',
+                  width: '100%'
+                }}>
+                  Accidentes
+                </Link>
+              </MenuItem>
+            </Menu>
             <Link to="/auditoria" style={{ 
               color: "whitesmoke", 
               textDecoration: "none", 

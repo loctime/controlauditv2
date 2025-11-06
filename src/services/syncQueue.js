@@ -111,15 +111,22 @@ class SyncQueueService {
       const db = await getOfflineDatabase();
       const allItems = await db.getAll('syncQueue');
       
+      // Filtrar items fallidos y obtener solo los pendientes
+      const pendingItems = allItems.filter(item => 
+        item.status !== 'failed' && item.retries < this.maxRetries
+      );
+      
       const stats = {
-        total: allItems.length,
+        total: pendingItems.length, // Solo contar items pendientes
+        totalIncludingFailed: allItems.length, // Total incluyendo fallidos
+        failed: allItems.filter(item => item.status === 'failed' || item.retries >= this.maxRetries).length,
         byType: {},
         byRetries: {},
         oldestItem: null,
         newestItem: null
       };
 
-      allItems.forEach(item => {
+      pendingItems.forEach(item => {
         // Por tipo
         stats.byType[item.type] = (stats.byType[item.type] || 0) + 1;
         
@@ -265,7 +272,41 @@ class SyncQueueService {
     // Importar AuditoriaService dinámicamente para evitar dependencias circulares
     const { default: AuditoriaService } = await import('../components/pages/auditoria/auditoriaService');
     
-    const auditoriaData = item.payload;
+    const db = await getOfflineDatabase();
+    let auditoriaData = item.payload;
+    
+    // Usar el auditoriaId del item si está disponible, o el ID del payload
+    const auditoriaIdToSearch = item.auditoriaId || auditoriaData.id;
+    
+    // Si faltan datos críticos (empresa/formulario), intentar obtenerlos de IndexedDB
+    if (!auditoriaData.empresa || !auditoriaData.formulario) {
+      try {
+        if (auditoriaIdToSearch) {
+          const fullAuditoria = await db.get('auditorias', auditoriaIdToSearch);
+          if (fullAuditoria) {
+            console.log('[SyncQueue] Datos incompletos en cola, obteniendo de IndexedDB:', auditoriaIdToSearch);
+            // Combinar datos de la cola con datos completos de IndexedDB
+            auditoriaData = {
+              ...fullAuditoria,
+              ...auditoriaData, // Los datos de la cola tienen prioridad
+              empresa: fullAuditoria.empresa || auditoriaData.empresa,
+              formulario: fullAuditoria.formulario || auditoriaData.formulario,
+              // Asegurar que el ID esté presente
+              id: fullAuditoria.id || auditoriaData.id || auditoriaIdToSearch
+            };
+          } else {
+            console.warn('[SyncQueue] Auditoría no encontrada en IndexedDB:', auditoriaIdToSearch);
+          }
+        }
+      } catch (error) {
+        console.warn('[SyncQueue] No se pudo obtener auditoría completa de IndexedDB:', error);
+      }
+    }
+    
+    // Validar que tengamos los datos requeridos antes de intentar sincronizar
+    if (!auditoriaData.empresa || !auditoriaData.formulario) {
+      throw new Error(`Faltan datos requeridos (empresa: ${!!auditoriaData.empresa}, formulario: ${!!auditoriaData.formulario}) para sincronizar auditoría ${auditoriaIdToSearch || 'desconocida'}`);
+    }
     
     // Log para debugging - verificar qué datos tenemos
     console.log('[SyncQueue] Datos de auditoría recibidos:', {
@@ -326,7 +367,6 @@ class SyncQueueService {
     const auditoriaId = await AuditoriaService.guardarAuditoria(auditoriaData, userProfile);
     
     // Actualizar estado en IndexedDB
-    const db = await getOfflineDatabase();
     await db.put('auditorias', {
       ...auditoriaData,
       status: 'synced',
