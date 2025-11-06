@@ -14,7 +14,8 @@ import { useUserDataLoaders } from './hooks/useUserDataLoaders';
 import { useSucursalesListener } from './hooks/useSucursalesListener';
 import { useFormulariosListener } from './hooks/useFormulariosListener';
 import { useContextActions } from './hooks/useContextActions';
-import { initializeControlFileFolders } from '../../services/controlFileInit';
+// Nota: Ya no importamos initializeControlFileFolders directamente
+// Usamos getControlFileFolders() que busca existentes primero
 
 // Definimos y exportamos el contexto
 export const AuthContext = createContext();
@@ -181,13 +182,19 @@ const AuthContextComponent = ({ children }) => {
               }
               
               // Inicializar carpetas de ControlFile después de autenticación exitosa
-              // Esperar un poco más para asegurar que el token esté listo y sea del proyecto correcto
+              // SOLO se ejecuta UNA VEZ al iniciar sesión
               try {
-                console.log('[AuthContext] 🚀 Inicializando carpetas ControlFile...');
+                console.log('[AuthContext] 🚀 Inicializando carpetas ControlFile (una sola vez)...');
                 // Esperar adicional para asegurar que el token esté actualizado
-                await new Promise(resolve => setTimeout(resolve, 500));
-                await initializeControlFileFolders();
-                console.log('[AuthContext] ✅ Carpetas ControlFile inicializadas');
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                const { initializeControlFileFolders } = await import('../../services/controlFileInit');
+                const folders = await initializeControlFileFolders();
+                if (folders.mainFolderId) {
+                  console.log('[AuthContext] ✅ Carpetas ControlFile inicializadas:', folders.mainFolderId);
+                  console.log('[AuthContext] 📁 Subcarpetas:', folders.subFolders);
+                } else {
+                  console.log('[AuthContext] ⚠️ No se pudieron inicializar carpetas ControlFile');
+                }
               } catch (error) {
                 console.error('[AuthContext] ⚠️ Error al inicializar carpetas ControlFile (no crítico):', error);
                 // No bloquear el flujo si falla la inicialización de carpetas

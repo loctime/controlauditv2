@@ -118,20 +118,35 @@ export const initializeControlFileFolders = async () => {
       let mainFolderId = storedFolderIds?.mainFolderId;
       
       if (!mainFolderId) {
-        // Buscar si existe (buscando todas las carpetas con source: 'taskbar')
-        console.log('[controlFileInit] 🔍 Buscando carpeta existente...');
+        // Buscar si existe (buscando TODAS las carpetas con source: 'taskbar')
+        console.log('[controlFileInit] 🔍 Buscando carpetas existentes antes de crear...');
         const allFiles = await listFiles(null);
         if (Array.isArray(allFiles)) {
-          // Buscar carpeta "ControlAudit" con source: 'taskbar'
-          const existingFolder = allFiles.find(item => 
+          // Buscar TODAS las carpetas "ControlAudit" con source: 'taskbar'
+          const existingFolders = allFiles.filter(item => 
             item.type === 'folder' && 
             item.name === 'ControlAudit' && 
             (item.metadata?.source === 'taskbar' || item.source === 'taskbar')
           );
           
-          if (existingFolder) {
-            mainFolderId = existingFolder.id;
-            console.log('[controlFileInit] ✅ Carpeta principal encontrada en ControlFile:', mainFolderId);
+          if (existingFolders.length > 0) {
+            // Usar la primera encontrada (o la que tenga contenido)
+            let bestFolder = existingFolders[0];
+            for (const folder of existingFolders) {
+              try {
+                const subFolderFiles = await listFiles(folder.id);
+                if (Array.isArray(subFolderFiles) && subFolderFiles.length > 0) {
+                  bestFolder = folder;
+                  break;
+                }
+              } catch (e) {
+                // Continuar
+              }
+            }
+            
+            mainFolderId = bestFolder.id;
+            console.log('[controlFileInit] ✅ Carpeta principal existente encontrada:', mainFolderId);
+            console.log(`[controlFileInit] ⚠️ Se encontraron ${existingFolders.length} carpeta(s) existente(s), usando la primera con contenido`);
             // Guardar en cache para próxima vez
             storeFolderIds({ mainFolderId, subFolders: {} });
           }
@@ -178,17 +193,25 @@ export const initializeControlFileFolders = async () => {
       let subFolderId = storedFolderIds?.subFolders?.[key];
       
       if (!subFolderId) {
-        // Buscar si existe
+        // Buscar si existe dentro de la carpeta principal
+        console.log(`[controlFileInit] 🔍 Buscando subcarpeta "${name}" en carpeta principal ${mainFolderId}...`);
         subFolderId = await findFolderByName(name, mainFolderId);
         
         if (!subFolderId) {
-          // Crear nueva subcarpeta
-          console.log(`[controlFileInit] 📁 Creando subcarpeta: ${name}...`);
-          subFolderId = await createSubFolder(name, mainFolderId);
-          console.log(`[controlFileInit] ✅ Subcarpeta ${name} creada:`, subFolderId);
+          // Crear nueva subcarpeta dentro de la carpeta principal
+          console.log(`[controlFileInit] 📁 Creando subcarpeta "${name}" dentro de carpeta principal ${mainFolderId}...`);
+          try {
+            subFolderId = await createSubFolder(name, mainFolderId);
+            console.log(`[controlFileInit] ✅ Subcarpeta "${name}" creada con ID:`, subFolderId);
+          } catch (createError) {
+            console.error(`[controlFileInit] ❌ Error al crear subcarpeta "${name}":`, createError);
+            subFolderId = null;
+          }
         } else {
-          console.log(`[controlFileInit] ✅ Subcarpeta ${name} encontrada:`, subFolderId);
+          console.log(`[controlFileInit] ✅ Subcarpeta "${name}" encontrada:`, subFolderId);
         }
+      } else {
+        console.log(`[controlFileInit] ✅ Subcarpeta "${name}" en cache:`, subFolderId);
       }
       
       folderIds.subFolders[key] = subFolderId;
@@ -213,76 +236,88 @@ export const initializeControlFileFolders = async () => {
 };
 
 /**
- * Obtiene IDs de carpetas (desde cache o busca existentes, NO crea nuevas)
+ * Obtiene IDs de carpetas (desde cache o busca existentes, NUNCA crea nuevas)
  * 
- * @returns {Promise<Object>} - Objeto con IDs de carpetas
+ * @returns {Promise<Object>} - Objeto con IDs de carpetas (puede tener nulls si no existen)
  */
 export const getControlFileFolders = async () => {
   try {
-    // 1. Verificar cache primero
+    // 1. Verificar cache primero (más rápido)
     const storedFolderIds = getStoredFolderIds();
     if (storedFolderIds && storedFolderIds.mainFolderId) {
-      // Verificar que la carpeta principal existe
-      const mainFolderExists = await findFolderByName('ControlAudit', null);
-      if (mainFolderExists === storedFolderIds.mainFolderId) {
-        console.log('[controlFileInit] ✅ Usando carpetas del cache');
-        return storedFolderIds;
-      }
+      console.log('[controlFileInit] ✅ Usando carpetas del cache:', storedFolderIds.mainFolderId);
+      return storedFolderIds;
     }
     
-    // 2. Buscar carpeta existente en ControlFile (sin crear nueva)
+    // 2. Buscar carpeta existente en ControlFile (sin crear)
     console.log('[controlFileInit] 🔍 Buscando carpeta existente en ControlFile...');
-    const allFiles = await listFiles(null);
-    if (Array.isArray(allFiles)) {
-      // Buscar carpeta "ControlAudit" con source: 'taskbar'
-      const existingFolder = allFiles.find(item => 
-        item.type === 'folder' && 
-        item.name === 'ControlAudit' && 
-        (item.metadata?.source === 'taskbar' || item.source === 'taskbar')
-      );
-      
-      if (existingFolder) {
-        console.log('[controlFileInit] ✅ Carpeta existente encontrada:', existingFolder.id);
+    try {
+      const allFiles = await listFiles(null);
+      if (Array.isArray(allFiles)) {
+        // Buscar carpeta "ControlAudit" con source: 'taskbar'
+        const existingFolder = allFiles.find(item => 
+          item.type === 'folder' && 
+          item.name === 'ControlAudit' && 
+          (item.metadata?.source === 'taskbar' || item.source === 'taskbar')
+        );
         
-        // Buscar subcarpetas
-        const subFolders = {};
-        const subFolderNames = {
-          auditorias: 'Auditorías',
-          accidentes: 'Accidentes',
-          empresas: 'Empresas'
-        };
-        
-        // Buscar subcarpetas dentro de la carpeta principal
-        const subFolderFiles = await listFiles(existingFolder.id);
-        if (Array.isArray(subFolderFiles)) {
-          for (const [key, name] of Object.entries(subFolderNames)) {
-            const subFolder = subFolderFiles.find(item => 
-              item.type === 'folder' && item.name === name
-            );
-            if (subFolder) {
-              subFolders[key] = subFolder.id;
-              console.log(`[controlFileInit] ✅ Subcarpeta ${name} encontrada:`, subFolder.id);
+        if (existingFolder) {
+          console.log('[controlFileInit] ✅ Carpeta existente encontrada:', existingFolder.id);
+          
+          // Buscar subcarpetas existentes
+          const subFolders = {};
+          const subFolderNames = {
+            auditorias: 'Auditorías',
+            accidentes: 'Accidentes',
+            empresas: 'Empresas'
+          };
+          
+          try {
+            const subFolderFiles = await listFiles(existingFolder.id);
+            if (Array.isArray(subFolderFiles)) {
+              for (const [key, name] of Object.entries(subFolderNames)) {
+                const subFolder = subFolderFiles.find(item => 
+                  item.type === 'folder' && item.name === name
+                );
+                if (subFolder) {
+                  subFolders[key] = subFolder.id;
+                  console.log(`[controlFileInit] ✅ Subcarpeta "${name}" encontrada:`, subFolder.id);
+                } else {
+                  subFolders[key] = null;
+                  console.log(`[controlFileInit] ⚠️ Subcarpeta "${name}" no encontrada`);
+                }
+              }
             }
+          } catch (e) {
+            console.warn('[controlFileInit] ⚠️ Error al buscar subcarpetas:', e);
           }
+          
+          const folderIds = {
+            mainFolderId: existingFolder.id,
+            subFolders
+          };
+          
+          // Guardar en cache
+          storeFolderIds(folderIds);
+          return folderIds;
         }
-        
-        const folderIds = {
-          mainFolderId: existingFolder.id,
-          subFolders
-        };
-        
-        // Guardar en cache
-        storeFolderIds(folderIds);
-        return folderIds;
       }
+    } catch (listError) {
+      console.error('[controlFileInit] ❌ Error al listar archivos:', listError);
     }
     
-    // 3. Si no existe ninguna carpeta, entonces inicializar (crear nuevas)
-    console.log('[controlFileInit] ⚠️ No se encontraron carpetas existentes, inicializando...');
-    return await initializeControlFileFolders();
+    // 3. Si no hay carpetas, retornar estructura vacía (NO crear nuevas aquí)
+    console.warn('[controlFileInit] ⚠️ No se encontraron carpetas existentes');
+    return {
+      mainFolderId: null,
+      subFolders: {
+        auditorias: null,
+        accidentes: null,
+        empresas: null
+      }
+    };
   } catch (error) {
     console.error('[controlFileInit] Error al obtener carpetas:', error);
-    // Retornar estructura vacía en caso de error
     return {
       mainFolderId: null,
       subFolders: {
