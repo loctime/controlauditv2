@@ -9,7 +9,31 @@ const AlertasFaltantes = memo(({
 }) => {
   if (cargandoDatosRespaldo) return null;
 
+  // Debug: verificar si estamos offline y si hay cache
+  const isOffline = !navigator.onLine;
+  const hasCache = localStorage.getItem('complete_user_cache');
+  
   if (!userEmpresas || userEmpresas.length === 0) {
+    // Si estamos offline y hay cache, intentar cargar desde cache
+    if (isOffline && hasCache) {
+      console.warn('⚠️ [AlertasFaltantes] Offline detectado con cache disponible, intentando cargar...');
+      try {
+        const cacheData = JSON.parse(hasCache);
+        if (cacheData.empresas && cacheData.empresas.length > 0) {
+          console.log('✅ [AlertasFaltantes] Empresas encontradas en cache:', cacheData.empresas.length);
+          // No podemos setear aquí directamente, pero informamos
+          return (
+            <Alert severity="warning" sx={{ mb: 2 }}>
+              ⚠️ Modo offline detectado. Empresas encontradas en cache: {cacheData.empresas.length}
+              <br />
+              Recarga la página o vuelve a conectar para ver las empresas.
+            </Alert>
+          );
+        }
+      } catch (e) {
+        console.error('Error parseando cache:', e);
+      }
+    }
     return (
       <Alert severity="error" sx={{ mb: 3 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2 }}>

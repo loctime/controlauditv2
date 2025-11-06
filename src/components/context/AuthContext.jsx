@@ -319,10 +319,40 @@ const AuthContextComponent = ({ children }) => {
                 setUserEmpresas(empresasFiltradas);
                 setLoadingEmpresas(false);
                 console.log('✅ Empresas cargadas desde cache:', empresasFiltradas.length);
+                console.log('📊 Detalle empresas:', empresasFiltradas.map(e => e.nombre || e.id));
               } else {
                 console.warn('⚠️ No hay empresas en cache');
-                setUserEmpresas([]);
-                setLoadingEmpresas(false);
+                // Último intento: verificar localStorage directamente (Chrome)
+                const isChrome = navigator.userAgent.includes('Chrome') && !navigator.userAgent.includes('Edg');
+                if (isChrome) {
+                  console.log('🔍 [Chrome] Intentando cargar desde localStorage directamente...');
+                  try {
+                    const localCache = localStorage.getItem('complete_user_cache');
+                    if (localCache) {
+                      const parsed = JSON.parse(localCache);
+                      if (parsed.empresas && parsed.empresas.length > 0) {
+                        let empresasFiltradas = parsed.empresas;
+                        if (cachedProfile.role !== 'supermax') {
+                          empresasFiltradas = parsed.empresas.filter(empresa => 
+                            empresa.propietarioId === cachedProfile.uid ||
+                            empresa.creadorId === cachedProfile.uid ||
+                            empresa.clienteAdminId === cachedProfile.clienteAdminId ||
+                            empresa.clienteAdminId === cachedProfile.uid
+                          );
+                        }
+                        setUserEmpresas(empresasFiltradas);
+                        setLoadingEmpresas(false);
+                        console.log('✅ [Chrome] Empresas cargadas desde localStorage:', empresasFiltradas.length);
+                      }
+                    }
+                  } catch (e) {
+                    console.error('Error cargando desde localStorage:', e);
+                  }
+                }
+                if (!userEmpresas || userEmpresas.length === 0) {
+                  setUserEmpresas([]);
+                  setLoadingEmpresas(false);
+                }
               }
               
               if (cachedUser.sucursales && cachedUser.sucursales.length > 0) {
