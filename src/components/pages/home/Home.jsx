@@ -130,20 +130,40 @@ const Home = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userProfile]); // Solo depende de userProfile - ignoramos otras deps intencionalmente para evitar bucle
 
-  // Ejecutar precarga automática en Chrome PWA (necesario para Chrome)
+  // Ejecutar precarga automática en Chrome PWA (una sola vez por sesión)
   useEffect(() => {
-    if (shouldPreload && !isPreloading && isPWAStandalone && userProfile && userEmpresas?.length > 0) {
-      console.log('🚀 [Chrome PWA] Detectado - Ejecutando precarga automática en 3 segundos...');
+    // Verificar si ya se precargó en esta sesión
+    const hasPreloadedThisSession = sessionStorage.getItem('chrome_preload_done') === 'true';
+    
+    // Verificar si el cache está actualizado (menos de 1 hora)
+    const cacheTimestamp = localStorage.getItem('chrome_preload_timestamp');
+    const cacheAge = cacheTimestamp ? Date.now() - parseInt(cacheTimestamp) : Infinity;
+    const cacheIsFresh = cacheAge < 60 * 60 * 1000; // 1 hora
+    
+    if (shouldPreload && !isPreloading && !hasPreloadedThisSession && isPWAStandalone && userProfile && userEmpresas?.length > 0) {
+      // Si el cache es muy antiguo (más de 24 horas), permitir precarga nuevamente
+      const shouldPreloadAgain = cacheAge > 24 * 60 * 60 * 1000; // 24 horas
       
-      const preloadTimer = setTimeout(() => {
-        console.log('🔄 [Chrome PWA] Iniciando precarga de páginas para cachear correctamente...');
-        startPreload();
-      }, 3000);
-      
-      return () => clearTimeout(preloadTimer);
+      if (!cacheIsFresh || shouldPreloadAgain) {
+        console.log('🚀 [Chrome PWA] Detectado - Ejecutando precarga automática en 3 segundos...');
+        
+        const preloadTimer = setTimeout(() => {
+          console.log('🔄 [Chrome PWA] Iniciando precarga de páginas para cachear correctamente...');
+          startPreload().then(() => {
+            // Marcar como precargado en esta sesión
+            sessionStorage.setItem('chrome_preload_done', 'true');
+            // Guardar timestamp del cache
+            localStorage.setItem('chrome_preload_timestamp', Date.now().toString());
+          });
+        }, 3000);
+        
+        return () => clearTimeout(preloadTimer);
+      } else {
+        console.log('ℹ️ [Chrome PWA] Cache reciente, saltando precarga automática');
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [shouldPreload, isPWAStandalone, userProfile, userEmpresas]);
+  }, [shouldPreload, isPWAStandalone, userProfile, userEmpresas?.length]);
 
   return (
     <div className="home-main-container">
@@ -227,6 +247,9 @@ const Home = () => {
                   variant="contained"
                   size="small"
                   onClick={async () => {
+                    // Limpiar flag de precarga para permitir precargar nuevamente
+                    sessionStorage.removeItem('chrome_preload_done');
+                    
                     // Iniciar precarga
                     await startPreload();
                     
@@ -250,6 +273,9 @@ const Home = () => {
                           userSucursales || [],
                           userFormularios || []
                         );
+                        
+                        // Guardar timestamp del cache
+                        localStorage.setItem('chrome_preload_timestamp', Date.now().toString());
                         
                         console.log('✅ [Home Chrome] Cache guardado correctamente después de precarga');
                         toast.success(`✅ Cache guardado: ${userEmpresas.length} empresas, ${userSucursales?.length || 0} sucursales, ${userFormularios?.length || 0} formularios`, {
