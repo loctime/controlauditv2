@@ -55,7 +55,6 @@ class AutoSaveService {
         sessionId: this.generateSessionId()
       };
       localStorage.setItem(this.storageKey, JSON.stringify(saveData));
-      console.log('💾 Datos guardados en localStorage');
       return true;
     } catch (error) {
       console.error('❌ Error al guardar en localStorage:', error);
@@ -69,7 +68,6 @@ class AutoSaveService {
       const savedData = localStorage.getItem(this.storageKey);
       if (savedData) {
         const parsedData = JSON.parse(savedData);
-        console.log('📂 Datos cargados desde localStorage');
         return parsedData;
       }
     } catch (error) {
@@ -82,7 +80,6 @@ class AutoSaveService {
   clearLocalStorage() {
     try {
       localStorage.removeItem(this.storageKey);
-      console.log('🗑️ Datos de autoguardado limpiados');
     } catch (error) {
       console.error('❌ Error al limpiar localStorage:', error);
     }
@@ -90,10 +87,9 @@ class AutoSaveService {
 
   // Guardar auditoría (online/offline automático)
   async saveAuditoria(userId, auditoriaData) {
-    if (this.isSaving) {
-      console.log('⏳ Ya hay un guardado en progreso...');
-      return false;
-    }
+      if (this.isSaving) {
+        return false;
+      }
 
     this.isSaving = true;
     
@@ -139,14 +135,12 @@ class AutoSaveService {
       this.saveToLocalStorage(saveData);
 
       this.lastSaveTime = Date.now();
-      console.log('✅ Autoguardado completado en Firestore + IndexedDB');
       
       return true;
     } catch (error) {
       console.error('❌ Error en autoguardado Firestore:', error);
       
       // Fallback a offline
-      console.log('🔄 Fallback a guardado offline...');
       return await this.saveOffline(userId, auditoriaData);
     }
   }
@@ -296,7 +290,6 @@ class AutoSaveService {
       this.saveToLocalStorage(datosParaLocalStorage);
 
       this.lastSaveTime = Date.now();
-      console.log('✅ Autoguardado completado offline:', auditoriaId);
       
       return true;
     } catch (error) {
@@ -346,14 +339,8 @@ class AutoSaveService {
 
             await db.put('fotos', fotoData);
             fotosGuardadas++;
-            
-            console.log(`📸 Foto guardada offline: ${fotoId} (sección ${seccionIndex}, pregunta ${preguntaIndex})`);
           }
         }
-      }
-      
-      if (fotosGuardadas > 0) {
-        console.log(`✅ ${fotosGuardadas} foto(s) guardada(s) en IndexedDB`);
       }
     } catch (error) {
       console.error('❌ Error al guardar fotos offline:', error);
@@ -369,7 +356,6 @@ class AutoSaveService {
       
       if (docSnap.exists()) {
         const data = docSnap.data();
-        console.log('📂 Datos cargados desde Firestore');
         return data;
       }
     } catch (error) {
@@ -444,7 +430,6 @@ class AutoSaveService {
           if (incompleteAuditorias.length > 0) {
             // Obtener la más reciente
             const latestOffline = incompleteAuditorias.sort((a, b) => b.updatedAt - a.updatedAt)[0];
-            console.log('🔄 Restaurando auditoría desde IndexedDB:', latestOffline.id);
             
             // Cargar imágenes reales desde IndexedDB
             const auditoriaConImagenes = await this.restoreAuditoriaImages(latestOffline, db);
@@ -458,9 +443,7 @@ class AutoSaveService {
       const localData = this.loadFromLocalStorage();
       if (localData && localData.userId === userId) {
         // Verificar que no esté completada
-        if (!localData.estadoCompletada && (!localData.auditoriaGenerada || localData.activeStep < 4)) {
-          console.log('🔄 Restaurando auditoría desde localStorage');
-          
+          if (!localData.estadoCompletada && (!localData.auditoriaGenerada || localData.activeStep < 4)) {
           // Intentar cargar imágenes desde IndexedDB si hay un id
           // Si no hay db todavía, intentar inicializarlo
           let dbForImages = db;
@@ -501,11 +484,8 @@ class AutoSaveService {
       const fotos = await db.getAllFromIndex('fotos', 'by-auditoriaId', auditoriaData.id);
       
       if (fotos.length === 0) {
-        console.log('📸 No se encontraron fotos guardadas para esta auditoría');
         return auditoriaData;
       }
-
-      console.log(`📸 Restaurando ${fotos.length} imágenes desde IndexedDB`);
 
       // Reconstruir el array de imágenes con los File objects
       const imagenesRestauradas = [...(auditoriaData.imagenes || [])];
@@ -529,7 +509,6 @@ class AutoSaveService {
           });
           
           imagenesRestauradas[seccionIndex][preguntaIndex] = file;
-          console.log(`✅ Imagen restaurada: sección ${seccionIndex}, pregunta ${preguntaIndex}`);
         }
       }
 
@@ -566,15 +545,27 @@ class AutoSaveService {
       const auditorias = await db.getAll('auditorias');
       const fotos = await db.getAll('fotos');
       const queueStats = await syncQueueService.getQueueStats();
+      
+      // Obtener IDs de items fallidos en la cola para excluirlos
+      const failedQueueItems = await this.getFailedQueueItems();
+      const failedAuditoriaIds = new Set(failedQueueItems.map(item => item.auditoriaId || item.payload?.id).filter(Boolean));
 
       const totalSize = fotos.reduce((sum, foto) => sum + (foto.size || 0), 0);
+      
+      // Filtrar auditorías pendientes: solo las que NO están en items fallidos de la cola
+      const pendingAuditorias = auditorias.filter(a => {
+        if (a.status !== 'pending_sync') return false;
+        // Excluir si está en la cola de items fallidos
+        return !failedAuditoriaIds.has(a.id);
+      });
 
       return {
         auditorias: {
           total: auditorias.length,
-          pending: auditorias.filter(a => a.status === 'pending_sync').length,
+          pending: pendingAuditorias.length, // Solo las que realmente pueden sincronizarse
           synced: auditorias.filter(a => a.status === 'synced').length,
-          failed: auditorias.filter(a => a.status === 'error').length
+          failed: auditorias.filter(a => a.status === 'error').length,
+          failedInQueue: failedAuditoriaIds.size // Auditorías asociadas a items fallidos en cola
         },
         fotos: {
           total: fotos.length,
@@ -588,6 +579,23 @@ class AutoSaveService {
     }
   }
 
+  // Obtener items fallidos de la cola
+  async getFailedQueueItems() {
+    try {
+      // Usar getOfflineDatabase que ya está importado en la parte superior del archivo
+      const db = await getOfflineDatabase();
+      const allItems = await db.getAll('syncQueue');
+      
+      // Filtrar items fallidos (status failed o retries >= maxRetries)
+      return allItems.filter(item => 
+        item.status === 'failed' || item.retries >= 5
+      );
+    } catch (error) {
+      console.error('❌ Error al obtener items fallidos de la cola:', error);
+      return [];
+    }
+  }
+
   // Limpiar datos antiguos (más de 7 días)
   async cleanupOldData() {
     try {
@@ -596,7 +604,6 @@ class AutoSaveService {
         const oneWeekAgo = Date.now() - (7 * 24 * 60 * 60 * 1000);
         if (savedData.timestamp < oneWeekAgo) {
           this.clearLocalStorage();
-          console.log('🧹 Datos antiguos limpiados');
         }
       }
     } catch (error) {

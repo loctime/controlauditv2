@@ -70,11 +70,26 @@ const OfflineIndicator = ({ userProfile }) => {
 
   // Listener para cambios en el procesamiento
   useEffect(() => {
-    const removeListener = syncQueueService.addListener((event, data) => {
+    const removeListener = syncQueueService.addListener(async (event, data) => {
       if (event === 'processing_started') {
         setIsProcessing(true);
       } else if (event === 'processing_stopped') {
         setIsProcessing(false);
+        // Actualizar estadísticas cuando termina el procesamiento
+        try {
+          const queue = await syncQueueService.getQueueStats();
+          setQueueStats(queue);
+        } catch (error) {
+          console.error('Error al actualizar estadísticas:', error);
+        }
+      } else if (event === 'item_success' || event === 'item_failed') {
+        // Actualizar estadísticas cuando un item se procesa
+        try {
+          const queue = await syncQueueService.getQueueStats();
+          setQueueStats(queue);
+        } catch (error) {
+          console.error('Error al actualizar estadísticas:', error);
+        }
       }
     });
 
@@ -97,7 +112,9 @@ const OfflineIndicator = ({ userProfile }) => {
   const handleClearFailed = async () => {
     try {
       await syncQueueService.clearFailedItems();
-      // Actualizar estadísticas
+      // Actualizar estadísticas de cola y offline
+      const queue = await syncQueueService.getQueueStats();
+      setQueueStats(queue);
       const stats = await autoSaveService.getOfflineStats();
       setOfflineStats(stats);
     } catch (error) {
@@ -280,6 +297,23 @@ const OfflineIndicator = ({ userProfile }) => {
                     <ListItemText 
                       primary="Fallidas" 
                       secondary={offlineStats.auditorias.failed} 
+                    />
+                  </ListItem>
+                )}
+                {offlineStats.auditorias.failedInQueue > 0 && (
+                  <ListItem>
+                    <ListItemIcon>
+                      <SyncProblem color="warning" />
+                    </ListItemIcon>
+                    <ListItemText 
+                      primary="No sincronizables" 
+                      secondary={`${offlineStats.auditorias.failedInQueue} en cola fallida`}
+                      secondaryTypographyProps={{ 
+                        sx: { 
+                          fontSize: '0.75rem',
+                          fontStyle: 'italic'
+                        } 
+                      }}
                     />
                   </ListItem>
                 )}

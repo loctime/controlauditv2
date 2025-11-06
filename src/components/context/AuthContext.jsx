@@ -1,5 +1,5 @@
 // src/components/context/AuthContext.jsx
-import { createContext, useState, useEffect, useContext } from "react";
+import { createContext, useState, useEffect, useContext, useRef } from "react";
 import { auth } from "../../firebaseConfig";
 import { onAuthStateChanged } from "firebase/auth";
 import { useUserProfile } from '../../hooks/useUserProfile';
@@ -36,6 +36,9 @@ const AuthContextComponent = ({ children }) => {
   // Estados globales de selección
   const [selectedEmpresa, setSelectedEmpresa] = useState('todas');
   const [selectedSucursal, setSelectedSucursal] = useState('todas');
+  
+  // Bandera para evitar múltiples inicializaciones de ControlFile
+  const controlFileInitializedRef = useRef(false);
 
   // Usar hooks personalizados
   const {
@@ -252,21 +255,21 @@ const AuthContextComponent = ({ children }) => {
               
               // Inicializar carpetas de ControlFile después de autenticación exitosa
               // SOLO se ejecuta UNA VEZ al iniciar sesión
-              try {
-                console.log('[AuthContext] 🚀 Inicializando carpetas ControlFile (una sola vez)...');
-                // Esperar adicional para asegurar que el token esté actualizado
-                await new Promise(resolve => setTimeout(resolve, 1000));
-                const { initializeControlFileFolders } = await import('../../services/controlFileInit');
-                const folders = await initializeControlFileFolders();
-                if (folders.mainFolderId) {
-                  console.log('[AuthContext] ✅ Carpetas ControlFile inicializadas:', folders.mainFolderId);
-                  console.log('[AuthContext] 📁 Subcarpetas:', folders.subFolders);
-                } else {
-                  console.log('[AuthContext] ⚠️ No se pudieron inicializar carpetas ControlFile');
+              if (!controlFileInitializedRef.current) {
+                controlFileInitializedRef.current = true;
+                try {
+                  // Esperar adicional para asegurar que el token esté actualizado
+                  await new Promise(resolve => setTimeout(resolve, 1000));
+                  const { initializeControlFileFolders } = await import('../../services/controlFileInit');
+                  const folders = await initializeControlFileFolders();
+                  if (folders.mainFolderId) {
+                    console.log('[AuthContext] ✅ Carpetas ControlFile inicializadas:', folders.mainFolderId);
+                  }
+                } catch (error) {
+                  console.error('[AuthContext] ⚠️ Error al inicializar carpetas ControlFile (no crítico):', error);
+                  controlFileInitializedRef.current = false; // Permitir reintento si falla
+                  // No bloquear el flujo si falla la inicialización de carpetas
                 }
-              } catch (error) {
-                console.error('[AuthContext] ⚠️ Error al inicializar carpetas ControlFile (no crítico):', error);
-                // No bloquear el flujo si falla la inicialización de carpetas
               }
             }, 2000);
           }

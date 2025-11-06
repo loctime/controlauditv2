@@ -112,9 +112,13 @@ class SyncQueueService {
       const allItems = await db.getAll('syncQueue');
       
       // Filtrar items fallidos y obtener solo los pendientes
-      const pendingItems = allItems.filter(item => 
-        item.status !== 'failed' && item.retries < this.maxRetries
-      );
+      // Un item es pendiente si:
+      // 1. No tiene status 'failed' (o no tiene status definido)
+      // 2. Y tiene menos de maxRetries reintentos
+      const pendingItems = allItems.filter(item => {
+        const isFailed = item.status === 'failed' || (item.retries >= this.maxRetries);
+        return !isFailed;
+      });
       
       const stats = {
         total: pendingItems.length, // Solo contar items pendientes
@@ -141,6 +145,17 @@ class SyncQueueService {
           stats.newestItem = item;
         }
       });
+
+      // Log temporal para debugging - mostrar items pendientes
+      if (pendingItems.length > 0) {
+        console.log('[getQueueStats] Items pendientes encontrados:', pendingItems.map(item => ({
+          id: item.id,
+          type: item.type,
+          retries: item.retries,
+          status: item.status,
+          auditoriaId: item.auditoriaId
+        })));
+      }
 
       return stats;
     } catch (error) {
@@ -219,6 +234,23 @@ class SyncQueueService {
 
       for (const item of itemsToProcess) {
         try {
+          // Verificar si el item tiene datos válidos antes de procesar
+          if (item.type === 'CREATE_AUDITORIA') {
+            const auditoriaId = item.auditoriaId || item.payload?.id;
+            if (auditoriaId) {
+              // Verificar si la auditoría existe en IndexedDB y tiene datos completos
+              const auditoria = await db.get('auditorias', auditoriaId);
+              if (!auditoria || !auditoria.empresa || !auditoria.formulario) {
+                // Si no tiene datos completos y ya tiene varios reintentos, marcar como fallido
+                if (item.retries >= 3) {
+                  console.warn(`⚠️ Item ${item.id} tiene datos incompletos después de ${item.retries} intentos, marcando como fallido`);
+                  await this.handleItemError(item, new Error('Datos incompletos persistentes después de múltiples intentos'));
+                  continue;
+                }
+              }
+            }
+          }
+          
           await this.processItem(item);
         } catch (error) {
           console.error(`❌ Error procesando item ${item.id}:`, error);
@@ -296,15 +328,27 @@ class SyncQueueService {
             };
           } else {
             console.warn('[SyncQueue] Auditoría no encontrada en IndexedDB:', auditoriaIdToSearch);
+            // Si no se encuentra en IndexedDB y ya tiene varios reintentos, marcar como fallido inmediatamente
+            if (item.retries >= 3) {
+              throw new Error(`Auditoría no encontrada en IndexedDB después de ${item.retries} intentos. Datos perdidos o corruptos.`);
+            }
           }
         }
       } catch (error) {
         console.warn('[SyncQueue] No se pudo obtener auditoría completa de IndexedDB:', error);
+        // Si ya tiene varios reintentos y sigue sin datos, marcar como fallido
+        if (item.retries >= 3) {
+          throw new Error(`No se pudieron obtener datos de IndexedDB después de ${item.retries} intentos: ${error.message}`);
+        }
       }
     }
     
     // Validar que tengamos los datos requeridos antes de intentar sincronizar
     if (!auditoriaData.empresa || !auditoriaData.formulario) {
+      // Si ya tiene varios reintentos y sigue sin datos críticos, marcar como fallido inmediatamente
+      if (item.retries >= 3) {
+        throw new Error(`Faltan datos requeridos permanentemente (empresa: ${!!auditoriaData.empresa}, formulario: ${!!auditoriaData.formulario}) después de ${item.retries} intentos. Item corrupto.`);
+      }
       throw new Error(`Faltan datos requeridos (empresa: ${!!auditoriaData.empresa}, formulario: ${!!auditoriaData.formulario}) para sincronizar auditoría ${auditoriaIdToSearch || 'desconocida'}`);
     }
     
@@ -443,18 +487,25 @@ class SyncQueueService {
     const db = await getOfflineDatabase();
     const newRetries = item.retries + 1;
     
-    if (newRetries >= this.maxRetries) {
-      // Máximo de reintentos alcanzado, marcar como error
-      console.error(`❌ Item falló definitivamente después de ${this.maxRetries} intentos:`, item.id);
+    // Si el error indica que los datos están corruptos o perdidos permanentemente, marcar como fallido inmediatamente
+    const isPermanentError = error.message.includes('permanentemente') || 
+                            error.message.includes('Datos perdidos o corruptos') ||
+                            error.message.includes('Item corrupto') ||
+                            error.message.includes('no encontrada en IndexedDB después de');
+    
+    if (newRetries >= this.maxRetries || isPermanentError) {
+      // Máximo de reintentos alcanzado o error permanente, marcar como error
+      const reason = isPermanentError ? 'Error permanente (datos corruptos/perdidos)' : `Máximo de reintentos (${this.maxRetries}) alcanzado`;
+      console.error(`❌ Item falló definitivamente: ${reason} -`, item.id);
       
       await db.put('syncQueue', {
         ...item,
-        retries: newRetries,
+        retries: Math.max(newRetries, this.maxRetries), // Asegurar que tenga al menos maxRetries
         lastError: error.message,
         status: 'failed'
       });
 
-      this.notifyListeners('item_failed', { item, error: error.message });
+      this.notifyListeners('item_failed', { item, error: error.message, reason });
     } else {
       // Calcular próximo reintento con backoff exponencial
       const retryDelay = this.retryIntervals[Math.min(newRetries - 1, this.retryIntervals.length - 1)];
@@ -492,7 +543,10 @@ class SyncQueueService {
     try {
       const db = await getOfflineDatabase();
       const allItems = await db.getAll('syncQueue');
-      const failedItems = allItems.filter(item => item.retries >= this.maxRetries);
+      // Filtrar items fallidos: status 'failed' o retries >= maxRetries
+      const failedItems = allItems.filter(item => 
+        item.status === 'failed' || item.retries >= this.maxRetries
+      );
       
       for (const item of failedItems) {
         await db.delete('syncQueue', item.id);

@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { 
   Container, 
@@ -297,11 +297,20 @@ const AuditoriaRefactorizada = () => {
     }
   }, [empresaSeleccionada, sucursalSeleccionada, formularioSeleccionadoId, respuestas, comentarios, imagenes]);
 
+  // Refs para evitar bucle infinito en restauración
+  const restoreAttemptedRef = useRef(false);
+  const restoreRetriesRef = useRef(0);
+  const MAX_RESTORE_RETRIES = 10; // Máximo 10 segundos de espera
+
   // Intentar restaurar auditoría al cargar
   useEffect(() => {
-    const restoreAuditoria = async () => {
-      if (!userProfile?.uid) return;
+    // Evitar múltiples intentos simultáneos
+    if (restoreAttemptedRef.current) return;
+    if (!userProfile?.uid) return;
 
+    const restoreAuditoria = async () => {
+      if (restoreAttemptedRef.current) return;
+      
       try {
         const savedData = await autoSaveService.restoreAuditoria(userProfile.uid);
         
@@ -313,18 +322,26 @@ const AuditoriaRefactorizada = () => {
           
           if (!isIncomplete) {
             // Si está completada, limpiar el autoguardado
-            console.log('🗑️ Auditoría completada encontrada, limpiando autoguardado...');
+            restoreAttemptedRef.current = true;
             await autoSaveService.clearLocalStorage();
             return;
           }
 
           // Esperar a que los formularios estén cargados antes de restaurar
           if (formularios.length === 0) {
-            console.log('⏳ Esperando carga de formularios...');
-            // Esperar un poco y reintentar
-            setTimeout(() => restoreAuditoria(), 1000);
-            return;
+            if (restoreRetriesRef.current < MAX_RESTORE_RETRIES) {
+              restoreRetriesRef.current++;
+              setTimeout(() => restoreAuditoria(), 1000);
+              return;
+            } else {
+              // Si ya se intentó muchas veces sin éxito, marcar como intentado y salir
+              restoreAttemptedRef.current = true;
+              return;
+            }
           }
+
+          // Marcar como intentado antes de mostrar el diálogo
+          restoreAttemptedRef.current = true;
 
           // Mostrar confirmación para restaurar
           const shouldRestore = await Swal.fire({
@@ -349,20 +366,31 @@ const AuditoriaRefactorizada = () => {
             setActiveStep(savedData.activeStep || 0);
             setHasUnsavedChanges(false);
             setLastSaved(savedData.timestamp);
-            
-            console.log('✅ Auditoría restaurada con imágenes');
           } else {
             // Limpiar datos guardados si no se quiere restaurar
             autoSaveService.clearLocalStorage();
           }
+        } else {
+          // No hay datos para restaurar, marcar como intentado
+          restoreAttemptedRef.current = true;
         }
       } catch (error) {
         console.error('❌ Error al restaurar auditoría:', error);
+        restoreAttemptedRef.current = true;
       }
     };
 
     restoreAuditoria();
-  }, [userProfile?.uid, location.state?.auditoriaId, formularios.length]);
+  }, [userProfile?.uid, location.state?.auditoriaId]);
+  
+  // Resetear la bandera cuando cambian los formularios (para permitir reintento si se cargan después)
+  useEffect(() => {
+    if (formularios.length > 0 && !restoreAttemptedRef.current && restoreRetriesRef.current > 0) {
+      // Si los formularios se cargaron después de un intento fallido, permitir un nuevo intento
+      restoreAttemptedRef.current = false;
+      restoreRetriesRef.current = 0;
+    }
+  }, [formularios.length]);
 
 
   // Verificar firmas cuando cambien
@@ -574,6 +602,9 @@ const AuditoriaRefactorizada = () => {
         userEmpresas={userEmpresas}
         userSucursales={userSucursales}
         userFormularios={userFormularios}
+        empresas={empresas}
+        sucursales={sucursales}
+        formularios={formularios}
       />
 
       {/* Contenido principal */}
