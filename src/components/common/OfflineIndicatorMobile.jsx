@@ -14,6 +14,7 @@ import {
   CloudOff,
   CloudDone
 } from '@mui/icons-material';
+import Badge from '@mui/material/Badge';
 import { useConnectivity } from '../../hooks/useConnectivity';
 import syncQueueService from '../../services/syncQueue';
 
@@ -132,47 +133,83 @@ const OfflineIndicatorMobile = ({ userProfile }) => {
   };
 
   const indicatorState = getIndicatorState();
+  const hasPendingItems = queueStats && queueStats.total > 0;
+  const canSync = isOnline && hasPendingItems && !isProcessing;
 
   return (
     <>
       <Tooltip title={indicatorState.tooltip}>
-        <IconButton
-          size="small"
-          onClick={handleManualSync}
-          disabled={!isOnline && !queueStats?.total}
+        <Badge 
+          badgeContent={hasPendingItems && !isProcessing ? queueStats.total : 0}
+          color="error"
+          invisible={!hasPendingItems || isProcessing}
           sx={{
-            p: 0.5,
-            minWidth: 'auto',
-            width: 24,
-            height: 24,
-            cursor: (isOnline || queueStats?.total) ? 'pointer' : 'default',
-            '&:hover': {
-              backgroundColor: 'rgba(255,255,255,0.1)'
-            },
-            '&:disabled': {
-              opacity: 0.6,
-              cursor: 'not-allowed'
+            '& .MuiBadge-badge': {
+              fontSize: '0.65rem',
+              minWidth: '16px',
+              height: '16px',
+              padding: '0 4px',
+              animation: hasPendingItems && !isProcessing ? 'pulse 2s infinite' : 'none',
+              '@keyframes pulse': {
+                '0%, 100%': {
+                  opacity: 1,
+                  transform: 'scale(1)'
+                },
+                '50%': {
+                  opacity: 0.8,
+                  transform: 'scale(1.1)'
+                }
+              }
             }
           }}
         >
-          <Box
+          <IconButton
+            size="small"
+            onClick={handleManualSync}
+            disabled={!canSync}
             sx={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              width: 20,
-              height: 20,
-              borderRadius: '50%',
-              backgroundColor: `${indicatorState.color}.main`,
-              color: 'white',
+              p: 0.5,
+              minWidth: 'auto',
+              width: 24,
+              height: 24,
+              cursor: canSync ? 'pointer' : 'default',
+              animation: hasPendingItems && !isProcessing ? 'pulseButton 2s infinite' : 'none',
+              '@keyframes pulseButton': {
+                '0%, 100%': {
+                  opacity: 1
+                },
+                '50%': {
+                  opacity: 0.7
+                }
+              },
               '&:hover': {
-                backgroundColor: `${indicatorState.color}.dark`
+                backgroundColor: canSync ? 'rgba(255,255,255,0.1)' : 'transparent'
+              },
+              '&:disabled': {
+                opacity: 0.6,
+                cursor: 'not-allowed'
               }
             }}
           >
-            {indicatorState.icon}
-          </Box>
-        </IconButton>
+            <Box
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: 20,
+                height: 20,
+                borderRadius: '50%',
+                backgroundColor: `${indicatorState.color}.main`,
+                color: 'white',
+                '&:hover': {
+                  backgroundColor: canSync ? `${indicatorState.color}.dark` : `${indicatorState.color}.main`
+                }
+              }}
+            >
+              {indicatorState.icon}
+            </Box>
+          </IconButton>
+        </Badge>
       </Tooltip>
 
       {/* Snackbar para notificaciones */}

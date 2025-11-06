@@ -298,29 +298,33 @@ const Home = () => {
 
         {/* Título Control-Audit - más grande y notable */}
         <Typography 
-          variant="h2" 
           component="h1" 
           align="center" 
           gutterBottom 
           sx={{
             fontWeight: 800,
-            fontSize: { xs: '3.5rem', sm: '4rem', md: '4.5rem' },
+            fontSize: { xs: '1.75rem', sm: '2rem', md: '2.25rem' },
+            lineHeight: 1.2,
+            whiteSpace: 'nowrap',
             background: isDark 
               ? 'linear-gradient(135deg, #42a5f5 0%, #1976d2 100%)'
               : 'linear-gradient(135deg, #1976d2 0%, #42a5f5 100%)',
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
             backgroundClip: 'text',
-            mb: 3,
+            mb: 1.5,
             mt: 2,
             textShadow: isDark ? 'none' : '0 2px 4px rgba(0,0,0,0.1)',
-            letterSpacing: '0.02em'
+            letterSpacing: '0.01em',
+            '&.MuiTypography-root': {
+              fontSize: { xs: '1.75rem !important', sm: '2rem !important', md: '2.25rem !important' }
+            }
           }}
         >
           Control-Audit
         </Typography>
 
-        <div style={{ textAlign: 'center', marginTop: 24, marginBottom: 16 }}>
+        <div style={{ textAlign: 'center', marginTop: 8, marginBottom: 16 }}>
           <Button
             component={Link}
             to="/auditoria"
