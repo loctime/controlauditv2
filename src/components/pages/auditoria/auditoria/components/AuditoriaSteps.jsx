@@ -67,7 +67,6 @@ export const createAuditoriaSteps = ({
   handleFinalizar,
   
   // Funciones
-  obtenerUbicacion,
   validarTodasLasPreguntas,
   setOpenAlertaEdicion,
   
@@ -128,66 +127,6 @@ export const createAuditoriaSteps = ({
                 </Grid>
               )}
             </Grid>
-
-            {empresaSeleccionada && (
-              <Zoom in={true} timeout={600}>
-                <Box sx={{ 
-                  mt: isMobile ? 1 : 3, 
-                  background: `linear-gradient(135deg, ${alpha(theme.palette.success.main, 0.1)}, ${alpha(theme.palette.success.main, 0.05)})`,
-                  border: `2px solid ${alpha(theme.palette.success.main, 0.2)}`,
-                  borderRadius: 2,
-                  p: isMobile ? 1 : 3,
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
-                  overflow: 'hidden'
-                }}>
-                  <Box display="flex" alignItems="center" gap={isMobile ? 1 : 2}>
-                    <CheckCircleIcon 
-                      color="success" 
-                      sx={{ fontSize: isMobile ? 16 : 32 }} 
-                    />
-                    <Box flex={1}>
-                      <Typography 
-                        variant={isMobile ? "body2" : "h6"} 
-                        color="success.main" 
-                        gutterBottom
-                        sx={{ 
-                          fontWeight: 600,
-                          fontSize: isMobile ? '0.8rem' : '1.25rem'
-                        }}
-                      >
-                        Empresa Seleccionada
-                      </Typography>
-                      <Typography 
-                        variant="body2" 
-                        color="textSecondary"
-                        sx={{ 
-                          fontSize: isMobile ? '0.7rem' : '1rem',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                          overflow: 'hidden'
-                        }}
-                      >
-                        <strong>Empresa:</strong> {empresaSeleccionada.nombre} | 
-                        <strong> Ubicación:</strong> {obtenerUbicacion()}
-                      </Typography>
-                    </Box>
-                    {empresaSeleccionada.logo && (
-                      <img
-                        src={empresaSeleccionada.logo}
-                        alt={`Logo de ${empresaSeleccionada.nombre}`}
-                        style={{ 
-                          width: isMobile ? "24px" : "60px", 
-                          height: isMobile ? "24px" : "60px", 
-                          objectFit: 'contain',
-                          borderRadius: '8px'
-                        }}
-                        onError={(e) => { e.target.style.display = 'none'; }}
-                      />
-                    )}
-                  </Box>
-                </Box>
-              </Zoom>
-            )}
           </Box>
         </MuiFade>
       )
@@ -217,30 +156,6 @@ export const createAuditoriaSteps = ({
               disabled={!empresaSeleccionada}
               formularioAgendadoId={location.state?.formularioId}
             />
-            
-            {formularioSeleccionadoId && (
-              <Zoom in={true} timeout={600}>
-                <Card sx={{ 
-                  mt: 3, 
-                  background: `linear-gradient(135deg, ${alpha(theme.palette.info.main, 0.1)}, ${alpha(theme.palette.info.main, 0.05)})`,
-                  border: `2px solid ${alpha(theme.palette.info.main, 0.2)}`
-                }}>
-                  <CardContent>
-                    <Box display="flex" alignItems="center" gap={2}>
-                      <CheckCircleIcon color="info" sx={{ fontSize: 32 }} />
-                      <Box flex={1}>
-                        <Typography variant="h6" color="info.main" gutterBottom>
-                          Formulario Seleccionado
-                        </Typography>
-                        <Typography variant="body1" color="textSecondary">
-                          {formularios.find(f => f.id === formularioSeleccionadoId)?.nombre}
-                        </Typography>
-                      </Box>
-                    </Box>
-                  </CardContent>
-                </Card>
-              </Zoom>
-            )}
           </Box>
         </MuiFade>
       )
