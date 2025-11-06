@@ -5,7 +5,7 @@ Dashboard visual para monitorear indicadores clave de higiene y seguridad labora
 ## Ubicación
 
 - **Ruta**: `/dashboard-seguridad`
-- **Componente principal**: `src/components/pages/dashboard/DashboardSeguridad.jsx`
+- **Componente principal**: `src/components/pages/dashboard/DashboardSeguridadV2.jsx`
 
 ## Acceso
 
@@ -17,15 +17,35 @@ Se puede acceder desde el menú lateral o directamente navegando a `/dashboard-s
 
 ## Componentes
 
-### DashboardHeader
-Header del dashboard con logo y período actual.
+### PeriodSelector
+Selector de año y mes para filtrar datos del dashboard.
 
-### KpiCard
-Tarjetas de indicadores con:
-- Estados de color (success/warning/critical)
-- Iconos descriptivos
-- Barra de progreso opcional
-- Subtítulos informativos
+### SucursalSelector
+Selector de sucursal para filtrar datos por ubicación.
+
+### GaugeChart
+Gráficos de medidores circulares para métricas de cumplimiento:
+- Actividades SST/año
+- Actividades SST/mes
+- Capacitaciones/año
+
+### EmployeeMetrics
+Métricas de empleados:
+- Total de empleados (operarios y administradores)
+- Días sin accidentes
+- Horas trabajadas
+
+### SafetyGoals
+Objetivos de seguridad:
+- Índice de Frecuencia (IF)
+- Índice de Gravedad (IG)
+- Índice de Accidentabilidad (IA)
+
+### TrainingMetrics
+Métricas de capacitación:
+- Charlas de seguridad
+- Entrenamientos
+- Capacitaciones
 
 ### SafetyCharts
 Gráficos usando Recharts:
@@ -39,39 +59,24 @@ Gráficos usando Recharts:
 ### Servicio de datos
 `src/services/safetyDashboardService.js`
 
-### Estructura de datos en Firestore
+El servicio obtiene datos en tiempo real de múltiples fuentes:
+- **Auditorías** (`auditorias` collection): Para calcular cumplimiento legal y desvíos
+- **Logs de operarios** (`logs_operarios` collection): Para accidentes e incidentes
+- **Formularios** (`formularios` collection): Para capacitaciones e inspecciones
+- **Empleados**: Para métricas de personal
 
-**Colección**: `safetyDashboard`
-**ID de documento**: `{companyId}-{period}` (ej: `company-001-2025-01`)
+### Datos en tiempo real
 
-```javascript
-{
-  companyId: string,
-  companyName: string,
-  period: string,              // Formato: YYYY-MM
-  totalAccidents: number,
-  totalIncidents: number,
-  daysWithoutAccidents: number,
-  frequencyIndex: number,
-  severityIndex: number,
-  trainingsDone: number,
-  trainingsPlanned: number,
-  inspectionsDone: number,
-  inspectionsPlanned: number,
-  deviationsFound: number,
-  deviationsClosed: number,
-  eppDeliveryRate: number,     // Porcentaje 0-100
-  contractorCompliance: number, // Porcentaje 0-100
-  legalCompliance: number,      // Porcentaje 0-100
-  alerts: string[]              // Array de mensajes de alerta
-}
-```
+El dashboard utiliza listeners de Firestore (`onSnapshot`) para actualizaciones automáticas cuando cambian los datos.
 
-## Datos de ejemplo
+### Estructura de datos
 
-Si no hay datos en Firestore, el sistema muestra datos de ejemplo automáticamente.
-
-Para agregar datos reales, crea un documento en Firestore con la estructura mencionada arriba.
+Los datos se calculan dinámicamente desde las colecciones de Firestore. El servicio procesa:
+- Accidentes e incidentes desde logs
+- Desvíos desde respuestas "No conforme" en auditorías
+- Cumplimiento legal desde porcentaje de respuestas "Conforme"
+- Capacitaciones desde formularios que contengan "capacitación", "entrenamiento" o "training"
+- Inspecciones desde formularios que contengan "inspección" en el nombre
 
 ## Personalización
 
@@ -81,7 +86,7 @@ Para agregar datos reales, crea un documento en Firestore con la estructura menc
 - **Critical**: Rojo (< umbral advertencia)
 
 ### Umbrales predeterminados
-Los umbrales se definen en `DashboardSeguridad.jsx` y pueden ser ajustados según necesidad.
+Los umbrales se definen en `DashboardSeguridadV2.jsx` y pueden ser ajustados según necesidad.
 
 ## Iconos
 

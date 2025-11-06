@@ -14,6 +14,7 @@ export const useAuditoriaState = () => {
   const [respuestas, setRespuestas] = useState([]);
   const [comentarios, setComentarios] = useState([]);
   const [imagenes, setImagenes] = useState([]);
+  const [clasificaciones, setClasificaciones] = useState([]);
   const [mostrarReporte, setMostrarReporte] = useState(false);
   const [errores, setErrores] = useState([]);
   const [empresas, setEmpresas] = useState([]);
@@ -54,7 +55,8 @@ export const useAuditoriaState = () => {
       formulario: formularioSeleccionadoId,
       respuestas: JSON.stringify(respuestas),
       comentarios: JSON.stringify(comentarios),
-      imagenes: imagenes.length
+      imagenes: imagenes.length,
+      clasificaciones: JSON.stringify(clasificaciones)
     };
     return btoa(JSON.stringify(datos));
   };
@@ -69,7 +71,7 @@ export const useAuditoriaState = () => {
     }
     
     setAuditoriaHash(nuevoHash);
-  }, [empresaSeleccionada, sucursalSeleccionada, formularioSeleccionadoId, respuestas, comentarios, imagenes]);
+  }, [empresaSeleccionada, sucursalSeleccionada, formularioSeleccionadoId, respuestas, comentarios, imagenes, clasificaciones]);
 
   // Marcar firmas como válidas cuando se completan
   useEffect(() => {
@@ -101,6 +103,7 @@ export const useAuditoriaState = () => {
     setRespuestas([]);
     setComentarios([]);
     setImagenes([]);
+    setClasificaciones([]);
     setMostrarReporte(false);
     setAuditoriaGenerada(false);
     setActiveStep(0);
@@ -125,6 +128,7 @@ export const useAuditoriaState = () => {
     respuestas, setRespuestas,
     comentarios, setComentarios,
     imagenes, setImagenes,
+    clasificaciones, setClasificaciones,
     mostrarReporte, setMostrarReporte,
     errores, setErrores,
     empresas, setEmpresas,

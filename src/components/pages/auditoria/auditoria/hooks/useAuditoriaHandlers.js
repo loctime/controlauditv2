@@ -19,6 +19,7 @@ export const useAuditoriaHandlers = ({
   respuestas,
   comentarios,
   imagenes,
+  clasificaciones,
   activeStep,
   firmaAuditor,
   firmaResponsable,
@@ -34,6 +35,7 @@ export const useAuditoriaHandlers = ({
   setRespuestas,
   setComentarios,
   setImagenes,
+  setClasificaciones,
   setFirmaAuditor,
   setFirmaResponsable,
   setFirmasCompletadas,
@@ -80,6 +82,10 @@ export const useAuditoriaHandlers = ({
     setImagenes(nuevasImagenes);
   }, [setImagenes]);
 
+  const handleGuardarClasificaciones = useCallback((nuevasClasificaciones) => {
+    setClasificaciones(nuevasClasificaciones);
+  }, [setClasificaciones]);
+
   // Handlers de firmas
   const verificarFirmasCompletadasLocal = useCallback(() => {
     const completadas = verificarFirmasCompletadas(firmaAuditor, firmaResponsable);
@@ -103,10 +109,11 @@ export const useAuditoriaHandlers = ({
     const hasData = empresaSeleccionada || sucursalSeleccionada || formularioSeleccionadoId || 
                    respuestas.some(seccion => seccion.some(resp => resp !== '')) ||
                    comentarios.some(seccion => seccion.some(com => com !== '')) ||
-                   imagenes.some(seccion => seccion.some(img => img !== null));
+                   imagenes.some(seccion => seccion.some(img => img !== null)) ||
+                   clasificaciones.some(seccion => seccion.some(clas => clas && (clas.condicion || clas.actitud)));
     
     return hasData && hasUnsavedChanges;
-  }, [empresaSeleccionada, sucursalSeleccionada, formularioSeleccionadoId, respuestas, comentarios, imagenes, hasUnsavedChanges]);
+  }, [empresaSeleccionada, sucursalSeleccionada, formularioSeleccionadoId, respuestas, comentarios, imagenes, clasificaciones, hasUnsavedChanges]);
 
   const handleAutoSave = useCallback(async () => {
     if (!userProfile?.uid) return;
@@ -123,6 +130,7 @@ export const useAuditoriaHandlers = ({
         respuestas,
         comentarios,
         imagenes, // Guardar las imágenes reales (File objects)
+        clasificaciones,
         activeStep,
         timestamp: Date.now()
       };
@@ -139,7 +147,7 @@ export const useAuditoriaHandlers = ({
     } finally {
       setIsSaving(false);
     }
-  }, [userProfile?.uid, empresaSeleccionada, sucursalSeleccionada, formularioSeleccionadoId, secciones, respuestas, comentarios, imagenes, activeStep, setIsSaving, setLastSaved, setHasUnsavedChanges]);
+  }, [userProfile?.uid, empresaSeleccionada, sucursalSeleccionada, formularioSeleccionadoId, secciones, respuestas, comentarios, imagenes, clasificaciones, activeStep, setIsSaving, setLastSaved, setHasUnsavedChanges]);
 
   const handleDiscardChanges = useCallback(async () => {
     try {
@@ -262,6 +270,7 @@ export const useAuditoriaHandlers = ({
     handleGuardarRespuestas,
     handleGuardarComentario,
     handleGuardarImagenes,
+    handleGuardarClasificaciones,
     
     // Handlers de firmas
     handleSaveFirmaAuditor,

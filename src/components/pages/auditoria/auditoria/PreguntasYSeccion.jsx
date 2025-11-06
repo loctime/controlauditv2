@@ -18,10 +18,12 @@ const PreguntasYSeccion = ({
   guardarRespuestas, 
   guardarComentario, 
   guardarImagenes,
+  guardarClasificaciones,
   // Props para mantener respuestas existentes
   respuestasExistentes = [],
   comentariosExistentes = [],
-  imagenesExistentes = []
+  imagenesExistentes = [],
+  clasificacionesExistentes = []
 }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -43,6 +45,7 @@ const PreguntasYSeccion = ({
 
   const [respuestas, setRespuestas] = useState([]);
   const [comentarios, setComentarios] = useState([]);
+  const [clasificaciones, setClasificaciones] = useState([]);
   const [modalAbierto, setModalAbierto] = useState(false);
   const [comentario, setComentario] = useState("");
   const [currentSeccionIndex, setCurrentSeccionIndex] = useState(null);
@@ -83,9 +86,17 @@ const PreguntasYSeccion = ({
       );
       setImagenes(newImagenes);
 
+      // Inicializar con clasificaciones existentes o vacías
+      const newClasificaciones = secciones.map((seccion, seccionIndex) => 
+        Array(seccion.preguntas.length).fill(null).map((_, preguntaIndex) => 
+          clasificacionesExistentes[seccionIndex]?.[preguntaIndex] || { condicion: false, actitud: false }
+        )
+      );
+      setClasificaciones(newClasificaciones);
+
       setInitialized(true);
     }
-  }, [initialized, secciones, respuestasExistentes, comentariosExistentes, imagenesExistentes]);
+  }, [initialized, secciones, respuestasExistentes, comentariosExistentes, imagenesExistentes, clasificacionesExistentes]);
 
   const handleRespuestaChange = (seccionIndex, preguntaIndex, value) => {
     const respuestaActual = respuestas[seccionIndex]?.[preguntaIndex];
@@ -120,6 +131,16 @@ const PreguntasYSeccion = ({
       guardarComentario(nuevosComentarios);
       setModalAbierto(false);
       setComentario("");
+    }
+  };
+
+  const handleClasificacionChange = (seccionIndex, preguntaIndex, nuevaClasificacion) => {
+    const nuevasClasificaciones = clasificaciones.map((clas, index) =>
+      index === seccionIndex ? [...clas.slice(0, preguntaIndex), nuevaClasificacion, ...clas.slice(preguntaIndex + 1)] : clas
+    );
+    setClasificaciones(nuevasClasificaciones);
+    if (guardarClasificaciones) {
+      guardarClasificaciones(nuevasClasificaciones);
     }
   };
 
@@ -329,12 +350,14 @@ const PreguntasYSeccion = ({
                 respuesta={respuestas[seccionIndex]?.[preguntaIndex] || ''}
                 comentario={comentarios[seccionIndex]?.[preguntaIndex] || ''}
                 imagenes={imagenes[seccionIndex]?.[preguntaIndex] || null}
+                clasificacion={clasificaciones[seccionIndex]?.[preguntaIndex] || { condicion: false, actitud: false }}
                 isMobile={isMobile}
                 mobileBoxStyle={mobileBoxStyle}
                 onRespuestaChange={handleRespuestaChange}
                 onOpenModal={handleOpenModal}
                 onOpenCameraDialog={handleOpenCameraDialog}
                 onDeleteImage={handleDeleteImage}
+                onClasificacionChange={handleClasificacionChange}
                 procesandoImagen={procesandoImagen}
               />
             ))}
