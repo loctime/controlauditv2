@@ -84,7 +84,7 @@ ControlAudit v2 ahora incluye **funcionalidad offline completa** que permite rea
 
 ### **Modo Online**
 1. Usuario crea auditoría → Se guarda en Firebase
-2. Fotos se suben a Firebase Storage
+2. Fotos se suben a **ControlFile** (Backblaze B2)
 3. Indicador muestra "Sincronizado"
 
 ### **Modo Offline**
@@ -96,9 +96,10 @@ ControlAudit v2 ahora incluye **funcionalidad offline completa** que permite rea
 ### **Restauración de Conexión**
 1. Sistema detecta conexión automáticamente
 2. Cola de sincronización se procesa automáticamente
-3. Fotos se suben a Firebase Storage
+3. Fotos se suben a **ControlFile** (los Blobs se convierten a Files)
 4. Auditorías se sincronizan con Firebase
-5. Indicador actualiza estado
+5. Si las carpetas no existen en ControlFile, se crean automáticamente
+6. Indicador actualiza estado
 
 ## 📊 **Esquema de Base de Datos**
 

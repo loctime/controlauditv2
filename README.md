@@ -16,7 +16,8 @@ ControlAudit v2 es una aplicación web progresiva (PWA) que permite realizar aud
 - 🔄 **Sincronización Automática** - Datos se sincronizan al volver online
 - 📊 **Base de Datos Local** - IndexedDB para almacenamiento offline
 - 🖼️ **Fotos Offline** - Captura y almacenamiento local de imágenes
-- 🔐 **Autenticación Firebase** - Sistema de usuarios robusto
+- 🗂️ **Integración ControlFile** - Almacenamiento de archivos en ControlFile
+- 🔐 **Autenticación Firebase** - Sistema de usuarios robusto (compartido con ControlFile)
 - 📈 **Reportes en Tiempo Real** - Dashboard con métricas actualizadas
 
 ## 🎯 **Estado del Proyecto**
@@ -288,6 +289,10 @@ vercel --prod
 - **CORS** configurado correctamente
 
 ## 📚 **Documentación**
+
+### Integración ControlFile
+- 📖 **[CONTROLFILE_INTEGRATION.md](./CONTROLFILE_INTEGRATION.md)** - Guía completa de integración con ControlFile
+- 📖 **[CONTROLFILE_SETUP.md](./CONTROLFILE_SETUP.md)** - Guía rápida de configuración
 
 ### **Guías Disponibles**
 - `IMPLEMENTACION_OFFLINE_FINAL.md` - **Implementación completa offline**
