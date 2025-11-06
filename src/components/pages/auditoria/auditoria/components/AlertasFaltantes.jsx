@@ -14,31 +14,26 @@ const AlertasFaltantes = memo(({
   const hasCache = localStorage.getItem('complete_user_cache');
   
   if (!userEmpresas || userEmpresas.length === 0) {
-    // Si estamos offline y hay cache, intentar cargar desde cache
+    // Si estamos offline y hay cache, verificar si hay empresas en cache
     if (isOffline && hasCache) {
-      console.warn('⚠️ [AlertasFaltantes] Offline detectado con cache disponible, intentando cargar...');
       try {
         const cacheData = JSON.parse(hasCache);
         if (cacheData.empresas && cacheData.empresas.length > 0) {
-          console.log('✅ [AlertasFaltantes] Empresas encontradas en cache:', cacheData.empresas.length);
-          // No podemos setear aquí directamente, pero informamos
-          return (
-            <Alert severity="warning" sx={{ mb: 2 }}>
-              ⚠️ Modo offline detectado. Empresas encontradas en cache: {cacheData.empresas.length}
-              <br />
-              Recarga la página o vuelve a conectar para ver las empresas.
-            </Alert>
-          );
+          // Si hay empresas en cache, NO mostrar alerta (ya están disponibles)
+          return null;
         }
       } catch (e) {
         console.error('Error parseando cache:', e);
       }
     }
+    // Solo mostrar alerta si realmente NO hay empresas disponibles
     return (
       <Alert severity="error" sx={{ mb: 3 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2 }}>
           <Typography variant="body1">
-            🏢 No hay empresas disponibles. No puedes crear auditorías sin empresas asignadas.
+            🏢 No hay empresas disponibles.
+            <br />
+            Si estás sin conexión, debes precargar páginas.
           </Typography>
           <Button
             variant="contained"
@@ -53,11 +48,25 @@ const AlertasFaltantes = memo(({
   }
 
   if (!userSucursales || userSucursales.length === 0) {
+    // Si estamos offline y hay cache, verificar si hay sucursales en cache
+    if (isOffline && hasCache) {
+      try {
+        const cacheData = JSON.parse(hasCache);
+        if (cacheData.sucursales && cacheData.sucursales.length > 0) {
+          // Si hay sucursales en cache, NO mostrar alerta (ya están disponibles)
+          return null;
+        }
+      } catch (e) {
+        console.error('Error parseando cache:', e);
+      }
+    }
     return (
       <Alert severity="warning" sx={{ mb: 3 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2 }}>
           <Typography variant="body1">
             🏪 No hay sucursales disponibles. Crea sucursales para poder auditar.
+            <br />
+            Si estás sin conexión, debes precargar páginas.
           </Typography>
           <Button
             variant="contained"
@@ -72,11 +81,25 @@ const AlertasFaltantes = memo(({
   }
 
   if (!userFormularios || userFormularios.length === 0) {
+    // Si estamos offline y hay cache, verificar si hay formularios en cache
+    if (isOffline && hasCache) {
+      try {
+        const cacheData = JSON.parse(hasCache);
+        if (cacheData.formularios && cacheData.formularios.length > 0) {
+          // Si hay formularios en cache, NO mostrar alerta (ya están disponibles)
+          return null;
+        }
+      } catch (e) {
+        console.error('Error parseando cache:', e);
+      }
+    }
     return (
       <Alert severity="info" sx={{ mb: 3 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2 }}>
           <Typography variant="body1">
             📋 No hay formularios disponibles. Crea o importa formularios para realizar auditorías.
+            <br />
+            Si estás sin conexión, debes precargar páginas.
           </Typography>
           <Button
             variant="contained"
