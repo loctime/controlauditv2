@@ -118,6 +118,64 @@ const AuthContextComponent = ({ children }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userProfile?.uid, role, userProfile?.clienteAdminId]);
 
+  // Estado para rastrear si estamos online
+  const [isOnline, setIsOnline] = useState(typeof navigator !== 'undefined' ? navigator.onLine : true);
+  
+  // Actualizar estado online/offline
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
+  // Actualizar cache automáticamente cuando los datos cambian (después de reconexión)
+  useEffect(() => {
+    if (!userProfile?.uid || !user || !isLogged) return;
+    
+    // Solo actualizar si hay datos y estamos online
+    const shouldUpdateCache = 
+      userEmpresas?.length > 0 && 
+      isOnline &&
+      !loadingEmpresas && 
+      !loadingSucursales && 
+      !loadingFormularios;
+    
+    if (shouldUpdateCache) {
+      // Debounce: esperar 3 segundos después del último cambio para evitar actualizaciones excesivas
+      const timeoutId = setTimeout(async () => {
+        try {
+          const completeProfile = {
+            ...userProfile,
+            clienteAdminId: userProfile.clienteAdminId || userProfile.uid,
+            email: userProfile.email || user?.email,
+            displayName: userProfile.displayName || user?.displayName || user?.email,
+            role: userProfile.role || 'operario'
+          };
+          
+          await saveCompleteUserCache(
+            completeProfile,
+            userEmpresas,
+            userSucursales || [],
+            userFormularios || []
+          );
+          console.log('✅ Cache actualizado automáticamente con datos actuales');
+        } catch (error) {
+          console.error('❌ Error actualizando cache automáticamente:', error);
+        }
+      }, 3000);
+      
+      return () => clearTimeout(timeoutId);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userProfile?.uid, userEmpresas?.length, userSucursales?.length, userFormularios?.length, isLogged, isOnline]);
+
   // Efecto principal de autenticación
   useEffect(() => {
     const timeoutId = setTimeout(() => {
@@ -129,7 +187,9 @@ const AuthContextComponent = ({ children }) => {
     }, 2500);
     
     const handleOnline = () => {
-      // Los listeners se encargarán automáticamente
+      console.log('🌐 Conexión restaurada');
+      // Los listeners se actualizarán automáticamente
+      // El cache se actualizará en el useEffect de abajo cuando los datos cambien
     };
     
     window.addEventListener('online', handleOnline);
@@ -161,24 +221,33 @@ const AuthContextComponent = ({ children }) => {
                 loadUserFormularios(firebaseUser.uid, empresasCargadas, profile)
               ]);
 
-              try {
-                const completeProfile = {
-                  ...profile,
-                  clienteAdminId: profile.clienteAdminId || profile.uid,
-                  email: profile.email || firebaseUser.email,
-                  displayName: profile.displayName || firebaseUser.displayName || firebaseUser.email,
-                  role: profile.role || 'operario'
-                };
-                
-                await saveCompleteUserCache(
-                  completeProfile, 
-                  empresasCargadas, 
-                  sucursalesCargadas, 
-                  formulariosCargados
-                );
-                console.log('✅ Cache guardado');
-              } catch (error) {
-                console.error('Error guardando cache:', error);
+              // Verificar que tenemos datos antes de guardar cache
+              if (empresasCargadas && empresasCargadas.length > 0) {
+                try {
+                  const completeProfile = {
+                    ...profile,
+                    clienteAdminId: profile.clienteAdminId || profile.uid,
+                    email: profile.email || firebaseUser.email,
+                    displayName: profile.displayName || firebaseUser.displayName || firebaseUser.email,
+                    role: profile.role || 'operario'
+                  };
+                  
+                  await saveCompleteUserCache(
+                    completeProfile, 
+                    empresasCargadas, 
+                    sucursalesCargadas || [], 
+                    formulariosCargados || []
+                  );
+                  console.log('✅ Cache guardado con datos:', {
+                    empresas: empresasCargadas.length,
+                    sucursales: (sucursalesCargadas || []).length,
+                    formularios: (formulariosCargados || []).length
+                  });
+                } catch (error) {
+                  console.error('❌ Error guardando cache:', error);
+                }
+              } else {
+                console.warn('⚠️ No se guardó cache: no hay empresas cargadas');
               }
               
               // Inicializar carpetas de ControlFile después de autenticación exitosa
@@ -205,10 +274,19 @@ const AuthContextComponent = ({ children }) => {
           const wasLoggedIn = localStorage.getItem("isLogged") === "true";
           
           if (wasLoggedIn) {
+            console.log('📴 Modo offline detectado - cargando desde cache...');
             const cachedUser = await loadUserFromCache();
             
             if (cachedUser && cachedUser.userProfile) {
               const cachedProfile = cachedUser.userProfile;
+              console.log('✅ Cache encontrado para usuario:', cachedProfile.email);
+              console.log('📊 Datos en cache:', {
+                empresas: cachedUser.empresas?.length || 0,
+                sucursales: cachedUser.sucursales?.length || 0,
+                formularios: cachedUser.formularios?.length || 0,
+                auditorias: cachedUser.auditorias?.length || 0
+              });
+              
               setUserProfile(cachedProfile);
               
               const simulatedUser = {
@@ -228,7 +306,7 @@ const AuthContextComponent = ({ children }) => {
               localStorage.setItem("userInfo", JSON.stringify(simulatedUser));
               localStorage.setItem("isLogged", JSON.stringify(true));
               
-              if (cachedUser.empresas?.length > 0) {
+              if (cachedUser.empresas && cachedUser.empresas.length > 0) {
                 let empresasFiltradas = cachedUser.empresas;
                 if (cachedProfile.role !== 'supermax') {
                   empresasFiltradas = cachedUser.empresas.filter(empresa => 
@@ -240,22 +318,39 @@ const AuthContextComponent = ({ children }) => {
                 }
                 setUserEmpresas(empresasFiltradas);
                 setLoadingEmpresas(false);
+                console.log('✅ Empresas cargadas desde cache:', empresasFiltradas.length);
+              } else {
+                console.warn('⚠️ No hay empresas en cache');
+                setUserEmpresas([]);
+                setLoadingEmpresas(false);
               }
               
-              if (cachedUser.sucursales?.length > 0) {
+              if (cachedUser.sucursales && cachedUser.sucursales.length > 0) {
                 setUserSucursales(cachedUser.sucursales);
+                setLoadingSucursales(false);
+                console.log('✅ Sucursales cargadas desde cache:', cachedUser.sucursales.length);
+              } else {
+                console.warn('⚠️ No hay sucursales en cache');
+                setUserSucursales([]);
                 setLoadingSucursales(false);
               }
               
-              if (cachedUser.formularios?.length > 0) {
+              if (cachedUser.formularios && cachedUser.formularios.length > 0) {
                 setUserFormularios(cachedUser.formularios);
+                setLoadingFormularios(false);
+                console.log('✅ Formularios cargados desde cache:', cachedUser.formularios.length);
+              } else {
+                console.warn('⚠️ No hay formularios en cache');
+                setUserFormularios([]);
                 setLoadingFormularios(false);
               }
               
-              if (cachedUser.auditorias?.length > 0) {
+              if (cachedUser.auditorias && cachedUser.auditorias.length > 0) {
                 setUserAuditorias(cachedUser.auditorias);
+                console.log('✅ Auditorías cargadas desde cache:', cachedUser.auditorias.length);
               }
             } else {
+              console.error('❌ No hay cache válido disponible');
               setUser(null);
               setIsLogged(false);
               setUserEmpresas([]);

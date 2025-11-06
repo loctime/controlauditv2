@@ -9,7 +9,14 @@ const EditarFormulario = lazy(() => import("../components/pages/editar/EditarFor
 const Informe = lazy(() => import("../components/pages/auditoria/Informe"));
 const ReportesPage = lazy(() => import("../components/pages/auditoria/reporte/ReportesPage"));
 const PerfilUsuario = lazy(() => import("../components/pages/perfil/PerfilUsuario"));
-const LogsOperarios = lazy(() => import('../components/pages/usuarios').then(module => ({ default: module.LogsOperarios })));
+const LogsOperarios = lazy(() => import('../components/pages/usuarios').then(module => {
+  // Asegurar que siempre retornamos un componente válido
+  const Component = module.LogsOperarios || module.default;
+  if (!Component) {
+    throw new Error('LogsOperarios component not found');
+  }
+  return { default: Component };
+}));
 const Dashboard = lazy(() => import("../components/pages/dashboard/Dashboard"));
 const DashboardSeguridad = lazy(() => import("../components/pages/dashboard/DashboardSeguridadV2"));
 const ClienteDashboard = lazy(() => import("../components/pages/admin/ClienteDashboard"));
