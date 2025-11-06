@@ -5,7 +5,10 @@ const AlertasFaltantes = memo(({
   cargandoDatosRespaldo,
   userEmpresas,
   userSucursales,
-  userFormularios
+  userFormularios,
+  empresas = [],
+  sucursales = [],
+  formularios = []
 }) => {
   if (cargandoDatosRespaldo) return null;
 
@@ -13,7 +16,12 @@ const AlertasFaltantes = memo(({
   const isOffline = !navigator.onLine;
   const hasCache = localStorage.getItem('complete_user_cache');
   
-  if (!userEmpresas || userEmpresas.length === 0) {
+  // Verificar datos disponibles (del contexto o cargados localmente)
+  const empresasDisponibles = (userEmpresas && userEmpresas.length > 0) || (empresas && empresas.length > 0);
+  const sucursalesDisponibles = (userSucursales && userSucursales.length > 0) || (sucursales && sucursales.length > 0);
+  const formulariosDisponibles = (userFormularios && userFormularios.length > 0) || (formularios && formularios.length > 0);
+  
+  if (!empresasDisponibles) {
     // Si estamos offline y hay cache, verificar si hay empresas en cache
     if (isOffline && hasCache) {
       try {
@@ -47,7 +55,7 @@ const AlertasFaltantes = memo(({
     );
   }
 
-  if (!userSucursales || userSucursales.length === 0) {
+  if (!sucursalesDisponibles) {
     // Si estamos offline y hay cache, verificar si hay sucursales en cache
     if (isOffline && hasCache) {
       try {
@@ -80,7 +88,7 @@ const AlertasFaltantes = memo(({
     );
   }
 
-  if (!userFormularios || userFormularios.length === 0) {
+  if (!formulariosDisponibles) {
     // Si estamos offline y hay cache, verificar si hay formularios en cache
     if (isOffline && hasCache) {
       try {

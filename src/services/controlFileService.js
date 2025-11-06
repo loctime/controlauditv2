@@ -15,17 +15,17 @@ const getToken = async (forceRefresh = false) => {
   // Obtener token (forzar refresh si es necesario)
   const token = await user.getIdToken(forceRefresh);
   
-  // Debug: verificar el proyecto del token (decodificar JWT)
-  try {
-    const payload = JSON.parse(atob(token.split('.')[1]));
-    console.log('[controlFileService] 🔑 Token info:', {
-      projectId: payload.aud,
-      email: payload.email,
-      uid: payload.user_id,
-      exp: new Date(payload.exp * 1000).toISOString()
-    });
-  } catch (e) {
-    // Ignorar errores de decodificación
+  // Debug: verificar el proyecto del token (solo en desarrollo)
+  if (process.env.NODE_ENV === 'development') {
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      // Solo log si hay problema con el proyecto
+      if (payload.aud !== 'controlstorage-eb796') {
+        console.warn('[controlFileService] ⚠️ Token de proyecto incorrecto:', payload.aud);
+      }
+    } catch (e) {
+      // Ignorar errores de decodificación
+    }
   }
   
   return token;
@@ -74,9 +74,7 @@ export const createTaskbarFolder = async (appName) => {
     }
     
     const result = await response.json();
-    console.log('[controlFileService] ✅ Respuesta completa del backend:', result);
     const folderId = result.folderId || result.folder?.id || result.id;
-    console.log('[controlFileService] ✅ Carpeta creada en taskbar con ID:', folderId);
     return folderId;
   } catch (error) {
     console.error('[controlFileService] ❌ Error al crear carpeta en taskbar:', error);
@@ -127,7 +125,6 @@ export const createNavbarFolder = async (name, parentId = null) => {
     }
     
     const result = await response.json();
-    console.log('[controlFileService] ✅ Carpeta creada en navbar:', result.folderId);
     return result.folderId;
   } catch (error) {
     console.error('[controlFileService] ❌ Error al crear carpeta en navbar:', error);

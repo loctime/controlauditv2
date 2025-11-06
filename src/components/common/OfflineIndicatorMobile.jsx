@@ -51,11 +51,26 @@ const OfflineIndicatorMobile = ({ userProfile }) => {
 
   // Listener para cambios en el procesamiento
   useEffect(() => {
-    const removeListener = syncQueueService.addListener((event, data) => {
+    const removeListener = syncQueueService.addListener(async (event, data) => {
       if (event === 'processing_started') {
         setIsProcessing(true);
       } else if (event === 'processing_stopped') {
         setIsProcessing(false);
+        // Actualizar estadísticas cuando termina el procesamiento
+        try {
+          const queue = await syncQueueService.getQueueStats();
+          setQueueStats(queue);
+        } catch (error) {
+          console.error('Error al actualizar estadísticas:', error);
+        }
+      } else if (event === 'item_success' || event === 'item_failed') {
+        // Actualizar estadísticas cuando un item se procesa
+        try {
+          const queue = await syncQueueService.getQueueStats();
+          setQueueStats(queue);
+        } catch (error) {
+          console.error('Error al actualizar estadísticas:', error);
+        }
       }
     });
 
@@ -134,7 +149,6 @@ const OfflineIndicatorMobile = ({ userProfile }) => {
 
   const indicatorState = getIndicatorState();
   const hasPendingItems = queueStats && queueStats.total > 0;
-  const canSync = isOnline && hasPendingItems && !isProcessing;
 
   return (
     <>
@@ -166,13 +180,13 @@ const OfflineIndicatorMobile = ({ userProfile }) => {
           <IconButton
             size="small"
             onClick={handleManualSync}
-            disabled={!canSync}
+            disabled={!isOnline && !queueStats?.total}
             sx={{
               p: 0.5,
               minWidth: 'auto',
               width: 24,
               height: 24,
-              cursor: canSync ? 'pointer' : 'default',
+              cursor: (isOnline || queueStats?.total) ? 'pointer' : 'default',
               animation: hasPendingItems && !isProcessing ? 'pulseButton 2s infinite' : 'none',
               '@keyframes pulseButton': {
                 '0%, 100%': {
@@ -183,7 +197,7 @@ const OfflineIndicatorMobile = ({ userProfile }) => {
                 }
               },
               '&:hover': {
-                backgroundColor: canSync ? 'rgba(255,255,255,0.1)' : 'transparent'
+                backgroundColor: (isOnline || queueStats?.total) ? 'rgba(255,255,255,0.1)' : 'transparent'
               },
               '&:disabled': {
                 opacity: 0.6,
@@ -202,7 +216,7 @@ const OfflineIndicatorMobile = ({ userProfile }) => {
                 backgroundColor: `${indicatorState.color}.main`,
                 color: 'white',
                 '&:hover': {
-                  backgroundColor: canSync ? `${indicatorState.color}.dark` : `${indicatorState.color}.main`
+                  backgroundColor: (isOnline || queueStats?.total) ? `${indicatorState.color}.dark` : `${indicatorState.color}.main`
                 }
               }}
             >
