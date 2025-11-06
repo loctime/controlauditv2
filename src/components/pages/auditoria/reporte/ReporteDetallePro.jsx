@@ -11,6 +11,7 @@ import {
   normalizarRespuestas, 
   normalizarImagenes, 
   normalizarComentarios, 
+  normalizarClasificaciones,
   normalizarFecha,
   normalizarEmpresaCompleta,
   normalizarFormularioCompleto
@@ -77,10 +78,13 @@ const ReporteDetallePro = forwardRef(({ open = false, onClose = () => {}, report
   const respuestasNormalizadas = normalizarRespuestas(reporte.respuestas || []);
   const imagenesNormalizadas = normalizarImagenes(reporte.imagenes, secciones);
   const comentariosNormalizados = normalizarComentarios(reporte.comentarios, secciones);
+  const clasificacionesNormalizadas = normalizarClasificaciones(reporte.clasificaciones, secciones);
   const fecha = normalizarFecha(reporte);
 
   // Debug logs para ver qué datos están llegando
-  console.debug('[ReporteDetallePro] reporte completo:', reporte);
+  console.log('🔍 [ReporteDetallePro] reporte.clasificaciones RAW:', reporte.clasificaciones);
+  console.log('🔍 [ReporteDetallePro] clasificacionesNormalizadas:', clasificacionesNormalizadas);
+  console.log('🔍 [ReporteDetallePro] Tipo de clasificaciones RAW:', typeof reporte.clasificaciones, Array.isArray(reporte.clasificaciones));
   console.debug('[ReporteDetallePro] empresa normalizada:', empresa);
   console.debug('[ReporteDetallePro] formulario normalizado:', formulario);
   console.debug('[ReporteDetallePro] sucursal:', sucursal);
@@ -145,6 +149,7 @@ const ReporteDetallePro = forwardRef(({ open = false, onClose = () => {}, report
       secciones,
       comentarios: comentariosNormalizados,
       imagenes: imagenesNormalizadas,
+      clasificaciones: clasificacionesNormalizadas,
       firmaAuditor: reporte.firmaAuditor,
       nombreAuditor,
       firmaResponsable: firmaResponsableFinal,
@@ -264,6 +269,7 @@ const ReporteDetallePro = forwardRef(({ open = false, onClose = () => {}, report
                  respuestas={respuestasNormalizadas}
                  comentarios={comentariosNormalizados}
                  imagenes={imagenesNormalizadas}
+                 clasificaciones={clasificacionesNormalizadas}
                />
              </Box>
           </Box>
@@ -405,6 +411,7 @@ const ReporteDetallePro = forwardRef(({ open = false, onClose = () => {}, report
           respuestas={respuestasNormalizadas}
           comentarios={comentariosNormalizados}
           imagenes={imagenesNormalizadas}
+          clasificaciones={clasificacionesNormalizadas}
         />
       </Box>
 

@@ -164,12 +164,16 @@ const PreguntaItem = ({
             variant={clasificacion?.condicion ? "contained" : "outlined"}
             startIcon={<BuildIcon />}
             onClick={() => {
+              console.log('🔍 [PreguntaItem] Click en botón Condición:', { seccionIndex, preguntaIndex, clasificacion, onClasificacionChange: !!onClasificacionChange });
               if (onClasificacionChange) {
                 const nuevaClasificacion = {
                   condicion: !clasificacion?.condicion,
                   actitud: clasificacion?.actitud || false
                 };
+                console.log('🔍 [PreguntaItem] Llamando onClasificacionChange con:', nuevaClasificacion);
                 onClasificacionChange(seccionIndex, preguntaIndex, nuevaClasificacion);
+              } else {
+                console.error('🔍 [PreguntaItem] onClasificacionChange NO está definido!');
               }
             }}
             sx={{ 
@@ -194,12 +198,16 @@ const PreguntaItem = ({
             variant={clasificacion?.actitud ? "contained" : "outlined"}
             startIcon={<PeopleIcon />}
             onClick={() => {
+              console.log('🔍 [PreguntaItem] Click en botón Actitud:', { seccionIndex, preguntaIndex, clasificacion, onClasificacionChange: !!onClasificacionChange });
               if (onClasificacionChange) {
                 const nuevaClasificacion = {
                   condicion: clasificacion?.condicion || false,
                   actitud: !clasificacion?.actitud
                 };
+                console.log('🔍 [PreguntaItem] Llamando onClasificacionChange con:', nuevaClasificacion);
                 onClasificacionChange(seccionIndex, preguntaIndex, nuevaClasificacion);
+              } else {
+                console.error('🔍 [PreguntaItem] onClasificacionChange NO está definido!');
               }
             }}
             sx={{ 

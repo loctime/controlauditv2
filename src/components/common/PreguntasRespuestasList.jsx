@@ -1,5 +1,7 @@
 import React from "react";
-import { Box, Typography, Paper, Divider } from "@mui/material";
+import { Box, Typography, Paper, Divider, Chip } from "@mui/material";
+import BuildIcon from '@mui/icons-material/Build';
+import PeopleIcon from '@mui/icons-material/People';
 
 /**
  * .Componente reutilizable para mostrar preguntas, respuestas, comentarios e imágenes agrupadas por sección.
@@ -8,8 +10,9 @@ import { Box, Typography, Paper, Divider } from "@mui/material";
  * - respuestas: array de arrays de string
  * - comentarios: array de arrays de string
  * - imagenes: array de arrays de string (urls)
+ * - clasificaciones: array de arrays de objetos { condicion: boolean, actitud: boolean }
  */
-const PreguntasRespuestasList = ({ secciones = [], respuestas = [], comentarios = [], imagenes = [] }) => {
+const PreguntasRespuestasList = ({ secciones = [], respuestas = [], comentarios = [], imagenes = [], clasificaciones = [] }) => {
   // Debug de props
   if (process.env.NODE_ENV === 'development') {
     // eslint-disable-next-line no-console
@@ -20,6 +23,8 @@ const PreguntasRespuestasList = ({ secciones = [], respuestas = [], comentarios 
     console.log('[PreguntasRespuestasList] comentarios:', comentarios);
     // eslint-disable-next-line no-console
     console.log('[PreguntasRespuestasList] imagenes:', imagenes);
+    // eslint-disable-next-line no-console
+    console.log('[PreguntasRespuestasList] clasificaciones:', clasificaciones);
   }
 
   if (!Array.isArray(secciones) || secciones.length === 0) {
@@ -90,10 +95,16 @@ const PreguntasRespuestasList = ({ secciones = [], respuestas = [], comentarios 
               const comentario = comentarios[sIdx]?.[pIdx] || "";
               const imagen = imagenes[sIdx]?.[pIdx];
               const imagenProcesada = procesarImagen(imagen, sIdx, pIdx);
+              const clasificacion = clasificaciones[sIdx]?.[pIdx] || { condicion: false, actitud: false };
               
-              console.debug(`[PreguntasRespuestasList] Sección ${sIdx}, Pregunta ${pIdx}:`, {
-                imagen: imagen,
-                imagenProcesada: imagenProcesada
+              // Log más visible para debug
+              console.log(`🔍 [PreguntasRespuestasList] Sección ${sIdx}, Pregunta ${pIdx} - Clasificación:`, {
+                clasificacion: clasificacion,
+                tieneCondicion: clasificacion.condicion,
+                tieneActitud: clasificacion.actitud,
+                mostrarChips: clasificacion.condicion || clasificacion.actitud,
+                tipoCondicion: typeof clasificacion.condicion,
+                tipoActitud: typeof clasificacion.actitud
               });
 
               return (
@@ -104,6 +115,31 @@ const PreguntasRespuestasList = ({ secciones = [], respuestas = [], comentarios 
                   <Typography variant="body2" sx={{ mb: 0.5 }}>
                     <strong>Respuesta:</strong> {mostrarRespuesta}
                   </Typography>
+                  
+                  {/* Clasificaciones */}
+                  {(clasificacion.condicion || clasificacion.actitud) && (
+                    <Box sx={{ mb: 0.5, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                      {clasificacion.condicion && (
+                        <Chip 
+                          icon={<BuildIcon />}
+                          label="Condición" 
+                          size="small" 
+                          color="info"
+                          sx={{ fontSize: '0.7rem', height: '24px' }}
+                        />
+                      )}
+                      {clasificacion.actitud && (
+                        <Chip 
+                          icon={<PeopleIcon />}
+                          label="Actitud" 
+                          size="small" 
+                          color="secondary"
+                          sx={{ fontSize: '0.7rem', height: '24px' }}
+                        />
+                      )}
+                    </Box>
+                  )}
+                  
                   {comentario && comentario.trim() !== "" && (
                     <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic', mb: 0.5 }}>
                       <strong>Comentario:</strong> {comentario}

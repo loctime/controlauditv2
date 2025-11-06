@@ -135,12 +135,22 @@ const PreguntasYSeccion = ({
   };
 
   const handleClasificacionChange = (seccionIndex, preguntaIndex, nuevaClasificacion) => {
+    console.log('🔍 [PreguntasYSeccion] handleClasificacionChange llamado:', {
+      seccionIndex,
+      preguntaIndex,
+      nuevaClasificacion,
+      clasificacionesActuales: clasificaciones
+    });
     const nuevasClasificaciones = clasificaciones.map((clas, index) =>
       index === seccionIndex ? [...clas.slice(0, preguntaIndex), nuevaClasificacion, ...clas.slice(preguntaIndex + 1)] : clas
     );
+    console.log('🔍 [PreguntasYSeccion] Nuevas clasificaciones después del cambio:', nuevasClasificaciones);
     setClasificaciones(nuevasClasificaciones);
     if (guardarClasificaciones) {
+      console.log('🔍 [PreguntasYSeccion] Llamando a guardarClasificaciones con:', nuevasClasificaciones);
       guardarClasificaciones(nuevasClasificaciones);
+    } else {
+      console.warn('🔍 [PreguntasYSeccion] guardarClasificaciones NO está definido!');
     }
   };
 

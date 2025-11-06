@@ -264,6 +264,7 @@ const AuditoriaRefactorizada = () => {
     handleGuardarRespuestas,
     handleGuardarComentario,
     handleGuardarImagenes,
+    handleGuardarClasificaciones,
     handleSaveFirmaAuditor,
     handleSaveFirmaResponsable,
     verificarFirmasCompletadas,
@@ -511,6 +512,15 @@ const AuditoriaRefactorizada = () => {
     }
   }, [location.state, empresaSeleccionada, sucursalSeleccionada, formularioSeleccionadoId, activeStep]);
 
+  // Debug: Verificar clasificaciones antes de crear pasos
+  useEffect(() => {
+    console.log('🔍 [Auditoria] clasificaciones en estado:', clasificaciones);
+    console.log('🔍 [Auditoria] Tipo:', typeof clasificaciones, Array.isArray(clasificaciones));
+    if (Array.isArray(clasificaciones) && clasificaciones.length > 0) {
+      console.log('🔍 [Auditoria] Contenido:', JSON.stringify(clasificaciones, null, 2));
+    }
+  }, [clasificaciones]);
+
   // Crear los pasos usando el componente
   const steps = createAuditoriaSteps({
     // Estados
@@ -538,6 +548,7 @@ const AuditoriaRefactorizada = () => {
     handleGuardarRespuestas,
     handleGuardarComentario,
     handleGuardarImagenes,
+    handleGuardarClasificaciones,
     handleSaveFirmaAuditor,
     handleSaveFirmaResponsable,
     handleFinalizar: () => handleFinalizar(marcarAuditoriaCompletada),
