@@ -304,7 +304,7 @@ const Home = () => {
           gutterBottom 
           sx={{
             fontWeight: 800,
-            fontSize: { xs: '2.5rem', sm: '3.5rem', md: '4.5rem' },
+            fontSize: { xs: '3.5rem', sm: '4rem', md: '4.5rem' },
             background: isDark 
               ? 'linear-gradient(135deg, #42a5f5 0%, #1976d2 100%)'
               : 'linear-gradient(135deg, #1976d2 0%, #42a5f5 100%)',

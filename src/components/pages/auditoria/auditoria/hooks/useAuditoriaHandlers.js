@@ -114,6 +114,7 @@ export const useAuditoriaHandlers = ({
     setIsSaving(true);
     
     try {
+      // Guardar imágenes REALES (File objects), no solo strings
       const auditoriaData = {
         empresaSeleccionada,
         sucursalSeleccionada,
@@ -121,16 +122,18 @@ export const useAuditoriaHandlers = ({
         secciones,
         respuestas,
         comentarios,
-        imagenes: imagenes.map(seccion => seccion.map(img => img ? 'image' : null)),
+        imagenes, // Guardar las imágenes reales (File objects)
         activeStep,
         timestamp: Date.now()
       };
 
-      await autoSaveService.saveToFirestore(userProfile.uid, auditoriaData);
+      // Usar saveAuditoria que guarda en IndexedDB con imágenes reales
+      await autoSaveService.saveAuditoria(userProfile.uid, auditoriaData);
+      
       setLastSaved(Date.now());
       setHasUnsavedChanges(false);
       
-      console.log('✅ Autoguardado exitoso');
+      console.log('✅ Autoguardado exitoso (con imágenes)');
     } catch (error) {
       console.error('❌ Error en autoguardado:', error);
     } finally {
