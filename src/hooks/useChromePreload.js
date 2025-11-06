@@ -26,9 +26,18 @@ export const useChromePreload = () => {
   ];
 
   const startPreload = async () => {
-    if (!shouldPreload || isPreloading || hasPreloaded.current) return;
+    // Verificar si ya se precargó en esta sesión
+    const hasPreloadedThisSession = sessionStorage.getItem('chrome_preload_done') === 'true';
+    
+    if (!shouldPreload || isPreloading || hasPreloaded.current || hasPreloadedThisSession) {
+      if (hasPreloadedThisSession) {
+        console.log('ℹ️ [ChromePreload] Ya se precargó en esta sesión, saltando...');
+      }
+      return;
+    }
     
     hasPreloaded.current = true;
+    sessionStorage.setItem('chrome_preload_done', 'true');
 
     console.log('🚀 [ChromePreload] Iniciando precarga automática para Chrome...');
     setIsPreloading(true);
