@@ -31,11 +31,16 @@ export const useConnectivity = () => {
         return true;
       }
 
+      // Si navigator.onLine dice false, no intentar verificar (ahorra tiempo)
+      if (typeof navigator !== 'undefined' && !navigator.onLine) {
+        return false;
+      }
+
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 3000); // 3 segundos timeout
 
       // Usar un endpoint más confiable para móvil
-      const response = await fetch('https://www.google.com/favicon.ico', {
+      await fetch('https://www.google.com/favicon.ico', {
         method: 'HEAD',
         signal: controller.signal,
         cache: 'no-cache',
@@ -45,7 +50,10 @@ export const useConnectivity = () => {
       clearTimeout(timeoutId);
       return true; // Si no hay error, asumimos conectividad
     } catch (error) {
-      console.log('🔍 Verificación de conectividad falló:', error.message);
+      // Silenciar errores de conectividad (es normal cuando no hay internet)
+      if (error.name !== 'AbortError') {
+        console.log('🔍 Verificación de conectividad falló:', error.message);
+      }
       return false;
     }
   }, []);
@@ -97,25 +105,36 @@ export const useConnectivity = () => {
   // Manejar cambios de conectividad
   const handleOnline = useCallback(async () => {
     console.log('🌐 Conexión restaurada');
-    // Verificar conectividad real en móvil
-    const realConnectivity = await checkRealConnectivity();
-    setIsOnline(realConnectivity);
-    if (realConnectivity) {
-      setLastOnlineTime(Date.now());
-      // Activar sincronización automática si no se ha activado ya
-      if (!autoSyncTriggered) {
-        await triggerAutoSync();
+    // Usar setTimeout para evitar actualizaciones durante el render
+    setTimeout(async () => {
+      try {
+        // Verificar conectividad real en móvil
+        const realConnectivity = await checkRealConnectivity();
+        setIsOnline(realConnectivity);
+        if (realConnectivity) {
+          setLastOnlineTime(Date.now());
+          // Activar sincronización automática si no se ha activado ya
+          if (!autoSyncTriggered) {
+            await triggerAutoSync();
+          }
+        }
+        detectConnectionType();
+      } catch (error) {
+        console.error('Error en handleOnline:', error);
+        setIsOnline(false);
       }
-    }
-    detectConnectionType();
+    }, 0);
   }, [detectConnectionType, checkRealConnectivity, autoSyncTriggered, triggerAutoSync]);
 
   const handleOffline = useCallback(() => {
     console.log('📴 Conexión perdida');
-    setIsOnline(false);
-    setAutoSyncTriggered(false); // Reset para permitir nueva sincronización automática
-    setLastSyncAttempt(0); // Reset del debounce
-    detectConnectionType();
+    // Usar setTimeout para evitar actualizaciones durante el render
+    setTimeout(() => {
+      setIsOnline(false);
+      setAutoSyncTriggered(false); // Reset para permitir nueva sincronización automática
+      setLastSyncAttempt(0); // Reset del debounce
+      detectConnectionType();
+    }, 0);
   }, [detectConnectionType]);
 
   // Configurar listeners
@@ -130,13 +149,22 @@ export const useConnectivity = () => {
       detectConnectionType();
 
       // Verificación inicial de conectividad real (especialmente para móvil)
+      // Usar setTimeout para evitar actualizaciones durante el render
       const initialConnectivityCheck = async () => {
-        if (typeof navigator !== 'undefined' && navigator.onLine) {
-          const realConnectivity = await checkRealConnectivity();
-          if (!realConnectivity) {
-            console.log('📱 Móvil: navigator.onLine dice online pero no hay conectividad real');
-            setIsOnline(false);
+        try {
+          if (typeof navigator !== 'undefined' && navigator.onLine) {
+            const realConnectivity = await checkRealConnectivity();
+            if (!realConnectivity) {
+              console.log('📱 Móvil: navigator.onLine dice online pero no hay conectividad real');
+              // Usar setTimeout para evitar actualizar durante render
+              setTimeout(() => {
+                setIsOnline(false);
+              }, 0);
+            }
           }
+        } catch (error) {
+          console.error('Error en verificación inicial de conectividad:', error);
+          // No actualizar estado si hay error, dejar el valor inicial
         }
       };
 
