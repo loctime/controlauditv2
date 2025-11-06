@@ -343,10 +343,47 @@ const AuthContextComponent = ({ children }) => {
                         setUserEmpresas(empresasFiltradas);
                         setLoadingEmpresas(false);
                         console.log('✅ [Chrome] Empresas cargadas desde localStorage:', empresasFiltradas.length);
+                        // Mostrar toast solo en móvil/Chrome (async)
+                        if (window.matchMedia('(display-mode: standalone)').matches) {
+                          import('react-toastify').then(({ toast }) => {
+                            toast.success(`✅ Modo offline: ${empresasFiltradas.length} empresas cargadas desde cache`, {
+                              autoClose: 4000,
+                              position: 'top-center'
+                            });
+                          });
+                        }
+                      } else {
+                        // No hay empresas en localStorage tampoco
+                        if (window.matchMedia('(display-mode: standalone)').matches) {
+                          import('react-toastify').then(({ toast }) => {
+                            toast.warning('⚠️ No hay empresas en cache. Conecta a internet y precarga las páginas.', {
+                              autoClose: 6000,
+                              position: 'top-center'
+                            });
+                          });
+                        }
+                      }
+                    } else {
+                      // No hay cache en localStorage
+                      if (window.matchMedia('(display-mode: standalone)').matches) {
+                        import('react-toastify').then(({ toast }) => {
+                          toast.error('❌ No hay cache disponible. Conecta a internet y precarga las páginas primero.', {
+                            autoClose: 7000,
+                            position: 'top-center'
+                          });
+                        });
                       }
                     }
                   } catch (e) {
                     console.error('Error cargando desde localStorage:', e);
+                    if (window.matchMedia('(display-mode: standalone)').matches) {
+                      import('react-toastify').then(({ toast }) => {
+                        toast.error(`❌ Error cargando cache: ${e.message}`, {
+                          autoClose: 7000,
+                          position: 'top-center'
+                        });
+                      });
+                    }
                   }
                 }
                 if (!userEmpresas || userEmpresas.length === 0) {

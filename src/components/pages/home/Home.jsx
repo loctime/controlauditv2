@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import './Home.css';
 import { Typography, Button, Grid, List, ListItem, ListItemIcon, ListItemText, Divider, useTheme, Box, LinearProgress, Alert } from '@mui/material';
+import { toast } from 'react-toastify';
 import { Link } from 'react-router-dom';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import DescriptionIcon from '@mui/icons-material/Description';
@@ -233,7 +234,7 @@ const Home = () => {
                     if (userProfile && userEmpresas?.length > 0) {
                       console.log('💾 [Home Chrome] Forzando guardado del cache después de precarga...');
                       try {
-                        const { saveCompleteUserCache } = await import('../../services/completeOfflineCache');
+                        const { saveCompleteUserCache } = await import('../../../services/completeOfflineCache');
                         
                         const completeProfile = {
                           ...userProfile,
@@ -251,14 +252,23 @@ const Home = () => {
                         );
                         
                         console.log('✅ [Home Chrome] Cache guardado correctamente después de precarga');
-                        alert('✅ Precarga completada y cache guardado correctamente');
+                        toast.success(`✅ Cache guardado: ${userEmpresas.length} empresas, ${userSucursales?.length || 0} sucursales, ${userFormularios?.length || 0} formularios`, {
+                          autoClose: 5000,
+                          position: 'top-center'
+                        });
                       } catch (error) {
                         console.error('❌ [Home Chrome] Error guardando cache:', error);
-                        alert('⚠️ Precarga completada, pero hubo un error guardando el cache');
+                        toast.error(`❌ Error guardando cache: ${error.message}`, {
+                          autoClose: 7000,
+                          position: 'top-center'
+                        });
                       }
                     } else {
                       console.warn('⚠️ [Home Chrome] No hay datos para guardar en cache');
-                      alert('⚠️ No hay datos disponibles para guardar en cache');
+                      toast.warning('⚠️ No hay datos disponibles para guardar en cache. Asegúrate de estar conectado.', {
+                        autoClose: 5000,
+                        position: 'top-center'
+                      });
                     }
                   }}
                   sx={{ 
