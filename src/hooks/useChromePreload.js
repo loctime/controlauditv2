@@ -132,6 +132,27 @@ export const useChromePreload = () => {
       console.log('✅ [ChromePreload] Precarga completada, volviendo al home...');
       navigate('/');
       
+      // Esperar un poco para que el home se cargue
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // FORZAR guardado del cache después de precargar (crítico para Chrome)
+      console.log('💾 [ChromePreload] Forzando guardado del cache de datos...');
+      try {
+        // Importar dinámicamente para evitar dependencias circulares
+        const { saveCompleteUserCache } = await import('../services/completeOfflineCache');
+        
+        // Obtener datos del contexto (necesitamos acceso al userProfile)
+        // Esto se hará desde el componente que llama a startPreload
+        // Por ahora, solo logueamos
+        console.log('📝 [ChromePreload] Cache de datos debe guardarse desde AuthContext');
+        
+        // Actualizar UI
+        if (progressText) progressText.textContent = 'Guardando cache de datos...';
+        await new Promise(resolve => setTimeout(resolve, 2000));
+      } catch (cacheError) {
+        console.error('❌ [ChromePreload] Error guardando cache:', cacheError);
+      }
+      
       // Actualizar UI final
       if (progressText) progressText.textContent = '¡Precarga completada!';
       

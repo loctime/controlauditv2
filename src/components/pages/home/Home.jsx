@@ -225,7 +225,42 @@ const Home = () => {
                 <Button
                   variant="contained"
                   size="small"
-                  onClick={startPreload}
+                  onClick={async () => {
+                    // Iniciar precarga
+                    await startPreload();
+                    
+                    // DESPUÉS de precargar, forzar guardado del cache
+                    if (userProfile && userEmpresas?.length > 0) {
+                      console.log('💾 [Home Chrome] Forzando guardado del cache después de precarga...');
+                      try {
+                        const { saveCompleteUserCache } = await import('../../services/completeOfflineCache');
+                        
+                        const completeProfile = {
+                          ...userProfile,
+                          clienteAdminId: userProfile.clienteAdminId || userProfile.uid,
+                          email: userProfile.email,
+                          displayName: userProfile.displayName || userProfile.email,
+                          role: userProfile.role || 'operario'
+                        };
+                        
+                        await saveCompleteUserCache(
+                          completeProfile,
+                          userEmpresas || [],
+                          userSucursales || [],
+                          userFormularios || []
+                        );
+                        
+                        console.log('✅ [Home Chrome] Cache guardado correctamente después de precarga');
+                        alert('✅ Precarga completada y cache guardado correctamente');
+                      } catch (error) {
+                        console.error('❌ [Home Chrome] Error guardando cache:', error);
+                        alert('⚠️ Precarga completada, pero hubo un error guardando el cache');
+                      }
+                    } else {
+                      console.warn('⚠️ [Home Chrome] No hay datos para guardar en cache');
+                      alert('⚠️ No hay datos disponibles para guardar en cache');
+                    }
+                  }}
                   sx={{ 
                     background: 'linear-gradient(90deg, #1976d2, #42a5f5)',
                     '&:hover': { background: 'linear-gradient(90deg, #1565c0, #1976d2)' }
