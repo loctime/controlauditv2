@@ -108,7 +108,7 @@ export const generarDetallesAuditoria = ({
 };
 
 // Template del resumen estadístico
-export const generarResumenEstadistico = ({ C, NC, NM, NA, total, pct }) => {
+export const generarResumenEstadistico = ({ C, NC, NM, NA, total, pct }, resumenClasificaciones = null) => {
   return `
     <div class="stats-summary">
       <div class="stats-title">📊 RESUMEN ESTADÍSTICO DE LA AUDITORÍA</div>
@@ -140,6 +140,27 @@ export const generarResumenEstadistico = ({ C, NC, NM, NA, total, pct }) => {
           <div class="stat-percentage">100%</div>
         </div>
       </div>
+
+      ${resumenClasificaciones ? `
+        <div class="stats-title" style="margin-top: 24px;">🔧 CLASIFICACIÓN DE HALLAZGOS</div>
+        <div class="stats-grid">
+          <div class="stat-card" style="background: #e3f2fd; border: 1px solid #2196f3;">
+            <div class="stat-number">${resumenClasificaciones.condicion}</div>
+            <div class="stat-label">Condición</div>
+            <div class="stat-percentage">${resumenClasificaciones.pct(resumenClasificaciones.condicion)}%</div>
+          </div>
+          <div class="stat-card" style="background: #f3e5f5; border: 1px solid #9c27b0;">
+            <div class="stat-number">${resumenClasificaciones.actitud}</div>
+            <div class="stat-label">Actitud</div>
+            <div class="stat-percentage">${resumenClasificaciones.pct(resumenClasificaciones.actitud)}%</div>
+          </div>
+          <div class="stat-card" style="background: #eceff1; border: 1px solid #90a4ae;">
+            <div class="stat-number">${resumenClasificaciones.total}</div>
+            <div class="stat-label">Total ítems</div>
+            <div class="stat-percentage">100%</div>
+          </div>
+        </div>
+      ` : ''}
     </div>
   `;
 };

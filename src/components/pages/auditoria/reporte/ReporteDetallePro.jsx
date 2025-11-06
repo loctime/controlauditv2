@@ -177,6 +177,7 @@ const ReporteDetallePro = forwardRef(({ open = false, onClose = () => {}, report
       comentarios: comentariosNormalizados,
       imagenes: imagenesNormalizadas,
       clasificaciones: clasificacionesNormalizadas,
+      estadisticasClasificaciones,
       firmaAuditor: reporte.firmaAuditor,
       nombreAuditor,
       firmaResponsable: firmaResponsableFinal,

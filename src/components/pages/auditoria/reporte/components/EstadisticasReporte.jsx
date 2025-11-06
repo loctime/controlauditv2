@@ -59,16 +59,18 @@ const EstadisticasReporte = ({
             />
           </Box>
 
-          <Box sx={{ flex: 1, minWidth: 260 }}>
-            <EstadisticasChartSimple
-              ref={clasificacionesChartRef}
-              estadisticas={{
-                Condición: estadisticasClasificaciones?.['Condición'] || 0,
-                Actitud: estadisticasClasificaciones?.['Actitud'] || 0
-              }}
-              title="Clasificación (Condición / Actitud)"
-            />
-          </Box>
+          {mostrarClasificaciones && (
+            <Box sx={{ flex: 1, minWidth: 260 }}>
+              <EstadisticasChartSimple
+                ref={clasificacionesChartRef}
+                estadisticas={{
+                  Condición: estadisticasClasificaciones?.['Condición'] || 0,
+                  Actitud: estadisticasClasificaciones?.['Actitud'] || 0
+                }}
+                title="Clasificación (Condición / Actitud)"
+              />
+            </Box>
+          )}
         </Box>
       </Box>
 

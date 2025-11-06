@@ -22,6 +22,7 @@ function generarContenidoImpresion({
   comentarios, // array de arrays (ya normalizado)
   imagenes, // array de arrays (urls o vacío)
   clasificaciones, // array de arrays de objetos { condicion: boolean, actitud: boolean }
+  estadisticasClasificaciones = null,
   firmaAuditor,
   chartImgDataUrl, // dataURL del gráfico general (Google Charts)
   clasificacionesChartImgDataUrl = '', // dataURL del gráfico de clasificaciones
@@ -44,6 +45,29 @@ function generarContenidoImpresion({
   const NA = contar('No aplica');
 
   const pct = (n) => total > 0 ? ((n / total) * 100).toFixed(1) : "0.0";
+
+  let condicion = 0;
+  let actitud = 0;
+  let totalClasificaciones = 0;
+
+  if (estadisticasClasificaciones) {
+    condicion = Number(estadisticasClasificaciones['Condición']) || 0;
+    actitud = Number(estadisticasClasificaciones['Actitud']) || 0;
+    totalClasificaciones = Number(estadisticasClasificaciones['Total']) || 0;
+  } else if (clasificaciones && Array.isArray(clasificaciones)) {
+    clasificaciones.forEach(seccion => {
+      if (Array.isArray(seccion)) {
+        seccion.forEach(clas => {
+          totalClasificaciones++;
+          if (clas && clas.condicion) condicion++;
+          if (clas && clas.actitud) actitud++;
+        });
+      }
+    });
+  }
+
+  const pctClas = (n) => totalClasificaciones > 0 ? ((n / totalClasificaciones) * 100).toFixed(1) : "0.0";
+  const resumenClasificaciones = totalClasificaciones > 0 ? { condicion, actitud, total: totalClasificaciones, pct: pctClas } : null;
 
   // Helpers seguros
   const val = (x) => (x ?? "").toString();
@@ -129,7 +153,7 @@ ${estilosCSS}
     fechaFin 
   })}
 
-  ${generarResumenEstadistico({ C, NC, NM, NA, total, pct })}
+  ${generarResumenEstadistico({ C, NC, NM, NA, total, pct }, resumenClasificaciones)}
 
   <div style="display: flex; gap: 20px; margin: 20px 0; flex-wrap: wrap;">
     ${generarGraficoPrincipal(chartImgDataUrl)}
