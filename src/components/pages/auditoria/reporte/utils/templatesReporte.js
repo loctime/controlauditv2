@@ -295,15 +295,17 @@ export const generarFirmas = ({ firmaAuditor, firmaResponsable, nombreAuditor, e
         <div class="signature-box">
           <div class="signature-label">Firma del Auditor</div>
           <div class="signature-image">
-            ${firmaAuditor ? `<img src="${firmaAuditor}" alt="Firma Auditor" />` : `<span style="color: #6c757d; font-size: 12px;">No hay firma registrada</span>`}
+            ${firmaAuditor ? `<img src="${firmaAuditor}" alt="Firma Auditor" />` : ''}
           </div>
+          ${!firmaAuditor ? `<div class="signature-placeholder">No hay firma registrada</div>` : ''}
           <div class="signature-name">${nombreAuditor || ''}</div>
         </div>
         <div class="signature-box">
           <div class="signature-label">Firma de la Empresa</div>
           <div class="signature-image">
-            ${firmaResponsable ? `<img src="${firmaResponsable}" alt="Firma Empresa" />` : `<span style="color: #6c757d; font-size: 12px;">No hay firma registrada</span>`}
+            ${firmaResponsable ? `<img src="${firmaResponsable}" alt="Firma Empresa" />` : ''}
           </div>
+          ${!firmaResponsable ? `<div class="signature-placeholder">No hay firma registrada</div>` : ''}
           <div class="signature-name">Representante de ${empresaNombre}</div>
         </div>
       </div>
