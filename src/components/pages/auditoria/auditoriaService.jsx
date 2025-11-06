@@ -437,6 +437,7 @@ class AuditoriaService {
         respuestas: this.anidarAObjetosPorSeccion(datosAuditoria.respuestas),
         comentarios: this.anidarAObjetosPorSeccion(datosAuditoria.comentarios),
         imagenes: this.anidarAObjetosPorSeccion(imagenesProcesadas),
+        clasificaciones: this.anidarAObjetosPorSeccion(datosAuditoria.clasificaciones || []),
         secciones: Array.isArray(datosAuditoria.secciones) ? datosAuditoria.secciones.map(seccion => {
           // Asegurar que las secciones no contengan arrays anidados
           if (seccion && typeof seccion === 'object') {

@@ -81,7 +81,7 @@ export const generarContenidoImpresion = ({
   `;
 
   // Agregar secciones y preguntas
-  contenido += generarSeccionesHTML(secciones, respuestas, comentarios, imagenes);
+  contenido += generarSeccionesHTML(secciones, respuestas, comentarios, imagenes, clasificaciones);
 
   // Agregar sección de firmas
   contenido += generarFirmasHTML(firmaAuditor, firmaResponsable, userProfile);
@@ -107,7 +107,7 @@ export const generarContenidoImpresion = ({
  * @param {Array} imagenes - Imágenes por sección
  * @returns {string} - HTML de las secciones
  */
-const generarSeccionesHTML = (secciones, respuestas, comentarios, imagenes) => {
+const generarSeccionesHTML = (secciones, respuestas, comentarios, imagenes, clasificaciones) => {
   let contenido = '';
 
   if (secciones && secciones.length > 0) {
@@ -122,11 +122,20 @@ const generarSeccionesHTML = (secciones, respuestas, comentarios, imagenes) => {
           const respuesta = respuestas[seccionIndex]?.[preguntaIndex] || 'No respondida';
           const comentario = comentarios[seccionIndex]?.[preguntaIndex] || '';
           const imagen = imagenes[seccionIndex]?.[preguntaIndex];
+          const clas = clasificaciones?.[seccionIndex]?.[preguntaIndex] || { condicion: false, actitud: false };
+          
+          const clasificacionText = [];
+          if (clas.condicion) clasificacionText.push('Condición');
+          if (clas.actitud) clasificacionText.push('Actitud');
+          const clasificacionHTML = clasificacionText.length > 0 
+            ? `<div class="clasificacion" style="margin-left: 20px; margin-top: 5px; font-size: 12px; color: #666;"><strong>Clasificación:</strong> ${clasificacionText.join(', ')}</div>` 
+            : '';
 
           contenido += `
             <div class="pregunta">
               <div class="pregunta-texto">${preguntaIndex + 1}. ${pregunta}</div>
               <div class="respuesta"><strong>Respuesta:</strong> ${respuesta}</div>
+              ${clasificacionHTML}
               ${comentario && comentario.trim() !== '' ? `<div class="comentario"><strong>Comentario:</strong> ${comentario}</div>` : ''}
               ${imagen && imagen instanceof File ? `<div class="imagen"><img src="${URL.createObjectURL(imagen)}" alt="Imagen de la pregunta" style="max-width: 200px; max-height: 150px;" /></div>` : ''}
             </div>

@@ -21,6 +21,7 @@ function generarContenidoImpresion({
   secciones,  // [{ nombre, preguntas: [...] }, ...]
   comentarios, // array de arrays (ya normalizado)
   imagenes, // array de arrays (urls o vacío)
+  clasificaciones, // array de arrays de objetos { condicion: boolean, actitud: boolean }
   firmaAuditor,
   chartImgDataUrl, // dataURL del gráfico general (Google Charts)
   sectionChartsImgDataUrl = [], // opcional, dataURL por sección
@@ -133,13 +134,14 @@ ${estilosCSS}
 
   <!-- SECCIONES -->
   <div class="sections-container">
-    ${secciones.map((sec, sIdx) => 
+      ${secciones.map((sec, sIdx) => 
       generarSeccion({ 
         sec, 
         sIdx, 
         respuestas, 
         comentarios, 
         imagenes, 
+        clasificaciones,
         sectionChartsImgDataUrl 
       })
     ).join('')}

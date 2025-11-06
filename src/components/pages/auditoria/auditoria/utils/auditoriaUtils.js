@@ -154,7 +154,8 @@ export const configurarFormulario = (formularioSeleccionadoId, formularios) => {
       secciones: [],
       respuestas: [],
       comentarios: [],
-      imagenes: []
+      imagenes: [],
+      clasificaciones: []
     };
   }
 
@@ -166,7 +167,8 @@ export const configurarFormulario = (formularioSeleccionadoId, formularios) => {
     secciones: seccionesArray,
     respuestas: seccionesArray.map(seccion => Array(seccion.preguntas.length).fill('')),
     comentarios: seccionesArray.map(seccion => Array(seccion.preguntas.length).fill('')),
-    imagenes: seccionesArray.map(seccion => Array(seccion.preguntas.length).fill(null))
+    imagenes: seccionesArray.map(seccion => Array(seccion.preguntas.length).fill(null)),
+    clasificaciones: seccionesArray.map(seccion => Array(seccion.preguntas.length).fill(null).map(() => ({ condicion: false, actitud: false })))
   };
 };
 

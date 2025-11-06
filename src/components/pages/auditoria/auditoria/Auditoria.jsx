@@ -175,6 +175,7 @@ const AuditoriaRefactorizada = () => {
     respuestas, setRespuestas,
     comentarios, setComentarios,
     imagenes, setImagenes,
+    clasificaciones, setClasificaciones,
     mostrarReporte, setMostrarReporte,
     errores, setErrores,
     empresas, setEmpresas,
@@ -221,6 +222,7 @@ const AuditoriaRefactorizada = () => {
         respuestas,
         comentarios,
     imagenes,
+        clasificaciones,
         activeStep,
     firmaAuditor,
     firmaResponsable,
@@ -236,6 +238,7 @@ const AuditoriaRefactorizada = () => {
     setRespuestas,
     setComentarios,
     setImagenes,
+    setClasificaciones,
     setFirmaAuditor,
     setFirmaResponsable,
     setFirmasCompletadas,
@@ -290,12 +293,13 @@ const AuditoriaRefactorizada = () => {
     const hasData = empresaSeleccionada || sucursalSeleccionada || formularioSeleccionadoId || 
                    respuestas.some(seccion => seccion.some(resp => resp !== '')) ||
                    comentarios.some(seccion => seccion.some(com => com !== '')) ||
-                   imagenes.some(seccion => seccion.some(img => img !== null));
+                   imagenes.some(seccion => seccion.some(img => img !== null)) ||
+                   clasificaciones.some(seccion => seccion.some(clas => clas && (clas.condicion || clas.actitud)));
     
     if (hasData) {
       setHasUnsavedChanges(true);
     }
-  }, [empresaSeleccionada, sucursalSeleccionada, formularioSeleccionadoId, respuestas, comentarios, imagenes]);
+  }, [empresaSeleccionada, sucursalSeleccionada, formularioSeleccionadoId, respuestas, comentarios, imagenes, clasificaciones]);
 
   // Refs para evitar bucle infinito en restauración
   const restoreAttemptedRef = useRef(false);
@@ -363,6 +367,7 @@ const AuditoriaRefactorizada = () => {
             setComentarios(savedData.comentarios || []);
             // Restaurar imágenes (ahora vienen como File objects desde IndexedDB)
             setImagenes(savedData.imagenes || []);
+            setClasificaciones(savedData.clasificaciones || []);
             setActiveStep(savedData.activeStep || 0);
             setHasUnsavedChanges(false);
             setLastSaved(savedData.timestamp);
@@ -458,6 +463,7 @@ const AuditoriaRefactorizada = () => {
       setRespuestas(configuracion.respuestas);
       setComentarios(configuracion.comentarios);
       setImagenes(configuracion.imagenes);
+      setClasificaciones(configuracion.clasificaciones);
     }
   }, [formularioSeleccionadoId, formularios]);
 
@@ -518,6 +524,7 @@ const AuditoriaRefactorizada = () => {
     respuestas,
     comentarios,
     imagenes,
+    clasificaciones,
     firmaAuditor,
     firmaResponsable,
     firmasCompletadas,
@@ -663,6 +670,7 @@ const AuditoriaRefactorizada = () => {
             respuestas,
             comentarios,
             imagenes,
+            clasificaciones,
             firmaAuditor,
             firmaResponsable
           })}

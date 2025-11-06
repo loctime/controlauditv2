@@ -49,6 +49,7 @@ export const createAuditoriaSteps = ({
   respuestas,
   comentarios,
   imagenes,
+  clasificaciones,
   firmaAuditor,
   firmaResponsable,
   firmasCompletadas,
@@ -62,6 +63,7 @@ export const createAuditoriaSteps = ({
   handleGuardarRespuestas,
   handleGuardarComentario,
   handleGuardarImagenes,
+  handleGuardarClasificaciones,
   handleSaveFirmaAuditor,
   handleSaveFirmaResponsable,
   handleFinalizar,
@@ -172,9 +174,11 @@ export const createAuditoriaSteps = ({
               guardarRespuestas={handleGuardarRespuestas}
               guardarComentario={handleGuardarComentario}
               guardarImagenes={handleGuardarImagenes}
+              guardarClasificaciones={handleGuardarClasificaciones}
               respuestasExistentes={respuestas}
               comentariosExistentes={comentarios}
               imagenesExistentes={imagenes}
+              clasificacionesExistentes={clasificaciones}
             />
             
             {validarTodasLasPreguntas() && (
@@ -256,6 +260,7 @@ export const createAuditoriaSteps = ({
               respuestas={respuestas}
               comentarios={comentarios}
               imagenes={imagenes}
+              clasificaciones={clasificaciones}
               secciones={secciones}
               firmaAuditor={firmaAuditor}
               firmaResponsable={firmaResponsable}

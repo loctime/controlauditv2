@@ -187,6 +187,7 @@ export const generarSeccion = ({
   respuestas, 
   comentarios, 
   imagenes, 
+  clasificaciones,
   sectionChartsImgDataUrl 
 }) => {
   const preguntas = Array.isArray(sec.preguntas) ? sec.preguntas : [];
@@ -226,11 +227,22 @@ export const generarSeccion = ({
           const r = val(respuestas[sIdx]?.[pIdx]) || 'Sin responder';
           const c = val(comentarios[sIdx]?.[pIdx]);
           const img = val(imagenes[sIdx]?.[pIdx]);
+          const clas = clasificaciones?.[sIdx]?.[pIdx] || { condicion: false, actitud: false };
           
           let statusClass = 'status-conforme';
           if (r === 'No conforme') statusClass = 'status-no-conforme';
           else if (r === 'Necesita mejora') statusClass = 'status-mejora';
           else if (r === 'No aplica') statusClass = 'status-no-aplica';
+          
+          // Generar badges de clasificación
+          const clasificacionBadges = [];
+          if (clas.condicion) {
+            clasificacionBadges.push('<span style="display: inline-block; background: #2196f3; color: white; padding: 2px 8px; border-radius: 12px; font-size: 11px; margin-left: 8px; font-weight: 500;">🔧 Condición</span>');
+          }
+          if (clas.actitud) {
+            clasificacionBadges.push('<span style="display: inline-block; background: #9c27b0; color: white; padding: 2px 8px; border-radius: 12px; font-size: 11px; margin-left: 8px; font-weight: 500;">👥 Actitud</span>');
+          }
+          const clasificacionHTML = clasificacionBadges.length > 0 ? `<div style="margin-top: 4px;">${clasificacionBadges.join('')}</div>` : '';
           
           return `
             <div class="question">
@@ -239,6 +251,7 @@ export const generarSeccion = ({
                 <span class="question-status ${statusClass}">${r}</span>
               </div>
               <div class="question-text">${text || 'Ítem sin descripción'}</div>
+              ${clasificacionHTML}
               ${c ? `<div class="question-comment">💬 ${c}</div>` : ''}
               ${img ? `<div class="question-image"><img src="${img}" alt="Evidencia" /></div>` : ''}
             </div>

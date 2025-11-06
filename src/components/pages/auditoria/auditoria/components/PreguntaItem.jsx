@@ -13,6 +13,8 @@ import UploadIcon from '@mui/icons-material/Upload';
 import CommentIcon from '@mui/icons-material/Comment';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import WarningIcon from '@mui/icons-material/Warning';
+import BuildIcon from '@mui/icons-material/Build';
+import PeopleIcon from '@mui/icons-material/People';
 import { 
   respuestasPosibles, 
   obtenerColorRespuesta, 
@@ -33,7 +35,9 @@ const PreguntaItem = ({
   onOpenModal,
   onOpenCameraDialog,
   onDeleteImage,
-  procesandoImagen
+  procesandoImagen,
+  clasificacion,
+  onClasificacionChange
 }) => {
   const theme = useTheme();
 
@@ -148,6 +152,73 @@ const PreguntaItem = ({
               </Button>
             ));
           })()}
+        </Stack>
+        
+        {/* Botones de clasificación Condición y Actitud */}
+        <Stack 
+          direction="row" 
+          spacing={isMobile ? 0.5 : 1}
+          sx={{ gap: isMobile ? 0.5 : 1 }}
+        >
+          <Button
+            variant={clasificacion?.condicion ? "contained" : "outlined"}
+            startIcon={<BuildIcon />}
+            onClick={() => {
+              if (onClasificacionChange) {
+                const nuevaClasificacion = {
+                  condicion: !clasificacion?.condicion,
+                  actitud: clasificacion?.actitud || false
+                };
+                onClasificacionChange(seccionIndex, preguntaIndex, nuevaClasificacion);
+              }
+            }}
+            sx={{ 
+              minWidth: isMobile ? 80 : 120,
+              fontSize: isMobile ? '0.75rem' : '0.875rem',
+              py: isMobile ? 0.5 : 1,
+              px: isMobile ? 1 : 2,
+              backgroundColor: clasificacion?.condicion ? theme.palette.info.main : 'transparent',
+              color: clasificacion?.condicion ? 'white' : theme.palette.info.main,
+              borderColor: theme.palette.info.main,
+              '&:hover': {
+                backgroundColor: clasificacion?.condicion ? theme.palette.info.dark : theme.palette.info.light,
+                color: 'white',
+                borderColor: theme.palette.info.main,
+              }
+            }}
+          >
+            Condición
+          </Button>
+          
+          <Button
+            variant={clasificacion?.actitud ? "contained" : "outlined"}
+            startIcon={<PeopleIcon />}
+            onClick={() => {
+              if (onClasificacionChange) {
+                const nuevaClasificacion = {
+                  condicion: clasificacion?.condicion || false,
+                  actitud: !clasificacion?.actitud
+                };
+                onClasificacionChange(seccionIndex, preguntaIndex, nuevaClasificacion);
+              }
+            }}
+            sx={{ 
+              minWidth: isMobile ? 80 : 120,
+              fontSize: isMobile ? '0.75rem' : '0.875rem',
+              py: isMobile ? 0.5 : 1,
+              px: isMobile ? 1 : 2,
+              backgroundColor: clasificacion?.actitud ? theme.palette.secondary.main : 'transparent',
+              color: clasificacion?.actitud ? 'white' : theme.palette.secondary.main,
+              borderColor: theme.palette.secondary.main,
+              '&:hover': {
+                backgroundColor: clasificacion?.actitud ? theme.palette.secondary.dark : theme.palette.secondary.light,
+                color: 'white',
+                borderColor: theme.palette.secondary.main,
+              }
+            }}
+          >
+            Actitud
+          </Button>
         </Stack>
         
         <Button
