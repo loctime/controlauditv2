@@ -60,43 +60,135 @@ class AuditoriaService {
     }
     
     // Obtener carpeta de auditorías desde ControlFile
+    // IMPORTANTE: NO crear carpeta principal nueva, solo subcarpetas si faltan
     let folderIdAuditorias = null;
+    let mainFolderId = null;
+    
     try {
-      const folders = await getControlFileFolders();
-      folderIdAuditorias = folders.subFolders?.auditorias;
-      
-      // Si no existe la subcarpeta pero existe la carpeta principal, crear solo la subcarpeta
-      if (!folderIdAuditorias && folders.mainFolderId) {
-        console.log('[AuditoriaService] ⚠️ Subcarpeta de auditorías no encontrada, creando...');
-        try {
-          const { createSubFolder } = await import('../../../services/controlFileService');
-          folderIdAuditorias = await createSubFolder('Auditorías', folders.mainFolderId);
+      // Intentar obtener carpetas desde cache primero (más rápido y no hace llamadas API)
+      const STORAGE_KEY = 'controlfile_folders';
+      try {
+        const stored = localStorage.getItem(STORAGE_KEY);
+        if (stored) {
+          const folderIds = JSON.parse(stored);
+          mainFolderId = folderIds.mainFolderId;
+          folderIdAuditorias = folderIds.subFolders?.auditorias;
           
-          // Actualizar cache local
-          const STORAGE_KEY = 'controlfile_folders';
-          try {
-            const stored = localStorage.getItem(STORAGE_KEY);
-            if (stored) {
-              const folderIds = JSON.parse(stored);
+          if (folderIdAuditorias) {
+            console.log('[AuditoriaService] ✅ Encontrado en cache - carpeta principal:', mainFolderId, 'subcarpeta auditorías:', folderIdAuditorias);
+            // Verificar que la subcarpeta realmente existe en ControlFile
+            try {
+              const { listFiles } = await import('../../../services/controlFileService');
+              if (mainFolderId) {
+                const subFolderFiles = await listFiles(mainFolderId);
+                if (Array.isArray(subFolderFiles)) {
+                  const subFolderExists = subFolderFiles.find(item => 
+                    item.type === 'folder' && item.id === folderIdAuditorias
+                  );
+                  if (!subFolderExists) {
+                    console.warn('[AuditoriaService] ⚠️ Subcarpeta del cache no existe en ControlFile, limpiando cache inválido');
+                    // Limpiar el ID inválido del cache
+                    const stored = localStorage.getItem(STORAGE_KEY);
+                    if (stored) {
+                      const folderIds = JSON.parse(stored);
+                      folderIds.subFolders = folderIds.subFolders || {};
+                      folderIds.subFolders.auditorias = null; // Limpiar ID inválido
+                      localStorage.setItem(STORAGE_KEY, JSON.stringify(folderIds));
+                      console.log('[AuditoriaService] ✅ Cache limpiado de ID inválido');
+                    }
+                    folderIdAuditorias = null; // Limpiar ID inválido para forzar creación
+                  } else {
+                    console.log('[AuditoriaService] ✅ Subcarpeta del cache verificada y existe');
+                  }
+                }
+              }
+            } catch (verifyError) {
+              console.warn('[AuditoriaService] ⚠️ Error al verificar subcarpeta del cache:', verifyError);
+              // Continuar, se intentará obtener desde ControlFile
+            }
+          } else if (mainFolderId) {
+            console.log('[AuditoriaService] ⚠️ No hay subcarpeta en cache, pero hay carpeta principal:', mainFolderId);
+          }
+        }
+      } catch (cacheError) {
+        console.warn('[AuditoriaService] Error al leer cache:', cacheError);
+      }
+      
+      // Si no hay carpeta principal, obtener desde ControlFile
+      if (!mainFolderId) {
+        try {
+          const folders = await getControlFileFolders();
+          mainFolderId = folders.mainFolderId;
+          // NO usar folderIdAuditorias de getControlFileFolders() porque puede tener IDs inválidos del cache
+          // Solo usar mainFolderId y crear la subcarpeta si es necesario
+        } catch (foldersError) {
+          console.error('[AuditoriaService] Error al obtener carpetas ControlFile:', foldersError);
+        }
+      }
+      
+      // Si no hay subcarpeta pero hay carpeta principal, buscar si existe primero
+      if (mainFolderId && !folderIdAuditorias) {
+        try {
+          const { listFiles } = await import('../../../services/controlFileService');
+          const subFolderFiles = await listFiles(mainFolderId);
+          if (Array.isArray(subFolderFiles)) {
+            const existingSubFolder = subFolderFiles.find(item => 
+              item.type === 'folder' && item.name === 'Auditorías'
+            );
+            if (existingSubFolder) {
+              folderIdAuditorias = existingSubFolder.id;
+              console.log('[AuditoriaService] ✅ Subcarpeta "Auditorías" encontrada en ControlFile:', folderIdAuditorias);
+              // Actualizar cache con el ID correcto
+              const stored = localStorage.getItem(STORAGE_KEY);
+              const folderIds = stored ? JSON.parse(stored) : {};
+              folderIds.mainFolderId = mainFolderId;
               folderIds.subFolders = folderIds.subFolders || {};
               folderIds.subFolders.auditorias = folderIdAuditorias;
               localStorage.setItem(STORAGE_KEY, JSON.stringify(folderIds));
             }
+          }
+        } catch (searchError) {
+          console.warn('[AuditoriaService] Error al buscar subcarpeta existente:', searchError);
+        }
+      }
+      
+      // Si aún no hay subcarpeta pero tenemos carpeta principal, crear SOLO la subcarpeta
+      if (mainFolderId && !folderIdAuditorias) {
+        console.log('[AuditoriaService] 📁 Creando subcarpeta "Auditorías" dentro de carpeta principal:', mainFolderId);
+        try {
+          const { createSubFolder } = await import('../../../services/controlFileService');
+          folderIdAuditorias = await createSubFolder('Auditorías', mainFolderId);
+          console.log('[AuditoriaService] ✅ Subcarpeta de auditorías creada con ID:', folderIdAuditorias);
+          
+          // FORZAR actualización del cache (siempre, asegurando que esté correcto)
+          try {
+            const stored = localStorage.getItem(STORAGE_KEY);
+            const folderIds = stored ? JSON.parse(stored) : {};
+            folderIds.mainFolderId = mainFolderId; // Asegurar que la principal esté
+            folderIds.subFolders = folderIds.subFolders || {};
+            folderIds.subFolders.auditorias = folderIdAuditorias; // Guardar ID válido
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(folderIds));
+            console.log('[AuditoriaService] ✅ Cache actualizado con subcarpeta válida:', folderIdAuditorias);
           } catch (cacheError) {
             console.warn('[AuditoriaService] Error al actualizar cache:', cacheError);
           }
-          
-          console.log('[AuditoriaService] ✅ Subcarpeta de auditorías creada:', folderIdAuditorias);
         } catch (createError) {
-          console.error('[AuditoriaService] Error al crear subcarpeta de auditorías:', createError);
+          console.error('[AuditoriaService] ❌ Error al crear subcarpeta de auditorías:', createError);
           console.warn('[AuditoriaService] ⚠️ Usando carpeta principal en lugar de subcarpeta');
-          folderIdAuditorias = folders.mainFolderId;
+          folderIdAuditorias = mainFolderId;
         }
-      } else if (!folderIdAuditorias) {
-        console.warn('[AuditoriaService] ⚠️ No se encontró carpeta de auditorías ni carpeta principal, usando raíz');
+      } else if (!mainFolderId) {
+        console.warn('[AuditoriaService] ⚠️ No se encontró carpeta principal, usando raíz (parentId: null)');
+        folderIdAuditorias = null;
       }
+      
+      // Log final del folderId que se usará
+      console.log('[AuditoriaService] 📋 FolderId final para subir imágenes:', folderIdAuditorias);
+      
     } catch (error) {
       console.error('[AuditoriaService] Error al obtener carpetas ControlFile:', error);
+      // En caso de error, usar null (raíz) en lugar de crear carpetas
+      folderIdAuditorias = null;
     }
     
     const imagenesProcesadas = [];
@@ -120,7 +212,7 @@ class AuditoriaService {
         
         if (imagen instanceof File) {
           try {
-            console.debug(`[AuditoriaService] Subiendo archivo a ControlFile: ${imagen.name}, tamaño: ${(imagen.size/1024/1024).toFixed(2)}MB`);
+            console.log(`[AuditoriaService] 📤 Subiendo archivo a ControlFile: ${imagen.name}, tamaño: ${(imagen.size/1024/1024).toFixed(2)}MB, parentId: ${folderIdAuditorias || 'null (raíz)'}`);
             
             // Subir imagen a ControlFile
             const fileId = await uploadToControlFile(imagen, folderIdAuditorias);
