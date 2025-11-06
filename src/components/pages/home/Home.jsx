@@ -168,44 +168,38 @@ const Home = () => {
   return (
     <div className="home-main-container">
       <div className="home-card">
-          <Typography variant="h1" component="h1" align="center" gutterBottom fontWeight={700}>
-          <span style={{ color: theme.palette.primary.light }}>Control-Audit</span>
-        </Typography>
-        
-
-        {/* Indicador de datos cargados para modo offline - SOLO EN PWA */}
+        {/* Indicador de datos cargados para modo offline - SOLO EN PWA - PRIMERO */}
         {userProfile && isPWAStandalone && (() => {
           const isEdge = navigator.userAgent.includes('Edg');
           const isChrome = navigator.userAgent.includes('Chrome') && !navigator.userAgent.includes('Edg');
           
           return (
-            <Box sx={{ mb: 3 }}>
+            <Box sx={{ mb: 2 }}>
               <Alert 
                 severity={Object.values(datosCargados).every(Boolean) ? "success" : "info"}
-                sx={{ mb: 2 }}
+                sx={{ mb: 1, py: 0.5 }}
+                dense
               >
-                <Typography variant="body2">
-                  <strong>Estado offline PWA:</strong>
-                  <br />
-                  📊 Empresas: {datosCargados.empresas ? `✅` : "❌"}     📋 Formularios: {datosCargados.formularios ? `✅` : "❌"}
+                <Typography variant="caption" sx={{ fontSize: '0.75rem' }}>
+                  📊 {datosCargados.empresas ? '✅' : '❌'} 📋 {datosCargados.formularios ? '✅' : '❌'}
                 </Typography>
               </Alert>
               
               {errorCarga && (
-                <Alert severity="warning" sx={{ mb: 2 }}>
-                  {errorCarga}
+                <Alert severity="warning" sx={{ mb: 1, py: 0.5 }} dense>
+                  <Typography variant="caption">{errorCarga}</Typography>
                   <Button 
                     size="small" 
                     onClick={() => window.location.reload()} 
-                    sx={{ ml: 2 }}
+                    sx={{ ml: 1, minWidth: 'auto', px: 1 }}
                   >
-                    Recargar página
+                    Recargar
                   </Button>
                 </Alert>
               )}
               
               {/* Botones según navegador */}
-              <Box sx={{ textAlign: 'center', mb: 2 }}>
+              <Box sx={{ textAlign: 'center', mb: 1 }}>
                 {/* Chrome: solo Precargar Páginas */}
                 {isChrome && shouldPreload && !isPreloading && (
                   <Button
@@ -256,10 +250,13 @@ const Home = () => {
                     }}
                     sx={{ 
                       background: 'linear-gradient(90deg, #1976d2, #42a5f5)',
-                      '&:hover': { background: 'linear-gradient(90deg, #1565c0, #1976d2)' }
+                      '&:hover': { background: 'linear-gradient(90deg, #1565c0, #1976d2)' },
+                      fontSize: '0.75rem',
+                      py: 0.5,
+                      px: 1.5
                     }}
                   >
-                    ⚡ Precargar Páginas
+                    ⚡ Precargar
                   </Button>
                 )}
                 
@@ -289,14 +286,39 @@ const Home = () => {
                       }
                     }}
                     disabled={cargandoDatosOffline}
+                    sx={{ fontSize: '0.75rem', py: 0.5, px: 1.5 }}
                   >
-                    {cargandoDatosOffline ? 'Cargando...' : '🔄 Recargar Datos'}
+                    {cargandoDatosOffline ? 'Cargando...' : '🔄 Recargar'}
                   </Button>
                 )}
               </Box>
             </Box>
           );
         })()}
+
+        {/* Título Control-Audit - más grande y notable */}
+        <Typography 
+          variant="h2" 
+          component="h1" 
+          align="center" 
+          gutterBottom 
+          sx={{
+            fontWeight: 800,
+            fontSize: { xs: '2.5rem', sm: '3.5rem', md: '4.5rem' },
+            background: isDark 
+              ? 'linear-gradient(135deg, #42a5f5 0%, #1976d2 100%)'
+              : 'linear-gradient(135deg, #1976d2 0%, #42a5f5 100%)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            backgroundClip: 'text',
+            mb: 3,
+            mt: 2,
+            textShadow: isDark ? 'none' : '0 2px 4px rgba(0,0,0,0.1)',
+            letterSpacing: '0.02em'
+          }}
+        >
+          Control-Audit
+        </Typography>
 
         <div style={{ textAlign: 'center', marginTop: 24, marginBottom: 16 }}>
           <Button
@@ -358,7 +380,8 @@ const Home = () => {
           </Grid>
         </Grid>
 
-        <Divider sx={{ mb: 2, mt: 4 }} />
+        <Divider sx={{ mb: 3, mt: 4 }} />
+        
         <div className="home-contact">
           Contacto: <a href="mailto:licvidalfernando@gmail.com" style={{ color: "#1976d2", textDecoration: "none" }}>licvidalfernando@gmail.com</a>
         </div>
