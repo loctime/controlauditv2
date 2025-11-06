@@ -7,6 +7,8 @@ const COLOR_MAP = {
   'No conforme': '#e53935',    // rojo
   'Necesita mejora': '#fbc02d',// amarillo
   'No aplica': '#1976d2',      // azul
+  'Condición': '#2196f3',      // azul (info)
+  'Actitud': '#9c27b0',        // morado (secondary)
 };
 
 const EstadisticasChartSimple = forwardRef(({ estadisticas, title, height = 320, width = '100%' }, ref) => {
@@ -310,40 +312,6 @@ const EstadisticasChartSimple = forwardRef(({ estadisticas, title, height = 320,
         width: '100%'
       }}
     >
-      {/* Indicador de debug más visible */}
-      <Box sx={{ 
-        position: 'absolute', 
-        top: 10, 
-        right: 10, 
-        backgroundColor: '#28a745', 
-        color: 'white', 
-        px: 2, 
-        py: 1, 
-        borderRadius: 2, 
-        fontSize: '12px',
-        fontWeight: 'bold',
-        zIndex: 10
-      }}>
-        ✅ GRÁFICO VÁLIDO - {total} DATOS
-      </Box>
-      
-      {/* Indicador de estado de imagen */}
-      <Box sx={{ 
-        position: 'absolute', 
-        top: 10, 
-        left: 10, 
-        backgroundColor: imageDataUrl ? '#4caf50' : '#ff9800', 
-        color: 'white', 
-        px: 2, 
-        py: 1, 
-        borderRadius: 2, 
-        fontSize: '12px',
-        fontWeight: 'bold',
-        zIndex: 10
-      }}>
-        {imageDataUrl ? `🖼️ IMAGEN: ${(imageDataUrl.length / 1024).toFixed(1)}KB` : '⏳ GENERANDO...'}
-      </Box>
-      
       {title && (
         <Typography variant="h6" gutterBottom align="center" sx={{ fontWeight: 600, color: '#1976d2', mb: 3 }}>
           {title}
@@ -351,26 +319,6 @@ const EstadisticasChartSimple = forwardRef(({ estadisticas, title, height = 320,
       )}
       
       {/* Indicador visual de que el componente está funcionando */}
-      <Box sx={{ 
-        mb: 3, 
-        p: 2, 
-        backgroundColor: '#e8f5e8', 
-        borderRadius: 2, 
-        border: '2px solid #4caf50',
-        textAlign: 'center'
-      }}>
-        <Typography variant="body1" sx={{ color: '#2e7d32', fontWeight: 600 }}>
-          🎯 GRÁFICO FUNCIONANDO - Total: {total} respuestas
-        </Typography>
-        <Typography variant="body2" sx={{ color: '#388e3c', mt: 1 }}>
-          Conforme: {estadisticas['Conforme']} | No Conforme: {estadisticas['No conforme']} | 
-          Necesita Mejora: {estadisticas['Necesita mejora']} | No Aplica: {estadisticas['No aplica']}
-        </Typography>
-        <Typography variant="body2" sx={{ color: '#388e3c', mt: 1, fontWeight: 'bold' }}>
-          Estado imagen: {imageDataUrl ? '✅ Generada' : '⏳ Generando...'}
-        </Typography>
-      </Box>
-
       {/* Gráfico de barras */}
       <Box sx={{ mb: 3 }}>
         <Typography variant="subtitle2" gutterBottom align="center" sx={{ color: '#666' }}>
@@ -433,46 +381,6 @@ const EstadisticasChartSimple = forwardRef(({ estadisticas, title, height = 320,
         </Box>
       </Box>
 
-      {/* Resumen numérico */}
-      <Box sx={{ 
-        display: 'grid', 
-        gridTemplateColumns: { xs: '1fr 1fr', sm: 'repeat(4, 1fr)' }, 
-        gap: 2,
-        mt: 3,
-        p: 2,
-        backgroundColor: 'rgba(255,255,255,0.7)',
-        borderRadius: 1
-      }}>
-        {Object.entries(estadisticas).map(([categoria, valor]) => {
-          if (valor === 0) return null;
-          
-          const color = COLOR_MAP[categoria] || '#666';
-          
-          return (
-            <Box key={categoria} sx={{ textAlign: 'center' }}>
-              <Typography variant="h4" sx={{ color: color, fontWeight: 700 }}>
-                {valor}
-              </Typography>
-              <Typography variant="caption" sx={{ color: '#666' }}>
-                {categoria}
-              </Typography>
-              <Typography variant="caption" display="block" sx={{ color: color, fontWeight: 600 }}>
-                {porcentajes[categoria]}%
-              </Typography>
-            </Box>
-          );
-        })}
-        
-        <Box sx={{ textAlign: 'center' }}>
-          <Typography variant="h4" sx={{ color: '#1976d2', fontWeight: 700 }}>
-            {total}
-          </Typography>
-          <Typography variant="caption" sx={{ color: '#666' }}>
-            Total
-          </Typography>
-        </Box>
-      </Box>
-
       {/* Gráfico circular simple */}
       <Box sx={{ mt: 3, textAlign: 'center' }}>
         <Typography variant="subtitle2" gutterBottom sx={{ color: '#666' }}>
@@ -485,13 +393,28 @@ const EstadisticasChartSimple = forwardRef(({ estadisticas, title, height = 320,
           height: 200, 
           margin: '0 auto',
           borderRadius: '50%',
-          background: `conic-gradient(${Object.entries(estadisticas).map(([categoria, valor], index, array) => {
-            if (valor === 0) return '';
-            const color = COLOR_MAP[categoria] || '#666';
-            const startAngle = array.slice(0, index).reduce((sum, [_, val]) => sum + (val / total) * 360, 0);
-            const endAngle = startAngle + (valor / total) * 360;
-            return `${color} ${startAngle}deg ${endAngle}deg`;
-          }).filter(Boolean).join(', ')} #e0e0e0)`,
+          background: (() => {
+            // Filtrar solo valores > 0 y calcular gradientes correctamente
+            const entries = Object.entries(estadisticas).filter(([_, valor]) => valor > 0);
+            if (entries.length === 0) return '#e0e0e0';
+            
+            let currentAngle = 0;
+            const gradients = entries.map(([categoria, valor]) => {
+              const color = COLOR_MAP[categoria] || '#666';
+              const angle = (valor / total) * 360;
+              const startAngle = currentAngle;
+              const endAngle = currentAngle + angle;
+              currentAngle = endAngle;
+              return `${color} ${startAngle}deg ${endAngle}deg`;
+            });
+            
+            // Si hay espacio restante, agregar gris
+            if (currentAngle < 360) {
+              gradients.push(`#e0e0e0 ${currentAngle}deg 360deg`);
+            }
+            
+            return `conic-gradient(${gradients.join(', ')})`;
+          })(),
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',

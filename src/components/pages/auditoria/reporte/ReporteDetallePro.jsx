@@ -135,6 +135,33 @@ const ReporteDetallePro = forwardRef(({ open = false, onClose = () => {}, report
     return null;
   }, [reporte.estadisticas, respuestasNormalizadas]);
 
+  // Calcular estadísticas de clasificaciones (Condición y Actitud)
+  const estadisticasClasificaciones = useMemo(() => {
+    if (!clasificacionesNormalizadas || clasificacionesNormalizadas.length === 0) {
+      return { Condición: 0, Actitud: 0 };
+    }
+    
+    let condicionCount = 0;
+    let actitudCount = 0;
+    let totalPreguntas = 0;
+    
+    clasificacionesNormalizadas.forEach(seccion => {
+      if (Array.isArray(seccion)) {
+        seccion.forEach(clasificacion => {
+          totalPreguntas++;
+          if (clasificacion?.condicion) condicionCount++;
+          if (clasificacion?.actitud) actitudCount++;
+        });
+      }
+    });
+    
+    return {
+      'Condición': condicionCount,
+      'Actitud': actitudCount,
+      'Total': totalPreguntas
+    };
+  }, [clasificacionesNormalizadas]);
+
   // Obtener nombre del auditor para aclaración
   const nombreAuditor = reporte?.auditorNombre || userProfile?.nombre || userProfile?.displayName || userProfile?.email || 'Nombre no disponible';
   
@@ -245,7 +272,14 @@ const ReporteDetallePro = forwardRef(({ open = false, onClose = () => {}, report
             {/* Estadísticas y gráficos */}
             <EstadisticasReporte 
               estadisticasCalculadas={estadisticasCalculadas}
+              estadisticasClasificaciones={estadisticasClasificaciones}
               chartRef={chartRef}
+              clasificacionesChartRef={(() => {
+                if (!sectionChartRefs.current['clasificaciones']) {
+                  sectionChartRefs.current['clasificaciones'] = React.createRef();
+                }
+                return sectionChartRefs.current['clasificaciones'];
+              })()}
               secciones={secciones}
               respuestasNormalizadas={respuestasNormalizadas}
               sectionChartRefs={sectionChartRefs}

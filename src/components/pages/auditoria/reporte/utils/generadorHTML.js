@@ -24,6 +24,7 @@ function generarContenidoImpresion({
   clasificaciones, // array de arrays de objetos { condicion: boolean, actitud: boolean }
   firmaAuditor,
   chartImgDataUrl, // dataURL del gráfico general (Google Charts)
+  clasificacionesChartImgDataUrl = '', // dataURL del gráfico de clasificaciones
   sectionChartsImgDataUrl = [], // opcional, dataURL por sección
   nombreAuditor,
   firmaResponsable,
@@ -130,7 +131,10 @@ ${estilosCSS}
 
   ${generarResumenEstadistico({ C, NC, NM, NA, total, pct })}
 
-  ${generarGraficoPrincipal(chartImgDataUrl)}
+  <div style="display: flex; gap: 20px; margin: 20px 0; flex-wrap: wrap;">
+    ${generarGraficoPrincipal(chartImgDataUrl)}
+    ${clasificacionesChartImgDataUrl ? generarGraficoPrincipal(clasificacionesChartImgDataUrl, 'Gráfico de Clasificaciones') : ''}
+  </div>
 
   <!-- SECCIONES -->
   <div class="sections-container">
