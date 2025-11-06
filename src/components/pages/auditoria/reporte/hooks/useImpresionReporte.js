@@ -218,6 +218,20 @@ export const useImpresionReporte = () => {
       return;
     }
     
+    // Obtener imagen del gráfico de clasificaciones
+    let clasificacionesChartImgDataUrl = '';
+    if (sectionChartRefs.current && sectionChartRefs.current['clasificaciones']) {
+      try {
+        const clasificacionesRef = sectionChartRefs.current['clasificaciones'];
+        if (clasificacionesRef && clasificacionesRef.getImage) {
+          clasificacionesChartImgDataUrl = await clasificacionesRef.getImage();
+          console.log('[useImpresionReporte] Imagen de gráfico de clasificaciones generada:', clasificacionesChartImgDataUrl ? 'Sí' : 'No');
+        }
+      } catch (error) {
+        console.error('[useImpresionReporte] Error obteniendo imagen de gráfico de clasificaciones:', error);
+      }
+    }
+    
     // Obtener imágenes de los gráficos por sección
     let sectionChartsImgDataUrl = [];
     if (sectionChartRefs.current && sectionChartRefs.current.length > 0) {
@@ -225,7 +239,7 @@ export const useImpresionReporte = () => {
         console.log('[useImpresionReporte] Generando imágenes de gráficos por sección...');
         sectionChartsImgDataUrl = await Promise.all(
           sectionChartRefs.current.map(async (ref, index) => {
-            if (ref && ref.getImage) {
+            if (ref && ref.getImage && typeof index === 'number') {
               try {
                 const imageUrl = await ref.getImage();
                 console.log(`[useImpresionReporte] Imagen de sección ${index} generada:`, imageUrl ? 'Sí' : 'No');
@@ -248,6 +262,7 @@ export const useImpresionReporte = () => {
     const html = generarContenidoImpresion({
       ...datosReporte,
       chartImgDataUrl,
+      clasificacionesChartImgDataUrl,
       sectionChartsImgDataUrl
     });
     

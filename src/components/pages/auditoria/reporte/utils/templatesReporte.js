@@ -145,14 +145,15 @@ export const generarResumenEstadistico = ({ C, NC, NM, NA, total, pct }) => {
 };
 
 // Template del gráfico principal
-export const generarGraficoPrincipal = (chartImgDataUrl) => {
+export const generarGraficoPrincipal = (chartImgDataUrl, titulo = 'Gráfico de Distribución') => {
   if (chartImgDataUrl && chartImgDataUrl.length > 1000 && chartImgDataUrl.startsWith('data:image')) {
     return `
-      <div class="chart-section">
+      <div class="chart-section" style="flex: 1; min-width: 300px;">
         <div class="chart-container">
+          <h3 style="text-align: center; color: #1976d2; margin-bottom: 10px;">📊 ${titulo}</h3>
           <img class="chart-image" 
                src="${chartImgDataUrl}" 
-               alt="Distribución general de respuestas" 
+               alt="${titulo}" 
                style="max-width: 100%; height: auto; border: 2px solid #3498db; border-radius: 8px; min-height: 200px; display: block;" 
                onerror="this.style.display='none'; this.nextElementSibling.style.display='block'; console.error('Error cargando imagen del gráfico principal');" 
                onload="console.log('Imagen del gráfico principal cargada exitosamente');" />

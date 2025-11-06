@@ -2,51 +2,75 @@ import React from 'react';
 import { Box, Typography } from '@mui/material';
 import EstadisticasChartSimple from '../EstadisticasChartSimple';
 
-const EstadisticasReporte = ({ 
-  estadisticasCalculadas, 
-  chartRef, 
-  secciones, 
-  respuestasNormalizadas, 
-  sectionChartRefs 
+const EstadisticasReporte = ({
+  estadisticasCalculadas,
+  estadisticasClasificaciones,
+  chartRef,
+  clasificacionesChartRef,
+  secciones,
+  respuestasNormalizadas,
+  sectionChartRefs
 }) => {
+  const mostrarClasificaciones =
+    estadisticasClasificaciones &&
+    ((estadisticasClasificaciones['Condición'] || 0) > 0 ||
+      (estadisticasClasificaciones['Actitud'] || 0) > 0);
+
   return (
     <>
-      {/* Gráfico general de respuestas */}
-      {(() => {
-        console.log('[EstadisticasReporte] Renderizando gráfico:', {
-          estadisticasCalculadas: !!estadisticasCalculadas,
-          conteo: estadisticasCalculadas?.conteo,
-          tieneDatos: estadisticasCalculadas && estadisticasCalculadas.conteo
-        });
-        return true;
-      })() && (
-        <Box sx={{ 
-          mb: 3, 
-          p: 2, 
-          bgcolor: 'background.paper', 
-          borderRadius: 2, 
+      <Box
+        sx={{
+          mb: 3,
+          p: 2,
+          bgcolor: 'background.paper',
+          borderRadius: 2,
           border: '1px solid',
           borderColor: 'divider',
           boxShadow: 1
-        }}>
-          <Typography variant="h6" gutterBottom sx={{ color: 'primary.main', fontWeight: 600 }}>
-            📊 Gráfico de Distribución
-          </Typography>
-          
-          {/* Debug info */}
-          <Box sx={{ mb: 2, p: 2, backgroundColor: '#e3f2fd', borderRadius: 1, border: '1px solid #2196f3' }}>
-            <Typography variant="caption" color="primary" fontWeight="bold">
-              🔍 DEBUG: estadisticasCalculadas = {JSON.stringify(estadisticasCalculadas?.conteo)}
-            </Typography>
+        }}
+      >
+        <Typography
+          variant="h6"
+          gutterBottom
+          sx={{ color: 'primary.main', fontWeight: 600 }}
+        >
+          📊 Distribución general
+        </Typography>
+
+        <Box
+          sx={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: 2
+          }}
+        >
+          <Box sx={{ flex: 1, minWidth: 260 }}>
+            <EstadisticasChartSimple
+              ref={chartRef}
+              estadisticas={
+                estadisticasCalculadas?.conteo || {
+                  Conforme: 0,
+                  'No conforme': 0,
+                  'Necesita mejora': 0,
+                  'No aplica': 0
+                }
+              }
+              title="Distribución de respuestas"
+            />
           </Box>
-          
-          <EstadisticasChartSimple
-            ref={chartRef}
-            estadisticas={estadisticasCalculadas?.conteo || { 'Conforme': 0, 'No conforme': 0, 'Necesita mejora': 0, 'No aplica': 0 }}
-            title="Distribución general de respuestas"
-          />
+
+          <Box sx={{ flex: 1, minWidth: 260 }}>
+            <EstadisticasChartSimple
+              ref={clasificacionesChartRef}
+              estadisticas={{
+                Condición: estadisticasClasificaciones?.['Condición'] || 0,
+                Actitud: estadisticasClasificaciones?.['Actitud'] || 0
+              }}
+              title="Clasificación (Condición / Actitud)"
+            />
+          </Box>
         </Box>
-      )}
+      </Box>
 
       {/* Gráficos por sección */}
       {secciones && secciones.length > 1 && respuestasNormalizadas.length === secciones.length && (
