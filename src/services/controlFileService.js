@@ -52,7 +52,7 @@ export const createTaskbarFolder = async (appName) => {
         id: `${appName.toLowerCase()}-main-${Date.now()}`,
         name: appName,
         parentId: null,
-        source: 'taskbar', // ✅ CLAVE: Aparece en taskbar
+        source: 'taskbar', // ✅ CLAVE: Aparece en taskbar (debe estar en nivel raíz)
         icon: 'Taskbar',
         color: 'text-blue-600',
         metadata: {
@@ -74,8 +74,10 @@ export const createTaskbarFolder = async (appName) => {
     }
     
     const result = await response.json();
-    console.log('[controlFileService] ✅ Carpeta creada en taskbar:', result.folderId);
-    return result.folderId;
+    console.log('[controlFileService] ✅ Respuesta completa del backend:', result);
+    const folderId = result.folderId || result.folder?.id || result.id;
+    console.log('[controlFileService] ✅ Carpeta creada en taskbar con ID:', folderId);
+    return folderId;
   } catch (error) {
     console.error('[controlFileService] ❌ Error al crear carpeta en taskbar:', error);
     throw error;
@@ -103,7 +105,7 @@ export const createNavbarFolder = async (name, parentId = null) => {
         id: `${name.toLowerCase()}-${Date.now()}`,
         name: name,
         parentId: parentId,
-        source: 'navbar', // ✅ CLAVE: Aparece en navbar
+        source: 'navbar', // ✅ CLAVE: Aparece en navbar (debe estar en nivel raíz)
         icon: 'Folder',
         color: 'text-purple-600',
         metadata: {

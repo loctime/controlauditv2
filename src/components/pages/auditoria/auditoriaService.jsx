@@ -64,8 +64,36 @@ class AuditoriaService {
     try {
       const folders = await getControlFileFolders();
       folderIdAuditorias = folders.subFolders?.auditorias;
-      if (!folderIdAuditorias) {
-        console.warn('[AuditoriaService] ⚠️ No se encontró carpeta de auditorías, usando raíz');
+      
+      // Si no existe la subcarpeta pero existe la carpeta principal, crear solo la subcarpeta
+      if (!folderIdAuditorias && folders.mainFolderId) {
+        console.log('[AuditoriaService] ⚠️ Subcarpeta de auditorías no encontrada, creando...');
+        try {
+          const { createSubFolder } = await import('../../../services/controlFileService');
+          folderIdAuditorias = await createSubFolder('Auditorías', folders.mainFolderId);
+          
+          // Actualizar cache local
+          const STORAGE_KEY = 'controlfile_folders';
+          try {
+            const stored = localStorage.getItem(STORAGE_KEY);
+            if (stored) {
+              const folderIds = JSON.parse(stored);
+              folderIds.subFolders = folderIds.subFolders || {};
+              folderIds.subFolders.auditorias = folderIdAuditorias;
+              localStorage.setItem(STORAGE_KEY, JSON.stringify(folderIds));
+            }
+          } catch (cacheError) {
+            console.warn('[AuditoriaService] Error al actualizar cache:', cacheError);
+          }
+          
+          console.log('[AuditoriaService] ✅ Subcarpeta de auditorías creada:', folderIdAuditorias);
+        } catch (createError) {
+          console.error('[AuditoriaService] Error al crear subcarpeta de auditorías:', createError);
+          console.warn('[AuditoriaService] ⚠️ Usando carpeta principal en lugar de subcarpeta');
+          folderIdAuditorias = folders.mainFolderId;
+        }
+      } else if (!folderIdAuditorias) {
+        console.warn('[AuditoriaService] ⚠️ No se encontró carpeta de auditorías ni carpeta principal, usando raíz');
       }
     } catch (error) {
       console.error('[AuditoriaService] Error al obtener carpetas ControlFile:', error);
