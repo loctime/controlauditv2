@@ -113,23 +113,33 @@ class AutoSaveService {
   async saveToFirestore(userId, auditoriaData) {
     try {
       const sessionId = this.generateSessionId();
+      
+      // Preparar datos para Firestore (sin imágenes reales, solo referencias)
+      const imagenesParaFirestore = auditoriaData.imagenes.map(seccion => 
+        seccion.map(img => img instanceof File ? 'image' : img)
+      );
+      
       const saveData = {
         ...auditoriaData,
+        imagenes: imagenesParaFirestore, // Solo referencias para Firestore
         userId,
         sessionId,
         lastModified: new Date(),
         autoSaved: true
       };
 
-      // Guardar en Firestore
+      // Guardar en Firestore (solo metadatos)
       const docRef = doc(db, 'auditorias_autosave', sessionId);
       await setDoc(docRef, saveData);
 
-      // También guardar en localStorage como respaldo
+      // IMPORTANTE: También guardar en IndexedDB con imágenes REALES
+      await this.saveOffline(userId, auditoriaData);
+
+      // También guardar en localStorage como respaldo (sin imágenes grandes)
       this.saveToLocalStorage(saveData);
 
       this.lastSaveTime = Date.now();
-      console.log('✅ Autoguardado completado en Firestore');
+      console.log('✅ Autoguardado completado en Firestore + IndexedDB');
       
       return true;
     } catch (error) {
@@ -268,16 +278,22 @@ class AutoSaveService {
       // Guardar auditoría en IndexedDB
       await db.put('auditorias', saveData);
 
-      // Procesar y guardar fotos si existen
+      // Procesar y guardar fotos si existen - IMPORTANTE: guardar imágenes reales
       if (auditoriaData.imagenes && auditoriaData.imagenes.length > 0) {
         await this.saveOfflineImages(auditoriaData.imagenes, auditoriaId, db);
       }
 
-      // Encolar para sincronización
-      await syncQueueService.enqueueAuditoria(saveData, 1);
+      // Encolar para sincronización (solo si no es autoguardado)
+      if (!auditoriaData.autoSaved) {
+        await syncQueueService.enqueueAuditoria(saveData, 1);
+      }
 
-      // También guardar en localStorage como respaldo
-      this.saveToLocalStorage(saveData);
+      // También guardar en localStorage como respaldo (sin imágenes)
+      const datosParaLocalStorage = {
+        ...saveData,
+        imagenes: saveData.imagenes.map(seccion => seccion.map(img => img ? 'image' : null))
+      };
+      this.saveToLocalStorage(datosParaLocalStorage);
 
       this.lastSaveTime = Date.now();
       console.log('✅ Autoguardado completado offline:', auditoriaId);
@@ -296,6 +312,12 @@ class AutoSaveService {
   // Guardar fotos offline en IndexedDB
   async saveOfflineImages(imagenes, auditoriaId, db) {
     try {
+      if (!imagenes || !Array.isArray(imagenes)) {
+        return;
+      }
+
+      let fotosGuardadas = 0;
+      
       for (let seccionIndex = 0; seccionIndex < imagenes.length; seccionIndex++) {
         const seccionImagenes = imagenes[seccionIndex];
         
@@ -304,6 +326,7 @@ class AutoSaveService {
         for (let preguntaIndex = 0; preguntaIndex < seccionImagenes.length; preguntaIndex++) {
           const imagen = seccionImagenes[preguntaIndex];
           
+          // Solo guardar si es un File object real (no string, no null, no undefined)
           if (imagen instanceof File) {
             // Convertir File a Blob y guardar en IndexedDB
             const fotoId = generateOfflineId();
@@ -322,18 +345,15 @@ class AutoSaveService {
             };
 
             await db.put('fotos', fotoData);
+            fotosGuardadas++;
             
-            // Actualizar referencia en la auditoría
-            seccionImagenes[preguntaIndex] = {
-              id: fotoId,
-              offline: true,
-              originalName: imagen.name,
-              size: imagen.size
-            };
-
-            console.log(`📸 Foto guardada offline: ${fotoId}`);
+            console.log(`📸 Foto guardada offline: ${fotoId} (sección ${seccionIndex}, pregunta ${preguntaIndex})`);
           }
         }
+      }
+      
+      if (fotosGuardadas > 0) {
+        console.log(`✅ ${fotosGuardadas} foto(s) guardada(s) en IndexedDB`);
       }
     } catch (error) {
       console.error('❌ Error al guardar fotos offline:', error);
@@ -409,32 +429,117 @@ class AutoSaveService {
   // Restaurar auditoría desde datos guardados
   async restoreAuditoria(userId) {
     try {
-      // Primero intentar cargar desde IndexedDB (offline)
+      // Primero intentar cargar desde IndexedDB (offline) - tiene imágenes reales
       const db = await this.initOfflineDatabase();
       if (db) {
         const offlineData = await db.getAllFromIndex('auditorias', 'by-userId', userId);
         if (offlineData && offlineData.length > 0) {
-          // Obtener la más reciente
-          const latestOffline = offlineData.sort((a, b) => b.updatedAt - a.updatedAt)[0];
-          console.log('🔄 Restaurando auditoría desde IndexedDB:', latestOffline.id);
-          return latestOffline;
+          // Filtrar solo auditorías incompletas (que no estén sincronizadas como completadas)
+          const incompleteAuditorias = offlineData.filter(a => 
+            a.status === 'pending_sync' && 
+            !a.estadoCompletada &&
+            (!a.auditoriaGenerada || a.activeStep < 4)
+          );
+          
+          if (incompleteAuditorias.length > 0) {
+            // Obtener la más reciente
+            const latestOffline = incompleteAuditorias.sort((a, b) => b.updatedAt - a.updatedAt)[0];
+            console.log('🔄 Restaurando auditoría desde IndexedDB:', latestOffline.id);
+            
+            // Cargar imágenes reales desde IndexedDB
+            const auditoriaConImagenes = await this.restoreAuditoriaImages(latestOffline, db);
+            
+            return auditoriaConImagenes;
+          }
         }
       }
 
-      // Fallback a localStorage
+      // Fallback a localStorage (pero luego cargar imágenes desde IndexedDB si existen)
       const localData = this.loadFromLocalStorage();
       if (localData && localData.userId === userId) {
-        console.log('🔄 Restaurando auditoría desde localStorage');
-        return localData;
+        // Verificar que no esté completada
+        if (!localData.estadoCompletada && (!localData.auditoriaGenerada || localData.activeStep < 4)) {
+          console.log('🔄 Restaurando auditoría desde localStorage');
+          
+          // Intentar cargar imágenes desde IndexedDB si hay un id
+          // Si no hay db todavía, intentar inicializarlo
+          let dbForImages = db;
+          if (localData.id && !dbForImages) {
+            dbForImages = await this.initOfflineDatabase();
+          }
+          
+          if (localData.id && dbForImages) {
+            const auditoriaConImagenes = await this.restoreAuditoriaImages(localData, dbForImages);
+            if (auditoriaConImagenes && auditoriaConImagenes.imagenes) {
+              return auditoriaConImagenes;
+            }
+          }
+          
+          return localData;
+        } else {
+          // Si está completada, limpiar
+          this.clearLocalStorage();
+          return null;
+        }
       }
 
-      // Si no hay datos locales, intentar desde Firestore
-      // (Aquí podrías implementar búsqueda de sesiones recientes)
-      
       return null;
     } catch (error) {
       console.error('❌ Error al restaurar auditoría:', error);
       return null;
+    }
+  }
+
+  // Restaurar imágenes de una auditoría desde IndexedDB
+  async restoreAuditoriaImages(auditoriaData, db) {
+    try {
+      if (!auditoriaData.id || !db) {
+        return auditoriaData;
+      }
+
+      // Buscar fotos asociadas a esta auditoría
+      const fotos = await db.getAllFromIndex('fotos', 'by-auditoriaId', auditoriaData.id);
+      
+      if (fotos.length === 0) {
+        console.log('📸 No se encontraron fotos guardadas para esta auditoría');
+        return auditoriaData;
+      }
+
+      console.log(`📸 Restaurando ${fotos.length} imágenes desde IndexedDB`);
+
+      // Reconstruir el array de imágenes con los File objects
+      const imagenesRestauradas = [...(auditoriaData.imagenes || [])];
+
+      for (const foto of fotos) {
+        const { seccionIndex, preguntaIndex, blob, mime, originalName } = foto;
+        
+        // Asegurar que el array tenga la estructura correcta
+        if (!imagenesRestauradas[seccionIndex]) {
+          imagenesRestauradas[seccionIndex] = [];
+        }
+        if (!Array.isArray(imagenesRestauradas[seccionIndex])) {
+          imagenesRestauradas[seccionIndex] = [];
+        }
+
+        // Convertir Blob a File object
+        if (blob instanceof Blob) {
+          const file = new File([blob], originalName || `foto_${foto.id}.jpg`, {
+            type: mime || 'image/jpeg',
+            lastModified: foto.createdAt || Date.now()
+          });
+          
+          imagenesRestauradas[seccionIndex][preguntaIndex] = file;
+          console.log(`✅ Imagen restaurada: sección ${seccionIndex}, pregunta ${preguntaIndex}`);
+        }
+      }
+
+      return {
+        ...auditoriaData,
+        imagenes: imagenesRestauradas
+      };
+    } catch (error) {
+      console.error('❌ Error al restaurar imágenes:', error);
+      return auditoriaData; // Retornar datos sin imágenes si hay error
     }
   }
 

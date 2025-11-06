@@ -304,8 +304,29 @@ const AuditoriaRefactorizada = () => {
 
       try {
         const savedData = await autoSaveService.restoreAuditoria(userProfile.uid);
+        
+        // Solo restaurar si hay datos Y no viene de agenda Y la auditoría está incompleta
         if (savedData && !location.state?.auditoriaId) {
-          // M.ostrar confirmación para restaurar
+          // Verificar que la auditoría esté incompleta (no completada)
+          const isIncomplete = !savedData.estadoCompletada && 
+                              (savedData.activeStep < 4 || !savedData.auditoriaGenerada);
+          
+          if (!isIncomplete) {
+            // Si está completada, limpiar el autoguardado
+            console.log('🗑️ Auditoría completada encontrada, limpiando autoguardado...');
+            await autoSaveService.clearLocalStorage();
+            return;
+          }
+
+          // Esperar a que los formularios estén cargados antes de restaurar
+          if (formularios.length === 0) {
+            console.log('⏳ Esperando carga de formularios...');
+            // Esperar un poco y reintentar
+            setTimeout(() => restoreAuditoria(), 1000);
+            return;
+          }
+
+          // Mostrar confirmación para restaurar
           const shouldRestore = await Swal.fire({
             title: '🔄 Auditoría encontrada',
             text: 'Se encontró una auditoría guardada automáticamente. ¿Quieres restaurarla?',
@@ -323,12 +344,13 @@ const AuditoriaRefactorizada = () => {
             setSecciones(savedData.secciones || []);
             setRespuestas(savedData.respuestas || []);
             setComentarios(savedData.comentarios || []);
+            // Restaurar imágenes (ahora vienen como File objects desde IndexedDB)
             setImagenes(savedData.imagenes || []);
             setActiveStep(savedData.activeStep || 0);
             setHasUnsavedChanges(false);
             setLastSaved(savedData.timestamp);
             
-            console.log('✅ Auditoría restaurada');
+            console.log('✅ Auditoría restaurada con imágenes');
           } else {
             // Limpiar datos guardados si no se quiere restaurar
             autoSaveService.clearLocalStorage();
@@ -340,7 +362,7 @@ const AuditoriaRefactorizada = () => {
     };
 
     restoreAuditoria();
-  }, [userProfile?.uid, location.state?.auditoriaId]);
+  }, [userProfile?.uid, location.state?.auditoriaId, formularios.length]);
 
 
   // Verificar firmas cuando cambien
