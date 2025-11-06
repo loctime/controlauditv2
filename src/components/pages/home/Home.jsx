@@ -174,140 +174,129 @@ const Home = () => {
         
 
         {/* Indicador de datos cargados para modo offline - SOLO EN PWA */}
-        {userProfile && isPWAStandalone && (
-          <Box sx={{ mb: 3 }}>
-            <Alert 
-              severity={Object.values(datosCargados).every(Boolean) ? "success" : "info"}
-              sx={{ mb: 2 }}
-            >
-              <Typography variant="body2">
-                <strong>Estado offline PWA:</strong>
-                <br />
-                📊 Empresas: {datosCargados.empresas ? `✅` : "❌"}     📋 Formularios: {datosCargados.formularios ? `✅` : "❌"}
-                {shouldPreload && (
-                  <>
-                    <br />
-                    📱 PWA Chrome detectado
-                    <br />
-                    {isPreloading ? (
-                      <>⚡ Precargando páginas para optimización...</>
-                    ) : (
-                      <>✅ Precarga disponible</>
-                    )}
-                  </>
-                )}
-              </Typography>
-            </Alert>
-            
-            {errorCarga && (
-              <Alert severity="warning" sx={{ mb: 2 }}>
-                {errorCarga}
-                <Button 
-                  size="small" 
-                  onClick={() => window.location.reload()} 
-                  sx={{ ml: 2 }}
-                >
-                  Recargar página
-                </Button>
-              </Alert>
-            )}
-            
-            {/* Botones para recarga de datos y precarga - SOLO EN PWA */}
-            <Box sx={{ textAlign: 'center', mb: 2, display: 'flex', gap: 2, justifyContent: 'center', flexWrap: 'wrap' }}>
-              <Button
-                variant="outlined"
-                size="small"
-                onClick={async () => {
-                  setCargandoDatosOffline(true);
-                  setErrorCarga(null);
-                  try {
-                    await Promise.all([
-                      getUserEmpresas(),
-                      getUserSucursales(),
-                      getUserFormularios()
-                    ]);
-                    setDatosCargados({
-                      empresas: (userEmpresas?.length || 0) > 0,
-                      sucursales: (userSucursales?.length || 0) > 0,
-                      formularios: (userFormularios?.length || 0) > 0
-                    });
-                  } catch (error) {
-                    setErrorCarga('Error al recargar datos');
-                  } finally {
-                    setCargandoDatosOffline(false);
-                  }
-                }}
-                disabled={cargandoDatosOffline}
+        {userProfile && isPWAStandalone && (() => {
+          const isEdge = navigator.userAgent.includes('Edg');
+          const isChrome = navigator.userAgent.includes('Chrome') && !navigator.userAgent.includes('Edg');
+          
+          return (
+            <Box sx={{ mb: 3 }}>
+              <Alert 
+                severity={Object.values(datosCargados).every(Boolean) ? "success" : "info"}
+                sx={{ mb: 2 }}
               >
-                {cargandoDatosOffline ? 'Cargando...' : '🔄 Recargar Datos'}
-              </Button>
+                <Typography variant="body2">
+                  <strong>Estado offline PWA:</strong>
+                  <br />
+                  📊 Empresas: {datosCargados.empresas ? `✅` : "❌"}     📋 Formularios: {datosCargados.formularios ? `✅` : "❌"}
+                </Typography>
+              </Alert>
               
-              {shouldPreload && !isPreloading && (
-                <Button
-                  variant="contained"
-                  size="small"
-                  onClick={async () => {
-                    // Limpiar flag de precarga para permitir precargar nuevamente
-                    sessionStorage.removeItem('chrome_preload_done');
-                    
-                    // Iniciar precarga
-                    await startPreload();
-                    
-                    // DESPUÉS de precargar, forzar guardado del cache
-                    if (userProfile && userEmpresas?.length > 0) {
-                      console.log('💾 [Home Chrome] Forzando guardado del cache después de precarga...');
-                      try {
-                        const { saveCompleteUserCache } = await import('../../../services/completeOfflineCache');
-                        
-                        const completeProfile = {
-                          ...userProfile,
-                          clienteAdminId: userProfile.clienteAdminId || userProfile.uid,
-                          email: userProfile.email,
-                          displayName: userProfile.displayName || userProfile.email,
-                          role: userProfile.role || 'operario'
-                        };
-                        
-                        await saveCompleteUserCache(
-                          completeProfile,
-                          userEmpresas || [],
-                          userSucursales || [],
-                          userFormularios || []
-                        );
-                        
-                        // Guardar timestamp del cache
-                        localStorage.setItem('chrome_preload_timestamp', Date.now().toString());
-                        
-                        console.log('✅ [Home Chrome] Cache guardado correctamente después de precarga');
-                        toast.success(`✅ Cache guardado: ${userEmpresas.length} empresas, ${userSucursales?.length || 0} sucursales, ${userFormularios?.length || 0} formularios`, {
+              {errorCarga && (
+                <Alert severity="warning" sx={{ mb: 2 }}>
+                  {errorCarga}
+                  <Button 
+                    size="small" 
+                    onClick={() => window.location.reload()} 
+                    sx={{ ml: 2 }}
+                  >
+                    Recargar página
+                  </Button>
+                </Alert>
+              )}
+              
+              {/* Botones según navegador */}
+              <Box sx={{ textAlign: 'center', mb: 2 }}>
+                {/* Chrome: solo Precargar Páginas */}
+                {isChrome && shouldPreload && !isPreloading && (
+                  <Button
+                    variant="contained"
+                    size="small"
+                    onClick={async () => {
+                      sessionStorage.removeItem('chrome_preload_done');
+                      await startPreload();
+                      
+                      if (userProfile && userEmpresas?.length > 0) {
+                        try {
+                          const { saveCompleteUserCache } = await import('../../../services/completeOfflineCache');
+                          
+                          const completeProfile = {
+                            ...userProfile,
+                            clienteAdminId: userProfile.clienteAdminId || userProfile.uid,
+                            email: userProfile.email,
+                            displayName: userProfile.displayName || userProfile.email,
+                            role: userProfile.role || 'operario'
+                          };
+                          
+                          await saveCompleteUserCache(
+                            completeProfile,
+                            userEmpresas || [],
+                            userSucursales || [],
+                            userFormularios || []
+                          );
+                          
+                          localStorage.setItem('chrome_preload_timestamp', Date.now().toString());
+                          toast.success(`✅ Cache guardado: ${userEmpresas.length} empresas, ${userSucursales?.length || 0} sucursales, ${userFormularios?.length || 0} formularios`, {
+                            autoClose: 5000,
+                            position: 'top-center'
+                          });
+                        } catch (error) {
+                          console.error('❌ [Home Chrome] Error guardando cache:', error);
+                          toast.error(`❌ Error guardando cache: ${error.message}`, {
+                            autoClose: 7000,
+                            position: 'top-center'
+                          });
+                        }
+                      } else {
+                        console.warn('⚠️ [Home Chrome] No hay datos para guardar en cache');
+                        toast.warning('⚠️ No hay datos disponibles para guardar en cache. Asegúrate de estar conectado.', {
                           autoClose: 5000,
                           position: 'top-center'
                         });
-                      } catch (error) {
-                        console.error('❌ [Home Chrome] Error guardando cache:', error);
-                        toast.error(`❌ Error guardando cache: ${error.message}`, {
-                          autoClose: 7000,
-                          position: 'top-center'
-                        });
                       }
-                    } else {
-                      console.warn('⚠️ [Home Chrome] No hay datos para guardar en cache');
-                      toast.warning('⚠️ No hay datos disponibles para guardar en cache. Asegúrate de estar conectado.', {
-                        autoClose: 5000,
-                        position: 'top-center'
-                      });
-                    }
-                  }}
-                  sx={{ 
-                    background: 'linear-gradient(90deg, #1976d2, #42a5f5)',
-                    '&:hover': { background: 'linear-gradient(90deg, #1565c0, #1976d2)' }
-                  }}
-                >
-                  ⚡ Precargar Páginas
-                </Button>
-              )}
+                    }}
+                    sx={{ 
+                      background: 'linear-gradient(90deg, #1976d2, #42a5f5)',
+                      '&:hover': { background: 'linear-gradient(90deg, #1565c0, #1976d2)' }
+                    }}
+                  >
+                    ⚡ Precargar Páginas
+                  </Button>
+                )}
+                
+                {/* Edge: solo Recargar Datos */}
+                {isEdge && (
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    onClick={async () => {
+                      setCargandoDatosOffline(true);
+                      setErrorCarga(null);
+                      try {
+                        await Promise.all([
+                          getUserEmpresas(),
+                          getUserSucursales(),
+                          getUserFormularios()
+                        ]);
+                        setDatosCargados({
+                          empresas: (userEmpresas?.length || 0) > 0,
+                          sucursales: (userSucursales?.length || 0) > 0,
+                          formularios: (userFormularios?.length || 0) > 0
+                        });
+                      } catch (error) {
+                        setErrorCarga('Error al recargar datos');
+                      } finally {
+                        setCargandoDatosOffline(false);
+                      }
+                    }}
+                    disabled={cargandoDatosOffline}
+                  >
+                    {cargandoDatosOffline ? 'Cargando...' : '🔄 Recargar Datos'}
+                  </Button>
+                )}
+              </Box>
             </Box>
-          </Box>
-        )}
+          );
+        })()}
 
         <div style={{ textAlign: 'center', marginTop: 24, marginBottom: 16 }}>
           <Button
