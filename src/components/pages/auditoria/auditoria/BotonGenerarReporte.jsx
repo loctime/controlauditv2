@@ -37,6 +37,15 @@ const BotonGenerarReporte = ({
 
     // Las firmas son opcionales - no validar como obligatorias
     console.log('[BotonGenerarReporte] Firmas opcionales - Auditor:', !!firmaAuditor, 'Responsable:', !!firmaResponsable);
+    
+    // Debug de clasificaciones
+    console.log('🔍 [BotonGenerarReporte] handleGuardar - clasificaciones recibidas como prop:', clasificaciones);
+    console.log('🔍 [BotonGenerarReporte] handleGuardar - Tipo:', typeof clasificaciones, Array.isArray(clasificaciones));
+    if (Array.isArray(clasificaciones) && clasificaciones.length > 0) {
+      console.log('🔍 [BotonGenerarReporte] handleGuardar - Contenido:', JSON.stringify(clasificaciones, null, 2));
+    } else {
+      console.warn('🔍 [BotonGenerarReporte] handleGuardar - ⚠️ clasificaciones está vacío o no es array!');
+    }
 
     setGuardando(true);
     try {
@@ -137,7 +146,10 @@ const BotonGenerarReporte = ({
         ...authData,
         fechaGuardado: new Date(),
       });
+      console.log('🔍 [BotonGenerarReporte] Clasificaciones recibidas como prop:', clasificaciones);
+      console.log('🔍 [BotonGenerarReporte] Tipo de clasificaciones:', typeof clasificaciones, Array.isArray(clasificaciones));
       console.debug('[BotonGenerarReporte] Guardando auditoría con metadatos:', datosAuditoria);
+      console.log('🔍 [BotonGenerarReporte] Clasificaciones en datosAuditoria:', datosAuditoria.clasificaciones);
       console.log('[BotonGenerarReporte] userProfile final que se pasa al servicio:', {
         uid: currentUserProfile?.uid,
         email: currentUserProfile?.email,

@@ -492,6 +492,7 @@ class AuditoriaService {
 
       // Log para debugging
       console.log('[AuditoriaService] Datos limpios para Firestore:', JSON.stringify(datosLimpios, null, 2));
+      console.log('[AuditoriaService] Clasificaciones a guardar:', JSON.stringify(datosLimpios.clasificaciones, null, 2));
 
       // Guardar en Firestore
       const docRef = await addDoc(collection(db, "reportes"), datosLimpios);

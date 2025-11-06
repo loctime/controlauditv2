@@ -14,7 +14,8 @@ const BotonGenerarReporte = ({
   formulario, 
   respuestas, 
   comentarios, 
-  imagenes, 
+  imagenes,
+  clasificaciones,
   secciones,
   firmaAuditor,
   firmaResponsable,
@@ -129,6 +130,7 @@ const BotonGenerarReporte = ({
         respuestas,
         comentarios,
         imagenes,
+        clasificaciones,
         secciones,
         firmaAuditor,
         firmaResponsable,
@@ -136,6 +138,8 @@ const BotonGenerarReporte = ({
         ...authData,
         fechaGuardado: new Date(),
       });
+      console.log('🔍 [ReporteImprimir] clasificaciones recibidas:', clasificaciones);
+      console.log('🔍 [ReporteImprimir] clasificaciones en datosAuditoria:', datosAuditoria.clasificaciones);
       console.debug('[ReporteImprimir] Guardando auditoría con metadatos:', datosAuditoria);
       console.log('[ReporteImprimir] userProfile final que se pasa al servicio:', {
         uid: currentUserProfile?.uid,

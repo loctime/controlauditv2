@@ -307,6 +307,85 @@ export const normalizarEmpresaCompleta = (reporte) => {
   return { id: 'unknown', nombre: "Empresa no disponible" };
 };
 
+// Normaliza clasificaciones: array de objetos {seccion, valores: [ ... ]} a array de arrays de objetos { condicion: boolean, actitud: boolean }
+export const normalizarClasificaciones = (clasificacionesFirestore, secciones) => {
+  console.log('🔍 [normalizarClasificaciones] clasificacionesFirestore:', clasificacionesFirestore);
+  console.log('🔍 [normalizarClasificaciones] Tipo:', typeof clasificacionesFirestore, Array.isArray(clasificacionesFirestore));
+  console.log('🔍 [normalizarClasificaciones] secciones:', secciones);
+  
+  if (!clasificacionesFirestore || (Array.isArray(clasificacionesFirestore) && clasificacionesFirestore.length === 0)) {
+    console.debug('[normalizarClasificaciones] No hay clasificaciones o array vacío, retornando arrays con valores por defecto');
+    return secciones.map((seccion) => 
+      Array(seccion?.preguntas?.length || 0).fill({ condicion: false, actitud: false })
+    );
+  }
+  
+  if (!Array.isArray(clasificacionesFirestore)) {
+    // Si es objeto (caso Firestore), convertir a array
+    if (clasificacionesFirestore && typeof clasificacionesFirestore === 'object') {
+      // Verificar si es un objeto con claves numéricas (formato Firestore)
+      const keys = Object.keys(clasificacionesFirestore);
+      if (keys.length > 0 && !isNaN(keys[0])) {
+        // Es un objeto indexado numéricamente, convertir a array
+        clasificacionesFirestore = Object.keys(clasificacionesFirestore)
+          .sort((a, b) => parseInt(a) - parseInt(b))
+          .map(key => clasificacionesFirestore[key]);
+      } else {
+        clasificacionesFirestore = Object.values(clasificacionesFirestore);
+      }
+    } else {
+      return secciones.map((seccion) => 
+        Array(seccion?.preguntas?.length || 0).fill({ condicion: false, actitud: false })
+      );
+    }
+  }
+  
+  // Si es array de objetos {seccion, valores}
+  if (clasificacionesFirestore.length > 0 && clasificacionesFirestore[0] && typeof clasificacionesFirestore[0] === 'object' && clasificacionesFirestore[0].seccion !== undefined && Array.isArray(clasificacionesFirestore[0].valores)) {
+    console.debug('[normalizarClasificaciones] Procesando formato de objetos por sección');
+    return secciones.map((_, idx) => {
+      const clasSec = clasificacionesFirestore.find(clas => clas.seccion === idx || clas.seccion === idx.toString());
+      if (!clasSec || !Array.isArray(clasSec.valores)) {
+        return Array(secciones[idx]?.preguntas?.length || 0).fill({ condicion: false, actitud: false });
+      }
+      return clasSec.valores.map(val => {
+        if (val && typeof val === 'object') {
+          return {
+            condicion: val.condicion === true || val.condicion === 'true' || val.condicion === 1,
+            actitud: val.actitud === true || val.actitud === 'true' || val.actitud === 1
+          };
+        }
+        return { condicion: false, actitud: false };
+      });
+    });
+  }
+  
+  // Si es array de arrays (formato clásico)
+  if (clasificacionesFirestore.length > 0 && Array.isArray(clasificacionesFirestore[0])) {
+    console.debug('[normalizarClasificaciones] Procesando formato de arrays anidados');
+    return clasificacionesFirestore.map((seccionClasificaciones) => {
+      if (!Array.isArray(seccionClasificaciones)) {
+        return [];
+      }
+      return seccionClasificaciones.map(clas => {
+        if (clas && typeof clas === 'object') {
+          return {
+            condicion: clas.condicion === true || clas.condicion === 'true' || clas.condicion === 1,
+            actitud: clas.actitud === true || clas.actitud === 'true' || clas.actitud === 1
+          };
+        }
+        return { condicion: false, actitud: false };
+      });
+    });
+  }
+  
+  // Fallback: retornar arrays vacíos con valores por defecto
+  console.debug('[normalizarClasificaciones] Usando fallback');
+  return secciones.map((seccion) => 
+    Array(seccion?.preguntas?.length || 0).fill({ condicion: false, actitud: false })
+  );
+};
+
 // Normaliza formulario usando todos los campos disponibles del reporte
 export const normalizarFormularioCompleto = (reporte) => {
   console.debug('[normalizarFormulario] reporte.formulario:', reporte.formulario);

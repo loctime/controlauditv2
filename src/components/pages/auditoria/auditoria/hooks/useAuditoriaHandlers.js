@@ -83,7 +83,13 @@ export const useAuditoriaHandlers = ({
   }, [setImagenes]);
 
   const handleGuardarClasificaciones = useCallback((nuevasClasificaciones) => {
+    console.log('🔍 [handleGuardarClasificaciones] Recibidas nuevas clasificaciones:', nuevasClasificaciones);
+    console.log('🔍 [handleGuardarClasificaciones] Tipo:', typeof nuevasClasificaciones, Array.isArray(nuevasClasificaciones));
+    if (Array.isArray(nuevasClasificaciones) && nuevasClasificaciones.length > 0) {
+      console.log('🔍 [handleGuardarClasificaciones] Contenido detallado:', JSON.stringify(nuevasClasificaciones, null, 2));
+    }
     setClasificaciones(nuevasClasificaciones);
+    console.log('🔍 [handleGuardarClasificaciones] Estado actualizado');
   }, [setClasificaciones]);
 
   // Handlers de firmas
