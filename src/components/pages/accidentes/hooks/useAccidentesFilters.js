@@ -8,6 +8,15 @@ export const useAccidentesFilters = (location) => {
   const [filterTipo, setFilterTipo] = useState('');
   const [filterEstado, setFilterEstado] = useState('');
   const [empresasCargadas, setEmpresasCargadas] = useState(false);
+  const routeEmpresaId = useMemo(() => {
+    const params = new URLSearchParams(location.search || '');
+    return location.state?.empresaId || params.get('empresaId');
+  }, [location.search, location.state]);
+
+  const routeSucursalId = useMemo(() => {
+    const params = new URLSearchParams(location.search || '');
+    return location.state?.sucursalId || params.get('sucursalId');
+  }, [location.search, location.state]);
 
   // Usar selección global
   const {
@@ -27,22 +36,22 @@ export const useAccidentesFilters = (location) => {
   }, [userEmpresas]);
 
   useEffect(() => {
-    if (userEmpresas && userEmpresas.length > 0 && selectedEmpresa === 'todas') {
-      const stateEmpresaId = location.state?.empresaId;
-      if (stateEmpresaId && userEmpresas.some(e => e.id === stateEmpresaId)) {
-        setSelectedEmpresa(stateEmpresaId);
-      }
+    if (!userEmpresas || userEmpresas.length === 0) return;
+    if (!routeEmpresaId) return;
+    if (!userEmpresas.some(e => e.id === routeEmpresaId)) return;
+    if (selectedEmpresa !== routeEmpresaId) {
+      setSelectedEmpresa(routeEmpresaId);
     }
-  }, [userEmpresas, location.state, selectedEmpresa]);
+  }, [routeEmpresaId, userEmpresas, selectedEmpresa, setSelectedEmpresa]);
 
   useEffect(() => {
-    if (selectedEmpresa !== 'todas' && selectedSucursal === 'todas') {
-      const stateSucursalId = location.state?.sucursalId;
-      if (stateSucursalId && sucursalesFiltradas.some(s => s.id === stateSucursalId)) {
-        setSelectedSucursal(stateSucursalId);
-      }
+    if (!routeSucursalId) return;
+    if (!sucursalesFiltradas || sucursalesFiltradas.length === 0) return;
+    if (!sucursalesFiltradas.some(s => s.id === routeSucursalId)) return;
+    if (selectedSucursal !== routeSucursalId) {
+      setSelectedSucursal(routeSucursalId);
     }
-  }, [selectedEmpresa, sucursalesFiltradas, location.state, selectedSucursal]);
+  }, [routeSucursalId, sucursalesFiltradas, selectedSucursal, setSelectedSucursal]);
 
   return {
     selectedEmpresa,

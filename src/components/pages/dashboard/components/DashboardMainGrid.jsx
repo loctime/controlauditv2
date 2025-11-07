@@ -116,6 +116,8 @@ export default function DashboardMainGrid({ data }) {
             incidentAccidentRatio={data.incidentAccidentRatio}
             daysWithoutIncidents={data.daysWithoutIncidents}
             recentIncidents={data.recentIncidents}
+            companyId={data.companyId}
+            sucursalId={data.sucursalId}
           />
 
           <Paper

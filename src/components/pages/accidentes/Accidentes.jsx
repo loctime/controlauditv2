@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Container,
   Paper,
@@ -9,7 +9,7 @@ import {
   useTheme
 } from '@mui/material';
 import { useAuth } from '../../context/AuthContext';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import NuevoAccidenteModal from './NuevoAccidenteModal';
 import NuevoIncidenteModal from './NuevoIncidenteModal';
 import {
@@ -28,6 +28,11 @@ import { actualizarEstadoAccidente } from '../../../services/accidenteService';
 export default function Accidentes() {
   const { userProfile } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
+  const searchParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
+  const searchIncidentId = searchParams.get('accidenteId');
+  const searchEmpresaId = searchParams.get('empresaId');
+  const searchSucursalId = searchParams.get('sucursalId');
   const theme = useTheme();
   const isSmallMobile = useMediaQuery(theme.breakpoints.down('sm'));
   
@@ -37,6 +42,8 @@ export default function Accidentes() {
   const [openIncidenteModal, setOpenIncidenteModal] = useState(false);
   const [openDetalleModal, setOpenDetalleModal] = useState(false);
   const [accidenteSeleccionado, setAccidenteSeleccionado] = useState(null);
+  const initialIncidentId = location.state?.accidenteId || searchIncidentId;
+  const [pendingIncidentId, setPendingIncidentId] = useState(initialIncidentId || null);
 
   const {
     selectedEmpresa,
@@ -66,6 +73,37 @@ export default function Accidentes() {
     handleCrearIncidente,
     handleCambiarEstado
   } = useAccidentesHandlers(userProfile, recargarAccidentes);
+
+  useEffect(() => {
+    if (location.state?.accidenteId) {
+      setPendingIncidentId(location.state.accidenteId);
+    }
+  }, [location.state?.accidenteId]);
+
+  useEffect(() => {
+    if (searchIncidentId) {
+      setPendingIncidentId(searchIncidentId);
+    }
+  }, [searchIncidentId]);
+
+  useEffect(() => {
+    if (!pendingIncidentId || loading || accidentes.length === 0) return;
+    const match = accidentes.find(acc => acc.id === pendingIncidentId);
+    if (match) {
+      setAccidenteSeleccionado(match);
+      setOpenDetalleModal(true);
+    }
+    setPendingIncidentId(null);
+
+    const hasQueryParams = Boolean(searchIncidentId || searchEmpresaId || searchSucursalId);
+    const stateHasAccidente = Boolean(location.state?.accidenteId);
+
+    if (hasQueryParams || stateHasAccidente) {
+      const { accidenteId, ...restState } = location.state || {};
+      const hasState = restState && Object.keys(restState).length > 0;
+      navigate(location.pathname, { replace: true, state: hasState ? restState : undefined });
+    }
+  }, [pendingIncidentId, accidentes, loading, navigate, location, searchIncidentId, searchEmpresaId, searchSucursalId]);
 
   const handleVerDetalle = (accidente) => {
     setAccidenteSeleccionado(accidente);
