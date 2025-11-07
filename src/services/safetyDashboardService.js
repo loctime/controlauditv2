@@ -241,25 +241,31 @@ export const safetyDashboardService = {
       unsubscribes.push(unsubscribeEmpleados);
       
       // Listener para auditorías
-      const auditoriasRef = collection(db, 'auditorias');
-      const qAuditorias = query(
-        auditoriasRef,
-        where('empresa', '==', companyId),
-        orderBy('fechaCreacion', 'desc')
-      );
+      const auditoriasRef = collection(db, 'reportes');
+      const auditoriaQueries = [];
       
-      const unsubscribeAuditorias = onSnapshot(qAuditorias,
-        (snapshot) => {
-          console.log(`🔄 [SafetyDashboard] Cambios detectados en auditorías: ${snapshot.docs.length} documentos`);
-          recargarDashboard();
-        },
-        (error) => {
-          console.error('❌ [SafetyDashboard] Error en listener de auditorías:', error);
-          if (onError) onError(error);
-        }
-      );
+      if (companyId) {
+        auditoriaQueries.push(query(auditoriasRef, where('empresaId', '==', companyId)));
+        auditoriaQueries.push(query(auditoriasRef, where('empresa', '==', companyId)));
+        auditoriaQueries.push(query(auditoriasRef, where('clienteAdminId', '==', companyId)));
+      } else {
+        auditoriaQueries.push(query(auditoriasRef, orderBy('fechaCreacion', 'desc')));
+      }
       
-      unsubscribes.push(unsubscribeAuditorias);
+      auditoriaQueries.forEach((auditoriaQuery, index) => {
+        const unsubscribe = onSnapshot(
+          auditoriaQuery,
+          (snapshot) => {
+            console.log(`🔄 [SafetyDashboard] Cambios detectados en auditorías (${index + 1}): ${snapshot.docs.length} documentos`);
+            recargarDashboard();
+          },
+          (error) => {
+            console.error('❌ [SafetyDashboard] Error en listener de auditorías:', error);
+            if (onError) onError(error);
+          }
+        );
+        unsubscribes.push(unsubscribe);
+      });
       
       // Retornar función para desuscribirse de todos los listeners
       return () => {
@@ -277,31 +283,56 @@ export const safetyDashboardService = {
   // Obtener datos de auditorías
   async getAuditoriasData(companyId, period) {
     try {
-      const auditoriasRef = collection(db, 'auditorias');
-      const q = query(
-        auditoriasRef,
-        where('empresa', '==', companyId),
-        orderBy('fechaCreacion', 'desc')
+      const reportesRef = collection(db, 'reportes');
+      const queries = [];
+
+      if (companyId) {
+        queries.push(query(reportesRef, where('empresaId', '==', companyId)));
+        queries.push(query(reportesRef, where('empresa', '==', companyId)));
+        queries.push(query(reportesRef, where('clienteAdminId', '==', companyId)));
+      } else {
+        queries.push(query(reportesRef, orderBy('fechaCreacion', 'desc')));
+      }
+
+      const snapshots = await Promise.allSettled(
+        queries.map((q) => getDocs(q))
       );
-      
-      const snapshot = await getDocs(q);
+
       const auditorias = [];
-      
-      snapshot.forEach(doc => {
-        const data = doc.data();
-        auditorias.push({
-          id: doc.id,
-          ...data,
-          // Procesar estadísticas si existen
-          estadisticas: data.estadisticas || this.calculateAuditoriaStats(data.respuestas)
+      const processedIds = new Set();
+
+      snapshots.forEach((result) => {
+        if (result.status !== 'fulfilled') {
+          console.warn('⚠️ [SafetyDashboard] Error en consulta de reportes:', result.reason);
+          return;
+        }
+
+        result.value.forEach((docSnapshot) => {
+          if (processedIds.has(docSnapshot.id)) return;
+          processedIds.add(docSnapshot.id);
+
+          const data = docSnapshot.data();
+          auditorias.push({
+            id: docSnapshot.id,
+            ...data,
+            estadisticas: data.estadisticas || this.calculateAuditoriaStats(data.respuestas)
+          });
         });
       });
-      
-      console.log(`📊 [SafetyDashboard] ${auditorias.length} auditorías encontradas`);
+
+      auditorias.sort((a, b) => {
+        const fechaARef = a.fechaCreacion || a.fecha || a.timestamp;
+        const fechaBRef = b.fechaCreacion || b.fecha || b.timestamp;
+        const fechaA = fechaARef?.toDate ? fechaARef.toDate() : new Date(fechaARef || 0);
+        const fechaB = fechaBRef?.toDate ? fechaBRef.toDate() : new Date(fechaBRef || 0);
+        return fechaB - fechaA;
+      });
+
+      console.log(`📊 [SafetyDashboard] ${auditorias.length} auditorías (reportes) encontradas`);
       return auditorias;
-      
+
     } catch (error) {
-      console.error('❌ [SafetyDashboard] Error obteniendo auditorías:', error);
+      console.error('❌ [SafetyDashboard] Error obteniendo auditorías (reportes):', error);
       return [];
     }
   },
@@ -599,6 +630,16 @@ export const safetyDashboardService = {
       a.formulario?.toLowerCase().includes('inspeccion')
     );
 
+    const auditoriasInPeriod = auditorias.filter(auditoria => {
+      if (!auditoria.fechaCreacion && !auditoria.fecha) return false;
+      const fechaReferencia = auditoria.fechaCreacion || auditoria.fecha;
+      const auditDate = fechaReferencia?.toDate ? fechaReferencia.toDate() : new Date(fechaReferencia);
+      return auditDate >= periodStart && auditDate <= periodEnd;
+    });
+
+    const completedAudits = auditoriasInPeriod.filter(auditoria => auditoria.estado === 'completada');
+    const pendingAudits = auditoriasInPeriod.filter(auditoria => auditoria.estado !== 'completada');
+
     // Calcular desvíos desde auditorías no conformes
     const deviations = auditorias.reduce((total, auditoria) => {
       if (auditoria.estadisticas) {
@@ -647,6 +688,17 @@ export const safetyDashboardService = {
       eppDeliveryRate: Math.min(100, Math.max(80, 100 - (deviations * 2))),
       contractorCompliance: Math.min(100, Math.max(85, legalCompliance - 5)),
       legalCompliance,
+
+      // Métricas de auditorías
+      auditsTotal: auditoriasInPeriod.length,
+      auditsCompleted: completedAudits.length,
+      auditsPending: pendingAudits.length,
+      auditsNonConformities: auditoriasInPeriod.reduce((total, auditoria) => {
+        if (auditoria.estadisticas) {
+          return total + (auditoria.estadisticas.conteo?.['No conforme'] || 0);
+        }
+        return total;
+      }, 0),
       
       // Métricas de empleados (DATOS REALES)
       totalEmployees,
@@ -827,6 +879,10 @@ export const safetyDashboardService = {
       eppDeliveryRate: 100,
       contractorCompliance: 100,
       legalCompliance: 100,
+      auditsTotal: 0,
+      auditsCompleted: 0,
+      auditsPending: 0,
+      auditsNonConformities: 0,
       totalEmployees: 0,
       operators: 0,
       administrators: 0,
