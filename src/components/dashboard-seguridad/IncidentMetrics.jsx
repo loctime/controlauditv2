@@ -10,13 +10,18 @@ import {
   DialogContent,
   DialogActions,
   Divider,
-  Stack
+  Stack,
+  Grid,
+  IconButton
 } from '@mui/material';
 import {
   Insights as InsightsIcon,
   TrendingUp as TrendingUpIcon,
   EventAvailable as EventAvailableIcon,
-  InfoOutlined as InfoIcon
+  InfoOutlined as InfoIcon,
+  Group as GroupIcon,
+  PhotoCamera as PhotoCameraIcon,
+  ImageSearch as ImageSearchIcon
 } from '@mui/icons-material';
 
 const formatDate = (isoString) => {
@@ -37,9 +42,13 @@ export default function IncidentMetrics({
   incidentTrend = [],
   incidentAccidentRatio = 0,
   daysWithoutIncidents = 0,
-  recentIncidents = []
+  recentIncidents = [],
+  companyId,
+  sucursalId
 }) {
   const [openModal, setOpenModal] = useState(false);
+  const [openImageModal, setOpenImageModal] = useState(false);
+  const [selectedImage, setSelectedImage] = useState(null);
 
   const { trendData, maxTrend } = useMemo(() => {
     if (!incidentTrend || incidentTrend.length === 0) {
@@ -55,13 +64,53 @@ export default function IncidentMetrics({
   }, [incidentTrend]);
 
   const ratioLabel = useMemo(() => {
-    if (!incidentAccidentRatio || Number.isNaN(incidentAccidentRatio)) {
+    if (incidentAccidentRatio === null || Number.isNaN(incidentAccidentRatio)) {
       return 'Sin datos';
     }
     return `${incidentAccidentRatio}:1`;
   }, [incidentAccidentRatio]);
 
   const noRecentIncidents = !recentIncidents || recentIncidents.length === 0;
+
+  const handleNavigate = (incident) => {
+    const params = new URLSearchParams();
+    if (incident?.id) params.set('accidenteId', incident.id);
+    const targetEmpresa = incident?.empresaId || companyId;
+    const targetSucursal = incident?.sucursalId || sucursalId;
+    if (targetEmpresa) params.set('empresaId', targetEmpresa);
+    if (targetSucursal) params.set('sucursalId', targetSucursal);
+
+    const url = `/accidentes${params.toString() ? `?${params.toString()}` : ''}`;
+
+    if (typeof window !== 'undefined') {
+      window.open(url, '_blank', 'noopener,noreferrer');
+    }
+  };
+
+  const handleOpenImage = (imageUrl) => {
+    setSelectedImage(imageUrl);
+    setOpenImageModal(true);
+  };
+
+  const handleCloseImage = () => {
+    setOpenImageModal(false);
+    setSelectedImage(null);
+  };
+
+  const formatDateTime = (isoString) => {
+    if (!isoString) return 'Fecha desconocida';
+    try {
+      return new Date(isoString).toLocaleString('es-AR', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch (error) {
+      return 'Fecha desconocida';
+    }
+  };
 
   return (
     <>
@@ -201,34 +250,97 @@ export default function IncidentMetrics({
           ) : (
             <Stack spacing={2}>
               {recentIncidents.map((incident, index) => (
-                <Box key={`${incident.id}-${index}`} sx={{ p: 2, border: '1px solid #e2e8f0', borderRadius: 2 }}>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                    <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-                      {incident.tipo || 'Incidente'}
-                    </Typography>
-                    <Chip
-                      size="small"
-                      label={incident.estado || 'SIN ESTADO'}
-                      sx={{ fontWeight: 600 }}
-                    />
-                  </Box>
-                  <Typography variant="body2" sx={{ color: '#475569' }}>
-                    Fecha: {formatDate(incident.fecha)}
-                  </Typography>
-                  <Typography variant="body2" sx={{ color: '#475569' }}>
-                    Área: {incident.area || 'Sin asignar'}
-                  </Typography>
-                  {incident.responsable && (
-                    <Typography variant="body2" sx={{ color: '#475569' }}>
-                      Responsable: {incident.responsable}
-                    </Typography>
-                  )}
-                  {incident.descripcion && (
-                    <Typography variant="body2" sx={{ color: '#64748b', mt: 1 }}>
-                      {incident.descripcion}
-                    </Typography>
-                  )}
-                </Box>
+                <Paper key={`${incident.id}-${index}`} variant="outlined" sx={{ p: 2, borderRadius: 2 }}>
+                  <Grid container spacing={2} alignItems="flex-start">
+                    <Grid item xs={12} md={6}>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                        <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                          {incident.tipo || 'Incidente'}
+                        </Typography>
+                        <Chip
+                          size="small"
+                          label={incident.estado || 'SIN ESTADO'}
+                          sx={{ fontWeight: 600 }}
+                        />
+                      </Box>
+                      <Stack spacing={0.5} sx={{ color: '#475569' }}>
+                        <Typography variant="body2">Fecha: {formatDateTime(incident.fecha)}</Typography>
+                        <Typography variant="body2">Área: {incident.area || 'Sin asignar'}</Typography>
+                        {incident.responsable && (
+                          <Typography variant="body2">Responsable: {incident.responsable}</Typography>
+                        )}
+                      </Stack>
+                      {incident.descripcion && (
+                        <Typography variant="body2" sx={{ color: '#64748b', mt: 1 }}>
+                          {incident.descripcion}
+                        </Typography>
+                      )}
+                    </Grid>
+
+                    <Grid item xs={12} md={6}>
+                      <Stack spacing={1}>
+                        {Array.isArray(incident.empleadosInvolucrados) && incident.empleadosInvolucrados.length > 0 && (
+                          <Box>
+                            <Typography variant="body2" sx={{ fontWeight: 600, color: '#1f2937', mb: 0.5, display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                              <GroupIcon fontSize="small" /> Involucrados
+                            </Typography>
+                            <Stack direction="row" spacing={0.5} useFlexGap flexWrap="wrap">
+                              {incident.empleadosInvolucrados.map((emp) => (
+                                <Chip
+                                  key={emp.id}
+                                  label={`${emp.nombre}${emp.conReposo ? ' (con reposo)' : ''}`}
+                                  color={emp.conReposo ? 'error' : 'default'}
+                                  size="small"
+                                />
+                              ))}
+                            </Stack>
+                          </Box>
+                        )}
+
+                        {Array.isArray(incident.testigos) && incident.testigos.length > 0 && (
+                          <Box>
+                            <Typography variant="body2" sx={{ fontWeight: 600, color: '#1f2937', mb: 0.5 }}>
+                              Testigos
+                            </Typography>
+                            <Stack direction="row" spacing={0.5} useFlexGap flexWrap="wrap">
+                              {incident.testigos.map((testigo) => (
+                                <Chip key={testigo.id} label={testigo.nombre} size="small" />
+                              ))}
+                            </Stack>
+                          </Box>
+                        )}
+
+                        {Array.isArray(incident.imagenes) && incident.imagenes.length > 0 && (
+                          <Box>
+                            <Typography variant="body2" sx={{ fontWeight: 600, color: '#1f2937', mb: 0.5, display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                              <PhotoCameraIcon fontSize="small" /> Evidencias
+                            </Typography>
+                            <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
+                              {incident.imagenes.map((img, imgIndex) => (
+                                <IconButton
+                                  key={`${incident.id}-img-${imgIndex}`}
+                                  onClick={() => handleOpenImage(img)}
+                                  size="small"
+                                  sx={{
+                                    width: 48,
+                                    height: 48,
+                                    border: '1px solid #e2e8f0',
+                                    borderRadius: 1,
+                                    backgroundImage: `url(${img})`,
+                                    backgroundSize: 'cover',
+                                    backgroundPosition: 'center'
+                                  }}
+                                >
+                                  <ImageSearchIcon sx={{ color: '#fff', textShadow: '0 0 6px rgba(0,0,0,0.6)' }} fontSize="small" />
+                                </IconButton>
+                              ))}
+                            </Stack>
+                          </Box>
+                        )}
+                      </Stack>
+                    </Grid>
+                  </Grid>
+                </Paper>
               ))}
             </Stack>
           )}
@@ -236,6 +348,35 @@ export default function IncidentMetrics({
         <Divider />
         <DialogActions sx={{ px: 3, py: 2 }}>
           <Button onClick={() => setOpenModal(false)}>Cerrar</Button>
+          {!noRecentIncidents && (
+            <Button
+              variant="contained"
+              onClick={() => handleNavigate(recentIncidents[0])}
+            >
+              Ir a Accidentes
+            </Button>
+          )}
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={openImageModal} onClose={handleCloseImage} maxWidth="lg">
+        {selectedImage && (
+          <Box sx={{ p: 2 }}>
+            <Box
+              component="img"
+              src={selectedImage}
+              alt="Evidencia de incidente"
+              sx={{ maxWidth: '80vw', maxHeight: '70vh', objectFit: 'contain', borderRadius: 2 }}
+            />
+          </Box>
+        )}
+        <DialogActions>
+          <Button onClick={handleCloseImage}>Cerrar</Button>
+          {selectedImage && (
+            <Button onClick={() => window.open(selectedImage, '_blank')} variant="contained">
+              Abrir en nueva pestaña
+            </Button>
+          )}
         </DialogActions>
       </Dialog>
     </>

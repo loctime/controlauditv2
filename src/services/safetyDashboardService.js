@@ -631,6 +631,7 @@ export const safetyDashboardService = {
       const incidentDate = parseEventDate(incident);
       const involucrados = incident.empleadosInvolucrados || incident.involucrados;
       const responsables = incident.responsable || incident.responsables || incident.supervisor;
+      const testigos = incident.testigos || incident.empleadosTestigos;
 
       const formatPeople = (people) => {
         if (!people) return null;
@@ -643,14 +644,29 @@ export const safetyDashboardService = {
         return typeof people === 'string' ? people : null;
       };
 
+      const mapPeople = (peopleArray, defaultPrefix) => {
+        if (!Array.isArray(peopleArray)) return [];
+        return peopleArray.map((person, index) => ({
+          id: person?.empleadoId || person?.id || `${defaultPrefix}-${index}`,
+          nombre: person?.empleadoNombre || person?.nombre || person?.displayName || 'Sin nombre',
+          conReposo: Boolean(person?.conReposo)
+        }));
+      };
+
       return {
         id: incident.id || incident.uid || `incident-${Math.random().toString(36).slice(2, 8)}`,
         fecha: incidentDate ? incidentDate.toISOString() : null,
+        fechaHora: incident.fechaHora || incidentDate || null,
         tipo: incident.tipo || incident.categoria || 'incidente',
         area: incident.area || incident.sector || incident.ubicacion || 'Sin asignar',
         descripcion: incident.descripcion || incident.detalle || incident.causas || '',
         estado: (incident.estado || incident.status || 'Sin estado').toUpperCase(),
-        responsable: formatPeople(responsables) || formatPeople(involucrados)
+        responsable: formatPeople(responsables) || formatPeople(involucrados),
+        empleadosInvolucrados: mapPeople(involucrados, 'emp'),
+        testigos: mapPeople(testigos, 'testigo'),
+        imagenes: Array.isArray(incident.imagenes) ? incident.imagenes : [],
+        empresaId: incident.empresaId || incident.companyId || null,
+        sucursalId: incident.sucursalId || incident.plantaId || null
       };
     });
 
