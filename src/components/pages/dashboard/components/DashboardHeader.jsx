@@ -23,15 +23,7 @@ export default function DashboardHeader({ companyName, period }) {
       >
         SISTEMA DE GESTIÓN DE SEGURIDAD Y SALUD EN EL TRABAJO
       </Typography>
-      <Typography
-        variant="subtitle1"
-        sx={{
-          textAlign: "center",
-          opacity: 0.9
-        }}
-      >
-        {companyName} - {period}
-      </Typography>
+      
     </Paper>
   );
 }
