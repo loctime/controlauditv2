@@ -6,7 +6,14 @@ import React, {
   lazy,
   Suspense
 } from "react";
-import { Container, Box, Skeleton, Alert, Stack } from "@mui/material";
+import {
+  Container,
+  Box,
+  Alert,
+  Stack,
+  CircularProgress,
+  Typography
+} from "@mui/material";
 import { safetyDashboardService } from "../../../services/safetyDashboardService";
 import { useAuth } from "../../context/AuthContext";
 import { useGlobalSelection } from "../../../hooks/useGlobalSelection";
@@ -42,20 +49,27 @@ function AnalyticsFallback() {
   return (
     <Box
       sx={{
-        mt: 5,
+        mt: 2,
+        mb: 2,
+        py: 4,
+        px: 2,
         display: "flex",
         flexDirection: "column",
-        gap: 3
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 2,
+        borderRadius: "16px",
+        border: "1px dashed #d1d5db",
+        backgroundColor: "rgba(59,130,246,0.05)"
       }}
     >
-      {[220, 280, 220].map((height, index) => (
-        <Skeleton
-          key={index}
-          variant="rectangular"
-          height={height}
-          sx={{ borderRadius: 3 }}
-        />
-      ))}
+      <CircularProgress size={36} thickness={5} sx={{ color: "#3b82f6" }} />
+      <Typography
+        variant="body2"
+        sx={{ color: "#1d4ed8", fontWeight: 600, textAlign: "center" }}
+      >
+        Cargando análisis avanzados...
+      </Typography>
     </Box>
   );
 }
@@ -663,8 +677,10 @@ export default function DashboardSeguridadV2() {
         onOpenReport={handleOpenReport}
       />
 
-      {datos.metricas.totalEmpleados > 0 ? (
-        <Suspense fallback={<AnalyticsFallback />}>
+      <Suspense fallback={<AnalyticsFallback />}>
+        {analyticsLoading ? (
+          <AnalyticsFallback />
+        ) : datos.metricas.totalEmpleados > 0 ? (
           <DashboardAnalyticsSection
             datos={datos}
             accidentesAnalysis={accidentesAnalysis}
@@ -672,10 +688,10 @@ export default function DashboardSeguridadV2() {
             capacitacionesMetrics={capacitacionesMetrics}
             selectedYear={selectedYear}
           />
-        </Suspense>
-      ) : (
-        <DashboardNoDataCard />
-      )}
+        ) : (
+          <DashboardNoDataCard />
+        )}
+      </Suspense>
 
       <DashboardMainGrid data={data} />
 
