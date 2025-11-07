@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   Box,
   Typography,
@@ -22,51 +22,80 @@ export default function PeriodSelector({
   const years = [currentYear - 1, currentYear, currentYear + 1];
 
   return (
-    <Paper elevation={1} sx={{
-      p: 2,
-      mb: 3,
-      backgroundColor: '#f8fafc',
-      border: '1px solid #e2e8f0'
-    }}>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 3, flexWrap: 'wrap' }}>
+    <Paper
+      elevation={1}
+      sx={{
+        p: 2,
+        mb: 3,
+        backgroundColor: '#f8fafc',
+        border: '1px solid #e2e8f0'
+      }}
+    >
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
         {/* Selector de Año */}
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Typography variant="body2" sx={{ fontWeight: 600, color: '#64748b' }}>
-            Año:
-          </Typography>
-          <ButtonGroup size="small" variant="outlined">
-            {years.map(year => (
-              <Button
-                key={year}
-                onClick={() => onYearChange(year)}
-                variant={selectedYear === year ? 'contained' : 'outlined'}
-                sx={{
-                  minWidth: '60px',
-                  backgroundColor: selectedYear === year ? '#3b82f6' : 'transparent',
-                  color: selectedYear === year ? 'white' : '#64748b',
-                  borderColor: '#d1d5db',
-                  '&:hover': {
-                    backgroundColor: selectedYear === year ? '#2563eb' : '#f3f4f6'
-                  }
-                }}
-              >
-                {year}
-              </Button>
-            ))}
-          </ButtonGroup>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Typography variant="caption" sx={{ fontWeight: 700, color: '#475569', textTransform: 'uppercase' }}>
+              Años
+            </Typography>
+            <ButtonGroup size="small" variant="outlined">
+              {years.map(year => (
+                <Button
+                  key={year}
+                  onClick={() => onYearChange(year)}
+                  variant={selectedYear === year ? 'contained' : 'outlined'}
+                  sx={{
+                    minWidth: '60px',
+                    backgroundColor: selectedYear === year ? '#3b82f6' : 'transparent',
+                    color: selectedYear === year ? 'white' : '#64748b',
+                    borderColor: '#d1d5db',
+                    '&:hover': {
+                      backgroundColor: selectedYear === year ? '#2563eb' : '#f3f4f6'
+                    }
+                  }}
+                >
+                  {year}
+                </Button>
+              ))}
+            </ButtonGroup>
+          </Box>
+          <Box sx={{ flexGrow: 1 }} />
+          {/* Indicador de período actual */}
+          <Box sx={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 1,
+            backgroundColor: '#dbeafe',
+            padding: '4px 12px',
+            borderRadius: '16px',
+            border: '1px solid #93c5fd'
+          }}>
+            <Typography
+              variant="caption"
+              sx={{
+                fontWeight: 600,
+                color: '#1e40af',
+                fontSize: '0.75rem'
+              }}
+            >
+              📊 Dashboard SST
+            </Typography>
+          </Box>
         </Box>
 
         {/* Selector de Mes */}
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Typography variant="body2" sx={{ fontWeight: 600, color: '#64748b' }}>
-            Mes:
-          </Typography>
-          <Box sx={{ 
-            display: 'flex', 
-            gap: 0.5, 
-            flexWrap: 'wrap',
-            maxWidth: '400px'
-          }}>
+        <Box>
+          
+          <Box
+            sx={{
+              mt: 1,
+              display: 'flex',
+              gap: 0.5,
+              flexWrap: { xs: 'wrap', md: 'nowrap' },
+              overflowX: { xs: 'visible', md: 'auto' },
+              pb: { xs: 0, md: 1 }
+            }}
+          >
             {months.map((month, index) => (
               <Button
                 key={month}
@@ -74,7 +103,7 @@ export default function PeriodSelector({
                 size="small"
                 variant={selectedMonth === index + 1 ? 'contained' : 'outlined'}
                 sx={{
-                  minWidth: '40px',
+                  minWidth: '48px',
                   fontSize: '0.75rem',
                   backgroundColor: selectedMonth === index + 1 ? '#3b82f6' : 'transparent',
                   color: selectedMonth === index + 1 ? 'white' : '#64748b',
@@ -88,26 +117,6 @@ export default function PeriodSelector({
               </Button>
             ))}
           </Box>
-        </Box>
-
-        {/* Indicador de período actual */}
-        <Box sx={{ 
-          ml: 'auto',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 1,
-          backgroundColor: '#dbeafe',
-          padding: '4px 12px',
-          borderRadius: '16px',
-          border: '1px solid #93c5fd'
-        }}>
-          <Typography variant="caption" sx={{ 
-            fontWeight: 600, 
-            color: '#1e40af',
-            fontSize: '0.75rem'
-          }}>
-            📊 Dashboard SST
-          </Typography>
         </Box>
       </Box>
     </Paper>
