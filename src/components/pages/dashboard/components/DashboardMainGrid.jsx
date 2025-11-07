@@ -3,8 +3,6 @@ import { Grid, Typography, Box, Paper } from "@mui/material";
 import GaugeChart from "../../../dashboard-seguridad/GaugeChart";
 import EmployeeMetrics from "../../../dashboard-seguridad/EmployeeMetrics";
 import SafetyGoals from "../../../dashboard-seguridad/SafetyGoals";
-import TrainingMetrics from "../../../dashboard-seguridad/TrainingMetrics";
-import SafetyCharts from "../../../dashboard-seguridad/SafetyCharts";
 import AuditSummaryChips from "../../../dashboard-seguridad/AuditSummaryChips";
 import IncidentMetrics from "../../../dashboard-seguridad/IncidentMetrics";
 
@@ -198,126 +196,6 @@ export default function DashboardMainGrid({ data }) {
         </Box>
       </Grid>
 
-      <Grid item xs={12} lg={6}>
-        <TrainingMetrics
-          charlas={data.charlasProgress}
-          entrenamientos={data.entrenamientosProgress}
-          capacitaciones={data.capacitacionesProgress}
-        />
-      </Grid>
-
-      <Grid item xs={12} lg={6}>
-        <Paper
-          elevation={2}
-          sx={{
-            p: 3,
-            backgroundColor: "white",
-            borderRadius: "16px",
-            border: "1px solid #e5e7eb",
-            height: "100%"
-          }}
-        >
-          <Typography
-            variant="h6"
-            sx={{
-              fontWeight: 600,
-              color: "#111827",
-              mb: 3,
-              display: "flex",
-              alignItems: "center",
-              gap: 1
-            }}
-          >
-            🔍 INSPECCIONES
-          </Typography>
-
-          <Box
-            sx={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              mb: 3
-            }}
-          >
-            <Typography
-              variant="h1"
-              sx={{
-                fontWeight: "bold",
-                color: "#3b82f6",
-                mr: 2
-              }}
-            >
-              {data.inspectionsDone}
-            </Typography>
-            <Typography variant="body1" sx={{ color: "#64748b" }}>
-              Inspecciones realizadas
-            </Typography>
-          </Box>
-
-          <Box
-            sx={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              mb: 3
-            }}
-          >
-            <Box
-              sx={{
-                width: 100,
-                height: 100,
-                borderRadius: "50%",
-                background: `conic-gradient(#3b82f6 ${
-                  (data.inspectionsDone / data.inspectionsPlanned) * 360
-                }deg, #e5e7eb 0deg)`,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                position: "relative"
-              }}
-            >
-              <Box
-                sx={{
-                  width: 60,
-                  height: 60,
-                  borderRadius: "50%",
-                  backgroundColor: "white",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center"
-                }}
-              >
-                <Typography
-                  variant="h6"
-                  sx={{
-                    fontWeight: "bold",
-                    color: "#3b82f6"
-                  }}
-                >
-                  {Math.round(
-                    (data.inspectionsDone / data.inspectionsPlanned) * 100
-                  )}
-                  %
-                </Typography>
-              </Box>
-            </Box>
-          </Box>
-
-          <Typography
-            variant="body2"
-            sx={{
-              color: "#64748b",
-              textAlign: "center"
-            }}
-          >
-            {data.inspectionsDone} de {data.inspectionsPlanned} planificadas
-          </Typography>
-        </Paper>
-      </Grid>
-
-      <Grid item xs={12}>
-        <SafetyCharts data={data} />
-      </Grid>
     </Grid>
   );
 }
