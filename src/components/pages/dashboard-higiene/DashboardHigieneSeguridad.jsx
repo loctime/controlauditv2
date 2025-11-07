@@ -76,12 +76,13 @@ const DashboardHigieneSeguridad = () => {
   const { calcularIndices, calcularPeriodo } = useIndicesCalculator();
 
   // Hook para cargar datos
-  const { empleados, accidentes, capacitaciones, loading } = useDashboardDataFetch(
+  const { empleados, accidentes, capacitaciones, auditorias, loading } = useDashboardDataFetch(
     selectedEmpresa,
     selectedSucursal,
     selectedYear,
     sucursalesFiltradas,
-    calcularPeriodo
+    calcularPeriodo,
+    userEmpresas
   );
 
   // Calcular índices cuando cambian los datos
@@ -91,6 +92,7 @@ const DashboardHigieneSeguridad = () => {
         empleados: [],
         accidentes: [],
         capacitaciones: [],
+        auditorias: [],
         indices: {
           tasaAusentismo: 0,
           indiceFrecuencia: 0,
@@ -117,11 +119,43 @@ const DashboardHigieneSeguridad = () => {
       empleados,
       accidentes,
       capacitaciones,
+      auditorias,
       indices,
       metricas,
       sucursalesParaCalculo
     };
-  }, [empleados, accidentes, capacitaciones, selectedSucursal, selectedEmpresa, selectedYear, calcularIndices, userSucursales, sucursalesFiltradas]);
+  }, [empleados, accidentes, capacitaciones, auditorias, selectedSucursal, selectedEmpresa, selectedYear, calcularIndices, userSucursales, sucursalesFiltradas]);
+  const auditoriasMetrics = useMemo(() => {
+    if (!auditorias || auditorias.length === 0) {
+      return {
+        total: 0,
+        completadas: 0,
+        pendientes: 0,
+        noConformes: 0
+      };
+    }
+
+    const completadas = auditorias.filter(a =>
+      (a.estado || '').toLowerCase() === 'completada'
+    ).length;
+
+    const pendientes = auditorias.filter(a => {
+      const estado = (a.estado || '').toLowerCase();
+      return estado === 'pendiente' || estado === 'agendada' || estado === 'en_proceso' || estado === 'en progreso';
+    }).length;
+
+    const noConformes = auditorias.reduce((total, auditoria) => {
+      return total + (auditoria.estadisticas?.conteo?.['No conforme'] || 0);
+    }, 0);
+
+    return {
+      total: auditorias.length,
+      completadas,
+      pendientes,
+      noConformes
+    };
+  }, [auditorias]);
+
 
   // Calcular métricas adicionales con los nuevos hooks
   const capacitacionesMetrics = useCapacitacionesMetrics(capacitaciones, empleados, selectedYear);
@@ -712,7 +746,11 @@ const DashboardHigieneSeguridad = () => {
             actionUrl="/empleados"
           />
         ) : (
-          <MetricChips metricas={datos.metricas} analysis={accidentesAnalysis} />
+          <MetricChips 
+            metricas={datos.metricas} 
+            analysis={accidentesAnalysis}
+            auditorias={auditoriasMetrics}
+          />
         )}
       </Box>
 

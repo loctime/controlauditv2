@@ -7,14 +7,16 @@ import {
   ReportProblem as ReportProblemIcon,
   CheckCircle as CheckCircleIcon,
   TrendingUp as TrendingUpIcon,
-  Assessment as AssessmentIcon
+  FactCheck as FactCheckIcon,
+  TaskAlt as TaskAltIcon,
+  PendingActions as PendingActionsIcon
 } from '@mui/icons-material';
 
 /**
  * Componente reutilizable para mostrar chips de métricas
  * Optimizado con React.memo
  */
-const MetricChips = React.memo(({ metricas, analysis }) => {
+const MetricChips = React.memo(({ metricas, analysis, auditorias }) => {
   const chips = [
     {
       icon: <PeopleIcon />,
@@ -81,6 +83,35 @@ const MetricChips = React.memo(({ metricas, analysis }) => {
     }
   }
 
+  if (auditorias) {
+    chips.push(
+      {
+        icon: <FactCheckIcon />,
+        label: `Auditorías: ${auditorias.total}`,
+        color: 'info',
+        tooltip: 'Total de auditorías registradas en el período seleccionado'
+      },
+      {
+        icon: <TaskAltIcon />,
+        label: `Completadas: ${auditorias.completadas}`,
+        color: 'success',
+        tooltip: 'Auditorías finalizadas y cerradas'
+      },
+      {
+        icon: <PendingActionsIcon />,
+        label: `Pendientes: ${auditorias.pendientes}`,
+        color: auditorias.pendientes > 0 ? 'warning' : 'success',
+        tooltip: 'Auditorías agendadas o en progreso'
+      },
+      {
+        icon: <ReportProblemIcon />,
+        label: `No conformes: ${auditorias.noConformes}`,
+        color: auditorias.noConformes > 0 ? 'error' : 'success',
+        tooltip: 'Total de hallazgos "No conforme" detectados'
+      }
+    );
+  }
+
   return (
     <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, alignItems: 'center' }}>
       {chips.map((chip, index) => {
@@ -117,7 +148,11 @@ const MetricChips = React.memo(({ metricas, analysis }) => {
     prevProps.metricas.diasPerdidos === nextProps.metricas.diasPerdidos &&
     prevProps.metricas.diasSinAccidentes === nextProps.metricas.diasSinAccidentes &&
     prevProps.analysis?.incidentes === nextProps.analysis?.incidentes &&
-    prevProps.analysis?.ratioIncidentes === nextProps.analysis?.ratioIncidentes
+    prevProps.analysis?.ratioIncidentes === nextProps.analysis?.ratioIncidentes &&
+    ((prevProps.auditorias?.total || 0) === (nextProps.auditorias?.total || 0)) &&
+    ((prevProps.auditorias?.completadas || 0) === (nextProps.auditorias?.completadas || 0)) &&
+    ((prevProps.auditorias?.pendientes || 0) === (nextProps.auditorias?.pendientes || 0)) &&
+    ((prevProps.auditorias?.noConformes || 0) === (nextProps.auditorias?.noConformes || 0))
   );
 });
 

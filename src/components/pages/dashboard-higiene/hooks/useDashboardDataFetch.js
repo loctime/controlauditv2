@@ -10,11 +10,13 @@ export const useDashboardDataFetch = (
   selectedSucursal,
   selectedYear,
   sucursalesFiltradas,
-  calcularPeriodo
+  calcularPeriodo,
+  empresasDisponibles
 ) => {
   const [empleados, setEmpleados] = useState([]);
   const [accidentes, setAccidentes] = useState([]);
   const [capacitaciones, setCapacitaciones] = useState([]);
+  const [auditorias, setAuditorias] = useState([]);
   const [loading, setLoading] = useState(false);
 
   // Cargar datos de empleados
@@ -214,6 +216,103 @@ export const useDashboardDataFetch = (
     }
   }, [selectedSucursal, selectedYear, calcularPeriodo, sucursalesFiltradas]);
 
+  // Cargar datos de auditorías
+  const cargarAuditorias = useCallback(async () => {
+    if (!selectedEmpresa || !selectedSucursal) return [];
+
+    try {
+      const { inicio, fin } = calcularPeriodo(selectedYear);
+      const auditoriasRef = collection(db, 'auditorias');
+      let auditoriasData = [];
+
+      const empresasIds = selectedEmpresa === 'todas'
+        ? [...new Set([
+            ...(sucursalesFiltradas || []).map(s => s.empresaId).filter(Boolean),
+            ...(empresasDisponibles || []).map(e => e.id).filter(Boolean)
+          ])]
+        : [selectedEmpresa];
+
+      if (empresasIds.length === 0) return [];
+
+      const fetchAuditoriasByEmpresa = async (empresaId) => {
+        try {
+          const baseQuery = query(auditoriasRef, where('empresaId', '==', empresaId));
+          const snapshot = await getDocs(baseQuery);
+
+          if (!snapshot.empty) {
+            snapshot.forEach(doc => {
+              auditoriasData.push({
+                id: doc.id,
+                ...doc.data()
+              });
+            });
+          } else {
+            // Fallback a campo legacy `empresa`
+            const empresaNombre =
+              sucursalesFiltradas?.find(s => s.empresaId === empresaId)?.empresaNombre ||
+              empresasDisponibles?.find(e => e.id === empresaId)?.nombre;
+            if (empresaNombre) {
+              const fallbackQuery = query(auditoriasRef, where('empresa', '==', empresaNombre));
+              const fallbackSnapshot = await getDocs(fallbackQuery);
+              fallbackSnapshot.forEach(doc => {
+                auditoriasData.push({
+                  id: doc.id,
+                  ...doc.data()
+                });
+              });
+            }
+          }
+        } catch (error) {
+          console.warn('Error consultando auditorías para empresa', empresaId, error);
+        }
+      };
+
+      for (const empresaId of empresasIds) {
+        await fetchAuditoriasByEmpresa(empresaId);
+      }
+
+      // Filtrar por sucursal seleccionada
+      let auditoriasFiltradas = auditoriasData;
+      if (selectedSucursal !== 'todas') {
+        const sucursalSeleccionada = sucursalesFiltradas?.find(s => s.id === selectedSucursal);
+        const sucursalNombre = sucursalSeleccionada?.nombre;
+
+        auditoriasFiltradas = auditoriasFiltradas.filter(auditoria => {
+          if (auditoria.sucursalId) {
+            return auditoria.sucursalId === selectedSucursal;
+          }
+          if (sucursalNombre) {
+            return auditoria.sucursal?.toLowerCase?.() === sucursalNombre.toLowerCase();
+          }
+          return true;
+        });
+      }
+
+      // Filtrar por período seleccionado
+      if (inicio) {
+        auditoriasFiltradas = auditoriasFiltradas.filter(auditoria => {
+          const fechaReferencia = auditoria.fechaCreacion || auditoria.fecha || auditoria.timestamp;
+          if (!fechaReferencia) return false;
+          const fecha = fechaReferencia?.toDate ? fechaReferencia.toDate() : new Date(fechaReferencia);
+          return fecha >= inicio && fecha <= fin;
+        });
+      }
+
+      auditoriasFiltradas.sort((a, b) => {
+        const fechaARef = a.fechaCreacion || a.fecha || a.timestamp;
+        const fechaBRef = b.fechaCreacion || b.fecha || b.timestamp;
+        const fechaA = fechaARef?.toDate ? fechaARef.toDate() : new Date(fechaARef || 0);
+        const fechaB = fechaBRef?.toDate ? fechaBRef.toDate() : new Date(fechaBRef || 0);
+        return fechaB - fechaA;
+      });
+
+      return auditoriasFiltradas;
+    } catch (error) {
+      console.error('Error cargando auditorías:', error);
+      return [];
+    }
+  }, [selectedEmpresa, selectedSucursal, selectedYear, calcularPeriodo, sucursalesFiltradas, empresasDisponibles]);
+
   // Memoizar IDs de sucursales para estabilizar dependencias
   const sucursalesIdsString = useMemo(() => 
     JSON.stringify(sucursalesFiltradas?.map(s => s.id).sort() || []),
@@ -240,16 +339,18 @@ export const useDashboardDataFetch = (
       }
       
       try {
-        const [empleadosData, accidentesData, capacitacionesData] = await Promise.all([
+        const [empleadosData, accidentesData, capacitacionesData, auditoriasData] = await Promise.all([
           cargarEmpleados(),
           cargarAccidentes(),
-          cargarCapacitaciones()
+          cargarCapacitaciones(),
+          cargarAuditorias()
         ]);
         
         if (mounted) {
           setEmpleados(empleadosData);
           setAccidentes(accidentesData);
           setCapacitaciones(capacitacionesData);
+          setAuditorias(auditoriasData);
           setLoading(false);
         }
       } catch (error) {
@@ -265,7 +366,7 @@ export const useDashboardDataFetch = (
     return () => {
       mounted = false;
     };
-  }, [selectedEmpresa, selectedSucursal, selectedYear, sucursalesIdsString, cargarEmpleados, cargarAccidentes, cargarCapacitaciones]);
+  }, [selectedEmpresa, selectedSucursal, selectedYear, sucursalesIdsString, cargarEmpleados, cargarAccidentes, cargarCapacitaciones, cargarAuditorias]);
 
   // Función manual para recargar (opcional, para usar desde fuera)
   const recargarDatos = useCallback(async () => {
@@ -273,22 +374,24 @@ export const useDashboardDataFetch = (
     
     setLoading(true);
     try {
-      const [empleadosData, accidentesData, capacitacionesData] = await Promise.all([
+      const [empleadosData, accidentesData, capacitacionesData, auditoriasData] = await Promise.all([
         cargarEmpleados(),
         cargarAccidentes(),
-        cargarCapacitaciones()
+        cargarCapacitaciones(),
+        cargarAuditorias()
       ]);
       
       setEmpleados(empleadosData);
       setAccidentes(accidentesData);
       setCapacitaciones(capacitacionesData);
+      setAuditorias(auditoriasData);
     } catch (error) {
       console.error('Error cargando datos:', error);
     } finally {
       setLoading(false);
     }
-  }, [selectedEmpresa, selectedSucursal, cargarEmpleados, cargarAccidentes, cargarCapacitaciones]);
+  }, [selectedEmpresa, selectedSucursal, cargarEmpleados, cargarAccidentes, cargarCapacitaciones, cargarAuditorias]);
 
-  return { empleados, accidentes, capacitaciones, loading, recargarDatos };
+  return { empleados, accidentes, capacitaciones, auditorias, loading, recargarDatos };
 };
 
