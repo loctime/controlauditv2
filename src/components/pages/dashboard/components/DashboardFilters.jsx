@@ -18,7 +18,7 @@ export default function DashboardFilters({
 }) {
   return (
     <>
-      <Box sx={{ mb: 3 }}>
+      <Box sx={{ mb: 2 }}>
         <PeriodSelector
           selectedYear={selectedYear}
           selectedMonth={selectedMonth}
@@ -27,7 +27,7 @@ export default function DashboardFilters({
         />
       </Box>
 
-      <Grid container spacing={2} sx={{ mb: 3 }}>
+      <Grid container spacing={1.5} sx={{ mb: 2 }}>
         <Grid item xs={12} md={6}>
           <EmpresaSelector
             empresas={userEmpresas || []}

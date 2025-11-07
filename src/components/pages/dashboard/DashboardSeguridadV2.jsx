@@ -621,7 +621,7 @@ export default function DashboardSeguridadV2() {
   }
 
   return (
-    <Container maxWidth="xl" sx={{ py: 3 }}>
+    <Container maxWidth="xl" sx={{ py: 2 }}>
       {isCachedSnapshot && (
         <Stack spacing={2} sx={{ mb: 2 }}>
           <Alert severity="info" variant="outlined">
@@ -663,8 +663,6 @@ export default function DashboardSeguridadV2() {
         onOpenReport={handleOpenReport}
       />
 
-      <DashboardMainGrid data={data} />
-
       {datos.metricas.totalEmpleados > 0 ? (
         <Suspense fallback={<AnalyticsFallback />}>
           <DashboardAnalyticsSection
@@ -678,6 +676,8 @@ export default function DashboardSeguridadV2() {
       ) : (
         <DashboardNoDataCard />
       )}
+
+      <DashboardMainGrid data={data} />
 
       <DashboardAlertsPopover
         open={openAlert}

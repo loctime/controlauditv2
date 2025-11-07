@@ -14,11 +14,11 @@ export default function DashboardAnalyticsSection({
 }) {
   return (
     <>
-      <Box sx={{ mt: 5 }}>
+      <Box sx={{ mt: 1.5 }}>
         <Paper
           elevation={2}
           sx={{
-            p: 3,
+            p: 2,
             borderRadius: "16px",
             border: "1px solid #e5e7eb",
             backgroundColor: "white"
@@ -45,19 +45,19 @@ export default function DashboardAnalyticsSection({
         </Paper>
       </Box>
 
-      <Box sx={{ mt: 5 }}>
+      <Box sx={{ mt: 1.5 }}>
         <AccidentesBreakdown analysis={accidentesAnalysis} />
       </Box>
 
-      <Box sx={{ mt: 5 }}>
+      <Box sx={{ mt: 1.5 }}>
         <CapacitacionesMetrics metrics={capacitacionesMetrics} />
       </Box>
 
-      <Box sx={{ mt: 5 }}>
+      <Box sx={{ mt: 1.5 }}>
         <Paper
           elevation={2}
           sx={{
-            p: 3,
+            p: 2,
             borderRadius: "16px",
             border: "1px solid #e5e7eb",
             backgroundColor: "white"

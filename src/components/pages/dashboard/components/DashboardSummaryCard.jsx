@@ -37,11 +37,11 @@ export default function DashboardSummaryCard({
     <Paper
       elevation={2}
       sx={{
-        p: 3,
+        p: 2,
         borderRadius: "16px",
         border: "1px solid #e5e7eb",
         backgroundColor: "white",
-        mb: 4
+        mb: 1
       }}
     >
       <Box
@@ -49,7 +49,7 @@ export default function DashboardSummaryCard({
           display: "flex",
           flexWrap: "wrap",
           alignItems: "center",
-          gap: 2
+        gap: 1.25
         }}
       >
         <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
