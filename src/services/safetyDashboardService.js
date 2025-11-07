@@ -554,17 +554,105 @@ export const safetyDashboardService = {
     const accidents = accidentes.filter(a => a.tipo === 'accidente');
     const incidents = accidentes.filter(a => a.tipo === 'incidente');
 
+    const parseEventDate = (event) => {
+      if (!event) return null;
+      const source =
+        event.fechaHora ||
+        event.fechaReporte ||
+        event.fecha ||
+        event.createdAt ||
+        event.updatedAt;
+      if (!source) return null;
+      try {
+        return source.toDate ? source.toDate() : new Date(source);
+      } catch (error) {
+        return null;
+      }
+    };
+
     // 🎯 FILTRAR ACCIDENTES DEL PERÍODO (para IF e II)
     const accidentsInPeriod = accidents.filter(acc => {
-      const accidentDate = acc.fechaHora?.toDate ? acc.fechaHora.toDate() : new Date(acc.fechaHora);
-      return accidentDate >= periodStart && accidentDate <= periodEnd;
+      const accidentDate = parseEventDate(acc);
+      return accidentDate && accidentDate >= periodStart && accidentDate <= periodEnd;
+    });
+
+    const incidentsInPeriod = incidents.filter(incident => {
+      const incidentDate = parseEventDate(incident);
+      return incidentDate && incidentDate >= periodStart && incidentDate <= periodEnd;
     });
 
     // Calcular días sin accidentes
-    const lastAccident = accidents.length > 0 ? 
-      new Date(accidents[0].fechaHora?.toDate?.() || accidents[0].fechaHora) : null;
+    const sortedAccidents = [...accidents].sort((a, b) => {
+      const dateA = parseEventDate(a);
+      const dateB = parseEventDate(b);
+      return (dateB?.getTime() || 0) - (dateA?.getTime() || 0);
+    });
+
+    const lastAccident = sortedAccidents.length > 0 ? parseEventDate(sortedAccidents[0]) : null;
     const daysWithoutAccidents = lastAccident ? 
       Math.floor((Date.now() - lastAccident.getTime()) / (1000 * 60 * 60 * 24)) : 0;
+
+    const sortedIncidents = [...incidents].sort((a, b) => {
+      const dateA = parseEventDate(a);
+      const dateB = parseEventDate(b);
+      return (dateB?.getTime() || 0) - (dateA?.getTime() || 0);
+    });
+
+    const lastIncident = sortedIncidents.length > 0 ? parseEventDate(sortedIncidents[0]) : null;
+    const daysWithoutIncidents = lastIncident ?
+      Math.floor((Date.now() - lastIncident.getTime()) / (1000 * 60 * 60 * 24)) : 0;
+
+    const incidentTrend = (() => {
+      const trend = [];
+      const baseDate = new Date(year, month - 1, 1);
+
+      for (let i = 5; i >= 0; i--) {
+        const start = new Date(baseDate.getFullYear(), baseDate.getMonth() - i, 1);
+        const end = new Date(start.getFullYear(), start.getMonth() + 1, 0, 23, 59, 59, 999);
+        const count = incidents.filter(incident => {
+          const incidentDate = parseEventDate(incident);
+          return incidentDate && incidentDate >= start && incidentDate <= end;
+        }).length;
+
+        trend.push({
+          label: start.toLocaleString('es-ES', { month: 'short' }).toUpperCase(),
+          value: count
+        });
+      }
+
+      return trend;
+    })();
+
+    const incidentAccidentRatio = accidentsInPeriod.length > 0
+      ? Number((incidentsInPeriod.length / accidentsInPeriod.length).toFixed(1))
+      : incidentsInPeriod.length > 0 ? incidentsInPeriod.length : 0;
+
+    const recentIncidents = sortedIncidents.slice(0, 5).map(incident => {
+      const incidentDate = parseEventDate(incident);
+      const involucrados = incident.empleadosInvolucrados || incident.involucrados;
+      const responsables = incident.responsable || incident.responsables || incident.supervisor;
+
+      const formatPeople = (people) => {
+        if (!people) return null;
+        if (Array.isArray(people)) {
+          return people
+            .map(person => person?.nombre || person?.name || person?.displayName)
+            .filter(Boolean)
+            .join(', ');
+        }
+        return typeof people === 'string' ? people : null;
+      };
+
+      return {
+        id: incident.id || incident.uid || `incident-${Math.random().toString(36).slice(2, 8)}`,
+        fecha: incidentDate ? incidentDate.toISOString() : null,
+        tipo: incident.tipo || incident.categoria || 'incidente',
+        area: incident.area || incident.sector || incident.ubicacion || 'Sin asignar',
+        descripcion: incident.descripcion || incident.detalle || incident.causas || '',
+        estado: (incident.estado || incident.status || 'Sin estado').toUpperCase(),
+        responsable: formatPeople(responsables) || formatPeople(involucrados)
+      };
+    });
 
     // 🎯 CÁLCULO CORRECTO DE ÍNDICES SEGÚN ESTÁNDARES OSHA/ISO 45001
     
@@ -666,6 +754,10 @@ export const safetyDashboardService = {
       // Métricas de accidentes
       totalAccidents: accidentsInPeriod.length, // Solo del período
       totalIncidents: incidents.length,
+      incidentTrend,
+      incidentAccidentRatio,
+      daysWithoutIncidents,
+      recentIncidents,
       daysWithoutAccidents,
       frequencyIndex: Number(frequencyIndex.toFixed(1)),
       severityIndex: Number(severityIndex.toFixed(1)),
@@ -867,6 +959,10 @@ export const safetyDashboardService = {
       period,
       totalAccidents: 0,
       totalIncidents: 0,
+      incidentTrend: [],
+      incidentAccidentRatio: 0,
+      daysWithoutIncidents: 0,
+      recentIncidents: [],
       daysWithoutAccidents: 0,
       frequencyIndex: 0,
       severityIndex: 0,
