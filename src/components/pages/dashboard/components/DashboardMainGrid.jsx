@@ -38,14 +38,6 @@ export default function DashboardMainGrid({ data }) {
             subtitle="Cumplimiento mensual"
             size={140}
           />
-
-          <GaugeChart
-            value={data.legalCompliance}
-            max={100}
-            title="Capacitaciones, entrenamientos/año"
-            subtitle="Programa anual"
-            size={140}
-          />
         </Box>
       </Grid>
 

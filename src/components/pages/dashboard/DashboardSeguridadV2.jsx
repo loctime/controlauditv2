@@ -42,6 +42,15 @@ const PREFETCH_MAX_PAYLOAD_BYTES = 1.5 * 1024 * 1024; // 1.5MB
 const DashboardAnalyticsSection = lazy(() =>
   import("./components/DashboardAnalyticsSection")
 );
+const AccidentesBreakdown = lazy(() =>
+  import("../dashboard-higiene/components/AccidentesBreakdown")
+);
+const CapacitacionesMetrics = lazy(() =>
+  import("../dashboard-higiene/components/CapacitacionesMetrics")
+);
+const GraficoIndices = lazy(() =>
+  import("../dashboard-higiene/components/GraficoIndices")
+);
 
 const FILTER_STORAGE_KEY = "dashboard-seguridad-filtros";
 
@@ -682,11 +691,8 @@ export default function DashboardSeguridadV2() {
           <AnalyticsFallback />
         ) : datos.metricas.totalEmpleados > 0 ? (
           <DashboardAnalyticsSection
-            datos={datos}
-            accidentesAnalysis={accidentesAnalysis}
+            metricas={datos.metricas}
             auditoriasMetrics={auditoriasMetrics}
-            capacitacionesMetrics={capacitacionesMetrics}
-            selectedYear={selectedYear}
           />
         ) : (
           <DashboardNoDataCard />
@@ -694,6 +700,22 @@ export default function DashboardSeguridadV2() {
       </Suspense>
 
       <DashboardMainGrid data={data} />
+
+      {datos.metricas.totalEmpleados > 0 && (
+        <Suspense fallback={<AnalyticsFallback />}>
+          <Box sx={{ mt: 1.5 }}>
+            <AccidentesBreakdown analysis={accidentesAnalysis} />
+          </Box>
+
+          <Box sx={{ mt: 1.5 }}>
+            <CapacitacionesMetrics metrics={capacitacionesMetrics} />
+          </Box>
+
+          <Box sx={{ mt: 1.5 }}>
+            <GraficoIndices datos={datos} periodo={selectedYear} />
+          </Box>
+        </Suspense>
+      )}
 
       <DashboardAlertsPopover
         open={openAlert}
