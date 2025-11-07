@@ -8,21 +8,21 @@ import IncidentMetrics from "../../../dashboard-seguridad/IncidentMetrics";
 
 export default function DashboardMainGrid({ data }) {
   return (
-    <Grid container spacing={3}>
+    <Grid container spacing={1.5}>
       <Grid item xs={12} lg={3}>
         <Typography
           variant="h6"
           sx={{
             fontWeight: 600,
             color: "#111827",
-            mb: 2,
+            mb: 1.5,
             textAlign: "center"
           }}
         >
           EJECUCIÓN DEL PROGRAMA
         </Typography>
 
-        <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+        <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
           <GaugeChart
             value={data.legalCompliance}
             max={100}
@@ -50,7 +50,7 @@ export default function DashboardMainGrid({ data }) {
       </Grid>
 
       <Grid item xs={12} lg={6}>
-        <Grid container spacing={3}>
+        <Grid container spacing={1.5}>
           <Grid item xs={12}>
             <EmployeeMetrics
               totalEmployees={data.totalEmployees}
@@ -65,7 +65,7 @@ export default function DashboardMainGrid({ data }) {
             <Paper
               elevation={2}
               sx={{
-                p: 3,
+                p: 2,
                 backgroundColor: "white",
                 borderRadius: "16px",
                 border: "1px solid #e5e7eb"
@@ -76,7 +76,7 @@ export default function DashboardMainGrid({ data }) {
                 sx={{
                   fontWeight: 600,
                   color: "#111827",
-                  mb: 2,
+                  mb: 1.5,
                   textAlign: "center",
                   display: "flex",
                   justifyContent: "center",
@@ -107,7 +107,7 @@ export default function DashboardMainGrid({ data }) {
       </Grid>
 
       <Grid item xs={12} lg={3}>
-        <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
+        <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
           <IncidentMetrics
             totalIncidents={data.totalIncidents}
             incidentTrend={data.incidentTrend}
@@ -121,7 +121,7 @@ export default function DashboardMainGrid({ data }) {
           <Paper
             elevation={2}
             sx={{
-              p: 3,
+              p: 2,
               backgroundColor: "white",
               borderRadius: "16px",
               border: "1px solid #e5e7eb"
@@ -132,7 +132,7 @@ export default function DashboardMainGrid({ data }) {
               sx={{
                 fontWeight: 600,
                 color: "#111827",
-                mb: 2,
+                mb: 1.5,
                 display: "flex",
                 alignItems: "center",
                 gap: 1
@@ -141,14 +141,14 @@ export default function DashboardMainGrid({ data }) {
               🏥 SALUD OCUPACIONAL
             </Typography>
 
-            <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
               <Box
                 sx={{
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "space-between",
                   backgroundColor: "#f0fdf4",
-                  padding: "12px",
+                  padding: "10px",
                   borderRadius: "8px",
                   border: "1px solid #bbf7d0"
                 }}
@@ -173,7 +173,7 @@ export default function DashboardMainGrid({ data }) {
                   alignItems: "center",
                   justifyContent: "space-between",
                   backgroundColor: "#fef2f2",
-                  padding: "12px",
+                  padding: "10px",
                   borderRadius: "8px",
                   border: "1px solid #fecaca"
                 }}
