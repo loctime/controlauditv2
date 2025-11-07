@@ -6,6 +6,7 @@ import SafetyGoals from "../../../dashboard-seguridad/SafetyGoals";
 import TrainingMetrics from "../../../dashboard-seguridad/TrainingMetrics";
 import SafetyCharts from "../../../dashboard-seguridad/SafetyCharts";
 import AuditSummaryChips from "../../../dashboard-seguridad/AuditSummaryChips";
+import IncidentMetrics from "../../../dashboard-seguridad/IncidentMetrics";
 
 export default function DashboardMainGrid({ data }) {
   return (
@@ -109,66 +110,13 @@ export default function DashboardMainGrid({ data }) {
 
       <Grid item xs={12} lg={3}>
         <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
-          <Paper
-            elevation={2}
-            sx={{
-              p: 3,
-              backgroundColor: "white",
-              borderRadius: "16px",
-              border: "1px solid #e5e7eb",
-              textAlign: "center"
-            }}
-          >
-            <Typography
-              variant="h6"
-              sx={{
-                fontWeight: 600,
-                color: "#111827",
-                mb: 2,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 1
-              }}
-            >
-              🚨 INCIDENTES
-            </Typography>
-
-            <Typography
-              variant="h1"
-              sx={{
-                fontWeight: "bold",
-                color: data.totalIncidents === 0 ? "#22c55e" : "#ef4444",
-                lineHeight: 1,
-                mb: 2
-              }}
-            >
-              {data.totalIncidents}
-            </Typography>
-
-            <Typography variant="body1" sx={{ color: "#64748b", mb: 2 }}>
-              Incidentes reportados
-            </Typography>
-
-            <Box
-              sx={{
-                backgroundColor: "#fef3c7",
-                padding: "12px",
-                borderRadius: "8px",
-                border: "1px solid #fde68a"
-              }}
-            >
-              <Typography
-                variant="body2"
-                sx={{
-                  fontWeight: 600,
-                  color: "#b45309"
-                }}
-              >
-                📝 REPORT ALL INCIDENTS
-              </Typography>
-            </Box>
-          </Paper>
+          <IncidentMetrics
+            totalIncidents={data.totalIncidents}
+            incidentTrend={data.incidentTrend}
+            incidentAccidentRatio={data.incidentAccidentRatio}
+            daysWithoutIncidents={data.daysWithoutIncidents}
+            recentIncidents={data.recentIncidents}
+          />
 
           <Paper
             elevation={2}
