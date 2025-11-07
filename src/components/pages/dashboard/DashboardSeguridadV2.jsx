@@ -1,5 +1,12 @@
-import React, { useState, useEffect, useRef, useMemo } from "react";
-import { Container } from "@mui/material";
+import React, {
+  useState,
+  useEffect,
+  useRef,
+  useMemo,
+  lazy,
+  Suspense
+} from "react";
+import { Container, Box, Skeleton } from "@mui/material";
 import { safetyDashboardService } from "../../../services/safetyDashboardService";
 import { useAuth } from "../../context/AuthContext";
 import { useGlobalSelection } from "../../../hooks/useGlobalSelection";
@@ -15,13 +22,40 @@ import DashboardHeader from "./components/DashboardHeader";
 import DashboardFilters from "./components/DashboardFilters";
 import DashboardSummaryCard from "./components/DashboardSummaryCard";
 import DashboardMainGrid from "./components/DashboardMainGrid";
-import DashboardAnalyticsSection from "./components/DashboardAnalyticsSection";
 import DashboardNoDataCard from "./components/DashboardNoDataCard";
 import DashboardAlertsPopover from "./components/DashboardAlertsPopover";
 import DashboardReportDialog from "./components/DashboardReportDialog";
 import InfoIcon from "@mui/icons-material/Info";
 import ReportProblemIcon from "@mui/icons-material/ReportProblem";
 import SchoolIcon from "@mui/icons-material/School";
+
+const DashboardAnalyticsSection = lazy(() =>
+  import("./components/DashboardAnalyticsSection")
+);
+
+const FILTER_STORAGE_KEY = "dashboard-seguridad-filtros";
+
+function AnalyticsFallback() {
+  return (
+    <Box
+      sx={{
+        mt: 5,
+        display: "flex",
+        flexDirection: "column",
+        gap: 3
+      }}
+    >
+      {[220, 280, 220].map((height, index) => (
+        <Skeleton
+          key={index}
+          variant="rectangular"
+          height={height}
+          sx={{ borderRadius: 3 }}
+        />
+      ))}
+    </Box>
+  );
+}
 
 export default function DashboardSeguridadV2() {
   const { userProfile } = useAuth();
@@ -39,6 +73,78 @@ export default function DashboardSeguridadV2() {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
   const unsubscribeRef = useRef(null);
+  const dataCacheKey = useMemo(() => {
+    if (!selectedEmpresa || !selectedSucursal) return null;
+    const month = selectedMonth.toString().padStart(2, "0");
+    return `dashboard-data:${selectedEmpresa}:${selectedSucursal}:${selectedYear}-${month}`;
+  }, [selectedEmpresa, selectedSucursal, selectedYear, selectedMonth]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const storedFilters = window.localStorage.getItem(FILTER_STORAGE_KEY);
+    if (!storedFilters) return;
+
+    try {
+      const parsed = JSON.parse(storedFilters);
+      if (parsed.selectedEmpresa) {
+        setSelectedEmpresa(parsed.selectedEmpresa);
+      }
+      if (parsed.selectedSucursal) {
+        setSelectedSucursal(parsed.selectedSucursal);
+      }
+      if (parsed.selectedYear) {
+        setSelectedYear(parsed.selectedYear);
+      }
+      if (parsed.selectedMonth) {
+        setSelectedMonth(parsed.selectedMonth);
+      }
+    } catch (error) {
+      window.localStorage.removeItem(FILTER_STORAGE_KEY);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const filtersToPersist = JSON.stringify({
+      selectedEmpresa,
+      selectedSucursal,
+      selectedYear,
+      selectedMonth
+    });
+    window.localStorage.setItem(FILTER_STORAGE_KEY, filtersToPersist);
+  }, [selectedEmpresa, selectedSucursal, selectedYear, selectedMonth]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (!dataCacheKey) return;
+
+    const cached = window.sessionStorage.getItem(dataCacheKey);
+
+    if (cached) {
+      try {
+        const parsed = JSON.parse(cached);
+        setData(parsed);
+        setLoading(false);
+        return;
+      } catch (error) {
+        window.sessionStorage.removeItem(dataCacheKey);
+      }
+    }
+
+    setLoading(true);
+  }, [dataCacheKey]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (!dataCacheKey || !data) return;
+
+    try {
+      window.sessionStorage.setItem(dataCacheKey, JSON.stringify(data));
+    } catch {
+      // Ignorar errores de almacenamiento (por ejemplo, cuota excedida)
+    }
+  }, [data, dataCacheKey]);
   const { calcularIndices, calcularPeriodo } = useIndicesCalculator();
   const {
     empleados,
@@ -353,22 +459,32 @@ export default function DashboardSeguridadV2() {
       selectedEmpresa && selectedEmpresa !== "todas"
         ? selectedEmpresa
         : userProfile?.empresaId || userProfile?.uid || "company-001";
-    const currentPeriod = `${selectedYear}-${selectedMonth.toString().padStart(2, '0')}`;
-    
-    console.log('🔄 [Dashboard] Configurando listener en tiempo real optimizado');
-    
+    const currentPeriod = `${selectedYear}-${selectedMonth
+      .toString()
+      .padStart(2, "0")}`;
+    const hasCachedData =
+      typeof window !== "undefined" &&
+      dataCacheKey &&
+      window.sessionStorage.getItem(dataCacheKey);
+
+    if (!hasCachedData) {
+      setLoading(true);
+    }
+
+    console.log("🔄 [Dashboard] Configurando listener en tiempo real optimizado");
+
     // Configurar listener en tiempo real (ya incluye carga inicial)
     unsubscribeRef.current = safetyDashboardService.subscribeToDashboard(
       companyId,
-      selectedSucursal === 'todas' ? 'todas' : selectedSucursal,
+      selectedSucursal === "todas" ? "todas" : selectedSucursal,
       currentPeriod,
       (updatedData) => {
-        console.log('✅ [Dashboard] Datos actualizados en tiempo real');
+        console.log("✅ [Dashboard] Datos actualizados en tiempo real");
         setData(updatedData);
         setLoading(false);
       },
       (error) => {
-        console.error('❌ [Dashboard] Error en listener:', error);
+        console.error("❌ [Dashboard] Error en listener:", error);
         setLoading(false);
       }
     );
@@ -376,12 +492,19 @@ export default function DashboardSeguridadV2() {
     // Cleanup: desuscribirse cuando el componente se desmonte o cambien las dependencias
     return () => {
       if (unsubscribeRef.current) {
-        console.log('🛑 [Dashboard] Desuscribiéndose de listeners');
+        console.log("🛑 [Dashboard] Desuscribiéndose de listeners");
         unsubscribeRef.current();
         unsubscribeRef.current = null;
       }
     };
-  }, [userProfile, selectedYear, selectedMonth, selectedSucursal, selectedEmpresa]);
+  }, [
+    userProfile,
+    selectedYear,
+    selectedMonth,
+    selectedSucursal,
+    selectedEmpresa,
+    dataCacheKey
+  ]);
 
   if ((loading && !data) || analyticsLoading) {
     return <DashboardLoading />;
@@ -424,13 +547,15 @@ export default function DashboardSeguridadV2() {
       <DashboardMainGrid data={data} />
 
       {datos.metricas.totalEmpleados > 0 ? (
-        <DashboardAnalyticsSection
-          datos={datos}
-          accidentesAnalysis={accidentesAnalysis}
-          auditoriasMetrics={auditoriasMetrics}
-          capacitacionesMetrics={capacitacionesMetrics}
-          selectedYear={selectedYear}
-        />
+        <Suspense fallback={<AnalyticsFallback />}>
+          <DashboardAnalyticsSection
+            datos={datos}
+            accidentesAnalysis={accidentesAnalysis}
+            auditoriasMetrics={auditoriasMetrics}
+            capacitacionesMetrics={capacitacionesMetrics}
+            selectedYear={selectedYear}
+          />
+        </Suspense>
       ) : (
         <DashboardNoDataCard />
       )}
