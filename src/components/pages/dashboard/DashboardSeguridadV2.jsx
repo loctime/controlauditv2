@@ -6,7 +6,7 @@ import React, {
   lazy,
   Suspense
 } from "react";
-import { Container, Box, Skeleton } from "@mui/material";
+import { Container, Box, Skeleton, Alert, Stack } from "@mui/material";
 import { safetyDashboardService } from "../../../services/safetyDashboardService";
 import { useAuth } from "../../context/AuthContext";
 import { useGlobalSelection } from "../../../hooks/useGlobalSelection";
@@ -28,6 +28,9 @@ import DashboardReportDialog from "./components/DashboardReportDialog";
 import InfoIcon from "@mui/icons-material/Info";
 import ReportProblemIcon from "@mui/icons-material/ReportProblem";
 import SchoolIcon from "@mui/icons-material/School";
+
+const PREFETCH_COMPANY_LIMIT = 5;
+const PREFETCH_MAX_PAYLOAD_BYTES = 1.5 * 1024 * 1024; // 1.5MB
 
 const DashboardAnalyticsSection = lazy(() =>
   import("./components/DashboardAnalyticsSection")
@@ -70,14 +73,23 @@ export default function DashboardSeguridadV2() {
   } = useGlobalSelection();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [isCachedSnapshot, setIsCachedSnapshot] = useState(false);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
   const unsubscribeRef = useRef(null);
+  const prefetchedPeriodsRef = useRef(new Set());
   const dataCacheKey = useMemo(() => {
     if (!selectedEmpresa || !selectedSucursal) return null;
     const month = selectedMonth.toString().padStart(2, "0");
     return `dashboard-data:${selectedEmpresa}:${selectedSucursal}:${selectedYear}-${month}`;
   }, [selectedEmpresa, selectedSucursal, selectedYear, selectedMonth]);
+  const shouldPrefetchAll = useMemo(
+    () =>
+      Array.isArray(userEmpresas) &&
+      userEmpresas.length > 0 &&
+      userEmpresas.length <= PREFETCH_COMPANY_LIMIT,
+    [userEmpresas]
+  );
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -125,6 +137,7 @@ export default function DashboardSeguridadV2() {
       try {
         const parsed = JSON.parse(cached);
         setData(parsed);
+        setIsCachedSnapshot(true);
         setLoading(false);
         return;
       } catch (error) {
@@ -133,6 +146,7 @@ export default function DashboardSeguridadV2() {
     }
 
     setLoading(true);
+    setIsCachedSnapshot(false);
   }, [dataCacheKey]);
 
   useEffect(() => {
@@ -145,6 +159,100 @@ export default function DashboardSeguridadV2() {
       // Ignorar errores de almacenamiento (por ejemplo, cuota excedida)
     }
   }, [data, dataCacheKey]);
+
+  useEffect(() => {
+    if (!shouldPrefetchAll) return;
+    if (!Array.isArray(userEmpresas) || userEmpresas.length === 0) return;
+    if (typeof window === "undefined") return;
+
+    const month = selectedMonth.toString().padStart(2, "0");
+    const period = `${selectedYear}-${month}`;
+    const empresasSignature = userEmpresas
+      .map((empresa) => empresa.id)
+      .sort()
+      .join(",");
+    const sucursalesSignature = Array.isArray(userSucursales)
+      ? userSucursales
+          .map((sucursal) => `${sucursal.empresaId || ""}:${sucursal.id}`)
+          .sort()
+          .join(",")
+      : "none";
+    const periodSignature = `${period}:${empresasSignature}:${sucursalesSignature}`;
+    if (prefetchedPeriodsRef.current.has(periodSignature)) return;
+
+    let cancelled = false;
+    const encoder = typeof TextEncoder !== "undefined" ? new TextEncoder() : null;
+
+    const prefetch = async () => {
+      let accumulatedBytes = 0;
+
+      try {
+        for (const empresa of userEmpresas) {
+          if (cancelled) return;
+          const sucursalesEmpresa = userSucursales?.filter(
+            (sucursal) => sucursal.empresaId === empresa.id
+          );
+          const sucursalTargetsSet = new Set(["todas"]);
+
+          if (sucursalesEmpresa && sucursalesEmpresa.length > 0) {
+            sucursalesEmpresa.forEach((sucursal) => {
+              if (sucursal?.id) {
+                sucursalTargetsSet.add(sucursal.id);
+              }
+            });
+          }
+
+          const sucursalTargets = Array.from(sucursalTargetsSet);
+
+          for (const sucursalId of sucursalTargets) {
+            if (cancelled) return;
+            const cacheKey = `dashboard-data:${empresa.id}:${sucursalId}:${period}`;
+            if (window.sessionStorage.getItem(cacheKey)) {
+              continue;
+            }
+
+            const dashboardData = await safetyDashboardService.getDashboardData(
+              empresa.id,
+              sucursalId,
+              period
+            );
+
+            if (cancelled) return;
+
+            const serialized = JSON.stringify(dashboardData);
+            window.sessionStorage.setItem(cacheKey, serialized);
+
+            if (encoder) {
+              accumulatedBytes += encoder.encode(serialized).length;
+              if (accumulatedBytes > PREFETCH_MAX_PAYLOAD_BYTES) {
+                console.warn(
+                  "⚠️ [Dashboard] Prefetch excede el límite configurado. Se detiene la precarga anticipada."
+                );
+                prefetchedPeriodsRef.current.add(periodSignature);
+                return;
+              }
+            }
+          }
+        }
+
+        prefetchedPeriodsRef.current.add(periodSignature);
+      } catch (error) {
+        console.error("❌ [Dashboard] Error durante la precarga anticipada:", error);
+      }
+    };
+
+    prefetch();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    shouldPrefetchAll,
+    selectedYear,
+    selectedMonth,
+    userEmpresas,
+    userSucursales
+  ]);
   const { calcularIndices, calcularPeriodo } = useIndicesCalculator();
   const {
     empleados,
@@ -482,10 +590,12 @@ export default function DashboardSeguridadV2() {
         console.log("✅ [Dashboard] Datos actualizados en tiempo real");
         setData(updatedData);
         setLoading(false);
+        setIsCachedSnapshot(false);
       },
       (error) => {
         console.error("❌ [Dashboard] Error en listener:", error);
         setLoading(false);
+        setIsCachedSnapshot(false);
       }
     );
 
@@ -506,12 +616,21 @@ export default function DashboardSeguridadV2() {
     dataCacheKey
   ]);
 
-  if ((loading && !data) || analyticsLoading) {
+  if (!data && (loading || analyticsLoading)) {
     return <DashboardLoading />;
   }
 
   return (
     <Container maxWidth="xl" sx={{ py: 3 }}>
+      {isCachedSnapshot && (
+        <Stack spacing={2} sx={{ mb: 2 }}>
+          <Alert severity="info" variant="outlined">
+            Mostrando datos cacheados del período seleccionado. Actualizando en
+            segundo plano...
+          </Alert>
+        </Stack>
+      )}
+
       <DashboardHeader companyName={data.companyName} period={data.period} />
 
       <DashboardFilters
