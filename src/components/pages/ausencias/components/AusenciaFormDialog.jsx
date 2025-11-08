@@ -29,18 +29,19 @@ import {
   orderBy
 } from "firebase/firestore";
 import { db } from "../../../../firebaseConfig";
+import dayjs from "dayjs";
 
-const initialState = {
+const getInitialState = () => ({
   empleadoId: "",
   tipo: "ocupacional",
   estado: "abierta",
-  fechaInicio: new Date(),
+  fechaInicio: dayjs(),
   fechaFin: null,
   observaciones: "",
   horasPorDia: "",
   relacionAccidente: false,
   accidenteId: ""
-};
+});
 
 const normalizeEmployees = (snapshot) =>
   snapshot.docs.map((docSnapshot) => ({
@@ -57,7 +58,7 @@ export default function AusenciaFormDialog({
   selectedSucursal,
   onSaved
 }) {
-  const [form, setForm] = useState(initialState);
+  const [form, setForm] = useState(getInitialState);
   const [empleados, setEmpleados] = useState([]);
   const [loadingEmployees, setLoadingEmployees] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -67,20 +68,25 @@ export default function AusenciaFormDialog({
   const empresaNombre = empresa?.nombre || empresa?.razonSocial || "";
 
   const canSubmit = useMemo(() => {
+    const fechaInicioValida =
+      form.fechaInicio &&
+      (typeof form.fechaInicio?.isValid === "function"
+        ? form.fechaInicio.isValid()
+        : true);
     return (
       selectedEmpresa &&
       selectedSucursal &&
       selectedSucursal !== "todas" &&
       form.empleadoId &&
-      form.fechaInicio
+      fechaInicioValida
     );
   }, [selectedEmpresa, selectedSucursal, form.empleadoId, form.fechaInicio]);
 
   useEffect(() => {
     if (!open) return;
     setForm((prev) => ({
-      ...initialState,
-      fechaInicio: new Date(),
+      ...getInitialState(),
+      fechaInicio: dayjs(),
       estado: "abierta"
     }));
     setError("");
@@ -133,6 +139,13 @@ export default function AusenciaFormDialog({
         (emp) => emp.id === form.empleadoId
       );
 
+      const fechaInicio = form.fechaInicio?.toDate
+        ? form.fechaInicio.toDate()
+        : form.fechaInicio || null;
+      const fechaFin = form.fechaFin?.toDate
+        ? form.fechaFin.toDate()
+        : form.fechaFin || null;
+
       await createAusencia({
         empresaId: selectedEmpresa === "todas" ? null : selectedEmpresa,
         sucursalId: selectedSucursal,
@@ -145,8 +158,8 @@ export default function AusenciaFormDialog({
           "Empleado sin nombre",
         tipo: form.tipo,
         estado: form.estado,
-        fechaInicio: form.fechaInicio,
-        fechaFin: form.fechaFin,
+        fechaInicio,
+        fechaFin,
         observaciones: form.observaciones,
         horasPorDia:
           form.horasPorDia !== ""
@@ -160,7 +173,7 @@ export default function AusenciaFormDialog({
       if (onSaved) {
         await onSaved();
       }
-      setForm(initialState);
+      setForm(getInitialState());
     } catch (submitError) {
       console.error("Error creando ausencia:", submitError);
       setError(
