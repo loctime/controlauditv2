@@ -76,7 +76,7 @@ const DashboardHigieneSeguridad = () => {
   const { calcularIndices, calcularPeriodo } = useIndicesCalculator();
 
   // Hook para cargar datos
-  const { empleados, accidentes, capacitaciones, auditorias, loading } = useDashboardDataFetch(
+  const { empleados, accidentes, capacitaciones, auditorias, ausencias, loading } = useDashboardDataFetch(
     selectedEmpresa,
     selectedSucursal,
     selectedYear,
@@ -93,6 +93,7 @@ const DashboardHigieneSeguridad = () => {
         accidentes: [],
         capacitaciones: [],
         auditorias: [],
+        ausencias: [],
         indices: {
           tasaAusentismo: 0,
           indiceFrecuencia: 0,
@@ -113,18 +114,20 @@ const DashboardHigieneSeguridad = () => {
     }
 
     const sucursalesParaCalculo = selectedSucursal === 'todas' ? sucursalesFiltradas : userSucursales?.find(s => s.id === selectedSucursal);
-    const { indices, metricas } = calcularIndices(empleados, accidentes, selectedYear, sucursalesParaCalculo);
+    const { indices, metricas, saludOcupacional } = calcularIndices(empleados, accidentes, ausencias, selectedYear, sucursalesParaCalculo);
 
     return {
       empleados,
       accidentes,
       capacitaciones,
       auditorias,
+      ausencias,
       indices,
       metricas,
+      saludOcupacional,
       sucursalesParaCalculo
     };
-  }, [empleados, accidentes, capacitaciones, auditorias, selectedSucursal, selectedEmpresa, selectedYear, calcularIndices, userSucursales, sucursalesFiltradas]);
+  }, [empleados, accidentes, capacitaciones, auditorias, ausencias, selectedSucursal, selectedEmpresa, selectedYear, calcularIndices, userSucursales, sucursalesFiltradas]);
   const auditoriasMetrics = useMemo(() => {
     if (!auditorias || auditorias.length === 0) {
       return {
@@ -169,7 +172,8 @@ const DashboardHigieneSeguridad = () => {
 
   const indicesComparacion = useIndicesComparacion(
     empleados, 
-    accidentes, 
+    accidentes,
+    ausencias,
     selectedYear, 
     sucursalesParaComparacion
   );

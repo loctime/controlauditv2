@@ -350,7 +350,7 @@ function Navbar(props) {
               }}
             >
               <MenuItem onClick={handleHigieneMenuClose}>
-                <Link to="/dashboard-higiene-seguridad" style={{ 
+                <Link to="/dashboard-seguridad" style={{ 
                   color: 'whitesmoke', 
                   textDecoration: 'none',
                   width: '100%'
@@ -467,7 +467,7 @@ function Navbar(props) {
               }}
             >
               <MenuItem onClick={handleHigieneMenuClose}>
-                <Link to="/dashboard-higiene-seguridad" style={{ 
+                <Link to="/dashboard-seguridad" style={{ 
                   color: 'whitesmoke', 
                   textDecoration: 'none',
                   width: '100%'

@@ -17,6 +17,7 @@ export const useDashboardDataFetch = (
   const [accidentes, setAccidentes] = useState([]);
   const [capacitaciones, setCapacitaciones] = useState([]);
   const [auditorias, setAuditorias] = useState([]);
+  const [ausencias, setAusencias] = useState([]);
   const [loading, setLoading] = useState(false);
 
   // Cargar datos de empleados
@@ -138,6 +139,107 @@ export const useDashboardDataFetch = (
       return accidentesData;
     } catch (error) {
       console.error('Error cargando accidentes:', error);
+      return [];
+    }
+  }, [selectedSucursal, selectedYear, calcularPeriodo, sucursalesFiltradas]);
+
+  // Cargar datos de ausencias de salud ocupacional
+  const cargarAusencias = useCallback(async () => {
+    if (!selectedSucursal) return [];
+
+    try {
+      const { inicio, fin } = calcularPeriodo(selectedYear);
+      const ausenciasRef = collection(db, 'ausencias');
+      let ausenciasData = [];
+
+      const overlapsPeriodo = (ausencia) => {
+        const parseDate = (valor) => {
+          if (!valor) return null;
+          if (valor?.toDate) {
+            try {
+              return valor.toDate();
+            } catch (error) {
+              return null;
+            }
+          }
+          const parsed = new Date(valor);
+          return Number.isNaN(parsed.getTime()) ? null : parsed;
+        };
+
+        const fechaInicio =
+          parseDate(ausencia.fechaInicio || ausencia.inicio || ausencia.fecha) ||
+          parseDate(ausencia.createdAt);
+        const fechaFin = parseDate(
+          ausencia.fechaFin || ausencia.fin || ausencia.fechaCierre
+        );
+
+        if (!fechaInicio) return false;
+
+        const cierre = fechaFin || new Date();
+
+        if (inicio && cierre < inicio) return false;
+        if (fin && fechaInicio > fin) return false;
+
+        return true;
+      };
+
+      if (selectedSucursal === 'todas') {
+        const sucursalesIds = (sucursalesFiltradas || [])
+          .map((s) => s.id)
+          .filter(Boolean);
+        if (sucursalesIds.length === 0) return [];
+
+        const chunkSize = 10;
+        for (let i = 0; i < sucursalesIds.length; i += chunkSize) {
+          const chunk = sucursalesIds.slice(i, i + chunkSize);
+          const snapshot = await getDocs(
+            query(ausenciasRef, where('sucursalId', 'in', chunk))
+          );
+          snapshot.forEach((docSnapshot) => {
+            ausenciasData.push({
+              id: docSnapshot.id,
+              ...docSnapshot.data()
+            });
+          });
+        }
+      } else {
+        const q = query(
+          ausenciasRef,
+          where('sucursalId', '==', selectedSucursal)
+        );
+        const snapshot = await getDocs(q);
+        snapshot.forEach((docSnapshot) => {
+          ausenciasData.push({
+            id: docSnapshot.id,
+            ...docSnapshot.data()
+          });
+        });
+      }
+
+      if (inicio || fin) {
+        ausenciasData = ausenciasData.filter(overlapsPeriodo);
+      }
+
+      ausenciasData.sort((a, b) => {
+        const parseDate = (valor) => {
+          if (!valor) return 0;
+          if (valor?.toDate) {
+            try {
+              return valor.toDate().getTime();
+            } catch (error) {
+              return 0;
+            }
+          }
+          const parsed = new Date(valor).getTime();
+          return Number.isNaN(parsed) ? 0 : parsed;
+        };
+
+        return parseDate(b.fechaInicio || b.inicio) - parseDate(a.fechaInicio || a.inicio);
+      });
+
+      return ausenciasData;
+    } catch (error) {
+      console.error('Error cargando ausencias:', error);
       return [];
     }
   }, [selectedSucursal, selectedYear, calcularPeriodo, sucursalesFiltradas]);
@@ -329,6 +431,8 @@ export const useDashboardDataFetch = (
           setEmpleados([]);
           setAccidentes([]);
           setCapacitaciones([]);
+          setAuditorias([]);
+          setAusencias([]);
           setLoading(false);
         }
         return;
@@ -339,11 +443,18 @@ export const useDashboardDataFetch = (
       }
       
       try {
-        const [empleadosData, accidentesData, capacitacionesData, auditoriasData] = await Promise.all([
+        const [
+          empleadosData,
+          accidentesData,
+          capacitacionesData,
+          auditoriasData,
+          ausenciasData
+        ] = await Promise.all([
           cargarEmpleados(),
           cargarAccidentes(),
           cargarCapacitaciones(),
-          cargarAuditorias()
+          cargarAuditorias(),
+          cargarAusencias()
         ]);
         
         if (mounted) {
@@ -351,6 +462,7 @@ export const useDashboardDataFetch = (
           setAccidentes(accidentesData);
           setCapacitaciones(capacitacionesData);
           setAuditorias(auditoriasData);
+          setAusencias(ausenciasData);
           setLoading(false);
         }
       } catch (error) {
@@ -366,7 +478,7 @@ export const useDashboardDataFetch = (
     return () => {
       mounted = false;
     };
-  }, [selectedEmpresa, selectedSucursal, selectedYear, sucursalesIdsString, cargarEmpleados, cargarAccidentes, cargarCapacitaciones, cargarAuditorias]);
+  }, [selectedEmpresa, selectedSucursal, selectedYear, sucursalesIdsString, cargarEmpleados, cargarAccidentes, cargarCapacitaciones, cargarAuditorias, cargarAusencias]);
 
   // Función manual para recargar (opcional, para usar desde fuera)
   const recargarDatos = useCallback(async () => {
@@ -374,24 +486,32 @@ export const useDashboardDataFetch = (
     
     setLoading(true);
     try {
-      const [empleadosData, accidentesData, capacitacionesData, auditoriasData] = await Promise.all([
+      const [
+        empleadosData,
+        accidentesData,
+        capacitacionesData,
+        auditoriasData,
+        ausenciasData
+      ] = await Promise.all([
         cargarEmpleados(),
         cargarAccidentes(),
         cargarCapacitaciones(),
-        cargarAuditorias()
+        cargarAuditorias(),
+        cargarAusencias()
       ]);
       
       setEmpleados(empleadosData);
       setAccidentes(accidentesData);
       setCapacitaciones(capacitacionesData);
       setAuditorias(auditoriasData);
+      setAusencias(ausenciasData);
     } catch (error) {
       console.error('Error cargando datos:', error);
     } finally {
       setLoading(false);
     }
-  }, [selectedEmpresa, selectedSucursal, cargarEmpleados, cargarAccidentes, cargarCapacitaciones, cargarAuditorias]);
+  }, [selectedEmpresa, selectedSucursal, cargarEmpleados, cargarAccidentes, cargarCapacitaciones, cargarAuditorias, cargarAusencias]);
 
-  return { empleados, accidentes, capacitaciones, auditorias, loading, recargarDatos };
+  return { empleados, accidentes, capacitaciones, auditorias, ausencias, loading, recargarDatos };
 };
 

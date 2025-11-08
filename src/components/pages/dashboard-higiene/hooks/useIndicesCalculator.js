@@ -1,4 +1,5 @@
 import { useCallback } from 'react';
+import { computeOccupationalHealthMetrics } from '../../../../utils/occupationalHealthMetrics';
 
 /**
  * Hook para calcular índices técnicos de seguridad
@@ -29,7 +30,7 @@ export const useIndicesCalculator = () => {
   }, []);
 
   // Calcular índices técnicos
-  const calcularIndices = useCallback((empleados, accidentes, year, sucursales) => {
+  const calcularIndices = useCallback((empleados, accidentes, ausencias, year, sucursales) => {
     const { inicio, fin } = calcularPeriodo(year);
     const diasTotales = Math.ceil((fin - inicio) / (1000 * 60 * 60 * 24));
     
@@ -48,6 +49,15 @@ export const useIndicesCalculator = () => {
     } else if (sucursales) {
       sucursalesMap.set(sucursales.id, sucursales);
     }
+
+    const empleadosPorId = new Map();
+    empleados.forEach((empleado) => {
+      if (empleado?.id) {
+        empleadosPorId.set(empleado.id, empleado);
+      }
+    });
+
+    const ausenciasList = Array.isArray(ausencias) ? ausencias : [];
     
     // Calcular promedio mensual de trabajadores expuestos (para Índice de Incidencia)
     // Según estándares OSHA/ILO: promedio de trabajadores que estuvieron expuestos durante el período
@@ -165,6 +175,7 @@ export const useIndicesCalculator = () => {
     // Esto asegura que los índices reflejen la realidad del período, no el estado actual
     let diasPerdidos = 0;
     let horasPerdidasPorAccidentes = 0;
+    let horasPerdidasPorAusencias = 0;
     
     // Calcular días perdidos desde los accidentes del período
     accidentsInPeriod.forEach(accidente => {
@@ -218,9 +229,72 @@ export const useIndicesCalculator = () => {
       }
     });
 
+    const saludOcupacionalCalculada = computeOccupationalHealthMetrics({
+      ausencias: ausenciasList,
+      periodStart: inicio,
+      periodEnd: fin,
+      now: new Date(),
+      resolveHorasPorDia: (ausencia) => {
+        const empleado = ausencia.empleadoId
+          ? empleadosPorId.get(ausencia.empleadoId)
+          : null;
+        const sucursalEmpleado = empleado ? sucursalesMap.get(empleado.sucursalId) : null;
+
+        if (typeof ausencia?.horasPorDia === 'number' && ausencia.horasPorDia > 0) {
+          return ausencia.horasPorDia;
+        }
+
+        const horasSemanalesAusencia =
+          typeof ausencia?.horasSemanales === 'number' && ausencia.horasSemanales > 0
+            ? ausencia.horasSemanales
+            : null;
+        const horasSemanalesEmpleado =
+          typeof empleado?.horasSemanales === 'number' && empleado.horasSemanales > 0
+            ? empleado.horasSemanales
+            : null;
+        const horasSemanalesSucursal =
+          typeof sucursalEmpleado?.horasSemanales === 'number' && sucursalEmpleado.horasSemanales > 0
+            ? sucursalEmpleado.horasSemanales
+            : null;
+
+        const valorHorasSemanales =
+          horasSemanalesAusencia || horasSemanalesEmpleado || horasSemanalesSucursal || 40;
+
+        const diasLaboralesAusencia =
+          typeof ausencia?.diasLaborales === 'number' && ausencia.diasLaborales > 0
+            ? ausencia.diasLaborales
+            : null;
+        const diasLaboralesEmpleado =
+          typeof empleado?.diasLaborales === 'number' && empleado.diasLaborales > 0
+            ? empleado.diasLaborales
+            : null;
+        const diasLaboralesSucursal =
+          typeof sucursalEmpleado?.diasLaborales === 'number' && sucursalEmpleado.diasLaborales > 0
+            ? sucursalEmpleado.diasLaborales
+            : null;
+
+        const divisor = diasLaboralesAusencia || diasLaboralesEmpleado || diasLaboralesSucursal || 5;
+
+        return valorHorasSemanales / divisor;
+      },
+      resolveEmpleado: (ausencia) =>
+        ausencia.empleadoId ? empleadosPorId.get(ausencia.empleadoId) : null
+    });
+
+    const resumenSalud = saludOcupacionalCalculada.resumen;
+    const diasAusenciasNoAccidente = resumenSalud.diasPerdidosNoAccidente || 0;
+    const horasAusenciasNoAccidente = resumenSalud.horasPerdidasNoAccidente || 0;
+    const diasAusenciasTotales = resumenSalud.diasPerdidosTotales || 0;
+    const horasAusenciasTotales = resumenSalud.horasPerdidasTotales || 0;
+
+    diasPerdidos += diasAusenciasNoAccidente;
+    horasPerdidasPorAusencias = horasAusenciasNoAccidente;
+    horasTrabajadas = Math.max(0, horasTrabajadas - horasAusenciasNoAccidente);
+
     // 1. Tasa de Ausentismo (TA) - Usando horas perdidas históricas desde accidentes
-    const horasTotales = horasTrabajadas + horasPerdidasPorAccidentes;
-    const tasaAusentismo = horasTotales > 0 ? (horasPerdidasPorAccidentes / horasTotales) * 100 : 0;
+    const horasPerdidasTotales = horasPerdidasPorAccidentes + horasPerdidasPorAusencias;
+    const horasTotales = horasTrabajadas + horasPerdidasTotales;
+    const tasaAusentismo = horasTotales > 0 ? (horasPerdidasTotales / horasTotales) * 100 : 0;
 
     // 2. Índice de Frecuencia (IF)
     const indiceFrecuencia = horasTrabajadas > 0 ? (accidentesConTiempoPerdido * 1000000) / horasTrabajadas : 0;
@@ -244,10 +318,26 @@ export const useIndicesCalculator = () => {
         empleadosEnReposo,
         promedioTrabajadores: Math.round(promedioTrabajadores * 100) / 100,
         horasTrabajadas: Math.round(horasTrabajadas),
-        horasPerdidas: Math.round(horasPerdidasPorAccidentes),
+        horasPerdidas: Math.round(horasPerdidasTotales),
+        horasPerdidasPorAccidentes: Math.round(horasPerdidasPorAccidentes),
+        horasPerdidasPorAusencias: Math.round(horasPerdidasPorAusencias),
         accidentesConTiempoPerdido,
         diasPerdidos,
-        diasSinAccidentes
+        diasPerdidosPorAusencias: diasAusenciasTotales,
+        diasSinAccidentes,
+        ausenciasTotales: resumenSalud.total,
+        ausenciasActivas: resumenSalud.activas,
+        enfermedadesOcupacionales: resumenSalud.ocupacionales,
+        casosCovid: resumenSalud.covid,
+        saludOcupacional: {
+          resumen: resumenSalud,
+          casosRecientes: saludOcupacionalCalculada.casosRecientes
+        }
+      },
+      saludOcupacional: {
+        resumen: resumenSalud,
+        casos: saludOcupacionalCalculada.casos,
+        casosRecientes: saludOcupacionalCalculada.casosRecientes
       }
     };
   }, [calcularPeriodo]);
