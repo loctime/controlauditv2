@@ -10,7 +10,6 @@ import {
   Button
 } from "@mui/material";
 import HealthAndSafetyIcon from "@mui/icons-material/HealthAndSafety";
-import CoronavirusIcon from "@mui/icons-material/Coronavirus";
 import PendingActionsIcon from "@mui/icons-material/PendingActions";
 import TimerIcon from "@mui/icons-material/Timer";
 import { Link as RouterLink } from "react-router-dom";
@@ -23,14 +22,6 @@ const SUMMARY_ITEMS = [
     color: "#22c55e",
     background: "#f0fdf4",
     border: "#bbf7d0"
-  },
-  {
-    key: "covid",
-    label: "Casos covid positivos",
-    icon: <CoronavirusIcon fontSize="small" sx={{ color: "#b91c1c" }} />,
-    color: "#ef4444",
-    background: "#fef2f2",
-    border: "#fecaca"
   },
   {
     key: "activas",
