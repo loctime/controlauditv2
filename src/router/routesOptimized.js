@@ -28,7 +28,12 @@ const Empleados = lazy(() => import('../components/pages/empleados/Empleados'));
 const Capacitaciones = lazy(() => import('../components/pages/capacitaciones/Capacitaciones'));
 const RegistrarAsistencia = lazy(() => import('../components/pages/capacitaciones/RegistrarAsistencia'));
 const Accidentes = lazy(() => import('../components/pages/accidentes/Accidentes'));
-const DashboardHigieneSeguridad = lazy(() => import('../components/pages/dashboard-higiene/DashboardHigieneSeguridad'));
+const DashboardHigieneSeguridad = lazy(() =>
+  import("../components/pages/dashboard-higiene/DashboardHigieneSeguridad")
+);
+const Ausencias = lazy(() =>
+  import("../components/pages/ausencias/Ausencias")
+);
 
 export const routes = [
   {
@@ -127,6 +132,13 @@ export const routes = [
     id: "accidentes",
     path: "/accidentes",
     Element: Accidentes,
+  },
+  {
+    id: "salud-ocupacional",
+    path: "/salud-ocupacional",
+    Element: Ausencias,
+    protected: true,
+    roles: ['max', 'supermax']
   },
   {
     id: "dashboard-seguridad",

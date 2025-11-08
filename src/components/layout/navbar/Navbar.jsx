@@ -376,6 +376,18 @@ function Navbar(props) {
                   Accidentes
                 </Link>
               </MenuItem>
+              <MenuItem onClick={handleHigieneMenuClose}>
+                <Link
+                  to="/salud-ocupacional"
+                  style={{
+                    color: "whitesmoke",
+                    textDecoration: "none",
+                    width: "100%"
+                  }}
+                >
+                  Salud ocupacional
+                </Link>
+              </MenuItem>
             </Menu>
 
 
@@ -491,6 +503,18 @@ function Navbar(props) {
                   width: '100%'
                 }}>
                   Accidentes
+                </Link>
+              </MenuItem>
+              <MenuItem onClick={handleHigieneMenuClose}>
+                <Link
+                  to="/salud-ocupacional"
+                  style={{
+                    color: "whitesmoke",
+                    textDecoration: "none",
+                    width: "100%"
+                  }}
+                >
+                  Salud ocupacional
                 </Link>
               </MenuItem>
             </Menu>
