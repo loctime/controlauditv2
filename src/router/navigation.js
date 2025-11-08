@@ -12,6 +12,7 @@ import HealthAndSafetyIcon from '@mui/icons-material/HealthAndSafety';
 import PeopleIcon from '@mui/icons-material/People';
 import SchoolIcon from '@mui/icons-material/School';
 import ReportProblemIcon from '@mui/icons-material/ReportProblem';
+import HealingIcon from '@mui/icons-material/Healing';
 
 // Configuración de menús por rol y permisos
 export const getMenuItems = (role, permisos = {}) => {
@@ -115,6 +116,14 @@ export const getMenuItems = (role, permisos = {}) => {
       path: "/accidentes",
       title: "Accidentes",
       Icon: ReportProblemIcon,
+      roles: ['max', 'supermax'],
+      required: true
+    },
+    {
+      id: "salud-ocupacional",
+      path: "/salud-ocupacional",
+      title: "Salud ocupacional",
+      Icon: HealingIcon,
       roles: ['max', 'supermax'],
       required: true
     }

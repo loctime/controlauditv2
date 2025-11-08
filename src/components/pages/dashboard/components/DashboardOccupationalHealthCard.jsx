@@ -6,12 +6,14 @@ import {
   Grid,
   Stack,
   Chip,
-  Divider
+  Divider,
+  Button
 } from "@mui/material";
 import HealthAndSafetyIcon from "@mui/icons-material/HealthAndSafety";
 import CoronavirusIcon from "@mui/icons-material/Coronavirus";
 import PendingActionsIcon from "@mui/icons-material/PendingActions";
 import TimerIcon from "@mui/icons-material/Timer";
+import { Link as RouterLink } from "react-router-dom";
 
 const SUMMARY_ITEMS = [
   {
@@ -234,6 +236,18 @@ export default function DashboardOccupationalHealthCard({ saludOcupacional }) {
               </Box>
             ))}
           </Stack>
+          <Button
+            component={RouterLink}
+            to="/salud-ocupacional"
+            sx={{
+              mt: 2,
+              textTransform: "none",
+              fontWeight: 600,
+              alignSelf: "flex-start"
+            }}
+          >
+            Gestionar ausencias
+          </Button>
         </>
       )}
     </Paper>

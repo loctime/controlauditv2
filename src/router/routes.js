@@ -15,6 +15,7 @@ import PermissionsDebug from "../components/pages/debug/PermissionsDebug";
 import GaleriaFormulariosPublicos from '../components/pages/formulario/GaleriaFormulariosPublicos';
 import ConfiguracionPage from '../components/pages/configuracion/ConfiguracionPage';
 import Accidentes from '../components/pages/accidentes/Accidentes';
+import Ausencias from '../components/pages/ausencias/Ausencias';
 import DashboardHigieneSeguridad from '../components/pages/dashboard-higiene/DashboardHigieneSeguridad';
 
 export const routes = [
@@ -96,6 +97,13 @@ export const routes = [
     id: "accidentes",
     path: "/accidentes",
     Element: Accidentes,
+  },
+  {
+    id: "salud-ocupacional",
+    path: "/salud-ocupacional",
+    Element: Ausencias,
+    protected: true,
+    roles: ['max', 'supermax']
   },
   {
     id: "dashboard-seguridad",
