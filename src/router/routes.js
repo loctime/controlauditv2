@@ -98,8 +98,8 @@ export const routes = [
     Element: Accidentes,
   },
   {
-    id: "dashboard-higiene-seguridad",
-    path: "/dashboard-higiene-seguridad",
+    id: "dashboard-seguridad",
+    path: "/dashboard-seguridad",
     Element: DashboardHigieneSeguridad,
     protected: true,
     roles: ['max', 'supermax']

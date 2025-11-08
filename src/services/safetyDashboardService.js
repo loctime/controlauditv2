@@ -13,6 +13,7 @@ import {
   onSnapshot 
 } from 'firebase/firestore';
 import { db } from '../firebaseConfig';
+import { computeOccupationalHealthMetrics } from '../utils/occupationalHealthMetrics';
 
 export const safetyDashboardService = {
   // Obtener datos del dashboard desde datos reales
@@ -27,14 +28,16 @@ export const safetyDashboardService = {
         formulariosData,
         empleadosData,
         capacitacionesData,
-        accidentesData
+        accidentesData,
+        ausenciasData
       ] = await Promise.all([
         this.getAuditoriasData(companyId, period),
         this.getLogsData(companyId, period),
         this.getFormulariosData(companyId, period),
         this.getEmpleados(sucursalId),
         this.getCapacitaciones(sucursalId, period),
-        this.getAccidentes(sucursalId, period)
+        this.getAccidentes(sucursalId, period),
+        this.getAusencias(companyId, sucursalId, period)
       ]);
 
       // Calcular métricas de seguridad
@@ -45,6 +48,7 @@ export const safetyDashboardService = {
         empleadosData,
         capacitacionesData,
         accidentesData,
+        ausenciasData,
         period // Pasar período para cálculo correcto de índices
       );
       
@@ -60,7 +64,8 @@ export const safetyDashboardService = {
         period,
         ...metrics,
         alerts: this.generateAlerts(auditoriasData, logsData, formulariosData, accidentesData),
-        chartData: this.generateChartData(auditoriasData, logsData, accidentesData, period)
+        chartData: this.generateChartData(auditoriasData, logsData, accidentesData, period),
+        occupationalHealth: metrics.occupationalHealth
       };
       
     } catch (error) {
@@ -106,14 +111,16 @@ export const safetyDashboardService = {
             formulariosData,
             empleadosData,
             capacitacionesData,
-            accidentesData
+            accidentesData,
+            ausenciasData
           ] = await Promise.all([
             this.getAuditoriasData(companyId, period),
             this.getLogsData(companyId, period),
             this.getFormulariosData(companyId, period),
             this.getEmpleados(sucursalId),
             this.getCapacitaciones(sucursalId, period),
-            this.getAccidentes(sucursalId, period)
+            this.getAccidentes(sucursalId, period),
+            this.getAusencias(companyId, sucursalId, period)
           ]);
 
           const metrics = this.calculateSafetyMetrics(
@@ -123,6 +130,7 @@ export const safetyDashboardService = {
             empleadosData,
             capacitacionesData,
             accidentesData,
+            ausenciasData,
             period // Pasar período para cálculo correcto de índices
           );
           
@@ -137,7 +145,8 @@ export const safetyDashboardService = {
             period,
             ...metrics,
             alerts: this.generateAlerts(auditoriasData, logsData, formulariosData, accidentesData),
-            chartData: this.generateChartData(auditoriasData, logsData, accidentesData, period)
+            chartData: this.generateChartData(auditoriasData, logsData, accidentesData, period),
+            occupationalHealth: metrics.occupationalHealth
           });
         } catch (error) {
           console.error('❌ [SafetyDashboard] Error recalculando métricas:', error);
@@ -185,6 +194,42 @@ export const safetyDashboardService = {
       );
       
       unsubscribes.push(unsubscribeAccidentes);
+      
+      // Listener para ausencias de salud ocupacional
+      const ausenciasRef = collection(db, 'ausencias');
+      let qAusencias;
+
+      if (sucursalId === 'todas') {
+        if (companyId) {
+          qAusencias = query(ausenciasRef, where('empresaId', '==', companyId));
+        } else {
+          qAusencias = query(ausenciasRef, orderBy('fechaInicio', 'desc'));
+        }
+      } else {
+        qAusencias = query(
+          ausenciasRef,
+          where('sucursalId', '==', sucursalId)
+        );
+      }
+
+      const unsubscribeAusencias = onSnapshot(
+        qAusencias,
+        (snapshot) => {
+          console.log(
+            `🔄 [Dashboard] Cambios detectados en ausencias: ${snapshot.docs.length} documentos`
+          );
+          recargarDashboard();
+        },
+        (error) => {
+          console.error(
+            '❌ [Dashboard] Error en listener de ausencias:',
+            error
+          );
+          if (onError) onError(error);
+        }
+      );
+
+      unsubscribes.push(unsubscribeAusencias);
       
       // Listener para capacitaciones
       const capacitacionesRef = collection(db, 'capacitaciones');
@@ -535,20 +580,119 @@ export const safetyDashboardService = {
     }
   },
 
+  // Obtener ausencias y enfermedades registradas
+  async getAusencias(companyId, sucursalId, period) {
+    try {
+      const ausenciasRef = collection(db, 'ausencias');
+      let snapshot;
+
+      if (sucursalId === 'todas') {
+        if (companyId) {
+          const q = query(ausenciasRef, where('empresaId', '==', companyId));
+          snapshot = await getDocs(q);
+        } else {
+          const q = query(ausenciasRef, orderBy('fechaInicio', 'desc'), limit(200));
+          snapshot = await getDocs(q);
+        }
+      } else {
+        const q = query(
+          ausenciasRef,
+          where('sucursalId', '==', sucursalId)
+        );
+        snapshot = await getDocs(q);
+      }
+
+      const ausencias = [];
+      snapshot.forEach((docSnapshot) => {
+        ausencias.push({
+          id: docSnapshot.id,
+          ...docSnapshot.data()
+        });
+      });
+
+      if (!period) {
+        return ausencias;
+      }
+
+      const [year, month] = period.split('-').map(Number);
+      if (!year || !month) {
+        return ausencias;
+      }
+
+      const periodStart = new Date(year, month - 1, 1);
+      const periodEnd = new Date(year, month, 0, 23, 59, 59, 999);
+
+      const parseDate = (value) => {
+        if (!value) return null;
+        if (value.toDate) {
+          try {
+            return value.toDate();
+          } catch (error) {
+            return null;
+          }
+        }
+        const parsed = new Date(value);
+        return Number.isNaN(parsed.getTime()) ? null : parsed;
+      };
+
+      const overlapsPeriod = (ausencia) => {
+        const inicio =
+          parseDate(
+            ausencia.fechaInicio ||
+              ausencia.inicio ||
+              ausencia.fecha ||
+              ausencia.startDate
+          ) || parseDate(ausencia.createdAt);
+        const fin = parseDate(
+          ausencia.fechaFin ||
+            ausencia.fin ||
+            ausencia.fechaCierre ||
+            ausencia.endDate
+        );
+
+        if (!inicio) return false;
+
+        const cierre = fin || new Date();
+        return inicio <= periodEnd && cierre >= periodStart;
+      };
+
+      return ausencias.filter(overlapsPeriod);
+    } catch (error) {
+      console.error('❌ [SafetyDashboard] Error obteniendo ausencias:', error);
+      return [];
+    }
+  },
+
   // Calcular métricas de seguridad desde datos reales - CON LÓGICA ESTÁNDAR OSHA/ISO
-  calculateSafetyMetrics(auditorias, logs, formularios, empleados, capacitaciones, accidentes, period) {
+  calculateSafetyMetrics(
+    auditorias,
+    logs,
+    formularios,
+    empleados,
+    capacitaciones,
+    accidentes,
+    ausencias,
+    period
+  ) {
     // Parsear período YYYY-MM
     const [year, month] = period ? period.split('-').map(Number) : [new Date().getFullYear(), new Date().getMonth() + 1];
     const periodStart = new Date(year, month - 1, 1);
     const periodEnd = new Date(year, month, 0, 23, 59, 59, 999); // Último día del mes
     const now = new Date();
+    const ausenciasList = Array.isArray(ausencias) ? ausencias : [];
     
     // Métricas de empleados (datos reales)
     const empleadosActivos = empleados.filter(e => e.estado === 'activo');
     const totalEmployees = empleadosActivos.length;
     const operators = empleados.filter(e => e.tipo === 'operativo' && e.estado === 'activo').length;
     const administrators = empleados.filter(e => e.tipo === 'administrativo' && e.estado === 'activo').length;
-    const hoursWorked = totalEmployees * 8 * 30; // 8 horas × 30 días
+    const empleadosMap = new Map();
+    empleados.forEach((emp) => {
+      if (emp?.id) {
+        empleadosMap.set(emp.id, emp);
+      }
+    });
+    let hoursWorked = totalEmployees * 8 * 30; // 8 horas × 30 días
 
     // Métricas de accidentes (datos reales de la nueva colección)
     const accidents = accidentes.filter(a => a.tipo === 'accidente');
@@ -671,16 +815,8 @@ export const safetyDashboardService = {
     });
 
     // 🎯 CÁLCULO CORRECTO DE ÍNDICES SEGÚN ESTÁNDARES OSHA/ISO 45001
-    
-    // IF: SOLO accidentes ocurridos en el período
-    const frequencyIndex = accidentsInPeriod.length > 0 && hoursWorked > 0 ? 
-      (accidentsInPeriod.length * 1000000) / hoursWorked : 0;
-    
-    // IG: Suma TODOS los días perdidos del período
-    // Esto incluye días de accidentes del período + días continuos de accidentes anteriores
-    // 🎯 LÓGICA CORRECTA: Verificar empleados que AÚN ESTÁN en reposo usando la colección empleados
     let totalDaysLost = 0;
-    
+
     // Crear mapa de empleados en reposo por ID
     const empleadosEnReposo = new Map();
     empleados.forEach(emp => {
@@ -688,29 +824,112 @@ export const safetyDashboardService = {
         empleadosEnReposo.set(emp.id, emp);
       }
     });
-    
-    // Calcular días perdidos solo para empleados que AÚN están en reposo
+
+    // Calcular días perdidos solo para empleados que AÚN están en reposo por accidentes
     empleadosEnReposo.forEach(emp => {
       const fechaInicioReposo = emp.fechaInicioReposo.toDate ? emp.fechaInicioReposo.toDate() : new Date(emp.fechaInicioReposo);
       const fechaFinPeriodo = periodEnd > now ? now : periodEnd;
-      
-      // Si el reposo continúa en el período, calcular días
+
       if (fechaInicioReposo < fechaFinPeriodo) {
         const inicioCalculo = fechaInicioReposo > periodStart ? fechaInicioReposo : periodStart;
         const diasEnPeriodo = Math.max(0, Math.ceil((fechaFinPeriodo - inicioCalculo) / (1000 * 60 * 60 * 24)));
         totalDaysLost += diasEnPeriodo;
       }
     });
-    
-    const severityIndex = totalDaysLost > 0 && hoursWorked > 0 ? 
-      (totalDaysLost * 1000000) / hoursWorked : 0;
-    
+
+    const occupationalHealthMetrics = computeOccupationalHealthMetrics({
+      ausencias: ausenciasList,
+      periodStart,
+      periodEnd,
+      now,
+      resolveHorasPorDia: (ausencia) => {
+        const empleado = ausencia.empleadoId ? empleadosMap.get(ausencia.empleadoId) : null;
+
+        if (typeof ausencia?.horasPorDia === 'number' && ausencia.horasPorDia > 0) {
+          return ausencia.horasPorDia;
+        }
+
+        if (
+          typeof ausencia?.horasSemanales === 'number' &&
+          ausencia.horasSemanales > 0
+        ) {
+          const divisor =
+            typeof ausencia?.diasLaborales === 'number' && ausencia.diasLaborales > 0
+              ? ausencia.diasLaborales
+              : 5;
+          return ausencia.horasSemanales / divisor;
+        }
+
+        if (empleado) {
+          if (typeof empleado?.horasPorDia === 'number' && empleado.horasPorDia > 0) {
+            return empleado.horasPorDia;
+          }
+
+          if (
+            typeof empleado?.horasSemanales === 'number' &&
+            empleado.horasSemanales > 0
+          ) {
+            const divisor =
+              typeof empleado?.diasLaborales === 'number' && empleado.diasLaborales > 0
+                ? empleado.diasLaborales
+                : 5;
+            return empleado.horasSemanales / divisor;
+          }
+        }
+
+        return 8;
+      },
+      resolveEmpleado: (ausencia) =>
+        ausencia.empleadoId ? empleadosMap.get(ausencia.empleadoId) : null
+    });
+
+    const resumenSalud = occupationalHealthMetrics.resumen;
+    const diasAusenciasNoAccidente = resumenSalud.diasPerdidosNoAccidente || 0;
+    const horasAusenciasNoAccidente = resumenSalud.horasPerdidasNoAccidente || 0;
+    const diasAusenciasTotales = resumenSalud.diasPerdidosTotales || 0;
+    const horasAusenciasTotales = resumenSalud.horasPerdidasTotales || 0;
+
+    totalDaysLost += diasAusenciasNoAccidente;
+    hoursWorked = Math.max(0, hoursWorked - horasAusenciasNoAccidente);
+
+    const frequencyIndex = accidentsInPeriod.length > 0 && hoursWorked > 0
+      ? (accidentsInPeriod.length * 1000000) / hoursWorked
+      : 0;
+
+    const severityIndex = totalDaysLost > 0 && hoursWorked > 0
+      ? (totalDaysLost * 1000000) / hoursWorked
+      : 0;
+
     // II: SOLO empleados accidentados en el período
-    const empleadosAccidentados = new Set(accidentsInPeriod.map(acc => 
-      acc.empleadosInvolucrados?.map(emp => emp.empleadoId)
-    ).flat().filter(Boolean));
-    const incidenceIndex = empleadosAccidentados.size > 0 && totalEmployees > 0 ? 
-      (empleadosAccidentados.size * 1000) / totalEmployees : 0;
+    const empleadosAccidentados = new Set(
+      accidentsInPeriod
+        .map(acc => acc.empleadosInvolucrados?.map(emp => emp.empleadoId))
+        .flat()
+        .filter(Boolean)
+    );
+    const incidenceIndex = empleadosAccidentados.size > 0 && totalEmployees > 0
+      ? (empleadosAccidentados.size * 1000) / totalEmployees
+      : 0;
+
+    const occupationalHealth = {
+      resumen: {
+        total: resumenSalud.total,
+        activas: resumenSalud.activas,
+        cerradas: resumenSalud.cerradas,
+        ocupacionales: resumenSalud.ocupacionales,
+        covid: resumenSalud.covid,
+        enfermedades: resumenSalud.enfermedades,
+        licencias: resumenSalud.licencias,
+        otros: resumenSalud.otros,
+        diasPerdidosTotales: diasAusenciasTotales,
+        horasPerdidasTotales: horasAusenciasTotales,
+        diasPerdidosNoAccidente: diasAusenciasNoAccidente,
+        horasPerdidasNoAccidente: horasAusenciasNoAccidente
+      },
+      porTipo: resumenSalud.porTipo || {},
+      casosRecientes: occupationalHealthMetrics.casosRecientes,
+      casos: occupationalHealthMetrics.casos
+    };
 
     // Métricas de capacitaciones (datos reales de la nueva colección)
     const trainingsDone = capacitaciones.filter(c => c.estado === 'completada').length;
@@ -779,6 +998,7 @@ export const safetyDashboardService = {
       severityIndex: Number(severityIndex.toFixed(1)),
       incidenceIndex: Number(incidenceIndex.toFixed(1)), // Añadido: Índice de Incidencia
       accidentabilityIndex: Number((frequencyIndex + severityIndex).toFixed(1)),
+      occupationalHealth,
       
       // Métricas de capacitaciones
       trainingsDone,

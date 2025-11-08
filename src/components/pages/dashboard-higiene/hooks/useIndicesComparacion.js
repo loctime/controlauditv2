@@ -4,7 +4,7 @@ import { useIndicesCalculator } from './useIndicesCalculator';
 /**
  * Hook para comparar índices del año actual vs año anterior
  */
-export const useIndicesComparacion = (empleados, accidentes, selectedYear, sucursales) => {
+export const useIndicesComparacion = (empleados, accidentes, ausencias, selectedYear, sucursales) => {
   const { calcularIndices } = useIndicesCalculator();
 
   const comparacion = useMemo(() => {
@@ -19,10 +19,10 @@ export const useIndicesComparacion = (empleados, accidentes, selectedYear, sucur
     const añoAnterior = selectedYear - 1;
     
     // Calcular índices del año actual
-    const indicesActual = calcularIndices(empleados, accidentes, selectedYear, sucursales);
+    const indicesActual = calcularIndices(empleados, accidentes, ausencias, selectedYear, sucursales);
     
     // Calcular índices del año anterior (solo si hay datos)
-    const indicesAnterior = calcularIndices(empleados, accidentes, añoAnterior, sucursales);
+    const indicesAnterior = calcularIndices(empleados, accidentes, ausencias, añoAnterior, sucursales);
 
     // Función para calcular variación porcentual
     const calcularVariacion = (actual, anterior) => {
@@ -76,7 +76,7 @@ export const useIndicesComparacion = (empleados, accidentes, selectedYear, sucur
         indicesAnterior.indices.indiceGravedad
       )
     };
-  }, [empleados, accidentes, selectedYear, sucursales, calcularIndices]);
+  }, [empleados, accidentes, ausencias, selectedYear, sucursales, calcularIndices]);
 
   return comparacion;
 };

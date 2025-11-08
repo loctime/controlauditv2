@@ -283,6 +283,7 @@ export default function DashboardSeguridadV2() {
     accidentes,
     capacitaciones,
     auditorias,
+    ausencias,
     loading: analyticsLoading
   } = useDashboardDataFetch(
     selectedEmpresa,
@@ -313,12 +314,6 @@ export default function DashboardSeguridadV2() {
     sucursalesFiltradas,
     userSucursales
   ]);
-  const indicesComparacion = useIndicesComparacion(
-    empleados,
-    accidentes,
-    selectedYear,
-    sucursalesParaComparacion
-  );
   const datos = useMemo(() => {
     if (!selectedEmpresa || !selectedSucursal) {
       return {
@@ -351,9 +346,10 @@ export default function DashboardSeguridadV2() {
         ? sucursalesFiltradas
         : userSucursales?.find((s) => s.id === selectedSucursal);
 
-    const { indices, metricas } = calcularIndices(
+    const { indices, metricas, saludOcupacional } = calcularIndices(
       empleados,
       accidentes,
+      ausencias,
       selectedYear,
       sucursalesParaCalculo
     );
@@ -363,8 +359,10 @@ export default function DashboardSeguridadV2() {
       accidentes,
       capacitaciones,
       auditorias,
+      ausencias,
       indices,
       metricas,
+      saludOcupacional,
       sucursalesParaCalculo
     };
   }, [
@@ -372,6 +370,7 @@ export default function DashboardSeguridadV2() {
     accidentes,
     capacitaciones,
     auditorias,
+    ausencias,
     selectedEmpresa,
     selectedSucursal,
     selectedYear,
@@ -379,6 +378,91 @@ export default function DashboardSeguridadV2() {
     sucursalesFiltradas,
     userSucursales
   ]);
+  const indicesComparacion = useIndicesComparacion(
+    empleados,
+    accidentes,
+    ausencias,
+    selectedYear,
+    sucursalesParaComparacion
+  );
+
+  const saludOcupacionalDatos = useMemo(() => {
+    const datosLocales = datos.saludOcupacional;
+    const datosServicio = data?.occupationalHealth;
+
+    if (!datosLocales && !datosServicio) {
+      return null;
+    }
+
+    const resumenLocal = datosLocales?.resumen || {};
+    const resumenServicio = datosServicio?.resumen || {};
+
+    const resumen = {
+      total:
+        resumenLocal.total ??
+        resumenServicio.total ??
+        0,
+      activas:
+        resumenLocal.activas ??
+        resumenServicio.activas ??
+        0,
+      cerradas:
+        resumenLocal.cerradas ??
+        resumenServicio.cerradas ??
+        0,
+      ocupacionales:
+        resumenLocal.ocupacionales ??
+        resumenServicio.ocupacionales ??
+        0,
+      covid:
+        resumenLocal.covid ??
+        resumenServicio.covid ??
+        0,
+      enfermedades:
+        resumenLocal.enfermedades ??
+        resumenServicio.enfermedades ??
+        0,
+      licencias:
+        resumenLocal.licencias ??
+        resumenServicio.licencias ??
+        0,
+      otros:
+        resumenLocal.otros ??
+        resumenServicio.otros ??
+        0,
+      diasPerdidosTotales:
+        resumenLocal.diasPerdidosTotales ??
+        resumenServicio.diasPerdidosTotales ??
+        0,
+      horasPerdidasTotales:
+        resumenLocal.horasPerdidasTotales ??
+        resumenServicio.horasPerdidasTotales ??
+        0,
+      porTipo:
+        resumenLocal.porTipo ||
+        datosServicio?.porTipo ||
+        {}
+    };
+
+    const casosLocales = datosLocales?.casos || [];
+    const casosServicio = datosServicio?.casos || [];
+    const casos = casosLocales.length > 0 ? casosLocales : casosServicio;
+
+    const casosRecientesLocales = datosLocales?.casosRecientes || [];
+    const casosRecientesServicio = datosServicio?.casosRecientes || [];
+    const casosRecientes =
+      casosRecientesLocales.length > 0
+        ? casosRecientesLocales
+        : casosRecientesServicio.length > 0
+          ? casosRecientesServicio
+          : casos.slice(0, 5);
+
+    return {
+      resumen,
+      casos,
+      casosRecientes
+    };
+  }, [datos.saludOcupacional, data?.occupationalHealth, datos]);
 
   const empresaSeleccionada = useMemo(
     () => userEmpresas?.find((e) => e.id === selectedEmpresa),
@@ -736,7 +820,10 @@ export default function DashboardSeguridadV2() {
           data-grafico-title="Dashboard General"
           sx={{ width: "100%" }}
         >
-          <DashboardMainGrid data={data} />
+          <DashboardMainGrid
+            data={data}
+            saludOcupacional={saludOcupacionalDatos}
+          />
         </Box>
 
         {datos.metricas.totalEmpleados > 0 && (

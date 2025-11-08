@@ -5,8 +5,9 @@ import EmployeeMetrics from "../../../dashboard-seguridad/EmployeeMetrics";
 import SafetyGoals from "../../../dashboard-seguridad/SafetyGoals";
 import AuditSummaryChips from "../../../dashboard-seguridad/AuditSummaryChips";
 import IncidentMetrics from "../../../dashboard-seguridad/IncidentMetrics";
+import DashboardOccupationalHealthCard from "./DashboardOccupationalHealthCard";
 
-export default function DashboardMainGrid({ data }) {
+export default function DashboardMainGrid({ data, saludOcupacional }) {
   return (
     <Grid container spacing={1.5}>
       <Grid item xs={12} lg={3}>
@@ -110,81 +111,9 @@ export default function DashboardMainGrid({ data }) {
             sucursalId={data.sucursalId}
           />
 
-          <Paper
-            elevation={2}
-            sx={{
-              p: 2,
-              backgroundColor: "white",
-              borderRadius: "16px",
-              border: "1px solid #e5e7eb"
-            }}
-          >
-            <Typography
-              variant="h6"
-              sx={{
-                fontWeight: 600,
-                color: "#111827",
-                mb: 1.5,
-                display: "flex",
-                alignItems: "center",
-                gap: 1
-              }}
-            >
-              🏥 SALUD OCUPACIONAL
-            </Typography>
-
-            <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
-              <Box
-                sx={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  backgroundColor: "#f0fdf4",
-                  padding: "10px",
-                  borderRadius: "8px",
-                  border: "1px solid #bbf7d0"
-                }}
-              >
-                <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                  🩺 Enfermedades ocupacionales
-                </Typography>
-                <Typography
-                  variant="h6"
-                  sx={{
-                    fontWeight: "bold",
-                    color: "#22c55e"
-                  }}
-                >
-                  0
-                </Typography>
-              </Box>
-
-              <Box
-                sx={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  backgroundColor: "#fef2f2",
-                  padding: "10px",
-                  borderRadius: "8px",
-                  border: "1px solid #fecaca"
-                }}
-              >
-                <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                  🦠 Casos covid positivos
-                </Typography>
-                <Typography
-                  variant="h6"
-                  sx={{
-                    fontWeight: "bold",
-                    color: "#ef4444"
-                  }}
-                >
-                  1
-                </Typography>
-              </Box>
-            </Box>
-          </Paper>
+          <DashboardOccupationalHealthCard
+            saludOcupacional={saludOcupacional}
+          />
         </Box>
       </Grid>
 
