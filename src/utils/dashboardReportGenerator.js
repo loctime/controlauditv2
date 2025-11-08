@@ -593,90 +593,90 @@ export const generarReporteDashboard = async ({
   // ========== GRÁFICOS ==========
   onProgress?.(70);
   try {
-    // Buscar contenedor de gráficos
     const graficosContainer = document.querySelector('[data-graficos-dashboard]');
     if (graficosContainer) {
-      // Scroll al contenedor para asegurar que esté visible
       graficosContainer.scrollIntoView({ behavior: 'instant', block: 'start' });
-      
-      // Esperar más tiempo para que los gráficos se rendericen completamente
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      await new Promise(resolve => setTimeout(resolve, 1200));
 
-      // Forzar que el contenedor muestre todo su contenido
-      const originalOverflow = graficosContainer.style.overflow;
-      const originalHeight = graficosContainer.style.height;
+      const originalContainerOverflow = graficosContainer.style.overflow;
+      const originalContainerHeight = graficosContainer.style.height;
       graficosContainer.style.overflow = 'visible';
       graficosContainer.style.height = 'auto';
-      
-      // Esperar un frame para que se apliquen los cambios
-      await new Promise(resolve => requestAnimationFrame(resolve));
 
-      // Obtener dimensiones reales del contenido incluyendo todos los hijos
-      const rect = graficosContainer.getBoundingClientRect();
-      let maxHeight = rect.height;
-      let maxWidth = rect.width;
-      
-      // Buscar el elemento más alto dentro del contenedor
-      const allChildren = graficosContainer.querySelectorAll('*');
-      allChildren.forEach(child => {
-        const childRect = child.getBoundingClientRect();
-        const relativeTop = childRect.top - rect.top + childRect.height;
-        if (relativeTop > maxHeight) {
-          maxHeight = relativeTop;
-        }
-        const relativeLeft = childRect.left - rect.left + childRect.width;
-        if (relativeLeft > maxWidth) {
-          maxWidth = relativeLeft;
-        }
-      });
+      const seccionesCapturables = Array.from(
+        graficosContainer.querySelectorAll('[data-grafico-seccion]')
+      ).filter((el) => el.offsetWidth > 0 && el.offsetHeight > 0);
 
-      const scrollWidth = Math.max(graficosContainer.scrollWidth, maxWidth, rect.width);
-      const scrollHeight = Math.max(graficosContainer.scrollHeight, maxHeight, rect.height);
+      const secciones = seccionesCapturables.length > 0 ? seccionesCapturables : [graficosContainer];
 
-      const canvas = await html2canvas(graficosContainer, {
-        scale: 2,
-        useCORS: true,
-        logging: false,
-        backgroundColor: '#ffffff',
-        width: scrollWidth,
-        height: scrollHeight,
-        windowWidth: window.innerWidth,
-        windowHeight: window.innerHeight,
-        scrollX: -rect.left,
-        scrollY: -rect.top,
-        allowTaint: true,
-        removeContainer: false,
-        onclone: (clonedDoc) => {
-          // Asegurar que el clon también tenga overflow visible
-          const clonedContainer = clonedDoc.querySelector('[data-graficos-dashboard]');
-          if (clonedContainer) {
-            clonedContainer.style.overflow = 'visible';
-            clonedContainer.style.height = 'auto';
+      addSectionTitle('5. ANÁLISIS GRÁFICO', 16, 40);
+
+      for (const section of secciones) {
+        section.scrollIntoView({ behavior: 'instant', block: 'center' });
+        await new Promise(resolve => setTimeout(resolve, 400));
+
+        const originalOverflow = section.style.overflow;
+        const originalHeight = section.style.height;
+        section.style.overflow = 'visible';
+        section.style.height = 'auto';
+
+        const rect = section.getBoundingClientRect();
+
+        const canvas = await html2canvas(section, {
+          scale: 2,
+          useCORS: true,
+          logging: false,
+          backgroundColor: '#ffffff',
+          width: rect.width,
+          height: rect.height,
+          windowWidth: Math.max(rect.width, window.innerWidth),
+          windowHeight: Math.max(rect.height, window.innerHeight),
+          scrollX: -rect.left,
+          scrollY: -rect.top,
+          allowTaint: true,
+          removeContainer: false,
+          onclone: (clonedDoc) => {
+            const clonedContainer = clonedDoc.querySelector('[data-graficos-dashboard]');
+            if (clonedContainer) {
+              clonedContainer.style.overflow = 'visible';
+              clonedContainer.style.height = 'auto';
+            }
+            clonedDoc.querySelectorAll('[data-grafico-seccion]').forEach((el) => {
+              el.style.overflow = 'visible';
+              el.style.height = 'auto';
+            });
           }
+        });
+
+        section.style.overflow = originalOverflow;
+        section.style.height = originalHeight;
+
+        const imgData = canvas.toDataURL('image/png');
+        const imgWidth = contentWidth;
+        const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+        const tituloSeccion =
+          section.getAttribute('data-grafico-title') ||
+          section.dataset?.graficoTitle ||
+          '';
+
+        const spaceNeeded = imgHeight + (tituloSeccion ? 18 : 10) + 10;
+        checkPageBreak(spaceNeeded);
+
+        if (tituloSeccion) {
+          doc.setFontSize(12);
+          doc.setFont('helvetica', 'bold');
+          doc.setTextColor(0, 0, 0);
+          doc.text(tituloSeccion, margin, yPosition);
+          yPosition += 7;
         }
-      });
-      
-      // Restaurar estilos originales
-      graficosContainer.style.overflow = originalOverflow;
-      graficosContainer.style.height = originalHeight;
 
-      const imgData = canvas.toDataURL('image/png');
-      const imgWidth = contentWidth;
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
-
-      // Calcular espacio necesario: título (20) + gráfico (imgHeight) + margen (15)
-      const spaceNeeded = 20 + imgHeight + 15;
-      
-      // Verificar espacio antes de agregar título
-      if (yPosition + spaceNeeded > pageHeight - 30) {
-        addNewPage();
+        doc.addImage(imgData, 'PNG', margin, yPosition, imgWidth, imgHeight);
+        yPosition += imgHeight + 12;
       }
-      
-      // Ahora agregar título y gráfico juntos
-      addSectionTitle('5. ANÁLISIS GRÁFICO', 16, imgHeight);
-      
-      doc.addImage(imgData, 'PNG', margin, yPosition, imgWidth, imgHeight);
-      yPosition += imgHeight + 15;
+
+      graficosContainer.style.overflow = originalContainerOverflow;
+      graficosContainer.style.height = originalContainerHeight;
     } else {
       addSectionTitle('5. ANÁLISIS GRÁFICO', 16, 10);
       doc.setFontSize(10);

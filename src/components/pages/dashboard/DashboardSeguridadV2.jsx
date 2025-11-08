@@ -12,7 +12,8 @@ import {
   Alert,
   Stack,
   CircularProgress,
-  Typography
+  Typography,
+  Backdrop
 } from "@mui/material";
 import { safetyDashboardService } from "../../../services/safetyDashboardService";
 import { useAuth } from "../../context/AuthContext";
@@ -494,6 +495,7 @@ export default function DashboardSeguridadV2() {
   });
   const [openReportModal, setOpenReportModal] = useState(false);
   const [generandoReporte, setGenerandoReporte] = useState(false);
+  const [reportLoadingOverlay, setReportLoadingOverlay] = useState(false);
 
   const handleAlertClick = (event) => {
     setAlertAnchorEl(event.currentTarget);
@@ -504,6 +506,19 @@ export default function DashboardSeguridadV2() {
   };
 
   const openAlert = Boolean(alertAnchorEl);
+
+  const resetBodyOverflow = () => {
+    if (typeof document !== "undefined") {
+      document.body.style.overflow = "";
+      document.body.removeAttribute("data-report-loading");
+    }
+  };
+
+  useEffect(() => {
+    return () => {
+      resetBodyOverflow();
+    };
+  }, []);
 
   const handleGenerateReport = async () => {
     if (
@@ -520,6 +535,11 @@ export default function DashboardSeguridadV2() {
     try {
       setOpenReportModal(false);
       setGenerandoReporte(true);
+      setReportLoadingOverlay(true);
+      if (typeof document !== "undefined") {
+        document.body.setAttribute("data-report-loading", "true");
+        document.body.style.overflow = "hidden";
+      }
       const loadingToastId = toast.info(
         "Generando reporte PDF... Por favor espera",
         {
@@ -552,6 +572,8 @@ export default function DashboardSeguridadV2() {
       toast.dismiss();
       toast.error("❌ Error al generar el reporte. Intenta nuevamente.");
     } finally {
+      resetBodyOverflow();
+      setReportLoadingOverlay(false);
       setGenerandoReporte(false);
     }
   };
@@ -686,36 +708,65 @@ export default function DashboardSeguridadV2() {
         onOpenReport={handleOpenReport}
       />
 
-      <Suspense fallback={<AnalyticsFallback />}>
-        {analyticsLoading ? (
-          <AnalyticsFallback />
-        ) : datos.metricas.totalEmpleados > 0 ? (
-          <DashboardAnalyticsSection
-            metricas={datos.metricas}
-            auditoriasMetrics={auditoriasMetrics}
-          />
-        ) : (
-          <DashboardNoDataCard />
-        )}
-      </Suspense>
-
-      <DashboardMainGrid data={data} />
-
-      {datos.metricas.totalEmpleados > 0 && (
+      <Box
+        data-graficos-dashboard
+        sx={{ display: "flex", flexDirection: "column", gap: 1.5, mt: 1.5 }}
+      >
         <Suspense fallback={<AnalyticsFallback />}>
-          <Box sx={{ mt: 1.5 }}>
-            <AccidentesBreakdown analysis={accidentesAnalysis} />
-          </Box>
-
-          <Box sx={{ mt: 1.5 }}>
-            <CapacitacionesMetrics metrics={capacitacionesMetrics} />
-          </Box>
-
-          <Box sx={{ mt: 1.5 }}>
-            <GraficoIndices datos={datos} periodo={selectedYear} />
-          </Box>
+          {analyticsLoading ? (
+            <AnalyticsFallback />
+          ) : datos.metricas.totalEmpleados > 0 ? (
+            <Box
+              data-grafico-seccion="resumen-integrado"
+              data-grafico-title="Resumen Integrado"
+              sx={{ width: "100%" }}
+            >
+              <DashboardAnalyticsSection
+                metricas={datos.metricas}
+                auditoriasMetrics={auditoriasMetrics}
+              />
+            </Box>
+          ) : (
+            <DashboardNoDataCard />
+          )}
         </Suspense>
-      )}
+
+        <Box
+          data-grafico-seccion="main-grid"
+          data-grafico-title="Dashboard General"
+          sx={{ width: "100%" }}
+        >
+          <DashboardMainGrid data={data} />
+        </Box>
+
+        {datos.metricas.totalEmpleados > 0 && (
+          <Suspense fallback={<AnalyticsFallback />}>
+            <Box
+              sx={{ mt: 0.5 }}
+              data-grafico-seccion="accidentes"
+              data-grafico-title="Análisis de Accidentes"
+            >
+              <AccidentesBreakdown analysis={accidentesAnalysis} />
+            </Box>
+
+            <Box
+              sx={{ mt: 0.5 }}
+              data-grafico-seccion="capacitaciones"
+              data-grafico-title="Cumplimiento de Capacitaciones"
+            >
+              <CapacitacionesMetrics metrics={capacitacionesMetrics} />
+            </Box>
+
+            <Box
+              sx={{ mt: 0.5 }}
+              data-grafico-seccion="indices"
+              data-grafico-title="Índices Técnicos"
+            >
+              <GraficoIndices datos={datos} periodo={selectedYear} />
+            </Box>
+          </Suspense>
+        )}
+      </Box>
 
       <DashboardAlertsPopover
         open={openAlert}
@@ -732,6 +783,25 @@ export default function DashboardSeguridadV2() {
         generandoReporte={generandoReporte}
         onGenerateReport={handleGenerateReport}
       />
+
+      <Backdrop
+        sx={{
+          color: "#fff",
+          zIndex: (theme) => theme.zIndex.drawer + 2000,
+          display: "flex",
+          flexDirection: "column",
+          gap: 2
+        }}
+        open={reportLoadingOverlay}
+      >
+        <CircularProgress color="inherit" size={56} thickness={4} />
+        <Typography variant="h6" sx={{ fontWeight: 600 }}>
+          Generando reporte PDF, por favor espera...
+        </Typography>
+        <Typography variant="body2" sx={{ maxWidth: 360, textAlign: "center" }}>
+          Estamos recopilando todos los gráficos y métricas. No cierres la ventana ni navegues a otra sección.
+        </Typography>
+      </Backdrop>
     </Container>
   );
 }
