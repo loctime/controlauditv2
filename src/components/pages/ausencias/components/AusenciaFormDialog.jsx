@@ -16,11 +16,9 @@ import {
   Checkbox,
   FormControlLabel
 } from "@mui/material";
+import Autocomplete from "@mui/material/Autocomplete";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
-import {
-  AUSENCIA_TIPOS,
-  createAusencia
-} from "../../../../services/ausenciasService";
+import { createAusencia } from "../../../../services/ausenciasService";
 import {
   collection,
   getDocs,
@@ -33,7 +31,7 @@ import dayjs from "dayjs";
 
 const getInitialState = () => ({
   empleadoId: "",
-  tipo: "ocupacional",
+  tipo: "",
   estado: "abierta",
   fechaInicio: dayjs(),
   fechaFin: null,
@@ -56,6 +54,8 @@ export default function AusenciaFormDialog({
   sucursal,
   selectedEmpresa,
   selectedSucursal,
+  tipoOptions = [],
+  onAddTipo,
   onSaved
 }) {
   const [form, setForm] = useState(getInitialState);
@@ -81,6 +81,21 @@ export default function AusenciaFormDialog({
       fechaInicioValida
     );
   }, [selectedEmpresa, selectedSucursal, form.empleadoId, form.fechaInicio]);
+
+  const tipoSuggestions = useMemo(() => {
+    const base = Array.isArray(tipoOptions) ? tipoOptions : [];
+    const unique = new Set(
+      base
+        .map((tipo) => (typeof tipo === "string" ? tipo.trim() : ""))
+        .filter(Boolean)
+    );
+    if (form.tipo && !unique.has(form.tipo.trim())) {
+      unique.add(form.tipo.trim());
+    }
+    return Array.from(unique).sort((a, b) =>
+      a.localeCompare(b, "es", { sensitivity: "base" })
+    );
+  }, [tipoOptions, form.tipo]);
 
   useEffect(() => {
     if (!open) return;
@@ -170,6 +185,11 @@ export default function AusenciaFormDialog({
           : null
       });
 
+      const tipoNormalizado = (form.tipo || "").trim();
+      if (tipoNormalizado && typeof onAddTipo === "function") {
+        onAddTipo(tipoNormalizado);
+      }
+
       if (onSaved) {
         await onSaved();
       }
@@ -246,25 +266,35 @@ export default function AusenciaFormDialog({
 
           {loadingEmployees && (
             <Stack direction="row" spacing={1} alignItems="center">
-              <CircularProgress size={18} />
+          <CircularProgress size={18} />
               <span>Cargando empleados...</span>
             </Stack>
           )}
 
-          <FormControl fullWidth size="small">
-            <InputLabel>Tipo</InputLabel>
-            <Select
-              label="Tipo"
-              value={form.tipo}
-              onChange={handleChange("tipo")}
-            >
-              {AUSENCIA_TIPOS.map((tipo) => (
-                <MenuItem key={tipo.value} value={tipo.value}>
-                  {tipo.label}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
+          <Autocomplete
+            freeSolo
+            clearOnBlur
+            handleHomeEndKeys
+            options={tipoSuggestions}
+            value={form.tipo || ""}
+            onChange={(_, newValue) => {
+              const nextValue = (newValue || "").trim();
+              setForm((prev) => ({
+                ...prev,
+                tipo: nextValue
+              }));
+            }}
+            onInputChange={(_, newInputValue) => {
+              setForm((prev) => ({
+                ...prev,
+                tipo: newInputValue
+              }));
+            }}
+            renderInput={(params) => (
+              <TextField {...params} label="Tipo" size="small" fullWidth />
+            )}
+            fullWidth
+          />
 
           <DatePicker
             label="Fecha inicio"

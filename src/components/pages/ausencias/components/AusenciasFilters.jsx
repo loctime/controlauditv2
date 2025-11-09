@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import {
   Grid,
   FormControl,
@@ -9,7 +9,7 @@ import {
   Button
 } from "@mui/material";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
-import { AUSENCIA_ESTADOS, AUSENCIA_TIPOS } from "../../../../services/ausenciasService";
+import { AUSENCIA_ESTADOS } from "../../../../services/ausenciasService";
 
 const capitalize = (value) =>
   value.charAt(0).toUpperCase() + value.slice(1).toLowerCase();
@@ -21,10 +21,30 @@ export default function AusenciasFilters({
   setSelectedSucursal,
   userEmpresas,
   userSucursales,
+  tipoOptions = [],
   filters,
   onChangeFilters,
   onResetFilters
 }) {
+  const opcionesTipo = useMemo(() => {
+    const base = Array.isArray(tipoOptions) ? tipoOptions : [];
+    const unique = new Set(
+      base
+        .map((tipo) => (typeof tipo === "string" ? tipo.trim() : ""))
+        .filter(Boolean)
+    );
+    if (
+      filters.tipo &&
+      filters.tipo !== "todos" &&
+      !unique.has(filters.tipo.trim())
+    ) {
+      unique.add(filters.tipo.trim());
+    }
+    return Array.from(unique).sort((a, b) =>
+      a.localeCompare(b, "es", { sensitivity: "base" })
+    );
+  }, [tipoOptions, filters.tipo]);
+
   return (
     <Box sx={{ mb: 3 }}>
       <Grid container spacing={1.5}>
@@ -75,9 +95,9 @@ export default function AusenciasFilters({
               onChange={(event) => onChangeFilters({ tipo: event.target.value })}
             >
               <MenuItem value="todos">Todos</MenuItem>
-              {AUSENCIA_TIPOS.map((tipo) => (
-                <MenuItem key={tipo.value} value={tipo.value}>
-                  {tipo.label}
+              {opcionesTipo.map((tipo) => (
+                <MenuItem key={tipo} value={tipo}>
+                  {capitalize(tipo)}
                 </MenuItem>
               ))}
             </Select>

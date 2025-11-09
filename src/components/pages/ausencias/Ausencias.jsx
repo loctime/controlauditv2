@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   Container,
   Paper,
@@ -19,7 +19,7 @@ import { useAusenciasData } from "./hooks/useAusenciasData";
 import AusenciasFilters from "./components/AusenciasFilters";
 import AusenciasTable from "./components/AusenciasTable";
 import AusenciaFormDialog from "./components/AusenciaFormDialog";
-import { AUSENCIA_TIPOS } from "../../../services/ausenciasService";
+import { getAusenciaTipos } from "../../../services/ausenciasService";
 
 const defaultFilters = {
   tipo: "todos",
@@ -42,6 +42,7 @@ export default function Ausencias() {
 
   const [filters, setFilters] = useState(defaultFilters);
   const [openDialog, setOpenDialog] = useState(false);
+  const [tipoOptions, setTipoOptions] = useState([]);
 
   const empresaSeleccionada = useMemo(
     () => userEmpresas?.find((empresa) => empresa.id === selectedEmpresa),
@@ -59,6 +60,20 @@ export default function Ausencias() {
     sucursalesFiltradas,
     filters
   );
+
+  useEffect(() => {
+    let active = true;
+    const fetchTipos = async () => {
+      const tipos = await getAusenciaTipos();
+      if (active) {
+        setTipoOptions(tipos);
+      }
+    };
+    fetchTipos();
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const handleChangeFilters = (changedFilters) => {
     setFilters((prev) => ({
@@ -94,21 +109,35 @@ export default function Ausencias() {
   );
 
   const totalPorTipo = useMemo(() => {
-    return AUSENCIA_TIPOS.reduce((acc, tipo) => {
-      const count = ausencias.filter((ausencia) => {
-        const recordTipo =
-          ausencia.tipo ||
-          ausencia.categoria ||
-          ausencia.clasificacion ||
-          "";
-        return recordTipo.toLowerCase().includes(tipo.value);
-      }).length;
-      if (count > 0) {
-        acc.push({ label: tipo.label, value: count });
-      }
+    const counts = ausencias.reduce((acc, ausencia) => {
+      const rawTipo =
+        ausencia.tipo ||
+        ausencia.categoria ||
+        ausencia.clasificacion ||
+        ausencia.etiqueta ||
+        "";
+      const normalized = rawTipo.trim() || "Sin tipo";
+      acc[normalized] = (acc[normalized] || 0) + 1;
       return acc;
-    }, []);
+    }, {});
+    return Object.entries(counts)
+      .map(([label, value]) => ({ label, value }))
+      .sort((a, b) => b.value - a.value);
   }, [ausencias]);
+
+  const handleTipoAdded = (nuevoTipo) => {
+    const normalized = (nuevoTipo || "").trim();
+    if (!normalized) return;
+    setTipoOptions((prev) => {
+      const exists = prev.some(
+        (tipo) => tipo.toLowerCase() === normalized.toLowerCase()
+      );
+      if (exists) return prev;
+      return [...prev, normalized].sort((a, b) =>
+        a.localeCompare(b, "es", { sensitivity: "base" })
+      );
+    });
+  };
 
   const canCreate =
     selectedEmpresa &&
@@ -189,6 +218,7 @@ export default function Ausencias() {
           setSelectedSucursal={setSelectedSucursal}
           userEmpresas={userEmpresas}
           userSucursales={userSucursales}
+          tipoOptions={tipoOptions}
           filters={filters}
           onChangeFilters={handleChangeFilters}
           onResetFilters={handleResetFilters}
@@ -268,8 +298,12 @@ export default function Ausencias() {
         sucursal={sucursalSeleccionada}
         selectedEmpresa={selectedEmpresa}
         selectedSucursal={selectedSucursal}
+        tipoOptions={tipoOptions}
+        onAddTipo={handleTipoAdded}
         onSaved={async () => {
           await recargar();
+          const tiposActualizados = await getAusenciaTipos();
+          setTipoOptions(tiposActualizados);
           setOpenDialog(false);
         }}
       />

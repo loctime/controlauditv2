@@ -279,15 +279,6 @@ export async function cerrarAusencia(ausenciaId, { fechaFin = new Date() } = {})
   });
 }
 
-export const AUSENCIA_TIPOS = [
-  { value: "ocupacional", label: "Enfermedad ocupacional" },
-  { value: "covid", label: "Caso covid positivo" },
-  { value: "enfermedad", label: "Enfermedad común" },
-  { value: "licencia", label: "Licencia especial" },
-  { value: "accidente", label: "Reposo por accidente" },
-  { value: "otro", label: "Otro" }
-];
-
 export const AUSENCIA_ESTADOS = [
   { value: "activas", label: "Activas" },
   { value: "cerradas", label: "Cerradas" },
@@ -295,5 +286,24 @@ export const AUSENCIA_ESTADOS = [
   { value: "en progreso", label: "En progreso" },
   { value: "cerrada", label: "Cerrada" }
 ];
+
+export async function getAusenciaTipos({ maxResults = 200 } = {}) {
+  try {
+    const ausenciasRef = collection(db, AUSENCIAS_COLLECTION);
+    const consulta = query(ausenciasRef, orderBy("tipo", "asc"), limit(maxResults));
+    const snapshot = await getDocs(consulta);
+    const unique = new Set();
+    snapshot.forEach((docSnapshot) => {
+      const tipo = docSnapshot.data()?.tipo;
+      if (typeof tipo === "string" && tipo.trim()) {
+        unique.add(tipo.trim());
+      }
+    });
+    return Array.from(unique);
+  } catch (error) {
+    console.error("Error obteniendo tipos de ausencias:", error);
+    return [];
+  }
+}
 
 
