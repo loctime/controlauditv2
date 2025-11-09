@@ -60,6 +60,8 @@ export default function AusenciasTable({ ausencias, onRecargar }) {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [selectedAusencia, setSelectedAusencia] = useState(null);
+  const [ausenciaPorCerrar, setAusenciaPorCerrar] = useState(null);
+  const [cerrando, setCerrando] = useState(false);
 
   const paginated = useMemo(() => {
     const start = page * rowsPerPage;
@@ -76,10 +78,17 @@ export default function AusenciasTable({ ausencias, onRecargar }) {
     setPage(0);
   };
 
-  const handleCerrarAusencia = async (ausencia) => {
-    await cerrarAusencia(ausencia.id);
-    if (onRecargar) {
-      await onRecargar();
+  const handleConfirmarCierre = async () => {
+    if (!ausenciaPorCerrar) return;
+    try {
+      setCerrando(true);
+      await cerrarAusencia(ausenciaPorCerrar.id);
+      if (onRecargar) {
+        await onRecargar();
+      }
+    } finally {
+      setCerrando(false);
+      setAusenciaPorCerrar(null);
     }
   };
 
@@ -191,8 +200,8 @@ export default function AusenciasTable({ ausencias, onRecargar }) {
                           <Tooltip title="Cerrar caso">
                             <IconButton
                               size="small"
-                              color="success"
-                              onClick={() => handleCerrarAusencia(ausencia)}
+                          color="success"
+                          onClick={() => setAusenciaPorCerrar(ausencia)}
                             >
                               <DoneIcon fontSize="small" />
                             </IconButton>
@@ -273,6 +282,36 @@ export default function AusenciasTable({ ausencias, onRecargar }) {
             sx={{ textTransform: "none" }}
           >
             Cerrar
+          </Button>
+        </DialogActions>
+      </Dialog>
+      <Dialog
+        open={Boolean(ausenciaPorCerrar)}
+        onClose={() => (cerrando ? null : setAusenciaPorCerrar(null))}
+      >
+        <DialogTitle sx={{ fontWeight: 700 }}>Confirmar cierre</DialogTitle>
+        <DialogContent dividers>
+          <Typography variant="body2">
+            ¿Querés cerrar el caso de ausencia para{" "}
+            <strong>{ausenciaPorCerrar?.empleadoNombre || "este empleado"}</strong>?
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={() => setAusenciaPorCerrar(null)}
+            disabled={cerrando}
+            sx={{ textTransform: "none" }}
+          >
+            Cancelar
+          </Button>
+          <Button
+            variant="contained"
+            color="success"
+            onClick={handleConfirmarCierre}
+            disabled={cerrando}
+            sx={{ textTransform: "none", fontWeight: 600 }}
+          >
+            {cerrando ? "Cerrando..." : "Cerrar caso"}
           </Button>
         </DialogActions>
       </Dialog>
