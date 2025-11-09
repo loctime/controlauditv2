@@ -14,9 +14,12 @@ import {
   Alert,
   CircularProgress,
   Checkbox,
-  FormControlLabel
+  FormControlLabel,
+  IconButton,
+  Tooltip
 } from "@mui/material";
 import Autocomplete from "@mui/material/Autocomplete";
+import CloseIcon from "@mui/icons-material/Close";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { createAusencia } from "../../../../services/ausenciasService";
 import {
@@ -56,6 +59,7 @@ export default function AusenciaFormDialog({
   selectedSucursal,
   tipoOptions = [],
   onAddTipo,
+  onRemoveTipo,
   onSaved
 }) {
   const [form, setForm] = useState(getInitialState);
@@ -271,30 +275,71 @@ export default function AusenciaFormDialog({
             </Stack>
           )}
 
-          <Autocomplete
-            freeSolo
-            clearOnBlur
-            handleHomeEndKeys
-            options={tipoSuggestions}
-            value={form.tipo || ""}
-            onChange={(_, newValue) => {
-              const nextValue = (newValue || "").trim();
-              setForm((prev) => ({
-                ...prev,
-                tipo: nextValue
-              }));
-            }}
-            onInputChange={(_, newInputValue) => {
-              setForm((prev) => ({
-                ...prev,
-                tipo: newInputValue
-              }));
-            }}
-            renderInput={(params) => (
-              <TextField {...params} label="Tipo" size="small" fullWidth />
-            )}
-            fullWidth
-          />
+      <Stack direction="row" spacing={1} alignItems="center">
+        <Autocomplete
+          freeSolo
+          clearOnBlur
+          handleHomeEndKeys
+          options={tipoSuggestions}
+          value={form.tipo || ""}
+          onChange={(_, newValue) => {
+            const nextValue = (newValue || "").trim();
+            setForm((prev) => ({
+              ...prev,
+              tipo: nextValue
+            }));
+          }}
+          onInputChange={(_, newInputValue) => {
+            setForm((prev) => ({
+              ...prev,
+              tipo: newInputValue
+            }));
+          }}
+          renderInput={(params) => (
+            <TextField {...params} label="Tipo" size="small" fullWidth />
+          )}
+          fullWidth
+        />
+        <Tooltip title="Eliminar tipo">
+          <span>
+            <IconButton
+              size="small"
+              color="error"
+              disabled={
+                !form.tipo ||
+                !tipoSuggestions.some(
+                  (tipo) =>
+                    tipo.toLowerCase() === form.tipo.trim().toLowerCase()
+                )
+              }
+              onClick={() => {
+                const actual = (form.tipo || "").trim();
+                if (
+                  !actual ||
+                  !tipoSuggestions.some(
+                    (tipo) => tipo.toLowerCase() === actual.toLowerCase()
+                  )
+                ) {
+                  return;
+                }
+                const confirmacion = window.confirm(
+                  `¿Eliminar el tipo "${actual}" de las sugerencias?`
+                );
+                if (!confirmacion) return;
+                if (typeof onRemoveTipo === "function") {
+                  onRemoveTipo(actual);
+                }
+                setForm((prev) => ({
+                  ...prev,
+                  tipo: ""
+                }));
+              }}
+            >
+              <CloseIcon fontSize="small" />
+            </IconButton>
+          </span>
+        </Tooltip>
+      </Stack>
 
           <DatePicker
             label="Fecha inicio"

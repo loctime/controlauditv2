@@ -139,6 +139,22 @@ export default function Ausencias() {
     });
   };
 
+  const handleTipoRemoved = (tipo) => {
+    const normalized = (tipo || "").trim();
+    if (!normalized) return;
+    setTipoOptions((prev) =>
+      prev.filter(
+        (item) => item.toLowerCase() !== normalized.toLowerCase()
+      )
+    );
+    setFilters((prev) => {
+      if (prev.tipo.toLowerCase?.() === normalized.toLowerCase()) {
+        return { ...prev, tipo: "todos" };
+      }
+      return prev;
+    });
+  };
+
   const canCreate =
     selectedEmpresa &&
     selectedSucursal &&
@@ -300,6 +316,7 @@ export default function Ausencias() {
         selectedSucursal={selectedSucursal}
         tipoOptions={tipoOptions}
         onAddTipo={handleTipoAdded}
+        onRemoveTipo={handleTipoRemoved}
         onSaved={async () => {
           await recargar();
           const tiposActualizados = await getAusenciaTipos();
