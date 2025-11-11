@@ -53,6 +53,7 @@ export const createAuditoriaSteps = ({
   firmaAuditor,
   firmaResponsable,
   firmasCompletadas,
+  datosReporte,
   bloquearDatosAgenda,
   location,
   
@@ -67,6 +68,7 @@ export const createAuditoriaSteps = ({
   handleSaveFirmaAuditor,
   handleSaveFirmaResponsable,
   handleFinalizar,
+  setDatosReporte,
   
   // Funciones
   validarTodasLasPreguntas,
@@ -221,6 +223,8 @@ export const createAuditoriaSteps = ({
               respuestas={respuestas}
               secciones={secciones}
               encargado={null}
+              datosReporte={datosReporte}
+              onDatosReporteChange={setDatosReporte}
             />
             
             {firmasCompletadas && (
@@ -264,6 +268,7 @@ export const createAuditoriaSteps = ({
               secciones={secciones}
               firmaAuditor={firmaAuditor}
               firmaResponsable={firmaResponsable}
+              datosReporte={datosReporte}
               onFinalizar={handleFinalizar}
             />
           </Box>

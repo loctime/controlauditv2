@@ -19,6 +19,7 @@ const BotonGenerarReporte = ({
   secciones,
   firmaAuditor,
   firmaResponsable,
+  datosReporte = {},
   onFinalizar
 }) => {
   const { user, userProfile } = useAuth();
@@ -134,6 +135,7 @@ const BotonGenerarReporte = ({
         secciones,
         firmaAuditor,
         firmaResponsable,
+        datosReporte,
         // Multi-tenant - asegurar que siempre tengamos estos datos
         ...authData,
         fechaGuardado: new Date(),

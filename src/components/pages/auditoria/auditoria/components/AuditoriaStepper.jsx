@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import { 
   Stepper,
   Step,
@@ -77,6 +77,24 @@ const AuditoriaStepper = ({
   theme
 }) => {
   const isMobile = useMediaQuery('(max-width:768px)');
+  const mobileContentRef = useRef(null);
+  const desktopContentRef = useRef(null);
+
+  // Scroll al top cuando se llega al paso de firmas (paso 3)
+  useEffect(() => {
+    if (activeStep === 3) {
+      // Delay más largo para asegurar que el contenido se haya renderizado completamente
+      setTimeout(() => {
+        // Intentar hacer scroll al contenedor del contenido según el dispositivo
+        const contentRef = isMobile ? mobileContentRef : desktopContentRef;
+        if (contentRef.current) {
+          contentRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+        // También hacer scroll al inicio de la ventana como respaldo
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }, 300);
+    }
+  }, [activeStep, isMobile]);
 
   // Componente para el header móvil compacto
   const MobileHeader = () => (
@@ -127,7 +145,7 @@ const AuditoriaStepper = ({
         // Layout móvil: header compacto + contenido
         <Box>
           <MobileHeader />
-          <Paper elevation={2} sx={{ p: 1.5, borderRadius: 2, minHeight: '300px' }}>
+          <Paper ref={mobileContentRef} elevation={2} sx={{ p: 1.5, borderRadius: 2, minHeight: '300px' }}>
             {steps[activeStep]?.content}
             
             <Box display="flex" gap={0.5} mt={1}>
@@ -214,7 +232,7 @@ const AuditoriaStepper = ({
           </Grid>
           
           <Grid item xs={12} md={9}>
-            <Paper elevation={2} sx={{ p: 2.5, borderRadius: 2, minHeight: '400px' }}>
+            <Paper ref={desktopContentRef} elevation={2} sx={{ p: 2.5, borderRadius: 2, minHeight: '400px' }}>
               {steps[activeStep]?.content}
               
               <Box display="flex" gap={1} mt={2}>

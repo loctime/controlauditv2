@@ -195,6 +195,7 @@ const AuditoriaRefactorizada = () => {
     firmasCompletadas, setFirmasCompletadas,
     firmasValidas, setFirmasValidas,
     mostrarAlertaReinicio, setMostrarAlertaReinicio,
+    datosReporte, setDatosReporte,
     log,
     reiniciarAuditoria,
     generarHashAuditoria
@@ -538,6 +539,7 @@ const AuditoriaRefactorizada = () => {
     firmaAuditor,
     firmaResponsable,
     firmasCompletadas,
+    datosReporte,
     bloquearDatosAgenda,
     location,
     
@@ -552,6 +554,7 @@ const AuditoriaRefactorizada = () => {
     handleSaveFirmaAuditor,
     handleSaveFirmaResponsable,
     handleFinalizar: () => handleFinalizar(marcarAuditoriaCompletada),
+    setDatosReporte,
     
     // Funciones
     obtenerUbicacion,
@@ -562,6 +565,21 @@ const AuditoriaRefactorizada = () => {
     theme,
     isMobile
   });
+
+  // Scroll al top cuando se llega al paso de firmas (paso 3)
+  useEffect(() => {
+    if (activeStep === 3) {
+      // Delay para asegurar que el contenido se haya renderizado
+      setTimeout(() => {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        // También intentar hacer scroll al Container principal
+        const container = document.querySelector('[class*="MuiContainer"]');
+        if (container) {
+          container.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }, 400);
+    }
+  }, [activeStep]);
 
   return (
     <Container maxWidth={isMobile ? false : "xl"} sx={{ py: isMobile ? 1 : 4, px: isMobile ? 0 : 2 }}>
