@@ -1,4 +1,4 @@
-import { doc, setDoc, getDoc } from 'firebase/firestore';
+import { doc, setDoc, getDoc, deleteDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../../../../../firebaseConfig';
 import { getOfflineDatabase, generateOfflineId, checkStorageLimit } from '../../../../../services/offlineDatabase';
 import syncQueueService from '../../../../../services/syncQueue';
@@ -68,7 +68,28 @@ class AutoSaveService {
       const savedData = localStorage.getItem(this.storageKey);
       if (savedData) {
         const parsedData = JSON.parse(savedData);
-        return parsedData;
+        
+        // Parsear arrays que puedan venir como strings JSON (desde Firestore)
+        const restoredData = {
+          ...parsedData,
+          respuestas: typeof parsedData.respuestas === 'string' 
+            ? JSON.parse(parsedData.respuestas) 
+            : parsedData.respuestas || [],
+          comentarios: typeof parsedData.comentarios === 'string' 
+            ? JSON.parse(parsedData.comentarios) 
+            : parsedData.comentarios || [],
+          imagenes: typeof parsedData.imagenes === 'string' 
+            ? JSON.parse(parsedData.imagenes) 
+            : parsedData.imagenes || [],
+          clasificaciones: typeof parsedData.clasificaciones === 'string' 
+            ? JSON.parse(parsedData.clasificaciones) 
+            : parsedData.clasificaciones || [],
+          secciones: typeof parsedData.secciones === 'string' 
+            ? JSON.parse(parsedData.secciones) 
+            : parsedData.secciones || []
+        };
+        
+        return restoredData;
       }
     } catch (error) {
       console.error('❌ Error al cargar desde localStorage:', error);
@@ -76,10 +97,58 @@ class AutoSaveService {
     return null;
   }
 
-  // Limpiar datos guardados
-  clearLocalStorage() {
+  // Limpiar datos guardados (localStorage, IndexedDB y Firestore)
+  async clearLocalStorage(userId = null) {
     try {
+      // Limpiar localStorage
       localStorage.removeItem(this.storageKey);
+      
+      // Limpiar IndexedDB si hay userId
+      if (userId) {
+        try {
+          const db = await this.initOfflineDatabase();
+          if (db) {
+            const offlineData = await db.getAllFromIndex('auditorias', 'by-userId', userId);
+            for (const auditoria of offlineData) {
+              // Limpiar autoguardados (status 'auto_saved' o 'pending_sync' con autoSaved=true)
+              if ((auditoria.autoSaved && auditoria.status === 'auto_saved') || 
+                  (auditoria.status === 'pending_sync' && auditoria.autoSaved)) {
+                // Eliminar fotos asociadas
+                const fotos = await db.getAllFromIndex('fotos', 'by-auditoriaId', auditoria.id);
+                for (const foto of fotos) {
+                  await db.delete('fotos', foto.id);
+                }
+                // Eliminar auditoría
+                await db.delete('auditorias', auditoria.id);
+              }
+            }
+            console.log('🗑️ Datos de autoguardado limpiados de IndexedDB');
+          }
+        } catch (indexedDBError) {
+          console.warn('⚠️ Error al limpiar IndexedDB:', indexedDBError);
+        }
+        
+        // Limpiar Firestore si está online
+        if (this.isOnline) {
+          try {
+            const autosaveRef = collection(db, 'auditorias_autosave');
+            const q = query(autosaveRef, where('userId', '==', userId));
+            const querySnapshot = await getDocs(q);
+            
+            const deletePromises = [];
+            querySnapshot.forEach((docSnapshot) => {
+              deletePromises.push(deleteDoc(doc(db, 'auditorias_autosave', docSnapshot.id)));
+            });
+            
+            await Promise.all(deletePromises);
+            console.log('🗑️ Datos de autoguardado limpiados de Firestore');
+          } catch (firestoreError) {
+            console.warn('⚠️ Error al limpiar Firestore:', firestoreError);
+          }
+        }
+      }
+      
+      console.log('✅ Limpieza completa de autoguardado realizada');
     } catch (error) {
       console.error('❌ Error al limpiar localStorage:', error);
     }
@@ -110,29 +179,85 @@ class AutoSaveService {
     try {
       const sessionId = this.generateSessionId();
       
-      // Preparar datos para Firestore (sin imágenes reales, solo referencias)
-      const imagenesParaFirestore = auditoriaData.imagenes.map(seccion => 
-        seccion.map(img => img instanceof File ? 'image' : img)
-      );
+      // Preparar datos para Firestore (sin arrays anidados - Firestore no los soporta)
+      // Convertir arrays anidados a objetos planos o strings JSON
+      const respuestasParaFirestore = auditoriaData.respuestas 
+        ? JSON.stringify(auditoriaData.respuestas) 
+        : '[]';
+      
+      const comentariosParaFirestore = auditoriaData.comentarios 
+        ? JSON.stringify(auditoriaData.comentarios) 
+        : '[]';
+      
+      const imagenesParaFirestore = auditoriaData.imagenes 
+        ? JSON.stringify(auditoriaData.imagenes.map(seccion => 
+            seccion.map(img => img instanceof File ? 'image' : img)
+          )) 
+        : '[]';
+      
+      const clasificacionesParaFirestore = auditoriaData.clasificaciones 
+        ? JSON.stringify(auditoriaData.clasificaciones) 
+        : '[]';
+      
+      const seccionesParaFirestore = auditoriaData.secciones 
+        ? JSON.stringify(auditoriaData.secciones) 
+        : '[]';
       
       const saveData = {
-        ...auditoriaData,
-        imagenes: imagenesParaFirestore, // Solo referencias para Firestore
+        empresaSeleccionada: auditoriaData.empresaSeleccionada ? {
+          id: auditoriaData.empresaSeleccionada.id,
+          nombre: auditoriaData.empresaSeleccionada.nombre
+        } : null,
+        sucursalSeleccionada: auditoriaData.sucursalSeleccionada || '',
+        formularioSeleccionadoId: auditoriaData.formularioSeleccionadoId || '',
+        // Arrays anidados convertidos a strings JSON para Firestore
+        respuestas: respuestasParaFirestore,
+        comentarios: comentariosParaFirestore,
+        imagenes: imagenesParaFirestore,
+        clasificaciones: clasificacionesParaFirestore,
+        secciones: seccionesParaFirestore,
+        activeStep: auditoriaData.activeStep || 0,
+        firmaAuditor: auditoriaData.firmaAuditor || null,
+        firmaResponsable: auditoriaData.firmaResponsable || null,
         userId,
         sessionId,
+        timestamp: auditoriaData.timestamp || Date.now(),
         lastModified: new Date(),
         autoSaved: true
       };
 
-      // Guardar en Firestore (solo metadatos)
+      // Guardar en Firestore (solo metadatos y datos serializados)
       const docRef = doc(db, 'auditorias_autosave', sessionId);
       await setDoc(docRef, saveData);
 
-      // IMPORTANTE: También guardar en IndexedDB con imágenes REALES
+      // IMPORTANTE: También guardar en IndexedDB con imágenes REALES y arrays completos
       await this.saveOffline(userId, auditoriaData);
 
-      // También guardar en localStorage como respaldo (sin imágenes grandes)
-      this.saveToLocalStorage(saveData);
+      // También guardar en localStorage como respaldo (con arrays como arrays, no strings JSON)
+      const datosParaLocalStorage = {
+        empresaSeleccionada: auditoriaData.empresaSeleccionada ? {
+          id: auditoriaData.empresaSeleccionada.id,
+          nombre: auditoriaData.empresaSeleccionada.nombre
+        } : null,
+        sucursalSeleccionada: auditoriaData.sucursalSeleccionada || '',
+        formularioSeleccionadoId: auditoriaData.formularioSeleccionadoId || '',
+        secciones: auditoriaData.secciones || [],
+        respuestas: auditoriaData.respuestas || [], // Guardar como array, no string JSON
+        comentarios: auditoriaData.comentarios || [], // Guardar como array, no string JSON
+        imagenes: auditoriaData.imagenes ? auditoriaData.imagenes.map(seccion => 
+          seccion.map(img => img instanceof File ? 'image' : img)
+        ) : [], // Guardar referencias, no File objects
+        clasificaciones: auditoriaData.clasificaciones || [], // Guardar como array, no string JSON
+        activeStep: auditoriaData.activeStep || 0,
+        firmaAuditor: auditoriaData.firmaAuditor || null,
+        firmaResponsable: auditoriaData.firmaResponsable || null,
+        userId,
+        sessionId,
+        timestamp: auditoriaData.timestamp || Date.now(),
+        lastModified: new Date(),
+        autoSaved: true
+      };
+      this.saveToLocalStorage(datosParaLocalStorage);
 
       this.lastSaveTime = Date.now();
       
@@ -229,6 +354,8 @@ class AutoSaveService {
       const auditoriaId = generateOfflineId();
       
       // Preparar datos para IndexedDB con información completa del usuario
+      // IMPORTANTE: Las auditorías autoguardadas NO deben sincronizarse automáticamente
+      const isAutoSaved = auditoriaData.autoSaved !== false; // Por defecto es autoguardado
       const saveData = {
         id: auditoriaId,
         ...auditoriaData,
@@ -243,10 +370,12 @@ class AutoSaveService {
         creadoPorEmail: userProfile?.email || 'usuario@ejemplo.com',
         sessionId: this.generateSessionId(),
         lastModified: new Date(),
-        autoSaved: true,
+        autoSaved: isAutoSaved,
         createdAt: Date.now(),
         updatedAt: Date.now(),
-        status: 'pending_sync'
+        // Las auditorías autoguardadas NO deben tener status 'pending_sync'
+        // Solo se sincronizan cuando el usuario finaliza la auditoría
+        status: isAutoSaved ? 'auto_saved' : 'pending_sync'
       };
 
       // Log para debugging
@@ -277,9 +406,12 @@ class AutoSaveService {
         await this.saveOfflineImages(auditoriaData.imagenes, auditoriaId, db);
       }
 
-      // Encolar para sincronización (solo si no es autoguardado)
-      if (!auditoriaData.autoSaved) {
+      // IMPORTANTE: NO encolar autoguardados para sincronización
+      // Solo se sincronizan cuando el usuario finaliza la auditoría explícitamente
+      if (!isAutoSaved && !saveData.autoSaved) {
         await syncQueueService.enqueueAuditoria(saveData, 1);
+      } else {
+        console.log('[AutoSaveService] Auditoría autoguardada NO encolada para sincronización:', auditoriaId);
       }
 
       // También guardar en localStorage como respaldo (sin imágenes)
@@ -356,7 +488,28 @@ class AutoSaveService {
       
       if (docSnap.exists()) {
         const data = docSnap.data();
-        return data;
+        
+        // Parsear strings JSON si vienen serializados (nuevo formato)
+        const parsedData = {
+          ...data,
+          respuestas: typeof data.respuestas === 'string' 
+            ? JSON.parse(data.respuestas) 
+            : data.respuestas || [],
+          comentarios: typeof data.comentarios === 'string' 
+            ? JSON.parse(data.comentarios) 
+            : data.comentarios || [],
+          imagenes: typeof data.imagenes === 'string' 
+            ? JSON.parse(data.imagenes) 
+            : data.imagenes || [],
+          clasificaciones: typeof data.clasificaciones === 'string' 
+            ? JSON.parse(data.clasificaciones) 
+            : data.clasificaciones || [],
+          secciones: typeof data.secciones === 'string' 
+            ? JSON.parse(data.secciones) 
+            : data.secciones || []
+        };
+        
+        return parsedData;
       }
     } catch (error) {
       console.error('❌ Error al cargar desde Firestore:', error);
@@ -418,24 +571,34 @@ class AutoSaveService {
       // Primero intentar cargar desde IndexedDB (offline) - tiene imágenes reales
       const db = await this.initOfflineDatabase();
       if (db) {
-        const offlineData = await db.getAllFromIndex('auditorias', 'by-userId', userId);
-        if (offlineData && offlineData.length > 0) {
-          // Filtrar solo auditorías incompletas (que no estén sincronizadas como completadas)
-          const incompleteAuditorias = offlineData.filter(a => 
-            a.status === 'pending_sync' && 
-            !a.estadoCompletada &&
-            (!a.auditoriaGenerada || a.activeStep < 4)
-          );
-          
-          if (incompleteAuditorias.length > 0) {
-            // Obtener la más reciente
-            const latestOffline = incompleteAuditorias.sort((a, b) => b.updatedAt - a.updatedAt)[0];
+        // Verificar que el object store existe antes de acceder
+        if (!db.objectStoreNames.contains('auditorias')) {
+          console.warn('⚠️ Object store "auditorias" no existe, usando localStorage');
+          return this.loadFromLocalStorage();
+        }
+        
+        try {
+          const offlineData = await db.getAllFromIndex('auditorias', 'by-userId', userId);
+          if (offlineData && offlineData.length > 0) {
+            // Filtrar solo auditorías incompletas (autoguardadas o pendientes de sincronización)
+            const incompleteAuditorias = offlineData.filter(a => 
+              (a.status === 'auto_saved' || a.status === 'pending_sync') &&
+              !a.estadoCompletada &&
+              (!a.auditoriaGenerada || a.activeStep < 4)
+            );
             
-            // Cargar imágenes reales desde IndexedDB
-            const auditoriaConImagenes = await this.restoreAuditoriaImages(latestOffline, db);
-            
-            return auditoriaConImagenes;
+            if (incompleteAuditorias.length > 0) {
+              // Obtener la más reciente
+              const latestOffline = incompleteAuditorias.sort((a, b) => b.updatedAt - a.updatedAt)[0];
+              
+              // Cargar imágenes reales desde IndexedDB
+              const auditoriaConImagenes = await this.restoreAuditoriaImages(latestOffline, db);
+              
+              return auditoriaConImagenes;
+            }
           }
+        } catch (indexedDBError) {
+          console.warn('⚠️ Error al leer desde IndexedDB, usando localStorage:', indexedDBError);
         }
       }
 
@@ -443,25 +606,64 @@ class AutoSaveService {
       const localData = this.loadFromLocalStorage();
       if (localData && localData.userId === userId) {
         // Verificar que no esté completada
-          if (!localData.estadoCompletada && (!localData.auditoriaGenerada || localData.activeStep < 4)) {
+        if (!localData.estadoCompletada && (!localData.auditoriaGenerada || localData.activeStep < 4)) {
           // Intentar cargar imágenes desde IndexedDB si hay un id
           // Si no hay db todavía, intentar inicializarlo
           let dbForImages = db;
-          if (localData.id && !dbForImages) {
-            dbForImages = await this.initOfflineDatabase();
-          }
-          
-          if (localData.id && dbForImages) {
-            const auditoriaConImagenes = await this.restoreAuditoriaImages(localData, dbForImages);
-            if (auditoriaConImagenes && auditoriaConImagenes.imagenes) {
-              return auditoriaConImagenes;
+          if (!dbForImages) {
+            try {
+              dbForImages = await this.initOfflineDatabase();
+            } catch (dbError) {
+              console.warn('⚠️ No se pudo inicializar IndexedDB para imágenes:', dbError);
             }
           }
+          
+          // Intentar restaurar imágenes desde IndexedDB si hay un id de auditoría
+          if (localData.id && dbForImages && dbForImages.objectStoreNames.contains('fotos')) {
+            try {
+              const auditoriaConImagenes = await this.restoreAuditoriaImages(localData, dbForImages);
+              if (auditoriaConImagenes && auditoriaConImagenes.imagenes) {
+                console.log('✅ Imágenes restauradas desde IndexedDB:', auditoriaConImagenes.imagenes.length);
+                return auditoriaConImagenes;
+              }
+            } catch (imageError) {
+              console.warn('⚠️ Error al restaurar imágenes desde IndexedDB:', imageError);
+            }
+          }
+          
+          // También intentar restaurar desde IndexedDB si hay datos guardados allí
+          if (dbForImages && dbForImages.objectStoreNames.contains('auditorias')) {
+            try {
+              const offlineData = await dbForImages.getAllFromIndex('auditorias', 'by-userId', userId);
+              if (offlineData && offlineData.length > 0) {
+                const incompleteAuditorias = offlineData.filter(a => 
+                  (a.status === 'auto_saved' || a.status === 'pending_sync') &&
+                  !a.estadoCompletada &&
+                  (!a.auditoriaGenerada || a.activeStep < 4)
+                );
+                
+                if (incompleteAuditorias.length > 0) {
+                  const latestOffline = incompleteAuditorias.sort((a, b) => b.updatedAt - a.updatedAt)[0];
+                  const auditoriaConImagenes = await this.restoreAuditoriaImages(latestOffline, dbForImages);
+                  console.log('✅ Datos restaurados desde IndexedDB con imágenes');
+                  return auditoriaConImagenes;
+                }
+              }
+            } catch (indexedDBError) {
+              console.warn('⚠️ Error al leer desde IndexedDB:', indexedDBError);
+            }
+          }
+          
+          console.log('✅ Restaurando desde localStorage:', {
+            respuestas: localData.respuestas?.length || 0,
+            comentarios: localData.comentarios?.length || 0,
+            imagenes: localData.imagenes?.length || 0
+          });
           
           return localData;
         } else {
           // Si está completada, limpiar
-          this.clearLocalStorage();
+          this.clearLocalStorage(userId);
           return null;
         }
       }
@@ -469,7 +671,13 @@ class AutoSaveService {
       return null;
     } catch (error) {
       console.error('❌ Error al restaurar auditoría:', error);
-      return null;
+      // Fallback a localStorage si todo falla
+      try {
+        return this.loadFromLocalStorage();
+      } catch (localStorageError) {
+        console.error('❌ Error al cargar desde localStorage:', localStorageError);
+        return null;
+      }
     }
   }
 
@@ -542,12 +750,53 @@ class AutoSaveService {
       const db = await this.initOfflineDatabase();
       if (!db) return null;
 
-      const auditorias = await db.getAll('auditorias');
-      const fotos = await db.getAll('fotos');
-      const queueStats = await syncQueueService.getQueueStats();
+      // Verificar que los object stores existan antes de acceder
+      const hasAuditorias = db.objectStoreNames.contains('auditorias');
+      const hasFotos = db.objectStoreNames.contains('fotos');
+      const hasSyncQueue = db.objectStoreNames.contains('syncQueue');
+
+      const auditorias = hasAuditorias ? await db.getAll('auditorias') : [];
+      const fotos = hasFotos ? await db.getAll('fotos') : [];
+      
+      // Obtener estadísticas de cola de forma segura
+      let queueStats = null;
+      if (hasSyncQueue) {
+        try {
+          queueStats = await syncQueueService.getQueueStats();
+        } catch (queueError) {
+          console.warn('⚠️ Error al obtener estadísticas de cola:', queueError);
+          queueStats = {
+            total: 0,
+            totalIncludingFailed: 0,
+            failed: 0,
+            byType: {},
+            byRetries: {},
+            oldestItem: null,
+            newestItem: null
+          };
+        }
+      } else {
+        queueStats = {
+          total: 0,
+          totalIncludingFailed: 0,
+          failed: 0,
+          byType: {},
+          byRetries: {},
+          oldestItem: null,
+          newestItem: null
+        };
+      }
       
       // Obtener IDs de items fallidos en la cola para excluirlos
-      const failedQueueItems = await this.getFailedQueueItems();
+      let failedQueueItems = [];
+      if (hasSyncQueue) {
+        try {
+          failedQueueItems = await this.getFailedQueueItems();
+        } catch (failedError) {
+          console.warn('⚠️ Error al obtener items fallidos:', failedError);
+        }
+      }
+      
       const failedAuditoriaIds = new Set(failedQueueItems.map(item => item.auditoriaId || item.payload?.id).filter(Boolean));
 
       const totalSize = fotos.reduce((sum, foto) => sum + (foto.size || 0), 0);
@@ -575,7 +824,29 @@ class AutoSaveService {
       };
     } catch (error) {
       console.error('❌ Error al obtener estadísticas offline:', error);
-      return null;
+      // Retornar estadísticas vacías en lugar de null para evitar errores
+      return {
+        auditorias: {
+          total: 0,
+          pending: 0,
+          synced: 0,
+          failed: 0,
+          failedInQueue: 0
+        },
+        fotos: {
+          total: 0,
+          totalSize: 0
+        },
+        queue: {
+          total: 0,
+          totalIncludingFailed: 0,
+          failed: 0,
+          byType: {},
+          byRetries: {},
+          oldestItem: null,
+          newestItem: null
+        }
+      };
     }
   }
 
@@ -597,13 +868,13 @@ class AutoSaveService {
   }
 
   // Limpiar datos antiguos (más de 7 días)
-  async cleanupOldData() {
+  async cleanupOldData(userId = null) {
     try {
       const savedData = this.loadFromLocalStorage();
       if (savedData) {
         const oneWeekAgo = Date.now() - (7 * 24 * 60 * 60 * 1000);
         if (savedData.timestamp < oneWeekAgo) {
-          this.clearLocalStorage();
+          await this.clearLocalStorage(userId);
         }
       }
     } catch (error) {

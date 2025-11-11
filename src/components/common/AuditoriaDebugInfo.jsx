@@ -29,7 +29,7 @@ const AuditoriaDebugInfo = () => {
       // Intentar abrir la base de datos directamente
       let db;
       try {
-        const request = indexedDB.open('controlaudit_offline_v1', 2);
+        const request = indexedDB.open('controlaudit_offline_v1', 3);
         
         db = await new Promise((resolve, reject) => {
           request.onsuccess = function(event) {

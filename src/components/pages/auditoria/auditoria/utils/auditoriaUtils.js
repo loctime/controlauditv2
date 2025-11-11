@@ -214,3 +214,72 @@ export const generarHashAuditoria = (datos) => {
   };
   return btoa(JSON.stringify(datosHash));
 };
+
+/**
+ * Verifica si hay progreso real en la auditoría (al menos una pregunta respondida)
+ * @param {Array} respuestas - Array de respuestas por sección
+ * @returns {boolean} - true si hay al menos una pregunta respondida
+ */
+export const tieneProgresoReal = (respuestas) => {
+  if (!respuestas || respuestas.length === 0) return false;
+  
+  // Verificar si hay al menos una pregunta respondida
+  return respuestas.some(seccionRespuestas => 
+    Array.isArray(seccionRespuestas) && 
+    seccionRespuestas.some(respuesta => respuesta !== '' && respuesta !== null && respuesta !== undefined)
+  );
+};
+
+/**
+ * Cuenta el número de preguntas respondidas
+ * @param {Array} respuestas - Array de respuestas por sección
+ * @returns {number} - Número de preguntas respondidas
+ */
+export const contarPreguntasRespondidas = (respuestas) => {
+  if (!respuestas || respuestas.length === 0) return 0;
+  return respuestas.reduce((total, seccion) => {
+    if (!Array.isArray(seccion)) return total;
+    return total + seccion.filter(resp => resp !== '' && resp !== null && resp !== undefined).length;
+  }, 0);
+};
+
+/**
+ * Cuenta el número total de preguntas en las secciones
+ * @param {Array} secciones - Array de secciones del formulario
+ * @returns {number} - Número total de preguntas
+ */
+export const contarTotalPreguntas = (secciones) => {
+  if (!secciones || secciones.length === 0) return 0;
+  return secciones.reduce((total, seccion) => {
+    const preguntas = seccion.preguntas || [];
+    return total + (Array.isArray(preguntas) ? preguntas.length : 0);
+  }, 0);
+};
+
+/**
+ * Calcula el paso correcto al restaurar una auditoría basado en el progreso real
+ * SIMPLIFICADO: Si hay respuestas, siempre ir al paso de preguntas (paso 2)
+ * @param {Object} params - Parámetros de la auditoría guardada
+ * @param {Array} params.respuestas - Array de respuestas por sección
+ * @param {boolean} params.todasLasPreguntasCompletadas - Si todas las preguntas están completadas
+ * @param {number} params.activeStepGuardado - Paso activo guardado
+ * @param {string|null} params.firmaAuditor - Firma del auditor si existe
+ * @param {boolean} params.auditoriaGenerada - Si la auditoría ya fue generada
+ * @returns {number|null} - Número del paso correcto o null si no debe restaurar
+ */
+export const calcularPasoCorrecto = ({
+  respuestas,
+  todasLasPreguntasCompletadas,
+  activeStepGuardado,
+  firmaAuditor,
+  auditoriaGenerada
+}) => {
+  // Si no hay progreso real (ninguna pregunta respondida), no restaurar
+  if (!tieneProgresoReal(respuestas)) {
+    return null; // No restaurar
+  }
+  
+  // SIMPLIFICADO: Si hay respuestas guardadas, siempre ir al paso de preguntas
+  // Esto permite al usuario revisar y continuar desde donde estaba
+  return 2; // Paso de preguntas
+};

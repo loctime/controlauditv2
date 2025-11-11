@@ -8,7 +8,7 @@ import { openDB } from 'idb';
  * Configuración de la base de datos offline
  */
 const DB_NAME = 'controlaudit_offline_v1';
-const DB_VERSION = 2;
+const DB_VERSION = 3; // Incrementado para forzar creación de object stores faltantes
 
 /**
  * Inicializar y configurar la base de datos IndexedDB
@@ -17,8 +17,11 @@ export const initOfflineDatabase = async () => {
   try {
     const db = await openDB(DB_NAME, DB_VERSION, {
       upgrade(db, oldVersion) {
-        // Solo crear stores si no existen
+        console.log(`🔄 Actualizando base de datos de versión ${oldVersion} a ${DB_VERSION}`);
+        
+        // Crear todos los object stores necesarios
         if (!db.objectStoreNames.contains('auditorias')) {
+          console.log('✅ Creando object store: auditorias');
           const auditoriasStore = db.createObjectStore('auditorias', { keyPath: 'id' });
           auditoriasStore.createIndex('by-updatedAt', 'updatedAt');
           auditoriasStore.createIndex('by-status', 'status');
@@ -26,12 +29,14 @@ export const initOfflineDatabase = async () => {
         }
 
         if (!db.objectStoreNames.contains('fotos')) {
+          console.log('✅ Creando object store: fotos');
           const fotosStore = db.createObjectStore('fotos', { keyPath: 'id' });
           fotosStore.createIndex('by-auditoriaId', 'auditoriaId');
           fotosStore.createIndex('by-createdAt', 'createdAt');
         }
 
         if (!db.objectStoreNames.contains('syncQueue')) {
+          console.log('✅ Creando object store: syncQueue');
           const syncQueueStore = db.createObjectStore('syncQueue', { keyPath: 'id' });
           syncQueueStore.createIndex('by-createdAt', 'createdAt');
           syncQueueStore.createIndex('by-nextRetry', 'nextRetry');
@@ -39,16 +44,19 @@ export const initOfflineDatabase = async () => {
         }
 
         if (!db.objectStoreNames.contains('settings')) {
+          console.log('✅ Creando object store: settings');
           db.createObjectStore('settings', { keyPath: 'key' });
         }
 
         if (!db.objectStoreNames.contains('userProfile')) {
+          console.log('✅ Creando object store: userProfile');
           const userProfileStore = db.createObjectStore('userProfile', { keyPath: 'uid' });
           userProfileStore.createIndex('by-email', 'email');
           userProfileStore.createIndex('by-role', 'role');
         }
 
         if (!db.objectStoreNames.contains('empresas')) {
+          console.log('✅ Creando object store: empresas');
           const empresasStore = db.createObjectStore('empresas', { keyPath: 'id' });
           empresasStore.createIndex('by-propietarioId', 'propietarioId');
           empresasStore.createIndex('by-creadorId', 'creadorId');
@@ -56,13 +64,27 @@ export const initOfflineDatabase = async () => {
         }
 
         if (!db.objectStoreNames.contains('formularios')) {
+          console.log('✅ Creando object store: formularios');
           const formulariosStore = db.createObjectStore('formularios', { keyPath: 'id' });
           formulariosStore.createIndex('by-creadorId', 'creadorId');
           formulariosStore.createIndex('by-clienteAdminId', 'clienteAdminId');
           formulariosStore.createIndex('by-nombre', 'nombre');
         }
+        
+        console.log('✅ Base de datos actualizada correctamente');
       },
     });
+
+    // Verificar que todos los stores existen después de abrir
+    const requiredStores = ['auditorias', 'fotos', 'syncQueue', 'settings', 'userProfile', 'empresas', 'formularios'];
+    const missingStores = requiredStores.filter(store => !db.objectStoreNames.contains(store));
+    
+    if (missingStores.length > 0) {
+      console.warn(`⚠️ Object stores faltantes detectados: ${missingStores.join(', ')}`);
+      console.warn('⚠️ Esto puede requerir cerrar y reabrir la aplicación para crear los stores');
+    } else {
+      console.log('✅ Todos los object stores están presentes');
+    }
 
     return db;
   } catch (error) {
@@ -76,7 +98,8 @@ export const initOfflineDatabase = async () => {
  */
 export const getOfflineDatabase = async () => {
   try {
-    return await openDB(DB_NAME, DB_VERSION);
+    // Usar initOfflineDatabase para asegurar que todos los object stores existan
+    return await initOfflineDatabase();
   } catch (error) {
     console.error('Error al obtener base de datos offline:', error);
     throw error;
