@@ -286,8 +286,23 @@ export const saveCompleteUserCache = async (userProfile, empresas = null, sucurs
     try {
       // Verificar que el object store existe antes de acceder
       if (!offlineDb.objectStoreNames.contains('settings')) {
-        console.warn('⚠️ Object store "settings" no existe, guardando solo en localStorage');
-        throw new Error('Settings store not found');
+        console.warn('⚠️ Object store "settings" no existe, intentando recrear base de datos...');
+        
+        // Intentar cerrar y reabrir la base de datos para forzar upgrade
+        try {
+          offlineDb.close();
+          const { getOfflineDatabase } = await import('./offlineDatabase');
+          offlineDb = await getOfflineDatabase();
+          
+          // Verificar nuevamente
+          if (!offlineDb.objectStoreNames.contains('settings')) {
+            console.warn('⚠️ Object store "settings" aún no existe después de reabrir, guardando solo en localStorage');
+            throw new Error('Settings store not found after reopen');
+          }
+        } catch (reopenError) {
+          console.warn('⚠️ Error al reabrir base de datos:', reopenError);
+          throw new Error('Settings store not found');
+        }
       }
       
       await offlineDb.put('settings', {

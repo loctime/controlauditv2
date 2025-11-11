@@ -8,7 +8,7 @@ import { openDB } from 'idb';
  * Configuración de la base de datos offline
  */
 const DB_NAME = 'controlaudit_offline_v1';
-const DB_VERSION = 3; // Incrementado para forzar creación de object stores faltantes
+const DB_VERSION = 4; // Incrementado para forzar creación de object stores faltantes (especialmente 'settings')
 
 /**
  * Inicializar y configurar la base de datos IndexedDB
