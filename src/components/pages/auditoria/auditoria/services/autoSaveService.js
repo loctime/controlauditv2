@@ -288,7 +288,7 @@ class AutoSaveService {
       // Obtener datos completos del usuario del cache
       let userProfile = null;
       try {
-        const request = indexedDB.open('controlaudit_offline_v1', 2);
+        const request = indexedDB.open('controlaudit_offline_v1', 3);
         const cachedUser = await new Promise((resolve, reject) => {
           request.onsuccess = function(event) {
             const db = event.target.result;
