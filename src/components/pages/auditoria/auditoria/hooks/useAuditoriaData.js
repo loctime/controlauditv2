@@ -19,95 +19,62 @@ export const useAuditoriaData = (
   // Función para cargar datos del cache offline (como fallback)
   // IMPORTANTE: Esta función debe estar definida antes de los useEffect que la usan
   const cargarDatosDelCache = useCallback(async () => {
+    if (!userProfile?.uid) {
+      console.log('[DEBUG Auditoria] ⏳ No hay userProfile.uid, no se puede cargar cache');
+      return null;
+    }
+
     try {
       console.log('[DEBUG Auditoria] ========== CARGANDO DESDE CACHE OFFLINE ==========');
+      console.log('[DEBUG Auditoria] userId:', userProfile.uid);
       console.log('[DEBUG Auditoria] Navegador detectado:', navigator.userAgent.includes('Edg') ? 'Edge' : 'Chrome/Firefox');
       
-      // Intentar IndexedDB primero usando getOfflineDatabase para asegurar inicialización
-      try {
-        const db = await getOfflineDatabase();
-        
-        // Verificar que el object store existe antes de acceder
-        if (!db.objectStoreNames.contains('settings')) {
-          console.warn('[DEBUG Auditoria] Object store "settings" no existe, usando localStorage');
-          throw new Error('Settings store not found');
-        }
-        
-        const cached = await db.get('settings', 'complete_user_cache');
-        
-        if (!cached || !cached.value) {
-          console.log('[DEBUG Auditoria] ❌ No hay cache completo disponible');
-          return null;
-        }
-
-        const cacheData = cached.value;
-        console.log('[DEBUG Auditoria] ✅ Cache encontrado:', {
-          userId: cacheData.userId,
-          empresas: cacheData.empresas?.length || 0,
-          formularios: cacheData.formularios?.length || 0,
-          sucursales: cacheData.sucursales?.length || 0
-        });
-        
-        // Cargar empresas
-        if (cacheData.empresas && cacheData.empresas.length > 0) {
-          console.log('[DEBUG Auditoria] ✅ Cargando empresas desde cache:', cacheData.empresas.length);
-          setEmpresas(cacheData.empresas);
-        } else {
-          console.log('[DEBUG Auditoria] ❌ No hay empresas en cache');
-        }
-        
-        // Cargar formularios
-        if (cacheData.formularios && cacheData.formularios.length > 0) {
-          console.log('[DEBUG Auditoria] ✅ Cargando formularios desde cache:', cacheData.formularios.length);
-          setFormularios(cacheData.formularios);
-        } else {
-          console.log('[DEBUG Auditoria] ❌ No hay formularios en cache');
-        }
-        
-        // Cargar sucursales
-        if (cacheData.sucursales && cacheData.sucursales.length > 0) {
-          console.log('[DEBUG Auditoria] ✅ Cargando sucursales desde cache:', cacheData.sucursales.length);
-          setSucursales(cacheData.sucursales);
-        } else {
-          console.log('[DEBUG Auditoria] ❌ No hay sucursales en cache');
-        }
-        
-        return cacheData;
+      // Usar getCompleteUserCache que ya maneja IndexedDB y localStorage correctamente
+      const cacheData = await getCompleteUserCache(userProfile.uid);
       
-      } catch (indexedDBError) {
-        console.warn('[DEBUG Auditoria] IndexedDB falló, intentando localStorage:', indexedDBError);
-        
-        // Fallback a localStorage
-        try {
-          const cacheData = JSON.parse(localStorage.getItem('complete_user_cache') || '{}');
-          
-          if (cacheData.empresas && cacheData.empresas.length > 0) {
-            console.log('[DEBUG Auditoria] ✅ Cargando empresas desde localStorage:', cacheData.empresas.length);
-            setEmpresas(cacheData.empresas);
-          }
-          
-          if (cacheData.formularios && cacheData.formularios.length > 0) {
-            console.log('[DEBUG Auditoria] ✅ Cargando formularios desde localStorage:', cacheData.formularios.length);
-            setFormularios(cacheData.formularios);
-          }
-          
-          if (cacheData.sucursales && cacheData.sucursales.length > 0) {
-            console.log('[DEBUG Auditoria] ✅ Cargando sucursales desde localStorage:', cacheData.sucursales.length);
-            setSucursales(cacheData.sucursales);
-          }
-          
-          return cacheData;
-        } catch (localStorageError) {
-          console.error('[DEBUG Auditoria] localStorage también falló:', localStorageError);
-          return null;
-        }
+      if (!cacheData) {
+        console.log('[DEBUG Auditoria] ❌ No hay cache completo disponible');
+        return null;
       }
+
+      console.log('[DEBUG Auditoria] ✅ Cache encontrado:', {
+        userId: cacheData.userId,
+        empresas: cacheData.empresas?.length || 0,
+        formularios: cacheData.formularios?.length || 0,
+        sucursales: cacheData.sucursales?.length || 0
+      });
+      
+      // Cargar empresas
+      if (cacheData.empresas && cacheData.empresas.length > 0) {
+        console.log('[DEBUG Auditoria] ✅ Cargando empresas desde cache:', cacheData.empresas.length);
+        setEmpresas(cacheData.empresas);
+      } else {
+        console.log('[DEBUG Auditoria] ❌ No hay empresas en cache');
+      }
+      
+      // Cargar formularios
+      if (cacheData.formularios && cacheData.formularios.length > 0) {
+        console.log('[DEBUG Auditoria] ✅ Cargando formularios desde cache:', cacheData.formularios.length);
+        setFormularios(cacheData.formularios);
+      } else {
+        console.log('[DEBUG Auditoria] ❌ No hay formularios en cache');
+      }
+      
+      // Cargar sucursales
+      if (cacheData.sucursales && cacheData.sucursales.length > 0) {
+        console.log('[DEBUG Auditoria] ✅ Cargando sucursales desde cache:', cacheData.sucursales.length);
+        setSucursales(cacheData.sucursales);
+      } else {
+        console.log('[DEBUG Auditoria] ❌ No hay sucursales en cache');
+      }
+      
+      return cacheData;
       
     } catch (error) {
       console.error('[DEBUG Auditoria] Error al cargar cache offline:', error);
       return null;
     }
-  }, [setEmpresas, setFormularios, setSucursales]);
+  }, [userProfile, setEmpresas, setFormularios, setSucursales]);
 
   // Cargar datos SIEMPRE al montar el componente
   useEffect(() => {

@@ -350,34 +350,93 @@ export const saveCompleteUserCache = async (userProfile, empresas = null, sucurs
  */
 export const getCompleteUserCache = async (userId) => {
   try {
-    const db = await getOfflineDatabase();
-    const cached = await db.get('settings', 'complete_user_cache');
-    
-    if (!cached || !cached.value) {
-      console.log('📭 No hay cache completo disponible');
-      return null;
-    }
+    // Intentar IndexedDB primero
+    try {
+      const db = await getOfflineDatabase();
+      
+      // Verificar que el object store existe antes de acceder
+      if (!db.objectStoreNames.contains('settings')) {
+        console.warn('⚠️ Object store "settings" no existe en IndexedDB, intentando localStorage...');
+        throw new Error('Settings store not found');
+      }
+      
+      const cached = await db.get('settings', 'complete_user_cache');
+      
+      if (!cached || !cached.value) {
+        console.log('📭 No hay cache completo disponible en IndexedDB');
+        throw new Error('No cache in IndexedDB');
+      }
 
-    const cacheData = cached.value;
-    
-    // Verificar si el cache es del usuario correcto
-    if (cacheData.userId !== userId) {
-      await clearCompleteUserCache();
-      return null;
-    }
+      const cacheData = cached.value;
+      
+      // Verificar si el cache es del usuario correcto
+      if (cacheData.userId !== userId) {
+        console.warn('⚠️ Cache de otro usuario, limpiando...');
+        await clearCompleteUserCache();
+        throw new Error('Cache user mismatch');
+      }
 
-    // Verificar si el cache no ha expirado
-    const cacheAge = Date.now() - cacheData.timestamp;
-    const cacheAgeDays = cacheAge / (1000 * 60 * 60 * 24);
-    
-    if (cacheAgeDays > CACHE_EXPIRY_DAYS) {
-      await clearCompleteUserCache();
-      return null;
-    }
+      // Verificar si el cache no ha expirado
+      const cacheAge = Date.now() - (cacheData.timestamp || 0);
+      const cacheAgeDays = cacheAge / (1000 * 60 * 60 * 24);
+      
+      if (cacheAgeDays > CACHE_EXPIRY_DAYS) {
+        console.warn('⚠️ Cache expirado, limpiando...');
+        await clearCompleteUserCache();
+        throw new Error('Cache expired');
+      }
 
-    return cacheData;
+      console.log('✅ Cache cargado desde IndexedDB:', {
+        empresas: cacheData.empresas?.length || 0,
+        formularios: cacheData.formularios?.length || 0,
+        sucursales: cacheData.sucursales?.length || 0
+      });
+
+      return cacheData;
+    } catch (indexedDBError) {
+      console.warn('⚠️ IndexedDB falló, intentando localStorage:', indexedDBError.message);
+      
+      // Fallback a localStorage
+      try {
+        const localCache = localStorage.getItem('complete_user_cache');
+        if (!localCache) {
+          console.log('📭 No hay cache en localStorage');
+          return null;
+        }
+        
+        const cacheData = JSON.parse(localCache);
+        
+        // Verificar si el cache es del usuario correcto
+        if (cacheData.userId !== userId) {
+          console.warn('⚠️ Cache de localStorage de otro usuario, limpiando...');
+          localStorage.removeItem('complete_user_cache');
+          return null;
+        }
+
+        // Verificar si el cache no ha expirado
+        const cacheAge = Date.now() - (cacheData.timestamp || 0);
+        const cacheAgeDays = cacheAge / (1000 * 60 * 60 * 24);
+        
+        if (cacheAgeDays > CACHE_EXPIRY_DAYS) {
+          console.warn('⚠️ Cache de localStorage expirado, limpiando...');
+          localStorage.removeItem('complete_user_cache');
+          return null;
+        }
+
+        console.log('✅ Cache cargado desde localStorage:', {
+          empresas: cacheData.empresas?.length || 0,
+          formularios: cacheData.formularios?.length || 0,
+          sucursales: cacheData.sucursales?.length || 0
+        });
+
+        return cacheData;
+      } catch (localStorageError) {
+        console.error('❌ Error parseando cache de localStorage:', localStorageError);
+        return null;
+      }
+    }
   } catch (error) {
-    console.error('Error obteniendo cache completo:', error);
+    console.error('❌ Error obteniendo cache completo:', error);
     return null;
   }
 };
