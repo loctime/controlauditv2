@@ -388,7 +388,7 @@ export const useAuditoriaData = (
     };
 
     cargarEmpresas();
-  }, [userProfile, userEmpresas, setEmpresas]);
+  }, [userProfile, userEmpresas, setEmpresas, cargarDatosDelCache]);
 
   // Cargar todas las sucursales disponibles al inicio
   useEffect(() => {
@@ -486,7 +486,7 @@ export const useAuditoriaData = (
     };
 
     cargarFormularios();
-  }, [userFormularios, setFormularios]);
+  }, [userFormularios, setFormularios, cargarDatosDelCache]);
 
   // Cargar formularios desde Firestore si no están en el contexto ni en cache offline
   useEffect(() => {
