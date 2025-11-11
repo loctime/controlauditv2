@@ -19,59 +19,91 @@ export const useAuditoriaData = (
   // Función para cargar datos del cache offline (como fallback)
   // IMPORTANTE: Esta función debe estar definida antes de los useEffect que la usan
   const cargarDatosDelCache = useCallback(async () => {
-    if (!userProfile?.uid) {
-      console.log('[DEBUG Auditoria] ⏳ No hay userProfile.uid, no se puede cargar cache');
-      return null;
-    }
-
     try {
       console.log('[DEBUG Auditoria] ========== CARGANDO DESDE CACHE OFFLINE ==========');
-      console.log('[DEBUG Auditoria] userId:', userProfile.uid);
+      console.log('[DEBUG Auditoria] userId:', userProfile?.uid || 'NO DISPONIBLE');
       console.log('[DEBUG Auditoria] Navegador detectado:', navigator.userAgent.includes('Edg') ? 'Edge' : 'Chrome/Firefox');
       
-      // Usar getCompleteUserCache que ya maneja IndexedDB y localStorage correctamente
-      const cacheData = await getCompleteUserCache(userProfile.uid);
-      
-      if (!cacheData) {
-        console.log('[DEBUG Auditoria] ❌ No hay cache completo disponible');
-        return null;
-      }
-
-      console.log('[DEBUG Auditoria] ✅ Cache encontrado:', {
-        userId: cacheData.userId,
-        empresas: cacheData.empresas?.length || 0,
-        formularios: cacheData.formularios?.length || 0,
-        sucursales: cacheData.sucursales?.length || 0
-      });
-      
-      // Cargar empresas
-      if (cacheData.empresas && cacheData.empresas.length > 0) {
-        console.log('[DEBUG Auditoria] ✅ Cargando empresas desde cache:', cacheData.empresas.length);
-        setEmpresas(cacheData.empresas);
-      } else {
-        console.log('[DEBUG Auditoria] ❌ No hay empresas en cache');
-      }
-      
-      // Cargar formularios
-      if (cacheData.formularios && cacheData.formularios.length > 0) {
-        console.log('[DEBUG Auditoria] ✅ Cargando formularios desde cache:', cacheData.formularios.length);
-        setFormularios(cacheData.formularios);
-      } else {
-        console.log('[DEBUG Auditoria] ❌ No hay formularios en cache');
-      }
-      
-      // Cargar sucursales
-      if (cacheData.sucursales && cacheData.sucursales.length > 0) {
-        console.log('[DEBUG Auditoria] ✅ Cargando sucursales desde cache:', cacheData.sucursales.length);
-        setSucursales(cacheData.sucursales);
-      } else {
-        console.log('[DEBUG Auditoria] ❌ No hay sucursales en cache');
+      // Si hay userProfile.uid, usar getCompleteUserCache (mejor opción)
+      if (userProfile?.uid) {
+        const cacheData = await getCompleteUserCache(userProfile.uid);
+        
+        if (cacheData) {
+          console.log('[DEBUG Auditoria] ✅ Cache encontrado:', {
+            userId: cacheData.userId,
+            empresas: cacheData.empresas?.length || 0,
+            formularios: cacheData.formularios?.length || 0,
+            sucursales: cacheData.sucursales?.length || 0
+          });
+          
+          // Cargar empresas
+          if (cacheData.empresas && cacheData.empresas.length > 0) {
+            console.log('[DEBUG Auditoria] ✅ Cargando empresas desde cache:', cacheData.empresas.length);
+            setEmpresas(cacheData.empresas);
+          }
+          
+          // Cargar formularios
+          if (cacheData.formularios && cacheData.formularios.length > 0) {
+            console.log('[DEBUG Auditoria] ✅ Cargando formularios desde cache:', cacheData.formularios.length);
+            setFormularios(cacheData.formularios);
+          }
+          
+          // Cargar sucursales
+          if (cacheData.sucursales && cacheData.sucursales.length > 0) {
+            console.log('[DEBUG Auditoria] ✅ Cargando sucursales desde cache:', cacheData.sucursales.length);
+            setSucursales(cacheData.sucursales);
+          }
+          
+          return cacheData;
+        }
       }
       
-      return cacheData;
+      // Fallback: Si no hay userProfile o getCompleteUserCache falló, intentar localStorage directamente
+      console.log('[DEBUG Auditoria] ⚠️ Intentando fallback a localStorage...');
+      try {
+        const localCache = localStorage.getItem('complete_user_cache');
+        if (localCache) {
+          const cacheData = JSON.parse(localCache);
+          
+          // Verificar que el cache tiene datos válidos
+          if (cacheData && (cacheData.empresas || cacheData.formularios || cacheData.sucursales)) {
+            console.log('[DEBUG Auditoria] ✅ Cache encontrado en localStorage:', {
+              userId: cacheData.userId,
+              empresas: cacheData.empresas?.length || 0,
+              formularios: cacheData.formularios?.length || 0,
+              sucursales: cacheData.sucursales?.length || 0
+            });
+            
+            // Cargar empresas
+            if (cacheData.empresas && cacheData.empresas.length > 0) {
+              console.log('[DEBUG Auditoria] ✅ Cargando empresas desde localStorage:', cacheData.empresas.length);
+              setEmpresas(cacheData.empresas);
+            }
+            
+            // Cargar formularios
+            if (cacheData.formularios && cacheData.formularios.length > 0) {
+              console.log('[DEBUG Auditoria] ✅ Cargando formularios desde localStorage:', cacheData.formularios.length);
+              setFormularios(cacheData.formularios);
+            }
+            
+            // Cargar sucursales
+            if (cacheData.sucursales && cacheData.sucursales.length > 0) {
+              console.log('[DEBUG Auditoria] ✅ Cargando sucursales desde localStorage:', cacheData.sucursales.length);
+              setSucursales(cacheData.sucursales);
+            }
+            
+            return cacheData;
+          }
+        }
+      } catch (localStorageError) {
+        console.error('[DEBUG Auditoria] ❌ Error parseando cache de localStorage:', localStorageError);
+      }
+      
+      console.log('[DEBUG Auditoria] ❌ No hay cache completo disponible');
+      return null;
       
     } catch (error) {
-      console.error('[DEBUG Auditoria] Error al cargar cache offline:', error);
+      console.error('[DEBUG Auditoria] ❌ Error al cargar cache offline:', error);
       return null;
     }
   }, [userProfile, setEmpresas, setFormularios, setSucursales]);
