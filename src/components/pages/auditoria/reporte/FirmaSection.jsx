@@ -46,7 +46,7 @@ const FirmaSection = ({
   datosReporte = {},
   onDatosReporteChange
 }) => {
-  const { userProfile } = useAuth();
+  const { userProfile, updateUserProfile } = useAuth();
   const theme = useTheme();
   const sigPadRef = useRef(null);
   const [firmaAuditorURL, setFirmaAuditorURL] = useState(firmaAuditor);
@@ -166,13 +166,20 @@ const FirmaSection = ({
       
       const nombreFormateado = capitalizeWords(nombre.trim());
       
-      // await updateUserProfile({ // This line was removed as per the new_code
-      //   firmaDigital: signatureDataUrl,
-      //   firmaActualizada: new Date().toISOString(),
-      //   nombre: nombreFormateado,
-      //   dni: dni.trim(),
-      //   telefono: telefono.trim()
-      // });
+      // Guardar en el perfil del usuario
+      try {
+        await updateUserProfile({
+          firmaDigital: signatureDataUrl,
+          firmaActualizada: new Date().toISOString(),
+          nombre: nombreFormateado,
+          dni: dni.trim(),
+          telefono: telefono.trim()
+        });
+        console.log('[DEBUG] Firma y datos guardados en el perfil');
+      } catch (error) {
+        console.error('[DEBUG] Error al guardar en el perfil:', error);
+        // Continuar aunque falle el guardado en perfil
+      }
       
       // Aplicar la firma inmediatamente
       setFirmaAuditorURL(signatureDataUrl);
@@ -181,8 +188,16 @@ const FirmaSection = ({
         onSaveFirmaAuditor(signatureDataUrl);
       }
       
+      // Autocompletar el nombre del inspector con el nombre ingresado
+      if (onDatosReporteChange) {
+        onDatosReporteChange({
+          ...datosReporte,
+          nombreInspector: nombreFormateado
+        });
+      }
+      
       setModalCrearFirmaAbierto(false);
-      Swal.fire('Éxito', 'Firma creada y aplicada correctamente', 'success');
+      Swal.fire('Éxito', 'Firma creada, guardada en tu perfil y aplicada correctamente', 'success');
     } catch (error) {
       console.error('Error al guardar firma:', error);
       Swal.fire('Error', 'Error al guardar la firma', 'error');
