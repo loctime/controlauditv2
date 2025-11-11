@@ -42,7 +42,7 @@ export function normalizeReporteEmpresa(reporte, empresas = []) {
 /**
  * Prepara los datos de reporte para guardado, asegurando metadatos consistentes
  */
-export function buildReporteMetadata({ empresa, sucursal, formulario, ...rest }) {
+export function buildReporteMetadata({ empresa, sucursal, formulario, datosReporte, ...rest }) {
   if (!empresa || !empresa.id || !empresa.nombre) {
     console.error('[MetadataService] Empresa inválida al guardar reporte', empresa);
     throw new Error('Empresa inválida');
@@ -51,8 +51,21 @@ export function buildReporteMetadata({ empresa, sucursal, formulario, ...rest })
     console.error('[MetadataService] Formulario inválido al guardar reporte', formulario);
     throw new Error('Formulario inválido');
   }
+  
+  // Expandir campos de datosReporte al nivel superior si existe
+  const camposAdicionales = datosReporte ? {
+    tareaObservada: datosReporte.tareaObservada || '',
+    lugarSector: datosReporte.lugarSector || '',
+    equiposInvolucrados: datosReporte.equiposInvolucrados || '',
+    supervisor: datosReporte.supervisor || '',
+    numeroTrabajadores: datosReporte.numeroTrabajadores || '',
+    nombreInspector: datosReporte.nombreInspector || '',
+    nombreResponsable: datosReporte.nombreResponsable || ''
+  } : {};
+  
   return {
     ...rest,
+    ...camposAdicionales, // Expandir campos adicionales al nivel superior
     empresa: { id: empresa.id, nombre: empresa.nombre },
     empresaId: empresa.id,
     empresaNombre: empresa.nombre,
