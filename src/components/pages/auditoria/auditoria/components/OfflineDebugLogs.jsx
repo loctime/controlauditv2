@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Paper, Typography, IconButton, Collapse, Chip, Alert } from '@mui/material';
-import { ExpandMore, ExpandLess, BugReport, Close } from '@mui/icons-material';
+import { Box, Paper, Typography, IconButton, Collapse, Chip, Alert, Button, Snackbar } from '@mui/material';
+import { ExpandMore, ExpandLess, BugReport, Close, ContentCopy, Check } from '@mui/icons-material';
 import { useAuth } from '../../../../context/AuthContext';
 
 // Array global para almacenar logs
@@ -37,6 +37,39 @@ const OfflineDebugLogs = () => {
   const [logs, setLogs] = useState([]);
   const [expanded, setExpanded] = useState(true);
   const [visible, setVisible] = useState(true);
+  const [copied, setCopied] = useState(false);
+
+  const copyLogsToClipboard = () => {
+    try {
+      const logsText = logs.map(log => {
+        return `[${log.timestamp}] [${log.level.toUpperCase()}] ${log.message}`;
+      }).join('\n\n');
+      
+      navigator.clipboard.writeText(logsText).then(() => {
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      }).catch(err => {
+        console.error('Error copiando logs:', err);
+        // Fallback para navegadores que no soportan clipboard API
+        const textArea = document.createElement('textarea');
+        textArea.value = logsText;
+        textArea.style.position = 'fixed';
+        textArea.style.opacity = '0';
+        document.body.appendChild(textArea);
+        textArea.select();
+        try {
+          document.execCommand('copy');
+          setCopied(true);
+          setTimeout(() => setCopied(false), 2000);
+        } catch (e) {
+          console.error('Error con fallback de copia:', e);
+        }
+        document.body.removeChild(textArea);
+      });
+    } catch (error) {
+      console.error('Error preparando logs para copiar:', error);
+    }
+  };
 
   useEffect(() => {
     // Cargar logs guardados al iniciar
@@ -180,6 +213,14 @@ const OfflineDebugLogs = () => {
         <Box>
           <IconButton
             size="small"
+            onClick={copyLogsToClipboard}
+            sx={{ color: 'inherit' }}
+            title="Copiar logs"
+          >
+            {copied ? <Check fontSize="small" /> : <ContentCopy fontSize="small" />}
+          </IconButton>
+          <IconButton
+            size="small"
             onClick={() => setExpanded(!expanded)}
             sx={{ color: 'inherit' }}
           >
@@ -266,6 +307,17 @@ const OfflineDebugLogs = () => {
           {errorLogs.length} error(es) encontrado(s)
         </Alert>
       )}
+
+      <Snackbar
+        open={copied}
+        autoHideDuration={2000}
+        onClose={() => setCopied(false)}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+      >
+        <Alert severity="success" onClose={() => setCopied(false)}>
+          Logs copiados al portapapeles
+        </Alert>
+      </Snackbar>
     </Paper>
   );
 };
