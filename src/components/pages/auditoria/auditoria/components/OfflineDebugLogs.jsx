@@ -6,6 +6,32 @@ import { useAuth } from '../../../../context/AuthContext';
 // Array global para almacenar logs
 window.offlineDebugLogs = window.offlineDebugLogs || [];
 
+// Cargar logs desde localStorage al iniciar (para funcionar offline)
+const loadLogsFromStorage = () => {
+  try {
+    const savedLogs = localStorage.getItem('offline_debug_logs');
+    if (savedLogs) {
+      const parsed = JSON.parse(savedLogs);
+      window.offlineDebugLogs = parsed;
+      return parsed;
+    }
+  } catch (e) {
+    console.warn('Error cargando logs desde localStorage:', e);
+  }
+  return [];
+};
+
+// Guardar logs en localStorage (para persistir offline)
+const saveLogsToStorage = (logs) => {
+  try {
+    // Mantener solo los últimos 50 logs para no llenar localStorage
+    const logsToSave = logs.slice(-50);
+    localStorage.setItem('offline_debug_logs', JSON.stringify(logsToSave));
+  } catch (e) {
+    console.warn('Error guardando logs en localStorage:', e);
+  }
+};
+
 const OfflineDebugLogs = () => {
   const { userProfile } = useAuth();
   const [logs, setLogs] = useState([]);
@@ -13,6 +39,13 @@ const OfflineDebugLogs = () => {
   const [visible, setVisible] = useState(true);
 
   useEffect(() => {
+    // Cargar logs guardados al iniciar
+    const savedLogs = loadLogsFromStorage();
+    if (savedLogs.length > 0) {
+      window.offlineDebugLogs = savedLogs;
+      setLogs(savedLogs);
+    }
+
     // Interceptar console.log para capturar logs relacionados con offline
     const originalLog = console.log;
     const originalWarn = console.warn;
@@ -38,7 +71,11 @@ const OfflineDebugLogs = () => {
         message.includes('empresas') ||
         message.includes('IndexedDB') ||
         message.includes('localStorage') ||
-        message.includes('getCompleteUserCache')
+        message.includes('getCompleteUserCache') ||
+        message.includes('saveCompleteUserCache') ||
+        message.includes('getOfflineDatabase') ||
+        message.includes('Settings store') ||
+        message.includes('complete_user_cache')
       ) {
         const logEntry = {
           id: Date.now() + Math.random(),
@@ -53,6 +90,9 @@ const OfflineDebugLogs = () => {
         if (window.offlineDebugLogs.length > 50) {
           window.offlineDebugLogs.shift();
         }
+        
+        // Guardar en localStorage para persistir offline
+        saveLogsToStorage(window.offlineDebugLogs);
         
         setLogs([...window.offlineDebugLogs]);
       }
