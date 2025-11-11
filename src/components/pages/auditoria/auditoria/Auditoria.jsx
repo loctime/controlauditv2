@@ -42,6 +42,7 @@ import AlertasFaltantes from "./components/AlertasFaltantes";
 import { createAuditoriaSteps } from "./components/AuditoriaSteps";
 import SimpleOfflineDebug from "../../../common/SimpleOfflineDebug";
 import AuditoriaDebugInfo from "../../../common/AuditoriaDebugInfo";
+import OfflineDebugLogs from "./components/OfflineDebugLogs";
 
 // Servicios
 import AuditoriaService from "../auditoriaService";
@@ -1065,6 +1066,9 @@ const AuditoriaRefactorizada = () => {
       
       {/* Debug específico para auditorías */}
       <AuditoriaDebugInfo />
+      
+      {/* Debug logs visual para móvil */}
+      <OfflineDebugLogs />
     </Container>
   );
 };
