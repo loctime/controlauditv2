@@ -2,7 +2,7 @@ import { useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
 import autoSaveService from '../services/autoSaveService';
-import { verificarFirmasCompletadas } from '../utils/auditoriaUtils';
+import { verificarFirmasCompletadas, filtrarSucursalesPorEmpresa } from '../utils/auditoriaUtils';
 import { generarContenidoImpresion, abrirImpresionNativa } from '../utils/impresionUtils';
 
 /**
@@ -54,9 +54,19 @@ export const useAuditoriaHandlers = ({
 }) => {
   
   // Handlers de datos básicos
-  const handleEmpresaChange = useCallback((selectedEmpresa) => {
+  const handleEmpresaChange = useCallback((selectedEmpresa, sucursalesDisponibles = []) => {
     setEmpresaSeleccionada(selectedEmpresa);
-    setSucursalSeleccionada("");
+    
+    // Filtrar sucursales por la empresa seleccionada
+    const sucursalesFiltradas = filtrarSucursalesPorEmpresa(sucursalesDisponibles, selectedEmpresa);
+    
+    // Auto-seleccionar si hay exactamente 1 sucursal
+    if (sucursalesFiltradas.length === 1) {
+      setSucursalSeleccionada(sucursalesFiltradas[0].nombre);
+    } else {
+      setSucursalSeleccionada("");
+    }
+    
     setFormularioSeleccionadoId("");
     setActiveStep(0);
   }, [setEmpresaSeleccionada, setSucursalSeleccionada, setFormularioSeleccionadoId, setActiveStep]);

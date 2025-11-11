@@ -91,7 +91,7 @@ export const createAuditoriaSteps = ({
                 <SeleccionEmpresa
                   empresas={empresas}
                   empresaSeleccionada={empresaSeleccionada}
-                  onChange={bloquearDatosAgenda ? () => setOpenAlertaEdicion(true) : handleEmpresaChange}
+                  onChange={bloquearDatosAgenda ? () => setOpenAlertaEdicion(true) : (selectedEmpresa) => handleEmpresaChange(selectedEmpresa, sucursales)}
                   disabled={bloquearDatosAgenda}
                 />
               </Grid>
@@ -108,6 +108,8 @@ export const createAuditoriaSteps = ({
                         sucursalSeleccionada={sucursalSeleccionada}
                         onChange={bloquearDatosAgenda ? () => setOpenAlertaEdicion(true) : handleSucursalChange}
                         disabled={bloquearDatosAgenda}
+                        autoOpen={!sucursalSeleccionada && sucursalesFiltradas.length > 1}
+                        isMobile={isMobile}
                       />
                     ) : (
                       <Card sx={{ 
