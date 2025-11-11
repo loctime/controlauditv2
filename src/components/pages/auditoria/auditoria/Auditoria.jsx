@@ -58,6 +58,10 @@ import {
   validarAuditoria,
   configurarFormulario,
   filtrarSucursalesPorEmpresa,
+  tieneProgresoReal,
+  calcularPasoCorrecto,
+  contarPreguntasRespondidas,
+  contarTotalPreguntas,
   verificarFirmasCompletadas,
   generarHashAuditoria
 } from "./utils/auditoriaUtils";
@@ -320,16 +324,28 @@ const AuditoriaRefactorizada = () => {
       try {
         const savedData = await autoSaveService.restoreAuditoria(userProfile.uid);
         
-        // Solo restaurar si hay datos Y no viene de agenda Y la auditoría está incompleta
+        // Solo restaurar si hay datos Y no viene de agenda
         if (savedData && !location.state?.auditoriaId) {
-          // Verificar que la auditoría esté incompleta (no completada)
+          // Verificar que haya progreso real (al menos una pregunta respondida)
+          const respuestasGuardadas = savedData.respuestas || [];
+          const tieneProgreso = tieneProgresoReal(respuestasGuardadas);
+          
+          if (!tieneProgreso) {
+            // No hay progreso real, limpiar y no restaurar
+            restoreAttemptedRef.current = true;
+            await autoSaveService.clearLocalStorage(userProfile.uid);
+            return;
+          }
+          
+          // Verificar que la auditoría esté incompleta
+          const todasCompletadas = todasLasPreguntasContestadas(respuestasGuardadas);
           const isIncomplete = !savedData.estadoCompletada && 
-                              (savedData.activeStep < 4 || !savedData.auditoriaGenerada);
+                              (!todasCompletadas || !savedData.auditoriaGenerada);
           
           if (!isIncomplete) {
             // Si está completada, limpiar el autoguardado
             restoreAttemptedRef.current = true;
-            await autoSaveService.clearLocalStorage();
+            await autoSaveService.clearLocalStorage(userProfile.uid);
             return;
           }
 
@@ -346,36 +362,122 @@ const AuditoriaRefactorizada = () => {
             }
           }
 
+          // Calcular el paso correcto basado en el progreso real
+          const pasoCorrecto = calcularPasoCorrecto({
+            respuestas: respuestasGuardadas,
+            todasLasPreguntasCompletadas: todasCompletadas,
+            activeStepGuardado: savedData.activeStep || 0,
+            firmaAuditor: savedData.firmaAuditor,
+            auditoriaGenerada: savedData.auditoriaGenerada
+          });
+          
+          if (pasoCorrecto === null) {
+            // No hay progreso suficiente para restaurar
+            restoreAttemptedRef.current = true;
+            await autoSaveService.clearLocalStorage(userProfile.uid);
+            return;
+          }
+
           // Marcar como intentado antes de mostrar el diálogo
           restoreAttemptedRef.current = true;
 
-          // Mostrar confirmación para restaurar
+          // Calcular información del progreso para mostrar en el diálogo
+          const preguntasRespondidas = contarPreguntasRespondidas(respuestasGuardadas);
+          const totalPreguntas = contarTotalPreguntas(savedData.secciones || []);
+          const porcentajeProgreso = totalPreguntas > 0 
+            ? Math.round((preguntasRespondidas / totalPreguntas) * 100) 
+            : 0;
+
+          // Mostrar confirmación con información del progreso
           const shouldRestore = await Swal.fire({
             title: '🔄 Auditoría encontrada',
-            text: 'Se encontró una auditoría guardada automáticamente. ¿Quieres restaurarla?',
+            html: `
+              <p>Se encontró una auditoría guardada automáticamente.</p>
+              <p style="margin-top: 10px;">
+                <strong>Progreso:</strong> ${preguntasRespondidas} de ${totalPreguntas} preguntas respondidas (${porcentajeProgreso}%)
+              </p>
+              <p style="margin-top: 10px;">¿Quieres continuar donde lo dejaste?</p>
+            `,
             icon: 'question',
             showCancelButton: true,
-            confirmButtonText: 'Restaurar',
+            confirmButtonText: 'Continuar',
             cancelButtonText: 'Comenzar nueva',
             reverseButtons: true
           });
 
           if (shouldRestore.isConfirmed) {
+            console.log('🔄 Restaurando auditoría con datos:', {
+              respuestas: savedData.respuestas?.length || 0,
+              comentarios: savedData.comentarios?.length || 0,
+              imagenes: savedData.imagenes?.length || 0,
+              clasificaciones: savedData.clasificaciones?.length || 0,
+              secciones: savedData.secciones?.length || 0,
+              contenidoRespuestas: savedData.respuestas
+            });
+            
             setEmpresaSeleccionada(savedData.empresaSeleccionada);
             setSucursalSeleccionada(savedData.sucursalSeleccionada);
             setFormularioSeleccionadoId(savedData.formularioSeleccionadoId);
             setSecciones(savedData.secciones || []);
-            setRespuestas(savedData.respuestas || []);
-            setComentarios(savedData.comentarios || []);
-            // Restaurar imágenes (ahora vienen como File objects desde IndexedDB)
-            setImagenes(savedData.imagenes || []);
-            setClasificaciones(savedData.clasificaciones || []);
-            setActiveStep(savedData.activeStep || 0);
+            
+            // Asegurar que respuestas, comentarios e imágenes sean arrays
+            const respuestasRestauradas = Array.isArray(savedData.respuestas) 
+              ? savedData.respuestas 
+              : (typeof savedData.respuestas === 'string' ? JSON.parse(savedData.respuestas) : []);
+            
+            const comentariosRestaurados = Array.isArray(savedData.comentarios) 
+              ? savedData.comentarios 
+              : (typeof savedData.comentarios === 'string' ? JSON.parse(savedData.comentarios) : []);
+            
+            const imagenesRestauradas = Array.isArray(savedData.imagenes) 
+              ? savedData.imagenes 
+              : (typeof savedData.imagenes === 'string' ? JSON.parse(savedData.imagenes) : []);
+            
+            const clasificacionesRestauradas = Array.isArray(savedData.clasificaciones) 
+              ? savedData.clasificaciones 
+              : (typeof savedData.clasificaciones === 'string' ? JSON.parse(savedData.clasificaciones) : []);
+            
+            console.log('📋 Respuestas restauradas (contenido):', JSON.stringify(respuestasRestauradas));
+            console.log('📋 Respuestas restauradas (estructura):', {
+              length: respuestasRestauradas.length,
+              primeraSeccion: respuestasRestauradas[0],
+              todasLasSecciones: respuestasRestauradas.map((seccion, idx) => ({
+                seccion: idx,
+                length: seccion?.length || 0,
+                contenido: seccion
+              }))
+            });
+            
+            // Restaurar estados - IMPORTANTE: hacerlo en este orden
+            setRespuestas(respuestasRestauradas);
+            setComentarios(comentariosRestaurados);
+            setImagenes(imagenesRestauradas);
+            setClasificaciones(clasificacionesRestauradas);
+            
+            // Restaurar firmas si existen (pero no las usaremos para determinar el paso)
+            if (savedData.firmaAuditor) {
+              setFirmaAuditor(savedData.firmaAuditor);
+            }
+            if (savedData.firmaResponsable) {
+              setFirmaResponsable(savedData.firmaResponsable);
+            }
+            
+            // SIMPLIFICADO: Siempre ir al paso de preguntas si hay respuestas guardadas
+            setActiveStep(2); // Paso de preguntas
             setHasUnsavedChanges(false);
             setLastSaved(savedData.timestamp);
+            
+            console.log('✅ Auditoría restaurada:', {
+              paso: 2,
+              progreso: `${preguntasRespondidas}/${totalPreguntas}`,
+              respuestasRestauradas: respuestasRestauradas.length,
+              comentariosRestaurados: comentariosRestaurados.length,
+              imagenesRestauradas: imagenesRestauradas.length,
+              clasificacionesRestauradas: clasificacionesRestauradas.length
+            });
           } else {
             // Limpiar datos guardados si no se quiere restaurar
-            autoSaveService.clearLocalStorage();
+            await autoSaveService.clearLocalStorage(userProfile.uid);
           }
         } else {
           // No hay datos para restaurar, marcar como intentado
@@ -388,7 +490,7 @@ const AuditoriaRefactorizada = () => {
     };
 
     restoreAuditoria();
-  }, [userProfile?.uid, location.state?.auditoriaId]);
+  }, [userProfile?.uid, location.state?.auditoriaId, formularios]);
   
   // Resetear la bandera cuando cambian los formularios (para permitir reintento si se cargan después)
   useEffect(() => {
@@ -398,6 +500,30 @@ const AuditoriaRefactorizada = () => {
       restoreRetriesRef.current = 0;
     }
   }, [formularios.length]);
+
+  // Guardar antes de cerrar/refrescar la página
+  useEffect(() => {
+    const handleBeforeUnload = async (e) => {
+      // Solo guardar si hay cambios sin guardar
+      if (checkUnsavedChanges && checkUnsavedChanges()) {
+        // Intentar guardar de forma síncrona usando sendBeacon o similar
+        // Como no podemos hacer async en beforeunload, guardamos de forma sincrónica
+        try {
+          // Forzar guardado inmediato antes de cerrar
+          await handleAutoSave(true);
+          console.log('💾 Guardado antes de cerrar/refrescar');
+        } catch (error) {
+          console.error('❌ Error al guardar antes de cerrar:', error);
+        }
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [checkUnsavedChanges, handleAutoSave]);
 
 
   // Verificar firmas cuando cambien

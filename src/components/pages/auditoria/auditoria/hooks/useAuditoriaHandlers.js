@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
 import autoSaveService from '../services/autoSaveService';
@@ -70,45 +70,10 @@ export const useAuditoriaHandlers = ({
     setActiveStep(1);
   }, [setFormularioSeleccionadoId, setActiveStep]);
 
-  const handleGuardarRespuestas = useCallback((nuevasRespuestas) => {
-    setRespuestas(nuevasRespuestas);
-  }, [setRespuestas]);
-
-  const handleGuardarComentario = useCallback((nuevosComentarios) => {
-    setComentarios(nuevosComentarios);
-  }, [setComentarios]);
-
-  const handleGuardarImagenes = useCallback((nuevasImagenes) => {
-    setImagenes(nuevasImagenes);
-  }, [setImagenes]);
-
-  const handleGuardarClasificaciones = useCallback((nuevasClasificaciones) => {
-    console.log('🔍 [handleGuardarClasificaciones] Recibidas nuevas clasificaciones:', nuevasClasificaciones);
-    console.log('🔍 [handleGuardarClasificaciones] Tipo:', typeof nuevasClasificaciones, Array.isArray(nuevasClasificaciones));
-    if (Array.isArray(nuevasClasificaciones) && nuevasClasificaciones.length > 0) {
-      console.log('🔍 [handleGuardarClasificaciones] Contenido detallado:', JSON.stringify(nuevasClasificaciones, null, 2));
-    }
-    setClasificaciones(nuevasClasificaciones);
-    console.log('🔍 [handleGuardarClasificaciones] Estado actualizado');
-  }, [setClasificaciones]);
-
-  // Handlers de firmas
-  const verificarFirmasCompletadasLocal = useCallback(() => {
-    const completadas = verificarFirmasCompletadas(firmaAuditor, firmaResponsable);
-    console.log('[DEBUG] Verificando firmas (opcionales):', { firmaAuditor, firmaResponsable, completadas });
-    setFirmasCompletadas(completadas);
-  }, [firmaAuditor, firmaResponsable, setFirmasCompletadas]);
-
-  const handleSaveFirmaAuditor = useCallback((firmaURL) => {
-    console.log('[DEBUG] handleSaveFirmaAuditor llamado con:', firmaURL);
-    setFirmaAuditor(firmaURL);
-    verificarFirmasCompletadasLocal();
-  }, [setFirmaAuditor, verificarFirmasCompletadasLocal]);
-
-  const handleSaveFirmaResponsable = useCallback((firmaURL) => {
-    setFirmaResponsable(firmaURL);
-    verificarFirmasCompletadasLocal();
-  }, [setFirmaResponsable, verificarFirmasCompletadasLocal]);
+  // Refs para debounce y control de guardado
+  const autoSaveTimeoutRef = useRef(null);
+  const isSavingRef = useRef(false);
+  const pendingSaveRef = useRef(false);
 
   // Handlers de autoguardado
   const checkUnsavedChanges = useCallback(() => {
@@ -121,9 +86,22 @@ export const useAuditoriaHandlers = ({
     return hasData && hasUnsavedChanges;
   }, [empresaSeleccionada, sucursalSeleccionada, formularioSeleccionadoId, respuestas, comentarios, imagenes, clasificaciones, hasUnsavedChanges]);
 
-  const handleAutoSave = useCallback(async () => {
-    if (!userProfile?.uid) return;
+  // Función de guardado interno con manejo robusto de errores
+  const performAutoSave = useCallback(async (force = false) => {
+    if (!userProfile?.uid) return false;
+    
+    // Si ya está guardando, marcar como pendiente y salir
+    if (isSavingRef.current && !force) {
+      pendingSaveRef.current = true;
+      return false;
+    }
 
+    // Si no hay cambios y no es forzado, no guardar
+    if (!force && !hasUnsavedChanges) {
+      return false;
+    }
+
+    isSavingRef.current = true;
     setIsSaving(true);
     
     try {
@@ -138,6 +116,8 @@ export const useAuditoriaHandlers = ({
         imagenes, // Guardar las imágenes reales (File objects)
         clasificaciones,
         activeStep,
+        firmaAuditor, // Guardar firma del auditor
+        firmaResponsable, // Guardar firma del responsable
         timestamp: Date.now()
       };
 
@@ -146,35 +126,137 @@ export const useAuditoriaHandlers = ({
       
       setLastSaved(Date.now());
       setHasUnsavedChanges(false);
+      pendingSaveRef.current = false;
       
       console.log('✅ Autoguardado exitoso (con imágenes)');
+      return true;
     } catch (error) {
       console.error('❌ Error en autoguardado:', error);
+      // No marcar como guardado si falló
+      pendingSaveRef.current = true;
+      return false;
     } finally {
+      isSavingRef.current = false;
       setIsSaving(false);
+      
+      // Si había un guardado pendiente, ejecutarlo ahora
+      if (pendingSaveRef.current) {
+        pendingSaveRef.current = false;
+        setTimeout(() => performAutoSave(true), 500);
+      }
     }
-  }, [userProfile?.uid, empresaSeleccionada, sucursalSeleccionada, formularioSeleccionadoId, secciones, respuestas, comentarios, imagenes, clasificaciones, activeStep, setIsSaving, setLastSaved, setHasUnsavedChanges]);
+  }, [userProfile?.uid, empresaSeleccionada, sucursalSeleccionada, formularioSeleccionadoId, secciones, respuestas, comentarios, imagenes, clasificaciones, activeStep, firmaAuditor, firmaResponsable, hasUnsavedChanges, setIsSaving, setLastSaved, setHasUnsavedChanges]);
+
+  // Función de guardado con debounce (para cambios frecuentes)
+  const handleAutoSave = useCallback(async (force = false) => {
+    // Si es forzado (cambio de paso), guardar inmediatamente
+    if (force) {
+      return await performAutoSave(true);
+    }
+
+    // Limpiar timeout anterior si existe
+    if (autoSaveTimeoutRef.current) {
+      clearTimeout(autoSaveTimeoutRef.current);
+    }
+
+    // Programar guardado con debounce de 1 segundo
+    return new Promise((resolve) => {
+      autoSaveTimeoutRef.current = setTimeout(async () => {
+        const result = await performAutoSave(false);
+        resolve(result);
+      }, 1000);
+    });
+  }, [performAutoSave]);
+
+  const handleGuardarRespuestas = useCallback((nuevasRespuestas) => {
+    setRespuestas(nuevasRespuestas);
+    // Guardar automáticamente después de actualizar respuestas
+    handleAutoSave(false).catch(err => console.error('Error en autoguardado de respuestas:', err));
+  }, [setRespuestas, handleAutoSave]);
+
+  const handleGuardarComentario = useCallback((nuevosComentarios) => {
+    setComentarios(nuevosComentarios);
+    // Guardar automáticamente después de actualizar comentarios
+    handleAutoSave(false).catch(err => console.error('Error en autoguardado de comentarios:', err));
+  }, [setComentarios, handleAutoSave]);
+
+  const handleGuardarImagenes = useCallback((nuevasImagenes) => {
+    setImagenes(nuevasImagenes);
+    // Guardar automáticamente después de actualizar imágenes (forzar guardado inmediato por tamaño)
+    handleAutoSave(true).catch(err => console.error('Error en autoguardado de imágenes:', err));
+  }, [setImagenes, handleAutoSave]);
+
+  const handleGuardarClasificaciones = useCallback((nuevasClasificaciones) => {
+    console.log('🔍 [handleGuardarClasificaciones] Recibidas nuevas clasificaciones:', nuevasClasificaciones);
+    console.log('🔍 [handleGuardarClasificaciones] Tipo:', typeof nuevasClasificaciones, Array.isArray(nuevasClasificaciones));
+    if (Array.isArray(nuevasClasificaciones) && nuevasClasificaciones.length > 0) {
+      console.log('🔍 [handleGuardarClasificaciones] Contenido detallado:', JSON.stringify(nuevasClasificaciones, null, 2));
+    }
+    setClasificaciones(nuevasClasificaciones);
+    console.log('🔍 [handleGuardarClasificaciones] Estado actualizado');
+    // Guardar automáticamente después de actualizar clasificaciones
+    handleAutoSave(false).catch(err => console.error('Error en autoguardado de clasificaciones:', err));
+  }, [setClasificaciones, handleAutoSave]);
+
+  // Handlers de firmas
+  const verificarFirmasCompletadasLocal = useCallback(() => {
+    const completadas = verificarFirmasCompletadas(firmaAuditor, firmaResponsable);
+    console.log('[DEBUG] Verificando firmas (opcionales):', { firmaAuditor, firmaResponsable, completadas });
+    setFirmasCompletadas(completadas);
+  }, [firmaAuditor, firmaResponsable, setFirmasCompletadas]);
+
+  const handleSaveFirmaAuditor = useCallback((firmaURL) => {
+    console.log('[DEBUG] handleSaveFirmaAuditor llamado con:', firmaURL);
+    setFirmaAuditor(firmaURL);
+    verificarFirmasCompletadasLocal();
+    // Guardar automáticamente después de guardar firma (forzar guardado inmediato)
+    handleAutoSave(true).catch(err => console.error('Error en autoguardado de firma auditor:', err));
+  }, [setFirmaAuditor, verificarFirmasCompletadasLocal, handleAutoSave]);
+
+  const handleSaveFirmaResponsable = useCallback((firmaURL) => {
+    setFirmaResponsable(firmaURL);
+    verificarFirmasCompletadasLocal();
+    // Guardar automáticamente después de guardar firma (forzar guardado inmediato)
+    handleAutoSave(true).catch(err => console.error('Error en autoguardado de firma responsable:', err));
+  }, [setFirmaResponsable, verificarFirmasCompletadasLocal, handleAutoSave]);
 
   const handleDiscardChanges = useCallback(async () => {
     try {
-      autoSaveService.clearLocalStorage();
+      await autoSaveService.clearLocalStorage(userProfile?.uid || null);
       setHasUnsavedChanges(false);
       setLastSaved(null);
       console.log('🗑️ Cambios descartados');
     } catch (error) {
       console.error('❌ Error al descartar cambios:', error);
     }
-  }, [setHasUnsavedChanges, setLastSaved]);
+  }, [setHasUnsavedChanges, setLastSaved, userProfile?.uid]);
 
   // Handlers de navegación
-  const handleSiguiente = useCallback((pasoCompletoAuditoria) => {
+  const handleSiguiente = useCallback(async (pasoCompletoAuditoria) => {
     setNavegacionError("");
     if (!pasoCompletoAuditoria(activeStep)) {
       setNavegacionError("Debes completar este paso antes de continuar.");
       return;
     }
+    
+    // Guardar antes de cambiar de paso (forzar guardado inmediato)
+    try {
+      await handleAutoSave(true);
+      console.log('💾 Guardado antes de cambiar al siguiente paso');
+    } catch (error) {
+      console.error('❌ Error al guardar antes de cambiar de paso:', error);
+      // Continuar aunque falle el guardado, pero mostrar advertencia
+      Swal.fire({
+        title: '⚠️ Advertencia',
+        text: 'No se pudo guardar automáticamente. Tu progreso puede perderse si cierras la página.',
+        icon: 'warning',
+        timer: 3000,
+        showConfirmButton: false
+      });
+    }
+    
     setActiveStep((prev) => Math.min(prev + 1, 4)); // 5 pasos (0-4)
-  }, [activeStep, setNavegacionError, setActiveStep]);
+  }, [activeStep, setNavegacionError, setActiveStep, handleAutoSave]);
 
   const handleAnterior = useCallback(() => {
     setNavegacionError("");

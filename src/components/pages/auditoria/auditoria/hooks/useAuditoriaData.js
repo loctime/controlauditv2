@@ -4,6 +4,7 @@ import { db } from "../../../../../firebaseConfig";
 import { storageUtils } from "../../../../../utils/utilitiesOptimization";
 import { useAuth } from "../../../../context/AuthContext";
 import { getCompleteUserCache } from "../../../../../services/completeOfflineCache";
+import { getOfflineDatabase } from "../../../../../services/offlineDatabase";
 
 export const useAuditoriaData = (
   setEmpresas,
@@ -85,71 +86,56 @@ export const useAuditoriaData = (
       console.log('[DEBUG Auditoria] ========== CARGANDO DESDE CACHE OFFLINE ==========');
       console.log('[DEBUG Auditoria] Navegador detectado:', navigator.userAgent.includes('Edg') ? 'Edge' : 'Chrome/Firefox');
       
-      // Intentar IndexedDB primero
+      // Intentar IndexedDB primero usando getOfflineDatabase para asegurar inicialización
       try {
-        const request = indexedDB.open('controlaudit_offline_v1', 2);
-      
-      return new Promise((resolve, reject) => {
-        request.onsuccess = function(event) {
-          const db = event.target.result;
-          const transaction = db.transaction(['settings'], 'readonly');
-          const store = transaction.objectStore('settings');
-          
-          store.get('complete_user_cache').onsuccess = function(e) {
-            const cached = e.target.result;
-            
-            if (!cached || !cached.value) {
-              console.log('[DEBUG Auditoria] ❌ No hay cache completo disponible');
-              resolve(null);
-              return;
-            }
-
-            const cacheData = cached.value;
-            console.log('[DEBUG Auditoria] ✅ Cache encontrado:', {
-              userId: cacheData.userId,
-              empresas: cacheData.empresas?.length || 0,
-              formularios: cacheData.formularios?.length || 0,
-              sucursales: cacheData.sucursales?.length || 0
-            });
-            
-            // Cargar empresas
-            if (cacheData.empresas && cacheData.empresas.length > 0) {
-              console.log('[DEBUG Auditoria] ✅ Cargando empresas desde cache:', cacheData.empresas.length);
-              setEmpresas(cacheData.empresas);
-            } else {
-              console.log('[DEBUG Auditoria] ❌ No hay empresas en cache');
-            }
-            
-            // Cargar formularios
-            if (cacheData.formularios && cacheData.formularios.length > 0) {
-              console.log('[DEBUG Auditoria] ✅ Cargando formularios desde cache:', cacheData.formularios.length);
-              setFormularios(cacheData.formularios);
-            } else {
-              console.log('[DEBUG Auditoria] ❌ No hay formularios en cache');
-            }
-            
-            // Cargar sucursales
-            if (cacheData.sucursales && cacheData.sucursales.length > 0) {
-              console.log('[DEBUG Auditoria] ✅ Cargando sucursales desde cache:', cacheData.sucursales.length);
-              setSucursales(cacheData.sucursales);
-            } else {
-              console.log('[DEBUG Auditoria] ❌ No hay sucursales en cache');
-            }
-            
-            resolve(cacheData);
-          };
-          
-          store.get('complete_user_cache').onerror = function(e) {
-            console.error('[DEBUG Auditoria] Error leyendo cache:', e.target.error);
-            reject(e.target.error);
-          };
-        };
+        const db = await getOfflineDatabase();
         
-        request.onerror = function(event) {
-          console.error('[DEBUG Auditoria] Error al abrir IndexedDB:', event.target.error);
-          reject(event.target.error);
-        };
-      });
+        // Verificar que el object store existe antes de acceder
+        if (!db.objectStoreNames.contains('settings')) {
+          console.warn('[DEBUG Auditoria] Object store "settings" no existe, usando localStorage');
+          throw new Error('Settings store not found');
+        }
+        
+        const cached = await db.get('settings', 'complete_user_cache');
+        
+        if (!cached || !cached.value) {
+          console.log('[DEBUG Auditoria] ❌ No hay cache completo disponible');
+          return null;
+        }
+
+        const cacheData = cached.value;
+        console.log('[DEBUG Auditoria] ✅ Cache encontrado:', {
+          userId: cacheData.userId,
+          empresas: cacheData.empresas?.length || 0,
+          formularios: cacheData.formularios?.length || 0,
+          sucursales: cacheData.sucursales?.length || 0
+        });
+        
+        // Cargar empresas
+        if (cacheData.empresas && cacheData.empresas.length > 0) {
+          console.log('[DEBUG Auditoria] ✅ Cargando empresas desde cache:', cacheData.empresas.length);
+          setEmpresas(cacheData.empresas);
+        } else {
+          console.log('[DEBUG Auditoria] ❌ No hay empresas en cache');
+        }
+        
+        // Cargar formularios
+        if (cacheData.formularios && cacheData.formularios.length > 0) {
+          console.log('[DEBUG Auditoria] ✅ Cargando formularios desde cache:', cacheData.formularios.length);
+          setFormularios(cacheData.formularios);
+        } else {
+          console.log('[DEBUG Auditoria] ❌ No hay formularios en cache');
+        }
+        
+        // Cargar sucursales
+        if (cacheData.sucursales && cacheData.sucursales.length > 0) {
+          console.log('[DEBUG Auditoria] ✅ Cargando sucursales desde cache:', cacheData.sucursales.length);
+          setSucursales(cacheData.sucursales);
+        } else {
+          console.log('[DEBUG Auditoria] ❌ No hay sucursales en cache');
+        }
+        
+        return cacheData;
       
       } catch (indexedDBError) {
         console.warn('[DEBUG Auditoria] IndexedDB falló, intentando localStorage:', indexedDBError);

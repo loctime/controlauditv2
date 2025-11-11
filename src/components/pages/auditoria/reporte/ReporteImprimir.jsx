@@ -157,23 +157,7 @@ const BotonGenerarReporte = ({
       
       // Limpiar autoguardado al completar exitosamente
       try {
-        await autoSaveService.clearLocalStorage();
-        // También limpiar de IndexedDB si existe
-        const db = await autoSaveService.initOfflineDatabase();
-        if (db && currentUserProfile?.uid) {
-          const offlineData = await db.getAllFromIndex('auditorias', 'by-userId', currentUserProfile.uid);
-          for (const auditoria of offlineData) {
-            if (auditoria.autoSaved && auditoria.status === 'pending_sync') {
-              // Eliminar fotos asociadas
-              const fotos = await db.getAllFromIndex('fotos', 'by-auditoriaId', auditoria.id);
-              for (const foto of fotos) {
-                await db.delete('fotos', foto.id);
-              }
-              // Eliminar auditoría
-              await db.delete('auditorias', auditoria.id);
-            }
-          }
-        }
+        await autoSaveService.clearLocalStorage(currentUserProfile?.uid);
         console.log('🗑️ Autoguardado limpiado después de completar auditoría');
       } catch (cleanupError) {
         console.warn('⚠️ Error al limpiar autoguardado:', cleanupError);

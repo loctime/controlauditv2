@@ -283,11 +283,23 @@ export const saveCompleteUserCache = async (userProfile, empresas = null, sucurs
     }
     
     // Guardar en IndexedDB
-    await offlineDb.put('settings', {
-      key: 'complete_user_cache',
-      value: cacheData,
-      updatedAt: Date.now()
-    });
+    try {
+      // Verificar que el object store existe antes de acceder
+      if (!offlineDb.objectStoreNames.contains('settings')) {
+        console.warn('⚠️ Object store "settings" no existe, guardando solo en localStorage');
+        throw new Error('Settings store not found');
+      }
+      
+      await offlineDb.put('settings', {
+        key: 'complete_user_cache',
+        value: cacheData,
+        updatedAt: Date.now()
+      });
+      console.log('✅ Cache guardado en IndexedDB');
+    } catch (indexedDBError) {
+      console.warn('⚠️ Error guardando en IndexedDB, usando solo localStorage:', indexedDBError);
+      // Continuar con localStorage como fallback
+    }
     
     // También guardar en localStorage como backup para Chrome
     try {
