@@ -22,9 +22,10 @@ import BusinessIcon from '@mui/icons-material/Business';
 import AssignmentIcon from '@mui/icons-material/Assignment';
 import QuestionAnswerIcon from '@mui/icons-material/QuestionAnswer';
 import AssessmentIcon from '@mui/icons-material/Assessment';
-import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import RefreshIcon from '@mui/icons-material/Refresh';
 import EditIcon from '@mui/icons-material/Edit';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import { Fade, Zoom } from "@mui/material";
 import SeleccionEmpresa from "../SeleccionEmpresa";
 import SeleccionSucursal from "../SeleccionSucursal";
@@ -42,6 +43,7 @@ const AuditoriaStepper = ({
   handleStepClick,
   handleAnterior,
   handleSiguiente,
+  handleForzarActualizacion,
   navegacionError,
   errores,
   // Props para los componentes
@@ -169,6 +171,18 @@ const AuditoriaStepper = ({
               >
                 Siguiente
               </Button>
+              {activeStep === 2 && !pasoCompleto(activeStep) && handleForzarActualizacion && (
+                <Button
+                  variant="outlined"
+                  color="secondary"
+                  onClick={handleForzarActualizacion}
+                  size="small"
+                  sx={{ px: 0.5, py: 0.25, fontSize: '0.7rem' }}
+                  startIcon={<RefreshIcon sx={{ fontSize: '0.7rem' }} />}
+                >
+                  Actualizar
+                </Button>
+              )}
             </Box>
 
             {navegacionError && (
@@ -256,6 +270,18 @@ const AuditoriaStepper = ({
                 >
                   Siguiente
                 </Button>
+                {activeStep === 2 && !pasoCompleto(activeStep) && handleForzarActualizacion && (
+                  <Button
+                    variant="outlined"
+                    color="secondary"
+                    onClick={handleForzarActualizacion}
+                    size="small"
+                    sx={{ fontSize: '0.8rem' }}
+                    startIcon={<RefreshIcon sx={{ fontSize: '0.8rem' }} />}
+                  >
+                    Actualizar
+                  </Button>
+                )}
               </Box>
 
               {navegacionError && (

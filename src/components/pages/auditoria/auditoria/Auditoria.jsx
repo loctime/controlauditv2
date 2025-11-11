@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useRef } from "react";
+import React, { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { 
   Container, 
@@ -444,9 +444,14 @@ const AuditoriaRefactorizada = () => {
               todasLasSecciones: respuestasRestauradas.map((seccion, idx) => ({
                 seccion: idx,
                 length: seccion?.length || 0,
-                contenido: seccion
+                contenido: seccion,
+                todasRespondidas: seccion?.every(resp => resp !== '' && resp !== null && resp !== undefined) || false
               }))
             });
+            
+            // Verificar inmediatamente si están completas
+            const todasCompletadasAhora = todasLasPreguntasContestadas(respuestasRestauradas);
+            console.log('✅ Verificación inmediata - Todas completadas:', todasCompletadasAhora);
             
             // Restaurar estados - IMPORTANTE: hacerlo en este orden
             setRespuestas(respuestasRestauradas);
@@ -467,13 +472,37 @@ const AuditoriaRefactorizada = () => {
             setHasUnsavedChanges(false);
             setLastSaved(savedData.timestamp);
             
+            // Forzar re-render para que el botón "Siguiente" se actualice correctamente
+            // Usar setTimeout para asegurar que el estado se haya actualizado completamente
+            setTimeout(() => {
+              console.log('🔄 [Auditoria] Estado después de restaurar:', {
+                respuestasLength: respuestasRestauradas.length,
+                todasCompletadas: todasLasPreguntasContestadas(respuestasRestauradas),
+                pasoCompleto2: pasoCompleto(2, {
+                  empresaSeleccionada: savedData.empresaSeleccionada,
+                  formularioSeleccionadoId: savedData.formularioSeleccionadoId,
+                  respuestas: respuestasRestauradas
+                })
+              });
+              
+              // Forzar actualización del botón "Siguiente" re-evaluando pasoCompletoAuditoria
+              // Esto asegura que el botón se habilite correctamente
+              const paso2Completo = pasoCompletoAuditoria(2);
+              console.log('🔄 [Auditoria] Re-evaluando paso 2 después de restaurar:', paso2Completo);
+              
+              // Forzar un re-render adicional para asegurar que el botón se actualice
+              // Esto es necesario porque React puede no actualizar inmediatamente después de setState
+              setForceUpdate(prev => prev + 1);
+            }, 200);
+            
             console.log('✅ Auditoría restaurada:', {
               paso: 2,
               progreso: `${preguntasRespondidas}/${totalPreguntas}`,
               respuestasRestauradas: respuestasRestauradas.length,
               comentariosRestaurados: comentariosRestaurados.length,
               imagenesRestauradas: imagenesRestauradas.length,
-              clasificacionesRestauradas: clasificacionesRestauradas.length
+              clasificacionesRestauradas: clasificacionesRestauradas.length,
+              todasCompletadas: todasLasPreguntasContestadas(respuestasRestauradas)
             });
           } else {
             // Limpiar datos guardados si no se quiere restaurar
@@ -500,6 +529,32 @@ const AuditoriaRefactorizada = () => {
       restoreRetriesRef.current = 0;
     }
   }, [formularios.length]);
+
+  // Forzar actualización del botón "Siguiente" cuando se restauran las respuestas
+  useEffect(() => {
+    // Este efecto se ejecutará cada vez que cambien las respuestas
+    // Esto asegura que el botón "Siguiente" se actualice correctamente
+    if (respuestas && respuestas.length > 0) {
+      const todasCompletadas = todasLasPreguntasContestadas(respuestas);
+      const paso2Completo = pasoCompleto(2, {
+        empresaSeleccionada,
+        formularioSeleccionadoId,
+        respuestas
+      });
+      
+      console.log('🔄 [Auditoria] Respuestas cambiaron, verificando paso completo:', {
+        todasCompletadas,
+        paso2Completo,
+        respuestasLength: respuestas.length,
+        respuestasEstructura: respuestas.map((seccion, idx) => ({
+          seccion: idx,
+          length: seccion?.length || 0,
+          todasRespondidas: seccion?.every(resp => resp !== '' && resp !== null && resp !== undefined) || false,
+          contenido: seccion
+        }))
+      });
+    }
+  }, [respuestas, empresaSeleccionada, formularioSeleccionadoId]);
 
   // Guardar antes de cerrar/refrescar la página
   useEffect(() => {
@@ -537,13 +592,13 @@ const AuditoriaRefactorizada = () => {
   const obtenerUbicacion = () => obtenerTipoUbicacion(empresaSeleccionada, sucursalSeleccionada, sucursales);
 
   // Funciones de navegación (ahora usando utils)
-  const calcularProgresoAuditoria = () => calcularProgreso({
+  const calcularProgresoAuditoria = useCallback(() => calcularProgreso({
     empresaSeleccionada,
     formularioSeleccionadoId,
     secciones,
     respuestas,
     firmasCompletadas
-  });
+  }), [empresaSeleccionada, formularioSeleccionadoId, secciones, respuestas, firmasCompletadas]);
 
   const getStepStatusAuditoria = (step) => getStepStatus(step, {
     empresaSeleccionada,
@@ -552,17 +607,88 @@ const AuditoriaRefactorizada = () => {
     respuestas
   });
 
-  const pasoCompletoAuditoria = (step) => {
+  const pasoCompletoAuditoria = useCallback((step) => {
+    const todasCompletadas = todasLasPreguntasContestadas(respuestas);
     const resultado = pasoCompleto(step, {
       empresaSeleccionada,
       formularioSeleccionadoId,
       respuestas
     });
-    console.log(`[DEBUG] Paso ${step} completo:`, resultado);
+    
+    // Log detallado solo para el paso 2 (preguntas)
+    if (step === 2) {
+      console.log(`[DEBUG] Paso ${step} completo:`, resultado, {
+        respuestasLength: respuestas?.length || 0,
+        respuestasEstructura: respuestas?.map((seccion, idx) => ({
+          seccion: idx,
+          length: seccion?.length || 0,
+          todasRespondidas: seccion?.every(resp => resp !== '' && resp !== null && resp !== undefined) || false,
+          contenido: seccion
+        })) || [],
+        todasCompletadas,
+        todasCompletadasDetalle: respuestas?.every(seccionRespuestas => {
+          if (!Array.isArray(seccionRespuestas)) return false;
+          return seccionRespuestas.every(respuesta => 
+            respuesta !== '' && respuesta !== null && respuesta !== undefined
+          );
+        }) || false
+      });
+    }
+    
     return resultado;
-  };
+  }, [empresaSeleccionada, formularioSeleccionadoId, respuestas]);
 
+  // Estado para forzar re-render
+  const [forceUpdate, setForceUpdate] = useState(0);
 
+  // Función para forzar actualización del estado (botón "Actualizar")
+  const handleForzarActualizacion = useCallback(() => {
+    console.log('🔄 [Auditoria] Forzando actualización del estado...');
+    console.log('🔄 [Auditoria] Estado actual respuestas:', respuestas);
+    
+    // Si hay respuestas, simplemente llamar a handleGuardarRespuestas para forzar actualización
+    if (respuestas && respuestas.length > 0) {
+      // Crear una copia nueva del array para forzar la actualización
+      const nuevasRespuestas = respuestas.map(seccion => [...seccion]);
+      
+      // Encontrar la primera respuesta con valor para desmarcar y remarcar
+      let encontrada = false;
+      for (let i = 0; i < nuevasRespuestas.length && !encontrada; i++) {
+        if (nuevasRespuestas[i] && Array.isArray(nuevasRespuestas[i])) {
+          for (let j = 0; j < nuevasRespuestas[i].length && !encontrada; j++) {
+            if (nuevasRespuestas[i][j] && nuevasRespuestas[i][j] !== '' && nuevasRespuestas[i][j] !== null && nuevasRespuestas[i][j] !== undefined) {
+              const valorOriginal = nuevasRespuestas[i][j];
+              console.log(`🔄 [Auditoria] Desmarcando y remarcando respuesta en sección ${i}, pregunta ${j}: ${valorOriginal}`);
+              
+              // Desmarcar temporalmente
+              nuevasRespuestas[i][j] = '';
+              
+              // Guardar primero con la respuesta desmarcada
+              handleGuardarRespuestas(nuevasRespuestas);
+              
+              // Remarcar después de un pequeño delay
+              setTimeout(() => {
+                nuevasRespuestas[i][j] = valorOriginal;
+                handleGuardarRespuestas(nuevasRespuestas);
+                console.log('🔄 [Auditoria] Respuesta remarcada');
+              }, 100);
+              
+              encontrada = true;
+            }
+          }
+        }
+      }
+      
+      if (!encontrada) {
+        console.log('⚠️ [Auditoria] No se encontraron respuestas válidas, forzando guardado de todas formas');
+        // Si no hay respuestas válidas, simplemente forzar guardado
+        handleGuardarRespuestas(nuevasRespuestas);
+      }
+    } else {
+      console.log('⚠️ [Auditoria] No hay respuestas para actualizar');
+      setForceUpdate(prev => prev + 1);
+    }
+  }, [respuestas, handleGuardarRespuestas]);
 
   // Función para marcar auditoría como completada
   const marcarAuditoriaCompletada = async () => {
@@ -584,14 +710,26 @@ const AuditoriaRefactorizada = () => {
 
 
   // Configurar secciones cuando cambie el formulario (ahora usando utils)
+  // IMPORTANTE: No sobrescribir respuestas si ya existen (por ejemplo, después de restaurar)
   useEffect(() => {
     if (formularioSeleccionadoId) {
       const configuracion = configurarFormulario(formularioSeleccionadoId, formularios);
       setSecciones(configuracion.secciones);
-      setRespuestas(configuracion.respuestas);
-      setComentarios(configuracion.comentarios);
-      setImagenes(configuracion.imagenes);
-      setClasificaciones(configuracion.clasificaciones);
+      
+      // Solo resetear respuestas si no hay respuestas existentes con datos
+      const tieneRespuestasExistentes = respuestas && respuestas.length > 0 && 
+        respuestas.some(seccion => seccion && seccion.some(resp => resp !== '' && resp !== null && resp !== undefined));
+      
+      if (!tieneRespuestasExistentes) {
+        setRespuestas(configuracion.respuestas);
+        setComentarios(configuracion.comentarios);
+        setImagenes(configuracion.imagenes);
+        setClasificaciones(configuracion.clasificaciones);
+      } else {
+        // Si hay respuestas existentes, solo asegurar que las secciones coincidan
+        // pero mantener las respuestas existentes
+        console.log('🔄 [Auditoria] Manteniendo respuestas existentes al cambiar formulario');
+      }
     }
   }, [formularioSeleccionadoId, formularios]);
 
@@ -649,7 +787,7 @@ const AuditoriaRefactorizada = () => {
   }, [clasificaciones]);
 
   // Crear los pasos usando el componente
-  const steps = createAuditoriaSteps({
+  const steps = useMemo(() => createAuditoriaSteps({
     // Estados
     empresas,
     empresaSeleccionada,
@@ -690,7 +828,40 @@ const AuditoriaRefactorizada = () => {
     // Tema
     theme,
     isMobile
-  });
+  }), [
+    empresas,
+    empresaSeleccionada,
+    sucursales,
+    sucursalSeleccionada,
+    formularios,
+    formularioSeleccionadoId,
+    secciones,
+    respuestas,
+    comentarios,
+    imagenes,
+    clasificaciones,
+    firmaAuditor,
+    firmaResponsable,
+    firmasCompletadas,
+    datosReporte,
+    bloquearDatosAgenda,
+    location,
+    handleEmpresaChange,
+    handleSucursalChange,
+    handleSeleccionarFormulario,
+    handleGuardarRespuestas,
+    handleGuardarComentario,
+    handleGuardarImagenes,
+    handleGuardarClasificaciones,
+    handleSaveFirmaAuditor,
+    handleSaveFirmaResponsable,
+    setDatosReporte,
+    obtenerUbicacion,
+    validarTodasLasPreguntas,
+    setOpenAlertaEdicion,
+    theme,
+    isMobile
+  ]);
 
   // Scroll al top cuando se llega al paso de firmas (paso 3)
   useEffect(() => {
@@ -782,6 +953,7 @@ const AuditoriaRefactorizada = () => {
           errores={errores}
           handleAnterior={handleAnterior}
           handleSiguiente={() => handleSiguiente(pasoCompletoAuditoria)}
+          handleForzarActualizacion={handleForzarActualizacion}
           // Props para los componentes
           empresas={empresas}
           empresaSeleccionada={empresaSeleccionada}
