@@ -24,7 +24,7 @@ export const saveCompleteUserCache = async (userProfile, empresas = null, sucurs
       throw new Error('No hay usuario autenticado');
     }
 
-    const offlineDb = await getOfflineDatabase();
+    let offlineDb = await getOfflineDatabase();
     const cacheData = {
       userId: userProfile.uid,
       userProfile,
