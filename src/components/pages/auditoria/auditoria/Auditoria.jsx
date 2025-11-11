@@ -611,8 +611,10 @@ const AuditoriaRefactorizada = () => {
     const todasCompletadas = todasLasPreguntasContestadas(respuestas);
     const resultado = pasoCompleto(step, {
       empresaSeleccionada,
+      sucursalSeleccionada,
       formularioSeleccionadoId,
-      respuestas
+      respuestas,
+      sucursales
     });
     
     // Log detallado solo para el paso 2 (preguntas)
@@ -636,7 +638,7 @@ const AuditoriaRefactorizada = () => {
     }
     
     return resultado;
-  }, [empresaSeleccionada, formularioSeleccionadoId, respuestas]);
+  }, [empresaSeleccionada, sucursalSeleccionada, formularioSeleccionadoId, respuestas, sucursales]);
 
   // Estado para forzar re-render
   const [forceUpdate, setForceUpdate] = useState(0);

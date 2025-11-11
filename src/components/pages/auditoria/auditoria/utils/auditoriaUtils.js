@@ -123,12 +123,27 @@ export const getStepStatus = (step, {
  */
 export const pasoCompleto = (step, {
   empresaSeleccionada,
+  sucursalSeleccionada,
   formularioSeleccionadoId,
-  respuestas
+  respuestas,
+  sucursales = []
 }) => {
   switch (step) {
     case 0: 
-      return !!empresaSeleccionada;
+      // Si hay empresa seleccionada
+      if (!empresaSeleccionada) return false;
+      
+      // Filtrar sucursales por empresa
+      const sucursalesFiltradas = filtrarSucursalesPorEmpresa(sucursales, empresaSeleccionada);
+      
+      // Si hay sucursales disponibles, requiere selección explícita
+      // Si no hay sucursales, se completa automáticamente (Casa Central)
+      if (sucursalesFiltradas.length > 0) {
+        return !!sucursalSeleccionada;
+      }
+      
+      // Si no hay sucursales, el paso está completo (Casa Central automático)
+      return true;
     case 1: 
       return !!formularioSeleccionadoId;
     case 2: 
