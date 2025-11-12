@@ -2,6 +2,11 @@ import ReactDOM from "react-dom/client";
 import App from "./App.jsx";
 import "./global.css";
 import { initOfflineDatabase } from "./services/offlineDatabase";
+import { initConsoleInterceptor } from "./utils/consoleInterceptor";
+
+// Inicializar interceptores de console temprano (antes de cualquier otro código)
+// Esto asegura que los logs estén disponibles incluso si el componente OfflineDebugLogs no se monta
+initConsoleInterceptor();
 
 // Inicializar base de datos offline con retry
 const initDatabaseWithRetry = async (retries = 3) => {

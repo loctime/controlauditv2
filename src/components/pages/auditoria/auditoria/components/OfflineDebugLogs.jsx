@@ -3,7 +3,8 @@ import { Box, Paper, Typography, IconButton, Collapse, Chip, Alert, Button, Snac
 import { ExpandMore, ExpandLess, BugReport, Close, ContentCopy, Check } from '@mui/icons-material';
 import { useAuth } from '../../../../context/AuthContext';
 
-// Array global para almacenar logs
+// Los interceptores de console ya están inicializados en main.jsx
+// Solo necesitamos asegurarnos de que window.offlineDebugLogs existe
 window.offlineDebugLogs = window.offlineDebugLogs || [];
 
 // Cargar logs desde localStorage al iniciar (para funcionar offline)
@@ -85,86 +86,26 @@ const OfflineDebugLogs = () => {
     if (savedLogs.length > 0) {
       window.offlineDebugLogs = savedLogs;
       setLogs(savedLogs);
+    } else {
+      // Si no hay logs guardados, usar los que ya están en window.offlineDebugLogs
+      // (que fueron capturados por el interceptor inicializado en main.jsx)
+      setLogs([...window.offlineDebugLogs]);
     }
 
-    // Interceptar console.log para capturar logs relacionados con offline
-    const originalLog = console.log;
-    const originalWarn = console.warn;
-    const originalError = console.error;
-
-    const addLog = (level, ...args) => {
-      const message = args.map(arg => {
-        if (typeof arg === 'object') {
-          try {
-            return JSON.stringify(arg, null, 2);
-          } catch {
-            return String(arg);
-          }
-        }
-        return String(arg);
-      }).join(' ');
-
-      // Solo capturar logs relacionados con offline/empresas/cache
-      if (
-        message.includes('[DEBUG Auditoria]') ||
-        message.includes('cache') ||
-        message.includes('offline') ||
-        message.includes('empresas') ||
-        message.includes('IndexedDB') ||
-        message.includes('localStorage') ||
-        message.includes('getCompleteUserCache') ||
-        message.includes('saveCompleteUserCache') ||
-        message.includes('getOfflineDatabase') ||
-        message.includes('Settings store') ||
-        message.includes('complete_user_cache') ||
-        message.includes('Chrome') ||
-        message.includes('PWA') ||
-        message.includes('userProfile') ||
-        message.includes('CARGANDO DESDE CACHE')
-      ) {
-        const logEntry = {
-          id: Date.now() + Math.random(),
-          level,
-          message,
-          timestamp: new Date().toLocaleTimeString()
-        };
-        
-        window.offlineDebugLogs.push(logEntry);
-        
-        // Mantener solo los últimos 50 logs
-        if (window.offlineDebugLogs.length > 50) {
-          window.offlineDebugLogs.shift();
-        }
-        
-        // Guardar en localStorage para persistir offline
-        saveLogsToStorage(window.offlineDebugLogs);
-        
-        setLogs([...window.offlineDebugLogs]);
-      }
+    // Los interceptores de console ya están inicializados en main.jsx
+    // Solo necesitamos actualizar los logs cuando cambien
+    const updateLogs = () => {
+      setLogs([...window.offlineDebugLogs]);
     };
 
-    console.log = (...args) => {
-      originalLog(...args);
-      addLog('log', ...args);
-    };
+    // Actualizar logs periódicamente para reflejar los nuevos logs capturados
+    const intervalId = setInterval(updateLogs, 500);
 
-    console.warn = (...args) => {
-      originalWarn(...args);
-      addLog('warn', ...args);
-    };
-
-    console.error = (...args) => {
-      originalError(...args);
-      addLog('error', ...args);
-    };
-
-    // Cargar logs existentes
-    setLogs([...window.offlineDebugLogs]);
+    // También escuchar cambios en window.offlineDebugLogs si es posible
+    // (aunque no hay un evento nativo, el intervalo debería ser suficiente)
 
     return () => {
-      console.log = originalLog;
-      console.warn = originalWarn;
-      console.error = originalError;
+      clearInterval(intervalId);
     };
   }, []);
 
