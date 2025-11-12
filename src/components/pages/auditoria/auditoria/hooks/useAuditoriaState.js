@@ -42,6 +42,16 @@ export const useAuditoriaState = () => {
   const [firmasValidas, setFirmasValidas] = useState(false);
   const [mostrarAlertaReinicio, setMostrarAlertaReinicio] = useState(false);
 
+  // Estados de información adicional del reporte
+  const [datosReporte, setDatosReporte] = useState({
+    tareaObservada: '',
+    lugarSector: '',
+    equiposInvolucrados: '',
+    supervisor: '',
+    numeroTrabajadores: '',
+    nombreResponsable: ''
+  });
+
   // Helper para logs
   const log = (msg, ...args) => {
     console.log(`[AUDITORIA] ${msg}`, ...args);
@@ -117,6 +127,14 @@ export const useAuditoriaState = () => {
     setAuditoriaIdAgenda(null);
     setErrores([]);
     setNavegacionError("");
+    setDatosReporte({
+      tareaObservada: '',
+      lugarSector: '',
+      equiposInvolucrados: '',
+      supervisor: '',
+      numeroTrabajadores: '',
+      nombreResponsable: ''
+    });
   };
 
   return {
@@ -154,6 +172,9 @@ export const useAuditoriaState = () => {
     firmasCompletadas, setFirmasCompletadas,
     firmasValidas, setFirmasValidas,
     mostrarAlertaReinicio, setMostrarAlertaReinicio,
+    
+    // Estados de datos del reporte
+    datosReporte, setDatosReporte,
     
     // Funciones
     log,

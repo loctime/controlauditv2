@@ -32,7 +32,8 @@ function generarContenidoImpresion({
   auditorTelefono = "",
   geolocalizacion = null, // { lat, lng } opcional
   fechaInicio = "", // opcional, p.ej. "04/09/2021 - 10:04:56"
-  fechaFin = "" // opcional
+  fechaFin = "", // opcional
+  datosReporte = {} // datos adicionales del reporte
 }) {
   // ===== Resumen general =====
   const flat = (respuestas || []).flat();
@@ -150,7 +151,8 @@ ${estilosCSS}
     auditorTelefono, 
     geolocalizacion, 
     fechaInicio, 
-    fechaFin 
+    fechaFin,
+    datosReporte
   })}
 
   ${generarResumenEstadistico({ C, NC, NM, NA, total, pct }, resumenClasificaciones)}
@@ -175,7 +177,7 @@ ${estilosCSS}
     ).join('')}
   </div>
 
-  ${generarFirmas({ firmaAuditor, firmaResponsable, nombreAuditor, empresa })}
+  ${generarFirmas({ firmaAuditor, firmaResponsable, nombreAuditor, empresa, datosReporte })}
 
   ${generarFooter({ sucursal, fecha })}
 

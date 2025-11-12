@@ -259,8 +259,27 @@ export const useImpresionReporte = () => {
     }
     
     // Generar el HTML de impresión
+    // Extraer datosReporte anidado si existe, o usar el objeto directamente
+    let datosReporteAdicionales = {};
+    if (datosReporte?.datosReporte) {
+      // Caso 1: Estructura anidada (desde ReporteDetallePro)
+      datosReporteAdicionales = datosReporte.datosReporte;
+    } else if (datosReporte?.tareaObservada !== undefined || datosReporte?.lugarSector !== undefined) {
+      // Caso 2: Los campos están directamente en datosReporte (desde auditoría nueva)
+      datosReporteAdicionales = {
+        tareaObservada: datosReporte.tareaObservada || '',
+        lugarSector: datosReporte.lugarSector || '',
+        equiposInvolucrados: datosReporte.equiposInvolucrados || '',
+        supervisor: datosReporte.supervisor || '',
+        numeroTrabajadores: datosReporte.numeroTrabajadores || '',
+        nombreInspector: datosReporte.nombreInspector || '',
+        nombreResponsable: datosReporte.nombreResponsable || ''
+      };
+    }
+    
     const html = generarContenidoImpresion({
       ...datosReporte,
+      datosReporte: datosReporteAdicionales, // Asegurar que datosReporte sea el objeto correcto
       chartImgDataUrl,
       clasificacionesChartImgDataUrl,
       sectionChartsImgDataUrl
@@ -274,6 +293,7 @@ export const useImpresionReporte = () => {
         
         const pdfUrl = await generarYGuardarPdf(reporteId, {
           ...datosReporte,
+          datosReporte: datosReporteAdicionales, // Asegurar que datosReporte sea el objeto correcto
           chartImgDataUrl,
           sectionChartsImgDataUrl
         });

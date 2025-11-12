@@ -477,7 +477,15 @@ class AuditoriaService {
         version: "2.0",
         // Guardar firmas
         firmaAuditor: datosAuditoria.firmaAuditor || null,
-        firmaResponsable: datosAuditoria.firmaResponsable || null
+        firmaResponsable: datosAuditoria.firmaResponsable || null,
+        // Guardar campos adicionales del reporte
+        tareaObservada: datosAuditoria.tareaObservada || '',
+        lugarSector: datosAuditoria.lugarSector || '',
+        equiposInvolucrados: datosAuditoria.equiposInvolucrados || '',
+        supervisor: datosAuditoria.supervisor || '',
+        numeroTrabajadores: datosAuditoria.numeroTrabajadores || '',
+        nombreInspector: datosAuditoria.nombreInspector || '',
+        nombreResponsable: datosAuditoria.nombreResponsable || ''
       };
 
       // Limpiar valores undefined y arrays anidados

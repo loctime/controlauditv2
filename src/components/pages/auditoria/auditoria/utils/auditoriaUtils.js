@@ -9,9 +9,62 @@
  * @returns {boolean} - true si todas las preguntas están contestadas
  */
 export const todasLasPreguntasContestadas = (respuestas) => {
-  return respuestas.every(seccionRespuestas => 
-    seccionRespuestas.every(respuesta => respuesta !== '')
-  );
+  if (!respuestas || !Array.isArray(respuestas) || respuestas.length === 0) {
+    console.log('❌ [todasLasPreguntasContestadas] No hay respuestas válidas:', {
+      respuestas,
+      esArray: Array.isArray(respuestas),
+      length: respuestas?.length || 0
+    });
+    return false;
+  }
+  
+  // Verificar que todas las secciones tengan todas sus preguntas respondidas
+  const resultado = respuestas.every((seccionRespuestas, seccionIndex) => {
+    if (!Array.isArray(seccionRespuestas)) {
+      console.log(`❌ [todasLasPreguntasContestadas] Sección ${seccionIndex} no es un array:`, seccionRespuestas);
+      return false;
+    }
+    
+    // Verificar que todas las respuestas de la sección estén contestadas (no vacías, null o undefined)
+    const todasRespondidas = seccionRespuestas.every((respuesta, preguntaIndex) => {
+      const estaRespondida = respuesta !== '' && respuesta !== null && respuesta !== undefined;
+      if (!estaRespondida && respuesta !== '') {
+        // Solo loggear si no está vacía pero tampoco es válida (para no saturar los logs)
+        console.log(`❌ [todasLasPreguntasContestadas] Sección ${seccionIndex}, pregunta ${preguntaIndex} no respondida:`, respuesta);
+      }
+      return estaRespondida;
+    });
+    
+    if (!todasRespondidas) {
+      console.log(`❌ [todasLasPreguntasContestadas] Sección ${seccionIndex} no está completa:`, {
+        length: seccionRespuestas.length,
+        contenido: seccionRespuestas,
+        detalleRespuestas: seccionRespuestas.map((resp, idx) => ({
+          pregunta: idx,
+          respuesta: resp,
+          valida: resp !== '' && resp !== null && resp !== undefined
+        }))
+      });
+    }
+    
+    return todasRespondidas;
+  });
+  
+  if (resultado) {
+    console.log('✅ [todasLasPreguntasContestadas] Todas las preguntas están completadas');
+  } else {
+    console.log('❌ [todasLasPreguntasContestadas] No todas las preguntas están completadas:', {
+      totalSecciones: respuestas.length,
+      seccionesCompletas: respuestas.map((seccion, idx) => ({
+        seccion: idx,
+        length: seccion?.length || 0,
+        todasRespondidas: Array.isArray(seccion) && seccion.every(resp => resp !== '' && resp !== null && resp !== undefined),
+        contenido: seccion
+      }))
+    });
+  }
+  
+  return resultado;
 };
 
 /**
@@ -70,12 +123,27 @@ export const getStepStatus = (step, {
  */
 export const pasoCompleto = (step, {
   empresaSeleccionada,
+  sucursalSeleccionada,
   formularioSeleccionadoId,
-  respuestas
+  respuestas,
+  sucursales = []
 }) => {
   switch (step) {
     case 0: 
-      return !!empresaSeleccionada;
+      // Si hay empresa seleccionada
+      if (!empresaSeleccionada) return false;
+      
+      // Filtrar sucursales por empresa
+      const sucursalesFiltradas = filtrarSucursalesPorEmpresa(sucursales, empresaSeleccionada);
+      
+      // Si hay sucursales disponibles, requiere selección explícita
+      // Si no hay sucursales, se completa automáticamente (Casa Central)
+      if (sucursalesFiltradas.length > 0) {
+        return !!sucursalSeleccionada;
+      }
+      
+      // Si no hay sucursales, el paso está completo (Casa Central automático)
+      return true;
     case 1: 
       return !!formularioSeleccionadoId;
     case 2: 
@@ -213,4 +281,73 @@ export const generarHashAuditoria = (datos) => {
     imagenes: datos.imagenes.length // Solo contamos cantidad, no contenido
   };
   return btoa(JSON.stringify(datosHash));
+};
+
+/**
+ * Verifica si hay progreso real en la auditoría (al menos una pregunta respondida)
+ * @param {Array} respuestas - Array de respuestas por sección
+ * @returns {boolean} - true si hay al menos una pregunta respondida
+ */
+export const tieneProgresoReal = (respuestas) => {
+  if (!respuestas || respuestas.length === 0) return false;
+  
+  // Verificar si hay al menos una pregunta respondida
+  return respuestas.some(seccionRespuestas => 
+    Array.isArray(seccionRespuestas) && 
+    seccionRespuestas.some(respuesta => respuesta !== '' && respuesta !== null && respuesta !== undefined)
+  );
+};
+
+/**
+ * Cuenta el número de preguntas respondidas
+ * @param {Array} respuestas - Array de respuestas por sección
+ * @returns {number} - Número de preguntas respondidas
+ */
+export const contarPreguntasRespondidas = (respuestas) => {
+  if (!respuestas || respuestas.length === 0) return 0;
+  return respuestas.reduce((total, seccion) => {
+    if (!Array.isArray(seccion)) return total;
+    return total + seccion.filter(resp => resp !== '' && resp !== null && resp !== undefined).length;
+  }, 0);
+};
+
+/**
+ * Cuenta el número total de preguntas en las secciones
+ * @param {Array} secciones - Array de secciones del formulario
+ * @returns {number} - Número total de preguntas
+ */
+export const contarTotalPreguntas = (secciones) => {
+  if (!secciones || secciones.length === 0) return 0;
+  return secciones.reduce((total, seccion) => {
+    const preguntas = seccion.preguntas || [];
+    return total + (Array.isArray(preguntas) ? preguntas.length : 0);
+  }, 0);
+};
+
+/**
+ * Calcula el paso correcto al restaurar una auditoría basado en el progreso real
+ * SIMPLIFICADO: Si hay respuestas, siempre ir al paso de preguntas (paso 2)
+ * @param {Object} params - Parámetros de la auditoría guardada
+ * @param {Array} params.respuestas - Array de respuestas por sección
+ * @param {boolean} params.todasLasPreguntasCompletadas - Si todas las preguntas están completadas
+ * @param {number} params.activeStepGuardado - Paso activo guardado
+ * @param {string|null} params.firmaAuditor - Firma del auditor si existe
+ * @param {boolean} params.auditoriaGenerada - Si la auditoría ya fue generada
+ * @returns {number|null} - Número del paso correcto o null si no debe restaurar
+ */
+export const calcularPasoCorrecto = ({
+  respuestas,
+  todasLasPreguntasCompletadas,
+  activeStepGuardado,
+  firmaAuditor,
+  auditoriaGenerada
+}) => {
+  // Si no hay progreso real (ninguna pregunta respondida), no restaurar
+  if (!tieneProgresoReal(respuestas)) {
+    return null; // No restaurar
+  }
+  
+  // SIMPLIFICADO: Si hay respuestas guardadas, siempre ir al paso de preguntas
+  // Esto permite al usuario revisar y continuar desde donde estaba
+  return 2; // Paso de preguntas
 };

@@ -21,15 +21,15 @@ const urlsToCache = [
   '/dashboard',
   '/auditoria',
   '/establecimiento',
-  '/formularios',
-  '/reportes',
+  '/editar',
+  '/reporte',
   '/perfil',
   // Páginas adicionales para carga de datos
   '/establecimiento/',
-  '/formularios/',
   '/auditoria/',
+  '/editar/',
   '/dashboard/',
-  '/reportes/',
+  '/reporte/',
   '/perfil/'
 ];
 

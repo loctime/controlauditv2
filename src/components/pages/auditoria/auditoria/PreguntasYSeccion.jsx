@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Button, Box, Typography, Stack, useTheme, useMediaQuery } from "@mui/material";
 import WarningIcon from '@mui/icons-material/Warning';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
@@ -58,6 +58,14 @@ const PreguntasYSeccion = ({
   const [currentImagePregunta, setCurrentImagePregunta] = useState(null);
   const [openPreguntasNoContestadas, setOpenPreguntasNoContestadas] = useState(false);
 
+  // Refs para rastrear props anteriores y detectar cambios
+  const prevPropsRef = useRef({
+    respuestasExistentes: null,
+    comentariosExistentes: null,
+    imagenesExistentes: null,
+    clasificacionesExistentes: null
+  });
+
   const secciones = Object.values(seccionesObj);
 
   useEffect(() => {
@@ -95,8 +103,201 @@ const PreguntasYSeccion = ({
       setClasificaciones(newClasificaciones);
 
       setInitialized(true);
+    } else if (initialized && secciones.length > 0) {
+      // Si ya está inicializado pero las secciones cambiaron o hay respuestas existentes que no están en el estado interno
+      // Esto maneja el caso cuando el usuario navega hacia atrás y vuelve al paso de preguntas
+      const tieneRespuestasEnProps = respuestasExistentes && respuestasExistentes.length > 0 && 
+        respuestasExistentes.some((seccion) => 
+          Array.isArray(seccion) && seccion.some((resp) => 
+            resp !== '' && resp !== null && resp !== undefined
+          )
+        );
+      
+      const tieneRespuestasEnEstado = respuestas && respuestas.length > 0 && 
+        respuestas.some((seccion) => 
+          Array.isArray(seccion) && seccion.some((resp) => 
+            resp !== '' && resp !== null && resp !== undefined
+          )
+        );
+      
+      // Si hay respuestas en props pero no en estado, restaurarlas
+      if (tieneRespuestasEnProps && !tieneRespuestasEnEstado) {
+        console.log('🔄 [PreguntasYSeccion] Restaurando respuestas al volver al paso de preguntas');
+        const newRespuestas = secciones.map((seccion, seccionIndex) => 
+          Array(seccion.preguntas.length).fill('').map((_, preguntaIndex) => 
+            respuestasExistentes[seccionIndex]?.[preguntaIndex] || ''
+          )
+        );
+        setRespuestas(newRespuestas);
+        
+        if (comentariosExistentes && comentariosExistentes.length > 0) {
+          const newComentarios = secciones.map((seccion, seccionIndex) => 
+            Array(seccion.preguntas.length).fill('').map((_, preguntaIndex) => 
+              comentariosExistentes[seccionIndex]?.[preguntaIndex] || ''
+            )
+          );
+          setComentarios(newComentarios);
+        }
+        
+        if (imagenesExistentes && imagenesExistentes.length > 0) {
+          const newImagenes = secciones.map((seccion, seccionIndex) => 
+            Array(seccion.preguntas.length).fill(null).map((_, preguntaIndex) => 
+              imagenesExistentes[seccionIndex]?.[preguntaIndex] || null
+            )
+          );
+          setImagenes(newImagenes);
+        }
+        
+        if (clasificacionesExistentes && clasificacionesExistentes.length > 0) {
+          const newClasificaciones = secciones.map((seccion, seccionIndex) => 
+            Array(seccion.preguntas.length).fill(null).map((_, preguntaIndex) => 
+              clasificacionesExistentes[seccionIndex]?.[preguntaIndex] || { condicion: false, actitud: false }
+            )
+          );
+          setClasificaciones(newClasificaciones);
+        }
+      }
     }
-  }, [initialized, secciones, respuestasExistentes, comentariosExistentes, imagenesExistentes, clasificacionesExistentes]);
+  }, [initialized, secciones, respuestasExistentes, comentariosExistentes, imagenesExistentes, clasificacionesExistentes, respuestas]);
+
+  // Nuevo useEffect para actualizar cuando las props cambian después de la inicialización
+  // Esto es necesario cuando se restauran datos después de que el componente ya se inicializó
+  useEffect(() => {
+    // Solo actualizar si ya está inicializado y hay secciones
+    if (initialized && secciones.length > 0) {
+      // Comparar con props anteriores para detectar cambios
+      const propsCambiaron = 
+        JSON.stringify(prevPropsRef.current.respuestasExistentes) !== JSON.stringify(respuestasExistentes) ||
+        JSON.stringify(prevPropsRef.current.comentariosExistentes) !== JSON.stringify(comentariosExistentes) ||
+        JSON.stringify(prevPropsRef.current.clasificacionesExistentes) !== JSON.stringify(clasificacionesExistentes) ||
+        (imagenesExistentes && imagenesExistentes.length > 0 && 
+         JSON.stringify(prevPropsRef.current.imagenesExistentes?.map(seccion => 
+           seccion.map(img => img instanceof File ? 'FILE' : img)
+         )) !== JSON.stringify(imagenesExistentes.map(seccion => 
+           seccion.map(img => img instanceof File ? 'FILE' : img)
+         )));
+      
+      // Verificar si hay respuestas válidas en las props
+      const tieneRespuestasEnProps = respuestasExistentes && respuestasExistentes.length > 0 && 
+        respuestasExistentes.some((seccion) => 
+          Array.isArray(seccion) && seccion.some((resp) => 
+            resp !== '' && resp !== null && resp !== undefined
+          )
+        );
+      
+      // Verificar si el estado interno está vacío o incompleto comparado con las props
+      const estadoInternoVacioOIncompleto = !respuestas || respuestas.length === 0 || 
+        !respuestas.some((seccion) => 
+          Array.isArray(seccion) && seccion.some((resp) => 
+            resp !== '' && resp !== null && resp !== undefined
+          )
+        );
+      
+      // ACTUALIZAR SIEMPRE que las props cambien Y tengan datos válidos
+      // Esto asegura que las respuestas restauradas siempre se apliquen
+      const debeActualizar = propsCambiaron && tieneRespuestasEnProps;
+      
+      console.log('🔍 [PreguntasYSeccion] Verificando actualización:', {
+        initialized,
+        propsCambiaron,
+        tieneRespuestasEnProps,
+        estadoInternoVacioOIncompleto,
+        debeActualizar,
+        respuestasExistentesLength: respuestasExistentes?.length || 0,
+        respuestasExistentesContenido: respuestasExistentes,
+        respuestasExistentesPrimeraSeccion: respuestasExistentes?.[0],
+        respuestasExistentesPrimeraSeccionLength: respuestasExistentes?.[0]?.length || 0,
+        respuestasExistentesPrimeraSeccionContenido: respuestasExistentes?.[0],
+        respuestasLength: respuestas.length,
+        respuestasContenido: respuestas
+      });
+      
+      if (debeActualizar) {
+        console.log('🔄 [PreguntasYSeccion] Actualizando desde respuestas restauradas');
+        
+        // Actualizar respuestas
+        const newRespuestas = secciones.map((seccion, seccionIndex) => 
+          Array(seccion.preguntas.length).fill('').map((_, preguntaIndex) => {
+            const restaurada = respuestasExistentes[seccionIndex]?.[preguntaIndex];
+            return restaurada !== undefined && restaurada !== null && restaurada !== '' 
+              ? restaurada 
+              : '';
+          })
+        );
+        console.log('📋 [PreguntasYSeccion] Nuevas respuestas a establecer:', newRespuestas);
+        setRespuestas(newRespuestas);
+
+        // Actualizar comentarios
+        const tieneComentariosRestaurados = comentariosExistentes && comentariosExistentes.length > 0 &&
+          comentariosExistentes.some((seccion) => 
+            Array.isArray(seccion) && seccion.some((com) => 
+              com !== '' && com !== null && com !== undefined
+            )
+          );
+        
+        if (tieneComentariosRestaurados) {
+          const newComentarios = secciones.map((seccion, seccionIndex) => 
+            Array(seccion.preguntas.length).fill('').map((_, preguntaIndex) => {
+              const restaurado = comentariosExistentes[seccionIndex]?.[preguntaIndex];
+              return restaurado !== undefined && restaurado !== null && restaurado !== '' 
+                ? restaurado 
+                : '';
+            })
+          );
+          setComentarios(newComentarios);
+        }
+
+        // Actualizar imágenes (File objects)
+        const tieneImagenesRestauradas = imagenesExistentes && imagenesExistentes.length > 0 &&
+          imagenesExistentes.some((seccion) => 
+            Array.isArray(seccion) && seccion.some((img) => 
+              img !== null && img !== undefined
+            )
+          );
+        
+        if (tieneImagenesRestauradas) {
+          const newImagenes = secciones.map((seccion, seccionIndex) => 
+            Array(seccion.preguntas.length).fill(null).map((_, preguntaIndex) => {
+              const restaurada = imagenesExistentes[seccionIndex]?.[preguntaIndex];
+              // Priorizar imágenes restauradas (File objects desde IndexedDB)
+              return restaurada !== null && restaurada !== undefined 
+                ? restaurada 
+                : null;
+            })
+          );
+          setImagenes(newImagenes);
+        }
+
+        // Actualizar clasificaciones
+        const tieneClasificacionesRestauradas = clasificacionesExistentes && clasificacionesExistentes.length > 0 &&
+          clasificacionesExistentes.some((seccion) => 
+            Array.isArray(seccion) && seccion.some((clas) => 
+              clas && (clas.condicion || clas.actitud)
+            )
+          );
+        
+        if (tieneClasificacionesRestauradas) {
+          const newClasificaciones = secciones.map((seccion, seccionIndex) => 
+            Array(seccion.preguntas.length).fill(null).map((_, preguntaIndex) => {
+              const restaurada = clasificacionesExistentes[seccionIndex]?.[preguntaIndex];
+              return restaurada && (restaurada.condicion || restaurada.actitud)
+                ? restaurada 
+                : { condicion: false, actitud: false };
+            })
+          );
+          setClasificaciones(newClasificaciones);
+        }
+      }
+      
+      // Actualizar refs con las props actuales
+      prevPropsRef.current = {
+        respuestasExistentes,
+        comentariosExistentes,
+        imagenesExistentes,
+        clasificacionesExistentes
+      };
+    }
+  }, [initialized, secciones.length, respuestasExistentes, comentariosExistentes, imagenesExistentes, clasificacionesExistentes]);
 
   const handleRespuestaChange = (seccionIndex, preguntaIndex, value) => {
     const respuestaActual = respuestas[seccionIndex]?.[preguntaIndex];

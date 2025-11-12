@@ -142,6 +142,7 @@ const BotonGenerarReporte = ({
         secciones,
         firmaAuditor,
         firmaResponsable,
+        datosReporte, // Incluir los datos adicionales del reporte
         // Multi-tenant - asegurar que siempre tengamos estos datos
         ...authData,
         fechaGuardado: new Date(),

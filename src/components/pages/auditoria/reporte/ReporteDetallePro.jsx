@@ -184,7 +184,17 @@ const ReporteDetallePro = forwardRef(({ open = false, onClose = () => {}, report
       auditorTelefono: reporte.auditorTelefono || userProfile?.telefono || "",
       geolocalizacion: reporte.geolocalizacion || null,
       fechaInicio: reporte.fechaInicio || "",
-      fechaFin: reporte.fechaFin || ""
+      fechaFin: reporte.fechaFin || "",
+      // Datos adicionales del reporte
+      datosReporte: {
+        tareaObservada: reporte.tareaObservada || '',
+        lugarSector: reporte.lugarSector || '',
+        equiposInvolucrados: reporte.equiposInvolucrados || '',
+        supervisor: reporte.supervisor || '',
+        numeroTrabajadores: reporte.numeroTrabajadores || '',
+        nombreInspector: reporte.nombreInspector || '',
+        nombreResponsable: reporte.nombreResponsable || ''
+      }
     };
     
     // Pasar el ID del reporte para guardar el PDF
@@ -268,6 +278,13 @@ const ReporteDetallePro = forwardRef(({ open = false, onClose = () => {}, report
               formulario={formulario}
               fecha={fecha}
               nombreAuditor={nombreAuditor}
+              datosReporte={{
+                tareaObservada: reporte.tareaObservada || '',
+                lugarSector: reporte.lugarSector || '',
+                equiposInvolucrados: reporte.equiposInvolucrados || '',
+                supervisor: reporte.supervisor || '',
+                numeroTrabajadores: reporte.numeroTrabajadores || ''
+              }}
             />
             
             {/* Estadísticas y gráficos */}

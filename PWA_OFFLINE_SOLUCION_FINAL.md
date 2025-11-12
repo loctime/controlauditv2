@@ -1,5 +1,7 @@
 # ✅ PWA Offline - Solución Final
 
+> **📌 Nota sobre terminología:** En este documento, "formularios" se refiere a los **datos** (colección de Firestore), no a rutas. La ruta donde se gestionan los formularios es `/editar`. La ruta `/formulario` es para crear formularios (no necesario offline).
+
 ## 🚨 Problema Raíz Identificado
 
 El PWA **NO podía funcionar offline** por **2 problemas críticos**:
@@ -174,6 +176,44 @@ useEffect(() => onSnapshot(...))
 ✅ Datos cargados desde cache offline: { empresas: 5, sucursales: 12, formularios: 8 }
 ⏱️ Timeout alcanzado, finalizando loaders
 ```
+
+---
+
+## 🔧 Solución Específica para Edge PWA
+
+### **Problema Identificado:**
+Edge PWA requería inicialización adicional de IndexedDB y hooks cuando entraba offline directamente sin pasar por `/auditoria` primero, causando error React #306.
+
+### **Solución Implementada:**
+
+**1. Inicialización Automática en AuthContext:**
+```javascript
+// Cuando Edge PWA entra offline, inicializa datos offline automáticamente
+if (isEdge && isPWA) {
+  await initializeOfflineData(cachedProfile, setUserEmpresas, setUserSucursales, setUserFormularios);
+}
+```
+
+**2. Navegación Automática a `/auditoria` en Home:**
+```javascript
+// En Edge PWA, después de cargar datos, navega brevemente a /auditoria
+// Esto monta el componente y ejecuta useAuditoriaData que inicializa IndexedDB
+if (isEdge) {
+  navigate('/auditoria');
+  await new Promise(resolve => setTimeout(resolve, 1500));
+  navigate(returnPath); // Vuelve a Home
+}
+```
+
+**3. Control de Frecuencia:**
+- Se ejecuta automáticamente **una vez por día** (24 horas)
+- El usuario puede activarlo manualmente con el botón "Recargar" cuando quiera
+- Se guarda timestamp en `localStorage` para controlar la frecuencia
+
+### **Archivos Clave:**
+- `src/utils/initializeOfflineData.js` - Función utilitaria para inicializar datos offline
+- `src/components/context/AuthContext.jsx` - Inicialización automática cuando Edge entra offline
+- `src/components/pages/home/Home.jsx` - Navegación automática a `/auditoria` para Edge PWA
 
 ---
 
