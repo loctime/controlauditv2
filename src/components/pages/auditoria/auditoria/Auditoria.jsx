@@ -113,7 +113,7 @@ const AuditoriaRefactorizada = () => {
     return (
       <Container maxWidth="xl" sx={{ py: 4, px: 2 }}>
         <Box display="flex" flexDirection="column" alignItems="center" justifyContent="center" minHeight="50vh">
-          <LinearProgress sx={{ width: '100%', mb: 2 }} />
+          <LinearProgress sx={{ width: '100%', mb: 2 }} aria-label="Cargando datos de autenticación" />
           <Typography variant="h6" color="text.secondary">
             Cargando datos de autenticación...
           </Typography>
@@ -889,7 +889,7 @@ const AuditoriaRefactorizada = () => {
           <Typography variant="body2">
             🔄 Cargando datos necesarios para crear auditorías...
           </Typography>
-          <LinearProgress sx={{ mt: 1 }} />
+          <LinearProgress sx={{ mt: 1 }} aria-label="Cargando datos necesarios para crear auditorías" />
         </Alert>
       )}
       
