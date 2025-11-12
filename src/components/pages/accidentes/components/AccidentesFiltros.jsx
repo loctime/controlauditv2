@@ -28,6 +28,7 @@ const AccidentesFiltros = React.memo(({
           }}
           label="Empresa"
           disabled={!userEmpresas || userEmpresas.length === 0}
+          aria-label="Seleccionar empresa para filtrar accidentes"
         >
           <MenuItem value="todas"><em>Todas las empresas</em></MenuItem>
           {userEmpresas?.map((empresa) => (
@@ -46,6 +47,7 @@ const AccidentesFiltros = React.memo(({
           onChange={(e) => setSelectedSucursal(e.target.value)}
           label="Sucursal"
           disabled={selectedEmpresa === 'todas'}
+          aria-label="Seleccionar sucursal para filtrar accidentes"
         >
           <MenuItem value="todas"><em>Todas las sucursales</em></MenuItem>
           {sucursalesFiltradas?.map((sucursal) => (
@@ -59,7 +61,12 @@ const AccidentesFiltros = React.memo(({
     <Grid item xs={12} sm={6} md={3}>
       <FormControl fullWidth size="small">
         <InputLabel>Tipo</InputLabel>
-        <Select value={filterTipo} onChange={(e) => setFilterTipo(e.target.value)} label="Tipo">
+        <Select 
+          value={filterTipo} 
+          onChange={(e) => setFilterTipo(e.target.value)} 
+          label="Tipo"
+          aria-label="Filtrar accidentes por tipo"
+        >
           <MenuItem value="">Todos</MenuItem>
           <MenuItem value="accidente">Accidente</MenuItem>
           <MenuItem value="incidente">Incidente</MenuItem>
@@ -69,7 +76,12 @@ const AccidentesFiltros = React.memo(({
     <Grid item xs={12} sm={6} md={3}>
       <FormControl fullWidth size="small">
         <InputLabel>Estado</InputLabel>
-        <Select value={filterEstado} onChange={(e) => setFilterEstado(e.target.value)} label="Estado">
+        <Select 
+          value={filterEstado} 
+          onChange={(e) => setFilterEstado(e.target.value)} 
+          label="Estado"
+          aria-label="Filtrar accidentes por estado"
+        >
           <MenuItem value="">Todos</MenuItem>
           <MenuItem value="abierto">Abierto</MenuItem>
           <MenuItem value="cerrado">Cerrado</MenuItem>
