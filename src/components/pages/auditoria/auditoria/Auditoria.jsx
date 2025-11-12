@@ -42,7 +42,7 @@ import AlertasFaltantes from "./components/AlertasFaltantes";
 import { createAuditoriaSteps } from "./components/AuditoriaSteps";
 import SimpleOfflineDebug from "../../../common/SimpleOfflineDebug";
 import AuditoriaDebugInfo from "../../../common/AuditoriaDebugInfo";
-import OfflineDebugLogs from "./components/OfflineDebugLogs";
+// import OfflineDebugLogs from "./components/OfflineDebugLogs"; // Comentado temporalmente para probar error en Edge PWA
 
 // Servicios
 import AuditoriaService from "../auditoriaService";
@@ -1068,7 +1068,7 @@ const AuditoriaRefactorizada = () => {
       <AuditoriaDebugInfo />
       
       {/* Debug logs visual para móvil */}
-      <OfflineDebugLogs />
+      {/* <OfflineDebugLogs /> Comentado temporalmente para probar error en Edge PWA */}
     </Container>
   );
 };
