@@ -2,6 +2,7 @@ import { useCallback } from 'react';
 import { empresaService } from '../../../services/empresaService';
 import { auditoriaService } from '../../../services/auditoriaService';
 import { saveCompleteUserCache } from '../../../services/completeOfflineCache';
+import { shouldEnableOffline } from '../../../utils/pwaDetection';
 
 /**
  * Hook para acciones del contexto (wrapper functions)
@@ -65,6 +66,12 @@ export const useContextActions = (
   }, [userProfile, setUserEmpresas]);
 
   const forceRefreshCache = useCallback(async () => {
+    // Solo actualizar cache si estamos en móvil (modo offline habilitado)
+    if (!shouldEnableOffline()) {
+      console.log('💻 Desktop: forceRefreshCache deshabilitado (modo offline no necesario)');
+      return null;
+    }
+    
     if (userProfile) {
       try {
         const cacheResult = await saveCompleteUserCache(

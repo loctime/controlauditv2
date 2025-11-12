@@ -4,8 +4,9 @@ import { db } from '../../../firebaseConfig.js';
 
 /**
  * Hook para listener reactivo de sucursales con chunking y fallback offline
+ * @param {boolean} enableListener - Si es false, el listener no se activa (optimización para evitar duplicados)
  */
-export const useSucursalesListener = (userProfile, role, userEmpresas, setUserSucursales, setLoadingSucursales, loadUserFromCache) => {
+export const useSucursalesListener = (userProfile, role, userEmpresas, setUserSucursales, setLoadingSucursales, loadUserFromCache, enableListener = true) => {
   // Memoizar IDs de empresas para estabilizar dependencias
   const empresasIdsString = useMemo(() => 
     JSON.stringify((userEmpresas || []).map(emp => emp.id).sort()),
@@ -13,6 +14,13 @@ export const useSucursalesListener = (userProfile, role, userEmpresas, setUserSu
   );
 
   useEffect(() => {
+    // OPTIMIZACIÓN: No activar listener hasta que se habilite (evita duplicados con carga manual)
+    if (!enableListener) {
+      // Si el listener está deshabilitado pero ya hay datos cargados manualmente, mantenerlos
+      // No hacer nada, los datos ya están cargados por la carga manual inicial
+      return;
+    }
+
     if (!userProfile || !role || !userEmpresas || userEmpresas.length === 0) {
       setUserSucursales([]);
       setLoadingSucursales(false);
@@ -74,16 +82,19 @@ export const useSucursalesListener = (userProfile, role, userEmpresas, setUserSu
       async (error) => {
         console.error('❌ Error en listener de sucursales:', error);
         
-        try {
-          const cachedData = await loadUserFromCache();
-          if (cachedData?.sucursales && cachedData.sucursales.length > 0) {
-            console.log('🔄 [Offline] Usando sucursales del cache IndexedDB:', cachedData.sucursales.length);
-            setUserSucursales(cachedData.sucursales);
-            setLoadingSucursales(false);
-            return;
+        // Fallback al cache offline solo si está habilitado (móvil)
+        if (loadUserFromCache) {
+          try {
+            const cachedData = await loadUserFromCache();
+            if (cachedData?.sucursales && cachedData.sucursales.length > 0) {
+              console.log('🔄 [Offline] Usando sucursales del cache IndexedDB:', cachedData.sucursales.length);
+              setUserSucursales(cachedData.sucursales);
+              setLoadingSucursales(false);
+              return;
+            }
+          } catch (cacheError) {
+            console.error('Error cargando sucursales desde cache:', cacheError);
           }
-        } catch (cacheError) {
-          console.error('Error cargando sucursales desde cache:', cacheError);
         }
         
         setUserSucursales([]);
@@ -93,6 +104,6 @@ export const useSucursalesListener = (userProfile, role, userEmpresas, setUserSu
 
     return unsubscribe;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userProfile?.uid, role, empresasIdsString]);
+  }, [userProfile?.uid, role, empresasIdsString, enableListener]);
 };
 
