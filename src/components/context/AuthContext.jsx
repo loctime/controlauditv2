@@ -430,7 +430,6 @@ const AuthContextComponent = ({ children }) => {
                             document.referrer.includes('android-app://');
               
               if (isEdge && isPWA) {
-                console.log('🔄 [AuthContext] Edge PWA detectado, inicializando datos offline...');
                 try {
                   await initializeOfflineData(
                     cachedProfile,
@@ -438,9 +437,8 @@ const AuthContextComponent = ({ children }) => {
                     setUserSucursales,
                     setUserFormularios
                   );
-                  console.log('✅ [AuthContext] Datos offline inicializados para Edge PWA');
                 } catch (initError) {
-                  console.warn('⚠️ [AuthContext] Error inicializando datos offline:', initError);
+                  console.warn('Error inicializando datos offline:', initError);
                   // Continuar sin fallar, los datos ya están cargados desde loadUserFromCache
                 }
               }

@@ -65,13 +65,11 @@ const Home = () => {
     const cargarDatosOffline = async () => {
       // Solo cargar en PWA standalone
       if (!isPWAStandalone) {
-        console.log('ℹ️ [Home] No es PWA standalone, saltando carga automática');
         return;
       }
 
       // Solo ejecutar una vez por sesión
       if (hasCargadoDatos.current) {
-        console.log('ℹ️ [Home] Datos ya cargados previamente en esta sesión');
         return;
       }
 
@@ -87,8 +85,6 @@ const Home = () => {
       if (lastAutoLoad) {
         const timeSinceLastLoad = now - parseInt(lastAutoLoad);
         if (timeSinceLastLoad < oneDayInMs) {
-          const hoursRemaining = Math.floor((oneDayInMs - timeSinceLastLoad) / (60 * 60 * 1000));
-          console.log(`ℹ️ [Home] Carga automática ya ejecutada hoy. Próxima ejecución en ${hoursRemaining} horas`);
           return;
         }
       }
@@ -98,8 +94,6 @@ const Home = () => {
       
       // Marcar que se ejecutó automáticamente hoy
       localStorage.setItem('edge_auto_reload_timestamp', now.toString());
-
-      console.log('🚀 [Home PWA] Iniciando carga forzada de datos para modo offline...');
       setErrorCarga(null);
       
       try {
@@ -107,15 +101,11 @@ const Home = () => {
         const isEdge = navigator.userAgent.includes('Edg');
         
         // Cargar todos los datos necesarios para TODAS las páginas
-        console.log('🔄 [Home PWA] Cargando datos para todas las páginas...');
         const promesas = [
           getUserEmpresas(),
           getUserSucursales(),
           getUserFormularios()
         ];
-        
-        // Esperar a que todas las promesas se resuelvan
-        console.log('⏳ [Home PWA] Esperando a que se carguen todos los datos...');
 
         const resultados = await Promise.allSettled(promesas);
         
@@ -123,18 +113,6 @@ const Home = () => {
         const empresasCargadas = resultados[0]?.status === 'fulfilled' ? resultados[0].value : [];
         const sucursalesCargadas = resultados[1]?.status === 'fulfilled' ? resultados[1].value : [];
         const formulariosCargados = resultados[2]?.status === 'fulfilled' ? resultados[2].value : [];
-        
-        console.log('📊 [Home PWA] Resultados de carga:', {
-          empresas: resultados[0]?.status,
-          sucursales: resultados[1]?.status,
-          formularios: resultados[2]?.status
-        });
-        
-        console.log('✅ [Home PWA] Datos cargados:', {
-          empresas: empresasCargadas?.length || 0,
-          sucursales: sucursalesCargadas?.length || 0,
-          formularios: formulariosCargados?.length || 0
-        });
         
         setDatosCargados({
           empresas: (empresasCargadas?.length || 0) > 0,
@@ -146,8 +124,6 @@ const Home = () => {
         // Esto asegura que Edge PWA funcione offline después
         // El componente Auditoria ejecuta useAuditoriaData que inicializa todo lo necesario
         if (isEdge) {
-          console.log('🔄 [Home Edge Auto] Navegando a /auditoria para inicializar datos offline...');
-          
           // Guardar la ruta actual para volver después
           const returnPath = window.location.pathname;
           
@@ -159,12 +135,10 @@ const Home = () => {
           
           // Volver a Home después de inicializar
           navigate(returnPath);
-          
-          console.log('✅ [Home Edge Auto] Datos offline inicializados correctamente');
         }
         
       } catch (error) {
-        console.error('❌ [Home PWA] Error cargando datos offline:', error);
+        console.error('Error cargando datos offline:', error);
         setErrorCarga('Error cargando datos para modo offline');
       } finally {
         setCargandoDatosOffline(false);
@@ -338,11 +312,7 @@ const Home = () => {
                         // CRÍTICO: Navegar a /auditoria para inicializar IndexedDB y hooks necesarios
                         // Esto asegura que Edge PWA funcione offline después
                         // El componente Auditoria ejecuta useAuditoriaData que inicializa todo lo necesario
-                        console.log('🔄 [Home Edge] Navegando a /auditoria para inicializar datos offline...');
-                        
-                        // Guardar la ruta actual para volver después
                         const returnPath = window.location.pathname;
-                        sessionStorage.setItem('edge_reload_return_path', returnPath);
                         
                         // Navegar a /auditoria para que se monte el componente y ejecute los hooks
                         navigate('/auditoria');

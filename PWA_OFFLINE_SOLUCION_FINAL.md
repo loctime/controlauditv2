@@ -179,6 +179,44 @@ useEffect(() => onSnapshot(...))
 
 ---
 
+## 🔧 Solución Específica para Edge PWA
+
+### **Problema Identificado:**
+Edge PWA requería inicialización adicional de IndexedDB y hooks cuando entraba offline directamente sin pasar por `/auditoria` primero, causando error React #306.
+
+### **Solución Implementada:**
+
+**1. Inicialización Automática en AuthContext:**
+```javascript
+// Cuando Edge PWA entra offline, inicializa datos offline automáticamente
+if (isEdge && isPWA) {
+  await initializeOfflineData(cachedProfile, setUserEmpresas, setUserSucursales, setUserFormularios);
+}
+```
+
+**2. Navegación Automática a `/auditoria` en Home:**
+```javascript
+// En Edge PWA, después de cargar datos, navega brevemente a /auditoria
+// Esto monta el componente y ejecuta useAuditoriaData que inicializa IndexedDB
+if (isEdge) {
+  navigate('/auditoria');
+  await new Promise(resolve => setTimeout(resolve, 1500));
+  navigate(returnPath); // Vuelve a Home
+}
+```
+
+**3. Control de Frecuencia:**
+- Se ejecuta automáticamente **una vez por día** (24 horas)
+- El usuario puede activarlo manualmente con el botón "Recargar" cuando quiera
+- Se guarda timestamp en `localStorage` para controlar la frecuencia
+
+### **Archivos Clave:**
+- `src/utils/initializeOfflineData.js` - Función utilitaria para inicializar datos offline
+- `src/components/context/AuthContext.jsx` - Inicialización automática cuando Edge entra offline
+- `src/components/pages/home/Home.jsx` - Navegación automática a `/auditoria` para Edge PWA
+
+---
+
 ## 🚀 Próximos Pasos
 
 Si quieres **eliminar Capacitor completamente**:
