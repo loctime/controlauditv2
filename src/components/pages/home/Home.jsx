@@ -417,7 +417,7 @@ const Home = () => {
         </Typography>
         <Grid container spacing={3}>
           <Grid item xs={12} md={6}>
-            <Typography variant="h5" gutterBottom fontWeight={600}>
+            <Typography variant="h4" component="h4" gutterBottom fontWeight={600}>
               Características
             </Typography>
             <List>
@@ -430,7 +430,7 @@ const Home = () => {
             </List>
           </Grid>
           <Grid item xs={12} md={6}>
-            <Typography variant="h5" gutterBottom fontWeight={600}>
+            <Typography variant="h4" component="h4" gutterBottom fontWeight={600}>
               Cómo Funciona
             </Typography>
             <List>

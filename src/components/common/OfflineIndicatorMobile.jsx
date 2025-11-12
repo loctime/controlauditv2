@@ -181,6 +181,7 @@ const OfflineIndicatorMobile = ({ userProfile }) => {
             size="small"
             onClick={handleManualSync}
             disabled={!isOnline && !queueStats?.total}
+            aria-label={hasPendingItems ? `Sincronizar ${queueStats.total} items pendientes` : 'Estado de sincronización'}
             sx={{
               p: 0.5,
               minWidth: 'auto',
