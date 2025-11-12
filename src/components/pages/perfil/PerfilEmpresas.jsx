@@ -243,6 +243,7 @@ const PerfilEmpresas = ({ empresas, loading }) => {
                   }}>
                     <Avatar 
                       src={empresa.logo || undefined}
+                      alt={empresa.logo ? `Logo de ${empresa.nombre}` : undefined}
                       sx={{ 
                         width: isSmallMobile ? 60 : 80, 
                         height: isSmallMobile ? 60 : 80,
