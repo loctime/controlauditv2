@@ -109,6 +109,21 @@ class SyncQueueService {
   async getQueueStats() {
     try {
       const db = await getOfflineDatabase();
+      
+      // Verificar que el object store existe antes de acceder
+      if (!db.objectStoreNames.contains('syncQueue')) {
+        console.warn('⚠️ Object store "syncQueue" no existe, retornando estadísticas vacías');
+        return {
+          total: 0,
+          totalIncludingFailed: 0,
+          failed: 0,
+          byType: {},
+          byRetries: {},
+          oldestItem: null,
+          newestItem: null
+        };
+      }
+      
       const allItems = await db.getAll('syncQueue');
       
       // Filtrar items fallidos y obtener solo los pendientes
@@ -160,7 +175,16 @@ class SyncQueueService {
       return stats;
     } catch (error) {
       console.error('❌ Error al obtener estadísticas de cola:', error);
-      return null;
+      // Retornar estadísticas vacías en lugar de null para evitar errores
+      return {
+        total: 0,
+        totalIncludingFailed: 0,
+        failed: 0,
+        byType: {},
+        byRetries: {},
+        oldestItem: null,
+        newestItem: null
+      };
     }
   }
 

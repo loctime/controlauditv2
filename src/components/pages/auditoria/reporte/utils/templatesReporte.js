@@ -41,7 +41,8 @@ export const generarDetallesAuditoria = ({
   auditorTelefono, 
   geolocalizacion, 
   fechaInicio, 
-  fechaFin 
+  fechaFin,
+  datosReporte = {}
 }) => {
   const _empresa = empresa || {};
   const empresaNombre = val(_empresa.nombre);
@@ -52,6 +53,13 @@ export const generarDetallesAuditoria = ({
   const geo = geolocalizacion && (geolocalizacion.lat || geolocalizacion.lng)
     ? `Latitud: ${geolocalizacion.lat} | Longitud: ${geolocalizacion.lng}`
     : "";
+
+  // Campos adicionales del reporte
+  const tareaObservada = val(datosReporte?.tareaObservada);
+  const lugarSector = val(datosReporte?.lugarSector);
+  const equiposInvolucrados = val(datosReporte?.equiposInvolucrados);
+  const supervisor = val(datosReporte?.supervisor);
+  const numeroTrabajadores = val(datosReporte?.numeroTrabajadores);
 
   return `
     <div class="audit-details">
@@ -68,6 +76,61 @@ export const generarDetallesAuditoria = ({
           <span class="detail-label">Formulario</span>
           <span class="detail-value">${formNombre}</span>
         </div>
+        ${tareaObservada ? `
+        <div class="detail-item">
+          <span class="detail-label">Tarea Observada</span>
+          <span class="detail-value">${tareaObservada}</span>
+        </div>
+        ` : `
+        <div class="detail-item">
+          <span class="detail-label">Tarea Observada</span>
+          <span class="detail-value" style="border-bottom: 1px solid #ccc; min-height: 20px; display: inline-block; min-width: 200px;">&nbsp;</span>
+        </div>
+        `}
+        ${lugarSector ? `
+        <div class="detail-item">
+          <span class="detail-label">Lugar / Sector</span>
+          <span class="detail-value">${lugarSector}</span>
+        </div>
+        ` : `
+        <div class="detail-item">
+          <span class="detail-label">Lugar / Sector</span>
+          <span class="detail-value" style="border-bottom: 1px solid #ccc; min-height: 20px; display: inline-block; min-width: 200px;">&nbsp;</span>
+        </div>
+        `}
+        ${equiposInvolucrados ? `
+        <div class="detail-item">
+          <span class="detail-label">Equipo/s Involucrado</span>
+          <span class="detail-value">${equiposInvolucrados}</span>
+        </div>
+        ` : `
+        <div class="detail-item">
+          <span class="detail-label">Equipo/s Involucrado</span>
+          <span class="detail-value" style="border-bottom: 1px solid #ccc; min-height: 20px; display: inline-block; min-width: 200px;">&nbsp;</span>
+        </div>
+        `}
+        ${supervisor ? `
+        <div class="detail-item">
+          <span class="detail-label">Supervisor</span>
+          <span class="detail-value">${supervisor}</span>
+        </div>
+        ` : `
+        <div class="detail-item">
+          <span class="detail-label">Supervisor</span>
+          <span class="detail-value" style="border-bottom: 1px solid #ccc; min-height: 20px; display: inline-block; min-width: 200px;">&nbsp;</span>
+        </div>
+        `}
+        ${numeroTrabajadores ? `
+        <div class="detail-item">
+          <span class="detail-label">N° de Trabajadores</span>
+          <span class="detail-value">${numeroTrabajadores}</span>
+        </div>
+        ` : `
+        <div class="detail-item">
+          <span class="detail-label">N° de Trabajadores</span>
+          <span class="detail-value" style="border-bottom: 1px solid #ccc; min-height: 20px; display: inline-block; min-width: 200px;">&nbsp;</span>
+        </div>
+        `}
         <div class="detail-item">
           <span class="detail-label">Teléfono Auditor</span>
           <span class="detail-value">${auditorTelefono || 'No especificado'}</span>
@@ -285,28 +348,30 @@ export const generarSeccion = ({
 };
 
 // Template de firmas
-export const generarFirmas = ({ firmaAuditor, firmaResponsable, nombreAuditor, empresa }) => {
+export const generarFirmas = ({ firmaAuditor, firmaResponsable, nombreAuditor, empresa, datosReporte = {} }) => {
   const empresaNombre = val(empresa?.nombre);
+  const nombreInspector = val(datosReporte?.nombreInspector) || nombreAuditor || '';
+  const nombreResponsable = val(datosReporte?.nombreResponsable) || `Representante de ${empresaNombre}`;
   
   return `
     <div class="signatures-section avoid-break">
       <div class="signatures-title">✍️ FIRMAS</div>
       <div class="signatures-grid">
         <div class="signature-box">
-          <div class="signature-label">Firma del Auditor</div>
+          <div class="signature-label">Firma del Inspector</div>
           <div class="signature-image">
-            ${firmaAuditor ? `<img src="${firmaAuditor}" alt="Firma Auditor" />` : ''}
+            ${firmaAuditor ? `<img src="${firmaAuditor}" alt="Firma Inspector" />` : ''}
           </div>
           ${!firmaAuditor ? `<div class="signature-placeholder">No hay firma registrada</div>` : ''}
-          <div class="signature-name">${nombreAuditor || ''}</div>
+          <div class="signature-name">${nombreInspector || '_________________________'}</div>
         </div>
         <div class="signature-box">
-          <div class="signature-label">Firma de la Empresa</div>
+          <div class="signature-label">Firma del Responsable de la Empresa</div>
           <div class="signature-image">
             ${firmaResponsable ? `<img src="${firmaResponsable}" alt="Firma Empresa" />` : ''}
           </div>
           ${!firmaResponsable ? `<div class="signature-placeholder">No hay firma registrada</div>` : ''}
-          <div class="signature-name">Representante de ${empresaNombre}</div>
+          <div class="signature-name">${nombreResponsable || '_________________________'}</div>
         </div>
       </div>
     </div>

@@ -10,17 +10,47 @@ import {
   Chip,
   useTheme,
   useMediaQuery,
-  alpha
+  alpha,
+  Alert,
+  CircularProgress
 } from "@mui/material";
 import BusinessIcon from '@mui/icons-material/Business';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import WarningIcon from '@mui/icons-material/Warning';
+import InfoIcon from '@mui/icons-material/Info';
 
 const SeleccionEmpresa = ({ empresas, empresaSeleccionada, onChange }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const isSmallMobile = useMediaQuery(theme.breakpoints.down('xs'));
   const [empresaSeleccionadaLocal, setEmpresaSeleccionadaLocal] = useState(empresaSeleccionada);
+  const [debugInfo, setDebugInfo] = useState(null);
+
+  // Verificar cache disponible
+  useEffect(() => {
+    const checkCache = async () => {
+      try {
+        // Verificar localStorage
+        const localCache = localStorage.getItem('complete_user_cache');
+        if (localCache) {
+          const cacheData = JSON.parse(localCache);
+          setDebugInfo({
+            hasLocalStorage: true,
+            empresasInCache: cacheData.empresas?.length || 0,
+            userId: cacheData.userId
+          });
+        } else {
+          setDebugInfo({
+            hasLocalStorage: false,
+            empresasInCache: 0
+          });
+        }
+      } catch (e) {
+        setDebugInfo({ error: e.message });
+      }
+    };
+    checkCache();
+  }, [empresas]);
 
   const mobileBoxStyle = {
     mb: isMobile ? 0.25 : 1,
@@ -257,48 +287,87 @@ const SeleccionEmpresa = ({ empresas, empresaSeleccionada, onChange }) => {
 
       {/* Información adicional */}
       {empresas.length === 0 && (
-        <Box sx={{
-          ...mobileBoxStyle,
-          background: alpha(theme.palette.warning.main, 0.1),
-          border: `1px solid ${alpha(theme.palette.warning.main, 0.3)}`
-        }}>
-          <Box sx={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            gap: isMobile ? 1 : 2,
-            mb: isMobile ? 1 : 2
+        <>
+          <Box sx={{
+            ...mobileBoxStyle,
+            background: alpha(theme.palette.warning.main, 0.1),
+            border: `1px solid ${alpha(theme.palette.warning.main, 0.3)}`
           }}>
             <Box sx={{ 
-              p: isMobile ? 1 : 1.5, 
-              borderRadius: '50%', 
-              bgcolor: alpha(theme.palette.warning.main, 0.1),
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: isMobile ? 1 : 2,
+              mb: isMobile ? 1 : 2
             }}>
-              <WarningIcon 
-                color="warning" 
-                sx={{ fontSize: isMobile ? 20 : 24 }} 
-              />
+              <Box sx={{ 
+                p: isMobile ? 1 : 1.5, 
+                borderRadius: '50%', 
+                bgcolor: alpha(theme.palette.warning.main, 0.1),
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <WarningIcon 
+                  color="warning" 
+                  sx={{ fontSize: isMobile ? 20 : 24 }} 
+                />
+              </Box>
+              <Typography 
+                variant={isMobile ? "body1" : "h6"} 
+                sx={{ fontWeight: 600, color: 'text.primary' }}
+              >
+                No hay empresas disponibles
+              </Typography>
             </Box>
             <Typography 
-              variant={isMobile ? "body1" : "h6"} 
-              sx={{ fontWeight: 600, color: 'text.primary' }}
+              variant="body2" 
+              color="text.secondary"
+              sx={{ 
+                pl: isMobile ? 3.5 : 4.5,
+                fontSize: isMobile ? '0.875rem' : '1rem',
+                mb: 2
+              }}
             >
-              No hay empresas disponibles
+              Contacta a tu administrador para agregar empresas.
             </Typography>
+            
+            {/* Debug info */}
+            {debugInfo && (
+              <Alert 
+                severity={debugInfo.hasLocalStorage && debugInfo.empresasInCache > 0 ? "info" : "warning"}
+                icon={<InfoIcon />}
+                sx={{ mt: 2 }}
+              >
+                <Typography variant="body2" fontWeight="bold">
+                  Debug Info:
+                </Typography>
+                <Typography variant="caption" component="div">
+                  • Empresas recibidas: {empresas.length}
+                </Typography>
+                {debugInfo.hasLocalStorage && (
+                  <Typography variant="caption" component="div">
+                    • Cache localStorage: {debugInfo.empresasInCache} empresas
+                  </Typography>
+                )}
+                {debugInfo.userId && (
+                  <Typography variant="caption" component="div">
+                    • UserId en cache: {debugInfo.userId}
+                  </Typography>
+                )}
+                {debugInfo.error && (
+                  <Typography variant="caption" color="error" component="div">
+                    • Error: {debugInfo.error}
+                  </Typography>
+                )}
+                {!navigator.onLine && (
+                  <Typography variant="caption" color="warning" component="div" sx={{ mt: 1 }}>
+                    ⚠️ Modo offline detectado
+                  </Typography>
+                )}
+              </Alert>
+            )}
           </Box>
-          <Typography 
-            variant="body2" 
-            color="text.secondary"
-            sx={{ 
-              pl: isMobile ? 3.5 : 4.5,
-              fontSize: isMobile ? '0.875rem' : '1rem'
-            }}
-          >
-            Contacta a tu administrador para agregar empresas.
-          </Typography>
-        </Box>
+        </>
       )}
 
 

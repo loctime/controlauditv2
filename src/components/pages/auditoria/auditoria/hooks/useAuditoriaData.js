@@ -1,9 +1,10 @@
-import { useEffect } from "react";
+import { useEffect, useCallback } from "react";
 import { collection, getDocs, query, where } from "firebase/firestore";
 import { db } from "../../../../../firebaseConfig";
 import { storageUtils } from "../../../../../utils/utilitiesOptimization";
 import { useAuth } from "../../../../context/AuthContext";
 import { getCompleteUserCache } from "../../../../../services/completeOfflineCache";
+import { getOfflineDatabase } from "../../../../../services/offlineDatabase";
 
 export const useAuditoriaData = (
   setEmpresas,
@@ -15,32 +16,136 @@ export const useAuditoriaData = (
   userFormularios,
   userSucursales
 ) => {
+  // Función para cargar datos del cache offline (como fallback)
+  // IMPORTANTE: Esta función debe estar definida antes de los useEffect que la usan
+  const cargarDatosDelCache = useCallback(async () => {
+    try {
+      // Detectar navegador y modo PWA
+      const isChrome = navigator.userAgent.includes('Chrome') && !navigator.userAgent.includes('Edg');
+      const isPWA = window.matchMedia('(display-mode: standalone)').matches || 
+                    (window.navigator.standalone === true) ||
+                    document.referrer.includes('android-app://');
+      const isOffline = !navigator.onLine;
+      
+      // En Chrome PWA offline, priorizar localStorage directamente
+      if ((isChrome && isPWA && isOffline) || (!userProfile?.uid && isOffline)) {
+        try {
+          const localCache = localStorage.getItem('complete_user_cache');
+          if (localCache) {
+            const cacheData = JSON.parse(localCache);
+            
+            // Verificar que el cache tiene datos válidos
+            if (cacheData && (cacheData.empresas || cacheData.formularios || cacheData.sucursales)) {
+              // Cargar empresas
+              if (cacheData.empresas && cacheData.empresas.length > 0) {
+                setEmpresas(cacheData.empresas);
+              }
+              
+              // Cargar formularios
+              if (cacheData.formularios && cacheData.formularios.length > 0) {
+                setFormularios(cacheData.formularios);
+              }
+              
+              // Cargar sucursales
+              if (cacheData.sucursales && cacheData.sucursales.length > 0) {
+                setSucursales(cacheData.sucursales);
+              }
+              
+              return cacheData;
+            }
+          }
+        } catch (localStorageError) {
+          console.error('Error parseando cache de localStorage:', localStorageError);
+        }
+      }
+      
+      // Si hay userProfile.uid, intentar getCompleteUserCache (mejor opción para Edge y Chrome online)
+      if (userProfile?.uid) {
+        try {
+          const cacheData = await getCompleteUserCache(userProfile.uid);
+          
+          if (cacheData) {
+            // Cargar empresas
+            if (cacheData.empresas && cacheData.empresas.length > 0) {
+              setEmpresas(cacheData.empresas);
+            }
+            
+            // Cargar formularios
+            if (cacheData.formularios && cacheData.formularios.length > 0) {
+              setFormularios(cacheData.formularios);
+            }
+            
+            // Cargar sucursales
+            if (cacheData.sucursales && cacheData.sucursales.length > 0) {
+              setSucursales(cacheData.sucursales);
+            }
+            
+            return cacheData;
+          }
+        } catch (indexedDBError) {
+          console.warn('Error cargando desde IndexedDB, intentando localStorage:', indexedDBError.message);
+        }
+      }
+      
+      // Fallback final: Intentar localStorage directamente
+      try {
+        const localCache = localStorage.getItem('complete_user_cache');
+        if (localCache) {
+          const cacheData = JSON.parse(localCache);
+          
+          // Verificar que el cache tiene datos válidos
+          if (cacheData && (cacheData.empresas || cacheData.formularios || cacheData.sucursales)) {
+            // Cargar empresas
+            if (cacheData.empresas && cacheData.empresas.length > 0) {
+              setEmpresas(cacheData.empresas);
+            }
+            
+            // Cargar formularios
+            if (cacheData.formularios && cacheData.formularios.length > 0) {
+              setFormularios(cacheData.formularios);
+            }
+            
+            // Cargar sucursales
+            if (cacheData.sucursales && cacheData.sucursales.length > 0) {
+              setSucursales(cacheData.sucursales);
+            }
+            
+            return cacheData;
+          }
+        }
+      } catch (localStorageError) {
+        console.error('Error parseando cache de localStorage:', localStorageError);
+      }
+      return null;
+      
+    } catch (error) {
+      console.error('Error al cargar cache offline:', error);
+      return null;
+    }
+  }, [userProfile, setEmpresas, setFormularios, setSucursales]);
+
   // Cargar datos SIEMPRE al montar el componente
   useEffect(() => {
-    console.log('[DEBUG Auditoria] ========== INICIANDO CARGA DE DATOS ==========');
-    console.log('[DEBUG Auditoria] userProfile:', !!userProfile);
-    console.log('[DEBUG Auditoria] userEmpresas:', userEmpresas?.length || 0);
-    console.log('[DEBUG Auditoria] userFormularios:', userFormularios?.length || 0);
-    console.log('[DEBUG Auditoria] userSucursales:', userSucursales?.length || 0);
+    // Esperar a que userProfile esté disponible antes de cargar datos
+    if (!userProfile) {
+      return;
+    }
     
     const cargarDatos = async () => {
       // 1. Intentar usar datos del contexto primero
       let datosCargados = false;
       
       if (userEmpresas && userEmpresas.length > 0) {
-        console.log('[DEBUG Auditoria] ✅ Usando empresas del contexto:', userEmpresas.length);
         setEmpresas(userEmpresas);
         datosCargados = true;
       }
       
       if (userFormularios && userFormularios.length > 0) {
-        console.log('[DEBUG Auditoria] ✅ Usando formularios del contexto:', userFormularios.length);
         setFormularios(userFormularios);
         datosCargados = true;
       }
       
       if (userSucursales && userSucursales.length > 0) {
-        console.log('[DEBUG Auditoria] ✅ Usando sucursales del contexto:', userSucursales.length);
         setSucursales(userSucursales);
         datosCargados = true;
       }
@@ -50,141 +155,55 @@ export const useAuditoriaData = (
           !userEmpresas || userEmpresas.length === 0 ||
           !userFormularios || userFormularios.length === 0 ||
           !userSucursales || userSucursales.length === 0) {
-        
-        console.log('[DEBUG Auditoria] ⚠️ Datos faltantes, cargando desde cache offline...');
         await cargarDatosDelCache();
       }
     };
     
     cargarDatos();
-  }, []); // Solo se ejecuta una vez al montar
+  }, [userProfile, userEmpresas, userFormularios, userSucursales, cargarDatosDelCache]);
 
   // Efecto para recargar datos si cambian en el contexto
   useEffect(() => {
-    console.log('[DEBUG Auditoria] Datos del contexto cambiaron...');
+    // Verificar si hay datos faltantes
+    const faltanEmpresas = !userEmpresas || userEmpresas.length === 0;
+    const faltanFormularios = !userFormularios || userFormularios.length === 0;
+    const faltanSucursales = !userSucursales || userSucursales.length === 0;
     
+    // Si hay datos en contexto, usarlos
     if (userEmpresas && userEmpresas.length > 0) {
-      console.log('[DEBUG Auditoria] ✅ Actualizando empresas del contexto:', userEmpresas.length);
       setEmpresas(userEmpresas);
     }
     
     if (userFormularios && userFormularios.length > 0) {
-      console.log('[DEBUG Auditoria] ✅ Actualizando formularios del contexto:', userFormularios.length);
       setFormularios(userFormularios);
     }
     
     if (userSucursales && userSucursales.length > 0) {
-      console.log('[DEBUG Auditoria] ✅ Actualizando sucursales del contexto:', userSucursales.length);
       setSucursales(userSucursales);
     }
-  }, [userEmpresas, userFormularios, userSucursales]);
-
-  // Función para cargar datos del cache offline (como fallback)
-  const cargarDatosDelCache = async () => {
-    try {
-      console.log('[DEBUG Auditoria] ========== CARGANDO DESDE CACHE OFFLINE ==========');
-      console.log('[DEBUG Auditoria] Navegador detectado:', navigator.userAgent.includes('Edg') ? 'Edge' : 'Chrome/Firefox');
-      
-      // Intentar IndexedDB primero
-      try {
-        const request = indexedDB.open('controlaudit_offline_v1', 2);
-      
-      return new Promise((resolve, reject) => {
-        request.onsuccess = function(event) {
-          const db = event.target.result;
-          const transaction = db.transaction(['settings'], 'readonly');
-          const store = transaction.objectStore('settings');
-          
-          store.get('complete_user_cache').onsuccess = function(e) {
-            const cached = e.target.result;
-            
-            if (!cached || !cached.value) {
-              console.log('[DEBUG Auditoria] ❌ No hay cache completo disponible');
-              resolve(null);
-              return;
-            }
-
-            const cacheData = cached.value;
-            console.log('[DEBUG Auditoria] ✅ Cache encontrado:', {
-              userId: cacheData.userId,
-              empresas: cacheData.empresas?.length || 0,
-              formularios: cacheData.formularios?.length || 0,
-              sucursales: cacheData.sucursales?.length || 0
-            });
-            
-            // Cargar empresas
-            if (cacheData.empresas && cacheData.empresas.length > 0) {
-              console.log('[DEBUG Auditoria] ✅ Cargando empresas desde cache:', cacheData.empresas.length);
-              setEmpresas(cacheData.empresas);
-            } else {
-              console.log('[DEBUG Auditoria] ❌ No hay empresas en cache');
-            }
-            
-            // Cargar formularios
-            if (cacheData.formularios && cacheData.formularios.length > 0) {
-              console.log('[DEBUG Auditoria] ✅ Cargando formularios desde cache:', cacheData.formularios.length);
-              setFormularios(cacheData.formularios);
-            } else {
-              console.log('[DEBUG Auditoria] ❌ No hay formularios en cache');
-            }
-            
-            // Cargar sucursales
-            if (cacheData.sucursales && cacheData.sucursales.length > 0) {
-              console.log('[DEBUG Auditoria] ✅ Cargando sucursales desde cache:', cacheData.sucursales.length);
-              setSucursales(cacheData.sucursales);
-            } else {
-              console.log('[DEBUG Auditoria] ❌ No hay sucursales en cache');
-            }
-            
-            resolve(cacheData);
-          };
-          
-          store.get('complete_user_cache').onerror = function(e) {
-            console.error('[DEBUG Auditoria] Error leyendo cache:', e.target.error);
-            reject(e.target.error);
-          };
-        };
-        
-        request.onerror = function(event) {
-          console.error('[DEBUG Auditoria] Error al abrir IndexedDB:', event.target.error);
-          reject(event.target.error);
-        };
-      });
-      
-      } catch (indexedDBError) {
-        console.warn('[DEBUG Auditoria] IndexedDB falló, intentando localStorage:', indexedDBError);
-        
-        // Fallback a localStorage
-        try {
-          const cacheData = JSON.parse(localStorage.getItem('complete_user_cache') || '{}');
-          
-          if (cacheData.empresas && cacheData.empresas.length > 0) {
-            console.log('[DEBUG Auditoria] ✅ Cargando empresas desde localStorage:', cacheData.empresas.length);
+    
+    // Si faltan datos y hay userProfile, cargar desde cache una sola vez
+    if (userProfile && (faltanEmpresas || faltanFormularios || faltanSucursales)) {
+      cargarDatosDelCache().then(cacheData => {
+        if (cacheData) {
+          // Solo actualizar los que faltan
+          if (faltanEmpresas && cacheData.empresas && cacheData.empresas.length > 0) {
             setEmpresas(cacheData.empresas);
           }
           
-          if (cacheData.formularios && cacheData.formularios.length > 0) {
-            console.log('[DEBUG Auditoria] ✅ Cargando formularios desde localStorage:', cacheData.formularios.length);
+          if (faltanFormularios && cacheData.formularios && cacheData.formularios.length > 0) {
             setFormularios(cacheData.formularios);
           }
           
-          if (cacheData.sucursales && cacheData.sucursales.length > 0) {
-            console.log('[DEBUG Auditoria] ✅ Cargando sucursales desde localStorage:', cacheData.sucursales.length);
+          if (faltanSucursales && cacheData.sucursales && cacheData.sucursales.length > 0) {
             setSucursales(cacheData.sucursales);
           }
-          
-          return cacheData;
-        } catch (localStorageError) {
-          console.error('[DEBUG Auditoria] localStorage también falló:', localStorageError);
-          return null;
         }
-      }
-      
-    } catch (error) {
-      console.error('[DEBUG Auditoria] Error al cargar cache offline:', error);
-      return null;
+      }).catch(err => {
+        console.warn('Error al cargar datos desde cache:', err);
+      });
     }
-  };
+  }, [userProfile, userEmpresas, userFormularios, userSucursales, cargarDatosDelCache]);
 
   // Función para obtener empresas que tienen sucursales desde el cache offline
   const obtenerEmpresasConSucursales = async () => {
@@ -202,14 +221,12 @@ export const useAuditoriaData = (
           const empresasFiltradas = cacheData.empresas.filter(empresa => 
             empresasConSucursales.includes(empresa.id)
           );
-          console.log('[DEBUG Auditoria] Empresas con sucursales desde cache:', empresasFiltradas.length);
           return empresasFiltradas;
         }
       }
       
       // Si no hay cache, intentar cargar desde Firestore (solo si hay conexión)
       if (navigator.onLine) {
-        console.log('[DEBUG Auditoria] No hay cache, cargando sucursales desde Firestore...');
         let sucursalesData = [];
         
         if (userProfile.role === 'supermax') {
@@ -306,7 +323,6 @@ export const useAuditoriaData = (
             ...doc.data()
           }));
           
-          console.log('[DEBUG Auditoria] Empresas con sucursales desde Firestore:', empresasData.length);
           return empresasData;
         }
       }
@@ -320,35 +336,56 @@ export const useAuditoriaData = (
 
   // Cargar empresas desde sucursales existentes
   useEffect(() => {
+    // Detectar Chrome PWA offline
+    const isChrome = navigator.userAgent.includes('Chrome') && !navigator.userAgent.includes('Edg');
+    const isPWA = window.matchMedia('(display-mode: standalone)').matches || 
+                  (window.navigator.standalone === true) ||
+                  document.referrer.includes('android-app://');
+    const isOffline = !navigator.onLine;
+    
+    // Si no hay userProfile o es Chrome PWA offline, intentar cargar desde localStorage directamente
+    if (!userProfile || (isChrome && isPWA && isOffline)) {
+      try {
+        const localCache = localStorage.getItem('complete_user_cache');
+        if (localCache) {
+          const cacheData = JSON.parse(localCache);
+          if (cacheData && cacheData.empresas && cacheData.empresas.length > 0) {
+            setEmpresas(cacheData.empresas);
+            
+            // También cargar formularios y sucursales si están disponibles
+            if (cacheData.formularios && cacheData.formularios.length > 0) {
+              setFormularios(cacheData.formularios);
+            }
+            if (cacheData.sucursales && cacheData.sucursales.length > 0) {
+              setSucursales(cacheData.sucursales);
+            }
+            return;
+          }
+        }
+      } catch (e) {
+        console.warn('Error cargando desde localStorage:', e);
+      }
+      // No retornar aquí, continuar con la lógica normal si localStorage falla
+    }
+
     const cargarEmpresas = async () => {
-      console.log('[DEBUG Auditoria] Iniciando carga de empresas desde sucursales...');
-      
       try {
         // Prioridad 1: Usar userEmpresas del contexto (igual que /establecimiento)
         if (userEmpresas && userEmpresas.length > 0) {
-          console.log('[DEBUG Auditoria] Usando empresas del contexto:', userEmpresas.length, 'empresas');
           setEmpresas(userEmpresas);
         } 
         // Prioridad 2: Datos del cache offline
         else {
-          console.log('[DEBUG Auditoria] No hay empresas en contexto, cargando desde cache offline...');
           const cacheData = await cargarDatosDelCache();
           
-          console.log('[DEBUG Auditoria] Cache data encontrado:', cacheData);
-          
           if (cacheData && cacheData.empresas && cacheData.empresas.length > 0) {
-            console.log('[DEBUG Auditoria] Empresas cargadas desde cache offline:', cacheData.empresas.length, 'empresas');
-            console.log('[DEBUG Auditoria] Empresas del cache:', cacheData.empresas);
             setEmpresas(cacheData.empresas);
           } 
           // Prioridad 3: Cargar desde Firestore (solo si hay conexión)
           else if (userProfile && userProfile.uid && navigator.onLine) {
-            console.log('[DEBUG Auditoria] No hay empresas en cache offline, cargando desde Firestore...');
             const empresasConSucursales = await obtenerEmpresasConSucursales();
             setEmpresas(empresasConSucursales);
-            console.log('[DEBUG Auditoria] Empresas cargadas desde Firestore (con sucursales):', empresasConSucursales.length, 'empresas');
           } else {
-            console.log('[DEBUG Auditoria] No hay empresas en cache offline ni conexión para cargar desde Firestore.');
             setEmpresas([]);
           }
         }
@@ -359,15 +396,28 @@ export const useAuditoriaData = (
     };
 
     cargarEmpresas();
-  }, [userProfile, userEmpresas, setEmpresas]);
+  }, [userProfile, userEmpresas, setEmpresas, cargarDatosDelCache]);
 
   // Cargar todas las sucursales disponibles al inicio
   useEffect(() => {
-    const cargarTodasLasSucursales = async () => {
-      if (!userProfile) {
-        setSucursales([]);
-        return;
+    // Si no hay userProfile, intentar cargar desde localStorage directamente (offline)
+    if (!userProfile) {
+      try {
+        const localCache = localStorage.getItem('complete_user_cache');
+        if (localCache) {
+          const cacheData = JSON.parse(localCache);
+          if (cacheData && cacheData.sucursales && cacheData.sucursales.length > 0) {
+            setSucursales(cacheData.sucursales);
+            return;
+          }
+        }
+      } catch (e) {
+        console.warn('Error cargando sucursales desde localStorage:', e);
       }
+      return;
+    }
+
+    const cargarTodasLasSucursales = async () => {
 
       try {
         let sucursalesData = [];
@@ -388,11 +438,9 @@ export const useAuditoriaData = (
           
           // Si no hay userEmpresas, intentar cargar desde cache offline
           if (!empresasParaSucursales || empresasParaSucursales.length === 0) {
-            console.log('[DEBUG Auditoria] No hay userEmpresas, cargando desde cache para sucursales...');
             const cacheData = await cargarDatosDelCache();
             if (cacheData && cacheData.empresas && cacheData.empresas.length > 0) {
               empresasParaSucursales = cacheData.empresas;
-              console.log('[DEBUG Auditoria] Empresas cargadas desde cache para sucursales:', empresasParaSucursales.length);
             }
           }
           
@@ -424,7 +472,6 @@ export const useAuditoriaData = (
         }
 
         setSucursales(sucursalesData);
-        console.log(`[DEBUG Auditoria] Sucursales cargadas: ${sucursalesData.length}`);
       } catch (error) {
         console.error("Error al obtener sucursales:", error);
         setSucursales([]);
@@ -436,28 +483,40 @@ export const useAuditoriaData = (
 
   // Cargar formularios desde el contexto, cache offline o Firestore
   useEffect(() => {
+    // Si no hay userProfile, intentar cargar desde localStorage directamente (offline)
+    if (!userProfile) {
+      try {
+        const localCache = localStorage.getItem('complete_user_cache');
+        if (localCache) {
+          const cacheData = JSON.parse(localCache);
+          if (cacheData && cacheData.formularios && cacheData.formularios.length > 0) {
+            setFormularios(cacheData.formularios);
+            return;
+          }
+        }
+      } catch (e) {
+        console.warn('Error cargando formularios desde localStorage:', e);
+      }
+      return;
+    }
+
     const cargarFormularios = async () => {
-      console.log('[DEBUG Auditoria] Iniciando carga de formularios...');
-      
       // Prioridad 1: Datos del contexto (online)
       if (userFormularios && userFormularios.length > 0) {
         setFormularios(userFormularios);
-        console.log('[DEBUG Auditoria] Formularios desde contexto:', userFormularios.length, 'formularios');
       } 
       // Prioridad 2: Datos del cache offline
       else {
-        console.log('[DEBUG Auditoria] No hay formularios en contexto, cargando desde cache offline...');
         const cacheData = await cargarDatosDelCache();
         
         if (cacheData && cacheData.formularios && cacheData.formularios.length > 0) {
-          console.log('[DEBUG Auditoria] Formularios cargados desde cache offline:', cacheData.formularios.length, 'formularios');
           setFormularios(cacheData.formularios);
         }
       }
     };
 
     cargarFormularios();
-  }, [userFormularios, setFormularios]);
+  }, [userProfile, userFormularios, setFormularios, cargarDatosDelCache]);
 
   // Cargar formularios desde Firestore si no están en el contexto ni en cache offline
   useEffect(() => {
@@ -512,10 +571,8 @@ export const useAuditoriaData = (
           });
           
           setFormularios(formulariosPermitidos);
-          console.log(`[DEBUG Auditoria] Formularios cargados desde Firestore: ${formulariosPermitidos.length} de ${todosLosFormularios.length}`);
         } else {
           // Cargar desde cache cuando está offline
-          console.log('[DEBUG Auditoria] Sin conectividad, cargando formularios desde cache...');
           const cacheData = storageUtils.get('formularios_cache');
           
           if (cacheData && cacheData.formularios && cacheData.userId === userProfile.uid) {
@@ -525,13 +582,10 @@ export const useAuditoriaData = (
             
             if (cacheAge < maxCacheAge) {
               setFormularios(cacheData.formularios);
-              console.log(`[DEBUG Auditoria] Formularios cargados desde cache offline: ${cacheData.formularios.length}`);
             } else {
-              console.log('[DEBUG Auditoria] Cache de formularios expirado');
               setFormularios([]);
             }
           } else {
-            console.log('[DEBUG Auditoria] No hay cache de formularios disponible');
             setFormularios([]);
           }
         }
@@ -543,7 +597,6 @@ export const useAuditoriaData = (
           const cacheData = storageUtils.get('formularios_cache');
           if (cacheData && cacheData.formularios) {
             setFormularios(cacheData.formularios);
-            console.log('[DEBUG Auditoria] Fallback: formularios cargados desde cache tras error');
           }
         } catch (cacheError) {
           console.error("Error al cargar desde cache:", cacheError);

@@ -1,5 +1,5 @@
 // components/SeleccionSucursal.js
-import React from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { 
   FormControl, 
   InputLabel, 
@@ -18,19 +18,56 @@ import LocationOnIcon from '@mui/icons-material/LocationOn';
 import BusinessIcon from '@mui/icons-material/Business';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 
-const SeleccionSucursal = ({ sucursales, sucursalSeleccionada, onChange }) => {
+const SeleccionSucursal = ({ sucursales, sucursalSeleccionada, onChange, autoOpen = false, isMobile: isMobileProp = false }) => {
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const isMobileHook = useMediaQuery(theme.breakpoints.down('sm'));
+  const isMobile = isMobileProp || isMobileHook;
+  const selectRef = useRef(null);
+  const containerRef = useRef(null);
+  const hasOpenedRef = useRef(false);
+  const [selectOpen, setSelectOpen] = useState(false);
 
   const handleChange = (event) => {
     onChange(event);
+    setSelectOpen(false);
   };
 
   // Determinar si hay una ubicación seleccionada para aplicar estilos verdes
   const hasSelectedSucursal = !!sucursalSeleccionada;
 
+  // Abrir automáticamente el selector y hacer scroll en móvil
+  useEffect(() => {
+    // Resetear el flag cuando cambia la empresa (sucursalSeleccionada se resetea)
+    if (!sucursalSeleccionada) {
+      hasOpenedRef.current = false;
+      setSelectOpen(false);
+    }
+  }, [sucursalSeleccionada]);
+
+  useEffect(() => {
+    if (autoOpen && !hasSelectedSucursal && !hasOpenedRef.current && selectRef.current) {
+      hasOpenedRef.current = true;
+      
+      // Pequeño delay para asegurar que el componente esté renderizado
+      setTimeout(() => {
+        // Abrir el selector usando el estado
+        setSelectOpen(true);
+        
+        // Hacer scroll en móvil
+        if (isMobile && containerRef.current) {
+          setTimeout(() => {
+            containerRef.current.scrollIntoView({ 
+              behavior: 'smooth', 
+              block: 'center' 
+            });
+          }, 300);
+        }
+      }, 100);
+    }
+  }, [autoOpen, hasSelectedSucursal, isMobile]);
+
   return (
-    <Box sx={{ mb: isMobile ? 0.25 : 1 }}>
+    <Box ref={containerRef} sx={{ mb: isMobile ? 0.25 : 1 }}>
       <Box sx={{ 
         display: 'flex', 
         alignItems: 'center', 
@@ -72,6 +109,7 @@ const SeleccionSucursal = ({ sucursales, sucursalSeleccionada, onChange }) => {
       </Box>
       
       <FormControl 
+        ref={selectRef}
         fullWidth 
         size="large"
         sx={{ 
@@ -114,8 +152,12 @@ const SeleccionSucursal = ({ sucursales, sucursalSeleccionada, onChange }) => {
           Ubicación
         </InputLabel>
         <Select
+          ref={selectRef}
           value={sucursalSeleccionada}
           onChange={handleChange}
+          open={selectOpen}
+          onOpen={() => setSelectOpen(true)}
+          onClose={() => setSelectOpen(false)}
           sx={{ 
             minHeight: isMobile ? '40px' : '56px',
             '& .MuiSelect-select': {

@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useRef } from "react";
+import React, { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { 
   Container, 
@@ -42,6 +42,7 @@ import AlertasFaltantes from "./components/AlertasFaltantes";
 import { createAuditoriaSteps } from "./components/AuditoriaSteps";
 import SimpleOfflineDebug from "../../../common/SimpleOfflineDebug";
 import AuditoriaDebugInfo from "../../../common/AuditoriaDebugInfo";
+// import OfflineDebugLogs from "./components/OfflineDebugLogs"; // Comentado temporalmente para probar error en Edge PWA
 
 // Servicios
 import AuditoriaService from "../auditoriaService";
@@ -58,6 +59,10 @@ import {
   validarAuditoria,
   configurarFormulario,
   filtrarSucursalesPorEmpresa,
+  tieneProgresoReal,
+  calcularPasoCorrecto,
+  contarPreguntasRespondidas,
+  contarTotalPreguntas,
   verificarFirmasCompletadas,
   generarHashAuditoria
 } from "./utils/auditoriaUtils";
@@ -195,6 +200,7 @@ const AuditoriaRefactorizada = () => {
     firmasCompletadas, setFirmasCompletadas,
     firmasValidas, setFirmasValidas,
     mostrarAlertaReinicio, setMostrarAlertaReinicio,
+    datosReporte, setDatosReporte,
     log,
     reiniciarAuditoria,
     generarHashAuditoria
@@ -319,16 +325,28 @@ const AuditoriaRefactorizada = () => {
       try {
         const savedData = await autoSaveService.restoreAuditoria(userProfile.uid);
         
-        // Solo restaurar si hay datos Y no viene de agenda Y la auditoría está incompleta
+        // Solo restaurar si hay datos Y no viene de agenda
         if (savedData && !location.state?.auditoriaId) {
-          // Verificar que la auditoría esté incompleta (no completada)
+          // Verificar que haya progreso real (al menos una pregunta respondida)
+          const respuestasGuardadas = savedData.respuestas || [];
+          const tieneProgreso = tieneProgresoReal(respuestasGuardadas);
+          
+          if (!tieneProgreso) {
+            // No hay progreso real, limpiar y no restaurar
+            restoreAttemptedRef.current = true;
+            await autoSaveService.clearLocalStorage(userProfile.uid);
+            return;
+          }
+          
+          // Verificar que la auditoría esté incompleta
+          const todasCompletadas = todasLasPreguntasContestadas(respuestasGuardadas);
           const isIncomplete = !savedData.estadoCompletada && 
-                              (savedData.activeStep < 4 || !savedData.auditoriaGenerada);
+                              (!todasCompletadas || !savedData.auditoriaGenerada);
           
           if (!isIncomplete) {
             // Si está completada, limpiar el autoguardado
             restoreAttemptedRef.current = true;
-            await autoSaveService.clearLocalStorage();
+            await autoSaveService.clearLocalStorage(userProfile.uid);
             return;
           }
 
@@ -345,36 +363,151 @@ const AuditoriaRefactorizada = () => {
             }
           }
 
+          // Calcular el paso correcto basado en el progreso real
+          const pasoCorrecto = calcularPasoCorrecto({
+            respuestas: respuestasGuardadas,
+            todasLasPreguntasCompletadas: todasCompletadas,
+            activeStepGuardado: savedData.activeStep || 0,
+            firmaAuditor: savedData.firmaAuditor,
+            auditoriaGenerada: savedData.auditoriaGenerada
+          });
+          
+          if (pasoCorrecto === null) {
+            // No hay progreso suficiente para restaurar
+            restoreAttemptedRef.current = true;
+            await autoSaveService.clearLocalStorage(userProfile.uid);
+            return;
+          }
+
           // Marcar como intentado antes de mostrar el diálogo
           restoreAttemptedRef.current = true;
 
-          // Mostrar confirmación para restaurar
+          // Calcular información del progreso para mostrar en el diálogo
+          const preguntasRespondidas = contarPreguntasRespondidas(respuestasGuardadas);
+          const totalPreguntas = contarTotalPreguntas(savedData.secciones || []);
+          const porcentajeProgreso = totalPreguntas > 0 
+            ? Math.round((preguntasRespondidas / totalPreguntas) * 100) 
+            : 0;
+
+          // Mostrar confirmación con información del progreso
           const shouldRestore = await Swal.fire({
             title: '🔄 Auditoría encontrada',
-            text: 'Se encontró una auditoría guardada automáticamente. ¿Quieres restaurarla?',
+            html: `
+              <p>Se encontró una auditoría guardada automáticamente.</p>
+              <p style="margin-top: 10px;">
+                <strong>Progreso:</strong> ${preguntasRespondidas} de ${totalPreguntas} preguntas respondidas (${porcentajeProgreso}%)
+              </p>
+              <p style="margin-top: 10px;">¿Quieres continuar donde lo dejaste?</p>
+            `,
             icon: 'question',
             showCancelButton: true,
-            confirmButtonText: 'Restaurar',
+            confirmButtonText: 'Continuar',
             cancelButtonText: 'Comenzar nueva',
             reverseButtons: true
           });
 
           if (shouldRestore.isConfirmed) {
+            console.log('🔄 Restaurando auditoría con datos:', {
+              respuestas: savedData.respuestas?.length || 0,
+              comentarios: savedData.comentarios?.length || 0,
+              imagenes: savedData.imagenes?.length || 0,
+              clasificaciones: savedData.clasificaciones?.length || 0,
+              secciones: savedData.secciones?.length || 0,
+              contenidoRespuestas: savedData.respuestas
+            });
+            
             setEmpresaSeleccionada(savedData.empresaSeleccionada);
             setSucursalSeleccionada(savedData.sucursalSeleccionada);
             setFormularioSeleccionadoId(savedData.formularioSeleccionadoId);
             setSecciones(savedData.secciones || []);
-            setRespuestas(savedData.respuestas || []);
-            setComentarios(savedData.comentarios || []);
-            // Restaurar imágenes (ahora vienen como File objects desde IndexedDB)
-            setImagenes(savedData.imagenes || []);
-            setClasificaciones(savedData.clasificaciones || []);
-            setActiveStep(savedData.activeStep || 0);
+            
+            // Asegurar que respuestas, comentarios e imágenes sean arrays
+            const respuestasRestauradas = Array.isArray(savedData.respuestas) 
+              ? savedData.respuestas 
+              : (typeof savedData.respuestas === 'string' ? JSON.parse(savedData.respuestas) : []);
+            
+            const comentariosRestaurados = Array.isArray(savedData.comentarios) 
+              ? savedData.comentarios 
+              : (typeof savedData.comentarios === 'string' ? JSON.parse(savedData.comentarios) : []);
+            
+            const imagenesRestauradas = Array.isArray(savedData.imagenes) 
+              ? savedData.imagenes 
+              : (typeof savedData.imagenes === 'string' ? JSON.parse(savedData.imagenes) : []);
+            
+            const clasificacionesRestauradas = Array.isArray(savedData.clasificaciones) 
+              ? savedData.clasificaciones 
+              : (typeof savedData.clasificaciones === 'string' ? JSON.parse(savedData.clasificaciones) : []);
+            
+            console.log('📋 Respuestas restauradas (contenido):', JSON.stringify(respuestasRestauradas));
+            console.log('📋 Respuestas restauradas (estructura):', {
+              length: respuestasRestauradas.length,
+              primeraSeccion: respuestasRestauradas[0],
+              todasLasSecciones: respuestasRestauradas.map((seccion, idx) => ({
+                seccion: idx,
+                length: seccion?.length || 0,
+                contenido: seccion,
+                todasRespondidas: seccion?.every(resp => resp !== '' && resp !== null && resp !== undefined) || false
+              }))
+            });
+            
+            // Verificar inmediatamente si están completas
+            const todasCompletadasAhora = todasLasPreguntasContestadas(respuestasRestauradas);
+            console.log('✅ Verificación inmediata - Todas completadas:', todasCompletadasAhora);
+            
+            // Restaurar estados - IMPORTANTE: hacerlo en este orden
+            setRespuestas(respuestasRestauradas);
+            setComentarios(comentariosRestaurados);
+            setImagenes(imagenesRestauradas);
+            setClasificaciones(clasificacionesRestauradas);
+            
+            // Restaurar firmas si existen (pero no las usaremos para determinar el paso)
+            if (savedData.firmaAuditor) {
+              setFirmaAuditor(savedData.firmaAuditor);
+            }
+            if (savedData.firmaResponsable) {
+              setFirmaResponsable(savedData.firmaResponsable);
+            }
+            
+            // SIMPLIFICADO: Siempre ir al paso de preguntas si hay respuestas guardadas
+            setActiveStep(2); // Paso de preguntas
             setHasUnsavedChanges(false);
             setLastSaved(savedData.timestamp);
+            
+            // Forzar re-render para que el botón "Siguiente" se actualice correctamente
+            // Usar setTimeout para asegurar que el estado se haya actualizado completamente
+            setTimeout(() => {
+              console.log('🔄 [Auditoria] Estado después de restaurar:', {
+                respuestasLength: respuestasRestauradas.length,
+                todasCompletadas: todasLasPreguntasContestadas(respuestasRestauradas),
+                pasoCompleto2: pasoCompleto(2, {
+                  empresaSeleccionada: savedData.empresaSeleccionada,
+                  formularioSeleccionadoId: savedData.formularioSeleccionadoId,
+                  respuestas: respuestasRestauradas
+                })
+              });
+              
+              // Forzar actualización del botón "Siguiente" re-evaluando pasoCompletoAuditoria
+              // Esto asegura que el botón se habilite correctamente
+              const paso2Completo = pasoCompletoAuditoria(2);
+              console.log('🔄 [Auditoria] Re-evaluando paso 2 después de restaurar:', paso2Completo);
+              
+              // Forzar un re-render adicional para asegurar que el botón se actualice
+              // Esto es necesario porque React puede no actualizar inmediatamente después de setState
+              setForceUpdate(prev => prev + 1);
+            }, 200);
+            
+            console.log('✅ Auditoría restaurada:', {
+              paso: 2,
+              progreso: `${preguntasRespondidas}/${totalPreguntas}`,
+              respuestasRestauradas: respuestasRestauradas.length,
+              comentariosRestaurados: comentariosRestaurados.length,
+              imagenesRestauradas: imagenesRestauradas.length,
+              clasificacionesRestauradas: clasificacionesRestauradas.length,
+              todasCompletadas: todasLasPreguntasContestadas(respuestasRestauradas)
+            });
           } else {
             // Limpiar datos guardados si no se quiere restaurar
-            autoSaveService.clearLocalStorage();
+            await autoSaveService.clearLocalStorage(userProfile.uid);
           }
         } else {
           // No hay datos para restaurar, marcar como intentado
@@ -387,7 +520,7 @@ const AuditoriaRefactorizada = () => {
     };
 
     restoreAuditoria();
-  }, [userProfile?.uid, location.state?.auditoriaId]);
+  }, [userProfile?.uid, location.state?.auditoriaId, formularios]);
   
   // Resetear la bandera cuando cambian los formularios (para permitir reintento si se cargan después)
   useEffect(() => {
@@ -397,6 +530,56 @@ const AuditoriaRefactorizada = () => {
       restoreRetriesRef.current = 0;
     }
   }, [formularios.length]);
+
+  // Forzar actualización del botón "Siguiente" cuando se restauran las respuestas
+  useEffect(() => {
+    // Este efecto se ejecutará cada vez que cambien las respuestas
+    // Esto asegura que el botón "Siguiente" se actualice correctamente
+    if (respuestas && respuestas.length > 0) {
+      const todasCompletadas = todasLasPreguntasContestadas(respuestas);
+      const paso2Completo = pasoCompleto(2, {
+        empresaSeleccionada,
+        formularioSeleccionadoId,
+        respuestas
+      });
+      
+      console.log('🔄 [Auditoria] Respuestas cambiaron, verificando paso completo:', {
+        todasCompletadas,
+        paso2Completo,
+        respuestasLength: respuestas.length,
+        respuestasEstructura: respuestas.map((seccion, idx) => ({
+          seccion: idx,
+          length: seccion?.length || 0,
+          todasRespondidas: seccion?.every(resp => resp !== '' && resp !== null && resp !== undefined) || false,
+          contenido: seccion
+        }))
+      });
+    }
+  }, [respuestas, empresaSeleccionada, formularioSeleccionadoId]);
+
+  // Guardar antes de cerrar/refrescar la página
+  useEffect(() => {
+    const handleBeforeUnload = async (e) => {
+      // Solo guardar si hay cambios sin guardar
+      if (checkUnsavedChanges && checkUnsavedChanges()) {
+        // Intentar guardar de forma síncrona usando sendBeacon o similar
+        // Como no podemos hacer async en beforeunload, guardamos de forma sincrónica
+        try {
+          // Forzar guardado inmediato antes de cerrar
+          await handleAutoSave(true);
+          console.log('💾 Guardado antes de cerrar/refrescar');
+        } catch (error) {
+          console.error('❌ Error al guardar antes de cerrar:', error);
+        }
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [checkUnsavedChanges, handleAutoSave]);
 
 
   // Verificar firmas cuando cambien
@@ -410,13 +593,13 @@ const AuditoriaRefactorizada = () => {
   const obtenerUbicacion = () => obtenerTipoUbicacion(empresaSeleccionada, sucursalSeleccionada, sucursales);
 
   // Funciones de navegación (ahora usando utils)
-  const calcularProgresoAuditoria = () => calcularProgreso({
+  const calcularProgresoAuditoria = useCallback(() => calcularProgreso({
     empresaSeleccionada,
     formularioSeleccionadoId,
     secciones,
     respuestas,
     firmasCompletadas
-  });
+  }), [empresaSeleccionada, formularioSeleccionadoId, secciones, respuestas, firmasCompletadas]);
 
   const getStepStatusAuditoria = (step) => getStepStatus(step, {
     empresaSeleccionada,
@@ -425,17 +608,90 @@ const AuditoriaRefactorizada = () => {
     respuestas
   });
 
-  const pasoCompletoAuditoria = (step) => {
+  const pasoCompletoAuditoria = useCallback((step) => {
+    const todasCompletadas = todasLasPreguntasContestadas(respuestas);
     const resultado = pasoCompleto(step, {
       empresaSeleccionada,
+      sucursalSeleccionada,
       formularioSeleccionadoId,
-      respuestas
+      respuestas,
+      sucursales
     });
-    console.log(`[DEBUG] Paso ${step} completo:`, resultado);
+    
+    // Log detallado solo para el paso 2 (preguntas)
+    if (step === 2) {
+      console.log(`[DEBUG] Paso ${step} completo:`, resultado, {
+        respuestasLength: respuestas?.length || 0,
+        respuestasEstructura: respuestas?.map((seccion, idx) => ({
+          seccion: idx,
+          length: seccion?.length || 0,
+          todasRespondidas: seccion?.every(resp => resp !== '' && resp !== null && resp !== undefined) || false,
+          contenido: seccion
+        })) || [],
+        todasCompletadas,
+        todasCompletadasDetalle: respuestas?.every(seccionRespuestas => {
+          if (!Array.isArray(seccionRespuestas)) return false;
+          return seccionRespuestas.every(respuesta => 
+            respuesta !== '' && respuesta !== null && respuesta !== undefined
+          );
+        }) || false
+      });
+    }
+    
     return resultado;
-  };
+  }, [empresaSeleccionada, sucursalSeleccionada, formularioSeleccionadoId, respuestas, sucursales]);
 
+  // Estado para forzar re-render
+  const [forceUpdate, setForceUpdate] = useState(0);
 
+  // Función para forzar actualización del estado (botón "Actualizar")
+  const handleForzarActualizacion = useCallback(() => {
+    console.log('🔄 [Auditoria] Forzando actualización del estado...');
+    console.log('🔄 [Auditoria] Estado actual respuestas:', respuestas);
+    
+    // Si hay respuestas, simplemente llamar a handleGuardarRespuestas para forzar actualización
+    if (respuestas && respuestas.length > 0) {
+      // Crear una copia nueva del array para forzar la actualización
+      const nuevasRespuestas = respuestas.map(seccion => [...seccion]);
+      
+      // Encontrar la primera respuesta con valor para desmarcar y remarcar
+      let encontrada = false;
+      for (let i = 0; i < nuevasRespuestas.length && !encontrada; i++) {
+        if (nuevasRespuestas[i] && Array.isArray(nuevasRespuestas[i])) {
+          for (let j = 0; j < nuevasRespuestas[i].length && !encontrada; j++) {
+            if (nuevasRespuestas[i][j] && nuevasRespuestas[i][j] !== '' && nuevasRespuestas[i][j] !== null && nuevasRespuestas[i][j] !== undefined) {
+              const valorOriginal = nuevasRespuestas[i][j];
+              console.log(`🔄 [Auditoria] Desmarcando y remarcando respuesta en sección ${i}, pregunta ${j}: ${valorOriginal}`);
+              
+              // Desmarcar temporalmente
+              nuevasRespuestas[i][j] = '';
+              
+              // Guardar primero con la respuesta desmarcada
+              handleGuardarRespuestas(nuevasRespuestas);
+              
+              // Remarcar después de un pequeño delay
+              setTimeout(() => {
+                nuevasRespuestas[i][j] = valorOriginal;
+                handleGuardarRespuestas(nuevasRespuestas);
+                console.log('🔄 [Auditoria] Respuesta remarcada');
+              }, 100);
+              
+              encontrada = true;
+            }
+          }
+        }
+      }
+      
+      if (!encontrada) {
+        console.log('⚠️ [Auditoria] No se encontraron respuestas válidas, forzando guardado de todas formas');
+        // Si no hay respuestas válidas, simplemente forzar guardado
+        handleGuardarRespuestas(nuevasRespuestas);
+      }
+    } else {
+      console.log('⚠️ [Auditoria] No hay respuestas para actualizar');
+      setForceUpdate(prev => prev + 1);
+    }
+  }, [respuestas, handleGuardarRespuestas]);
 
   // Función para marcar auditoría como completada
   const marcarAuditoriaCompletada = async () => {
@@ -457,14 +713,26 @@ const AuditoriaRefactorizada = () => {
 
 
   // Configurar secciones cuando cambie el formulario (ahora usando utils)
+  // IMPORTANTE: No sobrescribir respuestas si ya existen (por ejemplo, después de restaurar)
   useEffect(() => {
     if (formularioSeleccionadoId) {
       const configuracion = configurarFormulario(formularioSeleccionadoId, formularios);
       setSecciones(configuracion.secciones);
-      setRespuestas(configuracion.respuestas);
-      setComentarios(configuracion.comentarios);
-      setImagenes(configuracion.imagenes);
-      setClasificaciones(configuracion.clasificaciones);
+      
+      // Solo resetear respuestas si no hay respuestas existentes con datos
+      const tieneRespuestasExistentes = respuestas && respuestas.length > 0 && 
+        respuestas.some(seccion => seccion && seccion.some(resp => resp !== '' && resp !== null && resp !== undefined));
+      
+      if (!tieneRespuestasExistentes) {
+        setRespuestas(configuracion.respuestas);
+        setComentarios(configuracion.comentarios);
+        setImagenes(configuracion.imagenes);
+        setClasificaciones(configuracion.clasificaciones);
+      } else {
+        // Si hay respuestas existentes, solo asegurar que las secciones coincidan
+        // pero mantener las respuestas existentes
+        console.log('🔄 [Auditoria] Manteniendo respuestas existentes al cambiar formulario');
+      }
     }
   }, [formularioSeleccionadoId, formularios]);
 
@@ -522,7 +790,7 @@ const AuditoriaRefactorizada = () => {
   }, [clasificaciones]);
 
   // Crear los pasos usando el componente
-  const steps = createAuditoriaSteps({
+  const steps = useMemo(() => createAuditoriaSteps({
     // Estados
     empresas,
     empresaSeleccionada,
@@ -538,6 +806,7 @@ const AuditoriaRefactorizada = () => {
     firmaAuditor,
     firmaResponsable,
     firmasCompletadas,
+    datosReporte,
     bloquearDatosAgenda,
     location,
     
@@ -552,6 +821,7 @@ const AuditoriaRefactorizada = () => {
     handleSaveFirmaAuditor,
     handleSaveFirmaResponsable,
     handleFinalizar: () => handleFinalizar(marcarAuditoriaCompletada),
+    setDatosReporte,
     
     // Funciones
     obtenerUbicacion,
@@ -561,7 +831,55 @@ const AuditoriaRefactorizada = () => {
     // Tema
     theme,
     isMobile
-  });
+  }), [
+    empresas,
+    empresaSeleccionada,
+    sucursales,
+    sucursalSeleccionada,
+    formularios,
+    formularioSeleccionadoId,
+    secciones,
+    respuestas,
+    comentarios,
+    imagenes,
+    clasificaciones,
+    firmaAuditor,
+    firmaResponsable,
+    firmasCompletadas,
+    datosReporte,
+    bloquearDatosAgenda,
+    location,
+    handleEmpresaChange,
+    handleSucursalChange,
+    handleSeleccionarFormulario,
+    handleGuardarRespuestas,
+    handleGuardarComentario,
+    handleGuardarImagenes,
+    handleGuardarClasificaciones,
+    handleSaveFirmaAuditor,
+    handleSaveFirmaResponsable,
+    setDatosReporte,
+    obtenerUbicacion,
+    validarTodasLasPreguntas,
+    setOpenAlertaEdicion,
+    theme,
+    isMobile
+  ]);
+
+  // Scroll al top cuando se llega al paso de firmas (paso 3)
+  useEffect(() => {
+    if (activeStep === 3) {
+      // Delay para asegurar que el contenido se haya renderizado
+      setTimeout(() => {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        // También intentar hacer scroll al Container principal
+        const container = document.querySelector('[class*="MuiContainer"]');
+        if (container) {
+          container.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }, 400);
+    }
+  }, [activeStep]);
 
   return (
     <Container maxWidth={isMobile ? false : "xl"} sx={{ py: isMobile ? 1 : 4, px: isMobile ? 0 : 2 }}>
@@ -638,6 +956,8 @@ const AuditoriaRefactorizada = () => {
           errores={errores}
           handleAnterior={handleAnterior}
           handleSiguiente={() => handleSiguiente(pasoCompletoAuditoria)}
+          handleForzarActualizacion={handleForzarActualizacion}
+          isSaving={isSaving}
           // Props para los componentes
           empresas={empresas}
           empresaSeleccionada={empresaSeleccionada}
@@ -747,6 +1067,9 @@ const AuditoriaRefactorizada = () => {
       
       {/* Debug específico para auditorías */}
       <AuditoriaDebugInfo />
+      
+      {/* Debug logs visual para móvil */}
+      {/* <OfflineDebugLogs /> Comentado temporalmente para probar error en Edge PWA */}
     </Container>
   );
 };

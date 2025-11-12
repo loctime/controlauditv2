@@ -17,12 +17,13 @@ export const useChromePreload = () => {
   // Solo debe ejecutarse en PWA standalone con Chrome
   const shouldPreload = isPWAStandalone && isChrome;
   
-  // Páginas a precargar en orden
+  // Páginas a precargar en orden (indispensables primero)
   const pagesToPreload = [
+    { path: '/establecimiento', name: 'Establecimientos' },
     { path: '/auditoria', name: 'Auditoría' },
-    { path: '/formulario', name: 'Formularios' },
-    { path: '/editar', name: 'Editar' },
-    { path: '/reporte', name: 'Reportes' }
+    { path: '/editar', name: 'Formularios' },
+    { path: '/reporte', name: 'Reportes' },
+    { path: '/perfil', name: 'Perfil' }
   ];
 
   const startPreload = async () => {

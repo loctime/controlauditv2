@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import './Home.css';
 import { Typography, Button, Grid, List, ListItem, ListItemIcon, ListItemText, Divider, useTheme, Box, LinearProgress, Alert } from '@mui/material';
 import { toast } from 'react-toastify';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import DescriptionIcon from '@mui/icons-material/Description';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
@@ -27,6 +27,7 @@ const steps = [
 const Home = () => {
   // Debug log para renderizado
   console.debug('[Home] Renderizando página principal');
+  const navigate = useNavigate();
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
   
@@ -59,18 +60,16 @@ const Home = () => {
   // Hook para precarga automática en PWA Chrome
   const { shouldPreload, isPreloading, startPreload } = useChromePreload();
 
-  // Forzar carga de datos SOLO en PWA y SOLO una vez
+  // Forzar carga de datos SOLO en PWA y SOLO una vez por día
   useEffect(() => {
     const cargarDatosOffline = async () => {
       // Solo cargar en PWA standalone
       if (!isPWAStandalone) {
-        console.log('ℹ️ [Home] No es PWA standalone, saltando carga automática');
         return;
       }
 
-      // Solo ejecutar una vez
+      // Solo ejecutar una vez por sesión
       if (hasCargadoDatos.current) {
-        console.log('ℹ️ [Home] Datos ya cargados previamente');
         return;
       }
 
@@ -78,46 +77,68 @@ const Home = () => {
         return;
       }
 
+      // Verificar si ya se ejecutó automáticamente hoy (una vez por día)
+      const lastAutoLoad = localStorage.getItem('edge_auto_reload_timestamp');
+      const now = Date.now();
+      const oneDayInMs = 24 * 60 * 60 * 1000; // 24 horas en milisegundos
+      
+      if (lastAutoLoad) {
+        const timeSinceLastLoad = now - parseInt(lastAutoLoad);
+        if (timeSinceLastLoad < oneDayInMs) {
+          return;
+        }
+      }
+
       hasCargadoDatos.current = true;
       setCargandoDatosOffline(true);
-
-      console.log('🚀 [Home PWA] Iniciando carga forzada de datos para modo offline...');
+      
+      // Marcar que se ejecutó automáticamente hoy
+      localStorage.setItem('edge_auto_reload_timestamp', now.toString());
       setErrorCarga(null);
       
       try {
+        // Detectar si es Edge
+        const isEdge = navigator.userAgent.includes('Edg');
+        
         // Cargar todos los datos necesarios para TODAS las páginas
-        console.log('🔄 [Home PWA] Cargando datos para todas las páginas...');
         const promesas = [
           getUserEmpresas(),
           getUserSucursales(),
           getUserFormularios()
         ];
-        
-        // Esperar a que todas las promesas se resuelvan
-        console.log('⏳ [Home PWA] Esperando a que se carguen todos los datos...');
 
         const resultados = await Promise.allSettled(promesas);
         
-        console.log('📊 [Home PWA] Resultados de carga:', {
-          empresas: resultados[0]?.status,
-          sucursales: resultados[1]?.status,
-          formularios: resultados[2]?.status
-        });
-        
-        console.log('✅ [Home PWA] Datos cargados:', {
-          empresas: userEmpresas?.length || 0,
-          sucursales: userSucursales?.length || 0,
-          formularios: userFormularios?.length || 0
-        });
+        // Capturar los valores retornados directamente (no depender del estado)
+        const empresasCargadas = resultados[0]?.status === 'fulfilled' ? resultados[0].value : [];
+        const sucursalesCargadas = resultados[1]?.status === 'fulfilled' ? resultados[1].value : [];
+        const formulariosCargados = resultados[2]?.status === 'fulfilled' ? resultados[2].value : [];
         
         setDatosCargados({
-          empresas: (userEmpresas?.length || 0) > 0,
-          sucursales: (userSucursales?.length || 0) > 0,
-          formularios: (userFormularios?.length || 0) > 0
+          empresas: (empresasCargadas?.length || 0) > 0,
+          sucursales: (sucursalesCargadas?.length || 0) > 0,
+          formularios: (formulariosCargados?.length || 0) > 0
         });
         
+        // CRÍTICO para Edge PWA: Navegar a /auditoria para inicializar IndexedDB y hooks necesarios
+        // Esto asegura que Edge PWA funcione offline después
+        // El componente Auditoria ejecuta useAuditoriaData que inicializa todo lo necesario
+        if (isEdge) {
+          // Guardar la ruta actual para volver después
+          const returnPath = window.location.pathname;
+          
+          // Navegar a /auditoria para que se monte el componente y ejecute los hooks
+          navigate('/auditoria');
+          
+          // Esperar un momento para que el componente se monte y ejecute los hooks
+          await new Promise(resolve => setTimeout(resolve, 1500));
+          
+          // Volver a Home después de inicializar
+          navigate(returnPath);
+        }
+        
       } catch (error) {
-        console.error('❌ [Home PWA] Error cargando datos offline:', error);
+        console.error('Error cargando datos offline:', error);
         setErrorCarga('Error cargando datos para modo offline');
       } finally {
         setCargandoDatosOffline(false);
@@ -128,7 +149,18 @@ const Home = () => {
     const timer = setTimeout(cargarDatosOffline, 1500);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userProfile]); // Solo depende de userProfile - ignoramos otras deps intencionalmente para evitar bucle
+  }, [userProfile, navigate]); // Agregar navigate a las dependencias
+
+  // Actualizar indicador cuando cambien los datos (desde listeners u otros lugares)
+  useEffect(() => {
+    if (userProfile && isPWAStandalone) {
+      setDatosCargados({
+        empresas: (userEmpresas?.length || 0) > 0,
+        sucursales: (userSucursales?.length || 0) > 0,
+        formularios: (userFormularios?.length || 0) > 0
+      });
+    }
+  }, [userProfile, userEmpresas?.length, userSucursales?.length, userFormularios?.length, isPWAStandalone]);
 
   // Ejecutar precarga automática en Chrome PWA (una sola vez por sesión)
   useEffect(() => {
@@ -269,18 +301,46 @@ const Home = () => {
                       setCargandoDatosOffline(true);
                       setErrorCarga(null);
                       try {
-                        await Promise.all([
+                        // Primero cargar datos desde la red (si hay conexión)
+                        // Capturar los valores retornados directamente (no depender del estado)
+                        const [empresasCargadas, sucursalesCargadas, formulariosCargados] = await Promise.all([
                           getUserEmpresas(),
                           getUserSucursales(),
                           getUserFormularios()
                         ]);
+                        
+                        // CRÍTICO: Navegar a /auditoria para inicializar IndexedDB y hooks necesarios
+                        // Esto asegura que Edge PWA funcione offline después
+                        // El componente Auditoria ejecuta useAuditoriaData que inicializa todo lo necesario
+                        const returnPath = window.location.pathname;
+                        
+                        // Navegar a /auditoria para que se monte el componente y ejecute los hooks
+                        navigate('/auditoria');
+                        
+                        // Esperar un momento para que el componente se monte y ejecute los hooks
+                        await new Promise(resolve => setTimeout(resolve, 1500));
+                        
+                        // Volver a Home después de inicializar
+                        navigate(returnPath);
+                        
+                        // Usar los valores retornados directamente (no depender del estado que puede no estar actualizado)
                         setDatosCargados({
-                          empresas: (userEmpresas?.length || 0) > 0,
-                          sucursales: (userSucursales?.length || 0) > 0,
-                          formularios: (userFormularios?.length || 0) > 0
+                          empresas: (empresasCargadas?.length || 0) > 0,
+                          sucursales: (sucursalesCargadas?.length || 0) > 0,
+                          formularios: (formulariosCargados?.length || 0) > 0
+                        });
+                        
+                        toast.success('✅ Datos recargados e inicializados correctamente', {
+                          autoClose: 3000,
+                          position: 'top-center'
                         });
                       } catch (error) {
+                        console.error('Error al recargar datos:', error);
                         setErrorCarga('Error al recargar datos');
+                        toast.error('❌ Error al recargar datos', {
+                          autoClose: 3000,
+                          position: 'top-center'
+                        });
                       } finally {
                         setCargandoDatosOffline(false);
                       }

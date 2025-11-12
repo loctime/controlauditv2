@@ -41,15 +41,19 @@ const FirmaSection = ({
   formulario,
   respuestas,
   secciones,
-  encargado
+  encargado,
+  // Props para datos adicionales del reporte
+  datosReporte = {},
+  onDatosReporteChange
 }) => {
-  const { userProfile } = useAuth();
+  const { userProfile, updateUserProfile } = useAuth();
   const theme = useTheme();
   const sigPadRef = useRef(null);
   const [firmaAuditorURL, setFirmaAuditorURL] = useState(firmaAuditor);
   const [firmaResponsableURL, setFirmaResponsableURL] = useState(firmaResponsable);
   const [firmaAuditorAutoAplicada, setFirmaAuditorAutoAplicada] = useState(false);
   const [modalResumenAbierto, setModalResumenAbierto] = useState(false);
+  const nombreInspectorAutoCompletado = useRef(false);
   
   // Estados para el modal de creación de firma
   const [modalCrearFirmaAbierto, setModalCrearFirmaAbierto] = useState(false);
@@ -70,6 +74,24 @@ const FirmaSection = ({
       }
     }
   }, [userProfile?.firmaDigital, firmaAuditorURL, firmaAuditorAutoAplicada, onSaveFirmaAuditor]);
+
+  // Autocompletar nombre del inspector desde el perfil del usuario (solo una vez)
+  useEffect(() => {
+    if (
+      userProfile?.nombre && 
+      !nombreInspectorAutoCompletado.current &&
+      onDatosReporteChange &&
+      (!datosReporte?.nombreInspector || datosReporte.nombreInspector.trim() === '')
+    ) {
+      console.log('[DEBUG] Autocompletando nombre del inspector desde perfil:', userProfile.nombre);
+      nombreInspectorAutoCompletado.current = true;
+      onDatosReporteChange({
+        ...datosReporte,
+        nombreInspector: userProfile.nombre
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userProfile?.nombre]); // Solo cuando cambia el nombre del perfil
 
   // Cargar datos del perfil cuando se abre el modal
   useEffect(() => {
@@ -144,13 +166,20 @@ const FirmaSection = ({
       
       const nombreFormateado = capitalizeWords(nombre.trim());
       
-      // await updateUserProfile({ // This line was removed as per the new_code
-      //   firmaDigital: signatureDataUrl,
-      //   firmaActualizada: new Date().toISOString(),
-      //   nombre: nombreFormateado,
-      //   dni: dni.trim(),
-      //   telefono: telefono.trim()
-      // });
+      // Guardar en el perfil del usuario
+      try {
+        await updateUserProfile({
+          firmaDigital: signatureDataUrl,
+          firmaActualizada: new Date().toISOString(),
+          nombre: nombreFormateado,
+          dni: dni.trim(),
+          telefono: telefono.trim()
+        });
+        console.log('[DEBUG] Firma y datos guardados en el perfil');
+      } catch (error) {
+        console.error('[DEBUG] Error al guardar en el perfil:', error);
+        // Continuar aunque falle el guardado en perfil
+      }
       
       // Aplicar la firma inmediatamente
       setFirmaAuditorURL(signatureDataUrl);
@@ -159,8 +188,16 @@ const FirmaSection = ({
         onSaveFirmaAuditor(signatureDataUrl);
       }
       
+      // Autocompletar el nombre del inspector con el nombre ingresado
+      if (onDatosReporteChange) {
+        onDatosReporteChange({
+          ...datosReporte,
+          nombreInspector: nombreFormateado
+        });
+      }
+      
       setModalCrearFirmaAbierto(false);
-      Swal.fire('Éxito', 'Firma creada y aplicada correctamente', 'success');
+      Swal.fire('Éxito', 'Firma creada, guardada en tu perfil y aplicada correctamente', 'success');
     } catch (error) {
       console.error('Error al guardar firma:', error);
       Swal.fire('Error', 'Error al guardar la firma', 'error');
@@ -210,6 +247,74 @@ const FirmaSection = ({
         <Edit color="primary" />
         Firmas Digitales de la Auditoría
       </Typography>
+
+      {/* Sección de Información Adicional (Opcional) */}
+      {!isPdf && (
+        <Card sx={{ mb: 3, border: '2px dashed', borderColor: 'grey.300' }}>
+          <CardContent>
+            <Typography variant="h6" gutterBottom sx={{ color: 'text.secondary', fontWeight: 600 }}>
+              Información Adicional del Reporte (Opcional)
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              Complete estos campos si desea incluirlos en el reporte. Si no se completan, quedarán espacios en blanco para completar manualmente al imprimir.
+            </Typography>
+            
+            <Grid container spacing={2}>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  label="Tarea Observada"
+                  value={datosReporte?.tareaObservada || ''}
+                  onChange={(e) => onDatosReporteChange?.({ ...datosReporte, tareaObservada: e.target.value })}
+                  placeholder="Descripción de la tarea"
+                  size="small"
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  label="Lugar / Sector"
+                  value={datosReporte?.lugarSector || ''}
+                  onChange={(e) => onDatosReporteChange?.({ ...datosReporte, lugarSector: e.target.value })}
+                  placeholder="Lugar o sector donde se realizó la auditoría"
+                  size="small"
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  label="Equipo/s Involucrado"
+                  value={datosReporte?.equiposInvolucrados || ''}
+                  onChange={(e) => onDatosReporteChange?.({ ...datosReporte, equiposInvolucrados: e.target.value })}
+                  placeholder="Equipos involucrados"
+                  size="small"
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  label="Supervisor"
+                  value={datosReporte?.supervisor || ''}
+                  onChange={(e) => onDatosReporteChange?.({ ...datosReporte, supervisor: e.target.value })}
+                  placeholder="Nombre del supervisor"
+                  size="small"
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  label="N° de Trabajadores"
+                  type="number"
+                  value={datosReporte?.numeroTrabajadores || ''}
+                  onChange={(e) => onDatosReporteChange?.({ ...datosReporte, numeroTrabajadores: e.target.value })}
+                  placeholder="Cantidad de trabajadores"
+                  size="small"
+                />
+              </Grid>
+            </Grid>
+          </CardContent>
+        </Card>
+      )}
 
       {firmasCompletadas && (
         <Alert severity="success" sx={{ mb: 3 }}>
@@ -381,6 +486,42 @@ const FirmaSection = ({
         </Grid>
       </Grid>
 
+      {/* Campos de nombres para el pie del reporte */}
+      {!isPdf && (
+        <Card sx={{ mt: 3, border: '2px dashed', borderColor: 'grey.300' }}>
+          <CardContent>
+            <Typography variant="h6" gutterBottom sx={{ color: 'text.secondary', fontWeight: 600 }}>
+              Nombres para el Pie del Reporte (Opcional)
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              Complete estos campos para incluir los nombres en el reporte. Si no se completan, quedarán espacios en blanco para completar manualmente al imprimir.
+            </Typography>
+            <Grid container spacing={2}>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  label="Nombre del Inspector"
+                  value={datosReporte?.nombreInspector || ''}
+                  onChange={(e) => onDatosReporteChange?.({ ...datosReporte, nombreInspector: e.target.value })}
+                  placeholder="Nombre completo del inspector"
+                  size="small"
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  label="Nombre del Responsable de la Empresa"
+                  value={datosReporte?.nombreResponsable || ''}
+                  onChange={(e) => onDatosReporteChange?.({ ...datosReporte, nombreResponsable: e.target.value })}
+                  placeholder="Nombre completo del responsable"
+                  size="small"
+                />
+              </Grid>
+            </Grid>
+          </CardContent>
+        </Card>
+      )}
+
       {!firmasCompletadas && (
         <Alert severity="info" sx={{ mt: 3 }}>
           <Typography variant="body2">
@@ -406,6 +547,7 @@ const FirmaSection = ({
         encargado={encargado}
         onSaveFirmaResponsable={handleSaveFirmaResponsable}
         firmaResponsable={firmaResponsableURL}
+        datosReporte={datosReporte}
       />
 
       {/* Modal para crear firma */}

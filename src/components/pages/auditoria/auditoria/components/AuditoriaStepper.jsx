@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import { 
   Stepper,
   Step,
@@ -16,15 +16,17 @@ import {
   Grid,
   Button,
   Alert,
-  useMediaQuery
+  useMediaQuery,
+  CircularProgress
 } from "@mui/material";
 import BusinessIcon from '@mui/icons-material/Business';
 import AssignmentIcon from '@mui/icons-material/Assignment';
 import QuestionAnswerIcon from '@mui/icons-material/QuestionAnswer';
 import AssessmentIcon from '@mui/icons-material/Assessment';
-import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import RefreshIcon from '@mui/icons-material/Refresh';
 import EditIcon from '@mui/icons-material/Edit';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import { Fade, Zoom } from "@mui/material";
 import SeleccionEmpresa from "../SeleccionEmpresa";
 import SeleccionSucursal from "../SeleccionSucursal";
@@ -42,8 +44,10 @@ const AuditoriaStepper = ({
   handleStepClick,
   handleAnterior,
   handleSiguiente,
+  handleForzarActualizacion,
   navegacionError,
   errores,
+  isSaving,
   // Props para los componentes
   empresas,
   empresaSeleccionada,
@@ -77,6 +81,24 @@ const AuditoriaStepper = ({
   theme
 }) => {
   const isMobile = useMediaQuery('(max-width:768px)');
+  const mobileContentRef = useRef(null);
+  const desktopContentRef = useRef(null);
+
+  // Scroll al top cuando se llega al paso de firmas (paso 3)
+  useEffect(() => {
+    if (activeStep === 3) {
+      // Delay más largo para asegurar que el contenido se haya renderizado completamente
+      setTimeout(() => {
+        // Intentar hacer scroll al contenedor del contenido según el dispositivo
+        const contentRef = isMobile ? mobileContentRef : desktopContentRef;
+        if (contentRef.current) {
+          contentRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+        // También hacer scroll al inicio de la ventana como respaldo
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }, 300);
+    }
+  }, [activeStep, isMobile]);
 
   // Componente para el header móvil compacto
   const MobileHeader = () => (
@@ -127,7 +149,7 @@ const AuditoriaStepper = ({
         // Layout móvil: header compacto + contenido
         <Box>
           <MobileHeader />
-          <Paper elevation={2} sx={{ p: 1.5, borderRadius: 2, minHeight: '300px' }}>
+          <Paper ref={mobileContentRef} elevation={2} sx={{ p: 1.5, borderRadius: 2, minHeight: '300px' }}>
             {steps[activeStep]?.content}
             
             <Box display="flex" gap={0.5} mt={1}>
@@ -145,12 +167,25 @@ const AuditoriaStepper = ({
                 variant="contained"
                 color="primary"
                 onClick={handleSiguiente}
-                disabled={!pasoCompleto(activeStep) || activeStep === steps.length - 1}
+                disabled={!pasoCompleto(activeStep) || activeStep === steps.length - 1 || isSaving}
                 size="small"
-                sx={{ px: 0.5, py: 0.25, fontSize: '0.7rem' }}
+                sx={{ px: 0.5, py: 0.25, fontSize: '0.7rem', minWidth: 80 }}
+                startIcon={isSaving ? <CircularProgress size={14} color="inherit" /> : null}
               >
-                Siguiente
+                {isSaving ? 'Guardando...' : 'Siguiente'}
               </Button>
+              {activeStep === 2 && !pasoCompleto(activeStep) && handleForzarActualizacion && (
+                <Button
+                  variant="outlined"
+                  color="secondary"
+                  onClick={handleForzarActualizacion}
+                  size="small"
+                  sx={{ px: 0.5, py: 0.25, fontSize: '0.7rem' }}
+                  startIcon={<RefreshIcon sx={{ fontSize: '0.7rem' }} />}
+                >
+                  Actualizar
+                </Button>
+              )}
             </Box>
 
             {navegacionError && (
@@ -214,7 +249,7 @@ const AuditoriaStepper = ({
           </Grid>
           
           <Grid item xs={12} md={9}>
-            <Paper elevation={2} sx={{ p: 2.5, borderRadius: 2, minHeight: '400px' }}>
+            <Paper ref={desktopContentRef} elevation={2} sx={{ p: 2.5, borderRadius: 2, minHeight: '400px' }}>
               {steps[activeStep]?.content}
               
               <Box display="flex" gap={1} mt={2}>
@@ -232,12 +267,25 @@ const AuditoriaStepper = ({
                   variant="contained"
                   color="primary"
                   onClick={handleSiguiente}
-                  disabled={!pasoCompleto(activeStep) || activeStep === steps.length - 1}
+                  disabled={!pasoCompleto(activeStep) || activeStep === steps.length - 1 || isSaving}
                   size="small"
-                  sx={{ fontSize: '0.8rem' }}
+                  sx={{ fontSize: '0.8rem', minWidth: 100 }}
+                  startIcon={isSaving ? <CircularProgress size={16} color="inherit" /> : null}
                 >
-                  Siguiente
+                  {isSaving ? 'Guardando...' : 'Siguiente'}
                 </Button>
+                {activeStep === 2 && !pasoCompleto(activeStep) && handleForzarActualizacion && (
+                  <Button
+                    variant="outlined"
+                    color="secondary"
+                    onClick={handleForzarActualizacion}
+                    size="small"
+                    sx={{ fontSize: '0.8rem' }}
+                    startIcon={<RefreshIcon sx={{ fontSize: '0.8rem' }} />}
+                  >
+                    Actualizar
+                  </Button>
+                )}
               </Box>
 
               {navegacionError && (
