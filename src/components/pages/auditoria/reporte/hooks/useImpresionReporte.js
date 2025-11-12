@@ -260,7 +260,6 @@ export const useImpresionReporte = () => {
     
     // Generar el HTML de impresión
     // Extraer datosReporte anidado si existe, o usar el objeto directamente
-    // Si datosReporte tiene un campo datosReporte anidado, usarlo; si no, verificar si tiene los campos directamente
     let datosReporteAdicionales = {};
     if (datosReporte?.datosReporte) {
       // Caso 1: Estructura anidada (desde ReporteDetallePro)
