@@ -64,6 +64,18 @@ const AccidentesTabla = React.memo(({
                     label={accidente.tipo}
                     color={accidente.tipo === 'accidente' ? 'error' : 'warning'}
                     size="small"
+                    sx={
+                      accidente.tipo === 'incidente'
+                        ? {
+                            backgroundColor: '#e65100',
+                            color: '#ffffff',
+                            '& .MuiChip-label': {
+                              color: '#ffffff',
+                              fontWeight: 500
+                            }
+                          }
+                        : {}
+                    }
                   />
                 </TableCell>
                 <TableCell>
