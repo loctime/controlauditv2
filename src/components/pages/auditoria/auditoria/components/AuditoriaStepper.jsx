@@ -16,7 +16,8 @@ import {
   Grid,
   Button,
   Alert,
-  useMediaQuery
+  useMediaQuery,
+  CircularProgress
 } from "@mui/material";
 import BusinessIcon from '@mui/icons-material/Business';
 import AssignmentIcon from '@mui/icons-material/Assignment';
@@ -46,6 +47,7 @@ const AuditoriaStepper = ({
   handleForzarActualizacion,
   navegacionError,
   errores,
+  isSaving,
   // Props para los componentes
   empresas,
   empresaSeleccionada,
@@ -165,11 +167,12 @@ const AuditoriaStepper = ({
                 variant="contained"
                 color="primary"
                 onClick={handleSiguiente}
-                disabled={!pasoCompleto(activeStep) || activeStep === steps.length - 1}
+                disabled={!pasoCompleto(activeStep) || activeStep === steps.length - 1 || isSaving}
                 size="small"
-                sx={{ px: 0.5, py: 0.25, fontSize: '0.7rem' }}
+                sx={{ px: 0.5, py: 0.25, fontSize: '0.7rem', minWidth: 80 }}
+                startIcon={isSaving ? <CircularProgress size={14} color="inherit" /> : null}
               >
-                Siguiente
+                {isSaving ? 'Guardando...' : 'Siguiente'}
               </Button>
               {activeStep === 2 && !pasoCompleto(activeStep) && handleForzarActualizacion && (
                 <Button
@@ -264,11 +267,12 @@ const AuditoriaStepper = ({
                   variant="contained"
                   color="primary"
                   onClick={handleSiguiente}
-                  disabled={!pasoCompleto(activeStep) || activeStep === steps.length - 1}
+                  disabled={!pasoCompleto(activeStep) || activeStep === steps.length - 1 || isSaving}
                   size="small"
-                  sx={{ fontSize: '0.8rem' }}
+                  sx={{ fontSize: '0.8rem', minWidth: 100 }}
+                  startIcon={isSaving ? <CircularProgress size={16} color="inherit" /> : null}
                 >
-                  Siguiente
+                  {isSaving ? 'Guardando...' : 'Siguiente'}
                 </Button>
                 {activeStep === 2 && !pasoCompleto(activeStep) && handleForzarActualizacion && (
                   <Button

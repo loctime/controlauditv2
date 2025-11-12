@@ -269,17 +269,31 @@ const Home = () => {
                       setCargandoDatosOffline(true);
                       setErrorCarga(null);
                       try {
+                        // Primero cargar datos desde la red (si hay conexión)
                         await Promise.all([
                           getUserEmpresas(),
                           getUserSucursales(),
                           getUserFormularios()
                         ]);
+                        
+                        // CRÍTICO: También inicializar datos offline para asegurar que Edge funcione offline
+                        // Esto es especialmente importante si el usuario entra offline directamente
+                        // La función initializeOfflineData inicializa IndexedDB y asegura que todo esté listo
+                        const { initializeOfflineData } = await import('../../../utils/initializeOfflineData');
+                        await initializeOfflineData(
+                          userProfile,
+                          null, // Los setters no son necesarios aquí, los datos ya están cargados arriba
+                          null,
+                          null
+                        );
+                        
                         setDatosCargados({
                           empresas: (userEmpresas?.length || 0) > 0,
                           sucursales: (userSucursales?.length || 0) > 0,
                           formularios: (userFormularios?.length || 0) > 0
                         });
                       } catch (error) {
+                        console.error('Error al recargar datos:', error);
                         setErrorCarga('Error al recargar datos');
                       } finally {
                         setCargandoDatosOffline(false);
