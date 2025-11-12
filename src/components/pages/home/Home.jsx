@@ -86,6 +86,9 @@ const Home = () => {
       setErrorCarga(null);
       
       try {
+        // Detectar si es Edge
+        const isEdge = navigator.userAgent.includes('Edg');
+        
         // Cargar todos los datos necesarios para TODAS las páginas
         console.log('🔄 [Home PWA] Cargando datos para todas las páginas...');
         const promesas = [
@@ -122,6 +125,27 @@ const Home = () => {
           formularios: (formulariosCargados?.length || 0) > 0
         });
         
+        // CRÍTICO para Edge PWA: Navegar a /auditoria para inicializar IndexedDB y hooks necesarios
+        // Esto asegura que Edge PWA funcione offline después
+        // El componente Auditoria ejecuta useAuditoriaData que inicializa todo lo necesario
+        if (isEdge) {
+          console.log('🔄 [Home Edge Auto] Navegando a /auditoria para inicializar datos offline...');
+          
+          // Guardar la ruta actual para volver después
+          const returnPath = window.location.pathname;
+          
+          // Navegar a /auditoria para que se monte el componente y ejecute los hooks
+          navigate('/auditoria');
+          
+          // Esperar un momento para que el componente se monte y ejecute los hooks
+          await new Promise(resolve => setTimeout(resolve, 1500));
+          
+          // Volver a Home después de inicializar
+          navigate(returnPath);
+          
+          console.log('✅ [Home Edge Auto] Datos offline inicializados correctamente');
+        }
+        
       } catch (error) {
         console.error('❌ [Home PWA] Error cargando datos offline:', error);
         setErrorCarga('Error cargando datos para modo offline');
@@ -134,7 +158,7 @@ const Home = () => {
     const timer = setTimeout(cargarDatosOffline, 1500);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userProfile]); // Solo depende de userProfile - ignoramos otras deps intencionalmente para evitar bucle
+  }, [userProfile, navigate]); // Agregar navigate a las dependencias
 
   // Actualizar indicador cuando cambien los datos (desde listeners u otros lugares)
   useEffect(() => {
