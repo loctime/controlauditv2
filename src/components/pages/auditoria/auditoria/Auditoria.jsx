@@ -957,6 +957,7 @@ const AuditoriaRefactorizada = () => {
           handleAnterior={handleAnterior}
           handleSiguiente={() => handleSiguiente(pasoCompletoAuditoria)}
           handleForzarActualizacion={handleForzarActualizacion}
+          isSaving={isSaving}
           // Props para los componentes
           empresas={empresas}
           empresaSeleccionada={empresaSeleccionada}

@@ -96,7 +96,7 @@ export const useAuditoriaHandlers = ({
     return hasData && hasUnsavedChanges;
   }, [empresaSeleccionada, sucursalSeleccionada, formularioSeleccionadoId, respuestas, comentarios, imagenes, clasificaciones, hasUnsavedChanges]);
 
-  // Función de guardado interno con manejo robusto de errores
+  // Función de guardado interno optimizada con manejo robusto de errores
   const performAutoSave = useCallback(async (force = false) => {
     if (!userProfile?.uid) return false;
     
@@ -110,6 +110,13 @@ export const useAuditoriaHandlers = ({
     if (!force && !hasUnsavedChanges) {
       return false;
     }
+
+    // OPTIMIZACIÓN: Detectar si solo hay empresa/sucursal (sin respuestas/imágenes)
+    const tieneRespuestas = respuestas.some(seccion => seccion.some(resp => resp !== ''));
+    const tieneImagenes = imagenes.some(seccion => seccion.some(img => img !== null));
+    const tieneComentarios = comentarios.some(seccion => seccion.some(com => com !== ''));
+    const tieneClasificaciones = clasificaciones.some(seccion => seccion.some(clas => clas && (clas.condicion || clas.actitud)));
+    const esGuardadoSimple = !tieneRespuestas && !tieneImagenes && !tieneComentarios && !tieneClasificaciones;
 
     isSavingRef.current = true;
     setIsSaving(true);
@@ -131,14 +138,28 @@ export const useAuditoriaHandlers = ({
         timestamp: Date.now()
       };
 
-      // Usar saveAuditoria que guarda en IndexedDB con imágenes reales
-      await autoSaveService.saveAuditoria(userProfile.uid, auditoriaData);
+      // OPTIMIZACIÓN: Si es guardado simple, usar método rápido (solo localStorage)
+      if (esGuardadoSimple) {
+        // Guardado rápido solo en localStorage para empresa/sucursal/formulario
+        autoSaveService.saveToLocalStorage({
+          ...auditoriaData,
+          userId: userProfile.uid,
+          sessionId: `session_${userProfile.uid}_${Date.now()}`,
+          timestamp: Date.now(),
+          lastModified: Date.now(), // Usar timestamp en lugar de Date object
+          autoSaved: true
+        });
+        console.log('✅ Autoguardado rápido (simple)');
+      } else {
+        // Guardado completo con imágenes en IndexedDB
+        await autoSaveService.saveAuditoria(userProfile.uid, auditoriaData);
+        console.log('✅ Autoguardado exitoso (completo con imágenes)');
+      }
       
       setLastSaved(Date.now());
       setHasUnsavedChanges(false);
       pendingSaveRef.current = false;
       
-      console.log('✅ Autoguardado exitoso (con imágenes)');
       return true;
     } catch (error) {
       console.error('❌ Error en autoguardado:', error);
@@ -241,7 +262,7 @@ export const useAuditoriaHandlers = ({
     }
   }, [setHasUnsavedChanges, setLastSaved, userProfile?.uid]);
 
-  // Handlers de navegación
+  // Handlers de navegación optimizados
   const handleSiguiente = useCallback(async (pasoCompletoAuditoria) => {
     setNavegacionError("");
     if (!pasoCompletoAuditoria(activeStep)) {
@@ -249,23 +270,14 @@ export const useAuditoriaHandlers = ({
       return;
     }
     
-    // Guardar antes de cambiar de paso (forzar guardado inmediato)
-    try {
-      await handleAutoSave(true);
-      console.log('💾 Guardado antes de cambiar al siguiente paso');
-    } catch (error) {
-      console.error('❌ Error al guardar antes de cambiar de paso:', error);
-      // Continuar aunque falle el guardado, pero mostrar advertencia
-      Swal.fire({
-        title: '⚠️ Advertencia',
-        text: 'No se pudo guardar automáticamente. Tu progreso puede perderse si cierras la página.',
-        icon: 'warning',
-        timer: 3000,
-        showConfirmButton: false
-      });
-    }
-    
+    // OPTIMIZACIÓN: Cambiar de paso inmediatamente para mejor UX
     setActiveStep((prev) => Math.min(prev + 1, 4)); // 5 pasos (0-4)
+    
+    // Guardar en segundo plano (sin bloquear la navegación)
+    handleAutoSave(true).catch(err => {
+      console.error('❌ Error al guardar en segundo plano:', err);
+      // No mostrar error al usuario para no interrumpir el flujo
+    });
   }, [activeStep, setNavegacionError, setActiveStep, handleAutoSave]);
 
   const handleAnterior = useCallback(() => {

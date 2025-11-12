@@ -7,6 +7,7 @@ import { useUserManagement } from '../../hooks/useUserManagement';
 import { empresaService } from '../../services/empresaService';
 import { auditoriaService } from '../../services/auditoriaService';
 import { saveCompleteUserCache } from '../../services/completeOfflineCache';
+import { initializeOfflineData } from '../../utils/initializeOfflineData';
 
 // Hooks personalizados
 import { useOfflineCache } from './hooks/useOfflineCache';
@@ -418,6 +419,30 @@ const AuthContextComponent = ({ children }) => {
               if (cachedUser.auditorias && cachedUser.auditorias.length > 0) {
                 setUserAuditorias(cachedUser.auditorias);
                 console.log('✅ Auditorías cargadas desde cache:', cachedUser.auditorias.length);
+              }
+              
+              // CRÍTICO: Inicializar datos offline para Edge PWA
+              // Esto asegura que IndexedDB esté listo y los datos estén disponibles
+              // incluso si el usuario entra offline directamente sin pasar por /auditoria
+              const isEdge = navigator.userAgent.includes('Edg');
+              const isPWA = window.matchMedia('(display-mode: standalone)').matches || 
+                            (window.navigator.standalone === true) ||
+                            document.referrer.includes('android-app://');
+              
+              if (isEdge && isPWA) {
+                console.log('🔄 [AuthContext] Edge PWA detectado, inicializando datos offline...');
+                try {
+                  await initializeOfflineData(
+                    cachedProfile,
+                    setUserEmpresas,
+                    setUserSucursales,
+                    setUserFormularios
+                  );
+                  console.log('✅ [AuthContext] Datos offline inicializados para Edge PWA');
+                } catch (initError) {
+                  console.warn('⚠️ [AuthContext] Error inicializando datos offline:', initError);
+                  // Continuar sin fallar, los datos ya están cargados desde loadUserFromCache
+                }
               }
             } else {
               console.error('❌ No hay cache válido disponible');
