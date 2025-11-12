@@ -119,10 +119,31 @@ setLoadingFormularios(false);
   - setUserProfile en modo offline
   - Listeners reactivos mantenidos para tiempo real
 
+## 🔧 Solución Edge PWA (Actualización Reciente)
+
+### **Problema:**
+Edge PWA fallaba con error React #306 cuando entraba offline directamente sin pasar por `/auditoria` primero.
+
+### **Solución:**
+1. **Inicialización automática en AuthContext** cuando Edge entra offline
+2. **Navegación automática a `/auditoria`** en Home para Edge PWA (una vez por día)
+3. **Botón "Recargar" manual** siempre disponible para el usuario
+
+### **Archivos Nuevos:**
+- `src/utils/initializeOfflineData.js` - Función utilitaria para inicializar datos offline
+
+### **Archivos Modificados:**
+- `src/components/context/AuthContext.jsx` - Inicialización automática para Edge
+- `src/components/pages/home/Home.jsx` - Navegación automática a `/auditoria` para Edge
+- `src/components/pages/auditoria/auditoria/hooks/useAuditoriaData.js` - Mejoras en carga offline
+
+---
+
 ## ⚠️ Notas Importantes
 
 - Desktop: Service Worker deshabilitado (correcto, no lo necesitas)
 - Móvil: Service Worker habilitado + IndexedDB
 - Timeout: 3 segundos para evitar loading infinito
 - Cache se guarda 1.5 segundos después del login (espera datos completos)
+- **Edge PWA**: Requiere navegación automática a `/auditoria` para inicializar correctamente (una vez por día)
 
