@@ -10,7 +10,7 @@ import AssessmentIcon from '@mui/icons-material/Assessment';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import { useAuth } from '../../context/AuthContext';
 import { useChromePreload } from '@/hooks/useChromePreload';
-import { shouldEnableOffline } from '../../utils/pwaDetection';
+import { shouldEnableOffline } from '../../../utils/pwaDetection';
 
 const features = [
   { icon: <CheckCircleIcon color="success" />, text: 'Gestión completa de formularios' },
