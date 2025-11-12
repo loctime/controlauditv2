@@ -34,7 +34,15 @@ const saveLogsToStorage = (logs) => {
 
 const OfflineDebugLogs = () => {
   const { userProfile } = useAuth();
-  const [logs, setLogs] = useState([]);
+  // Cargar logs desde localStorage al iniciar (para funcionar offline)
+  const [logs, setLogs] = useState(() => {
+    const savedLogs = loadLogsFromStorage();
+    if (savedLogs.length > 0) {
+      window.offlineDebugLogs = savedLogs;
+      return savedLogs;
+    }
+    return [];
+  });
   const [expanded, setExpanded] = useState(true);
   const [visible, setVisible] = useState(true);
   const [copied, setCopied] = useState(false);
@@ -108,7 +116,11 @@ const OfflineDebugLogs = () => {
         message.includes('saveCompleteUserCache') ||
         message.includes('getOfflineDatabase') ||
         message.includes('Settings store') ||
-        message.includes('complete_user_cache')
+        message.includes('complete_user_cache') ||
+        message.includes('Chrome') ||
+        message.includes('PWA') ||
+        message.includes('userProfile') ||
+        message.includes('CARGANDO DESDE CACHE')
       ) {
         const logEntry = {
           id: Date.now() + Math.random(),
