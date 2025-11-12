@@ -160,6 +160,18 @@ export default function AusenciasTable({ ausencias, onRecargar }) {
                         label={estado.charAt(0).toUpperCase() + estado.slice(1)}
                         color={statusColor(estado)}
                         variant="filled"
+                        sx={
+                          statusColor(estado) === "info"
+                            ? {
+                                backgroundColor: "#01579b",
+                                color: "#ffffff",
+                                "& .MuiChip-label": {
+                                  color: "#ffffff",
+                                  fontWeight: 500
+                                }
+                              }
+                            : {}
+                        }
                       />
                     </TableCell>
                     <TableCell>{formatDate(ausencia.fechaInicio)}</TableCell>
