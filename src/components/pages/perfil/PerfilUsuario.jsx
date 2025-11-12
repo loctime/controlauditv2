@@ -386,7 +386,7 @@ const PerfilUsuario = () => {
                p: isSmallMobile ? 2 : 3,
                border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}`
              }}>
-               <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1, color: 'primary.main' }}>
+               <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1, color: '#1565c0' }}>
                  📋 Auditorías
                </Typography>
                {permisos?.puedeCrearAuditorias && (
@@ -470,7 +470,7 @@ const PerfilUsuario = () => {
                p: isSmallMobile ? 2 : 3,
                border: `1px solid ${alpha(theme.palette.warning.main, 0.1)}`
              }}>
-               <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1, color: 'warning.main' }}>
+               <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1, color: '#e65100' }}>
                  👥 Usuarios
                </Typography>
                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
@@ -517,7 +517,7 @@ const PerfilUsuario = () => {
                p: isSmallMobile ? 2 : 3,
                border: `1px solid ${alpha(theme.palette.info.main, 0.1)}`
              }}>
-               <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1, color: 'info.main' }}>
+               <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1, color: '#01579b' }}>
                  ⚙️ Sistema
                </Typography>
                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
