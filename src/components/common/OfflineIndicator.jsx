@@ -218,6 +218,7 @@ const OfflineIndicator = ({ userProfile }) => {
         <Box sx={{ width: '100%', mt: 1 }}>
           <LinearProgress 
             color="primary" 
+            aria-label="Sincronizando datos en segundo plano"
             sx={{ 
               height: 2,
               borderRadius: 1

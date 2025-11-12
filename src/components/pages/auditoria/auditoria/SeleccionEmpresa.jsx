@@ -168,6 +168,7 @@ const SeleccionEmpresa = ({ empresas, empresaSeleccionada, onChange }) => {
             value={empresaSeleccionadaLocal ? empresaSeleccionadaLocal.nombre : ""}
             onChange={handleChange}
             label="Empresa"
+            aria-label="Seleccionar empresa para la auditoría"
             MenuProps={{
               PaperProps: {
                 sx: {

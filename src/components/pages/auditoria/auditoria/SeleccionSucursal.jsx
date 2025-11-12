@@ -158,6 +158,7 @@ const SeleccionSucursal = ({ sucursales, sucursalSeleccionada, onChange, autoOpe
           open={selectOpen}
           onOpen={() => setSelectOpen(true)}
           onClose={() => setSelectOpen(false)}
+          aria-label="Seleccionar ubicación o sucursal para la auditoría"
           sx={{ 
             minHeight: isMobile ? '40px' : '56px',
             '& .MuiSelect-select': {

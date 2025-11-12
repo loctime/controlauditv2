@@ -28,6 +28,7 @@ const SelectoresDashboard = React.memo(({
             onChange={(e) => onEmpresaChange(e.target.value)}
             label="Empresa"
             disabled={deshabilitado || !userEmpresas || userEmpresas.length === 0}
+            aria-label="Seleccionar empresa para filtrar el dashboard"
           >
             <MenuItem value="todas">
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -54,6 +55,7 @@ const SelectoresDashboard = React.memo(({
             onChange={(e) => onSucursalChange(e.target.value)}
             label="Sucursal"
             disabled={deshabilitado || !userEmpresas || userEmpresas.length === 0}
+            aria-label="Seleccionar sucursal para filtrar el dashboard"
           >
             <MenuItem value="todas">
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -80,6 +82,7 @@ const SelectoresDashboard = React.memo(({
             onChange={(e) => onYearChange(e.target.value)}
             label="Año"
             disabled={deshabilitado || !userEmpresas || userEmpresas.length === 0}
+            aria-label="Seleccionar año para filtrar el dashboard"
           >
             {yearsAvailable.map(year => (
               <MenuItem key={year} value={year}>

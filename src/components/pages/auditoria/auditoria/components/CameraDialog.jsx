@@ -455,6 +455,7 @@ const CameraDialog = ({
                   <LinearProgress 
                     variant="determinate" 
                     value={compressionProgress}
+                    aria-label={`Procesando imagen: ${compressionProgress}% completado`}
                     sx={{
                       height: 8,
                       borderRadius: 4,

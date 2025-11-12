@@ -279,6 +279,7 @@ const OperarioDashboard = () => {
           <LinearProgress 
             variant="determinate" 
             value={estadisticas.porcentajeCompletado} 
+            aria-label={`Progreso general: ${estadisticas.porcentajeCompletado}% completado`}
             sx={{ flexGrow: 1, height: 10, borderRadius: 5 }}
           />
           <Typography variant="body2" color="text.secondary">
