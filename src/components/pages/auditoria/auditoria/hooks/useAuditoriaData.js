@@ -20,54 +20,73 @@ export const useAuditoriaData = (
   // IMPORTANTE: Esta función debe estar definida antes de los useEffect que la usan
   const cargarDatosDelCache = useCallback(async () => {
     try {
+      // Detectar navegador y modo PWA
+      const isChrome = navigator.userAgent.includes('Chrome') && !navigator.userAgent.includes('Edg');
+      const isPWA = window.matchMedia('(display-mode: standalone)').matches || 
+                    (window.navigator.standalone === true) ||
+                    document.referrer.includes('android-app://');
+      const isOffline = !navigator.onLine;
+      
       console.log('[DEBUG Auditoria] ========== CARGANDO DESDE CACHE OFFLINE ==========');
       console.log('[DEBUG Auditoria] userId:', userProfile?.uid || 'NO DISPONIBLE');
-      console.log('[DEBUG Auditoria] Navegador detectado:', navigator.userAgent.includes('Edg') ? 'Edge' : 'Chrome/Firefox');
+      console.log('[DEBUG Auditoria] Navegador:', isChrome ? 'Chrome' : 'Edge/Firefox');
+      console.log('[DEBUG Auditoria] Modo PWA:', isPWA);
+      console.log('[DEBUG Auditoria] Estado conexión:', isOffline ? 'OFFLINE' : 'ONLINE');
       
-      // Si hay userProfile.uid, usar getCompleteUserCache (mejor opción)
-      if (userProfile?.uid) {
-        const cacheData = await getCompleteUserCache(userProfile.uid);
-        
-        if (cacheData) {
-          console.log('[DEBUG Auditoria] ✅ Cache encontrado:', {
-            userId: cacheData.userId,
-            empresas: cacheData.empresas?.length || 0,
-            formularios: cacheData.formularios?.length || 0,
-            sucursales: cacheData.sucursales?.length || 0
-          });
-          
-          // Cargar empresas
-          if (cacheData.empresas && cacheData.empresas.length > 0) {
-            console.log('[DEBUG Auditoria] ✅ Cargando empresas desde cache:', cacheData.empresas.length);
-            setEmpresas(cacheData.empresas);
+      // En Chrome PWA offline, priorizar localStorage directamente
+      if ((isChrome && isPWA && isOffline) || (!userProfile?.uid && isOffline)) {
+        console.log('[DEBUG Auditoria] 🔄 Chrome PWA offline detectado, cargando desde localStorage primero...');
+        try {
+          const localCache = localStorage.getItem('complete_user_cache');
+          if (localCache) {
+            const cacheData = JSON.parse(localCache);
+            
+            // Verificar que el cache tiene datos válidos
+            if (cacheData && (cacheData.empresas || cacheData.formularios || cacheData.sucursales)) {
+              console.log('[DEBUG Auditoria] ✅ Cache encontrado en localStorage (Chrome PWA offline):', {
+                userId: cacheData.userId,
+                empresas: cacheData.empresas?.length || 0,
+                formularios: cacheData.formularios?.length || 0,
+                sucursales: cacheData.sucursales?.length || 0
+              });
+              
+              // Cargar empresas
+              if (cacheData.empresas && cacheData.empresas.length > 0) {
+                console.log('[DEBUG Auditoria] ✅ Cargando empresas desde localStorage (Chrome PWA):', cacheData.empresas.length);
+                setEmpresas(cacheData.empresas);
+              }
+              
+              // Cargar formularios
+              if (cacheData.formularios && cacheData.formularios.length > 0) {
+                console.log('[DEBUG Auditoria] ✅ Cargando formularios desde localStorage (Chrome PWA):', cacheData.formularios.length);
+                setFormularios(cacheData.formularios);
+              }
+              
+              // Cargar sucursales
+              if (cacheData.sucursales && cacheData.sucursales.length > 0) {
+                console.log('[DEBUG Auditoria] ✅ Cargando sucursales desde localStorage (Chrome PWA):', cacheData.sucursales.length);
+                setSucursales(cacheData.sucursales);
+              }
+              
+              return cacheData;
+            } else {
+              console.log('[DEBUG Auditoria] ⚠️ Cache en localStorage pero sin datos válidos');
+            }
+          } else {
+            console.log('[DEBUG Auditoria] ⚠️ No hay cache en localStorage');
           }
-          
-          // Cargar formularios
-          if (cacheData.formularios && cacheData.formularios.length > 0) {
-            console.log('[DEBUG Auditoria] ✅ Cargando formularios desde cache:', cacheData.formularios.length);
-            setFormularios(cacheData.formularios);
-          }
-          
-          // Cargar sucursales
-          if (cacheData.sucursales && cacheData.sucursales.length > 0) {
-            console.log('[DEBUG Auditoria] ✅ Cargando sucursales desde cache:', cacheData.sucursales.length);
-            setSucursales(cacheData.sucursales);
-          }
-          
-          return cacheData;
+        } catch (localStorageError) {
+          console.error('[DEBUG Auditoria] ❌ Error parseando cache de localStorage (Chrome PWA):', localStorageError);
         }
       }
       
-      // Fallback: Si no hay userProfile o getCompleteUserCache falló, intentar localStorage directamente
-      console.log('[DEBUG Auditoria] ⚠️ Intentando fallback a localStorage...');
-      try {
-        const localCache = localStorage.getItem('complete_user_cache');
-        if (localCache) {
-          const cacheData = JSON.parse(localCache);
+      // Si hay userProfile.uid, intentar getCompleteUserCache (mejor opción para Edge y Chrome online)
+      if (userProfile?.uid) {
+        try {
+          const cacheData = await getCompleteUserCache(userProfile.uid);
           
-          // Verificar que el cache tiene datos válidos
-          if (cacheData && (cacheData.empresas || cacheData.formularios || cacheData.sucursales)) {
-            console.log('[DEBUG Auditoria] ✅ Cache encontrado en localStorage:', {
+          if (cacheData) {
+            console.log('[DEBUG Auditoria] ✅ Cache encontrado desde IndexedDB:', {
               userId: cacheData.userId,
               empresas: cacheData.empresas?.length || 0,
               formularios: cacheData.formularios?.length || 0,
@@ -76,19 +95,60 @@ export const useAuditoriaData = (
             
             // Cargar empresas
             if (cacheData.empresas && cacheData.empresas.length > 0) {
-              console.log('[DEBUG Auditoria] ✅ Cargando empresas desde localStorage:', cacheData.empresas.length);
+              console.log('[DEBUG Auditoria] ✅ Cargando empresas desde cache IndexedDB:', cacheData.empresas.length);
               setEmpresas(cacheData.empresas);
             }
             
             // Cargar formularios
             if (cacheData.formularios && cacheData.formularios.length > 0) {
-              console.log('[DEBUG Auditoria] ✅ Cargando formularios desde localStorage:', cacheData.formularios.length);
+              console.log('[DEBUG Auditoria] ✅ Cargando formularios desde cache IndexedDB:', cacheData.formularios.length);
               setFormularios(cacheData.formularios);
             }
             
             // Cargar sucursales
             if (cacheData.sucursales && cacheData.sucursales.length > 0) {
-              console.log('[DEBUG Auditoria] ✅ Cargando sucursales desde localStorage:', cacheData.sucursales.length);
+              console.log('[DEBUG Auditoria] ✅ Cargando sucursales desde cache IndexedDB:', cacheData.sucursales.length);
+              setSucursales(cacheData.sucursales);
+            }
+            
+            return cacheData;
+          }
+        } catch (indexedDBError) {
+          console.warn('[DEBUG Auditoria] ⚠️ Error cargando desde IndexedDB, intentando localStorage:', indexedDBError.message);
+        }
+      }
+      
+      // Fallback final: Intentar localStorage directamente
+      console.log('[DEBUG Auditoria] ⚠️ Intentando fallback final a localStorage...');
+      try {
+        const localCache = localStorage.getItem('complete_user_cache');
+        if (localCache) {
+          const cacheData = JSON.parse(localCache);
+          
+          // Verificar que el cache tiene datos válidos
+          if (cacheData && (cacheData.empresas || cacheData.formularios || cacheData.sucursales)) {
+            console.log('[DEBUG Auditoria] ✅ Cache encontrado en localStorage (fallback):', {
+              userId: cacheData.userId,
+              empresas: cacheData.empresas?.length || 0,
+              formularios: cacheData.formularios?.length || 0,
+              sucursales: cacheData.sucursales?.length || 0
+            });
+            
+            // Cargar empresas
+            if (cacheData.empresas && cacheData.empresas.length > 0) {
+              console.log('[DEBUG Auditoria] ✅ Cargando empresas desde localStorage (fallback):', cacheData.empresas.length);
+              setEmpresas(cacheData.empresas);
+            }
+            
+            // Cargar formularios
+            if (cacheData.formularios && cacheData.formularios.length > 0) {
+              console.log('[DEBUG Auditoria] ✅ Cargando formularios desde localStorage (fallback):', cacheData.formularios.length);
+              setFormularios(cacheData.formularios);
+            }
+            
+            // Cargar sucursales
+            if (cacheData.sucursales && cacheData.sucursales.length > 0) {
+              console.log('[DEBUG Auditoria] ✅ Cargando sucursales desde localStorage (fallback):', cacheData.sucursales.length);
               setSucursales(cacheData.sucursales);
             }
             
@@ -96,10 +156,10 @@ export const useAuditoriaData = (
           }
         }
       } catch (localStorageError) {
-        console.error('[DEBUG Auditoria] ❌ Error parseando cache de localStorage:', localStorageError);
+        console.error('[DEBUG Auditoria] ❌ Error parseando cache de localStorage (fallback):', localStorageError);
       }
       
-      console.log('[DEBUG Auditoria] ❌ No hay cache completo disponible');
+      console.log('[DEBUG Auditoria] ❌ No hay cache completo disponible en ningún almacenamiento');
       return null;
       
     } catch (error) {
@@ -349,23 +409,45 @@ export const useAuditoriaData = (
 
   // Cargar empresas desde sucursales existentes
   useEffect(() => {
-    // Si no hay userProfile, intentar cargar desde localStorage directamente (offline)
-    if (!userProfile) {
-      console.log('[DEBUG Auditoria] ⏳ No hay userProfile, intentando cargar desde localStorage...');
+    // Detectar Chrome PWA offline
+    const isChrome = navigator.userAgent.includes('Chrome') && !navigator.userAgent.includes('Edg');
+    const isPWA = window.matchMedia('(display-mode: standalone)').matches || 
+                  (window.navigator.standalone === true) ||
+                  document.referrer.includes('android-app://');
+    const isOffline = !navigator.onLine;
+    
+    // Si no hay userProfile o es Chrome PWA offline, intentar cargar desde localStorage directamente
+    if (!userProfile || (isChrome && isPWA && isOffline)) {
+      console.log('[DEBUG Auditoria] ⏳ No hay userProfile o Chrome PWA offline, intentando cargar desde localStorage...');
+      console.log('[DEBUG Auditoria] Chrome:', isChrome, 'PWA:', isPWA, 'Offline:', isOffline);
       try {
         const localCache = localStorage.getItem('complete_user_cache');
         if (localCache) {
           const cacheData = JSON.parse(localCache);
           if (cacheData && cacheData.empresas && cacheData.empresas.length > 0) {
-            console.log('[DEBUG Auditoria] ✅ Empresas cargadas desde localStorage (sin userProfile):', cacheData.empresas.length);
+            console.log('[DEBUG Auditoria] ✅ Empresas cargadas desde localStorage (sin userProfile/Chrome PWA offline):', cacheData.empresas.length);
             setEmpresas(cacheData.empresas);
+            
+            // También cargar formularios y sucursales si están disponibles
+            if (cacheData.formularios && cacheData.formularios.length > 0) {
+              console.log('[DEBUG Auditoria] ✅ Formularios cargados desde localStorage:', cacheData.formularios.length);
+              setFormularios(cacheData.formularios);
+            }
+            if (cacheData.sucursales && cacheData.sucursales.length > 0) {
+              console.log('[DEBUG Auditoria] ✅ Sucursales cargadas desde localStorage:', cacheData.sucursales.length);
+              setSucursales(cacheData.sucursales);
+            }
             return;
+          } else {
+            console.log('[DEBUG Auditoria] ⚠️ Cache en localStorage pero sin empresas válidas');
           }
+        } else {
+          console.log('[DEBUG Auditoria] ⚠️ No hay cache en localStorage');
         }
       } catch (e) {
         console.warn('[DEBUG Auditoria] Error cargando desde localStorage:', e);
       }
-      return;
+      // No retornar aquí, continuar con la lógica normal si localStorage falla
     }
 
     const cargarEmpresas = async () => {
