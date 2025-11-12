@@ -57,6 +57,7 @@ const SelectoresCapacitaciones = React.memo(({
             value={selectedEmpresa}
             label="Empresa"
             onChange={(e) => onEmpresaChange(e.target.value)}
+            aria-label="Seleccionar empresa para filtrar capacitaciones"
           >
             <MenuItem value="">
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -82,6 +83,7 @@ const SelectoresCapacitaciones = React.memo(({
             value={selectedSucursal}
             label="Sucursal"
             onChange={(e) => onSucursalChange(e.target.value)}
+            aria-label="Seleccionar sucursal para filtrar capacitaciones"
           >
             <MenuItem value="">
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -115,6 +117,7 @@ const SelectoresCapacitaciones = React.memo(({
               value={filterTipo}
               label="Tipo"
               onChange={(e) => onTipoChange(e.target.value)}
+              aria-label="Filtrar capacitaciones por tipo"
             >
               <MenuItem value="">Todos</MenuItem>
               <MenuItem value="charla">Charla</MenuItem>
@@ -129,6 +132,7 @@ const SelectoresCapacitaciones = React.memo(({
               value={filterEstado}
               label="Estado"
               onChange={(e) => onEstadoChange(e.target.value)}
+              aria-label="Filtrar capacitaciones por estado"
             >
               <MenuItem value="">Todos</MenuItem>
               <MenuItem value="activa">Activa</MenuItem>
