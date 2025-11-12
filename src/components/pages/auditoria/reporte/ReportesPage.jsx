@@ -94,6 +94,10 @@ const ReportesPage = () => {
   const detalleRef = useRef();
   const [openModal, setOpenModal] = useState(false);
   const [expandedAccordion, setExpandedAccordion] = useState(null);
+  
+  // Cache para evitar recargas innecesarias
+  const reportesCacheRef = useRef({});
+  const lastUserProfileKeyRef = useRef(null);
 
   // Estilos responsivos
   const mobileBoxStyle = {
@@ -178,6 +182,18 @@ const ReportesPage = () => {
 
   // Fetch de reportes
   const fetchReportes = async () => {
+    // Generar clave de cache basada en datos relevantes del usuario
+    const cacheKey = `${userProfile?.uid || ''}-${userProfile?.clienteAdminId || ''}-${userProfile?.empresaId || ''}-${userProfile?.role || ''}`;
+    
+    // Verificar cache antes de cargar
+    if (reportesCacheRef.current[cacheKey] && lastUserProfileKeyRef.current === cacheKey) {
+      console.log('[DEBUG] Usando datos cacheados para:', cacheKey);
+      setReportes(reportesCacheRef.current[cacheKey]);
+      setFilteredReportes(reportesCacheRef.current[cacheKey]);
+      setLoading(false);
+      return;
+    }
+    
     setLoading(true);
     setError(null);
     
@@ -213,13 +229,15 @@ const ReportesPage = () => {
           console.log('[DEBUG] Aplicando filtro por clienteAdminId:', userProfile.clienteAdminId);
           queries.push(query(
             collection(db, "reportes"),
-            where("clienteAdminId", "==", userProfile.clienteAdminId)
+            where("clienteAdminId", "==", userProfile.clienteAdminId),
+            limit(100)
           ));
           
           if (oldUid) {
             queries.push(query(
               collection(db, "reportes"),
-              where("clienteAdminId", "==", oldUid)
+              where("clienteAdminId", "==", oldUid),
+              limit(100)
             ));
           }
         }
@@ -228,21 +246,25 @@ const ReportesPage = () => {
           console.log('[DEBUG] Aplicando filtro por creadoPor/usuarioId (UID):', userProfile.uid);
           queries.push(query(
             collection(db, "reportes"),
-            where("creadoPor", "==", userProfile.uid)
+            where("creadoPor", "==", userProfile.uid),
+            limit(100)
           ));
           queries.push(query(
             collection(db, "reportes"),
-            where("usuarioId", "==", userProfile.uid)
+            where("usuarioId", "==", userProfile.uid),
+            limit(100)
           ));
           
           if (oldUid) {
             queries.push(query(
               collection(db, "reportes"),
-              where("creadoPor", "==", oldUid)
+              where("creadoPor", "==", oldUid),
+              limit(100)
             ));
             queries.push(query(
               collection(db, "reportes"),
-              where("usuarioId", "==", oldUid)
+              where("usuarioId", "==", oldUid),
+              limit(100)
             ));
           }
         }
@@ -264,15 +286,18 @@ const ReportesPage = () => {
               
               queries.push(query(
                 collection(db, "reportes"),
-                where("creadoPor", "==", oldUidEncontrado)
+                where("creadoPor", "==", oldUidEncontrado),
+                limit(100)
               ));
               queries.push(query(
                 collection(db, "reportes"),
-                where("usuarioId", "==", oldUidEncontrado)
+                where("usuarioId", "==", oldUidEncontrado),
+                limit(100)
               ));
               queries.push(query(
                 collection(db, "reportes"),
-                where("clienteAdminId", "==", oldUidEncontrado)
+                where("clienteAdminId", "==", oldUidEncontrado),
+                limit(100)
               ));
             }
           }
@@ -282,7 +307,8 @@ const ReportesPage = () => {
           console.log('[DEBUG] Aplicando filtro por empresaId:', userProfile.empresaId);
           queries.push(query(
             collection(db, "reportes"),
-            where("empresaId", "==", userProfile.empresaId)
+            where("empresaId", "==", userProfile.empresaId),
+            limit(100)
           ));
         }
         
@@ -329,6 +355,10 @@ const ReportesPage = () => {
         });
       }
       
+      // Guardar en cache
+      reportesCacheRef.current[cacheKey] = reportesData;
+      lastUserProfileKeyRef.current = cacheKey;
+      
       setReportes(reportesData);
       setFilteredReportes(reportesData);
     } catch (error) {
@@ -339,10 +369,17 @@ const ReportesPage = () => {
     }
   };
 
-  // Efectos
+  // Efectos - Optimizado: solo recargar si cambian datos relevantes
   useEffect(() => {
+    // Solo cargar si hay datos mínimos del usuario
+    if (!userProfile?.uid && !userProfile?.clienteAdminId && !userProfile?.empresaId) {
+      setLoading(false);
+      return;
+    }
+    
     fetchReportes();
-  }, [userProfile]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userProfile?.uid, userProfile?.clienteAdminId, userProfile?.empresaId, userProfile?.role]);
 
   useEffect(() => {
     console.log('[DEBUG] Aplicando filtros...');
