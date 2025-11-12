@@ -60,7 +60,7 @@ const Home = () => {
   // Hook para precarga automática en PWA Chrome
   const { shouldPreload, isPreloading, startPreload } = useChromePreload();
 
-  // Forzar carga de datos SOLO en PWA y SOLO una vez
+  // Forzar carga de datos SOLO en PWA y SOLO una vez por día
   useEffect(() => {
     const cargarDatosOffline = async () => {
       // Solo cargar en PWA standalone
@@ -69,9 +69,9 @@ const Home = () => {
         return;
       }
 
-      // Solo ejecutar una vez
+      // Solo ejecutar una vez por sesión
       if (hasCargadoDatos.current) {
-        console.log('ℹ️ [Home] Datos ya cargados previamente');
+        console.log('ℹ️ [Home] Datos ya cargados previamente en esta sesión');
         return;
       }
 
@@ -79,8 +79,25 @@ const Home = () => {
         return;
       }
 
+      // Verificar si ya se ejecutó automáticamente hoy (una vez por día)
+      const lastAutoLoad = localStorage.getItem('edge_auto_reload_timestamp');
+      const now = Date.now();
+      const oneDayInMs = 24 * 60 * 60 * 1000; // 24 horas en milisegundos
+      
+      if (lastAutoLoad) {
+        const timeSinceLastLoad = now - parseInt(lastAutoLoad);
+        if (timeSinceLastLoad < oneDayInMs) {
+          const hoursRemaining = Math.floor((oneDayInMs - timeSinceLastLoad) / (60 * 60 * 1000));
+          console.log(`ℹ️ [Home] Carga automática ya ejecutada hoy. Próxima ejecución en ${hoursRemaining} horas`);
+          return;
+        }
+      }
+
       hasCargadoDatos.current = true;
       setCargandoDatosOffline(true);
+      
+      // Marcar que se ejecutó automáticamente hoy
+      localStorage.setItem('edge_auto_reload_timestamp', now.toString());
 
       console.log('🚀 [Home PWA] Iniciando carga forzada de datos para modo offline...');
       setErrorCarga(null);
