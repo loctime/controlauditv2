@@ -292,7 +292,7 @@ const Home = () => {
                   </Button>
                 )}
                 
-                {/* Edge: solo Recargar Datos */}
+                {/* .Edge: solo Recargar Datos */}
                 {isEdge && (
                   <Button
                     variant="outlined"
