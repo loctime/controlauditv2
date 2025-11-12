@@ -3,6 +3,7 @@ import { getCompleteUserCache, saveCompleteUserCache } from '../services/complet
 import { useAuth } from '../components/context/AuthContext';
 import { collection, getDocs, query, where, orderBy, limit } from 'firebase/firestore';
 import { db } from '../firebaseConfig';
+import { shouldEnableOffline } from '../utils/pwaDetection';
 
 /**
  * Hook para cargar datos de la aplicación, priorizando el cache offline
@@ -135,8 +136,8 @@ export const useOfflineData = () => {
 
         setCacheLoaded(true);
 
-        // Guardar en cache offline para futuras cargas
-        if (authUserProfile) {
+        // Guardar en cache offline para futuras cargas (solo en móvil)
+        if (shouldEnableOffline() && authUserProfile) {
           await saveCompleteUserCache({
             ...authUserProfile,
             empresas: empresas, // Usar el estado actual de empresas
@@ -144,6 +145,8 @@ export const useOfflineData = () => {
             auditorias: auditorias // Usar el estado actual de auditorias
           });
           console.log('✅ Datos cargados desde la red y guardados en cache offline.');
+        } else if (!shouldEnableOffline()) {
+          console.log('💻 Desktop: Datos cargados (cache offline no necesario)');
         }
 
       } catch (err) {

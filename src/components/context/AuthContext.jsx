@@ -8,6 +8,7 @@ import { empresaService } from '../../services/empresaService';
 import { auditoriaService } from '../../services/auditoriaService';
 import { saveCompleteUserCache } from '../../services/completeOfflineCache';
 import { initializeOfflineData } from '../../utils/initializeOfflineData';
+import { shouldEnableOffline } from '../../utils/pwaDetection';
 
 // Hooks personalizados
 import { useOfflineCache } from './hooks/useOfflineCache';
@@ -38,6 +39,9 @@ const AuthContextComponent = ({ children }) => {
   const [selectedEmpresa, setSelectedEmpresa] = useState('todas');
   const [selectedSucursal, setSelectedSucursal] = useState('todas');
   
+  // Control para activar listeners diferidos (optimización: evitar llamadas duplicadas)
+  const [enableDeferredListeners, setEnableDeferredListeners] = useState(false);
+  
   // Bandera para evitar múltiples inicializaciones de ControlFile
   const controlFileInitializedRef = useRef(false);
 
@@ -62,8 +66,9 @@ const AuthContextComponent = ({ children }) => {
     getFormulariosDeClienteAdmin
   } = useUserManagement(user, userProfile);
 
-  // Hook de cache offline
+  // Hook de cache offline (solo para móvil)
   const { loadUserFromCache } = useOfflineCache();
+  const enableOffline = shouldEnableOffline(); // Solo true en PWA móvil instalada
 
   // Hooks de carga de datos
   const {
@@ -82,12 +87,28 @@ const AuthContextComponent = ({ children }) => {
     setLoadingSucursales,
     setUserFormularios, 
     setLoadingFormularios,
-    loadUserFromCache
+    enableOffline ? loadUserFromCache : null
   );
 
-  // Hooks de listeners reactivos
-  useSucursalesListener(userProfile, role, userEmpresas, setUserSucursales, setLoadingSucursales, loadUserFromCache);
-  useFormulariosListener(userProfile, role, setUserFormularios, setLoadingFormularios, loadUserFromCache);
+  // Hooks de listeners reactivos (solo con fallback offline en móvil)
+  // OPTIMIZACIÓN: Diferir listeners no críticos para evitar llamadas duplicadas con carga manual
+  useSucursalesListener(
+    userProfile, 
+    role, 
+    userEmpresas, 
+    setUserSucursales, 
+    setLoadingSucursales, 
+    enableOffline ? loadUserFromCache : null,
+    enableDeferredListeners // Solo activar después de carga manual inicial
+  );
+  useFormulariosListener(
+    userProfile, 
+    role, 
+    setUserFormularios, 
+    setLoadingFormularios, 
+    enableOffline ? loadUserFromCache : null,
+    enableDeferredListeners // Solo activar después de carga manual inicial
+  );
 
   // Hook de acciones del contexto
   const {
@@ -107,7 +128,7 @@ const AuthContextComponent = ({ children }) => {
     loadAuditoriasCompartidas
   );
 
-  // Listener de empresas (ya usa servicio)
+  // Listener de empresas (solo con fallback offline en móvil)
   useEffect(() => {
     if (!userProfile?.uid || !role) return;
     
@@ -116,11 +137,11 @@ const AuthContextComponent = ({ children }) => {
       role, 
       setUserEmpresas, 
       setLoadingEmpresas,
-      loadUserFromCache
+      enableOffline ? loadUserFromCache : null
     );
     return unsubscribe;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userProfile?.uid, role, userProfile?.clienteAdminId]);
+  }, [userProfile?.uid, role, userProfile?.clienteAdminId, enableOffline]);
 
   // Estado para rastrear si estamos online
   const [isOnline, setIsOnline] = useState(typeof navigator !== 'undefined' ? navigator.onLine : true);
@@ -151,8 +172,9 @@ const AuthContextComponent = ({ children }) => {
       !loadingSucursales && 
       !loadingFormularios;
     
-    if (shouldUpdateCache) {
+    if (shouldUpdateCache && enableOffline) {
       // Debounce: esperar 3 segundos después del último cambio para evitar actualizaciones excesivas
+      // Solo actualizar cache si estamos en móvil (modo offline habilitado)
       const timeoutId = setTimeout(async () => {
         try {
           const completeProfile = {
@@ -225,8 +247,15 @@ const AuthContextComponent = ({ children }) => {
                 loadUserFormularios(firebaseUser.uid, empresasCargadas, profile)
               ]);
 
-              // Verificar que tenemos datos antes de guardar cache
-              if (empresasCargadas && empresasCargadas.length > 0) {
+              // OPTIMIZACIÓN: Activar listeners diferidos después de carga manual (evita duplicados)
+              // Esperar 1 segundo adicional para asegurar que la carga manual terminó
+              setTimeout(() => {
+                setEnableDeferredListeners(true);
+                console.log('✅ Listeners diferidos activados (optimización de performance)');
+              }, 1000);
+
+              // Verificar que tenemos datos antes de guardar cache (solo en móvil)
+              if (enableOffline && empresasCargadas && empresasCargadas.length > 0) {
                 try {
                   const completeProfile = {
                     ...profile,
@@ -250,6 +279,8 @@ const AuthContextComponent = ({ children }) => {
                 } catch (error) {
                   console.error('❌ Error guardando cache:', error);
                 }
+              } else if (!enableOffline) {
+                console.log('💻 Desktop: Cache offline deshabilitado (no necesario)');
               } else {
                 console.warn('⚠️ No se guardó cache: no hay empresas cargadas');
               }
@@ -275,10 +306,16 @@ const AuthContextComponent = ({ children }) => {
             }, 2000);
           }
         } else {
+          // Solo intentar cargar desde cache si estamos en móvil (modo offline habilitado)
           const wasLoggedIn = localStorage.getItem("isLogged") === "true";
           
-          if (wasLoggedIn) {
-            console.log('📴 Modo offline detectado - cargando desde cache...');
+          // En modo offline, activar listeners diferidos inmediatamente (ya hay datos en cache)
+          if (wasLoggedIn && enableOffline) {
+            setEnableDeferredListeners(true);
+          }
+          
+          if (wasLoggedIn && enableOffline) {
+            console.log('📴 Modo offline detectado (móvil) - cargando desde cache...');
             const cachedUser = await loadUserFromCache();
             
             if (cachedUser && cachedUser.userProfile) {
@@ -421,25 +458,27 @@ const AuthContextComponent = ({ children }) => {
                 console.log('✅ Auditorías cargadas desde cache:', cachedUser.auditorias.length);
               }
               
-              // CRÍTICO: Inicializar datos offline para Edge PWA
+              // CRÍTICO: Inicializar datos offline para Edge PWA (solo en móvil)
               // Esto asegura que IndexedDB esté listo y los datos estén disponibles
               // incluso si el usuario entra offline directamente sin pasar por /auditoria
-              const isEdge = navigator.userAgent.includes('Edg');
-              const isPWA = window.matchMedia('(display-mode: standalone)').matches || 
-                            (window.navigator.standalone === true) ||
-                            document.referrer.includes('android-app://');
-              
-              if (isEdge && isPWA) {
-                try {
-                  await initializeOfflineData(
-                    cachedProfile,
-                    setUserEmpresas,
-                    setUserSucursales,
-                    setUserFormularios
-                  );
-                } catch (initError) {
-                  console.warn('Error inicializando datos offline:', initError);
-                  // Continuar sin fallar, los datos ya están cargados desde loadUserFromCache
+              if (enableOffline) {
+                const isEdge = navigator.userAgent.includes('Edg');
+                const isPWA = window.matchMedia('(display-mode: standalone)').matches || 
+                              (window.navigator.standalone === true) ||
+                              document.referrer.includes('android-app://');
+                
+                if (isEdge && isPWA) {
+                  try {
+                    await initializeOfflineData(
+                      cachedProfile,
+                      setUserEmpresas,
+                      setUserSucursales,
+                      setUserFormularios
+                    );
+                  } catch (initError) {
+                    console.warn('Error inicializando datos offline:', initError);
+                    // Continuar sin fallar, los datos ya están cargados desde loadUserFromCache
+                  }
                 }
               }
             } else {
@@ -452,6 +491,16 @@ const AuthContextComponent = ({ children }) => {
               localStorage.removeItem("userInfo");
               localStorage.removeItem("isLogged");
             }
+          } else if (wasLoggedIn && !enableOffline) {
+            // En desktop sin conexión, simplemente cerrar sesión (no hay modo offline)
+            console.log('💻 Desktop: Sin conexión y modo offline deshabilitado - cerrando sesión');
+            setUser(null);
+            setIsLogged(false);
+            setUserEmpresas([]);
+            setUserAuditorias([]);
+            setAuditoriasCompartidas([]);
+            localStorage.removeItem("userInfo");
+            localStorage.removeItem("isLogged");
           } else {
             setUser(null);
             setIsLogged(false);

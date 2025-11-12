@@ -37,15 +37,18 @@ export const useUserDataLoaders = (
     } catch (error) {
       console.error('❌ Error cargando empresas:', error);
       
-      try {
-        const cachedData = await loadUserFromCache();
-        if (cachedData?.empresas && cachedData.empresas.length > 0) {
-          setUserEmpresas(cachedData.empresas);
-          setLoadingEmpresas(false);
-          return cachedData.empresas;
+      // Fallback al cache offline solo si está habilitado (móvil)
+      if (loadUserFromCache) {
+        try {
+          const cachedData = await loadUserFromCache();
+          if (cachedData?.empresas && cachedData.empresas.length > 0) {
+            setUserEmpresas(cachedData.empresas);
+            setLoadingEmpresas(false);
+            return cachedData.empresas;
+          }
+        } catch (cacheError) {
+          console.error('Error cargando desde cache:', cacheError);
         }
-      } catch (cacheError) {
-        console.error('Error cargando desde cache:', cacheError);
       }
       
       setUserEmpresas([]);
@@ -102,15 +105,18 @@ export const useUserDataLoaders = (
     } catch (error) {
       console.error('❌ Error cargando sucursales:', error);
       
-      try {
-        const cachedData = await loadUserFromCache();
-        if (cachedData?.sucursales && cachedData.sucursales.length > 0) {
-          setUserSucursales(cachedData.sucursales);
-          setLoadingSucursales(false);
-          return cachedData.sucursales;
+      // Fallback al cache offline solo si está habilitado (móvil)
+      if (loadUserFromCache) {
+        try {
+          const cachedData = await loadUserFromCache();
+          if (cachedData?.sucursales && cachedData.sucursales.length > 0) {
+            setUserSucursales(cachedData.sucursales);
+            setLoadingSucursales(false);
+            return cachedData.sucursales;
+          }
+        } catch (cacheError) {
+          console.error('Error cargando sucursales desde cache:', cacheError);
         }
-      } catch (cacheError) {
-        console.error('Error cargando sucursales desde cache:', cacheError);
       }
       
       setUserSucursales([]);
@@ -231,15 +237,18 @@ export const useUserDataLoaders = (
     } catch (error) {
       console.error('❌ Error cargando formularios:', error);
       
-      try {
-        const cachedData = await loadUserFromCache();
-        if (cachedData?.formularios && cachedData.formularios.length > 0) {
-          setUserFormularios(cachedData.formularios);
-          setLoadingFormularios(false);
-          return cachedData.formularios;
+      // Fallback al cache offline solo si está habilitado (móvil)
+      if (loadUserFromCache) {
+        try {
+          const cachedData = await loadUserFromCache();
+          if (cachedData?.formularios && cachedData.formularios.length > 0) {
+            setUserFormularios(cachedData.formularios);
+            setLoadingFormularios(false);
+            return cachedData.formularios;
+          }
+        } catch (cacheError) {
+          console.error('Error cargando formularios desde cache:', cacheError);
         }
-      } catch (cacheError) {
-        console.error('Error cargando formularios desde cache:', cacheError);
       }
       
       setUserFormularios([]);

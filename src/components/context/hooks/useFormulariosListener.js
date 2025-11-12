@@ -4,9 +4,17 @@ import { db } from '../../../firebaseConfig.js';
 
 /**
  * Hook para listener reactivo de formularios con fallback offline
+ * @param {boolean} enableListener - Si es false, el listener no se activa (optimización para evitar duplicados)
  */
-export const useFormulariosListener = (userProfile, role, setUserFormularios, setLoadingFormularios, loadUserFromCache) => {
+export const useFormulariosListener = (userProfile, role, setUserFormularios, setLoadingFormularios, loadUserFromCache, enableListener = true) => {
   useEffect(() => {
+    // OPTIMIZACIÓN: No activar listener hasta que se habilite (evita duplicados con carga manual)
+    if (!enableListener) {
+      // Si el listener está deshabilitado pero ya hay datos cargados manualmente, mantenerlos
+      // No hacer nada, los datos ya están cargados por la carga manual inicial
+      return;
+    }
+
     if (!userProfile || !role) {
       setUserFormularios([]);
       setLoadingFormularios(false);
@@ -82,16 +90,19 @@ export const useFormulariosListener = (userProfile, role, setUserFormularios, se
       async (error) => {
         console.error('❌ Error en listener de formularios:', error);
         
-        try {
-          const cachedData = await loadUserFromCache();
-          if (cachedData?.formularios && cachedData.formularios.length > 0) {
-            console.log('🔄 [Offline] Usando formularios del cache IndexedDB:', cachedData.formularios.length);
-            setUserFormularios(cachedData.formularios);
-            setLoadingFormularios(false);
-            return;
+        // Fallback al cache offline solo si está habilitado (móvil)
+        if (loadUserFromCache) {
+          try {
+            const cachedData = await loadUserFromCache();
+            if (cachedData?.formularios && cachedData.formularios.length > 0) {
+              console.log('🔄 [Offline] Usando formularios del cache IndexedDB:', cachedData.formularios.length);
+              setUserFormularios(cachedData.formularios);
+              setLoadingFormularios(false);
+              return;
+            }
+          } catch (cacheError) {
+            console.error('Error cargando formularios desde cache:', cacheError);
           }
-        } catch (cacheError) {
-          console.error('Error cargando formularios desde cache:', cacheError);
         }
         
         setUserFormularios([]);
@@ -100,6 +111,6 @@ export const useFormulariosListener = (userProfile, role, setUserFormularios, se
     );
 
     return unsubscribe;
-  }, [userProfile?.uid, role, userProfile?.clienteAdminId, loadUserFromCache]);
+  }, [userProfile?.uid, role, userProfile?.clienteAdminId, loadUserFromCache, enableListener]);
 };
 

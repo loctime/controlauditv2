@@ -10,6 +10,7 @@ import AssessmentIcon from '@mui/icons-material/Assessment';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import { useAuth } from '../../context/AuthContext';
 import { useChromePreload } from '@/hooks/useChromePreload';
+import { shouldEnableOffline } from '../../utils/pwaDetection';
 
 const features = [
   { icon: <CheckCircleIcon color="success" />, text: 'Gestión completa de formularios' },
@@ -241,7 +242,8 @@ const Home = () => {
                       sessionStorage.removeItem('chrome_preload_done');
                       await startPreload();
                       
-                      if (userProfile && userEmpresas?.length > 0) {
+                      // Solo guardar cache si estamos en móvil (modo offline habilitado)
+                      if (shouldEnableOffline() && userProfile && userEmpresas?.length > 0) {
                         try {
                           const { saveCompleteUserCache } = await import('../../../services/completeOfflineCache');
                           
@@ -272,6 +274,12 @@ const Home = () => {
                             position: 'top-center'
                           });
                         }
+                      } else if (!shouldEnableOffline()) {
+                        console.log('💻 Desktop: Precarga completada (cache offline no necesario)');
+                        toast.success('✅ Precarga completada', {
+                          autoClose: 3000,
+                          position: 'top-center'
+                        });
                       } else {
                         console.warn('⚠️ [Home Chrome] No hay datos para guardar en cache');
                         toast.warning('⚠️ No hay datos disponibles para guardar en cache. Asegúrate de estar conectado.', {
