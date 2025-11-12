@@ -337,7 +337,7 @@ const FiltrosReportes = ({
                 />
               }
               label={
-                <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
+                <Typography variant="body2" sx={{ fontWeight: 'bold', color: '#1565c0' }}>
                   Todas las empresas
                 </Typography>
               }

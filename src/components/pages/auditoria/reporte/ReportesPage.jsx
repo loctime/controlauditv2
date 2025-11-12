@@ -624,9 +624,10 @@ const ReportesPage = () => {
         
         <Typography 
           variant={isSmallMobile ? "h5" : "h4"} 
+          component="h1"
           sx={{ 
             fontWeight: 700, 
-            color: 'primary.main',
+            color: '#1565c0',
             mb: 2,
             display: 'flex',
             alignItems: 'center',
