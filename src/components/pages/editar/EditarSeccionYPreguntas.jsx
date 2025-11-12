@@ -265,6 +265,7 @@ const EditarSeccionYPreguntas = ({
                     setNuevoNombreFormulario(formularioSeleccionado.nombre);
                     setModalEditarFormularioAbierto(true);
                   }}
+                  aria-label={`Editar nombre del formulario ${formularioSeleccionado.nombre}`}
                   sx={{ 
                     color: 'white',
                     background: 'rgba(255,255,255,0.15)',
@@ -385,6 +386,7 @@ const EditarSeccionYPreguntas = ({
                       size="small" 
                       color="primary" 
                       onClick={() => handleEditarSeccion(seccion)}
+                      aria-label={`Editar sección ${seccion.nombre}`}
                       sx={{ 
                         background: alpha('#667eea', 0.1),
                         '&:hover': { background: alpha('#667eea', 0.2) }
@@ -413,6 +415,7 @@ const EditarSeccionYPreguntas = ({
                     size="small" 
                     color="error"
                     onClick={() => handleEliminarSeccion(seccion.nombre)}
+                    aria-label={`Eliminar sección ${seccion.nombre}`}
                     sx={{ 
                       background: alpha('#d32f2f', 0.1),
                       '&:hover': { background: alpha('#d32f2f', 0.2) }
@@ -469,6 +472,7 @@ const EditarSeccionYPreguntas = ({
                               console.log('🔧 [DEBUG] Click en editar pregunta:', { pregunta, seccionNombre: seccion.nombre, index: preguntaIndex });
                               handleEditarPregunta({ pregunta, seccionNombre: seccion.nombre, index: preguntaIndex });
                             }}
+                            aria-label={`Editar pregunta: ${pregunta}`}
                             sx={{ color: 'primary.main' }}
                           >
                             <EditIcon fontSize="small" />
@@ -478,6 +482,7 @@ const EditarSeccionYPreguntas = ({
                           <IconButton 
                             size="small"
                             onClick={() => handleEliminarPregunta(preguntaIndex, seccion.nombre)}
+                            aria-label={`Eliminar pregunta: ${pregunta}`}
                             sx={{ color: 'error.main' }}
                           >
                             <DeleteForeverIcon fontSize="small" />
