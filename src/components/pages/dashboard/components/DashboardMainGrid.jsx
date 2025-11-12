@@ -12,7 +12,8 @@ export default function DashboardMainGrid({ data, saludOcupacional }) {
     <Grid container spacing={1.5}>
       <Grid item xs={12} lg={3}>
         <Typography
-          variant="h6"
+          variant="h5"
+          component="h5"
           sx={{
             fontWeight: 600,
             color: "#111827",
@@ -65,7 +66,8 @@ export default function DashboardMainGrid({ data, saludOcupacional }) {
               }}
             >
               <Typography
-                variant="h6"
+                variant="h5"
+                component="h5"
                 sx={{
                   fontWeight: 600,
                   color: "#111827",

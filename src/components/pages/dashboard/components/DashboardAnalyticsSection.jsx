@@ -33,7 +33,8 @@ export default function DashboardAnalyticsSection({
           }}
         >
           <Typography
-            variant="h6"
+            variant="h5"
+            component="h5"
             sx={{
               fontWeight: 600,
               color: "#111827",

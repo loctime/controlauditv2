@@ -122,7 +122,18 @@ const MetricChips = React.memo(({ metricas, analysis, auditorias }) => {
             label={chip.label}
             color={chip.color}
             variant="outlined"
-            sx={{ fontSize: '0.9rem', height: 36 }}
+            sx={{ 
+              fontSize: '0.9rem', 
+              height: 36,
+              // Mejorar contraste para chips 'info' (cambiar de #0288d1 a #01579b)
+              ...(chip.color === 'info' && {
+                color: '#01579b',
+                borderColor: '#01579b',
+                '& .MuiChip-label': {
+                  color: '#01579b'
+                }
+              })
+            }}
           />
         );
 

@@ -61,6 +61,7 @@ export default function EmpresaSelector({
           <Select
             value={selectedEmpresa || "todas"}
             onChange={(e) => onEmpresaChange(e.target.value)}
+            aria-label="Seleccionar empresa"
             sx={{
               "& .MuiOutlinedInput-notchedOutline": {
                 border: "none"
