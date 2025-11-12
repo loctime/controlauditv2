@@ -86,6 +86,7 @@ const AuditoriaHeader = ({
       <LinearProgress 
         variant="determinate" 
         value={calcularProgresoAuditoria()} 
+        aria-label={`Progreso de la auditoría: ${calcularProgresoAuditoria()}% completado`}
         sx={{ 
           height: isMobile ? 4 : 8, 
           borderRadius: 4,

@@ -56,6 +56,7 @@ const SeleccionFormulario = ({ formularios, formularioSeleccionadoId, onChange, 
         <Select
           value={formularioSeleccionadoId}
           onChange={handleChange}
+          aria-label="Seleccionar formulario de auditoría"
           sx={{ 
             minHeight: '56px',
             '& .MuiSelect-select': {
