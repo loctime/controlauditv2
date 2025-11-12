@@ -349,6 +349,25 @@ export const useAuditoriaData = (
 
   // Cargar empresas desde sucursales existentes
   useEffect(() => {
+    // Si no hay userProfile, intentar cargar desde localStorage directamente (offline)
+    if (!userProfile) {
+      console.log('[DEBUG Auditoria] ⏳ No hay userProfile, intentando cargar desde localStorage...');
+      try {
+        const localCache = localStorage.getItem('complete_user_cache');
+        if (localCache) {
+          const cacheData = JSON.parse(localCache);
+          if (cacheData && cacheData.empresas && cacheData.empresas.length > 0) {
+            console.log('[DEBUG Auditoria] ✅ Empresas cargadas desde localStorage (sin userProfile):', cacheData.empresas.length);
+            setEmpresas(cacheData.empresas);
+            return;
+          }
+        }
+      } catch (e) {
+        console.warn('[DEBUG Auditoria] Error cargando desde localStorage:', e);
+      }
+      return;
+    }
+
     const cargarEmpresas = async () => {
       console.log('[DEBUG Auditoria] Iniciando carga de empresas desde sucursales...');
       
@@ -392,11 +411,26 @@ export const useAuditoriaData = (
 
   // Cargar todas las sucursales disponibles al inicio
   useEffect(() => {
-    const cargarTodasLasSucursales = async () => {
-      if (!userProfile) {
-        setSucursales([]);
-        return;
+    // Si no hay userProfile, intentar cargar desde localStorage directamente (offline)
+    if (!userProfile) {
+      console.log('[DEBUG Auditoria] ⏳ No hay userProfile, intentando cargar sucursales desde localStorage...');
+      try {
+        const localCache = localStorage.getItem('complete_user_cache');
+        if (localCache) {
+          const cacheData = JSON.parse(localCache);
+          if (cacheData && cacheData.sucursales && cacheData.sucursales.length > 0) {
+            console.log('[DEBUG Auditoria] ✅ Sucursales cargadas desde localStorage (sin userProfile):', cacheData.sucursales.length);
+            setSucursales(cacheData.sucursales);
+            return;
+          }
+        }
+      } catch (e) {
+        console.warn('[DEBUG Auditoria] Error cargando sucursales desde localStorage:', e);
       }
+      return;
+    }
+
+    const cargarTodasLasSucursales = async () => {
 
       try {
         let sucursalesData = [];
@@ -465,6 +499,25 @@ export const useAuditoriaData = (
 
   // Cargar formularios desde el contexto, cache offline o Firestore
   useEffect(() => {
+    // Si no hay userProfile, intentar cargar desde localStorage directamente (offline)
+    if (!userProfile) {
+      console.log('[DEBUG Auditoria] ⏳ No hay userProfile, intentando cargar formularios desde localStorage...');
+      try {
+        const localCache = localStorage.getItem('complete_user_cache');
+        if (localCache) {
+          const cacheData = JSON.parse(localCache);
+          if (cacheData && cacheData.formularios && cacheData.formularios.length > 0) {
+            console.log('[DEBUG Auditoria] ✅ Formularios cargados desde localStorage (sin userProfile):', cacheData.formularios.length);
+            setFormularios(cacheData.formularios);
+            return;
+          }
+        }
+      } catch (e) {
+        console.warn('[DEBUG Auditoria] Error cargando formularios desde localStorage:', e);
+      }
+      return;
+    }
+
     const cargarFormularios = async () => {
       console.log('[DEBUG Auditoria] Iniciando carga de formularios...');
       
@@ -486,7 +539,7 @@ export const useAuditoriaData = (
     };
 
     cargarFormularios();
-  }, [userFormularios, setFormularios, cargarDatosDelCache]);
+  }, [userProfile, userFormularios, setFormularios, cargarDatosDelCache]);
 
   // Cargar formularios desde Firestore si no están en el contexto ni en cache offline
   useEffect(() => {
