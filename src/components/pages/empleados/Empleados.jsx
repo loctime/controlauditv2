@@ -217,6 +217,7 @@ export default function Empleados() {
               label="Empresa"
               onChange={(e) => setSelectedEmpresa(e.target.value)}
               disabled={!userEmpresas || userEmpresas.length === 0}
+              aria-label="Seleccionar empresa"
             >
               {userEmpresas?.map((empresa) => (
                 <MenuItem key={empresa.id} value={empresa.id}>
@@ -233,6 +234,7 @@ export default function Empleados() {
               label="Sucursal"
               onChange={(e) => setSelectedSucursal(e.target.value)}
               disabled={!selectedEmpresa || filteredSucursales.length === 0 || !userEmpresas || userEmpresas.length === 0}
+              aria-label="Seleccionar sucursal"
             >
               {filteredSucursales.map((sucursal) => (
                 <MenuItem key={sucursal.id} value={sucursal.id}>
@@ -265,6 +267,7 @@ export default function Empleados() {
               value={filterCargo}
               label="Cargo"
               onChange={(e) => setFilterCargo(e.target.value)}
+              aria-label="Filtrar por cargo"
             >
               <MenuItem value="">Todos</MenuItem>
               {uniqueCargos.map((cargo) => (
@@ -279,6 +282,7 @@ export default function Empleados() {
               value={filterTipo}
               label="Tipo"
               onChange={(e) => setFilterTipo(e.target.value)}
+              aria-label="Filtrar por tipo de empleado"
             >
               <MenuItem value="">Todos</MenuItem>
               <MenuItem value="operativo">Operativo</MenuItem>
@@ -292,6 +296,7 @@ export default function Empleados() {
               value={filterEstado}
               label="Estado"
               onChange={(e) => setFilterEstado(e.target.value)}
+              aria-label="Filtrar por estado del empleado"
             >
               <MenuItem value="">
                 <Chip label="Todos" size="small" />
@@ -389,6 +394,7 @@ export default function Empleados() {
                       size="small"
                       color="primary"
                       onClick={() => handleOpenForm(empleado)}
+                      aria-label={`Editar empleado ${empleado.nombre} ${empleado.apellido || ''}`}
                     >
                       <EditIcon />
                     </IconButton>
@@ -396,6 +402,7 @@ export default function Empleados() {
                       size="small"
                       color="error"
                       onClick={() => handleDeleteEmpleado(empleado.id, `${empleado.nombre} ${empleado.apellido || ''}`)}
+                      aria-label={`Eliminar empleado ${empleado.nombre} ${empleado.apellido || ''}`}
                     >
                       <DeleteIcon />
                     </IconButton>
