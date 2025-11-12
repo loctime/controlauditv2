@@ -3,7 +3,7 @@ import App from "./App.jsx";
 import "./global.css";
 import { initOfflineDatabase } from "./services/offlineDatabase";
 
-// Inicializar base de datos offline con retry
+// Inicializar base de datos offline con retry.
 const initDatabaseWithRetry = async (retries = 3) => {
   for (let i = 0; i < retries; i++) {
     try {
