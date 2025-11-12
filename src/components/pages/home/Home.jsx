@@ -412,7 +412,7 @@ const Home = () => {
             Comenzar
           </Button>
         </div>
-        <Typography variant="h6" align="center" gutterBottom sx={{ opacity: 0.85 }}>
+        <Typography variant="h2" component="h2" align="center" gutterBottom sx={{ opacity: 0.85, fontSize: { xs: '1.25rem', sm: '1.5rem' } }}>
           Optimiza tus auditorías con nuestra plataforma profesional.
         </Typography>
         <Grid container spacing={3}>
@@ -447,7 +447,7 @@ const Home = () => {
         <Divider sx={{ mb: 3, mt: 4 }} />
         
         <div className="home-contact">
-          Contacto: <a href="mailto:licvidalfernando@gmail.com" style={{ color: "#1976d2", textDecoration: "none" }}>licvidalfernando@gmail.com</a>
+          Contacto: <a href="mailto:licvidalfernando@gmail.com" style={{ color: "#1565c0", textDecoration: "underline", fontWeight: 500 }}>licvidalfernando@gmail.com</a>
         </div>
       </div>
     </div>
