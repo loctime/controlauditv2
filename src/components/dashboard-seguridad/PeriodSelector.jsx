@@ -47,6 +47,7 @@ export default function PeriodSelector({
               size="small"
               value={selectedYear}
               onChange={(event) => onYearChange(event.target.value)}
+              aria-label="Seleccionar año"
               sx={{
                 minWidth: '90px',
                 backgroundColor: 'white',

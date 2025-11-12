@@ -57,6 +57,7 @@ export default function SucursalSelector({
           <Select
             value={selectedSucursal || 'todas'}
             onChange={(e) => onSucursalChange(e.target.value)}
+            aria-label="Seleccionar sucursal"
             sx={{
               '& .MuiOutlinedInput-notchedOutline': {
                 border: 'none'

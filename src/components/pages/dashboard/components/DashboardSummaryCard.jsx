@@ -113,6 +113,7 @@ export default function DashboardSummaryCard({
           <Badge badgeContent={alertasCount} color="error" sx={{ mr: 1 }}>
             <IconButton
               onClick={onAlertClick}
+              aria-label={`Ver ${alertasCount} alerta${alertasCount > 1 ? 's' : ''}`}
               sx={{
                 color: "#f97316",
                 backgroundColor: "rgba(251, 146, 60, 0.12)",
