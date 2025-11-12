@@ -27,9 +27,10 @@ const EmpresasHeader = React.memo(({
       <BusinessIcon sx={{ fontSize: isSmallMobile ? 32 : 40, color: 'primary.main' }} />
       <Typography
         variant={isSmallMobile ? "h5" : "h4"}
+        component="h1"
         sx={{
           fontWeight: 700,
-          color: 'primary.main',
+          color: '#1565c0',
           display: 'flex',
           alignItems: 'center',
           gap: 1

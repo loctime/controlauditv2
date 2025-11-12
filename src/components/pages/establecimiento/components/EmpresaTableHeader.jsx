@@ -7,16 +7,16 @@ import { TableHead, TableRow, TableCell } from '@mui/material';
 const EmpresaTableHeader = React.memo(() => (
   <TableHead>
     <TableRow>
-      <TableCell></TableCell>
-      <TableCell><strong>Empresa</strong></TableCell>
-      <TableCell><strong>Propietario</strong></TableCell>
-      <TableCell><strong>Dirección</strong></TableCell>
-      <TableCell><strong>Teléfono</strong></TableCell>
-      <TableCell><strong>Sucursales</strong></TableCell>
-      <TableCell><strong>Empleados</strong></TableCell>
-      <TableCell><strong>Capacitaciones</strong></TableCell>
-      <TableCell><strong>Accidentes</strong></TableCell>
-      <TableCell><strong>Acciones</strong></TableCell>
+      <TableCell scope="col"></TableCell>
+      <TableCell scope="col"><strong>Empresa</strong></TableCell>
+      <TableCell scope="col"><strong>Propietario</strong></TableCell>
+      <TableCell scope="col"><strong>Dirección</strong></TableCell>
+      <TableCell scope="col"><strong>Teléfono</strong></TableCell>
+      <TableCell scope="col"><strong>Sucursales</strong></TableCell>
+      <TableCell scope="col"><strong>Empleados</strong></TableCell>
+      <TableCell scope="col"><strong>Capacitaciones</strong></TableCell>
+      <TableCell scope="col"><strong>Accidentes</strong></TableCell>
+      <TableCell scope="col"><strong>Acciones</strong></TableCell>
     </TableRow>
   </TableHead>
 ));
