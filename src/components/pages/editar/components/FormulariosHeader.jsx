@@ -72,6 +72,7 @@ const FormulariosHeader = React.memo(({
             value={formularioSeleccionado?.id || ""}
             onChange={onFormularioChange}
             label="Seleccionar Formulario"
+            aria-label="Seleccionar formulario para editar"
           >
             <MenuItem value=""><em>Todos</em></MenuItem>
             {formularios.map((formulario) => (
@@ -140,6 +141,7 @@ const FormulariosHeader = React.memo(({
             color="primary"
             onClick={onReload}
             disabled={recargando}
+            aria-label="Recargar lista de formularios"
             sx={{
               minWidth: isSmallMobile ? 40 : 48,
               width: isSmallMobile ? 40 : 48,
