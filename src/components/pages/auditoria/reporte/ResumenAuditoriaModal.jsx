@@ -33,7 +33,11 @@ import {
   Warning as WarningIcon,
   Help as HelpIcon,
   Visibility as VisibilityIcon,
-  Edit as EditIcon
+  Edit as EditIcon,
+  Work as WorkIcon,
+  Build as BuildIcon,
+  SupervisorAccount as SupervisorAccountIcon,
+  People as PeopleIcon
 } from '@mui/icons-material';
 import Firma from './Firma';
 
@@ -49,7 +53,9 @@ const ResumenAuditoriaModal = ({
   fecha = new Date().toLocaleDateString('es-ES'),
   // Props para la firma
   onSaveFirmaResponsable,
-  firmaResponsable
+  firmaResponsable,
+  // Props para datos adicionales del reporte
+  datosReporte = {}
 }) => {
   const theme = useTheme();
 
@@ -116,9 +122,9 @@ const ResumenAuditoriaModal = ({
         justifyContent: 'space-between',
         background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.1)}, ${alpha(theme.palette.primary.main, 0.05)})`
       }}>
-        <Box display="flex" alignItems="center" gap={1}>
+        <Box display="flex" alignItems="center" gap={1} component="span">
           <VisibilityIcon color="primary" />
-          <Typography variant="h6" color="primary" sx={{ fontWeight: 600 }}>
+          <Typography variant="h6" color="primary" sx={{ fontWeight: 600 }} component="span">
             Resumen Completo de la Auditoría
           </Typography>
         </Box>
@@ -175,6 +181,67 @@ const ResumenAuditoriaModal = ({
                     </Box>
                   </Grid>
                 </Grid>
+
+                {/* Información Adicional del Reporte */}
+                {(datosReporte?.tareaObservada || datosReporte?.lugarSector || datosReporte?.equiposInvolucrados || datosReporte?.supervisor || datosReporte?.numeroTrabajadores) && (
+                  <Box mt={3} pt={2} borderTop={`1px solid ${alpha(theme.palette.divider, 0.5)}`}>
+                    <Typography variant="subtitle1" gutterBottom sx={{ color: 'primary.main', fontWeight: 600, mb: 2 }}>
+                      Información Adicional del Reporte
+                    </Typography>
+                    <Grid container spacing={2}>
+                      {datosReporte?.tareaObservada && (
+                        <Grid item xs={12} sm={6}>
+                          <Box display="flex" alignItems="center" gap={1}>
+                            <WorkIcon color="primary" fontSize="small" />
+                            <Typography variant="body2" color="text.secondary">
+                              <strong>Tarea Observada:</strong> {datosReporte.tareaObservada}
+                            </Typography>
+                          </Box>
+                        </Grid>
+                      )}
+                      {datosReporte?.lugarSector && (
+                        <Grid item xs={12} sm={6}>
+                          <Box display="flex" alignItems="center" gap={1}>
+                            <LocationIcon color="primary" fontSize="small" />
+                            <Typography variant="body2" color="text.secondary">
+                              <strong>Lugar / Sector:</strong> {datosReporte.lugarSector}
+                            </Typography>
+                          </Box>
+                        </Grid>
+                      )}
+                      {datosReporte?.equiposInvolucrados && (
+                        <Grid item xs={12} sm={6}>
+                          <Box display="flex" alignItems="center" gap={1}>
+                            <BuildIcon color="primary" fontSize="small" />
+                            <Typography variant="body2" color="text.secondary">
+                              <strong>Equipo/s Involucrado:</strong> {datosReporte.equiposInvolucrados}
+                            </Typography>
+                          </Box>
+                        </Grid>
+                      )}
+                      {datosReporte?.supervisor && (
+                        <Grid item xs={12} sm={6}>
+                          <Box display="flex" alignItems="center" gap={1}>
+                            <SupervisorAccountIcon color="primary" fontSize="small" />
+                            <Typography variant="body2" color="text.secondary">
+                              <strong>Supervisor:</strong> {datosReporte.supervisor}
+                            </Typography>
+                          </Box>
+                        </Grid>
+                      )}
+                      {datosReporte?.numeroTrabajadores && (
+                        <Grid item xs={12} sm={6}>
+                          <Box display="flex" alignItems="center" gap={1}>
+                            <PeopleIcon color="primary" fontSize="small" />
+                            <Typography variant="body2" color="text.secondary">
+                              <strong>N° de Trabajadores:</strong> {datosReporte.numeroTrabajadores}
+                            </Typography>
+                          </Box>
+                        </Grid>
+                      )}
+                    </Grid>
+                  </Box>
+                )}
 
                 {/* Encargado */}
                 {encargado && (

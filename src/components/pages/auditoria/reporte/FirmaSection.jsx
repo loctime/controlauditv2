@@ -547,6 +547,7 @@ const FirmaSection = ({
         encargado={encargado}
         onSaveFirmaResponsable={handleSaveFirmaResponsable}
         firmaResponsable={firmaResponsableURL}
+        datosReporte={datosReporte}
       />
 
       {/* Modal para crear firma */}

@@ -278,6 +278,13 @@ const ReporteDetallePro = forwardRef(({ open = false, onClose = () => {}, report
               formulario={formulario}
               fecha={fecha}
               nombreAuditor={nombreAuditor}
+              datosReporte={{
+                tareaObservada: reporte.tareaObservada || '',
+                lugarSector: reporte.lugarSector || '',
+                equiposInvolucrados: reporte.equiposInvolucrados || '',
+                supervisor: reporte.supervisor || '',
+                numeroTrabajadores: reporte.numeroTrabajadores || ''
+              }}
             />
             
             {/* Estadísticas y gráficos */}
