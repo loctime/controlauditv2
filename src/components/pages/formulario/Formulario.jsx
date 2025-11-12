@@ -178,7 +178,7 @@ const Formulario = () => {
         >
           Volver a Formularios
         </Button>
-        <Typography variant="h5" sx={{ flex: 1 }}>
+        <Typography variant="h5" component="h1" sx={{ flex: 1 }}>
           Crear Nuevo Formulario
         </Typography>
       </Box>
@@ -222,12 +222,22 @@ const Formulario = () => {
               value={seccion.preguntas}
               onChange={(event) => handleChangePreguntas(index, event)}
             />
-            <Button variant="contained" color="error" onClick={() => handleEliminarSeccion(index)}>
+            <Button 
+              variant="contained" 
+              color="error" 
+              onClick={() => handleEliminarSeccion(index)}
+              aria-label={`Eliminar sección ${index + 1}: ${seccion.nombre || 'sin nombre'}`}
+            >
               Eliminar Sección
             </Button>
           </Box>
         ))}
-        <Button variant="contained" color="primary" onClick={handleAgregarSeccion}>
+        <Button 
+          variant="contained" 
+          color="primary" 
+          onClick={handleAgregarSeccion}
+          aria-label="Agregar nueva sección al formulario"
+        >
           Agregar Sección
         </Button>
         <Button type="submit" variant="contained" color="primary">
