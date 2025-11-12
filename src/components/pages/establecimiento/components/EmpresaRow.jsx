@@ -36,7 +36,11 @@ const EmpresaRow = React.memo(({
   return (
   <TableRow hover>
     <TableCell>
-      <IconButton size="small" onClick={() => onToggleRow(empresa.id)}>
+      <IconButton 
+        size="small" 
+        onClick={() => onToggleRow(empresa.id)}
+        aria-label={isExpanded ? `Ocultar detalles de ${empresa.nombre}` : `Mostrar detalles de ${empresa.nombre}`}
+      >
         {isExpanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
       </IconButton>
     </TableCell>
@@ -155,12 +159,22 @@ const EmpresaRow = React.memo(({
     <TableCell>
       <Box sx={{ display: 'flex', gap: 1 }}>
         <Tooltip title="Editar empresa">
-          <IconButton size="small" color="primary" onClick={() => onEditClick(empresa)}>
+          <IconButton 
+            size="small" 
+            color="primary" 
+            onClick={() => onEditClick(empresa)}
+            aria-label={`Editar empresa ${empresa.nombre}`}
+          >
             <BusinessIcon />
           </IconButton>
         </Tooltip>
         <Tooltip title="Ver sucursales">
-          <IconButton size="small" onClick={() => onToggleRow(empresa.id)} color="secondary">
+          <IconButton 
+            size="small" 
+            onClick={() => onToggleRow(empresa.id)} 
+            color="secondary"
+            aria-label={`Ver sucursales de ${empresa.nombre}`}
+          >
             <StorefrontIcon />
           </IconButton>
         </Tooltip>
