@@ -109,7 +109,7 @@ function Navbar(props) {
       <Toolbar />
       {user && (
         <Box sx={{ p: 2, borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
-          <Box sx={{ color: 'whitesmoke', fontSize: '0.9rem' }}>
+          <Box sx={{ color: '#ffffff', fontSize: '0.9rem' }}>
             <div>Usuario: {user.email}</div>
           </Box>
         </Box>
@@ -120,9 +120,9 @@ function Navbar(props) {
             <ListItem disablePadding>
               <ListItemButton onClick={() => setMobileOpen(false)}>
                 <ListItemIcon>
-                  <Icon sx={{ color: "whitesmoke" }} />
+                  <Icon sx={{ color: "#ffffff" }} />
                 </ListItemIcon>
-                <ListItemText primary={title} sx={{ color: "whitesmoke" }} />
+                <ListItemText primary={title} sx={{ color: "#ffffff" }} />
               </ListItemButton>
             </ListItem>
           </Link>
@@ -135,9 +135,9 @@ function Navbar(props) {
             <ListItem disablePadding>
               <ListItemButton onClick={handleShowInfo}>
                 <ListItemIcon>
-                  <InfoIcon sx={{ color: "whitesmoke" }} />
+                  <InfoIcon sx={{ color: "#ffffff" }} />
                 </ListItemIcon>
-                <ListItemText primary={"Info App"} sx={{ color: "whitesmoke" }} />
+                <ListItemText primary={"Info App"} sx={{ color: "#ffffff" }} />
               </ListItemButton>
             </ListItem>
           </>
@@ -146,9 +146,9 @@ function Navbar(props) {
         <ListItem disablePadding>
           <ListItemButton onClick={handleLogout}>
             <ListItemIcon>
-              <LogoutIcon sx={{ color: "whitesmoke" }} />
+              <LogoutIcon sx={{ color: "#ffffff" }} />
             </ListItemIcon>
-            <ListItemText primary={"Cerrar sesión"} sx={{ color: "whitesmoke" }} />
+            <ListItemText primary={"Cerrar sesión"} sx={{ color: "#ffffff" }} />
           </ListItemButton>
         </ListItem>
       </List>
@@ -200,7 +200,7 @@ function Navbar(props) {
             flex: 1
           }}>
             <Link to={getDashboardRoute()} style={{ 
-              color: "whitesmoke", 
+              color: "#ffffff", 
               textDecoration: "none", 
               fontSize: '0.95rem', 
               padding: '8px 12px', 
@@ -214,7 +214,7 @@ function Navbar(props) {
               {getDashboardText()}
             </Link> 
             <Link to="/auditoria" style={{ 
-              color: "whitesmoke", 
+              color: "#ffffff", 
               textDecoration: "none", 
               fontSize: '0.95rem', 
               padding: '8px 12px', 
@@ -225,7 +225,7 @@ function Navbar(props) {
               Auditoria
             </Link>
             <Link to="/reporte" style={{ 
-              color: "whitesmoke", 
+              color: "#ffffff", 
               textDecoration: "none", 
               fontSize: '0.95rem', 
               padding: '8px 12px', 
@@ -240,7 +240,7 @@ function Navbar(props) {
             <Box 
               onClick={handleEmpresarialMenuOpen}
               sx={{
-                color: "whitesmoke",
+                color: "#ffffff",
                 fontSize: '0.95rem',
                 padding: '8px 12px',
                 lineHeight: 1.2,
@@ -273,9 +273,9 @@ function Navbar(props) {
               PaperProps={{
                 sx: {
                   backgroundColor: theme.palette.primary.main,
-                  color: 'whitesmoke',
+                  color: '#ffffff',
                   '& .MuiMenuItem-root': {
-                    color: 'whitesmoke',
+                    color: '#ffffff',
                     '&:hover': {
                       backgroundColor: 'rgba(255,255,255,0.1)',
                     },
@@ -285,7 +285,7 @@ function Navbar(props) {
             >
               <MenuItem onClick={handleEmpresarialMenuClose}>
                 <Link to="/establecimiento" style={{ 
-                  color: 'whitesmoke', 
+                  color: '#ffffff', 
                   textDecoration: 'none',
                   width: '100%'
                 }}>
@@ -294,7 +294,7 @@ function Navbar(props) {
               </MenuItem>
                             <MenuItem onClick={handleEmpresarialMenuClose}>
                 <Link to="/empleados" style={{ 
-                  color: 'whitesmoke', 
+                  color: '#ffffff', 
                   textDecoration: 'none',
                   width: '100%'
                 }}>
@@ -306,7 +306,7 @@ function Navbar(props) {
             <Box 
               onClick={handleHigieneMenuOpen}
               sx={{
-                color: "whitesmoke",
+                color: "#ffffff",
                 fontSize: '0.95rem',
                 padding: '8px 12px',
                 lineHeight: 1.2,
@@ -339,9 +339,9 @@ function Navbar(props) {
               PaperProps={{
                 sx: {
                   backgroundColor: theme.palette.primary.main,
-                  color: 'whitesmoke',
+                  color: '#ffffff',
                   '& .MuiMenuItem-root': {
-                    color: 'whitesmoke',
+                    color: '#ffffff',
                     '&:hover': {
                       backgroundColor: 'rgba(255,255,255,0.1)',
                     },
@@ -351,7 +351,7 @@ function Navbar(props) {
             >
               <MenuItem onClick={handleHigieneMenuClose}>
                 <Link to="/dashboard-seguridad" style={{ 
-                  color: 'whitesmoke', 
+                  color: '#ffffff', 
                   textDecoration: 'none',
                   width: '100%'
                 }}>
@@ -360,7 +360,7 @@ function Navbar(props) {
               </MenuItem>
               <MenuItem onClick={handleHigieneMenuClose}>
                 <Link to="/capacitaciones" style={{ 
-                  color: 'whitesmoke', 
+                  color: '#ffffff', 
                   textDecoration: 'none',
                   width: '100%'
                 }}>
@@ -369,7 +369,7 @@ function Navbar(props) {
               </MenuItem>
               <MenuItem onClick={handleHigieneMenuClose}>
                 <Link to="/accidentes" style={{ 
-                  color: 'whitesmoke', 
+                  color: '#ffffff', 
                   textDecoration: 'none',
                   width: '100%'
                 }}>
@@ -380,7 +380,7 @@ function Navbar(props) {
                 <Link
                   to="/salud-ocupacional"
                   style={{
-                    color: "whitesmoke",
+                    color: "#ffffff",
                     textDecoration: "none",
                     width: "100%"
                   }}
@@ -392,7 +392,7 @@ function Navbar(props) {
 
 
             <Link to="/perfil" style={{ 
-              color: "whitesmoke", 
+              color: "#ffffff", 
               textDecoration: "none", 
               fontSize: '0.95rem', 
               padding: '8px 12px', 
@@ -412,7 +412,7 @@ function Navbar(props) {
             height: '100%'
           }}>
             <Link to={getDashboardRoute()} style={{ 
-              color: "whitesmoke", 
+              color: "#ffffff", 
               textDecoration: "none", 
               fontSize: '0.8rem',
               fontWeight: 500,
@@ -431,7 +431,7 @@ function Navbar(props) {
             <Box 
               onClick={handleHigieneMenuOpen}
               sx={{
-                color: "whitesmoke",
+                color: "#ffffff",
                 fontSize: '0.8rem',
                 fontWeight: 500,
                 padding: '4px 8px',
@@ -468,9 +468,9 @@ function Navbar(props) {
               PaperProps={{
                 sx: {
                   backgroundColor: theme.palette.primary.main,
-                  color: 'whitesmoke',
+                  color: '#ffffff',
                   '& .MuiMenuItem-root': {
-                    color: 'whitesmoke',
+                    color: '#ffffff',
                     '&:hover': {
                       backgroundColor: 'rgba(255,255,255,0.1)',
                     },
@@ -480,7 +480,7 @@ function Navbar(props) {
             >
               <MenuItem onClick={handleHigieneMenuClose}>
                 <Link to="/dashboard-seguridad" style={{ 
-                  color: 'whitesmoke', 
+                  color: '#ffffff', 
                   textDecoration: 'none',
                   width: '100%'
                 }}>
@@ -489,7 +489,7 @@ function Navbar(props) {
               </MenuItem>
               <MenuItem onClick={handleHigieneMenuClose}>
                 <Link to="/capacitaciones" style={{ 
-                  color: 'whitesmoke', 
+                  color: '#ffffff', 
                   textDecoration: 'none',
                   width: '100%'
                 }}>
@@ -498,7 +498,7 @@ function Navbar(props) {
               </MenuItem>
               <MenuItem onClick={handleHigieneMenuClose}>
                 <Link to="/accidentes" style={{ 
-                  color: 'whitesmoke', 
+                  color: '#ffffff', 
                   textDecoration: 'none',
                   width: '100%'
                 }}>
@@ -509,7 +509,7 @@ function Navbar(props) {
                 <Link
                   to="/salud-ocupacional"
                   style={{
-                    color: "whitesmoke",
+                    color: "#ffffff",
                     textDecoration: "none",
                     width: "100%"
                   }}
@@ -519,7 +519,7 @@ function Navbar(props) {
               </MenuItem>
             </Menu>
             <Link to="/auditoria" style={{ 
-              color: "whitesmoke", 
+              color: "#ffffff", 
               textDecoration: "none", 
               fontSize: '0.8rem',
               fontWeight: 500,
