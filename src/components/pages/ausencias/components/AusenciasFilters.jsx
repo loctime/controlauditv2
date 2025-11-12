@@ -55,6 +55,7 @@ export default function AusenciasFilters({
               label="Empresa"
               value={selectedEmpresa || ""}
               onChange={(event) => setSelectedEmpresa(event.target.value)}
+              aria-label="Seleccionar empresa para filtrar ausencias"
             >
               <MenuItem value="">Selecciona una empresa</MenuItem>
               <MenuItem value="todas">Todas las empresas</MenuItem>
@@ -74,6 +75,7 @@ export default function AusenciasFilters({
               label="Sucursal"
               value={selectedSucursal || ""}
               onChange={(event) => setSelectedSucursal(event.target.value)}
+              aria-label="Seleccionar sucursal para filtrar ausencias"
             >
               <MenuItem value="">Selecciona una sucursal</MenuItem>
               <MenuItem value="todas">Todas las sucursales</MenuItem>
@@ -93,6 +95,7 @@ export default function AusenciasFilters({
               label="Tipo"
               value={filters.tipo}
               onChange={(event) => onChangeFilters({ tipo: event.target.value })}
+              aria-label="Filtrar ausencias por tipo"
             >
               <MenuItem value="todos">Todos</MenuItem>
               {opcionesTipo.map((tipo) => (
@@ -113,6 +116,7 @@ export default function AusenciasFilters({
               onChange={(event) =>
                 onChangeFilters({ estado: event.target.value })
               }
+              aria-label="Filtrar ausencias por estado"
             >
               <MenuItem value="todos">Todos</MenuItem>
               {AUSENCIA_ESTADOS.map((estado) => (
