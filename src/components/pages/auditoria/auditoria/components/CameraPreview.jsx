@@ -80,6 +80,7 @@ const CameraPreview = ({
         }}>
           <IconButton
             onClick={onClose}
+            aria-label="Cerrar cámara"
             sx={{ 
               color: 'white', 
               backgroundColor: 'rgba(255,255,255,0.2)',
@@ -104,6 +105,7 @@ const CameraPreview = ({
               <IconButton
                 onClick={onZoomOut}
                 disabled={cameraZoom <= 1}
+                aria-label="Reducir zoom"
                 sx={{ 
                   color: 'white', 
                   backgroundColor: 'rgba(255,255,255,0.2)',
@@ -128,6 +130,7 @@ const CameraPreview = ({
               <IconButton
                 onClick={onCapturePhoto}
                 disabled={compressionProgress > 0}
+                aria-label="Capturar foto"
                 sx={{ 
                   width: 70,
                   height: 70,
@@ -157,6 +160,7 @@ const CameraPreview = ({
               <IconButton
                 onClick={onZoomIn}
                 disabled={cameraZoom >= 4}
+                aria-label="Aumentar zoom"
                 sx={{ 
                   color: 'white', 
                   backgroundColor: 'rgba(255,255,255,0.2)',
@@ -183,6 +187,7 @@ const CameraPreview = ({
             <IconButton
               onClick={onSwitchCamera}
               disabled={!cameraStream}
+              aria-label={currentCamera === 'environment' ? "Cambiar a cámara frontal" : "Cambiar a cámara trasera"}
               sx={{ 
                 color: 'white', 
                 backgroundColor: 'rgba(255,255,255,0.2)',

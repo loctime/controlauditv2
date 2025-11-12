@@ -129,6 +129,7 @@ const AuditoriaStepper = ({
       <LinearProgress 
         variant="determinate" 
         value={((activeStep + 1) / steps.length) * 100}
+        aria-label={`Progreso de la auditoría: ${Math.round(((activeStep + 1) / steps.length) * 100)}% completado`}
         sx={{ 
           mt: 0.25,
           height: 2, 

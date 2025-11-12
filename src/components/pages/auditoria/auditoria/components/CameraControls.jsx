@@ -57,6 +57,7 @@ const CameraControls = ({
       }}>
         <IconButton
           onClick={onSelectFromGallery}
+          aria-label="Seleccionar imagen de la galería"
           sx={{ 
             width: 60,
             height: 60,
@@ -81,6 +82,7 @@ const CameraControls = ({
           <IconButton
             onClick={onCapturePhoto}
             disabled={compressionProgress > 0}
+            aria-label="Capturar foto"
             sx={{ 
               width: 120,
               height: 120,
@@ -109,6 +111,7 @@ const CameraControls = ({
         ) : cameraStatus === 'error' ? (
           <IconButton
             onClick={() => window.location.reload()}
+            aria-label="Recargar página para reintentar cámara"
             sx={{ 
               width: 120,
               height: 120,
@@ -132,6 +135,7 @@ const CameraControls = ({
         ) : (
           <IconButton
             disabled={cameraStatus === 'starting'}
+            aria-label="Cámara iniciando, espera..."
             sx={{ 
               width: 120,
               height: 120,
@@ -161,6 +165,7 @@ const CameraControls = ({
 
         <IconButton
           onClick={onToggleGrid}
+          aria-label={gridEnabled ? "Ocultar cuadrícula" : "Mostrar cuadrícula"}
           sx={{ 
             width: 60,
             height: 60,
