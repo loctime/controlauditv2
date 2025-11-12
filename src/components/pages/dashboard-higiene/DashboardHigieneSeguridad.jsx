@@ -360,6 +360,7 @@ const DashboardHigieneSeguridad = () => {
             <Badge badgeContent={alertas.length} color="error">
               <IconButton 
                 onClick={handleAlertClick}
+                aria-label={`Ver ${alertas.length} alerta${alertas.length > 1 ? 's' : ''} de seguridad`}
                 sx={{ 
                   color: 'text.primary',
                   '&:hover': { backgroundColor: 'action.hover' }
