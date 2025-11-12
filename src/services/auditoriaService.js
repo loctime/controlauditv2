@@ -6,7 +6,8 @@ import {
   updateDoc, 
   getDoc, 
   query, 
-  where 
+  where,
+  limit
 } from 'firebase/firestore';
 import { db } from '../firebaseConfig';
 import { registrarAccionSistema } from '../utils/firestoreUtils';
@@ -37,19 +38,21 @@ export const auditoriaService = {
       let snapshot;
       
       if (role === 'supermax') {
-        snapshot = await getDocs(auditoriasRef);
+        // Límite conservador para supermax: 500 auditorías
+        const q = query(auditoriasRef, limit(500));
+        snapshot = await getDocs(q);
       } else if (role === 'max') {
-        // Buscar auditorías propias con ambos UIDs
+        // Buscar auditorías propias con ambos UIDs (con límites conservadores)
         const queriesPropias = [
-          query(auditoriasRef, where("usuarioId", "==", userId)),
-          query(auditoriasRef, where("creadoPor", "==", userId))
+          query(auditoriasRef, where("usuarioId", "==", userId), limit(200)),
+          query(auditoriasRef, where("creadoPor", "==", userId), limit(200))
         ];
         
         if (oldUid) {
           queriesPropias.push(
-            query(auditoriasRef, where("usuarioId", "==", oldUid)),
-            query(auditoriasRef, where("creadoPor", "==", oldUid)),
-            query(auditoriasRef, where("clienteAdminId", "==", oldUid))
+            query(auditoriasRef, where("usuarioId", "==", oldUid), limit(200)),
+            query(auditoriasRef, where("creadoPor", "==", oldUid), limit(200)),
+            query(auditoriasRef, where("clienteAdminId", "==", oldUid), limit(200))
           );
         }
         
@@ -73,14 +76,19 @@ export const auditoriaService = {
         
         let auditoriasOperarios = [];
         if (todosOperariosIds.length > 0) {
+          // Optimización: Limitar a máximo 50 operarios para evitar demasiadas queries
+          const MAX_OPERARIOS = 50;
+          const operariosLimitados = todosOperariosIds.slice(0, MAX_OPERARIOS);
+          
           // Firestore solo permite "in" con hasta 10 elementos
           const chunks = [];
-          for (let i = 0; i < todosOperariosIds.length; i += 10) {
-            chunks.push(todosOperariosIds.slice(i, i + 10));
+          for (let i = 0; i < operariosLimitados.length; i += 10) {
+            chunks.push(operariosLimitados.slice(i, i + 10));
           }
           
+          // Agregar límite por chunk para evitar traer demasiados documentos
           const operariosQueries = chunks.map(chunk => 
-            query(auditoriasRef, where("usuarioId", "in", chunk))
+            query(auditoriasRef, where("usuarioId", "in", chunk), limit(200))
           );
           const operariosSnapshots = await Promise.all(operariosQueries.map(q => getDocs(q)));
           auditoriasOperarios = operariosSnapshots.flatMap(s => s.docs);
@@ -94,16 +102,16 @@ export const auditoriaService = {
         
         snapshot = { docs: uniqueAuditorias };
       } else {
-        // Para operarios, buscar con ambos UIDs
+        // Para operarios, buscar con ambos UIDs (con límites conservadores)
         const queries = [
-          query(auditoriasRef, where("usuarioId", "==", userId)),
-          query(auditoriasRef, where("creadoPor", "==", userId))
+          query(auditoriasRef, where("usuarioId", "==", userId), limit(200)),
+          query(auditoriasRef, where("creadoPor", "==", userId), limit(200))
         ];
         
         if (oldUid) {
           queries.push(
-            query(auditoriasRef, where("usuarioId", "==", oldUid)),
-            query(auditoriasRef, where("creadoPor", "==", oldUid))
+            query(auditoriasRef, where("usuarioId", "==", oldUid), limit(200)),
+            query(auditoriasRef, where("creadoPor", "==", oldUid), limit(200))
           );
         }
         
@@ -129,7 +137,8 @@ export const auditoriaService = {
   async getAuditoriasCompartidas(userId) {
     try {
       const auditoriasRef = collection(db, "reportes");
-      const q = query(auditoriasRef, where("compartidoCon", "array-contains", userId));
+      // Límite conservador: 200 auditorías compartidas
+      const q = query(auditoriasRef, where("compartidoCon", "array-contains", userId), limit(200));
       const snapshot = await getDocs(q);
       
       return snapshot.docs.map(doc => ({

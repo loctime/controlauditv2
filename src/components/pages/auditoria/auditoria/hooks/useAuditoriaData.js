@@ -1,5 +1,5 @@
 import { useEffect, useCallback } from "react";
-import { collection, getDocs, query, where } from "firebase/firestore";
+import { collection, getDocs, query, where, limit } from "firebase/firestore";
 import { db } from "../../../../../firebaseConfig";
 import { storageUtils } from "../../../../../utils/utilitiesOptimization";
 import { useAuth } from "../../../../context/AuthContext";
@@ -231,7 +231,9 @@ export const useAuditoriaData = (
         
         if (userProfile.role === 'supermax') {
           const sucursalesCollection = collection(db, "sucursales");
-          const snapshot = await getDocs(sucursalesCollection);
+          // Límite conservador: 500 sucursales para supermax
+          const q = query(sucursalesCollection, limit(500));
+          const snapshot = await getDocs(q);
           sucursalesData = snapshot.docs.map(doc => ({
             id: doc.id,
             ...doc.data()
@@ -249,9 +251,17 @@ export const useAuditoriaData = (
           const usuariosSnapshot = await getDocs(usuariosQuery);
           const usuariosOperarios = usuariosSnapshot.docs.map(doc => doc.id);
 
-          // Cargar empresas de operarios
-          const empresasOperariosPromises = usuariosOperarios.map(async (operarioId) => {
-            const operarioEmpresasQuery = query(empresasRef, where("propietarioId", "==", operarioId));
+          // Optimización: Limitar a máximo 50 operarios para evitar demasiadas queries
+          const MAX_OPERARIOS = 50;
+          const operariosLimitados = usuariosOperarios.slice(0, MAX_OPERARIOS);
+
+          // Cargar empresas de operarios (con límite por operario)
+          const empresasOperariosPromises = operariosLimitados.map(async (operarioId) => {
+            const operarioEmpresasQuery = query(
+              empresasRef, 
+              where("propietarioId", "==", operarioId),
+              limit(50) // Límite conservador: 50 empresas por operario
+            );
             const operarioEmpresasSnapshot = await getDocs(operarioEmpresasQuery);
             return operarioEmpresasSnapshot.docs.map(doc => doc.id);
           });
@@ -259,18 +269,27 @@ export const useAuditoriaData = (
           const empresasOperariosArrays = await Promise.all(empresasOperariosPromises);
           const empresasOperarios = empresasOperariosArrays.flat();
           const todasLasEmpresas = [...misEmpresas, ...empresasOperarios];
+          
+          // Optimización: Limitar total de empresas procesadas
+          const MAX_EMPRESAS = 100;
+          const empresasLimitadas = todasLasEmpresas.slice(0, MAX_EMPRESAS);
 
-          // Cargar sucursales de todas las empresas
-          if (todasLasEmpresas.length > 0) {
+          // Cargar sucursales de todas las empresas (limitadas)
+          if (empresasLimitadas.length > 0) {
             const chunkSize = 10;
             const empresasChunks = [];
-            for (let i = 0; i < todasLasEmpresas.length; i += chunkSize) {
-              empresasChunks.push(todasLasEmpresas.slice(i, i + chunkSize));
+            for (let i = 0; i < empresasLimitadas.length; i += chunkSize) {
+              empresasChunks.push(empresasLimitadas.slice(i, i + chunkSize));
             }
 
             const sucursalesPromises = empresasChunks.map(async (chunk) => {
               const sucursalesRef = collection(db, "sucursales");
-              const sucursalesQuery = query(sucursalesRef, where("empresaId", "in", chunk));
+              // Límite conservador: 200 sucursales por chunk
+              const sucursalesQuery = query(
+                sucursalesRef, 
+                where("empresaId", "in", chunk),
+                limit(200)
+              );
               const sucursalesSnapshot = await getDocs(sucursalesQuery);
               return sucursalesSnapshot.docs.map(doc => ({
                 id: doc.id,
@@ -288,16 +307,25 @@ export const useAuditoriaData = (
           const empresasSnapshot = await getDocs(empresasQuery);
           const empresasIds = empresasSnapshot.docs.map(doc => doc.id);
 
-          if (empresasIds.length > 0) {
+          // Optimización: Limitar total de empresas procesadas
+          const MAX_EMPRESAS_OPERARIO = 100;
+          const empresasLimitadas = empresasIds.slice(0, MAX_EMPRESAS_OPERARIO);
+
+          if (empresasLimitadas.length > 0) {
             const chunkSize = 10;
             const empresasChunks = [];
-            for (let i = 0; i < empresasIds.length; i += chunkSize) {
-              empresasChunks.push(empresasIds.slice(i, i + chunkSize));
+            for (let i = 0; i < empresasLimitadas.length; i += chunkSize) {
+              empresasChunks.push(empresasLimitadas.slice(i, i + chunkSize));
             }
 
             const sucursalesPromises = empresasChunks.map(async (chunk) => {
               const sucursalesRef = collection(db, "sucursales");
-              const sucursalesQuery = query(sucursalesRef, where("empresaId", "in", chunk));
+              // Límite conservador: 200 sucursales por chunk
+              const sucursalesQuery = query(
+                sucursalesRef, 
+                where("empresaId", "in", chunk),
+                limit(200)
+              );
               const sucursalesSnapshot = await getDocs(sucursalesQuery);
               return sucursalesSnapshot.docs.map(doc => ({
                 id: doc.id,
@@ -423,9 +451,10 @@ export const useAuditoriaData = (
         let sucursalesData = [];
         
         if (userProfile.role === 'supermax') {
-          // Supermax ve todas las sucursales
+          // Supermax ve todas las sucursales (con límite conservador)
           const sucursalesCollection = collection(db, "sucursales");
-          const snapshot = await getDocs(sucursalesCollection);
+          const q = query(sucursalesCollection, limit(500));
+          const snapshot = await getDocs(q);
           sucursalesData = snapshot.docs.map((doc) => ({
             id: doc.id,
             nombre: doc.data().nombre,
@@ -447,16 +476,25 @@ export const useAuditoriaData = (
           if (empresasParaSucursales && empresasParaSucursales.length > 0) {
             const empresasIds = empresasParaSucursales.map(emp => emp.id);
             
+            // Optimización: Limitar total de empresas procesadas
+            const MAX_EMPRESAS_SUCURSALES = 100;
+            const empresasLimitadas = empresasIds.slice(0, MAX_EMPRESAS_SUCURSALES);
+            
             // Firestore limita 'in' queries a 10 elementos, dividir en chunks si es necesario
             const chunkSize = 10;
             const empresasChunks = [];
-            for (let i = 0; i < empresasIds.length; i += chunkSize) {
-              empresasChunks.push(empresasIds.slice(i, i + chunkSize));
+            for (let i = 0; i < empresasLimitadas.length; i += chunkSize) {
+              empresasChunks.push(empresasLimitadas.slice(i, i + chunkSize));
             }
 
             const sucursalesPromises = empresasChunks.map(async (chunk) => {
               const sucursalesRef = collection(db, "sucursales");
-              const sucursalesQuery = query(sucursalesRef, where("empresaId", "in", chunk));
+              // Límite conservador: 200 sucursales por chunk
+              const sucursalesQuery = query(
+                sucursalesRef, 
+                where("empresaId", "in", chunk),
+                limit(200)
+              );
               const sucursalesSnapshot = await getDocs(sucursalesQuery);
               return sucursalesSnapshot.docs.map(doc => ({
                 id: doc.id,
@@ -533,9 +571,10 @@ export const useAuditoriaData = (
         const isOnline = navigator.onLine;
         
         if (isOnline) {
-          // Cargar desde Firestore cuando hay conectividad
+          // Cargar desde Firestore cuando hay conectividad (con límite conservador)
           const formulariosCollection = collection(db, "formularios");
-          const snapshot = await getDocs(formulariosCollection);
+          const q = query(formulariosCollection, limit(200));
+          const snapshot = await getDocs(q);
           const todosLosFormularios = snapshot.docs.map((doc) => ({
             id: doc.id,
             nombre: doc.data().nombre,
