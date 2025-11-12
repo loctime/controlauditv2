@@ -192,8 +192,8 @@ const CalendarioAuditorias = React.memo(({
           </Button>
           
           <Box display="flex" alignItems="center" gap={0.5}>
-            <IconButton onClick={prevMonth} size="small" sx={{ p: 0.5 }}>
-              <Typography variant="h6" sx={{ fontWeight: 'bold', fontSize: '1.2rem' }}>‹</Typography>
+            <IconButton onClick={prevMonth} size="small" sx={{ p: 0.5 }} aria-label="Mes anterior">
+              <Typography component="span" sx={{ fontWeight: 'bold', fontSize: '1.2rem' }}>‹</Typography>
             </IconButton>
             <Box sx={{ minWidth: '100px', textAlign: 'center' }}>
               <Typography 
@@ -210,8 +210,8 @@ const CalendarioAuditorias = React.memo(({
                 {monthNames[currentMonth.getMonth()]} {currentMonth.getFullYear()}
               </Typography>
             </Box>
-            <IconButton onClick={nextMonth} size="small" sx={{ p: 0.5 }}>
-              <Typography variant="h6" sx={{ fontWeight: 'bold', fontSize: '1.2rem' }}>›</Typography>
+            <IconButton onClick={nextMonth} size="small" sx={{ p: 0.5 }} aria-label="Mes siguiente">
+              <Typography component="span" sx={{ fontWeight: 'bold', fontSize: '1.2rem' }}>›</Typography>
             </IconButton>
           </Box>
 
@@ -285,8 +285,8 @@ const CalendarioAuditorias = React.memo(({
           </Box>
           
           <Box display="flex" alignItems="center" justifyContent="center" gap={0.5}>
-            <IconButton onClick={prevMonth} size="small" sx={{ p: 0.5 }}>
-              <Typography variant="h6" sx={{ fontWeight: 'bold', fontSize: '1.2rem' }}>‹</Typography>
+            <IconButton onClick={prevMonth} size="small" sx={{ p: 0.5 }} aria-label="Mes anterior">
+              <Typography component="span" sx={{ fontWeight: 'bold', fontSize: '1.2rem' }}>‹</Typography>
             </IconButton>
             <Box sx={{ minWidth: '100px', textAlign: 'center' }}>
               <Typography 
@@ -303,8 +303,8 @@ const CalendarioAuditorias = React.memo(({
                 {monthNames[currentMonth.getMonth()]} {currentMonth.getFullYear()}
               </Typography>
             </Box>
-            <IconButton onClick={nextMonth} size="small" sx={{ p: 0.5 }}>
-              <Typography variant="h6" sx={{ fontWeight: 'bold', fontSize: '1.2rem' }}>›</Typography>
+            <IconButton onClick={nextMonth} size="small" sx={{ p: 0.5 }} aria-label="Mes siguiente">
+              <Typography component="span" sx={{ fontWeight: 'bold', fontSize: '1.2rem' }}>›</Typography>
             </IconButton>
           </Box>
         </Box>
@@ -342,7 +342,7 @@ const CalendarioAuditorias = React.memo(({
                   border: day ? `1px solid ${theme.palette.divider}` : 'none',
                   borderRadius: 1,
                   cursor: day && canAgendarAuditorias ? 'pointer' : 'default',
-                  bgcolor: isSelected ? 'primary.light' : 'transparent',
+                  bgcolor: isSelected ? '#1565c0' : 'transparent',
                   color: isSelected ? 'white' : 'text.primary',
                   '&:hover': day && canAgendarAuditorias ? {
                     bgcolor: isSelected ? 'primary.main' : theme.palette.mode === 'dark' ? 'grey.700' : 'grey.100'

@@ -87,11 +87,11 @@ const ResumenGeneral = ({ auditoriasPendientes, auditoriasCompletadas, auditoria
           }}>
             <Typography 
               variant={isMobile ? "body2" : "h6"} 
-              color="warning.main"
               sx={{ 
                 fontWeight: 600,
                 fontSize: isMobile ? '0.875rem' : '1rem',
-                mb: isMobile ? 0.5 : 1
+                mb: isMobile ? 0.5 : 1,
+                color: '#e65100'
               }}
             >
               Pendientes
@@ -157,11 +157,11 @@ const ResumenGeneral = ({ auditoriasPendientes, auditoriasCompletadas, auditoria
           }}>
             <Typography 
               variant={isMobile ? "body2" : "h6"} 
-              color="info.main"
               sx={{ 
                 fontWeight: 600,
                 fontSize: isMobile ? '0.875rem' : '1rem',
-                mb: isMobile ? 0.5 : 1
+                mb: isMobile ? 0.5 : 1,
+                color: '#01579b'
               }}
             >
               Este Mes
