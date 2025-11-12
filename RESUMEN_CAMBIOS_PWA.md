@@ -1,5 +1,7 @@
 # 🔧 Resumen de Cambios - PWA Offline Reparado
 
+> **📌 Nota sobre terminología:** En este documento, "formularios" se refiere a los **datos** (colección de Firestore), no a rutas. La ruta donde se gestionan los formularios es `/editar`. La ruta `/formulario` es para crear formularios (no necesario offline).
+
 ## 📋 Problema Original
 
 El PWA offline dejó de funcionar porque:
