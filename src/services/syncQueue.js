@@ -388,14 +388,55 @@ class SyncQueueService {
       creadoPorEmail: auditoriaData.creadoPorEmail
     });
     
-    // Asegurar que tenemos todos los datos de auth necesarios
-    const userProfile = {
+    // OBTENER PERFIL ACTUAL DEL USUARIO AUTENTICADO DESDE FIRESTORE
+    // Esto asegura que usamos el clienteAdminId correcto del usuario actual
+    let currentUserProfile = null;
+    try {
+      const { auth, db: firestoreDb } = await import('../firebaseConfig');
+      const { doc, getDoc } = await import('firebase/firestore');
+      
+      const currentUser = auth.currentUser;
+      if (currentUser) {
+        const userProfileRef = doc(firestoreDb, 'usuarios', currentUser.uid);
+        const userProfileSnap = await getDoc(userProfileRef);
+        if (userProfileSnap.exists()) {
+          currentUserProfile = {
+            uid: currentUser.uid,
+            email: currentUser.email,
+            ...userProfileSnap.data()
+          };
+          console.log('[SyncQueue] ✅ Perfil actual obtenido desde Firestore:', {
+            uid: currentUserProfile.uid,
+            clienteAdminId: currentUserProfile.clienteAdminId,
+            email: currentUserProfile.email,
+            role: currentUserProfile.role
+          });
+        } else {
+          console.warn('[SyncQueue] ⚠️ Perfil de usuario no encontrado en Firestore para:', currentUser.uid);
+        }
+      } else {
+        console.warn('[SyncQueue] ⚠️ No hay usuario autenticado actualmente');
+      }
+    } catch (error) {
+      console.warn('[SyncQueue] ⚠️ No se pudo obtener perfil actual desde Firestore, usando datos offline:', error.message);
+    }
+    
+    // Usar perfil actual si está disponible, sino usar datos offline como fallback
+    const userProfile = currentUserProfile || {
       uid: auditoriaData.userId || auditoriaData.creadoPor,
       email: auditoriaData.userEmail || auditoriaData.usuarioEmail || auditoriaData.creadoPorEmail || 'usuario@ejemplo.com',
       clienteAdminId: auditoriaData.clienteAdminId || auditoriaData.userId, // Fallback al uid si no hay clienteAdminId
       displayName: auditoriaData.userDisplayName || auditoriaData.userEmail || 'Usuario',
       role: auditoriaData.userRole || 'operario'
     };
+    
+    console.log('[SyncQueue] 📋 Usando userProfile para sincronización:', {
+      uid: userProfile.uid,
+      clienteAdminId: userProfile.clienteAdminId,
+      email: userProfile.email,
+      role: userProfile.role,
+      source: currentUserProfile ? 'Firestore (actual)' : 'IndexedDB (offline)'
+    });
 
     // Asegurar que los datos de auditoría también tengan los metadatos correctos
     auditoriaData.userId = auditoriaData.userId || auditoriaData.creadoPor || userProfile.uid;
