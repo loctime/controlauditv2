@@ -472,6 +472,7 @@ class AuditoriaService {
         creadoPor: userProfile?.uid || null,
         creadoPorEmail: userProfile?.email || null,
         clienteAdminId: userProfile?.clienteAdminId || userProfile?.uid || null,
+        usuarioId: userProfile?.uid || null,
         timestamp: serverTimestamp(),
         fechaCreacion: new Date().toISOString(),
         version: "2.0",
