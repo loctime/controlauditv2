@@ -6,8 +6,13 @@ import {
   CircularProgress,
   Alert,
   useMediaQuery,
-  useTheme
+  useTheme,
+  Button
 } from '@mui/material';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+import { es } from 'date-fns/locale';
+import { FileDownload } from '@mui/icons-material';
 import { useAuth } from '../../context/AuthContext';
 import { useLocation, useNavigate } from 'react-router-dom';
 import NuevoAccidenteModal from './NuevoAccidenteModal';
@@ -17,13 +22,16 @@ import {
   useAccidentesFilters,
   useAccidentesHandlers
 } from './hooks';
+import { useAccidentesSorting } from './hooks/useAccidentesSorting';
 import AccidentesHeader from './components/AccidentesHeader';
 import AccidentesAlertas from './components/AccidentesAlertas';
 import AccidentesFiltros from './components/AccidentesFiltros';
 import EstadisticasAccidentes from './components/EstadisticasAccidentes';
 import AccidentesTabla from './components/AccidentesTabla';
 import AccidenteDetalleModal from './components/AccidenteDetalleModal';
+import EditarAccidenteModal from './components/EditarAccidenteModal';
 import { actualizarEstadoAccidente } from '../../../services/accidenteService';
+import { exportarAccidentesExcel, exportarAccidentesPDF } from './utils/accidentesExportUtils';
 
 export default function Accidentes() {
   const { userProfile } = useAuth();
@@ -41,7 +49,12 @@ export default function Accidentes() {
   const [openAccidenteModal, setOpenAccidenteModal] = useState(false);
   const [openIncidenteModal, setOpenIncidenteModal] = useState(false);
   const [openDetalleModal, setOpenDetalleModal] = useState(false);
+  const [openEditarModal, setOpenEditarModal] = useState(false);
   const [accidenteSeleccionado, setAccidenteSeleccionado] = useState(null);
+  const [accidenteEditando, setAccidenteEditando] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [fechaDesde, setFechaDesde] = useState(null);
+  const [fechaHasta, setFechaHasta] = useState(null);
   const initialIncidentId = location.state?.accidenteId || searchIncidentId;
   const [pendingIncidentId, setPendingIncidentId] = useState(initialIncidentId || null);
 
@@ -71,8 +84,62 @@ export default function Accidentes() {
   const {
     handleCrearAccidente,
     handleCrearIncidente,
-    handleCambiarEstado
+    handleCambiarEstado,
+    handleEliminarAccidente,
+    handleActualizarAccidente
   } = useAccidentesHandlers(userProfile, recargarAccidentes);
+
+  // Hook de ordenamiento
+  const { orderBy, order, handleRequestSort, sortedAccidentes } = useAccidentesSorting(accidentes);
+
+  // Filtrar accidentes por búsqueda y fechas
+  const accidentesFiltrados = useMemo(() => {
+    let filtrados = sortedAccidentes;
+
+    // Filtro por búsqueda
+    if (searchTerm.trim()) {
+      const term = searchTerm.toLowerCase();
+      filtrados = filtrados.filter(acc => 
+        (acc.descripcion || '').toLowerCase().includes(term)
+      );
+    }
+
+    // Filtro por rango de fechas
+    if (fechaDesde) {
+      filtrados = filtrados.filter(acc => {
+        const fechaAcc = acc.fechaHora?.toDate?.() || new Date(acc.fechaHora || 0);
+        return fechaAcc >= fechaDesde;
+      });
+    }
+
+    if (fechaHasta) {
+      filtrados = filtrados.filter(acc => {
+        const fechaAcc = acc.fechaHora?.toDate?.() || new Date(acc.fechaHora || 0);
+        const hasta = new Date(fechaHasta);
+        hasta.setHours(23, 59, 59, 999);
+        return fechaAcc <= hasta;
+      });
+    }
+
+    return filtrados;
+  }, [sortedAccidentes, searchTerm, fechaDesde, fechaHasta]);
+
+  // Handlers de exportación
+  const handleExportarExcel = async () => {
+    try {
+      await exportarAccidentesExcel(accidentesFiltrados);
+    } catch (error) {
+      console.error('Error exportando Excel:', error);
+    }
+  };
+
+  const handleExportarPDF = () => {
+    try {
+      exportarAccidentesPDF(accidentesFiltrados);
+    } catch (error) {
+      console.error('Error exportando PDF:', error);
+    }
+  };
 
   useEffect(() => {
     if (location.state?.accidenteId) {
@@ -146,33 +213,65 @@ export default function Accidentes() {
         />
 
         <Box sx={{ mb: 3 }}>
-          <AccidentesFiltros
-            userEmpresas={userEmpresas}
-            sucursalesFiltradas={sucursalesFiltradas}
-            selectedEmpresa={selectedEmpresa}
-            setSelectedEmpresa={setSelectedEmpresa}
-            selectedSucursal={selectedSucursal}
-            setSelectedSucursal={setSelectedSucursal}
-            filterTipo={filterTipo}
-            setFilterTipo={setFilterTipo}
-            filterEstado={filterEstado}
-            setFilterEstado={setFilterEstado}
-          />
+          <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={es}>
+            <AccidentesFiltros
+              userEmpresas={userEmpresas}
+              sucursalesFiltradas={sucursalesFiltradas}
+              selectedEmpresa={selectedEmpresa}
+              setSelectedEmpresa={setSelectedEmpresa}
+              selectedSucursal={selectedSucursal}
+              setSelectedSucursal={setSelectedSucursal}
+              filterTipo={filterTipo}
+              setFilterTipo={setFilterTipo}
+              filterEstado={filterEstado}
+              setFilterEstado={setFilterEstado}
+              searchTerm={searchTerm}
+              onSearchChange={setSearchTerm}
+              fechaDesde={fechaDesde}
+              fechaHasta={fechaHasta}
+              onFechaDesdeChange={setFechaDesde}
+              onFechaHastaChange={setFechaHasta}
+            />
+          </LocalizationProvider>
         </Box>
 
         <Box sx={{ mb: 3 }}>
-          <EstadisticasAccidentes accidentes={accidentes} />
+          <EstadisticasAccidentes accidentes={accidentesFiltrados} />
         </Box>
+
+        {/* Botones de exportación */}
+        {accidentesFiltrados.length > 0 && (
+          <Box sx={{ display: 'flex', gap: 1, mb: 2, justifyContent: 'flex-end' }}>
+            <Button
+              variant="outlined"
+              startIcon={<FileDownload />}
+              onClick={handleExportarExcel}
+            >
+              Exportar Excel
+            </Button>
+            <Button
+              variant="outlined"
+              startIcon={<FileDownload />}
+              onClick={handleExportarPDF}
+            >
+              Exportar PDF
+            </Button>
+          </Box>
+        )}
 
         {loading ? (
           <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
             <CircularProgress />
           </Box>
-        ) : accidentes.length === 0 ? (
-          <Alert severity="info">No hay accidentes o incidentes registrados</Alert>
+        ) : accidentesFiltrados.length === 0 ? (
+          <Alert severity="info">
+            {accidentes.length === 0 
+              ? 'No hay accidentes o incidentes registrados'
+              : 'No se encontraron resultados con los filtros aplicados'}
+          </Alert>
         ) : (
           <AccidentesTabla
-            accidentes={accidentes}
+            accidentes={accidentesFiltrados}
             page={page}
             rowsPerPage={rowsPerPage}
             onPageChange={(event, newPage) => setPage(newPage)}
@@ -182,6 +281,14 @@ export default function Accidentes() {
             }}
             onVerDetalle={handleVerDetalle}
             onCerrarAccidente={handleCambiarEstado}
+            onEliminarAccidente={handleEliminarAccidente}
+            onEditarAccidente={(acc) => {
+              setAccidenteEditando(acc);
+              setOpenEditarModal(true);
+            }}
+            orderBy={orderBy}
+            order={order}
+            onRequestSort={handleRequestSort}
           />
         )}
       </Paper>
@@ -215,6 +322,16 @@ export default function Accidentes() {
         onClose={() => setOpenDetalleModal(false)}
         accidente={accidenteSeleccionado}
         actualizarEstadoAccidente={handleActualizarEstadoWrapper}
+      />
+
+      <EditarAccidenteModal
+        open={openEditarModal}
+        onClose={() => {
+          setOpenEditarModal(false);
+          setAccidenteEditando(null);
+        }}
+        accidente={accidenteEditando}
+        onGuardar={handleActualizarAccidente}
       />
     </Container>
   );
