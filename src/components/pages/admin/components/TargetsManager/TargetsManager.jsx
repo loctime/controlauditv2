@@ -31,7 +31,7 @@ import CreateTargetDialog from "./CreateTargetDialog";
 import TargetsDashboard from "./TargetsDashboard";
 import { toast } from 'react-toastify';
 
-const TargetsManager = () => {
+const TargetsManager = ({ empresas = [], sucursales = [], formularios = [] }) => {
   const { userProfile } = useAuth();
   const { selectedEmpresa, selectedSucursal } = useGlobalSelection();
   const [targets, setTargets] = useState([]);
@@ -245,6 +245,9 @@ const TargetsManager = () => {
         onClose={handleCloseDialog}
         onSave={handleSave}
         targetToEdit={targetToEdit}
+        empresas={empresas}
+        sucursales={sucursales}
+        formularios={formularios}
       />
     </Box>
   );

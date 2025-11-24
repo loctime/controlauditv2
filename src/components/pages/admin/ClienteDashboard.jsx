@@ -183,7 +183,7 @@ const ClienteDashboard = React.memo(() => {
     } else if (currentTab === 1) {
       return <HistorialAuditorias auditorias={auditoriasCompletadasFiltradas} />;
     } else if (currentTab === 2) {
-      return <TargetsManager />;
+      return <TargetsManager empresas={empresas} sucursales={sucursales} formularios={formularios} />;
     } else if (currentTab === 3) {
       return <RecurringScheduler empresas={empresas} sucursales={sucursales} formularios={formularios} />;
     }

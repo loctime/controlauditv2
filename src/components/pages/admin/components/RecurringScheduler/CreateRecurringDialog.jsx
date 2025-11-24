@@ -28,7 +28,7 @@ import { toast } from 'react-toastify';
 import { collection, getDocs, query, where } from "firebase/firestore";
 import { db } from "../../../../../firebaseConfig";
 
-const CreateRecurringDialog = ({ open, onClose, onSave, recurringToEdit = null, empresas, sucursales, formularios }) => {
+const CreateRecurringDialog = ({ open, onClose, onSave, recurringToEdit = null, preset = null, empresas, sucursales, formularios }) => {
   const { userProfile } = useAuth();
   const { selectedEmpresa } = useGlobalSelection();
   const [usuariosOperarios, setUsuariosOperarios] = useState([]);
@@ -74,7 +74,30 @@ const CreateRecurringDialog = ({ open, onClose, onSave, recurringToEdit = null, 
   }, [open, userProfile]);
 
   useEffect(() => {
-    if (recurringToEdit && open) {
+    if (preset && open) {
+      // Usar preset para pre-llenar el formulario
+      setForm({
+        nombre: preset.nombre || '',
+        empresaId: preset.empresaId || '',
+        empresaNombre: preset.empresaNombre || '',
+        sucursalId: preset.sucursalId || '',
+        sucursalNombre: preset.sucursalNombre || '',
+        formularioId: preset.formularioId || '',
+        formularioNombre: formularios?.find(f => f.id === preset.formularioId)?.nombre || '',
+        encargadoId: preset.encargadoId || '',
+        frecuencia: preset.frecuencia || {
+          tipo: 'semanal',
+          diasSemana: [],
+          diaMes: null,
+          intervalo: 1
+        },
+        hora: preset.hora || '09:00',
+        fechaInicio: preset.fechaInicio || new Date().toISOString().split('T')[0],
+        fechaFin: preset.fechaFin || '',
+        activa: preset.activa !== undefined ? preset.activa : true
+      });
+      setErrors({});
+    } else if (recurringToEdit && open) {
       setForm({
         nombre: recurringToEdit.nombre || '',
         empresaId: recurringToEdit.empresaId || '',
@@ -119,7 +142,7 @@ const CreateRecurringDialog = ({ open, onClose, onSave, recurringToEdit = null, 
       });
       setErrors({});
     }
-  }, [recurringToEdit, open, selectedEmpresa]);
+  }, [preset, recurringToEdit, open, selectedEmpresa, formularios]);
 
   const cargarUsuariosOperarios = async () => {
     if (!userProfile) return;
