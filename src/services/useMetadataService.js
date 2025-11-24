@@ -42,7 +42,7 @@ export function normalizeReporteEmpresa(reporte, empresas = []) {
 /**
  * Prepara los datos de reporte para guardado, asegurando metadatos consistentes
  */
-export function buildReporteMetadata({ empresa, sucursal, formulario, datosReporte, ...rest }) {
+export function buildReporteMetadata({ empresa, sucursal, formulario, datosReporte, auditoriaAgendadaId, ...rest }) {
   if (!empresa || !empresa.id || !empresa.nombre) {
     console.error('[MetadataService] Empresa inválida al guardar reporte', empresa);
     throw new Error('Empresa inválida');
@@ -65,7 +65,9 @@ export function buildReporteMetadata({ empresa, sucursal, formulario, datosRepor
   
   return {
     ...rest,
-    ...camposAdicionales, // Expandir campos adicionales al nivel superior
+    ...camposAdicionales,
+    // Incluir auditoriaAgendadaId si existe (para vincular con auditorías agendadas)
+    auditoriaAgendadaId: auditoriaAgendadaId || null, // Expandir campos adicionales al nivel superior
     empresa: { id: empresa.id, nombre: empresa.nombre },
     empresaId: empresa.id,
     empresaNombre: empresa.nombre,

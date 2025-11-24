@@ -497,6 +497,22 @@ export const exportarAccidentesPDF = async (accidentes, nombreArchivo = 'acciden
     currentY += 5;
   }
 
+  // ========== FOOTER EN TODAS LAS PÁGINAS ==========
+  const totalPages = doc.internal.pages.length - 1;
+  for (let i = 1; i <= totalPages; i++) {
+    doc.setPage(i);
+    doc.setFontSize(8);
+    doc.setTextColor(128, 128, 128);
+    doc.setFont('helvetica', 'normal');
+    
+    // Izquierda: Información confidencial
+    doc.text('Información confidencial', margin, pageHeight - 10);
+    
+    // Derecha: Página y sistema
+    const textoDerecha = `${i} / Sistema de Control de Auditoría - ControlAudit`;
+    doc.text(textoDerecha, pageWidth - margin, pageHeight - 10, { align: 'right' });
+  }
+
   doc.save(`${nombreArchivo}_${new Date().toISOString().split('T')[0]}.pdf`);
 };
 

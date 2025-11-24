@@ -1,4 +1,127 @@
 {
-  "indexes": [],
+  "indexes": [
+    {
+      "collectionGroup": "auditorias_agendadas",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "clienteAdminId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "fechaCreacion",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "auditorias_agendadas",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "clienteAdminId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "empresa",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "fecha",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "auditorias_agendadas",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "recurringId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "fecha",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "auditorias_targets",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "clienteAdminId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "empresaId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "año",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "mes",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "auditorias_targets",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "clienteAdminId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "activo",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "año",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "auditorias_recurrentes",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "clienteAdminId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "activa",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "fechaCreacion",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "auditorias_recurrentes",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "clienteAdminId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "empresaId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "activa",
+          "order": "ASCENDING"
+        }
+      ]
+    }
+  ],
   "fieldOverrides": []
 }

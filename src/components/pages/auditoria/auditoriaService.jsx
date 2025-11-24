@@ -476,6 +476,8 @@ class AuditoriaService {
         timestamp: serverTimestamp(),
         fechaCreacion: new Date().toISOString(),
         version: "2.0",
+        // Vincular con auditoría agendada si existe
+        auditoriaAgendadaId: datosAuditoria.auditoriaAgendadaId || null,
         // Guardar firmas
         firmaAuditor: datosAuditoria.firmaAuditor || null,
         firmaResponsable: datosAuditoria.firmaResponsable || null,
@@ -505,6 +507,23 @@ class AuditoriaService {
 
       // Guardar en Firestore
       const docRef = await addDoc(collection(db, "reportes"), datosLimpios);
+
+      // Actualizar auditoría agendada si existe el vínculo
+      if (datosAuditoria.auditoriaAgendadaId) {
+        try {
+          const { updateDoc, doc } = await import('firebase/firestore');
+          const auditoriaAgendadaRef = doc(db, 'auditorias_agendadas', datosAuditoria.auditoriaAgendadaId);
+          await updateDoc(auditoriaAgendadaRef, {
+            estado: 'completada',
+            fechaCompletada: serverTimestamp(),
+            reporteId: docRef.id // Vincular con el reporte creado
+          });
+          console.log(`✅ Auditoría agendada ${datosAuditoria.auditoriaAgendadaId} vinculada con reporte ${docRef.id}`);
+        } catch (error) {
+          console.error('Error actualizando auditoría agendada:', error);
+          // No fallar si no se puede actualizar
+        }
+      }
 
       // Registrar log de operación
       await registrarAccionSistema(

@@ -1019,6 +1019,7 @@ const AuditoriaRefactorizada = () => {
               imagenes={imagenes}
               secciones={secciones} 
               formularios={formularios}
+              auditoriaAgendadaId={location.state?.auditoriaAgendadaId || auditoriaIdAgenda || null}
             />
           </Paper>
         </Zoom>

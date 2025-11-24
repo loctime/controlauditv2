@@ -1,6 +1,6 @@
 // src/components/pages/admin/hooks/useClienteDashboard.js
-import { useState, useEffect, useMemo, useCallback } from "react";
-import { collection, addDoc, query, where, getDocs, updateDoc, doc, deleteDoc, serverTimestamp, limit, orderBy, getDoc } from "firebase/firestore";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { collection, addDoc, query, where, getDocs, onSnapshot, updateDoc, doc, deleteDoc, serverTimestamp, limit, orderBy, getDoc } from "firebase/firestore";
 import { db } from "../../../../firebaseConfig";
 import { useAuth } from "../../../context/AuthContext";
 import { toast } from 'react-toastify';
@@ -223,14 +223,83 @@ export const useClienteDashboard = () => {
     }
   }, []);
 
-  // ✅ Función optimizada para cargar auditorías con paginación
+  // Ref para almacenar unsubscribe de listeners
+  const unsubscribeRef = useRef(null);
+
+  // ✅ Función optimizada para configurar listeners en tiempo real
+  const configurarListenersAuditorias = useCallback(() => {
+    if (!userProfile) return () => {};
+
+    // Limpiar listener anterior si existe
+    if (unsubscribeRef.current) {
+      unsubscribeRef.current();
+      unsubscribeRef.current = null;
+    }
+
+    try {
+      const auditoriasRef = collection(db, 'auditorias_agendadas');
+      let q;
+
+      if (role === 'supermax') {
+        q = query(
+          auditoriasRef,
+          orderBy('fechaCreacion', 'desc'),
+          limit(50)
+        );
+      } else if (role === 'max') {
+        // Query principal para auditorías del cliente admin
+        q = query(
+          auditoriasRef,
+          where("clienteAdminId", "==", userProfile.clienteAdminId || userProfile.uid),
+          orderBy('fechaCreacion', 'desc'),
+          limit(100)
+        );
+      } else {
+        return () => {};
+      }
+
+      // Configurar listener en tiempo real
+      const unsubscribe = onSnapshot(
+        q,
+        async (snapshot) => {
+          console.log('[useClienteDashboard] Cambios detectados en auditorías:', snapshot.docs.length);
+          
+          let auditoriasData = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          }));
+
+          // Cargar información completa de usuarios
+          auditoriasData = await cargarInformacionUsuarios(auditoriasData);
+
+          // Filtrar duplicados por ID
+          const auditoriasUnicas = auditoriasData.filter(
+            (aud, idx, self) => self.findIndex(a => a.id === aud.id) === idx
+          );
+
+          setAuditorias(auditoriasUnicas);
+        },
+        (error) => {
+          console.error('Error en listener de auditorías:', error);
+          toast.error('Error al recibir actualizaciones de auditorías');
+        }
+      );
+
+      unsubscribeRef.current = unsubscribe;
+      return unsubscribe;
+    } catch (error) {
+      console.error('Error configurando listeners de auditorías:', error);
+      return () => {};
+    }
+  }, [userProfile, role, cargarInformacionUsuarios]);
+
+  // ✅ Función legacy para carga inicial (mantener por compatibilidad)
   const cargarAuditorias = useCallback(async () => {
     try {
       if (!userProfile) return [];
 
       let auditoriasData = [];
       if (role === 'supermax') {
-        // Cargar solo las últimas 50 auditorías para supermax
         const auditoriasRef = collection(db, 'auditorias_agendadas');
         const auditoriasQuery = query(
           auditoriasRef, 
@@ -243,50 +312,21 @@ export const useClienteDashboard = () => {
           ...doc.data()
         }));
       } else if (role === 'max') {
-        // Cargar auditorías propias
         const auditoriasRef = collection(db, "auditorias_agendadas");
         const auditoriasQuery = query(
           auditoriasRef, 
-          where("usuarioId", "==", userProfile.uid),
+          where("clienteAdminId", "==", userProfile.clienteAdminId || userProfile.uid),
           orderBy('fechaCreacion', 'desc'),
-          limit(30)
+          limit(100)
         );
         const auditoriasSnapshot = await getDocs(auditoriasQuery);
-        const misAuditorias = auditoriasSnapshot.docs.map(doc => ({
+        auditoriasData = auditoriasSnapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data()
         }));
-
-        // Cargar usuarios operarios
-        const usuariosRef = collection(db, "usuarios");
-        const usuariosQuery = query(usuariosRef, where("clienteAdminId", "==", userProfile.uid));
-        const usuariosSnapshot = await getDocs(usuariosQuery);
-        const usuariosOperarios = usuariosSnapshot.docs.map(doc => doc.id);
-
-        // Cargar auditorías de operarios en paralelo (limitadas a 20 por operario)
-        const auditoriasOperariosPromises = usuariosOperarios.map(async (operarioId) => {
-          const operarioAuditoriasQuery = query(
-            auditoriasRef, 
-            where("usuarioId", "==", operarioId),
-            orderBy('fechaCreacion', 'desc'),
-            limit(20)
-          );
-          const operarioAuditoriasSnapshot = await getDocs(operarioAuditoriasQuery);
-          return operarioAuditoriasSnapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data()
-          }));
-        });
-
-        const auditoriasOperariosArrays = await Promise.all(auditoriasOperariosPromises);
-        const auditoriasOperarios = auditoriasOperariosArrays.flat();
-
-        auditoriasData = [...misAuditorias, ...auditoriasOperarios];
       }
 
-      // Cargar información completa de usuarios para auditorías que solo tienen IDs
       auditoriasData = await cargarInformacionUsuarios(auditoriasData);
-
       return auditoriasData;
     } catch (error) {
       console.error('Error cargando auditorías:', error);
@@ -341,14 +381,8 @@ export const useClienteDashboard = () => {
       //   fechaActualizacion: new Date()
       // }, ...prev]);
 
-      // Recargar auditorías desde Firestore
-      const auditoriasActualizadas = await cargarAuditorias();
-      // Filtrar duplicados por ID
-      const auditoriasUnicas = auditoriasActualizadas.filter(
-        (aud, idx, self) => self.findIndex(a => a.id === aud.id) === idx
-      );
-      setAuditorias(auditoriasUnicas);
-
+      // El listener en tiempo real actualizará automáticamente
+      // No necesitamos recargar manualmente
       toast.success('Auditoría agendada exitosamente');
       return true;
     } catch (error) {
@@ -358,7 +392,7 @@ export const useClienteDashboard = () => {
     }
   }, [userProfile, cargarAuditorias]);
 
-  // ✅ Cargar datos en paralelo para mejor rendimiento
+  // ✅ Cargar datos en paralelo y configurar listeners
   useEffect(() => {
     const cargarDatosParalelos = async () => {
       try {
@@ -369,21 +403,18 @@ export const useClienteDashboard = () => {
         // Cargar empresas primero (necesarias para sucursales)
         setLoadingStates(prev => ({ ...prev, empresas: true }));
         const empresasData = await cargarEmpresas();
-        // Filtrar duplicados por ID
         const empresasUnicas = empresasData.filter(
           (emp, idx, self) => self.findIndex(e => e.id === emp.id) === idx
         );
         setEmpresas(empresasUnicas);
         setLoadingStates(prev => ({ ...prev, empresas: false }));
 
-        // Cargar el resto en paralelo
-        const [sucursalesData, formulariosData, auditoriasData] = await Promise.all([
+        // Cargar sucursales y formularios en paralelo
+        const [sucursalesData, formulariosData] = await Promise.all([
           cargarSucursales(empresasUnicas),
-          cargarFormularios(),
-          cargarAuditorias()
+          cargarFormularios()
         ]);
 
-        // Filtrar duplicados por ID en sucursales y formularios
         const sucursalesUnicas = sucursalesData.filter(
           (suc, idx, self) => self.findIndex(s => s.id === suc.id) === idx
         );
@@ -393,7 +424,18 @@ export const useClienteDashboard = () => {
 
         setSucursales(sucursalesUnicas);
         setFormularios(formulariosUnicos);
-        setAuditorias(auditoriasData);
+
+        // Cargar auditorías inicialmente
+        setLoadingStates(prev => ({ ...prev, auditorias: true }));
+        const auditoriasData = await cargarAuditorias();
+        const auditoriasUnicas = auditoriasData.filter(
+          (aud, idx, self) => self.findIndex(a => a.id === aud.id) === idx
+        );
+        setAuditorias(auditoriasUnicas);
+        setLoadingStates(prev => ({ ...prev, auditorias: false }));
+
+        // Configurar listener en tiempo real para auditorías
+        configurarListenersAuditorias();
 
         setLoadingStates({
           empresas: false,
@@ -424,7 +466,15 @@ export const useClienteDashboard = () => {
     };
 
     cargarDatosParalelos();
-  }, [userProfile, role, cargarEmpresas, cargarSucursales, cargarFormularios, cargarAuditorias]);
+
+    // Cleanup: desuscribir listener cuando el componente se desmonte
+    return () => {
+      if (unsubscribeRef.current) {
+        unsubscribeRef.current();
+        unsubscribeRef.current = null;
+      }
+    };
+  }, [userProfile, role, cargarEmpresas, cargarSucursales, cargarFormularios, cargarAuditorias, configurarListenersAuditorias]);
 
   // ✅ Memoizar datos calculados para evitar recálculos
   const auditoriasPendientes = useMemo(() => 
@@ -452,27 +502,36 @@ export const useClienteDashboard = () => {
 
   const handleCompletarAuditoria = useCallback(async (auditoriaId) => {
     try {
-      const auditoriaRef = doc(db, 'auditorias_agendadas', auditoriaId);
-      await updateDoc(auditoriaRef, {
-        estado: 'completada',
-        fechaCompletada: serverTimestamp()
-      });
+      // Navegar a la página de auditoría con los datos de la auditoría agendada
+      const auditoria = auditorias.find(a => a.id === auditoriaId);
+      if (auditoria) {
+        // Redirigir a /auditoria con los datos pre-llenados
+        // Esto se manejará en el componente que llama a esta función
+        // Por ahora, solo marcamos como completada en auditorias_agendadas
+        const auditoriaRef = doc(db, 'auditorias_agendadas', auditoriaId);
+        await updateDoc(auditoriaRef, {
+          estado: 'completada',
+          fechaCompletada: serverTimestamp()
+        });
 
-      setAuditorias(prev => prev.map(aud => 
-        aud.id === auditoriaId 
-          ? { ...aud, estado: 'completada', fechaCompletada: new Date() }
-          : aud
-      ));
-      toast.success('Auditoría marcada como completada');
+        setAuditorias(prev => prev.map(aud => 
+          aud.id === auditoriaId 
+            ? { ...aud, estado: 'completada', fechaCompletada: new Date() }
+            : aud
+        ));
+        toast.success('Auditoría marcada como completada. Recuerda completarla en /auditoria');
+      }
     } catch (error) {
       console.error('Error completando auditoría:', error);
       toast.error('Error al marcar como completada');
     }
-  }, []);
+  }, [auditorias]);
 
   const handleEliminarAuditoria = useCallback(async (auditoriaId) => {
     try {
       await deleteDoc(doc(db, 'auditorias_agendadas', auditoriaId));
+      // El listener en tiempo real actualizará automáticamente
+      // Actualizar localmente para feedback inmediato
       setAuditorias(prev => prev.filter(aud => aud.id !== auditoriaId));
       toast.success('Auditoría eliminada');
     } catch (error) {

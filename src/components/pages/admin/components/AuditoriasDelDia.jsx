@@ -211,13 +211,28 @@ const AuditoriasDelDia = ({
                       size="small"
                       startIcon={<CheckCircle />}
                       onClick={() => {
+                        // Buscar empresa y formulario por nombre si no tenemos IDs
+                        const empresaObj = typeof auditoria.empresa === 'string' 
+                          ? { nombre: auditoria.empresa }
+                          : auditoria.empresa;
+                        const formularioObj = typeof auditoria.formulario === 'string'
+                          ? { nombre: auditoria.formulario }
+                          : auditoria.formulario;
+
                         navigate('/auditoria', {
                           state: {
-                            empresa: auditoria.empresa,
-                            sucursal: auditoria.sucursal,
-                            formularioId: auditoria.formularioId, // Asegúrate de que este campo exista
-                            auditoriaId: auditoria.id,
-                            fecha: auditoria.fecha
+                            empresa: empresaObj,
+                            empresaId: auditoria.empresaId,
+                            sucursal: auditoria.sucursal || 'Casa Central',
+                            sucursalId: auditoria.sucursalId,
+                            formularioId: auditoria.formularioId,
+                            formulario: formularioObj,
+                            auditoriaId: auditoria.id, // ID de auditoría agendada
+                            auditoriaAgendadaId: auditoria.id, // Para vincular con reporte
+                            fecha: auditoria.fecha,
+                            hora: auditoria.hora,
+                            encargado: auditoria.encargado,
+                            esRecurrente: auditoria.esRecurrente || false
                           }
                         });
                       }}
