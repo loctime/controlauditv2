@@ -480,13 +480,29 @@ export default function DashboardSeguridadV2() {
         total: 0,
         completadas: 0,
         pendientes: 0,
-        noConformes: 0
+        auditoriasConMayorNC: 0,
+        totalNoConformes: 0,
+        totalNecesitaMejora: 0,
+        totalCondicion: 0,
+        totalActitud: 0
       };
     }
 
+    console.log('🔍 [Dashboard] Calculando métricas de auditorías:', {
+      totalAuditorias: auditorias.length,
+      primeraAuditoria: auditorias[0] ? {
+        id: auditorias[0].id,
+        estado: auditorias[0].estado,
+        tieneEstadisticas: !!auditorias[0].estadisticas,
+        estadisticas: auditorias[0].estadisticas
+      } : null
+    });
+
+    // Estados básicos
     const completadas = auditorias.filter(
       (a) => (a.estado || "").toLowerCase() === "completada"
     ).length;
+    
     const pendientes = auditorias.filter((a) => {
       const estado = (a.estado || "").toLowerCase();
       return (
@@ -496,15 +512,115 @@ export default function DashboardSeguridadV2() {
         estado === "en progreso"
       );
     }).length;
-    const noConformes = auditorias.reduce((total, auditoria) => {
-      return total + (auditoria.estadisticas?.conteo?.["No conforme"] || 0);
-    }, 0);
+
+    // Totales de respuestas y clasificaciones
+    let totalNoConformes = 0;
+    let totalNecesitaMejora = 0;
+    let totalCondicion = 0;
+    let totalActitud = 0;
+    let auditoriasConMayorNC = 0;
+
+    // Función auxiliar para procesar clasificaciones
+    const procesarClasificaciones = (clasificaciones) => {
+      let condicionCount = 0;
+      let actitudCount = 0;
+
+      if (!clasificaciones) return { condicionCount, actitudCount };
+
+      // Si es array de objetos con sección: [{seccion, valores: [...]}, ...]
+      if (Array.isArray(clasificaciones) && clasificaciones.length > 0) {
+        const primerElemento = clasificaciones[0];
+        
+        // Formato: [{seccion, valores: [...]}, ...]
+        if (primerElemento && typeof primerElemento === 'object' && primerElemento.seccion !== undefined && Array.isArray(primerElemento.valores)) {
+          clasificaciones.forEach(clasSec => {
+            if (Array.isArray(clasSec.valores)) {
+              clasSec.valores.forEach(clas => {
+                if (clas && typeof clas === 'object') {
+                  if (clas.condicion === true || clas.condicion === 'true' || clas.condicion === 1) {
+                    condicionCount++;
+                  }
+                  if (clas.actitud === true || clas.actitud === 'true' || clas.actitud === 1) {
+                    actitudCount++;
+                  }
+                }
+              });
+            }
+          });
+        }
+        // Formato: array de arrays [[{condicion, actitud}, ...], ...]
+        else if (Array.isArray(primerElemento)) {
+          clasificaciones.forEach(seccionClasificaciones => {
+            if (Array.isArray(seccionClasificaciones)) {
+              seccionClasificaciones.forEach(clas => {
+                if (clas && typeof clas === 'object') {
+                  if (clas.condicion === true || clas.condicion === 'true' || clas.condicion === 1) {
+                    condicionCount++;
+                  }
+                  if (clas.actitud === true || clas.actitud === 'true' || clas.actitud === 1) {
+                    actitudCount++;
+                  }
+                }
+              });
+            }
+          });
+        }
+      }
+      // Si es objeto indexado numéricamente (formato Firestore)
+      else if (clasificaciones && typeof clasificaciones === 'object' && !Array.isArray(clasificaciones)) {
+        const keys = Object.keys(clasificaciones);
+        if (keys.length > 0 && !isNaN(keys[0])) {
+          // Es un objeto indexado numéricamente
+          keys.sort((a, b) => parseInt(a) - parseInt(b)).forEach(key => {
+            const seccionClasificaciones = clasificaciones[key];
+            if (Array.isArray(seccionClasificaciones)) {
+              seccionClasificaciones.forEach(clas => {
+                if (clas && typeof clas === 'object') {
+                  if (clas.condicion === true || clas.condicion === 'true' || clas.condicion === 1) {
+                    condicionCount++;
+                  }
+                  if (clas.actitud === true || clas.actitud === 'true' || clas.actitud === 1) {
+                    actitudCount++;
+                  }
+                }
+              });
+            }
+          });
+        }
+      }
+
+      return { condicionCount, actitudCount };
+    };
+
+    auditorias.forEach((auditoria) => {
+      const stats = auditoria.estadisticas?.conteo || {};
+      const conformes = stats["Conforme"] || 0;
+      const noConformes = stats["No conforme"] || 0;
+      
+      // Sumar totales de respuestas
+      totalNoConformes += noConformes;
+      totalNecesitaMejora += stats["Necesita mejora"] || 0;
+      
+      // Contar auditorías con mayor o igual % de no conformes
+      if (noConformes >= conformes) {
+        auditoriasConMayorNC++;
+      }
+
+      // Procesar clasificaciones
+      const { condicionCount, actitudCount } = procesarClasificaciones(auditoria.clasificaciones);
+      totalCondicion += condicionCount;
+      totalActitud += actitudCount;
+    });
 
     return {
       total: auditorias.length,
       completadas,
       pendientes,
-      noConformes
+      auditoriasConMayorNC,
+      totalNoConformes,
+      totalNecesitaMejora,
+      totalCondicion,
+      totalActitud
     };
   }, [auditorias]);
 
@@ -823,6 +939,7 @@ export default function DashboardSeguridadV2() {
           <DashboardMainGrid
             data={data}
             saludOcupacional={saludOcupacionalDatos}
+            auditoriasMetrics={auditoriasMetrics}
           />
         </Box>
 

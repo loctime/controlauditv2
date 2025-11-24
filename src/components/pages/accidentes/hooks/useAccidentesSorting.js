@@ -15,6 +15,15 @@ export const useAccidentesSorting = (accidentes) => {
 
   const sortedAccidentes = useMemo(() => {
     return [...accidentes].sort((a, b) => {
+      // Primero separar por estado: abiertos primero, cerrados después
+      const aAbierto = a.estado === 'abierto';
+      const bAbierto = b.estado === 'abierto';
+      
+      if (aAbierto !== bAbierto) {
+        return aAbierto ? -1 : 1; // Abiertos primero
+      }
+      
+      // Si tienen el mismo estado, ordenar por el campo seleccionado
       let aValue, bValue;
 
       switch (orderBy) {

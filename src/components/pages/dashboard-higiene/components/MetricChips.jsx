@@ -7,9 +7,7 @@ import {
   ReportProblem as ReportProblemIcon,
   CheckCircle as CheckCircleIcon,
   TrendingUp as TrendingUpIcon,
-  FactCheck as FactCheckIcon,
-  TaskAlt as TaskAltIcon,
-  PendingActions as PendingActionsIcon
+  FactCheck as FactCheckIcon
 } from '@mui/icons-material';
 
 /**
@@ -84,32 +82,13 @@ const MetricChips = React.memo(({ metricas, analysis, auditorias }) => {
   }
 
   if (auditorias) {
-    chips.push(
-      {
-        icon: <FactCheckIcon />,
-        label: `Auditorías: ${auditorias.total}`,
-        color: 'info',
-        tooltip: 'Total de auditorías registradas en el período seleccionado'
-      },
-      {
-        icon: <TaskAltIcon />,
-        label: `Completadas: ${auditorias.completadas}`,
-        color: 'success',
-        tooltip: 'Auditorías finalizadas y cerradas'
-      },
-      {
-        icon: <PendingActionsIcon />,
-        label: `Pendientes: ${auditorias.pendientes}`,
-        color: auditorias.pendientes > 0 ? 'warning' : 'success',
-        tooltip: 'Auditorías agendadas o en progreso'
-      },
-      {
-        icon: <ReportProblemIcon />,
-        label: `No conformes: ${auditorias.noConformes}`,
-        color: auditorias.noConformes > 0 ? 'error' : 'success',
-        tooltip: 'Total de hallazgos "No conforme" detectados'
-      }
-    );
+    // En el resumen integrado solo mostramos información general sobre auditorías
+    chips.push({
+      icon: <FactCheckIcon />,
+      label: `Auditorías: ${auditorias.total}`,
+      color: 'info',
+      tooltip: 'Total de auditorías registradas en el período seleccionado'
+    });
   }
 
   return (
@@ -160,10 +139,7 @@ const MetricChips = React.memo(({ metricas, analysis, auditorias }) => {
     prevProps.metricas.diasSinAccidentes === nextProps.metricas.diasSinAccidentes &&
     prevProps.analysis?.incidentes === nextProps.analysis?.incidentes &&
     prevProps.analysis?.ratioIncidentes === nextProps.analysis?.ratioIncidentes &&
-    ((prevProps.auditorias?.total || 0) === (nextProps.auditorias?.total || 0)) &&
-    ((prevProps.auditorias?.completadas || 0) === (nextProps.auditorias?.completadas || 0)) &&
-    ((prevProps.auditorias?.pendientes || 0) === (nextProps.auditorias?.pendientes || 0)) &&
-    ((prevProps.auditorias?.noConformes || 0) === (nextProps.auditorias?.noConformes || 0))
+    ((prevProps.auditorias?.total || 0) === (nextProps.auditorias?.total || 0))
   );
 });
 

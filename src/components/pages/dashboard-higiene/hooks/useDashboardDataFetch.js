@@ -324,7 +324,8 @@ export const useDashboardDataFetch = (
 
     try {
       const { inicio, fin } = calcularPeriodo(selectedYear);
-      const auditoriasRef = collection(db, 'auditorias');
+      // Las auditorías se guardan en la colección 'reportes'
+      const auditoriasRef = collection(db, 'reportes');
       let auditoriasData = [];
 
       const empresasIds = selectedEmpresa === 'todas'
@@ -338,6 +339,7 @@ export const useDashboardDataFetch = (
 
       const fetchAuditoriasByEmpresa = async (empresaId) => {
         try {
+          // Intentar con empresaId primero
           const baseQuery = query(auditoriasRef, where('empresaId', '==', empresaId));
           const snapshot = await getDocs(baseQuery);
 
@@ -349,7 +351,17 @@ export const useDashboardDataFetch = (
               });
             });
           } else {
-            // Fallback a campo legacy `empresa`
+            // Fallback a clienteAdminId
+            const clienteAdminQuery = query(auditoriasRef, where('clienteAdminId', '==', empresaId));
+            const clienteAdminSnapshot = await getDocs(clienteAdminQuery);
+            clienteAdminSnapshot.forEach(doc => {
+              auditoriasData.push({
+                id: doc.id,
+                ...doc.data()
+              });
+            });
+            
+            // También intentar con campo legacy `empresa` (nombre)
             const empresaNombre =
               sucursalesFiltradas?.find(s => s.empresaId === empresaId)?.empresaNombre ||
               empresasDisponibles?.find(e => e.id === empresaId)?.nombre;
@@ -372,6 +384,11 @@ export const useDashboardDataFetch = (
       for (const empresaId of empresasIds) {
         await fetchAuditoriasByEmpresa(empresaId);
       }
+      
+      // Remover duplicados por ID
+      auditoriasData = auditoriasData.filter((auditoria, index, self) => 
+        index === self.findIndex(a => a.id === auditoria.id)
+      );
 
       // Filtrar por sucursal seleccionada
       let auditoriasFiltradas = auditoriasData;

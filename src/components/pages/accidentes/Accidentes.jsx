@@ -7,8 +7,12 @@ import {
   Alert,
   useMediaQuery,
   useTheme,
-  Button
+  Button,
+  Collapse,
+  Typography,
+  IconButton
 } from '@mui/material';
+import { ExpandMore, ExpandLess } from '@mui/icons-material';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { es } from 'date-fns/locale';
@@ -55,6 +59,7 @@ export default function Accidentes() {
   const [searchTerm, setSearchTerm] = useState('');
   const [fechaDesde, setFechaDesde] = useState(null);
   const [fechaHasta, setFechaHasta] = useState(null);
+  const [mostrarCerrados, setMostrarCerrados] = useState(false);
   const initialIncidentId = location.state?.accidenteId || searchIncidentId;
   const [pendingIncidentId, setPendingIncidentId] = useState(initialIncidentId || null);
 
@@ -92,8 +97,8 @@ export default function Accidentes() {
   // Hook de ordenamiento
   const { orderBy, order, handleRequestSort, sortedAccidentes } = useAccidentesSorting(accidentes);
 
-  // Filtrar accidentes por búsqueda y fechas
-  const accidentesFiltrados = useMemo(() => {
+  // Filtrar accidentes por búsqueda y fechas, y separar abiertos/cerrados
+  const { accidentesAbiertos, accidentesCerrados } = useMemo(() => {
     let filtrados = sortedAccidentes;
 
     // Filtro por búsqueda
@@ -121,13 +126,21 @@ export default function Accidentes() {
       });
     }
 
-    return filtrados;
+    // Separar abiertos y cerrados
+    const abiertos = filtrados.filter(acc => acc.estado === 'abierto');
+    const cerrados = filtrados.filter(acc => acc.estado === 'cerrado');
+
+    return { accidentesAbiertos: abiertos, accidentesCerrados: cerrados };
   }, [sortedAccidentes, searchTerm, fechaDesde, fechaHasta]);
 
-  // Handlers de exportación
+  // Handlers de exportación (exporta todos los filtrados)
+  const accidentesFiltrados = useMemo(() => {
+    return [...accidentesAbiertos, ...accidentesCerrados];
+  }, [accidentesAbiertos, accidentesCerrados]);
+
   const handleExportarExcel = async () => {
     try {
-      await exportarAccidentesExcel(accidentesFiltrados);
+      await exportarAccidentesExcel(accidentesFiltrados, 'accidentes', userEmpresas, sucursalesFiltradas);
     } catch (error) {
       console.error('Error exportando Excel:', error);
     }
@@ -135,7 +148,7 @@ export default function Accidentes() {
 
   const handleExportarPDF = () => {
     try {
-      exportarAccidentesPDF(accidentesFiltrados);
+      exportarAccidentesPDF(accidentesFiltrados, 'accidentes', userEmpresas, sucursalesFiltradas);
     } catch (error) {
       console.error('Error exportando PDF:', error);
     }
@@ -270,26 +283,92 @@ export default function Accidentes() {
               : 'No se encontraron resultados con los filtros aplicados'}
           </Alert>
         ) : (
-          <AccidentesTabla
-            accidentes={accidentesFiltrados}
-            page={page}
-            rowsPerPage={rowsPerPage}
-            onPageChange={(event, newPage) => setPage(newPage)}
-            onRowsPerPageChange={(event) => {
-              setRowsPerPage(parseInt(event.target.value, 10));
-              setPage(0);
-            }}
-            onVerDetalle={handleVerDetalle}
-            onCerrarAccidente={handleCambiarEstado}
-            onEliminarAccidente={handleEliminarAccidente}
-            onEditarAccidente={(acc) => {
-              setAccidenteEditando(acc);
-              setOpenEditarModal(true);
-            }}
-            orderBy={orderBy}
-            order={order}
-            onRequestSort={handleRequestSort}
-          />
+          <Box>
+            {/* Accidentes e Incidentes Abiertos */}
+            {accidentesAbiertos.length > 0 ? (
+              <AccidentesTabla
+                accidentes={accidentesAbiertos}
+                page={page}
+                rowsPerPage={rowsPerPage}
+                onPageChange={(event, newPage) => setPage(newPage)}
+                onRowsPerPageChange={(event) => {
+                  setRowsPerPage(parseInt(event.target.value, 10));
+                  setPage(0);
+                }}
+                onVerDetalle={handleVerDetalle}
+                onCerrarAccidente={handleCambiarEstado}
+                onEliminarAccidente={handleEliminarAccidente}
+                onEditarAccidente={(acc) => {
+                  setAccidenteEditando(acc);
+                  setOpenEditarModal(true);
+                }}
+                orderBy={orderBy}
+                order={order}
+                onRequestSort={handleRequestSort}
+              />
+            ) : (
+              <Alert severity="info" sx={{ mb: 2 }}>
+                No hay accidentes o incidentes abiertos
+              </Alert>
+            )}
+
+            {/* Expandible para Accidentes e Incidentes Cerrados */}
+            {accidentesCerrados.length > 0 && (
+              <Box sx={{ mt: 3 }}>
+                <Box
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    p: 1.5,
+                    backgroundColor: '#f5f5f5',
+                    borderRadius: 1,
+                    cursor: 'pointer',
+                    '&:hover': {
+                      backgroundColor: '#eeeeee'
+                    }
+                  }}
+                  onClick={() => setMostrarCerrados(!mostrarCerrados)}
+                >
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <IconButton size="small">
+                      {mostrarCerrados ? <ExpandLess /> : <ExpandMore />}
+                    </IconButton>
+                    <Typography variant="subtitle2" fontWeight="medium">
+                      Accidentes e Incidentes Cerrados ({accidentesCerrados.length})
+                    </Typography>
+                  </Box>
+                </Box>
+                <Collapse in={mostrarCerrados}>
+                  <Box sx={{ mt: 2 }}>
+                    <AccidentesTabla
+                      accidentes={accidentesCerrados}
+                      page={0}
+                      rowsPerPage={accidentesCerrados.length > 50 ? 50 : accidentesCerrados.length}
+                      onPageChange={() => {}}
+                      onRowsPerPageChange={() => {}}
+                      onVerDetalle={handleVerDetalle}
+                      onCerrarAccidente={handleCambiarEstado}
+                      onEliminarAccidente={handleEliminarAccidente}
+                      onEditarAccidente={(acc) => {
+                        setAccidenteEditando(acc);
+                        setOpenEditarModal(true);
+                      }}
+                      orderBy={orderBy}
+                      order={order}
+                      onRequestSort={handleRequestSort}
+                    />
+                  </Box>
+                </Collapse>
+              </Box>
+            )}
+
+            {accidentesAbiertos.length === 0 && accidentesCerrados.length === 0 && (
+              <Alert severity="info">
+                No hay accidentes o incidentes que coincidan con los filtros aplicados
+              </Alert>
+            )}
+          </Box>
         )}
       </Paper>
 

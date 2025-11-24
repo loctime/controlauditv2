@@ -7,7 +7,7 @@ import AuditSummaryChips from "../../../dashboard-seguridad/AuditSummaryChips";
 import IncidentMetrics from "../../../dashboard-seguridad/IncidentMetrics";
 import DashboardOccupationalHealthCard from "./DashboardOccupationalHealthCard";
 
-export default function DashboardMainGrid({ data, saludOcupacional }) {
+export default function DashboardMainGrid({ data, saludOcupacional, auditoriasMetrics }) {
   return (
     <Grid container spacing={1.5}>
       <Grid item xs={12} lg={3}>
@@ -82,10 +82,7 @@ export default function DashboardMainGrid({ data, saludOcupacional }) {
                 📋 AUDITORÍAS
               </Typography>
               <AuditSummaryChips
-                total={data.auditsTotal}
-                completed={data.auditsCompleted}
-                pending={data.auditsPending}
-                nonConformities={data.auditsNonConformities}
+                auditoriasMetrics={auditoriasMetrics}
               />
             </Paper>
           </Grid>
