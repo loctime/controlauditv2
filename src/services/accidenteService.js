@@ -256,41 +256,48 @@ export const actualizarEstadoAccidente = async (accidenteId, nuevoEstado, userId
     const fechaAccidente = accidenteDoc.data()?.fechaHora;
     const updateData = { estado: nuevoEstado };
     
-    // Si se está cerrando un accidente y tiene empleados con reposo
-    if (nuevoEstado === 'cerrado' && tipo === 'accidente') {
-      const empleadosInvolucrados = accidenteDoc.data()?.empleadosInvolucrados || [];
+    // Si se está cerrando un accidente
+    if (nuevoEstado === 'cerrado') {
       const fechaCierre = Timestamp.now();
-      const fechaAccidenteDate = fechaAccidente?.toDate ? fechaAccidente.toDate() : new Date(fechaAccidente);
-      const fechaCierreDate = fechaCierre.toDate();
-      
-      // Calcular días perdidos para cada empleado y actualizar empleados
-      const empleadosActualizados = empleadosInvolucrados.map(emp => {
-        if (emp.conReposo && emp.fechaInicioReposo) {
-          // Calcular días perdidos desde inicio de reposo hasta cierre
-          const fechaInicioReposo = emp.fechaInicioReposo?.toDate 
-            ? emp.fechaInicioReposo.toDate() 
-            : new Date(emp.fechaInicioReposo);
-          
-          const diasPerdidos = Math.max(0, Math.ceil((fechaCierreDate - fechaInicioReposo) / (1000 * 60 * 60 * 24)));
-          
-          // Reactivar empleado
-          actualizarEstadoEmpleado(emp.empleadoId, 'activo').catch(err => 
-            console.error(`Error reactivando empleado ${emp.empleadoId}:`, err)
-          );
-          
-          // Retornar empleado con días perdidos guardados
-          return {
-            ...emp,
-            diasPerdidos,
-            fechaFinReposo: fechaCierre
-          };
-        }
-        return emp;
-      });
-      
-      // Actualizar empleados involucrados con días perdidos
-      updateData.empleadosInvolucrados = empleadosActualizados;
       updateData.fechaCierre = fechaCierre;
+      if (userId) {
+        updateData.cerradoPor = userId;
+      }
+      
+      // Si es accidente y tiene empleados con reposo
+      if (tipo === 'accidente') {
+        const empleadosInvolucrados = accidenteDoc.data()?.empleadosInvolucrados || [];
+        const fechaAccidenteDate = fechaAccidente?.toDate ? fechaAccidente.toDate() : new Date(fechaAccidente);
+        const fechaCierreDate = fechaCierre.toDate();
+        
+        // Calcular días perdidos para cada empleado y actualizar empleados
+        const empleadosActualizados = empleadosInvolucrados.map(emp => {
+          if (emp.conReposo && emp.fechaInicioReposo) {
+            // Calcular días perdidos desde inicio de reposo hasta cierre
+            const fechaInicioReposo = emp.fechaInicioReposo?.toDate 
+              ? emp.fechaInicioReposo.toDate() 
+              : new Date(emp.fechaInicioReposo);
+            
+            const diasPerdidos = Math.max(0, Math.ceil((fechaCierreDate - fechaInicioReposo) / (1000 * 60 * 60 * 24)));
+            
+            // Reactivar empleado
+            actualizarEstadoEmpleado(emp.empleadoId, 'activo').catch(err => 
+              console.error(`Error reactivando empleado ${emp.empleadoId}:`, err)
+            );
+            
+            // Retornar empleado con días perdidos guardados
+            return {
+              ...emp,
+              diasPerdidos,
+              fechaFinReposo: fechaCierre
+            };
+          }
+          return emp;
+        });
+        
+        // Actualizar empleados involucrados con días perdidos
+        updateData.empleadosInvolucrados = empleadosActualizados;
+      }
     }
     
     await updateDoc(accidenteRef, updateData);
@@ -402,7 +409,14 @@ export const actualizarAccidente = async (accidenteId, datosActualizados, imagen
       throw new Error('Accidente no encontrado');
     }
 
-    const updateData = { ...datosActualizados };
+    const updateData = { 
+      ...datosActualizados,
+      fechaEdicion: Timestamp.now()
+    };
+    
+    if (userId) {
+      updateData.editadoPor = userId;
+    }
 
     // Si hay nuevas imágenes, subirlas
     if (imagenesNuevas && imagenesNuevas.length > 0) {

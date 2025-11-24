@@ -146,9 +146,9 @@ export default function Accidentes() {
     }
   };
 
-  const handleExportarPDF = () => {
+  const handleExportarPDF = async () => {
     try {
-      exportarAccidentesPDF(accidentesFiltrados, 'accidentes', userEmpresas, sucursalesFiltradas);
+      await exportarAccidentesPDF(accidentesFiltrados, 'accidentes', userEmpresas, sucursalesFiltradas);
     } catch (error) {
       console.error('Error exportando PDF:', error);
     }

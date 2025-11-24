@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -13,6 +13,8 @@ import {
 } from '@mui/material';
 import { Close as CloseIcon, ReportProblem as AccidenteIcon, Warning as IncidenteIcon } from '@mui/icons-material';
 import Swal from 'sweetalert2';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '../../../../firebaseConfig';
 
 /**
  * Modal de detalle de accidente
@@ -24,6 +26,53 @@ const AccidenteDetalleModal = React.memo(({
   onCerrarCaso,
   actualizarEstadoAccidente
 }) => {
+  const [cerradoPorNombre, setCerradoPorNombre] = useState('');
+  const [editadoPorNombre, setEditadoPorNombre] = useState('');
+
+  useEffect(() => {
+    const cargarNombresUsuarios = async () => {
+      if (!accidente) return;
+      
+      // Cargar nombre de quien cerró
+      if (accidente.cerradoPor) {
+        try {
+          const usuarioRef = doc(db, 'usuarios', accidente.cerradoPor);
+          const usuarioDoc = await getDoc(usuarioRef);
+          if (usuarioDoc.exists()) {
+            const data = usuarioDoc.data();
+            setCerradoPorNombre(data.displayName || data.email || accidente.cerradoPor);
+          } else {
+            setCerradoPorNombre(accidente.cerradoPor);
+          }
+        } catch (error) {
+          console.error('Error cargando usuario que cerró:', error);
+          setCerradoPorNombre(accidente.cerradoPor);
+        }
+      }
+
+      // Cargar nombre de quien editó
+      if (accidente.editadoPor) {
+        try {
+          const usuarioRef = doc(db, 'usuarios', accidente.editadoPor);
+          const usuarioDoc = await getDoc(usuarioRef);
+          if (usuarioDoc.exists()) {
+            const data = usuarioDoc.data();
+            setEditadoPorNombre(data.displayName || data.email || accidente.editadoPor);
+          } else {
+            setEditadoPorNombre(accidente.editadoPor);
+          }
+        } catch (error) {
+          console.error('Error cargando usuario que editó:', error);
+          setEditadoPorNombre(accidente.editadoPor);
+        }
+      }
+    };
+
+    if (open && accidente) {
+      cargarNombresUsuarios();
+    }
+  }, [open, accidente]);
+
   if (!accidente) return null;
 
   const getEstadoColor = (estado) => estado === 'abierto' ? 'error' : 'success';
@@ -113,6 +162,34 @@ const AccidenteDetalleModal = React.memo(({
                   />
                 ))}
               </Box>
+            </Grid>
+          )}
+          {accidente.fechaCierre && (
+            <Grid item xs={12}>
+              <Typography variant="subtitle2" color="textSecondary">Fecha de Cierre</Typography>
+              <Typography variant="body1">
+                {accidente.fechaCierre?.toDate?.()?.toLocaleString() || 'N/A'}
+              </Typography>
+            </Grid>
+          )}
+          {cerradoPorNombre && (
+            <Grid item xs={12}>
+              <Typography variant="subtitle2" color="textSecondary">Cerrado Por</Typography>
+              <Typography variant="body1">{cerradoPorNombre}</Typography>
+            </Grid>
+          )}
+          {accidente.fechaEdicion && (
+            <Grid item xs={12}>
+              <Typography variant="subtitle2" color="textSecondary">Última Edición</Typography>
+              <Typography variant="body1">
+                {accidente.fechaEdicion?.toDate?.()?.toLocaleString() || 'N/A'}
+              </Typography>
+            </Grid>
+          )}
+          {editadoPorNombre && (
+            <Grid item xs={12}>
+              <Typography variant="subtitle2" color="textSecondary">Editado Por</Typography>
+              <Typography variant="body1">{editadoPorNombre}</Typography>
             </Grid>
           )}
         </Grid>
