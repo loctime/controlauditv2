@@ -40,8 +40,6 @@ import AutoSaveAlert from "./components/AutoSaveAlert";
 import AuditoriaHeader from "./components/AuditoriaHeader";
 import AlertasFaltantes from "./components/AlertasFaltantes";
 import { createAuditoriaSteps } from "./components/AuditoriaSteps";
-import SimpleOfflineDebug from "../../../common/SimpleOfflineDebug";
-import AuditoriaDebugInfo from "../../../common/AuditoriaDebugInfo";
 // import OfflineDebugLogs from "./components/OfflineDebugLogs"; // Comentado temporalmente para probar error en Edge PWA
 
 // Servicios
@@ -1062,12 +1060,6 @@ const AuditoriaRefactorizada = () => {
         </MuiAlert>
       </Snackbar>
 
-      {/* Debug offline para verificar datos del usuario */}
-      <SimpleOfflineDebug />
-      
-      {/* Debug específico para auditorías */}
-      <AuditoriaDebugInfo />
-      
       {/* Debug logs visual para móvil */}
       {/* <OfflineDebugLogs /> Comentado temporalmente para probar error en Edge PWA */}
     </Container>

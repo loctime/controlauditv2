@@ -8,7 +8,8 @@ import {
   where, 
   orderBy,
   Timestamp,
-  getDoc
+  getDoc,
+  deleteDoc
 } from 'firebase/firestore';
 import { db } from '../firebaseConfig';
 import { uploadToControlFile, getDownloadUrl } from './controlFileService';
@@ -355,6 +356,78 @@ export const obtenerEstadisticas = async (empresaId) => {
     };
   } catch (error) {
     console.error('Error al obtener estadísticas:', error);
+    throw error;
+  }
+};
+
+// Eliminar accidente/incidente
+export const eliminarAccidente = async (accidenteId, userId = null) => {
+  try {
+    const accidenteRef = doc(db, 'accidentes', accidenteId);
+    const accidenteDoc = await getDoc(accidenteRef);
+    
+    if (!accidenteDoc.exists()) {
+      throw new Error('Accidente no encontrado');
+    }
+
+    const accidenteData = accidenteDoc.data();
+    
+    // Eliminar documento de Firestore
+    await deleteDoc(accidenteRef);
+
+    // Registrar log
+    if (userId) {
+      await registrarAccionSistema(
+        userId,
+        'Accidente/incidente eliminado',
+        { accidenteId, tipo: accidenteData.tipo },
+        'eliminar',
+        'accidente',
+        accidenteId
+      );
+    }
+  } catch (error) {
+    console.error('Error al eliminar accidente:', error);
+    throw error;
+  }
+};
+
+// Actualizar accidente/incidente
+export const actualizarAccidente = async (accidenteId, datosActualizados, imagenesNuevas = [], userId = null) => {
+  try {
+    const accidenteRef = doc(db, 'accidentes', accidenteId);
+    const accidenteDoc = await getDoc(accidenteRef);
+    
+    if (!accidenteDoc.exists()) {
+      throw new Error('Accidente no encontrado');
+    }
+
+    const updateData = { ...datosActualizados };
+
+    // Si hay nuevas imágenes, subirlas
+    if (imagenesNuevas && imagenesNuevas.length > 0) {
+      const nuevasUrls = await subirImagenes(accidenteId, imagenesNuevas);
+      const imagenesExistentes = accidenteDoc.data().imagenes || [];
+      updateData.imagenes = [...imagenesExistentes, ...nuevasUrls];
+    }
+
+    await updateDoc(accidenteRef, updateData);
+
+    // Registrar log
+    if (userId) {
+      await registrarAccionSistema(
+        userId,
+        'Accidente/incidente actualizado',
+        { accidenteId, cambios: Object.keys(updateData) },
+        'editar',
+        accidenteDoc.data().tipo,
+        accidenteId
+      );
+    }
+
+    return { id: accidenteId, ...updateData };
+  } catch (error) {
+    console.error('Error al actualizar accidente:', error);
     throw error;
   }
 };

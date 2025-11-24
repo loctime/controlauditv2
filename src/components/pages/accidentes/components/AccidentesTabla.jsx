@@ -8,15 +8,19 @@ import {
   TableHead,
   TableRow,
   TablePagination,
+  TableSortLabel,
   Chip,
   Typography,
-  Button
+  Button,
+  IconButton
 } from '@mui/material';
 import {
   ReportProblem as AccidenteIcon,
   Warning as IncidenteIcon,
   Image as ImageIcon,
-  People as PeopleIcon
+  People as PeopleIcon,
+  Delete as DeleteIcon,
+  Edit as EditIcon
 } from '@mui/icons-material';
 
 /**
@@ -29,7 +33,12 @@ const AccidentesTabla = React.memo(({
   onPageChange,
   onRowsPerPageChange,
   onVerDetalle,
-  onCerrarAccidente
+  onCerrarAccidente,
+  onEliminarAccidente,
+  onEditarAccidente,
+  orderBy,
+  order,
+  onRequestSort
 }) => {
   const accidentesPaginados = accidentes.slice(
     page * rowsPerPage,
@@ -47,11 +56,35 @@ const AccidentesTabla = React.memo(({
           <TableHead>
             <TableRow>
               <TableCell>Tipo</TableCell>
-              <TableCell>Fecha</TableCell>
-              <TableCell>Descripción</TableCell>
+              <TableCell>
+                <TableSortLabel
+                  active={orderBy === 'fechaHora'}
+                  direction={orderBy === 'fechaHora' ? order : 'asc'}
+                  onClick={() => onRequestSort?.('fechaHora')}
+                >
+                  Fecha
+                </TableSortLabel>
+              </TableCell>
+              <TableCell>
+                <TableSortLabel
+                  active={orderBy === 'descripcion'}
+                  direction={orderBy === 'descripcion' ? order : 'asc'}
+                  onClick={() => onRequestSort?.('descripcion')}
+                >
+                  Descripción
+                </TableSortLabel>
+              </TableCell>
               <TableCell>Involucrados</TableCell>
               <TableCell>Imágenes</TableCell>
-              <TableCell>Estado</TableCell>
+              <TableCell>
+                <TableSortLabel
+                  active={orderBy === 'estado'}
+                  direction={orderBy === 'estado' ? order : 'asc'}
+                  onClick={() => onRequestSort?.('estado')}
+                >
+                  Estado
+                </TableSortLabel>
+              </TableCell>
               <TableCell>Acciones</TableCell>
             </TableRow>
           </TableHead>
@@ -114,10 +147,20 @@ const AccidentesTabla = React.memo(({
                   />
                 </TableCell>
                 <TableCell>
-                  <Box sx={{ display: 'flex', gap: 1 }}>
+                  <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
                     <Button size="small" onClick={() => onVerDetalle(accidente)}>
                       Ver
                     </Button>
+                    {onEditarAccidente && (
+                      <IconButton 
+                        size="small" 
+                        color="primary"
+                        onClick={() => onEditarAccidente(accidente)}
+                        title="Editar"
+                      >
+                        <EditIcon fontSize="small" />
+                      </IconButton>
+                    )}
                     {accidente.estado === 'abierto' && (
                       <Button
                         size="small"
@@ -126,6 +169,16 @@ const AccidentesTabla = React.memo(({
                       >
                         Cerrar
                       </Button>
+                    )}
+                    {onEliminarAccidente && (
+                      <IconButton
+                        size="small"
+                        color="error"
+                        onClick={() => onEliminarAccidente(accidente.id)}
+                        title="Eliminar"
+                      >
+                        <DeleteIcon fontSize="small" />
+                      </IconButton>
                     )}
                   </Box>
                 </TableCell>

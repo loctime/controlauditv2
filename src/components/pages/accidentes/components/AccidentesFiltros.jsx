@@ -1,5 +1,16 @@
 import React from 'react';
-import { Grid, FormControl, InputLabel, Select, MenuItem } from '@mui/material';
+import { 
+  Grid, 
+  FormControl, 
+  InputLabel, 
+  Select, 
+  MenuItem,
+  TextField,
+  InputAdornment,
+  IconButton
+} from '@mui/material';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import { Search, Clear } from '@mui/icons-material';
 
 /**
  * Filtros de accidentes
@@ -14,10 +25,42 @@ const AccidentesFiltros = React.memo(({
   filterTipo,
   setFilterTipo,
   filterEstado,
-  setFilterEstado
+  setFilterEstado,
+  searchTerm = '',
+  onSearchChange,
+  fechaDesde,
+  fechaHasta,
+  onFechaDesdeChange,
+  onFechaHastaChange
 }) => (
   <Grid container spacing={2}>
-    <Grid item xs={12} sm={6} md={3}>
+    {/* Búsqueda por texto */}
+    <Grid item xs={12} md={4}>
+      <TextField
+        fullWidth
+        size="small"
+        placeholder="Buscar por descripción..."
+        value={searchTerm}
+        onChange={(e) => onSearchChange?.(e.target.value)}
+        InputProps={{
+          startAdornment: (
+            <InputAdornment position="start">
+              <Search />
+            </InputAdornment>
+          ),
+          endAdornment: searchTerm && (
+            <InputAdornment position="end">
+              <IconButton size="small" onClick={() => onSearchChange?.('')}>
+                <Clear />
+              </IconButton>
+            </InputAdornment>
+          )
+        }}
+      />
+    </Grid>
+
+    {/* Filtros existentes */}
+    <Grid item xs={12} sm={6} md={2}>
       <FormControl fullWidth size="small">
         <InputLabel>Empresa</InputLabel>
         <Select
@@ -39,7 +82,8 @@ const AccidentesFiltros = React.memo(({
         </Select>
       </FormControl>
     </Grid>
-    <Grid item xs={12} sm={6} md={3}>
+
+    <Grid item xs={12} sm={6} md={2}>
       <FormControl fullWidth size="small">
         <InputLabel>Sucursal</InputLabel>
         <Select
@@ -58,7 +102,8 @@ const AccidentesFiltros = React.memo(({
         </Select>
       </FormControl>
     </Grid>
-    <Grid item xs={12} sm={6} md={3}>
+
+    <Grid item xs={12} sm={6} md={2}>
       <FormControl fullWidth size="small">
         <InputLabel>Tipo</InputLabel>
         <Select 
@@ -73,7 +118,8 @@ const AccidentesFiltros = React.memo(({
         </Select>
       </FormControl>
     </Grid>
-    <Grid item xs={12} sm={6} md={3}>
+
+    <Grid item xs={12} sm={6} md={2}>
       <FormControl fullWidth size="small">
         <InputLabel>Estado</InputLabel>
         <Select 
@@ -87,6 +133,26 @@ const AccidentesFiltros = React.memo(({
           <MenuItem value="cerrado">Cerrado</MenuItem>
         </Select>
       </FormControl>
+    </Grid>
+
+    {/* Filtros de fecha */}
+    <Grid item xs={12} sm={6} md={3}>
+      <DatePicker
+        label="Fecha desde"
+        value={fechaDesde}
+        onChange={onFechaDesdeChange}
+        slotProps={{ textField: { size: 'small', fullWidth: true } }}
+      />
+    </Grid>
+
+    <Grid item xs={12} sm={6} md={3}>
+      <DatePicker
+        label="Fecha hasta"
+        value={fechaHasta}
+        onChange={onFechaHastaChange}
+        slotProps={{ textField: { size: 'small', fullWidth: true } }}
+        minDate={fechaDesde}
+      />
     </Grid>
   </Grid>
 ));

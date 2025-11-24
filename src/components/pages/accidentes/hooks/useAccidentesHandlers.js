@@ -2,7 +2,9 @@ import { useCallback } from 'react';
 import {
   crearAccidente,
   crearIncidente,
-  actualizarEstadoAccidente
+  actualizarEstadoAccidente,
+  eliminarAccidente,
+  actualizarAccidente
 } from '../../../../services/accidenteService';
 import Swal from 'sweetalert2';
 
@@ -68,10 +70,54 @@ export const useAccidentesHandlers = (userProfile, recargarAccidentes) => {
     }
   }, [recargarAccidentes, userProfile]);
 
+  const handleEliminarAccidente = useCallback(async (accidenteId) => {
+    try {
+      const result = await Swal.fire({
+        title: '¿Eliminar registro?',
+        text: 'Esta acción eliminará el registro permanentemente. No se puede deshacer.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: 'Sí, eliminar',
+        cancelButtonText: 'Cancelar'
+      });
+
+      if (result.isConfirmed) {
+        Swal.fire({
+          title: 'Eliminando...',
+          allowOutsideClick: false,
+          didOpen: () => Swal.showLoading()
+        });
+
+        await eliminarAccidente(accidenteId, userProfile?.uid);
+        Swal.fire('Éxito', 'Registro eliminado correctamente', 'success');
+        recargarAccidentes();
+      }
+    } catch (error) {
+      console.error('Error eliminando accidente:', error);
+      Swal.fire('Error', 'No se pudo eliminar el registro', 'error');
+    }
+  }, [recargarAccidentes, userProfile]);
+
+  const handleActualizarAccidente = useCallback(async (accidenteId, datos, imagenesNuevas = []) => {
+    try {
+      await actualizarAccidente(accidenteId, datos, imagenesNuevas, userProfile?.uid);
+      Swal.fire('Éxito', 'Accidente actualizado correctamente', 'success');
+      recargarAccidentes();
+    } catch (error) {
+      console.error('Error actualizando accidente:', error);
+      Swal.fire('Error', 'No se pudo actualizar el registro', 'error');
+      throw error;
+    }
+  }, [recargarAccidentes, userProfile]);
+
   return {
     handleCrearAccidente,
     handleCrearIncidente,
-    handleCambiarEstado
+    handleCambiarEstado,
+    handleEliminarAccidente,
+    handleActualizarAccidente
   };
 };
 

@@ -12,7 +12,6 @@ import PWAInstallPrompt from './components/common/PWAInstallPrompt';
 import PWADownloadButton from './components/common/PWADownloadButton';
 import OfflineFallback from './components/common/OfflineFallback';
 import MobileDebug from './components/common/MobileDebug';
-import OfflineDebugInfo from './components/common/OfflineDebugInfo';
 import ErrorBoundary from './components/common/ErrorBoundary';
 import { useConnectivitySimple } from './hooks/useConnectivitySimple';
 // import { useBackButton } from './hooks/useBackButton'; // Deshabilitado para web
@@ -63,8 +62,6 @@ const App = () => {
                 <AppRouter />
                 {/* Debug móvil temporal */}
                 <MobileDebug />
-                {/* Debug offline para verificar datos del usuario */}
-                <OfflineDebugInfo />
                 {/* Solo mostrar componentes PWA cuando no esté en loading inicial */}
                 {!isInitialLoad && (
                   <>
