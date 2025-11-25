@@ -143,18 +143,125 @@ export const targetsService = {
   },
 
   /**
-   * Eliminar un target
+   * Eliminar un target, sus programaciones recurrentes y auditorías relacionadas (solo pendientes)
    * @param {string} targetId - ID del target
+   * @param {boolean} eliminarProgramaciones - Si true, elimina programaciones recurrentes relacionadas (default: true)
+   * @param {boolean} eliminarAuditorias - Si true, elimina auditorías relacionadas pendientes (default: true)
    * @returns {Promise<void>}
    */
-  async deleteTarget(targetId) {
+  async deleteTarget(targetId, eliminarProgramaciones = true, eliminarAuditorias = true) {
     try {
+      // Importar recurringService para eliminar programaciones relacionadas
+      const { recurringService } = await import('./recurringService');
+
+      // Si se debe eliminar programaciones relacionadas, hacerlo primero
+      if (eliminarProgramaciones) {
+        await this._eliminarProgramacionesRelacionadas(targetId, eliminarAuditorias);
+      }
+
+      // Si se debe eliminar auditorías relacionadas directamente con el target
+      if (eliminarAuditorias) {
+        await this._eliminarAuditoriasRelacionadas(targetId);
+      }
+
+      // Eliminar el target
       await deleteDoc(doc(db, 'auditorias_targets', targetId));
       toast.success('Target eliminado exitosamente');
     } catch (error) {
       console.error('Error eliminando target:', error);
       toast.error('Error al eliminar el target');
       throw error;
+    }
+  },
+
+  /**
+   * Eliminar programaciones recurrentes relacionadas con un target
+   * @private
+   * @param {string} targetId - ID del target
+   * @param {boolean} eliminarAuditorias - Si true, elimina auditorías de cada programación
+   * @returns {Promise<number>} Cantidad de programaciones eliminadas
+   */
+  async _eliminarProgramacionesRelacionadas(targetId, eliminarAuditorias = true) {
+    try {
+      const { recurringService } = await import('./recurringService');
+      const { collection: col, query: q, where: w, getDocs } = await import('firebase/firestore');
+      
+      const recurringsRef = col(db, 'auditorias_recurrentes');
+      const recurringsQuery = q(
+        recurringsRef,
+        w('targetId', '==', targetId)
+      );
+
+      const snapshot = await getDocs(recurringsQuery);
+      const programacionesAEliminar = snapshot.docs;
+
+      // Eliminar cada programación recurrente (esto también eliminará sus auditorías si eliminarAuditorias es true)
+      let eliminadas = 0;
+      for (const recurringDoc of programacionesAEliminar) {
+        try {
+          await recurringService.deleteRecurring(recurringDoc.id, eliminarAuditorias);
+          eliminadas++;
+        } catch (error) {
+          console.error(`Error eliminando programación recurrente ${recurringDoc.id}:`, error);
+        }
+      }
+
+      if (eliminadas > 0) {
+        console.log(`✅ ${eliminadas} programación${eliminadas > 1 ? 'es' : ''} recurrente${eliminadas > 1 ? 's' : ''} eliminada${eliminadas > 1 ? 's' : ''}`);
+      }
+
+      return eliminadas;
+    } catch (error) {
+      console.error('Error eliminando programaciones relacionadas:', error);
+      return 0;
+    }
+  },
+
+  /**
+   * Eliminar auditorías agendadas relacionadas directamente con un target
+   * @private
+   * @param {string} targetId - ID del target
+   * @returns {Promise<number>} Cantidad de auditorías eliminadas
+   */
+  async _eliminarAuditoriasRelacionadas(targetId) {
+    try {
+      const { collection: col, query: q, where: w, getDocs, deleteDoc: delDoc, doc: docRef } = await import('firebase/firestore');
+      const auditoriasRef = col(db, 'auditorias_agendadas');
+      
+      // Nota: Filtrar por estado después, ya que Firestore tiene limitaciones con 'in'
+      const auditoriasQuery = q(
+        auditoriasRef,
+        w('targetId', '==', targetId)
+      );
+
+      const snapshot = await getDocs(auditoriasQuery);
+      // Filtrar para obtener solo las que NO están completadas
+      const auditoriasAEliminar = snapshot.docs.filter(doc => {
+        const data = doc.data();
+        const estado = data.estado;
+        // Solo eliminar si está pendiente o agendada, NO completadas
+        return estado === 'pendiente' || estado === 'agendada';
+      });
+
+      // Eliminar cada auditoría pendiente/agendada
+      let eliminadas = 0;
+      for (const auditoriaDoc of auditoriasAEliminar) {
+        try {
+          await delDoc(docRef(db, 'auditorias_agendadas', auditoriaDoc.id));
+          eliminadas++;
+        } catch (error) {
+          console.error(`Error eliminando auditoría ${auditoriaDoc.id}:`, error);
+        }
+      }
+
+      if (eliminadas > 0) {
+        console.log(`✅ ${eliminadas} auditoría${eliminadas > 1 ? 's' : ''} pendiente${eliminadas > 1 ? 's' : ''} eliminada${eliminadas > 1 ? 's' : ''} del target`);
+      }
+
+      return eliminadas;
+    } catch (error) {
+      console.error('Error eliminando auditorías relacionadas:', error);
+      return 0;
     }
   },
 

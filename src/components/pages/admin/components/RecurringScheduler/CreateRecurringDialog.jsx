@@ -445,18 +445,6 @@ const CreateRecurringDialog = ({ open, onClose, onSave, recurringToEdit = null, 
                     </Box>
                   </FormControl>
                 </Grid>
-                <Grid item xs={12} md={4}>
-                  <TextField
-                    fullWidth
-                    name="intervalo"
-                    label="Cada N semanas"
-                    type="number"
-                    value={form.frecuencia.intervalo}
-                    onChange={(e) => handleFrecuenciaChange('intervalo', Number(e.target.value))}
-                    inputProps={{ min: 1 }}
-                    helperText="Ej: 2 = cada 2 semanas"
-                  />
-                </Grid>
               </>
             )}
 
@@ -477,20 +465,7 @@ const CreateRecurringDialog = ({ open, onClose, onSave, recurringToEdit = null, 
               </Grid>
             )}
 
-            <Grid item xs={12} md={4}>
-              <TextField
-                fullWidth
-                required
-                name="hora"
-                label="Hora"
-                type="time"
-                value={form.hora}
-                onChange={handleChange}
-                InputLabelProps={{ shrink: true }}
-              />
-            </Grid>
-
-            <Grid item xs={12} md={4}>
+            <Grid item xs={12} md={6}>
               <TextField
                 fullWidth
                 required

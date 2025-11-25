@@ -30,6 +30,8 @@ import { Add, ExpandMore, Lightbulb, PersonAdd } from "@mui/icons-material";
 import { collection, getDocs, query, where, addDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "../../../../../firebaseConfig";
 import { targetsService } from "../../../../../services/targetsService";
+import { recurringService } from "../../../../../services/recurringService";
+import { autoScheduler } from "../../../../../services/autoScheduler";
 import { useAuth } from "../../../../context/AuthContext";
 import { useGlobalSelection } from "../../../../../hooks/useGlobalSelection";
 import { toast } from 'react-toastify';
@@ -61,6 +63,7 @@ const CreateTargetDialog = ({ open, onClose, onSave, targetToEdit = null, empres
   const [diasPreferidos, setDiasPreferidos] = useState([]); // Días de la semana preferidos (1-7)
   const [diasExcluidos, setDiasExcluidos] = useState([]); // Días de la semana excluidos (1-7)
   const [programacionGuardada, setProgramacionGuardada] = useState(false);
+  const [programacionesRecurrentesIds, setProgramacionesRecurrentesIds] = useState([]);
   const [mostrarConfirmacion, setMostrarConfirmacion] = useState(false);
   
   // Cargar usuarios operarios
@@ -347,10 +350,18 @@ const CreateTargetDialog = ({ open, onClose, onSave, targetToEdit = null, empres
   // Cargar datos del target a editar
   useEffect(() => {
     if (targetToEdit && open) {
+      // Validar que el sucursalId esté en las opciones disponibles
+      let sucursalId = targetToEdit.sucursalId || '';
+      if (sucursalId && !sucursalesDisponibles?.find(s => s.id === sucursalId)) {
+        // Si la sucursal no está disponible, limpiarla (pero mantener el nombre para referencia)
+        console.warn(`Sucursal ${sucursalId} no encontrada en opciones disponibles`);
+        sucursalId = '';
+      }
+
       setForm({
         empresaId: targetToEdit.empresaId || '',
         empresaNombre: targetToEdit.empresaNombre || '',
-        sucursalId: targetToEdit.sucursalId || '',
+        sucursalId: sucursalId,
         sucursalNombre: targetToEdit.sucursalNombre || '',
         periodo: targetToEdit.periodo || 'mensual',
         cantidad: targetToEdit.cantidad || 0,
@@ -373,7 +384,7 @@ const CreateTargetDialog = ({ open, onClose, onSave, targetToEdit = null, empres
       });
       setErrors({});
     }
-  }, [targetToEdit, open, selectedEmpresa]);
+  }, [targetToEdit, open, selectedEmpresa, sucursalesDisponibles]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -423,7 +434,122 @@ const CreateTargetDialog = ({ open, onClose, onSave, targetToEdit = null, empres
     return Object.keys(newErrors).length === 0;
   };
 
-  // Guardar programación de auditorías
+  // Guardar programación de auditorías como programaciones recurrentes
+  // Función para crear auditorías directamente desde la configuración del target
+  const crearAuditoriasDesdeConfiguracion = async (
+    auditoriasConfiguradas,
+    empresaSeleccionada,
+    sucursalSeleccionada,
+    formData,
+    programacionesRecurrentesIds,
+    usuariosOperarios,
+    formularios,
+    clienteAdminId
+  ) => {
+    try {
+      const { collection: col, addDoc: addDocFirestore, query: q, where: w, getDocs } = await import('firebase/firestore');
+      const auditoriasRef = col(db, 'auditorias_agendadas');
+      
+      // Crear un mapa de recurringId por día de semana y patrón
+      const recurringMap = {};
+      for (const recurringId of programacionesRecurrentesIds) {
+        // Obtener la programación recurrente para obtener su información
+        const { doc: docRef, getDoc: getDocFirestore } = await import('firebase/firestore');
+        const recurringDoc = await getDocFirestore(docRef(db, 'auditorias_recurrentes', recurringId));
+        if (recurringDoc.exists()) {
+          const recurringData = recurringDoc.data();
+          const diasSemana = recurringData.frecuencia?.diasSemana || [];
+          const clave = `${recurringData.hora || '09:00'}-${recurringData.encargadoId || 'sin'}-${recurringData.formularioId || 'sin'}`;
+          diasSemana.forEach(dia => {
+            const diaKey = `${dia}-${clave}`;
+            if (!recurringMap[diaKey]) {
+              recurringMap[diaKey] = {
+                recurringId,
+                ...recurringData
+              };
+            }
+          });
+        }
+      }
+
+      let creadas = 0;
+      for (const auditoriaConfig of auditoriasConfiguradas) {
+        // Buscar la programación recurrente correspondiente
+        const clave = `${auditoriaConfig.hora || '09:00'}-${auditoriaConfig.encargadoId || 'sin'}-${auditoriaConfig.formularioId || 'sin'}`;
+        const diaKey = `${auditoriaConfig.diaSemana}-${clave}`;
+        const recurringInfo = recurringMap[diaKey];
+
+        if (!recurringInfo) {
+          console.warn(`No se encontró programación recurrente para ${diaKey}`);
+          continue;
+        }
+
+        // Calcular la fecha real a partir del día del mes y el año
+        const año = formData.año;
+        const mes = formData.periodo === 'mensual' ? formData.mes : null;
+        
+        let fechaAuditoria = null;
+        if (formData.periodo === 'mensual' && mes && auditoriaConfig.diaMes) {
+          // El día ya viene calculado en auditoriaConfig.diaMes (número del día del mes)
+          fechaAuditoria = new Date(año, mes - 1, auditoriaConfig.diaMes);
+        } else if (formData.periodo === 'anual' && auditoriaConfig.mes && auditoriaConfig.diaMes) {
+          // Para anual, usar el mes y día calculados
+          fechaAuditoria = new Date(año, auditoriaConfig.mes - 1, auditoriaConfig.diaMes);
+        }
+
+        if (!fechaAuditoria) continue;
+
+        const fechaStr = fechaAuditoria.toISOString().split('T')[0];
+
+        // Verificar si ya existe una auditoría para esta fecha
+        const existingQuery = q(
+          auditoriasRef,
+          w('recurringId', '==', recurringInfo.recurringId),
+          w('fecha', '==', fechaStr)
+        );
+        const existingSnapshot = await getDocs(existingQuery);
+        
+        if (!existingSnapshot.empty) {
+          console.log(`Auditoría ya existe para ${fechaStr}`);
+          continue;
+        }
+
+        // Crear la auditoría agendada
+        const auditoriaData = {
+          empresa: empresaSeleccionada?.nombre || '',
+          empresaId: formData.empresaId,
+          sucursal: sucursalSeleccionada?.nombre || 'Casa Central',
+          sucursalId: formData.sucursalId || null,
+          formulario: recurringInfo.formularioNombre || null,
+          formularioId: recurringInfo.formularioId || null,
+          fecha: fechaStr,
+          hora: auditoriaConfig.hora || recurringInfo.hora || '09:00',
+          descripcion: `Generada desde target: ${recurringInfo.nombre}`,
+          estado: 'agendada',
+          recurringId: recurringInfo.recurringId,
+          targetId: null, // Se actualizará después de crear el target
+          usuarioId: clienteAdminId,
+          usuarioNombre: userProfile?.displayName || userProfile?.email || '',
+          clienteAdminId: clienteAdminId,
+          encargado: recurringInfo.encargadoId ? {
+            id: recurringInfo.encargadoId
+          } : null,
+          fechaCreacion: serverTimestamp(),
+          fechaActualizacion: serverTimestamp(),
+          esRecurrente: true
+        };
+
+        await addDocFirestore(auditoriasRef, auditoriaData);
+        creadas++;
+      }
+
+      return creadas;
+    } catch (error) {
+      console.error('Error creando auditorías desde configuración:', error);
+      throw error;
+    }
+  };
+
   const handleGuardarProgramacion = async () => {
     if (!form.empresaId || auditoriasConfiguradas.length === 0) {
       toast.error('No hay auditorías configuradas para guardar');
@@ -436,33 +562,61 @@ const CreateTargetDialog = ({ open, onClose, onSave, targetToEdit = null, empres
         ? sucursalesDisponibles?.find(s => s.id === form.sucursalId)
         : null;
 
-      // Calcular fechas basadas en el período
+      // Calcular fechas de inicio y fin basadas en el período
       const año = form.año;
       const mes = form.periodo === 'mensual' ? form.mes : null;
+      
+      let fechaInicio = null;
+      let fechaFin = null;
+      
+      if (form.periodo === 'mensual' && mes) {
+        fechaInicio = new Date(año, mes - 1, 1).toISOString().split('T')[0];
+        const diasEnMes = new Date(año, mes, 0).getDate();
+        fechaFin = new Date(año, mes - 1, diasEnMes).toISOString().split('T')[0];
+      } else if (form.periodo === 'anual') {
+        fechaInicio = new Date(año, 0, 1).toISOString().split('T')[0];
+        fechaFin = new Date(año, 11, 31).toISOString().split('T')[0];
+      } else if (form.periodo === 'semanal') {
+        const hoy = new Date();
+        fechaInicio = hoy.toISOString().split('T')[0];
+        const fechaSemanaSiguiente = new Date(hoy);
+        fechaSemanaSiguiente.setDate(hoy.getDate() + 7);
+        fechaFin = fechaSemanaSiguiente.toISOString().split('T')[0];
+      }
 
-      // Crear todas las auditorías programadas
-      const auditoriasCreadas = [];
-      for (const auditoria of auditoriasConfiguradas) {
-        let fechaAuditoria = null;
+      // Agrupar auditorías por patrón (hora, encargado, formulario) - permite múltiples días
+      const grupos = {};
+      
+      auditoriasConfiguradas.forEach((auditoria) => {
+        // Crear clave única para agrupar por patrón (sin día de semana para permitir múltiples días)
+        const clave = `${auditoria.hora || '09:00'}-${auditoria.encargadoId || 'sin'}-${auditoria.formularioId || 'sin'}`;
         
-        if (form.periodo === 'mensual' && auditoria.diaMes) {
-          // Para mensual, usar el día del mes
-          fechaAuditoria = new Date(año, mes - 1, auditoria.diaMes);
-        } else if (form.periodo === 'anual' && auditoria.diaMes && auditoria.mes) {
-          // Para anual, usar mes y día
-          fechaAuditoria = new Date(año, auditoria.mes - 1, auditoria.diaMes);
+        if (!grupos[clave]) {
+          grupos[clave] = {
+            diasSemana: [auditoria.diaSemana],
+            hora: auditoria.hora || '09:00',
+            encargadoId: auditoria.encargadoId || null,
+            formularioId: auditoria.formularioId || null,
+            auditorias: [auditoria]
+          };
         } else {
-          // Para semanal o si no hay día específico, calcular fecha basada en día de la semana
-          const hoy = new Date();
-          const diasHastaProximo = (auditoria.diaSemana - hoy.getDay() + 7) % 7;
-          fechaAuditoria = new Date(hoy);
-          fechaAuditoria.setDate(hoy.getDate() + diasHastaProximo);
+          // Agregar día de semana si no está en la lista
+          if (!grupos[clave].diasSemana.includes(auditoria.diaSemana)) {
+            grupos[clave].diasSemana.push(auditoria.diaSemana);
+            grupos[clave].diasSemana.sort();
+          }
+          grupos[clave].auditorias.push(auditoria);
         }
+      });
 
+      // Crear una programación recurrente por cada grupo
+      const programacionesCreadas = [];
+      
+      for (const [clave, grupo] of Object.entries(grupos)) {
         // Obtener información del encargado si existe
         let encargadoInfo = null;
-        if (auditoria.encargadoId) {
-          const encargado = usuariosOperarios.find(u => u.id === auditoria.encargadoId);
+        if (grupo.encargadoId) {
+          const encargado = usuariosOperarios.find(u => u.id === grupo.encargadoId);
           if (encargado) {
             encargadoInfo = {
               id: encargado.id,
@@ -474,8 +628,8 @@ const CreateTargetDialog = ({ open, onClose, onSave, targetToEdit = null, empres
 
         // Obtener información del formulario si existe
         let formularioInfo = null;
-        if (auditoria.formularioId) {
-          const formulario = formularios?.find(f => f.id === auditoria.formularioId);
+        if (grupo.formularioId) {
+          const formulario = formularios?.find(f => f.id === grupo.formularioId);
           if (formulario) {
             formularioInfo = {
               id: formulario.id,
@@ -484,31 +638,82 @@ const CreateTargetDialog = ({ open, onClose, onSave, targetToEdit = null, empres
           }
         }
 
-        const nuevaAuditoria = {
-          empresa: empresaSeleccionada?.nombre || '',
-          empresaId: form.empresaId,
-          sucursal: sucursalSeleccionada?.nombre || '',
-          sucursalId: form.sucursalId || null,
-          formulario: formularioInfo?.nombre || '',
-          formularioId: auditoria.formularioId || null,
-          fecha: fechaAuditoria.toISOString().split('T')[0],
-          hora: auditoria.hora || '09:00',
-          estado: 'pendiente',
-          encargado: encargadoInfo?.id || null,
-          encargadoNombre: encargadoInfo?.nombre || null,
-          clienteAdminId: userProfile?.clienteAdminId || userProfile?.uid,
-          usuarioId: userProfile?.uid,
-          fechaCreacion: serverTimestamp(),
-          targetId: null, // Se actualizará después de crear el target
-          descripcion: `Auditoría programada desde target`
+        // Determinar el nombre de la programación
+        const diasNombres = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+        const diasTexto = grupo.diasSemana.map(d => diasNombres[d === 7 ? 0 : d]).join(', ');
+        const nombre = `Target ${empresaSeleccionada?.nombre || ''}${sucursalSeleccionada ? ` - ${sucursalSeleccionada.nombre}` : ''} - ${diasTexto}`;
+
+        // Determinar tipo de frecuencia según el período del target
+        // Para todos los períodos, usar frecuencia semanal para respetar los días de semana configurados
+        // La limitación por mes/año se hace con fechaInicio y fechaFin
+        let frecuenciaConfig = {
+          tipo: 'semanal',
+          diasSemana: grupo.diasSemana,
+          intervalo: 1
         };
 
-        const docRef = await addDoc(collection(db, 'auditorias_agendadas'), nuevaAuditoria);
-        auditoriasCreadas.push(docRef.id);
+        // Formulario es opcional - obtener información si existe
+        let formularioFinalInfo = null;
+        if (grupo.formularioId) {
+          formularioFinalInfo = formularios?.find(f => f.id === grupo.formularioId);
+        }
+        
+        const recurringData = {
+          nombre: nombre,
+          empresaId: form.empresaId,
+          empresaNombre: empresaSeleccionada?.nombre || '',
+          sucursalId: form.sucursalId || null,
+          sucursalNombre: sucursalSeleccionada?.nombre || null,
+          formularioId: grupo.formularioId || null,
+          formularioNombre: formularioFinalInfo?.nombre || null,
+          encargadoId: grupo.encargadoId || null,
+          frecuencia: frecuenciaConfig,
+          hora: grupo.hora,
+          fechaInicio: fechaInicio,
+          fechaFin: fechaFin,
+          activa: true,
+          clienteAdminId: userProfile?.clienteAdminId || userProfile?.uid,
+          targetId: null // Se actualizará después de crear el target
+        };
+
+        const recurringId = await recurringService.createRecurring(recurringData);
+        programacionesCreadas.push(recurringId);
       }
 
       setProgramacionGuardada(true);
-      toast.success(`Programación guardada: ${auditoriasCreadas.length} auditoría${auditoriasCreadas.length > 1 ? 's' : ''} creada${auditoriasCreadas.length > 1 ? 's' : ''}`);
+      setProgramacionesRecurrentesIds(programacionesCreadas);
+      
+      // Para targets mensuales/anuales, crear auditorías directamente desde las fechas configuradas
+      // en lugar de usar autoScheduler que generaría todas las fechas posibles
+      if (form.periodo === 'mensual' || form.periodo === 'anual') {
+        try {
+          const clienteAdminId = userProfile?.clienteAdminId || userProfile?.uid;
+          await crearAuditoriasDesdeConfiguracion(
+            auditoriasConfiguradas, 
+            empresaSeleccionada, 
+            sucursalSeleccionada,
+            form,
+            programacionesCreadas,
+            usuariosOperarios,
+            formularios,
+            clienteAdminId
+          );
+          console.log(`✅ ${auditoriasConfiguradas.length} auditorías creadas directamente desde la configuración del target`);
+        } catch (error) {
+          console.error('Error creando auditorías desde configuración:', error);
+        }
+      } else {
+        // Para semanales, usar autoScheduler
+        try {
+          const clienteAdminId = userProfile?.clienteAdminId || userProfile?.uid;
+          await autoScheduler.generateScheduledAudits(clienteAdminId, 90);
+          console.log('✅ Auditorías generadas automáticamente desde las programaciones recurrentes');
+        } catch (error) {
+          console.error('Error generando auditorías automáticamente:', error);
+        }
+      }
+      
+      toast.success(`Programación guardada: ${programacionesCreadas.length} programación${programacionesCreadas.length > 1 ? 'es' : ''} recurrente${programacionesCreadas.length > 1 ? 's' : ''} creada${programacionesCreadas.length > 1 ? 's' : ''}`);
     } catch (error) {
       console.error('Error guardando programación:', error);
       toast.error('Error al guardar la programación');
@@ -518,20 +723,43 @@ const CreateTargetDialog = ({ open, onClose, onSave, targetToEdit = null, empres
   // Función auxiliar para crear el target
   const crearTarget = async () => {
     try {
+      const empresaSeleccionada = empresasDisponibles?.find(e => e.id === form.empresaId);
+      const sucursalSeleccionada = form.sucursalId 
+        ? sucursalesDisponibles?.find(s => s.id === form.sucursalId)
+        : null;
+
       const targetData = {
         ...form,
+        empresaNombre: empresaSeleccionada?.nombre || '',
+        sucursalNombre: sucursalSeleccionada?.nombre || null,
         cantidad: Number(form.cantidad),
         año: Number(form.año),
         mes: form.periodo === 'mensual' ? Number(form.mes) : null,
         clienteAdminId: userProfile?.clienteAdminId || userProfile?.uid
       };
 
+      let targetId = null;
+
       if (targetToEdit) {
         await targetsService.updateTarget(targetToEdit.id, targetData);
+        targetId = targetToEdit.id;
         toast.success('Target actualizado exitosamente');
       } else {
-        await targetsService.createTarget(targetData);
+        targetId = await targetsService.createTarget(targetData);
         toast.success('Target creado exitosamente');
+      }
+
+      // Actualizar las programaciones recurrentes con el targetId si existen
+      if (targetId && programacionesRecurrentesIds.length > 0) {
+        try {
+          for (const recurringId of programacionesRecurrentesIds) {
+            await recurringService.updateRecurring(recurringId, { targetId });
+          }
+          console.log(`✅ ${programacionesRecurrentesIds.length} programación${programacionesRecurrentesIds.length > 1 ? 'es' : ''} recurrente${programacionesRecurrentesIds.length > 1 ? 's' : ''} vinculada${programacionesRecurrentesIds.length > 1 ? 's' : ''} con el target`);
+        } catch (error) {
+          console.error('Error vinculando programaciones con el target:', error);
+          // No mostramos error al usuario porque el target ya se creó exitosamente
+        }
       }
 
       if (onSave) {
@@ -626,11 +854,11 @@ const CreateTargetDialog = ({ open, onClose, onSave, targetToEdit = null, empres
             </Grid>
 
             <Grid item xs={12} md={6}>
-              <FormControl fullWidth>
+              <FormControl fullWidth error={!!(form.sucursalId && !sucursalesDisponibles?.find(s => s.id === form.sucursalId))}>
                 <InputLabel>Sucursal (Opcional)</InputLabel>
                 <Select
                   name="sucursalId"
-                  value={form.sucursalId}
+                  value={form.sucursalId || ''}
                   onChange={handleChange}
                   label="Sucursal (Opcional)"
                   disabled={!form.empresaId}
@@ -643,6 +871,12 @@ const CreateTargetDialog = ({ open, onClose, onSave, targetToEdit = null, empres
                         {sucursal.nombre}
                       </MenuItem>
                     ))}
+                  {/* Si la sucursal del target no está en las opciones disponibles, agregarla */}
+                  {form.sucursalId && targetToEdit && !sucursalesDisponibles?.find(s => s.id === form.sucursalId) && (
+                    <MenuItem value={form.sucursalId} disabled>
+                      {targetToEdit.sucursalNombre || form.sucursalId}
+                    </MenuItem>
+                  )}
                 </Select>
               </FormControl>
             </Grid>

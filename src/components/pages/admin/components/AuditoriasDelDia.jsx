@@ -157,7 +157,7 @@ const AuditoriasDelDia = ({
                   </Box>
                 }
                 secondary={
-                  <Box>
+                  <Box component="div">
                     <Typography variant="body1" sx={{ mt: 1 }} component="div">
                       <LocationOn sx={{ fontSize: '1rem', mr: 0.5, verticalAlign: 'middle' }} />
                       {auditoria.sucursal || 'Casa Central'}
@@ -171,7 +171,7 @@ const AuditoriasDelDia = ({
                       {auditoria.formulario}
                     </Typography>
                     {/* Información del encargado */}
-                    <Box sx={{ mt: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Box sx={{ mt: 1, display: 'flex', alignItems: 'center', gap: 1 }} component="div">
                       {auditoria.encargado ? (
                         <>
                           <Avatar sx={{ width: 20, height: 20, fontSize: '0.7rem' }}>
@@ -201,6 +201,7 @@ const AuditoriasDelDia = ({
                     )}
                   </Box>
                 }
+                secondaryTypographyProps={{ component: 'div' }}
               />
               <ListItemSecondaryAction>
                 <Stack direction="row" spacing={1}>

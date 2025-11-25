@@ -29,13 +29,17 @@ const TargetsSummary = ({ auditoriasCompletadas = [] }) => {
 
     try {
       setLoading(true);
+      const ahora = new Date();
+      const añoActual = ahora.getFullYear();
+      const mesActual = ahora.getMonth() + 1;
+
       const filters = {
         activo: true,
-        año: new Date().getFullYear(),
-        mes: new Date().getMonth() + 1,
-        periodo: 'mensual'
+        año: añoActual
       };
 
+      // Incluir targets mensuales del mes actual y targets anuales
+      // No filtrar por mes para incluir todos los targets activos del año actual
       if (selectedEmpresa && selectedEmpresa !== 'todas') {
         filters.empresaId = selectedEmpresa;
       }
@@ -69,10 +73,22 @@ const TargetsSummary = ({ auditoriasCompletadas = [] }) => {
     let targetTotal = 0;
     let completadas = 0;
 
+    const ahora = new Date();
+    const añoActual = ahora.getFullYear();
+    const mesActual = ahora.getMonth() + 1;
+
     targets.forEach(target => {
-      const cumplimiento = targetsService.calcularCumplimiento(target, auditoriasCompletadas);
-      targetTotal += cumplimiento.target;
-      completadas += cumplimiento.completadas;
+      // Solo contar targets del mes actual (mensuales) o anuales
+      if (target.periodo === 'mensual' && target.mes === mesActual && target.año === añoActual) {
+        const cumplimiento = targetsService.calcularCumplimiento(target, auditoriasCompletadas);
+        targetTotal += cumplimiento.target;
+        completadas += cumplimiento.completadas;
+      } else if (target.periodo === 'anual' && target.año === añoActual) {
+        // Para anuales, contar proporcionalmente (1/12 del target para el mes)
+        const cumplimiento = targetsService.calcularCumplimiento(target, auditoriasCompletadas);
+        targetTotal += Math.ceil(cumplimiento.target / 12);
+        completadas += cumplimiento.completadas;
+      }
     });
 
     const faltantes = Math.max(0, targetTotal - completadas);

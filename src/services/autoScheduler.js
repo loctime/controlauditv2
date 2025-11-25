@@ -77,17 +77,40 @@ export const autoScheduler = {
 
     // Calcular fechas próximas
     const proximasFechas = recurringService.calcularProximasFechas(recurring, 50);
+    console.log(`[AutoScheduler] Fechas calculadas para ${recurring.nombre}:`, proximasFechas.length, 'fechas');
     
     // Filtrar fechas dentro del rango y no generadas aún
     const fechaInicioBusqueda = ultimaGeneracion 
       ? (ultimaGeneracion.toDate ? ultimaGeneracion.toDate() : new Date(ultimaGeneracion))
       : new Date(recurring.fechaInicio);
     
+    console.log(`[AutoScheduler] Fecha inicio búsqueda:`, fechaInicioBusqueda.toISOString().split('T')[0]);
+    console.log(`[AutoScheduler] Fecha límite:`, fechaLimite.toISOString().split('T')[0]);
+    console.log(`[AutoScheduler] Frecuencia:`, recurring.frecuencia);
+    
+    // Ajustar fechaInicioBusqueda para que incluya fechas desde hoy
+    const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0);
+    const fechaInicioEfectiva = fechaInicioBusqueda < hoy ? hoy : fechaInicioBusqueda;
+    
     const fechasAGenerar = proximasFechas.filter(fecha => {
-      return fecha > fechaInicioBusqueda && fecha <= fechaLimite && (!fechaFin || fecha <= new Date(fechaFin));
+      const fechaDate = fecha instanceof Date ? fecha : new Date(fecha);
+      fechaDate.setHours(0, 0, 0, 0);
+      const cumpleCondiciones = fechaDate >= fechaInicioEfectiva && fechaDate <= fechaLimite && (!fechaFin || fechaDate <= new Date(fechaFin));
+      return cumpleCondiciones;
     });
 
+    console.log(`[AutoScheduler] Fechas a generar después de filtrar:`, fechasAGenerar.length, fechasAGenerar.map(f => (f instanceof Date ? f : new Date(f)).toISOString().split('T')[0]));
+
     if (fechasAGenerar.length === 0) {
+      console.log(`[AutoScheduler] No hay fechas para generar para ${recurring.nombre}. Detalles:`, {
+        proximasFechasCalculadas: proximasFechas.length,
+        fechaInicioBusqueda: fechaInicioBusqueda.toISOString().split('T')[0],
+        fechaInicioEfectiva: fechaInicioEfectiva.toISOString().split('T')[0],
+        fechaLimite: fechaLimite.toISOString().split('T')[0],
+        fechaFin: fechaFin || 'sin límite',
+        primeraFechaCalculada: proximasFechas.length > 0 ? (proximasFechas[0] instanceof Date ? proximasFechas[0] : new Date(proximasFechas[0])).toISOString().split('T')[0] : 'ninguna'
+      });
       return 0;
     }
 
@@ -189,13 +212,14 @@ export const autoScheduler = {
       empresaId: recurring.empresaId,
       sucursal: recurring.sucursalNombre || 'Casa Central',
       sucursalId: recurring.sucursalId || null,
-      formulario: recurring.formularioNombre,
-      formularioId: recurring.formularioId,
+      formulario: recurring.formularioNombre || null,
+      formularioId: recurring.formularioId || null,
       fecha: fechaStr,
-      hora: recurring.hora,
+      hora: recurring.hora || '09:00',
       descripcion: `Generada automáticamente desde: ${recurring.nombre}`,
       estado: 'agendada',
       recurringId: recurring.id,
+      targetId: recurring.targetId || null, // Vincular con el target si existe
       usuarioId: recurring.clienteAdminId,
       usuarioNombre: recurring.nombre,
       clienteAdminId: recurring.clienteAdminId,
