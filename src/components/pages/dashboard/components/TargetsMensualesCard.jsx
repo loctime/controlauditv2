@@ -13,12 +13,20 @@ import {
 import AssignmentIcon from '@mui/icons-material/Assignment';
 import { calcularProgresoTargets } from '../../../../utils/sucursalTargetUtils';
 
-export default function TargetsMensualesCard({ sucursales, selectedSucursal }) {
+export default function TargetsMensualesCard({ sucursales, selectedSucursal, progresos: progresosProp }) {
   const theme = useTheme();
-  const [progresos, setProgresos] = useState({});
-  const [loading, setLoading] = useState(true);
+  const [progresos, setProgresos] = useState(progresosProp || {});
+  const [loading, setLoading] = useState(!progresosProp);
 
+  // Si se pasan progresos como prop, usarlos directamente
   useEffect(() => {
+    if (progresosProp) {
+      setProgresos(progresosProp);
+      setLoading(false);
+      return;
+    }
+
+    // Si no hay progresos como prop, cargarlos
     const cargarProgresos = async () => {
       if (!sucursales || sucursales.length === 0) {
         setLoading(false);
@@ -52,7 +60,7 @@ export default function TargetsMensualesCard({ sucursales, selectedSucursal }) {
     };
 
     cargarProgresos();
-  }, [sucursales, selectedSucursal]);
+  }, [sucursales, selectedSucursal, progresosProp]);
 
   // Calcular resumen general
   const resumen = React.useMemo(() => {

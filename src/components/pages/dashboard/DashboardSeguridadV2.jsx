@@ -35,6 +35,7 @@ import DashboardAlertsPopover from "./components/DashboardAlertsPopover";
 import DashboardReportDialog from "./components/DashboardReportDialog";
 import TargetsMensualesCard from "./components/TargetsMensualesCard";
 import AccionesRequeridasWidget from "./components/AccionesRequeridasWidget";
+import { calcularProgresoTargets } from "../../../utils/sucursalTargetUtils";
 import InfoIcon from "@mui/icons-material/Info";
 import ReportProblemIcon from "@mui/icons-material/ReportProblem";
 import SchoolIcon from "@mui/icons-material/School";
@@ -102,6 +103,9 @@ export default function DashboardSeguridadV2() {
   const [isCachedSnapshot, setIsCachedSnapshot] = useState(false);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
+  const [targetsExpanded, setTargetsExpanded] = useState(false);
+  const [targetsProgresos, setTargetsProgresos] = useState({});
+  const [targetsLoading, setTargetsLoading] = useState(false);
   const unsubscribeRef = useRef(null);
   const prefetchedPeriodsRef = useRef(new Set());
   const dataCacheKey = useMemo(() => {
@@ -747,6 +751,42 @@ export default function DashboardSeguridadV2() {
     dataCacheKey
   ]);
 
+  // Cargar progresos de targets una sola vez
+  useEffect(() => {
+    const cargarTargetsProgresos = async () => {
+      const sucursalesParaTargets = sucursalesFiltradas || userSucursales;
+      if (!sucursalesParaTargets || sucursalesParaTargets.length === 0) {
+        setTargetsProgresos({});
+        return;
+      }
+
+      setTargetsLoading(true);
+      try {
+        let sucursalesACalcular = sucursalesParaTargets;
+        if (selectedSucursal && selectedSucursal !== 'todas') {
+          sucursalesACalcular = sucursalesParaTargets.filter(s => s.id === selectedSucursal);
+        }
+
+        const sucursalesConTarget = sucursalesACalcular.filter(s => (s.targetMensual || 0) > 0);
+        
+        if (sucursalesConTarget.length === 0) {
+          setTargetsProgresos({});
+          setTargetsLoading(false);
+          return;
+        }
+
+        const progresosCalculados = await calcularProgresoTargets(sucursalesConTarget);
+        setTargetsProgresos(progresosCalculados);
+      } catch (error) {
+        console.error('Error cargando progresos de targets:', error);
+      } finally {
+        setTargetsLoading(false);
+      }
+    };
+
+    cargarTargetsProgresos();
+  }, [sucursalesFiltradas, userSucursales, selectedSucursal]);
+
   if (!data && (loading || analyticsLoading)) {
     return <DashboardLoading />;
   }
@@ -792,12 +832,19 @@ export default function DashboardSeguridadV2() {
           datos.metricas.totalEmpleados > 0
         }
         onOpenReport={handleOpenReport}
+        sucursales={sucursalesFiltradas || userSucursales}
+        onToggleTargets={() => setTargetsExpanded(!targetsExpanded)}
+        targetsProgresos={targetsProgresos}
+        targetsLoading={targetsLoading}
       />
 
-      <TargetsMensualesCard
-        sucursales={sucursalesFiltradas || userSucursales}
-        selectedSucursal={selectedSucursal}
-      />
+      {targetsExpanded && (
+        <TargetsMensualesCard
+          sucursales={sucursalesFiltradas || userSucursales}
+          selectedSucursal={selectedSucursal}
+          progresos={targetsProgresos}
+        />
+      )}
 
       <AccionesRequeridasWidget
         sucursales={sucursalesFiltradas || userSucursales}
