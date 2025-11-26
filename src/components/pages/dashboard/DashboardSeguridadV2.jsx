@@ -371,6 +371,91 @@ export default function DashboardSeguridadV2() {
     };
   }, [auditorias]);
 
+  const auditoriasClasificaciones = useMemo(() => {
+    if (data?.auditClassificationSummary?.total > 0) {
+      return data.auditClassificationSummary;
+    }
+
+    if (!Array.isArray(auditorias) || auditorias.length === 0) {
+      return null;
+    }
+
+    const parseClasificaciones = (raw) => {
+      if (!raw) return [];
+
+      let parsed = raw;
+      if (typeof parsed === "string") {
+        try {
+          parsed = JSON.parse(parsed);
+        } catch (error) {
+          console.warn("No se pudieron parsear las clasificaciones de auditoría:", error);
+          return [];
+        }
+      }
+
+      if (Array.isArray(parsed)) {
+        return parsed.flatMap((seccion) => {
+          if (!seccion) return [];
+          if (Array.isArray(seccion)) return seccion;
+          if (Array.isArray(seccion.valores)) return seccion.valores;
+          return [];
+        });
+      }
+
+      if (typeof parsed === "object") {
+        return Object.values(parsed).flatMap((seccion) => {
+          if (!seccion) return [];
+          if (Array.isArray(seccion)) return seccion;
+          if (Array.isArray(seccion.valores)) return seccion.valores;
+          return [];
+        });
+      }
+
+      return [];
+    };
+
+    let condicion = 0;
+    let actitud = 0;
+
+    auditorias.forEach((auditoria) => {
+      let sumoDetalle = false;
+      [
+        auditoria?.clasificaciones,
+        auditoria?.estadisticas?.clasificaciones
+      ].forEach((fuente) => {
+        const registros = parseClasificaciones(fuente);
+        if (registros.length === 0) return;
+
+        sumoDetalle = true;
+        registros.forEach((clasificacion) => {
+          if (clasificacion?.condicion) condicion += 1;
+          if (clasificacion?.actitud) actitud += 1;
+        });
+      });
+
+      if (!sumoDetalle && auditoria?.estadisticas?.resumenClasificaciones) {
+        const resumen = auditoria.estadisticas.resumenClasificaciones;
+        if (typeof resumen.condicion === "number") {
+          condicion += resumen.condicion;
+        }
+        if (typeof resumen.actitud === "number") {
+          actitud += resumen.actitud;
+        }
+      }
+    });
+
+    const total = condicion + actitud;
+    if (total === 0) {
+      return null;
+    }
+
+    return {
+      condicion,
+      actitud,
+      total
+    };
+  }, [data?.auditClassificationSummary, auditorias]);
+
   const alertas = useMemo(() => {
     const alertasList = [];
     if (!accidentesAnalysis || !capacitacionesMetrics) return alertasList;
@@ -648,7 +733,8 @@ export default function DashboardSeguridadV2() {
         >
           <DashboardMainGrid
             data={data}
-            saludOcupacional={saludOcupacionalDatos}
+          saludOcupacional={saludOcupacionalDatos}
+          auditClasificaciones={auditoriasClasificaciones}
           />
         </Box>
 

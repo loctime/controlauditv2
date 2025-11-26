@@ -6,8 +6,13 @@ import SafetyGoals from "../../../dashboard-seguridad/SafetyGoals";
 import AuditSummaryChips from "../../../dashboard-seguridad/AuditSummaryChips";
 import IncidentMetrics from "../../../dashboard-seguridad/IncidentMetrics";
 import DashboardOccupationalHealthCard from "./DashboardOccupationalHealthCard";
+import AuditClassificationPie from "./AuditClassificationPie";
 
-export default function DashboardMainGrid({ data, saludOcupacional }) {
+export default function DashboardMainGrid({
+  data,
+  saludOcupacional,
+  auditClasificaciones
+}) {
   return (
     <Grid container spacing={1.5}>
       <Grid item xs={12} lg={3}>
@@ -88,6 +93,10 @@ export default function DashboardMainGrid({ data, saludOcupacional }) {
                 nonConformities={data.auditsNonConformities}
               />
             </Paper>
+          </Grid>
+
+          <Grid item xs={12}>
+            <AuditClassificationPie stats={auditClasificaciones} />
           </Grid>
 
           <Grid item xs={12}>
