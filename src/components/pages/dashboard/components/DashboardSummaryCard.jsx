@@ -1,11 +1,14 @@
-import React from "react";
+import React, { useMemo } from "react";
 import {
   Paper,
   Box,
   Typography,
   Badge,
   IconButton,
-  Button
+  Button,
+  LinearProgress,
+  Chip,
+  useTheme
 } from "@mui/material";
 import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
 import WarningIcon from "@mui/icons-material/Warning";
@@ -23,8 +26,14 @@ export default function DashboardSummaryCard({
   onAlertClick,
   generandoReporte,
   puedeGenerarReporte,
-  onOpenReport
+  onOpenReport,
+  sucursales,
+  onToggleTargets,
+  targetsProgresos = {},
+  targetsLoading = false
 }) {
+  const theme = useTheme();
+
   const periodLabel = new Date(
     selectedYear,
     selectedMonth - 1
@@ -32,6 +41,44 @@ export default function DashboardSummaryCard({
     month: "long",
     year: "numeric"
   });
+
+  // Calcular resumen de targets usando los progresos pasados como prop
+  const resumenTargets = useMemo(() => {
+    const sucursalesConTarget = sucursales?.filter(s => (s.targetMensual || 0) > 0) || [];
+    
+    if (sucursalesConTarget.length === 0) {
+      return null;
+    }
+
+    let totalCompletadas = 0;
+    let totalTarget = 0;
+
+    sucursalesConTarget.forEach(sucursal => {
+      const progreso = targetsProgresos[sucursal.id];
+      if (progreso) {
+        totalCompletadas += progreso.completadas;
+        totalTarget += progreso.target;
+      } else if (sucursal.targetMensual) {
+        totalTarget += sucursal.targetMensual;
+      }
+    });
+
+    const porcentaje = totalTarget > 0 ? Math.round((totalCompletadas / totalTarget) * 100) : 0;
+
+    return {
+      completadas: totalCompletadas,
+      target: totalTarget,
+      porcentaje,
+      sucursalesConTarget: sucursalesConTarget.length
+    };
+  }, [sucursales, targetsProgresos]);
+
+  const getColorTarget = (porcentaje) => {
+    if (porcentaje >= 100) return 'success';
+    if (porcentaje >= 80) return 'success';
+    if (porcentaje >= 50) return 'warning';
+    return 'error';
+  };
 
   return (
     <Paper
@@ -108,6 +155,64 @@ export default function DashboardSummaryCard({
         </Box>
 
         <Box sx={{ flexGrow: 1 }} />
+
+        {/* Barra de progreso de targets mensuales */}
+        {resumenTargets && resumenTargets.sucursalesConTarget > 0 && (
+          <Box 
+            onClick={onToggleTargets}
+            sx={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: 1.5, 
+              minWidth: 200,
+              px: 2,
+              py: 1,
+              borderRadius: '12px',
+              backgroundColor: theme.palette.grey[50],
+              border: `1px solid ${theme.palette.grey[200]}`,
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+              '&:hover': {
+                backgroundColor: theme.palette.grey[100],
+                borderColor: theme.palette.grey[300],
+                transform: 'translateY(-1px)',
+                boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+              }
+            }}
+          >
+            <Box sx={{ flex: 1, minWidth: 120 }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
+                <Typography variant="caption" sx={{ fontSize: '0.7rem', color: '#6b7280', fontWeight: 500 }}>
+                  Target Mensual
+                </Typography>
+                <Chip
+                  label={`${resumenTargets.completadas} / ${resumenTargets.target}`}
+                  size="small"
+                  color={getColorTarget(resumenTargets.porcentaje)}
+                  sx={{ 
+                    height: 20, 
+                    fontSize: '0.7rem',
+                    fontWeight: 'bold',
+                    pointerEvents: 'none'
+                  }}
+                />
+              </Box>
+              <LinearProgress
+                variant="determinate"
+                value={Math.min(resumenTargets.porcentaje, 100)}
+                sx={{
+                  height: 6,
+                  borderRadius: 3,
+                  backgroundColor: theme.palette.grey[200],
+                  '& .MuiLinearProgress-bar': {
+                    borderRadius: 3
+                  }
+                }}
+                color={getColorTarget(resumenTargets.porcentaje)}
+              />
+            </Box>
+          </Box>
+        )}
 
         {alertasCount > 0 && (
           <Badge badgeContent={alertasCount} color="error" sx={{ mr: 1 }}>
