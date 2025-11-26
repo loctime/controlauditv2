@@ -21,12 +21,20 @@ import {
 } from '@mui/icons-material';
 import AccionesRequeridasService from '../../../../services/accionesRequeridasService';
 
-export default function AccionesRequeridasWidget({ sucursales, selectedSucursal }) {
+export default function AccionesRequeridasWidget({ sucursales, selectedSucursal, estadisticas: estadisticasProp }) {
   const theme = useTheme();
-  const [estadisticas, setEstadisticas] = useState({});
-  const [loading, setLoading] = useState(true);
+  const [estadisticas, setEstadisticas] = useState(estadisticasProp || {});
+  const [loading, setLoading] = useState(!estadisticasProp);
 
+  // Si se pasan estadísticas como prop, usarlas directamente
   useEffect(() => {
+    if (estadisticasProp) {
+      setEstadisticas(estadisticasProp);
+      setLoading(false);
+      return;
+    }
+
+    // Si no hay estadísticas como prop, cargarlas
     const cargarEstadisticas = async () => {
       if (!sucursales || sucursales.length === 0) {
         setLoading(false);
@@ -94,7 +102,7 @@ export default function AccionesRequeridasWidget({ sucursales, selectedSucursal 
     };
 
     cargarEstadisticas();
-  }, [sucursales, selectedSucursal]);
+  }, [sucursales, selectedSucursal, estadisticasProp]);
 
   if (loading) {
     return (

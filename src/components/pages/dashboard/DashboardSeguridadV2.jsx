@@ -36,6 +36,7 @@ import DashboardReportDialog from "./components/DashboardReportDialog";
 import TargetsMensualesCard from "./components/TargetsMensualesCard";
 import AccionesRequeridasWidget from "./components/AccionesRequeridasWidget";
 import { calcularProgresoTargets } from "../../../utils/sucursalTargetUtils";
+import AccionesRequeridasService from "../../../services/accionesRequeridasService";
 import InfoIcon from "@mui/icons-material/Info";
 import ReportProblemIcon from "@mui/icons-material/ReportProblem";
 import SchoolIcon from "@mui/icons-material/School";
@@ -106,6 +107,9 @@ export default function DashboardSeguridadV2() {
   const [targetsExpanded, setTargetsExpanded] = useState(false);
   const [targetsProgresos, setTargetsProgresos] = useState({});
   const [targetsLoading, setTargetsLoading] = useState(false);
+  const [accionesExpanded, setAccionesExpanded] = useState(false);
+  const [accionesEstadisticas, setAccionesEstadisticas] = useState({});
+  const [accionesLoading, setAccionesLoading] = useState(false);
   const unsubscribeRef = useRef(null);
   const prefetchedPeriodsRef = useRef(new Set());
   const dataCacheKey = useMemo(() => {
@@ -787,6 +791,77 @@ export default function DashboardSeguridadV2() {
     cargarTargetsProgresos();
   }, [sucursalesFiltradas, userSucursales, selectedSucursal]);
 
+  // Cargar estadísticas de acciones requeridas una sola vez
+  useEffect(() => {
+    const cargarAccionesEstadisticas = async () => {
+      const sucursalesParaAcciones = sucursalesFiltradas || userSucursales;
+      if (!sucursalesParaAcciones || sucursalesParaAcciones.length === 0) {
+        setAccionesEstadisticas({});
+        return;
+      }
+
+      setAccionesLoading(true);
+      try {
+        let sucursalesACalcular = sucursalesParaAcciones;
+        if (selectedSucursal && selectedSucursal !== 'todas') {
+          sucursalesACalcular = sucursalesParaAcciones.filter(s => s.id === selectedSucursal);
+        }
+
+        if (sucursalesACalcular.length === 0) {
+          setAccionesEstadisticas({});
+          setAccionesLoading(false);
+          return;
+        }
+
+        // Calcular estadísticas para cada sucursal
+        const estadisticasPorSucursal = {};
+        let totalPendientes = 0;
+        let totalVencidas = 0;
+        let totalCompletadas = 0;
+        let totalEnProceso = 0;
+        let totalCanceladas = 0;
+
+        for (const sucursal of sucursalesACalcular) {
+          try {
+            const stats = await AccionesRequeridasService.obtenerEstadisticas(sucursal.id);
+            estadisticasPorSucursal[sucursal.id] = stats;
+            totalPendientes += stats.pendientes;
+            totalVencidas += stats.vencidas;
+            totalCompletadas += stats.completadas;
+            totalEnProceso += stats.enProceso;
+            totalCanceladas += stats.canceladas;
+          } catch (error) {
+            console.warn(`Error cargando estadísticas para sucursal ${sucursal.id}:`, error);
+            estadisticasPorSucursal[sucursal.id] = {
+              total: 0,
+              pendientes: 0,
+              enProceso: 0,
+              completadas: 0,
+              canceladas: 0,
+              vencidas: 0
+            };
+          }
+        }
+
+        setAccionesEstadisticas({
+          total: totalPendientes + totalEnProceso + totalCompletadas + totalCanceladas,
+          pendientes: totalPendientes,
+          enProceso: totalEnProceso,
+          completadas: totalCompletadas,
+          canceladas: totalCanceladas,
+          vencidas: totalVencidas,
+          porSucursal: estadisticasPorSucursal
+        });
+      } catch (error) {
+        console.error('Error cargando estadísticas de acciones requeridas:', error);
+      } finally {
+        setAccionesLoading(false);
+      }
+    };
+
+    cargarAccionesEstadisticas();
+  }, [sucursalesFiltradas, userSucursales, selectedSucursal]);
+
   if (!data && (loading || analyticsLoading)) {
     return <DashboardLoading />;
   }
@@ -836,6 +911,9 @@ export default function DashboardSeguridadV2() {
         onToggleTargets={() => setTargetsExpanded(!targetsExpanded)}
         targetsProgresos={targetsProgresos}
         targetsLoading={targetsLoading}
+        onToggleAcciones={() => setAccionesExpanded(!accionesExpanded)}
+        accionesEstadisticas={accionesEstadisticas}
+        accionesLoading={accionesLoading}
       />
 
       {targetsExpanded && (
@@ -846,10 +924,13 @@ export default function DashboardSeguridadV2() {
         />
       )}
 
-      <AccionesRequeridasWidget
-        sucursales={sucursalesFiltradas || userSucursales}
-        selectedSucursal={selectedSucursal}
-      />
+      {accionesExpanded && (
+        <AccionesRequeridasWidget
+          sucursales={sucursalesFiltradas || userSucursales}
+          selectedSucursal={selectedSucursal}
+          estadisticas={accionesEstadisticas}
+        />
+      )}
 
       <Box
         data-graficos-dashboard
