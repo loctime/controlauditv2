@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { 
   Box, 
   Typography, 
@@ -6,7 +6,11 @@ import {
   Stack, 
   Chip, 
   useTheme, 
-  useMediaQuery 
+  useMediaQuery,
+  Collapse,
+  Checkbox,
+  FormControlLabel,
+  TextField
 } from "@mui/material";
 import CameraAltIcon from '@mui/icons-material/CameraAlt';
 import UploadIcon from '@mui/icons-material/Upload';
@@ -15,6 +19,10 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import WarningIcon from '@mui/icons-material/Warning';
 import BuildIcon from '@mui/icons-material/Build';
 import PeopleIcon from '@mui/icons-material/People';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import ExpandLessIcon from '@mui/icons-material/ExpandLess';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import dayjs from 'dayjs';
 import { 
   respuestasPosibles, 
   obtenerColorRespuesta, 
@@ -37,9 +45,19 @@ const PreguntaItem = ({
   onDeleteImage,
   procesandoImagen,
   clasificacion,
-  onClasificacionChange
+  onClasificacionChange,
+  accionRequerida,
+  onAccionRequeridaChange
 }) => {
   const theme = useTheme();
+  const [expandedAccion, setExpandedAccion] = useState(false);
+  
+  // Inicializar estado local de acción requerida
+  const accionData = accionRequerida || {
+    requiereAccion: false,
+    accionTexto: '',
+    fechaVencimiento: null
+  };
 
   return (
     <Box 
@@ -350,6 +368,107 @@ const PreguntaItem = ({
             </Box>
           </Box>
         )}
+      </Box>
+
+      {/* Sección de Acción Requerida */}
+      <Box mt={isMobile ? 1.5 : 2}>
+        <FormControlLabel
+          control={
+            <Checkbox
+              checked={accionData.requiereAccion || false}
+              onChange={(e) => {
+                const nuevaAccion = {
+                  ...accionData,
+                  requiereAccion: e.target.checked
+                };
+                if (!e.target.checked) {
+                  // Si se desmarca, limpiar datos
+                  nuevaAccion.accionTexto = '';
+                  nuevaAccion.fechaVencimiento = null;
+                  setExpandedAccion(false);
+                } else {
+                  setExpandedAccion(true);
+                }
+                if (onAccionRequeridaChange) {
+                  onAccionRequeridaChange(seccionIndex, preguntaIndex, nuevaAccion);
+                }
+              }}
+              size={isMobile ? "small" : "medium"}
+            />
+          }
+          label={
+            <Typography 
+              variant="body2" 
+              sx={{ 
+                fontSize: isMobile ? '0.75rem' : '0.875rem',
+                fontWeight: 500
+              }}
+            >
+              Acción requerida
+            </Typography>
+          }
+        />
+        
+        <Collapse in={expandedAccion || (accionData.requiereAccion && accionData.accionTexto)}>
+          <Box 
+            sx={{ 
+              mt: 1, 
+              p: 2, 
+              bgcolor: 'background.default',
+              borderRadius: 1,
+              border: '1px solid',
+              borderColor: 'divider'
+            }}
+          >
+            <Stack spacing={2}>
+              <TextField
+                label="Descripción de la acción requerida"
+                multiline
+                rows={2}
+                value={accionData.accionTexto || ''}
+                onChange={(e) => {
+                  const nuevaAccion = {
+                    ...accionData,
+                    accionTexto: e.target.value
+                  };
+                  if (onAccionRequeridaChange) {
+                    onAccionRequeridaChange(seccionIndex, preguntaIndex, nuevaAccion);
+                  }
+                }}
+                size="small"
+                fullWidth
+                required={accionData.requiereAccion}
+                error={accionData.requiereAccion && !accionData.accionTexto}
+                helperText={
+                  accionData.requiereAccion && !accionData.accionTexto
+                    ? 'La descripción es requerida'
+                    : ''
+                }
+              />
+              
+              <DatePicker
+                label="Fecha de vencimiento (opcional)"
+                value={accionData.fechaVencimiento ? dayjs(accionData.fechaVencimiento) : null}
+                onChange={(value) => {
+                  const nuevaAccion = {
+                    ...accionData,
+                    fechaVencimiento: value ? value.toDate() : null
+                  };
+                  if (onAccionRequeridaChange) {
+                    onAccionRequeridaChange(seccionIndex, preguntaIndex, nuevaAccion);
+                  }
+                }}
+                slotProps={{
+                  textField: {
+                    size: "small",
+                    fullWidth: true
+                  }
+                }}
+                minDate={dayjs()}
+              />
+            </Stack>
+          </Box>
+        </Collapse>
       </Box>
     </Box>
   );

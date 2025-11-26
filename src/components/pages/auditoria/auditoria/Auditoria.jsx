@@ -179,6 +179,7 @@ const AuditoriaRefactorizada = () => {
     comentarios, setComentarios,
     imagenes, setImagenes,
     clasificaciones, setClasificaciones,
+    accionesRequeridas, setAccionesRequeridas,
     mostrarReporte, setMostrarReporte,
     errores, setErrores,
     empresas, setEmpresas,
@@ -227,6 +228,7 @@ const AuditoriaRefactorizada = () => {
         comentarios,
     imagenes,
         clasificaciones,
+        accionesRequeridas,
         activeStep,
     firmaAuditor,
     firmaResponsable,
@@ -243,6 +245,7 @@ const AuditoriaRefactorizada = () => {
     setComentarios,
     setImagenes,
     setClasificaciones,
+    setAccionesRequeridas,
     setFirmaAuditor,
     setFirmaResponsable,
     setFirmasCompletadas,
@@ -269,6 +272,7 @@ const AuditoriaRefactorizada = () => {
     handleGuardarComentario,
     handleGuardarImagenes,
     handleGuardarClasificaciones,
+    handleGuardarAccionesRequeridas,
     handleSaveFirmaAuditor,
     handleSaveFirmaResponsable,
     verificarFirmasCompletadas,
@@ -299,12 +303,13 @@ const AuditoriaRefactorizada = () => {
                    respuestas.some(seccion => seccion.some(resp => resp !== '')) ||
                    comentarios.some(seccion => seccion.some(com => com !== '')) ||
                    imagenes.some(seccion => seccion.some(img => img !== null)) ||
-                   clasificaciones.some(seccion => seccion.some(clas => clas && (clas.condicion || clas.actitud)));
+                   clasificaciones.some(seccion => seccion.some(clas => clas && (clas.condicion || clas.actitud))) ||
+                   accionesRequeridas.some(seccion => seccion.some(acc => acc && acc.requiereAccion && acc.accionTexto));
     
     if (hasData) {
       setHasUnsavedChanges(true);
     }
-  }, [empresaSeleccionada, sucursalSeleccionada, formularioSeleccionadoId, respuestas, comentarios, imagenes, clasificaciones]);
+  }, [empresaSeleccionada, sucursalSeleccionada, formularioSeleccionadoId, respuestas, comentarios, imagenes, clasificaciones, accionesRequeridas]);
 
   // Refs para evitar bucle infinito en restauración
   const restoreAttemptedRef = useRef(false);
@@ -801,6 +806,7 @@ const AuditoriaRefactorizada = () => {
     comentarios,
     imagenes,
     clasificaciones,
+    accionesRequeridas,
     firmaAuditor,
     firmaResponsable,
     firmasCompletadas,
@@ -816,6 +822,7 @@ const AuditoriaRefactorizada = () => {
     handleGuardarComentario,
     handleGuardarImagenes,
     handleGuardarClasificaciones,
+    handleGuardarAccionesRequeridas,
     handleSaveFirmaAuditor,
     handleSaveFirmaResponsable,
     handleFinalizar: () => handleFinalizar(marcarAuditoriaCompletada),
@@ -841,6 +848,7 @@ const AuditoriaRefactorizada = () => {
     comentarios,
     imagenes,
     clasificaciones,
+    accionesRequeridas,
     firmaAuditor,
     firmaResponsable,
     firmasCompletadas,
@@ -854,6 +862,7 @@ const AuditoriaRefactorizada = () => {
     handleGuardarComentario,
     handleGuardarImagenes,
     handleGuardarClasificaciones,
+    handleGuardarAccionesRequeridas,
     handleSaveFirmaAuditor,
     handleSaveFirmaResponsable,
     setDatosReporte,

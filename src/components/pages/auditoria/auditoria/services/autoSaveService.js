@@ -84,6 +84,9 @@ class AutoSaveService {
           clasificaciones: typeof parsedData.clasificaciones === 'string' 
             ? JSON.parse(parsedData.clasificaciones) 
             : parsedData.clasificaciones || [],
+          accionesRequeridas: typeof parsedData.accionesRequeridas === 'string' 
+            ? JSON.parse(parsedData.accionesRequeridas) 
+            : parsedData.accionesRequeridas || [],
           secciones: typeof parsedData.secciones === 'string' 
             ? JSON.parse(parsedData.secciones) 
             : parsedData.secciones || []
@@ -199,6 +202,10 @@ class AutoSaveService {
         ? JSON.stringify(auditoriaData.clasificaciones) 
         : '[]';
       
+      const accionesRequeridasParaFirestore = auditoriaData.accionesRequeridas 
+        ? JSON.stringify(auditoriaData.accionesRequeridas) 
+        : '[]';
+      
       const seccionesParaFirestore = auditoriaData.secciones 
         ? JSON.stringify(auditoriaData.secciones) 
         : '[]';
@@ -215,6 +222,7 @@ class AutoSaveService {
         comentarios: comentariosParaFirestore,
         imagenes: imagenesParaFirestore,
         clasificaciones: clasificacionesParaFirestore,
+        accionesRequeridas: accionesRequeridasParaFirestore,
         secciones: seccionesParaFirestore,
         activeStep: auditoriaData.activeStep || 0,
         firmaAuditor: auditoriaData.firmaAuditor || null,
@@ -248,6 +256,7 @@ class AutoSaveService {
           seccion.map(img => img instanceof File ? 'image' : img)
         ) : [], // Guardar referencias, no File objects
         clasificaciones: auditoriaData.clasificaciones || [], // Guardar como array, no string JSON
+        accionesRequeridas: auditoriaData.accionesRequeridas || [], // Guardar como array, no string JSON
         activeStep: auditoriaData.activeStep || 0,
         firmaAuditor: auditoriaData.firmaAuditor || null,
         firmaResponsable: auditoriaData.firmaResponsable || null,

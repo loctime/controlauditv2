@@ -340,6 +340,49 @@ class AuditoriaService {
     return obj;
   }
 
+  // Helper para procesar acciones requeridas y generar IDs únicos
+  static procesarAccionesRequeridas(accionesRequeridas, secciones) {
+    if (!Array.isArray(accionesRequeridas) || accionesRequeridas.length === 0) {
+      return [];
+    }
+
+    const accionesProcesadas = [];
+    
+    accionesRequeridas.forEach((seccionAcciones, seccionIndex) => {
+      if (!Array.isArray(seccionAcciones)) return;
+      
+      seccionAcciones.forEach((accionData, preguntaIndex) => {
+        if (!accionData || !accionData.requiereAccion || !accionData.accionTexto) {
+          return; // Solo procesar acciones que estén marcadas y tengan texto
+        }
+
+        const seccion = secciones?.[seccionIndex];
+        const preguntaTexto = seccion?.preguntas?.[preguntaIndex] || 'Pregunta sin texto';
+
+        const accionProcesada = {
+          id: accionData.id || `accion_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          preguntaIndex: {
+            seccionIndex,
+            preguntaIndex
+          },
+          preguntaTexto,
+          accionTexto: accionData.accionTexto,
+          fechaVencimiento: accionData.fechaVencimiento ? (accionData.fechaVencimiento instanceof Date ? accionData.fechaVencimiento.toISOString() : accionData.fechaVencimiento) : null,
+          estado: 'pendiente',
+          fechaCreacion: new Date().toISOString(),
+          fechaCompletada: null,
+          completadaPor: null,
+          comentarios: [],
+          modificaciones: []
+        };
+
+        accionesProcesadas.push(accionProcesada);
+      });
+    });
+
+    return accionesProcesadas;
+  }
+
   // Helper para transformar arrays anidados a arrays de objetos por sección
   static anidarAObjetosPorSeccion(arr) {
     if (!Array.isArray(arr)) return [];
@@ -438,6 +481,7 @@ class AuditoriaService {
         comentarios: this.anidarAObjetosPorSeccion(datosAuditoria.comentarios),
         imagenes: this.anidarAObjetosPorSeccion(imagenesProcesadas),
         clasificaciones: this.anidarAObjetosPorSeccion(datosAuditoria.clasificaciones || []),
+        accionesRequeridas: this.procesarAccionesRequeridas(datosAuditoria.accionesRequeridas || [], datosAuditoria.secciones || []),
         secciones: Array.isArray(datosAuditoria.secciones) ? datosAuditoria.secciones.map(seccion => {
           // Asegurar que las secciones no contengan arrays anidados
           if (seccion && typeof seccion === 'object') {

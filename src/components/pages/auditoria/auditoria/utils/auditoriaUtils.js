@@ -236,7 +236,8 @@ export const configurarFormulario = (formularioSeleccionadoId, formularios) => {
     respuestas: seccionesArray.map(seccion => Array(seccion.preguntas.length).fill('')),
     comentarios: seccionesArray.map(seccion => Array(seccion.preguntas.length).fill('')),
     imagenes: seccionesArray.map(seccion => Array(seccion.preguntas.length).fill(null)),
-    clasificaciones: seccionesArray.map(seccion => Array(seccion.preguntas.length).fill(null).map(() => ({ condicion: false, actitud: false })))
+    clasificaciones: seccionesArray.map(seccion => Array(seccion.preguntas.length).fill(null).map(() => ({ condicion: false, actitud: false }))),
+    accionesRequeridas: seccionesArray.map(seccion => Array(seccion.preguntas.length).fill(null))
   };
 };
 

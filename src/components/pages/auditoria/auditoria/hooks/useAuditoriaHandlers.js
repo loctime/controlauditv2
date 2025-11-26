@@ -20,6 +20,7 @@ export const useAuditoriaHandlers = ({
   comentarios,
   imagenes,
   clasificaciones,
+  accionesRequeridas,
   activeStep,
   firmaAuditor,
   firmaResponsable,
@@ -36,6 +37,7 @@ export const useAuditoriaHandlers = ({
   setComentarios,
   setImagenes,
   setClasificaciones,
+  setAccionesRequeridas,
   setFirmaAuditor,
   setFirmaResponsable,
   setFirmasCompletadas,
@@ -91,10 +93,11 @@ export const useAuditoriaHandlers = ({
                    respuestas.some(seccion => seccion.some(resp => resp !== '')) ||
                    comentarios.some(seccion => seccion.some(com => com !== '')) ||
                    imagenes.some(seccion => seccion.some(img => img !== null)) ||
-                   clasificaciones.some(seccion => seccion.some(clas => clas && (clas.condicion || clas.actitud)));
+                   clasificaciones.some(seccion => seccion.some(clas => clas && (clas.condicion || clas.actitud))) ||
+                   accionesRequeridas.some(seccion => seccion.some(acc => acc && acc.requiereAccion && acc.accionTexto));
     
     return hasData && hasUnsavedChanges;
-  }, [empresaSeleccionada, sucursalSeleccionada, formularioSeleccionadoId, respuestas, comentarios, imagenes, clasificaciones, hasUnsavedChanges]);
+  }, [empresaSeleccionada, sucursalSeleccionada, formularioSeleccionadoId, respuestas, comentarios, imagenes, clasificaciones, accionesRequeridas, hasUnsavedChanges]);
 
   // Función de guardado interno optimizada con manejo robusto de errores
   const performAutoSave = useCallback(async (force = false) => {
@@ -228,6 +231,12 @@ export const useAuditoriaHandlers = ({
     // Guardar automáticamente después de actualizar clasificaciones
     handleAutoSave(false).catch(err => console.error('Error en autoguardado de clasificaciones:', err));
   }, [setClasificaciones, handleAutoSave]);
+
+  const handleGuardarAccionesRequeridas = useCallback((nuevasAcciones) => {
+    setAccionesRequeridas(nuevasAcciones);
+    // Guardar automáticamente después de actualizar acciones requeridas
+    handleAutoSave(false).catch(err => console.error('Error en autoguardado de acciones requeridas:', err));
+  }, [setAccionesRequeridas, handleAutoSave]);
 
   // Handlers de firmas
   const verificarFirmasCompletadasLocal = useCallback(() => {
@@ -381,6 +390,7 @@ export const useAuditoriaHandlers = ({
     handleGuardarComentario,
     handleGuardarImagenes,
     handleGuardarClasificaciones,
+    handleGuardarAccionesRequeridas,
     
     // Handlers de firmas
     handleSaveFirmaAuditor,
