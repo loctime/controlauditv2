@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { safetyDashboardService } from "../../../../services/safetyDashboardService";
 
 const FILTER_STORAGE_KEY = "dashboard-seguridad-filtros";
+const PREFETCH_MAX_PAYLOAD_BYTES = 1.5 * 1024 * 1024;
 
 export const useDashboardRealtimeData = ({
   selectedEmpresa,
@@ -16,27 +17,13 @@ export const useDashboardRealtimeData = ({
   userSucursales,
   shouldPrefetchAll,
   userProfile,
-  dataCacheKey,
-  calcularIndices,
-  calcularPeriodo,
-  useDashboardDataFetchHook,
-  useCapacitacionesMetricsHook,
-  useAccidentesAnalysisHook,
-  useIndicesComparacionHook
+  dataCacheKey
 }) => {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isCachedSnapshot, setIsCachedSnapshot] = useState(false);
   const unsubscribeRef = useRef(null);
   const prefetchedPeriodsRef = useRef(new Set());
-
-  const sucursalesFiltradas = useMemo(() => {
-    if (!selectedEmpresa || !selectedSucursal) return [];
-    if (selectedSucursal === "todas") {
-      return userSucursales || [];
-    }
-    return (userSucursales || []).filter((s) => s.id === selectedSucursal);
-  }, [selectedEmpresa, selectedSucursal, userSucursales]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -171,7 +158,7 @@ export const useDashboardRealtimeData = ({
 
             if (encoder) {
               accumulatedBytes += encoder.encode(serialized).length;
-              if (accumulatedBytes > 1.5 * 1024 * 1024) {
+              if (accumulatedBytes > PREFETCH_MAX_PAYLOAD_BYTES) {
                 prefetchedPeriodsRef.current.add(periodSignature);
                 return;
               }
@@ -251,130 +238,10 @@ export const useDashboardRealtimeData = ({
     dataCacheKey
   ]);
 
-  const {
-    empleados,
-    accidentes,
-    capacitaciones,
-    auditorias,
-    ausencias,
-    loading: analyticsLoading
-  } = useDashboardDataFetchHook(
-    selectedEmpresa,
-    selectedSucursal,
-    selectedYear,
-    sucursalesFiltradas,
-    calcularPeriodo,
-    userEmpresas
-  );
-
-  const capacitacionesMetrics = useCapacitacionesMetricsHook(
-    capacitaciones,
-    empleados,
-    selectedYear
-  );
-
-  const accidentesAnalysis = useAccidentesAnalysisHook(
-    accidentes,
-    empleados,
-    selectedYear
-  );
-
-  const sucursalesParaComparacion = useMemo(() => {
-    if (!selectedSucursal || !selectedEmpresa) return null;
-    return selectedSucursal === "todas"
-      ? sucursalesFiltradas
-      : userSucursales?.find((s) => s.id === selectedSucursal);
-  }, [
-    selectedSucursal,
-    selectedEmpresa,
-    sucursalesFiltradas,
-    userSucursales
-  ]);
-
-  const datos = useMemo(() => {
-    if (!selectedEmpresa || !selectedSucursal) {
-      return {
-        empleados: [],
-        accidentes: [],
-        capacitaciones: [],
-        auditorias: [],
-        indices: {
-          tasaAusentismo: 0,
-          indiceFrecuencia: 0,
-          indiceIncidencia: 0,
-          indiceGravedad: 0
-        },
-        metricas: {
-          totalEmpleados: 0,
-          empleadosActivos: 0,
-          empleadosEnReposo: 0,
-          horasTrabajadas: 0,
-          horasPerdidas: 0,
-          accidentesConTiempoPerdido: 0,
-          diasPerdidos: 0,
-          diasSinAccidentes: 0,
-          promedioTrabajadores: 0
-        }
-      };
-    }
-
-    const sucursalesParaCalculo =
-      selectedSucursal === "todas"
-        ? sucursalesFiltradas
-        : userSucursales?.find((s) => s.id === selectedSucursal);
-
-    const { indices, metricas, saludOcupacional } = calcularIndices(
-      empleados,
-      accidentes,
-      ausencias,
-      selectedYear,
-      sucursalesParaCalculo
-    );
-
-    return {
-      empleados,
-      accidentes,
-      capacitaciones,
-      auditorias,
-      ausencias,
-      indices,
-      metricas,
-      saludOcupacional,
-      sucursalesParaCalculo
-    };
-  }, [
-    empleados,
-    accidentes,
-    capacitaciones,
-    auditorias,
-    ausencias,
-    selectedEmpresa,
-    selectedSucursal,
-    selectedYear,
-    calcularIndices,
-    sucursalesFiltradas,
-    userSucursales
-  ]);
-
-  const indicesComparacion = useIndicesComparacionHook(
-    empleados,
-    accidentes,
-    ausencias,
-    selectedYear,
-    sucursalesParaComparacion
-  );
-
   return {
     data,
     loading,
-    isCachedSnapshot,
-    sucursalesFiltradas,
-    analyticsLoading,
-    datos,
-    capacitacionesMetrics,
-    accidentesAnalysis,
-    sucursalesParaComparacion,
-    indicesComparacion
+    isCachedSnapshot
   };
 };
 

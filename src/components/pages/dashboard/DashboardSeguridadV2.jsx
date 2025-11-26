@@ -1,8 +1,7 @@
 import React, {
   useState,
-  useEffect,
-  useRef,
   useMemo,
+  useEffect,
   lazy,
   Suspense
 } from "react";
@@ -36,12 +35,12 @@ import TargetsMensualesCard from "./components/TargetsMensualesCard";
 import AccionesRequeridasWidget from "./components/AccionesRequeridasWidget";
 import { useTargetsMensualesData } from "./hooks/useTargetsMensualesData";
 import { useAccionesRequeridasStats } from "./hooks/useAccionesRequeridasStats";
+import { useDashboardRealtimeData } from "./hooks/useDashboardRealtimeData";
 import InfoIcon from "@mui/icons-material/Info";
 import ReportProblemIcon from "@mui/icons-material/ReportProblem";
 import SchoolIcon from "@mui/icons-material/School";
 
 const PREFETCH_COMPANY_LIMIT = 5;
-const PREFETCH_MAX_PAYLOAD_BYTES = 1.5 * 1024 * 1024; // 1.5MB
 
 const DashboardAnalyticsSection = lazy(() =>
   import("./components/DashboardAnalyticsSection")
@@ -55,8 +54,6 @@ const CapacitacionesMetrics = lazy(() =>
 const GraficoIndices = lazy(() =>
   import("../dashboard-higiene/components/GraficoIndices")
 );
-
-const FILTER_STORAGE_KEY = "dashboard-seguridad-filtros";
 
 function AnalyticsFallback() {
   return (
@@ -96,26 +93,12 @@ export default function DashboardSeguridadV2() {
     setSelectedSucursal,
     userSucursales,
     userEmpresas,
-    sucursalesFiltradas
+    sucursalesFiltradas: sucursalesContext
   } = useGlobalSelection();
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [isCachedSnapshot, setIsCachedSnapshot] = useState(false);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
   const [targetsExpanded, setTargetsExpanded] = useState(false);
   const [accionesExpanded, setAccionesExpanded] = useState(false);
-  const sucursalesBase = sucursalesFiltradas || userSucursales;
-  const { progresos: targetsProgresos, loading: targetsLoading } = useTargetsMensualesData(
-    sucursalesBase,
-    selectedSucursal
-  );
-  const { estadisticas: accionesEstadisticas, loading: accionesLoading } = useAccionesRequeridasStats(
-    sucursalesBase,
-    selectedSucursal
-  );
-  const unsubscribeRef = useRef(null);
-  const prefetchedPeriodsRef = useRef(new Set());
   const dataCacheKey = useMemo(() => {
     if (!selectedEmpresa || !selectedSucursal) return null;
     const month = selectedMonth.toString().padStart(2, "0");
@@ -129,168 +112,34 @@ export default function DashboardSeguridadV2() {
     [userEmpresas]
   );
 
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const storedFilters = window.localStorage.getItem(FILTER_STORAGE_KEY);
-    if (!storedFilters) return;
-
-    try {
-      const parsed = JSON.parse(storedFilters);
-      if (parsed.selectedEmpresa) {
-        setSelectedEmpresa(parsed.selectedEmpresa);
-      }
-      if (parsed.selectedSucursal) {
-        setSelectedSucursal(parsed.selectedSucursal);
-      }
-      if (parsed.selectedYear) {
-        setSelectedYear(parsed.selectedYear);
-      }
-      if (parsed.selectedMonth) {
-        setSelectedMonth(parsed.selectedMonth);
-      }
-    } catch (error) {
-      window.localStorage.removeItem(FILTER_STORAGE_KEY);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const filtersToPersist = JSON.stringify({
-      selectedEmpresa,
-      selectedSucursal,
-      selectedYear,
-      selectedMonth
-    });
-    window.localStorage.setItem(FILTER_STORAGE_KEY, filtersToPersist);
-  }, [selectedEmpresa, selectedSucursal, selectedYear, selectedMonth]);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    if (!dataCacheKey) return;
-
-    const cached = window.sessionStorage.getItem(dataCacheKey);
-
-    if (cached) {
-      try {
-        const parsed = JSON.parse(cached);
-        setData(parsed);
-        setIsCachedSnapshot(true);
-        setLoading(false);
-        return;
-      } catch (error) {
-        window.sessionStorage.removeItem(dataCacheKey);
-      }
-    }
-
-    setLoading(true);
-    setIsCachedSnapshot(false);
-  }, [dataCacheKey]);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    if (!dataCacheKey || !data) return;
-
-    try {
-      window.sessionStorage.setItem(dataCacheKey, JSON.stringify(data));
-    } catch {
-      // Ignorar errores de almacenamiento (por ejemplo, cuota excedida)
-    }
-  }, [data, dataCacheKey]);
-
-  useEffect(() => {
-    if (!shouldPrefetchAll) return;
-    if (!Array.isArray(userEmpresas) || userEmpresas.length === 0) return;
-    if (typeof window === "undefined") return;
-
-    const month = selectedMonth.toString().padStart(2, "0");
-    const period = `${selectedYear}-${month}`;
-    const empresasSignature = userEmpresas
-      .map((empresa) => empresa.id)
-      .sort()
-      .join(",");
-    const sucursalesSignature = Array.isArray(userSucursales)
-      ? userSucursales
-          .map((sucursal) => `${sucursal.empresaId || ""}:${sucursal.id}`)
-          .sort()
-          .join(",")
-      : "none";
-    const periodSignature = `${period}:${empresasSignature}:${sucursalesSignature}`;
-    if (prefetchedPeriodsRef.current.has(periodSignature)) return;
-
-    let cancelled = false;
-    const encoder = typeof TextEncoder !== "undefined" ? new TextEncoder() : null;
-
-    const prefetch = async () => {
-      let accumulatedBytes = 0;
-
-      try {
-        for (const empresa of userEmpresas) {
-          if (cancelled) return;
-          const sucursalesEmpresa = userSucursales?.filter(
-            (sucursal) => sucursal.empresaId === empresa.id
-          );
-          const sucursalTargetsSet = new Set(["todas"]);
-
-          if (sucursalesEmpresa && sucursalesEmpresa.length > 0) {
-            sucursalesEmpresa.forEach((sucursal) => {
-              if (sucursal?.id) {
-                sucursalTargetsSet.add(sucursal.id);
-              }
-            });
-          }
-
-          const sucursalTargets = Array.from(sucursalTargetsSet);
-
-          for (const sucursalId of sucursalTargets) {
-            if (cancelled) return;
-            const cacheKey = `dashboard-data:${empresa.id}:${sucursalId}:${period}`;
-            if (window.sessionStorage.getItem(cacheKey)) {
-              continue;
-            }
-
-            const dashboardData = await safetyDashboardService.getDashboardData(
-              empresa.id,
-              sucursalId,
-              period
-            );
-
-            if (cancelled) return;
-
-            const serialized = JSON.stringify(dashboardData);
-            window.sessionStorage.setItem(cacheKey, serialized);
-
-            if (encoder) {
-              accumulatedBytes += encoder.encode(serialized).length;
-              if (accumulatedBytes > PREFETCH_MAX_PAYLOAD_BYTES) {
-                console.warn(
-                  "⚠️ [Dashboard] Prefetch excede el límite configurado. Se detiene la precarga anticipada."
-                );
-                prefetchedPeriodsRef.current.add(periodSignature);
-                return;
-              }
-            }
-          }
-        }
-
-        prefetchedPeriodsRef.current.add(periodSignature);
-      } catch (error) {
-        console.error("❌ [Dashboard] Error durante la precarga anticipada:", error);
-      }
-    };
-
-    prefetch();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [
-    shouldPrefetchAll,
+  const { data, loading, isCachedSnapshot } = useDashboardRealtimeData({
+    selectedEmpresa,
+    selectedSucursal,
     selectedYear,
     selectedMonth,
+    setSelectedEmpresa,
+    setSelectedSucursal,
+    setSelectedYear,
+    setSelectedMonth,
     userEmpresas,
-    userSucursales
-  ]);
+    userSucursales,
+    shouldPrefetchAll,
+    userProfile,
+    dataCacheKey
+  });
+
+  const sucursalesBase = (sucursalesContext && sucursalesContext.length > 0
+    ? sucursalesContext
+    : userSucursales) || [];
+  const { progresos: targetsProgresos, loading: targetsLoading } = useTargetsMensualesData(
+    sucursalesBase,
+    selectedSucursal
+  );
+  const { estadisticas: accionesEstadisticas, loading: accionesLoading } = useAccionesRequeridasStats(
+    sucursalesBase,
+    selectedSucursal
+  );
+
   const { calcularIndices, calcularPeriodo } = useIndicesCalculator();
   const {
     empleados,
@@ -303,7 +152,7 @@ export default function DashboardSeguridadV2() {
     selectedEmpresa,
     selectedSucursal,
     selectedYear,
-    sucursalesFiltradas,
+    sucursalesContext,
     calcularPeriodo,
     userEmpresas
   );
@@ -320,12 +169,12 @@ export default function DashboardSeguridadV2() {
   const sucursalesParaComparacion = useMemo(() => {
     if (!selectedSucursal || !selectedEmpresa) return null;
     return selectedSucursal === "todas"
-      ? sucursalesFiltradas
+      ? sucursalesContext
       : userSucursales?.find((s) => s.id === selectedSucursal);
   }, [
     selectedSucursal,
     selectedEmpresa,
-    sucursalesFiltradas,
+    sucursalesContext,
     userSucursales
   ]);
   const datos = useMemo(() => {
@@ -357,7 +206,7 @@ export default function DashboardSeguridadV2() {
 
     const sucursalesParaCalculo =
       selectedSucursal === "todas"
-        ? sucursalesFiltradas
+      ? sucursalesContext
         : userSucursales?.find((s) => s.id === selectedSucursal);
 
     const { indices, metricas, saludOcupacional } = calcularIndices(
@@ -389,7 +238,7 @@ export default function DashboardSeguridadV2() {
     selectedSucursal,
     selectedYear,
     calcularIndices,
-    sucursalesFiltradas,
+    sucursalesContext,
     userSucursales
   ]);
   const indicesComparacion = useIndicesComparacion(
@@ -698,66 +547,6 @@ export default function DashboardSeguridadV2() {
   };
 
   // Listener en tiempo real - Optimizado: carga inicial y actualizaciones automáticas
-  useEffect(() => {
-    if (!userProfile) return;
-
-    // Desuscribirse de listeners anteriores
-    if (unsubscribeRef.current) {
-      unsubscribeRef.current();
-    }
-
-    const companyId =
-      selectedEmpresa && selectedEmpresa !== "todas"
-        ? selectedEmpresa
-        : userProfile?.empresaId || userProfile?.uid || "company-001";
-    const currentPeriod = `${selectedYear}-${selectedMonth
-      .toString()
-      .padStart(2, "0")}`;
-    const hasCachedData =
-      typeof window !== "undefined" &&
-      dataCacheKey &&
-      window.sessionStorage.getItem(dataCacheKey);
-
-    if (!hasCachedData) {
-      setLoading(true);
-    }
-
-    console.log("🔄 [Dashboard] Configurando listener en tiempo real optimizado");
-
-    // Configurar listener en tiempo real (ya incluye carga inicial)
-    unsubscribeRef.current = safetyDashboardService.subscribeToDashboard(
-      companyId,
-      selectedSucursal === "todas" ? "todas" : selectedSucursal,
-      currentPeriod,
-      (updatedData) => {
-        console.log("✅ [Dashboard] Datos actualizados en tiempo real");
-        setData(updatedData);
-        setLoading(false);
-        setIsCachedSnapshot(false);
-      },
-      (error) => {
-        console.error("❌ [Dashboard] Error en listener:", error);
-        setLoading(false);
-        setIsCachedSnapshot(false);
-      }
-    );
-
-    // Cleanup: desuscribirse cuando el componente se desmonte o cambien las dependencias
-    return () => {
-      if (unsubscribeRef.current) {
-        console.log("🛑 [Dashboard] Desuscribiéndose de listeners");
-        unsubscribeRef.current();
-        unsubscribeRef.current = null;
-      }
-    };
-  }, [
-    userProfile,
-    selectedYear,
-    selectedMonth,
-    selectedSucursal,
-    selectedEmpresa,
-    dataCacheKey
-  ]);
 
   if (!data && (loading || analyticsLoading)) {
     return <DashboardLoading />;
