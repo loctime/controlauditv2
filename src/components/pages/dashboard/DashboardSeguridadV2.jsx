@@ -15,7 +15,6 @@ import {
   Typography,
   Backdrop
 } from "@mui/material";
-import { safetyDashboardService } from "../../../services/safetyDashboardService";
 import { useAuth } from "../../context/AuthContext";
 import { useGlobalSelection } from "../../../hooks/useGlobalSelection";
 import { useIndicesCalculator } from "../dashboard-higiene/hooks/useIndicesCalculator";
@@ -35,8 +34,8 @@ import DashboardAlertsPopover from "./components/DashboardAlertsPopover";
 import DashboardReportDialog from "./components/DashboardReportDialog";
 import TargetsMensualesCard from "./components/TargetsMensualesCard";
 import AccionesRequeridasWidget from "./components/AccionesRequeridasWidget";
-import { calcularProgresoTargets } from "../../../utils/sucursalTargetUtils";
-import AccionesRequeridasService from "../../../services/accionesRequeridasService";
+import { useTargetsMensualesData } from "./hooks/useTargetsMensualesData";
+import { useAccionesRequeridasStats } from "./hooks/useAccionesRequeridasStats";
 import InfoIcon from "@mui/icons-material/Info";
 import ReportProblemIcon from "@mui/icons-material/ReportProblem";
 import SchoolIcon from "@mui/icons-material/School";
@@ -105,11 +104,16 @@ export default function DashboardSeguridadV2() {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
   const [targetsExpanded, setTargetsExpanded] = useState(false);
-  const [targetsProgresos, setTargetsProgresos] = useState({});
-  const [targetsLoading, setTargetsLoading] = useState(false);
   const [accionesExpanded, setAccionesExpanded] = useState(false);
-  const [accionesEstadisticas, setAccionesEstadisticas] = useState({});
-  const [accionesLoading, setAccionesLoading] = useState(false);
+  const sucursalesBase = sucursalesFiltradas || userSucursales;
+  const { progresos: targetsProgresos, loading: targetsLoading } = useTargetsMensualesData(
+    sucursalesBase,
+    selectedSucursal
+  );
+  const { estadisticas: accionesEstadisticas, loading: accionesLoading } = useAccionesRequeridasStats(
+    sucursalesBase,
+    selectedSucursal
+  );
   const unsubscribeRef = useRef(null);
   const prefetchedPeriodsRef = useRef(new Set());
   const dataCacheKey = useMemo(() => {
@@ -755,113 +759,6 @@ export default function DashboardSeguridadV2() {
     dataCacheKey
   ]);
 
-  // Cargar progresos de targets una sola vez
-  useEffect(() => {
-    const cargarTargetsProgresos = async () => {
-      const sucursalesParaTargets = sucursalesFiltradas || userSucursales;
-      if (!sucursalesParaTargets || sucursalesParaTargets.length === 0) {
-        setTargetsProgresos({});
-        return;
-      }
-
-      setTargetsLoading(true);
-      try {
-        let sucursalesACalcular = sucursalesParaTargets;
-        if (selectedSucursal && selectedSucursal !== 'todas') {
-          sucursalesACalcular = sucursalesParaTargets.filter(s => s.id === selectedSucursal);
-        }
-
-        const sucursalesConTarget = sucursalesACalcular.filter(s => (s.targetMensual || 0) > 0);
-        
-        if (sucursalesConTarget.length === 0) {
-          setTargetsProgresos({});
-          setTargetsLoading(false);
-          return;
-        }
-
-        const progresosCalculados = await calcularProgresoTargets(sucursalesConTarget);
-        setTargetsProgresos(progresosCalculados);
-      } catch (error) {
-        console.error('Error cargando progresos de targets:', error);
-      } finally {
-        setTargetsLoading(false);
-      }
-    };
-
-    cargarTargetsProgresos();
-  }, [sucursalesFiltradas, userSucursales, selectedSucursal]);
-
-  // Cargar estadísticas de acciones requeridas una sola vez
-  useEffect(() => {
-    const cargarAccionesEstadisticas = async () => {
-      const sucursalesParaAcciones = sucursalesFiltradas || userSucursales;
-      if (!sucursalesParaAcciones || sucursalesParaAcciones.length === 0) {
-        setAccionesEstadisticas({});
-        return;
-      }
-
-      setAccionesLoading(true);
-      try {
-        let sucursalesACalcular = sucursalesParaAcciones;
-        if (selectedSucursal && selectedSucursal !== 'todas') {
-          sucursalesACalcular = sucursalesParaAcciones.filter(s => s.id === selectedSucursal);
-        }
-
-        if (sucursalesACalcular.length === 0) {
-          setAccionesEstadisticas({});
-          setAccionesLoading(false);
-          return;
-        }
-
-        // Calcular estadísticas para cada sucursal
-        const estadisticasPorSucursal = {};
-        let totalPendientes = 0;
-        let totalVencidas = 0;
-        let totalCompletadas = 0;
-        let totalEnProceso = 0;
-        let totalCanceladas = 0;
-
-        for (const sucursal of sucursalesACalcular) {
-          try {
-            const stats = await AccionesRequeridasService.obtenerEstadisticas(sucursal.id);
-            estadisticasPorSucursal[sucursal.id] = stats;
-            totalPendientes += stats.pendientes;
-            totalVencidas += stats.vencidas;
-            totalCompletadas += stats.completadas;
-            totalEnProceso += stats.enProceso;
-            totalCanceladas += stats.canceladas;
-          } catch (error) {
-            console.warn(`Error cargando estadísticas para sucursal ${sucursal.id}:`, error);
-            estadisticasPorSucursal[sucursal.id] = {
-              total: 0,
-              pendientes: 0,
-              enProceso: 0,
-              completadas: 0,
-              canceladas: 0,
-              vencidas: 0
-            };
-          }
-        }
-
-        setAccionesEstadisticas({
-          total: totalPendientes + totalEnProceso + totalCompletadas + totalCanceladas,
-          pendientes: totalPendientes,
-          enProceso: totalEnProceso,
-          completadas: totalCompletadas,
-          canceladas: totalCanceladas,
-          vencidas: totalVencidas,
-          porSucursal: estadisticasPorSucursal
-        });
-      } catch (error) {
-        console.error('Error cargando estadísticas de acciones requeridas:', error);
-      } finally {
-        setAccionesLoading(false);
-      }
-    };
-
-    cargarAccionesEstadisticas();
-  }, [sucursalesFiltradas, userSucursales, selectedSucursal]);
-
   if (!data && (loading || analyticsLoading)) {
     return <DashboardLoading />;
   }
@@ -907,7 +804,7 @@ export default function DashboardSeguridadV2() {
           datos.metricas.totalEmpleados > 0
         }
         onOpenReport={handleOpenReport}
-        sucursales={sucursalesFiltradas || userSucursales}
+        sucursales={sucursalesBase}
         onToggleTargets={() => setTargetsExpanded(!targetsExpanded)}
         targetsProgresos={targetsProgresos}
         targetsLoading={targetsLoading}
@@ -918,7 +815,7 @@ export default function DashboardSeguridadV2() {
 
       {targetsExpanded && (
         <TargetsMensualesCard
-          sucursales={sucursalesFiltradas || userSucursales}
+          sucursales={sucursalesBase}
           selectedSucursal={selectedSucursal}
           progresos={targetsProgresos}
         />
@@ -926,7 +823,7 @@ export default function DashboardSeguridadV2() {
 
       {accionesExpanded && (
         <AccionesRequeridasWidget
-          sucursales={sucursalesFiltradas || userSucursales}
+          sucursales={sucursalesBase}
           selectedSucursal={selectedSucursal}
           estadisticas={accionesEstadisticas}
         />
