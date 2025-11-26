@@ -338,6 +338,20 @@ export default function DashboardSeguridadV2() {
   );
 
   const auditoriasMetrics = useMemo(() => {
+    if (
+      typeof data?.auditsTotal === "number" ||
+      typeof data?.auditsCompleted === "number" ||
+      typeof data?.auditsPending === "number" ||
+      typeof data?.auditsNonConformities === "number"
+    ) {
+      return {
+        total: data?.auditsTotal ?? 0,
+        completadas: data?.auditsCompleted ?? 0,
+        pendientes: data?.auditsPending ?? 0,
+        noConformes: data?.auditsNonConformities ?? 0
+      };
+    }
+
     if (!auditorias || auditorias.length === 0) {
       return {
         total: 0,
