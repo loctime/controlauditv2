@@ -167,6 +167,21 @@ const ReporteDetallePro = forwardRef(({ open = false, onClose = () => {}, report
   
   // Función handleImprimir que usa el hook
   const handleImprimir = async () => {
+    // Normalizar acciones requeridas (pueden venir como array o como string JSON)
+    let accionesRequeridasNormalizadas = [];
+    if (reporte.accionesRequeridas) {
+      if (typeof reporte.accionesRequeridas === 'string') {
+        try {
+          accionesRequeridasNormalizadas = JSON.parse(reporte.accionesRequeridas);
+        } catch (error) {
+          console.warn('Error parseando accionesRequeridas:', error);
+          accionesRequeridasNormalizadas = [];
+        }
+      } else if (Array.isArray(reporte.accionesRequeridas)) {
+        accionesRequeridasNormalizadas = reporte.accionesRequeridas;
+      }
+    }
+
     const datosReporte = {
       empresa,
       sucursal,
@@ -177,6 +192,7 @@ const ReporteDetallePro = forwardRef(({ open = false, onClose = () => {}, report
       comentarios: comentariosNormalizados,
       imagenes: imagenesNormalizadas,
       clasificaciones: clasificacionesNormalizadas,
+      accionesRequeridas: accionesRequeridasNormalizadas,
       estadisticasClasificaciones,
       firmaAuditor: reporte.firmaAuditor,
       nombreAuditor,

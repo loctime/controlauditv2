@@ -21,6 +21,7 @@ import StorefrontIcon from '@mui/icons-material/Storefront';
 import PeopleIcon from '@mui/icons-material/People';
 import SchoolIcon from '@mui/icons-material/School';
 import ReportProblemIcon from '@mui/icons-material/ReportProblem';
+import AssignmentIcon from '@mui/icons-material/Assignment';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import EditIcon from '@mui/icons-material/Edit';
@@ -33,6 +34,7 @@ import Swal from 'sweetalert2';
 import EmpleadosContent from './EmpleadosContent';
 import CapacitacionesContent from './CapacitacionesContent';
 import AccidentesContent from './AccidentesContent';
+import AccionesRequeridas from '../components/AccionesRequeridas';
 import { registrarAccionSistema } from '../../../../utils/firestoreUtils';
 import { calcularProgresoTargets } from '../../../../utils/sucursalTargetUtils';
 
@@ -105,6 +107,15 @@ const SucursalesTab = ({ empresaId, empresaNombre, userEmpresas, loadEmpresasSta
           getDocs(query(collection(db, 'accidentes'), where('sucursalId', '==', sucursal.id)))
         ]);
         
+        // Cargar acciones requeridas desde subcolección
+        let accionesRequeridasCount = 0;
+        try {
+          const accionesSnapshot = await getDocs(collection(db, 'sucursales', sucursal.id, 'acciones_requeridas'));
+          accionesRequeridasCount = accionesSnapshot.docs.length;
+        } catch (error) {
+          console.warn(`Error cargando acciones requeridas para sucursal ${sucursal.id}:`, error);
+        }
+        
         const capacitacionesData = capacitacionesSnapshot.docs.map(doc => doc.data());
         const capacitacionesCompletadas = capacitacionesData.filter(cap => cap.estado === 'completada').length;
         
@@ -126,11 +137,12 @@ const SucursalesTab = ({ empresaId, empresaNombre, userEmpresas, loadEmpresasSta
           capacitaciones: capacitacionesSnapshot.docs.length + capacitacionesDePlanes,
           capacitacionesCompletadas: capacitacionesCompletadas,
           accidentes: accidentesSnapshot.docs.length,
-          accidentesAbiertos: accidentesSnapshot.docs.filter(doc => doc.data().estado === 'abierto').length
+          accidentesAbiertos: accidentesSnapshot.docs.filter(doc => doc.data().estado === 'abierto').length,
+          accionesRequeridas: accionesRequeridasCount
         };
       } catch (error) {
         console.error(`Error cargando stats para sucursal ${sucursal.id}:`, error);
-        stats[sucursal.id] = { empleados: 0, capacitaciones: 0, capacitacionesCompletadas: 0, accidentes: 0, accidentesAbiertos: 0 };
+        stats[sucursal.id] = { empleados: 0, capacitaciones: 0, capacitacionesCompletadas: 0, accidentes: 0, accidentesAbiertos: 0, accionesRequeridas: 0 };
       }
     }
     setSucursalesStats(stats);
@@ -425,6 +437,7 @@ const SucursalesTab = ({ empresaId, empresaNombre, userEmpresas, loadEmpresasSta
                 <TableCell align="center"><strong>Empleados</strong></TableCell>
                 <TableCell align="center"><strong>Capacitaciones</strong></TableCell>
                 <TableCell align="center"><strong>Accidentes</strong></TableCell>
+                <TableCell align="center"><strong>Acciones Req.</strong></TableCell>
                 <TableCell align="center"><strong>Target Mes</strong></TableCell>
                 <TableCell align="center"><strong>Acciones</strong></TableCell>
               </TableRow>
@@ -432,7 +445,7 @@ const SucursalesTab = ({ empresaId, empresaNombre, userEmpresas, loadEmpresasSta
             <TableBody>
               {sucursales.map((sucursal) => {
                 const isExpanded = expandedRows.has(sucursal.id);
-                const stats = sucursalesStats[sucursal.id] || { empleados: 0, capacitaciones: 0, capacitacionesCompletadas: 0, accidentes: 0, accidentesAbiertos: 0 };
+                const stats = sucursalesStats[sucursal.id] || { empleados: 0, capacitaciones: 0, capacitacionesCompletadas: 0, accidentes: 0, accidentesAbiertos: 0, accionesRequeridas: 0 };
                 const progreso = targetsProgreso[sucursal.id] || { completadas: 0, target: 0, porcentaje: 0, estado: 'sin_target' };
 
                 return (
@@ -490,6 +503,21 @@ const SucursalesTab = ({ empresaId, empresaNombre, userEmpresas, loadEmpresasSta
                         </Button>
                       </TableCell>
                       <TableCell align="center">
+                        <Button
+                          variant="text"
+                          size="small"
+                          startIcon={<AssignmentIcon />}
+                          onClick={() => toggleRow(sucursal.id, 'acciones_requeridas')}
+                          sx={{ 
+                            textTransform: 'none',
+                            minWidth: '100px'
+                          }}
+                        >
+                          {stats.accionesRequeridas || 0}
+                          {isExpanded && getActiveTab(sucursal.id) === 'acciones_requeridas' ? <ExpandLessIcon fontSize="small" sx={{ ml: 0.5 }} /> : <ExpandMoreIcon fontSize="small" sx={{ ml: 0.5 }} />}
+                        </Button>
+                      </TableCell>
+                      <TableCell align="center">
                         {progreso.estado === 'sin_target' ? (
                           <Typography variant="body2" color="text.secondary">
                             Sin target
@@ -534,7 +562,7 @@ const SucursalesTab = ({ empresaId, empresaNombre, userEmpresas, loadEmpresasSta
                       </TableCell>
                     </TableRow>
                     <TableRow>
-                      <TableCell colSpan={9} sx={{ py: 0 }}>
+                      <TableCell colSpan={10} sx={{ py: 0 }}>
                         <Collapse in={isExpanded} timeout="auto" unmountOnExit>
                           <Box sx={{ p: 3, backgroundColor: theme.palette.background.default, borderTop: `1px solid ${theme.palette.divider}` }}>
                             {getActiveTab(sucursal.id) === 'empleados' && (
@@ -552,6 +580,9 @@ const SucursalesTab = ({ empresaId, empresaNombre, userEmpresas, loadEmpresasSta
                             )}
                             {getActiveTab(sucursal.id) === 'accidentes' && (
                               <AccidentesContent sucursalId={sucursal.id} sucursalNombre={sucursal.nombre} empresaId={empresaId} navigateToPage={navigateToPage} />
+                            )}
+                            {getActiveTab(sucursal.id) === 'acciones_requeridas' && (
+                              <AccionesRequeridas sucursalId={sucursal.id} sucursalNombre={sucursal.nombre} />
                             )}
                           </Box>
                         </Collapse>

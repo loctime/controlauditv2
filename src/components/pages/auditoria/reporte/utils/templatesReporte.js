@@ -347,6 +347,118 @@ export const generarSeccion = ({
   `;
 };
 
+// Template de acciones requeridas
+export const generarSeccionAccionesRequeridas = ({ accionesRequeridas, secciones }) => {
+  if (!accionesRequeridas || accionesRequeridas.length === 0) {
+    return '';
+  }
+
+  // Helper para obtener el texto de la pregunta
+  const obtenerPreguntaTexto = (preguntaIndex) => {
+    if (!preguntaIndex || !secciones) return 'Pregunta sin texto';
+    
+    const { seccionIndex, preguntaIndex: pIdx } = preguntaIndex;
+    const seccion = secciones[seccionIndex];
+    if (!seccion || !seccion.preguntas) return 'Pregunta sin texto';
+    
+    return seccion.preguntas[pIdx] || 'Pregunta sin texto';
+  };
+
+  // Helper para formatear fecha
+  const formatearFecha = (fecha) => {
+    if (!fecha) return 'N/A';
+    try {
+      const fechaObj = fecha.toDate ? fecha.toDate() : new Date(fecha);
+      return new Date(fechaObj).toLocaleDateString('es-AR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+      });
+    } catch (error) {
+      return 'N/A';
+    }
+  };
+
+  // Helper para obtener color de estado
+  const obtenerColorEstado = (estado) => {
+    switch (estado) {
+      case 'pendiente':
+        return '#ff9800';
+      case 'en_proceso':
+        return '#2196f3';
+      case 'completada':
+        return '#4caf50';
+      case 'cancelada':
+        return '#f44336';
+      default:
+        return '#757575';
+    }
+  };
+
+  // Helper para obtener texto de estado
+  const obtenerTextoEstado = (estado) => {
+    switch (estado) {
+      case 'pendiente':
+        return 'Pendiente';
+      case 'en_proceso':
+        return 'En Proceso';
+      case 'completada':
+        return 'Completada';
+      case 'cancelada':
+        return 'Cancelada';
+      default:
+        return estado;
+    }
+  };
+
+  return `
+    <div class="acciones-requeridas-section avoid-break">
+      <div class="section-header">
+        ⚠️ ACCIONES REQUERIDAS
+      </div>
+      <div class="acciones-table-container">
+        <table class="acciones-table">
+          <thead>
+            <tr>
+              <th>Pregunta</th>
+              <th>Acción Requerida</th>
+              <th>Estado</th>
+              <th>Fecha Vencimiento</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${accionesRequeridas.map((accion, idx) => {
+              const preguntaTexto = obtenerPreguntaTexto(accion.preguntaIndex);
+              const estadoColor = obtenerColorEstado(accion.estado);
+              const estadoTexto = obtenerTextoEstado(accion.estado);
+              const fechaVenc = formatearFecha(accion.fechaVencimiento);
+              
+              return `
+                <tr>
+                  <td style="font-size: 12px; padding: 8px;">${preguntaTexto}</td>
+                  <td style="font-size: 12px; padding: 8px; font-weight: 500;">${val(accion.accionTexto)}</td>
+                  <td style="padding: 8px;">
+                    <span style="
+                      display: inline-block;
+                      background: ${estadoColor};
+                      color: white;
+                      padding: 4px 12px;
+                      border-radius: 12px;
+                      font-size: 11px;
+                      font-weight: 500;
+                    ">${estadoTexto}</span>
+                  </td>
+                  <td style="font-size: 12px; padding: 8px;">${fechaVenc}</td>
+                </tr>
+              `;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+};
+
 // Template de firmas
 export const generarFirmas = ({ firmaAuditor, firmaResponsable, nombreAuditor, empresa, datosReporte = {} }) => {
   const empresaNombre = val(empresa?.nombre);

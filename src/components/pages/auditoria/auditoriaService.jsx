@@ -6,6 +6,7 @@ import { getControlFileFolders } from '../../../services/controlFileInit';
 import { prepararDatosParaFirestore, registrarAccionSistema } from '../../../utils/firestoreUtils';
 import { getOfflineDatabase, generateOfflineId } from '../../../services/offlineDatabase';
 import syncQueueService from '../../../services/syncQueue';
+import AccionesRequeridasService from '../../../services/accionesRequeridasService';
 
 /**
  * Servicio centralizado para operaciones de auditoría
@@ -549,6 +550,39 @@ class AuditoriaService {
 
       // Guardar en Firestore
       const docRef = await addDoc(collection(db, "reportes"), datosLimpios);
+
+      // Crear acciones requeridas en la subcolección de la sucursal si existen
+      if (datosCompletos.accionesRequeridas && datosCompletos.accionesRequeridas.length > 0) {
+        try {
+          // Obtener sucursalId - buscar en la colección de sucursales
+          let sucursalId = null;
+          if (datosAuditoria.sucursal && datosAuditoria.sucursal !== "Casa Central") {
+            const sucursalesRef = collection(db, "sucursales");
+            const q = query(sucursalesRef, where("nombre", "==", datosAuditoria.sucursal));
+            const sucursalesSnapshot = await getDocs(q);
+            
+            if (!sucursalesSnapshot.empty) {
+              sucursalId = sucursalesSnapshot.docs[0].id;
+            }
+          }
+
+          // Si encontramos sucursalId, crear las acciones requeridas
+          if (sucursalId) {
+            await AccionesRequeridasService.crearAccionesDesdeReporte(
+              docRef.id,
+              sucursalId,
+              datosAuditoria.empresa?.id || null,
+              datosCompletos.accionesRequeridas
+            );
+            console.log(`✅ ${datosCompletos.accionesRequeridas.length} acciones requeridas creadas en sucursal`);
+          } else {
+            console.warn('⚠️ No se encontró sucursalId, las acciones requeridas no se crearán en la subcolección');
+          }
+        } catch (accionesError) {
+          // No fallar el guardado del reporte si falla la creación de acciones
+          console.error('❌ Error al crear acciones requeridas (no crítico):', accionesError);
+        }
+      }
 
       // Registrar log de operación
       await registrarAccionSistema(
