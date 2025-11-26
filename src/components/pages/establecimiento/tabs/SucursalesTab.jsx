@@ -14,7 +14,8 @@ import {
   Collapse,
   IconButton,
   Tooltip,
-  useTheme
+  useTheme,
+  Chip
 } from '@mui/material';
 import StorefrontIcon from '@mui/icons-material/Storefront';
 import PeopleIcon from '@mui/icons-material/People';
@@ -33,6 +34,7 @@ import EmpleadosContent from './EmpleadosContent';
 import CapacitacionesContent from './CapacitacionesContent';
 import AccidentesContent from './AccidentesContent';
 import { registrarAccionSistema } from '../../../../utils/firestoreUtils';
+import { calcularProgresoTargets } from '../../../../utils/sucursalTargetUtils';
 
 const SucursalesTab = ({ empresaId, empresaNombre, userEmpresas, loadEmpresasStats }) => {
   const { userProfile } = useAuth();
@@ -45,10 +47,12 @@ const SucursalesTab = ({ empresaId, empresaNombre, userEmpresas, loadEmpresasSta
     nombre: '',
     direccion: '',
     telefono: '',
-    horasSemanales: 40
+    horasSemanales: 40,
+    targetMensual: 0
   });
   const [expandedRows, setExpandedRows] = useState(new Set());
   const [sucursalesStats, setSucursalesStats] = useState({});
+  const [targetsProgreso, setTargetsProgreso] = useState({});
   const [activeTabPerSucursal, setActiveTabPerSucursal] = useState({});
   const [openEditModal, setOpenEditModal] = useState(false);
   const [sucursalEdit, setSucursalEdit] = useState(null);
@@ -79,6 +83,10 @@ const SucursalesTab = ({ empresaId, empresaNombre, userEmpresas, loadEmpresasSta
       
       // Cargar estadísticas de cada sucursal
       await loadSucursalesStats(sucursalesData);
+      
+      // Cargar progreso de targets mensuales
+      const progresos = await calcularProgresoTargets(sucursalesData);
+      setTargetsProgreso(progresos);
     } catch (error) {
       console.error('Error cargando sucursales:', error);
     } finally {
@@ -208,7 +216,7 @@ const SucursalesTab = ({ empresaId, empresaNombre, userEmpresas, loadEmpresasSta
         docRef.id
       );
 
-      setSucursalForm({ nombre: '', direccion: '', telefono: '', horasSemanales: 40 });
+      setSucursalForm({ nombre: '', direccion: '', telefono: '', horasSemanales: 40, targetMensual: 0 });
       setOpenSucursalForm(false);
       
       await loadSucursales();
@@ -238,7 +246,8 @@ const SucursalesTab = ({ empresaId, empresaNombre, userEmpresas, loadEmpresasSta
       nombre: sucursal.nombre,
       direccion: sucursal.direccion || '',
       telefono: sucursal.telefono || '',
-      horasSemanales: sucursal.horasSemanales || 40
+      horasSemanales: sucursal.horasSemanales || 40,
+      targetMensual: sucursal.targetMensual || 0
     });
     setOpenEditModal(true);
   };
@@ -267,6 +276,7 @@ const SucursalesTab = ({ empresaId, empresaNombre, userEmpresas, loadEmpresasSta
         direccion: sucursalEdit.direccion,
         telefono: sucursalEdit.telefono,
         horasSemanales: parseInt(sucursalEdit.horasSemanales),
+        targetMensual: parseInt(sucursalEdit.targetMensual) || 0,
         fechaModificacion: Timestamp.now(),
         modificadoPor: userProfile?.uid,
         modificadoPorEmail: userProfile?.email
@@ -415,6 +425,7 @@ const SucursalesTab = ({ empresaId, empresaNombre, userEmpresas, loadEmpresasSta
                 <TableCell align="center"><strong>Empleados</strong></TableCell>
                 <TableCell align="center"><strong>Capacitaciones</strong></TableCell>
                 <TableCell align="center"><strong>Accidentes</strong></TableCell>
+                <TableCell align="center"><strong>Target Mes</strong></TableCell>
                 <TableCell align="center"><strong>Acciones</strong></TableCell>
               </TableRow>
             </TableHead>
@@ -422,6 +433,7 @@ const SucursalesTab = ({ empresaId, empresaNombre, userEmpresas, loadEmpresasSta
               {sucursales.map((sucursal) => {
                 const isExpanded = expandedRows.has(sucursal.id);
                 const stats = sucursalesStats[sucursal.id] || { empleados: 0, capacitaciones: 0, capacitacionesCompletadas: 0, accidentes: 0, accidentesAbiertos: 0 };
+                const progreso = targetsProgreso[sucursal.id] || { completadas: 0, target: 0, porcentaje: 0, estado: 'sin_target' };
 
                 return (
                   <React.Fragment key={sucursal.id}>
@@ -478,6 +490,27 @@ const SucursalesTab = ({ empresaId, empresaNombre, userEmpresas, loadEmpresasSta
                         </Button>
                       </TableCell>
                       <TableCell align="center">
+                        {progreso.estado === 'sin_target' ? (
+                          <Typography variant="body2" color="text.secondary">
+                            Sin target
+                          </Typography>
+                        ) : (
+                          <Tooltip title={`${progreso.completadas} de ${progreso.target} auditorías (${progreso.porcentaje}%)`}>
+                            <Chip
+                              label={`${progreso.completadas}/${progreso.target}`}
+                              size="small"
+                              color={
+                                progreso.estado === 'completado' ? 'success' :
+                                progreso.estado === 'bueno' ? 'success' :
+                                progreso.estado === 'regular' ? 'warning' :
+                                'error'
+                              }
+                              sx={{ fontWeight: 'bold' }}
+                            />
+                          </Tooltip>
+                        )}
+                      </TableCell>
+                      <TableCell align="center">
                         <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center' }}>
                           <Tooltip title="Editar sucursal">
                             <IconButton 
@@ -501,7 +534,7 @@ const SucursalesTab = ({ empresaId, empresaNombre, userEmpresas, loadEmpresasSta
                       </TableCell>
                     </TableRow>
                     <TableRow>
-                      <TableCell colSpan={8} sx={{ py: 0 }}>
+                      <TableCell colSpan={9} sx={{ py: 0 }}>
                         <Collapse in={isExpanded} timeout="auto" unmountOnExit>
                           <Box sx={{ p: 3, backgroundColor: theme.palette.background.default, borderTop: `1px solid ${theme.palette.divider}` }}>
                             {getActiveTab(sucursal.id) === 'empleados' && (
@@ -758,6 +791,29 @@ const SucursalesTab = ({ empresaId, empresaNombre, userEmpresas, loadEmpresasSta
                     fontSize: '14px'
                   }}
                 />
+              </Box>
+              <Box>
+                <Typography variant="body2" sx={{ mb: 1 }}>
+                  Target Mensual de Auditorías
+                </Typography>
+                <input
+                  type="number"
+                  name="targetMensual"
+                  value={sucursalEdit.targetMensual}
+                  onChange={handleEditFormChange}
+                  placeholder="0"
+                  min="0"
+                  style={{
+                    width: '100%',
+                    padding: '8px 12px',
+                    border: `1px solid ${theme.palette.divider}`,
+                    borderRadius: '4px',
+                    fontSize: '14px'
+                  }}
+                />
+                <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
+                  Número de auditorías objetivo para este mes
+                </Typography>
               </Box>
               <Box sx={{ display: 'flex', gap: 2, mt: 2 }}>
                 <Button
