@@ -34,6 +34,7 @@ import DashboardNoDataCard from "./components/DashboardNoDataCard";
 import DashboardAlertsPopover from "./components/DashboardAlertsPopover";
 import DashboardReportDialog from "./components/DashboardReportDialog";
 import TargetsMensualesCard from "./components/TargetsMensualesCard";
+import AccionesRequeridasWidget from "./components/AccionesRequeridasWidget";
 import InfoIcon from "@mui/icons-material/Info";
 import ReportProblemIcon from "@mui/icons-material/ReportProblem";
 import SchoolIcon from "@mui/icons-material/School";
@@ -794,6 +795,11 @@ export default function DashboardSeguridadV2() {
       />
 
       <TargetsMensualesCard
+        sucursales={sucursalesFiltradas || userSucursales}
+        selectedSucursal={selectedSucursal}
+      />
+
+      <AccionesRequeridasWidget
         sucursales={sucursalesFiltradas || userSucursales}
         selectedSucursal={selectedSucursal}
       />

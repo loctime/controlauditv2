@@ -7,6 +7,7 @@ import {
   generarResumenEstadistico, 
   generarGraficoPrincipal, 
   generarSeccion, 
+  generarSeccionAccionesRequeridas,
   generarFirmas, 
   generarFooter 
 } from './templatesReporte.js';
@@ -22,6 +23,7 @@ function generarContenidoImpresion({
   comentarios, // array de arrays (ya normalizado)
   imagenes, // array de arrays (urls o vacío)
   clasificaciones, // array de arrays de objetos { condicion: boolean, actitud: boolean }
+  accionesRequeridas = [], // array de acciones requeridas
   estadisticasClasificaciones = null,
   firmaAuditor,
   chartImgDataUrl, // dataURL del gráfico general (Google Charts)
@@ -176,6 +178,8 @@ ${estilosCSS}
       })
     ).join('')}
   </div>
+
+  ${generarSeccionAccionesRequeridas({ accionesRequeridas, secciones })}
 
   ${generarFirmas({ firmaAuditor, firmaResponsable, nombreAuditor, empresa, datosReporte })}
 
