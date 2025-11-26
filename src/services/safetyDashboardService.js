@@ -15,6 +15,173 @@ import {
 import { db } from '../firebaseConfig';
 import { computeOccupationalHealthMetrics } from '../utils/occupationalHealthMetrics';
 
+const isTruthyFlag = (value) => {
+  if (typeof value === 'boolean') return value;
+  if (typeof value === 'number') return value > 0;
+  if (typeof value === 'string') {
+    const normalized = value.trim().toLowerCase();
+    return normalized === 'true' || normalized === '1' || normalized === 'sí' || normalized === 'si';
+  }
+  return false;
+};
+
+const aggregateAuditClassifications = (auditorias = []) => {
+  if (!Array.isArray(auditorias) || auditorias.length === 0) {
+    return { condicion: 0, actitud: 0, total: 0 };
+  }
+
+  let condicion = 0;
+  let actitud = 0;
+
+  const addFromRecord = (record) => {
+    if (!record || typeof record !== 'object') return;
+    if (isTruthyFlag(record.condicion)) condicion += 1;
+    if (isTruthyFlag(record.actitud)) actitud += 1;
+  };
+
+  const addFromSummary = (summary) => {
+    if (!summary || typeof summary !== 'object') return;
+    const condValue = summary.condicion ?? summary.Condición;
+    const actValue = summary.actitud ?? summary.Actitud;
+    if (typeof condValue === 'number' && !Number.isNaN(condValue)) condicion += condValue;
+    if (typeof actValue === 'number' && !Number.isNaN(actValue)) actitud += actValue;
+  };
+
+  const processArrayEntries = (entries) => {
+    if (!Array.isArray(entries)) return false;
+    let processed = false;
+    entries.forEach((entry) => {
+      if (!entry) return;
+      if (Array.isArray(entry)) {
+        if (processArrayEntries(entry)) processed = true;
+        return;
+      }
+      if (Array.isArray(entry.valores)) {
+        entry.valores.forEach(addFromRecord);
+        processed = true;
+        return;
+      }
+      if (
+        typeof entry === 'object' &&
+        (Object.prototype.hasOwnProperty.call(entry, 'condicion') ||
+          Object.prototype.hasOwnProperty.call(entry, 'actitud'))
+      ) {
+        addFromRecord(entry);
+        processed = true;
+        return;
+      }
+      if (typeof entry === 'object') {
+        const nestedValues = [];
+        if (Array.isArray(entry.valores)) {
+          nestedValues.push(entry.valores);
+        }
+        nestedValues.push(...Object.values(entry));
+        nestedValues.forEach((nested) => {
+          if (Array.isArray(nested)) {
+            if (processArrayEntries(nested)) processed = true;
+          } else if (nested && typeof nested === 'object') {
+            if (Array.isArray(nested.valores)) {
+              nested.valores.forEach(addFromRecord);
+              processed = true;
+            } else if (
+              Object.prototype.hasOwnProperty.call(nested, 'condicion') ||
+              Object.prototype.hasOwnProperty.call(nested, 'actitud')
+            ) {
+              addFromRecord(nested);
+              processed = true;
+            } else {
+              const deeperValues = Object.values(nested);
+              deeperValues.forEach((value) => {
+                if (Array.isArray(value) && processArrayEntries(value)) {
+                  processed = true;
+                }
+              });
+            }
+          }
+        });
+      }
+    });
+    return processed;
+  };
+
+  const tryParseSource = (source) => {
+    if (!source) return false;
+    let value = source;
+    if (typeof value === 'string') {
+      try {
+        value = JSON.parse(value);
+      } catch (error) {
+        console.warn('⚠️ [Dashboard] No se pudo parsear clasificaciones:', error);
+        return false;
+      }
+    }
+
+    if (Array.isArray(value)) {
+      return processArrayEntries(value);
+    }
+
+    if (typeof value === 'object') {
+      const hasSummaryValues =
+        typeof (value.condicion ?? value.Condición) === 'number' ||
+        typeof (value.actitud ?? value.Actitud) === 'number';
+      if (hasSummaryValues) {
+        addFromSummary(value);
+        return true;
+      }
+
+      const candidates = [];
+      if (Array.isArray(value.valores)) {
+        candidates.push(value.valores);
+      }
+      candidates.push(...Object.values(value));
+
+      let consumed = false;
+      candidates.forEach((candidate) => {
+        if (Array.isArray(candidate)) {
+          if (processArrayEntries(candidate)) consumed = true;
+        } else if (candidate && typeof candidate === 'object') {
+          if (Array.isArray(candidate.valores)) {
+            candidate.valores.forEach(addFromRecord);
+            consumed = true;
+          } else if (
+            Object.prototype.hasOwnProperty.call(candidate, 'condicion') ||
+            Object.prototype.hasOwnProperty.call(candidate, 'actitud')
+          ) {
+            addFromRecord(candidate);
+            consumed = true;
+          } else {
+            const nested = Object.values(candidate);
+            nested.forEach((value) => {
+              if (Array.isArray(value) && processArrayEntries(value)) {
+                consumed = true;
+              }
+            });
+          }
+        }
+      });
+      return consumed;
+    }
+
+    return false;
+  };
+
+  auditorias.forEach((auditoria) => {
+    let parsed = false;
+    parsed = tryParseSource(auditoria?.clasificaciones) || parsed;
+    parsed = tryParseSource(auditoria?.estadisticas?.clasificaciones) || parsed;
+    parsed = tryParseSource(auditoria?.estadisticasClasificaciones) || parsed;
+    if (!parsed) {
+      addFromSummary(auditoria?.estadisticas?.resumenClasificaciones);
+    }
+  });
+
+  return {
+    condicion,
+    actitud,
+    total: condicion + actitud
+  };
+};
+
 export const safetyDashboardService = {
   // Obtener datos del dashboard desde datos reales
   async getDashboardData(companyId, sucursalId, period = '2025-01') {
@@ -985,6 +1152,8 @@ export const safetyDashboardService = {
     const legalCompliance = totalAuditorias > 0 ? 
       Math.round((conformes / totalAuditorias) * 100) : 100;
 
+    const auditClassificationSummary = aggregateAuditClassifications(auditorias);
+
     return {
       // Métricas de accidentes
       totalAccidents: accidentsInPeriod.length, // Solo del período
@@ -1027,6 +1196,7 @@ export const safetyDashboardService = {
         }
         return total;
       }, 0),
+      auditClassificationSummary,
       
       // Métricas de empleados (DATOS REALES)
       totalEmployees,
