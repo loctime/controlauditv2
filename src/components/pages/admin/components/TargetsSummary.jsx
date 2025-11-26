@@ -1,4 +1,4 @@
-// src/components/pages/admin/components/TargetsSummary.jsx
+// .src/components/pages/admin/components/TargetsSummary.jsx
 import React, { useState, useEffect, useMemo } from "react";
 import {
   Paper,
