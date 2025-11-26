@@ -19,11 +19,13 @@ const PreguntasYSeccion = ({
   guardarComentario, 
   guardarImagenes,
   guardarClasificaciones,
+  guardarAccionesRequeridas,
   // Props para mantener respuestas existentes
   respuestasExistentes = [],
   comentariosExistentes = [],
   imagenesExistentes = [],
-  clasificacionesExistentes = []
+  clasificacionesExistentes = [],
+  accionesRequeridasExistentes = []
 }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -46,6 +48,7 @@ const PreguntasYSeccion = ({
   const [respuestas, setRespuestas] = useState([]);
   const [comentarios, setComentarios] = useState([]);
   const [clasificaciones, setClasificaciones] = useState([]);
+  const [accionesRequeridas, setAccionesRequeridas] = useState([]);
   const [modalAbierto, setModalAbierto] = useState(false);
   const [comentario, setComentario] = useState("");
   const [currentSeccionIndex, setCurrentSeccionIndex] = useState(null);
@@ -101,6 +104,14 @@ const PreguntasYSeccion = ({
         )
       );
       setClasificaciones(newClasificaciones);
+
+      // Inicializar con acciones requeridas existentes o vacías
+      const newAccionesRequeridas = secciones.map((seccion, seccionIndex) => 
+        Array(seccion.preguntas.length).fill(null).map((_, preguntaIndex) => 
+          accionesRequeridasExistentes[seccionIndex]?.[preguntaIndex] || null
+        )
+      );
+      setAccionesRequeridas(newAccionesRequeridas);
 
       setInitialized(true);
     } else if (initialized && secciones.length > 0) {
@@ -355,6 +366,16 @@ const PreguntasYSeccion = ({
     }
   };
 
+  const handleAccionRequeridaChange = (seccionIndex, preguntaIndex, accionData) => {
+    const nuevasAcciones = accionesRequeridas.map((acc, index) =>
+      index === seccionIndex ? [...acc.slice(0, preguntaIndex), accionData, ...acc.slice(preguntaIndex + 1)] : acc
+    );
+    setAccionesRequeridas(nuevasAcciones);
+    if (guardarAccionesRequeridas) {
+      guardarAccionesRequeridas(nuevasAcciones);
+    }
+  };
+
   const handleOpenModal = (seccionIndex, preguntaIndex) => {
     setCurrentSeccionIndex(seccionIndex);
     setCurrentPreguntaIndex(preguntaIndex);
@@ -562,6 +583,7 @@ const PreguntasYSeccion = ({
                 comentario={comentarios[seccionIndex]?.[preguntaIndex] || ''}
                 imagenes={imagenes[seccionIndex]?.[preguntaIndex] || null}
                 clasificacion={clasificaciones[seccionIndex]?.[preguntaIndex] || { condicion: false, actitud: false }}
+                accionRequerida={accionesRequeridas[seccionIndex]?.[preguntaIndex] || null}
                 isMobile={isMobile}
                 mobileBoxStyle={mobileBoxStyle}
                 onRespuestaChange={handleRespuestaChange}
@@ -569,6 +591,7 @@ const PreguntasYSeccion = ({
                 onOpenCameraDialog={handleOpenCameraDialog}
                 onDeleteImage={handleDeleteImage}
                 onClasificacionChange={handleClasificacionChange}
+                onAccionRequeridaChange={handleAccionRequeridaChange}
                 procesandoImagen={procesandoImagen}
               />
             ))}
