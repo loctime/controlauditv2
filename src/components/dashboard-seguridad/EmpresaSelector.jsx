@@ -38,7 +38,7 @@ export default function EmpresaSelector({
         alignItems: "center",
         gap: 2,
         backgroundColor: "white",
-        padding: "12px 16px",
+        padding: "8px 12px",
         borderRadius: "12px",
         border: "1px solid #e5e7eb",
         boxShadow: "0 1px 3px rgba(0,0,0,0.1)"

@@ -67,7 +67,7 @@ export default function DashboardSummaryCard({
     <Paper
       elevation={2}
       sx={{
-        p: 2,
+        p: 1,
         borderRadius: "16px",
         border: "1px solid #e5e7eb",
         backgroundColor: "white",
