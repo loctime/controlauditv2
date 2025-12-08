@@ -14,6 +14,7 @@ import BusinessIcon from "@mui/icons-material/Business";
 import StorefrontIcon from "@mui/icons-material/Storefront";
 import TargetsSummarySection from "./TargetsSummarySection";
 import AccionesSummarySection from "./AccionesSummarySection";
+import GoalsSummarySection from "./GoalsSummarySection";
 
 export default function DashboardSummaryCard({
   selectedEmpresa,
@@ -33,7 +34,12 @@ export default function DashboardSummaryCard({
   targetsLoading = false,
   onToggleAcciones,
   accionesEstadisticas = {},
-  accionesLoading = false
+  accionesLoading = false,
+  onToggleGoals,
+  goalsCapacitaciones = null,
+  goalsAuditorias = null,
+  goalsAccidentes = null,
+  goalsLoading = false
 }) {
   const theme = useTheme();
 
@@ -183,6 +189,13 @@ export default function DashboardSummaryCard({
             estadisticas={accionesEstadisticas}
             loading={accionesLoading}
             onToggle={onToggleAcciones}
+          />
+          <GoalsSummarySection
+            goalsCapacitaciones={goalsCapacitaciones}
+            goalsAuditorias={goalsAuditorias}
+            goalsAccidentes={goalsAccidentes}
+            loading={goalsLoading}
+            onToggle={onToggleGoals}
           />
         </Box>
 

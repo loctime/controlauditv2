@@ -47,7 +47,7 @@ const AccionesSummarySection = memo(function AccionesSummarySection({
       <Box sx={{ flex: 1, minWidth: 120 }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
           <Typography variant="caption" sx={{ fontSize: '0.7rem', color: '#6b7280', fontWeight: 500 }}>
-            Acciones Req.
+            Acciones
           </Typography>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
             <Chip
