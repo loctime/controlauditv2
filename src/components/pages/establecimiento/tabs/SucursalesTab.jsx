@@ -7,27 +7,10 @@ import {
   Typography,
   Table,
   TableBody,
-  TableCell,
   TableContainer,
-  TableHead,
-  TableRow,
-  Collapse,
-  IconButton,
-  Tooltip,
-  useTheme,
-  Chip,
-  Grid,
-  Divider
+  useTheme
 } from '@mui/material';
 import StorefrontIcon from '@mui/icons-material/Storefront';
-import PeopleIcon from '@mui/icons-material/People';
-import SchoolIcon from '@mui/icons-material/School';
-import ReportProblemIcon from '@mui/icons-material/ReportProblem';
-import AssignmentIcon from '@mui/icons-material/Assignment';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import ExpandLessIcon from '@mui/icons-material/ExpandLess';
-import EditIcon from '@mui/icons-material/Edit';
-import DeleteIcon from '@mui/icons-material/Delete';
 import { collection, getDocs, query, where, addDoc, updateDoc, deleteDoc, doc, Timestamp } from 'firebase/firestore';
 import { db } from '../../../../firebaseConfig';
 import { useAuth } from '../../../context/AuthContext';
@@ -39,14 +22,26 @@ import AccidentesContent from './AccidentesContent';
 import AccionesRequeridas from '../components/AccionesRequeridas';
 import { registrarAccionSistema } from '../../../../utils/firestoreUtils';
 import { calcularProgresoTargets } from '../../../../utils/sucursalTargetUtils';
+import { useSucursalesStats } from '../hooks/useSucursalesStats';
+import SucursalTableHeader from '../components/SucursalTableHeader';
+import SucursalRow from '../components/SucursalRow';
+import SucursalFormModal from '../components/SucursalFormModal';
 
 const SucursalesTab = ({ empresaId, empresaNombre, userEmpresas, loadEmpresasStats }) => {
   const { userProfile } = useAuth();
   const navigate = useNavigate();
   const theme = useTheme();
+  const { sucursalesStats, loadSucursalesStats } = useSucursalesStats();
+  
   const [sucursales, setSucursales] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [openSucursalForm, setOpenSucursalForm] = useState(false);
+  const [expandedRows, setExpandedRows] = useState(new Set());
+  const [targetsProgreso, setTargetsProgreso] = useState({});
+  const [activeTabPerSucursal, setActiveTabPerSucursal] = useState({});
+  
+  // Estado del modal unificado
+  const [openModal, setOpenModal] = useState(false);
+  const [modalMode, setModalMode] = useState('create'); // 'create' o 'edit'
   const [sucursalForm, setSucursalForm] = useState({
     nombre: '',
     direccion: '',
@@ -57,12 +52,6 @@ const SucursalesTab = ({ empresaId, empresaNombre, userEmpresas, loadEmpresasSta
     targetMensualCapacitaciones: 1,
     targetAnualCapacitaciones: 12
   });
-  const [expandedRows, setExpandedRows] = useState(new Set());
-  const [sucursalesStats, setSucursalesStats] = useState({});
-  const [targetsProgreso, setTargetsProgreso] = useState({});
-  const [activeTabPerSucursal, setActiveTabPerSucursal] = useState({});
-  const [openEditModal, setOpenEditModal] = useState(false);
-  const [sucursalEdit, setSucursalEdit] = useState(null);
 
   // Función para recargar estadísticas de sucursales
   const reloadSucursalesStats = async () => {
@@ -99,58 +88,6 @@ const SucursalesTab = ({ empresaId, empresaNombre, userEmpresas, loadEmpresasSta
     } finally {
       setLoading(false);
     }
-  };
-
-  const loadSucursalesStats = async (sucursalesList) => {
-    const stats = {};
-    for (const sucursal of sucursalesList) {
-      try {
-        const [empleadosSnapshot, capacitacionesSnapshot, planesSnapshot, accidentesSnapshot] = await Promise.all([
-          getDocs(query(collection(db, 'empleados'), where('sucursalId', '==', sucursal.id))),
-          getDocs(query(collection(db, 'capacitaciones'), where('sucursalId', '==', sucursal.id))),
-          getDocs(query(collection(db, 'planes_capacitaciones_anuales'), where('sucursalId', '==', sucursal.id))),
-          getDocs(query(collection(db, 'accidentes'), where('sucursalId', '==', sucursal.id)))
-        ]);
-        
-        // Cargar acciones requeridas desde subcolección
-        let accionesRequeridasCount = 0;
-        try {
-          const accionesSnapshot = await getDocs(collection(db, 'sucursales', sucursal.id, 'acciones_requeridas'));
-          accionesRequeridasCount = accionesSnapshot.docs.length;
-        } catch (error) {
-          console.warn(`Error cargando acciones requeridas para sucursal ${sucursal.id}:`, error);
-        }
-        
-        const capacitacionesData = capacitacionesSnapshot.docs.map(doc => doc.data());
-        const capacitacionesCompletadas = capacitacionesData.filter(cap => cap.estado === 'completada').length;
-        
-        // Contar capacitaciones de planes anuales
-        const planesData = planesSnapshot.docs.map(doc => doc.data());
-        const capacitacionesDePlanes = planesData.reduce((total, plan) => total + (plan.capacitaciones?.length || 0), 0);
-        
-        // Debug logs
-        console.log(`Sucursal ${sucursal.nombre}:`, {
-          totalCapacitaciones: capacitacionesSnapshot.docs.length,
-          capacitacionesCompletadas: capacitacionesCompletadas,
-          planesAnuales: planesSnapshot.docs.length,
-          capacitacionesDePlanes: capacitacionesDePlanes,
-          estados: capacitacionesData.map(cap => cap.estado)
-        });
-        
-        stats[sucursal.id] = {
-          empleados: empleadosSnapshot.docs.length,
-          capacitaciones: capacitacionesSnapshot.docs.length + capacitacionesDePlanes,
-          capacitacionesCompletadas: capacitacionesCompletadas,
-          accidentes: accidentesSnapshot.docs.length,
-          accidentesAbiertos: accidentesSnapshot.docs.filter(doc => doc.data().estado === 'abierto').length,
-          accionesRequeridas: accionesRequeridasCount
-        };
-      } catch (error) {
-        console.error(`Error cargando stats para sucursal ${sucursal.id}:`, error);
-        stats[sucursal.id] = { empleados: 0, capacitaciones: 0, capacitacionesCompletadas: 0, accidentes: 0, accidentesAbiertos: 0, accionesRequeridas: 0 };
-      }
-    }
-    setSucursalesStats(stats);
   };
 
   const toggleRow = (sucursalId, tab) => {
@@ -190,7 +127,7 @@ const SucursalesTab = ({ empresaId, empresaNombre, userEmpresas, loadEmpresasSta
     }
   };
 
-  const handleSucursalFormChange = (e) => {
+  const handleFormChange = (e) => {
     const { name, value } = e.target;
     setSucursalForm(prev => ({
       ...prev,
@@ -198,83 +135,27 @@ const SucursalesTab = ({ empresaId, empresaNombre, userEmpresas, loadEmpresasSta
     }));
   };
 
-  const handleAddSucursal = async () => {
-    if (!sucursalForm.nombre.trim()) {
-      Swal.fire({
-        icon: 'error',
-        title: 'Error',
-        text: 'El nombre de la sucursal es requerido'
-      });
-      return;
-    }
-
-    try {
-      const docRef = await addDoc(collection(db, 'sucursales'), {
-        nombre: sucursalForm.nombre,
-        direccion: sucursalForm.direccion || '',
-        telefono: sucursalForm.telefono || '',
-        horasSemanales: parseInt(sucursalForm.horasSemanales) || 40,
-        targetMensual: parseInt(sucursalForm.targetMensual) || 0,
-        targetAnualAuditorias: parseInt(sucursalForm.targetAnualAuditorias) || 12,
-        targetMensualCapacitaciones: parseInt(sucursalForm.targetMensualCapacitaciones) || 1,
-        targetAnualCapacitaciones: parseInt(sucursalForm.targetAnualCapacitaciones) || 12,
-        empresaId: empresaId,
-        fechaCreacion: Timestamp.now(),
-        creadoPor: userProfile?.uid,
-        creadoPorEmail: userProfile?.email,
-        clienteAdminId: userProfile?.clienteAdminId || userProfile?.uid
-      });
-
-      // Registrar log
-      await registrarAccionSistema(
-        userProfile?.uid,
-        `Sucursal creada: ${sucursalForm.nombre}`,
-        {
-          sucursalId: docRef.id,
-          nombre: sucursalForm.nombre,
-          empresaId: empresaId,
-          direccion: sucursalForm.direccion
-        },
-        'crear',
-        'sucursal',
-        docRef.id
-      );
-
-      setSucursalForm({ 
-        nombre: '', 
-        direccion: '', 
-        telefono: '', 
-        horasSemanales: 40, 
-        targetMensual: 0,
-        targetAnualAuditorias: 12,
-        targetMensualCapacitaciones: 1,
-        targetAnualCapacitaciones: 12
-      });
-      setOpenSucursalForm(false);
-      
-      await loadSucursales();
-      
-      if (typeof loadEmpresasStats === 'function') {
-        loadEmpresasStats(userEmpresas);
-      }
-
-      Swal.fire({
-        icon: 'success',
-        title: 'Éxito',
-        text: 'Sucursal creada exitosamente'
-      });
-    } catch (error) {
-      console.error('Error creando sucursal:', error);
-      Swal.fire({
-        icon: 'error',
-        title: 'Error',
-        text: 'Error al crear la sucursal: ' + error.message
-      });
-    }
+  const resetForm = () => {
+    setSucursalForm({
+      nombre: '',
+      direccion: '',
+      telefono: '',
+      horasSemanales: 40,
+      targetMensual: 0,
+      targetAnualAuditorias: 12,
+      targetMensualCapacitaciones: 1,
+      targetAnualCapacitaciones: 12
+    });
   };
 
-  const handleEditSucursal = (sucursal) => {
-    setSucursalEdit({
+  const handleOpenCreateModal = () => {
+    resetForm();
+    setModalMode('create');
+    setOpenModal(true);
+  };
+
+  const handleOpenEditModal = (sucursal) => {
+    setSucursalForm({
       id: sucursal.id,
       nombre: sucursal.nombre,
       direccion: sucursal.direccion || '',
@@ -285,19 +166,12 @@ const SucursalesTab = ({ empresaId, empresaNombre, userEmpresas, loadEmpresasSta
       targetMensualCapacitaciones: sucursal.targetMensualCapacitaciones || 1,
       targetAnualCapacitaciones: sucursal.targetAnualCapacitaciones || 12
     });
-    setOpenEditModal(true);
+    setModalMode('edit');
+    setOpenModal(true);
   };
 
-  const handleEditFormChange = (e) => {
-    const { name, value } = e.target;
-    setSucursalEdit(prev => ({
-      ...prev,
-      [name]: value
-    }));
-  };
-
-  const handleUpdateSucursal = async () => {
-    if (!sucursalEdit.nombre.trim()) {
+  const handleSubmit = async () => {
+    if (!sucursalForm.nombre.trim()) {
       Swal.fire({
         icon: 'error',
         title: 'Error',
@@ -307,58 +181,95 @@ const SucursalesTab = ({ empresaId, empresaNombre, userEmpresas, loadEmpresasSta
     }
 
     try {
-      await updateDoc(doc(db, 'sucursales', sucursalEdit.id), {
-        nombre: sucursalEdit.nombre,
-        direccion: sucursalEdit.direccion,
-        telefono: sucursalEdit.telefono,
-        horasSemanales: parseInt(sucursalEdit.horasSemanales),
-        targetMensual: parseInt(sucursalEdit.targetMensual) || 0,
-        targetAnualAuditorias: parseInt(sucursalEdit.targetAnualAuditorias) || 12,
-        targetMensualCapacitaciones: parseInt(sucursalEdit.targetMensualCapacitaciones) || 1,
-        targetAnualCapacitaciones: parseInt(sucursalEdit.targetAnualCapacitaciones) || 12,
-        fechaModificacion: Timestamp.now(),
-        modificadoPor: userProfile?.uid,
-        modificadoPorEmail: userProfile?.email
-      });
+      if (modalMode === 'create') {
+        const docRef = await addDoc(collection(db, 'sucursales'), {
+          nombre: sucursalForm.nombre,
+          direccion: sucursalForm.direccion || '',
+          telefono: sucursalForm.telefono || '',
+          horasSemanales: parseInt(sucursalForm.horasSemanales) || 40,
+          targetMensual: parseInt(sucursalForm.targetMensual) || 0,
+          targetAnualAuditorias: parseInt(sucursalForm.targetAnualAuditorias) || 12,
+          targetMensualCapacitaciones: parseInt(sucursalForm.targetMensualCapacitaciones) || 1,
+          targetAnualCapacitaciones: parseInt(sucursalForm.targetAnualCapacitaciones) || 12,
+          empresaId: empresaId,
+          fechaCreacion: Timestamp.now(),
+          creadoPor: userProfile?.uid,
+          creadoPorEmail: userProfile?.email,
+          clienteAdminId: userProfile?.clienteAdminId || userProfile?.uid
+        });
 
-      // Registrar log
-      await registrarAccionSistema(
-        userProfile?.uid,
-        `Sucursal actualizada: ${sucursalEdit.nombre}`,
-        {
-          sucursalId: sucursalEdit.id,
-          nombre: sucursalEdit.nombre,
-          cambios: {
-            direccion: sucursalEdit.direccion,
-            telefono: sucursalEdit.telefono,
-            horasSemanales: sucursalEdit.horasSemanales
-          }
-        },
-        'editar',
-        'sucursal',
-        sucursalEdit.id
-      );
+        await registrarAccionSistema(
+          userProfile?.uid,
+          `Sucursal creada: ${sucursalForm.nombre}`,
+          {
+            sucursalId: docRef.id,
+            nombre: sucursalForm.nombre,
+            empresaId: empresaId,
+            direccion: sucursalForm.direccion
+          },
+          'crear',
+          'sucursal',
+          docRef.id
+        );
 
-      setSucursalEdit(null);
-      setOpenEditModal(false);
-      
+        Swal.fire({
+          icon: 'success',
+          title: 'Éxito',
+          text: 'Sucursal creada exitosamente'
+        });
+      } else {
+        // Modo edición
+        await updateDoc(doc(db, 'sucursales', sucursalForm.id), {
+          nombre: sucursalForm.nombre,
+          direccion: sucursalForm.direccion,
+          telefono: sucursalForm.telefono,
+          horasSemanales: parseInt(sucursalForm.horasSemanales),
+          targetMensual: parseInt(sucursalForm.targetMensual) || 0,
+          targetAnualAuditorias: parseInt(sucursalForm.targetAnualAuditorias) || 12,
+          targetMensualCapacitaciones: parseInt(sucursalForm.targetMensualCapacitaciones) || 1,
+          targetAnualCapacitaciones: parseInt(sucursalForm.targetAnualCapacitaciones) || 12,
+          fechaModificacion: Timestamp.now(),
+          modificadoPor: userProfile?.uid,
+          modificadoPorEmail: userProfile?.email
+        });
+
+        await registrarAccionSistema(
+          userProfile?.uid,
+          `Sucursal actualizada: ${sucursalForm.nombre}`,
+          {
+            sucursalId: sucursalForm.id,
+            nombre: sucursalForm.nombre,
+            cambios: {
+              direccion: sucursalForm.direccion,
+              telefono: sucursalForm.telefono,
+              horasSemanales: sucursalForm.horasSemanales
+            }
+          },
+          'editar',
+          'sucursal',
+          sucursalForm.id
+        );
+
+        Swal.fire({
+          icon: 'success',
+          title: 'Éxito',
+          text: 'Sucursal actualizada exitosamente'
+        });
+      }
+
+      setOpenModal(false);
+      resetForm();
       await loadSucursales();
       
       if (typeof loadEmpresasStats === 'function') {
         loadEmpresasStats(userEmpresas);
       }
-
-      Swal.fire({
-        icon: 'success',
-        title: 'Éxito',
-        text: 'Sucursal actualizada exitosamente'
-      });
     } catch (error) {
-      console.error('Error actualizando sucursal:', error);
+      console.error(`Error ${modalMode === 'create' ? 'creando' : 'actualizando'} sucursal:`, error);
       Swal.fire({
         icon: 'error',
         title: 'Error',
-        text: 'Error al actualizar la sucursal: ' + error.message
+        text: `Error al ${modalMode === 'create' ? 'crear' : 'actualizar'} la sucursal: ${error.message}`
       });
     }
   };
@@ -393,7 +304,6 @@ const SucursalesTab = ({ empresaId, empresaNombre, userEmpresas, loadEmpresasSta
 
         await deleteDoc(doc(db, 'sucursales', sucursal.id));
 
-        // Registrar log
         await registrarAccionSistema(
           userProfile?.uid,
           `Sucursal eliminada: ${sucursal.nombre}`,
@@ -429,6 +339,46 @@ const SucursalesTab = ({ empresaId, empresaNombre, userEmpresas, loadEmpresasSta
     }
   };
 
+  const renderExpandedContent = (sucursal) => {
+    const activeTab = getActiveTab(sucursal.id);
+    
+    return (
+      <Box sx={{ p: 3, backgroundColor: theme.palette.background.default, borderTop: `1px solid ${theme.palette.divider}` }}>
+        {activeTab === 'empleados' && (
+          <EmpleadosContent 
+            sucursalId={sucursal.id} 
+            sucursalNombre={sucursal.nombre} 
+            navigateToPage={navigateToPage}
+            reloadSucursalesStats={reloadSucursalesStats}
+            loadEmpresasStats={loadEmpresasStats}
+            userEmpresas={userEmpresas}
+          />
+        )}
+        {activeTab === 'capacitaciones' && (
+          <CapacitacionesContent 
+            sucursalId={sucursal.id} 
+            sucursalNombre={sucursal.nombre} 
+            navigateToPage={navigateToPage} 
+          />
+        )}
+        {activeTab === 'accidentes' && (
+          <AccidentesContent 
+            sucursalId={sucursal.id} 
+            sucursalNombre={sucursal.nombre} 
+            empresaId={empresaId} 
+            navigateToPage={navigateToPage} 
+          />
+        )}
+        {activeTab === 'acciones_requeridas' && (
+          <AccionesRequeridas 
+            sucursalId={sucursal.id} 
+            sucursalNombre={sucursal.nombre} 
+          />
+        )}
+      </Box>
+    );
+  };
+
   return (
     <Box>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
@@ -436,7 +386,7 @@ const SucursalesTab = ({ empresaId, empresaNombre, userEmpresas, loadEmpresasSta
         <Button
           variant="contained"
           startIcon={<StorefrontIcon />}
-          onClick={() => setOpenSucursalForm(true)}
+          onClick={handleOpenCreateModal}
         >
           Agregar Sucursal
         </Button>
@@ -455,167 +405,39 @@ const SucursalesTab = ({ empresaId, empresaNombre, userEmpresas, loadEmpresasSta
       ) : (
         <TableContainer component={Paper}>
           <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell><strong>Nombre</strong></TableCell>
-                <TableCell><strong>Dirección</strong></TableCell>
-                <TableCell><strong>Teléfono</strong></TableCell>
-                <TableCell align="center"><strong>Horas/Semana</strong></TableCell>
-                <TableCell align="center"><strong>Empleados</strong></TableCell>
-                <TableCell align="center"><strong>Capacitaciones</strong></TableCell>
-                <TableCell align="center"><strong>Accidentes</strong></TableCell>
-                <TableCell align="center"><strong>Acciones Req.</strong></TableCell>
-                <TableCell align="center"><strong>Target Mes</strong></TableCell>
-                <TableCell align="center"><strong>Acciones</strong></TableCell>
-              </TableRow>
-            </TableHead>
+            <SucursalTableHeader />
             <TableBody>
               {sucursales.map((sucursal) => {
                 const isExpanded = expandedRows.has(sucursal.id);
-                const stats = sucursalesStats[sucursal.id] || { empleados: 0, capacitaciones: 0, capacitacionesCompletadas: 0, accidentes: 0, accidentesAbiertos: 0, accionesRequeridas: 0 };
-                const progreso = targetsProgreso[sucursal.id] || { completadas: 0, target: 0, porcentaje: 0, estado: 'sin_target' };
+                const stats = sucursalesStats[sucursal.id] || { 
+                  empleados: 0, 
+                  capacitaciones: 0, 
+                  capacitacionesCompletadas: 0, 
+                  accidentes: 0, 
+                  accidentesAbiertos: 0, 
+                  accionesRequeridas: 0 
+                };
+                const progreso = targetsProgreso[sucursal.id] || { 
+                  completadas: 0, 
+                  target: 0, 
+                  porcentaje: 0, 
+                  estado: 'sin_target' 
+                };
 
                 return (
-                  <React.Fragment key={sucursal.id}>
-                    <TableRow hover>
-                      <TableCell>{sucursal.nombre}</TableCell>
-                      <TableCell>{sucursal.direccion || 'N/A'}</TableCell>
-                      <TableCell>{sucursal.telefono || 'N/A'}</TableCell>
-                      <TableCell align="center">
-                        {sucursal.horasSemanales || '40'}h
-                      </TableCell>
-                      <TableCell align="center">
-                        <Button
-                          variant="text"
-                          size="small"
-                          startIcon={<PeopleIcon />}
-                          onClick={() => toggleRow(sucursal.id, 'empleados')}
-                          sx={{ 
-                            textTransform: 'none',
-                            minWidth: '100px'
-                          }}
-                        >
-                          {stats.empleados}
-                          {isExpanded && getActiveTab(sucursal.id) === 'empleados' ? <ExpandLessIcon fontSize="small" sx={{ ml: 0.5 }} /> : <ExpandMoreIcon fontSize="small" sx={{ ml: 0.5 }} />}
-                        </Button>
-                      </TableCell>
-                      <TableCell align="center">
-                        <Button
-                          variant="text"
-                          size="small"
-                          startIcon={<SchoolIcon />}
-                          onClick={() => toggleRow(sucursal.id, 'capacitaciones')}
-                          sx={{ 
-                            textTransform: 'none',
-                            minWidth: '100px'
-                          }}
-                        >
-                          {stats.capacitaciones}
-                          {isExpanded && getActiveTab(sucursal.id) === 'capacitaciones' ? <ExpandLessIcon fontSize="small" sx={{ ml: 0.5 }} /> : <ExpandMoreIcon fontSize="small" sx={{ ml: 0.5 }} />}
-                        </Button>
-                      </TableCell>
-                      <TableCell align="center">
-                        <Button
-                          variant="text"
-                          size="small"
-                          startIcon={<ReportProblemIcon />}
-                          onClick={() => toggleRow(sucursal.id, 'accidentes')}
-                          sx={{ 
-                            textTransform: 'none',
-                            minWidth: '100px'
-                          }}
-                        >
-                          {stats.accidentes}
-                          {isExpanded && getActiveTab(sucursal.id) === 'accidentes' ? <ExpandLessIcon fontSize="small" sx={{ ml: 0.5 }} /> : <ExpandMoreIcon fontSize="small" sx={{ ml: 0.5 }} />}
-                        </Button>
-                      </TableCell>
-                      <TableCell align="center">
-                        <Button
-                          variant="text"
-                          size="small"
-                          startIcon={<AssignmentIcon />}
-                          onClick={() => toggleRow(sucursal.id, 'acciones_requeridas')}
-                          sx={{ 
-                            textTransform: 'none',
-                            minWidth: '100px'
-                          }}
-                        >
-                          {stats.accionesRequeridas || 0}
-                          {isExpanded && getActiveTab(sucursal.id) === 'acciones_requeridas' ? <ExpandLessIcon fontSize="small" sx={{ ml: 0.5 }} /> : <ExpandMoreIcon fontSize="small" sx={{ ml: 0.5 }} />}
-                        </Button>
-                      </TableCell>
-                      <TableCell align="center">
-                        {progreso.estado === 'sin_target' ? (
-                          <Typography variant="body2" color="text.secondary">
-                            Sin target
-                          </Typography>
-                        ) : (
-                          <Tooltip title={`${progreso.completadas} de ${progreso.target} auditorías (${progreso.porcentaje}%)`}>
-                            <Chip
-                              label={`${progreso.completadas}/${progreso.target}`}
-                              size="small"
-                              color={
-                                progreso.estado === 'completado' ? 'success' :
-                                progreso.estado === 'bueno' ? 'success' :
-                                progreso.estado === 'regular' ? 'warning' :
-                                'error'
-                              }
-                              sx={{ fontWeight: 'bold' }}
-                            />
-                          </Tooltip>
-                        )}
-                      </TableCell>
-                      <TableCell align="center">
-                        <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center' }}>
-                          <Tooltip title="Editar sucursal">
-                            <IconButton 
-                              size="small" 
-                              color="primary"
-                              onClick={() => handleEditSucursal(sucursal)}
-                            >
-                              <EditIcon />
-                            </IconButton>
-                          </Tooltip>
-                          <Tooltip title="Eliminar sucursal">
-                            <IconButton 
-                              size="small" 
-                              color="error"
-                              onClick={() => handleDeleteSucursal(sucursal)}
-                            >
-                              <DeleteIcon />
-                            </IconButton>
-                          </Tooltip>
-                        </Box>
-                      </TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell colSpan={10} sx={{ py: 0 }}>
-                        <Collapse in={isExpanded} timeout="auto" unmountOnExit>
-                          <Box sx={{ p: 3, backgroundColor: theme.palette.background.default, borderTop: `1px solid ${theme.palette.divider}` }}>
-                            {getActiveTab(sucursal.id) === 'empleados' && (
-                              <EmpleadosContent 
-                                sucursalId={sucursal.id} 
-                                sucursalNombre={sucursal.nombre} 
-                                navigateToPage={navigateToPage}
-                                reloadSucursalesStats={reloadSucursalesStats}
-                                loadEmpresasStats={loadEmpresasStats}
-                                userEmpresas={userEmpresas}
-                              />
-                            )}
-                            {getActiveTab(sucursal.id) === 'capacitaciones' && (
-                              <CapacitacionesContent sucursalId={sucursal.id} sucursalNombre={sucursal.nombre} navigateToPage={navigateToPage} />
-                            )}
-                            {getActiveTab(sucursal.id) === 'accidentes' && (
-                              <AccidentesContent sucursalId={sucursal.id} sucursalNombre={sucursal.nombre} empresaId={empresaId} navigateToPage={navigateToPage} />
-                            )}
-                            {getActiveTab(sucursal.id) === 'acciones_requeridas' && (
-                              <AccionesRequeridas sucursalId={sucursal.id} sucursalNombre={sucursal.nombre} />
-                            )}
-                          </Box>
-                        </Collapse>
-                      </TableCell>
-                    </TableRow>
-                  </React.Fragment>
+                  <SucursalRow
+                    key={sucursal.id}
+                    sucursal={sucursal}
+                    stats={stats}
+                    progreso={progreso}
+                    isExpanded={isExpanded}
+                    activeTab={getActiveTab(sucursal.id)}
+                    onToggleRow={toggleRow}
+                    onEdit={handleOpenEditModal}
+                    onDelete={handleDeleteSucursal}
+                  >
+                    {renderExpandedContent(sucursal)}
+                  </SucursalRow>
                 );
               })}
             </TableBody>
@@ -623,589 +445,18 @@ const SucursalesTab = ({ empresaId, empresaNombre, userEmpresas, loadEmpresasSta
         </TableContainer>
       )}
 
-      {/* Modal para agregar sucursal */}
-      {openSucursalForm && (
-        <Box
-          sx={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: 'rgba(0,0,0,0.5)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1000
-          }}
-          onClick={() => setOpenSucursalForm(false)}
-        >
-          <Paper
-            sx={{ 
-              p: 3, 
-              maxWidth: 700, 
-              width: '90%',
-              maxHeight: '90vh',
-              display: 'flex',
-              flexDirection: 'column'
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
-              Agregar Sucursal
-            </Typography>
-            <Box sx={{ 
-              overflowY: 'auto', 
-              overflowX: 'hidden',
-              pr: 1,
-              '&::-webkit-scrollbar': {
-                width: '8px',
-              },
-              '&::-webkit-scrollbar-track': {
-                backgroundColor: '#f1f1f1',
-                borderRadius: '4px',
-              },
-              '&::-webkit-scrollbar-thumb': {
-                backgroundColor: '#c1c1c1',
-                borderRadius: '4px',
-                '&:hover': {
-                  backgroundColor: '#a8a8a8',
-                },
-              },
-            }}>
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                {/* Sección: Información General */}
-                <Box>
-                  <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600, color: '#111827' }}>
-                    📋 Información General
-                  </Typography>
-                  <Grid container spacing={2}>
-                    <Grid item xs={12} sm={6}>
-                      <Box>
-                        <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
-                          Nombre *
-                        </Typography>
-                        <input
-                          type="text"
-                          name="nombre"
-                          value={sucursalForm.nombre}
-                          onChange={handleSucursalFormChange}
-                          placeholder="Nombre de la sucursal"
-                          style={{
-                            width: '100%',
-                            padding: '10px 12px',
-                            border: `1px solid ${theme.palette.divider}`,
-                            borderRadius: '6px',
-                            fontSize: '14px'
-                          }}
-                        />
-                      </Box>
-                    </Grid>
-                    <Grid item xs={12} sm={6}>
-                      <Box>
-                        <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
-                          Dirección
-                        </Typography>
-                        <input
-                          type="text"
-                          name="direccion"
-                          value={sucursalForm.direccion}
-                          onChange={handleSucursalFormChange}
-                          placeholder="Dirección de la sucursal"
-                          style={{
-                            width: '100%',
-                            padding: '10px 12px',
-                            border: `1px solid ${theme.palette.divider}`,
-                            borderRadius: '6px',
-                            fontSize: '14px'
-                          }}
-                        />
-                      </Box>
-                    </Grid>
-                    <Grid item xs={12} sm={6}>
-                      <Box>
-                        <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
-                          Teléfono
-                        </Typography>
-                        <input
-                          type="text"
-                          name="telefono"
-                          value={sucursalForm.telefono}
-                          onChange={handleSucursalFormChange}
-                          placeholder="Teléfono de la sucursal"
-                          style={{
-                            width: '100%',
-                            padding: '10px 12px',
-                            border: `1px solid ${theme.palette.divider}`,
-                            borderRadius: '6px',
-                            fontSize: '14px'
-                          }}
-                        />
-                      </Box>
-                    </Grid>
-                    <Grid item xs={12} sm={6}>
-                      <Box>
-                        <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
-                          Horas Semanales
-                        </Typography>
-                        <input
-                          type="number"
-                          name="horasSemanales"
-                          value={sucursalForm.horasSemanales}
-                          onChange={handleSucursalFormChange}
-                          placeholder="40"
-                          min="1"
-                          max="168"
-                          style={{
-                            width: '100%',
-                            padding: '10px 12px',
-                            border: `1px solid ${theme.palette.divider}`,
-                            borderRadius: '6px',
-                            fontSize: '14px'
-                          }}
-                        />
-                        <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
-                          Por defecto: 40 horas
-                        </Typography>
-                      </Box>
-                    </Grid>
-                  </Grid>
-                </Box>
-
-                <Divider />
-
-                {/* Sección: Metas de Auditorías */}
-                <Box>
-                  <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600, color: '#111827' }}>
-                    📊 Metas de Auditorías
-                  </Typography>
-                  <Grid container spacing={2}>
-                    <Grid item xs={12} sm={6}>
-                      <Box>
-                        <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
-                          Target Mensual
-                        </Typography>
-                        <input
-                          type="number"
-                          name="targetMensual"
-                          value={sucursalForm.targetMensual}
-                          onChange={handleSucursalFormChange}
-                          placeholder="0"
-                          min="0"
-                          style={{
-                            width: '100%',
-                            padding: '10px 12px',
-                            border: `1px solid ${theme.palette.divider}`,
-                            borderRadius: '6px',
-                            fontSize: '14px'
-                          }}
-                        />
-                        <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
-                          Auditorías objetivo para este mes
-                        </Typography>
-                      </Box>
-                    </Grid>
-                    <Grid item xs={12} sm={6}>
-                      <Box>
-                        <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
-                          Target Anual
-                        </Typography>
-                        <input
-                          type="number"
-                          name="targetAnualAuditorias"
-                          value={sucursalForm.targetAnualAuditorias}
-                          onChange={handleSucursalFormChange}
-                          placeholder="12"
-                          min="0"
-                          style={{
-                            width: '100%',
-                            padding: '10px 12px',
-                            border: `1px solid ${theme.palette.divider}`,
-                            borderRadius: '6px',
-                            fontSize: '14px'
-                          }}
-                        />
-                        <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
-                          Auditorías objetivo para el año
-                        </Typography>
-                      </Box>
-                    </Grid>
-                  </Grid>
-                </Box>
-
-                <Divider />
-
-                {/* Sección: Metas de Capacitaciones */}
-                <Box>
-                  <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600, color: '#111827' }}>
-                    📚 Metas de Capacitaciones
-                  </Typography>
-                  <Grid container spacing={2}>
-                    <Grid item xs={12} sm={6}>
-                      <Box>
-                        <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
-                          Target Mensual
-                        </Typography>
-                        <input
-                          type="number"
-                          name="targetMensualCapacitaciones"
-                          value={sucursalForm.targetMensualCapacitaciones}
-                          onChange={handleSucursalFormChange}
-                          placeholder="1"
-                          min="0"
-                          style={{
-                            width: '100%',
-                            padding: '10px 12px',
-                            border: `1px solid ${theme.palette.divider}`,
-                            borderRadius: '6px',
-                            fontSize: '14px'
-                          }}
-                        />
-                        <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
-                          Capacitaciones objetivo para este mes
-                        </Typography>
-                      </Box>
-                    </Grid>
-                    <Grid item xs={12} sm={6}>
-                      <Box>
-                        <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
-                          Target Anual
-                        </Typography>
-                        <input
-                          type="number"
-                          name="targetAnualCapacitaciones"
-                          value={sucursalForm.targetAnualCapacitaciones}
-                          onChange={handleSucursalFormChange}
-                          placeholder="12"
-                          min="0"
-                          style={{
-                            width: '100%',
-                            padding: '10px 12px',
-                            border: `1px solid ${theme.palette.divider}`,
-                            borderRadius: '6px',
-                            fontSize: '14px'
-                          }}
-                        />
-                        <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
-                          Capacitaciones objetivo para el año
-                        </Typography>
-                      </Box>
-                    </Grid>
-                  </Grid>
-                </Box>
-              </Box>
-            </Box>
-            <Box sx={{ display: 'flex', gap: 2, mt: 3, pt: 2, borderTop: `1px solid ${theme.palette.divider}` }}>
-              <Button
-                variant="contained"
-                onClick={handleAddSucursal}
-                sx={{ flex: 1 }}
-              >
-                Crear
-              </Button>
-              <Button
-                variant="outlined"
-                onClick={() => setOpenSucursalForm(false)}
-                sx={{ flex: 1 }}
-              >
-                Cancelar
-              </Button>
-            </Box>
-          </Paper>
-        </Box>
-      )}
-
-      {/* Modal para editar sucursal */}
-      {openEditModal && sucursalEdit && (
-        <Box
-          sx={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: 'rgba(0,0,0,0.5)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1000
-          }}
-          onClick={() => setOpenEditModal(false)}
-        >
-          <Paper
-            sx={{ 
-              p: 3, 
-              maxWidth: 700, 
-              width: '90%',
-              maxHeight: '90vh',
-              display: 'flex',
-              flexDirection: 'column'
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
-              Editar Sucursal
-            </Typography>
-            <Box sx={{ 
-              overflowY: 'auto', 
-              overflowX: 'hidden',
-              pr: 1,
-              '&::-webkit-scrollbar': {
-                width: '8px',
-              },
-              '&::-webkit-scrollbar-track': {
-                backgroundColor: '#f1f1f1',
-                borderRadius: '4px',
-              },
-              '&::-webkit-scrollbar-thumb': {
-                backgroundColor: '#c1c1c1',
-                borderRadius: '4px',
-                '&:hover': {
-                  backgroundColor: '#a8a8a8',
-                },
-              },
-            }}>
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                {/* Sección: Información General */}
-                <Box>
-                  <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600, color: '#111827' }}>
-                    📋 Información General
-                  </Typography>
-                  <Grid container spacing={2}>
-                    <Grid item xs={12} sm={6}>
-                      <Box>
-                        <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
-                          Nombre *
-                        </Typography>
-                        <input
-                          type="text"
-                          name="nombre"
-                          value={sucursalEdit.nombre}
-                          onChange={handleEditFormChange}
-                          placeholder="Nombre de la sucursal"
-                          style={{
-                            width: '100%',
-                            padding: '10px 12px',
-                            border: `1px solid ${theme.palette.divider}`,
-                            borderRadius: '6px',
-                            fontSize: '14px'
-                          }}
-                        />
-                      </Box>
-                    </Grid>
-                    <Grid item xs={12} sm={6}>
-                      <Box>
-                        <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
-                          Dirección
-                        </Typography>
-                        <input
-                          type="text"
-                          name="direccion"
-                          value={sucursalEdit.direccion}
-                          onChange={handleEditFormChange}
-                          placeholder="Dirección de la sucursal"
-                          style={{
-                            width: '100%',
-                            padding: '10px 12px',
-                            border: `1px solid ${theme.palette.divider}`,
-                            borderRadius: '6px',
-                            fontSize: '14px'
-                          }}
-                        />
-                      </Box>
-                    </Grid>
-                    <Grid item xs={12} sm={6}>
-                      <Box>
-                        <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
-                          Teléfono
-                        </Typography>
-                        <input
-                          type="text"
-                          name="telefono"
-                          value={sucursalEdit.telefono}
-                          onChange={handleEditFormChange}
-                          placeholder="Teléfono de la sucursal"
-                          style={{
-                            width: '100%',
-                            padding: '10px 12px',
-                            border: `1px solid ${theme.palette.divider}`,
-                            borderRadius: '6px',
-                            fontSize: '14px'
-                          }}
-                        />
-                      </Box>
-                    </Grid>
-                    <Grid item xs={12} sm={6}>
-                      <Box>
-                        <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
-                          Horas Semanales
-                        </Typography>
-                        <input
-                          type="number"
-                          name="horasSemanales"
-                          value={sucursalEdit.horasSemanales}
-                          onChange={handleEditFormChange}
-                          placeholder="40"
-                          min="1"
-                          max="168"
-                          style={{
-                            width: '100%',
-                            padding: '10px 12px',
-                            border: `1px solid ${theme.palette.divider}`,
-                            borderRadius: '6px',
-                            fontSize: '14px'
-                          }}
-                        />
-                        <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
-                          Por defecto: 40 horas
-                        </Typography>
-                      </Box>
-                    </Grid>
-                  </Grid>
-                </Box>
-
-                <Divider />
-
-                {/* Sección: Metas de Auditorías */}
-                <Box>
-                  <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600, color: '#111827' }}>
-                    📊 Metas de Auditorías
-                  </Typography>
-                  <Grid container spacing={2}>
-                    <Grid item xs={12} sm={6}>
-                      <Box>
-                        <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
-                          Target Mensual
-                        </Typography>
-                        <input
-                          type="number"
-                          name="targetMensual"
-                          value={sucursalEdit.targetMensual}
-                          onChange={handleEditFormChange}
-                          placeholder="0"
-                          min="0"
-                          style={{
-                            width: '100%',
-                            padding: '10px 12px',
-                            border: `1px solid ${theme.palette.divider}`,
-                            borderRadius: '6px',
-                            fontSize: '14px'
-                          }}
-                        />
-                        <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
-                          Auditorías objetivo para este mes
-                        </Typography>
-                      </Box>
-                    </Grid>
-                    <Grid item xs={12} sm={6}>
-                      <Box>
-                        <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
-                          Target Anual
-                        </Typography>
-                        <input
-                          type="number"
-                          name="targetAnualAuditorias"
-                          value={sucursalEdit.targetAnualAuditorias}
-                          onChange={handleEditFormChange}
-                          placeholder="12"
-                          min="0"
-                          style={{
-                            width: '100%',
-                            padding: '10px 12px',
-                            border: `1px solid ${theme.palette.divider}`,
-                            borderRadius: '6px',
-                            fontSize: '14px'
-                          }}
-                        />
-                        <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
-                          Auditorías objetivo para el año
-                        </Typography>
-                      </Box>
-                    </Grid>
-                  </Grid>
-                </Box>
-
-                <Divider />
-
-                {/* Sección: Metas de Capacitaciones */}
-                <Box>
-                  <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600, color: '#111827' }}>
-                    📚 Metas de Capacitaciones
-                  </Typography>
-                  <Grid container spacing={2}>
-                    <Grid item xs={12} sm={6}>
-                      <Box>
-                        <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
-                          Target Mensual
-                        </Typography>
-                        <input
-                          type="number"
-                          name="targetMensualCapacitaciones"
-                          value={sucursalEdit.targetMensualCapacitaciones}
-                          onChange={handleEditFormChange}
-                          placeholder="1"
-                          min="0"
-                          style={{
-                            width: '100%',
-                            padding: '10px 12px',
-                            border: `1px solid ${theme.palette.divider}`,
-                            borderRadius: '6px',
-                            fontSize: '14px'
-                          }}
-                        />
-                        <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
-                          Capacitaciones objetivo para este mes
-                        </Typography>
-                      </Box>
-                    </Grid>
-                    <Grid item xs={12} sm={6}>
-                      <Box>
-                        <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
-                          Target Anual
-                        </Typography>
-                        <input
-                          type="number"
-                          name="targetAnualCapacitaciones"
-                          value={sucursalEdit.targetAnualCapacitaciones}
-                          onChange={handleEditFormChange}
-                          placeholder="12"
-                          min="0"
-                          style={{
-                            width: '100%',
-                            padding: '10px 12px',
-                            border: `1px solid ${theme.palette.divider}`,
-                            borderRadius: '6px',
-                            fontSize: '14px'
-                          }}
-                        />
-                        <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
-                          Capacitaciones objetivo para el año
-                        </Typography>
-                      </Box>
-                    </Grid>
-                  </Grid>
-                </Box>
-              </Box>
-            </Box>
-            <Box sx={{ display: 'flex', gap: 2, mt: 3, pt: 2, borderTop: `1px solid ${theme.palette.divider}` }}>
-              <Button
-                variant="contained"
-                onClick={handleUpdateSucursal}
-                sx={{ flex: 1 }}
-              >
-                Actualizar
-              </Button>
-              <Button
-                variant="outlined"
-                onClick={() => setOpenEditModal(false)}
-                sx={{ flex: 1 }}
-              >
-                Cancelar
-              </Button>
-            </Box>
-          </Paper>
-        </Box>
-      )}
+      {/* Modal unificado para crear/editar */}
+      <SucursalFormModal
+        open={openModal}
+        onClose={() => {
+          setOpenModal(false);
+          resetForm();
+        }}
+        formData={sucursalForm}
+        onChange={handleFormChange}
+        onSubmit={handleSubmit}
+        isEditing={modalMode === 'edit'}
+      />
     </Box>
   );
 };
