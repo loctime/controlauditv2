@@ -1064,7 +1064,7 @@ const PERMISOS_LISTA = [
   { key: 'puedeCrearSucursales', label: 'Crear Sucursales' },
   { key: 'puedeCrearAuditorias', label: 'Crear Auditorías' },
   { key: 'puedeAgendarAuditorias', label: 'Agendar Auditorías' },
-  { key: 'puedeCompartirAuditorias', label: 'Compartir Auditorías' },
+  { key: 'puedeCompartirFormularios', label: 'Compartir Formularios' },
   { key: 'puedeAgregarSocios', label: 'Agregar Socios' }
 ];
 ```
@@ -1077,7 +1077,7 @@ const defaultPermissions = {
     puedeCrearSucursales: false,
     puedeCrearAuditorias: false,
     puedeAgendarAuditorias: false,
-    puedeCompartirAuditorias: false,
+    puedeCompartirFormularios: false,
     puedeAgregarSocios: false
   },
   max: {
@@ -1085,7 +1085,7 @@ const defaultPermissions = {
     puedeCrearSucursales: true,
     puedeCrearAuditorias: true,
     puedeAgendarAuditorias: true,
-    puedeCompartirAuditorias: true,
+    puedeCompartirFormularios: true,
     puedeAgregarSocios: true
   },
   supermax: {
@@ -1093,7 +1093,7 @@ const defaultPermissions = {
     puedeCrearSucursales: true,
     puedeCrearAuditorias: true,
     puedeAgendarAuditorias: true,
-    puedeCompartirAuditorias: true,
+    puedeCompartirFormularios: true,
     puedeAgregarSocios: true
   }
 };
@@ -1131,7 +1131,7 @@ export const usePermissions = () => {
     canCrearAuditorias,
     canCrearEmpresas,
     canCrearSucursales,
-    canCompartirAuditorias,
+    canCompartirFormularios,
     canAgregarSocios,
     hasPermission
   };
