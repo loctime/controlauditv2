@@ -190,11 +190,16 @@ export default function DashboardSeguridadV2() {
     return sucursalesBase.find(s => s.id === selectedSucursal);
   }, [selectedSucursal, sucursalesBase]);
 
+  // Memoizar arrays de datos para evitar recálculos innecesarios
+  const capacitacionesMemo = useMemo(() => capacitaciones, [capacitaciones?.length, capacitaciones?.[0]?.id]);
+  const auditoriasMemo = useMemo(() => auditorias, [auditorias?.length, auditorias?.[0]?.id]);
+  const accidentesMemo = useMemo(() => accidentes, [accidentes?.length, accidentes?.[0]?.id]);
+
   const { capacitaciones: goalsCapacitaciones, auditorias: goalsAuditorias, accidentes: goalsAccidentes, loading: goalsLoading } = useGoalsData({
     sucursal: sucursalParaMetas,
-    capacitaciones: capacitaciones,
-    auditorias: auditorias,
-    accidentes: accidentes,
+    capacitaciones: capacitacionesMemo,
+    auditorias: auditoriasMemo,
+    accidentes: accidentesMemo,
     año: selectedYear,
     periodo: { mes: selectedMonth, año: selectedYear }
   });
@@ -739,7 +744,7 @@ export default function DashboardSeguridadV2() {
       )}
 
       {/* Cards de Metas y Objetivos */}
-      {!goalsLoading && (goalsCapacitaciones || goalsAuditorias || goalsAccidentes) && (
+      {(goalsCapacitaciones || goalsAuditorias || goalsAccidentes) && (
         <Box sx={{ mt: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
           <Typography variant="h5" sx={{ fontWeight: 600, color: '#111827', mb: 1 }}>
             Metas y Objetivos

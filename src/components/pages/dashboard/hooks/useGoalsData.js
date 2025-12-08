@@ -1,5 +1,5 @@
 // src/components/pages/dashboard/hooks/useGoalsData.js
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import {
   calcularCumplimientoCapacitaciones,
   calcularCumplimientoAuditoriasAnual,
@@ -33,6 +33,7 @@ export const useGoalsData = ({
     auditorias: null,
     accidentes: null
   });
+  const isFirstLoad = useRef(true);
 
   // Determinar si es una sucursal única o múltiples
   const sucursalesArray = useMemo(() => {
@@ -42,24 +43,34 @@ export const useGoalsData = ({
 
   useEffect(() => {
     let isMounted = true;
+    let timeoutId = null;
 
     const calcularMetas = async () => {
-      if (sucursalesArray.length === 0) {
-        if (isMounted) {
-          setGoalsData({
-            capacitaciones: null,
-            auditorias: null,
-            accidentes: null
-          });
-          setLoading(false);
-        }
-        return;
+      // Cancelar timeout anterior si existe
+      if (timeoutId) {
+        clearTimeout(timeoutId);
       }
 
-      if (isMounted) {
-        setLoading(true);
+      // Debounce: esperar 500ms antes de recalcular para evitar parpadeos
+      timeoutId = setTimeout(async () => {
+        if (sucursalesArray.length === 0) {
+          if (isMounted) {
+            setGoalsData(prev => ({
+              ...prev,
+              capacitaciones: null,
+              auditorias: null,
+              accidentes: null
+            }));
+            setLoading(false);
+          }
+          return;
+        }
+
+        // Solo mostrar loading en la primera carga
+        if (isMounted && isFirstLoad.current) {
+          setLoading(true);
+        }
         setError(null);
-      }
 
       try {
         // Si hay múltiples sucursales, calcular para cada una y sumar
@@ -160,6 +171,7 @@ export const useGoalsData = ({
               auditorias: auditoriasAgregadas,
               accidentes: peorAccidente
             });
+            isFirstLoad.current = false;
           }
         } else {
           // Una sola sucursal
@@ -177,29 +189,30 @@ export const useGoalsData = ({
               auditorias: aud,
               accidentes: acc
             });
+            isFirstLoad.current = false;
           }
         }
       } catch (err) {
         console.error('Error calculando metas:', err);
         if (isMounted) {
           setError(err.message || 'Error al calcular metas');
-          setGoalsData({
-            capacitaciones: null,
-            auditorias: null,
-            accidentes: null
-          });
+          // No limpiar datos en caso de error, mantener los anteriores
         }
       } finally {
         if (isMounted) {
           setLoading(false);
         }
       }
+      }, 500); // Debounce de 500ms para evitar parpadeos
     };
 
     calcularMetas();
 
     return () => {
       isMounted = false;
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
     };
   }, [sucursalesArray, capacitaciones, auditorias, accidentes, año, periodo]);
 
