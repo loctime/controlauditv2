@@ -14,12 +14,8 @@ import OfflineFallback from './components/common/OfflineFallback';
 import MobileDebug from './components/common/MobileDebug';
 import ErrorBoundary from './components/common/ErrorBoundary';
 import { useConnectivitySimple } from './hooks/useConnectivitySimple';
-// import { useBackButton } from './hooks/useBackButton'; // Deshabilitado para web
 
 const App = () => {
-  // Hook para manejar el botón atrás de Android - deshabilitado para web
-  // useBackButton();
-  
   const { isOnline, checkRealConnectivity } = useConnectivitySimple();
   const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
   const [isInitialLoad, setIsInitialLoad] = useState(true);

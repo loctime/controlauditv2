@@ -11,8 +11,6 @@ export default defineConfig({
   },
   // Configuración para optimizar el desarrollo
   optimizeDeps: {
-    exclude: ['@capacitor/ios', '@capacitor/android'],
-    include: ['@capacitor/core', '@capacitor/app'],
     esbuildOptions: {
       // Asegurar que solo hay una versión de React
       inject: []
@@ -38,28 +36,6 @@ export default defineConfig({
              transformMixedEsModules: true
            },
     rollupOptions: {
-      external: [
-        '@capacitor/app',
-        '@capacitor/core',
-        '@capacitor/android',
-        '@capacitor/ios',
-        '@capacitor/browser',
-        '@capacitor/camera',
-        '@capacitor/device',
-        '@capacitor/filesystem',
-        '@capacitor/geolocation',
-        '@capacitor/haptics',
-        '@capacitor/keyboard',
-        '@capacitor/local-notifications',
-        '@capacitor/network',
-        '@capacitor/push-notifications',
-        '@capacitor/screen-reader',
-        '@capacitor/share',
-        '@capacitor/splash-screen',
-        '@capacitor/status-bar',
-        '@capacitor/storage',
-        '@capacitor/toast'
-      ],
       output: {
         manualChunks: {
           // Core React
@@ -123,7 +99,6 @@ export default defineConfig({
       '@emotion/react': resolve(__dirname, './node_modules/@emotion/react'),
       '@emotion/styled': resolve(__dirname, './node_modules/@emotion/styled')
     },
-    // Excluir paquetes de Capacitor que no se usan en desarrollo web
     dedupe: ['react', 'react-dom', '@emotion/react', '@emotion/styled', '@emotion/cache']
   },
   // Optimización de assets
