@@ -23,7 +23,15 @@ export const generarReporteDashboard = async ({
     capacitacionesPorTipo: true,
     horasSemanales: true
   },
-  onProgress
+  onProgress,
+  // Nuevos parámetros para secciones adicionales
+  targetsProgresos = {},
+  accionesEstadisticas = {},
+  goalsCapacitaciones = null,
+  goalsAuditorias = null,
+  goalsAccidentes = null,
+  sucursalesBase = [],
+  selectedMonth = null
 }) => {
   const doc = new jsPDF('p', 'mm', 'a4');
   const pageWidth = doc.internal.pageSize.getWidth();
@@ -389,11 +397,155 @@ export const generarReporteDashboard = async ({
   yPosition += 5;
   checkPageBreak(40);
 
+  // ========== TARGETS MENSUALES ==========
+  onProgress?.(35);
+  if (targetsProgresos && Object.keys(targetsProgresos).length > 0) {
+    const mesNombre = selectedMonth 
+      ? new Date(año, selectedMonth - 1).toLocaleString('es-ES', { month: 'long' })
+      : 'Actual';
+    
+    addSectionTitle(`3. TARGETS MENSUALES - ${mesNombre.toUpperCase()}`, 16, 50);
+
+    const targetsData = [];
+    const sucursalesConTarget = sucursalesBase.filter(s => {
+      const progreso = targetsProgresos[s.id];
+      return progreso && progreso.target > 0;
+    });
+
+    if (sucursalesConTarget.length > 0) {
+      sucursalesConTarget.forEach(sucursal => {
+        const progreso = targetsProgresos[sucursal.id];
+        if (progreso) {
+          const porcentaje = progreso.target > 0 
+            ? Math.round((progreso.completadas / progreso.target) * 100) 
+            : 0;
+          const estado = porcentaje >= 100 ? 'Cumplido' 
+            : porcentaje >= 80 ? 'En Progreso' 
+            : porcentaje >= 50 ? 'Atención' 
+            : 'Atrasado';
+          
+          targetsData.push([
+            sucursal.nombre || 'Sin nombre',
+            `${progreso.completadas} / ${progreso.target}`,
+            `${porcentaje}%`,
+            estado
+          ]);
+        }
+      });
+
+      if (targetsData.length > 0) {
+        doc.autoTable({
+          startY: yPosition,
+          head: [['Sucursal', 'Completadas / Target', 'Cumplimiento', 'Estado']],
+          body: targetsData,
+          theme: 'striped',
+          headStyles: { 
+            fillColor: false, 
+            textColor: 0, 
+            fontStyle: 'bold',
+            fontSize: 11,
+            lineWidth: 0.8
+          },
+          bodyStyles: { fontSize: 10 },
+          alternateRowStyles: { fillColor: false },
+          margin: { left: margin, right: margin },
+          styles: { cellPadding: 3, lineWidth: 0.3 },
+          columnStyles: {
+            1: { halign: 'center' },
+            2: { halign: 'center' },
+            3: { halign: 'center' }
+          },
+          didParseCell: (data) => {
+            if (data.row.index >= 0 && data.column.index === 3) {
+              const estado = data.cell.text[0];
+              if (estado === 'Cumplido') {
+                data.cell.styles.textColor = [76, 175, 80];
+                data.cell.styles.fontStyle = 'bold';
+              } else if (estado === 'Atrasado') {
+                data.cell.styles.textColor = [244, 67, 54];
+                data.cell.styles.fontStyle = 'bold';
+              } else if (estado === 'Atención') {
+                data.cell.styles.textColor = [255, 152, 0];
+                data.cell.styles.fontStyle = 'bold';
+              }
+            }
+          }
+        });
+
+        yPosition = doc.lastAutoTable.finalY + 15;
+        checkPageBreak(30);
+      }
+    }
+  }
+
+  // ========== ACCIONES REQUERIDAS ==========
+  onProgress?.(37);
+  if (accionesEstadisticas && accionesEstadisticas.total > 0) {
+    addSectionTitle('4. ACCIONES REQUERIDAS', 16, 50);
+
+    const accionesData = [
+      ['Total de Acciones', accionesEstadisticas.total],
+      ['Pendientes', accionesEstadisticas.pendientes || 0],
+      ['Vencidas', accionesEstadisticas.vencidas || 0],
+      ['En Proceso', accionesEstadisticas.enProceso || 0],
+      ['Completadas', accionesEstadisticas.completadas || 0],
+      ['Canceladas', accionesEstadisticas.canceladas || 0]
+    ];
+
+    const porcentajeCompletadas = accionesEstadisticas.total > 0
+      ? Math.round((accionesEstadisticas.completadas / accionesEstadisticas.total) * 100)
+      : 0;
+
+    doc.autoTable({
+      startY: yPosition,
+      head: [['Categoría', 'Cantidad']],
+      body: accionesData,
+      theme: 'striped',
+      headStyles: { 
+        fillColor: false, 
+        textColor: 0, 
+        fontStyle: 'bold',
+        fontSize: 11,
+        lineWidth: 0.8
+      },
+      bodyStyles: { fontSize: 10 },
+      alternateRowStyles: { fillColor: false },
+      margin: { left: margin, right: margin },
+      styles: { cellPadding: 3, lineWidth: 0.3 },
+      didParseCell: (data) => {
+        if (data.row.index >= 0 && data.column.index === 1) {
+          const categoria = data.row.raw[0];
+          if (categoria === 'Vencidas' && parseInt(data.cell.text[0]) > 0) {
+            data.cell.styles.textColor = [244, 67, 54];
+            data.cell.styles.fontStyle = 'bold';
+          } else if (categoria === 'Pendientes' && parseInt(data.cell.text[0]) > 0) {
+            data.cell.styles.textColor = [255, 152, 0];
+            data.cell.styles.fontStyle = 'bold';
+          } else if (categoria === 'Completadas' && parseInt(data.cell.text[0]) > 0) {
+            data.cell.styles.textColor = [76, 175, 80];
+            data.cell.styles.fontStyle = 'bold';
+          }
+        }
+      }
+    });
+
+    yPosition = doc.lastAutoTable.finalY + 10;
+    checkPageBreak(15);
+
+    // Agregar porcentaje de cumplimiento
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(0, 0, 0);
+    doc.text(`Porcentaje de Cumplimiento: ${porcentajeCompletadas}%`, margin, yPosition);
+    yPosition += 8;
+    checkPageBreak(30);
+  }
+
   // ========== ANÁLISIS DE ACCIDENTES ==========
   onProgress?.(40);
   if (accidentesAnalysis) {
     // Estimar espacio para tabla (7 filas aprox)
-    addSectionTitle('3. ANÁLISIS DE ACCIDENTES E INCIDENTES', 16, 60);
+    addSectionTitle('5. ANÁLISIS DE ACCIDENTES E INCIDENTES', 16, 60);
 
     const accidentesData = [
       ['Total de Accidentes', accidentesAnalysis.total],
@@ -493,7 +645,7 @@ export const generarReporteDashboard = async ({
   onProgress?.(55);
   if (capacitacionesMetrics) {
     // Estimar espacio para tabla (4 filas aprox)
-    addSectionTitle('4. CUMPLIMIENTO DE CAPACITACIONES', 16, 50);
+    addSectionTitle('6. CUMPLIMIENTO DE CAPACITACIONES', 16, 50);
 
     const capacitacionesData = [
       ['Total de Capacitaciones', capacitacionesMetrics.total],
@@ -590,6 +742,125 @@ export const generarReporteDashboard = async ({
     }
   }
 
+  // ========== METAS Y OBJETIVOS ==========
+  onProgress?.(60);
+  if (goalsCapacitaciones || goalsAuditorias || goalsAccidentes) {
+    addSectionTitle('7. METAS Y OBJETIVOS', 16, 80);
+
+    const metasData = [];
+
+    // Metas de Capacitaciones
+    if (goalsCapacitaciones) {
+      if (goalsCapacitaciones.mensual && goalsCapacitaciones.mensual.target > 0) {
+        metasData.push([
+          'Capacitaciones - Mensual',
+          `${goalsCapacitaciones.mensual.completadas} / ${goalsCapacitaciones.mensual.target}`,
+          `${goalsCapacitaciones.mensual.porcentaje}%`,
+          goalsCapacitaciones.mensual.estado === 'cumplido' ? 'Cumplido' 
+            : goalsCapacitaciones.mensual.estado === 'en_progreso' ? 'En Progreso' 
+            : goalsCapacitaciones.mensual.estado === 'atrasado' ? 'Atrasado' 
+            : 'Sin Target'
+        ]);
+      }
+      if (goalsCapacitaciones.anual && goalsCapacitaciones.anual.target > 0) {
+        metasData.push([
+          'Capacitaciones - Anual',
+          `${goalsCapacitaciones.anual.completadas} / ${goalsCapacitaciones.anual.target}`,
+          `${goalsCapacitaciones.anual.porcentaje}%`,
+          goalsCapacitaciones.anual.estado === 'cumplido' ? 'Cumplido' 
+            : goalsCapacitaciones.anual.estado === 'en_progreso' ? 'En Progreso' 
+            : goalsCapacitaciones.anual.estado === 'atrasado' ? 'Atrasado' 
+            : 'Sin Target'
+        ]);
+      }
+    }
+
+    // Metas de Auditorías
+    if (goalsAuditorias && goalsAuditorias.target > 0) {
+      metasData.push([
+        'Auditorías - Anual',
+        `${goalsAuditorias.completadas} / ${goalsAuditorias.target}`,
+        `${goalsAuditorias.porcentaje}%`,
+        goalsAuditorias.estado === 'cumplido' ? 'Cumplido' 
+          : goalsAuditorias.estado === 'en_progreso' ? 'En Progreso' 
+          : goalsAuditorias.estado === 'atrasado' ? 'Atrasado' 
+          : 'Sin Target'
+      ]);
+    }
+
+    // Metas de Accidentes
+    if (goalsAccidentes) {
+      const estadoAccidentes = goalsAccidentes.dias >= 30 ? 'Excelente' 
+        : goalsAccidentes.dias >= 7 ? 'Atención' 
+        : 'Crítico';
+      
+      let fechaUltimoAccidenteStr = 'Nunca';
+      if (goalsAccidentes.fechaUltimoAccidente) {
+        try {
+          const fecha = goalsAccidentes.fechaUltimoAccidente?.toDate 
+            ? goalsAccidentes.fechaUltimoAccidente.toDate()
+            : new Date(goalsAccidentes.fechaUltimoAccidente);
+          fechaUltimoAccidenteStr = fecha.toLocaleDateString('es-AR');
+        } catch (error) {
+          fechaUltimoAccidenteStr = 'Fecha inválida';
+        }
+      }
+      
+      metasData.push([
+        'Días sin Accidentes',
+        `${goalsAccidentes.dias} días`,
+        fechaUltimoAccidenteStr,
+        estadoAccidentes
+      ]);
+    }
+
+    if (metasData.length > 0) {
+      doc.autoTable({
+        startY: yPosition,
+        head: [['Meta', 'Valor / Target', 'Cumplimiento', 'Estado']],
+        body: metasData,
+        theme: 'striped',
+        headStyles: { 
+          fillColor: false, 
+          textColor: 0, 
+          fontStyle: 'bold',
+          fontSize: 11,
+          lineWidth: 0.8
+        },
+        bodyStyles: { fontSize: 10 },
+        alternateRowStyles: { fillColor: false },
+        margin: { left: margin, right: margin },
+        styles: { cellPadding: 3, lineWidth: 0.3 },
+        columnStyles: {
+          1: { halign: 'center' },
+          2: { halign: 'center' },
+          3: { halign: 'center' }
+        },
+        didParseCell: (data) => {
+          if (data.row.index >= 0 && data.column.index === 3) {
+            const estado = data.cell.text[0];
+            if (estado === 'Cumplido' || estado === 'Excelente') {
+              data.cell.styles.textColor = [76, 175, 80];
+              data.cell.styles.fontStyle = 'bold';
+            } else if (estado === 'Atrasado' || estado === 'Crítico') {
+              data.cell.styles.textColor = [244, 67, 54];
+              data.cell.styles.fontStyle = 'bold';
+            } else if (estado === 'Atención') {
+              data.cell.styles.textColor = [255, 152, 0];
+              data.cell.styles.fontStyle = 'bold';
+            } else if (estado === 'En Progreso') {
+              data.cell.styles.textColor = [33, 150, 243];
+              data.cell.styles.fontStyle = 'bold';
+            }
+          }
+        }
+      });
+
+      yPosition = doc.lastAutoTable.finalY + 15;
+      checkPageBreak(30);
+    }
+  }
+
   // ========== GRÁFICOS ==========
   onProgress?.(70);
   try {
@@ -609,7 +880,7 @@ export const generarReporteDashboard = async ({
 
       const secciones = seccionesCapturables.length > 0 ? seccionesCapturables : [graficosContainer];
 
-      addSectionTitle('5. ANÁLISIS GRÁFICO', 16, 40);
+      addSectionTitle('8. ANÁLISIS GRÁFICO', 16, 40);
 
       for (const section of secciones) {
         section.scrollIntoView({ behavior: 'instant', block: 'center' });
@@ -678,7 +949,7 @@ export const generarReporteDashboard = async ({
       graficosContainer.style.overflow = originalContainerOverflow;
       graficosContainer.style.height = originalContainerHeight;
     } else {
-      addSectionTitle('5. ANÁLISIS GRÁFICO', 16, 10);
+      addSectionTitle('8. ANÁLISIS GRÁFICO', 16, 10);
       doc.setFontSize(10);
       doc.setTextColor(0, 0, 0);
       doc.setFont('helvetica', 'italic');
@@ -687,7 +958,7 @@ export const generarReporteDashboard = async ({
     }
   } catch (error) {
     console.warn('Error al generar gráficos:', error);
-    addSectionTitle('5. ANÁLISIS GRÁFICO', 16, 10);
+    addSectionTitle('8. ANÁLISIS GRÁFICO', 16, 10);
     doc.setFontSize(10);
     doc.setTextColor(0, 0, 0);
     doc.setFont('helvetica', 'italic');
@@ -698,7 +969,7 @@ export const generarReporteDashboard = async ({
   // ========== ALERTAS Y RECOMENDACIONES ==========
   onProgress?.(85);
   // Estimar espacio para recomendaciones (múltiples líneas)
-  addSectionTitle('6. ALERTAS Y RECOMENDACIONES', 16, 60);
+  addSectionTitle('9. ALERTAS Y RECOMENDACIONES', 16, 60);
 
   doc.setFontSize(10);
   doc.setTextColor(0, 0, 0);

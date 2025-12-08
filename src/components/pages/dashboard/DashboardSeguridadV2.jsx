@@ -636,7 +636,15 @@ export default function DashboardSeguridadV2() {
         opciones: reportOptions,
         onProgress: (progress) => {
           console.log(`Generando reporte: ${progress}%`);
-        }
+        },
+        // Nuevos parámetros para secciones adicionales
+        targetsProgresos,
+        accionesEstadisticas,
+        goalsCapacitaciones,
+        goalsAuditorias,
+        goalsAccidentes,
+        sucursalesBase,
+        selectedMonth
       });
 
       toast.dismiss(loadingToastId);
@@ -862,6 +870,10 @@ export default function DashboardSeguridadV2() {
         onOptionChange={handleReportOptionChange}
         generandoReporte={generandoReporte}
         onGenerateReport={handleGenerateReport}
+        empresaSeleccionada={empresaSeleccionada}
+        sucursalSeleccionada={sucursalSeleccionada}
+        selectedYear={selectedYear}
+        selectedMonth={selectedMonth}
       />
 
       <Backdrop
