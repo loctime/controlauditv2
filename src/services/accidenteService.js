@@ -60,6 +60,19 @@ export const crearAccidente = async (accidenteData, empleadosSeleccionados, imag
       }
     }
 
+    // Actualizar fechaUltimoAccidente en la sucursal
+    if (accidenteData.sucursalId) {
+      try {
+        const sucursalRef = doc(db, 'sucursales', accidenteData.sucursalId);
+        await updateDoc(sucursalRef, {
+          fechaUltimoAccidente: Timestamp.now()
+        });
+      } catch (error) {
+        console.warn('No se pudo actualizar fechaUltimoAccidente en sucursal:', error);
+        // No fallar si no se puede actualizar, es un campo opcional
+      }
+    }
+
     // Registrar log
     await registrarAccionSistema(
       accidenteData.reportadoPor,

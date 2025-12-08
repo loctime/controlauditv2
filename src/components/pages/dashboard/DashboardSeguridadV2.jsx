@@ -33,9 +33,13 @@ import DashboardAlertsPopover from "./components/DashboardAlertsPopover";
 import DashboardReportDialog from "./components/DashboardReportDialog";
 import TargetsMensualesCard from "./components/TargetsMensualesCard";
 import AccionesRequeridasWidget from "./components/AccionesRequeridasWidget";
+import CapacitacionesGoalsCard from "./components/CapacitacionesGoalsCard";
+import AccidentesGoalsCard from "./components/AccidentesGoalsCard";
+import GoalsCard from "./components/GoalsCard";
 import { useTargetsMensualesData } from "./hooks/useTargetsMensualesData";
 import { useAccionesRequeridasStats } from "./hooks/useAccionesRequeridasStats";
 import { useDashboardRealtimeData } from "./hooks/useDashboardRealtimeData";
+import { useGoalsData } from "./hooks/useGoalsData";
 import InfoIcon from "@mui/icons-material/Info";
 import ReportProblemIcon from "@mui/icons-material/ReportProblem";
 import SchoolIcon from "@mui/icons-material/School";
@@ -177,6 +181,23 @@ export default function DashboardSeguridadV2() {
     sucursalesContext,
     userSucursales
   ]);
+
+  // Calcular metas y objetivos
+  const sucursalParaMetas = useMemo(() => {
+    if (!selectedSucursal || selectedSucursal === 'todas') {
+      return sucursalesBase;
+    }
+    return sucursalesBase.find(s => s.id === selectedSucursal);
+  }, [selectedSucursal, sucursalesBase]);
+
+  const { capacitaciones: goalsCapacitaciones, auditorias: goalsAuditorias, accidentes: goalsAccidentes, loading: goalsLoading } = useGoalsData({
+    sucursal: sucursalParaMetas,
+    capacitaciones: capacitaciones,
+    auditorias: auditorias,
+    accidentes: accidentes,
+    año: selectedYear,
+    periodo: { mes: selectedMonth, año: selectedYear }
+  });
   const datos = useMemo(() => {
     if (!selectedEmpresa || !selectedSucursal) {
       return {
@@ -715,6 +736,48 @@ export default function DashboardSeguridadV2() {
           selectedSucursal={selectedSucursal}
           estadisticas={accionesEstadisticas}
         />
+      )}
+
+      {/* Cards de Metas y Objetivos */}
+      {!goalsLoading && (goalsCapacitaciones || goalsAuditorias || goalsAccidentes) && (
+        <Box sx={{ mt: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
+          <Typography variant="h5" sx={{ fontWeight: 600, color: '#111827', mb: 1 }}>
+            Metas y Objetivos
+          </Typography>
+          
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            {/* Capacitaciones */}
+            {goalsCapacitaciones && (
+              <CapacitacionesGoalsCard
+                cumplimiento={goalsCapacitaciones}
+                sucursalNombre={selectedSucursal !== 'todas' && sucursalParaMetas?.nombre ? sucursalParaMetas.nombre : ''}
+              />
+            )}
+
+            {/* Auditorías Anuales */}
+            {goalsAuditorias && goalsAuditorias.target > 0 && (
+              <GoalsCard
+                tipo="auditorias"
+                valor={goalsAuditorias.completadas}
+                target={goalsAuditorias.target}
+                porcentaje={goalsAuditorias.porcentaje}
+                estado={goalsAuditorias.estado}
+                periodo="anual"
+                titulo={`Auditorías - Anual${selectedSucursal !== 'todas' && sucursalParaMetas?.nombre ? ` - ${sucursalParaMetas.nombre}` : ''}`}
+              />
+            )}
+
+            {/* Accidentes */}
+            {goalsAccidentes && (
+              <AccidentesGoalsCard
+                datosAccidentes={goalsAccidentes}
+                sucursalId={selectedSucursal !== 'todas' ? selectedSucursal : null}
+                sucursalNombre={selectedSucursal !== 'todas' && sucursalParaMetas?.nombre ? sucursalParaMetas.nombre : ''}
+                puedeReiniciar={userProfile?.role === 'max' || userProfile?.role === 'supermax'}
+              />
+            )}
+          </Box>
+        </Box>
       )}
 
       <Box

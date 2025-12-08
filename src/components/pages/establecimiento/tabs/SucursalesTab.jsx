@@ -15,7 +15,9 @@ import {
   IconButton,
   Tooltip,
   useTheme,
-  Chip
+  Chip,
+  Grid,
+  Divider
 } from '@mui/material';
 import StorefrontIcon from '@mui/icons-material/Storefront';
 import PeopleIcon from '@mui/icons-material/People';
@@ -50,7 +52,10 @@ const SucursalesTab = ({ empresaId, empresaNombre, userEmpresas, loadEmpresasSta
     direccion: '',
     telefono: '',
     horasSemanales: 40,
-    targetMensual: 0
+    targetMensual: 0,
+    targetAnualAuditorias: 12,
+    targetMensualCapacitaciones: 1,
+    targetAnualCapacitaciones: 12
   });
   const [expandedRows, setExpandedRows] = useState(new Set());
   const [sucursalesStats, setSucursalesStats] = useState({});
@@ -205,7 +210,14 @@ const SucursalesTab = ({ empresaId, empresaNombre, userEmpresas, loadEmpresasSta
 
     try {
       const docRef = await addDoc(collection(db, 'sucursales'), {
-        ...sucursalForm,
+        nombre: sucursalForm.nombre,
+        direccion: sucursalForm.direccion || '',
+        telefono: sucursalForm.telefono || '',
+        horasSemanales: parseInt(sucursalForm.horasSemanales) || 40,
+        targetMensual: parseInt(sucursalForm.targetMensual) || 0,
+        targetAnualAuditorias: parseInt(sucursalForm.targetAnualAuditorias) || 12,
+        targetMensualCapacitaciones: parseInt(sucursalForm.targetMensualCapacitaciones) || 1,
+        targetAnualCapacitaciones: parseInt(sucursalForm.targetAnualCapacitaciones) || 12,
         empresaId: empresaId,
         fechaCreacion: Timestamp.now(),
         creadoPor: userProfile?.uid,
@@ -228,7 +240,16 @@ const SucursalesTab = ({ empresaId, empresaNombre, userEmpresas, loadEmpresasSta
         docRef.id
       );
 
-      setSucursalForm({ nombre: '', direccion: '', telefono: '', horasSemanales: 40, targetMensual: 0 });
+      setSucursalForm({ 
+        nombre: '', 
+        direccion: '', 
+        telefono: '', 
+        horasSemanales: 40, 
+        targetMensual: 0,
+        targetAnualAuditorias: 12,
+        targetMensualCapacitaciones: 1,
+        targetAnualCapacitaciones: 12
+      });
       setOpenSucursalForm(false);
       
       await loadSucursales();
@@ -259,7 +280,10 @@ const SucursalesTab = ({ empresaId, empresaNombre, userEmpresas, loadEmpresasSta
       direccion: sucursal.direccion || '',
       telefono: sucursal.telefono || '',
       horasSemanales: sucursal.horasSemanales || 40,
-      targetMensual: sucursal.targetMensual || 0
+      targetMensual: sucursal.targetMensual || 0,
+      targetAnualAuditorias: sucursal.targetAnualAuditorias || 12,
+      targetMensualCapacitaciones: sucursal.targetMensualCapacitaciones || 1,
+      targetAnualCapacitaciones: sucursal.targetAnualCapacitaciones || 12
     });
     setOpenEditModal(true);
   };
@@ -289,6 +313,9 @@ const SucursalesTab = ({ empresaId, empresaNombre, userEmpresas, loadEmpresasSta
         telefono: sucursalEdit.telefono,
         horasSemanales: parseInt(sucursalEdit.horasSemanales),
         targetMensual: parseInt(sucursalEdit.targetMensual) || 0,
+        targetAnualAuditorias: parseInt(sucursalEdit.targetAnualAuditorias) || 12,
+        targetMensualCapacitaciones: parseInt(sucursalEdit.targetMensualCapacitaciones) || 1,
+        targetAnualCapacitaciones: parseInt(sucursalEdit.targetAnualCapacitaciones) || 12,
         fechaModificacion: Timestamp.now(),
         modificadoPor: userProfile?.uid,
         modificadoPorEmail: userProfile?.email
@@ -614,107 +641,275 @@ const SucursalesTab = ({ empresaId, empresaNombre, userEmpresas, loadEmpresasSta
           onClick={() => setOpenSucursalForm(false)}
         >
           <Paper
-            sx={{ p: 3, maxWidth: 400, width: '90%' }}
+            sx={{ 
+              p: 3, 
+              maxWidth: 700, 
+              width: '90%',
+              maxHeight: '90vh',
+              display: 'flex',
+              flexDirection: 'column'
+            }}
             onClick={(e) => e.stopPropagation()}
           >
-            <Typography variant="h6" sx={{ mb: 2 }}>
+            <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
               Agregar Sucursal
             </Typography>
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-              <Box>
-                <Typography variant="body2" sx={{ mb: 1 }}>
-                  Nombre *
-                </Typography>
-                <input
-                  type="text"
-                  name="nombre"
-                  value={sucursalForm.nombre}
-                  onChange={handleSucursalFormChange}
-                  placeholder="Nombre de la sucursal"
-                  style={{
-                    width: '100%',
-                    padding: '8px 12px',
-                    border: `1px solid ${theme.palette.divider}`,
-                    borderRadius: '4px',
-                    fontSize: '14px'
-                  }}
-                />
+            <Box sx={{ 
+              overflowY: 'auto', 
+              overflowX: 'hidden',
+              pr: 1,
+              '&::-webkit-scrollbar': {
+                width: '8px',
+              },
+              '&::-webkit-scrollbar-track': {
+                backgroundColor: '#f1f1f1',
+                borderRadius: '4px',
+              },
+              '&::-webkit-scrollbar-thumb': {
+                backgroundColor: '#c1c1c1',
+                borderRadius: '4px',
+                '&:hover': {
+                  backgroundColor: '#a8a8a8',
+                },
+              },
+            }}>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                {/* Sección: Información General */}
+                <Box>
+                  <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600, color: '#111827' }}>
+                    📋 Información General
+                  </Typography>
+                  <Grid container spacing={2}>
+                    <Grid item xs={12} sm={6}>
+                      <Box>
+                        <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
+                          Nombre *
+                        </Typography>
+                        <input
+                          type="text"
+                          name="nombre"
+                          value={sucursalForm.nombre}
+                          onChange={handleSucursalFormChange}
+                          placeholder="Nombre de la sucursal"
+                          style={{
+                            width: '100%',
+                            padding: '10px 12px',
+                            border: `1px solid ${theme.palette.divider}`,
+                            borderRadius: '6px',
+                            fontSize: '14px'
+                          }}
+                        />
+                      </Box>
+                    </Grid>
+                    <Grid item xs={12} sm={6}>
+                      <Box>
+                        <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
+                          Dirección
+                        </Typography>
+                        <input
+                          type="text"
+                          name="direccion"
+                          value={sucursalForm.direccion}
+                          onChange={handleSucursalFormChange}
+                          placeholder="Dirección de la sucursal"
+                          style={{
+                            width: '100%',
+                            padding: '10px 12px',
+                            border: `1px solid ${theme.palette.divider}`,
+                            borderRadius: '6px',
+                            fontSize: '14px'
+                          }}
+                        />
+                      </Box>
+                    </Grid>
+                    <Grid item xs={12} sm={6}>
+                      <Box>
+                        <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
+                          Teléfono
+                        </Typography>
+                        <input
+                          type="text"
+                          name="telefono"
+                          value={sucursalForm.telefono}
+                          onChange={handleSucursalFormChange}
+                          placeholder="Teléfono de la sucursal"
+                          style={{
+                            width: '100%',
+                            padding: '10px 12px',
+                            border: `1px solid ${theme.palette.divider}`,
+                            borderRadius: '6px',
+                            fontSize: '14px'
+                          }}
+                        />
+                      </Box>
+                    </Grid>
+                    <Grid item xs={12} sm={6}>
+                      <Box>
+                        <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
+                          Horas Semanales
+                        </Typography>
+                        <input
+                          type="number"
+                          name="horasSemanales"
+                          value={sucursalForm.horasSemanales}
+                          onChange={handleSucursalFormChange}
+                          placeholder="40"
+                          min="1"
+                          max="168"
+                          style={{
+                            width: '100%',
+                            padding: '10px 12px',
+                            border: `1px solid ${theme.palette.divider}`,
+                            borderRadius: '6px',
+                            fontSize: '14px'
+                          }}
+                        />
+                        <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
+                          Por defecto: 40 horas
+                        </Typography>
+                      </Box>
+                    </Grid>
+                  </Grid>
+                </Box>
+
+                <Divider />
+
+                {/* Sección: Metas de Auditorías */}
+                <Box>
+                  <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600, color: '#111827' }}>
+                    📊 Metas de Auditorías
+                  </Typography>
+                  <Grid container spacing={2}>
+                    <Grid item xs={12} sm={6}>
+                      <Box>
+                        <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
+                          Target Mensual
+                        </Typography>
+                        <input
+                          type="number"
+                          name="targetMensual"
+                          value={sucursalForm.targetMensual}
+                          onChange={handleSucursalFormChange}
+                          placeholder="0"
+                          min="0"
+                          style={{
+                            width: '100%',
+                            padding: '10px 12px',
+                            border: `1px solid ${theme.palette.divider}`,
+                            borderRadius: '6px',
+                            fontSize: '14px'
+                          }}
+                        />
+                        <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
+                          Auditorías objetivo para este mes
+                        </Typography>
+                      </Box>
+                    </Grid>
+                    <Grid item xs={12} sm={6}>
+                      <Box>
+                        <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
+                          Target Anual
+                        </Typography>
+                        <input
+                          type="number"
+                          name="targetAnualAuditorias"
+                          value={sucursalForm.targetAnualAuditorias}
+                          onChange={handleSucursalFormChange}
+                          placeholder="12"
+                          min="0"
+                          style={{
+                            width: '100%',
+                            padding: '10px 12px',
+                            border: `1px solid ${theme.palette.divider}`,
+                            borderRadius: '6px',
+                            fontSize: '14px'
+                          }}
+                        />
+                        <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
+                          Auditorías objetivo para el año
+                        </Typography>
+                      </Box>
+                    </Grid>
+                  </Grid>
+                </Box>
+
+                <Divider />
+
+                {/* Sección: Metas de Capacitaciones */}
+                <Box>
+                  <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600, color: '#111827' }}>
+                    📚 Metas de Capacitaciones
+                  </Typography>
+                  <Grid container spacing={2}>
+                    <Grid item xs={12} sm={6}>
+                      <Box>
+                        <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
+                          Target Mensual
+                        </Typography>
+                        <input
+                          type="number"
+                          name="targetMensualCapacitaciones"
+                          value={sucursalForm.targetMensualCapacitaciones}
+                          onChange={handleSucursalFormChange}
+                          placeholder="1"
+                          min="0"
+                          style={{
+                            width: '100%',
+                            padding: '10px 12px',
+                            border: `1px solid ${theme.palette.divider}`,
+                            borderRadius: '6px',
+                            fontSize: '14px'
+                          }}
+                        />
+                        <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
+                          Capacitaciones objetivo para este mes
+                        </Typography>
+                      </Box>
+                    </Grid>
+                    <Grid item xs={12} sm={6}>
+                      <Box>
+                        <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
+                          Target Anual
+                        </Typography>
+                        <input
+                          type="number"
+                          name="targetAnualCapacitaciones"
+                          value={sucursalForm.targetAnualCapacitaciones}
+                          onChange={handleSucursalFormChange}
+                          placeholder="12"
+                          min="0"
+                          style={{
+                            width: '100%',
+                            padding: '10px 12px',
+                            border: `1px solid ${theme.palette.divider}`,
+                            borderRadius: '6px',
+                            fontSize: '14px'
+                          }}
+                        />
+                        <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
+                          Capacitaciones objetivo para el año
+                        </Typography>
+                      </Box>
+                    </Grid>
+                  </Grid>
+                </Box>
               </Box>
-              <Box>
-                <Typography variant="body2" sx={{ mb: 1 }}>
-                  Dirección
-                </Typography>
-                <input
-                  type="text"
-                  name="direccion"
-                  value={sucursalForm.direccion}
-                  onChange={handleSucursalFormChange}
-                  placeholder="Dirección de la sucursal"
-                  style={{
-                    width: '100%',
-                    padding: '8px 12px',
-                    border: `1px solid ${theme.palette.divider}`,
-                    borderRadius: '4px',
-                    fontSize: '14px'
-                  }}
-                />
-              </Box>
-              <Box>
-                <Typography variant="body2" sx={{ mb: 1 }}>
-                  Teléfono
-                </Typography>
-                <input
-                  type="text"
-                  name="telefono"
-                  value={sucursalForm.telefono}
-                  onChange={handleSucursalFormChange}
-                  placeholder="Teléfono de la sucursal"
-                  style={{
-                    width: '100%',
-                    padding: '8px 12px',
-                    border: `1px solid ${theme.palette.divider}`,
-                    borderRadius: '4px',
-                    fontSize: '14px'
-                  }}
-                />
-              </Box>
-              <Box>
-                <Typography variant="body2" sx={{ mb: 1 }}>
-                  Horas Semanales
-                </Typography>
-                <input
-                  type="number"
-                  name="horasSemanales"
-                  value={sucursalForm.horasSemanales}
-                  onChange={handleSucursalFormChange}
-                  placeholder="40"
-                  min="1"
-                  max="168"
-                  style={{
-                    width: '100%',
-                    padding: '8px 12px',
-                    border: `1px solid ${theme.palette.divider}`,
-                    borderRadius: '4px',
-                    fontSize: '14px'
-                  }}
-                />
-              </Box>
-              <Box sx={{ display: 'flex', gap: 2, mt: 2 }}>
-                <Button
-                  variant="contained"
-                  onClick={handleAddSucursal}
-                  sx={{ flex: 1 }}
-                >
-                  Crear
-                </Button>
-                <Button
-                  variant="outlined"
-                  onClick={() => setOpenSucursalForm(false)}
-                  sx={{ flex: 1 }}
-                >
-                  Cancelar
-                </Button>
-              </Box>
+            </Box>
+            <Box sx={{ display: 'flex', gap: 2, mt: 3, pt: 2, borderTop: `1px solid ${theme.palette.divider}` }}>
+              <Button
+                variant="contained"
+                onClick={handleAddSucursal}
+                sx={{ flex: 1 }}
+              >
+                Crear
+              </Button>
+              <Button
+                variant="outlined"
+                onClick={() => setOpenSucursalForm(false)}
+                sx={{ flex: 1 }}
+              >
+                Cancelar
+              </Button>
             </Box>
           </Paper>
         </Box>
@@ -738,130 +933,275 @@ const SucursalesTab = ({ empresaId, empresaNombre, userEmpresas, loadEmpresasSta
           onClick={() => setOpenEditModal(false)}
         >
           <Paper
-            sx={{ p: 3, maxWidth: 400, width: '90%' }}
+            sx={{ 
+              p: 3, 
+              maxWidth: 700, 
+              width: '90%',
+              maxHeight: '90vh',
+              display: 'flex',
+              flexDirection: 'column'
+            }}
             onClick={(e) => e.stopPropagation()}
           >
-            <Typography variant="h6" sx={{ mb: 2 }}>
+            <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
               Editar Sucursal
             </Typography>
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-              <Box>
-                <Typography variant="body2" sx={{ mb: 1 }}>
-                  Nombre *
-                </Typography>
-                <input
-                  type="text"
-                  name="nombre"
-                  value={sucursalEdit.nombre}
-                  onChange={handleEditFormChange}
-                  placeholder="Nombre de la sucursal"
-                  style={{
-                    width: '100%',
-                    padding: '8px 12px',
-                    border: `1px solid ${theme.palette.divider}`,
-                    borderRadius: '4px',
-                    fontSize: '14px'
-                  }}
-                />
+            <Box sx={{ 
+              overflowY: 'auto', 
+              overflowX: 'hidden',
+              pr: 1,
+              '&::-webkit-scrollbar': {
+                width: '8px',
+              },
+              '&::-webkit-scrollbar-track': {
+                backgroundColor: '#f1f1f1',
+                borderRadius: '4px',
+              },
+              '&::-webkit-scrollbar-thumb': {
+                backgroundColor: '#c1c1c1',
+                borderRadius: '4px',
+                '&:hover': {
+                  backgroundColor: '#a8a8a8',
+                },
+              },
+            }}>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                {/* Sección: Información General */}
+                <Box>
+                  <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600, color: '#111827' }}>
+                    📋 Información General
+                  </Typography>
+                  <Grid container spacing={2}>
+                    <Grid item xs={12} sm={6}>
+                      <Box>
+                        <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
+                          Nombre *
+                        </Typography>
+                        <input
+                          type="text"
+                          name="nombre"
+                          value={sucursalEdit.nombre}
+                          onChange={handleEditFormChange}
+                          placeholder="Nombre de la sucursal"
+                          style={{
+                            width: '100%',
+                            padding: '10px 12px',
+                            border: `1px solid ${theme.palette.divider}`,
+                            borderRadius: '6px',
+                            fontSize: '14px'
+                          }}
+                        />
+                      </Box>
+                    </Grid>
+                    <Grid item xs={12} sm={6}>
+                      <Box>
+                        <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
+                          Dirección
+                        </Typography>
+                        <input
+                          type="text"
+                          name="direccion"
+                          value={sucursalEdit.direccion}
+                          onChange={handleEditFormChange}
+                          placeholder="Dirección de la sucursal"
+                          style={{
+                            width: '100%',
+                            padding: '10px 12px',
+                            border: `1px solid ${theme.palette.divider}`,
+                            borderRadius: '6px',
+                            fontSize: '14px'
+                          }}
+                        />
+                      </Box>
+                    </Grid>
+                    <Grid item xs={12} sm={6}>
+                      <Box>
+                        <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
+                          Teléfono
+                        </Typography>
+                        <input
+                          type="text"
+                          name="telefono"
+                          value={sucursalEdit.telefono}
+                          onChange={handleEditFormChange}
+                          placeholder="Teléfono de la sucursal"
+                          style={{
+                            width: '100%',
+                            padding: '10px 12px',
+                            border: `1px solid ${theme.palette.divider}`,
+                            borderRadius: '6px',
+                            fontSize: '14px'
+                          }}
+                        />
+                      </Box>
+                    </Grid>
+                    <Grid item xs={12} sm={6}>
+                      <Box>
+                        <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
+                          Horas Semanales
+                        </Typography>
+                        <input
+                          type="number"
+                          name="horasSemanales"
+                          value={sucursalEdit.horasSemanales}
+                          onChange={handleEditFormChange}
+                          placeholder="40"
+                          min="1"
+                          max="168"
+                          style={{
+                            width: '100%',
+                            padding: '10px 12px',
+                            border: `1px solid ${theme.palette.divider}`,
+                            borderRadius: '6px',
+                            fontSize: '14px'
+                          }}
+                        />
+                        <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
+                          Por defecto: 40 horas
+                        </Typography>
+                      </Box>
+                    </Grid>
+                  </Grid>
+                </Box>
+
+                <Divider />
+
+                {/* Sección: Metas de Auditorías */}
+                <Box>
+                  <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600, color: '#111827' }}>
+                    📊 Metas de Auditorías
+                  </Typography>
+                  <Grid container spacing={2}>
+                    <Grid item xs={12} sm={6}>
+                      <Box>
+                        <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
+                          Target Mensual
+                        </Typography>
+                        <input
+                          type="number"
+                          name="targetMensual"
+                          value={sucursalEdit.targetMensual}
+                          onChange={handleEditFormChange}
+                          placeholder="0"
+                          min="0"
+                          style={{
+                            width: '100%',
+                            padding: '10px 12px',
+                            border: `1px solid ${theme.palette.divider}`,
+                            borderRadius: '6px',
+                            fontSize: '14px'
+                          }}
+                        />
+                        <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
+                          Auditorías objetivo para este mes
+                        </Typography>
+                      </Box>
+                    </Grid>
+                    <Grid item xs={12} sm={6}>
+                      <Box>
+                        <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
+                          Target Anual
+                        </Typography>
+                        <input
+                          type="number"
+                          name="targetAnualAuditorias"
+                          value={sucursalEdit.targetAnualAuditorias}
+                          onChange={handleEditFormChange}
+                          placeholder="12"
+                          min="0"
+                          style={{
+                            width: '100%',
+                            padding: '10px 12px',
+                            border: `1px solid ${theme.palette.divider}`,
+                            borderRadius: '6px',
+                            fontSize: '14px'
+                          }}
+                        />
+                        <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
+                          Auditorías objetivo para el año
+                        </Typography>
+                      </Box>
+                    </Grid>
+                  </Grid>
+                </Box>
+
+                <Divider />
+
+                {/* Sección: Metas de Capacitaciones */}
+                <Box>
+                  <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600, color: '#111827' }}>
+                    📚 Metas de Capacitaciones
+                  </Typography>
+                  <Grid container spacing={2}>
+                    <Grid item xs={12} sm={6}>
+                      <Box>
+                        <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
+                          Target Mensual
+                        </Typography>
+                        <input
+                          type="number"
+                          name="targetMensualCapacitaciones"
+                          value={sucursalEdit.targetMensualCapacitaciones}
+                          onChange={handleEditFormChange}
+                          placeholder="1"
+                          min="0"
+                          style={{
+                            width: '100%',
+                            padding: '10px 12px',
+                            border: `1px solid ${theme.palette.divider}`,
+                            borderRadius: '6px',
+                            fontSize: '14px'
+                          }}
+                        />
+                        <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
+                          Capacitaciones objetivo para este mes
+                        </Typography>
+                      </Box>
+                    </Grid>
+                    <Grid item xs={12} sm={6}>
+                      <Box>
+                        <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
+                          Target Anual
+                        </Typography>
+                        <input
+                          type="number"
+                          name="targetAnualCapacitaciones"
+                          value={sucursalEdit.targetAnualCapacitaciones}
+                          onChange={handleEditFormChange}
+                          placeholder="12"
+                          min="0"
+                          style={{
+                            width: '100%',
+                            padding: '10px 12px',
+                            border: `1px solid ${theme.palette.divider}`,
+                            borderRadius: '6px',
+                            fontSize: '14px'
+                          }}
+                        />
+                        <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
+                          Capacitaciones objetivo para el año
+                        </Typography>
+                      </Box>
+                    </Grid>
+                  </Grid>
+                </Box>
               </Box>
-              <Box>
-                <Typography variant="body2" sx={{ mb: 1 }}>
-                  Dirección
-                </Typography>
-                <input
-                  type="text"
-                  name="direccion"
-                  value={sucursalEdit.direccion}
-                  onChange={handleEditFormChange}
-                  placeholder="Dirección de la sucursal"
-                  style={{
-                    width: '100%',
-                    padding: '8px 12px',
-                    border: `1px solid ${theme.palette.divider}`,
-                    borderRadius: '4px',
-                    fontSize: '14px'
-                  }}
-                />
-              </Box>
-              <Box>
-                <Typography variant="body2" sx={{ mb: 1 }}>
-                  Teléfono
-                </Typography>
-                <input
-                  type="text"
-                  name="telefono"
-                  value={sucursalEdit.telefono}
-                  onChange={handleEditFormChange}
-                  placeholder="Teléfono de la sucursal"
-                  style={{
-                    width: '100%',
-                    padding: '8px 12px',
-                    border: `1px solid ${theme.palette.divider}`,
-                    borderRadius: '4px',
-                    fontSize: '14px'
-                  }}
-                />
-              </Box>
-              <Box>
-                <Typography variant="body2" sx={{ mb: 1 }}>
-                  Horas Semanales
-                </Typography>
-                <input
-                  type="number"
-                  name="horasSemanales"
-                  value={sucursalEdit.horasSemanales}
-                  onChange={handleEditFormChange}
-                  placeholder="40"
-                  min="1"
-                  max="168"
-                  style={{
-                    width: '100%',
-                    padding: '8px 12px',
-                    border: `1px solid ${theme.palette.divider}`,
-                    borderRadius: '4px',
-                    fontSize: '14px'
-                  }}
-                />
-              </Box>
-              <Box>
-                <Typography variant="body2" sx={{ mb: 1 }}>
-                  Target Mensual de Auditorías
-                </Typography>
-                <input
-                  type="number"
-                  name="targetMensual"
-                  value={sucursalEdit.targetMensual}
-                  onChange={handleEditFormChange}
-                  placeholder="0"
-                  min="0"
-                  style={{
-                    width: '100%',
-                    padding: '8px 12px',
-                    border: `1px solid ${theme.palette.divider}`,
-                    borderRadius: '4px',
-                    fontSize: '14px'
-                  }}
-                />
-                <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
-                  Número de auditorías objetivo para este mes
-                </Typography>
-              </Box>
-              <Box sx={{ display: 'flex', gap: 2, mt: 2 }}>
-                <Button
-                  variant="contained"
-                  onClick={handleUpdateSucursal}
-                  sx={{ flex: 1 }}
-                >
-                  Actualizar
-                </Button>
-                <Button
-                  variant="outlined"
-                  onClick={() => setOpenEditModal(false)}
-                  sx={{ flex: 1 }}
-                >
-                  Cancelar
-                </Button>
-              </Box>
+            </Box>
+            <Box sx={{ display: 'flex', gap: 2, mt: 3, pt: 2, borderTop: `1px solid ${theme.palette.divider}` }}>
+              <Button
+                variant="contained"
+                onClick={handleUpdateSucursal}
+                sx={{ flex: 1 }}
+              >
+                Actualizar
+              </Button>
+              <Button
+                variant="outlined"
+                onClick={() => setOpenEditModal(false)}
+                sx={{ flex: 1 }}
+              >
+                Cancelar
+              </Button>
             </Box>
           </Paper>
         </Box>
