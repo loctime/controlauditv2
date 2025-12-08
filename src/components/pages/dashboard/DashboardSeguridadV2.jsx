@@ -706,12 +706,6 @@ export default function DashboardSeguridadV2() {
       />
 
       <DashboardSummaryCard
-        selectedEmpresa={selectedEmpresa}
-        empresaSeleccionada={empresaSeleccionada}
-        selectedSucursal={selectedSucursal}
-        sucursalSeleccionada={sucursalSeleccionada}
-        selectedYear={selectedYear}
-        selectedMonth={selectedMonth}
         alertasCount={alertas.length}
         onAlertClick={handleAlertClick}
         generandoReporte={generandoReporte}

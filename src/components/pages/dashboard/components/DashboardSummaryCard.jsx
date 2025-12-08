@@ -2,27 +2,17 @@ import React, { useMemo } from "react";
 import {
   Paper,
   Box,
-  Typography,
   Badge,
   IconButton,
-  Button,
-  useTheme
+  Button
 } from "@mui/material";
 import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
 import WarningIcon from "@mui/icons-material/Warning";
-import BusinessIcon from "@mui/icons-material/Business";
-import StorefrontIcon from "@mui/icons-material/Storefront";
 import TargetsSummarySection from "./TargetsSummarySection";
 import AccionesSummarySection from "./AccionesSummarySection";
 import GoalsSummarySection from "./GoalsSummarySection";
 
 export default function DashboardSummaryCard({
-  selectedEmpresa,
-  empresaSeleccionada,
-  selectedSucursal,
-  sucursalSeleccionada,
-  selectedYear,
-  selectedMonth,
   alertasCount,
   onAlertClick,
   generandoReporte,
@@ -41,15 +31,6 @@ export default function DashboardSummaryCard({
   goalsAccidentes = null,
   goalsLoading = false
 }) {
-  const theme = useTheme();
-
-  const periodLabel = new Date(
-    selectedYear,
-    selectedMonth - 1
-  ).toLocaleString("es-ES", {
-    month: "long",
-    year: "numeric"
-  });
 
   // Calcular resumen de targets usando los progresos pasados como prop
   const resumenTargets = useMemo(() => {
@@ -82,20 +63,6 @@ export default function DashboardSummaryCard({
     };
   }, [sucursales, targetsProgresos]);
 
-  const getColorTarget = (porcentaje) => {
-    if (porcentaje >= 100) return 'success';
-    if (porcentaje >= 80) return 'success';
-    if (porcentaje >= 50) return 'warning';
-    return 'error';
-  };
-
-  const accionesTotales = accionesEstadisticas?.total || 0;
-  const accionesPendientes = accionesEstadisticas?.pendientes || 0;
-  const accionesVencidas = accionesEstadisticas?.vencidas || 0;
-  const accionesCompletadas = accionesEstadisticas?.completadas || 0;
-  const accionesPorcentaje =
-    accionesTotales > 0 ? Math.round((accionesCompletadas / accionesTotales) * 100) : 0;
-
   return (
     <Paper
       elevation={2}
@@ -116,70 +83,6 @@ export default function DashboardSummaryCard({
         }}
       >
         <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-          <BusinessIcon sx={{ color: "#4f46e5" }} />
-          <Box>
-            <Typography
-              variant="caption"
-              sx={{ color: "#6b7280", fontWeight: 500 }}
-            >
-              Empresa
-            </Typography>
-            <Typography
-              variant="body1"
-              sx={{ fontWeight: 600, color: "#111827" }}
-            >
-              {selectedEmpresa === "todas"
-                ? "Todas las empresas"
-                : empresaSeleccionada?.nombre || "Sin empresa"}
-            </Typography>
-          </Box>
-        </Box>
-
-        <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-          <StorefrontIcon sx={{ color: "#0ea5e9" }} />
-          <Box>
-            <Typography
-              variant="caption"
-              sx={{ color: "#6b7280", fontWeight: 500 }}
-            >
-              Sucursal
-            </Typography>
-            <Typography
-              variant="body1"
-              sx={{ fontWeight: 600, color: "#111827" }}
-            >
-              {selectedSucursal === "todas"
-                ? "Todas las sucursales"
-                : sucursalSeleccionada?.nombre || "Sin sucursal"}
-            </Typography>
-          </Box>
-        </Box>
-
-        <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-          <Typography
-            variant="caption"
-            sx={{ color: "#6b7280", fontWeight: 500 }}
-          >
-            Período
-          </Typography>
-          <Typography
-            variant="body1"
-            sx={{ fontWeight: 600, color: "#111827" }}
-          >
-            {periodLabel}
-          </Typography>
-        </Box>
-
-        <Box sx={{ flexGrow: 1 }} />
-
-        <Box
-          sx={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 1,
-            flexWrap: 'wrap'
-          }}
-        >
           <TargetsSummarySection
             resumen={resumenTargets}
             loading={targetsLoading}
