@@ -590,7 +590,7 @@ const ReportesPage = () => {
               display: 'flex', 
               gap: 1.5, 
               mt: 'auto',
-              flexDirection: isSmallMobile ? 'column' : 'row'
+              alignItems: 'center'
             }}>
               <Button
                 variant="contained"
@@ -605,19 +605,16 @@ const ReportesPage = () => {
               >
                 Ver Detalles
               </Button>
-              <Button
-                variant="outlined"
+              <IconButton
                 color="error"
-                fullWidth
-                startIcon={<DeleteIcon />}
                 onClick={() => handleDeleteReporte(reporte)}
                 sx={{ 
-                  py: isSmallMobile ? 1 : 1.5,
-                  fontSize: isSmallMobile ? '0.875rem' : '1rem'
+                  flexShrink: 0
                 }}
+                aria-label="Eliminar reporte"
               >
-                Eliminar
-              </Button>
+                <DeleteIcon />
+              </IconButton>
             </Box>
           </CardContent>
         </Card>
@@ -647,7 +644,7 @@ const ReportesPage = () => {
               <TableCell>{getNombreAuditor(reporte, userProfile)}</TableCell>
               <TableCell>{formatFecha(reporte.fechaCreacion)}</TableCell>
               <TableCell>
-                <Box sx={{ display: 'flex', gap: 1 }}>
+                <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
                   <Button
                     variant="outlined"
                     size="small"
@@ -656,15 +653,14 @@ const ReportesPage = () => {
                   >
                     Ver
                   </Button>
-                  <Button
-                    variant="outlined"
-                    size="small"
+                  <IconButton
                     color="error"
-                    startIcon={<DeleteIcon />}
+                    size="small"
                     onClick={() => handleDeleteReporte(reporte)}
+                    aria-label="Eliminar reporte"
                   >
-                    Eliminar
-                  </Button>
+                    <DeleteIcon />
+                  </IconButton>
                 </Box>
               </TableCell>
             </TableRow>
