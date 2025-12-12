@@ -39,6 +39,7 @@ import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import PersonIcon from '@mui/icons-material/Person';
 import DeleteIcon from '@mui/icons-material/Delete';
+import PrintIcon from '@mui/icons-material/Print';
 import Swal from 'sweetalert2';
 import "./ReportesPage.css";
 import FiltrosReportes from "./FiltrosReportes";
@@ -106,6 +107,7 @@ const ReportesPage = () => {
   const detalleRef = useRef();
   const [openModal, setOpenModal] = useState(false);
   const [expandedAccordion, setExpandedAccordion] = useState(null);
+  const [autoPrint, setAutoPrint] = useState(false);
   
   // Cache para evitar recargas innecesarias
   const reportesCacheRef = useRef({});
@@ -450,6 +452,7 @@ const ReportesPage = () => {
   const handleCloseModal = () => {
     setOpenModal(false);
     setSelectedReporte(null);
+    setAutoPrint(false);
   };
 
   const handlePrintReport = () => {
@@ -457,6 +460,27 @@ const ReportesPage = () => {
       detalleRef.current.printReport();
     }
   };
+
+  const handlePrintReporteDirecto = (reporte) => {
+    // Seleccionar el reporte y marcar para impresión automática
+    setSelectedReporte(reporte);
+    setAutoPrint(true);
+    setOpenModal(true);
+  };
+
+  // Efecto para ejecutar impresión automática cuando el modal esté listo
+  useEffect(() => {
+    if (openModal && autoPrint && selectedReporte && detalleRef.current) {
+      // Esperar un poco más para que los gráficos se preparen
+      const timer = setTimeout(() => {
+        if (detalleRef.current) {
+          detalleRef.current.printReport();
+          setAutoPrint(false);
+        }
+      }, 1500);
+      return () => clearTimeout(timer);
+    }
+  }, [openModal, autoPrint, selectedReporte]);
 
   const handleVolver = () => {
     navigate('/perfil');
@@ -606,6 +630,16 @@ const ReportesPage = () => {
                 Ver Detalles
               </Button>
               <IconButton
+                color="primary"
+                onClick={() => handlePrintReporteDirecto(reporte)}
+                sx={{ 
+                  flexShrink: 0
+                }}
+                aria-label="Imprimir reporte"
+              >
+                <PrintIcon />
+              </IconButton>
+              <IconButton
                 color="error"
                 onClick={() => handleDeleteReporte(reporte)}
                 sx={{ 
@@ -653,6 +687,14 @@ const ReportesPage = () => {
                   >
                     Ver
                   </Button>
+                  <IconButton
+                    color="primary"
+                    size="small"
+                    onClick={() => handlePrintReporteDirecto(reporte)}
+                    aria-label="Imprimir reporte"
+                  >
+                    <PrintIcon />
+                  </IconButton>
                   <IconButton
                     color="error"
                     size="small"
