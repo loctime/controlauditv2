@@ -67,11 +67,26 @@ export const useFilterState = (userEmpresas, userSucursales, localSucursales) =>
     if (selectedEmpresa) {
       const sucursalesEmpresa = sucursalesDisponibles.filter(s => s.empresaId === selectedEmpresa);
       
-      if (sucursalesEmpresa.length > 0 && !selectedSucursal) {
+      // Si la empresa tiene una sola sucursal, seleccionarla automáticamente
+      if (sucursalesEmpresa.length === 1) {
         setSelectedSucursal(sucursalesEmpresa[0].id);
-      } else if (sucursalesEmpresa.length === 0) {
+      } else if (sucursalesEmpresa.length > 1) {
+        // Si hay múltiples sucursales, verificar que la seleccionada pertenezca a la empresa actual
+        if (selectedSucursal) {
+          const sucursalPertenece = sucursalesEmpresa.some(s => s.id === selectedSucursal);
+          if (!sucursalPertenece) {
+            // Limpiar sucursal si no pertenece a la nueva empresa
+            setSelectedSucursal('');
+          }
+        }
+        // Si no hay sucursal seleccionada, no seleccionar ninguna (dejar que el usuario elija)
+      } else {
+        // Si no hay sucursales, limpiar selección
         setSelectedSucursal('');
       }
+    } else {
+      // Si no hay empresa seleccionada, limpiar sucursal
+      setSelectedSucursal('');
     }
   }, [selectedEmpresa, sucursalesDisponibles, selectedSucursal]);
 
