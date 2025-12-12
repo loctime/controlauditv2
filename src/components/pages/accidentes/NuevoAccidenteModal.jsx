@@ -27,6 +27,10 @@ const NuevoAccidenteModal = ({ open, onClose, onAccidenteCreado, empresaId, sucu
   const [empleados, setEmpleados] = useState([]);
   const [empleadosSeleccionados, setEmpleadosSeleccionados] = useState([]);
   const [descripcion, setDescripcion] = useState('');
+  const [fechaAccidente, setFechaAccidente] = useState(() => {
+    const hoy = new Date();
+    return hoy.toISOString().split('T')[0];
+  });
   const [imagenes, setImagenes] = useState([]);
   const [imagenesPreview, setImagenesPreview] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -36,6 +40,9 @@ const NuevoAccidenteModal = ({ open, onClose, onAccidenteCreado, empresaId, sucu
   useEffect(() => {
     if (open && sucursalId) {
       cargarEmpleados();
+      // Resetear fecha a hoy cuando se abre el modal
+      const hoy = new Date();
+      setFechaAccidente(hoy.toISOString().split('T')[0]);
     }
   }, [open, sucursalId]);
 
@@ -124,6 +131,7 @@ const NuevoAccidenteModal = ({ open, onClose, onAccidenteCreado, empresaId, sucu
         empresaId,
         sucursalId,
         descripcion,
+        fechaAccidente,
         empleadosSeleccionados,
         imagenes
       });
@@ -141,6 +149,8 @@ const NuevoAccidenteModal = ({ open, onClose, onAccidenteCreado, empresaId, sucu
   const handleClose = () => {
     setEmpleadosSeleccionados([]);
     setDescripcion('');
+    const hoy = new Date();
+    setFechaAccidente(hoy.toISOString().split('T')[0]);
     setImagenes([]);
     setImagenesPreview([]);
     setError('');
@@ -224,6 +234,25 @@ const NuevoAccidenteModal = ({ open, onClose, onAccidenteCreado, empresaId, sucu
               ))}
             </FormGroup>
           )}
+        </Box>
+
+        <Divider sx={{ my: 2 }} />
+
+        {/* Fecha del accidente */}
+        <Box sx={{ mb: 3 }}>
+          <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mb: 1 }}>
+            Fecha del Accidente *
+          </Typography>
+          <TextField
+            fullWidth
+            type="date"
+            value={fechaAccidente}
+            onChange={(e) => setFechaAccidente(e.target.value)}
+            variant="outlined"
+            InputLabelProps={{
+              shrink: true,
+            }}
+          />
         </Box>
 
         <Divider sx={{ my: 2 }} />

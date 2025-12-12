@@ -47,14 +47,67 @@ export async function calcularCumplimientoCapacitaciones(sucursal, capacitacione
 
     // Si no hay capacitaciones pasadas, consultarlas
     let capacitacionesData = capacitaciones;
-    if (!capacitacionesData) {
+    if (!capacitacionesData || capacitacionesData.length === 0) {
       const capacitacionesRef = collection(db, 'capacitaciones');
-      const q = query(capacitacionesRef, where('sucursalId', '==', sucursal.id));
-      const snapshot = await getDocs(q);
-      capacitacionesData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
+      const empresaId = sucursal.empresaId;
+      const queries = [];
+
+      // Intentar query combinada si tenemos empresaId
+      if (empresaId) {
+        try {
+          queries.push(
+            query(
+              capacitacionesRef,
+              where('empresaId', '==', empresaId),
+              where('sucursalId', '==', sucursal.id)
+            )
+          );
+        } catch (e) {
+          console.warn('Query combinada no disponible, usando queries simples:', e);
+        }
+      }
+
+      // Siempre agregar query simple como fallback
+      queries.push(
+        query(capacitacionesRef, where('sucursalId', '==', sucursal.id))
+      );
+
+      const snapshots = await Promise.allSettled(queries.map(q => getDocs(q)));
+      capacitacionesData = [];
+      const processedIds = new Set();
+
+      snapshots.forEach((result) => {
+        if (result.status !== 'fulfilled') return;
+        result.value.forEach((docSnapshot) => {
+          if (processedIds.has(docSnapshot.id)) return;
+          processedIds.add(docSnapshot.id);
+          
+          const data = docSnapshot.data();
+          
+          // FILTRAR POR EMPRESA si tenemos empresaId
+          if (empresaId) {
+            const tieneEmpresa = data.empresaId;
+            if (tieneEmpresa && data.empresaId !== empresaId) {
+              return; // No pertenece a esta empresa, ignorar
+            }
+          }
+          
+          // Verificar que la sucursal coincida
+          if (data.sucursalId !== sucursal.id) {
+            return; // No pertenece a esta sucursal, ignorar
+          }
+          
+          capacitacionesData.push({
+            id: docSnapshot.id,
+            ...data
+          });
+        });
+      });
+    } else {
+      // Si se pasaron capacitaciones, filtrar por sucursal específica
+      capacitacionesData = capacitacionesData.filter(cap => 
+        cap.sucursalId === sucursal.id
+      );
     }
 
     // Calcular período mensual
@@ -150,13 +203,37 @@ export async function calcularCumplimientoAuditoriasAnual(sucursal, auditorias =
     let auditoriasData = auditorias;
     if (!auditoriasData) {
       const reportesRef = collection(db, 'reportes');
-      const queries = [
-        query(reportesRef, where('sucursalId', '==', sucursal.id))
-      ];
+      const empresaId = sucursal.empresaId;
+      const queries = [];
+
+      // Intentar query combinada si tenemos empresaId
+      if (empresaId) {
+        try {
+          queries.push(
+            query(reportesRef, where('empresaId', '==', empresaId), where('sucursalId', '==', sucursal.id))
+          );
+        } catch (e) {
+          console.warn('Query combinada no disponible, usando queries simples:', e);
+        }
+      }
+
+      // Siempre agregar queries simples como fallback
+      queries.push(query(reportesRef, where('sucursalId', '==', sucursal.id)));
 
       // También buscar por nombre de sucursal (compatibilidad)
       if (sucursal.nombre) {
         queries.push(query(reportesRef, where('sucursal', '==', sucursal.nombre)));
+        
+        // Si tenemos empresaId, también buscar por empresaId + nombre
+        if (empresaId) {
+          try {
+            queries.push(
+              query(reportesRef, where('empresaId', '==', empresaId), where('sucursal', '==', sucursal.nombre))
+            );
+          } catch (e) {
+            // Si falla, no es crítico
+          }
+        }
       }
 
       const snapshots = await Promise.allSettled(queries.map(q => getDocs(q)));
@@ -168,9 +245,30 @@ export async function calcularCumplimientoAuditoriasAnual(sucursal, auditorias =
         result.value.forEach((docSnapshot) => {
           if (processedIds.has(docSnapshot.id)) return;
           processedIds.add(docSnapshot.id);
+          
+          const data = docSnapshot.data();
+          
+          // FILTRAR POR EMPRESA si tenemos empresaId
+          if (empresaId) {
+            const tieneEmpresa = data.empresaId || 
+                                (data.empresa && typeof data.empresa !== 'string') || 
+                                (typeof data.empresa === 'object' && data.empresa !== null);
+            
+            if (tieneEmpresa) {
+              const empresaMatch = 
+                data.empresaId === empresaId ||
+                (typeof data.empresa === 'string' && data.empresa === empresaId) ||
+                (typeof data.empresa === 'object' && data.empresa?.id === empresaId);
+              
+              if (!empresaMatch) {
+                return; // No pertenece a esta empresa, ignorar
+              }
+            }
+          }
+          
           auditoriasData.push({
             id: docSnapshot.id,
-            ...docSnapshot.data()
+            ...data
           });
         });
       });
@@ -245,18 +343,73 @@ export async function calcularDiasSinAccidentes(sucursal, accidentes = null) {
     } else {
       // Si no, buscar en accidentes
       let accidentesData = accidentes;
-      if (!accidentesData) {
+      if (!accidentesData || accidentesData.length === 0) {
         const accidentesRef = collection(db, 'accidentes');
-        const q = query(
-          accidentesRef, 
-          where('sucursalId', '==', sucursal.id),
-          where('tipo', '==', 'accidente')
+        const empresaId = sucursal.empresaId;
+        const queries = [];
+
+        // Intentar query combinada si tenemos empresaId
+        if (empresaId) {
+          try {
+            queries.push(
+              query(
+                accidentesRef,
+                where('empresaId', '==', empresaId),
+                where('sucursalId', '==', sucursal.id),
+                where('tipo', '==', 'accidente')
+              )
+            );
+          } catch (e) {
+            console.warn('Query combinada no disponible, usando queries simples:', e);
+          }
+        }
+
+        // Siempre agregar query simple como fallback
+        queries.push(
+          query(
+            accidentesRef, 
+            where('sucursalId', '==', sucursal.id),
+            where('tipo', '==', 'accidente')
+          )
         );
-        const snapshot = await getDocs(q);
-        accidentesData = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
+
+        const snapshots = await Promise.allSettled(queries.map(q => getDocs(q)));
+        accidentesData = [];
+        const processedIds = new Set();
+
+        snapshots.forEach((result) => {
+          if (result.status !== 'fulfilled') return;
+          result.value.forEach((docSnapshot) => {
+            if (processedIds.has(docSnapshot.id)) return;
+            processedIds.add(docSnapshot.id);
+            
+            const data = docSnapshot.data();
+            
+            // FILTRAR POR EMPRESA si tenemos empresaId
+            if (empresaId) {
+              const tieneEmpresa = data.empresaId;
+              if (tieneEmpresa && data.empresaId !== empresaId) {
+                return; // No pertenece a esta empresa, ignorar
+              }
+            }
+            
+            // Verificar que la sucursal coincida
+            if (data.sucursalId !== sucursal.id) {
+              return; // No pertenece a esta sucursal, ignorar
+            }
+            
+            accidentesData.push({
+              id: docSnapshot.id,
+              ...data
+            });
+          });
+        });
+      } else {
+        // Si se pasaron accidentes, filtrar por sucursal específica
+        accidentesData = accidentesData.filter(acc => 
+          acc.sucursalId === sucursal.id && 
+          acc.tipo === 'accidente'
+        );
       }
 
       // Buscar el accidente más reciente

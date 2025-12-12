@@ -420,8 +420,14 @@ export const actualizarAccidente = async (accidenteId, datosActualizados, imagen
     // Si hay nuevas imágenes, subirlas
     if (imagenesNuevas && imagenesNuevas.length > 0) {
       const nuevasUrls = await subirImagenes(accidenteId, imagenesNuevas);
-      const imagenesExistentes = accidenteDoc.data().imagenes || [];
-      updateData.imagenes = [...imagenesExistentes, ...nuevasUrls];
+      // Si ya vienen imágenes en datosActualizados (después de eliminar algunas), usar esas
+      // Si no, usar las existentes del documento
+      const imagenesBase = updateData.imagenes || accidenteDoc.data().imagenes || [];
+      updateData.imagenes = [...imagenesBase, ...nuevasUrls];
+    } else if (!updateData.imagenes) {
+      // Si no hay nuevas imágenes pero no se enviaron imágenes en datosActualizados,
+      // mantener las existentes
+      updateData.imagenes = accidenteDoc.data().imagenes || [];
     }
 
     await updateDoc(accidenteRef, updateData);
