@@ -190,7 +190,8 @@ body::before {
         comentarios, 
         imagenes, 
         clasificaciones,
-        sectionChartsImgDataUrl 
+        sectionChartsImgDataUrl,
+        accionesRequeridas
       })
     ).join('')}
   </div>

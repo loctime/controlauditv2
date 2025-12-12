@@ -388,7 +388,8 @@ export const generarSeccion = ({
   comentarios, 
   imagenes, 
   clasificaciones,
-  sectionChartsImgDataUrl 
+  sectionChartsImgDataUrl,
+  accionesRequeridas = []
 }) => {
   const preguntas = Array.isArray(sec.preguntas) ? sec.preguntas : [];
   const local = (respuestas[sIdx] || []);
@@ -424,15 +425,94 @@ export const generarSeccion = ({
       ${miniChart}
       <div class="questions-container">
         ${preguntas.map((text, pIdx) => {
+          // Helpers para acciones requeridas
+          const obtenerColorEstado = (estado) => {
+            switch (estado) {
+              case 'pendiente': return '#ff9800';
+              case 'en_proceso': return '#2196f3';
+              case 'completada': return '#4caf50';
+              case 'cancelada': return '#f44336';
+              default: return '#757575';
+            }
+          };
+          
+          const obtenerTextoEstado = (estado) => {
+            switch (estado) {
+              case 'pendiente': return 'Pendiente';
+              case 'en_proceso': return 'En Proceso';
+              case 'completada': return 'Completada';
+              case 'cancelada': return 'Cancelada';
+              default: return estado;
+            }
+          };
+          
+          const formatearFecha = (fecha) => {
+            if (!fecha) return 'N/A';
+            try {
+              const fechaObj = fecha.toDate ? fecha.toDate() : new Date(fecha);
+              return new Date(fechaObj).toLocaleDateString('es-AR', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric'
+              });
+            } catch (error) {
+              return 'N/A';
+            }
+          };
+          
           const r = val(respuestas[sIdx]?.[pIdx]) || 'Sin responder';
           const c = val(comentarios[sIdx]?.[pIdx]);
           const img = val(imagenes[sIdx]?.[pIdx]);
           const clas = clasificaciones?.[sIdx]?.[pIdx] || { condicion: false, actitud: false };
           
+          // Determinar color de la línea según la respuesta
+          let borderColor = '#28a745'; // Verde para Conforme
           let statusClass = 'status-conforme';
-          if (r === 'No conforme') statusClass = 'status-no-conforme';
-          else if (r === 'Necesita mejora') statusClass = 'status-mejora';
-          else if (r === 'No aplica') statusClass = 'status-no-aplica';
+          if (r === 'No conforme') {
+            borderColor = '#dc3545'; // Rojo
+            statusClass = 'status-no-conforme';
+          } else if (r === 'Necesita mejora') {
+            borderColor = '#ffc107'; // Amarillo
+            statusClass = 'status-mejora';
+          } else if (r === 'No aplica') {
+            borderColor = '#17a2b8'; // Azul claro
+            statusClass = 'status-no-aplica';
+          }
+          
+          // Buscar acciones requeridas para esta pregunta
+          const accionesPregunta = accionesRequeridas.filter(accion => {
+            if (!accion.preguntaIndex) return false;
+            return accion.preguntaIndex.seccionIndex === sIdx && 
+                   accion.preguntaIndex.preguntaIndex === pIdx;
+          });
+          
+          // Generar HTML de acciones requeridas
+          let accionesHTML = '';
+          if (accionesPregunta.length > 0) {
+            const accionesList = accionesPregunta.map(accion => {
+              const estadoColor = obtenerColorEstado(accion.estado || 'pendiente');
+              const estadoTexto = obtenerTextoEstado(accion.estado || 'pendiente');
+              const fechaVenc = accion.fechaVencimiento 
+                ? formatearFecha(accion.fechaVencimiento)
+                : 'N/A';
+              
+              return `
+                <div class="question-action">
+                  <div class="action-text">
+                    <strong>⚠️ Acción requerida:</strong> ${val(accion.accionTexto)}
+                  </div>
+                  <div class="action-meta">
+                    <span class="action-status" style="background: ${estadoColor};">
+                      ${estadoTexto}
+                    </span>
+                    ${fechaVenc !== 'N/A' ? `<span class="action-date">Vence: ${fechaVenc}</span>` : ''}
+                  </div>
+                </div>
+              `;
+            }).join('');
+            
+            accionesHTML = `<div class="question-actions">${accionesList}</div>`;
+          }
           
           // Generar badges de clasificación
           const clasificacionBadges = [];
@@ -445,7 +525,7 @@ export const generarSeccion = ({
           const clasificacionHTML = clasificacionBadges.length > 0 ? `<div style="margin-top: 4px;">${clasificacionBadges.join('')}</div>` : '';
           
           return `
-            <div class="question">
+            <div class="question" style="border-left-color: ${borderColor};">
               <div class="question-header">
                 <span class="question-number">${num(sIdx, pIdx)}</span>
                 <span class="question-status ${statusClass}">${r}</span>
@@ -453,6 +533,7 @@ export const generarSeccion = ({
               <div class="question-text">${text || 'Ítem sin descripción'}</div>
               ${clasificacionHTML}
               ${c ? `<div class="question-comment">💬 ${c}</div>` : ''}
+              ${accionesHTML}
               ${img ? `<div class="question-image"><img src="${img}" alt="Evidencia" /></div>` : ''}
             </div>
           `;
