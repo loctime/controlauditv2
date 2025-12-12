@@ -31,7 +31,12 @@ export const generarReporteDashboard = async ({
   goalsAuditorias = null,
   goalsAccidentes = null,
   sucursalesBase = [],
-  selectedMonth = null
+  selectedMonth = null,
+  // Nuevos parámetros para secciones del dashboard
+  saludOcupacional = null,
+  auditoriasMetrics = null,
+  auditClasificaciones = null,
+  data = null // datos del servicio con totalEmployeesAll, inactiveEmployees, etc.
 }) => {
   const doc = new jsPDF('p', 'mm', 'a4');
   const pageWidth = doc.internal.pageSize.getWidth();
@@ -248,11 +253,147 @@ export const generarReporteDashboard = async ({
   yPosition = doc.lastAutoTable.finalY + 15;
   checkPageBreak(30);
 
+  // ========== EMPLEADOS DETALLADO ==========
+  onProgress?.(18);
+  if (data && (data.totalEmployeesAll || data.totalEmployees || data.operators || data.administrators)) {
+    addSectionTitle('2. INFORMACIÓN DE EMPLEADOS', 16, 50);
+    
+    const empleadosData = [];
+    
+    if (data.totalEmployeesAll !== undefined && data.totalEmployeesAll !== null) {
+      empleadosData.push(['Total de Empleados (incluyendo inactivos)', data.totalEmployeesAll.toLocaleString('es-AR')]);
+    }
+    if (data.totalEmployees !== undefined && data.totalEmployees !== null) {
+      empleadosData.push(['Empleados Activos', data.totalEmployees.toLocaleString('es-AR')]);
+    }
+    if (data.inactiveEmployees !== undefined && data.inactiveEmployees !== null && data.inactiveEmployees > 0) {
+      empleadosData.push(['Empleados Inactivos', data.inactiveEmployees.toLocaleString('es-AR')]);
+    }
+    if (data.operators !== undefined && data.operators !== null) {
+      empleadosData.push(['Operarios', data.operators.toLocaleString('es-AR')]);
+    }
+    if (data.administrators !== undefined && data.administrators !== null) {
+      empleadosData.push(['Administrativos', data.administrators.toLocaleString('es-AR')]);
+    }
+    if (data.hoursWorked !== undefined && data.hoursWorked !== null) {
+      empleadosData.push(['Horas Trabajadas', data.hoursWorked.toLocaleString('es-AR')]);
+    }
+    
+    if (empleadosData.length > 0) {
+      doc.autoTable({
+        startY: yPosition,
+        head: [['Categoría', 'Valor']],
+        body: empleadosData,
+        theme: 'striped',
+        headStyles: { 
+          fillColor: false, 
+          textColor: 0, 
+          fontStyle: 'bold',
+          fontSize: 11,
+          lineWidth: 0.8
+        },
+        bodyStyles: { fontSize: 10 },
+        alternateRowStyles: { fillColor: false },
+        margin: { left: margin, right: margin },
+        styles: { cellPadding: 3, lineWidth: 0.3 }
+      });
+
+      yPosition = doc.lastAutoTable.finalY + 15;
+      checkPageBreak(30);
+    }
+  }
+
+  // ========== AUDITORÍAS DETALLADO ==========
+  onProgress?.(20);
+  if (auditoriasMetrics && (auditoriasMetrics.total > 0 || auditoriasMetrics.total === 0)) {
+    addSectionTitle('3. AUDITORÍAS', 16, 50);
+    
+    const auditoriasData = [
+      ['Total de Auditorías', auditoriasMetrics.total || 0],
+      ['Completadas', auditoriasMetrics.completadas || 0],
+      ['Pendientes', auditoriasMetrics.pendientes || 0],
+      ['No Conformes', auditoriasMetrics.noConformes || 0]
+    ];
+    
+    doc.autoTable({
+      startY: yPosition,
+      head: [['Estado', 'Cantidad']],
+      body: auditoriasData,
+      theme: 'striped',
+      headStyles: { 
+        fillColor: false, 
+        textColor: 0, 
+        fontStyle: 'bold',
+        fontSize: 11,
+        lineWidth: 0.8
+      },
+      bodyStyles: { fontSize: 10 },
+      alternateRowStyles: { fillColor: false },
+      margin: { left: margin, right: margin },
+      styles: { cellPadding: 3, lineWidth: 0.3 },
+      didParseCell: (data) => {
+        if (data.row.index >= 0 && data.column.index === 1) {
+          const valor = parseInt(data.cell.text[0]);
+          if (!isNaN(valor) && valor > 0) {
+            if (data.row.raw[0].includes('Pendientes') || data.row.raw[0].includes('No Conformes')) {
+              data.cell.styles.textColor = [0, 0, 0];
+              data.cell.styles.fontStyle = 'bold';
+            }
+          }
+        }
+      }
+    });
+
+    yPosition = doc.lastAutoTable.finalY + 15;
+    checkPageBreak(30);
+
+    // Condición vs Actitud
+    if (auditClasificaciones && auditClasificaciones.total > 0) {
+      checkPageBreak(25);
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(0, 0, 0);
+      doc.text('Clasificación de Hallazgos', margin, yPosition);
+      yPosition += 8;
+
+      const clasificacionData = [
+        ['Condición', auditClasificaciones.condicion || 0, `${auditClasificaciones.total > 0 ? ((auditClasificaciones.condicion || 0) / auditClasificaciones.total * 100).toFixed(1) : 0}%`],
+        ['Actitud', auditClasificaciones.actitud || 0, `${auditClasificaciones.total > 0 ? ((auditClasificaciones.actitud || 0) / auditClasificaciones.total * 100).toFixed(1) : 0}%`],
+        ['Total', auditClasificaciones.total, '100%']
+      ];
+
+      doc.autoTable({
+        startY: yPosition,
+        head: [['Tipo', 'Cantidad', 'Porcentaje']],
+        body: clasificacionData,
+        theme: 'striped',
+        headStyles: { 
+          fillColor: false, 
+          textColor: 0, 
+          fontStyle: 'bold',
+          fontSize: 11,
+          lineWidth: 0.8
+        },
+        bodyStyles: { fontSize: 10 },
+        alternateRowStyles: { fillColor: false },
+        margin: { left: margin, right: margin },
+        styles: { cellPadding: 3, lineWidth: 0.3 },
+        columnStyles: {
+          1: { halign: 'center' },
+          2: { halign: 'center' }
+        }
+      });
+
+      yPosition = doc.lastAutoTable.finalY + 15;
+      checkPageBreak(30);
+    }
+  }
+
   // ========== ÍNDICES TÉCNICOS ==========
-  onProgress?.(25);
+  onProgress?.(30);
   // Estimar espacio para tabla (4 filas + descripciones + comparación si hay)
   const espacioIndices = opciones.comparacionAnoAnterior && indicesComparacion?.tieneComparacion ? 100 : 80;
-  addSectionTitle('2. ÍNDICES TÉCNICOS DE SEGURIDAD', 16, espacioIndices);
+  addSectionTitle('4. ÍNDICES TÉCNICOS DE SEGURIDAD', 16, espacioIndices);
 
   // Determinar columnas según si hay comparación
   const tieneComparacion = opciones.comparacionAnoAnterior && indicesComparacion?.tieneComparacion;
@@ -398,7 +539,7 @@ export const generarReporteDashboard = async ({
   checkPageBreak(40);
 
   // ========== TARGETS MENSUALES ==========
-  onProgress?.(35);
+  onProgress?.(40);
   if (targetsProgresos && Object.keys(targetsProgresos).length > 0) {
     const mesNombre = selectedMonth 
       ? new Date(año, selectedMonth - 1).toLocaleString('es-ES', { month: 'long' })
@@ -479,9 +620,9 @@ export const generarReporteDashboard = async ({
   }
 
   // ========== ACCIONES REQUERIDAS ==========
-  onProgress?.(37);
+  onProgress?.(42);
   if (accionesEstadisticas && accionesEstadisticas.total > 0) {
-    addSectionTitle('4. ACCIONES REQUERIDAS', 16, 50);
+    addSectionTitle('6. ACCIONES REQUERIDAS', 16, 50);
 
     const accionesData = [
       ['Total de Acciones', accionesEstadisticas.total],
@@ -542,10 +683,10 @@ export const generarReporteDashboard = async ({
   }
 
   // ========== ANÁLISIS DE ACCIDENTES ==========
-  onProgress?.(40);
+  onProgress?.(45);
   if (accidentesAnalysis) {
     // Estimar espacio para tabla (7 filas aprox)
-    addSectionTitle('5. ANÁLISIS DE ACCIDENTES E INCIDENTES', 16, 60);
+    addSectionTitle('7. ANÁLISIS DE ACCIDENTES E INCIDENTES', 16, 60);
 
     const accidentesData = [
       ['Total de Accidentes', accidentesAnalysis.total],
@@ -645,7 +786,7 @@ export const generarReporteDashboard = async ({
   onProgress?.(55);
   if (capacitacionesMetrics) {
     // Estimar espacio para tabla (4 filas aprox)
-    addSectionTitle('6. CUMPLIMIENTO DE CAPACITACIONES', 16, 50);
+    addSectionTitle('8. CUMPLIMIENTO DE CAPACITACIONES', 16, 50);
 
     const capacitacionesData = [
       ['Total de Capacitaciones', capacitacionesMetrics.total],
@@ -742,10 +883,169 @@ export const generarReporteDashboard = async ({
     }
   }
 
+  // ========== SALUD OCUPACIONAL ==========
+  onProgress?.(65);
+  if (saludOcupacional && saludOcupacional.resumen) {
+    const resumen = saludOcupacional.resumen;
+    const tieneDatos = resumen.total > 0 || resumen.activas > 0 || resumen.ocupacionales > 0 || resumen.diasPerdidosTotales > 0;
+    
+    if (tieneDatos) {
+      addSectionTitle('9. SALUD OCUPACIONAL', 16, 80);
+      
+      const saludData = [];
+      
+      if (resumen.total !== undefined && resumen.total !== null) {
+        saludData.push(['Total de Ausencias/Enfermedades', resumen.total.toLocaleString('es-AR')]);
+      }
+      if (resumen.activas !== undefined && resumen.activas !== null) {
+        saludData.push(['Ausencias Activas', resumen.activas.toLocaleString('es-AR')]);
+      }
+      if (resumen.cerradas !== undefined && resumen.cerradas !== null) {
+        saludData.push(['Ausencias Cerradas', resumen.cerradas.toLocaleString('es-AR')]);
+      }
+      if (resumen.ocupacionales !== undefined && resumen.ocupacionales !== null && resumen.ocupacionales > 0) {
+        saludData.push(['Enfermedades Ocupacionales', resumen.ocupacionales.toLocaleString('es-AR')]);
+      }
+      if (resumen.covid !== undefined && resumen.covid !== null && resumen.covid > 0) {
+        saludData.push(['Casos COVID', resumen.covid.toLocaleString('es-AR')]);
+      }
+      if (resumen.enfermedades !== undefined && resumen.enfermedades !== null && resumen.enfermedades > 0) {
+        saludData.push(['Enfermedades Comunes', resumen.enfermedades.toLocaleString('es-AR')]);
+      }
+      if (resumen.licencias !== undefined && resumen.licencias !== null && resumen.licencias > 0) {
+        saludData.push(['Licencias Especiales', resumen.licencias.toLocaleString('es-AR')]);
+      }
+      if (resumen.diasPerdidosTotales !== undefined && resumen.diasPerdidosTotales !== null) {
+        saludData.push(['Días Perdidos (Ausencias)', resumen.diasPerdidosTotales.toLocaleString('es-AR')]);
+      }
+      if (resumen.horasPerdidasTotales !== undefined && resumen.horasPerdidasTotales !== null) {
+        saludData.push(['Horas Perdidas (Ausencias)', resumen.horasPerdidasTotales.toLocaleString('es-AR')]);
+      }
+      
+      if (saludData.length > 0) {
+        doc.autoTable({
+          startY: yPosition,
+          head: [['Categoría', 'Valor']],
+          body: saludData,
+          theme: 'striped',
+          headStyles: { 
+            fillColor: false, 
+            textColor: 0, 
+            fontStyle: 'bold',
+            fontSize: 11,
+            lineWidth: 0.8
+          },
+          bodyStyles: { fontSize: 10 },
+          alternateRowStyles: { fillColor: false },
+          margin: { left: margin, right: margin },
+          styles: { cellPadding: 3, lineWidth: 0.3 }
+        });
+
+        yPosition = doc.lastAutoTable.finalY + 15;
+        checkPageBreak(40);
+
+        // Tipos personalizados de ausencias
+        if (resumen.porTipo && Object.keys(resumen.porTipo).length > 0) {
+          const tiposPersonalizados = Object.entries(resumen.porTipo)
+            .filter(([tipo, cantidad]) => {
+              // Excluir tipos predefinidos que ya se mostraron
+              const tiposPredefinidos = ['ocupacional', 'covid', 'accidente', 'licencia', 'enfermedad', 'otro'];
+              return !tiposPredefinidos.includes(tipo) && cantidad > 0;
+            })
+            .sort((a, b) => b[1] - a[1]);
+
+          if (tiposPersonalizados.length > 0) {
+            checkPageBreak(25);
+            doc.setFontSize(12);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(0, 0, 0);
+            doc.text('Tipos Personalizados de Ausencias', margin, yPosition);
+            yPosition += 8;
+
+            const tiposData = tiposPersonalizados.map(([tipo, cantidad]) => [
+              tipo.charAt(0).toUpperCase() + tipo.slice(1).replace(/_/g, ' '),
+              cantidad.toLocaleString('es-AR')
+            ]);
+
+            doc.autoTable({
+              startY: yPosition,
+              head: [['Tipo', 'Cantidad']],
+              body: tiposData,
+              theme: 'striped',
+              headStyles: { 
+                fillColor: false, 
+                textColor: 0, 
+                fontStyle: 'bold',
+                fontSize: 11,
+                lineWidth: 0.8
+              },
+              bodyStyles: { fontSize: 10 },
+              alternateRowStyles: { fillColor: false },
+              margin: { left: margin, right: margin },
+              styles: { cellPadding: 3, lineWidth: 0.3 },
+              columnStyles: {
+                1: { halign: 'center' }
+              }
+            });
+
+            yPosition = doc.lastAutoTable.finalY + 15;
+            checkPageBreak(30);
+          }
+        }
+
+        // Casos recientes (top 5)
+        if (saludOcupacional.casosRecientes && saludOcupacional.casosRecientes.length > 0) {
+          checkPageBreak(35);
+          doc.setFontSize(12);
+          doc.setFont('helvetica', 'bold');
+          doc.setTextColor(0, 0, 0);
+          doc.text('Casos Recientes', margin, yPosition);
+          yPosition += 8;
+
+          const casosRecientes = saludOcupacional.casosRecientes.slice(0, 5);
+          const casosData = casosRecientes.map((caso) => {
+            const fechaInicio = caso.fechaInicio ? new Date(caso.fechaInicio).toLocaleDateString('es-AR') : 'Sin fecha';
+            return [
+              caso.empleadoNombre || 'Sin nombre',
+              caso.etiqueta || caso.tipo || 'Sin clasificar',
+              `${caso.diasEnPeriodo || 0} días`,
+              fechaInicio
+            ];
+          });
+
+          doc.autoTable({
+            startY: yPosition,
+            head: [['Empleado', 'Tipo', 'Días', 'Fecha Inicio']],
+            body: casosData,
+            theme: 'striped',
+            headStyles: { 
+              fillColor: false, 
+              textColor: 0, 
+              fontStyle: 'bold',
+              fontSize: 11,
+              lineWidth: 0.8
+            },
+            bodyStyles: { fontSize: 9 },
+            alternateRowStyles: { fillColor: false },
+            margin: { left: margin, right: margin },
+            styles: { cellPadding: 2, lineWidth: 0.3 },
+            columnStyles: {
+              2: { halign: 'center' },
+              3: { halign: 'center' }
+            }
+          });
+
+          yPosition = doc.lastAutoTable.finalY + 15;
+          checkPageBreak(30);
+        }
+      }
+    }
+  }
+
   // ========== METAS Y OBJETIVOS ==========
-  onProgress?.(60);
+  onProgress?.(75);
   if (goalsCapacitaciones || goalsAuditorias || goalsAccidentes) {
-    addSectionTitle('7. METAS Y OBJETIVOS', 16, 80);
+    addSectionTitle('10. METAS Y OBJETIVOS', 16, 80);
 
     const metasData = [];
 
@@ -880,7 +1180,7 @@ export const generarReporteDashboard = async ({
 
       const secciones = seccionesCapturables.length > 0 ? seccionesCapturables : [graficosContainer];
 
-      addSectionTitle('8. ANÁLISIS GRÁFICO', 16, 40);
+      addSectionTitle('11. ANÁLISIS GRÁFICO', 16, 40);
 
       for (const section of secciones) {
         section.scrollIntoView({ behavior: 'instant', block: 'center' });
@@ -949,7 +1249,7 @@ export const generarReporteDashboard = async ({
       graficosContainer.style.overflow = originalContainerOverflow;
       graficosContainer.style.height = originalContainerHeight;
     } else {
-      addSectionTitle('8. ANÁLISIS GRÁFICO', 16, 10);
+      addSectionTitle('11. ANÁLISIS GRÁFICO', 16, 10);
       doc.setFontSize(10);
       doc.setTextColor(0, 0, 0);
       doc.setFont('helvetica', 'italic');
@@ -958,7 +1258,7 @@ export const generarReporteDashboard = async ({
     }
   } catch (error) {
     console.warn('Error al generar gráficos:', error);
-    addSectionTitle('8. ANÁLISIS GRÁFICO', 16, 10);
+    addSectionTitle('11. ANÁLISIS GRÁFICO', 16, 10);
     doc.setFontSize(10);
     doc.setTextColor(0, 0, 0);
     doc.setFont('helvetica', 'italic');
@@ -969,7 +1269,7 @@ export const generarReporteDashboard = async ({
   // ========== ALERTAS Y RECOMENDACIONES ==========
   onProgress?.(85);
   // Estimar espacio para recomendaciones (múltiples líneas)
-  addSectionTitle('9. ALERTAS Y RECOMENDACIONES', 16, 60);
+  addSectionTitle('12. ALERTAS Y RECOMENDACIONES', 16, 60);
 
   doc.setFontSize(10);
   doc.setTextColor(0, 0, 0);

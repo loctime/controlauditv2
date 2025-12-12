@@ -645,7 +645,12 @@ export default function DashboardSeguridadV2() {
         goalsAuditorias,
         goalsAccidentes,
         sucursalesBase,
-        selectedMonth
+        selectedMonth,
+        // Nuevos parámetros para secciones del dashboard
+        saludOcupacional: saludOcupacionalDatos,
+        auditoriasMetrics,
+        auditClasificaciones: auditoriasClasificaciones,
+        data
       });
 
       toast.dismiss(loadingToastId);
