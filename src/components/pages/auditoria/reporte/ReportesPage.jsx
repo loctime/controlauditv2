@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
-import { collection, getDocs, query, where, orderBy, limit } from "firebase/firestore";
+import { collection, getDocs, query, where, orderBy, limit, deleteDoc, doc } from "firebase/firestore";
 import { db } from "../../../../firebaseConfig";
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
@@ -38,6 +38,8 @@ import AssignmentIcon from '@mui/icons-material/Assignment';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import PersonIcon from '@mui/icons-material/Person';
+import DeleteIcon from '@mui/icons-material/Delete';
+import Swal from 'sweetalert2';
 import "./ReportesPage.css";
 import FiltrosReportes from "./FiltrosReportes";
 import { useAuth } from "../../../context/AuthContext";
@@ -64,6 +66,16 @@ const getNombreFormulario = (formulario, nombreForm) =>
     : typeof formulario === "string"
     ? formulario
     : "Formulario no disponible");
+
+// Helper para obtener nombre del auditor
+const getNombreAuditor = (reporte, userProfile) => {
+  return reporte?.nombreInspector || 
+         reporte?.auditorNombre || 
+         userProfile?.nombre || 
+         userProfile?.displayName || 
+         userProfile?.email || 
+         'N/A';
+};
 
 const ReportesPage = () => {
   const { userProfile, userEmpresas } = useAuth();
@@ -148,21 +160,6 @@ const ReportesPage = () => {
     return Array.from(formulariosMap.values());
   }, [reportes]);
 
-  // Función para obtener el color del estado del reporte
-  const getEstadoColor = (reporte) => {
-    if (reporte.estado === 'completado') return 'success';
-    if (reporte.estado === 'en_progreso') return 'warning';
-    if (reporte.estado === 'pendiente') return 'info';
-    return 'default';
-  };
-
-  // Función para obtener el texto del estado
-  const getEstadoText = (reporte) => {
-    if (reporte.estado === 'completado') return 'Completado';
-    if (reporte.estado === 'en_progreso') return 'En Progreso';
-    if (reporte.estado === 'pendiente') return 'Pendiente';
-    return 'Sin Estado';
-  };
 
   // Función para formatear fecha
   const formatFecha = (fecha) => {
@@ -465,6 +462,46 @@ const ReportesPage = () => {
     navigate('/perfil');
   };
 
+  const handleDeleteReporte = async (reporte) => {
+    const result = await Swal.fire({
+      title: '¿Eliminar reporte?',
+      text: `Esta acción eliminará permanentemente el reporte de ${getNombreEmpresa(reporte, userEmpresas)}. Esta acción no se puede deshacer.`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d32f2f',
+      cancelButtonColor: '#757575',
+      confirmButtonText: 'Sí, eliminar',
+      cancelButtonText: 'Cancelar',
+      reverseButtons: true,
+      focusCancel: true,
+      customClass: {
+        popup: 'swal2-popup-custom',
+        confirmButton: 'swal2-confirm-danger'
+      }
+    });
+
+    if (result.isConfirmed) {
+      try {
+        await deleteDoc(doc(db, 'reportes', reporte.id));
+        
+        // Actualizar estado local
+        setReportes(prev => prev.filter(r => r.id !== reporte.id));
+        setFilteredReportes(prev => prev.filter(r => r.id !== reporte.id));
+        
+        // Limpiar cache
+        const cacheKey = `${userProfile?.uid || ''}-${userProfile?.clienteAdminId || ''}-${userProfile?.empresaId || ''}-${userProfile?.role || ''}`;
+        if (reportesCacheRef.current[cacheKey]) {
+          reportesCacheRef.current[cacheKey] = reportesCacheRef.current[cacheKey].filter(r => r.id !== reporte.id);
+        }
+        
+        Swal.fire('Eliminado', 'El reporte ha sido eliminado correctamente', 'success');
+      } catch (error) {
+        console.error('Error al eliminar reporte:', error);
+        Swal.fire('Error', 'No se pudo eliminar el reporte. Por favor, intenta de nuevo.', 'error');
+      }
+    }
+  };
+
   // Renderizado condicional para móvil vs desktop
   const renderMobileView = () => (
     <Box sx={{ 
@@ -485,7 +522,7 @@ const ReportesPage = () => {
             flexDirection: 'column',
             justifyContent: 'space-between'
           }}>
-            {/* Header con empresa y estado */}
+            {/* Header con empresa */}
             <Box sx={{ 
               display: 'flex', 
               alignItems: 'center', 
@@ -511,12 +548,6 @@ const ReportesPage = () => {
                   {getNombreEmpresa(reporte, userEmpresas)}
                 </Typography>
               </Box>
-              <Chip 
-                label={getEstadoText(reporte)}
-                color={getEstadoColor(reporte)}
-                size="small"
-                sx={{ fontSize: isSmallMobile ? '0.75rem' : '0.875rem' }}
-              />
             </Box>
 
             {/* Información del reporte */}
@@ -542,7 +573,7 @@ const ReportesPage = () => {
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                 <PersonIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
                 <Typography variant="body2" color="text.secondary">
-                  {reporte.auditor || "Auditor no disponible"}
+                  {getNombreAuditor(reporte, userProfile)}
                 </Typography>
               </Box>
 
@@ -554,21 +585,40 @@ const ReportesPage = () => {
               </Box>
             </Stack>
 
-            {/* Botón de acción */}
-            <Button
-              variant="contained"
-              color="primary"
-              fullWidth
-              startIcon={<VisibilityIcon />}
-              onClick={() => handleSelectReporte(reporte)}
-              sx={{ 
-                mt: 'auto',
-                py: isSmallMobile ? 1 : 1.5,
-                fontSize: isSmallMobile ? '0.875rem' : '1rem'
-              }}
-            >
-              Ver Detalles
-            </Button>
+            {/* Botones de acción */}
+            <Box sx={{ 
+              display: 'flex', 
+              gap: 1.5, 
+              mt: 'auto',
+              flexDirection: isSmallMobile ? 'column' : 'row'
+            }}>
+              <Button
+                variant="contained"
+                color="primary"
+                fullWidth
+                startIcon={<VisibilityIcon />}
+                onClick={() => handleSelectReporte(reporte)}
+                sx={{ 
+                  py: isSmallMobile ? 1 : 1.5,
+                  fontSize: isSmallMobile ? '0.875rem' : '1rem'
+                }}
+              >
+                Ver Detalles
+              </Button>
+              <Button
+                variant="outlined"
+                color="error"
+                fullWidth
+                startIcon={<DeleteIcon />}
+                onClick={() => handleDeleteReporte(reporte)}
+                sx={{ 
+                  py: isSmallMobile ? 1 : 1.5,
+                  fontSize: isSmallMobile ? '0.875rem' : '1rem'
+                }}
+              >
+                Eliminar
+              </Button>
+            </Box>
           </CardContent>
         </Card>
       ))}
@@ -585,7 +635,6 @@ const ReportesPage = () => {
             <TableCell sx={{ fontWeight: 600 }}>Formulario</TableCell>
             <TableCell sx={{ fontWeight: 600 }}>Auditor</TableCell>
             <TableCell sx={{ fontWeight: 600 }}>Fecha</TableCell>
-            <TableCell sx={{ fontWeight: 600 }}>Estado</TableCell>
             <TableCell sx={{ fontWeight: 600 }}>Acciones</TableCell>
           </TableRow>
         </TableHead>
@@ -595,24 +644,28 @@ const ReportesPage = () => {
               <TableCell>{getNombreEmpresa(reporte, userEmpresas)}</TableCell>
               <TableCell>{reporte.sucursal ?? "Casa Central"}</TableCell>
               <TableCell>{getNombreFormulario(reporte.formulario, reporte.nombreForm)}</TableCell>
-              <TableCell>{reporte.auditor || "N/A"}</TableCell>
+              <TableCell>{getNombreAuditor(reporte, userProfile)}</TableCell>
               <TableCell>{formatFecha(reporte.fechaCreacion)}</TableCell>
               <TableCell>
-                <Chip 
-                  label={getEstadoText(reporte)}
-                  color={getEstadoColor(reporte)}
-                  size="small"
-                />
-              </TableCell>
-              <TableCell>
-                <Button
-                  variant="outlined"
-                  size="small"
-                  startIcon={<VisibilityIcon />}
-                  onClick={() => handleSelectReporte(reporte)}
-                >
-                  Ver
-                </Button>
+                <Box sx={{ display: 'flex', gap: 1 }}>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    startIcon={<VisibilityIcon />}
+                    onClick={() => handleSelectReporte(reporte)}
+                  >
+                    Ver
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    color="error"
+                    startIcon={<DeleteIcon />}
+                    onClick={() => handleDeleteReporte(reporte)}
+                  >
+                    Eliminar
+                  </Button>
+                </Box>
               </TableCell>
             </TableRow>
           ))}
