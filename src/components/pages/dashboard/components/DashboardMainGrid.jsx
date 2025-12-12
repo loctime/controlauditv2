@@ -127,6 +127,8 @@ export default function DashboardMainGrid({
           <Grid item xs={12}>
             <EmployeeMetrics
               totalEmployees={data.totalEmployees}
+              totalEmployeesAll={data.totalEmployeesAll}
+              inactiveEmployees={data.inactiveEmployees}
               operators={data.operators}
               administrators={data.administrators}
               daysWithoutAccidents={data.daysWithoutAccidents}

@@ -11,16 +11,22 @@ import {
   Engineering as EngineerIcon,
   CalendarToday as CalendarIcon,
   AccessTime as TimeIcon,
-  EmojiEvents as TrophyIcon
+  EmojiEvents as TrophyIcon,
+  PersonOff as PersonOffIcon
 } from '@mui/icons-material';
 
 export default function EmployeeMetrics({ 
   totalEmployees = 152,
+  totalEmployeesAll = null, // Total incluyendo inactivos
+  inactiveEmployees = 0, // Empleados inactivos
   operators = 115,
   administrators = 37,
   daysWithoutAccidents = 18,
   hoursWorked = 100828
 }) {
+  // Si no se pasa totalEmployeesAll, usar totalEmployees como total
+  const totalAll = totalEmployeesAll !== null ? totalEmployeesAll : totalEmployees;
+  const inactivos = inactiveEmployees || (totalAll - totalEmployees);
   const formatNumber = (num) => {
     return new Intl.NumberFormat('es-ES').format(num);
   };
@@ -84,20 +90,50 @@ export default function EmployeeMetrics({
           borderRadius: '50%',
           border: '3px solid #e2e8f0'
         }}>
-          <Typography variant="h3" sx={{
-            fontWeight: 'bold',
-            color: '#111827',
-            lineHeight: 1
-          }}>
-            {totalEmployees}
-          </Typography>
-          <Typography variant="caption" sx={{ 
-            color: '#64748b',
-            fontWeight: 500,
-            fontSize: '0.75rem'
-          }}>
-            Total
-          </Typography>
+          {inactivos > 0 && totalAll > totalEmployees ? (
+            <>
+              <Typography variant="h4" sx={{
+                fontWeight: 'bold',
+                color: '#111827',
+                lineHeight: 1.2
+              }}>
+                {totalEmployees}
+              </Typography>
+              <Typography variant="caption" sx={{ 
+                color: '#64748b',
+                fontWeight: 600,
+                fontSize: '0.65rem',
+                mt: 0.25
+              }}>
+                / {totalAll}
+              </Typography>
+              <Typography variant="caption" sx={{ 
+                color: '#64748b',
+                fontWeight: 500,
+                fontSize: '0.7rem',
+                mt: 0.25
+              }}>
+                Activos / Total
+              </Typography>
+            </>
+          ) : (
+            <>
+              <Typography variant="h3" sx={{
+                fontWeight: 'bold',
+                color: '#111827',
+                lineHeight: 1
+              }}>
+                {totalEmployees}
+              </Typography>
+              <Typography variant="caption" sx={{ 
+                color: '#64748b',
+                fontWeight: 500,
+                fontSize: '0.75rem'
+              }}>
+                Total
+              </Typography>
+            </>
+          )}
           
           {/* Indicador visual */}
           <Box sx={{
@@ -141,47 +177,67 @@ export default function EmployeeMetrics({
       </Box>
 
       {/* Métricas secundarias */}
-      <Box sx={{ display: 'flex', gap: 3, justifyContent: 'center' }}>
-        {/* Días sin accidentes */}
-        <Box sx={{ 
-          display: 'flex', 
-          alignItems: 'center', 
-          gap: 1,
-          backgroundColor: daysWithoutAccidents > 30 ? '#dcfce7' : '#fef3c7',
-          padding: '8px 16px',
-          borderRadius: '20px',
-          border: `1px solid ${daysWithoutAccidents > 30 ? '#bbf7d0' : '#fde68a'}`
-        }}>
-          <CalendarIcon sx={{ 
-            fontSize: 20, 
-            color: daysWithoutAccidents > 30 ? '#16a34a' : '#d97706' 
-          }} />
-          <Typography variant="body2" sx={{ 
-            fontWeight: 600,
-            color: daysWithoutAccidents > 30 ? '#15803d' : '#b45309'
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, alignItems: 'center' }}>
+        <Box sx={{ display: 'flex', gap: 3, justifyContent: 'center' }}>
+          {/* Días sin accidentes */}
+          <Box sx={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: 1,
+            backgroundColor: daysWithoutAccidents > 30 ? '#dcfce7' : '#fef3c7',
+            padding: '8px 16px',
+            borderRadius: '20px',
+            border: `1px solid ${daysWithoutAccidents > 30 ? '#bbf7d0' : '#fde68a'}`
           }}>
-            {daysWithoutAccidents} Días sin accidentes
-          </Typography>
+            <CalendarIcon sx={{ 
+              fontSize: 20, 
+              color: daysWithoutAccidents > 30 ? '#16a34a' : '#d97706' 
+            }} />
+            <Typography variant="body2" sx={{ 
+              fontWeight: 600,
+              color: daysWithoutAccidents > 30 ? '#15803d' : '#b45309'
+            }}>
+              {daysWithoutAccidents} Días sin accidentes
+            </Typography>
+          </Box>
+
+          {/* Horas trabajadas */}
+          <Box sx={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: 1,
+            backgroundColor: '#dbeafe',
+            padding: '8px 16px',
+            borderRadius: '20px',
+            border: '1px solid #93c5fd'
+          }}>
+            <TimeIcon sx={{ fontSize: 20, color: '#2563eb' }} />
+            <Typography variant="body2" sx={{ 
+              fontWeight: 600,
+              color: '#1e40af'
+            }}>
+              {formatNumber(hoursWorked)} Horas trabajadas
+            </Typography>
+          </Box>
         </Box>
 
-        {/* Horas trabajadas */}
-        <Box sx={{ 
-          display: 'flex', 
-          alignItems: 'center', 
-          gap: 1,
-          backgroundColor: '#dbeafe',
-          padding: '8px 16px',
-          borderRadius: '20px',
-          border: '1px solid #93c5fd'
-        }}>
-          <TimeIcon sx={{ fontSize: 20, color: '#2563eb' }} />
-          <Typography variant="body2" sx={{ 
-            fontWeight: 600,
-            color: '#1e40af'
-          }}>
-            {formatNumber(hoursWorked)} Horas trabajadas
-          </Typography>
-        </Box>
+        {/* Chip de empleados inactivos */}
+        {inactivos > 0 && (
+          <Chip
+            icon={<PersonOffIcon />}
+            label={`${inactivos} ${inactivos === 1 ? 'empleado inactivo' : 'empleados inactivos'}`}
+            size="small"
+            sx={{
+              backgroundColor: '#fee2e2',
+              color: '#991b1b',
+              border: '1px solid #fecaca',
+              fontWeight: 600,
+              '& .MuiChip-icon': {
+                color: '#dc2626'
+              }
+            }}
+          />
+        )}
       </Box>
 
       {/* Indicador de estado */}

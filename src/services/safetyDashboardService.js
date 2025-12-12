@@ -851,6 +851,8 @@ export const safetyDashboardService = {
     // Métricas de empleados (datos reales)
     const empleadosActivos = empleados.filter(e => e.estado === 'activo');
     const totalEmployees = empleadosActivos.length;
+    const totalEmployeesAll = empleados.length; // Total incluyendo inactivos
+    const inactiveEmployees = totalEmployeesAll - totalEmployees; // Empleados inactivos
     const operators = empleados.filter(e => e.tipo === 'operativo' && e.estado === 'activo').length;
     const administrators = empleados.filter(e => e.tipo === 'administrativo' && e.estado === 'activo').length;
     const empleadosMap = new Map();
@@ -1200,6 +1202,8 @@ export const safetyDashboardService = {
       
       // Métricas de empleados (DATOS REALES)
       totalEmployees,
+      totalEmployeesAll,
+      inactiveEmployees,
       operators,
       administrators,
       hoursWorked,
