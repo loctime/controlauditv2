@@ -6,9 +6,10 @@ import { db } from '../firebaseConfig';
  * Calcula el número de auditorías completadas en el mes actual para una sucursal
  * @param {string} sucursalId - ID de la sucursal
  * @param {string} sucursalNombre - Nombre de la sucursal (opcional, para búsqueda más precisa)
+ * @param {string} empresaId - ID de la empresa (opcional, pero recomendado para filtrar correctamente)
  * @returns {Promise<number>} Número de auditorías del mes actual
  */
-export async function getAuditoriasMesActual(sucursalId, sucursalNombre = null) {
+export async function getAuditoriasMesActual(sucursalId, sucursalNombre = null, empresaId = null) {
   try {
     if (!sucursalId) return 0;
 
@@ -20,26 +21,56 @@ export async function getAuditoriasMesActual(sucursalId, sucursalNombre = null) 
     // Buscar en la colección 'reportes' (donde se guardan las auditorías)
     const reportesRef = collection(db, 'reportes');
     
-    // Obtener el nombre de la sucursal si no se proporciona
-    if (!sucursalNombre && sucursalId) {
+    // Obtener el nombre de la sucursal y empresaId si no se proporciona
+    if (sucursalId) {
       try {
         const sucursalDoc = await getDoc(doc(db, 'sucursales', sucursalId));
         if (sucursalDoc.exists()) {
-          sucursalNombre = sucursalDoc.data().nombre;
+          const sucursalData = sucursalDoc.data();
+          if (!sucursalNombre) {
+            sucursalNombre = sucursalData.nombre;
+          }
+          if (!empresaId && sucursalData.empresaId) {
+            empresaId = sucursalData.empresaId;
+          }
         }
       } catch (e) {
-        console.warn('No se pudo obtener nombre de sucursal:', e);
+        console.warn('No se pudo obtener datos de sucursal:', e);
       }
     }
 
-    // Buscar por sucursalId si existe como campo
-    const queries = [
-      query(reportesRef, where('sucursalId', '==', sucursalId))
-    ];
+    // Construir queries - siempre incluir todas las opciones para mayor compatibilidad
+    const queries = [];
 
-    // Si tenemos el nombre, también buscar por nombre (puede estar guardado como string)
+    // Intentar query combinada si tenemos empresaId (más eficiente si existe índice)
+    if (empresaId) {
+      try {
+        queries.push(
+          query(reportesRef, where('empresaId', '==', empresaId), where('sucursalId', '==', sucursalId))
+        );
+      } catch (e) {
+        // Si falla por falta de índice compuesto, continuamos con queries simples
+        console.warn('Query combinada no disponible (índice faltante), usando queries simples:', e);
+      }
+    }
+
+    // Siempre agregar queries simples como fallback (necesarias porque algunos reportes pueden usar 'sucursal' string)
+    queries.push(query(reportesRef, where('sucursalId', '==', sucursalId)));
+    
+    // Buscar por nombre de sucursal (puede estar guardado como string)
     if (sucursalNombre) {
       queries.push(query(reportesRef, where('sucursal', '==', sucursalNombre)));
+    }
+    
+    // Si tenemos empresaId, también buscar por empresaId + nombre de sucursal
+    if (empresaId && sucursalNombre) {
+      try {
+        queries.push(
+          query(reportesRef, where('empresaId', '==', empresaId), where('sucursal', '==', sucursalNombre))
+        );
+      } catch (e) {
+        // Si falla, no es crítico, ya tenemos otras queries
+      }
     }
 
     const snapshots = await Promise.allSettled(
@@ -57,6 +88,28 @@ export async function getAuditoriasMesActual(sucursalId, sucursalNombre = null) 
         processedIds.add(docSnapshot.id);
 
         const data = docSnapshot.data();
+        
+        // FILTRAR POR EMPRESA: Verificar que la auditoría pertenezca a la empresa correcta
+        // Solo filtrar si el reporte tiene algún campo de empresa definido
+        // Si no tiene empresaId/empresa, confiamos en que la sucursal ya filtra correctamente
+        if (empresaId) {
+          // Solo filtrar si el reporte tiene algún campo de empresa
+          const tieneEmpresa = data.empresaId || 
+                              (data.empresa && typeof data.empresa !== 'string') || 
+                              (typeof data.empresa === 'object' && data.empresa !== null);
+          
+          if (tieneEmpresa) {
+            const empresaMatch = 
+              data.empresaId === empresaId ||
+              (typeof data.empresa === 'string' && data.empresa === empresaId) ||
+              (typeof data.empresa === 'object' && data.empresa?.id === empresaId);
+            
+            if (!empresaMatch) {
+              return; // No pertenece a esta empresa, ignorar
+            }
+          }
+          // Si no tiene campo de empresa, no filtrar (confiar en que la sucursal ya filtra correctamente)
+        }
         
         // Verificar que la auditoría sea del mes actual
         const fechaCreacion = data.fechaCreacion || data.timestamp || data.fecha;
@@ -110,7 +163,7 @@ export async function calcularProgresoTarget(sucursal) {
     return { completadas: 0, target: 0, porcentaje: 0, estado: 'sin_target' };
   }
 
-  const completadas = await getAuditoriasMesActual(sucursal.id, sucursal.nombre);
+  const completadas = await getAuditoriasMesActual(sucursal.id, sucursal.nombre, sucursal.empresaId);
   const porcentaje = Math.round((completadas / target) * 100);
 
   let estado = 'sin_target';
@@ -134,9 +187,10 @@ export async function calcularProgresoTarget(sucursal) {
  * @param {string} sucursalId - ID de la sucursal
  * @param {string} sucursalNombre - Nombre de la sucursal (opcional, para búsqueda más precisa)
  * @param {number} año - Año a calcular (opcional, por defecto año actual)
+ * @param {string} empresaId - ID de la empresa (opcional, pero recomendado para filtrar correctamente)
  * @returns {Promise<number>} Número de auditorías del año
  */
-export async function getAuditoriasAñoActual(sucursalId, sucursalNombre = null, año = null) {
+export async function getAuditoriasAñoActual(sucursalId, sucursalNombre = null, año = null, empresaId = null) {
   try {
     if (!sucursalId) return 0;
 
@@ -147,26 +201,56 @@ export async function getAuditoriasAñoActual(sucursalId, sucursalNombre = null,
     // Buscar en la colección 'reportes' (donde se guardan las auditorías)
     const reportesRef = collection(db, 'reportes');
     
-    // Obtener el nombre de la sucursal si no se proporciona
-    if (!sucursalNombre && sucursalId) {
+    // Obtener el nombre de la sucursal y empresaId si no se proporciona
+    if (sucursalId) {
       try {
         const sucursalDoc = await getDoc(doc(db, 'sucursales', sucursalId));
         if (sucursalDoc.exists()) {
-          sucursalNombre = sucursalDoc.data().nombre;
+          const sucursalData = sucursalDoc.data();
+          if (!sucursalNombre) {
+            sucursalNombre = sucursalData.nombre;
+          }
+          if (!empresaId && sucursalData.empresaId) {
+            empresaId = sucursalData.empresaId;
+          }
         }
       } catch (e) {
-        console.warn('No se pudo obtener nombre de sucursal:', e);
+        console.warn('No se pudo obtener datos de sucursal:', e);
       }
     }
 
-    // Buscar por sucursalId si existe como campo
-    const queries = [
-      query(reportesRef, where('sucursalId', '==', sucursalId))
-    ];
+    // Construir queries - siempre incluir todas las opciones para mayor compatibilidad
+    const queries = [];
 
-    // Si tenemos el nombre, también buscar por nombre (puede estar guardado como string)
+    // Intentar query combinada si tenemos empresaId (más eficiente si existe índice)
+    if (empresaId) {
+      try {
+        queries.push(
+          query(reportesRef, where('empresaId', '==', empresaId), where('sucursalId', '==', sucursalId))
+        );
+      } catch (e) {
+        // Si falla por falta de índice compuesto, continuamos con queries simples
+        console.warn('Query combinada no disponible (índice faltante), usando queries simples:', e);
+      }
+    }
+
+    // Siempre agregar queries simples como fallback (necesarias porque algunos reportes pueden usar 'sucursal' string)
+    queries.push(query(reportesRef, where('sucursalId', '==', sucursalId)));
+    
+    // Buscar por nombre de sucursal (puede estar guardado como string)
     if (sucursalNombre) {
       queries.push(query(reportesRef, where('sucursal', '==', sucursalNombre)));
+    }
+    
+    // Si tenemos empresaId, también buscar por empresaId + nombre de sucursal
+    if (empresaId && sucursalNombre) {
+      try {
+        queries.push(
+          query(reportesRef, where('empresaId', '==', empresaId), where('sucursal', '==', sucursalNombre))
+        );
+      } catch (e) {
+        // Si falla, no es crítico, ya tenemos otras queries
+      }
     }
 
     const snapshots = await Promise.allSettled(
@@ -184,6 +268,28 @@ export async function getAuditoriasAñoActual(sucursalId, sucursalNombre = null,
         processedIds.add(docSnapshot.id);
 
         const data = docSnapshot.data();
+        
+        // FILTRAR POR EMPRESA: Verificar que la auditoría pertenezca a la empresa correcta
+        // Solo filtrar si el reporte tiene algún campo de empresa definido
+        // Si no tiene empresaId/empresa, confiamos en que la sucursal ya filtra correctamente
+        if (empresaId) {
+          // Solo filtrar si el reporte tiene algún campo de empresa
+          const tieneEmpresa = data.empresaId || 
+                              (data.empresa && typeof data.empresa !== 'string') || 
+                              (typeof data.empresa === 'object' && data.empresa !== null);
+          
+          if (tieneEmpresa) {
+            const empresaMatch = 
+              data.empresaId === empresaId ||
+              (typeof data.empresa === 'string' && data.empresa === empresaId) ||
+              (typeof data.empresa === 'object' && data.empresa?.id === empresaId);
+            
+            if (!empresaMatch) {
+              return; // No pertenece a esta empresa, ignorar
+            }
+          }
+          // Si no tiene campo de empresa, no filtrar (confiar en que la sucursal ya filtra correctamente)
+        }
         
         // Verificar que la auditoría sea del año actual
         const fechaCreacion = data.fechaCreacion || data.timestamp || data.fecha;
@@ -238,7 +344,7 @@ export async function calcularProgresoTargetAnualAuditorias(sucursal, año = nul
     return { completadas: 0, target: 0, porcentaje: 0, estado: 'sin_target' };
   }
 
-  const completadas = await getAuditoriasAñoActual(sucursal.id, sucursal.nombre, año);
+  const completadas = await getAuditoriasAñoActual(sucursal.id, sucursal.nombre, año, sucursal.empresaId);
   const porcentaje = Math.round((completadas / target) * 100);
 
   let estado = 'sin_target';
