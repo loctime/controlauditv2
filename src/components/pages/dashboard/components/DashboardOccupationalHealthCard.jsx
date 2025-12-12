@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   Paper,
   Typography,
@@ -7,11 +7,15 @@ import {
   Stack,
   Chip,
   Divider,
-  Button
+  Button,
+  Collapse,
+  IconButton
 } from "@mui/material";
 import HealthAndSafetyIcon from "@mui/icons-material/HealthAndSafety";
 import PendingActionsIcon from "@mui/icons-material/PendingActions";
 import TimerIcon from "@mui/icons-material/Timer";
+import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
+import ExpandLessIcon from "@mui/icons-material/ExpandLess";
 import { Link as RouterLink } from "react-router-dom";
 
 const SUMMARY_ITEMS = [
@@ -49,6 +53,7 @@ const formatEstado = (estado) => {
 };
 
 export default function DashboardOccupationalHealthCard({ saludOcupacional }) {
+  const [casosExpandidos, setCasosExpandidos] = useState(false);
   const resumen = saludOcupacional?.resumen || {};
   const casosRecientes =
     saludOcupacional?.casosRecientes || saludOcupacional?.casos || [];
@@ -172,73 +177,96 @@ export default function DashboardOccupationalHealthCard({ saludOcupacional }) {
       {hasCases && (
         <>
           <Divider sx={{ my: 2 }} />
-          <Typography
-            variant="subtitle2"
-            sx={{ color: "#4b5563", fontWeight: 600, mb: 1 }}
-          >
-            Casos recientes
-          </Typography>
-          <Stack spacing={1.25}>
-            {casosRecientes.slice(0, 5).map((caso) => (
-              <Box
-                key={caso.id}
-                sx={{
-                  border: "1px solid #e5e7eb",
-                  borderRadius: "10px",
-                  padding: "10px 12px",
-                  backgroundColor: "#f9fafb",
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: 0.5
-                }}
-              >
-                <Box
-                  sx={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    gap: 1
-                  }}
-                >
-                  <Typography
-                    variant="subtitle2"
-                    sx={{ fontWeight: 600, color: "#111827" }}
-                  >
-                    {caso.empleadoNombre || "Empleado sin nombre"}
-                  </Typography>
-                  <Chip
-                    size="small"
-                    label={`${caso.diasEnPeriodo || 0} día${
-                      (caso.diasEnPeriodo || 0) === 1 ? "" : "s"
-                    }`}
-                    sx={{
-                      backgroundColor: "#e0f2fe",
-                      color: "#1d4ed8",
-                      fontWeight: 600
-                    }}
-                  />
-                </Box>
-                <Typography variant="body2" sx={{ color: "#1f2937" }}>
-                  {caso.etiqueta || "Ausencia registrada"}
-                </Typography>
-                <Typography variant="caption" sx={{ color: "#6b7280" }}>
-                  Estado: {formatEstado(caso.estado)}
-                </Typography>
-              </Box>
-            ))}
-          </Stack>
-          <Button
-            component={RouterLink}
-            to="/salud-ocupacional"
+          <Box
             sx={{
-              mt: 2,
-              textTransform: "none",
-              fontWeight: 600,
-              alignSelf: "flex-start"
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              mb: 1
             }}
           >
-            Gestionar ausencias
-          </Button>
+            <Typography
+              variant="subtitle2"
+              sx={{ color: "#4b5563", fontWeight: 600 }}
+            >
+              Casos recientes
+            </Typography>
+            <IconButton
+              size="small"
+              onClick={() => setCasosExpandidos(!casosExpandidos)}
+              sx={{
+                color: "#4b5563",
+                "&:hover": {
+                  backgroundColor: "#f3f4f6"
+                }
+              }}
+            >
+              {casosExpandidos ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+            </IconButton>
+          </Box>
+          <Collapse in={casosExpandidos}>
+            <Stack spacing={1.25}>
+              {casosRecientes.slice(0, 5).map((caso) => (
+                <Box
+                  key={caso.id}
+                  sx={{
+                    border: "1px solid #e5e7eb",
+                    borderRadius: "10px",
+                    padding: "10px 12px",
+                    backgroundColor: "#f9fafb",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 0.5
+                  }}
+                >
+                  <Box
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      gap: 1
+                    }}
+                  >
+                    <Typography
+                      variant="subtitle2"
+                      sx={{ fontWeight: 600, color: "#111827" }}
+                    >
+                      {caso.empleadoNombre || "Empleado sin nombre"}
+                    </Typography>
+                    <Chip
+                      size="small"
+                      label={`${caso.diasEnPeriodo || 0} día${
+                        (caso.diasEnPeriodo || 0) === 1 ? "" : "s"
+                      }`}
+                      sx={{
+                        backgroundColor: "#e0f2fe",
+                        color: "#1d4ed8",
+                        fontWeight: 600
+                      }}
+                    />
+                  </Box>
+                  <Typography variant="body2" sx={{ color: "#1f2937" }}>
+                    {caso.etiqueta || "Ausencia registrada"}
+                  </Typography>
+                  <Typography variant="caption" sx={{ color: "#6b7280" }}>
+                    Estado: {formatEstado(caso.estado)}
+                  </Typography>
+                </Box>
+              ))}
+            </Stack>
+            <Button
+              component={RouterLink}
+              to="/salud-ocupacional"
+              sx={{
+                mt: 2,
+                textTransform: "none",
+                fontWeight: 600,
+                alignSelf: "flex-start"
+              }}
+            >
+              Gestionar ausencias
+            </Button>
+          </Collapse>
         </>
       )}
     </Paper>

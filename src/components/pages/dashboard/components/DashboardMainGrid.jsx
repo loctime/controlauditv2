@@ -25,20 +25,37 @@ export default function DashboardMainGrid({
   return (
     <Grid container spacing={1.5}>
       <Grid item xs={12} lg={3}>
-        <Typography
-          variant="h5"
-          component="h5"
-          sx={{
-            fontWeight: 600,
-            color: "#111827",
-            mb: 1.5,
-            textAlign: "center"
-          }}
-        >
-          EJECUCIÓN DEL PROGRAMA
-        </Typography>
-
         <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
+          {/* Incidentes arriba */}
+          <IncidentMetrics
+            totalIncidents={data.totalIncidents}
+            incidentTrend={data.incidentTrend}
+            incidentAccidentRatio={data.incidentAccidentRatio}
+            daysWithoutIncidents={data.daysWithoutIncidents}
+            recentIncidents={data.recentIncidents}
+            companyId={data.companyId}
+            sucursalId={data.sucursalId}
+          />
+
+          {/* Salud Ocupacional debajo de Incidentes */}
+          <DashboardOccupationalHealthCard
+            saludOcupacional={saludOcupacional}
+          />
+
+          {/* Título de capacitaciones */}
+          <Typography
+            variant="h5"
+            component="h5"
+            sx={{
+              fontWeight: 600,
+              color: "#111827",
+              textAlign: "center"
+            }}
+          >
+            EJECUCIÓN DEL PROGRAMA
+          </Typography>
+
+          {/* Capacitaciones */}
           {tieneMetasAnual ? (
             <GaugeChart
               value={porcentajeAnual}
@@ -152,11 +169,11 @@ export default function DashboardMainGrid({
             </Paper>
           </Grid>
 
-          <Grid item xs={12}>
+          <Grid item xs={12} md={6}>
             <AuditClassificationPie stats={auditClasificaciones} />
           </Grid>
 
-          <Grid item xs={12}>
+          <Grid item xs={12} md={6}>
             <SafetyGoals
               totalAccidents={data.totalAccidents}
               frequencyIndex={data.frequencyIndex}
@@ -165,24 +182,6 @@ export default function DashboardMainGrid({
             />
           </Grid>
         </Grid>
-      </Grid>
-
-      <Grid item xs={12} lg={3}>
-        <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
-          <IncidentMetrics
-            totalIncidents={data.totalIncidents}
-            incidentTrend={data.incidentTrend}
-            incidentAccidentRatio={data.incidentAccidentRatio}
-            daysWithoutIncidents={data.daysWithoutIncidents}
-            recentIncidents={data.recentIncidents}
-            companyId={data.companyId}
-            sucursalId={data.sucursalId}
-          />
-
-          <DashboardOccupationalHealthCard
-            saludOcupacional={saludOcupacional}
-          />
-        </Box>
       </Grid>
 
     </Grid>
