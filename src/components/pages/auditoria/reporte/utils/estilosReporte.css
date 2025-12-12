@@ -2,7 +2,7 @@
 
 @page { 
   size: A4; 
-  margin: 10mm 12mm 20mm 12mm; 
+  margin: 5mm 12mm 20mm 12mm; 
   /* El pie de página se define dinámicamente en generadorHTML.js */
 }
 
@@ -34,11 +34,11 @@ body::after {
 .header-main {
   background: #ffffff;
   color: #000000;
-  padding: 15px 20px;
-  border-radius: 8px;
+  padding: 10px 15px;
+  border-radius: 6px;
   margin-top: 0;
-  margin-bottom: 10px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  margin-bottom: 8px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
   border: 1px solid #e9ecef;
 }
 
@@ -46,14 +46,14 @@ body::after {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 12px;
+  margin-bottom: 8px;
 }
 
 .header-details-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 12px 20px;
-  padding-top: 12px;
+  gap: 8px 15px;
+  padding-top: 8px;
   border-top: 1px solid rgba(0, 0, 0, 0.2);
 }
 
@@ -82,9 +82,9 @@ body::after {
 }
 
 .header-fecha p {
-  font-size: 13px;
+  font-size: 12px;
   margin: 0;
-  line-height: 1.5;
+  line-height: 1.4;
   color: #000000;
 }
 
@@ -100,27 +100,27 @@ body::after {
 }
 
 .logo {
-  width: 60px;
-  height: 60px;
+  width: 50px;
+  height: 50px;
   background: white;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: bold;
-  font-size: 18px;
+  font-size: 16px;
   color: #1e3c72;
 }
 
 .company-info h1 {
-  font-size: 26px;
+  font-size: 22px;
   font-weight: 700;
-  margin-bottom: 5px;
+  margin-bottom: 3px;
   color: #000000;
 }
 
 .company-info p {
-  font-size: 15px;
+  font-size: 13px;
   color: #000000;
   opacity: 0.8;
 }
@@ -167,32 +167,32 @@ body::after {
   background: white;
   border: 1px solid #e9ecef;
   border-radius: 6px;
-  padding: 10px 15px;
-  margin-bottom: 10px;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+  padding: 8px 12px;
+  margin-bottom: 8px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
 }
 
 .stats-title {
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 700;
   color: #2c3e50;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
   text-align: center;
   border-bottom: 1px solid #3498db;
-  padding-bottom: 4px;
+  padding-bottom: 3px;
 }
 
 .stats-grid {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
-  gap: 8px;
-  margin-bottom: 8px;
+  gap: 6px;
+  margin-bottom: 6px;
 }
 
 .stat-card {
   text-align: center;
-  padding: 6px 4px;
-  border-radius: 4px;
+  padding: 5px 3px;
+  border-radius: 3px;
   border: 1px solid #e9ecef;
 }
 

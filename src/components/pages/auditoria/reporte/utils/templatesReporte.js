@@ -42,7 +42,7 @@ export const generarHeader = ({
       <div class="header-top">
         <div class="logo-section">
           <div class="logo">
-            <img src="/vite.svg" alt="ControlAudit" style="width: 40px; height: 40px; filter: brightness(0);" />
+            <img src="/vite.svg" alt="ControlAudit" style="width: 35px; height: 35px; filter: brightness(0);" />
           </div>
           <div class="company-info">
             <h1>ControlAudit</h1>
