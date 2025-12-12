@@ -2,7 +2,14 @@
 
 @page { 
   size: A4; 
-  margin: 15mm 12mm; 
+  margin: 10mm 12mm 15mm 12mm; 
+  /* Ocultar encabezados y pies de página del navegador */
+  @top-center { content: ""; }
+  @top-left { content: ""; }
+  @top-right { content: ""; }
+  @bottom-center { content: ""; }
+  @bottom-left { content: ""; }
+  @bottom-right { content: ""; }
 }
 
 * { 
@@ -17,22 +24,79 @@ body {
   font-size: 11px;
   line-height: 1.4;
   background: #ffffff;
+  margin: 0;
+  padding: 0;
+  padding-top: 0;
+}
+
+/* Ocultar cualquier contenido que el navegador agregue automáticamente */
+body::before,
+body::after {
+  display: none !important;
+  content: none !important;
 }
 
 /* Header principal */
 .header-main {
-  background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
-  color: white;
-  padding: 20px;
+  background: #ffffff;
+  color: #000000;
+  padding: 15px 20px;
   border-radius: 8px;
-  margin-bottom: 20px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  margin-top: 0;
+  margin-bottom: 10px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  border: 1px solid #e9ecef;
 }
 
-.header-content {
+.header-top {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  margin-bottom: 12px;
+}
+
+.header-details-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px 20px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(0, 0, 0, 0.2);
+}
+
+.header-detail-item {
+  display: flex;
+  flex-direction: column;
+}
+
+.header-detail-item .detail-label {
+  font-weight: 600;
+  color: #495057;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 3px;
+}
+
+.header-detail-item .detail-value {
+  font-size: 12px;
+  color: #2c3e50;
+  font-weight: 500;
+}
+
+.header-fecha {
+  text-align: right;
+}
+
+.header-fecha p {
+  font-size: 13px;
+  margin: 0;
+  line-height: 1.5;
+  color: #000000;
+}
+
+.header-fecha p strong {
+  font-weight: 600;
+  margin-right: 5px;
 }
 
 .logo-section {
@@ -55,29 +119,18 @@ body {
 }
 
 .company-info h1 {
-  font-size: 24px;
+  font-size: 26px;
   font-weight: 700;
   margin-bottom: 5px;
+  color: #000000;
 }
 
 .company-info p {
-  font-size: 14px;
-  opacity: 0.9;
+  font-size: 15px;
+  color: #000000;
+  opacity: 0.8;
 }
 
-.audit-info {
-  text-align: right;
-}
-
-.audit-info h2 {
-  font-size: 18px;
-  margin-bottom: 8px;
-}
-
-.audit-info p {
-  font-size: 12px;
-  margin-bottom: 3px;
-}
 
 /* Información de la auditoría */
 .audit-details {
@@ -85,6 +138,7 @@ body {
   border: 1px solid #e9ecef;
   border-radius: 6px;
   padding: 15px;
+  margin-top: 0;
   margin-bottom: 20px;
 }
 

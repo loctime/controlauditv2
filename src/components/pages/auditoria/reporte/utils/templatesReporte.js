@@ -7,27 +7,154 @@ const val = (x) => (x ?? "").toString();
 // Helper para numeración 1.1, 1.2, etc.
 const num = (sIdx, pIdx) => `${sIdx + 1}.${pIdx + 1}`;
 
-// Template del header principal
-export const generarHeader = ({ empresa, fecha, nombreAuditor }) => {
+// Template del header principal (fusionado con detalles de auditoría)
+export const generarHeader = ({ 
+  empresa, 
+  sucursal, 
+  formulario, 
+  fecha, 
+  nombreAuditor,
+  auditorTelefono,
+  geolocalizacion,
+  fechaInicio,
+  fechaFin,
+  datosReporte = {}
+}) => {
   const empresaNombre = val(empresa?.nombre);
+  const sucursalNombre = val(sucursal) || 'Casa Central';
+  const formularioNombre = val(formulario?.nombre);
+  const empresaDir = val(empresa?.direccion);
+  const empresaTel = val(empresa?.telefono);
+  
+  const geo = geolocalizacion && (geolocalizacion.lat || geolocalizacion.lng)
+    ? `Latitud: ${geolocalizacion.lat} | Longitud: ${geolocalizacion.lng}`
+    : "";
+  
+  // Campos adicionales del reporte
+  const tareaObservada = val(datosReporte?.tareaObservada);
+  const lugarSector = val(datosReporte?.lugarSector);
+  const equiposInvolucrados = val(datosReporte?.equiposInvolucrados);
+  const supervisor = val(datosReporte?.supervisor);
+  const numeroTrabajadores = val(datosReporte?.numeroTrabajadores);
   
   return `
     <div class="header-main">
-      <div class="header-content">
+      <div class="header-top">
         <div class="logo-section">
           <div class="logo">
-            <img src="/vite.svg" alt="ControlAudit" style="width: 40px; height: 40px; filter: brightness(0) invert(1);" />
+            <img src="/vite.svg" alt="ControlAudit" style="width: 40px; height: 40px; filter: brightness(0);" />
           </div>
           <div class="company-info">
             <h1>ControlAudit</h1>
             <p>Sistema de Auditorías Profesionales</p>
           </div>
         </div>
-        <div class="audit-info">
-          <h2>REPORTE DE AUDITORÍA</h2>
-          <p>Fecha: ${fecha}</p>
-          <p>Auditor: ${nombreAuditor}</p>
+        <div class="header-fecha">
+          <p><strong>Fecha:</strong> ${fecha}</p>
         </div>
+      </div>
+      <div class="header-details-grid">
+        <div class="header-detail-item">
+          <span class="detail-label">Empresa</span>
+          <span class="detail-value">${empresaNombre}</span>
+        </div>
+        <div class="header-detail-item">
+          <span class="detail-label">Sucursal</span>
+          <span class="detail-value">${sucursalNombre}</span>
+        </div>
+        <div class="header-detail-item">
+          <span class="detail-label">Formulario</span>
+          <span class="detail-value">${formularioNombre}</span>
+        </div>
+        ${tareaObservada ? `
+        <div class="header-detail-item">
+          <span class="detail-label">Tarea Observada</span>
+          <span class="detail-value">${tareaObservada}</span>
+        </div>
+        ` : `
+        <div class="header-detail-item">
+          <span class="detail-label">Tarea Observada</span>
+          <span class="detail-value" style="border-bottom: 1px solid #ccc; min-height: 20px; display: inline-block; min-width: 200px;">&nbsp;</span>
+        </div>
+        `}
+        ${lugarSector ? `
+        <div class="header-detail-item">
+          <span class="detail-label">Lugar / Sector</span>
+          <span class="detail-value">${lugarSector}</span>
+        </div>
+        ` : `
+        <div class="header-detail-item">
+          <span class="detail-label">Lugar / Sector</span>
+          <span class="detail-value" style="border-bottom: 1px solid #ccc; min-height: 20px; display: inline-block; min-width: 200px;">&nbsp;</span>
+        </div>
+        `}
+        ${equiposInvolucrados ? `
+        <div class="header-detail-item">
+          <span class="detail-label">Equipo/s Involucrado</span>
+          <span class="detail-value">${equiposInvolucrados}</span>
+        </div>
+        ` : `
+        <div class="header-detail-item">
+          <span class="detail-label">Equipo/s Involucrado</span>
+          <span class="detail-value" style="border-bottom: 1px solid #ccc; min-height: 20px; display: inline-block; min-width: 200px;">&nbsp;</span>
+        </div>
+        `}
+        ${supervisor ? `
+        <div class="header-detail-item">
+          <span class="detail-label">Supervisor</span>
+          <span class="detail-value">${supervisor}</span>
+        </div>
+        ` : `
+        <div class="header-detail-item">
+          <span class="detail-label">Supervisor</span>
+          <span class="detail-value" style="border-bottom: 1px solid #ccc; min-height: 20px; display: inline-block; min-width: 200px;">&nbsp;</span>
+        </div>
+        `}
+        ${numeroTrabajadores ? `
+        <div class="header-detail-item">
+          <span class="detail-label">N° de Trabajadores</span>
+          <span class="detail-value">${numeroTrabajadores}</span>
+        </div>
+        ` : `
+        <div class="header-detail-item">
+          <span class="detail-label">N° de Trabajadores</span>
+          <span class="detail-value" style="border-bottom: 1px solid #ccc; min-height: 20px; display: inline-block; min-width: 200px;">&nbsp;</span>
+        </div>
+        `}
+        <div class="header-detail-item">
+          <span class="detail-label">Teléfono Auditor</span>
+          <span class="detail-value">${auditorTelefono || 'No especificado'}</span>
+        </div>
+        ${empresaDir ? `
+        <div class="header-detail-item">
+          <span class="detail-label">Dirección</span>
+          <span class="detail-value">${empresaDir}</span>
+        </div>
+        ` : ''}
+        ${empresaTel ? `
+        <div class="header-detail-item">
+          <span class="detail-label">Teléfono Empresa</span>
+          <span class="detail-value">${empresaTel}</span>
+        </div>
+        ` : ''}
+        ${geo ? `
+        <div class="header-detail-item">
+          <span class="detail-label">Geolocalización</span>
+          <span class="detail-value">${geo}</span>
+        </div>
+        ` : ''}
+        ${fechaInicio ? `
+        <div class="header-detail-item">
+          <span class="detail-label">Inicio Auditoría</span>
+          <span class="detail-value">${fechaInicio}</span>
+        </div>
+        ` : ''}
+        ${fechaFin ? `
+        <div class="header-detail-item">
+          <span class="detail-label">Fin Auditoría</span>
+          <span class="detail-value">${fechaFin}</span>
+        </div>
+        ` : ''}
       </div>
     </div>
   `;
@@ -64,18 +191,6 @@ export const generarDetallesAuditoria = ({
   return `
     <div class="audit-details">
       <div class="details-grid">
-        <div class="detail-item">
-          <span class="detail-label">Empresa</span>
-          <span class="detail-value">${empresaNombre}</span>
-        </div>
-        <div class="detail-item">
-          <span class="detail-label">Sucursal</span>
-          <span class="detail-value">${sucursal || 'Casa Central'}</span>
-        </div>
-        <div class="detail-item">
-          <span class="detail-label">Formulario</span>
-          <span class="detail-value">${formNombre}</span>
-        </div>
         ${tareaObservada ? `
         <div class="detail-item">
           <span class="detail-label">Tarea Observada</span>

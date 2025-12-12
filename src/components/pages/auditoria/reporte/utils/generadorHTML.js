@@ -82,9 +82,25 @@ function generarContenidoImpresion({
 <html lang="es">
 <head>
 <meta charset="UTF-8" />
-<title>Reporte de Auditoría - ${empresaNombre}</title>
+<title>ControlAudit</title>
 <style>
 ${estilosCSS}
+
+/* Ocultar encabezados y pies de página del navegador al imprimir */
+@page {
+  @top-center { content: ""; }
+  @top-left { content: ""; }
+  @top-right { content: ""; }
+  @bottom-center { content: ""; }
+  @bottom-left { content: ""; }
+  @bottom-right { content: ""; }
+}
+
+/* Ocultar cualquier elemento que pueda aparecer antes del header */
+body::before {
+  display: none !important;
+  content: none !important;
+}
 
 /* Estilos para el botón de imprimir */
 .print-button-container {
@@ -134,7 +150,7 @@ ${estilosCSS}
 }
 </style>
 </head>
-<body>
+<body style="margin: 0; padding: 0;">
 
   <!-- Botón de imprimir flotante -->
   <div class="print-button-container">
@@ -144,15 +160,15 @@ ${estilosCSS}
     </button>
   </div>
 
-  ${generarHeader({ empresa, fecha, nombreAuditor })}
-
-  ${generarDetallesAuditoria({ 
+  ${generarHeader({ 
     empresa, 
     sucursal, 
     formulario, 
-    auditorTelefono, 
-    geolocalizacion, 
-    fechaInicio, 
+    fecha, 
+    nombreAuditor,
+    auditorTelefono,
+    geolocalizacion,
+    fechaInicio,
     fechaFin,
     datosReporte
   })}
@@ -186,6 +202,27 @@ ${estilosCSS}
   ${generarFooter({ sucursal, fecha })}
 
   <script>
+    // Ocultar encabezados y pies de página del navegador
+    window.addEventListener('beforeprint', function() {
+      // Intentar desactivar encabezados/pies de página si el navegador lo permite
+      try {
+        const style = document.createElement('style');
+        style.textContent = \`
+          @page {
+            margin: 15mm 12mm !important;
+          }
+          @media print {
+            @page {
+              margin: 15mm 12mm !important;
+            }
+          }
+        \`;
+        document.head.appendChild(style);
+      } catch (e) {
+        console.log('No se pudieron modificar los márgenes de impresión');
+      }
+    });
+
     // Función para imprimir con mejor experiencia
     function imprimirReporte() {
       // Mostrar mensaje de ayuda
