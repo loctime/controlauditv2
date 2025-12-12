@@ -42,14 +42,22 @@ export const useGlobalSelection = () => {
     [globalSelectedEmpresa, userSucursales]
   );
 
-  // Auto-seleccionar primera sucursal si cambia la empresa
+  // Auto-seleccionar sucursal si cambia la empresa
   useEffect(() => {
     if (globalSelectedEmpresa && globalSelectedEmpresa !== 'todas' && sucursalesFiltradas.length > 0) {
-      // Verificar si la sucursal actual pertenece a la empresa
-      const sucursalValida = globalSelectedSucursal && sucursalesFiltradas.find(s => s.id === globalSelectedSucursal);
-      if (!sucursalValida) {
+      // Si hay una sola sucursal, seleccionarla automáticamente
+      if (sucursalesFiltradas.length === 1) {
         setGlobalSelectedSucursal(sucursalesFiltradas[0].id);
+      } else {
+        // Verificar si la sucursal actual pertenece a la empresa
+        const sucursalValida = globalSelectedSucursal && globalSelectedSucursal !== 'todas' && sucursalesFiltradas.find(s => s.id === globalSelectedSucursal);
+        if (!sucursalValida) {
+          // No auto-seleccionar si hay múltiples, dejar que el usuario elija
+          setGlobalSelectedSucursal('todas');
+        }
       }
+    } else if (globalSelectedEmpresa === 'todas' || !globalSelectedEmpresa) {
+      setGlobalSelectedSucursal('todas');
     }
   }, [globalSelectedEmpresa, sucursalesFiltradas, globalSelectedSucursal, setGlobalSelectedSucursal]);
 

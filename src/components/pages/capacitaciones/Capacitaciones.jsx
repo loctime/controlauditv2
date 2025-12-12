@@ -20,8 +20,8 @@ import PlanAnualModal from './PlanAnualModal';
 
 // Hooks personalizados
 import { useCapacitacionesData } from './hooks/useCapacitacionesData';
-import { useFilterState } from './hooks/useFilterState';
 import { useCapacitacionesHandlers } from './hooks/useCapacitacionesHandlers';
+import { useGlobalSelection } from '../../../hooks/useGlobalSelection';
 
 // Componentes reutilizables
 import SelectoresCapacitaciones from './components/SelectoresCapacitaciones';
@@ -48,20 +48,50 @@ export default function Capacitaciones() {
   const [realizarCapSelectedEmpresa, setRealizarCapSelectedEmpresa] = useState('');
   const [realizarCapSelectedSucursal, setRealizarCapSelectedSucursal] = useState('');
 
-  // Hook de filtros
+  // Filtros locales (tipo y estado son específicos de capacitaciones)
+  const [filterTipo, setFilterTipo] = useState('');
+  const [filterEstado, setFilterEstado] = useState('');
+  const [empresasCargadas, setEmpresasCargadas] = useState(false);
+
+  // Usar selección global (compartida entre páginas)
   const {
-    filterTipo,
-    setFilterTipo,
-    filterEstado,
-    setFilterEstado,
-    selectedEmpresa,
-    setSelectedEmpresa,
-    selectedSucursal,
-    setSelectedSucursal,
-    sucursalesDisponibles,
+    selectedEmpresa: globalSelectedEmpresa,
+    setSelectedEmpresa: setGlobalSelectedEmpresa,
+    selectedSucursal: globalSelectedSucursal,
+    setSelectedSucursal: setGlobalSelectedSucursal,
     sucursalesFiltradas,
-    empresasCargadas
-  } = useFilterState(userEmpresas, userSucursales, localSucursales);
+    userEmpresas: globalUserEmpresas,
+    userSucursales: globalUserSucursales
+  } = useGlobalSelection();
+
+  // Normalizar valores: convertir 'todas' a '' para compatibilidad con el componente
+  const selectedEmpresa = globalSelectedEmpresa === 'todas' ? '' : globalSelectedEmpresa;
+  const selectedSucursal = globalSelectedSucursal === 'todas' ? '' : globalSelectedSucursal;
+  
+  const setSelectedEmpresa = (value) => {
+    setGlobalSelectedEmpresa(value === '' ? 'todas' : value);
+  };
+  
+  const setSelectedSucursal = (value) => {
+    setGlobalSelectedSucursal(value === '' ? 'todas' : value);
+  };
+
+  // Usar sucursales locales si están disponibles, sino las globales
+  const sucursalesDisponibles = localSucursales.length > 0 ? localSucursales : (globalUserSucursales || userSucursales);
+
+  // Detectar cuando las empresas han sido cargadas
+  useEffect(() => {
+    if (userEmpresas !== undefined) {
+      setEmpresasCargadas(true);
+    }
+  }, [userEmpresas]);
+
+  // Auto-seleccionar empresa si solo hay una
+  useEffect(() => {
+    if (userEmpresas && userEmpresas.length === 1 && !selectedEmpresa) {
+      setSelectedEmpresa(userEmpresas[0].id);
+    }
+  }, [userEmpresas, selectedEmpresa, setSelectedEmpresa]);
 
   // Hook de datos
   const { capacitaciones, planesAnuales, loading, recargarDatos } = useCapacitacionesData(
