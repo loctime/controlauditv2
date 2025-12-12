@@ -24,7 +24,7 @@ export default function DashboardMainGrid({
 
   return (
     <Grid container spacing={1.5}>
-      <Grid item xs={12} lg={3}>
+      <Grid item xs={12} lg={4}>
         <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
           {/* Incidentes arriba */}
           <IncidentMetrics
@@ -122,7 +122,7 @@ export default function DashboardMainGrid({
         </Box>
       </Grid>
 
-      <Grid item xs={12} lg={6}>
+      <Grid item xs={12} lg={8}>
         <Grid container spacing={1.5}>
           <Grid item xs={12}>
             <EmployeeMetrics

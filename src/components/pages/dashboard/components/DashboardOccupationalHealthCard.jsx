@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   Paper,
   Typography,
@@ -52,18 +52,61 @@ const formatEstado = (estado) => {
   return texto.charAt(0).toUpperCase() + texto.slice(1);
 };
 
+// Tipos predefinidos que no deben mostrarse como tarjetas personalizadas
+const TIPOS_PREDEFINIDOS = new Set([
+  "ocupacional",
+  "covid",
+  "accidente",
+  "licencia",
+  "enfermedad",
+  "otro"
+]);
+
 export default function DashboardOccupationalHealthCard({ saludOcupacional }) {
   const [casosExpandidos, setCasosExpandidos] = useState(false);
   const resumen = saludOcupacional?.resumen || {};
   const casosRecientes =
     saludOcupacional?.casosRecientes || saludOcupacional?.casos || [];
+  const todosLosCasos = saludOcupacional?.casos || [];
+
+  // Crear mapeo de tipo (clave) -> etiqueta desde los casos
+  const tipoToEtiqueta = useMemo(() => {
+    const mapa = {};
+    todosLosCasos.forEach((caso) => {
+      if (caso.tipo && caso.etiqueta && !mapa[caso.tipo]) {
+        mapa[caso.tipo] = caso.etiqueta;
+      }
+    });
+    return mapa;
+  }, [todosLosCasos]);
+
+  // Obtener tipos personalizados (que no son predefinidos) con conteo > 0
+  const tiposPersonalizados = useMemo(() => {
+    const porTipo = resumen.porTipo || {};
+    return Object.entries(porTipo)
+      .filter(([tipo, conteo]) => {
+        // Solo incluir tipos personalizados con conteo > 0
+        return (
+          !TIPOS_PREDEFINIDOS.has(tipo) &&
+          typeof conteo === "number" &&
+          conteo > 0
+        );
+      })
+      .map(([tipo, conteo]) => ({
+        tipo,
+        etiqueta: tipoToEtiqueta[tipo] || tipo.charAt(0).toUpperCase() + tipo.slice(1),
+        conteo
+      }))
+      .sort((a, b) => b.conteo - a.conteo); // Ordenar por conteo descendente
+  }, [resumen.porTipo, tipoToEtiqueta]);
 
   const hasSummary =
     Object.keys(resumen).length > 0 &&
     (resumen.ocupacionales ||
       resumen.covid ||
       resumen.activas ||
-      resumen.diasPerdidosTotales);
+      resumen.diasPerdidosTotales ||
+      tiposPersonalizados.length > 0);
 
   const hasCases = Array.isArray(casosRecientes) && casosRecientes.length > 0;
 
@@ -142,6 +185,11 @@ export default function DashboardOccupationalHealthCard({ saludOcupacional }) {
                 ? item.formatter(value)
                 : value;
 
+            // Solo mostrar "Enfermedades ocupacionales" si hay valor > 0
+            if (item.key === "ocupacionales" && value === 0) {
+              return null;
+            }
+
             return (
               <Grid item xs={12} sm={6} key={item.key}>
                 <Box
@@ -171,6 +219,39 @@ export default function DashboardOccupationalHealthCard({ saludOcupacional }) {
               </Grid>
             );
           })}
+
+          {/* Mostrar tipos personalizados */}
+          {tiposPersonalizados.map((tipoPersonalizado) => (
+            <Grid item xs={12} sm={6} key={`personalizado-${tipoPersonalizado.tipo}`}>
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  backgroundColor: "#f9fafb",
+                  padding: "10px 12px",
+                  borderRadius: "10px",
+                  border: "1px solid #e5e7eb"
+                }}
+              >
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                  <HealthAndSafetyIcon
+                    fontSize="small"
+                    sx={{ color: "#6b7280" }}
+                  />
+                  <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                    {tipoPersonalizado.etiqueta}
+                  </Typography>
+                </Box>
+                <Typography
+                  variant="h6"
+                  sx={{ fontWeight: "bold", color: "#374151" }}
+                >
+                  {tipoPersonalizado.conteo}
+                </Typography>
+              </Box>
+            </Grid>
+          ))}
         </Grid>
       )}
 
