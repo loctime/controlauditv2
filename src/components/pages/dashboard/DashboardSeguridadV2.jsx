@@ -708,7 +708,7 @@ export default function DashboardSeguridadV2() {
         userEmpresas={userEmpresas}
         selectedEmpresa={selectedEmpresa}
         onEmpresaChange={setSelectedEmpresa}
-        userSucursales={userSucursales}
+        userSucursales={sucursalesContext || []}
         selectedSucursal={selectedSucursal}
         onSucursalChange={setSelectedSucursal}
       />
