@@ -24,107 +24,113 @@ export default function DashboardMainGrid({
 
   return (
     <Grid container spacing={1.5}>
-      <Grid item xs={12} lg={4}>
+      {/* Columna izquierda: Salud Ocupacional + EJECUCIÓN DEL PROGRAMA */}
+      <Grid item xs={12} lg={3}>
         <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
-          {/* Incidentes arriba */}
-          <IncidentMetrics
-            totalIncidents={data.totalIncidents}
-            incidentTrend={data.incidentTrend}
-            incidentAccidentRatio={data.incidentAccidentRatio}
-            daysWithoutIncidents={data.daysWithoutIncidents}
-            recentIncidents={data.recentIncidents}
-            companyId={data.companyId}
-            sucursalId={data.sucursalId}
-          />
-
-          {/* Salud Ocupacional debajo de Incidentes */}
           <DashboardOccupationalHealthCard
             saludOcupacional={saludOcupacional}
           />
-
-          {/* Título de capacitaciones */}
-          <Typography
-            variant="h5"
-            component="h5"
-            sx={{
-              fontWeight: 600,
-              color: "#111827",
-              textAlign: "center"
-            }}
-          >
-            EJECUCIÓN DEL PROGRAMA
-          </Typography>
-
-          {/* Capacitaciones */}
-          {tieneMetasAnual ? (
-            <GaugeChart
-              value={porcentajeAnual}
-              max={100}
-              title="Capacitaciones - Año"
-              subtitle={`${capacitacionesMetas.anual.completadas} de ${capacitacionesMetas.anual.target}`}
-              size={140}
-            />
-          ) : (
-            <Box
+          
+          {/* EJECUCIÓN DEL PROGRAMA */}
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
+            {/* Título de capacitaciones */}
+            <Typography
+              variant="h5"
+              component="h5"
               sx={{
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                justifyContent: "center",
-                backgroundColor: "white",
-                borderRadius: "12px",
-                border: "1px solid #e5e7eb",
-                boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
-                padding: "1.5rem",
-                minHeight: "200px"
+                fontWeight: 600,
+                color: "#111827",
+                textAlign: "center"
               }}
             >
-              <Typography variant="body2" color="text.secondary" textAlign="center">
-                Capacitaciones - Año
-              </Typography>
-              <Typography variant="caption" color="text.secondary" sx={{ mt: 1 }}>
-                Sin meta configurada
-              </Typography>
-            </Box>
-          )}
+              EJECUCIÓN DEL PROGRAMA
+            </Typography>
 
-          {tieneMetasMensual ? (
-            <GaugeChart
-              value={porcentajeMensual}
-              max={100}
-              title="Capacitaciones - Mes"
-              subtitle={`${capacitacionesMetas.mensual.completadas} de ${capacitacionesMetas.mensual.target}`}
-              size={140}
-            />
-          ) : (
-            <Box
-              sx={{
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                justifyContent: "center",
-                backgroundColor: "white",
-                borderRadius: "12px",
-                border: "1px solid #e5e7eb",
-                boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
-                padding: "1.5rem",
-                minHeight: "200px"
-              }}
-            >
-              <Typography variant="body2" color="text.secondary" textAlign="center">
-                Capacitaciones - Mes
-              </Typography>
-              <Typography variant="caption" color="text.secondary" sx={{ mt: 1 }}>
-                Sin meta configurada
-              </Typography>
-            </Box>
-          )}
+            {/* Capacitaciones */}
+            {tieneMetasAnual ? (
+              <GaugeChart
+                value={porcentajeAnual}
+                max={100}
+                title="Capacitaciones - Año"
+                subtitle={`${capacitacionesMetas.anual.completadas} de ${capacitacionesMetas.anual.target}`}
+                size={140}
+              />
+            ) : (
+              <Box
+                sx={{
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  backgroundColor: "white",
+                  borderRadius: "12px",
+                  border: "1px solid #e5e7eb",
+                  boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+                  padding: "1.5rem",
+                  minHeight: "200px"
+                }}
+              >
+                <Typography variant="body2" color="text.secondary" textAlign="center">
+                  Capacitaciones - Año
+                </Typography>
+                <Typography variant="caption" color="text.secondary" sx={{ mt: 1 }}>
+                  Sin meta configurada
+                </Typography>
+              </Box>
+            )}
+
+            {tieneMetasMensual ? (
+              <GaugeChart
+                value={porcentajeMensual}
+                max={100}
+                title="Capacitaciones - Mes"
+                subtitle={`${capacitacionesMetas.mensual.completadas} de ${capacitacionesMetas.mensual.target}`}
+                size={140}
+              />
+            ) : (
+              <Box
+                sx={{
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  backgroundColor: "white",
+                  borderRadius: "12px",
+                  border: "1px solid #e5e7eb",
+                  boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+                  padding: "1.5rem",
+                  minHeight: "200px"
+                }}
+              >
+                <Typography variant="body2" color="text.secondary" textAlign="center">
+                  Capacitaciones - Mes
+                </Typography>
+                <Typography variant="caption" color="text.secondary" sx={{ mt: 1 }}>
+                  Sin meta configurada
+                </Typography>
+              </Box>
+            )}
+          </Box>
         </Box>
       </Grid>
 
-      <Grid item xs={12} lg={8}>
+      {/* Columna derecha: Incidentes + Empleados arriba, AUDITORÍAS + gráficos abajo */}
+      <Grid item xs={12} lg={9}>
         <Grid container spacing={1.5}>
-          <Grid item xs={12}>
+          {/* Fila 1: Incidentes y Empleados */}
+          <Grid item xs={12} lg={4}>
+            <IncidentMetrics
+              totalIncidents={data.totalIncidents}
+              incidentTrend={data.incidentTrend}
+              incidentAccidentRatio={data.incidentAccidentRatio}
+              daysWithoutIncidents={data.daysWithoutIncidents}
+              recentIncidents={data.recentIncidents}
+              companyId={data.companyId}
+              sucursalId={data.sucursalId}
+            />
+          </Grid>
+
+          <Grid item xs={12} lg={8}>
             <EmployeeMetrics
               totalEmployees={data.totalEmployees}
               totalEmployeesAll={data.totalEmployeesAll}
@@ -136,6 +142,7 @@ export default function DashboardMainGrid({
             />
           </Grid>
 
+          {/* Fila 2: AUDITORÍAS y gráficos */}
           <Grid item xs={12}>
             <Paper
               elevation={2}
@@ -171,11 +178,13 @@ export default function DashboardMainGrid({
             </Paper>
           </Grid>
 
-          <Grid item xs={12} md={6}>
+          {/* Condición vs Actitud más pequeño */}
+          <Grid item xs={12} md={4}>
             <AuditClassificationPie stats={auditClasificaciones} />
           </Grid>
 
-          <Grid item xs={12} md={6}>
+          {/* ACCIDENTES más grande */}
+          <Grid item xs={12} md={8}>
             <SafetyGoals
               totalAccidents={data.totalAccidents}
               frequencyIndex={data.frequencyIndex}
