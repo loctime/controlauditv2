@@ -273,14 +273,16 @@ const EditarAccidenteModal = ({
                   <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
                     <CircularProgress size={24} />
                   </Box>
-                ) : empleados.length === 0 ? (
-                  <Alert severity="info" sx={{ fontSize: '0.875rem' }}>
-                    No hay empleados en esta sucursal
-                  </Alert>
-                ) : (
-                  <Box sx={{ maxHeight: 300, overflowY: 'auto', pr: 1 }}>
-                    <FormGroup>
-                      {empleados.map((empleado) => (
+              ) : empleados.length === 0 ? (
+                <Alert severity="info" sx={{ fontSize: '0.875rem' }}>
+                  No hay empleados en esta sucursal
+                </Alert>
+              ) : (
+                <Box sx={{ maxHeight: 300, overflowY: 'auto', pr: 1 }}>
+                  <FormGroup>
+                    {empleados.map((empleado) => {
+                      const estaInactivo = empleado.estado === 'inactivo';
+                      return (
                         <Box key={empleado.id} sx={{ mb: 0.5 }}>
                           <FormControlLabel
                             control={
@@ -292,8 +294,29 @@ const EditarAccidenteModal = ({
                             }
                             label={
                               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                <Typography variant="body2">{empleado.nombre}</Typography>
-                                <Chip label={empleado.cargo || 'Sin cargo'} size="small" variant="outlined" sx={{ height: 20, fontSize: '0.7rem' }} />
+                                <Typography 
+                                  variant="body2" 
+                                  sx={{ 
+                                    color: estaInactivo ? 'error.main' : 'inherit',
+                                    fontWeight: estaInactivo ? 'bold' : 'normal'
+                                  }}
+                                >
+                                  {empleado.nombre}
+                                </Typography>
+                                <Chip 
+                                  label={empleado.cargo || 'Sin cargo'} 
+                                  size="small" 
+                                  variant="outlined" 
+                                  sx={{ height: 20, fontSize: '0.7rem' }} 
+                                />
+                                {estaInactivo && (
+                                  <Chip 
+                                    label="Inactivo" 
+                                    size="small" 
+                                    color="error"
+                                    sx={{ height: 20, fontSize: '0.65rem' }} 
+                                  />
+                                )}
                               </Box>
                             }
                           />
@@ -318,7 +341,8 @@ const EditarAccidenteModal = ({
                             </Box>
                           )}
                         </Box>
-                      ))}
+                      );
+                    })}
                     </FormGroup>
                   </Box>
                 )}

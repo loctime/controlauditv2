@@ -217,29 +217,53 @@ const NuevoIncidenteModal = ({ open, onClose, onIncidenteCreado, empresaId, sucu
               </Box>
             ) : empleados.length === 0 ? (
               <Alert severity="info" sx={{ fontSize: '0.875rem' }}>
-                No hay empleados activos en esta sucursal
+                No hay empleados en esta sucursal
               </Alert>
             ) : (
               <Box sx={{ maxHeight: 300, overflowY: 'auto', pr: 1 }}>
                 <FormGroup>
-                  {empleados.map((empleado) => (
-                    <FormControlLabel
-                      key={empleado.id}
-                      control={
-                        <Checkbox
-                          size="small"
-                          checked={testigosSeleccionados.some(e => e.id === empleado.id)}
-                          onChange={() => handleTestigoToggle(empleado)}
-                        />
-                      }
-                      label={
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                          <Typography variant="body2">{empleado.nombre}</Typography>
-                          <Chip label={empleado.cargo || 'Sin cargo'} size="small" variant="outlined" sx={{ height: 20, fontSize: '0.7rem' }} />
-                        </Box>
-                      }
-                    />
-                  ))}
+                  {empleados.map((empleado) => {
+                    const estaInactivo = empleado.estado === 'inactivo';
+                    return (
+                      <FormControlLabel
+                        key={empleado.id}
+                        control={
+                          <Checkbox
+                            size="small"
+                            checked={testigosSeleccionados.some(e => e.id === empleado.id)}
+                            onChange={() => handleTestigoToggle(empleado)}
+                          />
+                        }
+                        label={
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                            <Typography 
+                              variant="body2" 
+                              sx={{ 
+                                color: estaInactivo ? 'error.main' : 'inherit',
+                                fontWeight: estaInactivo ? 'bold' : 'normal'
+                              }}
+                            >
+                              {empleado.nombre}
+                            </Typography>
+                            <Chip 
+                              label={empleado.cargo || 'Sin cargo'} 
+                              size="small" 
+                              variant="outlined" 
+                              sx={{ height: 20, fontSize: '0.7rem' }} 
+                            />
+                            {estaInactivo && (
+                              <Chip 
+                                label="Inactivo" 
+                                size="small" 
+                                color="error"
+                                sx={{ height: 20, fontSize: '0.65rem' }} 
+                              />
+                            )}
+                          </Box>
+                        }
+                      />
+                    );
+                  })}
                 </FormGroup>
               </Box>
             )}

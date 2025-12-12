@@ -37,6 +37,7 @@ import AccionesRequeridasWidget from "./components/AccionesRequeridasWidget";
 import CapacitacionesGoalsCard from "./components/CapacitacionesGoalsCard";
 import AccidentesGoalsCard from "./components/AccidentesGoalsCard";
 import GoalsCard from "./components/GoalsCard";
+import DashboardSection from "./components/DashboardSection";
 import { useTargetsMensualesData } from "./hooks/useTargetsMensualesData";
 import { useAccionesRequeridasStats } from "./hooks/useAccionesRequeridasStats";
 import { useDashboardRealtimeData } from "./hooks/useDashboardRealtimeData";
@@ -800,25 +801,25 @@ export default function DashboardSeguridadV2() {
           {analyticsLoading ? (
             <AnalyticsFallback />
           ) : datos.metricas.totalEmpleados > 0 ? (
-            <Box
-              data-grafico-seccion="resumen-integrado"
-              data-grafico-title="Resumen Integrado"
-              sx={{ width: "100%" }}
+            <DashboardSection
+              title="Resumen Integrado"
+              dataSection="resumen-integrado"
+              showTitle={false}
+              removePadding={true}
             >
               <DashboardAnalyticsSection
                 metricas={datos.metricas}
                 auditoriasMetrics={auditoriasMetrics}
               />
-            </Box>
+            </DashboardSection>
           ) : (
             <DashboardNoDataCard />
           )}
         </Suspense>
 
-        <Box
-          data-grafico-seccion="main-grid"
-          data-grafico-title="Dashboard General"
-          sx={{ width: "100%" }}
+        <DashboardSection
+          title="Dashboard General"
+          dataSection="main-grid"
         >
           <DashboardMainGrid
             data={data}
@@ -826,33 +827,36 @@ export default function DashboardSeguridadV2() {
             auditClasificaciones={auditoriasClasificaciones}
             capacitacionesMetas={goalsCapacitaciones}
           />
-        </Box>
+        </DashboardSection>
 
         {datos.metricas.totalEmpleados > 0 && (
           <Suspense fallback={<AnalyticsFallback />}>
-            <Box
-              sx={{ mt: 0.5 }}
-              data-grafico-seccion="accidentes"
-              data-grafico-title="Análisis de Accidentes"
+            <DashboardSection
+              title="Análisis de Accidentes e Incidentes"
+              dataSection="accidentes"
+              showTitle={false}
+              removePadding={true}
             >
               <AccidentesBreakdown analysis={accidentesAnalysis} />
-            </Box>
+            </DashboardSection>
 
-            <Box
-              sx={{ mt: 0.5 }}
-              data-grafico-seccion="capacitaciones"
-              data-grafico-title="Cumplimiento de Capacitaciones"
+            <DashboardSection
+              title="Cumplimiento de Capacitaciones"
+              dataSection="capacitaciones"
+              showTitle={false}
+              removePadding={true}
             >
               <CapacitacionesMetrics metrics={capacitacionesMetrics} />
-            </Box>
+            </DashboardSection>
 
-            <Box
-              sx={{ mt: 0.5 }}
-              data-grafico-seccion="indices"
-              data-grafico-title="Índices Técnicos"
+            <DashboardSection
+              title="Índices Técnicos"
+              dataSection="indices"
+              showTitle={false}
+              removePadding={true}
             >
               <GraficoIndices datos={datos} periodo={selectedYear} />
-            </Box>
+            </DashboardSection>
           </Suspense>
         )}
       </Box>

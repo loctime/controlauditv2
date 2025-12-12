@@ -338,12 +338,12 @@ export const actualizarEstadoAccidente = async (accidenteId, nuevoEstado, userId
 };
 
 // Obtener empleados por sucursal (para los selectores)
+// Incluye todos los empleados (activos e inactivos) para permitir reportar accidentes previos
 export const obtenerEmpleadosPorSucursal = async (sucursalId) => {
   try {
     const q = query(
       collection(db, 'empleados'),
-      where('sucursalId', '==', sucursalId),
-      where('estado', '==', 'activo')
+      where('sucursalId', '==', sucursalId)
     );
     
     const snapshot = await getDocs(q);
