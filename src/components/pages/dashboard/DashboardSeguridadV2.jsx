@@ -822,8 +822,9 @@ export default function DashboardSeguridadV2() {
         >
           <DashboardMainGrid
             data={data}
-          saludOcupacional={saludOcupacionalDatos}
-          auditClasificaciones={auditoriasClasificaciones}
+            saludOcupacional={saludOcupacionalDatos}
+            auditClasificaciones={auditoriasClasificaciones}
+            capacitacionesMetas={goalsCapacitaciones}
           />
         </Box>
 

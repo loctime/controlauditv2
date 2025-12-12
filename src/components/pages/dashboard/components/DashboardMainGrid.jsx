@@ -11,8 +11,17 @@ import AuditClassificationPie from "./AuditClassificationPie";
 export default function DashboardMainGrid({
   data,
   saludOcupacional,
-  auditClasificaciones
+  auditClasificaciones,
+  capacitacionesMetas
 }) {
+  // Obtener porcentajes de cumplimiento de capacitaciones
+  const porcentajeMensual = capacitacionesMetas?.mensual?.porcentaje || 0;
+  const porcentajeAnual = capacitacionesMetas?.anual?.porcentaje || 0;
+  
+  // Si no hay metas configuradas, no mostrar los gauges
+  const tieneMetasMensual = capacitacionesMetas?.mensual?.target > 0;
+  const tieneMetasAnual = capacitacionesMetas?.anual?.target > 0;
+
   return (
     <Grid container spacing={1.5}>
       <Grid item xs={12} lg={3}>
@@ -30,21 +39,69 @@ export default function DashboardMainGrid({
         </Typography>
 
         <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
-          <GaugeChart
-            value={data.legalCompliance}
-            max={100}
-            title="Actividades SST/año"
-            subtitle="Cumplimiento anual"
-            size={140}
-          />
+          {tieneMetasAnual ? (
+            <GaugeChart
+              value={porcentajeAnual}
+              max={100}
+              title="Capacitaciones - Año"
+              subtitle={`${capacitacionesMetas.anual.completadas} de ${capacitacionesMetas.anual.target}`}
+              size={140}
+            />
+          ) : (
+            <Box
+              sx={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                backgroundColor: "white",
+                borderRadius: "12px",
+                border: "1px solid #e5e7eb",
+                boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+                padding: "1.5rem",
+                minHeight: "200px"
+              }}
+            >
+              <Typography variant="body2" color="text.secondary" textAlign="center">
+                Capacitaciones - Año
+              </Typography>
+              <Typography variant="caption" color="text.secondary" sx={{ mt: 1 }}>
+                Sin meta configurada
+              </Typography>
+            </Box>
+          )}
 
-          <GaugeChart
-            value={data.legalCompliance}
-            max={100}
-            title="Actividades SST/mes"
-            subtitle="Cumplimiento mensual"
-            size={140}
-          />
+          {tieneMetasMensual ? (
+            <GaugeChart
+              value={porcentajeMensual}
+              max={100}
+              title="Capacitaciones - Mes"
+              subtitle={`${capacitacionesMetas.mensual.completadas} de ${capacitacionesMetas.mensual.target}`}
+              size={140}
+            />
+          ) : (
+            <Box
+              sx={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                backgroundColor: "white",
+                borderRadius: "12px",
+                border: "1px solid #e5e7eb",
+                boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+                padding: "1.5rem",
+                minHeight: "200px"
+              }}
+            >
+              <Typography variant="body2" color="text.secondary" textAlign="center">
+                Capacitaciones - Mes
+              </Typography>
+              <Typography variant="caption" color="text.secondary" sx={{ mt: 1 }}>
+                Sin meta configurada
+              </Typography>
+            </Box>
+          )}
         </Box>
       </Grid>
 
