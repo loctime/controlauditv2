@@ -131,3 +131,4 @@ Write-Host "   ⚠️  Archivos no procesados: $errorCount" -ForegroundColor Yel
 Write-Host ""
 Write-Host "✨ Organización completada!" -ForegroundColor Cyan
 Write-Host ""
+

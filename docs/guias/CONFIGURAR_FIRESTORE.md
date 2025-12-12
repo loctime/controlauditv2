@@ -37,3 +37,4 @@ Después de publicar las reglas, el usuario `1@gmail.com` debería poder:
 
 ### Nota:
 Si el proyecto de Firebase es diferente, actualiza el `projectId` en `src/firebaseConfig.js` con el ID correcto.
+

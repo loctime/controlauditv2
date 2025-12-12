@@ -64,3 +64,4 @@ O mueve manualmente según el mapeo anterior.
 - Todos los enlaces en README.md y docs/README.md han sido actualizados
 - La estructura facilita encontrar documentación por categoría
 - Los archivos históricos están separados para mantener la raíz limpia
+

@@ -71,3 +71,4 @@ Write-Host "========================================" -ForegroundColor Cyan
 Write-Host "Movidos: $movidos" -ForegroundColor Green
 Write-Host "Errores: $errores" -ForegroundColor $(if ($errores -eq 0) { "Green" } else { "Red" })
 Write-Host "`n¡Listo!`n" -ForegroundColor Cyan
+

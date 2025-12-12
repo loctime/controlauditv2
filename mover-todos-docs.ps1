@@ -67,3 +67,4 @@ Write-Host "`n📊 Resumen:"
 Write-Host "   ✅ Movidos: $moved"
 Write-Host "   ⚠️  No encontrados: $notFound"
 Write-Host "`n✨ Organización completada!"
+
