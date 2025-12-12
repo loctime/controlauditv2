@@ -7,9 +7,7 @@ import {
   generarResumenEstadistico, 
   generarGraficoPrincipal, 
   generarSeccion, 
-  generarSeccionAccionesRequeridas,
-  generarFirmas, 
-  generarFooter 
+  generarFirmas
 } from './templatesReporte.js';
 import estilosCSS from './estilosReporte.css?raw';
 
@@ -75,6 +73,7 @@ function generarContenidoImpresion({
   // Helpers seguros
   const val = (x) => (x ?? "").toString();
   const empresaNombre = val(empresa?.nombre);
+  const sucursalNombre = val(sucursal) || 'Casa Central';
 
   // ===== HTML usando templates modulares =====
   return `
@@ -86,14 +85,33 @@ function generarContenidoImpresion({
 <style>
 ${estilosCSS}
 
-/* Ocultar encabezados y pies de página del navegador al imprimir */
+/* Pie de página en todas las páginas */
 @page {
   @top-center { content: ""; }
   @top-left { content: ""; }
   @top-right { content: ""; }
-  @bottom-center { content: ""; }
-  @bottom-left { content: ""; }
-  @bottom-right { content: ""; }
+  @bottom-center { 
+    content: "ControlAudit - Sistema de Auditorías Profesionales";
+    font-size: 11px;
+    color: #2c3e50;
+    padding-top: 3mm;
+    border-top: 1px solid #e9ecef;
+    margin-top: 2mm;
+  }
+  @bottom-left {
+    content: "Empresa: ${empresaNombre} | Sucursal: ${sucursalNombre} | Fecha de auditoría: ${fecha} |";
+    font-size: 11px;
+    color: #2c3e50;
+    padding-top: 3mm;
+    margin-top: 2mm;
+  }
+  @bottom-right {
+    content: "- hoja " counter(page) "/" counter(pages);
+    font-size: 11px;
+    color: #2c3e50;
+    padding-top: 3mm;
+    margin-top: 2mm;
+  }
 }
 
 /* Ocultar cualquier elemento que pueda aparecer antes del header */
@@ -196,11 +214,8 @@ body::before {
     ).join('')}
   </div>
 
-  ${generarSeccionAccionesRequeridas({ accionesRequeridas, secciones })}
 
   ${generarFirmas({ firmaAuditor, firmaResponsable, nombreAuditor, empresa, datosReporte })}
-
-  ${generarFooter({ sucursal, fecha })}
 
   <script>
     // Ocultar encabezados y pies de página del navegador
