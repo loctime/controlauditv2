@@ -175,7 +175,7 @@ body::before {
 
   ${generarResumenEstadistico({ C, NC, NM, NA, total, pct }, resumenClasificaciones)}
 
-  <div style="display: flex; gap: 20px; margin: 20px 0; flex-wrap: wrap;">
+  <div style="display: flex; gap: 15px; margin: 8px 0; flex-wrap: wrap;">
     ${generarGraficoPrincipal(chartImgDataUrl)}
     ${clasificacionesChartImgDataUrl ? generarGraficoPrincipal(clasificacionesChartImgDataUrl, 'Gráfico de Clasificaciones') : ''}
   </div>

@@ -320,7 +320,7 @@ export const generarResumenEstadistico = ({ C, NC, NM, NA, total, pct }, resumen
       </div>
 
       ${resumenClasificaciones ? `
-        <div class="stats-title" style="margin-top: 24px;">🔧 CLASIFICACIÓN DE HALLAZGOS</div>
+        <div class="stats-title" style="margin-top: 8px;">🔧 CLASIFICACIÓN DE HALLAZGOS</div>
         <div class="stats-grid">
           <div class="stat-card" style="background: #e3f2fd; border: 1px solid #2196f3;">
             <div class="stat-number">${resumenClasificaciones.condicion}</div>
@@ -349,7 +349,7 @@ export const generarGraficoPrincipal = (chartImgDataUrl, titulo = 'Gráfico de D
     return `
       <div class="chart-section" style="flex: 1; min-width: 300px;">
         <div class="chart-container">
-          <h3 style="text-align: center; color: #1976d2; margin-bottom: 10px;">📊 ${titulo}</h3>
+          <h3 style="text-align: center; color: #1976d2; margin-bottom: 4px; font-size: 13px;">📊 ${titulo}</h3>
           <img class="chart-image" 
                src="${chartImgDataUrl}" 
                alt="${titulo}" 
