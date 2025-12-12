@@ -16,7 +16,8 @@ import {
   IconButton,
   Alert,
   Chip,
-  Divider
+  Divider,
+  Grid
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
@@ -178,156 +179,160 @@ const NuevoAccidenteModal = ({ open, onClose, onAccidenteCreado, empresaId, sucu
           </Alert>
         )}
 
-        {/* Selección de empleados */}
-        <Box sx={{ mb: 3 }}>
-          <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mb: 1 }}>
-            Empleados Involucrados *
-          </Typography>
-          
-          {loadingEmpleados ? (
-            <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
-              <CircularProgress size={24} />
-            </Box>
-          ) : empleados.length === 0 ? (
-            <Alert severity="info">
-              No hay empleados activos en esta sucursal
-            </Alert>
-          ) : (
-            <FormGroup>
-              {empleados.map((empleado) => (
-                <Box key={empleado.id} sx={{ mb: 1 }}>
-                  <FormControlLabel
-                    control={
-                      <Checkbox
-                        checked={empleadosSeleccionados.some(e => e.id === empleado.id)}
-                        onChange={() => handleEmpleadoToggle(empleado)}
-                      />
-                    }
-                    label={
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Typography>{empleado.nombre}</Typography>
-                        <Chip label={empleado.cargo || 'Sin cargo'} size="small" variant="outlined" />
-                      </Box>
-                    }
-                  />
-                  
-                  {/* Switch de días de reposo */}
-                  {empleadosSeleccionados.some(e => e.id === empleado.id) && (
-                    <Box sx={{ ml: 4, mt: 0.5 }}>
+        <Grid container spacing={2}>
+          {/* Fila 1: Fecha | Descripción */}
+          <Grid item xs={12} md={6}>
+            <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 1 }}>
+              Fecha del Accidente *
+            </Typography>
+            <TextField
+              fullWidth
+              type="date"
+              value={fechaAccidente}
+              onChange={(e) => setFechaAccidente(e.target.value)}
+              variant="outlined"
+              size="small"
+              InputLabelProps={{
+                shrink: true,
+              }}
+            />
+          </Grid>
+
+          <Grid item xs={12} md={6}>
+            <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 1 }}>
+              Descripción del Accidente *
+            </Typography>
+            <TextField
+              fullWidth
+              multiline
+              rows={4}
+              value={descripcion}
+              onChange={(e) => setDescripcion(e.target.value)}
+              placeholder="Describa detalladamente lo ocurrido..."
+              variant="outlined"
+              size="small"
+            />
+          </Grid>
+
+          {/* Fila 2: Involucrados | Imágenes */}
+          <Grid item xs={12} md={6}>
+            <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 1 }}>
+              Empleados Involucrados *
+            </Typography>
+            
+            {loadingEmpleados ? (
+              <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
+                <CircularProgress size={24} />
+              </Box>
+            ) : empleados.length === 0 ? (
+              <Alert severity="info" sx={{ fontSize: '0.875rem' }}>
+                No hay empleados activos en esta sucursal
+              </Alert>
+            ) : (
+              <Box sx={{ maxHeight: 300, overflowY: 'auto', pr: 1 }}>
+                <FormGroup>
+                  {empleados.map((empleado) => (
+                    <Box key={empleado.id} sx={{ mb: 0.5 }}>
                       <FormControlLabel
                         control={
-                          <Switch
-                            checked={empleadosSeleccionados.find(e => e.id === empleado.id)?.conReposo || false}
-                            onChange={() => handleReposoToggle(empleado.id)}
-                            color="warning"
+                          <Checkbox
+                            size="small"
+                            checked={empleadosSeleccionados.some(e => e.id === empleado.id)}
+                            onChange={() => handleEmpleadoToggle(empleado)}
                           />
                         }
                         label={
-                          <Typography variant="body2" color="warning.main">
-                            Con días de reposo (el empleado quedará inactivo)
-                          </Typography>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                            <Typography variant="body2">{empleado.nombre}</Typography>
+                            <Chip label={empleado.cargo || 'Sin cargo'} size="small" variant="outlined" sx={{ height: 20, fontSize: '0.7rem' }} />
+                          </Box>
                         }
                       />
+                      
+                      {empleadosSeleccionados.some(e => e.id === empleado.id) && (
+                        <Box sx={{ ml: 4, mt: 0.25 }}>
+                          <FormControlLabel
+                            control={
+                              <Switch
+                                size="small"
+                                checked={empleadosSeleccionados.find(e => e.id === empleado.id)?.conReposo || false}
+                                onChange={() => handleReposoToggle(empleado.id)}
+                                color="warning"
+                              />
+                            }
+                            label={
+                              <Typography variant="caption" color="warning.main">
+                                Con reposo
+                              </Typography>
+                            }
+                          />
+                        </Box>
+                      )}
                     </Box>
-                  )}
-                </Box>
-              ))}
-            </FormGroup>
-          )}
-        </Box>
+                  ))}
+                </FormGroup>
+              </Box>
+            )}
+          </Grid>
 
-        <Divider sx={{ my: 2 }} />
+          <Grid item xs={12} md={6}>
+            <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 1 }}>
+              Imágenes (Opcional)
+            </Typography>
+            
+            <Button
+              variant="outlined"
+              component="label"
+              size="small"
+              startIcon={<CloudUploadIcon />}
+              sx={{ mb: 1 }}
+            >
+              Subir Imágenes
+              <input
+                type="file"
+                hidden
+                multiple
+                accept="image/*"
+                onChange={handleImagenesChange}
+              />
+            </Button>
 
-        {/* Fecha del accidente */}
-        <Box sx={{ mb: 3 }}>
-          <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mb: 1 }}>
-            Fecha del Accidente *
-          </Typography>
-          <TextField
-            fullWidth
-            type="date"
-            value={fechaAccidente}
-            onChange={(e) => setFechaAccidente(e.target.value)}
-            variant="outlined"
-            InputLabelProps={{
-              shrink: true,
-            }}
-          />
-        </Box>
-
-        <Divider sx={{ my: 2 }} />
-
-        {/* Descripción */}
-        <Box sx={{ mb: 3 }}>
-          <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mb: 1 }}>
-            Descripción del Accidente *
-          </Typography>
-          <TextField
-            fullWidth
-            multiline
-            rows={4}
-            value={descripcion}
-            onChange={(e) => setDescripcion(e.target.value)}
-            placeholder="Describa detalladamente lo ocurrido..."
-            variant="outlined"
-          />
-        </Box>
-
-        {/* Imágenes */}
-        <Box>
-          <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mb: 1 }}>
-            Imágenes (Opcional)
-          </Typography>
-          
-          <Button
-            variant="outlined"
-            component="label"
-            startIcon={<CloudUploadIcon />}
-            sx={{ mb: 2 }}
-          >
-            Subir Imágenes
-            <input
-              type="file"
-              hidden
-              multiple
-              accept="image/*"
-              onChange={handleImagenesChange}
-            />
-          </Button>
-
-          {imagenesPreview.length > 0 && (
-            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-              {imagenesPreview.map((preview, index) => (
-                <Box key={index} sx={{ position: 'relative' }}>
-                  <img
-                    src={preview}
-                    alt={`Preview ${index + 1}`}
-                    style={{
-                      width: 100,
-                      height: 100,
-                      objectFit: 'cover',
-                      borderRadius: 4
-                    }}
-                  />
-                  <IconButton
-                    size="small"
-                    onClick={() => handleRemoveImagen(index)}
-                    sx={{
-                      position: 'absolute',
-                      top: -8,
-                      right: -8,
-                      bgcolor: 'error.main',
-                      color: 'white',
-                      '&:hover': { bgcolor: 'error.dark' }
-                    }}
-                  >
-                    <DeleteIcon fontSize="small" />
-                  </IconButton>
-                </Box>
-              ))}
-            </Box>
-          )}
-        </Box>
+            {imagenesPreview.length > 0 && (
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1 }}>
+                {imagenesPreview.map((preview, index) => (
+                  <Box key={index} sx={{ position: 'relative' }}>
+                    <img
+                      src={preview}
+                      alt={`Preview ${index + 1}`}
+                      style={{
+                        width: 80,
+                        height: 80,
+                        objectFit: 'cover',
+                        borderRadius: 4
+                      }}
+                    />
+                    <IconButton
+                      size="small"
+                      onClick={() => handleRemoveImagen(index)}
+                      sx={{
+                        position: 'absolute',
+                        top: -8,
+                        right: -8,
+                        bgcolor: 'error.main',
+                        color: 'white',
+                        width: 20,
+                        height: 20,
+                        '&:hover': { bgcolor: 'error.dark' }
+                      }}
+                    >
+                      <DeleteIcon sx={{ fontSize: 14 }} />
+                    </IconButton>
+                  </Box>
+                ))}
+              </Box>
+            )}
+          </Grid>
+        </Grid>
       </DialogContent>
 
       <DialogActions sx={{ px: 3, py: 2 }}>

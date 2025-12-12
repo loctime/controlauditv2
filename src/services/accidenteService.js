@@ -32,6 +32,10 @@ export const crearAccidente = async (accidenteData, empleadosSeleccionados, imag
     }));
 
     // Crear documento del accidente
+    const fechaAccidente = accidenteData.fechaAccidente 
+      ? Timestamp.fromDate(new Date(accidenteData.fechaAccidente))
+      : Timestamp.now();
+    
     const accidenteDoc = {
       empresaId: accidenteData.empresaId,
       sucursalId: accidenteData.sucursalId,
@@ -39,7 +43,7 @@ export const crearAccidente = async (accidenteData, empleadosSeleccionados, imag
       empleadosInvolucrados,
       descripcion: accidenteData.descripcion || '',
       imagenes: [],
-      fechaHora: Timestamp.now(),
+      fechaHora: fechaAccidente,
       createdAt: Timestamp.now(),
       reportadoPor: accidenteData.reportadoPor,
       estado: 'abierto'
@@ -104,6 +108,10 @@ export const crearIncidente = async (incidenteData, testigos = [], imagenes = []
     }));
 
     // Crear documento del incidente
+    const fechaIncidente = incidenteData.fechaIncidente 
+      ? Timestamp.fromDate(new Date(incidenteData.fechaIncidente))
+      : Timestamp.now();
+    
     const incidenteDoc = {
       empresaId: incidenteData.empresaId,
       sucursalId: incidenteData.sucursalId,
@@ -112,7 +120,7 @@ export const crearIncidente = async (incidenteData, testigos = [], imagenes = []
       empleadosInvolucrados: [], // Los incidentes no tienen empleados con reposo
       descripcion: incidenteData.descripcion || '',
       imagenes: [],
-      fechaHora: Timestamp.now(),
+      fechaHora: fechaIncidente,
       createdAt: Timestamp.now(),
       reportadoPor: incidenteData.reportadoPor,
       estado: 'abierto'
