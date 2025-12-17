@@ -145,6 +145,18 @@ const verificarTokenAdmin = async (req, res, next) => {
     next();
   } catch (error) {
     console.error('Error verificando token:', error);
+    // Detectar errores internos de dependencias (ej. jsonwebtoken/jwa/buffer-equal-constant-time)
+    const errMsg = (error && (error.message || '')).toString();
+    const errStack = (error && error.stack) || '';
+    if (errMsg.includes('prototype') || errStack.includes('buffer-equal-constant-time') || errStack.includes('jwa') || errMsg.includes('jwa')) {
+      console.error('Error interno en verificación de token (dependencia). Activando modo fallback.');
+      return res.status(503).json({
+        error: 'Error interno verificando token',
+        message: 'Error en dependencias internas al verificar token. Usando modo fallback.',
+        fallback: true
+      });
+    }
+
     res.status(401).json({ error: 'Token inválido' });
   }
 };
