@@ -25,7 +25,7 @@
     "nodemon": "^3.0.1"
   },
   "engines": {
-    "node": ">=16.0.0"
+    "node": "18.x"
   },
   "keywords": ["auditoria", "control", "firebase"],
   "author": "ControlAudit Team",
