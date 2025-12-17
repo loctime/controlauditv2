@@ -52,9 +52,15 @@ api.interceptors.response.use(
     
     if (error.response?.status === 401) {
       console.error('Error de autenticación');
+      console.error('Recibido 401 del backend — sesión inválida o token no válido');
       throw new Error('Sesión expirada. Por favor, inicia sesión nuevamente.');
     }
     
+    // 440 se usa cuando el backend reasignó claims y requiere que el cliente refresque sesión
+    if (error.response?.status === 440) {
+      console.error('Claim de rol actualizado en backend (440) — forzando fallback a Firestore');
+      throw error; // será manejado por los catch específicos en los métodos (createUser etc.)
+    }
     if (error.response?.status === 403) {
       console.error('Error de permisos');
       throw new Error('No tienes permisos para realizar esta acción.');
@@ -132,6 +138,12 @@ export const userService = {
       // Si es un error de autenticación (401), intentar con Firebase directamente
       if (error.response?.status === 401 || error.message.includes('autenticación') || error.message.includes('Usuario no autenticado')) {
         console.log('🔄 Error de autenticación, intentando con Firebase directamente...');
+        return await createUserWithFirebase(userData);
+      }
+
+      // Si el backend respondió 440 (claims reasignados), también usar fallback
+      if (error.response?.status === 440) {
+        console.log('🔄 Backend indicó que claims fueron reasignados (440). Creando usuario en Firestore...');
         return await createUserWithFirebase(userData);
       }
       
