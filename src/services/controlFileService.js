@@ -1,7 +1,14 @@
 // Servicio para interactuar con ControlFile APIs
 // Maneja upload, download, listado y eliminación de archivos
 
-import { auth, CONTROLFILE_BACKEND_URL } from '../firebaseConfig';
+import { auth } from '../firebaseConfig';
+
+// ControlFile backend URL comes from env var directly
+const CONTROLFILE_BACKEND_URL = import.meta.env.VITE_CONTROLFILE_BACKEND_URL;
+if (!CONTROLFILE_BACKEND_URL) {
+  console.error('[controlFileService] Missing VITE_CONTROLFILE_BACKEND_URL env var');
+  throw new Error('VITE_CONTROLFILE_BACKEND_URL is required for controlFileService');
+}
 
 /**
  * Obtiene el token de autenticación de Firebase
