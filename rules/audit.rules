@@ -1,23 +1,19 @@
-// =============================================================
-// 🚨 ARCHIVO PARCIAL DE REGLAS – SE CONCATENA AUTOMÁTICAMENTE 🚨
-//
-// ⚠️ NO ES UN ARCHIVO DE REGLAS COMPLETO
-//
-// PROHIBIDO DEFINIR AQUÍ:
-// ❌ rules_version
-// ❌ service cloud.firestore
-// ❌ match /databases/{database}/documents
-//
-// 👉 Este archivo SOLO puede contener:
-//    match /ruta/{id} { ... }
-//
-// ❗ Si agregás un `match /databases/...`
-//    Firestore IGNORA estas reglas sin error visible.
-// =============================================================
+// ================================
+// ControlAudit – reglas DEV claras
+// ================================
 
+// 🔐 Perfil de usuario (SIEMPRE primero)
+match /apps/auditoria/users/{userId} {
+  allow read, write: if request.auth != null
+    && request.auth.uid == userId;
+}
 
+// 🔓 Datos de la app (empresas, auditorías, formularios, etc)
+match /apps/auditoria/{document=**} {
+  allow read, write: if request.auth != null;
+}
 
-  match /{document=**} {
-      allow read, write: if request.time < timestamp.date(2050, 4, 12);
-    }
-
+// ❌ Todo lo demás cerrado
+match /{document=**} {
+  allow read, write: if false;
+}

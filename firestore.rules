@@ -398,7 +398,7 @@ service cloud.firestore {
     
     /* ========= CONTROLAUDIT (Higiene y Seguridad) ========= */
     
-    // Usuarios
+    // Usuarios (ruta antigua - mantener compatibilidad)
     match /usuarios/{userId} {
       allow read: if isAuth() && request.auth.uid == userId;
       allow read: if isAuth() && 
@@ -409,6 +409,17 @@ service cloud.firestore {
         get(/databases/$(db)/documents/usuarios/$(request.auth.uid)).data.role == 'max' &&
         get(/databases/$(db)/documents/usuarios/$(userId)).data.clienteAdminId == request.auth.uid;
       allow write: if isAuth() && request.auth.uid == userId;
+    }
+    
+    // Usuarios de ControlAudit - Nueva ruta: apps/audit/users/{userId}
+    match /apps/audit/users/{userId} {
+      allow create: if isAuth() && userId == uid();
+      allow read, update: if isAuth() && userId == uid();
+    }
+    
+    // Usuarios de ControlAudit - Ruta alternativa: apps/auditoria/users/{userId}
+    match /apps/auditoria/users/{userId} {
+      allow create, read, update: if isAuth() && userId == uid();
     }
     
     // Empresas

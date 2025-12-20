@@ -18,14 +18,14 @@ export const useUserProfile = (firebaseUser) => {
   // Crear o obtener perfil del usuario
   const createOrGetUserProfile = async (firebaseUser) => {
     try {
-      // Usar la nueva colección: /apps/audit/users/{uid}
-      const userRef = doc(db, "apps", "audit", "users", firebaseUser.uid);
+      // Usar la colección: /apps/auditoria/users/{uid}
+      const userRef = doc(db, "apps", "auditoria", "users", firebaseUser.uid);
       let userSnap = await getDoc(userRef);
 
       if (userSnap.exists()) {
         const profileData = userSnap.data();
         if (isDev) {
-          console.log('[AUDIT] User profile loaded from /apps/audit/users');
+          console.log('[AUDIT] User profile loaded from /apps/auditoria/users');
         }
         
         setUserProfile(profileData);
@@ -36,7 +36,7 @@ export const useUserProfile = (firebaseUser) => {
 
       // Si no existe, crear nuevo perfil
       if (isDev) {
-        console.log('[AUDIT] User profile not found, creating in /apps/audit/users');
+        console.log('[AUDIT] User profile not found, creating in /apps/auditoria/users');
       }
       
       const newProfile = {
@@ -67,7 +67,7 @@ export const useUserProfile = (firebaseUser) => {
 
       await setDoc(userRef, newProfile);
       if (isDev) {
-        console.log('[AUDIT] User profile created in /apps/audit/users');
+        console.log('[AUDIT] User profile created in /apps/auditoria/users');
       }
       
       setUserProfile(newProfile);
@@ -83,7 +83,7 @@ export const useUserProfile = (firebaseUser) => {
   // Actualizar perfil del usuario
   const updateUserProfile = async (updates) => {
     try {
-      const userRef = doc(db, "apps", "audit", "users", firebaseUser.uid);
+      const userRef = doc(db, "apps", "auditoria", "users", firebaseUser.uid);
       await updateDoc(userRef, updates);
       
       const updatedProfile = { ...userProfile, ...updates };
@@ -133,7 +133,7 @@ export const useUserProfile = (firebaseUser) => {
       }
 
       if (userProfile.role === 'operario' && userProfile.clienteAdminId) {
-        const adminRef = doc(db, 'apps', 'audit', 'users', userProfile.clienteAdminId);
+        const adminRef = doc(db, 'apps', 'auditoria', 'users', userProfile.clienteAdminId);
         const adminSnap = await getDoc(adminRef);
         if (adminSnap.exists()) {
           const adminData = adminSnap.data();
