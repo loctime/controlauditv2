@@ -1,5 +1,5 @@
 import { Route, Routes } from "react-router-dom";
-import React, { Suspense } from "react";
+import React, { Suspense, useEffect } from "react";
 import Navbar from "../components/layout/navbar/Navbar";
 import { routes } from "./routesOptimized";
 import Login from "../components/pages/login/Login";
@@ -11,6 +11,21 @@ import VistaFormularioPublico from '../components/pages/formulario/VistaFormular
 import LazyLoader from '../components/common/LazyLoader';
 
 const AppRouter = () => {
+  // Logs de debug para producción
+  useEffect(() => {
+    console.log('🔍 [AppRouter] Inicializando router...');
+    console.log('🔍 [AppRouter] Total de rutas registradas:', routes.length);
+    console.log('🔍 [AppRouter] Rutas registradas:', routes.map(r => ({ id: r.id, path: r.path })));
+    
+    const testControlFileRoute = routes.find(r => r.path === '/test-controlfile');
+    if (testControlFileRoute) {
+      console.log('✅ [AppRouter] Ruta /test-controlfile ENCONTRADA:', testControlFileRoute);
+    } else {
+      console.error('❌ [AppRouter] Ruta /test-controlfile NO ENCONTRADA en el array de rutas');
+      console.error('❌ [AppRouter] Rutas disponibles:', routes.map(r => r.path));
+    }
+  }, []);
+
   return (
     <Routes>
       {/* Rutas públicas */}

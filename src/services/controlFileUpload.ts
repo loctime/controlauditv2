@@ -3,7 +3,8 @@ import { auth } from '../firebaseConfig';
 
 const CONTROLFILE_API_URL =
   (import.meta as any).env?.VITE_CONTROLFILE_API_URL ??
-  'https://api.controldoc.app/api/controlfile/upload';
+  'https://files.controldoc.app/api/controlfile/upload';
+
 
 /**
  * Sube un archivo a ControlFile vía HTTP

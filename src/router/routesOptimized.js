@@ -22,6 +22,7 @@ const DashboardSeguridad = lazy(() => import("../components/pages/dashboard/Dash
 const ClienteDashboard = lazy(() => import("../components/pages/admin/ClienteDashboard"));
 const OperarioDashboard = lazy(() => import("../components/pages/user/OperarioDashboard"));
 const PermissionsDebug = lazy(() => import("../components/pages/debug/PermissionsDebug"));
+const TestControlFile = lazy(() => import("../components/pages/debug/TestControlFile"));
 const GaleriaFormulariosPublicos = lazy(() => import('../components/pages/formulario/GaleriaFormulariosPublicos'));
 const ConfiguracionPage = lazy(() => import('../components/pages/configuracion/ConfiguracionPage'));
 const Empleados = lazy(() => import('../components/pages/empleados/Empleados'));
@@ -97,6 +98,11 @@ export const routes = [
     Element: PermissionsDebug,
   },
   {
+    id: "test-controlfile",
+    path: "/test-controlfile",
+    Element: TestControlFile,
+  },
+  {
     id: "logs",
     path: "/usuarios/logs",
     Element: LogsOperarios,
@@ -148,3 +154,15 @@ export const routes = [
     roles: ['max', 'supermax']
   }
 ];
+
+// Logs de debug para producción
+console.log('🔍 [routesOptimized] Archivo cargado');
+console.log('🔍 [routesOptimized] Total de rutas exportadas:', routes.length);
+console.log('🔍 [routesOptimized] Rutas exportadas:', routes.map(r => ({ id: r.id, path: r.path })));
+
+const testControlFileRoute = routes.find(r => r.path === '/test-controlfile');
+if (testControlFileRoute) {
+  console.log('✅ [routesOptimized] Ruta /test-controlfile ENCONTRADA en export:', testControlFileRoute);
+} else {
+  console.error('❌ [routesOptimized] Ruta /test-controlfile NO ENCONTRADA en el array exportado');
+}
