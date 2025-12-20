@@ -25,13 +25,15 @@ import {
   Add as AddIcon,
   Edit as EditIcon,
   Delete as DeleteIcon,
-  Search as SearchIcon
+  Search as SearchIcon,
+  CloudUpload as CloudUploadIcon
 } from '@mui/icons-material';
 import { collection, query, where, getDocs, deleteDoc, doc } from 'firebase/firestore';
 import { db } from '../../../firebaseConfig';
 import { useAuth } from '../../context/AuthContext';
 import { useGlobalSelection } from '../../../hooks/useGlobalSelection';
 import EmpleadoForm from './EmpleadoForm';
+import ImportEmpleadosDialog from './import/ImportEmpleadosDialog';
 
 export default function Empleados() {
   const { userProfile, loadingSucursales } = useAuth();
@@ -56,6 +58,7 @@ export default function Empleados() {
   const [openForm, setOpenForm] = useState(false);
   const [selectedEmpleado, setSelectedEmpleado] = useState(null);
   const [empresasCargadas, setEmpresasCargadas] = useState(false);
+  const [openImportDialog, setOpenImportDialog] = useState(false);
 
   // Detectar cuando las empresas han sido cargadas
   useEffect(() => {
@@ -159,19 +162,35 @@ export default function Empleados() {
         <Typography variant="h4" sx={{ fontWeight: 'bold' }}>
           Gestión de Empleados
         </Typography>
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={() => handleOpenForm()}
-          sx={{
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-            '&:hover': {
-              background: 'linear-gradient(135deg, #5568d3 0%, #65408b 100%)',
-            }
-          }}
-        >
-          Nuevo Empleado
-        </Button>
+        <Box sx={{ display: 'flex', gap: 2 }}>
+          <Button
+            variant="outlined"
+            startIcon={<CloudUploadIcon />}
+            onClick={() => setOpenImportDialog(true)}
+            disabled={!selectedSucursal}
+            sx={{
+              borderColor: 'primary.main',
+              '&:hover': {
+                borderColor: 'primary.dark',
+              }
+            }}
+          >
+            Importar Masivo
+          </Button>
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={() => handleOpenForm()}
+            sx={{
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              '&:hover': {
+                background: 'linear-gradient(135deg, #5568d3 0%, #65408b 100%)',
+              }
+            }}
+          >
+            Nuevo Empleado
+          </Button>
+        </Box>
       </Box>
 
       {/* Alertas de estado */}
@@ -422,6 +441,18 @@ export default function Empleados() {
         empleado={selectedEmpleado}
         sucursalId={selectedSucursal}
         empresaId={userProfile?.empresaId || userProfile?.uid}
+      />
+
+      {/* Dialog de Importación Masiva */}
+      <ImportEmpleadosDialog
+        open={openImportDialog}
+        onClose={() => setOpenImportDialog(false)}
+        onSuccess={(count) => {
+          alert(`¡Importación exitosa! Se crearon ${count} empleado(s)`);
+          loadEmpleados();
+        }}
+        empresaId={selectedEmpresa}
+        sucursalId={selectedSucursal}
       />
     </Container>
   );
