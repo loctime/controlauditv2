@@ -359,11 +359,16 @@ function Dashboard() {
         }
       });
 
-      // Verificar si requiere creación manual
-      if (userRes.requiresManualCreation) {
-        toast.warning('⚠️ Usuario creado en Firestore. El administrador debe crear el usuario en Firebase Auth manualmente.');
-        console.log('📝 Usuario pendiente de creación en Firebase Auth:', userRes);
+      console.log('[Dashboard] userService.createUser result:', userRes);
+      // Si el backend devolvió que requiere creación manual en Auth, informar y detener el flujo
+      if (userRes?.requiresManualCreation) {
+        toast.warning('Usuario creado en Firestore pero no en Firebase Auth. Crea el usuario en Auth o espera a que el backend esté disponible.');
+        setLoading(false);
+        return;
       }
+
+      // Verificar si requiere creación manual
+      // Si no requiere creación manual, continuar con el flujo normal
 
       // 2. Crear empresa en Firestore
       const empresaRef = await addDoc(collection(db, 'empresas'), {
