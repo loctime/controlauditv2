@@ -22,7 +22,7 @@ export const auditoriaService = {
       // Si no hay migratedFromUid, buscar por email para encontrar datos antiguos
       if (!oldUid && userProfile?.email) {
         console.log('[auditoriaService] No hay migratedFromUid, buscando por email:', userProfile.email);
-        const usuariosRef = collection(db, 'usuarios');
+        const usuariosRef = collection(db, 'apps', 'audit', 'users');
         const emailQuery = query(usuariosRef, where('email', '==', userProfile.email));
         const emailSnapshot = await getDocs(emailQuery);
         
@@ -60,7 +60,7 @@ export const auditoriaService = {
         const todasPropias = snapshotsPropias.flatMap(s => s.docs);
         
         // Obtener auditorías de sus operarios (con nuevo y antiguo UID)
-        const usuariosRef = collection(db, "usuarios");
+        const usuariosRef = collection(db, "apps", "audit", "users");
         const queriesOperarios = [
           query(usuariosRef, where("clienteAdminId", "==", userId))
         ];
@@ -155,7 +155,7 @@ export const auditoriaService = {
   async compartirAuditoria(auditoriaId, emailUsuario, user) {
     try {
       // Buscar usuario por email
-      const usuariosRef = collection(db, "usuarios");
+      const usuariosRef = collection(db, "apps", "audit", "users");
       const q = query(usuariosRef, where("email", "==", emailUsuario));
       const snapshot = await getDocs(q);
       

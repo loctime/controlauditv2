@@ -26,7 +26,7 @@ export const empresaService = {
         snapshot = await getDocs(empresasRef);
       } else if (role === 'max') {
         // Buscar empresas por el UID actual Y por el UID migrado (si existe)
-        const userRef = doc(db, "usuarios", userId);
+        const userRef = doc(db, "apps", "audit", "users", userId);
         const userSnap = await getDoc(userRef);
         let migratedFromUid = null;
         let userEmail = null;
@@ -85,7 +85,7 @@ export const empresaService = {
           if (snapshot.empty && userEmail) {
             console.log('[empresaService] 🔍 No se encontraron empresas por UID, buscando por email del propietario...');
             // Buscar usuarios con este email y obtener sus UIDs
-            const usuariosRef = collection(db, 'usuarios');
+            const usuariosRef = collection(db, 'apps', 'audit', 'users');
             const emailQuery = query(usuariosRef, where('email', '==', userEmail));
             const usuariosSnapshot = await getDocs(emailQuery);
             
@@ -121,7 +121,7 @@ export const empresaService = {
           }
         }
       } else {
-        const userRef = doc(db, "usuarios", userId);
+        const userRef = doc(db, "apps", "audit", "users", userId);
         const userSnap = await getDoc(userRef);
         if (userSnap.exists()) {
           const userData = userSnap.data();
@@ -223,7 +223,7 @@ export const empresaService = {
       if (role === 'operario' && userProfile?.clienteAdminId) {
         propietarioId = userProfile.clienteAdminId;
         
-        const adminRef = doc(db, "usuarios", userProfile.clienteAdminId);
+        const adminRef = doc(db, "apps", "audit", "users", userProfile.clienteAdminId);
         const adminSnap = await getDoc(adminRef);
         propietarioEmail = adminSnap.exists() ? adminSnap.data().email : 'admin@empresa.com';
         propietarioRole = 'max';
@@ -272,7 +272,7 @@ export const empresaService = {
       await addDoc(sucursalesRef, sucursalCasaCentral);
       
       // Actualizar perfil del propietario
-      const propietarioRef = doc(db, "usuarios", propietarioId);
+      const propietarioRef = doc(db, "apps", "audit", "users", propietarioId);
       const propietarioSnap = await getDoc(propietarioRef);
       
       if (propietarioSnap.exists()) {

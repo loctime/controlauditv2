@@ -1,0 +1,23 @@
+// =============================================================
+// 🚨 ARCHIVO PARCIAL DE REGLAS – SE CONCATENA AUTOMÁTICAMENTE 🚨
+//
+// ⚠️ NO ES UN ARCHIVO DE REGLAS COMPLETO
+//
+// PROHIBIDO DEFINIR AQUÍ:
+// ❌ rules_version
+// ❌ service cloud.firestore
+// ❌ match /databases/{database}/documents
+//
+// 👉 Este archivo SOLO puede contener:
+//    match /ruta/{id} { ... }
+//
+// ❗ Si agregás un `match /databases/...`
+//    Firestore IGNORA estas reglas sin error visible.
+// =============================================================
+
+
+
+  match /{document=**} {
+      allow read, write: if request.time < timestamp.date(2050, 4, 12);
+    }
+

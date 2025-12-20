@@ -63,7 +63,7 @@ function Dashboard() {
        // Obtener clientes administradores según el rol del usuario
        if (role === 'supermax') {
          // Super administradores ven todos los clientes administradores
-         const usuariosRef = collection(db, "usuarios");
+         const usuariosRef = collection(db, "apps", "audit", "users");
          const clientesQuery = query(usuariosRef, where("role", "==", "max"));
          const clientesSnapshot = await getDocs(clientesQuery);
          empresasData = clientesSnapshot.docs.map(doc => ({
@@ -74,7 +74,7 @@ function Dashboard() {
          }));
        } else if (role === 'max') {
          // Clientes administradores solo ven sus propios datos
-         const userRef = doc(db, "usuarios", userProfile.uid);
+         const userRef = doc(db, "apps", "audit", "users", userProfile.uid);
          const userSnap = await getDoc(userRef);
          if (userSnap.exists()) {
            const userData = userSnap.data();
@@ -88,7 +88,7 @@ function Dashboard() {
        } else {
          // Operarios ven datos de su cliente admin
          if (userProfile.clienteAdminId) {
-           const adminRef = doc(db, "usuarios", userProfile.clienteAdminId);
+           const adminRef = doc(db, "apps", "audit", "users", userProfile.clienteAdminId);
            const adminSnap = await getDoc(adminRef);
            if (adminSnap.exists()) {
              const adminData = adminSnap.data();
@@ -106,7 +106,7 @@ function Dashboard() {
         const empresasEnriquecidas = await Promise.all(
           empresasData.map(async (cliente) => {
             // Contar usuarios operarios de este cliente
-            const usuariosRef = collection(db, "usuarios");
+            const usuariosRef = collection(db, "apps", "audit", "users");
             const usuariosQuery = query(usuariosRef, where("clienteAdminId", "==", cliente.id));
             const usuariosSnapshot = await getDocs(usuariosQuery);
             const usuariosCount = usuariosSnapshot.size;
@@ -218,7 +218,7 @@ function Dashboard() {
       }
 
       // Actualizar usuario en Firestore
-      const userRef = doc(db, 'usuarios', userProfile.uid);
+      const userRef = doc(db, 'apps', 'audit', 'users', userProfile.uid);
       await updateDoc(userRef, {
         role: newRole,
         permisos: newPermisos
@@ -398,7 +398,7 @@ function Dashboard() {
       });
 
       // 3. Actualizar usuario con información adicional usando Firestore directamente
-      const userRef = doc(db, 'usuarios', userRes.uid);
+      const userRef = doc(db, 'apps', 'audit', 'users', userRes.uid);
       await updateDoc(userRef, {
         empresaId: empresaRef.id,
         plan: 'estandar',

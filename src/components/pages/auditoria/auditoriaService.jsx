@@ -744,7 +744,7 @@ class AuditoriaService {
       // Si no hay migratedFromUid, buscar por email para encontrar datos antiguos
       if (!oldUid && userProfile.email) {
         console.log('[auditoriaService.obtenerAuditorias] No hay migratedFromUid, buscando por email:', userProfile.email);
-        const usuariosRef = collection(db, 'usuarios');
+        const usuariosRef = collection(db, 'apps', 'audit', 'users');
         const emailQuery = query(usuariosRef, where('email', '==', userProfile.email));
         const emailSnapshot = await getDocs(emailQuery);
         

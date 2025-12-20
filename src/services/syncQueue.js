@@ -397,7 +397,7 @@ class SyncQueueService {
       
       const currentUser = auth.currentUser;
       if (currentUser) {
-        const userProfileRef = doc(firestoreDb, 'usuarios', currentUser.uid);
+        const userProfileRef = doc(firestoreDb, 'apps', 'audit', 'users', currentUser.uid);
         const userProfileSnap = await getDoc(userProfileRef);
         if (userProfileSnap.exists()) {
           currentUserProfile = {

@@ -272,7 +272,7 @@ const ReportesPage = () => {
         if (!oldUid && userProfile?.email) {
           console.log('[DEBUG] No hay migratedFromUid, buscando por email para detectar datos antiguos:', userProfile.email);
           // Buscar usuarios con este email que tengan UID diferente
-          const usuariosRef = collection(db, 'usuarios');
+          const usuariosRef = collection(db, 'apps', 'audit', 'users');
           const emailQuery = query(usuariosRef, where('email', '==', userProfile.email));
           const emailSnapshot = await getDocs(emailQuery);
           

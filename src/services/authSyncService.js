@@ -41,7 +41,7 @@ export const syncUserToAuth = async (email, password) => {
         console.log('[authSyncService] Usuario no encontrado/encontrado con credenciales inválidas en Auth, buscando en Firestore...');
         
         // Buscar usuario en Firestore por email
-        const usuariosRef = collection(db, 'usuarios');
+        const usuariosRef = collection(db, 'apps', 'audit', 'users');
         const q = query(usuariosRef, where('email', '==', email));
         const querySnapshot = await getDocs(q);
         
@@ -120,7 +120,7 @@ export const syncUserToAuth = async (email, password) => {
  */
 export const getUserFromFirestore = async (email) => {
   try {
-    const usuariosRef = collection(db, 'usuarios');
+    const usuariosRef = collection(db, 'apps', 'audit', 'users');
     const q = query(usuariosRef, where('email', '==', email));
     const querySnapshot = await getDocs(q);
     

@@ -81,7 +81,7 @@ const PerfilUsuario = () => {
       if (!userProfile?.uid) return;
       setLoadingUsuariosCreados(true);
       try {
-        const usuariosRef = collection(db, 'usuarios');
+        const usuariosRef = collection(db, 'apps', 'audit', 'users');
         const q = query(usuariosRef, where('clienteAdminId', '==', userProfile.clienteAdminId || userProfile.uid));
         const snapshot = await getDocs(q);
         const lista = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));

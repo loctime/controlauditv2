@@ -2,6 +2,7 @@
 import { 
   collection, 
   doc, 
+  getDoc,
   getDocs, 
   updateDoc, 
   query, 
@@ -16,13 +17,13 @@ export const useUserManagement = (user, userProfile) => {
   const crearOperario = async (email, displayName = "Operario") => {
     try {
       // Verificar límite de usuarios
-      const usuariosRef = collection(db, "usuarios");
+      const usuariosRef = collection(db, "apps", "audit", "users");
       const qOperarios = query(usuariosRef, where("clienteAdminId", "==", user.uid));
       const snapshotOperarios = await getDocs(qOperarios);
       const usuariosActuales = snapshotOperarios.size;
       
       // Obtener límite del cliente admin
-      const userRef = doc(db, "usuarios", user.uid);
+      const userRef = doc(db, "apps", "audit", "users", user.uid);
       const userSnap = await getDoc(userRef);
       const limiteUsuarios = userSnap.data()?.limiteUsuarios || 10;
       
@@ -65,7 +66,7 @@ export const useUserManagement = (user, userProfile) => {
   // Editar permisos de operario
   const editarPermisosOperario = async (userId, nuevosPermisos) => {
     try {
-      const userRef = doc(db, "usuarios", userId);
+      const userRef = doc(db, "apps", "audit", "users", userId);
       await updateDoc(userRef, { permisos: nuevosPermisos });
       await registrarLogOperario(userId, 'editarPermisos', { nuevosPermisos });
       await registrarAccionSistema(
@@ -95,7 +96,7 @@ export const useUserManagement = (user, userProfile) => {
   // Asignar usuario operario a cliente administrador
   const asignarUsuarioAClienteAdmin = async (userId, clienteAdminId) => {
     try {
-      const userRef = doc(db, "usuarios", userId);
+      const userRef = doc(db, "apps", "audit", "users", userId);
       await updateDoc(userRef, {
         clienteAdminId: clienteAdminId,
         ultimaModificacion: new Date()
@@ -111,7 +112,7 @@ export const useUserManagement = (user, userProfile) => {
   // Obtener usuarios de un cliente administrador
   const getUsuariosDeClienteAdmin = async (clienteAdminId) => {
     try {
-      const usuariosRef = collection(db, "usuarios");
+      const usuariosRef = collection(db, "apps", "audit", "users");
       const q = query(usuariosRef, where("clienteAdminId", "==", clienteAdminId));
       const snapshot = await getDocs(q);
       

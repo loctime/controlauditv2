@@ -103,7 +103,7 @@ const createUserWithFirebase = async (userData) => {
       tempPassword: userData.password // Guardar temporalmente para que el admin pueda crear el usuario en Firebase Auth
     };
 
-    await setDoc(doc(db, 'usuarios', tempUid), userProfile);
+    await setDoc(doc(db, 'apps', 'audit', 'users', tempUid), userProfile);
 
     console.log('✅ Usuario creado en Firestore (pendiente de creación en Firebase Auth)');
     return {

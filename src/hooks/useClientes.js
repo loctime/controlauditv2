@@ -34,7 +34,7 @@ export const useClientes = () => {
   const cargarClientes = async () => {
     setLoading(true);
     try {
-      const usuariosRef = collection(db, 'usuarios');
+      const usuariosRef = collection(db, 'apps', 'audit', 'users');
       const q = query(usuariosRef, where('role', '==', 'max'));
       const snapshot = await getDocs(q);
       
@@ -73,7 +73,7 @@ export const useClientes = () => {
   const cargarOperarios = async (clienteId) => {
     if (operariosPorCliente[clienteId]) return; // Ya cargados
     try {
-      const usuariosRef = collection(db, 'usuarios');
+      const usuariosRef = collection(db, 'apps', 'audit', 'users');
       const q = query(usuariosRef, where('clienteAdminId', '==', clienteId), where('role', '==', 'operario'));
       const snapshot = await getDocs(q);
       setOperariosPorCliente(prev => ({
@@ -88,7 +88,7 @@ export const useClientes = () => {
   // Función para procesar pago
   const handlePago = async (cliente) => {
     try {
-      const userRef = doc(db, 'usuarios', cliente.id);
+      const userRef = doc(db, 'apps', 'audit', 'users', cliente.id);
       const fechaVencimiento = new Date();
       fechaVencimiento.setMonth(fechaVencimiento.getMonth() + 1); // 1 mes
       await updateDoc(userRef, {
@@ -99,7 +99,7 @@ export const useClientes = () => {
         ultimaModificacion: Timestamp.now()
       });
       // Agregar registro al historial de pagos
-      const pagosRef = collection(db, 'usuarios', cliente.id, 'pagos');
+      const pagosRef = collection(db, 'apps', 'audit', 'users', cliente.id, 'pagos');
       await addDoc(pagosRef, {
         fecha: Timestamp.now(),
         tipo: 'pago',
@@ -117,7 +117,7 @@ export const useClientes = () => {
   // Función para activar demo
   const handleDemo = async (cliente) => {
     try {
-      const userRef = doc(db, 'usuarios', cliente.id);
+      const userRef = doc(db, 'apps', 'audit', 'users', cliente.id);
       const fechaVencimiento = new Date();
       fechaVencimiento.setMonth(fechaVencimiento.getMonth() + 1); // 1 mes de demo
       
@@ -140,7 +140,7 @@ export const useClientes = () => {
   // Función para activar/desactivar cliente
   const handleToggleActivo = async (cliente) => {
     try {
-      const userRef = doc(db, 'usuarios', cliente.id);
+      const userRef = doc(db, 'apps', 'audit', 'users', cliente.id);
       await updateDoc(userRef, {
         activo: !cliente.activo,
         ultimaModificacion: Timestamp.now()
@@ -157,7 +157,7 @@ export const useClientes = () => {
   // Función para actualizar cliente
   const handleSaveCliente = async (clienteEditando, form) => {
     try {
-      const userRef = doc(db, 'usuarios', clienteEditando.id);
+      const userRef = doc(db, 'apps', 'audit', 'users', clienteEditando.id);
       const updateData = {
         limiteUsuarios: Number(form.limiteUsuarios),
         plan: form.plan,

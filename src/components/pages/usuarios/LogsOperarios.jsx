@@ -96,7 +96,7 @@ const LogsOperarios = () => {
       } else if (role === 'max') {
         // Clientes administradores ven sus logs y los de sus operarios
         // Primero obtener los IDs de sus operarios
-        const usuariosRef = collection(db, 'usuarios');
+        const usuariosRef = collection(db, 'apps', 'audit', 'users');
         const qOperarios = query(usuariosRef, where('clienteAdminId', '==', userProfile?.uid));
         const snapshotOperarios = await getDocs(qOperarios);
         const operariosIds = snapshotOperarios.docs.map(doc => doc.id);
@@ -126,7 +126,7 @@ const LogsOperarios = () => {
       setLogs(logsData);
 
       // Obtener información de usuarios para mostrar nombres
-      const usuariosRef = collection(db, 'usuarios');
+      const usuariosRef = collection(db, 'apps', 'audit', 'users');
       const usuariosSnapshot = await getDocs(usuariosRef);
       const usuariosData = {};
       usuariosSnapshot.docs.forEach(doc => {

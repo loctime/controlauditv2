@@ -72,7 +72,7 @@ export const useOfflineData = () => {
           const misEmpresas = empresasPropiasSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
           // Cargar usuarios operarios y sus empresas
-          const usuariosRef = collection(db, 'usuarios');
+          const usuariosRef = collection(db, 'apps', 'audit', 'users');
           const usuariosQuery = query(usuariosRef, where('clienteAdminId', '==', user.uid));
           const usuariosSnapshot = await getDocs(usuariosQuery);
           const usuariosOperarios = usuariosSnapshot.docs.map(doc => doc.id);

@@ -291,14 +291,14 @@ export const migrateAllUserData = async (oldUid, newUid) => {
 
     // 8. Migrar USUARIOS OPERARIOS (clienteAdminId)
     console.log('[migrationService] 👤 Migrando usuarios operarios...');
-    const usuariosRef = collection(db, 'usuarios');
+    const usuariosRef = collection(db, 'apps', 'audit', 'users');
     const usuariosQuery = query(usuariosRef, where('clienteAdminId', '==', oldUid));
     const usuariosSnapshot = await getDocs(usuariosQuery);
     
     const usuariosUpdates = [];
     usuariosSnapshot.docs.forEach(docSnap => {
       usuariosUpdates.push({
-        docRef: doc(db, 'usuarios', docSnap.id),
+        docRef: doc(db, 'apps', 'audit', 'users', docSnap.id),
         data: {
           clienteAdminId: newUid,
           lastUidUpdate: new Date(),

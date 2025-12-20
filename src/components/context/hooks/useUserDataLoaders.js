@@ -167,7 +167,7 @@ export const useUserDataLoaders = (
         } else if (profileToUse.email) {
           // Si no hay oldUid, buscar por email para encontrar datos antiguos
           console.log('[loadUserFormularios] No hay migratedFromUid, buscando por email:', profileToUse.email);
-          const usuariosRef = collection(db, 'usuarios');
+          const usuariosRef = collection(db, 'apps', 'audit', 'users');
           const emailQuery = query(usuariosRef, where('email', '==', profileToUse.email));
           const emailSnapshot = await getDocs(emailQuery);
           

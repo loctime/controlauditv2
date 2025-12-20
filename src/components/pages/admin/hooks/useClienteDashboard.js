@@ -42,7 +42,7 @@ export const useClienteDashboard = () => {
         }));
 
         // Cargar usuarios operarios y sus empresas en paralelo
-        const usuariosRef = collection(db, "usuarios");
+        const usuariosRef = collection(db, "apps", "audit", "users");
         const usuariosQuery = query(usuariosRef, where("clienteAdminId", "==", userProfile.uid));
         const usuariosSnapshot = await getDocs(usuariosQuery);
         const usuariosOperarios = usuariosSnapshot.docs.map(doc => doc.id);
@@ -133,7 +133,7 @@ export const useClienteDashboard = () => {
         }));
 
         // Cargar usuarios operarios
-        const usuariosRef = collection(db, "usuarios");
+        const usuariosRef = collection(db, "apps", "audit", "users");
         const usuariosQuery = query(usuariosRef, where("clienteAdminId", "==", userProfile.uid));
         const usuariosSnapshot = await getDocs(usuariosQuery);
         const usuariosOperarios = usuariosSnapshot.docs.map(doc => doc.id);
@@ -176,7 +176,7 @@ export const useClienteDashboard = () => {
       // Cargar información de usuarios en paralelo
       const usuariosPromises = Array.from(userIds).map(async (userId) => {
         try {
-          const usuarioRef = doc(db, 'usuarios', userId);
+          const usuarioRef = doc(db, 'apps', 'audit', 'users', userId);
           const usuarioDoc = await getDoc(usuarioRef);
           if (usuarioDoc.exists()) {
             return {
@@ -258,7 +258,7 @@ export const useClienteDashboard = () => {
         }));
 
         // Cargar usuarios operarios
-        const usuariosRef = collection(db, "usuarios");
+        const usuariosRef = collection(db, "apps", "audit", "users");
         const usuariosQuery = query(usuariosRef, where("clienteAdminId", "==", userProfile.uid));
         const usuariosSnapshot = await getDocs(usuariosQuery);
         const usuariosOperarios = usuariosSnapshot.docs.map(doc => doc.id);
@@ -301,7 +301,7 @@ export const useClienteDashboard = () => {
       let encargadoInfo = null;
       if (formData.encargado) {
         try {
-          const usuarioRef = doc(db, 'usuarios', formData.encargado);
+          const usuarioRef = doc(db, 'apps', 'audit', 'users', formData.encargado);
           const usuarioDoc = await getDoc(usuarioRef);
           if (usuarioDoc.exists()) {
             encargadoInfo = {
