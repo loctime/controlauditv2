@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { 
   Box, 
   Typography, 
@@ -29,6 +29,7 @@ import {
   obtenerIconoRespuesta, 
   preguntaContestada 
 } from '../utils/respuestaUtils.jsx';
+import { uploadToControlFile } from '../../../../../services/controlFileUpload';
 
 const PreguntaItem = ({
   seccionIndex,
@@ -47,10 +48,15 @@ const PreguntaItem = ({
   clasificacion,
   onClasificacionChange,
   accionRequerida,
-  onAccionRequeridaChange
+  onAccionRequeridaChange,
+  auditId,
+  companyId,
+  onImageUploaded
 }) => {
   const theme = useTheme();
   const [expandedAccion, setExpandedAccion] = useState(false);
+  const fileInputRef = useRef(null);
+  const [localProcesandoImagen, setLocalProcesandoImagen] = useState(false);
   
   // Inicializar estado local de acción requerida
   const accionData = accionRequerida || {
@@ -58,6 +64,51 @@ const PreguntaItem = ({
     accionTexto: '',
     fechaVencimiento: null
   };
+
+  // Handler para subir archivo usando ControlFile
+  const handleFileUpload = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validar que tenemos los datos necesarios
+    if (!auditId || !companyId) {
+      console.warn('⚠️ [PreguntaItem] auditId o companyId no disponibles para subir archivo');
+      return;
+    }
+
+    const key = `${seccionIndex}-${preguntaIndex}`;
+    setLocalProcesandoImagen(true);
+
+    try {
+      // Subir archivo a ControlFile
+      const result = await uploadToControlFile({
+        file,
+        auditId,
+        companyId,
+        seccionId: seccionIndex.toString(),
+        preguntaId: preguntaIndex.toString(),
+        fecha: new Date()
+      });
+
+      // Guardar solo { fileId, fileURL } en lugar del File object
+      if (onImageUploaded) {
+        onImageUploaded(seccionIndex, preguntaIndex, {
+          fileId: result.fileId,
+          fileURL: result.fileURL
+        });
+      }
+    } catch (error) {
+      console.error('❌ Error al subir archivo a ControlFile:', error);
+    } finally {
+      setLocalProcesandoImagen(false);
+      // Limpiar el input para permitir seleccionar el mismo archivo de nuevo
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
+  const isProcesando = procesandoImagen?.[`${seccionIndex}-${preguntaIndex}`] || localProcesandoImagen;
 
   return (
     <Box 
@@ -271,7 +322,7 @@ const PreguntaItem = ({
             component="span"
             startIcon={<CameraAltIcon />}
             onClick={() => onOpenCameraDialog(seccionIndex, preguntaIndex)}
-            disabled={procesandoImagen[`${seccionIndex}-${preguntaIndex}`]}
+            disabled={isProcesando}
             sx={{ 
               minWidth: isMobile ? 80 : 120,
               fontSize: isMobile ? '0.75rem' : '0.875rem',
@@ -279,7 +330,7 @@ const PreguntaItem = ({
               px: isMobile ? 1 : 2
             }}
           >
-            {procesandoImagen[`${seccionIndex}-${preguntaIndex}`] ? 'Procesando...' : 'Camara'}
+            {isProcesando ? 'Procesando...' : 'Camara'}
           </Button>
           
           <label htmlFor={`upload-gallery-${seccionIndex}-${preguntaIndex}`}>
@@ -293,11 +344,19 @@ const PreguntaItem = ({
                 py: isMobile ? 0.5 : 1,
                 px: isMobile ? 1 : 2
               }}
-              disabled={procesandoImagen[`${seccionIndex}-${preguntaIndex}`]}
+              disabled={isProcesando}
             >
-              {procesandoImagen[`${seccionIndex}-${preguntaIndex}`] ? 'Procesando...' : 'Subir'}
+              {isProcesando ? 'Procesando...' : 'Subir'}
             </Button>
           </label>
+          <input
+            id={`upload-gallery-${seccionIndex}-${preguntaIndex}`}
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handleFileUpload}
+            style={{ display: 'none' }}
+          />
         </Stack>
       </Stack>
       
@@ -324,7 +383,7 @@ const PreguntaItem = ({
           <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', alignItems: 'center' }}>
             <Box sx={{ position: 'relative' }}>
               <img
-                src={URL.createObjectURL(imagenes)}
+                src={imagenes instanceof File ? URL.createObjectURL(imagenes) : (imagenes.fileURL || imagenes.url || imagenes)}
                 alt={`Imagen de la pregunta ${preguntaIndex}`}
                 style={{ 
                   maxWidth: isMobile ? '80px' : '100px', 
@@ -334,7 +393,10 @@ const PreguntaItem = ({
                   cursor: 'pointer'
                 }}
                 onClick={() => {
-                  window.open(URL.createObjectURL(imagenes), '_blank');
+                  const imageUrl = imagenes instanceof File 
+                    ? URL.createObjectURL(imagenes) 
+                    : (imagenes.fileURL || imagenes.url || imagenes);
+                  window.open(imageUrl, '_blank');
                 }}
               />
               <Button
