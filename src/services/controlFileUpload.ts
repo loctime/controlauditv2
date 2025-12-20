@@ -2,8 +2,9 @@
 import { auth } from '../firebaseConfig';
 
 const CONTROLFILE_API_URL =
-  (import.meta as any).env?.VITE_CONTROLFILE_API_URL ??
-  'https://files.controldoc.app/api/controlfile/upload';
+  import.meta.env.VITE_CONTROLFILE_API_URL ??
+  'https://controlfile.onrender.com/upload';
+
 
 
 /**
