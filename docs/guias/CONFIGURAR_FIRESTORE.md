@@ -10,7 +10,7 @@ Necesitas configurar las reglas de Firestore manualmente en la consola de Fireba
 
 1. **Ve a la consola de Firebase:**
    - Abre https://console.firebase.google.com/
-   - Selecciona tu proyecto (probablemente `auditoria-f9fc4` o similar)
+   - Selecciona tu proyecto: `controlstorage-eb796` (migrado desde auditoria-f9fc4)
 
 2. **Navega a Firestore Database:**
    - En el menú lateral, haz clic en "Firestore Database"
@@ -36,5 +36,6 @@ Después de publicar las reglas, el usuario `1@gmail.com` debería poder:
 - ✅ Ver todas las funcionalidades
 
 ### Nota:
-Si el proyecto de Firebase es diferente, actualiza el `projectId` en `src/firebaseConfig.js` con el ID correcto.
+El proyecto Firebase es `controlstorage-eb796` (migrado desde auditoria-f9fc4).
+El `projectId` se configura mediante la variable de entorno `VITE_FIREBASE_PROJECT_ID` en `src/firebaseConfig.js`.
 

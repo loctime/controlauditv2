@@ -228,6 +228,19 @@ const AuthContextComponent = ({ children }) => {
           localStorage.setItem("userInfo", JSON.stringify(firebaseUser));
           localStorage.setItem("isLogged", JSON.stringify(true));
           
+          // Verificar que el token tenga el aud correcto (controlstorage-eb796)
+          try {
+            const token = await auth.currentUser.getIdTokenResult();
+            console.log('[AUTH] Token aud claim:', token.claims.aud);
+            if (token.claims.aud !== 'controlstorage-eb796') {
+              console.warn('[AUTH] ⚠️ Token aud no coincide con controlstorage-eb796:', token.claims.aud);
+            } else {
+              console.log('[AUTH] ✅ Token aud correcto:', token.claims.aud);
+            }
+          } catch (error) {
+            console.error('[AUTH] Error obteniendo token:', error);
+          }
+          
           const profile = await createOrGetUserProfile(firebaseUser);
           
           if (profile) {

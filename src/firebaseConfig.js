@@ -39,6 +39,9 @@ if (getApps().length === 0) {
   app = getApps()[0];
 }
 
+// Log temporal para verificar projectId (migración a controlstorage-eb796)
+console.log('[AUTH] Firebase projectId:', app.options.projectId);
+
 // Exports: auth, db, storage
 const auth = getAuth(app);
 const db = getFirestore(app);
