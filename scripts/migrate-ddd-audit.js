@@ -31,8 +31,8 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 // Configuración
-const USER_EMAIL = 'ssanabria.sh@gmail.com';
-const OLD_UID = 'pbLX5nBx2WTZV1Z0sFMJkVtSmZy2';
+const USER_EMAIL = 'ddd@gmail.com';
+const OLD_UID = 'M80UldJYWkVBLtzM0meo6Mlj4TJ2';
 const SOURCE_PROJECT_ID = 'auditoria-f9fc4';
 const TARGET_PROJECT_ID = 'controlstorage-eb796';
 

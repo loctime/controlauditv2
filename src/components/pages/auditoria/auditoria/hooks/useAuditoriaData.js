@@ -1,6 +1,6 @@
 import { useEffect, useCallback } from "react";
 import { collection, getDocs, query, where, limit } from "firebase/firestore";
-import { db } from "../../../../../firebaseControlFile";
+import { dbAudit, auditUserCollection } from "../../../../../firebaseAudit";
 import { storageUtils } from "../../../../../utils/utilitiesOptimization";
 import { useAuth } from "../../../../context/AuthContext";
 import { getCompleteUserCache } from "../../../../../services/completeOfflineCache";
@@ -230,7 +230,7 @@ export const useAuditoriaData = (
         let sucursalesData = [];
         
         if (userProfile.role === 'supermax') {
-          const sucursalesCollection = collection(db, "sucursales");
+          const sucursalesCollection = auditUserCollection(userProfile.uid, "sucursales");
           // Límite conservador: 500 sucursales para supermax
           const q = query(sucursalesCollection, limit(500));
           const snapshot = await getDocs(q);
@@ -240,13 +240,15 @@ export const useAuditoriaData = (
           }));
         } else if (userProfile.role === 'max') {
           // Cargar sucursales de empresas propias
-          const empresasRef = collection(db, "empresas");
+          const empresasRef = auditUserCollection(userProfile.uid, "empresas");
           const empresasQuery = query(empresasRef, where("propietarioId", "==", userProfile.uid));
           const empresasSnapshot = await getDocs(empresasQuery);
           const misEmpresas = empresasSnapshot.docs.map(doc => doc.id);
 
           // Cargar usuarios operarios y sus empresas
-          const usuariosRef = collection(db, "apps", "audit", "users");
+          // NOTA: Esta colección está en la estructura multi-tenant, pero necesitamos buscar en otros usuarios
+          // Por ahora mantenemos la estructura original hasta confirmar la migración completa
+          const usuariosRef = collection(dbAudit, "apps", "auditoria", "users");
           const usuariosQuery = query(usuariosRef, where("clienteAdminId", "==", userProfile.uid));
           const usuariosSnapshot = await getDocs(usuariosQuery);
           const usuariosOperarios = usuariosSnapshot.docs.map(doc => doc.id);
@@ -257,8 +259,9 @@ export const useAuditoriaData = (
 
           // Cargar empresas de operarios (con límite por operario)
           const empresasOperariosPromises = operariosLimitados.map(async (operarioId) => {
+            const operarioEmpresasRef = auditUserCollection(operarioId, "empresas");
             const operarioEmpresasQuery = query(
-              empresasRef, 
+              operarioEmpresasRef, 
               where("propietarioId", "==", operarioId),
               limit(50) // Límite conservador: 50 empresas por operario
             );
@@ -283,7 +286,7 @@ export const useAuditoriaData = (
             }
 
             const sucursalesPromises = empresasChunks.map(async (chunk) => {
-              const sucursalesRef = collection(db, "sucursales");
+              const sucursalesRef = auditUserCollection(userProfile.uid, "sucursales");
               // Límite conservador: 200 sucursales por chunk
               const sucursalesQuery = query(
                 sucursalesRef, 
@@ -302,7 +305,7 @@ export const useAuditoriaData = (
           }
         } else if (userProfile.role === 'operario' && userProfile.clienteAdminId) {
           // Operario ve sucursales de su cliente admin
-          const empresasRef = collection(db, "empresas");
+          const empresasRef = auditUserCollection(userProfile.clienteAdminId, "empresas");
           const empresasQuery = query(empresasRef, where("propietarioId", "==", userProfile.clienteAdminId));
           const empresasSnapshot = await getDocs(empresasQuery);
           const empresasIds = empresasSnapshot.docs.map(doc => doc.id);
@@ -319,7 +322,7 @@ export const useAuditoriaData = (
             }
 
             const sucursalesPromises = empresasChunks.map(async (chunk) => {
-              const sucursalesRef = collection(db, "sucursales");
+              const sucursalesRef = auditUserCollection(userProfile.clienteAdminId, "sucursales");
               // Límite conservador: 200 sucursales por chunk
               const sucursalesQuery = query(
                 sucursalesRef, 
@@ -343,7 +346,7 @@ export const useAuditoriaData = (
         
         if (empresasConSucursales.length > 0) {
           // Cargar datos completos de las empresas
-          const empresasRef = collection(db, "empresas");
+          const empresasRef = auditUserCollection(userProfile.uid, "empresas");
           const empresasQuery = query(empresasRef, where("__name__", "in", empresasConSucursales));
           const empresasSnapshot = await getDocs(empresasQuery);
           const empresasData = empresasSnapshot.docs.map(doc => ({
@@ -452,7 +455,7 @@ export const useAuditoriaData = (
         
         if (userProfile.role === 'supermax') {
           // Supermax ve todas las sucursales (con límite conservador)
-          const sucursalesCollection = collection(db, "sucursales");
+          const sucursalesCollection = auditUserCollection(userProfile.uid, "sucursales");
           const q = query(sucursalesCollection, limit(500));
           const snapshot = await getDocs(q);
           sucursalesData = snapshot.docs.map((doc) => ({
@@ -488,7 +491,7 @@ export const useAuditoriaData = (
             }
 
             const sucursalesPromises = empresasChunks.map(async (chunk) => {
-              const sucursalesRef = collection(db, "sucursales");
+              const sucursalesRef = auditUserCollection(userProfile.uid, "sucursales");
               // Límite conservador: 200 sucursales por chunk
               const sucursalesQuery = query(
                 sucursalesRef, 
@@ -572,7 +575,7 @@ export const useAuditoriaData = (
         
         if (isOnline) {
           // Cargar desde Firestore cuando hay conectividad (con límite conservador)
-          const formulariosCollection = collection(db, "formularios");
+          const formulariosCollection = auditUserCollection(userProfile.uid, "formularios");
           const q = query(formulariosCollection, limit(200));
           const snapshot = await getDocs(q);
           const todosLosFormularios = snapshot.docs.map((doc) => ({

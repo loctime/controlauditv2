@@ -8,7 +8,7 @@ import {
 } from 'firebase/auth';
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import { getFirestore } from 'firebase/firestore';
+import { getFirestore, collection } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 
 // Configuración EXPLÍCITA para ControlAudit (auditoria-f9fc4)
@@ -59,6 +59,7 @@ if (auditApp.options.projectId !== 'auditoria-f9fc4') {
 // Exports: auth, db, storage para ControlAudit
 export const auth = getAuth(auditApp);
 export const db = getFirestore(auditApp);
+export const dbAudit = db; // Alias para claridad
 export const storage = getStorage(auditApp);
 
 // Auth helpers (behavior preserved)
@@ -96,4 +97,26 @@ export const signUp = async ({ email, password }) => {
 export const forgotPassword = async (email) => {
   return sendPasswordResetEmail(auth, email);
 };
+
+/**
+ * Helper centralizado para obtener colecciones multi-tenant de auditoría
+ * Construye el path: apps/auditoria/users/{uid}/{collectionName}
+ * 
+ * @param {string} uid - UID del usuario
+ * @param {string} collectionName - Nombre de la colección (empresas, sucursales, formularios, etc.)
+ * @returns {CollectionReference} Referencia a la colección
+ */
+export function auditUserCollection(uid, collectionName) {
+  if (!uid) {
+    throw new Error('auditUserCollection: uid es requerido');
+  }
+  if (!collectionName) {
+    throw new Error('auditUserCollection: collectionName es requerido');
+  }
+  
+  const path = `apps/auditoria/users/${uid}/${collectionName}`;
+  console.log('[AUDIT PATH]', path);
+  
+  return collection(dbAudit, 'apps', 'auditoria', 'users', uid, collectionName);
+}
 
