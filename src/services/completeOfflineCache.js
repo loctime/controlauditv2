@@ -508,10 +508,24 @@ export const hasCompleteCache = async (userId) => {
 
 /**
  * Obtener estadísticas del cache
+ * @param {string} userId - ID del usuario (opcional, se obtiene de auth si no se proporciona)
  */
-export const getCacheStats = async () => {
+export const getCacheStats = async (userId = null) => {
   try {
-    const cache = await getCompleteUserCache(auth.currentUser?.uid);
+    // Obtener userId de parámetro o de auth como fallback
+    const targetUserId = userId || auth.currentUser?.uid;
+    if (!targetUserId) {
+      return {
+        hasCache: false,
+        empresas: 0,
+        formularios: 0,
+        sucursales: 0,
+        auditorias: 0,
+        age: 0
+      };
+    }
+    
+    const cache = await getCompleteUserCache(targetUserId);
     if (!cache) {
       return {
         hasCache: false,

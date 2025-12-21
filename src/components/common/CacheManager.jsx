@@ -45,12 +45,14 @@ const CacheManager = () => {
 
   // Cargar estadísticas del cache
   useEffect(() => {
-    loadCacheStats();
-  }, []);
+    if (userProfile?.uid) {
+      loadCacheStats();
+    }
+  }, [userProfile?.uid]);
 
   const loadCacheStats = async () => {
     try {
-      const stats = await getCacheStats();
+      const stats = await getCacheStats(userProfile?.uid);
       setCacheStats(stats);
     } catch (error) {
       console.error('Error cargando estadísticas de cache:', error);

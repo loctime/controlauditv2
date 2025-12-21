@@ -20,7 +20,6 @@ import ErrorIcon from '@mui/icons-material/Error';
 import InfoIcon from '@mui/icons-material/Info';
 import { uploadToControlFile } from '../../../services/controlFileUpload';
 import { useAuth } from '../../../components/context/AuthContext';
-import { auth } from '../../../firebaseConfig';
 
 const TestControlFile = () => {
   const { user, loading: authLoading, isLogged } = useAuth();
@@ -45,7 +44,6 @@ const TestControlFile = () => {
   // Actualizar información de debug visible en UI
   useEffect(() => {
     const updateDebugInfo = async () => {
-      const authCurrentUser = auth.currentUser;
       let tokenObtained = false;
       let tokenError = null;
 
@@ -59,9 +57,9 @@ const TestControlFile = () => {
       }
 
       setDebugInfo({
-        authCurrentUser: authCurrentUser ? {
-          uid: authCurrentUser.uid,
-          email: authCurrentUser.email
+        authCurrentUser: user ? {
+          uid: user.uid,
+          email: user.email
         } : null,
         userFromContext: user ? {
           uid: user.uid,
@@ -105,7 +103,7 @@ const TestControlFile = () => {
       if (!isLogged) authStatus.push('isLogged es false');
       if (authLoading) authStatus.push('authLoading es true');
       
-      const errorMsg = `Usuario no autenticado o autenticación en proceso. Estado: ${authStatus.join(', ')}. auth.currentUser: ${auth.currentUser ? 'existe' : 'null'}`;
+      const errorMsg = `Usuario no autenticado o autenticación en proceso. Estado: ${authStatus.join(', ')}. user del contexto: ${user ? 'existe' : 'null'}`;
       setError(errorMsg);
       setDebugInfo(prev => ({ ...prev, lastError: errorMsg }));
       return;
@@ -181,7 +179,7 @@ const TestControlFile = () => {
               <Stack spacing={1.5}>
                 <Box>
                   <Typography variant="body2" color="text.secondary" gutterBottom>
-                    <strong>auth.currentUser:</strong>
+                    <strong>user desde AuthContext:</strong>
                   </Typography>
                   {debugInfo.authCurrentUser ? (
                     <Chip 
@@ -191,7 +189,7 @@ const TestControlFile = () => {
                     />
                   ) : (
                     <Chip 
-                      label="❌ NULL (problema de timing)" 
+                      label="❌ NULL" 
                       color="error" 
                       size="small" 
                     />

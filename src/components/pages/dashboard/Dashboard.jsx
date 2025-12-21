@@ -3,7 +3,7 @@ import React, { useState, useEffect } from "react";
 import { Typography, Box, Grid, Paper, Alert, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Button, TextField, Dialog, DialogTitle, DialogContent, DialogActions, Card, CardContent, Tabs, Tab, CircularProgress } from "@mui/material";
 import { useAuth } from "../../context/AuthContext";
 import { collection, addDoc, setDoc, doc, updateDoc, query, where, getDocs, getDoc } from "firebase/firestore";
-import { db, auth } from "../../../firebaseAudit";
+import { db } from "../../../firebaseAudit";
 import { toast } from 'react-toastify';
 import { verifyAdminCode, verifySuperAdminCode } from "../../../config/admin";
 import GestionClientes from "./GestionClientes";
@@ -330,7 +330,7 @@ function Dashboard() {
       console.log('🔍 DIAGNÓSTICO DE BACKEND:');
       console.log('   Backend URL:', getBackendUrl());
       console.log('   Environment:', getEnvironmentInfo());
-      console.log('   Usuario autenticado:', auth.currentUser?.email);
+      console.log('   Usuario autenticado:', userProfile?.email);
       
       // Probar conectividad del backend
       try {
@@ -393,7 +393,7 @@ function Dashboard() {
         horasSemanales: 40,
         createdAt: new Date(),
         propietarioId: userRes.uid,
-        creadorId: auth.currentUser.uid,
+        creadorId: userProfile?.uid,
         activa: true
       });
 

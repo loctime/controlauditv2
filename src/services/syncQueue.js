@@ -390,13 +390,41 @@ class SyncQueueService {
     
     // OBTENER PERFIL ACTUAL DEL USUARIO AUTENTICADO DESDE FIRESTORE
     // Esto asegura que usamos el clienteAdminId correcto del usuario actual
+    // Usar función helper para obtener usuario de forma robusta (maneja problemas de timing)
     let currentUserProfile = null;
     try {
       const { auth, db: firestoreDb } = await import('../firebaseAudit');
+      const { onAuthStateChanged } = await import('firebase/auth');
       const { doc, getDoc } = await import('firebase/firestore');
       
-      const currentUser = auth.currentUser;
-      if (currentUser) {
+      // Función helper para obtener usuario actual de forma robusta
+      const getCurrentUser = () => {
+        return new Promise((resolve, reject) => {
+          if (auth.currentUser) {
+            resolve(auth.currentUser);
+            return;
+          }
+          
+          // Si no está disponible inmediatamente, esperar un poco (problema de timing)
+          const unsubscribe = onAuthStateChanged(auth, (user) => {
+            unsubscribe();
+            if (user) {
+              resolve(user);
+            } else {
+              reject(new Error('Usuario no autenticado'));
+            }
+          });
+          
+          // Timeout después de 1 segundo
+          setTimeout(() => {
+            unsubscribe();
+            reject(new Error('Timeout esperando autenticación'));
+          }, 1000);
+        });
+      };
+      
+      try {
+        const currentUser = await getCurrentUser();
         const userProfileRef = doc(firestoreDb, 'apps', 'audit', 'users', currentUser.uid);
         const userProfileSnap = await getDoc(userProfileRef);
         if (userProfileSnap.exists()) {
@@ -414,8 +442,8 @@ class SyncQueueService {
         } else {
           console.warn('[SyncQueue] ⚠️ Perfil de usuario no encontrado en Firestore para:', currentUser.uid);
         }
-      } else {
-        console.warn('[SyncQueue] ⚠️ No hay usuario autenticado actualmente');
+      } catch (userError) {
+        console.warn('[SyncQueue] ⚠️ No se pudo obtener usuario autenticado, usando datos offline:', userError.message);
       }
     } catch (error) {
       console.warn('[SyncQueue] ⚠️ No se pudo obtener perfil actual desde Firestore, usando datos offline:', error.message);

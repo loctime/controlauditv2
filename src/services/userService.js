@@ -1,6 +1,7 @@
 // src/services/userService.js
 import axios from 'axios';
 import { auth } from '../firebaseAudit';
+import { onAuthStateChanged } from 'firebase/auth';
 import { getBackendUrl } from '../config/environment.js';
 import { doc, setDoc, collection, getDocs, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../firebaseAudit';
@@ -14,16 +15,45 @@ const api = axios.create({
   timeout: 30000, // Aumentar timeout para producción
 });
 
+// Función helper para obtener el usuario actual de forma robusta
+const getCurrentUser = async () => {
+  // Intentar obtener usuario directamente
+  if (auth.currentUser) {
+    return auth.currentUser;
+  }
+  
+  // Si no está disponible inmediatamente, esperar un poco (problema de timing)
+  // Esto es un fallback para casos donde auth.currentUser aún no está sincronizado
+  return new Promise((resolve, reject) => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      unsubscribe();
+      if (user) {
+        resolve(user);
+      } else {
+        reject(new Error('Usuario no autenticado'));
+      }
+    });
+    
+    // Timeout después de 1 segundo
+    setTimeout(() => {
+      unsubscribe();
+      reject(new Error('Timeout esperando autenticación'));
+    }, 1000);
+  });
+};
+
 // Interceptor para agregar token de Firebase automáticamente
 api.interceptors.request.use(async (config) => {
   try {
-    // Verificar que el usuario esté autenticado
-    if (!auth.currentUser) {
+    // Obtener usuario de forma robusta (maneja problemas de timing)
+    const currentUser = await getCurrentUser();
+    
+    if (!currentUser) {
       console.error('❌ No hay usuario autenticado');
       throw new Error('Usuario no autenticado');
     }
     
-    const token = await auth.currentUser.getIdToken(true); // Forzar refresh del token
+    const token = await currentUser.getIdToken(true); // Forzar refresh del token
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
       console.log('✅ Token agregado a la petición');
