@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Container,
   Box,
@@ -11,14 +11,19 @@ import {
   CircularProgress,
   Card,
   CardContent,
-  Divider
+  Divider,
+  Chip
 } from '@mui/material';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import ErrorIcon from '@mui/icons-material/Error';
+import InfoIcon from '@mui/icons-material/Info';
 import { uploadToControlFile } from '../../../services/controlFileUpload';
+import { useAuth } from '../../../components/context/AuthContext';
+import { auth } from '../../../firebaseConfig';
 
 const TestControlFile = () => {
+  const { user, loading: authLoading, isLogged } = useAuth();
   const [file, setFile] = useState(null);
   const [auditId, setAuditId] = useState('test-audit-' + Date.now());
   const [companyId, setCompanyId] = useState('test-company-123');
@@ -27,6 +32,51 @@ const TestControlFile = () => {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
+  const [debugInfo, setDebugInfo] = useState({
+    authCurrentUser: null,
+    userFromContext: null,
+    isLogged: false,
+    authLoading: true,
+    tokenObtained: false,
+    tokenError: null,
+    lastError: null
+  });
+
+  // Actualizar información de debug visible en UI
+  useEffect(() => {
+    const updateDebugInfo = async () => {
+      const authCurrentUser = auth.currentUser;
+      let tokenObtained = false;
+      let tokenError = null;
+
+      if (user) {
+        try {
+          const token = await user.getIdToken();
+          tokenObtained = !!token;
+        } catch (err) {
+          tokenError = err.message || 'Error al obtener token';
+        }
+      }
+
+      setDebugInfo({
+        authCurrentUser: authCurrentUser ? {
+          uid: authCurrentUser.uid,
+          email: authCurrentUser.email
+        } : null,
+        userFromContext: user ? {
+          uid: user.uid,
+          email: user.email
+        } : null,
+        isLogged,
+        authLoading,
+        tokenObtained,
+        tokenError,
+        lastError: error
+      });
+    };
+
+    updateDebugInfo();
+  }, [user, isLogged, authLoading, error]);
 
   const handleFileChange = (event) => {
     const selectedFile = event.target.files?.[0];
@@ -48,13 +98,47 @@ const TestControlFile = () => {
       return;
     }
 
+    // Validar que el usuario esté autenticado desde el contexto
+    if (!user || !isLogged || authLoading) {
+      const authStatus = [];
+      if (!user) authStatus.push('user es null');
+      if (!isLogged) authStatus.push('isLogged es false');
+      if (authLoading) authStatus.push('authLoading es true');
+      
+      const errorMsg = `Usuario no autenticado o autenticación en proceso. Estado: ${authStatus.join(', ')}. auth.currentUser: ${auth.currentUser ? 'existe' : 'null'}`;
+      setError(errorMsg);
+      setDebugInfo(prev => ({ ...prev, lastError: errorMsg }));
+      return;
+    }
+
     setLoading(true);
     setError(null);
     setResult(null);
 
     try {
+      // Obtener el token desde el usuario del contexto
+      let idToken;
+      try {
+        idToken = await user.getIdToken();
+      } catch (tokenErr) {
+        const tokenErrorMsg = `Error al obtener token: ${tokenErr.message || tokenErr}`;
+        setError(tokenErrorMsg);
+        setDebugInfo(prev => ({ ...prev, tokenError: tokenErrorMsg, lastError: tokenErrorMsg }));
+        setLoading(false);
+        return;
+      }
+      
+      if (!idToken) {
+        const noTokenMsg = 'No se pudo obtener el token de autenticación (token es null/undefined)';
+        setError(noTokenMsg);
+        setDebugInfo(prev => ({ ...prev, tokenError: noTokenMsg, lastError: noTokenMsg }));
+        setLoading(false);
+        return;
+      }
+
       const uploadResult = await uploadToControlFile({
         file,
+        idToken,
         auditId,
         companyId,
         seccionId: seccionId || undefined,
@@ -63,10 +147,13 @@ const TestControlFile = () => {
       });
 
       setResult(uploadResult);
+      setDebugInfo(prev => ({ ...prev, tokenObtained: true, tokenError: null, lastError: null }));
       console.log('✅ Archivo subido exitosamente:', uploadResult);
     } catch (err) {
+      const errorMsg = err.message || 'Error desconocido al subir archivo';
       console.error('❌ Error al subir archivo:', err);
-      setError(err.message || 'Error desconocido al subir archivo');
+      setError(errorMsg);
+      setDebugInfo(prev => ({ ...prev, lastError: errorMsg }));
     } finally {
       setLoading(false);
     }
@@ -82,6 +169,110 @@ const TestControlFile = () => {
         </Typography>
 
         <Stack spacing={3}>
+          {/* Panel de Debug - Visible en UI para producción */}
+          <Card variant="outlined" sx={{ bgcolor: 'info.light', border: '2px solid', borderColor: 'info.main' }}>
+            <CardContent>
+              <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 2 }}>
+                <InfoIcon color="info" />
+                <Typography variant="h6">
+                  🔍 DEBUG - Estado de Autenticación (Visible en UI)
+                </Typography>
+              </Stack>
+              <Stack spacing={1.5}>
+                <Box>
+                  <Typography variant="body2" color="text.secondary" gutterBottom>
+                    <strong>auth.currentUser:</strong>
+                  </Typography>
+                  {debugInfo.authCurrentUser ? (
+                    <Chip 
+                      label={`✅ Existe (${debugInfo.authCurrentUser.email})`} 
+                      color="success" 
+                      size="small" 
+                    />
+                  ) : (
+                    <Chip 
+                      label="❌ NULL (problema de timing)" 
+                      color="error" 
+                      size="small" 
+                    />
+                  )}
+                </Box>
+                <Box>
+                  <Typography variant="body2" color="text.secondary" gutterBottom>
+                    <strong>user desde AuthContext:</strong>
+                  </Typography>
+                  {debugInfo.userFromContext ? (
+                    <Chip 
+                      label={`✅ Existe (${debugInfo.userFromContext.email})`} 
+                      color="success" 
+                      size="small" 
+                    />
+                  ) : (
+                    <Chip 
+                      label="❌ NULL" 
+                      color="error" 
+                      size="small" 
+                    />
+                  )}
+                </Box>
+                <Box>
+                  <Typography variant="body2" color="text.secondary" gutterBottom>
+                    <strong>isLogged:</strong>
+                  </Typography>
+                  <Chip 
+                    label={debugInfo.isLogged ? '✅ true' : '❌ false'} 
+                    color={debugInfo.isLogged ? 'success' : 'error'} 
+                    size="small" 
+                  />
+                </Box>
+                <Box>
+                  <Typography variant="body2" color="text.secondary" gutterBottom>
+                    <strong>authLoading:</strong>
+                  </Typography>
+                  <Chip 
+                    label={debugInfo.authLoading ? '⏳ true' : '✅ false'} 
+                    color={debugInfo.authLoading ? 'warning' : 'success'} 
+                    size="small" 
+                  />
+                </Box>
+                <Box>
+                  <Typography variant="body2" color="text.secondary" gutterBottom>
+                    <strong>Token obtenido:</strong>
+                  </Typography>
+                  <Chip 
+                    label={debugInfo.tokenObtained ? '✅ Sí' : '❌ No'} 
+                    color={debugInfo.tokenObtained ? 'success' : 'error'} 
+                    size="small" 
+                  />
+                </Box>
+                {debugInfo.tokenError && (
+                  <Box>
+                    <Typography variant="body2" color="text.secondary" gutterBottom>
+                      <strong>Error al obtener token:</strong>
+                    </Typography>
+                    <Alert severity="error" sx={{ mt: 0.5 }}>
+                      <Typography variant="body2" sx={{ wordBreak: 'break-word' }}>
+                        {debugInfo.tokenError}
+                      </Typography>
+                    </Alert>
+                  </Box>
+                )}
+                {debugInfo.lastError && (
+                  <Box>
+                    <Typography variant="body2" color="text.secondary" gutterBottom>
+                      <strong>Último error:</strong>
+                    </Typography>
+                    <Alert severity="error" sx={{ mt: 0.5 }}>
+                      <Typography variant="body2" sx={{ wordBreak: 'break-word' }}>
+                        {debugInfo.lastError}
+                      </Typography>
+                    </Alert>
+                  </Box>
+                )}
+              </Stack>
+            </CardContent>
+          </Card>
+
           {/* Campos de configuración */}
           <Card variant="outlined">
             <CardContent>
@@ -167,7 +358,7 @@ const TestControlFile = () => {
             variant="contained"
             size="large"
             onClick={handleUpload}
-            disabled={!file || loading || !auditId || !companyId}
+            disabled={!file || loading || !auditId || !companyId || !user || !isLogged || authLoading}
             startIcon={loading ? <CircularProgress size={20} /> : <CloudUploadIcon />}
             fullWidth
             sx={{ py: 1.5 }}

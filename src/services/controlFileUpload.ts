@@ -1,8 +1,8 @@
 // src/services/controlFileUpload.ts
-import { auth } from '../firebaseConfig';
 
 const CONTROLFILE_API_URL =
-  import.meta.env.VITE_CONTROLFILE_API_URL ??
+  // @ts-ignore - Vite environment variables
+  (import.meta.env?.VITE_CONTROLFILE_API_URL as string | undefined) ??
   'https://controlfile.onrender.com/upload';
 
 
@@ -11,6 +11,7 @@ const CONTROLFILE_API_URL =
  * Sube un archivo a ControlFile vía HTTP
  * @param {Object} params - Parámetros de la subida
  * @param {File} params.file - Archivo a subir
+ * @param {string} params.idToken - Firebase ID Token del usuario autenticado
  * @param {string} params.auditId - ID de la auditoría
  * @param {string} params.companyId - ID de la empresa
  * @param {string} params.seccionId - ID de la sección (opcional)
@@ -20,6 +21,7 @@ const CONTROLFILE_API_URL =
  */
 export async function uploadToControlFile({
   file,
+  idToken,
   auditId,
   companyId,
   seccionId,
@@ -27,6 +29,7 @@ export async function uploadToControlFile({
   fecha
 }: {
   file: File;
+  idToken: string;
   auditId: string;
   companyId: string;
   seccionId?: string;
@@ -34,13 +37,10 @@ export async function uploadToControlFile({
   fecha?: Date | string;
 }): Promise<{ fileId: string; fileURL: string }> {
   try {
-    // Verificar que el usuario esté autenticado
-    if (!auth.currentUser) {
-      throw new Error('Usuario no autenticado');
+    // Validar que el token esté presente
+    if (!idToken || idToken.trim() === '') {
+      throw new Error('Token de autenticación requerido: el token recibido está vacío o es inválido');
     }
-
-    // Obtener el Firebase ID Token
-    const idToken = await auth.currentUser.getIdToken();
 
     // Crear FormData
     const formData = new FormData();

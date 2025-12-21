@@ -23,6 +23,7 @@ import {
 } from '@mui/icons-material';
 import capacitacionImageService from '../../../../services/capacitacionImageService';
 import { useConnectivity } from '../../../../hooks/useConnectivity';
+import { useAuth } from '../../../../components/context/AuthContext';
 
 /**
  * Diálogo para gestionar imágenes de capacitaciones
@@ -33,6 +34,7 @@ const CapacitacionImagesDialog = ({
   capacitacion,
   onImagesUpdated
 }) => {
+  const { user, isLogged, loading: authLoading } = useAuth();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const { isOnline } = useConnectivity();
@@ -95,10 +97,23 @@ const CapacitacionImagesDialog = ({
       setImagenes(prev => [...prev, tempImage]);
       setUploadingIndex(imagenes.length);
 
+      // Validar autenticación desde el contexto
+      if (!user || !isLogged || authLoading) {
+        throw new Error('Usuario no autenticado o autenticación en proceso');
+      }
+
+      // Obtener el token desde el usuario del contexto
+      const idToken = await user.getIdToken();
+      
+      if (!idToken) {
+        throw new Error('No se pudo obtener el token de autenticación');
+      }
+
       // Subir imagen (companyId se obtendrá automáticamente si no se proporciona)
       const companyId = capacitacion.empresaId || null;
       const result = await capacitacionImageService.uploadImageSmart(
         file,
+        idToken,
         capacitacion.id,
         companyId,
         isOnline

@@ -13,14 +13,16 @@ class CapacitacionImageService {
   /**
    * Subir imagen a ControlFile (modo online)
    * @param {File} file - Archivo a subir
+   * @param {string} idToken - Firebase ID Token del usuario autenticado
    * @param {string} capacitacionId - ID de la capacitación
    * @param {string} companyId - ID de la empresa
    * @returns {Promise<{fileId: string, fileURL: string}>}
    */
-  async uploadImage(file, capacitacionId, companyId) {
+  async uploadImage(file, idToken, capacitacionId, companyId) {
     try {
       const result = await uploadToControlFile({
         file,
+        idToken,
         auditId: capacitacionId, // Reutilizar auditId para capacitaciones
         companyId,
         fecha: new Date()
@@ -97,12 +99,13 @@ class CapacitacionImageService {
   /**
    * Subir imagen (online o offline según conectividad)
    * @param {File} file - Archivo a subir
+   * @param {string} idToken - Firebase ID Token del usuario autenticado
    * @param {string} capacitacionId - ID de la capacitación
    * @param {string} companyId - ID de la empresa (opcional, se obtendrá de la capacitación si no se proporciona)
    * @param {boolean} isOnline - Si hay conexión a internet
    * @returns {Promise<Object>} Metadata de la imagen
    */
-  async uploadImageSmart(file, capacitacionId, companyId = null, isOnline = navigator.onLine) {
+  async uploadImageSmart(file, idToken, capacitacionId, companyId = null, isOnline = navigator.onLine) {
     // Si no se proporciona companyId, intentar obtenerlo de la capacitación
     let finalCompanyId = companyId;
     if (!finalCompanyId) {
@@ -123,7 +126,7 @@ class CapacitacionImageService {
 
     if (isOnline) {
       try {
-        return await this.uploadImage(file, capacitacionId, finalCompanyId);
+        return await this.uploadImage(file, idToken, capacitacionId, finalCompanyId);
       } catch (error) {
         console.warn('⚠️ Fallo en subida online, guardando offline:', error);
         // Si falla online, guardar offline (con companyId para sincronización posterior)

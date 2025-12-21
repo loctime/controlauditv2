@@ -30,6 +30,7 @@ import {
   preguntaContestada 
 } from '../utils/respuestaUtils.jsx';
 import { uploadToControlFile } from '../../../../../services/controlFileUpload';
+import { useAuth } from '../../../../../components/context/AuthContext';
 
 const PreguntaItem = ({
   seccionIndex,
@@ -53,6 +54,7 @@ const PreguntaItem = ({
   companyId,
   onImageUploaded
 }) => {
+  const { user, isLogged, loading: authLoading } = useAuth();
   const theme = useTheme();
   const [expandedAccion, setExpandedAccion] = useState(false);
   const fileInputRef = useRef(null);
@@ -76,13 +78,27 @@ const PreguntaItem = ({
       return;
     }
 
+    // Validar autenticación desde el contexto
+    if (!user || !isLogged || authLoading) {
+      console.error('❌ [PreguntaItem] Usuario no autenticado o autenticación en proceso');
+      return;
+    }
+
     const key = `${seccionIndex}-${preguntaIndex}`;
     setLocalProcesandoImagen(true);
 
     try {
+      // Obtener el token desde el usuario del contexto
+      const idToken = await user.getIdToken();
+      
+      if (!idToken) {
+        throw new Error('No se pudo obtener el token de autenticación');
+      }
+
       // Subir archivo a ControlFile
       const result = await uploadToControlFile({
         file,
+        idToken,
         auditId,
         companyId,
         seccionId: seccionIndex.toString(),
