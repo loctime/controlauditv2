@@ -10,7 +10,7 @@ import {
   where, 
   onSnapshot
 } from 'firebase/firestore';
-import { db } from '../firebaseControlFile';
+import { db, auditUserCollection } from '../firebaseControlFile';
 import { registrarAccionSistema } from '../utils/firestoreUtils';
 
 export const empresaService = {
@@ -19,7 +19,7 @@ export const empresaService = {
     try {
       if (!userId) return [];
 
-      const empresasRef = collection(db, "empresas");
+      const empresasRef = auditUserCollection(userId, "empresas");
       let snapshot;
 
       if (role === 'supermax') {
@@ -56,7 +56,7 @@ export const empresaService = {
           if (empresasAntiguas.length > 0 && empresasNuevas.length === 0) {
             console.log(`[empresaService] 🔄 Encontradas ${empresasAntiguas.length} empresas con UID antiguo, migrando...`);
             const empresasUpdatePromises = empresasAntiguas.map(async (empresa) => {
-              await updateDoc(doc(db, "empresas", empresa.id), {
+              await updateDoc(doc(empresasRef, empresa.id), {
                 propietarioId: userId,
                 lastUidUpdate: new Date(),
                 migratedFromUid: migratedFromUid
@@ -77,12 +77,38 @@ export const empresaService = {
           
           return todasEmpresas;
         } else {
-          // Búsqueda normal por UID
-          const q = query(empresasRef, where("propietarioId", "==", userId));
-          snapshot = await getDocs(q);
+          // Búsqueda múltiple: propietarioId, creadorId, socios, migratedFromUid
+          console.log('[empresaService] 🔍 Buscando empresas para userId:', userId);
+          
+          const queries = [
+            query(empresasRef, where("propietarioId", "==", userId)),
+            query(empresasRef, where("creadorId", "==", userId)),
+            query(empresasRef, where("migratedFromUid", "==", userId)),
+            query(empresasRef, where("socios", "array-contains", userId))
+          ];
+          
+          const snapshots = await Promise.all(queries.map(q => getDocs(q).catch(() => ({ empty: true, docs: [] }))));
+          
+          // Combinar todos los resultados sin duplicados
+          const todasEmpresasMap = new Map();
+          snapshots.forEach(snap => {
+            snap.docs.forEach(doc => {
+              if (!todasEmpresasMap.has(doc.id)) {
+                todasEmpresasMap.set(doc.id, { id: doc.id, ...doc.data() });
+              }
+            });
+          });
+          
+          const todasEmpresas = Array.from(todasEmpresasMap.values());
+          console.log(`[empresaService] 📦 Encontradas ${todasEmpresas.length} empresas (propietario: ${snapshots[0].docs.length}, creador: ${snapshots[1].docs.length}, migradas: ${snapshots[2].docs.length}, socios: ${snapshots[3].docs.length})`);
+          
+          // Si encuentra empresas, retornarlas
+          if (todasEmpresas.length > 0) {
+            return todasEmpresas;
+          }
           
           // Si no encuentra empresas y hay email, buscar por email del propietario (fallback)
-          if (snapshot.empty && userEmail) {
+          if (userEmail) {
             console.log('[empresaService] 🔍 No se encontraron empresas por UID, buscando por email del propietario...');
             // Buscar usuarios con este email y obtener sus UIDs
             const usuariosRef = collection(db, 'apps', 'audit', 'users');
@@ -101,13 +127,13 @@ export const empresaService = {
               });
               
               const empresasArrays = await Promise.all(empresasPromises);
-              const todasEmpresas = empresasArrays.flat();
+              const empresasPorEmail = empresasArrays.flat();
               
-              if (todasEmpresas.length > 0) {
-                console.log(`[empresaService] 📦 Encontradas ${todasEmpresas.length} empresas, migrando al nuevo UID...`);
+              if (empresasPorEmail.length > 0) {
+                console.log(`[empresaService] 📦 Encontradas ${empresasPorEmail.length} empresas por email, migrando al nuevo UID...`);
                 // Migrar todas las empresas al nuevo UID
-                const empresasUpdatePromises = todasEmpresas.map(async (empresa) => {
-                  await updateDoc(doc(db, "empresas", empresa.id), {
+                const empresasUpdatePromises = empresasPorEmail.map(async (empresa) => {
+                  await updateDoc(doc(empresasRef, empresa.id), {
                     propietarioId: userId,
                     lastUidUpdate: new Date(),
                     migratedFromUid: empresa.propietarioId
@@ -115,29 +141,54 @@ export const empresaService = {
                 });
                 await Promise.all(empresasUpdatePromises);
                 console.log('[empresaService] ✅ Empresas migradas exitosamente');
-                return todasEmpresas;
+                return empresasPorEmail;
               }
             }
           }
+          
+          return [];
         }
       } else {
+        // Operario: buscar empresas del cliente admin Y empresas donde es creador/socio
         const userRef = doc(db, "apps", "audit", "users", userId);
         const userSnap = await getDoc(userRef);
+        let todasEmpresasOperario = [];
+        
         if (userSnap.exists()) {
           const userData = userSnap.data();
           const adminId = userData.clienteAdminId;
+          
           if (adminId) {
-            const q = query(empresasRef, where("propietarioId", "==", adminId));
-            snapshot = await getDocs(q);
-          } else {
-            snapshot = { docs: [] };
+            // Buscar empresas del admin
+            const qAdmin = query(empresasRef, where("propietarioId", "==", adminId));
+            const snapAdmin = await getDocs(qAdmin);
+            todasEmpresasOperario.push(...snapAdmin.docs.map(doc => ({ id: doc.id, ...doc.data() })));
           }
-        } else {
-          snapshot = { docs: [] };
+          
+          // También buscar empresas donde el operario es creador o socio
+          const queriesOperario = [
+            query(empresasRef, where("creadorId", "==", userId)),
+            query(empresasRef, where("socios", "array-contains", userId))
+          ];
+          
+          const snapshotsOperario = await Promise.all(
+            queriesOperario.map(q => getDocs(q).catch(() => ({ docs: [] })))
+          );
+          
+          snapshotsOperario.forEach(snap => {
+            snap.docs.forEach(doc => {
+              if (!todasEmpresasOperario.find(e => e.id === doc.id)) {
+                todasEmpresasOperario.push({ id: doc.id, ...doc.data() });
+              }
+            });
+          });
         }
+        
+        return todasEmpresasOperario;
       }
 
-      // Si snapshot es un objeto con docs (no es un array de empresas)
+      // Este código ya no debería ejecutarse para role 'max' porque retornamos antes
+      // Pero lo mantenemos por compatibilidad con otros roles
       if (snapshot && snapshot.docs) {
         return snapshot.docs.map(doc => ({
           id: doc.id,
@@ -340,7 +391,8 @@ export const empresaService = {
   // Crear empresa (multi-tenant)
   async crearEmpresa(empresaData, user, role, userProfile) {
     try {
-      const empresaRef = collection(db, "empresas");
+      if (!user?.uid) throw new Error('Usuario no autenticado');
+      const empresaRef = auditUserCollection(user.uid, "empresas");
       
       let propietarioId, propietarioEmail, propietarioRole;
       let creadorId, creadorEmail, creadorRole;
@@ -381,7 +433,7 @@ export const empresaService = {
       const docRef = await addDoc(empresaRef, nuevaEmpresa);
       
       // Crear automáticamente sucursal "Casa Central"
-      const sucursalesRef = collection(db, "sucursales");
+      const sucursalesRef = auditUserCollection(user.uid, "sucursales");
       const sucursalCasaCentral = {
         nombre: "Casa Central",
         empresaId: docRef.id,
@@ -428,7 +480,9 @@ export const empresaService = {
   // Actualizar empresa
   async updateEmpresa(empresaId, updateData, userProfile) {
     try {
-      const empresaRef = doc(db, 'empresas', empresaId);
+      if (!userProfile?.uid) throw new Error('Usuario no autenticado');
+      const empresasRef = auditUserCollection(userProfile.uid, "empresas");
+      const empresaRef = doc(empresasRef, empresaId);
       await updateDoc(empresaRef, {
         ...updateData,
         ultimaModificacion: new Date(),
@@ -461,7 +515,8 @@ export const empresaService = {
 
       for (const empresa of empresasAVerificar) {
         if (!empresa.propietarioId) {
-          const empresaRef = doc(db, "empresas", empresa.id);
+          const empresasRef = auditUserCollection(userProfile.uid, "empresas");
+          const empresaRef = doc(empresasRef, empresa.id);
           await updateDoc(empresaRef, {
             propietarioId: userProfile.uid,
             propietarioEmail: userProfile.email,

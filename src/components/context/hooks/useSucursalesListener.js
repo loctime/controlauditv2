@@ -1,6 +1,6 @@
 import { useEffect, useMemo } from 'react';
 import { collection, getDocs, query, where, onSnapshot } from 'firebase/firestore';
-import { db } from '../../../firebaseControlFile.js';
+import { db, auditUserCollection } from '../../../firebaseControlFile.js';
 
 /**
  * Hook para listener reactivo de sucursales con chunking y fallback offline
@@ -28,7 +28,7 @@ export const useSucursalesListener = (userProfile, role, userEmpresas, setUserSu
     }
 
     setLoadingSucursales(true);
-    const sucursalesRef = collection(db, 'sucursales');
+    const sucursalesRef = auditUserCollection(userProfile.uid, 'sucursales');
     let q;
 
     if (role === 'supermax') {
