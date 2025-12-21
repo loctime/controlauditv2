@@ -100,10 +100,10 @@ export const forgotPassword = async (email) => {
 };
 
 /**
- * Helper centralizado para obtener colecciones multi-tenant de auditoría
- * Construye el path: apps/auditoria/users/{uid}/{collectionName}
+ * Helper centralizado para obtener colecciones de auditoría
+ * Construye el path en la raíz: {collectionName}
  * 
- * @param {string} uid - UID del usuario
+ * @param {string} uid - UID del usuario (para logging)
  * @param {string} collectionName - Nombre de la colección (empresas, sucursales, formularios, etc.)
  * @returns {CollectionReference} Referencia a la colección
  */
@@ -115,9 +115,9 @@ export function auditUserCollection(uid, collectionName) {
     throw new Error('auditUserCollection: collectionName es requerido');
   }
   
-  const path = `apps/auditoria/users/${uid}/${collectionName}`;
-  console.log('[AUDIT PATH]', path);
+  const path = `${collectionName}`;
+  console.log('[AUDIT PATH]', path, `(uid: ${uid})`);
   
-  return collection(dbAudit, 'apps', 'auditoria', 'users', uid, collectionName);
+  return collection(dbAudit, collectionName);
 }
 
