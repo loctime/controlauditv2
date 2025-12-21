@@ -29,3 +29,6 @@ dist-ssr
 backend/serviceAccountKey.json
 backend/.env
 backend/.env.*
+
+# Firebase / Google Cloud
+backend/serviceAccountKey.json
