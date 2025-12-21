@@ -1,9 +1,9 @@
 // src/services/userService.js
 import axios from 'axios';
-import { auth } from '../firebaseConfig';
+import { auth } from '../firebaseAudit';
 import { getBackendUrl } from '../config/environment.js';
 import { doc, setDoc, collection, getDocs, updateDoc, deleteDoc } from 'firebase/firestore';
-import { db } from '../firebaseConfig';
+import { db } from '../firebaseAudit';
 
 // Usar la URL del backend desde la configuración del entorno
 const API_BASE_URL = `${getBackendUrl()}/api`;

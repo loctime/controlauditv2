@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Button, TextField, Typography, Box } from "@mui/material";
 import { ArrowBack } from "@mui/icons-material";
 import { collection, addDoc, Timestamp } from "firebase/firestore";
-import { db } from "../../../firebaseConfig";
+import { db } from "../../../firebaseAudit";
 import { useAuth } from "../../context/AuthContext";
 import Swal from 'sweetalert2';
 import { useNavigate } from "react-router-dom";

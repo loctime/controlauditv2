@@ -29,7 +29,7 @@ import {
   CloudUpload as CloudUploadIcon
 } from '@mui/icons-material';
 import { collection, query, where, getDocs, deleteDoc, doc } from 'firebase/firestore';
-import { db } from '../../../firebaseConfig';
+import { db } from '../../../firebaseAudit';
 import { useAuth } from '../../context/AuthContext';
 import { useGlobalSelection } from '../../../hooks/useGlobalSelection';
 import EmpleadoForm from './EmpleadoForm';

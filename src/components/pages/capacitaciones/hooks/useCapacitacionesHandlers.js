@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 import { collection, addDoc, updateDoc, doc, Timestamp } from 'firebase/firestore';
-import { db } from '../../../../firebaseConfig';
+import { db } from '../../../../firebaseAudit';
 
 /**
  * Hook para manejar las acciones de capacitaciones

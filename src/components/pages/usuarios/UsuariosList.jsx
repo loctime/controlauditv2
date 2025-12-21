@@ -24,7 +24,7 @@ import {
 } from '@mui/material';
 import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon } from '@mui/icons-material';
 import { collection, getDocs, doc, deleteDoc, updateDoc, setDoc, query, where } from 'firebase/firestore';
-import { db } from '../../../firebaseConfig';
+import { db } from '../../../firebaseAudit';
 import { useAuth } from '../../context/AuthContext';
 import { toast } from 'react-toastify';
 import { registrarAccionSistema } from '../../../utils/firestoreUtils';

@@ -16,7 +16,7 @@ import {
 } from '@mui/material';
 import { Warning as WarningIcon, Refresh as RefreshIcon } from '@mui/icons-material';
 import { doc, updateDoc, Timestamp } from 'firebase/firestore';
-import { db } from '../../../../firebaseConfig';
+import { db } from '../../../../firebaseAudit';
 import Swal from 'sweetalert2';
 
 /**

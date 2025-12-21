@@ -10,7 +10,7 @@ import {
 } from '@mui/material';
 import PeopleIcon from '@mui/icons-material/People';
 import { collection, getDocs, query, where } from 'firebase/firestore';
-import { db } from '../../../../firebaseConfig';
+import { db } from '../../../../firebaseAudit';
 import { useNavigate } from 'react-router-dom';
 
 const EmpleadosTab = ({ empresaId, empresaNombre }) => {

@@ -29,7 +29,7 @@ import {
   Save as SaveIcon
 } from '@mui/icons-material';
 import { collection, getDocs, query, where, updateDoc, doc, Timestamp } from 'firebase/firestore';
-import { db } from '../../../firebaseConfig';
+import { db } from '../../../firebaseAudit';
 import { useAuth } from '../../context/AuthContext';
 import Swal from 'sweetalert2';
 import ConfirmacionGuardadoModal from './ConfirmacionGuardadoModal';

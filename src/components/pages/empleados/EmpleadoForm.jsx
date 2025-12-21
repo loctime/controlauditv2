@@ -11,7 +11,7 @@ import {
   CircularProgress
 } from '@mui/material';
 import { collection, addDoc, updateDoc, doc, Timestamp } from 'firebase/firestore';
-import { db } from '../../../firebaseConfig';
+import { db } from '../../../firebaseAudit';
 import { useAuth } from '../../context/AuthContext';
 
 export default function EmpleadoForm({ open, onClose, onSave, empleado, sucursalId, empresaId }) {

@@ -1,6 +1,6 @@
 import { useEffect, useCallback } from "react";
 import { collection, getDocs, query, where, limit } from "firebase/firestore";
-import { db } from "../../../../../firebaseConfig";
+import { db } from "../../../../../firebaseAudit";
 import { storageUtils } from "../../../../../utils/utilitiesOptimization";
 import { useAuth } from "../../../../context/AuthContext";
 import { getCompleteUserCache } from "../../../../../services/completeOfflineCache";

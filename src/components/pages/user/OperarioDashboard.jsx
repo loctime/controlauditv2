@@ -31,7 +31,7 @@ import {
 } from "@mui/icons-material";
 import { useAuth } from "../../context/AuthContext";
 import { collection, query, where, getDocs, orderBy, limit } from "firebase/firestore";
-import { db } from "../../../firebaseConfig";
+import { db } from "../../../firebaseAudit";
 
 const OperarioDashboard = () => {
   const { user, userProfile, role } = useAuth();

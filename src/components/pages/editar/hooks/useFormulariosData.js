@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { collection, onSnapshot, doc, getDoc } from 'firebase/firestore';
-import { db } from '../../../../firebaseConfig';
+import { db } from '../../../../firebaseAudit';
 
 /**
  * Hook para cargar formularios con cache y filtrado multi-tenant

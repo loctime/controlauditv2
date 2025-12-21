@@ -1,17 +1,13 @@
 import { initializeApp, getApps } from 'firebase/app';
-import {
-  signInWithEmailAndPassword,
-  getAuth,
-  signOut,
-  createUserWithEmailAndPassword,
-  sendPasswordResetEmail,
-} from 'firebase/auth';
-import { toast } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
+import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 
-// Single Firebase configuration - require env vars (no fallbacks)
+// ⚠️ CONFIGURACIÓN SOLO PARA CONTROLFILE (controlstorage-eb796)
+// Este archivo se usa EXCLUSIVAMENTE para ControlFile integration
+// Para Firestore y Auth de ControlAudit, usar firebaseAudit.js
+
+// Configuración de Firebase para ControlFile (controlstorage-eb796)
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
   authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
@@ -21,66 +17,36 @@ const firebaseConfig = {
   appId: import.meta.env.VITE_FIREBASE_APP_ID,
 };
 
-// Fail fast if required env vars are missing
+// Validación: verificar que las variables estén configuradas
 if (!firebaseConfig.apiKey || !firebaseConfig.authDomain || !firebaseConfig.projectId) {
   const missing = [];
   if (!firebaseConfig.apiKey) missing.push('VITE_FIREBASE_API_KEY');
   if (!firebaseConfig.authDomain) missing.push('VITE_FIREBASE_AUTH_DOMAIN');
   if (!firebaseConfig.projectId) missing.push('VITE_FIREBASE_PROJECT_ID');
-  console.error('[firebaseConfig] Missing required env vars:', missing.join(', '));
-  throw new Error('Missing required Firebase environment variables');
+  console.warn('[firebaseConfig] ⚠️ Variables de ControlFile no configuradas:', missing.join(', '));
+  console.warn('[firebaseConfig] ControlFile puede no funcionar correctamente sin estas variables.');
 }
 
-// Initialize single app (idempotent)
+// Inicializar app con nombre explícito para ControlFile
+const APP_NAME = 'controlfile-firebase';
 let app;
-if (getApps().length === 0) {
-  app = initializeApp(firebaseConfig);
+const existingApps = getApps();
+const existingApp = existingApps.find(a => a.name === APP_NAME);
+
+if (existingApp) {
+  app = existingApp;
 } else {
-  app = getApps()[0];
+  app = initializeApp(firebaseConfig, APP_NAME);
 }
 
-// Log temporal para verificar projectId (migración a controlstorage-eb796)
-console.log('[AUTH] Firebase projectId:', app.options.projectId);
+// Log de verificación
+console.log('[firebaseConfig] 🔧 ControlFile Firebase inicializado - projectId:', app.options.projectId);
 
-// Exports: auth, db, storage
-const auth = getAuth(app);
-const db = getFirestore(app);
-const storage = getStorage(app);
+// Exports: auth, db, storage para ControlFile
+// NOTA: Estos solo deben usarse para ControlFile integration
+export const auth = getAuth(app);
+export const db = getFirestore(app);
+export const storage = getStorage(app);
 
-// Auth helpers (behavior preserved)
-export const onSignIn = async ({ email, password }) => {
-  try {
-    const res = await signInWithEmailAndPassword(auth, email, password);
-    return res;
-  } catch (error) {
-    throw error;
-  }
-};
-
-export const logout = () => {
-  return signOut(auth).catch((error) => {
-    console.error('Error al cerrar sesión:', error);
-    throw error;
-  });
-};
-
-export const signUp = async ({ email, password }) => {
-  try {
-    const res = await createUserWithEmailAndPassword(auth, email, password);
-    toast.success('Registro exitoso!', { position: 'top-left', autoClose: 3000 });
-    return res;
-  } catch (error) {
-    if (error.code === 'auth/email-already-in-use') {
-      toast.error('El correo electrónico ya está en uso.', { position: 'top-left', autoClose: 5000 });
-    } else {
-      toast.error('Error al registrar. Por favor, inténtalo de nuevo.', { position: 'top-left', autoClose: 5000 });
-    }
-    throw error;
-  }
-};
-
-export const forgotPassword = async (email) => {
-  return sendPasswordResetEmail(auth, email);
-};
-
-export { db, storage, auth };
+// Exportar configuración para uso en controlFileUpload.ts
+export { firebaseConfig };

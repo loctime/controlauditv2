@@ -1,6 +1,6 @@
 // Servicio centralizado para operaciones de auditoría
 import { collection, addDoc, getDocs, query, where, orderBy, serverTimestamp } from 'firebase/firestore';
-import { db } from '../../../firebaseConfig';
+import { db } from '../../../firebaseAudit';
 import { uploadToControlFile, getDownloadUrl } from '../../../services/controlFileService';
 import { getControlFileFolders } from '../../../services/controlFileInit';
 import { prepararDatosParaFirestore, registrarAccionSistema } from '../../../utils/firestoreUtils';

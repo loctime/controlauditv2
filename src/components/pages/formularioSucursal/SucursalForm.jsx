@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Button, TextField, Grid, Typography, Box, MenuItem, FormControl, InputLabel, Select, Paper, Alert, CircularProgress } from "@mui/material";
-import { db } from "../../../firebaseConfig";
+import { db } from "../../../firebaseAudit";
 import { getDocs, collection, query, where } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";

@@ -21,7 +21,7 @@ import "./Navbar.css";
 import { useState } from "react";
 import LogoutIcon from "@mui/icons-material/Logout";
 import { getMenuItems } from "../../../router/navigation";
-import { logout } from "../../../firebaseConfig";
+import { logout } from "../../../firebaseAudit";
 import { useAuth } from "../../context/AuthContext";
 import Brightness4Icon from '@mui/icons-material/Brightness4';
 import Brightness7Icon from '@mui/icons-material/Brightness7';

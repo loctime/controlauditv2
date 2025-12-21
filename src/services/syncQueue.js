@@ -392,7 +392,7 @@ class SyncQueueService {
     // Esto asegura que usamos el clienteAdminId correcto del usuario actual
     let currentUserProfile = null;
     try {
-      const { auth, db: firestoreDb } = await import('../firebaseConfig');
+      const { auth, db: firestoreDb } = await import('../firebaseAudit');
       const { doc, getDoc } = await import('firebase/firestore');
       
       const currentUser = auth.currentUser;

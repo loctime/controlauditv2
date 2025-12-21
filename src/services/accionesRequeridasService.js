@@ -16,7 +16,7 @@ import {
   serverTimestamp,
   Timestamp
 } from 'firebase/firestore';
-import { db } from '../firebaseConfig';
+import { db } from '../firebaseAudit';
 
 class AccionesRequeridasService {
   /**

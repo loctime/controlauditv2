@@ -20,7 +20,7 @@ import {
 import { Add, Person, PersonOff } from "@mui/icons-material";
 import { toast } from 'react-toastify';
 import { collection, getDocs, query, where } from "firebase/firestore";
-import { db } from "../../../../firebaseConfig";
+import { db } from "../../../../firebaseAudit";
 import { useAuth } from "../../../context/AuthContext";
 
 const AgendarAuditoriaDialog = ({ open, onClose, onSave, empresas, sucursales, formularios, fechaPreestablecida }) => {

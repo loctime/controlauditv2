@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import { collection, getDocs, query, where, orderBy, limit, deleteDoc, doc } from "firebase/firestore";
-import { db } from "../../../../firebaseConfig";
+import { db } from "../../../../firebaseAudit";
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
   Button,

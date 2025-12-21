@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 import { doc, updateDoc, deleteDoc } from "firebase/firestore";
-import { db } from "../../../../firebaseConfig";
+import { db } from "../../../../firebaseAudit";
 import Swal from 'sweetalert2';
 import { registrarAccionSistema } from '../../../../utils/firestoreUtils';
 

@@ -25,7 +25,7 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import Swal from 'sweetalert2';
 import { useAuth } from "../../../context/AuthContext";
 import { doc, updateDoc } from "firebase/firestore";
-import { db } from "../../../../firebaseConfig";
+import { db } from "../../../../firebaseAudit";
 
 // Hooks personalizados
 import { useAuditoriaState } from "./hooks/useAuditoriaState";

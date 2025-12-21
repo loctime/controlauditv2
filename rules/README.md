@@ -215,3 +215,12 @@ CONTROLFILE/
 4. ✅ CONTROLFILE combina todas las apps en un solo `firestore.rules`
 5. ✅ Otras apps pueden generar `firestore.rules` para testing, pero NO desplegarlo
 
+---
+
+## 📚 Documentación Específica de ControlAudit
+
+Para información detallada sobre cómo ControlAudit se conecta con CONTROLFILE, ver:
+- **[CONTROLFILE_FIRESTORE_RULES.md](../docs/CONTROLFILE_FIRESTORE_RULES.md)** - Guía completa de integración
+- **[CONTROLFILE_INTEGRATION.md](../CONTROLFILE_INTEGRATION.md)** - Integración de almacenamiento de archivos
+- **[CONTROLFILE_SETUP.md](../CONTROLFILE_SETUP.md)** - Configuración rápida
+

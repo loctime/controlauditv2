@@ -14,7 +14,7 @@ import {
 } from '@mui/material';
 import SchoolIcon from '@mui/icons-material/School';
 import { collection, getDocs, query, where } from 'firebase/firestore';
-import { db } from '../../../../firebaseConfig';
+import { db } from '../../../../firebaseAudit';
 
 const CapacitacionesContent = ({ sucursalId, sucursalNombre, navigateToPage }) => {
   const [capacitaciones, setCapacitaciones] = useState([]);

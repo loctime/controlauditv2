@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 import { collection, getDocs, query, where } from 'firebase/firestore';
-import { db } from '../../../firebaseConfig.js';
+import { db } from '../../../firebaseAudit.js';
 import { empresaService } from '../../../services/empresaService';
 import { auditoriaService } from '../../../services/auditoriaService';
 

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { collection, getDocs, query, where, orderBy } from 'firebase/firestore';
-import { db } from '../../../../firebaseConfig.js';
+import { db } from '../../../../firebaseAudit.js';
 
 /**
  * Hook para cargar datos del dashboard de seguridad

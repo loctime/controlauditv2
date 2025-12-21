@@ -8,9 +8,9 @@ import {
   getDoc, 
   query, 
   where, 
-  onSnapshot 
+  onSnapshot
 } from 'firebase/firestore';
-import { db } from '../firebaseConfig';
+import { db } from '../firebaseAudit';
 import { registrarAccionSistema } from '../utils/firestoreUtils';
 
 export const empresaService = {
@@ -166,50 +166,175 @@ export const empresaService = {
     }
 
     setLoadingEmpresas(true);
-    let q;
     const empresasRef = collection(db, "empresas");
+    const unsubscribes = [];
+    const empresasMaps = []; // Array de Maps, uno por cada query
+
+    // Función para unificar resultados de todas las queries y actualizar estado
+    const updateEmpresas = () => {
+      const empresasUnificadasMap = new Map();
+      // Combinar todos los Maps en uno solo (elimina duplicados por id)
+      empresasMaps.forEach(map => {
+        map.forEach((empresa, id) => {
+          empresasUnificadasMap.set(id, empresa);
+        });
+      });
+      const empresasUnificadas = Array.from(empresasUnificadasMap.values());
+      setUserEmpresas(empresasUnificadas);
+      setLoadingEmpresas(false);
+    };
+
+    // Función para manejar errores
+    const handleError = async (error) => {
+      console.error('❌ Error en listener de empresas:', error);
+      
+      // Fallback al cache offline
+      if (loadUserFromCache) {
+        try {
+          const cachedData = await loadUserFromCache();
+          if (cachedData?.empresas && cachedData.empresas.length > 0) {
+            console.log('🔄 [Offline] Usando empresas del cache IndexedDB:', cachedData.empresas.length);
+            setUserEmpresas(cachedData.empresas);
+            setLoadingEmpresas(false);
+            return;
+          }
+        } catch (cacheError) {
+          console.error('Error cargando empresas desde cache:', cacheError);
+        }
+      }
+      
+      setUserEmpresas([]);
+      setLoadingEmpresas(false);
+    };
 
     if (role === 'supermax') {
-      q = empresasRef;
+      // Supermax ve todas las empresas
+      const empresasMap = new Map();
+      empresasMaps.push(empresasMap);
+      const unsubscribe = onSnapshot(empresasRef, 
+        (snapshot) => {
+          empresasMap.clear(); // Limpiar antes de agregar nuevos
+          snapshot.docs.forEach(doc => {
+            empresasMap.set(doc.id, { id: doc.id, ...doc.data() });
+          });
+          updateEmpresas();
+        }, 
+        handleError
+      );
+      unsubscribes.push(unsubscribe);
     } else if (role === 'max') {
-      q = query(empresasRef, where("propietarioId", "==", userProfile.uid));
+      // Max: buscar por propietarioId, creadorId y socios
+      const userId = userProfile.uid;
+      
+      // Query 1: propietarioId
+      const empresasMap1 = new Map();
+      empresasMaps.push(empresasMap1);
+      const qPropietario = query(empresasRef, where("propietarioId", "==", userId));
+      const unsubscribe1 = onSnapshot(qPropietario,
+        (snapshot) => {
+          empresasMap1.clear(); // Limpiar antes de agregar nuevos
+          snapshot.docs.forEach(doc => {
+            empresasMap1.set(doc.id, { id: doc.id, ...doc.data() });
+          });
+          updateEmpresas();
+        },
+        handleError
+      );
+      unsubscribes.push(unsubscribe1);
+
+      // Query 2: creadorId
+      const empresasMap2 = new Map();
+      empresasMaps.push(empresasMap2);
+      const qCreador = query(empresasRef, where("creadorId", "==", userId));
+      const unsubscribe2 = onSnapshot(qCreador,
+        (snapshot) => {
+          empresasMap2.clear(); // Limpiar antes de agregar nuevos
+          snapshot.docs.forEach(doc => {
+            empresasMap2.set(doc.id, { id: doc.id, ...doc.data() });
+          });
+          updateEmpresas();
+        },
+        handleError
+      );
+      unsubscribes.push(unsubscribe2);
+
+      // Query 3: socios (array-contains)
+      const empresasMap3 = new Map();
+      empresasMaps.push(empresasMap3);
+      const qSocios = query(empresasRef, where("socios", "array-contains", userId));
+      const unsubscribe3 = onSnapshot(qSocios,
+        (snapshot) => {
+          empresasMap3.clear(); // Limpiar antes de agregar nuevos
+          snapshot.docs.forEach(doc => {
+            empresasMap3.set(doc.id, { id: doc.id, ...doc.data() });
+          });
+          updateEmpresas();
+        },
+        handleError
+      );
+      unsubscribes.push(unsubscribe3);
     } else if (role === 'operario' && userProfile.clienteAdminId) {
-      q = query(empresasRef, where("propietarioId", "==", userProfile.clienteAdminId));
+      // Operario: buscar por propietarioId, creadorId y socios del clienteAdminId
+      const adminId = userProfile.clienteAdminId;
+      const userId = userProfile.uid;
+      
+      // Query 1: propietarioId del admin
+      const empresasMapOp1 = new Map();
+      empresasMaps.push(empresasMapOp1);
+      const qPropietarioAdmin = query(empresasRef, where("propietarioId", "==", adminId));
+      const unsubscribe1 = onSnapshot(qPropietarioAdmin,
+        (snapshot) => {
+          empresasMapOp1.clear(); // Limpiar antes de agregar nuevos
+          snapshot.docs.forEach(doc => {
+            empresasMapOp1.set(doc.id, { id: doc.id, ...doc.data() });
+          });
+          updateEmpresas();
+        },
+        handleError
+      );
+      unsubscribes.push(unsubscribe1);
+
+      // Query 2: creadorId del usuario actual
+      const empresasMapOp2 = new Map();
+      empresasMaps.push(empresasMapOp2);
+      const qCreadorUsuario = query(empresasRef, where("creadorId", "==", userId));
+      const unsubscribe2 = onSnapshot(qCreadorUsuario,
+        (snapshot) => {
+          empresasMapOp2.clear(); // Limpiar antes de agregar nuevos
+          snapshot.docs.forEach(doc => {
+            empresasMapOp2.set(doc.id, { id: doc.id, ...doc.data() });
+          });
+          updateEmpresas();
+        },
+        handleError
+      );
+      unsubscribes.push(unsubscribe2);
+
+      // Query 3: socios contiene userId
+      const empresasMapOp3 = new Map();
+      empresasMaps.push(empresasMapOp3);
+      const qSociosUsuario = query(empresasRef, where("socios", "array-contains", userId));
+      const unsubscribe3 = onSnapshot(qSociosUsuario,
+        (snapshot) => {
+          empresasMapOp3.clear(); // Limpiar antes de agregar nuevos
+          snapshot.docs.forEach(doc => {
+            empresasMapOp3.set(doc.id, { id: doc.id, ...doc.data() });
+          });
+          updateEmpresas();
+        },
+        handleError
+      );
+      unsubscribes.push(unsubscribe3);
     } else {
       setUserEmpresas([]);
       setLoadingEmpresas(false);
       return () => {};
     }
 
-    const unsubscribe = onSnapshot(q, 
-      (snapshot) => {
-        setUserEmpresas(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-        setLoadingEmpresas(false);
-      }, 
-      async (error) => {
-        console.error('❌ Error en listener de empresas:', error);
-        
-        // Fallback al cache offline
-        if (loadUserFromCache) {
-          try {
-            const cachedData = await loadUserFromCache();
-            if (cachedData?.empresas && cachedData.empresas.length > 0) {
-              console.log('🔄 [Offline] Usando empresas del cache IndexedDB:', cachedData.empresas.length);
-              setUserEmpresas(cachedData.empresas);
-              setLoadingEmpresas(false);
-              return;
-            }
-          } catch (cacheError) {
-            console.error('Error cargando empresas desde cache:', cacheError);
-          }
-        }
-        
-        setUserEmpresas([]);
-        setLoadingEmpresas(false);
-      }
-    );
-
-    return unsubscribe;
+    // Retornar función que cancela todos los listeners
+    return () => {
+      unsubscribes.forEach(unsubscribe => unsubscribe());
+    };
   },
 
   // Crear empresa (multi-tenant)

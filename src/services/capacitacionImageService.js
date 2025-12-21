@@ -3,7 +3,7 @@ import { uploadToControlFile } from './controlFileUpload';
 import { getOfflineDatabase, generateOfflineId } from './offlineDatabase';
 import syncQueueService from './syncQueue';
 import { doc, updateDoc, getDoc } from 'firebase/firestore';
-import { db } from '../firebaseConfig';
+import { db } from '../firebaseAudit';
 
 /**
  * Servicio para manejar imágenes de capacitaciones

@@ -6,7 +6,7 @@ import {
   createUserWithEmailAndPassword
 } from 'firebase/auth';
 import { collection, query, where, getDocs } from 'firebase/firestore';
-import { db, auth } from '../firebaseConfig';
+import { db, auth } from '../firebaseAudit';
 
 /**
  * Sincroniza un usuario de Firestore con Firebase Auth

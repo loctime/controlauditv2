@@ -11,7 +11,7 @@ import {
   where,
   Timestamp 
 } from 'firebase/firestore';
-import { db } from '../firebaseConfig';
+import { db } from '../firebaseAudit';
 import { registrarAccionSistema } from '../utils/firestoreUtils';
 
 export const capacitacionService = {

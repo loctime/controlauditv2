@@ -425,15 +425,15 @@ service cloud.firestore {
     // Empresas
     match /empresas/{empresaId} {
       allow read: if isAuth() && 
-        exists(/databases/$(db)/documents/usuarios/$(request.auth.uid)) &&
-        (get(/databases/$(db)/documents/usuarios/$(request.auth.uid)).data.role == 'supermax' ||
+        exists(/databases/$(db)/documents/apps/auditoria/users/$(request.auth.uid)) &&
+        (get(/databases/$(db)/documents/apps/auditoria/users/$(request.auth.uid)).data.role == 'supermax' ||
          resource.data.propietarioId == request.auth.uid ||
-         get(/databases/$(db)/documents/usuarios/$(request.auth.uid)).data.clienteAdminId == resource.data.propietarioId);
+         get(/databases/$(db)/documents/apps/auditoria/users/$(request.auth.uid)).data.clienteAdminId == resource.data.propietarioId);
       allow write: if isAuth() && 
-        exists(/databases/$(db)/documents/usuarios/$(request.auth.uid)) &&
-        (get(/databases/$(db)/documents/usuarios/$(request.auth.uid)).data.role == 'supermax' ||
+        exists(/databases/$(db)/documents/apps/auditoria/users/$(request.auth.uid)) &&
+        (get(/databases/$(db)/documents/apps/auditoria/users/$(request.auth.uid)).data.role == 'supermax' ||
          resource.data.propietarioId == request.auth.uid ||
-         get(/databases/$(db)/documents/usuarios/$(request.auth.uid)).data.clienteAdminId == resource.data.propietarioId);
+         get(/databases/$(db)/documents/apps/auditoria/users/$(request.auth.uid)).data.clienteAdminId == resource.data.propietarioId);
     }
     
     // Sucursales

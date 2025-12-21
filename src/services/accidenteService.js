@@ -11,7 +11,7 @@ import {
   getDoc,
   deleteDoc
 } from 'firebase/firestore';
-import { db } from '../firebaseConfig';
+import { db } from '../firebaseAudit';
 import { uploadToControlFile, getDownloadUrl } from './controlFileService';
 import { getControlFileFolders } from './controlFileInit';
 import { registrarAccionSistema } from '../utils/firestoreUtils';

@@ -7,11 +7,15 @@ import { getFirestore, connectFirestoreEmulator } from 'firebase/firestore';
 import { getStorage, connectStorageEmulator } from 'firebase/storage';
 import { getAnalytics, isSupported } from 'firebase/analytics';
 
-// Configuración de Firebase (importar desde tu archivo de configuración)
-import { firebaseConfig } from '../firebaseConfig';
+// Configuración de Firebase (importar desde firebaseAudit para ControlAudit)
+// NOTA: Este archivo parece no estar en uso. Si se necesita, usar firebaseAudit.js
+// Por ahora, comentamos la importación ya que este archivo no se usa
+// import { firebaseAuditConfig } from '../firebaseAudit';
 
 // Inicializar Firebase
-const app = initializeApp(firebaseConfig);
+// NOTA: Este archivo no se está usando actualmente
+// Si se necesita, usar firebaseAudit.js en su lugar
+// const app = initializeApp(firebaseConfig);
 
 // Inicializar servicios solo cuando se necesiten
 let auth = null;
