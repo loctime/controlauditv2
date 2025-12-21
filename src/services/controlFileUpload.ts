@@ -6,11 +6,19 @@ const CONTROLFILE_API_URL =
   'https://controlfile.onrender.com/upload';
 
 // Verificar si ControlFile está deshabilitado
-const isControlFileDisabled = () => {
+// ControlFile está deshabilitado SOLO si:
+// 1. Variable de entorno explícita VITE_CONTROLFILE_DISABLED === 'true'
+// 2. NO existe VITE_CONTROLFILE_BACKEND_URL
+// En cualquier otro caso → ControlFile está ACTIVO
+const isControlFileDisabled = (): boolean => {
   // @ts-ignore - Vite environment variables
-  const disabled = import.meta.env?.VITE_CONTROLFILE_DISABLED === 'true';
-  const noUrl = !CONTROLFILE_API_URL || CONTROLFILE_API_URL.trim() === '';
-  return disabled || noUrl;
+  const explicitDisabled = import.meta.env?.VITE_CONTROLFILE_DISABLED === 'true';
+  
+  // @ts-ignore - Vite environment variables
+  const hasBackendUrl = !!import.meta.env?.VITE_CONTROLFILE_BACKEND_URL;
+  
+  // Solo deshabilitado si está explícitamente marcado como disabled O no hay BACKEND_URL
+  return explicitDisabled || !hasBackendUrl;
 };
 
 /**
@@ -81,12 +89,17 @@ export async function uploadToControlFile({
   preguntaId?: string;
   fecha?: Date | string;
 }): Promise<{ fileId: string; fileURL: string }> {
-  // Si ControlFile está deshabilitado, retornar resultado mock inmediatamente
-  if (isControlFileDisabled()) {
-    console.warn('[controlFileUpload] ControlFile está deshabilitado. Retornando resultado mock.');
-    return Promise.resolve(generateMockResult(file));
+  // Verificar estado de ControlFile
+  const isDisabled = isControlFileDisabled();
+  
+  if (isDisabled) {
+    console.warn('[ControlFile] DISABLED → usando mock');
+    // Retornar directamente (no Promise.resolve) para evitar cualquier delay
+    return generateMockResult(file);
   }
 
+  console.log('[ControlFile] ACTIVE → usando backend real');
+  
   try {
     // Validar que el token esté presente
     if (!idToken || idToken.trim() === '') {
