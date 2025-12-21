@@ -51,6 +51,7 @@
     "exceljs": "^4.4.0",
     "file-saver": "^2.0.5",
     "firebase": "^10.12.4",
+    "firebase-admin": "^13.6.0",
     "formik": "^2.4.5",
     "html2canvas": "^1.4.1",
     "html2pdf.js": "^0.10.2",
