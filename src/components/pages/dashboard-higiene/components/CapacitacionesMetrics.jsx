@@ -224,7 +224,7 @@ const CapacitacionesMetrics = React.memo(({ metrics }) => {
           sx={{ mt: 2 }}
         >
           <Typography variant="body2" sx={{ fontWeight: 600 }}>
-            {metrics.capacitacionesVencidas} empleado(s) con capacitaciones vencidas (>365 días sin renovar)
+            {metrics.capacitacionesVencidas} empleado(s) con capacitaciones vencidas ({'>365'} días sin renovar)
           </Typography>
           <Typography variant="caption" color="text.secondary">
             Se recomienda actualizar las capacitaciones para mantener el cumplimiento normativo.
