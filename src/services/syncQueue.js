@@ -393,7 +393,7 @@ class SyncQueueService {
     // Usar función helper para obtener usuario de forma robusta (maneja problemas de timing)
     let currentUserProfile = null;
     try {
-      const { auth, db: firestoreDb } = await import('../firebaseAudit');
+      const { auth, db: firestoreDb } = await import('../firebaseControlFile');
       const { onAuthStateChanged } = await import('firebase/auth');
       const { doc, getDoc } = await import('firebase/firestore');
       

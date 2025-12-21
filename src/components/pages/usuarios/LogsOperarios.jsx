@@ -45,7 +45,7 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import { toast } from 'react-toastify';
 import { collection, getDocs, query, orderBy, limit, where, addDoc } from 'firebase/firestore';
-import { db } from '../../../firebaseAudit';
+import { db } from '../../../firebaseControlFile';
 
 // Configuración de tipos de acciones
 const TIPOS_ACCIONES = {

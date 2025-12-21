@@ -1,6 +1,6 @@
 // src/utils/goalsCalculationService.js
 import { collection, query, where, getDocs, Timestamp } from 'firebase/firestore';
-import { db } from '../firebaseAudit';
+import { db } from '../firebaseControlFile';
 
 /**
  * Servicio para calcular cumplimiento de metas y objetivos

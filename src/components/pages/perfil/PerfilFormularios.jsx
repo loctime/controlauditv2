@@ -8,7 +8,7 @@ import { Draw as DrawIcon, ExpandMore as ExpandMoreIcon } from '@mui/icons-mater
 import ShareIcon from '@mui/icons-material/Share';
 import { useState } from 'react';
 import { doc, updateDoc, deleteDoc } from 'firebase/firestore';
-import { db } from '../../../firebaseAudit';
+import { db } from '../../../firebaseControlFile';
 import { v4 as uuidv4 } from 'uuid';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import DeleteForeverIcon from '@mui/icons-material/DeleteForever';

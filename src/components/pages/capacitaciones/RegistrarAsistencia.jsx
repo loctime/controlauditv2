@@ -14,7 +14,7 @@ import {
 } from '@mui/material';
 import { useParams, useNavigate } from 'react-router-dom';
 import { collection, query, where, getDocs, doc, getDoc, updateDoc, Timestamp } from 'firebase/firestore';
-import { db } from '../../../firebaseAudit';
+import { db } from '../../../firebaseControlFile';
 
 export default function RegistrarAsistencia() {
   const { capacitacionId } = useParams();

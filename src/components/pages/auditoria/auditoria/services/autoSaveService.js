@@ -1,5 +1,5 @@
 import { doc, setDoc, getDoc, deleteDoc, collection, query, where, getDocs } from 'firebase/firestore';
-import { db } from '../../../../../firebaseAudit';
+import { db } from '../../../../../firebaseControlFile';
 import { getOfflineDatabase, generateOfflineId, checkStorageLimit } from '../../../../../services/offlineDatabase';
 import syncQueueService from '../../../../../services/syncQueue';
 

@@ -3,7 +3,7 @@ import React, { useState, useEffect } from "react";
 import { Typography, Box, Grid, Paper, Alert, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Button, TextField, Dialog, DialogTitle, DialogContent, DialogActions, Card, CardContent, Tabs, Tab, CircularProgress } from "@mui/material";
 import { useAuth } from "../../context/AuthContext";
 import { collection, addDoc, setDoc, doc, updateDoc, query, where, getDocs, getDoc } from "firebase/firestore";
-import { db } from "../../../firebaseAudit";
+import { db } from "../../../firebaseControlFile";
 import { toast } from 'react-toastify';
 import { verifyAdminCode, verifySuperAdminCode } from "../../../config/admin";
 import GestionClientes from "./GestionClientes";

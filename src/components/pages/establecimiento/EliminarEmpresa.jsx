@@ -2,7 +2,7 @@ import React from "react";
 import Swal from "sweetalert2";
 import { IconButton } from "@mui/material";
 import DeleteIcon from "@mui/icons-material/Delete";
-import { db } from "../../../firebaseAudit";
+import { db } from "../../../firebaseControlFile";
 import { doc, deleteDoc } from "firebase/firestore";
 
 const EliminarEmpresa = ({ empresa, onEmpresaEliminada }) => {

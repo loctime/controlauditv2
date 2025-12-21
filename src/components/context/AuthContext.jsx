@@ -1,6 +1,6 @@
 // src/components/context/AuthContext.jsx
 import { createContext, useState, useEffect, useContext, useRef } from "react";
-import { auth } from "../../firebaseAudit";
+import { auth } from "../../firebaseControlFile";
 import { onAuthStateChanged } from "firebase/auth";
 import { useUserProfile } from '../../hooks/useUserProfile';
 import { useUserManagement } from '../../hooks/useUserManagement';
@@ -228,12 +228,12 @@ const AuthContextComponent = ({ children }) => {
           localStorage.setItem("userInfo", JSON.stringify(firebaseUser));
           localStorage.setItem("isLogged", JSON.stringify(true));
           
-          // Verificar que el token tenga el aud correcto (auditoria-f9fc4)
+          // Verificar que el token tenga el aud correcto (controlstorage-eb796)
           try {
             const token = await auth.currentUser.getIdTokenResult();
             console.log('[AUTH] Token aud claim:', token.claims.aud);
-            if (token.claims.aud !== 'auditoria-f9fc4') {
-              console.warn('[AUTH] ⚠️ Token aud no coincide con auditoria-f9fc4:', token.claims.aud);
+            if (token.claims.aud !== 'controlstorage-eb796') {
+              console.warn('[AUTH] ⚠️ Token aud no coincide con controlstorage-eb796:', token.claims.aud);
             } else {
               console.log('[AUTH] ✅ Token aud correcto para ControlAudit:', token.claims.aud);
             }

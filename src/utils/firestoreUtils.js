@@ -1,7 +1,7 @@
 // Utilidades para manejar datos de Firestore
 
 import { collection, addDoc, Timestamp } from 'firebase/firestore';
-import { db } from '../firebaseAudit';
+import { db } from '../firebaseControlFile';
 
 /**
  * Convierte arrays anidados a objetos planos para Firestore

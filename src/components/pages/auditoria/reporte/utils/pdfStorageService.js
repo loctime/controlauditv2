@@ -1,7 +1,7 @@
 // Servicio para manejar el guardado y descarga de PDFs en Firebase Storage
 import { doc, updateDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
-import { db, storage } from '../../../../firebaseAudit';
+import { db, storage } from '../../../../firebaseControlFile';
 import generarContenidoImpresion from './generadorHTML';
 
 /**

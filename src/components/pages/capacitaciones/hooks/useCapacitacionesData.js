@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { collection, query, where, getDocs } from 'firebase/firestore';
-import { db } from '../../../../firebaseAudit';
+import { db } from '../../../../firebaseControlFile';
 
 /**
  * Hook para cargar capacitaciones individuales y planes anuales

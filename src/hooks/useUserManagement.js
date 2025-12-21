@@ -8,7 +8,7 @@ import {
   query, 
   where 
 } from 'firebase/firestore';
-import { db } from '../firebaseAudit';
+import { db } from '../firebaseControlFile';
 import { registrarLogOperario, registrarAccionSistema } from '../utils/firestoreUtils';
 import userService from '../services/userService';
 

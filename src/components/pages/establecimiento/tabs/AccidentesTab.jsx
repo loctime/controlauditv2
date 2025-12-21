@@ -15,7 +15,7 @@ import WarningIcon from '@mui/icons-material/Warning';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import ErrorIcon from '@mui/icons-material/Error';
 import { collection, getDocs, query, where } from 'firebase/firestore';
-import { db } from '../../../../firebaseAudit';
+import { db } from '../../../../firebaseControlFile';
 import { useNavigate } from 'react-router-dom';
 
 const AccidentesTab = ({ empresaId, empresaNombre }) => {

@@ -33,7 +33,7 @@ import {
   CalendarToday
 } from "@mui/icons-material";
 import { collection, getDocs, query, where, orderBy } from "firebase/firestore";
-import { db } from "../../../firebaseAudit";
+import { db } from "../../../firebaseControlFile";
 import { toast } from 'react-toastify';
 import { useAuth } from "../../context/AuthContext";
 

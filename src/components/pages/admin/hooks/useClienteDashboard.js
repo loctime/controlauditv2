@@ -1,7 +1,7 @@
 // src/components/pages/admin/hooks/useClienteDashboard.js
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { collection, addDoc, query, where, getDocs, updateDoc, doc, deleteDoc, serverTimestamp, limit, orderBy, getDoc } from "firebase/firestore";
-import { db } from "../../../../firebaseAudit";
+import { db } from "../../../../firebaseControlFile";
 import { useAuth } from "../../../context/AuthContext";
 import { toast } from 'react-toastify';
 

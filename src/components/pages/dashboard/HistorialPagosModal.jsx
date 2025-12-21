@@ -16,7 +16,7 @@ import {
   Box
 } from '@mui/material';
 import { collection, getDocs, query, orderBy } from 'firebase/firestore';
-import { db } from '../../../firebaseAudit';
+import { db } from '../../../firebaseControlFile';
 import PaymentIcon from '@mui/icons-material/Payment';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import EditIcon from '@mui/icons-material/Edit';

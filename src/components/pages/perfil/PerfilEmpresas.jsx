@@ -6,7 +6,7 @@ import {
 } from '@mui/material';
 import { Business as BusinessIcon, ExpandMore as ExpandMoreIcon, Store as StoreIcon, LocationOn, Phone, Person } from '@mui/icons-material';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
-import { db } from '../../../firebaseAudit';
+import { db } from '../../../firebaseControlFile';
 import { useNavigate } from 'react-router-dom';
 
 // Componente para mostrar sucursales de una empresa

@@ -22,7 +22,7 @@ import DrawIcon from '@mui/icons-material/Draw';
 import InfoIcon from '@mui/icons-material/Info';
 import { useAuth } from "../../context/AuthContext";
 import Swal from 'sweetalert2';
-import { db } from '../../../firebaseAudit';
+import { db } from '../../../firebaseControlFile';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import { useLocation, useNavigate } from 'react-router-dom';
 // Componentes modulares

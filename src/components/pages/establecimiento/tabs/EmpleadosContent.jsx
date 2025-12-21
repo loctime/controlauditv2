@@ -29,7 +29,7 @@ import PeopleIcon from '@mui/icons-material/People';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import EditIcon from '@mui/icons-material/Edit';
 import { collection, getDocs, query, where, addDoc, updateDoc, deleteDoc, doc, Timestamp } from 'firebase/firestore';
-import { db } from '../../../../firebaseAudit';
+import { db } from '../../../../firebaseControlFile';
 import { useAuth } from '../../../context/AuthContext';
 import Swal from 'sweetalert2';
 

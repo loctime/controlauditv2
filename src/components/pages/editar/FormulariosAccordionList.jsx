@@ -24,7 +24,7 @@ import EditIcon from "@mui/icons-material/Edit";
 import PublicIcon from '@mui/icons-material/Public';
 import SearchIcon from '@mui/icons-material/Search';
 import { doc, updateDoc } from "firebase/firestore";
-import { db } from "../../../firebaseAudit";
+import { db } from "../../../firebaseControlFile";
 import EditarFormularioModal from "./EditarFormularioModal";
 import { useAuth } from "../../context/AuthContext";
 

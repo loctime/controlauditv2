@@ -19,7 +19,7 @@ import {
 } from '@mui/material';
 import { Link, useNavigate } from 'react-router-dom';
 import { Visibility, VisibilityOff } from '@mui/icons-material';
-import { onSignIn } from '../../../firebaseAudit';
+import { onSignIn } from '../../../firebaseControlFile';
 import { syncUserToAuth } from '../../../services/authSyncService';
 import { Formik, Form, Field, ErrorMessage } from 'formik';
 import * as Yup from 'yup';

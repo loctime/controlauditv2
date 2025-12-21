@@ -11,7 +11,7 @@ import {
   Timestamp,
   doc
 } from "firebase/firestore";
-import { db } from "../firebaseAudit";
+import { db } from "../firebaseControlFile";
 
 const AUSENCIAS_COLLECTION = "ausencias";
 const CHUNK_SIZE = 10;

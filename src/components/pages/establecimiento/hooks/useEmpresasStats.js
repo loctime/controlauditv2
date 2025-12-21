@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { collection, getDocs, query, where } from 'firebase/firestore';
-import { db } from '../../../../firebaseAudit';
+import { db } from '../../../../firebaseControlFile';
 
 /**
  * Hook para cargar estadísticas de empresas

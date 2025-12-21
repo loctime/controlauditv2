@@ -11,7 +11,7 @@ import {
   CircularProgress
 } from '@mui/material';
 import { collection, addDoc, Timestamp } from 'firebase/firestore';
-import { db } from '../../../firebaseAudit';
+import { db } from '../../../firebaseControlFile';
 import { useAuth } from '../../context/AuthContext';
 
 export default function CapacitacionForm({ open, onClose, onSave, sucursalId, empresaId }) {

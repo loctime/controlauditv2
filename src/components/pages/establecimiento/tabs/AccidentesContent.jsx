@@ -14,7 +14,7 @@ import {
 } from '@mui/material';
 import ReportProblemIcon from '@mui/icons-material/ReportProblem';
 import { collection, getDocs, query, where } from 'firebase/firestore';
-import { db } from '../../../../firebaseAudit';
+import { db } from '../../../../firebaseControlFile';
 
 const AccidentesContent = ({ sucursalId, sucursalNombre, empresaId, navigateToPage }) => {
   const [accidentes, setAccidentes] = useState([]);

@@ -1,6 +1,6 @@
 import { getOfflineDatabase } from './offlineDatabase';
-import { auth } from '../firebaseAudit';
-import { db } from '../firebaseAudit';
+import { auth } from '../firebaseControlFile';
+import { db } from '../firebaseControlFile';
 import { collection, getDocs, doc, getDoc, query, where } from 'firebase/firestore';
 
 /**

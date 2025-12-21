@@ -29,7 +29,7 @@ import {
   where,
   orderBy
 } from "firebase/firestore";
-import { db } from "../../../../firebaseAudit";
+import { db } from "../../../../firebaseControlFile";
 import dayjs from "dayjs";
 
 const getInitialState = () => ({

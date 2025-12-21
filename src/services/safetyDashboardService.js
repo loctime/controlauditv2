@@ -12,7 +12,7 @@ import {
   Timestamp,
   onSnapshot 
 } from 'firebase/firestore';
-import { db } from '../firebaseAudit';
+import { db } from '../firebaseControlFile';
 import { computeOccupationalHealthMetrics } from '../utils/occupationalHealthMetrics';
 
 const isTruthyFlag = (value) => {

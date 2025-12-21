@@ -1,7 +1,7 @@
 // src/hooks/useUserProfile.js
 import { useState, useEffect } from 'react';
 import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
-import { db } from '../firebaseAudit';
+import { db } from '../firebaseControlFile';
 import { getUserRole } from '../config/admin';
 import { registrarAccionSistema } from '../utils/firestoreUtils';
 import { isEnvironment } from '../config/environment';

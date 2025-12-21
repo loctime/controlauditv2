@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Box, Button, Grid, TextField, Typography, Alert } from "@mui/material";
 import { useNavigate, Link } from "react-router-dom";
-import { forgotPassword } from "../../../firebaseAudit";
+import { forgotPassword } from "../../../firebaseControlFile";
 import { Formik, Form, Field } from 'formik';
 import * as Yup from 'yup';
 

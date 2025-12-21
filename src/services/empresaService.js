@@ -10,7 +10,7 @@ import {
   where, 
   onSnapshot
 } from 'firebase/firestore';
-import { db } from '../firebaseAudit';
+import { db } from '../firebaseControlFile';
 import { registrarAccionSistema } from '../utils/firestoreUtils';
 
 export const empresaService = {

@@ -1,6 +1,6 @@
 // src/utils/sucursalTargetUtils.js
 import { collection, query, where, getDocs, Timestamp, doc, getDoc } from 'firebase/firestore';
-import { db } from '../firebaseAudit';
+import { db } from '../firebaseControlFile';
 
 /**
  * Calcula el número de auditorías completadas en el mes actual para una sucursal

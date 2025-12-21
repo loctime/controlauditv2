@@ -10,7 +10,7 @@ import {
   doc,
   writeBatch
 } from 'firebase/firestore';
-import { db } from '../firebaseAudit';
+import { db } from '../firebaseControlFile';
 
 /**
  * Migra todos los datos relacionados con un UID antiguo a un UID nuevo

@@ -29,7 +29,7 @@ import {
   Storefront as StorefrontIcon
 } from '@mui/icons-material';
 import { collection, addDoc, updateDoc, doc, Timestamp } from 'firebase/firestore';
-import { db } from '../../../firebaseAudit';
+import { db } from '../../../firebaseControlFile';
 import { useAuth } from '../../context/AuthContext';
 import Swal from 'sweetalert2';
 

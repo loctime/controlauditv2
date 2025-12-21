@@ -32,3 +32,6 @@ backend/.env.*
 
 # Firebase / Google Cloud
 backend/serviceAccountKey.json
+backend/serviceAccountKey-controlfile.json
+backend/serviceAccountKey.json
+
