@@ -97,7 +97,8 @@ export default defineConfig({
       'react': resolve(__dirname, './node_modules/react'),
       'react-dom': resolve(__dirname, './node_modules/react-dom'),
       '@emotion/react': resolve(__dirname, './node_modules/@emotion/react'),
-      '@emotion/styled': resolve(__dirname, './node_modules/@emotion/styled')
+      '@emotion/styled': resolve(__dirname, './node_modules/@emotion/styled'),
+      '@emotion/cache': resolve(__dirname, './node_modules/@emotion/cache')
     },
     dedupe: ['react', 'react-dom', '@emotion/react', '@emotion/styled', '@emotion/cache']
   },
