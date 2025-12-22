@@ -1,6 +1,5 @@
 // src/services/empleadoService.js
 import { 
-  collection, 
   doc, 
   getDocs, 
   addDoc, 
@@ -10,35 +9,38 @@ import {
   query, 
   where 
 } from 'firebase/firestore';
-import { db } from '../firebaseControlFile';
+import { auditUserCollection } from '../firebaseControlFile';
 import { registrarAccionSistema } from '../utils/firestoreUtils';
 
 export const empleadoService = {
   /**
-   * Obtener empleados de una empresa
+   * Obtener empleados de una empresa (multi-tenant)
+   * @param {string} userId - UID del usuario
    * @param {string} empresaId - ID de la empresa
    * @returns {Promise<Array>} Lista de empleados
    */
-  async getEmpleadosByEmpresa(empresaId) {
+  async getEmpleadosByEmpresa(userId, empresaId) {
     try {
-      if (!empresaId) return [];
+      if (!userId || !empresaId) return [];
 
-      // 1. Obtener sucursales de la empresa
+      // 1. Obtener sucursales de la empresa (multi-tenant)
+      const sucursalesRef = auditUserCollection(userId, 'sucursales');
       const sucursalesSnapshot = await getDocs(
-        query(collection(db, 'sucursales'), where('empresaId', '==', empresaId))
+        query(sucursalesRef, where('empresaId', '==', empresaId))
       );
       const sucursalesIds = sucursalesSnapshot.docs.map(doc => doc.id);
       
       if (sucursalesIds.length === 0) return [];
 
       // 2. Obtener empleados de esas sucursales (máximo 10 por query)
+      const empleadosRef = auditUserCollection(userId, 'empleados');
       const empleadosData = [];
       const chunkSize = 10;
       
       for (let i = 0; i < sucursalesIds.length; i += chunkSize) {
         const chunk = sucursalesIds.slice(i, i + chunkSize);
         const empleadosSnapshot = await getDocs(
-          query(collection(db, 'empleados'), where('sucursalId', 'in', chunk))
+          query(empleadosRef, where('sucursalId', 'in', chunk))
         );
         
         empleadosSnapshot.docs.forEach(doc => {
@@ -57,16 +59,18 @@ export const empleadoService = {
   },
 
   /**
-   * Obtener empleados de una sucursal
+   * Obtener empleados de una sucursal (multi-tenant)
+   * @param {string} userId - UID del usuario
    * @param {string} sucursalId - ID de la sucursal
    * @returns {Promise<Array>} Lista de empleados
    */
-  async getEmpleadosBySucursal(sucursalId) {
+  async getEmpleadosBySucursal(userId, sucursalId) {
     try {
-      if (!sucursalId) return [];
+      if (!userId || !sucursalId) return [];
 
+      const empleadosRef = auditUserCollection(userId, 'empleados');
       const snapshot = await getDocs(
-        query(collection(db, 'empleados'), where('sucursalId', '==', sucursalId))
+        query(empleadosRef, where('sucursalId', '==', sucursalId))
       );
       
       return snapshot.docs.map(doc => ({ 
@@ -80,21 +84,23 @@ export const empleadoService = {
   },
 
   /**
-   * Obtener empleados de múltiples sucursales
+   * Obtener empleados de múltiples sucursales (multi-tenant)
+   * @param {string} userId - UID del usuario
    * @param {Array<string>} sucursalesIds - IDs de las sucursales
    * @returns {Promise<Array>} Lista de empleados
    */
-  async getEmpleadosBySucursales(sucursalesIds) {
+  async getEmpleadosBySucursales(userId, sucursalesIds) {
     try {
-      if (!sucursalesIds || sucursalesIds.length === 0) return [];
+      if (!userId || !sucursalesIds || sucursalesIds.length === 0) return [];
 
+      const empleadosRef = auditUserCollection(userId, 'empleados');
       const empleadosData = [];
       const chunkSize = 10;
       
       for (let i = 0; i < sucursalesIds.length; i += chunkSize) {
         const chunk = sucursalesIds.slice(i, i + chunkSize);
         const snapshot = await getDocs(
-          query(collection(db, 'empleados'), where('sucursalId', 'in', chunk))
+          query(empleadosRef, where('sucursalId', 'in', chunk))
         );
         
         snapshot.docs.forEach(doc => {
@@ -113,13 +119,17 @@ export const empleadoService = {
   },
 
   /**
-   * Obtener un empleado por ID
+   * Obtener un empleado por ID (multi-tenant)
+   * @param {string} userId - UID del usuario
    * @param {string} empleadoId - ID del empleado
    * @returns {Promise<Object|null>} Datos del empleado o null
    */
-  async getEmpleadoById(empleadoId) {
+  async getEmpleadoById(userId, empleadoId) {
     try {
-      const empleadoDoc = await getDoc(doc(db, 'empleados', empleadoId));
+      if (!userId || !empleadoId) return null;
+
+      const empleadoRef = doc(auditUserCollection(userId, 'empleados'), empleadoId);
+      const empleadoDoc = await getDoc(empleadoRef);
       
       if (empleadoDoc.exists()) {
         return {
@@ -136,14 +146,18 @@ export const empleadoService = {
   },
 
   /**
-   * Crear un nuevo empleado
+   * Crear un nuevo empleado (multi-tenant)
+   * @param {string} userId - UID del usuario
    * @param {Object} empleadoData - Datos del empleado
    * @param {Object} user - Usuario que crea el empleado
    * @returns {Promise<string>} ID del empleado creado
    */
-  async crearEmpleado(empleadoData, user) {
+  async crearEmpleado(userId, empleadoData, user) {
     try {
-      const empleadoRef = await addDoc(collection(db, 'empleados'), {
+      if (!userId) throw new Error('userId es requerido');
+
+      const empleadosRef = auditUserCollection(userId, 'empleados');
+      const empleadoRef = await addDoc(empleadosRef, {
         ...empleadoData,
         createdAt: new Date(),
         createdBy: user?.uid,
@@ -168,15 +182,19 @@ export const empleadoService = {
   },
 
   /**
-   * Actualizar un empleado
+   * Actualizar un empleado (multi-tenant)
+   * @param {string} userId - UID del usuario
    * @param {string} empleadoId - ID del empleado
    * @param {Object} updateData - Datos a actualizar
    * @param {Object} user - Usuario que actualiza
    * @returns {Promise<boolean>} True si se actualizó correctamente
    */
-  async updateEmpleado(empleadoId, updateData, user) {
+  async updateEmpleado(userId, empleadoId, updateData, user) {
     try {
-      await updateDoc(doc(db, 'empleados', empleadoId), {
+      if (!userId) throw new Error('userId es requerido');
+
+      const empleadoRef = doc(auditUserCollection(userId, 'empleados'), empleadoId);
+      await updateDoc(empleadoRef, {
         ...updateData,
         updatedAt: new Date(),
         updatedBy: user?.uid
@@ -200,14 +218,18 @@ export const empleadoService = {
   },
 
   /**
-   * Eliminar un empleado
+   * Eliminar un empleado (multi-tenant)
+   * @param {string} userId - UID del usuario
    * @param {string} empleadoId - ID del empleado
    * @param {Object} user - Usuario que elimina
    * @returns {Promise<boolean>} True si se eliminó correctamente
    */
-  async deleteEmpleado(empleadoId, user) {
+  async deleteEmpleado(userId, empleadoId, user) {
     try {
-      await deleteDoc(doc(db, 'empleados', empleadoId));
+      if (!userId) throw new Error('userId es requerido');
+
+      const empleadoRef = doc(auditUserCollection(userId, 'empleados'), empleadoId);
+      await deleteDoc(empleadoRef);
 
       // Registrar acción
       await registrarAccionSistema(

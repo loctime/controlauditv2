@@ -21,12 +21,8 @@ import { registrarAccionSistema } from '../utils/firestoreUtils';
  */
 
 // Crear un nuevo accidente
-export const crearAccidente = async (accidenteData, empleadosSeleccionados, imagenes = [], userProfile = null) => {
+export const crearAccidente = async (accidenteData, empleadosSeleccionados, imagenes = [], userProfile) => {
   try {
-    if (!userProfile || !userProfile.uid) {
-      throw new Error('userProfile.uid es requerido para crear accidente');
-    }
-
     // Preparar datos de empleados involucrados
     const empleadosInvolucrados = empleadosSeleccionados.map(emp => ({
       empleadoId: emp.id,
@@ -104,12 +100,8 @@ export const crearAccidente = async (accidenteData, empleadosSeleccionados, imag
 };
 
 // Crear un nuevo incidente
-export const crearIncidente = async (incidenteData, testigos = [], imagenes = [], userProfile = null) => {
+export const crearIncidente = async (incidenteData, testigos = [], imagenes = [], userProfile) => {
   try {
-    if (!userProfile || !userProfile.uid) {
-      throw new Error('userProfile.uid es requerido para crear incidente');
-    }
-
     // Preparar datos de testigos
     const testigosArray = testigos.map(emp => ({
       empleadoId: emp.id,
@@ -223,16 +215,10 @@ export const subirImagenes = async (accidenteId, imagenes) => {
   }
 };
 
-// Obtener accidentes con filtros (multi-tenant)
-export const obtenerAccidentes = async (filtros = {}, userProfile = null) => {
+// Obtener accidentes con filtros funcionales
+export const obtenerAccidentes = async (filtros = {}, userProfile) => {
   try {
-    if (!userProfile || !userProfile.uid) {
-      console.error('[accidenteService] obtenerAccidentes: userProfile.uid es requerido');
-      return [];
-    }
-
-    const uid = userProfile.uid;
-    const accidentesRef = auditUserCollection(uid, 'accidentes');
+    const accidentesRef = auditUserCollection(userProfile.uid, 'accidentes');
     
     const conditions = [];
 
@@ -270,13 +256,9 @@ export const obtenerAccidentes = async (filtros = {}, userProfile = null) => {
   }
 };
 
-// Obtener un accidente específico (multi-tenant)
-export const obtenerAccidentePorId = async (accidenteId, userProfile = null) => {
+// Obtener un accidente específico
+export const obtenerAccidentePorId = async (accidenteId, userProfile) => {
   try {
-    if (!userProfile || !userProfile.uid) {
-      throw new Error('userProfile.uid es requerido para obtener accidente');
-    }
-
     const accidentesRef = auditUserCollection(userProfile.uid, 'accidentes');
     const docRef = doc(accidentesRef, accidenteId);
     const docSnap = await getDoc(docRef);
@@ -291,13 +273,9 @@ export const obtenerAccidentePorId = async (accidenteId, userProfile = null) => 
   }
 };
 
-// Actualizar estado de accidente/incidente (multi-tenant)
-export const actualizarEstadoAccidente = async (accidenteId, nuevoEstado, userId = null, userProfile = null) => {
+// Actualizar estado de accidente/incidente
+export const actualizarEstadoAccidente = async (accidenteId, nuevoEstado, userId = null, userProfile) => {
   try {
-    if (!userProfile || !userProfile.uid) {
-      throw new Error('userProfile.uid es requerido para actualizar estado');
-    }
-
     const accidentesRef = auditUserCollection(userProfile.uid, 'accidentes');
     const accidenteRef = doc(accidentesRef, accidenteId);
     const accidenteDoc = await getDoc(accidenteRef);
@@ -385,13 +363,9 @@ export const obtenerEmpleadosPorSucursal = async (sucursalId) => {
   }
 };
 
-// Obtener estadísticas de accidentes por empresa (multi-tenant)
-export const obtenerEstadisticas = async (empresaId, userProfile = null) => {
+// Obtener estadísticas de accidentes por empresa
+export const obtenerEstadisticas = async (empresaId, userProfile) => {
   try {
-    if (!userProfile || !userProfile.uid) {
-      throw new Error('userProfile.uid es requerido para obtener estadísticas');
-    }
-
     const accidentesRef = auditUserCollection(userProfile.uid, 'accidentes');
     const q = query(
       accidentesRef,
@@ -414,13 +388,9 @@ export const obtenerEstadisticas = async (empresaId, userProfile = null) => {
   }
 };
 
-// Eliminar accidente/incidente (multi-tenant)
-export const eliminarAccidente = async (accidenteId, userId = null, userProfile = null) => {
+// Eliminar accidente/incidente
+export const eliminarAccidente = async (accidenteId, userId = null, userProfile) => {
   try {
-    if (!userProfile || !userProfile.uid) {
-      throw new Error('userProfile.uid es requerido para eliminar accidente');
-    }
-
     const accidentesRef = auditUserCollection(userProfile.uid, 'accidentes');
     const accidenteRef = doc(accidentesRef, accidenteId);
     const accidenteDoc = await getDoc(accidenteRef);
@@ -451,13 +421,9 @@ export const eliminarAccidente = async (accidenteId, userId = null, userProfile 
   }
 };
 
-// Actualizar accidente/incidente (multi-tenant)
-export const actualizarAccidente = async (accidenteId, datosActualizados, imagenesNuevas = [], userId = null, userProfile = null) => {
+// Actualizar accidente/incidente
+export const actualizarAccidente = async (accidenteId, datosActualizados, imagenesNuevas = [], userId = null, userProfile) => {
   try {
-    if (!userProfile || !userProfile.uid) {
-      throw new Error('userProfile.uid es requerido para actualizar accidente');
-    }
-
     const accidentesRef = auditUserCollection(userProfile.uid, 'accidentes');
     const accidenteRef = doc(accidentesRef, accidenteId);
     const accidenteDoc = await getDoc(accidenteRef);

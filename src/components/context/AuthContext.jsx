@@ -141,7 +141,7 @@ const AuthContextComponent = ({ children }) => {
     );
     return unsubscribe;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userProfile?.uid, role, userProfile?.clienteAdminId, enableOffline]);
+  }, [userProfile?.uid, role, enableOffline]);
 
   // Estado para rastrear si estamos online
   const [isOnline, setIsOnline] = useState(typeof navigator !== 'undefined' ? navigator.onLine : true);
@@ -179,7 +179,6 @@ const AuthContextComponent = ({ children }) => {
         try {
           const completeProfile = {
             ...userProfile,
-            clienteAdminId: userProfile.clienteAdminId || userProfile.uid,
             email: userProfile.email || user?.email,
             displayName: userProfile.displayName || user?.displayName || user?.email,
             role: userProfile.role || 'operario'
@@ -274,7 +273,6 @@ const AuthContextComponent = ({ children }) => {
                 try {
                   const completeProfile = {
                     ...profile,
-                    clienteAdminId: profile.clienteAdminId || profile.uid,
                     email: profile.email || firebaseUser.email,
                     displayName: profile.displayName || firebaseUser.displayName || firebaseUser.email,
                     role: profile.role || 'operario'
@@ -363,19 +361,11 @@ const AuthContextComponent = ({ children }) => {
               localStorage.setItem("isLogged", JSON.stringify(true));
               
               if (cachedUser.empresas && cachedUser.empresas.length > 0) {
-                let empresasFiltradas = cachedUser.empresas;
-                if (cachedProfile.role !== 'supermax') {
-                  empresasFiltradas = cachedUser.empresas.filter(empresa => 
-                    empresa.propietarioId === cachedProfile.uid ||
-                    empresa.creadorId === cachedProfile.uid ||
-                    empresa.clienteAdminId === cachedProfile.clienteAdminId ||
-                    empresa.clienteAdminId === cachedProfile.uid
-                  );
-                }
-                setUserEmpresas(empresasFiltradas);
+                // Los servicios ya traen solo datos del usuario (multi-tenant)
+                setUserEmpresas(cachedUser.empresas);
                 setLoadingEmpresas(false);
-                console.log('✅ Empresas cargadas desde cache:', empresasFiltradas.length);
-                console.log('📊 Detalle empresas:', empresasFiltradas.map(e => e.nombre || e.id));
+                console.log('✅ Empresas cargadas desde cache:', cachedUser.empresas.length);
+                console.log('📊 Detalle empresas:', cachedUser.empresas.map(e => e.nombre || e.id));
               } else {
                 console.warn('⚠️ No hay empresas en cache');
                 // Último intento: verificar localStorage directamente (Chrome)
@@ -387,18 +377,10 @@ const AuthContextComponent = ({ children }) => {
                     if (localCache) {
                       const parsed = JSON.parse(localCache);
                       if (parsed.empresas && parsed.empresas.length > 0) {
-                        let empresasFiltradas = parsed.empresas;
-                        if (cachedProfile.role !== 'supermax') {
-                          empresasFiltradas = parsed.empresas.filter(empresa => 
-                            empresa.propietarioId === cachedProfile.uid ||
-                            empresa.creadorId === cachedProfile.uid ||
-                            empresa.clienteAdminId === cachedProfile.clienteAdminId ||
-                            empresa.clienteAdminId === cachedProfile.uid
-                          );
-                        }
-                        setUserEmpresas(empresasFiltradas);
+                        // Los servicios ya traen solo datos del usuario (multi-tenant)
+                        setUserEmpresas(parsed.empresas);
                         setLoadingEmpresas(false);
-                        console.log('✅ [Chrome] Empresas cargadas desde localStorage:', empresasFiltradas.length);
+                        console.log('✅ [Chrome] Empresas cargadas desde localStorage:', parsed.empresas.length);
                         // Mostrar toast solo en móvil/Chrome (async)
                         if (window.matchMedia('(display-mode: standalone)').matches) {
                           import('react-toastify').then(({ toast }) => {

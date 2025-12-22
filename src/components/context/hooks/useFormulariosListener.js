@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
-import { collection, query, where, onSnapshot } from 'firebase/firestore';
-import { db } from '../../../firebaseControlFile.js';
+import { onSnapshot } from 'firebase/firestore';
+import { auditUserCollection } from '../../../firebaseControlFile.js';
 
 /**
  * Hook para listener reactivo de formularios con fallback offline
@@ -15,74 +15,22 @@ export const useFormulariosListener = (userProfile, role, setUserFormularios, se
       return;
     }
 
-    if (!userProfile || !role) {
+    if (!userProfile || !userProfile.uid) {
       setUserFormularios([]);
       setLoadingFormularios(false);
       return;
     }
 
     setLoadingFormularios(true);
-    const formulariosRef = collection(db, 'formularios');
-    let q;
+    // Usar estructura multi-tenant: apps/auditoria/users/{uid}/formularios
+    const formulariosRef = auditUserCollection(userProfile.uid, 'formularios');
 
-    if (role === 'supermax') {
-      q = formulariosRef;
-    } else if (role === 'max') {
-      // Buscar por UID nuevo y antiguo (migración)
-      const oldUid = userProfile.migratedFromUid;
-      if (oldUid) {
-        // Si hay UID antiguo, buscar ambos (Firestore no soporta OR, así que usamos el listener completo)
-        // El filtrado se hará en el callback
-        q = formulariosRef;
-      } else {
-        q = query(formulariosRef, where('clienteAdminId', '==', userProfile.uid));
-      }
-    } else if (role === 'operario' && userProfile.clienteAdminId) {
-      const oldClienteAdminId = userProfile.migratedFromUid;
-      if (oldClienteAdminId) {
-        // Buscar todos y filtrar después
-        q = formulariosRef;
-      } else {
-        q = query(formulariosRef, where('clienteAdminId', '==', userProfile.clienteAdminId));
-      }
-    } else {
-      setUserFormularios([]);
-      setLoadingFormularios(false);
-      return;
-    }
-
-    const unsubscribe = onSnapshot(q,
+    const unsubscribe = onSnapshot(formulariosRef,
       (snapshot) => {
-        let formulariosData = snapshot.docs.map(doc => ({
+        const formulariosData = snapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data()
         }));
-
-        // Filtrar por UID antiguo si existe (migración)
-        const oldUid = userProfile.migratedFromUid;
-        if (oldUid && role === 'max') {
-          formulariosData = formulariosData.filter(form => 
-            form.clienteAdminId === userProfile.uid || 
-            form.clienteAdminId === oldUid ||
-            form.creadorId === userProfile.uid ||
-            form.creadorId === oldUid ||
-            form.permisos?.puedeEditar?.includes(userProfile.uid) ||
-            form.permisos?.puedeEditar?.includes(oldUid) ||
-            form.permisos?.puedeVer?.includes(userProfile.uid) ||
-            form.permisos?.puedeVer?.includes(oldUid)
-          );
-        } else if (oldUid && role === 'operario') {
-          const oldClienteAdminId = oldUid;
-          formulariosData = formulariosData.filter(form => 
-            form.clienteAdminId === userProfile.clienteAdminId ||
-            form.clienteAdminId === oldClienteAdminId ||
-            form.creadorId === userProfile.uid ||
-            form.creadorId === oldUid ||
-            form.esPublico ||
-            form.permisos?.puedeVer?.includes(userProfile.uid) ||
-            form.permisos?.puedeVer?.includes(oldUid)
-          );
-        }
 
         setUserFormularios(formulariosData);
         setLoadingFormularios(false);
@@ -111,6 +59,6 @@ export const useFormulariosListener = (userProfile, role, setUserFormularios, se
     );
 
     return unsubscribe;
-  }, [userProfile?.uid, role, userProfile?.clienteAdminId, loadUserFromCache, enableListener]);
+  }, [userProfile?.uid, loadUserFromCache, enableListener]);
 };
 
