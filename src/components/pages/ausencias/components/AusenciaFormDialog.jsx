@@ -29,7 +29,8 @@ import {
   where,
   orderBy
 } from "firebase/firestore";
-import { db } from "../../../../firebaseControlFile";
+import { db, auditUserCollection } from "../../../../firebaseControlFile";
+import { useAuth } from "../../../../components/context/AuthContext";
 import dayjs from "dayjs";
 
 const getInitialState = () => ({
@@ -62,6 +63,7 @@ export default function AusenciaFormDialog({
   onRemoveTipo,
   onSaved
 }) {
+  const { userProfile } = useAuth();
   const [form, setForm] = useState(getInitialState);
   const [empleados, setEmpleados] = useState([]);
   const [loadingEmployees, setLoadingEmployees] = useState(false);
@@ -117,9 +119,13 @@ export default function AusenciaFormDialog({
         setEmpleados([]);
         return;
       }
+      if (!userProfile?.uid) {
+        setEmpleados([]);
+        return;
+      }
       setLoadingEmployees(true);
       try {
-        const empleadosRef = collection(db, "empleados");
+        const empleadosRef = auditUserCollection(userProfile.uid, "empleados");
         const q = query(
           empleadosRef,
           where("sucursalId", "==", selectedSucursal),
@@ -135,7 +141,7 @@ export default function AusenciaFormDialog({
       }
     };
     fetchEmployees();
-  }, [open, selectedSucursal]);
+  }, [open, selectedSucursal, userProfile]);
 
   const handleChange = (field) => (event) => {
     const value =
@@ -186,7 +192,8 @@ export default function AusenciaFormDialog({
             : undefined,
         relacionAccidente: form.relacionAccidente
           ? form.accidenteId || true
-          : null
+          : null,
+        userProfile
       });
 
       const tipoNormalizado = (form.tipo || "").trim();

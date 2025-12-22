@@ -11,7 +11,7 @@ import {
   Timestamp,
   doc
 } from "firebase/firestore";
-import { db } from "../firebaseControlFile";
+import { db, auditUserCollection } from "../firebaseControlFile";
 
 const AUSENCIAS_COLLECTION = "ausencias";
 const CHUNK_SIZE = 10;
@@ -121,10 +121,14 @@ export async function listAusencias({
   endDate,
   tipo = "todos",
   estado = "todos",
-  search = ""
+  search = "",
+  userProfile
 }) {
   try {
-    const ausenciasRef = collection(db, AUSENCIAS_COLLECTION);
+    if (!userProfile?.uid) {
+      throw new Error('userProfile.uid es requerido para listar ausencias');
+    }
+    const ausenciasRef = auditUserCollection(userProfile.uid, AUSENCIAS_COLLECTION);
     const results = [];
 
     const fetchByQuery = async (consulta) => {
@@ -219,8 +223,12 @@ export async function createAusencia({
   horasPorDia,
   relacionAccidente = null,
   diasLaborales = null,
-  horasSemanales = null
+  horasSemanales = null,
+  userProfile
 }) {
+  if (!userProfile?.uid) {
+    throw new Error('userProfile.uid es requerido para crear ausencia');
+  }
   const payload = {
     empresaId: empresaId || null,
     empresaNombre: empresaNombre || null,
@@ -242,10 +250,11 @@ export async function createAusencia({
     updatedAt: serverTimestamp()
   };
 
-  const docRef = await addDoc(collection(db, AUSENCIAS_COLLECTION), payload);
+  const ausenciasRef = auditUserCollection(userProfile.uid, AUSENCIAS_COLLECTION);
+  const docRef = await addDoc(ausenciasRef, payload);
   const snapshot = await getDocs(
     query(
-      collection(db, AUSENCIAS_COLLECTION),
+      ausenciasRef,
       where("__name__", "==", docRef.id)
     )
   );
@@ -254,9 +263,13 @@ export async function createAusencia({
   return created ? mapAusenciaDoc(created) : { id: docRef.id, ...payload };
 }
 
-export async function updateAusencia(ausenciaId, changes = {}) {
+export async function updateAusencia(ausenciaId, changes = {}, userProfile) {
   if (!ausenciaId) return;
-  const docRef = doc(db, AUSENCIAS_COLLECTION, ausenciaId);
+  if (!userProfile?.uid) {
+    throw new Error('userProfile.uid es requerido para actualizar ausencia');
+  }
+  const ausenciasRef = auditUserCollection(userProfile.uid, AUSENCIAS_COLLECTION);
+  const docRef = doc(ausenciasRef, ausenciaId);
   const payload = {
     ...changes,
     updatedAt: serverTimestamp()
@@ -270,8 +283,12 @@ export async function updateAusencia(ausenciaId, changes = {}) {
   await updateDoc(docRef, payload);
 }
 
-export async function cerrarAusencia(ausenciaId, { fechaFin = new Date() } = {}) {
-  const docRef = doc(db, AUSENCIAS_COLLECTION, ausenciaId);
+export async function cerrarAusencia(ausenciaId, { fechaFin = new Date() } = {}, userProfile) {
+  if (!userProfile?.uid) {
+    throw new Error('userProfile.uid es requerido para cerrar ausencia');
+  }
+  const ausenciasRef = auditUserCollection(userProfile.uid, AUSENCIAS_COLLECTION);
+  const docRef = doc(ausenciasRef, ausenciaId);
   await updateDoc(docRef, {
     estado: "cerrada",
     fechaFin: toTimestamp(fechaFin),
@@ -287,9 +304,12 @@ export const AUSENCIA_ESTADOS = [
   { value: "cerrada", label: "Cerrada" }
 ];
 
-export async function getAusenciaTipos({ maxResults = 200 } = {}) {
+export async function getAusenciaTipos({ maxResults = 200 } = {}, userProfile) {
   try {
-    const ausenciasRef = collection(db, AUSENCIAS_COLLECTION);
+    if (!userProfile?.uid) {
+      throw new Error('userProfile.uid es requerido para obtener tipos de ausencias');
+    }
+    const ausenciasRef = auditUserCollection(userProfile.uid, AUSENCIAS_COLLECTION);
     const consulta = query(ausenciasRef, orderBy("tipo", "asc"), limit(maxResults));
     const snapshot = await getDocs(consulta);
     const unique = new Set();

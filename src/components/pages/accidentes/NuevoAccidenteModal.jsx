@@ -23,8 +23,10 @@ import CloseIcon from '@mui/icons-material/Close';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { obtenerEmpleadosPorSucursal } from '../../../services/accidenteService';
+import { useAuth } from '../../../context/AuthContext';
 
 const NuevoAccidenteModal = ({ open, onClose, onAccidenteCreado, empresaId, sucursalId, empresaNombre, sucursalNombre }) => {
+  const { userProfile } = useAuth();
   const [empleados, setEmpleados] = useState([]);
   const [empleadosSeleccionados, setEmpleadosSeleccionados] = useState([]);
   const [descripcion, setDescripcion] = useState('');
@@ -48,9 +50,10 @@ const NuevoAccidenteModal = ({ open, onClose, onAccidenteCreado, empresaId, sucu
   }, [open, sucursalId]);
 
   const cargarEmpleados = async () => {
+    if (!userProfile?.uid) return;
     setLoadingEmpleados(true);
     try {
-      const empleadosData = await obtenerEmpleadosPorSucursal(sucursalId);
+      const empleadosData = await obtenerEmpleadosPorSucursal(sucursalId, userProfile);
       setEmpleados(empleadosData);
     } catch (err) {
       console.error('Error cargando empleados:', err);

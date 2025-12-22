@@ -76,14 +76,15 @@ export const crearAccidente = async (accidenteData, empleadosSeleccionados, imag
     // Actualizar estado de empleados con días de reposo
     for (const emp of empleadosSeleccionados) {
       if (emp.conReposo) {
-        await actualizarEstadoEmpleado(emp.id, 'inactivo', Timestamp.now());
+        await actualizarEstadoEmpleado(emp.id, 'inactivo', Timestamp.now(), userProfile);
       }
     }
 
     // Actualizar fechaUltimoAccidente en la sucursal
     if (accidenteData.sucursalId) {
       try {
-        const sucursalRef = doc(db, 'sucursales', accidenteData.sucursalId);
+        const sucursalesRef = auditUserCollection(userProfile.uid, 'sucursales');
+        const sucursalRef = doc(sucursalesRef, accidenteData.sucursalId);
         await updateDoc(sucursalRef, {
           fechaUltimoAccidente: Timestamp.now()
         });
@@ -175,9 +176,13 @@ export const crearIncidente = async (incidenteData, testigos = [], imagenes = []
 };
 
 // Actualizar estado de empleado
-export const actualizarEstadoEmpleado = async (empleadoId, estado, fechaInicioReposo = null) => {
+export const actualizarEstadoEmpleado = async (empleadoId, estado, fechaInicioReposo = null, userProfile) => {
   try {
-    const empleadoRef = doc(db, 'empleados', empleadoId);
+    if (!userProfile?.uid) {
+      throw new Error('userProfile.uid es requerido para actualizar empleado');
+    }
+    const empleadosRef = auditUserCollection(userProfile.uid, 'empleados');
+    const empleadoRef = doc(empleadosRef, empleadoId);
     const updateData = { estado };
     
     if (fechaInicioReposo) {
@@ -319,7 +324,7 @@ export const actualizarEstadoAccidente = async (accidenteId, nuevoEstado, userId
           const diasPerdidos = Math.max(0, Math.ceil((fechaCierreDate - fechaInicioReposo) / (1000 * 60 * 60 * 24)));
           
           // Reactivar empleado
-          actualizarEstadoEmpleado(emp.empleadoId, 'activo').catch(err => 
+          actualizarEstadoEmpleado(emp.empleadoId, 'activo', null, userProfile).catch(err => 
             console.error(`Error reactivando empleado ${emp.empleadoId}:`, err)
           );
           
@@ -363,10 +368,14 @@ export const actualizarEstadoAccidente = async (accidenteId, nuevoEstado, userId
 
 // Obtener empleados por sucursal (para los selectores)
 // Incluye todos los empleados (activos e inactivos) para permitir reportar accidentes previos
-export const obtenerEmpleadosPorSucursal = async (sucursalId) => {
+export const obtenerEmpleadosPorSucursal = async (sucursalId, userProfile) => {
   try {
+    if (!userProfile?.uid) {
+      throw new Error('userProfile.uid es requerido para obtener empleados');
+    }
+    const empleadosRef = auditUserCollection(userProfile.uid, 'empleados');
     const q = query(
-      collection(db, 'empleados'),
+      empleadosRef,
       where('sucursalId', '==', sucursalId)
     );
     

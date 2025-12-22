@@ -24,6 +24,7 @@ import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { obtenerEmpleadosPorSucursal } from '../../../../services/accidenteService';
 import { Timestamp } from 'firebase/firestore';
+import { useAuth } from '../../../../context/AuthContext';
 
 /**
  * Modal para editar accidente/incidente
@@ -86,11 +87,11 @@ const EditarAccidenteModal = ({
   }, [accidente, open]);
 
   const cargarEmpleados = async () => {
-    if (!accidente?.sucursalId) return;
+    if (!accidente?.sucursalId || !userProfile?.uid) return;
     
     setLoadingEmpleados(true);
     try {
-      const empleadosData = await obtenerEmpleadosPorSucursal(accidente.sucursalId);
+      const empleadosData = await obtenerEmpleadosPorSucursal(accidente.sucursalId, userProfile);
       setEmpleados(empleadosData);
     } catch (err) {
       console.error('Error cargando empleados:', err);

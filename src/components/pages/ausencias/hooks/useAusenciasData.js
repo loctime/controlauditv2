@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { listAusencias } from "../../../../services/ausenciasService";
+import { useAuth } from "../../../../components/context/AuthContext";
 
 export const useAusenciasData = (
   selectedEmpresa,
@@ -7,6 +8,7 @@ export const useAusenciasData = (
   sucursalesFiltradas,
   filters
 ) => {
+  const { userProfile } = useAuth();
   const [ausencias, setAusencias] = useState([]);
   const [loading, setLoading] = useState(false);
 
@@ -33,7 +35,8 @@ export const useAusenciasData = (
         endDate: filters.endDate,
         tipo: filters.tipo,
         estado: filters.estado,
-        search: filters.search
+        search: filters.search,
+        userProfile
       });
       setAusencias(data);
     } catch (error) {
@@ -50,7 +53,8 @@ export const useAusenciasData = (
     filters.endDate,
     filters.tipo,
     filters.estado,
-    filters.search
+    filters.search,
+    userProfile
   ]);
 
   useEffect(() => {

@@ -111,6 +111,7 @@ export const empresaService = {
           if (userEmail) {
             console.log('[empresaService] 🔍 No se encontraron empresas por UID, buscando por email del propietario...');
             // Buscar usuarios con este email y obtener sus UIDs
+            // NOTA: apps/audit/users es una colección global compartida, no multi-tenant
             const usuariosRef = collection(db, 'apps', 'audit', 'users');
             const emailQuery = query(usuariosRef, where('email', '==', userEmail));
             const usuariosSnapshot = await getDocs(emailQuery);
@@ -217,7 +218,7 @@ export const empresaService = {
     }
 
     setLoadingEmpresas(true);
-    const empresasRef = collection(db, "empresas");
+    const empresasRef = auditUserCollection(userProfile.uid, "empresas");
     const unsubscribes = [];
     const empresasMaps = []; // Array de Maps, uno por cada query
 

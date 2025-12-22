@@ -20,6 +20,7 @@ import AusenciasFilters from "./components/AusenciasFilters";
 import AusenciasTable from "./components/AusenciasTable";
 import AusenciaFormDialog from "./components/AusenciaFormDialog";
 import { getAusenciaTipos } from "../../../services/ausenciasService";
+import { useAuth } from "../../../components/context/AuthContext";
 
 const defaultFilters = {
   tipo: "todos",
@@ -64,7 +65,7 @@ export default function Ausencias() {
   useEffect(() => {
     let active = true;
     const fetchTipos = async () => {
-      const tipos = await getAusenciaTipos();
+      const tipos = await getAusenciaTipos({}, userProfile);
       if (active) {
         setTipoOptions(tipos);
       }
@@ -319,7 +320,7 @@ export default function Ausencias() {
         onRemoveTipo={handleTipoRemoved}
         onSaved={async () => {
           await recargar();
-          const tiposActualizados = await getAusenciaTipos();
+          const tiposActualizados = await getAusenciaTipos({}, userProfile);
           setTipoOptions(tiposActualizados);
           setOpenDialog(false);
         }}

@@ -23,6 +23,7 @@ import DoneIcon from "@mui/icons-material/Done";
 import HistoryIcon from "@mui/icons-material/History";
 import CloseIcon from "@mui/icons-material/Close";
 import { cerrarAusencia, updateAusencia } from "../../../../services/ausenciasService";
+import { useAuth } from "../../../../components/context/AuthContext";
 
 const formatDate = (value) => {
   if (!value) return "-";
@@ -79,10 +80,10 @@ export default function AusenciasTable({ ausencias, onRecargar }) {
   };
 
   const handleConfirmarCierre = async () => {
-    if (!ausenciaPorCerrar) return;
+    if (!ausenciaPorCerrar || !userProfile?.uid) return;
     try {
       setCerrando(true);
-      await cerrarAusencia(ausenciaPorCerrar.id);
+      await cerrarAusencia(ausenciaPorCerrar.id, {}, userProfile);
       if (onRecargar) {
         await onRecargar();
       }
@@ -93,10 +94,11 @@ export default function AusenciasTable({ ausencias, onRecargar }) {
   };
 
   const handleReabrirAusencia = async (ausencia) => {
+    if (!userProfile?.uid) return;
     await updateAusencia(ausencia.id, {
       estado: "abierta",
       fechaFin: null
-    });
+    }, userProfile);
     if (onRecargar) {
       await onRecargar();
     }

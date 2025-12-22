@@ -39,7 +39,8 @@ export default function AccidenteForm({ open, onClose, onSave, sucursalId, empre
 
   const loadEmpleados = async () => {
     try {
-      const empleadosData = await obtenerEmpleadosPorSucursal(sucursalId);
+      if (!userProfile?.uid) return;
+      const empleadosData = await obtenerEmpleadosPorSucursal(sucursalId, userProfile);
       // Filtrar solo activos para el selector
       setEmpleados(empleadosData.filter(emp => emp.estado === 'activo'));
     } catch (error) {
