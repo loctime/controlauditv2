@@ -108,9 +108,7 @@ const BotonGenerarReporte = ({
               uid: currentUserProfile.uid,
               email: currentUserProfile.email,
               displayName: currentUserProfile.displayName,
-              role: currentUserProfile.role,
-              clienteAdminId: currentUserProfile.clienteAdminId,
-              clienteAdminIdFallback: currentUserProfile.clienteAdminId || currentUserProfile.uid
+              role: currentUserProfile.role
             });
           } else {
             console.log('[BotonGenerarReporte] No se encontró usuario en cache');
@@ -121,16 +119,7 @@ const BotonGenerarReporte = ({
         }
       }
 
-      // Asegurar que tenemos los datos de auth correctos
-      const authData = {
-        clienteAdminId: currentUserProfile?.clienteAdminId || currentUserProfile?.uid,
-        usuarioId: currentUserProfile?.uid,
-        usuarioEmail: currentUserProfile?.email,
-        userDisplayName: currentUserProfile?.displayName,
-        userRole: currentUserProfile?.role
-      };
-
-      // Construir l metadatos consistentes y multi-tenant
+      // Construir metadatos consistentes y multi-tenant
       const datosAuditoria = buildReporteMetadata({
         empresa,
         sucursal,
@@ -143,22 +132,12 @@ const BotonGenerarReporte = ({
         firmaAuditor,
         firmaResponsable,
         datosReporte, // Incluir los datos adicionales del reporte
-        // Multi-tenant - asegurar que siempre tengamos estos datos
-        ...authData,
         fechaGuardado: new Date(),
       });
       console.log('🔍 [BotonGenerarReporte] Clasificaciones recibidas como prop:', clasificaciones);
       console.log('🔍 [BotonGenerarReporte] Tipo de clasificaciones:', typeof clasificaciones, Array.isArray(clasificaciones));
       console.debug('[BotonGenerarReporte] Guardando auditoría con metadatos:', datosAuditoria);
       console.log('🔍 [BotonGenerarReporte] Clasificaciones en datosAuditoria:', datosAuditoria.clasificaciones);
-      console.log('[BotonGenerarReporte] userProfile final que se pasa al servicio:', {
-        uid: currentUserProfile?.uid,
-        email: currentUserProfile?.email,
-        displayName: currentUserProfile?.displayName,
-        role: currentUserProfile?.role,
-        clienteAdminId: currentUserProfile?.clienteAdminId,
-        clienteAdminIdFallback: currentUserProfile?.clienteAdminId || currentUserProfile?.uid
-      });
 
       // Usar el servicio centralizado para guardar
       const auditoriaId = await AuditoriaService.guardarAuditoria(datosAuditoria, currentUserProfile);

@@ -22,9 +22,8 @@ export const auditoriaService = {
       }
 
       const uid = userProfile.uid;
-      const oldUid = userProfile?.migratedFromUid || null;
 
-      console.log('[AUDIT PATH] getUserAuditorias - UID usado:', uid, '| Role:', role, '| OldUid:', oldUid || 'ninguno');
+      console.log('[AUDIT PATH] getUserAuditorias - UID usado:', uid, '| Role:', role);
 
       // Leer directo desde auditUserCollection(uid, 'reportes') - contexto multi-tenant
       const auditoriasRef = auditUserCollection(uid, 'reportes');
@@ -34,27 +33,7 @@ export const auditoriaService = {
       const snapshotResult = await getDocs(q);
       console.log('[AUDIT PATH] Resultado principal:', snapshotResult.size, 'documentos');
       
-      let allDocs = [...snapshotResult.docs];
-      
-      // Si hay oldUid, también buscar en la colección antigua para migración
-      if (oldUid) {
-        console.log('[AUDIT PATH] Buscando también en oldUid:', oldUid);
-        const auditoriasOldRef = auditUserCollection(oldUid, 'reportes');
-        const qOld = query(auditoriasOldRef, limit(500));
-        const snapshotOld = await getDocs(qOld);
-        console.log('[AUDIT PATH] Resultado oldUid:', snapshotOld.size, 'documentos');
-        
-        allDocs = [...allDocs, ...snapshotOld.docs];
-      }
-      
-      // Eliminar duplicados
-      const uniqueAuditorias = Array.from(
-        new Map(allDocs.map(doc => [doc.id, doc])).values()
-      );
-      
-      console.log('[AUDIT PATH] Total auditorías únicas:', uniqueAuditorias.length);
-      
-      return uniqueAuditorias.map(doc => ({
+      return snapshotResult.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       }));
@@ -73,13 +52,9 @@ export const auditoriaService = {
       }
 
       const uid = userProfile.uid;
-      const empresaId = userProfile.empresaId || null;
-      const clienteAdminId = userProfile.clienteAdminId || null;
 
       console.log('[auditoriaService] getAuditoriasCompartidas - Inicio query:', {
         uid,
-        empresaId,
-        clienteAdminId,
         filtros: 'compartidoCon array-contains userId, límite 200'
       });
 
@@ -108,13 +83,9 @@ export const auditoriaService = {
       }
 
       const uid = userProfile.uid;
-      const empresaId = userProfile.empresaId || null;
-      const clienteAdminId = userProfile.clienteAdminId || null;
 
       console.log('[auditoriaService] compartirAuditoria - Inicio:', {
         uid,
-        empresaId,
-        clienteAdminId,
         auditoriaId,
         emailUsuario,
         filtros: 'buscar usuario por email, actualizar compartidoCon'

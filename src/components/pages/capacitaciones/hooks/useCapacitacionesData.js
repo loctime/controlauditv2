@@ -15,20 +15,11 @@ export const useCapacitacionesData = (selectedEmpresa, selectedSucursal, sucursa
   const [loading, setLoading] = useState(false);
 
   const loadCapacitaciones = useCallback(async () => {
-    if (!empresasCargadas || !userProfile?.uid) return;
+    if (!userProfile?.uid) return;
 
     let mounted = true;
 
     const loadData = async () => {
-      if (!sucursalesDisponibles || sucursalesDisponibles.length === 0) {
-        if (mounted) {
-          setCapacitaciones([]);
-          setPlanesAnuales([]);
-          setLoading(false);
-        }
-        return;
-      }
-
       if (mounted) {
         setLoading(true);
       }
@@ -37,13 +28,14 @@ export const useCapacitacionesData = (selectedEmpresa, selectedSucursal, sucursa
         const userId = userProfile.uid;
 
         // Cargar capacitaciones individuales desde arquitectura multi-tenant
+        // NO se aplican filtros por identidad - solo filtros funcionales de UI
         const capacitacionesRef = auditUserCollection(userId, 'capacitaciones');
         let qCap;
         
         if (selectedSucursal) {
           // Filtro funcional: solo por sucursal
           qCap = query(capacitacionesRef, where('sucursalId', '==', selectedSucursal));
-        } else if (selectedEmpresa) {
+        } else if (selectedEmpresa && sucursalesDisponibles && sucursalesDisponibles.length > 0) {
           // Filtro funcional: solo por empresa
           const sucursalesEmpresa = sucursalesDisponibles
             .filter(s => s.empresaId === selectedEmpresa)
@@ -168,13 +160,13 @@ export const useCapacitacionesData = (selectedEmpresa, selectedSucursal, sucursa
     loadData();
 
     return () => { mounted = false; };
-  }, [selectedEmpresa, selectedSucursal, sucursalesDisponibles, empresasCargadas, userProfile?.uid]);
+  }, [selectedEmpresa, selectedSucursal, sucursalesDisponibles, userProfile?.uid]);
 
   useEffect(() => {
-    if (sucursalesDisponibles && sucursalesDisponibles.length > 0 && userProfile?.uid) {
+    if (userProfile?.uid) {
       loadCapacitaciones();
     }
-  }, [sucursalesDisponibles, loadCapacitaciones]);
+  }, [loadCapacitaciones, userProfile?.uid]);
 
   return { capacitaciones, planesAnuales, loading, recargarDatos: loadCapacitaciones };
 };

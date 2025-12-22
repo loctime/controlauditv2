@@ -1,7 +1,7 @@
 // src/components/pages/admin/hooks/useClienteDashboard.js
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { collection, addDoc, query, where, getDocs, updateDoc, doc, deleteDoc, serverTimestamp, limit, orderBy, getDoc } from "firebase/firestore";
-import { db } from "../../../../firebaseControlFile";
+import { db, auditUserCollection } from "../../../../firebaseControlFile";
 import { useAuth } from "../../../context/AuthContext";
 import { toast } from 'react-toastify';
 
@@ -22,10 +22,11 @@ export const useClienteDashboard = () => {
   // ✅ Función optimizada para cargar empresas
   const cargarEmpresas = useCallback(async () => {
     try {
-      if (!userProfile) return [];
+      if (!userProfile?.uid) return [];
 
-      // Cargar todas las empresas disponibles (ya filtradas por multi-tenant)
-      const empresasSnapshot = await getDocs(collection(db, 'empresas'));
+      // Cargar empresas desde estructura multi-tenant: apps/auditoria/users/{uid}/empresas
+      const empresasRef = auditUserCollection(userProfile.uid, 'empresas');
+      const empresasSnapshot = await getDocs(empresasRef);
       const empresasData = empresasSnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
@@ -36,16 +37,18 @@ export const useClienteDashboard = () => {
       console.error('Error cargando empresas:', error);
       return [];
     }
-  }, [userProfile]);
+  }, [userProfile?.uid]);
 
   // ✅ Función optimizada para cargar sucursales
   const cargarSucursales = useCallback(async (empresasData) => {
     try {
-      if (!userProfile) return [];
+      if (!userProfile?.uid) return [];
 
-      // Cargar todas las sucursales disponibles (ya filtradas por multi-tenant)
+      // Cargar sucursales desde estructura multi-tenant: apps/auditoria/users/{uid}/sucursales
       // Si hay filtro funcional por empresa, aplicarlo
       let sucursalesData = [];
+      const sucursalesRef = auditUserCollection(userProfile.uid, 'sucursales');
+      
       if (empresasData && empresasData.length > 0) {
         const empresasIds = empresasData.map(emp => emp.nombre || emp.id);
         // Firestore limita 'in' queries a 10 elementos, dividir en chunks si es necesario
@@ -56,7 +59,6 @@ export const useClienteDashboard = () => {
         }
 
         const sucursalesPromises = empresasChunks.map(async (chunk) => {
-          const sucursalesRef = collection(db, "sucursales");
           const sucursalesQuery = query(sucursalesRef, where("empresaId", "in", chunk));
           const sucursalesSnapshot = await getDocs(sucursalesQuery);
           return sucursalesSnapshot.docs.map(doc => ({
@@ -68,8 +70,8 @@ export const useClienteDashboard = () => {
         const sucursalesArrays = await Promise.all(sucursalesPromises);
         sucursalesData = sucursalesArrays.flat();
       } else {
-        // Si no hay filtro de empresa, cargar todas
-        const sucursalesSnapshot = await getDocs(collection(db, 'sucursales'));
+        // Si no hay filtro de empresa, cargar todas las sucursales disponibles
+        const sucursalesSnapshot = await getDocs(sucursalesRef);
         sucursalesData = sucursalesSnapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data()
@@ -80,15 +82,16 @@ export const useClienteDashboard = () => {
       console.error('Error cargando sucursales:', error);
       return [];
     }
-  }, [userProfile]);
+  }, [userProfile?.uid]);
 
   // ✅ Función optimizada para cargar formularios
   const cargarFormularios = useCallback(async () => {
     try {
-      if (!userProfile) return [];
+      if (!userProfile?.uid) return [];
 
-      // Cargar todos los formularios disponibles (ya filtrados por multi-tenant)
-      const formulariosSnapshot = await getDocs(collection(db, 'formularios'));
+      // Cargar formularios desde estructura multi-tenant: apps/auditoria/users/{uid}/formularios
+      const formulariosRef = auditUserCollection(userProfile.uid, 'formularios');
+      const formulariosSnapshot = await getDocs(formulariosRef);
       const formulariosData = formulariosSnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
@@ -99,7 +102,7 @@ export const useClienteDashboard = () => {
       console.error('Error cargando formularios:', error);
       return [];
     }
-  }, [userProfile]);
+  }, [userProfile?.uid]);
 
   // ✅ Función para cargar información completa de usuarios cuando solo tenemos IDs
   const cargarInformacionUsuarios = useCallback(async (auditoriasData) => {
@@ -167,10 +170,10 @@ export const useClienteDashboard = () => {
   // ✅ Función optimizada para cargar auditorías con paginación
   const cargarAuditorias = useCallback(async () => {
     try {
-      if (!userProfile) return [];
+      if (!userProfile?.uid) return [];
 
-      // Cargar todas las auditorías disponibles (ya filtradas por multi-tenant)
-      const auditoriasRef = collection(db, 'auditorias_agendadas');
+      // Cargar auditorías desde estructura multi-tenant: apps/auditoria/users/{uid}/auditorias_agendadas
+      const auditoriasRef = auditUserCollection(userProfile.uid, 'auditorias_agendadas');
       const auditoriasQuery = query(
         auditoriasRef, 
         orderBy('fechaCreacion', 'desc'), 
@@ -190,7 +193,7 @@ export const useClienteDashboard = () => {
       console.error('Error cargando auditorías:', error);
       return [];
     }
-  }, [userProfile, cargarInformacionUsuarios]);
+  }, [userProfile?.uid, cargarInformacionUsuarios]);
 
   // ✅ Funciones optimizadas con useCallback
   const handleAgendarAuditoria = useCallback(async (formData) => {
@@ -227,7 +230,9 @@ export const useClienteDashboard = () => {
         fechaActualizacion: serverTimestamp()
       };
 
-      const docRef = await addDoc(collection(db, 'auditorias_agendadas'), nuevaAuditoria);
+      // Guardar en estructura multi-tenant: apps/auditoria/users/{uid}/auditorias_agendadas
+      const auditoriasRef = auditUserCollection(userProfile.uid, 'auditorias_agendadas');
+      const docRef = await addDoc(auditoriasRef, nuevaAuditoria);
       
       // Eliminar el setAuditorias manual
       // setAuditorias(prev => [{
@@ -258,7 +263,7 @@ export const useClienteDashboard = () => {
   useEffect(() => {
     const cargarDatosParalelos = async () => {
       try {
-        if (!userProfile) return;
+        if (!userProfile?.uid) return;
 
         console.log('[DEBUG] Iniciando carga paralela de datos...');
         
@@ -320,7 +325,7 @@ export const useClienteDashboard = () => {
     };
 
     cargarDatosParalelos();
-  }, [userProfile, cargarEmpresas, cargarSucursales, cargarFormularios, cargarAuditorias]);
+  }, [userProfile?.uid, cargarEmpresas, cargarSucursales, cargarFormularios, cargarAuditorias]);
 
   // ✅ Memoizar datos calculados para evitar recálculos
   const auditoriasPendientes = useMemo(() => 
@@ -348,7 +353,11 @@ export const useClienteDashboard = () => {
 
   const handleCompletarAuditoria = useCallback(async (auditoriaId) => {
     try {
-      const auditoriaRef = doc(db, 'auditorias_agendadas', auditoriaId);
+      if (!userProfile?.uid) return;
+      
+      // Actualizar en estructura multi-tenant: apps/auditoria/users/{uid}/auditorias_agendadas
+      const auditoriasRef = auditUserCollection(userProfile.uid, 'auditorias_agendadas');
+      const auditoriaRef = doc(auditoriasRef, auditoriaId);
       await updateDoc(auditoriaRef, {
         estado: 'completada',
         fechaCompletada: serverTimestamp()
@@ -364,18 +373,22 @@ export const useClienteDashboard = () => {
       console.error('Error completando auditoría:', error);
       toast.error('Error al marcar como completada');
     }
-  }, []);
+  }, [userProfile?.uid]);
 
   const handleEliminarAuditoria = useCallback(async (auditoriaId) => {
     try {
-      await deleteDoc(doc(db, 'auditorias_agendadas', auditoriaId));
+      if (!userProfile?.uid) return;
+      
+      // Eliminar de estructura multi-tenant: apps/auditoria/users/{uid}/auditorias_agendadas
+      const auditoriasRef = auditUserCollection(userProfile.uid, 'auditorias_agendadas');
+      await deleteDoc(doc(auditoriasRef, auditoriaId));
       setAuditorias(prev => prev.filter(aud => aud.id !== auditoriaId));
       toast.success('Auditoría eliminada');
     } catch (error) {
       console.error('Error eliminando auditoría:', error);
       toast.error('Error al eliminar la auditoría');
     }
-  }, []);
+  }, [userProfile?.uid]);
 
   return {
     auditorias,

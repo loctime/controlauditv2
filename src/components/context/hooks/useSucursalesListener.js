@@ -27,8 +27,10 @@ export const useSucursalesListener = (userProfile, setUserSucursales, setLoading
     const unsubscribe = onSnapshot(sucursalesRef, 
       (snapshot) => {
         const sucursalesData = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
+          activa: true,
+          estado: "activa",
+          ...doc.data(),
+          id: doc.id
         }));
         
         setUserSucursales(sucursalesData);

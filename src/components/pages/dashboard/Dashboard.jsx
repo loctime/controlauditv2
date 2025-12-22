@@ -69,17 +69,15 @@ function Dashboard() {
          ...doc.data()
        }));
 
-       // Enriquecer datos con información de usuarios (sin filtrar por clienteAdminId)
-       const empresasEnriquecidas = await Promise.all(
-         empresasData.map(async (cliente) => {
-           // Contar usuarios operarios de este cliente (filtro funcional por rol, no identidad)
-           const usuariosRef = collection(db, "apps", "audit", "users");
-           const usuariosQuery = query(usuariosRef, where("role", "==", "operario"));
-           const usuariosSnapshot = await getDocs(usuariosQuery);
-           // Contar solo los que pertenecen a este cliente (filtro funcional)
-           const usuariosCount = usuariosSnapshot.docs.filter(doc => 
-             doc.data().clienteAdminId === cliente.id
-           ).length;
+      // Enriquecer datos con información de usuarios
+      const empresasEnriquecidas = await Promise.all(
+        empresasData.map(async (cliente) => {
+          // Contar usuarios operarios (los datos ya vienen filtrados por multi-tenant)
+          const usuariosRef = collection(db, "apps", "audit", "users");
+          const usuariosQuery = query(usuariosRef, where("role", "==", "operario"));
+          const usuariosSnapshot = await getDocs(usuariosQuery);
+          // Contar todos los usuarios operarios disponibles (sin filtro por identidad)
+          const usuariosCount = usuariosSnapshot.docs.length;
 
            return {
              ...cliente,

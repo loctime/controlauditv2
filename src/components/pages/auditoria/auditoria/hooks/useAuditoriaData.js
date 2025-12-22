@@ -477,11 +477,9 @@ export const useAuditoriaData = (
             id: doc.id,
             nombre: doc.data().nombre,
             secciones: doc.data().secciones,
-            creadorId: doc.data().creadorId,
             creadorEmail: doc.data().creadorEmail,
             esPublico: doc.data().esPublico,
-            permisos: doc.data().permisos,
-            clienteAdminId: doc.data().clienteAdminId
+            permisos: doc.data().permisos
           }));
           
           // Guardar en cache para uso offline
