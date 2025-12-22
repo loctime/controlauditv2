@@ -12,7 +12,7 @@ import {
 } from '@mui/material';
 import StorefrontIcon from '@mui/icons-material/Storefront';
 import { collection, getDocs, query, where, addDoc, updateDoc, deleteDoc, doc, Timestamp } from 'firebase/firestore';
-import { db } from '../../../../firebaseControlFile';
+import { db, auditUserCollection } from '../../../../firebaseControlFile';
 import { useAuth } from '../../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
@@ -69,7 +69,12 @@ const SucursalesTab = ({ empresaId, empresaNombre, userEmpresas, loadEmpresasSta
   const loadSucursales = async () => {
     setLoading(true);
     try {
-      const q = query(collection(db, 'sucursales'), where('empresaId', '==', empresaId));
+      if (!userProfile?.uid) {
+        console.error('Error: userProfile.uid es requerido');
+        return;
+      }
+      const sucursalesRef = auditUserCollection(userProfile.uid, 'sucursales');
+      const q = query(sucursalesRef, where('empresaId', '==', empresaId));
       const snapshot = await getDocs(q);
       const sucursalesData = snapshot.docs.map(doc => normalizeSucursal(doc));
       setSucursales(sucursalesData);
@@ -178,8 +183,19 @@ const SucursalesTab = ({ empresaId, empresaNombre, userEmpresas, loadEmpresasSta
     }
 
     try {
+      if (!userProfile?.uid) {
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: 'Usuario no autenticado'
+        });
+        return;
+      }
+
+      const sucursalesRef = auditUserCollection(userProfile.uid, 'sucursales');
+
       if (modalMode === 'create') {
-        const docRef = await addDoc(collection(db, 'sucursales'), {
+        const docRef = await addDoc(sucursalesRef, {
           nombre: sucursalForm.nombre,
           direccion: sucursalForm.direccion || '',
           telefono: sucursalForm.telefono || '',
@@ -213,7 +229,8 @@ const SucursalesTab = ({ empresaId, empresaNombre, userEmpresas, loadEmpresasSta
         });
       } else {
         // Modo edición
-        await updateDoc(doc(db, 'sucursales', sucursalForm.id), {
+        const sucursalRef = doc(sucursalesRef, sucursalForm.id);
+        await updateDoc(sucursalRef, {
           nombre: sucursalForm.nombre,
           direccion: sucursalForm.direccion,
           telefono: sucursalForm.telefono,
@@ -280,6 +297,15 @@ const SucursalesTab = ({ empresaId, empresaNombre, userEmpresas, loadEmpresasSta
 
     if (result.isConfirmed) {
       try {
+        if (!userProfile?.uid) {
+          Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Usuario no autenticado'
+          });
+          return;
+        }
+
         // Verificar si hay empleados asociados
         const empleadosSnapshot = await getDocs(
           query(collection(db, 'empleados'), where('sucursalId', '==', sucursal.id))
@@ -294,7 +320,9 @@ const SucursalesTab = ({ empresaId, empresaNombre, userEmpresas, loadEmpresasSta
           return;
         }
 
-        await deleteDoc(doc(db, 'sucursales', sucursal.id));
+        const sucursalesRef = auditUserCollection(userProfile.uid, 'sucursales');
+        const sucursalRef = doc(sucursalesRef, sucursal.id);
+        await deleteDoc(sucursalRef);
 
         await registrarAccionSistema(
           userProfile?.uid,
