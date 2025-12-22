@@ -704,7 +704,7 @@ export default function DashboardSeguridadV2() {
         </Stack>
       )}
 
-      <DashboardHeader companyName={data.companyName} period={data.period} />
+      <DashboardHeader companyName={data?.companyName ?? '—'} period={data?.period} />
 
       <DashboardFilters
         selectedYear={selectedYear}

@@ -120,25 +120,25 @@ export default function DashboardMainGrid({
           {/* Fila 1: Incidentes y Empleados */}
           <Grid item xs={12} lg={4}>
             <IncidentMetrics
-              totalIncidents={data.totalIncidents}
-              incidentTrend={data.incidentTrend}
-              incidentAccidentRatio={data.incidentAccidentRatio}
-              daysWithoutIncidents={data.daysWithoutIncidents}
-              recentIncidents={data.recentIncidents}
-              companyId={data.companyId}
-              sucursalId={data.sucursalId}
+              totalIncidents={data?.totalIncidents ?? 0}
+              incidentTrend={data?.incidentTrend}
+              incidentAccidentRatio={data?.incidentAccidentRatio ?? 0}
+              daysWithoutIncidents={data?.daysWithoutIncidents ?? 0}
+              recentIncidents={data?.recentIncidents}
+              companyId={data?.companyId}
+              sucursalId={data?.sucursalId}
             />
           </Grid>
 
           <Grid item xs={12} lg={8}>
             <EmployeeMetrics
-              totalEmployees={data.totalEmployees}
-              totalEmployeesAll={data.totalEmployeesAll}
-              inactiveEmployees={data.inactiveEmployees}
-              operators={data.operators}
-              administrators={data.administrators}
-              daysWithoutAccidents={data.daysWithoutAccidents}
-              hoursWorked={data.hoursWorked}
+              totalEmployees={data?.totalEmployees ?? 0}
+              totalEmployeesAll={data?.totalEmployeesAll ?? 0}
+              inactiveEmployees={data?.inactiveEmployees ?? 0}
+              operators={data?.operators ?? 0}
+              administrators={data?.administrators ?? 0}
+              daysWithoutAccidents={data?.daysWithoutAccidents ?? 0}
+              hoursWorked={data?.hoursWorked ?? 0}
             />
           </Grid>
 
@@ -170,10 +170,10 @@ export default function DashboardMainGrid({
                 📋 AUDITORÍAS
               </Typography>
               <AuditSummaryChips
-                total={data.auditsTotal}
-                completed={data.auditsCompleted}
-                pending={data.auditsPending}
-                nonConformities={data.auditsNonConformities}
+                total={data?.auditsTotal ?? 0}
+                completed={data?.auditsCompleted ?? 0}
+                pending={data?.auditsPending ?? 0}
+                nonConformities={data?.auditsNonConformities ?? 0}
               />
             </Paper>
           </Grid>
@@ -186,10 +186,10 @@ export default function DashboardMainGrid({
           {/* ACCIDENTES más grande */}
           <Grid item xs={12} md={8}>
             <SafetyGoals
-              totalAccidents={data.totalAccidents}
-              frequencyIndex={data.frequencyIndex}
-              severityIndex={data.severityIndex}
-              accidentabilityIndex={data.accidentabilityIndex}
+              totalAccidents={data?.totalAccidents ?? 0}
+              frequencyIndex={data?.frequencyIndex ?? 0}
+              severityIndex={data?.severityIndex ?? 0}
+              accidentabilityIndex={data?.accidentabilityIndex ?? 0}
             />
           </Grid>
         </Grid>
