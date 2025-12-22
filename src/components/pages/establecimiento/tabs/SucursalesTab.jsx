@@ -192,10 +192,7 @@ const SucursalesTab = ({ empresaId, empresaNombre, userEmpresas, loadEmpresasSta
           targetMensualCapacitaciones: parseInt(sucursalForm.targetMensualCapacitaciones) || 1,
           targetAnualCapacitaciones: parseInt(sucursalForm.targetAnualCapacitaciones) || 12,
           empresaId: empresaId,
-          fechaCreacion: Timestamp.now(),
-          creadoPor: userProfile?.uid,
-          creadoPorEmail: userProfile?.email,
-          clienteAdminId: userProfile?.clienteAdminId || userProfile?.uid
+          fechaCreacion: Timestamp.now()
         });
 
         await registrarAccionSistema(
@@ -228,9 +225,7 @@ const SucursalesTab = ({ empresaId, empresaNombre, userEmpresas, loadEmpresasSta
           targetAnualAuditorias: parseInt(sucursalForm.targetAnualAuditorias) || 12,
           targetMensualCapacitaciones: parseInt(sucursalForm.targetMensualCapacitaciones) || 1,
           targetAnualCapacitaciones: parseInt(sucursalForm.targetAnualCapacitaciones) || 12,
-          fechaModificacion: Timestamp.now(),
-          modificadoPor: userProfile?.uid,
-          modificadoPorEmail: userProfile?.email
+          fechaModificacion: Timestamp.now()
         });
 
         await registrarAccionSistema(

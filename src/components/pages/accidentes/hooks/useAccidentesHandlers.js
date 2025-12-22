@@ -20,7 +20,8 @@ export const useAccidentesHandlers = (userProfile, recargarAccidentes) => {
           reportadoPor: userProfile.uid
         },
         accidenteData.empleadosSeleccionados,
-        accidenteData.imagenes
+        accidenteData.imagenes,
+        userProfile
       );
       Swal.fire('Éxito', 'Accidente reportado correctamente', 'success');
       recargarAccidentes();
@@ -38,7 +39,8 @@ export const useAccidentesHandlers = (userProfile, recargarAccidentes) => {
           reportadoPor: userProfile.uid
         },
         incidenteData.testigos,
-        incidenteData.imagenes
+        incidenteData.imagenes,
+        userProfile
       );
       Swal.fire('Éxito', 'Incidente reportado correctamente', 'success');
       recargarAccidentes();
@@ -60,7 +62,7 @@ export const useAccidentesHandlers = (userProfile, recargarAccidentes) => {
       });
 
       if (result.isConfirmed) {
-        await actualizarEstadoAccidente(accidenteId, nuevoEstado, userProfile?.uid);
+        await actualizarEstadoAccidente(accidenteId, nuevoEstado, userProfile?.uid, userProfile);
         Swal.fire('Éxito', 'Estado actualizado correctamente', 'success');
         recargarAccidentes();
       }
@@ -90,7 +92,7 @@ export const useAccidentesHandlers = (userProfile, recargarAccidentes) => {
           didOpen: () => Swal.showLoading()
         });
 
-        await eliminarAccidente(accidenteId, userProfile?.uid);
+        await eliminarAccidente(accidenteId, userProfile?.uid, userProfile);
         Swal.fire('Éxito', 'Registro eliminado correctamente', 'success');
         recargarAccidentes();
       }
@@ -102,7 +104,7 @@ export const useAccidentesHandlers = (userProfile, recargarAccidentes) => {
 
   const handleActualizarAccidente = useCallback(async (accidenteId, datos, imagenesNuevas = []) => {
     try {
-      await actualizarAccidente(accidenteId, datos, imagenesNuevas, userProfile?.uid);
+      await actualizarAccidente(accidenteId, datos, imagenesNuevas, userProfile?.uid, userProfile);
       Swal.fire('Éxito', 'Accidente actualizado correctamente', 'success');
       recargarAccidentes();
     } catch (error) {

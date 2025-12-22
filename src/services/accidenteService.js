@@ -11,7 +11,7 @@ import {
   getDoc,
   deleteDoc
 } from 'firebase/firestore';
-import { db } from '../firebaseControlFile';
+import { db, auditUserCollection } from '../firebaseControlFile';
 import { uploadToControlFile, getDownloadUrl } from './controlFileService';
 import { getControlFileFolders } from './controlFileInit';
 import { registrarAccionSistema } from '../utils/firestoreUtils';
@@ -21,8 +21,12 @@ import { registrarAccionSistema } from '../utils/firestoreUtils';
  */
 
 // Crear un nuevo accidente
-export const crearAccidente = async (accidenteData, empleadosSeleccionados, imagenes = []) => {
+export const crearAccidente = async (accidenteData, empleadosSeleccionados, imagenes = [], userProfile = null) => {
   try {
+    if (!userProfile || !userProfile.uid) {
+      throw new Error('userProfile.uid es requerido para crear accidente');
+    }
+
     // Preparar datos de empleados involucrados
     const empleadosInvolucrados = empleadosSeleccionados.map(emp => ({
       empleadoId: emp.id,
@@ -49,7 +53,8 @@ export const crearAccidente = async (accidenteData, empleadosSeleccionados, imag
       estado: 'abierto'
     };
 
-    const docRef = await addDoc(collection(db, 'accidentes'), accidenteDoc);
+    const accidentesRef = auditUserCollection(userProfile.uid, 'accidentes');
+    const docRef = await addDoc(accidentesRef, accidenteDoc);
 
     // Subir imágenes si existen
     if (imagenes && imagenes.length > 0) {
@@ -99,8 +104,12 @@ export const crearAccidente = async (accidenteData, empleadosSeleccionados, imag
 };
 
 // Crear un nuevo incidente
-export const crearIncidente = async (incidenteData, testigos = [], imagenes = []) => {
+export const crearIncidente = async (incidenteData, testigos = [], imagenes = [], userProfile = null) => {
   try {
+    if (!userProfile || !userProfile.uid) {
+      throw new Error('userProfile.uid es requerido para crear incidente');
+    }
+
     // Preparar datos de testigos
     const testigosArray = testigos.map(emp => ({
       empleadoId: emp.id,
@@ -126,7 +135,8 @@ export const crearIncidente = async (incidenteData, testigos = [], imagenes = []
       estado: 'abierto'
     };
 
-    const docRef = await addDoc(collection(db, 'accidentes'), incidenteDoc);
+    const accidentesRef = auditUserCollection(userProfile.uid, 'accidentes');
+    const docRef = await addDoc(accidentesRef, incidenteDoc);
 
     // Subir imágenes si existen
     if (imagenes && imagenes.length > 0) {
@@ -213,10 +223,17 @@ export const subirImagenes = async (accidenteId, imagenes) => {
   }
 };
 
-// Obtener accidentes con filtros
-export const obtenerAccidentes = async (filtros = {}) => {
+// Obtener accidentes con filtros (multi-tenant)
+export const obtenerAccidentes = async (filtros = {}, userProfile = null) => {
   try {
-    let q = collection(db, 'accidentes');
+    if (!userProfile || !userProfile.uid) {
+      console.error('[accidenteService] obtenerAccidentes: userProfile.uid es requerido');
+      return [];
+    }
+
+    const uid = userProfile.uid;
+    const accidentesRef = auditUserCollection(uid, 'accidentes');
+    
     const conditions = [];
 
     if (filtros.empresaId) {
@@ -235,10 +252,11 @@ export const obtenerAccidentes = async (filtros = {}) => {
       conditions.push(where('estado', '==', filtros.estado));
     }
 
+    let q;
     if (conditions.length > 0) {
-      q = query(q, ...conditions, orderBy('fechaHora', 'desc'));
+      q = query(accidentesRef, ...conditions, orderBy('fechaHora', 'desc'));
     } else {
-      q = query(q, orderBy('fechaHora', 'desc'));
+      q = query(accidentesRef, orderBy('fechaHora', 'desc'));
     }
 
     const snapshot = await getDocs(q);
@@ -252,10 +270,15 @@ export const obtenerAccidentes = async (filtros = {}) => {
   }
 };
 
-// Obtener un accidente específico
-export const obtenerAccidentePorId = async (accidenteId) => {
+// Obtener un accidente específico (multi-tenant)
+export const obtenerAccidentePorId = async (accidenteId, userProfile = null) => {
   try {
-    const docRef = doc(db, 'accidentes', accidenteId);
+    if (!userProfile || !userProfile.uid) {
+      throw new Error('userProfile.uid es requerido para obtener accidente');
+    }
+
+    const accidentesRef = auditUserCollection(userProfile.uid, 'accidentes');
+    const docRef = doc(accidentesRef, accidenteId);
     const docSnap = await getDoc(docRef);
     
     if (docSnap.exists()) {
@@ -268,10 +291,15 @@ export const obtenerAccidentePorId = async (accidenteId) => {
   }
 };
 
-// Actualizar estado de accidente/incidente
-export const actualizarEstadoAccidente = async (accidenteId, nuevoEstado, userId = null) => {
+// Actualizar estado de accidente/incidente (multi-tenant)
+export const actualizarEstadoAccidente = async (accidenteId, nuevoEstado, userId = null, userProfile = null) => {
   try {
-    const accidenteRef = doc(db, 'accidentes', accidenteId);
+    if (!userProfile || !userProfile.uid) {
+      throw new Error('userProfile.uid es requerido para actualizar estado');
+    }
+
+    const accidentesRef = auditUserCollection(userProfile.uid, 'accidentes');
+    const accidenteRef = doc(accidentesRef, accidenteId);
     const accidenteDoc = await getDoc(accidenteRef);
     const tipo = accidenteDoc.data()?.tipo || 'accidente';
     const fechaAccidente = accidenteDoc.data()?.fechaHora;
@@ -357,11 +385,16 @@ export const obtenerEmpleadosPorSucursal = async (sucursalId) => {
   }
 };
 
-// Obtener estadísticas de accidentes por empresa
-export const obtenerEstadisticas = async (empresaId) => {
+// Obtener estadísticas de accidentes por empresa (multi-tenant)
+export const obtenerEstadisticas = async (empresaId, userProfile = null) => {
   try {
+    if (!userProfile || !userProfile.uid) {
+      throw new Error('userProfile.uid es requerido para obtener estadísticas');
+    }
+
+    const accidentesRef = auditUserCollection(userProfile.uid, 'accidentes');
     const q = query(
-      collection(db, 'accidentes'),
+      accidentesRef,
       where('empresaId', '==', empresaId)
     );
     
@@ -381,10 +414,15 @@ export const obtenerEstadisticas = async (empresaId) => {
   }
 };
 
-// Eliminar accidente/incidente
-export const eliminarAccidente = async (accidenteId, userId = null) => {
+// Eliminar accidente/incidente (multi-tenant)
+export const eliminarAccidente = async (accidenteId, userId = null, userProfile = null) => {
   try {
-    const accidenteRef = doc(db, 'accidentes', accidenteId);
+    if (!userProfile || !userProfile.uid) {
+      throw new Error('userProfile.uid es requerido para eliminar accidente');
+    }
+
+    const accidentesRef = auditUserCollection(userProfile.uid, 'accidentes');
+    const accidenteRef = doc(accidentesRef, accidenteId);
     const accidenteDoc = await getDoc(accidenteRef);
     
     if (!accidenteDoc.exists()) {
@@ -413,10 +451,15 @@ export const eliminarAccidente = async (accidenteId, userId = null) => {
   }
 };
 
-// Actualizar accidente/incidente
-export const actualizarAccidente = async (accidenteId, datosActualizados, imagenesNuevas = [], userId = null) => {
+// Actualizar accidente/incidente (multi-tenant)
+export const actualizarAccidente = async (accidenteId, datosActualizados, imagenesNuevas = [], userId = null, userProfile = null) => {
   try {
-    const accidenteRef = doc(db, 'accidentes', accidenteId);
+    if (!userProfile || !userProfile.uid) {
+      throw new Error('userProfile.uid es requerido para actualizar accidente');
+    }
+
+    const accidentesRef = auditUserCollection(userProfile.uid, 'accidentes');
+    const accidenteRef = doc(accidentesRef, accidenteId);
     const accidenteDoc = await getDoc(accidenteRef);
     
     if (!accidenteDoc.exists()) {

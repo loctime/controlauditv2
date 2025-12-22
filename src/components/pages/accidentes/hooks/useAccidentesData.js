@@ -5,12 +5,12 @@ import Swal from 'sweetalert2';
 /**
  * Hook para cargar accidentes con filtros
  */
-export const useAccidentesData = (selectedEmpresa, selectedSucursal, filterTipo, filterEstado, empresasCargadas) => {
+export const useAccidentesData = (selectedEmpresa, selectedSucursal, filterTipo, filterEstado, empresasCargadas, userProfile) => {
   const [accidentes, setAccidentes] = useState([]);
   const [loading, setLoading] = useState(false);
 
   const loadAccidentes = useCallback(async () => {
-    if (!empresasCargadas) return;
+    if (!empresasCargadas || !userProfile) return;
 
     setLoading(true);
     try {
@@ -32,7 +32,7 @@ export const useAccidentesData = (selectedEmpresa, selectedSucursal, filterTipo,
         filtros.estado = filterEstado;
       }
 
-      const accidentesData = await obtenerAccidentes(filtros);
+      const accidentesData = await obtenerAccidentes(filtros, userProfile);
       setAccidentes(accidentesData);
     } catch (error) {
       console.error('Error cargando accidentes:', error);
@@ -40,7 +40,7 @@ export const useAccidentesData = (selectedEmpresa, selectedSucursal, filterTipo,
     } finally {
       setLoading(false);
     }
-  }, [selectedEmpresa, selectedSucursal, filterTipo, filterEstado, empresasCargadas]);
+  }, [selectedEmpresa, selectedSucursal, filterTipo, filterEstado, empresasCargadas, userProfile]);
 
   useEffect(() => {
     loadAccidentes();

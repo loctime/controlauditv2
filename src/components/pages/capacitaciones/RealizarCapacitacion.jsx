@@ -28,8 +28,8 @@ import {
   StarBorder as StarBorderIcon,
   Save as SaveIcon
 } from '@mui/icons-material';
-import { collection, getDocs, query, where, updateDoc, doc, Timestamp } from 'firebase/firestore';
-import { db } from '../../../firebaseControlFile';
+import { getDocs, query, where, updateDoc, doc, Timestamp } from 'firebase/firestore';
+import { auditUserCollection } from '../../../firebaseControlFile';
 import { useAuth } from '../../context/AuthContext';
 import Swal from 'sweetalert2';
 import ConfirmacionGuardadoModal from './ConfirmacionGuardadoModal';
@@ -122,11 +122,18 @@ export default function RealizarCapacitacion({
   }, [capacitacionSeleccionada, planAnualSeleccionado]);
 
   const loadPlanesAnuales = async () => {
+    if (!userProfile?.uid) {
+      console.error('[RealizarCapacitacion] Usuario no autenticado');
+      return;
+    }
+
     setLoading(true);
     try {
-      // Cargar planes específicos de la sucursal Y planes de "todas las sucursales" de la empresa
+      // Cargar planes desde arquitectura multi-tenant
+      // Solo filtros funcionales: empresa y año
+      const planesRef = auditUserCollection(userProfile.uid, 'planes_capacitaciones_anuales');
       const q = query(
-        collection(db, 'planes_capacitaciones_anuales'),
+        planesRef,
         where('empresaId', '==', selectedEmpresa),
         where('año', '==', new Date().getFullYear())
       );
@@ -137,6 +144,7 @@ export default function RealizarCapacitacion({
       }));
       
       // Filtrar planes que aplican a esta sucursal (sucursalId coincide O es null)
+      // Este es un filtro funcional de UI, no por identidad
       const planesFiltrados = todosPlanes.filter(plan => 
         plan.sucursalId === selectedSucursal || plan.sucursalId === null
       );
@@ -269,8 +277,14 @@ export default function RealizarCapacitacion({
         return c;
       });
       
-      // Actualizar documento en Firestore
-      await updateDoc(doc(db, 'planes_capacitaciones_anuales', planAnualSeleccionado), {
+      // Actualizar documento en Firestore usando arquitectura multi-tenant
+      if (!userProfile?.uid) {
+        Swal.fire('Error', 'Usuario no autenticado', 'error');
+        return;
+      }
+
+      const planesRef = auditUserCollection(userProfile.uid, 'planes_capacitaciones_anuales');
+      await updateDoc(doc(planesRef, planAnualSeleccionado), {
         capacitaciones: capacitacionesActualizadas
       });
       

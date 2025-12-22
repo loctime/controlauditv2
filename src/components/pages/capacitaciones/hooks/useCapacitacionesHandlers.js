@@ -1,9 +1,10 @@
 import { useCallback } from 'react';
-import { collection, addDoc, updateDoc, doc, Timestamp } from 'firebase/firestore';
-import { db } from '../../../../firebaseControlFile';
+import { addDoc, updateDoc, doc, Timestamp } from 'firebase/firestore';
+import { auditUserCollection } from '../../../../firebaseControlFile';
 
 /**
  * Hook para manejar las acciones de capacitaciones
+ * Usa arquitectura multi-tenant: apps/auditoria/users/{uid}/{coleccion}
  */
 export const useCapacitacionesHandlers = (userProfile, recargarDatos, navigate) => {
   const handleRegistrarAsistencia = useCallback((capacitacionId) => {
@@ -11,9 +12,15 @@ export const useCapacitacionesHandlers = (userProfile, recargarDatos, navigate) 
   }, [navigate]);
 
   const handleMarcarCompletada = useCallback(async (capacitacionId) => {
+    if (!userProfile?.uid) {
+      alert('Error: Usuario no autenticado');
+      return;
+    }
+
     if (window.confirm('¿Marcar esta capacitación como completada?')) {
       try {
-        await updateDoc(doc(db, 'capacitaciones', capacitacionId), {
+        const capacitacionRef = doc(auditUserCollection(userProfile.uid, 'capacitaciones'), capacitacionId);
+        await updateDoc(capacitacionRef, {
           estado: 'completada',
           updatedAt: Timestamp.now()
         });
@@ -23,9 +30,14 @@ export const useCapacitacionesHandlers = (userProfile, recargarDatos, navigate) 
         alert('Error al actualizar la capacitación');
       }
     }
-  }, [recargarDatos]);
+  }, [userProfile?.uid, recargarDatos]);
 
   const handleDuplicar = useCallback(async (capacitacion) => {
+    if (!userProfile?.uid) {
+      alert('Error: Usuario no autenticado');
+      return;
+    }
+
     if (window.confirm(`¿Crear nueva instancia de "${capacitacion.nombre}"?`)) {
       try {
         const nuevaCapacitacion = {
@@ -33,20 +45,25 @@ export const useCapacitacionesHandlers = (userProfile, recargarDatos, navigate) 
           estado: 'activa',
           empleados: [],
           fechaRealizada: Timestamp.now(),
-          createdAt: Timestamp.now(),
-          createdBy: userProfile?.uid
+          createdAt: Timestamp.now()
         };
         delete nuevaCapacitacion.id;
         delete nuevaCapacitacion.updatedAt;
+        // Eliminar campos de identidad legacy
+        delete nuevaCapacitacion.createdBy;
+        delete nuevaCapacitacion.creadoPor;
+        delete nuevaCapacitacion.clienteAdminId;
+        delete nuevaCapacitacion.usuarioId;
         
-        await addDoc(collection(db, 'capacitaciones'), nuevaCapacitacion);
+        const capacitacionesRef = auditUserCollection(userProfile.uid, 'capacitaciones');
+        await addDoc(capacitacionesRef, nuevaCapacitacion);
         recargarDatos();
       } catch (error) {
         console.error('Error al duplicar:', error);
         alert('Error al duplicar la capacitación');
       }
     }
-  }, [userProfile, recargarDatos]);
+  }, [userProfile?.uid, recargarDatos]);
 
   return {
     handleRegistrarAsistencia,

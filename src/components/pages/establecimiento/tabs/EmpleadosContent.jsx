@@ -98,10 +98,7 @@ const EmpleadosContent = ({ sucursalId, sucursalNombre, navigateToPage, reloadSu
         sucursalId: sucursalId,
         sucursalNombre: sucursalNombre,
         estado: 'activo',
-        fechaCreacion: Timestamp.now(),
-        creadoPor: userProfile?.uid,
-        creadoPorEmail: userProfile?.email,
-        clienteAdminId: userProfile?.clienteAdminId || userProfile?.uid
+        fechaCreacion: Timestamp.now()
       });
 
       setEmpleadoForm({
@@ -197,8 +194,7 @@ const EmpleadosContent = ({ sucursalId, sucursalNombre, navigateToPage, reloadSu
         cargo: empleadoEdit.cargo,
         area: empleadoEdit.area,
         fechaIngreso: empleadoEdit.fechaIngreso,
-        fechaActualizacion: Timestamp.now(),
-        actualizadoPor: userProfile?.uid
+        fechaActualizacion: Timestamp.now()
       });
 
       setOpenEditEmpleadoForm(false);
@@ -247,8 +243,7 @@ const EmpleadosContent = ({ sucursalId, sucursalNombre, navigateToPage, reloadSu
       try {
         await updateDoc(doc(db, 'empleados', empleado.id), {
           estado: 'inactivo',
-          fechaActualizacion: Timestamp.now(),
-          actualizadoPor: userProfile?.uid
+          fechaActualizacion: Timestamp.now()
         });
 
         // Recargar datos

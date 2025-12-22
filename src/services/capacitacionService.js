@@ -11,46 +11,32 @@ import {
   where,
   Timestamp 
 } from 'firebase/firestore';
-import { db } from '../firebaseControlFile';
+import { db, auditUserCollection } from '../firebaseControlFile';
 import { registrarAccionSistema } from '../utils/firestoreUtils';
 
 export const capacitacionService = {
   /**
-   * Obtener capacitaciones de una empresa
+   * Obtener capacitaciones de una empresa (multi-tenant)
+   * @param {string} userId - UID del usuario
    * @param {string} empresaId - ID de la empresa
    * @returns {Promise<Array>} Lista de capacitaciones
    */
-  async getCapacitacionesByEmpresa(empresaId) {
+  async getCapacitacionesByEmpresa(userId, empresaId) {
     try {
-      if (!empresaId) return [];
+      if (!userId || !empresaId) return [];
 
-      // 1. Obtener sucursales de la empresa
-      const sucursalesSnapshot = await getDocs(
-        query(collection(db, 'sucursales'), where('empresaId', '==', empresaId))
+      // Leer desde arquitectura multi-tenant
+      const capacitacionesRef = auditUserCollection(userId, 'capacitaciones');
+      
+      // Filtrar solo por empresaId (filtro funcional, no por identidad)
+      const snapshot = await getDocs(
+        query(capacitacionesRef, where('empresaId', '==', empresaId))
       );
-      const sucursalesIds = sucursalesSnapshot.docs.map(doc => doc.id);
       
-      if (sucursalesIds.length === 0) return [];
-
-      // 2. Obtener capacitaciones de esas sucursales
-      const capacitacionesData = [];
-      const chunkSize = 10;
-      
-      for (let i = 0; i < sucursalesIds.length; i += chunkSize) {
-        const chunk = sucursalesIds.slice(i, i + chunkSize);
-        const capacitacionesSnapshot = await getDocs(
-          query(collection(db, 'capacitaciones'), where('sucursalId', 'in', chunk))
-        );
-        
-        capacitacionesSnapshot.docs.forEach(doc => {
-          capacitacionesData.push({
-            id: doc.id,
-            ...doc.data()
-          });
-        });
-      }
-      
-      return capacitacionesData;
+      return snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
     } catch (error) {
       console.error('❌ Error obteniendo capacitaciones por empresa:', error);
       return [];
@@ -58,16 +44,21 @@ export const capacitacionService = {
   },
 
   /**
-   * Obtener capacitaciones de una sucursal
+   * Obtener capacitaciones de una sucursal (multi-tenant)
+   * @param {string} userId - UID del usuario
    * @param {string} sucursalId - ID de la sucursal
    * @returns {Promise<Array>} Lista de capacitaciones
    */
-  async getCapacitacionesBySucursal(sucursalId) {
+  async getCapacitacionesBySucursal(userId, sucursalId) {
     try {
-      if (!sucursalId) return [];
+      if (!userId || !sucursalId) return [];
 
+      // Leer desde arquitectura multi-tenant
+      const capacitacionesRef = auditUserCollection(userId, 'capacitaciones');
+      
+      // Filtrar solo por sucursalId (filtro funcional, no por identidad)
       const snapshot = await getDocs(
-        query(collection(db, 'capacitaciones'), where('sucursalId', '==', sucursalId))
+        query(capacitacionesRef, where('sucursalId', '==', sucursalId))
       );
       
       return snapshot.docs.map(doc => ({ 
@@ -81,21 +72,26 @@ export const capacitacionService = {
   },
 
   /**
-   * Obtener capacitaciones de múltiples sucursales
+   * Obtener capacitaciones de múltiples sucursales (multi-tenant)
+   * @param {string} userId - UID del usuario
    * @param {Array<string>} sucursalesIds - IDs de las sucursales
    * @returns {Promise<Array>} Lista de capacitaciones
    */
-  async getCapacitacionesBySucursales(sucursalesIds) {
+  async getCapacitacionesBySucursales(userId, sucursalesIds) {
     try {
-      if (!sucursalesIds || sucursalesIds.length === 0) return [];
+      if (!userId || !sucursalesIds || sucursalesIds.length === 0) return [];
 
+      // Leer desde arquitectura multi-tenant
+      const capacitacionesRef = auditUserCollection(userId, 'capacitaciones');
+      
       const capacitacionesData = [];
       const chunkSize = 10;
       
+      // Filtrar solo por sucursalId (filtro funcional, no por identidad)
       for (let i = 0; i < sucursalesIds.length; i += chunkSize) {
         const chunk = sucursalesIds.slice(i, i + chunkSize);
         const snapshot = await getDocs(
-          query(collection(db, 'capacitaciones'), where('sucursalId', 'in', chunk))
+          query(capacitacionesRef, where('sucursalId', 'in', chunk))
         );
         
         snapshot.docs.forEach(doc => {
@@ -114,13 +110,41 @@ export const capacitacionService = {
   },
 
   /**
-   * Obtener una capacitación por ID
+   * Obtener todas las capacitaciones del usuario (multi-tenant)
+   * @param {string} userId - UID del usuario
+   * @returns {Promise<Array>} Lista de capacitaciones
+   */
+  async getAllCapacitaciones(userId) {
+    try {
+      if (!userId) return [];
+
+      // Leer desde arquitectura multi-tenant - sin filtros por identidad
+      const capacitacionesRef = auditUserCollection(userId, 'capacitaciones');
+      const snapshot = await getDocs(capacitacionesRef);
+      
+      return snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+    } catch (error) {
+      console.error('❌ Error obteniendo todas las capacitaciones:', error);
+      return [];
+    }
+  },
+
+  /**
+   * Obtener una capacitación por ID (multi-tenant)
+   * @param {string} userId - UID del usuario
    * @param {string} capacitacionId - ID de la capacitación
    * @returns {Promise<Object|null>} Datos de la capacitación o null
    */
-  async getCapacitacionById(capacitacionId) {
+  async getCapacitacionById(userId, capacitacionId) {
     try {
-      const capacitacionDoc = await getDoc(doc(db, 'capacitaciones', capacitacionId));
+      if (!userId || !capacitacionId) return null;
+
+      // Leer desde arquitectura multi-tenant
+      const capacitacionRef = doc(auditUserCollection(userId, 'capacitaciones'), capacitacionId);
+      const capacitacionDoc = await getDoc(capacitacionRef);
       
       if (capacitacionDoc.exists()) {
         return {
@@ -137,17 +161,21 @@ export const capacitacionService = {
   },
 
   /**
-   * Crear una nueva capacitación
+   * Crear una nueva capacitación (multi-tenant)
+   * @param {string} userId - UID del usuario
    * @param {Object} capacitacionData - Datos de la capacitación
    * @param {Object} user - Usuario que crea la capacitación
    * @returns {Promise<string>} ID de la capacitación creada
    */
-  async crearCapacitacion(capacitacionData, user) {
+  async crearCapacitacion(userId, capacitacionData, user) {
     try {
-      const capacitacionRef = await addDoc(collection(db, 'capacitaciones'), {
+      if (!userId) throw new Error('userId es requerido');
+
+      // Guardar en arquitectura multi-tenant
+      const capacitacionesRef = auditUserCollection(userId, 'capacitaciones');
+      const capacitacionRef = await addDoc(capacitacionesRef, {
         ...capacitacionData,
         fechaCreacion: Timestamp.now(),
-        creadoPor: user?.uid,
         ultimaModificacion: Timestamp.now()
       });
 
@@ -169,18 +197,22 @@ export const capacitacionService = {
   },
 
   /**
-   * Actualizar una capacitación
+   * Actualizar una capacitación (multi-tenant)
+   * @param {string} userId - UID del usuario
    * @param {string} capacitacionId - ID de la capacitación
    * @param {Object} updateData - Datos a actualizar
    * @param {Object} user - Usuario que actualiza
    * @returns {Promise<boolean>} True si se actualizó correctamente
    */
-  async updateCapacitacion(capacitacionId, updateData, user) {
+  async updateCapacitacion(userId, capacitacionId, updateData, user) {
     try {
-      await updateDoc(doc(db, 'capacitaciones', capacitacionId), {
+      if (!userId) throw new Error('userId es requerido');
+
+      // Actualizar en arquitectura multi-tenant
+      const capacitacionRef = doc(auditUserCollection(userId, 'capacitaciones'), capacitacionId);
+      await updateDoc(capacitacionRef, {
         ...updateData,
-        ultimaModificacion: Timestamp.now(),
-        modificadoPor: user?.uid
+        ultimaModificacion: Timestamp.now()
       });
 
       // Registrar acción
@@ -201,14 +233,19 @@ export const capacitacionService = {
   },
 
   /**
-   * Eliminar una capacitación
+   * Eliminar una capacitación (multi-tenant)
+   * @param {string} userId - UID del usuario
    * @param {string} capacitacionId - ID de la capacitación
    * @param {Object} user - Usuario que elimina
    * @returns {Promise<boolean>} True si se eliminó correctamente
    */
-  async deleteCapacitacion(capacitacionId, user) {
+  async deleteCapacitacion(userId, capacitacionId, user) {
     try {
-      await deleteDoc(doc(db, 'capacitaciones', capacitacionId));
+      if (!userId) throw new Error('userId es requerido');
+
+      // Eliminar en arquitectura multi-tenant
+      const capacitacionRef = doc(auditUserCollection(userId, 'capacitaciones'), capacitacionId);
+      await deleteDoc(capacitacionRef);
 
       // Registrar acción
       await registrarAccionSistema(
@@ -228,17 +265,21 @@ export const capacitacionService = {
   },
 
   /**
-   * Marcar capacitación como completada
+   * Marcar capacitación como completada (multi-tenant)
+   * @param {string} userId - UID del usuario
    * @param {string} capacitacionId - ID de la capacitación
    * @param {Object} user - Usuario que completa
    * @returns {Promise<boolean>} True si se actualizó correctamente
    */
-  async completarCapacitacion(capacitacionId, user) {
+  async completarCapacitacion(userId, capacitacionId, user) {
     try {
-      await updateDoc(doc(db, 'capacitaciones', capacitacionId), {
+      if (!userId) throw new Error('userId es requerido');
+
+      // Actualizar en arquitectura multi-tenant
+      const capacitacionRef = doc(auditUserCollection(userId, 'capacitaciones'), capacitacionId);
+      await updateDoc(capacitacionRef, {
         estado: 'completada',
         fechaCompletada: Timestamp.now(),
-        completadaPor: user?.uid,
         ultimaModificacion: Timestamp.now()
       });
 

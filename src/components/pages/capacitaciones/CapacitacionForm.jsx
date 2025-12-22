@@ -10,8 +10,8 @@ import {
   MenuItem,
   CircularProgress
 } from '@mui/material';
-import { collection, addDoc, Timestamp } from 'firebase/firestore';
-import { db } from '../../../firebaseControlFile';
+import { addDoc, Timestamp } from 'firebase/firestore';
+import { auditUserCollection } from '../../../firebaseControlFile';
 import { useAuth } from '../../context/AuthContext';
 
 export default function CapacitacionForm({ open, onClose, onSave, sucursalId, empresaId }) {
@@ -31,18 +31,25 @@ export default function CapacitacionForm({ open, onClose, onSave, sucursalId, em
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    if (!userProfile?.uid) {
+      alert('Error: Usuario no autenticado');
+      return;
+    }
+
     setLoading(true);
 
     try {
-      await addDoc(collection(db, 'capacitaciones'), {
+      // Guardar en arquitectura multi-tenant - sin campos de identidad
+      const capacitacionesRef = auditUserCollection(userProfile.uid, 'capacitaciones');
+      await addDoc(capacitacionesRef, {
         ...formData,
         empresaId,
         sucursalId,
         estado: 'activa',
         empleados: [],
         fechaRealizada: Timestamp.fromDate(new Date(formData.fechaRealizada)),
-        createdAt: Timestamp.now(),
-        createdBy: userProfile?.uid
+        createdAt: Timestamp.now()
       });
 
       setFormData({

@@ -14,11 +14,13 @@ import {
 } from '@mui/material';
 import { useParams, useNavigate } from 'react-router-dom';
 import { collection, query, where, getDocs, doc, getDoc, updateDoc, Timestamp } from 'firebase/firestore';
-import { db } from '../../../firebaseControlFile';
+import { db, auditUserCollection } from '../../../firebaseControlFile';
+import { useAuth } from '../../context/AuthContext';
 
 export default function RegistrarAsistencia() {
   const { capacitacionId } = useParams();
   const navigate = useNavigate();
+  const { userProfile } = useAuth();
   const [capacitacion, setCapacitacion] = useState(null);
   const [empleados, setEmpleados] = useState([]);
   const [selectedEmpleados, setSelectedEmpleados] = useState(new Set());
@@ -26,14 +28,23 @@ export default function RegistrarAsistencia() {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    loadData();
-  }, [capacitacionId]);
+    if (userProfile?.uid) {
+      loadData();
+    }
+  }, [capacitacionId, userProfile?.uid]);
 
   const loadData = async () => {
+    if (!userProfile?.uid) {
+      alert('Usuario no autenticado');
+      navigate('/capacitaciones');
+      return;
+    }
+
     setLoading(true);
     try {
-      // Cargar capacitación
-      const capDoc = await getDoc(doc(db, 'capacitaciones', capacitacionId));
+      // Cargar capacitación desde arquitectura multi-tenant
+      const capacitacionRef = doc(auditUserCollection(userProfile.uid, 'capacitaciones'), capacitacionId);
+      const capDoc = await getDoc(capacitacionRef);
       if (!capDoc.exists()) {
         alert('Capacitación no encontrada');
         navigate('/capacitaciones');
@@ -91,6 +102,11 @@ export default function RegistrarAsistencia() {
   };
 
   const handleGuardar = async () => {
+    if (!userProfile?.uid) {
+      alert('Usuario no autenticado');
+      return;
+    }
+
     setSaving(true);
     try {
       const empleadosRegistrados = empleados
@@ -102,7 +118,9 @@ export default function RegistrarAsistencia() {
           fecha: Timestamp.now()
         }));
 
-      await updateDoc(doc(db, 'capacitaciones', capacitacionId), {
+      // Actualizar en arquitectura multi-tenant
+      const capacitacionRef = doc(auditUserCollection(userProfile.uid, 'capacitaciones'), capacitacionId);
+      await updateDoc(capacitacionRef, {
         empleados: empleadosRegistrados,
         updatedAt: Timestamp.now()
       });

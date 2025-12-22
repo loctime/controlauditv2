@@ -28,8 +28,8 @@ import {
   Business as BusinessIcon,
   Storefront as StorefrontIcon
 } from '@mui/icons-material';
-import { collection, addDoc, updateDoc, doc, Timestamp } from 'firebase/firestore';
-import { db } from '../../../firebaseControlFile';
+import { addDoc, updateDoc, doc, Timestamp } from 'firebase/firestore';
+import { auditUserCollection } from '../../../firebaseControlFile';
 import { useAuth } from '../../context/AuthContext';
 import Swal from 'sweetalert2';
 
@@ -213,6 +213,11 @@ export default function PlanAnualModal({
       const sucursalNombre = selectedSucursal ? 
         (userSucursales.find(s => s.id === selectedSucursal)?.nombre || 'Sucursal no encontrada') : 'Todas las sucursales';
 
+      if (!userProfile?.uid) {
+        Swal.fire('Error', 'Usuario no autenticado', 'error');
+        return;
+      }
+
       const planDocumento = {
         nombre: planData.nombre || 'Plan Anual',
         empresaId: selectedEmpresa || null,
@@ -221,18 +226,19 @@ export default function PlanAnualModal({
         sucursalNombre: sucursalNombre || 'Sucursal no especificada',
         año: new Date().getFullYear(),
         capacitaciones: capacitacionesArray,
-        createdAt: Timestamp.now(),
-        createdBy: userProfile?.uid || 'unknown',
-        createdByEmail: userProfile?.email || 'unknown@example.com'
+        createdAt: Timestamp.now()
       };
+
+      // Usar arquitectura multi-tenant
+      const planesRef = auditUserCollection(userProfile.uid, 'planes_capacitaciones_anuales');
 
       if (planToEdit) {
         // Modo edición: actualizar documento existente
-        await updateDoc(doc(db, 'planes_capacitaciones_anuales', planToEdit.id), planDocumento);
+        await updateDoc(doc(planesRef, planToEdit.id), planDocumento);
         Swal.fire('Éxito', 'Plan anual actualizado correctamente', 'success');
       } else {
         // Modo creación: crear nuevo documento
-        await addDoc(collection(db, 'planes_capacitaciones_anuales'), planDocumento);
+        await addDoc(planesRef, planDocumento);
         Swal.fire('Éxito', 'Plan anual creado correctamente', 'success');
       }
       

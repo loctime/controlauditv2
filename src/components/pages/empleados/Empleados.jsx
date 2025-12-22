@@ -28,8 +28,8 @@ import {
   Search as SearchIcon,
   CloudUpload as CloudUploadIcon
 } from '@mui/icons-material';
-import { collection, query, where, getDocs, deleteDoc, doc } from 'firebase/firestore';
-import { db } from '../../../firebaseControlFile';
+import { query, where, getDocs, deleteDoc, doc } from 'firebase/firestore';
+import { auditUserCollection } from '../../../firebaseControlFile';
 import { useAuth } from '../../context/AuthContext';
 import { useGlobalSelection } from '../../../hooks/useGlobalSelection';
 import EmpleadoForm from './EmpleadoForm';
@@ -68,9 +68,15 @@ export default function Empleados() {
   }, [userEmpresas]);
 
   const loadEmpleados = useCallback(async () => {
+    if (!userProfile?.uid || !selectedSucursal) {
+      setEmpleados([]);
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     try {
-      const empleadosRef = collection(db, 'empleados');
+      const empleadosRef = auditUserCollection(userProfile.uid, 'empleados');
       const q = query(
         empleadosRef,
         where('sucursalId', '==', selectedSucursal)
@@ -85,10 +91,11 @@ export default function Empleados() {
       setEmpleados(empleadosData);
     } catch (error) {
       console.error('Error al cargar empleados:', error);
+      setEmpleados([]);
     } finally {
       setLoading(false);
     }
-  }, [selectedSucursal]);
+  }, [selectedSucursal, userProfile?.uid]);
 
   // Cargar empleados
   useEffect(() => {
@@ -117,9 +124,15 @@ export default function Empleados() {
   };
 
   const handleDeleteEmpleado = async (empleadoId, nombreEmpleado) => {
+    if (!userProfile?.uid) {
+      alert('Error: No se pudo identificar el usuario');
+      return;
+    }
+
     if (window.confirm(`¿Está seguro de eliminar a ${nombreEmpleado}?`)) {
       try {
-        await deleteDoc(doc(db, 'empleados', empleadoId));
+        const empleadoRef = doc(auditUserCollection(userProfile.uid, 'empleados'), empleadoId);
+        await deleteDoc(empleadoRef);
         loadEmpleados();
       } catch (error) {
         console.error('Error al eliminar empleado:', error);

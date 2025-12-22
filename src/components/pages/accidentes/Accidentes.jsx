@@ -78,7 +78,8 @@ export default function Accidentes() {
     selectedSucursal,
     filterTipo,
     filterEstado,
-    empresasCargadas
+    empresasCargadas,
+    userProfile
   );
 
   const {
@@ -178,7 +179,7 @@ export default function Accidentes() {
   };
 
   const handleActualizarEstadoWrapper = async (accidenteId, nuevoEstado) => {
-    return actualizarEstadoAccidente(accidenteId, nuevoEstado, userProfile?.uid);
+    return actualizarEstadoAccidente(accidenteId, nuevoEstado, userProfile?.uid, userProfile);
   };
 
   const empresaActual = userEmpresas?.find(e => e.id === selectedEmpresa);

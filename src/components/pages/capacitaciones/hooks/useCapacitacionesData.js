@@ -1,18 +1,21 @@
 import { useState, useEffect, useCallback } from 'react';
-import { collection, query, where, getDocs } from 'firebase/firestore';
-import { db } from '../../../../firebaseControlFile';
+import { query, where, getDocs } from 'firebase/firestore';
+import { auditUserCollection } from '../../../../firebaseControlFile';
+import { useAuth } from '../../../context/AuthContext';
 
 /**
  * Hook para cargar capacitaciones individuales y planes anuales
  * Optimizado con cleanup patterns y carga paralela
+ * Usa arquitectura multi-tenant: apps/auditoria/users/{uid}/{coleccion}
  */
 export const useCapacitacionesData = (selectedEmpresa, selectedSucursal, sucursalesDisponibles, empresasCargadas) => {
+  const { userProfile } = useAuth();
   const [capacitaciones, setCapacitaciones] = useState([]);
   const [planesAnuales, setPlanesAnuales] = useState([]);
   const [loading, setLoading] = useState(false);
 
   const loadCapacitaciones = useCallback(async () => {
-    if (!empresasCargadas) return;
+    if (!empresasCargadas || !userProfile?.uid) return;
 
     let mounted = true;
 
@@ -31,13 +34,17 @@ export const useCapacitacionesData = (selectedEmpresa, selectedSucursal, sucursa
       }
 
       try {
-        // Cargar capacitaciones individuales
-        const capacitacionesRef = collection(db, 'capacitaciones');
+        const userId = userProfile.uid;
+
+        // Cargar capacitaciones individuales desde arquitectura multi-tenant
+        const capacitacionesRef = auditUserCollection(userId, 'capacitaciones');
         let qCap;
         
         if (selectedSucursal) {
+          // Filtro funcional: solo por sucursal
           qCap = query(capacitacionesRef, where('sucursalId', '==', selectedSucursal));
         } else if (selectedEmpresa) {
+          // Filtro funcional: solo por empresa
           const sucursalesEmpresa = sucursalesDisponibles
             .filter(s => s.empresaId === selectedEmpresa)
             .map(s => s.id);
@@ -51,8 +58,40 @@ export const useCapacitacionesData = (selectedEmpresa, selectedSucursal, sucursa
             return;
           }
           
-          qCap = query(capacitacionesRef, where('sucursalId', 'in', sucursalesEmpresa));
+          // Usar 'in' para múltiples sucursales (máximo 10)
+          const chunkSize = 10;
+          const capacitacionesData = [];
+          
+          for (let i = 0; i < sucursalesEmpresa.length; i += chunkSize) {
+            const chunk = sucursalesEmpresa.slice(i, i + chunkSize);
+            const chunkQuery = query(capacitacionesRef, where('sucursalId', 'in', chunk));
+            const chunkSnapshot = await getDocs(chunkQuery);
+            chunkSnapshot.docs.forEach(doc => {
+              capacitacionesData.push({
+                id: doc.id,
+                ...doc.data(),
+                tipo: 'individual'
+              });
+            });
+          }
+          
+          // Ordenar por fecha más reciente
+          capacitacionesData.sort((a, b) => {
+            const dateA = a.fechaRealizada?.toDate?.() || new Date(a.fechaRealizada);
+            const dateB = b.fechaRealizada?.toDate?.() || new Date(b.fechaRealizada);
+            return dateB - dateA;
+          });
+
+          // Cargar planes anuales
+          await loadPlanesAnuales(userId, mounted);
+
+          if (mounted) {
+            setCapacitaciones(capacitacionesData);
+            setLoading(false);
+          }
+          return;
         } else {
+          // Sin filtros funcionales: cargar todas las capacitaciones del usuario
           qCap = capacitacionesRef;
         }
         
@@ -71,9 +110,27 @@ export const useCapacitacionesData = (selectedEmpresa, selectedSucursal, sucursa
         });
 
         // Cargar planes anuales
-        const planesRef = collection(db, 'planes_capacitaciones_anuales');
+        await loadPlanesAnuales(userId, mounted);
+
+        if (mounted) {
+          setCapacitaciones(capacitacionesData);
+          setLoading(false);
+        }
+      } catch (error) {
+        console.error('Error al cargar capacitaciones:', error);
+        if (mounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    const loadPlanesAnuales = async (userId, mounted) => {
+      try {
+        // Cargar planes anuales desde arquitectura multi-tenant
+        const planesRef = auditUserCollection(userId, 'planes_capacitaciones_anuales');
         let planesQ;
         
+        // Solo filtros funcionales: empresa, sucursal, año
         if (selectedSucursal) {
           planesQ = query(
             planesRef, 
@@ -98,14 +155,12 @@ export const useCapacitacionesData = (selectedEmpresa, selectedSucursal, sucursa
         }));
 
         if (mounted) {
-          setCapacitaciones(capacitacionesData);
           setPlanesAnuales(planesData);
-          setLoading(false);
         }
       } catch (error) {
-        console.error('Error al cargar capacitaciones:', error);
+        console.error('Error al cargar planes anuales:', error);
         if (mounted) {
-          setLoading(false);
+          setPlanesAnuales([]);
         }
       }
     };
@@ -113,10 +168,10 @@ export const useCapacitacionesData = (selectedEmpresa, selectedSucursal, sucursa
     loadData();
 
     return () => { mounted = false; };
-  }, [selectedEmpresa, selectedSucursal, sucursalesDisponibles, empresasCargadas]);
+  }, [selectedEmpresa, selectedSucursal, sucursalesDisponibles, empresasCargadas, userProfile?.uid]);
 
   useEffect(() => {
-    if (sucursalesDisponibles && sucursalesDisponibles.length > 0) {
+    if (sucursalesDisponibles && sucursalesDisponibles.length > 0 && userProfile?.uid) {
       loadCapacitaciones();
     }
   }, [sucursalesDisponibles, loadCapacitaciones]);
