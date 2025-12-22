@@ -31,6 +31,7 @@ const defaultFilters = {
 };
 
 export default function Ausencias() {
+  const { userProfile } = useAuth();
   const {
     selectedEmpresa,
     setSelectedEmpresa,

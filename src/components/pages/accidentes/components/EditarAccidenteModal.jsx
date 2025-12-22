@@ -24,7 +24,7 @@ import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { obtenerEmpleadosPorSucursal } from '../../../../services/accidenteService';
 import { Timestamp } from 'firebase/firestore';
-import { useAuth } from '../../../../context/AuthContext';
+import { useAuth } from '../../../context/AuthContext';
 
 /**
  * Modal para editar accidente/incidente
@@ -35,6 +35,7 @@ const EditarAccidenteModal = ({
   accidente, 
   onGuardar
 }) => {
+  const { userProfile } = useAuth();
   const [empleados, setEmpleados] = useState([]);
   const [empleadosSeleccionados, setEmpleadosSeleccionados] = useState([]);
   const [descripcion, setDescripcion] = useState('');
