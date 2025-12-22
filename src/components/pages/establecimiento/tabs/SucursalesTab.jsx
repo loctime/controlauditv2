@@ -20,7 +20,7 @@ import EmpleadosContent from './EmpleadosContent';
 import CapacitacionesContent from './CapacitacionesContent';
 import AccidentesContent from './AccidentesContent';
 import AccionesRequeridas from '../components/AccionesRequeridas';
-import { registrarAccionSistema } from '../../../../utils/firestoreUtils';
+import { registrarAccionSistema, normalizeSucursal } from '../../../../utils/firestoreUtils';
 import { calcularProgresoTargets } from '../../../../utils/sucursalTargetUtils';
 import { useSucursalesStats } from '../hooks/useSucursalesStats';
 import SucursalTableHeader from '../components/SucursalTableHeader';
@@ -71,10 +71,7 @@ const SucursalesTab = ({ empresaId, empresaNombre, userEmpresas, loadEmpresasSta
     try {
       const q = query(collection(db, 'sucursales'), where('empresaId', '==', empresaId));
       const snapshot = await getDocs(q);
-      const sucursalesData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
+      const sucursalesData = snapshot.docs.map(doc => normalizeSucursal(doc));
       setSucursales(sucursalesData);
       
       // Cargar estadísticas de cada sucursal

@@ -13,6 +13,7 @@ import { getDocs, query, where } from 'firebase/firestore';
 import { auditUserCollection } from '../../../../firebaseControlFile';
 import { useAuth } from '../../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { normalizeEmpleado } from '../../../../utils/firestoreUtils';
 
 const EmpleadosTab = ({ empresaId, empresaNombre }) => {
   const navigate = useNavigate();
@@ -45,10 +46,7 @@ const EmpleadosTab = ({ empresaId, empresaNombre }) => {
 
       const empleadosRef = auditUserCollection(userProfile.uid, 'empleados');
       const empleadosSnapshot = await getDocs(query(empleadosRef, where('sucursalId', 'in', sucursalesIds)));
-      const empleadosData = empleadosSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
+      const empleadosData = empleadosSnapshot.docs.map(doc => normalizeEmpleado(doc));
       setEmpleados(empleadosData);
     } catch (error) {
       console.error('Error cargando empleados:', error);

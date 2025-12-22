@@ -120,7 +120,7 @@ export default function Capacitaciones() {
       nombre: `Plan Anual: ${plan.nombre}`,
       descripcion: `Plan anual con ${plan.capacitaciones?.length || 0} capacitaciones programadas`,
       instructor: 'Plan Anual',
-      fechaRealizada: plan.createdAt,
+      fechaRealizada: plan.fechaCreacion ?? plan.createdAt,
       empleados: plan.capacitaciones?.flatMap(cap => cap.empleadosAsistieron || []) || [],
       estado: 'plan_anual',
       originalPlan: plan

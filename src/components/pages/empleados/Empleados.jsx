@@ -32,6 +32,7 @@ import { query, where, getDocs, deleteDoc, doc } from 'firebase/firestore';
 import { auditUserCollection } from '../../../firebaseControlFile';
 import { useAuth } from '../../context/AuthContext';
 import { useGlobalSelection } from '../../../hooks/useGlobalSelection';
+import { normalizeEmpleado } from '../../../utils/firestoreUtils';
 import EmpleadoForm from './EmpleadoForm';
 import ImportEmpleadosDialog from './import/ImportEmpleadosDialog';
 
@@ -83,10 +84,7 @@ export default function Empleados() {
       );
       
       const snapshot = await getDocs(q);
-      const empleadosData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
+      const empleadosData = snapshot.docs.map(doc => normalizeEmpleado(doc));
       
       setEmpleados(empleadosData);
     } catch (error) {

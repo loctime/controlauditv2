@@ -4,6 +4,28 @@ import { auditUserCollection } from '../../../../firebaseControlFile';
 import { useAuth } from '../../../context/AuthContext';
 
 /**
+ * Normaliza una capacitación unificando campos legacy
+ * Preserva todos los campos originales
+ */
+const normalizeCapacitacion = (doc) => ({
+  id: doc.id,
+  ...doc.data(),
+  fechaCreacion: doc.data().fechaCreacion ?? doc.data().createdAt ?? null,
+  activa: doc.data().activa ?? true,
+});
+
+/**
+ * Normaliza un plan anual unificando campos legacy
+ * Preserva todos los campos originales
+ */
+const normalizePlanAnual = (doc) => ({
+  id: doc.id,
+  ...doc.data(),
+  fechaCreacion: doc.data().fechaCreacion ?? doc.data().createdAt ?? null,
+  activa: doc.data().activa ?? true,
+});
+
+/**
  * Hook para cargar capacitaciones individuales y planes anuales
  * Optimizado con cleanup patterns y carga paralela
  * Usa arquitectura multi-tenant: apps/auditoria/users/{uid}/{coleccion}
@@ -60,8 +82,7 @@ export const useCapacitacionesData = (selectedEmpresa, selectedSucursal, sucursa
             const chunkSnapshot = await getDocs(chunkQuery);
             chunkSnapshot.docs.forEach(doc => {
               capacitacionesData.push({
-                id: doc.id,
-                ...doc.data(),
+                ...normalizeCapacitacion(doc),
                 tipo: 'individual'
               });
             });
@@ -89,8 +110,7 @@ export const useCapacitacionesData = (selectedEmpresa, selectedSucursal, sucursa
         
         const snapshotCap = await getDocs(qCap);
         const capacitacionesData = snapshotCap.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data(),
+          ...normalizeCapacitacion(doc),
           tipo: 'individual'
         }));
         
@@ -141,8 +161,7 @@ export const useCapacitacionesData = (selectedEmpresa, selectedSucursal, sucursa
         
         const planesSnapshot = await getDocs(planesQ);
         const planesData = planesSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data(),
+          ...normalizePlanAnual(doc),
           tipo: 'plan_anual'
         }));
 

@@ -165,4 +165,42 @@ export const registrarAccionSistema = async (userId, accion, detalles = {}, tipo
   } catch (error) {
     console.error('Error al registrar acción del sistema:', error);
   }
+};
+
+/**
+ * Normaliza datos de sucursal para unificar campos legacy
+ * Unifica campos de fecha y estado activo sin modificar Firestore
+ * Preserva TODOS los campos originales
+ * @param {Object} doc - Documento de sucursal desde Firestore
+ * @returns {Object} Sucursal normalizada con campos unificados
+ */
+export const normalizeSucursal = (doc) => {
+  const data = typeof doc === 'object' && doc.data ? doc.data() : doc;
+  const id = doc.id || data.id;
+  
+  return {
+    ...data,
+    id,
+    fechaCreacion: data.fechaCreacion ?? data.createdAt ?? null,
+    activa: data.activa ?? true
+  };
+};
+
+/**
+ * Normaliza datos de empleado para unificar campos legacy
+ * Unifica campos de fecha y estado activo sin modificar Firestore
+ * Preserva TODOS los campos originales
+ * @param {Object} doc - Documento de empleado desde Firestore
+ * @returns {Object} Empleado normalizado con campos unificados
+ */
+export const normalizeEmpleado = (doc) => {
+  const data = typeof doc === 'object' && doc.data ? doc.data() : doc;
+  const id = doc.id || data.id;
+  
+  return {
+    ...data,
+    id,
+    fechaCreacion: data.fechaCreacion ?? data.createdAt ?? null,
+    activa: data.activa ?? true
+  };
 }; 

@@ -4,6 +4,7 @@ import { collection, addDoc, query, where, getDocs, updateDoc, doc, deleteDoc, s
 import { db, auditUserCollection } from "../../../../firebaseControlFile";
 import { useAuth } from "../../../context/AuthContext";
 import { toast } from 'react-toastify';
+import { normalizeSucursal } from '../../../../utils/firestoreUtils';
 
 export const useClienteDashboard = () => {
   const { userProfile, role } = useAuth();
@@ -61,10 +62,7 @@ export const useClienteDashboard = () => {
         const sucursalesPromises = empresasChunks.map(async (chunk) => {
           const sucursalesQuery = query(sucursalesRef, where("empresaId", "in", chunk));
           const sucursalesSnapshot = await getDocs(sucursalesQuery);
-          return sucursalesSnapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data()
-          }));
+          return sucursalesSnapshot.docs.map(doc => normalizeSucursal(doc));
         });
 
         const sucursalesArrays = await Promise.all(sucursalesPromises);
@@ -72,10 +70,7 @@ export const useClienteDashboard = () => {
       } else {
         // Si no hay filtro de empresa, cargar todas las sucursales disponibles
         const sucursalesSnapshot = await getDocs(sucursalesRef);
-        sucursalesData = sucursalesSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
+        sucursalesData = sucursalesSnapshot.docs.map(doc => normalizeSucursal(doc));
       }
       return sucursalesData;
     } catch (error) {

@@ -3,6 +3,7 @@ import { getDocs, query, where, limit } from "firebase/firestore";
 import { auditUserCollection } from "../../../../../firebaseControlFile";
 import { storageUtils } from "../../../../../utils/utilitiesOptimization";
 import { getCompleteUserCache } from "../../../../../services/completeOfflineCache";
+import { normalizeSucursal } from "../../../../../utils/firestoreUtils";
 
 export const useAuditoriaData = (
   setEmpresas,
@@ -282,7 +283,16 @@ export const useAuditoriaData = (
               setFormularios(cacheData.formularios);
             }
             if (cacheData.sucursales && cacheData.sucursales.length > 0) {
-              setSucursales(cacheData.sucursales);
+              const normalizedSucursales = cacheData.sucursales.map(sucursal => {
+                const normalized = normalizeSucursal(sucursal);
+                return {
+                  id: normalized.id,
+                  nombre: normalized.nombre,
+                  empresa: normalized.empresa,
+                  empresaId: normalized.empresaId
+                };
+              });
+              setSucursales(normalizedSucursales);
             }
             return;
           }
@@ -382,12 +392,15 @@ export const useAuditoriaData = (
               limit(200)
             );
             const sucursalesSnapshot = await getDocs(sucursalesQuery);
-            return sucursalesSnapshot.docs.map(doc => ({
-              id: doc.id,
-              nombre: doc.data().nombre,
-              empresa: doc.data().empresa,
-              empresaId: doc.data().empresaId
-            }));
+            return sucursalesSnapshot.docs.map(doc => {
+              const normalized = normalizeSucursal(doc);
+              return {
+                id: normalized.id,
+                nombre: normalized.nombre,
+                empresa: normalized.empresa,
+                empresaId: normalized.empresaId
+              };
+            });
           });
 
           const sucursalesArrays = await Promise.all(sucursalesPromises);
@@ -397,12 +410,15 @@ export const useAuditoriaData = (
           const sucursalesCollection = auditUserCollection(userProfile.uid, "sucursales");
           const q = query(sucursalesCollection, limit(500));
           const snapshot = await getDocs(q);
-          sucursalesData = snapshot.docs.map((doc) => ({
-            id: doc.id,
-            nombre: doc.data().nombre,
-            empresa: doc.data().empresa,
-            empresaId: doc.data().empresaId
-          }));
+          sucursalesData = snapshot.docs.map((doc) => {
+            const normalized = normalizeSucursal(doc);
+            return {
+              id: normalized.id,
+              nombre: normalized.nombre,
+              empresa: normalized.empresa,
+              empresaId: normalized.empresaId
+            };
+          });
         }
 
         setSucursales(sucursalesData);

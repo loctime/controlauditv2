@@ -10,7 +10,7 @@ import {
   where 
 } from 'firebase/firestore';
 import { auditUserCollection } from '../firebaseControlFile';
-import { registrarAccionSistema } from '../utils/firestoreUtils';
+import { registrarAccionSistema, normalizeEmpleado } from '../utils/firestoreUtils';
 
 export const empleadoService = {
   /**
@@ -44,10 +44,7 @@ export const empleadoService = {
         );
         
         empleadosSnapshot.docs.forEach(doc => {
-          empleadosData.push({
-            id: doc.id,
-            ...doc.data()
-          });
+          empleadosData.push(normalizeEmpleado(doc));
         });
       }
       
@@ -73,10 +70,7 @@ export const empleadoService = {
         query(empleadosRef, where('sucursalId', '==', sucursalId))
       );
       
-      return snapshot.docs.map(doc => ({ 
-        id: doc.id, 
-        ...doc.data() 
-      }));
+      return snapshot.docs.map(doc => normalizeEmpleado(doc));
     } catch (error) {
       console.error('❌ Error obteniendo empleados por sucursal:', error);
       return [];
@@ -104,10 +98,7 @@ export const empleadoService = {
         );
         
         snapshot.docs.forEach(doc => {
-          empleadosData.push({
-            id: doc.id,
-            ...doc.data()
-          });
+          empleadosData.push(normalizeEmpleado(doc));
         });
       }
       
@@ -132,10 +123,7 @@ export const empleadoService = {
       const empleadoDoc = await getDoc(empleadoRef);
       
       if (empleadoDoc.exists()) {
-        return {
-          id: empleadoDoc.id,
-          ...empleadoDoc.data()
-        };
+        return normalizeEmpleado(empleadoDoc);
       }
       
       return null;

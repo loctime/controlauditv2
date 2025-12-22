@@ -20,6 +20,21 @@ import { registrarAccionSistema } from '../utils/firestoreUtils';
  * Servicio para gestión de accidentes e incidentes
  */
 
+/**
+ * Normaliza un documento de accidente/incidente para unificar campos legacy
+ * @param {Object} doc - Documento de Firestore
+ * @returns {Object} Documento normalizado
+ */
+const normalizeAccidente = (doc) => {
+  if (!doc) return doc;
+  
+  return {
+    ...doc,
+    fechaCreacion: doc.fechaCreacion ?? doc.createdAt ?? null,
+    activa: doc.activa ?? true,
+  };
+};
+
 // Crear un nuevo accidente
 export const crearAccidente = async (accidenteData, empleadosSeleccionados, imagenes = [], userProfile) => {
   try {
@@ -92,7 +107,8 @@ export const crearAccidente = async (accidenteData, empleadosSeleccionados, imag
       docRef.id
     );
 
-    return { id: docRef.id, ...accidenteDoc };
+    const result = { id: docRef.id, ...accidenteDoc };
+    return normalizeAccidente(result);
   } catch (error) {
     console.error('Error al crear accidente:', error);
     throw error;
@@ -150,7 +166,8 @@ export const crearIncidente = async (incidenteData, testigos = [], imagenes = []
       docRef.id
     );
 
-    return { id: docRef.id, ...incidenteDoc };
+    const result = { id: docRef.id, ...incidenteDoc };
+    return normalizeAccidente(result);
   } catch (error) {
     console.error('Error al crear incidente:', error);
     throw error;
@@ -246,10 +263,10 @@ export const obtenerAccidentes = async (filtros = {}, userProfile) => {
     }
 
     const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    }));
+    return snapshot.docs.map(doc => {
+      const data = { id: doc.id, ...doc.data() };
+      return normalizeAccidente(data);
+    });
   } catch (error) {
     console.error('Error al obtener accidentes:', error);
     throw error;
@@ -264,7 +281,8 @@ export const obtenerAccidentePorId = async (accidenteId, userProfile) => {
     const docSnap = await getDoc(docRef);
     
     if (docSnap.exists()) {
-      return { id: docSnap.id, ...docSnap.data() };
+      const data = { id: docSnap.id, ...docSnap.data() };
+      return normalizeAccidente(data);
     }
     return null;
   } catch (error) {
@@ -373,7 +391,10 @@ export const obtenerEstadisticas = async (empresaId, userProfile) => {
     );
     
     const snapshot = await getDocs(q);
-    const accidentes = snapshot.docs.map(doc => doc.data());
+    const accidentes = snapshot.docs.map(doc => {
+      const data = doc.data();
+      return normalizeAccidente(data);
+    });
     
     return {
       total: accidentes.length,
@@ -461,7 +482,8 @@ export const actualizarAccidente = async (accidenteId, datosActualizados, imagen
       );
     }
 
-    return { id: accidenteId, ...updateData };
+    const result = { id: accidenteId, ...updateData };
+    return normalizeAccidente(result);
   } catch (error) {
     console.error('Error al actualizar accidente:', error);
     throw error;

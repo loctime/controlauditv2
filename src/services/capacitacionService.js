@@ -14,6 +14,17 @@ import {
 import { db, auditUserCollection } from '../firebaseControlFile';
 import { registrarAccionSistema } from '../utils/firestoreUtils';
 
+/**
+ * Normaliza una capacitación unificando campos legacy
+ * Preserva todos los campos originales
+ */
+const normalizeCapacitacion = (doc) => ({
+  id: doc.id,
+  ...doc.data(),
+  fechaCreacion: doc.data().fechaCreacion ?? doc.data().createdAt ?? null,
+  activa: doc.data().activa ?? true,
+});
+
 export const capacitacionService = {
   /**
    * Obtener capacitaciones de una empresa (multi-tenant)
@@ -33,10 +44,7 @@ export const capacitacionService = {
         query(capacitacionesRef, where('empresaId', '==', empresaId))
       );
       
-      return snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
+      return snapshot.docs.map(doc => normalizeCapacitacion(doc));
     } catch (error) {
       console.error('❌ Error obteniendo capacitaciones por empresa:', error);
       return [];
@@ -61,10 +69,7 @@ export const capacitacionService = {
         query(capacitacionesRef, where('sucursalId', '==', sucursalId))
       );
       
-      return snapshot.docs.map(doc => ({ 
-        id: doc.id, 
-        ...doc.data() 
-      }));
+      return snapshot.docs.map(doc => normalizeCapacitacion(doc));
     } catch (error) {
       console.error('❌ Error obteniendo capacitaciones por sucursal:', error);
       return [];
@@ -95,10 +100,7 @@ export const capacitacionService = {
         );
         
         snapshot.docs.forEach(doc => {
-          capacitacionesData.push({
-            id: doc.id,
-            ...doc.data()
-          });
+          capacitacionesData.push(normalizeCapacitacion(doc));
         });
       }
       
@@ -122,10 +124,7 @@ export const capacitacionService = {
       const capacitacionesRef = auditUserCollection(userId, 'capacitaciones');
       const snapshot = await getDocs(capacitacionesRef);
       
-      return snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
+      return snapshot.docs.map(doc => normalizeCapacitacion(doc));
     } catch (error) {
       console.error('❌ Error obteniendo todas las capacitaciones:', error);
       return [];
@@ -147,10 +146,7 @@ export const capacitacionService = {
       const capacitacionDoc = await getDoc(capacitacionRef);
       
       if (capacitacionDoc.exists()) {
-        return {
-          id: capacitacionDoc.id,
-          ...capacitacionDoc.data()
-        };
+        return normalizeCapacitacion(capacitacionDoc);
       }
       
       return null;

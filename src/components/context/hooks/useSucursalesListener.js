@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { onSnapshot } from 'firebase/firestore';
 import { auditUserCollection } from '../../../firebaseControlFile.js';
+import { normalizeSucursal } from '../../../utils/firestoreUtils';
 
 /**
  * Hook para listener reactivo de sucursales con fallback offline
@@ -26,12 +27,7 @@ export const useSucursalesListener = (userProfile, setUserSucursales, setLoading
 
     const unsubscribe = onSnapshot(sucursalesRef, 
       (snapshot) => {
-        const sucursalesData = snapshot.docs.map(doc => ({
-          activa: true,
-          estado: "activa",
-          ...doc.data(),
-          id: doc.id
-        }));
+        const sucursalesData = snapshot.docs.map(doc => normalizeSucursal(doc));
         
         setUserSucursales(sucursalesData);
         setLoadingSucursales(false);
@@ -45,7 +41,8 @@ export const useSucursalesListener = (userProfile, setUserSucursales, setLoading
             const cachedData = await loadUserFromCache();
             if (cachedData?.sucursales && cachedData.sucursales.length > 0) {
               console.log('🔄 [Offline] Usando sucursales del cache IndexedDB:', cachedData.sucursales.length);
-              setUserSucursales(cachedData.sucursales);
+              const normalizedSucursales = cachedData.sucursales.map(sucursal => normalizeSucursal(sucursal));
+              setUserSucursales(normalizedSucursales);
               setLoadingSucursales(false);
               return;
             }

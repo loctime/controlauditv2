@@ -8,6 +8,7 @@ import { Business as BusinessIcon, ExpandMore as ExpandMoreIcon, Store as StoreI
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { db } from '../../../firebaseControlFile';
 import { useNavigate } from 'react-router-dom';
+import { normalizeSucursal } from '../../../utils/firestoreUtils';
 
 // Componente para mostrar sucursales de una empresa
 const SucursalesEmpresa = ({ empresaId }) => {
@@ -21,7 +22,7 @@ const SucursalesEmpresa = ({ empresaId }) => {
     setLoading(true);
     const q = query(collection(db, 'sucursales'), where('empresaId', '==', empresaId));
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      setSucursales(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      setSucursales(snapshot.docs.map(doc => normalizeSucursal(doc)));
       setLoading(false);
       console.debug(`[SucursalesEmpresa] ${snapshot.docs.length} sucursales para empresa ${empresaId}`);
     });

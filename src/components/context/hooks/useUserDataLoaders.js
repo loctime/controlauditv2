@@ -3,6 +3,7 @@ import { getDocs, query, where } from 'firebase/firestore';
 import { auditUserCollection } from '../../../firebaseControlFile.js';
 import { empresaService } from '../../../services/empresaService';
 import { auditoriaService } from '../../../services/auditoriaService';
+import { normalizeSucursal } from '../../../utils/firestoreUtils';
 
 /**
  * Hook para funciones de carga de datos del usuario
@@ -75,10 +76,7 @@ export const useUserDataLoaders = (
       if (role === 'supermax') {
         // Admin: cargar todas las sucursales del usuario
         const sucursalesSnapshot = await getDocs(sucursalesRef);
-        sucursalesData = sucursalesSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
+        sucursalesData = sucursalesSnapshot.docs.map(doc => normalizeSucursal(doc));
       } else if (empresasToUse && empresasToUse.length > 0) {
         // Filtrar por empresaId (filtro funcional)
         const empresasIds = empresasToUse.map(emp => emp.id);
@@ -91,10 +89,7 @@ export const useUserDataLoaders = (
         const sucursalesPromises = empresasChunks.map(async (chunk) => {
           const sucursalesQuery = query(sucursalesRef, where("empresaId", "in", chunk));
           const sucursalesSnapshot = await getDocs(sucursalesQuery);
-          return sucursalesSnapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data()
-          }));
+          return sucursalesSnapshot.docs.map(doc => normalizeSucursal(doc));
         });
 
         const sucursalesArrays = await Promise.all(sucursalesPromises);
@@ -112,9 +107,10 @@ export const useUserDataLoaders = (
         try {
           const cachedData = await loadUserFromCache();
           if (cachedData?.sucursales && cachedData.sucursales.length > 0) {
-            setUserSucursales(cachedData.sucursales);
+            const normalizedSucursales = cachedData.sucursales.map(sucursal => normalizeSucursal(sucursal));
+            setUserSucursales(normalizedSucursales);
             setLoadingSucursales(false);
-            return cachedData.sucursales;
+            return normalizedSucursales;
           }
         } catch (cacheError) {
           console.error('Error cargando sucursales desde cache:', cacheError);

@@ -31,6 +31,7 @@ import {
 import { getDocs, query, where, updateDoc, doc, Timestamp } from 'firebase/firestore';
 import { auditUserCollection } from '../../../firebaseControlFile';
 import { useAuth } from '../../context/AuthContext';
+import { normalizeEmpleado } from '../../../utils/firestoreUtils';
 import Swal from 'sweetalert2';
 import ConfirmacionGuardadoModal from './ConfirmacionGuardadoModal';
 
@@ -172,10 +173,7 @@ export default function RealizarCapacitacion({
         where('sucursalId', '==', selectedSucursal)
       );
       const snapshot = await getDocs(q);
-      const empleadosData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
+      const empleadosData = snapshot.docs.map(doc => normalizeEmpleado(doc));
       setEmpleados(empleadosData);
     } catch (error) {
       console.error('Error cargando empleados:', error);
