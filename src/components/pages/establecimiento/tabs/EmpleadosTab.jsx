@@ -9,25 +9,33 @@ import {
   Typography
 } from '@mui/material';
 import PeopleIcon from '@mui/icons-material/People';
-import { collection, getDocs, query, where } from 'firebase/firestore';
-import { db } from '../../../../firebaseControlFile';
+import { getDocs, query, where } from 'firebase/firestore';
+import { auditUserCollection } from '../../../../firebaseControlFile';
+import { useAuth } from '../../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
 const EmpleadosTab = ({ empresaId, empresaNombre }) => {
   const navigate = useNavigate();
+  const { userProfile } = useAuth();
   const [empleados, setEmpleados] = useState([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (empresaId) {
+    if (empresaId && userProfile?.uid) {
       loadEmpleados();
     }
-  }, [empresaId]);
+  }, [empresaId, userProfile?.uid]);
 
   const loadEmpleados = async () => {
+    if (!userProfile?.uid) {
+      setEmpleados([]);
+      return;
+    }
+
     setLoading(true);
     try {
-      const sucursalesSnapshot = await getDocs(query(collection(db, 'sucursales'), where('empresaId', '==', empresaId)));
+      const sucursalesRef = auditUserCollection(userProfile.uid, 'sucursales');
+      const sucursalesSnapshot = await getDocs(query(sucursalesRef, where('empresaId', '==', empresaId)));
       const sucursalesIds = sucursalesSnapshot.docs.map(doc => doc.id);
       
       if (sucursalesIds.length === 0) {
@@ -35,7 +43,8 @@ const EmpleadosTab = ({ empresaId, empresaNombre }) => {
         return;
       }
 
-      const empleadosSnapshot = await getDocs(query(collection(db, 'empleados'), where('sucursalId', 'in', sucursalesIds)));
+      const empleadosRef = auditUserCollection(userProfile.uid, 'empleados');
+      const empleadosSnapshot = await getDocs(query(empleadosRef, where('sucursalId', 'in', sucursalesIds)));
       const empleadosData = empleadosSnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()

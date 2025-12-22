@@ -13,28 +13,26 @@ import {
   TableRow
 } from '@mui/material';
 import ReportProblemIcon from '@mui/icons-material/ReportProblem';
-import { collection, getDocs, query, where } from 'firebase/firestore';
-import { db } from '../../../../firebaseControlFile';
+import { obtenerAccidentes } from '../../../../services/accidenteService';
+import { useAuth } from '../../../context/AuthContext';
 
 const AccidentesContent = ({ sucursalId, sucursalNombre, empresaId, navigateToPage }) => {
+  const { userProfile } = useAuth();
   const [accidentes, setAccidentes] = useState([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (sucursalId) {
+    if (sucursalId && userProfile?.uid) {
       loadAccidentes();
     }
-  }, [sucursalId]);
+  }, [sucursalId, userProfile?.uid]);
 
   const loadAccidentes = async () => {
+    if (!userProfile?.uid) return;
+    
     setLoading(true);
     try {
-      const q = query(collection(db, 'accidentes'), where('sucursalId', '==', sucursalId));
-      const snapshot = await getDocs(q);
-      const accidentesData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
+      const accidentesData = await obtenerAccidentes({ sucursalId }, userProfile);
       setAccidentes(accidentesData);
     } catch (error) {
       console.error('Error cargando accidentes:', error);

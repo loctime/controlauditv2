@@ -11,9 +11,10 @@ import {
   CircularProgress,
   Autocomplete
 } from '@mui/material';
-import { collection, addDoc, query, where, getDocs, Timestamp } from 'firebase/firestore';
-import { db } from '../../../firebaseControlFile';
+import { query, where, getDocs } from 'firebase/firestore';
+import { db, auditUserCollection } from '../../../firebaseControlFile';
 import { useAuth } from '../../context/AuthContext';
+import { crearAccidente, crearIncidente, obtenerEmpleadosPorSucursal } from '../../../services/accidenteService';
 
 export default function AccidenteForm({ open, onClose, onSave, sucursalId, empresaId }) {
   const { userProfile } = useAuth();
@@ -38,20 +39,9 @@ export default function AccidenteForm({ open, onClose, onSave, sucursalId, empre
 
   const loadEmpleados = async () => {
     try {
-      const empleadosRef = collection(db, 'empleados');
-      const q = query(
-        empleadosRef,
-        where('sucursalId', '==', sucursalId),
-        where('estado', '==', 'activo')
-      );
-      
-      const snapshot = await getDocs(q);
-      const empleadosData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-      
-      setEmpleados(empleadosData);
+      const empleadosData = await obtenerEmpleadosPorSucursal(sucursalId);
+      // Filtrar solo activos para el selector
+      setEmpleados(empleadosData.filter(emp => emp.estado === 'activo'));
     } catch (error) {
       console.error('Error al cargar empleados:', error);
     }
@@ -64,7 +54,7 @@ export default function AccidenteForm({ open, onClose, onSave, sucursalId, empre
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    if (!selectedEmpleado) {
+    if (!selectedEmpleado || !userProfile?.uid) {
       alert('Debe seleccionar un empleado');
       return;
     }
@@ -72,17 +62,29 @@ export default function AccidenteForm({ open, onClose, onSave, sucursalId, empre
     setLoading(true);
 
     try {
-      await addDoc(collection(db, 'accidentes'), {
-        ...formData,
+      const accidenteData = {
         empresaId,
         sucursalId,
-        empleadoId: selectedEmpleado.id,
-        empleadoNombre: selectedEmpleado.nombre,
-        fechaHora: Timestamp.fromDate(new Date(formData.fechaHora)),
-        diasPerdidos: parseInt(formData.diasPerdidos) || 0,
-        createdAt: Timestamp.now(),
-        reportadoPor: userProfile?.uid
-      });
+        fechaAccidente: formData.fechaHora,
+        descripcion: formData.descripcion,
+        lugar: formData.lugar,
+        reportadoPor: userProfile.uid
+      };
+
+      if (formData.tipo === 'accidente') {
+        const empleadosSeleccionados = [{
+          id: selectedEmpleado.id,
+          nombre: selectedEmpleado.nombre,
+          conReposo: formData.diasPerdidos > 0
+        }];
+        await crearAccidente(accidenteData, empleadosSeleccionados, [], userProfile);
+      } else {
+        const testigos = [{
+          id: selectedEmpleado.id,
+          nombre: selectedEmpleado.nombre
+        }];
+        await crearIncidente(accidenteData, testigos, [], userProfile);
+      }
 
       setFormData({
         tipo: 'accidente',

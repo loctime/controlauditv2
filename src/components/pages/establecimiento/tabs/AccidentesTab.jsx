@@ -14,37 +14,28 @@ import ReportProblemIcon from '@mui/icons-material/ReportProblem';
 import WarningIcon from '@mui/icons-material/Warning';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import ErrorIcon from '@mui/icons-material/Error';
-import { collection, getDocs, query, where } from 'firebase/firestore';
-import { db } from '../../../../firebaseControlFile';
 import { useNavigate } from 'react-router-dom';
+import { obtenerAccidentes } from '../../../../services/accidenteService';
+import { useAuth } from '../../../context/AuthContext';
 
 const AccidentesTab = ({ empresaId, empresaNombre }) => {
   const navigate = useNavigate();
+  const { userProfile } = useAuth();
   const [loading, setLoading] = useState(false);
   const [recentesAccidentes, setRecentesAccidentes] = useState([]);
 
   useEffect(() => {
-    if (empresaId) {
+    if (empresaId && userProfile?.uid) {
       loadEstadisticas();
     }
-  }, [empresaId]);
+  }, [empresaId, userProfile?.uid]);
 
   const loadEstadisticas = async () => {
+    if (!userProfile?.uid) return;
+    
     setLoading(true);
     try {
-      const sucursalesSnapshot = await getDocs(query(collection(db, 'sucursales'), where('empresaId', '==', empresaId)));
-      const sucursalesIds = sucursalesSnapshot.docs.map(doc => doc.id);
-      
-      if (sucursalesIds.length === 0) {
-        setRecentesAccidentes([]);
-        return;
-      }
-
-      const accidentesSnapshot = await getDocs(query(collection(db, 'accidentes'), where('sucursalId', 'in', sucursalesIds)));
-      const accidentesData = accidentesSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
+      const accidentesData = await obtenerAccidentes({ empresaId }, userProfile);
 
       // Obtener 3 registros más recientes
       const ordenados = accidentesData

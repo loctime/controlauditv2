@@ -10,8 +10,8 @@ import {
   MenuItem,
   CircularProgress
 } from '@mui/material';
-import { collection, addDoc, updateDoc, doc, Timestamp } from 'firebase/firestore';
-import { db } from '../../../firebaseControlFile';
+import { addDoc, updateDoc, doc, Timestamp } from 'firebase/firestore';
+import { auditUserCollection } from '../../../firebaseControlFile';
 import { useAuth } from '../../context/AuthContext';
 
 export default function EmpleadoForm({ open, onClose, onSave, empleado, sucursalId, empresaId }) {
@@ -71,6 +71,12 @@ export default function EmpleadoForm({ open, onClose, onSave, empleado, sucursal
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    if (!userProfile?.uid) {
+      alert('Error: No se pudo identificar el usuario');
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -84,12 +90,11 @@ export default function EmpleadoForm({ open, onClose, onSave, empleado, sucursal
 
       if (empleado) {
         // Actualizar
-        await updateDoc(doc(db, 'empleados', empleado.id), empleadoData);
+        await updateDoc(doc(auditUserCollection(userProfile.uid, 'empleados'), empleado.id), empleadoData);
       } else {
         // Crear
         empleadoData.createdAt = Timestamp.now();
-        empleadoData.createdBy = userProfile?.uid;
-        await addDoc(collection(db, 'empleados'), empleadoData);
+        await addDoc(auditUserCollection(userProfile.uid, 'empleados'), empleadoData);
       }
 
       onSave();

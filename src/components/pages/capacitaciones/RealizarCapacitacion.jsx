@@ -160,9 +160,15 @@ export default function RealizarCapacitacion({
   };
 
   const loadEmpleados = async () => {
+    if (!userProfile?.uid || !selectedSucursal) {
+      setEmpleados([]);
+      return;
+    }
+
     try {
+      const empleadosRef = auditUserCollection(userProfile.uid, 'empleados');
       const q = query(
-        collection(db, 'empleados'),
+        empleadosRef,
         where('sucursalId', '==', selectedSucursal)
       );
       const snapshot = await getDocs(q);
