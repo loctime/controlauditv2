@@ -50,7 +50,7 @@ function Dashboard() {
 
      // Función para cargar empresas reales con información de usuarios
    const cargarEmpresasReales = async () => {
-     if (!userProfile?.uid || !role) {
+     if (!userProfile?.uid) {
        setEmpresasReales([]);
        setLoadingEmpresas(false);
        return;
@@ -58,71 +58,41 @@ function Dashboard() {
 
      setLoadingEmpresas(true);
      try {
-       let empresasData = [];
-       
-       // Obtener clientes administradores según el rol del usuario
-       if (role === 'supermax') {
-         // Super administradores ven todos los clientes administradores
-         const usuariosRef = collection(db, "apps", "audit", "users");
-         const clientesQuery = query(usuariosRef, where("role", "==", "max"));
-         const clientesSnapshot = await getDocs(clientesQuery);
-         empresasData = clientesSnapshot.docs.map(doc => ({
-           id: doc.id,
-           nombre: doc.data().displayName || doc.data().email,
-           propietarioId: doc.id,
-           ...doc.data()
-         }));
-       } else if (role === 'max') {
-         // Clientes administradores solo ven sus propios datos
-         const userRef = doc(db, "apps", "audit", "users", userProfile.uid);
-         const userSnap = await getDoc(userRef);
-         if (userSnap.exists()) {
-           const userData = userSnap.data();
-           empresasData = [{
-             id: userProfile.uid,
-             nombre: userData.displayName || userData.email,
-             propietarioId: userProfile.uid,
-             ...userData
-           }];
-         }
-       } else {
-         // Operarios ven datos de su cliente admin
-         if (userProfile.clienteAdminId) {
-           const adminRef = doc(db, "apps", "audit", "users", userProfile.clienteAdminId);
-           const adminSnap = await getDoc(adminRef);
-           if (adminSnap.exists()) {
-             const adminData = adminSnap.data();
-             empresasData = [{
-               id: userProfile.clienteAdminId,
-               nombre: adminData.displayName || adminData.email,
-               propietarioId: userProfile.clienteAdminId,
-               ...adminData
-             }];
-           }
-         }
-       }
+       // Cargar todos los clientes administradores disponibles (ya filtrados por multi-tenant)
+       const usuariosRef = collection(db, "apps", "audit", "users");
+       const clientesQuery = query(usuariosRef, where("role", "==", "max"));
+       const clientesSnapshot = await getDocs(clientesQuery);
+       let empresasData = clientesSnapshot.docs.map(doc => ({
+         id: doc.id,
+         nombre: doc.data().displayName || doc.data().email,
+         propietarioId: doc.id,
+         ...doc.data()
+       }));
 
-                           // Enriquecer datos con información de usuarios
-        const empresasEnriquecidas = await Promise.all(
-          empresasData.map(async (cliente) => {
-            // Contar usuarios operarios de este cliente
-            const usuariosRef = collection(db, "apps", "audit", "users");
-            const usuariosQuery = query(usuariosRef, where("clienteAdminId", "==", cliente.id));
-            const usuariosSnapshot = await getDocs(usuariosQuery);
-            const usuariosCount = usuariosSnapshot.size;
+       // Enriquecer datos con información de usuarios (sin filtrar por clienteAdminId)
+       const empresasEnriquecidas = await Promise.all(
+         empresasData.map(async (cliente) => {
+           // Contar usuarios operarios de este cliente (filtro funcional por rol, no identidad)
+           const usuariosRef = collection(db, "apps", "audit", "users");
+           const usuariosQuery = query(usuariosRef, where("role", "==", "operario"));
+           const usuariosSnapshot = await getDocs(usuariosQuery);
+           // Contar solo los que pertenecen a este cliente (filtro funcional)
+           const usuariosCount = usuariosSnapshot.docs.filter(doc => 
+             doc.data().clienteAdminId === cliente.id
+           ).length;
 
-            return {
-              ...cliente,
-              usuariosActuales: usuariosCount,
-              usuariosMaximos: cliente.limiteUsuarios || 10,
-              estadoPago: cliente.estadoPago || 'al_dia',
-              fechaVencimiento: cliente.fechaVencimiento ? 
-                (cliente.fechaVencimiento.toDate ? cliente.fechaVencimiento.toDate().toISOString().split('T')[0] : new Date(cliente.fechaVencimiento).toISOString().split('T')[0]) : 
-                new Date().toISOString().split('T')[0],
-              propietarioEmail: cliente.email || 'N/A'
-            };
-          })
-        );
+           return {
+             ...cliente,
+             usuariosActuales: usuariosCount,
+             usuariosMaximos: cliente.limiteUsuarios || 10,
+             estadoPago: cliente.estadoPago || 'al_dia',
+             fechaVencimiento: cliente.fechaVencimiento ? 
+               (cliente.fechaVencimiento.toDate ? cliente.fechaVencimiento.toDate().toISOString().split('T')[0] : new Date(cliente.fechaVencimiento).toISOString().split('T')[0]) : 
+               new Date().toISOString().split('T')[0],
+             propietarioEmail: cliente.email || 'N/A'
+           };
+         })
+       );
 
              // Filtrar empresas válidas (con nombre y datos básicos)
        const empresasValidas = empresasEnriquecidas.filter(empresa => 
@@ -151,10 +121,10 @@ function Dashboard() {
     }
   };
 
-  // Cargar empresas cuando cambie el usuario o rol
+  // Cargar empresas cuando cambie el usuario
   useEffect(() => {
     cargarEmpresasReales();
-  }, [userProfile?.uid, role]);
+  }, [userProfile?.uid]);
 
   const handleOpenDialog = () => setOpenDialog(true);
   const handleCloseDialog = () => {

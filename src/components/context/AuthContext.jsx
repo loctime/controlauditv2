@@ -92,10 +92,9 @@ const AuthContextComponent = ({ children }) => {
 
   // Hooks de listeners reactivos (solo con fallback offline en móvil)
   // OPTIMIZACIÓN: Diferir listeners no críticos para evitar llamadas duplicadas con carga manual
+  // Multi-tenant: Los datos ya vienen filtrados por usuario desde auditUserCollection
   useSucursalesListener(
     userProfile, 
-    role, 
-    userEmpresas, 
     setUserSucursales, 
     setLoadingSucursales, 
     enableOffline ? loadUserFromCache : null,
@@ -103,7 +102,6 @@ const AuthContextComponent = ({ children }) => {
   );
   useFormulariosListener(
     userProfile, 
-    role, 
     setUserFormularios, 
     setLoadingFormularios, 
     enableOffline ? loadUserFromCache : null,

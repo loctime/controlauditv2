@@ -4,9 +4,11 @@ import { auditUserCollection } from '../../../firebaseControlFile.js';
 
 /**
  * Hook para listener reactivo de formularios con fallback offline
+ * Multi-tenant: asume que auditUserCollection ya filtra por usuario
+ * Los datos devueltos son visibles directamente sin filtros adicionales
  * @param {boolean} enableListener - Si es false, el listener no se activa (optimización para evitar duplicados)
  */
-export const useFormulariosListener = (userProfile, role, setUserFormularios, setLoadingFormularios, loadUserFromCache, enableListener = true) => {
+export const useFormulariosListener = (userProfile, setUserFormularios, setLoadingFormularios, loadUserFromCache, enableListener = true) => {
   useEffect(() => {
     // OPTIMIZACIÓN: No activar listener hasta que se habilite (evita duplicados con carga manual)
     if (!enableListener) {

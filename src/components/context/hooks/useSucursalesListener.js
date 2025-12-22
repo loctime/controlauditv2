@@ -5,9 +5,10 @@ import { auditUserCollection } from '../../../firebaseControlFile.js';
 /**
  * Hook para listener reactivo de sucursales con fallback offline
  * Multi-tenant: asume que auditUserCollection ya filtra por usuario
+ * Los datos devueltos son visibles directamente sin filtros adicionales
  * @param {boolean} enableListener - Si es false, el listener no se activa (optimización para evitar duplicados)
  */
-export const useSucursalesListener = (userProfile, role, userEmpresas, setUserSucursales, setLoadingSucursales, loadUserFromCache, enableListener = true) => {
+export const useSucursalesListener = (userProfile, setUserSucursales, setLoadingSucursales, loadUserFromCache, enableListener = true) => {
   useEffect(() => {
     // OPTIMIZACIÓN: No activar listener hasta que se habilite (evita duplicados con carga manual)
     if (!enableListener) {

@@ -1,10 +1,8 @@
 import { useEffect, useCallback } from "react";
-import { collection, getDocs, query, where, limit } from "firebase/firestore";
-import { dbAudit, auditUserCollection } from "../../../../../firebaseControlFile";
+import { getDocs, query, where, limit } from "firebase/firestore";
+import { auditUserCollection } from "../../../../../firebaseControlFile";
 import { storageUtils } from "../../../../../utils/utilitiesOptimization";
-import { useAuth } from "../../../../context/AuthContext";
 import { getCompleteUserCache } from "../../../../../services/completeOfflineCache";
-import { getOfflineDatabase } from "../../../../../services/offlineDatabase";
 
 export const useAuditoriaData = (
   setEmpresas,
@@ -206,6 +204,7 @@ export const useAuditoriaData = (
   }, [userProfile, userEmpresas, userFormularios, userSucursales, cargarDatosDelCache]);
 
   // Función para obtener empresas que tienen sucursales desde el cache offline
+  // Los datos ya vienen filtrados por multi-tenant, solo obtenemos empresas con sucursales
   const obtenerEmpresasConSucursales = async () => {
     try {
       if (!userProfile) return [];
@@ -226,126 +225,21 @@ export const useAuditoriaData = (
       }
       
       // Si no hay cache, intentar cargar desde Firestore (solo si hay conexión)
+      // Los datos ya vienen filtrados por multi-tenant desde auditUserCollection
       if (navigator.onLine) {
-        let sucursalesData = [];
-        
-        if (userProfile.role === 'supermax') {
-          const sucursalesCollection = auditUserCollection(userProfile.uid, "sucursales");
-          // Límite conservador: 500 sucursales para supermax
-          const q = query(sucursalesCollection, limit(500));
-          const snapshot = await getDocs(q);
-          sucursalesData = snapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data()
-          }));
-        } else if (userProfile.role === 'max') {
-          // Cargar sucursales de empresas propias
-          const empresasRef = auditUserCollection(userProfile.uid, "empresas");
-          const empresasQuery = query(empresasRef, where("propietarioId", "==", userProfile.uid));
-          const empresasSnapshot = await getDocs(empresasQuery);
-          const misEmpresas = empresasSnapshot.docs.map(doc => doc.id);
-
-          // Cargar usuarios operarios y sus empresas
-          // NOTA: Esta colección está en la estructura multi-tenant, pero necesitamos buscar en otros usuarios
-          // Por ahora mantenemos la estructura original hasta confirmar la migración completa
-          const usuariosRef = collection(dbAudit, "apps", "auditoria", "users");
-          const usuariosQuery = query(usuariosRef, where("clienteAdminId", "==", userProfile.uid));
-          const usuariosSnapshot = await getDocs(usuariosQuery);
-          const usuariosOperarios = usuariosSnapshot.docs.map(doc => doc.id);
-
-          // Optimización: Limitar a máximo 50 operarios para evitar demasiadas queries
-          const MAX_OPERARIOS = 50;
-          const operariosLimitados = usuariosOperarios.slice(0, MAX_OPERARIOS);
-
-          // Cargar empresas de operarios (con límite por operario)
-          const empresasOperariosPromises = operariosLimitados.map(async (operarioId) => {
-            const operarioEmpresasRef = auditUserCollection(operarioId, "empresas");
-            const operarioEmpresasQuery = query(
-              operarioEmpresasRef, 
-              where("propietarioId", "==", operarioId),
-              limit(50) // Límite conservador: 50 empresas por operario
-            );
-            const operarioEmpresasSnapshot = await getDocs(operarioEmpresasQuery);
-            return operarioEmpresasSnapshot.docs.map(doc => doc.id);
-          });
-
-          const empresasOperariosArrays = await Promise.all(empresasOperariosPromises);
-          const empresasOperarios = empresasOperariosArrays.flat();
-          const todasLasEmpresas = [...misEmpresas, ...empresasOperarios];
-          
-          // Optimización: Limitar total de empresas procesadas
-          const MAX_EMPRESAS = 100;
-          const empresasLimitadas = todasLasEmpresas.slice(0, MAX_EMPRESAS);
-
-          // Cargar sucursales de todas las empresas (limitadas)
-          if (empresasLimitadas.length > 0) {
-            const chunkSize = 10;
-            const empresasChunks = [];
-            for (let i = 0; i < empresasLimitadas.length; i += chunkSize) {
-              empresasChunks.push(empresasLimitadas.slice(i, i + chunkSize));
-            }
-
-            const sucursalesPromises = empresasChunks.map(async (chunk) => {
-              const sucursalesRef = auditUserCollection(userProfile.uid, "sucursales");
-              // Límite conservador: 200 sucursales por chunk
-              const sucursalesQuery = query(
-                sucursalesRef, 
-                where("empresaId", "in", chunk),
-                limit(200)
-              );
-              const sucursalesSnapshot = await getDocs(sucursalesQuery);
-              return sucursalesSnapshot.docs.map(doc => ({
-                id: doc.id,
-                ...doc.data()
-              }));
-            });
-
-            const sucursalesArrays = await Promise.all(sucursalesPromises);
-            sucursalesData = sucursalesArrays.flat();
-          }
-        } else if (userProfile.role === 'operario' && userProfile.clienteAdminId) {
-          // Operario ve sucursales de su cliente admin
-          const empresasRef = auditUserCollection(userProfile.clienteAdminId, "empresas");
-          const empresasQuery = query(empresasRef, where("propietarioId", "==", userProfile.clienteAdminId));
-          const empresasSnapshot = await getDocs(empresasQuery);
-          const empresasIds = empresasSnapshot.docs.map(doc => doc.id);
-
-          // Optimización: Limitar total de empresas procesadas
-          const MAX_EMPRESAS_OPERARIO = 100;
-          const empresasLimitadas = empresasIds.slice(0, MAX_EMPRESAS_OPERARIO);
-
-          if (empresasLimitadas.length > 0) {
-            const chunkSize = 10;
-            const empresasChunks = [];
-            for (let i = 0; i < empresasLimitadas.length; i += chunkSize) {
-              empresasChunks.push(empresasLimitadas.slice(i, i + chunkSize));
-            }
-
-            const sucursalesPromises = empresasChunks.map(async (chunk) => {
-              const sucursalesRef = auditUserCollection(userProfile.clienteAdminId, "sucursales");
-              // Límite conservador: 200 sucursales por chunk
-              const sucursalesQuery = query(
-                sucursalesRef, 
-                where("empresaId", "in", chunk),
-                limit(200)
-              );
-              const sucursalesSnapshot = await getDocs(sucursalesQuery);
-              return sucursalesSnapshot.docs.map(doc => ({
-                id: doc.id,
-                ...doc.data()
-              }));
-            });
-
-            const sucursalesArrays = await Promise.all(sucursalesPromises);
-            sucursalesData = sucursalesArrays.flat();
-          }
-        }
+        const sucursalesCollection = auditUserCollection(userProfile.uid, "sucursales");
+        const q = query(sucursalesCollection, limit(500));
+        const snapshot = await getDocs(q);
+        const sucursalesData = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
 
         // Obtener IDs únicos de empresas que tienen sucursales
         const empresasConSucursales = [...new Set(sucursalesData.map(s => s.empresaId))];
         
         if (empresasConSucursales.length > 0) {
-          // Cargar datos completos de las empresas
+          // Cargar datos completos de las empresas (ya filtradas por multi-tenant)
           const empresasRef = auditUserCollection(userProfile.uid, "empresas");
           const empresasQuery = query(empresasRef, where("__name__", "in", empresasConSucursales));
           const empresasSnapshot = await getDocs(empresasQuery);
@@ -430,6 +324,7 @@ export const useAuditoriaData = (
   }, [userProfile, userEmpresas, setEmpresas, cargarDatosDelCache]);
 
   // Cargar todas las sucursales disponibles al inicio
+  // Los datos ya vienen filtrados por multi-tenant desde auditUserCollection
   useEffect(() => {
     // Si no hay userProfile, intentar cargar desde localStorage directamente (offline)
     if (!userProfile) {
@@ -449,12 +344,56 @@ export const useAuditoriaData = (
     }
 
     const cargarTodasLasSucursales = async () => {
-
       try {
+        // Usar userEmpresas o cache offline para filtrar por empresa (filtro funcional de UI)
+        let empresasParaSucursales = userEmpresas;
+        
+        // Si no hay userEmpresas, intentar cargar desde cache offline
+        if (!empresasParaSucursales || empresasParaSucursales.length === 0) {
+          const cacheData = await cargarDatosDelCache();
+          if (cacheData && cacheData.empresas && cacheData.empresas.length > 0) {
+            empresasParaSucursales = cacheData.empresas;
+          }
+        }
+        
         let sucursalesData = [];
         
-        if (userProfile.role === 'supermax') {
-          // Supermax ve todas las sucursales (con límite conservador)
+        // Si hay empresas seleccionadas, filtrar sucursales por empresa (filtro funcional)
+        if (empresasParaSucursales && empresasParaSucursales.length > 0) {
+          const empresasIds = empresasParaSucursales.map(emp => emp.id);
+          
+          // Optimización: Limitar total de empresas procesadas
+          const MAX_EMPRESAS_SUCURSALES = 100;
+          const empresasLimitadas = empresasIds.slice(0, MAX_EMPRESAS_SUCURSALES);
+          
+          // Firestore limita 'in' queries a 10 elementos, dividir en chunks si es necesario
+          const chunkSize = 10;
+          const empresasChunks = [];
+          for (let i = 0; i < empresasLimitadas.length; i += chunkSize) {
+            empresasChunks.push(empresasLimitadas.slice(i, i + chunkSize));
+          }
+
+          const sucursalesPromises = empresasChunks.map(async (chunk) => {
+            // Los datos ya vienen filtrados por multi-tenant desde auditUserCollection
+            const sucursalesRef = auditUserCollection(userProfile.uid, "sucursales");
+            const sucursalesQuery = query(
+              sucursalesRef, 
+              where("empresaId", "in", chunk),
+              limit(200)
+            );
+            const sucursalesSnapshot = await getDocs(sucursalesQuery);
+            return sucursalesSnapshot.docs.map(doc => ({
+              id: doc.id,
+              nombre: doc.data().nombre,
+              empresa: doc.data().empresa,
+              empresaId: doc.data().empresaId
+            }));
+          });
+
+          const sucursalesArrays = await Promise.all(sucursalesPromises);
+          sucursalesData = sucursalesArrays.flat();
+        } else {
+          // Si no hay filtro de empresas, cargar todas las sucursales disponibles (ya filtradas por multi-tenant)
           const sucursalesCollection = auditUserCollection(userProfile.uid, "sucursales");
           const q = query(sucursalesCollection, limit(500));
           const snapshot = await getDocs(q);
@@ -464,52 +403,6 @@ export const useAuditoriaData = (
             empresa: doc.data().empresa,
             empresaId: doc.data().empresaId
           }));
-        } else {
-          // Para max y operario, usar userEmpresas o cache offline
-          let empresasParaSucursales = userEmpresas;
-          
-          // Si no hay userEmpresas, intentar cargar desde cache offline
-          if (!empresasParaSucursales || empresasParaSucursales.length === 0) {
-            const cacheData = await cargarDatosDelCache();
-            if (cacheData && cacheData.empresas && cacheData.empresas.length > 0) {
-              empresasParaSucursales = cacheData.empresas;
-            }
-          }
-          
-          if (empresasParaSucursales && empresasParaSucursales.length > 0) {
-            const empresasIds = empresasParaSucursales.map(emp => emp.id);
-            
-            // Optimización: Limitar total de empresas procesadas
-            const MAX_EMPRESAS_SUCURSALES = 100;
-            const empresasLimitadas = empresasIds.slice(0, MAX_EMPRESAS_SUCURSALES);
-            
-            // Firestore limita 'in' queries a 10 elementos, dividir en chunks si es necesario
-            const chunkSize = 10;
-            const empresasChunks = [];
-            for (let i = 0; i < empresasLimitadas.length; i += chunkSize) {
-              empresasChunks.push(empresasLimitadas.slice(i, i + chunkSize));
-            }
-
-            const sucursalesPromises = empresasChunks.map(async (chunk) => {
-              const sucursalesRef = auditUserCollection(userProfile.uid, "sucursales");
-              // Límite conservador: 200 sucursales por chunk
-              const sucursalesQuery = query(
-                sucursalesRef, 
-                where("empresaId", "in", chunk),
-                limit(200)
-              );
-              const sucursalesSnapshot = await getDocs(sucursalesQuery);
-              return sucursalesSnapshot.docs.map(doc => ({
-                id: doc.id,
-                nombre: doc.data().nombre,
-                empresa: doc.data().empresa,
-                empresaId: doc.data().empresaId
-              }));
-            });
-
-            const sucursalesArrays = await Promise.all(sucursalesPromises);
-            sucursalesData = sucursalesArrays.flat();
-          }
         }
 
         setSucursales(sucursalesData);
@@ -520,7 +413,7 @@ export const useAuditoriaData = (
     };
 
     cargarTodasLasSucursales();
-  }, [userProfile, userEmpresas, setSucursales]);
+  }, [userProfile, userEmpresas, setSucursales, cargarDatosDelCache]);
 
   // Cargar formularios desde el contexto, cache offline o Firestore
   useEffect(() => {
@@ -560,6 +453,7 @@ export const useAuditoriaData = (
   }, [userProfile, userFormularios, setFormularios, cargarDatosDelCache]);
 
   // Cargar formularios desde Firestore si no están en el contexto ni en cache offline
+  // Los datos ya vienen filtrados por multi-tenant desde auditUserCollection
   useEffect(() => {
     const obtenerFormularios = async () => {
       try {
@@ -574,7 +468,8 @@ export const useAuditoriaData = (
         const isOnline = navigator.onLine;
         
         if (isOnline) {
-          // Cargar desde Firestore cuando hay conectividad (con límite conservador)
+          // Cargar desde Firestore cuando hay conectividad
+          // Los datos ya vienen filtrados por multi-tenant desde auditUserCollection
           const formulariosCollection = auditUserCollection(userProfile.uid, "formularios");
           const q = query(formulariosCollection, limit(200));
           const snapshot = await getDocs(q);
@@ -589,30 +484,14 @@ export const useAuditoriaData = (
             clienteAdminId: doc.data().clienteAdminId
           }));
           
-          // Filtrar formularios por permisos multi-tenant
-          const formulariosPermitidos = todosLosFormularios.filter(formulario => {
-            if (userProfile.role === 'supermax') return true;
-            if (userProfile.role === 'max') {
-              return formulario.clienteAdminId === userProfile.uid || 
-                     formulario.creadorId === userProfile.uid;
-            }
-            if (userProfile.role === 'operario') {
-              return formulario.creadorId === userProfile.uid ||
-                     formulario.clienteAdminId === userProfile.clienteAdminId ||
-                     formulario.esPublico ||
-                     formulario.permisos?.puedeVer?.includes(userProfile.uid);
-            }
-            return false;
-          });
-          
           // Guardar en cache para uso offline
           storageUtils.set('formularios_cache', {
-            formularios: formulariosPermitidos,
+            formularios: todosLosFormularios,
             timestamp: Date.now(),
             userId: userProfile.uid
           });
           
-          setFormularios(formulariosPermitidos);
+          setFormularios(todosLosFormularios);
         } else {
           // Cargar desde cache cuando está offline
           const cacheData = storageUtils.get('formularios_cache');

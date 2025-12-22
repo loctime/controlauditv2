@@ -32,13 +32,13 @@ import {
   Description,
   CalendarToday
 } from "@mui/icons-material";
-import { collection, getDocs, query, where, orderBy } from "firebase/firestore";
-import { db } from "../../../firebaseControlFile";
+import { getDocs, query, where, orderBy } from "firebase/firestore";
+import { auditUserCollection } from "../../../firebaseControlFile";
 import { toast } from 'react-toastify';
 import { useAuth } from "../../context/AuthContext";
 
 const HistorialAuditorias = () => {
-  const { userProfile, role } = useAuth();
+  const { userProfile } = useAuth();
   const [auditorias, setAuditorias] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedAuditoria, setSelectedAuditoria] = useState(null);
@@ -48,82 +48,36 @@ const HistorialAuditorias = () => {
 
   useEffect(() => {
     cargarAuditorias();
-  }, [userProfile, role]);
+  }, [userProfile]);
 
   const cargarAuditorias = async () => {
     try {
       setLoading(true);
       
-      if (!userProfile) {
+      if (!userProfile?.uid) {
         setAuditorias([]);
         return;
       }
 
-      let auditoriasData = [];
-
-      if (role === 'supermax') {
-        // Super administradores ven todas las auditorías completadas
-        const auditoriasRef = collection(db, 'auditorias_agendadas');
-        const q = query(
-          auditoriasRef,
-          where('estado', '==', 'completada'),
-          orderBy('fechaCompletada', 'desc')
-        );
-        
-        const snapshot = await getDocs(q);
-        auditoriasData = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
-      } else if (role === 'max') {
-        // Clientes administradores ven sus auditorías y las de sus usuarios operarios
-        const auditoriasRef = collection(db, "auditorias_agendadas");
-        
-        // Obtener sus propias auditorías completadas
-        const misAuditoriasQuery = query(
-          auditoriasRef,
-          where('usuarioId', '==', userProfile.uid),
-          where('estado', '==', 'completada'),
-          orderBy('fechaCompletada', 'desc')
-        );
-        const misAuditoriasSnapshot = await getDocs(misAuditoriasQuery);
-        const misAuditorias = misAuditoriasSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
-
-        // Obtener usuarios operarios del cliente administrador
-        const usuariosRef = collection(db, "apps", "audit", "users");
-        const usuariosQuery = query(usuariosRef, where("clienteAdminId", "==", userProfile.uid));
-        const usuariosSnapshot = await getDocs(usuariosQuery);
-        const usuariosOperarios = usuariosSnapshot.docs.map(doc => doc.id);
-
-        // Obtener auditorías completadas de usuarios operarios
-        let auditoriasOperarios = [];
-        for (const operarioId of usuariosOperarios) {
-          const operarioAuditoriasQuery = query(
-            auditoriasRef,
-            where('usuarioId', '==', operarioId),
-            where('estado', '==', 'completada'),
-            orderBy('fechaCompletada', 'desc')
-          );
-          const operarioAuditoriasSnapshot = await getDocs(operarioAuditoriasQuery);
-          const operarioAuditorias = operarioAuditoriasSnapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data()
-          }));
-          auditoriasOperarios.push(...operarioAuditorias);
-        }
-
-        auditoriasData = [...misAuditorias, ...auditoriasOperarios];
-      }
+      // Leer desde estructura multi-tenant: apps/auditoria/users/{uid}/auditorias_agendadas
+      const auditoriasRef = auditUserCollection(userProfile.uid, 'auditorias_agendadas');
+      const q = query(
+        auditoriasRef,
+        where('estado', '==', 'completada'),
+        orderBy('fechaCompletada', 'desc')
+      );
+      
+      const snapshot = await getDocs(q);
+      const auditoriasData = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
       
       setAuditorias(auditoriasData);
       
-      console.log('[DEBUG] Historial cargado con filtrado multi-tenant:', {
+      console.log('[DEBUG] Historial cargado desde multi-tenant:', {
         total: auditoriasData.length,
-        role: role,
-        userId: userProfile?.uid
+        userId: userProfile.uid
       });
       
     } catch (error) {

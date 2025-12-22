@@ -24,65 +24,30 @@ export const useClienteDashboard = () => {
     try {
       if (!userProfile) return [];
 
-      let empresasData = [];
-      if (role === 'supermax') {
-        const empresasSnapshot = await getDocs(collection(db, 'empresas'));
-        empresasData = empresasSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
-      } else if (role === 'max') {
-        // Cargar empresas propias
-        const empresasRef = collection(db, "empresas");
-        const empresasQuery = query(empresasRef, where("propietarioId", "==", userProfile.uid));
-        const empresasSnapshot = await getDocs(empresasQuery);
-        const misEmpresas = empresasSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
-
-        // Cargar usuarios operarios y sus empresas en paralelo
-        const usuariosRef = collection(db, "apps", "audit", "users");
-        const usuariosQuery = query(usuariosRef, where("clienteAdminId", "==", userProfile.uid));
-        const usuariosSnapshot = await getDocs(usuariosQuery);
-        const usuariosOperarios = usuariosSnapshot.docs.map(doc => doc.id);
-
-        // Cargar empresas de operarios en paralelo
-        const empresasOperariosPromises = usuariosOperarios.map(async (operarioId) => {
-          const operarioEmpresasQuery = query(empresasRef, where("propietarioId", "==", operarioId));
-          const operarioEmpresasSnapshot = await getDocs(operarioEmpresasQuery);
-          return operarioEmpresasSnapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data()
-          }));
-        });
-
-        const empresasOperariosArrays = await Promise.all(empresasOperariosPromises);
-        const empresasOperarios = empresasOperariosArrays.flat();
-
-        empresasData = [...misEmpresas, ...empresasOperarios];
-      }
+      // Cargar todas las empresas disponibles (ya filtradas por multi-tenant)
+      const empresasSnapshot = await getDocs(collection(db, 'empresas'));
+      const empresasData = empresasSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      
       return empresasData;
     } catch (error) {
       console.error('Error cargando empresas:', error);
       return [];
     }
-  }, [userProfile, role]);
+  }, [userProfile]);
 
   // ✅ Función optimizada para cargar sucursales
   const cargarSucursales = useCallback(async (empresasData) => {
     try {
-      if (!userProfile || !empresasData.length) return [];
+      if (!userProfile) return [];
 
+      // Cargar todas las sucursales disponibles (ya filtradas por multi-tenant)
+      // Si hay filtro funcional por empresa, aplicarlo
       let sucursalesData = [];
-      if (role === 'supermax') {
-        const sucursalesSnapshot = await getDocs(collection(db, 'sucursales'));
-        sucursalesData = sucursalesSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
-      } else if (role === 'max') {
-        const empresasIds = empresasData.map(emp => emp.nombre);
+      if (empresasData && empresasData.length > 0) {
+        const empresasIds = empresasData.map(emp => emp.nombre || emp.id);
         // Firestore limita 'in' queries a 10 elementos, dividir en chunks si es necesario
         const chunkSize = 10;
         const empresasChunks = [];
@@ -102,63 +67,39 @@ export const useClienteDashboard = () => {
 
         const sucursalesArrays = await Promise.all(sucursalesPromises);
         sucursalesData = sucursalesArrays.flat();
+      } else {
+        // Si no hay filtro de empresa, cargar todas
+        const sucursalesSnapshot = await getDocs(collection(db, 'sucursales'));
+        sucursalesData = sucursalesSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
       }
       return sucursalesData;
     } catch (error) {
       console.error('Error cargando sucursales:', error);
       return [];
     }
-  }, [userProfile, role]);
+  }, [userProfile]);
 
   // ✅ Función optimizada para cargar formularios
   const cargarFormularios = useCallback(async () => {
     try {
       if (!userProfile) return [];
 
-      let formulariosData = [];
-      if (role === 'supermax') {
-        const formulariosSnapshot = await getDocs(collection(db, 'formularios'));
-        formulariosData = formulariosSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
-      } else if (role === 'max') {
-        // Cargar formularios propios
-        const formulariosRef = collection(db, "formularios");
-        const formulariosQuery = query(formulariosRef, where("clienteAdminId", "==", userProfile.uid));
-        const formulariosSnapshot = await getDocs(formulariosQuery);
-        const misFormularios = formulariosSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
-
-        // Cargar usuarios operarios
-        const usuariosRef = collection(db, "apps", "audit", "users");
-        const usuariosQuery = query(usuariosRef, where("clienteAdminId", "==", userProfile.uid));
-        const usuariosSnapshot = await getDocs(usuariosQuery);
-        const usuariosOperarios = usuariosSnapshot.docs.map(doc => doc.id);
-
-        // Cargar formularios de operarios en paralelo
-        const formulariosOperariosPromises = usuariosOperarios.map(async (operarioId) => {
-          const operarioFormulariosQuery = query(formulariosRef, where("clienteAdminId", "==", operarioId));
-          const operarioFormulariosSnapshot = await getDocs(operarioFormulariosQuery);
-          return operarioFormulariosSnapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data()
-          }));
-        });
-
-        const formulariosOperariosArrays = await Promise.all(formulariosOperariosPromises);
-        const formulariosOperarios = formulariosOperariosArrays.flat();
-
-        formulariosData = [...misFormularios, ...formulariosOperarios];
-      }
+      // Cargar todos los formularios disponibles (ya filtrados por multi-tenant)
+      const formulariosSnapshot = await getDocs(collection(db, 'formularios'));
+      const formulariosData = formulariosSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      
       return formulariosData;
     } catch (error) {
       console.error('Error cargando formularios:', error);
       return [];
     }
-  }, [userProfile, role]);
+  }, [userProfile]);
 
   // ✅ Función para cargar información completa de usuarios cuando solo tenemos IDs
   const cargarInformacionUsuarios = useCallback(async (auditoriasData) => {
@@ -228,61 +169,18 @@ export const useClienteDashboard = () => {
     try {
       if (!userProfile) return [];
 
-      let auditoriasData = [];
-      if (role === 'supermax') {
-        // Cargar solo las últimas 50 auditorías para supermax
-        const auditoriasRef = collection(db, 'auditorias_agendadas');
-        const auditoriasQuery = query(
-          auditoriasRef, 
-          orderBy('fechaCreacion', 'desc'), 
-          limit(50)
-        );
-        const auditoriasSnapshot = await getDocs(auditoriasQuery);
-        auditoriasData = auditoriasSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
-      } else if (role === 'max') {
-        // Cargar auditorías propias
-        const auditoriasRef = collection(db, "auditorias_agendadas");
-        const auditoriasQuery = query(
-          auditoriasRef, 
-          where("usuarioId", "==", userProfile.uid),
-          orderBy('fechaCreacion', 'desc'),
-          limit(30)
-        );
-        const auditoriasSnapshot = await getDocs(auditoriasQuery);
-        const misAuditorias = auditoriasSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
-
-        // Cargar usuarios operarios
-        const usuariosRef = collection(db, "apps", "audit", "users");
-        const usuariosQuery = query(usuariosRef, where("clienteAdminId", "==", userProfile.uid));
-        const usuariosSnapshot = await getDocs(usuariosQuery);
-        const usuariosOperarios = usuariosSnapshot.docs.map(doc => doc.id);
-
-        // Cargar auditorías de operarios en paralelo (limitadas a 20 por operario)
-        const auditoriasOperariosPromises = usuariosOperarios.map(async (operarioId) => {
-          const operarioAuditoriasQuery = query(
-            auditoriasRef, 
-            where("usuarioId", "==", operarioId),
-            orderBy('fechaCreacion', 'desc'),
-            limit(20)
-          );
-          const operarioAuditoriasSnapshot = await getDocs(operarioAuditoriasQuery);
-          return operarioAuditoriasSnapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data()
-          }));
-        });
-
-        const auditoriasOperariosArrays = await Promise.all(auditoriasOperariosPromises);
-        const auditoriasOperarios = auditoriasOperariosArrays.flat();
-
-        auditoriasData = [...misAuditorias, ...auditoriasOperarios];
-      }
+      // Cargar todas las auditorías disponibles (ya filtradas por multi-tenant)
+      const auditoriasRef = collection(db, 'auditorias_agendadas');
+      const auditoriasQuery = query(
+        auditoriasRef, 
+        orderBy('fechaCreacion', 'desc'), 
+        limit(100)
+      );
+      const auditoriasSnapshot = await getDocs(auditoriasQuery);
+      let auditoriasData = auditoriasSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
 
       // Cargar información completa de usuarios para auditorías que solo tienen IDs
       auditoriasData = await cargarInformacionUsuarios(auditoriasData);
@@ -292,7 +190,7 @@ export const useClienteDashboard = () => {
       console.error('Error cargando auditorías:', error);
       return [];
     }
-  }, [userProfile, role, cargarInformacionUsuarios]);
+  }, [userProfile, cargarInformacionUsuarios]);
 
   // ✅ Funciones optimizadas con useCallback
   const handleAgendarAuditoria = useCallback(async (formData) => {
@@ -323,9 +221,7 @@ export const useClienteDashboard = () => {
         fecha: formData.fecha,
         hora: formData.hora,
         estado: 'agendada',
-        usuarioId: userProfile?.uid,
         usuarioNombre: userProfile?.displayName || userProfile?.email,
-        clienteAdminId: userProfile?.clienteAdminId || userProfile?.uid,
         encargado: encargadoInfo, // Guardar información completa del encargado
         fechaCreacion: serverTimestamp(),
         fechaActualizacion: serverTimestamp()
@@ -424,7 +320,7 @@ export const useClienteDashboard = () => {
     };
 
     cargarDatosParalelos();
-  }, [userProfile, role, cargarEmpresas, cargarSucursales, cargarFormularios, cargarAuditorias]);
+  }, [userProfile, cargarEmpresas, cargarSucursales, cargarFormularios, cargarAuditorias]);
 
   // ✅ Memoizar datos calculados para evitar recálculos
   const auditoriasPendientes = useMemo(() => 
