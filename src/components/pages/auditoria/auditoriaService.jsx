@@ -1,6 +1,6 @@
 // Servicio centralizado para operaciones de auditoría
 import { collection, addDoc, getDocs, query, where, orderBy, serverTimestamp } from 'firebase/firestore';
-import { db } from '../../../firebaseControlFile';
+import { db, auditUserCollection } from '../../../firebaseControlFile';
 import { uploadToControlFile, getDownloadUrl } from '../../../services/controlFileService';
 import { getControlFileFolders } from '../../../services/controlFileInit';
 import { prepararDatosParaFirestore, registrarAccionSistema } from '../../../utils/firestoreUtils';
@@ -461,6 +461,11 @@ class AuditoriaService {
         throw new Error("Faltan datos requeridos para guardar la auditoría");
       }
 
+      // Validar que userProfile.uid esté presente (obligatorio para multi-tenant)
+      if (!userProfile || !userProfile.uid) {
+        throw new Error("userProfile.uid es requerido para guardar la auditoría en arquitectura multi-tenant");
+      }
+
       // Procesar imágenes si existen
       let imagenesProcesadas = [];
       if (datosAuditoria.imagenes && datosAuditoria.imagenes.length > 0) {
@@ -548,8 +553,10 @@ class AuditoriaService {
       console.log('[AuditoriaService] Datos limpios para Firestore:', JSON.stringify(datosLimpios, null, 2));
       console.log('[AuditoriaService] Clasificaciones a guardar:', JSON.stringify(datosLimpios.clasificaciones, null, 2));
 
-      // Guardar en Firestore
-      const docRef = await addDoc(collection(db, "reportes"), datosLimpios);
+      // Guardar en Firestore multi-tenant: apps/auditoria/users/{uid}/reportes
+      const reportesRef = auditUserCollection(userProfile.uid, 'reportes');
+      console.log('[AuditoriaService] Guardando reporte en ruta multi-tenant:', `apps/auditoria/users/${userProfile.uid}/reportes`);
+      const docRef = await addDoc(reportesRef, datosLimpios);
 
       // Crear acciones requeridas en la subcolección de la sucursal si existen
       if (datosCompletos.accionesRequeridas && datosCompletos.accionesRequeridas.length > 0) {

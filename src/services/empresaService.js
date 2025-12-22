@@ -393,7 +393,6 @@ export const empresaService = {
   async crearEmpresa(empresaData, user, role, userProfile) {
     try {
       if (!user?.uid) throw new Error('Usuario no autenticado');
-      const empresaRef = auditUserCollection(user.uid, "empresas");
       
       let propietarioId, propietarioEmail, propietarioRole;
       let creadorId, creadorEmail, creadorRole;
@@ -419,6 +418,9 @@ export const empresaService = {
         creadorRole = role;
       }
       
+      // Usar propietarioId para las colecciones multi-tenant
+      const empresaRef = auditUserCollection(propietarioId, "empresas");
+      
       const nuevaEmpresa = {
         ...empresaData,
         propietarioId,
@@ -434,7 +436,7 @@ export const empresaService = {
       const docRef = await addDoc(empresaRef, nuevaEmpresa);
       
       // Crear automáticamente sucursal "Casa Central"
-      const sucursalesRef = auditUserCollection(user.uid, "sucursales");
+      const sucursalesRef = auditUserCollection(propietarioId, "sucursales");
       const sucursalCasaCentral = {
         nombre: "Casa Central",
         empresaId: docRef.id,
