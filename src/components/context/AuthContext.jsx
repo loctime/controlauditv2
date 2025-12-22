@@ -248,11 +248,13 @@ const AuthContextComponent = ({ children }) => {
             
             const empresasCargadas = await loadUserEmpresas(firebaseUser.uid, profile, profile.role);
             
-            // Cargar auditorías en paralelo
-            await Promise.all([
-              loadUserAuditorias(firebaseUser.uid).then(aud => setUserAuditorias(aud)),
-              loadAuditoriasCompartidas(firebaseUser.uid).then(aud => setAuditoriasCompartidas(aud))
-            ]);
+            // Cargar auditorías en paralelo (solo si profile tiene uid)
+            if (profile && profile.uid) {
+              await Promise.all([
+                loadUserAuditorias(firebaseUser.uid, profile).then(aud => setUserAuditorias(aud)),
+                loadAuditoriasCompartidas(firebaseUser.uid, profile).then(aud => setAuditoriasCompartidas(aud))
+              ]);
+            }
 
             setTimeout(async () => {
               const [sucursalesCargadas, formulariosCargados] = await Promise.all([
@@ -583,8 +585,8 @@ const AuthContextComponent = ({ children }) => {
     getUserEmpresas: () => loadUserEmpresas(user?.uid),
     getUserSucursales: () => loadUserSucursales(user?.uid),
     getUserFormularios: () => loadUserFormularios(user?.uid),
-    getUserAuditorias: () => loadUserAuditorias(user?.uid),
-    getAuditoriasCompartidas: () => loadAuditoriasCompartidas(user?.uid),
+    getUserAuditorias: () => loadUserAuditorias(user?.uid, userProfile),
+    getAuditoriasCompartidas: () => loadAuditoriasCompartidas(user?.uid, userProfile),
     role,
     permisos,
     crearOperario,

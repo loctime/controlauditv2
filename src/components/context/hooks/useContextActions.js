@@ -43,10 +43,12 @@ export const useContextActions = (
   }, [user, role, userProfile, setUserEmpresas]);
 
   const compartirAuditoria = useCallback(async (auditoriaId, emailUsuario) => {
-    await auditoriaService.compartirAuditoria(auditoriaId, emailUsuario, user);
-    await loadAuditoriasCompartidas(user.uid);
+    await auditoriaService.compartirAuditoria(auditoriaId, emailUsuario, user, userProfile);
+    if (userProfile && userProfile.uid) {
+      await loadAuditoriasCompartidas(user.uid, userProfile);
+    }
     return true;
-  }, [user, loadAuditoriasCompartidas]);
+  }, [user, userProfile, loadAuditoriasCompartidas]);
 
   const verificarYCorregirEmpresas = useCallback(async () => {
     const { empresasCorregidas, empresasActualizadas } = 

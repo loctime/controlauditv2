@@ -260,6 +260,13 @@ export const useUserDataLoaders = (
   const loadUserAuditorias = useCallback(async (userId, profileParam = null) => {
     try {
       const profileToUse = profileParam || userProfile;
+      
+      // Guard explícito: NO llamar a auditoriaService hasta que userProfile.uid exista
+      if (!profileToUse || !profileToUse.uid) {
+        console.warn('[loadUserAuditorias] ⚠️ userProfile.uid no disponible, omitiendo carga');
+        return [];
+      }
+      
       const auditorias = await auditoriaService.getUserAuditorias(userId, role, profileToUse);
       return auditorias;
     } catch (error) {
@@ -268,15 +275,23 @@ export const useUserDataLoaders = (
     }
   }, [role, userProfile]);
 
-  const loadAuditoriasCompartidas = useCallback(async (userId) => {
+  const loadAuditoriasCompartidas = useCallback(async (userId, profileParam = null) => {
     try {
-      const auditorias = await auditoriaService.getAuditoriasCompartidas(userId);
+      const profileToUse = profileParam || userProfile;
+      
+      // Guard explícito: NO llamar a auditoriaService hasta que userProfile.uid exista
+      if (!profileToUse || !profileToUse.uid) {
+        console.warn('[loadAuditoriasCompartidas] ⚠️ userProfile.uid no disponible, omitiendo carga');
+        return [];
+      }
+      
+      const auditorias = await auditoriaService.getAuditoriasCompartidas(userId, profileToUse);
       return auditorias;
     } catch (error) {
       console.error('❌ Error cargando auditorías compartidas:', error);
       return [];
     }
-  }, []);
+  }, [userProfile]);
 
   return {
     loadUserEmpresas,

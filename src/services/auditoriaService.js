@@ -22,83 +22,39 @@ export const auditoriaService = {
       }
 
       const uid = userProfile.uid;
-      const empresaId = userProfile.empresaId || null;
-      const clienteAdminId = userProfile.clienteAdminId || null;
       const oldUid = userProfile?.migratedFromUid || null;
 
-      console.log('[auditoriaService] getUserAuditorias - Inicio query:', {
-        uid,
-        empresaId,
-        clienteAdminId,
-        role,
-        oldUid,
-        filtros: 'reportes desde apps/auditoria/users/{uid}/reportes'
-      });
+      console.log('[AUDIT PATH] getUserAuditorias - UID usado:', uid, '| Role:', role, '| OldUid:', oldUid || 'ninguno');
 
-      // Usar auditUserCollection para leer desde apps/auditoria/users/{uid}/reportes
+      // Leer directo desde auditUserCollection(uid, 'reportes') - contexto multi-tenant
       const auditoriasRef = auditUserCollection(uid, 'reportes');
+      console.log('[AUDIT PATH] Leyendo desde:', `apps/auditoria/users/${uid}/reportes`);
       
-      let snapshot;
+      const q = query(auditoriasRef, limit(500));
+      const snapshotResult = await getDocs(q);
+      console.log('[AUDIT PATH] Resultado principal:', snapshotResult.size, 'documentos');
       
-      if (role === 'supermax') {
-        console.log('[auditoriaService] Query supermax - sin filtros, límite 500');
-        const q = query(auditoriasRef, limit(500));
-        const snapshotResult = await getDocs(q);
-        console.log('[auditoriaService] Query supermax - resultado:', snapshotResult.size, 'documentos');
-        snapshot = snapshotResult;
-      } else if (role === 'max') {
-        console.log('[auditoriaService] Query max - obteniendo todas las auditorías del usuario');
-        // Para max, obtener todas las auditorías de su colección personal
-        const q = query(auditoriasRef, limit(500));
-        const snapshotResult = await getDocs(q);
-        console.log('[auditoriaService] Query max - resultado:', snapshotResult.size, 'documentos');
+      let allDocs = [...snapshotResult.docs];
+      
+      // Si hay oldUid, también buscar en la colección antigua para migración
+      if (oldUid) {
+        console.log('[AUDIT PATH] Buscando también en oldUid:', oldUid);
+        const auditoriasOldRef = auditUserCollection(oldUid, 'reportes');
+        const qOld = query(auditoriasOldRef, limit(500));
+        const snapshotOld = await getDocs(qOld);
+        console.log('[AUDIT PATH] Resultado oldUid:', snapshotOld.size, 'documentos');
         
-        // Si hay oldUid, también buscar en la colección antigua
-        if (oldUid) {
-          console.log('[auditoriaService] Query max - buscando también en oldUid:', oldUid);
-          const auditoriasOldRef = auditUserCollection(oldUid, 'reportes');
-          const qOld = query(auditoriasOldRef, limit(500));
-          const snapshotOld = await getDocs(qOld);
-          console.log('[auditoriaService] Query max oldUid - resultado:', snapshotOld.size, 'documentos');
-          
-          // Combinar resultados
-          const todasLasAuditorias = [...snapshotResult.docs, ...snapshotOld.docs];
-          const uniqueAuditorias = Array.from(
-            new Map(todasLasAuditorias.map(doc => [doc.id, doc])).values()
-          );
-          snapshot = { docs: uniqueAuditorias };
-          console.log('[auditoriaService] Query max - total combinado:', snapshot.docs.length, 'documentos únicos');
-        } else {
-          snapshot = snapshotResult;
-        }
-      } else {
-        // Para operarios, obtener sus propias auditorías
-        console.log('[auditoriaService] Query operario - obteniendo auditorías del usuario');
-        const q = query(auditoriasRef, limit(500));
-        const snapshotResult = await getDocs(q);
-        console.log('[auditoriaService] Query operario - resultado:', snapshotResult.size, 'documentos');
-        
-        // Si hay oldUid, también buscar en la colección antigua
-        if (oldUid) {
-          console.log('[auditoriaService] Query operario - buscando también en oldUid:', oldUid);
-          const auditoriasOldRef = auditUserCollection(oldUid, 'reportes');
-          const qOld = query(auditoriasOldRef, limit(500));
-          const snapshotOld = await getDocs(qOld);
-          console.log('[auditoriaService] Query operario oldUid - resultado:', snapshotOld.size, 'documentos');
-          
-          // Combinar resultados
-          const allDocs = [...snapshotResult.docs, ...snapshotOld.docs];
-          const uniqueDocs = Array.from(
-            new Map(allDocs.map(doc => [doc.id, doc])).values()
-          );
-          snapshot = { docs: uniqueDocs };
-          console.log('[auditoriaService] Query operario - total combinado:', snapshot.docs.length, 'documentos únicos');
-        } else {
-          snapshot = snapshotResult;
-        }
+        allDocs = [...allDocs, ...snapshotOld.docs];
       }
       
-      return snapshot.docs.map(doc => ({
+      // Eliminar duplicados
+      const uniqueAuditorias = Array.from(
+        new Map(allDocs.map(doc => [doc.id, doc])).values()
+      );
+      
+      console.log('[AUDIT PATH] Total auditorías únicas:', uniqueAuditorias.length);
+      
+      return uniqueAuditorias.map(doc => ({
         id: doc.id,
         ...doc.data()
       }));

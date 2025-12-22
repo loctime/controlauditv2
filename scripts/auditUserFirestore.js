@@ -16,10 +16,10 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 // 🔴 UID ACTUAL (el que usás al loguearte)
-const UID_ACTUAL = "M80UldJYWkVBLtzM0meo6Mlj4TJ2";
+const UID_ACTUAL = "wMmxyHYvCKchLJSX3FiZD5nvV2P2";
 
 // 🔴 UID DONDE SABEMOS QUE HAY DATOS
-const UID_DATOS = "wMmxyHYvCKchLJSX3FiZD5nvV2P2";
+const UID_DATOS = "M80UldJYWkVBLtzM0meo6Mlj4TJ2";
 
 const COLLECTIONS = [
   "empresas",
@@ -32,7 +32,7 @@ const COLLECTIONS = [
 
 // Inicializar Firebase Admin SDK
 try {
-  const serviceAccountPath = join(__dirname, '..', 'backend', 'serviceAccountKey.json');
+  const serviceAccountPath = join(__dirname, '..', 'backend', 'serviceAccountKey-controlfile.json');
   const serviceAccount = JSON.parse(readFileSync(serviceAccountPath, 'utf8'));
   
   if (!admin.apps.length) {
