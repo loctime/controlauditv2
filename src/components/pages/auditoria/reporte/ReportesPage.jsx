@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
-import { collection, getDocs, query, where, orderBy, limit, deleteDoc, doc } from "firebase/firestore";
-import { db } from "../../../../firebaseControlFile";
+import { deleteDoc, doc } from "firebase/firestore";
+import { db, auditUserCollection } from "../../../../firebaseControlFile";
 import { useLocation, useNavigate } from 'react-router-dom';
+import { auditoriaService } from '../../../../services/auditoriaService';
 import {
   Button,
   Table,
@@ -111,7 +112,7 @@ const ReportesPage = () => {
   
   // Cache para evitar recargas innecesarias
   const reportesCacheRef = useRef({});
-  const lastUserProfileKeyRef = useRef(null);
+  const lastUserIdRef = useRef(null);
 
   // Estilos responsivos
   const mobileBoxStyle = {
@@ -179,16 +180,20 @@ const ReportesPage = () => {
     }
   };
 
-  // Fetch de reportes
+  // Fetch de reportes usando auditoriaService (multi-tenant)
   const fetchReportes = async () => {
-    // Generar clave de cache basada en datos relevantes del usuario
-    const cacheKey = `${userProfile?.uid || ''}-${userProfile?.clienteAdminId || ''}-${userProfile?.empresaId || ''}-${userProfile?.role || ''}`;
+    if (!userProfile?.uid) {
+      setLoading(false);
+      return;
+    }
+
+    const userId = userProfile.uid;
     
     // Verificar cache antes de cargar
-    if (reportesCacheRef.current[cacheKey] && lastUserProfileKeyRef.current === cacheKey) {
-      console.log('[DEBUG] Usando datos cacheados para:', cacheKey);
-      setReportes(reportesCacheRef.current[cacheKey]);
-      setFilteredReportes(reportesCacheRef.current[cacheKey]);
+    if (reportesCacheRef.current[userId] && lastUserIdRef.current === userId) {
+      console.log('[DEBUG] Usando datos cacheados para usuario:', userId);
+      setReportes(reportesCacheRef.current[userId]);
+      setFilteredReportes(reportesCacheRef.current[userId]);
       setLoading(false);
       return;
     }
@@ -197,169 +202,30 @@ const ReportesPage = () => {
     setError(null);
     
     try {
-      console.log('[DEBUG] Iniciando fetch de reportes con multi-tenant...');
-      console.log('[DEBUG] userProfile:', userProfile);
-      console.log('[DEBUG] userProfile.role:', userProfile?.role);
-      console.log('[DEBUG] userProfile.clienteAdminId:', userProfile?.clienteAdminId);
-      console.log('[DEBUG] userProfile.empresaId:', userProfile?.empresaId);
-      console.log('[DEBUG] userProfile.migratedFromUid:', userProfile?.migratedFromUid);
+      console.log('[DEBUG] Cargando reportes desde auditoriaService para usuario:', userId);
       
-      const oldUid = userProfile?.migratedFromUid;
-      let reportesData = [];
+      // Usar auditoriaService que ya maneja multi-tenant
+      const reportesData = await auditoriaService.getUserAuditorias(
+        userId,
+        userProfile?.role || 'operario',
+        userProfile
+      );
 
-      // Aplicar filtros de multi-tenant si el usuario no es supermax
-      if (userProfile?.role === 'supermax') {
-        console.log('[DEBUG] Usuario supermax - sin filtros aplicados');
-        const q = query(
-          collection(db, "reportes"),
-          orderBy("fechaCreacion", "desc"),
-          limit(100)
-        );
-        const querySnapshot = await getDocs(q);
-        reportesData = querySnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
-      } else {
-        // Buscar con múltiples queries para incluir ambos UIDs (SIN orderBy para evitar índices compuestos)
-        const queries = [];
-        
-        if (userProfile?.clienteAdminId) {
-          console.log('[DEBUG] Aplicando filtro por clienteAdminId:', userProfile.clienteAdminId);
-          queries.push(query(
-            collection(db, "reportes"),
-            where("clienteAdminId", "==", userProfile.clienteAdminId),
-            limit(100)
-          ));
-          
-          if (oldUid) {
-            queries.push(query(
-              collection(db, "reportes"),
-              where("clienteAdminId", "==", oldUid),
-              limit(100)
-            ));
-          }
-        }
-        
-        if (userProfile?.uid) {
-          console.log('[DEBUG] Aplicando filtro por creadoPor/usuarioId (UID):', userProfile.uid);
-          queries.push(query(
-            collection(db, "reportes"),
-            where("creadoPor", "==", userProfile.uid),
-            limit(100)
-          ));
-          queries.push(query(
-            collection(db, "reportes"),
-            where("usuarioId", "==", userProfile.uid),
-            limit(100)
-          ));
-          
-          if (oldUid) {
-            queries.push(query(
-              collection(db, "reportes"),
-              where("creadoPor", "==", oldUid),
-              limit(100)
-            ));
-            queries.push(query(
-              collection(db, "reportes"),
-              where("usuarioId", "==", oldUid),
-              limit(100)
-            ));
-          }
-        }
-        
-        // También buscar por email si no hay migratedFromUid (para detectar datos antiguos)
-        if (!oldUid && userProfile?.email) {
-          console.log('[DEBUG] No hay migratedFromUid, buscando por email para detectar datos antiguos:', userProfile.email);
-          // Buscar usuarios con este email que tengan UID diferente
-          const usuariosRef = collection(db, 'apps', 'audit', 'users');
-          const emailQuery = query(usuariosRef, where('email', '==', userProfile.email));
-          const emailSnapshot = await getDocs(emailQuery);
-          
-          if (!emailSnapshot.empty) {
-            const usuariosConEmail = emailSnapshot.docs.filter(doc => doc.id !== userProfile.uid);
-            if (usuariosConEmail.length > 0) {
-              const oldUidEncontrado = usuariosConEmail[0].id;
-              console.log('[DEBUG] ⚠️ Encontrado usuario antiguo por email:', oldUidEncontrado);
-              console.log('[DEBUG] 🔄 Este usuario necesita migración. Buscando reportes con UID antiguo...');
-              
-              queries.push(query(
-                collection(db, "reportes"),
-                where("creadoPor", "==", oldUidEncontrado),
-                limit(100)
-              ));
-              queries.push(query(
-                collection(db, "reportes"),
-                where("usuarioId", "==", oldUidEncontrado),
-                limit(100)
-              ));
-              queries.push(query(
-                collection(db, "reportes"),
-                where("clienteAdminId", "==", oldUidEncontrado),
-                limit(100)
-              ));
-            }
-          }
-        }
-        
-        if (userProfile?.empresaId) {
-          console.log('[DEBUG] Aplicando filtro por empresaId:', userProfile.empresaId);
-          queries.push(query(
-            collection(db, "reportes"),
-            where("empresaId", "==", userProfile.empresaId),
-            limit(100)
-          ));
-        }
-        
-        if (queries.length === 0) {
-          console.log('[DEBUG] ⚠️ Usuario sin clienteAdminId, UID ni empresaId - no se aplicarán filtros');
-        }
+      // Ordenar por fecha de creación (más recientes primero)
+      const reportesOrdenados = reportesData.sort((a, b) => {
+        const fechaA = a.fechaCreacion?.toDate?.() || new Date(a.fechaCreacion || 0);
+        const fechaB = b.fechaCreacion?.toDate?.() || new Date(b.fechaCreacion || 0);
+        return fechaB - fechaA;
+      });
 
-        // Ejecutar todas las queries y combinar resultados
-        const snapshots = await Promise.all(queries.map(q => getDocs(q).catch(err => {
-          console.warn('[DEBUG] Error en query (ignorando):', err);
-          return { docs: [] };
-        })));
-        
-        const allReportes = snapshots.flatMap(snapshot => 
-          snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
-        );
-        
-        // Eliminar duplicados y ordenar por fecha (en memoria, sin índice)
-        const uniqueReportes = Array.from(
-          new Map(allReportes.map(r => [r.id, r])).values()
-        );
-        
-        reportesData = uniqueReportes.sort((a, b) => {
-          const fechaA = a.fechaCreacion?.toDate?.() || new Date(a.fechaCreacion || 0);
-          const fechaB = b.fechaCreacion?.toDate?.() || new Date(b.fechaCreacion || 0);
-          return fechaB - fechaA;
-        }).slice(0, 100);
-      }
-
-      console.log('[DEBUG]', reportesData.length, 'reportes cargados con multi-tenant');
-      console.log('[DEBUG] Primeros 3 reportes:', reportesData.slice(0, 3));
-      
-      // Debug adicional: mostrar todos los reportes si hay alguno
-      if (reportesData.length > 0) {
-        console.log('[DEBUG] Todos los reportes encontrados:');
-        reportesData.forEach((reporte, index) => {
-          console.log(`[DEBUG] Reporte ${index + 1}:`, {
-            id: reporte.id,
-            clienteAdminId: reporte.clienteAdminId,
-            empresaId: reporte.empresaId,
-            empresaNombre: reporte.empresaNombre,
-            fechaCreacion: reporte.fechaCreacion
-          });
-        });
-      }
+      console.log('[DEBUG]', reportesOrdenados.length, 'reportes cargados');
       
       // Guardar en cache
-      reportesCacheRef.current[cacheKey] = reportesData;
-      lastUserProfileKeyRef.current = cacheKey;
+      reportesCacheRef.current[userId] = reportesOrdenados;
+      lastUserIdRef.current = userId;
       
-      setReportes(reportesData);
-      setFilteredReportes(reportesData);
+      setReportes(reportesOrdenados);
+      setFilteredReportes(reportesOrdenados);
     } catch (error) {
       console.error("Error fetching reportes:", error);
       setError("Error al cargar los reportes. Por favor, intenta de nuevo.");
@@ -368,17 +234,16 @@ const ReportesPage = () => {
     }
   };
 
-  // Efectos - Optimizado: solo recargar si cambian datos relevantes
+  // Efectos - Recargar solo si cambia el UID del usuario
   useEffect(() => {
-    // Solo cargar si hay datos mínimos del usuario
-    if (!userProfile?.uid && !userProfile?.clienteAdminId && !userProfile?.empresaId) {
+    if (!userProfile?.uid) {
       setLoading(false);
       return;
     }
     
     fetchReportes();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userProfile?.uid, userProfile?.clienteAdminId, userProfile?.empresaId, userProfile?.role]);
+  }, [userProfile?.uid]);
 
   useEffect(() => {
     console.log('[DEBUG] Aplicando filtros...');
@@ -506,16 +371,22 @@ const ReportesPage = () => {
 
     if (result.isConfirmed) {
       try {
-        await deleteDoc(doc(db, 'reportes', reporte.id));
+        const userId = userProfile?.uid;
+        if (!userId) {
+          throw new Error('UID de usuario no disponible');
+        }
+
+        // Eliminar desde la ruta multi-tenant
+        const reportesRef = auditUserCollection(userId, 'reportes');
+        await deleteDoc(doc(reportesRef, reporte.id));
         
         // Actualizar estado local
         setReportes(prev => prev.filter(r => r.id !== reporte.id));
         setFilteredReportes(prev => prev.filter(r => r.id !== reporte.id));
         
         // Limpiar cache
-        const cacheKey = `${userProfile?.uid || ''}-${userProfile?.clienteAdminId || ''}-${userProfile?.empresaId || ''}-${userProfile?.role || ''}`;
-        if (reportesCacheRef.current[cacheKey]) {
-          reportesCacheRef.current[cacheKey] = reportesCacheRef.current[cacheKey].filter(r => r.id !== reporte.id);
+        if (reportesCacheRef.current[userId]) {
+          reportesCacheRef.current[userId] = reportesCacheRef.current[userId].filter(r => r.id !== reporte.id);
         }
         
         Swal.fire('Eliminado', 'El reporte ha sido eliminado correctamente', 'success');
