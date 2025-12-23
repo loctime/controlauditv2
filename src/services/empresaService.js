@@ -1,6 +1,5 @@
 // src/services/empresaService.js
 import { 
-  collection, 
   doc, 
   getDocs, 
   addDoc, 
@@ -10,32 +9,30 @@ import {
   where, 
   onSnapshot
 } from 'firebase/firestore';
-// db y auditUserCollection importados desde firebaseControlFile para acceso centralizado
-import { db, auditUserCollection } from '../firebaseControlFile';
 import { registrarAccionSistema } from '../utils/firestoreUtils';
 
 export const empresaService = {
   // Obtener empresas del usuario (multi-tenant)
-  async getUserEmpresas(userId, role, clienteAdminId) {
+  // empresasRef: CollectionReference - referencia a la colección de empresas
+  // userRef: DocumentReference - referencia al documento del usuario
+  async getUserEmpresas(userId, role, clienteAdminId, empresasRef, userRef) {
     try {
       if (!userId) return [];
+      if (!empresasRef) throw new Error('empresasRef es requerido');
 
-      const empresasRef = auditUserCollection(userId, "empresas");
       let snapshot;
 
       if (role === 'supermax') {
         snapshot = await getDocs(empresasRef);
       } else if (role === 'max') {
         // Buscar empresas por el UID actual Y por el UID migrado (si existe)
-        const userRef = doc(db, "apps", "audit", "users", userId);
+        if (!userRef) throw new Error('userRef es requerido para role max');
         const userSnap = await getDoc(userRef);
         let migratedFromUid = null;
-        let userEmail = null;
         
         if (userSnap.exists()) {
           const userData = userSnap.data();
           migratedFromUid = userData.migratedFromUid;
-          userEmail = userData.email;
         }
         
         // Si hay UID migrado, buscar empresas con ambos UIDs
@@ -103,56 +100,11 @@ export const empresaService = {
           const todasEmpresas = Array.from(todasEmpresasMap.values());
           console.log(`[empresaService] 📦 Encontradas ${todasEmpresas.length} empresas (propietario: ${snapshots[0].docs.length}, creador: ${snapshots[1].docs.length}, migradas: ${snapshots[2].docs.length}, socios: ${snapshots[3].docs.length})`);
           
-          // Si encuentra empresas, retornarlas
-          if (todasEmpresas.length > 0) {
-            return todasEmpresas;
-          }
-          
-          // Si no encuentra empresas y hay email, buscar por email del propietario (fallback)
-          if (userEmail) {
-            console.log('[empresaService] 🔍 No se encontraron empresas por UID, buscando por email del propietario...');
-            // Buscar usuarios con este email y obtener sus UIDs
-            // NOTA: apps/audit/users es una colección global compartida, no multi-tenant
-            const usuariosRef = collection(db, 'apps', 'audit', 'users');
-            const emailQuery = query(usuariosRef, where('email', '==', userEmail));
-            const usuariosSnapshot = await getDocs(emailQuery);
-            
-            if (!usuariosSnapshot.empty) {
-              // Buscar empresas con todos los UIDs encontrados
-              const uidsEncontrados = usuariosSnapshot.docs.map(doc => doc.id);
-              console.log('[empresaService] 📋 UIDs encontrados para este email:', uidsEncontrados);
-              
-              const empresasPromises = uidsEncontrados.map(async (uid) => {
-                const qEmpresas = query(empresasRef, where("propietarioId", "==", uid));
-                const empresasSnap = await getDocs(qEmpresas);
-                return empresasSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-              });
-              
-              const empresasArrays = await Promise.all(empresasPromises);
-              const empresasPorEmail = empresasArrays.flat();
-              
-              if (empresasPorEmail.length > 0) {
-                console.log(`[empresaService] 📦 Encontradas ${empresasPorEmail.length} empresas por email, migrando al nuevo UID...`);
-                // Migrar todas las empresas al nuevo UID
-                const empresasUpdatePromises = empresasPorEmail.map(async (empresa) => {
-                  await updateDoc(doc(empresasRef, empresa.id), {
-                    propietarioId: userId,
-                    lastUidUpdate: new Date(),
-                    migratedFromUid: empresa.propietarioId
-                  });
-                });
-                await Promise.all(empresasUpdatePromises);
-                console.log('[empresaService] ✅ Empresas migradas exitosamente');
-                return empresasPorEmail;
-              }
-            }
-          }
-          
-          return [];
+          return todasEmpresas;
         }
       } else {
         // Operario: buscar empresas del cliente admin Y empresas donde es creador/socio
-        const userRef = doc(db, "apps", "audit", "users", userId);
+        if (!userRef) throw new Error('userRef es requerido para role operario');
         const userSnap = await getDoc(userRef);
         let todasEmpresasOperario = [];
         
@@ -211,15 +163,20 @@ export const empresaService = {
   },
 
   // Listener reactivo para empresas
-  subscribeToUserEmpresas(userProfile, role, setUserEmpresas, setLoadingEmpresas, loadUserFromCache = null) {
+  // empresasRef: CollectionReference - referencia a la colección de empresas
+  subscribeToUserEmpresas(userProfile, role, setUserEmpresas, setLoadingEmpresas, empresasRef, loadUserFromCache = null) {
     if (!userProfile?.uid || !role) {
+      setUserEmpresas([]);
+      setLoadingEmpresas(false);
+      return () => {};
+    }
+    if (!empresasRef) {
       setUserEmpresas([]);
       setLoadingEmpresas(false);
       return () => {};
     }
 
     setLoadingEmpresas(true);
-    const empresasRef = auditUserCollection(userProfile.uid, "empresas");
     const unsubscribes = [];
     const empresasMaps = []; // Array de Maps, uno por cada query
 
@@ -391,17 +348,23 @@ export const empresaService = {
   },
 
   // Crear empresa (multi-tenant)
-  async crearEmpresa(empresaData, user, role, userProfile) {
+  // empresasRef: CollectionReference - referencia a la colección de empresas
+  // sucursalesRef: CollectionReference - referencia a la colección de sucursales
+  // propietarioRef: DocumentReference - referencia al documento del propietario
+  // adminRef: DocumentReference (opcional) - referencia al documento del admin (si es operario)
+  async crearEmpresa(empresaData, user, role, userProfile, empresasRef, sucursalesRef, propietarioRef, adminRef = null) {
     try {
       if (!user?.uid) throw new Error('Usuario no autenticado');
+      if (!empresasRef) throw new Error('empresasRef es requerido');
+      if (!sucursalesRef) throw new Error('sucursalesRef es requerido');
+      if (!propietarioRef) throw new Error('propietarioRef es requerido');
       
       let propietarioId, propietarioEmail, propietarioRole;
       let creadorId, creadorEmail, creadorRole;
       
-      if (role === 'operario' && userProfile?.clienteAdminId) {
+      if (role === 'operario' && userProfile?.clienteAdminId && adminRef) {
         propietarioId = userProfile.clienteAdminId;
         
-        const adminRef = doc(db, "apps", "audit", "users", userProfile.clienteAdminId);
         const adminSnap = await getDoc(adminRef);
         propietarioEmail = adminSnap.exists() ? adminSnap.data().email : 'admin@empresa.com';
         propietarioRole = 'max';
@@ -419,9 +382,6 @@ export const empresaService = {
         creadorRole = role;
       }
       
-      // Usar propietarioId para las colecciones multi-tenant
-      const empresaRef = auditUserCollection(propietarioId, "empresas");
-      
       const nuevaEmpresa = {
         ...empresaData,
         propietarioId,
@@ -434,10 +394,9 @@ export const empresaService = {
         socios: [propietarioId]
       };
       
-      const docRef = await addDoc(empresaRef, nuevaEmpresa);
+      const docRef = await addDoc(empresasRef, nuevaEmpresa);
       
       // Crear automáticamente sucursal "Casa Central"
-      const sucursalesRef = auditUserCollection(propietarioId, "sucursales");
       const sucursalCasaCentral = {
         nombre: "Casa Central",
         empresaId: docRef.id,
@@ -453,7 +412,6 @@ export const empresaService = {
       await addDoc(sucursalesRef, sucursalCasaCentral);
       
       // Actualizar perfil del propietario
-      const propietarioRef = doc(db, "apps", "audit", "users", propietarioId);
       const propietarioSnap = await getDoc(propietarioRef);
       
       if (propietarioSnap.exists()) {
@@ -482,10 +440,11 @@ export const empresaService = {
   },
 
   // Actualizar empresa
-  async updateEmpresa(empresaId, updateData, userProfile) {
+  // empresasRef: CollectionReference - referencia a la colección de empresas
+  async updateEmpresa(empresaId, updateData, userProfile, empresasRef) {
     try {
       if (!userProfile?.uid) throw new Error('Usuario no autenticado');
-      const empresasRef = auditUserCollection(userProfile.uid, "empresas");
+      if (!empresasRef) throw new Error('empresasRef es requerido');
       const empresaRef = doc(empresasRef, empresaId);
       await updateDoc(empresaRef, {
         ...updateData,
@@ -509,9 +468,11 @@ export const empresaService = {
   },
 
   // Verificar y corregir empresas sin propietarioId
-  async verificarYCorregirEmpresas(userEmpresas, userProfile) {
+  // empresasRef: CollectionReference - referencia a la colección de empresas
+  async verificarYCorregirEmpresas(userEmpresas, userProfile, empresasRef) {
     try {
-      if (!userProfile) return 0;
+      if (!userProfile) return { empresasCorregidas: 0, empresasActualizadas: [] };
+      if (!empresasRef) throw new Error('empresasRef es requerido');
 
       const empresasAVerificar = userEmpresas || [];
       let empresasCorregidas = 0;
@@ -519,7 +480,6 @@ export const empresaService = {
 
       for (const empresa of empresasAVerificar) {
         if (!empresa.propietarioId) {
-          const empresasRef = auditUserCollection(userProfile.uid, "empresas");
           const empresaRef = doc(empresasRef, empresa.id);
           await updateDoc(empresaRef, {
             propietarioId: userProfile.uid,
