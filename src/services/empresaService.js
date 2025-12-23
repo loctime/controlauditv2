@@ -15,8 +15,14 @@ export const empresaService = {
   // Obtener empresas del usuario (multi-tenant)
   // empresasRef: CollectionReference - referencia a la colección de empresas
   // userRef: DocumentReference - referencia al documento del usuario
-  async getUserEmpresas(userId, role, clienteAdminId, empresasRef, userRef) {
+  async getUserEmpresas(params) {
     try {
+      // Soporte para objeto o parámetros posicionales (compatibilidad)
+      const { userId, role, clienteAdminId, empresasRef, userRef, userProfile } = 
+        typeof params === 'object' && params !== null && !Array.isArray(params)
+          ? params
+          : { userId: params, role: arguments[1], clienteAdminId: arguments[2], empresasRef: arguments[3], userRef: arguments[4] };
+      
       if (!userId) return [];
       if (!empresasRef) throw new Error('empresasRef es requerido');
 

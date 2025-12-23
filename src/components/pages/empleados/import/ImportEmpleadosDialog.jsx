@@ -30,7 +30,8 @@ import {
   ContentPaste as ContentPasteIcon,
   CheckCircle as CheckCircleIcon,
   Download as DownloadIcon,
-  Info as InfoIcon
+  Info as InfoIcon,
+  Edit as EditIcon
 } from '@mui/icons-material';
 import * as XLSX from 'xlsx';
 import { useAuth } from '../../../context/AuthContext';
@@ -46,8 +47,9 @@ const steps = [
 export default function ImportEmpleadosDialog({ open, onClose, onSuccess, empresaId, sucursalId }) {
   const { userProfile } = useAuth();
   const [activeStep, setActiveStep] = useState(0);
-  const [importMethod, setImportMethod] = useState(null); // 'file' o 'text'
+  const [importMethod, setImportMethod] = useState(null); // 'file', 'text' o 'manual'
   const [pastedText, setPastedText] = useState('');
+  const [manualText, setManualText] = useState('');
   const fileInputRef = useRef(null);
 
   const {
@@ -58,6 +60,7 @@ export default function ImportEmpleadosDialog({ open, onClose, onSuccess, empres
     progress,
     importFromFile,
     importFromText,
+    importFromManualText,
     saveEmpleados,
     reset,
     getValidEmpleados
@@ -70,6 +73,7 @@ export default function ImportEmpleadosDialog({ open, onClose, onSuccess, empres
       setActiveStep(0);
       setImportMethod(null);
       setPastedText('');
+      setManualText('');
     }
   }, [open, reset]);
 
@@ -110,9 +114,30 @@ export default function ImportEmpleadosDialog({ open, onClose, onSuccess, empres
     setActiveStep(1);
   };
 
+  const handleManualText = async () => {
+    if (!manualText.trim()) {
+      alert('Por favor ingrese los datos de los empleados');
+      return;
+    }
+
+    if (!sucursalId) {
+      alert('Debe seleccionar una sucursal antes de importar');
+      return;
+    }
+
+    importFromManualText(manualText, empresaId, sucursalId);
+    setActiveStep(1);
+  };
+
   const handleNext = () => {
-    if (activeStep === 0 && importMethod === 'text' && pastedText.trim()) {
-      handlePasteText();
+    if (activeStep === 0) {
+      if (importMethod === 'text' && pastedText.trim()) {
+        handlePasteText();
+      } else if (importMethod === 'manual' && manualText.trim()) {
+        handleManualText();
+      } else if (importMethod === 'file' && empleadosParsed.length > 0) {
+        setActiveStep(1);
+      }
     } else if (activeStep === 1) {
       setActiveStep(2);
     }
@@ -187,7 +212,8 @@ export default function ImportEmpleadosDialog({ open, onClose, onSuccess, empres
   const validEmpleados = getValidEmpleados();
   const canProceed = activeStep === 0 
     ? (importMethod === 'file' && empleadosParsed.length > 0) || 
-      (importMethod === 'text' && pastedText.trim().length > 0)
+      (importMethod === 'text' && pastedText.trim().length > 0) ||
+      (importMethod === 'manual' && manualText.trim().length > 0)
     : activeStep === 1
     ? validEmpleados.length > 0
     : true;
@@ -369,6 +395,72 @@ export default function ImportEmpleadosDialog({ open, onClose, onSuccess, empres
                       sx={{ mt: 2 }}
                     >
                       Procesar texto
+                    </Button>
+                  </Box>
+                )}
+
+                <Divider sx={{ my: 2 }}>O</Divider>
+
+                <Paper
+                  variant="outlined"
+                  sx={{
+                    p: 3,
+                    cursor: 'pointer',
+                    border: importMethod === 'manual' ? 2 : 1,
+                    borderColor: importMethod === 'manual' ? 'primary.main' : 'divider',
+                    '&:hover': { borderColor: 'primary.main' }
+                  }}
+                  onClick={() => handleMethodSelect('manual')}
+                >
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                    <EditIcon color={importMethod === 'manual' ? 'primary' : 'action'} />
+                    <Box>
+                      <Typography variant="h6">Ingreso manual masivo</Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        Escriba los datos de empleados, una línea por empleado, separados por espacios
+                      </Typography>
+                    </Box>
+                  </Box>
+                </Paper>
+
+                {importMethod === 'manual' && (
+                  <Box sx={{ mt: 2 }}>
+                    <Alert severity="info" sx={{ mb: 2 }}>
+                      <Typography variant="body2" gutterBottom>
+                        <strong>Formato:</strong> Una línea = un empleado, separado por espacios.
+                      </Typography>
+                      <Typography variant="body2" component="div">
+                        <Box component="ul" sx={{ m: 0, pl: 2, mt: 1 }}>
+                          <li>Primera palabra: <strong>nombre</strong></li>
+                          <li>Segunda palabra: <strong>apellido</strong></li>
+                          <li>Número de 7-9 dígitos: <strong>DNI</strong></li>
+                          <li>Texto con "@": <strong>email</strong></li>
+                          <li>Número largo: <strong>teléfono</strong></li>
+                          <li>Resto: <strong>cargo</strong> y <strong>área</strong></li>
+                        </Box>
+                      </Typography>
+                      <Typography variant="body2" sx={{ mt: 1, fontStyle: 'italic' }}>
+                        Ejemplo: diego bertosi 37399444 diego@gmail.com 112233445 operario produccion
+                      </Typography>
+                    </Alert>
+                    <TextField
+                      fullWidth
+                      multiline
+                      rows={10}
+                      placeholder="diego bertosi 37399444 diego@gmail.com 112233445 operario produccion&#10;martin dipalma 38488222 martin@gmail.com 119988776 administrativo administracion"
+                      value={manualText}
+                      onChange={(e) => setManualText(e.target.value)}
+                      disabled={loading}
+                      helperText="Una línea por empleado. El sistema detectará automáticamente DNI, email y teléfono."
+                    />
+                    <Button
+                      variant="contained"
+                      startIcon={<EditIcon />}
+                      onClick={handleManualText}
+                      disabled={loading || !manualText.trim()}
+                      sx={{ mt: 2 }}
+                    >
+                      Procesar texto manual
                     </Button>
                   </Box>
                 )}

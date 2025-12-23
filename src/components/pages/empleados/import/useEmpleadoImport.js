@@ -55,16 +55,16 @@ export const useEmpleadoImport = () => {
       telefono: row.telefono ? String(row.telefono).trim() : '',
       cargo: row.cargo ? String(row.cargo).trim() : '',
       area: row.area ? String(row.area).trim() : '',
-      tipo: row.tipo ? String(row.tipo).trim().toLowerCase() : 'operativo',
+      tipo: row.tipo === null ? null : (row.tipo ? String(row.tipo).trim().toLowerCase() : 'operativo'),
       estado: row.estado ? String(row.estado).trim().toLowerCase() : 'activo',
       fechaIngreso: null,
       empresaId,
       sucursalId,
-      _rowIndex: index + 2 // +2 porque Excel empieza en 1 y tiene header
+      _rowIndex: row._rowIndex !== undefined ? row._rowIndex : index + 2 // +2 porque Excel empieza en 1 y tiene header
     };
 
-    // Normalizar tipo
-    if (empleado.tipo !== 'operativo' && empleado.tipo !== 'administrativo') {
+    // Normalizar tipo (respetar null del método manual)
+    if (empleado.tipo !== null && empleado.tipo !== 'operativo' && empleado.tipo !== 'administrativo') {
       empleado.tipo = 'operativo';
     }
 
@@ -186,6 +186,97 @@ export const useEmpleadoImport = () => {
   }, []);
 
   /**
+   * Parsea texto manual libre (una línea por empleado, separado por espacios)
+   * Heurística: parts[0]=nombre, parts[1]=apellido, número 7-9 dígitos=DNI,
+   * texto con @=email, número largo=teléfono, resto=cargo/area
+   */
+  const parseManualText = useCallback((text) => {
+    const lines = text.trim().split('\n').filter(line => line.trim().length > 0);
+    if (lines.length === 0) {
+      throw new Error('El texto no puede estar vacío');
+    }
+
+    const rows = [];
+    
+    lines.forEach((line, lineIndex) => {
+      // Dividir por espacios múltiples y limpiar
+      const parts = line.trim().split(/\s+/).filter(p => p.length > 0);
+      
+      if (parts.length < 2) {
+        // Mínimo nombre y apellido
+        return;
+      }
+
+      const row = {
+        nombre: parts[0] || '',
+        apellido: parts[1] || '',
+        dni: '',
+        email: '',
+        telefono: '',
+        cargo: '',
+        area: '',
+        tipo: null,
+        estado: 'activo',
+        _rowIndex: lineIndex + 1 // Para método manual, línea 1 = empleado 1
+      };
+
+      // Buscar DNI (número de 7-9 dígitos)
+      let dniPartIndex = -1;
+      for (let i = 2; i < parts.length; i++) {
+        const part = parts[i];
+        const numOnly = part.replace(/\D/g, '');
+        if (numOnly.length >= 7 && numOnly.length <= 9 && !row.dni) {
+          row.dni = numOnly;
+          dniPartIndex = i;
+          break;
+        }
+      }
+
+      // Buscar email (contiene @)
+      let emailPartIndex = -1;
+      for (let i = 2; i < parts.length; i++) {
+        const part = parts[i];
+        if (part.includes('@') && !row.email) {
+          row.email = part;
+          emailPartIndex = i;
+          break;
+        }
+      }
+
+      // Buscar teléfono (número largo, más de 9 dígitos, excluyendo DNI y email)
+      let telefonoPartIndex = -1;
+      for (let i = 2; i < parts.length; i++) {
+        if (i === dniPartIndex || i === emailPartIndex) continue;
+        const part = parts[i];
+        const numOnly = part.replace(/\D/g, '');
+        if (numOnly.length > 9 && !row.telefono) {
+          row.telefono = part;
+          telefonoPartIndex = i;
+          break;
+        }
+      }
+
+      // Resto de campos: cargo y area (excluyendo DNI, email y teléfono ya procesados)
+      const remainingParts = [];
+      for (let i = 2; i < parts.length; i++) {
+        if (i === dniPartIndex || i === emailPartIndex || i === telefonoPartIndex) continue;
+        remainingParts.push(parts[i]);
+      }
+
+      if (remainingParts.length > 0) {
+        row.cargo = remainingParts[0] || '';
+        if (remainingParts.length > 1) {
+          row.area = remainingParts[1] || '';
+        }
+      }
+
+      rows.push(row);
+    });
+
+    return rows;
+  }, []);
+
+  /**
    * Procesa los datos parseados
    */
   const processData = useCallback((data, empresaId, sucursalId) => {
@@ -251,6 +342,25 @@ export const useEmpleadoImport = () => {
       setLoading(false);
     }
   }, [parseTextData, processData]);
+
+  /**
+   * Importa desde texto manual libre
+   */
+  const importFromManualText = useCallback((text, empresaId, sucursalId) => {
+    try {
+      setLoading(true);
+      setErrors([]);
+      setWarnings([]);
+      
+      const data = parseManualText(text);
+      processData(data, empresaId, sucursalId);
+    } catch (error) {
+      setErrors([`Error al procesar texto manual: ${error.message}`]);
+      setEmpleadosParsed([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [parseManualText, processData]);
 
   /**
    * Guarda los empleados en Firestore
@@ -343,6 +453,7 @@ export const useEmpleadoImport = () => {
     progress,
     importFromFile,
     importFromText,
+    importFromManualText,
     saveEmpleados,
     reset,
     getValidEmpleados

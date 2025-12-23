@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
-import { getDocs, query, where } from 'firebase/firestore';
-import { auditUserCollection } from '../../../firebaseControlFile.js';
+import { getDocs, query, where, doc } from 'firebase/firestore';
+import { auditUserCollection, auditUsersCollection } from '../../../firebaseControlFile.js';
 import { empresaService } from '../../../services/empresaService';
 import { auditoriaService } from '../../../services/auditoriaService';
 import { normalizeSucursal } from '../../../utils/firestoreUtils';
@@ -31,7 +31,15 @@ export const useUserDataLoaders = (
         return [];
       }
 
-      const empresas = await empresaService.getUserEmpresas(userId, roleToUse);
+      const empresasRef = auditUserCollection(userId, 'empresas');
+      const userRef = doc(auditUsersCollection(), userId);
+      const empresas = await empresaService.getUserEmpresas({
+        userId,
+        role: roleToUse,
+        userProfile: profileToUse,
+        empresasRef,
+        userRef
+      });
       setUserEmpresas(empresas);
       setLoadingEmpresas(false);
       return empresas;
