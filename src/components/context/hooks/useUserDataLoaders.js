@@ -31,14 +31,10 @@ export const useUserDataLoaders = (
         return [];
       }
 
-      const empresasRef = auditUserCollection(userId, 'empresas');
-      const userRef = doc(auditUsersCollection(), userId);
       const empresas = await empresaService.getUserEmpresas({
         userId,
         role: roleToUse,
-        userProfile: profileToUse,
-        empresasRef,
-        userRef
+        userProfile: profileToUse
       });
       setUserEmpresas(empresas);
       setLoadingEmpresas(false);

@@ -27,18 +27,26 @@ export const empresaService = {
         return [];
       }
 
+      // Obtener role del userProfile si no está proporcionado
+      let roleToUse = role;
+      if (!roleToUse && userProfile?.role) {
+        roleToUse = userProfile.role;
+        console.log('[empresaService] Role obtenido del userProfile:', roleToUse);
+      }
+
       // Construir rutas internamente
       const empresasRef = auditUserCollection(userId, 'empresas');
       const userRef = doc(auditUsersCollection(), userId);
       
       console.log('[empresaService] usando path:', empresasRef.path);
-      console.log('[empresaService] getUserEmpresas - userId:', userId, 'role:', role);
+      console.log('[empresaService] getUserEmpresas - userId:', userId, 'role:', roleToUse);
 
       let snapshot;
 
-      if (role === 'supermax') {
+      if (roleToUse === 'supermax') {
         snapshot = await getDocs(empresasRef);
-      } else if (role === 'max') {
+      } else if (roleToUse === 'max' || !roleToUse) {
+        // Si role es null/undefined, usar lógica de 'max' como fallback
         // Buscar empresas por el UID actual Y por el UID migrado (si existe)
         const userSnap = await getDoc(userRef);
         let migratedFromUid = null;
@@ -115,14 +123,14 @@ export const empresaService = {
           
           return todasEmpresas;
         }
-      } else {
+      } else if (roleToUse === 'operario') {
         // Operario: buscar empresas del cliente admin Y empresas donde es creador/socio
         const userSnap = await getDoc(userRef);
         let todasEmpresasOperario = [];
         
         if (userSnap.exists()) {
           const userData = userSnap.data();
-          const adminId = userData.clienteAdminId;
+          const adminId = userData.clienteAdminId || userProfile?.clienteAdminId;
           
           if (adminId) {
             // Buscar empresas del admin (en su propia colección)
@@ -153,6 +161,43 @@ export const empresaService = {
         }
         
         return todasEmpresasOperario;
+      } else {
+        // Fallback: si el role no es reconocido, usar lógica de 'max'
+        console.warn('[empresaService] Role no reconocido:', roleToUse, '- usando lógica de fallback');
+        const userSnap = await getDoc(userRef);
+        let migratedFromUid = null;
+        
+        if (userSnap.exists()) {
+          const userData = userSnap.data();
+          migratedFromUid = userData.migratedFromUid;
+        }
+        
+        // Búsqueda múltiple: propietarioId, creadorId, socios, migratedFromUid
+        console.log('[empresaService] 🔍 [Fallback] Buscando empresas para userId:', userId);
+        
+        const queries = [
+          query(empresasRef, where("propietarioId", "==", userId)),
+          query(empresasRef, where("creadorId", "==", userId)),
+          query(empresasRef, where("migratedFromUid", "==", userId)),
+          query(empresasRef, where("socios", "array-contains", userId))
+        ];
+        
+        const snapshots = await Promise.all(queries.map(q => getDocs(q).catch(() => ({ empty: true, docs: [] }))));
+        
+        // Combinar todos los resultados sin duplicados
+        const todasEmpresasMap = new Map();
+        snapshots.forEach(snap => {
+          snap.docs.forEach(doc => {
+            if (!todasEmpresasMap.has(doc.id)) {
+              todasEmpresasMap.set(doc.id, { id: doc.id, ...doc.data() });
+            }
+          });
+        });
+        
+        const todasEmpresas = Array.from(todasEmpresasMap.values());
+        console.log(`[empresaService] 📦 [Fallback] Encontradas ${todasEmpresas.length} empresas`);
+        
+        return todasEmpresas;
       }
 
       // Este código ya no debería ejecutarse para role 'max' porque retornamos antes
