@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { getDocs, query, where } from 'firebase/firestore';
-import { auditUserCollection, sucursalesCollection } from '../../../../firebaseControlFile';
+import { auditUserCollection } from '../../../../firebaseControlFile';
 
 /**
  * Hook para cargar estadísticas de empresas
@@ -20,7 +20,13 @@ export const useEmpresasStats = (userEmpresas, userId = null) => {
     
     for (const empresa of empresas) {
       try {
-        const sucursalesSnapshot = await getDocs(query(sucursalesCollection(), where('empresaId', '==', empresa.id)));
+        // Las sucursales están en la colección del propietario de la empresa
+        const propietarioId = empresa.propietarioId || uid;
+        const sucursalesRef = auditUserCollection(propietarioId, 'sucursales');
+        
+        console.log('[useEmpresasStats] Buscando sucursales para empresa', empresa.id, 'en path:', sucursalesRef.path);
+        
+        const sucursalesSnapshot = await getDocs(query(sucursalesRef, where('empresaId', '==', empresa.id)));
         const sucursalesIds = sucursalesSnapshot.docs.map(doc => doc.id);
         
         if (sucursalesIds.length === 0) {
@@ -35,10 +41,11 @@ export const useEmpresasStats = (userEmpresas, userId = null) => {
           continue;
         }
 
+        // Empleados, capacitaciones y accidentes están en la colección del propietario
         const [empleadosSnapshot, capacitacionesSnapshot, accidentesSnapshot] = await Promise.all([
-          getDocs(query(auditUserCollection(uid, 'empleados'), where('sucursalId', 'in', sucursalesIds))),
-          getDocs(query(auditUserCollection(uid, 'capacitaciones'), where('sucursalId', 'in', sucursalesIds))),
-          getDocs(query(auditUserCollection(uid, 'accidentes'), where('sucursalId', 'in', sucursalesIds)))
+          getDocs(query(auditUserCollection(propietarioId, 'empleados'), where('sucursalId', 'in', sucursalesIds))),
+          getDocs(query(auditUserCollection(propietarioId, 'capacitaciones'), where('sucursalId', 'in', sucursalesIds))),
+          getDocs(query(auditUserCollection(propietarioId, 'accidentes'), where('sucursalId', 'in', sucursalesIds)))
         ]);
         
         stats[empresa.id] = {
@@ -50,7 +57,7 @@ export const useEmpresasStats = (userEmpresas, userId = null) => {
           accidentesAbiertos: accidentesSnapshot.docs.filter(doc => doc.data().estado === 'abierto').length
         };
       } catch (error) {
-        console.error(`Error cargando stats para empresa ${empresa.id}:`, error);
+        console.error(`[useEmpresasStats] Error cargando stats para empresa ${empresa.id}:`, error);
         stats[empresa.id] = {
           sucursales: 0,
           empleados: 0,
@@ -63,7 +70,7 @@ export const useEmpresasStats = (userEmpresas, userId = null) => {
     }
     
     setEmpresasStats(stats);
-  }, []);
+  }, [userId]);
 
   useEffect(() => {
     if (userEmpresas && userEmpresas.length > 0 && userId) {

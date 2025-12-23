@@ -5,29 +5,37 @@ import {
   useTheme, useMediaQuery, alpha, Card, CardContent, IconButton, Tooltip
 } from '@mui/material';
 import { Business as BusinessIcon, ExpandMore as ExpandMoreIcon, Store as StoreIcon, LocationOn, Phone, Person } from '@mui/icons-material';
-import { collection, query, where, onSnapshot } from 'firebase/firestore';
-import { sucursalesCollection } from '../../../firebaseControlFile';
+import { query, where, onSnapshot } from 'firebase/firestore';
+import { auditUserCollection } from '../../../firebaseControlFile';
 import { useNavigate } from 'react-router-dom';
 import { normalizeSucursal } from '../../../utils/firestoreUtils';
 
 // Componente para mostrar sucursales de una empresa
-const SucursalesEmpresa = ({ empresaId }) => {
+const SucursalesEmpresa = ({ empresaId, propietarioId }) => {
   const [sucursales, setSucursales] = useState([]);
   const [loading, setLoading] = useState(true);
   const theme = useTheme();
   const isSmallMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
   useEffect(() => {
-    if (!empresaId) return;
+    if (!empresaId || !propietarioId) return;
     setLoading(true);
-    const q = query(sucursalesCollection(), where('empresaId', '==', empresaId));
+    
+    // Construir ruta correcta usando auditUserCollection
+    const sucursalesRef = auditUserCollection(propietarioId, 'sucursales');
+    console.log('[SucursalesEmpresa] Buscando sucursales para empresa', empresaId, 'en path:', sucursalesRef.path);
+    
+    const q = query(sucursalesRef, where('empresaId', '==', empresaId));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       setSucursales(snapshot.docs.map(doc => normalizeSucursal(doc)));
       setLoading(false);
       console.debug(`[SucursalesEmpresa] ${snapshot.docs.length} sucursales para empresa ${empresaId}`);
+    }, (error) => {
+      console.error('[SucursalesEmpresa] Error cargando sucursales:', error);
+      setLoading(false);
     });
     return () => unsubscribe();
-  }, [empresaId]);
+  }, [empresaId, propietarioId]);
 
   if (loading) return (
     <Box sx={{ textAlign: 'center', py: 2 }}>
@@ -362,7 +370,7 @@ const PerfilEmpresas = ({ empresas, loading }) => {
                   >
                     🏪 Sucursales
                   </Typography>
-                  <SucursalesEmpresa empresaId={empresa.id} />
+                  <SucursalesEmpresa empresaId={empresa.id} propietarioId={empresa.propietarioId} />
                 </Box>
               </CardContent>
             </Card>

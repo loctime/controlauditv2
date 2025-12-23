@@ -19,27 +19,40 @@ function sameAppId() {
   return resource.data.appId == request.resource.data.appId;
 }
 
-// 🔐 Perfil de usuario (SIEMPRE primero)
+// 🔐 PERFIL
 match /apps/auditoria/users/{userId} {
-  allow read, write: if request.auth != null
+  allow get, update: if request.auth != null
     && request.auth.uid == userId;
 }
 
-// 🔓 Datos de la app (empresas, auditorías, formularios, etc)
-match /apps/auditoria/{document=**} {
-  // READ: Solo requiere autenticación
-  allow read: if request.auth != null;
+// 🔐 LISTADO DE SUBCOLECCIONES (ESTA ERA LA PIEZA FALTANTE)
+match /apps/auditoria/users/{userId}/{collection} {
+  allow list: if request.auth != null
+    && request.auth.uid == userId;
+}
+
+// 🔐 DOCUMENTOS DENTRO DE SUBCOLECCIONES
+match /apps/auditoria/users/{userId}/{collection}/{docId} {
+  allow read, create, update, delete: if request.auth != null
+    && request.auth.uid == userId;
+}
+
+// 🔓 Datos generales de la app (excluye explícitamente 'users')
+match /apps/auditoria/{collection}/{document=**} {
+  // Solo aplicar si NO es 'users' (las rutas de usuarios ya están manejadas arriba)
+  allow read: if request.auth != null
+    && collection != 'users';
   
-  // CREATE: Exige appId válido
   allow create: if request.auth != null
+    && collection != 'users'
     && hasValidAppId();
   
-  // UPDATE: Permite legacy o exige appId válido y coincidente
   allow update: if request.auth != null
+    && collection != 'users'
     && (isLegacyDoc() || (hasValidAppId() && sameAppId()));
   
-  // DELETE: Solo requiere autenticación
-  allow delete: if request.auth != null;
+  allow delete: if request.auth != null
+    && collection != 'users';
 }
 
 // 📊 Colecciones en raíz (empresas, sucursales, auditorías, etc)

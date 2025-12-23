@@ -1,6 +1,6 @@
 // Servicio centralizado para operaciones de auditoría
 import { collection, addDoc, getDocs, query, where, orderBy, serverTimestamp, doc } from 'firebase/firestore';
-import { dbAudit, auditUserCollection, auditUsersCollection, sucursalesCollection, reportesCollection } from '../../../firebaseControlFile';
+import { dbAudit, auditUserCollection, auditUsersCollection, reportesCollection } from '../../../firebaseControlFile';
 import { uploadEvidence, getDownloadUrl, ensureTaskbarFolder, ensureSubFolder } from '../../../services/controlFileB2Service';
 import { prepararDatosParaFirestore, registrarAccionSistema } from '../../../utils/firestoreUtils';
 import { getOfflineDatabase, generateOfflineId } from '../../../services/offlineDatabase';
@@ -459,10 +459,12 @@ class AuditoriaService {
       // Crear acciones requeridas en la subcolección de la sucursal si existen
       if (datosCompletos.accionesRequeridas && datosCompletos.accionesRequeridas.length > 0) {
         try {
-          // Obtener sucursalId - buscar en la colección de sucursales
+          // Obtener sucursalId - buscar en la colección de sucursales del usuario
           let sucursalId = null;
           if (datosAuditoria.sucursal && datosAuditoria.sucursal !== "Casa Central") {
-            const sucursalesRef = sucursalesCollection();
+            // Construir ruta correcta usando auditUserCollection
+            const sucursalesRef = auditUserCollection(userProfile.uid, 'sucursales');
+            console.log('[AuditoriaService] Buscando sucursal por nombre en path:', sucursalesRef.path);
             const q = query(sucursalesRef, where("nombre", "==", datosAuditoria.sucursal));
             const sucursalesSnapshot = await getDocs(q);
             
