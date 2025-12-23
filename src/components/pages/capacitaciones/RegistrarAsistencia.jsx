@@ -13,8 +13,8 @@ import {
   Divider
 } from '@mui/material';
 import { useParams, useNavigate } from 'react-router-dom';
-import { collection, query, where, getDocs, doc, getDoc, updateDoc, Timestamp } from 'firebase/firestore';
-import { db, auditUserCollection } from '../../../firebaseControlFile';
+import { query, where, getDocs, doc, getDoc, updateDoc, Timestamp } from 'firebase/firestore';
+import { auditUserCollection } from '../../../firebaseControlFile';
 import { useAuth } from '../../context/AuthContext';
 
 export default function RegistrarAsistencia() {
@@ -55,7 +55,7 @@ export default function RegistrarAsistencia() {
       setCapacitacion(capData);
 
       // Cargar empleados de la sucursal
-      const empleadosRef = collection(db, 'empleados');
+      const empleadosRef = auditUserCollection(userProfile.uid, 'empleados');
       const q = query(
         empleadosRef,
         where('sucursalId', '==', capData.sucursalId),

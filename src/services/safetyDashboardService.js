@@ -12,7 +12,7 @@ import {
   Timestamp,
   onSnapshot 
 } from 'firebase/firestore';
-import { db } from '../firebaseControlFile';
+import { dbAudit, reportesCollection } from '../firebaseControlFile';
 import { computeOccupationalHealthMetrics } from '../utils/occupationalHealthMetrics';
 
 const isTruthyFlag = (value) => {
@@ -336,7 +336,7 @@ export const safetyDashboardService = {
     
     try {
       // Listener para accidentes
-      const accidentesRef = collection(db, 'accidentes');
+      const accidentesRef = collection(dbAudit, 'accidentes');
       let qAccidentes;
       
       if (sucursalId === 'todas') {
@@ -363,7 +363,7 @@ export const safetyDashboardService = {
       unsubscribes.push(unsubscribeAccidentes);
       
       // Listener para ausencias de salud ocupacional
-      const ausenciasRef = collection(db, 'ausencias');
+      const ausenciasRef = collection(dbAudit, 'ausencias');
       let qAusencias;
 
       if (sucursalId === 'todas') {
@@ -399,7 +399,7 @@ export const safetyDashboardService = {
       unsubscribes.push(unsubscribeAusencias);
       
       // Listener para capacitaciones
-      const capacitacionesRef = collection(db, 'capacitaciones');
+      const capacitacionesRef = collection(dbAudit, 'capacitaciones');
       let qCapacitaciones;
       
       if (sucursalId === 'todas') {
@@ -426,7 +426,7 @@ export const safetyDashboardService = {
       unsubscribes.push(unsubscribeCapacitaciones);
       
       // Listener para empleados
-      const empleadosRef = collection(db, 'empleados');
+      const empleadosRef = collection(dbAudit, 'empleados');
       let qEmpleados;
       
       if (sucursalId === 'todas') {
@@ -453,7 +453,7 @@ export const safetyDashboardService = {
       unsubscribes.push(unsubscribeEmpleados);
       
       // Listener para auditorías
-      const auditoriasRef = collection(db, 'reportes');
+      const auditoriasRef = reportesCollection();
       const auditoriaQueries = [];
       
       if (companyId) {
@@ -495,7 +495,7 @@ export const safetyDashboardService = {
   // Obtener datos de auditorías
   async getAuditoriasData(companyId, period) {
     try {
-      const reportesRef = collection(db, 'reportes');
+      const reportesRef = reportesCollection();
       const queries = [];
 
       if (companyId) {
@@ -552,7 +552,7 @@ export const safetyDashboardService = {
   // Obtener datos de logs de operarios
   async getLogsData(companyId, period) {
     try {
-      const logsRef = collection(db, 'logs_operarios');
+      const logsRef = collection(dbAudit, 'logs_operarios');
       const q = query(
         logsRef,
         where('detalles.empresaId', '==', companyId),
@@ -582,7 +582,7 @@ export const safetyDashboardService = {
   // Obtener datos de formularios
   async getFormulariosData(companyId, period) {
     try {
-      const formulariosRef = collection(db, 'formularios');
+      const formulariosRef = collection(dbAudit, 'formularios');
       const q = query(
         formulariosRef,
         where('clienteAdminId', '==', companyId),
@@ -611,7 +611,7 @@ export const safetyDashboardService = {
   // Obtener información de la empresa
   async getCompanyInfo(companyId) {
     try {
-      const empresaRef = doc(db, 'empresas', companyId);
+      const empresaRef = doc(dbAudit, 'empresas', companyId);
       const empresaDoc = await getDoc(empresaRef);
       
       if (empresaDoc.exists()) {
@@ -628,7 +628,7 @@ export const safetyDashboardService = {
   // Obtener información de la sucursal
   async getSucursalInfo(sucursalId) {
     try {
-      const sucursalRef = doc(db, 'sucursales', sucursalId);
+      const sucursalRef = doc(dbAudit, 'sucursales', sucursalId);
       const sucursalDoc = await getDoc(sucursalRef);
       
       if (sucursalDoc.exists()) {
@@ -645,7 +645,7 @@ export const safetyDashboardService = {
   // Obtener empleados de una sucursal
   async getEmpleados(sucursalId) {
     try {
-      const empleadosRef = collection(db, 'empleados');
+      const empleadosRef = collection(dbAudit, 'empleados');
       let q;
       
       if (sucursalId === 'todas') {
@@ -680,7 +680,7 @@ export const safetyDashboardService = {
   // Obtener capacitaciones de una sucursal
   async getCapacitaciones(sucursalId, period) {
     try {
-      const capacitacionesRef = collection(db, 'capacitaciones');
+      const capacitacionesRef = collection(dbAudit, 'capacitaciones');
       let q;
       
       if (sucursalId === 'todas') {
@@ -715,7 +715,7 @@ export const safetyDashboardService = {
   // Obtener accidentes de una sucursal
   async getAccidentes(sucursalId, period) {
     try {
-      const accidentesRef = collection(db, 'accidentes');
+      const accidentesRef = collection(dbAudit, 'accidentes');
       let q;
       
       if (sucursalId === 'todas') {
@@ -750,7 +750,7 @@ export const safetyDashboardService = {
   // Obtener ausencias y enfermedades registradas
   async getAusencias(companyId, sucursalId, period) {
     try {
-      const ausenciasRef = collection(db, 'ausencias');
+      const ausenciasRef = collection(dbAudit, 'ausencias');
       let snapshot;
 
       if (sucursalId === 'todas') {

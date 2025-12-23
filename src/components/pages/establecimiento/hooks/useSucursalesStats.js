@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { collection, getDocs, query, where } from 'firebase/firestore';
-import { db } from '../../../../firebaseControlFile';
+import { dbAudit } from '../../../../firebaseControlFile';
 
 /**
  * Hook para cargar estadísticas de sucursales
@@ -13,16 +13,16 @@ export const useSucursalesStats = () => {
     for (const sucursal of sucursalesList) {
       try {
         const [empleadosSnapshot, capacitacionesSnapshot, planesSnapshot, accidentesSnapshot] = await Promise.all([
-          getDocs(query(collection(db, 'empleados'), where('sucursalId', '==', sucursal.id))),
-          getDocs(query(collection(db, 'capacitaciones'), where('sucursalId', '==', sucursal.id))),
-          getDocs(query(collection(db, 'planes_capacitaciones_anuales'), where('sucursalId', '==', sucursal.id))),
-          getDocs(query(collection(db, 'accidentes'), where('sucursalId', '==', sucursal.id)))
+          getDocs(query(collection(dbAudit, 'empleados'), where('sucursalId', '==', sucursal.id))),
+          getDocs(query(collection(dbAudit, 'capacitaciones'), where('sucursalId', '==', sucursal.id))),
+          getDocs(query(collection(dbAudit, 'planes_capacitaciones_anuales'), where('sucursalId', '==', sucursal.id))),
+          getDocs(query(collection(dbAudit, 'accidentes'), where('sucursalId', '==', sucursal.id)))
         ]);
         
         // Cargar acciones requeridas desde subcolección
         let accionesRequeridasCount = 0;
         try {
-          const accionesSnapshot = await getDocs(collection(db, 'sucursales', sucursal.id, 'acciones_requeridas'));
+          const accionesSnapshot = await getDocs(collection(dbAudit, 'sucursales', sucursal.id, 'acciones_requeridas'));
           accionesRequeridasCount = accionesSnapshot.docs.length;
         } catch (error) {
           console.warn(`Error cargando acciones requeridas para sucursal ${sucursal.id}:`, error);

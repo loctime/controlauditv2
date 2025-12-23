@@ -1,5 +1,5 @@
 import { doc, setDoc, getDoc, deleteDoc, collection, query, where, getDocs } from 'firebase/firestore';
-import { db } from '../../../../../firebaseControlFile';
+import { dbAudit, auditoriasAutosaveCollection } from '../../../../../firebaseControlFile';
 import { getOfflineDatabase, generateOfflineId, checkStorageLimit } from '../../../../../services/offlineDatabase';
 import syncQueueService from '../../../../../services/syncQueue';
 
@@ -134,13 +134,13 @@ class AutoSaveService {
         // Limpiar Firestore si está online
         if (this.isOnline) {
           try {
-            const autosaveRef = collection(db, 'auditorias_autosave');
+            const autosaveRef = auditoriasAutosaveCollection();
             const q = query(autosaveRef, where('userId', '==', userId));
             const querySnapshot = await getDocs(q);
             
             const deletePromises = [];
             querySnapshot.forEach((docSnapshot) => {
-              deletePromises.push(deleteDoc(doc(db, 'auditorias_autosave', docSnapshot.id)));
+              deletePromises.push(deleteDoc(doc(dbAudit, 'auditorias_autosave', docSnapshot.id)));
             });
             
             await Promise.all(deletePromises);
@@ -235,7 +235,7 @@ class AutoSaveService {
       };
 
       // Guardar en Firestore (solo metadatos y datos serializados)
-      const docRef = doc(db, 'auditorias_autosave', sessionId);
+      const docRef = doc(dbAudit, 'auditorias_autosave', sessionId);
       await setDoc(docRef, saveData);
 
       // IMPORTANTE: También guardar en IndexedDB con imágenes REALES y arrays completos
@@ -492,7 +492,7 @@ class AutoSaveService {
   // Cargar desde Firestore
   async loadFromFirestore(userId, sessionId) {
     try {
-      const docRef = doc(db, 'auditorias_autosave', sessionId);
+      const docRef = doc(dbAudit, 'auditorias_autosave', sessionId);
       const docSnap = await getDoc(docRef);
       
       if (docSnap.exists()) {

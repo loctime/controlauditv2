@@ -10,25 +10,33 @@ import {
   Typography
 } from '@mui/material';
 import SchoolIcon from '@mui/icons-material/School';
-import { collection, getDocs, query, where } from 'firebase/firestore';
-import { db } from '../../../../firebaseControlFile';
+import { getDocs, query, where } from 'firebase/firestore';
+import { auditUserCollection } from '../../../../firebaseControlFile';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../../context/AuthContext';
 
 const CapacitacionesTab = ({ empresaId, empresaNombre }) => {
   const navigate = useNavigate();
+  const { userProfile } = useAuth();
   const [capacitaciones, setCapacitaciones] = useState([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (empresaId) {
+    if (empresaId && userProfile?.uid) {
       loadCapacitaciones();
     }
-  }, [empresaId]);
+  }, [empresaId, userProfile?.uid]);
 
   const loadCapacitaciones = async () => {
+    if (!userProfile?.uid) {
+      console.error('Error: userProfile.uid es requerido');
+      return;
+    }
+
     setLoading(true);
     try {
-      const sucursalesSnapshot = await getDocs(query(collection(db, 'sucursales'), where('empresaId', '==', empresaId)));
+      const sucursalesRef = auditUserCollection(userProfile.uid, 'sucursales');
+      const sucursalesSnapshot = await getDocs(query(sucursalesRef, where('empresaId', '==', empresaId)));
       const sucursalesIds = sucursalesSnapshot.docs.map(doc => doc.id);
       
       if (sucursalesIds.length === 0) {
@@ -36,7 +44,8 @@ const CapacitacionesTab = ({ empresaId, empresaNombre }) => {
         return;
       }
 
-      const capacitacionesSnapshot = await getDocs(query(collection(db, 'capacitaciones'), where('sucursalId', 'in', sucursalesIds)));
+      const capacitacionesRef = auditUserCollection(userProfile.uid, 'capacitaciones');
+      const capacitacionesSnapshot = await getDocs(query(capacitacionesRef, where('sucursalId', 'in', sucursalesIds)));
       const capacitacionesData = capacitacionesSnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()

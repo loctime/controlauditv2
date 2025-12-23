@@ -9,7 +9,7 @@ import {
   where,
   limit
 } from 'firebase/firestore';
-import { db, auditUserCollection } from '../firebaseControlFile';
+import { dbAudit, auditUserCollection, auditUsersCollection } from '../firebaseControlFile';
 import { registrarAccionSistema } from '../utils/firestoreUtils';
 
 export const auditoriaService = {
@@ -92,7 +92,7 @@ export const auditoriaService = {
       });
 
       // Buscar usuario por email
-      const usuariosRef = collection(db, "apps", "audit", "users");
+      const usuariosRef = auditUsersCollection();
       const q = query(usuariosRef, where("email", "==", emailUsuario));
       const snapshot = await getDocs(q);
       

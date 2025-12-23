@@ -1,6 +1,6 @@
 // Servicio centralizado para operaciones de auditoría
 import { collection, addDoc, getDocs, query, where, orderBy, serverTimestamp } from 'firebase/firestore';
-import { db, auditUserCollection } from '../../../firebaseControlFile';
+import { dbAudit, auditUserCollection, auditUsersCollection, sucursalesCollection, reportesCollection } from '../../../firebaseControlFile';
 import { uploadToControlFile, getDownloadUrl } from '../../../services/controlFileService';
 import { getControlFileFolders } from '../../../services/controlFileInit';
 import { prepararDatosParaFirestore, registrarAccionSistema } from '../../../utils/firestoreUtils';
@@ -564,7 +564,7 @@ class AuditoriaService {
           // Obtener sucursalId - buscar en la colección de sucursales
           let sucursalId = null;
           if (datosAuditoria.sucursal && datosAuditoria.sucursal !== "Casa Central") {
-            const sucursalesRef = collection(db, "sucursales");
+            const sucursalesRef = sucursalesCollection();
             const q = query(sucursalesRef, where("nombre", "==", datosAuditoria.sucursal));
             const sucursalesSnapshot = await getDocs(q);
             
@@ -751,7 +751,7 @@ class AuditoriaService {
       // Si no hay migratedFromUid, buscar por email para encontrar datos antiguos
       if (!oldUid && userProfile.email) {
         console.log('[auditoriaService.obtenerAuditorias] No hay migratedFromUid, buscando por email:', userProfile.email);
-        const usuariosRef = collection(db, 'apps', 'audit', 'users');
+        const usuariosRef = auditUsersCollection();
         const emailQuery = query(usuariosRef, where('email', '==', userProfile.email));
         const emailSnapshot = await getDocs(emailQuery);
         
@@ -768,15 +768,16 @@ class AuditoriaService {
       
       // Aplicar filtros según el rol del usuario (SIN orderBy para evitar índices compuestos)
       if (userProfile.role === 'operario') {
+        const reportesRef = reportesCollection();
         const queries = [
-          query(collection(db, "reportes"), where("creadoPor", "==", userProfile.uid)),
-          query(collection(db, "reportes"), where("usuarioId", "==", userProfile.uid))
+          query(reportesRef, where("creadoPor", "==", userProfile.uid)),
+          query(reportesRef, where("usuarioId", "==", userProfile.uid))
         ];
         
         if (oldUid) {
           queries.push(
-            query(collection(db, "reportes"), where("creadoPor", "==", oldUid)),
-            query(collection(db, "reportes"), where("usuarioId", "==", oldUid))
+            query(reportesRef, where("creadoPor", "==", oldUid)),
+            query(reportesRef, where("usuarioId", "==", oldUid))
           );
         }
         
@@ -791,17 +792,18 @@ class AuditoriaService {
           return timestampB - timestampA;
         });
       } else if (userProfile.role === 'max') {
+        const reportesRef = reportesCollection();
         const queries = [
-          query(collection(db, "reportes"), where("clienteAdminId", "==", userProfile.uid)),
-          query(collection(db, "reportes"), where("creadoPor", "==", userProfile.uid)),
-          query(collection(db, "reportes"), where("usuarioId", "==", userProfile.uid))
+          query(reportesRef, where("clienteAdminId", "==", userProfile.uid)),
+          query(reportesRef, where("creadoPor", "==", userProfile.uid)),
+          query(reportesRef, where("usuarioId", "==", userProfile.uid))
         ];
         
         if (oldUid) {
           queries.push(
-            query(collection(db, "reportes"), where("clienteAdminId", "==", oldUid)),
-            query(collection(db, "reportes"), where("creadoPor", "==", oldUid)),
-            query(collection(db, "reportes"), where("usuarioId", "==", oldUid))
+            query(reportesRef, where("clienteAdminId", "==", oldUid)),
+            query(reportesRef, where("creadoPor", "==", oldUid)),
+            query(reportesRef, where("usuarioId", "==", oldUid))
           );
         }
         
@@ -817,7 +819,8 @@ class AuditoriaService {
         });
       } else {
         // Para supermax, no aplicar filtros (puede ver todo)
-        const snapshot = await getDocs(collection(db, "reportes"));
+        const reportesRef = reportesCollection();
+        const snapshot = await getDocs(reportesRef);
         auditorias = snapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data()

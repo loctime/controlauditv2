@@ -59,7 +59,7 @@ if (controlFileApp.options.projectId !== 'controlstorage-eb796') {
 
 // Exports: auth, db, storage para ControlAudit (usando controlstorage-eb796)
 export const auth = getAuth(controlFileApp);
-//export const db = getFirestore(controlFileApp);
+const db = getFirestore(controlFileApp);
 export const dbAudit = db; // Alias para claridad
 export const storage = getStorage(controlFileApp);
 
@@ -119,5 +119,37 @@ export function auditUserCollection(uid, collectionName) {
   console.log('[AUDIT PATH]', path);
   
   return collection(dbAudit, 'apps', 'auditoria', 'users', uid, collectionName);
+}
+
+/**
+ * Helper para colección legacy de usuarios del sistema
+ * Path: apps/audit/users
+ */
+export function auditUsersCollection() {
+  return collection(dbAudit, 'apps', 'audit', 'users');
+}
+
+/**
+ * Helper para colección de sucursales (legacy)
+ * Path: sucursales
+ */
+export function sucursalesCollection() {
+  return collection(dbAudit, 'sucursales');
+}
+
+/**
+ * Helper para colección legacy de reportes
+ * Path: reportes
+ */
+export function reportesCollection() {
+  return collection(dbAudit, 'reportes');
+}
+
+/**
+ * Helper para colección de autoguardados de auditorías
+ * Path: auditorias_autosave
+ */
+export function auditoriasAutosaveCollection() {
+  return collection(dbAudit, 'auditorias_autosave');
 }
 

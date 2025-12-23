@@ -14,7 +14,7 @@ import {
 } from '@mui/material';
 import SchoolIcon from '@mui/icons-material/School';
 import { collection, getDocs, query, where } from 'firebase/firestore';
-import { db } from '../../../../firebaseControlFile';
+import { dbAudit } from '../../../../firebaseControlFile';
 
 const CapacitacionesContent = ({ sucursalId, sucursalNombre, navigateToPage }) => {
   const [capacitaciones, setCapacitaciones] = useState([]);
@@ -35,7 +35,7 @@ const CapacitacionesContent = ({ sucursalId, sucursalNombre, navigateToPage }) =
       // Cargar capacitaciones individuales
       let capacitacionesData = [];
       try {
-        const capacitacionesQuery = query(collection(db, 'capacitaciones'), where('sucursalId', '==', sucursalId));
+        const capacitacionesQuery = query(collection(dbAudit, 'capacitaciones'), where('sucursalId', '==', sucursalId));
         const capacitacionesSnapshot = await getDocs(capacitacionesQuery);
         capacitacionesData = capacitacionesSnapshot.docs.map(doc => ({
           id: doc.id,
@@ -56,7 +56,7 @@ const CapacitacionesContent = ({ sucursalId, sucursalNombre, navigateToPage }) =
       // Cargar planes anuales - usar el nombre correcto de la colección
       let planesData = [];
       try {
-        const planesQuery = query(collection(db, 'planes_capacitaciones_anuales'), where('sucursalId', '==', sucursalId));
+        const planesQuery = query(collection(dbAudit, 'planes_capacitaciones_anuales'), where('sucursalId', '==', sucursalId));
         const planesSnapshot = await getDocs(planesQuery);
         planesData = planesSnapshot.docs.map(doc => ({
           id: doc.id,

@@ -12,7 +12,7 @@ import {
 } from '@mui/material';
 import StorefrontIcon from '@mui/icons-material/Storefront';
 import { collection, getDocs, query, where, addDoc, updateDoc, deleteDoc, doc, Timestamp } from 'firebase/firestore';
-import { db, auditUserCollection } from '../../../../firebaseControlFile';
+import { dbAudit, auditUserCollection } from '../../../../firebaseControlFile';
 import { useAuth } from '../../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
@@ -308,7 +308,7 @@ const SucursalesTab = ({ empresaId, empresaNombre, userEmpresas, loadEmpresasSta
 
         // Verificar si hay empleados asociados
         const empleadosSnapshot = await getDocs(
-          query(collection(db, 'empleados'), where('sucursalId', '==', sucursal.id))
+          query(collection(dbAudit, 'empleados'), where('sucursalId', '==', sucursal.id))
         );
 
         if (empleadosSnapshot.docs.length > 0) {

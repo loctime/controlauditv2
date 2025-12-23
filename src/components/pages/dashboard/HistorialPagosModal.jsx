@@ -15,8 +15,8 @@ import {
   CircularProgress,
   Box
 } from '@mui/material';
-import { collection, getDocs, query, orderBy } from 'firebase/firestore';
-import { db } from '../../../firebaseControlFile';
+import { getDocs, query, orderBy } from 'firebase/firestore';
+import { auditUserCollection } from '../../../firebaseControlFile';
 import PaymentIcon from '@mui/icons-material/Payment';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import EditIcon from '@mui/icons-material/Edit';
@@ -45,7 +45,7 @@ const HistorialPagosModal = ({ open, onClose, cliente }) => {
       if (!cliente) return;
       setLoading(true);
       try {
-        const pagosRef = collection(db, 'apps', 'audit', 'users', cliente.id, 'pagos');
+        const pagosRef = auditUserCollection(cliente.id, 'pagos');
         const q = query(pagosRef, orderBy('fecha', 'desc'));
         const snapshot = await getDocs(q);
         setHistorial(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));

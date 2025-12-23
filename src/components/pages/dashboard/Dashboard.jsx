@@ -2,8 +2,8 @@
 import React, { useState, useEffect } from "react";
 import { Typography, Box, Grid, Paper, Alert, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Button, TextField, Dialog, DialogTitle, DialogContent, DialogActions, Card, CardContent, Tabs, Tab, CircularProgress } from "@mui/material";
 import { useAuth } from "../../context/AuthContext";
-import { collection, addDoc, setDoc, doc, updateDoc, query, where, getDocs, getDoc } from "firebase/firestore";
-import { db } from "../../../firebaseControlFile";
+import { addDoc, setDoc, doc, updateDoc, query, where, getDocs, getDoc, collection } from "firebase/firestore";
+import { dbAudit, auditUsersCollection, sucursalesCollection } from "../../../firebaseControlFile";
 import { toast } from 'react-toastify';
 import { verifyAdminCode, verifySuperAdminCode } from "../../../config/admin";
 import GestionClientes from "./GestionClientes";
@@ -58,9 +58,9 @@ function Dashboard() {
 
      setLoadingEmpresas(true);
      try {
-       // Cargar todos los clientes administradores disponibles (ya filtrados por multi-tenant)
-       const usuariosRef = collection(db, "apps", "audit", "users");
-       const clientesQuery = query(usuariosRef, where("role", "==", "max"));
+      // Cargar todos los clientes administradores disponibles (ya filtrados por multi-tenant)
+      const usuariosRef = auditUsersCollection();
+      const clientesQuery = query(usuariosRef, where("role", "==", "max"));
        const clientesSnapshot = await getDocs(clientesQuery);
        let empresasData = clientesSnapshot.docs.map(doc => ({
          id: doc.id,
@@ -73,7 +73,7 @@ function Dashboard() {
       const empresasEnriquecidas = await Promise.all(
         empresasData.map(async (cliente) => {
           // Contar usuarios operarios (los datos ya vienen filtrados por multi-tenant)
-          const usuariosRef = collection(db, "apps", "audit", "users");
+          const usuariosRef = auditUsersCollection();
           const usuariosQuery = query(usuariosRef, where("role", "==", "operario"));
           const usuariosSnapshot = await getDocs(usuariosQuery);
           // Contar todos los usuarios operarios disponibles (sin filtro por identidad)
@@ -186,7 +186,7 @@ function Dashboard() {
       }
 
       // Actualizar usuario en Firestore
-      const userRef = doc(db, 'apps', 'audit', 'users', userProfile.uid);
+      const userRef = doc(dbAudit, 'apps', 'audit', 'users', userProfile.uid);
       await updateDoc(userRef, {
         role: newRole,
         permisos: newPermisos
@@ -339,7 +339,7 @@ function Dashboard() {
       // Si no requiere creación manual, continuar con el flujo normal
 
       // 2. Crear empresa en Firestore
-      const empresaRef = await addDoc(collection(db, 'empresas'), {
+      const empresaRef = await addDoc(collection(dbAudit, 'empresas'), {
         nombre: form.nombre,
         emailContacto: form.email,
         usuariosMaximos: Number(form.usuariosMaximos),
@@ -352,7 +352,7 @@ function Dashboard() {
       });
 
       // Crear automáticamente sucursal "Casa Central"
-      const sucursalesRef = collection(db, 'sucursales');
+      const sucursalesRef = sucursalesCollection();
       await addDoc(sucursalesRef, {
         nombre: "Casa Central",
         empresaId: empresaRef.id,
@@ -366,7 +366,7 @@ function Dashboard() {
       });
 
       // 3. Actualizar usuario con información adicional usando Firestore directamente
-      const userRef = doc(db, 'apps', 'audit', 'users', userRes.uid);
+      const userRef = doc(dbAudit, 'apps', 'audit', 'users', userRes.uid);
       await updateDoc(userRef, {
         empresaId: empresaRef.id,
         plan: 'estandar',

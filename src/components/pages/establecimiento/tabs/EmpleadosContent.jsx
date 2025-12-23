@@ -29,7 +29,7 @@ import PeopleIcon from '@mui/icons-material/People';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import EditIcon from '@mui/icons-material/Edit';
 import { collection, getDocs, query, where, addDoc, updateDoc, deleteDoc, doc, Timestamp } from 'firebase/firestore';
-import { db } from '../../../../firebaseControlFile';
+import { dbAudit } from '../../../../firebaseControlFile';
 import { useAuth } from '../../../context/AuthContext';
 import Swal from 'sweetalert2';
 
@@ -60,7 +60,7 @@ const EmpleadosContent = ({ sucursalId, sucursalNombre, navigateToPage, reloadSu
   const loadEmpleados = async () => {
     setLoading(true);
     try {
-      const q = query(collection(db, 'empleados'), where('sucursalId', '==', sucursalId));
+      const q = query(collection(dbAudit, 'empleados'), where('sucursalId', '==', sucursalId));
       const snapshot = await getDocs(q);
       const empleadosData = snapshot.docs.map(doc => ({
         id: doc.id,
@@ -93,7 +93,7 @@ const EmpleadosContent = ({ sucursalId, sucursalNombre, navigateToPage, reloadSu
     }
 
     try {
-      await addDoc(collection(db, 'empleados'), {
+      await addDoc(collection(dbAudit, 'empleados'), {
         ...empleadoForm,
         sucursalId: sucursalId,
         sucursalNombre: sucursalNombre,
@@ -185,7 +185,7 @@ const EmpleadosContent = ({ sucursalId, sucursalNombre, navigateToPage, reloadSu
     }
 
     try {
-      await updateDoc(doc(db, 'empleados', empleadoEdit.id), {
+      await updateDoc(doc(dbAudit, 'empleados', empleadoEdit.id), {
         nombre: empleadoEdit.nombre,
         apellido: empleadoEdit.apellido,
         dni: empleadoEdit.dni,
@@ -241,7 +241,7 @@ const EmpleadosContent = ({ sucursalId, sucursalNombre, navigateToPage, reloadSu
 
     if (result.isConfirmed) {
       try {
-        await updateDoc(doc(db, 'empleados', empleado.id), {
+        await updateDoc(doc(dbAudit, 'empleados', empleado.id), {
           estado: 'inactivo',
           fechaActualizacion: Timestamp.now()
         });
@@ -285,7 +285,7 @@ const EmpleadosContent = ({ sucursalId, sucursalNombre, navigateToPage, reloadSu
 
     if (result.isConfirmed) {
       try {
-        await deleteDoc(doc(db, 'empleados', empleado.id));
+        await deleteDoc(doc(dbAudit, 'empleados', empleado.id));
 
         // Recargar datos
         await loadEmpleados();

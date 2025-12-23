@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { collection, getDocs, query, where } from 'firebase/firestore';
-import { db } from '../../../../firebaseControlFile';
+import { getDocs, query, where, collection } from 'firebase/firestore';
+import { dbAudit, sucursalesCollection } from '../../../../firebaseControlFile';
 
 /**
  * Hook para cargar estadísticas de empresas
@@ -13,7 +13,7 @@ export const useEmpresasStats = (userEmpresas) => {
     
     for (const empresa of empresas) {
       try {
-        const sucursalesSnapshot = await getDocs(query(collection(db, 'sucursales'), where('empresaId', '==', empresa.id)));
+        const sucursalesSnapshot = await getDocs(query(sucursalesCollection(), where('empresaId', '==', empresa.id)));
         const sucursalesIds = sucursalesSnapshot.docs.map(doc => doc.id);
         
         if (sucursalesIds.length === 0) {
@@ -29,9 +29,9 @@ export const useEmpresasStats = (userEmpresas) => {
         }
 
         const [empleadosSnapshot, capacitacionesSnapshot, accidentesSnapshot] = await Promise.all([
-          getDocs(query(collection(db, 'empleados'), where('sucursalId', 'in', sucursalesIds))),
-          getDocs(query(collection(db, 'capacitaciones'), where('sucursalId', 'in', sucursalesIds))),
-          getDocs(query(collection(db, 'accidentes'), where('sucursalId', 'in', sucursalesIds)))
+          getDocs(query(collection(dbAudit, 'empleados'), where('sucursalId', 'in', sucursalesIds))),
+          getDocs(query(collection(dbAudit, 'capacitaciones'), where('sucursalId', 'in', sucursalesIds))),
+          getDocs(query(collection(dbAudit, 'accidentes'), where('sucursalId', 'in', sucursalesIds)))
         ]);
         
         stats[empresa.id] = {
