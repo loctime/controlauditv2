@@ -128,8 +128,11 @@ const AuthContextComponent = ({ children }) => {
 
   // Listener de empresas (solo con fallback offline en móvil)
   useEffect(() => {
-    if (!userProfile?.uid || !role) return;
-    
+    if (
+      !userProfile?.uid ||
+      typeof role !== 'string' ||
+      role.length === 0
+    ) return;    
     const unsubscribe = empresaService.subscribeToUserEmpresas(
       userProfile, 
       role, 
