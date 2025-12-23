@@ -1,16 +1,11 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { collection, getDocs, query, where, orderBy } from 'firebase/firestore';
+import { getDocs, query, where, orderBy } from 'firebase/firestore';
 import { auditUserCollection } from '../../../../firebaseControlFile.js';
+import { useAuth } from '../../../context/AuthContext';
 
 /**
  * Hook para cargar datos del dashboard de seguridad
- * 
- * ⚠️ MIGRACIÓN PENDIENTE: Este archivo usa colecciones genéricas (empleados, accidentes, ausencias, capacitaciones, auditorias)
- * que están en la raíz de Firestore. Para migrar completamente, necesita:
- * - Recibir referencias de colección por parámetro, O
- * - Recibir userId para usar auditUserCollection() si las colecciones están en apps/audit/users/{uid}/
- * 
- * Actualmente usa collection(db, ...) que requiere importar db directamente.
+ * Usa arquitectura multi-tenant: apps/auditoria/users/{uid}/{coleccion}
  */
 export const useDashboardDataFetch = (
   selectedEmpresa,
@@ -20,6 +15,7 @@ export const useDashboardDataFetch = (
   calcularPeriodo,
   empresasDisponibles
 ) => {
+  const { userProfile } = useAuth();
   const [empleados, setEmpleados] = useState([]);
   const [accidentes, setAccidentes] = useState([]);
   const [capacitaciones, setCapacitaciones] = useState([]);
@@ -29,11 +25,10 @@ export const useDashboardDataFetch = (
 
   // Cargar datos de empleados
   const cargarEmpleados = useCallback(async () => {
-    if (!selectedSucursal) return [];
+    if (!selectedSucursal || !userProfile?.uid) return [];
 
     try {
-      // ⚠️ MIGRACIÓN PENDIENTE: Necesita referencia de colección por parámetro o userId para auditUserCollection
-      const empleadosRef = collection(db, 'empleados'); // eslint-disable-line no-undef
+      const empleadosRef = auditUserCollection(userProfile.uid, 'empleados');
       let empleadosData = [];
       
       if (selectedSucursal === 'todas') {
@@ -75,16 +70,15 @@ export const useDashboardDataFetch = (
       console.error('Error cargando empleados:', error);
       return [];
     }
-  }, [selectedSucursal, sucursalesFiltradas]);
+  }, [selectedSucursal, sucursalesFiltradas, userProfile?.uid]);
 
   // Cargar datos de accidentes
   const cargarAccidentes = useCallback(async () => {
-    if (!selectedSucursal) return [];
+    if (!selectedSucursal || !userProfile?.uid) return [];
 
     try {
       const { inicio, fin } = calcularPeriodo(selectedYear);
-      // ⚠️ MIGRACIÓN PENDIENTE: Necesita referencia de colección por parámetro o userId para auditUserCollection
-      const accidentesRef = collection(db, 'accidentes'); // eslint-disable-line no-undef
+      const accidentesRef = auditUserCollection(userProfile.uid, 'accidentes');
       let accidentesData = [];
       
       if (selectedSucursal === 'todas') {
@@ -150,16 +144,15 @@ export const useDashboardDataFetch = (
       console.error('Error cargando accidentes:', error);
       return [];
     }
-  }, [selectedSucursal, selectedYear, calcularPeriodo, sucursalesFiltradas]);
+  }, [selectedSucursal, selectedYear, calcularPeriodo, sucursalesFiltradas, userProfile?.uid]);
 
   // Cargar datos de ausencias de salud ocupacional
   const cargarAusencias = useCallback(async () => {
-    if (!selectedSucursal) return [];
+    if (!selectedSucursal || !userProfile?.uid) return [];
 
     try {
       const { inicio, fin } = calcularPeriodo(selectedYear);
-      // ⚠️ MIGRACIÓN PENDIENTE: Necesita referencia de colección por parámetro o userId para auditUserCollection
-      const ausenciasRef = collection(db, 'ausencias'); // eslint-disable-line no-undef
+      const ausenciasRef = auditUserCollection(userProfile.uid, 'ausencias');
       let ausenciasData = [];
 
       const overlapsPeriodo = (ausencia) => {
@@ -252,16 +245,15 @@ export const useDashboardDataFetch = (
       console.error('Error cargando ausencias:', error);
       return [];
     }
-  }, [selectedSucursal, selectedYear, calcularPeriodo, sucursalesFiltradas]);
+  }, [selectedSucursal, selectedYear, calcularPeriodo, sucursalesFiltradas, userProfile?.uid]);
 
   // Cargar datos de capacitaciones
   const cargarCapacitaciones = useCallback(async () => {
-    if (!selectedSucursal) return [];
+    if (!selectedSucursal || !userProfile?.uid) return [];
 
     try {
       const { inicio, fin } = calcularPeriodo(selectedYear);
-      // ⚠️ MIGRACIÓN PENDIENTE: Necesita referencia de colección por parámetro o userId para auditUserCollection
-      const capacitacionesRef = collection(db, 'capacitaciones'); // eslint-disable-line no-undef
+      const capacitacionesRef = auditUserCollection(userProfile.uid, 'capacitaciones');
       let capacitacionesData = [];
       
       if (selectedSucursal === 'todas') {
@@ -327,16 +319,15 @@ export const useDashboardDataFetch = (
       console.error('Error cargando capacitaciones:', error);
       return [];
     }
-  }, [selectedSucursal, selectedYear, calcularPeriodo, sucursalesFiltradas]);
+  }, [selectedSucursal, selectedYear, calcularPeriodo, sucursalesFiltradas, userProfile?.uid]);
 
   // Cargar datos de auditorías
   const cargarAuditorias = useCallback(async () => {
-    if (!selectedEmpresa || !selectedSucursal) return [];
+    if (!selectedEmpresa || !selectedSucursal || !userProfile?.uid) return [];
 
     try {
       const { inicio, fin } = calcularPeriodo(selectedYear);
-      // ⚠️ MIGRACIÓN PENDIENTE: Necesita referencia de colección por parámetro o userId para auditUserCollection
-      const auditoriasRef = collection(db, 'auditorias'); // eslint-disable-line no-undef
+      const auditoriasRef = auditUserCollection(userProfile.uid, 'auditorias');
       let auditoriasData = [];
 
       const empresasIds = selectedEmpresa === 'todas'
@@ -425,7 +416,7 @@ export const useDashboardDataFetch = (
       console.error('Error cargando auditorías:', error);
       return [];
     }
-  }, [selectedEmpresa, selectedSucursal, selectedYear, calcularPeriodo, sucursalesFiltradas, empresasDisponibles]);
+  }, [selectedEmpresa, selectedSucursal, selectedYear, calcularPeriodo, sucursalesFiltradas, empresasDisponibles, userProfile?.uid]);
 
   // Memoizar IDs de sucursales para estabilizar dependencias
   const sucursalesIdsString = useMemo(() => 
@@ -438,7 +429,7 @@ export const useDashboardDataFetch = (
     let mounted = true;
     
     const loadData = async () => {
-      if (!selectedEmpresa || !selectedSucursal) {
+      if (!selectedEmpresa || !selectedSucursal || !userProfile?.uid) {
         if (mounted) {
           setEmpleados([]);
           setAccidentes([]);
@@ -490,11 +481,11 @@ export const useDashboardDataFetch = (
     return () => {
       mounted = false;
     };
-  }, [selectedEmpresa, selectedSucursal, selectedYear, sucursalesIdsString, cargarEmpleados, cargarAccidentes, cargarCapacitaciones, cargarAuditorias, cargarAusencias]);
+  }, [selectedEmpresa, selectedSucursal, selectedYear, sucursalesIdsString, userProfile?.uid, cargarEmpleados, cargarAccidentes, cargarCapacitaciones, cargarAuditorias, cargarAusencias]);
 
   // Función manual para recargar (opcional, para usar desde fuera)
   const recargarDatos = useCallback(async () => {
-    if (!selectedEmpresa || !selectedSucursal) return;
+    if (!selectedEmpresa || !selectedSucursal || !userProfile?.uid) return;
     
     setLoading(true);
     try {
@@ -522,7 +513,7 @@ export const useDashboardDataFetch = (
     } finally {
       setLoading(false);
     }
-  }, [selectedEmpresa, selectedSucursal, cargarEmpleados, cargarAccidentes, cargarCapacitaciones, cargarAuditorias, cargarAusencias]);
+  }, [selectedEmpresa, selectedSucursal, userProfile?.uid, cargarEmpleados, cargarAccidentes, cargarCapacitaciones, cargarAuditorias, cargarAusencias]);
 
   return { empleados, accidentes, capacitaciones, auditorias, ausencias, loading, recargarDatos };
 };
