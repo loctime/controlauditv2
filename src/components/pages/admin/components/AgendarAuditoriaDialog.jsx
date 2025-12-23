@@ -19,8 +19,8 @@ import {
 } from "@mui/material";
 import { Add, Person, PersonOff } from "@mui/icons-material";
 import { toast } from 'react-toastify';
-import { collection, getDocs, query, where } from "firebase/firestore";
-import { db } from "../../../../firebaseControlFile";
+import { getDocs, query, where } from "firebase/firestore";
+import { auditUsersCollection } from "../../../../firebaseControlFile";
 import { useAuth } from "../../../context/AuthContext";
 
 const AgendarAuditoriaDialog = ({ open, onClose, onSave, empresas, sucursales, formularios, fechaPreestablecida }) => {
@@ -55,7 +55,7 @@ const AgendarAuditoriaDialog = ({ open, onClose, onSave, empresas, sucursales, f
       
       // Query para obtener usuarios operarios del mismo cliente
       const q = query(
-        collection(db, "apps", "audit", "users"),
+        auditUsersCollection(),
         where("clienteAdminId", "==", userProfile.clienteAdminId || userProfile.uid),
         where("role", "==", "operario")
       );

@@ -1,5 +1,9 @@
 // Servicio para migrar todos los datos relacionados con un UID antiguo a un UID nuevo
 // Migra automáticamente empresas, formularios, reportes, sucursales, empleados, etc.
+// 
+// NOTA LEGACY: Este servicio usa dbAudit directamente para colecciones sin helpers.
+// Algunas colecciones (empresas, formularios, empleados, capacitaciones, accidentes) 
+// no tienen helpers centralizados y se acceden directamente con collection(dbAudit, ...).
 
 import { 
   collection, 
@@ -10,7 +14,7 @@ import {
   doc,
   writeBatch
 } from 'firebase/firestore';
-import { db } from '../firebaseControlFile';
+import { dbAudit, sucursalesCollection, reportesCollection, auditUsersCollection } from '../firebaseControlFile';
 
 /**
  * Migra todos los datos relacionados con un UID antiguo a un UID nuevo
@@ -45,7 +49,7 @@ export const migrateAllUserData = async (oldUid, newUid) => {
       }
       
       for (const chunk of chunks) {
-        const batch = writeBatch(db);
+        const batch = writeBatch(dbAudit);
         chunk.forEach(({ docRef, data }) => {
           batch.update(docRef, data);
         });
@@ -54,15 +58,16 @@ export const migrateAllUserData = async (oldUid, newUid) => {
     };
 
     // 1. Migrar EMPRESAS
+    // NOTA: No hay helper para 'empresas', usando collection directa con dbAudit
     console.log('[migrationService] 📦 Migrando empresas...');
-    const empresasRef = collection(db, 'empresas');
+    const empresasRef = collection(dbAudit, 'empresas');
     const empresasQuery = query(empresasRef, where('propietarioId', '==', oldUid));
     const empresasSnapshot = await getDocs(empresasQuery);
     
     const empresasUpdates = [];
     empresasSnapshot.docs.forEach(docSnap => {
       empresasUpdates.push({
-        docRef: doc(db, 'empresas', docSnap.id),
+        docRef: doc(dbAudit, 'empresas', docSnap.id),
         data: {
           propietarioId: newUid,
           lastUidUpdate: new Date(),
@@ -81,7 +86,7 @@ export const migrateAllUserData = async (oldUid, newUid) => {
       // Solo actualizar si propietarioId no es el oldUid (para evitar duplicados)
       if (empresaData.propietarioId !== oldUid) {
         empresasUpdates.push({
-          docRef: doc(db, 'empresas', docSnap.id),
+          docRef: doc(dbAudit, 'empresas', docSnap.id),
           data: {
             creadorId: newUid,
             lastUidUpdate: new Date(),
@@ -100,8 +105,9 @@ export const migrateAllUserData = async (oldUid, newUid) => {
     }
 
     // 2. Migrar FORMULARIOS
+    // NOTA: No hay helper para 'formularios', usando collection directa con dbAudit
     console.log('[migrationService] 📋 Migrando formularios...');
-    const formulariosRef = collection(db, 'formularios');
+    const formulariosRef = collection(dbAudit, 'formularios');
     const formulariosQuery = query(formulariosRef, where('creadorId', '==', oldUid));
     const formulariosSnapshot = await getDocs(formulariosQuery);
     
@@ -131,7 +137,7 @@ export const migrateAllUserData = async (oldUid, newUid) => {
       }
 
       formulariosUpdates.push({
-        docRef: doc(db, 'formularios', docSnap.id),
+        docRef: doc(dbAudit, 'formularios', docSnap.id),
         data: updates
       });
       migrationSummary.formularios++;
@@ -146,7 +152,7 @@ export const migrateAllUserData = async (oldUid, newUid) => {
       // Solo actualizar si creadorId no es el oldUid
       if (formularioData.creadorId !== oldUid) {
         formulariosUpdates.push({
-          docRef: doc(db, 'formularios', docSnap.id),
+          docRef: doc(dbAudit, 'formularios', docSnap.id),
           data: {
             clienteAdminId: newUid,
             lastUidUpdate: new Date(),
@@ -163,7 +169,7 @@ export const migrateAllUserData = async (oldUid, newUid) => {
 
     // 3. Migrar REPORTES/AUDITORIAS
     console.log('[migrationService] 📊 Migrando reportes/auditorías...');
-    const reportesRef = collection(db, 'reportes');
+    const reportesRef = reportesCollection();
     const reportesQuery = query(reportesRef, where('usuarioId', '==', oldUid));
     const reportesSnapshot = await getDocs(reportesQuery);
     
@@ -187,7 +193,7 @@ export const migrateAllUserData = async (oldUid, newUid) => {
       }
 
       reportesUpdates.push({
-        docRef: doc(db, 'reportes', docSnap.id),
+        docRef: doc(dbAudit, 'reportes', docSnap.id),
         data: updates
       });
       migrationSummary.reportes++;
@@ -199,14 +205,14 @@ export const migrateAllUserData = async (oldUid, newUid) => {
 
     // 4. Migrar SUCURSALES
     console.log('[migrationService] 🏢 Migrando sucursales...');
-    const sucursalesRef = collection(db, 'sucursales');
+    const sucursalesRef = sucursalesCollection();
     const sucursalesQuery = query(sucursalesRef, where('creadorId', '==', oldUid));
     const sucursalesSnapshot = await getDocs(sucursalesQuery);
     
     const sucursalesUpdates = [];
     sucursalesSnapshot.docs.forEach(docSnap => {
       sucursalesUpdates.push({
-        docRef: doc(db, 'sucursales', docSnap.id),
+        docRef: doc(dbAudit, 'sucursales', docSnap.id),
         data: {
           creadorId: newUid,
           lastUidUpdate: new Date(),
@@ -221,15 +227,16 @@ export const migrateAllUserData = async (oldUid, newUid) => {
     }
 
     // 5. Migrar EMPLEADOS
+    // NOTA: No hay helper para 'empleados', usando collection directa con dbAudit
     console.log('[migrationService] 👥 Migrando empleados...');
-    const empleadosRef = collection(db, 'empleados');
+    const empleadosRef = collection(dbAudit, 'empleados');
     const empleadosQuery = query(empleadosRef, where('createdBy', '==', oldUid));
     const empleadosSnapshot = await getDocs(empleadosQuery);
     
     const empleadosUpdates = [];
     empleadosSnapshot.docs.forEach(docSnap => {
       empleadosUpdates.push({
-        docRef: doc(db, 'empleados', docSnap.id),
+        docRef: doc(dbAudit, 'empleados', docSnap.id),
         data: {
           createdBy: newUid,
           lastUidUpdate: new Date(),
@@ -244,15 +251,16 @@ export const migrateAllUserData = async (oldUid, newUid) => {
     }
 
     // 6. Migrar CAPACITACIONES
+    // NOTA: No hay helper para 'capacitaciones', usando collection directa con dbAudit
     console.log('[migrationService] 📚 Migrando capacitaciones...');
-    const capacitacionesRef = collection(db, 'capacitaciones');
+    const capacitacionesRef = collection(dbAudit, 'capacitaciones');
     const capacitacionesQuery = query(capacitacionesRef, where('createdBy', '==', oldUid));
     const capacitacionesSnapshot = await getDocs(capacitacionesQuery);
     
     const capacitacionesUpdates = [];
     capacitacionesSnapshot.docs.forEach(docSnap => {
       capacitacionesUpdates.push({
-        docRef: doc(db, 'capacitaciones', docSnap.id),
+        docRef: doc(dbAudit, 'capacitaciones', docSnap.id),
         data: {
           createdBy: newUid,
           lastUidUpdate: new Date(),
@@ -267,15 +275,16 @@ export const migrateAllUserData = async (oldUid, newUid) => {
     }
 
     // 7. Migrar ACCIDENTES
+    // NOTA: No hay helper para 'accidentes', usando collection directa con dbAudit
     console.log('[migrationService] ⚠️ Migrando accidentes...');
-    const accidentesRef = collection(db, 'accidentes');
+    const accidentesRef = collection(dbAudit, 'accidentes');
     const accidentesQuery = query(accidentesRef, where('createdBy', '==', oldUid));
     const accidentesSnapshot = await getDocs(accidentesQuery);
     
     const accidentesUpdates = [];
     accidentesSnapshot.docs.forEach(docSnap => {
       accidentesUpdates.push({
-        docRef: doc(db, 'accidentes', docSnap.id),
+        docRef: doc(dbAudit, 'accidentes', docSnap.id),
         data: {
           createdBy: newUid,
           lastUidUpdate: new Date(),
@@ -291,14 +300,14 @@ export const migrateAllUserData = async (oldUid, newUid) => {
 
     // 8. Migrar USUARIOS OPERARIOS (clienteAdminId)
     console.log('[migrationService] 👤 Migrando usuarios operarios...');
-    const usuariosRef = collection(db, 'apps', 'audit', 'users');
+    const usuariosRef = auditUsersCollection();
     const usuariosQuery = query(usuariosRef, where('clienteAdminId', '==', oldUid));
     const usuariosSnapshot = await getDocs(usuariosQuery);
     
     const usuariosUpdates = [];
     usuariosSnapshot.docs.forEach(docSnap => {
       usuariosUpdates.push({
-        docRef: doc(db, 'apps', 'audit', 'users', docSnap.id),
+        docRef: doc(dbAudit, 'apps', 'audit', 'users', docSnap.id),
         data: {
           clienteAdminId: newUid,
           lastUidUpdate: new Date(),
