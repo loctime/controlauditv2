@@ -1,7 +1,6 @@
 // Utilidades para manejar datos de Firestore
 
-import { collection, addDoc, Timestamp } from 'firebase/firestore';
-import { db } from '../firebaseControlFile';
+import { addDoc, Timestamp } from 'firebase/firestore';
 
 /**
  * Convierte arrays anidados a objetos planos para Firestore
@@ -97,9 +96,15 @@ export const reconstruirDatosDesdeFirestore = (datosFirestore) => {
  * @param {string} accion - Acción realizada
  * @param {object} detalles - Detalles adicionales
  * @param {object} metadata - Metadatos adicionales (opcional)
+ * @param {CollectionReference} logsCollectionRef - Referencia a la colección de logs (requerido)
  */
-export const registrarLogOperario = async (userId, accion, detalles = {}, metadata = {}) => {
+export const registrarLogOperario = async (userId, accion, detalles = {}, metadata = {}, logsCollectionRef) => {
   try {
+    if (!logsCollectionRef) {
+      console.error('registrarLogOperario: logsCollectionRef es requerido');
+      return;
+    }
+
     // Obtener información del navegador
     const userAgent = navigator.userAgent;
     const browser = userAgent.includes('Chrome') ? 'Chrome' : 
@@ -129,7 +134,7 @@ export const registrarLogOperario = async (userId, accion, detalles = {}, metada
       timestamp: Date.now()
     };
 
-    await addDoc(collection(db, 'logs_operarios'), logData);
+    await addDoc(logsCollectionRef, logData);
     
     // Log en consola para debugging
     console.log(`[LOG OPERARIO] ${userId} - ${accion}`, {
@@ -151,8 +156,9 @@ export const registrarLogOperario = async (userId, accion, detalles = {}, metada
  * @param {string} tipo - Tipo de acción (crear, editar, eliminar, ver, etc.)
  * @param {string} entidad - Entidad afectada (usuario, empresa, auditoria, etc.)
  * @param {string} entidadId - ID de la entidad (opcional)
+ * @param {CollectionReference} logsCollectionRef - Referencia a la colección de logs (requerido)
  */
-export const registrarAccionSistema = async (userId, accion, detalles = {}, tipo = 'general', entidad = null, entidadId = null) => {
+export const registrarAccionSistema = async (userId, accion, detalles = {}, tipo = 'general', entidad = null, entidadId = null, logsCollectionRef) => {
   try {
     const metadata = {
       tipo,
@@ -161,7 +167,7 @@ export const registrarAccionSistema = async (userId, accion, detalles = {}, tipo
       severidad: tipo === 'eliminar' ? 'alta' : tipo === 'crear' ? 'media' : 'baja'
     };
     
-    await registrarLogOperario(userId, accion, detalles, metadata);
+    await registrarLogOperario(userId, accion, detalles, metadata, logsCollectionRef);
   } catch (error) {
     console.error('Error al registrar acción del sistema:', error);
   }

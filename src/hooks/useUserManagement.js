@@ -1,6 +1,5 @@
 // src/hooks/useUserManagement.js
 import { 
-  collection, 
   doc, 
   getDoc,
   getDocs, 
@@ -8,22 +7,32 @@ import {
   query, 
   where 
 } from 'firebase/firestore';
-import { db } from '../firebaseControlFile';
 import { registrarLogOperario, registrarAccionSistema } from '../utils/firestoreUtils';
 import userService from '../services/userService';
 
-export const useUserManagement = (user, userProfile) => {
+/**
+ * ⚠️ MIGRACIÓN PENDIENTE: Este hook usa colecciones que requieren referencias por parámetro:
+ * - apps/audit/users (necesita referencia de colección)
+ * - formularios (necesita referencia de colección)
+ * - logs_operarios (necesita referencia de colección para registrarLogOperario/registrarAccionSistema)
+ * 
+ * Para migrar completamente, el hook debería recibir estas referencias como parámetros.
+ */
+export const useUserManagement = (user, userProfile, usuariosCollectionRef, formulariosCollectionRef, logsCollectionRef) => {
   // Crear operario (solo para admin)
   const crearOperario = async (email, displayName = "Operario") => {
     try {
+      if (!usuariosCollectionRef) {
+        throw new Error('usuariosCollectionRef es requerido');
+      }
+      
       // Verificar límite de usuarios
-      const usuariosRef = collection(db, "apps", "audit", "users");
-      const qOperarios = query(usuariosRef, where("clienteAdminId", "==", user.uid));
+      const qOperarios = query(usuariosCollectionRef, where("clienteAdminId", "==", user.uid));
       const snapshotOperarios = await getDocs(qOperarios);
       const usuariosActuales = snapshotOperarios.size;
       
       // Obtener límite del cliente admin
-      const userRef = doc(db, "apps", "audit", "users", user.uid);
+      const userRef = doc(usuariosCollectionRef, user.uid);
       const userSnap = await getDoc(userRef);
       const limiteUsuarios = userSnap.data()?.limiteUsuarios || 10;
       
@@ -47,14 +56,17 @@ export const useUserManagement = (user, userProfile) => {
         clienteAdminId: user.uid
       });
       
-      await registrarAccionSistema(
-        user.uid,
-        `Crear operario: ${email}`,
-        { email, displayName, limiteUsuarios, usuariosActuales },
-        'crear',
-        'usuario',
-        result.uid
-      );
+      if (logsCollectionRef) {
+        await registrarAccionSistema(
+          user.uid,
+          `Crear operario: ${email}`,
+          { email, displayName, limiteUsuarios, usuariosActuales },
+          'crear',
+          'usuario',
+          result.uid,
+          logsCollectionRef
+        );
+      }
 
       return true;
     } catch (error) {
@@ -66,17 +78,26 @@ export const useUserManagement = (user, userProfile) => {
   // Editar permisos de operario
   const editarPermisosOperario = async (userId, nuevosPermisos) => {
     try {
-      const userRef = doc(db, "apps", "audit", "users", userId);
+      if (!usuariosCollectionRef) {
+        throw new Error('usuariosCollectionRef es requerido');
+      }
+      
+      const userRef = doc(usuariosCollectionRef, userId);
       await updateDoc(userRef, { permisos: nuevosPermisos });
-      await registrarLogOperario(userId, 'editarPermisos', { nuevosPermisos });
-      await registrarAccionSistema(
-        user.uid,
-        `Editar permisos de operario`,
-        { userId, nuevosPermisos },
-        'editar',
-        'usuario',
-        userId
-      );
+      
+      if (logsCollectionRef) {
+        await registrarLogOperario(userId, 'editarPermisos', { nuevosPermisos }, {}, logsCollectionRef);
+        await registrarAccionSistema(
+          user.uid,
+          `Editar permisos de operario`,
+          { userId, nuevosPermisos },
+          'editar',
+          'usuario',
+          userId,
+          logsCollectionRef
+        );
+      }
+      
       return true;
     } catch (error) {
       console.error("Error al editar permisos del operario:", error);
@@ -87,7 +108,11 @@ export const useUserManagement = (user, userProfile) => {
   // Registrar acción de operario
   const logAccionOperario = async (userId, accion, detalles = {}) => {
     try {
-      await registrarLogOperario(userId, accion, detalles);
+      if (!logsCollectionRef) {
+        console.warn('logAccionOperario: logsCollectionRef no proporcionado');
+        return;
+      }
+      await registrarLogOperario(userId, accion, detalles, {}, logsCollectionRef);
     } catch (error) {
       console.error("Error al registrar log de operario:", error);
     }
@@ -96,7 +121,11 @@ export const useUserManagement = (user, userProfile) => {
   // Asignar usuario operario a cliente administrador
   const asignarUsuarioAClienteAdmin = async (userId, clienteAdminId) => {
     try {
-      const userRef = doc(db, "apps", "audit", "users", userId);
+      if (!usuariosCollectionRef) {
+        throw new Error('usuariosCollectionRef es requerido');
+      }
+      
+      const userRef = doc(usuariosCollectionRef, userId);
       await updateDoc(userRef, {
         clienteAdminId: clienteAdminId,
         ultimaModificacion: new Date()
@@ -112,8 +141,11 @@ export const useUserManagement = (user, userProfile) => {
   // Obtener usuarios de un cliente administrador
   const getUsuariosDeClienteAdmin = async (clienteAdminId) => {
     try {
-      const usuariosRef = collection(db, "apps", "audit", "users");
-      const q = query(usuariosRef, where("clienteAdminId", "==", clienteAdminId));
+      if (!usuariosCollectionRef) {
+        throw new Error('usuariosCollectionRef es requerido');
+      }
+      
+      const q = query(usuariosCollectionRef, where("clienteAdminId", "==", clienteAdminId));
       const snapshot = await getDocs(q);
       
       return snapshot.docs.map(doc => ({
@@ -129,8 +161,11 @@ export const useUserManagement = (user, userProfile) => {
   // Obtener formularios de un cliente administrador
   const getFormulariosDeClienteAdmin = async (clienteAdminId) => {
     try {
-      const formulariosRef = collection(db, "formularios");
-      const q = query(formulariosRef, where("clienteAdminId", "==", clienteAdminId));
+      if (!formulariosCollectionRef) {
+        throw new Error('formulariosCollectionRef es requerido');
+      }
+      
+      const q = query(formulariosCollectionRef, where("clienteAdminId", "==", clienteAdminId));
       const snapshot = await getDocs(q);
       
       return snapshot.docs.map(doc => ({

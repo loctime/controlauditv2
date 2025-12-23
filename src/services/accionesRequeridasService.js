@@ -16,6 +16,7 @@ import {
   serverTimestamp,
   Timestamp
 } from 'firebase/firestore';
+// db importado desde firebaseControlFile para acceso centralizado
 import { db } from '../firebaseControlFile';
 
 class AccionesRequeridasService {

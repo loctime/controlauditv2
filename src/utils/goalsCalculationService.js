@@ -1,6 +1,5 @@
 // src/utils/goalsCalculationService.js
-import { collection, query, where, getDocs, Timestamp } from 'firebase/firestore';
-import { db } from '../firebaseControlFile';
+import { query, where, getDocs } from 'firebase/firestore';
 
 /**
  * Servicio para calcular cumplimiento de metas y objetivos
@@ -26,9 +25,10 @@ export function obtenerEstadoCumplimiento(porcentaje) {
  * @param {Object} sucursal - Objeto sucursal con metas configuradas
  * @param {Array} capacitaciones - Array de capacitaciones (opcional, si no se pasa se consulta)
  * @param {Object} periodo - { mes: number, año: number } (opcional, por defecto mes/año actual)
+ * @param {Firestore} db - Instancia de Firestore (requerido si no se pasan capacitaciones)
  * @returns {Promise<Object>} { mensual: {...}, anual: {...} }
  */
-export async function calcularCumplimientoCapacitaciones(sucursal, capacitaciones = null, periodo = null) {
+export async function calcularCumplimientoCapacitaciones(sucursal, capacitaciones = null, periodo = null, db = null) {
   try {
     if (!sucursal || !sucursal.id) {
       return {
@@ -48,6 +48,16 @@ export async function calcularCumplimientoCapacitaciones(sucursal, capacitacione
     // Si no hay capacitaciones pasadas, consultarlas
     let capacitacionesData = capacitaciones;
     if (!capacitacionesData || capacitacionesData.length === 0) {
+      if (!db) {
+        console.error('calcularCumplimientoCapacitaciones: db es requerido cuando no se pasan capacitaciones');
+        return {
+          mensual: { completadas: 0, target: 0, porcentaje: 0, estado: 'sin_target' },
+          anual: { completadas: 0, target: 0, porcentaje: 0, estado: 'sin_target' }
+        };
+      }
+      // NOTA: Requiere recibir referencia de colección o db por parámetro
+      // Esta función necesita migración para usar helpers centralizados
+      const { collection } = await import('firebase/firestore');
       const capacitacionesRef = collection(db, 'capacitaciones');
       const empresaId = sucursal.empresaId;
       const queries = [];
@@ -184,9 +194,10 @@ export async function calcularCumplimientoCapacitaciones(sucursal, capacitacione
  * @param {Object} sucursal - Objeto sucursal con metas configuradas
  * @param {Array} auditorias - Array de auditorías (opcional, si no se pasa se consulta)
  * @param {number} año - Año a calcular (opcional, por defecto año actual)
+ * @param {Firestore} db - Instancia de Firestore (requerido si no se pasan auditorías)
  * @returns {Promise<Object>} { completadas, target, porcentaje, estado }
  */
-export async function calcularCumplimientoAuditoriasAnual(sucursal, auditorias = null, año = null) {
+export async function calcularCumplimientoAuditoriasAnual(sucursal, auditorias = null, año = null, db = null) {
   try {
     if (!sucursal || !sucursal.id) {
       return { completadas: 0, target: 0, porcentaje: 0, estado: 'sin_target' };
@@ -202,6 +213,13 @@ export async function calcularCumplimientoAuditoriasAnual(sucursal, auditorias =
     // Si no hay auditorías pasadas, consultarlas
     let auditoriasData = auditorias;
     if (!auditoriasData) {
+      if (!db) {
+        console.error('calcularCumplimientoAuditoriasAnual: db es requerido cuando no se pasan auditorías');
+        return { completadas: 0, target: 0, porcentaje: 0, estado: 'sin_target' };
+      }
+      // NOTA: Requiere recibir referencia de colección o db por parámetro
+      // Esta función necesita migración para usar helpers centralizados
+      const { collection } = await import('firebase/firestore');
       const reportesRef = collection(db, 'reportes');
       const empresaId = sucursal.empresaId;
       const queries = [];
@@ -320,9 +338,10 @@ export async function calcularCumplimientoAuditoriasAnual(sucursal, auditorias =
  * Calcula los días sin accidentes para una sucursal
  * @param {Object} sucursal - Objeto sucursal con fechaUltimoAccidente
  * @param {Array} accidentes - Array de accidentes (opcional, si no se pasa se consulta)
+ * @param {Firestore} db - Instancia de Firestore (requerido si no se pasan accidentes)
  * @returns {Promise<Object>} { dias, estado, fechaUltimoAccidente, semaforo }
  */
-export async function calcularDiasSinAccidentes(sucursal, accidentes = null) {
+export async function calcularDiasSinAccidentes(sucursal, accidentes = null, db = null) {
   try {
     if (!sucursal || !sucursal.id) {
       return { 
@@ -344,6 +363,18 @@ export async function calcularDiasSinAccidentes(sucursal, accidentes = null) {
       // Si no, buscar en accidentes
       let accidentesData = accidentes;
       if (!accidentesData || accidentesData.length === 0) {
+        if (!db) {
+          console.error('calcularDiasSinAccidentes: db es requerido cuando no se pasan accidentes');
+          return { 
+            dias: 0, 
+            estado: 'sin_datos', 
+            fechaUltimoAccidente: null, 
+            semaforo: 'gray' 
+          };
+        }
+        // NOTA: Requiere recibir referencia de colección o db por parámetro
+        // Esta función necesita migración para usar helpers centralizados
+        const { collection } = await import('firebase/firestore');
         const accidentesRef = collection(db, 'accidentes');
         const empresaId = sucursal.empresaId;
         const queries = [];

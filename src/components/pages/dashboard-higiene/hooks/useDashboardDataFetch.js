@@ -1,9 +1,16 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { collection, getDocs, query, where, orderBy } from 'firebase/firestore';
-import { db } from '../../../../firebaseControlFile.js';
+import { auditUserCollection } from '../../../../firebaseControlFile.js';
 
 /**
  * Hook para cargar datos del dashboard de seguridad
+ * 
+ * ⚠️ MIGRACIÓN PENDIENTE: Este archivo usa colecciones genéricas (empleados, accidentes, ausencias, capacitaciones, auditorias)
+ * que están en la raíz de Firestore. Para migrar completamente, necesita:
+ * - Recibir referencias de colección por parámetro, O
+ * - Recibir userId para usar auditUserCollection() si las colecciones están en apps/audit/users/{uid}/
+ * 
+ * Actualmente usa collection(db, ...) que requiere importar db directamente.
  */
 export const useDashboardDataFetch = (
   selectedEmpresa,
@@ -25,7 +32,8 @@ export const useDashboardDataFetch = (
     if (!selectedSucursal) return [];
 
     try {
-      const empleadosRef = collection(db, 'empleados');
+      // ⚠️ MIGRACIÓN PENDIENTE: Necesita referencia de colección por parámetro o userId para auditUserCollection
+      const empleadosRef = collection(db, 'empleados'); // eslint-disable-line no-undef
       let empleadosData = [];
       
       if (selectedSucursal === 'todas') {
@@ -75,7 +83,8 @@ export const useDashboardDataFetch = (
 
     try {
       const { inicio, fin } = calcularPeriodo(selectedYear);
-      const accidentesRef = collection(db, 'accidentes');
+      // ⚠️ MIGRACIÓN PENDIENTE: Necesita referencia de colección por parámetro o userId para auditUserCollection
+      const accidentesRef = collection(db, 'accidentes'); // eslint-disable-line no-undef
       let accidentesData = [];
       
       if (selectedSucursal === 'todas') {
@@ -149,7 +158,8 @@ export const useDashboardDataFetch = (
 
     try {
       const { inicio, fin } = calcularPeriodo(selectedYear);
-      const ausenciasRef = collection(db, 'ausencias');
+      // ⚠️ MIGRACIÓN PENDIENTE: Necesita referencia de colección por parámetro o userId para auditUserCollection
+      const ausenciasRef = collection(db, 'ausencias'); // eslint-disable-line no-undef
       let ausenciasData = [];
 
       const overlapsPeriodo = (ausencia) => {
@@ -250,7 +260,8 @@ export const useDashboardDataFetch = (
 
     try {
       const { inicio, fin } = calcularPeriodo(selectedYear);
-      const capacitacionesRef = collection(db, 'capacitaciones');
+      // ⚠️ MIGRACIÓN PENDIENTE: Necesita referencia de colección por parámetro o userId para auditUserCollection
+      const capacitacionesRef = collection(db, 'capacitaciones'); // eslint-disable-line no-undef
       let capacitacionesData = [];
       
       if (selectedSucursal === 'todas') {
@@ -324,7 +335,8 @@ export const useDashboardDataFetch = (
 
     try {
       const { inicio, fin } = calcularPeriodo(selectedYear);
-      const auditoriasRef = collection(db, 'auditorias');
+      // ⚠️ MIGRACIÓN PENDIENTE: Necesita referencia de colección por parámetro o userId para auditUserCollection
+      const auditoriasRef = collection(db, 'auditorias'); // eslint-disable-line no-undef
       let auditoriasData = [];
 
       const empresasIds = selectedEmpresa === 'todas'

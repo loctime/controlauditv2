@@ -10,6 +10,7 @@ import {
   where, 
   onSnapshot
 } from 'firebase/firestore';
+// db y auditUserCollection importados desde firebaseControlFile para acceso centralizado
 import { db, auditUserCollection } from '../firebaseControlFile';
 import { registrarAccionSistema } from '../utils/firestoreUtils';
 

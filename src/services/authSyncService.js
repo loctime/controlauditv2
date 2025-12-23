@@ -6,6 +6,7 @@ import {
   createUserWithEmailAndPassword
 } from 'firebase/auth';
 import { collection, query, where, getDocs } from 'firebase/firestore';
+// db y auth importados desde firebaseControlFile para acceso centralizado
 import { db, auth } from '../firebaseControlFile';
 
 /**

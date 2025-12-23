@@ -5,7 +5,7 @@ import { getStorage } from 'firebase/storage';
 
 // ⚠️ CONFIGURACIÓN SOLO PARA CONTROLFILE (controlstorage-eb796)
 // Este archivo se usa EXCLUSIVAMENTE para ControlFile integration
-// Para Firestore y Auth de ControlAudit, usar firebaseAudit.js
+// Para Firestore y Auth de ControlAudit, usar firebaseControlFile.js
 
 // Configuración de Firebase para ControlFile (controlstorage-eb796)
 const firebaseConfig = {

@@ -1,10 +1,18 @@
 import { useState, useEffect } from 'react';
-import { collection, getDocs, updateDoc, doc, query, where, Timestamp, addDoc } from 'firebase/firestore';
-import { db } from '../firebaseControlFile';
+import { getDocs, updateDoc, doc, query, where, Timestamp, addDoc } from 'firebase/firestore';
 import { toast } from 'react-toastify';
 import { useAuth } from '../components/context/AuthContext';
 
-export const useClientes = () => {
+/**
+ * ⚠️ MIGRACIÓN PENDIENTE: Este hook usa colecciones que requieren referencias por parámetro:
+ * - apps/audit/users (necesita referencia de colección)
+ * - empresas (necesita referencia de colección)
+ * - apps/audit/users/{clienteId}/pagos (necesita referencia de colección)
+ * 
+ * Para migrar completamente, el hook debería recibir estas referencias como parámetros.
+ */
+
+export const useClientes = (usuariosCollectionRef, empresasCollectionRef) => {
   const [clientes, setClientes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [operariosPorCliente, setOperariosPorCliente] = useState({});
@@ -32,10 +40,15 @@ export const useClientes = () => {
 
   // Cargar todos los clientes (max)
   const cargarClientes = async () => {
+    if (!usuariosCollectionRef) {
+      console.error('useClientes: usuariosCollectionRef es requerido');
+      setLoading(false);
+      return;
+    }
+    
     setLoading(true);
     try {
-      const usuariosRef = collection(db, 'apps', 'audit', 'users');
-      const q = query(usuariosRef, where('role', '==', 'max'));
+      const q = query(usuariosCollectionRef, where('role', '==', 'max'));
       const snapshot = await getDocs(q);
       
       const clientesData = await Promise.all(
@@ -43,15 +56,18 @@ export const useClientes = () => {
           const cliente = { id: doc.id, ...doc.data() };
           
           // Contar usuarios activos (operarios)
-          const qOperarios = query(usuariosRef, where('clienteAdminId', '==', doc.id));
+          const qOperarios = query(usuariosCollectionRef, where('clienteAdminId', '==', doc.id));
           const snapshotOperarios = await getDocs(qOperarios);
           cliente.usuariosActivos = snapshotOperarios.size;
           
           // Contar empresas
-          const empresasRef = collection(db, 'empresas');
-          const qEmpresas = query(empresasRef, where('propietarioId', '==', doc.id));
-          const snapshotEmpresas = await getDocs(qEmpresas);
-          cliente.empresasCount = snapshotEmpresas.size;
+          if (empresasCollectionRef) {
+            const qEmpresas = query(empresasCollectionRef, where('propietarioId', '==', doc.id));
+            const snapshotEmpresas = await getDocs(qEmpresas);
+            cliente.empresasCount = snapshotEmpresas.size;
+          } else {
+            cliente.empresasCount = 0;
+          }
           
           // Calcular estado del semáforo
           cliente.semaforo = calcularSemaforo(cliente);
@@ -72,9 +88,13 @@ export const useClientes = () => {
   // Cargar operarios de un cliente
   const cargarOperarios = async (clienteId) => {
     if (operariosPorCliente[clienteId]) return; // Ya cargados
+    if (!usuariosCollectionRef) {
+      console.error('useClientes: usuariosCollectionRef es requerido');
+      return;
+    }
+    
     try {
-      const usuariosRef = collection(db, 'apps', 'audit', 'users');
-      const q = query(usuariosRef, where('clienteAdminId', '==', clienteId), where('role', '==', 'operario'));
+      const q = query(usuariosCollectionRef, where('clienteAdminId', '==', clienteId), where('role', '==', 'operario'));
       const snapshot = await getDocs(q);
       setOperariosPorCliente(prev => ({
         ...prev,
@@ -86,9 +106,13 @@ export const useClientes = () => {
   };
 
   // Función para procesar pago
-  const handlePago = async (cliente) => {
+  const handlePago = async (cliente, pagosCollectionRef) => {
+    if (!usuariosCollectionRef) {
+      throw new Error('usuariosCollectionRef es requerido');
+    }
+    
     try {
-      const userRef = doc(db, 'apps', 'audit', 'users', cliente.id);
+      const userRef = doc(usuariosCollectionRef, cliente.id);
       const fechaVencimiento = new Date();
       fechaVencimiento.setMonth(fechaVencimiento.getMonth() + 1); // 1 mes
       await updateDoc(userRef, {
@@ -99,13 +123,14 @@ export const useClientes = () => {
         ultimaModificacion: Timestamp.now()
       });
       // Agregar registro al historial de pagos
-      const pagosRef = collection(db, 'apps', 'audit', 'users', cliente.id, 'pagos');
-      await addDoc(pagosRef, {
-        fecha: Timestamp.now(),
-        tipo: 'pago',
-        detalle: 'Se acreditó el pago de ControlDoc. ¡Gracias por su compra!',
-        usuarioEmail: userProfile?.email || ''
-      });
+      if (pagosCollectionRef) {
+        await addDoc(pagosCollectionRef, {
+          fecha: Timestamp.now(),
+          tipo: 'pago',
+          detalle: 'Se acreditó el pago de ControlDoc. ¡Gracias por su compra!',
+          usuarioEmail: userProfile?.email || ''
+        });
+      }
       toast.success(`Pago procesado para ${cliente.nombre || cliente.email}`);
       cargarClientes();
     } catch (error) {
@@ -116,8 +141,12 @@ export const useClientes = () => {
 
   // Función para activar demo
   const handleDemo = async (cliente) => {
+    if (!usuariosCollectionRef) {
+      throw new Error('usuariosCollectionRef es requerido');
+    }
+    
     try {
-      const userRef = doc(db, 'apps', 'audit', 'users', cliente.id);
+      const userRef = doc(usuariosCollectionRef, cliente.id);
       const fechaVencimiento = new Date();
       fechaVencimiento.setMonth(fechaVencimiento.getMonth() + 1); // 1 mes de demo
       
@@ -139,8 +168,12 @@ export const useClientes = () => {
 
   // Función para activar/desactivar cliente
   const handleToggleActivo = async (cliente) => {
+    if (!usuariosCollectionRef) {
+      throw new Error('usuariosCollectionRef es requerido');
+    }
+    
     try {
-      const userRef = doc(db, 'apps', 'audit', 'users', cliente.id);
+      const userRef = doc(usuariosCollectionRef, cliente.id);
       await updateDoc(userRef, {
         activo: !cliente.activo,
         ultimaModificacion: Timestamp.now()
@@ -156,8 +189,12 @@ export const useClientes = () => {
 
   // Función para actualizar cliente
   const handleSaveCliente = async (clienteEditando, form) => {
+    if (!usuariosCollectionRef) {
+      throw new Error('usuariosCollectionRef es requerido');
+    }
+    
     try {
-      const userRef = doc(db, 'apps', 'audit', 'users', clienteEditando.id);
+      const userRef = doc(usuariosCollectionRef, clienteEditando.id);
       const updateData = {
         limiteUsuarios: Number(form.limiteUsuarios),
         plan: form.plan,

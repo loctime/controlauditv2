@@ -1,6 +1,6 @@
 import { getOfflineDatabase } from './offlineDatabase';
-import { auth } from '../firebaseControlFile';
-import { db } from '../firebaseControlFile';
+// db y auth importados desde firebaseControlFile para acceso centralizado
+import { auth, db } from '../firebaseControlFile';
 import { collection, getDocs, doc, getDoc, query, where } from 'firebase/firestore';
 
 /**

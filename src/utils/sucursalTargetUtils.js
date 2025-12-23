@@ -1,17 +1,21 @@
 // src/utils/sucursalTargetUtils.js
-import { collection, query, where, getDocs, Timestamp, doc, getDoc } from 'firebase/firestore';
-import { db } from '../firebaseControlFile';
+import { query, where, getDocs, doc, getDoc } from 'firebase/firestore';
 
 /**
  * Calcula el número de auditorías completadas en el mes actual para una sucursal
  * @param {string} sucursalId - ID de la sucursal
  * @param {string} sucursalNombre - Nombre de la sucursal (opcional, para búsqueda más precisa)
  * @param {string} empresaId - ID de la empresa (opcional, pero recomendado para filtrar correctamente)
+ * @param {Firestore} db - Instancia de Firestore (requerido)
  * @returns {Promise<number>} Número de auditorías del mes actual
  */
-export async function getAuditoriasMesActual(sucursalId, sucursalNombre = null, empresaId = null) {
+export async function getAuditoriasMesActual(sucursalId, sucursalNombre = null, empresaId = null, db = null) {
   try {
     if (!sucursalId) return 0;
+    if (!db) {
+      console.error('getAuditoriasMesActual: db es requerido');
+      return 0;
+    }
 
     // Obtener inicio y fin del mes actual
     const ahora = new Date();
@@ -19,6 +23,9 @@ export async function getAuditoriasMesActual(sucursalId, sucursalNombre = null, 
     const finMes = new Date(ahora.getFullYear(), ahora.getMonth() + 1, 0, 23, 59, 59, 999);
 
     // Buscar en la colección 'reportes' (donde se guardan las auditorías)
+    // NOTA: Requiere recibir referencia de colección o db por parámetro
+    // Esta función necesita migración para usar helpers centralizados
+    const { collection } = await import('firebase/firestore');
     const reportesRef = collection(db, 'reportes');
     
     // Obtener el nombre de la sucursal y empresaId si no se proporciona
@@ -150,9 +157,10 @@ export async function getAuditoriasMesActual(sucursalId, sucursalNombre = null, 
 /**
  * Calcula el progreso del target mensual para una sucursal
  * @param {Object} sucursal - Objeto sucursal con targetMensual
+ * @param {Firestore} db - Instancia de Firestore (requerido)
  * @returns {Promise<Object>} { completadas, target, porcentaje, estado }
  */
-export async function calcularProgresoTarget(sucursal) {
+export async function calcularProgresoTarget(sucursal, db = null) {
   if (!sucursal || !sucursal.id) {
     return { completadas: 0, target: 0, porcentaje: 0, estado: 'sin_target' };
   }
@@ -163,7 +171,12 @@ export async function calcularProgresoTarget(sucursal) {
     return { completadas: 0, target: 0, porcentaje: 0, estado: 'sin_target' };
   }
 
-  const completadas = await getAuditoriasMesActual(sucursal.id, sucursal.nombre, sucursal.empresaId);
+  if (!db) {
+    console.error('calcularProgresoTarget: db es requerido');
+    return { completadas: 0, target: 0, porcentaje: 0, estado: 'sin_target' };
+  }
+
+  const completadas = await getAuditoriasMesActual(sucursal.id, sucursal.nombre, sucursal.empresaId, db);
   const porcentaje = Math.round((completadas / target) * 100);
 
   let estado = 'sin_target';
@@ -188,17 +201,25 @@ export async function calcularProgresoTarget(sucursal) {
  * @param {string} sucursalNombre - Nombre de la sucursal (opcional, para búsqueda más precisa)
  * @param {number} año - Año a calcular (opcional, por defecto año actual)
  * @param {string} empresaId - ID de la empresa (opcional, pero recomendado para filtrar correctamente)
+ * @param {Firestore} db - Instancia de Firestore (requerido)
  * @returns {Promise<number>} Número de auditorías del año
  */
-export async function getAuditoriasAñoActual(sucursalId, sucursalNombre = null, año = null, empresaId = null) {
+export async function getAuditoriasAñoActual(sucursalId, sucursalNombre = null, año = null, empresaId = null, db = null) {
   try {
     if (!sucursalId) return 0;
+    if (!db) {
+      console.error('getAuditoriasAñoActual: db es requerido');
+      return 0;
+    }
 
     const añoActual = año || new Date().getFullYear();
     const inicioAño = new Date(añoActual, 0, 1);
     const finAño = new Date(añoActual, 11, 31, 23, 59, 59, 999);
 
     // Buscar en la colección 'reportes' (donde se guardan las auditorías)
+    // NOTA: Requiere recibir referencia de colección o db por parámetro
+    // Esta función necesita migración para usar helpers centralizados
+    const { collection } = await import('firebase/firestore');
     const reportesRef = collection(db, 'reportes');
     
     // Obtener el nombre de la sucursal y empresaId si no se proporciona
@@ -331,9 +352,10 @@ export async function getAuditoriasAñoActual(sucursalId, sucursalNombre = null,
  * Calcula el progreso del target anual para auditorías de una sucursal
  * @param {Object} sucursal - Objeto sucursal con targetAnualAuditorias
  * @param {number} año - Año a calcular (opcional, por defecto año actual)
+ * @param {Firestore} db - Instancia de Firestore (requerido)
  * @returns {Promise<Object>} { completadas, target, porcentaje, estado }
  */
-export async function calcularProgresoTargetAnualAuditorias(sucursal, año = null) {
+export async function calcularProgresoTargetAnualAuditorias(sucursal, año = null, db = null) {
   if (!sucursal || !sucursal.id) {
     return { completadas: 0, target: 0, porcentaje: 0, estado: 'sin_target' };
   }
@@ -344,7 +366,12 @@ export async function calcularProgresoTargetAnualAuditorias(sucursal, año = nul
     return { completadas: 0, target: 0, porcentaje: 0, estado: 'sin_target' };
   }
 
-  const completadas = await getAuditoriasAñoActual(sucursal.id, sucursal.nombre, año, sucursal.empresaId);
+  if (!db) {
+    console.error('calcularProgresoTargetAnualAuditorias: db es requerido');
+    return { completadas: 0, target: 0, porcentaje: 0, estado: 'sin_target' };
+  }
+
+  const completadas = await getAuditoriasAñoActual(sucursal.id, sucursal.nombre, año, sucursal.empresaId, db);
   const porcentaje = Math.round((completadas / target) * 100);
 
   let estado = 'sin_target';
@@ -366,14 +393,20 @@ export async function calcularProgresoTargetAnualAuditorias(sucursal, año = nul
 /**
  * Calcula el progreso de targets para múltiples sucursales
  * @param {Array} sucursales - Array de objetos sucursal
+ * @param {Firestore} db - Instancia de Firestore (requerido)
  * @returns {Promise<Object>} Objeto con progreso por sucursalId
  */
-export async function calcularProgresoTargets(sucursales) {
+export async function calcularProgresoTargets(sucursales, db = null) {
+  if (!db) {
+    console.error('calcularProgresoTargets: db es requerido');
+    return {};
+  }
+
   const progresos = {};
   
   await Promise.all(
     sucursales.map(async (sucursal) => {
-      progresos[sucursal.id] = await calcularProgresoTarget(sucursal);
+      progresos[sucursal.id] = await calcularProgresoTarget(sucursal, db);
     })
   );
 

@@ -1,5 +1,11 @@
 // Optimización de importaciones de Firebase
 // Importar solo los servicios necesarios para reducir el tamaño del bundle
+//
+// NOTA DE MIGRACIÓN: Este archivo no puede migrarse sin contexto adicional.
+// - El archivo parece no estar en uso según comentarios internos
+// - Usa 'app' que no está definido (comentado)
+// - La función firestoreFunctions.collection usa db interno que requiere inicialización
+// - Se requiere determinar si este archivo debe eliminarse o migrarse completamente
 
 import { initializeApp } from 'firebase/app';
 import { getAuth, connectAuthEmulator } from 'firebase/auth';

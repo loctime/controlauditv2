@@ -2,7 +2,7 @@
 // Ejecutar en la consola del navegador en la página de tu aplicación
 
 import { doc, updateDoc, getDoc } from 'firebase/firestore';
-import { db } from './src/firebaseConfig';
+import { db } from './src/firebaseControlFile';
 
 // Función para arreglar el formulario RGRL
 const arreglarFormularioRGRL = async () => {
