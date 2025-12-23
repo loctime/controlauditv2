@@ -1,5 +1,5 @@
 // src/services/capacitacionImageService.js
-import { uploadEvidence } from './controlFileB2Service';
+import { uploadEvidence, ensureTaskbarFolder, ensureSubFolder } from './controlFileB2Service';
 import { getOfflineDatabase, generateOfflineId } from './offlineDatabase';
 import syncQueueService from './syncQueue';
 import { doc, updateDoc, getDoc } from 'firebase/firestore';
@@ -20,10 +20,21 @@ class CapacitacionImageService {
    */
   async uploadImage(file, idToken, capacitacionId, companyId) {
     try {
+      // Asegurar carpetas antes de subir (evita duplicados)
+      const mainFolderId = await ensureTaskbarFolder('ControlAudit');
+      if (!mainFolderId) {
+        throw new Error('No se pudo crear/obtener carpeta principal ControlAudit');
+      }
+      
+      // Asegurar subcarpeta "Capacitaciones"
+      const capacitacionesFolderId = await ensureSubFolder('Capacitaciones', mainFolderId);
+      const targetFolderId = capacitacionesFolderId || mainFolderId;
+      
       const result = await uploadEvidence({
         file,
         auditId: capacitacionId, // Reutilizar auditId para capacitaciones
         companyId,
+        parentId: targetFolderId, // ✅ Usar carpeta verificada/creada
         fecha: new Date()
       });
 

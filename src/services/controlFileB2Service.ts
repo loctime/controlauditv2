@@ -10,7 +10,17 @@
  * o usar Firebase Storage de forma directa.
  */
 
-import { auth } from '../firebaseControlFile';
+import { auth, db } from '../firebaseControlFile';
+import { 
+  collection, 
+  query, 
+  where, 
+  getDocs, 
+  doc, 
+  getDoc, 
+  setDoc,
+  serverTimestamp 
+} from 'firebase/firestore';
 
 // URL del backend de ControlFile
 const BACKEND_URL = (import.meta as any).env?.VITE_CONTROLFILE_BACKEND_URL || 'https://controlfile.onrender.com';
@@ -298,14 +308,16 @@ export async function listFiles(
 }
 
 /**
- * Crea una carpeta en ControlFile
+ * Crea una carpeta en ControlFile usando la API del backend
  * @param {string} name - Nombre de la carpeta
  * @param {string | null} parentId - ID de la carpeta padre (null para raíz)
+ * @param {'taskbar' | 'navbar'} source - Source de la carpeta (default: 'navbar')
  * @returns {Promise<string | null>} ID de la carpeta creada
  */
 export async function createFolder(
   name: string,
-  parentId: string | null = null
+  parentId: string | null = null,
+  source: 'taskbar' | 'navbar' = 'navbar'
 ): Promise<string | null> {
   try {
     const user = auth.currentUser;
@@ -327,6 +339,9 @@ export async function createFolder(
       body: JSON.stringify({
         name,
         parentId,
+        metadata: {
+          source: source
+        }
       }),
     });
 
@@ -383,25 +398,63 @@ export async function getFileInfo(fileId: string): Promise<any | null> {
 
 /**
  * Asegura que existe la carpeta principal de la app en ControlFile (source: 'taskbar')
+ * ✅ Verifica existencia antes de crear usando queries directas de Firestore
+ * ✅ Evita duplicados filtrando por userId, parentId=null, name, type='folder', source='taskbar'
+ * ✅ Asegura que aparezca en taskbar con metadata.source = 'taskbar'
+ * 
  * @param {string} appName - Nombre de la app (opcional, se usa 'ControlAudit' por defecto)
  * @returns {Promise<string | null>} ID de la carpeta principal o null si hay error
  */
 export async function ensureTaskbarFolder(appName: string = 'ControlAudit'): Promise<string | null> {
+  const user = auth.currentUser;
+  if (!user) {
+    throw new Error('Usuario no autenticado');
+  }
+
   try {
-    // Buscar carpeta principal existente
-    const files = await listFiles(null);
-    const existingFolder = files.find(f => f.type === 'folder' && f.name === appName);
+    const userId = user.uid;
+    const filesCol = collection(db, 'files');
     
-    if (existingFolder) {
-      console.log('[controlFileB2Service] ✅ Carpeta principal encontrada:', existingFolder.id);
-      return existingFolder.id;
+    // 1. Buscar carpeta existente con query específica:
+    //    - userId del usuario actual
+    //    - parentId = null (carpeta raíz)
+    //    - name = appName (nombre exacto)
+    //    - type = 'folder'
+    const q = query(
+      filesCol,
+      where('userId', '==', userId),
+      where('parentId', '==', null),
+      where('name', '==', appName),
+      where('type', '==', 'folder')
+    );
+
+    const snapshot = await getDocs(q);
+    
+    // 2. Verificar si existe una carpeta con source: 'taskbar' y no eliminada
+    let existingFolderId: string | null = null;
+    snapshot.forEach((docSnap) => {
+      const data = docSnap.data();
+      if (data.metadata?.source === 'taskbar' && !data.deletedAt) {
+        existingFolderId = docSnap.id;
+      }
+    });
+
+    // 3. Si existe, retornar su ID
+    if (existingFolderId) {
+      console.log(`📁 [controlFileB2Service] Carpeta existente reutilizada: ${appName} (${existingFolderId})`);
+      return existingFolderId;
     }
+
+    // 4. Si NO existe, crear nueva carpeta con source: 'taskbar' usando API
+    console.log(`📁 [controlFileB2Service] Creando carpeta principal: ${appName}`);
+    const folderId = await createFolder(appName, null, 'taskbar');
     
-    // Crear nueva carpeta principal
-    const folderId = await createFolder(appName, null);
     if (folderId) {
-      console.log('[controlFileB2Service] ✅ Carpeta principal creada:', folderId);
+      console.log(`📁 [controlFileB2Service] Carpeta creada: ${appName} (${folderId})`);
+    } else {
+      console.error(`❌ [controlFileB2Service] No se pudo crear carpeta: ${appName}`);
     }
+    
     return folderId;
   } catch (error) {
     console.error('[controlFileB2Service] ❌ Error al asegurar carpeta principal:', error);
@@ -410,7 +463,74 @@ export async function ensureTaskbarFolder(appName: string = 'ControlAudit'): Pro
 }
 
 /**
+ * Asegura que existe una subcarpeta dentro de una carpeta padre
+ * ✅ Verifica existencia antes de crear usando queries directas de Firestore
+ * ✅ Evita duplicados filtrando por userId, parentId, name, type='folder'
+ * ✅ Crea con metadata.source = 'navbar' (subcarpetas van en navbar)
+ * 
+ * @param {string} name - Nombre de la subcarpeta
+ * @param {string} parentId - ID de la carpeta padre
+ * @returns {Promise<string | null>} ID de la subcarpeta creada o existente
+ */
+export async function ensureSubFolder(
+  name: string,
+  parentId: string
+): Promise<string | null> {
+  const user = auth.currentUser;
+  if (!user) {
+    throw new Error('Usuario no autenticado');
+  }
+
+  try {
+    const userId = user.uid;
+    const filesCol = collection(db, 'files');
+    
+    // 1. Buscar subcarpeta existente con query específica:
+    //    - userId del usuario actual
+    //    - parentId = parentId (carpeta padre)
+    //    - name = name (nombre exacto)
+    //    - type = 'folder'
+    const q = query(
+      filesCol,
+      where('userId', '==', userId),
+      where('parentId', '==', parentId),
+      where('name', '==', name),
+      where('type', '==', 'folder')
+    );
+
+    const snapshot = await getDocs(q);
+    
+    // 2. Si existe y no está eliminada, retornar su ID
+    if (!snapshot.empty) {
+      for (const docSnap of snapshot.docs) {
+        const data = docSnap.data();
+        if (!data.deletedAt) {
+          console.log(`📁 [controlFileB2Service] Subcarpeta existente reutilizada: ${name} (${docSnap.id})`);
+          return docSnap.id;
+        }
+      }
+    }
+
+    // 3. Si NO existe, crear nueva subcarpeta con source: 'navbar' usando API
+    console.log(`📁 [controlFileB2Service] Creando subcarpeta: ${name}`);
+    const folderId = await createFolder(name, parentId, 'navbar');
+    
+    if (folderId) {
+      console.log(`📁 [controlFileB2Service] Subcarpeta creada: ${name} (${folderId})`);
+    } else {
+      console.error(`❌ [controlFileB2Service] No se pudo crear subcarpeta: ${name}`);
+    }
+    
+    return folderId;
+  } catch (error) {
+    console.error('[controlFileB2Service] ❌ Error al asegurar subcarpeta:', error);
+    return null;
+  }
+}
+
+/**
  * Crea una subcarpeta dentro de una carpeta padre (verifica existencia primero)
+ * @deprecated Usar ensureSubFolder() en su lugar
  * @param {string} name - Nombre de la subcarpeta
  * @param {string} parentId - ID de la carpeta padre
  * @returns {Promise<string | null>} ID de la subcarpeta creada o existente
@@ -419,26 +539,8 @@ export async function createSubFolder(
   name: string,
   parentId: string
 ): Promise<string | null> {
-  try {
-    // Buscar carpeta existente primero
-    const files = await listFiles(parentId);
-    const existingFolder = files.find(f => f.type === 'folder' && f.name === name);
-    
-    if (existingFolder) {
-      console.log('[controlFileB2Service] ✅ Subcarpeta existente encontrada:', existingFolder.id);
-      return existingFolder.id;
-    }
-    
-    // Crear nueva subcarpeta
-    const folderId = await createFolder(name, parentId);
-    if (folderId) {
-      console.log('[controlFileB2Service] ✅ Subcarpeta creada:', folderId);
-    }
-    return folderId;
-  } catch (error) {
-    console.error('[controlFileB2Service] ❌ Error al crear subcarpeta:', error);
-    return null;
-  }
+  // Wrapper para compatibilidad - usar ensureSubFolder internamente
+  return await ensureSubFolder(name, parentId);
 }
 
 /**

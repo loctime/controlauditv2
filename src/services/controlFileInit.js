@@ -1,9 +1,10 @@
 // src/services/controlFileInit.js
 // Inicialización de carpetas de ControlFile usando Backblaze B2 (flujo oficial)
+// ✅ Usa ensureTaskbarFolder() y ensureSubFolder() para evitar duplicados
 
 import {
-  createFolder,
-  listFiles
+  ensureTaskbarFolder,
+  ensureSubFolder
 } from './controlFileB2Service';
 
 const STORAGE_KEY = 'controlfile_folders';
@@ -14,43 +15,24 @@ const STORAGE_KEY = 'controlfile_folders';
  */
 export const initializeControlFileFolders = async () => {
   try {
-    // Buscar o crear carpeta principal
-    let mainFolderId = null;
-    const rootFiles = await listFiles(null);
-    const existingMainFolder = rootFiles.find(f => f.type === 'folder' && f.name === 'ControlAudit');
-    
-    if (existingMainFolder) {
-      mainFolderId = existingMainFolder.id;
-    } else {
-      mainFolderId = await createFolder('ControlAudit', null);
-    }
+    // 1. Asegurar carpeta principal usando ensureTaskbarFolder (evita duplicados)
+    const mainFolderId = await ensureTaskbarFolder('ControlAudit');
     
     if (!mainFolderId) {
-      console.warn('[controlFileInit] No se pudo crear carpeta principal');
+      console.warn('[controlFileInit] No se pudo crear/obtener carpeta principal');
       return { mainFolderId: null, subFolders: {} };
     }
 
-    // Crear subcarpetas si no existen
+    // 2. Crear subcarpetas usando ensureSubFolder (evita duplicados)
     const subFolders = {};
-    
-    // Listar archivos en carpeta principal para verificar subcarpetas existentes
-    const files = await listFiles(mainFolderId);
-    
     const subFolderNames = ['Auditorías', 'Accidentes', 'Empresas'];
     
     for (const folderName of subFolderNames) {
-      const existingFolder = files.find(f => f.type === 'folder' && f.name === folderName);
-      
-      if (existingFolder) {
+      // ensureSubFolder verifica existencia antes de crear
+      const folderId = await ensureSubFolder(folderName, mainFolderId);
+      if (folderId) {
         const key = folderName.toLowerCase().replace('ías', 'ias').replace('es', '');
-        subFolders[key] = existingFolder.id;
-      } else {
-        // Crear subcarpeta si no existe
-        const folderId = await createFolder(folderName, mainFolderId);
-        if (folderId) {
-          const key = folderName.toLowerCase().replace('ías', 'ias').replace('es', '');
-          subFolders[key] = folderId;
-        }
+        subFolders[key] = folderId;
       }
     }
 
@@ -66,7 +48,7 @@ export const initializeControlFileFolders = async () => {
       console.warn('[controlFileInit] Error al guardar en cache:', e);
     }
 
-    console.log('[controlFileInit] ✅ Carpetas inicializadas:', folderData);
+    console.log('[controlFileInit] ✅ Carpetas inicializadas (sin duplicados):', folderData);
     return folderData;
   } catch (error) {
     console.error('[controlFileInit] ❌ Error al inicializar carpetas:', error);

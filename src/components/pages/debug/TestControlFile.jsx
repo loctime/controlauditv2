@@ -18,7 +18,7 @@ import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import ErrorIcon from '@mui/icons-material/Error';
 import InfoIcon from '@mui/icons-material/Info';
-import { uploadEvidence } from '../../../services/controlFileB2Service';
+import { uploadEvidence, ensureTaskbarFolder } from '../../../services/controlFileB2Service';
 import { useAuth } from '../../../components/context/AuthContext';
 
 const TestControlFile = () => {
@@ -114,13 +114,18 @@ const TestControlFile = () => {
     setResult(null);
 
     try {
-      // Subir archivo usando Firestore directo (no requiere token explícito)
+      // Asegurar carpeta principal antes de subir (evita duplicados)
+      const mainFolderId = await ensureTaskbarFolder('ControlAudit');
+      const targetFolderId = mainFolderId; // Usar carpeta principal para tests
+      
+      // Subir archivo usando ControlFile B2
       const uploadResult = await uploadEvidence({
         file,
         auditId,
         companyId,
         seccionId: seccionId || undefined,
         preguntaId: preguntaId || undefined,
+        parentId: targetFolderId, // ✅ Usar carpeta verificada/creada
         fecha: new Date()
       });
 

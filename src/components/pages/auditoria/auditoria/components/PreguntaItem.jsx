@@ -29,7 +29,7 @@ import {
   obtenerIconoRespuesta, 
   preguntaContestada 
 } from '../utils/respuestaUtils.jsx';
-import { uploadEvidence, getDownloadUrl } from '../../../../../services/controlFileB2Service';
+import { uploadEvidence, getDownloadUrl, ensureTaskbarFolder, ensureSubFolder } from '../../../../../services/controlFileB2Service';
 import { useAuth } from '../../../../../components/context/AuthContext';
 
 const PreguntaItem = ({
@@ -109,6 +109,16 @@ const PreguntaItem = ({
     setLocalProcesandoImagen(true);
 
     try {
+      // Asegurar carpetas antes de subir (evita duplicados)
+      const mainFolderId = await ensureTaskbarFolder('ControlAudit');
+      if (!mainFolderId) {
+        throw new Error('No se pudo crear/obtener carpeta principal ControlAudit');
+      }
+      
+      // Asegurar subcarpeta "Auditorías"
+      const auditoriasFolderId = await ensureSubFolder('Auditorías', mainFolderId);
+      const targetFolderId = auditoriasFolderId || mainFolderId;
+      
       // Subir archivo a ControlFile usando Backblaze B2 (flujo oficial)
       const result = await uploadEvidence({
         file,
@@ -116,6 +126,7 @@ const PreguntaItem = ({
         companyId,
         seccionId: seccionIndex.toString(),
         preguntaId: preguntaIndex.toString(),
+        parentId: targetFolderId, // ✅ Usar carpeta verificada/creada
         fecha: new Date()
       });
 
