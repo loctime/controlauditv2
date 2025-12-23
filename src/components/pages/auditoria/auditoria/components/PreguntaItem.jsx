@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { 
   Box, 
   Typography, 
@@ -29,7 +29,7 @@ import {
   obtenerIconoRespuesta, 
   preguntaContestada 
 } from '../utils/respuestaUtils.jsx';
-import { uploadEvidence } from '../../../../../services/controlFileFirestore';
+import { uploadEvidence, getDownloadUrl } from '../../../../../services/controlFileB2Service';
 import { useAuth } from '../../../../../components/context/AuthContext';
 
 const PreguntaItem = ({
@@ -59,6 +59,7 @@ const PreguntaItem = ({
   const [expandedAccion, setExpandedAccion] = useState(false);
   const fileInputRef = useRef(null);
   const [localProcesandoImagen, setLocalProcesandoImagen] = useState(false);
+  const [imageUrlCache, setImageUrlCache] = useState({}); // Cache de URLs temporales
   
   // Inicializar estado local de acción requerida
   const accionData = accionRequerida || {
@@ -67,14 +68,34 @@ const PreguntaItem = ({
     fechaVencimiento: null
   };
 
+  // Validar si auditId es válido para subir archivos
+  const isValidAuditId = () => {
+    // auditId es inválido si:
+    // - es null o undefined
+    // - empieza con "offline_" (auditoría temporal offline)
+    if (!auditId || typeof auditId !== 'string') {
+      return false;
+    }
+    if (auditId.startsWith('offline_')) {
+      return false;
+    }
+    return true;
+  };
+
   // Handler para subir archivo usando ControlFile
   const handleFileUpload = async (event) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
+    // Validar que auditId es válido (no temporal, no null/undefined)
+    if (!isValidAuditId()) {
+      console.warn('⚠️ [PreguntaItem] auditId no válido para subir archivo (temporal o no disponible)');
+      return;
+    }
+
     // Validar que tenemos los datos necesarios
-    if (!auditId || !companyId) {
-      console.warn('⚠️ [PreguntaItem] auditId o companyId no disponibles para subir archivo');
+    if (!companyId) {
+      console.warn('⚠️ [PreguntaItem] companyId no disponible para subir archivo');
       return;
     }
 
@@ -88,7 +109,7 @@ const PreguntaItem = ({
     setLocalProcesandoImagen(true);
 
     try {
-      // Subir archivo a ControlFile usando Firestore directo
+      // Subir archivo a ControlFile usando Backblaze B2 (flujo oficial)
       const result = await uploadEvidence({
         file,
         auditId,
@@ -116,6 +137,74 @@ const PreguntaItem = ({
   };
 
   const isProcesando = procesandoImagen?.[`${seccionIndex}-${preguntaIndex}`] || localProcesandoImagen;
+
+  // Obtener URL temporal para mostrar imagen si hay fileId
+  const getImageUrl = async (imageData) => {
+    if (!imageData) return null;
+    
+    // Si es un File, crear URL local
+    if (imageData instanceof File) {
+      return URL.createObjectURL(imageData);
+    }
+    
+    // Si ya hay URL guardada (compatibilidad con datos antiguos)
+    if (imageData.fileURL || imageData.url) {
+      return imageData.fileURL || imageData.url;
+    }
+    
+    // Si hay fileId, obtener URL temporal desde ControlFile
+    if (imageData.fileId) {
+      const cacheKey = imageData.fileId;
+      
+      // Verificar cache primero
+      if (imageUrlCache[cacheKey]) {
+        return imageUrlCache[cacheKey];
+      }
+      
+      try {
+        const tempUrl = await getDownloadUrl(imageData.fileId);
+        // Guardar en cache (URL temporal, expira pero útil para la sesión)
+        setImageUrlCache(prev => ({ ...prev, [cacheKey]: tempUrl }));
+        return tempUrl;
+      } catch (error) {
+        console.error('[PreguntaItem] Error al obtener URL temporal:', error);
+        return null;
+      }
+    }
+    
+    // Fallback: si es string directo (compatibilidad)
+    if (typeof imageData === 'string') {
+      return imageData;
+    }
+    
+    return null;
+  };
+
+  // Estado para URL de imagen resuelta
+  const [resolvedImageUrl, setResolvedImageUrl] = useState(null);
+
+  // Resolver URL de imagen cuando cambie imagenes
+  useEffect(() => {
+    let cancelled = false;
+    
+    if (imagenes) {
+      getImageUrl(imagenes).then(url => {
+        if (!cancelled) {
+          setResolvedImageUrl(url);
+        }
+      }).catch(() => {
+        if (!cancelled) {
+          setResolvedImageUrl(null);
+        }
+      });
+    } else {
+      setResolvedImageUrl(null);
+    }
+    
+    return () => {
+      cancelled = true;
+    };
+  }, [imagenes]);
 
   return (
     <Box 
@@ -329,7 +418,7 @@ const PreguntaItem = ({
             component="span"
             startIcon={<CameraAltIcon />}
             onClick={() => onOpenCameraDialog(seccionIndex, preguntaIndex)}
-            disabled={isProcesando}
+            disabled={isProcesando || !isValidAuditId()}
             sx={{ 
               minWidth: isMobile ? 80 : 120,
               fontSize: isMobile ? '0.75rem' : '0.875rem',
@@ -340,28 +429,44 @@ const PreguntaItem = ({
             {isProcesando ? 'Procesando...' : 'Camara'}
           </Button>
           
-          <label htmlFor={`upload-gallery-${seccionIndex}-${preguntaIndex}`}>
-            <Button
-              variant="outlined"
-              component="span"
-              startIcon={<UploadIcon />}
-              sx={{ 
-                minWidth: isMobile ? 80 : 120,
-                fontSize: isMobile ? '0.75rem' : '0.875rem',
-                py: isMobile ? 0.5 : 1,
-                px: isMobile ? 1 : 2
-              }}
-              disabled={isProcesando}
-            >
-              {isProcesando ? 'Procesando...' : 'Subir'}
-            </Button>
-          </label>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+            <label htmlFor={`upload-gallery-${seccionIndex}-${preguntaIndex}`}>
+              <Button
+                variant="outlined"
+                component="span"
+                startIcon={<UploadIcon />}
+                sx={{ 
+                  minWidth: isMobile ? 80 : 120,
+                  fontSize: isMobile ? '0.75rem' : '0.875rem',
+                  py: isMobile ? 0.5 : 1,
+                  px: isMobile ? 1 : 2
+                }}
+                disabled={isProcesando || !isValidAuditId()}
+              >
+                {isProcesando ? 'Procesando...' : 'Subir'}
+              </Button>
+            </label>
+            {!isValidAuditId() && (
+              <Typography 
+                variant="caption" 
+                color="warning.main"
+                sx={{ 
+                  fontSize: isMobile ? '0.65rem' : '0.75rem',
+                  fontStyle: 'italic',
+                  mt: 0.5
+                }}
+              >
+                Guardá la auditoría para poder adjuntar evidencias
+              </Typography>
+            )}
+          </Box>
           <input
             id={`upload-gallery-${seccionIndex}-${preguntaIndex}`}
             ref={fileInputRef}
             type="file"
             accept="image/*"
             onChange={handleFileUpload}
+            disabled={!isValidAuditId()}
             style={{ display: 'none' }}
           />
         </Stack>
@@ -386,11 +491,11 @@ const PreguntaItem = ({
           {comentario ? `Comentario: ${comentario}` : "Sin comentario"}
         </Typography>
         
-        {imagenes && (
+        {imagenes && resolvedImageUrl && (
           <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', alignItems: 'center' }}>
             <Box sx={{ position: 'relative' }}>
               <img
-                src={imagenes instanceof File ? URL.createObjectURL(imagenes) : (imagenes.fileURL || imagenes.url || imagenes)}
+                src={resolvedImageUrl}
                 alt={`Imagen de la pregunta ${preguntaIndex}`}
                 style={{ 
                   maxWidth: isMobile ? '80px' : '100px', 
@@ -399,11 +504,20 @@ const PreguntaItem = ({
                   border: '1px solid #eee',
                   cursor: 'pointer'
                 }}
-                onClick={() => {
-                  const imageUrl = imagenes instanceof File 
-                    ? URL.createObjectURL(imagenes) 
-                    : (imagenes.fileURL || imagenes.url || imagenes);
-                  window.open(imageUrl, '_blank');
+                onClick={async () => {
+                  // Obtener URL fresca para abrir (puede haber expirado)
+                  const url = await getImageUrl(imagenes);
+                  if (url) {
+                    window.open(url, '_blank');
+                  }
+                }}
+                onError={() => {
+                  // Si la URL expiró, intentar refrescar
+                  if (imagenes?.fileId) {
+                    getImageUrl(imagenes).then(url => {
+                      if (url) setResolvedImageUrl(url);
+                    });
+                  }
                 }}
               />
               <Button
