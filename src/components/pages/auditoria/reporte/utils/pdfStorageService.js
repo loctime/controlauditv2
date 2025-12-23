@@ -1,7 +1,7 @@
-// Servicio para manejar el guardado y descarga de PDFs en Firebase Storage
-import { doc, updateDoc, getDoc } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
-import { db, storage, auditUserCollection } from '../../../../firebaseControlFile';
+// Servicio para manejar el guardado y descarga de PDFs usando ControlFile
+import { doc, updateDoc } from 'firebase/firestore';
+import { auditUserCollection } from '../../../../firebaseControlFile';
+import { uploadEvidence, getDownloadUrl } from '../../../../services/controlFileB2Service';
 import generarContenidoImpresion from './generadorHTML';
 
 /**
@@ -49,41 +49,39 @@ const htmlToPdf = async (html) => {
 };
 
 /**
- * Guarda un PDF en Firebase Storage
+ * Guarda un PDF usando ControlFile
  * @param {string} reporteId - ID del reporte
  * @param {string} html - Contenido HTML del reporte
  * @param {Object} metadata - Metadatos del reporte
- * @returns {Promise<string>} - URL de descarga del PDF
+ * @param {string} companyId - ID de la empresa (opcional, default: 'system')
+ * @returns {Promise<string>} - URL de descarga temporal del PDF
  */
-export const guardarPdfEnStorage = async (reporteId, html, metadata = {}) => {
+export const guardarPdfEnStorage = async (reporteId, html, metadata = {}, companyId = 'system') => {
   try {
-    console.log('[pdfStorageService] Iniciando guardado de PDF...');
+    console.log('[pdfStorageService] Iniciando guardado de PDF en ControlFile...');
     
     // Generar nombre único para el archivo
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
     const fileName = `reporte-${reporteId}-${timestamp}.html`;
-    const storagePath = `reportes-pdf/${reporteId}/${fileName}`;
     
-    // Crear referencia en Storage
-    const storageRef = ref(storage, storagePath);
-    
-    // Convertir HTML a blob
+    // Convertir HTML a File/Blob para subir
     const htmlBlob = new Blob([html], { type: 'text/html; charset=utf-8' });
+    const htmlFile = new File([htmlBlob], fileName, { type: 'text/html; charset=utf-8' });
     
-    // Subir archivo a Storage
-    console.log('[pdfStorageService] Subiendo archivo a Storage...');
-    const uploadResult = await uploadBytes(storageRef, htmlBlob, {
-      customMetadata: {
-        reporteId,
-        fechaCreacion: new Date().toISOString(),
-        ...metadata
-      }
+    // Subir archivo a ControlFile usando uploadEvidence
+    console.log('[pdfStorageService] Subiendo archivo a ControlFile...');
+    const result = await uploadEvidence({
+      file: htmlFile,
+      auditId: `reporte_${reporteId}`,
+      companyId: companyId,
+      parentId: null, // Usar raíz o crear carpeta de reportes si es necesario
+      fecha: new Date()
     });
     
-    // Obtener URL de descarga
-    const downloadURL = await getDownloadURL(uploadResult.ref);
+    // Obtener URL de descarga temporal (NO guardar esta URL - es temporal)
+    const downloadURL = await getDownloadUrl(result.fileId);
     
-    console.log('[pdfStorageService] ✅ PDF guardado exitosamente:', downloadURL);
+    console.log('[pdfStorageService] ✅ PDF guardado exitosamente en ControlFile, fileId:', result.fileId);
     return downloadURL;
     
   } catch (error) {
@@ -131,8 +129,11 @@ export const generarYGuardarPdf = async (reporteId, datosReporte, userUid = null
       auditor: datosReporte.nombreAuditor || 'Sin auditor'
     };
     
-    // Guardar en Storage
-    const downloadURL = await guardarPdfEnStorage(reporteId, html, metadata);
+    // Obtener companyId del reporte si está disponible
+    const companyId = datosReporte.empresa?.id || datosReporte.empresaId || 'system';
+    
+    // Guardar en ControlFile
+    const downloadURL = await guardarPdfEnStorage(reporteId, html, metadata, companyId);
     
     // Actualizar el reporte en Firestore con la URL del PDF (solo si tenemos uid)
     if (uid) {
@@ -226,16 +227,14 @@ export const actualizarReporteConPdf = async (reporteId, pdfUrl, userUid = null)
 };
 
 /**
- * Elimina un PDF del Storage
- * @param {string} storagePath - Ruta del archivo en Storage
+ * Elimina un PDF de ControlFile
+ * NOTA: La eliminación de archivos en ControlFile debe hacerse vía API del backend
+ * Esta función está marcada como deprecated - usar API de ControlFile directamente
+ * @param {string} fileId - ID del archivo en ControlFile
+ * @deprecated Usar API de ControlFile directamente para eliminar archivos
  */
-export const eliminarPdfDelStorage = async (storagePath) => {
-  try {
-    const storageRef = ref(storage, storagePath);
-    await deleteObject(storageRef);
-    console.log('[pdfStorageService] ✅ PDF eliminado del Storage');
-  } catch (error) {
-    console.error('[pdfStorageService] ❌ Error eliminando PDF:', error);
-    throw error;
-  }
+export const eliminarPdfDelStorage = async (fileId) => {
+  console.warn('[pdfStorageService] ⚠️ eliminarPdfDelStorage está deprecated. Usar API de ControlFile directamente.');
+  // TODO: Implementar eliminación vía API de ControlFile si es necesario
+  throw new Error('Eliminación de archivos debe hacerse vía API de ControlFile');
 };

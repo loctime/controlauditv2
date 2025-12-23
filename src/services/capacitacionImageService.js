@@ -1,5 +1,5 @@
 // src/services/capacitacionImageService.js
-import { uploadEvidence } from './controlFileFirestore';
+import { uploadEvidence } from './controlFileB2Service';
 import { getOfflineDatabase, generateOfflineId } from './offlineDatabase';
 import syncQueueService from './syncQueue';
 import { doc, updateDoc, getDoc } from 'firebase/firestore';

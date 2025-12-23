@@ -1,7 +1,7 @@
 // Servicio centralizado para operaciones de auditoría
 import { collection, addDoc, getDocs, query, where, orderBy, serverTimestamp, doc } from 'firebase/firestore';
 import { dbAudit, auditUserCollection, auditUsersCollection, sucursalesCollection, reportesCollection } from '../../../firebaseControlFile';
-import { uploadToControlFile, getDownloadUrl } from '../../../services/controlFileService';
+import { uploadEvidence, getDownloadUrl, listFiles, createSubFolder } from '../../../services/controlFileB2Service';
 import { getControlFileFolders } from '../../../services/controlFileInit';
 import { prepararDatosParaFirestore, registrarAccionSistema } from '../../../utils/firestoreUtils';
 import { getOfflineDatabase, generateOfflineId } from '../../../services/offlineDatabase';
@@ -79,7 +79,6 @@ class AuditoriaService {
             console.log('[AuditoriaService] ✅ Encontrado en cache - carpeta principal:', mainFolderId, 'subcarpeta auditorías:', folderIdAuditorias);
             // Verificar que la subcarpeta realmente existe en ControlFile
             try {
-              const { listFiles } = await import('../../../services/controlFileService');
               if (mainFolderId) {
                 const subFolderFiles = await listFiles(mainFolderId);
                 if (Array.isArray(subFolderFiles)) {
@@ -130,7 +129,6 @@ class AuditoriaService {
       // Si no hay subcarpeta pero hay carpeta principal, buscar si existe primero
       if (mainFolderId && !folderIdAuditorias) {
         try {
-          const { listFiles } = await import('../../../services/controlFileService');
           const subFolderFiles = await listFiles(mainFolderId);
           if (Array.isArray(subFolderFiles)) {
             const existingSubFolder = subFolderFiles.find(item => 
@@ -157,7 +155,7 @@ class AuditoriaService {
       if (mainFolderId && !folderIdAuditorias) {
         console.log('[AuditoriaService] 📁 Creando subcarpeta "Auditorías" dentro de carpeta principal:', mainFolderId);
         try {
-          const { createSubFolder } = await import('../../../services/controlFileService');
+          // createSubFolder ya está importado arriba
           folderIdAuditorias = await createSubFolder('Auditorías', mainFolderId);
           console.log('[AuditoriaService] ✅ Subcarpeta de auditorías creada con ID:', folderIdAuditorias);
           
@@ -215,11 +213,16 @@ class AuditoriaService {
           try {
             console.log(`[AuditoriaService] 📤 Subiendo archivo a ControlFile: ${imagen.name}, tamaño: ${(imagen.size/1024/1024).toFixed(2)}MB, parentId: ${folderIdAuditorias || 'null (raíz)'}`);
             
-            // Subir imagen a ControlFile
-            const fileId = await uploadToControlFile(imagen, folderIdAuditorias);
+            // Subir imagen a ControlFile usando uploadEvidence
+            const result = await uploadEvidence({
+              file: imagen,
+              auditId: 'auditoria_general',
+              companyId: 'system', // TODO: Obtener del contexto si está disponible
+              parentId: folderIdAuditorias
+            });
             
-            // Obtener URL de descarga
-            const url = await getDownloadUrl(fileId);
+            // Obtener URL de descarga temporal
+            const url = await getDownloadUrl(result.fileId);
             
             const timestamp = Date.now();
             const imagenProcesada = {
@@ -227,7 +230,7 @@ class AuditoriaService {
               tipo: imagen.type,
               tamaño: imagen.size,
               url: url,
-              fileId: fileId, // Guardar fileId para referencia futura
+              fileId: result.fileId, // Guardar fileId para referencia futura
               timestamp: timestamp
             };
             

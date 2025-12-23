@@ -1,7 +1,6 @@
 import { useState, useCallback } from 'react';
 import Swal from 'sweetalert2';
-import { uploadEvidence, getDownloadUrl } from '../../../../services/controlFileFirestore';
-import { ensureTaskbarFolder, createSubFolder } from '../../../../services/controlFileFirestore';
+import { uploadEvidence, getDownloadUrl, ensureTaskbarFolder, createSubFolder, listFiles } from '../../../../services/controlFileB2Service';
 
 /**
  * Hook para handlers de empresas
@@ -51,7 +50,6 @@ export const useEmpresasHandlers = (crearEmpresa, updateEmpresa, onEmpresaCreate
           
           if (mainFolderId) {
             // Buscar carpeta de empresas existente o crearla
-            const { listFiles } = await import('../../../../services/controlFileFirestore');
             const files = await listFiles(mainFolderId);
             const empresasFolder = files.find(f => f.type === 'folder' && f.name === 'Empresas');
             
@@ -70,7 +68,6 @@ export const useEmpresasHandlers = (crearEmpresa, updateEmpresa, onEmpresaCreate
             parentId: folderIdEmpresas
           });
           // Obtener URL temporal para guardar (se regenerará cuando se necesite)
-          const { getDownloadUrl } = await import('../../../../services/controlFileB2Service');
           logoURL = await getDownloadUrl(result.fileId);
           
           console.log('[useEmpresasHandlers] ✅ Logo subido a ControlFile');
@@ -182,7 +179,6 @@ export const useEmpresasEditHandlers = (updateEmpresa) => {
           
           if (mainFolderId) {
             // Buscar carpeta de empresas existente o crearla
-            const { listFiles } = await import('../../../../services/controlFileFirestore');
             const files = await listFiles(mainFolderId);
             const empresasFolder = files.find(f => f.type === 'folder' && f.name === 'Empresas');
             
@@ -201,7 +197,6 @@ export const useEmpresasEditHandlers = (updateEmpresa) => {
             parentId: folderIdEmpresas
           });
           // Obtener URL temporal para guardar (se regenerará cuando se necesite)
-          const { getDownloadUrl } = await import('../../../../services/controlFileB2Service');
           logoURL = await getDownloadUrl(result.fileId);
           
           console.log('[useEmpresasHandlers] ✅ Logo actualizado en ControlFile');

@@ -1,11 +1,19 @@
 // src/services/controlFileB2Service.ts
 // Servicio para integración con ControlFile usando Backblaze B2
 // Flujo oficial: presign → upload to B2 → confirm → guardar solo fileId
+/**
+ * ⚠️ SINGLE SOURCE OF TRUTH
+ * Toda subida de archivos en ControlAudit / ControlFile
+ * DEBE pasar por este servicio.
+ * 
+ * Prohibido subir archivos directamente desde componentes
+ * o usar Firebase Storage de forma directa.
+ */
 
 import { auth } from '../firebaseControlFile';
 
 // URL del backend de ControlFile
-const BACKEND_URL = import.meta.env.VITE_CONTROLFILE_BACKEND_URL || 'https://controlfile.onrender.com';
+const BACKEND_URL = (import.meta as any).env?.VITE_CONTROLFILE_BACKEND_URL || 'https://controlfile.onrender.com';
 
 /**
  * Obtiene URL presignada para subir archivo a Backblaze B2
@@ -369,6 +377,105 @@ export async function getFileInfo(fileId: string): Promise<any | null> {
     return await response.json();
   } catch (error) {
     console.error('[controlFileB2Service] ❌ Error al obtener información del archivo:', error);
+    return null;
+  }
+}
+
+/**
+ * Asegura que existe la carpeta principal de la app en ControlFile (source: 'taskbar')
+ * @param {string} appName - Nombre de la app (opcional, se usa 'ControlAudit' por defecto)
+ * @returns {Promise<string | null>} ID de la carpeta principal o null si hay error
+ */
+export async function ensureTaskbarFolder(appName: string = 'ControlAudit'): Promise<string | null> {
+  try {
+    // Buscar carpeta principal existente
+    const files = await listFiles(null);
+    const existingFolder = files.find(f => f.type === 'folder' && f.name === appName);
+    
+    if (existingFolder) {
+      console.log('[controlFileB2Service] ✅ Carpeta principal encontrada:', existingFolder.id);
+      return existingFolder.id;
+    }
+    
+    // Crear nueva carpeta principal
+    const folderId = await createFolder(appName, null);
+    if (folderId) {
+      console.log('[controlFileB2Service] ✅ Carpeta principal creada:', folderId);
+    }
+    return folderId;
+  } catch (error) {
+    console.error('[controlFileB2Service] ❌ Error al asegurar carpeta principal:', error);
+    return null;
+  }
+}
+
+/**
+ * Crea una subcarpeta dentro de una carpeta padre (verifica existencia primero)
+ * @param {string} name - Nombre de la subcarpeta
+ * @param {string} parentId - ID de la carpeta padre
+ * @returns {Promise<string | null>} ID de la subcarpeta creada o existente
+ */
+export async function createSubFolder(
+  name: string,
+  parentId: string
+): Promise<string | null> {
+  try {
+    // Buscar carpeta existente primero
+    const files = await listFiles(parentId);
+    const existingFolder = files.find(f => f.type === 'folder' && f.name === name);
+    
+    if (existingFolder) {
+      console.log('[controlFileB2Service] ✅ Subcarpeta existente encontrada:', existingFolder.id);
+      return existingFolder.id;
+    }
+    
+    // Crear nueva subcarpeta
+    const folderId = await createFolder(name, parentId);
+    if (folderId) {
+      console.log('[controlFileB2Service] ✅ Subcarpeta creada:', folderId);
+    }
+    return folderId;
+  } catch (error) {
+    console.error('[controlFileB2Service] ❌ Error al crear subcarpeta:', error);
+    return null;
+  }
+}
+
+/**
+ * Crea o asegura la carpeta principal de la app en ControlFile (source: 'taskbar')
+ * Alias de ensureTaskbarFolder para compatibilidad
+ * @param {string} appName - Nombre de la app (opcional, se usa 'ControlAudit' por defecto)
+ * @returns {Promise<string | null>} ID de la carpeta principal
+ */
+export async function createTaskbarFolder(appName?: string): Promise<string | null> {
+  return await ensureTaskbarFolder(appName);
+}
+
+/**
+ * Crea o asegura una carpeta en el navbar (source: 'navbar')
+ * @param {string} name - Nombre de la carpeta
+ * @param {string | null} parentId - ID de la carpeta padre (opcional, usa carpeta principal si no se proporciona)
+ * @returns {Promise<string | null>} ID de la carpeta creada
+ */
+export async function createNavbarFolder(
+  name: string,
+  parentId: string | null = null
+): Promise<string | null> {
+  try {
+    // Si no hay parentId, usar carpeta principal
+    if (!parentId) {
+      const mainFolderId = await ensureTaskbarFolder();
+      if (!mainFolderId) {
+        console.warn('[controlFileB2Service] No se pudo obtener carpeta principal');
+        return null;
+      }
+      parentId = mainFolderId;
+    }
+    
+    // Buscar o crear carpeta navbar
+    return await createSubFolder(name, parentId);
+  } catch (error) {
+    console.error('[controlFileB2Service] Error al crear carpeta navbar:', error);
     return null;
   }
 }

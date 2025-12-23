@@ -18,7 +18,7 @@ import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import ErrorIcon from '@mui/icons-material/Error';
 import InfoIcon from '@mui/icons-material/Info';
-import { uploadEvidence } from '../../../services/controlFileFirestore';
+import { uploadEvidence } from '../../../services/controlFileB2Service';
 import { useAuth } from '../../../components/context/AuthContext';
 
 const TestControlFile = () => {

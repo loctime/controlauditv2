@@ -1,6 +1,9 @@
 // src/services/controlFileFirestore.ts
-// DEPRECATED: Este servicio ha sido reemplazado por controlFileB2Service.ts
-// Mantenido temporalmente para compatibilidad - usar controlFileB2Service en su lugar
+// ⚠️ DEPRECATED - ELIMINAR DESPUÉS DE MIGRACIÓN
+// Este servicio ha sido reemplazado por controlFileB2Service.ts
+// TODAS las referencias han sido migradas a controlFileB2Service.ts
+// 
+// ⚠️ NO USAR ESTE ARCHIVO - Usar controlFileB2Service.ts en su lugar
 // 
 // El flujo correcto ahora es:
 // 1. POST /api/uploads/presign

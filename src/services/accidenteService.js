@@ -12,7 +12,7 @@ import {
   deleteDoc
 } from 'firebase/firestore';
 import { db, auditUserCollection } from '../firebaseControlFile';
-import { uploadToControlFile, getDownloadUrl } from './controlFileService';
+import { uploadEvidence, getDownloadUrl } from './controlFileB2Service';
 import { getControlFileFolders } from './controlFileInit';
 import { registrarAccionSistema } from '../utils/firestoreUtils';
 
@@ -69,7 +69,7 @@ export const crearAccidente = async (accidenteData, empleadosSeleccionados, imag
 
     // Subir imágenes si existen
     if (imagenes && imagenes.length > 0) {
-      const imagenesUrls = await subirImagenes(docRef.id, imagenes);
+      const imagenesUrls = await subirImagenes(docRef.id, imagenes, accidenteData.empresaId);
       await updateDoc(docRef, { imagenes: imagenesUrls });
     }
 
@@ -151,7 +151,7 @@ export const crearIncidente = async (incidenteData, testigos = [], imagenes = []
 
     // Subir imágenes si existen
     if (imagenes && imagenes.length > 0) {
-      const imagenesUrls = await subirImagenes(docRef.id, imagenes);
+      const imagenesUrls = await subirImagenes(docRef.id, imagenes, incidenteData.empresaId);
       await updateDoc(docRef, { imagenes: imagenesUrls });
     }
 
@@ -201,7 +201,7 @@ export const actualizarEstadoEmpleado = async (empleadoId, estado, fechaInicioRe
 };
 
 // Subir imágenes a ControlFile
-export const subirImagenes = async (accidenteId, imagenes) => {
+export const subirImagenes = async (accidenteId, imagenes, companyId = 'system') => {
   try {
     // Obtener carpeta de accidentes desde ControlFile
     let folderIdAccidentes = null;
@@ -220,11 +220,16 @@ export const subirImagenes = async (accidenteId, imagenes) => {
     for (let i = 0; i < imagenes.length; i++) {
       const imagen = imagenes[i];
       try {
-        // Subir imagen a ControlFile
-        const fileId = await uploadToControlFile(imagen, folderIdAccidentes);
+        // Subir imagen a ControlFile usando uploadEvidence
+        const result = await uploadEvidence({
+          file: imagen,
+          auditId: `accidente_${accidenteId}`,
+          companyId: companyId,
+          parentId: folderIdAccidentes
+        });
         
-        // Obtener URL de descarga
-        const url = await getDownloadUrl(fileId);
+        // Obtener URL de descarga temporal
+        const url = await getDownloadUrl(result.fileId);
         urls.push(url);
         
         console.log(`[accidenteService] ✅ Imagen ${i + 1}/${imagenes.length} subida a ControlFile`);
@@ -474,7 +479,9 @@ export const actualizarAccidente = async (accidenteId, datosActualizados, imagen
 
     // Si hay nuevas imágenes, subirlas
     if (imagenesNuevas && imagenesNuevas.length > 0) {
-      const nuevasUrls = await subirImagenes(accidenteId, imagenesNuevas);
+      const accidenteData = accidenteDoc.data();
+      const empresaId = datosActualizados.empresaId || accidenteData.empresaId || 'system';
+      const nuevasUrls = await subirImagenes(accidenteId, imagenesNuevas, empresaId);
       // Si ya vienen imágenes en datosActualizados (después de eliminar algunas), usar esas
       // Si no, usar las existentes del documento
       const imagenesBase = updateData.imagenes || accidenteDoc.data().imagenes || [];

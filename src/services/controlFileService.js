@@ -1,4 +1,10 @@
 // src/services/controlFileService.js
+// ⚠️ DEPRECATED - ELIMINAR DESPUÉS DE MIGRACIÓN
+// Este servicio ha sido reemplazado por controlFileB2Service.ts
+// TODAS las referencias han sido migradas a controlFileB2Service.ts
+// 
+// ⚠️ NO USAR ESTE ARCHIVO - Usar controlFileB2Service.ts directamente
+// 
 // Servicio de integración con ControlFile usando Backblaze B2 (flujo oficial)
 // Usa controlFileB2Service que implementa: presign → upload to B2 → confirm
 
