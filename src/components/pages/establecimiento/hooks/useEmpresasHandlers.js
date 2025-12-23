@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import Swal from 'sweetalert2';
-import { uploadToControlFile, getDownloadUrl } from '../../../../services/controlFileService';
-import { getControlFileFolders } from '../../../../services/controlFileInit';
+import { uploadEvidence, getDownloadUrl } from '../../../../services/controlFileFirestore';
+import { ensureTaskbarFolder, createSubFolder } from '../../../../services/controlFileFirestore';
 
 /**
  * Hook para handlers de empresas
@@ -45,13 +45,33 @@ export const useEmpresasHandlers = (crearEmpresa, updateEmpresa, onEmpresaCreate
       let logoURL = "";
       if (empresa.logo) {
         try {
-          // Obtener carpeta de empresas desde ControlFile
-          const folders = await getControlFileFolders();
-          const folderIdEmpresas = folders.subFolders?.empresas;
+          // Obtener o crear carpeta de empresas desde ControlFile
+          const mainFolderId = await ensureTaskbarFolder();
+          let folderIdEmpresas = null;
+          
+          if (mainFolderId) {
+            // Buscar carpeta de empresas existente o crearla
+            const { listFiles } = await import('../../../../services/controlFileFirestore');
+            const files = await listFiles(mainFolderId);
+            const empresasFolder = files.find(f => f.type === 'folder' && f.name === 'Empresas');
+            
+            if (empresasFolder) {
+              folderIdEmpresas = empresasFolder.id;
+            } else {
+              folderIdEmpresas = await createSubFolder('Empresas', mainFolderId);
+            }
+          }
           
           // Subir logo a ControlFile
-          const fileId = await uploadToControlFile(empresa.logo, folderIdEmpresas);
-          logoURL = await getDownloadUrl(fileId);
+          const result = await uploadEvidence({
+            file: empresa.logo,
+            auditId: 'empresas',
+            companyId: 'system',
+            parentId: folderIdEmpresas
+          });
+          // Obtener URL temporal para guardar (se regenerará cuando se necesite)
+          const { getDownloadUrl } = await import('../../../../services/controlFileB2Service');
+          logoURL = await getDownloadUrl(result.fileId);
           
           console.log('[useEmpresasHandlers] ✅ Logo subido a ControlFile');
         } catch (error) {
@@ -156,13 +176,33 @@ export const useEmpresasEditHandlers = (updateEmpresa) => {
       let logoURL = empresaEdit.logoURL || "";
       if (empresaEdit.logo && empresaEdit.logo instanceof File) {
         try {
-          // Obtener carpeta de empresas desde ControlFile
-          const folders = await getControlFileFolders();
-          const folderIdEmpresas = folders.subFolders?.empresas;
+          // Obtener o crear carpeta de empresas desde ControlFile
+          const mainFolderId = await ensureTaskbarFolder();
+          let folderIdEmpresas = null;
+          
+          if (mainFolderId) {
+            // Buscar carpeta de empresas existente o crearla
+            const { listFiles } = await import('../../../../services/controlFileFirestore');
+            const files = await listFiles(mainFolderId);
+            const empresasFolder = files.find(f => f.type === 'folder' && f.name === 'Empresas');
+            
+            if (empresasFolder) {
+              folderIdEmpresas = empresasFolder.id;
+            } else {
+              folderIdEmpresas = await createSubFolder('Empresas', mainFolderId);
+            }
+          }
           
           // Subir logo a ControlFile
-          const fileId = await uploadToControlFile(empresaEdit.logo, folderIdEmpresas);
-          logoURL = await getDownloadUrl(fileId);
+          const result = await uploadEvidence({
+            file: empresaEdit.logo,
+            auditId: 'empresas',
+            companyId: 'system',
+            parentId: folderIdEmpresas
+          });
+          // Obtener URL temporal para guardar (se regenerará cuando se necesite)
+          const { getDownloadUrl } = await import('../../../../services/controlFileB2Service');
+          logoURL = await getDownloadUrl(result.fileId);
           
           console.log('[useEmpresasHandlers] ✅ Logo actualizado en ControlFile');
         } catch (error) {

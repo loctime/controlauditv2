@@ -1,5 +1,5 @@
 // src/services/capacitacionImageService.js
-import { uploadToControlFile } from './controlFileUpload';
+import { uploadEvidence } from './controlFileFirestore';
 import { getOfflineDatabase, generateOfflineId } from './offlineDatabase';
 import syncQueueService from './syncQueue';
 import { doc, updateDoc, getDoc } from 'firebase/firestore';
@@ -20,9 +20,8 @@ class CapacitacionImageService {
    */
   async uploadImage(file, idToken, capacitacionId, companyId) {
     try {
-      const result = await uploadToControlFile({
+      const result = await uploadEvidence({
         file,
-        idToken,
         auditId: capacitacionId, // Reutilizar auditId para capacitaciones
         companyId,
         fecha: new Date()

@@ -29,7 +29,7 @@ import {
   obtenerIconoRespuesta, 
   preguntaContestada 
 } from '../utils/respuestaUtils.jsx';
-import { uploadToControlFile } from '../../../../../services/controlFileUpload';
+import { uploadEvidence } from '../../../../../services/controlFileFirestore';
 import { useAuth } from '../../../../../components/context/AuthContext';
 
 const PreguntaItem = ({
@@ -88,17 +88,9 @@ const PreguntaItem = ({
     setLocalProcesandoImagen(true);
 
     try {
-      // Obtener el token desde el usuario del contexto
-      const idToken = await user.getIdToken();
-      
-      if (!idToken) {
-        throw new Error('No se pudo obtener el token de autenticación');
-      }
-
-      // Subir archivo a ControlFile
-      const result = await uploadToControlFile({
+      // Subir archivo a ControlFile usando Firestore directo
+      const result = await uploadEvidence({
         file,
-        idToken,
         auditId,
         companyId,
         seccionId: seccionIndex.toString(),
@@ -106,11 +98,10 @@ const PreguntaItem = ({
         fecha: new Date()
       });
 
-      // Guardar solo { fileId, fileURL } en lugar del File object
+      // Guardar solo fileId (NO URL permanente - usar presign-get cuando se necesite)
       if (onImageUploaded) {
         onImageUploaded(seccionIndex, preguntaIndex, {
-          fileId: result.fileId,
-          fileURL: result.fileURL
+          fileId: result.fileId
         });
       }
     } catch (error) {

@@ -48,5 +48,5 @@ export const auth = getAuth(app);
 export const db = getFirestore(app);
 export const storage = getStorage(app);
 
-// Exportar configuración para uso en controlFileUpload.ts
+// Exportar configuración para uso en controlFileFirestore.ts
 export { firebaseConfig };

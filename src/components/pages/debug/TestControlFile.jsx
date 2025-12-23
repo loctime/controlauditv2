@@ -18,7 +18,7 @@ import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import ErrorIcon from '@mui/icons-material/Error';
 import InfoIcon from '@mui/icons-material/Info';
-import { uploadToControlFile } from '../../../services/controlFileUpload';
+import { uploadEvidence } from '../../../services/controlFileFirestore';
 import { useAuth } from '../../../components/context/AuthContext';
 
 const TestControlFile = () => {
@@ -114,29 +114,9 @@ const TestControlFile = () => {
     setResult(null);
 
     try {
-      // Obtener el token desde el usuario del contexto
-      let idToken;
-      try {
-        idToken = await user.getIdToken();
-      } catch (tokenErr) {
-        const tokenErrorMsg = `Error al obtener token: ${tokenErr.message || tokenErr}`;
-        setError(tokenErrorMsg);
-        setDebugInfo(prev => ({ ...prev, tokenError: tokenErrorMsg, lastError: tokenErrorMsg }));
-        setLoading(false);
-        return;
-      }
-      
-      if (!idToken) {
-        const noTokenMsg = 'No se pudo obtener el token de autenticación (token es null/undefined)';
-        setError(noTokenMsg);
-        setDebugInfo(prev => ({ ...prev, tokenError: noTokenMsg, lastError: noTokenMsg }));
-        setLoading(false);
-        return;
-      }
-
-      const uploadResult = await uploadToControlFile({
+      // Subir archivo usando Firestore directo (no requiere token explícito)
+      const uploadResult = await uploadEvidence({
         file,
-        idToken,
         auditId,
         companyId,
         seccionId: seccionId || undefined,
