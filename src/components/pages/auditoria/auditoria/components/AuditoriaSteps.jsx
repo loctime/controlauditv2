@@ -78,7 +78,11 @@ export const createAuditoriaSteps = ({
   
   // Tema
   theme,
-  isMobile
+  isMobile,
+  
+  // IDs para carga de imágenes
+  auditId,
+  companyId
 }) => {
   return [
     {
@@ -187,6 +191,8 @@ export const createAuditoriaSteps = ({
               imagenesExistentes={imagenes}
               clasificacionesExistentes={clasificaciones}
               accionesRequeridasExistentes={accionesRequeridas}
+              auditId={auditId}
+              companyId={companyId}
             />
             
             {validarTodasLasPreguntas() && (

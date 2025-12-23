@@ -25,7 +25,10 @@ const PreguntasYSeccion = ({
   comentariosExistentes = [],
   imagenesExistentes = [],
   clasificacionesExistentes = [],
-  accionesRequeridasExistentes = []
+  accionesRequeridasExistentes = [],
+  // Props para carga de imágenes
+  auditId,
+  companyId
 }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -483,6 +486,24 @@ const PreguntasYSeccion = ({
     console.log(`🗑️ Imagen eliminada de pregunta ${preguntaIndex} de sección ${seccionIndex}`);
   };
 
+  // Handler para cuando se sube una imagen usando ControlFile
+  const handleImageUploaded = (seccionIndex, preguntaIndex, imageData) => {
+    console.log('📸 [PreguntasYSeccion] Imagen subida:', { seccionIndex, preguntaIndex, imageData });
+    
+    // Actualizar el estado de imágenes con el fileId recibido
+    const nuevasImagenes = imagenes.map((img, index) => {
+      if (index === seccionIndex) {
+        // Reemplazar cualquier imagen existente con la nueva (que contiene fileId)
+        return [...img.slice(0, preguntaIndex), imageData, ...img.slice(preguntaIndex + 1)];
+      }
+      return img;
+    });
+    
+    setImagenes(nuevasImagenes);
+    guardarImagenes(nuevasImagenes);
+    console.log(`✅ Imagen guardada con fileId para pregunta ${preguntaIndex} de sección ${seccionIndex}`);
+  };
+
   // Función para navegar a una pregunta específica
   const navegarAPregunta = (seccionIndex, preguntaIndex) => {
     setTimeout(() => {
@@ -593,6 +614,9 @@ const PreguntasYSeccion = ({
                 onClasificacionChange={handleClasificacionChange}
                 onAccionRequeridaChange={handleAccionRequeridaChange}
                 procesandoImagen={procesandoImagen}
+                auditId={auditId}
+                companyId={companyId}
+                onImageUploaded={handleImageUploaded}
               />
             ))}
           </Stack>

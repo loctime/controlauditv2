@@ -792,6 +792,17 @@ const AuditoriaRefactorizada = () => {
     }
   }, [clasificaciones]);
 
+  // Generar auditId temporal para la sesión (se usará para subir imágenes)
+  const auditId = useMemo(() => {
+    // Generar ID único basado en timestamp y random
+    return `audit_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  }, []); // Solo se genera una vez al montar el componente
+
+  // Obtener companyId de la empresa seleccionada
+  const companyId = useMemo(() => {
+    return empresaSeleccionada?.id || null;
+  }, [empresaSeleccionada]);
+
   // Crear los pasos usando el componente
   const steps = useMemo(() => createAuditoriaSteps({
     // Estados
@@ -835,7 +846,11 @@ const AuditoriaRefactorizada = () => {
     
     // Tema
     theme,
-    isMobile
+    isMobile,
+    
+    // IDs para carga de imágenes
+    auditId,
+    companyId
   }), [
     empresas,
     empresaSeleccionada,
@@ -870,7 +885,9 @@ const AuditoriaRefactorizada = () => {
     validarTodasLasPreguntas,
     setOpenAlertaEdicion,
     theme,
-    isMobile
+    isMobile,
+    auditId,
+    companyId
   ]);
 
   // Scroll al top cuando se llega al paso de firmas (paso 3)
