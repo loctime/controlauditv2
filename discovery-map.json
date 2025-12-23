@@ -1,0 +1,444 @@
+{
+  "meta": {
+    "email": "ssanabria.sh@gmail.com",
+    "historicUIDs": [
+      "pbLX5nBx2WTZV1Z0sFMJkVtSmZy2",
+      "nRULnL7XWAex0U2RtsbWkJEPcYp1",
+      "hTD8FYeueHhuXxGCjxD0DcYmkRG2"
+    ],
+    "discoveredAt": "2025-12-23T15:31:14.930Z"
+  },
+  "empresas": {
+    "E65GgRA804BtOZuWTJ8o": {
+      "id": "E65GgRA804BtOZuWTJ8o",
+      "nombre": "CC&M Control",
+      "metadata": {
+        "uids": [
+          {
+            "field": "creadorId",
+            "value": "hTD8FYeueHhuXxGCjxD0DcYmkRG2"
+          },
+          {
+            "field": "propietarioId",
+            "value": "pbLX5nBx2WTZV1Z0sFMJkVtSmZy2"
+          }
+        ],
+        "emails": [
+          {
+            "field": "creadorEmail",
+            "value": "ssanabria.sh@gmail.com"
+          },
+          {
+            "field": "propietarioEmail",
+            "value": "ssanabria.sh@gmail.com"
+          }
+        ],
+        "migratedFromUid": "pbLX5nBx2WTZV1Z0sFMJkVtSmZy2",
+        "lastUidUpdate": {
+          "_seconds": 1762453751,
+          "_nanoseconds": 213000000
+        }
+      },
+      "sucursales": {
+        "1fMecAaZ2Mxh6mLpGf0m": {
+          "id": "1fMecAaZ2Mxh6mLpGf0m",
+          "nombre": "Casa Central",
+          "empresaId": "E65GgRA804BtOZuWTJ8o",
+          "metadata": {
+            "uids": [
+              {
+                "field": "creadorId",
+                "value": "nRULnL7XWAex0U2RtsbWkJEPcYp1"
+              },
+              {
+                "field": "propietarioId",
+                "value": "pbLX5nBx2WTZV1Z0sFMJkVtSmZy2"
+              }
+            ],
+            "emails": [],
+            "migratedFromUid": "pbLX5nBx2WTZV1Z0sFMJkVtSmZy2",
+            "lastUidUpdate": {
+              "_seconds": 1762453765,
+              "_nanoseconds": 801000000
+            }
+          },
+          "empleados": {
+            "4GkF7g9D1HmiQ12F9u9P": {
+              "id": "4GkF7g9D1HmiQ12F9u9P",
+              "nombre": "Nerea Luciana Ferreira",
+              "empresaId": "cDiMVec96xmk4WfRCH9T",
+              "sucursalId": "1fMecAaZ2Mxh6mLpGf0m",
+              "metadata": {
+                "uids": [
+                  {
+                    "field": "createdBy",
+                    "value": "nRULnL7XWAex0U2RtsbWkJEPcYp1"
+                  },
+                  {
+                    "field": "actualizadoPor",
+                    "value": "nRULnL7XWAex0U2RtsbWkJEPcYp1"
+                  }
+                ],
+                "migratedFromUid": "pbLX5nBx2WTZV1Z0sFMJkVtSmZy2",
+                "lastUidUpdate": {
+                  "_seconds": 1762453766,
+                  "_nanoseconds": 146000000
+                }
+              }
+            },
+            "9BCpO45pI4EkMmIhUApC": {
+              "id": "9BCpO45pI4EkMmIhUApC",
+              "nombre": "BAEZ  CARLOS MARCELO",
+              "empresaId": "cDiMVec96xmk4WfRCH9T",
+              "sucursalId": "1fMecAaZ2Mxh6mLpGf0m",
+              "metadata": {
+                "uids": [
+                  {
+                    "field": "createdBy",
+                    "value": "nRULnL7XWAex0U2RtsbWkJEPcYp1"
+                  }
+                ],
+                "migratedFromUid": "pbLX5nBx2WTZV1Z0sFMJkVtSmZy2",
+                "lastUidUpdate": {
+                  "_seconds": 1762453766,
+                  "_nanoseconds": 146000000
+                }
+              }
+            },
+            "T7jDYJzCnOfOk96DQj4j": {
+              "id": "T7jDYJzCnOfOk96DQj4j",
+              "nombre": "Florencia lujan Korbmacher",
+              "empresaId": "cDiMVec96xmk4WfRCH9T",
+              "sucursalId": "1fMecAaZ2Mxh6mLpGf0m",
+              "metadata": {
+                "uids": [
+                  {
+                    "field": "createdBy",
+                    "value": "nRULnL7XWAex0U2RtsbWkJEPcYp1"
+                  },
+                  {
+                    "field": "actualizadoPor",
+                    "value": "nRULnL7XWAex0U2RtsbWkJEPcYp1"
+                  }
+                ],
+                "migratedFromUid": "pbLX5nBx2WTZV1Z0sFMJkVtSmZy2",
+                "lastUidUpdate": {
+                  "_seconds": 1762453766,
+                  "_nanoseconds": 146000000
+                }
+              }
+            },
+            "WjRci32qH1FhzNNqn5ZV": {
+              "id": "WjRci32qH1FhzNNqn5ZV",
+              "nombre": "HERNAN LEONARDO   MOSCOSO",
+              "empresaId": "cDiMVec96xmk4WfRCH9T",
+              "sucursalId": "1fMecAaZ2Mxh6mLpGf0m",
+              "metadata": {
+                "uids": [
+                  {
+                    "field": "createdBy",
+                    "value": "nRULnL7XWAex0U2RtsbWkJEPcYp1"
+                  },
+                  {
+                    "field": "actualizadoPor",
+                    "value": "nRULnL7XWAex0U2RtsbWkJEPcYp1"
+                  }
+                ],
+                "migratedFromUid": "pbLX5nBx2WTZV1Z0sFMJkVtSmZy2",
+                "lastUidUpdate": {
+                  "_seconds": 1762453766,
+                  "_nanoseconds": 146000000
+                }
+              }
+            },
+            "WmqvuPppTJdhcty37OD2": {
+              "id": "WmqvuPppTJdhcty37OD2",
+              "nombre": "Aldana Mailen Cantero",
+              "empresaId": "cDiMVec96xmk4WfRCH9T",
+              "sucursalId": "1fMecAaZ2Mxh6mLpGf0m",
+              "metadata": {
+                "uids": [
+                  {
+                    "field": "createdBy",
+                    "value": "nRULnL7XWAex0U2RtsbWkJEPcYp1"
+                  },
+                  {
+                    "field": "actualizadoPor",
+                    "value": "nRULnL7XWAex0U2RtsbWkJEPcYp1"
+                  }
+                ],
+                "migratedFromUid": "pbLX5nBx2WTZV1Z0sFMJkVtSmZy2",
+                "lastUidUpdate": {
+                  "_seconds": 1762453766,
+                  "_nanoseconds": 146000000
+                }
+              }
+            },
+            "fnDXJNbHAI5S9FKoHxAZ": {
+              "id": "fnDXJNbHAI5S9FKoHxAZ",
+              "nombre": "RAUL ALBERTO RAMON  CLADERA",
+              "empresaId": "cDiMVec96xmk4WfRCH9T",
+              "sucursalId": "1fMecAaZ2Mxh6mLpGf0m",
+              "metadata": {
+                "uids": [
+                  {
+                    "field": "createdBy",
+                    "value": "nRULnL7XWAex0U2RtsbWkJEPcYp1"
+                  },
+                  {
+                    "field": "actualizadoPor",
+                    "value": "nRULnL7XWAex0U2RtsbWkJEPcYp1"
+                  }
+                ],
+                "migratedFromUid": "pbLX5nBx2WTZV1Z0sFMJkVtSmZy2",
+                "lastUidUpdate": {
+                  "_seconds": 1762453766,
+                  "_nanoseconds": 146000000
+                }
+              }
+            },
+            "jGeswGZPsKnGbffLo6sq": {
+              "id": "jGeswGZPsKnGbffLo6sq",
+              "nombre": "Milena Soledad Retamar",
+              "empresaId": "cDiMVec96xmk4WfRCH9T",
+              "sucursalId": "1fMecAaZ2Mxh6mLpGf0m",
+              "metadata": {
+                "uids": [
+                  {
+                    "field": "createdBy",
+                    "value": "nRULnL7XWAex0U2RtsbWkJEPcYp1"
+                  },
+                  {
+                    "field": "actualizadoPor",
+                    "value": "nRULnL7XWAex0U2RtsbWkJEPcYp1"
+                  }
+                ],
+                "migratedFromUid": "pbLX5nBx2WTZV1Z0sFMJkVtSmZy2",
+                "lastUidUpdate": {
+                  "_seconds": 1762453766,
+                  "_nanoseconds": 146000000
+                }
+              }
+            },
+            "moUtVwfMTV73OPlKBcLt": {
+              "id": "moUtVwfMTV73OPlKBcLt",
+              "nombre": "Carlos  Sobrero",
+              "empresaId": "cDiMVec96xmk4WfRCH9T",
+              "sucursalId": "1fMecAaZ2Mxh6mLpGf0m",
+              "metadata": {
+                "uids": [
+                  {
+                    "field": "createdBy",
+                    "value": "nRULnL7XWAex0U2RtsbWkJEPcYp1"
+                  },
+                  {
+                    "field": "actualizadoPor",
+                    "value": "nRULnL7XWAex0U2RtsbWkJEPcYp1"
+                  }
+                ],
+                "migratedFromUid": "pbLX5nBx2WTZV1Z0sFMJkVtSmZy2",
+                "lastUidUpdate": {
+                  "_seconds": 1762453766,
+                  "_nanoseconds": 146000000
+                }
+              }
+            },
+            "nQxL4rNjTUUInwA9nD12": {
+              "id": "nQxL4rNjTUUInwA9nD12",
+              "nombre": "CLADERA  ROMAN",
+              "empresaId": "cDiMVec96xmk4WfRCH9T",
+              "sucursalId": "1fMecAaZ2Mxh6mLpGf0m",
+              "metadata": {
+                "uids": [
+                  {
+                    "field": "createdBy",
+                    "value": "nRULnL7XWAex0U2RtsbWkJEPcYp1"
+                  },
+                  {
+                    "field": "actualizadoPor",
+                    "value": "nRULnL7XWAex0U2RtsbWkJEPcYp1"
+                  }
+                ],
+                "migratedFromUid": "pbLX5nBx2WTZV1Z0sFMJkVtSmZy2",
+                "lastUidUpdate": {
+                  "_seconds": 1762453766,
+                  "_nanoseconds": 146000000
+                }
+              }
+            },
+            "s997vOSKaUAQ3KgwvTti": {
+              "id": "s997vOSKaUAQ3KgwvTti",
+              "nombre": "Samuel  Sanabria",
+              "empresaId": "cDiMVec96xmk4WfRCH9T",
+              "sucursalId": "1fMecAaZ2Mxh6mLpGf0m",
+              "metadata": {
+                "uids": [
+                  {
+                    "field": "createdBy",
+                    "value": "nRULnL7XWAex0U2RtsbWkJEPcYp1"
+                  },
+                  {
+                    "field": "actualizadoPor",
+                    "value": "nRULnL7XWAex0U2RtsbWkJEPcYp1"
+                  }
+                ],
+                "migratedFromUid": "pbLX5nBx2WTZV1Z0sFMJkVtSmZy2",
+                "lastUidUpdate": {
+                  "_seconds": 1762453766,
+                  "_nanoseconds": 146000000
+                }
+              }
+            },
+            "s9St0c3jnBDf433DCVPa": {
+              "id": "s9St0c3jnBDf433DCVPa",
+              "nombre": "Garrido  Agustina Denise",
+              "empresaId": "cDiMVec96xmk4WfRCH9T",
+              "sucursalId": "1fMecAaZ2Mxh6mLpGf0m",
+              "metadata": {
+                "uids": [
+                  {
+                    "field": "createdBy",
+                    "value": "nRULnL7XWAex0U2RtsbWkJEPcYp1"
+                  },
+                  {
+                    "field": "actualizadoPor",
+                    "value": "nRULnL7XWAex0U2RtsbWkJEPcYp1"
+                  }
+                ],
+                "migratedFromUid": "pbLX5nBx2WTZV1Z0sFMJkVtSmZy2",
+                "lastUidUpdate": {
+                  "_seconds": 1762453766,
+                  "_nanoseconds": 146000000
+                }
+              }
+            },
+            "ubwlA7xzjkIVJJDPVnQb": {
+              "id": "ubwlA7xzjkIVJJDPVnQb",
+              "nombre": "Orieta  Giuliana Belén",
+              "empresaId": "cDiMVec96xmk4WfRCH9T",
+              "sucursalId": "1fMecAaZ2Mxh6mLpGf0m",
+              "metadata": {
+                "uids": [
+                  {
+                    "field": "createdBy",
+                    "value": "nRULnL7XWAex0U2RtsbWkJEPcYp1"
+                  }
+                ],
+                "migratedFromUid": "pbLX5nBx2WTZV1Z0sFMJkVtSmZy2",
+                "lastUidUpdate": {
+                  "_seconds": 1762453766,
+                  "_nanoseconds": 146000000
+                }
+              }
+            }
+          }
+        },
+        "msR4gsLAd1Bmb2xDjcmc": {
+          "id": "msR4gsLAd1Bmb2xDjcmc",
+          "nombre": "CC&M Control - Ternium ",
+          "empresaId": "E65GgRA804BtOZuWTJ8o",
+          "metadata": {
+            "uids": [
+              {
+                "field": "clienteAdminId",
+                "value": "pbLX5nBx2WTZV1Z0sFMJkVtSmZy2"
+              }
+            ],
+            "emails": []
+          },
+          "empleados": {
+            "A1AZXbf817Vgq0iAxD2c": {
+              "id": "A1AZXbf817Vgq0iAxD2c",
+              "nombre": "ELISEO JOAQUIN COLACILLI",
+              "empresaId": "cDiMVec96xmk4WfRCH9T",
+              "sucursalId": "msR4gsLAd1Bmb2xDjcmc",
+              "metadata": {
+                "uids": [
+                  {
+                    "field": "createdBy",
+                    "value": "nRULnL7XWAex0U2RtsbWkJEPcYp1"
+                  },
+                  {
+                    "field": "actualizadoPor",
+                    "value": "nRULnL7XWAex0U2RtsbWkJEPcYp1"
+                  }
+                ],
+                "migratedFromUid": "pbLX5nBx2WTZV1Z0sFMJkVtSmZy2",
+                "lastUidUpdate": {
+                  "_seconds": 1762453766,
+                  "_nanoseconds": 146000000
+                }
+              }
+            },
+            "qSKSwUHT6TTybfaDYRiA": {
+              "id": "qSKSwUHT6TTybfaDYRiA",
+              "nombre": "Franco  Vera",
+              "empresaId": "cDiMVec96xmk4WfRCH9T",
+              "sucursalId": "msR4gsLAd1Bmb2xDjcmc",
+              "metadata": {
+                "uids": [
+                  {
+                    "field": "createdBy",
+                    "value": "nRULnL7XWAex0U2RtsbWkJEPcYp1"
+                  }
+                ],
+                "migratedFromUid": "pbLX5nBx2WTZV1Z0sFMJkVtSmZy2",
+                "lastUidUpdate": {
+                  "_seconds": 1762453766,
+                  "_nanoseconds": 146000000
+                }
+              }
+            },
+            "znRuwuE7tGi8cEQepeIv": {
+              "id": "znRuwuE7tGi8cEQepeIv",
+              "nombre": "Damian ARMOYA",
+              "empresaId": "cDiMVec96xmk4WfRCH9T",
+              "sucursalId": "msR4gsLAd1Bmb2xDjcmc",
+              "metadata": {
+                "uids": [
+                  {
+                    "field": "createdBy",
+                    "value": "nRULnL7XWAex0U2RtsbWkJEPcYp1"
+                  }
+                ],
+                "migratedFromUid": "pbLX5nBx2WTZV1Z0sFMJkVtSmZy2",
+                "lastUidUpdate": {
+                  "_seconds": 1762453766,
+                  "_nanoseconds": 146000000
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "cDiMVec96xmk4WfRCH9T": {
+      "id": "cDiMVec96xmk4WfRCH9T",
+      "nombre": "Samuel sanabria",
+      "metadata": {
+        "uids": [],
+        "emails": [
+          {
+            "field": "emailContacto",
+            "value": "ssanabria.sh@gmail.com"
+          }
+        ]
+      },
+      "sucursales": {}
+    },
+    "e5azglGux7umNB3stNIm": {
+      "id": "e5azglGux7umNB3stNIm",
+      "nombre": "Samuel Sanabria",
+      "metadata": {
+        "uids": [],
+        "emails": [
+          {
+            "field": "emailContacto",
+            "value": "ssanabria.sh@gmail.com"
+          }
+        ]
+      },
+      "sucursales": {}
+    }
+  }
+}
