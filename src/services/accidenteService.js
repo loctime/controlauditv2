@@ -95,6 +95,7 @@ export const crearAccidente = async (accidenteData, empleadosSeleccionados, imag
     }
 
     // Registrar log
+    const logsCollectionRef = auditUserCollection(userProfile.uid, 'logs');
     await registrarAccionSistema(
       accidenteData.reportadoPor,
       `Accidente reportado: ${empleadosInvolucrados.length} empleado(s) involucrado(s)`,
@@ -105,7 +106,8 @@ export const crearAccidente = async (accidenteData, empleadosSeleccionados, imag
       },
       'crear',
       'accidente',
-      docRef.id
+      docRef.id,
+      logsCollectionRef
     );
 
     const result = { id: docRef.id, ...accidenteDoc };
@@ -154,6 +156,7 @@ export const crearIncidente = async (incidenteData, testigos = [], imagenes = []
     }
 
     // Registrar log
+    const logsCollectionRef = auditUserCollection(userProfile.uid, 'logs');
     await registrarAccionSistema(
       incidenteData.reportadoPor,
       `Incidente reportado: ${testigosArray.length} testigo(s)`,
@@ -164,7 +167,8 @@ export const crearIncidente = async (incidenteData, testigos = [], imagenes = []
       },
       'crear',
       'incidente',
-      docRef.id
+      docRef.id,
+      logsCollectionRef
     );
 
     const result = { id: docRef.id, ...incidenteDoc };
@@ -347,6 +351,7 @@ export const actualizarEstadoAccidente = async (accidenteId, nuevoEstado, userId
 
     // Registrar log si hay userId
     if (userId) {
+      const logsCollectionRef = auditUserCollection(userProfile.uid, 'logs');
       await registrarAccionSistema(
         userId,
         `Estado de ${tipo} actualizado a: ${nuevoEstado}`,
@@ -357,7 +362,8 @@ export const actualizarEstadoAccidente = async (accidenteId, nuevoEstado, userId
         },
         'editar',
         tipo,
-        accidenteId
+        accidenteId,
+        logsCollectionRef
       );
     }
   } catch (error) {
@@ -436,13 +442,15 @@ export const eliminarAccidente = async (accidenteId, userId = null, userProfile)
 
     // Registrar log
     if (userId) {
+      const logsCollectionRef = auditUserCollection(userProfile.uid, 'logs');
       await registrarAccionSistema(
         userId,
         'Accidente/incidente eliminado',
         { accidenteId, tipo: accidenteData.tipo },
         'eliminar',
         'accidente',
-        accidenteId
+        accidenteId,
+        logsCollectionRef
       );
     }
   } catch (error) {
@@ -481,13 +489,15 @@ export const actualizarAccidente = async (accidenteId, datosActualizados, imagen
 
     // Registrar log
     if (userId) {
+      const logsCollectionRef = auditUserCollection(userProfile.uid, 'logs');
       await registrarAccionSistema(
         userId,
         'Accidente/incidente actualizado',
         { accidenteId, cambios: Object.keys(updateData) },
         'editar',
         accidenteDoc.data().tipo,
-        accidenteId
+        accidenteId,
+        logsCollectionRef
       );
     }
 

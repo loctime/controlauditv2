@@ -5,32 +5,20 @@ import {
   DialogContent,
   DialogActions,
   Button,
-  Stepper,
-  Step,
-  StepLabel,
-  StepContent,
+  Tabs,
+  Tab,
   Box,
   Typography,
   TextField,
-  Paper,
   CircularProgress,
   LinearProgress,
-  Alert,
-  Divider,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Chip
+  Alert
 } from '@mui/material';
 import {
   CloudUpload as CloudUploadIcon,
   ContentPaste as ContentPasteIcon,
   CheckCircle as CheckCircleIcon,
   Download as DownloadIcon,
-  Info as InfoIcon,
   Edit as EditIcon
 } from '@mui/icons-material';
 import * as XLSX from 'xlsx';
@@ -38,16 +26,9 @@ import { useAuth } from '../../../context/AuthContext';
 import { useEmpleadoImport } from './useEmpleadoImport';
 import ImportPreviewTable from './ImportPreviewTable';
 
-const steps = [
-  'Seleccionar método',
-  'Preview y validación',
-  'Confirmación'
-];
-
 export default function ImportEmpleadosDialog({ open, onClose, onSuccess, empresaId, sucursalId }) {
   const { userProfile } = useAuth();
-  const [activeStep, setActiveStep] = useState(0);
-  const [importMethod, setImportMethod] = useState(null); // 'file', 'text' o 'manual'
+  const [activeTab, setActiveTab] = useState(0); // 0: Excel, 1: Pegar, 2: Manual
   const [pastedText, setPastedText] = useState('');
   const [manualText, setManualText] = useState('');
   const fileInputRef = useRef(null);
@@ -70,16 +51,11 @@ export default function ImportEmpleadosDialog({ open, onClose, onSuccess, empres
   React.useEffect(() => {
     if (!open) {
       reset();
-      setActiveStep(0);
-      setImportMethod(null);
+      setActiveTab(0);
       setPastedText('');
       setManualText('');
     }
   }, [open, reset]);
-
-  const handleMethodSelect = (method) => {
-    setImportMethod(method);
-  };
 
   const handleFileSelect = async (event) => {
     const file = event.target.files?.[0];
@@ -96,7 +72,6 @@ export default function ImportEmpleadosDialog({ open, onClose, onSuccess, empres
     }
 
     await importFromFile(file, empresaId, sucursalId);
-    setActiveStep(1);
   };
 
   const handlePasteText = async () => {
@@ -111,7 +86,6 @@ export default function ImportEmpleadosDialog({ open, onClose, onSuccess, empres
     }
 
     importFromText(pastedText, empresaId, sucursalId);
-    setActiveStep(1);
   };
 
   const handleManualText = async () => {
@@ -126,25 +100,6 @@ export default function ImportEmpleadosDialog({ open, onClose, onSuccess, empres
     }
 
     importFromManualText(manualText, empresaId, sucursalId);
-    setActiveStep(1);
-  };
-
-  const handleNext = () => {
-    if (activeStep === 0) {
-      if (importMethod === 'text' && pastedText.trim()) {
-        handlePasteText();
-      } else if (importMethod === 'manual' && manualText.trim()) {
-        handleManualText();
-      } else if (importMethod === 'file' && empleadosParsed.length > 0) {
-        setActiveStep(1);
-      }
-    } else if (activeStep === 1) {
-      setActiveStep(2);
-    }
-  };
-
-  const handleBack = () => {
-    setActiveStep(activeStep - 1);
   };
 
   // Descargar plantilla Excel
@@ -210,13 +165,6 @@ export default function ImportEmpleadosDialog({ open, onClose, onSuccess, empres
   };
 
   const validEmpleados = getValidEmpleados();
-  const canProceed = activeStep === 0 
-    ? (importMethod === 'file' && empleadosParsed.length > 0) || 
-      (importMethod === 'text' && pastedText.trim().length > 0) ||
-      (importMethod === 'manual' && manualText.trim().length > 0)
-    : activeStep === 1
-    ? validEmpleados.length > 0
-    : true;
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="lg" fullWidth>
@@ -228,298 +176,156 @@ export default function ImportEmpleadosDialog({ open, onClose, onSuccess, empres
       </DialogTitle>
 
       <DialogContent>
-        <Stepper activeStep={activeStep} orientation="vertical">
-          {/* Paso 1: Selección de método */}
-          <Step>
-            <StepLabel>Seleccionar método de importación</StepLabel>
-            <StepContent>
-              {/* Formato esperado */}
-              <Alert 
-                icon={<InfoIcon />} 
-                severity="info" 
-                sx={{ mb: 3 }}
-                action={
-                  <Button
-                    color="inherit"
-                    size="small"
-                    startIcon={<DownloadIcon />}
-                    onClick={handleDownloadTemplate}
-                  >
-                    Descargar Plantilla
-                  </Button>
-                }
-              >
-                <Typography variant="subtitle2" gutterBottom>
-                  Formato esperado del archivo Excel
-                </Typography>
-                <Typography variant="body2" component="div">
-                  <Box component="ul" sx={{ m: 0, pl: 2 }}>
-                    <li>El archivo debe tener una hoja llamada <strong>"empleados"</strong></li>
-                    <li><strong>Fila 1:</strong> Encabezados (nombre, apellido, dni, etc.)</li>
-                    <li><strong>Filas siguientes:</strong> Datos de empleados (una fila = un empleado)</li>
-                  </Box>
-                </Typography>
-              </Alert>
+        {/* Tabs horizontales */}
+        <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
+          <Tabs value={activeTab} onChange={(e, newValue) => setActiveTab(newValue)}>
+            <Tab label="Excel" icon={<CloudUploadIcon />} iconPosition="start" />
+            <Tab label="Pegar desde Excel" icon={<ContentPasteIcon />} iconPosition="start" />
+            <Tab label="Texto manual" icon={<EditIcon />} iconPosition="start" />
+          </Tabs>
+        </Box>
 
-              {/* Tabla de formato - Fila 1: Encabezados */}
-              <Box sx={{ mb: 2 }}>
-                <Typography variant="body2" color="text.secondary" gutterBottom>
-                  <strong>Estructura del archivo:</strong> Fila 1 = Encabezados | Filas siguientes = Empleados (una fila = un empleado)
-                </Typography>
+        {/* Contenido de cada Tab */}
+        <Box sx={{ mb: 3 }}>
+          {/* Tab Excel */}
+          {activeTab === 0 && (
+            <Box>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                La fila 1 debe contener los encabezados (nombre, apellido, dni, etc.)
+              </Typography>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".xlsx,.xls"
+                onChange={handleFileSelect}
+                style={{ display: 'none' }}
+              />
+              <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', mb: 2 }}>
+                <Button
+                  variant="contained"
+                  startIcon={<CloudUploadIcon />}
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={loading}
+                >
+                  Seleccionar archivo
+                </Button>
+                <Button
+                  variant="outlined"
+                  startIcon={<DownloadIcon />}
+                  onClick={handleDownloadTemplate}
+                  size="small"
+                >
+                  Descargar plantilla
+                </Button>
               </Box>
-              
-              {/* Tabla que muestra la Fila 1 del Excel (encabezados como columnas) */}
-              <TableContainer component={Paper} variant="outlined" sx={{ mb: 2 }}>
-                <Table size="small">
-                  <TableHead>
-                    <TableRow>
-                      <TableCell align="center" sx={{ backgroundColor: 'primary.light', color: 'primary.contrastText', fontWeight: 'bold' }}>
-                        Fila 1: Encabezados (cada columna es un campo)
-                      </TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    <TableRow>
-                      <TableCell>
-                        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', justifyContent: 'center' }}>
-                          <Chip label="nombre *" color="error" size="small" />
-                          <Chip label="apellido *" color="error" size="small" />
-                          <Chip label="dni" color="default" size="small" />
-                          <Chip label="email" color="default" size="small" />
-                          <Chip label="telefono" color="default" size="small" />
-                          <Chip label="cargo" color="default" size="small" />
-                          <Chip label="area" color="default" size="small" />
-                          <Chip label="tipo" color="default" size="small" />
-                          <Chip label="estado" color="default" size="small" />
-                          <Chip label="fechaIngreso" color="default" size="small" />
-                        </Box>
-                      </TableCell>
-                    </TableRow>
-                  </TableBody>
-                </Table>
-              </TableContainer>
-
-              {/* Información detallada de campos */}
-               
-
-              <Box sx={{ display: 'flex', gap: 2, flexDirection: 'column', mt: 2 }}>
-                <Paper
-                  variant="outlined"
-                  sx={{
-                    p: 3,
-                    cursor: 'pointer',
-                    border: importMethod === 'file' ? 2 : 1,
-                    borderColor: importMethod === 'file' ? 'primary.main' : 'divider',
-                    '&:hover': { borderColor: 'primary.main' }
-                  }}
-                  onClick={() => handleMethodSelect('file')}
-                >
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                    <CloudUploadIcon color={importMethod === 'file' ? 'primary' : 'action'} />
-                    <Box>
-                      <Typography variant="h6">Subir archivo Excel</Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        Seleccione un archivo .xlsx con los datos de empleados
-                      </Typography>
-                    </Box>
-                  </Box>
-                </Paper>
-
-                {importMethod === 'file' && (
-                  <Box sx={{ mt: 2 }}>
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept=".xlsx,.xls"
-                      onChange={handleFileSelect}
-                      style={{ display: 'none' }}
-                    />
-                    <Button
-                      variant="contained"
-                      startIcon={<CloudUploadIcon />}
-                      onClick={() => fileInputRef.current?.click()}
-                      disabled={loading}
-                    >
-                      Seleccionar archivo
-                    </Button>
-                  </Box>
-                )}
-
-                <Divider sx={{ my: 2 }}>O</Divider>
-
-                <Paper
-                  variant="outlined"
-                  sx={{
-                    p: 3,
-                    cursor: 'pointer',
-                    border: importMethod === 'text' ? 2 : 1,
-                    borderColor: importMethod === 'text' ? 'primary.main' : 'divider',
-                    '&:hover': { borderColor: 'primary.main' }
-                  }}
-                  onClick={() => handleMethodSelect('text')}
-                >
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                    <ContentPasteIcon color={importMethod === 'text' ? 'primary' : 'action'} />
-                    <Box>
-                      <Typography variant="h6">Pegar desde Excel</Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        Copie y pegue las filas desde Excel (con tabulaciones)
-                      </Typography>
-                    </Box>
-                  </Box>
-                </Paper>
-
-                {importMethod === 'text' && (
-                  <Box sx={{ mt: 2 }}>
-                    <Alert severity="info" sx={{ mb: 2 }}>
-                      <Typography variant="body2">
-                        <strong>Formato:</strong> Pegue el contenido copiado desde Excel incluyendo la primera fila con los encabezados.
-                        Cada fila siguiente representa un empleado.
-                      </Typography>
-                    </Alert>
-                    <TextField
-                      fullWidth
-                      multiline
-                      rows={8}
-                      placeholder="nombre	apellido	dni	email	telefono	cargo	area	tipo	estado	fechaIngreso&#10;Juan	Pérez	12345678	juan@ejemplo.com	+54 11 1234-5678	Operario	Producción	operativo	activo	2024-01-15&#10;María	González	23456789	maria@ejemplo.com	+54 11 2345-6789	Supervisor	Producción	operativo	activo	2024-02-01"
-                      value={pastedText}
-                      onChange={(e) => setPastedText(e.target.value)}
-                      disabled={loading}
-                      helperText="Primera fila: encabezados | Filas siguientes: empleados (una fila = un empleado)"
-                    />
-                    <Button
-                      variant="contained"
-                      startIcon={<ContentPasteIcon />}
-                      onClick={handlePasteText}
-                      disabled={loading || !pastedText.trim()}
-                      sx={{ mt: 2 }}
-                    >
-                      Procesar texto
-                    </Button>
-                  </Box>
-                )}
-
-                <Divider sx={{ my: 2 }}>O</Divider>
-
-                <Paper
-                  variant="outlined"
-                  sx={{
-                    p: 3,
-                    cursor: 'pointer',
-                    border: importMethod === 'manual' ? 2 : 1,
-                    borderColor: importMethod === 'manual' ? 'primary.main' : 'divider',
-                    '&:hover': { borderColor: 'primary.main' }
-                  }}
-                  onClick={() => handleMethodSelect('manual')}
-                >
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                    <EditIcon color={importMethod === 'manual' ? 'primary' : 'action'} />
-                    <Box>
-                      <Typography variant="h6">Ingreso manual masivo</Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        Escriba los datos de empleados, una línea por empleado, separados por espacios
-                      </Typography>
-                    </Box>
-                  </Box>
-                </Paper>
-
-                {importMethod === 'manual' && (
-                  <Box sx={{ mt: 2 }}>
-                    <Alert severity="info" sx={{ mb: 2 }}>
-                      <Typography variant="body2" gutterBottom>
-                        <strong>Formato:</strong> Una línea = un empleado, separado por espacios.
-                      </Typography>
-                      <Typography variant="body2" component="div">
-                        <Box component="ul" sx={{ m: 0, pl: 2, mt: 1 }}>
-                          <li>Primera palabra: <strong>nombre</strong></li>
-                          <li>Segunda palabra: <strong>apellido</strong></li>
-                          <li>Número de 7-9 dígitos: <strong>DNI</strong></li>
-                          <li>Texto con "@": <strong>email</strong></li>
-                          <li>Número largo: <strong>teléfono</strong></li>
-                          <li>Resto: <strong>cargo</strong> y <strong>área</strong></li>
-                        </Box>
-                      </Typography>
-                      <Typography variant="body2" sx={{ mt: 1, fontStyle: 'italic' }}>
-                        Ejemplo: diego bertosi 37399444 diego@gmail.com 112233445 operario produccion
-                      </Typography>
-                    </Alert>
-                    <TextField
-                      fullWidth
-                      multiline
-                      rows={10}
-                      placeholder="diego bertosi 37399444 diego@gmail.com 112233445 operario produccion&#10;martin dipalma 38488222 martin@gmail.com 119988776 administrativo administracion"
-                      value={manualText}
-                      onChange={(e) => setManualText(e.target.value)}
-                      disabled={loading}
-                      helperText="Una línea por empleado. El sistema detectará automáticamente DNI, email y teléfono."
-                    />
-                    <Button
-                      variant="contained"
-                      startIcon={<EditIcon />}
-                      onClick={handleManualText}
-                      disabled={loading || !manualText.trim()}
-                      sx={{ mt: 2 }}
-                    >
-                      Procesar texto manual
-                    </Button>
-                  </Box>
-                )}
-
-                {loading && (
-                  <Box sx={{ mt: 2 }}>
-                    <CircularProgress size={24} />
-                    <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                      Procesando datos...
-                    </Typography>
-                  </Box>
-                )}
-              </Box>
-            </StepContent>
-          </Step>
-
-          {/* Paso 2: Preview y validación */}
-          <Step>
-            <StepLabel>Preview y validación</StepLabel>
-            <StepContent>
-              {empleadosParsed.length > 0 ? (
-                <Box sx={{ mt: 2 }}>
-                  <ImportPreviewTable
-                    empleados={empleadosParsed}
-                    errors={errors}
-                    warnings={warnings}
-                    maxRows={10}
-                  />
-                  
-                  <Box sx={{ mt: 3 }}>
-                    <Alert severity={validEmpleados.length > 0 ? 'success' : 'error'}>
-                      <Typography variant="body1">
-                        <strong>{validEmpleados.length}</strong> empleado(s) válido(s) de {empleadosParsed.length} total
-                      </Typography>
-                      {errors.length > 0 && (
-                        <Typography variant="body2" sx={{ mt: 1 }}>
-                          {errors.length} error(es) bloqueante(s) encontrado(s)
-                        </Typography>
-                      )}
-                    </Alert>
-                  </Box>
-                </Box>
-              ) : (
-                <Alert severity="info">
-                  No hay datos para mostrar. Por favor, seleccione un método de importación.
-                </Alert>
-              )}
-            </StepContent>
-          </Step>
-
-          {/* Paso 3: Confirmación */}
-          <Step>
-            <StepLabel>Confirmar importación</StepLabel>
-            <StepContent>
-              <Box sx={{ mt: 2 }}>
-                <Alert severity="info" sx={{ mb: 2 }}>
-                  <Typography variant="body1" gutterBottom>
-                    <strong>Resumen de importación:</strong>
+              {loading && (
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 2 }}>
+                  <CircularProgress size={20} />
+                  <Typography variant="body2" color="text.secondary">
+                    Procesando archivo...
                   </Typography>
+                </Box>
+              )}
+            </Box>
+          )}
+
+          {/* Tab Pegar desde Excel */}
+          {activeTab === 1 && (
+            <Box>
+              <TextField
+                fullWidth
+                multiline
+                rows={8}
+                placeholder="nombre	apellido	dni	email	telefono	cargo	area	tipo	estado	fechaIngreso&#10;Juan	Pérez	12345678	juan@ejemplo.com	+54 11 1234-5678	Operario	Producción	operativo	activo	2024-01-15"
+                value={pastedText}
+                onChange={(e) => setPastedText(e.target.value)}
+                disabled={loading}
+                helperText="Primera fila: encabezados | Filas siguientes: empleados (una fila = un empleado)"
+              />
+              <Button
+                variant="contained"
+                startIcon={<ContentPasteIcon />}
+                onClick={handlePasteText}
+                disabled={loading || !pastedText.trim()}
+                sx={{ mt: 2 }}
+              >
+                Procesar texto
+              </Button>
+              {loading && (
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 2 }}>
+                  <CircularProgress size={20} />
+                  <Typography variant="body2" color="text.secondary">
+                    Procesando texto...
+                  </Typography>
+                </Box>
+              )}
+            </Box>
+          )}
+
+          {/* Tab Texto manual */}
+          {activeTab === 2 && (
+            <Box>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                Ejemplo: diego bertosi 37399444 diego@gmail.com 112233445 operario produccion
+              </Typography>
+              <TextField
+                fullWidth
+                multiline
+                rows={10}
+                placeholder="diego bertosi 37399444 diego@gmail.com 112233445 operario produccion&#10;martin dipalma 38488222 martin@gmail.com 119988776 administrativo administracion"
+                value={manualText}
+                onChange={(e) => setManualText(e.target.value)}
+                disabled={loading}
+                helperText="Una línea por empleado. El sistema detectará automáticamente DNI, email y teléfono."
+              />
+              <Button
+                variant="contained"
+                startIcon={<EditIcon />}
+                onClick={handleManualText}
+                disabled={loading || !manualText.trim()}
+                sx={{ mt: 2 }}
+              >
+                Procesar texto manual
+              </Button>
+              {loading && (
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 2 }}>
+                  <CircularProgress size={20} />
+                  <Typography variant="body2" color="text.secondary">
+                    Procesando texto...
+                  </Typography>
+                </Box>
+              )}
+            </Box>
+          )}
+        </Box>
+
+        {/* Preview y validación - se muestra cuando hay datos */}
+        {empleadosParsed.length > 0 && (
+          <Box sx={{ mt: 3 }}>
+            <ImportPreviewTable
+              empleados={empleadosParsed}
+              errors={errors}
+              warnings={warnings}
+              maxRows={10}
+            />
+            
+            <Box sx={{ mt: 3 }}>
+              <Alert severity={validEmpleados.length > 0 ? 'success' : 'error'}>
+                <Typography variant="body1">
+                  <strong>{validEmpleados.length}</strong> empleado(s) válido(s) de {empleadosParsed.length} total
+                </Typography>
+                {errors.length > 0 && (
+                  <Typography variant="body2" sx={{ mt: 1 }}>
+                    {errors.length} error(es) bloqueante(s) encontrado(s)
+                  </Typography>
+                )}
+              </Alert>
+            </Box>
+
+            {/* Confirmación integrada */}
+            {validEmpleados.length > 0 && (
+              <Box sx={{ mt: 3 }}>
+                <Alert severity="info" sx={{ mb: 2 }}>
                   <Typography variant="body2">
                     • Empleados válidos: <strong>{validEmpleados.length}</strong>
                   </Typography>
@@ -528,13 +334,6 @@ export default function ImportEmpleadosDialog({ open, onClose, onSuccess, empres
                   </Typography>
                   <Typography variant="body2">
                     • Advertencias: <strong>{warnings.length}</strong>
-                  </Typography>
-                </Alert>
-
-                <Alert severity="warning" sx={{ mb: 2 }}>
-                  <Typography variant="body2">
-                    Se crearán {validEmpleados.length} empleado(s) en Firestore.
-                    Esta acción no se puede deshacer.
                   </Typography>
                 </Alert>
 
@@ -562,40 +361,20 @@ export default function ImportEmpleadosDialog({ open, onClose, onSuccess, empres
                   </Alert>
                 )}
               </Box>
-            </StepContent>
-          </Step>
-        </Stepper>
+            )}
+          </Box>
+        )}
       </DialogContent>
 
       <DialogActions>
         <Button onClick={onClose} disabled={loading}>
           Cancelar
         </Button>
-        {activeStep > 0 && (
-          <Button onClick={handleBack} disabled={loading}>
-            Atrás
-          </Button>
-        )}
-        {activeStep < 2 && (
-          <Button
-            onClick={handleNext}
-            variant="contained"
-            disabled={!canProceed || loading}
-            sx={{
-              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-              '&:hover': {
-                background: 'linear-gradient(135deg, #5568d3 0%, #65408b 100%)',
-              }
-            }}
-          >
-            {activeStep === 0 ? 'Continuar' : 'Siguiente'}
-          </Button>
-        )}
-        {activeStep === 2 && (
+        {validEmpleados.length > 0 && (
           <Button
             onClick={handleConfirmImport}
             variant="contained"
-            disabled={loading || validEmpleados.length === 0}
+            disabled={loading}
             startIcon={loading ? <CircularProgress size={20} /> : <CheckCircleIcon />}
             sx={{
               background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',

@@ -3,7 +3,7 @@ import { useAuth } from '../components/context/AuthContext';
 
 /**
  * Hook global para manejar la selección de empresa y sucursal
- * Reemplaza los estados locales individuales por un estado global compartido
+ * Solo maneja IDs reales o null, nunca valores virtuales como "todas"
  */
 export const useGlobalSelection = () => {
   const {
@@ -15,57 +15,52 @@ export const useGlobalSelection = () => {
     setSelectedSucursal: setGlobalSelectedSucursal
   } = useAuth();
 
-  // Inicializar con valores predeterminados si es necesario
+  // Normalizar valores: convertir "todas" a null
+  const selectedEmpresaNormalizada = globalSelectedEmpresa && globalSelectedEmpresa !== 'todas' ? globalSelectedEmpresa : null;
+  const selectedSucursalNormalizada = globalSelectedSucursal && globalSelectedSucursal !== 'todas' ? globalSelectedSucursal : null;
+
+  // Auto-seleccionar primera empresa si no hay ninguna seleccionada
   useEffect(() => {
-    // Solo inicializar si no hay nada seleccionado
-    if (userEmpresas && userEmpresas.length > 0 && !globalSelectedEmpresa) {
-      // Intentar empresa con sucursales
-      const empresaConSucursales = userEmpresas.find(empresa => {
-        const sucursalesDeEmpresa = userSucursales?.filter(s => s.empresaId === empresa.id) || [];
-        return sucursalesDeEmpresa.length > 0;
-      });
-      
-      if (empresaConSucursales) {
-        setGlobalSelectedEmpresa(empresaConSucursales.id);
-      } else {
-        setGlobalSelectedEmpresa(userEmpresas[0].id);
-      }
+    if (userEmpresas && userEmpresas.length > 0 && !selectedEmpresaNormalizada) {
+      setGlobalSelectedEmpresa(userEmpresas[0].id);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userEmpresas, userSucursales]);
+  }, [userEmpresas]);
 
-  // Filtrar sucursales por empresa seleccionada
-  const sucursalesFiltradas = useMemo(() => 
-    globalSelectedEmpresa && globalSelectedEmpresa !== 'todas'
-      ? (userSucursales?.filter(s => s.empresaId === globalSelectedEmpresa) || [])
-      : (userSucursales || []),
-    [globalSelectedEmpresa, userSucursales]
-  );
-
-  // Auto-seleccionar sucursal si cambia la empresa
-  useEffect(() => {
-    if (globalSelectedEmpresa && globalSelectedEmpresa !== 'todas' && sucursalesFiltradas.length > 0) {
-      // Si hay una sola sucursal, seleccionarla automáticamente
-      if (sucursalesFiltradas.length === 1) {
-        setGlobalSelectedSucursal(sucursalesFiltradas[0].id);
-      } else {
-        // Verificar si la sucursal actual pertenece a la empresa
-        const sucursalValida = globalSelectedSucursal && globalSelectedSucursal !== 'todas' && sucursalesFiltradas.find(s => s.id === globalSelectedSucursal);
-        if (!sucursalValida) {
-          // No auto-seleccionar si hay múltiples, dejar que el usuario elija
-          setGlobalSelectedSucursal('todas');
-        }
-      }
-    } else if (globalSelectedEmpresa === 'todas' || !globalSelectedEmpresa) {
-      setGlobalSelectedSucursal('todas');
+  // Filtrar sucursales SOLO por empresa seleccionada
+  const sucursalesFiltradas = useMemo(() => {
+    if (!selectedEmpresaNormalizada) {
+      return [];
     }
-  }, [globalSelectedEmpresa, sucursalesFiltradas, globalSelectedSucursal, setGlobalSelectedSucursal]);
+    return userSucursales?.filter(s => s.empresaId === selectedEmpresaNormalizada) || [];
+  }, [selectedEmpresaNormalizada, userSucursales]);
+
+  // Si cambia la empresa y la sucursal seleccionada no pertenece a ella, setear null
+  useEffect(() => {
+    if (selectedEmpresaNormalizada && selectedSucursalNormalizada) {
+      const sucursalValida = sucursalesFiltradas.find(s => s.id === selectedSucursalNormalizada);
+      if (!sucursalValida) {
+        setGlobalSelectedSucursal(null);
+      }
+    }
+  }, [selectedEmpresaNormalizada, selectedSucursalNormalizada, sucursalesFiltradas, setGlobalSelectedSucursal]);
+
+  // Wrappers para setters: convertir '' a null (Material-UI puede enviar '' cuando se limpia)
+  const setSelectedEmpresaWrapper = (value) => {
+    const normalizedValue = value === '' || value === 'todas' ? null : value;
+    setGlobalSelectedEmpresa(normalizedValue);
+  };
+
+  const setSelectedSucursalWrapper = (value) => {
+    const normalizedValue = value === '' || value === 'todas' ? null : value;
+    setGlobalSelectedSucursal(normalizedValue);
+  };
 
   return {
-    selectedEmpresa: globalSelectedEmpresa || 'todas',
-    selectedSucursal: globalSelectedSucursal || 'todas',
-    setSelectedEmpresa: setGlobalSelectedEmpresa,
-    setSelectedSucursal: setGlobalSelectedSucursal,
+    selectedEmpresa: selectedEmpresaNormalizada || '',
+    selectedSucursal: selectedSucursalNormalizada || '',
+    setSelectedEmpresa: setSelectedEmpresaWrapper,
+    setSelectedSucursal: setSelectedSucursalWrapper,
     sucursalesFiltradas,
     userEmpresas,
     userSucursales
