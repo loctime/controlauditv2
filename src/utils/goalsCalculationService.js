@@ -1,5 +1,5 @@
 // src/utils/goalsCalculationService.js
-import { query, where, getDocs } from 'firebase/firestore';
+import { getDocs } from 'firebase/firestore';
 
 /**
  * Servicio para calcular cumplimiento de metas y objetivos
@@ -23,12 +23,12 @@ export function obtenerEstadoCumplimiento(porcentaje) {
 /**
  * Calcula el cumplimiento de capacitaciones para una sucursal
  * @param {Object} sucursal - Objeto sucursal con metas configuradas
- * @param {Array} capacitaciones - Array de capacitaciones (opcional, si no se pasa se consulta)
+ * @param {Array} capacitaciones - Array de capacitaciones (opcional, si no se pasa se consulta desde queries)
  * @param {Object} periodo - { mes: number, año: number } (opcional, por defecto mes/año actual)
- * @param {Firestore} db - Instancia de Firestore (requerido si no se pasan capacitaciones)
+ * @param {Array<Query>} capacitacionesQueries - Array de queries de Firestore (opcional, requerido si no se pasan capacitaciones)
  * @returns {Promise<Object>} { mensual: {...}, anual: {...} }
  */
-export async function calcularCumplimientoCapacitaciones(sucursal, capacitaciones = null, periodo = null, db = null) {
+export async function calcularCumplimientoCapacitaciones(sucursal, capacitaciones = null, periodo = null, capacitacionesQueries = null) {
   try {
     if (!sucursal || !sucursal.id) {
       return {
@@ -45,44 +45,19 @@ export async function calcularCumplimientoCapacitaciones(sucursal, capacitacione
     const targetMensual = sucursal.targetMensualCapacitaciones || 0;
     const targetAnual = sucursal.targetAnualCapacitaciones || 0;
 
-    // Si no hay capacitaciones pasadas, consultarlas
+    // Si no hay capacitaciones pasadas, consultarlas desde queries
     let capacitacionesData = capacitaciones;
     if (!capacitacionesData || capacitacionesData.length === 0) {
-      if (!db) {
-        console.error('calcularCumplimientoCapacitaciones: db es requerido cuando no se pasan capacitaciones');
+      if (!capacitacionesQueries || capacitacionesQueries.length === 0) {
+        console.warn('calcularCumplimientoCapacitaciones: capacitaciones o capacitacionesQueries son requeridos');
         return {
           mensual: { completadas: 0, target: 0, porcentaje: 0, estado: 'sin_target' },
           anual: { completadas: 0, target: 0, porcentaje: 0, estado: 'sin_target' }
         };
       }
-      // NOTA: Requiere recibir referencia de colección o db por parámetro
-      // Esta función necesita migración para usar helpers centralizados
-      const { collection } = await import('firebase/firestore');
-      const capacitacionesRef = collection(db, 'capacitaciones');
+
       const empresaId = sucursal.empresaId;
-      const queries = [];
-
-      // Intentar query combinada si tenemos empresaId
-      if (empresaId) {
-        try {
-          queries.push(
-            query(
-              capacitacionesRef,
-              where('empresaId', '==', empresaId),
-              where('sucursalId', '==', sucursal.id)
-            )
-          );
-        } catch (e) {
-          console.warn('Query combinada no disponible, usando queries simples:', e);
-        }
-      }
-
-      // Siempre agregar query simple como fallback
-      queries.push(
-        query(capacitacionesRef, where('sucursalId', '==', sucursal.id))
-      );
-
-      const snapshots = await Promise.allSettled(queries.map(q => getDocs(q)));
+      const snapshots = await Promise.allSettled(capacitacionesQueries.map(q => getDocs(q)));
       capacitacionesData = [];
       const processedIds = new Set();
 
@@ -192,12 +167,12 @@ export async function calcularCumplimientoCapacitaciones(sucursal, capacitacione
 /**
  * Calcula el cumplimiento anual de auditorías para una sucursal
  * @param {Object} sucursal - Objeto sucursal con metas configuradas
- * @param {Array} auditorias - Array de auditorías (opcional, si no se pasa se consulta)
+ * @param {Array} auditorias - Array de auditorías (opcional, si no se pasa se consulta desde queries)
  * @param {number} año - Año a calcular (opcional, por defecto año actual)
- * @param {Firestore} db - Instancia de Firestore (requerido si no se pasan auditorías)
+ * @param {Array<Query>} auditoriasQueries - Array de queries de Firestore (opcional, requerido si no se pasan auditorías)
  * @returns {Promise<Object>} { completadas, target, porcentaje, estado }
  */
-export async function calcularCumplimientoAuditoriasAnual(sucursal, auditorias = null, año = null, db = null) {
+export async function calcularCumplimientoAuditoriasAnual(sucursal, auditorias = null, año = null, auditoriasQueries = null) {
   try {
     if (!sucursal || !sucursal.id) {
       return { completadas: 0, target: 0, porcentaje: 0, estado: 'sin_target' };
@@ -210,51 +185,16 @@ export async function calcularCumplimientoAuditoriasAnual(sucursal, auditorias =
       return { completadas: 0, target: 0, porcentaje: 0, estado: 'sin_target' };
     }
 
-    // Si no hay auditorías pasadas, consultarlas
+    // Si no hay auditorías pasadas, consultarlas desde queries
     let auditoriasData = auditorias;
     if (!auditoriasData) {
-      if (!db) {
-        console.error('calcularCumplimientoAuditoriasAnual: db es requerido cuando no se pasan auditorías');
+      if (!auditoriasQueries || auditoriasQueries.length === 0) {
+        console.warn('calcularCumplimientoAuditoriasAnual: auditorias o auditoriasQueries son requeridos');
         return { completadas: 0, target: 0, porcentaje: 0, estado: 'sin_target' };
       }
-      // NOTA: Requiere recibir referencia de colección o db por parámetro
-      // Esta función necesita migración para usar helpers centralizados
-      const { collection } = await import('firebase/firestore');
-      const reportesRef = collection(db, 'reportes');
+
       const empresaId = sucursal.empresaId;
-      const queries = [];
-
-      // Intentar query combinada si tenemos empresaId
-      if (empresaId) {
-        try {
-          queries.push(
-            query(reportesRef, where('empresaId', '==', empresaId), where('sucursalId', '==', sucursal.id))
-          );
-        } catch (e) {
-          console.warn('Query combinada no disponible, usando queries simples:', e);
-        }
-      }
-
-      // Siempre agregar queries simples como fallback
-      queries.push(query(reportesRef, where('sucursalId', '==', sucursal.id)));
-
-      // También buscar por nombre de sucursal (compatibilidad)
-      if (sucursal.nombre) {
-        queries.push(query(reportesRef, where('sucursal', '==', sucursal.nombre)));
-        
-        // Si tenemos empresaId, también buscar por empresaId + nombre
-        if (empresaId) {
-          try {
-            queries.push(
-              query(reportesRef, where('empresaId', '==', empresaId), where('sucursal', '==', sucursal.nombre))
-            );
-          } catch (e) {
-            // Si falla, no es crítico
-          }
-        }
-      }
-
-      const snapshots = await Promise.allSettled(queries.map(q => getDocs(q)));
+      const snapshots = await Promise.allSettled(auditoriasQueries.map(q => getDocs(q)));
       auditoriasData = [];
       const processedIds = new Set();
 
@@ -337,11 +277,11 @@ export async function calcularCumplimientoAuditoriasAnual(sucursal, auditorias =
 /**
  * Calcula los días sin accidentes para una sucursal
  * @param {Object} sucursal - Objeto sucursal con fechaUltimoAccidente
- * @param {Array} accidentes - Array de accidentes (opcional, si no se pasa se consulta)
- * @param {Firestore} db - Instancia de Firestore (requerido si no se pasan accidentes)
+ * @param {Array} accidentes - Array de accidentes (opcional, si no se pasa se consulta desde queries)
+ * @param {Array<Query>} accidentesQueries - Array de queries de Firestore (opcional, requerido si no se pasan accidentes)
  * @returns {Promise<Object>} { dias, estado, fechaUltimoAccidente, semaforo }
  */
-export async function calcularDiasSinAccidentes(sucursal, accidentes = null, db = null) {
+export async function calcularDiasSinAccidentes(sucursal, accidentes = null, accidentesQueries = null) {
   try {
     if (!sucursal || !sucursal.id) {
       return { 
@@ -363,8 +303,8 @@ export async function calcularDiasSinAccidentes(sucursal, accidentes = null, db 
       // Si no, buscar en accidentes
       let accidentesData = accidentes;
       if (!accidentesData || accidentesData.length === 0) {
-        if (!db) {
-          console.error('calcularDiasSinAccidentes: db es requerido cuando no se pasan accidentes');
+        if (!accidentesQueries || accidentesQueries.length === 0) {
+          console.warn('calcularDiasSinAccidentes: accidentes o accidentesQueries son requeridos');
           return { 
             dias: 0, 
             estado: 'sin_datos', 
@@ -372,39 +312,9 @@ export async function calcularDiasSinAccidentes(sucursal, accidentes = null, db 
             semaforo: 'gray' 
           };
         }
-        // NOTA: Requiere recibir referencia de colección o db por parámetro
-        // Esta función necesita migración para usar helpers centralizados
-        const { collection } = await import('firebase/firestore');
-        const accidentesRef = collection(db, 'accidentes');
+
         const empresaId = sucursal.empresaId;
-        const queries = [];
-
-        // Intentar query combinada si tenemos empresaId
-        if (empresaId) {
-          try {
-            queries.push(
-              query(
-                accidentesRef,
-                where('empresaId', '==', empresaId),
-                where('sucursalId', '==', sucursal.id),
-                where('tipo', '==', 'accidente')
-              )
-            );
-          } catch (e) {
-            console.warn('Query combinada no disponible, usando queries simples:', e);
-          }
-        }
-
-        // Siempre agregar query simple como fallback
-        queries.push(
-          query(
-            accidentesRef, 
-            where('sucursalId', '==', sucursal.id),
-            where('tipo', '==', 'accidente')
-          )
-        );
-
-        const snapshots = await Promise.allSettled(queries.map(q => getDocs(q)));
+        const snapshots = await Promise.allSettled(accidentesQueries.map(q => getDocs(q)));
         accidentesData = [];
         const processedIds = new Set();
 

@@ -1,19 +1,19 @@
 // src/utils/sucursalTargetUtils.js
-import { query, where, getDocs, doc, getDoc } from 'firebase/firestore';
+import { getDocs } from 'firebase/firestore';
 
 /**
  * Calcula el número de auditorías completadas en el mes actual para una sucursal
  * @param {string} sucursalId - ID de la sucursal
  * @param {string} sucursalNombre - Nombre de la sucursal (opcional, para búsqueda más precisa)
  * @param {string} empresaId - ID de la empresa (opcional, pero recomendado para filtrar correctamente)
- * @param {Firestore} db - Instancia de Firestore (requerido)
+ * @param {Array<Query>} reportesQueries - Array de queries de Firestore (requerido)
  * @returns {Promise<number>} Número de auditorías del mes actual
  */
-export async function getAuditoriasMesActual(sucursalId, sucursalNombre = null, empresaId = null, db = null) {
+export async function getAuditoriasMesActual(sucursalId, sucursalNombre = null, empresaId = null, reportesQueries = null) {
   try {
     if (!sucursalId) return 0;
-    if (!db) {
-      console.error('getAuditoriasMesActual: db es requerido');
+    if (!reportesQueries || reportesQueries.length === 0) {
+      console.warn('getAuditoriasMesActual: reportesQueries es requerido');
       return 0;
     }
 
@@ -22,66 +22,8 @@ export async function getAuditoriasMesActual(sucursalId, sucursalNombre = null, 
     const inicioMes = new Date(ahora.getFullYear(), ahora.getMonth(), 1);
     const finMes = new Date(ahora.getFullYear(), ahora.getMonth() + 1, 0, 23, 59, 59, 999);
 
-    // Buscar en la colección 'reportes' (donde se guardan las auditorías)
-    // NOTA: Requiere recibir referencia de colección o db por parámetro
-    // Esta función necesita migración para usar helpers centralizados
-    const { collection } = await import('firebase/firestore');
-    const reportesRef = collection(db, 'reportes');
-    
-    // Obtener el nombre de la sucursal y empresaId si no se proporciona
-    if (sucursalId) {
-      try {
-        const sucursalDoc = await getDoc(doc(db, 'sucursales', sucursalId));
-        if (sucursalDoc.exists()) {
-          const sucursalData = sucursalDoc.data();
-          if (!sucursalNombre) {
-            sucursalNombre = sucursalData.nombre;
-          }
-          if (!empresaId && sucursalData.empresaId) {
-            empresaId = sucursalData.empresaId;
-          }
-        }
-      } catch (e) {
-        console.warn('No se pudo obtener datos de sucursal:', e);
-      }
-    }
-
-    // Construir queries - siempre incluir todas las opciones para mayor compatibilidad
-    const queries = [];
-
-    // Intentar query combinada si tenemos empresaId (más eficiente si existe índice)
-    if (empresaId) {
-      try {
-        queries.push(
-          query(reportesRef, where('empresaId', '==', empresaId), where('sucursalId', '==', sucursalId))
-        );
-      } catch (e) {
-        // Si falla por falta de índice compuesto, continuamos con queries simples
-        console.warn('Query combinada no disponible (índice faltante), usando queries simples:', e);
-      }
-    }
-
-    // Siempre agregar queries simples como fallback (necesarias porque algunos reportes pueden usar 'sucursal' string)
-    queries.push(query(reportesRef, where('sucursalId', '==', sucursalId)));
-    
-    // Buscar por nombre de sucursal (puede estar guardado como string)
-    if (sucursalNombre) {
-      queries.push(query(reportesRef, where('sucursal', '==', sucursalNombre)));
-    }
-    
-    // Si tenemos empresaId, también buscar por empresaId + nombre de sucursal
-    if (empresaId && sucursalNombre) {
-      try {
-        queries.push(
-          query(reportesRef, where('empresaId', '==', empresaId), where('sucursal', '==', sucursalNombre))
-        );
-      } catch (e) {
-        // Si falla, no es crítico, ya tenemos otras queries
-      }
-    }
-
     const snapshots = await Promise.allSettled(
-      queries.map(q => getDocs(q))
+      reportesQueries.map(q => getDocs(q))
     );
 
     const auditorias = [];
@@ -157,10 +99,10 @@ export async function getAuditoriasMesActual(sucursalId, sucursalNombre = null, 
 /**
  * Calcula el progreso del target mensual para una sucursal
  * @param {Object} sucursal - Objeto sucursal con targetMensual
- * @param {Firestore} db - Instancia de Firestore (requerido)
+ * @param {Array<Query>} reportesQueries - Array de queries de Firestore (requerido)
  * @returns {Promise<Object>} { completadas, target, porcentaje, estado }
  */
-export async function calcularProgresoTarget(sucursal, db = null) {
+export async function calcularProgresoTarget(sucursal, reportesQueries = null) {
   if (!sucursal || !sucursal.id) {
     return { completadas: 0, target: 0, porcentaje: 0, estado: 'sin_target' };
   }
@@ -171,12 +113,12 @@ export async function calcularProgresoTarget(sucursal, db = null) {
     return { completadas: 0, target: 0, porcentaje: 0, estado: 'sin_target' };
   }
 
-  if (!db) {
-    console.error('calcularProgresoTarget: db es requerido');
+  if (!reportesQueries || reportesQueries.length === 0) {
+    console.warn('calcularProgresoTarget: reportesQueries es requerido');
     return { completadas: 0, target: 0, porcentaje: 0, estado: 'sin_target' };
   }
 
-  const completadas = await getAuditoriasMesActual(sucursal.id, sucursal.nombre, sucursal.empresaId, db);
+  const completadas = await getAuditoriasMesActual(sucursal.id, sucursal.nombre, sucursal.empresaId, reportesQueries);
   const porcentaje = Math.round((completadas / target) * 100);
 
   let estado = 'sin_target';
@@ -201,14 +143,14 @@ export async function calcularProgresoTarget(sucursal, db = null) {
  * @param {string} sucursalNombre - Nombre de la sucursal (opcional, para búsqueda más precisa)
  * @param {number} año - Año a calcular (opcional, por defecto año actual)
  * @param {string} empresaId - ID de la empresa (opcional, pero recomendado para filtrar correctamente)
- * @param {Firestore} db - Instancia de Firestore (requerido)
+ * @param {Array<Query>} reportesQueries - Array de queries de Firestore (requerido)
  * @returns {Promise<number>} Número de auditorías del año
  */
-export async function getAuditoriasAñoActual(sucursalId, sucursalNombre = null, año = null, empresaId = null, db = null) {
+export async function getAuditoriasAñoActual(sucursalId, sucursalNombre = null, año = null, empresaId = null, reportesQueries = null) {
   try {
     if (!sucursalId) return 0;
-    if (!db) {
-      console.error('getAuditoriasAñoActual: db es requerido');
+    if (!reportesQueries || reportesQueries.length === 0) {
+      console.warn('getAuditoriasAñoActual: reportesQueries es requerido');
       return 0;
     }
 
@@ -216,66 +158,8 @@ export async function getAuditoriasAñoActual(sucursalId, sucursalNombre = null,
     const inicioAño = new Date(añoActual, 0, 1);
     const finAño = new Date(añoActual, 11, 31, 23, 59, 59, 999);
 
-    // Buscar en la colección 'reportes' (donde se guardan las auditorías)
-    // NOTA: Requiere recibir referencia de colección o db por parámetro
-    // Esta función necesita migración para usar helpers centralizados
-    const { collection } = await import('firebase/firestore');
-    const reportesRef = collection(db, 'reportes');
-    
-    // Obtener el nombre de la sucursal y empresaId si no se proporciona
-    if (sucursalId) {
-      try {
-        const sucursalDoc = await getDoc(doc(db, 'sucursales', sucursalId));
-        if (sucursalDoc.exists()) {
-          const sucursalData = sucursalDoc.data();
-          if (!sucursalNombre) {
-            sucursalNombre = sucursalData.nombre;
-          }
-          if (!empresaId && sucursalData.empresaId) {
-            empresaId = sucursalData.empresaId;
-          }
-        }
-      } catch (e) {
-        console.warn('No se pudo obtener datos de sucursal:', e);
-      }
-    }
-
-    // Construir queries - siempre incluir todas las opciones para mayor compatibilidad
-    const queries = [];
-
-    // Intentar query combinada si tenemos empresaId (más eficiente si existe índice)
-    if (empresaId) {
-      try {
-        queries.push(
-          query(reportesRef, where('empresaId', '==', empresaId), where('sucursalId', '==', sucursalId))
-        );
-      } catch (e) {
-        // Si falla por falta de índice compuesto, continuamos con queries simples
-        console.warn('Query combinada no disponible (índice faltante), usando queries simples:', e);
-      }
-    }
-
-    // Siempre agregar queries simples como fallback (necesarias porque algunos reportes pueden usar 'sucursal' string)
-    queries.push(query(reportesRef, where('sucursalId', '==', sucursalId)));
-    
-    // Buscar por nombre de sucursal (puede estar guardado como string)
-    if (sucursalNombre) {
-      queries.push(query(reportesRef, where('sucursal', '==', sucursalNombre)));
-    }
-    
-    // Si tenemos empresaId, también buscar por empresaId + nombre de sucursal
-    if (empresaId && sucursalNombre) {
-      try {
-        queries.push(
-          query(reportesRef, where('empresaId', '==', empresaId), where('sucursal', '==', sucursalNombre))
-        );
-      } catch (e) {
-        // Si falla, no es crítico, ya tenemos otras queries
-      }
-    }
-
     const snapshots = await Promise.allSettled(
-      queries.map(q => getDocs(q))
+      reportesQueries.map(q => getDocs(q))
     );
 
     const auditorias = [];
@@ -352,10 +236,10 @@ export async function getAuditoriasAñoActual(sucursalId, sucursalNombre = null,
  * Calcula el progreso del target anual para auditorías de una sucursal
  * @param {Object} sucursal - Objeto sucursal con targetAnualAuditorias
  * @param {number} año - Año a calcular (opcional, por defecto año actual)
- * @param {Firestore} db - Instancia de Firestore (requerido)
+ * @param {Array<Query>} reportesQueries - Array de queries de Firestore (requerido)
  * @returns {Promise<Object>} { completadas, target, porcentaje, estado }
  */
-export async function calcularProgresoTargetAnualAuditorias(sucursal, año = null, db = null) {
+export async function calcularProgresoTargetAnualAuditorias(sucursal, año = null, reportesQueries = null) {
   if (!sucursal || !sucursal.id) {
     return { completadas: 0, target: 0, porcentaje: 0, estado: 'sin_target' };
   }
@@ -366,12 +250,12 @@ export async function calcularProgresoTargetAnualAuditorias(sucursal, año = nul
     return { completadas: 0, target: 0, porcentaje: 0, estado: 'sin_target' };
   }
 
-  if (!db) {
-    console.error('calcularProgresoTargetAnualAuditorias: db es requerido');
+  if (!reportesQueries || reportesQueries.length === 0) {
+    console.warn('calcularProgresoTargetAnualAuditorias: reportesQueries es requerido');
     return { completadas: 0, target: 0, porcentaje: 0, estado: 'sin_target' };
   }
 
-  const completadas = await getAuditoriasAñoActual(sucursal.id, sucursal.nombre, año, sucursal.empresaId, db);
+  const completadas = await getAuditoriasAñoActual(sucursal.id, sucursal.nombre, año, sucursal.empresaId, reportesQueries);
   const porcentaje = Math.round((completadas / target) * 100);
 
   let estado = 'sin_target';
@@ -393,12 +277,12 @@ export async function calcularProgresoTargetAnualAuditorias(sucursal, año = nul
 /**
  * Calcula el progreso de targets para múltiples sucursales
  * @param {Array} sucursales - Array de objetos sucursal
- * @param {Firestore} db - Instancia de Firestore (requerido)
+ * @param {Function} getReportesQueries - Función que recibe sucursal y retorna Array<Query> de reportes
  * @returns {Promise<Object>} Objeto con progreso por sucursalId
  */
-export async function calcularProgresoTargets(sucursales, db = null) {
-  if (!db) {
-    console.error('calcularProgresoTargets: db es requerido');
+export async function calcularProgresoTargets(sucursales, getReportesQueries = null) {
+  if (!getReportesQueries || typeof getReportesQueries !== 'function') {
+    console.warn('calcularProgresoTargets: getReportesQueries es requerido');
     return {};
   }
 
@@ -406,7 +290,8 @@ export async function calcularProgresoTargets(sucursales, db = null) {
   
   await Promise.all(
     sucursales.map(async (sucursal) => {
-      progresos[sucursal.id] = await calcularProgresoTarget(sucursal, db);
+      const reportesQueries = getReportesQueries(sucursal);
+      progresos[sucursal.id] = await calcularProgresoTarget(sucursal, reportesQueries);
     })
   );
 
