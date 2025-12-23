@@ -41,6 +41,8 @@ import {
 } from '@mui/icons-material';
 import AccionesRequeridasService from '../../../../services/accionesRequeridasService';
 import { useAuth } from '../../../context/AuthContext';
+import { auditUserCollection } from '../../../../firebaseControlFile';
+import { doc, collection } from 'firebase/firestore';
 import dayjs from 'dayjs';
 
 const AccionesRequeridas = ({ sucursalId, sucursalNombre }) => {
@@ -65,8 +67,15 @@ const AccionesRequeridas = ({ sucursalId, sucursalNombre }) => {
     
     setLoading(true);
     try {
+      if (!userProfile?.uid) {
+        throw new Error('Usuario no autenticado');
+      }
+      const sucursalesRef = auditUserCollection(userProfile.uid, 'sucursales');
+      const sucursalDocRef = doc(sucursalesRef, sucursalId);
+      const accionesCollectionRef = collection(sucursalDocRef, 'acciones_requeridas');
+      
       const filtros = filtroEstado !== 'todas' ? { estado: filtroEstado } : {};
-      const accionesData = await AccionesRequeridasService.obtenerAccionesPorSucursal(sucursalId, filtros);
+      const accionesData = await AccionesRequeridasService.obtenerAccionesPorSucursal(accionesCollectionRef, filtros);
       setAcciones(accionesData);
     } catch (error) {
       console.error('Error cargando acciones requeridas:', error);
@@ -150,21 +159,28 @@ const AccionesRequeridas = ({ sucursalId, sucursalNombre }) => {
     if (!accionSeleccionada || !textoDialog.trim()) return;
 
     try {
+      if (!userProfile?.uid) {
+        throw new Error('Usuario no autenticado');
+      }
+      
+      const sucursalesRef = auditUserCollection(userProfile.uid, 'sucursales');
+      const sucursalDocRef = doc(sucursalesRef, sucursalId);
+      const accionesCollectionRef = collection(sucursalDocRef, 'acciones_requeridas');
+      const accionDocRef = doc(accionesCollectionRef, accionSeleccionada.id);
+      
       if (dialogTipo === 'estado') {
         await AccionesRequeridasService.actualizarEstadoAccion(
-          sucursalId,
-          accionSeleccionada.id,
+          accionDocRef,
           textoDialog,
-          userProfile?.uid,
+          userProfile.uid,
           userProfile?.displayName || userProfile?.email,
           null
         );
       } else if (dialogTipo === 'comentario') {
         await AccionesRequeridasService.agregarComentarioAccion(
-          sucursalId,
-          accionSeleccionada.id,
+          accionDocRef,
           textoDialog,
-          userProfile?.uid,
+          userProfile.uid,
           userProfile?.displayName || userProfile?.email
         );
       }

@@ -1,7 +1,6 @@
 import { getOfflineDatabase } from './offlineDatabase';
-// db y auth importados desde firebaseControlFile para acceso centralizado
-import { auth, db } from '../firebaseControlFile';
-import { collection, getDocs, doc, getDoc, query, where } from 'firebase/firestore';
+import { auth, auditUserCollection } from '../firebaseControlFile';
+import { getDocs, query, where } from 'firebase/firestore';
 
 /**
  * Sistema de cache completo para funcionamiento offline
@@ -9,7 +8,7 @@ import { collection, getDocs, doc, getDoc, query, where } from 'firebase/firesto
  */
 
 const CACHE_VERSION = 'v1';
-const CACHE_EXPIRY_DAYS = 7; // Los datos se consideran válidos por 7 días
+const CACHE_EXPIRY_DAYS = 7;
 
 /**
  * Guardar datos completos del usuario para funcionamiento offline
@@ -36,17 +35,13 @@ export const saveCompleteUserCache = async (userProfile, empresas = null, sucurs
       version: CACHE_VERSION
     };
 
-    // Usar empresas pasadas como parámetro o hacer query
-    // ✅ Usar empresaService.getUserEmpresas que ya maneja migratedFromUid automáticamente
     try {
       let empresasData = [];
       
       if (empresas && empresas.length > 0) {
-        // ✅ Usar empresas ya cargadas (más rápido y confiable)
         empresasData = empresas;
         console.log('✅ Usando empresas ya cargadas en memoria:', empresasData.length);
       } else {
-        // Usar el servicio que ya maneja migratedFromUid y busca con ambos UIDs
         const { empresaService } = await import('./empresaService');
         empresasData = await empresaService.getUserEmpresas(
           userProfile.uid,
@@ -61,13 +56,10 @@ export const saveCompleteUserCache = async (userProfile, empresas = null, sucurs
       console.error('Error cacheando empresas:', error);
     }
 
-    // Usar formularios pasados como parámetro o hacer query
-    // ✅ Buscar con ambos UIDs (nuevo y antiguo) para incluir datos migrados
     try {
       let formulariosData = [];
       
       if (formularios && formularios.length > 0) {
-        // ✅ Usar formularios ya cargados (más rápido y confiable)
         formulariosData = formularios;
         console.log('✅ Usando formularios ya cargados en memoria:', formulariosData.length);
       } else {
@@ -75,45 +67,42 @@ export const saveCompleteUserCache = async (userProfile, empresas = null, sucurs
         const formulariosQueries = [];
         
         if (userProfile.role === 'supermax') {
-          const formulariosSnapshot = await getDocs(collection(db, 'formularios'));
+          const formulariosRef = auditUserCollection(userProfile.uid, 'formularios');
+          const formulariosSnapshot = await getDocs(formulariosRef);
           formulariosData = formulariosSnapshot.docs.map(doc => ({
             id: doc.id,
             ...doc.data()
           }));
         } else if (userProfile.role === 'max') {
-          // Buscar con ambos UIDs (nuevo y antiguo)
           formulariosQueries.push(
-            query(collection(db, "formularios"), where("clienteAdminId", "==", userProfile.uid)),
-            query(collection(db, "formularios"), where("creadorId", "==", userProfile.uid))
+            query(auditUserCollection(userProfile.uid, 'formularios'), where("clienteAdminId", "==", userProfile.uid)),
+            query(auditUserCollection(userProfile.uid, 'formularios'), where("creadorId", "==", userProfile.uid))
           );
           
           if (oldUid) {
             formulariosQueries.push(
-              query(collection(db, "formularios"), where("clienteAdminId", "==", oldUid)),
-              query(collection(db, "formularios"), where("creadorId", "==", oldUid))
+              query(auditUserCollection(userProfile.uid, 'formularios'), where("clienteAdminId", "==", oldUid)),
+              query(auditUserCollection(userProfile.uid, 'formularios'), where("creadorId", "==", oldUid))
             );
           }
           
-          // Ejecutar todas las queries y combinar resultados
           const snapshots = await Promise.all(formulariosQueries.map(q => getDocs(q)));
           const allFormularios = snapshots.flatMap(snapshot => 
             snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
           );
           
-          // Eliminar duplicados
           formulariosData = Array.from(
             new Map(allFormularios.map(f => [f.id, f])).values()
           );
         } else if (userProfile.role === 'operario' && userProfile.clienteAdminId) {
           const clienteAdminId = userProfile.clienteAdminId;
           formulariosQueries.push(
-            query(collection(db, "formularios"), where("clienteAdminId", "==", clienteAdminId))
+            query(auditUserCollection(userProfile.uid, 'formularios'), where("clienteAdminId", "==", clienteAdminId))
           );
           
-          // También buscar por el clienteAdminId antiguo si existe
           if (oldUid && userProfile.clienteAdminId === userProfile.uid) {
             formulariosQueries.push(
-              query(collection(db, "formularios"), where("clienteAdminId", "==", oldUid))
+              query(auditUserCollection(userProfile.uid, 'formularios'), where("clienteAdminId", "==", oldUid))
             );
           }
           
@@ -122,7 +111,6 @@ export const saveCompleteUserCache = async (userProfile, empresas = null, sucurs
             snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
           );
           
-          // Eliminar duplicados y filtrar por permisos
           const uniqueFormularios = Array.from(
             new Map(allFormularios.map(f => [f.id, f])).values()
           );
@@ -143,22 +131,20 @@ export const saveCompleteUserCache = async (userProfile, empresas = null, sucurs
       console.error('Error cacheando formularios:', error);
     }
 
-    // Usar sucursales pasadas como parámetro o hacer query
     try {
       let sucursalesData = [];
       
       if (sucursales && sucursales.length > 0) {
-        // ✅ Usar sucursales ya cargadas (más rápido y confiable)
         sucursalesData = sucursales;
         console.log('✅ Usando sucursales ya cargadas en memoria:', sucursalesData.length);
       } else if (userProfile.role === 'supermax') {
-        const sucursalesSnapshot = await getDocs(collection(db, 'sucursales'));
+        const sucursalesRef = auditUserCollection(userProfile.uid, 'sucursales');
+        const sucursalesSnapshot = await getDocs(sucursalesRef);
         sucursalesData = sucursalesSnapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data()
         }));
       } else {
-        // Para max y operario: cargar sucursales de sus empresas
         const empresasIds = cacheData.empresas.map(emp => emp.id);
         
         if (empresasIds.length > 0) {
@@ -169,7 +155,7 @@ export const saveCompleteUserCache = async (userProfile, empresas = null, sucurs
           }
 
           const sucursalesPromises = empresasChunks.map(async (chunk) => {
-            const sucursalesRef = collection(db, "sucursales");
+            const sucursalesRef = auditUserCollection(userProfile.uid, 'sucursales');
             const sucursalesQuery = query(sucursalesRef, where("empresaId", "in", chunk));
             const sucursalesSnapshot = await getDocs(sucursalesQuery);
             return sucursalesSnapshot.docs.map(doc => ({
@@ -188,49 +174,45 @@ export const saveCompleteUserCache = async (userProfile, empresas = null, sucurs
       console.error('Error cacheando sucursales:', error);
     }
 
-    // Obtener y cachear reportes/auditorías del usuario
-    // ✅ Buscar con ambos UIDs (nuevo y antiguo) para incluir datos migrados
     try {
       const oldUid = userProfile.migratedFromUid;
       const reportesQueries = [];
       
       if (userProfile.role === 'supermax') {
-        // Supermax ve todos los reportes
-        const reportesSnapshot = await getDocs(collection(db, 'reportes'));
+        const reportesRef = auditUserCollection(userProfile.uid, 'reportes');
+        const reportesSnapshot = await getDocs(reportesRef);
         cacheData.auditorias = reportesSnapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data()
         }));
       } else {
-        // Buscar reportes con ambos UIDs
         if (userProfile.clienteAdminId) {
           reportesQueries.push(
-            query(collection(db, "reportes"), where("clienteAdminId", "==", userProfile.clienteAdminId))
+            query(auditUserCollection(userProfile.uid, 'reportes'), where("clienteAdminId", "==", userProfile.clienteAdminId))
           );
           
           if (oldUid) {
             reportesQueries.push(
-              query(collection(db, "reportes"), where("clienteAdminId", "==", oldUid))
+              query(auditUserCollection(userProfile.uid, 'reportes'), where("clienteAdminId", "==", oldUid))
             );
           }
         }
         
         if (userProfile.uid) {
           reportesQueries.push(
-            query(collection(db, "reportes"), where("creadoPor", "==", userProfile.uid)),
-            query(collection(db, "reportes"), where("usuarioId", "==", userProfile.uid))
+            query(auditUserCollection(userProfile.uid, 'reportes'), where("creadoPor", "==", userProfile.uid)),
+            query(auditUserCollection(userProfile.uid, 'reportes'), where("usuarioId", "==", userProfile.uid))
           );
           
           if (oldUid) {
             reportesQueries.push(
-              query(collection(db, "reportes"), where("creadoPor", "==", oldUid)),
-              query(collection(db, "reportes"), where("usuarioId", "==", oldUid))
+              query(auditUserCollection(userProfile.uid, 'reportes'), where("creadoPor", "==", oldUid)),
+              query(auditUserCollection(userProfile.uid, 'reportes'), where("usuarioId", "==", oldUid))
             );
           }
         }
         
         if (reportesQueries.length > 0) {
-          // Ejecutar todas las queries y combinar resultados
           const snapshots = await Promise.all(
             reportesQueries.map(q => getDocs(q).catch(err => {
               console.warn('Error en query de reportes (ignorando):', err);
@@ -242,7 +224,6 @@ export const saveCompleteUserCache = async (userProfile, empresas = null, sucurs
             snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
           );
           
-          // Eliminar duplicados
           cacheData.auditorias = Array.from(
             new Map(allReportes.map(r => [r.id, r])).values()
           );
@@ -257,7 +238,6 @@ export const saveCompleteUserCache = async (userProfile, empresas = null, sucurs
       cacheData.auditorias = [];
     }
 
-    // Verificar cuota disponible antes de guardar (especialmente importante en Chrome)
     try {
       if (navigator.storage && navigator.storage.estimate) {
         const estimate = await navigator.storage.estimate();
@@ -265,14 +245,12 @@ export const saveCompleteUserCache = async (userProfile, empresas = null, sucurs
         const quota = estimate.quota || 0;
         const percentage = quota > 0 ? (usage / quota) * 100 : 0;
         
-        // Estimar tamaño de cache (aproximado)
         const cacheSize = JSON.stringify(cacheData).length;
         const newUsage = usage + cacheSize;
         const newPercentage = quota > 0 ? (newUsage / quota) * 100 : 0;
         
         if (newPercentage > 90) {
           console.warn('⚠️ Cuota casi llena:', newPercentage.toFixed(1) + '%');
-          // Limpiar cache antiguo si es necesario
           await clearOldCacheIfNeeded();
         } else if (percentage > 80) {
           console.log('📊 Cuota de almacenamiento:', percentage.toFixed(1) + '%');
@@ -282,19 +260,15 @@ export const saveCompleteUserCache = async (userProfile, empresas = null, sucurs
       console.warn('No se pudo verificar cuota:', quotaError);
     }
     
-    // Guardar en IndexedDB
     try {
-      // Verificar que el object store existe antes de acceder
       if (!offlineDb.objectStoreNames.contains('settings')) {
         console.warn('⚠️ Object store "settings" no existe, intentando recrear base de datos...');
         
-        // Intentar cerrar y reabrir la base de datos para forzar upgrade
         try {
           offlineDb.close();
           const { getOfflineDatabase } = await import('./offlineDatabase');
           offlineDb = await getOfflineDatabase();
           
-          // Verificar nuevamente
           if (!offlineDb.objectStoreNames.contains('settings')) {
             console.warn('⚠️ Object store "settings" aún no existe después de reabrir, guardando solo en localStorage');
             throw new Error('Settings store not found after reopen');
@@ -313,21 +287,17 @@ export const saveCompleteUserCache = async (userProfile, empresas = null, sucurs
       console.log('✅ Cache guardado en IndexedDB');
     } catch (indexedDBError) {
       console.warn('⚠️ Error guardando en IndexedDB, usando solo localStorage:', indexedDBError);
-      // Continuar con localStorage como fallback
     }
     
-    // También guardar en localStorage como backup para Chrome
     try {
       localStorage.setItem('complete_user_cache', JSON.stringify(cacheData));
     } catch (localStorageError) {
-      // Si localStorage está lleno, intentar limpiar y guardar solo lo esencial
       if (localStorageError.name === 'QuotaExceededError') {
         console.warn('⚠️ localStorage lleno, limpiando cache antiguo...');
         try {
-          // Guardar solo datos esenciales (sin auditorías grandes)
           const essentialCache = {
             ...cacheData,
-            auditorias: [] // Las auditorías están en IndexedDB
+            auditorias: []
           };
           localStorage.setItem('complete_user_cache', JSON.stringify(essentialCache));
         } catch (e) {
@@ -350,11 +320,9 @@ export const saveCompleteUserCache = async (userProfile, empresas = null, sucurs
  */
 export const getCompleteUserCache = async (userId) => {
   try {
-    // Intentar IndexedDB primero
     try {
       const db = await getOfflineDatabase();
       
-      // Verificar que el object store existe antes de acceder
       if (!db.objectStoreNames.contains('settings')) {
         console.warn('⚠️ Object store "settings" no existe en IndexedDB, intentando localStorage...');
         throw new Error('Settings store not found');
@@ -369,14 +337,12 @@ export const getCompleteUserCache = async (userId) => {
 
       const cacheData = cached.value;
       
-      // Verificar si el cache es del usuario correcto
       if (cacheData.userId !== userId) {
         console.warn('⚠️ Cache de otro usuario, limpiando...');
         await clearCompleteUserCache();
         throw new Error('Cache user mismatch');
       }
 
-      // Verificar si el cache no ha expirado
       const cacheAge = Date.now() - (cacheData.timestamp || 0);
       const cacheAgeDays = cacheAge / (1000 * 60 * 60 * 24);
       
@@ -396,7 +362,6 @@ export const getCompleteUserCache = async (userId) => {
     } catch (indexedDBError) {
       console.warn('⚠️ IndexedDB falló, intentando localStorage:', indexedDBError.message);
       
-      // Fallback a localStorage
       try {
         const localCache = localStorage.getItem('complete_user_cache');
         if (!localCache) {
@@ -406,14 +371,12 @@ export const getCompleteUserCache = async (userId) => {
         
         const cacheData = JSON.parse(localCache);
         
-        // Verificar si el cache es del usuario correcto
         if (cacheData.userId !== userId) {
           console.warn('⚠️ Cache de localStorage de otro usuario, limpiando...');
           localStorage.removeItem('complete_user_cache');
           return null;
         }
 
-        // Verificar si el cache no ha expirado
         const cacheAge = Date.now() - (cacheData.timestamp || 0);
         const cacheAgeDays = cacheAge / (1000 * 60 * 60 * 24);
         
@@ -448,11 +411,9 @@ export const clearCompleteUserCache = async () => {
   try {
     const db = await getOfflineDatabase();
     await db.delete('settings', 'complete_user_cache');
-    // También limpiar localStorage
     try {
       localStorage.removeItem('complete_user_cache');
     } catch (e) {
-      // Ignorar errores de localStorage
     }
   } catch (error) {
     console.error('Error limpiando cache completo:', error);
@@ -471,12 +432,11 @@ const clearOldCacheIfNeeded = async () => {
       const cacheAge = Date.now() - (cached.value.timestamp || 0);
       const cacheAgeDays = cacheAge / (1000 * 60 * 60 * 24);
       
-      // Si el cache tiene más de 7 días, limpiar auditorías antiguas del cache
       if (cacheAgeDays > 7 && cached.value.auditorias) {
         console.log('🧹 Limpiando auditorías antiguas del cache para liberar espacio...');
         const updatedCache = {
           ...cached.value,
-          auditorias: [] // Las auditorías están en su propio store de IndexedDB
+          auditorias: []
         };
         
         await db.put('settings', {
@@ -512,7 +472,6 @@ export const hasCompleteCache = async (userId) => {
  */
 export const getCacheStats = async (userId = null) => {
   try {
-    // Obtener userId de parámetro o de auth como fallback
     const targetUserId = userId || auth.currentUser?.uid;
     if (!targetUserId) {
       return {

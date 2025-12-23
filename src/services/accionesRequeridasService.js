@@ -1,10 +1,8 @@
 /**
  * Servicio para gestionar acciones requeridas en sucursales
- * Las acciones se almacenan en subcolecciones: sucursales/{sucursalId}/acciones_requeridas/{accionId}
+ * Service agnóstico a paths de Firestore - recibe CollectionReference/DocumentReference como parámetros
  */
 import { 
-  collection, 
-  doc, 
   addDoc, 
   updateDoc, 
   deleteDoc, 
@@ -16,39 +14,23 @@ import {
   serverTimestamp,
   Timestamp
 } from 'firebase/firestore';
-// db importado desde firebaseControlFile para acceso centralizado
-import { db } from '../firebaseControlFile';
 
 class AccionesRequeridasService {
   /**
-   * Obtiene la referencia a la subcolección de acciones requeridas de una sucursal
-   * @param {string} sucursalId - ID de la sucursal
-   * @returns {CollectionReference} Referencia a la colección
-   */
-  static getAccionesCollection(sucursalId) {
-    return collection(db, 'sucursales', sucursalId, 'acciones_requeridas');
-  }
-
-  /**
-   * Obtiene la referencia a un documento de acción requerida
-   * @param {string} sucursalId - ID de la sucursal
-   * @param {string} accionId - ID de la acción
-   * @returns {DocumentReference} Referencia al documento
-   */
-  static getAccionDoc(sucursalId, accionId) {
-    return doc(db, 'sucursales', sucursalId, 'acciones_requeridas', accionId);
-  }
-
-  /**
    * Crea una acción requerida desde un reporte
+   * @param {CollectionReference} accionesCollectionRef - Referencia a la colección de acciones requeridas
    * @param {string} reporteId - ID del reporte origen
    * @param {string} sucursalId - ID de la sucursal
    * @param {string} empresaId - ID de la empresa
    * @param {Object} accionData - Datos de la acción (del array accionesRequeridas del reporte)
    * @returns {Promise<string>} ID de la acción creada
    */
-  static async crearAccionDesdeReporte(reporteId, sucursalId, empresaId, accionData) {
+  static async crearAccionDesdeReporte(accionesCollectionRef, reporteId, sucursalId, empresaId, accionData) {
     try {
+      if (!accionesCollectionRef) {
+        throw new Error('AccionesRequeridasService: accionesCollectionRef es requerido');
+      }
+
       const accionCompleta = {
         ...accionData,
         reporteId,
@@ -58,7 +40,7 @@ class AccionesRequeridasService {
         fechaActualizacion: serverTimestamp()
       };
 
-      const docRef = await addDoc(this.getAccionesCollection(sucursalId), accionCompleta);
+      const docRef = await addDoc(accionesCollectionRef, accionCompleta);
       console.log(`✅ Acción requerida creada: ${docRef.id}`);
       return docRef.id;
     } catch (error) {
@@ -69,20 +51,21 @@ class AccionesRequeridasService {
 
   /**
    * Crea múltiples acciones requeridas desde un reporte
+   * @param {CollectionReference} accionesCollectionRef - Referencia a la colección de acciones requeridas
    * @param {string} reporteId - ID del reporte origen
    * @param {string} sucursalId - ID de la sucursal
    * @param {string} empresaId - ID de la empresa
    * @param {Array} accionesData - Array de acciones requeridas del reporte
    * @returns {Promise<Array<string>>} IDs de las acciones creadas
    */
-  static async crearAccionesDesdeReporte(reporteId, sucursalId, empresaId, accionesData) {
+  static async crearAccionesDesdeReporte(accionesCollectionRef, reporteId, sucursalId, empresaId, accionesData) {
     if (!accionesData || accionesData.length === 0) {
       return [];
     }
 
     try {
       const promesas = accionesData.map(accion => 
-        this.crearAccionDesdeReporte(reporteId, sucursalId, empresaId, accion)
+        this.crearAccionDesdeReporte(accionesCollectionRef, reporteId, sucursalId, empresaId, accion)
       );
       
       const ids = await Promise.all(promesas);
@@ -96,7 +79,7 @@ class AccionesRequeridasService {
 
   /**
    * Obtiene todas las acciones requeridas de una sucursal
-   * @param {string} sucursalId - ID de la sucursal
+   * @param {CollectionReference} accionesCollectionRef - Referencia a la colección de acciones requeridas
    * @param {Object} filtros - Filtros opcionales
    * @param {string} filtros.estado - Filtrar por estado
    * @param {string} filtros.reporteId - Filtrar por reporte origen
@@ -104,12 +87,14 @@ class AccionesRequeridasService {
    * @param {Date} filtros.fechaHasta - Filtrar hasta fecha
    * @returns {Promise<Array>} Array de acciones requeridas
    */
-  static async obtenerAccionesPorSucursal(sucursalId, filtros = {}) {
+  static async obtenerAccionesPorSucursal(accionesCollectionRef, filtros = {}) {
     try {
-      const accionesRef = this.getAccionesCollection(sucursalId);
-      let q = query(accionesRef, orderBy('fechaCreacion', 'desc'));
+      if (!accionesCollectionRef) {
+        throw new Error('AccionesRequeridasService: accionesCollectionRef es requerido');
+      }
 
-      // Aplicar filtros
+      let q = query(accionesCollectionRef, orderBy('fechaCreacion', 'desc'));
+
       if (filtros.estado) {
         q = query(q, where('estado', '==', filtros.estado));
       }
@@ -147,18 +132,20 @@ class AccionesRequeridasService {
 
   /**
    * Actualiza el estado de una acción requerida
-   * @param {string} sucursalId - ID de la sucursal
-   * @param {string} accionId - ID de la acción
+   * @param {DocumentReference} accionDocRef - Referencia al documento de la acción
    * @param {string} nuevoEstado - Nuevo estado: "pendiente" | "en_proceso" | "completada" | "cancelada"
    * @param {string} usuarioId - ID del usuario que actualiza
    * @param {string} usuarioNombre - Nombre del usuario
    * @param {string} comentario - Comentario opcional
    * @returns {Promise<void>}
    */
-  static async actualizarEstadoAccion(sucursalId, accionId, nuevoEstado, usuarioId, usuarioNombre, comentario = null) {
+  static async actualizarEstadoAccion(accionDocRef, nuevoEstado, usuarioId, usuarioNombre, comentario = null) {
     try {
-      const accionRef = this.getAccionDoc(sucursalId, accionId);
-      const accionDoc = await getDoc(accionRef);
+      if (!accionDocRef) {
+        throw new Error('AccionesRequeridasService: accionDocRef es requerido');
+      }
+
+      const accionDoc = await getDoc(accionDocRef);
 
       if (!accionDoc.exists()) {
         throw new Error('Acción requerida no encontrada');
@@ -170,17 +157,14 @@ class AccionesRequeridasService {
         fechaActualizacion: serverTimestamp()
       };
 
-      // Si se marca como completada, agregar fecha y usuario
       if (nuevoEstado === 'completada') {
         updateData.fechaCompletada = serverTimestamp();
         updateData.completadaPor = usuarioId;
       } else if (nuevoEstado !== 'completada' && accionData.fechaCompletada) {
-        // Si se cambia de completada a otro estado, limpiar datos
         updateData.fechaCompletada = null;
         updateData.completadaPor = null;
       }
 
-      // Agregar comentario si se proporciona
       if (comentario) {
         const comentarios = accionData.comentarios || [];
         comentarios.push({
@@ -192,8 +176,8 @@ class AccionesRequeridasService {
         updateData.comentarios = comentarios;
       }
 
-      await updateDoc(accionRef, updateData);
-      console.log(`✅ Estado de acción actualizado: ${accionId} -> ${nuevoEstado}`);
+      await updateDoc(accionDocRef, updateData);
+      console.log(`✅ Estado de acción actualizado: ${accionDocRef.id} -> ${nuevoEstado}`);
     } catch (error) {
       console.error('❌ Error al actualizar estado de acción:', error);
       throw error;
@@ -202,17 +186,19 @@ class AccionesRequeridasService {
 
   /**
    * Agrega un comentario a una acción requerida
-   * @param {string} sucursalId - ID de la sucursal
-   * @param {string} accionId - ID de la acción
+   * @param {DocumentReference} accionDocRef - Referencia al documento de la acción
    * @param {string} comentario - Texto del comentario
    * @param {string} usuarioId - ID del usuario
    * @param {string} usuarioNombre - Nombre del usuario
    * @returns {Promise<void>}
    */
-  static async agregarComentarioAccion(sucursalId, accionId, comentario, usuarioId, usuarioNombre) {
+  static async agregarComentarioAccion(accionDocRef, comentario, usuarioId, usuarioNombre) {
     try {
-      const accionRef = this.getAccionDoc(sucursalId, accionId);
-      const accionDoc = await getDoc(accionRef);
+      if (!accionDocRef) {
+        throw new Error('AccionesRequeridasService: accionDocRef es requerido');
+      }
+
+      const accionDoc = await getDoc(accionDocRef);
 
       if (!accionDoc.exists()) {
         throw new Error('Acción requerida no encontrada');
@@ -228,12 +214,12 @@ class AccionesRequeridasService {
         usuarioNombre: usuarioNombre
       });
 
-      await updateDoc(accionRef, {
+      await updateDoc(accionDocRef, {
         comentarios,
         fechaActualizacion: serverTimestamp()
       });
 
-      console.log(`✅ Comentario agregado a acción: ${accionId}`);
+      console.log(`✅ Comentario agregado a acción: ${accionDocRef.id}`);
     } catch (error) {
       console.error('❌ Error al agregar comentario:', error);
       throw error;
@@ -242,17 +228,19 @@ class AccionesRequeridasService {
 
   /**
    * Registra una modificación en una acción requerida
-   * @param {string} sucursalId - ID de la sucursal
-   * @param {string} accionId - ID de la acción
+   * @param {DocumentReference} accionDocRef - Referencia al documento de la acción
    * @param {string} modificacion - Texto de la modificación
    * @param {string} usuarioId - ID del usuario
    * @param {string} usuarioNombre - Nombre del usuario
    * @returns {Promise<void>}
    */
-  static async agregarModificacionAccion(sucursalId, accionId, modificacion, usuarioId, usuarioNombre) {
+  static async agregarModificacionAccion(accionDocRef, modificacion, usuarioId, usuarioNombre) {
     try {
-      const accionRef = this.getAccionDoc(sucursalId, accionId);
-      const accionDoc = await getDoc(accionRef);
+      if (!accionDocRef) {
+        throw new Error('AccionesRequeridasService: accionDocRef es requerido');
+      }
+
+      const accionDoc = await getDoc(accionDocRef);
 
       if (!accionDoc.exists()) {
         throw new Error('Acción requerida no encontrada');
@@ -268,12 +256,12 @@ class AccionesRequeridasService {
         usuarioNombre: usuarioNombre
       });
 
-      await updateDoc(accionRef, {
+      await updateDoc(accionDocRef, {
         modificaciones,
         fechaActualizacion: serverTimestamp()
       });
 
-      console.log(`✅ Modificación registrada en acción: ${accionId}`);
+      console.log(`✅ Modificación registrada en acción: ${accionDocRef.id}`);
     } catch (error) {
       console.error('❌ Error al registrar modificación:', error);
       throw error;
@@ -282,33 +270,31 @@ class AccionesRequeridasService {
 
   /**
    * Actualiza el texto de una acción requerida
-   * @param {string} sucursalId - ID de la sucursal
-   * @param {string} accionId - ID de la acción
+   * @param {DocumentReference} accionDocRef - Referencia al documento de la acción
    * @param {string} nuevoTexto - Nuevo texto de la acción
    * @param {string} usuarioId - ID del usuario
    * @param {string} usuarioNombre - Nombre del usuario
    * @returns {Promise<void>}
    */
-  static async actualizarTextoAccion(sucursalId, accionId, nuevoTexto, usuarioId, usuarioNombre) {
+  static async actualizarTextoAccion(accionDocRef, nuevoTexto, usuarioId, usuarioNombre) {
     try {
-      const accionRef = this.getAccionDoc(sucursalId, accionId);
+      if (!accionDocRef) {
+        throw new Error('AccionesRequeridasService: accionDocRef es requerido');
+      }
       
-      // Registrar modificación
       await this.agregarModificacionAccion(
-        sucursalId, 
-        accionId, 
+        accionDocRef,
         `Texto actualizado: "${nuevoTexto}"`, 
         usuarioId, 
         usuarioNombre
       );
 
-      // Actualizar texto
-      await updateDoc(accionRef, {
+      await updateDoc(accionDocRef, {
         accionTexto: nuevoTexto,
         fechaActualizacion: serverTimestamp()
       });
 
-      console.log(`✅ Texto de acción actualizado: ${accionId}`);
+      console.log(`✅ Texto de acción actualizado: ${accionDocRef.id}`);
     } catch (error) {
       console.error('❌ Error al actualizar texto de acción:', error);
       throw error;
@@ -317,15 +303,17 @@ class AccionesRequeridasService {
 
   /**
    * Elimina una acción requerida
-   * @param {string} sucursalId - ID de la sucursal
-   * @param {string} accionId - ID de la acción
+   * @param {DocumentReference} accionDocRef - Referencia al documento de la acción
    * @returns {Promise<void>}
    */
-  static async eliminarAccion(sucursalId, accionId) {
+  static async eliminarAccion(accionDocRef) {
     try {
-      const accionRef = this.getAccionDoc(sucursalId, accionId);
-      await deleteDoc(accionRef);
-      console.log(`✅ Acción eliminada: ${accionId}`);
+      if (!accionDocRef) {
+        throw new Error('AccionesRequeridasService: accionDocRef es requerido');
+      }
+
+      await deleteDoc(accionDocRef);
+      console.log(`✅ Acción eliminada: ${accionDocRef.id}`);
     } catch (error) {
       console.error('❌ Error al eliminar acción:', error);
       throw error;
@@ -334,12 +322,16 @@ class AccionesRequeridasService {
 
   /**
    * Obtiene estadísticas de acciones requeridas por sucursal
-   * @param {string} sucursalId - ID de la sucursal
+   * @param {CollectionReference} accionesCollectionRef - Referencia a la colección de acciones requeridas
    * @returns {Promise<Object>} Estadísticas
    */
-  static async obtenerEstadisticas(sucursalId) {
+  static async obtenerEstadisticas(accionesCollectionRef) {
     try {
-      const acciones = await this.obtenerAccionesPorSucursal(sucursalId);
+      if (!accionesCollectionRef) {
+        throw new Error('AccionesRequeridasService: accionesCollectionRef es requerido');
+      }
+
+      const acciones = await this.obtenerAccionesPorSucursal(accionesCollectionRef);
       
       const estadisticas = {
         total: acciones.length,
@@ -351,7 +343,6 @@ class AccionesRequeridasService {
           if (!a.fechaVencimiento || a.estado === 'completada' || a.estado === 'cancelada') {
             return false;
           }
-          // Manejar diferentes formatos de fecha (Timestamp de Firestore, Date, string)
           let fechaVenc;
           if (a.fechaVencimiento.toDate && typeof a.fechaVencimiento.toDate === 'function') {
             fechaVenc = a.fechaVencimiento.toDate();
@@ -375,4 +366,3 @@ class AccionesRequeridasService {
 }
 
 export default AccionesRequeridasService;
-

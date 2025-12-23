@@ -1,7 +1,11 @@
 import { useState, useEffect } from 'react';
 import AccionesRequeridasService from '../../../../services/accionesRequeridasService';
+import { useAuth } from '../../../../components/context/AuthContext';
+import { auditUserCollection } from '../../../../firebaseControlFile';
+import { doc, collection } from 'firebase/firestore';
 
 export const useAccionesRequeridasStats = (sucursales, selectedSucursal) => {
+  const { userProfile } = useAuth();
   const [estadisticas, setEstadisticas] = useState({});
   const [loading, setLoading] = useState(true);
 
@@ -44,7 +48,14 @@ export const useAccionesRequeridasStats = (sucursales, selectedSucursal) => {
 
         for (const sucursal of sucursalesACalcular) {
           try {
-            const stats = await AccionesRequeridasService.obtenerEstadisticas(sucursal.id);
+            if (!userProfile?.uid) {
+              throw new Error('Usuario no autenticado');
+            }
+            const sucursalesRef = auditUserCollection(userProfile.uid, 'sucursales');
+            const sucursalDocRef = doc(sucursalesRef, sucursal.id);
+            const accionesCollectionRef = collection(sucursalDocRef, 'acciones_requeridas');
+            
+            const stats = await AccionesRequeridasService.obtenerEstadisticas(accionesCollectionRef);
             estadisticasPorSucursal[sucursal.id] = stats;
             totalPendientes += stats.pendientes;
             totalVencidas += stats.vencidas;
@@ -89,7 +100,7 @@ export const useAccionesRequeridasStats = (sucursales, selectedSucursal) => {
     return () => {
       isMounted = false;
     };
-  }, [sucursales, selectedSucursal]);
+  }, [sucursales, selectedSucursal, userProfile?.uid]);
 
   return { estadisticas, loading };
 };

@@ -1,5 +1,5 @@
 // Servicio centralizado para operaciones de auditoría
-import { collection, addDoc, getDocs, query, where, orderBy, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, getDocs, query, where, orderBy, serverTimestamp, doc } from 'firebase/firestore';
 import { dbAudit, auditUserCollection, auditUsersCollection, sucursalesCollection, reportesCollection } from '../../../firebaseControlFile';
 import { uploadToControlFile, getDownloadUrl } from '../../../services/controlFileService';
 import { getControlFileFolders } from '../../../services/controlFileInit';
@@ -575,7 +575,12 @@ class AuditoriaService {
 
           // Si encontramos sucursalId, crear las acciones requeridas
           if (sucursalId) {
+            const sucursalesRef = auditUserCollection(userProfile.uid, 'sucursales');
+            const sucursalDocRef = doc(sucursalesRef, sucursalId);
+            const accionesCollectionRef = collection(sucursalDocRef, 'acciones_requeridas');
+            
             await AccionesRequeridasService.crearAccionesDesdeReporte(
+              accionesCollectionRef,
               docRef.id,
               sucursalId,
               datosAuditoria.empresa?.id || null,
