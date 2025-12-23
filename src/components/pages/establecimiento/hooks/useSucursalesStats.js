@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { collection, getDocs, query, where } from 'firebase/firestore';
-import { dbAudit } from '../../../../firebaseControlFile';
+import { auditUserCollection } from '../../../../firebaseControlFile';
 
 /**
  * Hook para cargar estadísticas de sucursales
@@ -8,21 +8,27 @@ import { dbAudit } from '../../../../firebaseControlFile';
 export const useSucursalesStats = () => {
   const [sucursalesStats, setSucursalesStats] = useState({});
 
-  const loadSucursalesStats = useCallback(async (sucursalesList) => {
+  const loadSucursalesStats = useCallback(async (sucursalesList, userId = null) => {
+    if (!userId) {
+      console.warn('⚠️ [useSucursalesStats] userId no proporcionado, retornando stats vacías');
+      setSucursalesStats({});
+      return;
+    }
+
     const stats = {};
     for (const sucursal of sucursalesList) {
       try {
         const [empleadosSnapshot, capacitacionesSnapshot, planesSnapshot, accidentesSnapshot] = await Promise.all([
-          getDocs(query(collection(dbAudit, 'empleados'), where('sucursalId', '==', sucursal.id))),
-          getDocs(query(collection(dbAudit, 'capacitaciones'), where('sucursalId', '==', sucursal.id))),
-          getDocs(query(collection(dbAudit, 'planes_capacitaciones_anuales'), where('sucursalId', '==', sucursal.id))),
-          getDocs(query(collection(dbAudit, 'accidentes'), where('sucursalId', '==', sucursal.id)))
+          getDocs(query(auditUserCollection(userId, 'empleados'), where('sucursalId', '==', sucursal.id))),
+          getDocs(query(auditUserCollection(userId, 'capacitaciones'), where('sucursalId', '==', sucursal.id))),
+          getDocs(query(auditUserCollection(userId, 'planes_capacitaciones_anuales'), where('sucursalId', '==', sucursal.id))),
+          getDocs(query(auditUserCollection(userId, 'accidentes'), where('sucursalId', '==', sucursal.id)))
         ]);
         
         // Cargar acciones requeridas desde subcolección
         let accionesRequeridasCount = 0;
         try {
-          const accionesSnapshot = await getDocs(collection(dbAudit, 'sucursales', sucursal.id, 'acciones_requeridas'));
+          const accionesSnapshot = await getDocs(collection(auditUserCollection(userId, 'sucursales'), sucursal.id, 'acciones_requeridas'));
           accionesRequeridasCount = accionesSnapshot.docs.length;
         } catch (error) {
           console.warn(`Error cargando acciones requeridas para sucursal ${sucursal.id}:`, error);

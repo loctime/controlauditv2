@@ -1,14 +1,21 @@
 import { useState, useEffect, useCallback } from 'react';
-import { getDocs, query, where, collection } from 'firebase/firestore';
-import { dbAudit, sucursalesCollection } from '../../../../firebaseControlFile';
+import { getDocs, query, where } from 'firebase/firestore';
+import { auditUserCollection, sucursalesCollection } from '../../../../firebaseControlFile';
 
 /**
  * Hook para cargar estadísticas de empresas
  */
-export const useEmpresasStats = (userEmpresas) => {
+export const useEmpresasStats = (userEmpresas, userId = null) => {
   const [empresasStats, setEmpresasStats] = useState({});
 
-  const loadEmpresasStats = useCallback(async (empresas) => {
+  const loadEmpresasStats = useCallback(async (empresas, providedUserId = null) => {
+    const uid = providedUserId || userId;
+    if (!uid) {
+      console.warn('⚠️ [useEmpresasStats] userId no proporcionado, retornando stats vacías');
+      setEmpresasStats({});
+      return;
+    }
+
     const stats = {};
     
     for (const empresa of empresas) {
@@ -29,9 +36,9 @@ export const useEmpresasStats = (userEmpresas) => {
         }
 
         const [empleadosSnapshot, capacitacionesSnapshot, accidentesSnapshot] = await Promise.all([
-          getDocs(query(collection(dbAudit, 'empleados'), where('sucursalId', 'in', sucursalesIds))),
-          getDocs(query(collection(dbAudit, 'capacitaciones'), where('sucursalId', 'in', sucursalesIds))),
-          getDocs(query(collection(dbAudit, 'accidentes'), where('sucursalId', 'in', sucursalesIds)))
+          getDocs(query(auditUserCollection(uid, 'empleados'), where('sucursalId', 'in', sucursalesIds))),
+          getDocs(query(auditUserCollection(uid, 'capacitaciones'), where('sucursalId', 'in', sucursalesIds))),
+          getDocs(query(auditUserCollection(uid, 'accidentes'), where('sucursalId', 'in', sucursalesIds)))
         ]);
         
         stats[empresa.id] = {
@@ -59,10 +66,10 @@ export const useEmpresasStats = (userEmpresas) => {
   }, []);
 
   useEffect(() => {
-    if (userEmpresas && userEmpresas.length > 0) {
+    if (userEmpresas && userEmpresas.length > 0 && userId) {
       loadEmpresasStats(userEmpresas);
     }
-  }, [userEmpresas, loadEmpresasStats]);
+  }, [userEmpresas, userId, loadEmpresasStats]);
 
   return { empresasStats, loadEmpresasStats };
 };

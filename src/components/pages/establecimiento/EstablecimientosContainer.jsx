@@ -59,7 +59,7 @@ const EstablecimientosContainer = () => {
   const theme = useTheme();
   const isSmallMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
-  const { empresasStats, loadEmpresasStats } = useEmpresasStats(userEmpresas);
+  const { empresasStats, loadEmpresasStats } = useEmpresasStats(userEmpresas, userProfile?.uid);
 
   const {
     empresa,

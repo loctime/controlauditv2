@@ -28,8 +28,8 @@ import {
 import PeopleIcon from '@mui/icons-material/People';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import EditIcon from '@mui/icons-material/Edit';
-import { collection, getDocs, query, where, addDoc, updateDoc, deleteDoc, doc, Timestamp } from 'firebase/firestore';
-import { dbAudit } from '../../../../firebaseControlFile';
+import { getDocs, query, where, addDoc, updateDoc, deleteDoc, doc, Timestamp } from 'firebase/firestore';
+import { auditUserCollection } from '../../../../firebaseControlFile';
 import { useAuth } from '../../../context/AuthContext';
 import Swal from 'sweetalert2';
 
@@ -58,9 +58,14 @@ const EmpleadosContent = ({ sucursalId, sucursalNombre, navigateToPage, reloadSu
   }, [sucursalId]);
 
   const loadEmpleados = async () => {
+    if (!userProfile?.uid) {
+      console.error('Error: userProfile.uid es requerido');
+      return;
+    }
     setLoading(true);
     try {
-      const q = query(collection(dbAudit, 'empleados'), where('sucursalId', '==', sucursalId));
+      const empleadosRef = auditUserCollection(userProfile.uid, 'empleados');
+      const q = query(empleadosRef, where('sucursalId', '==', sucursalId));
       const snapshot = await getDocs(q);
       const empleadosData = snapshot.docs.map(doc => ({
         id: doc.id,
@@ -92,8 +97,18 @@ const EmpleadosContent = ({ sucursalId, sucursalNombre, navigateToPage, reloadSu
       return;
     }
 
+    if (!userProfile?.uid) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: 'Usuario no autenticado'
+      });
+      return;
+    }
+
     try {
-      await addDoc(collection(dbAudit, 'empleados'), {
+      const empleadosRef = auditUserCollection(userProfile.uid, 'empleados');
+      await addDoc(empleadosRef, {
         ...empleadoForm,
         sucursalId: sucursalId,
         sucursalNombre: sucursalNombre,
@@ -122,8 +137,8 @@ const EmpleadosContent = ({ sucursalId, sucursalNombre, navigateToPage, reloadSu
       }
 
       // Recargar estadísticas de la empresa completa
-      if (typeof loadEmpresasStats === 'function' && userEmpresas) {
-        await loadEmpresasStats(userEmpresas);
+      if (typeof loadEmpresasStats === 'function' && userEmpresas && userProfile?.uid) {
+        await loadEmpresasStats(userEmpresas, userProfile.uid);
       }
 
       Swal.fire({
@@ -184,8 +199,18 @@ const EmpleadosContent = ({ sucursalId, sucursalNombre, navigateToPage, reloadSu
       return;
     }
 
+    if (!userProfile?.uid) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: 'Usuario no autenticado'
+      });
+      return;
+    }
+
     try {
-      await updateDoc(doc(dbAudit, 'empleados', empleadoEdit.id), {
+      const empleadosRef = auditUserCollection(userProfile.uid, 'empleados');
+      await updateDoc(doc(empleadosRef, empleadoEdit.id), {
         nombre: empleadoEdit.nombre,
         apellido: empleadoEdit.apellido,
         dni: empleadoEdit.dni,
@@ -240,8 +265,17 @@ const EmpleadosContent = ({ sucursalId, sucursalNombre, navigateToPage, reloadSu
     });
 
     if (result.isConfirmed) {
+      if (!userProfile?.uid) {
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: 'Usuario no autenticado'
+        });
+        return;
+      }
       try {
-        await updateDoc(doc(dbAudit, 'empleados', empleado.id), {
+        const empleadosRef = auditUserCollection(userProfile.uid, 'empleados');
+        await updateDoc(doc(empleadosRef, empleado.id), {
           estado: 'inactivo',
           fechaActualizacion: Timestamp.now()
         });
@@ -284,8 +318,17 @@ const EmpleadosContent = ({ sucursalId, sucursalNombre, navigateToPage, reloadSu
     });
 
     if (result.isConfirmed) {
+      if (!userProfile?.uid) {
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: 'Usuario no autenticado'
+        });
+        return;
+      }
       try {
-        await deleteDoc(doc(dbAudit, 'empleados', empleado.id));
+        const empleadosRef = auditUserCollection(userProfile.uid, 'empleados');
+        await deleteDoc(doc(empleadosRef, empleado.id));
 
         // Recargar datos
         await loadEmpleados();

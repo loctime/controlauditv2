@@ -148,7 +148,8 @@ export const useDashboardRealtimeData = ({
             const dashboardData = await safetyDashboardService.getDashboardData(
               empresa.id,
               sucursalId,
-              period
+              period,
+              userProfile?.uid
             );
 
             if (cancelled) return;
@@ -220,7 +221,8 @@ export const useDashboardRealtimeData = ({
       () => {
         setLoading(false);
         setIsCachedSnapshot(false);
-      }
+      },
+      userProfile?.uid
     );
 
     return () => {

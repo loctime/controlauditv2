@@ -12,7 +12,7 @@ import {
   Timestamp,
   onSnapshot 
 } from 'firebase/firestore';
-import { dbAudit, reportesCollection } from '../firebaseControlFile';
+import { dbAudit, reportesCollection, auditUserCollection } from '../firebaseControlFile';
 import { computeOccupationalHealthMetrics } from '../utils/occupationalHealthMetrics';
 
 const isTruthyFlag = (value) => {
@@ -184,7 +184,7 @@ const aggregateAuditClassifications = (auditorias = []) => {
 
 export const safetyDashboardService = {
   // Obtener datos del dashboard desde datos reales
-  async getDashboardData(companyId, sucursalId, period = '2025-01') {
+  async getDashboardData(companyId, sucursalId, period = '2025-01', userId = null) {
     try {
       console.log(`🔍 [SafetyDashboard] Obteniendo datos para empresa ${companyId}, sucursal ${sucursalId}, período ${period}`);
       
@@ -201,10 +201,10 @@ export const safetyDashboardService = {
         this.getAuditoriasData(companyId, period),
         this.getLogsData(companyId, period),
         this.getFormulariosData(companyId, period),
-        this.getEmpleados(sucursalId),
-        this.getCapacitaciones(sucursalId, period),
-        this.getAccidentes(sucursalId, period),
-        this.getAusencias(companyId, sucursalId, period)
+        this.getEmpleados(sucursalId, userId),
+        this.getCapacitaciones(sucursalId, period, userId),
+        this.getAccidentes(sucursalId, period, userId),
+        this.getAusencias(companyId, sucursalId, period, userId)
       ]);
 
       // Calcular métricas de seguridad
@@ -243,7 +243,7 @@ export const safetyDashboardService = {
   },
 
   // Listener en tiempo real para dashboard - Optimizado con debounce
-  subscribeToDashboard(companyId, sucursalId, period, callback, onError) {
+  subscribeToDashboard(companyId, sucursalId, period, callback, onError, userId = null) {
     console.log(`🔍 [SafetyDashboard] Suscribiéndose a dashboard en tiempo real para empresa ${companyId}, sucursal ${sucursalId}`);
     
     const unsubscribes = [];
@@ -284,10 +284,10 @@ export const safetyDashboardService = {
             this.getAuditoriasData(companyId, period),
             this.getLogsData(companyId, period),
             this.getFormulariosData(companyId, period),
-            this.getEmpleados(sucursalId),
-            this.getCapacitaciones(sucursalId, period),
-            this.getAccidentes(sucursalId, period),
-            this.getAusencias(companyId, sucursalId, period)
+            this.getEmpleados(sucursalId, userId),
+            this.getCapacitaciones(sucursalId, period, userId),
+            this.getAccidentes(sucursalId, period, userId),
+            this.getAusencias(companyId, sucursalId, period, userId)
           ]);
 
           const metrics = this.calculateSafetyMetrics(
@@ -336,121 +336,129 @@ export const safetyDashboardService = {
     
     try {
       // Listener para accidentes
-      const accidentesRef = collection(dbAudit, 'accidentes');
-      let qAccidentes;
-      
-      if (sucursalId === 'todas') {
-        qAccidentes = query(accidentesRef, orderBy('fechaHora', 'desc'));
-      } else {
-        qAccidentes = query(
-          accidentesRef,
-          where('sucursalId', '==', sucursalId),
-          orderBy('fechaHora', 'desc')
-        );
-      }
-      
-      const unsubscribeAccidentes = onSnapshot(qAccidentes, 
-        (snapshot) => {
-          console.log(`🔄 [SafetyDashboard] Cambios detectados en accidentes: ${snapshot.docs.length} documentos`);
-          recargarDashboard();
-        },
-        (error) => {
-          console.error('❌ [SafetyDashboard] Error en listener de accidentes:', error);
-          if (onError) onError(error);
+      if (userId) {
+        const accidentesRef = auditUserCollection(userId, 'accidentes');
+        let qAccidentes;
+        
+        if (sucursalId === 'todas') {
+          qAccidentes = query(accidentesRef, orderBy('fechaHora', 'desc'));
+        } else {
+          qAccidentes = query(
+            accidentesRef,
+            where('sucursalId', '==', sucursalId),
+            orderBy('fechaHora', 'desc')
+          );
         }
-      );
-      
-      unsubscribes.push(unsubscribeAccidentes);
+        
+        const unsubscribeAccidentes = onSnapshot(qAccidentes, 
+          (snapshot) => {
+            console.log(`🔄 [SafetyDashboard] Cambios detectados en accidentes: ${snapshot.docs.length} documentos`);
+            recargarDashboard();
+          },
+          (error) => {
+            console.error('❌ [SafetyDashboard] Error en listener de accidentes:', error);
+            if (onError) onError(error);
+          }
+        );
+        
+        unsubscribes.push(unsubscribeAccidentes);
+      }
       
       // Listener para ausencias de salud ocupacional
-      const ausenciasRef = collection(dbAudit, 'ausencias');
-      let qAusencias;
+      if (userId) {
+        const ausenciasRef = auditUserCollection(userId, 'ausencias');
+        let qAusencias;
 
-      if (sucursalId === 'todas') {
-        if (companyId) {
-          qAusencias = query(ausenciasRef, where('empresaId', '==', companyId));
+        if (sucursalId === 'todas') {
+          if (companyId) {
+            qAusencias = query(ausenciasRef, where('empresaId', '==', companyId));
+          } else {
+            qAusencias = query(ausenciasRef, orderBy('fechaInicio', 'desc'));
+          }
         } else {
-          qAusencias = query(ausenciasRef, orderBy('fechaInicio', 'desc'));
+          qAusencias = query(
+            ausenciasRef,
+            where('sucursalId', '==', sucursalId)
+          );
         }
-      } else {
-        qAusencias = query(
-          ausenciasRef,
-          where('sucursalId', '==', sucursalId)
+
+        const unsubscribeAusencias = onSnapshot(
+          qAusencias,
+          (snapshot) => {
+            console.log(
+              `🔄 [Dashboard] Cambios detectados en ausencias: ${snapshot.docs.length} documentos`
+            );
+            recargarDashboard();
+          },
+          (error) => {
+            console.error(
+              '❌ [Dashboard] Error en listener de ausencias:',
+              error
+            );
+            if (onError) onError(error);
+          }
         );
+
+        unsubscribes.push(unsubscribeAusencias);
       }
-
-      const unsubscribeAusencias = onSnapshot(
-        qAusencias,
-        (snapshot) => {
-          console.log(
-            `🔄 [Dashboard] Cambios detectados en ausencias: ${snapshot.docs.length} documentos`
-          );
-          recargarDashboard();
-        },
-        (error) => {
-          console.error(
-            '❌ [Dashboard] Error en listener de ausencias:',
-            error
-          );
-          if (onError) onError(error);
-        }
-      );
-
-      unsubscribes.push(unsubscribeAusencias);
       
       // Listener para capacitaciones
-      const capacitacionesRef = collection(dbAudit, 'capacitaciones');
-      let qCapacitaciones;
-      
-      if (sucursalId === 'todas') {
-        qCapacitaciones = query(capacitacionesRef, orderBy('fechaRealizada', 'desc'));
-      } else {
-        qCapacitaciones = query(
-          capacitacionesRef,
-          where('sucursalId', '==', sucursalId),
-          orderBy('fechaRealizada', 'desc')
-        );
-      }
-      
-      const unsubscribeCapacitaciones = onSnapshot(qCapacitaciones,
-        (snapshot) => {
-          console.log(`🔄 [SafetyDashboard] Cambios detectados en capacitaciones: ${snapshot.docs.length} documentos`);
-          recargarDashboard();
-        },
-        (error) => {
-          console.error('❌ [SafetyDashboard] Error en listener de capacitaciones:', error);
-          if (onError) onError(error);
+      if (userId) {
+        const capacitacionesRef = auditUserCollection(userId, 'capacitaciones');
+        let qCapacitaciones;
+        
+        if (sucursalId === 'todas') {
+          qCapacitaciones = query(capacitacionesRef, orderBy('fechaRealizada', 'desc'));
+        } else {
+          qCapacitaciones = query(
+            capacitacionesRef,
+            where('sucursalId', '==', sucursalId),
+            orderBy('fechaRealizada', 'desc')
+          );
         }
-      );
-      
-      unsubscribes.push(unsubscribeCapacitaciones);
+        
+        const unsubscribeCapacitaciones = onSnapshot(qCapacitaciones,
+          (snapshot) => {
+            console.log(`🔄 [SafetyDashboard] Cambios detectados en capacitaciones: ${snapshot.docs.length} documentos`);
+            recargarDashboard();
+          },
+          (error) => {
+            console.error('❌ [SafetyDashboard] Error en listener de capacitaciones:', error);
+            if (onError) onError(error);
+          }
+        );
+        
+        unsubscribes.push(unsubscribeCapacitaciones);
+      }
       
       // Listener para empleados
-      const empleadosRef = collection(dbAudit, 'empleados');
-      let qEmpleados;
-      
-      if (sucursalId === 'todas') {
-        qEmpleados = query(empleadosRef, orderBy('nombre', 'asc'));
-      } else {
-        qEmpleados = query(
-          empleadosRef,
-          where('sucursalId', '==', sucursalId),
-          orderBy('nombre', 'asc')
-        );
-      }
-      
-      const unsubscribeEmpleados = onSnapshot(qEmpleados,
-        (snapshot) => {
-          console.log(`🔄 [SafetyDashboard] Cambios detectados en empleados: ${snapshot.docs.length} documentos`);
-          recargarDashboard();
-        },
-        (error) => {
-          console.error('❌ [SafetyDashboard] Error en listener de empleados:', error);
-          if (onError) onError(error);
+      if (userId) {
+        const empleadosRef = auditUserCollection(userId, 'empleados');
+        let qEmpleados;
+        
+        if (sucursalId === 'todas') {
+          qEmpleados = query(empleadosRef, orderBy('nombre', 'asc'));
+        } else {
+          qEmpleados = query(
+            empleadosRef,
+            where('sucursalId', '==', sucursalId),
+            orderBy('nombre', 'asc')
+          );
         }
-      );
-      
-      unsubscribes.push(unsubscribeEmpleados);
+        
+        const unsubscribeEmpleados = onSnapshot(qEmpleados,
+          (snapshot) => {
+            console.log(`🔄 [SafetyDashboard] Cambios detectados en empleados: ${snapshot.docs.length} documentos`);
+            recargarDashboard();
+          },
+          (error) => {
+            console.error('❌ [SafetyDashboard] Error en listener de empleados:', error);
+            if (onError) onError(error);
+          }
+        );
+        
+        unsubscribes.push(unsubscribeEmpleados);
+      }
       
       // Listener para auditorías
       const auditoriasRef = reportesCollection();
@@ -643,9 +651,14 @@ export const safetyDashboardService = {
   },
 
   // Obtener empleados de una sucursal
-  async getEmpleados(sucursalId) {
+  async getEmpleados(sucursalId, userId = null) {
     try {
-      const empleadosRef = collection(dbAudit, 'empleados');
+      if (!userId) {
+        console.warn('⚠️ [SafetyDashboard] getEmpleados: userId no proporcionado, retornando array vacío');
+        return [];
+      }
+
+      const empleadosRef = auditUserCollection(userId, 'empleados');
       let q;
       
       if (sucursalId === 'todas') {
@@ -668,7 +681,7 @@ export const safetyDashboardService = {
         });
       });
       
-      console.log(`👥 [SafetyDashboard] ${empleados.length} empleados encontrados`);
+      console.log(`👥 [SafetyDashboard] ${empleados.length} empleados encontrados para usuario ${userId}`);
       return empleados;
       
     } catch (error) {
@@ -678,9 +691,14 @@ export const safetyDashboardService = {
   },
 
   // Obtener capacitaciones de una sucursal
-  async getCapacitaciones(sucursalId, period) {
+  async getCapacitaciones(sucursalId, period, userId = null) {
     try {
-      const capacitacionesRef = collection(dbAudit, 'capacitaciones');
+      if (!userId) {
+        console.warn('⚠️ [SafetyDashboard] getCapacitaciones: userId no proporcionado, retornando array vacío');
+        return [];
+      }
+
+      const capacitacionesRef = auditUserCollection(userId, 'capacitaciones');
       let q;
       
       if (sucursalId === 'todas') {
@@ -703,7 +721,7 @@ export const safetyDashboardService = {
         });
       });
       
-      console.log(`📚 [SafetyDashboard] ${capacitaciones.length} capacitaciones encontradas`);
+      console.log(`📚 [SafetyDashboard] ${capacitaciones.length} capacitaciones encontradas para usuario ${userId}`);
       return capacitaciones;
       
     } catch (error) {
@@ -713,9 +731,14 @@ export const safetyDashboardService = {
   },
 
   // Obtener accidentes de una sucursal
-  async getAccidentes(sucursalId, period) {
+  async getAccidentes(sucursalId, period, userId = null) {
     try {
-      const accidentesRef = collection(dbAudit, 'accidentes');
+      if (!userId) {
+        console.warn('⚠️ [SafetyDashboard] getAccidentes: userId no proporcionado, retornando array vacío');
+        return [];
+      }
+
+      const accidentesRef = auditUserCollection(userId, 'accidentes');
       let q;
       
       if (sucursalId === 'todas') {
@@ -738,7 +761,7 @@ export const safetyDashboardService = {
         });
       });
       
-      console.log(`🚨 [SafetyDashboard] ${accidentes.length} accidentes encontrados`);
+      console.log(`🚨 [SafetyDashboard] ${accidentes.length} accidentes encontrados para usuario ${userId}`);
       return accidentes;
       
     } catch (error) {
@@ -748,9 +771,14 @@ export const safetyDashboardService = {
   },
 
   // Obtener ausencias y enfermedades registradas
-  async getAusencias(companyId, sucursalId, period) {
+  async getAusencias(companyId, sucursalId, period, userId = null) {
     try {
-      const ausenciasRef = collection(dbAudit, 'ausencias');
+      if (!userId) {
+        console.warn('⚠️ [SafetyDashboard] getAusencias: userId no proporcionado, retornando array vacío');
+        return [];
+      }
+
+      const ausenciasRef = auditUserCollection(userId, 'ausencias');
       let snapshot;
 
       if (sucursalId === 'todas') {
@@ -823,7 +851,9 @@ export const safetyDashboardService = {
         return inicio <= periodEnd && cierre >= periodStart;
       };
 
-      return ausencias.filter(overlapsPeriod);
+      const filtered = ausencias.filter(overlapsPeriod);
+      console.log(`🏥 [SafetyDashboard] ${filtered.length} ausencias encontradas para usuario ${userId}`);
+      return filtered;
     } catch (error) {
       console.error('❌ [SafetyDashboard] Error obteniendo ausencias:', error);
       return [];

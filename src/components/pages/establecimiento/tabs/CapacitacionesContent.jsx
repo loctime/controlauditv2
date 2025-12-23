@@ -13,10 +13,12 @@ import {
   TableRow
 } from '@mui/material';
 import SchoolIcon from '@mui/icons-material/School';
-import { collection, getDocs, query, where } from 'firebase/firestore';
-import { dbAudit } from '../../../../firebaseControlFile';
+import { getDocs, query, where } from 'firebase/firestore';
+import { auditUserCollection } from '../../../../firebaseControlFile';
+import { useAuth } from '../../../context/AuthContext';
 
 const CapacitacionesContent = ({ sucursalId, sucursalNombre, navigateToPage }) => {
+  const { userProfile } = useAuth();
   const [capacitaciones, setCapacitaciones] = useState([]);
   const [planesAnuales, setPlanesAnuales] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -33,9 +35,15 @@ const CapacitacionesContent = ({ sucursalId, sucursalNombre, navigateToPage }) =
       console.log('Cargando capacitaciones para sucursal:', sucursalId);
       
       // Cargar capacitaciones individuales
+      if (!userProfile?.uid) {
+        console.error('Error: userProfile.uid es requerido');
+        setLoading(false);
+        return;
+      }
       let capacitacionesData = [];
       try {
-        const capacitacionesQuery = query(collection(dbAudit, 'capacitaciones'), where('sucursalId', '==', sucursalId));
+        const capacitacionesRef = auditUserCollection(userProfile.uid, 'capacitaciones');
+        const capacitacionesQuery = query(capacitacionesRef, where('sucursalId', '==', sucursalId));
         const capacitacionesSnapshot = await getDocs(capacitacionesQuery);
         capacitacionesData = capacitacionesSnapshot.docs.map(doc => ({
           id: doc.id,
@@ -56,7 +64,8 @@ const CapacitacionesContent = ({ sucursalId, sucursalNombre, navigateToPage }) =
       // Cargar planes anuales - usar el nombre correcto de la colección
       let planesData = [];
       try {
-        const planesQuery = query(collection(dbAudit, 'planes_capacitaciones_anuales'), where('sucursalId', '==', sucursalId));
+        const planesRef = auditUserCollection(userProfile.uid, 'planes_capacitaciones_anuales');
+        const planesQuery = query(planesRef, where('sucursalId', '==', sucursalId));
         const planesSnapshot = await getDocs(planesQuery);
         planesData = planesSnapshot.docs.map(doc => ({
           id: doc.id,

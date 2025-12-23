@@ -11,7 +11,7 @@ import {
   useTheme
 } from '@mui/material';
 import StorefrontIcon from '@mui/icons-material/Storefront';
-import { collection, getDocs, query, where, addDoc, updateDoc, deleteDoc, doc, Timestamp } from 'firebase/firestore';
+import { getDocs, query, where, addDoc, updateDoc, deleteDoc, doc, Timestamp } from 'firebase/firestore';
 import { dbAudit, auditUserCollection } from '../../../../firebaseControlFile';
 import { useAuth } from '../../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -55,8 +55,8 @@ const SucursalesTab = ({ empresaId, empresaNombre, userEmpresas, loadEmpresasSta
 
   // Función para recargar estadísticas de sucursales
   const reloadSucursalesStats = async () => {
-    if (sucursales && sucursales.length > 0) {
-      await loadSucursalesStats(sucursales);
+    if (sucursales && sucursales.length > 0 && userProfile?.uid) {
+      await loadSucursalesStats(sucursales, userProfile.uid);
     }
   };
 
@@ -80,7 +80,7 @@ const SucursalesTab = ({ empresaId, empresaNombre, userEmpresas, loadEmpresasSta
       setSucursales(sucursalesData);
       
       // Cargar estadísticas de cada sucursal
-      await loadSucursalesStats(sucursalesData);
+      await loadSucursalesStats(sucursalesData, userProfile.uid);
       
       // Cargar progreso de targets mensuales
       const progresos = await calcularProgresoTargets(sucursalesData);
@@ -270,8 +270,8 @@ const SucursalesTab = ({ empresaId, empresaNombre, userEmpresas, loadEmpresasSta
       resetForm();
       await loadSucursales();
       
-      if (typeof loadEmpresasStats === 'function') {
-        loadEmpresasStats(userEmpresas);
+      if (typeof loadEmpresasStats === 'function' && userProfile?.uid) {
+        loadEmpresasStats(userEmpresas, userProfile.uid);
       }
     } catch (error) {
       console.error(`Error ${modalMode === 'create' ? 'creando' : 'actualizando'} sucursal:`, error);
@@ -307,8 +307,17 @@ const SucursalesTab = ({ empresaId, empresaNombre, userEmpresas, loadEmpresasSta
         }
 
         // Verificar si hay empleados asociados
+        if (!userProfile?.uid) {
+          Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Usuario no autenticado'
+          });
+          return;
+        }
+        const empleadosRef = auditUserCollection(userProfile.uid, 'empleados');
         const empleadosSnapshot = await getDocs(
-          query(collection(dbAudit, 'empleados'), where('sucursalId', '==', sucursal.id))
+          query(empleadosRef, where('sucursalId', '==', sucursal.id))
         );
 
         if (empleadosSnapshot.docs.length > 0) {
@@ -340,7 +349,7 @@ const SucursalesTab = ({ empresaId, empresaNombre, userEmpresas, loadEmpresasSta
         await loadSucursales();
         
         if (typeof loadEmpresasStats === 'function') {
-          loadEmpresasStats(userEmpresas);
+          loadEmpresasStats(userEmpresas, userProfile.uid);
         }
 
         Swal.fire({
