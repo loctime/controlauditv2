@@ -12,7 +12,7 @@ import {
   Timestamp,
   onSnapshot 
 } from 'firebase/firestore';
-import { dbAudit, reportesCollection, auditUserCollection } from '../firebaseControlFile';
+import { dbAudit, auditUserCollection } from '../firebaseControlFile';
 import { computeOccupationalHealthMetrics } from '../utils/occupationalHealthMetrics';
 
 const isTruthyFlag = (value) => {
@@ -198,7 +198,7 @@ export const safetyDashboardService = {
         accidentesData,
         ausenciasData
       ] = await Promise.all([
-        this.getAuditoriasData(companyId, period),
+        this.getAuditoriasData(companyId, period, userId),
         this.getLogsData(companyId, period),
         this.getFormulariosData(companyId, period),
         this.getEmpleados(sucursalId, userId),
@@ -221,7 +221,7 @@ export const safetyDashboardService = {
       
       // Obtener información de la empresa y sucursal
       const companyInfo = await this.getCompanyInfo(companyId);
-      const sucursalInfo = sucursalId !== 'todas' ? await this.getSucursalInfo(sucursalId) : null;
+      const sucursalInfo = sucursalId !== 'todas' ? await this.getSucursalInfo(sucursalId, userId) : null;
       
       return {
         companyId,
@@ -281,7 +281,7 @@ export const safetyDashboardService = {
             accidentesData,
             ausenciasData
           ] = await Promise.all([
-            this.getAuditoriasData(companyId, period),
+            this.getAuditoriasData(companyId, period, userId),
             this.getLogsData(companyId, period),
             this.getFormulariosData(companyId, period),
             this.getEmpleados(sucursalId, userId),
@@ -302,7 +302,7 @@ export const safetyDashboardService = {
           );
           
           const companyInfo = await this.getCompanyInfo(companyId);
-          const sucursalInfo = sucursalId !== 'todas' ? await this.getSucursalInfo(sucursalId) : null;
+          const sucursalInfo = sucursalId !== 'todas' ? await this.getSucursalInfo(sucursalId, userId) : null;
           
           callback({
             companyId,
@@ -461,8 +461,13 @@ export const safetyDashboardService = {
       }
       
       // Listener para auditorías
-      const auditoriasRef = reportesCollection();
-      const auditoriaQueries = [];
+      if (!userId) {
+        console.warn('⚠️ Dashboard: userId requerido para reportes');
+        return;
+      }
+      
+      const auditoriasRef = auditUserCollection(userId, 'reportes');
+            const auditoriaQueries = [];
       
       if (companyId) {
         auditoriaQueries.push(query(auditoriasRef, where('empresaId', '==', companyId)));
@@ -501,10 +506,15 @@ export const safetyDashboardService = {
   },
 
   // Obtener datos de auditorías
-  async getAuditoriasData(companyId, period) {
+  async getAuditoriasData(companyId, period, userId) {
     try {
-      const reportesRef = reportesCollection();
-      const queries = [];
+      if (!userId) {
+        console.warn('⚠️ getAuditoriasData: userId requerido');
+        return [];
+      }
+      
+      const reportesRef = auditUserCollection(userId, 'reportes');
+            const queries = [];
 
       if (companyId) {
         queries.push(query(reportesRef, where('empresaId', '==', companyId)));
@@ -532,19 +542,34 @@ export const safetyDashboardService = {
           processedIds.add(docSnapshot.id);
 
           const data = docSnapshot.data();
+          
+          // Normalizar fechaCreacion: convertir Timestamp o string ISO a Date
+          let fechaCreacionNormalizada = null;
+          if (data.fechaCreacion) {
+            if (data.fechaCreacion.toDate) {
+              // Es un Timestamp de Firestore
+              fechaCreacionNormalizada = data.fechaCreacion.toDate();
+            } else if (typeof data.fechaCreacion === 'string') {
+              // Es un string ISO
+              fechaCreacionNormalizada = new Date(data.fechaCreacion);
+            } else if (data.fechaCreacion instanceof Date) {
+              // Ya es un Date
+              fechaCreacionNormalizada = data.fechaCreacion;
+            }
+          }
+          
           auditorias.push({
             id: docSnapshot.id,
             ...data,
+            fechaCreacion: fechaCreacionNormalizada,
             estadisticas: data.estadisticas || this.calculateAuditoriaStats(data.respuestas)
           });
         });
       });
 
       auditorias.sort((a, b) => {
-        const fechaARef = a.fechaCreacion || a.fecha || a.timestamp;
-        const fechaBRef = b.fechaCreacion || b.fecha || b.timestamp;
-        const fechaA = fechaARef?.toDate ? fechaARef.toDate() : new Date(fechaARef || 0);
-        const fechaB = fechaBRef?.toDate ? fechaBRef.toDate() : new Date(fechaBRef || 0);
+        const fechaA = a.fechaCreacion instanceof Date ? a.fechaCreacion : (a.fecha?.toDate ? a.fecha.toDate() : (a.timestamp?.toDate ? a.timestamp.toDate() : new Date(a.fecha || a.timestamp || 0)));
+        const fechaB = b.fechaCreacion instanceof Date ? b.fechaCreacion : (b.fecha?.toDate ? b.fecha.toDate() : (b.timestamp?.toDate ? b.timestamp.toDate() : new Date(b.fecha || b.timestamp || 0)));
         return fechaB - fechaA;
       });
 
@@ -634,9 +659,13 @@ export const safetyDashboardService = {
   },
 
   // Obtener información de la sucursal
-  async getSucursalInfo(sucursalId) {
+  async getSucursalInfo(sucursalId, userId) {
     try {
-      const sucursalRef = doc(dbAudit, 'sucursales', sucursalId);
+      if (!userId) {
+        console.warn('⚠️ [SafetyDashboard] getSucursalInfo: userId no proporcionado');
+        return null;
+      }
+      const sucursalRef = doc(dbAudit, 'apps', 'auditoria', 'users', userId, 'sucursales', sucursalId);
       const sucursalDoc = await getDoc(sucursalRef);
       
       if (sucursalDoc.exists()) {
@@ -1154,9 +1183,10 @@ export const safetyDashboardService = {
 
     const auditoriasInPeriod = auditorias.filter(auditoria => {
       if (!auditoria.fechaCreacion && !auditoria.fecha) return false;
-      const fechaReferencia = auditoria.fechaCreacion || auditoria.fecha;
-      const auditDate = fechaReferencia?.toDate ? fechaReferencia.toDate() : new Date(fechaReferencia);
-      return auditDate >= periodStart && auditDate <= periodEnd;
+      const auditDate = auditoria.fechaCreacion instanceof Date 
+        ? auditoria.fechaCreacion 
+        : (auditoria.fecha?.toDate ? auditoria.fecha.toDate() : new Date(auditoria.fecha || 0));
+      return auditDate instanceof Date && auditDate >= periodStart && auditDate <= periodEnd;
     });
 
     const completedAudits = auditoriasInPeriod.filter(auditoria => auditoria.estado === 'completada');
@@ -1332,9 +1362,10 @@ export const safetyDashboardService = {
     const complianceTrend = months.map(month => {
       const monthAuditorias = auditorias.filter(auditoria => {
         if (!auditoria.fechaCreacion) return false;
-        const auditDate = auditoria.fechaCreacion.toDate ? auditoria.fechaCreacion.toDate() : new Date(auditoria.fechaCreacion);
-        const monthIndex = auditDate.getMonth();
-        return monthIndex === months.indexOf(month);
+        const auditDate = auditoria.fechaCreacion instanceof Date 
+          ? auditoria.fechaCreacion 
+          : (auditoria.fechaCreacion?.toDate ? auditoria.fechaCreacion.toDate() : new Date(auditoria.fechaCreacion));
+        return auditDate instanceof Date && auditDate.getMonth() === months.indexOf(month);
       });
 
       const conformes = monthAuditorias.reduce((total, auditoria) => {

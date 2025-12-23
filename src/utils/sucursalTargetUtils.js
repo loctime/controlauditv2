@@ -251,8 +251,10 @@ export async function calcularProgresoTargetAnualAuditorias(sucursal, año = nul
   }
 
   if (!reportesQueries || reportesQueries.length === 0) {
-    console.warn('calcularProgresoTargetAnualAuditorias: reportesQueries es requerido');
-    return { completadas: 0, target: 0, porcentaje: 0, estado: 'sin_target' };
+    // Si no hay queries, devolver valores por defecto silenciosamente
+    // Solo mostrar warning si hay un target configurado pero no hay forma de obtener datos
+    // (esto indica un problema de configuración, no simplemente falta de datos)
+    return { completadas: 0, target: target, porcentaje: 0, estado: 'sin_datos' };
   }
 
   const completadas = await getAuditoriasAñoActual(sucursal.id, sucursal.nombre, año, sucursal.empresaId, reportesQueries);

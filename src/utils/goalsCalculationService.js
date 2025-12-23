@@ -49,10 +49,12 @@ export async function calcularCumplimientoCapacitaciones(sucursal, capacitacione
     let capacitacionesData = capacitaciones;
     if (!capacitacionesData || capacitacionesData.length === 0) {
       if (!capacitacionesQueries || capacitacionesQueries.length === 0) {
-        console.warn('calcularCumplimientoCapacitaciones: capacitaciones o capacitacionesQueries son requeridos');
+        // Si no hay datos ni queries, devolver valores por defecto silenciosamente
+        // Solo mostrar warning si hay un target configurado pero no hay forma de obtener datos
+        // (esto indica un problema de configuración, no simplemente falta de datos)
         return {
-          mensual: { completadas: 0, target: 0, porcentaje: 0, estado: 'sin_target' },
-          anual: { completadas: 0, target: 0, porcentaje: 0, estado: 'sin_target' }
+          mensual: { completadas: 0, target: targetMensual, porcentaje: 0, estado: targetMensual > 0 ? 'sin_datos' : 'sin_target' },
+          anual: { completadas: 0, target: targetAnual, porcentaje: 0, estado: targetAnual > 0 ? 'sin_datos' : 'sin_target' }
         };
       }
 

@@ -21,8 +21,17 @@ export default function SafetyGoals({
   totalAccidents = 0,
   frequencyIndex = 0.0,
   severityIndex = 0.0,
-  accidentabilityIndex = 0.0
+  accidentabilityIndex = 0.0,
+  indiceFrecuenciaNormalizado = null,
+  indiceGravedadNormalizado = null,
+  indiceAccidentabilidadNormalizado = null
 }) {
+  // Normalizar valores técnicos para mostrar si no se proporcionan los normalizados
+  const frecuenciaMostrable = indiceFrecuenciaNormalizado?.valorMostrable ?? Math.round((frequencyIndex / 1000) * 10) / 10;
+  const gravedadMostrable = indiceGravedadNormalizado?.valorMostrable ?? Math.round((severityIndex / 1000) * 10) / 10;
+  const accidentabilidadMostrable = indiceAccidentabilidadNormalizado?.valorMostrable ?? Math.round((accidentabilityIndex / 1000) * 10) / 10;
+  
+  const unidad = "por millón de horas hombre";
   const getSafetyStatus = () => {
     if (totalAccidents === 0) return {
       status: 'EXCELENTE',
@@ -170,15 +179,20 @@ export default function SafetyGoals({
             }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                 <SpeedIcon sx={{ color: '#3b82f6' }} />
-                <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                  IF
-                </Typography>
+                <Box>
+                  <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                    IF
+                  </Typography>
+                  <Typography variant="caption" sx={{ color: '#64748b', display: 'block' }}>
+                    {unidad}
+                  </Typography>
+                </Box>
               </Box>
               <Typography variant="h6" sx={{
                 fontWeight: 'bold',
                 color: '#1e40af'
               }}>
-                {frequencyIndex.toFixed(1)}
+                {frecuenciaMostrable.toFixed(1)}
               </Typography>
             </Box>
 
@@ -194,15 +208,20 @@ export default function SafetyGoals({
             }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                 <TimelineIcon sx={{ color: '#22c55e' }} />
-                <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                  IG
-                </Typography>
+                <Box>
+                  <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                    IG
+                  </Typography>
+                  <Typography variant="caption" sx={{ color: '#64748b', display: 'block' }}>
+                    {unidad}
+                  </Typography>
+                </Box>
               </Box>
               <Typography variant="h6" sx={{
                 fontWeight: 'bold',
                 color: '#16a34a'
               }}>
-                {severityIndex.toFixed(1)}
+                {gravedadMostrable.toFixed(1)}
               </Typography>
             </Box>
 
@@ -218,15 +237,20 @@ export default function SafetyGoals({
             }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                 <AssessmentIcon sx={{ color: '#f59e0b' }} />
-                <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                  IA
-                </Typography>
+                <Box>
+                  <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                    IA
+                  </Typography>
+                  <Typography variant="caption" sx={{ color: '#64748b', display: 'block' }}>
+                    {unidad}
+                  </Typography>
+                </Box>
               </Box>
               <Typography variant="h6" sx={{
                 fontWeight: 'bold',
                 color: '#d97706'
               }}>
-                {accidentabilityIndex.toFixed(1)}
+                {accidentabilidadMostrable.toFixed(1)}
               </Typography>
             </Box>
           </Box>

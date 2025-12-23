@@ -3,6 +3,18 @@ import { computeOccupationalHealthMetrics } from '../../../../utils/occupational
 
 /**
  * Hook para calcular índices técnicos de seguridad
+ * 
+ * Índices calculados:
+ * - IF (Índice de Frecuencia): Accidentes con tiempo perdido por millón de horas hombre
+ * - IG (Índice de Gravedad): Días perdidos por millón de horas hombre
+ * - IA (Índice de Accidentabilidad): IF + IG
+ * 
+ * Cada índice se exporta en dos formatos:
+ * - valorTecnico: Valor exacto de la fórmula (ej: 8333.3)
+ * - valorMostrable: Valor normalizado dividido por 1000 para mejor legibilidad (ej: 8.3)
+ * 
+ * Los valores técnicos se mantienen para compatibilidad hacia atrás y cálculos precisos.
+ * Los valores mostrables son para exposición en UI sin necesidad de interpretación adicional.
  */
 export const useIndicesCalculator = () => {
   // Calcular período de análisis basado en año
@@ -297,20 +309,52 @@ export const useIndicesCalculator = () => {
     const tasaAusentismo = horasTotales > 0 ? (horasPerdidasTotales / horasTotales) * 100 : 0;
 
     // 2. Índice de Frecuencia (IF)
-    const indiceFrecuencia = horasTrabajadas > 0 ? (accidentesConTiempoPerdido * 1000000) / horasTrabajadas : 0;
+    // Fórmula técnica: (accidentes con tiempo perdido × 1,000,000) / horas trabajadas
+    // Representa: número de accidentes con tiempo perdido por cada millón de horas hombre trabajadas
+    const indiceFrecuenciaTecnico = horasTrabajadas > 0 ? (accidentesConTiempoPerdido * 1000000) / horasTrabajadas : 0;
+    const indiceFrecuenciaMostrable = Math.round((indiceFrecuenciaTecnico / 1000) * 10) / 10; // Normalizado a unidades por 1000 HH
 
     // 3. Índice de Incidencia (II) - Usando promedio mensual de trabajadores expuestos
     const indiceIncidencia = promedioTrabajadores > 0 ? (accidentesConTiempoPerdido * 1000) / promedioTrabajadores : 0;
 
     // 4. Índice de Gravedad (IG) - OSHA standard: (días perdidos × 1,000,000) / horas trabajadas
-    const indiceGravedad = horasTrabajadas > 0 ? (diasPerdidos * 1000000) / horasTrabajadas : 0;
+    // Fórmula técnica: (días perdidos × 1,000,000) / horas trabajadas
+    // Representa: días perdidos por incapacidad temporal por cada millón de horas hombre trabajadas
+    const indiceGravedadTecnico = horasTrabajadas > 0 ? (diasPerdidos * 1000000) / horasTrabajadas : 0;
+    const indiceGravedadMostrable = Math.round((indiceGravedadTecnico / 1000) * 10) / 10; // Normalizado a unidades por 1000 HH
+
+    // 5. Índice de Accidentabilidad (IA) - Suma de IF + IG
+    // Representa: combinación de frecuencia y gravedad de accidentes por cada millón de horas hombre trabajadas
+    const indiceAccidentabilidadTecnico = indiceFrecuenciaTecnico + indiceGravedadTecnico;
+    const indiceAccidentabilidadMostrable = Math.round((indiceAccidentabilidadTecnico / 1000) * 10) / 10; // Normalizado a unidades por 1000 HH
 
     return {
       indices: {
+        // Valores técnicos (mantienen compatibilidad hacia atrás)
         tasaAusentismo: Math.round(tasaAusentismo * 100) / 100,
-        indiceFrecuencia: Math.round(indiceFrecuencia * 100) / 100,
+        indiceFrecuencia: Math.round(indiceFrecuenciaTecnico * 100) / 100,
         indiceIncidencia: Math.round(indiceIncidencia * 100) / 100,
-        indiceGravedad: Math.round(indiceGravedad * 100) / 100
+        indiceGravedad: Math.round(indiceGravedadTecnico * 100) / 100,
+        indiceAccidentabilidad: Math.round(indiceAccidentabilidadTecnico * 100) / 100,
+        // Estructura normalizada con metadata
+        indiceFrecuenciaNormalizado: {
+          valorTecnico: Math.round(indiceFrecuenciaTecnico * 100) / 100,
+          valorMostrable: indiceFrecuenciaMostrable,
+          unidad: "por millón de horas hombre",
+          descripcion: "Número de accidentes con tiempo perdido por cada millón de horas hombre trabajadas"
+        },
+        indiceGravedadNormalizado: {
+          valorTecnico: Math.round(indiceGravedadTecnico * 100) / 100,
+          valorMostrable: indiceGravedadMostrable,
+          unidad: "por millón de horas hombre",
+          descripcion: "Días perdidos por incapacidad temporal por cada millón de horas hombre trabajadas"
+        },
+        indiceAccidentabilidadNormalizado: {
+          valorTecnico: Math.round(indiceAccidentabilidadTecnico * 100) / 100,
+          valorMostrable: indiceAccidentabilidadMostrable,
+          unidad: "por millón de horas hombre",
+          descripcion: "Combinación de frecuencia y gravedad de accidentes (IF + IG) por cada millón de horas hombre trabajadas"
+        }
       },
       metricas: {
         totalEmpleados,
