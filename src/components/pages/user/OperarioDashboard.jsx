@@ -31,7 +31,7 @@ import {
 } from "@mui/icons-material";
 import { useAuth } from "../../context/AuthContext";
 import { collection, query, where, getDocs, orderBy, limit } from "firebase/firestore";
-import { db } from "../../../firebaseControlFile";
+import { dbAudit } from "../../../firebaseControlFile";
 
 const OperarioDashboard = () => {
   const { user, userProfile, role } = useAuth();
@@ -56,7 +56,7 @@ const OperarioDashboard = () => {
         setLoading(true);
         
         // Obtener auditorías asignadas al operario
-        const auditoriasRef = collection(db, 'auditorias');
+        const auditoriasRef = collection(dbAudit, 'auditorias');
         const q = query(
           auditoriasRef,
           where('operarioId', '==', user.uid),

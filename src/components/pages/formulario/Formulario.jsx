@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Button, TextField, Typography, Box } from "@mui/material";
 import { ArrowBack } from "@mui/icons-material";
 import { collection, addDoc, Timestamp } from "firebase/firestore";
-import { db } from "../../../firebaseControlFile";
+import { dbAudit } from "../../../firebaseControlFile";
 import { useAuth } from "../../context/AuthContext";
 import Swal from 'sweetalert2';
 import { useNavigate } from "react-router-dom";
@@ -75,7 +75,7 @@ const Formulario = () => {
         ultimaModificacion: Timestamp.now()
       };
       
-      const docRef = await addDoc(collection(db, "formularios"), formularioData);
+      const docRef = await addDoc(collection(dbAudit, "formularios"), formularioData);
       console.log("Formulario creado con ID: ", docRef.id);
       
       // Registrar log de creación

@@ -6,7 +6,7 @@ import {
 } from '@mui/material';
 import { Business as BusinessIcon, ExpandMore as ExpandMoreIcon, Store as StoreIcon, LocationOn, Phone, Person } from '@mui/icons-material';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
-import { db } from '../../../firebaseControlFile';
+import { sucursalesCollection } from '../../../firebaseControlFile';
 import { useNavigate } from 'react-router-dom';
 import { normalizeSucursal } from '../../../utils/firestoreUtils';
 
@@ -20,7 +20,7 @@ const SucursalesEmpresa = ({ empresaId }) => {
   useEffect(() => {
     if (!empresaId) return;
     setLoading(true);
-    const q = query(collection(db, 'sucursales'), where('empresaId', '==', empresaId));
+    const q = query(sucursalesCollection(), where('empresaId', '==', empresaId));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       setSucursales(snapshot.docs.map(doc => normalizeSucursal(doc)));
       setLoading(false);

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { collection, query, where, getDocs, addDoc } from 'firebase/firestore';
-import { db } from '../../../firebaseControlFile';
+import { dbAudit } from '../../../firebaseControlFile';
 import { Box, Typography, Button, Alert } from '@mui/material';
 import { useAuth } from '../../context/AuthContext';
 
@@ -15,7 +15,7 @@ const VistaFormularioPublico = () => {
   useEffect(() => {
     const fetchForm = async () => {
       setLoading(true);
-      const q = query(collection(db, 'formularios'), where('publicSharedId', '==', publicSharedId), where('esPublico', '==', true));
+      const q = query(collection(dbAudit, 'formularios'), where('publicSharedId', '==', publicSharedId), where('esPublico', '==', true));
       const snapshot = await getDocs(q);
       setForm(snapshot.empty ? null : { id: snapshot.docs[0].id, ...snapshot.docs[0].data() });
       setLoading(false);
@@ -35,7 +35,7 @@ const VistaFormularioPublico = () => {
       createdAt: new Date()
     };
     delete nuevoFormulario.id;
-    await addDoc(collection(db, 'formularios'), nuevoFormulario);
+    await addDoc(collection(dbAudit, 'formularios'), nuevoFormulario);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
     console.debug('[VistaFormularioPublico] Formulario copiado a sistema:', userProfile.uid);

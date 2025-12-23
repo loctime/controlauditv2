@@ -45,7 +45,7 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import { toast } from 'react-toastify';
 import { collection, getDocs, query, orderBy, limit, where, addDoc } from 'firebase/firestore';
-import { db } from '../../../firebaseControlFile';
+import { dbAudit, auditUsersCollection } from '../../../firebaseControlFile';
 
 // Configuración de tipos de acciones
 const TIPOS_ACCIONES = {
@@ -86,7 +86,7 @@ const LogsOperarios = () => {
   const fetchLogs = async () => {
     setLoading(true);
     try {
-      const logsRef = collection(db, 'logs_operarios');
+      const logsRef = collection(dbAudit, 'logs_operarios');
       let qLogs;
       
       // Filtrar logs según el rol del usuario actual
@@ -96,7 +96,7 @@ const LogsOperarios = () => {
       } else if (role === 'max') {
         // Clientes administradores ven sus logs y los de sus operarios
         // Primero obtener los IDs de sus operarios
-        const usuariosRef = collection(db, 'apps', 'audit', 'users');
+        const usuariosRef = auditUsersCollection();
         const qOperarios = query(usuariosRef, where('clienteAdminId', '==', userProfile?.uid));
         const snapshotOperarios = await getDocs(qOperarios);
         const operariosIds = snapshotOperarios.docs.map(doc => doc.id);
@@ -126,7 +126,7 @@ const LogsOperarios = () => {
       setLogs(logsData);
 
       // Obtener información de usuarios para mostrar nombres
-      const usuariosRef = collection(db, 'apps', 'audit', 'users');
+      const usuariosRef = auditUsersCollection();
       const usuariosSnapshot = await getDocs(usuariosRef);
       const usuariosData = {};
       usuariosSnapshot.docs.forEach(doc => {
@@ -648,7 +648,7 @@ export const logUserAction = async (action, detalles = {}) => {
     }
 
     // Guardar en Firestore
-    const logsRef = collection(db, 'logs_operarios');
+    const logsRef = collection(dbAudit, 'logs_operarios');
     await addDoc(logsRef, logData);
 
     console.log('Acción registrada:', action, logData);

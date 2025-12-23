@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { collection, query, where, getDocs, doc, updateDoc, increment, addDoc } from 'firebase/firestore';
-import { db } from '../../../firebaseControlFile';
+import { dbAudit } from '../../../firebaseControlFile';
 import {
   Box, Typography, Accordion, AccordionSummary, AccordionDetails, Chip, Button, Grid, Alert, TextField, InputAdornment, Select, MenuItem, Rating, Stack, Tooltip, Avatar, CircularProgress
 } from '@mui/material';
@@ -34,7 +34,7 @@ const GaleriaFormulariosPublicos = ({ onCopiar }) => {
   useEffect(() => {
     const fetchPublicForms = async () => {
       setLoading(true);
-      const q = query(collection(db, 'formularios'), where('esPublico', '==', true));
+      const q = query(collection(dbAudit, 'formularios'), where('esPublico', '==', true));
       const snapshot = await getDocs(q);
       setFormularios(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
       setLoading(false);
@@ -50,7 +50,7 @@ const GaleriaFormulariosPublicos = ({ onCopiar }) => {
       
       try {
         const q = query(
-          collection(db, 'formularios'), 
+          collection(dbAudit, 'formularios'), 
           where('creadorId', '==', userProfile.uid),
           where('esPublico', '==', false)
         );
@@ -131,7 +131,7 @@ const GaleriaFormulariosPublicos = ({ onCopiar }) => {
       
       // Solo incrementar contador si es la primera vez que este usuario copia este formulario
       if (!yaCopiadoAntes && !usuarioYaCopio) {
-        const ref = doc(db, 'formularios', form.id);
+        const ref = doc(dbAudit, 'formularios', form.id);
         // Agregar el usuario a la lista de usuarios que han copiado este formulario
         const usuariosQueCopiaron = form.usuariosQueCopiaron || [];
         await updateDoc(ref, { 
@@ -155,7 +155,7 @@ const GaleriaFormulariosPublicos = ({ onCopiar }) => {
           createdAt: new Date()
         };
         delete nuevoFormulario.id;
-        await addDoc(collection(db, 'formularios'), nuevoFormulario);
+        await addDoc(collection(dbAudit, 'formularios'), nuevoFormulario);
         console.debug('[GaleriaFormulariosPublicos] Formulario copiado a sistema:', userProfile.uid);
       }
       
@@ -190,7 +190,7 @@ const GaleriaFormulariosPublicos = ({ onCopiar }) => {
   const handlePuntuar = async (form, value) => {
     setRatingLoading(form.id);
     try {
-      const ref = doc(db, 'formularios', form.id);
+      const ref = doc(dbAudit, 'formularios', form.id);
       const ratingsCount = (form.ratingsCount || 0) + 1;
       const newRating = ((form.rating || 0) * (form.ratingsCount || 0) + value) / ratingsCount;
       await updateDoc(ref, { rating: newRating, ratingsCount });

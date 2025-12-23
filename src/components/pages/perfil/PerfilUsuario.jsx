@@ -22,7 +22,7 @@ import DrawIcon from '@mui/icons-material/Draw';
 import InfoIcon from '@mui/icons-material/Info';
 import { useAuth } from "../../context/AuthContext";
 import Swal from 'sweetalert2';
-import { db } from '../../../firebaseControlFile';
+import { dbAudit, auditUsersCollection } from '../../../firebaseControlFile';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import { useLocation, useNavigate } from 'react-router-dom';
 // Componentes modulares
@@ -81,7 +81,7 @@ const PerfilUsuario = () => {
       if (!userProfile?.uid) return;
       setLoadingUsuariosCreados(true);
       try {
-        const usuariosRef = collection(db, 'apps', 'audit', 'users');
+        const usuariosRef = auditUsersCollection();
         const q = query(usuariosRef, where('clienteAdminId', '==', userProfile.clienteAdminId || userProfile.uid));
         const snapshot = await getDocs(q);
         const lista = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -101,7 +101,7 @@ const PerfilUsuario = () => {
       if (!userProfile?.uid) return;
       setLoadingFormularios(true);
       try {
-        const formulariosRef = collection(db, 'formularios');
+        const formulariosRef = collection(dbAudit, 'formularios');
         const q = query(formulariosRef, where('clienteAdminId', '==', userProfile.clienteAdminId || userProfile.uid));
         const snapshot = await getDocs(q);
         const lista = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
