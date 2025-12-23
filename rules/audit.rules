@@ -2,6 +2,23 @@
 // ControlAudit – reglas DEV claras
 // ================================
 
+// ========= HELPERS APPID =========
+// Valida que appId es string y es 'auditoria'
+function hasValidAppId() {
+  return request.resource.data.appId is string
+    && request.resource.data.appId == 'auditoria';
+}
+
+// Detecta si el documento existente es legacy (sin appId)
+function isLegacyDoc() {
+  return !('appId' in resource.data);
+}
+
+// Valida que appId coincide entre resource y request.resource
+function sameAppId() {
+  return resource.data.appId == request.resource.data.appId;
+}
+
 // 🔐 Perfil de usuario (SIEMPRE primero)
 match /apps/auditoria/users/{userId} {
   allow read, write: if request.auth != null
@@ -10,7 +27,19 @@ match /apps/auditoria/users/{userId} {
 
 // 🔓 Datos de la app (empresas, auditorías, formularios, etc)
 match /apps/auditoria/{document=**} {
-  allow read, write: if request.auth != null;
+  // READ: Solo requiere autenticación
+  allow read: if request.auth != null;
+  
+  // CREATE: Exige appId válido
+  allow create: if request.auth != null
+    && hasValidAppId();
+  
+  // UPDATE: Permite legacy o exige appId válido y coincidente
+  allow update: if request.auth != null
+    && (isLegacyDoc() || (hasValidAppId() && sameAppId()));
+  
+  // DELETE: Solo requiere autenticación
+  allow delete: if request.auth != null;
 }
 
 // 📊 Colecciones en raíz (empresas, sucursales, auditorías, etc)

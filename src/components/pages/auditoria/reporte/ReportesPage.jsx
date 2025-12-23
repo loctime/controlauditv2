@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
-import { deleteDoc, doc } from "firebase/firestore";
+import { reporteService } from "../../../../services/reporteService";
 import { db, auditUserCollection } from "../../../../firebaseControlFile";
 import { useLocation, useNavigate } from 'react-router-dom';
 import { auditoriaService } from '../../../../services/auditoriaService';
@@ -377,8 +377,7 @@ const ReportesPage = () => {
         }
 
         // Eliminar desde la ruta multi-tenant
-        const reportesRef = auditUserCollection(userId, 'reportes');
-        await deleteDoc(doc(reportesRef, reporte.id));
+        await reporteService.deleteReporte(userId, reporte.id);
         
         // Actualizar estado local
         setReportes(prev => prev.filter(r => r.id !== reporte.id));

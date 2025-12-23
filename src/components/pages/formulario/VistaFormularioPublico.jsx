@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { collection, query, where, getDocs, addDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs } from 'firebase/firestore';
 import { dbAudit } from '../../../firebaseControlFile';
 import { Box, Typography, Button, Alert } from '@mui/material';
 import { useAuth } from '../../context/AuthContext';
+import { formularioService } from '../../../services/formularioService';
 
 const VistaFormularioPublico = () => {
   const { publicSharedId } = useParams();
@@ -26,19 +27,14 @@ const VistaFormularioPublico = () => {
 
   const copiarFormularioPublico = async (form) => {
     if (!userProfile) return;
-    const nuevoFormulario = {
-      ...form,
-      clienteAdminId: userProfile.clienteAdminId || userProfile.uid,
-      creadorId: userProfile.uid,
-      esPublico: false,
-      publicSharedId: null,
-      createdAt: new Date()
-    };
-    delete nuevoFormulario.id;
-    await addDoc(collection(dbAudit, 'formularios'), nuevoFormulario);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-    console.debug('[VistaFormularioPublico] Formulario copiado a sistema:', userProfile.uid);
+    try {
+      await formularioService.copiarFormularioPublico(form, userProfile);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+      console.debug('[VistaFormularioPublico] Formulario copiado a sistema:', userProfile.uid);
+    } catch (error) {
+      console.error('Error al copiar formulario:', error);
+    }
   };
 
   if (loading) return <Alert severity="info">Cargando formulario...</Alert>;

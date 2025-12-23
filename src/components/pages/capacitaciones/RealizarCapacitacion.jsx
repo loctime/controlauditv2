@@ -28,8 +28,9 @@ import {
   StarBorder as StarBorderIcon,
   Save as SaveIcon
 } from '@mui/icons-material';
-import { getDocs, query, where, updateDoc, doc, Timestamp } from 'firebase/firestore';
+import { getDocs, query, where, Timestamp } from 'firebase/firestore';
 import { auditUserCollection } from '../../../firebaseControlFile';
+import { planAnualService } from '../../../services/planAnualService';
 import { useAuth } from '../../context/AuthContext';
 import { normalizeEmpleado } from '../../../utils/firestoreUtils';
 import Swal from 'sweetalert2';
@@ -287,8 +288,7 @@ export default function RealizarCapacitacion({
         return;
       }
 
-      const planesRef = auditUserCollection(userProfile.uid, 'planes_capacitaciones_anuales');
-      await updateDoc(doc(planesRef, planAnualSeleccionado), {
+      await planAnualService.updatePlanAnual(userProfile.uid, planAnualSeleccionado, {
         capacitaciones: capacitacionesActualizadas
       });
       

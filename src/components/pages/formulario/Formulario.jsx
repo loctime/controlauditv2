@@ -1,13 +1,12 @@
 import React, { useState } from "react";
 import { Button, TextField, Typography, Box } from "@mui/material";
 import { ArrowBack } from "@mui/icons-material";
-import { collection, addDoc, Timestamp } from "firebase/firestore";
-import { dbAudit } from "../../../firebaseControlFile";
+import { Timestamp } from "firebase/firestore";
 import { useAuth } from "../../context/AuthContext";
 import Swal from 'sweetalert2';
 import { useNavigate } from "react-router-dom";
 import PublicIcon from '@mui/icons-material/Public';
-import { registrarAccionSistema } from '../../../utils/firestoreUtils';
+import { formularioService } from '../../../services/formularioService';
 
 const Formulario = () => {
   const { user, userProfile, getUserFormularios } = useAuth();
@@ -55,42 +54,11 @@ const Formulario = () => {
         secciones: secciones.map((seccion) => ({
           nombre: seccion.nombre,
           preguntas: seccion.preguntas.split("\n").map((pregunta) => pregunta.trim()).filter(Boolean),
-        })),
-        timestamp: Timestamp.now(),
-        // ✅ Campos de creador y permisos multi-tenant
-        creadorId: user.uid,
-        creadorEmail: user.email,
-        creadorNombre: user.displayName || user.email,
-        // ✅ Cliente administrador responsable
-        clienteAdminId: userProfile?.clienteAdminId || user.uid, // Si no tiene cliente admin, es su propio admin
-        esPublico: false, // Por defecto privado
-        permisos: {
-          puedeEditar: [user.uid], // Solo el creador puede editar inicialmente
-          puedeVer: [user.uid], // Solo el creador puede ver inicialmente
-          puedeEliminar: [user.uid] // Solo el creador puede eliminar
-        },
-        // ✅ Metadatos adicionales
-        version: "1.0",
-        estado: "activo",
-        ultimaModificacion: Timestamp.now()
+        }))
       };
       
-      const docRef = await addDoc(collection(dbAudit, "formularios"), formularioData);
-      console.log("Formulario creado con ID: ", docRef.id);
-      
-      // Registrar log de creación
-      await registrarAccionSistema(
-        user.uid,
-        `Formulario creado: ${nombreFormulario}`,
-        {
-          formularioId: docRef.id,
-          nombre: nombreFormulario,
-          cantidadSecciones: secciones.length
-        },
-        'crear',
-        'formulario',
-        docRef.id
-      );
+      const formularioId = await formularioService.crearFormulario(formularioData, user, userProfile);
+      console.log("Formulario creado con ID: ", formularioId);
       
       // Invalidar cache offline para forzar recarga de formularios
       try {

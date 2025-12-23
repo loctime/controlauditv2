@@ -28,10 +28,10 @@ import {
   Business as BusinessIcon,
   Storefront as StorefrontIcon
 } from '@mui/icons-material';
-import { addDoc, updateDoc, doc, Timestamp } from 'firebase/firestore';
-import { auditUserCollection } from '../../../firebaseControlFile';
+import { Timestamp } from 'firebase/firestore';
 import { useAuth } from '../../context/AuthContext';
 import Swal from 'sweetalert2';
+import { planAnualService } from '../../../services/planAnualService';
 
 const MESES = [
   'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
@@ -229,16 +229,13 @@ export default function PlanAnualModal({
         createdAt: Timestamp.now()
       };
 
-      // Usar arquitectura multi-tenant
-      const planesRef = auditUserCollection(userProfile.uid, 'planes_capacitaciones_anuales');
-
       if (planToEdit) {
         // Modo edición: actualizar documento existente
-        await updateDoc(doc(planesRef, planToEdit.id), planDocumento);
+        await planAnualService.updatePlanAnual(userProfile.uid, planToEdit.id, planDocumento);
         Swal.fire('Éxito', 'Plan anual actualizado correctamente', 'success');
       } else {
         // Modo creación: crear nuevo documento
-        await addDoc(planesRef, planDocumento);
+        await planAnualService.crearPlanAnual(userProfile.uid, planDocumento);
         Swal.fire('Éxito', 'Plan anual creado correctamente', 'success');
       }
       

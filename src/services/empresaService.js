@@ -5,10 +5,12 @@ import {
   getDoc, 
   query, 
   where, 
-  onSnapshot
+  onSnapshot,
+  collection
 } from 'firebase/firestore';
 import { registrarAccionSistema } from '../utils/firestoreUtils';
 import { addDocWithAppId, updateDocWithAppId } from '../firebase/firestoreAppWriter';
+import { dbAudit, sucursalesCollection } from '../firebaseControlFile';
 
 export const empresaService = {
   // Obtener empresas del usuario (multi-tenant)
@@ -544,5 +546,48 @@ export const empresaService = {
     }
     
     return false;
+  },
+
+  /**
+   * Crear empresa legacy (colección 'empresas' en raíz)
+   * Usado por Dashboard para compatibilidad con estructura legacy
+   * @param {Object} empresaData - Datos de la empresa
+   * @param {string} userId - UID del usuario propietario
+   * @returns {Promise<string>} ID de la empresa creada
+   */
+  async crearEmpresaLegacy(empresaData, userId) {
+    try {
+      if (!userId) throw new Error('userId es requerido');
+      
+      const empresasRef = collection(dbAudit, 'empresas');
+      const empresaDoc = {
+        ...empresaData,
+        propietarioId: userId,
+        createdAt: new Date()
+      };
+      
+      const docRef = await addDocWithAppId(empresasRef, empresaDoc);
+      
+      // Crear automáticamente sucursal "Casa Central" legacy
+      const sucursalesRef = sucursalesCollection();
+      const sucursalCasaCentral = {
+        nombre: "Casa Central",
+        empresaId: docRef.id,
+        direccion: empresaData.direccion || "",
+        telefono: empresaData.telefono || "",
+        horasSemanales: 40,
+        createdAt: new Date(),
+        propietarioId: userId,
+        creadorId: userId,
+        activa: true
+      };
+      
+      await addDocWithAppId(sucursalesRef, sucursalCasaCentral);
+      
+      return docRef.id;
+    } catch (error) {
+      console.error("Error al crear empresa legacy:", error);
+      throw error;
+    }
   }
 };

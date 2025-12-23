@@ -2,12 +2,13 @@
 import React, { useState, useEffect } from "react";
 import { Typography, Box, Grid, Paper, Alert, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Button, TextField, Dialog, DialogTitle, DialogContent, DialogActions, Card, CardContent, Tabs, Tab, CircularProgress } from "@mui/material";
 import { useAuth } from "../../context/AuthContext";
-import { addDoc, setDoc, doc, updateDoc, query, where, getDocs, getDoc, collection } from "firebase/firestore";
-import { dbAudit, auditUsersCollection, sucursalesCollection } from "../../../firebaseControlFile";
+import { doc, query, where, getDocs, getDoc, collection } from "firebase/firestore";
+import { dbAudit, auditUsersCollection } from "../../../firebaseControlFile";
 import { toast } from 'react-toastify';
 import { verifyAdminCode, verifySuperAdminCode } from "../../../config/admin";
 import GestionClientes from "./GestionClientes";
 import userService from "../../../services/userService";
+import { empresaService } from "../../../services/empresaService";
 import { getEnvironmentInfo, getBackendUrl } from "../../../config/environment.js";
 import BackendHealthCheck from "../../../utils/backendHealthCheck.js";
 import BackendStatus from "../../../utils/backendStatus.js";
@@ -186,8 +187,7 @@ function Dashboard() {
       }
 
       // Actualizar usuario en Firestore
-      const userRef = doc(dbAudit, 'apps', 'audit', 'users', userProfile.uid);
-      await updateDoc(userRef, {
+      await userService.updateUserDirect(userProfile.uid, {
         role: newRole,
         permisos: newPermisos
       });
@@ -338,8 +338,8 @@ function Dashboard() {
       // Verificar si requiere creación manual
       // Si no requiere creación manual, continuar con el flujo normal
 
-      // 2. Crear empresa en Firestore
-      const empresaRef = await addDoc(collection(dbAudit, 'empresas'), {
+      // 2. Crear empresa en Firestore (legacy)
+      const empresaId = await empresaService.crearEmpresaLegacy({
         nombre: form.nombre,
         emailContacto: form.email,
         usuariosMaximos: Number(form.usuariosMaximos),
@@ -349,26 +349,11 @@ function Dashboard() {
         fechaUltimoPago: new Date(),
         fechaVencimiento: null,
         plan: 'estandar',
-      });
+      }, userRes.uid);
 
-      // Crear automáticamente sucursal "Casa Central"
-      const sucursalesRef = sucursalesCollection();
-      await addDoc(sucursalesRef, {
-        nombre: "Casa Central",
-        empresaId: empresaRef.id,
-        direccion: "",
-        telefono: "",
-        horasSemanales: 40,
-        createdAt: new Date(),
-        propietarioId: userRes.uid,
-        creadorId: userProfile?.uid,
-        activa: true
-      });
-
-      // 3. Actualizar usuario con información adicional usando Firestore directamente
-      const userRef = doc(dbAudit, 'apps', 'audit', 'users', userRes.uid);
-      await updateDoc(userRef, {
-        empresaId: empresaRef.id,
+      // 3. Actualizar usuario con información adicional
+      await userService.updateUserDirect(userRes.uid, {
+        empresaId: empresaId,
         plan: 'estandar',
         limiteUsuarios: Number(form.usuariosMaximos),
         usuariosActivos: 0,

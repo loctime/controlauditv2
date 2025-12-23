@@ -10,9 +10,9 @@ import {
   MenuItem,
   CircularProgress
 } from '@mui/material';
-import { addDoc, Timestamp } from 'firebase/firestore';
-import { auditUserCollection } from '../../../firebaseControlFile';
+import { Timestamp } from 'firebase/firestore';
 import { useAuth } from '../../context/AuthContext';
+import { capacitacionService } from '../../../services/capacitacionService';
 
 export default function CapacitacionForm({ open, onClose, onSave, sucursalId, empresaId }) {
   const { userProfile } = useAuth();
@@ -40,17 +40,14 @@ export default function CapacitacionForm({ open, onClose, onSave, sucursalId, em
     setLoading(true);
 
     try {
-      // Guardar en arquitectura multi-tenant - sin campos de identidad
-      const capacitacionesRef = auditUserCollection(userProfile.uid, 'capacitaciones');
-      await addDoc(capacitacionesRef, {
+      await capacitacionService.crearCapacitacion(userProfile.uid, {
         ...formData,
         empresaId,
         sucursalId,
         estado: 'activa',
         empleados: [],
-        fechaRealizada: Timestamp.fromDate(new Date(formData.fechaRealizada)),
-        createdAt: Timestamp.now()
-      });
+        fechaRealizada: Timestamp.fromDate(new Date(formData.fechaRealizada))
+      }, { uid: userProfile.uid });
 
       setFormData({
         nombre: '',

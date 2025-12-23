@@ -230,6 +230,26 @@ export const userService = {
       console.error('Error verificando salud del backend:', error);
       throw new Error('No se puede conectar con el servidor');
     }
+  },
+
+  /**
+   * Actualizar usuario directamente en Firestore (para casos legacy)
+   * @param {string} uid - UID del usuario
+   * @param {Object} updateData - Datos a actualizar
+   * @returns {Promise<void>}
+   */
+  async updateUserDirect(uid, updateData) {
+    try {
+      const { doc } = await import('firebase/firestore');
+      const { db } = await import('../firebaseControlFile');
+      const { updateDocWithAppId } = await import('../firebase/firestoreAppWriter');
+      
+      const userRef = doc(db, 'apps', 'audit', 'users', uid);
+      await updateDocWithAppId(userRef, updateData);
+    } catch (error) {
+      console.error('Error actualizando usuario directamente:', error);
+      throw error;
+    }
   }
 };
 

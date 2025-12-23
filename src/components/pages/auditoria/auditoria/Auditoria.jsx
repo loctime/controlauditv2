@@ -24,7 +24,7 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import Swal from 'sweetalert2';
 import { useAuth } from "../../../context/AuthContext";
-import { doc, updateDoc } from "firebase/firestore";
+import { reporteService } from "../../../../services/reporteService";
 import { db } from "../../../../firebaseControlFile";
 
 // Hooks personalizados
@@ -700,7 +700,7 @@ const AuditoriaRefactorizada = () => {
   const marcarAuditoriaCompletada = async () => {
     try {
       if (auditoriaIdAgenda) {
-        await updateDoc(doc(db, "auditorias", auditoriaIdAgenda), { estado: "completada" });
+        await reporteService.marcarAuditoriaCompletada(auditoriaIdAgenda);
         log("Auditoría agendada (ID: %s) marcada como completada.", auditoriaIdAgenda);
         setSnackbarMsg("Auditoría agendada marcada como completada.");
         setSnackbarType("success");

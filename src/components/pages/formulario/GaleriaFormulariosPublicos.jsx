@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { collection, query, where, getDocs, doc, updateDoc, increment, addDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs } from 'firebase/firestore';
 import { dbAudit } from '../../../firebaseControlFile';
+import { formularioService } from '../../../services/formularioService';
 import {
   Box, Typography, Accordion, AccordionSummary, AccordionDetails, Chip, Button, Grid, Alert, TextField, InputAdornment, Select, MenuItem, Rating, Stack, Tooltip, Avatar, CircularProgress
 } from '@mui/material';
@@ -131,13 +132,8 @@ const GaleriaFormulariosPublicos = ({ onCopiar }) => {
       
       // Solo incrementar contador si es la primera vez que este usuario copia este formulario
       if (!yaCopiadoAntes && !usuarioYaCopio) {
-        const ref = doc(dbAudit, 'formularios', form.id);
-        // Agregar el usuario a la lista de usuarios que han copiado este formulario
         const usuariosQueCopiaron = form.usuariosQueCopiaron || [];
-        await updateDoc(ref, { 
-          copiadoCount: increment(1),
-          usuariosQueCopiaron: [...usuariosQueCopiaron, userProfile.uid]
-        });
+        await formularioService.incrementarContadorCopias(form.id, userProfile.uid, usuariosQueCopiaron);
         console.debug('[GaleriaFormulariosPublicos] Contador incrementado - primera copia del usuario');
       } else {
         console.debug('[GaleriaFormulariosPublicos] No se incrementa contador - usuario ya copió este formulario antes');
@@ -145,17 +141,7 @@ const GaleriaFormulariosPublicos = ({ onCopiar }) => {
       
       // Copiar realmente el formulario a la cuenta del usuario
       if (userProfile) {
-        const nuevoFormulario = {
-          ...form,
-          clienteAdminId: userProfile.clienteAdminId || userProfile.uid,
-          creadorId: userProfile.uid,
-          esPublico: false,
-          publicSharedId: null,
-          formularioOriginalId: form.id, // ID del formulario original
-          createdAt: new Date()
-        };
-        delete nuevoFormulario.id;
-        await addDoc(collection(dbAudit, 'formularios'), nuevoFormulario);
+        await formularioService.copiarFormularioPublico(form, userProfile);
         console.debug('[GaleriaFormulariosPublicos] Formulario copiado a sistema:', userProfile.uid);
       }
       
@@ -190,10 +176,9 @@ const GaleriaFormulariosPublicos = ({ onCopiar }) => {
   const handlePuntuar = async (form, value) => {
     setRatingLoading(form.id);
     try {
-      const ref = doc(dbAudit, 'formularios', form.id);
       const ratingsCount = (form.ratingsCount || 0) + 1;
       const newRating = ((form.rating || 0) * (form.ratingsCount || 0) + value) / ratingsCount;
-      await updateDoc(ref, { rating: newRating, ratingsCount });
+      await formularioService.actualizarRating(form.id, newRating, ratingsCount);
       setFormularios(prev => prev.map(f => f.id === form.id ? { ...f, rating: newRating, ratingsCount } : f));
       console.log('[GaleriaFormulariosPublicos] Formulario puntuado:', form.id, value);
     } catch (e) {

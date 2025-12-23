@@ -19,8 +19,9 @@ import {
   Delete as DeleteIcon
 } from '@mui/icons-material';
 import { useParams, useNavigate } from 'react-router-dom';
-import { query, where, getDocs, doc, getDoc, updateDoc, Timestamp } from 'firebase/firestore';
+import { query, where, getDocs, doc, getDoc, Timestamp } from 'firebase/firestore';
 import { auditUserCollection } from '../../../firebaseControlFile';
+import { capacitacionService } from '../../../services/capacitacionService';
 import { useAuth } from '../../context/AuthContext';
 import { uploadEvidence, ensureTaskbarFolder, ensureSubFolder, getDownloadUrl } from '../../../services/controlFileB2Service';
 import { auth } from '../../../firebaseControlFile';
@@ -296,11 +297,9 @@ export default function RegistrarAsistencia() {
       };
 
       // Actualizar en arquitectura multi-tenant
-      const capacitacionRef = doc(auditUserCollection(userProfile.uid, 'capacitaciones'), capacitacionId);
-      await updateDoc(capacitacionRef, {
+      await capacitacionService.registrarAsistencia(userProfile.uid, capacitacionId, {
         empleados: empleadosRegistrados,
-        registroAsistencia: registroAsistencia,
-        updatedAt: Timestamp.now()
+        registroAsistencia: registroAsistencia
       });
 
       alert('Asistencia registrada correctamente');

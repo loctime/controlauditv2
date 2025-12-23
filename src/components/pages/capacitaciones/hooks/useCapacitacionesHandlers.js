@@ -1,6 +1,5 @@
 import { useCallback } from 'react';
-import { addDoc, updateDoc, doc, Timestamp } from 'firebase/firestore';
-import { auditUserCollection } from '../../../../firebaseControlFile';
+import { capacitacionService } from '../../../../services/capacitacionService';
 
 /**
  * Hook para manejar las acciones de capacitaciones
@@ -19,11 +18,7 @@ export const useCapacitacionesHandlers = (userProfile, recargarDatos, navigate) 
 
     if (window.confirm('¿Marcar esta capacitación como completada?')) {
       try {
-        const capacitacionRef = doc(auditUserCollection(userProfile.uid, 'capacitaciones'), capacitacionId);
-        await updateDoc(capacitacionRef, {
-          estado: 'completada',
-          updatedAt: Timestamp.now()
-        });
+        await capacitacionService.completarCapacitacion(userProfile.uid, capacitacionId, { uid: userProfile.uid });
         recargarDatos();
       } catch (error) {
         console.error('Error al marcar completada:', error);
@@ -40,23 +35,7 @@ export const useCapacitacionesHandlers = (userProfile, recargarDatos, navigate) 
 
     if (window.confirm(`¿Crear nueva instancia de "${capacitacion.nombre}"?`)) {
       try {
-        const nuevaCapacitacion = {
-          ...capacitacion,
-          estado: 'activa',
-          empleados: [],
-          fechaRealizada: Timestamp.now(),
-          createdAt: Timestamp.now()
-        };
-        delete nuevaCapacitacion.id;
-        delete nuevaCapacitacion.updatedAt;
-        // Eliminar campos de identidad legacy
-        delete nuevaCapacitacion.createdBy;
-        delete nuevaCapacitacion.creadoPor;
-        delete nuevaCapacitacion.clienteAdminId;
-        delete nuevaCapacitacion.usuarioId;
-        
-        const capacitacionesRef = auditUserCollection(userProfile.uid, 'capacitaciones');
-        await addDoc(capacitacionesRef, nuevaCapacitacion);
+        await capacitacionService.duplicarCapacitacion(userProfile.uid, capacitacion, { uid: userProfile.uid });
         recargarDatos();
       } catch (error) {
         console.error('Error al duplicar:', error);

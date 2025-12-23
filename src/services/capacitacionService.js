@@ -292,6 +292,76 @@ export const capacitacionService = {
       console.error('❌ Error completando capacitación:', error);
       throw error;
     }
+  },
+
+  /**
+   * Duplicar capacitación (multi-tenant)
+   * @param {string} userId - UID del usuario
+   * @param {Object} capacitacion - Capacitación a duplicar
+   * @param {Object} user - Usuario que duplica
+   * @returns {Promise<string>} ID de la capacitación duplicada
+   */
+  async duplicarCapacitacion(userId, capacitacion, user) {
+    try {
+      if (!userId) throw new Error('userId es requerido');
+
+      const nuevaCapacitacion = {
+        ...capacitacion,
+        estado: 'activa',
+        empleados: [],
+        fechaRealizada: Timestamp.now(),
+        fechaCreacion: Timestamp.now(),
+        ultimaModificacion: Timestamp.now()
+      };
+      
+      // Eliminar campos de identidad
+      delete nuevaCapacitacion.id;
+      delete nuevaCapacitacion.updatedAt;
+      delete nuevaCapacitacion.createdBy;
+      delete nuevaCapacitacion.creadoPor;
+      delete nuevaCapacitacion.clienteAdminId;
+      delete nuevaCapacitacion.usuarioId;
+      
+      const capacitacionesRef = auditUserCollection(userId, 'capacitaciones');
+      const docRef = await addDocWithAppId(capacitacionesRef, nuevaCapacitacion);
+
+      // Registrar acción
+      await registrarAccionSistema(
+        user?.uid,
+        'Capacitación duplicada',
+        { capacitacionId: docRef.id, nombre: capacitacion.nombre },
+        'create',
+        'capacitacion',
+        docRef.id
+      );
+
+      return docRef.id;
+    } catch (error) {
+      console.error('❌ Error duplicando capacitación:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Registrar asistencia a capacitación (multi-tenant)
+   * @param {string} userId - UID del usuario
+   * @param {string} capacitacionId - ID de la capacitación
+   * @param {Object} asistenciaData - Datos de asistencia (empleados, registroAsistencia)
+   * @returns {Promise<void>}
+   */
+  async registrarAsistencia(userId, capacitacionId, asistenciaData) {
+    try {
+      if (!userId || !capacitacionId) throw new Error('userId y capacitacionId son requeridos');
+      
+      const capacitacionRef = doc(auditUserCollection(userId, 'capacitaciones'), capacitacionId);
+      await updateDocWithAppId(capacitacionRef, {
+        ...asistenciaData,
+        updatedAt: Timestamp.now()
+      });
+    } catch (error) {
+      console.error('Error al registrar asistencia:', error);
+      throw error;
+    }
   }
 };
 
