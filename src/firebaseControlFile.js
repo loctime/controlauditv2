@@ -61,6 +61,7 @@ if (controlFileApp.options.projectId !== 'controlstorage-eb796') {
 export const auth = getAuth(controlFileApp);
 const db = getFirestore(controlFileApp);
 export const dbAudit = db; // Alias para claridad
+export { db }; // Exportar db para compatibilidad con imports existentes
 export const storage = getStorage(controlFileApp);
 
 // Auth helpers (behavior preserved)
