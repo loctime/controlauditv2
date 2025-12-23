@@ -3,9 +3,6 @@
  * Service agnóstico a paths de Firestore - recibe CollectionReference/DocumentReference como parámetros
  */
 import { 
-  addDoc, 
-  updateDoc, 
-  deleteDoc, 
   getDocs, 
   getDoc,
   query, 
@@ -14,6 +11,7 @@ import {
   serverTimestamp,
   Timestamp
 } from 'firebase/firestore';
+import { addDocWithAppId, updateDocWithAppId, deleteDocWithAppId } from '../firebase/firestoreAppWriter';
 
 class AccionesRequeridasService {
   /**
@@ -40,7 +38,7 @@ class AccionesRequeridasService {
         fechaActualizacion: serverTimestamp()
       };
 
-      const docRef = await addDoc(accionesCollectionRef, accionCompleta);
+      const docRef = await addDocWithAppId(accionesCollectionRef, accionCompleta);
       console.log(`✅ Acción requerida creada: ${docRef.id}`);
       return docRef.id;
     } catch (error) {
@@ -176,7 +174,7 @@ class AccionesRequeridasService {
         updateData.comentarios = comentarios;
       }
 
-      await updateDoc(accionDocRef, updateData);
+      await updateDocWithAppId(accionDocRef, updateData);
       console.log(`✅ Estado de acción actualizado: ${accionDocRef.id} -> ${nuevoEstado}`);
     } catch (error) {
       console.error('❌ Error al actualizar estado de acción:', error);
@@ -214,7 +212,7 @@ class AccionesRequeridasService {
         usuarioNombre: usuarioNombre
       });
 
-      await updateDoc(accionDocRef, {
+      await updateDocWithAppId(accionDocRef, {
         comentarios,
         fechaActualizacion: serverTimestamp()
       });
@@ -256,7 +254,7 @@ class AccionesRequeridasService {
         usuarioNombre: usuarioNombre
       });
 
-      await updateDoc(accionDocRef, {
+      await updateDocWithAppId(accionDocRef, {
         modificaciones,
         fechaActualizacion: serverTimestamp()
       });
@@ -289,7 +287,7 @@ class AccionesRequeridasService {
         usuarioNombre
       );
 
-      await updateDoc(accionDocRef, {
+      await updateDocWithAppId(accionDocRef, {
         accionTexto: nuevoTexto,
         fechaActualizacion: serverTimestamp()
       });
@@ -312,7 +310,7 @@ class AccionesRequeridasService {
         throw new Error('AccionesRequeridasService: accionDocRef es requerido');
       }
 
-      await deleteDoc(accionDocRef);
+      await deleteDocWithAppId(accionDocRef);
       console.log(`✅ Acción eliminada: ${accionDocRef.id}`);
     } catch (error) {
       console.error('❌ Error al eliminar acción:', error);

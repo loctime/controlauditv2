@@ -2,8 +2,9 @@
 import { uploadEvidence, ensureTaskbarFolder, ensureSubFolder } from './controlFileB2Service';
 import { getOfflineDatabase, generateOfflineId } from './offlineDatabase';
 import syncQueueService from './syncQueue';
-import { doc, updateDoc, getDoc } from 'firebase/firestore';
+import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../firebaseControlFile';
+import { updateDocWithAppId } from '../firebase/firestoreAppWriter';
 
 /**
  * Servicio para manejar imágenes de capacitaciones
@@ -172,7 +173,7 @@ class CapacitacionImageService {
       // Agregar nueva imagen
       imagenes.push(imageMetadata);
 
-      await updateDoc(capacitacionRef, {
+      await updateDocWithAppId(capacitacionRef, {
         imagenes,
         updatedAt: new Date()
       });
@@ -204,7 +205,7 @@ class CapacitacionImageService {
         img => img.fileId !== imageId && img.id !== imageId
       );
 
-      await updateDoc(capacitacionRef, {
+      await updateDocWithAppId(capacitacionRef, {
         imagenes,
         updatedAt: new Date()
       });

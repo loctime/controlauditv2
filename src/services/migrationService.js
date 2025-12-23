@@ -10,11 +10,10 @@ import {
   query, 
   where, 
   getDocs, 
-  updateDoc, 
-  doc,
-  writeBatch
+  doc
 } from 'firebase/firestore';
 import { dbAudit, sucursalesCollection, reportesCollection, auditUsersCollection } from '../firebaseControlFile';
+import { writeBatchWithAppId } from '../firebase/firestoreAppWriter';
 
 /**
  * Migra todos los datos relacionados con un UID antiguo a un UID nuevo
@@ -49,7 +48,7 @@ export const migrateAllUserData = async (oldUid, newUid) => {
       }
       
       for (const chunk of chunks) {
-        const batch = writeBatch(dbAudit);
+        const batch = writeBatchWithAppId(dbAudit);
         chunk.forEach(({ docRef, data }) => {
           batch.update(docRef, data);
         });

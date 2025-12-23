@@ -2,14 +2,13 @@
 import { 
   doc, 
   getDocs, 
-  addDoc, 
-  updateDoc, 
   getDoc, 
   query, 
   where, 
   onSnapshot
 } from 'firebase/firestore';
 import { registrarAccionSistema } from '../utils/firestoreUtils';
+import { addDocWithAppId, updateDocWithAppId } from '../firebase/firestoreAppWriter';
 
 export const empresaService = {
   // Obtener empresas del usuario (multi-tenant)
@@ -60,7 +59,7 @@ export const empresaService = {
           if (empresasAntiguas.length > 0 && empresasNuevas.length === 0) {
             console.log(`[empresaService] 🔄 Encontradas ${empresasAntiguas.length} empresas con UID antiguo, migrando...`);
             const empresasUpdatePromises = empresasAntiguas.map(async (empresa) => {
-              await updateDoc(doc(empresasRef, empresa.id), {
+              await updateDocWithAppId(doc(empresasRef, empresa.id), {
                 propietarioId: userId,
                 lastUidUpdate: new Date(),
                 migratedFromUid: migratedFromUid
@@ -400,7 +399,7 @@ export const empresaService = {
         socios: [propietarioId]
       };
       
-      const docRef = await addDoc(empresasRef, nuevaEmpresa);
+      const docRef = await addDocWithAppId(empresasRef, nuevaEmpresa);
       
       // Crear automáticamente sucursal "Casa Central"
       const sucursalCasaCentral = {
@@ -415,7 +414,7 @@ export const empresaService = {
         activa: true
       };
       
-      await addDoc(sucursalesRef, sucursalCasaCentral);
+      await addDocWithAppId(sucursalesRef, sucursalCasaCentral);
       
       // Actualizar perfil del propietario
       const propietarioSnap = await getDoc(propietarioRef);
@@ -424,7 +423,7 @@ export const empresaService = {
         const propietarioData = propietarioSnap.data();
         const empresasActuales = propietarioData.empresas || [];
         
-        await updateDoc(propietarioRef, {
+        await updateDocWithAppId(propietarioRef, {
           empresas: [...empresasActuales, docRef.id]
         });
       }
@@ -452,7 +451,7 @@ export const empresaService = {
       if (!userProfile?.uid) throw new Error('Usuario no autenticado');
       if (!empresasRef) throw new Error('empresasRef es requerido');
       const empresaRef = doc(empresasRef, empresaId);
-      await updateDoc(empresaRef, {
+      await updateDocWithAppId(empresaRef, {
         ...updateData,
         ultimaModificacion: new Date(),
       });
@@ -487,7 +486,7 @@ export const empresaService = {
       for (const empresa of empresasAVerificar) {
         if (!empresa.propietarioId) {
           const empresaRef = doc(empresasRef, empresa.id);
-          await updateDoc(empresaRef, {
+          await updateDocWithAppId(empresaRef, {
             propietarioId: userProfile.uid,
             propietarioEmail: userProfile.email,
             propietarioRole: userProfile.role,

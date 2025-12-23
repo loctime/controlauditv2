@@ -2,15 +2,13 @@
 import { 
   doc, 
   getDocs, 
-  addDoc, 
-  updateDoc, 
-  deleteDoc, 
   getDoc, 
   query, 
   where 
 } from 'firebase/firestore';
 import { auditUserCollection } from '../firebaseControlFile';
 import { registrarAccionSistema, normalizeEmpleado } from '../utils/firestoreUtils';
+import { addDocWithAppId, updateDocWithAppId, deleteDocWithAppId } from '../firebase/firestoreAppWriter';
 
 export const empleadoService = {
   /**
@@ -145,7 +143,7 @@ export const empleadoService = {
       if (!userId) throw new Error('userId es requerido');
 
       const empleadosRef = auditUserCollection(userId, 'empleados');
-      const empleadoRef = await addDoc(empleadosRef, {
+      const empleadoRef = await addDocWithAppId(empleadosRef, {
         ...empleadoData,
         createdAt: new Date(),
         createdBy: user?.uid,
@@ -182,7 +180,7 @@ export const empleadoService = {
       if (!userId) throw new Error('userId es requerido');
 
       const empleadoRef = doc(auditUserCollection(userId, 'empleados'), empleadoId);
-      await updateDoc(empleadoRef, {
+      await updateDocWithAppId(empleadoRef, {
         ...updateData,
         updatedAt: new Date(),
         updatedBy: user?.uid
@@ -217,7 +215,7 @@ export const empleadoService = {
       if (!userId) throw new Error('userId es requerido');
 
       const empleadoRef = doc(auditUserCollection(userId, 'empleados'), empleadoId);
-      await deleteDoc(empleadoRef);
+      await deleteDocWithAppId(empleadoRef);
 
       // Registrar acción
       await registrarAccionSistema(

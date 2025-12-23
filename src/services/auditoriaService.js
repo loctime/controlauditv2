@@ -3,7 +3,6 @@ import {
   collection, 
   doc, 
   getDocs, 
-  updateDoc, 
   getDoc, 
   query, 
   where,
@@ -11,6 +10,7 @@ import {
 } from 'firebase/firestore';
 import { dbAudit, auditUserCollection, auditUsersCollection } from '../firebaseControlFile';
 import { registrarAccionSistema } from '../utils/firestoreUtils';
+import { updateDocWithAppId } from '../firebase/firestoreAppWriter';
 
 export const auditoriaService = {
   // Obtener auditorías del usuario (multi-tenant)
@@ -114,7 +114,7 @@ export const auditoriaService = {
         const compartidoCon = auditoriaData.compartidoCon || [];
         
         if (!compartidoCon.includes(usuarioId)) {
-          await updateDoc(auditoriaRef, {
+          await updateDocWithAppId(auditoriaRef, {
             compartidoCon: [...compartidoCon, usuarioId]
           });
           

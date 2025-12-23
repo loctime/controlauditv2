@@ -3,9 +3,6 @@ import {
   collection, 
   doc, 
   getDocs, 
-  addDoc, 
-  updateDoc, 
-  deleteDoc, 
   getDoc, 
   query, 
   where,
@@ -13,6 +10,7 @@ import {
 } from 'firebase/firestore';
 import { db, auditUserCollection } from '../firebaseControlFile';
 import { registrarAccionSistema } from '../utils/firestoreUtils';
+import { addDocWithAppId, updateDocWithAppId, deleteDocWithAppId } from '../firebase/firestoreAppWriter';
 
 /**
  * Normaliza una capacitación unificando campos legacy
@@ -169,7 +167,7 @@ export const capacitacionService = {
 
       // Guardar en arquitectura multi-tenant
       const capacitacionesRef = auditUserCollection(userId, 'capacitaciones');
-      const capacitacionRef = await addDoc(capacitacionesRef, {
+      const capacitacionRef = await addDocWithAppId(capacitacionesRef, {
         ...capacitacionData,
         fechaCreacion: Timestamp.now(),
         ultimaModificacion: Timestamp.now()
@@ -206,7 +204,7 @@ export const capacitacionService = {
 
       // Actualizar en arquitectura multi-tenant
       const capacitacionRef = doc(auditUserCollection(userId, 'capacitaciones'), capacitacionId);
-      await updateDoc(capacitacionRef, {
+      await updateDocWithAppId(capacitacionRef, {
         ...updateData,
         ultimaModificacion: Timestamp.now()
       });
@@ -241,7 +239,7 @@ export const capacitacionService = {
 
       // Eliminar en arquitectura multi-tenant
       const capacitacionRef = doc(auditUserCollection(userId, 'capacitaciones'), capacitacionId);
-      await deleteDoc(capacitacionRef);
+      await deleteDocWithAppId(capacitacionRef);
 
       // Registrar acción
       await registrarAccionSistema(
@@ -273,7 +271,7 @@ export const capacitacionService = {
 
       // Actualizar en arquitectura multi-tenant
       const capacitacionRef = doc(auditUserCollection(userId, 'capacitaciones'), capacitacionId);
-      await updateDoc(capacitacionRef, {
+      await updateDocWithAppId(capacitacionRef, {
         estado: 'completada',
         fechaCompletada: Timestamp.now(),
         ultimaModificacion: Timestamp.now()

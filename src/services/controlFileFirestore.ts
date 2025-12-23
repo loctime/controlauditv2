@@ -14,7 +14,6 @@
 import { 
   collection, 
   doc, 
-  setDoc, 
   getDoc, 
   getDocs, 
   query, 
@@ -22,6 +21,7 @@ import {
   Timestamp,
   serverTimestamp 
 } from 'firebase/firestore';
+import { setDocWithAppId } from '../firebase/firestoreAppWriter';
 import { 
   ref, 
   uploadBytes, 
@@ -70,7 +70,7 @@ export async function ensureTaskbarFolder(): Promise<string | null> {
     const folderId = `folder_${Date.now()}_${Math.random().toString(36).substring(7)}`;
     const folderRef = doc(db, FILES_COLLECTION, folderId);
     
-    await setDoc(folderRef, {
+    await setDocWithAppId(folderRef, {
       id: folderId,
       userId,
       name: APP_NAME,
@@ -140,7 +140,7 @@ export async function ensureAuditFolder(
     const folderId = `folder_${Date.now()}_${Math.random().toString(36).substring(7)}`;
     const folderRef = doc(db, FILES_COLLECTION, folderId);
     
-    await setDoc(folderRef, {
+    await setDocWithAppId(folderRef, {
       id: folderId,
       userId,
       name: auditName || `Auditoría ${auditId}`,
@@ -259,7 +259,7 @@ export async function uploadEvidence({
 
     // Crear documento en Firestore con esquema de ControlFile
     const fileRef = doc(db, FILES_COLLECTION, fileId);
-    await setDoc(fileRef, {
+    await setDocWithAppId(fileRef, {
       id: fileId,
       userId,
       name: file.name,
@@ -370,7 +370,7 @@ export async function createSubFolder(
     const folderId = `folder_${Date.now()}_${Math.random().toString(36).substring(7)}`;
     const folderRef = doc(db, FILES_COLLECTION, folderId);
     
-    await setDoc(folderRef, {
+    await setDocWithAppId(folderRef, {
       id: folderId,
       userId,
       name,

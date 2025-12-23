@@ -164,9 +164,10 @@ export const listFiles = async (parentId = null, pageSize = 50) => {
  */
 export const deleteFile = async (fileId) => {
   try {
-    const { doc, deleteDoc } = await import('firebase/firestore');
+    const { doc } = await import('firebase/firestore');
     const { ref, deleteObject } = await import('firebase/storage');
     const { db, storage } = await import('../firebaseControlFile');
+    const { deleteDocWithAppId } = await import('../firebase/firestoreAppWriter');
     
     // Obtener información del archivo
     const fileRef = doc(db, 'files', fileId);
@@ -190,7 +191,7 @@ export const deleteFile = async (fileId) => {
     }
     
     // Eliminar documento de Firestore
-    await deleteDoc(fileRef);
+    await deleteDocWithAppId(fileRef);
     
     console.log('[controlFileService] ✅ Archivo eliminado:', fileId);
   } catch (error) {

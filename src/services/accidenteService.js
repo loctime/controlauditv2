@@ -1,16 +1,14 @@
 import { 
   collection, 
-  addDoc, 
   getDocs, 
-  updateDoc, 
   doc, 
   query, 
   where, 
   orderBy,
   Timestamp,
-  getDoc,
-  deleteDoc
+  getDoc
 } from 'firebase/firestore';
+import { addDocWithAppId, updateDocWithAppId, deleteDocWithAppId } from '../firebase/firestoreAppWriter';
 import { db, auditUserCollection } from '../firebaseControlFile';
 import { uploadEvidence, getDownloadUrl } from './controlFileB2Service';
 import { getControlFileFolders } from './controlFileInit';
@@ -65,12 +63,12 @@ export const crearAccidente = async (accidenteData, empleadosSeleccionados, imag
     };
 
     const accidentesRef = auditUserCollection(userProfile.uid, 'accidentes');
-    const docRef = await addDoc(accidentesRef, accidenteDoc);
+    const docRef = await addDocWithAppId(accidentesRef, accidenteDoc);
 
     // Subir imágenes si existen
     if (imagenes && imagenes.length > 0) {
       const imagenesUrls = await subirImagenes(docRef.id, imagenes, accidenteData.empresaId);
-      await updateDoc(docRef, { imagenes: imagenesUrls });
+      await updateDocWithAppId(docRef, { imagenes: imagenesUrls });
     }
 
     // Actualizar estado de empleados con días de reposo
@@ -85,7 +83,7 @@ export const crearAccidente = async (accidenteData, empleadosSeleccionados, imag
       try {
         const sucursalesRef = auditUserCollection(userProfile.uid, 'sucursales');
         const sucursalRef = doc(sucursalesRef, accidenteData.sucursalId);
-        await updateDoc(sucursalRef, {
+        await updateDocWithAppId(sucursalRef, {
           fechaUltimoAccidente: Timestamp.now()
         });
       } catch (error) {
@@ -147,12 +145,12 @@ export const crearIncidente = async (incidenteData, testigos = [], imagenes = []
     };
 
     const accidentesRef = auditUserCollection(userProfile.uid, 'accidentes');
-    const docRef = await addDoc(accidentesRef, incidenteDoc);
+    const docRef = await addDocWithAppId(accidentesRef, incidenteDoc);
 
     // Subir imágenes si existen
     if (imagenes && imagenes.length > 0) {
       const imagenesUrls = await subirImagenes(docRef.id, imagenes, incidenteData.empresaId);
-      await updateDoc(docRef, { imagenes: imagenesUrls });
+      await updateDocWithAppId(docRef, { imagenes: imagenesUrls });
     }
 
     // Registrar log
@@ -193,7 +191,7 @@ export const actualizarEstadoEmpleado = async (empleadoId, estado, fechaInicioRe
       updateData.fechaInicioReposo = fechaInicioReposo;
     }
     
-    await updateDoc(empleadoRef, updateData);
+    await updateDocWithAppId(empleadoRef, updateData);
   } catch (error) {
     console.error('Error al actualizar estado de empleado:', error);
     throw error;
@@ -352,7 +350,7 @@ export const actualizarEstadoAccidente = async (accidenteId, nuevoEstado, userId
       updateData.fechaCierre = fechaCierre;
     }
     
-    await updateDoc(accidenteRef, updateData);
+    await updateDocWithAppId(accidenteRef, updateData);
 
     // Registrar log si hay userId
     if (userId) {
@@ -443,7 +441,7 @@ export const eliminarAccidente = async (accidenteId, userId = null, userProfile)
     const accidenteData = accidenteDoc.data();
     
     // Eliminar documento de Firestore
-    await deleteDoc(accidenteRef);
+    await deleteDocWithAppId(accidenteRef);
 
     // Registrar log
     if (userId) {
@@ -492,7 +490,7 @@ export const actualizarAccidente = async (accidenteId, datosActualizados, imagen
       updateData.imagenes = accidenteDoc.data().imagenes || [];
     }
 
-    await updateDoc(accidenteRef, updateData);
+    await updateDocWithAppId(accidenteRef, updateData);
 
     // Registrar log
     if (userId) {

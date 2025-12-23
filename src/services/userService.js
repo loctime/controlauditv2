@@ -3,8 +3,9 @@ import axios from 'axios';
 import { auth } from '../firebaseControlFile';
 import { onAuthStateChanged } from 'firebase/auth';
 import { getBackendUrl } from '../config/environment.js';
-import { doc, setDoc, collection, getDocs, updateDoc, deleteDoc } from 'firebase/firestore';
+import { doc, collection, getDocs } from 'firebase/firestore';
 import { db } from '../firebaseControlFile';
+import { setDocWithAppId } from '../firebase/firestoreAppWriter';
 
 // Usar la URL del backend desde la configuración del entorno
 const API_BASE_URL = `${getBackendUrl()}/api`;
@@ -133,7 +134,7 @@ const createUserWithFirebase = async (userData) => {
       tempPassword: userData.password // Guardar temporalmente para que el admin pueda crear el usuario en Firebase Auth
     };
 
-    await setDoc(doc(db, 'apps', 'audit', 'users', tempUid), userProfile);
+    await setDocWithAppId(doc(db, 'apps', 'audit', 'users', tempUid), userProfile);
 
     console.log('✅ Usuario creado en Firestore (pendiente de creación en Firebase Auth)');
     return {

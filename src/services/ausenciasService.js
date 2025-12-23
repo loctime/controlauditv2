@@ -5,13 +5,12 @@ import {
   orderBy,
   limit,
   getDocs,
-  addDoc,
-  updateDoc,
   serverTimestamp,
   Timestamp,
   doc
 } from "firebase/firestore";
 import { db, auditUserCollection } from "../firebaseControlFile";
+import { addDocWithAppId, updateDocWithAppId } from "../firebase/firestoreAppWriter";
 
 const AUSENCIAS_COLLECTION = "ausencias";
 const CHUNK_SIZE = 10;
@@ -251,7 +250,7 @@ export async function createAusencia({
   };
 
   const ausenciasRef = auditUserCollection(userProfile.uid, AUSENCIAS_COLLECTION);
-  const docRef = await addDoc(ausenciasRef, payload);
+  const docRef = await addDocWithAppId(ausenciasRef, payload);
   const snapshot = await getDocs(
     query(
       ausenciasRef,
@@ -280,7 +279,7 @@ export async function updateAusencia(ausenciaId, changes = {}, userProfile) {
   if (Object.prototype.hasOwnProperty.call(changes, "fechaFin")) {
     payload.fechaFin = toTimestamp(changes.fechaFin);
   }
-  await updateDoc(docRef, payload);
+  await updateDocWithAppId(docRef, payload);
 }
 
 export async function cerrarAusencia(ausenciaId, { fechaFin = new Date() } = {}, userProfile) {
@@ -289,7 +288,7 @@ export async function cerrarAusencia(ausenciaId, { fechaFin = new Date() } = {},
   }
   const ausenciasRef = auditUserCollection(userProfile.uid, AUSENCIAS_COLLECTION);
   const docRef = doc(ausenciasRef, ausenciaId);
-  await updateDoc(docRef, {
+  await updateDocWithAppId(docRef, {
     estado: "cerrada",
     fechaFin: toTimestamp(fechaFin),
     updatedAt: serverTimestamp()
