@@ -68,36 +68,22 @@ const PreguntaItem = ({
     fechaVencimiento: null
   };
 
-  // Validar si auditId es válido para subir archivos
-  const isValidAuditId = () => {
-    // auditId es inválido si:
-    // - es null o undefined
-    // - empieza con "offline_" (auditoría temporal offline)
-    if (!auditId || typeof auditId !== 'string') {
-      return false;
-    }
-    if (auditId.startsWith('offline_')) {
-      return false;
-    }
-    return true;
-  };
-
   // Handler para subir archivo usando ControlFile
   const handleFileUpload = async (event) => {
     const file = event.target.files?.[0];
     if (!file) return;
-
-    // Validar que auditId es válido (no temporal, no null/undefined)
-    if (!isValidAuditId()) {
-      console.warn('⚠️ [PreguntaItem] auditId no válido para subir archivo (temporal o no disponible)');
-      return;
-    }
 
     // Validar que tenemos los datos necesarios
     if (!companyId) {
       console.warn('⚠️ [PreguntaItem] companyId no disponible para subir archivo');
       return;
     }
+
+    // Generar auditId temporal si no existe o es temporal
+    // La subida siempre debe estar permitida, incluso sin auditId definitivo
+    const effectiveAuditId = auditId && !auditId.startsWith('offline_') 
+      ? auditId 
+      : `offline_${crypto.randomUUID()}`;
 
     // Validar autenticación desde el contexto
     if (!user || !isLogged || authLoading) {
@@ -122,7 +108,7 @@ const PreguntaItem = ({
       // Subir archivo a ControlFile usando Backblaze B2 (flujo oficial)
       const result = await uploadEvidence({
         file,
-        auditId,
+        auditId: effectiveAuditId, // Usar auditId real o temporal
         companyId,
         seccionId: seccionIndex.toString(),
         preguntaId: preguntaIndex.toString(),
@@ -429,7 +415,7 @@ const PreguntaItem = ({
             component="span"
             startIcon={<CameraAltIcon />}
             onClick={() => onOpenCameraDialog(seccionIndex, preguntaIndex)}
-            disabled={isProcesando || !isValidAuditId()}
+            disabled={isProcesando}
             sx={{ 
               minWidth: isMobile ? 80 : 120,
               fontSize: isMobile ? '0.75rem' : '0.875rem',
@@ -452,24 +438,11 @@ const PreguntaItem = ({
                   py: isMobile ? 0.5 : 1,
                   px: isMobile ? 1 : 2
                 }}
-                disabled={isProcesando || !isValidAuditId()}
+                disabled={isProcesando}
               >
                 {isProcesando ? 'Procesando...' : 'Subir'}
               </Button>
             </label>
-            {!isValidAuditId() && (
-              <Typography 
-                variant="caption" 
-                color="warning.main"
-                sx={{ 
-                  fontSize: isMobile ? '0.65rem' : '0.75rem',
-                  fontStyle: 'italic',
-                  mt: 0.5
-                }}
-              >
-                Guardá la auditoría para poder adjuntar evidencias
-              </Typography>
-            )}
           </Box>
           <input
             id={`upload-gallery-${seccionIndex}-${preguntaIndex}`}
@@ -477,7 +450,6 @@ const PreguntaItem = ({
             type="file"
             accept="image/*"
             onChange={handleFileUpload}
-            disabled={!isValidAuditId()}
             style={{ display: 'none' }}
           />
         </Stack>
