@@ -216,15 +216,16 @@ export const userService = {
   // Usa API Route de Next.js (ruta relativa, sin CORS, ejecuta en Vercel)
   async createUser(userData) {
     try {
-      console.log('📤 Creando usuario con API Route de Next.js:', '/api/create-user');
+      console.log('📤 Creando usuario con backend de Render:', `${getBackendUrl()}/api/create-user`);
       console.log('📋 Datos del usuario:', { email: userData.email, nombre: userData.nombre, role: userData.role });
       
-      const response = await nextApi.post('/create-user', userData);
+      // Usar externalApi (backend de Render) en lugar de nextApi
+      const response = await externalApi.post('/create-user', userData);
       
-      console.log('✅ Usuario creado exitosamente por la API Route:', response.data);
+      console.log('✅ Usuario creado exitosamente por el backend:', response.data);
       return response.data;
     } catch (error) {
-      console.error('❌ Error creando usuario con API Route:', error);
+      console.error('❌ Error creando usuario con backend:', error);
       console.error('📊 Detalles del error:', {
         status: error.response?.status,
         statusText: error.response?.statusText,
@@ -232,6 +233,15 @@ export const userService = {
         code: error.code,
         message: error.message
       });
+      
+      // Si el backend no está disponible o hay error 405/404/503, usar fallback
+      if (error.response?.status === 405 || 
+          error.response?.status === 404 || 
+          error.response?.status === 503 ||
+          error.code === 'ERR_NETWORK') {
+        console.log('🔄 Backend no disponible o endpoint incorrecto, usando fallback de Firebase...');
+        return await createUserWithFirebase(userData);
+      }
       
       // Detectar problemas de autenticación/autorización
       if (error.response?.status === 401) {
@@ -248,22 +258,13 @@ export const userService = {
         throw new Error('No tienes permisos para crear usuarios. Verifica tu rol de administrador.');
       }
       
-      // Si el endpoint no existe (404), la API Route de Next.js no está disponible
-      if (error.response?.status === 404) {
-        console.error('🚨 ERROR 404: API Route /api/create-user no encontrada');
-        console.error('💡 Verifica que la ruta app/api/create-user/route.ts exista en Next.js');
-        throw new Error('El endpoint de creación de usuarios no está disponible. Contacta al administrador del sistema.');
+      // Para otros errores, intentar fallback antes de lanzar excepción
+      console.log('🔄 Intentando fallback de Firebase...');
+      try {
+        return await createUserWithFirebase(userData);
+      } catch (fallbackError) {
+        throw new Error(error.response?.data?.error || error.message || 'Error al crear usuario');
       }
-      
-      // Si es un error de red (solo para API Route local, no debería ocurrir)
-      if (error.code === 'ERR_NETWORK') {
-        console.error('🚨 ERROR de red al conectar con API Route de Next.js');
-        console.error('💡 Esto no debería ocurrir - la API Route está en el mismo servidor');
-        throw new Error('Error de conectividad. Por favor, recarga la página e intenta nuevamente.');
-      }
-      
-      // Para otros errores, lanzar excepción con el mensaje del servidor
-      throw new Error(error.response?.data?.error || error.message || 'Error al crear usuario');
     }
   },
 
