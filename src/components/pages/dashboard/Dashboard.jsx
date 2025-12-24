@@ -134,7 +134,15 @@ function Dashboard() {
   
   // Manejar cambios en el formulario
   const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    // Para email, prevenir problemas con @ usando requestAnimationFrame
+    if (name === 'email') {
+      requestAnimationFrame(() => {
+        setForm(prev => ({ ...prev, [name]: value }));
+      });
+    } else {
+      setForm(prev => ({ ...prev, [name]: value }));
+    }
   };
 
   // Función para activar administrador con código
@@ -444,23 +452,35 @@ function Dashboard() {
               value={form.nombre}
               onChange={handleChange}
             />
-            <TextField
-              margin="dense"
-              name="email"
-              label="Email"
-              type="text"
-              fullWidth
-              required
-              value={form.email}
-              onChange={handleChange}
-              autoComplete="off"
-              inputProps={{
-                autoComplete: 'off',
-                autoCorrect: 'off',
-                autoCapitalize: 'off',
-                spellCheck: 'false'
-              }}
-            />
+            <Box sx={{ mb: 1, mt: 1 }}>
+              <Typography variant="body2" sx={{ mb: 0.5, color: 'text.secondary' }}>
+                Email <span style={{ color: 'red' }}>*</span>
+              </Typography>
+              <input
+                name="email"
+                type="text"
+                value={form.email}
+                onChange={handleChange}
+                required
+                autoComplete="off"
+                style={{
+                  width: '100%',
+                  padding: '16.5px 14px',
+                  border: '1px solid rgba(0, 0, 0, 0.23)',
+                  borderRadius: '4px',
+                  fontSize: '16px',
+                  fontFamily: 'inherit',
+                  outline: 'none',
+                  boxSizing: 'border-box'
+                }}
+                onFocus={(e) => {
+                  e.target.style.borderColor = '#1976d2';
+                }}
+                onBlur={(e) => {
+                  e.target.style.borderColor = 'rgba(0, 0, 0, 0.23)';
+                }}
+              />
+            </Box>
             <TextField
               margin="dense"
               name="usuariosMaximos"
