@@ -199,8 +199,8 @@ export const safetyDashboardService = {
         ausenciasData
       ] = await Promise.all([
         this.getAuditoriasData(companyId, period, userId),
-        this.getLogsData(companyId, period),
-        this.getFormulariosData(companyId, period),
+        this.getLogsData(companyId, period, userId),
+        this.getFormulariosData(companyId, period, userId),
         this.getEmpleados(sucursalId, userId),
         this.getCapacitaciones(sucursalId, period, userId),
         this.getAccidentes(sucursalId, period, userId),
@@ -220,7 +220,7 @@ export const safetyDashboardService = {
       );
       
       // Obtener información de la empresa y sucursal
-      const companyInfo = await this.getCompanyInfo(companyId);
+      const companyInfo = await this.getCompanyInfo(companyId, userId);
       const sucursalInfo = sucursalId !== 'todas' ? await this.getSucursalInfo(sucursalId, userId) : null;
       
       return {
@@ -282,8 +282,8 @@ export const safetyDashboardService = {
             ausenciasData
           ] = await Promise.all([
             this.getAuditoriasData(companyId, period, userId),
-            this.getLogsData(companyId, period),
-            this.getFormulariosData(companyId, period),
+            this.getLogsData(companyId, period, userId),
+            this.getFormulariosData(companyId, period, userId),
             this.getEmpleados(sucursalId, userId),
             this.getCapacitaciones(sucursalId, period, userId),
             this.getAccidentes(sucursalId, period, userId),
@@ -301,7 +301,7 @@ export const safetyDashboardService = {
             period // Pasar período para cálculo correcto de índices
           );
           
-          const companyInfo = await this.getCompanyInfo(companyId);
+          const companyInfo = await this.getCompanyInfo(companyId, userId);
           const sucursalInfo = sucursalId !== 'todas' ? await this.getSucursalInfo(sucursalId, userId) : null;
           
           callback({
@@ -583,9 +583,17 @@ export const safetyDashboardService = {
   },
 
   // Obtener datos de logs de operarios
-  async getLogsData(companyId, period) {
+  async getLogsData(companyId, period, userId = null) {
     try {
-      const logsRef = collection(dbAudit, 'logs_operarios');
+      if (!userId) {
+        console.warn('⚠️ [SafetyDashboard] getLogsData: userId no proporcionado');
+        return [];
+      }
+      
+      // Los logs están en la colección del usuario
+      const logsRef = auditUserCollection(userId, 'logs_operarios');
+      console.log('[SafetyDashboard] getLogsData usando path:', logsRef.path);
+      
       const q = query(
         logsRef,
         where('detalles.empresaId', '==', companyId),
@@ -613,9 +621,17 @@ export const safetyDashboardService = {
   },
 
   // Obtener datos de formularios
-  async getFormulariosData(companyId, period) {
+  async getFormulariosData(companyId, period, userId = null) {
     try {
-      const formulariosRef = collection(dbAudit, 'formularios');
+      if (!userId) {
+        console.warn('⚠️ [SafetyDashboard] getFormulariosData: userId no proporcionado');
+        return [];
+      }
+      
+      // Los formularios están en la colección del usuario
+      const formulariosRef = auditUserCollection(userId, 'formularios');
+      console.log('[SafetyDashboard] getFormulariosData usando path:', formulariosRef.path);
+      
       const q = query(
         formulariosRef,
         where('clienteAdminId', '==', companyId),
@@ -642,9 +658,18 @@ export const safetyDashboardService = {
   },
 
   // Obtener información de la empresa
-  async getCompanyInfo(companyId) {
+  async getCompanyInfo(companyId, userId = null) {
     try {
-      const empresaRef = doc(dbAudit, 'empresas', companyId);
+      if (!userId) {
+        console.warn('⚠️ [SafetyDashboard] getCompanyInfo: userId no proporcionado');
+        return null;
+      }
+      
+      // Las empresas están en la colección del usuario
+      const empresasRef = auditUserCollection(userId, 'empresas');
+      const empresaRef = doc(empresasRef, companyId);
+      console.log('[SafetyDashboard] getCompanyInfo usando path:', empresaRef.path);
+      
       const empresaDoc = await getDoc(empresaRef);
       
       if (empresaDoc.exists()) {
@@ -665,7 +690,12 @@ export const safetyDashboardService = {
         console.warn('⚠️ [SafetyDashboard] getSucursalInfo: userId no proporcionado');
         return null;
       }
-      const sucursalRef = doc(dbAudit, 'apps', 'auditoria', 'users', userId, 'sucursales', sucursalId);
+      
+      // Construir ruta correcta usando auditUserCollection
+      const sucursalesRef = auditUserCollection(userId, 'sucursales');
+      const sucursalRef = doc(sucursalesRef, sucursalId);
+      console.log('[SafetyDashboard] getSucursalInfo usando path:', sucursalRef.path);
+      
       const sucursalDoc = await getDoc(sucursalRef);
       
       if (sucursalDoc.exists()) {
