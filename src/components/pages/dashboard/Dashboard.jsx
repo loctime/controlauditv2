@@ -282,6 +282,14 @@ function Dashboard() {
     setLoading(true);
     setError('');
     
+    // Validación manual de email con regex
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!form.email || !emailRegex.test(form.email.trim())) {
+      setError('Por favor ingresa un email válido (ejemplo: usuario@dominio.com)');
+      setLoading(false);
+      return;
+    }
+    
     if (!form.password) {
       setError('La contraseña temporal es obligatoria.');
       setLoading(false);
@@ -423,7 +431,7 @@ function Dashboard() {
       )}
       <Dialog open={openDialog} onClose={handleCloseDialog}>
         <DialogTitle>Agregar Administrador Principal</DialogTitle>
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} noValidate>
           <DialogContent>
             <TextField
               autoFocus
@@ -440,7 +448,7 @@ function Dashboard() {
               margin="dense"
               name="email"
               label="Email"
-              type="email"
+              type="text"
               fullWidth
               required
               value={form.email}
