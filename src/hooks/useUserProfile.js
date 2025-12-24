@@ -35,6 +35,53 @@ export const useUserProfile = (firebaseUser) => {
         return profileData;
       }
 
+      // Si no existe por UID, buscar por email (puede ser que el documento tenga UID temporal)
+      // Esto ocurre cuando el email ya existía en Auth (compartido con otras apps)
+      // y se creó el documento en Firestore con un UID temporal
+      if (firebaseUser.email) {
+        const { collection, query, where, getDocs } = await import('firebase/firestore');
+        const usuariosRef = collection(db, "apps", "auditoria", "users");
+        const emailQuery = query(usuariosRef, where("email", "==", firebaseUser.email));
+        const emailSnapshot = await getDocs(emailQuery);
+        
+        if (!emailSnapshot.empty) {
+          // Encontrado por email - migrar al UID real
+          const tempUserDoc = emailSnapshot.docs[0];
+          const tempUserData = tempUserDoc.data();
+          
+          if (isDev) {
+            console.log('[AUDIT] User profile found by email, migrating to real UID');
+            console.log('[AUDIT] Temp UID:', tempUserDoc.id, 'Real UID:', firebaseUser.uid);
+          }
+          
+          // Crear documento con UID real (merge para preservar datos existentes)
+          const migratedProfile = {
+            ...tempUserData,
+            uid: firebaseUser.uid,
+            // Limpiar campos temporales
+            status: undefined,
+            tempPassword: undefined,
+            needsAuthSync: undefined
+          };
+          
+          await setDocWithAppId(userRef, migratedProfile);
+          
+          // Eliminar documento temporal si el UID es diferente
+          if (tempUserDoc.id !== firebaseUser.uid) {
+            const { deleteDoc } = await import('firebase/firestore');
+            await deleteDoc(tempUserDoc.ref);
+            if (isDev) {
+              console.log('[AUDIT] Temporary document deleted:', tempUserDoc.id);
+            }
+          }
+          
+          setUserProfile(migratedProfile);
+          setRole(migratedProfile.role || null);
+          setPermisos(migratedProfile.permisos || {});
+          return migratedProfile;
+        }
+      }
+
       // Si no existe, crear nuevo perfil
       if (isDev) {
         console.log('[AUDIT] User profile not found, creating in /apps/auditoria/users');

@@ -132,7 +132,7 @@ const createUserWithFirebase = async (userData) => {
     }
     
     let userUid = null;
-    let authCreated = false;
+    let authExists = false;
     
     // 1. Buscar si el usuario ya existe en Firestore con este email
     const usuariosRef = collection(db, 'apps', 'auditoria', 'users');
@@ -143,15 +143,22 @@ const createUserWithFirebase = async (userData) => {
       // Usuario ya existe en Firestore, usar su UID
       const existingUser = querySnapshot.docs[0];
       userUid = existingUser.id;
-      authCreated = true; // Asumimos que ya existe en Auth
+      authExists = true; // Ya existe en Firestore, probablemente también en Auth
       console.log('✅ Usuario encontrado en Firestore con UID:', userUid);
       console.log('📝 El usuario ya existe. Se actualizará con los nuevos datos.');
     } else {
-      // Usuario no existe, usar UID temporal
-      // El sistema de sincronización vinculará cuando el usuario inicie sesión
-      console.log('⚠️ Usuario no existe. Creando en Firestore con UID temporal.');
-      console.log('⚠️ El sistema vinculará automáticamente cuando el usuario inicie sesión.');
-      userUid = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      // Usuario no existe en Firestore
+      // IMPORTANTE: El email puede existir en Auth (compartido con otras apps como ControlFile)
+      // Esto está bien - creamos el documento en Firestore y el sistema de sincronización
+      // vinculará el documento con el UID real cuando el usuario inicie sesión
+      console.log('📧 Creando nuevo documento en Firestore para:', userData.email);
+      console.log('ℹ️ Si el email ya existe en Auth (compartido con otras apps), el sistema');
+      console.log('   vinculará automáticamente cuando el usuario inicie sesión.');
+      
+      // Usar un UID temporal basado en el email para facilitar la vinculación
+      // El sistema de sincronización buscará por email y actualizará el UID cuando el usuario inicie sesión
+      userUid = `temp_email_${userData.email.replace(/[^a-zA-Z0-9]/g, '_')}_${Date.now()}`;
+      authExists = false; // No sabemos si existe en Auth, pero está bien
     }
     
     // 2. Crear/actualizar perfil en Firestore
@@ -171,28 +178,34 @@ const createUserWithFirebase = async (userData) => {
         tema: 'light'
       },
       clienteAdminId: userData.clienteAdminId || null,
-      ...(authCreated ? {} : { 
-        status: 'pending_creation',
-        tempPassword: userData.password 
+      // Si el usuario no existe en Firestore, guardar la contraseña temporal
+      // para que el sistema de sincronización pueda crear/vincular en Auth cuando inicie sesión
+      ...(authExists ? {} : { 
+        status: 'pending_sync',
+        tempPassword: userData.password,
+        // Marcar que necesita sincronización con Auth cuando el usuario inicie sesión
+        needsAuthSync: true
       })
     };
 
     await setDocWithAppId(doc(db, 'apps', 'auditoria', 'users', userUid), userProfile, { merge: true });
 
-    if (authCreated) {
-      console.log('✅ Usuario creado exitosamente en Auth y Firestore');
+    if (authExists) {
+      console.log('✅ Usuario actualizado en Firestore');
       return {
         success: true,
         uid: userUid,
-        message: `Usuario creado exitosamente. Rol '${userData.role || 'operario'}' asignado.`
+        message: `Usuario actualizado exitosamente. Rol '${userData.role || 'operario'}' asignado.`
       };
     } else {
-      console.log('✅ Usuario creado en Firestore (pendiente de creación/vincular con Auth)');
+      console.log('✅ Usuario creado en Firestore');
+      console.log('ℹ️ Si el email ya existe en Auth (compartido con otras apps),');
+      console.log('   el sistema vinculará automáticamente cuando el usuario inicie sesión.');
       return {
         success: true,
         uid: userUid,
-        message: 'Usuario creado en Firestore. Si el email ya existe en Auth, el usuario deberá iniciar sesión para vincular su cuenta.',
-        requiresManualCreation: !authCreated
+        message: 'Usuario creado en Firestore. El sistema vinculará automáticamente con Auth cuando el usuario inicie sesión.',
+        requiresAuthSync: true
       };
     }
   } catch (error) {
