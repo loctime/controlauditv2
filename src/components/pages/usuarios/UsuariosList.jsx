@@ -163,6 +163,12 @@ const UsuariosList = ({ clienteAdminId, showAddButton = true }) => {
 
   // Manejar cambios en el formulario
   const handleFormChange = (field, value) => {
+    // Prevenir loops infinitos con validaciones pesadas
+    if (field === 'email' && typeof value === 'string') {
+      // Limitar longitud para evitar problemas de rendimiento
+      if (value.length > 100) return;
+    }
+    
     if (field === 'permisos') {
       setFormData(prev => ({
         ...prev,
@@ -421,6 +427,13 @@ const UsuariosList = ({ clienteAdminId, showAddButton = true }) => {
               fullWidth
               required
               disabled={!!editando}
+              autoComplete="off"
+              inputProps={{
+                autoComplete: 'off',
+                autoCorrect: 'off',
+                autoCapitalize: 'off',
+                spellCheck: 'false'
+              }}
             />
             {!editando && (
               <TextField

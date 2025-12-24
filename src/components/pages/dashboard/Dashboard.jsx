@@ -440,6 +440,13 @@ function Dashboard() {
               required
               value={form.email}
               onChange={handleChange}
+              autoComplete="off"
+              inputProps={{
+                autoComplete: 'off',
+                autoCorrect: 'off',
+                autoCapitalize: 'off',
+                spellCheck: 'false'
+              }}
             />
             <TextField
               margin="dense"

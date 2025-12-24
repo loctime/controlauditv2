@@ -1,7 +1,7 @@
 // src/services/userService.js
 import axios from 'axios';
 import { auth } from '../firebaseControlFile';
-import { onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
+import { onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from 'firebase/auth';
 import { getBackendUrl } from '../config/environment.js';
 import { doc, collection, getDocs, query, where, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebaseControlFile';
@@ -119,49 +119,39 @@ externalApi.interceptors.response.use(
 // Función de fallback usando Firebase directamente
 const createUserWithFirebase = async (userData) => {
   try {
-    console.log('🔄 Backend no disponible, creando usuario en Firebase Auth y Firestore...');
+    console.log('🔄 Backend no disponible, creando usuario solo en Firestore (sin Auth desde frontend)...');
+    
+    // IMPORTANTE: NO crear usuarios en Auth desde el frontend cuando hay un admin logueado
+    // porque Firebase automáticamente autentica al usuario recién creado, desconectando al admin.
+    // En su lugar, solo creamos el documento en Firestore y dejamos que el backend
+    // o el sistema de sincronización maneje la creación en Auth cuando el usuario inicie sesión.
+    
+    const currentUser = auth.currentUser;
+    if (!currentUser) {
+      throw new Error('No hay usuario autenticado. No se puede crear usuario sin sesión activa.');
+    }
     
     let userUid = null;
     let authCreated = false;
     
-    // 1. Intentar crear usuario en Firebase Auth
-    try {
-      const userCredential = await createUserWithEmailAndPassword(auth, userData.email, userData.password);
-      userUid = userCredential.user.uid;
-      authCreated = true;
-      console.log('✅ Usuario creado en Firebase Auth:', userUid);
-    } catch (authError) {
-      console.log('⚠️ Error al crear en Auth:', authError.code, authError.message);
-      
-      // Si el email ya existe en Auth (comparten Firebase con ControlFile)
-      if (authError.code === 'auth/email-already-in-use') {
-        console.log('📧 Email ya existe en Auth (compartido con ControlFile), buscando en Firestore...');
-        
-        // Buscar si el usuario ya existe en Firestore con este email
-        const usuariosRef = collection(db, 'apps', 'auditoria', 'users');
-        const q = query(usuariosRef, where('email', '==', userData.email));
-        const querySnapshot = await getDocs(q);
-        
-        if (!querySnapshot.empty) {
-          // Usuario ya existe en Firestore, usar su UID
-          const existingUser = querySnapshot.docs[0];
-          userUid = existingUser.id;
-          authCreated = true; // El usuario ya existe en Auth, solo actualizamos Firestore
-          console.log('✅ Usuario encontrado en Firestore con UID:', userUid);
-          console.log('📝 El usuario ya existe en Auth y Firestore. Se actualizará con los nuevos datos.');
-        } else {
-          // Email existe en Auth pero no en Firestore de ControlAudit
-          // No podemos obtener el UID real sin hacer login (lo cual desconectaría al admin)
-          // Usar UID temporal - el sistema de sincronización vinculará cuando el usuario inicie sesión
-          console.log('⚠️ Email existe en Auth pero no en Firestore de ControlAudit');
-          console.log('⚠️ Usando UID temporal. El sistema vinculará automáticamente cuando el usuario inicie sesión.');
-          userUid = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-        }
-      } else {
-        // Otro error de Auth, usar UID temporal
-        console.log('⚠️ No se pudo crear en Auth, usando UID temporal');
-        userUid = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      }
+    // 1. Buscar si el usuario ya existe en Firestore con este email
+    const usuariosRef = collection(db, 'apps', 'auditoria', 'users');
+    const q = query(usuariosRef, where('email', '==', userData.email));
+    const querySnapshot = await getDocs(q);
+    
+    if (!querySnapshot.empty) {
+      // Usuario ya existe en Firestore, usar su UID
+      const existingUser = querySnapshot.docs[0];
+      userUid = existingUser.id;
+      authCreated = true; // Asumimos que ya existe en Auth
+      console.log('✅ Usuario encontrado en Firestore con UID:', userUid);
+      console.log('📝 El usuario ya existe. Se actualizará con los nuevos datos.');
+    } else {
+      // Usuario no existe, usar UID temporal
+      // El sistema de sincronización vinculará cuando el usuario inicie sesión
+      console.log('⚠️ Usuario no existe. Creando en Firestore con UID temporal.');
+      console.log('⚠️ El sistema vinculará automáticamente cuando el usuario inicie sesión.');
+      userUid = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     }
     
     // 2. Crear/actualizar perfil en Firestore
