@@ -73,57 +73,58 @@ const PreguntaItem = ({
     const file = event.target.files?.[0];
     if (!file) return;
 
-    // Validar que tenemos los datos necesarios
-    if (!companyId) {
-      console.warn('⚠️ [PreguntaItem] companyId no disponible para subir archivo');
-      return;
-    }
-
-    // Generar auditId temporal si no existe o es temporal
-    // La subida siempre debe estar permitida, incluso sin auditId definitivo
-    const effectiveAuditId = auditId && !auditId.startsWith('offline_') 
-      ? auditId 
-      : `offline_${crypto.randomUUID()}`;
-
-    // Validar autenticación desde el contexto
-    if (!user || !isLogged || authLoading) {
-      console.error('❌ [PreguntaItem] Usuario no autenticado o autenticación en proceso');
-      return;
-    }
-
     const key = `${seccionIndex}-${preguntaIndex}`;
     setLocalProcesandoImagen(true);
 
     try {
-      // Asegurar carpetas antes de subir (evita duplicados)
-      const mainFolderId = await ensureTaskbarFolder('ControlAudit');
-      if (!mainFolderId) {
-        throw new Error('No se pudo crear/obtener carpeta principal ControlAudit');
-      }
-      
-      // Asegurar subcarpeta "Auditorías"
-      const auditoriasFolderId = await ensureSubFolder('Auditorías', mainFolderId);
-      const targetFolderId = auditoriasFolderId || mainFolderId;
-      
-      // Subir archivo a ControlFile usando Backblaze B2 (flujo oficial)
-      const result = await uploadEvidence({
-        file,
-        auditId: effectiveAuditId, // Usar auditId real o temporal
-        companyId,
-        seccionId: seccionIndex.toString(),
-        preguntaId: preguntaIndex.toString(),
-        parentId: targetFolderId, // ✅ Usar carpeta verificada/creada
-        fecha: new Date()
-      });
-
-      // Guardar solo fileId (NO URL permanente - usar presign-get cuando se necesite)
+      // PRIMERO: Guardar el File object inmediatamente para el reporte
+      // Esto mantiene la compatibilidad con el sistema anterior
       if (onImageUploaded) {
-        onImageUploaded(seccionIndex, preguntaIndex, {
-          fileId: result.fileId
-        });
+        onImageUploaded(seccionIndex, preguntaIndex, file);
+      }
+
+      // SEGUNDO: Subir a ControlFile en segundo plano (si tenemos los datos necesarios)
+      if (companyId && auditId) {
+        // Validar autenticación desde el contexto
+        if (user && isLogged && !authLoading) {
+          try {
+            // Generar auditId temporal si no existe o es temporal
+            const effectiveAuditId = auditId && !auditId.startsWith('offline_') 
+              ? auditId 
+              : `offline_${crypto.randomUUID()}`;
+
+            // Asegurar carpetas antes de subir (evita duplicados)
+            const mainFolderId = await ensureTaskbarFolder('ControlAudit');
+            if (mainFolderId) {
+              // Asegurar subcarpeta "Auditorías"
+              const auditoriasFolderId = await ensureSubFolder('Auditorías', mainFolderId);
+              const targetFolderId = auditoriasFolderId || mainFolderId;
+              
+              // Subir archivo a ControlFile usando Backblaze B2 (flujo oficial)
+              const result = await uploadEvidence({
+                file,
+                auditId: effectiveAuditId,
+                companyId,
+                seccionId: seccionIndex.toString(),
+                preguntaId: preguntaIndex.toString(),
+                parentId: targetFolderId,
+                fecha: new Date()
+              });
+
+              console.log('✅ [PreguntaItem] Imagen subida a ControlFile:', result.fileId);
+              // Opcional: Actualizar con fileId si se necesita referencia futura
+              // Por ahora mantenemos el File object para compatibilidad con reportes
+            }
+          } catch (uploadError) {
+            console.warn('⚠️ [PreguntaItem] Error al subir a ControlFile (continuando con File local):', uploadError);
+            // Continuar aunque falle la subida - el File object ya está guardado
+          }
+        }
+      } else {
+        console.log('ℹ️ [PreguntaItem] Subida a ControlFile omitida (falta companyId o auditId), usando File local');
       }
     } catch (error) {
-      console.error('❌ Error al subir archivo a ControlFile:', error);
+      console.error('❌ Error al procesar archivo:', error);
     } finally {
       setLocalProcesandoImagen(false);
       // Limpiar el input para permitir seleccionar el mismo archivo de nuevo

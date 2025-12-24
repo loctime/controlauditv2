@@ -486,14 +486,19 @@ const PreguntasYSeccion = ({
     console.log(`🗑️ Imagen eliminada de pregunta ${preguntaIndex} de sección ${seccionIndex}`);
   };
 
-  // Handler para cuando se sube una imagen usando ControlFile
+  // Handler para cuando se sube una imagen
   const handleImageUploaded = (seccionIndex, preguntaIndex, imageData) => {
     console.log('📸 [PreguntasYSeccion] Imagen subida:', { seccionIndex, preguntaIndex, imageData });
     
-    // Actualizar el estado de imágenes con el fileId recibido
+    // imageData puede ser:
+    // - File object (para compatibilidad con reportes)
+    // - Objeto con fileId (si viene de ControlFile)
+    // - String URL (formato antiguo)
+    
+    // Actualizar el estado de imágenes
     const nuevasImagenes = imagenes.map((img, index) => {
       if (index === seccionIndex) {
-        // Reemplazar cualquier imagen existente con la nueva (que contiene fileId)
+        // Reemplazar cualquier imagen existente con la nueva
         return [...img.slice(0, preguntaIndex), imageData, ...img.slice(preguntaIndex + 1)];
       }
       return img;
@@ -501,7 +506,7 @@ const PreguntasYSeccion = ({
     
     setImagenes(nuevasImagenes);
     guardarImagenes(nuevasImagenes);
-    console.log(`✅ Imagen guardada con fileId para pregunta ${preguntaIndex} de sección ${seccionIndex}`);
+    console.log(`✅ Imagen guardada para pregunta ${preguntaIndex} de sección ${seccionIndex}`);
   };
 
   // Función para navegar a una pregunta específica
