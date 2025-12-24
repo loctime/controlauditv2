@@ -21,7 +21,7 @@ function sameAppId() {
 
 // 🔐 PERFIL
 match /apps/auditoria/users/{userId} {
-  allow get, update: if request.auth != null
+  allow get, create, update: if request.auth != null
     && request.auth.uid == userId;
 }
 

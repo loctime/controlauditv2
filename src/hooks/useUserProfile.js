@@ -1,10 +1,11 @@
 // src/hooks/useUserProfile.js
 import { useState, useEffect } from 'react';
-import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebaseControlFile';
 import { getUserRole } from '../config/admin';
 import { registrarAccionSistema } from '../utils/firestoreUtils';
 import { isEnvironment } from '../config/environment';
+import { setDocWithAppId, updateDocWithAppId } from '../firebase/firestoreAppWriter';
 
 export const useUserProfile = (firebaseUser) => {
   const [userProfile, setUserProfile] = useState(null);
@@ -43,7 +44,8 @@ export const useUserProfile = (firebaseUser) => {
         uid: firebaseUser.uid,
         email: firebaseUser.email,
         displayName: firebaseUser.displayName || firebaseUser.email,
-        createdAt: new Date(),
+        createdAt: serverTimestamp(),
+        appId: 'auditoria',
         role: getUserRole(firebaseUser.email),
         clienteAdminId: getUserRole(firebaseUser.email) === 'max' ? firebaseUser.uid : null,
         empresas: [],
@@ -65,7 +67,7 @@ export const useUserProfile = (firebaseUser) => {
         }
       };
 
-      await setDoc(userRef, newProfile);
+      await setDocWithAppId(userRef, newProfile);
       if (isDev) {
         console.log('[AUDIT] User profile created in /apps/auditoria/users');
       }
@@ -84,7 +86,7 @@ export const useUserProfile = (firebaseUser) => {
   const updateUserProfile = async (updates) => {
     try {
       const userRef = doc(db, "apps", "auditoria", "users", firebaseUser.uid);
-      await updateDoc(userRef, updates);
+      await updateDocWithAppId(userRef, updates);
       
       const updatedProfile = { ...userProfile, ...updates };
       setUserProfile(updatedProfile);

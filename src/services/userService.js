@@ -3,7 +3,7 @@ import axios from 'axios';
 import { auth } from '../firebaseControlFile';
 import { onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
 import { getBackendUrl } from '../config/environment.js';
-import { doc, collection, getDocs, query, where } from 'firebase/firestore';
+import { doc, collection, getDocs, query, where, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebaseControlFile';
 import { setDocWithAppId } from '../firebase/firestoreAppWriter';
 
@@ -138,7 +138,7 @@ const createUserWithFirebase = async (userData) => {
         console.log('📧 Email ya existe en Auth (compartido con ControlFile), buscando en Firestore...');
         
         // Buscar si el usuario ya existe en Firestore con este email
-        const usuariosRef = collection(db, 'apps', 'audit', 'users');
+        const usuariosRef = collection(db, 'apps', 'auditoria', 'users');
         const q = query(usuariosRef, where('email', '==', userData.email));
         const querySnapshot = await getDocs(q);
         
@@ -171,7 +171,8 @@ const createUserWithFirebase = async (userData) => {
       displayName: userData.nombre,
       role: userData.role || 'operario',
       permisos: userData.permisos || {},
-      createdAt: new Date(),
+      createdAt: serverTimestamp(),
+      appId: 'auditoria',
       empresas: [],
       auditorias: [],
       socios: [],
@@ -186,7 +187,7 @@ const createUserWithFirebase = async (userData) => {
       })
     };
 
-    await setDocWithAppId(doc(db, 'apps', 'audit', 'users', userUid), userProfile, { merge: true });
+    await setDocWithAppId(doc(db, 'apps', 'auditoria', 'users', userUid), userProfile, { merge: true });
 
     if (authCreated) {
       console.log('✅ Usuario creado exitosamente en Auth y Firestore');
@@ -327,7 +328,7 @@ export const userService = {
       const { db } = await import('../firebaseControlFile');
       const { updateDocWithAppId } = await import('../firebase/firestoreAppWriter');
       
-      const userRef = doc(db, 'apps', 'audit', 'users', uid);
+      const userRef = doc(db, 'apps', 'auditoria', 'users', uid);
       await updateDocWithAppId(userRef, updateData);
     } catch (error) {
       console.error('Error actualizando usuario directamente:', error);
