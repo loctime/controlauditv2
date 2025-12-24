@@ -19,10 +19,23 @@ function sameAppId() {
   return resource.data.appId == request.resource.data.appId;
 }
 
+// Verifica si el usuario autenticado es supermax
+function isSupermax() {
+  return request.auth != null
+    && exists(/databases/(default)/documents/apps/auditoria/users/$(request.auth.uid))
+    && get(/databases/(default)/documents/apps/auditoria/users/$(request.auth.uid)).data.role == 'supermax';
+}
+
 // 🔐 PERFIL
 match /apps/auditoria/users/{userId} {
-  allow get, create, update: if request.auth != null
+  // Permitir leer/actualizar el propio perfil
+  allow get, update: if request.auth != null
     && request.auth.uid == userId;
+  
+  // Permitir crear: propio perfil O supermax creando para otros
+  allow create: if request.auth != null
+    && (request.auth.uid == userId || isSupermax())
+    && hasValidAppId();
 }
 
 // 🔐 LISTADO DE SUBCOLECCIONES (ESTA ERA LA PIEZA FALTANTE)

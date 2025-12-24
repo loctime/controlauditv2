@@ -1,9 +1,9 @@
 // src/services/userService.js
 import axios from 'axios';
 import { auth } from '../firebaseControlFile';
-import { onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from 'firebase/auth';
+import { onAuthStateChanged } from 'firebase/auth';
 import { getBackendUrl } from '../config/environment.js';
-import { doc, collection, getDocs, query, where, serverTimestamp } from 'firebase/firestore';
+import { doc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebaseControlFile';
 import { setDocWithAppId } from '../firebase/firestoreAppWriter';
 
@@ -116,60 +116,33 @@ externalApi.interceptors.response.use(
   }
 );
 
-// Función de fallback usando Firebase directamente
-const createUserWithFirebase = async (userData) => {
+// Función de fallback: crear solo perfil "pending" en Firestore
+// El backend es responsable del linking Auth ↔ Firestore
+const createPendingProfile = async (userData) => {
   try {
-    console.log('🔄 Backend no disponible, creando usuario solo en Firestore (sin Auth desde frontend)...');
-    
-    // IMPORTANTE: NO crear usuarios en Auth desde el frontend cuando hay un admin logueado
-    // porque Firebase automáticamente autentica al usuario recién creado, desconectando al admin.
-    // En su lugar, solo creamos el documento en Firestore y dejamos que el backend
-    // o el sistema de sincronización maneje la creación en Auth cuando el usuario inicie sesión.
+    console.log('🔄 Backend no disponible, creando perfil "pending" en Firestore...');
+    console.log('ℹ️ El backend vinculará automáticamente Auth ↔ Firestore cuando esté disponible.');
     
     const currentUser = auth.currentUser;
     if (!currentUser) {
       throw new Error('No hay usuario autenticado. No se puede crear usuario sin sesión activa.');
     }
     
-    let userUid = null;
-    let authExists = false;
+    // Generar UID temporal basado en email y timestamp
+    // El backend lo reemplazará con el UID real de Auth cuando procese el perfil pending
+    const tempUid = `pending_${userData.email.replace(/[^a-zA-Z0-9]/g, '_')}_${Date.now()}`;
     
-    // 1. Buscar si el usuario ya existe en Firestore con este email
-    const usuariosRef = collection(db, 'apps', 'auditoria', 'users');
-    const q = query(usuariosRef, where('email', '==', userData.email));
-    const querySnapshot = await getDocs(q);
-    
-    if (!querySnapshot.empty) {
-      // Usuario ya existe en Firestore, usar su UID
-      const existingUser = querySnapshot.docs[0];
-      userUid = existingUser.id;
-      authExists = true; // Ya existe en Firestore, probablemente también en Auth
-      console.log('✅ Usuario encontrado en Firestore con UID:', userUid);
-      console.log('📝 El usuario ya existe. Se actualizará con los nuevos datos.');
-    } else {
-      // Usuario no existe en Firestore
-      // IMPORTANTE: El email puede existir en Auth (compartido con otras apps como ControlFile)
-      // Esto está bien - creamos el documento en Firestore y el sistema de sincronización
-      // vinculará el documento con el UID real cuando el usuario inicie sesión
-      console.log('📧 Creando nuevo documento en Firestore para:', userData.email);
-      console.log('ℹ️ Si el email ya existe en Auth (compartido con otras apps), el sistema');
-      console.log('   vinculará automáticamente cuando el usuario inicie sesión.');
-      
-      // Usar un UID temporal basado en el email para facilitar la vinculación
-      // El sistema de sincronización buscará por email y actualizará el UID cuando el usuario inicie sesión
-      userUid = `temp_email_${userData.email.replace(/[^a-zA-Z0-9]/g, '_')}_${Date.now()}`;
-      authExists = false; // No sabemos si existe en Auth, pero está bien
-    }
-    
-    // 2. Crear/actualizar perfil en Firestore
-    const userProfile = {
-      uid: userUid,
+    // Crear perfil "pending" en Firestore
+    // NO hacer queries cruzadas - el backend manejará el linking
+    const pendingProfile = {
+      uid: tempUid,
       email: userData.email,
       displayName: userData.nombre,
       role: userData.role || 'operario',
       permisos: userData.permisos || {},
-      createdAt: serverTimestamp(),
       appId: 'auditoria',
+      status: 'pending',
+      tempPassword: userData.password,
       empresas: [],
       auditorias: [],
       socios: [],
@@ -178,53 +151,40 @@ const createUserWithFirebase = async (userData) => {
         tema: 'light'
       },
       clienteAdminId: userData.clienteAdminId || null,
-      // Si el usuario no existe en Firestore, guardar la contraseña temporal
-      // para que el sistema de sincronización pueda crear/vincular en Auth cuando inicie sesión
-      ...(authExists ? {} : { 
-        status: 'pending_sync',
-        tempPassword: userData.password,
-        // Marcar que necesita sincronización con Auth cuando el usuario inicie sesión
-        needsAuthSync: true
-      })
+      createdBy: currentUser.uid,
+      createdAt: serverTimestamp()
     };
 
-    await setDocWithAppId(doc(db, 'apps', 'auditoria', 'users', userUid), userProfile, { merge: true });
+    await setDocWithAppId(doc(db, 'apps', 'auditoria', 'users', tempUid), pendingProfile);
 
-    if (authExists) {
-      console.log('✅ Usuario actualizado en Firestore');
-      return {
-        success: true,
-        uid: userUid,
-        message: `Usuario actualizado exitosamente. Rol '${userData.role || 'operario'}' asignado.`
-      };
-    } else {
-      console.log('✅ Usuario creado en Firestore');
-      console.log('ℹ️ Si el email ya existe en Auth (compartido con otras apps),');
-      console.log('   el sistema vinculará automáticamente cuando el usuario inicie sesión.');
-      return {
-        success: true,
-        uid: userUid,
-        message: 'Usuario creado en Firestore. El sistema vinculará automáticamente con Auth cuando el usuario inicie sesión.',
-        requiresAuthSync: true
-      };
-    }
+    console.log('✅ Perfil "pending" creado en Firestore');
+    console.log('ℹ️ El backend procesará este perfil y creará el usuario en Auth cuando esté disponible.');
+    
+    return {
+      success: true,
+      uid: tempUid,
+      message: 'Perfil creado en estado "pending". El backend lo procesará y creará el usuario en Auth cuando esté disponible.',
+      pending: true
+    };
   } catch (error) {
-    console.error('❌ Error creando usuario:', error);
-    throw new Error(`Error creando usuario: ${error.message}`);
+    console.error('❌ Error creando perfil pending:', error);
+    throw new Error(`Error creando perfil: ${error.message}`);
   }
 };
 
 // Servicios de usuarios
 export const userService = {
-  // Crear usuario (sin desconectar al admin)
-  // Usa API Route de Next.js (ruta relativa, sin CORS, ejecuta en Vercel)
+  // Crear usuario - FLUJO OFICIAL
+  // 1. Siempre llama a POST /api/admin/create-user
+  // 2. Si falla, crea solo perfil "pending" en Firestore
+  // 3. El backend es responsable del linking Auth ↔ Firestore
   async createUser(userData) {
     try {
-      console.log('📤 Creando usuario con backend de Render:', `${getBackendUrl()}/api/create-user`);
+      console.log('📤 Creando usuario con backend:', `${getBackendUrl()}/api/admin/create-user`);
       console.log('📋 Datos del usuario:', { email: userData.email, nombre: userData.nombre, role: userData.role });
       
-      // Usar externalApi (backend de Render) en lugar de nextApi
-      const response = await externalApi.post('/create-user', userData);
+      // Llamar al endpoint oficial del backend
+      const response = await externalApi.post('/admin/create-user', userData);
       
       console.log('✅ Usuario creado exitosamente por el backend:', response.data);
       return response.data;
@@ -238,37 +198,29 @@ export const userService = {
         message: error.message
       });
       
-      // Si el backend no está disponible o hay error 405/404/503, usar fallback
-      if (error.response?.status === 405 || 
-          error.response?.status === 404 || 
+      // Si el backend falla (404, 503, network error, etc.), crear solo perfil "pending"
+      if (error.response?.status === 404 || 
           error.response?.status === 503 ||
+          error.response?.status === 500 ||
           error.code === 'ERR_NETWORK') {
-        console.log('🔄 Backend no disponible o endpoint incorrecto, usando fallback de Firebase...');
-        return await createUserWithFirebase(userData);
+        console.log('🔄 Backend no disponible, creando perfil "pending" en Firestore...');
+        return await createPendingProfile(userData);
       }
       
-      // Detectar problemas de autenticación/autorización
+      // Errores de autenticación/autorización - no crear perfil pending
       if (error.response?.status === 401) {
         console.error('🚨 ERROR 401: Token de autenticación inválido o expirado');
-        console.error('💡 Verifica que el admin esté autenticado correctamente');
-        console.error('💡 Verifica que el token de Firebase sea válido');
         throw new Error('Error de autenticación. Por favor, recarga la página e intenta nuevamente.');
       }
       
       if (error.response?.status === 403) {
         console.error('🚨 ERROR 403: Sin permisos para crear usuarios');
-        console.error('💡 Verifica que el usuario tenga rol "supermax" o "max"');
-        console.error('💡 Verifica los custom claims del token');
         throw new Error('No tienes permisos para crear usuarios. Verifica tu rol de administrador.');
       }
       
-      // Para otros errores, intentar fallback antes de lanzar excepción
-      console.log('🔄 Intentando fallback de Firebase...');
-      try {
-        return await createUserWithFirebase(userData);
-      } catch (fallbackError) {
-        throw new Error(error.response?.data?.error || error.message || 'Error al crear usuario');
-      }
+      // Para otros errores del backend, crear perfil pending
+      console.log('🔄 Error del backend, creando perfil "pending" en Firestore...');
+      return await createPendingProfile(userData);
     }
   },
 
