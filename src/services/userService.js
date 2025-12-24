@@ -7,13 +7,19 @@ import { doc, collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '../firebaseControlFile';
 import { setDocWithAppId } from '../firebase/firestoreAppWriter';
 
-// Usar la URL del backend desde la configuración del entorno
-const API_BASE_URL = `${getBackendUrl()}/api`;
+// API Routes de Next.js (rutas relativas, sin CORS)
+// Estas rutas se ejecutan en el mismo servidor de Vercel
+const nextApi = axios.create({
+  baseURL: '/api', // Ruta relativa - se ejecuta en Next.js/Vercel
+  timeout: 30000,
+});
 
-// Configurar axios con interceptor para agregar token automáticamente
-const api = axios.create({
+// Backend externo de ControlFile (Render) - solo para endpoints específicos
+// uploads, folders, health, etc.
+const API_BASE_URL = `${getBackendUrl()}/api`;
+const externalApi = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 30000, // Aumentar timeout para producción
+  timeout: 30000,
 });
 
 // Función helper para obtener el usuario actual de forma robusta
@@ -43,8 +49,8 @@ const getCurrentUser = async () => {
   });
 };
 
-// Interceptor para agregar token de Firebase automáticamente
-api.interceptors.request.use(async (config) => {
+// Interceptor para agregar token de Firebase automáticamente (ambas instancias)
+const addAuthToken = async (config) => {
   try {
     // Obtener usuario de forma robusta (maneja problemas de timing)
     const currentUser = await getCurrentUser();
@@ -67,10 +73,14 @@ api.interceptors.request.use(async (config) => {
     throw new Error('Error de autenticación: ' + error.message);
   }
   return config;
-});
+};
 
-// Interceptor para manejar errores de red
-api.interceptors.response.use(
+// Aplicar interceptor de autenticación a ambas instancias
+nextApi.interceptors.request.use(addAuthToken);
+externalApi.interceptors.request.use(addAuthToken);
+
+// Interceptor para manejar errores de red (solo para API externa)
+externalApi.interceptors.response.use(
   (response) => response,
   (error) => {
     console.error('Error en petición API:', error);
@@ -203,19 +213,18 @@ const createUserWithFirebase = async (userData) => {
 // Servicios de usuarios
 export const userService = {
   // Crear usuario (sin desconectar al admin)
-  // Usa exclusivamente https://controlfile.onrender.com/api/create-user
+  // Usa API Route de Next.js (ruta relativa, sin CORS, ejecuta en Vercel)
   async createUser(userData) {
     try {
-      const backendUrl = getBackendUrl();
-      console.log('📤 Creando usuario con backend ControlFile:', `${backendUrl}/api/create-user`);
+      console.log('📤 Creando usuario con API Route de Next.js:', '/api/create-user');
       console.log('📋 Datos del usuario:', { email: userData.email, nombre: userData.nombre, role: userData.role });
       
-      const response = await api.post('/create-user', userData);
+      const response = await nextApi.post('/create-user', userData);
       
-      console.log('✅ Usuario creado exitosamente por el backend:', response.data);
+      console.log('✅ Usuario creado exitosamente por la API Route:', response.data);
       return response.data;
     } catch (error) {
-      console.error('❌ Error creando usuario con backend:', error);
+      console.error('❌ Error creando usuario con API Route:', error);
       console.error('📊 Detalles del error:', {
         status: error.response?.status,
         statusText: error.response?.statusText,
@@ -229,7 +238,6 @@ export const userService = {
         console.error('🚨 ERROR 401: Token de autenticación inválido o expirado');
         console.error('💡 Verifica que el admin esté autenticado correctamente');
         console.error('💡 Verifica que el token de Firebase sea válido');
-        // No usar fallback en 401 - es un error de autenticación que debe resolverse
         throw new Error('Error de autenticación. Por favor, recarga la página e intenta nuevamente.');
       }
       
@@ -237,43 +245,33 @@ export const userService = {
         console.error('🚨 ERROR 403: Sin permisos para crear usuarios');
         console.error('💡 Verifica que el usuario tenga rol "supermax" o "max"');
         console.error('💡 Verifica los custom claims del token');
-        // No usar fallback en 403 - es un error de permisos
         throw new Error('No tienes permisos para crear usuarios. Verifica tu rol de administrador.');
       }
       
-      // Fallback solo para errores de servicio (503) o endpoint no encontrado (404)
-      if (error.response?.status === 503 && error.response?.data?.fallback) {
-        console.warn('⚠️ Backend en modo fallback (503), usando fallback a Firestore...');
-        return await createUserWithFirebase(userData);
-      }
-      
-      // Si el endpoint no existe (404), usar fallback a Firestore
+      // Si el endpoint no existe (404), la API Route de Next.js no está disponible
       if (error.response?.status === 404) {
-        console.warn('⚠️ Endpoint no encontrado en el backend (404), usando fallback a Firestore...');
-        return await createUserWithFirebase(userData);
+        console.error('🚨 ERROR 404: API Route /api/create-user no encontrada');
+        console.error('💡 Verifica que la ruta app/api/create-user/route.ts exista en Next.js');
+        throw new Error('El endpoint de creación de usuarios no está disponible. Contacta al administrador del sistema.');
       }
       
-      // Si es un error de red, intentar con Firebase directamente
-      if (error.code === 'ERR_NETWORK' || error.message.includes('conectividad')) {
-        console.warn('⚠️ Backend no disponible (error de red), usando fallback a Firestore...');
-        return await createUserWithFirebase(userData);
-      }
-
-      // Si el backend respondió 440 (claims reasignados), también usar fallback
-      if (error.response?.status === 440) {
-        console.warn('⚠️ Backend indicó que claims fueron reasignados (440), usando fallback...');
-        return await createUserWithFirebase(userData);
+      // Si es un error de red (solo para API Route local, no debería ocurrir)
+      if (error.code === 'ERR_NETWORK') {
+        console.error('🚨 ERROR de red al conectar con API Route de Next.js');
+        console.error('💡 Esto no debería ocurrir - la API Route está en el mismo servidor');
+        throw new Error('Error de conectividad. Por favor, recarga la página e intenta nuevamente.');
       }
       
-      // Para otros errores, lanzar excepción
+      // Para otros errores, lanzar excepción con el mensaje del servidor
       throw new Error(error.response?.data?.error || error.message || 'Error al crear usuario');
     }
   },
 
   // Listar usuarios (filtrado por multi-tenant)
+  // Usa API Route de Next.js (ruta relativa)
   async listUsers() {
     try {
-      const response = await api.get('/list-users');
+      const response = await nextApi.get('/list-users');
       return response.data.usuarios;
     } catch (error) {
       console.error('Error listando usuarios:', error);
@@ -282,9 +280,10 @@ export const userService = {
   },
 
   // Actualizar usuario
+  // Usa API Route de Next.js (ruta relativa)
   async updateUser(uid, updateData) {
     try {
-      const response = await api.put(`/update-user/${uid}`, updateData);
+      const response = await nextApi.put(`/update-user/${uid}`, updateData);
       return response.data;
     } catch (error) {
       console.error('Error actualizando usuario:', error);
@@ -293,9 +292,10 @@ export const userService = {
   },
 
   // Eliminar usuario
+  // Usa API Route de Next.js (ruta relativa)
   async deleteUser(uid) {
     try {
-      const response = await api.delete(`/delete-user/${uid}`);
+      const response = await nextApi.delete(`/delete-user/${uid}`);
       return response.data;
     } catch (error) {
       console.error('Error eliminando usuario:', error);
@@ -303,10 +303,10 @@ export const userService = {
     }
   },
 
-  // Verificar conectividad con el backend
+  // Verificar conectividad con el backend externo (ControlFile en Render)
   async checkBackendHealth() {
     try {
-      const response = await api.get('/health');
+      const response = await externalApi.get('/health');
       return response.data;
     } catch (error) {
       console.error('Error verificando salud del backend:', error);
