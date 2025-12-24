@@ -505,6 +505,71 @@ export const empresaService = {
     }
   },
 
+  // Crear empresa legacy (compatibilidad con código antiguo)
+  // Adapta datos legacy al formato nuevo y llama a crearEmpresa
+  async crearEmpresaLegacy(empresaDataLegacy, userId) {
+    try {
+      if (!userId) throw new Error('userId es requerido');
+      
+      // Obtener datos del usuario desde Firestore
+      const userRef = doc(auditUsersCollection(), userId);
+      const userSnap = await getDoc(userRef);
+      
+      let userData = {};
+      let userEmail = empresaDataLegacy.emailContacto;
+      let userRole = 'max';
+      let clienteAdminId = null;
+      
+      if (userSnap.exists()) {
+        userData = userSnap.data();
+        userEmail = userData.email || empresaDataLegacy.emailContacto;
+        userRole = userData.role || 'max';
+        clienteAdminId = userData.clienteAdminId || null;
+      } else {
+        // Usuario no existe aún (puede estar en estado "pending" o ser un uid temporal)
+        // Usar datos del formulario como fallback
+        console.warn(`[empresaService] Usuario ${userId} no encontrado en Firestore, usando datos del formulario`);
+        userEmail = empresaDataLegacy.emailContacto;
+        userRole = 'max';
+      }
+      
+      // Construir objeto user mínimo
+      const user = {
+        uid: userId,
+        email: userEmail
+      };
+      
+      // Construir userProfile mínimo
+      const userProfile = {
+        uid: userId,
+        email: userEmail,
+        role: userRole,
+        clienteAdminId: clienteAdminId
+      };
+      
+      // Adaptar datos legacy al formato nuevo
+      const empresaData = {
+        nombre: empresaDataLegacy.nombre,
+        direccion: empresaDataLegacy.direccion || '',
+        telefono: empresaDataLegacy.telefono || '',
+        emailContacto: empresaDataLegacy.emailContacto,
+        usuariosMaximos: empresaDataLegacy.usuariosMaximos,
+        usuariosActuales: empresaDataLegacy.usuariosActuales || 1,
+        usuarios: empresaDataLegacy.usuarios || [],
+        estadoPago: empresaDataLegacy.estadoPago || 'al_dia',
+        fechaUltimoPago: empresaDataLegacy.fechaUltimoPago,
+        fechaVencimiento: empresaDataLegacy.fechaVencimiento,
+        plan: empresaDataLegacy.plan || 'estandar'
+      };
+      
+      // Llamar a crearEmpresa con los datos adaptados
+      return await this.crearEmpresa(empresaData, user, userProfile.role, userProfile);
+    } catch (error) {
+      console.error("[empresaService] Error al crear empresa legacy:", error);
+      throw error;
+    }
+  },
+
   // Actualizar empresa
   // Construye internamente las rutas: /apps/auditoria/users/{uid}/empresas
   async updateEmpresa(empresaId, updateData, userProfile) {
