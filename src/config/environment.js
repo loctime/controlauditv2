@@ -60,7 +60,7 @@ const getEnvironmentConfig = () => {
         environment: 'demo'
       },
       backend: {
-        url: 'https://demo-api.controlaudit.app',
+        url: 'https://controlfile.onrender.com',
         timeout: 30000,
         maxRetries: 3
       },
@@ -83,7 +83,7 @@ const getEnvironmentConfig = () => {
         environment: 'client'
       },
       backend: {
-        url: 'https://api.controlaudit.app',
+        url: 'https://controlfile.onrender.com',
         timeout: 30000,
         maxRetries: 3
       },
@@ -106,7 +106,7 @@ const getEnvironmentConfig = () => {
         environment: 'production'
       },
       backend: {
-        url: 'https://api.controlaudit.app',
+        url: 'https://controlfile.onrender.com',
         timeout: 30000,
         maxRetries: 3
       },
@@ -128,7 +128,7 @@ const getEnvironmentConfig = () => {
         environment: 'staging'
       },
       backend: {
-        url: 'https://api.controlaudit.app',
+        url: 'https://controlfile.onrender.com',
         timeout: 30000,
         maxRetries: 3
       },
@@ -150,7 +150,7 @@ const getEnvironmentConfig = () => {
         environment: 'production'
       },
       backend: {
-        url: 'https://controlauditv2.onrender.com',
+        url: 'https://controlfile.onrender.com',
         timeout: 30000,
         maxRetries: 3
       },
@@ -171,7 +171,7 @@ const getEnvironmentConfig = () => {
       environment: 'unknown'
     },
     backend: {
-      url: import.meta.env.VITE_BACKEND_URL || 'https://api.controlaudit.app',
+      url: import.meta.env.VITE_BACKEND_URL || 'https://controlfile.onrender.com',
       timeout: 30000,
       maxRetries: 3
     },
