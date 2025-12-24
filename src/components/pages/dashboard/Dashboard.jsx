@@ -1,5 +1,5 @@
 // src/pages/Dashboard.jsx
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect } from "react";
 import { Typography, Box, Grid, Paper, Alert, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Button, TextField, Dialog, DialogTitle, DialogContent, DialogActions, Card, CardContent, Tabs, Tab, CircularProgress } from "@mui/material";
 import { useAuth } from "../../context/AuthContext";
 import { doc, query, where, getDocs, getDoc, collection } from "firebase/firestore";
@@ -43,9 +43,6 @@ function Dashboard() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [tabValue, setTabValue] = useState(0);
-  
-  // Ref para prevenir re-renders innecesarios durante la escritura
-  const emailInputRef = useRef(null);
   
   // Estados para empresas reales
   const [empresasReales, setEmpresasReales] = useState([]);
@@ -135,29 +132,10 @@ function Dashboard() {
     setForm({ nombre: '', email: '', usuariosMaximos: 1, password: '' });
   };
   
-  // Manejar cambios con protección para email para evitar problemas de rendimiento
-  const handleChange = useCallback((e) => {
-    const { name, value } = e.target;
-    
-    // Para email, limitar longitud y prevenir caracteres problemáticos
-    if (name === 'email') {
-      if (value.length > 100) {
-        return; // No actualizar si excede el límite
-      }
-      // Prevenir actualizaciones muy rápidas que puedan causar problemas
-      if (emailInputRef.current && emailInputRef.current.value === value) {
-        return; // Ya está actualizado, evitar re-render innecesario
-      }
-    }
-    
-    setForm(prev => {
-      // Evitar actualización si el valor no cambió realmente
-      if (prev[name] === value) {
-        return prev;
-      }
-      return { ...prev, [name]: value };
-    });
-  }, []);
+  // Manejar cambios en el formulario
+  const handleChange = (e) => {
+    setForm({ ...form, [e.target.name]: e.target.value });
+  };
 
   // Función para activar administrador con código
   const activarAdminConCodigo = async () => {
@@ -459,7 +437,6 @@ function Dashboard() {
               onChange={handleChange}
             />
             <TextField
-              inputRef={emailInputRef}
               margin="dense"
               name="email"
               label="Email"
@@ -468,35 +445,12 @@ function Dashboard() {
               required
               value={form.email}
               onChange={handleChange}
-              onKeyDown={(e) => {
-                // Prevenir problemas específicos con @
-                if (e.key === '@') {
-                  e.stopPropagation();
-                }
-              }}
-              autoComplete="new-password"
+              autoComplete="off"
               inputProps={{
-                autoComplete: 'new-password',
+                autoComplete: 'off',
                 autoCorrect: 'off',
                 autoCapitalize: 'off',
-                spellCheck: 'false',
-                maxLength: 100,
-                'data-lpignore': 'true',
-                'data-form-type': 'other',
-                'data-1p-ignore': 'true'
-              }}
-              InputProps={{
-                onCompositionStart: (e) => {
-                  e.stopPropagation();
-                },
-                onCompositionEnd: (e) => {
-                  e.stopPropagation();
-                }
-              }}
-              sx={{
-                '& input': {
-                  caretColor: 'auto'
-                }
+                spellCheck: 'false'
               }}
             />
             <TextField
