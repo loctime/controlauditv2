@@ -106,6 +106,14 @@ app.get('/api/latest-apk', async (req, res) => {
   }
 });
 
+// Helper para obtener referencia a la colección de usuarios (ruta correcta: apps/auditoria/users)
+const getUsersCollection = () => {
+  return admin.firestore()
+    .collection('apps')
+    .doc('auditoria')
+    .collection('users');
+};
+
 // Middleware para verificar token de Firebase (solo admins pueden gestionar usuarios)
 const verificarTokenAdmin = async (req, res, next) => {
   try {
@@ -126,7 +134,7 @@ const verificarTokenAdmin = async (req, res, next) => {
     const decodedToken = await admin.auth().verifyIdToken(token);
     // Si el claim 'role' no está, intentar recuperarlo de Firestore y reasignar
     if (!decodedToken.role) {
-      const userDoc = await admin.firestore().collection('usuarios').doc(decodedToken.uid).get();
+      const userDoc = await getUsersCollection().doc(decodedToken.uid).get();
       if (userDoc.exists && userDoc.data().role) {
         // Reasignar el custom claim
         await admin.auth().setCustomUserClaims(decodedToken.uid, { role: userDoc.data().role });
@@ -193,13 +201,14 @@ app.post('/api/admin/create-user', verificarTokenAdmin, async (req, res) => {
     await admin.auth().setCustomUserClaims(userRecord.uid, { role });
     console.log(`[INFO] Custom claim 'role: ${role}' asignado a UID: ${userRecord.uid}`);
 
-    // 3. Crear perfil en Firestore
+    // 3. Crear perfil en Firestore (ruta correcta: apps/auditoria/users/{uid})
     const userProfile = {
       uid: userRecord.uid,
       email: email,
       displayName: nombre,
       role: role,
       permisos: permisos,
+      appId: 'auditoria',
       createdAt: new Date(),
       empresas: [],
       auditorias: [],
@@ -211,7 +220,7 @@ app.post('/api/admin/create-user', verificarTokenAdmin, async (req, res) => {
       clienteAdminId: clienteAdminId || (req.user.role === 'max' ? req.user.uid : null)
     };
 
-    await admin.firestore().collection('usuarios').doc(userRecord.uid).set(userProfile);
+    await getUsersCollection().doc(userRecord.uid).set(userProfile);
 
     res.json({ 
       success: true,
@@ -243,15 +252,14 @@ app.get('/api/list-users', verificarTokenAdmin, async (req, res) => {
 
     if (role === 'supermax') {
       // Super admin ve todos los usuarios
-      const usuariosSnapshot = await admin.firestore().collection('usuarios').get();
+      const usuariosSnapshot = await getUsersCollection().get();
       usuarios = usuariosSnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       }));
     } else if (role === 'max') {
       // Cliente admin ve sus usuarios operarios
-      const usuariosSnapshot = await admin.firestore()
-        .collection('usuarios')
+      const usuariosSnapshot = await getUsersCollection()
         .where('clienteAdminId', '==', req.user.uid)
         .get();
       
@@ -276,7 +284,7 @@ app.put('/api/update-user/:uid', verificarTokenAdmin, async (req, res) => {
   try {
     // Verificar permisos (solo puede actualizar sus propios usuarios)
     if (req.user.role === 'max') {
-      const userDoc = await admin.firestore().collection('usuarios').doc(uid).get();
+      const userDoc = await getUsersCollection().doc(uid).get();
       if (!userDoc.exists || userDoc.data().clienteAdminId !== req.user.uid) {
         return res.status(403).json({ error: 'No puedes actualizar este usuario' });
       }
@@ -289,7 +297,7 @@ app.put('/api/update-user/:uid', verificarTokenAdmin, async (req, res) => {
     if (permisos) updateData.permisos = permisos;
     if (clienteAdminId) updateData.clienteAdminId = clienteAdminId;
 
-    await admin.firestore().collection('usuarios').doc(uid).update(updateData);
+    await getUsersCollection().doc(uid).update(updateData);
 
     res.json({
       success: true,
@@ -308,7 +316,7 @@ app.delete('/api/delete-user/:uid', verificarTokenAdmin, async (req, res) => {
   try {
     // Verificar permisos
     if (req.user.role === 'max') {
-      const userDoc = await admin.firestore().collection('usuarios').doc(uid).get();
+      const userDoc = await getUsersCollection().doc(uid).get();
       if (!userDoc.exists || userDoc.data().clienteAdminId !== req.user.uid) {
         return res.status(403).json({ error: 'No puedes eliminar este usuario' });
       }
@@ -323,7 +331,7 @@ app.delete('/api/delete-user/:uid', verificarTokenAdmin, async (req, res) => {
     await admin.auth().deleteUser(uid);
     
     // Eliminar de Firestore
-    await admin.firestore().collection('usuarios').doc(uid).delete();
+    await getUsersCollection().doc(uid).delete();
     
     res.json({
       success: true,
