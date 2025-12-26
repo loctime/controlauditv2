@@ -175,14 +175,14 @@ const createPendingProfile = async (userData) => {
 // Servicios de usuarios
 export const userService = {
   // Crear usuario - FLUJO OFICIAL
-  // 1. Siempre llama a POST /api/create-user contra el backend Express de ControlFile (Render)
+  // 1. Siempre llama a POST /api/admin/create-user contra el backend Express de ControlFile (Render)
   // 2. Si falla, crea solo perfil "pending" en Firestore
   // 3. El backend es responsable del linking Auth ↔ Firestore
   async createUser(userData) {
     try {
       // Usar VITE_CONTROLFILE_BACKEND_URL directamente (no rutas relativas)
       const backendUrl = import.meta.env.VITE_CONTROLFILE_BACKEND_URL || 'https://controlfile.onrender.com';
-      const endpoint = `${backendUrl}/api/create-user`;
+      const endpoint = `${backendUrl}/api/admin/create-user`;
       
       console.log('📤 Creando usuario con backend:', endpoint);
       console.log('📋 Datos del usuario:', { email: userData.email, nombre: userData.nombre, role: userData.role });
