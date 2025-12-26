@@ -41,13 +41,13 @@ match /apps/auditoria/users/{userId} {
 // 🔐 LISTADO DE SUBCOLECCIONES (ESTA ERA LA PIEZA FALTANTE)
 match /apps/auditoria/users/{userId}/{collection} {
   allow list: if request.auth != null
-    && request.auth.uid == userId;
+    && (request.auth.uid == userId || isSupermax());
 }
 
 // 🔐 DOCUMENTOS DENTRO DE SUBCOLECCIONES
 match /apps/auditoria/users/{userId}/{collection}/{docId} {
   allow read, create, update, delete: if request.auth != null
-    && request.auth.uid == userId;
+    && (request.auth.uid == userId || isSupermax());
 }
 
 // 🔓 Datos generales de la app (excluye explícitamente 'users')
