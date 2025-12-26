@@ -162,7 +162,7 @@ const verificarTokenAdmin = async (req, res, next) => {
 };
 
 // 1. Crear usuario (ya existente, mejorado)
-app.post('/api/create-user', verificarTokenAdmin, async (req, res) => {
+app.post('/api/admin/create-user', verificarTokenAdmin, async (req, res) => {
   const { email, password, nombre, role = 'operario', permisos = {}, clienteAdminId } = req.body;
   
   if (!email || !password || !nombre) {
