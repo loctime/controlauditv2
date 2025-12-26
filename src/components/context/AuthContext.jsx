@@ -57,13 +57,11 @@ const AuthContextComponent = ({ children }) => {
     updateUserProfile
   } = useUserProfile(user);
 
+  // Hook obsoleto - mantenido solo para compatibilidad
+  // Las funciones de creación de usuarios se manejan directamente con userService
   const {
-    crearOperario,
     editarPermisosOperario,
-    logAccionOperario,
-    asignarUsuarioAClienteAdmin,
-    getUsuariosDeClienteAdmin,
-    getFormulariosDeClienteAdmin
+    logAccionOperario
   } = useUserManagement(user, userProfile);
 
   // Hook de cache offline (solo para móvil)
@@ -572,12 +570,8 @@ const AuthContextComponent = ({ children }) => {
     getAuditoriasCompartidas: () => loadAuditoriasCompartidas(user?.uid, userProfile),
     role,
     permisos,
-    crearOperario,
     editarPermisosOperario,
     logAccionOperario,
-    asignarUsuarioAClienteAdmin,
-    getUsuariosDeClienteAdmin,
-    getFormulariosDeClienteAdmin,
     verificarYCorregirEmpresas,
     updateEmpresa,
     compartirAuditoria,

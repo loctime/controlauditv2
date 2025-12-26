@@ -1,81 +1,23 @@
 // src/hooks/useUserManagement.js
+// ⚠️ CÓDIGO OBSOLETO: Este hook ya no se usa.
+// Las funciones de creación de usuarios ahora se manejan directamente con userService.createUser()
+// desde los componentes PerfilUsuarios.jsx y UsuariosList.jsx
+// 
+// Este archivo se mantiene temporalmente para evitar errores de importación,
+// pero las funciones exportadas NO se usan en ningún lugar del código.
+
 import { 
   doc, 
-  getDoc,
-  getDocs, 
-  updateDoc, 
-  query, 
-  where 
+  updateDoc
 } from 'firebase/firestore';
-import { registrarLogOperario, registrarAccionSistema } from '../utils/firestoreUtils';
-import userService from '../services/userService';
+import { registrarLogOperario } from '../utils/firestoreUtils';
 
 /**
- * ⚠️ MIGRACIÓN PENDIENTE: Este hook usa colecciones que requieren referencias por parámetro:
- * - apps/audit/users (necesita referencia de colección)
- * - formularios (necesita referencia de colección)
- * - logs_operarios (necesita referencia de colección para registrarLogOperario/registrarAccionSistema)
- * 
- * Para migrar completamente, el hook debería recibir estas referencias como parámetros.
+ * Hook obsoleto - mantenido solo para compatibilidad
+ * Las funciones de creación de usuarios se manejan directamente con userService
  */
 export const useUserManagement = (user, userProfile, usuariosCollectionRef, formulariosCollectionRef, logsCollectionRef) => {
-  // Crear operario (solo para admin)
-  const crearOperario = async (email, displayName = "Operario") => {
-    try {
-      if (!usuariosCollectionRef) {
-        throw new Error('usuariosCollectionRef es requerido');
-      }
-      
-      // Verificar límite de usuarios
-      const qOperarios = query(usuariosCollectionRef, where("clienteAdminId", "==", user.uid));
-      const snapshotOperarios = await getDocs(qOperarios);
-      const usuariosActuales = snapshotOperarios.size;
-      
-      // Obtener límite del cliente admin
-      const userRef = doc(usuariosCollectionRef, user.uid);
-      const userSnap = await getDoc(userRef);
-      const limiteUsuarios = userSnap.data()?.limiteUsuarios || 10;
-      
-      if (usuariosActuales >= limiteUsuarios) {
-        throw new Error(`Límite de usuarios alcanzado (${limiteUsuarios}). Contacta al administrador para aumentar tu límite.`);
-      }
-
-      // Crear usuario usando el backend
-      const result = await userService.createUser({
-        email,
-        password: "123456", // Contraseña temporal
-        nombre: displayName,
-        role: 'operario',
-        permisos: {
-          puedeCrearEmpresas: false,
-          puedeCrearSucursales: false,
-          puedeCrearAuditorias: true,
-          puedeCompartirFormularios: false,
-          puedeAgregarSocios: false
-        },
-        clienteAdminId: user.uid
-      });
-      
-      if (logsCollectionRef) {
-        await registrarAccionSistema(
-          user.uid,
-          `Crear operario: ${email}`,
-          { email, displayName, limiteUsuarios, usuariosActuales },
-          'crear',
-          'usuario',
-          result.uid,
-          logsCollectionRef
-        );
-      }
-
-      return true;
-    } catch (error) {
-      console.error("Error al crear operario:", error);
-      throw error;
-    }
-  };
-
-  // Editar permisos de operario
+  // Editar permisos de operario (aún se usa en algunos lugares)
   const editarPermisosOperario = async (userId, nuevosPermisos) => {
     try {
       if (!usuariosCollectionRef) {
@@ -87,15 +29,6 @@ export const useUserManagement = (user, userProfile, usuariosCollectionRef, form
       
       if (logsCollectionRef) {
         await registrarLogOperario(userId, 'editarPermisos', { nuevosPermisos }, {}, logsCollectionRef);
-        await registrarAccionSistema(
-          user.uid,
-          `Editar permisos de operario`,
-          { userId, nuevosPermisos },
-          'editar',
-          'usuario',
-          userId,
-          logsCollectionRef
-        );
       }
       
       return true;
@@ -105,7 +38,7 @@ export const useUserManagement = (user, userProfile, usuariosCollectionRef, form
     }
   };
 
-  // Registrar acción de operario
+  // Registrar acción de operario (aún se usa en algunos lugares)
   const logAccionOperario = async (userId, accion, detalles = {}) => {
     try {
       if (!logsCollectionRef) {
@@ -118,64 +51,25 @@ export const useUserManagement = (user, userProfile, usuariosCollectionRef, form
     }
   };
 
-  // Asignar usuario operario a cliente administrador
-  const asignarUsuarioAClienteAdmin = async (userId, clienteAdminId) => {
-    try {
-      if (!usuariosCollectionRef) {
-        throw new Error('usuariosCollectionRef es requerido');
-      }
-      
-      const userRef = doc(usuariosCollectionRef, userId);
-      await updateDoc(userRef, {
-        clienteAdminId: clienteAdminId,
-        ultimaModificacion: new Date()
-      });
-      
-      return true;
-    } catch (error) {
-      console.error("Error al asignar usuario a cliente admin:", error);
-      return false;
-    }
+  // Funciones obsoletas - retornan funciones vacías para evitar errores
+  const crearOperario = async () => {
+    console.warn('crearOperario está obsoleto. Usa userService.createUser() directamente.');
+    throw new Error('Función obsoleta. Usa userService.createUser() desde los componentes.');
   };
 
-  // Obtener usuarios de un cliente administrador
-  const getUsuariosDeClienteAdmin = async (clienteAdminId) => {
-    try {
-      if (!usuariosCollectionRef) {
-        throw new Error('usuariosCollectionRef es requerido');
-      }
-      
-      const q = query(usuariosCollectionRef, where("clienteAdminId", "==", clienteAdminId));
-      const snapshot = await getDocs(q);
-      
-      return snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-    } catch (error) {
-      console.error("Error al obtener usuarios del cliente admin:", error);
-      return [];
-    }
+  const asignarUsuarioAClienteAdmin = async () => {
+    console.warn('asignarUsuarioAClienteAdmin está obsoleto.');
+    throw new Error('Función obsoleta.');
   };
 
-  // Obtener formularios de un cliente administrador
-  const getFormulariosDeClienteAdmin = async (clienteAdminId) => {
-    try {
-      if (!formulariosCollectionRef) {
-        throw new Error('formulariosCollectionRef es requerido');
-      }
-      
-      const q = query(formulariosCollectionRef, where("clienteAdminId", "==", clienteAdminId));
-      const snapshot = await getDocs(q);
-      
-      return snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-    } catch (error) {
-      console.error("Error al obtener formularios del cliente admin:", error);
-      return [];
-    }
+  const getUsuariosDeClienteAdmin = async () => {
+    console.warn('getUsuariosDeClienteAdmin está obsoleto. Usa userService.listUsers() directamente.');
+    return [];
+  };
+
+  const getFormulariosDeClienteAdmin = async () => {
+    console.warn('getFormulariosDeClienteAdmin está obsoleto.');
+    return [];
   };
 
   return {

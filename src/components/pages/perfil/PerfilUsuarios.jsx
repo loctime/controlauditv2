@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { 
   Box, 
   Typography, 
@@ -7,17 +7,11 @@ import {
   useMediaQuery, 
   alpha, 
   Button,
-  Avatar,
-  IconButton,
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
   TextField,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
   FormControlLabel,
   Checkbox,
   CircularProgress
@@ -29,7 +23,7 @@ import { toast } from 'react-toastify';
 import userService from '../../../services/userService';
 import { registrarAccionSistema } from '../../../utils/firestoreUtils';
 
-const PerfilUsuarios = ({ usuariosCreados, loading }) => {
+const PerfilUsuarios = ({ usuariosCreados, loading, onRefresh }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const isSmallMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -45,7 +39,7 @@ const PerfilUsuarios = ({ usuariosCreados, loading }) => {
     email: '',
     password: '',
     nombre: '',
-    role: 'operario',
+    // role no se envía - el backend lo fuerza a 'operario' para usuarios max
     permisos: {
       puedeCrearEmpresas: false,
       puedeCrearSucursales: false,
@@ -62,11 +56,8 @@ const PerfilUsuarios = ({ usuariosCreados, loading }) => {
   const usuariosActuales = usuariosCreados?.length || 0;
   const puedeAgregar = usuariosActuales < limiteUsuarios || !limiteUsuarios;
 
-  // ROLES disponibles
-  const ROLES = [
-    { value: 'operario', label: 'Operario' },
-    { value: 'max', label: 'Administrador' }
-  ];
+  // Los usuarios max solo pueden crear operarios, nunca administradores
+  // Los roles privilegiados (max/supermax) se crean exclusivamente por script
 
   // PERMISOS disponibles
   const PERMISOS_LISTA = [
@@ -214,20 +205,9 @@ const PerfilUsuarios = ({ usuariosCreados, loading }) => {
               required
               helperText="Mínimo 6 caracteres"
             />
-            <FormControl fullWidth>
-              <InputLabel>Rol</InputLabel>
-              <Select
-                value={formData.role}
-                onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-                label="Rol"
-              >
-                {ROLES.map((rol) => (
-                  <MenuItem key={rol.value} value={rol.value}>
-                    {rol.label}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
+            <Alert severity="info" sx={{ mt: 1 }}>
+              El usuario se creará con rol <strong>Operario</strong>. Los administradores se crean exclusivamente mediante scripts del backend.
+            </Alert>
             <Typography variant="h6" sx={{ mt: 2 }}>
               Permisos
             </Typography>
@@ -265,11 +245,12 @@ const PerfilUsuarios = ({ usuariosCreados, loading }) => {
 
               setLoadingCreate(true);
               try {
+                // No enviar role - el backend lo fuerza a 'operario' para usuarios max
                 const result = await userService.createUser({
                   email: formData.email,
                   password: formData.password,
                   nombre: formData.nombre,
-                  role: formData.role,
+                  // role no se envía - el backend lo fuerza automáticamente
                   permisos: formData.permisos,
                   clienteAdminId: clienteAdminId
                 });
@@ -280,7 +261,7 @@ const PerfilUsuarios = ({ usuariosCreados, loading }) => {
                   { 
                     email: formData.email, 
                     nombre: formData.nombre, 
-                    role: formData.role,
+                    role: 'operario', // Siempre operario desde frontend
                     permisos: formData.permisos 
                   },
                   'crear',
@@ -294,7 +275,6 @@ const PerfilUsuarios = ({ usuariosCreados, loading }) => {
                   email: '',
                   password: '',
                   nombre: '',
-                  role: 'operario',
                   permisos: {
                     puedeCrearEmpresas: false,
                     puedeCrearSucursales: false,
@@ -304,8 +284,13 @@ const PerfilUsuarios = ({ usuariosCreados, loading }) => {
                     puedeCompartirFormularios: false
                   }
                 });
-                // Recargar la página para mostrar el nuevo usuario
-                window.location.reload();
+                // Refrescar lista de usuarios sin recargar toda la página
+                if (onRefresh) {
+                  onRefresh();
+                } else {
+                  // Fallback: recargar página si no hay callback
+                  window.location.reload();
+                }
               } catch (error) {
                 toast.error(error.message);
               } finally {

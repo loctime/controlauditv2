@@ -599,7 +599,30 @@ const PerfilUsuario = () => {
               <PerfilFormularios formularios={formularios} loading={loadingFormularios} />
             )}
             {selectedSection === 'usuarios' && (
-              <PerfilUsuarios usuariosCreados={usuariosCreados} loading={loadingUsuariosCreados} clienteAdminId={userProfile?.clienteAdminId || userProfile?.uid} />
+              <PerfilUsuarios 
+                usuariosCreados={usuariosCreados} 
+                loading={loadingUsuariosCreados} 
+                clienteAdminId={userProfile?.clienteAdminId || userProfile?.uid}
+                onRefresh={() => {
+                  // Refrescar usuarios cuando se crea uno nuevo
+                  const fetchUsuariosCreados = async () => {
+                    if (!userProfile?.uid) return;
+                    setLoadingUsuariosCreados(true);
+                    try {
+                      const usuariosRef = auditUsersCollection();
+                      const q = query(usuariosRef, where('clienteAdminId', '==', userProfile.clienteAdminId || userProfile.uid));
+                      const snapshot = await getDocs(q);
+                      const lista = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                      setUsuariosCreados(lista);
+                    } catch (error) {
+                      setUsuariosCreados([]);
+                    } finally {
+                      setLoadingUsuariosCreados(false);
+                    }
+                  };
+                  fetchUsuariosCreados();
+                }}
+              />
             )}
             {selectedSection === 'configuracion' && (
                               <PerfilConfiguracion userProfile={userProfile} />

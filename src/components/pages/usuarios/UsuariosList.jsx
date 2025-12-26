@@ -41,11 +41,8 @@ const PERMISOS_LISTA = [
   { key: 'puedeCompartirFormularios', label: 'Compartir Formularios' }
 ];
 
-const ROLES = [
-  { value: 'operario', label: 'Usuario' },
-  { value: 'max', label: 'Cliente Administrador' },
-  { value: 'supermax', label: 'Developer' }
-];
+// Los usuarios max solo pueden crear operarios, nunca administradores
+// Los roles privilegiados (max/supermax) se crean exclusivamente por script
 
 // Límite de usuarios: SIEMPRE usar userProfile.limiteUsuarios para validación y visualización. No usar sociosMaximos para usuarios.
 const UsuariosList = ({ clienteAdminId, showAddButton = true }) => {
@@ -111,7 +108,7 @@ const UsuariosList = ({ clienteAdminId, showAddButton = true }) => {
         email: usuario.email,
         password: '',
         nombre: usuario.displayName || '',
-        role: usuario.role || 'operario',
+        // role no se modifica desde frontend
         permisos: usuario.permisos || {
           puedeCrearEmpresas: false,
           puedeCrearSucursales: false,
@@ -127,7 +124,7 @@ const UsuariosList = ({ clienteAdminId, showAddButton = true }) => {
         email: '',
         password: '',
         nombre: '',
-        role: 'operario',
+        // role no se envía - el backend lo fuerza a 'operario'
         permisos: {
           puedeCrearEmpresas: false,
           puedeCrearSucursales: false,
@@ -149,7 +146,7 @@ const UsuariosList = ({ clienteAdminId, showAddButton = true }) => {
       email: '',
       password: '',
       nombre: '',
-      role: 'operario',
+      // role no se envía - el backend lo fuerza a 'operario'
       permisos: {
         puedeCrearEmpresas: false,
         puedeCrearSucursales: false,
@@ -193,11 +190,12 @@ const UsuariosList = ({ clienteAdminId, showAddButton = true }) => {
 
     try {
       // Usar el servicio del backend para crear usuario
+      // No enviar role - el backend lo fuerza a 'operario' para usuarios max
       const result = await userService.createUser({
         email: formData.email,
         password: formData.password,
         nombre: formData.nombre,
-        role: formData.role,
+        // role no se envía - el backend lo fuerza automáticamente
         permisos: formData.permisos,
         clienteAdminId: clienteAdminId || (userProfile?.role === 'max' ? userProfile?.uid : null)
       });
@@ -209,7 +207,7 @@ const UsuariosList = ({ clienteAdminId, showAddButton = true }) => {
         { 
           email: formData.email, 
           nombre: formData.nombre, 
-          role: formData.role,
+          role: 'operario', // Siempre operario desde frontend
           permisos: formData.permisos 
         },
         'crear',
@@ -229,9 +227,10 @@ const UsuariosList = ({ clienteAdminId, showAddButton = true }) => {
   const handleActualizarUsuario = async () => {
     if (!editando) return;
     try {
+      // No permitir cambiar role desde frontend - solo supermax puede hacerlo
       await userService.updateUser(editando.id, {
         displayName: formData.nombre,
-        role: formData.role,
+        // role no se modifica desde frontend
         permisos: formData.permisos
       });
 
@@ -244,7 +243,7 @@ const UsuariosList = ({ clienteAdminId, showAddButton = true }) => {
           nombreAnterior: editando.displayName,
           nombreNuevo: formData.nombre,
           roleAnterior: editando.role,
-          roleNuevo: formData.role,
+          roleNuevo: editando.role, // No se modifica desde frontend
           permisosAnteriores: editando.permisos,
           permisosNuevos: formData.permisos
         },
@@ -446,20 +445,12 @@ const UsuariosList = ({ clienteAdminId, showAddButton = true }) => {
                 helperText="Mínimo 6 caracteres"
               />
             )}
-            <TextField
-              select
-              label="Rol"
-              value={formData.role}
-              onChange={(e) => handleFormChange('role', e.target.value)}
-              fullWidth
-              SelectProps={{ native: true }}
-            >
-              {ROLES.map((rol) => (
-                <option key={rol.value} value={rol.value}>
-                  {rol.label}
-                </option>
-              ))}
-            </TextField>
+            <Alert severity="info" sx={{ mt: 1 }}>
+              {editando 
+                ? `Rol actual: ${editando.role || 'operario'}. Los roles no se pueden modificar desde el frontend.`
+                : 'El usuario se creará con rol Operario. Los administradores se crean exclusivamente mediante scripts del backend.'
+              }
+            </Alert>
             <Typography variant="h6" sx={{ mt: 2 }}>
               Permisos
             </Typography>

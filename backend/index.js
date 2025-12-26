@@ -188,6 +188,22 @@ app.post('/api/admin/create-user', verificarTokenAdmin, async (req, res) => {
       });
     }
 
+    // SEGURIDAD: Si el usuario que crea es 'max', forzar role='operario'
+    // Los usuarios max solo pueden crear operarios, nunca administradores
+    let finalRole = role;
+    if (req.user.role === 'max') {
+      finalRole = 'operario';
+      console.log(`[SECURITY] Usuario max intentó crear usuario con role '${role}', forzado a 'operario'`);
+    }
+
+    // Validar que no se intenten crear roles privilegiados desde frontend
+    if (finalRole === 'max' || finalRole === 'supermax') {
+      return res.status(403).json({ 
+        error: 'No se pueden crear usuarios con roles privilegiados desde el frontend',
+        message: 'Los administradores solo se crean mediante scripts del backend'
+      });
+    }
+
     // 1. Crear usuario en Firebase Auth
     const userRecord = await admin.auth().createUser({
       email,
@@ -198,15 +214,15 @@ app.post('/api/admin/create-user', verificarTokenAdmin, async (req, res) => {
     });
 
     // 2. Asignar custom claim (rol) automáticamente
-    await admin.auth().setCustomUserClaims(userRecord.uid, { role });
-    console.log(`[INFO] Custom claim 'role: ${role}' asignado a UID: ${userRecord.uid}`);
+    await admin.auth().setCustomUserClaims(userRecord.uid, { role: finalRole });
+    console.log(`[INFO] Custom claim 'role: ${finalRole}' asignado a UID: ${userRecord.uid}`);
 
     // 3. Crear perfil en Firestore (ruta correcta: apps/auditoria/users/{uid})
     const userProfile = {
       uid: userRecord.uid,
       email: email,
       displayName: nombre,
-      role: role,
+      role: finalRole,
       permisos: permisos,
       appId: 'auditoria',
       createdAt: new Date(),
@@ -225,7 +241,7 @@ app.post('/api/admin/create-user', verificarTokenAdmin, async (req, res) => {
     res.json({ 
       success: true,
       uid: userRecord.uid,
-      message: `Usuario creado y rol '${role}' asignado automáticamente. El usuario debe cerrar sesión y volver a iniciar para obtener el claim.`
+      message: `Usuario creado y rol '${finalRole}' asignado automáticamente. El usuario debe cerrar sesión y volver a iniciar para obtener el claim.`
     });
   } catch (error) {
     console.error('Error al crear usuario:', error);
