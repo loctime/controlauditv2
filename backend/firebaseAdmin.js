@@ -32,9 +32,9 @@ const getServiceAccount = async () => {
   
   // Fallback para desarrollo local
   try {
-    console.log('🔄 Intentando usar archivo local serviceAccountKey.json...');
+    console.log('🔄 Intentando usar archivo local serviceAccountKey-controlfile.json...');
     const fs = await import('fs');
-    const serviceAccountData = fs.readFileSync('./serviceAccountKey.json', 'utf8');
+    const serviceAccountData = fs.readFileSync('./serviceAccountKey-controlfile.json', 'utf8');
     const parsed = JSON.parse(serviceAccountData);
     console.log('✅ Usando credenciales del archivo local');
     return parsed;
@@ -44,7 +44,7 @@ const getServiceAccount = async () => {
     console.error('   - FIREBASE_PROJECT_ID:', process.env.FIREBASE_PROJECT_ID ? '✅' : '❌');
     console.error('   - FIREBASE_CLIENT_EMAIL:', process.env.FIREBASE_CLIENT_EMAIL ? '✅' : '❌');
     console.error('   - FIREBASE_PRIVATE_KEY:', process.env.FIREBASE_PRIVATE_KEY ? '✅' : '❌');
-    console.error('💡 Solución: Configura las variables de entorno o coloca serviceAccountKey.json en el directorio backend/');
+    console.error('💡 Solución: Configura las variables de entorno o coloca serviceAccountKey-controlfile.json en el directorio backend/');
     throw new Error('Credenciales de Firebase Admin SDK no configuradas');
   }
 };
