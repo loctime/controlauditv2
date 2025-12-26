@@ -175,19 +175,52 @@ const createPendingProfile = async (userData) => {
 // Servicios de usuarios
 export const userService = {
   // Crear usuario - FLUJO OFICIAL
-  // 1. Siempre llama a POST /api/admin/create-user
+  // 1. Siempre llama a POST /api/create-user contra el backend Express de ControlFile (Render)
   // 2. Si falla, crea solo perfil "pending" en Firestore
   // 3. El backend es responsable del linking Auth ↔ Firestore
   async createUser(userData) {
     try {
-      console.log('📤 Creando usuario con backend:', `${getBackendUrl()}/api/admin/create-user`);
+      // Usar VITE_CONTROLFILE_BACKEND_URL directamente (no rutas relativas)
+      const backendUrl = import.meta.env.VITE_CONTROLFILE_BACKEND_URL || 'https://controlfile.onrender.com';
+      const endpoint = `${backendUrl}/api/create-user`;
+      
+      console.log('📤 Creando usuario con backend:', endpoint);
       console.log('📋 Datos del usuario:', { email: userData.email, nombre: userData.nombre, role: userData.role });
       
-      // Llamar al endpoint oficial del backend
-      const response = await externalApi.post('/admin/create-user', userData);
+      // Obtener token de autenticación
+      const currentUser = await getCurrentUser();
+      if (!currentUser) {
+        throw new Error('Usuario no autenticado');
+      }
       
-      console.log('✅ Usuario creado exitosamente por el backend:', response.data);
-      return response.data;
+      const token = await currentUser.getIdToken(true);
+      
+      // Llamar al endpoint oficial del backend usando fetch (no axios)
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(userData),
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Error desconocido' }));
+        throw {
+          response: {
+            status: response.status,
+            statusText: response.statusText,
+            data: errorData
+          },
+          code: 'HTTP_ERROR',
+          message: errorData.error || `Error ${response.status}: ${response.statusText}`
+        };
+      }
+      
+      const data = await response.json();
+      console.log('✅ Usuario creado exitosamente por el backend:', data);
+      return data;
     } catch (error) {
       console.error('❌ Error creando usuario con backend:', error);
       console.error('📊 Detalles del error:', {
@@ -202,7 +235,8 @@ export const userService = {
       if (error.response?.status === 404 || 
           error.response?.status === 503 ||
           error.response?.status === 500 ||
-          error.code === 'ERR_NETWORK') {
+          error.code === 'ERR_NETWORK' ||
+          error.code === 'HTTP_ERROR') {
         console.log('🔄 Backend no disponible, creando perfil "pending" en Firestore...');
         return await createPendingProfile(userData);
       }
