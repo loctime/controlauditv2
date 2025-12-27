@@ -133,7 +133,7 @@ const GaleriaFormulariosPublicos = ({ onCopiar }) => {
       // Solo incrementar contador si es la primera vez que este usuario copia este formulario
       if (!yaCopiadoAntes && !usuarioYaCopio) {
         const usuariosQueCopiaron = form.usuariosQueCopiaron || [];
-        await formularioService.incrementarContadorCopias(form.id, userProfile.uid, usuariosQueCopiaron);
+        await formularioService.incrementarContadorCopias(form.id, userProfile.uid, form, usuariosQueCopiaron);
         console.debug('[GaleriaFormulariosPublicos] Contador incrementado - primera copia del usuario');
       } else {
         console.debug('[GaleriaFormulariosPublicos] No se incrementa contador - usuario ya copió este formulario antes');
@@ -178,7 +178,7 @@ const GaleriaFormulariosPublicos = ({ onCopiar }) => {
     try {
       const ratingsCount = (form.ratingsCount || 0) + 1;
       const newRating = ((form.rating || 0) * (form.ratingsCount || 0) + value) / ratingsCount;
-      await formularioService.actualizarRating(form.id, newRating, ratingsCount);
+      await formularioService.actualizarRating(form.id, newRating, ratingsCount, form);
       setFormularios(prev => prev.map(f => f.id === form.id ? { ...f, rating: newRating, ratingsCount } : f));
       console.log('[GaleriaFormulariosPublicos] Formulario puntuado:', form.id, value);
     } catch (e) {

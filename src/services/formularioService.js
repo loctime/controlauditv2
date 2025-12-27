@@ -9,13 +9,36 @@ import {
   increment
 } from 'firebase/firestore';
 import { Timestamp } from 'firebase/firestore';
-import { dbAudit } from '../firebaseControlFile';
+import { auditUserCollection } from '../firebaseControlFile';
 import { addDocWithAppId, updateDocWithAppId, deleteDocWithAppId } from '../firebase/firestoreAppWriter';
 import { registrarAccionSistema } from '../utils/firestoreUtils';
 
 export const formularioService = {
   /**
-   * Crear formulario (legacy - colección 'formularios' en raíz)
+   * Obtener formularios del usuario desde apps/auditoria/users/{userUid}/formularios
+   * Lectura simple sin listeners ni cache
+   * @param {string} userUid - UID del usuario
+   * @returns {Promise<Array>} Array de formularios con id incluido
+   */
+  async getUserFormularios(userUid) {
+    try {
+      if (!userUid) throw new Error('userUid es requerido');
+      
+      const formulariosRef = auditUserCollection(userUid, 'formularios');
+      const snapshot = await getDocs(formulariosRef);
+      
+      return snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+    } catch (error) {
+      console.error('Error al obtener formularios del usuario:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Crear formulario bajo apps/auditoria/users/{userUid}/formularios
    * @param {Object} formularioData - Datos del formulario
    * @param {Object} user - Usuario que crea el formulario
    * @param {Object} userProfile - Perfil del usuario
@@ -25,7 +48,7 @@ export const formularioService = {
     try {
       if (!user?.uid) throw new Error('Usuario no autenticado');
       
-      const formulariosRef = collection(dbAudit, 'formularios');
+      const formulariosRef = auditUserCollection(user.uid, 'formularios');
       const formularioCompleto = {
         ...formularioData,
         timestamp: Timestamp.now(),
@@ -68,7 +91,7 @@ export const formularioService = {
   },
 
   /**
-   * Actualizar formulario
+   * Actualizar formulario bajo apps/auditoria/users/{userUid}/formularios
    * @param {string} formularioId - ID del formulario
    * @param {Object} updateData - Datos a actualizar
    * @param {Object} user - Usuario que actualiza
@@ -77,8 +100,9 @@ export const formularioService = {
   async updateFormulario(formularioId, updateData, user) {
     try {
       if (!formularioId) throw new Error('formularioId es requerido');
+      if (!user?.uid) throw new Error('Usuario no autenticado');
       
-      const formulariosRef = collection(dbAudit, 'formularios');
+      const formulariosRef = auditUserCollection(user.uid, 'formularios');
       const formularioRef = doc(formulariosRef, formularioId);
       
       await updateDocWithAppId(formularioRef, {
@@ -88,7 +112,7 @@ export const formularioService = {
       
       // Registrar log
       await registrarAccionSistema(
-        user?.uid,
+        user.uid,
         `Formulario actualizado: ${formularioId}`,
         { formularioId, cambios: Object.keys(updateData) },
         'editar',
@@ -102,7 +126,7 @@ export const formularioService = {
   },
 
   /**
-   * Eliminar formulario
+   * Eliminar formulario bajo apps/auditoria/users/{userUid}/formularios
    * @param {string} formularioId - ID del formulario
    * @param {Object} user - Usuario que elimina
    * @returns {Promise<void>}
@@ -110,15 +134,16 @@ export const formularioService = {
   async deleteFormulario(formularioId, user) {
     try {
       if (!formularioId) throw new Error('formularioId es requerido');
+      if (!user?.uid) throw new Error('Usuario no autenticado');
       
-      const formulariosRef = collection(dbAudit, 'formularios');
+      const formulariosRef = auditUserCollection(user.uid, 'formularios');
       const formularioRef = doc(formulariosRef, formularioId);
       
       await deleteDocWithAppId(formularioRef);
       
       // Registrar log
       await registrarAccionSistema(
-        user?.uid,
+        user.uid,
         `Formulario eliminado: ${formularioId}`,
         { formularioId },
         'eliminar',
@@ -132,7 +157,7 @@ export const formularioService = {
   },
 
   /**
-   * Copiar formulario público a cuenta del usuario
+   * Copiar formulario público a cuenta del usuario bajo apps/auditoria/users/{userUid}/formularios
    * @param {Object} formularioPublico - Formulario público a copiar
    * @param {Object} userProfile - Perfil del usuario que copia
    * @returns {Promise<string>} ID del formulario copiado
@@ -141,7 +166,7 @@ export const formularioService = {
     try {
       if (!userProfile?.uid) throw new Error('Usuario no autenticado');
       
-      const formulariosRef = collection(dbAudit, 'formularios');
+      const formulariosRef = auditUserCollection(userProfile.uid, 'formularios');
       const nuevoFormulario = {
         ...formularioPublico,
         clienteAdminId: userProfile.clienteAdminId || userProfile.uid,
@@ -165,17 +190,27 @@ export const formularioService = {
   },
 
   /**
-   * Incrementar contador de copias de formulario público
+   * Incrementar contador de copias de formulario público bajo apps/auditoria/users/{userUid}/formularios
    * @param {string} formularioId - ID del formulario público
    * @param {string} userId - UID del usuario que copia
+   * @param {string|Object} creadorUidOrForm - UID del creador del formulario original o objeto del formulario con creadorId
    * @param {Array<string>} usuariosQueCopiaron - Lista actual de usuarios que copiaron
    * @returns {Promise<void>}
    */
-  async incrementarContadorCopias(formularioId, userId, usuariosQueCopiaron = []) {
+  async incrementarContadorCopias(formularioId, userId, creadorUidOrForm, usuariosQueCopiaron = []) {
     try {
       if (!formularioId || !userId) throw new Error('formularioId y userId son requeridos');
       
-      const formulariosRef = collection(dbAudit, 'formularios');
+      // Obtener creadorUid: puede venir como string o desde el objeto del formulario
+      let creadorUid = typeof creadorUidOrForm === 'string' 
+        ? creadorUidOrForm 
+        : creadorUidOrForm?.creadorId;
+      
+      if (!creadorUid) {
+        throw new Error('creadorUid es requerido. Debe proporcionarse como parámetro o en el objeto del formulario (creadorId)');
+      }
+      
+      const formulariosRef = auditUserCollection(creadorUid, 'formularios');
       const formularioRef = doc(formulariosRef, formularioId);
       
       await updateDocWithAppId(formularioRef, {
@@ -189,17 +224,27 @@ export const formularioService = {
   },
 
   /**
-   * Actualizar rating de formulario público
+   * Actualizar rating de formulario público bajo apps/auditoria/users/{userUid}/formularios
    * @param {string} formularioId - ID del formulario
    * @param {number} nuevoRating - Nuevo valor de rating
    * @param {number} ratingsCount - Cantidad total de ratings
+   * @param {string|Object} creadorUidOrForm - UID del creador del formulario o objeto del formulario con creadorId
    * @returns {Promise<void>}
    */
-  async actualizarRating(formularioId, nuevoRating, ratingsCount) {
+  async actualizarRating(formularioId, nuevoRating, ratingsCount, creadorUidOrForm) {
     try {
       if (!formularioId) throw new Error('formularioId es requerido');
       
-      const formulariosRef = collection(dbAudit, 'formularios');
+      // Obtener creadorUid: puede venir como string o desde el objeto del formulario
+      let creadorUid = typeof creadorUidOrForm === 'string' 
+        ? creadorUidOrForm 
+        : creadorUidOrForm?.creadorId;
+      
+      if (!creadorUid) {
+        throw new Error('creadorUid es requerido. Debe proporcionarse como parámetro o en el objeto del formulario (creadorId)');
+      }
+      
+      const formulariosRef = auditUserCollection(creadorUid, 'formularios');
       const formularioRef = doc(formulariosRef, formularioId);
       
       await updateDocWithAppId(formularioRef, {
