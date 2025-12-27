@@ -6,16 +6,25 @@ import {
   ensureTaskbarFolder,
   ensureSubFolder
 } from './controlFileB2Service';
+import { auth } from '../firebaseControlFile';
 
 const STORAGE_KEY = 'controlfile_folders';
 
 /**
  * Inicializa las carpetas principales de ControlFile
+ * ✅ Verifica existencia antes de crear (idempotente)
+ * ✅ Solo crea en TASKBAR, nunca en NAVBAR
  * @returns {Promise<Object>} Objeto con mainFolderId y subFolders
  */
 export const initializeControlFileFolders = async () => {
   try {
-    // 1. Asegurar carpeta principal usando ensureTaskbarFolder (evita duplicados)
+    const user = auth.currentUser;
+    if (!user) {
+      console.warn('[controlFileInit] Usuario no autenticado');
+      return { mainFolderId: null, subFolders: {} };
+    }
+
+    // 1. Asegurar carpeta principal usando ensureTaskbarFolder (busca primero en TASKBAR, evita duplicados)
     const mainFolderId = await ensureTaskbarFolder('ControlAudit');
     
     if (!mainFolderId) {
@@ -23,7 +32,7 @@ export const initializeControlFileFolders = async () => {
       return { mainFolderId: null, subFolders: {} };
     }
 
-    // 2. Crear subcarpetas usando ensureSubFolder (evita duplicados)
+    // 2. Crear subcarpetas usando ensureSubFolder (verifica existencia antes de crear)
     const subFolders = {};
     const subFolderNames = ['Auditorías', 'Accidentes', 'Empresas'];
     

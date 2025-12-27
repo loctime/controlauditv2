@@ -441,16 +441,16 @@ export async function ensureTaskbarFolder(appName: string = 'ControlAudit'): Pro
 
     // 3. Si existe, retornar su ID
     if (existingFolderId) {
-      console.log(`📁 [controlFileB2Service] Carpeta existente reutilizada: ${appName} (${existingFolderId})`);
+      console.log(`📁 Carpeta existente encontrada, no se crea nuevamente: ${appName} (${existingFolderId})`);
       return existingFolderId;
     }
 
     // 4. Si NO existe, crear nueva carpeta con source: 'taskbar' usando API
-    console.log(`📁 [controlFileB2Service] Creando carpeta principal: ${appName}`);
+    console.log(`📁 Creando carpeta principal en TASKBAR: ${appName}`);
     const folderId = await createFolder(appName, null, 'taskbar');
     
     if (folderId) {
-      console.log(`📁 [controlFileB2Service] Carpeta creada: ${appName} (${folderId})`);
+      console.log(`📁 Carpeta creada en TASKBAR: ${appName} (${folderId})`);
     } else {
       console.error(`❌ [controlFileB2Service] No se pudo crear carpeta: ${appName}`);
     }
@@ -505,18 +505,19 @@ export async function ensureSubFolder(
       for (const docSnap of snapshot.docs) {
         const data = docSnap.data();
         if (!data.deletedAt) {
-          console.log(`📁 [controlFileB2Service] Subcarpeta existente reutilizada: ${name} (${docSnap.id})`);
+          console.log(`📁 Carpeta existente encontrada, no se crea nuevamente: ${name} (${docSnap.id})`);
           return docSnap.id;
         }
       }
     }
 
     // 3. Si NO existe, crear nueva subcarpeta con source: 'navbar' usando API
-    console.log(`📁 [controlFileB2Service] Creando subcarpeta: ${name}`);
+    // Nota: Las subcarpetas se crean con source: 'navbar' porque van dentro de la carpeta principal del taskbar
+    console.log(`📁 Creando subcarpeta: ${name}`);
     const folderId = await createFolder(name, parentId, 'navbar');
     
     if (folderId) {
-      console.log(`📁 [controlFileB2Service] Subcarpeta creada: ${name} (${folderId})`);
+      console.log(`📁 Subcarpeta creada: ${name} (${folderId})`);
     } else {
       console.error(`❌ [controlFileB2Service] No se pudo crear subcarpeta: ${name}`);
     }

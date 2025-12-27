@@ -1,5 +1,5 @@
 // src/components/context/AuthContext.jsx
-import { createContext, useState, useEffect, useContext, useRef } from "react";
+import { createContext, useState, useEffect, useContext } from "react";
 import { auth } from "../../firebaseControlFile";
 import { onAuthStateChanged } from "firebase/auth";
 import { useUserProfile } from '../../hooks/useUserProfile';
@@ -42,8 +42,6 @@ const AuthContextComponent = ({ children }) => {
   // Control para activar listeners diferidos (optimización: evitar llamadas duplicadas)
   const [enableDeferredListeners, setEnableDeferredListeners] = useState(false);
   
-  // Bandera para evitar múltiples inicializaciones de ControlFile
-  const controlFileInitializedRef = useRef(false);
 
   // Usar hooks personalizados
   const {
@@ -298,22 +296,26 @@ const AuthContextComponent = ({ children }) => {
               }
               
               // Inicializar carpetas de ControlFile después de autenticación exitosa
-              // SOLO se ejecuta UNA VEZ al iniciar sesión
-              if (!controlFileInitializedRef.current) {
-                controlFileInitializedRef.current = true;
+              // SOLO se ejecuta UNA VEZ por usuario usando localStorage
+              const initKey = `controlfile_initialized_${firebaseUser.uid}`;
+              const isInitialized = localStorage.getItem(initKey);
+              
+              if (!isInitialized) {
                 try {
                   // Esperar adicional para asegurar que el token esté actualizado
                   await new Promise(resolve => setTimeout(resolve, 1000));
                   const { initializeControlFileFolders } = await import('../../services/controlFileInit');
                   const folders = await initializeControlFileFolders();
                   if (folders.mainFolderId) {
+                    localStorage.setItem(initKey, 'true');
                     console.log('[AuthContext] ✅ Carpetas ControlFile inicializadas:', folders.mainFolderId);
                   }
                 } catch (error) {
                   console.error('[AuthContext] ⚠️ Error al inicializar carpetas ControlFile (no crítico):', error);
-                  controlFileInitializedRef.current = false; // Permitir reintento si falla
                   // No bloquear el flujo si falla la inicialización de carpetas
                 }
+              } else {
+                console.log('[AuthContext] ⏭️ Inicialización de ControlFile omitida (ya inicializado)');
               }
             }, 2000);
           }
