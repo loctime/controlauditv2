@@ -10,8 +10,8 @@ import {
 } from 'firebase/firestore';
 import { addDocWithAppId, updateDocWithAppId, deleteDocWithAppId } from '../firebase/firestoreAppWriter';
 import { db, auditUserCollection } from '../firebaseControlFile';
-import { uploadEvidence, getDownloadUrl } from './controlFileB2Service';
-import { getControlFileFolders } from './controlFileInit';
+import { uploadEvidence, getDownloadUrl, ensureTaskbarFolder, ensureSubFolder } from './controlFileB2Service';
+import { getControlFileFolders, clearControlFileFolders } from './controlFileInit';
 import { registrarAccionSistema } from '../utils/firestoreUtils';
 
 /**
@@ -201,18 +201,55 @@ export const actualizarEstadoEmpleado = async (empleadoId, estado, fechaInicioRe
 // Subir imágenes a ControlFile
 export const subirImagenes = async (accidenteId, imagenes, companyId = 'system') => {
   try {
-    // Obtener carpeta de accidentes desde ControlFile
+    // PASO 1: Obtener carpeta raíz ControlAudit (ya existente)
+    const mainFolderId = await ensureTaskbarFolder('ControlAudit');
+    if (!mainFolderId) {
+      console.error('[accidenteService] ⛔ Upload cancelado: carpeta accidentes no disponible - No se pudo obtener carpeta principal ControlAudit');
+      throw new Error('No se pudo obtener carpeta principal ControlAudit');
+    }
+
+    // PASO 2: Resolver subcarpeta "accidentes" con lógica GET-OR-CREATE
     let folderIdAccidentes = null;
+    let subcarpetaCreada = false;
+
     try {
+      // 2a. Buscar subcarpeta "accidentes" bajo ControlAudit
       const folders = await getControlFileFolders();
       folderIdAccidentes = folders.subFolders?.accidentes;
+
+      // 2b. SI NO EXISTE → crearla usando ensureSubFolder
       if (!folderIdAccidentes) {
-        console.warn('[accidenteService] ⚠️ No se encontró carpeta de accidentes, usando raíz');
+        console.log('[accidenteService] 📂 Subcarpeta accidentes no encontrada en cache, creando...');
+        folderIdAccidentes = await ensureSubFolder('Accidentes', mainFolderId);
+        
+        if (folderIdAccidentes) {
+          subcarpetaCreada = true;
+          console.log('[accidenteService] 📂 Subcarpeta accidentes creada');
+          
+          // PASO 3: Invalidar cache si se creó la subcarpeta
+          clearControlFileFolders();
+          console.log('[accidenteService] ♻️ Cache de carpetas invalidado');
+        } else {
+          console.error('[accidenteService] ⛔ Upload cancelado: carpeta accidentes no disponible - No se pudo crear subcarpeta');
+          throw new Error('No se pudo crear subcarpeta accidentes');
+        }
+      } else {
+        // 2c. SI EXISTE → usar su id
+        console.log('[accidenteService] 📂 Subcarpeta accidentes existente reutilizada');
       }
     } catch (error) {
-      console.error('[accidenteService] Error al obtener carpetas ControlFile:', error);
+      console.error('[accidenteService] Error al resolver carpeta de accidentes:', error);
+      console.error('[accidenteService] ⛔ Upload cancelado: carpeta accidentes no disponible');
+      throw error;
     }
-    
+
+    // PASO 4: Validar que parentId es válido antes de subir
+    if (!folderIdAccidentes) {
+      console.error('[accidenteService] ⛔ Upload cancelado: carpeta accidentes no disponible - folderIdAccidentes es null');
+      throw new Error('folderIdAccidentes no disponible');
+    }
+
+    // PASO 5: Subir imágenes SOLO si parentId es válido
     const urls = [];
     
     for (let i = 0; i < imagenes.length; i++) {
