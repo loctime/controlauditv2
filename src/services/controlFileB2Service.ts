@@ -430,23 +430,38 @@ export async function ensureTaskbarFolder(appName: string = 'ControlAudit'): Pro
 
     const snapshot = await getDocs(q);
     
-    // 2. Verificar si existe una carpeta con source: 'taskbar' y no eliminada
+    // 2. Buscar carpeta existente: primero taskbar, luego navbar (para evitar duplicados)
     let existingFolderId: string | null = null;
+    let existingSource: string | null = null;
+    
     snapshot.forEach((docSnap) => {
       const data = docSnap.data();
-      if (data.metadata?.source === 'taskbar' && !data.deletedAt) {
-        existingFolderId = docSnap.id;
+      if (!data.deletedAt) {
+        const source = data.metadata?.source;
+        // Priorizar taskbar, pero aceptar navbar si no hay taskbar
+        if (source === 'taskbar') {
+          existingFolderId = docSnap.id;
+          existingSource = 'taskbar';
+        } else if (source === 'navbar' && !existingFolderId) {
+          // Solo usar navbar si no hay taskbar
+          existingFolderId = docSnap.id;
+          existingSource = 'navbar';
+        }
       }
     });
 
-    // 3. Si existe, retornar su ID
+    // 3. Si existe, retornar su ID (reutilizar siempre antes de crear)
     if (existingFolderId) {
-      console.log(`📁 Carpeta existente encontrada, no se crea nuevamente: ${appName} (${existingFolderId})`);
+      if (existingSource === 'taskbar') {
+        console.log(`📁 Carpeta principal existente reutilizada: ${appName} (${existingFolderId})`);
+      } else {
+        console.log(`📁 Carpeta principal existente reutilizada (source: ${existingSource}): ${appName} (${existingFolderId})`);
+      }
       return existingFolderId;
     }
 
-    // 4. Si NO existe, crear nueva carpeta con source: 'taskbar' usando API
-    console.log(`📁 Creando carpeta principal en TASKBAR: ${appName}`);
+    // 4. Si NO existe ninguna, crear nueva carpeta con source: 'taskbar' usando API
+    console.log(`📁 Carpeta principal creada en TASKBAR: ${appName}`);
     const folderId = await createFolder(appName, null, 'taskbar');
     
     if (folderId) {
@@ -505,7 +520,7 @@ export async function ensureSubFolder(
       for (const docSnap of snapshot.docs) {
         const data = docSnap.data();
         if (!data.deletedAt) {
-          console.log(`📁 Carpeta existente encontrada, no se crea nuevamente: ${name} (${docSnap.id})`);
+          console.log(`📂 Subcarpeta existente reutilizada: ${name} (${docSnap.id})`);
           return docSnap.id;
         }
       }
@@ -513,11 +528,11 @@ export async function ensureSubFolder(
 
     // 3. Si NO existe, crear nueva subcarpeta con source: 'navbar' usando API
     // Nota: Las subcarpetas se crean con source: 'navbar' porque van dentro de la carpeta principal del taskbar
-    console.log(`📁 Creando subcarpeta: ${name}`);
+    console.log(`📂 Creando subcarpeta: ${name}`);
     const folderId = await createFolder(name, parentId, 'navbar');
     
     if (folderId) {
-      console.log(`📁 Subcarpeta creada: ${name} (${folderId})`);
+      console.log(`📂 Subcarpeta creada: ${name} (${folderId})`);
     } else {
       console.error(`❌ [controlFileB2Service] No se pudo crear subcarpeta: ${name}`);
     }

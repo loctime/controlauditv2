@@ -22,16 +22,9 @@ import {
  */
 export const createTaskbarFolder = async (appName) => {
   try {
-    // Buscar carpeta existente primero
-    const files = await listFilesB2(null);
-    const existingFolder = files.find(f => f.type === 'folder' && f.name === (appName || 'ControlAudit'));
-    
-    if (existingFolder) {
-      return existingFolder.id;
-    }
-    
-    // Crear nueva carpeta
-    return await createFolderB2(appName || 'ControlAudit', null);
+    // Usar ensureTaskbarFolder que busca correctamente en TASKBAR
+    const { ensureTaskbarFolder } = await import('./controlFileB2Service');
+    return await ensureTaskbarFolder(appName || 'ControlAudit');
   } catch (error) {
     console.error('[controlFileService] Error al crear carpeta principal:', error);
     return null;
@@ -56,15 +49,9 @@ export const createNavbarFolder = async (name, parentId = null) => {
       parentId = mainFolderId;
     }
     
-    // Buscar carpeta existente primero
-    const files = await listFilesB2(parentId);
-    const existingFolder = files.find(f => f.type === 'folder' && f.name === name);
-    
-    if (existingFolder) {
-      return existingFolder.id;
-    }
-    
-    return await createFolderB2(name, parentId);
+    // Buscar carpeta existente primero usando query directa de Firestore
+    const { ensureSubFolder } = await import('./controlFileB2Service');
+    return await ensureSubFolder(name, parentId);
   } catch (error) {
     console.error('[controlFileService] Error al crear carpeta navbar:', error);
     return null;
@@ -79,15 +66,9 @@ export const createNavbarFolder = async (name, parentId = null) => {
  */
 export const createSubFolder = async (name, parentId) => {
   try {
-    // Buscar carpeta existente primero
-    const files = await listFilesB2(parentId);
-    const existingFolder = files.find(f => f.type === 'folder' && f.name === name);
-    
-    if (existingFolder) {
-      return existingFolder.id;
-    }
-    
-    return await createFolderB2(name, parentId);
+    // Buscar carpeta existente primero usando query directa de Firestore
+    const { ensureSubFolder } = await import('./controlFileB2Service');
+    return await ensureSubFolder(name, parentId);
   } catch (error) {
     console.error('[controlFileService] Error al crear subcarpeta:', error);
     return null;
