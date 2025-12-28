@@ -1,5 +1,5 @@
 // Función para comprimir imágenes - Optimizada para evitar tildes del sistema
-import logger from '../../../../utils/logger';
+import logger from '../../../../../utils/logger';
 
 export const comprimirImagen = (file, maxWidth = 800, quality = 0.7) => {
   return new Promise((resolve) => {

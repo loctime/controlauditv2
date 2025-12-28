@@ -3,7 +3,7 @@
  * Funciones de validación, progreso y navegación
  */
 
-import logger from '../../../../utils/logger';
+import logger from '../../../../../utils/logger';
 
 /**
  * Valida si todas las preguntas han sido contestadas

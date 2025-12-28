@@ -4,7 +4,7 @@ import Swal from 'sweetalert2';
 import autoSaveService from '../services/autoSaveService';
 import { verificarFirmasCompletadas, filtrarSucursalesPorEmpresa } from '../utils/auditoriaUtils';
 import { generarContenidoImpresion, abrirImpresionNativa } from '../utils/impresionUtils';
-import logger from '../../../../utils/logger';
+import logger from '../../../../../utils/logger';
 
 /**
  * Hook personalizado para manejar todos los handlers de la auditoría
