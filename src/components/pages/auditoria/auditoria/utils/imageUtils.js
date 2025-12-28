@@ -1,16 +1,18 @@
 // Función para comprimir imágenes - Optimizada para evitar tildes del sistema
+import logger from '../../../../utils/logger';
+
 export const comprimirImagen = (file, maxWidth = 800, quality = 0.7) => {
   return new Promise((resolve) => {
     // Validar que sea una imagen
     if (!file.type.startsWith('image/')) {
-      console.warn('Archivo no es una imagen:', file.type);
+      logger.warn('Archivo no es una imagen:', file.type);
       resolve(file);
       return;
     }
 
     // SIEMPRE comprimir, sin importar el tamaño inicial
     // Esto garantiza que las imágenes nunca sean problemáticas
-    console.log(`🔄 Comprimiendo imagen: ${(file.size/1024/1024).toFixed(2)}MB`);
+    logger.debug('Comprimiendo imagen', { sizeMB: (file.size/1024/1024).toFixed(2) });
 
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
@@ -65,18 +67,22 @@ export const comprimirImagen = (file, maxWidth = 800, quality = 0.7) => {
         const reductionPercent = Math.round((1 - compressedFile.size/file.size) * 100);
         const finalSizeMB = (compressedFile.size/1024/1024).toFixed(2);
         
-        console.log(`✅ Imagen optimizada: ${(file.size/1024/1024).toFixed(2)}MB -> ${finalSizeMB}MB (${reductionPercent}% reducción)`);
+        logger.debug('Imagen optimizada', { 
+          originalMB: (file.size/1024/1024).toFixed(2),
+          finalMB: finalSizeMB,
+          reductionPercent 
+        });
         
         // Verificar que el tamaño final sea razonable (< 2MB)
         if (compressedFile.size > 2 * 1024 * 1024) {
-          console.warn(`⚠️ Imagen aún grande (${finalSizeMB}MB), aplicando compresión adicional`);
+          logger.debug('Imagen aún grande, aplicando compresión adicional', { sizeMB: finalSizeMB });
           // Aplicar compresión adicional si aún es muy grande
           canvas.toBlob((finalBlob) => {
             const finalFile = new File([finalBlob], file.name, {
               type: 'image/jpeg',
               lastModified: Date.now()
             });
-            console.log(`🎯 Compresión final: ${(finalFile.size/1024/1024).toFixed(2)}MB`);
+            logger.debug('Compresión final completada', { sizeMB: (finalFile.size/1024/1024).toFixed(2) });
             resolve(finalFile);
           }, 'image/jpeg', 0.4);
         } else {
@@ -86,7 +92,7 @@ export const comprimirImagen = (file, maxWidth = 800, quality = 0.7) => {
     };
     
     img.onerror = () => {
-      console.error('Error al cargar la imagen para compresión');
+      logger.error('Error al cargar la imagen para compresión');
       resolve(file);
     };
     
@@ -98,14 +104,14 @@ export const comprimirImagen = (file, maxWidth = 800, quality = 0.7) => {
 export const validarArchivoImagen = (file) => {
   // Validar tipo de archivo
   if (!file.type.startsWith('image/')) {
-    console.error('Archivo no es una imagen:', file.type);
+    logger.error('Archivo no es una imagen:', file.type);
     return { valido: false, error: 'Por favor selecciona solo archivos de imagen (JPG, PNG, etc.)' };
   }
   
   // Validar tamaño máximo (50MB para permitir archivos grandes que se comprimirán)
   const maxSize = 50 * 1024 * 1024; // 50MB
   if (file.size > maxSize) {
-    console.error('Archivo demasiado grande:', file.size, 'bytes');
+    logger.error('Archivo demasiado grande', { size: file.size, sizeMB: (file.size/1024/1024).toFixed(1) });
     return { 
       valido: false, 
       error: `El archivo es demasiado grande (${(file.size/1024/1024).toFixed(1)}MB). El tamaño máximo es 50MB.` 

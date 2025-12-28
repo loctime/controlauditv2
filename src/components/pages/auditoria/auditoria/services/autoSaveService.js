@@ -2,6 +2,8 @@ import { doc, setDoc, getDoc, deleteDoc, collection, query, where, getDocs } fro
 import { dbAudit, auditoriasAutosaveCollection } from '../../../../../firebaseControlFile';
 import { getOfflineDatabase, generateOfflineId, checkStorageLimit } from '../../../../../services/offlineDatabase';
 import syncQueueService from '../../../../../services/syncQueue';
+import { canWriteToFirestore, isContextComplete } from '../../../../../utils/firestoreWriteCheck';
+import logger from '../../../../../utils/logger';
 
 class AutoSaveService {
   constructor() {
@@ -19,12 +21,12 @@ class AutoSaveService {
   setupConnectivityListeners() {
     window.addEventListener('online', () => {
       this.isOnline = true;
-      console.log('🌐 AutoSaveService: Conexión restaurada');
+      logger.info('AutoSaveService: Conexión restaurada');
     });
     
     window.addEventListener('offline', () => {
       this.isOnline = false;
-      console.log('📴 AutoSaveService: Conexión perdida');
+      logger.info('AutoSaveService: Conexión perdida');
     });
   }
 
@@ -33,9 +35,9 @@ class AutoSaveService {
     if (!this.offlineDb) {
       try {
         this.offlineDb = await getOfflineDatabase();
-        console.log('✅ AutoSaveService: Base de datos offline inicializada');
+        logger.debug('AutoSaveService: Base de datos offline inicializada');
       } catch (error) {
-        console.error('❌ AutoSaveService: Error al inicializar base de datos offline:', error);
+        logger.error('AutoSaveService: Error al inicializar base de datos offline:', error);
       }
     }
     return this.offlineDb;
@@ -57,7 +59,7 @@ class AutoSaveService {
       localStorage.setItem(this.storageKey, JSON.stringify(saveData));
       return true;
     } catch (error) {
-      console.error('❌ Error al guardar en localStorage:', error);
+      logger.error('Error al guardar en localStorage:', error);
       return false;
     }
   }
@@ -95,7 +97,7 @@ class AutoSaveService {
         return restoredData;
       }
     } catch (error) {
-      console.error('❌ Error al cargar desde localStorage:', error);
+      logger.error('Error al cargar desde localStorage:', error);
     }
     return null;
   }
@@ -125,10 +127,10 @@ class AutoSaveService {
                 await db.delete('auditorias', auditoria.id);
               }
             }
-            console.log('🗑️ Datos de autoguardado limpiados de IndexedDB');
+            logger.debug('Datos de autoguardado limpiados de IndexedDB');
           }
         } catch (indexedDBError) {
-          console.warn('⚠️ Error al limpiar IndexedDB:', indexedDBError);
+          logger.warn('Error al limpiar IndexedDB:', indexedDBError);
         }
         
         // Limpiar Firestore si está online
@@ -144,21 +146,21 @@ class AutoSaveService {
             });
             
             await Promise.all(deletePromises);
-            console.log('🗑️ Datos de autoguardado limpiados de Firestore');
+            logger.debug('Datos de autoguardado limpiados de Firestore');
           } catch (firestoreError) {
-            console.warn('⚠️ Error al limpiar Firestore:', firestoreError);
+            logger.warn('Error al limpiar Firestore:', firestoreError);
           }
         }
       }
       
-      console.log('✅ Limpieza completa de autoguardado realizada');
+      logger.debug('Limpieza completa de autoguardado realizada');
     } catch (error) {
-      console.error('❌ Error al limpiar localStorage:', error);
+      logger.error('Error al limpiar localStorage:', error);
     }
   }
 
   // Guardar auditoría (online/offline automático)
-  async saveAuditoria(userId, auditoriaData) {
+  async saveAuditoria(userId, auditoriaData, userProfile = null) {
       if (this.isSaving) {
         return false;
       }
@@ -168,7 +170,7 @@ class AutoSaveService {
     try {
       // Verificar conectividad
       if (this.isOnline) {
-        return await this.saveToFirestore(userId, auditoriaData);
+        return await this.saveToFirestore(userId, auditoriaData, userProfile);
       } else {
         return await this.saveOffline(userId, auditoriaData);
       }
@@ -178,8 +180,60 @@ class AutoSaveService {
   }
 
   // Guardar en Firestore (online)
-  async saveToFirestore(userId, auditoriaData) {
+  async saveToFirestore(userId, auditoriaData, userProfile = null) {
     try {
+      // Obtener userProfile desde cache si no se proporciona
+      if (!userProfile) {
+        try {
+          const request = indexedDB.open('controlaudit_offline_v1', 3);
+          userProfile = await new Promise((resolve) => {
+            request.onsuccess = function(event) {
+              const db = event.target.result;
+              if (!db.objectStoreNames.contains('settings')) {
+                resolve(null);
+                return;
+              }
+              const transaction = db.transaction(['settings'], 'readonly');
+              const store = transaction.objectStore('settings');
+              store.get('complete_user_cache').onsuccess = function(e) {
+                const cached = e.target.result;
+                resolve(cached?.value?.userProfile || null);
+              };
+              store.get('complete_user_cache').onerror = () => resolve(null);
+            };
+            request.onerror = () => resolve(null);
+          });
+        } catch (e) {
+          logger.debug('No se pudo obtener userProfile del cache:', e);
+        }
+      }
+
+      // Verificar si se puede escribir en Firestore
+      const empresaId = auditoriaData.empresaSeleccionada?.id;
+      const sucursalId = auditoriaData.sucursalSeleccionada;
+      const auditoriaId = auditoriaData.id || auditoriaData.auditoriaId;
+
+      const writeContext = {
+        auditoriaId,
+        userProfile,
+        empresaId,
+        sucursalId
+      };
+
+      const canWrite = canWriteToFirestore(writeContext);
+      const isEarlyAutosave = !isContextComplete(writeContext);
+
+      // Si no se puede escribir, solo guardar offline
+      if (!canWrite) {
+        logger.autosave('Contexto incompleto, guardando solo offline', {
+          hasUserProfile: !!userProfile,
+          hasEmpresaId: !!empresaId,
+          hasSucursalId: !!sucursalId,
+          auditoriaId: auditoriaId?.substring(0, 20)
+        });
+        return await this.saveOffline(userId, auditoriaData);
+      }
+
       const sessionId = this.generateSessionId();
       
       // Preparar datos para Firestore (sin arrays anidados - Firestore no los soporta)
@@ -235,8 +289,20 @@ class AutoSaveService {
       };
 
       // Guardar en Firestore (solo metadatos y datos serializados)
-      const docRef = doc(dbAudit, 'auditorias_autosave', sessionId);
-      await setDoc(docRef, saveData);
+      try {
+        const docRef = doc(dbAudit, 'auditorias_autosave', sessionId);
+        await setDoc(docRef, saveData);
+        logger.autosave('Guardado en Firestore exitoso', { sessionId });
+      } catch (firestoreError) {
+        // Clasificar errores apropiadamente
+        logger.firestore(
+          'error',
+          'Error al guardar en Firestore',
+          firestoreError,
+          { isEarlyAutosave, sessionId }
+        );
+        throw firestoreError;
+      }
 
       // IMPORTANTE: También guardar en IndexedDB con imágenes REALES y arrays completos
       await this.saveOffline(userId, auditoriaData);
@@ -272,7 +338,19 @@ class AutoSaveService {
       
       return true;
     } catch (error) {
-      console.error('❌ Error en autoguardado Firestore:', error);
+      // Clasificar errores apropiadamente
+      const isEarlyAutosave = !isContextComplete({
+        userProfile: userProfile || null,
+        empresaId: auditoriaData.empresaSeleccionada?.id,
+        sucursalId: auditoriaData.sucursalSeleccionada
+      });
+
+      logger.firestore(
+        'error',
+        'Error en autoguardado Firestore',
+        error,
+        { isEarlyAutosave }
+      );
       
       // Fallback a offline
       return await this.saveOffline(userId, auditoriaData);
@@ -303,7 +381,7 @@ class AutoSaveService {
             const db = event.target.result;
             
             if (!db.objectStoreNames.contains('settings')) {
-              console.warn('[AutoSaveService] Object store "settings" no existe');
+              logger.debug('Object store "settings" no existe');
               resolve(null);
               return;
             }
@@ -316,47 +394,43 @@ class AutoSaveService {
               if (cached && cached.value && cached.value.userProfile) {
                 resolve(cached.value.userProfile);
               } else {
-                console.warn('[AutoSaveService] No hay userProfile en cache');
+                logger.debug('No hay userProfile en cache');
                 resolve(null);
               }
             };
             
             store.get('complete_user_cache').onerror = function(e) {
-              console.warn('[AutoSaveService] Error al obtener cache:', e.target.error);
+              logger.debug('Error al obtener cache:', e.target.error);
               resolve(null);
             };
           };
           
           request.onerror = function(event) {
-            console.warn('[AutoSaveService] Error al abrir IndexedDB:', event.target.error);
+            logger.debug('Error al abrir IndexedDB:', event.target.error);
             resolve(null);
           };
           
           request.onupgradeneeded = function(event) {
             const db = event.target.result;
-            console.log('[AutoSaveService] Inicializando base de datos...');
+            logger.debug('Inicializando base de datos...');
             
             if (!db.objectStoreNames.contains('settings')) {
               db.createObjectStore('settings', { keyPath: 'key' });
-              console.log('[AutoSaveService] Object store "settings" creado');
+              logger.debug('Object store "settings" creado');
             }
           };
         });
         
         if (cachedUser) {
           userProfile = cachedUser;
-          console.log('[AutoSaveService] Usuario encontrado en cache:', {
+          logger.debug('Usuario encontrado en cache', {
             uid: userProfile.uid,
             email: userProfile.email,
-            displayName: userProfile.displayName,
-            role: userProfile.role,
-            clienteAdminId: userProfile.clienteAdminId
+            role: userProfile.role
           });
-        } else {
-          console.warn('[AutoSaveService] No se encontró usuario en cache');
         }
       } catch (error) {
-        console.warn('[AutoSaveService] Error al obtener usuario del cache:', error);
+        logger.debug('Error al obtener usuario del cache:', error);
       }
 
       // Generar ID único para la auditoría offline
@@ -387,24 +461,11 @@ class AutoSaveService {
         status: isAutoSaved ? 'auto_saved' : 'pending_sync'
       };
 
-      // Log para debugging
-      console.log('[AutoSaveService] Datos que se van a guardar:', {
+      // Log para debugging (solo en development)
+      logger.debug('Datos que se van a guardar offline', {
         auditoriaId: saveData.id,
         userId: saveData.userId,
-        userEmail: saveData.userEmail,
-        usuarioEmail: saveData.usuarioEmail,
-        userDisplayName: saveData.userDisplayName,
-        userRole: saveData.userRole,
-        clienteAdminId: saveData.clienteAdminId,
-        creadoPor: saveData.creadoPor,
-        creadoPorEmail: saveData.creadoPorEmail,
-        userProfileFromCache: userProfile ? {
-          uid: userProfile.uid,
-          email: userProfile.email,
-          displayName: userProfile.displayName,
-          role: userProfile.role,
-          clienteAdminId: userProfile.clienteAdminId
-        } : null
+        userRole: saveData.userRole
       });
 
       // Guardar auditoría en IndexedDB
@@ -420,7 +481,7 @@ class AutoSaveService {
       if (!isAutoSaved && !saveData.autoSaved) {
         await syncQueueService.enqueueAuditoria(saveData, 1);
       } else {
-        console.log('[AutoSaveService] Auditoría autoguardada NO encolada para sincronización:', auditoriaId);
+        logger.debug('Auditoría autoguardada NO encolada para sincronización', { auditoriaId });
       }
 
       // También guardar en localStorage como respaldo (sin imágenes)
@@ -434,7 +495,7 @@ class AutoSaveService {
       
       return true;
     } catch (error) {
-      console.error('❌ Error en autoguardado offline:', error);
+      logger.error('Error en autoguardado offline:', error);
       
       // Fallback a localStorage
       this.saveToLocalStorage(auditoriaData);
@@ -484,7 +545,7 @@ class AutoSaveService {
         }
       }
     } catch (error) {
-      console.error('❌ Error al guardar fotos offline:', error);
+      logger.error('Error al guardar fotos offline:', error);
       throw error;
     }
   }
@@ -521,7 +582,7 @@ class AutoSaveService {
         return parsedData;
       }
     } catch (error) {
-      console.error('❌ Error al cargar desde Firestore:', error);
+      logger.error('Error al cargar desde Firestore:', error);
     }
     
     return null;
@@ -582,7 +643,7 @@ class AutoSaveService {
       if (db) {
         // Verificar que el object store existe antes de acceder
         if (!db.objectStoreNames.contains('auditorias')) {
-          console.warn('⚠️ Object store "auditorias" no existe, usando localStorage');
+          logger.debug('Object store "auditorias" no existe, usando localStorage');
           return this.loadFromLocalStorage();
         }
         
@@ -607,7 +668,7 @@ class AutoSaveService {
             }
           }
         } catch (indexedDBError) {
-          console.warn('⚠️ Error al leer desde IndexedDB, usando localStorage:', indexedDBError);
+          logger.debug('Error al leer desde IndexedDB, usando localStorage:', indexedDBError);
         }
       }
 
@@ -623,7 +684,7 @@ class AutoSaveService {
             try {
               dbForImages = await this.initOfflineDatabase();
             } catch (dbError) {
-              console.warn('⚠️ No se pudo inicializar IndexedDB para imágenes:', dbError);
+              logger.debug('No se pudo inicializar IndexedDB para imágenes:', dbError);
             }
           }
           
@@ -632,11 +693,11 @@ class AutoSaveService {
             try {
               const auditoriaConImagenes = await this.restoreAuditoriaImages(localData, dbForImages);
               if (auditoriaConImagenes && auditoriaConImagenes.imagenes) {
-                console.log('✅ Imágenes restauradas desde IndexedDB:', auditoriaConImagenes.imagenes.length);
+                logger.debug('Imágenes restauradas desde IndexedDB', { count: auditoriaConImagenes.imagenes.length });
                 return auditoriaConImagenes;
               }
             } catch (imageError) {
-              console.warn('⚠️ Error al restaurar imágenes desde IndexedDB:', imageError);
+              logger.debug('Error al restaurar imágenes desde IndexedDB:', imageError);
             }
           }
           
@@ -654,20 +715,16 @@ class AutoSaveService {
                 if (incompleteAuditorias.length > 0) {
                   const latestOffline = incompleteAuditorias.sort((a, b) => b.updatedAt - a.updatedAt)[0];
                   const auditoriaConImagenes = await this.restoreAuditoriaImages(latestOffline, dbForImages);
-                  console.log('✅ Datos restaurados desde IndexedDB con imágenes');
+                  logger.debug('Datos restaurados desde IndexedDB con imágenes');
                   return auditoriaConImagenes;
                 }
               }
             } catch (indexedDBError) {
-              console.warn('⚠️ Error al leer desde IndexedDB:', indexedDBError);
+              logger.debug('Error al leer desde IndexedDB:', indexedDBError);
             }
           }
           
-          console.log('✅ Restaurando desde localStorage:', {
-            respuestas: localData.respuestas?.length || 0,
-            comentarios: localData.comentarios?.length || 0,
-            imagenes: localData.imagenes?.length || 0
-          });
+          logger.debug('Restaurando desde localStorage');
           
           return localData;
         } else {
@@ -679,12 +736,12 @@ class AutoSaveService {
 
       return null;
     } catch (error) {
-      console.error('❌ Error al restaurar auditoría:', error);
+      logger.error('Error al restaurar auditoría:', error);
       // Fallback a localStorage si todo falla
       try {
         return this.loadFromLocalStorage();
       } catch (localStorageError) {
-        console.error('❌ Error al cargar desde localStorage:', localStorageError);
+        logger.error('Error al cargar desde localStorage:', localStorageError);
         return null;
       }
     }
@@ -734,7 +791,7 @@ class AutoSaveService {
         imagenes: imagenesRestauradas
       };
     } catch (error) {
-      console.error('❌ Error al restaurar imágenes:', error);
+      logger.error('Error al restaurar imágenes:', error);
       return auditoriaData; // Retornar datos sin imágenes si hay error
     }
   }
@@ -748,7 +805,7 @@ class AutoSaveService {
       const offlineAuditorias = await db.getAllFromIndex('auditorias', 'by-userId', userId);
       return offlineAuditorias.filter(a => a.status === 'pending_sync');
     } catch (error) {
-      console.error('❌ Error al obtener auditorías offline:', error);
+      logger.error('Error al obtener auditorías offline:', error);
       return [];
     }
   }
@@ -773,7 +830,7 @@ class AutoSaveService {
         try {
           queueStats = await syncQueueService.getQueueStats();
         } catch (queueError) {
-          console.warn('⚠️ Error al obtener estadísticas de cola:', queueError);
+          logger.debug('Error al obtener estadísticas de cola:', queueError);
           queueStats = {
             total: 0,
             totalIncludingFailed: 0,
@@ -802,7 +859,7 @@ class AutoSaveService {
         try {
           failedQueueItems = await this.getFailedQueueItems();
         } catch (failedError) {
-          console.warn('⚠️ Error al obtener items fallidos:', failedError);
+          logger.debug('Error al obtener items fallidos:', failedError);
         }
       }
       
@@ -832,7 +889,7 @@ class AutoSaveService {
         queue: queueStats
       };
     } catch (error) {
-      console.error('❌ Error al obtener estadísticas offline:', error);
+      logger.error('Error al obtener estadísticas offline:', error);
       // Retornar estadísticas vacías en lugar de null para evitar errores
       return {
         auditorias: {
@@ -871,7 +928,7 @@ class AutoSaveService {
         item.status === 'failed' || item.retries >= 5
       );
     } catch (error) {
-      console.error('❌ Error al obtener items fallidos de la cola:', error);
+      logger.error('Error al obtener items fallidos de la cola:', error);
       return [];
     }
   }
@@ -887,7 +944,7 @@ class AutoSaveService {
         }
       }
     } catch (error) {
-      console.error('❌ Error al limpiar datos antiguos:', error);
+      logger.error('Error al limpiar datos antiguos:', error);
     }
   }
 }

@@ -4,6 +4,7 @@ import Swal from 'sweetalert2';
 import autoSaveService from '../services/autoSaveService';
 import { verificarFirmasCompletadas, filtrarSucursalesPorEmpresa } from '../utils/auditoriaUtils';
 import { generarContenidoImpresion, abrirImpresionNativa } from '../utils/impresionUtils';
+import logger from '../../../../utils/logger';
 
 /**
  * Hook personalizado para manejar todos los handlers de la auditoría
@@ -152,11 +153,11 @@ export const useAuditoriaHandlers = ({
           lastModified: Date.now(), // Usar timestamp en lugar de Date object
           autoSaved: true
         });
-        console.log('✅ Autoguardado rápido (simple)');
+        logger.autosave('Autoguardado rápido (simple)');
       } else {
         // Guardado completo con imágenes en IndexedDB
-        await autoSaveService.saveAuditoria(userProfile.uid, auditoriaData);
-        console.log('✅ Autoguardado exitoso (completo con imágenes)');
+        await autoSaveService.saveAuditoria(userProfile.uid, auditoriaData, userProfile);
+        logger.autosave('Autoguardado exitoso (completo con imágenes)');
       }
       
       setLastSaved(Date.now());
@@ -165,7 +166,7 @@ export const useAuditoriaHandlers = ({
       
       return true;
     } catch (error) {
-      console.error('❌ Error en autoguardado:', error);
+      logger.error('Error en autoguardado:', error);
       // No marcar como guardado si falló
       pendingSaveRef.current = true;
       return false;
@@ -205,59 +206,54 @@ export const useAuditoriaHandlers = ({
   const handleGuardarRespuestas = useCallback((nuevasRespuestas) => {
     setRespuestas(nuevasRespuestas);
     // Guardar automáticamente después de actualizar respuestas
-    handleAutoSave(false).catch(err => console.error('Error en autoguardado de respuestas:', err));
+    handleAutoSave(false).catch(err => logger.debug('Error en autoguardado de respuestas:', err));
   }, [setRespuestas, handleAutoSave]);
 
   const handleGuardarComentario = useCallback((nuevosComentarios) => {
     setComentarios(nuevosComentarios);
     // Guardar automáticamente después de actualizar comentarios
-    handleAutoSave(false).catch(err => console.error('Error en autoguardado de comentarios:', err));
+    handleAutoSave(false).catch(err => logger.debug('Error en autoguardado de comentarios:', err));
   }, [setComentarios, handleAutoSave]);
 
   const handleGuardarImagenes = useCallback((nuevasImagenes) => {
     setImagenes(nuevasImagenes);
     // Guardar automáticamente después de actualizar imágenes (forzar guardado inmediato por tamaño)
-    handleAutoSave(true).catch(err => console.error('Error en autoguardado de imágenes:', err));
+    handleAutoSave(true).catch(err => logger.debug('Error en autoguardado de imágenes:', err));
   }, [setImagenes, handleAutoSave]);
 
   const handleGuardarClasificaciones = useCallback((nuevasClasificaciones) => {
-    console.log('🔍 [handleGuardarClasificaciones] Recibidas nuevas clasificaciones:', nuevasClasificaciones);
-    console.log('🔍 [handleGuardarClasificaciones] Tipo:', typeof nuevasClasificaciones, Array.isArray(nuevasClasificaciones));
-    if (Array.isArray(nuevasClasificaciones) && nuevasClasificaciones.length > 0) {
-      console.log('🔍 [handleGuardarClasificaciones] Contenido detallado:', JSON.stringify(nuevasClasificaciones, null, 2));
-    }
+    logger.debug('Recibidas nuevas clasificaciones', { count: nuevasClasificaciones?.length || 0 });
     setClasificaciones(nuevasClasificaciones);
-    console.log('🔍 [handleGuardarClasificaciones] Estado actualizado');
     // Guardar automáticamente después de actualizar clasificaciones
-    handleAutoSave(false).catch(err => console.error('Error en autoguardado de clasificaciones:', err));
+    handleAutoSave(false).catch(err => logger.debug('Error en autoguardado de clasificaciones:', err));
   }, [setClasificaciones, handleAutoSave]);
 
   const handleGuardarAccionesRequeridas = useCallback((nuevasAcciones) => {
     setAccionesRequeridas(nuevasAcciones);
     // Guardar automáticamente después de actualizar acciones requeridas
-    handleAutoSave(false).catch(err => console.error('Error en autoguardado de acciones requeridas:', err));
+    handleAutoSave(false).catch(err => logger.debug('Error en autoguardado de acciones requeridas:', err));
   }, [setAccionesRequeridas, handleAutoSave]);
 
   // Handlers de firmas
   const verificarFirmasCompletadasLocal = useCallback(() => {
     const completadas = verificarFirmasCompletadas(firmaAuditor, firmaResponsable);
-    console.log('[DEBUG] Verificando firmas (opcionales):', { firmaAuditor, firmaResponsable, completadas });
+    logger.debug('Verificando firmas (opcionales)', { completadas });
     setFirmasCompletadas(completadas);
   }, [firmaAuditor, firmaResponsable, setFirmasCompletadas]);
 
   const handleSaveFirmaAuditor = useCallback((firmaURL) => {
-    console.log('[DEBUG] handleSaveFirmaAuditor llamado con:', firmaURL);
+    logger.debug('handleSaveFirmaAuditor llamado');
     setFirmaAuditor(firmaURL);
     verificarFirmasCompletadasLocal();
     // Guardar automáticamente después de guardar firma (forzar guardado inmediato)
-    handleAutoSave(true).catch(err => console.error('Error en autoguardado de firma auditor:', err));
+    handleAutoSave(true).catch(err => logger.debug('Error en autoguardado de firma auditor:', err));
   }, [setFirmaAuditor, verificarFirmasCompletadasLocal, handleAutoSave]);
 
   const handleSaveFirmaResponsable = useCallback((firmaURL) => {
     setFirmaResponsable(firmaURL);
     verificarFirmasCompletadasLocal();
     // Guardar automáticamente después de guardar firma (forzar guardado inmediato)
-    handleAutoSave(true).catch(err => console.error('Error en autoguardado de firma responsable:', err));
+    handleAutoSave(true).catch(err => logger.debug('Error en autoguardado de firma responsable:', err));
   }, [setFirmaResponsable, verificarFirmasCompletadasLocal, handleAutoSave]);
 
   const handleDiscardChanges = useCallback(async () => {
@@ -265,9 +261,9 @@ export const useAuditoriaHandlers = ({
       await autoSaveService.clearLocalStorage(userProfile?.uid || null);
       setHasUnsavedChanges(false);
       setLastSaved(null);
-      console.log('🗑️ Cambios descartados');
+      logger.debug('Cambios descartados');
     } catch (error) {
-      console.error('❌ Error al descartar cambios:', error);
+      logger.error('Error al descartar cambios:', error);
     }
   }, [setHasUnsavedChanges, setLastSaved, userProfile?.uid]);
 
@@ -284,7 +280,7 @@ export const useAuditoriaHandlers = ({
     
     // Guardar en segundo plano (sin bloquear la navegación)
     handleAutoSave(true).catch(err => {
-      console.error('❌ Error al guardar en segundo plano:', err);
+      logger.debug('Error al guardar en segundo plano:', err);
       // No mostrar error al usuario para no interrumpir el flujo
     });
   }, [activeStep, setNavegacionError, setActiveStep, handleAutoSave]);

@@ -3,6 +3,8 @@
  * Funciones de validación, progreso y navegación
  */
 
+import logger from '../../../../utils/logger';
+
 /**
  * Valida si todas las preguntas han sido contestadas
  * @param {Array} respuestas - Array de respuestas por sección
@@ -10,59 +12,27 @@
  */
 export const todasLasPreguntasContestadas = (respuestas) => {
   if (!respuestas || !Array.isArray(respuestas) || respuestas.length === 0) {
-    console.log('❌ [todasLasPreguntasContestadas] No hay respuestas válidas:', {
-      respuestas,
-      esArray: Array.isArray(respuestas),
-      length: respuestas?.length || 0
-    });
+    logger.debug('No hay respuestas válidas para validar');
     return false;
   }
   
   // Verificar que todas las secciones tengan todas sus preguntas respondidas
   const resultado = respuestas.every((seccionRespuestas, seccionIndex) => {
     if (!Array.isArray(seccionRespuestas)) {
-      console.log(`❌ [todasLasPreguntasContestadas] Sección ${seccionIndex} no es un array:`, seccionRespuestas);
+      logger.debug(`Sección ${seccionIndex} no es un array`);
       return false;
     }
     
     // Verificar que todas las respuestas de la sección estén contestadas (no vacías, null o undefined)
-    const todasRespondidas = seccionRespuestas.every((respuesta, preguntaIndex) => {
-      const estaRespondida = respuesta !== '' && respuesta !== null && respuesta !== undefined;
-      if (!estaRespondida && respuesta !== '') {
-        // Solo loggear si no está vacía pero tampoco es válida (para no saturar los logs)
-        console.log(`❌ [todasLasPreguntasContestadas] Sección ${seccionIndex}, pregunta ${preguntaIndex} no respondida:`, respuesta);
-      }
-      return estaRespondida;
+    const todasRespondidas = seccionRespuestas.every((respuesta) => {
+      return respuesta !== '' && respuesta !== null && respuesta !== undefined;
     });
-    
-    if (!todasRespondidas) {
-      console.log(`❌ [todasLasPreguntasContestadas] Sección ${seccionIndex} no está completa:`, {
-        length: seccionRespuestas.length,
-        contenido: seccionRespuestas,
-        detalleRespuestas: seccionRespuestas.map((resp, idx) => ({
-          pregunta: idx,
-          respuesta: resp,
-          valida: resp !== '' && resp !== null && resp !== undefined
-        }))
-      });
-    }
     
     return todasRespondidas;
   });
   
-  if (resultado) {
-    console.log('✅ [todasLasPreguntasContestadas] Todas las preguntas están completadas');
-  } else {
-    console.log('❌ [todasLasPreguntasContestadas] No todas las preguntas están completadas:', {
-      totalSecciones: respuestas.length,
-      seccionesCompletas: respuestas.map((seccion, idx) => ({
-        seccion: idx,
-        length: seccion?.length || 0,
-        todasRespondidas: Array.isArray(seccion) && seccion.every(resp => resp !== '' && resp !== null && resp !== undefined),
-        contenido: seccion
-      }))
-    });
-  }
+  // Solo loggear en debug si es necesario (evitar logs repetidos)
+  logger.debug('Validación de preguntas completadas', { resultado });
   
   return resultado;
 };
