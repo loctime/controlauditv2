@@ -130,30 +130,11 @@ async function confirmUpload(
 
   const data = await response.json();
   
-  // Obtener información completa del archivo para obtener bucketKey
-  const fileInfoResponse = await fetch(
-    `${BACKEND_URL}/api/files/${data.fileId}`,
-    {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-      },
-    }
-  );
-
-  if (!fileInfoResponse.ok) {
-    // Si falla obtener info completa, usar lo que tenemos
-    console.warn('[controlFileB2Service] No se pudo obtener información completa del archivo');
-    return {
-      fileId: data.fileId,
-      bucketKey: data.bucketKey || '',
-    };
-  }
-
-  const fileInfo = await fileInfoResponse.json();
-  
+  // ✅ ELIMINADO: Fetch innecesario a /api/files/:id
+  // El backend debe devolver directamente { fileId, bucketKey }
   return {
     fileId: data.fileId,
-    bucketKey: fileInfo.bucketKey || data.bucketKey || '',
+    bucketKey: data.bucketKey || '',
   };
 }
 

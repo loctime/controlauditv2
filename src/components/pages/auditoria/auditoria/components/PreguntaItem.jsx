@@ -73,58 +73,70 @@ const PreguntaItem = ({
     const file = event.target.files?.[0];
     if (!file) return;
 
+    // ✅ PROTECCIÓN IDEMPOTENTE: Si ya hay imagen con fileId, no hacer nada
+    if (imagenes && typeof imagenes === 'object' && imagenes.fileId) {
+      console.log('✅ [PreguntaItem] Imagen ya subida, ignorando:', imagenes.fileId);
+      return;
+    }
+
     const key = `${seccionIndex}-${preguntaIndex}`;
     setLocalProcesandoImagen(true);
 
     try {
-      // PRIMERO: Guardar el File object inmediatamente para el reporte
-      // Esto mantiene la compatibilidad con el sistema anterior
-      if (onImageUploaded) {
-        onImageUploaded(seccionIndex, preguntaIndex, file);
+      // Validar que tenemos los datos necesarios para subir
+      if (!companyId || !auditId) {
+        console.warn('ℹ️ [PreguntaItem] Subida omitida (falta companyId o auditId)');
+        return;
       }
 
-      // SEGUNDO: Subir a ControlFile en segundo plano (si tenemos los datos necesarios)
-      if (companyId && auditId) {
-        // Validar autenticación desde el contexto
-        if (user && isLogged && !authLoading) {
-          try {
-            // Generar auditId temporal si no existe o es temporal
-            const effectiveAuditId = auditId && !auditId.startsWith('offline_') 
-              ? auditId 
-              : `offline_${crypto.randomUUID()}`;
+      // Validar autenticación
+      if (!user || !isLogged || authLoading) {
+        console.warn('ℹ️ [PreguntaItem] Subida omitida (usuario no autenticado)');
+        return;
+      }
 
-            // Asegurar carpetas antes de subir (evita duplicados)
-            const mainFolderId = await ensureTaskbarFolder('ControlAudit');
-            if (mainFolderId) {
-              // Asegurar subcarpeta "Auditorías"
-              const auditoriasFolderId = await ensureSubFolder('Auditorías', mainFolderId);
-              const targetFolderId = auditoriasFolderId || mainFolderId;
-              
-              // Subir archivo a ControlFile usando Backblaze B2 (flujo oficial)
-              const result = await uploadEvidence({
-                file,
-                auditId: effectiveAuditId,
-                companyId,
-                seccionId: seccionIndex.toString(),
-                preguntaId: preguntaIndex.toString(),
-                parentId: targetFolderId,
-                fecha: new Date()
-              });
+      // Generar auditId temporal si no existe o es temporal
+      const effectiveAuditId = auditId && !auditId.startsWith('offline_') 
+        ? auditId 
+        : `offline_${crypto.randomUUID()}`;
 
-              console.log('✅ [PreguntaItem] Imagen subida a ControlFile:', result.fileId);
-              // Opcional: Actualizar con fileId si se necesita referencia futura
-              // Por ahora mantenemos el File object para compatibilidad con reportes
-            }
-          } catch (uploadError) {
-            console.warn('⚠️ [PreguntaItem] Error al subir a ControlFile (continuando con File local):', uploadError);
-            // Continuar aunque falle la subida - el File object ya está guardado
-          }
-        }
-      } else {
-        console.log('ℹ️ [PreguntaItem] Subida a ControlFile omitida (falta companyId o auditId), usando File local');
+      // Asegurar carpetas antes de subir
+      const mainFolderId = await ensureTaskbarFolder('ControlAudit');
+      if (!mainFolderId) {
+        throw new Error('No se pudo obtener carpeta principal');
+      }
+
+      const auditoriasFolderId = await ensureSubFolder('Auditorías', mainFolderId);
+      const targetFolderId = auditoriasFolderId || mainFolderId;
+      
+      // Subir archivo a ControlFile usando Backblaze B2 (flujo oficial)
+      const result = await uploadEvidence({
+        file,
+        auditId: effectiveAuditId,
+        companyId,
+        seccionId: seccionIndex.toString(),
+        preguntaId: preguntaIndex.toString(),
+        parentId: targetFolderId,
+        fecha: new Date()
+      });
+
+      console.log('✅ [PreguntaItem] Imagen subida a ControlFile:', result.fileId);
+
+      // ✅ Guardar SOLO metadata, NO File object
+      const metadata = {
+        fileId: result.fileId,
+        name: file.name,
+        type: file.type,
+        size: file.size
+      };
+
+      // Llamar callback con metadata, NO File
+      if (onImageUploaded) {
+        onImageUploaded(seccionIndex, preguntaIndex, metadata);
       }
     } catch (error) {
-      console.error('❌ Error al procesar archivo:', error);
+      console.error('❌ Error al subir archivo:', error);
+      // No guardar nada si falla la subida
     } finally {
       setLocalProcesandoImagen(false);
       // Limpiar el input para permitir seleccionar el mismo archivo de nuevo

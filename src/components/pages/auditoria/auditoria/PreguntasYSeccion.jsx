@@ -391,62 +391,7 @@ const PreguntasYSeccion = ({
     setComentario("");
   };
 
-  const handleFileChange = async (seccionIndex, preguntaIndex, event) => {
-    const file = event.target.files[0];
-    
-    if (!file) return;
-    
-    // Validar archivo
-    const validacion = validarArchivoImagen(file);
-    if (!validacion.valido) {
-      alert(validacion.error);
-      return;
-    }
-    
-    // Mostrar indicador de procesamiento
-    const key = `${seccionIndex}-${preguntaIndex}`;
-    setProcesandoImagen(prev => ({ ...prev, [key]: true }));
-    
-    try {
-      console.log(`🔄 Procesando imagen: ${(file.size/1024/1024).toFixed(2)}MB`);
-      
-      // Comprimir imagen antes de guardar
-      const compressedFile = await comprimirImagen(file);
-      
-      // Solo permitir una imagen por pregunta
-      const nuevasImagenes = imagenes.map((img, index) => {
-        if (index === seccionIndex) {
-          // Reemplazar cualquier imagen existente con la nueva
-          return [...img.slice(0, preguntaIndex), compressedFile, ...img.slice(preguntaIndex + 1)];
-        }
-        return img;
-      });
-      
-      setImagenes(nuevasImagenes);
-      guardarImagenes(nuevasImagenes);
-      
-      console.log(`✅ Imagen optimizada y guardada para pregunta ${preguntaIndex} de sección ${seccionIndex}`);
-    } catch (error) {
-      console.error('❌ Error al procesar imagen:', error);
-      
-      // Fallback: usar imagen original si falla la compresión
-      const nuevasImagenes = imagenes.map((img, index) => {
-        if (index === seccionIndex) {
-          // Reemplazar cualquier imagen existente con la nueva
-          return [...img.slice(0, preguntaIndex), file, ...img.slice(preguntaIndex + 1)];
-        }
-        return img;
-      });
-      
-      setImagenes(nuevasImagenes);
-      guardarImagenes(nuevasImagenes);
-      
-      console.log('⚠️ Usando imagen original sin optimizar');
-    } finally {
-      // Ocultar indicador ade procesamiento
-      setProcesandoImagen(prev => ({ ...prev, [key]: false }));
-    }
-  };
+  // ❌ ELIMINADO: handleFileChange - usar solo handleFileUpload en PreguntaItem
 
   // Funciones para manejar cámara web
   const handleOpenCameraDialog = (seccionIndex, preguntaIndex) => {
@@ -460,11 +405,19 @@ const PreguntasYSeccion = ({
   };
 
   const handlePhotoCapture = (compressedFile) => {
-    handleFileChange(currentImageSeccion, currentImagePregunta, { target: { files: [compressedFile] } });
+    // ✅ Usar el input de PreguntaItem en lugar de handleFileChange
+    const input = document.getElementById(`upload-gallery-${currentImageSeccion}-${currentImagePregunta}`);
+    if (input) {
+      // Crear un DataTransfer para simular selección de archivo
+      const dataTransfer = new DataTransfer();
+      dataTransfer.items.add(compressedFile);
+      input.files = dataTransfer.files;
+      input.dispatchEvent(new Event('change', { bubbles: true }));
+    }
   };
 
   const handleSelectFromGallery = () => {
-    // Simular click en el input de galería
+    // ✅ Usar el input de PreguntaItem (ya no hay inputs duplicados)
     const input = document.getElementById(`upload-gallery-${currentImageSeccion}-${currentImagePregunta}`);
     if (input) {
       input.click();
@@ -487,26 +440,28 @@ const PreguntasYSeccion = ({
   };
 
   // Handler para cuando se sube una imagen
-  const handleImageUploaded = (seccionIndex, preguntaIndex, imageData) => {
-    console.log('📸 [PreguntasYSeccion] Imagen subida:', { seccionIndex, preguntaIndex, imageData });
+  const handleImageUploaded = (seccionIndex, preguntaIndex, metadata) => {
+    console.log('📸 [PreguntasYSeccion] Imagen subida:', { seccionIndex, preguntaIndex, metadata });
     
-    // imageData puede ser:
-    // - File object (para compatibilidad con reportes)
-    // - Objeto con fileId (si viene de ControlFile)
-    // - String URL (formato antiguo)
+    // ✅ metadata DEBE ser objeto con fileId, NO File object
+    // Formato esperado: { fileId, name, type, size }
+    if (!metadata || typeof metadata !== 'object' || !metadata.fileId) {
+      console.error('❌ [PreguntasYSeccion] metadata inválido, debe tener fileId:', metadata);
+      return;
+    }
     
-    // Actualizar el estado de imágenes
+    // Actualizar el estado de imágenes con metadata, NO File
     const nuevasImagenes = imagenes.map((img, index) => {
       if (index === seccionIndex) {
-        // Reemplazar cualquier imagen existente con la nueva
-        return [...img.slice(0, preguntaIndex), imageData, ...img.slice(preguntaIndex + 1)];
+        // Reemplazar cualquier imagen existente con la nueva metadata
+        return [...img.slice(0, preguntaIndex), metadata, ...img.slice(preguntaIndex + 1)];
       }
       return img;
     });
     
     setImagenes(nuevasImagenes);
     guardarImagenes(nuevasImagenes);
-    console.log(`✅ Imagen guardada para pregunta ${preguntaIndex} de sección ${seccionIndex}`);
+    console.log(`✅ Metadata de imagen guardada para pregunta ${preguntaIndex} de sección ${seccionIndex}`);
   };
 
   // Función para navegar a una pregunta específica
@@ -628,29 +583,7 @@ const PreguntasYSeccion = ({
         </Box>
       ))}
 
-      {/* Inputs de archivo ocultos */}
-      {secciones.map((seccion, seccionIndex) => (
-        seccion.preguntas.map((pregunta, preguntaIndex) => (
-          <Box key={`inputs-${seccionIndex}-${preguntaIndex}`} sx={{ display: 'none' }}>
-            {/* Input para cámara */}
-            <input
-              id={`upload-camera-${seccionIndex}-${preguntaIndex}`}
-              type="file"
-              accept="image/*"
-              onChange={(event) => handleFileChange(seccionIndex, preguntaIndex, event)}
-              style={{ display: 'none' }}
-            />
-            {/* Input para galería */}
-            <input
-              id={`upload-gallery-${seccionIndex}-${preguntaIndex}`}
-              type="file"
-              accept="image/*"
-              onChange={(event) => handleFileChange(seccionIndex, preguntaIndex, event)}
-              style={{ display: 'none' }}
-            />
-          </Box>
-        ))
-      ))}
+      {/* ❌ ELIMINADOS: Inputs duplicados - ahora se manejan en PreguntaItem */}
 
       {/* Modales */}
       <CommentModal
