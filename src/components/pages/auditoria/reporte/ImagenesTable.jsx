@@ -21,6 +21,28 @@ const getSafeValue = (val) => {
   return String(val);
 };
 
+// Función helper para convertir imagen a URL usando shareToken
+const imagenToUrl = (imagen) => {
+  if (!imagen) return null;
+  
+  // ✅ PRIORIDAD 1: Usar shareToken para URL persistente
+  if (typeof imagen === 'object' && imagen.shareToken) {
+    return `https://files.controldoc.app/api/shares/${imagen.shareToken}/image`;
+  }
+  
+  // ⚠️ COMPATIBILIDAD: Si tiene URL (datos antiguos)
+  if (typeof imagen === 'object' && imagen.url && typeof imagen.url === 'string') {
+    return imagen.url;
+  }
+  
+  // ⚠️ COMPATIBILIDAD: Si es string directo (URL antigua)
+  if (typeof imagen === 'string' && imagen.trim() !== '' && imagen !== '[object Object]') {
+    return imagen;
+  }
+  
+  return null;
+};
+
 // Función helper para procesar imagen
 const procesarImagen = (imagen, seccionIndex, preguntaIndex) => {
   console.debug(`[ImagenesTable] Procesando imagen para sección ${seccionIndex}, pregunta ${preguntaIndex}:`, imagen);
@@ -30,34 +52,23 @@ const procesarImagen = (imagen, seccionIndex, preguntaIndex) => {
     return null;
   }
 
-  // Si es un objeto con URL
-  if (typeof imagen === 'object' && imagen.url && typeof imagen.url === 'string') {
-    console.debug(`[ImagenesTable] Imagen con URL: ${imagen.url}`);
-    return imagen.url;
-  }
-
-  // Si es una string (URL directa)
-  if (typeof imagen === 'string' && imagen.trim() !== '' && imagen !== '[object Object]') {
-    console.debug(`[ImagenesTable] Imagen como string: ${imagen}`);
-    return imagen;
-  }
-
-  // Si es un array de imágenes
+  // Si es un array de imágenes, tomar la primera
   if (Array.isArray(imagen) && imagen.length > 0) {
     console.debug(`[ImagenesTable] Array de imágenes:`, imagen);
-    // Tomar la primera imagen del array
-    const primeraImagen = imagen[0];
-    if (typeof primeraImagen === 'object' && primeraImagen.url && typeof primeraImagen.url === 'string') {
-      return primeraImagen.url;
-    } else if (typeof primeraImagen === 'string' && primeraImagen !== '[object Object]') {
-      return primeraImagen;
-    }
+    return imagenToUrl(imagen[0]);
   }
 
   // Si es "[object Object]", es una imagen corrupta
   if (typeof imagen === 'string' && imagen === '[object Object]') {
     console.warn(`[ImagenesTable] Imagen corrupta "[object Object]" para sección ${seccionIndex}, pregunta ${preguntaIndex}`);
     return null;
+  }
+
+  // Procesar imagen individual
+  const url = imagenToUrl(imagen);
+  if (url) {
+    console.debug(`[ImagenesTable] URL generada: ${url}`);
+    return url;
   }
 
   console.debug(`[ImagenesTable] Formato de imagen no reconocido:`, imagen);

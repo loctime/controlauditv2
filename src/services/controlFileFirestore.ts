@@ -196,8 +196,8 @@ export async function uploadEvidence({
   preguntaId?: string;
   fecha?: Date | string;
   parentId?: string | null;
-}): Promise<{ fileId: string; fileURL?: string }> {
-  // Usar el servicio B2 y obtener URL temporal si se necesita
+}): Promise<{ fileId: string; shareToken: string }> {
+  // ✅ Usar el servicio B2 que ahora retorna shareToken
   const result = await uploadEvidenceB2({
     file,
     auditId,
@@ -208,14 +208,11 @@ export async function uploadEvidence({
     parentId
   });
   
-  // Obtener URL temporal para compatibilidad (pero NO guardarla)
-  try {
-    const tempUrl = await getDownloadUrlB2(result.fileId);
-    return { fileId: result.fileId, fileURL: tempUrl };
-  } catch (error) {
-    console.warn('[controlFileFirestore] No se pudo obtener URL temporal:', error);
-    return { fileId: result.fileId };
-  }
+  // ✅ Retornar shareToken en lugar de URL temporal
+  return { 
+    fileId: result.fileId, 
+    shareToken: result.shareToken 
+  };
   try {
     const user = auth.currentUser;
     if (!user) {

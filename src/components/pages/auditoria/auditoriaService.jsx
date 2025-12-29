@@ -1,7 +1,7 @@
 // Servicio centralizado para operaciones de auditoría
 import { collection, addDoc, getDocs, query, where, orderBy, serverTimestamp, doc } from 'firebase/firestore';
 import { dbAudit, auditUserCollection, auditUsersCollection, reportesCollection } from '../../../firebaseControlFile';
-import { uploadEvidence, getDownloadUrl, ensureTaskbarFolder, ensureSubFolder } from '../../../services/controlFileB2Service';
+import { uploadEvidence, ensureTaskbarFolder, ensureSubFolder } from '../../../services/controlFileB2Service';
 import { prepararDatosParaFirestore, registrarAccionSistema } from '../../../utils/firestoreUtils';
 import { getOfflineDatabase, generateOfflineId } from '../../../services/offlineDatabase';
 import syncQueueService from '../../../services/syncQueue';
@@ -131,16 +131,14 @@ class AuditoriaService {
               parentId: folderIdAuditorias
             });
             
-            // Obtener URL de descarga temporal
-            const url = await getDownloadUrl(result.fileId);
-            
             const timestamp = Date.now();
+            // ✅ Guardar shareToken en lugar de URL temporal
             const imagenProcesada = {
               nombre: imagen.name,
               tipo: imagen.type,
               tamaño: imagen.size,
-              url: url,
-              fileId: result.fileId, // Guardar fileId para referencia futura
+              fileId: result.fileId,
+              shareToken: result.shareToken, // ✅ Share persistente
               timestamp: timestamp
             };
             
@@ -170,15 +168,20 @@ class AuditoriaService {
           const primeraImagen = imagen[0];
           if (primeraImagen instanceof File) {
             try {
-              const fileId = await uploadToControlFile(primeraImagen, folderIdAuditorias);
-              const url = await getDownloadUrl(fileId);
+              // ✅ Usar uploadEvidence directamente (igual que arriba)
+              const result = await uploadEvidence({
+                file: primeraImagen,
+                auditId: 'auditoria_general',
+                companyId: 'system',
+                parentId: folderIdAuditorias
+              });
               
               seccionImagenes.push({
                 nombre: primeraImagen.name,
                 tipo: primeraImagen.type,
                 tamaño: primeraImagen.size,
-                url: url,
-                fileId: fileId,
+                fileId: result.fileId,
+                shareToken: result.shareToken, // ✅ Share persistente
                 timestamp: Date.now()
               });
             } catch (error) {

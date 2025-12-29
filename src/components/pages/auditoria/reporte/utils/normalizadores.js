@@ -98,13 +98,20 @@ export const normalizarImagenes = (imagenesFirestore, secciones) => {
       const imagenesSeccion = imgSec.valores.map(val => {
         console.debug(`[normalizarImagenes] Procesando valor:`, val);
         
-        // Si es un objeto con URL válida
+        // ✅ PRIORIDAD 1: Si es un objeto con shareToken, construir URL persistente
+        if (val && typeof val === "object" && val.shareToken) {
+          const url = `https://files.controldoc.app/api/shares/${val.shareToken}/image`;
+          console.debug(`[normalizarImagenes] Encontrado shareToken, URL: ${url}`);
+          return url;
+        }
+        
+        // ⚠️ COMPATIBILIDAD: Si es un objeto con URL válida (datos antiguos)
         if (val && typeof val === "object" && val.url && typeof val.url === 'string') {
           console.debug(`[normalizarImagenes] Encontrada URL: ${val.url}`);
           return val.url;
         } 
         
-        // Si es string válido (no "[object Object]")
+        // ⚠️ COMPATIBILIDAD: Si es string válido (no "[object Object]")
         else if (typeof val === "string" && val.trim() !== '' && val !== '[object Object]') {
           console.debug(`[normalizarImagenes] Encontrada string: ${val}`);
           return val;
@@ -114,7 +121,7 @@ export const normalizarImagenes = (imagenesFirestore, secciones) => {
         else if (typeof val === "string" && val === '[object Object]') {
           console.warn(`[normalizarImagenes] Imagen corrupta "[object Object]" detectada`);
           return "";
-        }
+        } 
         
         // Cualquier otro caso
         else {
@@ -139,6 +146,11 @@ export const normalizarImagenes = (imagenesFirestore, secciones) => {
       if (!Array.isArray(seccionImagenes)) return [];
       
       return seccionImagenes.map(img => {
+        // ✅ PRIORIDAD 1: shareToken
+        if (img && typeof img === "object" && img.shareToken) {
+          return `https://files.controldoc.app/api/shares/${img.shareToken}/image`;
+        }
+        // ⚠️ COMPATIBILIDAD: URL (datos antiguos)
         if (img && typeof img === "object" && img.url && typeof img.url === 'string') {
           return img.url;
         } else if (typeof img === "string" && img.trim() !== '' && img !== '[object Object]') {
@@ -164,6 +176,11 @@ export const normalizarImagenes = (imagenesFirestore, secciones) => {
       
       if (Array.isArray(seccionImagenes)) {
         return seccionImagenes.map(img => {
+          // ✅ PRIORIDAD 1: shareToken
+          if (img && typeof img === "object" && img.shareToken) {
+            return `https://files.controldoc.app/api/shares/${img.shareToken}/image`;
+          }
+          // ⚠️ COMPATIBILIDAD: URL (datos antiguos)
           if (img && typeof img === "object" && img.url && typeof img.url === 'string') {
             return img.url;
           } else if (typeof img === "string" && img.trim() !== '' && img !== '[object Object]') {
@@ -177,7 +194,12 @@ export const normalizarImagenes = (imagenesFirestore, secciones) => {
         const imagenes = [];
         Object.keys(seccionImagenes).forEach(key => {
           const img = seccionImagenes[key];
-          if (img && typeof img === "object" && img.url && typeof img.url === 'string') {
+          // ✅ PRIORIDAD 1: shareToken
+          if (img && typeof img === "object" && img.shareToken) {
+            imagenes.push(`https://files.controldoc.app/api/shares/${img.shareToken}/image`);
+          }
+          // ⚠️ COMPATIBILIDAD: URL (datos antiguos)
+          else if (img && typeof img === "object" && img.url && typeof img.url === 'string') {
             imagenes.push(img.url);
           } else if (typeof img === "string" && img.trim() !== '' && img !== '[object Object]') {
             imagenes.push(img);

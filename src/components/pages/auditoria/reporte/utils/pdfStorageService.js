@@ -1,7 +1,7 @@
 // Servicio para manejar el guardado y descarga de PDFs usando ControlFile
 import { doc, updateDoc } from 'firebase/firestore';
 import { auditUserCollection } from '../../../../firebaseControlFile';
-import { uploadEvidence, getDownloadUrl, ensureTaskbarFolder, ensureSubFolder } from '../../../../services/controlFileB2Service';
+import { uploadEvidence, ensureTaskbarFolder, ensureSubFolder } from '../../../../services/controlFileB2Service';
 import generarContenidoImpresion from './generadorHTML';
 
 /**
@@ -54,7 +54,7 @@ const htmlToPdf = async (html) => {
  * @param {string} html - Contenido HTML del reporte
  * @param {Object} metadata - Metadatos del reporte
  * @param {string} companyId - ID de la empresa (opcional, default: 'system')
- * @returns {Promise<string>} - URL de descarga temporal del PDF
+ * @returns {Promise<string>} - URL persistente usando shareToken
  */
 export const guardarPdfEnStorage = async (reporteId, html, metadata = {}, companyId = 'system') => {
   try {
@@ -88,11 +88,12 @@ export const guardarPdfEnStorage = async (reporteId, html, metadata = {}, compan
       fecha: new Date()
     });
     
-    // Obtener URL de descarga temporal (NO guardar esta URL - es temporal)
-    const downloadURL = await getDownloadUrl(result.fileId);
+    // ✅ Usar shareToken para URL persistente
+    const shareUrl = `https://files.controldoc.app/api/shares/${result.shareToken}/image`;
     
     console.log('[pdfStorageService] ✅ PDF guardado exitosamente en ControlFile, fileId:', result.fileId);
-    return downloadURL;
+    console.log('[pdfStorageService] ✅ Share token:', result.shareToken);
+    return shareUrl;
     
   } catch (error) {
     console.error('[pdfStorageService] ❌ Error guardando PDF:', error);

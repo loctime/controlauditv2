@@ -29,7 +29,7 @@ import {
   obtenerIconoRespuesta, 
   preguntaContestada 
 } from '../utils/respuestaUtils.jsx';
-import { uploadEvidence, getDownloadUrl, ensureTaskbarFolder, ensureSubFolder } from '../../../../../services/controlFileB2Service';
+import { uploadEvidence, ensureTaskbarFolder, ensureSubFolder } from '../../../../../services/controlFileB2Service';
 import { useAuth } from '../../../../../components/context/AuthContext';
 
 const PreguntaItem = ({
@@ -59,7 +59,6 @@ const PreguntaItem = ({
   const [expandedAccion, setExpandedAccion] = useState(false);
   const fileInputRef = useRef(null);
   const [localProcesandoImagen, setLocalProcesandoImagen] = useState(false);
-  const [imageUrlCache, setImageUrlCache] = useState({}); // Cache de URLs temporales
   
   // Inicializar estado local de acción requerida
   const accionData = accionRequerida || {
@@ -121,10 +120,12 @@ const PreguntaItem = ({
       });
 
       console.log('✅ [PreguntaItem] Imagen subida a ControlFile:', result.fileId);
+      console.log('✅ [PreguntaItem] Share token creado:', result.shareToken);
 
-      // ✅ Guardar SOLO metadata, NO File object
+      // ✅ Guardar SOLO metadata con shareToken, NO File object, NO URLs temporales
       const metadata = {
         fileId: result.fileId,
+        shareToken: result.shareToken,
         name: file.name,
         type: file.type,
         size: file.size
@@ -148,41 +149,35 @@ const PreguntaItem = ({
 
   const isProcesando = procesandoImagen?.[`${seccionIndex}-${preguntaIndex}`] || localProcesandoImagen;
 
-  // Obtener URL temporal para mostrar imagen si hay fileId
-  const getImageUrl = async (imageData) => {
+  // Obtener URL de imagen usando share token (persistente)
+  const getImageUrl = (imageData) => {
     if (!imageData) return null;
     
-    // Si es un File, crear URL local
+    // Si es un File, crear URL local (solo para preview antes de subir)
     if (imageData instanceof File) {
       return URL.createObjectURL(imageData);
     }
     
-    // Si ya hay URL guardada (compatibilidad con datos antiguos)
+    // ✅ PRIORIDAD 1: Usar shareToken para URL persistente
+    if (imageData.shareToken) {
+      return `https://files.controldoc.app/api/shares/${imageData.shareToken}/image`;
+    }
+    
+    // ⚠️ COMPATIBILIDAD: Si hay URL guardada (datos antiguos)
     if (imageData.fileURL || imageData.url) {
       return imageData.fileURL || imageData.url;
     }
     
-    // Si hay fileId, obtener URL temporal desde ControlFile
-    if (imageData.fileId) {
-      const cacheKey = imageData.fileId;
-      
-      // Verificar cache primero
-      if (imageUrlCache[cacheKey]) {
-        return imageUrlCache[cacheKey];
-      }
-      
-      try {
-        const tempUrl = await getDownloadUrl(imageData.fileId);
-        // Guardar en cache (URL temporal, expira pero útil para la sesión)
-        setImageUrlCache(prev => ({ ...prev, [cacheKey]: tempUrl }));
-        return tempUrl;
-      } catch (error) {
-        console.error('[PreguntaItem] Error al obtener URL temporal:', error);
-        return null;
-      }
+    // ⚠️ COMPATIBILIDAD: Si solo hay fileId (sin shareToken), intentar construir share
+    // Nota: Esto es para datos antiguos. Los nuevos siempre deben tener shareToken
+    if (imageData.fileId && !imageData.shareToken) {
+      console.warn('[PreguntaItem] Imagen sin shareToken, usando fileId:', imageData.fileId);
+      // Para datos antiguos, podríamos intentar obtener shareToken desde Firestore
+      // Por ahora, retornamos null para forzar migración
+      return null;
     }
     
-    // Fallback: si es string directo (compatibilidad)
+    // Fallback: si es string directo (compatibilidad con URLs antiguas)
     if (typeof imageData === 'string') {
       return imageData;
     }
@@ -191,30 +186,7 @@ const PreguntaItem = ({
   };
 
   // Estado para URL de imagen resuelta
-  const [resolvedImageUrl, setResolvedImageUrl] = useState(null);
-
-  // Resolver URL de imagen cuando cambie imagenes
-  useEffect(() => {
-    let cancelled = false;
-    
-    if (imagenes) {
-      getImageUrl(imagenes).then(url => {
-        if (!cancelled) {
-          setResolvedImageUrl(url);
-        }
-      }).catch(() => {
-        if (!cancelled) {
-          setResolvedImageUrl(null);
-        }
-      });
-    } else {
-      setResolvedImageUrl(null);
-    }
-    
-    return () => {
-      cancelled = true;
-    };
-  }, [imagenes]);
+  const resolvedImageUrl = getImageUrl(imagenes);
 
   return (
     <Box 
@@ -500,20 +472,16 @@ const PreguntaItem = ({
                   border: '1px solid #eee',
                   cursor: 'pointer'
                 }}
-                onClick={async () => {
-                  // Obtener URL fresca para abrir (puede haber expirado)
-                  const url = await getImageUrl(imagenes);
+                onClick={() => {
+                  // Abrir imagen en nueva pestaña usando share token (URL persistente)
+                  const url = getImageUrl(imagenes);
                   if (url) {
                     window.open(url, '_blank');
                   }
                 }}
-                onError={() => {
-                  // Si la URL expiró, intentar refrescar
-                  if (imagenes?.fileId) {
-                    getImageUrl(imagenes).then(url => {
-                      if (url) setResolvedImageUrl(url);
-                    });
-                  }
+                onError={(e) => {
+                  // Si falla la carga, puede ser un problema de CORS o archivo eliminado
+                  console.error('[PreguntaItem] Error al cargar imagen:', e);
                 }}
               />
               <Button
