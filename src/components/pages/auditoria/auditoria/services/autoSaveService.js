@@ -521,7 +521,13 @@ class AutoSaveService {
         for (let preguntaIndex = 0; preguntaIndex < seccionImagenes.length; preguntaIndex++) {
           const imagen = seccionImagenes[preguntaIndex];
           
-          // Solo guardar si es un File object real (no string, no null, no undefined)
+          // ✅ REGLA DE ORO: NO guardar en IndexedDB imágenes que ya tengan fileId
+          if (imagen && typeof imagen === 'object' && imagen.fileId) {
+            console.log(`[AutoSaveService] Imagen ya sincronizada, NO guardando en IndexedDB: ${imagen.fileId}`);
+            continue;
+          }
+          
+          // Solo guardar File objects que aún no tienen fileId
           if (imagen instanceof File) {
             // Convertir File a Blob y guardar en IndexedDB
             const fotoId = generateOfflineId();

@@ -104,6 +104,21 @@ class AuditoriaService {
         
         console.debug(`[AuditoriaService] Procesando imagen sección ${seccionIndex}, pregunta ${preguntaIndex}:`, imagen);
         
+        // ✅ REGLA DE ORO: Si imagen tiene fileId, preservar sin subir (ya fue subida)
+        if (imagen && typeof imagen === 'object' && imagen.fileId) {
+          console.log(`[AuditoriaService] Imagen ya subida, preservando fileId: ${imagen.fileId}`);
+          seccionImagenes.push(imagen);
+          continue;
+        }
+        
+        // ✅ Si tiene url pero no fileId, preservar (compatibilidad)
+        if (imagen && typeof imagen === 'object' && imagen.url && !imagen.fileId) {
+          console.log(`[AuditoriaService] Imagen con URL preservada: ${imagen.url}`);
+          seccionImagenes.push(imagen);
+          continue;
+        }
+        
+        // Solo subir si es File
         if (imagen instanceof File) {
           try {
             console.log(`[AuditoriaService] 📤 Subiendo archivo a ControlFile: ${imagen.name}, tamaño: ${(imagen.size/1024/1024).toFixed(2)}MB, parentId: ${folderIdAuditorias || 'null (raíz)'}`);
@@ -606,6 +621,13 @@ class AuditoriaService {
         for (let preguntaIndex = 0; preguntaIndex < seccionImagenes.length; preguntaIndex++) {
           const imagen = seccionImagenes[preguntaIndex];
           
+          // ✅ REGLA DE ORO: NO guardar en IndexedDB imágenes que ya tengan fileId
+          if (imagen && typeof imagen === 'object' && imagen.fileId) {
+            console.log(`[AuditoriaService] Imagen ya sincronizada, NO guardando en IndexedDB: ${imagen.fileId}`);
+            continue;
+          }
+          
+          // Solo guardar File objects que aún no tienen fileId
           if (imagen instanceof File) {
             // Convertir File a Blob y guardar en IndexedDB
             const fotoId = generateOfflineId();

@@ -533,7 +533,22 @@ class SyncQueueService {
       for (let preguntaIndex = 0; preguntaIndex < seccionActual.length; preguntaIndex++) {
         const imagen = seccionActual[preguntaIndex];
         
-        if (imagen && typeof imagen === 'object' && imagen.id) {
+        // ✅ REGLA DE ORO: Si imagen tiene fileId, preservar tal cual (ya fue subida)
+        if (imagen && typeof imagen === 'object' && imagen.fileId) {
+          console.log('[SyncQueue] Imagen ya sincronizada, preservando fileId:', imagen.fileId);
+          seccionImagenes.push(imagen);
+          continue;
+        }
+        
+        // ✅ Si tiene url pero no fileId, preservar (compatibilidad)
+        if (imagen && typeof imagen === 'object' && imagen.url && !imagen.fileId) {
+          console.log('[SyncQueue] Imagen con URL preservada:', imagen.url);
+          seccionImagenes.push(imagen);
+          continue;
+        }
+        
+        // Solo convertir a File si es referencia offline sin fileId
+        if (imagen && typeof imagen === 'object' && imagen.id && !imagen.fileId) {
           // Es una imagen offline, obtener el blob
           const fotoData = await db.get('fotos', imagen.id);
           if (fotoData && fotoData.blob) {
@@ -546,6 +561,7 @@ class SyncQueueService {
             seccionImagenes.push(null);
           }
         } else {
+          // Preservar otros tipos (File, null, string, etc.)
           seccionImagenes.push(imagen);
         }
       }
