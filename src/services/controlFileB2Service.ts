@@ -139,6 +139,61 @@ async function confirmUpload(
 }
 
 /**
+ * Genera un token único para share links
+ * @returns {string} Token único de 21 caracteres
+ */
+function generateShareToken(): string {
+  const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+  let token = '';
+  for (let i = 0; i < 21; i++) {
+    token += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return token;
+}
+
+/**
+ * Crea un share persistente en Firestore para un archivo
+ * @param {string} fileId - ID del archivo
+ * @param {string} userId - ID del usuario propietario
+ * @returns {Promise<string>} Token del share creado
+ */
+async function createShareToken(fileId: string, userId: string): Promise<string> {
+  const sharesCol = collection(db, 'shares');
+  let token: string;
+  let attempts = 0;
+  const maxAttempts = 5;
+
+  // Generar token único (verificar colisiones)
+  do {
+    token = generateShareToken();
+    const shareDocRef = doc(sharesCol, token);
+    const shareDoc = await getDoc(shareDocRef);
+    
+    if (!shareDoc.exists()) {
+      break; // Token único encontrado
+    }
+    
+    attempts++;
+    if (attempts >= maxAttempts) {
+      throw new Error('No se pudo generar un token único después de varios intentos');
+    }
+  } while (true);
+
+  // Crear documento del share en Firestore
+  const shareDocRef = doc(sharesCol, token);
+  await setDoc(shareDocRef, {
+    fileId,
+    userId,
+    isPublic: true,
+    createdAt: serverTimestamp(),
+    // No incluir expiresAt para que sea persistente (no expira)
+  });
+
+  console.log('[controlFileB2Service] 🔗 Share token creado:', token);
+  return token;
+}
+
+/**
  * Sube una evidencia usando el flujo oficial de Backblaze B2
  * @param {Object} params - Parámetros de la subida
  * @param {File} params.file - Archivo a subir
@@ -148,7 +203,7 @@ async function confirmUpload(
  * @param {string} params.preguntaId - ID de la pregunta (opcional)
  * @param {Date|string} params.fecha - Fecha de la evidencia (opcional)
  * @param {string | null} params.parentId - ID de la carpeta padre (opcional)
- * @returns {Promise<{fileId: string}>} Solo retorna fileId (NO URL permanente)
+ * @returns {Promise<{fileId: string, shareToken: string}>} Retorna fileId y shareToken persistente
  */
 export async function uploadEvidence({
   file,
@@ -166,8 +221,15 @@ export async function uploadEvidence({
   preguntaId?: string;
   fecha?: Date | string;
   parentId?: string | null;
-}): Promise<{ fileId: string }> {
+}): Promise<{ fileId: string; shareToken: string }> {
   try {
+    const user = auth.currentUser;
+    if (!user) {
+      throw new Error('Usuario no autenticado');
+    }
+
+    const userId = user.uid;
+
     // Preparar metadata para ControlFile
     const fechaValue = fecha instanceof Date ? fecha.toISOString() : (fecha || new Date().toISOString());
     const metadata = {
@@ -194,10 +256,15 @@ export async function uploadEvidence({
     console.log('[controlFileB2Service] ✅ Confirmando upload en ControlFile...');
     const { fileId } = await confirmUpload(presignData.uploadSessionId);
 
+    // 4. Crear share persistente en Firestore
+    console.log('[controlFileB2Service] 🔗 Creando share persistente...');
+    const shareToken = await createShareToken(fileId, userId);
+
     console.log('[controlFileB2Service] ✅ Archivo subido exitosamente:', fileId);
+    console.log('[controlFileB2Service] ✅ Share token creado:', shareToken);
     
-    // IMPORTANTE: Solo retornar fileId, NO URL permanente
-    return { fileId };
+    // Retornar fileId y shareToken (NO URL permanente)
+    return { fileId, shareToken };
   } catch (error) {
     console.error('[controlFileB2Service] ❌ Error al subir evidencia:', error);
     throw error instanceof Error ? error : new Error(String(error));
