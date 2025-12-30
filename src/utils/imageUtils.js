@@ -21,8 +21,9 @@ export const convertirShareTokenAUrl = (valor) => {
     const trimmed = valor.trim();
     if (!trimmed || trimmed === '[object Object]') return null;
     
-    // Si ya es URL, retornarla (compatibilidad con datos antiguos)
+    // ⚠️ SOLO para compatibilidad legacy - NO persistir URLs
     if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+      console.warn('[imageUtils] ⚠️ URL legacy detectada (no persistir):', trimmed);
       return trimmed;
     }
     
@@ -79,19 +80,24 @@ export const convertirImagenesADataUrls = async (imagenes) => {
       
       return Promise.all(
         seccion.map(async (img) => {
-          if (!img) return img;
+          if (!img) return null;
           
           // Primero convertir shareToken a URL si es necesario
           const url = convertirShareTokenAUrl(img);
-          if (!url) return img;
+          
+          // Guard defensivo: solo procesar URLs válidas
+          if (!url || !url.startsWith('http')) {
+            // Si no es URL válida, retornar null (evita basura en PDF)
+            return null;
+          }
           
           // Si es URL externa, convertir a base64
           if (url.startsWith('http://') || url.startsWith('https://')) {
             const dataUrl = await convertirImagenADataUrl(url);
-            return dataUrl || url; // Fallback a URL si falla conversión
+            return dataUrl || null; // Retornar null si falla conversión (mejor que URL rota)
           }
           
-          return img;
+          return null;
         })
       );
     })
