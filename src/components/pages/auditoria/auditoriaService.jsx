@@ -132,13 +132,15 @@ class AuditoriaService {
             });
             
             const timestamp = Date.now();
-            // ✅ Guardar shareToken en lugar de URL temporal
+            // ✅ Guardar shareToken con seccionId y preguntaId
             const imagenProcesada = {
+              fileId: result.fileId,
+              shareToken: result.shareToken,
+              seccionId: seccionIndex.toString(),
+              preguntaId: preguntaIndex.toString(),
               nombre: imagen.name,
               tipo: imagen.type,
               tamaño: imagen.size,
-              fileId: result.fileId,
-              shareToken: result.shareToken, // ✅ Share persistente
               timestamp: timestamp
             };
             
@@ -177,11 +179,13 @@ class AuditoriaService {
               });
               
               seccionImagenes.push({
+                fileId: result.fileId,
+                shareToken: result.shareToken,
+                seccionId: seccionIndex.toString(),
+                preguntaId: preguntaIndex.toString(),
                 nombre: primeraImagen.name,
                 tipo: primeraImagen.type,
                 tamaño: primeraImagen.size,
-                fileId: result.fileId,
-                shareToken: result.shareToken, // ✅ Share persistente
                 timestamp: Date.now()
               });
             } catch (error) {
@@ -265,10 +269,12 @@ class AuditoriaService {
               fecha: new Date()
             });
             
-            // ✅ Guardar SOLO metadata con shareToken
+            // ✅ Guardar metadata con shareToken, seccionId y preguntaId
             const imagenProcesada = {
               fileId: result.fileId,
-              shareId: result.shareToken, // shareToken es el shareId
+              shareToken: result.shareToken,
+              seccionId: seccionIndex.toString(),
+              preguntaId: preguntaIndex.toString(),
               name: imagen.name,
               mime: imagen.type,
               size: imagen.size

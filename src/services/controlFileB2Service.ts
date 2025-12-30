@@ -159,39 +159,56 @@ function generateShareToken(): string {
  * @returns {Promise<string>} Token del share creado
  */
 async function createShareToken(fileId: string, userId: string): Promise<string> {
-  const sharesCol = collection(db, 'shares');
-  let token: string;
-  let attempts = 0;
-  const maxAttempts = 5;
+  try {
+    console.log('[controlFileB2Service] 🔗 Creando share para fileId:', fileId, 'userId:', userId);
+    
+    const sharesCol = collection(db, 'shares');
+    let token: string;
+    let attempts = 0;
+    const maxAttempts = 5;
 
-  // Generar token único (verificar colisiones)
-  do {
-    token = generateShareToken();
+    // Generar token único (verificar colisiones)
+    do {
+      token = generateShareToken();
+      const shareDocRef = doc(sharesCol, token);
+      const shareDoc = await getDoc(shareDocRef);
+      
+      if (!shareDoc.exists()) {
+        break; // Token único encontrado
+      }
+      
+      attempts++;
+      if (attempts >= maxAttempts) {
+        throw new Error('No se pudo generar un token único después de varios intentos');
+      }
+    } while (true);
+
+    // Crear documento del share en Firestore
     const shareDocRef = doc(sharesCol, token);
-    const shareDoc = await getDoc(shareDocRef);
+    const shareData = {
+      fileId,
+      userId,
+      isPublic: true,
+      createdAt: serverTimestamp(),
+      // No incluir expiresAt para que sea persistente (no expira)
+    };
     
-    if (!shareDoc.exists()) {
-      break; // Token único encontrado
+    console.log('[controlFileB2Service] 🔗 Guardando share en /shares/' + token, shareData);
+    await setDoc(shareDocRef, shareData);
+    
+    // Verificar que se creó correctamente
+    const verifyDoc = await getDoc(shareDocRef);
+    if (!verifyDoc.exists()) {
+      throw new Error('El share no se creó correctamente en Firestore');
     }
     
-    attempts++;
-    if (attempts >= maxAttempts) {
-      throw new Error('No se pudo generar un token único después de varios intentos');
-    }
-  } while (true);
-
-  // Crear documento del share en Firestore
-  const shareDocRef = doc(sharesCol, token);
-  await setDoc(shareDocRef, {
-    fileId,
-    userId,
-    isPublic: true,
-    createdAt: serverTimestamp(),
-    // No incluir expiresAt para que sea persistente (no expira)
-  });
-
-  console.log('[controlFileB2Service] 🔗 Share token creado:', token);
-  return token;
+    console.log('[controlFileB2Service] ✅ Share token creado exitosamente:', token);
+    console.log('[controlFileB2Service] ✅ Documento verificado en /shares/' + token);
+    return token;
+  } catch (error) {
+    console.error('[controlFileB2Service] ❌ Error al crear share token:', error);
+    throw error instanceof Error ? error : new Error(String(error));
+  }
 }
 
 /**
