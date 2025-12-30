@@ -3,6 +3,92 @@ import generarContenidoImpresion from '../utils/generadorHTML';
 import { generarYGuardarPdf } from '../utils/pdfStorageServiceSimple';
 import { registrarAccionSistema } from '../../../../../utils/firestoreUtils';
 
+// Función helper para convertir una imagen externa a data URL (base64)
+const convertirImagenADataUrl = async (imageUrl) => {
+  if (!imageUrl || typeof imageUrl !== 'string') return null;
+  
+  // Si ya es una data URL, retornarla tal cual
+  if (imageUrl.startsWith('data:image')) {
+    return imageUrl;
+  }
+  
+  try {
+    const response = await fetch(imageUrl, { 
+      mode: 'cors', 
+      credentials: 'omit' 
+    });
+    
+    if (!response.ok) {
+      console.warn(`[useImpresionReporte] No se pudo cargar imagen: ${imageUrl} (status: ${response.status})`);
+      return null;
+    }
+    
+    const blob = await response.blob();
+    
+    // Convertir blob a data URL
+    return await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  } catch (error) {
+    console.warn(`[useImpresionReporte] Error convirtiendo imagen a data URL: ${imageUrl}`, error);
+    return null;
+  }
+};
+
+// Función para convertir todas las imágenes del reporte a data URLs
+const convertirImagenesADataUrls = async (imagenes) => {
+  if (!imagenes || !Array.isArray(imagenes)) {
+    return imagenes;
+  }
+  
+  console.log('[useImpresionReporte] 🔄 Convirtiendo imágenes a data URLs...');
+  const startTime = Date.now();
+  
+  try {
+    const imagenesConvertidas = await Promise.all(
+      imagenes.map(async (seccion, seccionIndex) => {
+        if (!Array.isArray(seccion)) {
+          return seccion;
+        }
+        
+        return await Promise.all(
+          seccion.map(async (img, imagenIndex) => {
+            if (!img || typeof img !== 'string') {
+              return img;
+            }
+            
+            // Solo convertir URLs externas (http/https)
+            if (img.startsWith('http://') || img.startsWith('https://')) {
+              const dataUrl = await convertirImagenADataUrl(img);
+              if (dataUrl) {
+                console.log(`[useImpresionReporte] ✅ Imagen convertida: sección ${seccionIndex}, imagen ${imagenIndex}`);
+                return dataUrl;
+              } else {
+                console.warn(`[useImpresionReporte] ⚠️ No se pudo convertir imagen: sección ${seccionIndex}, imagen ${imagenIndex}`);
+                return img; // Fallback a URL original si falla
+              }
+            }
+            
+            // Si ya es data URL o no es URL, retornar tal cual
+            return img;
+          })
+        );
+      })
+    );
+    
+    const elapsedTime = Date.now() - startTime;
+    console.log(`[useImpresionReporte] ✅ Conversión completada en ${elapsedTime}ms`);
+    
+    return imagenesConvertidas;
+  } catch (error) {
+    console.error('[useImpresionReporte] ❌ Error convirtiendo imágenes:', error);
+    return imagenes; // Fallback a imágenes originales si falla
+  }
+};
+
 // Hook personalizado para manejar la lógica de impresión de reportes
 export const useImpresionReporte = () => {
   const [isProcessing, setIsProcessing] = useState(false);
@@ -258,6 +344,10 @@ export const useImpresionReporte = () => {
       }
     }
     
+    // Convertir imágenes a data URLs antes de generar el HTML
+    console.log('[useImpresionReporte] 🔄 Convirtiendo imágenes del reporte a data URLs...');
+    const imagenesConvertidas = await convertirImagenesADataUrls(datosReporte.imagenes);
+    
     // Generar el HTML de impresión
     // Extraer datosReporte anidado si existe, o usar el objeto directamente
     let datosReporteAdicionales = {};
@@ -279,6 +369,7 @@ export const useImpresionReporte = () => {
     
     const html = generarContenidoImpresion({
       ...datosReporte,
+      imagenes: imagenesConvertidas, // Usar imágenes convertidas a data URLs
       datosReporte: datosReporteAdicionales, // Asegurar que datosReporte sea el objeto correcto
       chartImgDataUrl,
       clasificacionesChartImgDataUrl,
@@ -293,6 +384,7 @@ export const useImpresionReporte = () => {
         
         const pdfUrl = await generarYGuardarPdf(reporteId, {
           ...datosReporte,
+          imagenes: imagenesConvertidas, // Usar imágenes convertidas a data URLs
           datosReporte: datosReporteAdicionales, // Asegurar que datosReporte sea el objeto correcto
           chartImgDataUrl,
           sectionChartsImgDataUrl
