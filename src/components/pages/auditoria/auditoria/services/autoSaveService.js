@@ -582,6 +582,9 @@ class AutoSaveService {
           clasificaciones: typeof data.clasificaciones === 'string' 
             ? JSON.parse(data.clasificaciones) 
             : data.clasificaciones || [],
+          accionesRequeridas: typeof data.accionesRequeridas === 'string' 
+            ? JSON.parse(data.accionesRequeridas) 
+            : data.accionesRequeridas || [],
           secciones: typeof data.secciones === 'string' 
             ? JSON.parse(data.secciones) 
             : data.secciones || []

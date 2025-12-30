@@ -314,6 +314,7 @@ const AuditoriaRefactorizada = () => {
   // Refs para evitar bucle infinito en restauración
   const restoreAttemptedRef = useRef(false);
   const restoreRetriesRef = useRef(0);
+  const isRestoringRef = useRef(false);
   const MAX_RESTORE_RETRIES = 10; // Máximo 10 segundos de espera
 
   // Intentar restaurar auditoría al cargar
@@ -415,13 +416,17 @@ const AuditoriaRefactorizada = () => {
               comentarios: savedData.comentarios?.length || 0,
               imagenes: savedData.imagenes?.length || 0,
               clasificaciones: savedData.clasificaciones?.length || 0,
+              accionesRequeridas: savedData.accionesRequeridas?.length || 0,
               secciones: savedData.secciones?.length || 0,
               contenidoRespuestas: savedData.respuestas
             });
             
+            // Marcar que estamos restaurando para evitar que useEffect resetee estados
+            isRestoringRef.current = true;
+            
+            // Restaurar metadatos primero (sin formularioSeleccionadoId aún)
             setEmpresaSeleccionada(savedData.empresaSeleccionada);
             setSucursalSeleccionada(savedData.sucursalSeleccionada);
-            setFormularioSeleccionadoId(savedData.formularioSeleccionadoId);
             setSecciones(savedData.secciones || []);
             
             // Asegurar que respuestas, comentarios e imágenes sean arrays
@@ -441,6 +446,10 @@ const AuditoriaRefactorizada = () => {
               ? savedData.clasificaciones 
               : (typeof savedData.clasificaciones === 'string' ? JSON.parse(savedData.clasificaciones) : []);
             
+            const accionesRequeridasRestauradas = Array.isArray(savedData.accionesRequeridas) 
+              ? savedData.accionesRequeridas 
+              : (typeof savedData.accionesRequeridas === 'string' ? JSON.parse(savedData.accionesRequeridas) : []);
+            
             console.log('📋 Respuestas restauradas (contenido):', JSON.stringify(respuestasRestauradas));
             console.log('📋 Respuestas restauradas (estructura):', {
               length: respuestasRestauradas.length,
@@ -457,11 +466,12 @@ const AuditoriaRefactorizada = () => {
             const todasCompletadasAhora = todasLasPreguntasContestadas(respuestasRestauradas);
             console.log('✅ Verificación inmediata - Todas completadas:', todasCompletadasAhora);
             
-            // Restaurar estados - IMPORTANTE: hacerlo en este orden
+            // Restaurar arrays PRIMERO (antes de formularioSeleccionadoId)
             setRespuestas(respuestasRestauradas);
             setComentarios(comentariosRestaurados);
             setImagenes(imagenesRestauradas);
             setClasificaciones(clasificacionesRestauradas);
+            setAccionesRequeridas(accionesRequeridasRestauradas);
             
             // Restaurar firmas si existen (pero no las usaremos para determinar el paso)
             if (savedData.firmaAuditor) {
@@ -470,6 +480,16 @@ const AuditoriaRefactorizada = () => {
             if (savedData.firmaResponsable) {
               setFirmaResponsable(savedData.firmaResponsable);
             }
+            
+            // Establecer formularioSeleccionadoId DESPUÉS de los arrays para evitar que useEffect resetee
+            // Usar setTimeout para asegurar que los setState anteriores se hayan aplicado
+            setTimeout(() => {
+              setFormularioSeleccionadoId(savedData.formularioSeleccionadoId);
+              // Marcar que terminamos de restaurar después de un pequeño delay
+              setTimeout(() => {
+                isRestoringRef.current = false;
+              }, 100);
+            }, 50);
             
             // SIMPLIFICADO: Siempre ir al paso de preguntas si hay respuestas guardadas
             setActiveStep(2); // Paso de preguntas
@@ -718,26 +738,44 @@ const AuditoriaRefactorizada = () => {
   // Configurar secciones cuando cambie el formulario (ahora usando utils)
   // IMPORTANTE: No sobrescribir respuestas si ya existen (por ejemplo, después de restaurar)
   useEffect(() => {
+    // NO ejecutar si estamos restaurando datos
+    if (isRestoringRef.current) {
+      console.log('🔄 [Auditoria] Omitiendo configuración de formulario durante restore');
+      return;
+    }
+    
     if (formularioSeleccionadoId) {
       const configuracion = configurarFormulario(formularioSeleccionadoId, formularios);
       setSecciones(configuracion.secciones);
       
-      // Solo resetear respuestas si no hay respuestas existentes con datos
+      // Verificar si hay datos existentes en respuestas, comentarios o accionesRequeridas
       const tieneRespuestasExistentes = respuestas && respuestas.length > 0 && 
         respuestas.some(seccion => seccion && seccion.some(resp => resp !== '' && resp !== null && resp !== undefined));
       
-      if (!tieneRespuestasExistentes) {
+      const tieneComentariosExistentes = comentarios && comentarios.length > 0 && 
+        comentarios.some(seccion => seccion && seccion.some(com => com !== '' && com !== null && com !== undefined));
+      
+      const tieneAccionesRequeridasExistentes = accionesRequeridas && accionesRequeridas.length > 0 && 
+        accionesRequeridas.some(seccion => seccion && seccion.some(acc => acc !== null && acc !== undefined));
+      
+      const tieneDatosExistentes = tieneRespuestasExistentes || tieneComentariosExistentes || tieneAccionesRequeridasExistentes;
+      
+      if (!tieneDatosExistentes) {
         setRespuestas(configuracion.respuestas);
         setComentarios(configuracion.comentarios);
         setImagenes(configuracion.imagenes);
         setClasificaciones(configuracion.clasificaciones);
       } else {
-        // Si hay respuestas existentes, solo asegurar que las secciones coincidan
-        // pero mantener las respuestas existentes
-        console.log('🔄 [Auditoria] Manteniendo respuestas existentes al cambiar formulario');
+        // Si hay datos existentes, solo asegurar que las secciones coincidan
+        // pero mantener los datos existentes
+        console.log('🔄 [Auditoria] Manteniendo datos existentes al cambiar formulario', {
+          tieneRespuestas: tieneRespuestasExistentes,
+          tieneComentarios: tieneComentariosExistentes,
+          tieneAccionesRequeridas: tieneAccionesRequeridasExistentes
+        });
       }
     }
-  }, [formularioSeleccionadoId, formularios]);
+  }, [formularioSeleccionadoId, formularios, respuestas, comentarios, accionesRequeridas]);
 
   // Configurar datos de agenda
   useEffect(() => {

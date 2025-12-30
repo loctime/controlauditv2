@@ -40,15 +40,28 @@ export default function RegistrarAsistencia() {
   // Estados para imágenes
   const [imagenes, setImagenes] = useState([]); // Array de { id, url, nombre, createdAt, fileId?, file? }
   const [uploadingImages, setUploadingImages] = useState(new Set()); // IDs de imágenes en proceso de subida
+  const [imageBlobUrls, setImageBlobUrls] = useState(new Map()); // Map<imageId, blobUrl>
+  const [loadingImages, setLoadingImages] = useState(new Set()); // IDs de imágenes cargando
   const [error, setError] = useState(null);
   
   const cameraInputRef = useRef(null);
   const galleryInputRef = useRef(null);
+  const blobUrlsRef = useRef(new Map()); // Ref para rastrear blob URLs
 
   useEffect(() => {
     if (userProfile?.uid) {
       loadData();
     }
+    
+    // Limpiar blob URLs al desmontar
+    return () => {
+      blobUrlsRef.current.forEach(url => {
+        if (url && url.startsWith('blob:')) {
+          URL.revokeObjectURL(url);
+        }
+      });
+      blobUrlsRef.current.clear();
+    };
   }, [capacitacionId, userProfile?.uid]);
 
   const loadData = async () => {
@@ -106,6 +119,13 @@ export default function RegistrarAsistencia() {
           })
         );
         setImagenes(imagenesCargadas);
+        
+        // Cargar imágenes como blob URLs para evitar CORS
+        imagenesCargadas.forEach(img => {
+          if (img.shareToken || img.id) {
+            loadImageAsBlob(img.id, img.shareToken || img.id);
+          }
+        });
       }
     } catch (error) {
       console.error('Error al cargar datos:', error);
@@ -208,6 +228,9 @@ export default function RegistrarAsistencia() {
           prev.map(img => img.id === tempId ? finalImage : img)
         );
         
+        // Cargar imagen como blob URL
+        loadImageAsBlob(result.fileId, result.shareToken);
+        
         // Limpiar preview temporal
         URL.revokeObjectURL(previewURL);
       } catch (err) {
@@ -230,7 +253,74 @@ export default function RegistrarAsistencia() {
     if (galleryInputRef.current) galleryInputRef.current.value = '';
   };
 
+  // Cargar imagen como blob URL para evitar problemas de CORS
+  const loadImageAsBlob = async (imageId, shareToken) => {
+    if (!shareToken) return;
+    
+    // Si ya está cargando o ya tiene blob URL, no hacer nada
+    if (loadingImages.has(imageId) || imageBlobUrls.has(imageId) || blobUrlsRef.current.has(imageId)) return;
+    
+    setLoadingImages(prev => new Set([...prev, imageId]));
+    
+    try {
+      const imageUrl = convertirShareTokenAUrl(shareToken);
+      if (!imageUrl) return;
+      
+      // Cargar imagen usando fetch con CORS
+      const response = await fetch(imageUrl, { 
+        mode: 'cors', 
+        credentials: 'omit' 
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+      
+      const blob = await response.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      
+      // Guardar en ref y state
+      blobUrlsRef.current.set(imageId, blobUrl);
+      setImageBlobUrls(prev => {
+        const newMap = new Map(prev);
+        newMap.set(imageId, blobUrl);
+        return newMap;
+      });
+    } catch (error) {
+      console.error(`Error cargando imagen ${imageId}:`, error);
+      // En caso de error, intentar usar la URL directa como fallback
+      const fallbackUrl = convertirShareTokenAUrl(shareToken);
+      if (fallbackUrl) {
+        blobUrlsRef.current.set(imageId, fallbackUrl);
+        setImageBlobUrls(prev => {
+          const newMap = new Map(prev);
+          newMap.set(imageId, fallbackUrl);
+          return newMap;
+        });
+      }
+    } finally {
+      setLoadingImages(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(imageId);
+        return newSet;
+      });
+    }
+  };
+
   const handleDeleteImage = (imageId) => {
+    // Limpiar blob URL si existe
+    const blobUrl = imageBlobUrls.get(imageId) || blobUrlsRef.current.get(imageId);
+    if (blobUrl && blobUrl.startsWith('blob:')) {
+      URL.revokeObjectURL(blobUrl);
+    }
+    
+    blobUrlsRef.current.delete(imageId);
+    setImageBlobUrls(prev => {
+      const newMap = new Map(prev);
+      newMap.delete(imageId);
+      return newMap;
+    });
+    
     setImagenes(prev => prev.filter(img => img.id !== imageId));
   };
 
@@ -397,8 +487,17 @@ export default function RegistrarAsistencia() {
             <Grid container spacing={2}>
               {imagenes.map((imagen, index) => {
                 const isUploading = uploadingImages.has(imagen.id) || imagen.uploading;
-                // Usar helper global para convertir shareToken a URL
-                const imageUrl = convertirShareTokenAUrl(imagen.shareToken || imagen.url || imagen);
+                const isLoading = loadingImages.has(imagen.id);
+                
+                // Priorizar blob URL, luego URL directa como fallback
+                const blobUrl = imageBlobUrls.get(imagen.id);
+                const directUrl = convertirShareTokenAUrl(imagen.shareToken || imagen.url || imagen);
+                const imageUrl = blobUrl || directUrl;
+                
+                // Si no hay URL y tiene shareToken, intentar cargar
+                if (!imageUrl && (imagen.shareToken || imagen.id) && !isLoading && !isUploading) {
+                  loadImageAsBlob(imagen.id, imagen.shareToken || imagen.id);
+                }
 
                 return (
                   <Grid item xs={6} sm={4} md={3} key={imagen.id || index}>
@@ -427,6 +526,13 @@ export default function RegistrarAsistencia() {
                             cursor: 'pointer'
                           }}
                           onClick={() => window.open(imageUrl, '_blank')}
+                          onError={(e) => {
+                            // Si falla la carga, intentar recargar
+                            console.warn(`Error cargando imagen ${imagen.id}, reintentando...`);
+                            if (imagen.shareToken || imagen.id) {
+                              loadImageAsBlob(imagen.id, imagen.shareToken || imagen.id);
+                            }
+                          }}
                         />
                       ) : (
                         <Box
@@ -443,7 +549,11 @@ export default function RegistrarAsistencia() {
                             color: 'text.secondary'
                           }}
                         >
-                          <Typography variant="caption">Cargando...</Typography>
+                          {isLoading || isUploading ? (
+                            <CircularProgress size={24} />
+                          ) : (
+                            <Typography variant="caption">Cargando...</Typography>
+                          )}
                         </Box>
                       )}
                       
