@@ -182,12 +182,17 @@ const PreguntasRespuestasList = ({ secciones = [], respuestas = [], comentarios 
                         alt={`Imagen pregunta ${pIdx + 1}`}
                         style={{ maxWidth: '400px', maxHeight: '300px', borderRadius: 4, border: '1px solid #ccc' }}
                         onError={(e) => { 
-                          console.error(`[PreguntasRespuestasList] Error cargando imagen: ${imagenProcesada}`, e);
+                          // Extraer shareToken de la URL para logging más útil
+                          const shareTokenMatch = imagenProcesada?.match(/\/shares\/([^\/]+)\/image/);
+                          const shareToken = shareTokenMatch ? shareTokenMatch[1] : 'desconocido';
+                          
+                          console.warn(`[PreguntasRespuestasList] ⚠️ No se pudo cargar imagen (shareToken: ${shareToken}). Puede que el share no exista o no sea público.`);
                           e.target.style.display = 'none'; 
                         }}
                         onLoad={() => {
-                          console.debug(`[PreguntasRespuestasList] Imagen cargada exitosamente: ${imagenProcesada}`);
+                          console.debug(`[PreguntasRespuestasList] ✅ Imagen cargada exitosamente`);
                         }}
+                        loading="lazy"
                       />
                     </Box>
                   )}

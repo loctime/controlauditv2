@@ -455,9 +455,14 @@ const ResumenAuditoriaModal = ({
                                             display: 'block'
                                           }}
                                           onError={(e) => { 
-                                            console.error(`[ResumenAuditoriaModal] Error cargando imagen: ${imagenUrl}`, e);
+                                            // Extraer shareToken de la URL para logging más útil
+                                            const shareTokenMatch = imagenUrl?.match(/\/shares\/([^\/]+)\/image/);
+                                            const shareToken = shareTokenMatch ? shareTokenMatch[1] : 'desconocido';
+                                            
+                                            console.warn(`[ResumenAuditoriaModal] ⚠️ No se pudo cargar imagen (shareToken: ${shareToken}). Puede que el share no exista o no sea público.`);
                                             e.target.style.display = 'none'; 
                                           }}
+                                          loading="lazy"
                                         />
                                       </Box>
                                     )}
