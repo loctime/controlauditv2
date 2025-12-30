@@ -92,3 +92,83 @@ export async function ensureTaskbarAppFolder(
 
   return folderId;
 }
+
+/**
+ * Helper servidor para asegurar carpetas de taskbar usando Admin SDK
+ * ✅ Usa el mismo ID determinístico que la versión cliente
+ * ✅ Idempotente con merge: true
+ */
+export interface EnsureTaskbarFolderServerOptions {
+  appId: string;
+  appName: string;
+  userId: string;
+  adminDb: any; // Firestore Admin SDK
+  icon?: string;
+  color?: string;
+}
+
+export async function ensureTaskbarAppFolderServer({
+  appId,
+  appName,
+  userId,
+  adminDb,
+  icon = 'Folder',
+  color = 'text-blue-600',
+}: EnsureTaskbarFolderServerOptions): Promise<string> {
+  if (!adminDb || !userId || !appId) {
+    throw new Error('ensureTaskbarAppFolderServer: parámetros inválidos');
+  }
+
+  // Admin SDK usa adminDb directamente, no necesita importar FieldValue
+  const { FieldValue } = require('firebase-admin/firestore');
+
+  const normalizedAppId = normalizeAppId(appId);
+  const folderId = `taskbar_${userId}_${normalizedAppId}`;
+
+  await adminDb
+    .collection('files')
+    .doc(folderId)
+    .set(
+      {
+        id: folderId,
+        userId,
+        appId: normalizedAppId,
+        name: appName,
+        slug: normalizedAppId,
+        parentId: null,
+        path: [],
+        type: 'folder',
+        createdAt: FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp(),
+        deletedAt: null,
+        metadata: {
+          source: 'taskbar',
+          appId: normalizedAppId,
+          icon,
+          color,
+          isSystem: true,
+          isMainFolder: false,
+          isDefault: false,
+          description: `Carpeta principal de ${appName}`,
+          tags: [],
+          isPublic: false,
+          viewCount: 0,
+          lastAccessedAt: FieldValue.serverTimestamp(),
+          permissions: {
+            canEdit: true,
+            canDelete: false,
+            canShare: true,
+            canDownload: true,
+          },
+          customFields: {
+            appName,
+            appId: normalizedAppId,
+            createdBy: 'ensureTaskbarAppFolderServer',
+          },
+        },
+      },
+      { merge: true }
+    );
+
+  return folderId;
+}

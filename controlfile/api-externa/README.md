@@ -26,36 +26,37 @@ Integración con APIs de ControlFile para apps que NO comparten el mismo proyect
 ## 🚀 **Inicio Rápido:**
 
 ```typescript
-// 1. Configurar URL del backend
-const BACKEND_URL = 'https://controlfile.onrender.com';
+// ✅ CORRECTO: Usar helper oficial para carpetas taskbar
+import { ensureTaskbarAppFolder } from '@/utils/taskbar-folder';
+import { getAuth } from 'firebase/auth';
 
-// 2. Obtener token de autenticación
-const token = await getAuth().currentUser?.getIdToken();
+// 1. Obtener usuario autenticado
+const user = getAuth().currentUser;
+if (!user) throw new Error('Usuario no autenticado');
 
-// 3. Crear carpeta en taskbar.
-const response = await fetch(`${BACKEND_URL}/api/folders/create`, {
-  method: 'POST',
-  headers: {
-    'Authorization': `Bearer ${token}`,
-    'Content-Type': 'application/json',
-  },
-  body: JSON.stringify({
-    id: `miapp-main-${Date.now()}`,
-    name: 'Mi App',
-    parentId: null,
-    source: 'taskbar', // ✅ Aaparece en taskbar
-    icon: 'Taskbar',
-    color: 'text-blue-600',
-    metadata: {
-      isMainFolder: true,
-      isPublic: false
-    }
-  }),
+// 2. Crear carpeta en taskbar usando helper oficial
+const folderId = await ensureTaskbarAppFolder({
+  appId: 'miapp',
+  appName: 'Mi App',
+  userId: user.uid,
+  icon: 'ClipboardList',
+  color: 'text-blue-600'
 });
 
-const result = await response.json();
-console.log('✅ Carpeta creada:', result.folderId);
+console.log('✅ Carpeta taskbar asegurada:', folderId);
+// ✅ Retorna: "taskbar_${userId}_miapp"
+// ✅ Idempotente: puede ejecutarse múltiples veces sin duplicados
+
+// ❌ INCORRECTO: NO usar API para crear carpetas taskbar
+// const response = await fetch(`${BACKEND_URL}/api/folders/create`, {
+//   body: JSON.stringify({
+//     id: `miapp-main-${Date.now()}`, // ❌ PROHIBIDO
+//     source: 'taskbar'
+//   })
+// });
 ```
+
+**📚 Ver [Guía Completa de Carpetas Taskbar](./GUIA_CARPETAS_TASKBAR.md) para más detalles.**
 
 ## 🎯 **Apps que Usan Esta Integración:**
 

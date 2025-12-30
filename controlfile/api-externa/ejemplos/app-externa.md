@@ -16,46 +16,43 @@ async function getToken() {
 }
 
 // 📁 CREAR CARPETA PRINCIPAL EN TASKBAR
-export async function createTaskbarFolder(appName: string): Promise<string> {
-  const token = await getToken();
-  
-  const response = await fetch(`${BACKEND_URL}/api/folders/create`, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      id: `${appName.toLowerCase()}-main-${Date.now()}`,
-      name: appName,
-      parentId: null,
-      source: 'taskbar', // ✅ CLAVE: Aparece en taskbar
-      icon: 'Taskbar',
-      color: 'text-blue-600',
-      metadata: {
-        isMainFolder: true,
-        isPublic: false,
-        description: `Carpeta principal de ${appName}`,
-        tags: [appName.toLowerCase()],
-        customFields: {
-          appName: appName,
-          version: '1.0.0'
-        }
-      }
-    }),
-  });
-  
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || `Error HTTP ${response.status}`);
+// ✅ CORRECTO: Usar helper oficial ensureTaskbarAppFolder
+import { ensureTaskbarAppFolder } from '@/utils/taskbar-folder';
+import { getAuth } from 'firebase/auth';
+
+export async function createTaskbarFolder(appId: string, appName: string): Promise<string> {
+  const user = getAuth().currentUser;
+  if (!user) {
+    throw new Error('Usuario no autenticado');
   }
   
-  const result = await response.json();
-  console.log('✅ Carpeta creada en taskbar:', result.folderId);
-  return result.folderId;
+  // ✅ Helper idempotente: puede ejecutarse múltiples veces sin crear duplicados
+  // ✅ ID determinístico: taskbar_${userId}_${normalizedAppId}
+  const folderId = await ensureTaskbarAppFolder({
+    appId,
+    appName,
+    userId: user.uid,
+    icon: 'ClipboardList',
+    color: 'text-blue-600'
+  });
+  
+  console.log('✅ Carpeta taskbar asegurada:', folderId);
+  return folderId;
 }
 
+// ❌ INCORRECTO: NO usar API para crear carpetas taskbar
+// export async function createTaskbarFolderOld(appName: string): Promise<string> {
+//   const response = await fetch(`${BACKEND_URL}/api/folders/create`, {
+//     body: JSON.stringify({
+//       id: `${appName.toLowerCase()}-main-${Date.now()}`, // ❌ PROHIBIDO
+//       source: 'taskbar'
+//     })
+//   });
+// }
+
 // 📁 CREAR CARPETA PRINCIPAL EN NAVBAR
+// ⚠️ NOTA: Las carpetas navbar pueden usar la API directamente
+// Solo las carpetas TASKBAR requieren el helper oficial
 export async function createNavbarFolder(appName: string): Promise<string> {
   const token = await getToken();
   
@@ -66,21 +63,10 @@ export async function createNavbarFolder(appName: string): Promise<string> {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      id: `${appName.toLowerCase()}-main-${Date.now()}`,
       name: appName,
       parentId: null,
-      source: 'navbar', // ✅ CLAVE: Aparece en navbar
-      icon: 'Folder',
-      color: 'text-purple-600',
       metadata: {
-        isMainFolder: true,
-        isPublic: false,
-        description: `Carpeta principal de ${appName}`,
-        tags: [appName.toLowerCase()],
-        customFields: {
-          appName: appName,
-          version: '1.0.0'
-        }
+        source: 'navbar' // ✅ Subcarpetas van en navbar
       }
     }),
   });
@@ -96,43 +82,32 @@ export async function createNavbarFolder(appName: string): Promise<string> {
 }
 
 // 📁 CREAR SUBCARPETA
+// ✅ CORRECTO: Usar helper ensureSubFolder o API directamente
+// Las subcarpetas NO requieren helper especial (solo las taskbar)
+import { ensureSubFolder } from '@/services/controlFileB2Service';
+
 export async function createSubFolder(name: string, parentId: string): Promise<string> {
-  const token = await getToken();
+  // ✅ Opción 1: Usar helper (recomendado, evita duplicados)
+  const folderId = await ensureSubFolder(name, parentId);
+  return folderId;
   
-  const response = await fetch(`${BACKEND_URL}/api/folders/create`, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      id: `${name.toLowerCase()}-${Date.now()}`,
-      name: name,
-      parentId: parentId,
-      source: 'navbar', // Subcarpetas van en navbar
-      icon: 'Folder',
-      color: 'text-gray-600',
-      metadata: {
-        isMainFolder: false,
-        isPublic: false,
-        description: `Subcarpeta: ${name}`,
-        tags: [name.toLowerCase()],
-        customFields: {
-          appName: 'App Externa',
-          folderType: 'subfolder'
-        }
-      }
-    }),
-  });
-  
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || `Error HTTP ${response.status}`);
-  }
-  
-  const result = await response.json();
-  console.log('✅ Subcarpeta creada:', result.folderId);
-  return result.folderId;
+  // ✅ Opción 2: Usar API directamente (también válido para subcarpetas)
+  // const token = await getToken();
+  // const response = await fetch(`${BACKEND_URL}/api/folders/create`, {
+  //   method: 'POST',
+  //   headers: {
+  //     'Authorization': `Bearer ${token}`,
+  //     'Content-Type': 'application/json',
+  //   },
+  //   body: JSON.stringify({
+  //     name: name,
+  //     parentId: parentId,
+  //     metadata: {
+  //       source: 'navbar' // ✅ Subcarpetas van en navbar
+  //     }
+  //   }),
+  // });
+  // return await response.json();
 }
 
 // 📤 SUBIR ARCHIVO
@@ -315,7 +290,10 @@ export async function createShareLink(fileId: string, expiresInHours: number = 2
 
 ```typescript
 // 1. Crear carpeta principal en taskbar
-const mainFolderId = await createTaskbarFolder('Mi App Externa');
+// ✅ CORRECTO: Usar helper oficial con appId y appName
+const mainFolderId = await createTaskbarFolder('miapp', 'Mi App Externa');
+// ✅ Retorna: "taskbar_${userId}_miapp"
+// ✅ Idempotente: puede ejecutarse múltiples veces sin duplicados
 
 // 2. Crear subcarpeta
 const subFolderId = await createSubFolder('Documentos', mainFolderId);
