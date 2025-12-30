@@ -234,6 +234,7 @@ export const createAuditoriaSteps = ({
               formulario={formularios.find(formulario => formulario.id === formularioSeleccionadoId)}
               respuestas={respuestas}
               secciones={secciones}
+              imagenes={imagenes}
               encargado={null}
               datosReporte={datosReporte}
               onDatosReporteChange={setDatosReporte}

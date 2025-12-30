@@ -41,6 +41,7 @@ const FirmaSection = ({
   formulario,
   respuestas,
   secciones,
+  imagenes = [],
   encargado,
   // Props para datos adicionales del reporte
   datosReporte = {},
@@ -544,6 +545,7 @@ const FirmaSection = ({
         formulario={formulario}
         respuestas={respuestas}
         secciones={secciones}
+        imagenes={imagenes}
         encargado={encargado}
         onSaveFirmaResponsable={handleSaveFirmaResponsable}
         firmaResponsable={firmaResponsableURL}

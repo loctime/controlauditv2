@@ -40,6 +40,24 @@ import {
   People as PeopleIcon
 } from '@mui/icons-material';
 import Firma from './Firma';
+import { normalizarImagenes } from './utils/normalizadores';
+
+// Función helper para convertir shareToken (string) a URL de ControlFile
+const convertirShareTokenAUrl = (valor) => {
+  if (!valor || typeof valor !== "string" || valor.trim() === '' || valor === '[object Object]') {
+    return null;
+  }
+  
+  const valorTrimmed = valor.trim();
+  
+  // Si ya es una URL (empieza con http:// o https://), retornarla tal cual
+  if (valorTrimmed.startsWith('http://') || valorTrimmed.startsWith('https://')) {
+    return valorTrimmed;
+  }
+  
+  // Si no es URL, asumir que es un shareToken y construir URL de ControlFile
+  return `https://files.controldoc.app/api/shares/${valorTrimmed}/image`;
+};
 
 const ResumenAuditoriaModal = ({ 
   open, 
@@ -49,6 +67,7 @@ const ResumenAuditoriaModal = ({
   formulario, 
   respuestas, 
   secciones, 
+  imagenes = [],
   encargado,
   fecha = new Date().toLocaleDateString('es-ES'),
   // Props para la firma
@@ -58,6 +77,37 @@ const ResumenAuditoriaModal = ({
   datosReporte = {}
 }) => {
   const theme = useTheme();
+
+  // Normalizar imágenes usando la misma función que ReporteDetallePro
+  const imagenesNormalizadas = React.useMemo(() => {
+    if (!imagenes || imagenes.length === 0) return [];
+    return normalizarImagenes(imagenes, secciones || []);
+  }, [imagenes, secciones]);
+
+  // Función helper para procesar imagen
+  const procesarImagen = (imagen) => {
+    if (!imagen || imagen === null || imagen === undefined) {
+      return null;
+    }
+
+    // ✅ PRIORIDAD 1: Si es un objeto con shareToken
+    if (typeof imagen === 'object' && imagen.shareToken) {
+      return `https://files.controldoc.app/api/shares/${imagen.shareToken}/image`;
+    }
+
+    // ⚠️ COMPATIBILIDAD: Si es un objeto con URL
+    if (typeof imagen === 'object' && imagen.url && typeof imagen.url === 'string') {
+      return imagen.url;
+    }
+
+    // ✅ NUEVO: Si es string, convertir shareToken a URL si es necesario
+    if (typeof imagen === 'string') {
+      const urlConvertida = convertirShareTokenAUrl(imagen);
+      if (urlConvertida) return urlConvertida;
+    }
+
+    return null;
+  };
 
   // Función para obtener el icono según la calificación
   const getCalificacionIcon = (calificacion) => {
@@ -352,6 +402,8 @@ const ResumenAuditoriaModal = ({
                         
                         {seccion.preguntas.map((pregunta, preguntaIndex) => {
                           const respuesta = respuestas?.[seccionIndex]?.[preguntaIndex] || '';
+                          const imagen = imagenesNormalizadas?.[seccionIndex]?.[preguntaIndex];
+                          const imagenUrl = procesarImagen(imagen);
                           return (
                             <ListItem key={preguntaIndex} sx={{ 
                               flexDirection: 'column', 
@@ -369,24 +421,45 @@ const ResumenAuditoriaModal = ({
                                   </Typography>
                                 }
                                 secondary={
-                                  <Box display="flex" alignItems="center" gap={1}>
-                                    {respuesta ? (
-                                      <>
-                                        {getCalificacionIcon(respuesta)}
+                                  <Box>
+                                    <Box display="flex" alignItems="center" gap={1} mb={imagenUrl ? 1 : 0}>
+                                      {respuesta ? (
+                                        <>
+                                          {getCalificacionIcon(respuesta)}
+                                          <Chip
+                                            label={respuesta}
+                                            color={getCalificacionColor(respuesta)}
+                                            size="small"
+                                            variant="outlined"
+                                          />
+                                        </>
+                                      ) : (
                                         <Chip
-                                          label={respuesta}
-                                          color={getCalificacionColor(respuesta)}
+                                          label="Sin responder"
+                                          color="default"
                                           size="small"
                                           variant="outlined"
                                         />
-                                      </>
-                                    ) : (
-                                      <Chip
-                                        label="Sin responder"
-                                        color="default"
-                                        size="small"
-                                        variant="outlined"
-                                      />
+                                      )}
+                                    </Box>
+                                    {imagenUrl && (
+                                      <Box mt={1}>
+                                        <img
+                                          src={imagenUrl}
+                                          alt={`Imagen pregunta ${preguntaIndex + 1}`}
+                                          style={{ 
+                                            maxWidth: '100%', 
+                                            maxHeight: '300px', 
+                                            borderRadius: 4, 
+                                            border: '1px solid #ccc',
+                                            display: 'block'
+                                          }}
+                                          onError={(e) => { 
+                                            console.error(`[ResumenAuditoriaModal] Error cargando imagen: ${imagenUrl}`, e);
+                                            e.target.style.display = 'none'; 
+                                          }}
+                                        />
+                                      </Box>
                                     )}
                                   </Box>
                                 }
