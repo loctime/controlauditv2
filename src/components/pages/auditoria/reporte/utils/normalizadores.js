@@ -1,6 +1,6 @@
 // Utilidades de normalización para reportes de auditoría
 // Funciones extraídas de ReporteDetallePro.jsx para mejorar mantenibilidad
-import { convertirShareTokenAUrl } from '../../../../utils/imageUtils';
+import { convertirShareTokenAUrl } from '@/utils/imageUtils';
 
 // Normaliza respuestas a array de arrays de strings
 export const normalizarRespuestas = (res) => {
