@@ -454,15 +454,37 @@ const ResumenAuditoriaModal = ({
                                             border: '1px solid #ccc',
                                             display: 'block'
                                           }}
-                                          onError={(e) => { 
+                                          onError={async (e) => { 
                                             // Extraer shareToken de la URL para logging más útil
                                             const shareTokenMatch = imagenUrl?.match(/\/shares\/([^\/]+)\/image/);
                                             const shareToken = shareTokenMatch ? shareTokenMatch[1] : 'desconocido';
                                             
-                                            console.warn(`[ResumenAuditoriaModal] ⚠️ No se pudo cargar imagen (shareToken: ${shareToken}). Puede que el share no exista o no sea público.`);
+                                            // Intentar diagnosticar el problema
+                                            try {
+                                              console.warn(`[ResumenAuditoriaModal] ⚠️ Error cargando imagen (shareToken: ${shareToken})`);
+                                              console.warn(`[ResumenAuditoriaModal] URL completa: ${imagenUrl}`);
+                                              console.warn(`[ResumenAuditoriaModal] Verifica en Firestore: /shares/${shareToken}`);
+                                              console.warn(`[ResumenAuditoriaModal] Prueba directamente: https://files.controldoc.app/api/shares/${shareToken}/image`);
+                                              
+                                              // Intentar fetch para ver la respuesta
+                                              const testResponse = await fetch(`https://files.controldoc.app/api/shares/${shareToken}`, { 
+                                                method: 'GET',
+                                                headers: { 'Accept': 'application/json' }
+                                              });
+                                              if (testResponse.ok) {
+                                                const shareData = await testResponse.json();
+                                                console.warn(`[ResumenAuditoriaModal] Share existe:`, shareData);
+                                              } else {
+                                                console.warn(`[ResumenAuditoriaModal] Share no encontrado o no accesible. Status: ${testResponse.status}`);
+                                              }
+                                            } catch (fetchError) {
+                                              console.warn(`[ResumenAuditoriaModal] ⚠️ Error al diagnosticar (shareToken: ${shareToken}):`, fetchError);
+                                            }
+                                            
                                             e.target.style.display = 'none'; 
                                           }}
                                           loading="lazy"
+                                          crossOrigin="anonymous"
                                         />
                                       </Box>
                                     )}

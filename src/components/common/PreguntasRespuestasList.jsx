@@ -181,18 +181,30 @@ const PreguntasRespuestasList = ({ secciones = [], respuestas = [], comentarios 
                         src={imagenProcesada}
                         alt={`Imagen pregunta ${pIdx + 1}`}
                         style={{ maxWidth: '400px', maxHeight: '300px', borderRadius: 4, border: '1px solid #ccc' }}
-                        onError={(e) => { 
+                        onError={async (e) => { 
                           // Extraer shareToken de la URL para logging más útil
                           const shareTokenMatch = imagenProcesada?.match(/\/shares\/([^\/]+)\/image/);
                           const shareToken = shareTokenMatch ? shareTokenMatch[1] : 'desconocido';
                           
-                          console.warn(`[PreguntasRespuestasList] ⚠️ No se pudo cargar imagen (shareToken: ${shareToken}). Puede que el share no exista o no sea público.`);
+                          // Intentar diagnosticar el problema
+                          try {
+                            const response = await fetch(imagenProcesada, { method: 'HEAD', mode: 'no-cors' });
+                            console.warn(`[PreguntasRespuestasList] ⚠️ Error cargando imagen (shareToken: ${shareToken})`);
+                            console.warn(`[PreguntasRespuestasList] URL: ${imagenProcesada}`);
+                            console.warn(`[PreguntasRespuestasList] Verifica en Firestore: /shares/${shareToken}`);
+                            console.warn(`[PreguntasRespuestasList] Verifica endpoint: https://files.controldoc.app/api/shares/${shareToken}/image`);
+                          } catch (fetchError) {
+                            console.warn(`[PreguntasRespuestasList] ⚠️ Error al diagnosticar (shareToken: ${shareToken}):`, fetchError);
+                            console.warn(`[PreguntasRespuestasList] URL completa: ${imagenProcesada}`);
+                          }
+                          
                           e.target.style.display = 'none'; 
                         }}
                         onLoad={() => {
                           console.debug(`[PreguntasRespuestasList] ✅ Imagen cargada exitosamente`);
                         }}
                         loading="lazy"
+                        crossOrigin="anonymous"
                       />
                     </Box>
                   )}
