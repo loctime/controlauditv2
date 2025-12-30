@@ -29,6 +29,7 @@ import {
   getMetadata 
 } from 'firebase/storage';
 import { db, storage, auth } from '../firebaseControlFile';
+import { ensureTaskbarAppFolder } from '../utils/taskbar-folder';
 
 const FILES_COLLECTION = 'files';
 const APP_NAME = 'ControlAudit';
@@ -37,6 +38,7 @@ const SOURCE_NAVBAR = 'navbar';
 
 /**
  * Asegura que existe la carpeta principal de la app en ControlFile (source: 'taskbar')
+ * ✅ Usa el helper oficial ensureTaskbarAppFolder con ID determinístico
  * @returns {Promise<string | null>} ID de la carpeta principal o null si hay error
  */
 export async function ensureTaskbarFolder(): Promise<string | null> {
@@ -46,47 +48,15 @@ export async function ensureTaskbarFolder(): Promise<string | null> {
       throw new Error('Usuario no autenticado');
     }
 
-    const userId = user.uid;
-
-    // Buscar carpeta principal existente
-    const filesRef = collection(db, FILES_COLLECTION);
-    const folderQuery = query(
-      filesRef,
-      where('userId', '==', userId),
-      where('type', '==', 'folder'),
-      where('metadata.source', '==', SOURCE_TASKBAR),
-      where('metadata.customFields.appName', '==', APP_NAME)
-    );
-
-    const snapshot = await getDocs(folderQuery);
-    
-    if (!snapshot.empty) {
-      const existingFolder = snapshot.docs[0];
-      console.log('[controlFileFirestore] ✅ Carpeta principal encontrada:', existingFolder.id);
-      return existingFolder.id;
-    }
-
-    // Crear carpeta principal si no existe
-    const folderId = `folder_${Date.now()}_${Math.random().toString(36).substring(7)}`;
-    const folderRef = doc(db, FILES_COLLECTION, folderId);
-    
-    await setDocWithAppId(folderRef, {
-      id: folderId,
-      userId,
-      name: APP_NAME,
-      type: 'folder',
-      parentId: null,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-      metadata: {
-        source: SOURCE_TASKBAR,
-        customFields: {
-          appName: APP_NAME
-        }
-      }
+    const folderId = await ensureTaskbarAppFolder({
+      appId: 'controlaudit',
+      appName: APP_NAME,
+      userId: user.uid,
+      icon: 'ClipboardList',
+      color: 'text-blue-600'
     });
 
-    console.log('[controlFileFirestore] ✅ Carpeta principal creada:', folderId);
+    console.log('[controlFileFirestore] ✅ Carpeta principal asegurada:', folderId);
     return folderId;
   } catch (error) {
     console.error('[controlFileFirestore] ❌ Error al asegurar carpeta principal:', error);

@@ -21,6 +21,7 @@ import {
   setDoc,
   serverTimestamp 
 } from 'firebase/firestore';
+import { ensureTaskbarAppFolder } from '../utils/taskbar-folder';
 
 // URL del backend de ControlFile
 const BACKEND_URL = (import.meta as any).env?.VITE_CONTROLFILE_BACKEND_URL || 'https://controlfile.onrender.com';
@@ -446,9 +447,8 @@ export async function getFileInfo(fileId: string): Promise<any | null> {
 
 /**
  * Asegura que existe la carpeta principal de la app en ControlFile (source: 'taskbar')
- * ✅ Verifica existencia antes de crear usando queries directas de Firestore
- * ✅ Evita duplicados filtrando por userId, parentId=null, name, type='folder', source='taskbar'
- * ✅ Asegura que aparezca en taskbar con metadata.source = 'taskbar'
+ * ✅ Usa el helper oficial ensureTaskbarAppFolder con ID determinístico taskbar_${userId}_${appId}
+ * ✅ Sin queries previas, usa setDoc con merge: true para idempotencia total
  * 
  * @param {string} appName - Nombre de la app (opcional, se usa 'ControlAudit' por defecto)
  * @returns {Promise<string | null>} ID de la carpeta principal o null si hay error
@@ -460,64 +460,15 @@ export async function ensureTaskbarFolder(appName: string = 'ControlAudit'): Pro
   }
 
   try {
-    const userId = user.uid;
-    const filesCol = collection(db, 'files');
-    
-    // 1. Buscar carpeta existente con query específica:
-    //    - userId del usuario actual
-    //    - parentId = null (carpeta raíz)
-    //    - name = appName (nombre exacto)
-    //    - type = 'folder'
-    const q = query(
-      filesCol,
-      where('userId', '==', userId),
-      where('parentId', '==', null),
-      where('name', '==', appName),
-      where('type', '==', 'folder')
-    );
-
-    const snapshot = await getDocs(q);
-    
-    // 2. Buscar carpeta existente: primero taskbar, luego navbar (para evitar duplicados)
-    let existingFolderId: string | null = null;
-    let existingSource: string | null = null;
-    
-    snapshot.forEach((docSnap) => {
-      const data = docSnap.data();
-      if (!data.deletedAt) {
-        const source = data.metadata?.source;
-        // Priorizar taskbar, pero aceptar navbar si no hay taskbar
-        if (source === 'taskbar') {
-          existingFolderId = docSnap.id;
-          existingSource = 'taskbar';
-        } else if (source === 'navbar' && !existingFolderId) {
-          // Solo usar navbar si no hay taskbar
-          existingFolderId = docSnap.id;
-          existingSource = 'navbar';
-        }
-      }
+    const folderId = await ensureTaskbarAppFolder({
+      appId: 'controlaudit',
+      appName,
+      userId: user.uid,
+      icon: 'ClipboardList',
+      color: 'text-blue-600'
     });
 
-    // 3. Si existe, retornar su ID (reutilizar siempre antes de crear)
-    if (existingFolderId) {
-      if (existingSource === 'taskbar') {
-        console.log(`📁 Carpeta principal existente reutilizada: ${appName} (${existingFolderId})`);
-      } else {
-        console.log(`📁 Carpeta principal existente reutilizada (source: ${existingSource}): ${appName} (${existingFolderId})`);
-      }
-      return existingFolderId;
-    }
-
-    // 4. Si NO existe ninguna, crear nueva carpeta con source: 'taskbar' usando API
-    console.log(`📁 Carpeta principal creada en TASKBAR: ${appName}`);
-    const folderId = await createFolder(appName, null, 'taskbar');
-    
-    if (folderId) {
-      console.log(`📁 Carpeta creada en TASKBAR: ${appName} (${folderId})`);
-    } else {
-      console.error(`❌ [controlFileB2Service] No se pudo crear carpeta: ${appName}`);
-    }
-    
+    console.log(`[controlFileB2Service] ✅ Carpeta principal asegurada: ${appName} (${folderId})`);
     return folderId;
   } catch (error) {
     console.error('[controlFileB2Service] ❌ Error al asegurar carpeta principal:', error);
