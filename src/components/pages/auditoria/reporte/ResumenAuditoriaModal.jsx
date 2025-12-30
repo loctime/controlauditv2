@@ -41,23 +41,7 @@ import {
 } from '@mui/icons-material';
 import Firma from './Firma';
 import { normalizarImagenes } from './utils/normalizadores';
-
-// Función helper para convertir shareToken (string) a URL de ControlFile
-const convertirShareTokenAUrl = (valor) => {
-  if (!valor || typeof valor !== "string" || valor.trim() === '' || valor === '[object Object]') {
-    return null;
-  }
-  
-  const valorTrimmed = valor.trim();
-  
-  // Si ya es una URL (empieza con http:// o https://), retornarla tal cual
-  if (valorTrimmed.startsWith('http://') || valorTrimmed.startsWith('https://')) {
-    return valorTrimmed;
-  }
-  
-  // Si no es URL, asumir que es un shareToken y construir URL de ControlFile
-  return `https://files.controldoc.app/api/shares/${valorTrimmed}/image`;
-};
+import { convertirShareTokenAUrl } from '../../../utils/imageUtils';
 
 const ResumenAuditoriaModal = ({ 
   open, 
@@ -84,29 +68,14 @@ const ResumenAuditoriaModal = ({
     return normalizarImagenes(imagenes, secciones || []);
   }, [imagenes, secciones]);
 
-  // Función helper para procesar imagen
+  // Función helper para procesar imagen usando helper global
   const procesarImagen = (imagen) => {
     if (!imagen || imagen === null || imagen === undefined) {
       return null;
     }
 
-    // ✅ PRIORIDAD 1: Si es un objeto con shareToken
-    if (typeof imagen === 'object' && imagen.shareToken) {
-      return `https://files.controldoc.app/api/shares/${imagen.shareToken}/image`;
-    }
-
-    // ⚠️ COMPATIBILIDAD: Si es un objeto con URL
-    if (typeof imagen === 'object' && imagen.url && typeof imagen.url === 'string') {
-      return imagen.url;
-    }
-
-    // ✅ NUEVO: Si es string, convertir shareToken a URL si es necesario
-    if (typeof imagen === 'string') {
-      const urlConvertida = convertirShareTokenAUrl(imagen);
-      if (urlConvertida) return urlConvertida;
-    }
-
-    return null;
+    // Usar helper global para convertir shareToken a URL
+    return convertirShareTokenAUrl(imagen);
   };
 
   // Función para obtener el icono según la calificación

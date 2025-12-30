@@ -24,6 +24,7 @@ import {
 import capacitacionImageService from '../../../../services/capacitacionImageService';
 import { useConnectivity } from '../../../../hooks/useConnectivity';
 import { useAuth } from '../../../../components/context/AuthContext';
+import { convertirShareTokenAUrl } from '../../../../utils/imageUtils';
 
 /**
  * Diálogo para gestionar imágenes de capacitaciones
@@ -120,9 +121,10 @@ const CapacitacionImagesDialog = ({
       );
 
       // Actualizar imagen con metadata real
+      // ✅ Guardar solo shareToken, NO fileURL
       const finalImage = {
         ...result,
-        fileURL: result.fileURL || previewURL,
+        shareToken: result.shareToken, // ✅ shareToken es lo único que se guarda
         uploadedAt: result.uploadedAt || new Date().toISOString()
       };
 
@@ -188,8 +190,15 @@ const CapacitacionImagesDialog = ({
   };
 
   const getImageURL = (image) => {
+    // ✅ PRIORIDAD: Usar shareToken con helper global
+    if (image.shareToken) {
+      return convertirShareTokenAUrl(image.shareToken);
+    }
+    // ⚠️ COMPATIBILIDAD: Para datos antiguos con fileURL (solo lectura)
     if (image.fileURL) return image.fileURL;
+    // Preview local antes de subir
     if (image.file) return URL.createObjectURL(image.file);
+    // ⚠️ COMPATIBILIDAD: Para datos antiguos con url (solo lectura)
     if (image.url) return image.url;
     return null;
   };

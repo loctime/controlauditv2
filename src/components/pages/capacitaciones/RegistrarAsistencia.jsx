@@ -25,6 +25,7 @@ import { capacitacionService } from '../../../services/capacitacionService';
 import { useAuth } from '../../context/AuthContext';
 import { uploadEvidence, ensureTaskbarFolder, ensureSubFolder, getDownloadUrl } from '../../../services/controlFileB2Service';
 import { auth } from '../../../firebaseControlFile';
+import { convertirShareTokenAUrl } from '../../../utils/imageUtils';
 
 export default function RegistrarAsistencia() {
   const { capacitacionId } = useParams();
@@ -96,21 +97,12 @@ export default function RegistrarAsistencia() {
         // Cargar URLs de descarga para imágenes existentes
         const imagenesCargadas = await Promise.all(
           capData.registroAsistencia.imagenes.map(async (img) => {
-            try {
-              const url = await getDownloadUrl(img.id);
-              return {
-                ...img,
-                url: url,
-                fileId: img.id
-              };
-            } catch (err) {
-              console.error('Error al cargar URL de imagen:', err);
-              return {
-                ...img,
-                url: null,
-                fileId: img.id
-              };
-            }
+            // ✅ Usar shareToken si existe, NO obtener URL temporal
+            return {
+              ...img,
+              shareToken: img.shareToken || img.id, // Usar shareToken si existe, sino usar id como fallback
+              fileId: img.id
+            };
           })
         );
         setImagenes(imagenesCargadas);
@@ -167,10 +159,9 @@ export default function RegistrarAsistencia() {
       const tempId = `temp_${Date.now()}_${Math.random().toString(36).substring(7)}`;
       const previewURL = URL.createObjectURL(file);
       
-      // Agregar imagen temporal con preview
+      // Agregar imagen temporal con preview (previewURL es solo local, NO se guarda)
       const tempImage = {
         id: tempId,
-        url: previewURL,
         nombre: file.name,
         createdAt: Timestamp.now(),
         file: file,
@@ -204,13 +195,10 @@ export default function RegistrarAsistencia() {
           fecha: new Date()
         });
         
-        // Obtener URL de descarga temporal
-        const downloadUrl = await getDownloadUrl(result.fileId);
-        
-        // Actualizar imagen con datos reales
+        // ✅ Guardar solo shareToken, NO URL temporal
         const finalImage = {
           id: result.fileId,
-          url: downloadUrl,
+          shareToken: result.shareToken, // ✅ Solo shareToken se guarda
           nombre: file.name,
           createdAt: Timestamp.now(),
           fileId: result.fileId
@@ -282,7 +270,7 @@ export default function RegistrarAsistencia() {
         .filter(img => img.fileId && !img.id.startsWith('temp_'))
         .map(img => ({
           id: img.fileId || img.id,
-          url: img.url || '',
+          shareToken: img.shareToken || img.id || '', // ✅ Guardar shareToken, NO url
           nombre: img.nombre || 'imagen',
           createdAt: img.createdAt || Timestamp.now()
         }));
@@ -409,7 +397,8 @@ export default function RegistrarAsistencia() {
             <Grid container spacing={2}>
               {imagenes.map((imagen, index) => {
                 const isUploading = uploadingImages.has(imagen.id) || imagen.uploading;
-                const imageUrl = imagen.url;
+                // Usar helper global para convertir shareToken a URL
+                const imageUrl = convertirShareTokenAUrl(imagen.shareToken || imagen.url || imagen);
 
                 return (
                   <Grid item xs={6} sm={4} md={3} key={imagen.id || index}>

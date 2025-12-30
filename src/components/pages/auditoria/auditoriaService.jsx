@@ -155,15 +155,29 @@ class AuditoriaService {
           console.debug(`[AuditoriaService] Imagen ya procesada:`, imagen);
           seccionImagenes.push(imagen);
         } else if (typeof imagen === 'string' && imagen.trim() !== '') {
-          // Si es una URL directa (compatibilidad con URLs antiguas)
-          console.debug(`[AuditoriaService] Imagen como URL:`, imagen);
-          seccionImagenes.push({
-            nombre: 'imagen_existente',
-            tipo: 'image/*',
-            tamaño: 0,
-            url: imagen,
-            timestamp: Date.now()
-          });
+          // Si es string, puede ser shareToken o URL antigua
+          // Si empieza con http, es URL antigua (solo lectura, no guardar)
+          // Si no, asumir que es shareToken
+          if (imagen.startsWith('http://') || imagen.startsWith('https://')) {
+            console.debug(`[AuditoriaService] ⚠️ URL antigua detectada (solo lectura):`, imagen);
+            // NO guardar URL, solo mantener para compatibilidad de lectura
+            seccionImagenes.push({
+              nombre: 'imagen_existente',
+              tipo: 'image/*',
+              tamaño: 0,
+              timestamp: Date.now()
+            });
+          } else {
+            // Asumir que es shareToken
+            console.debug(`[AuditoriaService] ✅ ShareToken detectado:`, imagen);
+            seccionImagenes.push({
+              nombre: 'imagen_existente',
+              tipo: 'image/*',
+              tamaño: 0,
+              shareToken: imagen,
+              timestamp: Date.now()
+            });
+          }
         } else if (Array.isArray(imagen) && imagen.length > 0) {
           // Si es un array de imágenes, procesar la primera
           console.debug(`[AuditoriaService] Array de imágenes, procesando primera:`, imagen);
@@ -334,16 +348,28 @@ class AuditoriaService {
             if (Array.isArray(item)) {
               return item.join(', '); // Convertir arrays anidados a string
             }
-            // Si es un objeto de imagen, mantenerlo como objeto
-            if (item && typeof item === 'object' && item.url && typeof item.url === 'string') {
-              return item; // Mantener objeto de imagen intacto
+            // Si es un objeto de imagen, mantenerlo pero usar shareToken si existe
+            if (item && typeof item === 'object') {
+              if (item.shareToken) {
+                return { ...item, shareToken: item.shareToken }; // ✅ Priorizar shareToken
+              }
+              // ⚠️ COMPATIBILIDAD: Si solo tiene URL (datos antiguos), mantener para lectura
+              if (item.url && typeof item.url === 'string') {
+                return item; // Mantener objeto de imagen intacto (solo lectura)
+              }
             }
             return this.limpiarArraysAnidados(item);
           });
         } else {
-          // Si es un objeto de imagen, mantenerlo como objeto
-          if (valor && typeof valor === 'object' && valor.url && typeof valor.url === 'string') {
-            objLimpio[key] = valor; // Mantener objeto de imagen intacto
+          // Si es un objeto de imagen, mantenerlo pero usar shareToken si existe
+          if (valor && typeof valor === 'object') {
+            if (valor.shareToken) {
+              objLimpio[key] = { ...valor, shareToken: valor.shareToken }; // ✅ Priorizar shareToken
+            } else if (valor.url && typeof valor.url === 'string') {
+              objLimpio[key] = valor; // ⚠️ COMPATIBILIDAD: Mantener objeto de imagen intacto (solo lectura)
+            } else {
+              objLimpio[key] = this.limpiarArraysAnidados(valor);
+            }
           } else {
             objLimpio[key] = this.limpiarArraysAnidados(valor);
           }
@@ -413,10 +439,21 @@ class AuditoriaService {
           
           // Si es un objeto (como imagen), mantenerlo como objeto pero asegurar que sea serializable
           if (valor && typeof valor === 'object' && !(valor instanceof File)) {
-            // Si es un objeto de imagen con URL, mantenerlo como objeto
+            // ✅ PRIORIDAD: Si tiene shareToken, guardar solo shareToken
+            if (valor.shareToken) {
+              return {
+                shareToken: valor.shareToken,
+                nombre: valor.nombre || 'imagen',
+                tipo: valor.tipo || 'image/*',
+                tamaño: valor.tamaño || 0,
+                timestamp: valor.timestamp || Date.now()
+              };
+            }
+            // ⚠️ COMPATIBILIDAD: Si solo tiene URL (datos antiguos), mantener para lectura pero NO guardar URL
+            // Esto es solo para compatibilidad, los nuevos datos siempre deben tener shareToken
             if (valor.url && typeof valor.url === 'string') {
               return {
-                url: valor.url,
+                // NO guardar url, solo mantener metadata
                 nombre: valor.nombre || 'imagen',
                 tipo: valor.tipo || 'image/*',
                 tamaño: valor.tamaño || 0,

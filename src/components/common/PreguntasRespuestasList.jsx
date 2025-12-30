@@ -2,6 +2,7 @@ import React from "react";
 import { Box, Typography, Paper, Divider, Chip } from "@mui/material";
 import BuildIcon from '@mui/icons-material/Build';
 import PeopleIcon from '@mui/icons-material/People';
+import { convertirShareTokenAUrl } from '../../utils/imageUtils';
 
 /**
  * .Componente reutilizable para mostrar preguntas, respuestas, comentarios e imágenes agrupadas por sección.
@@ -32,24 +33,7 @@ const PreguntasRespuestasList = ({ secciones = [], respuestas = [], comentarios 
     return <Typography variant="body2" color="text.secondary">No hay datos para mostrar.</Typography>;
   }
 
-  // Función helper para convertir shareToken (string) a URL de ControlFile
-  const convertirShareTokenAUrl = (valor) => {
-    if (!valor || typeof valor !== "string" || valor.trim() === '' || valor === '[object Object]') {
-      return null;
-    }
-    
-    const valorTrimmed = valor.trim();
-    
-    // Si ya es una URL (empieza con http:// o https://), retornarla tal cual
-    if (valorTrimmed.startsWith('http://') || valorTrimmed.startsWith('https://')) {
-      return valorTrimmed;
-    }
-    
-    // Si no es URL, asumir que es un shareToken y construir URL de ControlFile
-    return `https://files.controldoc.app/api/shares/${valorTrimmed}/image`;
-  };
-
-  // Función helper para procesar imagen
+  // Función helper para procesar imagen usando helper global
   const procesarImagen = (imagen, seccionIndex, preguntaIndex) => {
     console.debug(`[PreguntasRespuestasList] Procesando imagen para sección ${seccionIndex}, pregunta ${preguntaIndex}:`, imagen);
     
@@ -58,47 +42,23 @@ const PreguntasRespuestasList = ({ secciones = [], respuestas = [], comentarios 
       return null;
     }
 
-    // ✅ PRIORIDAD 1: Si es un objeto con shareToken
-    if (typeof imagen === 'object' && imagen.shareToken) {
-      const url = `https://files.controldoc.app/api/shares/${imagen.shareToken}/image`;
-      console.debug(`[PreguntasRespuestasList] Imagen con shareToken en objeto: ${url}`);
-      return url;
-    }
-
-    // ⚠️ COMPATIBILIDAD: Si es un objeto con URL
-    if (typeof imagen === 'object' && imagen.url && typeof imagen.url === 'string') {
-      console.debug(`[PreguntasRespuestasList] Imagen con URL: ${imagen.url}`);
-      return imagen.url;
-    }
-
-    // ✅ NUEVO: Si es string, convertir shareToken a URL si es necesario
-    if (typeof imagen === 'string') {
-      const urlConvertida = convertirShareTokenAUrl(imagen);
-      if (urlConvertida) {
-        console.debug(`[PreguntasRespuestasList] String convertido a URL: ${urlConvertida}`);
-        return urlConvertida;
-      }
-    }
-
-    // Si es un array de imágenes
+    // Si es un array de imágenes, tomar la primera
     if (Array.isArray(imagen) && imagen.length > 0) {
       console.debug(`[PreguntasRespuestasList] Array de imágenes:`, imagen);
-      // Tomar la primera imagen del array
-      const primeraImagen = imagen[0];
-      if (typeof primeraImagen === 'object' && primeraImagen.shareToken) {
-        return `https://files.controldoc.app/api/shares/${primeraImagen.shareToken}/image`;
-      } else if (typeof primeraImagen === 'object' && primeraImagen.url && typeof primeraImagen.url === 'string') {
-        return primeraImagen.url;
-      } else if (typeof primeraImagen === 'string') {
-        const urlConvertida = convertirShareTokenAUrl(primeraImagen);
-        if (urlConvertida) return urlConvertida;
-      }
+      return convertirShareTokenAUrl(imagen[0]);
     }
 
-    // Si es "[object Object]", intentar extraer la URL si es posible
+    // Si es "[object Object]", es una imagen corrupta
     if (typeof imagen === 'string' && imagen === '[object Object]') {
       console.warn(`[PreguntasRespuestasList] Imagen corrupta "[object Object]" para sección ${seccionIndex}, pregunta ${preguntaIndex}`);
       return null;
+    }
+
+    // Usar helper global para convertir shareToken a URL
+    const url = convertirShareTokenAUrl(imagen);
+    if (url) {
+      console.debug(`[PreguntasRespuestasList] URL generada: ${url}`);
+      return url;
     }
 
     console.debug(`[PreguntasRespuestasList] Formato de imagen no reconocido:`, imagen);

@@ -29,6 +29,7 @@ import {
   obtenerIconoRespuesta, 
   preguntaContestada 
 } from '../utils/respuestaUtils.jsx';
+import { convertirShareTokenAUrl } from '../../../../utils/imageUtils';
 // Imports eliminados: uploadEvidence, ensureTaskbarFolder, ensureSubFolder, useAuth
 // Ya no se suben archivos aquí, solo se seleccionan
 
@@ -91,7 +92,7 @@ const PreguntaItem = ({
 
   const isProcesando = procesandoImagen?.[`${seccionIndex}-${preguntaIndex}`] || false;
 
-  // Obtener URL de imagen usando share token (persistente)
+  // Obtener URL de imagen usando helper global
   const getImageUrl = (imageData) => {
     if (!imageData) return null;
     
@@ -100,31 +101,8 @@ const PreguntaItem = ({
       return URL.createObjectURL(imageData);
     }
     
-    // ✅ PRIORIDAD 1: Usar shareToken para URL persistente
-    if (imageData.shareToken) {
-      return `https://files.controldoc.app/api/shares/${imageData.shareToken}/image`;
-    }
-    
-    // ⚠️ COMPATIBILIDAD: Si hay URL guardada (datos antiguos)
-    if (imageData.fileURL || imageData.url) {
-      return imageData.fileURL || imageData.url;
-    }
-    
-    // ⚠️ COMPATIBILIDAD: Si solo hay fileId (sin shareToken), intentar construir share
-    // Nota: Esto es para datos antiguos. Los nuevos siempre deben tener shareToken
-    if (imageData.fileId && !imageData.shareToken) {
-      console.warn('[PreguntaItem] Imagen sin shareToken, usando fileId:', imageData.fileId);
-      // Para datos antiguos, podríamos intentar obtener shareToken desde Firestore
-      // Por ahora, retornamos null para forzar migración
-      return null;
-    }
-    
-    // Fallback: si es string directo (compatibilidad con URLs antiguas)
-    if (typeof imageData === 'string') {
-      return imageData;
-    }
-    
-    return null;
+    // Usar helper global para convertir shareToken a URL
+    return convertirShareTokenAUrl(imageData);
   };
 
   // Estado para URL de imagen resuelta

@@ -1,5 +1,6 @@
 // Utilidades de normalización para reportes de auditoría
 // Funciones extraídas de ReporteDetallePro.jsx para mejorar mantenibilidad
+import { convertirShareTokenAUrl } from '../../../../utils/imageUtils';
 
 // Normaliza respuestas a array de arrays de strings
 export const normalizarRespuestas = (res) => {
@@ -73,22 +74,7 @@ export const normalizarFormulario = (formulario, nombreForm) => {
   return { nombre: "Formulario no disponible" };
 };
 
-// Función helper para convertir shareToken (string) a URL de ControlFile
-const convertirShareTokenAUrl = (valor) => {
-  if (!valor || typeof valor !== "string" || valor.trim() === '' || valor === '[object Object]') {
-    return null;
-  }
-  
-  const valorTrimmed = valor.trim();
-  
-  // Si ya es una URL (empieza con http:// o https://), retornarla tal cual
-  if (valorTrimmed.startsWith('http://') || valorTrimmed.startsWith('https://')) {
-    return valorTrimmed;
-  }
-  
-  // Si no es URL, asumir que es un shareToken y construir URL de ControlFile
-  return `https://files.controldoc.app/api/shares/${valorTrimmed}/image`;
-};
+// Helper global importado desde imageUtils.js
 
 // Normaliza imagenes: array de objetos {seccion, valores: [ ... ]} a array de arrays de urls
 export const normalizarImagenes = (imagenesFirestore, secciones) => {

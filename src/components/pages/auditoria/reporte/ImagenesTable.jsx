@@ -1,5 +1,6 @@
 import React from "react";
 import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper } from "@mui/material";
+import { convertirShareTokenAUrl } from '../../../utils/imageUtils';
 
 const getSafeValue = (val) => {
   if (!val) return "Dato no disponible";
@@ -21,29 +22,7 @@ const getSafeValue = (val) => {
   return String(val);
 };
 
-// Función helper para convertir imagen a URL usando shareToken
-const imagenToUrl = (imagen) => {
-  if (!imagen) return null;
-  
-  // ✅ PRIORIDAD 1: Usar shareToken para URL persistente
-  if (typeof imagen === 'object' && imagen.shareToken) {
-    return `https://files.controldoc.app/api/shares/${imagen.shareToken}/image`;
-  }
-  
-  // ⚠️ COMPATIBILIDAD: Si tiene URL (datos antiguos)
-  if (typeof imagen === 'object' && imagen.url && typeof imagen.url === 'string') {
-    return imagen.url;
-  }
-  
-  // ⚠️ COMPATIBILIDAD: Si es string directo (URL antigua)
-  if (typeof imagen === 'string' && imagen.trim() !== '' && imagen !== '[object Object]') {
-    return imagen;
-  }
-  
-  return null;
-};
-
-// Función helper para procesar imagen
+// Función helper para procesar imagen usando helper global
 const procesarImagen = (imagen, seccionIndex, preguntaIndex) => {
   console.debug(`[ImagenesTable] Procesando imagen para sección ${seccionIndex}, pregunta ${preguntaIndex}:`, imagen);
   
@@ -55,7 +34,7 @@ const procesarImagen = (imagen, seccionIndex, preguntaIndex) => {
   // Si es un array de imágenes, tomar la primera
   if (Array.isArray(imagen) && imagen.length > 0) {
     console.debug(`[ImagenesTable] Array de imágenes:`, imagen);
-    return imagenToUrl(imagen[0]);
+    return convertirShareTokenAUrl(imagen[0]);
   }
 
   // Si es "[object Object]", es una imagen corrupta
@@ -64,8 +43,8 @@ const procesarImagen = (imagen, seccionIndex, preguntaIndex) => {
     return null;
   }
 
-  // Procesar imagen individual
-  const url = imagenToUrl(imagen);
+  // Usar helper global para convertir shareToken a URL
+  const url = convertirShareTokenAUrl(imagen);
   if (url) {
     console.debug(`[ImagenesTable] URL generada: ${url}`);
     return url;

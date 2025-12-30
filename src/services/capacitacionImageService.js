@@ -17,7 +17,7 @@ class CapacitacionImageService {
    * @param {string} idToken - Firebase ID Token del usuario autenticado
    * @param {string} capacitacionId - ID de la capacitación
    * @param {string} companyId - ID de la empresa
-   * @returns {Promise<{fileId: string, fileURL: string}>}
+   * @returns {Promise<{fileId: string, shareToken: string}>}
    */
   async uploadImage(file, idToken, capacitacionId, companyId) {
     try {
@@ -41,7 +41,7 @@ class CapacitacionImageService {
 
       return {
         fileId: result.fileId,
-        fileURL: result.fileURL,
+        shareToken: result.shareToken, // ✅ Retornar shareToken en lugar de fileURL
         uploadedAt: new Date().toISOString(),
         size: file.size,
         name: file.name,
