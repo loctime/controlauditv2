@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import generarContenidoImpresion from '../utils/generadorHTML';
 import { generarYGuardarPdf } from '../utils/pdfStorageServiceSimple';
 import { registrarAccionSistema } from '../../../../../utils/firestoreUtils';
-import { convertirImagenesADataUrls, convertirShareTokenAUrl } from '../../../../utils/imageUtils';
+import { convertirImagenesADataUrls, convertirShareTokenAUrl } from '@/utils/imageUtils';
 
 // Hook personalizado para manejar la lógica de impresión de reportes
 export const useImpresionReporte = () => {

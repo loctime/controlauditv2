@@ -29,7 +29,7 @@ import {
   obtenerIconoRespuesta, 
   preguntaContestada 
 } from '../utils/respuestaUtils.jsx';
-import { convertirShareTokenAUrl } from '../../../../utils/imageUtils';
+import { convertirShareTokenAUrl } from '@/utils/imageUtils';
 // Imports eliminados: uploadEvidence, ensureTaskbarFolder, ensureSubFolder, useAuth
 // Ya no se suben archivos aquí, solo se seleccionan
 

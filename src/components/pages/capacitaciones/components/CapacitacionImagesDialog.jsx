@@ -24,7 +24,7 @@ import {
 import capacitacionImageService from '../../../../services/capacitacionImageService';
 import { useConnectivity } from '../../../../hooks/useConnectivity';
 import { useAuth } from '../../../../components/context/AuthContext';
-import { convertirShareTokenAUrl } from '../../../../utils/imageUtils';
+import { convertirShareTokenAUrl } from '@/utils/imageUtils';
 
 /**
  * Diálogo para gestionar imágenes de capacitaciones

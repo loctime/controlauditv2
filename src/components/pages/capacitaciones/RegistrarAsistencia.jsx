@@ -25,7 +25,7 @@ import { capacitacionService } from '../../../services/capacitacionService';
 import { useAuth } from '../../context/AuthContext';
 import { uploadEvidence, ensureTaskbarFolder, ensureSubFolder, getDownloadUrl } from '../../../services/controlFileB2Service';
 import { auth } from '../../../firebaseControlFile';
-import { convertirShareTokenAUrl } from '../../../utils/imageUtils';
+import { convertirShareTokenAUrl } from '@/utils/imageUtils';
 
 export default function RegistrarAsistencia() {
   const { capacitacionId } = useParams();

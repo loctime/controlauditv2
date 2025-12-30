@@ -41,7 +41,7 @@ import {
 } from '@mui/icons-material';
 import Firma from './Firma';
 import { normalizarImagenes } from './utils/normalizadores';
-import { convertirShareTokenAUrl } from '../../../utils/imageUtils';
+import { convertirShareTokenAUrl } from '@/utils/imageUtils';
 
 const ResumenAuditoriaModal = ({ 
   open, 

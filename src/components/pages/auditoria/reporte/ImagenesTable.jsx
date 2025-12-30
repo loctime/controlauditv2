@@ -1,6 +1,6 @@
 import React from "react";
 import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper } from "@mui/material";
-import { convertirShareTokenAUrl } from '../../../utils/imageUtils';
+import { convertirShareTokenAUrl } from '@/utils/imageUtils';
 
 const getSafeValue = (val) => {
   if (!val) return "Dato no disponible";
