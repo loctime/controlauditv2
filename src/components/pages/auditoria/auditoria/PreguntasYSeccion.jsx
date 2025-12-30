@@ -439,29 +439,28 @@ const PreguntasYSeccion = ({
     console.log(`🗑️ Imagen eliminada de pregunta ${preguntaIndex} de sección ${seccionIndex}`);
   };
 
-  // Handler para cuando se sube una imagen
-  const handleImageUploaded = (seccionIndex, preguntaIndex, metadata) => {
-    console.log('📸 [PreguntasYSeccion] Imagen subida:', { seccionIndex, preguntaIndex, metadata });
+  // Handler para cuando se selecciona una imagen (File pendiente de subir)
+  const handleImageUploaded = (seccionIndex, preguntaIndex, file) => {
+    console.log('📸 [PreguntasYSeccion] Imagen seleccionada (pendiente):', { seccionIndex, preguntaIndex, fileName: file?.name });
     
-    // ✅ metadata DEBE ser objeto con fileId, NO File object
-    // Formato esperado: { fileId, name, type, size }
-    if (!metadata || typeof metadata !== 'object' || !metadata.fileId) {
-      console.error('❌ [PreguntasYSeccion] metadata inválido, debe tener fileId:', metadata);
+    // ✅ Guardar File object en estado (pendiente de subir)
+    if (!(file instanceof File)) {
+      console.error('❌ [PreguntasYSeccion] Se esperaba File object:', file);
       return;
     }
     
-    // Actualizar el estado de imágenes con metadata, NO File
+    // Actualizar el estado de imágenes con File object
     const nuevasImagenes = imagenes.map((img, index) => {
       if (index === seccionIndex) {
-        // Reemplazar cualquier imagen existente con la nueva metadata
-        return [...img.slice(0, preguntaIndex), metadata, ...img.slice(preguntaIndex + 1)];
+        // Reemplazar cualquier imagen existente con el nuevo File
+        return [...img.slice(0, preguntaIndex), file, ...img.slice(preguntaIndex + 1)];
       }
       return img;
     });
     
     setImagenes(nuevasImagenes);
     guardarImagenes(nuevasImagenes);
-    console.log(`✅ Metadata de imagen guardada para pregunta ${preguntaIndex} de sección ${seccionIndex}`);
+    console.log(`✅ File guardado para pregunta ${preguntaIndex} de sección ${seccionIndex}`);
   };
 
   // Función para navegar a una pregunta específica

@@ -208,6 +208,97 @@ class AuditoriaService {
   }
 
   /**
+   * Procesa imágenes pendientes (Files) y las sube a ControlFile
+   * @param {Array} imagenes - Array de Files pendientes
+   * @param {string} parentFolderId - ID de la carpeta padre (subcarpeta de auditoría)
+   * @param {string} companyId - ID de la empresa
+   * @returns {Promise<Array>} Array de metadata de imágenes subidas
+   */
+  static async procesarImagenesPendientes(imagenes, parentFolderId, companyId) {
+    console.debug('[AuditoriaService] Procesando imágenes pendientes:', imagenes);
+    
+    if (!Array.isArray(imagenes)) {
+      console.warn('[AuditoriaService] imagenes no es un array:', imagenes);
+      return [];
+    }
+    
+    const imagenesProcesadas = [];
+    
+    for (let seccionIndex = 0; seccionIndex < imagenes.length; seccionIndex++) {
+      const seccionImagenes = [];
+      const seccionActual = imagenes[seccionIndex];
+      
+      console.debug(`[AuditoriaService] Procesando sección ${seccionIndex}:`, seccionActual);
+      
+      if (!Array.isArray(seccionActual)) {
+        console.warn(`[AuditoriaService] Sección ${seccionIndex} no es un array:`, seccionActual);
+        imagenesProcesadas.push([]);
+        continue;
+      }
+      
+      for (let preguntaIndex = 0; preguntaIndex < seccionActual.length; preguntaIndex++) {
+        const imagen = seccionActual[preguntaIndex];
+        
+        console.debug(`[AuditoriaService] Procesando imagen sección ${seccionIndex}, pregunta ${preguntaIndex}:`, imagen);
+        
+        // ✅ Si ya tiene fileId, preservar (ya fue subida previamente)
+        if (imagen && typeof imagen === 'object' && imagen.fileId) {
+          console.log(`[AuditoriaService] Imagen ya subida, preservando fileId: ${imagen.fileId}`);
+          seccionImagenes.push(imagen);
+          continue;
+        }
+        
+        // ✅ Si es File, subirlo a ControlFile
+        if (imagen instanceof File) {
+          try {
+            const nombreArchivo = `pregunta_${preguntaIndex}.png`;
+            console.log(`[AuditoriaService] 📤 Subiendo archivo a ControlFile: ${nombreArchivo}, tamaño: ${(imagen.size/1024/1024).toFixed(2)}MB, parentId: ${parentFolderId}`);
+            
+            // Subir imagen a ControlFile usando uploadEvidence
+            const result = await uploadEvidence({
+              file: imagen,
+              auditId: 'auditoria_general',
+              companyId: companyId,
+              seccionId: seccionIndex.toString(),
+              preguntaId: preguntaIndex.toString(),
+              parentId: parentFolderId,
+              fecha: new Date()
+            });
+            
+            // ✅ Guardar SOLO metadata con shareToken
+            const imagenProcesada = {
+              fileId: result.fileId,
+              shareId: result.shareToken, // shareToken es el shareId
+              name: imagen.name,
+              mime: imagen.type,
+              size: imagen.size
+            };
+            
+            console.debug(`[AuditoriaService] Imagen subida exitosamente a ControlFile:`, imagenProcesada);
+            seccionImagenes.push(imagenProcesada);
+          } catch (error) {
+            console.error(`[AuditoriaService] Error al procesar imagen:`, error);
+            seccionImagenes.push(null);
+          }
+        } else if (imagen && typeof imagen === 'object' && imagen.shareToken) {
+          // Si ya es un objeto con shareToken (compatibilidad)
+          console.debug(`[AuditoriaService] Imagen ya procesada:`, imagen);
+          seccionImagenes.push(imagen);
+        } else {
+          console.debug(`[AuditoriaService] Imagen no válida o null:`, imagen);
+          seccionImagenes.push(null);
+        }
+      }
+      
+      console.debug(`[AuditoriaService] Sección ${seccionIndex} procesada:`, seccionImagenes);
+      imagenesProcesadas.push(seccionImagenes);
+    }
+    
+    console.debug('[AuditoriaService] Todas las imágenes procesadas:', imagenesProcesadas);
+    return imagenesProcesadas;
+  }
+
+  /**
    * Genera nombre de archivo para la auditoría
    * @param {Object} empresa - Datos de la empresa
    * @param {string} sucursal - Nombre de la sucursal
@@ -382,10 +473,41 @@ class AuditoriaService {
         throw new Error("userProfile.uid es requerido para guardar la auditoría en arquitectura multi-tenant");
       }
 
-      // Procesar imágenes si existen
+      // ✅ PASO 1: Generar nombre de carpeta con fecha y hora
+      const ahora = new Date();
+      const fechaHora = ahora.toISOString()
+        .replace(/T/, '_')
+        .replace(/:/g, '-')
+        .split('.')[0]; // Formato: 2025-12-30_01-45-30
+      const auditFechaHora = fechaHora;
+
+      // ✅ PASO 2: Crear subcarpeta dentro de "Auditorías"
+      const mainFolderId = await ensureTaskbarFolder('ControlAudit');
+      if (!mainFolderId) {
+        throw new Error('No se pudo obtener carpeta principal ControlAudit');
+      }
+
+      const auditoriasFolderId = await ensureSubFolder('Auditorías', mainFolderId);
+      if (!auditoriasFolderId) {
+        throw new Error('No se pudo obtener carpeta Auditorías');
+      }
+
+      // Crear subcarpeta específica para esta auditoría
+      const auditFolderId = await ensureSubFolder(auditFechaHora, auditoriasFolderId);
+      if (!auditFolderId) {
+        throw new Error(`No se pudo crear subcarpeta ${auditFechaHora}`);
+      }
+
+      console.log(`✅ Subcarpeta creada: ${auditFechaHora} (${auditFolderId})`);
+
+      // ✅ PASO 3: Procesar imágenes pendientes (Files) y subirlas a la subcarpeta
       let imagenesProcesadas = [];
       if (datosAuditoria.imagenes && datosAuditoria.imagenes.length > 0) {
-        imagenesProcesadas = await this.procesarImagenes(datosAuditoria.imagenes);
+        imagenesProcesadas = await this.procesarImagenesPendientes(
+          datosAuditoria.imagenes,
+          auditFolderId,
+          datosAuditoria.empresa?.id || 'system'
+        );
       }
 
       // Generar estadísticas

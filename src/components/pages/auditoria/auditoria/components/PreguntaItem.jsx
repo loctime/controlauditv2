@@ -29,8 +29,8 @@ import {
   obtenerIconoRespuesta, 
   preguntaContestada 
 } from '../utils/respuestaUtils.jsx';
-import { uploadEvidence, ensureTaskbarFolder, ensureSubFolder } from '../../../../../services/controlFileB2Service';
-import { useAuth } from '../../../../../components/context/AuthContext';
+// Imports eliminados: uploadEvidence, ensureTaskbarFolder, ensureSubFolder, useAuth
+// Ya no se suben archivos aquí, solo se seleccionan
 
 const PreguntaItem = ({
   seccionIndex,
@@ -54,11 +54,9 @@ const PreguntaItem = ({
   companyId,
   onImageUploaded
 }) => {
-  const { user, isLogged, loading: authLoading } = useAuth();
   const theme = useTheme();
   const [expandedAccion, setExpandedAccion] = useState(false);
   const fileInputRef = useRef(null);
-  const [localProcesandoImagen, setLocalProcesandoImagen] = useState(false);
   
   // Inicializar estado local de acción requerida
   const accionData = accionRequerida || {
@@ -67,8 +65,8 @@ const PreguntaItem = ({
     fechaVencimiento: null
   };
 
-  // Handler para subir archivo usando ControlFile
-  const handleFileUpload = async (event) => {
+  // Handler para seleccionar imagen (SIN subir)
+  const handleFileUpload = (event) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
@@ -78,76 +76,20 @@ const PreguntaItem = ({
       return;
     }
 
-    const key = `${seccionIndex}-${preguntaIndex}`;
-    setLocalProcesandoImagen(true);
+    // ✅ SOLO guardar File en estado local y notificar al padre
+    // NO subir archivos aquí - se subirán al guardar el reporte
+    console.log('📸 [PreguntaItem] Imagen seleccionada (pendiente de subir):', file.name);
+    if (onImageUploaded) {
+      onImageUploaded(seccionIndex, preguntaIndex, file);
+    }
 
-    try {
-      // Validar que tenemos los datos necesarios para subir
-      if (!companyId || !auditId) {
-        console.warn('ℹ️ [PreguntaItem] Subida omitida (falta companyId o auditId)');
-        return;
-      }
-
-      // Validar autenticación
-      if (!user || !isLogged || authLoading) {
-        console.warn('ℹ️ [PreguntaItem] Subida omitida (usuario no autenticado)');
-        return;
-      }
-
-      // Generar auditId temporal si no existe o es temporal
-      const effectiveAuditId = auditId && !auditId.startsWith('offline_') 
-        ? auditId 
-        : `offline_${crypto.randomUUID()}`;
-
-      // Asegurar carpetas antes de subir
-      const mainFolderId = await ensureTaskbarFolder('ControlAudit');
-      if (!mainFolderId) {
-        throw new Error('No se pudo obtener carpeta principal');
-      }
-
-      const auditoriasFolderId = await ensureSubFolder('Auditorías', mainFolderId);
-      const targetFolderId = auditoriasFolderId || mainFolderId;
-      
-      // Subir archivo a ControlFile usando Backblaze B2 (flujo oficial)
-      const result = await uploadEvidence({
-        file,
-        auditId: effectiveAuditId,
-        companyId,
-        seccionId: seccionIndex.toString(),
-        preguntaId: preguntaIndex.toString(),
-        parentId: targetFolderId,
-        fecha: new Date()
-      });
-
-      console.log('✅ [PreguntaItem] Imagen subida a ControlFile:', result.fileId);
-      console.log('✅ [PreguntaItem] Share token creado:', result.shareToken);
-
-      // ✅ Guardar SOLO metadata con shareToken, NO File object, NO URLs temporales
-      const metadata = {
-        fileId: result.fileId,
-        shareToken: result.shareToken,
-        name: file.name,
-        type: file.type,
-        size: file.size
-      };
-
-      // Llamar callback con metadata, NO File
-      if (onImageUploaded) {
-        onImageUploaded(seccionIndex, preguntaIndex, metadata);
-      }
-    } catch (error) {
-      console.error('❌ Error al subir archivo:', error);
-      // No guardar nada si falla la subida
-    } finally {
-      setLocalProcesandoImagen(false);
-      // Limpiar el input para permitir seleccionar el mismo archivo de nuevo
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
+    // Limpiar el input para permitir seleccionar el mismo archivo de nuevo
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
     }
   };
 
-  const isProcesando = procesandoImagen?.[`${seccionIndex}-${preguntaIndex}`] || localProcesandoImagen;
+  const isProcesando = procesandoImagen?.[`${seccionIndex}-${preguntaIndex}`] || false;
 
   // Obtener URL de imagen usando share token (persistente)
   const getImageUrl = (imageData) => {
