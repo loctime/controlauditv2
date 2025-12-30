@@ -188,10 +188,11 @@ async function createShareToken(fileId: string, userId: string): Promise<string>
     const shareData = {
       fileId,
       userId,
+      appId: 'auditoria', // 👈 CLAVE
       isPublic: true,
       createdAt: serverTimestamp(),
-      // No incluir expiresAt para que sea persistente (no expira)
     };
+    
     
     console.log('[controlFileB2Service] 🔗 Guardando share en /shares/' + token, shareData);
     await setDoc(shareDocRef, shareData);
