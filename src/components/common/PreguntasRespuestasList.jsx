@@ -32,6 +32,23 @@ const PreguntasRespuestasList = ({ secciones = [], respuestas = [], comentarios 
     return <Typography variant="body2" color="text.secondary">No hay datos para mostrar.</Typography>;
   }
 
+  // Función helper para convertir shareToken (string) a URL de ControlFile
+  const convertirShareTokenAUrl = (valor) => {
+    if (!valor || typeof valor !== "string" || valor.trim() === '' || valor === '[object Object]') {
+      return null;
+    }
+    
+    const valorTrimmed = valor.trim();
+    
+    // Si ya es una URL (empieza con http:// o https://), retornarla tal cual
+    if (valorTrimmed.startsWith('http://') || valorTrimmed.startsWith('https://')) {
+      return valorTrimmed;
+    }
+    
+    // Si no es URL, asumir que es un shareToken y construir URL de ControlFile
+    return `https://files.controldoc.app/api/shares/${valorTrimmed}/image`;
+  };
+
   // Función helper para procesar imagen
   const procesarImagen = (imagen, seccionIndex, preguntaIndex) => {
     console.debug(`[PreguntasRespuestasList] Procesando imagen para sección ${seccionIndex}, pregunta ${preguntaIndex}:`, imagen);
@@ -41,16 +58,26 @@ const PreguntasRespuestasList = ({ secciones = [], respuestas = [], comentarios 
       return null;
     }
 
-    // Si es un objeto con URL
+    // ✅ PRIORIDAD 1: Si es un objeto con shareToken
+    if (typeof imagen === 'object' && imagen.shareToken) {
+      const url = `https://files.controldoc.app/api/shares/${imagen.shareToken}/image`;
+      console.debug(`[PreguntasRespuestasList] Imagen con shareToken en objeto: ${url}`);
+      return url;
+    }
+
+    // ⚠️ COMPATIBILIDAD: Si es un objeto con URL
     if (typeof imagen === 'object' && imagen.url && typeof imagen.url === 'string') {
       console.debug(`[PreguntasRespuestasList] Imagen con URL: ${imagen.url}`);
       return imagen.url;
     }
 
-    // Si es una string (URL directa)
-    if (typeof imagen === 'string' && imagen.trim() !== '' && imagen !== '[object Object]') {
-      console.debug(`[PreguntasRespuestasList] Imagen como string: ${imagen}`);
-      return imagen;
+    // ✅ NUEVO: Si es string, convertir shareToken a URL si es necesario
+    if (typeof imagen === 'string') {
+      const urlConvertida = convertirShareTokenAUrl(imagen);
+      if (urlConvertida) {
+        console.debug(`[PreguntasRespuestasList] String convertido a URL: ${urlConvertida}`);
+        return urlConvertida;
+      }
     }
 
     // Si es un array de imágenes
@@ -58,10 +85,13 @@ const PreguntasRespuestasList = ({ secciones = [], respuestas = [], comentarios 
       console.debug(`[PreguntasRespuestasList] Array de imágenes:`, imagen);
       // Tomar la primera imagen del array
       const primeraImagen = imagen[0];
-      if (typeof primeraImagen === 'object' && primeraImagen.url && typeof primeraImagen.url === 'string') {
+      if (typeof primeraImagen === 'object' && primeraImagen.shareToken) {
+        return `https://files.controldoc.app/api/shares/${primeraImagen.shareToken}/image`;
+      } else if (typeof primeraImagen === 'object' && primeraImagen.url && typeof primeraImagen.url === 'string') {
         return primeraImagen.url;
-      } else if (typeof primeraImagen === 'string' && primeraImagen !== '[object Object]') {
-        return primeraImagen;
+      } else if (typeof primeraImagen === 'string') {
+        const urlConvertida = convertirShareTokenAUrl(primeraImagen);
+        if (urlConvertida) return urlConvertida;
       }
     }
 

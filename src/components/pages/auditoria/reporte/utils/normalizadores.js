@@ -73,6 +73,23 @@ export const normalizarFormulario = (formulario, nombreForm) => {
   return { nombre: "Formulario no disponible" };
 };
 
+// Función helper para convertir shareToken (string) a URL de ControlFile
+const convertirShareTokenAUrl = (valor) => {
+  if (!valor || typeof valor !== "string" || valor.trim() === '' || valor === '[object Object]') {
+    return null;
+  }
+  
+  const valorTrimmed = valor.trim();
+  
+  // Si ya es una URL (empieza con http:// o https://), retornarla tal cual
+  if (valorTrimmed.startsWith('http://') || valorTrimmed.startsWith('https://')) {
+    return valorTrimmed;
+  }
+  
+  // Si no es URL, asumir que es un shareToken y construir URL de ControlFile
+  return `https://files.controldoc.app/api/shares/${valorTrimmed}/image`;
+};
+
 // Normaliza imagenes: array de objetos {seccion, valores: [ ... ]} a array de arrays de urls
 export const normalizarImagenes = (imagenesFirestore, secciones) => {
   console.debug('[normalizarImagenes] imagenesFirestore:', imagenesFirestore);
@@ -101,20 +118,23 @@ export const normalizarImagenes = (imagenesFirestore, secciones) => {
         // ✅ PRIORIDAD 1: Si es un objeto con shareToken, construir URL persistente
         if (val && typeof val === "object" && val.shareToken) {
           const url = `https://files.controldoc.app/api/shares/${val.shareToken}/image`;
-          console.debug(`[normalizarImagenes] Encontrado shareToken, URL: ${url}`);
+          console.debug(`[normalizarImagenes] Encontrado shareToken en objeto, URL: ${url}`);
           return url;
         }
         
         // ⚠️ COMPATIBILIDAD: Si es un objeto con URL válida (datos antiguos)
         if (val && typeof val === "object" && val.url && typeof val.url === 'string') {
-          console.debug(`[normalizarImagenes] Encontrada URL: ${val.url}`);
+          console.debug(`[normalizarImagenes] Encontrada URL en objeto: ${val.url}`);
           return val.url;
         } 
         
-        // ⚠️ COMPATIBILIDAD: Si es string válido (no "[object Object]")
-        else if (typeof val === "string" && val.trim() !== '' && val !== '[object Object]') {
-          console.debug(`[normalizarImagenes] Encontrada string: ${val}`);
-          return val;
+        // ✅ NUEVO: Si es string, verificar si es shareToken o URL
+        if (typeof val === "string") {
+          const urlConvertida = convertirShareTokenAUrl(val);
+          if (urlConvertida) {
+            console.debug(`[normalizarImagenes] String convertido a URL: ${urlConvertida}`);
+            return urlConvertida;
+          }
         } 
         
         // Si es "[object Object]", es una imagen corrupta
@@ -146,18 +166,20 @@ export const normalizarImagenes = (imagenesFirestore, secciones) => {
       if (!Array.isArray(seccionImagenes)) return [];
       
       return seccionImagenes.map(img => {
-        // ✅ PRIORIDAD 1: shareToken
+        // ✅ PRIORIDAD 1: shareToken en objeto
         if (img && typeof img === "object" && img.shareToken) {
           return `https://files.controldoc.app/api/shares/${img.shareToken}/image`;
         }
-        // ⚠️ COMPATIBILIDAD: URL (datos antiguos)
+        // ⚠️ COMPATIBILIDAD: URL en objeto (datos antiguos)
         if (img && typeof img === "object" && img.url && typeof img.url === 'string') {
           return img.url;
-        } else if (typeof img === "string" && img.trim() !== '' && img !== '[object Object]') {
-          return img;
-        } else {
-          return "";
         }
+        // ✅ NUEVO: Si es string, convertir shareToken a URL
+        if (typeof img === "string") {
+          const urlConvertida = convertirShareTokenAUrl(img);
+          if (urlConvertida) return urlConvertida;
+        }
+        return "";
       });
     });
     
@@ -198,11 +220,14 @@ export const normalizarImagenes = (imagenesFirestore, secciones) => {
           if (img && typeof img === "object" && img.shareToken) {
             imagenes.push(`https://files.controldoc.app/api/shares/${img.shareToken}/image`);
           }
-          // ⚠️ COMPATIBILIDAD: URL (datos antiguos)
+          // ⚠️ COMPATIBILIDAD: URL en objeto (datos antiguos)
           else if (img && typeof img === "object" && img.url && typeof img.url === 'string') {
             imagenes.push(img.url);
-          } else if (typeof img === "string" && img.trim() !== '' && img !== '[object Object]') {
-            imagenes.push(img);
+          }
+          // ✅ NUEVO: Si es string, convertir shareToken a URL
+          else if (typeof img === "string") {
+            const urlConvertida = convertirShareTokenAUrl(img);
+            if (urlConvertida) imagenes.push(urlConvertida);
           }
         });
         return imagenes;
