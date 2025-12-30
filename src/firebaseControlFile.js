@@ -148,9 +148,15 @@ export function reportesCollection() {
 
 /**
  * Helper para colección de autoguardados de auditorías
- * Path: auditorias_autosave
+ * Path: apps/auditoria/users/{uid}/autosave
+ * 
+ * @param {string} uid - UID del usuario
+ * @returns {CollectionReference} Referencia a la colección de autosave del usuario
  */
-export function auditoriasAutosaveCollection() {
-  return collection(dbAudit, 'auditorias_autosave');
+export function auditAutosaveCollection(uid) {
+  if (!uid) {
+    throw new Error('auditAutosaveCollection: uid es requerido');
+  }
+  return auditUserCollection(uid, 'autosave');
 }
 

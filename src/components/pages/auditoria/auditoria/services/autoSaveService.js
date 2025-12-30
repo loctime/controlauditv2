@@ -1,5 +1,5 @@
-import { doc, setDoc, getDoc, deleteDoc, collection, query, where, getDocs } from 'firebase/firestore';
-import { dbAudit, auditoriasAutosaveCollection } from '../../../../../firebaseControlFile';
+import { doc, setDoc, getDoc, deleteDoc, query, where, getDocs } from 'firebase/firestore';
+import { dbAudit, auditAutosaveCollection } from '../../../../../firebaseControlFile';
 import { getOfflineDatabase, generateOfflineId, checkStorageLimit } from '../../../../../services/offlineDatabase';
 import syncQueueService from '../../../../../services/syncQueue';
 import { canWriteToFirestore, isContextComplete } from '../../../../../utils/firestoreWriteCheck';
@@ -136,13 +136,12 @@ class AutoSaveService {
         // Limpiar Firestore si está online
         if (this.isOnline) {
           try {
-            const autosaveRef = auditoriasAutosaveCollection();
-            const q = query(autosaveRef, where('userId', '==', userId));
-            const querySnapshot = await getDocs(q);
+            const autosaveRef = auditAutosaveCollection(userId);
+            const querySnapshot = await getDocs(autosaveRef);
             
             const deletePromises = [];
             querySnapshot.forEach((docSnapshot) => {
-              deletePromises.push(deleteDoc(doc(dbAudit, 'auditorias_autosave', docSnapshot.id)));
+              deletePromises.push(deleteDoc(doc(autosaveRef, docSnapshot.id)));
             });
             
             await Promise.all(deletePromises);
@@ -265,6 +264,8 @@ class AutoSaveService {
         : '[]';
       
       const saveData = {
+        appId: 'auditoria',
+        userId,
         empresaSeleccionada: auditoriaData.empresaSeleccionada ? {
           id: auditoriaData.empresaSeleccionada.id,
           nombre: auditoriaData.empresaSeleccionada.nombre
@@ -281,7 +282,6 @@ class AutoSaveService {
         activeStep: auditoriaData.activeStep || 0,
         firmaAuditor: auditoriaData.firmaAuditor || null,
         firmaResponsable: auditoriaData.firmaResponsable || null,
-        userId,
         sessionId,
         timestamp: auditoriaData.timestamp || Date.now(),
         lastModified: new Date(),
@@ -290,9 +290,10 @@ class AutoSaveService {
 
       // Guardar en Firestore (solo metadatos y datos serializados)
       try {
-        const docRef = doc(dbAudit, 'auditorias_autosave', sessionId);
+        const autosaveRef = auditAutosaveCollection(userId);
+        const docRef = doc(autosaveRef, sessionId);
         await setDoc(docRef, saveData);
-        logger.autosave('Guardado en Firestore exitoso', { sessionId });
+        logger.autosave('Guardado en Firestore exitoso', { sessionId, userId });
       } catch (firestoreError) {
         // Clasificar errores apropiadamente
         logger.firestore(
@@ -559,7 +560,8 @@ class AutoSaveService {
   // Cargar desde Firestore
   async loadFromFirestore(userId, sessionId) {
     try {
-      const docRef = doc(dbAudit, 'auditorias_autosave', sessionId);
+      const autosaveRef = auditAutosaveCollection(userId);
+      const docRef = doc(autosaveRef, sessionId);
       const docSnap = await getDoc(docRef);
       
       if (docSnap.exists()) {
