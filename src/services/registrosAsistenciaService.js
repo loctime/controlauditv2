@@ -8,7 +8,9 @@ import {
   where,
   orderBy,
   Timestamp,
-  writeBatch
+  writeBatch,
+  updateDoc,
+  arrayUnion
 } from 'firebase/firestore';
 import { auditUserCollection } from '../firebaseControlFile';
 import { addDocWithAppId, updateDocWithAppId, deleteDocWithAppId } from '../firebase/firestoreAppWriter';
@@ -177,6 +179,104 @@ export const registrosAsistenciaService = {
   },
 
   /**
+   * Crear registro de asistencia (wrapper simplificado)
+   * @param {Object} params - Parámetros del registro
+   * @param {string} params.userId - UID del usuario
+   * @param {string} params.capacitacionId - ID de la capacitación (REAL, no plan anual)
+   * @param {Array<string>} params.empleadoIds - IDs de empleados que asistieron
+   * @param {Array<Object>} params.imagenes - Array de objetos con { id, shareToken, nombre, createdAt }
+   * @returns {Promise<{id: string}>} Objeto con el ID del registro creado
+   */
+  async createRegistroAsistencia({ userId, capacitacionId, empleadoIds, imagenes }) {
+    try {
+      console.log('[registrosAsistenciaService] createRegistroAsistencia - Datos recibidos:', {
+        userId,
+        capacitacionId,
+        empleadoIds: empleadoIds?.length || 0,
+        imagenes: imagenes?.length || 0
+      });
+
+      // Validaciones
+      if (!userId) throw new Error('userId es requerido');
+      if (!capacitacionId) throw new Error('capacitacionId es requerido');
+      if (!empleadoIds || empleadoIds.length === 0) {
+        throw new Error('empleadoIds es requerido y debe tener al menos un empleado');
+      }
+
+      // Normalizar capacitacionId a string
+      const capacitacionIdStr = String(capacitacionId);
+
+      // Preparar datos del registro
+      const registroData = {
+        capacitacionId: capacitacionIdStr,
+        empleadoIds: empleadoIds,
+        imagenes: imagenes || [],
+        fecha: Timestamp.now()
+      };
+
+      console.log('[registrosAsistenciaService] createRegistroAsistencia - Datos enviados:', {
+        capacitacionId: registroData.capacitacionId,
+        tipoCapacitacionId: typeof registroData.capacitacionId,
+        empleadoIds: registroData.empleadoIds.length,
+        imagenes: registroData.imagenes.length
+      });
+
+      // Crear registro usando crearRegistro
+      const registroId = await this.crearRegistro(
+        userId,
+        registroData,
+        { uid: userId }
+      );
+
+      console.log('[registrosAsistenciaService] createRegistroAsistencia - ID generado:', registroId);
+
+      return { id: registroId };
+    } catch (error) {
+      console.error('❌ Error en createRegistroAsistencia:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Asociar imágenes a un registro de asistencia existente
+   * @param {Object} params - Parámetros
+   * @param {string} params.userId - UID del usuario
+   * @param {string} params.registroId - ID del registro
+   * @param {Array<Object>} params.imagenes - Array de objetos con { fileId, shareToken, nombre, empleadoIds, registroId, capacitacionId, createdAt }
+   * @returns {Promise<void>}
+   */
+  async attachImagesToRegistro({ userId, registroId, imagenes }) {
+    try {
+      if (!userId) throw new Error('userId es requerido');
+      if (!registroId) throw new Error('registroId es requerido');
+      if (!imagenes || imagenes.length === 0) {
+        console.warn('[attachImagesToRegistro] No hay imágenes para asociar');
+        return;
+      }
+
+      console.log('[registrosAsistenciaService] attachImagesToRegistro:', {
+        userId,
+        registroId,
+        imagenesCount: imagenes.length
+      });
+
+      // Obtener referencia al documento
+      const registrosRef = auditUserCollection(userId, 'registrosAsistencia');
+      const registroRef = doc(registrosRef, registroId);
+
+      // Actualizar el documento agregando las imágenes al array usando arrayUnion
+      await updateDoc(registroRef, {
+        imagenes: arrayUnion(...imagenes)
+      });
+
+      console.log('[registrosAsistenciaService] Imágenes asociadas correctamente al registro:', registroId);
+    } catch (error) {
+      console.error('❌ Error asociando imágenes al registro:', error);
+      throw error;
+    }
+  },
+
+  /**
    * Obtener todos los registros de una capacitación
    * @param {string} userId - UID del usuario
    * @param {string} capacitacionId - ID de la capacitación
@@ -200,41 +300,94 @@ export const registrosAsistenciaService = {
       });
       
       const registrosRef = auditUserCollection(userId, 'registrosAsistencia');
-      const q = query(
-        registrosRef,
-        where('capacitacionId', '==', capacitacionIdStr), // ⚠️ Usar string normalizado
-        orderBy('fecha', 'desc')
-      );
+      
+      try {
+        // Intentar query con índice compuesto (capacitacionId + fecha)
+        const q = query(
+          registrosRef,
+          where('capacitacionId', '==', capacitacionIdStr),
+          orderBy('fecha', 'desc')
+        );
 
-      const snapshot = await getDocs(q);
-      const resultados = snapshot.docs.map(doc => {
-        const data = doc.data();
-        return {
-          id: doc.id,
-          ...data,
-          // ⚠️ Asegurar que capacitacionId también esté normalizado en el resultado
-          capacitacionId: String(data.capacitacionId || capacitacionIdStr)
-        };
-      });
-      
-      console.log('[registrosAsistenciaService] Registros encontrados:', {
-        cantidad: resultados.length,
-        capacitacionIdBuscado: capacitacionIdStr,
-        registros: resultados.map(r => ({
-          id: r.id,
-          capacitacionId: r.capacitacionId,
-          empleadoIds: r.empleadoIds?.length || 0,
-          imagenes: r.imagenes?.length || 0
-        }))
-      });
-      
-      return resultados;
+        const snapshot = await getDocs(q);
+        const resultados = snapshot.docs.map(doc => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            ...data,
+            // ⚠️ Asegurar que capacitacionId también esté normalizado en el resultado
+            capacitacionId: String(data.capacitacionId || capacitacionIdStr)
+          };
+        });
+        
+        console.log('[registrosAsistenciaService] Registros encontrados:', {
+          cantidad: resultados.length,
+          capacitacionIdBuscado: capacitacionIdStr,
+          registros: resultados.map(r => ({
+            id: r.id,
+            capacitacionId: r.capacitacionId,
+            tipoCapacitacionId: typeof r.capacitacionId,
+            empleadoIds: r.empleadoIds?.length || 0,
+            imagenes: r.imagenes?.length || 0
+          }))
+        });
+        
+        return resultados;
+      } catch (queryError) {
+        // Si falla por índice faltante, usar fallback sin orderBy
+        if (queryError.code === 'failed-precondition' || queryError.message?.includes('index')) {
+          console.warn(
+            '⚠️ Índice compuesto (capacitacionId + fecha) no encontrado. ' +
+            'Usando fallback sin orderBy. ' +
+            'Crear índice: (capacitacionId ASC, fecha DESC) en registrosAsistencia'
+          );
+          
+          // Fallback: solo where, sin orderBy, ordenar en memoria
+          const q = query(
+            registrosRef,
+            where('capacitacionId', '==', capacitacionIdStr)
+          );
+
+          const snapshot = await getDocs(q);
+          const resultados = snapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+              id: doc.id,
+              ...data,
+              capacitacionId: String(data.capacitacionId || capacitacionIdStr)
+            };
+          }).sort((a, b) => {
+            // Ordenar por fecha descendente en memoria
+            const fechaA = a.fecha?.toMillis?.() || a.fecha?.seconds || 0;
+            const fechaB = b.fecha?.toMillis?.() || b.fecha?.seconds || 0;
+            return fechaB - fechaA;
+          });
+          
+          console.log('[registrosAsistenciaService] Registros encontrados (fallback):', {
+            cantidad: resultados.length,
+            capacitacionIdBuscado: capacitacionIdStr,
+            registros: resultados.map(r => ({
+              id: r.id,
+              capacitacionId: r.capacitacionId,
+              tipoCapacitacionId: typeof r.capacitacionId,
+              empleadoIds: r.empleadoIds?.length || 0,
+              imagenes: r.imagenes?.length || 0
+            }))
+          });
+          
+          return resultados;
+        }
+        // Si es otro error, relanzarlo
+        throw queryError;
+      }
     } catch (error) {
       console.error('❌ Error obteniendo registros por capacitación:', error);
       console.error('Error details:', {
         code: error.code,
         message: error.message,
-        stack: error.stack
+        stack: error.stack,
+        userId,
+        capacitacionId
       });
       return [];
     }
@@ -512,6 +665,51 @@ export const registrosAsistenciaService = {
     } catch (error) {
       console.error('❌ Error eliminando registro de asistencia:', error);
       throw error;
+    }
+  },
+
+  /**
+   * MÉTODO DE DIAGNÓSTICO: Obtener todos los registros sin filtro para debugging
+   * @param {string} userId - UID del usuario
+   * @returns {Promise<Array>} Todos los registros de asistencia del usuario
+   */
+  async getAllRegistros(userId) {
+    try {
+      if (!userId) {
+        console.warn('[registrosAsistenciaService] getAllRegistros: userId faltante');
+        return [];
+      }
+
+      const registrosRef = auditUserCollection(userId, 'registrosAsistencia');
+      const q = query(registrosRef, orderBy('createdAt', 'desc'));
+
+      const snapshot = await getDocs(q);
+      const resultados = snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          ...data,
+          capacitacionId: String(data.capacitacionId || ''),
+          tipoCapacitacionId: typeof data.capacitacionId
+        };
+      });
+
+      console.log('[registrosAsistenciaService] 🔍 DIAGNÓSTICO - Todos los registros:', {
+        total: resultados.length,
+        registros: resultados.map(r => ({
+          id: r.id,
+          capacitacionId: r.capacitacionId,
+          tipoCapacitacionId: r.tipoCapacitacionId,
+          empleadoIds: r.empleadoIds?.length || 0,
+          imagenes: r.imagenes?.length || 0,
+          fecha: r.fecha?.toDate?.()?.toISOString() || r.fecha
+        }))
+      });
+
+      return resultados;
+    } catch (error) {
+      console.error('❌ Error en getAllRegistros (diagnóstico):', error);
+      return [];
     }
   }
 };

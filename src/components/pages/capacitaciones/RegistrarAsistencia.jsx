@@ -377,118 +377,49 @@ export default function RegistrarAsistencia() {
   };
 
   const handleGuardar = async () => {
-    console.log('[RegistrarAsistencia] ⚡ handleGuardar llamado');
-    
-    if (!userProfile?.uid) {
-      console.error('[RegistrarAsistencia] ❌ Usuario no autenticado');
-      alert('Usuario no autenticado');
-      return;
-    }
+    if (!userProfile?.uid) return alert('Usuario no autenticado');
+    if (uploadingImages.size > 0) return alert('Esperá que terminen de subir las imágenes');
+    if (selectedEmpleados.size === 0) return alert('Seleccioná al menos un empleado');
 
-    // Verificar que no haya imágenes en proceso de subida
-    if (uploadingImages.size > 0) {
-      console.warn('[RegistrarAsistencia] ⚠️ Hay imágenes subiendo:', uploadingImages.size);
-      alert('Por favor espera a que terminen de subir las imágenes');
-      return;
-    }
-
-    console.log('[RegistrarAsistencia] ✅ Iniciando guardado...');
     setSaving(true);
+
     try {
-      console.log('[RegistrarAsistencia] 📊 Guardando asistencia:', {
-        capacitacionId,
-        userId: userProfile.uid,
-        empleadosSeleccionados: Array.from(selectedEmpleados),
-        totalImagenes: imagenes.length
+      const userId = userProfile.uid;
+      const empleadoIds = Array.from(selectedEmpleados);
+      const capId = String(capacitacionId);
+
+      const registro = await registrosAsistenciaService.createRegistroAsistencia({
+        userId,
+        capacitacionId: capId,
+        empleadoIds,
+        imagenes: []
       });
 
-      // Preparar imágenes para guardar (solo las que tienen fileId, excluyendo temporales)
       const imagenesParaGuardar = imagenes
-        .filter(img => img.fileId && !img.id.startsWith('temp_'))
+        .filter(img => img.fileId && !img.id?.startsWith('temp_'))
         .map(img => ({
-          id: img.fileId || img.id,
-          shareToken: img.shareToken || img.id || '', // ✅ Guardar shareToken, NO url
+          fileId: img.fileId,
+          shareToken: img.shareToken,
           nombre: img.nombre || 'imagen',
+          empleadoIds,
+          registroId: registro.id,
+          capacitacionId: capId,
           createdAt: img.createdAt || Timestamp.now()
         }));
 
-      console.log('[RegistrarAsistencia] Imágenes para guardar:', imagenesParaGuardar);
+      if (imagenesParaGuardar.length > 0) {
+        await registrosAsistenciaService.attachImagesToRegistro({
+          userId,
+          registroId: registro.id,
+          imagenes: imagenesParaGuardar
+        });
+      }
 
-      // NUEVO: Crear registro en registrosAsistencia (fuente de verdad)
-      // ⚠️ IMPORTANTE: Asegurar que capacitacionId sea string para evitar problemas de comparación
-      const capacitacionIdStr = String(capacitacionId);
-      
-      const registroData = {
-        capacitacionId: capacitacionIdStr,
-        empleadoIds: Array.from(selectedEmpleados),
-        imagenes: imagenesParaGuardar,
-        fecha: Timestamp.now()
-      };
+      alert(`Asistencia registrada correctamente`);
 
-      console.log('[RegistrarAsistencia] Datos del registro:', {
-        ...registroData,
-        tipoCapacitacionId: typeof registroData.capacitacionId,
-        capacitacionIdOriginal: capacitacionId,
-        tipoOriginal: typeof capacitacionId
-      });
-
-      // Crear registro usando el nuevo servicio
-      const registroId = await registrosAsistenciaService.crearRegistro(
-        userProfile.uid,
-        registroData,
-        { uid: userProfile.uid }
-      );
-
-      console.log('[RegistrarAsistencia] Registro creado con ID:', registroId);
-
-      // Verificar que se creó correctamente
-      const registroVerificado = await registrosAsistenciaService.getRegistroById(
-        userProfile.uid,
-        registroId
-      );
-      console.log('[RegistrarAsistencia] Registro verificado:', registroVerificado);
-
-      // Verificar que se puede buscar por capacitacionId (esto es crítico para el panel)
-      const registrosEncontrados = await registrosAsistenciaService.getRegistrosByCapacitacion(
-        userProfile.uid,
-        capacitacionIdStr
-      );
-      console.log('[RegistrarAsistencia] Registros encontrados para capacitación:', {
-        capacitacionId: capacitacionIdStr,
-        cantidad: registrosEncontrados.length,
-        registros: registrosEncontrados
-      });
-
-      // LEGACY: Mantener compatibilidad temporal con código antiguo
-      // Solo para lectura legacy, NO actualizar capacitacion.empleados
-      const registroAsistencia = {
-        fecha: Timestamp.now(),
-        empleados: Array.from(selectedEmpleados),
-        creadoPor: userProfile.uid,
-        creadoEn: Timestamp.now(),
-        imagenes: imagenesParaGuardar
-      };
-
-      // LEGACY: Actualizar solo campos NO relacionados con empleados/imágenes en la capacitación
-      // ⚠️ IMPORTANTE: NO llamar a capacitacionService.registrarAsistencia aquí porque
-      // ese método también crearía otro registro duplicado en registrosAsistencia.
-      // Ya creamos el registro arriba, así que solo actualizamos campos legacy si es necesario.
-      // Por ahora, omitimos esta llamada para evitar duplicación.
-
-      console.log('[RegistrarAsistencia] ✅ Guardado exitoso. Navegando a /capacitaciones');
-      alert('Asistencia registrada correctamente');
-      
-      // Navegar sin recargar - el componente Capacitaciones manejará el refresh
-      navigate('/capacitaciones');
-    } catch (error) {
-      console.error('[RegistrarAsistencia] Error al guardar:', error);
-      console.error('[RegistrarAsistencia] Error details:', {
-        message: error.message,
-        stack: error.stack,
-        capacitacionId,
-        userId: userProfile?.uid
-      });
-      alert('Error al guardar la asistencia: ' + error.message);
+    } catch (e) {
+      console.error(e);
+      alert(e.message);
     } finally {
       setSaving(false);
     }
