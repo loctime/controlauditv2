@@ -18,11 +18,13 @@ import {
   CheckCircle as CheckCircleIcon,
   Edit as EditIcon,
   CalendarMonth as CalendarIcon,
-  Download as DownloadIcon
+  Download as DownloadIcon,
+  ArrowBack as ArrowBackIcon
 } from '@mui/icons-material';
 import { registrosAsistenciaService } from '../../../../services/registrosAsistenciaService';
 import { capacitacionService } from '../../../../services/capacitacionService';
 import { useAuth } from '../../../context/AuthContext';
+import RegistrarAsistenciaInline from './RegistrarAsistenciaInline';
 
 /* ===================== Utils ===================== */
 
@@ -543,6 +545,7 @@ const CapacitacionDetailPanel = ({
   open,
   onClose,
   capacitacionId,
+  initialMode = 'view', // 'view' | 'registrar'
   onRegistrarAsistencia,
   onMarcarCompletada,
   onEditarPlan,
@@ -552,11 +555,14 @@ const CapacitacionDetailPanel = ({
   const [capacitacion, setCapacitacion] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState(0);
+  const [mode, setMode] = useState(initialMode); // 'view' | 'registrar'
+  const [refreshKey, setRefreshKey] = useState(0); // Para forzar refresh de tabs
 
   useEffect(() => {
     if (!open || !capacitacionId || !userProfile?.uid) {
       setCapacitacion(null);
       setLoading(false);
+      setMode('view'); // Resetear modo al cerrar
       return;
     }
 
@@ -596,6 +602,13 @@ const CapacitacionDetailPanel = ({
     loadCapacitacion();
     return () => { mounted = false; };
   }, [open, capacitacionId, userProfile?.uid]);
+
+  // Resetear modo cuando cambia la capacitación o cuando se recibe initialMode
+  useEffect(() => {
+    if (open) {
+      setMode(initialMode);
+    }
+  }, [capacitacionId, open, initialMode]);
 
   const handleTabChange = (event, newValue) => {
     setActiveTab(newValue);
@@ -640,8 +653,7 @@ const CapacitacionDetailPanel = ({
             size="small"
             variant="contained"
             onClick={() => {
-              onRegistrarAsistencia?.(capacitacionId);
-              onClose();
+              setMode('registrar');
             }}
           >
             Registrar Asistencia
@@ -686,6 +698,49 @@ const CapacitacionDetailPanel = ({
             Capacitación no encontrada
           </Typography>
         </Box>
+      ) : mode === 'registrar' ? (
+        <>
+          {/* Header en modo registrar */}
+          <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <IconButton 
+                  size="small" 
+                  onClick={() => setMode('view')}
+                  sx={{ mr: 1 }}
+                >
+                  <ArrowBackIcon />
+                </IconButton>
+                <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                  Registrar Asistencia
+                </Typography>
+              </Box>
+              <IconButton onClick={onClose} size="small">
+                <CloseIcon />
+              </IconButton>
+            </Box>
+            <Typography variant="body2" color="text.secondary">
+              {capacitacion.nombre}
+            </Typography>
+          </Box>
+
+          {/* Formulario inline */}
+          <Box sx={{ flex: 1, overflowY: 'auto' }}>
+            <RegistrarAsistenciaInline
+              capacitacionId={capacitacionId ? String(capacitacionId) : null}
+              capacitacion={capacitacion}
+              userId={userProfile?.uid}
+              compact={true}
+              onSaved={(registroId) => {
+                console.log('[CapacitacionDetailPanel] Registro guardado:', registroId);
+                setMode('view');
+                setRefreshKey(prev => prev + 1); // Forzar refresh de tabs
+                setActiveTab(1); // Cambiar a tab de Registros
+              }}
+              onCancel={() => setMode('view')}
+            />
+          </Box>
+        </>
       ) : (
         <>
           {/* Header */}
@@ -752,24 +807,28 @@ const CapacitacionDetailPanel = ({
           <Box sx={{ flex: 1, overflowY: 'auto' }}>
             {activeTab === 0 && (
               <TabResumen
+                key={`resumen-${refreshKey}`}
                 capacitacionId={capacitacionId ? String(capacitacionId) : null}
                 userId={userProfile?.uid}
               />
             )}
             {activeTab === 1 && (
               <TabRegistros
+                key={`registros-${refreshKey}`}
                 capacitacionId={capacitacionId ? String(capacitacionId) : null}
                 userId={userProfile?.uid}
               />
             )}
             {activeTab === 2 && (
               <TabEvidencias
+                key={`evidencias-${refreshKey}`}
                 capacitacionId={capacitacionId ? String(capacitacionId) : null}
                 userId={userProfile?.uid}
               />
             )}
             {activeTab === 3 && (
               <TabEmpleados
+                key={`empleados-${refreshKey}`}
                 capacitacionId={capacitacionId ? String(capacitacionId) : null}
                 userId={userProfile?.uid}
               />

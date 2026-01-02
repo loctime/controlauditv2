@@ -49,6 +49,7 @@ export default function Capacitaciones() {
   
   // Estado para panel de detalle
   const [selectedCapacitacionId, setSelectedCapacitacionId] = useState(null);
+  const [panelInitialMode, setPanelInitialMode] = useState('view'); // 'view' | 'registrar'
   
   // Estado para forzar refresh del cache de la tabla
   const [tableRefreshKey, setTableRefreshKey] = useState(0);
@@ -119,8 +120,14 @@ export default function Capacitaciones() {
     }, 500); // Pequeño delay para asegurar que los datos se cargaron
   }, [recargarDatos]);
 
+  // Handler para abrir panel en modo registrar
+  const handleOpenPanelRegistrar = useCallback((capacitacionId) => {
+    setSelectedCapacitacionId(capacitacionId);
+    setPanelInitialMode('registrar');
+  }, []);
+
   const { handleRegistrarAsistencia, handleMarcarCompletada, handleDuplicar } = 
-    useCapacitacionesHandlers(userProfile, handleRecargarConRefresh, navigate);
+    useCapacitacionesHandlers(userProfile, handleRecargarConRefresh, navigate, handleOpenPanelRegistrar);
 
   // Refrescar cache cuando se vuelve a esta página (desde RegistrarAsistencia)
   useEffect(() => {
@@ -396,8 +403,12 @@ export default function Capacitaciones() {
       {/* Panel de Detalle */}
       <CapacitacionDetailPanel
         open={!!selectedCapacitacionId}
-        onClose={() => setSelectedCapacitacionId(null)}
+        onClose={() => {
+          setSelectedCapacitacionId(null);
+          setPanelInitialMode('view'); // Resetear modo al cerrar
+        }}
         capacitacionId={selectedCapacitacionId}
+        initialMode={panelInitialMode}
         onRegistrarAsistencia={handleRegistrarAsistencia}
         onMarcarCompletada={handleMarcarCompletada}
         onEditarPlan={handleEditarPlan}

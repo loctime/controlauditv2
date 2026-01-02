@@ -5,10 +5,15 @@ import { capacitacionService } from '../../../../services/capacitacionService';
  * Hook para manejar las acciones de capacitaciones
  * Usa arquitectura multi-tenant: apps/auditoria/users/{uid}/{coleccion}
  */
-export const useCapacitacionesHandlers = (userProfile, recargarDatos, navigate) => {
+export const useCapacitacionesHandlers = (userProfile, recargarDatos, navigate, onOpenPanelRegistrar) => {
   const handleRegistrarAsistencia = useCallback((capacitacionId) => {
-    navigate(`/capacitacion/${capacitacionId}/asistencia`);
-  }, [navigate]);
+    // Si hay callback para abrir panel, usarlo; sino navegar (compatibilidad)
+    if (onOpenPanelRegistrar) {
+      onOpenPanelRegistrar(capacitacionId);
+    } else {
+      navigate(`/capacitacion/${capacitacionId}/asistencia`);
+    }
+  }, [navigate, onOpenPanelRegistrar]);
 
   const handleMarcarCompletada = useCallback(async (capacitacionId) => {
     if (!userProfile?.uid) {
