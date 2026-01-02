@@ -28,6 +28,8 @@ import SelectoresCapacitaciones from './components/SelectoresCapacitaciones';
 import CapacitacionCard from './components/CapacitacionCard';
 import CapacitacionesAlertas from './components/CapacitacionesAlertas';
 import CapacitacionesEmptyState from './components/CapacitacionesEmptyState';
+import CapacitacionesTable from './components/CapacitacionesTable';
+import CapacitacionDetailPanel from './components/CapacitacionDetailPanel';
 
 export default function Capacitaciones() {
   const { userProfile, userSucursales, loadingSucursales, getUserSucursales, userEmpresas } = useAuth();
@@ -43,6 +45,9 @@ export default function Capacitaciones() {
   const [openForm, setOpenForm] = useState(false);
   const [openPlanAnualModal, setOpenPlanAnualModal] = useState(false);
   const [editingPlanAnual, setEditingPlanAnual] = useState(null);
+  
+  // Estado para panel de detalle
+  const [selectedCapacitacionId, setSelectedCapacitacionId] = useState(null);
   
   // Estado para pestaña "Realizar Capacitación" (filtros independientes)
   const [realizarCapSelectedEmpresa, setRealizarCapSelectedEmpresa] = useState('');
@@ -294,29 +299,21 @@ export default function Capacitaciones() {
             onEstadoChange={setFilterEstado}
           />
 
-          {/* Grid de Capacitaciones */}
-          {loading ? (
-            <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
-              <CircularProgress />
-            </Box>
-          ) : filteredCapacitaciones.length === 0 ? (
-            <CapacitacionesEmptyState />
-          ) : (
-            <Grid container spacing={3}>
-              {filteredCapacitaciones.map((capacitacion) => (
-                <Grid item xs={12} md={6} lg={4} key={capacitacion.id}>
-                  <CapacitacionCard
-                    capacitacion={capacitacion}
-                    onRegistrarAsistencia={handleRegistrarAsistencia}
-                    onMarcarCompletada={handleMarcarCompletada}
-                    onDuplicar={handleDuplicar}
-                    onEditarPlan={handleEditarPlan}
-                    onRealizarCapacitacion={handleRealizarCapacitacion}
-                  />
-                </Grid>
-              ))}
-            </Grid>
-          )}
+          {/* Tabla de Capacitaciones */}
+          <CapacitacionesTable
+            capacitaciones={filteredCapacitaciones}
+            onSelectCapacitacion={setSelectedCapacitacionId}
+            onRegistrarAsistencia={handleRegistrarAsistencia}
+            onMarcarCompletada={handleMarcarCompletada}
+            onDuplicar={handleDuplicar}
+            onEditarPlan={handleEditarPlan}
+            onRealizarCapacitacion={handleRealizarCapacitacion}
+            selectedEmpresa={selectedEmpresa}
+            selectedSucursal={selectedSucursal}
+            empresas={userEmpresas}
+            sucursales={sucursalesFiltradas}
+            loading={loading}
+          />
         </>
       )}
 
@@ -360,6 +357,17 @@ export default function Capacitaciones() {
           setOpenPlanAnualModal(false);
           setEditingPlanAnual(null);
         }}
+      />
+
+      {/* Panel de Detalle */}
+      <CapacitacionDetailPanel
+        open={!!selectedCapacitacionId}
+        onClose={() => setSelectedCapacitacionId(null)}
+        capacitacionId={selectedCapacitacionId}
+        onRegistrarAsistencia={handleRegistrarAsistencia}
+        onMarcarCompletada={handleMarcarCompletada}
+        onEditarPlan={handleEditarPlan}
+        onRealizarCapacitacion={handleRealizarCapacitacion}
       />
     </Container>
   );
