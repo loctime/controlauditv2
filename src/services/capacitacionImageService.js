@@ -2,9 +2,15 @@
 import { uploadEvidence, ensureTaskbarFolder, ensureSubFolder } from './controlFileB2Service';
 import { getOfflineDatabase, generateOfflineId } from './offlineDatabase';
 import syncQueueService from './syncQueue';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../firebaseControlFile';
 import { updateDocWithAppId } from '../firebase/firestoreAppWriter';
+import { 
+  esArchivoLegacy, 
+  normalizarArchivoCapacitacion,
+  separarArchivosPorTipo,
+  esArchivoValido
+} from '../utils/capacitacionFileUtils';
 
 /**
  * Servicio para manejar imágenes de capacitaciones
@@ -238,6 +244,123 @@ class CapacitacionImageService {
       );
     } catch (error) {
       console.error('❌ Error al obtener imágenes offline:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Obtiene archivos de una capacitación desde ControlFile
+   * Maneja tanto archivos nuevos (con metadata completa) como legacy (sin metadata completa)
+   * Los archivos legacy se tratan como "archivos adjuntos" simples
+   * 
+   * @param {string} capacitacionId - ID de la capacitación
+   * @param {string} userId - ID del usuario (para filtrar por usuario)
+   * @returns {Promise<Array>} Array de archivos normalizados (nuevos + legacy)
+   */
+  async getArchivosCapacitacion(capacitacionId, userId) {
+    try {
+      if (!capacitacionId || !userId) {
+        console.warn('⚠️ CapacitacionId o userId no proporcionado');
+        return [];
+      }
+
+      const archivosNuevos = [];
+      const archivosLegacy = [];
+
+      // Query 1: Archivos nuevos (con metadata completa)
+      try {
+        const queryNuevos = query(
+          collection(db, 'files'),
+          where('metadata.customFields.capacitacionId', '==', capacitacionId),
+          where('metadata.customFields.contextType', '==', 'capacitacion'),
+          where('userId', '==', userId)
+        );
+        
+        const nuevosSnapshot = await getDocs(queryNuevos);
+        archivosNuevos.push(...nuevosSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        })));
+      } catch (error) {
+        console.warn('⚠️ Error al obtener archivos nuevos:', error);
+        // No romper, continuar con legacy
+      }
+
+      // Query 2: Archivos legacy (solo con auditId, sin estructura nueva)
+      try {
+        const queryLegacy = query(
+          collection(db, 'files'),
+          where('metadata.customFields.auditId', '==', capacitacionId),
+          where('metadata.customFields.appName', '==', 'ControlAudit'),
+          where('userId', '==', userId)
+        );
+        
+        const legacySnapshot = await getDocs(queryLegacy);
+        const archivosRaw = legacySnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+        
+        // Filtrar solo los que son realmente legacy
+        archivosLegacy.push(...archivosRaw.filter(archivo => esArchivoLegacy(archivo)));
+      } catch (error) {
+        console.warn('⚠️ Error al obtener archivos legacy:', error);
+        // No romper, continuar con lo que tenemos
+      }
+
+      // Normalizar todos los archivos
+      const todosArchivos = [
+        ...archivosNuevos.map(normalizarArchivoCapacitacion),
+        ...archivosLegacy.map(normalizarArchivoCapacitacion)
+      ].filter(archivo => archivo && esArchivoValido(archivo));
+
+      console.log(`✅ Archivos obtenidos para capacitación ${capacitacionId}:`, {
+        total: todosArchivos.length,
+        nuevos: archivosNuevos.length,
+        legacy: archivosLegacy.length
+      });
+
+      return todosArchivos;
+    } catch (error) {
+      console.error('❌ Error al obtener archivos de capacitación:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Obtiene solo archivos nuevos (con metadata completa)
+   * Útil para reportes y queries avanzadas
+   * 
+   * @param {string} capacitacionId - ID de la capacitación
+   * @param {string} userId - ID del usuario
+   * @returns {Promise<Array>} Array de archivos nuevos normalizados
+   */
+  async getArchivosNuevos(capacitacionId, userId) {
+    try {
+      const todosArchivos = await this.getArchivosCapacitacion(capacitacionId, userId);
+      const { nuevos } = separarArchivosPorTipo(todosArchivos);
+      return nuevos;
+    } catch (error) {
+      console.error('❌ Error al obtener archivos nuevos:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Obtiene solo archivos legacy (sin metadata completa)
+   * Útil para auditorías y migraciones
+   * 
+   * @param {string} capacitacionId - ID de la capacitación
+   * @param {string} userId - ID del usuario
+   * @returns {Promise<Array>} Array de archivos legacy normalizados
+   */
+  async getArchivosLegacy(capacitacionId, userId) {
+    try {
+      const todosArchivos = await this.getArchivosCapacitacion(capacitacionId, userId);
+      const { legacy } = separarArchivosPorTipo(todosArchivos);
+      return legacy;
+    } catch (error) {
+      console.error('❌ Error al obtener archivos legacy:', error);
       return [];
     }
   }
