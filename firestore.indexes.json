@@ -1,4 +1,43 @@
 {
-  "indexes": [],
+  "indexes": [
+    {
+      "collectionGroup": "registrosAsistencia",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "capacitacionId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "fecha",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "registrosAsistencia",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "fecha",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "registrosAsistencia",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "empleadoIds",
+          "arrayConfig": "CONTAINS"
+        },
+        {
+          "fieldPath": "fecha",
+          "order": "DESCENDING"
+        }
+      ]
+    }
+  ],
   "fieldOverrides": []
 }

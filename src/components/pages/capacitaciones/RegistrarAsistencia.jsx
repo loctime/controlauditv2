@@ -22,6 +22,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { query, where, getDocs, doc, getDoc, Timestamp } from 'firebase/firestore';
 import { auditUserCollection } from '../../../firebaseControlFile';
 import { capacitacionService } from '../../../services/capacitacionService';
+import { registrosAsistenciaService } from '../../../services/registrosAsistenciaService';
 import { useAuth } from '../../context/AuthContext';
 import { uploadEvidence, ensureTaskbarFolder, ensureSubFolder, getDownloadUrl } from '../../../services/controlFileB2Service';
 import { auth } from '../../../firebaseControlFile';
@@ -101,32 +102,75 @@ export default function RegistrarAsistencia() {
       
       setEmpleados(empleadosData);
 
-      // Marcar empleados ya registrados
-      const registered = new Set(capData.empleados?.map(e => e.empleadoId) || []);
-      setSelectedEmpleados(registered);
+      // NUEVO: Cargar empleados desde registrosAsistencia (fuente de verdad)
+      const registros = await registrosAsistenciaService.getRegistrosByCapacitacion(userProfile.uid, capacitacionId);
+      const empleadosRegistrados = new Set();
+      registros.forEach(reg => {
+        if (reg.empleadoIds) {
+          reg.empleadoIds.forEach(id => empleadosRegistrados.add(id));
+        }
+      });
       
-      // Cargar imágenes existentes del registro de asistencia
+      // LEGACY: También considerar empleados legacy si existen (solo lectura)
+      if (capData.empleados && Array.isArray(capData.empleados)) {
+        capData.empleados.forEach(e => {
+          if (e.empleadoId) empleadosRegistrados.add(e.empleadoId);
+        });
+      }
+      
+      setSelectedEmpleados(empleadosRegistrados);
+      
+      // NUEVO: Cargar imágenes desde todos los registros de asistencia
+      const todasLasImagenes = await registrosAsistenciaService.getImagenesByCapacitacion(userProfile.uid, capacitacionId);
+      
+      // LEGACY: También cargar imágenes del registro legacy si existe
+      let imagenesLegacy = [];
       if (capData.registroAsistencia?.imagenes) {
         // Cargar URLs de descarga para imágenes existentes
-        const imagenesCargadas = await Promise.all(
+        imagenesLegacy = await Promise.all(
           capData.registroAsistencia.imagenes.map(async (img) => {
             // ✅ Usar shareToken si existe, NO obtener URL temporal
             return {
               ...img,
-              shareToken: img.shareToken || img.id, // Usar shareToken si existe, sino usar id como fallback
+              shareToken: img.shareToken || img.id,
               fileId: img.id
             };
           })
         );
-        setImagenes(imagenesCargadas);
-        
-        // Cargar imágenes como blob URLs para evitar CORS
-        imagenesCargadas.forEach(img => {
-          if (img.shareToken || img.id) {
-            loadImageAsBlob(img.id, img.shareToken || img.id);
-          }
-        });
       }
+      
+      // Combinar imágenes de registros nuevos + legacy (sin duplicados)
+      const imagenesUnicas = new Map();
+      
+      // Agregar imágenes de registros nuevos
+      todasLasImagenes.forEach(img => {
+        const key = img.id || img.fileId;
+        if (key && !imagenesUnicas.has(key)) {
+          imagenesUnicas.set(key, {
+            ...img,
+            shareToken: img.shareToken || img.id,
+            fileId: img.id || img.fileId
+          });
+        }
+      });
+      
+      // Agregar imágenes legacy (sin sobrescribir)
+      imagenesLegacy.forEach(img => {
+        const key = img.id || img.fileId;
+        if (key && !imagenesUnicas.has(key)) {
+          imagenesUnicas.set(key, img);
+        }
+      });
+      
+      const imagenesCargadas = Array.from(imagenesUnicas.values());
+      setImagenes(imagenesCargadas);
+      
+      // Cargar imágenes como blob URLs para evitar CORS
+      imagenesCargadas.forEach(img => {
+        if (img.shareToken || img.id) {
+          loadImageAsBlob(img.id || img.fileId, img.shareToken || img.id);
+        }
+      });
     } catch (error) {
       console.error('Error al cargar datos:', error);
       alert('Error al cargar los datos');
@@ -365,7 +409,23 @@ export default function RegistrarAsistencia() {
           createdAt: img.createdAt || Timestamp.now()
         }));
 
-      // Crear registro de asistencia con la estructura especificada
+      // NUEVO: Crear registro en registrosAsistencia (fuente de verdad)
+      const registroData = {
+        capacitacionId,
+        empleadoIds: Array.from(selectedEmpleados),
+        imagenes: imagenesParaGuardar,
+        fecha: Timestamp.now()
+      };
+
+      // Crear registro usando el nuevo servicio
+      await registrosAsistenciaService.crearRegistro(
+        userProfile.uid,
+        registroData,
+        { uid: userProfile.uid }
+      );
+
+      // LEGACY: Mantener compatibilidad temporal con código antiguo
+      // Solo para lectura legacy, NO actualizar capacitacion.empleados
       const registroAsistencia = {
         fecha: Timestamp.now(),
         empleados: Array.from(selectedEmpleados),
@@ -374,10 +434,10 @@ export default function RegistrarAsistencia() {
         imagenes: imagenesParaGuardar
       };
 
-      // Actualizar en arquitectura multi-tenant
+      // Actualizar solo campos NO relacionados con empleados/imágenes
       await capacitacionService.registrarAsistencia(userProfile.uid, capacitacionId, {
-        empleados: empleadosRegistrados,
         registroAsistencia: registroAsistencia
+        // ⚠️ NO incluir empleados aquí - se calcula desde registrosAsistencia
       });
 
       alert('Asistencia registrada correctamente');

@@ -11,16 +11,23 @@ import {
 import { db, auditUserCollection } from '../firebaseControlFile';
 import { registrarAccionSistema } from '../utils/firestoreUtils';
 import { addDocWithAppId, updateDocWithAppId, deleteDocWithAppId } from '../firebase/firestoreAppWriter';
+import { registrosAsistenciaService } from './registrosAsistenciaService';
 
 /**
  * Normaliza una capacitación unificando campos legacy
  * Preserva todos los campos originales
+ * 
+ * ⚠️ NOTA: El campo `empleados` se mantiene solo para compatibilidad legacy.
+ * Los empleados reales se calculan dinámicamente desde registrosAsistencia.
  */
 const normalizeCapacitacion = (doc) => ({
   id: doc.id,
   ...doc.data(),
   fechaCreacion: doc.data().fechaCreacion ?? doc.data().createdAt ?? null,
   activa: doc.data().activa ?? true,
+  // Mantener empleados legacy para compatibilidad, pero marcado como deprecated
+  empleados: doc.data().empleados || [],
+  _empleadosLegacy: true // Flag para indicar que es legacy
 });
 
 export const capacitacionService = {
@@ -133,9 +140,10 @@ export const capacitacionService = {
    * Obtener una capacitación por ID (multi-tenant)
    * @param {string} userId - UID del usuario
    * @param {string} capacitacionId - ID de la capacitación
+   * @param {boolean} calcularEmpleados - Si true, calcula empleados desde registrosAsistencia (default: false para compatibilidad)
    * @returns {Promise<Object|null>} Datos de la capacitación o null
    */
-  async getCapacitacionById(userId, capacitacionId) {
+  async getCapacitacionById(userId, capacitacionId, calcularEmpleados = false) {
     try {
       if (!userId || !capacitacionId) return null;
 
@@ -144,7 +152,16 @@ export const capacitacionService = {
       const capacitacionDoc = await getDoc(capacitacionRef);
       
       if (capacitacionDoc.exists()) {
-        return normalizeCapacitacion(capacitacionDoc);
+        const capacitacion = normalizeCapacitacion(capacitacionDoc);
+        
+        // Si se solicita, calcular empleados desde registrosAsistencia
+        if (calcularEmpleados) {
+          const empleadoIds = await registrosAsistenciaService.getEmpleadosUnicosByCapacitacion(userId, capacitacionId);
+          capacitacion.empleados = empleadoIds.map(id => ({ empleadoId: id }));
+          capacitacion._empleadosCalculados = true;
+        }
+        
+        return capacitacion;
       }
       
       return null;
@@ -344,6 +361,9 @@ export const capacitacionService = {
 
   /**
    * Registrar asistencia a capacitación (multi-tenant)
+   * ⚠️ DEPRECADO: Usar registrosAsistenciaService.crearRegistro() directamente
+   * Mantenido para compatibilidad temporal
+   * 
    * @param {string} userId - UID del usuario
    * @param {string} capacitacionId - ID de la capacitación
    * @param {Object} asistenciaData - Datos de asistencia (empleados, registroAsistencia)
@@ -353,14 +373,64 @@ export const capacitacionService = {
     try {
       if (!userId || !capacitacionId) throw new Error('userId y capacitacionId son requeridos');
       
-      const capacitacionRef = doc(auditUserCollection(userId, 'capacitaciones'), capacitacionId);
-      await updateDocWithAppId(capacitacionRef, {
-        ...asistenciaData,
-        updatedAt: Timestamp.now()
-      });
+      // NUEVO: Crear registro en registrosAsistencia (fuente de verdad)
+      if (asistenciaData.registroAsistencia) {
+        const registroData = {
+          capacitacionId,
+          empleadoIds: asistenciaData.registroAsistencia.empleados || asistenciaData.empleados?.map(e => e.empleadoId) || [],
+          imagenes: asistenciaData.registroAsistencia.imagenes || [],
+          fecha: asistenciaData.registroAsistencia.fecha || Timestamp.now()
+        };
+        
+        await registrosAsistenciaService.crearRegistro(userId, registroData, { uid: userId });
+      }
+      
+      // LEGACY: Mantener compatibilidad con código antiguo que espera actualización directa
+      // Solo actualizar campos NO relacionados con empleados/imágenes
+      const { empleados, registroAsistencia, ...otrosCampos } = asistenciaData;
+      
+      if (Object.keys(otrosCampos).length > 0) {
+        const capacitacionRef = doc(auditUserCollection(userId, 'capacitaciones'), capacitacionId);
+        await updateDocWithAppId(capacitacionRef, {
+          ...otrosCampos,
+          updatedAt: Timestamp.now()
+        });
+      }
+      
+      // ⚠️ NO actualizar capacitacion.empleados - se calcula dinámicamente desde registrosAsistencia
     } catch (error) {
       console.error('Error al registrar asistencia:', error);
       throw error;
+    }
+  },
+
+  /**
+   * Obtener empleados de una capacitación (calculado desde registrosAsistencia)
+   * @param {string} userId - UID del usuario
+   * @param {string} capacitacionId - ID de la capacitación
+   * @returns {Promise<Array<string>>} Array de IDs de empleados únicos
+   */
+  async getEmpleadosByCapacitacion(userId, capacitacionId) {
+    try {
+      return await registrosAsistenciaService.getEmpleadosUnicosByCapacitacion(userId, capacitacionId);
+    } catch (error) {
+      console.error('❌ Error obteniendo empleados por capacitación:', error);
+      return [];
+    }
+  },
+
+  /**
+   * Obtener registros de asistencia de una capacitación
+   * @param {string} userId - UID del usuario
+   * @param {string} capacitacionId - ID de la capacitación
+   * @returns {Promise<Array>} Lista de registros de asistencia
+   */
+  async getRegistrosAsistencia(userId, capacitacionId) {
+    try {
+      return await registrosAsistenciaService.getRegistrosByCapacitacion(userId, capacitacionId);
+    } catch (error) {
+      console.error('❌ Error obteniendo registros de asistencia:', error);
+      return [];
     }
   }
 };
