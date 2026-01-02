@@ -1,5 +1,5 @@
 // src/services/capacitacionImageService.js
-import { uploadEvidence, ensureTaskbarFolder, ensureSubFolder } from './controlFileB2Service';
+import { uploadEvidence, ensureTaskbarFolder, ensureSubFolder, ensureCapacitacionFolder } from './controlFileB2Service';
 import { getOfflineDatabase, generateOfflineId } from './offlineDatabase';
 import syncQueueService from './syncQueue';
 import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
@@ -25,23 +25,49 @@ class CapacitacionImageService {
    * @param {string} companyId - ID de la empresa
    * @returns {Promise<{fileId: string, shareToken: string}>}
    */
-  async uploadImage(file, idToken, capacitacionId, companyId) {
+  async uploadImage(file, idToken, capacitacionId, companyId, categoria = null, tipoArchivo = 'evidencia') {
     try {
-      // Asegurar carpetas antes de subir (evita duplicados)
-      const mainFolderId = await ensureTaskbarFolder('ControlAudit');
-      if (!mainFolderId) {
-        throw new Error('No se pudo crear/obtener carpeta principal ControlAudit');
+      // Obtener categoría de la capacitación si no se proporciona
+      let categoriaFinal = categoria;
+      if (!categoriaFinal) {
+        try {
+          // Intentar obtener desde la colección de capacitaciones
+          // Nota: La ruta puede variar según la estructura multi-tenant
+          const capacitacionRef = doc(db, 'capacitaciones', capacitacionId);
+          const capacitacionSnap = await getDoc(capacitacionRef);
+          
+          if (capacitacionSnap.exists()) {
+            const capacitacionData = capacitacionSnap.data();
+            // Buscar categoría en diferentes campos posibles
+            categoriaFinal = capacitacionData.categoria || 
+                           capacitacionData.tipo || 
+                           'seguridad'; // Valor por defecto
+          } else {
+            // Si no existe la capacitación, usar valor por defecto
+            categoriaFinal = 'seguridad';
+          }
+        } catch (error) {
+          console.warn('⚠️ No se pudo obtener categoría de la capacitación, usando "seguridad" por defecto:', error);
+          categoriaFinal = 'seguridad'; // Valor por defecto para compatibilidad con estructura actual
+        }
       }
       
-      // Asegurar subcarpeta "Capacitaciones"
-      const capacitacionesFolderId = await ensureSubFolder('Capacitaciones', mainFolderId);
-      const targetFolderId = capacitacionesFolderId || mainFolderId;
+      // Asegurar estructura completa de carpetas: Capacitaciones/{categoria}/{capacitacionId}/
+      const targetFolderId = await ensureCapacitacionFolder(
+        capacitacionId,
+        categoriaFinal,
+        tipoArchivo
+      );
+      
+      if (!targetFolderId) {
+        throw new Error('No se pudo crear estructura de carpetas para la capacitación');
+      }
       
       const result = await uploadEvidence({
         file,
-        auditId: capacitacionId, // Reutilizar auditId para capacitaciones
+        auditId: capacitacionId, // Reutilizar auditId para capacitaciones (compatibilidad)
         companyId,
-        parentId: targetFolderId, // ✅ Usar carpeta verificada/creada
+        parentId: targetFolderId, // ✅ Usar carpeta de capacitación específica
         fecha: new Date()
       });
 
@@ -51,7 +77,8 @@ class CapacitacionImageService {
         uploadedAt: new Date().toISOString(),
         size: file.size,
         name: file.name,
-        type: file.type
+        type: file.type,
+        categoria: categoriaFinal // Incluir categoría en el resultado
       };
     } catch (error) {
       console.error('❌ Error al subir imagen de capacitación:', error);
@@ -122,39 +149,55 @@ class CapacitacionImageService {
    * @param {boolean} isOnline - Si hay conexión a internet
    * @returns {Promise<Object>} Metadata de la imagen
    */
-  async uploadImageSmart(file, idToken, capacitacionId, companyId = null, isOnline = navigator.onLine) {
-    // Si no se proporciona companyId, intentar obtenerlo de la capacitación
+  async uploadImageSmart(file, idToken, capacitacionId, companyId = null, isOnline = navigator.onLine, categoria = null, tipoArchivo = 'evidencia') {
+    // Si no se proporciona companyId o categoria, intentar obtenerlos de la capacitación
     let finalCompanyId = companyId;
-    if (!finalCompanyId) {
+    let finalCategoria = categoria;
+    
+    if (!finalCompanyId || !finalCategoria) {
       try {
         const capacitacionRef = doc(db, 'capacitaciones', capacitacionId);
         const capacitacionSnap = await getDoc(capacitacionRef);
         if (capacitacionSnap.exists()) {
-          finalCompanyId = capacitacionSnap.data().empresaId;
+          const capacitacionData = capacitacionSnap.data();
+          if (!finalCompanyId) {
+            finalCompanyId = capacitacionData.empresaId;
+          }
+          if (!finalCategoria) {
+            // Buscar categoría en diferentes campos posibles
+            finalCategoria = capacitacionData.categoria || 
+                           capacitacionData.tipo || 
+                           'seguridad'; // Valor por defecto
+          }
         }
       } catch (error) {
-        console.warn('⚠️ No se pudo obtener companyId de la capacitación:', error);
+        console.warn('⚠️ No se pudo obtener datos de la capacitación:', error);
       }
     }
 
     if (!finalCompanyId) {
       throw new Error('No se pudo obtener companyId para la capacitación');
     }
+    
+    // Si aún no hay categoría, usar valor por defecto
+    if (!finalCategoria) {
+      finalCategoria = 'seguridad';
+    }
 
     if (isOnline) {
       try {
-        return await this.uploadImage(file, idToken, capacitacionId, finalCompanyId);
+        return await this.uploadImage(file, idToken, capacitacionId, finalCompanyId, finalCategoria, tipoArchivo);
       } catch (error) {
         console.warn('⚠️ Fallo en subida online, guardando offline:', error);
         // Si falla online, guardar offline (con companyId para sincronización posterior)
         const offlineResult = await this.saveImageOffline(file, capacitacionId, finalCompanyId);
-        // Guardar companyId en el resultado offline para sincronización
-        return { ...offlineResult, companyId: finalCompanyId };
+        // Guardar companyId y categoria en el resultado offline para sincronización
+        return { ...offlineResult, companyId: finalCompanyId, categoria: finalCategoria };
       }
     } else {
       const offlineResult = await this.saveImageOffline(file, capacitacionId, finalCompanyId);
-      // Guardar companyId en el resultado offline para sincronización
-      return { ...offlineResult, companyId: finalCompanyId };
+      // Guardar companyId y categoria en el resultado offline para sincronización
+      return { ...offlineResult, companyId: finalCompanyId, categoria: finalCategoria };
     }
   }
 
