@@ -29,6 +29,7 @@ import AccidentesFiltros from './components/AccidentesFiltros';
 import EstadisticasAccidentes from './components/EstadisticasAccidentes';
 import AccidentesTabla from './components/AccidentesTabla';
 import AccidenteDetalleModal from './components/AccidenteDetalleModal';
+import AccidenteDetailPanel from './components/AccidenteDetailPanel';
 import EditarAccidenteModal from './components/EditarAccidenteModal';
 import { actualizarEstadoAccidente } from '../../../services/accidenteService';
 import { exportarAccidentesExcel, exportarAccidentesPDF } from './utils/accidentesExportUtils';
@@ -52,6 +53,8 @@ export default function Accidentes() {
   const [openEditarModal, setOpenEditarModal] = useState(false);
   const [accidenteSeleccionado, setAccidenteSeleccionado] = useState(null);
   const [accidenteEditando, setAccidenteEditando] = useState(null);
+  const [selectedAccidenteId, setSelectedAccidenteId] = useState(null);
+  const [panelInitialMode, setPanelInitialMode] = useState('view');
   const [searchTerm, setSearchTerm] = useState('');
   const [fechaDesde, setFechaDesde] = useState(null);
   const [fechaHasta, setFechaHasta] = useState(null);
@@ -158,8 +161,9 @@ export default function Accidentes() {
     if (!pendingIncidentId || loading || accidentes.length === 0) return;
     const match = accidentes.find(acc => acc.id === pendingIncidentId);
     if (match) {
-      setAccidenteSeleccionado(match);
-      setOpenDetalleModal(true);
+      // Usar nuevo panel en lugar de modal
+      setSelectedAccidenteId(pendingIncidentId);
+      setPanelInitialMode('view');
     }
     setPendingIncidentId(null);
 
@@ -174,8 +178,9 @@ export default function Accidentes() {
   }, [pendingIncidentId, accidentes, loading, navigate, location, searchIncidentId, searchEmpresaId, searchSucursalId]);
 
   const handleVerDetalle = (accidente) => {
-    setAccidenteSeleccionado(accidente);
-    setOpenDetalleModal(true);
+    // Usar nuevo panel en lugar de modal
+    setSelectedAccidenteId(accidente.id);
+    setPanelInitialMode('view');
   };
 
   const handleActualizarEstadoWrapper = async (accidenteId, nuevoEstado) => {
@@ -318,11 +323,49 @@ export default function Accidentes() {
         />
       )}
 
-      <AccidenteDetalleModal
-        open={openDetalleModal}
-        onClose={() => setOpenDetalleModal(false)}
-        accidente={accidenteSeleccionado}
-        actualizarEstadoAccidente={handleActualizarEstadoWrapper}
+      {/* Modal legacy (mantener por compatibilidad temporal) */}
+      {openDetalleModal && (
+        <AccidenteDetalleModal
+          open={openDetalleModal}
+          onClose={() => setOpenDetalleModal(false)}
+          accidente={accidenteSeleccionado}
+          actualizarEstadoAccidente={handleActualizarEstadoWrapper}
+        />
+      )}
+
+      {/* Panel de detalles nuevo */}
+      <AccidenteDetailPanel
+        open={!!selectedAccidenteId}
+        onClose={() => {
+          setSelectedAccidenteId(null);
+          setPanelInitialMode('view');
+        }}
+        accidenteId={selectedAccidenteId}
+        initialMode={panelInitialMode}
+        userId={userProfile?.uid}
+        onRegistrarAccidente={(accidenteId) => {
+          setPanelInitialMode('registrar');
+        }}
+        onMarcarCerrado={async (accidenteId) => {
+          if (window.confirm('¿Marcar este accidente como cerrado?')) {
+            try {
+              await actualizarEstadoAccidente(accidenteId, 'cerrado', userProfile?.uid, userProfile);
+              recargarAccidentes();
+              setSelectedAccidenteId(null);
+            } catch (error) {
+              console.error('Error al cerrar accidente:', error);
+              alert('Error al actualizar el estado del accidente');
+            }
+          }
+        }}
+        onEditarAccidente={(accidente) => {
+          setAccidenteEditando(accidente);
+          setOpenEditarModal(true);
+        }}
+        onSaved={(registroId) => {
+          console.log('[Accidentes] Registro guardado, refrescando datos');
+          recargarAccidentes();
+        }}
       />
 
       <EditarAccidenteModal
