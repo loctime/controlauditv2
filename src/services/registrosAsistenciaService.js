@@ -129,8 +129,11 @@ export const registrosAsistenciaService = {
       // Validar y sanitizar imágenes (solo metadata liviana)
       const imagenesSanitizadas = validarYSanitizarImagenes(registroData.imagenes || []);
       
+      // ⚠️ CRÍTICO: Normalizar capacitacionId a string para consistencia
+      const capacitacionIdStr = String(registroData.capacitacionId);
+      
       const nuevoRegistro = {
-        capacitacionId: registroData.capacitacionId,
+        capacitacionId: capacitacionIdStr, // ⚠️ Siempre guardar como string
         empleadoIds: registroData.empleadoIds,
         // imagenIds: array de strings para queries eficientes
         imagenIds: imagenesSanitizadas.map(img => img.id || img.fileId).filter(Boolean),
@@ -141,6 +144,13 @@ export const registrosAsistenciaService = {
         createdAt: Timestamp.now(),
         appId: 'auditoria'
       };
+      
+      console.log('[registrosAsistenciaService] Creando registro:', {
+        capacitacionId: capacitacionIdStr,
+        tipo: typeof capacitacionIdStr,
+        empleadoIds: nuevoRegistro.empleadoIds.length,
+        imagenes: nuevoRegistro.imagenes.length
+      });
 
       const registroRef = await addDocWithAppId(registrosRef, nuevoRegistro);
 
@@ -174,22 +184,58 @@ export const registrosAsistenciaService = {
    */
   async getRegistrosByCapacitacion(userId, capacitacionId) {
     try {
-      if (!userId || !capacitacionId) return [];
+      if (!userId || !capacitacionId) {
+        console.warn('[registrosAsistenciaService] getRegistrosByCapacitacion: parámetros faltantes', { userId, capacitacionId });
+        return [];
+      }
 
+      // ⚠️ CRÍTICO: Normalizar capacitacionId a string para consistencia
+      const capacitacionIdStr = String(capacitacionId);
+      
+      console.log('[registrosAsistenciaService] Buscando registros:', { 
+        userId, 
+        capacitacionId: capacitacionIdStr,
+        tipoOriginal: typeof capacitacionId,
+        tipoNormalizado: typeof capacitacionIdStr
+      });
+      
       const registrosRef = auditUserCollection(userId, 'registrosAsistencia');
       const q = query(
         registrosRef,
-        where('capacitacionId', '==', capacitacionId),
+        where('capacitacionId', '==', capacitacionIdStr), // ⚠️ Usar string normalizado
         orderBy('fecha', 'desc')
       );
 
       const snapshot = await getDocs(q);
-      return snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
+      const resultados = snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          ...data,
+          // ⚠️ Asegurar que capacitacionId también esté normalizado en el resultado
+          capacitacionId: String(data.capacitacionId || capacitacionIdStr)
+        };
+      });
+      
+      console.log('[registrosAsistenciaService] Registros encontrados:', {
+        cantidad: resultados.length,
+        capacitacionIdBuscado: capacitacionIdStr,
+        registros: resultados.map(r => ({
+          id: r.id,
+          capacitacionId: r.capacitacionId,
+          empleadoIds: r.empleadoIds?.length || 0,
+          imagenes: r.imagenes?.length || 0
+        }))
+      });
+      
+      return resultados;
     } catch (error) {
       console.error('❌ Error obteniendo registros por capacitación:', error);
+      console.error('Error details:', {
+        code: error.code,
+        message: error.message,
+        stack: error.stack
+      });
       return [];
     }
   },
@@ -284,7 +330,16 @@ export const registrosAsistenciaService = {
    */
   async getEmpleadosUnicosByCapacitacion(userId, capacitacionId) {
     try {
-      const registros = await this.getRegistrosByCapacitacion(userId, capacitacionId);
+      // ⚠️ CRÍTICO: Normalizar capacitacionId a string
+      const capacitacionIdStr = String(capacitacionId);
+      
+      console.log('[registrosAsistenciaService] getEmpleadosUnicosByCapacitacion:', { 
+        userId, 
+        capacitacionId: capacitacionIdStr,
+        tipoOriginal: typeof capacitacionId
+      });
+      
+      const registros = await this.getRegistrosByCapacitacion(userId, capacitacionIdStr);
       const empleadoIdsUnicos = new Set();
       
       registros.forEach(reg => {
@@ -293,7 +348,13 @@ export const registrosAsistenciaService = {
         }
       });
 
-      return Array.from(empleadoIdsUnicos);
+      const resultado = Array.from(empleadoIdsUnicos);
+      console.log('[registrosAsistenciaService] Empleados únicos encontrados:', {
+        cantidad: resultado.length,
+        capacitacionId: capacitacionIdStr,
+        empleados: resultado
+      });
+      return resultado;
     } catch (error) {
       console.error('❌ Error calculando empleados únicos:', error);
       return [];
@@ -308,7 +369,16 @@ export const registrosAsistenciaService = {
    */
   async getImagenesByCapacitacion(userId, capacitacionId) {
     try {
-      const registros = await this.getRegistrosByCapacitacion(userId, capacitacionId);
+      // ⚠️ CRÍTICO: Normalizar capacitacionId a string
+      const capacitacionIdStr = String(capacitacionId);
+      
+      console.log('[registrosAsistenciaService] getImagenesByCapacitacion:', { 
+        userId, 
+        capacitacionId: capacitacionIdStr,
+        tipoOriginal: typeof capacitacionId
+      });
+      
+      const registros = await this.getRegistrosByCapacitacion(userId, capacitacionIdStr);
       const imagenesConRegistro = [];
 
       registros.forEach(reg => {
@@ -324,6 +394,11 @@ export const registrosAsistenciaService = {
         }
       });
 
+      console.log('[registrosAsistenciaService] Imágenes encontradas:', {
+        cantidad: imagenesConRegistro.length,
+        capacitacionId: capacitacionIdStr,
+        imagenes: imagenesConRegistro
+      });
       return imagenesConRegistro;
     } catch (error) {
       console.error('❌ Error obteniendo imágenes por capacitación:', error);

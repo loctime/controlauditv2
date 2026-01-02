@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   Container,
   Typography,
@@ -13,7 +13,7 @@ import {
 } from '@mui/material';
 import { Add as AddIcon } from '@mui/icons-material';
 import { useAuth } from '../../context/AuthContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import CapacitacionForm from './CapacitacionForm';
 import RealizarCapacitacion from './RealizarCapacitacion';
 import PlanAnualModal from './PlanAnualModal';
@@ -34,6 +34,7 @@ import CapacitacionDetailPanel from './components/CapacitacionDetailPanel';
 export default function Capacitaciones() {
   const { userProfile, userSucursales, loadingSucursales, getUserSucursales, userEmpresas } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   
   // Estado de pestañas
   const [activeTab, setActiveTab] = useState(0);
@@ -48,6 +49,9 @@ export default function Capacitaciones() {
   
   // Estado para panel de detalle
   const [selectedCapacitacionId, setSelectedCapacitacionId] = useState(null);
+  
+  // Estado para forzar refresh del cache de la tabla
+  const [tableRefreshKey, setTableRefreshKey] = useState(0);
   
   // Estado para pestaña "Realizar Capacitación" (filtros independientes)
   const [realizarCapSelectedEmpresa, setRealizarCapSelectedEmpresa] = useState('');
@@ -106,9 +110,38 @@ export default function Capacitaciones() {
     empresasCargadas
   );
 
-  // Hook de handlers
+  // Hook de handlers con callback para refrescar cache de tabla
+  const handleRecargarConRefresh = useCallback(() => {
+    recargarDatos();
+    // Forzar refresh del cache de la tabla después de recargar datos
+    setTimeout(() => {
+      setTableRefreshKey(prev => prev + 1);
+    }, 500); // Pequeño delay para asegurar que los datos se cargaron
+  }, [recargarDatos]);
+
   const { handleRegistrarAsistencia, handleMarcarCompletada, handleDuplicar } = 
-    useCapacitacionesHandlers(userProfile, recargarDatos, navigate);
+    useCapacitacionesHandlers(userProfile, handleRecargarConRefresh, navigate);
+
+  // Refrescar cache cuando se vuelve a esta página (desde RegistrarAsistencia)
+  useEffect(() => {
+    // Detectar cuando se vuelve a esta ruta y forzar refresh del cache
+    if (location.pathname === '/capacitaciones' && capacitaciones.length > 0 && !loading) {
+      console.log('[Capacitaciones] Detectado retorno a página, refrescando cache');
+      setTableRefreshKey(prev => prev + 1);
+    }
+  }, [location.pathname, loading]); // Refrescar cuando se navega a esta página
+
+  // Refrescar cache cuando se recargan los datos
+  useEffect(() => {
+    // Incrementar refreshKey para forzar refresh del cache de la tabla
+    if (capacitaciones.length > 0 && !loading) {
+      console.log('[Capacitaciones] Datos recargados, refrescando cache, capacitaciones:', capacitaciones.length);
+      // Pequeño delay para asegurar que los datos están listos
+      setTimeout(() => {
+        setTableRefreshKey(prev => prev + 1);
+      }, 100);
+    }
+  }, [capacitaciones.length, loading]); // Refrescar cuando cambia el número de capacitaciones o se recargan datos
 
   // Guardar sucursales en estado local
   useEffect(() => {
@@ -313,6 +346,7 @@ export default function Capacitaciones() {
             empresas={userEmpresas}
             sucursales={sucursalesFiltradas}
             loading={loading}
+            refreshKey={tableRefreshKey}
           />
         </>
       )}

@@ -74,11 +74,30 @@ const TabResumen = ({ capacitacionId, userId }) => {
 
     const loadStats = async () => {
       try {
+        // ⚠️ IMPORTANTE: Asegurar que capacitacionId sea string
+        const capacitacionIdStr = String(capacitacionId);
+        
+        console.log('[TabResumen] Cargando stats para:', { 
+          userId, 
+          capacitacionId: capacitacionIdStr,
+          tipoOriginal: typeof capacitacionId,
+          tipoString: typeof capacitacionIdStr
+        });
+        
         const [registros, empleadosUnicos, imagenes] = await Promise.all([
-          registrosAsistenciaService.getRegistrosByCapacitacion(userId, capacitacionId),
-          registrosAsistenciaService.getEmpleadosUnicosByCapacitacion(userId, capacitacionId),
-          registrosAsistenciaService.getImagenesByCapacitacion(userId, capacitacionId)
+          registrosAsistenciaService.getRegistrosByCapacitacion(userId, capacitacionIdStr),
+          registrosAsistenciaService.getEmpleadosUnicosByCapacitacion(userId, capacitacionIdStr),
+          registrosAsistenciaService.getImagenesByCapacitacion(userId, capacitacionIdStr)
         ]);
+
+        console.log('[TabResumen] Resultados:', {
+          registros: registros.length,
+          empleadosUnicos: empleadosUnicos.length,
+          imagenes: imagenes.length,
+          registrosData: registros,
+          empleadosData: empleadosUnicos,
+          imagenesData: imagenes
+        });
 
         if (mounted) {
           setStats({
@@ -89,7 +108,7 @@ const TabResumen = ({ capacitacionId, userId }) => {
           });
         }
       } catch (error) {
-        console.error('Error cargando resumen:', error);
+        console.error('[TabResumen] Error cargando resumen:', error);
         if (mounted) {
           setStats(prev => ({ ...prev, loading: false }));
         }
@@ -114,34 +133,45 @@ const TabResumen = ({ capacitacionId, userId }) => {
         Resumen de Asistencia
       </Typography>
       
-      <Stack spacing={2}>
-        <Paper sx={{ p: 2 }}>
-          <Typography variant="body2" color="text.secondary">
-            Total de Registros
+      {stats.totalRegistros === 0 && stats.totalEmpleados === 0 && stats.totalEvidencias === 0 ? (
+        <Paper sx={{ p: 3, textAlign: 'center', bgcolor: 'grey.50' }}>
+          <Typography color="text.secondary" sx={{ mb: 1 }}>
+            No hay datos de asistencia registrados
           </Typography>
-          <Typography variant="h4">
-            {stats.totalRegistros}
+          <Typography variant="caption" color="text.secondary">
+            Los datos pueden estar en formato legacy. Verifica la consola para más detalles.
           </Typography>
         </Paper>
+      ) : (
+        <Stack spacing={2}>
+          <Paper sx={{ p: 2 }}>
+            <Typography variant="body2" color="text.secondary">
+              Total de Registros
+            </Typography>
+            <Typography variant="h4">
+              {stats.totalRegistros}
+            </Typography>
+          </Paper>
 
-        <Paper sx={{ p: 2 }}>
-          <Typography variant="body2" color="text.secondary">
-            Empleados Únicos
-          </Typography>
-          <Typography variant="h4">
-            {stats.totalEmpleados}
-          </Typography>
-        </Paper>
+          <Paper sx={{ p: 2 }}>
+            <Typography variant="body2" color="text.secondary">
+              Empleados Únicos
+            </Typography>
+            <Typography variant="h4">
+              {stats.totalEmpleados}
+            </Typography>
+          </Paper>
 
-        <Paper sx={{ p: 2 }}>
-          <Typography variant="body2" color="text.secondary">
-            Total de Evidencias
-          </Typography>
-          <Typography variant="h4">
-            {stats.totalEvidencias}
-          </Typography>
-        </Paper>
-      </Stack>
+          <Paper sx={{ p: 2 }}>
+            <Typography variant="body2" color="text.secondary">
+              Total de Evidencias
+            </Typography>
+            <Typography variant="h4">
+              {stats.totalEvidencias}
+            </Typography>
+          </Paper>
+        </Stack>
+      )}
     </Box>
   );
 };
@@ -164,17 +194,22 @@ const TabRegistros = ({ capacitacionId, userId }) => {
 
     const loadRegistros = async () => {
       try {
+        const capacitacionIdStr = String(capacitacionId);
+        console.log('[TabRegistros] Cargando registros para:', { userId, capacitacionId: capacitacionIdStr });
+        
         const data = await registrosAsistenciaService.getRegistrosByCapacitacion(
           userId,
-          capacitacionId
+          capacitacionIdStr
         );
+
+        console.log('[TabRegistros] Registros obtenidos:', data.length, data);
 
         if (mounted) {
           setRegistros(data);
           setLoading(false);
         }
       } catch (error) {
-        console.error('Error cargando registros:', error);
+        console.error('[TabRegistros] Error cargando registros:', error);
         if (mounted) {
           setLoading(false);
         }
@@ -265,9 +300,10 @@ const TabEvidencias = ({ capacitacionId, userId }) => {
 
     const loadEvidencias = async () => {
       try {
+        const capacitacionIdStr = String(capacitacionId);
         const data = await registrosAsistenciaService.getImagenesByCapacitacion(
           userId,
-          capacitacionId
+          capacitacionIdStr
         );
 
         if (mounted) {
@@ -403,16 +439,18 @@ const TabEmpleados = ({ capacitacionId, userId }) => {
 
     const loadEmpleados = async () => {
       try {
+        const capacitacionIdStr = String(capacitacionId);
+        
         // Obtener empleados únicos
         const empleadoIds = await registrosAsistenciaService.getEmpleadosUnicosByCapacitacion(
           userId,
-          capacitacionId
+          capacitacionIdStr
         );
 
         // Obtener registros para contar asistencias por empleado
         const registros = await registrosAsistenciaService.getRegistrosByCapacitacion(
           userId,
-          capacitacionId
+          capacitacionIdStr
         );
 
         // Contar asistencias por empleado
@@ -526,18 +564,29 @@ const CapacitacionDetailPanel = ({
 
     const loadCapacitacion = async () => {
       try {
+        // ⚠️ IMPORTANTE: Asegurar que capacitacionId sea string para consistencia
+        const capacitacionIdStr = String(capacitacionId);
+        
+        console.log('[CapacitacionDetailPanel] Cargando capacitación:', {
+          capacitacionId: capacitacionIdStr,
+          tipo: typeof capacitacionIdStr,
+          userId: userProfile.uid
+        });
+
         const data = await capacitacionService.getCapacitacionById(
           userProfile.uid,
-          capacitacionId,
+          capacitacionIdStr,
           false // No calcular empleados aquí, se hace en tabs
         );
+
+        console.log('[CapacitacionDetailPanel] Capacitación cargada:', data);
 
         if (mounted) {
           setCapacitacion(data);
           setLoading(false);
         }
       } catch (error) {
-        console.error('Error cargando capacitación:', error);
+        console.error('[CapacitacionDetailPanel] Error cargando capacitación:', error);
         if (mounted) {
           setLoading(false);
         }
@@ -703,25 +752,25 @@ const CapacitacionDetailPanel = ({
           <Box sx={{ flex: 1, overflowY: 'auto' }}>
             {activeTab === 0 && (
               <TabResumen
-                capacitacionId={capacitacionId}
+                capacitacionId={capacitacionId ? String(capacitacionId) : null}
                 userId={userProfile?.uid}
               />
             )}
             {activeTab === 1 && (
               <TabRegistros
-                capacitacionId={capacitacionId}
+                capacitacionId={capacitacionId ? String(capacitacionId) : null}
                 userId={userProfile?.uid}
               />
             )}
             {activeTab === 2 && (
               <TabEvidencias
-                capacitacionId={capacitacionId}
+                capacitacionId={capacitacionId ? String(capacitacionId) : null}
                 userId={userProfile?.uid}
               />
             )}
             {activeTab === 3 && (
               <TabEmpleados
-                capacitacionId={capacitacionId}
+                capacitacionId={capacitacionId ? String(capacitacionId) : null}
                 userId={userProfile?.uid}
               />
             )}

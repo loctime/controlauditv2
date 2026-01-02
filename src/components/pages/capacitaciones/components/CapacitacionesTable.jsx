@@ -79,7 +79,8 @@ const CapacitacionesTable = ({
   selectedSucursal = '',
   empresas = [],
   sucursales = [],
-  loading = false
+  loading = false,
+  refreshKey = 0 // Key para forzar refresh del cache
 }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
@@ -100,7 +101,8 @@ const CapacitacionesTable = ({
 
     const loadAll = async () => {
       // Limpiar cache de capacitaciones que ya no están en la lista
-      const currentIds = new Set(capacitaciones.map(c => c.id));
+      // ⚠️ IMPORTANTE: Convertir a string para comparación consistente
+      const currentIds = new Set(capacitaciones.map(c => String(c.id)));
       Object.keys(statsCache.current).forEach(id => {
         if (!currentIds.has(id)) delete statsCache.current[id];
       });
@@ -109,20 +111,43 @@ const CapacitacionesTable = ({
       });
 
       for (const cap of capacitaciones) {
-        if (!statsCache.current[cap.id]) {
+        const capIdStr = String(cap.id);
+        
+        // ⚠️ IMPORTANTE: Si refreshKey cambió, forzar refresh del cache (invalidar y recargar)
+        const shouldRefresh = refreshKey > 0;
+        
+        // Si debe refrescar, limpiar el cache primero
+        if (shouldRefresh) {
+          delete statsCache.current[capIdStr];
+          delete evidenciasCache.current[capIdStr];
+        }
+        
+        if (!statsCache.current[capIdStr]) {
+          console.log('[CapacitacionesTable] Cargando stats para:', capIdStr, { shouldRefresh, refreshKey });
           const empleados = await registrosAsistenciaService.getEmpleadosUnicosByCapacitacion(
             userProfile.uid,
-            cap.id
+            capIdStr
           );
-          statsCache.current[cap.id] = empleados.length;
+          statsCache.current[capIdStr] = empleados.length;
+          console.log('[CapacitacionesTable] Stats cargados:', { 
+            capId: capIdStr, 
+            empleados: empleados.length,
+            empleadosData: empleados 
+          });
         }
 
-        if (!evidenciasCache.current[cap.id]) {
+        if (!evidenciasCache.current[capIdStr]) {
+          console.log('[CapacitacionesTable] Cargando evidencias para:', capIdStr, { shouldRefresh, refreshKey });
           const imgs = await registrosAsistenciaService.getImagenesByCapacitacion(
             userProfile.uid,
-            cap.id
+            capIdStr
           );
-          evidenciasCache.current[cap.id] = imgs.length;
+          evidenciasCache.current[capIdStr] = imgs.length;
+          console.log('[CapacitacionesTable] Evidencias cargadas:', { 
+            capId: capIdStr, 
+            imagenes: imgs.length,
+            imagenesData: imgs 
+          });
         }
       }
 
@@ -131,7 +156,7 @@ const CapacitacionesTable = ({
 
     loadAll();
     return () => { mounted = false; };
-  }, [capacitaciones, userProfile?.uid]);
+  }, [capacitaciones, userProfile?.uid, refreshKey]); // ⚠️ Agregar refreshKey para forzar refresh
 
   if (loading || !ready) {
     return (
@@ -209,6 +234,8 @@ const CapacitacionesTable = ({
   const renderRow = (cap) => {
     const empresa = empresas.find(e => e.id === cap.empresaId)?.nombre || 'N/A';
     const sucursal = sucursales.find(s => s.id === cap.sucursalId)?.nombre || 'N/A';
+    // ⚠️ IMPORTANTE: Usar string para acceder al cache (debe coincidir con cómo se guarda)
+    const capIdStr = String(cap.id);
 
     return (
       <TableRow key={cap.id} hover onClick={() => onSelectCapacitacion?.(cap.id)}>
@@ -221,10 +248,10 @@ const CapacitacionesTable = ({
         <TableCell>{formatDate(cap.fechaRealizada)}</TableCell>
         <TableCell>{cap.instructor || 'N/A'}</TableCell>
         <TableCell align="center">
-          <AsistentesCell count={statsCache.current[cap.id] || 0} />
+          <AsistentesCell count={statsCache.current[capIdStr] || 0} />
         </TableCell>
         <TableCell align="center">
-          <EvidenciasCell count={evidenciasCache.current[cap.id] || 0} />
+          <EvidenciasCell count={evidenciasCache.current[capIdStr] || 0} />
         </TableCell>
         <TableCell onClick={(e) => e.stopPropagation()}>
           {renderAcciones(cap)}
@@ -264,6 +291,8 @@ const CapacitacionesTable = ({
       {capacitaciones.map(cap => {
         const empresa = empresas.find(e => e.id === cap.empresaId)?.nombre || 'N/A';
         const sucursal = sucursales.find(s => s.id === cap.sucursalId)?.nombre || 'N/A';
+        // ⚠️ IMPORTANTE: Usar string para acceder al cache (debe coincidir con cómo se guarda)
+        const capIdStr = String(cap.id);
         
         return (
           <Accordion key={cap.id}>
@@ -289,9 +318,9 @@ const CapacitacionesTable = ({
                 </Box>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                   <Typography variant="body2">
-                    {statsCache.current[cap.id] || 0}
+                    {statsCache.current[capIdStr] || 0}
                   </Typography>
-                  <EvidenciasCell count={evidenciasCache.current[cap.id] || 0} />
+                  <EvidenciasCell count={evidenciasCache.current[capIdStr] || 0} />
                 </Box>
               </Box>
             </AccordionSummary>
