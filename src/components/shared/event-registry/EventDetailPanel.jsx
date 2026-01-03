@@ -17,6 +17,7 @@
  * - onModeChange: (mode) => void (opcional)
  * - hideInternalHeader: boolean (opcional, oculta el header interno por defecto)
  * - hideTabs: boolean (opcional, oculta las tabs visuales)
+ * - hideCloseButton: boolean (opcional, oculta el botón de cerrar)
  */
 
 import React, { useState, useEffect } from 'react';
@@ -382,7 +383,8 @@ const EventDetailPanel = ({
   onModeChange,
   renderRegistryForm,
   hideInternalHeader = false,
-  hideTabs = false
+  hideTabs = false,
+  hideCloseButton = false
 }) => {
   const [entity, setEntity] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -494,9 +496,11 @@ const EventDetailPanel = ({
                   Registrar
                 </Typography>
               </Box>
-              <IconButton onClick={onClose} size="small">
-                <CloseIcon />
-              </IconButton>
+              {!hideCloseButton && (
+                <IconButton onClick={onClose} size="small">
+                  <CloseIcon />
+                </IconButton>
+              )}
             </Box>
             {entity && (
               <Typography variant="body2" color="text.secondary">

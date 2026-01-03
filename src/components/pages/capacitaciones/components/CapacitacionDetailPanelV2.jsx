@@ -7,17 +7,15 @@ import {
   Chip,
   Button,
   Stack,
-  Paper,
   Grid,
   CircularProgress,
-  Divider,
-  IconButton
+  Accordion,
+  AccordionSummary,
+  AccordionDetails
 } from '@mui/material';
 import {
-  Edit as EditIcon,
-  CheckCircle as CheckCircleIcon,
   PlayArrow as PlayArrowIcon,
-  Close as CloseIcon
+  ExpandMore as ExpandMoreIcon
 } from '@mui/icons-material';
 import EventDetailPanel from '../../../shared/event-registry/EventDetailPanel';
 import RegistrarAsistenciaInlineV2 from './RegistrarAsistenciaInlineV2';
@@ -110,35 +108,34 @@ const ContenidoRegistros = ({ entityId, userId, registryService, refreshKey }) =
 
   return (
     <Box sx={{ p: 2 }}>
-    
-      
-      <Stack spacing={3}>
+      <Stack spacing={1.5}>
         {registros.map((registro) => {
           const fechaStr = registro.fecha?.toDate?.()?.toLocaleDateString() || registro.fecha || 'N/A';
           const evidencias = registro.imagenes || [];
           
           return (
-            <Paper key={registro.id} elevation={1} sx={{ p: 2.5 }}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
-                <Box>
-                  <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 0.5 }}>
-                    Registro del {fechaStr}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    {registro.empleadoIds?.length || 0} empleado(s) • {evidencias.length} evidencia(s)
-                  </Typography>
+            <Accordion key={registro.id} elevation={1}>
+              <AccordionSummary
+                expandIcon={<ExpandMoreIcon />}
+                sx={{
+                  '& .MuiAccordionSummary-content': {
+                    alignItems: 'center'
+                  }
+                }}
+              >
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', pr: 2 }}>
+                  <Box>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+                      {fechaStr}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      {registro.empleadoIds?.length || 0} empleado(s) • {evidencias.length} evidencia(s)
+                    </Typography>
+                  </Box>
                 </Box>
-                <Typography variant="caption" color="text.secondary">
-                  ID: {registro.id}
-                </Typography>
-              </Box>
-
-              {evidencias.length > 0 && (
-                <>
-                  <Divider sx={{ my: 2 }} />
-                  <Typography variant="subtitle2" sx={{ mb: 1.5, fontWeight: 600 }}>
-                    Evidencias
-                  </Typography>
+              </AccordionSummary>
+              <AccordionDetails>
+                {evidencias.length > 0 ? (
                   <Grid container spacing={2}>
                     {evidencias.map((evidencia, idx) => {
                       const imgId = evidencia.id || `${registro.id}-${idx}`;
@@ -197,9 +194,13 @@ const ContenidoRegistros = ({ entityId, userId, registryService, refreshKey }) =
                       );
                     })}
                   </Grid>
-                </>
-              )}
-            </Paper>
+                ) : (
+                  <Typography variant="body2" color="text.secondary">
+                    No hay evidencias para este registro
+                  </Typography>
+                )}
+              </AccordionDetails>
+            </Accordion>
           );
         })}
       </Stack>
@@ -219,11 +220,6 @@ const CapacitacionDetailPanelV2 = ({
   onRealizarCapacitacion,
   onSaved
 }) => {
-  const handleCloseRef = React.useRef(onClose);
-  
-  React.useEffect(() => {
-    handleCloseRef.current = onClose;
-  }, [onClose]);
   const [currentMode, setCurrentMode] = React.useState(initialMode);
   const [kpiStats, setKpiStats] = React.useState({
     totalRegistros: 0,
@@ -283,23 +279,18 @@ const CapacitacionDetailPanelV2 = ({
         <Paper
           elevation={2}
           sx={{
-            p: 2.5,
+            p: 2,
             mb: 2,
             mt: { xs: 6, sm: 7 },
             background: 'linear-gradient(to bottom, rgba(255,255,255,1), rgba(248,249,250,1))'
           }}
         >
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <Box sx={{ flex: 1 }}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1.5 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1, flexWrap: 'wrap' }}>
                 <Typography variant="h6" sx={{ fontWeight: 600 }}>
                   {cap.nombre || cap.titulo || 'Capacitación'}
                 </Typography>
-                <IconButton onClick={handleCloseRef.current} size="small" sx={{ ml: 1 }}>
-                  <CloseIcon />
-                </IconButton>
-              </Box>
-              <Box sx={{ display: 'flex', gap: 1, mb: 1.5, flexWrap: 'wrap' }}>
                 <Chip
                   label={cap.estado || 'N/A'}
                   color={getEstadoColor(cap.estado)}
@@ -314,29 +305,19 @@ const CapacitacionDetailPanelV2 = ({
                 )}
               </Box>
 
-              <Stack direction="row" spacing={2} sx={{ flexWrap: 'wrap', gap: 1 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap' }}>
                 {fechaStr && (
                   <Typography variant="body2" color="text.secondary">
-                    <strong>Fecha:</strong> {fechaStr}
+                    {fechaStr}
                   </Typography>
                 )}
                 {cap.instructor && (
                   <Typography variant="body2" color="text.secondary">
-                    <strong>Instructor:</strong> {cap.instructor}
+                    {cap.instructor}
                   </Typography>
                 )}
-                {(cap.empresaNombre || cap.sucursalNombre) && (
-                  <Typography variant="body2" color="text.secondary">
-                    {cap.empresaNombre && `${cap.empresaNombre}`}
-                    {cap.empresaNombre && cap.sucursalNombre && ' / '}
-                    {cap.sucursalNombre && `${cap.sucursalNombre}`}
-                  </Typography>
-                )}
-              </Stack>
-
-              <Box sx={{ display: 'flex', gap: 1, mt: 2, flexWrap: 'wrap' }}>
                 {kpiStats.loading ? (
-                  <CircularProgress size={20} />
+                  <CircularProgress size={16} />
                 ) : (
                   <>
                     <Chip
@@ -427,6 +408,7 @@ const CapacitacionDetailPanelV2 = ({
       renderActions={() => null}
       hideInternalHeader={true}
       hideTabs={true}
+      hideCloseButton={true}
       tabs={[
         {
           id: 'registros',
