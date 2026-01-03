@@ -343,18 +343,23 @@ const TabEvidencias = ({ capacitacionId, userId }) => {
   }
 
   const handleDescargar = (imagen) => {
-    const shareToken = imagen.shareToken;
+    const { shareToken, nombre } = imagen;
     
     if (!shareToken) {
       console.warn('Imagen sin shareToken:', imagen);
       return;
     }
 
-    // URL de descarga de ControlFile
-    const downloadUrl = `https://files.controldoc.app/api/shares/${shareToken}/download`;
-    
-    // Abrir en nueva pestaña para forzar descarga
-    window.open(downloadUrl, '_blank');
+    // Usar endpoint /image y forzar descarga desde el frontend
+    const url = `https://files.controldoc.app/api/shares/${shareToken}/image`;
+
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = nombre || 'evidencia';
+    link.target = '_blank'; // fallback
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   return (

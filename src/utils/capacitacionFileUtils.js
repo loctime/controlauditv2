@@ -267,8 +267,11 @@ export function convertirShareTokenAUrl(shareToken) {
 /**
  * Convierte shareToken a URL de descarga
  * 
+ * IMPORTANTE: ControlFile solo expone /image
+ * El frontend decide si es preview o descarga usando <a download>
+ * 
  * @param {string} shareToken - Token del archivo
- * @returns {string} URL de descarga
+ * @returns {string} URL usando endpoint /image
  */
 export function convertirShareTokenAUrlDescarga(shareToken) {
   if (!shareToken || typeof shareToken !== 'string') {
@@ -280,8 +283,8 @@ export function convertirShareTokenAUrlDescarga(shareToken) {
     return shareToken;
   }
   
-  // Convertir shareToken a URL de descarga de ControlFile
-  return `https://files.controldoc.app/api/shares/${shareToken}/download`;
+  // Usar endpoint /image (único endpoint válido en ControlFile)
+  return `https://files.controldoc.app/api/shares/${shareToken}/image`;
 }
 
 /**
