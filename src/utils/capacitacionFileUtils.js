@@ -21,14 +21,16 @@ export function esArchivoLegacy(archivo) {
 
   const customFields = archivo.metadata.customFields || {};
   
-  // Archivo nuevo tiene estos campos obligatorios:
+  // Archivo nuevo tiene estos campos obligatorios (nuevo modelo):
   const tieneContextType = customFields.contextType === 'capacitacion';
-  const tieneCategoria = !!customFields.categoria;
+  const tieneCapacitacionTipoId = !!customFields.capacitacionTipoId;
+  const tieneCapacitacionEventoId = !!(customFields.capacitacionEventoId || customFields.capacitacionId);
   const tieneTipoArchivo = ['evidencia', 'material', 'certificado'].includes(
     customFields.tipoArchivo
   );
   
-  const tieneEstructuraNueva = tieneContextType && tieneCategoria && tieneTipoArchivo;
+  // Estructura nueva completa (nuevo modelo)
+  const tieneEstructuraNueva = tieneContextType && tieneCapacitacionTipoId && tieneCapacitacionEventoId && tieneTipoArchivo;
   
   // Si tiene auditId pero NO tiene estructura nueva, es legacy
   const tieneAuditId = !!customFields.auditId;
@@ -86,8 +88,8 @@ export function normalizarArchivoCapacitacion(archivo) {
       fecha: customFields.fecha || null,
       
       // Campos de capacitación NO disponibles en legacy
-      capacitacionId: customFields.auditId || null, // Usar auditId como fallback
-      categoria: null,
+      capacitacionTipoId: null,
+      capacitacionEventoId: customFields.auditId || null, // Usar auditId como fallback
       tipoArchivo: null,
       sucursalId: null,
       tipoCapacitacion: null,
@@ -95,6 +97,10 @@ export function normalizarArchivoCapacitacion(archivo) {
       fechaCapacitacion: null,
       registroAsistenciaId: null,
       empleadoIds: [],
+      
+      // Compatibilidad legacy (deprecated)
+      capacitacionId: customFields.auditId || null,
+      categoria: null, // Eliminado del modelo
     };
   }
   
@@ -107,9 +113,9 @@ export function normalizarArchivoCapacitacion(archivo) {
     _tipoArchivo: customFields.tipoArchivo,
     _metadataCompleta: true,
     
-    // Campos de capacitación (metadata completa)
-    capacitacionId: customFields.capacitacionId,
-    categoria: customFields.categoria,
+    // Campos de capacitación (metadata completa - nuevo modelo)
+    capacitacionTipoId: customFields.capacitacionTipoId || null,
+    capacitacionEventoId: customFields.capacitacionEventoId || customFields.capacitacionId || null, // Compatibilidad con campo antiguo
     tipoArchivo: customFields.tipoArchivo,
     companyId: customFields.companyId,
     sucursalId: customFields.sucursalId || null,
@@ -123,6 +129,10 @@ export function normalizarArchivoCapacitacion(archivo) {
     uploadedBy: customFields.uploadedBy,
     uploadedAt: customFields.uploadedAt,
     fechaArchivo: customFields.fechaArchivo,
+    
+    // Compatibilidad legacy (deprecated)
+    capacitacionId: customFields.capacitacionEventoId || customFields.capacitacionId || null,
+    categoria: null, // Eliminado del modelo nuevo
   };
 }
 
@@ -284,7 +294,7 @@ export function obtenerMetadataLegible(archivo) {
   if (!archivo) {
     return {
       tipo: 'Desconocido',
-      categoria: 'N/A',
+      capacitacionTipoId: 'N/A',
       fecha: 'N/A',
       metadataCompleta: false,
     };
@@ -293,7 +303,7 @@ export function obtenerMetadataLegible(archivo) {
   if (archivo._legacy) {
     return {
       tipo: 'Archivo adjunto',
-      categoria: 'N/A',
+      capacitacionTipoId: 'N/A',
       fecha: archivo.fecha || archivo.createdAt || 'N/A',
       metadataCompleta: false,
       esLegacy: true,
@@ -302,11 +312,14 @@ export function obtenerMetadataLegible(archivo) {
   
   return {
     tipo: obtenerTipoArchivoLegible(archivo),
-    categoria: archivo.categoria || 'N/A',
+    capacitacionTipoId: archivo.capacitacionTipoId || 'N/A',
+    capacitacionEventoId: archivo.capacitacionEventoId || archivo.capacitacionId || 'N/A',
     fecha: archivo.fechaCapacitacion || archivo.fechaArchivo || archivo.createdAt || 'N/A',
     metadataCompleta: true,
     esLegacy: false,
     tipoCapacitacion: archivo.tipoCapacitacion || null,
     nombreCapacitacion: archivo.nombreCapacitacion || null,
+    companyId: archivo.companyId || null,
+    sucursalId: archivo.sucursalId || null,
   };
 }

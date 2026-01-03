@@ -616,17 +616,35 @@ export async function createNavbarFolder(
 }
 
 /**
+ * Normaliza un nombre de capacitación a un ID de tipo válido para carpetas
+ * Ej: "Uso de Matafuegos" -> "uso-de-matafuegos"
+ */
+function normalizarCapacitacionTipoId(nombre: string): string {
+  return nombre
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9\s-]/g, '') // Eliminar caracteres especiales
+    .replace(/\s+/g, '-') // Reemplazar espacios con guiones
+    .replace(/-+/g, '-') // Eliminar guiones múltiples
+    .replace(/^-|-$/g, ''); // Eliminar guiones al inicio/final
+}
+
+/**
  * Asegura la estructura completa de carpetas para una capacitación
- * Crea: ControlAudit/Capacitaciones/{categoria}/{capacitacionId}/
+ * Crea: ControlAudit/Capacitaciones/{capacitacionTipoId}/{capacitacionEventoId}/{companyId}/{sucursalId}/{tipoArchivo}/
  * 
- * @param {string} capacitacionId - ID de la capacitación
- * @param {string} categoria - Categoría de la capacitación (ej: "seguridad", "salud")
+ * @param {string} capacitacionTipoId - ID del tipo de capacitación (ej: "uso-de-matafuegos")
+ * @param {string} capacitacionEventoId - ID del evento específico de capacitación (cada vez que se dicta)
+ * @param {string} companyId - ID de la empresa
+ * @param {string} sucursalId - ID de la sucursal
  * @param {'evidencia' | 'material' | 'certificado'} tipoArchivo - Tipo de archivo (opcional, solo organizativo)
- * @returns {Promise<string | null>} ID de la carpeta de capacitación o null si hay error
+ * @returns {Promise<string | null>} ID de la carpeta final o null si hay error
  */
 export async function ensureCapacitacionFolder(
-  capacitacionId: string,
-  categoria: string,
+  capacitacionTipoId: string,
+  capacitacionEventoId: string,
+  companyId: string,
+  sucursalId: string,
   tipoArchivo?: 'evidencia' | 'material' | 'certificado'
 ): Promise<string | null> {
   try {
@@ -642,34 +660,46 @@ export async function ensureCapacitacionFolder(
       throw new Error('No se pudo crear carpeta Capacitaciones');
     }
     
-    // 3. Normalizar categoría (lowercase, sin espacios)
-    const categoriaNormalizada = categoria.toLowerCase().trim().replace(/\s+/g, '-');
+    // 3. Normalizar capacitacionTipoId
+    const tipoIdNormalizado = normalizarCapacitacionTipoId(capacitacionTipoId);
     
-    // 4. Carpeta por categoría
-    const categoriaFolderId = await ensureSubFolder(categoriaNormalizada, capacitacionesFolderId);
-    if (!categoriaFolderId) {
-      throw new Error(`No se pudo crear carpeta categoría: ${categoria}`);
+    // 4. Carpeta por tipo de capacitación (reutilizable)
+    const tipoFolderId = await ensureSubFolder(tipoIdNormalizado, capacitacionesFolderId);
+    if (!tipoFolderId) {
+      throw new Error(`No se pudo crear carpeta tipo capacitación: ${tipoIdNormalizado}`);
     }
     
-    // 5. Carpeta por capacitacionId (única por capacitación)
-    const capacitacionFolderId = await ensureSubFolder(capacitacionId, categoriaFolderId);
-    if (!capacitacionFolderId) {
-      throw new Error(`No se pudo crear carpeta capacitación: ${capacitacionId}`);
+    // 5. Carpeta por evento de capacitación (cada vez que se dicta)
+    const eventoFolderId = await ensureSubFolder(capacitacionEventoId, tipoFolderId);
+    if (!eventoFolderId) {
+      throw new Error(`No se pudo crear carpeta evento capacitación: ${capacitacionEventoId}`);
     }
     
-    // 6. Subcarpeta por tipo de archivo (opcional, solo organizativo)
+    // 6. Carpeta por empresa
+    const companyFolderId = await ensureSubFolder(companyId, eventoFolderId);
+    if (!companyFolderId) {
+      throw new Error(`No se pudo crear carpeta empresa: ${companyId}`);
+    }
+    
+    // 7. Carpeta por sucursal
+    const sucursalFolderId = await ensureSubFolder(sucursalId, companyFolderId);
+    if (!sucursalFolderId) {
+      throw new Error(`No se pudo crear carpeta sucursal: ${sucursalId}`);
+    }
+    
+    // 8. Subcarpeta por tipo de archivo (opcional, solo organizativo)
     if (tipoArchivo) {
-      const tipoFolderId = await ensureSubFolder(tipoArchivo, capacitacionFolderId);
-      if (tipoFolderId) {
-        console.log(`[controlFileB2Service] ✅ Estructura completa creada: Capacitaciones/${categoriaNormalizada}/${capacitacionId}/${tipoArchivo}`);
-        return tipoFolderId;
+      const tipoArchivoFolderId = await ensureSubFolder(tipoArchivo, sucursalFolderId);
+      if (tipoArchivoFolderId) {
+        console.log(`[controlFileB2Service] ✅ Estructura completa creada: Capacitaciones/${tipoIdNormalizado}/${capacitacionEventoId}/${companyId}/${sucursalId}/${tipoArchivo}`);
+        return tipoArchivoFolderId;
       }
-      // Si falla crear subcarpeta de tipo, usar carpeta de capacitación como fallback
-      console.warn(`[controlFileB2Service] ⚠️ No se pudo crear subcarpeta ${tipoArchivo}, usando carpeta de capacitación`);
+      // Si falla crear subcarpeta de tipo, usar carpeta de sucursal como fallback
+      console.warn(`[controlFileB2Service] ⚠️ No se pudo crear subcarpeta ${tipoArchivo}, usando carpeta de sucursal`);
     }
     
-    console.log(`[controlFileB2Service] ✅ Estructura creada: Capacitaciones/${categoriaNormalizada}/${capacitacionId}`);
-    return capacitacionFolderId;
+    console.log(`[controlFileB2Service] ✅ Estructura creada: Capacitaciones/${tipoIdNormalizado}/${capacitacionEventoId}/${companyId}/${sucursalId}`);
+    return sucursalFolderId;
   } catch (error) {
     console.error('[controlFileB2Service] ❌ Error al asegurar carpeta de capacitación:', error);
     return null;

@@ -18,44 +18,74 @@ import {
  */
 class CapacitacionImageService {
   /**
+   * Normaliza un nombre de capacitación a un ID de tipo válido para carpetas
+   * Ej: "Uso de Matafuegos" -> "uso-de-matafuegos"
+   */
+  _normalizarCapacitacionTipoId(nombre) {
+    if (!nombre || typeof nombre !== 'string') {
+      return 'capacitacion-generica';
+    }
+    return nombre
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9\s-]/g, '') // Eliminar caracteres especiales
+      .replace(/\s+/g, '-') // Reemplazar espacios con guiones
+      .replace(/-+/g, '-') // Eliminar guiones múltiples
+      .replace(/^-|-$/g, ''); // Eliminar guiones al inicio/final
+  }
+
+  /**
    * Subir imagen a ControlFile (modo online)
    * @param {File} file - Archivo a subir
    * @param {string} idToken - Firebase ID Token del usuario autenticado
-   * @param {string} capacitacionId - ID de la capacitación
+   * @param {string} capacitacionEventoId - ID del evento de capacitación (cada vez que se dicta)
    * @param {string} companyId - ID de la empresa
+   * @param {string} sucursalId - ID de la sucursal (opcional, se obtendrá de la capacitación)
+   * @param {string} capacitacionTipoId - ID del tipo de capacitación (opcional, se generará del nombre)
+   * @param {'evidencia' | 'material' | 'certificado'} tipoArchivo - Tipo de archivo
    * @returns {Promise<{fileId: string, shareToken: string}>}
    */
-  async uploadImage(file, idToken, capacitacionId, companyId, categoria = null, tipoArchivo = 'evidencia') {
+  async uploadImage(file, idToken, capacitacionEventoId, companyId, sucursalId = null, capacitacionTipoId = null, tipoArchivo = 'evidencia') {
     try {
-      // Obtener categoría de la capacitación si no se proporciona
-      let categoriaFinal = categoria;
-      if (!categoriaFinal) {
-        try {
-          // Intentar obtener desde la colección de capacitaciones
-          // Nota: La ruta puede variar según la estructura multi-tenant
-          const capacitacionRef = doc(db, 'capacitaciones', capacitacionId);
-          const capacitacionSnap = await getDoc(capacitacionRef);
-          
-          if (capacitacionSnap.exists()) {
-            const capacitacionData = capacitacionSnap.data();
-            // Buscar categoría en diferentes campos posibles
-            categoriaFinal = capacitacionData.categoria || 
-                           capacitacionData.tipo || 
-                           'seguridad'; // Valor por defecto
-          } else {
-            // Si no existe la capacitación, usar valor por defecto
-            categoriaFinal = 'seguridad';
-          }
-        } catch (error) {
-          console.warn('⚠️ No se pudo obtener categoría de la capacitación, usando "seguridad" por defecto:', error);
-          categoriaFinal = 'seguridad'; // Valor por defecto para compatibilidad con estructura actual
+      // Obtener datos completos de la capacitación
+      let capacitacionData = null;
+      try {
+        const capacitacionRef = doc(db, 'capacitaciones', capacitacionEventoId);
+        const capacitacionSnap = await getDoc(capacitacionRef);
+        
+        if (capacitacionSnap.exists()) {
+          capacitacionData = capacitacionSnap.data();
         }
+      } catch (error) {
+        console.warn('⚠️ No se pudo obtener datos de la capacitación:', error);
+      }
+
+      // Determinar valores finales
+      const finalCompanyId = companyId || capacitacionData?.empresaId;
+      const finalSucursalId = sucursalId || capacitacionData?.sucursalId;
+      
+      if (!finalCompanyId) {
+        throw new Error('No se pudo obtener companyId para la capacitación');
       }
       
-      // Asegurar estructura completa de carpetas: Capacitaciones/{categoria}/{capacitacionId}/
+      if (!finalSucursalId) {
+        throw new Error('No se pudo obtener sucursalId para la capacitación');
+      }
+
+      // Generar capacitacionTipoId desde el nombre si no se proporciona
+      let finalTipoId = capacitacionTipoId;
+      if (!finalTipoId) {
+        const nombreCapacitacion = capacitacionData?.nombre || 'Capacitación Genérica';
+        finalTipoId = this._normalizarCapacitacionTipoId(nombreCapacitacion);
+      }
+      
+      // Asegurar estructura completa de carpetas:
+      // Capacitaciones/{capacitacionTipoId}/{capacitacionEventoId}/{companyId}/{sucursalId}/{tipoArchivo}/
       const targetFolderId = await ensureCapacitacionFolder(
-        capacitacionId,
-        categoriaFinal,
+        finalTipoId,
+        capacitacionEventoId,
+        finalCompanyId,
+        finalSucursalId,
         tipoArchivo
       );
       
@@ -65,8 +95,8 @@ class CapacitacionImageService {
       
       const result = await uploadEvidence({
         file,
-        auditId: capacitacionId, // Reutilizar auditId para capacitaciones (compatibilidad)
-        companyId,
+        auditId: capacitacionEventoId, // Reutilizar auditId para compatibilidad legacy
+        companyId: finalCompanyId,
         parentId: targetFolderId, // ✅ Usar carpeta de capacitación específica
         fecha: new Date()
       });
@@ -78,7 +108,10 @@ class CapacitacionImageService {
         size: file.size,
         name: file.name,
         type: file.type,
-        categoria: categoriaFinal // Incluir categoría en el resultado
+        capacitacionTipoId: finalTipoId,
+        capacitacionEventoId: capacitacionEventoId,
+        companyId: finalCompanyId,
+        sucursalId: finalSucursalId
       };
     } catch (error) {
       console.error('❌ Error al subir imagen de capacitación:', error);
@@ -144,30 +177,30 @@ class CapacitacionImageService {
    * Subir imagen (online o offline según conectividad)
    * @param {File} file - Archivo a subir
    * @param {string} idToken - Firebase ID Token del usuario autenticado
-   * @param {string} capacitacionId - ID de la capacitación
+   * @param {string} capacitacionEventoId - ID del evento de capacitación (cada vez que se dicta)
    * @param {string} companyId - ID de la empresa (opcional, se obtendrá de la capacitación si no se proporciona)
+   * @param {string} sucursalId - ID de la sucursal (opcional, se obtendrá de la capacitación si no se proporciona)
    * @param {boolean} isOnline - Si hay conexión a internet
+   * @param {string} capacitacionTipoId - ID del tipo de capacitación (opcional, se generará del nombre)
+   * @param {'evidencia' | 'material' | 'certificado'} tipoArchivo - Tipo de archivo
    * @returns {Promise<Object>} Metadata de la imagen
    */
-  async uploadImageSmart(file, idToken, capacitacionId, companyId = null, isOnline = navigator.onLine, categoria = null, tipoArchivo = 'evidencia') {
-    // Si no se proporciona companyId o categoria, intentar obtenerlos de la capacitación
+  async uploadImageSmart(file, idToken, capacitacionEventoId, companyId = null, sucursalId = null, isOnline = navigator.onLine, capacitacionTipoId = null, tipoArchivo = 'evidencia') {
+    // Obtener datos de la capacitación si faltan companyId o sucursalId
     let finalCompanyId = companyId;
-    let finalCategoria = categoria;
+    let finalSucursalId = sucursalId;
     
-    if (!finalCompanyId || !finalCategoria) {
+    if (!finalCompanyId || !finalSucursalId) {
       try {
-        const capacitacionRef = doc(db, 'capacitaciones', capacitacionId);
+        const capacitacionRef = doc(db, 'capacitaciones', capacitacionEventoId);
         const capacitacionSnap = await getDoc(capacitacionRef);
         if (capacitacionSnap.exists()) {
           const capacitacionData = capacitacionSnap.data();
           if (!finalCompanyId) {
             finalCompanyId = capacitacionData.empresaId;
           }
-          if (!finalCategoria) {
-            // Buscar categoría en diferentes campos posibles
-            finalCategoria = capacitacionData.categoria || 
-                           capacitacionData.tipo || 
-                           'seguridad'; // Valor por defecto
+          if (!finalSucursalId) {
+            finalSucursalId = capacitacionData.sucursalId;
           }
         }
       } catch (error) {
@@ -179,25 +212,34 @@ class CapacitacionImageService {
       throw new Error('No se pudo obtener companyId para la capacitación');
     }
     
-    // Si aún no hay categoría, usar valor por defecto
-    if (!finalCategoria) {
-      finalCategoria = 'seguridad';
+    if (!finalSucursalId) {
+      throw new Error('No se pudo obtener sucursalId para la capacitación');
     }
 
     if (isOnline) {
       try {
-        return await this.uploadImage(file, idToken, capacitacionId, finalCompanyId, finalCategoria, tipoArchivo);
+        return await this.uploadImage(file, idToken, capacitacionEventoId, finalCompanyId, finalSucursalId, capacitacionTipoId, tipoArchivo);
       } catch (error) {
         console.warn('⚠️ Fallo en subida online, guardando offline:', error);
         // Si falla online, guardar offline (con companyId para sincronización posterior)
-        const offlineResult = await this.saveImageOffline(file, capacitacionId, finalCompanyId);
-        // Guardar companyId y categoria en el resultado offline para sincronización
-        return { ...offlineResult, companyId: finalCompanyId, categoria: finalCategoria };
+        const offlineResult = await this.saveImageOffline(file, capacitacionEventoId, finalCompanyId);
+        // Guardar datos en el resultado offline para sincronización
+        return { 
+          ...offlineResult, 
+          companyId: finalCompanyId, 
+          sucursalId: finalSucursalId,
+          capacitacionTipoId: capacitacionTipoId || this._normalizarCapacitacionTipoId('Capacitación Genérica')
+        };
       }
     } else {
-      const offlineResult = await this.saveImageOffline(file, capacitacionId, finalCompanyId);
-      // Guardar companyId y categoria en el resultado offline para sincronización
-      return { ...offlineResult, companyId: finalCompanyId, categoria: finalCategoria };
+      const offlineResult = await this.saveImageOffline(file, capacitacionEventoId, finalCompanyId);
+      // Guardar datos en el resultado offline para sincronización
+      return { 
+        ...offlineResult, 
+        companyId: finalCompanyId, 
+        sucursalId: finalSucursalId,
+        capacitacionTipoId: capacitacionTipoId || this._normalizarCapacitacionTipoId('Capacitación Genérica')
+      };
     }
   }
 
@@ -311,19 +353,39 @@ class CapacitacionImageService {
       const archivosLegacy = [];
 
       // Query 1: Archivos nuevos (con metadata completa)
+      // Buscar por capacitacionEventoId (nuevo modelo) o capacitacionId (compatibilidad)
       try {
-        const queryNuevos = query(
+        // Query por capacitacionEventoId (nuevo modelo)
+        const queryNuevosEvento = query(
+          collection(db, 'files'),
+          where('metadata.customFields.capacitacionEventoId', '==', capacitacionId),
+          where('metadata.customFields.contextType', '==', 'capacitacion'),
+          where('userId', '==', userId)
+        );
+        
+        const nuevosEventoSnapshot = await getDocs(queryNuevosEvento);
+        archivosNuevos.push(...nuevosEventoSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        })));
+        
+        // Query por capacitacionId (compatibilidad con modelo anterior)
+        const queryNuevosId = query(
           collection(db, 'files'),
           where('metadata.customFields.capacitacionId', '==', capacitacionId),
           where('metadata.customFields.contextType', '==', 'capacitacion'),
           where('userId', '==', userId)
         );
         
-        const nuevosSnapshot = await getDocs(queryNuevos);
-        archivosNuevos.push(...nuevosSnapshot.docs.map(doc => ({
+        const nuevosIdSnapshot = await getDocs(queryNuevosId);
+        const nuevosPorId = nuevosIdSnapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data()
-        })));
+        }));
+        
+        // Filtrar duplicados (por si un archivo tiene ambos campos)
+        const idsExistentes = new Set(archivosNuevos.map(a => a.id));
+        archivosNuevos.push(...nuevosPorId.filter(a => !idsExistentes.has(a.id)));
       } catch (error) {
         console.warn('⚠️ Error al obtener archivos nuevos:', error);
         // No romper, continuar con legacy
