@@ -42,6 +42,9 @@ const AuthContextComponent = ({ children }) => {
   // Control para activar listeners diferidos (optimización: evitar llamadas duplicadas)
   const [enableDeferredListeners, setEnableDeferredListeners] = useState(false);
   
+  // Estado crítico: authReady solo es true cuando user, userProfile y role están completamente inicializados
+  // Esto previene queries prematuras que causan errores de permisos
+  const [authReady, setAuthReady] = useState(false);
 
   // Usar hooks personalizados
   const {
@@ -89,19 +92,22 @@ const AuthContextComponent = ({ children }) => {
   // Hooks de listeners reactivos (solo con fallback offline en móvil)
   // OPTIMIZACIÓN: Diferir listeners no críticos para evitar llamadas duplicadas con carga manual
   // Multi-tenant: Los datos ya vienen filtrados por usuario desde auditUserCollection
+  // CRÍTICO: Pasar authReady para bloquear listeners hasta que la autenticación esté completa
   useSucursalesListener(
     userProfile, 
     setUserSucursales, 
     setLoadingSucursales, 
     enableOffline ? loadUserFromCache : null,
-    enableDeferredListeners // Solo activar después de carga manual inicial
+    enableDeferredListeners, // Solo activar después de carga manual inicial
+    authReady // Bloquear hasta que authReady sea true
   );
   useFormulariosListener(
     userProfile, 
     setUserFormularios, 
     setLoadingFormularios, 
     enableOffline ? loadUserFromCache : null,
-    enableDeferredListeners // Solo activar después de carga manual inicial
+    enableDeferredListeners, // Solo activar después de carga manual inicial
+    authReady // Bloquear hasta que authReady sea true
   );
 
   // Hook de acciones del contexto
@@ -123,7 +129,12 @@ const AuthContextComponent = ({ children }) => {
   );
 
   // Listener de empresas (solo con fallback offline en móvil)
+  // CRÍTICO: Solo ejecutar cuando authReady === true para evitar queries prematuras
   useEffect(() => {
+    if (!authReady) {
+      return;
+    }
+    
     if (
       !userProfile?.uid ||
       typeof role !== 'string' ||
@@ -138,7 +149,7 @@ const AuthContextComponent = ({ children }) => {
     );
     return unsubscribe;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userProfile?.uid, role, enableOffline]);
+  }, [authReady, userProfile?.uid, role, enableOffline]);
 
   // Estado para rastrear si estamos online
   const [isOnline, setIsOnline] = useState(typeof navigator !== 'undefined' ? navigator.onLine : true);
@@ -283,22 +294,32 @@ const AuthContextComponent = ({ children }) => {
               }
             }
             
-            // PASO 2: Cargar desde Firestore (actualizará datos si hay cambios)
-            const empresasCargadas = await loadUserEmpresas(firebaseUser.uid, profile, profile.role);
+            // CRÍTICO: Establecer authReady ANTES de ejecutar cualquier query
+            // Solo cuando user, userProfile y role están completamente listos
+            if (profile && profile.role && typeof profile.role === 'string' && profile.role.length > 0) {
+              setAuthReady(true);
+              console.log('✅ [AuthContext] authReady establecido - user, userProfile y role listos');
+            }
             
-            // Cargar auditorías en paralelo (solo si profile tiene uid)
-            if (profile && profile.uid) {
-              await Promise.all([
-                loadUserAuditorias(firebaseUser.uid, profile).then(aud => setUserAuditorias(aud)),
-                loadAuditoriasCompartidas(firebaseUser.uid, profile).then(aud => setAuditoriasCompartidas(aud))
+            // PASO 2: Cargar desde Firestore (actualizará datos si hay cambios)
+            // Solo ejecutar si authReady es true (ya establecido arriba si profile.role existe)
+            if (profile && profile.role && typeof profile.role === 'string' && profile.role.length > 0) {
+              const empresasCargadas = await loadUserEmpresas(firebaseUser.uid, profile, profile.role);
+              
+              // Cargar auditorías en paralelo (solo si profile tiene uid)
+              if (profile && profile.uid) {
+                await Promise.all([
+                  loadUserAuditorias(firebaseUser.uid, profile).then(aud => setUserAuditorias(aud)),
+                  loadAuditoriasCompartidas(firebaseUser.uid, profile).then(aud => setAuditoriasCompartidas(aud))
+                ]);
+              }
+
+              // Cargar sucursales y formularios inmediatamente (sin setTimeout artificial)
+              const [sucursalesCargadas, formulariosCargados] = await Promise.all([
+                loadUserSucursales(firebaseUser.uid, empresasCargadas, profile),
+                loadUserFormularios(firebaseUser.uid, empresasCargadas, profile)
               ]);
             }
-
-            // Cargar sucursales y formularios inmediatamente (sin setTimeout artificial)
-            const [sucursalesCargadas, formulariosCargados] = await Promise.all([
-              loadUserSucursales(firebaseUser.uid, empresasCargadas, profile),
-              loadUserFormularios(firebaseUser.uid, empresasCargadas, profile)
-            ]);
 
             // OPTIMIZACIÓN: Activar listeners diferidos después de carga manual (evita duplicados)
             // Esperar 1 segundo para asegurar que la carga manual terminó completamente
@@ -361,6 +382,9 @@ const AuthContextComponent = ({ children }) => {
             }
           }
         } else {
+          // Usuario no autenticado - resetear authReady
+          setAuthReady(false);
+          
           // Solo intentar cargar desde cache si estamos en móvil (modo offline habilitado)
           const wasLoggedIn = localStorage.getItem("isLogged") === "true";
           
@@ -384,6 +408,12 @@ const AuthContextComponent = ({ children }) => {
               });
               
               setUserProfile(cachedProfile);
+              
+              // CRÍTICO: Establecer authReady solo si el perfil del cache tiene role válido
+              if (cachedProfile && cachedProfile.role && typeof cachedProfile.role === 'string' && cachedProfile.role.length > 0) {
+                setAuthReady(true);
+                console.log('✅ [AuthContext] authReady establecido desde cache - userProfile y role listos');
+              }
               
               const simulatedUser = {
                 uid: cachedProfile.uid,
@@ -524,6 +554,7 @@ const AuthContextComponent = ({ children }) => {
               console.error('❌ No hay cache válido disponible');
               setUser(null);
               setIsLogged(false);
+              setAuthReady(false);
               setUserEmpresas([]);
               setUserAuditorias([]);
               setAuditoriasCompartidas([]);
@@ -535,6 +566,7 @@ const AuthContextComponent = ({ children }) => {
             console.log('💻 Desktop: Sin conexión y modo offline deshabilitado - cerrando sesión');
             setUser(null);
             setIsLogged(false);
+            setAuthReady(false);
             setUserEmpresas([]);
             setUserAuditorias([]);
             setAuditoriasCompartidas([]);
@@ -543,6 +575,7 @@ const AuthContextComponent = ({ children }) => {
           } else {
             setUser(null);
             setIsLogged(false);
+            setAuthReady(false);
             setUserEmpresas([]);
             setUserAuditorias([]);
             setAuditoriasCompartidas([]);
@@ -576,18 +609,43 @@ const AuthContextComponent = ({ children }) => {
   const logoutContext = () => {
     setUser(null);
     setIsLogged(false);
+    setAuthReady(false);
     setUserEmpresas([]);
     setUserAuditorias([]);
     setAuditoriasCompartidas([]);
     localStorage.removeItem("userInfo");
     localStorage.removeItem("isLogged");
   };
+  
+  // Efecto para mantener authReady sincronizado con user, userProfile y role
+  // Esto asegura que authReady se actualice automáticamente cuando cualquiera de estos cambie
+  useEffect(() => {
+    const isReady = !!(
+      user &&
+      userProfile &&
+      userProfile.uid &&
+      role &&
+      typeof role === 'string' &&
+      role.length > 0
+    );
+    
+    // Solo actualizar si cambió el estado (evitar loops infinitos)
+    if (isReady !== authReady) {
+      setAuthReady(isReady);
+      if (isReady) {
+        console.log('✅ [AuthContext] authReady sincronizado - user, userProfile y role listos');
+      } else {
+        console.log('⏳ [AuthContext] authReady sincronizado - esperando inicialización completa');
+      }
+    }
+  }, [user, userProfile, role, authReady]);
 
   const data = {
     user,
     userProfile,
     isLogged,
     loading,
+    authReady, // Estado crítico: solo true cuando user, userProfile y role están completamente listos
     userEmpresas,
     loadingEmpresas,
     userSucursales,

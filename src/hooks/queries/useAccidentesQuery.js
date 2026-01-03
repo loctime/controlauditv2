@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { obtenerAccidentes } from '../../services/accidenteService';
+import { useAuth } from '../../components/context/AuthContext';
 
 /**
  * Hook TanStack Query para accidentes
@@ -21,6 +22,7 @@ export const useAccidentesQuery = (
   empresasReady,
   userProfile
 ) => {
+  const { authReady } = useAuth();
   const userId = userProfile?.uid;
 
   // Construir filtros para la query
@@ -54,6 +56,7 @@ export const useAccidentesQuery = (
   ];
 
   // Query para accidentes
+  // CRÍTICO: Solo ejecutar cuando authReady === true para evitar queries prematuras
   const {
     data: accidentes = [],
     isLoading,
@@ -62,7 +65,7 @@ export const useAccidentesQuery = (
   } = useQuery({
     queryKey,
     queryFn: () => obtenerAccidentes(filtros, userProfile),
-    enabled: !!userId && empresasReady && !!userProfile, // Solo ejecutar si hay userId, empresas ya terminaron de cargar y userProfile
+    enabled: !!userId && empresasReady && !!userProfile && authReady, // Bloquear hasta que authReady sea true
     staleTime: 30000, // 30 segundos - datos frescos por un tiempo razonable
     gcTime: 5 * 60 * 1000, // 5 minutos - mantener en cache
     retry: 1, // Reintentar una vez en caso de error

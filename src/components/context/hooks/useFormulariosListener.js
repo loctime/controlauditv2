@@ -7,13 +7,19 @@ import { auditUserCollection } from '../../../firebaseControlFile.js';
  * Multi-tenant: asume que auditUserCollection ya filtra por usuario
  * Los datos devueltos son visibles directamente sin filtros adicionales
  * @param {boolean} enableListener - Si es false, el listener no se activa (optimización para evitar duplicados)
+ * @param {boolean} authReady - Si es false, el listener no se activa (previene queries prematuras)
  */
-export const useFormulariosListener = (userProfile, setUserFormularios, setLoadingFormularios, loadUserFromCache, enableListener = true) => {
+export const useFormulariosListener = (userProfile, setUserFormularios, setLoadingFormularios, loadUserFromCache, enableListener = true, authReady = false) => {
   useEffect(() => {
     // OPTIMIZACIÓN: No activar listener hasta que se habilite (evita duplicados con carga manual)
     if (!enableListener) {
       // Si el listener está deshabilitado pero ya hay datos cargados manualmente, mantenerlos
       // No hacer nada, los datos ya están cargados por la carga manual inicial
+      return;
+    }
+
+    // CRÍTICO: No activar listener hasta que authReady sea true (previene queries prematuras)
+    if (!authReady) {
       return;
     }
 
@@ -61,6 +67,6 @@ export const useFormulariosListener = (userProfile, setUserFormularios, setLoadi
     );
 
     return unsubscribe;
-  }, [userProfile?.uid, loadUserFromCache, enableListener]);
+  }, [userProfile?.uid, loadUserFromCache, enableListener, authReady]);
 };
 

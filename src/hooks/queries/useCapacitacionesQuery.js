@@ -151,7 +151,10 @@ export const useCapacitacionesQuery = (
     selectedSucursal ?? undefined
   ];
 
+  const { authReady } = useAuth();
+
   // Query para capacitaciones individuales
+  // CRÍTICO: Solo ejecutar cuando authReady === true para evitar queries prematuras
   const {
     data: capacitaciones = [],
     isLoading: isLoadingCapacitaciones,
@@ -160,7 +163,7 @@ export const useCapacitacionesQuery = (
   } = useQuery({
     queryKey,
     queryFn: () => fetchCapacitaciones(userId, selectedEmpresa, selectedSucursal, sucursalesDisponibles),
-    enabled: !!userId && empresasReady, // Solo ejecutar si hay userId y empresas ya terminaron de cargar
+    enabled: !!userId && empresasReady && authReady, // Bloquear hasta que authReady sea true
     staleTime: 30000, // 30 segundos - datos frescos por un tiempo razonable
     gcTime: 5 * 60 * 1000, // 5 minutos - mantener en cache
   });
@@ -174,6 +177,7 @@ export const useCapacitacionesQuery = (
   ];
 
   // Query para planes anuales
+  // CRÍTICO: Solo ejecutar cuando authReady === true para evitar queries prematuras
   const {
     data: planesAnuales = [],
     isLoading: isLoadingPlanes,
@@ -182,7 +186,7 @@ export const useCapacitacionesQuery = (
   } = useQuery({
     queryKey: planesQueryKey,
     queryFn: () => fetchPlanesAnuales(userId, selectedEmpresa, selectedSucursal),
-    enabled: !!userId && empresasReady, // Solo ejecutar si hay userId y empresas ya terminaron de cargar
+    enabled: !!userId && empresasReady && authReady, // Bloquear hasta que authReady sea true
     staleTime: 30000,
     gcTime: 5 * 60 * 1000,
   });

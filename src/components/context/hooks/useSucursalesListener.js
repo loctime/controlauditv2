@@ -8,11 +8,17 @@ import { normalizeSucursal } from '../../../utils/firestoreUtils';
  * Multi-tenant: asume que auditUserCollection ya filtra por usuario
  * Los datos devueltos son visibles directamente sin filtros adicionales
  * @param {boolean} enableListener - Si es false, el listener no se activa (optimización para evitar duplicados)
+ * @param {boolean} authReady - Si es false, el listener no se activa (previene queries prematuras)
  */
-export const useSucursalesListener = (userProfile, setUserSucursales, setLoadingSucursales, loadUserFromCache, enableListener = true) => {
+export const useSucursalesListener = (userProfile, setUserSucursales, setLoadingSucursales, loadUserFromCache, enableListener = true, authReady = false) => {
   useEffect(() => {
     // OPTIMIZACIÓN: No activar listener hasta que se habilite (evita duplicados con carga manual)
     if (!enableListener) {
+      return;
+    }
+
+    // CRÍTICO: No activar listener hasta que authReady sea true (previene queries prematuras)
+    if (!authReady) {
       return;
     }
 
@@ -58,6 +64,6 @@ export const useSucursalesListener = (userProfile, setUserSucursales, setLoading
 
     return unsubscribe;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userProfile?.uid, enableListener]);
+  }, [userProfile?.uid, enableListener, authReady]);
 };
 

@@ -55,7 +55,8 @@ const Home = () => {
     loadingFormularios,
     getUserEmpresas,
     getUserSucursales,
-    getUserFormularios
+    getUserFormularios,
+    authReady
   } = useAuth();
 
   // Hook para precarga automática en PWA Chrome
@@ -75,6 +76,11 @@ const Home = () => {
       }
 
       if (!userProfile) {
+        return;
+      }
+
+      // CRÍTICO: Esperar hasta que authReady sea true antes de ejecutar queries
+      if (!authReady) {
         return;
       }
 
@@ -102,6 +108,7 @@ const Home = () => {
         const isEdge = navigator.userAgent.includes('Edg');
         
         // Cargar todos los datos necesarios para TODAS las páginas
+        // Solo ejecutar si authReady es true (ya verificado arriba)
         const promesas = [
           getUserEmpresas(),
           getUserSucursales(),
@@ -146,11 +153,22 @@ const Home = () => {
       }
     };
 
-    // Esperar un poco para que el contexto se inicialice
-    const timer = setTimeout(cargarDatosOffline, 1500);
+    // Esperar hasta que authReady sea true antes de ejecutar
+    // Esto previene queries prematuras que causan errores de permisos
+    if (!authReady) {
+      return;
+    }
+    
+    // Solo ejecutar cuando authReady sea true
+    // Esto previene queries prematuras que causan errores de permisos
+    if (!authReady) {
+      return;
+    }
+    
+    // Esperar un poco para que el contexto se inicialice completamente
+    const timer = setTimeout(cargarDatosOffline, 500);
     return () => clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userProfile, navigate]); // Agregar navigate a las dependencias
+  }, [isPWAStandalone, userProfile, authReady, getUserEmpresas, getUserSucursales, getUserFormularios, navigate]);
 
   // Actualizar indicador cuando cambien los datos (desde listeners u otros lugares)
   useEffect(() => {
