@@ -29,7 +29,7 @@ import AccidentesFiltros from './components/AccidentesFiltros';
 import EstadisticasAccidentes from './components/EstadisticasAccidentes';
 import AccidentesTabla from './components/AccidentesTabla';
 import AccidenteDetalleModal from './components/AccidenteDetalleModal';
-import AccidenteDetailPanel from './components/AccidenteDetailPanel';
+import AccidenteDetailPanelV2 from './components/AccidenteDetailPanelV2';
 import EditarAccidenteModal from './components/EditarAccidenteModal';
 import { actualizarEstadoAccidente } from '../../../services/accidenteService';
 import { exportarAccidentesExcel, exportarAccidentesPDF } from './utils/accidentesExportUtils';
@@ -334,8 +334,8 @@ export default function Accidentes() {
         />
       )}
 
-      {/* Panel de detalles nuevo */}
-      <AccidenteDetailPanel
+      {/* Panel de detalles V2 */}
+      <AccidenteDetailPanelV2
         open={!!selectedAccidenteId}
         onClose={() => {
           setSelectedAccidenteId(null);
