@@ -19,7 +19,7 @@ import RealizarCapacitacion from './RealizarCapacitacion';
 import PlanAnualModal from './PlanAnualModal';
 
 // Hooks personalizados
-import { useCapacitacionesData } from './hooks/useCapacitacionesData';
+import { useCapacitacionesQuery } from '../../../hooks/queries/useCapacitacionesQuery';
 import { useCapacitacionesHandlers } from './hooks/useCapacitacionesHandlers';
 import { useGlobalSelection } from '../../../hooks/useGlobalSelection';
 
@@ -32,7 +32,7 @@ import CapacitacionesTable from './components/CapacitacionesTable';
 import CapacitacionDetailPanelV2 from './components/CapacitacionDetailPanelV2';
 
 export default function Capacitaciones() {
-  const { userProfile, userSucursales, loadingSucursales, getUserSucursales, userEmpresas } = useAuth();
+  const { userProfile, userSucursales, loadingSucursales, getUserSucursales, userEmpresas, loadingEmpresas } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   
@@ -61,7 +61,6 @@ export default function Capacitaciones() {
   // Filtros locales (tipo y estado son específicos de capacitaciones)
   const [filterTipo, setFilterTipo] = useState('');
   const [filterEstado, setFilterEstado] = useState('');
-  const [empresasCargadas, setEmpresasCargadas] = useState(false);
 
   // Usar selección global (compartida entre páginas)
   const {
@@ -89,13 +88,6 @@ export default function Capacitaciones() {
   // Usar sucursales locales si están disponibles, sino las globales
   const sucursalesDisponibles = localSucursales.length > 0 ? localSucursales : (globalUserSucursales || userSucursales);
 
-  // Detectar cuando las empresas han sido cargadas
-  useEffect(() => {
-    if (userEmpresas !== undefined) {
-      setEmpresasCargadas(true);
-    }
-  }, [userEmpresas]);
-
   // Auto-seleccionar empresa si solo hay una
   useEffect(() => {
     if (userEmpresas && userEmpresas.length === 1 && !selectedEmpresa) {
@@ -103,12 +95,12 @@ export default function Capacitaciones() {
     }
   }, [userEmpresas, selectedEmpresa, setSelectedEmpresa]);
 
-  // Hook de datos
-  const { capacitaciones, planesAnuales, loading, recargarDatos } = useCapacitacionesData(
+  // Hook de datos con TanStack Query
+  const { capacitaciones, planesAnuales, loading, recargarDatos } = useCapacitacionesQuery(
     selectedEmpresa,
     selectedSucursal,
     sucursalesDisponibles,
-    empresasCargadas
+    !loadingEmpresas // empresasReady: true cuando ya terminó de cargar (incluso si hay 0 empresas)
   );
 
   // Hook de handlers con callback para refrescar cache de tabla

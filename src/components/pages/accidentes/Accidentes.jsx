@@ -18,10 +18,10 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import NuevoAccidenteModal from './NuevoAccidenteModal';
 import NuevoIncidenteModal from './NuevoIncidenteModal';
 import {
-  useAccidentesData,
   useAccidentesFilters,
   useAccidentesHandlers
 } from './hooks';
+import { useAccidentesQuery } from '../../../hooks/queries/useAccidentesQuery';
 import { useAccidentesSorting } from './hooks/useAccidentesSorting';
 import AccidentesHeader from './components/AccidentesHeader';
 import AccidentesAlertas from './components/AccidentesAlertas';
@@ -35,7 +35,7 @@ import { actualizarEstadoAccidente } from '../../../services/accidenteService';
 import { exportarAccidentesExcel, exportarAccidentesPDF } from './utils/accidentesExportUtils';
 
 export default function Accidentes() {
-  const { userProfile } = useAuth();
+  const { userProfile, loadingEmpresas } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const searchParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
@@ -71,17 +71,17 @@ export default function Accidentes() {
     filterEstado,
     setFilterEstado,
     sucursalesFiltradas,
-    empresasCargadas,
     userEmpresas,
     userSucursales
   } = useAccidentesFilters(location);
 
-  const { accidentes, loading, recargarAccidentes } = useAccidentesData(
+  // Hook de datos con TanStack Query
+  const { accidentes, loading, recargarAccidentes } = useAccidentesQuery(
     selectedEmpresa,
     selectedSucursal,
     filterTipo,
     filterEstado,
-    empresasCargadas,
+    !loadingEmpresas, // empresasReady: true cuando ya terminó de cargar (incluso si hay 0 empresas)
     userProfile
   );
 

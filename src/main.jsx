@@ -1,8 +1,10 @@
 import ReactDOM from "react-dom/client";
+import { QueryClientProvider } from '@tanstack/react-query';
 import App from "./App.jsx";
 import "./global.css";
 import { initOfflineDatabase } from "./services/offlineDatabase";
 import { initConsoleInterceptor } from "./utils/consoleInterceptor";
+import { queryClient } from "./hooks/queries/queryClientConfig";
 
 // Inicializar interceptores de console temprano (antes de cualquier otro código)
 // Esto asegura que los logs estén disponibles incluso si el componente OfflineDebugLogs no se monta
@@ -30,4 +32,8 @@ const initDatabaseWithRetry = async (retries = 3) => {
 
 initDatabaseWithRetry();
 
-ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+ReactDOM.createRoot(document.getElementById("root")).render(
+  <QueryClientProvider client={queryClient}>
+    <App />
+  </QueryClientProvider>
+);

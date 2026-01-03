@@ -242,6 +242,48 @@ const AuthContextComponent = ({ children }) => {
           if (profile) {
             setUserProfile(profile);
             
+            // PASO 1: Cargar desde cache primero (instantáneo, elimina parpadeo)
+            // Esto muestra datos inmediatamente mientras Firestore responde
+            if (enableOffline && loadUserFromCache) {
+              try {
+                const cachedData = await loadUserFromCache();
+                if (cachedData) {
+                  console.log('📦 [Cache inicial] Cargando datos desde cache para mostrar inmediatamente...');
+                  
+                  // Cargar empresas desde cache si existen
+                  if (cachedData.empresas && cachedData.empresas.length > 0) {
+                    setUserEmpresas(cachedData.empresas);
+                    setLoadingEmpresas(false);
+                    console.log('✅ [Cache inicial] Empresas cargadas desde cache:', cachedData.empresas.length);
+                  }
+                  
+                  // Cargar sucursales desde cache si existen
+                  if (cachedData.sucursales && cachedData.sucursales.length > 0) {
+                    setUserSucursales(cachedData.sucursales);
+                    setLoadingSucursales(false);
+                    console.log('✅ [Cache inicial] Sucursales cargadas desde cache:', cachedData.sucursales.length);
+                  }
+                  
+                  // Cargar formularios desde cache si existen
+                  if (cachedData.formularios && cachedData.formularios.length > 0) {
+                    setUserFormularios(cachedData.formularios);
+                    setLoadingFormularios(false);
+                    console.log('✅ [Cache inicial] Formularios cargados desde cache:', cachedData.formularios.length);
+                  }
+                  
+                  // Cargar auditorías desde cache si existen
+                  if (cachedData.auditorias && cachedData.auditorias.length > 0) {
+                    setUserAuditorias(cachedData.auditorias);
+                    console.log('✅ [Cache inicial] Auditorías cargadas desde cache:', cachedData.auditorias.length);
+                  }
+                }
+              } catch (cacheError) {
+                console.warn('⚠️ [Cache inicial] No se pudo cargar desde cache (continuando con carga normal):', cacheError);
+                // Continuar normalmente si el cache falla
+              }
+            }
+            
+            // PASO 2: Cargar desde Firestore (actualizará datos si hay cambios)
             const empresasCargadas = await loadUserEmpresas(firebaseUser.uid, profile, profile.role);
             
             // Cargar auditorías en paralelo (solo si profile tiene uid)
@@ -252,72 +294,71 @@ const AuthContextComponent = ({ children }) => {
               ]);
             }
 
-            setTimeout(async () => {
-              const [sucursalesCargadas, formulariosCargados] = await Promise.all([
-                loadUserSucursales(firebaseUser.uid, empresasCargadas, profile),
-                loadUserFormularios(firebaseUser.uid, empresasCargadas, profile)
-              ]);
+            // Cargar sucursales y formularios inmediatamente (sin setTimeout artificial)
+            const [sucursalesCargadas, formulariosCargados] = await Promise.all([
+              loadUserSucursales(firebaseUser.uid, empresasCargadas, profile),
+              loadUserFormularios(firebaseUser.uid, empresasCargadas, profile)
+            ]);
 
-              // OPTIMIZACIÓN: Activar listeners diferidos después de carga manual (evita duplicados)
-              // Esperar 1 segundo adicional para asegurar que la carga manual terminó
-              setTimeout(() => {
-                setEnableDeferredListeners(true);
-                console.log('✅ Listeners diferidos activados (optimización de performance)');
-              }, 1000);
+            // OPTIMIZACIÓN: Activar listeners diferidos después de carga manual (evita duplicados)
+            // Esperar 1 segundo para asegurar que la carga manual terminó completamente
+            setTimeout(() => {
+              setEnableDeferredListeners(true);
+              console.log('✅ Listeners diferidos activados (optimización de performance)');
+            }, 1000);
 
-              // Verificar que tenemos datos antes de guardar cache (solo en móvil)
-              if (enableOffline && empresasCargadas && empresasCargadas.length > 0) {
-                try {
-                  const completeProfile = {
-                    ...profile,
-                    email: profile.email || firebaseUser.email,
-                    displayName: profile.displayName || firebaseUser.displayName || firebaseUser.email,
-                    role: profile.role || 'operario'
-                  };
-                  
-                  await saveCompleteUserCache(
-                    completeProfile, 
-                    empresasCargadas, 
-                    sucursalesCargadas || [], 
-                    formulariosCargados || []
-                  );
-                  console.log('✅ Cache guardado con datos:', {
-                    empresas: empresasCargadas.length,
-                    sucursales: (sucursalesCargadas || []).length,
-                    formularios: (formulariosCargados || []).length
-                  });
-                } catch (error) {
-                  console.error('❌ Error guardando cache:', error);
-                }
-              } else if (!enableOffline) {
-                console.log('💻 Desktop: Cache offline deshabilitado (no necesario)');
-              } else {
-                console.warn('⚠️ No se guardó cache: no hay empresas cargadas');
+            // Verificar que tenemos datos antes de guardar cache (solo en móvil)
+            if (enableOffline && empresasCargadas && empresasCargadas.length > 0) {
+              try {
+                const completeProfile = {
+                  ...profile,
+                  email: profile.email || firebaseUser.email,
+                  displayName: profile.displayName || firebaseUser.displayName || firebaseUser.email,
+                  role: profile.role || 'operario'
+                };
+                
+                await saveCompleteUserCache(
+                  completeProfile, 
+                  empresasCargadas, 
+                  sucursalesCargadas || [], 
+                  formulariosCargados || []
+                );
+                console.log('✅ Cache guardado con datos:', {
+                  empresas: empresasCargadas.length,
+                  sucursales: (sucursalesCargadas || []).length,
+                  formularios: (formulariosCargados || []).length
+                });
+              } catch (error) {
+                console.error('❌ Error guardando cache:', error);
               }
-              
-              // Inicializar carpetas de ControlFile después de autenticación exitosa
-              // SOLO se ejecuta UNA VEZ por usuario usando localStorage
-              const initKey = `controlfile_initialized_${firebaseUser.uid}`;
-              const isInitialized = localStorage.getItem(initKey);
-              
-              if (!isInitialized) {
-                try {
-                  // Esperar adicional para asegurar que el token esté actualizado
-                  await new Promise(resolve => setTimeout(resolve, 1000));
-                  const { initializeControlFileFolders } = await import('../../services/controlFileInit');
-                  const folders = await initializeControlFileFolders();
-                  if (folders.mainFolderId) {
-                    localStorage.setItem(initKey, 'true');
-                    console.log('[AuthContext] ✅ Carpetas ControlFile inicializadas:', folders.mainFolderId);
-                  }
-                } catch (error) {
-                  console.error('[AuthContext] ⚠️ Error al inicializar carpetas ControlFile (no crítico):', error);
-                  // No bloquear el flujo si falla la inicialización de carpetas
+            } else if (!enableOffline) {
+              console.log('💻 Desktop: Cache offline deshabilitado (no necesario)');
+            } else {
+              console.warn('⚠️ No se guardó cache: no hay empresas cargadas');
+            }
+            
+            // Inicializar carpetas de ControlFile después de autenticación exitosa
+            // SOLO se ejecuta UNA VEZ por usuario usando localStorage
+            const initKey = `controlfile_initialized_${firebaseUser.uid}`;
+            const isInitialized = localStorage.getItem(initKey);
+            
+            if (!isInitialized) {
+              try {
+                // Esperar adicional para asegurar que el token esté actualizado
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                const { initializeControlFileFolders } = await import('../../services/controlFileInit');
+                const folders = await initializeControlFileFolders();
+                if (folders.mainFolderId) {
+                  localStorage.setItem(initKey, 'true');
+                  console.log('[AuthContext] ✅ Carpetas ControlFile inicializadas:', folders.mainFolderId);
                 }
-              } else {
-                console.log('[AuthContext] ⏭️ Inicialización de ControlFile omitida (ya inicializado)');
+              } catch (error) {
+                console.error('[AuthContext] ⚠️ Error al inicializar carpetas ControlFile (no crítico):', error);
+                // No bloquear el flujo si falla la inicialización de carpetas
               }
-            }, 2000);
+            } else {
+              console.log('[AuthContext] ⏭️ Inicialización de ControlFile omitida (ya inicializado)');
+            }
           }
         } else {
           // Solo intentar cargar desde cache si estamos en móvil (modo offline habilitado)
