@@ -209,6 +209,9 @@ export const useCapacitacionesQuery = (
     placeholderData: (previousData) => previousData, // Mantener datos existentes mientras carga
   });
 
+  // Combinar estados (definir antes de usarlo en useEffect)
+  const loading = isLoadingCapacitaciones || isLoadingPlanes;
+
   // Rastrear cuando la carga inicial termina
   useEffect(() => {
     if (!loading && authReady && userId) {
@@ -364,8 +367,7 @@ export const useCapacitacionesQuery = (
     };
   }, [authReady, userId, selectedEmpresa, selectedSucursal, queryClient, planesQueryKey]);
 
-  // Combinar estados
-  const loading = isLoadingCapacitaciones || isLoadingPlanes;
+  // Combinar estados (loading ya está definido arriba)
   const error = errorCapacitaciones || errorPlanes;
 
   // Función de refetch que actualiza ambas queries
