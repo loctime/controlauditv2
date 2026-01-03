@@ -29,7 +29,7 @@ import CapacitacionCard from './components/CapacitacionCard';
 import CapacitacionesAlertas from './components/CapacitacionesAlertas';
 import CapacitacionesEmptyState from './components/CapacitacionesEmptyState';
 import CapacitacionesTable from './components/CapacitacionesTable';
-import CapacitacionDetailPanel from './components/CapacitacionDetailPanel';
+import CapacitacionDetailPanelV2 from './components/CapacitacionDetailPanelV2';
 
 export default function Capacitaciones() {
   const { userProfile, userSucursales, loadingSucursales, getUserSucursales, userEmpresas } = useAuth();
@@ -401,14 +401,15 @@ export default function Capacitaciones() {
       />
 
       {/* Panel de Detalle */}
-      <CapacitacionDetailPanel
+      <CapacitacionDetailPanelV2
         open={!!selectedCapacitacionId}
         onClose={() => {
           setSelectedCapacitacionId(null);
-          setPanelInitialMode('view'); // Resetear modo al cerrar
+          setPanelInitialMode('view');
         }}
         capacitacionId={selectedCapacitacionId}
         initialMode={panelInitialMode}
+        userId={userProfile?.uid}
         onRegistrarAsistencia={handleRegistrarAsistencia}
         onMarcarCompletada={handleMarcarCompletada}
         onEditarPlan={handleEditarPlan}

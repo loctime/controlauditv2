@@ -58,6 +58,9 @@ const getEstadoColor = (estado) => {
   return 'default';
 };
 
+const formatEstadoLabel = (estado = '') =>
+  estado.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
+
 /* ===================== Presentational ===================== */
 
 const AsistentesCell = ({ count }) => (
@@ -168,7 +171,7 @@ const CapacitacionesTable = ({
   if (loading || !ready) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
-        <CircularProgress />
+        <CircularProgress size={32} />
       </Box>
     );
   }
@@ -291,7 +294,7 @@ const CapacitacionesTable = ({
     const capIdStr = String(cap.id);
 
     return (
-      <TableRow key={cap.id} hover onClick={() => onSelectCapacitacion?.(cap.id)}>
+      <TableRow key={cap.id} hover>
         <TableCell>
           <Typography variant="subtitle2" fontWeight={600}>
             {cap.nombre}
@@ -312,7 +315,7 @@ const CapacitacionesTable = ({
           </TableCell>
         )}
         <TableCell>
-          <Chip label={cap.estado} size="small" color={getEstadoColor(cap.estado)} />
+          <Chip label={formatEstadoLabel(cap.estado)} size="small" color={getEstadoColor(cap.estado)} />
         </TableCell>
         <TableCell>
           <Typography variant="body2" color="text.secondary">
@@ -352,7 +355,7 @@ const CapacitacionesTable = ({
                 <TableCell><strong>Instructor</strong></TableCell>
                 <TableCell align="center"><strong>Asist</strong></TableCell>
                 <TableCell align="center"><strong>Evid</strong></TableCell>
-                <TableCell><strong>Acción</strong></TableCell>
+                <TableCell><strong>Acciones</strong></TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -379,7 +382,6 @@ const CapacitacionesTable = ({
             <Accordion key={cap.id}>
               <AccordionSummary 
                 expandIcon={<ExpandMoreIcon />}
-                onClick={() => onSelectCapacitacion?.(cap.id)}
               >
                 <Box sx={{ width: '100%', display: 'flex', alignItems: 'center', gap: 2 }}>
                   <Box sx={{ flex: 1 }}>
@@ -388,7 +390,7 @@ const CapacitacionesTable = ({
                     </Typography>
                     <Box sx={{ display: 'flex', gap: 1, mt: 0.5, flexWrap: 'wrap' }}>
                       <Chip
-                        label={cap.estado || 'N/A'}
+                        label={formatEstadoLabel(cap.estado || 'N/A')}
                         size="small"
                         color={getEstadoColor(cap.estado)}
                       />
