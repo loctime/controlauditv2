@@ -20,18 +20,28 @@ class CapacitacionImageService {
   /**
    * Normaliza un nombre de capacitación a un ID de tipo válido para carpetas
    * Ej: "Uso de Matafuegos" -> "uso-de-matafuegos"
+   * 
+   * ⚠️ Valida que el resultado nunca sea vacío
    */
   _normalizarCapacitacionTipoId(nombre) {
     if (!nombre || typeof nombre !== 'string') {
       return 'capacitacion-generica';
     }
-    return nombre
+    
+    const normalizado = nombre
       .toLowerCase()
       .trim()
       .replace(/[^a-z0-9\s-]/g, '') // Eliminar caracteres especiales
       .replace(/\s+/g, '-') // Reemplazar espacios con guiones
       .replace(/-+/g, '-') // Eliminar guiones múltiples
       .replace(/^-|-$/g, ''); // Eliminar guiones al inicio/final
+    
+    // Si después de normalizar queda vacío, usar valor por defecto
+    if (!normalizado || normalizado.length === 0) {
+      return 'capacitacion-generica';
+    }
+    
+    return normalizado;
   }
 
   /**
@@ -81,23 +91,31 @@ class CapacitacionImageService {
       
       // Asegurar estructura completa de carpetas:
       // Capacitaciones/{capacitacionTipoId}/{capacitacionEventoId}/{companyId}/{sucursalId}/{tipoArchivo}/
-      const targetFolderId = await ensureCapacitacionFolder(
-        finalTipoId,
-        capacitacionEventoId,
-        finalCompanyId,
-        finalSucursalId,
-        tipoArchivo
-      );
+      // ⚠️ ESTRICTO: ensureCapacitacionFolder lanza error si falla, nunca devuelve null
+      let targetFolderId;
+      try {
+        targetFolderId = await ensureCapacitacionFolder(
+          finalTipoId,
+          capacitacionEventoId,
+          finalCompanyId,
+          finalSucursalId,
+          tipoArchivo
+        );
+      } catch (error) {
+        // Propagar el error con contexto adicional
+        throw new Error(`Error al crear estructura de carpetas de capacitación: ${error.message}`);
+      }
       
-      if (!targetFolderId) {
-        throw new Error('No se pudo crear estructura de carpetas para la capacitación');
+      // Validación explícita: parentId NUNCA puede ser null para capacitaciones
+      if (!targetFolderId || typeof targetFolderId !== 'string' || targetFolderId.trim() === '') {
+        throw new Error(`parentId inválido para capacitación: ${targetFolderId}. La estructura de carpetas debe crearse completamente antes de subir archivos.`);
       }
       
       const result = await uploadEvidence({
         file,
         auditId: capacitacionEventoId, // Reutilizar auditId para compatibilidad legacy
         companyId: finalCompanyId,
-        parentId: targetFolderId, // ✅ Usar carpeta de capacitación específica
+        parentId: targetFolderId, // ✅ NUNCA null - validado arriba
         fecha: new Date()
       });
 
