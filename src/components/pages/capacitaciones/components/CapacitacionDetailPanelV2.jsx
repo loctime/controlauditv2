@@ -9,17 +9,21 @@ import {
   Stack,
   Paper,
   Grid,
-  CircularProgress
+  CircularProgress,
+  Divider,
+  IconButton
 } from '@mui/material';
 import {
   Edit as EditIcon,
   CheckCircle as CheckCircleIcon,
-  PlayArrow as PlayArrowIcon
+  PlayArrow as PlayArrowIcon,
+  Close as CloseIcon
 } from '@mui/icons-material';
 import EventDetailPanel from '../../../shared/event-registry/EventDetailPanel';
 import RegistrarAsistenciaInlineV2 from './RegistrarAsistenciaInlineV2';
 import { capacitacionService } from '../../../../services/capacitacionService';
 import { registrosAsistenciaServiceAdapter } from '../../../../services/adapters/registrosAsistenciaServiceAdapter';
+import { convertirShareTokenAUrl } from '../../../../utils/imageUtils';
 
 const capacitacionServiceWrapper = {
   async getById(userId, capacitacionId) {
@@ -39,153 +43,10 @@ const getEstadoColor = (estado) => {
   return 'default';
 };
 
-const KPICard = ({ value, label, loading }) => (
-  <Paper
-    elevation={0}
-    sx={{
-      p: 1.5,
-      border: 1,
-      borderColor: 'divider',
-      borderRadius: 1,
-      textAlign: 'center',
-      minHeight: 70,
-      display: 'flex',
-      flexDirection: 'column',
-      justifyContent: 'center'
-    }}
-  >
-    {loading ? (
-      <CircularProgress size={24} />
-    ) : (
-      <>
-        <Typography variant="h5" sx={{ fontWeight: 600, mb: 0.5 }}>
-          {value ?? 0}
-        </Typography>
-        <Typography variant="caption" color="text.secondary">
-          {label}
-        </Typography>
-      </>
-    )}
-  </Paper>
-);
-
-const TabResumenLimpio = ({ entityId, userId, registryService, refreshKey }) => {
-  const [stats, setStats] = React.useState({
-    totalRegistros: 0,
-    totalPersonas: 0,
-    totalEvidencias: 0,
-    loading: true
-  });
-  const [entity, setEntity] = React.useState(null);
-
-  React.useEffect(() => {
-    if (!entityId || !userId) {
-      setStats(prev => ({ ...prev, loading: false }));
-      return;
-    }
-
-    let mounted = true;
-
-    const loadData = async () => {
-      try {
-        const entityIdStr = String(entityId);
-        const capData = await capacitacionServiceWrapper.getById(userId, entityIdStr);
-        if (mounted) setEntity(capData);
-
-        if (registryService) {
-          const statsData = await registryService.getStatsByEntity(userId, entityIdStr);
-          if (mounted) {
-            setStats({
-              ...statsData,
-              loading: false
-            });
-          }
-        } else {
-          if (mounted) setStats(prev => ({ ...prev, loading: false }));
-        }
-      } catch (error) {
-        console.error('[TabResumenLimpio] Error cargando datos:', error);
-        if (mounted) {
-          setStats(prev => ({ ...prev, loading: false }));
-        }
-      }
-    };
-
-    loadData();
-    return () => { mounted = false; };
-  }, [entityId, userId, registryService, refreshKey]);
-
-  const fechaUltimaActualizacion = entity?.fechaRealizada
-    ? entity.fechaRealizada.toDate?.()?.toLocaleDateString() || entity.fechaRealizada
-    : null;
-
-  return (
-    <Box sx={{ p: 2 }}>
-      <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
-        Estado Actual
-      </Typography>
-      
-      <Box sx={{ mb: 3 }}>
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-          <strong>Estado:</strong> {entity?.estado || 'N/A'}
-        </Typography>
-        {fechaUltimaActualizacion && (
-          <Typography variant="body2" color="text.secondary">
-            <strong>Última actualización:</strong> {fechaUltimaActualizacion}
-          </Typography>
-        )}
-      </Box>
-
-      {stats.loading ? (
-        <Box sx={{ display: 'flex', justifyContent: 'center', p: 2 }}>
-          <CircularProgress />
-        </Box>
-      ) : (
-        <Box>
-          <Typography variant="subtitle2" sx={{ mb: 1.5, fontWeight: 600 }}>
-            Resumen de Actividad
-          </Typography>
-          <Grid container spacing={2}>
-            <Grid item xs={6}>
-              <Box sx={{ p: 1.5, border: 1, borderColor: 'divider', borderRadius: 1 }}>
-                <Typography variant="h6" color="primary">
-                  {stats.totalRegistros}
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  Registros
-                </Typography>
-              </Box>
-            </Grid>
-            <Grid item xs={6}>
-              <Box sx={{ p: 1.5, border: 1, borderColor: 'divider', borderRadius: 1 }}>
-                <Typography variant="h6" color="primary">
-                  {stats.totalPersonas}
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  Empleados únicos
-                </Typography>
-              </Box>
-            </Grid>
-            <Grid item xs={6}>
-              <Box sx={{ p: 1.5, border: 1, borderColor: 'divider', borderRadius: 1 }}>
-                <Typography variant="h6" color="primary">
-                  {stats.totalEvidencias}
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  Evidencias
-                </Typography>
-              </Box>
-            </Grid>
-          </Grid>
-        </Box>
-      )}
-    </Box>
-  );
-};
-
-const TabRegistrosCustom = ({ entityId, userId, registryService, refreshKey }) => {
+const ContenidoRegistros = ({ entityId, userId, registryService, refreshKey }) => {
   const [registros, setRegistros] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
+  const [evidenciasUrls, setEvidenciasUrls] = React.useState(new Map());
 
   React.useEffect(() => {
     if (!entityId || !userId || !registryService) {
@@ -204,7 +65,7 @@ const TabRegistrosCustom = ({ entityId, userId, registryService, refreshKey }) =
           setLoading(false);
         }
       } catch (error) {
-        console.error('[TabRegistrosCustom] Error:', error);
+        console.error('[ContenidoRegistros] Error:', error);
         if (mounted) setLoading(false);
       }
     };
@@ -212,6 +73,22 @@ const TabRegistrosCustom = ({ entityId, userId, registryService, refreshKey }) =
     loadRegistros();
     return () => { mounted = false; };
   }, [entityId, userId, registryService, refreshKey]);
+
+  React.useEffect(() => {
+    const urls = new Map();
+    registros.forEach(registro => {
+      if (registro.imagenes && Array.isArray(registro.imagenes)) {
+        registro.imagenes.forEach((img, idx) => {
+          const imgId = img.id || `${registro.id}-${idx}`;
+          const url = convertirShareTokenAUrl(img.shareToken || img.url || img);
+          if (url) {
+            urls.set(imgId, url);
+          }
+        });
+      }
+    });
+    setEvidenciasUrls(urls);
+  }, [registros]);
 
   if (loading) {
     return (
@@ -223,8 +100,8 @@ const TabRegistrosCustom = ({ entityId, userId, registryService, refreshKey }) =
 
   if (registros.length === 0) {
     return (
-      <Box sx={{ p: 2 }}>
-        <Typography color="text.secondary">
+      <Box sx={{ p: 3 }}>
+        <Typography color="text.secondary" align="center">
           No hay registros para esta capacitación
         </Typography>
       </Box>
@@ -233,163 +110,99 @@ const TabRegistrosCustom = ({ entityId, userId, registryService, refreshKey }) =
 
   return (
     <Box sx={{ p: 2 }}>
-      <Typography variant="h6" sx={{ mb: 2 }}>
-        Registros ({registros.length})
-      </Typography>
-      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-        {registros.map((registro) => (
-          <Box
-            key={registro.id}
-            sx={{
-              p: 2,
-              border: 1,
-              borderColor: 'divider',
-              borderRadius: 1
-            }}
-          >
-            <Typography variant="subtitle2">
-              Registro del {registro.fecha?.toDate?.()?.toLocaleDateString() || 'N/A'}
-            </Typography>
-            <Typography variant="caption" color="text.secondary">
-              ID: {registro.id}
-            </Typography>
-          </Box>
-        ))}
-      </Box>
-    </Box>
-  );
-};
+    
+      
+      <Stack spacing={3}>
+        {registros.map((registro) => {
+          const fechaStr = registro.fecha?.toDate?.()?.toLocaleDateString() || registro.fecha || 'N/A';
+          const evidencias = registro.imagenes || [];
+          
+          return (
+            <Paper key={registro.id} elevation={1} sx={{ p: 2.5 }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+                <Box>
+                  <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 0.5 }}>
+                    Registro del {fechaStr}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    {registro.empleadoIds?.length || 0} empleado(s) • {evidencias.length} evidencia(s)
+                  </Typography>
+                </Box>
+                <Typography variant="caption" color="text.secondary">
+                  ID: {registro.id}
+                </Typography>
+              </Box>
 
-const TabEvidenciasCustom = ({ entityId, userId, registryService, refreshKey }) => {
-  const [evidencias, setEvidencias] = React.useState([]);
-  const [loading, setLoading] = React.useState(true);
-
-  React.useEffect(() => {
-    if (!entityId || !userId || !registryService) {
-      setLoading(false);
-      return;
-    }
-
-    let mounted = true;
-
-    const loadEvidencias = async () => {
-      try {
-        const entityIdStr = String(entityId);
-        const data = await registryService.getEvidenciasByEntity(userId, entityIdStr);
-        if (mounted) {
-          setEvidencias(data);
-          setLoading(false);
-        }
-      } catch (error) {
-        console.error('[TabEvidenciasCustom] Error:', error);
-        if (mounted) setLoading(false);
-      }
-    };
-
-    loadEvidencias();
-    return () => { mounted = false; };
-  }, [entityId, userId, registryService, refreshKey]);
-
-  if (loading) {
-    return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
-        <CircularProgress />
-      </Box>
-    );
-  }
-
-  if (evidencias.length === 0) {
-    return (
-      <Box sx={{ p: 2 }}>
-        <Typography color="text.secondary">
-          No hay evidencias para esta capacitación
-        </Typography>
-      </Box>
-    );
-  }
-
-  return (
-    <Box sx={{ p: 2 }}>
-      <Typography variant="h6" sx={{ mb: 2 }}>
-        Evidencias ({evidencias.length})
-      </Typography>
-      <Typography variant="body2" color="text.secondary">
-        {evidencias.length} evidencia(s) registrada(s)
-      </Typography>
-    </Box>
-  );
-};
-
-const TabEmpleadosCustom = ({ entityId, userId, registryService, refreshKey }) => {
-  const [personas, setPersonas] = React.useState([]);
-  const [loading, setLoading] = React.useState(true);
-
-  React.useEffect(() => {
-    if (!entityId || !userId || !registryService) {
-      setLoading(false);
-      return;
-    }
-
-    let mounted = true;
-
-    const loadPersonas = async () => {
-      try {
-        const entityIdStr = String(entityId);
-        const personaIds = await registryService.getPersonasUnicasByEntity(userId, entityIdStr);
-        if (mounted) {
-          setPersonas(personaIds);
-          setLoading(false);
-        }
-      } catch (error) {
-        console.error('[TabEmpleadosCustom] Error:', error);
-        if (mounted) setLoading(false);
-      }
-    };
-
-    loadPersonas();
-    return () => { mounted = false; };
-  }, [entityId, userId, registryService, refreshKey]);
-
-  if (loading) {
-    return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
-        <CircularProgress />
-      </Box>
-    );
-  }
-
-  if (personas.length === 0) {
-    return (
-      <Box sx={{ p: 2 }}>
-        <Typography color="text.secondary">
-          No hay empleados registrados para esta capacitación
-        </Typography>
-      </Box>
-    );
-  }
-
-  return (
-    <Box sx={{ p: 2 }}>
-      <Typography variant="h6" sx={{ mb: 2 }}>
-        Empleados ({personas.length})
-      </Typography>
-      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-        {personas.map((personaId) => (
-          <Box
-            key={personaId}
-            sx={{
-              p: 1,
-              border: 1,
-              borderColor: 'divider',
-              borderRadius: 1
-            }}
-          >
-            <Typography variant="body2">
-              ID: {personaId}
-            </Typography>
-          </Box>
-        ))}
-      </Box>
+              {evidencias.length > 0 && (
+                <>
+                  <Divider sx={{ my: 2 }} />
+                  <Typography variant="subtitle2" sx={{ mb: 1.5, fontWeight: 600 }}>
+                    Evidencias
+                  </Typography>
+                  <Grid container spacing={2}>
+                    {evidencias.map((evidencia, idx) => {
+                      const imgId = evidencia.id || `${registro.id}-${idx}`;
+                      const url = evidenciasUrls.get(imgId) || convertirShareTokenAUrl(evidencia.shareToken || evidencia.url || evidencia);
+                      
+                      return (
+                        <Grid item xs={6} sm={4} md={3} key={imgId}>
+                          <Box
+                            sx={{
+                              position: 'relative',
+                              paddingTop: '100%',
+                              borderRadius: 1,
+                              overflow: 'hidden',
+                              border: '1px solid',
+                              borderColor: 'divider',
+                              backgroundColor: 'background.paper',
+                              cursor: url ? 'pointer' : 'default'
+                            }}
+                            onClick={() => url && window.open(url, '_blank')}
+                          >
+                            {url ? (
+                              <img
+                                src={url}
+                                alt={`Evidencia ${idx + 1}`}
+                                style={{
+                                  position: 'absolute',
+                                  top: 0,
+                                  left: 0,
+                                  width: '100%',
+                                  height: '100%',
+                                  objectFit: 'cover'
+                                }}
+                                onError={(e) => {
+                                  e.target.style.display = 'none';
+                                }}
+                              />
+                            ) : (
+                              <Box
+                                sx={{
+                                  position: 'absolute',
+                                  top: 0,
+                                  left: 0,
+                                  width: '100%',
+                                  height: '100%',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  backgroundColor: 'grey.100'
+                                }}
+                              >
+                                <CircularProgress size={24} />
+                              </Box>
+                            )}
+                          </Box>
+                        </Grid>
+                      );
+                    })}
+                  </Grid>
+                </>
+              )}
+            </Paper>
+          );
+        })}
+      </Stack>
     </Box>
   );
 };
@@ -406,6 +219,11 @@ const CapacitacionDetailPanelV2 = ({
   onRealizarCapacitacion,
   onSaved
 }) => {
+  const handleCloseRef = React.useRef(onClose);
+  
+  React.useEffect(() => {
+    handleCloseRef.current = onClose;
+  }, [onClose]);
   const [currentMode, setCurrentMode] = React.useState(initialMode);
   const [kpiStats, setKpiStats] = React.useState({
     totalRegistros: 0,
@@ -467,15 +285,20 @@ const CapacitacionDetailPanelV2 = ({
           sx={{
             p: 2.5,
             mb: 2,
+            mt: { xs: 6, sm: 7 },
             background: 'linear-gradient(to bottom, rgba(255,255,255,1), rgba(248,249,250,1))'
           }}
         >
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
             <Box sx={{ flex: 1 }}>
-              <Typography variant="h6" sx={{ fontWeight: 600, mb: 1.5 }}>
-                {cap.nombre || cap.titulo || 'Capacitación'}
-              </Typography>
-              
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1.5 }}>
+                <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                  {cap.nombre || cap.titulo || 'Capacitación'}
+                </Typography>
+                <IconButton onClick={handleCloseRef.current} size="small" sx={{ ml: 1 }}>
+                  <CloseIcon />
+                </IconButton>
+              </Box>
               <Box sx={{ display: 'flex', gap: 1, mb: 1.5, flexWrap: 'wrap' }}>
                 <Chip
                   label={cap.estado || 'N/A'}
@@ -510,6 +333,33 @@ const CapacitacionDetailPanelV2 = ({
                   </Typography>
                 )}
               </Stack>
+
+              <Box sx={{ display: 'flex', gap: 1, mt: 2, flexWrap: 'wrap' }}>
+                {kpiStats.loading ? (
+                  <CircularProgress size={20} />
+                ) : (
+                  <>
+                    <Chip
+                      label={`${kpiStats.totalRegistros} Registros`}
+                      size="small"
+                      variant="outlined"
+                      color="primary"
+                    />
+                    <Chip
+                      label={`${kpiStats.totalPersonas} Empleados`}
+                      size="small"
+                      variant="outlined"
+                      color="primary"
+                    />
+                    <Chip
+                      label={`${kpiStats.totalEvidencias} Evidencias`}
+                      size="small"
+                      variant="outlined"
+                      color="primary"
+                    />
+                  </>
+                )}
+              </Box>
             </Box>
             
             <Box sx={{ ml: 2 }}>
@@ -517,32 +367,6 @@ const CapacitacionDetailPanelV2 = ({
             </Box>
           </Box>
         </Paper>
-
-        <Box sx={{ mb: 2 }}>
-          <Grid container spacing={1.5}>
-            <Grid item xs={4}>
-              <KPICard
-                value={kpiStats.totalRegistros}
-                label="Registros"
-                loading={kpiStats.loading}
-              />
-            </Grid>
-            <Grid item xs={4}>
-              <KPICard
-                value={kpiStats.totalPersonas}
-                label="Empleados únicos"
-                loading={kpiStats.loading}
-              />
-            </Grid>
-            <Grid item xs={4}>
-              <KPICard
-                value={kpiStats.totalEvidencias}
-                label="Evidencias"
-                loading={kpiStats.loading}
-              />
-            </Grid>
-          </Grid>
-        </Box>
       </Box>
     );
   };
@@ -587,29 +411,6 @@ const CapacitacionDetailPanelV2 = ({
     return null;
   };
 
-  const tabsPersonalizadas = [
-    {
-      id: 'resumen',
-      label: 'Resumen',
-      component: TabResumenLimpio
-    },
-    {
-      id: 'registros',
-      label: 'Registros',
-      component: TabRegistrosCustom
-    },
-    {
-      id: 'evidencias',
-      label: 'Evidencias',
-      component: TabEvidenciasCustom
-    },
-    {
-      id: 'empleados',
-      label: 'Empleados',
-      component: TabEmpleadosCustom
-    }
-  ];
-
   return (
     <EventDetailPanel
       open={open}
@@ -624,7 +425,15 @@ const CapacitacionDetailPanelV2 = ({
         return renderHeaderEjecutivo(cap || capacitacion);
       }}
       renderActions={() => null}
-      tabs={tabsPersonalizadas}
+      hideInternalHeader={true}
+      hideTabs={true}
+      tabs={[
+        {
+          id: 'registros',
+          label: 'Registros',
+          component: ContenidoRegistros
+        }
+      ]}
       renderRegistryForm={(props) => (
         <RegistrarAsistenciaInlineV2
           {...props}

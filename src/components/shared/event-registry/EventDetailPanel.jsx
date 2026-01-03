@@ -15,6 +15,8 @@
  * - tabs: Array<{id, label, component}> (opcional, usa defaults si no se pasa)
  * - onSaved: (registroId) => void (opcional)
  * - onModeChange: (mode) => void (opcional)
+ * - hideInternalHeader: boolean (opcional, oculta el header interno por defecto)
+ * - hideTabs: boolean (opcional, oculta las tabs visuales)
  */
 
 import React, { useState, useEffect } from 'react';
@@ -378,7 +380,9 @@ const EventDetailPanel = ({
   tabs = DEFAULT_TABS,
   onSaved,
   onModeChange,
-  renderRegistryForm // Componente para modo 'registrar'
+  renderRegistryForm,
+  hideInternalHeader = false,
+  hideTabs = false
 }) => {
   const [entity, setEntity] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -523,82 +527,111 @@ const EventDetailPanel = ({
         </>
       ) : (
         <>
-          {/* Header */}
-          <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
-              <Box sx={{ flex: 1 }}>
-                {renderHeader ? (
-                  renderHeader(entity)
-                ) : (
-                  <>
-                    <Typography variant="h5" sx={{ fontWeight: 600, mb: 1 }}>
-                      {entity?.nombre || entityId || 'Detalle'}
-                    </Typography>
-                    {entity?.estado && (
-                      <Chip
-                        label={entity.estado}
-                        size="small"
-                        sx={{ mt: 1 }}
-                      />
+          {!hideInternalHeader && (
+            <>
+              {/* Header */}
+              <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+                  <Box sx={{ flex: 1 }}>
+                    {renderHeader ? (
+                      renderHeader(entity)
+                    ) : (
+                      <>
+                        <Typography variant="h5" sx={{ fontWeight: 600, mb: 1 }}>
+                          {entity?.nombre || entityId || 'Detalle'}
+                        </Typography>
+                        {entity?.estado && (
+                          <Chip
+                            label={entity.estado}
+                            size="small"
+                            sx={{ mt: 1 }}
+                          />
+                        )}
+                      </>
                     )}
-                  </>
+                  </Box>
+                  <IconButton onClick={onClose} size="small">
+                    <CloseIcon />
+                  </IconButton>
+                </Box>
+
+                <Divider sx={{ my: 2 }} />
+
+                {/* Información básica */}
+                {entity && (
+                  <Box sx={{ mb: 2 }}>
+                    {entity.fechaRealizada && (
+                      <Typography variant="body2" sx={{ mb: 1 }}>
+                        <strong>Fecha:</strong> {entity.fechaRealizada?.toDate?.()?.toLocaleDateString() || 'N/A'}
+                      </Typography>
+                    )}
+                    {entity.descripcion && (
+                      <Typography variant="body2" color="text.secondary">
+                        {entity.descripcion}
+                      </Typography>
+                    )}
+                  </Box>
+                )}
+
+                {/* Acciones */}
+                {renderActions && (
+                  <Box sx={{ mt: 2 }}>
+                    {renderActions(entity)}
+                  </Box>
                 )}
               </Box>
-              <IconButton onClick={onClose} size="small">
-                <CloseIcon />
-              </IconButton>
+            </>
+          )}
+
+          {renderHeader && hideInternalHeader && (
+            <Box sx={{ p: 0 }}>
+              {renderHeader(entity)}
             </Box>
+          )}
 
-            <Divider sx={{ my: 2 }} />
-
-            {/* Información básica */}
-            {entity && (
-              <Box sx={{ mb: 2 }}>
-                {entity.fechaRealizada && (
-                  <Typography variant="body2" sx={{ mb: 1 }}>
-                    <strong>Fecha:</strong> {entity.fechaRealizada?.toDate?.()?.toLocaleDateString() || 'N/A'}
-                  </Typography>
-                )}
-                {entity.descripcion && (
-                  <Typography variant="body2" color="text.secondary">
-                    {entity.descripcion}
-                  </Typography>
-                )}
+          {!hideTabs && (
+            <>
+              {/* Tabs */}
+              <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
+                <Tabs value={activeTab} onChange={handleTabChange}>
+                  {tabs.map((tab) => (
+                    <Tab key={tab.id} label={tab.label} id={`tab-${tab.id}`} />
+                  ))}
+                </Tabs>
               </Box>
-            )}
-
-            {/* Acciones */}
-            {renderActions && (
-              <Box sx={{ mt: 2 }}>
-                {renderActions(entity)}
-              </Box>
-            )}
-          </Box>
-
-          {/* Tabs */}
-          <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-            <Tabs value={activeTab} onChange={handleTabChange}>
-              {tabs.map((tab) => (
-                <Tab key={tab.id} label={tab.label} id={`tab-${tab.id}`} />
-              ))}
-            </Tabs>
-          </Box>
+            </>
+          )}
 
           {/* Tab Content */}
           <Box sx={{ flex: 1, overflowY: 'auto' }}>
-            {tabs.map((tab, index) => {
-              if (index !== activeTab) return null;
-              const TabComponent = tab.component;
-              return (
-                <TabComponent
-                  key={`${tab.id}-${refreshKey}`}
-                  entityId={entityId ? String(entityId) : null}
-                  userId={userId}
-                  registryService={registryService}
-                  refreshKey={refreshKey}
-                />
-              );
-            })}
+            {hideTabs && tabs.length > 0 ? (
+              (() => {
+                const TabComponent = tabs[0].component;
+                return (
+                  <TabComponent
+                    key={`${tabs[0].id}-${refreshKey}`}
+                    entityId={entityId ? String(entityId) : null}
+                    userId={userId}
+                    registryService={registryService}
+                    refreshKey={refreshKey}
+                  />
+                );
+              })()
+            ) : (
+              tabs.map((tab, index) => {
+                if (index !== activeTab) return null;
+                const TabComponent = tab.component;
+                return (
+                  <TabComponent
+                    key={`${tab.id}-${refreshKey}`}
+                    entityId={entityId ? String(entityId) : null}
+                    userId={userId}
+                    registryService={registryService}
+                    refreshKey={refreshKey}
+                  />
+                );
+              })
+            )}
           </Box>
         </>
       )}
