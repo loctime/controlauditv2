@@ -113,13 +113,16 @@ const CapacitacionImagesDialog = ({
       // Subir imagen (companyId y sucursalId se obtendrán automáticamente si no se proporcionan)
       const companyId = capacitacion.empresaId || null;
       const sucursalId = capacitacion.sucursalId || null;
+      const capacitacionTipoId = capacitacion.nombre || null; // Nombre de la capacitación para generar tipoId
       const result = await capacitacionImageService.uploadImageSmart(
         file,
         idToken,
-        capacitacion.id,
+        capacitacion.id,        // capacitacionEventoId
         companyId,
         sucursalId,
-        isOnline
+        isOnline,
+        capacitacionTipoId,     // capacitacionTipoId (ej: "Uso de Matafuegos")
+        'evidencia'             // tipoArchivo
       );
 
       // Actualizar imagen con metadata real
