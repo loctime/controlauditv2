@@ -214,41 +214,54 @@ async function createShareToken(fileId: string, userId: string): Promise<string>
 
 /**
  * Sube una evidencia usando el flujo oficial de Backblaze B2
+ * 
+ * Soporta dos modos:
+ * - Nuevo modelo: cuando se proporciona `metadata` (modelo de contexto v1.0)
+ * - Legacy: cuando no hay `metadata` (compatibilidad con código antiguo)
+ * 
  * @param {Object} params - Parámetros de la subida
  * @param {File} params.file - Archivo a subir
- * @param {string} params.auditId - ID de la auditoría
+ * @param {Record<string, any>} params.metadata - Metadata plana (nuevo modelo, prioritaria)
+ * @param {string | null} params.parentId - ID de la carpeta padre (requerido)
+ * 
+ * Parámetros legacy (solo usados cuando no hay metadata):
+ * @param {string} params.auditId - ID de la auditoría/evento
  * @param {string} params.companyId - ID de la empresa
  * @param {string} params.seccionId - ID de la sección (opcional)
  * @param {string} params.preguntaId - ID de la pregunta (opcional)
  * @param {Date|string} params.fecha - Fecha de la evidencia (opcional)
- * @param {string | null} params.parentId - ID de la carpeta padre (opcional)
- * @param {Record<string, any>} params.metadata - Metadata plana opcional (nuevo modelo de contexto)
+ * @param {string} params.capacitacionTipoId - ID del tipo de capacitación (solo legacy)
+ * @param {string} params.sucursalId - ID de la sucursal (solo legacy)
+ * @param {string} params.tipoArchivo - Tipo de archivo (solo legacy)
+ * 
  * @returns {Promise<{fileId: string, shareToken: string}>} Retorna fileId y shareToken persistente
  */
 export async function uploadEvidence({
   file,
+  metadata: providedMetadata,
+  parentId,
+  // Parámetros legacy (opcionales, solo usados cuando no hay metadata)
   auditId,
   companyId,
   seccionId,
   preguntaId,
   fecha,
-  parentId,
   capacitacionTipoId,
   sucursalId,
   tipoArchivo,
-  metadata: providedMetadata
 }: {
   file: File;
-  auditId: string;
-  companyId: string;
+  metadata?: Record<string, any>; // Metadata plana del nuevo modelo (prioritaria)
+  parentId?: string | null;
+  // Parámetros legacy (opcionales)
+  auditId?: string;
+  companyId?: string;
   seccionId?: string;
   preguntaId?: string;
   fecha?: Date | string;
-  parentId?: string | null;
   capacitacionTipoId?: string;
   sucursalId?: string;
   tipoArchivo?: string;
-  metadata?: Record<string, any>; // Metadata plana del nuevo modelo
 }): Promise<{ fileId: string; shareToken: string }> {
   try {
     const user = auth.currentUser;
@@ -260,6 +273,7 @@ export async function uploadEvidence({
 
     // Determinar metadata según modelo (nuevo vs legacy)
     let metadata: Record<string, any>;
+    let resolvedParentId = parentId ?? null;
     
     if (providedMetadata) {
       // Nuevo modelo: metadata plana proporcionada
@@ -268,31 +282,51 @@ export async function uploadEvidence({
         source: 'navbar',
         ...providedMetadata
       };
-      console.log('[controlFileB2Service] ✅ Usando metadata plana (modelo contexto v1.0)');
+      // En el nuevo modelo, parentId siempre viene resuelto desde el resolver
+      if (!resolvedParentId) {
+        throw new Error('parentId es requerido cuando se usa metadata del nuevo modelo');
+      }
     } else {
-      // Legacy: construir metadata anidada como antes
+      // Legacy: construir metadata anidada
+      // Validar parámetros requeridos para modo legacy
+      if (!auditId || !companyId) {
+        throw new Error('auditId y companyId son requeridos en modo legacy (cuando no hay metadata)');
+      }
+      
       const fechaValue = fecha instanceof Date ? fecha.toISOString() : (fecha || new Date().toISOString());
       
       // Construir customFields base
       const customFields: Record<string, any> = {
         appName: 'ControlAudit',
-        auditId, // ⚠️ Solo compatibilidad legacy para capacitaciones
+        auditId,
         companyId,
         seccionId: seccionId || null,
         preguntaId: preguntaId || null,
         fecha: fechaValue
       };
       
-      // Si es capacitación, agregar campos específicos
+      // Si es capacitación legacy, agregar campos específicos
       if (capacitacionTipoId) {
-        customFields.contextType = 'capacitacion'; // ✅ CLAVE
-        customFields.capacitacionEventoId = auditId; // ✅ CLAVE (auditId es el evento real)
-        customFields.capacitacionTipoId = capacitacionTipoId; // ✅ CLAVE
+        customFields.contextType = 'capacitacion';
+        customFields.capacitacionEventoId = auditId;
+        customFields.capacitacionTipoId = capacitacionTipoId;
         if (sucursalId) {
-          customFields.sucursalId = sucursalId; // ✅ CLAVE
+          customFields.sucursalId = sucursalId;
         }
         if (tipoArchivo) {
-          customFields.tipoArchivo = tipoArchivo; // ✅ CLAVE
+          customFields.tipoArchivo = tipoArchivo;
+        }
+        
+        // Fallback de seguridad: si no hay parentId resuelto, calcularlo
+        // (normalmente los wrappers legacy ya lo resuelven antes de llamar)
+        if (!resolvedParentId && sucursalId) {
+          resolvedParentId = await ensureCapacitacionFolder(
+            capacitacionTipoId,
+            auditId,
+            companyId,
+            sucursalId,
+            tipoArchivo as 'evidencia' | 'material' | 'certificado' | undefined
+          );
         }
       }
       
@@ -301,50 +335,26 @@ export async function uploadEvidence({
         source: 'navbar',
         customFields
       };
-      console.log('[controlFileB2Service] ⚠️ Usando metadata legacy (customFields anidado)');
-    }
-
-    // 🔥 Calcular parentId correcto antes de pedir presign URL
-    let resolvedParentId = parentId ?? null;
-    
-    // 🔥 SI ES CAPACITACIÓN LEGACY, IGNORAR parentId EXTERNO y calcular el correcto
-    // (Solo para llamadas legacy, el nuevo modelo ya viene con parentId resuelto)
-    if (!providedMetadata && capacitacionTipoId && sucursalId) {
-      console.log('[controlFileB2Service] 🔥 Es capacitación legacy - calculando parentId correcto...');
-      resolvedParentId = await ensureCapacitacionFolder(
-        capacitacionTipoId,
-        auditId,          // evento (capacitacionEventoId)
-        companyId,
-        sucursalId,
-        tipoArchivo as 'evidencia' | 'material' | 'certificado' | undefined
-      );
-      console.log('[controlFileB2Service] ✅ parentId calculado para capacitación:', resolvedParentId);
     }
 
     // 1. Obtener URL presignada
-    console.log('[controlFileB2Service] 📤 Obteniendo URL presignada con parentId:', resolvedParentId);
     const presignData = await getPresignedUrl(file, resolvedParentId, metadata);
 
     // 2. Subir archivo físico a B2
-    console.log('[controlFileB2Service] ⬆️ Subiendo archivo a B2...');
     await uploadFileToB2(presignData.url, file);
 
     // 3. Confirmar upload en ControlFile
-    console.log('[controlFileB2Service] ✅ Confirmando upload en ControlFile...');
     const { fileId } = await confirmUpload(presignData.uploadSessionId);
 
     // 4. Crear share persistente en Firestore
-    console.log('[controlFileB2Service] 🔗 Creando share persistente...');
     const shareToken = await createShareToken(fileId, userId);
-
-    console.log('[controlFileB2Service] ✅ Archivo subido exitosamente:', fileId);
-    console.log('[controlFileB2Service] ✅ Share token creado:', shareToken);
     
     // Retornar fileId y shareToken (NO URL permanente)
     return { fileId, shareToken };
   } catch (error) {
-    console.error('[controlFileB2Service] ❌ Error al subir evidencia:', error);
-    throw error instanceof Error ? error : new Error(String(error));
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error('[controlFileB2Service] ❌ Error al subir evidencia:', errorMessage);
+    throw error instanceof Error ? error : new Error(errorMessage);
   }
 }
 

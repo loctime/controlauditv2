@@ -39,34 +39,21 @@ function getCacheKey(context: FileContext): string {
  */
 function maintainCache(): void {
   if (folderCache.size > MAX_CACHE_SIZE) {
-    // Eliminar las primeras entradas (más antiguas)
+    // Eliminar las primeras entradas (más antiguas) - LRU implícito
     const entriesToRemove = folderCache.size - MAX_CACHE_SIZE;
     const keysToRemove = Array.from(folderCache.keys()).slice(0, entriesToRemove);
     keysToRemove.forEach(key => folderCache.delete(key));
-    console.log(`[contextFolderResolver] 🧹 Cache limpiado: ${entriesToRemove} entradas removidas`);
   }
 }
 
 /**
- * Resuelve la estructura completa de carpetas según el contexto
- * 
- * Estructura objetivo:
- * ControlAudit/
- * └── Archivos/
- *     └── {contextType}/
- *         └── {contextEventId}/
- *             └── {companyId}/           (opcional según contexto)
- *                 └── {sucursalId}/      (opcional según contexto)
- *                     └── {tipoArchivo}/
- * 
- * @param context - Contexto del archivo
- * @returns Promise<string> - ID de la carpeta final (parentId)
- * @throws Error si la validación falla o no se puede crear la estructura
- */
-/**
  * Valida el contexto básico según configuración
+ * 
  * Iteración 1: Solo validaciones de tipos y campos requeridos
  * Iteración 2: Agregar validación de existencia en Firestore
+ * 
+ * @param context - Contexto del archivo a validar
+ * @throws Error si el contexto no cumple con los requisitos del contextType
  */
 function validateContext(context: FileContext): void {
   const config = getContextConfig(context.contextType);
@@ -95,6 +82,25 @@ function validateContext(context: FileContext): void {
   }
 }
 
+/**
+ * Resuelve la estructura completa de carpetas según el contexto de evento
+ * 
+ * Estructura objetivo:
+ * ControlAudit/
+ * └── Archivos/
+ *     └── {contextType}/
+ *         └── {contextEventId}/
+ *             └── {companyId}/           (opcional según contexto)
+ *                 └── {sucursalId}/      (opcional según contexto)
+ *                     └── {tipoArchivo}/
+ * 
+ * La función valida el contexto, verifica cache, y crea la estructura completa
+ * si no existe. Los resultados se cachean para mejorar performance.
+ * 
+ * @param context - Contexto del archivo con todos los campos requeridos
+ * @returns Promise<string> - ID de la carpeta final (parentId) donde se debe subir el archivo
+ * @throws Error si la validación falla o no se puede crear la estructura
+ */
 export async function resolveContextFolder(context: FileContext): Promise<string> {
   // Validar contexto antes de resolver carpetas
   validateContext(context);
@@ -103,12 +109,9 @@ export async function resolveContextFolder(context: FileContext): Promise<string
 
   // Verificar cache
   const cacheKey = getCacheKey(context);
-  if (folderCache.has(cacheKey)) {
-    const cachedFolderId = folderCache.get(cacheKey);
-    if (cachedFolderId) {
-      console.log(`[contextFolderResolver] ✅ Usando carpeta desde cache: ${cacheKey}`);
-      return cachedFolderId;
-    }
+  const cachedFolderId = folderCache.get(cacheKey);
+  if (cachedFolderId) {
+    return cachedFolderId;
   }
 
   try {
@@ -165,17 +168,6 @@ export async function resolveContextFolder(context: FileContext): Promise<string
     folderCache.set(cacheKey, tipoArchivoFolderId);
     maintainCache();
 
-    const path = [
-      'Archivos',
-      context.contextType,
-      context.contextEventId,
-      config.requiresCompanyId ? context.companyId : null,
-      config.requiresSucursalId ? context.sucursalId : null,
-      context.tipoArchivo
-    ].filter(Boolean).join('/');
-
-    console.log(`[contextFolderResolver] ✅ Estructura creada: ${path} → ${tipoArchivoFolderId}`);
-
     return tipoArchivoFolderId;
   } catch (error) {
     console.error('[contextFolderResolver] ❌ Error al resolver carpeta:', error);
@@ -185,16 +177,21 @@ export async function resolveContextFolder(context: FileContext): Promise<string
 
 /**
  * Limpia el cache de carpetas
- * Útil para testing o cuando se necesita forzar recreación
+ * 
+ * Útil para testing o cuando se necesita forzar recreación de estructuras.
+ * En producción, el cache se mantiene automáticamente con límite de tamaño.
+ * 
+ * @returns void
  */
 export function clearFolderCache(): void {
-  const size = folderCache.size;
   folderCache.clear();
-  console.log(`[contextFolderResolver] 🧹 Cache limpiado: ${size} entradas removidas`);
 }
 
 /**
  * Exporta validación para uso en otros servicios
- * Útil para validar antes de construir contexto
+ * Útil para validar contexto antes de construir FileContext completo
+ * 
+ * @param context - Contexto a validar
+ * @throws Error si el contexto no es válido
  */
 export { validateContext };

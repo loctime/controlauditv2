@@ -46,6 +46,10 @@ export const CONTEXT_CONFIG: Record<ContextType, ContextConfig> = {
 
 /**
  * Obtiene la configuración para un contexto específico
+ * 
+ * @param contextType - Tipo de contexto (capacitacion, accidente, incidente, salud)
+ * @returns ContextConfig - Configuración con reglas de validación y tipos permitidos
+ * @throws Error si el contextType no está configurado
  */
 export function getContextConfig(contextType: ContextType): ContextConfig {
   const config = CONTEXT_CONFIG[contextType];
