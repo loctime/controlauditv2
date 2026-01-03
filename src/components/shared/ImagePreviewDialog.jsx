@@ -23,13 +23,15 @@ import {
  * @param {string} imageUrl - URL de la imagen (puede ser blob URL o URL externa)
  * @param {string} imageName - Nombre del archivo para descarga (opcional)
  * @param {Blob} imageBlob - Blob de la imagen para descarga directa (opcional, preferido)
+ * @param {number} imageSize - Tamaño del archivo en bytes (opcional)
  */
 const ImagePreviewDialog = ({
   open,
   onClose,
   imageUrl,
   imageName = 'evidencia',
-  imageBlob = null
+  imageBlob = null,
+  imageSize = null
 }) => {
   const [imageLoading, setImageLoading] = React.useState(true);
   const [imageError, setImageError] = React.useState(false);
@@ -52,7 +54,7 @@ const ImagePreviewDialog = ({
 
   const handleDownload = async () => {
     try {
-      // Si tenemos el blob directamente, usarlo
+      // ✅ PRIORIDAD: Si tenemos el blob directamente, usarlo (NO hacer fetch nunca)
       if (imageBlob) {
         const url = URL.createObjectURL(imageBlob);
         const link = document.createElement('a');
@@ -66,36 +68,27 @@ const ImagePreviewDialog = ({
         return;
       }
 
-      // Si no tenemos blob pero tenemos URL, hacer fetch
-      if (imageUrl) {
-        // Si es blob URL, convertir a blob
-        if (imageUrl.startsWith('blob:')) {
-          const response = await fetch(imageUrl);
-          const blob = await response.blob();
-          const url = URL.createObjectURL(blob);
-          const link = document.createElement('a');
-          link.href = url;
-          link.download = imageName || 'evidencia';
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-          setTimeout(() => URL.revokeObjectURL(url), 100);
-        } else {
-          // URL externa, hacer fetch y descargar
-          const response = await fetch(imageUrl, { mode: 'cors', credentials: 'omit' });
-          if (!response.ok) {
-            throw new Error(`HTTP ${response.status}`);
-          }
-          const blob = await response.blob();
-          const url = URL.createObjectURL(blob);
-          const link = document.createElement('a');
-          link.href = url;
-          link.download = imageName || 'evidencia';
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-          setTimeout(() => URL.revokeObjectURL(url), 100);
+      // Si no tenemos blob pero tenemos URL, hacer fetch SOLO si es HTTP(S)
+      if (imageUrl && imageUrl.startsWith('http')) {
+        // URL externa, hacer fetch y descargar
+        const response = await fetch(imageUrl, { mode: 'cors', credentials: 'omit' });
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
         }
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = imageName || 'evidencia';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        setTimeout(() => URL.revokeObjectURL(url), 100);
+      } else if (imageUrl && imageUrl.startsWith('blob:')) {
+        // ⚠️ Blob URL sin blob disponible: mejor fallback a abrir en nueva pestaña
+        // (fetch de blob: puede fallar en Safari)
+        console.warn('[ImagePreviewDialog] Blob URL sin blob disponible, usando fallback');
+        window.open(imageUrl, '_blank');
       }
     } catch (error) {
       console.error('[ImagePreviewDialog] Error al descargar imagen:', error);
@@ -104,6 +97,14 @@ const ImagePreviewDialog = ({
         window.open(imageUrl, '_blank');
       }
     }
+  };
+
+  // Formatear tamaño del archivo
+  const formatFileSize = (bytes) => {
+    if (!bytes) return null;
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
 
   return (
@@ -120,44 +121,70 @@ const ImagePreviewDialog = ({
       }}
     >
       <Box sx={{ position: 'relative' }}>
-        {/* Header con botones */}
+        {/* Header con botones y metadata */}
         <Box
           sx={{
             position: 'absolute',
             top: 8,
+            left: 8,
             right: 8,
             zIndex: 10,
             display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'flex-start',
             gap: 1
           }}
         >
-          <Button
-            variant="contained"
-            color="primary"
-            startIcon={<DownloadIcon />}
-            onClick={handleDownload}
+          {/* Metadata (nombre y tamaño) */}
+          <Box
             sx={{
               backgroundColor: 'rgba(0, 0, 0, 0.7)',
               color: 'white',
-              '&:hover': {
-                backgroundColor: 'rgba(0, 0, 0, 0.9)'
-              }
+              borderRadius: 1,
+              p: 1,
+              maxWidth: '60%'
             }}
           >
-            Descargar
-          </Button>
-          <IconButton
-            onClick={onClose}
-            sx={{
-              backgroundColor: 'rgba(0, 0, 0, 0.7)',
-              color: 'white',
-              '&:hover': {
-                backgroundColor: 'rgba(0, 0, 0, 0.9)'
-              }
-            }}
-          >
-            <CloseIcon />
-          </IconButton>
+            <Typography variant="body2" sx={{ fontWeight: 600, mb: 0.5 }}>
+              {imageName}
+            </Typography>
+            {imageSize && (
+              <Typography variant="caption" sx={{ opacity: 0.9 }}>
+                {formatFileSize(imageSize)}
+              </Typography>
+            )}
+          </Box>
+
+          {/* Botones */}
+          <Box sx={{ display: 'flex', gap: 1 }}>
+            <Button
+              variant="contained"
+              color="primary"
+              startIcon={<DownloadIcon />}
+              onClick={handleDownload}
+              sx={{
+                backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                color: 'white',
+                '&:hover': {
+                  backgroundColor: 'rgba(0, 0, 0, 0.9)'
+                }
+              }}
+            >
+              Descargar
+            </Button>
+            <IconButton
+              onClick={onClose}
+              sx={{
+                backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                color: 'white',
+                '&:hover': {
+                  backgroundColor: 'rgba(0, 0, 0, 0.9)'
+                }
+              }}
+            >
+              <CloseIcon />
+            </IconButton>
+          </Box>
         </Box>
 
         {/* Contenido de la imagen */}
