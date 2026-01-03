@@ -13,6 +13,8 @@ import { db, auditUserCollection } from '../firebaseControlFile';
 import { uploadEvidence, getDownloadUrl, ensureTaskbarFolder, ensureSubFolder } from './controlFileB2Service';
 import { getControlFileFolders, clearControlFileFolders } from './controlFileInit';
 import { registrarAccionSistema } from '../utils/firestoreUtils';
+import { uploadFileWithContext } from './unifiedFileUploadService';
+import { auth } from '../firebaseControlFile';
 
 /**
  * Servicio para gestión de accidentes e incidentes
@@ -198,13 +200,75 @@ export const actualizarEstadoEmpleado = async (empleadoId, estado, fechaInicioRe
   }
 };
 
-// Subir imágenes a ControlFile
-export const subirImagenes = async (accidenteId, imagenes, companyId = 'system') => {
+/**
+ * Subir imágenes usando el nuevo modelo de contexto de evento
+ * Función interna que usa uploadFileWithContext()
+ * 
+ * @private
+ * @deprecated Esta función será removida en Iteración 2 cuando todos los componentes migren
+ */
+const subirImagenesNew = async (accidenteId, imagenes, companyId = 'system') => {
+  try {
+    const user = auth.currentUser;
+    if (!user) {
+      throw new Error('Usuario no autenticado');
+    }
+    const userId = user.uid;
+
+    console.log(`[accidenteService] 📤 [v1.0] Subiendo ${imagenes.length} imagen(es) con modelo de contexto: accidente/${accidenteId}/evidencia`);
+
+    const urls = [];
+    
+    for (let i = 0; i < imagenes.length; i++) {
+      const imagen = imagenes[i];
+      try {
+        // Usar el nuevo servicio unificado
+        const result = await uploadFileWithContext({
+          file: imagen,
+          context: {
+            contextType: 'accidente',
+            contextEventId: accidenteId,
+            companyId,
+            tipoArchivo: 'evidencia'
+          },
+          fecha: new Date(),
+          uploadedBy: userId
+        });
+        
+        // Obtener URL de descarga temporal
+        const url = await getDownloadUrl(result.fileId);
+        urls.push(url);
+        
+        console.log(`[accidenteService] ✅ [v1.0] Imagen ${i + 1}/${imagenes.length} subida exitosamente`);
+      } catch (error) {
+        const errorMsg = error instanceof Error ? error.message : String(error);
+        console.error(`[accidenteService] ❌ [v1.0] Error al subir imagen ${i + 1}/${imagenes.length}:`, errorMsg);
+        // Continuar con las demás imágenes aunque una falle
+      }
+    }
+    
+    if (urls.length === 0) {
+      throw new Error('No se pudo subir ninguna imagen');
+    }
+    
+    return urls;
+  } catch (error) {
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    console.error(`[accidenteService] ❌ [v1.0] Error al subir imágenes (${imagenes.length} total):`, errorMsg);
+    throw error;
+  }
+};
+
+/**
+ * Subir imágenes usando sistema legacy (fallback)
+ * @private
+ */
+const subirImagenesLegacy = async (accidenteId, imagenes, companyId = 'system') => {
   try {
     // PASO 1: Obtener carpeta raíz ControlAudit (ya existente)
     const mainFolderId = await ensureTaskbarFolder('ControlAudit');
     if (!mainFolderId) {
-      console.error('[accidenteService] ⛔ Upload cancelado: carpeta accidentes no disponible - No se pudo obtener carpeta principal ControlAudit');
+      console.error('[accidenteService] ⛔ [LEGACY] Upload cancelado: carpeta accidentes no disponible - No se pudo obtener carpeta principal ControlAudit');
       throw new Error('No se pudo obtener carpeta principal ControlAudit');
     }
 
@@ -219,33 +283,33 @@ export const subirImagenes = async (accidenteId, imagenes, companyId = 'system')
 
       // 2b. SI NO EXISTE → crearla usando ensureSubFolder
       if (!folderIdAccidentes) {
-        console.log('[accidenteService] 📂 Subcarpeta accidentes no encontrada en cache, creando...');
+        console.log('[accidenteService] 📂 [LEGACY] Subcarpeta accidentes no encontrada en cache, creando...');
         folderIdAccidentes = await ensureSubFolder('Accidentes', mainFolderId);
         
         if (folderIdAccidentes) {
           subcarpetaCreada = true;
-          console.log('[accidenteService] 📂 Subcarpeta accidentes creada');
+          console.log('[accidenteService] 📂 [LEGACY] Subcarpeta accidentes creada');
           
           // PASO 3: Invalidar cache si se creó la subcarpeta
           clearControlFileFolders();
-          console.log('[accidenteService] ♻️ Cache de carpetas invalidado');
+          console.log('[accidenteService] ♻️ [LEGACY] Cache de carpetas invalidado');
         } else {
-          console.error('[accidenteService] ⛔ Upload cancelado: carpeta accidentes no disponible - No se pudo crear subcarpeta');
+          console.error('[accidenteService] ⛔ [LEGACY] Upload cancelado: carpeta accidentes no disponible - No se pudo crear subcarpeta');
           throw new Error('No se pudo crear subcarpeta accidentes');
         }
       } else {
         // 2c. SI EXISTE → usar su id
-        console.log('[accidenteService] 📂 Subcarpeta accidentes existente reutilizada');
+        console.log('[accidenteService] 📂 [LEGACY] Subcarpeta accidentes existente reutilizada');
       }
     } catch (error) {
-      console.error('[accidenteService] Error al resolver carpeta de accidentes:', error);
-      console.error('[accidenteService] ⛔ Upload cancelado: carpeta accidentes no disponible');
+      console.error('[accidenteService] [LEGACY] Error al resolver carpeta de accidentes:', error);
+      console.error('[accidenteService] ⛔ [LEGACY] Upload cancelado: carpeta accidentes no disponible');
       throw error;
     }
 
     // PASO 4: Validar que parentId es válido antes de subir
     if (!folderIdAccidentes) {
-      console.error('[accidenteService] ⛔ Upload cancelado: carpeta accidentes no disponible - folderIdAccidentes es null');
+      console.error('[accidenteService] ⛔ [LEGACY] Upload cancelado: carpeta accidentes no disponible - folderIdAccidentes es null');
       throw new Error('folderIdAccidentes no disponible');
     }
 
@@ -267,17 +331,43 @@ export const subirImagenes = async (accidenteId, imagenes, companyId = 'system')
         const url = await getDownloadUrl(result.fileId);
         urls.push(url);
         
-        console.log(`[accidenteService] ✅ Imagen ${i + 1}/${imagenes.length} subida a ControlFile`);
+        console.log(`[accidenteService] ✅ [LEGACY] Imagen ${i + 1}/${imagenes.length} subida a ControlFile`);
       } catch (error) {
-        console.error(`[accidenteService] Error al subir imagen ${i + 1}:`, error);
+        console.error(`[accidenteService] [LEGACY] Error al subir imagen ${i + 1}:`, error);
         // Continuar con las demás imágenes aunque una falle
       }
     }
     
     return urls;
   } catch (error) {
-    console.error('[accidenteService] Error al subir imágenes:', error);
+    console.error('[accidenteService] [LEGACY] Error al subir imágenes:', error);
     throw error;
+  }
+};
+
+/**
+ * Subir imágenes a ControlFile
+ * 
+ * @deprecated Esta función ahora usa internamente el nuevo modelo de contexto de evento (v1.0).
+ * Se mantiene la API existente para compatibilidad total con código legacy.
+ * 
+ * Migración: Los componentes deberían migrar a usar uploadFileWithContext() directamente.
+ * Esta función será removida en Iteración 2 cuando todos los componentes migren.
+ * 
+ * @param {string} accidenteId - ID del accidente
+ * @param {File[]} imagenes - Array de archivos de imagen
+ * @param {string} companyId - ID de la empresa (default: 'system')
+ * @returns {Promise<string[]>} Array de URLs de descarga temporal
+ */
+export const subirImagenes = async (accidenteId, imagenes, companyId = 'system') => {
+  // Wrapper: usar nuevo sistema internamente pero mantener API legacy
+  try {
+    return await subirImagenesNew(accidenteId, imagenes, companyId);
+  } catch (error) {
+    // Fallback a sistema legacy solo si el nuevo sistema falla
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    console.warn(`[accidenteService] ⚠️ [v1.0] Fallback a legacy por error: ${errorMsg}`);
+    return await subirImagenesLegacy(accidenteId, imagenes, companyId);
   }
 };
 

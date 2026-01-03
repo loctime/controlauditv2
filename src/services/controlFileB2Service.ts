@@ -222,6 +222,7 @@ async function createShareToken(fileId: string, userId: string): Promise<string>
  * @param {string} params.preguntaId - ID de la pregunta (opcional)
  * @param {Date|string} params.fecha - Fecha de la evidencia (opcional)
  * @param {string | null} params.parentId - ID de la carpeta padre (opcional)
+ * @param {Record<string, any>} params.metadata - Metadata plana opcional (nuevo modelo de contexto)
  * @returns {Promise<{fileId: string, shareToken: string}>} Retorna fileId y shareToken persistente
  */
 export async function uploadEvidence({
@@ -234,7 +235,8 @@ export async function uploadEvidence({
   parentId,
   capacitacionTipoId,
   sucursalId,
-  tipoArchivo
+  tipoArchivo,
+  metadata: providedMetadata
 }: {
   file: File;
   auditId: string;
@@ -246,6 +248,7 @@ export async function uploadEvidence({
   capacitacionTipoId?: string;
   sucursalId?: string;
   tipoArchivo?: string;
+  metadata?: Record<string, any>; // Metadata plana del nuevo modelo
 }): Promise<{ fileId: string; shareToken: string }> {
   try {
     const user = auth.currentUser;
@@ -255,43 +258,59 @@ export async function uploadEvidence({
 
     const userId = user.uid;
 
-    // Preparar metadata para ControlFile
-    const fechaValue = fecha instanceof Date ? fecha.toISOString() : (fecha || new Date().toISOString());
+    // Determinar metadata según modelo (nuevo vs legacy)
+    let metadata: Record<string, any>;
     
-    // Construir customFields base
-    const customFields: Record<string, any> = {
-      appName: 'ControlAudit',
-      auditId, // ⚠️ Solo compatibilidad legacy para capacitaciones
-      companyId,
-      seccionId: seccionId || null,
-      preguntaId: preguntaId || null,
-      fecha: fechaValue
-    };
-    
-    // Si es capacitación, agregar campos específicos
-    if (capacitacionTipoId) {
-      customFields.contextType = 'capacitacion'; // ✅ CLAVE
-      customFields.capacitacionEventoId = auditId; // ✅ CLAVE (auditId es el evento real)
-      customFields.capacitacionTipoId = capacitacionTipoId; // ✅ CLAVE
-      if (sucursalId) {
-        customFields.sucursalId = sucursalId; // ✅ CLAVE
+    if (providedMetadata) {
+      // Nuevo modelo: metadata plana proporcionada
+      // Agregar source para compatibilidad con ControlFile API
+      metadata = {
+        source: 'navbar',
+        ...providedMetadata
+      };
+      console.log('[controlFileB2Service] ✅ Usando metadata plana (modelo contexto v1.0)');
+    } else {
+      // Legacy: construir metadata anidada como antes
+      const fechaValue = fecha instanceof Date ? fecha.toISOString() : (fecha || new Date().toISOString());
+      
+      // Construir customFields base
+      const customFields: Record<string, any> = {
+        appName: 'ControlAudit',
+        auditId, // ⚠️ Solo compatibilidad legacy para capacitaciones
+        companyId,
+        seccionId: seccionId || null,
+        preguntaId: preguntaId || null,
+        fecha: fechaValue
+      };
+      
+      // Si es capacitación, agregar campos específicos
+      if (capacitacionTipoId) {
+        customFields.contextType = 'capacitacion'; // ✅ CLAVE
+        customFields.capacitacionEventoId = auditId; // ✅ CLAVE (auditId es el evento real)
+        customFields.capacitacionTipoId = capacitacionTipoId; // ✅ CLAVE
+        if (sucursalId) {
+          customFields.sucursalId = sucursalId; // ✅ CLAVE
+        }
+        if (tipoArchivo) {
+          customFields.tipoArchivo = tipoArchivo; // ✅ CLAVE
+        }
       }
-      if (tipoArchivo) {
-        customFields.tipoArchivo = tipoArchivo; // ✅ CLAVE
-      }
+      
+      // Legacy: metadata anidada con customFields
+      metadata = {
+        source: 'navbar',
+        customFields
+      };
+      console.log('[controlFileB2Service] ⚠️ Usando metadata legacy (customFields anidado)');
     }
-    
-    const metadata = {
-      source: 'navbar',
-      customFields
-    };
 
     // 🔥 Calcular parentId correcto antes de pedir presign URL
     let resolvedParentId = parentId ?? null;
     
-    // 🔥 SI ES CAPACITACIÓN, IGNORAR parentId EXTERNO y calcular el correcto
-    if (capacitacionTipoId && sucursalId) {
-      console.log('[controlFileB2Service] 🔥 Es capacitación - calculando parentId correcto...');
+    // 🔥 SI ES CAPACITACIÓN LEGACY, IGNORAR parentId EXTERNO y calcular el correcto
+    // (Solo para llamadas legacy, el nuevo modelo ya viene con parentId resuelto)
+    if (!providedMetadata && capacitacionTipoId && sucursalId) {
+      console.log('[controlFileB2Service] 🔥 Es capacitación legacy - calculando parentId correcto...');
       resolvedParentId = await ensureCapacitacionFolder(
         capacitacionTipoId,
         auditId,          // evento (capacitacionEventoId)

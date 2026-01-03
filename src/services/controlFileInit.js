@@ -34,9 +34,17 @@ export const initializeControlFileFolders = async () => {
 
     // 2. Crear subcarpetas usando ensureSubFolder (verifica existencia antes de crear)
     const subFolders = {};
-    const subFolderNames = ['Auditorías', 'Accidentes', 'Empresas'];
+    // Carpetas legacy para compatibilidad
+    const legacyFolderNames = ['Auditorías', 'Accidentes', 'Empresas'];
+    // Nueva carpeta "Archivos" para el modelo de contexto de evento
+    const archivosFolderId = await ensureSubFolder('Archivos', mainFolderId);
+    if (archivosFolderId) {
+      subFolders['archivos'] = archivosFolderId;
+      console.log('[controlFileInit] ✅ Carpeta Archivos creada para nuevo modelo de contexto');
+    }
     
-    for (const folderName of subFolderNames) {
+    // Mantener carpetas legacy para compatibilidad
+    for (const folderName of legacyFolderNames) {
       // ensureSubFolder verifica existencia antes de crear
       const folderId = await ensureSubFolder(folderName, mainFolderId);
       if (folderId) {
