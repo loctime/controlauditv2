@@ -231,7 +231,10 @@ export async function uploadEvidence({
   seccionId,
   preguntaId,
   fecha,
-  parentId
+  parentId,
+  capacitacionTipoId,
+  sucursalId,
+  tipoArchivo
 }: {
   file: File;
   auditId: string;
@@ -240,6 +243,9 @@ export async function uploadEvidence({
   preguntaId?: string;
   fecha?: Date | string;
   parentId?: string | null;
+  capacitacionTipoId?: string;
+  sucursalId?: string;
+  tipoArchivo?: string;
 }): Promise<{ fileId: string; shareToken: string }> {
   try {
     const user = auth.currentUser;
@@ -251,21 +257,54 @@ export async function uploadEvidence({
 
     // Preparar metadata para ControlFile
     const fechaValue = fecha instanceof Date ? fecha.toISOString() : (fecha || new Date().toISOString());
+    
+    // Construir customFields base
+    const customFields: Record<string, any> = {
+      appName: 'ControlAudit',
+      auditId, // ⚠️ Solo compatibilidad legacy para capacitaciones
+      companyId,
+      seccionId: seccionId || null,
+      preguntaId: preguntaId || null,
+      fecha: fechaValue
+    };
+    
+    // Si es capacitación, agregar campos específicos
+    if (capacitacionTipoId) {
+      customFields.contextType = 'capacitacion'; // ✅ CLAVE
+      customFields.capacitacionEventoId = auditId; // ✅ CLAVE (auditId es el evento real)
+      customFields.capacitacionTipoId = capacitacionTipoId; // ✅ CLAVE
+      if (sucursalId) {
+        customFields.sucursalId = sucursalId; // ✅ CLAVE
+      }
+      if (tipoArchivo) {
+        customFields.tipoArchivo = tipoArchivo; // ✅ CLAVE
+      }
+    }
+    
     const metadata = {
       source: 'navbar',
-      customFields: {
-        appName: 'ControlAudit',
-        auditId,
-        companyId,
-        seccionId: seccionId || null,
-        preguntaId: preguntaId || null,
-        fecha: fechaValue
-      }
+      customFields
     };
 
+    // 🔥 Calcular parentId correcto antes de pedir presign URL
+    let resolvedParentId = parentId ?? null;
+    
+    // 🔥 SI ES CAPACITACIÓN, IGNORAR parentId EXTERNO y calcular el correcto
+    if (capacitacionTipoId && sucursalId) {
+      console.log('[controlFileB2Service] 🔥 Es capacitación - calculando parentId correcto...');
+      resolvedParentId = await ensureCapacitacionFolder(
+        capacitacionTipoId,
+        auditId,          // evento (capacitacionEventoId)
+        companyId,
+        sucursalId,
+        tipoArchivo as 'evidencia' | 'material' | 'certificado' | undefined
+      );
+      console.log('[controlFileB2Service] ✅ parentId calculado para capacitación:', resolvedParentId);
+    }
+
     // 1. Obtener URL presignada
-    console.log('[controlFileB2Service] 📤 Obteniendo URL presignada...');
-    const presignData = await getPresignedUrl(file, parentId, metadata);
+    console.log('[controlFileB2Service] 📤 Obteniendo URL presignada con parentId:', resolvedParentId);
+    const presignData = await getPresignedUrl(file, resolvedParentId, metadata);
 
     // 2. Subir archivo físico a B2
     console.log('[controlFileB2Service] ⬆️ Subiendo archivo a B2...');
@@ -627,13 +666,15 @@ export async function createNavbarFolder(
  * Normaliza un nombre de capacitación a un ID de tipo válido para carpetas
  * Ej: "Uso de Matafuegos" -> "uso-de-matafuegos"
  * 
+ * ⚠️ SINGLE SOURCE OF TRUTH - Esta es la ÚNICA función de normalización
+ * 
  * ⚠️ Valida que el resultado nunca sea vacío
  * 
  * @param {string} nombre - Nombre de la capacitación
  * @returns {string} ID normalizado (nunca vacío)
  * @throws {Error} Si el nombre no puede normalizarse a un ID válido
  */
-function normalizarCapacitacionTipoId(nombre: string): string {
+export function normalizarCapacitacionTipoId(nombre: string): string {
   if (!nombre || typeof nombre !== 'string') {
     throw new Error('Nombre de capacitación inválido para normalizar');
   }
@@ -693,16 +734,24 @@ export async function ensureCapacitacionFolder(
   }
   
   // 3. Normalizar capacitacionTipoId
+  console.log(`[controlFileB2Service] 🔄 Normalizando capacitacionTipoId: "${capacitacionTipoId}"`);
   const tipoIdNormalizado = normalizarCapacitacionTipoId(capacitacionTipoId);
   if (!tipoIdNormalizado) {
     throw new Error(`No se pudo normalizar capacitacionTipoId: ${capacitacionTipoId}`);
   }
+  console.log(`[controlFileB2Service] ✅ CapacitacionTipoId normalizado: "${tipoIdNormalizado}"`);
   
-  // 4. Carpeta por tipo de capacitación (reutilizable)
+  // 4. Carpeta por tipo de capacitación (reutilizable) - ESTE ES EL PASO CRÍTICO
+  console.log(`[controlFileB2Service] 📂 [PASO CRÍTICO] Creando carpeta tipo capacitación: "${tipoIdNormalizado}" dentro de Capacitaciones (${capacitacionesFolderId})`);
   const tipoFolderId = await ensureSubFolder(tipoIdNormalizado, capacitacionesFolderId);
   if (!tipoFolderId) {
     throw new Error(`No se pudo crear carpeta tipo capacitación: ${tipoIdNormalizado}`);
   }
+  // ⚠️ VALIDACIÓN CRÍTICA: Verificar que tipoFolderId NO sea igual a capacitacionesFolderId
+  if (tipoFolderId === capacitacionesFolderId) {
+    throw new Error(`ERROR CRÍTICO: tipoFolderId (${tipoFolderId}) es igual a capacitacionesFolderId. La carpeta por tipo NO se creó correctamente.`);
+  }
+  console.log(`[controlFileB2Service] ✅ Carpeta tipo capacitación creada: ${tipoFolderId} (diferente de Capacitaciones: ${capacitacionesFolderId})`);
   
   // 5. Carpeta por evento de capacitación (cada vez que se dicta)
   const eventoFolderId = await ensureSubFolder(capacitacionEventoId, tipoFolderId);
@@ -728,12 +777,22 @@ export async function ensureCapacitacionFolder(
     if (!tipoArchivoFolderId) {
       throw new Error(`No se pudo crear subcarpeta tipo archivo: ${tipoArchivo}`);
     }
+    // ⚠️ VALIDACIÓN FINAL: Verificar que la carpeta retornada NO sea capacitacionesFolderId
+    if (tipoArchivoFolderId === capacitacionesFolderId) {
+      throw new Error(`ERROR CRÍTICO: La carpeta final (${tipoArchivoFolderId}) es igual a capacitacionesFolderId. La estructura completa NO se creó.`);
+    }
     console.log(`[controlFileB2Service] ✅ Estructura completa creada: Capacitaciones/${tipoIdNormalizado}/${capacitacionEventoId}/${companyId}/${sucursalId}/${tipoArchivo}`);
+    console.log(`[controlFileB2Service] ✅ Carpeta final retornada: ${tipoArchivoFolderId} (NO es Capacitaciones: ${capacitacionesFolderId})`);
     return tipoArchivoFolderId;
   }
   
   // Si no se especifica tipoArchivo, retornar carpeta de sucursal
+  // ⚠️ VALIDACIÓN FINAL: Verificar que la carpeta retornada NO sea capacitacionesFolderId
+  if (sucursalFolderId === capacitacionesFolderId) {
+    throw new Error(`ERROR CRÍTICO: La carpeta final (${sucursalFolderId}) es igual a capacitacionesFolderId. La estructura completa NO se creó.`);
+  }
   console.log(`[controlFileB2Service] ✅ Estructura creada: Capacitaciones/${tipoIdNormalizado}/${capacitacionEventoId}/${companyId}/${sucursalId}`);
+  console.log(`[controlFileB2Service] ✅ Carpeta final retornada: ${sucursalFolderId} (NO es Capacitaciones: ${capacitacionesFolderId})`);
   return sucursalFolderId;
 }
 

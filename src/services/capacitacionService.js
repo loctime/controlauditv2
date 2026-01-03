@@ -12,37 +12,7 @@ import { db, auditUserCollection } from '../firebaseControlFile';
 import { registrarAccionSistema } from '../utils/firestoreUtils';
 import { addDocWithAppId, updateDocWithAppId, deleteDocWithAppId } from '../firebase/firestoreAppWriter';
 import { registrosAsistenciaService } from './registrosAsistenciaService';
-
-/**
- * Normaliza un nombre de capacitación a un ID de tipo válido para carpetas
- * Ej: "Uso de Matafuegos" -> "uso-de-matafuegos"
- * 
- * ⚠️ Valida que el resultado nunca sea vacío
- * 
- * @param {string} nombre - Nombre de la capacitación
- * @returns {string} ID normalizado (nunca vacío)
- * @throws {Error} Si el nombre no puede normalizarse a un ID válido
- */
-function normalizarCapacitacionTipoId(nombre) {
-  if (!nombre || typeof nombre !== 'string') {
-    throw new Error('Nombre de capacitación inválido para normalizar');
-  }
-  
-  const normalizado = nombre
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9\s-]/g, '') // Eliminar caracteres especiales
-    .replace(/\s+/g, '-') // Reemplazar espacios con guiones
-    .replace(/-+/g, '-') // Eliminar guiones múltiples
-    .replace(/^-|-$/g, ''); // Eliminar guiones al inicio/final
-  
-  // Validar que el resultado no sea vacío
-  if (!normalizado || normalizado.length === 0) {
-    throw new Error(`No se pudo normalizar el nombre de capacitación "${nombre}" a un ID válido`);
-  }
-  
-  return normalizado;
-}
+import { normalizarCapacitacionTipoId } from './controlFileB2Service';
 
 /**
  * Normaliza una capacitación unificando campos legacy

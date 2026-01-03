@@ -3,7 +3,7 @@ import { uploadEvidence, ensureTaskbarFolder, ensureSubFolder, ensureCapacitacio
 import { getOfflineDatabase, generateOfflineId } from './offlineDatabase';
 import syncQueueService from './syncQueue';
 import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
-import { db } from '../firebaseControlFile';
+import { db, auditUserCollection, auth } from '../firebaseControlFile';
 import { updateDocWithAppId } from '../firebase/firestoreAppWriter';
 import { 
   esArchivoLegacy, 
@@ -17,32 +17,6 @@ import {
  * Soporta modo online y offline con sincronización automática
  */
 class CapacitacionImageService {
-  /**
-   * Normaliza un nombre de capacitación a un ID de tipo válido para carpetas
-   * Ej: "Uso de Matafuegos" -> "uso-de-matafuegos"
-   * 
-   * ⚠️ Valida que el resultado nunca sea vacío
-   */
-  _normalizarCapacitacionTipoId(nombre) {
-    if (!nombre || typeof nombre !== 'string') {
-      return 'capacitacion-generica';
-    }
-    
-    const normalizado = nombre
-      .toLowerCase()
-      .trim()
-      .replace(/[^a-z0-9\s-]/g, '') // Eliminar caracteres especiales
-      .replace(/\s+/g, '-') // Reemplazar espacios con guiones
-      .replace(/-+/g, '-') // Eliminar guiones múltiples
-      .replace(/^-|-$/g, ''); // Eliminar guiones al inicio/final
-    
-    // Si después de normalizar queda vacío, usar valor por defecto
-    if (!normalizado || normalizado.length === 0) {
-      return 'capacitacion-generica';
-    }
-    
-    return normalizado;
-  }
 
   /**
    * Subir imagen a ControlFile (modo online)
@@ -57,10 +31,17 @@ class CapacitacionImageService {
    */
   async uploadImage(file, idToken, capacitacionEventoId, companyId, sucursalId = null, capacitacionTipoId = null, tipoArchivo = 'evidencia') {
     try {
-      // Obtener datos completos de la capacitación
+      // Obtener userId del usuario autenticado
+      const user = auth.currentUser;
+      if (!user) {
+        throw new Error('Usuario no autenticado');
+      }
+      const userId = user.uid;
+
+      // Obtener datos completos de la capacitación desde la colección multi-tenant
       let capacitacionData = null;
       try {
-        const capacitacionRef = doc(db, 'capacitaciones', capacitacionEventoId);
+        const capacitacionRef = doc(auditUserCollection(userId, 'capacitaciones'), capacitacionEventoId);
         const capacitacionSnap = await getDoc(capacitacionRef);
         
         if (capacitacionSnap.exists()) {
@@ -82,12 +63,21 @@ class CapacitacionImageService {
         throw new Error('No se pudo obtener sucursalId para la capacitación');
       }
 
-      // Generar capacitacionTipoId desde el nombre si no se proporciona
-      let finalTipoId = capacitacionTipoId;
-      if (!finalTipoId) {
-        const nombreCapacitacion = capacitacionData?.nombre || 'Capacitación Genérica';
-        finalTipoId = this._normalizarCapacitacionTipoId(nombreCapacitacion);
+      // ⚠️ capacitacionTipoId es OBLIGATORIO y debe venir persistido en Firestore
+      // NO se recalcula, NO se normaliza, NO hay fallback
+      const finalTipoId = capacitacionTipoId || capacitacionData?.capacitacionTipoId;
+      
+      if (!finalTipoId || typeof finalTipoId !== 'string' || finalTipoId.trim() === '') {
+        throw new Error('Capacitación sin capacitacionTipoId. Estado inválido. El capacitacionTipoId debe estar persistido en Firestore desde la creación.');
       }
+      
+      console.log('[capacitacionImageService] 📁 Creando estructura de carpetas:', {
+        capacitacionTipoId: finalTipoId,
+        capacitacionEventoId,
+        companyId: finalCompanyId,
+        sucursalId: finalSucursalId,
+        tipoArchivo
+      });
       
       // Asegurar estructura completa de carpetas:
       // Capacitaciones/{capacitacionTipoId}/{capacitacionEventoId}/{companyId}/{sucursalId}/{tipoArchivo}/
@@ -101,8 +91,10 @@ class CapacitacionImageService {
           finalSucursalId,
           tipoArchivo
         );
+        console.log('[capacitacionImageService] ✅ Estructura de carpetas creada, targetFolderId:', targetFolderId);
       } catch (error) {
-        // Propagar el error con contexto adicional
+        // Propagar el error con contexto adicional - NO hacer fallback
+        console.error('[capacitacionImageService] ❌ Error al crear estructura de carpetas:', error);
         throw new Error(`Error al crear estructura de carpetas de capacitación: ${error.message}`);
       }
       
@@ -111,12 +103,17 @@ class CapacitacionImageService {
         throw new Error(`parentId inválido para capacitación: ${targetFolderId}. La estructura de carpetas debe crearse completamente antes de subir archivos.`);
       }
       
+      console.log('[capacitacionImageService] 📤 Subiendo archivo con parentId:', targetFolderId);
+      
       const result = await uploadEvidence({
         file,
-        auditId: capacitacionEventoId, // Reutilizar auditId para compatibilidad legacy
+        auditId: capacitacionEventoId, // ⚠️ Solo compatibilidad legacy - capacitacionEventoId es el ID real
         companyId: finalCompanyId,
         parentId: targetFolderId, // ✅ NUNCA null - validado arriba
-        fecha: new Date()
+        fecha: new Date(),
+        capacitacionTipoId: finalTipoId, // ✅ CLAVE
+        sucursalId: finalSucursalId, // ✅ CLAVE
+        tipoArchivo: tipoArchivo // ✅ CLAVE
       });
 
       return {
@@ -204,13 +201,21 @@ class CapacitacionImageService {
    * @returns {Promise<Object>} Metadata de la imagen
    */
   async uploadImageSmart(file, idToken, capacitacionEventoId, companyId = null, sucursalId = null, isOnline = navigator.onLine, capacitacionTipoId = null, tipoArchivo = 'evidencia') {
-    // Obtener datos de la capacitación si faltan companyId o sucursalId
+    // Obtener userId del usuario autenticado
+    const user = auth.currentUser;
+    if (!user) {
+      throw new Error('Usuario no autenticado');
+    }
+    const userId = user.uid;
+
+    // Obtener datos de la capacitación desde la colección multi-tenant si faltan companyId, sucursalId o capacitacionTipoId
     let finalCompanyId = companyId;
     let finalSucursalId = sucursalId;
+    let finalTipoId = capacitacionTipoId;
     
-    if (!finalCompanyId || !finalSucursalId) {
+    if (!finalCompanyId || !finalSucursalId || !finalTipoId) {
       try {
-        const capacitacionRef = doc(db, 'capacitaciones', capacitacionEventoId);
+        const capacitacionRef = doc(auditUserCollection(userId, 'capacitaciones'), capacitacionEventoId);
         const capacitacionSnap = await getDoc(capacitacionRef);
         if (capacitacionSnap.exists()) {
           const capacitacionData = capacitacionSnap.data();
@@ -219,6 +224,9 @@ class CapacitacionImageService {
           }
           if (!finalSucursalId) {
             finalSucursalId = capacitacionData.sucursalId;
+          }
+          if (!finalTipoId) {
+            finalTipoId = capacitacionData.capacitacionTipoId;
           }
         }
       } catch (error) {
@@ -234,9 +242,14 @@ class CapacitacionImageService {
       throw new Error('No se pudo obtener sucursalId para la capacitación');
     }
 
+    // ⚠️ capacitacionTipoId es OBLIGATORIO - sin fallback, sin normalización
+    if (!finalTipoId || typeof finalTipoId !== 'string' || finalTipoId.trim() === '') {
+      throw new Error('Capacitación sin capacitacionTipoId. Estado inválido. El capacitacionTipoId debe estar persistido en Firestore desde la creación.');
+    }
+
     if (isOnline) {
       try {
-        return await this.uploadImage(file, idToken, capacitacionEventoId, finalCompanyId, finalSucursalId, capacitacionTipoId, tipoArchivo);
+        return await this.uploadImage(file, idToken, capacitacionEventoId, finalCompanyId, finalSucursalId, finalTipoId, tipoArchivo);
       } catch (error) {
         console.warn('⚠️ Fallo en subida online, guardando offline:', error);
         // Si falla online, guardar offline (con companyId para sincronización posterior)
@@ -246,7 +259,7 @@ class CapacitacionImageService {
           ...offlineResult, 
           companyId: finalCompanyId, 
           sucursalId: finalSucursalId,
-          capacitacionTipoId: capacitacionTipoId || this._normalizarCapacitacionTipoId('Capacitación Genérica')
+          capacitacionTipoId: finalTipoId // ✅ Usar el tipoId persistido, no generar
         };
       }
     } else {
@@ -256,7 +269,7 @@ class CapacitacionImageService {
         ...offlineResult, 
         companyId: finalCompanyId, 
         sucursalId: finalSucursalId,
-        capacitacionTipoId: capacitacionTipoId || this._normalizarCapacitacionTipoId('Capacitación Genérica')
+        capacitacionTipoId: finalTipoId // ✅ Usar el tipoId persistido, no generar
       };
     }
   }
@@ -267,9 +280,13 @@ class CapacitacionImageService {
    * @param {Object} imageMetadata - Metadata de la imagen
    * @returns {Promise<void>}
    */
-  async addImageToCapacitacion(capacitacionId, imageMetadata) {
+  async addImageToCapacitacion(capacitacionId, imageMetadata, userId) {
     try {
-      const capacitacionRef = doc(db, 'capacitaciones', capacitacionId);
+      if (!userId) {
+        throw new Error('userId es requerido para acceder a la colección multi-tenant');
+      }
+      
+      const capacitacionRef = doc(auditUserCollection(userId, 'capacitaciones'), capacitacionId);
       const capacitacionSnap = await getDoc(capacitacionRef);
 
       if (!capacitacionSnap.exists()) {
@@ -300,9 +317,13 @@ class CapacitacionImageService {
    * @param {string} imageId - ID de la imagen (fileId o id offline)
    * @returns {Promise<void>}
    */
-  async removeImageFromCapacitacion(capacitacionId, imageId) {
+  async removeImageFromCapacitacion(capacitacionId, imageId, userId) {
     try {
-      const capacitacionRef = doc(db, 'capacitaciones', capacitacionId);
+      if (!userId) {
+        throw new Error('userId es requerido para acceder a la colección multi-tenant');
+      }
+      
+      const capacitacionRef = doc(auditUserCollection(userId, 'capacitaciones'), capacitacionId);
       const capacitacionSnap = await getDoc(capacitacionRef);
 
       if (!capacitacionSnap.exists()) {
