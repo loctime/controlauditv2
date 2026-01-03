@@ -20,6 +20,7 @@ import {
 } from '@mui/icons-material';
 import EventDetailPanel from '../../../shared/event-registry/EventDetailPanel';
 import RegistrarAsistenciaInlineV2 from './RegistrarAsistenciaInlineV2';
+import ImagePreviewDialog from '../../../shared/ImagePreviewDialog';
 import { capacitacionService } from '../../../../services/capacitacionService';
 import { registrosAsistenciaServiceAdapter } from '../../../../services/adapters/registrosAsistenciaServiceAdapter';
 import { convertirShareTokenAUrl } from '../../../../utils/imageUtils';
@@ -45,7 +46,24 @@ const getEstadoColor = (estado) => {
 const ContenidoRegistros = ({ entityId, userId, registryService, refreshKey }) => {
   const [registros, setRegistros] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
-  const [evidenciasUrls, setEvidenciasUrls] = React.useState(new Map());
+  // Map de imgId -> blobUrl para thumbnails
+  const [evidenciasBlobUrls, setEvidenciasBlobUrls] = React.useState(new Map());
+  // Map de imgId -> blob para descarga
+  const [evidenciasBlobs, setEvidenciasBlobs] = React.useState(new Map());
+  // Map de imgId -> loading state
+  const [evidenciasLoading, setEvidenciasLoading] = React.useState(new Map());
+  // Map de imgId -> error state
+  const [evidenciasErrors, setEvidenciasErrors] = React.useState(new Map());
+  // Estado del modal
+  const [modalOpen, setModalOpen] = React.useState(false);
+  const [selectedEvidencia, setSelectedEvidencia] = React.useState(null);
+  
+  // Ref para rastrear qué imágenes ya están siendo cargadas (evita loops)
+  const loadingRef = React.useRef(new Set());
+  // Ref para rastrear blob URLs creados (para limpieza)
+  const blobUrlsRef = React.useRef(new Map());
+  // Ref para rastrear qué imágenes ya están cargadas (evita recargas)
+  const loadedRef = React.useRef(new Set());
 
   React.useEffect(() => {
     if (!entityId || !userId || !registryService) {
@@ -73,21 +91,160 @@ const ContenidoRegistros = ({ entityId, userId, registryService, refreshKey }) =
     return () => { mounted = false; };
   }, [entityId, userId, registryService, refreshKey]);
 
+  // Cargar imágenes como blobs cuando cambian los registros
   React.useEffect(() => {
-    const urls = new Map();
+    if (registros.length === 0) return;
+
+    // Identificar todas las evidencias que necesitan ser cargadas
     registros.forEach(registro => {
       if (registro.imagenes && Array.isArray(registro.imagenes)) {
         registro.imagenes.forEach((img, idx) => {
           const imgId = img.id || `${registro.id}-${idx}`;
-          const url = convertirShareTokenAUrl(img.shareToken || img.url || img);
-          if (url) {
-            urls.set(imgId, url);
+          const shareToken = img.shareToken || img.url || img;
+          const url = convertirShareTokenAUrl(shareToken);
+          
+          // Solo cargar si hay URL válida y no está ya cargada o en proceso
+          if (url && !loadedRef.current.has(imgId) && !loadingRef.current.has(imgId)) {
+            // Marcar como cargando en el ref
+            loadingRef.current.add(imgId);
+            
+            // Marcar como cargando en el estado
+            setEvidenciasLoading(prev => {
+              const newMap = new Map(prev);
+              newMap.set(imgId, true);
+              return newMap;
+            });
+            
+            // Hacer fetch y convertir a blob
+            fetch(url, { mode: 'cors', credentials: 'omit' })
+              .then(response => {
+                if (!response.ok) {
+                  throw new Error(`HTTP ${response.status}`);
+                }
+                return response.blob();
+              })
+              .then(blob => {
+                // Crear blob URL para mostrar
+                const blobUrl = URL.createObjectURL(blob);
+                
+                // Guardar en ref para limpieza
+                blobUrlsRef.current.set(imgId, blobUrl);
+                
+                // Marcar como cargada
+                loadedRef.current.add(imgId);
+                
+                // Actualizar estados
+                setEvidenciasBlobUrls(prev => {
+                  const newMap = new Map(prev);
+                  newMap.set(imgId, blobUrl);
+                  return newMap;
+                });
+                setEvidenciasBlobs(prev => {
+                  const newMap = new Map(prev);
+                  newMap.set(imgId, blob);
+                  return newMap;
+                });
+                setEvidenciasLoading(prev => {
+                  const newMap = new Map(prev);
+                  newMap.delete(imgId);
+                  return newMap;
+                });
+                
+                // Remover del ref de carga
+                loadingRef.current.delete(imgId);
+              })
+              .catch(error => {
+                console.error(`[ContenidoRegistros] Error cargando imagen ${imgId}:`, error);
+                
+                // Guardar URL original para fallback
+                setEvidenciasErrors(prev => {
+                  const newMap = new Map(prev);
+                  newMap.set(imgId, url);
+                  return newMap;
+                });
+                setEvidenciasLoading(prev => {
+                  const newMap = new Map(prev);
+                  newMap.delete(imgId);
+                  return newMap;
+                });
+                
+                // Remover del ref de carga
+                loadingRef.current.delete(imgId);
+              });
+          } else if (!url) {
+            // No hay URL válida, marcar como error
+            setEvidenciasErrors(prev => {
+              const newMap = new Map(prev);
+              newMap.set(imgId, null);
+              return newMap;
+            });
           }
         });
       }
     });
-    setEvidenciasUrls(urls);
   }, [registros]);
+
+  // Limpiar blob URLs de imágenes que ya no están en los registros
+  React.useEffect(() => {
+    // Obtener todos los imgIds actuales de los registros
+    const currentImgIds = new Set();
+    registros.forEach(registro => {
+      if (registro.imagenes && Array.isArray(registro.imagenes)) {
+        registro.imagenes.forEach((img, idx) => {
+          const imgId = img.id || `${registro.id}-${idx}`;
+          currentImgIds.add(imgId);
+        });
+      }
+    });
+
+    // Revocar blob URLs de imágenes que ya no están presentes
+    blobUrlsRef.current.forEach((blobUrl, imgId) => {
+      if (!currentImgIds.has(imgId)) {
+        if (blobUrl && blobUrl.startsWith('blob:')) {
+          URL.revokeObjectURL(blobUrl);
+        }
+        blobUrlsRef.current.delete(imgId);
+        loadedRef.current.delete(imgId);
+        
+        // Limpiar estados
+        setEvidenciasBlobUrls(prev => {
+          const newMap = new Map(prev);
+          newMap.delete(imgId);
+          return newMap;
+        });
+        setEvidenciasBlobs(prev => {
+          const newMap = new Map(prev);
+          newMap.delete(imgId);
+          return newMap;
+        });
+        setEvidenciasLoading(prev => {
+          const newMap = new Map(prev);
+          newMap.delete(imgId);
+          return newMap;
+        });
+        setEvidenciasErrors(prev => {
+          const newMap = new Map(prev);
+          newMap.delete(imgId);
+          return newMap;
+        });
+      }
+    });
+  }, [registros]);
+
+  // Limpiar todos los blob URLs al desmontar
+  React.useEffect(() => {
+    return () => {
+      // Revocar todos los blob URLs del ref
+      blobUrlsRef.current.forEach((blobUrl) => {
+        if (blobUrl && blobUrl.startsWith('blob:')) {
+          URL.revokeObjectURL(blobUrl);
+        }
+      });
+      blobUrlsRef.current.clear();
+      loadingRef.current.clear();
+      loadedRef.current.clear();
+    };
+  }, []);
 
   if (loading) {
     return (
@@ -106,6 +263,31 @@ const ContenidoRegistros = ({ entityId, userId, registryService, refreshKey }) =
       </Box>
     );
   }
+
+  const handleImageClick = (evidencia, imgId) => {
+    const blobUrl = evidenciasBlobUrls.get(imgId);
+    const blob = evidenciasBlobs.get(imgId);
+    const errorUrl = evidenciasErrors.get(imgId);
+    
+    // Si tenemos blob URL, abrir modal
+    if (blobUrl) {
+      setSelectedEvidencia({
+        imageUrl: blobUrl,
+        imageBlob: blob,
+        imageName: evidencia.nombre || `evidencia-${imgId}`
+      });
+      setModalOpen(true);
+    } else if (errorUrl) {
+      // Fallback: abrir en nueva pestaña
+      window.open(errorUrl, '_blank');
+    } else {
+      // Intentar obtener URL desde shareToken como último recurso
+      const url = convertirShareTokenAUrl(evidencia.shareToken || evidencia.url || evidencia);
+      if (url) {
+        window.open(url, '_blank');
+      }
+    }
+  };
 
   return (
     <Box sx={{ p: 2 }}>
@@ -140,7 +322,16 @@ const ContenidoRegistros = ({ entityId, userId, registryService, refreshKey }) =
                   <Grid container spacing={2}>
                     {evidencias.map((evidencia, idx) => {
                       const imgId = evidencia.id || `${registro.id}-${idx}`;
-                      const url = evidenciasUrls.get(imgId) || convertirShareTokenAUrl(evidencia.shareToken || evidencia.url || evidencia);
+                      const blobUrl = evidenciasBlobUrls.get(imgId);
+                      const isLoading = evidenciasLoading.get(imgId);
+                      const errorUrl = evidenciasErrors.get(imgId);
+                      const hasBlobUrl = !!blobUrl;
+                      const hasError = !!errorUrl;
+                      
+                      // Si no hay blob URL y no está cargando y no hay error, intentar obtener URL legacy
+                      const fallbackUrl = !hasBlobUrl && !isLoading && !hasError 
+                        ? convertirShareTokenAUrl(evidencia.shareToken || evidencia.url || evidencia)
+                        : null;
                       
                       return (
                         <Grid item xs={6} sm={4} md={3} key={imgId}>
@@ -153,13 +344,13 @@ const ContenidoRegistros = ({ entityId, userId, registryService, refreshKey }) =
                               border: '1px solid',
                               borderColor: 'divider',
                               backgroundColor: 'background.paper',
-                              cursor: url ? 'pointer' : 'default'
+                              cursor: (hasBlobUrl || errorUrl || fallbackUrl) ? 'pointer' : 'default'
                             }}
-                            onClick={() => url && window.open(url, '_blank')}
+                            onClick={() => handleImageClick(evidencia, imgId)}
                           >
-                            {url ? (
+                            {hasBlobUrl ? (
                               <img
-                                src={url}
+                                src={blobUrl}
                                 alt={`Evidencia ${idx + 1}`}
                                 style={{
                                   position: 'absolute',
@@ -173,7 +364,7 @@ const ContenidoRegistros = ({ entityId, userId, registryService, refreshKey }) =
                                   e.target.style.display = 'none';
                                 }}
                               />
-                            ) : (
+                            ) : isLoading ? (
                               <Box
                                 sx={{
                                   position: 'absolute',
@@ -188,6 +379,45 @@ const ContenidoRegistros = ({ entityId, userId, registryService, refreshKey }) =
                                 }}
                               >
                                 <CircularProgress size={24} />
+                              </Box>
+                            ) : (errorUrl || fallbackUrl) ? (
+                              <Box
+                                sx={{
+                                  position: 'absolute',
+                                  top: 0,
+                                  left: 0,
+                                  width: '100%',
+                                  height: '100%',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  backgroundColor: 'grey.200',
+                                  flexDirection: 'column',
+                                  gap: 1,
+                                  p: 1
+                                }}
+                              >
+                                <Typography variant="caption" color="text.secondary" align="center">
+                                  Click para abrir
+                                </Typography>
+                              </Box>
+                            ) : (
+                              <Box
+                                sx={{
+                                  position: 'absolute',
+                                  top: 0,
+                                  left: 0,
+                                  width: '100%',
+                                  height: '100%',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  backgroundColor: 'grey.100'
+                                }}
+                              >
+                                <Typography variant="caption" color="text.secondary">
+                                  Sin imagen
+                                </Typography>
                               </Box>
                             )}
                           </Box>
@@ -205,6 +435,18 @@ const ContenidoRegistros = ({ entityId, userId, registryService, refreshKey }) =
           );
         })}
       </Stack>
+
+      {/* Modal de vista previa */}
+      <ImagePreviewDialog
+        open={modalOpen}
+        onClose={() => {
+          setModalOpen(false);
+          setSelectedEvidencia(null);
+        }}
+        imageUrl={selectedEvidencia?.imageUrl}
+        imageBlob={selectedEvidencia?.imageBlob}
+        imageName={selectedEvidencia?.imageName}
+      />
     </Box>
   );
 };
