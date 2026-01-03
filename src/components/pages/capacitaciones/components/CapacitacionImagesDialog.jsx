@@ -110,13 +110,15 @@ const CapacitacionImagesDialog = ({
         throw new Error('No se pudo obtener el token de autenticación');
       }
 
-      // Subir imagen (companyId se obtendrá automáticamente si no se proporciona)
+      // Subir imagen (companyId y sucursalId se obtendrán automáticamente si no se proporcionan)
       const companyId = capacitacion.empresaId || null;
+      const sucursalId = capacitacion.sucursalId || null;
       const result = await capacitacionImageService.uploadImageSmart(
         file,
         idToken,
         capacitacion.id,
         companyId,
+        sucursalId,
         isOnline
       );
 

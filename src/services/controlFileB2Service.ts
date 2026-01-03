@@ -550,14 +550,22 @@ export async function ensureSubFolder(
     
     if (folderId) {
       console.log(`📂 Subcarpeta creada: ${name} (${folderId})`);
+      return folderId;
     } else {
-      console.error(`❌ [controlFileB2Service] No se pudo crear subcarpeta: ${name}`);
+      // ⚠️ ESTRICTO: Si createFolder devuelve null, lanzar error en lugar de devolver null silenciosamente
+      // Esto evita fallbacks silenciosos que causan que los archivos se guarden en ubicaciones incorrectas
+      const errorMsg = `No se pudo crear subcarpeta "${name}" con parentId "${parentId}". El backend de ControlFile devolvió null.`;
+      console.error(`❌ [controlFileB2Service] ${errorMsg}`);
+      throw new Error(errorMsg);
     }
-    
-    return folderId;
   } catch (error) {
+    // Si el error ya es un Error, propagarlo
+    if (error instanceof Error) {
+      throw error;
+    }
+    // Si es otro tipo de error, convertirlo a Error
     console.error('[controlFileB2Service] ❌ Error al asegurar subcarpeta:', error);
-    return null;
+    throw new Error(`Error al asegurar subcarpeta: ${String(error)}`);
   }
 }
 
