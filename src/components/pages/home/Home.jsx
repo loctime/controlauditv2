@@ -53,7 +53,6 @@ const Home = () => {
     loadingEmpresas,
     loadingSucursales,
     loadingFormularios,
-    getUserEmpresas,
     getUserSucursales,
     getUserFormularios,
     authReady
@@ -108,9 +107,9 @@ const Home = () => {
         const isEdge = navigator.userAgent.includes('Edg');
         
         // Cargar todos los datos necesarios para TODAS las páginas
-        // Solo ejecutar si authReady es true (ya verificado arriba)
+        // NOTA: Las empresas se cargan automáticamente con useEmpresasQuery en AuthContext
+        // Solo cargar sucursales y formularios aquí
         const promesas = [
-          getUserEmpresas(),
           getUserSucursales(),
           getUserFormularios()
         ];
@@ -118,12 +117,12 @@ const Home = () => {
         const resultados = await Promise.allSettled(promesas);
         
         // Capturar los valores retornados directamente (no depender del estado)
-        const empresasCargadas = resultados[0]?.status === 'fulfilled' ? resultados[0].value : [];
-        const sucursalesCargadas = resultados[1]?.status === 'fulfilled' ? resultados[1].value : [];
-        const formulariosCargados = resultados[2]?.status === 'fulfilled' ? resultados[2].value : [];
+        // Las empresas se cargan automáticamente con useEmpresasQuery en AuthContext
+        const sucursalesCargadas = resultados[0]?.status === 'fulfilled' ? resultados[0].value : [];
+        const formulariosCargados = resultados[1]?.status === 'fulfilled' ? resultados[1].value : [];
         
         setDatosCargados({
-          empresas: (empresasCargadas?.length || 0) > 0,
+          empresas: (userEmpresas?.length || 0) > 0, // Usar userEmpresas del contexto
           sucursales: (sucursalesCargadas?.length || 0) > 0,
           formularios: (formulariosCargados?.length || 0) > 0
         });
@@ -165,10 +164,10 @@ const Home = () => {
       return;
     }
     
-    // Esperar un poco para que el contexto se inicialice completamente
+    // Esperar un poco para que el contexto se inicialize completamente
     const timer = setTimeout(cargarDatosOffline, 500);
     return () => clearTimeout(timer);
-  }, [isPWAStandalone, userProfile, authReady, getUserEmpresas, getUserSucursales, getUserFormularios, navigate]);
+  }, [isPWAStandalone, userProfile, authReady, userEmpresas, getUserSucursales, getUserFormularios, navigate]);
 
   // Actualizar indicador cuando cambien los datos (desde listeners u otros lugares)
   useEffect(() => {
@@ -328,12 +327,13 @@ const Home = () => {
                       setErrorCarga(null);
                       try {
                         // Primero cargar datos desde la red (si hay conexión)
-                        // Capturar los valores retornados directamente (no depender del estado)
-                        const [empresasCargadas, sucursalesCargadas, formulariosCargados] = await Promise.all([
-                          getUserEmpresas(),
+                        // NOTA: Las empresas se cargan automáticamente con useEmpresasQuery en AuthContext
+                        // Solo cargar sucursales y formularios aquí
+                        const [sucursalesCargadas, formulariosCargados] = await Promise.all([
                           getUserSucursales(),
                           getUserFormularios()
                         ]);
+                        const empresasCargadas = userEmpresas || []; // Usar empresas del contexto
                         
                         // CRÍTICO: Navegar a /auditoria para inicializar IndexedDB y hooks necesarios
                         // Esto asegura que Edge PWA funcione offline después

@@ -16,6 +16,7 @@ import { useUserDataLoaders } from './hooks/useUserDataLoaders';
 import { useSucursalesListener } from './hooks/useSucursalesListener';
 import { useFormulariosListener } from './hooks/useFormulariosListener';
 import { useContextActions } from './hooks/useContextActions';
+import { useEmpresasQuery } from '../../hooks/queries/useEmpresasQuery';
 // Nota: Ya no importamos initializeControlFileFolders directamente
 // Usamos getControlFileFolders() que busca existentes primero
 
@@ -69,9 +70,23 @@ const AuthContextComponent = ({ children }) => {
   const { loadUserFromCache } = useOfflineCache();
   const enableOffline = shouldEnableOffline(); // Solo true en PWA móvil instalada
 
-  // Hooks de carga de datos
+  // Hook TanStack Query para empresas - ÚNICA FUENTE DE VERDAD
+  // Elimina la necesidad de fetch manual y listeners duplicados
+  // Pasar valores directamente para evitar dependencia circular (useAuth no está disponible aún)
+  const { empresas: empresasFromQuery, loading: empresasLoadingFromQuery } = useEmpresasQuery({
+    userProfile,
+    role,
+    authReady
+  });
+
+  // Sincronizar empresas del hook TanStack Query con el estado del contexto
+  useEffect(() => {
+    setUserEmpresas(empresasFromQuery || []);
+    setLoadingEmpresas(empresasLoadingFromQuery);
+  }, [empresasFromQuery, empresasLoadingFromQuery]);
+
+  // Hooks de carga de datos (sin loadUserEmpresas - ahora se usa useEmpresasQuery)
   const {
-    loadUserEmpresas,
     loadUserSucursales,
     loadUserFormularios,
     loadUserAuditorias,
@@ -79,7 +94,7 @@ const AuthContextComponent = ({ children }) => {
   } = useUserDataLoaders(
     userProfile, 
     role, 
-    userEmpresas,
+    empresasFromQuery || [], // Usar empresas del hook TanStack Query
     setUserEmpresas, 
     setLoadingEmpresas,
     setUserSucursales, 
@@ -128,28 +143,9 @@ const AuthContextComponent = ({ children }) => {
     loadAuditoriasCompartidas
   );
 
-  // Listener de empresas (solo con fallback offline en móvil)
-  // CRÍTICO: Solo ejecutar cuando authReady === true para evitar queries prematuras
-  useEffect(() => {
-    if (!authReady) {
-      return;
-    }
-    
-    if (
-      !userProfile?.uid ||
-      typeof role !== 'string' ||
-      role.length === 0
-    ) return;    
-    const unsubscribe = empresaService.subscribeToUserEmpresas(
-      userProfile, 
-      role, 
-      setUserEmpresas, 
-      setLoadingEmpresas,
-      enableOffline ? loadUserFromCache : null
-    );
-    return unsubscribe;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authReady, userProfile?.uid, role, enableOffline]);
+  // ELIMINADO: Listener de empresas duplicado
+  // Ahora se usa useEmpresasQuery que es la única fuente de verdad
+  // El hook TanStack Query maneja tanto el fetch inicial como el listener reactivo
 
   // Estado para rastrear si estamos online
   const [isOnline, setIsOnline] = useState(typeof navigator !== 'undefined' ? navigator.onLine : true);
@@ -301,11 +297,10 @@ const AuthContextComponent = ({ children }) => {
               console.log('✅ [AuthContext] authReady establecido - user, userProfile y role listos');
             }
             
-            // PASO 2: Cargar desde Firestore (actualizará datos si hay cambios)
-            // Solo ejecutar si authReady es true (ya establecido arriba si profile.role existe)
+            // PASO 2: Cargar datos desde Firestore
+            // NOTA: Las empresas ahora se cargan automáticamente con useEmpresasQuery
+            // Solo cargar auditorías aquí. Sucursales y formularios se cargarán cuando las empresas estén disponibles
             if (profile && profile.role && typeof profile.role === 'string' && profile.role.length > 0) {
-              const empresasCargadas = await loadUserEmpresas(firebaseUser.uid, profile, profile.role);
-              
               // Cargar auditorías en paralelo (solo si profile tiene uid)
               if (profile && profile.uid) {
                 await Promise.all([
@@ -314,11 +309,8 @@ const AuthContextComponent = ({ children }) => {
                 ]);
               }
 
-              // Cargar sucursales y formularios inmediatamente (sin setTimeout artificial)
-              const [sucursalesCargadas, formulariosCargados] = await Promise.all([
-                loadUserSucursales(firebaseUser.uid, empresasCargadas, profile),
-                loadUserFormularios(firebaseUser.uid, empresasCargadas, profile)
-              ]);
+              // Sucursales y formularios se cargarán automáticamente cuando empresasFromQuery esté disponible
+              // El efecto de abajo maneja esto
             }
 
             // OPTIMIZACIÓN: Activar listeners diferidos después de carga manual (evita duplicados)
@@ -664,7 +656,7 @@ const AuthContextComponent = ({ children }) => {
     updateUserProfile,
     canViewEmpresa: (empresaId) => empresaService.canViewEmpresa(empresaId, userProfile),
     canViewAuditoria: (auditoriaId) => auditoriaService.canViewAuditoria(auditoriaId, userProfile, auditoriasCompartidas),
-    getUserEmpresas: () => loadUserEmpresas(user?.uid),
+    // ELIMINADO: getUserEmpresas - ahora se usa useEmpresasQuery directamente
     getUserSucursales: () => loadUserSucursales(user?.uid),
     getUserFormularios: () => loadUserFormularios(user?.uid),
     getUserAuditorias: () => loadUserAuditorias(user?.uid, userProfile),

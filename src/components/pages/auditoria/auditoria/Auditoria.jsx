@@ -98,7 +98,6 @@ const AuditoriaRefactorizada = () => {
     userEmpresas, 
     userFormularios, 
     userSucursales,
-    getUserEmpresas,
     getUserSucursales,
     getUserFormularios,
     role,
@@ -147,8 +146,9 @@ const AuditoriaRefactorizada = () => {
         setDatosRespaldoCargados(true);
         
         try {
+          // NOTA: Las empresas se cargan automáticamente con useEmpresasQuery en AuthContext
+          // Solo cargar sucursales y formularios aquí
           await Promise.allSettled([
-            getUserEmpresas(),
             getUserSucursales(),
             getUserFormularios()
           ]);

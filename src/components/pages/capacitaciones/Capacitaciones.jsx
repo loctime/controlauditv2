@@ -130,17 +130,17 @@ export default function Capacitaciones() {
     }
   }, [location.pathname, loading]); // Refrescar cuando se navega a esta página
 
-  // Refrescar cache cuando se recargan los datos
-  useEffect(() => {
-    // Incrementar refreshKey para forzar refresh del cache de la tabla
-    if (capacitaciones.length > 0 && !loading) {
-      console.log('[Capacitaciones] Datos recargados, refrescando cache, capacitaciones:', capacitaciones.length);
-      // Pequeño delay para asegurar que los datos están listos
-      setTimeout(() => {
-        setTableRefreshKey(prev => prev + 1);
-      }, 100);
-    }
-  }, [capacitaciones.length, loading]); // Refrescar cuando cambia el número de capacitaciones o se recargan datos
+  // ELIMINADO: Refrescar cache cuando se recargan los datos
+  // Este efecto causaba múltiples refreshes innecesarios cada vez que las capacitaciones cambiaban
+  // El listener reactivo ya mantiene los datos actualizados automáticamente
+  // Solo refrescar manualmente cuando el usuario vuelve a la página (efecto de arriba)
+  // useEffect(() => {
+  //   if (capacitaciones.length > 0 && !loading) {
+  //     setTimeout(() => {
+  //       setTableRefreshKey(prev => prev + 1);
+  //     }, 100);
+  //   }
+  // }, [capacitaciones.length, loading]);
 
   // Guardar sucursales en estado local
   useEffect(() => {

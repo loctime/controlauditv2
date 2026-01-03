@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   Table,
   TableBody,
@@ -100,6 +100,18 @@ const CapacitacionesTable = ({
   const [ready, setReady] = useState(false);
   const [menuAnchor, setMenuAnchor] = useState(null);
   const [selectedCapacitacion, setSelectedCapacitacion] = useState(null);
+  
+  // Estabilizar IDs de capacitaciones para evitar ejecuciones innecesarias
+  const capacitacionesIds = useMemo(() => 
+    capacitaciones.map(c => String(c.id)).sort().join(','),
+    [capacitaciones]
+  );
+  
+  // Ref para rastrear el último refreshKey procesado
+  const lastRefreshKeyRef = useRef(0);
+  
+  // Ref para evitar ejecuciones concurrentes
+  const isLoadingRef = useRef(false);
 
   useEffect(() => {
     if (!userProfile?.uid || capacitaciones.length === 0) {
@@ -107,66 +119,116 @@ const CapacitacionesTable = ({
       return;
     }
 
+    // Evitar ejecuciones concurrentes
+    if (isLoadingRef.current) {
+      return;
+    }
+
+    // Solo ejecutar si los IDs cambiaron o si refreshKey cambió
+    const currentRefreshKey = refreshKey || 0;
+    const idsChanged = capacitacionesIds !== (statsCache.current._lastIds || '');
+    const refreshKeyChanged = currentRefreshKey !== lastRefreshKeyRef.current;
+    
+    if (!idsChanged && !refreshKeyChanged) {
+      // No hay cambios, no ejecutar
+      return;
+    }
+
+    isLoadingRef.current = true;
     let mounted = true;
 
     const loadAll = async () => {
-      // Limpiar cache de capacitaciones que ya no están en la lista
-      // ⚠️ IMPORTANTE: Convertir a string para comparación consistente
-      const currentIds = new Set(capacitaciones.map(c => String(c.id)));
-      Object.keys(statsCache.current).forEach(id => {
-        if (!currentIds.has(id)) delete statsCache.current[id];
-      });
-      Object.keys(evidenciasCache.current).forEach(id => {
-        if (!currentIds.has(id)) delete evidenciasCache.current[id];
-      });
+      try {
+        // Limpiar cache de capacitaciones que ya no están en la lista
+        const currentIds = new Set(capacitaciones.map(c => String(c.id)));
+        Object.keys(statsCache.current).forEach(id => {
+          if (id !== '_lastIds' && !currentIds.has(id)) {
+            delete statsCache.current[id];
+          }
+        });
+        Object.keys(evidenciasCache.current).forEach(id => {
+          if (!currentIds.has(id)) {
+            delete evidenciasCache.current[id];
+          }
+        });
 
-      for (const cap of capacitaciones) {
-        const capIdStr = String(cap.id);
-        
-        // ⚠️ IMPORTANTE: Si refreshKey cambió, forzar refresh del cache (invalidar y recargar)
-        const shouldRefresh = refreshKey > 0;
-        
-        // Si debe refrescar, limpiar el cache primero
-        if (shouldRefresh) {
-          delete statsCache.current[capIdStr];
-          delete evidenciasCache.current[capIdStr];
-        }
-        
-        if (!statsCache.current[capIdStr]) {
-          console.log('[CapacitacionesTable] Cargando stats para:', capIdStr, { shouldRefresh, refreshKey });
-          const empleados = await registrosAsistenciaService.getEmpleadosUnicosByCapacitacion(
-            userProfile.uid,
-            capIdStr
-          );
-          statsCache.current[capIdStr] = empleados.length;
-          console.log('[CapacitacionesTable] Stats cargados:', { 
-            capId: capIdStr, 
-            empleados: empleados.length,
-            empleadosData: empleados 
+        // Si refreshKey cambió, limpiar todo el cache
+        if (refreshKeyChanged) {
+          currentIds.forEach(id => {
+            delete statsCache.current[id];
+            delete evidenciasCache.current[id];
           });
+          lastRefreshKeyRef.current = currentRefreshKey;
         }
 
-        if (!evidenciasCache.current[capIdStr]) {
-          console.log('[CapacitacionesTable] Cargando evidencias para:', capIdStr, { shouldRefresh, refreshKey });
-          const imgs = await registrosAsistenciaService.getImagenesByCapacitacion(
-            userProfile.uid,
-            capIdStr
-          );
-          evidenciasCache.current[capIdStr] = imgs.length;
-          console.log('[CapacitacionesTable] Evidencias cargadas:', { 
-            capId: capIdStr, 
-            imagenes: imgs.length,
-            imagenesData: imgs 
-          });
+        // Cargar datos solo para capacitaciones que no tienen cache
+        const promises = [];
+        
+        for (const cap of capacitaciones) {
+          const capIdStr = String(cap.id);
+          
+          if (!statsCache.current[capIdStr]) {
+            promises.push(
+              registrosAsistenciaService.getEmpleadosUnicosByCapacitacion(
+                userProfile.uid,
+                capIdStr
+              ).then(empleados => {
+                if (mounted) {
+                  statsCache.current[capIdStr] = empleados.length;
+                }
+              }).catch(err => {
+                console.error('[CapacitacionesTable] Error cargando stats:', err);
+                if (mounted) {
+                  statsCache.current[capIdStr] = 0;
+                }
+              })
+            );
+          }
+
+          if (!evidenciasCache.current[capIdStr]) {
+            promises.push(
+              registrosAsistenciaService.getImagenesByCapacitacion(
+                userProfile.uid,
+                capIdStr
+              ).then(imgs => {
+                if (mounted) {
+                  evidenciasCache.current[capIdStr] = imgs.length;
+                }
+              }).catch(err => {
+                console.error('[CapacitacionesTable] Error cargando evidencias:', err);
+                if (mounted) {
+                  evidenciasCache.current[capIdStr] = 0;
+                }
+              })
+            );
+          }
         }
+
+        // Ejecutar todas las promesas en paralelo
+        await Promise.all(promises);
+        
+        // Guardar IDs procesados
+        statsCache.current._lastIds = capacitacionesIds;
+
+        if (mounted) {
+          setReady(true);
+        }
+      } catch (error) {
+        console.error('[CapacitacionesTable] Error en loadAll:', error);
+        if (mounted) {
+          setReady(true); // Mostrar tabla aunque haya errores
+        }
+      } finally {
+        isLoadingRef.current = false;
       }
-
-      if (mounted) setReady(true);
     };
 
     loadAll();
-    return () => { mounted = false; };
-  }, [capacitaciones, userProfile?.uid, refreshKey]); // ⚠️ Agregar refreshKey para forzar refresh
+    return () => { 
+      mounted = false;
+      isLoadingRef.current = false;
+    };
+  }, [capacitacionesIds, userProfile?.uid, refreshKey]); // Usar capacitacionesIds estabilizado en lugar de capacitaciones
 
   if (loading || !ready) {
     return (

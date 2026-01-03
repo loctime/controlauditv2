@@ -21,46 +21,8 @@ export const useUserDataLoaders = (
   loadUserFromCache
 ) => {
   
-  const loadUserEmpresas = useCallback(async (userId, providedProfile = null, providedRole = null) => {
-    try {
-      const profileToUse = providedProfile || userProfile;
-      const roleToUse = providedRole || role;
-
-      if (!roleToUse || !profileToUse || !userId) {
-        setLoadingEmpresas(false);
-        return [];
-      }
-
-      const empresas = await empresaService.getUserEmpresas({
-        userId,
-        role: roleToUse,
-        userProfile: profileToUse
-      });
-      setUserEmpresas(empresas);
-      setLoadingEmpresas(false);
-      return empresas;
-    } catch (error) {
-      console.error('❌ Error cargando empresas:', error);
-      
-      // Fallback al cache offline solo si está habilitado (móvil)
-      if (loadUserFromCache) {
-        try {
-          const cachedData = await loadUserFromCache();
-          if (cachedData?.empresas && cachedData.empresas.length > 0) {
-            setUserEmpresas(cachedData.empresas);
-            setLoadingEmpresas(false);
-            return cachedData.empresas;
-          }
-        } catch (cacheError) {
-          console.error('Error cargando desde cache:', cacheError);
-        }
-      }
-      
-      setUserEmpresas([]);
-      setLoadingEmpresas(false);
-      return [];
-    }
-  }, [userProfile, role, setUserEmpresas, setLoadingEmpresas, loadUserFromCache]);
+  // ELIMINADO: loadUserEmpresas
+  // Ahora se usa useEmpresasQuery que es la única fuente de verdad para empresas
 
   const loadUserSucursales = useCallback(async (userId, empresasParam = null, profileParam = null) => {
     try {
@@ -204,7 +166,7 @@ export const useUserDataLoaders = (
   }, [userProfile]);
 
   return {
-    loadUserEmpresas,
+    // ELIMINADO: loadUserEmpresas - ahora se usa useEmpresasQuery
     loadUserSucursales,
     loadUserFormularios,
     loadUserAuditorias,

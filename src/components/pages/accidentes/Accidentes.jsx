@@ -192,7 +192,8 @@ export default function Accidentes() {
 
   const canCreate = selectedSucursal !== 'todas' && userEmpresas && userEmpresas.length > 0;
 
-  if (!empresasCargadas) {
+  // Mostrar loading mientras se cargan las empresas
+  if (loadingEmpresas) {
     return (
       <Container maxWidth="xl" sx={{ py: 4 }}>
         <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
