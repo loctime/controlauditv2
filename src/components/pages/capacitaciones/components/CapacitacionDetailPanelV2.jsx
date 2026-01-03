@@ -22,10 +22,14 @@ import {
 import EventDetailPanel from '../../../shared/event-registry/EventDetailPanel';
 import RegistrarAsistenciaInlineV2 from './RegistrarAsistenciaInlineV2';
 import ImagePreviewDialog from '../../../shared/ImagePreviewDialog';
+import EvidenciaEmpleadoList from '../../../shared/EvidenciaEmpleadoList';
 import useControlFileImages from '../../../../hooks/useControlFileImages';
 import { capacitacionService } from '../../../../services/capacitacionService';
 import { registrosAsistenciaServiceAdapter } from '../../../../services/adapters/registrosAsistenciaServiceAdapter';
 import { convertirShareTokenAUrl } from '../../../../utils/imageUtils';
+import { auditUserCollection } from '../../../../firebaseControlFile';
+import { getDoc, doc } from 'firebase/firestore';
+import { normalizeEmpleado } from '../../../../utils/firestoreUtils';
 
 const capacitacionServiceWrapper = {
   async getById(userId, capacitacionId) {
@@ -48,6 +52,8 @@ const getEstadoColor = (estado) => {
 const ContenidoRegistros = ({ entityId, userId, registryService, refreshKey }) => {
   const [registros, setRegistros] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
+  // Map de registroId -> empleados cargados
+  const [empleadosPorRegistro, setEmpleadosPorRegistro] = React.useState(new Map());
   
   // Usar hook reutilizable para manejar imágenes
   const {
@@ -87,6 +93,75 @@ const ContenidoRegistros = ({ entityId, userId, registryService, refreshKey }) =
     loadRegistros();
     return () => { mounted = false; };
   }, [entityId, userId, registryService, refreshKey]);
+
+  // Cargar empleados para cada registro
+  React.useEffect(() => {
+    if (!userId || registros.length === 0) return;
+
+    const loadEmpleados = async () => {
+      const empleadosMap = new Map();
+      
+      // Obtener todos los empleadoIds únicos de todos los registros
+      const todosEmpleadoIds = new Set();
+      registros.forEach(registro => {
+        if (registro.empleadoIds && Array.isArray(registro.empleadoIds)) {
+          registro.empleadoIds.forEach(id => todosEmpleadoIds.add(id));
+        }
+      });
+
+      if (todosEmpleadoIds.size === 0) return;
+
+      try {
+        // Cargar empleados por ID usando getDoc
+        const empleadosRef = auditUserCollection(userId, 'empleados');
+        const empleadosData = [];
+        const empleadoIdsArray = Array.from(todosEmpleadoIds);
+
+        // Cargar empleados en paralelo (máximo 10 a la vez para no sobrecargar)
+        const chunkSize = 10;
+        for (let i = 0; i < empleadoIdsArray.length; i += chunkSize) {
+          const chunk = empleadoIdsArray.slice(i, i + chunkSize);
+          const promises = chunk.map(empId => 
+            getDoc(doc(empleadosRef, empId))
+              .then(docSnap => {
+                if (docSnap.exists()) {
+                  return normalizeEmpleado(docSnap);
+                }
+                return null;
+              })
+              .catch(error => {
+                console.warn(`[ContenidoRegistros] Error cargando empleado ${empId}:`, error);
+                return null;
+              })
+          );
+          const chunkResults = await Promise.all(promises);
+          empleadosData.push(...chunkResults.filter(Boolean));
+        }
+
+        // Crear mapa de empleados por ID para acceso rápido
+        const empleadosById = new Map();
+        empleadosData.forEach(emp => {
+          empleadosById.set(emp.id, emp);
+        });
+
+        // Asignar empleados a cada registro
+        registros.forEach(registro => {
+          if (registro.empleadoIds && Array.isArray(registro.empleadoIds)) {
+            const empleadosDelRegistro = registro.empleadoIds
+              .map(id => empleadosById.get(id))
+              .filter(Boolean); // Filtrar empleados no encontrados
+            empleadosMap.set(registro.id, empleadosDelRegistro);
+          }
+        });
+
+        setEmpleadosPorRegistro(empleadosMap);
+      } catch (error) {
+        console.error('[ContenidoRegistros] Error cargando empleados:', error);
+      }
+    };
+
+    loadEmpleados();
+  }, [registros, userId]);
 
   if (loading) {
     return (
@@ -152,26 +227,32 @@ const ContenidoRegistros = ({ entityId, userId, registryService, refreshKey }) =
                         ? convertirShareTokenAUrl(evidencia.shareToken || evidencia.url || evidencia)
                         : null;
                       
+                      const empleadosDelRegistro = empleadosPorRegistro.get(registro.id) || [];
+                      
                       return (
                         <Grid item xs={6} sm={4} md={3} key={imgId}>
-                          <Box
-                            sx={{
-                              position: 'relative',
-                              paddingTop: '100%',
-                              borderRadius: 1,
-                              overflow: 'hidden',
-                              border: '1px solid',
-                              borderColor: 'divider',
-                              backgroundColor: 'background.paper',
-                              cursor: (hasBlobUrl || errorUrl || fallbackUrl) ? 'pointer' : 'default',
-                              '&:hover': {
-                                '& .image-overlay': {
-                                  opacity: 1
+                          <Box sx={{ display: 'flex', flexDirection: 'row', gap: 1, alignItems: 'flex-start' }}>
+                            {/* Imagen */}
+                            <Box
+                              sx={{
+                                position: 'relative',
+                                width: '60%',
+                                paddingTop: '60%', // Mantener aspecto cuadrado pero más pequeño
+                                flexShrink: 0,
+                                borderRadius: 1,
+                                overflow: 'hidden',
+                                border: '1px solid',
+                                borderColor: 'divider',
+                                backgroundColor: 'background.paper',
+                                cursor: (hasBlobUrl || errorUrl || fallbackUrl) ? 'pointer' : 'default',
+                                '&:hover': {
+                                  '& .image-overlay': {
+                                    opacity: 1
+                                  }
                                 }
-                              }
-                            }}
-                            onClick={() => openImage(imgId, evidencia)}
-                          >
+                              }}
+                              onClick={() => openImage(imgId, evidencia)}
+                            >
                             {hasBlobUrl ? (
                               <>
                                 <img
@@ -264,6 +345,18 @@ const ContenidoRegistros = ({ entityId, userId, registryService, refreshKey }) =
                                 <Typography variant="caption" color="text.secondary">
                                   Sin imagen
                                 </Typography>
+                              </Box>
+                            )}
+                            </Box>
+                            
+                            {/* Lista de empleados */}
+                            {empleadosDelRegistro.length > 0 && (
+                              <Box sx={{ flex: 1, minWidth: 0 }}>
+                                <EvidenciaEmpleadoList
+                                  empleados={empleadosDelRegistro}
+                                  evidenciaEmpleadoIds={evidencia.empleadoIds}
+                                  maxVisible={2}
+                                />
                               </Box>
                             )}
                           </Box>
