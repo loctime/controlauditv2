@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect, useContext } from 'react';
+import { useEffect, useContext, useMemo, useRef } from 'react';
 import { onSnapshot, query, where } from 'firebase/firestore';
 import { empresaService } from '../../services/empresaService';
 import { auditUserCollection } from '../../firebaseControlFile';
@@ -35,8 +35,12 @@ export const useEmpresasQuery = (options = {}) => {
   
   const queryClient = useQueryClient();
   const userId = userProfile?.uid;
+  const listenerActiveRef = useRef(false);
+  const currentQueryKeyRef = useRef(null);
+  const initialLoadCompleteRef = useRef(false);
 
-  const queryKey = ['empresas', userId, role];
+  // Usar useMemo para mantener referencia estable y evitar re-renders infinitos
+  const queryKey = useMemo(() => ['empresas', userId, role], [userId, role]);
 
   // Query inicial con TanStack Query
   const {
@@ -67,20 +71,35 @@ export const useEmpresasQuery = (options = {}) => {
     refetchOnReconnect: false, // No refetch al reconectar (el listener se reconecta automáticamente)
   });
 
+  // Rastrear cuando la carga inicial termina
+  useEffect(() => {
+    if (!isLoading && authReady && userId && role && userProfile) {
+      initialLoadCompleteRef.current = true;
+    }
+  }, [isLoading, authReady, userId, role, userProfile]);
+
   // Listener reactivo que actualiza el cache de TanStack Query
   // Usa la misma lógica de múltiples queries según el rol que subscribeToUserEmpresas
   useEffect(() => {
-    // Solo activar listener cuando la query está habilitada
-    if (!authReady || !userId || !role || !userProfile) {
+    // Solo activar listener cuando la query está habilitada y la carga inicial ha terminado
+    if (!authReady || !userId || !role || !userProfile || !initialLoadCompleteRef.current) {
+      listenerActiveRef.current = false;
+      currentQueryKeyRef.current = null;
       return;
     }
 
-    // Esperar a que la query inicial termine antes de activar el listener
-    if (isLoading) {
+    // Verificar si el queryKey cambió o si el listener no está activo
+    const queryKeyChanged = JSON.stringify(currentQueryKeyRef.current) !== JSON.stringify(queryKey);
+    
+    // Evitar activar múltiples listeners si ya está activo con los mismos parámetros
+    if (listenerActiveRef.current && !queryKeyChanged) {
       return;
     }
 
+    // Si el queryKey cambió, el cleanup del efecto anterior ya desactivó el listener anterior
     console.log('[useEmpresasQuery] Activando listener reactivo de empresas');
+    listenerActiveRef.current = true;
+    currentQueryKeyRef.current = queryKey;
     const empresasRef = auditUserCollection(userId, 'empresas');
     const unsubscribes = [];
     const empresasMaps = []; // Array de Maps, uno por cada query
@@ -221,9 +240,11 @@ export const useEmpresasQuery = (options = {}) => {
 
     return () => {
       console.log('[useEmpresasQuery] Desactivando listener reactivo');
+      listenerActiveRef.current = false;
+      currentQueryKeyRef.current = null;
       unsubscribes.forEach(unsubscribe => unsubscribe());
     };
-  }, [authReady, userId, role, userProfile, isLoading, queryClient, queryKey]);
+  }, [authReady, userId, role, userProfile, queryClient, queryKey]);
 
   return {
     empresas,

@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { query, where, getDocs, onSnapshot } from 'firebase/firestore';
 import { auditUserCollection } from '../../firebaseControlFile';
 import { useAuth } from '../../components/context/AuthContext';
@@ -143,15 +143,20 @@ export const useCapacitacionesQuery = (
   const { userProfile, authReady } = useAuth();
   const queryClient = useQueryClient();
   const userId = userProfile?.uid;
+  const listenerActiveRef = useRef(false);
+  const currentQueryKeyRef = useRef(null);
+  const planesListenerActiveRef = useRef(false);
+  const currentPlanesQueryKeyRef = useRef(null);
+  const initialLoadCompleteRef = useRef(false);
 
   // Construir queryKey dinámica basada en filtros
-  // Usar ?? undefined para mantener posición semántica (TanStack maneja undefined perfectamente)
-  const queryKey = [
+  // Usar useMemo para mantener referencia estable y evitar re-renders infinitos
+  const queryKey = useMemo(() => [
     'capacitaciones',
     userId,
     selectedEmpresa ?? undefined,
     selectedSucursal ?? undefined
-  ];
+  ], [userId, selectedEmpresa, selectedSucursal]);
 
   // Query para capacitaciones individuales
   // CRÍTICO: Solo ejecutar cuando authReady === true para evitar queries prematuras
@@ -175,12 +180,13 @@ export const useCapacitacionesQuery = (
   });
 
   // QueryKey para planes anuales (similar pero separada)
-  const planesQueryKey = [
+  // Usar useMemo para mantener referencia estable y evitar re-renders infinitos
+  const planesQueryKey = useMemo(() => [
     'planes-anuales',
     userId,
     selectedEmpresa ?? undefined,
     selectedSucursal ?? undefined
-  ];
+  ], [userId, selectedEmpresa, selectedSucursal]);
 
   // Query para planes anuales
   // CRÍTICO: Solo ejecutar cuando authReady === true para evitar queries prematuras
@@ -203,14 +209,34 @@ export const useCapacitacionesQuery = (
     placeholderData: (previousData) => previousData, // Mantener datos existentes mientras carga
   });
 
+  // Rastrear cuando la carga inicial termina
+  useEffect(() => {
+    if (!loading && authReady && userId) {
+      initialLoadCompleteRef.current = true;
+    }
+  }, [loading, authReady, userId]);
+
   // Listener reactivo para capacitaciones que actualiza el cache de TanStack Query
   // Se activa inmediatamente para mostrar datos en tiempo real sin esperar el fetch inicial
   useEffect(() => {
-    if (!authReady || !userId) {
+    if (!authReady || !userId || !initialLoadCompleteRef.current) {
+      listenerActiveRef.current = false;
+      currentQueryKeyRef.current = null;
       return;
     }
 
+    // Verificar si el queryKey cambió o si el listener no está activo
+    const queryKeyChanged = JSON.stringify(currentQueryKeyRef.current) !== JSON.stringify(queryKey);
+    
+    // Evitar activar múltiples listeners si ya está activo con los mismos parámetros
+    if (listenerActiveRef.current && !queryKeyChanged) {
+      return;
+    }
+
+    // Si el queryKey cambió, el cleanup del efecto anterior ya desactivó el listener anterior
     console.log('[useCapacitacionesQuery] Activando listener reactivo de capacitaciones');
+    listenerActiveRef.current = true;
+    currentQueryKeyRef.current = queryKey;
     const capacitacionesRef = auditUserCollection(userId, 'capacitaciones');
     
     let qCap;
@@ -263,11 +289,13 @@ export const useCapacitacionesQuery = (
       },
       (error) => {
         console.error('[useCapacitacionesQuery] ❌ Error en listener:', error);
+        listenerActiveRef.current = false;
       }
     );
 
     return () => {
       console.log('[useCapacitacionesQuery] Desactivando listener reactivo');
+      listenerActiveRef.current = false;
       unsubscribe();
     };
   }, [authReady, userId, selectedEmpresa, selectedSucursal, sucursalesDisponibles, queryClient, queryKey]);
@@ -275,11 +303,24 @@ export const useCapacitacionesQuery = (
   // Listener reactivo para planes anuales
   // Se activa inmediatamente para mostrar datos en tiempo real sin esperar el fetch inicial
   useEffect(() => {
-    if (!authReady || !userId) {
+    if (!authReady || !userId || !initialLoadCompleteRef.current) {
+      planesListenerActiveRef.current = false;
+      currentPlanesQueryKeyRef.current = null;
       return;
     }
 
+    // Verificar si el queryKey cambió o si el listener no está activo
+    const queryKeyChanged = JSON.stringify(currentPlanesQueryKeyRef.current) !== JSON.stringify(planesQueryKey);
+    
+    // Evitar activar múltiples listeners si ya está activo con los mismos parámetros
+    if (planesListenerActiveRef.current && !queryKeyChanged) {
+      return;
+    }
+
+    // Si el queryKey cambió, el cleanup del efecto anterior ya desactivó el listener anterior
     console.log('[useCapacitacionesQuery] Activando listener reactivo de planes anuales');
+    planesListenerActiveRef.current = true;
+    currentPlanesQueryKeyRef.current = planesQueryKey;
     const planesRef = auditUserCollection(userId, 'planes_capacitaciones_anuales');
     
     let planesQ;
@@ -312,11 +353,13 @@ export const useCapacitacionesQuery = (
       },
       (error) => {
         console.error('[useCapacitacionesQuery] Error en listener de planes:', error);
+        planesListenerActiveRef.current = false;
       }
     );
 
     return () => {
       console.log('[useCapacitacionesQuery] Desactivando listener reactivo de planes');
+      planesListenerActiveRef.current = false;
       unsubscribe();
     };
   }, [authReady, userId, selectedEmpresa, selectedSucursal, queryClient, planesQueryKey]);

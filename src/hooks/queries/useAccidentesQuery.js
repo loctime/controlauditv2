@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { query, where, orderBy, onSnapshot } from 'firebase/firestore';
 import { obtenerAccidentes } from '../../services/accidenteService';
 import { auditUserCollection } from '../../firebaseControlFile';
@@ -28,36 +28,38 @@ export const useAccidentesQuery = (
   const { authReady } = useAuth();
   const queryClient = useQueryClient();
   const userId = userProfile?.uid;
+  const listenerActiveRef = useRef(false);
+  const currentQueryKeyRef = useRef(null);
+  const initialLoadCompleteRef = useRef(false);
 
   // Construir filtros para la query
-  const filtros = {};
-
-  if (selectedEmpresa && selectedEmpresa !== 'todas') {
-    filtros.empresaId = selectedEmpresa;
-  }
-
-  if (selectedSucursal && selectedSucursal !== 'todas') {
-    filtros.sucursalId = selectedSucursal;
-  }
-
-  if (filterTipo) {
-    filtros.tipo = filterTipo;
-  }
-
-  if (filterEstado) {
-    filtros.estado = filterEstado;
-  }
+  const filtros = useMemo(() => {
+    const result = {};
+    if (selectedEmpresa && selectedEmpresa !== 'todas') {
+      result.empresaId = selectedEmpresa;
+    }
+    if (selectedSucursal && selectedSucursal !== 'todas') {
+      result.sucursalId = selectedSucursal;
+    }
+    if (filterTipo) {
+      result.tipo = filterTipo;
+    }
+    if (filterEstado) {
+      result.estado = filterEstado;
+    }
+    return result;
+  }, [selectedEmpresa, selectedSucursal, filterTipo, filterEstado]);
 
   // Construir queryKey dinámica basada en filtros
-  // Usar ?? undefined para mantener posición semántica (TanStack maneja undefined perfectamente)
-  const queryKey = [
+  // Usar useMemo para mantener referencia estable y evitar re-renders infinitos
+  const queryKey = useMemo(() => [
     'accidentes',
     userId,
     filtros.empresaId ?? undefined,
     filtros.sucursalId ?? undefined,
     filtros.tipo ?? undefined,
     filtros.estado ?? undefined
-  ];
+  ], [userId, filtros.empresaId, filtros.sucursalId, filtros.tipo, filtros.estado]);
 
   // Query para accidentes
   // CRÍTICO: Solo ejecutar cuando authReady === true para evitar queries prematuras
@@ -79,13 +81,34 @@ export const useAccidentesQuery = (
     retryDelay: 1000, // Esperar 1 segundo antes de reintentar
   });
 
+  // Rastrear cuando la carga inicial termina
+  useEffect(() => {
+    if (!isLoading && authReady && userId) {
+      initialLoadCompleteRef.current = true;
+    }
+  }, [isLoading, authReady, userId]);
+
   // Listener reactivo para accidentes que actualiza el cache de TanStack Query
   useEffect(() => {
-    if (!authReady || !userId || isLoading) {
+    // Solo activar listener cuando la query está habilitada y la carga inicial ha terminado
+    if (!authReady || !userId || !initialLoadCompleteRef.current) {
+      listenerActiveRef.current = false;
+      currentQueryKeyRef.current = null;
       return;
     }
 
+    // Verificar si el queryKey cambió o si el listener no está activo
+    const queryKeyChanged = JSON.stringify(currentQueryKeyRef.current) !== JSON.stringify(queryKey);
+    
+    // Evitar activar múltiples listeners si ya está activo con los mismos parámetros
+    if (listenerActiveRef.current && !queryKeyChanged) {
+      return;
+    }
+
+    // Si el queryKey cambió, el cleanup del efecto anterior ya desactivó el listener anterior
     console.log('[useAccidentesQuery] Activando listener reactivo de accidentes');
+    listenerActiveRef.current = true;
+    currentQueryKeyRef.current = queryKey;
     const accidentesRef = auditUserCollection(userId, 'accidentes');
     
     const conditions = [];
@@ -122,14 +145,16 @@ export const useAccidentesQuery = (
       },
       (error) => {
         console.error('[useAccidentesQuery] Error en listener:', error);
+        listenerActiveRef.current = false;
       }
     );
 
     return () => {
       console.log('[useAccidentesQuery] Desactivando listener reactivo');
+      listenerActiveRef.current = false;
       unsubscribe();
     };
-  }, [authReady, userId, filtros.empresaId, filtros.sucursalId, filtros.tipo, filtros.estado, isLoading, queryClient, queryKey]);
+  }, [authReady, userId, filtros, queryClient, queryKey]);
 
   return {
     accidentes,
