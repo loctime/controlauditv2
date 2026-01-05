@@ -31,6 +31,7 @@ import { registrarAccionSistema } from '../../../utils/firestoreUtils';
 import Permiso from '../../common/Permiso';
 import { usePermiso } from '../../hooks/usePermiso';
 import userService from '../../../services/userService';
+import OwnerUserCreateDialog from './OwnerUserCreateDialog';
 
 const PERMISOS_LISTA = [
   { key: 'puedeCrearEmpresas', label: 'Crear Empresas' },
@@ -59,6 +60,7 @@ const UsuariosList = ({ clienteAdminId, showAddButton = true }) => {
   const [usuarios, setUsuarios] = useState([]);
   const [loading, setLoading] = useState(true);
   const [openModal, setOpenModal] = useState(false);
+  const [openOwnerDialog, setOpenOwnerDialog] = useState(false);
   const [editando, setEditando] = useState(null);
   const [formData, setFormData] = useState({
     email: '',
@@ -88,8 +90,20 @@ const UsuariosList = ({ clienteAdminId, showAddButton = true }) => {
       const lista = await userService.listUsers();
       setUsuarios(lista);
     } catch (error) {
-      toast.error('Error al cargar usuarios: ' + error.message);
-      setUsuarios([]);
+      // No mostrar error si es permission-denied (error visual falso después de crear usuario)
+      const isPermissionDenied = 
+        error.code === 'permission-denied' ||
+        error.message?.includes('permission-denied') ||
+        error.message?.includes('Missing or insufficient permissions') ||
+        error.response?.data?.error?.includes('permission-denied');
+      
+      if (isPermissionDenied) {
+        console.debug('[UsuariosList] Permission denied al cargar usuarios (esperado después de crear usuario en Core)');
+        setUsuarios([]);
+      } else {
+        toast.error('Error al cargar usuarios: ' + error.message);
+        setUsuarios([]);
+      }
     } finally {
       setLoading(false);
     }
@@ -103,6 +117,7 @@ const UsuariosList = ({ clienteAdminId, showAddButton = true }) => {
   // Abrir modal para crear/editar usuario
   const handleOpenModal = (usuario = null) => {
     if (usuario) {
+      // Editar usuario: usar diálogo legacy
       setEditando(usuario);
       setFormData({
         email: usuario.email,
@@ -118,24 +133,11 @@ const UsuariosList = ({ clienteAdminId, showAddButton = true }) => {
           puedeCompartirFormularios: false
         }
       });
+      setOpenModal(true);
     } else {
-      setEditando(null);
-      setFormData({
-        email: '',
-        password: '',
-        nombre: '',
-        // role no se envía - el backend lo fuerza a 'operario'
-        permisos: {
-          puedeCrearEmpresas: false,
-          puedeCrearSucursales: false,
-          puedeCrearAuditorias: false,
-          puedeAgendarAuditorias: false,
-          puedeCrearFormularios: false,
-          puedeCompartirFormularios: false
-        }
-      });
+      // Crear usuario nuevo: usar diálogo Core owner-centric
+      setOpenOwnerDialog(true);
     }
-    setOpenModal(true);
   };
 
   // Cerrar modal
@@ -404,7 +406,15 @@ const UsuariosList = ({ clienteAdminId, showAddButton = true }) => {
           </Table>
         </TableContainer>
       )}
-      {/* Modal para crear/editar usuario */}
+      {/* Diálogo Core para crear usuario nuevo */}
+      <OwnerUserCreateDialog
+        open={openOwnerDialog}
+        onClose={() => setOpenOwnerDialog(false)}
+        onSuccess={() => {
+          fetchUsuarios();
+        }}
+      />
+      {/* Modal legacy para editar usuario */}
       <Dialog open={openModal} onClose={handleCloseModal} maxWidth="md" fullWidth>
         <DialogTitle>
           {editando ? 'Editar Usuario' : 'Crear Nuevo Usuario'}

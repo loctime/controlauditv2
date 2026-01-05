@@ -10,7 +10,7 @@ import {
 } from '@mui/material';
 import { Group as GroupIcon, PersonAdd as PersonAddIcon } from '@mui/icons-material';
 import UsuariosList from '../usuarios/UsuariosList';
-import UserCreateDialogV3 from '../usuarios/UserCreateDialogV3';
+import OwnerUserCreateDialog from '../usuarios/OwnerUserCreateDialog';
 import { useAuth } from '../../context/AuthContext';
 
 const PerfilUsuarios = ({ usuariosCreados, loading, onRefresh }) => {
@@ -130,8 +130,8 @@ const PerfilUsuarios = ({ usuariosCreados, loading, onRefresh }) => {
         </Box>
       )}
 
-      {/* Modal para agregar usuario - Versión refactorizada */}
-      <UserCreateDialogV3
+      {/* Modal Core para agregar usuario */}
+      <OwnerUserCreateDialog
         open={openModal}
         onClose={() => setOpenModal(false)}
         onSuccess={() => {
@@ -141,8 +141,6 @@ const PerfilUsuarios = ({ usuariosCreados, loading, onRefresh }) => {
             window.location.reload();
           }
         }}
-        limiteUsuarios={limiteUsuarios}
-        usuariosActuales={usuariosActuales}
       />
     </Box>
   );

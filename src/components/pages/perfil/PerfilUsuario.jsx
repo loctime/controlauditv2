@@ -87,6 +87,17 @@ const PerfilUsuario = () => {
         const lista = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         setUsuariosCreados(lista);
       } catch (error) {
+        // No mostrar error si es permission-denied (error visual falso después de crear usuario en Core)
+        const isPermissionDenied = 
+          error.code === 'permission-denied' ||
+          error.message?.includes('permission-denied') ||
+          error.message?.includes('Missing or insufficient permissions');
+        
+        if (isPermissionDenied) {
+          console.debug('[PerfilUsuario] Permission denied al cargar usuarios (esperado después de crear usuario en Core)');
+        } else {
+          console.warn('[PerfilUsuario] Error al cargar usuarios:', error);
+        }
         setUsuariosCreados([]);
       } finally {
         setLoadingUsuariosCreados(false);
@@ -615,6 +626,17 @@ const PerfilUsuario = () => {
                       const lista = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                       setUsuariosCreados(lista);
                     } catch (error) {
+                      // No mostrar error si es permission-denied (error visual falso después de crear usuario en Core)
+                      const isPermissionDenied = 
+                        error.code === 'permission-denied' ||
+                        error.message?.includes('permission-denied') ||
+                        error.message?.includes('Missing or insufficient permissions');
+                      
+                      if (isPermissionDenied) {
+                        console.debug('[PerfilUsuario] Permission denied al refrescar usuarios (esperado después de crear usuario en Core)');
+                      } else {
+                        console.warn('[PerfilUsuario] Error al refrescar usuarios:', error);
+                      }
                       setUsuariosCreados([]);
                     } finally {
                       setLoadingUsuariosCreados(false);
