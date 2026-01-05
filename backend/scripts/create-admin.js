@@ -1,31 +1,40 @@
 // backend/scripts/create-admin.js
 import admin from '../firebaseAdmin.js';
 
-const EMAIL = 'dev@gmail.com'; // <-- CAMBIAR
-const PASSWORD = '123123123';
+// ===============================
+// CONFIGURACIÓN MANUAL
+// ===============================
+const EMAIL = 'licvidalfernando@gmail.com';          // <-- CAMBIAR
+const PASSWORD = '123123123';            // <-- CAMBIAR
 const DISPLAY_NAME = 'Administrador Principal';
-const ROLE = 'max'; // 'supermax' | 'max'
+const ROLE = 'max';                      // 'supermax' | 'max'
+// 👉 CUPO DE USUARIOS (CLAVE)
+const MAX_USUARIOS = 10;                  // <-- DEFINÍ ACÁ EL LÍMITE
+
+// ===============================
 
 async function createAdmin() {
   try {
     if (!admin) {
-      throw new Error('Firebase Admin SDK no está inicializado. Verifica las credenciales.');
+      throw new Error('Firebase Admin SDK no está inicializado');
     }
 
-    console.log('🚀 Creando/actualizando administrador...');
+    console.log('🚀 Creando / actualizando administrador...');
+    console.log(`👤 Email: ${EMAIL}`);
+    console.log(`🎭 Rol: ${ROLE}`);
+    console.log(`👥 Máx. usuarios permitidos: ${MAX_USUARIOS}`);
 
     let userRecord;
     let isNewUser = false;
 
-    // 1. Verificar si el usuario ya existe en Auth
+    // 1. Verificar si existe en Auth
     try {
       userRecord = await admin.auth().getUserByEmail(EMAIL);
-      console.log('✅ Usuario Auth ya existe:', userRecord.uid);
+      console.log('✅ Usuario Auth existente:', userRecord.uid);
     } catch (error) {
       if (error.code === 'auth/user-not-found') {
-        // Usuario no existe, crearlo
         isNewUser = true;
-        console.log('📝 Usuario no existe, creando nuevo usuario...');
+        console.log('📝 Usuario no existe, creando...');
         userRecord = await admin.auth().createUser({
           email: EMAIL,
           password: PASSWORD,
@@ -39,44 +48,55 @@ async function createAdmin() {
       }
     }
 
-    // 2. Asignar custom claim (actualizar si ya existe)
+    // 2. Asignar custom claim
     await admin.auth().setCustomUserClaims(userRecord.uid, {
       role: ROLE,
     });
 
     console.log(`🔐 Claim asignado: role = ${ROLE}`);
 
-    // 3. Crear perfil en Firestore (auditoría) - Ruta correcta: apps/auditoria/users/{uid}
+    // 3. Perfil Firestore (apps/auditoria/users/{uid})
     const userProfile = {
       uid: userRecord.uid,
       email: EMAIL,
       displayName: DISPLAY_NAME,
       role: ROLE,
+
+      // 👉 LÍMITES DE USUARIOS
+      limites: {
+        maxUsuarios: ROLE === 'supermax' ? null : MAX_USUARIOS,
+        usuariosCreados: 0,
+      },
+
       permisos: {
         puedeGestionarUsuarios: true,
-        puedeGestionarSistema: true,
+        puedeGestionarSistema: ROLE === 'supermax',
         puedeCrearEmpresas: true,
         puedeCrearSucursales: true,
         puedeCrearAuditorias: true,
+        puedeAgendarAuditorias: true,
+        puedeCrearFormularios: true,
         puedeCompartirFormularios: true,
-        puedeAgregarSocios: true,
-        puedeVerLogs: true,
-        puedeEliminarUsuarios: true,
+        puedeVerLogs: ROLE === 'supermax',
+        puedeEliminarUsuarios: ROLE === 'supermax',
       },
+
       appId: 'auditoria',
-      createdAt: new Date(),
+      status: 'active',
+
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+
+      // relaciones futuras
       empresas: [],
       auditorias: [],
       socios: [],
+
       configuracion: {
         notificaciones: true,
-        tema: 'light'
+        tema: 'light',
       },
-      status: 'active',
     };
 
-    // Usar la estructura correcta de Firestore: apps/auditoria/users/{uid}
-    // Usar merge para no sobrescribir datos existentes
     await admin
       .firestore()
       .collection('apps')
@@ -85,15 +105,12 @@ async function createAdmin() {
       .doc(userRecord.uid)
       .set(userProfile, { merge: true });
 
-    console.log('📄 Perfil Firestore creado/actualizado en apps/auditoria/users/');
+    console.log('📄 Perfil Firestore creado / actualizado');
+    console.log('🎉 ADMINISTRADOR LISTO');
 
-    console.log('🎉 ADMINISTRADOR CONFIGURADO CON ÉXITO');
-    console.log('📧 Email:', EMAIL);
     if (isNewUser) {
-      console.log('🔑 Password:', PASSWORD);
+      console.log('🔑 Password inicial:', PASSWORD);
       console.log('⚠️ Debe cambiar la contraseña al primer login');
-    } else {
-      console.log('ℹ️ Usuario existente, solo se actualizó el perfil y claims');
     }
 
     process.exit(0);

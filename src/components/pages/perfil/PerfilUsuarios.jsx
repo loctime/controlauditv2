@@ -6,68 +6,28 @@ import {
   useTheme, 
   useMediaQuery, 
   alpha, 
-  Button,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  TextField,
-  FormControlLabel,
-  Checkbox,
-  CircularProgress
+  Button
 } from '@mui/material';
 import { Group as GroupIcon, PersonAdd as PersonAddIcon } from '@mui/icons-material';
 import UsuariosList from '../usuarios/UsuariosList';
+import UserCreateDialogV3 from '../usuarios/UserCreateDialogV3';
 import { useAuth } from '../../context/AuthContext';
-import { toast } from 'react-toastify';
-import userService from '../../../services/userService';
-import { registrarAccionSistema } from '../../../utils/firestoreUtils';
 
 const PerfilUsuarios = ({ usuariosCreados, loading, onRefresh }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const isSmallMobile = useMediaQuery(theme.breakpoints.down('sm'));
   
-  // Log de depuración
   const { userProfile } = useAuth();
   const clienteAdminId = userProfile?.clienteAdminId || userProfile?.uid;
-  console.debug('[PerfilUsuarios] usuariosCreados:', usuariosCreados);
 
   // Estado para el modal de agregar usuario
   const [openModal, setOpenModal] = useState(false);
-  const [formData, setFormData] = useState({
-    email: '',
-    password: '',
-    nombre: '',
-    // role no se envía - el backend lo fuerza a 'operario' para usuarios max
-    permisos: {
-      puedeCrearEmpresas: false,
-      puedeCrearSucursales: false,
-      puedeCrearAuditorias: false,
-      puedeAgendarAuditorias: false,
-      puedeCrearFormularios: false,
-      puedeCompartirFormularios: false
-    }
-  });
-  const [loadingCreate, setLoadingCreate] = useState(false);
 
   // Validación de límite de usuarios
   const limiteUsuarios = userProfile?.limiteUsuarios ?? 0;
   const usuariosActuales = usuariosCreados?.length || 0;
   const puedeAgregar = usuariosActuales < limiteUsuarios || !limiteUsuarios;
-
-  // Los usuarios max solo pueden crear operarios, nunca administradores
-  // Los roles privilegiados (max/supermax) se crean exclusivamente por script
-
-  // PERMISOS disponibles
-  const PERMISOS_LISTA = [
-    { key: 'puedeCrearEmpresas', label: 'Crear Empresas' },
-    { key: 'puedeCrearSucursales', label: 'Crear Sucursales' },
-    { key: 'puedeCrearAuditorias', label: 'Crear Auditorías' },
-    { key: 'puedeAgendarAuditorias', label: 'Agendar Auditorías' },
-    { key: 'puedeCrearFormularios', label: 'Crear Formularios' },
-    { key: 'puedeCompartirFormularios', label: 'Compartir Formularios' }
-  ];
   
   return (
     <Box sx={{ 
@@ -111,13 +71,7 @@ const PerfilUsuarios = ({ usuariosCreados, loading, onRefresh }) => {
           variant="contained"
           color="primary"
           startIcon={<PersonAddIcon />}
-          onClick={() => {
-            if (!puedeAgregar) {
-              toast.error('Has alcanzado el límite de usuarios permitidos para tu plan.');
-              return;
-            }
-            setOpenModal(true);
-          }}
+          onClick={() => setOpenModal(true)}
           disabled={!puedeAgregar}
           sx={{ 
             py: isSmallMobile ? 1.5 : 2,
@@ -176,134 +130,20 @@ const PerfilUsuarios = ({ usuariosCreados, loading, onRefresh }) => {
         </Box>
       )}
 
-      {/* Modal para agregar usuario */}
-      <Dialog open={openModal} onClose={() => setOpenModal(false)} maxWidth="md" fullWidth>
-        <DialogTitle>Crear Nuevo Usuario</DialogTitle>
-        <DialogContent>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
-            <TextField
-              label="Nombre completo"
-              value={formData.nombre}
-              onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
-              fullWidth
-              required
-            />
-            <TextField
-              label="Email"
-              type="email"
-              value={formData.email}
-              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              fullWidth
-              required
-            />
-            <TextField
-              label="Contraseña"
-              type="password"
-              value={formData.password}
-              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-              fullWidth
-              required
-              helperText="Mínimo 6 caracteres"
-            />
-            <Alert severity="info" sx={{ mt: 1 }}>
-              El usuario se creará con rol <strong>Operario</strong>. Los administradores se crean exclusivamente mediante scripts del backend.
-            </Alert>
-            <Typography variant="h6" sx={{ mt: 2 }}>
-              Permisos
-            </Typography>
-            <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 1 }}>
-              {PERMISOS_LISTA.map((permiso) => (
-                <FormControlLabel
-                  key={permiso.key}
-                  control={
-                    <Checkbox
-                      checked={formData.permisos[permiso.key] || false}
-                      onChange={(e) => setFormData({
-                        ...formData,
-                        permisos: { ...formData.permisos, [permiso.key]: e.target.checked }
-                      })}
-                    />
-                  }
-                  label={permiso.label}
-                />
-              ))}
-            </Box>
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setOpenModal(false)}>Cancelar</Button>
-          <Button
-            onClick={async () => {
-              if (!formData.email || !formData.password || !formData.nombre) {
-                toast.error('Todos los campos son obligatorios');
-                return;
-              }
-              if (!puedeAgregar) {
-                toast.error('Has alcanzado el límite de usuarios permitidos para tu plan.');
-                return;
-              }
-
-              setLoadingCreate(true);
-              try {
-                // No enviar role - el backend lo fuerza a 'operario' para usuarios max
-                const result = await userService.createUser({
-                  email: formData.email,
-                  password: formData.password,
-                  nombre: formData.nombre,
-                  // role no se envía - el backend lo fuerza automáticamente
-                  permisos: formData.permisos,
-                  clienteAdminId: clienteAdminId
-                });
-
-                await registrarAccionSistema(
-                  userProfile?.uid || 'system',
-                  `Crear usuario: ${formData.email}`,
-                  { 
-                    email: formData.email, 
-                    nombre: formData.nombre, 
-                    role: 'operario', // Siempre operario desde frontend
-                    permisos: formData.permisos 
-                  },
-                  'crear',
-                  'usuario',
-                  result.uid
-                );
-
-                toast.success('Usuario creado exitosamente');
-                setOpenModal(false);
-                setFormData({
-                  email: '',
-                  password: '',
-                  nombre: '',
-                  permisos: {
-                    puedeCrearEmpresas: false,
-                    puedeCrearSucursales: false,
-                    puedeCrearAuditorias: false,
-                    puedeAgendarAuditorias: false,
-                    puedeCrearFormularios: false,
-                    puedeCompartirFormularios: false
-                  }
-                });
-                // Refrescar lista de usuarios sin recargar toda la página
-                if (onRefresh) {
-                  onRefresh();
-                } else {
-                  // Fallback: recargar página si no hay callback
-                  window.location.reload();
-                }
-              } catch (error) {
-                toast.error(error.message);
-              } finally {
-                setLoadingCreate(false);
-              }
-            }}
-            variant="contained"
-            disabled={loadingCreate}
-          >
-            {loadingCreate ? <CircularProgress size={20} /> : 'Crear Usuario'}
-          </Button>
-        </DialogActions>
-      </Dialog>
+      {/* Modal para agregar usuario - Versión refactorizada */}
+      <UserCreateDialogV3
+        open={openModal}
+        onClose={() => setOpenModal(false)}
+        onSuccess={() => {
+          if (onRefresh) {
+            onRefresh();
+          } else {
+            window.location.reload();
+          }
+        }}
+        limiteUsuarios={limiteUsuarios}
+        usuariosActuales={usuariosActuales}
+      />
     </Box>
   );
 };
