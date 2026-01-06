@@ -16,6 +16,7 @@ import StorefrontIcon from '@mui/icons-material/Storefront';
 import PeopleIcon from '@mui/icons-material/People';
 import SchoolIcon from '@mui/icons-material/School';
 import ReportProblemIcon from '@mui/icons-material/ReportProblem';
+import PersonAddIcon from '@mui/icons-material/PersonAdd';
 import EmpresaTableCell from './EmpresaTableCell';
 
 /**
@@ -29,6 +30,7 @@ const EmpresaRow = React.memo(({
   onTabChange,
   formatearEmail,
   onEditClick,
+  onOperariosClick,
   EliminarEmpresaComponent
 }) => {
   const theme = useTheme();
@@ -178,6 +180,18 @@ const EmpresaRow = React.memo(({
             <StorefrontIcon />
           </IconButton>
         </Tooltip>
+        {onOperariosClick && (
+          <Tooltip title="Gestionar operarios">
+            <IconButton 
+              size="small" 
+              onClick={() => onOperariosClick(empresa)} 
+              color="info"
+              aria-label={`Gestionar operarios de ${empresa.nombre}`}
+            >
+              <PersonAddIcon />
+            </IconButton>
+          </Tooltip>
+        )}
         {EliminarEmpresaComponent && <EliminarEmpresaComponent empresa={empresa} onEmpresaEliminada={() => {}} />}
       </Box>
     </TableCell>

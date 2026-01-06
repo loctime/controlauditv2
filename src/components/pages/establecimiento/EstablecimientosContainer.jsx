@@ -32,6 +32,7 @@ import { useAuth } from "../../context/AuthContext";
 import AddEmpresaModal from "./AddEmpresaModal";
 import EliminarEmpresa from "./EliminarEmpresa";
 import EditarEmpresaModal from "./EditarEmpresa";
+import EmpresaOperariosDialog from "./EmpresaOperariosDialog";
 import SucursalesTab from "./tabs/SucursalesTab";
 import EmpleadosTab from "./tabs/EmpleadosTab";
 import CapacitacionesTab from "./tabs/CapacitacionesTab";
@@ -61,6 +62,9 @@ const EstablecimientosContainer = () => {
 
   const { empresasStats, loadEmpresasStats } = useEmpresasStats(userEmpresas, userProfile?.uid);
 
+  // Obtener ownerId: si es operario usa clienteAdminId, si no usa su propio uid
+  const ownerId = userProfile?.clienteAdminId || userProfile?.uid || user?.uid;
+
   const {
     empresa,
     loading,
@@ -69,7 +73,7 @@ const EstablecimientosContainer = () => {
     handleAddEmpresa,
     resetEmpresa,
     setLoading
-  } = useEmpresasHandlers(crearEmpresa, updateEmpresa);
+  } = useEmpresasHandlers(ownerId, updateEmpresa);
 
   const {
     empresaEdit,
@@ -84,6 +88,8 @@ const EstablecimientosContainer = () => {
   const [openModal, setOpenModal] = useState(false);
   const [verificando, setVerificando] = useState(false);
   const [openEditModal, setOpenEditModal] = useState(false);
+  const [openOperariosModal, setOpenOperariosModal] = useState(false);
+  const [selectedEmpresaForOperarios, setSelectedEmpresaForOperarios] = useState(null);
   const [expandedRows, setExpandedRows] = useState(new Set());
   const [activeTabPerEmpresa, setActiveTabPerEmpresa] = useState({});
 
@@ -149,6 +155,16 @@ const EstablecimientosContainer = () => {
     setEmpresaEdit(null);
   };
 
+  const handleOpenOperariosModal = (empresa) => {
+    setSelectedEmpresaForOperarios(empresa);
+    setOpenOperariosModal(true);
+  };
+
+  const handleCloseOperariosModal = () => {
+    setOpenOperariosModal(false);
+    setSelectedEmpresaForOperarios(null);
+  };
+
   const eliminarEmpresa = async () => {
     // Las empresas se recargarán automáticamente desde el contexto
   };
@@ -161,7 +177,12 @@ const EstablecimientosContainer = () => {
         onVerificar={handleVerificarEmpresas}
         verificando={verificando}
         onNavigateToAccidentes={() => navigate('/accidentes')}
-        onAddEmpresa={() => setOpenModal(true)}
+        onAddEmpresa={() => {
+          console.log('🔵 [EstablecimientosContainer] Botón "Agregar Empresa" clickeado');
+          console.log('[EstablecimientosContainer] Abriendo modal...');
+          console.log('[EstablecimientosContainer] ownerId actual:', ownerId);
+          setOpenModal(true);
+        }}
       />
 
       <Typography variant="body2" color="textSecondary" sx={{ mb: 3 }}>
@@ -210,6 +231,7 @@ const EstablecimientosContainer = () => {
                       onTabChange={setActiveTab}
                       formatearEmail={formatearEmail}
                       onEditClick={handleOpenEditModal}
+                      onOperariosClick={handleOpenOperariosModal}
                       EliminarEmpresaComponent={EliminarEmpresa}
                     />
 
@@ -254,8 +276,17 @@ const EstablecimientosContainer = () => {
           open={openModal}
           handleClose={handleCloseModal}
           handleAddEmpresa={async () => {
-            await handleAddEmpresa();
-            setOpenModal(false);
+            console.log('🔵 [EstablecimientosContainer] handleAddEmpresa wrapper llamado');
+            console.log('[EstablecimientosContainer] ownerId:', ownerId);
+            console.log('[EstablecimientosContainer] empresa:', empresa);
+            try {
+              await handleAddEmpresa();
+              console.log('[EstablecimientosContainer] ✅ handleAddEmpresa completado, cerrando modal');
+              setOpenModal(false);
+            } catch (error) {
+              console.error('[EstablecimientosContainer] ❌ ERROR en handleAddEmpresa:', error);
+              throw error; // Re-lanzar para que se muestre el error
+            }
           }}
           empresa={empresa}
           handleInputChange={handleInputChange}
@@ -276,6 +307,16 @@ const EstablecimientosContainer = () => {
           handleInputChange={handleEditInputChange}
           handleLogoChange={handleEditLogoChange}
           loading={editLoading}
+        />
+      )}
+
+      {openOperariosModal && selectedEmpresaForOperarios && (
+        <EmpresaOperariosDialog
+          open={openOperariosModal}
+          handleClose={handleCloseOperariosModal}
+          empresaId={selectedEmpresaForOperarios.id}
+          empresaNombre={selectedEmpresaForOperarios.nombre}
+          ownerId={ownerId}
         />
       )}
     </Box>

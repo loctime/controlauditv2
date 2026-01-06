@@ -594,6 +594,63 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
     
+    /* ========= CONTROL-AUDIT OWNER-CENTRIC MODEL ========= */
+    
+    // Modelo owner-centric: apps/auditoria/owners/{ownerId}/...
+    // El ownerId en la ruta DEBE coincidir con request.auth.uid para garantizar seguridad
+    
+    // Empresas del owner
+    match /apps/auditoria/owners/{ownerId}/empresas/{empresaId} {
+      // El owner puede leer sus propias empresas
+      allow read: if isAuth() && ownerId == uid();
+      
+      // El owner puede crear empresas propias
+      allow create: if isAuth() 
+        && ownerId == uid()
+        && request.resource.data.ownerId == uid()
+        && request.resource.data.nombre is string
+        && request.resource.data.nombre.size() > 0;
+      
+      // El owner puede actualizar sus propias empresas
+      allow update: if isAuth() 
+        && ownerId == uid()
+        && resource.data.ownerId == uid()
+        && request.resource.data.ownerId == uid()
+        && (!("nombre" in request.resource.data) || 
+            (request.resource.data.nombre is string && request.resource.data.nombre.size() > 0));
+      
+      // El owner puede eliminar sus propias empresas
+      allow delete: if isAuth() && ownerId == uid() && resource.data.ownerId == uid();
+    }
+    
+    // Usuarios del owner (operarios)
+    match /apps/auditoria/owners/{ownerId}/usuarios/{userId} {
+      // Lectura: El owner puede leer todos sus usuarios, y cada usuario puede leer su propio documento
+      allow read: if isAuth() && (ownerId == uid() || (userId == uid() && ownerId == uid()));
+      
+      // El owner puede crear usuarios (operarios) para sí mismo
+      allow create: if isAuth() 
+        && ownerId == uid()
+        && request.resource.data.ownerId == uid()
+        && request.resource.data.role in ['admin', 'operario']
+        && request.resource.data.empresasAsignadas is list;
+      
+      // El owner puede actualizar usuarios que le pertenecen
+      // Específicamente permite actualizar empresasAsignadas
+      // Los operarios NO pueden modificar sus propias asignaciones (solo el owner)
+      allow update: if isAuth() 
+        && ownerId == uid()
+        && resource.data.ownerId == uid()
+        && request.resource.data.ownerId == uid()
+        && (!("role" in request.resource.data) || 
+            request.resource.data.role in ['admin', 'operario'])
+        && (!("empresasAsignadas" in request.resource.data) || 
+            request.resource.data.empresasAsignadas is list);
+      
+      // El owner puede desactivar usuarios que le pertenecen
+      allow delete: if isAuth() && ownerId == uid() && resource.data.ownerId == uid();
+    }
+    
     /* ========= DENY POR DEFECTO ========= */
     
     match /{document=**} {

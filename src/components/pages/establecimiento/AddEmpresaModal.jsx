@@ -7,10 +7,19 @@ import {
   Button,
   TextField,
   CircularProgress,
-  Typography
+  Box
 } from '@mui/material';
-import Swal from 'sweetalert2';
 
+/**
+ * Modal para crear una nueva empresa
+ * 
+ * Responsabilidad ÚNICA: Crear empresa usando ownerEmpresaService.createEmpresa
+ * 
+ * NO gestiona:
+ * - Asignación de usuarios
+ * - Permisos
+ * - Selección de operarios
+ */
 const AddEmpresaModal = ({
   open,
   handleClose,
@@ -20,6 +29,17 @@ const AddEmpresaModal = ({
   handleLogoChange,
   loading
 }) => {
+  const handleClickAdd = () => {
+    console.log('[AddEmpresaModal][handleClickAdd] Evento: Usuario hizo clic en "Agregar Empresa"');
+    console.log('[AddEmpresaModal][handleClickAdd] Datos del formulario:', {
+      nombre: empresa.nombre,
+      direccion: empresa.direccion,
+      telefono: empresa.telefono,
+      tieneLogo: !!empresa.logo
+    });
+    handleAddEmpresa();
+  };
+
   return (
     <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
       <DialogTitle>Agregar Nueva Empresa</DialogTitle>
@@ -40,7 +60,6 @@ const AddEmpresaModal = ({
           name="direccion"
           value={empresa.direccion}
           onChange={handleInputChange}
-          required
           fullWidth
           margin="normal"
         />
@@ -50,7 +69,6 @@ const AddEmpresaModal = ({
           name="telefono"
           value={empresa.telefono}
           onChange={handleInputChange}
-          required
           fullWidth
           margin="normal"
         />
@@ -58,17 +76,20 @@ const AddEmpresaModal = ({
           type="file"
           accept="image/*"
           onChange={handleLogoChange}
-          required
           style={{ margin: '16px 0' }}
         />
-        {loading && <CircularProgress />}
+        {loading && (
+          <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
+            <CircularProgress />
+          </Box>
+        )}
       </DialogContent>
       <DialogActions>
-        <Button onClick={handleClose} variant="outlined">
+        <Button onClick={handleClose} variant="outlined" disabled={loading}>
           Cancelar
         </Button>
         <Button
-          onClick={handleAddEmpresa}
+          onClick={handleClickAdd}
           variant="contained"
           color="primary"
           disabled={loading}
