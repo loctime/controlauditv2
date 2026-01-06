@@ -19,6 +19,16 @@ export const useUserProfile = (firebaseUser) => {
   // Crear o obtener perfil del usuario
   const createOrGetUserProfile = async (firebaseUser) => {
     try {
+      // ✅ FIX OBLIGATORIO #1: Bloquear admins - useUserProfile es solo para operarios
+      const tokenRole = await firebaseUser.getIdTokenResult()
+        .then(t => t.claims.role)
+        .catch(() => null);
+
+      if (tokenRole === 'max' || tokenRole === 'supermax') {
+        console.warn('[SECURITY] createOrGetUserProfile bloqueado para admin');
+        return null;
+      }
+
       // Usar la colección: /apps/auditoria/users/{uid}
       const userRef = doc(db, "apps", "auditoria", "users", firebaseUser.uid);
       let userSnap = await getDoc(userRef);
@@ -29,10 +39,21 @@ export const useUserProfile = (firebaseUser) => {
           console.log('[AUDIT] User profile loaded from /apps/auditoria/users');
         }
         
-        setUserProfile(profileData);
-        setRole(profileData.role || null);
-        setPermisos(profileData.permisos || {});
-        return profileData;
+        // ✅ Solo usar identidad global desde /users
+        // NO usar: ownerId, empresasAsignadas, permisos, clienteAdminId (vienen de owner-centric)
+        const cleanProfile = {
+          uid: profileData.uid,
+          email: profileData.email,
+          displayName: profileData.displayName,
+          role: profileData.role || null,
+          appId: profileData.appId,
+          createdAt: profileData.createdAt
+        };
+        
+        setUserProfile(cleanProfile);
+        setRole(cleanProfile.role || null);
+        setPermisos({}); // Permisos vienen de owner-centric, no de /users
+        return cleanProfile;
       }
 
       // Si no existe por UID, buscar por email (puede ser que el documento tenga UID temporal)
@@ -54,14 +75,15 @@ export const useUserProfile = (firebaseUser) => {
             console.log('[AUDIT] Temp UID:', tempUserDoc.id, 'Real UID:', firebaseUser.uid);
           }
           
-          // Crear documento con UID real (merge para preservar datos existentes)
+          // ✅ Crear documento con UID real - SOLO identidad global
+          // NO guardar: ownerId, empresasAsignadas, permisos, clienteAdminId (vienen de owner-centric)
           const migratedProfile = {
-            ...tempUserData,
             uid: firebaseUser.uid,
-            // Limpiar campos temporales
-            status: undefined,
-            tempPassword: undefined,
-            needsAuthSync: undefined
+            email: tempUserData.email || firebaseUser.email,
+            displayName: tempUserData.displayName || firebaseUser.displayName || firebaseUser.email,
+            role: tempUserData.role || getUserRole(firebaseUser.email),
+            appId: 'auditoria',
+            createdAt: serverTimestamp()
           };
           
           await setDocWithAppId(userRef, migratedProfile);
@@ -77,7 +99,7 @@ export const useUserProfile = (firebaseUser) => {
           
           setUserProfile(migratedProfile);
           setRole(migratedProfile.role || null);
-          setPermisos(migratedProfile.permisos || {});
+          setPermisos({}); // Permisos vienen de owner-centric, no de /users
           return migratedProfile;
         }
       }
@@ -87,31 +109,17 @@ export const useUserProfile = (firebaseUser) => {
         console.log('[AUDIT] User profile not found, creating in /apps/auditoria/users');
       }
       
+      // ✅ Crear perfil SOLO con identidad global
+      // NO guardar: ownerId, empresasAsignadas, permisos, clienteAdminId (vienen de owner-centric)
       const newProfile = {
         uid: firebaseUser.uid,
         email: firebaseUser.email,
         displayName: firebaseUser.displayName || firebaseUser.email,
         createdAt: serverTimestamp(),
         appId: 'auditoria',
-        role: getUserRole(firebaseUser.email),
-        clienteAdminId: getUserRole(firebaseUser.email) === 'max' ? firebaseUser.uid : null,
-        empresas: [],
-        auditorias: [],
-        permisos: {
-          puedeCrearEmpresas: true,
-          puedeCrearSucursales: true,
-          puedeCrearAuditorias: true,
-          puedeCompartirFormularios: true,
-          puedeAgregarSocios: true,
-          puedeGestionarUsuarios: true,
-          puedeVerLogs: true,
-          puedeGestionarSistema: true,
-          puedeEliminarUsuarios: true
-        },
-        configuracion: {
-          notificaciones: true,
-          tema: 'light'
-        }
+        role: getUserRole(firebaseUser.email)
+        // ❌ NO incluir: clienteAdminId, empresas, auditorias, permisos, configuracion
+        // Estos campos pertenecen a owner-centric, no a /users
       };
 
       await setDocWithAppId(userRef, newProfile);
@@ -132,6 +140,12 @@ export const useUserProfile = (firebaseUser) => {
   // Actualizar perfil del usuario
   const updateUserProfile = async (updates) => {
     try {
+      // ✅ FIX OBLIGATORIO #2: Bloquear admins - no se actualizan en /users
+      if (userProfile?.role === 'max' || userProfile?.role === 'supermax') {
+        console.warn('[SECURITY] updateUserProfile bloqueado para admin');
+        return false;
+      }
+
       const userRef = doc(db, "apps", "auditoria", "users", firebaseUser.uid);
       await updateDocWithAppId(userRef, updates);
       
@@ -153,6 +167,18 @@ export const useUserProfile = (firebaseUser) => {
       throw error;
     }
   };
+
+  // Sincronizar role y permisos cuando userProfile cambia (para admins que no pasan por createOrGetUserProfile)
+  useEffect(() => {
+    if (userProfile) {
+      if (userProfile.role && userProfile.role !== role) {
+        setRole(userProfile.role);
+      }
+      if (userProfile.permisos && JSON.stringify(userProfile.permisos) !== JSON.stringify(permisos)) {
+        setPermisos(userProfile.permisos || {});
+      }
+    }
+  }, [userProfile, role, permisos]);
 
   // Verificar bloqueo por estado de pago
   useEffect(() => {
@@ -181,8 +207,9 @@ export const useUserProfile = (firebaseUser) => {
         }
       }
 
-      if (userProfile.role === 'operario' && userProfile.clienteAdminId) {
-        const adminRef = doc(db, 'apps', 'auditoria', 'users', userProfile.clienteAdminId);
+      // ✅ FIX OBLIGATORIO #3: Consultar owner desde owner-centric, no desde /users
+      if (userProfile.role === 'operario' && userProfile.ownerId) {
+        const adminRef = doc(db, 'apps', 'auditoria', 'owners', userProfile.ownerId);
         const adminSnap = await getDoc(adminRef);
         if (adminSnap.exists()) {
           const adminData = adminSnap.data();

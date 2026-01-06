@@ -1,5 +1,5 @@
 // src/components/context/AuthContext.jsx
-import { createContext, useState, useEffect, useContext } from "react";
+import { createContext, useState, useEffect, useContext, useRef } from "react";
 import { auth } from "../../firebaseControlFile";
 import { onAuthStateChanged } from "firebase/auth";
 import { useUserProfile } from '../../hooks/useUserProfile';
@@ -80,9 +80,26 @@ const AuthContextComponent = ({ children }) => {
   });
 
   // Sincronizar empresas del hook TanStack Query con el estado del contexto
+  // Usar useRef para rastrear valores anteriores y evitar loops infinitos
+  const prevEmpresasRef = useRef();
+  const prevLoadingRef = useRef();
+  
   useEffect(() => {
-    setUserEmpresas(empresasFromQuery || []);
-    setLoadingEmpresas(empresasLoadingFromQuery);
+    const empresasArray = empresasFromQuery || [];
+    const empresasString = JSON.stringify(empresasArray);
+    const prevEmpresasString = JSON.stringify(prevEmpresasRef.current || []);
+    
+    // Solo actualizar si el contenido realmente cambió
+    if (empresasString !== prevEmpresasString) {
+      setUserEmpresas(empresasArray);
+      prevEmpresasRef.current = empresasArray;
+    }
+    
+    // Solo actualizar loading si realmente cambió
+    if (empresasLoadingFromQuery !== prevLoadingRef.current) {
+      setLoadingEmpresas(empresasLoadingFromQuery);
+      prevLoadingRef.current = empresasLoadingFromQuery;
+    }
   }, [empresasFromQuery, empresasLoadingFromQuery]);
 
   // Hooks de carga de datos (sin loadUserEmpresas - ahora se usa useEmpresasQuery)
@@ -231,9 +248,12 @@ const AuthContextComponent = ({ children }) => {
           localStorage.setItem("userInfo", JSON.stringify(firebaseUser));
           localStorage.setItem("isLogged", JSON.stringify(true));
           
-          // Verificar que el token tenga el aud correcto (controlstorage-eb796)
+          // ✅ CRÍTICO: Leer role del token PRIMERO para determinar flujo
+          let tokenRole = null;
           try {
             const token = await auth.currentUser.getIdTokenResult();
+            tokenRole = token.claims.role || null;
+            console.log('[AUTH] Token role claim:', tokenRole);
             console.log('[AUTH] Token aud claim:', token.claims.aud);
             if (token.claims.aud !== 'controlstorage-eb796') {
               console.warn('[AUTH] ⚠️ Token aud no coincide con controlstorage-eb796:', token.claims.aud);
@@ -244,7 +264,45 @@ const AuthContextComponent = ({ children }) => {
             console.error('[AUTH] Error obteniendo token:', error);
           }
           
-          const profile = await createOrGetUserProfile(firebaseUser);
+          // ✅ MODELO OWNER-CENTRIC: Admins NO usan /users, solo operarios
+          let profile = null;
+          
+          if (tokenRole === 'max' || tokenRole === 'supermax') {
+            // ADMIN: Construir userProfile directamente sin buscar en /users
+            console.log('[AUTH] ✅ ADMIN detectado - construyendo userProfile sin /users');
+            profile = {
+              uid: firebaseUser.uid,
+              email: firebaseUser.email,
+              displayName: firebaseUser.displayName || firebaseUser.email,
+              role: tokenRole,
+              ownerId: firebaseUser.uid, // ✅ Admin es su propio owner
+              appId: 'auditoria',
+              permisos: {
+                puedeCrearEmpresas: true,
+                puedeCrearSucursales: true,
+                puedeCrearAuditorias: true,
+                puedeCompartirFormularios: true,
+                puedeAgregarSocios: true,
+                puedeGestionarUsuarios: true,
+                puedeVerLogs: tokenRole === 'supermax',
+                puedeGestionarSistema: tokenRole === 'supermax',
+                puedeEliminarUsuarios: tokenRole === 'supermax'
+              },
+              configuracion: {
+                notificaciones: true,
+                tema: 'light'
+              }
+            };
+            console.log('[AUTH] ✅ userProfile construido para ADMIN:', {
+              uid: profile.uid,
+              role: profile.role,
+              ownerId: profile.ownerId
+            });
+          } else {
+            // OPERARIO: Usar createOrGetUserProfile que busca en /users
+            console.log('[AUTH] ✅ OPERARIO detectado - usando createOrGetUserProfile');
+            profile = await createOrGetUserProfile(firebaseUser);
+          }
           
           if (profile) {
             setUserProfile(profile);
@@ -654,7 +712,14 @@ const AuthContextComponent = ({ children }) => {
     logoutContext,
     crearEmpresa,
     updateUserProfile,
-    canViewEmpresa: (empresaId) => empresaService.canViewEmpresa(empresaId, userProfile),
+    canViewEmpresa: (empresaId) => {
+      // ✅ Para operarios: pasar empresas ya resueltas (no userProfile)
+      if (role === 'operario') {
+        return empresaService.canViewEmpresa(empresaId, userProfile, userEmpresas);
+      }
+      // Para max/supermax: usar userProfile (legacy)
+      return empresaService.canViewEmpresa(empresaId, userProfile);
+    },
     canViewAuditoria: (auditoriaId) => auditoriaService.canViewAuditoria(auditoriaId, userProfile, auditoriasCompartidas),
     // ELIMINADO: getUserEmpresas - ahora se usa useEmpresasQuery directamente
     getUserSucursales: () => loadUserSucursales(user?.uid),

@@ -217,26 +217,39 @@ app.post('/api/admin/create-user', verificarTokenAdmin, async (req, res) => {
     await admin.auth().setCustomUserClaims(userRecord.uid, { role: finalRole });
     console.log(`[INFO] Custom claim 'role: ${finalRole}' asignado a UID: ${userRecord.uid}`);
 
-    // 3. Crear perfil en Firestore (ruta correcta: apps/auditoria/users/{uid})
-    const userProfile = {
-      uid: userRecord.uid,
-      email: email,
-      displayName: nombre,
-      role: finalRole,
-      permisos: permisos,
-      appId: 'auditoria',
-      createdAt: new Date(),
-      empresas: [],
-      auditorias: [],
-      socios: [],
-      configuracion: {
-        notificaciones: true,
-        tema: 'light'
-      },
-      clienteAdminId: clienteAdminId || (req.user.role === 'max' ? req.user.uid : null)
-    };
-
-    await getUsersCollection().doc(userRecord.uid).set(userProfile);
+    // 3. Crear perfil en Firestore según el modelo owner-centric
+    // ✅ REGLA: Solo OPERARIOS tienen documento en apps/auditoria/users/{uid} (legacy)
+    // ✅ ADMINS solo existen en apps/auditoria/owners/{ownerId}/usuarios/{ownerId}
+    const ownerId = req.user.uid; // El admin que está creando el usuario
+    
+    if (finalRole === 'operario') {
+      // Solo operarios: crear documento legacy en apps/auditoria/users/{uid}
+      const userProfile = {
+        uid: userRecord.uid,
+        email: email,
+        displayName: nombre,
+        role: finalRole,
+        permisos: permisos,
+        appId: 'auditoria',
+        ownerId: ownerId, // ✅ Campo crítico para modelo owner-centric
+        status: 'active', // Campo requerido por las rules
+        createdAt: new Date(),
+        empresas: [],
+        auditorias: [],
+        socios: [],
+        configuracion: {
+          notificaciones: true,
+          tema: 'light'
+        },
+        clienteAdminId: clienteAdminId || (req.user.role === 'max' ? req.user.uid : null)
+      };
+      
+      console.log(`[create-user] ✅ Creando OPERARIO en apps/auditoria/users/{uid} con ownerId: ${ownerId}`);
+      await getUsersCollection().doc(userRecord.uid).set(userProfile);
+    } else {
+      // Para otros roles (admin, etc): NO crear en /users (solo owner-centric)
+      console.log(`[create-user] ⚠️ Role '${finalRole}' - NO creando documento en apps/auditoria/users (solo owner-centric)`);
+    }
 
     res.json({ 
       success: true,

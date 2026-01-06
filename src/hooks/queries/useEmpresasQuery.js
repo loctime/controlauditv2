@@ -1,22 +1,25 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useContext, useMemo, useRef } from 'react';
-import { onSnapshot, query, where, doc, getDoc } from 'firebase/firestore';
+import { onSnapshot, query, where } from 'firebase/firestore';
 import { empresaService } from '../../services/empresaService';
-import { auditUserCollection, db } from '../../firebaseControlFile';
+import { auditUserCollection } from '../../firebaseControlFile';
 import { AuthContext } from '../../components/context/AuthContext';
-import { firestoreRoutesCore } from '../../core/firestore/firestoreRoutes.core';
 
 /**
- * Hook TanStack Query para empresas - ÚNICA FUENTE DE VERDAD
+ * Hook TanStack Query para empresas - ÚNICA FUENTE DE VERDAD REACTIVA
  * 
  * QueryKey: ['empresas', userId, role]
  * 
  * Este hook:
  * - Hace fetch inicial con getUserEmpresas (maneja todos los roles correctamente)
  * - Mantiene listener reactivo con onSnapshot que actualiza el cache de TanStack Query
- * - Usa la misma lógica de múltiples queries según el rol que subscribeToUserEmpresas
+ * - ✅ OPERARIOS: Única fuente reactiva (no usa subscribeToUserEmpresas)
+ * - ✅ MAX/SUPERMAX: Maneja listeners legacy para compatibilidad
  * - Solo se ejecuta cuando authReady === true y role !== null
  * - Elimina la necesidad de fetch manual y listeners duplicados
+ * 
+ * IMPORTANTE: Para operarios, este hook es la ÚNICA capa reactiva.
+ * Los servicios (empresaService) solo proveen métodos de fetch puro.
  * 
  * @param {Object} options - Opciones opcionales para evitar dependencia circular
  * @param {Object} options.userProfile - Perfil de usuario (opcional, si no se proporciona usa useAuth)
@@ -101,127 +104,100 @@ export const useEmpresasQuery = (options = {}) => {
       
       // Variables propias del flujo operario (aisladas)
       const unsubscribesOperario = [];
-      const empresasMapOperario = new Map(); // Map único para operario
-      let empresasAsignadasActuales = []; // Trackear empresas asignadas actuales
 
-      // Función para actualizar cache específica de operario
-      const updateCacheOperario = () => {
-        const empresasArray = Array.from(empresasMapOperario.values());
-        queryClient.setQueryData(queryKey, empresasArray);
-        logger.debugProd('[useEmpresasQuery] Operario: cache actualizado con', empresasArray.length, 'empresas');
-      };
-
-      // Función para manejar errores específica de operario
-      const handleErrorOperario = (error) => {
-        console.error('[useEmpresasQuery] Operario: error en listener:', error);
-      };
-
-      // Función para crear listeners de empresas asignadas
-      const crearListenersEmpresas = (ownerId, empresasAsignadas) => {
-        // Limpiar listeners anteriores de empresas (mantener listener del usuario)
-        const listenersEmpresas = unsubscribesOperario.filter((_, index) => index > 0); // El primero es el listener del usuario
-        listenersEmpresas.forEach(unsubscribe => unsubscribe());
-        unsubscribesOperario.splice(1); // Mantener solo el listener del usuario
-
-        // Limpiar empresas que ya no están asignadas
-        const empresasAsignadasSet = new Set(empresasAsignadas);
-        empresasMapOperario.forEach((empresa, empresaId) => {
-          if (!empresasAsignadasSet.has(empresaId)) {
-            empresasMapOperario.delete(empresaId);
+      // ✅ OPERARIO: Hook reactivo simple - Service = verdad, Hook = solo escucha
+      const configurarOperario = async () => {
+        try {
+          // 1. Llamar al servicio (única fuente de verdad)
+          const resultado = await empresaService.getEmpresasForOperario(userId, userProfile);
+          
+          if (!resultado.ownerId || !resultado.userDocRef) {
+            queryClient.setQueryData(queryKey, []);
+            return;
           }
-        });
 
-        if (!empresasAsignadas || empresasAsignadas.length === 0) {
-          logger.debugProd('[useEmpresasQuery] Operario: no hay empresas asignadas');
-          updateCacheOperario();
-          return;
-        }
+          const { ownerId, empresas, empresasAsignadas, userDocRef, empresasQueryRef } = resultado;
+          
+          console.log('[useEmpresasQuery] ✅ Operario configurado desde servicio:', {
+            userId,
+            ownerId,
+            empresasCount: empresas.length
+          });
 
-        logger.debugProd(`[useEmpresasQuery] Operario: escuchando ${empresasAsignadas.length} empresas asignadas (ownerId: ${ownerId})`);
+          // 2. Cargar empresas iniciales en cache
+          queryClient.setQueryData(queryKey, empresas);
 
-        // Crear listener individual para cada empresa asignada desde owner-centric
-        empresasAsignadas.forEach((empresaId) => {
-          const empresaRef = doc(db, ...firestoreRoutesCore.empresa(ownerId, empresaId));
-          const unsubscribe = onSnapshot(
-            empresaRef,
+          // 3. Escuchar query única de empresas → reemplazar cache con datos mapeados del service
+          const unsubscribeEmpresas = onSnapshot(
+            empresasQueryRef,
             (snapshot) => {
-              if (snapshot.exists()) {
-                const empresaData = snapshot.data();
-                empresasMapOperario.set(snapshot.id, {
-                  id: snapshot.id,
-                  ownerId: empresaData.ownerId || ownerId,
-                  nombre: empresaData.nombre,
-                  activa: empresaData.activa !== undefined ? empresaData.activa : true,
-                  createdAt: empresaData.createdAt?.toDate() || new Date(),
-                  legacy: false
-                });
-                logger.debugProd(`[useEmpresasQuery] Operario: empresa ${snapshot.id} cargada desde owner-centric`);
-              } else {
-                // Empresa eliminada o no existe aún en owner-centric
-                console.warn(`[useEmpresasQuery] Operario: empresa ${empresaId} no existe en owner-centric (ownerId: ${ownerId})`);
-                empresasMapOperario.delete(empresaId);
-              }
-              updateCacheOperario();
+              // Mapear y filtrar usando el servicio (filtra por empresasAsignadas internamente)
+              const empresasMapeadas = empresaService.mapEmpresasSnapshots(
+                snapshot.docs,
+                ownerId,
+                empresasAsignadas
+              );
+              
+              // Reemplazar cache directamente (sin combinar Maps)
+              queryClient.setQueryData(queryKey, empresasMapeadas);
             },
             (error) => {
-              console.error(`[useEmpresasQuery] Operario: error al escuchar empresa ${empresaId}:`, error);
-              handleErrorOperario(error);
+              console.error('[useEmpresasQuery] Operario: error al escuchar query de empresas:', error);
             }
           );
-          unsubscribesOperario.push(unsubscribe);
-        });
+          unsubscribesOperario.push(unsubscribeEmpresas);
+
+          // 4. Escuchar documento del operario → refetch completo desde service
+          const unsubscribeUser = onSnapshot(
+            userDocRef,
+            async () => {
+              // Ante cualquier cambio → volver a llamar al service
+              const nuevoResultado = await empresaService.getEmpresasForOperario(userId, userProfile);
+              if (nuevoResultado.empresas) {
+                // Limpiar listener anterior de empresas (es el primer elemento)
+                if (unsubscribesOperario[0]) {
+                  unsubscribesOperario[0]();
+                }
+                
+                // Actualizar cache con empresas del service
+                queryClient.setQueryData(queryKey, nuevoResultado.empresas);
+                
+                // Crear nuevo listener para query actualizada
+                const nuevoUnsubscribeEmpresas = onSnapshot(
+                  nuevoResultado.empresasQueryRef,
+                  (snapshot) => {
+                    // Mapear y filtrar usando el servicio
+                    const empresasMapeadas = empresaService.mapEmpresasSnapshots(
+                      snapshot.docs,
+                      nuevoResultado.ownerId,
+                      nuevoResultado.empresasAsignadas
+                    );
+                    
+                    // Reemplazar cache directamente
+                    queryClient.setQueryData(queryKey, empresasMapeadas);
+                  },
+                  (error) => {
+                    console.error('[useEmpresasQuery] Operario: error al escuchar query de empresas:', error);
+                  }
+                );
+                unsubscribesOperario[0] = nuevoUnsubscribeEmpresas;
+              }
+            },
+            (error) => {
+              console.error('[useEmpresasQuery] Operario: error al escuchar documento owner-centric:', error);
+            }
+          );
+
+          // Guardar listener del usuario como segundo elemento
+          unsubscribesOperario.push(unsubscribeUser);
+        } catch (error) {
+          console.error('[useEmpresasQuery] Operario: error al configurar:', error);
+          queryClient.setQueryData(queryKey, []);
+        }
       };
 
-      // 1. Escuchar documento del usuario con onSnapshot para reaccionar a cambios en empresasAsignadas
-      const userRef = doc(db, 'apps', 'auditoria', 'users', userId);
-      
-      const unsubscribeUser = onSnapshot(
-        userRef,
-        (userSnap) => {
-          if (!userSnap.exists()) {
-            console.warn('[useEmpresasQuery] Operario: documento de usuario no encontrado');
-            queryClient.setQueryData(queryKey, []);
-            return;
-          }
-
-          const userData = userSnap.data();
-          // ✅ OPERARIO: ownerId EXCLUSIVAMENTE desde documento del usuario (sin fallbacks)
-          const ownerId = userData.ownerId;
-          const empresasAsignadas = userData.empresasAsignadas || [];
-
-          if (!ownerId) {
-            console.error('[useEmpresasQuery] ❌ ERROR FATAL: Operario sin ownerId en documento del usuario');
-            console.error('[useEmpresasQuery] userId:', userId);
-            console.error('[useEmpresasQuery] userData:', userData);
-            queryClient.setQueryData(queryKey, []);
-            return;
-          }
-
-          console.log('[OPERARIO] ownerId efectivo:', ownerId);
-
-          // Verificar si las empresas asignadas cambiaron (primera carga o cambios)
-          const esPrimeraCarga = empresasAsignadasActuales.length === 0;
-          const empresasCambiaron = esPrimeraCarga || 
-            JSON.stringify(empresasAsignadas.sort()) !== JSON.stringify(empresasAsignadasActuales.sort());
-          
-          if (empresasCambiaron) {
-            if (esPrimeraCarga) {
-              logger.debugProd(`[useEmpresasQuery] Operario: primera carga con ${empresasAsignadas.length} empresas asignadas (ownerId: ${ownerId})`);
-            } else {
-              logger.debugProd(`[useEmpresasQuery] Operario: empresas asignadas cambiaron. Antes: ${empresasAsignadasActuales.length}, Ahora: ${empresasAsignadas.length}`);
-            }
-            empresasAsignadasActuales = [...empresasAsignadas];
-            crearListenersEmpresas(ownerId, empresasAsignadas);
-          }
-        },
-        (error) => {
-          console.error('[useEmpresasQuery] Operario: error al escuchar documento del usuario:', error);
-          handleErrorOperario(error);
-        }
-      );
-
-      // Guardar listener del usuario como primer elemento
-      unsubscribesOperario.push(unsubscribeUser);
+      // Ejecutar configuración
+      configurarOperario();
 
       // Cleanup específico para operario
       return () => {

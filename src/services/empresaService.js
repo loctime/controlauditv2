@@ -6,7 +6,8 @@ import {
   query, 
   where, 
   onSnapshot,
-  collection
+  collection,
+  collectionGroup
 } from 'firebase/firestore';
 import { registrarAccionSistema } from '../utils/firestoreUtils';
 import { addDocWithAppId, updateDocWithAppId } from '../firebase/firestoreAppWriter';
@@ -113,46 +114,69 @@ export const empresaService = {
   },
 
   /**
-   * ✅ MODELO OWNER-CENTRIC PARA OPERARIOS
+   * ✅ MODELO OWNER-CENTRIC PARA OPERARIOS - FETCH PURO
    * 
    * Obtiene empresas para un operario usando el modelo owner-centric.
+   * Este es un método de FETCH PURO, sin listeners reactivos.
    * 
-   * Flujo:
-   * 1. Lee documento del usuario desde apps/auditoria/users/{userId}
-   * 2. Obtiene ownerId y empresasAsignadas[]
-   * 3. Resuelve empresas una por una con getDoc(doc()) desde apps/auditoria/owners/{ownerId}/empresas/{empresaId}
+   * ⚠️ IMPORTANTE: Para listeners reactivos, usar useEmpresasQuery (única fuente reactiva)
+   * 
+   * Flujo CORRECTO:
+   * 1. Buscar documento del operario en apps/auditoria/owners/{ownerId}/usuarios/{userId} usando query optimizada
+   * 2. Extraer ownerId y empresasAsignadas[] desde el documento owner-centric
+   * 3. Resolver empresas una por una con getDoc(doc()) desde apps/auditoria/owners/{ownerId}/empresas/{empresaId}
    * 
    * ⚠️ NO usa:
+   * - apps/auditoria/users/{uid} para obtener ownerId o empresasAsignadas (solo identidad global)
    * - apps/auditoria/users/{uid}/empresas (legacy)
-   * - queries (where, collection)
-   * - listeners innecesarios
+   * - queries (where, collection) para empresas
+   * - listeners reactivos (eso lo hace useEmpresasQuery)
    */
   async getEmpresasForOperario(userId, userProfile) {
     try {
       if (!userId) {
         logger.debugProd('[empresaService][getEmpresasForOperario] userId no proporcionado');
-        return [];
+        return { ownerId: null, empresas: [], empresasAsignadas: [], userDocRef: null, empresasQueryRef: null };
       }
 
-      // 1. Leer documento del usuario desde apps/auditoria/users/{userId}
-      const userRef = doc(db, 'apps', 'auditoria', 'users', userId);
-      const userSnap = await getDoc(userRef);
+      // ✅ 1. Buscar documento del operario en owner-centric usando query optimizada
+      // Path correcto: apps/auditoria/owners/{ownerId}/usuarios/{userId}
+      // ⚠️ CRÍTICO: En collectionGroup NO usar __name__ (requiere ruta completa)
+      // ✅ Usar campo explícito 'uid' para búsqueda eficiente
+      const usuariosCollectionGroup = collectionGroup(db, 'usuarios');
+      const userQuery = query(usuariosCollectionGroup, where('uid', '==', userId));
+      const snapshot = await getDocs(userQuery);
+      
+      // Debe haber exactamente un documento (o ninguno)
+      const userDoc = snapshot.docs.find(doc => doc.id === userId);
 
-      if (!userSnap.exists()) {
-        logger.debugProd('[empresaService][getEmpresasForOperario] Usuario no encontrado:', userId);
-        return [];
+      if (!userDoc) {
+        console.error('[empresaService][getEmpresasForOperario] ❌ ERROR DE PROVISIONING: Operario no encontrado en owner-centric');
+        console.error('[empresaService][getEmpresasForOperario] El usuario debe existir en apps/auditoria/owners/{ownerId}/usuarios/{userId}');
+        console.error('[empresaService][getEmpresasForOperario] userId:', userId);
+        return { ownerId: null, empresas: [], empresasAsignadas: [], userDocRef: null, empresasQueryRef: null };
       }
 
-      const userData = userSnap.data();
-      // ✅ OPERARIO: ownerId EXCLUSIVAMENTE desde documento del usuario (sin fallbacks)
-      const ownerId = userData.ownerId;
+      const userData = userDoc.data();
+      
+      // ✅ Extraer ownerId del path del documento
+      // Path: apps/auditoria/owners/{ownerId}/usuarios/{userId}
+      const pathParts = userDoc.ref.path.split('/');
+      const ownerIndex = pathParts.indexOf('owners');
+      if (ownerIndex === -1 || ownerIndex + 1 >= pathParts.length) {
+        console.error('[empresaService][getEmpresasForOperario] ❌ ERROR: No se pudo extraer ownerId del path');
+        return { ownerId: null, empresas: [], empresasAsignadas: [], userDocRef: null, empresasQueryRef: null };
+      }
+      const ownerId = pathParts[ownerIndex + 1];
+      
+      // ✅ OPERARIO: ownerId y empresasAsignadas EXCLUSIVAMENTE desde documento owner-centric
       const empresasAsignadas = userData.empresasAsignadas || [];
 
       if (!ownerId) {
-        console.error('[empresaService][getEmpresasForOperario] ❌ ERROR FATAL: Operario sin ownerId en documento del usuario');
+        console.error('[empresaService][getEmpresasForOperario] ❌ ERROR FATAL: Operario sin ownerId en documento owner-centric');
         console.error('[empresaService][getEmpresasForOperario] userId:', userId);
         console.error('[empresaService][getEmpresasForOperario] userData:', userData);
-        return [];
+        return { ownerId: null, empresas: [], empresasAsignadas: [], userDocRef: null, empresasQueryRef: null };
       }
 
       logger.debugProd('[getUserEmpresas][OPERARIO] ownerId efectivo:', ownerId);
@@ -160,7 +184,15 @@ export const empresaService = {
 
       if (!empresasAsignadas || empresasAsignadas.length === 0) {
         logger.debugProd('[empresaService][getEmpresasForOperario] No hay empresas asignadas para el operario');
-        return [];
+        const empresasCollectionRef = collection(db, ...firestoreRoutesCore.empresas(ownerId));
+        const empresasQueryRef = query(empresasCollectionRef);
+        return { 
+          ownerId, 
+          empresas: [], 
+          empresasAsignadas: [],
+          userDocRef: userDoc.ref, 
+          empresasQueryRef
+        };
       }
 
       logger.debugProd(`[empresaService][getEmpresasForOperario] 🔄 Resolviendo ${empresasAsignadas.length} empresas para operario ${userId} (ownerId: ${ownerId})`);
@@ -194,11 +226,56 @@ export const empresaService = {
       const empresas = (await Promise.all(empresasPromises)).filter(emp => emp !== null);
 
       logger.debugProd(`[empresaService][getEmpresasForOperario] ✅ Resueltas ${empresas.length} empresas para operario`);
-      return empresas;
-    } catch (error) {
-      console.error('[empresaService][getEmpresasForOperario] ❌ Error:', error);
-      return [];
+      
+      // ✅ Crear UNA sola query para escuchar TODAS las empresas del owner
+      // El servicio filtrará por empresasAsignadas al mapear
+      const empresasCollectionRef = collection(db, ...firestoreRoutesCore.empresas(ownerId));
+      const empresasQueryRef = query(empresasCollectionRef);
+      
+      return { 
+        ownerId, 
+        empresas, 
+        empresasAsignadas, // Guardar para filtrar al mapear
+        userDocRef: userDoc.ref,
+        empresasQueryRef // UNA sola query (todas las empresas del owner)
+      };
+      } catch (error) {
+        console.error('[empresaService][getEmpresasForOperario] ❌ Error:', error);
+        return { ownerId: null, empresas: [], empresasAsignadas: [], userDocRef: null, empresasQueryRef: null };
+      }
+    },
+
+  /**
+   * Mapea snapshots de empresas a array de empresas normalizadas
+   * Filtra por empresasAsignadas si se proporciona
+   * Única fuente de verdad para la estructura de una empresa
+   */
+  mapEmpresasSnapshots(snapshots, ownerId, empresasAsignadas = null) {
+    const empresas = snapshots
+      .map(snapshot => {
+        if (!snapshot.exists()) {
+          return null;
+        }
+        
+        const empresaData = snapshot.data();
+        return {
+          id: snapshot.id,
+          ownerId: empresaData.ownerId || ownerId,
+          nombre: empresaData.nombre,
+          activa: empresaData.activa !== undefined ? empresaData.activa : true,
+          createdAt: empresaData.createdAt?.toDate() || new Date(),
+          legacy: false
+        };
+      })
+      .filter(emp => emp !== null);
+    
+    // Filtrar por empresasAsignadas si se proporciona
+    if (empresasAsignadas && empresasAsignadas.length > 0) {
+      const empresasAsignadasSet = new Set(empresasAsignadas);
+      return empresas.filter(emp => empresasAsignadasSet.has(emp.id));
     }
+    
+    return empresas;
   },
 
   /**
@@ -437,9 +514,11 @@ export const empresaService = {
       if (esOperario) {
         logger.debugProd('[empresaService][getUserEmpresas] ✅ Operario detectado - usando flujo owner-centric exclusivo');
         logger.debugProd('[empresaService][getUserEmpresas] ⚠️ NO ejecutando getLegacyEmpresas() ni _getUserCentricEmpresas()');
-        const empresasOperario = await this.getEmpresasForOperario(userId, userProfile);
-        logger.debugProd(`[empresaService][getUserEmpresas] ✅ Operario: ${empresasOperario.length} empresas resueltas`);
-        return empresasOperario;
+        const resultadoOperario = await this.getEmpresasForOperario(userId, userProfile);
+        // getEmpresasForOperario retorna { ownerId, empresas, userDocRef, empresaRefs }
+        // getUserEmpresas retorna solo el array de empresas para compatibilidad
+        logger.debugProd(`[empresaService][getUserEmpresas] ✅ Operario: ${resultadoOperario.empresas?.length || 0} empresas resueltas`);
+        return resultadoOperario.empresas || [];
       }
 
       // Obtener role del userProfile si no está proporcionado (solo para no-operarios)
@@ -491,8 +570,14 @@ export const empresaService = {
     }
   },
 
-  // Listener reactivo para empresas
-  // Construye internamente las rutas: /apps/auditoria/users/{uid}/empresas
+  /**
+   * Listener reactivo para empresas (SOLO max/supermax - legacy)
+   * 
+   * ⚠️ OPERARIOS NO DEBEN USAR ESTE MÉTODO
+   * Los operarios usan useEmpresasQuery como única fuente reactiva
+   * 
+   * Este método solo maneja listeners legacy para max/supermax
+   */
   subscribeToUserEmpresas(userProfile, role, setUserEmpresas, setLoadingEmpresas, loadUserFromCache = null) {
     if (!userProfile?.uid || !role) {
       setUserEmpresas([]);
@@ -502,10 +587,6 @@ export const empresaService = {
 
     const userId = userProfile.uid;
     
-    // Construir rutas internamente
-    const empresasRef = auditUserCollection(userId, 'empresas');
-    console.log('[empresaService] subscribeToUserEmpresas usando path:', empresasRef.path);
-
     setLoadingEmpresas(true);
     const unsubscribes = [];
     const empresasMaps = []; // Array de Maps, uno por cada query
@@ -548,6 +629,10 @@ export const empresaService = {
     };
 
     if (role === 'supermax') {
+      // ✅ Solo max/supermax construyen auditUserCollection
+      const empresasRef = auditUserCollection(userId, 'empresas');
+      console.log('[empresaService] subscribeToUserEmpresas usando path:', empresasRef.path);
+      
       // Supermax ve todas las empresas
       const empresasMap = new Map();
       empresasMaps.push(empresasMap);
@@ -563,6 +648,10 @@ export const empresaService = {
       );
       unsubscribes.push(unsubscribe);
     } else if (role === 'max') {
+      // ✅ Solo max/supermax construyen auditUserCollection
+      const empresasRef = auditUserCollection(userId, 'empresas');
+      console.log('[empresaService] subscribeToUserEmpresas usando path:', empresasRef.path);
+      
       // Max: buscar por propietarioId, creadorId y socios
       
       // Query 1: propietarioId
@@ -613,77 +702,13 @@ export const empresaService = {
       );
       unsubscribes.push(unsubscribe3);
     } else if (role === 'operario') {
-      // ✅ OPERARIO: Usar modelo owner-centric exclusivamente
-      // 1. Leer documento del usuario para obtener ownerId y empresasAsignadas
-      const userRef = doc(db, 'apps', 'auditoria', 'users', userId);
-      
-      // Leer documento del usuario una vez al inicio
-      getDoc(userRef).then((userSnap) => {
-        if (!userSnap.exists()) {
-          console.warn('[empresaService] Operario: documento de usuario no encontrado');
-          setUserEmpresas([]);
-          setLoadingEmpresas(false);
-          return;
-        }
-
-        const userData = userSnap.data();
-        // ✅ OPERARIO: ownerId EXCLUSIVAMENTE desde documento del usuario (sin fallbacks)
-        const ownerId = userData.ownerId;
-        const empresasAsignadas = userData.empresasAsignadas || [];
-
-        if (!ownerId) {
-          console.error('[empresaService] ❌ ERROR FATAL: Operario sin ownerId en documento del usuario');
-          console.error('[empresaService] userId:', userId);
-          console.error('[empresaService] userData:', userData);
-          setUserEmpresas([]);
-          setLoadingEmpresas(false);
-          return;
-        }
-
-        logger.debugProd('[OPERARIO] ownerId efectivo:', ownerId);
-
-        if (!empresasAsignadas || empresasAsignadas.length === 0) {
-          logger.debugProd('[empresaService] Operario: no hay empresas asignadas');
-          setUserEmpresas([]);
-          setLoadingEmpresas(false);
-          return;
-        }
-
-        logger.debugProd(`[empresaService] Operario: escuchando ${empresasAsignadas.length} empresas asignadas (ownerId: ${ownerId})`);
-
-        // 2. Crear listener individual para cada empresa asignada desde owner-centric
-        empresasAsignadas.forEach((empresaId) => {
-          const empresasMap = new Map();
-          empresasMaps.push(empresasMap);
-          
-          const empresaRef = doc(db, ...firestoreRoutesCore.empresa(ownerId, empresaId));
-          const unsubscribe = onSnapshot(
-            empresaRef,
-            (snapshot) => {
-              if (snapshot.exists()) {
-                const empresaData = snapshot.data();
-                empresasMap.set(snapshot.id, {
-                  id: snapshot.id,
-                  ownerId: empresaData.ownerId || ownerId,
-                  nombre: empresaData.nombre,
-                  activa: empresaData.activa !== undefined ? empresaData.activa : true,
-                  createdAt: empresaData.createdAt?.toDate() || new Date(),
-                  legacy: false
-                });
-              } else {
-                // Empresa eliminada o no existe
-                empresasMap.delete(empresaId);
-              }
-              updateEmpresas();
-            },
-            handleError
-          );
-          unsubscribes.push(unsubscribe);
-        });
-      }).catch((error) => {
-        console.error('[empresaService] Operario: error al leer documento del usuario:', error);
-        handleError(error);
-      });
+      // ✅ OPERARIO: NO usar subscribeToUserEmpresas
+      // Los operarios usan useEmpresasQuery como única fuente reactiva
+      // Este método solo maneja listeners para max/supermax (legacy)
+      console.warn('[empresaService] subscribeToUserEmpresas: Operarios deben usar useEmpresasQuery');
+      setUserEmpresas([]);
+      setLoadingEmpresas(false);
+      return () => {};
     } else {
       setUserEmpresas([]);
       setLoadingEmpresas(false);
@@ -943,7 +968,13 @@ export const empresaService = {
   },
 
   // Verificar si el usuario puede ver una empresa
-  canViewEmpresa(empresaId, userProfile) {
+  /**
+   * Verifica si un usuario puede ver una empresa
+   * 
+   * Para operarios: usa empresas ya resueltas (no userProfile)
+   * Para max/supermax: usa userProfile.empresas (legacy)
+   */
+  canViewEmpresa(empresaId, userProfile, empresasResueltas = null) {
     if (!userProfile) return false;
     
     if (userProfile.role === 'supermax') {
@@ -957,10 +988,13 @@ export const empresaService = {
       return false;
     }
     
+    // ✅ OPERARIO: usar empresas ya resueltas, NO userProfile
     if (userProfile.role === 'operario') {
-      if (userProfile.empresas && userProfile.empresas.includes(empresaId)) {
-        return true;
+      // Si se proporcionan empresas resueltas, usar esas
+      if (empresasResueltas && Array.isArray(empresasResueltas)) {
+        return empresasResueltas.some(emp => emp.id === empresaId);
       }
+      // Fallback: NO usar userProfile.empresas (no debe existir en /users)
       return false;
     }
     

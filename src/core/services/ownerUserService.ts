@@ -146,6 +146,7 @@ export async function createUser(
   try {
     // Payload requerido por las rules owner-centric
     await setDoc(userRef, {
+      uid: userData.id, // ✅ CRÍTICO: Campo requerido para búsquedas por collectionGroup
       ownerId: currentUserUid, // Debe ser igual a auth.uid
       appId: 'auditoria', // Requerido por las rules
       role: userData.role, // Debe ser 'admin' u 'operario'

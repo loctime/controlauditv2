@@ -55,57 +55,18 @@ async function createAdmin() {
 
     console.log(`🔐 Claim asignado: role = ${ROLE}`);
 
-    // 3. Perfil Firestore (apps/auditoria/users/{uid})
-    const userProfile = {
-      uid: userRecord.uid,
-      email: EMAIL,
-      displayName: DISPLAY_NAME,
-      role: ROLE,
-
-      // 👉 LÍMITES DE USUARIOS
-      limites: {
-        maxUsuarios: ROLE === 'supermax' ? null : MAX_USUARIOS,
-        usuariosCreados: 0,
-      },
-
-      permisos: {
-        puedeGestionarUsuarios: true,
-        puedeGestionarSistema: ROLE === 'supermax',
-        puedeCrearEmpresas: true,
-        puedeCrearSucursales: true,
-        puedeCrearAuditorias: true,
-        puedeAgendarAuditorias: true,
-        puedeCrearFormularios: true,
-        puedeCompartirFormularios: true,
-        puedeVerLogs: ROLE === 'supermax',
-        puedeEliminarUsuarios: ROLE === 'supermax',
-      },
-
-      appId: 'auditoria',
-      status: 'active',
-
-      createdAt: admin.firestore.FieldValue.serverTimestamp(),
-
-      // relaciones futuras
-      empresas: [],
-      auditorias: [],
-      socios: [],
-
-      configuracion: {
-        notificaciones: true,
-        tema: 'light',
-      },
-    };
-
-    await admin
-      .firestore()
-      .collection('apps')
-      .doc('auditoria')
-      .collection('users')
-      .doc(userRecord.uid)
-      .set(userProfile, { merge: true });
-
-    console.log('📄 Perfil Firestore creado / actualizado');
+    // ✅ MODELO OWNER-CENTRIC: Admins NO tienen documento en apps/auditoria/users
+    // Los admins solo existen en:
+    // - apps/auditoria/owners/{ownerId} (documento del owner)
+    // - apps/auditoria/owners/{ownerId}/usuarios/{ownerId} (documento del usuario owner-centric)
+    // 
+    // El documento en /users es legacy y solo para operarios.
+    // 
+    // NOTA: El documento owner-centric se crea desde el frontend cuando el admin
+    // inicia sesión por primera vez o cuando se crea explícitamente.
+    
+    console.log('⚠️ ADMIN - NO creando documento en apps/auditoria/users (solo owner-centric)');
+    console.log('📝 El documento owner-centric se creará desde el frontend o manualmente');
     console.log('🎉 ADMINISTRADOR LISTO');
 
     if (isNewUser) {
