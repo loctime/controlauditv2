@@ -192,25 +192,23 @@ const EmpresaOperariosDialog = ({
           <List>
             {usuarios.map((user) => (
               <ListItem key={user.id} button onClick={() => handleToggleUsuario(user.id)}>
-                <ListItemText
-                  primary={`Usuario ${user.id}`}
-                  secondary={
-                    <Box sx={{ display: 'flex', gap: 1, mt: 0.5 }}>
+                <Box sx={{ flex: 1 }}>
+                  <Typography variant="body1">{`Usuario ${user.id}`}</Typography>
+                  <Box sx={{ display: 'flex', gap: 1, mt: 0.5 }}>
+                    <Chip 
+                      label={user.role} 
+                      size="small" 
+                      color={user.role === 'operario' ? 'primary' : 'default'}
+                    />
+                    {usuariosAsignados.has(user.id) && (
                       <Chip 
-                        label={user.role} 
+                        label="Asignado" 
                         size="small" 
-                        color={user.role === 'operario' ? 'primary' : 'default'}
+                        color="success"
                       />
-                      {usuariosAsignados.has(user.id) && (
-                        <Chip 
-                          label="Asignado" 
-                          size="small" 
-                          color="success"
-                        />
-                      )}
-                    </Box>
-                  }
-                />
+                    )}
+                  </Box>
+                </Box>
                 <ListItemSecondaryAction>
                   <Checkbox
                     edge="end"

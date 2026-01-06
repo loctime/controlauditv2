@@ -1,9 +1,10 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useContext, useMemo, useRef } from 'react';
-import { onSnapshot, query, where } from 'firebase/firestore';
+import { onSnapshot, query, where, doc } from 'firebase/firestore';
 import { empresaService } from '../../services/empresaService';
-import { auditUserCollection } from '../../firebaseControlFile';
+import { auditUserCollection, db } from '../../firebaseControlFile';
 import { AuthContext } from '../../components/context/AuthContext';
+import { firestoreRoutesCore } from '../../core/firestore/firestoreRoutes.core';
 
 /**
  * Hook TanStack Query para empresas - ÚNICA FUENTE DE VERDAD REACTIVA
@@ -108,15 +109,24 @@ export const useEmpresasQuery = (options = {}) => {
       // ✅ OPERARIO: Hook reactivo simple - Service = verdad, Hook = solo escucha
       const configurarOperario = async () => {
         try {
-          // 1. Llamar al servicio (única fuente de verdad)
-          const resultado = await empresaService.getEmpresasForOperario(userId, userProfile);
+          // 1. Obtener ownerId desde userProfile (debe venir de /apps/auditoria/users/{uid})
+          const ownerId = userProfile?.ownerId || userProfile?.clienteAdminId;
+          if (!ownerId) {
+            console.error('[useEmpresasQuery] ❌ ownerId no disponible en userProfile');
+            console.error('[useEmpresasQuery] userProfile:', userProfile);
+            queryClient.setQueryData(queryKey, []);
+            return;
+          }
+          
+          // 2. Llamar al servicio con ownerId explícito (única fuente de verdad)
+          const resultado = await empresaService.getEmpresasForOperario(userId, ownerId);
           
           if (!resultado.ownerId || !resultado.userDocRef) {
             queryClient.setQueryData(queryKey, []);
             return;
           }
 
-          const { ownerId, empresas, empresasAsignadas, userDocRef, empresasQueryRef } = resultado;
+          const { empresas, empresasAsignadas, userDocRef, empresasQueryRef } = resultado;
           
           console.log('[useEmpresasQuery] ✅ Operario configurado desde servicio:', {
             userId,
@@ -127,69 +137,73 @@ export const useEmpresasQuery = (options = {}) => {
           // 2. Cargar empresas iniciales en cache
           queryClient.setQueryData(queryKey, empresas);
 
-          // 3. Escuchar query única de empresas → reemplazar cache con datos mapeados del service
-          const unsubscribeEmpresas = onSnapshot(
-            empresasQueryRef,
-            (snapshot) => {
-              // Mapear y filtrar usando el servicio (filtra por empresasAsignadas internamente)
-              const empresasMapeadas = empresaService.mapEmpresasSnapshots(
-                snapshot.docs,
-                ownerId,
-                empresasAsignadas
-              );
-              
-              // Reemplazar cache directamente (sin combinar Maps)
-              queryClient.setQueryData(queryKey, empresasMapeadas);
-            },
-            (error) => {
-              console.error('[useEmpresasQuery] Operario: error al escuchar query de empresas:', error);
-            }
-          );
-          unsubscribesOperario.push(unsubscribeEmpresas);
-
-          // 4. Escuchar documento del operario → refetch completo desde service
+          // ⚠️ OPERARIOS NO PUEDEN USAR QUERIES (empresasQueryRef será null)
+          // Solo pueden usar getDoc() directo según las reglas de Firestore
+          
+          // 3. Escuchar documento del operario → refetch completo desde service
+          // Cuando cambie empresasAsignadas, hacer refetch completo
           const unsubscribeUser = onSnapshot(
             userDocRef,
             async () => {
-              // Ante cualquier cambio → volver a llamar al service
-              const nuevoResultado = await empresaService.getEmpresasForOperario(userId, userProfile);
-              if (nuevoResultado.empresas) {
-                // Limpiar listener anterior de empresas (es el primer elemento)
-                if (unsubscribesOperario[0]) {
-                  unsubscribesOperario[0]();
-                }
-                
+              // Ante cualquier cambio → volver a llamar al service (refetch completo)
+              console.log('[useEmpresasQuery] Operario: documento usuario cambió, haciendo refetch completo');
+              
+              // Obtener ownerId desde userProfile (actualizado)
+              const nuevoOwnerId = userProfile?.ownerId || userProfile?.clienteAdminId;
+              if (!nuevoOwnerId) {
+                console.error('[useEmpresasQuery] ❌ ownerId no disponible en userProfile en refetch');
+                return;
+              }
+              
+              const nuevoResultado = await empresaService.getEmpresasForOperario(userId, nuevoOwnerId);
+              if (nuevoResultado.empresas !== undefined) {
                 // Actualizar cache con empresas del service
-                queryClient.setQueryData(queryKey, nuevoResultado.empresas);
-                
-                // Crear nuevo listener para query actualizada
-                const nuevoUnsubscribeEmpresas = onSnapshot(
-                  nuevoResultado.empresasQueryRef,
-                  (snapshot) => {
-                    // Mapear y filtrar usando el servicio
-                    const empresasMapeadas = empresaService.mapEmpresasSnapshots(
-                      snapshot.docs,
-                      nuevoResultado.ownerId,
-                      nuevoResultado.empresasAsignadas
-                    );
-                    
-                    // Reemplazar cache directamente
-                    queryClient.setQueryData(queryKey, empresasMapeadas);
-                  },
-                  (error) => {
-                    console.error('[useEmpresasQuery] Operario: error al escuchar query de empresas:', error);
-                  }
-                );
-                unsubscribesOperario[0] = nuevoUnsubscribeEmpresas;
+                queryClient.setQueryData(queryKey, nuevoResultado.empresas || []);
               }
             },
             (error) => {
               console.error('[useEmpresasQuery] Operario: error al escuchar documento owner-centric:', error);
             }
           );
-
-          // Guardar listener del usuario como segundo elemento
           unsubscribesOperario.push(unsubscribeUser);
+
+          // 4. Escuchar cambios en empresas individuales usando getDoc() directo
+          // Solo para empresas que existen actualmente (permitido por reglas)
+          if (empresasAsignadas && empresasAsignadas.length > 0) {
+            empresasAsignadas.forEach((empresaId) => {
+              try {
+                const empresaRef = doc(db, ...firestoreRoutesCore.empresa(ownerId, empresaId));
+                const unsubscribeEmpresa = onSnapshot(
+                  empresaRef,
+                  async () => {
+                    // Cuando una empresa cambia, hacer refetch completo desde service
+                    console.log(`[useEmpresasQuery] Operario: empresa ${empresaId} cambió, haciendo refetch completo`);
+                    
+                    // Obtener ownerId desde userProfile (actualizado)
+                    const nuevoOwnerId = userProfile?.ownerId || userProfile?.clienteAdminId;
+                    if (!nuevoOwnerId) {
+                      console.error('[useEmpresasQuery] ❌ ownerId no disponible en userProfile en refetch de empresa');
+                      return;
+                    }
+                    
+                    const nuevoResultado = await empresaService.getEmpresasForOperario(userId, nuevoOwnerId);
+                    if (nuevoResultado.empresas !== undefined) {
+                      queryClient.setQueryData(queryKey, nuevoResultado.empresas || []);
+                    }
+                  },
+                  (error) => {
+                    // Ignorar errores de permisos (empresa puede haber sido desasignada)
+                    if (error.code !== 'permission-denied') {
+                      console.error(`[useEmpresasQuery] Operario: error al escuchar empresa ${empresaId}:`, error);
+                    }
+                  }
+                );
+                unsubscribesOperario.push(unsubscribeEmpresa);
+              } catch (error) {
+                console.error(`[useEmpresasQuery] Operario: error al crear listener para empresa ${empresaId}:`, error);
+              }
+            });
+          }
         } catch (error) {
           console.error('[useEmpresasQuery] Operario: error al configurar:', error);
           queryClient.setQueryData(queryKey, []);

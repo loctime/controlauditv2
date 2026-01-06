@@ -39,15 +39,29 @@ export const useUserProfile = (firebaseUser) => {
           console.log('[AUDIT] User profile loaded from /apps/auditoria/users');
         }
         
-        // ✅ Solo usar identidad global desde /users
-        // NO usar: ownerId, empresasAsignadas, permisos, clienteAdminId (vienen de owner-centric)
+        // ✅ Incluir ownerId/clienteAdminId desde /users (requerido para operarios)
+        // Estos campos son necesarios para que el operario pueda leer sus empresas
+        const ownerId = profileData.ownerId || profileData.clienteAdminId || null;
+        const clienteAdminId = profileData.clienteAdminId || profileData.ownerId || null;
+        
+        // ⚠️ VALIDACIÓN CRÍTICA: Operarios DEBEN tener ownerId
+        if (profileData.role === 'operario' && !ownerId) {
+          console.error('[AUDIT] ❌ ERROR CRÍTICO: Operario sin ownerId en documento legacy');
+          console.error('[AUDIT] El operario debe ser recreado o actualizado por el admin');
+          console.error('[AUDIT] userId:', profileData.uid);
+          // Retornar perfil con ownerId null para que el sistema detecte el error
+        }
+        
         const cleanProfile = {
           uid: profileData.uid,
           email: profileData.email,
           displayName: profileData.displayName,
           role: profileData.role || null,
           appId: profileData.appId,
-          createdAt: profileData.createdAt
+          createdAt: profileData.createdAt,
+          // ✅ CRÍTICO: Incluir ownerId/clienteAdminId para operarios
+          ownerId: ownerId,
+          clienteAdminId: clienteAdminId
         };
         
         setUserProfile(cleanProfile);
@@ -75,15 +89,17 @@ export const useUserProfile = (firebaseUser) => {
             console.log('[AUDIT] Temp UID:', tempUserDoc.id, 'Real UID:', firebaseUser.uid);
           }
           
-          // ✅ Crear documento con UID real - SOLO identidad global
-          // NO guardar: ownerId, empresasAsignadas, permisos, clienteAdminId (vienen de owner-centric)
+          // ✅ Crear documento con UID real - Incluir ownerId/clienteAdminId si existen
           const migratedProfile = {
             uid: firebaseUser.uid,
             email: tempUserData.email || firebaseUser.email,
             displayName: tempUserData.displayName || firebaseUser.displayName || firebaseUser.email,
             role: tempUserData.role || getUserRole(firebaseUser.email),
             appId: 'auditoria',
-            createdAt: serverTimestamp()
+            createdAt: serverTimestamp(),
+            // ✅ CRÍTICO: Preservar ownerId/clienteAdminId si existen
+            ownerId: tempUserData.ownerId || tempUserData.clienteAdminId || null,
+            clienteAdminId: tempUserData.clienteAdminId || tempUserData.ownerId || null
           };
           
           await setDocWithAppId(userRef, migratedProfile);
@@ -109,17 +125,18 @@ export const useUserProfile = (firebaseUser) => {
         console.log('[AUDIT] User profile not found, creating in /apps/auditoria/users');
       }
       
-      // ✅ Crear perfil SOLO con identidad global
-      // NO guardar: ownerId, empresasAsignadas, permisos, clienteAdminId (vienen de owner-centric)
+      // ✅ Crear perfil con identidad global
+      // NOTA: ownerId/clienteAdminId se asignan cuando el admin crea el operario
       const newProfile = {
         uid: firebaseUser.uid,
         email: firebaseUser.email,
         displayName: firebaseUser.displayName || firebaseUser.email,
         createdAt: serverTimestamp(),
         appId: 'auditoria',
-        role: getUserRole(firebaseUser.email)
-        // ❌ NO incluir: clienteAdminId, empresas, auditorias, permisos, configuracion
-        // Estos campos pertenecen a owner-centric, no a /users
+        role: getUserRole(firebaseUser.email),
+        // ownerId/clienteAdminId se asignarán cuando el admin cree el operario
+        ownerId: null,
+        clienteAdminId: null
       };
 
       await setDocWithAppId(userRef, newProfile);

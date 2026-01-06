@@ -623,25 +623,34 @@ service cloud.firestore {
       allow delete: if isAuth() && ownerId == uid() && resource.data.ownerId == uid();
     }
     
-    // Usuarios del owner (operarios)
+    // Usuarios del owner (operarios y admins)
     match /apps/auditoria/owners/{ownerId}/usuarios/{userId} {
       // Lectura: El owner puede leer todos sus usuarios, y cada usuario puede leer su propio documento
       allow read: if isAuth() && (ownerId == uid() || (userId == uid() && ownerId == uid()));
       
-      // El owner puede crear usuarios (operarios) para sí mismo
+      // ✅ CREAR: El owner puede crear usuarios (operarios/admins) para sí mismo
+      // Condiciones OBLIGATORIAS:
+      // - auth.uid == ownerId (el owner autenticado coincide con el ownerId en la ruta)
+      // - request.resource.data.ownerId == auth.uid (el documento tiene el ownerId correcto)
+      // - request.resource.data.appId == 'auditoria' (requerido por el modelo)
+      // - request.resource.data.role in ['admin','operario'] (solo roles válidos)
+      // NO depende de existencia previa del documento
+      // NO permite writes cruzados entre owners
       allow create: if isAuth() 
         && ownerId == uid()
         && request.resource.data.ownerId == uid()
+        && request.resource.data.appId == 'auditoria'
         && request.resource.data.role in ['admin', 'operario']
         && request.resource.data.empresasAsignadas is list;
       
-      // El owner puede actualizar usuarios que le pertenecen
+      // ✅ ACTUALIZAR: El owner puede actualizar usuarios que le pertenecen
       // Específicamente permite actualizar empresasAsignadas
       // Los operarios NO pueden modificar sus propias asignaciones (solo el owner)
       allow update: if isAuth() 
         && ownerId == uid()
         && resource.data.ownerId == uid()
         && request.resource.data.ownerId == uid()
+        && request.resource.data.appId == 'auditoria'
         && (!("role" in request.resource.data) || 
             request.resource.data.role in ['admin', 'operario'])
         && (!("empresasAsignadas" in request.resource.data) || 

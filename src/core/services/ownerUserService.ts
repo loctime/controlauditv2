@@ -20,12 +20,14 @@ import {
   query,
   where,
   Timestamp,
-  serverTimestamp
+  serverTimestamp,
+  deleteField
 } from 'firebase/firestore';
 import { db, auth } from '../../firebaseControlFile';
 import { firestoreRoutesCore } from '../firestore/firestoreRoutes.core';
 import { User } from '../models/User';
 import { getEmpresas } from './ownerEmpresaService';
+import { updateDocWithAppId, setDocWithAppId } from '../../firebase/firestoreAppWriter';
 
 /**
  * ✅ Valida que los IDs de empresas existan realmente en owner-centric
@@ -144,17 +146,67 @@ export async function createUser(
   };
 
   try {
-    // Payload requerido por las rules owner-centric
+    // ✅ CRÍTICO PARA OPERARIOS: Asegurar documento legacy COMPLETO ANTES de crear owner-centric
+    if (userData.role === 'operario') {
+      const legacyUserRef = doc(db, 'apps', 'auditoria', 'users', userData.id);
+      
+      // Verificar si el documento legacy existe
+      const legacySnapshot = await getDoc(legacyUserRef);
+      
+      if (legacySnapshot.exists()) {
+        // Documento existe: actualizar con ownerId y clienteAdminId (ambos iguales)
+        const legacyData = legacySnapshot.data();
+        const legacyOwnerId = legacyData.ownerId || legacyData.clienteAdminId;
+        
+        // Si no tiene ownerId o es diferente, actualizar
+        if (!legacyOwnerId || legacyOwnerId !== currentUserUid) {
+          await updateDocWithAppId(legacyUserRef, {
+            ownerId: currentUserUid,
+            clienteAdminId: currentUserUid,
+            role: 'operario',
+            appId: 'auditoria',
+            status: 'active'
+          });
+          console.log(`[Firestore][${methodName}] ✅ Documento legacy actualizado con ownerId para operario`);
+          
+          // Verificar que la actualización fue exitosa
+          const verifySnapshot = await getDoc(legacyUserRef);
+          if (!verifySnapshot.exists() || !verifySnapshot.data().ownerId) {
+            throw new Error('No se pudo confirmar la actualización del documento legacy');
+          }
+        }
+      } else {
+        // Documento NO existe: crearlo COMPLETO antes de continuar
+        await setDocWithAppId(legacyUserRef, {
+          uid: userData.id,
+          ownerId: currentUserUid,
+          clienteAdminId: currentUserUid, // ✅ IGUAL a ownerId
+          role: 'operario',
+          appId: 'auditoria',
+          status: 'active',
+          createdAt: serverTimestamp()
+        });
+        console.log(`[Firestore][${methodName}] ✅ Documento legacy creado con ownerId para operario`);
+        
+        // Verificar que la creación fue exitosa
+        const verifySnapshot = await getDoc(legacyUserRef);
+        if (!verifySnapshot.exists() || !verifySnapshot.data().ownerId) {
+          throw new Error('No se pudo confirmar la creación del documento legacy');
+        }
+      }
+      
+      console.log(`[Firestore][${methodName}] ✅ Documento legacy confirmado correctamente antes de crear owner-centric`);
+    }
+    
+    // ✅ SOLO DESPUÉS de confirmar legacy correcto: crear documento owner-centric
+    // ✅ CRÍTICO: Escribir SOLO los campos mínimos permitidos por las reglas
     await setDoc(userRef, {
-      uid: userData.id, // ✅ CRÍTICO: Campo requerido para búsquedas por collectionGroup
-      ownerId: currentUserUid, // Debe ser igual a auth.uid
-      appId: 'auditoria', // Requerido por las rules
-      role: userData.role, // Debe ser 'admin' u 'operario'
-      empresasAsignadas: empresasAsignadasValidadas, // ✅ Solo IDs válidos
-      status: 'active', // Requerido por las rules
-      activo: userData.activo !== undefined ? userData.activo : true,
-      createdAt: serverTimestamp()
+      ownerId: currentUserUid,
+      appId: 'auditoria',
+      role: userData.role,
+      empresasAsignadas: empresasAsignadasValidadas
     });
+    
     console.log(`[Firestore][${methodName}] ✅ Operación exitosa`);
     console.log(`[Firestore][${methodName}] Path: ${pathString}`);
     return user;
@@ -178,7 +230,10 @@ export async function createUser(
 }
 
 /**
- * Asigna empresas a un usuario
+ * Asigna empresas a un usuario (actualización bidireccional)
+ * 
+ * Actualiza tanto el documento del usuario (empresasAsignadas) como
+ * los documentos de las empresas (operarios[userId]).
  */
 export async function assignEmpresasToUser(
   ownerId: string,
@@ -217,17 +272,62 @@ export async function assignEmpresasToUser(
     console.warn(`[Firestore][${methodName}] IDs inválidos filtrados:`, empresaIds.filter(id => !empresasAsignadasValidadas.includes(id)));
   }
 
-  const userRef = doc(
-    db,
-    ...path
-  );
+  const userRef = doc(db, ...path);
 
   try {
-    await updateDoc(userRef, {
-      empresasAsignadas: empresasAsignadasValidadas // ✅ Solo IDs válidos
+    // 1) Leer el estado actual del usuario (empresasAsignadas previas)
+    const userSnapshot = await getDoc(userRef);
+    const empresasPrevias: string[] = userSnapshot.exists() 
+      ? (userSnapshot.data().empresasAsignadas || [])
+      : [];
+
+    // 2) Calcular diferencias: empresas agregadas y empresas quitadas
+    const empresasPreviasSet = new Set(empresasPrevias);
+    const empresasNuevasSet = new Set(empresasAsignadasValidadas);
+    
+    const empresasAgregadas = empresasAsignadasValidadas.filter(
+      id => !empresasPreviasSet.has(id)
+    );
+    const empresasQuitadas = empresasPrevias.filter(
+      id => !empresasNuevasSet.has(id)
+    );
+
+    console.log(`[Firestore][${methodName}] Empresas previas: ${empresasPrevias.length}`);
+    console.log(`[Firestore][${methodName}] Empresas nuevas: ${empresasAsignadasValidadas.length}`);
+    console.log(`[Firestore][${methodName}] Empresas agregadas: ${empresasAgregadas.length}`);
+    console.log(`[Firestore][${methodName}] Empresas quitadas: ${empresasQuitadas.length}`);
+
+    // 3) Actualizar documentos de empresas agregadas: operarios[userId] = true
+    const updatesEmpresasAgregadas = empresasAgregadas.map(empresaId => {
+      const empresaRef = doc(db, ...firestoreRoutesCore.empresa(ownerId, empresaId));
+      return updateDoc(empresaRef, {
+        [`operarios.${userId}`]: true
+      });
     });
+
+    // 4) Actualizar documentos de empresas quitadas: eliminar operarios[userId]
+    const updatesEmpresasQuitadas = empresasQuitadas.map(empresaId => {
+      const empresaRef = doc(db, ...firestoreRoutesCore.empresa(ownerId, empresaId));
+      return updateDoc(empresaRef, {
+        [`operarios.${userId}`]: deleteField()
+      });
+    });
+
+    // 5) Ejecutar todas las actualizaciones en paralelo
+    await Promise.all([
+      // Actualizar documento del usuario (empresasAsignadas)
+      updateDoc(userRef, {
+        empresasAsignadas: empresasAsignadasValidadas
+      }),
+      // Actualizar documentos de empresas
+      ...updatesEmpresasAgregadas,
+      ...updatesEmpresasQuitadas
+    ]);
+
     console.log(`[Firestore][${methodName}] ✅ Operación exitosa`);
     console.log(`[Firestore][${methodName}] Path: ${pathString}`);
+    console.log(`[Firestore][${methodName}] Usuario actualizado: ${pathString}`);
+    console.log(`[Firestore][${methodName}] Empresas actualizadas: ${updatesEmpresasAgregadas.length + updatesEmpresasQuitadas.length}`);
   } catch (error: any) {
     console.group('[Firestore ERROR]');
     console.error('code:', error.code);

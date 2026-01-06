@@ -241,7 +241,7 @@ app.post('/api/admin/create-user', verificarTokenAdmin, async (req, res) => {
           notificaciones: true,
           tema: 'light'
         },
-        clienteAdminId: clienteAdminId || (req.user.role === 'max' ? req.user.uid : null)
+        clienteAdminId: ownerId // ✅ CRÍTICO: clienteAdminId DEBE ser igual a ownerId
       };
       
       console.log(`[create-user] ✅ Creando OPERARIO en apps/auditoria/users/{uid} con ownerId: ${ownerId}`);

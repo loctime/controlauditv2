@@ -113,6 +113,7 @@ export const empresaService = {
     }
   },
 
+
   /**
    * ✅ MODELO OWNER-CENTRIC PARA OPERARIOS - FETCH PURO
    * 
@@ -121,83 +122,73 @@ export const empresaService = {
    * 
    * ⚠️ IMPORTANTE: Para listeners reactivos, usar useEmpresasQuery (única fuente reactiva)
    * 
-   * Flujo CORRECTO:
-   * 1. Buscar documento del operario en apps/auditoria/owners/{ownerId}/usuarios/{userId} usando query optimizada
-   * 2. Extraer ownerId y empresasAsignadas[] desde el documento owner-centric
-   * 3. Resolver empresas una por una con getDoc(doc()) desde apps/auditoria/owners/{ownerId}/empresas/{empresaId}
+   * Flujo CORRECTO (SIN QUERIES PARA EMPRESAS):
+   * 1. Recibir ownerId como parámetro requerido (NO inferir desde userProfile)
+   * 2. Leer documento del operario directamente con getDoc():
+   *    apps/auditoria/owners/{ownerId}/usuarios/{userId}
+   * 3. Extraer empresasAsignadas[] desde el documento
+   * 4. Para cada empresaId, usar getDoc() directo:
+   *    apps/auditoria/owners/{ownerId}/empresas/{empresaId}
    * 
    * ⚠️ NO usa:
-   * - apps/auditoria/users/{uid} para obtener ownerId o empresasAsignadas (solo identidad global)
-   * - apps/auditoria/users/{uid}/empresas (legacy)
-   * - queries (where, collection) para empresas
-   * - listeners reactivos (eso lo hace useEmpresasQuery)
+   * - Inferencia de ownerId desde userProfile (no confiable)
+   * - Queries para empresas (prohibido para operarios)
+   * - Solo getDoc() directo está permitido
+   * 
+   * @param {string} userId - ID del usuario operario
+   * @param {string} ownerId - ID del owner (REQUERIDO, no se infiere)
    */
-  async getEmpresasForOperario(userId, userProfile) {
+  async getEmpresasForOperario(userId, ownerId) {
     try {
       if (!userId) {
         logger.debugProd('[empresaService][getEmpresasForOperario] userId no proporcionado');
         return { ownerId: null, empresas: [], empresasAsignadas: [], userDocRef: null, empresasQueryRef: null };
       }
 
-      // ✅ 1. Buscar documento del operario en owner-centric usando query optimizada
-      // Path correcto: apps/auditoria/owners/{ownerId}/usuarios/{userId}
-      // ⚠️ CRÍTICO: En collectionGroup NO usar __name__ (requiere ruta completa)
-      // ✅ Usar campo explícito 'uid' para búsqueda eficiente
-      const usuariosCollectionGroup = collectionGroup(db, 'usuarios');
-      const userQuery = query(usuariosCollectionGroup, where('uid', '==', userId));
-      const snapshot = await getDocs(userQuery);
-      
-      // Debe haber exactamente un documento (o ninguno)
-      const userDoc = snapshot.docs.find(doc => doc.id === userId);
-
-      if (!userDoc) {
-        console.error('[empresaService][getEmpresasForOperario] ❌ ERROR DE PROVISIONING: Operario no encontrado en owner-centric');
-        console.error('[empresaService][getEmpresasForOperario] El usuario debe existir en apps/auditoria/owners/{ownerId}/usuarios/{userId}');
+      if (!ownerId) {
+        console.error('[empresaService][getEmpresasForOperario] ❌ ERROR: ownerId es requerido');
         console.error('[empresaService][getEmpresasForOperario] userId:', userId);
+        console.error('[empresaService][getEmpresasForOperario] ownerId recibido:', ownerId);
         return { ownerId: null, empresas: [], empresasAsignadas: [], userDocRef: null, empresasQueryRef: null };
       }
 
-      const userData = userDoc.data();
-      
-      // ✅ Extraer ownerId del path del documento
+      // ✅ 2. Leer documento del operario directamente con getDoc() (SIN QUERIES)
       // Path: apps/auditoria/owners/{ownerId}/usuarios/{userId}
-      const pathParts = userDoc.ref.path.split('/');
-      const ownerIndex = pathParts.indexOf('owners');
-      if (ownerIndex === -1 || ownerIndex + 1 >= pathParts.length) {
-        console.error('[empresaService][getEmpresasForOperario] ❌ ERROR: No se pudo extraer ownerId del path');
+      const userRef = doc(db, ...firestoreRoutesCore.usuario(ownerId, userId));
+      const userSnapshot = await getDoc(userRef);
+
+      if (!userSnapshot.exists()) {
+        console.error('[empresaService][getEmpresasForOperario] ❌ ERROR DE PROVISIONING: Operario no encontrado en owner-centric');
+        console.error('[empresaService][getEmpresasForOperario] Path:', userRef.path);
+        console.error('[empresaService][getEmpresasForOperario] userId:', userId);
+        console.error('[empresaService][getEmpresasForOperario] ownerId:', ownerId);
         return { ownerId: null, empresas: [], empresasAsignadas: [], userDocRef: null, empresasQueryRef: null };
       }
-      const ownerId = pathParts[ownerIndex + 1];
+
+      const userData = userSnapshot.data();
       
-      // ✅ OPERARIO: ownerId y empresasAsignadas EXCLUSIVAMENTE desde documento owner-centric
+      // ✅ 3. Obtener empresasAsignadas desde el documento
       const empresasAsignadas = userData.empresasAsignadas || [];
 
-      if (!ownerId) {
-        console.error('[empresaService][getEmpresasForOperario] ❌ ERROR FATAL: Operario sin ownerId en documento owner-centric');
-        console.error('[empresaService][getEmpresasForOperario] userId:', userId);
-        console.error('[empresaService][getEmpresasForOperario] userData:', userData);
-        return { ownerId: null, empresas: [], empresasAsignadas: [], userDocRef: null, empresasQueryRef: null };
-      }
-
       logger.debugProd('[getUserEmpresas][OPERARIO] ownerId efectivo:', ownerId);
-      logger.debugProd('[getUserEmpresas][OPERARIO] userId:', userId, 'ownerId:', ownerId, '(NO usar userId como ownerId)');
+      logger.debugProd('[getUserEmpresas][OPERARIO] userId:', userId, 'ownerId:', ownerId);
 
       if (!empresasAsignadas || empresasAsignadas.length === 0) {
         logger.debugProd('[empresaService][getEmpresasForOperario] No hay empresas asignadas para el operario');
-        const empresasCollectionRef = collection(db, ...firestoreRoutesCore.empresas(ownerId));
-        const empresasQueryRef = query(empresasCollectionRef);
+        // ⚠️ NO crear query para operarios (prohibido por reglas)
+        // Retornar null en empresasQueryRef para indicar que no se puede escuchar
         return { 
           ownerId, 
           empresas: [], 
           empresasAsignadas: [],
-          userDocRef: userDoc.ref, 
-          empresasQueryRef
+          userDocRef: userRef, 
+          empresasQueryRef: null // ⚠️ Operarios NO pueden usar queries
         };
       }
 
       logger.debugProd(`[empresaService][getEmpresasForOperario] 🔄 Resolviendo ${empresasAsignadas.length} empresas para operario ${userId} (ownerId: ${ownerId})`);
 
-      // 2. Resolver empresas una por una con getDoc(doc())
+      // ✅ 4. Para cada empresaId, usar getDoc() directo (SIN QUERIES)
       const empresasPromises = empresasAsignadas.map(async (empresaId) => {
         try {
           const empresaRef = doc(db, ...firestoreRoutesCore.empresa(ownerId, empresaId));
@@ -227,17 +218,16 @@ export const empresaService = {
 
       logger.debugProd(`[empresaService][getEmpresasForOperario] ✅ Resueltas ${empresas.length} empresas para operario`);
       
-      // ✅ Crear UNA sola query para escuchar TODAS las empresas del owner
-      // El servicio filtrará por empresasAsignadas al mapear
-      const empresasCollectionRef = collection(db, ...firestoreRoutesCore.empresas(ownerId));
-      const empresasQueryRef = query(empresasCollectionRef);
+      // ⚠️ NO crear query para operarios (prohibido por reglas de Firestore)
+      // Los operarios solo pueden usar getDoc() directo
+      // Retornar null en empresasQueryRef para indicar que no se puede escuchar
       
       return { 
         ownerId, 
         empresas, 
-        empresasAsignadas, // Guardar para filtrar al mapear
-        userDocRef: userDoc.ref,
-        empresasQueryRef // UNA sola query (todas las empresas del owner)
+        empresasAsignadas,
+        userDocRef: userRef,
+        empresasQueryRef: null // ⚠️ Operarios NO pueden usar queries
       };
       } catch (error) {
         console.error('[empresaService][getEmpresasForOperario] ❌ Error:', error);
@@ -514,7 +504,16 @@ export const empresaService = {
       if (esOperario) {
         logger.debugProd('[empresaService][getUserEmpresas] ✅ Operario detectado - usando flujo owner-centric exclusivo');
         logger.debugProd('[empresaService][getUserEmpresas] ⚠️ NO ejecutando getLegacyEmpresas() ni _getUserCentricEmpresas()');
-        const resultadoOperario = await this.getEmpresasForOperario(userId, userProfile);
+        
+        // ✅ Obtener ownerId desde userProfile (debe venir de /apps/auditoria/users/{uid})
+        const ownerId = userProfile?.ownerId || userProfile?.clienteAdminId;
+        if (!ownerId) {
+          console.error('[empresaService][getUserEmpresas] ❌ ownerId no disponible en userProfile');
+          console.error('[empresaService][getUserEmpresas] userProfile:', userProfile);
+          return [];
+        }
+        
+        const resultadoOperario = await this.getEmpresasForOperario(userId, ownerId);
         // getEmpresasForOperario retorna { ownerId, empresas, userDocRef, empresaRefs }
         // getUserEmpresas retorna solo el array de empresas para compatibilidad
         logger.debugProd(`[empresaService][getUserEmpresas] ✅ Operario: ${resultadoOperario.empresas?.length || 0} empresas resueltas`);
