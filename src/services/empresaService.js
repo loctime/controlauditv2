@@ -5,41 +5,146 @@ import {
   getDoc, 
   query, 
   where, 
-  onSnapshot
+  onSnapshot,
+  collection
 } from 'firebase/firestore';
 import { registrarAccionSistema } from '../utils/firestoreUtils';
 import { addDocWithAppId, updateDocWithAppId } from '../firebase/firestoreAppWriter';
-import { dbAudit, auditUserCollection, auditUsersCollection } from '../firebaseControlFile';
+import { dbAudit, auditUserCollection, auditUsersCollection, db } from '../firebaseControlFile';
+import { getEmpresas } from '../core/services/ownerEmpresaService';
 
 export const empresaService = {
-  // Obtener empresas del usuario (multi-tenant)
-  // Construye internamente las rutas: /apps/auditoria/users/{uid}/empresas
-  async getUserEmpresas(params) {
+  /**
+   * LECTURA TEMPORAL POR MIGRACIÓN
+   * 
+   * Lee empresas legacy de /empresas (colección raíz)
+   * Solo lectura - NO permite creación ni edición
+   */
+  async getLegacyEmpresas(userId, role, userProfile) {
     try {
-      // Soporte para objeto o parámetros posicionales (compatibilidad)
-      const { userId, role, clienteAdminId, userProfile } = 
-        typeof params === 'object' && params !== null && !Array.isArray(params)
-          ? params
-          : { userId: params, role: arguments[1], clienteAdminId: arguments[2] };
+      console.log('[empresaService][getLegacyEmpresas] 🔄 Leyendo empresas legacy de /empresas');
+      const empresasLegacyRef = collection(dbAudit, 'empresas');
       
-      if (!userId) {
-        console.log('[empresaService] getUserEmpresas: userId no proporcionado');
+      let legacyEmpresas = [];
+      
+      if (role === 'supermax') {
+        // Supermax: todas las empresas
+        const snapshot = await getDocs(empresasLegacyRef);
+        legacyEmpresas = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data(),
+          legacy: true // Marcar como legacy
+        }));
+      } else if (role === 'max' || !role) {
+        // Max: empresas donde es propietario, creador o socio
+        const queries = [
+          query(empresasLegacyRef, where('propietarioId', '==', userId)),
+          query(empresasLegacyRef, where('creadorId', '==', userId)),
+          query(empresasLegacyRef, where('socios', 'array-contains', userId))
+        ];
+        
+        const snapshots = await Promise.all(
+          queries.map(q => getDocs(q).catch(() => ({ docs: [] })))
+        );
+        
+        const empresasMap = new Map();
+        snapshots.forEach(snap => {
+          snap.docs.forEach(doc => {
+            if (!empresasMap.has(doc.id)) {
+              empresasMap.set(doc.id, {
+                id: doc.id,
+                ...doc.data(),
+                legacy: true // Marcar como legacy
+              });
+            }
+          });
+        });
+        
+        legacyEmpresas = Array.from(empresasMap.values());
+      } else if (role === 'operario' && userProfile?.clienteAdminId) {
+        // Operario: empresas del admin
+        const adminId = userProfile.clienteAdminId;
+        const queries = [
+          query(empresasLegacyRef, where('propietarioId', '==', adminId)),
+          query(empresasLegacyRef, where('creadorId', '==', userId)),
+          query(empresasLegacyRef, where('socios', 'array-contains', userId))
+        ];
+        
+        const snapshots = await Promise.all(
+          queries.map(q => getDocs(q).catch(() => ({ docs: [] })))
+        );
+        
+        const empresasMap = new Map();
+        snapshots.forEach(snap => {
+          snap.docs.forEach(doc => {
+            if (!empresasMap.has(doc.id)) {
+              empresasMap.set(doc.id, {
+                id: doc.id,
+                ...doc.data(),
+                legacy: true // Marcar como legacy
+              });
+            }
+          });
+        });
+        
+        legacyEmpresas = Array.from(empresasMap.values());
+      }
+      
+      console.log(`[empresaService][getLegacyEmpresas] ✅ Encontradas ${legacyEmpresas.length} empresas legacy`);
+      return legacyEmpresas;
+    } catch (error) {
+      console.error('[empresaService][getLegacyEmpresas] ❌ Error al leer empresas legacy:', error);
+      return [];
+    }
+  },
+
+  /**
+   * LECTURA TEMPORAL POR MIGRACIÓN
+   * 
+   * Lee empresas owner-centric de /apps/auditoria/owners/{ownerId}/empresas
+   */
+  async getOwnerCentricEmpresas(ownerId) {
+    try {
+      if (!ownerId) {
+        console.log('[empresaService][getOwnerCentricEmpresas] ownerId no proporcionado');
         return [];
       }
+      
+      console.log('[empresaService][getOwnerCentricEmpresas] 🔄 Leyendo empresas owner-centric');
+      const empresas = await getEmpresas(ownerId);
+      
+      // Normalizar formato para compatibilidad
+      const empresasNormalizadas = empresas.map(emp => ({
+        id: emp.id,
+        nombre: emp.nombre,
+        ownerId: emp.ownerId,
+        activa: emp.activa,
+        createdAt: emp.createdAt,
+        legacy: false // No es legacy
+      }));
+      
+      console.log(`[empresaService][getOwnerCentricEmpresas] ✅ Encontradas ${empresasNormalizadas.length} empresas owner-centric`);
+      return empresasNormalizadas;
+    } catch (error) {
+      console.error('[empresaService][getOwnerCentricEmpresas] ❌ Error al leer empresas owner-centric:', error);
+      return [];
+    }
+  },
 
-      // Obtener role del userProfile si no está proporcionado
-      let roleToUse = role;
-      if (!roleToUse && userProfile?.role) {
-        roleToUse = userProfile.role;
-        console.log('[empresaService] Role obtenido del userProfile:', roleToUse);
-      }
-
+  /**
+   * LECTURA TEMPORAL POR MIGRACIÓN
+   * 
+   * Método interno para leer empresas user-centric (código original)
+   * Separado para mantener compatibilidad durante la migración
+   */
+  async _getUserCentricEmpresas(userId, roleToUse, userProfile) {
+    try {
       // Construir rutas internamente
       const empresasRef = auditUserCollection(userId, 'empresas');
       const userRef = doc(auditUsersCollection(), userId);
       
-      console.log('[empresaService] usando path:', empresasRef.path);
-      console.log('[empresaService] getUserEmpresas - userId:', userId, 'role:', roleToUse);
+      console.log('[empresaService][_getUserCentricEmpresas] usando path:', empresasRef.path);
+      console.log('[empresaService][_getUserCentricEmpresas] userId:', userId, 'role:', roleToUse);
 
       let snapshot;
 
@@ -215,6 +320,72 @@ export const empresaService = {
       }
       
       return [];
+    } catch (error) {
+      console.error("[empresaService][_getUserCentricEmpresas] Error al obtener empresas user-centric:", error);
+      return [];
+    }
+  },
+
+  // Obtener empresas del usuario (multi-tenant)
+  // Construye internamente las rutas: /apps/auditoria/users/{uid}/empresas
+  // LECTURA TEMPORAL POR MIGRACIÓN: Ahora también lee de owner-centric y legacy
+  async getUserEmpresas(params) {
+    try {
+      // Soporte para objeto o parámetros posicionales (compatibilidad)
+      const { userId, role, clienteAdminId, userProfile } = 
+        typeof params === 'object' && params !== null && !Array.isArray(params)
+          ? params
+          : { userId: params, role: arguments[1], clienteAdminId: arguments[2] };
+      
+      if (!userId) {
+        console.log('[empresaService] getUserEmpresas: userId no proporcionado');
+        return [];
+      }
+
+      // Obtener role del userProfile si no está proporcionado
+      let roleToUse = role;
+      if (!roleToUse && userProfile?.role) {
+        roleToUse = userProfile.role;
+        console.log('[empresaService] Role obtenido del userProfile:', roleToUse);
+      }
+
+      // LECTURA TEMPORAL POR MIGRACIÓN: Determinar ownerId para leer empresas owner-centric
+      const ownerId = userProfile?.clienteAdminId || userProfile?.uid || userId;
+      
+      // LECTURA TEMPORAL POR MIGRACIÓN: Leer empresas de ambas ubicaciones en paralelo
+      console.log('[empresaService][getUserEmpresas] 🔄 Leyendo empresas de múltiples fuentes (migración)');
+      const [empresasLegacy, empresasOwnerCentric, empresasUserCentric] = await Promise.all([
+        this.getLegacyEmpresas(userId, roleToUse, userProfile).catch(() => []),
+        this.getOwnerCentricEmpresas(ownerId).catch(() => []),
+        this._getUserCentricEmpresas(userId, roleToUse, userProfile).catch(() => [])
+      ]);
+
+      // Unificar todas las empresas evitando duplicados por id
+      const empresasUnificadasMap = new Map();
+      
+      // Agregar empresas legacy primero (tienen prioridad en caso de duplicados)
+      empresasLegacy.forEach(emp => {
+        empresasUnificadasMap.set(emp.id, emp);
+      });
+      
+      // Agregar empresas owner-centric (no sobrescriben legacy)
+      empresasOwnerCentric.forEach(emp => {
+        if (!empresasUnificadasMap.has(emp.id)) {
+          empresasUnificadasMap.set(emp.id, emp);
+        }
+      });
+      
+      // Agregar empresas user-centric (no sobrescriben las anteriores)
+      empresasUserCentric.forEach(emp => {
+        if (!empresasUnificadasMap.has(emp.id)) {
+          empresasUnificadasMap.set(emp.id, emp);
+        }
+      });
+      
+      const empresasUnificadas = Array.from(empresasUnificadasMap.values());
+      console.log(`[empresaService][getUserEmpresas] ✅ Total unificado: ${empresasUnificadas.length} empresas (legacy: ${empresasLegacy.length}, owner-centric: ${empresasOwnerCentric.length}, user-centric: ${empresasUserCentric.length})`);
+      
+      return empresasUnificadas;
     } catch (error) {
       console.error("[empresaService] Error al obtener empresas del usuario:", error);
       return [];

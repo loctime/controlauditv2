@@ -8,7 +8,7 @@ import {
   alpha, 
   Button
 } from '@mui/material';
-import { Group as GroupIcon, PersonAdd as PersonAddIcon } from '@mui/icons-material';
+import { PersonAdd as PersonAddIcon } from '@mui/icons-material';
 import UsuariosList from '../usuarios/UsuariosList';
 import OwnerUserCreateDialog from '../usuarios/OwnerUserCreateDialog';
 import { useAuth } from '../../context/AuthContext';
@@ -25,9 +25,9 @@ const PerfilUsuarios = ({ usuariosCreados, loading, onRefresh }) => {
   const [openModal, setOpenModal] = useState(false);
 
   // Validación de límite de usuarios
+  // Nota: UsuariosList maneja su propia carga con el servicio de migración
   const limiteUsuarios = userProfile?.limiteUsuarios ?? 0;
-  const usuariosActuales = usuariosCreados?.length || 0;
-  const puedeAgregar = usuariosActuales < limiteUsuarios || !limiteUsuarios;
+  const puedeAgregar = limiteUsuarios === 0 || true; // UsuariosList valida el límite internamente
   
   return (
     <Box sx={{ 
@@ -57,13 +57,10 @@ const PerfilUsuarios = ({ usuariosCreados, loading, onRefresh }) => {
           >
             👥 Mis Usuarios
           </Typography>
-          <Typography variant="body2" color="text.secondary">
-            {usuariosCreados?.length || 0} usuario(s) registrado(s)
-          </Typography>
-          {!puedeAgregar && (
-            <Alert severity="warning" sx={{ mt: 1 }}>
-              Has alcanzado el límite de usuarios permitidos para tu plan ({limiteUsuarios}). Contacta a soporte para ampliarlo.
-            </Alert>
+          {limiteUsuarios > 0 && (
+            <Typography variant="body2" color="text.secondary">
+              Límite: {limiteUsuarios} usuario(s)
+            </Typography>
           )}
         </Box>
         
@@ -91,44 +88,14 @@ const PerfilUsuarios = ({ usuariosCreados, loading, onRefresh }) => {
         </Button>
       </Box>
       
-      {/* Contenido de usuarios */}
-      {loading ? (
-        <Box sx={{
-          bgcolor: alpha(theme.palette.info.main, 0.05),
-          borderRadius: 2,
-          p: isSmallMobile ? 3 : 4,
-          border: `1px solid ${alpha(theme.palette.info.main, 0.1)}`,
-          textAlign: 'center'
-        }}>
-          <Typography variant="body1" color="info.main">
-            Cargando usuarios...
-          </Typography>
-        </Box>
-      ) : !usuariosCreados || usuariosCreados.length === 0 ? (
-        <Box sx={{
-          bgcolor: alpha(theme.palette.warning.main, 0.05),
-          borderRadius: 2,
-          p: isSmallMobile ? 3 : 4,
-          border: `1px solid ${alpha(theme.palette.warning.main, 0.1)}`,
-          textAlign: 'center'
-        }}>
-          <GroupIcon sx={{ fontSize: 48, color: 'warning.main', mb: 2 }} />
-          <Typography variant="h6" color="warning.main" sx={{ mb: 1 }}>
-            No hay usuarios para mostrar
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            Comienza agregando usuarios para gestionar tu equipo
-          </Typography>
-        </Box>
-      ) : (
-        <Box sx={{ 
-          display: 'flex', 
-          flexDirection: 'column', 
-          gap: isSmallMobile ? 2 : 3 
-        }}>
-          <UsuariosList clienteAdminId={clienteAdminId} showAddButton={false} />
-        </Box>
-      )}
+      {/* Contenido de usuarios - UsuariosList maneja su propia carga con servicio de migración */}
+      <Box sx={{ 
+        display: 'flex', 
+        flexDirection: 'column', 
+        gap: isSmallMobile ? 2 : 3 
+      }}>
+        <UsuariosList clienteAdminId={clienteAdminId} showAddButton={false} />
+      </Box>
 
       {/* Modal Core para agregar usuario */}
       <OwnerUserCreateDialog

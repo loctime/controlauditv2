@@ -32,6 +32,7 @@ import Permiso from '../../common/Permiso';
 import { usePermiso } from '../../hooks/usePermiso';
 import userService from '../../../services/userService';
 import OwnerUserCreateDialog from './OwnerUserCreateDialog';
+import { getUsers } from '../../../core/services/ownerUserService';
 
 const PERMISOS_LISTA = [
   { key: 'puedeCrearEmpresas', label: 'Crear Empresas' },
@@ -82,12 +83,23 @@ const UsuariosList = ({ clienteAdminId, showAddButton = true }) => {
   const usuariosActuales = usuarios.length;
   const puedeAgregar = usuariosActuales < limiteUsuarios || !limiteUsuarios; // Si no hay límite, permitir
 
-  // Cargar usuarios usando el backend
+  // Obtener ownerId del usuario autenticado (en modelo owner-centric, el admin es su propio owner)
+  const ownerId = userProfile?.uid;
+
+  // Cargar usuarios (combina legacy y owner-centric)
   const fetchUsuarios = async () => {
     setLoading(true);
     try {
-      // Usar el servicio del backend en lugar de consultas directas a Firestore
-      const lista = await userService.listUsers();
+      if (!ownerId) {
+        console.warn('[UsuariosList] No hay ownerId, usando servicio legacy');
+        // Fallback a servicio legacy si no hay ownerId
+        const lista = await userService.listUsers();
+        setUsuarios(lista);
+        return;
+      }
+
+      // Usar servicio owner-centric que combina legacy y owner-centric
+      const lista = await getUsers(ownerId);
       setUsuarios(lista);
     } catch (error) {
       // No mostrar error si es permission-denied (error visual falso después de crear usuario)
@@ -101,6 +113,7 @@ const UsuariosList = ({ clienteAdminId, showAddButton = true }) => {
         console.debug('[UsuariosList] Permission denied al cargar usuarios (esperado después de crear usuario en Core)');
         setUsuarios([]);
       } else {
+        console.error('[UsuariosList] Error al cargar usuarios:', error);
         toast.error('Error al cargar usuarios: ' + error.message);
         setUsuarios([]);
       }
@@ -117,10 +130,16 @@ const UsuariosList = ({ clienteAdminId, showAddButton = true }) => {
   // Abrir modal para crear/editar usuario
   const handleOpenModal = (usuario = null) => {
     if (usuario) {
+      // No permitir editar usuarios legacy (solo lectura)
+      if (usuario.legacy) {
+        toast.warning('Los usuarios legacy son de solo lectura. No se pueden editar.');
+        return;
+      }
+      
       // Editar usuario: usar diálogo legacy
       setEditando(usuario);
       setFormData({
-        email: usuario.email,
+        email: usuario.email || '',
         password: '',
         nombre: usuario.displayName || '',
         // role no se modifica desde frontend
@@ -269,14 +288,21 @@ const UsuariosList = ({ clienteAdminId, showAddButton = true }) => {
       toast.error('No puedes eliminar tu propia cuenta');
       return;
     }
-    if (window.confirm(`¿Estás seguro de que quieres eliminar al usuario ${usuario.email}?`)) {
+    
+    // No permitir eliminar usuarios legacy (solo lectura)
+    if (usuario.legacy) {
+      toast.warning('Los usuarios legacy son de solo lectura. No se pueden eliminar.');
+      return;
+    }
+    
+    if (window.confirm(`¿Estás seguro de que quieres eliminar al usuario ${usuario.email || usuario.id}?`)) {
       try {
         await userService.deleteUser(usuario.id);
 
         // Registrar log de la acción
         await registrarAccionSistema(
           userProfile?.uid || 'system',
-          `Eliminar usuario: ${usuario.email}`,
+          `Eliminar usuario: ${usuario.email || usuario.id}`,
           { 
             email: usuario.email,
             nombre: usuario.displayName,
@@ -341,8 +367,19 @@ const UsuariosList = ({ clienteAdminId, showAddButton = true }) => {
             <TableBody>
               {usuarios.map((usuario) => (
                 <TableRow key={usuario.id}>
-                  <TableCell>{usuario.displayName || 'Sin nombre'}</TableCell>
-                  <TableCell>{usuario.email}</TableCell>
+                  <TableCell>
+                    {usuario.displayName || 'Sin nombre'}
+                    {usuario.legacy && (
+                      <Chip 
+                        label="Legacy" 
+                        size="small" 
+                        color="warning" 
+                        sx={{ ml: 1 }}
+                        title="Usuario legacy - Solo lectura"
+                      />
+                    )}
+                  </TableCell>
+                  <TableCell>{usuario.email || usuario.id}</TableCell>
                   <TableCell>
                     <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
                       {PERMISOS_LISTA.map((permiso) => (
@@ -388,6 +425,8 @@ const UsuariosList = ({ clienteAdminId, showAddButton = true }) => {
                       onClick={() => handleOpenModal(usuario)}
                       color="primary"
                       size="small"
+                      disabled={usuario.legacy}
+                      title={usuario.legacy ? 'Usuario legacy - Solo lectura' : 'Editar usuario'}
                     >
                       <EditIcon />
                     </IconButton>
@@ -395,7 +434,8 @@ const UsuariosList = ({ clienteAdminId, showAddButton = true }) => {
                       onClick={() => handleEliminarUsuario(usuario)}
                       color="error"
                       size="small"
-                      disabled={usuario.id === userProfile?.uid}
+                      disabled={usuario.id === userProfile?.uid || usuario.legacy}
+                      title={usuario.legacy ? 'Usuario legacy - Solo lectura' : usuario.id === userProfile?.uid ? 'No puedes eliminar tu propia cuenta' : 'Eliminar usuario'}
                     >
                       <DeleteIcon />
                     </IconButton>

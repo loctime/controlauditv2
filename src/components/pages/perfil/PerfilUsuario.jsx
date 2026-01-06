@@ -24,6 +24,7 @@ import { useAuth } from "../../context/AuthContext";
 import Swal from 'sweetalert2';
 import { dbAudit, auditUsersCollection } from '../../../firebaseControlFile';
 import { collection, getDocs, query, where } from 'firebase/firestore';
+import { getUsers } from '../../../core/services/ownerUserService';
 import { useLocation, useNavigate } from 'react-router-dom';
 // Componentes modulares
 import PerfilHeader from './PerfilHeader';
@@ -81,10 +82,9 @@ const PerfilUsuario = () => {
       if (!userProfile?.uid) return;
       setLoadingUsuariosCreados(true);
       try {
-        const usuariosRef = auditUsersCollection();
-        const q = query(usuariosRef, where('clienteAdminId', '==', userProfile.clienteAdminId || userProfile.uid));
-        const snapshot = await getDocs(q);
-        const lista = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        // Usar servicio de migración que combina legacy y owner-centric
+        const ownerId = userProfile.uid; // En modelo owner-centric, el admin es su propio owner
+        const lista = await getUsers(ownerId);
         setUsuariosCreados(lista);
       } catch (error) {
         // No mostrar error si es permission-denied (error visual falso después de crear usuario en Core)
@@ -615,15 +615,14 @@ const PerfilUsuario = () => {
                 loading={loadingUsuariosCreados} 
                 clienteAdminId={userProfile?.clienteAdminId || userProfile?.uid}
                 onRefresh={() => {
-                  // Refrescar usuarios cuando se crea uno nuevo
+                  // Refrescar usuarios cuando se crea uno nuevo (usar servicio de migración)
                   const fetchUsuariosCreados = async () => {
                     if (!userProfile?.uid) return;
                     setLoadingUsuariosCreados(true);
                     try {
-                      const usuariosRef = auditUsersCollection();
-                      const q = query(usuariosRef, where('clienteAdminId', '==', userProfile.clienteAdminId || userProfile.uid));
-                      const snapshot = await getDocs(q);
-                      const lista = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                      // Usar servicio de migración que combina legacy y owner-centric
+                      const ownerId = userProfile.uid; // En modelo owner-centric, el admin es su propio owner
+                      const lista = await getUsers(ownerId);
                       setUsuariosCreados(lista);
                     } catch (error) {
                       // No mostrar error si es permission-denied (error visual falso después de crear usuario en Core)
