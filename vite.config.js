@@ -16,21 +16,16 @@ export default defineConfig({
       inject: []
     }
   },
-           build: {
-           outDir: 'dist',
-           sourcemap: false,
-           minify: 'terser',
-           terserOptions: {
-             compress: {
-               // Habilitar logs en producción si VITE_ENABLE_LOGS=true
-               drop_console: process.env.VITE_ENABLE_LOGS !== 'true',
-               drop_debugger: true,
-               // Solo eliminar console.log si los logs están deshabilitados
-               pure_funcs: process.env.VITE_ENABLE_LOGS === 'true' 
-                 ? [] 
-                 : ['console.log', 'console.info', 'console.debug', 'console.warn']
-             }
-           },
+          build: {
+          outDir: 'dist',
+          sourcemap: false,
+          minify: 'terser',
+          terserOptions: {
+            compress: {
+              drop_debugger: true
+              // drop_console y pure_funcs removidos - todos los console.log se mantienen en producción
+            }
+          },
            commonjsOptions: {
              include: [/node_modules/],
              transformMixedEsModules: true

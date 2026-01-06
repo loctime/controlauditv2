@@ -6,6 +6,10 @@
  */
 
 const isDevelopment = import.meta.env.DEV || import.meta.env.MODE === 'development';
+// Flag para habilitar logs de debug en producción (temporal para depuración)
+const DEBUG_LOGS_ENABLED = import.meta.env.VITE_DEBUG_LOGS === 'true' || 
+                           localStorage.getItem('DEBUG_LOGS') === 'true' ||
+                           window.location.search.includes('debug=true');
 
 // Cache para evitar logs repetidos
 const logCache = new Map();
@@ -45,6 +49,21 @@ export const logger = {
   debug: (...args) => {
     if (isDevelopment) {
       console.log('[DEBUG]', ...args);
+    }
+  },
+
+  /**
+   * Log de debug para producción (usa console.error que NO se elimina por Terser)
+   * Útil para depuración temporal en builds optimizados
+   * Se puede habilitar con: VITE_DEBUG_LOGS=true, localStorage.setItem('DEBUG_LOGS', 'true'), o ?debug=true en URL
+   * 
+   * NOTA: Usa console.error porque es el único método que NO está en pure_funcs en vite.config.js
+   */
+  debugProd: (...args) => {
+    if (DEBUG_LOGS_ENABLED || isDevelopment) {
+      // console.error NO está en pure_funcs, así que no se elimina en producción
+      // Usamos un prefijo claro para distinguirlo de errores reales
+      console.error('%c[DEBUG_PROD]', 'color: #00a8ff; font-weight: bold;', ...args);
     }
   },
 

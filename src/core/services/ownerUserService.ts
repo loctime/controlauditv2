@@ -25,6 +25,55 @@ import {
 import { db, auth } from '../../firebaseControlFile';
 import { firestoreRoutesCore } from '../firestore/firestoreRoutes.core';
 import { User } from '../models/User';
+import { getEmpresas } from './ownerEmpresaService';
+
+/**
+ * ✅ Valida que los IDs de empresas existan realmente en owner-centric
+ * 
+ * Consulta apps/auditoria/owners/{ownerId}/empresas y retorna solo IDs válidos.
+ * Usa exclusivamente doc.id, nunca data.id.
+ * 
+ * @param ownerId - ID del owner
+ * @param empresaIds - Array de IDs de empresas a validar
+ * @returns Array de IDs válidos (solo los que existen como documentos)
+ */
+export async function validateEmpresasAsignadas(
+  ownerId: string,
+  empresaIds: string[]
+): Promise<string[]> {
+  if (!ownerId) {
+    throw new Error('ownerId es requerido');
+  }
+  if (!Array.isArray(empresaIds) || empresaIds.length === 0) {
+    return [];
+  }
+
+  try {
+    // Obtener todas las empresas del owner desde owner-centric
+    const empresas = await getEmpresas(ownerId);
+    
+    // Crear Set de IDs válidos usando doc.id (nunca data.id)
+    const empresasValidasSet = new Set(empresas.map(emp => emp.id));
+    
+    // Filtrar solo IDs que existen realmente
+    const empresasValidas = empresaIds.filter(empresaId => empresasValidasSet.has(empresaId));
+    
+    // Detectar IDs inválidos
+    const empresasInvalidas = empresaIds.filter(empresaId => !empresasValidasSet.has(empresaId));
+    
+    if (empresasInvalidas.length > 0) {
+      console.warn(`[validateEmpresasAsignadas] ⚠️ IDs de empresas inválidos detectados:`, empresasInvalidas);
+      console.warn(`[validateEmpresasAsignadas] IDs válidos encontrados: ${empresasValidas.length} de ${empresaIds.length}`);
+      console.warn(`[validateEmpresasAsignadas] ownerId: ${ownerId}`);
+    }
+    
+    return empresasValidas;
+  } catch (error: any) {
+    console.error('[validateEmpresasAsignadas] ❌ Error al validar empresas:', error);
+    // En caso de error, retornar array vacío para evitar asignar empresas inválidas
+    return [];
+  }
+}
 
 /**
  * Crea un nuevo usuario para el owner
@@ -76,11 +125,20 @@ export async function createUser(
     throw new Error('ownerId debe ser igual al usuario autenticado');
   }
 
+  // ✅ Validar empresas asignadas antes de crear usuario
+  let empresasAsignadasValidadas: string[] = [];
+  if (userData.empresasAsignadas && userData.empresasAsignadas.length > 0) {
+    empresasAsignadasValidadas = await validateEmpresasAsignadas(currentUserUid, userData.empresasAsignadas);
+    if (empresasAsignadasValidadas.length !== userData.empresasAsignadas.length) {
+      console.warn(`[Firestore][${methodName}] ⚠️ Algunas empresas asignadas fueron filtradas. Originales: ${userData.empresasAsignadas.length}, Válidas: ${empresasAsignadasValidadas.length}`);
+    }
+  }
+
   const user: User = {
     id: userData.id,
     ownerId: currentUserUid, // Usar el uid del usuario autenticado
     role: userData.role,
-    empresasAsignadas: userData.empresasAsignadas || [],
+    empresasAsignadas: empresasAsignadasValidadas,
     activo: userData.activo !== undefined ? userData.activo : true,
     createdAt: new Date()
   };
@@ -91,7 +149,7 @@ export async function createUser(
       ownerId: currentUserUid, // Debe ser igual a auth.uid
       appId: 'auditoria', // Requerido por las rules
       role: userData.role, // Debe ser 'admin' u 'operario'
-      empresasAsignadas: userData.empresasAsignadas || [], // Requerido por las rules
+      empresasAsignadas: empresasAsignadasValidadas, // ✅ Solo IDs válidos
       status: 'active', // Requerido por las rules
       activo: userData.activo !== undefined ? userData.activo : true,
       createdAt: serverTimestamp()
@@ -150,6 +208,14 @@ export async function assignEmpresasToUser(
     throw new Error('empresaIds debe ser un array');
   }
 
+  // ✅ Validar empresas asignadas antes de actualizar
+  const empresasAsignadasValidadas = await validateEmpresasAsignadas(ownerId, empresaIds);
+  
+  if (empresasAsignadasValidadas.length !== empresaIds.length) {
+    console.warn(`[Firestore][${methodName}] ⚠️ Algunas empresas asignadas fueron filtradas. Originales: ${empresaIds.length}, Válidas: ${empresasAsignadasValidadas.length}`);
+    console.warn(`[Firestore][${methodName}] IDs inválidos filtrados:`, empresaIds.filter(id => !empresasAsignadasValidadas.includes(id)));
+  }
+
   const userRef = doc(
     db,
     ...path
@@ -157,7 +223,7 @@ export async function assignEmpresasToUser(
 
   try {
     await updateDoc(userRef, {
-      empresasAsignadas: empresaIds
+      empresasAsignadas: empresasAsignadasValidadas // ✅ Solo IDs válidos
     });
     console.log(`[Firestore][${methodName}] ✅ Operación exitosa`);
     console.log(`[Firestore][${methodName}] Path: ${pathString}`);
