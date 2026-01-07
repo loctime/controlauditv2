@@ -1,13 +1,15 @@
 // src/components/context/AuthContext.jsx
 import { createContext, useState, useEffect, useContext, useRef } from "react";
 import { auth } from "../../firebaseControlFile";
-import { onAuthStateChanged } from "firebase/auth";
-import { useUserProfile } from '../../hooks/useUserProfile';
+import { onAuthStateChanged, signOut } from "firebase/auth";
+import { doc, getDoc } from "firebase/firestore";
+import { db } from "../../firebaseControlFile";
+import { updateDocWithAppId } from '../firebase/firestoreAppWriter';
+import { registrarAccionSistema } from '../utils/firestoreUtils';
 import { useUserManagement } from '../../hooks/useUserManagement';
 import { empresaService } from '../../services/empresaService';
 import { auditoriaService } from '../../services/auditoriaService';
 import { saveCompleteUserCache } from '../../services/completeOfflineCache';
-import { initializeOfflineData } from '../../utils/initializeOfflineData';
 import { shouldEnableOffline } from '../../utils/pwaDetection';
 
 // Hooks personalizados
@@ -17,8 +19,6 @@ import { useSucursalesListener } from './hooks/useSucursalesListener';
 import { useFormulariosListener } from './hooks/useFormulariosListener';
 import { useContextActions } from './hooks/useContextActions';
 import { useEmpresasQuery } from '../../hooks/queries/useEmpresasQuery';
-// Nota: Ya no importamos initializeControlFileFolders directamente
-// Usamos getControlFileFolders() que busca existentes primero
 
 // Definimos y exportamos el contexto
 export const AuthContext = createContext();
@@ -27,6 +27,10 @@ const AuthContextComponent = ({ children }) => {
   const [user, setUser] = useState(null);
   const [isLogged, setIsLogged] = useState(false);
   const [loading, setLoading] = useState(true);
+  
+  // UserContext simple: solo desde custom claims
+  const [userContext, setUserContext] = useState(null);
+  
   const [userEmpresas, setUserEmpresas] = useState([]);
   const [loadingEmpresas, setLoadingEmpresas] = useState(true);
   const [userSucursales, setUserSucursales] = useState([]);
@@ -40,49 +44,21 @@ const AuthContextComponent = ({ children }) => {
   const [selectedEmpresa, setSelectedEmpresa] = useState('todas');
   const [selectedSucursal, setSelectedSucursal] = useState('todas');
   
-  // Control para activar listeners diferidos (optimización: evitar llamadas duplicadas)
+  // Control para activar listeners diferidos
   const [enableDeferredListeners, setEnableDeferredListeners] = useState(false);
   
-  // Estados para custom claims del token (fuente de verdad inicial)
-  const [tokenClaims, setTokenClaims] = useState(null);
-  
-  // Estado crítico: authReady solo es true cuando user, tokenClaims, userProfile y role están completamente inicializados
-  // Esto previene queries prematuras que causan errores de permisos
-  const [authReady, setAuthReady] = useState(false);
-
-  // Usar hooks personalizados
-  const {
-    userProfile,
-    setUserProfile,
-    role,
-    bloqueado,
-    motivoBloqueo,
-    getUserProfile,
-    updateUserProfile
-  } = useUserProfile(user);
-
-  // Hook obsoleto - mantenido solo para compatibilidad
-  // Las funciones de creación de usuarios se manejan directamente con userService
-  const {
-    editarPermisosOperario,
-    logAccionOperario
-  } = useUserManagement(user, userProfile);
-
   // Hook de cache offline (solo para móvil)
   const { loadUserFromCache } = useOfflineCache();
-  const enableOffline = shouldEnableOffline(); // Solo true en PWA móvil instalada
+  const enableOffline = shouldEnableOffline();
 
-  // Hook TanStack Query para empresas - ÚNICA FUENTE DE VERDAD
-  // Elimina la necesidad de fetch manual y listeners duplicados
-  // Pasar valores directamente para evitar dependencia circular (useAuth no está disponible aún)
+  // Hook TanStack Query para empresas
   const { empresas: empresasFromQuery, loading: empresasLoadingFromQuery } = useEmpresasQuery({
-    userProfile,
-    role,
-    authReady
+    userProfile: userContext, // Compatibilidad: userContext actúa como userProfile
+    role: userContext?.role,
+    authReady: !!userContext // Simple: authReady = userContext existe
   });
 
   // Sincronizar empresas del hook TanStack Query con el estado del contexto
-  // Usar useRef para rastrear valores anteriores y evitar loops infinitos
   const prevEmpresasRef = useRef();
   const prevLoadingRef = useRef();
   
@@ -91,29 +67,27 @@ const AuthContextComponent = ({ children }) => {
     const empresasString = JSON.stringify(empresasArray);
     const prevEmpresasString = JSON.stringify(prevEmpresasRef.current || []);
     
-    // Solo actualizar si el contenido realmente cambió
     if (empresasString !== prevEmpresasString) {
       setUserEmpresas(empresasArray);
       prevEmpresasRef.current = empresasArray;
     }
     
-    // Solo actualizar loading si realmente cambió
     if (empresasLoadingFromQuery !== prevLoadingRef.current) {
       setLoadingEmpresas(empresasLoadingFromQuery);
       prevLoadingRef.current = empresasLoadingFromQuery;
     }
   }, [empresasFromQuery, empresasLoadingFromQuery]);
 
-  // Hooks de carga de datos (sin loadUserEmpresas - ahora se usa useEmpresasQuery)
+  // Hooks de carga de datos
   const {
     loadUserSucursales,
     loadUserFormularios,
     loadUserAuditorias,
     loadAuditoriasCompartidas
   } = useUserDataLoaders(
-    userProfile, 
-    role, 
-    empresasFromQuery || [], // Usar empresas del hook TanStack Query
+    userContext, // Compatibilidad: userContext actúa como userProfile
+    userContext?.role,
+    empresasFromQuery || [],
     setUserEmpresas, 
     setLoadingEmpresas,
     setUserSucursales, 
@@ -123,24 +97,22 @@ const AuthContextComponent = ({ children }) => {
     enableOffline ? loadUserFromCache : null
   );
 
-  // Hooks de listeners reactivos (solo con fallback offline en móvil)
-  // OPTIMIZACIÓN: Diferir listeners no críticos para evitar llamadas duplicadas con carga manual
-  // CRÍTICO: Pasar authReady para bloquear listeners hasta que la autenticación esté completa
+  // Hooks de listeners reactivos
   useSucursalesListener(
-    userProfile, 
+    userContext, 
     setUserSucursales, 
     setLoadingSucursales, 
     enableOffline ? loadUserFromCache : null,
-    enableDeferredListeners, // Solo activar después de carga manual inicial
-    authReady // Bloquear hasta que authReady sea true
+    enableDeferredListeners,
+    !!userContext // Simple: authReady = userContext existe
   );
   useFormulariosListener(
-    userProfile, 
+    userContext, 
     setUserFormularios, 
     setLoadingFormularios, 
     enableOffline ? loadUserFromCache : null,
-    enableDeferredListeners, // Solo activar después de carga manual inicial
-    authReady // Bloquear hasta que authReady sea true
+    enableDeferredListeners,
+    !!userContext // Simple: authReady = userContext existe
   );
 
   // Hook de acciones del contexto
@@ -152,8 +124,8 @@ const AuthContextComponent = ({ children }) => {
     forceRefreshCache
   } = useContextActions(
     user,
-    userProfile,
-    role,
+    userContext, // Compatibilidad: userContext actúa como userProfile
+    userContext?.role,
     userEmpresas,
     userSucursales,
     userFormularios,
@@ -161,14 +133,17 @@ const AuthContextComponent = ({ children }) => {
     loadAuditoriasCompartidas
   );
 
-  // ELIMINADO: Listener de empresas duplicado
-  // Ahora se usa useEmpresasQuery que es la única fuente de verdad
-  // El hook TanStack Query maneja tanto el fetch inicial como el listener reactivo
+  // ⚠️ DEUDA TÉCNICA: useUserManagement es legacy
+  // Mezcla conceptos viejos - migrar a servicios owner-centric puros a mediano plazo
+  // Por ahora se mantiene para compatibilidad, pero no usar para nuevas features
+  const {
+    editarPermisosOperario,
+    logAccionOperario
+  } = useUserManagement(user, userContext);
 
   // Estado para rastrear si estamos online
   const [isOnline, setIsOnline] = useState(typeof navigator !== 'undefined' ? navigator.onLine : true);
   
-  // Actualizar estado online/offline
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
     const handleOffline = () => setIsOnline(false);
@@ -182,11 +157,10 @@ const AuthContextComponent = ({ children }) => {
     };
   }, []);
 
-  // Actualizar cache automáticamente cuando los datos cambian (después de reconexión)
+  // Actualizar cache automáticamente cuando los datos cambian
   useEffect(() => {
-    if (!userProfile?.uid || !user || !isLogged) return;
+    if (!userContext?.uid || !user || !isLogged) return;
     
-    // Solo actualizar si hay datos y estamos online
     const shouldUpdateCache = 
       userEmpresas?.length > 0 && 
       isOnline &&
@@ -195,15 +169,12 @@ const AuthContextComponent = ({ children }) => {
       !loadingFormularios;
     
     if (shouldUpdateCache && enableOffline) {
-      // Debounce: esperar 3 segundos después del último cambio para evitar actualizaciones excesivas
-      // Solo actualizar cache si estamos en móvil (modo offline habilitado)
       const timeoutId = setTimeout(async () => {
         try {
           const completeProfile = {
-            ...userProfile,
-            email: userProfile.email || user?.email,
-            displayName: userProfile.displayName || user?.displayName || user?.email,
-            role: userProfile.role || 'operario'
+            ...userContext,
+            email: user?.email,
+            displayName: user?.displayName || user?.email
           };
           
           await saveCompleteUserCache(
@@ -212,34 +183,24 @@ const AuthContextComponent = ({ children }) => {
             userSucursales || [],
             userFormularios || []
           );
-          console.log('✅ Cache actualizado automáticamente con datos actuales');
+          console.log('✅ Cache actualizado automáticamente');
         } catch (error) {
-          console.error('❌ Error actualizando cache automáticamente:', error);
+          console.error('❌ Error actualizando cache:', error);
         }
       }, 3000);
       
       return () => clearTimeout(timeoutId);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userProfile?.uid, userEmpresas?.length, userSucursales?.length, userFormularios?.length, isLogged, isOnline]);
+  }, [userContext?.uid, userEmpresas?.length, userSucursales?.length, userFormularios?.length, isLogged, isOnline]);
 
-  // Efecto principal de autenticación
+  // Efecto principal de autenticación - SIMPLIFICADO
   useEffect(() => {
     const timeoutId = setTimeout(() => {
       setLoading(false);
       setLoadingEmpresas(false);
       setLoadingSucursales(false);
       setLoadingFormularios(false);
-      console.log('⏱️ Timeout alcanzado, finalizando loaders');
     }, 2500);
-    
-    const handleOnline = () => {
-      console.log('🌐 Conexión restaurada');
-      // Los listeners se actualizarán automáticamente
-      // El cache se actualizará en el useEffect de abajo cuando los datos cambien
-    };
-    
-    window.addEventListener('online', handleOnline);
     
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       try {
@@ -249,198 +210,95 @@ const AuthContextComponent = ({ children }) => {
           localStorage.setItem("userInfo", JSON.stringify(firebaseUser));
           localStorage.setItem("isLogged", JSON.stringify(true));
           
-          // CRÍTICO: Leer SIEMPRE los custom claims del token (forzar refresh)
-          // Esta es la fuente de verdad inicial para role y ownerId
-          // Firebase puede tardar varios segundos en propagar los claims después de setearlos
-          let tokenRole = null;
-          let tokenOwnerId = null;
-          let tokenAppId = null;
+          // 1. Obtener custom claims del token (única fuente de verdad)
+          const tokenResult = await firebaseUser.getIdTokenResult(true);
+          const tokenRole = tokenResult.claims.role;
+          const tokenOwnerId = tokenResult.claims.ownerId; // NO usar fallback - debe venir del token
+          const tokenAppId = tokenResult.claims.appId;
           
-          // Delay inicial: dar tiempo a Firebase para propagar los claims
-          await new Promise(resolve => setTimeout(resolve, 1000));
-          
-          // Retry mechanism: los claims pueden tardar en propagarse desde el backend
-          const maxRetries = 10;
-          const retryDelays = [1000, 1500, 2000, 2500, 3000, 3500, 4000, 4500, 5000, 6000]; // delays progresivos en ms
-          
-          for (let attempt = 0; attempt < maxRetries; attempt++) {
-            try {
-              // Paso 1: Forzar refresh del token (esto invalida el cache)
-              await auth.currentUser.getIdToken(true);
-              
-              // Paso 2: Esperar antes de leer los claims
-              if (attempt > 0) {
-                await new Promise(resolve => setTimeout(resolve, retryDelays[attempt - 1]));
-              }
-              
-              // Paso 3: Leer los claims del token refrescado
-              const tokenResult = await auth.currentUser.getIdTokenResult(true);
-              tokenRole = tokenResult.claims.role || null;
-              tokenOwnerId = tokenResult.claims.ownerId || null;
-              tokenAppId = tokenResult.claims.appId || null;
-              
-              console.log(`[AUTH] Token claims (intento ${attempt + 1}/${maxRetries}):`, {
-                role: tokenRole,
-                ownerId: tokenOwnerId,
-                appId: tokenAppId,
-                aud: tokenResult.claims.aud
-              });
-              
-              // Si encontramos el role, salir del loop
-              if (tokenRole) {
-                break;
-              }
-              
-              // Si es el último intento y no hay role, abortar (sin fallback legacy)
-              if (attempt === maxRetries - 1) {
-                console.error('[AUTH] ❌ Token sin role en claims después de', maxRetries, 'intentos');
-                setTokenClaims(null);
-                return;
-              } else {
-                console.warn(`[AUTH] ⚠️ Claims no disponibles aún, reintentando en ${retryDelays[attempt]}ms...`);
-              }
-            } catch (error) {
-              console.error(`[AUTH] ❌ Error obteniendo token (intento ${attempt + 1}):`, error);
-              if (attempt === maxRetries - 1) {
-                // Último intento fallido, abortar (sin fallback legacy)
-                console.error('[AUTH] ❌ Error obteniendo token después de todos los reintentos');
-                setTokenClaims(null);
-                return;
-              }
-            }
-          }
-          
-          // Validar que los claims críticos existan después de todos los reintentos
-          if (!tokenRole) {
-            console.error('[AUTH] ❌ Token sin role en claims después de todos los reintentos');
-            setTokenClaims(null);
+          // Validar claims críticos
+          if (!tokenRole || (tokenRole !== 'admin' && tokenRole !== 'operario')) {
+            console.error('[AUTH] ❌ Token sin role válido');
+            await signOut(auth);
+            setUser(null);
+            setUserContext(null);
+            setLoading(false);
             return;
           }
           
-          // Para admin: ownerId debe ser igual al uid
-          if (tokenRole === 'admin') {
-            tokenOwnerId = firebaseUser.uid;
-          }
-          
-          // Validar que operario tenga ownerId
+          // Validar ownerId según role
+          // admin → ownerId = uid (no viene en token)
+          // operario → ownerId DEBE venir en el token
           if (tokenRole === 'operario' && !tokenOwnerId) {
-            console.error('[AUTH] ❌ Operario sin ownerId en token claims');
-            setTokenClaims(null);
+            console.error('[AUTH] ❌ Operario sin ownerId en token');
+            await signOut(auth);
+            setUser(null);
+            setUserContext(null);
+            setLoading(false);
             return;
           }
           
-          // Guardar claims como fuente de verdad
-          setTokenClaims({
-            role: tokenRole,
-            ownerId: tokenOwnerId,
-            appId: tokenAppId
-          });
+          // Resolver ownerId según role
+          const resolvedOwnerId = tokenRole === 'admin' ? firebaseUser.uid : tokenOwnerId;
           
-          console.log('[AUTH] ✅ Claims validados y guardados:', {
-            role: tokenRole,
-            ownerId: tokenOwnerId,
-            appId: tokenAppId
-          });
+          // 2. Validar existencia del documento en Firestore (solo exists/not exists)
+          const userDocRef = doc(db, "apps", "auditoria", "owners", resolvedOwnerId, "usuarios", firebaseUser.uid);
+          const userDocSnap = await getDoc(userDocRef);
           
-          // Leer perfil desde owner-centric usando custom claims
-          // NO se crean perfiles - solo se leen desde apps/auditoria/owners/{ownerId}/usuarios/{userId}
-          // Admin: ownerId = firebaseUser.uid (ya seteado arriba)
-          // Operario: ownerId = tokenOwnerId (del token)
-          let profile = null;
-          
-          if (tokenRole === 'admin') {
-            profile = await getUserProfile(firebaseUser, firebaseUser.uid);
-            if (!profile) {
-              console.error('[AUTH] ❌ Admin no encontrado en owner-centric');
-              setTokenClaims(null);
-              return;
-            }
-          } else if (tokenRole === 'operario' && tokenOwnerId) {
-            profile = await getUserProfile(firebaseUser, tokenOwnerId);
-            if (!profile) {
-              console.error('[AUTH] ❌ Operario no encontrado en owner-centric');
-              setTokenClaims(null);
-              return;
-            }
-          } else {
-            console.error('[AUTH] ❌ Role inválido o operario sin ownerId:', { tokenRole, tokenOwnerId });
-            setTokenClaims(null);
+          if (!userDocSnap.exists()) {
+            console.error('[AUTH] ❌ Usuario no registrado en ControlAudit');
+            // Logout limpio - no debe quedar medio logueado
+            await signOut(auth);
+            setUser(null);
+            setUserContext(null);
+            setLoading(false);
             return;
           }
           
-          // Validar que el profile retornado tenga el role correcto
-          if (!profile || !profile.role) {
-            console.error('[AUTH] ❌ Profile sin role después de getUserProfile');
-            setTokenClaims(null);
-            return;
-          }
+          // 3. Si existe, crear userContext solo desde custom claims
+          const context = {
+            uid: firebaseUser.uid,
+            email: firebaseUser.email,
+            displayName: firebaseUser.displayName || firebaseUser.email,
+            role: tokenRole, // SOLO del token
+            ownerId: resolvedOwnerId, // SOLO del token
+            appId: tokenAppId || 'auditoria'
+          };
           
-          // Validar que el role del profile coincida con el role del token
-          if (profile.role !== tokenRole) {
-            console.error('[AUTH] ❌ Role del profile no coincide con token:', {
-              profileRole: profile.role,
-              tokenRole: tokenRole
-            });
-            setTokenClaims(null);
-            return;
-          }
+          setUserContext(context);
+          console.log('[AUTH] ✅ Usuario autenticado:', context);
           
-          // Esperar a que useUserProfile sincronice estado (máximo 2 segundos)
-          // El hook actualizará userProfile en el siguiente render, pero continuamos con el profile retornado
-          let syncRetries = 0;
-          const maxSyncRetries = 20; // 20 * 100ms = 2 segundos máximo
-          while (!userProfile && syncRetries < maxSyncRetries) {
-            await new Promise(resolve => setTimeout(resolve, 100));
-            syncRetries++;
-          }
-          
-          // Si userProfile aún no se sincronizó, usar el profile retornado directamente
-          // El hook se sincronizará en el siguiente render, pero no bloqueamos el flujo
-          if (!userProfile) {
-            console.warn('[AUTH] ⚠️ userProfile aún no sincronizado, usando profile retornado. El hook se sincronizará en el siguiente render.');
-            // No abortar, continuar con el flujo usando el profile retornado
-          }
-          
-          // Perfil cargado exitosamente - useUserProfile ya seteo userProfile y role
-          // Cargar datos desde cache primero (instantáneo) - SOLO datos secundarios
+          // Cargar datos desde cache primero (solo datos secundarios)
           if (enableOffline && loadUserFromCache) {
             try {
               const cachedData = await loadUserFromCache();
               if (cachedData) {
-                console.log('📦 [Cache inicial] Cargando datos secundarios desde cache...');
-                
-                if (cachedData.empresas && cachedData.empresas.length > 0) {
+                if (cachedData.empresas?.length > 0) {
                   setUserEmpresas(cachedData.empresas);
                   setLoadingEmpresas(false);
                 }
-                
-                if (cachedData.sucursales && cachedData.sucursales.length > 0) {
+                if (cachedData.sucursales?.length > 0) {
                   setUserSucursales(cachedData.sucursales);
                   setLoadingSucursales(false);
                 }
-                
-                if (cachedData.formularios && cachedData.formularios.length > 0) {
+                if (cachedData.formularios?.length > 0) {
                   setUserFormularios(cachedData.formularios);
                   setLoadingFormularios(false);
                 }
-                
-                if (cachedData.auditorias && cachedData.auditorias.length > 0) {
+                if (cachedData.auditorias?.length > 0) {
                   setUserAuditorias(cachedData.auditorias);
                 }
               }
             } catch (cacheError) {
-              console.warn('⚠️ [Cache inicial] Error cargando cache:', cacheError);
+              console.warn('⚠️ Error cargando cache:', cacheError);
             }
           }
           
           // Cargar auditorías desde Firestore
-          // Usar profile (valor retornado) para operaciones inmediatas si userProfile aún no se sincronizó
-          // authReady se establecerá automáticamente por el useEffect cuando userProfile y tokenClaims coincidan
-          const profileToUse = userProfile || profile;
-          if (profileToUse?.uid) {
+          if (context.uid) {
             await Promise.all([
-              loadUserAuditorias(firebaseUser.uid, profileToUse).then(aud => setUserAuditorias(aud)),
-              loadAuditoriasCompartidas(firebaseUser.uid, profileToUse).then(aud => setAuditoriasCompartidas(aud))
+              loadUserAuditorias(firebaseUser.uid, context).then(aud => setUserAuditorias(aud)),
+              loadAuditoriasCompartidas(firebaseUser.uid, context).then(aud => setAuditoriasCompartidas(aud))
             ]);
           }
 
@@ -467,23 +325,19 @@ const AuthContextComponent = ({ children }) => {
           // Usuario no autenticado
           setUser(null);
           setIsLogged(false);
-          setTokenClaims(null);
+          setUserContext(null);
           setUserEmpresas([]);
           setUserAuditorias([]);
           setAuditoriasCompartidas([]);
           localStorage.removeItem("userInfo");
           localStorage.removeItem("isLogged");
           
-          // Modo offline: solo cargar datos secundarios desde cache
-          // NO setear userProfile desde cache (requiere Firestore + token válido)
+          // Modo offline: cargar datos secundarios desde cache
           const wasLoggedIn = localStorage.getItem("isLogged") === "true";
           if (wasLoggedIn && enableOffline && loadUserFromCache) {
             try {
               const cachedUser = await loadUserFromCache();
               if (cachedUser) {
-                console.log('📴 [Modo offline] Cargando solo datos secundarios desde cache');
-                
-                // Solo cargar datos secundarios, NO userProfile
                 if (cachedUser.empresas?.length > 0) {
                   setUserEmpresas(cachedUser.empresas);
                   setLoadingEmpresas(false);
@@ -499,7 +353,6 @@ const AuthContextComponent = ({ children }) => {
                 if (cachedUser.auditorias?.length > 0) {
                   setUserAuditorias(cachedUser.auditorias);
                 }
-                
                 setEnableDeferredListeners(true);
               }
             } catch (error) {
@@ -509,6 +362,7 @@ const AuthContextComponent = ({ children }) => {
         }
       } catch (error) {
         console.error('AuthContext error:', error);
+        setUserContext(null);
       } finally {
         clearTimeout(timeoutId);
         setLoading(false);
@@ -518,10 +372,8 @@ const AuthContextComponent = ({ children }) => {
     return () => {
       clearTimeout(timeoutId);
       unsubscribe();
-      window.removeEventListener('online', handleOnline);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.uid]);
+  }, []);
 
   const handleLogin = (userLogged) => {
     setUser(userLogged);
@@ -533,70 +385,55 @@ const AuthContextComponent = ({ children }) => {
   const logoutContext = () => {
     setUser(null);
     setIsLogged(false);
-    setTokenClaims(null);
+    setUserContext(null);
     setUserEmpresas([]);
     setUserAuditorias([]);
     setAuditoriasCompartidas([]);
     localStorage.removeItem("userInfo");
     localStorage.removeItem("isLogged");
   };
-  
-  // authReady se deriva automáticamente del estado (user, tokenClaims, userProfile)
-  // CRÍTICO: Solo es true cuando TODOS los componentes están listos:
-  // - user existe
-  // - tokenClaims existe y tiene role y ownerId válidos
-  // - userProfile existe y su role coincide con tokenClaims.role
-  // NOTA: No dependemos de 'role' del hook porque puede tardar en sincronizarse
-  // Usamos tokenClaims.role como fuente de verdad
-  useEffect(() => {
-    const hasValidTokenClaims = !!(
-      tokenClaims &&
-      tokenClaims.role &&
-      typeof tokenClaims.role === 'string' &&
-      tokenClaims.role.length > 0 &&
-      tokenClaims.ownerId &&
-      typeof tokenClaims.ownerId === 'string' &&
-      tokenClaims.ownerId.length > 0
-    );
-    
-    const hasValidUserProfile = !!(
-      userProfile &&
-      userProfile.uid &&
-      userProfile.role &&
-      typeof userProfile.role === 'string' &&
-      userProfile.role.length > 0
-    );
-    
-    // Verificar que el role del userProfile coincida con el role del tokenClaims
-    // tokenClaims.role es la fuente de verdad
-    const rolesMatch = tokenClaims?.role === userProfile?.role;
-    
-    const isReady = !!(
-      user &&
-      hasValidTokenClaims &&
-      hasValidUserProfile &&
-      rolesMatch
-    );
-    
-    if (isReady !== authReady) {
-      console.log('[AUTH] authReady:', isReady, {
-        user: !!user,
-        tokenClaims: hasValidTokenClaims,
-        userProfile: hasValidUserProfile,
-        rolesMatch,
-        tokenRole: tokenClaims?.role,
-        profileRole: userProfile?.role
-      });
-      setAuthReady(isReady);
+
+  // Función simple para actualizar perfil en Firestore (sin sincronizar estado)
+  // ⚠️ IMPORTANTE: Solo usar para UI/preferencias/flags, NO para datos de auth
+  // El auth se maneja exclusivamente con custom claims del token
+  const updateUserProfile = async (updates) => {
+    if (!userContext?.ownerId || !user?.uid) {
+      console.error('[AuthContext] ownerId o uid no disponible');
+      return false;
     }
-  }, [user, tokenClaims, userProfile, authReady]);
+
+    try {
+      const userRef = doc(db, "apps", "auditoria", "owners", userContext.ownerId, "usuarios", user.uid);
+      await updateDocWithAppId(userRef, updates);
+      
+      await registrarAccionSistema(
+        user.uid,
+        `Actualizar perfil de usuario`,
+        { updates },
+        'editar',
+        'usuario',
+        user.uid
+      );
+      
+      return true;
+    } catch (error) {
+      console.error("Error al actualizar perfil:", error);
+      throw error;
+    }
+  };
+
+  // Compatibilidad: userProfile y role desde userContext
+  const userProfile = userContext;
+  const role = userContext?.role;
+  const authReady = !!userContext; // Simple: existe o no existe
 
   const data = {
     user,
-    userProfile,
+    userProfile, // Compatibilidad: alias de userContext
+    userContext, // Nuevo: contexto simple desde custom claims
     isLogged,
     loading,
-    authReady, // Estado crítico: solo true cuando user, userProfile y role están completamente listos
+    authReady, // Simple: userContext existe
     userEmpresas,
     loadingEmpresas,
     userSucursales,
@@ -614,19 +451,16 @@ const AuthContextComponent = ({ children }) => {
     crearEmpresa,
     updateUserProfile,
     canViewEmpresa: (empresaId) => {
-      // ✅ Para operarios: pasar empresas ya resueltas (no userProfile)
       if (role === 'operario') {
-        return empresaService.canViewEmpresa(empresaId, userProfile, userEmpresas);
+        return empresaService.canViewEmpresa(empresaId, userContext, userEmpresas);
       }
-      // Para admin: usar userProfile
-      return empresaService.canViewEmpresa(empresaId, userProfile);
+      return empresaService.canViewEmpresa(empresaId, userContext);
     },
-    canViewAuditoria: (auditoriaId) => auditoriaService.canViewAuditoria(auditoriaId, userProfile, auditoriasCompartidas),
-    // ELIMINADO: getUserEmpresas - ahora se usa useEmpresasQuery directamente
+    canViewAuditoria: (auditoriaId) => auditoriaService.canViewAuditoria(auditoriaId, userContext, auditoriasCompartidas),
     getUserSucursales: () => loadUserSucursales(user?.uid),
     getUserFormularios: () => loadUserFormularios(user?.uid),
-    getUserAuditorias: () => loadUserAuditorias(user?.uid, userProfile),
-    getAuditoriasCompartidas: () => loadAuditoriasCompartidas(user?.uid, userProfile),
+    getUserAuditorias: () => loadUserAuditorias(user?.uid, userContext),
+    getAuditoriasCompartidas: () => loadAuditoriasCompartidas(user?.uid, userContext),
     role,
     editarPermisosOperario,
     logAccionOperario,
@@ -634,8 +468,6 @@ const AuthContextComponent = ({ children }) => {
     updateEmpresa,
     compartirAuditoria,
     forceRefreshCache,
-    bloqueado,
-    motivoBloqueo,
     loadUserFromCache
   };
 
