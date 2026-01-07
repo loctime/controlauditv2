@@ -423,24 +423,34 @@ class SyncQueueService {
         });
       };
       
+      // ELIMINADO: Lectura desde ruta legacy apps/audit/users/{uid}
+      // Los perfiles deben leerse desde owner-centric usando custom claims + getUserProfile
+      // Este código solo funciona con datos offline como fallback
       try {
         const currentUser = await getCurrentUser();
-        const userProfileRef = doc(firestoreDb, 'apps', 'audit', 'users', currentUser.uid);
+        // Obtener ownerId desde custom claims del token
+        const tokenResult = await currentUser.getIdTokenResult(true);
+        const tokenOwnerId = tokenResult.claims.ownerId || currentUser.uid; // Admin usa su propio uid
+        
+        // Leer desde owner-centric: apps/auditoria/owners/{ownerId}/usuarios/{userId}
+        const userProfileRef = doc(firestoreDb, 'apps', 'auditoria', 'owners', tokenOwnerId, 'usuarios', currentUser.uid);
         const userProfileSnap = await getDoc(userProfileRef);
         if (userProfileSnap.exists()) {
+          const profileData = userProfileSnap.data();
           currentUserProfile = {
             uid: currentUser.uid,
             email: currentUser.email,
-            ...userProfileSnap.data()
+            ownerId: tokenOwnerId,
+            ...profileData
           };
-          console.log('[SyncQueue] ✅ Perfil actual obtenido desde Firestore:', {
+          console.log('[SyncQueue] ✅ Perfil actual obtenido desde owner-centric:', {
             uid: currentUserProfile.uid,
-            clienteAdminId: currentUserProfile.clienteAdminId,
+            ownerId: currentUserProfile.ownerId,
             email: currentUserProfile.email,
             role: currentUserProfile.role
           });
         } else {
-          console.warn('[SyncQueue] ⚠️ Perfil de usuario no encontrado en Firestore para:', currentUser.uid);
+          console.warn('[SyncQueue] ⚠️ Perfil de usuario no encontrado en owner-centric para:', currentUser.uid, 'ownerId:', tokenOwnerId);
         }
       } catch (userError) {
         console.warn('[SyncQueue] ⚠️ No se pudo obtener usuario autenticado, usando datos offline:', userError.message);

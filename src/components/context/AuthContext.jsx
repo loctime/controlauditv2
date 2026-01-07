@@ -57,7 +57,7 @@ const AuthContextComponent = ({ children }) => {
     role,
     bloqueado,
     motivoBloqueo,
-    createOrGetUserProfile,
+    getUserProfile,
     updateUserProfile
   } = useUserProfile(user);
 
@@ -342,20 +342,21 @@ const AuthContextComponent = ({ children }) => {
             appId: tokenAppId
           });
           
-          // Usar createOrGetUserProfile con ownerId del token
+          // Leer perfil desde owner-centric usando custom claims
+          // NO se crean perfiles - solo se leen desde apps/auditoria/owners/{ownerId}/usuarios/{userId}
           // Admin: ownerId = firebaseUser.uid (ya seteado arriba)
-          // Operario: ownerId = tokenOwnerId (del token o fallback)
+          // Operario: ownerId = tokenOwnerId (del token)
           let profile = null;
           
           if (tokenRole === 'admin') {
-            profile = await createOrGetUserProfile(firebaseUser, firebaseUser.uid);
+            profile = await getUserProfile(firebaseUser, firebaseUser.uid);
             if (!profile) {
               console.error('[AUTH] ❌ Admin no encontrado en owner-centric');
               setTokenClaims(null);
               return;
             }
           } else if (tokenRole === 'operario' && tokenOwnerId) {
-            profile = await createOrGetUserProfile(firebaseUser, tokenOwnerId);
+            profile = await getUserProfile(firebaseUser, tokenOwnerId);
             if (!profile) {
               console.error('[AUTH] ❌ Operario no encontrado en owner-centric');
               setTokenClaims(null);
@@ -369,7 +370,7 @@ const AuthContextComponent = ({ children }) => {
           
           // Validar que el profile retornado tenga el role correcto
           if (!profile || !profile.role) {
-            console.error('[AUTH] ❌ Profile sin role después de createOrGetUserProfile');
+            console.error('[AUTH] ❌ Profile sin role después de getUserProfile');
             setTokenClaims(null);
             return;
           }

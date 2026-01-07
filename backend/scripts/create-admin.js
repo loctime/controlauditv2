@@ -4,7 +4,7 @@ import admin from '../firebaseAdmin.js';
 // ===============================
 // CONFIGURACIÓN DEL CLIENTE
 // ===============================
-const EMAIL = 'develo11@gmail.com';
+const EMAIL = 'licvidalfernando@gmail.com';
 const PASSWORD = '123123123';
 const DISPLAY_NAME = 'Cliente Principal';
 

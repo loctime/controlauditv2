@@ -55,40 +55,11 @@ nextApi.interceptors.request.use(addAuthToken);
 externalApi.interceptors.request.use(addAuthToken);
 
 /* ============================================================================
-   FALLBACK: PERFIL PENDING
+   ELIMINADO: PERFIL PENDING (LEGACY)
 ============================================================================ */
-
-const createPendingProfile = async (userData) => {
-  const currentUser = auth.currentUser;
-  if (!currentUser) throw new Error('No hay sesión activa');
-
-  const tempUid = `pending_${userData.email.replace(/[^a-zA-Z0-9]/g, '_')}_${Date.now()}`;
-
-  const pendingProfile = {
-    uid: tempUid,
-    email: userData.email,
-    displayName: userData.nombre,
-    role: 'operario',
-    permisos: userData.permisos || {},
-    appId: 'auditoria',
-    status: 'pending',
-    tempPassword: userData.password,
-    clienteAdminId: userData.clienteAdminId || null,
-    createdBy: currentUser.uid,
-    createdAt: serverTimestamp(),
-  };
-
-  await setDocWithAppId(
-    doc(db, 'apps', 'auditoria', 'users', tempUid),
-    pendingProfile
-  );
-
-  return {
-    success: true,
-    uid: tempUid,
-    pending: true,
-  };
-};
+// Código legacy eliminado - NO se crean perfiles automáticamente
+// Los perfiles deben crearse solo desde el backend usando owner-centric:
+// apps/auditoria/owners/{ownerId}/usuarios/{userId}
 
 /* ============================================================================
    USER SERVICE
@@ -140,14 +111,6 @@ export const userService = {
 
       return await response.json();
     } catch (error) {
-      if (
-        error.response?.status === 404 ||
-        error.response?.status === 500 ||
-        error.response?.status === 503
-      ) {
-        return await createPendingProfile(userData);
-      }
-
       if (error.response?.status === 401) {
         throw new Error('Sesión expirada');
       }
@@ -156,7 +119,8 @@ export const userService = {
         throw new Error('Sin permisos para crear usuarios');
       }
 
-      return await createPendingProfile(userData);
+      // No hay fallback - el backend debe estar disponible para crear usuarios
+      throw error;
     }
   },
 
@@ -180,11 +144,8 @@ export const userService = {
     return res.data;
   },
 
-  async updateUserDirect(uid, updateData) {
-    const { updateDocWithAppId } = await import('../firebase/firestoreAppWriter');
-    const userRef = doc(db, 'apps', 'auditoria', 'users', uid);
-    await updateDocWithAppId(userRef, updateData);
-  },
+  // ELIMINADO: updateUserDirect - usa rutas legacy
+  // Usar ownerUserService.updateUser() en su lugar con owner-centric path
 };
 
 export default userService;

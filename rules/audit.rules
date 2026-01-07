@@ -100,16 +100,12 @@ match /apps/auditoria/owners/{ownerId}/sucursales/{sucursalId} {
 
   allow read: if isAuth()
     && request.auth.token.appId == 'auditoria'
-    && (
-      ownerId == uid() ||
-      request.auth.token.ownerId == ownerId
-    );
+    && request.auth.token.ownerId == ownerId;
 
   allow create: if isAuth()
     && request.auth.token.appId == 'auditoria'
     && ownerId == uid()
-    && request.resource.data.ownerId == uid()
-    && nonEmptyString("nombre");
+    && request.resource.data.ownerId == uid();
 
   allow update: if isAuth()
     && request.auth.token.appId == 'auditoria'
@@ -130,120 +126,6 @@ match /apps/auditoria/owners/{ownerId}/formularios/{formularioId} {
     && request.auth.token.appId == 'auditoria'
     && (
       ownerId == uid() ||
-      request.auth.token.ownerId == ownerId ||
-      resource.data.esPublico == true ||
-      uid() in resource.data.permisos.puedeVer
-    );
-
-  allow create: if isAuth()
-    && request.auth.token.appId == 'auditoria'
-    && ownerId == uid()
-    && request.resource.data.ownerId == uid()
-    && nonEmptyString("nombre");
-
-  allow update: if isAuth()
-    && request.auth.token.appId == 'auditoria'
-    && ownerId == uid()
-    && unchanged("ownerId");
-
-  allow delete: if isAuth()
-    && request.auth.token.appId == 'auditoria'
-    && ownerId == uid();
-}
-
-// ================================
-// EMPLEADOS
-// ================================
-match /apps/auditoria/owners/{ownerId}/empleados/{empleadoId} {
-
-  allow read: if isAuth()
-    && request.auth.token.appId == 'auditoria'
-    && (
-      ownerId == uid() ||
-      request.auth.token.ownerId == ownerId
-    );
-
-  allow create: if isAuth()
-    && request.auth.token.appId == 'auditoria'
-    && ownerId == uid()
-    && request.resource.data.ownerId == uid()
-    && nonEmptyString("nombre");
-
-  allow update: if isAuth()
-    && request.auth.token.appId == 'auditoria'
-    && ownerId == uid()
-    && unchanged("ownerId");
-
-  allow delete: if isAuth()
-    && request.auth.token.appId == 'auditoria'
-    && ownerId == uid();
-}
-
-// ================================
-// CAPACITACIONES
-// ================================
-match /apps/auditoria/owners/{ownerId}/capacitaciones/{capacitacionId} {
-
-  allow read: if isAuth()
-    && request.auth.token.appId == 'auditoria'
-    && (
-      ownerId == uid() ||
-      request.auth.token.ownerId == ownerId
-    );
-
-  allow create: if isAuth()
-    && request.auth.token.appId == 'auditoria'
-    && ownerId == uid()
-    && request.resource.data.ownerId == uid()
-    && nonEmptyString("nombre");
-
-  allow update: if isAuth()
-    && request.auth.token.appId == 'auditoria'
-    && ownerId == uid()
-    && unchanged("ownerId");
-
-  allow delete: if isAuth()
-    && request.auth.token.appId == 'auditoria'
-    && ownerId == uid();
-}
-
-// ================================
-// PLANES CAPACITACIONES ANUALES
-// ================================
-match /apps/auditoria/owners/{ownerId}/planes_capacitaciones_anuales/{planId} {
-
-  allow read: if isAuth()
-    && request.auth.token.appId == 'auditoria'
-    && (
-      ownerId == uid() ||
-      request.auth.token.ownerId == ownerId
-    );
-
-  allow create: if isAuth()
-    && request.auth.token.appId == 'auditoria'
-    && ownerId == uid()
-    && request.resource.data.ownerId == uid()
-    && nonEmptyString("nombre");
-
-  allow update: if isAuth()
-    && request.auth.token.appId == 'auditoria'
-    && ownerId == uid()
-    && unchanged("ownerId");
-
-  allow delete: if isAuth()
-    && request.auth.token.appId == 'auditoria'
-    && ownerId == uid();
-}
-
-// ================================
-// REGISTROS ASISTENCIA
-// ================================
-match /apps/auditoria/owners/{ownerId}/registrosAsistencia/{registroId} {
-
-  allow read: if isAuth()
-    && request.auth.token.appId == 'auditoria'
-    && (
-      ownerId == uid() ||
       request.auth.token.ownerId == ownerId
     );
 
@@ -262,135 +144,24 @@ match /apps/auditoria/owners/{ownerId}/registrosAsistencia/{registroId} {
     && ownerId == uid();
 }
 
-// ================================
-// AUSENCIAS
-// ================================
-match /apps/auditoria/owners/{ownerId}/ausencias/{ausenciaId} {
-
+// SECCIONES
+match /apps/auditoria/owners/{ownerId}/formularios/{formularioId}/secciones/{seccionId} {
   allow read: if isAuth()
     && request.auth.token.appId == 'auditoria'
-    && (
-      ownerId == uid() ||
-      request.auth.token.ownerId == ownerId
-    );
+    && request.auth.token.ownerId == ownerId;
 
-  allow create: if isAuth()
-    && request.auth.token.appId == 'auditoria'
-    && ownerId == uid()
-    && request.resource.data.ownerId == uid();
-
-  allow update: if isAuth()
-    && request.auth.token.appId == 'auditoria'
-    && ownerId == uid()
-    && unchanged("ownerId");
-
-  allow delete: if isAuth()
+  allow write: if isAuth()
     && request.auth.token.appId == 'auditoria'
     && ownerId == uid();
 }
 
-// ================================
-// ACCIDENTES
-// ================================
-match /apps/auditoria/owners/{ownerId}/accidentes/{accidenteId} {
-
+// PREGUNTAS
+match /apps/auditoria/owners/{ownerId}/formularios/{formularioId}/preguntas/{preguntaId} {
   allow read: if isAuth()
     && request.auth.token.appId == 'auditoria'
-    && (
-      ownerId == uid() ||
-      request.auth.token.ownerId == ownerId
-    );
+    && request.auth.token.ownerId == ownerId;
 
-  allow create: if isAuth()
-    && request.auth.token.appId == 'auditoria'
-    && ownerId == uid()
-    && request.resource.data.ownerId == uid();
-
-  allow update: if isAuth()
-    && request.auth.token.appId == 'auditoria'
-    && ownerId == uid()
-    && unchanged("ownerId");
-
-  allow delete: if isAuth()
-    && request.auth.token.appId == 'auditoria'
-    && ownerId == uid();
-}
-
-// ================================
-// LOGS
-// ================================
-match /apps/auditoria/owners/{ownerId}/logs/{logId} {
-
-  allow read: if isAuth()
-    && request.auth.token.appId == 'auditoria'
-    && (
-      ownerId == uid() ||
-      request.auth.token.ownerId == ownerId
-    );
-
-  allow create: if isAuth()
-    && request.auth.token.appId == 'auditoria'
-    && ownerId == uid()
-    && request.resource.data.ownerId == uid();
-
-  allow update: if isAuth()
-    && request.auth.token.appId == 'auditoria'
-    && ownerId == uid()
-    && unchanged("ownerId");
-
-  allow delete: if isAuth()
-    && request.auth.token.appId == 'auditoria'
-    && ownerId == uid();
-}
-
-// ================================
-// AUTOSAVES
-// ================================
-match /apps/auditoria/owners/{ownerId}/autosaves/{sessionId} {
-
-  allow read: if isAuth()
-    && request.auth.token.appId == 'auditoria'
-    && (
-      ownerId == uid() ||
-      request.auth.token.ownerId == ownerId
-    );
-
-  allow create: if isAuth()
-    && request.auth.token.appId == 'auditoria'
-    && ownerId == uid()
-    && request.resource.data.ownerId == uid();
-
-  allow update: if isAuth()
-    && request.auth.token.appId == 'auditoria'
-    && ownerId == uid()
-    && unchanged("ownerId");
-
-  allow delete: if isAuth()
-    && request.auth.token.appId == 'auditoria'
-    && ownerId == uid();
-}
-
-// ================================
-// ACCIONES REQUERIDAS (subcolección de sucursales)
-// ================================
-match /apps/auditoria/owners/{ownerId}/sucursales/{sucursalId}/acciones_requeridas/{accionId} {
-
-  allow read: if isAuth()
-    && request.auth.token.appId == 'auditoria'
-    && (
-      ownerId == uid() ||
-      request.auth.token.ownerId == ownerId
-    );
-
-  allow create: if isAuth()
-    && request.auth.token.appId == 'auditoria'
-    && ownerId == uid();
-
-  allow update: if isAuth()
-    && request.auth.token.appId == 'auditoria'
-    && ownerId == uid();
-
-  allow delete: if isAuth()
+  allow write: if isAuth()
     && request.auth.token.appId == 'auditoria'
     && ownerId == uid();
 }

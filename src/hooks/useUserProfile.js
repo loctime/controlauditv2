@@ -12,9 +12,11 @@ export const useUserProfile = (firebaseUser) => {
   const [motivoBloqueo, setMotivoBloqueo] = useState('');
 
   // Leer perfil del usuario desde owner-centric
+  // NO crea perfiles - solo lee desde apps/auditoria/owners/{ownerId}/usuarios/{userId}
   // Para operarios: ownerIdFromToken viene del token (custom claims)
   // Para admin: ownerIdFromToken es null, se usa firebaseUser.uid como ownerId
-  const createOrGetUserProfile = async (firebaseUser, ownerIdFromToken) => {
+  // El auth debe validarse solo con custom claims + owner-centric user doc
+  const getUserProfile = async (firebaseUser, ownerIdFromToken) => {
     // Resolver ownerId: operario usa token, admin usa su propio uid
     const resolvedOwnerId = ownerIdFromToken || firebaseUser.uid;
 
@@ -153,7 +155,7 @@ export const useUserProfile = (firebaseUser) => {
     role,
     bloqueado,
     motivoBloqueo,
-    createOrGetUserProfile,
+    getUserProfile,
     updateUserProfile
   };
 };
