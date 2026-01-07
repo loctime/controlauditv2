@@ -43,7 +43,10 @@ const AuthContextComponent = ({ children }) => {
   // Control para activar listeners diferidos (optimización: evitar llamadas duplicadas)
   const [enableDeferredListeners, setEnableDeferredListeners] = useState(false);
   
-  // Estado crítico: authReady solo es true cuando user, userProfile y role están completamente inicializados
+  // Estados para custom claims del token (fuente de verdad inicial)
+  const [tokenClaims, setTokenClaims] = useState(null);
+  
+  // Estado crítico: authReady solo es true cuando user, tokenClaims, userProfile y role están completamente inicializados
   // Esto previene queries prematuras que causan errores de permisos
   const [authReady, setAuthReady] = useState(false);
 
@@ -52,7 +55,6 @@ const AuthContextComponent = ({ children }) => {
     userProfile,
     setUserProfile,
     role,
-    permisos,
     bloqueado,
     motivoBloqueo,
     createOrGetUserProfile,
@@ -248,375 +250,290 @@ const AuthContextComponent = ({ children }) => {
           localStorage.setItem("userInfo", JSON.stringify(firebaseUser));
           localStorage.setItem("isLogged", JSON.stringify(true));
           
-          // ✅ CRÍTICO: Leer role y ownerId del token PRIMERO para determinar flujo
-          // FORZAR REFRESH del token para obtener custom claims actualizados (especialmente después de crear operario)
+          // CRÍTICO: Leer SIEMPRE los custom claims del token (forzar refresh)
+          // Esta es la fuente de verdad inicial para role y ownerId
+          // Firebase puede tardar varios segundos en propagar los claims después de setearlos
           let tokenRole = null;
           let tokenOwnerId = null;
-          try {
-            const token = await auth.currentUser.getIdTokenResult(true); // true = forzar refresh del token
-            tokenRole = token.claims.role || null;
-            tokenOwnerId = token.claims.ownerId || null; // ownerId solo existe para operarios
-            console.log('[AUTH] Token role claim:', tokenRole);
-            console.log('[AUTH] Token ownerId claim:', tokenOwnerId);
-            console.log('[AUTH] Token aud claim:', token.claims.aud);
-            if (token.claims.aud !== 'controlstorage-eb796') {
-              console.warn('[AUTH] ⚠️ Token aud no coincide con controlstorage-eb796:', token.claims.aud);
-            } else {
-              console.log('[AUTH] ✅ Token aud correcto para ControlAudit:', token.claims.aud);
+          let tokenAppId = null;
+          
+          // Delay inicial: dar tiempo a Firebase para propagar los claims
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          
+          // Retry mechanism: los claims pueden tardar en propagarse desde el backend
+          const maxRetries = 10;
+          const retryDelays = [1000, 1500, 2000, 2500, 3000, 3500, 4000, 4500, 5000, 6000]; // delays progresivos en ms
+          
+          for (let attempt = 0; attempt < maxRetries; attempt++) {
+            try {
+              // Paso 1: Forzar refresh del token (esto invalida el cache)
+              await auth.currentUser.getIdToken(true);
+              
+              // Paso 2: Esperar antes de leer los claims
+              if (attempt > 0) {
+                await new Promise(resolve => setTimeout(resolve, retryDelays[attempt - 1]));
+              }
+              
+              // Paso 3: Leer los claims del token refrescado
+              const tokenResult = await auth.currentUser.getIdTokenResult(true);
+              tokenRole = tokenResult.claims.role || null;
+              tokenOwnerId = tokenResult.claims.ownerId || null;
+              tokenAppId = tokenResult.claims.appId || null;
+              
+              console.log(`[AUTH] Token claims (intento ${attempt + 1}/${maxRetries}):`, {
+                role: tokenRole,
+                ownerId: tokenOwnerId,
+                appId: tokenAppId,
+                aud: tokenResult.claims.aud
+              });
+              
+              // Si encontramos el role, salir del loop
+              if (tokenRole) {
+                break;
+              }
+              
+              // Si es el último intento, intentar fallback desde Firestore
+              if (attempt === maxRetries - 1) {
+                console.warn('[AUTH] ⚠️ Claims no disponibles después de', maxRetries, 'intentos, intentando fallback desde Firestore...');
+                
+                // FALLBACK: Intentar leer el perfil desde Firestore como admin primero
+                try {
+                  const fallbackProfile = await createOrGetUserProfile(firebaseUser, firebaseUser.uid);
+                  if (fallbackProfile && fallbackProfile.role) {
+                    console.log('[AUTH] ✅ Fallback exitoso: usando role desde Firestore:', fallbackProfile.role);
+                    tokenRole = fallbackProfile.role;
+                    tokenOwnerId = fallbackProfile.ownerId || firebaseUser.uid;
+                    tokenAppId = fallbackProfile.appId || 'auditoria';
+                    break;
+                  }
+                } catch (fallbackError) {
+                  console.error('[AUTH] ❌ Error en fallback desde Firestore:', fallbackError);
+                }
+                
+                // Si el fallback también falla, abortar
+                if (!tokenRole) {
+                  console.error('[AUTH] ❌ Token sin role en claims después de', maxRetries, 'intentos y fallback fallido');
+                  setTokenClaims(null);
+                  return;
+                }
+              } else {
+                console.warn(`[AUTH] ⚠️ Claims no disponibles aún, reintentando en ${retryDelays[attempt]}ms...`);
+              }
+            } catch (error) {
+              console.error(`[AUTH] ❌ Error obteniendo token (intento ${attempt + 1}):`, error);
+              if (attempt === maxRetries - 1) {
+                // Último intento fallido, intentar fallback
+                try {
+                  const fallbackProfile = await createOrGetUserProfile(firebaseUser, firebaseUser.uid);
+                  if (fallbackProfile && fallbackProfile.role) {
+                    tokenRole = fallbackProfile.role;
+                    tokenOwnerId = fallbackProfile.ownerId || firebaseUser.uid;
+                    tokenAppId = fallbackProfile.appId || 'auditoria';
+                    break;
+                  }
+                } catch (fallbackError) {
+                  console.error('[AUTH] ❌ Error en fallback:', fallbackError);
+                  setTokenClaims(null);
+                  return;
+                }
+              }
             }
-          } catch (error) {
-            console.error('[AUTH] Error obteniendo token:', error);
           }
           
-          // ✅ MODELO OWNER-CENTRIC: Admins y operarios usan owner-centric
+          // Validar que los claims críticos existan después de todos los reintentos
+          if (!tokenRole) {
+            console.error('[AUTH] ❌ Token sin role en claims después de todos los reintentos');
+            setTokenClaims(null);
+            return;
+          }
+          
+          // Para admin: ownerId debe ser igual al uid
+          if (tokenRole === 'admin') {
+            tokenOwnerId = firebaseUser.uid;
+          }
+          
+          // Validar que operario tenga ownerId
+          if (tokenRole === 'operario' && !tokenOwnerId) {
+            console.error('[AUTH] ❌ Operario sin ownerId en token claims');
+            setTokenClaims(null);
+            return;
+          }
+          
+          // Guardar claims como fuente de verdad
+          setTokenClaims({
+            role: tokenRole,
+            ownerId: tokenOwnerId,
+            appId: tokenAppId
+          });
+          
+          console.log('[AUTH] ✅ Claims validados y guardados:', {
+            role: tokenRole,
+            ownerId: tokenOwnerId,
+            appId: tokenAppId
+          });
+          
+          // Usar createOrGetUserProfile con ownerId del token
+          // Admin: ownerId = firebaseUser.uid (ya seteado arriba)
+          // Operario: ownerId = tokenOwnerId (del token o fallback)
           let profile = null;
           
-          // ⚠️ COMPATIBILIDAD TEMPORAL: Tratar max/supermax como admin
-          // TODO: Migrar roles legacy (max/supermax) a 'admin' en custom claims
-          if (tokenRole === 'max' || tokenRole === 'supermax') {
-            // ADMIN: Construir userProfile directamente (ownerId = auth.uid)
-            console.log('[AUTH] ✅ ADMIN detectado (role legacy:', tokenRole, ') - construyendo userProfile');
-            profile = {
-              uid: firebaseUser.uid,
-              email: firebaseUser.email,
-              displayName: firebaseUser.displayName || firebaseUser.email,
-              role: tokenRole, // Mantener role legacy por compatibilidad temporal
-              ownerId: firebaseUser.uid, // Admin es su propio owner
-              appId: 'auditoria',
-              permisos: {
-                puedeCrearEmpresas: true,
-                puedeCrearSucursales: true,
-                puedeCrearAuditorias: true,
-                puedeCompartirFormularios: true,
-                puedeAgregarSocios: true,
-                puedeGestionarUsuarios: true,
-                puedeVerLogs: tokenRole === 'supermax',
-                puedeGestionarSistema: tokenRole === 'supermax',
-                puedeEliminarUsuarios: tokenRole === 'supermax'
-              },
-              configuracion: {
-                notificaciones: true,
-                tema: 'light'
-              }
-            };
-            console.log('[AUTH] ✅ userProfile construido para ADMIN:', {
-              uid: profile.uid,
-              role: profile.role,
-              ownerId: profile.ownerId
-            });
+          if (tokenRole === 'admin') {
+            profile = await createOrGetUserProfile(firebaseUser, firebaseUser.uid);
+            if (!profile) {
+              console.error('[AUTH] ❌ Admin no encontrado en owner-centric');
+              setTokenClaims(null);
+              return;
+            }
           } else if (tokenRole === 'operario' && tokenOwnerId) {
-            // OPERARIO: Leer ownerId desde token claims y leer perfil desde owner-centric
-            console.log('[AUTH] ✅ OPERARIO detectado - leyendo ownerId desde token claims:', tokenOwnerId);
             profile = await createOrGetUserProfile(firebaseUser, tokenOwnerId);
+            if (!profile) {
+              console.error('[AUTH] ❌ Operario no encontrado en owner-centric');
+              setTokenClaims(null);
+              return;
+            }
           } else {
-            console.error('[AUTH] ❌ Operario sin ownerId en token claims o role desconocido');
-            console.error('[AUTH] tokenRole:', tokenRole, 'tokenOwnerId:', tokenOwnerId);
+            console.error('[AUTH] ❌ Role inválido o operario sin ownerId:', { tokenRole, tokenOwnerId });
+            setTokenClaims(null);
+            return;
           }
           
-          if (profile) {
-            setUserProfile(profile);
-            
-            // PASO 1: Cargar desde cache primero (instantáneo, elimina parpadeo)
-            // Esto muestra datos inmediatamente mientras Firestore responde
-            if (enableOffline && loadUserFromCache) {
-              try {
-                const cachedData = await loadUserFromCache();
-                if (cachedData) {
-                  console.log('📦 [Cache inicial] Cargando datos desde cache para mostrar inmediatamente...');
-                  
-                  // Cargar empresas desde cache si existen
-                  if (cachedData.empresas && cachedData.empresas.length > 0) {
-                    setUserEmpresas(cachedData.empresas);
-                    setLoadingEmpresas(false);
-                    console.log('✅ [Cache inicial] Empresas cargadas desde cache:', cachedData.empresas.length);
-                  }
-                  
-                  // Cargar sucursales desde cache si existen
-                  if (cachedData.sucursales && cachedData.sucursales.length > 0) {
-                    setUserSucursales(cachedData.sucursales);
-                    setLoadingSucursales(false);
-                    console.log('✅ [Cache inicial] Sucursales cargadas desde cache:', cachedData.sucursales.length);
-                  }
-                  
-                  // Cargar formularios desde cache si existen
-                  if (cachedData.formularios && cachedData.formularios.length > 0) {
-                    setUserFormularios(cachedData.formularios);
-                    setLoadingFormularios(false);
-                    console.log('✅ [Cache inicial] Formularios cargados desde cache:', cachedData.formularios.length);
-                  }
-                  
-                  // Cargar auditorías desde cache si existen
-                  if (cachedData.auditorias && cachedData.auditorias.length > 0) {
-                    setUserAuditorias(cachedData.auditorias);
-                    console.log('✅ [Cache inicial] Auditorías cargadas desde cache:', cachedData.auditorias.length);
-                  }
+          // Validar que el profile retornado tenga el role correcto
+          if (!profile || !profile.role) {
+            console.error('[AUTH] ❌ Profile sin role después de createOrGetUserProfile');
+            setTokenClaims(null);
+            return;
+          }
+          
+          // Validar que el role del profile coincida con el role del token
+          if (profile.role !== tokenRole) {
+            console.error('[AUTH] ❌ Role del profile no coincide con token:', {
+              profileRole: profile.role,
+              tokenRole: tokenRole
+            });
+            setTokenClaims(null);
+            return;
+          }
+          
+          // Esperar a que useUserProfile sincronice estado (máximo 2 segundos)
+          // El hook actualizará userProfile en el siguiente render, pero continuamos con el profile retornado
+          let syncRetries = 0;
+          const maxSyncRetries = 20; // 20 * 100ms = 2 segundos máximo
+          while (!userProfile && syncRetries < maxSyncRetries) {
+            await new Promise(resolve => setTimeout(resolve, 100));
+            syncRetries++;
+          }
+          
+          // Si userProfile aún no se sincronizó, usar el profile retornado directamente
+          // El hook se sincronizará en el siguiente render, pero no bloqueamos el flujo
+          if (!userProfile) {
+            console.warn('[AUTH] ⚠️ userProfile aún no sincronizado, usando profile retornado. El hook se sincronizará en el siguiente render.');
+            // No abortar, continuar con el flujo usando el profile retornado
+          }
+          
+          // Perfil cargado exitosamente - useUserProfile ya seteo userProfile y role
+          // Cargar datos desde cache primero (instantáneo) - SOLO datos secundarios
+          if (enableOffline && loadUserFromCache) {
+            try {
+              const cachedData = await loadUserFromCache();
+              if (cachedData) {
+                console.log('📦 [Cache inicial] Cargando datos secundarios desde cache...');
+                
+                if (cachedData.empresas && cachedData.empresas.length > 0) {
+                  setUserEmpresas(cachedData.empresas);
+                  setLoadingEmpresas(false);
                 }
-              } catch (cacheError) {
-                console.warn('⚠️ [Cache inicial] No se pudo cargar desde cache (continuando con carga normal):', cacheError);
-                // Continuar normalmente si el cache falla
-              }
-            }
-            
-            // CRÍTICO: Establecer authReady ANTES de ejecutar cualquier query
-            // Solo cuando user, userProfile y role están completamente listos
-            if (profile && profile.role && typeof profile.role === 'string' && profile.role.length > 0) {
-              setAuthReady(true);
-              console.log('✅ [AuthContext] authReady establecido - user, userProfile y role listos');
-            }
-            
-            // PASO 2: Cargar datos desde Firestore
-            // NOTA: Las empresas ahora se cargan automáticamente con useEmpresasQuery
-            // Solo cargar auditorías aquí. Sucursales y formularios se cargarán cuando las empresas estén disponibles
-            if (profile && profile.role && typeof profile.role === 'string' && profile.role.length > 0) {
-              // Cargar auditorías en paralelo (solo si profile tiene uid)
-              if (profile && profile.uid) {
-                await Promise.all([
-                  loadUserAuditorias(firebaseUser.uid, profile).then(aud => setUserAuditorias(aud)),
-                  loadAuditoriasCompartidas(firebaseUser.uid, profile).then(aud => setAuditoriasCompartidas(aud))
-                ]);
-              }
-
-              // Sucursales y formularios se cargarán automáticamente cuando empresasFromQuery esté disponible
-              // El efecto de abajo maneja esto
-            }
-
-            // OPTIMIZACIÓN: Activar listeners diferidos después de carga manual (evita duplicados)
-            // Esperar 1 segundo para asegurar que la carga manual terminó completamente
-            setTimeout(() => {
-              setEnableDeferredListeners(true);
-              console.log('✅ Listeners diferidos activados (optimización de performance)');
-            }, 1000);
-
-            // Verificar que tenemos datos antes de guardar cache (solo en móvil)
-            // NOTA: Este código se ejecuta antes de que userEmpresas esté disponible
-            // El cache se guardará cuando los datos estén disponibles (ver useEffect más abajo)
-            if (enableOffline) {
-              console.log('💾 Cache offline habilitado - se guardará cuando los datos estén disponibles');
-            }
-            
-            // Inicializar carpetas de ControlFile después de autenticación exitosa
-            // SOLO se ejecuta UNA VEZ por usuario usando localStorage
-            const initKey = `controlfile_initialized_${firebaseUser.uid}`;
-            const isInitialized = localStorage.getItem(initKey);
-            
-            if (!isInitialized) {
-              try {
-                // Esperar adicional para asegurar que el token esté actualizado
-                await new Promise(resolve => setTimeout(resolve, 1000));
-                const { initializeControlFileFolders } = await import('../../services/controlFileInit');
-                const folders = await initializeControlFileFolders();
-                if (folders.mainFolderId) {
-                  localStorage.setItem(initKey, 'true');
-                  console.log('[AuthContext] ✅ Carpetas ControlFile inicializadas:', folders.mainFolderId);
+                
+                if (cachedData.sucursales && cachedData.sucursales.length > 0) {
+                  setUserSucursales(cachedData.sucursales);
+                  setLoadingSucursales(false);
                 }
-              } catch (error) {
-                console.error('[AuthContext] ⚠️ Error al inicializar carpetas ControlFile (no crítico):', error);
-                // No bloquear el flujo si falla la inicialización de carpetas
+                
+                if (cachedData.formularios && cachedData.formularios.length > 0) {
+                  setUserFormularios(cachedData.formularios);
+                  setLoadingFormularios(false);
+                }
+                
+                if (cachedData.auditorias && cachedData.auditorias.length > 0) {
+                  setUserAuditorias(cachedData.auditorias);
+                }
               }
-            } else {
-              console.log('[AuthContext] ⏭️ Inicialización de ControlFile omitida (ya inicializado)');
+            } catch (cacheError) {
+              console.warn('⚠️ [Cache inicial] Error cargando cache:', cacheError);
+            }
+          }
+          
+          // Cargar auditorías desde Firestore
+          // Usar profile (valor retornado) para operaciones inmediatas si userProfile aún no se sincronizó
+          // authReady se establecerá automáticamente por el useEffect cuando userProfile y tokenClaims coincidan
+          const profileToUse = userProfile || profile;
+          if (profileToUse?.uid) {
+            await Promise.all([
+              loadUserAuditorias(firebaseUser.uid, profileToUse).then(aud => setUserAuditorias(aud)),
+              loadAuditoriasCompartidas(firebaseUser.uid, profileToUse).then(aud => setAuditoriasCompartidas(aud))
+            ]);
+          }
+
+          // Activar listeners diferidos después de carga inicial
+          setTimeout(() => {
+            setEnableDeferredListeners(true);
+          }, 1000);
+          
+          // Inicializar carpetas de ControlFile (solo una vez)
+          const initKey = `controlfile_initialized_${firebaseUser.uid}`;
+          if (!localStorage.getItem(initKey)) {
+            try {
+              await new Promise(resolve => setTimeout(resolve, 1000));
+              const { initializeControlFileFolders } = await import('../../services/controlFileInit');
+              const folders = await initializeControlFileFolders();
+              if (folders.mainFolderId) {
+                localStorage.setItem(initKey, 'true');
+              }
+            } catch (error) {
+              console.error('[AuthContext] Error inicializando ControlFile:', error);
             }
           }
         } else {
-          // Usuario no autenticado - resetear authReady
-          setAuthReady(false);
+          // Usuario no autenticado
+          setUser(null);
+          setIsLogged(false);
+          setTokenClaims(null);
+          setUserEmpresas([]);
+          setUserAuditorias([]);
+          setAuditoriasCompartidas([]);
+          localStorage.removeItem("userInfo");
+          localStorage.removeItem("isLogged");
           
-          // Solo intentar cargar desde cache si estamos en móvil (modo offline habilitado)
+          // Modo offline: solo cargar datos secundarios desde cache
+          // NO setear userProfile desde cache (requiere Firestore + token válido)
           const wasLoggedIn = localStorage.getItem("isLogged") === "true";
-          
-          // En modo offline, activar listeners diferidos inmediatamente (ya hay datos en cache)
-          if (wasLoggedIn && enableOffline) {
-            setEnableDeferredListeners(true);
-          }
-          
-          if (wasLoggedIn && enableOffline) {
-            console.log('📴 Modo offline detectado (móvil) - cargando desde cache...');
-            const cachedUser = await loadUserFromCache();
-            
-            if (cachedUser && cachedUser.userProfile) {
-              const cachedProfile = cachedUser.userProfile;
-              console.log('✅ Cache encontrado para usuario:', cachedProfile.email);
-              console.log('📊 Datos en cache:', {
-                empresas: cachedUser.empresas?.length || 0,
-                sucursales: cachedUser.sucursales?.length || 0,
-                formularios: cachedUser.formularios?.length || 0,
-                auditorias: cachedUser.auditorias?.length || 0
-              });
-              
-              setUserProfile(cachedProfile);
-              
-              // CRÍTICO: Establecer authReady solo si el perfil del cache tiene role válido
-              if (cachedProfile && cachedProfile.role && typeof cachedProfile.role === 'string' && cachedProfile.role.length > 0) {
-                setAuthReady(true);
-                console.log('✅ [AuthContext] authReady establecido desde cache - userProfile y role listos');
-              }
-              
-              const simulatedUser = {
-                uid: cachedProfile.uid,
-                email: cachedProfile.email,
-                displayName: cachedProfile.displayName || cachedProfile.email,
-                emailVerified: true,
-                isAnonymous: false,
-                metadata: {
-                  creationTime: cachedProfile.createdAt || new Date().toISOString(),
-                  lastSignInTime: new Date().toISOString()
-                }
-              };
-              
-              setUser(simulatedUser);
-              setIsLogged(true);
-              localStorage.setItem("userInfo", JSON.stringify(simulatedUser));
-              localStorage.setItem("isLogged", JSON.stringify(true));
-              
-              if (cachedUser.empresas && cachedUser.empresas.length > 0) {
-                // Los servicios ya traen solo datos del usuario (multi-tenant)
-                setUserEmpresas(cachedUser.empresas);
-                setLoadingEmpresas(false);
-                console.log('✅ Empresas cargadas desde cache:', cachedUser.empresas.length);
-                console.log('📊 Detalle empresas:', cachedUser.empresas.map(e => e.nombre || e.id));
-              } else {
-                console.warn('⚠️ No hay empresas en cache');
-                // Último intento: verificar localStorage directamente (Chrome)
-                const isChrome = navigator.userAgent.includes('Chrome') && !navigator.userAgent.includes('Edg');
-                if (isChrome) {
-                  console.log('🔍 [Chrome] Intentando cargar desde localStorage directamente...');
-                  try {
-                    const localCache = localStorage.getItem('complete_user_cache');
-                    if (localCache) {
-                      const parsed = JSON.parse(localCache);
-                      if (parsed.empresas && parsed.empresas.length > 0) {
-                        // Los servicios ya traen solo datos del usuario (multi-tenant)
-                        setUserEmpresas(parsed.empresas);
-                        setLoadingEmpresas(false);
-                        console.log('✅ [Chrome] Empresas cargadas desde localStorage:', parsed.empresas.length);
-                        // Mostrar toast solo en móvil/Chrome (async)
-                        if (window.matchMedia('(display-mode: standalone)').matches) {
-                          import('react-toastify').then(({ toast }) => {
-                            toast.success(`✅ Modo offline: ${empresasFiltradas.length} empresas cargadas desde cache`, {
-                              autoClose: 4000,
-                              position: 'top-center'
-                            });
-                          });
-                        }
-                      } else {
-                        // No hay empresas en localStorage tampoco
-                        if (window.matchMedia('(display-mode: standalone)').matches) {
-                          import('react-toastify').then(({ toast }) => {
-                            toast.warning('⚠️ No hay empresas en cache. Conecta a internet y precarga las páginas.', {
-                              autoClose: 6000,
-                              position: 'top-center'
-                            });
-                          });
-                        }
-                      }
-                    } else {
-                      // No hay cache en localStorage
-                      if (window.matchMedia('(display-mode: standalone)').matches) {
-                        import('react-toastify').then(({ toast }) => {
-                          toast.error('❌ No hay cache disponible. Conecta a internet y precarga las páginas primero.', {
-                            autoClose: 7000,
-                            position: 'top-center'
-                          });
-                        });
-                      }
-                    }
-                  } catch (e) {
-                    console.error('Error cargando desde localStorage:', e);
-                    if (window.matchMedia('(display-mode: standalone)').matches) {
-                      import('react-toastify').then(({ toast }) => {
-                        toast.error(`❌ Error cargando cache: ${e.message}`, {
-                          autoClose: 7000,
-                          position: 'top-center'
-                        });
-                      });
-                    }
-                  }
-                }
-                if (!userEmpresas || userEmpresas.length === 0) {
-                  setUserEmpresas([]);
+          if (wasLoggedIn && enableOffline && loadUserFromCache) {
+            try {
+              const cachedUser = await loadUserFromCache();
+              if (cachedUser) {
+                console.log('📴 [Modo offline] Cargando solo datos secundarios desde cache');
+                
+                // Solo cargar datos secundarios, NO userProfile
+                if (cachedUser.empresas?.length > 0) {
+                  setUserEmpresas(cachedUser.empresas);
                   setLoadingEmpresas(false);
                 }
-              }
-              
-              if (cachedUser.sucursales && cachedUser.sucursales.length > 0) {
-                setUserSucursales(cachedUser.sucursales);
-                setLoadingSucursales(false);
-                console.log('✅ Sucursales cargadas desde cache:', cachedUser.sucursales.length);
-              } else {
-                console.warn('⚠️ No hay sucursales en cache');
-                setUserSucursales([]);
-                setLoadingSucursales(false);
-              }
-              
-              if (cachedUser.formularios && cachedUser.formularios.length > 0) {
-                setUserFormularios(cachedUser.formularios);
-                setLoadingFormularios(false);
-                console.log('✅ Formularios cargados desde cache:', cachedUser.formularios.length);
-              } else {
-                console.warn('⚠️ No hay formularios en cache');
-                setUserFormularios([]);
-                setLoadingFormularios(false);
-              }
-              
-              if (cachedUser.auditorias && cachedUser.auditorias.length > 0) {
-                setUserAuditorias(cachedUser.auditorias);
-                console.log('✅ Auditorías cargadas desde cache:', cachedUser.auditorias.length);
-              }
-              
-              // CRÍTICO: Inicializar datos offline para Edge PWA (solo en móvil)
-              // Esto asegura que IndexedDB esté listo y los datos estén disponibles
-              // incluso si el usuario entra offline directamente sin pasar por /auditoria
-              if (enableOffline) {
-                const isEdge = navigator.userAgent.includes('Edg');
-                const isPWA = window.matchMedia('(display-mode: standalone)').matches || 
-                              (window.navigator.standalone === true) ||
-                              document.referrer.includes('android-app://');
-                
-                if (isEdge && isPWA) {
-                  try {
-                    await initializeOfflineData(
-                      cachedProfile,
-                      setUserEmpresas,
-                      setUserSucursales,
-                      setUserFormularios
-                    );
-                  } catch (initError) {
-                    console.warn('Error inicializando datos offline:', initError);
-                    // Continuar sin fallar, los datos ya están cargados desde loadUserFromCache
-                  }
+                if (cachedUser.sucursales?.length > 0) {
+                  setUserSucursales(cachedUser.sucursales);
+                  setLoadingSucursales(false);
                 }
+                if (cachedUser.formularios?.length > 0) {
+                  setUserFormularios(cachedUser.formularios);
+                  setLoadingFormularios(false);
+                }
+                if (cachedUser.auditorias?.length > 0) {
+                  setUserAuditorias(cachedUser.auditorias);
+                }
+                
+                setEnableDeferredListeners(true);
               }
-            } else {
-              console.error('❌ No hay cache válido disponible');
-              setUser(null);
-              setIsLogged(false);
-              setAuthReady(false);
-              setUserEmpresas([]);
-              setUserAuditorias([]);
-              setAuditoriasCompartidas([]);
-              localStorage.removeItem("userInfo");
-              localStorage.removeItem("isLogged");
+            } catch (error) {
+              console.error('Error cargando cache offline:', error);
             }
-          } else if (wasLoggedIn && !enableOffline) {
-            // En desktop sin conexión, simplemente cerrar sesión (no hay modo offline)
-            console.log('💻 Desktop: Sin conexión y modo offline deshabilitado - cerrando sesión');
-            setUser(null);
-            setIsLogged(false);
-            setAuthReady(false);
-            setUserEmpresas([]);
-            setUserAuditorias([]);
-            setAuditoriasCompartidas([]);
-            localStorage.removeItem("userInfo");
-            localStorage.removeItem("isLogged");
-          } else {
-            setUser(null);
-            setIsLogged(false);
-            setAuthReady(false);
-            setUserEmpresas([]);
-            setUserAuditorias([]);
-            setAuditoriasCompartidas([]);
-            localStorage.removeItem("userInfo");
-            localStorage.removeItem("isLogged");
           }
         }
       } catch (error) {
@@ -645,7 +562,7 @@ const AuthContextComponent = ({ children }) => {
   const logoutContext = () => {
     setUser(null);
     setIsLogged(false);
-    setAuthReady(false);
+    setTokenClaims(null);
     setUserEmpresas([]);
     setUserAuditorias([]);
     setAuditoriasCompartidas([]);
@@ -653,28 +570,55 @@ const AuthContextComponent = ({ children }) => {
     localStorage.removeItem("isLogged");
   };
   
-  // Efecto para mantener authReady sincronizado con user, userProfile y role
-  // Esto asegura que authReady se actualice automáticamente cuando cualquiera de estos cambie
+  // authReady se deriva automáticamente del estado (user, tokenClaims, userProfile)
+  // CRÍTICO: Solo es true cuando TODOS los componentes están listos:
+  // - user existe
+  // - tokenClaims existe y tiene role y ownerId válidos
+  // - userProfile existe y su role coincide con tokenClaims.role
+  // NOTA: No dependemos de 'role' del hook porque puede tardar en sincronizarse
+  // Usamos tokenClaims.role como fuente de verdad
   useEffect(() => {
-    const isReady = !!(
-      user &&
-      userProfile &&
-      userProfile.uid &&
-      role &&
-      typeof role === 'string' &&
-      role.length > 0
+    const hasValidTokenClaims = !!(
+      tokenClaims &&
+      tokenClaims.role &&
+      typeof tokenClaims.role === 'string' &&
+      tokenClaims.role.length > 0 &&
+      tokenClaims.ownerId &&
+      typeof tokenClaims.ownerId === 'string' &&
+      tokenClaims.ownerId.length > 0
     );
     
-    // Solo actualizar si cambió el estado (evitar loops infinitos)
+    const hasValidUserProfile = !!(
+      userProfile &&
+      userProfile.uid &&
+      userProfile.role &&
+      typeof userProfile.role === 'string' &&
+      userProfile.role.length > 0
+    );
+    
+    // Verificar que el role del userProfile coincida con el role del tokenClaims
+    // tokenClaims.role es la fuente de verdad
+    const rolesMatch = tokenClaims?.role === userProfile?.role;
+    
+    const isReady = !!(
+      user &&
+      hasValidTokenClaims &&
+      hasValidUserProfile &&
+      rolesMatch
+    );
+    
     if (isReady !== authReady) {
+      console.log('[AUTH] authReady:', isReady, {
+        user: !!user,
+        tokenClaims: hasValidTokenClaims,
+        userProfile: hasValidUserProfile,
+        rolesMatch,
+        tokenRole: tokenClaims?.role,
+        profileRole: userProfile?.role
+      });
       setAuthReady(isReady);
-      if (isReady) {
-        console.log('✅ [AuthContext] authReady sincronizado - user, userProfile y role listos');
-      } else {
-        console.log('⏳ [AuthContext] authReady sincronizado - esperando inicialización completa');
-      }
     }
-  }, [user, userProfile, role, authReady]);
+  }, [user, tokenClaims, userProfile, authReady]);
 
   const data = {
     user,
@@ -703,7 +647,7 @@ const AuthContextComponent = ({ children }) => {
       if (role === 'operario') {
         return empresaService.canViewEmpresa(empresaId, userProfile, userEmpresas);
       }
-      // Para max/supermax: usar userProfile (legacy)
+      // Para admin: usar userProfile
       return empresaService.canViewEmpresa(empresaId, userProfile);
     },
     canViewAuditoria: (auditoriaId) => auditoriaService.canViewAuditoria(auditoriaId, userProfile, auditoriasCompartidas),
@@ -713,7 +657,6 @@ const AuthContextComponent = ({ children }) => {
     getUserAuditorias: () => loadUserAuditorias(user?.uid, userProfile),
     getAuditoriasCompartidas: () => loadAuditoriasCompartidas(user?.uid, userProfile),
     role,
-    permisos,
     editarPermisosOperario,
     logAccionOperario,
     verificarYCorregirEmpresas,
