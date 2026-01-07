@@ -16,154 +16,64 @@ export const useUserProfile = (firebaseUser) => {
   
   const isDev = isEnvironment('development');
 
-  // Crear o obtener perfil del usuario
-  const createOrGetUserProfile = async (firebaseUser) => {
+  // Crear o obtener perfil del usuario desde owner-centric
+  const createOrGetUserProfile = async (firebaseUser, ownerIdFromToken = null) => {
     try {
-      // ✅ FIX OBLIGATORIO #1: Bloquear admins - useUserProfile es solo para operarios
-      const tokenRole = await firebaseUser.getIdTokenResult()
-        .then(t => t.claims.role)
-        .catch(() => null);
-
-      if (tokenRole === 'max' || tokenRole === 'supermax') {
-        console.warn('[SECURITY] createOrGetUserProfile bloqueado para admin');
+      // ✅ CRÍTICO: Para operarios, ownerId DEBE venir del token (custom claims)
+      if (!ownerIdFromToken) {
+        console.error('[useUserProfile] ❌ ownerId no proporcionado desde token claims');
         return null;
       }
 
-      // Usar la colección: /apps/auditoria/users/{uid}
-      const userRef = doc(db, "apps", "auditoria", "users", firebaseUser.uid);
+      // Leer perfil desde owner-centric: apps/auditoria/owners/{ownerId}/usuarios/{userId}
+      const userRef = doc(db, "apps", "auditoria", "owners", ownerIdFromToken, "usuarios", firebaseUser.uid);
       let userSnap = await getDoc(userRef);
 
       if (userSnap.exists()) {
         const profileData = userSnap.data();
         if (isDev) {
-          console.log('[AUDIT] User profile loaded from /apps/auditoria/users');
-        }
-        
-        // ✅ Incluir ownerId/clienteAdminId desde /users (requerido para operarios)
-        // Estos campos son necesarios para que el operario pueda leer sus empresas
-        const ownerId = profileData.ownerId || profileData.clienteAdminId || null;
-        const clienteAdminId = profileData.clienteAdminId || profileData.ownerId || null;
-        
-        // ⚠️ VALIDACIÓN CRÍTICA: Operarios DEBEN tener ownerId
-        if (profileData.role === 'operario' && !ownerId) {
-          console.error('[AUDIT] ❌ ERROR CRÍTICO: Operario sin ownerId en documento legacy');
-          console.error('[AUDIT] El operario debe ser recreado o actualizado por el admin');
-          console.error('[AUDIT] userId:', profileData.uid);
-          // Retornar perfil con ownerId null para que el sistema detecte el error
+          console.log('[AUDIT] User profile loaded from owner-centric');
         }
         
         const cleanProfile = {
-          uid: profileData.uid,
-          email: profileData.email,
-          displayName: profileData.displayName,
+          uid: firebaseUser.uid,
+          email: firebaseUser.email,
+          displayName: firebaseUser.displayName || firebaseUser.email,
           role: profileData.role || null,
-          appId: profileData.appId,
+          appId: profileData.appId || 'auditoria',
           createdAt: profileData.createdAt,
-          // ✅ CRÍTICO: Incluir ownerId/clienteAdminId para operarios
-          ownerId: ownerId,
-          clienteAdminId: clienteAdminId
+          ownerId: ownerIdFromToken, // Usar ownerId del token
+          empresasAsignadas: profileData.empresasAsignadas || []
         };
         
         setUserProfile(cleanProfile);
         setRole(cleanProfile.role || null);
-        setPermisos({}); // Permisos vienen de owner-centric, no de /users
+        setPermisos({});
         return cleanProfile;
       }
 
-      // Si no existe por UID, buscar por email (puede ser que el documento tenga UID temporal)
-      // Esto ocurre cuando el email ya existía en Auth (compartido con otras apps)
-      // y se creó el documento en Firestore con un UID temporal
-      if (firebaseUser.email) {
-        const { collection, query, where, getDocs } = await import('firebase/firestore');
-        const usuariosRef = collection(db, "apps", "auditoria", "users");
-        const emailQuery = query(usuariosRef, where("email", "==", firebaseUser.email));
-        const emailSnapshot = await getDocs(emailQuery);
-        
-        if (!emailSnapshot.empty) {
-          // Encontrado por email - migrar al UID real
-          const tempUserDoc = emailSnapshot.docs[0];
-          const tempUserData = tempUserDoc.data();
-          
-          if (isDev) {
-            console.log('[AUDIT] User profile found by email, migrating to real UID');
-            console.log('[AUDIT] Temp UID:', tempUserDoc.id, 'Real UID:', firebaseUser.uid);
-          }
-          
-          // ✅ Crear documento con UID real - Incluir ownerId/clienteAdminId si existen
-          const migratedProfile = {
-            uid: firebaseUser.uid,
-            email: tempUserData.email || firebaseUser.email,
-            displayName: tempUserData.displayName || firebaseUser.displayName || firebaseUser.email,
-            role: tempUserData.role || getUserRole(firebaseUser.email),
-            appId: 'auditoria',
-            createdAt: serverTimestamp(),
-            // ✅ CRÍTICO: Preservar ownerId/clienteAdminId si existen
-            ownerId: tempUserData.ownerId || tempUserData.clienteAdminId || null,
-            clienteAdminId: tempUserData.clienteAdminId || tempUserData.ownerId || null
-          };
-          
-          await setDocWithAppId(userRef, migratedProfile);
-          
-          // Eliminar documento temporal si el UID es diferente
-          if (tempUserDoc.id !== firebaseUser.uid) {
-            const { deleteDoc } = await import('firebase/firestore');
-            await deleteDoc(tempUserDoc.ref);
-            if (isDev) {
-              console.log('[AUDIT] Temporary document deleted:', tempUserDoc.id);
-            }
-          }
-          
-          setUserProfile(migratedProfile);
-          setRole(migratedProfile.role || null);
-          setPermisos({}); // Permisos vienen de owner-centric, no de /users
-          return migratedProfile;
-        }
-      }
-
-      // Si no existe, crear nuevo perfil
+      // Si no existe, el operario aún no ha sido creado por el admin
+      // Retornar null para que el sistema maneje el error
       if (isDev) {
-        console.log('[AUDIT] User profile not found, creating in /apps/auditoria/users');
+        console.log('[AUDIT] User profile not found in owner-centric - operario no creado aún');
       }
       
-      // ✅ Crear perfil con identidad global
-      // NOTA: ownerId/clienteAdminId se asignan cuando el admin crea el operario
-      const newProfile = {
-        uid: firebaseUser.uid,
-        email: firebaseUser.email,
-        displayName: firebaseUser.displayName || firebaseUser.email,
-        createdAt: serverTimestamp(),
-        appId: 'auditoria',
-        role: getUserRole(firebaseUser.email),
-        // ownerId/clienteAdminId se asignarán cuando el admin cree el operario
-        ownerId: null,
-        clienteAdminId: null
-      };
-
-      await setDocWithAppId(userRef, newProfile);
-      if (isDev) {
-        console.log('[AUDIT] User profile created in /apps/auditoria/users');
-      }
-      
-      setUserProfile(newProfile);
-      setRole(newProfile.role);
-      setPermisos(newProfile.permisos);
-      return newProfile;
+      return null;
     } catch (error) {
       console.error("Error al crear/obtener perfil de usuario:", error);
       return null;
     }
   };
 
-  // Actualizar perfil del usuario
+  // Actualizar perfil del usuario (solo para operarios en owner-centric)
   const updateUserProfile = async (updates) => {
     try {
-      // ✅ FIX OBLIGATORIO #2: Bloquear admins - no se actualizan en /users
-      if (userProfile?.role === 'max' || userProfile?.role === 'supermax') {
-        console.warn('[SECURITY] updateUserProfile bloqueado para admin');
+      if (!userProfile?.ownerId) {
+        console.error('[useUserProfile] ownerId no disponible para actualizar perfil');
         return false;
       }
 
-      const userRef = doc(db, "apps", "auditoria", "users", firebaseUser.uid);
+      const userRef = doc(db, "apps", "auditoria", "owners", userProfile.ownerId, "usuarios", firebaseUser.uid);
       await updateDocWithAppId(userRef, updates);
       
       const updatedProfile = { ...userProfile, ...updates };
@@ -224,16 +134,17 @@ export const useUserProfile = (firebaseUser) => {
         }
       }
 
-      // ✅ FIX OBLIGATORIO #3: Consultar owner desde owner-centric, no desde /users
+      // Verificar estado del owner para operarios
       if (userProfile.role === 'operario' && userProfile.ownerId) {
-        const adminRef = doc(db, 'apps', 'auditoria', 'owners', userProfile.ownerId);
-        const adminSnap = await getDoc(adminRef);
-        if (adminSnap.exists()) {
-          const adminData = adminSnap.data();
+        // Leer documento del owner desde owner-centric
+        const ownerUserRef = doc(db, 'apps', 'auditoria', 'owners', userProfile.ownerId, 'usuarios', userProfile.ownerId);
+        const ownerSnap = await getDoc(ownerUserRef);
+        if (ownerSnap.exists()) {
+          const ownerData = ownerSnap.data();
           if (
-            adminData.activo === false ||
-            adminData.estadoPago === 'vencido' ||
-            (adminData.fechaVencimiento && adminData.fechaVencimiento.toDate && new Date(adminData.fechaVencimiento.toDate()) < new Date())
+            ownerData.activo === false ||
+            ownerData.estadoPago === 'vencido' ||
+            (ownerData.fechaVencimiento && ownerData.fechaVencimiento.toDate && new Date(ownerData.fechaVencimiento.toDate()) < new Date())
           ) {
             setBloqueado(true);
             setMotivoBloqueo('El cliente administrador de tu cuenta tiene la suscripción vencida o inactiva. No puedes acceder al sistema.');

@@ -248,12 +248,16 @@ const AuthContextComponent = ({ children }) => {
           localStorage.setItem("userInfo", JSON.stringify(firebaseUser));
           localStorage.setItem("isLogged", JSON.stringify(true));
           
-          // ✅ CRÍTICO: Leer role del token PRIMERO para determinar flujo
+          // ✅ CRÍTICO: Leer role y ownerId del token PRIMERO para determinar flujo
+          // FORZAR REFRESH del token para obtener custom claims actualizados (especialmente después de crear operario)
           let tokenRole = null;
+          let tokenOwnerId = null;
           try {
-            const token = await auth.currentUser.getIdTokenResult();
+            const token = await auth.currentUser.getIdTokenResult(true); // true = forzar refresh del token
             tokenRole = token.claims.role || null;
+            tokenOwnerId = token.claims.ownerId || null; // ownerId solo existe para operarios
             console.log('[AUTH] Token role claim:', tokenRole);
+            console.log('[AUTH] Token ownerId claim:', tokenOwnerId);
             console.log('[AUTH] Token aud claim:', token.claims.aud);
             if (token.claims.aud !== 'controlstorage-eb796') {
               console.warn('[AUTH] ⚠️ Token aud no coincide con controlstorage-eb796:', token.claims.aud);
@@ -264,18 +268,20 @@ const AuthContextComponent = ({ children }) => {
             console.error('[AUTH] Error obteniendo token:', error);
           }
           
-          // ✅ MODELO OWNER-CENTRIC: Admins NO usan /users, solo operarios
+          // ✅ MODELO OWNER-CENTRIC: Admins y operarios usan owner-centric
           let profile = null;
           
+          // ⚠️ COMPATIBILIDAD TEMPORAL: Tratar max/supermax como admin
+          // TODO: Migrar roles legacy (max/supermax) a 'admin' en custom claims
           if (tokenRole === 'max' || tokenRole === 'supermax') {
-            // ADMIN: Construir userProfile directamente sin buscar en /users
-            console.log('[AUTH] ✅ ADMIN detectado - construyendo userProfile sin /users');
+            // ADMIN: Construir userProfile directamente (ownerId = auth.uid)
+            console.log('[AUTH] ✅ ADMIN detectado (role legacy:', tokenRole, ') - construyendo userProfile');
             profile = {
               uid: firebaseUser.uid,
               email: firebaseUser.email,
               displayName: firebaseUser.displayName || firebaseUser.email,
-              role: tokenRole,
-              ownerId: firebaseUser.uid, // ✅ Admin es su propio owner
+              role: tokenRole, // Mantener role legacy por compatibilidad temporal
+              ownerId: firebaseUser.uid, // Admin es su propio owner
               appId: 'auditoria',
               permisos: {
                 puedeCrearEmpresas: true,
@@ -298,10 +304,13 @@ const AuthContextComponent = ({ children }) => {
               role: profile.role,
               ownerId: profile.ownerId
             });
+          } else if (tokenRole === 'operario' && tokenOwnerId) {
+            // OPERARIO: Leer ownerId desde token claims y leer perfil desde owner-centric
+            console.log('[AUTH] ✅ OPERARIO detectado - leyendo ownerId desde token claims:', tokenOwnerId);
+            profile = await createOrGetUserProfile(firebaseUser, tokenOwnerId);
           } else {
-            // OPERARIO: Usar createOrGetUserProfile que busca en /users
-            console.log('[AUTH] ✅ OPERARIO detectado - usando createOrGetUserProfile');
-            profile = await createOrGetUserProfile(firebaseUser);
+            console.error('[AUTH] ❌ Operario sin ownerId en token claims o role desconocido');
+            console.error('[AUTH] tokenRole:', tokenRole, 'tokenOwnerId:', tokenOwnerId);
           }
           
           if (profile) {
@@ -379,33 +388,10 @@ const AuthContextComponent = ({ children }) => {
             }, 1000);
 
             // Verificar que tenemos datos antes de guardar cache (solo en móvil)
-            if (enableOffline && empresasCargadas && empresasCargadas.length > 0) {
-              try {
-                const completeProfile = {
-                  ...profile,
-                  email: profile.email || firebaseUser.email,
-                  displayName: profile.displayName || firebaseUser.displayName || firebaseUser.email,
-                  role: profile.role || 'operario'
-                };
-                
-                await saveCompleteUserCache(
-                  completeProfile, 
-                  empresasCargadas, 
-                  sucursalesCargadas || [], 
-                  formulariosCargados || []
-                );
-                console.log('✅ Cache guardado con datos:', {
-                  empresas: empresasCargadas.length,
-                  sucursales: (sucursalesCargadas || []).length,
-                  formularios: (formulariosCargados || []).length
-                });
-              } catch (error) {
-                console.error('❌ Error guardando cache:', error);
-              }
-            } else if (!enableOffline) {
-              console.log('💻 Desktop: Cache offline deshabilitado (no necesario)');
-            } else {
-              console.warn('⚠️ No se guardó cache: no hay empresas cargadas');
+            // NOTA: Este código se ejecuta antes de que userEmpresas esté disponible
+            // El cache se guardará cuando los datos estén disponibles (ver useEffect más abajo)
+            if (enableOffline) {
+              console.log('💾 Cache offline habilitado - se guardará cuando los datos estén disponibles');
             }
             
             // Inicializar carpetas de ControlFile después de autenticación exitosa

@@ -417,19 +417,7 @@ service cloud.firestore {
       allow read, update: if isAuth() && userId == uid();
     }
     
-    // Usuarios de ControlAudit - Ruta alternativa: apps/auditoria/users/{userId}
-    match /apps/auditoria/users/{userId} {
-      // Permitir leer/actualizar el propio perfil
-      allow read, update: if isAuth() && userId == uid();
-      
-      // Permitir crear: propio perfil O supermax creando para otros
-      allow create: if isAuth() 
-        && (userId == uid() || 
-            (exists(/databases/$(db)/documents/apps/auditoria/users/$(uid())) &&
-             get(/databases/$(db)/documents/apps/auditoria/users/$(uid())).data.role == 'supermax'))
-        && request.resource.data.appId is string
-        && request.resource.data.appId == 'auditoria';
-    }
+    // Reglas legacy eliminadas - apps/auditoria/users ya no se usa
     
     // Empresas
     match /empresas/{empresaId} {
@@ -601,8 +589,13 @@ service cloud.firestore {
     
     // Empresas del owner
     match /apps/auditoria/owners/{ownerId}/empresas/{empresaId} {
-      // El owner puede leer sus propias empresas
-      allow read: if isAuth() && ownerId == uid();
+      // Lectura:
+      // - Owner puede leer sus propias empresas (ownerId == auth.uid)
+      // - Operario puede leer empresas asignadas usando ownerId del token (request.auth.token.ownerId == ownerId AND operarios[uid] == true)
+      allow read: if isAuth() && (
+        ownerId == uid() || 
+        (request.auth.token.ownerId == ownerId && resource.data.operarios[uid()] == true)
+      );
       
       // El owner puede crear empresas propias
       allow create: if isAuth() 
@@ -625,17 +618,15 @@ service cloud.firestore {
     
     // Usuarios del owner (operarios y admins)
     match /apps/auditoria/owners/{ownerId}/usuarios/{userId} {
-      // Lectura: El owner puede leer todos sus usuarios, y cada usuario puede leer su propio documento
-      allow read: if isAuth() && (ownerId == uid() || (userId == uid() && ownerId == uid()));
+      // Lectura: 
+      // - Owner puede leer todos sus usuarios (ownerId == auth.uid)
+      // - Operario puede leer su propio documento usando ownerId del token (request.auth.token.ownerId == ownerId)
+      allow read: if isAuth() && (
+        ownerId == uid() || 
+        (userId == uid() && request.auth.token.ownerId == ownerId)
+      );
       
-      // ✅ CREAR: El owner puede crear usuarios (operarios/admins) para sí mismo
-      // Condiciones OBLIGATORIAS:
-      // - auth.uid == ownerId (el owner autenticado coincide con el ownerId en la ruta)
-      // - request.resource.data.ownerId == auth.uid (el documento tiene el ownerId correcto)
-      // - request.resource.data.appId == 'auditoria' (requerido por el modelo)
-      // - request.resource.data.role in ['admin','operario'] (solo roles válidos)
-      // NO depende de existencia previa del documento
-      // NO permite writes cruzados entre owners
+      // CREAR: El owner puede crear usuarios (operarios/admins) para sí mismo
       allow create: if isAuth() 
         && ownerId == uid()
         && request.resource.data.ownerId == uid()
@@ -643,9 +634,7 @@ service cloud.firestore {
         && request.resource.data.role in ['admin', 'operario']
         && request.resource.data.empresasAsignadas is list;
       
-      // ✅ ACTUALIZAR: El owner puede actualizar usuarios que le pertenecen
-      // Específicamente permite actualizar empresasAsignadas
-      // Los operarios NO pueden modificar sus propias asignaciones (solo el owner)
+      // ACTUALIZAR: El owner puede actualizar usuarios que le pertenecen
       allow update: if isAuth() 
         && ownerId == uid()
         && resource.data.ownerId == uid()

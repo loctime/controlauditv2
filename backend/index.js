@@ -213,43 +213,21 @@ app.post('/api/admin/create-user', verificarTokenAdmin, async (req, res) => {
       disabled: false
     });
 
-    // 2. Asignar custom claim (rol) automáticamente
-    await admin.auth().setCustomUserClaims(userRecord.uid, { role: finalRole });
-    console.log(`[INFO] Custom claim 'role: ${finalRole}' asignado a UID: ${userRecord.uid}`);
-
-    // 3. Crear perfil en Firestore según el modelo owner-centric
-    // ✅ REGLA: Solo OPERARIOS tienen documento en apps/auditoria/users/{uid} (legacy)
-    // ✅ ADMINS solo existen en apps/auditoria/owners/{ownerId}/usuarios/{ownerId}
-    const ownerId = req.user.uid; // El admin que está creando el usuario
+    // 2. Obtener ownerId (el admin que está creando el usuario)
+    const ownerId = req.user.uid;
     
-    if (finalRole === 'operario') {
-      // Solo operarios: crear documento legacy en apps/auditoria/users/{uid}
-      const userProfile = {
-        uid: userRecord.uid,
-        email: email,
-        displayName: nombre,
-        role: finalRole,
-        permisos: permisos,
-        appId: 'auditoria',
-        ownerId: ownerId, // ✅ Campo crítico para modelo owner-centric
-        status: 'active', // Campo requerido por las rules
-        createdAt: new Date(),
-        empresas: [],
-        auditorias: [],
-        socios: [],
-        configuracion: {
-          notificaciones: true,
-          tema: 'light'
-        },
-        clienteAdminId: ownerId // ✅ CRÍTICO: clienteAdminId DEBE ser igual a ownerId
-      };
-      
-      console.log(`[create-user] ✅ Creando OPERARIO en apps/auditoria/users/{uid} con ownerId: ${ownerId}`);
-      await getUsersCollection().doc(userRecord.uid).set(userProfile);
-    } else {
-      // Para otros roles (admin, etc): NO crear en /users (solo owner-centric)
-      console.log(`[create-user] ⚠️ Role '${finalRole}' - NO creando documento en apps/auditoria/users (solo owner-centric)`);
-    }
+    // 3. Asignar custom claims con role y ownerId (CRÍTICO para operarios)
+    // Esto debe ejecutarse ANTES de crear documento en owner-centric
+    const customClaims = { 
+      role: finalRole,
+      ...(finalRole === 'operario' && { ownerId: ownerId }) // Solo operarios tienen ownerId en claims
+    };
+    
+    await admin.auth().setCustomUserClaims(userRecord.uid, customClaims);
+    console.log(`[INFO] Custom claims asignados a UID ${userRecord.uid}:`, customClaims);
+    
+    // NOTA: El documento en owner-centric se crea desde el frontend usando ownerUserService.createUser()
+    // El backend solo crea el usuario en Auth y setea los custom claims
 
     res.json({ 
       success: true,
