@@ -60,10 +60,9 @@ const EstablecimientosContainer = () => {
   const theme = useTheme();
   const isSmallMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
-  const { empresasStats, loadEmpresasStats } = useEmpresasStats(userEmpresas, userProfile?.uid);
-
-  // Obtener ownerId: si es operario usa clienteAdminId, si no usa su propio uid
-  const ownerId = userProfile?.clienteAdminId || userProfile?.uid || user?.uid;
+  // Obtener ownerId desde userProfile (viene del token)
+  const ownerId = userProfile?.ownerId;
+  const { empresasStats, loadEmpresasStats } = useEmpresasStats(userEmpresas, ownerId);
 
   const {
     empresa,

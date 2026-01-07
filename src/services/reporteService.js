@@ -4,13 +4,14 @@
 import { 
   doc
 } from 'firebase/firestore';
-import { auditUserCollection, dbAudit } from '../firebaseControlFile';
+import { dbAudit } from '../firebaseControlFile';
+import { firestoreRoutesCore } from '../core/firestore/firestoreRoutes.core';
 import { deleteDocWithAppId, updateDocWithAppId } from '../firebase/firestoreAppWriter';
 
 export const reporteService = {
   /**
-   * Eliminar reporte (multi-tenant)
-   * @param {string} userId - UID del usuario
+   * Eliminar reporte (owner-centric)
+   * @param {string} userId - ID del owner (viene del token)
    * @param {string} reporteId - ID del reporte
    * @returns {Promise<void>}
    */
@@ -18,8 +19,9 @@ export const reporteService = {
     try {
       if (!userId || !reporteId) throw new Error('userId y reporteId son requeridos');
       
-      const reportesRef = auditUserCollection(userId, 'reportes');
-      const reporteRef = doc(reportesRef, reporteId);
+      if (!userId) throw new Error('ownerId es requerido');
+      const ownerId = userId; // userId ahora es ownerId
+      const reporteRef = doc(dbAudit, ...firestoreRoutesCore.reporte(ownerId, reporteId));
       
       await deleteDocWithAppId(reporteRef);
     } catch (error) {

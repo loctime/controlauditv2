@@ -1,0 +1,351 @@
+[
+  {
+    "id": "YmiTWxVqE3caK6ERPMQq",
+    "secciones": [
+      {
+        "preguntas": [
+          "1\t¿ Dispone del Servicio de Higiene y Seguridad?",
+          "2\t¿Cumple con las  horas profesionales según  Decreto 1338/96 ?",
+          "3\t¿ Posee documentación actualizada sobre análisis de riesgos y medidas preventivas, en los puestos de trabajo?"
+        ],
+        "nombre": "SERVICIO DE HIGIENE Y SEGURIDAD EN EL TRABAJO"
+      },
+      {
+        "preguntas": [
+          "4\t¿ Dispone del Servicio de Medicina del Trabajo?",
+          "5\t¿ Posee documentación actualizada sobre acciones tales como de educación sanitaria, socorro, vacunación y estudios de ausentismo por morbilidad?",
+          "6\t¿ Se realizan los exámenes periódicos?"
+        ],
+        "nombre": "SERVICIO DE MEDICINA DEL TRABAJO"
+      },
+      {
+        "preguntas": [
+          "7\t¿Las herramientas están en estado de conservación adecuado ?",
+          "8\t¿La empresa provee herramientas aptas y seguras ?",
+          "9\t¿Las herramientas corto-punzantes poseen fundas o vainas?",
+          "10\t¿Existe un lugar destinado para la ubicación ordenada de las herramientas?",
+          "11\t¿ Las portátiles eléctricas poseen protecciones para evitar riesgos ?",
+          "12\t¿ Las neumáticas e hidráulicas poseen válvulas de cierre automático al dejar de accionarla?"
+        ],
+        "nombre": "HERRAMIENTAS"
+      },
+      {
+        "nombre": "MÁQUINAS",
+        "preguntas": [
+          "13\t¿Tienen todas las máquinas y herramientas, protecciones para evitar riesgos al trabajador?",
+          "14\t¿Existen dispositivos de parada de emergencia?",
+          "15\t¿Se han previsto sistema de bloqueo de la máquina para operaciones de mantenimiento?",
+          "16\t¿Tienen las máquinas eléctricas, sistema de puesta a tierra?",
+          "17\t¿Están identificadas conforme a normas IRAM todas las partes de máquinas y equipos que en accionamiento puedan causar daño a los trabajadores?"
+        ]
+      },
+      {
+        "nombre": "ESPACIOS DE TRABAJO",
+        "preguntas": [
+          "18\t¿Existe orden y limpieza en los puestos de trabajo?",
+          "19\t¿Existen depósito de residuos en los puestos de trabajo?",
+          "20\tTienen las salientes y partes móviles de máquinas y/o instalaciones, señalización y protección ?"
+        ]
+      },
+      {
+        "preguntas": [
+          "21\tSe desarrolla un Programa de Ergonomía Integrado para los distintos puestos de trabajo?",
+          "22\tSe realizan controles de ingeniería a los puestos de trabajo?",
+          "23\tSe realizan controles administrativos y seguimientos a los puestos de trabajo?"
+        ],
+        "nombre": "ERGONOMÍA"
+      },
+      {
+        "preguntas": [
+          "24\t¿Existen medios o vías de escape adecuadas en caso de incendio?",
+          "25\t¿Cuentan con estudio de carga de fuego?",
+          "26\t¿ La cantidad de matafuegos es acorde a la carga de fuego?",
+          "27\t¿ Se registra el control de recargas y/o reparación ?",
+          "28\t¿ Se registra el control de prueba hidráulica de carros y/o matafuegos?",
+          "29\t¿Existen sistemas de detección de incendios?",
+          "30\t¿Cuentan con habilitación, los carros y/o matafuegos y demás instalaciones para  extinción?",
+          "31\t¿ El depósito de combustibles cumple con la legislación vigente?",
+          "32\t¿ Se acredita la realización periódica de simulacros de evacuación ?",
+          "33\t¿ Se disponen de estanterías o elementos equivalentes de material no combustible o metálico?",
+          "34\t¿ Se separan en forma alternada, las de materiales combustibles con las no combustibles y las que puedan reaccionar entre si?"
+        ],
+        "nombre": "PROTECCION CONTRA INCENDIOS"
+      },
+      {
+        "preguntas": [
+          "35\t¿Se almacenan los productos respetando la distancia mínima de 1 m entre la parte superior de las estibas y el techo?",
+          "36\t¿Los sistemas de almacenaje permiten una adecuada circulación y son seguros?",
+          "37\t¿En los almacenajes a granel, las estibas cuentan con elementos de contención?"
+        ],
+        "nombre": "ALMACENAJE"
+      },
+      {
+        "nombre": "ALMACENAJE DE SUSTANCIAS PELIGROSAS",
+        "preguntas": [
+          "38\t¿Se encuentran separados los productos incompatibles?",
+          "39\t¿Se identifican los productos riesgosos almacenados?",
+          "40\t¿Se proveen elementos de protección adecuados al personal ?",
+          "41\t¿Existen duchas de emergencia y/o lava ojos en los sectores con productos peligrosos?",
+          "42\t¿En atmósferas inflamables la instalación eléctrica es antiexplosiva?",
+          "43\t¿Existe un sistema para control de derrames de productos peligrosos?"
+        ]
+      },
+      {
+        "preguntas": [
+          "44\t¿Su fabricación y/o manipuleo cumplimenta la legislación vigente?",
+          "45\t¿Todas las sustancias que se utilizan poseen su respectivas hojas de seguridad?",
+          "46\t¿Las instalaciones y equipos se encuentran protegidos contra el efecto corrosivo de las sustancias empleadas?",
+          "47\t¿ Se fabrican, depositan o manipulan sustancias explosivas, teniendo en cuenta lo reglamentado por Fabricaciones Militares ?",
+          "48\t¿Existen dispositivos de alarma acústico y visuales donde se manipulen sustancias infectantes y/o contaminantes?",
+          "49\t¿ Se ha señalizado y resguardado la zona o los elementos afectados ante casos de derrame de sustancias corrosivas?",
+          "50\t¿Se ha evitado la acumulación de desechos orgánicos en estado de putrefacción, e implementado la desinfección correspondiente?",
+          "51\t¿Se confeccionó un plan de seguridad para casos de emergencia, y se colocó en lugar visible?"
+        ],
+        "nombre": " SUSTANCIAS PELIGROSAS"
+      },
+      {
+        "preguntas": [
+          "52\t¿Están todos los cableados eléctricos adecuadamente contenidos?",
+          "53\t¿Los conectores eléctricos se encuentran en buen estado?",
+          "54\t¿ Las instalaciones y equipos eléctricos cumplen con la legislación?",
+          "55\t¿ Las tareas de mantenimiento son efectuadas por personal capacitado y autorizado por la empresa?",
+          "56\t¿ Se efectúa y registra los resultados del mantenimiento de las instalaciones, en base a programas confeccionados de acuerdo a normas de seguridad?",
+          "57\t¿Los proyectos de instalaciones y equipos eléctricos de más de 1000 voltios cumplimentan con lo establecido en la legislación vigente y están aprobados por el responsable de Higiene y Seguridad en el rubro de su competencia?",
+          "58\t¿ Se adoptan las medidas de seguridad en locales donde se manipule sustancias corrosivas, inflamables y/o explosivas ó de alto riesgo y en  locales húmedos ?",
+          "59\tSe han adoptado las medidas para la protección contra riesgos de contactos directos e indirectos?",
+          "60\t¿ Se han adoptado medidas para eliminar la electricidad estática en todas las operaciones que pueda producirse?",
+          "61\t¿ Posee instalación para prevenir sobretensiones producidas por descargas atmosféricas (pararrayos)?",
+          "62\t¿ Poseen las instalaciones tomas a tierra independientes de la instalada para descargas atmosféricas?",
+          "63\t¿Las puestas a tierra se verifican periodicamente mediante mediciones?"
+        ],
+        "nombre": "RIESGO ELÉCTRICO"
+      },
+      {
+        "nombre": "APARATOS SOMETIDOS A PRESIÓN",
+        "preguntas": [
+          "64\t¿Se realizan los controles e inspecciones peródicas establecidos en calderas y todo otro aparato sometido a presión?",
+          "65\t¿ Se han fijado las instrucciones detalladas con esquemas de la instalación,  y los procedimientos operativos?",
+          "66\t¿Se protegen los hornos, calderas, etc., para evitar la acción del calor?",
+          "67\t¿Están los cilindros que contengan gases sometidos a presión adecuadamente almacenados?",
+          "68\t¿Los restantes aparatos sometidos a presión, cuentan con dispositivos de protección y seguridad?",
+          "69\t¿Cuenta el operador con la capacitación y/o habilitación pertinente?",
+          "70\t¿ Están aislados y convenientemente ventilados los aparatos capaces de producir frío, con posibilidad de desprendimiento de contaminantes?"
+        ]
+      },
+      {
+        "preguntas": [
+          "71\t¿Se provee a todos los trabajadores, de los elementos de protección personal adecuado, acorde a los riesgos a los que se hallan expuestos?",
+          "72\t¿ Existen señalizaciones visibles en los puestos y/o  lugares de trabajo sobre la obligatoriedad del uso de los elementos de protección personal?",
+          "73\t¿ Se verifica la  existencia de registros de entrega de los E.P.P.?",
+          "74\t¿Se realizó un estudio por puesto de trabajo o sector donde se detallen los E.P.P. necesarios?"
+        ],
+        "nombre": " EQUIPOS Y ELEMENTOS DE PROTECCIÓN PERSONAL ( E.P.P.)"
+      },
+      {
+        "preguntas": [
+          "75\t¿ Se cumple con los requisitos de iluminación establecidos en la legislación vigente?",
+          "76\t¿ Se ha instalado un sistema de iluminación de emergencia, en  casos necesarios, acorde a los requerimientos de la legislación vigente?",
+          "77\t¿ Se registran las mediciones en los puestos y/o lugares de trabajo?",
+          "78\t¿Los niveles existentes cumplen con la legislación vigente?",
+          "79\t¿ Existe marcación visible de pasillos, circulaciones de tránsito y lugares de cruce donde circulen cargas suspendidas y otros elementos de transporte?",
+          "80\t¿Se encuentran señalizados los caminos de evacuación en caso de peligro e indicadas las salidas normales y de emergencia?",
+          "81\t¿ Se encuentran identificadas las cañerías?"
+        ],
+        "nombre": "ILUMINACION Y COLOR"
+      },
+      {
+        "preguntas": [
+          "82\t¿ Se registran las mediciones en los puestos y/o lugares de trabajo?",
+          "83\t¿El personal sometido a estrés por frío, está protegido adecuadamente?",
+          "84\t¿Se adoptaron las correcciones en los puestos y/o lugares de trabajo del personal sometido a estrés por frío?",
+          "85\t¿El personal sometido a estrés térmico y tensión térmica, está protegido adecuadamente?",
+          "86\t¿Se adoptaron las correcciones en los puestos y/o lugares de trabajo del personal sometido a estrés térmico tensión térmica?"
+        ],
+        "nombre": "CONDICIONES HIGROTERMICAS"
+      },
+      {
+        "preguntas": [
+          "87\t¿En caso de existir fuentes generadoras de radiaciones ionizantes ( Ej. Rayos X en radiografías), los trabajadores y las fuentes cuentan con la autorización del organismo competente?",
+          "88\t¿Se encuentran habilitados los operadores y los equipos generadores de radiaciones ionizantes ante el organismo competente?",
+          "89\t¿Se lleva el control y registro de las dosis individuales?",
+          "90\t¿Los valores hallados, se encuentran dentro de lo establecido en la normativa vigente?"
+        ],
+        "nombre": "RADIACIONES IONIZANTES "
+      },
+      {
+        "nombre": "RADIACIONES NO IONIZANTES",
+        "preguntas": [
+          "93\t¿En caso de existir fuentes generadoras de radiaciones no ionizantes ( Ej. Soldadura),que puedan generar daños a los trabajadores, están éstos protegidos?",
+          "94\t¿Se cumple con la normativa vigente para campos magnéticos estáticos?",
+          "95\t¿Se registran las mediciones de radiofrecuencia y/o microondas en los lugares de trabajo?",
+          "96\t¿Se encuentran dentro de lo establecido en la normativa vigente?",
+          "97\t¿En caso de existir radiación infrarroja, se registran las mediciones de la misma?",
+          "98\t¿Los valores hallados, se encuentran dentro de lo establecido en la normativa vigente?",
+          "99\t¿En caso de existir radiación ultravioleta, se registran las mediciones de la misma?",
+          "100\t¿Los valores hallados, se encuentran dentro de lo establecido en la normativa vigente?"
+        ]
+      },
+      {
+        "nombre": "PROVISIÓN DE AGUA",
+        "preguntas": [
+          "101\t¿Existe provisión de agua potable para el consumo e higiene de los trabajadores?",
+          "102\t¿ Se registran los análisis bacteriológico y físico químico del agua de consumo humano con la frecuencia requerida?",
+          "103\t¿ Se ha evitado el consumo humano del agua para uso industrial?"
+        ]
+      },
+      {
+        "preguntas": [
+          "104\t¿Se recogen y canalizan por conductos, impidiendo su libre escurrimiento?",
+          "105\t¿ Se ha evitado el contacto de líquidos que puedan reaccionar originando desprendimiento de gases tóxicos ó contaminantes?",
+          "106\t¿ Son evacuados los efluentes a plantas de tratamiento?",
+          "107\t¿ Se limpia periódicamente la planta de tratamiento, con las precauciones necesarias de protección para el personal que efectúe estas tareas?"
+        ],
+        "nombre": "DESAGÜES INDUSTRIALES "
+      },
+      {
+        "nombre": "BAÑOS, VESTUARIOS Y COMEDORES",
+        "preguntas": [
+          "108\t¿Existen baños aptos higiénicamente?",
+          "109\t¿Existen vestuarios aptos higiénicamente y poseen armarios adecuados e individuales?",
+          "110\t¿Existen comedores aptos higiénicamente?",
+          "111\t¿La cocina reúne los requisitos establecidos?",
+          "112\t¿Los establecimientos temporarios cumplen con las exigencias de la legislación vigente?"
+        ]
+      },
+      {
+        "nombre": "APARATOS PARA IZAR, MONTACARGAS Y ASCENSORES",
+        "preguntas": [
+          "113\t¿Se encuentra identificada la carga máxima en dichos equipos?",
+          "114\t¿Poseen parada de máximo nivel de sobrecarga en el sistema de fuerza motriz?",
+          "115\t¿Se halla la alimentación eléctrica del equipo en buenas condiciones?",
+          "116\t¿Tienen los ganchos de izar traba de seguridad?",
+          "117\t¿Los elementos auxiliares de elevación se encuentran en buen estado (cadenas, perchas, eslingas, fajas etc.)?",
+          "118\t¿Se registra el mantenimiento preventivo de estos equipos?",
+          "119\t¿Reciben los operadores instrucción respecto a la operación y uso correcto del equipo de izar?",
+          "120\t¿ Los ascensores y montacargas cumplen los requisitos y condiciones máximas de seguridad en lo relativo a la construcción, instalación y mantenimiento?",
+          "121\t¿ Los aparatos para izar, aparejos, puentes grúa, transportadores cumplen los requisitos y condiciones máximas de seguridad ?"
+        ]
+      },
+      {
+        "preguntas": [
+          "122\t¿ Se capacita a los trabajadores acerca  de los riesgos específicos a los que se encuentren expuestos en su  puesto de trabajo?",
+          "123\t¿ Existen programas de capacitación con planificación en forma anual?",
+          "124\t¿ Se entrega por escrito al personal las medidas preventivas tendientes a evitar las enfermedades profesionales y accidentes de trabajo?"
+        ],
+        "nombre": "CAPACITACIÓN"
+      },
+      {
+        "nombre": "PRIMEROS AUXILIOS",
+        "preguntas": [
+          "125\t¿Existen botiquines de primeros auxilios acorde a los riesgos existentes?"
+        ]
+      },
+      {
+        "preguntas": [
+          "126\t¿Cuentan los vehículos con los elementos de seguridad?",
+          "127\t¿ Se ha evitado la utilización de vehículos con motor a explosión  en lugares con peligro de incendio o explosión, ó bien aquellos cuentan con dispositivos de seguridad apropiados para evitar dichos riesgos?",
+          "128\t¿ Disponen de asientos que neutralicen las vibraciones, tengan respaldo y apoya pies?",
+          "129\t¿Son adecuadas las cabinas de protección para las inclemencias del tiempo?",
+          "130\t¿Son adecuadas las cabinas para proteger del riesgo de vuelco?",
+          "131\t¿Están protegidas para los riesgos de desplazamiento de cargas?",
+          "132\t¿Poseen los operadores capacitación respecto a los riesgos inherentes al vehículo que conducen?",
+          "133\t¿Están los vehículos equipados con luces, frenos, dispositivo de aviso acústico-luminosos, espejos, cinturón de seguridad, bocina y matafuegos?",
+          "134\t¿ Se cumplen las condiciones que deben reunir los ferrocarriles para el transporte interno?"
+        ],
+        "nombre": "VEHÍCULOS"
+      },
+      {
+        "nombre": "CONTAMINACIÓN  AMBIENTAL",
+        "preguntas": [
+          "135\t¿ Se registran las mediciones en los puestos y/o lugares de trabajo?",
+          "136\t¿Se adoptaron las correcciones en los puestos y/o lugares de trabajo?"
+        ]
+      },
+      {
+        "nombre": " RUIDOS ",
+        "preguntas": [
+          "137\t¿ Se registran las mediciones de nivel sonoro continuo equivalente en los puestos y/o lugares de trabajo?",
+          "138\t¿Se adoptaron las correcciones en los puestos y/o lugares de trabajo?"
+        ]
+      },
+      {
+        "preguntas": [
+          "139\t¿ Se registran las mediciones en los puestos y/o lugares de trabajo?",
+          "140\t¿Se adoptaron las correcciones en los puestos y/o lugares de trabajo?"
+        ],
+        "nombre": "ULTRASONIDOS E INFRASONIDOS"
+      },
+      {
+        "nombre": "VIBRACIONES",
+        "preguntas": [
+          "141\t¿ Se registran las mediciones en los puestos y/o lugares de trabajo?",
+          "142\t¿Se adoptaron las correcciones en los puestos y/o lugares de trabajo?"
+        ]
+      },
+      {
+        "nombre": "UTILIZACIÓN DE GASES",
+        "preguntas": [
+          "143\t¿Los recipientes con gases se almacenan adecuadamente?",
+          "144\t¿Los cilindros de gases son transportados en carretillas adecuadas?",
+          "145\t¿Los cilindros de gases almacenados cuentan con el capuchón protector y tienen la válvula cerrada?",
+          "146\t¿Los colindros de oxigeno y acetileno cuentan con válvulas antirrtroceso de llama?"
+        ]
+      },
+      {
+        "preguntas": [
+          "147\t¿Existe captación localizada de humos de soldadura?",
+          "148\t¿Se utilizan pantallas para la proyección de partículas y chispas?",
+          "149\t¿Las mangueras, reguladores, manómetros, sopletes y valvulas antirretornos se encuentran en buen estado?"
+        ],
+        "nombre": "SOLDADURA"
+      },
+      {
+        "preguntas": [
+          "150\t¿Todas las escaleras cumplen con las condiciones de seguridad?",
+          "151\t¿Todas las plataformas de trabajo y rampas  cumplen con las condiciones de seguridad?"
+        ],
+        "nombre": "ESCALERAS"
+      },
+      {
+        "nombre": "MANTENIMIENTO PREVENTIVO DE LAS MAQUINAS, EQUIPOS E  INSTALACIONES EN GENERAL",
+        "preguntas": [
+          "152\t¿ Posee programa de mantenimiento preventivo, en base a razones de riesgos y otras situaciones similares, para máquinas e instalaciones, tales como?:",
+          "153\t Instalaciones eléctricas",
+          "154\tAparatos para izar",
+          "155\t Cables de equipos para izar",
+          "156\t Ascensores y Montacargas",
+          "157\tCalderas y recipientes a presión",
+          "158\t¿ Cumplimenta dicho programa de mantenimiento preventivo?"
+        ]
+      }
+    ],
+    "creadorId": "pbLX5nBx2WTZV1Z0sFMJkVtSmZy2",
+    "copiadoCount": 19,
+    "creadorNombre": "licvidalfernando@gmail.com",
+    "estado": "activo",
+    "formularioOriginalId": "FoLeMunD2gDPu9OZy7KW",
+    "nombre": "RGRL",
+    "clienteAdminId": "hTD8FYeueHhuXxGCjxD0DcYmkRG2",
+    "rating": 5,
+    "ratingsCount": 1,
+    "createdAt": {
+      "_seconds": 1762511289,
+      "_nanoseconds": 654000000
+    },
+    "usuariosQueCopiaron": [
+      "2bLKZHz13sUD0XbrNhbtIGSy10w2",
+      "FVwC6hDvraRo502KSUkQrT6RvCf1",
+      "FVwC6hDvraRo502KSUkQrT6RvCf1",
+      "962mqjCG1uROhQ0Id9c1GgnkaIy1",
+      "pbLX5nBx2WTZV1Z0sFMJkVtSmZy2",
+      "M80UldJYWkVBLtzM0meo6Mlj4TJ2"
+    ],
+    "publicSharedId": null,
+    "creadorEmail": "licvidalfernando@gmail.com",
+    "timestamp": {
+      "_seconds": 1722639558,
+      "_nanoseconds": 8000000
+    },
+    "esPublico": false
+  }
+]

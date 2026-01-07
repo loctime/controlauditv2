@@ -9,7 +9,8 @@ import {
   getDoc
 } from 'firebase/firestore';
 import { addDocWithAppId, updateDocWithAppId, deleteDocWithAppId } from '../firebase/firestoreAppWriter';
-import { db, auditUserCollection } from '../firebaseControlFile';
+import { db } from '../firebaseControlFile';
+import { firestoreRoutesCore } from '../core/firestore/firestoreRoutes.core';
 import { uploadEvidence, getDownloadUrl, ensureTaskbarFolder, ensureSubFolder } from './controlFileB2Service';
 import { getControlFileFolders, clearControlFileFolders } from './controlFileInit';
 import { registrarAccionSistema } from '../utils/firestoreUtils';
@@ -64,7 +65,9 @@ export const crearAccidente = async (accidenteData, empleadosSeleccionados, imag
       estado: 'abierto'
     };
 
-    const accidentesRef = auditUserCollection(userProfile.uid, 'accidentes');
+    if (!userProfile?.ownerId) throw new Error('userProfile.ownerId es requerido');
+    const ownerId = userProfile.ownerId;
+    const accidentesRef = collection(db, ...firestoreRoutesCore.accidentes(ownerId));
     const docRef = await addDocWithAppId(accidentesRef, accidenteDoc);
 
     // Subir imágenes si existen
@@ -83,8 +86,7 @@ export const crearAccidente = async (accidenteData, empleadosSeleccionados, imag
     // Actualizar fechaUltimoAccidente en la sucursal
     if (accidenteData.sucursalId) {
       try {
-        const sucursalesRef = auditUserCollection(userProfile.uid, 'sucursales');
-        const sucursalRef = doc(sucursalesRef, accidenteData.sucursalId);
+        const sucursalRef = doc(db, ...firestoreRoutesCore.sucursales(ownerId), accidenteData.sucursalId);
         await updateDocWithAppId(sucursalRef, {
           fechaUltimoAccidente: Timestamp.now()
         });
@@ -95,7 +97,7 @@ export const crearAccidente = async (accidenteData, empleadosSeleccionados, imag
     }
 
     // Registrar log
-    const logsCollectionRef = auditUserCollection(userProfile.uid, 'logs');
+    // registrarAccionSistema maneja la ruta internamente
     await registrarAccionSistema(
       accidenteData.reportadoPor,
       `Accidente reportado: ${empleadosInvolucrados.length} empleado(s) involucrado(s)`,
@@ -146,7 +148,9 @@ export const crearIncidente = async (incidenteData, testigos = [], imagenes = []
       estado: 'abierto'
     };
 
-    const accidentesRef = auditUserCollection(userProfile.uid, 'accidentes');
+    if (!userProfile?.ownerId) throw new Error('userProfile.ownerId es requerido');
+    const ownerId = userProfile.ownerId;
+    const accidentesRef = collection(db, ...firestoreRoutesCore.accidentes(ownerId));
     const docRef = await addDocWithAppId(accidentesRef, incidenteDoc);
 
     // Subir imágenes si existen
@@ -155,8 +159,7 @@ export const crearIncidente = async (incidenteData, testigos = [], imagenes = []
       await updateDocWithAppId(docRef, { imagenes: imagenesUrls });
     }
 
-    // Registrar log
-    const logsCollectionRef = auditUserCollection(userProfile.uid, 'logs');
+    // Registrar log (registrarAccionSistema maneja la ruta internamente)
     await registrarAccionSistema(
       incidenteData.reportadoPor,
       `Incidente reportado: ${testigosArray.length} testigo(s)`,
@@ -167,8 +170,7 @@ export const crearIncidente = async (incidenteData, testigos = [], imagenes = []
       },
       'crear',
       'incidente',
-      docRef.id,
-      logsCollectionRef
+      docRef.id
     );
 
     const result = { id: docRef.id, ...incidenteDoc };
@@ -182,11 +184,9 @@ export const crearIncidente = async (incidenteData, testigos = [], imagenes = []
 // Actualizar estado de empleado
 export const actualizarEstadoEmpleado = async (empleadoId, estado, fechaInicioReposo = null, userProfile) => {
   try {
-    if (!userProfile?.uid) {
-      throw new Error('userProfile.uid es requerido para actualizar empleado');
-    }
-    const empleadosRef = auditUserCollection(userProfile.uid, 'empleados');
-    const empleadoRef = doc(empleadosRef, empleadoId);
+    if (!userProfile?.ownerId) throw new Error('userProfile.ownerId es requerido');
+    const ownerId = userProfile.ownerId;
+    const empleadoRef = doc(db, ...firestoreRoutesCore.empleado(ownerId, empleadoId));
     const updateData = { estado };
     
     if (fechaInicioReposo) {
@@ -374,7 +374,9 @@ export const subirImagenes = async (accidenteId, imagenes, companyId = 'system')
 // Obtener accidentes con filtros funcionales
 export const obtenerAccidentes = async (filtros = {}, userProfile) => {
   try {
-    const accidentesRef = auditUserCollection(userProfile.uid, 'accidentes');
+    if (!userProfile?.ownerId) throw new Error('userProfile.ownerId es requerido');
+    const ownerId = userProfile.ownerId;
+    const accidentesRef = collection(db, ...firestoreRoutesCore.accidentes(ownerId));
     
     const conditions = [];
 
@@ -415,7 +417,9 @@ export const obtenerAccidentes = async (filtros = {}, userProfile) => {
 // Obtener un accidente específico
 export const obtenerAccidentePorId = async (accidenteId, userProfile) => {
   try {
-    const accidentesRef = auditUserCollection(userProfile.uid, 'accidentes');
+    if (!userProfile?.ownerId) throw new Error('userProfile.ownerId es requerido');
+    const ownerId = userProfile.ownerId;
+    const accidentesRef = collection(db, ...firestoreRoutesCore.accidentes(ownerId));
     const docRef = doc(accidentesRef, accidenteId);
     const docSnap = await getDoc(docRef);
     
@@ -433,7 +437,9 @@ export const obtenerAccidentePorId = async (accidenteId, userProfile) => {
 // Actualizar estado de accidente/incidente
 export const actualizarEstadoAccidente = async (accidenteId, nuevoEstado, userId = null, userProfile) => {
   try {
-    const accidentesRef = auditUserCollection(userProfile.uid, 'accidentes');
+    if (!userProfile?.ownerId) throw new Error('userProfile.ownerId es requerido');
+    const ownerId = userProfile.ownerId;
+    const accidentesRef = collection(db, ...firestoreRoutesCore.accidentes(ownerId));
     const accidenteRef = doc(accidentesRef, accidenteId);
     const accidenteDoc = await getDoc(accidenteRef);
     const tipo = accidenteDoc.data()?.tipo || 'accidente';
@@ -481,7 +487,7 @@ export const actualizarEstadoAccidente = async (accidenteId, nuevoEstado, userId
 
     // Registrar log si hay userId
     if (userId) {
-      const logsCollectionRef = auditUserCollection(userProfile.uid, 'logs');
+      // registrarAccionSistema maneja la ruta internamente
       await registrarAccionSistema(
         userId,
         `Estado de ${tipo} actualizado a: ${nuevoEstado}`,
@@ -492,8 +498,7 @@ export const actualizarEstadoAccidente = async (accidenteId, nuevoEstado, userId
         },
         'editar',
         tipo,
-        accidenteId,
-        logsCollectionRef
+        accidenteId
       );
     }
   } catch (error) {
@@ -506,10 +511,9 @@ export const actualizarEstadoAccidente = async (accidenteId, nuevoEstado, userId
 // Incluye todos los empleados (activos e inactivos) para permitir reportar accidentes previos
 export const obtenerEmpleadosPorSucursal = async (sucursalId, userProfile) => {
   try {
-    if (!userProfile?.uid) {
-      throw new Error('userProfile.uid es requerido para obtener empleados');
-    }
-    const empleadosRef = auditUserCollection(userProfile.uid, 'empleados');
+    if (!userProfile?.ownerId) throw new Error('userProfile.ownerId es requerido');
+    const ownerId = userProfile.ownerId;
+    const empleadosRef = collection(db, ...firestoreRoutesCore.empleados(ownerId));
     const q = query(
       empleadosRef,
       where('sucursalId', '==', sucursalId)
@@ -529,7 +533,9 @@ export const obtenerEmpleadosPorSucursal = async (sucursalId, userProfile) => {
 // Obtener estadísticas de accidentes por empresa
 export const obtenerEstadisticas = async (empresaId, userProfile) => {
   try {
-    const accidentesRef = auditUserCollection(userProfile.uid, 'accidentes');
+    if (!userProfile?.ownerId) throw new Error('userProfile.ownerId es requerido');
+    const ownerId = userProfile.ownerId;
+    const accidentesRef = collection(db, ...firestoreRoutesCore.accidentes(ownerId));
     const q = query(
       accidentesRef,
       where('empresaId', '==', empresaId)
@@ -557,7 +563,9 @@ export const obtenerEstadisticas = async (empresaId, userProfile) => {
 // Eliminar accidente/incidente
 export const eliminarAccidente = async (accidenteId, userId = null, userProfile) => {
   try {
-    const accidentesRef = auditUserCollection(userProfile.uid, 'accidentes');
+    if (!userProfile?.ownerId) throw new Error('userProfile.ownerId es requerido');
+    const ownerId = userProfile.ownerId;
+    const accidentesRef = collection(db, ...firestoreRoutesCore.accidentes(ownerId));
     const accidenteRef = doc(accidentesRef, accidenteId);
     const accidenteDoc = await getDoc(accidenteRef);
     
@@ -572,15 +580,14 @@ export const eliminarAccidente = async (accidenteId, userId = null, userProfile)
 
     // Registrar log
     if (userId) {
-      const logsCollectionRef = auditUserCollection(userProfile.uid, 'logs');
+      // registrarAccionSistema maneja la ruta internamente
       await registrarAccionSistema(
         userId,
         'Accidente/incidente eliminado',
         { accidenteId, tipo: accidenteData.tipo },
         'eliminar',
         'accidente',
-        accidenteId,
-        logsCollectionRef
+        accidenteId
       );
     }
   } catch (error) {
@@ -592,7 +599,9 @@ export const eliminarAccidente = async (accidenteId, userId = null, userProfile)
 // Actualizar accidente/incidente
 export const actualizarAccidente = async (accidenteId, datosActualizados, imagenesNuevas = [], userId = null, userProfile) => {
   try {
-    const accidentesRef = auditUserCollection(userProfile.uid, 'accidentes');
+    if (!userProfile?.ownerId) throw new Error('userProfile.ownerId es requerido');
+    const ownerId = userProfile.ownerId;
+    const accidentesRef = collection(db, ...firestoreRoutesCore.accidentes(ownerId));
     const accidenteRef = doc(accidentesRef, accidenteId);
     const accidenteDoc = await getDoc(accidenteRef);
     
@@ -621,15 +630,14 @@ export const actualizarAccidente = async (accidenteId, datosActualizados, imagen
 
     // Registrar log
     if (userId) {
-      const logsCollectionRef = auditUserCollection(userProfile.uid, 'logs');
+      // registrarAccionSistema maneja la ruta internamente
       await registrarAccionSistema(
         userId,
         'Accidente/incidente actualizado',
         { accidenteId, cambios: Object.keys(updateData) },
         'editar',
         accidenteDoc.data().tipo,
-        accidenteId,
-        logsCollectionRef
+        accidenteId
       );
     }
 

@@ -1,0 +1,15 @@
+[
+  {
+    "id": "user",
+    "role": "supermax",
+    "migratedFrom": {
+      "oldUid": "pbLX5nBx2WTZV1Z0sFMJkVtSmZy2",
+      "projectId": "auditoria-f9fc4"
+    },
+    "email": "ssanabria.sh@gmail.com",
+    "migratedAt": {
+      "_seconds": 1766375957,
+      "_nanoseconds": 550000000
+    }
+  }
+]

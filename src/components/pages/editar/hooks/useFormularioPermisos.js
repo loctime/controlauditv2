@@ -31,7 +31,8 @@ export const useFormularioPermisos = (user, userProfile) => {
     
     if (userProfile?.role === 'supermax') return true;
     if (formulario.creadorId === user.uid) return true;
-    if (formulario.clienteAdminId === userProfile?.clienteAdminId) return true;
+    // En modelo owner-centric, formularios pertenecen al ownerId
+    if (formulario.ownerId === userProfile?.ownerId) return true;
     if (formulario.esPublico) return true;
     if (formulario.permisos?.puedeVer?.includes(user.uid)) return true;
     

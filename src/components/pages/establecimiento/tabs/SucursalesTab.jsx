@@ -11,8 +11,9 @@ import {
   useTheme
 } from '@mui/material';
 import StorefrontIcon from '@mui/icons-material/Storefront';
-import { getDocs, query, where, addDoc, updateDoc, deleteDoc, doc, Timestamp } from 'firebase/firestore';
-import { dbAudit, auditUserCollection } from '../../../../firebaseControlFile';
+import { getDocs, query, where, addDoc, updateDoc, deleteDoc, doc, Timestamp, collection } from 'firebase/firestore';
+import { dbAudit } from '../../../../firebaseControlFile';
+import { firestoreRoutesCore } from '../../../../core/firestore/firestoreRoutes.core';
 import { useAuth } from '../../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
@@ -55,8 +56,8 @@ const SucursalesTab = ({ empresaId, empresaNombre, userEmpresas, loadEmpresasSta
 
   // Función para recargar estadísticas de sucursales
   const reloadSucursalesStats = async () => {
-    if (sucursales && sucursales.length > 0 && userProfile?.uid) {
-      await loadSucursalesStats(sucursales, userProfile.uid);
+    if (sucursales && sucursales.length > 0 && userProfile?.ownerId) {
+      await loadSucursalesStats(sucursales, userProfile.ownerId);
     }
   };
 
@@ -69,18 +70,19 @@ const SucursalesTab = ({ empresaId, empresaNombre, userEmpresas, loadEmpresasSta
   const loadSucursales = async () => {
     setLoading(true);
     try {
-      if (!userProfile?.uid) {
-        console.error('Error: userProfile.uid es requerido');
+      if (!userProfile?.ownerId) {
+        console.error('Error: userProfile.ownerId es requerido');
         return;
       }
-      const sucursalesRef = auditUserCollection(userProfile.uid, 'sucursales');
+      const ownerId = userProfile.ownerId;
+      const sucursalesRef = collection(dbAudit, ...firestoreRoutesCore.sucursales(ownerId));
       const q = query(sucursalesRef, where('empresaId', '==', empresaId));
       const snapshot = await getDocs(q);
       const sucursalesData = snapshot.docs.map(doc => normalizeSucursal(doc));
       setSucursales(sucursalesData);
       
       // Cargar estadísticas de cada sucursal
-      await loadSucursalesStats(sucursalesData, userProfile.uid);
+      await loadSucursalesStats(sucursalesData, ownerId);
       
       // Cargar progreso de targets mensuales
       const progresos = await calcularProgresoTargets(sucursalesData);
@@ -183,16 +185,17 @@ const SucursalesTab = ({ empresaId, empresaNombre, userEmpresas, loadEmpresasSta
     }
 
     try {
-      if (!userProfile?.uid) {
+      if (!userProfile?.ownerId) {
         Swal.fire({
           icon: 'error',
           title: 'Error',
-          text: 'Usuario no autenticado'
+          text: 'ownerId no disponible'
         });
         return;
       }
 
-      const sucursalesRef = auditUserCollection(userProfile.uid, 'sucursales');
+      const ownerId = userProfile.ownerId;
+      const sucursalesRef = collection(dbAudit, ...firestoreRoutesCore.sucursales(ownerId));
 
       if (modalMode === 'create') {
         const docRef = await addDoc(sucursalesRef, {
@@ -209,7 +212,7 @@ const SucursalesTab = ({ empresaId, empresaNombre, userEmpresas, loadEmpresasSta
         });
 
         await registrarAccionSistema(
-          userProfile?.uid,
+          ownerId,
           `Sucursal creada: ${sucursalForm.nombre}`,
           {
             sucursalId: docRef.id,
@@ -229,7 +232,7 @@ const SucursalesTab = ({ empresaId, empresaNombre, userEmpresas, loadEmpresasSta
         });
       } else {
         // Modo edición
-        const sucursalRef = doc(sucursalesRef, sucursalForm.id);
+        const sucursalRef = doc(dbAudit, ...firestoreRoutesCore.sucursal(ownerId, sucursalForm.id));
         await updateDoc(sucursalRef, {
           nombre: sucursalForm.nombre,
           direccion: sucursalForm.direccion,
@@ -243,7 +246,7 @@ const SucursalesTab = ({ empresaId, empresaNombre, userEmpresas, loadEmpresasSta
         });
 
         await registrarAccionSistema(
-          userProfile?.uid,
+          ownerId,
           `Sucursal actualizada: ${sucursalForm.nombre}`,
           {
             sucursalId: sucursalForm.id,
@@ -270,8 +273,8 @@ const SucursalesTab = ({ empresaId, empresaNombre, userEmpresas, loadEmpresasSta
       resetForm();
       await loadSucursales();
       
-      if (typeof loadEmpresasStats === 'function' && userProfile?.uid) {
-        loadEmpresasStats(userEmpresas, userProfile.uid);
+      if (typeof loadEmpresasStats === 'function' && ownerId) {
+        loadEmpresasStats(userEmpresas, ownerId);
       }
     } catch (error) {
       console.error(`Error ${modalMode === 'create' ? 'creando' : 'actualizando'} sucursal:`, error);
@@ -297,25 +300,19 @@ const SucursalesTab = ({ empresaId, empresaNombre, userEmpresas, loadEmpresasSta
 
     if (result.isConfirmed) {
       try {
-        if (!userProfile?.uid) {
+        if (!userProfile?.ownerId) {
           Swal.fire({
             icon: 'error',
             title: 'Error',
-            text: 'Usuario no autenticado'
+            text: 'ownerId no disponible'
           });
           return;
         }
 
+        const ownerId = userProfile.ownerId;
+        
         // Verificar si hay empleados asociados
-        if (!userProfile?.uid) {
-          Swal.fire({
-            icon: 'error',
-            title: 'Error',
-            text: 'Usuario no autenticado'
-          });
-          return;
-        }
-        const empleadosRef = auditUserCollection(userProfile.uid, 'empleados');
+        const empleadosRef = collection(dbAudit, ...firestoreRoutesCore.empleados(ownerId));
         const empleadosSnapshot = await getDocs(
           query(empleadosRef, where('sucursalId', '==', sucursal.id))
         );
@@ -329,12 +326,11 @@ const SucursalesTab = ({ empresaId, empresaNombre, userEmpresas, loadEmpresasSta
           return;
         }
 
-        const sucursalesRef = auditUserCollection(userProfile.uid, 'sucursales');
-        const sucursalRef = doc(sucursalesRef, sucursal.id);
+        const sucursalRef = doc(dbAudit, ...firestoreRoutesCore.sucursal(ownerId, sucursal.id));
         await deleteDoc(sucursalRef);
 
         await registrarAccionSistema(
-          userProfile?.uid,
+          ownerId,
           `Sucursal eliminada: ${sucursal.nombre}`,
           {
             sucursalId: sucursal.id,
@@ -349,7 +345,7 @@ const SucursalesTab = ({ empresaId, empresaNombre, userEmpresas, loadEmpresasSta
         await loadSucursales();
         
         if (typeof loadEmpresasStats === 'function') {
-          loadEmpresasStats(userEmpresas, userProfile.uid);
+          loadEmpresasStats(userEmpresas, ownerId);
         }
 
         Swal.fire({

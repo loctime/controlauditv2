@@ -1,6 +1,7 @@
 import { getOfflineDatabase } from './offlineDatabase';
-import { auth, auditUserCollection } from '../firebaseControlFile';
-import { getDocs, query, where } from 'firebase/firestore';
+import { auth, dbAudit } from '../firebaseControlFile';
+import { getDocs, query, where, collection } from 'firebase/firestore';
+import { firestoreRoutesCore } from '../core/firestore/firestoreRoutes.core';
 
 /**
  * Sistema de cache completo para funcionamiento offline
@@ -19,9 +20,11 @@ const CACHE_EXPIRY_DAYS = 7;
  */
 export const saveCompleteUserCache = async (userProfile, empresas = null, sucursales = null, formularios = null) => {
   try {
-    if (!userProfile?.uid) {
-      throw new Error('No hay usuario autenticado');
+    if (!userProfile?.uid || !userProfile?.ownerId) {
+      throw new Error('No hay usuario autenticado o falta ownerId');
     }
+    
+    const ownerId = userProfile.ownerId; // ownerId viene del token
 
     let offlineDb = await getOfflineDatabase();
     const cacheData = {
@@ -66,62 +69,13 @@ export const saveCompleteUserCache = async (userProfile, empresas = null, sucurs
         const oldUid = userProfile.migratedFromUid;
         const formulariosQueries = [];
         
-        if (userProfile.role === 'supermax') {
-          const formulariosRef = auditUserCollection(userProfile.uid, 'formularios');
-          const formulariosSnapshot = await getDocs(formulariosRef);
-          formulariosData = formulariosSnapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data()
-          }));
-        } else if (userProfile.role === 'max') {
-          formulariosQueries.push(
-            query(auditUserCollection(userProfile.uid, 'formularios'), where("clienteAdminId", "==", userProfile.uid)),
-            query(auditUserCollection(userProfile.uid, 'formularios'), where("creadorId", "==", userProfile.uid))
-          );
-          
-          if (oldUid) {
-            formulariosQueries.push(
-              query(auditUserCollection(userProfile.uid, 'formularios'), where("clienteAdminId", "==", oldUid)),
-              query(auditUserCollection(userProfile.uid, 'formularios'), where("creadorId", "==", oldUid))
-            );
-          }
-          
-          const snapshots = await Promise.all(formulariosQueries.map(q => getDocs(q)));
-          const allFormularios = snapshots.flatMap(snapshot => 
-            snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
-          );
-          
-          formulariosData = Array.from(
-            new Map(allFormularios.map(f => [f.id, f])).values()
-          );
-        } else if (userProfile.role === 'operario' && userProfile.clienteAdminId) {
-          const clienteAdminId = userProfile.clienteAdminId;
-          formulariosQueries.push(
-            query(auditUserCollection(userProfile.uid, 'formularios'), where("clienteAdminId", "==", clienteAdminId))
-          );
-          
-          if (oldUid && userProfile.clienteAdminId === userProfile.uid) {
-            formulariosQueries.push(
-              query(auditUserCollection(userProfile.uid, 'formularios'), where("clienteAdminId", "==", oldUid))
-            );
-          }
-          
-          const snapshots = await Promise.all(formulariosQueries.map(q => getDocs(q)));
-          const allFormularios = snapshots.flatMap(snapshot => 
-            snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
-          );
-          
-          const uniqueFormularios = Array.from(
-            new Map(allFormularios.map(f => [f.id, f])).values()
-          );
-          
-          formulariosData = uniqueFormularios.filter(form => {
-            if (form.esPublico) return true;
-            if (form.creadorId === userProfile.uid || (oldUid && form.creadorId === oldUid)) return true;
-            if (form.permisos?.puedeVer?.includes(userProfile.uid) || (oldUid && form.permisos?.puedeVer?.includes(oldUid))) return true;
-            return false;
-          });
-        }
+        // Leer formularios desde owner-centric
+        const formulariosRef = collection(dbAudit, ...firestoreRoutesCore.formularios(ownerId));
+        const formulariosSnapshot = await getDocs(formulariosRef);
+        formulariosData = formulariosSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
         
         console.log('✅ Formularios cargados (con migración):', formulariosData.length);
       }
@@ -137,14 +91,8 @@ export const saveCompleteUserCache = async (userProfile, empresas = null, sucurs
       if (sucursales && sucursales.length > 0) {
         sucursalesData = sucursales;
         console.log('✅ Usando sucursales ya cargadas en memoria:', sucursalesData.length);
-      } else if (userProfile.role === 'supermax') {
-        const sucursalesRef = auditUserCollection(userProfile.uid, 'sucursales');
-        const sucursalesSnapshot = await getDocs(sucursalesRef);
-        sucursalesData = sucursalesSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
       } else {
+        // Leer sucursales desde owner-centric
         const empresasIds = cacheData.empresas.map(emp => emp.id);
         
         if (empresasIds.length > 0) {
@@ -155,7 +103,7 @@ export const saveCompleteUserCache = async (userProfile, empresas = null, sucurs
           }
 
           const sucursalesPromises = empresasChunks.map(async (chunk) => {
-            const sucursalesRef = auditUserCollection(userProfile.uid, 'sucursales');
+            const sucursalesRef = collection(dbAudit, ...firestoreRoutesCore.sucursales(ownerId));
             const sucursalesQuery = query(sucursalesRef, where("empresaId", "in", chunk));
             const sucursalesSnapshot = await getDocs(sucursalesQuery);
             return sucursalesSnapshot.docs.map(doc => ({
@@ -166,6 +114,14 @@ export const saveCompleteUserCache = async (userProfile, empresas = null, sucurs
 
           const sucursalesArrays = await Promise.all(sucursalesPromises);
           sucursalesData = sucursalesArrays.flat();
+        } else {
+          // Si no hay empresas, leer todas las sucursales del owner
+          const sucursalesRef = collection(dbAudit, ...firestoreRoutesCore.sucursales(ownerId));
+          const sucursalesSnapshot = await getDocs(sucursalesRef);
+          sucursalesData = sucursalesSnapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          }));
         }
       }
       
@@ -175,64 +131,15 @@ export const saveCompleteUserCache = async (userProfile, empresas = null, sucurs
     }
 
     try {
-      const oldUid = userProfile.migratedFromUid;
-      const reportesQueries = [];
+      // Leer reportes desde owner-centric
+      const reportesRef = collection(dbAudit, ...firestoreRoutesCore.reportes(ownerId));
+      const reportesSnapshot = await getDocs(reportesRef);
+      cacheData.auditorias = reportesSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
       
-      if (userProfile.role === 'supermax') {
-        const reportesRef = auditUserCollection(userProfile.uid, 'reportes');
-        const reportesSnapshot = await getDocs(reportesRef);
-        cacheData.auditorias = reportesSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
-      } else {
-        if (userProfile.clienteAdminId) {
-          reportesQueries.push(
-            query(auditUserCollection(userProfile.uid, 'reportes'), where("clienteAdminId", "==", userProfile.clienteAdminId))
-          );
-          
-          if (oldUid) {
-            reportesQueries.push(
-              query(auditUserCollection(userProfile.uid, 'reportes'), where("clienteAdminId", "==", oldUid))
-            );
-          }
-        }
-        
-        if (userProfile.uid) {
-          reportesQueries.push(
-            query(auditUserCollection(userProfile.uid, 'reportes'), where("creadoPor", "==", userProfile.uid)),
-            query(auditUserCollection(userProfile.uid, 'reportes'), where("usuarioId", "==", userProfile.uid))
-          );
-          
-          if (oldUid) {
-            reportesQueries.push(
-              query(auditUserCollection(userProfile.uid, 'reportes'), where("creadoPor", "==", oldUid)),
-              query(auditUserCollection(userProfile.uid, 'reportes'), where("usuarioId", "==", oldUid))
-            );
-          }
-        }
-        
-        if (reportesQueries.length > 0) {
-          const snapshots = await Promise.all(
-            reportesQueries.map(q => getDocs(q).catch(err => {
-              console.warn('Error en query de reportes (ignorando):', err);
-              return { docs: [] };
-            }))
-          );
-          
-          const allReportes = snapshots.flatMap(snapshot => 
-            snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
-          );
-          
-          cacheData.auditorias = Array.from(
-            new Map(allReportes.map(r => [r.id, r])).values()
-          );
-        } else {
-          cacheData.auditorias = [];
-        }
-      }
-      
-      console.log('✅ Reportes/auditorías cargados (con migración):', cacheData.auditorias.length);
+      console.log('✅ Reportes/auditorías cargados desde owner-centric:', cacheData.auditorias.length);
     } catch (error) {
       console.error('Error cacheando auditorías:', error);
       cacheData.auditorias = [];

@@ -8,7 +8,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { query, where, getDocs } from 'firebase/firestore';
-import { auditUserCollection } from '../../../../firebaseControlFile';
+import { dbAudit } from '../../../../firebaseControlFile';
+import { firestoreRoutesCore } from '../../../../core/firestore/firestoreRoutes.core';
 import EventRegistryInline from '../../../shared/event-registry/EventRegistryInline';
 import { registrosAsistenciaServiceAdapter } from '../../../../services/adapters/registrosAsistenciaServiceAdapter';
 import { capacitacionService } from '../../../../services/capacitacionService';
@@ -24,23 +25,24 @@ const RegistrarAsistenciaInlineV2 = ({
   onCancel,
   compact = false
 }) => {
+  const { userProfile } = useAuth();
   const [capacitacion, setCapacitacion] = useState(capacitacionProp || null);
   const [personas, setPersonas] = useState([]);
   const [loading, setLoading] = useState(!capacitacionProp);
 
   useEffect(() => {
-    if (userId && capacitacionId && !capacitacionProp) {
+    if (userProfile?.ownerId && capacitacionId && !capacitacionProp) {
       loadCapacitacion();
     }
-  }, [capacitacionId, userId]);
+  }, [capacitacionId, userProfile?.ownerId]);
 
   const loadCapacitacion = async () => {
-    if (!userId) return;
+    if (!userProfile?.ownerId) return;
 
     setLoading(true);
     try {
       const capacitacionData = await capacitacionService.getCapacitacionById(
-        userId,
+        userProfile.ownerId,
         capacitacionId,
         false
       );
@@ -54,14 +56,16 @@ const RegistrarAsistenciaInlineV2 = ({
 
   // Cargar empleados de la sucursal de la capacitación
   useEffect(() => {
-    if (capacitacion && capacitacion.sucursalId && userId) {
+    if (capacitacion && capacitacion.sucursalId && userProfile?.ownerId) {
       loadEmpleados();
     }
-  }, [capacitacion?.sucursalId, userId]);
+  }, [capacitacion?.sucursalId, userProfile?.ownerId]);
 
   const loadEmpleados = async () => {
+    if (!userProfile?.ownerId) return;
     try {
-      const empleadosRef = auditUserCollection(userId, 'empleados');
+      const ownerId = userProfile.ownerId;
+      const empleadosRef = collection(dbAudit, ...firestoreRoutesCore.empleados(ownerId));
       const q = query(
         empleadosRef,
         where('sucursalId', '==', capacitacion.sucursalId),

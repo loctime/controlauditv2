@@ -100,63 +100,7 @@ export const forgotPassword = async (email) => {
   return sendPasswordResetEmail(auth, email);
 };
 
-/**
- * Helper centralizado para obtener colecciones multi-tenant de auditoría
- * Construye el path: apps/auditoria/users/{uid}/{collectionName}
- * 
- * @param {string} uid - UID del usuario
- * @param {string} collectionName - Nombre de la colección (empresas, sucursales, formularios, etc.)
- * @returns {CollectionReference} Referencia a la colección
- */
-export function auditUserCollection(uid, collectionName) {
-  if (!uid) {
-    throw new Error('auditUserCollection: uid es requerido');
-  }
-  if (!collectionName) {
-    throw new Error('auditUserCollection: collectionName es requerido');
-  }
-  
-  const path = `apps/auditoria/users/${uid}/${collectionName}`;
-  console.log('[AUDIT PATH]', path);
-  
-  return collection(dbAudit, 'apps', 'auditoria', 'users', uid, collectionName);
-}
-
-/**
- * Helper para colección legacy de usuarios del sistema
- * Path: apps/audit/users
- */
-export function auditUsersCollection() {
-  return collection(dbAudit, 'apps', 'audit', 'users');
-}
-
-/**
- * Helper para colección de sucursales (legacy)
- * Path: sucursales
- */
-export function sucursalesCollection() {
-  return collection(dbAudit, 'sucursales');
-}
-
-/**
- * Helper para colección legacy de reportes
- * Path: reportes
- */
-export function reportesCollection() {
-  return collection(dbAudit, 'reportes');
-}
-
-/**
- * Helper para colección de autoguardados de auditorías
- * Path: apps/auditoria/users/{uid}/autosave
- * 
- * @param {string} uid - UID del usuario
- * @returns {CollectionReference} Referencia a la colección de autosave del usuario
- */
-export function auditAutosaveCollection(uid) {
-  if (!uid) {
-    throw new Error('auditAutosaveCollection: uid es requerido');
-  }
-  return auditUserCollection(uid, 'autosave');
-}
+// Funciones legacy eliminadas - usar firestoreRoutesCore con owner-centric
+// apps/auditoria/users/** ya no se usa
+// Usar apps/auditoria/owners/{ownerId}/** en su lugar
 

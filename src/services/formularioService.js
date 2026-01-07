@@ -9,22 +9,23 @@ import {
   increment
 } from 'firebase/firestore';
 import { Timestamp } from 'firebase/firestore';
-import { auditUserCollection } from '../firebaseControlFile';
+import { dbAudit } from '../firebaseControlFile';
+import { firestoreRoutesCore } from '../core/firestore/firestoreRoutes.core';
 import { addDocWithAppId, updateDocWithAppId, deleteDocWithAppId } from '../firebase/firestoreAppWriter';
 import { registrarAccionSistema } from '../utils/firestoreUtils';
 
 export const formularioService = {
   /**
-   * Obtener formularios del usuario desde apps/auditoria/users/{userUid}/formularios
+   * Obtener formularios del owner desde apps/auditoria/owners/{ownerId}/formularios
    * Lectura simple sin listeners ni cache
-   * @param {string} userUid - UID del usuario
+   * @param {string} ownerId - ID del owner (viene del token)
    * @returns {Promise<Array>} Array de formularios con id incluido
    */
-  async getUserFormularios(userUid) {
+  async getUserFormularios(ownerId) {
     try {
-      if (!userUid) throw new Error('userUid es requerido');
+      if (!ownerId) throw new Error('ownerId es requerido');
       
-      const formulariosRef = auditUserCollection(userUid, 'formularios');
+      const formulariosRef = collection(dbAudit, ...firestoreRoutesCore.formularios(ownerId));
       const snapshot = await getDocs(formulariosRef);
       
       return snapshot.docs.map(doc => ({
@@ -32,30 +33,32 @@ export const formularioService = {
         ...doc.data()
       }));
     } catch (error) {
-      console.error('Error al obtener formularios del usuario:', error);
+      console.error('Error al obtener formularios del owner:', error);
       throw error;
     }
   },
 
   /**
-   * Crear formulario bajo apps/auditoria/users/{userUid}/formularios
+   * Crear formulario bajo apps/auditoria/owners/{ownerId}/formularios
    * @param {Object} formularioData - Datos del formulario
    * @param {Object} user - Usuario que crea el formulario
-   * @param {Object} userProfile - Perfil del usuario
+   * @param {Object} userProfile - Perfil del usuario (debe tener ownerId)
    * @returns {Promise<string>} ID del formulario creado
    */
   async crearFormulario(formularioData, user, userProfile) {
     try {
       if (!user?.uid) throw new Error('Usuario no autenticado');
+      if (!userProfile?.ownerId) throw new Error('userProfile.ownerId es requerido');
       
-      const formulariosRef = auditUserCollection(user.uid, 'formularios');
+      const ownerId = userProfile.ownerId; // ownerId viene del token
+      const formulariosRef = collection(dbAudit, ...firestoreRoutesCore.formularios(ownerId));
       const formularioCompleto = {
         ...formularioData,
         timestamp: Timestamp.now(),
         creadorId: user.uid,
         creadorEmail: user.email,
         creadorNombre: user.displayName || user.email,
-        clienteAdminId: userProfile?.clienteAdminId || user.uid,
+        ownerId: ownerId,
         esPublico: formularioData.esPublico || false,
         permisos: formularioData.permisos || {
           puedeEditar: [user.uid],
@@ -91,19 +94,21 @@ export const formularioService = {
   },
 
   /**
-   * Actualizar formulario bajo apps/auditoria/users/{userUid}/formularios
+   * Actualizar formulario bajo apps/auditoria/owners/{ownerId}/formularios
    * @param {string} formularioId - ID del formulario
    * @param {Object} updateData - Datos a actualizar
    * @param {Object} user - Usuario que actualiza
+   * @param {Object} userProfile - Perfil del usuario (debe tener ownerId)
    * @returns {Promise<void>}
    */
-  async updateFormulario(formularioId, updateData, user) {
+  async updateFormulario(formularioId, updateData, user, userProfile) {
     try {
       if (!formularioId) throw new Error('formularioId es requerido');
       if (!user?.uid) throw new Error('Usuario no autenticado');
+      if (!userProfile?.ownerId) throw new Error('userProfile.ownerId es requerido');
       
-      const formulariosRef = auditUserCollection(user.uid, 'formularios');
-      const formularioRef = doc(formulariosRef, formularioId);
+      const ownerId = userProfile.ownerId;
+      const formularioRef = doc(dbAudit, ...firestoreRoutesCore.formularios(ownerId), formularioId);
       
       await updateDocWithAppId(formularioRef, {
         ...updateData,
@@ -126,18 +131,20 @@ export const formularioService = {
   },
 
   /**
-   * Eliminar formulario bajo apps/auditoria/users/{userUid}/formularios
+   * Eliminar formulario bajo apps/auditoria/owners/{ownerId}/formularios
    * @param {string} formularioId - ID del formulario
    * @param {Object} user - Usuario que elimina
+   * @param {Object} userProfile - Perfil del usuario (debe tener ownerId)
    * @returns {Promise<void>}
    */
-  async deleteFormulario(formularioId, user) {
+  async deleteFormulario(formularioId, user, userProfile) {
     try {
       if (!formularioId) throw new Error('formularioId es requerido');
       if (!user?.uid) throw new Error('Usuario no autenticado');
+      if (!userProfile?.ownerId) throw new Error('userProfile.ownerId es requerido');
       
-      const formulariosRef = auditUserCollection(user.uid, 'formularios');
-      const formularioRef = doc(formulariosRef, formularioId);
+      const ownerId = userProfile.ownerId;
+      const formularioRef = doc(dbAudit, ...firestoreRoutesCore.formularios(ownerId), formularioId);
       
       await deleteDocWithAppId(formularioRef);
       
@@ -157,19 +164,21 @@ export const formularioService = {
   },
 
   /**
-   * Copiar formulario público a cuenta del usuario bajo apps/auditoria/users/{userUid}/formularios
+   * Copiar formulario público a cuenta del owner bajo apps/auditoria/owners/{ownerId}/formularios
    * @param {Object} formularioPublico - Formulario público a copiar
-   * @param {Object} userProfile - Perfil del usuario que copia
+   * @param {Object} userProfile - Perfil del usuario que copia (debe tener ownerId)
    * @returns {Promise<string>} ID del formulario copiado
    */
   async copiarFormularioPublico(formularioPublico, userProfile) {
     try {
       if (!userProfile?.uid) throw new Error('Usuario no autenticado');
+      if (!userProfile?.ownerId) throw new Error('userProfile.ownerId es requerido');
       
-      const formulariosRef = auditUserCollection(userProfile.uid, 'formularios');
+      const ownerId = userProfile.ownerId;
+      const formulariosRef = collection(dbAudit, ...firestoreRoutesCore.formularios(ownerId));
       const nuevoFormulario = {
         ...formularioPublico,
-        clienteAdminId: userProfile.clienteAdminId || userProfile.uid,
+        ownerId: ownerId,
         creadorId: userProfile.uid,
         esPublico: false,
         publicSharedId: null,
@@ -190,28 +199,27 @@ export const formularioService = {
   },
 
   /**
-   * Incrementar contador de copias de formulario público bajo apps/auditoria/users/{userUid}/formularios
+   * Incrementar contador de copias de formulario público bajo apps/auditoria/owners/{ownerId}/formularios
    * @param {string} formularioId - ID del formulario público
    * @param {string} userId - UID del usuario que copia
-   * @param {string|Object} creadorUidOrForm - UID del creador del formulario original o objeto del formulario con creadorId
+   * @param {string|Object} ownerIdOrForm - ownerId del formulario original o objeto del formulario con ownerId
    * @param {Array<string>} usuariosQueCopiaron - Lista actual de usuarios que copiaron
    * @returns {Promise<void>}
    */
-  async incrementarContadorCopias(formularioId, userId, creadorUidOrForm, usuariosQueCopiaron = []) {
+  async incrementarContadorCopias(formularioId, userId, ownerIdOrForm, usuariosQueCopiaron = []) {
     try {
       if (!formularioId || !userId) throw new Error('formularioId y userId son requeridos');
       
-      // Obtener creadorUid: puede venir como string o desde el objeto del formulario
-      let creadorUid = typeof creadorUidOrForm === 'string' 
-        ? creadorUidOrForm 
-        : creadorUidOrForm?.creadorId;
+      // Obtener ownerId: puede venir como string o desde el objeto del formulario
+      let ownerId = typeof ownerIdOrForm === 'string' 
+        ? ownerIdOrForm 
+        : ownerIdOrForm?.ownerId;
       
-      if (!creadorUid) {
-        throw new Error('creadorUid es requerido. Debe proporcionarse como parámetro o en el objeto del formulario (creadorId)');
+      if (!ownerId) {
+        throw new Error('ownerId es requerido. Debe proporcionarse como parámetro o en el objeto del formulario (ownerId)');
       }
       
-      const formulariosRef = auditUserCollection(creadorUid, 'formularios');
-      const formularioRef = doc(formulariosRef, formularioId);
+      const formularioRef = doc(dbAudit, ...firestoreRoutesCore.formularios(ownerId), formularioId);
       
       await updateDocWithAppId(formularioRef, {
         copiadoCount: increment(1),
@@ -224,28 +232,27 @@ export const formularioService = {
   },
 
   /**
-   * Actualizar rating de formulario público bajo apps/auditoria/users/{userUid}/formularios
+   * Actualizar rating de formulario público bajo apps/auditoria/owners/{ownerId}/formularios
    * @param {string} formularioId - ID del formulario
    * @param {number} nuevoRating - Nuevo valor de rating
    * @param {number} ratingsCount - Cantidad total de ratings
-   * @param {string|Object} creadorUidOrForm - UID del creador del formulario o objeto del formulario con creadorId
+   * @param {string|Object} ownerIdOrForm - ownerId del formulario o objeto del formulario con ownerId
    * @returns {Promise<void>}
    */
-  async actualizarRating(formularioId, nuevoRating, ratingsCount, creadorUidOrForm) {
+  async actualizarRating(formularioId, nuevoRating, ratingsCount, ownerIdOrForm) {
     try {
       if (!formularioId) throw new Error('formularioId es requerido');
       
-      // Obtener creadorUid: puede venir como string o desde el objeto del formulario
-      let creadorUid = typeof creadorUidOrForm === 'string' 
-        ? creadorUidOrForm 
-        : creadorUidOrForm?.creadorId;
+      // Obtener ownerId: puede venir como string o desde el objeto del formulario
+      let ownerId = typeof ownerIdOrForm === 'string' 
+        ? ownerIdOrForm 
+        : ownerIdOrForm?.ownerId;
       
-      if (!creadorUid) {
-        throw new Error('creadorUid es requerido. Debe proporcionarse como parámetro o en el objeto del formulario (creadorId)');
+      if (!ownerId) {
+        throw new Error('ownerId es requerido. Debe proporcionarse como parámetro o en el objeto del formulario (ownerId)');
       }
       
-      const formulariosRef = auditUserCollection(creadorUid, 'formularios');
-      const formularioRef = doc(formulariosRef, formularioId);
+      const formularioRef = doc(dbAudit, ...firestoreRoutesCore.formularios(ownerId), formularioId);
       
       await updateDocWithAppId(formularioRef, {
         rating: nuevoRating,

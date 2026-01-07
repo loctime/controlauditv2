@@ -1,0 +1,50 @@
+[
+  {
+    "id": "4DZ44XX6u5M0CGxdpgmh",
+    "nombre": "alutra",
+    "descripcion": "altura",
+    "tipo": "charla",
+    "instructor": "ferpureba",
+    "fechaRealizada": {
+      "_seconds": 1766707200,
+      "_nanoseconds": 0
+    },
+    "empresaId": "hTD8FYeueHhuXxGCjxD0DcYmkRG2",
+    "sucursalId": "1fMecAaZ2Mxh6mLpGf0m",
+    "estado": "activa",
+    "empleados": [],
+    "fechaCreacion": {
+      "_seconds": 1766756105,
+      "_nanoseconds": 648000000
+    },
+    "ultimaModificacion": {
+      "_seconds": 1766756105,
+      "_nanoseconds": 648000000
+    },
+    "appId": "auditoria"
+  },
+  {
+    "id": "C9oxrQU51dR59jtr2hKr",
+    "nombre": "altura",
+    "descripcion": "altura",
+    "tipo": "charla",
+    "instructor": "ferpureba",
+    "fechaRealizada": {
+      "_seconds": 1766707200,
+      "_nanoseconds": 0
+    },
+    "empresaId": "hTD8FYeueHhuXxGCjxD0DcYmkRG2",
+    "sucursalId": "msR4gsLAd1Bmb2xDjcmc",
+    "estado": "activa",
+    "empleados": [],
+    "fechaCreacion": {
+      "_seconds": 1766756056,
+      "_nanoseconds": 11000000
+    },
+    "ultimaModificacion": {
+      "_seconds": 1766756056,
+      "_nanoseconds": 11000000
+    },
+    "appId": "auditoria"
+  }
+]

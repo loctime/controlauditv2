@@ -1,10 +1,11 @@
 import { useEffect } from 'react';
-import { onSnapshot } from 'firebase/firestore';
-import { auditUserCollection } from '../../../firebaseControlFile.js';
+import { onSnapshot, collection } from 'firebase/firestore';
+import { dbAudit } from '../../../firebaseControlFile.js';
+import { firestoreRoutesCore } from '../../../core/firestore/firestoreRoutes.core';
 
 /**
  * Hook para listener reactivo de formularios con fallback offline
- * Multi-tenant: asume que auditUserCollection ya filtra por usuario
+ * Owner-centric: asume que firestoreRoutesCore ya filtra por owner
  * Los datos devueltos son visibles directamente sin filtros adicionales
  * @param {boolean} enableListener - Si es false, el listener no se activa (optimización para evitar duplicados)
  * @param {boolean} authReady - Si es false, el listener no se activa (previene queries prematuras)
@@ -23,15 +24,16 @@ export const useFormulariosListener = (userProfile, setUserFormularios, setLoadi
       return;
     }
 
-    if (!userProfile || !userProfile.uid) {
+    if (!userProfile || !userProfile.ownerId) {
       setUserFormularios([]);
       setLoadingFormularios(false);
       return;
     }
 
     setLoadingFormularios(true);
-    // Usar estructura multi-tenant: apps/auditoria/users/{uid}/formularios
-    const formulariosRef = auditUserCollection(userProfile.uid, 'formularios');
+    // Usar estructura owner-centric: apps/auditoria/owners/{ownerId}/formularios
+    const ownerId = userProfile.ownerId;
+    const formulariosRef = collection(dbAudit, ...firestoreRoutesCore.formularios(ownerId));
 
     const unsubscribe = onSnapshot(formulariosRef,
       (snapshot) => {
@@ -67,6 +69,6 @@ export const useFormulariosListener = (userProfile, setUserFormularios, setLoadi
     );
 
     return unsubscribe;
-  }, [userProfile?.uid, loadUserFromCache, enableListener, authReady]);
+  }, [userProfile?.ownerId, loadUserFromCache, enableListener, authReady]);
 };
 

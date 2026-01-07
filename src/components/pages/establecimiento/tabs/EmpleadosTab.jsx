@@ -9,8 +9,9 @@ import {
   Typography
 } from '@mui/material';
 import PeopleIcon from '@mui/icons-material/People';
-import { getDocs, query, where } from 'firebase/firestore';
-import { auditUserCollection } from '../../../../firebaseControlFile';
+import { getDocs, query, where, collection } from 'firebase/firestore';
+import { dbAudit } from '../../../../firebaseControlFile';
+import { firestoreRoutesCore } from '../../../../core/firestore/firestoreRoutes.core';
 import { useAuth } from '../../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { normalizeEmpleado } from '../../../../utils/firestoreUtils';
@@ -22,20 +23,21 @@ const EmpleadosTab = ({ empresaId, empresaNombre }) => {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (empresaId && userProfile?.uid) {
+    if (empresaId && userProfile?.ownerId) {
       loadEmpleados();
     }
-  }, [empresaId, userProfile?.uid]);
+  }, [empresaId, userProfile?.ownerId]);
 
   const loadEmpleados = async () => {
-    if (!userProfile?.uid) {
+    if (!userProfile?.ownerId) {
       setEmpleados([]);
       return;
     }
 
     setLoading(true);
     try {
-      const sucursalesRef = auditUserCollection(userProfile.uid, 'sucursales');
+      const ownerId = userProfile.ownerId;
+      const sucursalesRef = collection(dbAudit, ...firestoreRoutesCore.sucursales(ownerId));
       const sucursalesSnapshot = await getDocs(query(sucursalesRef, where('empresaId', '==', empresaId)));
       const sucursalesIds = sucursalesSnapshot.docs.map(doc => doc.id);
       
@@ -44,7 +46,7 @@ const EmpleadosTab = ({ empresaId, empresaNombre }) => {
         return;
       }
 
-      const empleadosRef = auditUserCollection(userProfile.uid, 'empleados');
+      const empleadosRef = collection(dbAudit, ...firestoreRoutesCore.empleados(ownerId));
       const empleadosSnapshot = await getDocs(query(empleadosRef, where('sucursalId', 'in', sucursalesIds)));
       const empleadosData = empleadosSnapshot.docs.map(doc => normalizeEmpleado(doc));
       setEmpleados(empleadosData);

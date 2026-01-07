@@ -3,7 +3,8 @@ import React, { useState, useEffect } from "react";
 import { Typography, Box, Grid, Paper, Alert, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Button, TextField, Dialog, DialogTitle, DialogContent, DialogActions, Card, CardContent, Tabs, Tab, CircularProgress } from "@mui/material";
 import { useAuth } from "../../context/AuthContext";
 import { doc, query, where, getDocs, getDoc, collection } from "firebase/firestore";
-import { dbAudit, auditUsersCollection } from "../../../firebaseControlFile";
+import { dbAudit } from "../../../firebaseControlFile";
+import { firestoreRoutesCore } from "../../../core/firestore/firestoreRoutes.core";
 import { toast } from 'react-toastify';
 import { verifyAdminCode, verifySuperAdminCode } from "../../../config/admin";
 import GestionClientes from "./GestionClientes";
@@ -51,7 +52,7 @@ function Dashboard() {
 
      // Función para cargar empresas reales con información de usuarios
    const cargarEmpresasReales = async () => {
-     if (!userProfile?.uid) {
+     if (!userProfile?.ownerId) {
        setEmpresasReales([]);
        setLoadingEmpresas(false);
        return;
@@ -59,25 +60,43 @@ function Dashboard() {
 
      setLoadingEmpresas(true);
      try {
-      // Cargar todos los clientes administradores disponibles (ya filtrados por multi-tenant)
-      const usuariosRef = auditUsersCollection();
-      const clientesQuery = query(usuariosRef, where("role", "==", "max"));
-       const clientesSnapshot = await getDocs(clientesQuery);
-       let empresasData = clientesSnapshot.docs.map(doc => ({
-         id: doc.id,
-         nombre: doc.data().displayName || doc.data().email,
-         propietarioId: doc.id,
-         ...doc.data()
-       }));
+      // Cargar todos los clientes administradores disponibles (owner-centric)
+      // Para supermax, obtener todos los owners; para max, solo el propio owner
+      const ownerId = userProfile.ownerId;
+      let empresasData = [];
+      
+      if (role === 'supermax') {
+        // Supermax puede ver todos los owners - usar colección de owners directamente
+        const ownersRef = collection(dbAudit, 'apps', 'auditoria', 'owners');
+        const ownersSnapshot = await getDocs(ownersRef);
+        empresasData = ownersSnapshot.docs.map(doc => ({
+          id: doc.id,
+          nombre: doc.data().displayName || doc.data().email || doc.id,
+          ownerId: doc.id,
+          ...doc.data()
+        }));
+      } else {
+        // Max solo ve su propio owner
+        const ownerRef = doc(dbAudit, ...firestoreRoutesCore.owner(ownerId));
+        const ownerDoc = await getDoc(ownerRef);
+        if (ownerDoc.exists()) {
+          empresasData = [{
+            id: ownerId,
+            nombre: ownerDoc.data().displayName || ownerDoc.data().email || ownerId,
+            ownerId: ownerId,
+            ...ownerDoc.data()
+          }];
+        }
+      }
 
       // Enriquecer datos con información de usuarios
       const empresasEnriquecidas = await Promise.all(
         empresasData.map(async (cliente) => {
-          // Contar usuarios operarios (los datos ya vienen filtrados por multi-tenant)
-          const usuariosRef = auditUsersCollection();
+          // Contar usuarios operarios del owner
+          const ownerIdToUse = cliente.ownerId || cliente.id;
+          const usuariosRef = collection(dbAudit, ...firestoreRoutesCore.usuarios(ownerIdToUse));
           const usuariosQuery = query(usuariosRef, where("role", "==", "operario"));
           const usuariosSnapshot = await getDocs(usuariosQuery);
-          // Contar todos los usuarios operarios disponibles (sin filtro por identidad)
           const usuariosCount = usuariosSnapshot.docs.length;
 
            return {

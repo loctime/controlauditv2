@@ -1,0 +1,43 @@
+[
+  {
+    "id": "1fMecAaZ2Mxh6mLpGf0m",
+    "activa": true,
+    "modificadoPor": "pbLX5nBx2WTZV1Z0sFMJkVtSmZy2",
+    "empresaId": "E65GgRA804BtOZuWTJ8o",
+    "fechaModificacion": {
+      "_seconds": 1761669834,
+      "_nanoseconds": 754000000
+    },
+    "createdAt": {
+      "_seconds": 1760442117,
+      "_nanoseconds": 988000000
+    },
+    "direccion": "Av Viale 360 ",
+    "propietarioId": "hTD8FYeueHhuXxGCjxD0DcYmkRG2",
+    "horasSemanales": 44,
+    "telefono": "",
+    "migratedFromUid": "pbLX5nBx2WTZV1Z0sFMJkVtSmZy2",
+    "lastUidUpdate": {
+      "_seconds": 1762453765,
+      "_nanoseconds": 801000000
+    },
+    "creadorId": "nRULnL7XWAex0U2RtsbWkJEPcYp1",
+    "nombre": "Casa Central",
+    "modificadoPorEmail": "ssanabria.sh@gmail.com"
+  },
+  {
+    "id": "msR4gsLAd1Bmb2xDjcmc",
+    "creadoPorEmail": "ssanabria.sh@gmail.com",
+    "fechaCreacion": {
+      "_seconds": 1761669795,
+      "_nanoseconds": 452000000
+    },
+    "horasSemanales": "44",
+    "telefono": "",
+    "nombre": "CC&M Control - Ternium ",
+    "empresaId": "E65GgRA804BtOZuWTJ8o",
+    "direccion": "Planta General Savio",
+    "clienteAdminId": "hTD8FYeueHhuXxGCjxD0DcYmkRG2",
+    "creadoPor": "hTD8FYeueHhuXxGCjxD0DcYmkRG2"
+  }
+]

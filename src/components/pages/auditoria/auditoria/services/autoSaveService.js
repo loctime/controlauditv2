@@ -449,7 +449,7 @@ class AutoSaveService {
         usuarioEmail: userProfile?.email || 'usuario@ejemplo.com',
         userDisplayName: userProfile?.displayName || userProfile?.email || 'Usuario',
         userRole: userProfile?.role || 'operario',
-        clienteAdminId: userProfile?.clienteAdminId || userProfile?.uid || userId,
+        ownerId: userProfile?.ownerId || null,
         creadoPor: userProfile?.uid || userId,
         creadoPorEmail: userProfile?.email || 'usuario@ejemplo.com',
         sessionId: this.generateSessionId(),

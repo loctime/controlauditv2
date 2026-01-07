@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import { reporteService } from "../../../../services/reporteService";
-import { db, auditUserCollection } from "../../../../firebaseControlFile";
+import { db } from "../../../../firebaseControlFile";
 import { useLocation, useNavigate } from 'react-router-dom';
 import { auditoriaService } from '../../../../services/auditoriaService';
 import {
@@ -112,7 +112,7 @@ const ReportesPage = () => {
   
   // Cache para evitar recargas innecesarias
   const reportesCacheRef = useRef({});
-  const lastUserIdRef = useRef(null);
+  const lastOwnerIdRef = useRef(null);
 
   // Estilos responsivos
   const mobileBoxStyle = {
@@ -180,20 +180,20 @@ const ReportesPage = () => {
     }
   };
 
-  // Fetch de reportes usando auditoriaService (multi-tenant)
+  // Fetch de reportes usando auditoriaService (owner-centric)
   const fetchReportes = async () => {
-    if (!userProfile?.uid) {
+    if (!userProfile?.ownerId) {
       setLoading(false);
       return;
     }
 
-    const userId = userProfile.uid;
+    const ownerId = userProfile.ownerId;
     
     // Verificar cache antes de cargar
-    if (reportesCacheRef.current[userId] && lastUserIdRef.current === userId) {
-      console.log('[DEBUG] Usando datos cacheados para usuario:', userId);
-      setReportes(reportesCacheRef.current[userId]);
-      setFilteredReportes(reportesCacheRef.current[userId]);
+    if (reportesCacheRef.current[ownerId] && lastOwnerIdRef.current === ownerId) {
+      console.log('[DEBUG] Usando datos cacheados para owner:', ownerId);
+      setReportes(reportesCacheRef.current[ownerId]);
+      setFilteredReportes(reportesCacheRef.current[ownerId]);
       setLoading(false);
       return;
     }
@@ -202,11 +202,11 @@ const ReportesPage = () => {
     setError(null);
     
     try {
-      console.log('[DEBUG] Cargando reportes desde auditoriaService para usuario:', userId);
+      console.log('[DEBUG] Cargando reportes desde auditoriaService para owner:', ownerId);
       
-      // Usar auditoriaService que ya maneja multi-tenant
+      // Usar auditoriaService que ya maneja owner-centric
       const reportesData = await auditoriaService.getUserAuditorias(
-        userId,
+        ownerId,
         userProfile?.role || 'operario',
         userProfile
       );
@@ -221,8 +221,8 @@ const ReportesPage = () => {
       console.log('[DEBUG]', reportesOrdenados.length, 'reportes cargados');
       
       // Guardar en cache
-      reportesCacheRef.current[userId] = reportesOrdenados;
-      lastUserIdRef.current = userId;
+      reportesCacheRef.current[ownerId] = reportesOrdenados;
+      lastOwnerIdRef.current = ownerId;
       
       setReportes(reportesOrdenados);
       setFilteredReportes(reportesOrdenados);
@@ -371,21 +371,21 @@ const ReportesPage = () => {
 
     if (result.isConfirmed) {
       try {
-        const userId = userProfile?.uid;
-        if (!userId) {
-          throw new Error('UID de usuario no disponible');
+        const ownerId = userProfile?.ownerId;
+        if (!ownerId) {
+          throw new Error('ownerId no disponible');
         }
 
-        // Eliminar desde la ruta multi-tenant
-        await reporteService.deleteReporte(userId, reporte.id);
+        // Eliminar desde la ruta owner-centric
+        await reporteService.deleteReporte(ownerId, reporte.id);
         
         // Actualizar estado local
         setReportes(prev => prev.filter(r => r.id !== reporte.id));
         setFilteredReportes(prev => prev.filter(r => r.id !== reporte.id));
         
         // Limpiar cache
-        if (reportesCacheRef.current[userId]) {
-          reportesCacheRef.current[userId] = reportesCacheRef.current[userId].filter(r => r.id !== reporte.id);
+        if (reportesCacheRef.current[ownerId]) {
+          reportesCacheRef.current[ownerId] = reportesCacheRef.current[ownerId].filter(r => r.id !== reporte.id);
         }
         
         Swal.fire('Eliminado', 'El reporte ha sido eliminado correctamente', 'success');

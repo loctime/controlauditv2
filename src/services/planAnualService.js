@@ -4,16 +4,18 @@ import {
   getDoc, 
   getDocs,
   query,
-  where
+  where,
+  collection
 } from 'firebase/firestore';
 import { Timestamp } from 'firebase/firestore';
-import { auditUserCollection } from '../firebaseControlFile';
+import { dbAudit } from '../firebaseControlFile';
+import { firestoreRoutesCore } from '../core/firestore/firestoreRoutes.core';
 import { addDocWithAppId, updateDocWithAppId } from '../firebase/firestoreAppWriter';
 
 export const planAnualService = {
   /**
-   * Crear plan anual de capacitaciones (multi-tenant)
-   * @param {string} userId - UID del usuario
+   * Crear plan anual de capacitaciones (owner-centric)
+   * @param {string} userId - ID del owner (viene del token)
    * @param {Object} planData - Datos del plan anual
    * @returns {Promise<string>} ID del plan creado
    */
@@ -21,7 +23,9 @@ export const planAnualService = {
     try {
       if (!userId) throw new Error('userId es requerido');
       
-      const planesRef = auditUserCollection(userId, 'planes_capacitaciones_anuales');
+      if (!userId) throw new Error('ownerId es requerido');
+      const ownerId = userId; // userId ahora es ownerId
+      const planesRef = collection(dbAudit, ...firestoreRoutesCore.planesCapacitacionesAnuales(ownerId));
       const docRef = await addDocWithAppId(planesRef, {
         ...planData,
         createdAt: Timestamp.now(),
@@ -36,18 +40,18 @@ export const planAnualService = {
   },
 
   /**
-   * Actualizar plan anual de capacitaciones (multi-tenant)
-   * @param {string} userId - UID del usuario
+   * Actualizar plan anual de capacitaciones (owner-centric)
+   * @param {string} userId - ID del owner (viene del token)
    * @param {string} planId - ID del plan anual
    * @param {Object} updateData - Datos a actualizar
    * @returns {Promise<void>}
    */
   async updatePlanAnual(userId, planId, updateData) {
     try {
-      if (!userId || !planId) throw new Error('userId y planId son requeridos');
+      if (!userId || !planId) throw new Error('ownerId y planId son requeridos');
       
-      const planesRef = auditUserCollection(userId, 'planes_capacitaciones_anuales');
-      const planRef = doc(planesRef, planId);
+      const ownerId = userId; // userId ahora es ownerId
+      const planRef = doc(dbAudit, ...firestoreRoutesCore.planCapacitacionesAnual(ownerId, planId));
       
       await updateDocWithAppId(planRef, {
         ...updateData,
@@ -60,8 +64,8 @@ export const planAnualService = {
   },
 
   /**
-   * Obtener plan anual por ID (multi-tenant)
-   * @param {string} userId - UID del usuario
+   * Obtener plan anual por ID (owner-centric)
+   * @param {string} userId - ID del owner (viene del token)
    * @param {string} planId - ID del plan anual
    * @returns {Promise<Object|null>} Datos del plan o null
    */
@@ -69,7 +73,9 @@ export const planAnualService = {
     try {
       if (!userId || !planId) return null;
       
-      const planesRef = auditUserCollection(userId, 'planes_capacitaciones_anuales');
+      if (!userId) throw new Error('ownerId es requerido');
+      const ownerId = userId; // userId ahora es ownerId
+      const planesRef = collection(dbAudit, ...firestoreRoutesCore.planesCapacitacionesAnuales(ownerId));
       const planRef = doc(planesRef, planId);
       const planDoc = await getDoc(planRef);
       
@@ -85,15 +91,17 @@ export const planAnualService = {
   },
 
   /**
-   * Obtener todos los planes anuales del usuario (multi-tenant)
-   * @param {string} userId - UID del usuario
+   * Obtener todos los planes anuales del owner (owner-centric)
+   * @param {string} userId - ID del owner (viene del token)
    * @returns {Promise<Array>} Lista de planes anuales
    */
   async getAllPlanesAnuales(userId) {
     try {
       if (!userId) return [];
       
-      const planesRef = auditUserCollection(userId, 'planes_capacitaciones_anuales');
+      if (!userId) throw new Error('ownerId es requerido');
+      const ownerId = userId; // userId ahora es ownerId
+      const planesRef = collection(dbAudit, ...firestoreRoutesCore.planesCapacitacionesAnuales(ownerId));
       const snapshot = await getDocs(planesRef);
       
       return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));

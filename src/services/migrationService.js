@@ -1,9 +1,8 @@
-// Servicio para migrar todos los datos relacionados con un UID antiguo a un UID nuevo
+// Servicio para migrar todos los datos relacionados con un ownerId antiguo a un ownerId nuevo
 // Migra automáticamente empresas, formularios, reportes, sucursales, empleados, etc.
 // 
-// NOTA LEGACY: Este servicio usa dbAudit directamente para colecciones sin helpers.
-// Algunas colecciones (empresas, formularios, empleados, capacitaciones, accidentes) 
-// no tienen helpers centralizados y se acceden directamente con collection(dbAudit, ...).
+// NOTA: Este servicio migra datos dentro del modelo owner-centric.
+// Todas las colecciones están bajo apps/auditoria/owners/{ownerId}/
 
 import { 
   collection, 
@@ -12,18 +11,19 @@ import {
   getDocs, 
   doc
 } from 'firebase/firestore';
-import { dbAudit, sucursalesCollection, reportesCollection, auditUsersCollection } from '../firebaseControlFile';
+import { dbAudit } from '../firebaseControlFile';
+import { firestoreRoutesCore } from '../core/firestore/firestoreRoutes.core';
 import { writeBatchWithAppId } from '../firebase/firestoreAppWriter';
 
 /**
- * Migra todos los datos relacionados con un UID antiguo a un UID nuevo
+ * Migra todos los datos relacionados con un ownerId antiguo a un ownerId nuevo (owner-centric)
  * 
- * @param {string} oldUid - UID antiguo del usuario
- * @param {string} newUid - UID nuevo del usuario
+ * @param {string} oldOwnerId - ownerId antiguo
+ * @param {string} newOwnerId - ownerId nuevo
  * @returns {Promise<Object>} - Resumen de la migración
  */
-export const migrateAllUserData = async (oldUid, newUid) => {
-  console.log(`[migrationService] 🚀 Iniciando migración completa de ${oldUid} → ${newUid}`);
+export const migrateAllUserData = async (oldOwnerId, newOwnerId) => {
+  console.log(`[migrationService] 🚀 Iniciando migración completa de ${oldOwnerId} → ${newOwnerId}`);
   
   const migrationSummary = {
     empresas: 0,
@@ -56,44 +56,21 @@ export const migrateAllUserData = async (oldUid, newUid) => {
       }
     };
 
-    // 1. Migrar EMPRESAS
-    // NOTA: No hay helper para 'empresas', usando collection directa con dbAudit
+    // 1. Migrar EMPRESAS (owner-centric)
     console.log('[migrationService] 📦 Migrando empresas...');
-    const empresasRef = collection(dbAudit, 'empresas');
-    const empresasQuery = query(empresasRef, where('propietarioId', '==', oldUid));
-    const empresasSnapshot = await getDocs(empresasQuery);
+    const empresasRef = collection(dbAudit, ...firestoreRoutesCore.empresas(oldOwnerId));
+    const empresasSnapshot = await getDocs(empresasRef);
     
     const empresasUpdates = [];
     empresasSnapshot.docs.forEach(docSnap => {
       empresasUpdates.push({
-        docRef: doc(dbAudit, 'empresas', docSnap.id),
+        docRef: doc(dbAudit, ...firestoreRoutesCore.empresa(newOwnerId, docSnap.id)),
         data: {
-          propietarioId: newUid,
-          lastUidUpdate: new Date(),
-          migratedFromUid: oldUid
+          lastOwnerIdUpdate: new Date(),
+          migratedFromOwnerId: oldOwnerId
         }
       });
       migrationSummary.empresas++;
-    });
-
-    // También buscar por creadorId
-    const empresasCreadorQuery = query(empresasRef, where('creadorId', '==', oldUid));
-    const empresasCreadorSnapshot = await getDocs(empresasCreadorQuery);
-    
-    empresasCreadorSnapshot.docs.forEach(docSnap => {
-      const empresaData = docSnap.data();
-      // Solo actualizar si propietarioId no es el oldUid (para evitar duplicados)
-      if (empresaData.propietarioId !== oldUid) {
-        empresasUpdates.push({
-          docRef: doc(dbAudit, 'empresas', docSnap.id),
-          data: {
-            creadorId: newUid,
-            lastUidUpdate: new Date(),
-            migratedFromUid: oldUid
-          }
-        });
-        migrationSummary.empresas++;
-      }
     });
 
     // Ejecutar todas las migraciones en paralelo para mayor velocidad
@@ -103,96 +80,61 @@ export const migrateAllUserData = async (oldUid, newUid) => {
       migrationPromises.push(executeBatchInChunks(empresasUpdates, 'empresas'));
     }
 
-    // 2. Migrar FORMULARIOS
-    // NOTA: No hay helper para 'formularios', usando collection directa con dbAudit
+    // 2. Migrar FORMULARIOS (owner-centric)
     console.log('[migrationService] 📋 Migrando formularios...');
-    const formulariosRef = collection(dbAudit, 'formularios');
-    const formulariosQuery = query(formulariosRef, where('creadorId', '==', oldUid));
-    const formulariosSnapshot = await getDocs(formulariosQuery);
+    const formulariosRef = collection(dbAudit, ...firestoreRoutesCore.formularios(oldOwnerId));
+    const formulariosSnapshot = await getDocs(formulariosRef);
     
     const formulariosUpdates = [];
     formulariosSnapshot.docs.forEach(docSnap => {
       const formularioData = docSnap.data();
       const updates = {
-        creadorId: newUid,
-        lastUidUpdate: new Date(),
-        migratedFromUid: oldUid
+        lastOwnerIdUpdate: new Date(),
+        migratedFromOwnerId: oldOwnerId
       };
 
-      // Actualizar clienteAdminId si es el oldUid
-      if (formularioData.clienteAdminId === oldUid) {
-        updates.clienteAdminId = newUid;
-      }
-
-      // Actualizar arrays de permisos
+      // Actualizar arrays de permisos si contienen el oldOwnerId
       if (formularioData.permisos) {
         const permisos = { ...formularioData.permisos };
         ['puedeEditar', 'puedeVer', 'puedeEliminar'].forEach(campo => {
           if (Array.isArray(permisos[campo])) {
-            permisos[campo] = permisos[campo].map(uid => uid === oldUid ? newUid : uid);
+            permisos[campo] = permisos[campo].map(uid => uid === oldOwnerId ? newOwnerId : uid);
           }
         });
         updates.permisos = permisos;
       }
 
       formulariosUpdates.push({
-        docRef: doc(dbAudit, 'formularios', docSnap.id),
+        docRef: doc(dbAudit, ...firestoreRoutesCore.formulario(newOwnerId, docSnap.id)),
         data: updates
       });
       migrationSummary.formularios++;
-    });
-
-    // También buscar por clienteAdminId
-    const formulariosAdminQuery = query(formulariosRef, where('clienteAdminId', '==', oldUid));
-    const formulariosAdminSnapshot = await getDocs(formulariosAdminQuery);
-    
-    formulariosAdminSnapshot.docs.forEach(docSnap => {
-      const formularioData = docSnap.data();
-      // Solo actualizar si creadorId no es el oldUid
-      if (formularioData.creadorId !== oldUid) {
-        formulariosUpdates.push({
-          docRef: doc(dbAudit, 'formularios', docSnap.id),
-          data: {
-            clienteAdminId: newUid,
-            lastUidUpdate: new Date(),
-            migratedFromUid: oldUid
-          }
-        });
-        migrationSummary.formularios++;
-      }
     });
 
     if (formulariosUpdates.length > 0) {
       migrationPromises.push(executeBatchInChunks(formulariosUpdates, 'formularios'));
     }
 
-    // 3. Migrar REPORTES/AUDITORIAS
+    // 3. Migrar REPORTES/AUDITORIAS (owner-centric)
     console.log('[migrationService] 📊 Migrando reportes/auditorías...');
-    const reportesRef = reportesCollection();
-    const reportesQuery = query(reportesRef, where('usuarioId', '==', oldUid));
-    const reportesSnapshot = await getDocs(reportesQuery);
+    const reportesRef = collection(dbAudit, ...firestoreRoutesCore.reportes(oldOwnerId));
+    const reportesSnapshot = await getDocs(reportesRef);
     
     const reportesUpdates = [];
     reportesSnapshot.docs.forEach(docSnap => {
       const reporteData = docSnap.data();
       const updates = {
-        usuarioId: newUid,
-        lastUidUpdate: new Date(),
-        migratedFromUid: oldUid
+        lastOwnerIdUpdate: new Date(),
+        migratedFromOwnerId: oldOwnerId
       };
 
-      // Actualizar creadoPor si existe
-      if (reporteData.creadoPor === oldUid) {
-        updates.creadoPor = newUid;
-      }
-
-      // Actualizar clienteAdminId si existe
-      if (reporteData.clienteAdminId === oldUid) {
-        updates.clienteAdminId = newUid;
+      // Actualizar creadoPor si existe y es el oldOwnerId
+      if (reporteData.creadoPor === oldOwnerId) {
+        updates.creadoPor = newOwnerId;
       }
 
       reportesUpdates.push({
-        docRef: doc(dbAudit, 'reportes', docSnap.id),
+        docRef: doc(dbAudit, ...firestoreRoutesCore.reporte(newOwnerId, docSnap.id)),
         data: updates
       });
       migrationSummary.reportes++;
@@ -202,20 +144,18 @@ export const migrateAllUserData = async (oldUid, newUid) => {
       migrationPromises.push(executeBatchInChunks(reportesUpdates, 'reportes'));
     }
 
-    // 4. Migrar SUCURSALES
+    // 4. Migrar SUCURSALES (owner-centric)
     console.log('[migrationService] 🏢 Migrando sucursales...');
-    const sucursalesRef = sucursalesCollection();
-    const sucursalesQuery = query(sucursalesRef, where('creadorId', '==', oldUid));
-    const sucursalesSnapshot = await getDocs(sucursalesQuery);
+    const sucursalesRef = collection(dbAudit, ...firestoreRoutesCore.sucursales(oldOwnerId));
+    const sucursalesSnapshot = await getDocs(sucursalesRef);
     
     const sucursalesUpdates = [];
     sucursalesSnapshot.docs.forEach(docSnap => {
       sucursalesUpdates.push({
-        docRef: doc(dbAudit, 'sucursales', docSnap.id),
+        docRef: doc(dbAudit, ...firestoreRoutesCore.sucursal(newOwnerId, docSnap.id)),
         data: {
-          creadorId: newUid,
-          lastUidUpdate: new Date(),
-          migratedFromUid: oldUid
+          lastOwnerIdUpdate: new Date(),
+          migratedFromOwnerId: oldOwnerId
         }
       });
       migrationSummary.sucursales++;
@@ -225,21 +165,18 @@ export const migrateAllUserData = async (oldUid, newUid) => {
       migrationPromises.push(executeBatchInChunks(sucursalesUpdates, 'sucursales'));
     }
 
-    // 5. Migrar EMPLEADOS
-    // NOTA: No hay helper para 'empleados', usando collection directa con dbAudit
+    // 5. Migrar EMPLEADOS (owner-centric)
     console.log('[migrationService] 👥 Migrando empleados...');
-    const empleadosRef = collection(dbAudit, 'empleados');
-    const empleadosQuery = query(empleadosRef, where('createdBy', '==', oldUid));
-    const empleadosSnapshot = await getDocs(empleadosQuery);
+    const empleadosRef = collection(dbAudit, ...firestoreRoutesCore.empleados(oldOwnerId));
+    const empleadosSnapshot = await getDocs(empleadosRef);
     
     const empleadosUpdates = [];
     empleadosSnapshot.docs.forEach(docSnap => {
       empleadosUpdates.push({
-        docRef: doc(dbAudit, 'empleados', docSnap.id),
+        docRef: doc(dbAudit, ...firestoreRoutesCore.empleado(newOwnerId, docSnap.id)),
         data: {
-          createdBy: newUid,
-          lastUidUpdate: new Date(),
-          migratedFromUid: oldUid
+          lastOwnerIdUpdate: new Date(),
+          migratedFromOwnerId: oldOwnerId
         }
       });
       migrationSummary.empleados++;
@@ -249,21 +186,18 @@ export const migrateAllUserData = async (oldUid, newUid) => {
       migrationPromises.push(executeBatchInChunks(empleadosUpdates, 'empleados'));
     }
 
-    // 6. Migrar CAPACITACIONES
-    // NOTA: No hay helper para 'capacitaciones', usando collection directa con dbAudit
+    // 6. Migrar CAPACITACIONES (owner-centric)
     console.log('[migrationService] 📚 Migrando capacitaciones...');
-    const capacitacionesRef = collection(dbAudit, 'capacitaciones');
-    const capacitacionesQuery = query(capacitacionesRef, where('createdBy', '==', oldUid));
-    const capacitacionesSnapshot = await getDocs(capacitacionesQuery);
+    const capacitacionesRef = collection(dbAudit, ...firestoreRoutesCore.capacitaciones(oldOwnerId));
+    const capacitacionesSnapshot = await getDocs(capacitacionesRef);
     
     const capacitacionesUpdates = [];
     capacitacionesSnapshot.docs.forEach(docSnap => {
       capacitacionesUpdates.push({
-        docRef: doc(dbAudit, 'capacitaciones', docSnap.id),
+        docRef: doc(dbAudit, ...firestoreRoutesCore.capacitacion(newOwnerId, docSnap.id)),
         data: {
-          createdBy: newUid,
-          lastUidUpdate: new Date(),
-          migratedFromUid: oldUid
+          lastOwnerIdUpdate: new Date(),
+          migratedFromOwnerId: oldOwnerId
         }
       });
       migrationSummary.capacitaciones++;
@@ -273,21 +207,18 @@ export const migrateAllUserData = async (oldUid, newUid) => {
       migrationPromises.push(executeBatchInChunks(capacitacionesUpdates, 'capacitaciones'));
     }
 
-    // 7. Migrar ACCIDENTES
-    // NOTA: No hay helper para 'accidentes', usando collection directa con dbAudit
+    // 7. Migrar ACCIDENTES (owner-centric)
     console.log('[migrationService] ⚠️ Migrando accidentes...');
-    const accidentesRef = collection(dbAudit, 'accidentes');
-    const accidentesQuery = query(accidentesRef, where('createdBy', '==', oldUid));
-    const accidentesSnapshot = await getDocs(accidentesQuery);
+    const accidentesRef = collection(dbAudit, ...firestoreRoutesCore.accidentes(oldOwnerId));
+    const accidentesSnapshot = await getDocs(accidentesRef);
     
     const accidentesUpdates = [];
     accidentesSnapshot.docs.forEach(docSnap => {
       accidentesUpdates.push({
-        docRef: doc(dbAudit, 'accidentes', docSnap.id),
+        docRef: doc(dbAudit, ...firestoreRoutesCore.accidente(newOwnerId, docSnap.id)),
         data: {
-          createdBy: newUid,
-          lastUidUpdate: new Date(),
-          migratedFromUid: oldUid
+          lastOwnerIdUpdate: new Date(),
+          migratedFromOwnerId: oldOwnerId
         }
       });
       migrationSummary.accidentes++;
@@ -297,20 +228,18 @@ export const migrateAllUserData = async (oldUid, newUid) => {
       migrationPromises.push(executeBatchInChunks(accidentesUpdates, 'accidentes'));
     }
 
-    // 8. Migrar USUARIOS OPERARIOS (clienteAdminId)
+    // 8. Migrar USUARIOS OPERARIOS (owner-centric)
     console.log('[migrationService] 👤 Migrando usuarios operarios...');
-    const usuariosRef = auditUsersCollection();
-    const usuariosQuery = query(usuariosRef, where('clienteAdminId', '==', oldUid));
-    const usuariosSnapshot = await getDocs(usuariosQuery);
+    const usuariosRef = collection(dbAudit, ...firestoreRoutesCore.usuarios(oldOwnerId));
+    const usuariosSnapshot = await getDocs(usuariosRef);
     
     const usuariosUpdates = [];
     usuariosSnapshot.docs.forEach(docSnap => {
       usuariosUpdates.push({
-        docRef: doc(dbAudit, 'apps', 'audit', 'users', docSnap.id),
+        docRef: doc(dbAudit, ...firestoreRoutesCore.usuario(newOwnerId, docSnap.id)),
         data: {
-          clienteAdminId: newUid,
-          lastUidUpdate: new Date(),
-          migratedFromUid: oldUid
+          lastOwnerIdUpdate: new Date(),
+          migratedFromOwnerId: oldOwnerId
         }
       });
       migrationSummary.usuariosOperarios++;

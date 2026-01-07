@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
-import { query, where, getDocs } from 'firebase/firestore';
-import { auditUserCollection } from '../../../../firebaseControlFile';
+import { query, where, getDocs, collection } from 'firebase/firestore';
+import { dbAudit } from '../../../../firebaseControlFile';
+import { firestoreRoutesCore } from '../../../../core/firestore/firestoreRoutes.core';
 import { useAuth } from '../../../context/AuthContext';
 
 /**
@@ -28,7 +29,7 @@ const normalizePlanAnual = (doc) => ({
 /**
  * Hook para cargar capacitaciones individuales y planes anuales
  * Optimizado con cleanup patterns y carga paralela
- * Usa arquitectura multi-tenant: apps/auditoria/users/{uid}/{coleccion}
+ * Usa arquitectura owner-centric: apps/auditoria/owners/{ownerId}/{coleccion}
  */
 export const useCapacitacionesData = (selectedEmpresa, selectedSucursal, sucursalesDisponibles, empresasCargadas) => {
   const { userProfile } = useAuth();
@@ -37,7 +38,7 @@ export const useCapacitacionesData = (selectedEmpresa, selectedSucursal, sucursa
   const [loading, setLoading] = useState(false);
 
   const loadCapacitaciones = useCallback(async () => {
-    if (!userProfile?.uid) return;
+    if (!userProfile?.ownerId) return;
 
     let mounted = true;
 
@@ -47,11 +48,11 @@ export const useCapacitacionesData = (selectedEmpresa, selectedSucursal, sucursa
       }
 
       try {
-        const userId = userProfile.uid;
+        const ownerId = userProfile.ownerId;
 
-        // Cargar capacitaciones individuales desde arquitectura multi-tenant
+        // Cargar capacitaciones individuales desde arquitectura owner-centric
         // NO se aplican filtros por identidad - solo filtros funcionales de UI
-        const capacitacionesRef = auditUserCollection(userId, 'capacitaciones');
+        const capacitacionesRef = collection(dbAudit, ...firestoreRoutesCore.capacitaciones(ownerId));
         let qCap;
         
         if (selectedSucursal) {
@@ -96,7 +97,7 @@ export const useCapacitacionesData = (selectedEmpresa, selectedSucursal, sucursa
           });
 
           // Cargar planes anuales
-          await loadPlanesAnuales(userId, mounted);
+          await loadPlanesAnuales(ownerId, mounted);
 
           if (mounted) {
             setCapacitaciones(capacitacionesData);
@@ -136,10 +137,10 @@ export const useCapacitacionesData = (selectedEmpresa, selectedSucursal, sucursa
       }
     };
 
-    const loadPlanesAnuales = async (userId, mounted) => {
+    const loadPlanesAnuales = async (ownerId, mounted) => {
       try {
-        // Cargar planes anuales desde arquitectura multi-tenant
-        const planesRef = auditUserCollection(userId, 'planes_capacitaciones_anuales');
+        // Cargar planes anuales desde arquitectura owner-centric
+        const planesRef = collection(dbAudit, ...firestoreRoutesCore.planesCapacitacionesAnuales(ownerId));
         let planesQ;
         
         // Solo filtros funcionales: empresa, sucursal, año
@@ -179,13 +180,13 @@ export const useCapacitacionesData = (selectedEmpresa, selectedSucursal, sucursa
     loadData();
 
     return () => { mounted = false; };
-  }, [selectedEmpresa, selectedSucursal, sucursalesDisponibles, userProfile?.uid]);
+  }, [selectedEmpresa, selectedSucursal, sucursalesDisponibles, userProfile?.ownerId]);
 
   useEffect(() => {
-    if (userProfile?.uid) {
+    if (userProfile?.ownerId) {
       loadCapacitaciones();
     }
-  }, [loadCapacitaciones, userProfile?.uid]);
+  }, [loadCapacitaciones, userProfile?.ownerId]);
 
   return { capacitaciones, planesAnuales, loading, recargarDatos: loadCapacitaciones };
 };

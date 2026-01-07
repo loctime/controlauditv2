@@ -21,7 +21,8 @@ import {
 } from '@mui/icons-material';
 import AccionesRequeridasService from '../../../../services/accionesRequeridasService';
 import { useAuth } from '../../../../components/context/AuthContext';
-import { auditUserCollection } from '../../../../firebaseControlFile';
+import { dbAudit } from '../../../../firebaseControlFile';
+import { firestoreRoutesCore } from '../../../../core/firestore/firestoreRoutes.core';
 import { doc, collection } from 'firebase/firestore';
 
 export default function AccionesRequeridasWidget({ sucursales, selectedSucursal, estadisticas: estadisticasProp }) {
@@ -69,11 +70,11 @@ export default function AccionesRequeridasWidget({ sucursales, selectedSucursal,
 
         for (const sucursal of sucursalesACalcular) {
           try {
-            if (!userProfile?.uid) {
-              throw new Error('Usuario no autenticado');
+            if (!userProfile?.ownerId) {
+              throw new Error('ownerId no disponible');
             }
-            const sucursalesRef = auditUserCollection(userProfile.uid, 'sucursales');
-            const sucursalDocRef = doc(sucursalesRef, sucursal.id);
+            const ownerId = userProfile.ownerId;
+            const sucursalDocRef = doc(dbAudit, ...firestoreRoutesCore.sucursal(ownerId, sucursal.id));
             const accionesCollectionRef = collection(sucursalDocRef, 'acciones_requeridas');
             
             const stats = await AccionesRequeridasService.obtenerEstadisticas(accionesCollectionRef);

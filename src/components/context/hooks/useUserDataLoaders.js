@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
-import { getDocs, query, where, doc } from 'firebase/firestore';
-import { auditUserCollection, auditUsersCollection } from '../../../firebaseControlFile.js';
+import { getDocs, query, where, doc, collection } from 'firebase/firestore';
+import { dbAudit } from '../../../firebaseControlFile.js';
+import { firestoreRoutesCore } from '../../../core/firestore/firestoreRoutes.core';
 import { empresaService } from '../../../services/empresaService';
 import { auditoriaService } from '../../../services/auditoriaService';
 import { normalizeSucursal } from '../../../utils/firestoreUtils';
@@ -24,19 +25,20 @@ export const useUserDataLoaders = (
   // ELIMINADO: loadUserEmpresas
   // Ahora se usa useEmpresasQuery que es la única fuente de verdad para empresas
 
-  const loadUserSucursales = useCallback(async (userId, empresasParam = null, profileParam = null) => {
+  const loadUserSucursales = useCallback(async (ownerId, empresasParam = null, profileParam = null) => {
     try {
       const profileToUse = profileParam || userProfile;
       const empresasToUse = empresasParam || userEmpresas;
       
-      if (!userId || !profileToUse) {
+      if (!ownerId || !profileToUse?.ownerId) {
         setUserSucursales([]);
         setLoadingSucursales(false);
         return [];
       }
 
       setLoadingSucursales(true);
-      const sucursalesRef = auditUserCollection(userId, 'sucursales');
+      const ownerIdToUse = profileToUse.ownerId;
+      const sucursalesRef = collection(dbAudit, ...firestoreRoutesCore.sucursales(ownerIdToUse));
       let sucursalesData = [];
       
       if (role === 'supermax') {
@@ -89,18 +91,19 @@ export const useUserDataLoaders = (
     }
   }, [userProfile, role, userEmpresas, setUserSucursales, setLoadingSucursales, loadUserFromCache]);
 
-  const loadUserFormularios = useCallback(async (userId, empresasParam = null, profileParam = null) => {
+  const loadUserFormularios = useCallback(async (ownerId, empresasParam = null, profileParam = null) => {
     try {
       const profileToUse = profileParam || userProfile;
       
-      if (!userId || !profileToUse) {
+      if (!ownerId || !profileToUse?.ownerId) {
         setUserFormularios([]);
         setLoadingFormularios(false);
         return [];
       }
 
       setLoadingFormularios(true);
-      const formulariosRef = auditUserCollection(userId, 'formularios');
+      const ownerIdToUse = profileToUse.ownerId;
+      const formulariosRef = collection(dbAudit, ...firestoreRoutesCore.formularios(ownerIdToUse));
       const formulariosSnapshot = await getDocs(formulariosRef);
       const formulariosData = formulariosSnapshot.docs.map(doc => ({
         id: doc.id,
@@ -133,15 +136,15 @@ export const useUserDataLoaders = (
     }
   }, [userProfile, setUserFormularios, setLoadingFormularios, loadUserFromCache]);
 
-  const loadUserAuditorias = useCallback(async (userId, profileParam = null) => {
+  const loadUserAuditorias = useCallback(async (ownerId, profileParam = null) => {
     try {
       const profileToUse = profileParam || userProfile;
       
-      if (!userId || !profileToUse || !profileToUse.uid) {
+      if (!ownerId || !profileToUse?.ownerId) {
         return [];
       }
       
-      const auditorias = await auditoriaService.getUserAuditorias(userId, role, profileToUse);
+      const auditorias = await auditoriaService.getUserAuditorias(ownerId, role, profileToUse);
       return auditorias;
     } catch (error) {
       console.error('❌ Error cargando auditorías:', error);
@@ -149,15 +152,15 @@ export const useUserDataLoaders = (
     }
   }, [role, userProfile]);
 
-  const loadAuditoriasCompartidas = useCallback(async (userId, profileParam = null) => {
+  const loadAuditoriasCompartidas = useCallback(async (ownerId, profileParam = null) => {
     try {
       const profileToUse = profileParam || userProfile;
       
-      if (!userId || !profileToUse || !profileToUse.uid) {
+      if (!ownerId || !profileToUse?.ownerId) {
         return [];
       }
       
-      const auditorias = await auditoriaService.getAuditoriasCompartidas(userId, profileToUse);
+      const auditorias = await auditoriaService.getAuditoriasCompartidas(ownerId, profileToUse);
       return auditorias;
     } catch (error) {
       console.error('❌ Error cargando auditorías compartidas:', error);

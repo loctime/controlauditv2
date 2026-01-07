@@ -76,5 +76,216 @@ export const firestoreRoutesCore = {
     ownerId,
     'usuarios',
     userId
+  ],
+
+  /**
+   * Colección de reportes (auditorías) del owner
+   * Path: apps/auditoria/owners/{ownerId}/reportes
+   */
+  reportes: (ownerId: string): string[] => [
+    'apps',
+    'auditoria',
+    'owners',
+    ownerId,
+    'reportes'
+  ],
+
+  /**
+   * Documento de reporte específico del owner
+   * Path: apps/auditoria/owners/{ownerId}/reportes/{reporteId}
+   */
+  reporte: (ownerId: string, reporteId: string): string[] => [
+    'apps',
+    'auditoria',
+    'owners',
+    ownerId,
+    'reportes',
+    reporteId
+  ],
+
+  /**
+   * Colección de formularios del owner
+   * Path: apps/auditoria/owners/{ownerId}/formularios
+   */
+  formularios: (ownerId: string): string[] => [
+    'apps',
+    'auditoria',
+    'owners',
+    ownerId,
+    'formularios'
+  ],
+
+  /**
+   * Colección de sucursales del owner
+   * Path: apps/auditoria/owners/{ownerId}/sucursales
+   */
+  sucursales: (ownerId: string): string[] => [
+    'apps',
+    'auditoria',
+    'owners',
+    ownerId,
+    'sucursales'
+  ],
+
+  /**
+   * Documento de sucursal específica del owner
+   * Path: apps/auditoria/owners/{ownerId}/sucursales/{sucursalId}
+   */
+  sucursal: (ownerId: string, sucursalId: string): string[] => [
+    'apps',
+    'auditoria',
+    'owners',
+    ownerId,
+    'sucursales',
+    sucursalId
+  ],
+
+  /**
+   * Colección de empleados del owner
+   * Path: apps/auditoria/owners/{ownerId}/empleados
+   */
+  empleados: (ownerId: string): string[] => [
+    'apps',
+    'auditoria',
+    'owners',
+    ownerId,
+    'empleados'
+  ],
+
+  /**
+   * Documento de empleado específico del owner
+   * Path: apps/auditoria/owners/{ownerId}/empleados/{empleadoId}
+   */
+  empleado: (ownerId: string, empleadoId: string): string[] => [
+    'apps',
+    'auditoria',
+    'owners',
+    ownerId,
+    'empleados',
+    empleadoId
+  ],
+
+  /**
+   * Colección de accidentes del owner
+   * Path: apps/auditoria/owners/{ownerId}/accidentes
+   */
+  accidentes: (ownerId: string): string[] => [
+    'apps',
+    'auditoria',
+    'owners',
+    ownerId,
+    'accidentes'
+  ],
+
+  /**
+   * Documento de accidente específico del owner
+   * Path: apps/auditoria/owners/{ownerId}/accidentes/{accidenteId}
+   */
+  accidente: (ownerId: string, accidenteId: string): string[] => [
+    'apps',
+    'auditoria',
+    'owners',
+    ownerId,
+    'accidentes',
+    accidenteId
+  ],
+
+  /**
+   * Colección de logs del owner
+   * Path: apps/auditoria/owners/{ownerId}/logs
+   */
+  logs: (ownerId: string): string[] => [
+    'apps',
+    'auditoria',
+    'owners',
+    ownerId,
+    'logs'
+  ],
+
+  /**
+   * Colección de capacitaciones del owner
+   * Path: apps/auditoria/owners/{ownerId}/capacitaciones
+   */
+  capacitaciones: (ownerId: string): string[] => [
+    'apps',
+    'auditoria',
+    'owners',
+    ownerId,
+    'capacitaciones'
+  ],
+
+  /**
+   * Documento de capacitación específica del owner
+   * Path: apps/auditoria/owners/{ownerId}/capacitaciones/{capacitacionId}
+   */
+  capacitacion: (ownerId: string, capacitacionId: string): string[] => [
+    'apps',
+    'auditoria',
+    'owners',
+    ownerId,
+    'capacitaciones',
+    capacitacionId
+  ],
+
+  /**
+   * Colección de registros de asistencia del owner
+   * Path: apps/auditoria/owners/{ownerId}/registrosAsistencia
+   */
+  registrosAsistencia: (ownerId: string): string[] => [
+    'apps',
+    'auditoria',
+    'owners',
+    ownerId,
+    'registrosAsistencia'
+  ],
+
+  /**
+   * Documento de registro de asistencia específico del owner
+   * Path: apps/auditoria/owners/{ownerId}/registrosAsistencia/{registroId}
+   */
+  registroAsistencia: (ownerId: string, registroId: string): string[] => [
+    'apps',
+    'auditoria',
+    'owners',
+    ownerId,
+    'registrosAsistencia',
+    registroId
+  ],
+
+  /**
+   * Colección de ausencias del owner
+   * Path: apps/auditoria/owners/{ownerId}/ausencias
+   */
+  ausencias: (ownerId: string): string[] => [
+    'apps',
+    'auditoria',
+    'owners',
+    ownerId,
+    'ausencias'
+  ],
+
+  /**
+   * Colección de planes anuales de capacitaciones del owner
+   * Path: apps/auditoria/owners/{ownerId}/planes_capacitaciones_anuales
+   */
+  planesCapacitacionesAnuales: (ownerId: string): string[] => [
+    'apps',
+    'auditoria',
+    'owners',
+    ownerId,
+    'planes_capacitaciones_anuales'
+  ],
+
+  /**
+   * Documento de plan anual específico del owner
+   * Path: apps/auditoria/owners/{ownerId}/planes_capacitaciones_anuales/{planId}
+   */
+  planCapacitacionesAnual: (ownerId: string, planId: string): string[] => [
+    'apps',
+    'auditoria',
+    'owners',
+    ownerId,
+    'planes_capacitaciones_anuales',
+    planId
   ]
 };

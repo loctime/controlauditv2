@@ -418,20 +418,7 @@ service cloud.firestore {
     }
     
     // Reglas legacy eliminadas - apps/auditoria/users ya no se usa
-    
-    // Empresas
-    match /empresas/{empresaId} {
-      allow read: if isAuth() && 
-        exists(/databases/$(db)/documents/apps/auditoria/users/$(request.auth.uid)) &&
-        (get(/databases/$(db)/documents/apps/auditoria/users/$(request.auth.uid)).data.role == 'supermax' ||
-         resource.data.propietarioId == request.auth.uid ||
-         get(/databases/$(db)/documents/apps/auditoria/users/$(request.auth.uid)).data.clienteAdminId == resource.data.propietarioId);
-      allow write: if isAuth() && 
-        exists(/databases/$(db)/documents/apps/auditoria/users/$(request.auth.uid)) &&
-        (get(/databases/$(db)/documents/apps/auditoria/users/$(request.auth.uid)).data.role == 'supermax' ||
-         resource.data.propietarioId == request.auth.uid ||
-         get(/databases/$(db)/documents/apps/auditoria/users/$(request.auth.uid)).data.clienteAdminId == resource.data.propietarioId);
-    }
+    // Empresas legacy eliminadas - usar apps/auditoria/owners/{ownerId}/empresas en su lugar
     
     // Sucursales
     match /sucursales/{sucursalId} {
@@ -646,6 +633,35 @@ service cloud.firestore {
             request.resource.data.empresasAsignadas is list);
       
       // El owner puede desactivar usuarios que le pertenecen
+      allow delete: if isAuth() && ownerId == uid() && resource.data.ownerId == uid();
+    }
+    
+    // Reportes (auditorías) del owner
+    match /apps/auditoria/owners/{ownerId}/reportes/{reporteId} {
+      // Lectura:
+      // - Owner puede leer todos sus reportes (ownerId == auth.uid)
+      // - Operario puede leer reportes del owner usando ownerId del token (request.auth.token.ownerId == ownerId)
+      // - También puede leer si está en compartidoCon
+      allow read: if isAuth() && (
+        ownerId == uid() || 
+        (request.auth.token.ownerId == ownerId && request.auth.token.appId == 'auditoria') ||
+        (request.auth.token.ownerId == ownerId && request.auth.uid in resource.data.compartidoCon)
+      );
+      
+      // El owner puede crear reportes propios
+      allow create: if isAuth() 
+        && ownerId == uid()
+        && request.resource.data.ownerId == uid()
+        && request.auth.token.appId == 'auditoria';
+      
+      // El owner puede actualizar sus propios reportes
+      allow update: if isAuth() 
+        && ownerId == uid()
+        && resource.data.ownerId == uid()
+        && request.resource.data.ownerId == uid()
+        && request.auth.token.appId == 'auditoria';
+      
+      // El owner puede eliminar sus propios reportes
       allow delete: if isAuth() && ownerId == uid() && resource.data.ownerId == uid();
     }
     

@@ -1,16 +1,17 @@
 import { useState, useCallback } from 'react';
 import { collection, getDocs, query, where } from 'firebase/firestore';
-import { auditUserCollection } from '../../../../firebaseControlFile';
+import { dbAudit } from '../../../../firebaseControlFile';
+import { firestoreRoutesCore } from '../../../../core/firestore/firestoreRoutes.core';
 
 /**
- * Hook para cargar estadísticas de sucursales
+ * Hook para cargar estadísticas de sucursales (owner-centric)
  */
 export const useSucursalesStats = () => {
   const [sucursalesStats, setSucursalesStats] = useState({});
 
-  const loadSucursalesStats = useCallback(async (sucursalesList, userId = null) => {
-    if (!userId) {
-      console.warn('⚠️ [useSucursalesStats] userId no proporcionado, retornando stats vacías');
+  const loadSucursalesStats = useCallback(async (sucursalesList, ownerId = null) => {
+    if (!ownerId) {
+      console.warn('⚠️ [useSucursalesStats] ownerId no proporcionado, retornando stats vacías');
       setSucursalesStats({});
       return;
     }
@@ -19,16 +20,16 @@ export const useSucursalesStats = () => {
     for (const sucursal of sucursalesList) {
       try {
         const [empleadosSnapshot, capacitacionesSnapshot, planesSnapshot, accidentesSnapshot] = await Promise.all([
-          getDocs(query(auditUserCollection(userId, 'empleados'), where('sucursalId', '==', sucursal.id))),
-          getDocs(query(auditUserCollection(userId, 'capacitaciones'), where('sucursalId', '==', sucursal.id))),
-          getDocs(query(auditUserCollection(userId, 'planes_capacitaciones_anuales'), where('sucursalId', '==', sucursal.id))),
-          getDocs(query(auditUserCollection(userId, 'accidentes'), where('sucursalId', '==', sucursal.id)))
+          getDocs(query(collection(dbAudit, ...firestoreRoutesCore.empleados(ownerId)), where('sucursalId', '==', sucursal.id))),
+          getDocs(query(collection(dbAudit, ...firestoreRoutesCore.capacitaciones(ownerId)), where('sucursalId', '==', sucursal.id))),
+          getDocs(query(collection(dbAudit, ...firestoreRoutesCore.planesCapacitacionesAnuales(ownerId)), where('sucursalId', '==', sucursal.id))),
+          getDocs(query(collection(dbAudit, ...firestoreRoutesCore.accidentes(ownerId)), where('sucursalId', '==', sucursal.id)))
         ]);
         
         // Cargar acciones requeridas desde subcolección
         let accionesRequeridasCount = 0;
         try {
-          const accionesSnapshot = await getDocs(collection(auditUserCollection(userId, 'sucursales'), sucursal.id, 'acciones_requeridas'));
+          const accionesSnapshot = await getDocs(collection(dbAudit, ...firestoreRoutesCore.sucursales(ownerId), sucursal.id, 'acciones_requeridas'));
           accionesRequeridasCount = accionesSnapshot.docs.length;
         } catch (error) {
           console.warn(`Error cargando acciones requeridas para sucursal ${sucursal.id}:`, error);

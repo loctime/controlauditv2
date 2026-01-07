@@ -1,7 +1,8 @@
 // src/components/pages/admin/hooks/useClienteDashboard.js
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { collection, addDoc, query, where, getDocs, updateDoc, doc, deleteDoc, serverTimestamp, limit, orderBy, getDoc } from "firebase/firestore";
-import { db, auditUserCollection } from "../../../../firebaseControlFile";
+import { db, dbAudit } from "../../../../firebaseControlFile";
+import { firestoreRoutesCore } from "../../../../core/firestore/firestoreRoutes.core";
 import { useAuth } from "../../../context/AuthContext";
 import { toast } from 'react-toastify';
 import { normalizeSucursal } from '../../../../utils/firestoreUtils';
@@ -20,13 +21,14 @@ export const useClienteDashboard = () => {
     auditorias: true
   });
 
-  // ✅ Función optimizada para cargar empresas
+  // ✅ Función optimizada para cargar empresas (owner-centric)
   const cargarEmpresas = useCallback(async () => {
     try {
-      if (!userProfile?.uid) return [];
+      if (!userProfile?.ownerId) return [];
 
-      // Cargar empresas desde estructura multi-tenant: apps/auditoria/users/{uid}/empresas
-      const empresasRef = auditUserCollection(userProfile.uid, 'empresas');
+      // Cargar empresas desde estructura owner-centric: apps/auditoria/owners/{ownerId}/empresas
+      const ownerId = userProfile.ownerId;
+      const empresasRef = collection(dbAudit, ...firestoreRoutesCore.empresas(ownerId));
       const empresasSnapshot = await getDocs(empresasRef);
       const empresasData = empresasSnapshot.docs.map(doc => ({
         id: doc.id,
@@ -38,17 +40,18 @@ export const useClienteDashboard = () => {
       console.error('Error cargando empresas:', error);
       return [];
     }
-  }, [userProfile?.uid]);
+  }, [userProfile?.ownerId]);
 
-  // ✅ Función optimizada para cargar sucursales
+  // ✅ Función optimizada para cargar sucursales (owner-centric)
   const cargarSucursales = useCallback(async (empresasData) => {
     try {
-      if (!userProfile?.uid) return [];
+      if (!userProfile?.ownerId) return [];
 
-      // Cargar sucursales desde estructura multi-tenant: apps/auditoria/users/{uid}/sucursales
+      // Cargar sucursales desde estructura owner-centric: apps/auditoria/owners/{ownerId}/sucursales
       // Si hay filtro funcional por empresa, aplicarlo
       let sucursalesData = [];
-      const sucursalesRef = auditUserCollection(userProfile.uid, 'sucursales');
+      const ownerId = userProfile.ownerId;
+      const sucursalesRef = collection(dbAudit, ...firestoreRoutesCore.sucursales(ownerId));
       
       if (empresasData && empresasData.length > 0) {
         const empresasIds = empresasData.map(emp => emp.nombre || emp.id);
@@ -77,15 +80,16 @@ export const useClienteDashboard = () => {
       console.error('Error cargando sucursales:', error);
       return [];
     }
-  }, [userProfile?.uid]);
+  }, [userProfile?.ownerId]);
 
-  // ✅ Función optimizada para cargar formularios
+  // ✅ Función optimizada para cargar formularios (owner-centric)
   const cargarFormularios = useCallback(async () => {
     try {
-      if (!userProfile?.uid) return [];
+      if (!userProfile?.ownerId) return [];
 
-      // Cargar formularios desde estructura multi-tenant: apps/auditoria/users/{uid}/formularios
-      const formulariosRef = auditUserCollection(userProfile.uid, 'formularios');
+      // Cargar formularios desde estructura owner-centric: apps/auditoria/owners/{ownerId}/formularios
+      const ownerId = userProfile.ownerId;
+      const formulariosRef = collection(dbAudit, ...firestoreRoutesCore.formularios(ownerId));
       const formulariosSnapshot = await getDocs(formulariosRef);
       const formulariosData = formulariosSnapshot.docs.map(doc => ({
         id: doc.id,
@@ -97,11 +101,13 @@ export const useClienteDashboard = () => {
       console.error('Error cargando formularios:', error);
       return [];
     }
-  }, [userProfile?.uid]);
+  }, [userProfile?.ownerId]);
 
-  // ✅ Función para cargar información completa de usuarios cuando solo tenemos IDs
+  // ✅ Función para cargar información completa de usuarios cuando solo tenemos IDs (owner-centric)
   const cargarInformacionUsuarios = useCallback(async (auditoriasData) => {
     try {
+      if (!userProfile?.ownerId) return auditoriasData;
+      
       // Obtener todos los IDs únicos de usuarios que necesitamos cargar
       const userIds = new Set();
       auditoriasData.forEach(auditoria => {
@@ -112,10 +118,11 @@ export const useClienteDashboard = () => {
 
       if (userIds.size === 0) return auditoriasData;
 
-      // Cargar información de usuarios en paralelo
+      const ownerId = userProfile.ownerId;
+      // Cargar información de usuarios en paralelo desde owner-centric
       const usuariosPromises = Array.from(userIds).map(async (userId) => {
         try {
-          const usuarioRef = doc(db, 'apps', 'audit', 'users', userId);
+          const usuarioRef = doc(dbAudit, ...firestoreRoutesCore.usuario(ownerId, userId));
           const usuarioDoc = await getDoc(usuarioRef);
           if (usuarioDoc.exists()) {
             return {
@@ -162,13 +169,14 @@ export const useClienteDashboard = () => {
     }
   }, []);
 
-  // ✅ Función optimizada para cargar auditorías con paginación
+  // ✅ Función optimizada para cargar auditorías con paginación (owner-centric)
   const cargarAuditorias = useCallback(async () => {
     try {
-      if (!userProfile?.uid) return [];
+      if (!userProfile?.ownerId) return [];
 
-      // Cargar auditorías desde estructura multi-tenant: apps/auditoria/users/{uid}/auditorias_agendadas
-      const auditoriasRef = auditUserCollection(userProfile.uid, 'auditorias_agendadas');
+      // Cargar auditorías desde estructura owner-centric: apps/auditoria/owners/{ownerId}/auditorias_agendadas
+      const ownerId = userProfile.ownerId;
+      const auditoriasRef = collection(dbAudit, 'apps', 'auditoria', 'owners', ownerId, 'auditorias_agendadas');
       const auditoriasQuery = query(
         auditoriasRef, 
         orderBy('fechaCreacion', 'desc'), 
@@ -225,8 +233,10 @@ export const useClienteDashboard = () => {
         fechaActualizacion: serverTimestamp()
       };
 
-      // Guardar en estructura multi-tenant: apps/auditoria/users/{uid}/auditorias_agendadas
-      const auditoriasRef = auditUserCollection(userProfile.uid, 'auditorias_agendadas');
+      // Guardar en estructura owner-centric: apps/auditoria/owners/{ownerId}/auditorias_agendadas
+      if (!userProfile?.ownerId) throw new Error('ownerId no disponible');
+      const ownerId = userProfile.ownerId;
+      const auditoriasRef = collection(dbAudit, 'apps', 'auditoria', 'owners', ownerId, 'auditorias_agendadas');
       const docRef = await addDoc(auditoriasRef, nuevaAuditoria);
       
       // Eliminar el setAuditorias manual
@@ -348,11 +358,11 @@ export const useClienteDashboard = () => {
 
   const handleCompletarAuditoria = useCallback(async (auditoriaId) => {
     try {
-      if (!userProfile?.uid) return;
+      if (!userProfile?.ownerId) return;
       
-      // Actualizar en estructura multi-tenant: apps/auditoria/users/{uid}/auditorias_agendadas
-      const auditoriasRef = auditUserCollection(userProfile.uid, 'auditorias_agendadas');
-      const auditoriaRef = doc(auditoriasRef, auditoriaId);
+      // Actualizar en estructura owner-centric: apps/auditoria/owners/{ownerId}/auditorias_agendadas
+      const ownerId = userProfile.ownerId;
+      const auditoriaRef = doc(dbAudit, 'apps', 'auditoria', 'owners', ownerId, 'auditorias_agendadas', auditoriaId);
       await updateDoc(auditoriaRef, {
         estado: 'completada',
         fechaCompletada: serverTimestamp()
@@ -368,22 +378,23 @@ export const useClienteDashboard = () => {
       console.error('Error completando auditoría:', error);
       toast.error('Error al marcar como completada');
     }
-  }, [userProfile?.uid]);
+  }, [userProfile?.ownerId]);
 
   const handleEliminarAuditoria = useCallback(async (auditoriaId) => {
     try {
-      if (!userProfile?.uid) return;
+      if (!userProfile?.ownerId) return;
       
-      // Eliminar de estructura multi-tenant: apps/auditoria/users/{uid}/auditorias_agendadas
-      const auditoriasRef = auditUserCollection(userProfile.uid, 'auditorias_agendadas');
-      await deleteDoc(doc(auditoriasRef, auditoriaId));
+      // Eliminar de estructura owner-centric: apps/auditoria/owners/{ownerId}/auditorias_agendadas
+      const ownerId = userProfile.ownerId;
+      const auditoriaRef = doc(dbAudit, 'apps', 'auditoria', 'owners', ownerId, 'auditorias_agendadas', auditoriaId);
+      await deleteDoc(auditoriaRef);
       setAuditorias(prev => prev.filter(aud => aud.id !== auditoriaId));
       toast.success('Auditoría eliminada');
     } catch (error) {
       console.error('Error eliminando auditoría:', error);
       toast.error('Error al eliminar la auditoría');
     }
-  }, [userProfile?.uid]);
+  }, [userProfile?.ownerId]);
 
   return {
     auditorias,

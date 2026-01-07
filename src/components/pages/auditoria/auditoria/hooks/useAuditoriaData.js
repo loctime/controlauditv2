@@ -1,6 +1,7 @@
 import { useEffect, useCallback } from "react";
-import { getDocs, query, where, limit } from "firebase/firestore";
-import { auditUserCollection } from "../../../../../firebaseControlFile";
+import { getDocs, query, where, limit, collection } from "firebase/firestore";
+import { dbAudit } from "../../../../../firebaseControlFile";
+import { firestoreRoutesCore } from "../../../../../core/firestore/firestoreRoutes.core";
 import { storageUtils } from "../../../../../utils/utilitiesOptimization";
 import { getCompleteUserCache } from "../../../../../services/completeOfflineCache";
 import { normalizeSucursal } from "../../../../../utils/firestoreUtils";
@@ -58,10 +59,10 @@ export const useAuditoriaData = (
         }
       }
       
-      // Si hay userProfile.uid, intentar getCompleteUserCache (mejor opción para Edge y Chrome online)
-      if (userProfile?.uid) {
+      // Si hay userProfile.ownerId, intentar getCompleteUserCache (mejor opción para Edge y Chrome online)
+      if (userProfile?.ownerId) {
         try {
-          const cacheData = await getCompleteUserCache(userProfile.uid);
+          const cacheData = await getCompleteUserCache(userProfile.ownerId);
           
           if (cacheData) {
             // Cargar empresas
@@ -226,9 +227,10 @@ export const useAuditoriaData = (
       }
       
       // Si no hay cache, intentar cargar desde Firestore (solo si hay conexión)
-      // Los datos ya vienen filtrados por multi-tenant desde auditUserCollection
-      if (navigator.onLine) {
-        const sucursalesCollection = auditUserCollection(userProfile.uid, "sucursales");
+      // Los datos vienen filtrados por owner-centric
+      if (navigator.onLine && userProfile?.ownerId) {
+        const ownerId = userProfile.ownerId;
+        const sucursalesCollection = collection(dbAudit, ...firestoreRoutesCore.sucursales(ownerId));
         const q = query(sucursalesCollection, limit(500));
         const snapshot = await getDocs(q);
         const sucursalesData = snapshot.docs.map(doc => ({
@@ -240,8 +242,8 @@ export const useAuditoriaData = (
         const empresasConSucursales = [...new Set(sucursalesData.map(s => s.empresaId))];
         
         if (empresasConSucursales.length > 0) {
-          // Cargar datos completos de las empresas (ya filtradas por multi-tenant)
-          const empresasRef = auditUserCollection(userProfile.uid, "empresas");
+          // Cargar datos completos de las empresas (owner-centric)
+          const empresasRef = collection(dbAudit, ...firestoreRoutesCore.empresas(ownerId));
           const empresasQuery = query(empresasRef, where("__name__", "in", empresasConSucursales));
           const empresasSnapshot = await getDocs(empresasQuery);
           const empresasData = empresasSnapshot.docs.map(doc => ({
@@ -317,7 +319,7 @@ export const useAuditoriaData = (
             setEmpresas(cacheData.empresas);
           } 
           // Prioridad 3: Cargar desde Firestore (solo si hay conexión)
-          else if (userProfile && userProfile.uid && navigator.onLine) {
+          else if (userProfile && userProfile.ownerId && navigator.onLine) {
             const empresasConSucursales = await obtenerEmpresasConSucursales();
             setEmpresas(empresasConSucursales);
           } else {
@@ -384,8 +386,10 @@ export const useAuditoriaData = (
           }
 
           const sucursalesPromises = empresasChunks.map(async (chunk) => {
-            // Los datos ya vienen filtrados por multi-tenant desde auditUserCollection
-            const sucursalesRef = auditUserCollection(userProfile.uid, "sucursales");
+            // Los datos vienen filtrados por owner-centric
+            if (!userProfile?.ownerId) return [];
+            const ownerId = userProfile.ownerId;
+            const sucursalesRef = collection(dbAudit, ...firestoreRoutesCore.sucursales(ownerId));
             const sucursalesQuery = query(
               sucursalesRef, 
               where("empresaId", "in", chunk),
@@ -406,8 +410,13 @@ export const useAuditoriaData = (
           const sucursalesArrays = await Promise.all(sucursalesPromises);
           sucursalesData = sucursalesArrays.flat();
         } else {
-          // Si no hay filtro de empresas, cargar todas las sucursales disponibles (ya filtradas por multi-tenant)
-          const sucursalesCollection = auditUserCollection(userProfile.uid, "sucursales");
+          // Si no hay filtro de empresas, cargar todas las sucursales disponibles (owner-centric)
+          if (!userProfile?.ownerId) {
+            setSucursales([]);
+            return;
+          }
+          const ownerId = userProfile.ownerId;
+          const sucursalesCollection = collection(dbAudit, ...firestoreRoutesCore.sucursales(ownerId));
           const q = query(sucursalesCollection, limit(500));
           const snapshot = await getDocs(q);
           sucursalesData = snapshot.docs.map((doc) => {
@@ -483,10 +492,10 @@ export const useAuditoriaData = (
         // Verificar conectividad
         const isOnline = navigator.onLine;
         
-        if (isOnline) {
-          // Cargar desde Firestore cuando hay conectividad
-          // Los datos ya vienen filtrados por multi-tenant desde auditUserCollection
-          const formulariosCollection = auditUserCollection(userProfile.uid, "formularios");
+        if (isOnline && userProfile?.ownerId) {
+          // Cargar desde Firestore cuando hay conectividad (owner-centric)
+          const ownerId = userProfile.ownerId;
+          const formulariosCollection = collection(dbAudit, ...firestoreRoutesCore.formularios(ownerId));
           const q = query(formulariosCollection, limit(200));
           const snapshot = await getDocs(q);
           const todosLosFormularios = snapshot.docs.map((doc) => ({
@@ -502,7 +511,7 @@ export const useAuditoriaData = (
           storageUtils.set('formularios_cache', {
             formularios: todosLosFormularios,
             timestamp: Date.now(),
-            userId: userProfile.uid
+            ownerId: ownerId
           });
           
           setFormularios(todosLosFormularios);
@@ -510,7 +519,7 @@ export const useAuditoriaData = (
           // Cargar desde cache cuando está offline
           const cacheData = storageUtils.get('formularios_cache');
           
-          if (cacheData && cacheData.formularios && cacheData.userId === userProfile.uid) {
+          if (cacheData && cacheData.formularios && cacheData.ownerId === userProfile?.ownerId) {
             // Verificar que el cache no esté muy antiguo (máximo 24 horas)
             const cacheAge = Date.now() - cacheData.timestamp;
             const maxCacheAge = 24 * 60 * 60 * 1000; // 24 horas

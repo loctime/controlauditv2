@@ -8,28 +8,32 @@ import {
   where,
   limit
 } from 'firebase/firestore';
-import { dbAudit, auditUserCollection, auditUsersCollection } from '../firebaseControlFile';
+import { dbAudit } from '../firebaseControlFile';
 import { registrarAccionSistema } from '../utils/firestoreUtils';
 import { updateDocWithAppId } from '../firebase/firestoreAppWriter';
+import { firestoreRoutesCore } from '../core/firestore/firestoreRoutes.core';
 
 export const auditoriaService = {
-  // Obtener auditorías del usuario (multi-tenant)
+  // Obtener auditorías del owner (owner-centric)
+  // CRÍTICO: Las auditorías se leen desde el OWNER (ownerId del token), NO desde el uid del usuario logueado
+  // Admin: ownerId === uid (su propio uid)
+  // Operario: ownerId viene de request.auth.token.ownerId (NO su propio uid)
   async getUserAuditorias(userId, role, userProfile = null) {
     try {
-      if (!userProfile || !userProfile.uid) {
-        console.error('[auditoriaService] getUserAuditorias: userProfile.uid es requerido');
+      if (!userProfile || !userProfile.ownerId) {
+        console.error('[auditoriaService] getUserAuditorias: userProfile.ownerId es requerido');
         return [];
       }
 
-      const uid = userProfile.uid;
+      const ownerId = userProfile.ownerId; // ownerId viene del token, no del uid
 
-      console.log('[AUDIT PATH] getUserAuditorias - UID usado:', uid, '| Role:', role);
+      console.log('[AUDIT PATH] getUserAuditorias - ownerId usado:', ownerId, '| Role:', role, '| userId:', userId);
 
-      // Leer directo desde auditUserCollection(uid, 'reportes') - contexto multi-tenant
-      const auditoriasRef = auditUserCollection(uid, 'reportes');
-      console.log('[AUDIT PATH] Leyendo desde:', `apps/auditoria/users/${uid}/reportes`);
+      // Leer desde owner-centric: apps/auditoria/owners/{ownerId}/reportes
+      const reportesRef = collection(dbAudit, ...firestoreRoutesCore.reportes(ownerId));
+      console.log('[AUDIT PATH] Leyendo desde:', `apps/auditoria/owners/${ownerId}/reportes`);
       
-      const q = query(auditoriasRef, limit(500));
+      const q = query(reportesRef, limit(500));
       const snapshotResult = await getDocs(q);
       console.log('[AUDIT PATH] Resultado principal:', snapshotResult.size, 'documentos');
       
@@ -38,29 +42,30 @@ export const auditoriaService = {
         ...doc.data()
       }));
     } catch (error) {
-      console.error("[auditoriaService] Error al obtener auditorías del usuario:", error);
+      console.error("[auditoriaService] Error al obtener auditorías del owner:", error);
       return [];
     }
   },
 
-  // Obtener auditorías compartidas
+  // Obtener auditorías compartidas del owner
   async getAuditoriasCompartidas(userId, userProfile = null) {
     try {
-      if (!userProfile || !userProfile.uid) {
-        console.error('[auditoriaService] getAuditoriasCompartidas: userProfile.uid es requerido');
+      if (!userProfile || !userProfile.ownerId) {
+        console.error('[auditoriaService] getAuditoriasCompartidas: userProfile.ownerId es requerido');
         return [];
       }
 
-      const uid = userProfile.uid;
+      const ownerId = userProfile.ownerId; // ownerId viene del token
 
       console.log('[auditoriaService] getAuditoriasCompartidas - Inicio query:', {
-        uid,
+        ownerId,
+        userId,
         filtros: 'compartidoCon array-contains userId, límite 200'
       });
 
-      // Leer desde la colección del usuario y filtrar por compartidoCon
-      const auditoriasRef = auditUserCollection(uid, 'reportes');
-      const q = query(auditoriasRef, where("compartidoCon", "array-contains", userId), limit(200));
+      // Leer desde owner-centric y filtrar por compartidoCon
+      const reportesRef = collection(dbAudit, ...firestoreRoutesCore.reportes(ownerId));
+      const q = query(reportesRef, where("compartidoCon", "array-contains", userId), limit(200));
       const snapshot = await getDocs(q);
       
       console.log('[auditoriaService] getAuditoriasCompartidas - resultado:', snapshot.size, 'documentos');
@@ -75,38 +80,38 @@ export const auditoriaService = {
     }
   },
 
-  // Compartir auditoría
+  // Compartir auditoría del owner
   async compartirAuditoria(auditoriaId, emailUsuario, user, userProfile = null) {
     try {
-      if (!userProfile || !userProfile.uid) {
-        throw new Error("userProfile.uid es requerido para compartir auditoría");
+      if (!userProfile || !userProfile.ownerId) {
+        throw new Error("userProfile.ownerId es requerido para compartir auditoría");
       }
 
-      const uid = userProfile.uid;
+      const ownerId = userProfile.ownerId; // ownerId viene del token
 
       console.log('[auditoriaService] compartirAuditoria - Inicio:', {
-        uid,
+        ownerId,
         auditoriaId,
         emailUsuario,
-        filtros: 'buscar usuario por email, actualizar compartidoCon'
+        filtros: 'buscar usuario por email en owner-centric, actualizar compartidoCon'
       });
 
-      // Buscar usuario por email
-      const usuariosRef = auditUsersCollection();
+      // Buscar usuario por email en owner-centric
+      const usuariosRef = collection(dbAudit, ...firestoreRoutesCore.usuarios(ownerId));
       const q = query(usuariosRef, where("email", "==", emailUsuario));
       const snapshot = await getDocs(q);
       
       if (snapshot.empty) {
-        throw new Error("Usuario no encontrado");
+        throw new Error("Usuario no encontrado en el owner");
       }
       
       const usuarioDoc = snapshot.docs[0];
       const usuarioId = usuarioDoc.id;
       console.log('[auditoriaService] compartirAuditoria - usuario encontrado:', usuarioId);
       
-      // Actualizar auditoría para compartir desde la colección del usuario
-      const auditoriasRef = auditUserCollection(uid, 'reportes');
-      const auditoriaRef = doc(auditoriasRef, auditoriaId);
+      // Actualizar auditoría en owner-centric
+      const reportesRef = collection(dbAudit, ...firestoreRoutesCore.reportes(ownerId));
+      const auditoriaRef = doc(reportesRef, auditoriaId);
       const auditoriaSnap = await getDoc(auditoriaRef);
       
       if (auditoriaSnap.exists()) {
@@ -143,30 +148,23 @@ export const auditoriaService = {
   },
 
   // Verificar si el usuario puede ver una auditoría
+  // Los permisos se validan por Firestore rules basados en ownerId del token
   canViewAuditoria(auditoriaId, userProfile, auditoriasCompartidas) {
     if (!userProfile) return false;
     
-    if (userProfile.role === 'supermax') {
+    // Admin puede ver todas las auditorías de su owner
+    if (userProfile.role === 'admin') {
       return true;
     }
     
-    if (userProfile.role === 'max') {
-      if (userProfile.auditorias && userProfile.auditorias.includes(auditoriaId)) {
-        return true;
-      }
-      return true; // Por ahora permitimos acceso a todas las auditorías
-    }
-    
+    // Operario puede ver auditorías compartidas o todas las del owner (validado por Firestore rules)
     if (userProfile.role === 'operario') {
-      if (userProfile.auditorias && userProfile.auditorias.includes(auditoriaId)) {
-        return true;
-      }
-      
+      // Si está en compartidoCon, puede verla
       if (auditoriasCompartidas.some(aud => aud.id === auditoriaId)) {
         return true;
       }
-      
-      return true; // Por ahora permitimos acceso a todas las auditorías
+      // Firestore rules validan acceso basado en ownerId del token
+      return true;
     }
     
     return false;

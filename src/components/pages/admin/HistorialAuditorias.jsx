@@ -32,8 +32,9 @@ import {
   Description,
   CalendarToday
 } from "@mui/icons-material";
-import { getDocs, query, where, orderBy } from "firebase/firestore";
-import { auditUserCollection } from "../../../firebaseControlFile";
+import { getDocs, query, where, orderBy, collection } from "firebase/firestore";
+import { dbAudit } from "../../../firebaseControlFile";
+import { firestoreRoutesCore } from "../../../core/firestore/firestoreRoutes.core";
 import { toast } from 'react-toastify';
 import { useAuth } from "../../context/AuthContext";
 
@@ -54,13 +55,15 @@ const HistorialAuditorias = () => {
     try {
       setLoading(true);
       
-      if (!userProfile?.uid) {
+      if (!userProfile?.ownerId) {
         setAuditorias([]);
         return;
       }
 
-      // Leer desde estructura multi-tenant: apps/auditoria/users/{uid}/auditorias_agendadas
-      const auditoriasRef = auditUserCollection(userProfile.uid, 'auditorias_agendadas');
+      // Leer desde estructura owner-centric: apps/auditoria/owners/{ownerId}/auditorias_agendadas
+      const ownerId = userProfile.ownerId;
+      // Nota: auditorias_agendadas puede no estar en firestoreRoutesCore, usar construcción manual
+      const auditoriasRef = collection(dbAudit, 'apps', 'auditoria', 'owners', ownerId, 'auditorias_agendadas');
       const q = query(
         auditoriasRef,
         where('estado', '==', 'completada'),
@@ -75,9 +78,9 @@ const HistorialAuditorias = () => {
       
       setAuditorias(auditoriasData);
       
-      console.log('[DEBUG] Historial cargado desde multi-tenant:', {
+      console.log('[DEBUG] Historial cargado desde owner-centric:', {
         total: auditoriasData.length,
-        userId: userProfile.uid
+        ownerId: ownerId
       });
       
     } catch (error) {

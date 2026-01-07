@@ -19,7 +19,7 @@ const PerfilUsuarios = ({ usuariosCreados, loading, onRefresh }) => {
   const isSmallMobile = useMediaQuery(theme.breakpoints.down('sm'));
   
   const { userProfile } = useAuth();
-  const clienteAdminId = userProfile?.clienteAdminId || userProfile?.uid;
+  const ownerId = userProfile?.ownerId;
 
   // Estado para el modal de agregar usuario
   const [openModal, setOpenModal] = useState(false);
@@ -94,7 +94,7 @@ const PerfilUsuarios = ({ usuariosCreados, loading, onRefresh }) => {
         flexDirection: 'column', 
         gap: isSmallMobile ? 2 : 3 
       }}>
-        <UsuariosList clienteAdminId={clienteAdminId} showAddButton={false} />
+        <UsuariosList ownerId={ownerId} showAddButton={false} />
       </Box>
 
       {/* Modal Core para agregar usuario */}

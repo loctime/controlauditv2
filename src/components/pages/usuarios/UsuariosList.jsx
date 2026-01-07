@@ -47,17 +47,8 @@ const PERMISOS_LISTA = [
 // Los roles privilegiados (max/supermax) se crean exclusivamente por script
 
 // Límite de usuarios: SIEMPRE usar userProfile.limiteUsuarios para validación y visualización. No usar sociosMaximos para usuarios.
-const UsuariosList = ({ clienteAdminId, showAddButton = true }) => {
+const UsuariosList = ({ ownerId: propOwnerId, showAddButton = true }) => {
   const { role, userProfile } = useAuth();
-  // Filtrado multi-tenant robusto
-  let adminId = null;
-  if (role === 'supermax') {
-    adminId = null; // Ver todos
-  } else if (userProfile?.clienteAdminId) {
-    adminId = userProfile.clienteAdminId;
-  } else {
-    adminId = userProfile?.uid;
-  }
   const [usuarios, setUsuarios] = useState([]);
   const [loading, setLoading] = useState(true);
   const [openModal, setOpenModal] = useState(false);
@@ -83,8 +74,8 @@ const UsuariosList = ({ clienteAdminId, showAddButton = true }) => {
   const usuariosActuales = usuarios.length;
   const puedeAgregar = usuariosActuales < limiteUsuarios || !limiteUsuarios; // Si no hay límite, permitir
 
-  // Obtener ownerId del usuario autenticado (en modelo owner-centric, el admin es su propio owner)
-  const ownerId = userProfile?.uid;
+  // Obtener ownerId del usuario autenticado (viene del token)
+  const ownerId = propOwnerId || userProfile?.ownerId;
 
   // Cargar usuarios (combina legacy y owner-centric)
   const fetchUsuarios = async () => {
@@ -125,7 +116,7 @@ const UsuariosList = ({ clienteAdminId, showAddButton = true }) => {
   useEffect(() => {
     fetchUsuarios();
     // eslint-disable-next-line
-  }, [clienteAdminId]);
+  }, [ownerId]);
 
   // Abrir modal para crear/editar usuario
   const handleOpenModal = (usuario = null) => {
@@ -218,7 +209,7 @@ const UsuariosList = ({ clienteAdminId, showAddButton = true }) => {
         nombre: formData.nombre,
         // role no se envía - el backend lo fuerza automáticamente
         permisos: formData.permisos,
-        clienteAdminId: clienteAdminId || (userProfile?.role === 'max' ? userProfile?.uid : null)
+        ownerId: ownerId || userProfile?.ownerId
       });
 
       // Registrar log de la acción

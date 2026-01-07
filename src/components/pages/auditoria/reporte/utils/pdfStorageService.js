@@ -1,6 +1,7 @@
 // Servicio para manejar el guardado y descarga de PDFs usando ControlFile
 import { doc, updateDoc } from 'firebase/firestore';
-import { auditUserCollection } from '../../../../firebaseControlFile';
+import { dbAudit } from '../../../../firebaseControlFile';
+import { firestoreRoutesCore } from '../../../../core/firestore/firestoreRoutes.core';
 import { uploadEvidence, ensureTaskbarFolder, ensureSubFolder } from '../../../../services/controlFileB2Service';
 import generarContenidoImpresion from './generadorHTML';
 
@@ -102,30 +103,18 @@ export const guardarPdfEnStorage = async (reporteId, html, metadata = {}, compan
 };
 
 /**
- * Genera y guarda un PDF completo del reporte
+ * Genera y guarda un PDF completo del reporte (owner-centric)
  * @param {string} reporteId - ID del reporte
  * @param {Object} datosReporte - Datos completos del reporte
- * @param {string} userUid - UID del usuario (opcional, se obtiene desde datosReporte o auth)
+ * @param {string} ownerId - ID del owner (requerido, viene del token)
  * @returns {Promise<string>} - URL de descarga del PDF
  */
-export const generarYGuardarPdf = async (reporteId, datosReporte, userUid = null) => {
+export const generarYGuardarPdf = async (reporteId, datosReporte, ownerId = null) => {
   try {
     console.log('[pdfStorageService] Generando PDF completo...');
     
-    // Obtener userUid desde datosReporte o parámetro
-    let uid = userUid || datosReporte.creadoPor || datosReporte.usuarioId || datosReporte.userId;
-    
-    // Si aún no tenemos uid, intentar obtenerlo desde auth
-    if (!uid) {
-      try {
-        const { auth } = await import('../../../../firebaseControlFile');
-        if (auth.currentUser) {
-          uid = auth.currentUser.uid;
-          console.log('[pdfStorageService] UID obtenido desde auth.currentUser:', uid);
-        }
-      } catch (authError) {
-        console.warn('[pdfStorageService] No se pudo obtener UID desde auth:', authError);
-      }
+    if (!ownerId) {
+      throw new Error('ownerId es requerido para generar y guardar PDF en owner-centric. Proporcione ownerId desde userProfile.ownerId.');
     }
     
     // Generar el HTML del reporte
@@ -146,16 +135,12 @@ export const generarYGuardarPdf = async (reporteId, datosReporte, userUid = null
     // Guardar en ControlFile
     const downloadURL = await guardarPdfEnStorage(reporteId, html, metadata, companyId);
     
-    // Actualizar el reporte en Firestore con la URL del PDF (solo si tenemos uid)
-    if (uid) {
-      try {
-        await actualizarReporteConPdf(reporteId, downloadURL, uid);
-      } catch (updateError) {
-        console.warn('[pdfStorageService] ⚠️ PDF guardado pero no se pudo actualizar el reporte:', updateError);
-        // No lanzar error, el PDF ya está guardado
-      }
-    } else {
-      console.warn('[pdfStorageService] ⚠️ PDF guardado pero no se pudo actualizar el reporte: falta userUid');
+    // Actualizar el reporte en Firestore con la URL del PDF
+    try {
+      await actualizarReporteConPdf(reporteId, downloadURL, ownerId);
+    } catch (updateError) {
+      console.warn('[pdfStorageService] ⚠️ PDF guardado pero no se pudo actualizar el reporte:', updateError);
+      // No lanzar error, el PDF ya está guardado
     }
     
     return downloadURL;
@@ -189,40 +174,23 @@ export const descargarPdf = (url, fileName = 'reporte-auditoria.html') => {
 };
 
 /**
- * Actualiza un reporte en Firestore con la URL del PDF
+ * Actualiza un reporte en Firestore con la URL del PDF (owner-centric)
  * @param {string} reporteId - ID del reporte
  * @param {string} pdfUrl - URL del PDF guardado
- * @param {string} userUid - UID del usuario (opcional, se busca desde el reporte si no se proporciona)
+ * @param {string} ownerId - ID del owner (requerido, viene del token)
  * @returns {Promise<void>}
  */
-export const actualizarReporteConPdf = async (reporteId, pdfUrl, userUid = null) => {
+export const actualizarReporteConPdf = async (reporteId, pdfUrl, ownerId = null) => {
   try {
     console.log('[pdfStorageService] Actualizando reporte con URL del PDF...');
     
-    // Si no se proporciona userUid, intentar obtenerlo desde datosReporte o buscar el reporte
-    let uid = userUid;
-    
-    if (!uid) {
-      // Intentar obtener desde auth actual como fallback
-      try {
-        const { auth } = await import('../../../../firebaseControlFile');
-        if (auth.currentUser) {
-          uid = auth.currentUser.uid;
-          console.log('[pdfStorageService] UID obtenido desde auth.currentUser:', uid);
-        }
-      } catch (authError) {
-        console.warn('[pdfStorageService] No se pudo obtener UID desde auth:', authError);
-      }
+    if (!ownerId) {
+      throw new Error('ownerId es requerido para actualizar reporte en owner-centric. Proporcione ownerId desde userProfile.ownerId.');
     }
     
-    if (!uid) {
-      throw new Error('userUid es requerido para actualizar reporte en arquitectura multi-tenant. Proporcione userUid o asegúrese de que el usuario esté autenticado.');
-    }
-    
-    // Actualizar en ruta multi-tenant: apps/auditoria/users/{uid}/reportes
-    const reportesRef = auditUserCollection(uid, 'reportes');
-    const reporteRef = doc(reportesRef, reporteId);
-    console.log('[pdfStorageService] Actualizando reporte en ruta multi-tenant:', `apps/auditoria/users/${uid}/reportes/${reporteId}`);
+    // Actualizar en ruta owner-centric: apps/auditoria/owners/{ownerId}/reportes
+    const reporteRef = doc(dbAudit, ...firestoreRoutesCore.reporte(ownerId, reporteId));
+    console.log('[pdfStorageService] Actualizando reporte en ruta owner-centric:', `apps/auditoria/owners/${ownerId}/reportes/${reporteId}`);
     
     await updateDoc(reporteRef, {
       pdfUrl: pdfUrl,

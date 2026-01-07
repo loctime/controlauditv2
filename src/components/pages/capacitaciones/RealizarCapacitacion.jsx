@@ -28,8 +28,9 @@ import {
   StarBorder as StarBorderIcon,
   Save as SaveIcon
 } from '@mui/icons-material';
-import { getDocs, query, where, Timestamp } from 'firebase/firestore';
-import { auditUserCollection } from '../../../firebaseControlFile';
+import { getDocs, query, where, Timestamp, collection } from 'firebase/firestore';
+import { dbAudit } from '../../../firebaseControlFile';
+import { firestoreRoutesCore } from '../../../core/firestore/firestoreRoutes.core';
 import { planAnualService } from '../../../services/planAnualService';
 import { useAuth } from '../../context/AuthContext';
 import { normalizeEmpleado } from '../../../utils/firestoreUtils';
@@ -124,16 +125,17 @@ export default function RealizarCapacitacion({
   }, [capacitacionSeleccionada, planAnualSeleccionado]);
 
   const loadPlanesAnuales = async () => {
-    if (!userProfile?.uid) {
-      console.error('[RealizarCapacitacion] Usuario no autenticado');
+    if (!userProfile?.ownerId) {
+      console.error('[RealizarCapacitacion] ownerId no disponible');
       return;
     }
 
     setLoading(true);
     try {
-      // Cargar planes desde arquitectura multi-tenant
+      const ownerId = userProfile.ownerId;
+      // Cargar planes desde arquitectura owner-centric
       // Solo filtros funcionales: empresa y año
-      const planesRef = auditUserCollection(userProfile.uid, 'planes_capacitaciones_anuales');
+      const planesRef = collection(dbAudit, ...firestoreRoutesCore.planesCapacitacionesAnuales(ownerId));
       const q = query(
         planesRef,
         where('empresaId', '==', selectedEmpresa),
@@ -162,13 +164,14 @@ export default function RealizarCapacitacion({
   };
 
   const loadEmpleados = async () => {
-    if (!userProfile?.uid || !selectedSucursal) {
+    if (!userProfile?.ownerId || !selectedSucursal) {
       setEmpleados([]);
       return;
     }
 
     try {
-      const empleadosRef = auditUserCollection(userProfile.uid, 'empleados');
+      const ownerId = userProfile.ownerId;
+      const empleadosRef = collection(dbAudit, ...firestoreRoutesCore.empleados(ownerId));
       const q = query(
         empleadosRef,
         where('sucursalId', '==', selectedSucursal)

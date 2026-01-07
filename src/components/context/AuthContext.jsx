@@ -125,7 +125,6 @@ const AuthContextComponent = ({ children }) => {
 
   // Hooks de listeners reactivos (solo con fallback offline en móvil)
   // OPTIMIZACIÓN: Diferir listeners no críticos para evitar llamadas duplicadas con carga manual
-  // Multi-tenant: Los datos ya vienen filtrados por usuario desde auditUserCollection
   // CRÍTICO: Pasar authReady para bloquear listeners hasta que la autenticación esté completa
   useSucursalesListener(
     userProfile, 
@@ -292,50 +291,21 @@ const AuthContextComponent = ({ children }) => {
                 break;
               }
               
-              // Si es el último intento, intentar fallback desde Firestore
+              // Si es el último intento y no hay role, abortar (sin fallback legacy)
               if (attempt === maxRetries - 1) {
-                console.warn('[AUTH] ⚠️ Claims no disponibles después de', maxRetries, 'intentos, intentando fallback desde Firestore...');
-                
-                // FALLBACK: Intentar leer el perfil desde Firestore como admin primero
-                try {
-                  const fallbackProfile = await createOrGetUserProfile(firebaseUser, firebaseUser.uid);
-                  if (fallbackProfile && fallbackProfile.role) {
-                    console.log('[AUTH] ✅ Fallback exitoso: usando role desde Firestore:', fallbackProfile.role);
-                    tokenRole = fallbackProfile.role;
-                    tokenOwnerId = fallbackProfile.ownerId || firebaseUser.uid;
-                    tokenAppId = fallbackProfile.appId || 'auditoria';
-                    break;
-                  }
-                } catch (fallbackError) {
-                  console.error('[AUTH] ❌ Error en fallback desde Firestore:', fallbackError);
-                }
-                
-                // Si el fallback también falla, abortar
-                if (!tokenRole) {
-                  console.error('[AUTH] ❌ Token sin role en claims después de', maxRetries, 'intentos y fallback fallido');
-                  setTokenClaims(null);
-                  return;
-                }
+                console.error('[AUTH] ❌ Token sin role en claims después de', maxRetries, 'intentos');
+                setTokenClaims(null);
+                return;
               } else {
                 console.warn(`[AUTH] ⚠️ Claims no disponibles aún, reintentando en ${retryDelays[attempt]}ms...`);
               }
             } catch (error) {
               console.error(`[AUTH] ❌ Error obteniendo token (intento ${attempt + 1}):`, error);
               if (attempt === maxRetries - 1) {
-                // Último intento fallido, intentar fallback
-                try {
-                  const fallbackProfile = await createOrGetUserProfile(firebaseUser, firebaseUser.uid);
-                  if (fallbackProfile && fallbackProfile.role) {
-                    tokenRole = fallbackProfile.role;
-                    tokenOwnerId = fallbackProfile.ownerId || firebaseUser.uid;
-                    tokenAppId = fallbackProfile.appId || 'auditoria';
-                    break;
-                  }
-                } catch (fallbackError) {
-                  console.error('[AUTH] ❌ Error en fallback:', fallbackError);
-                  setTokenClaims(null);
-                  return;
-                }
+                // Último intento fallido, abortar (sin fallback legacy)
+                console.error('[AUTH] ❌ Error obteniendo token después de todos los reintentos');
+                setTokenClaims(null);
+                return;
               }
             }
           }

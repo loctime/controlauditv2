@@ -1,0 +1,691 @@
+[
+  {
+    "id": "4GkF7g9D1HmiQ12F9u9P",
+    "lastUidUpdate": {
+      "_seconds": 1762453766,
+      "_nanoseconds": 146000000
+    },
+    "estado": "activo",
+    "tipo": "administrativo",
+    "relocatedBy": "hTD8FYeueHhuXxGCjxD0DcYmkRG2",
+    "migratedFromUid": "pbLX5nBx2WTZV1Z0sFMJkVtSmZy2",
+    "migratedFromEmpleadoId": "4GkF7g9D1HmiQ12F9u9P",
+    "nombre": "Nerea Luciana",
+    "migratedFromProject": "legacy-auditoria",
+    "createdAt": {
+      "_seconds": 1761668584,
+      "_nanoseconds": 964000000
+    },
+    "apellido": "Ferreira ",
+    "cargo": "Administrativa ",
+    "telefono": "",
+    "dni": "42.959.066",
+    "email": "",
+    "updatedAt": {
+      "_seconds": 1764951818,
+      "_nanoseconds": 245000000
+    },
+    "area": "Administrativo",
+    "relocatedAt": {
+      "_seconds": 1766506505,
+      "_nanoseconds": 23000000
+    },
+    "migratedAt": {
+      "_seconds": 1766505093,
+      "_nanoseconds": 653000000
+    },
+    "empresaId": "E65GgRA804BtOZuWTJ8o",
+    "sucursalId": "1fMecAaZ2Mxh6mLpGf0m",
+    "relocatedFromRoot": true,
+    "fechaIngreso": "2024-12-10",
+    "createdBy": "hTD8FYeueHhuXxGCjxD0DcYmkRG2",
+    "fechaActualizacion": {
+      "_seconds": 1764954074,
+      "_nanoseconds": 666000000
+    },
+    "actualizadoPor": "hTD8FYeueHhuXxGCjxD0DcYmkRG2"
+  },
+  {
+    "id": "9BCpO45pI4EkMmIhUApC",
+    "area": "Inspeccion",
+    "lastUidUpdate": {
+      "_seconds": 1762453766,
+      "_nanoseconds": 146000000
+    },
+    "relocatedAt": {
+      "_seconds": 1766506505,
+      "_nanoseconds": 759000000
+    },
+    "estado": "activo",
+    "migratedAt": {
+      "_seconds": 1766505094,
+      "_nanoseconds": 157000000
+    },
+    "tipo": "operativo",
+    "empresaId": "E65GgRA804BtOZuWTJ8o",
+    "relocatedBy": "hTD8FYeueHhuXxGCjxD0DcYmkRG2",
+    "sucursalId": "1fMecAaZ2Mxh6mLpGf0m",
+    "migratedFromUid": "pbLX5nBx2WTZV1Z0sFMJkVtSmZy2",
+    "migratedFromEmpleadoId": "9BCpO45pI4EkMmIhUApC",
+    "relocatedFromRoot": true,
+    "nombre": "BAEZ ",
+    "migratedFromProject": "legacy-auditoria",
+    "createdAt": {
+      "_seconds": 1761668981,
+      "_nanoseconds": 761000000
+    },
+    "fechaIngreso": {
+      "_seconds": 1722902400,
+      "_nanoseconds": 0
+    },
+    "createdBy": "hTD8FYeueHhuXxGCjxD0DcYmkRG2",
+    "apellido": "CARLOS MARCELO",
+    "actualizadoPor": "hTD8FYeueHhuXxGCjxD0DcYmkRG2",
+    "cargo": "Inspector ",
+    "telefono": "",
+    "dni": "18149678",
+    "email": "",
+    "updatedAt": {
+      "_seconds": 1761669333,
+      "_nanoseconds": 30000000
+    }
+  },
+  {
+    "id": "A1AZXbf817Vgq0iAxD2c",
+    "lastUidUpdate": {
+      "_seconds": 1762453766,
+      "_nanoseconds": 146000000
+    },
+    "estado": "inactivo",
+    "tipo": "operativo",
+    "relocatedBy": "hTD8FYeueHhuXxGCjxD0DcYmkRG2",
+    "migratedFromUid": "pbLX5nBx2WTZV1Z0sFMJkVtSmZy2",
+    "migratedFromEmpleadoId": "A1AZXbf817Vgq0iAxD2c",
+    "nombre": "ELISEO JOAQUIN",
+    "migratedFromProject": "legacy-auditoria",
+    "createdAt": {
+      "_seconds": 1761670007,
+      "_nanoseconds": 923000000
+    },
+    "apellido": "COLACILLI",
+    "cargo": "Supervsior de Inspeccion",
+    "telefono": "",
+    "dni": "35000736",
+    "email": "",
+    "updatedAt": {
+      "_seconds": 1764952063,
+      "_nanoseconds": 370000000
+    },
+    "area": "Inspeccion",
+    "relocatedAt": {
+      "_seconds": 1766506506,
+      "_nanoseconds": 216000000
+    },
+    "migratedAt": {
+      "_seconds": 1766505100,
+      "_nanoseconds": 961000000
+    },
+    "empresaId": "E65GgRA804BtOZuWTJ8o",
+    "sucursalId": "msR4gsLAd1Bmb2xDjcmc",
+    "relocatedFromRoot": true,
+    "fechaIngreso": {
+      "_seconds": 1682899200,
+      "_nanoseconds": 0
+    },
+    "createdBy": "hTD8FYeueHhuXxGCjxD0DcYmkRG2",
+    "fechaActualizacion": {
+      "_seconds": 1764949803,
+      "_nanoseconds": 343000000
+    },
+    "actualizadoPor": "hTD8FYeueHhuXxGCjxD0DcYmkRG2"
+  },
+  {
+    "id": "T7jDYJzCnOfOk96DQj4j",
+    "lastUidUpdate": {
+      "_seconds": 1762453766,
+      "_nanoseconds": 146000000
+    },
+    "estado": "activo",
+    "tipo": "administrativo",
+    "relocatedBy": "hTD8FYeueHhuXxGCjxD0DcYmkRG2",
+    "migratedFromUid": "pbLX5nBx2WTZV1Z0sFMJkVtSmZy2",
+    "migratedFromEmpleadoId": "T7jDYJzCnOfOk96DQj4j",
+    "nombre": "Florencia lujan",
+    "migratedFromProject": "legacy-auditoria",
+    "createdAt": {
+      "_seconds": 1761667743,
+      "_nanoseconds": 315000000
+    },
+    "apellido": "Korbmacher ",
+    "cargo": "RRHH",
+    "telefono": "",
+    "dni": "39.285.212",
+    "email": "",
+    "updatedAt": {
+      "_seconds": 1761668020,
+      "_nanoseconds": 403000000
+    },
+    "area": "Administrativo",
+    "relocatedAt": {
+      "_seconds": 1766506506,
+      "_nanoseconds": 742000000
+    },
+    "migratedAt": {
+      "_seconds": 1766505094,
+      "_nanoseconds": 870000000
+    },
+    "empresaId": "E65GgRA804BtOZuWTJ8o",
+    "sucursalId": "1fMecAaZ2Mxh6mLpGf0m",
+    "relocatedFromRoot": true,
+    "fechaIngreso": "2023-08-17",
+    "createdBy": "hTD8FYeueHhuXxGCjxD0DcYmkRG2",
+    "fechaActualizacion": {
+      "_seconds": 1764954125,
+      "_nanoseconds": 939000000
+    },
+    "actualizadoPor": "hTD8FYeueHhuXxGCjxD0DcYmkRG2"
+  },
+  {
+    "id": "WjRci32qH1FhzNNqn5ZV",
+    "lastUidUpdate": {
+      "_seconds": 1762453766,
+      "_nanoseconds": 146000000
+    },
+    "estado": "activo",
+    "tipo": "administrativo",
+    "relocatedBy": "hTD8FYeueHhuXxGCjxD0DcYmkRG2",
+    "migratedFromUid": "pbLX5nBx2WTZV1Z0sFMJkVtSmZy2",
+    "migratedFromEmpleadoId": "WjRci32qH1FhzNNqn5ZV",
+    "nombre": " HERNAN LEONARDO ",
+    "migratedFromProject": "legacy-auditoria",
+    "createdAt": {
+      "_seconds": 1761666076,
+      "_nanoseconds": 325000000
+    },
+    "apellido": " MOSCOSO",
+    "cargo": "Responsable Tecnico",
+    "telefono": "",
+    "dni": "21434312",
+    "email": "",
+    "updatedAt": {
+      "_seconds": 1761666076,
+      "_nanoseconds": 325000000
+    },
+    "area": "Administrativo",
+    "relocatedAt": {
+      "_seconds": 1766506507,
+      "_nanoseconds": 460000000
+    },
+    "migratedAt": {
+      "_seconds": 1766505095,
+      "_nanoseconds": 528000000
+    },
+    "empresaId": "E65GgRA804BtOZuWTJ8o",
+    "sucursalId": "1fMecAaZ2Mxh6mLpGf0m",
+    "relocatedFromRoot": true,
+    "fechaIngreso": "2022-01-01",
+    "createdBy": "hTD8FYeueHhuXxGCjxD0DcYmkRG2",
+    "fechaActualizacion": {
+      "_seconds": 1764954146,
+      "_nanoseconds": 372000000
+    },
+    "actualizadoPor": "hTD8FYeueHhuXxGCjxD0DcYmkRG2"
+  },
+  {
+    "id": "WmqvuPppTJdhcty37OD2",
+    "lastUidUpdate": {
+      "_seconds": 1762453766,
+      "_nanoseconds": 146000000
+    },
+    "estado": "activo",
+    "tipo": "administrativo",
+    "relocatedBy": "hTD8FYeueHhuXxGCjxD0DcYmkRG2",
+    "migratedFromUid": "pbLX5nBx2WTZV1Z0sFMJkVtSmZy2",
+    "migratedFromEmpleadoId": "WmqvuPppTJdhcty37OD2",
+    "nombre": "Aldana Mailen",
+    "migratedFromProject": "legacy-auditoria",
+    "createdAt": {
+      "_seconds": 1761668084,
+      "_nanoseconds": 345000000
+    },
+    "apellido": "Cantero ",
+    "cargo": "Administrativa ",
+    "telefono": "",
+    "dni": "",
+    "email": "",
+    "updatedAt": {
+      "_seconds": 1761669320,
+      "_nanoseconds": 566000000
+    },
+    "area": "Administrativo",
+    "relocatedAt": {
+      "_seconds": 1766506507,
+      "_nanoseconds": 978000000
+    },
+    "migratedAt": {
+      "_seconds": 1766505096,
+      "_nanoseconds": 64000000
+    },
+    "empresaId": "E65GgRA804BtOZuWTJ8o",
+    "sucursalId": "1fMecAaZ2Mxh6mLpGf0m",
+    "relocatedFromRoot": true,
+    "fechaIngreso": "2024-11-05",
+    "createdBy": "hTD8FYeueHhuXxGCjxD0DcYmkRG2",
+    "fechaActualizacion": {
+      "_seconds": 1764954099,
+      "_nanoseconds": 219000000
+    },
+    "actualizadoPor": "hTD8FYeueHhuXxGCjxD0DcYmkRG2"
+  },
+  {
+    "id": "fnDXJNbHAI5S9FKoHxAZ",
+    "lastUidUpdate": {
+      "_seconds": 1762453766,
+      "_nanoseconds": 146000000
+    },
+    "estado": "activo",
+    "tipo": "operativo",
+    "relocatedBy": "hTD8FYeueHhuXxGCjxD0DcYmkRG2",
+    "migratedFromUid": "pbLX5nBx2WTZV1Z0sFMJkVtSmZy2",
+    "migratedFromEmpleadoId": "fnDXJNbHAI5S9FKoHxAZ",
+    "nombre": "RAUL ALBERTO RAMON ",
+    "migratedFromProject": "legacy-auditoria",
+    "createdAt": {
+      "_seconds": 1761665867,
+      "_nanoseconds": 949000000
+    },
+    "apellido": "CLADERA ",
+    "cargo": "Supervsior de Inspeccion",
+    "telefono": "",
+    "dni": "16627335",
+    "email": "",
+    "updatedAt": {
+      "_seconds": 1761665867,
+      "_nanoseconds": 949000000
+    },
+    "area": "Inspeccion",
+    "relocatedAt": {
+      "_seconds": 1766506508,
+      "_nanoseconds": 428000000
+    },
+    "migratedAt": {
+      "_seconds": 1766505096,
+      "_nanoseconds": 703000000
+    },
+    "empresaId": "E65GgRA804BtOZuWTJ8o",
+    "sucursalId": "1fMecAaZ2Mxh6mLpGf0m",
+    "relocatedFromRoot": true,
+    "fechaIngreso": "2022-01-01",
+    "createdBy": "hTD8FYeueHhuXxGCjxD0DcYmkRG2",
+    "fechaActualizacion": {
+      "_seconds": 1764954164,
+      "_nanoseconds": 30000000
+    },
+    "actualizadoPor": "hTD8FYeueHhuXxGCjxD0DcYmkRG2"
+  },
+  {
+    "id": "jGeswGZPsKnGbffLo6sq",
+    "lastUidUpdate": {
+      "_seconds": 1762453766,
+      "_nanoseconds": 146000000
+    },
+    "estado": "activo",
+    "tipo": "administrativo",
+    "relocatedBy": "hTD8FYeueHhuXxGCjxD0DcYmkRG2",
+    "migratedFromUid": "pbLX5nBx2WTZV1Z0sFMJkVtSmZy2",
+    "migratedFromEmpleadoId": "jGeswGZPsKnGbffLo6sq",
+    "nombre": "Milena Soledad",
+    "migratedFromProject": "legacy-auditoria",
+    "createdAt": {
+      "_seconds": 1761667940,
+      "_nanoseconds": 901000000
+    },
+    "apellido": "Retamar ",
+    "cargo": "Administrativa ",
+    "telefono": "",
+    "dni": "40.858.747",
+    "email": "",
+    "updatedAt": {
+      "_seconds": 1761667940,
+      "_nanoseconds": 901000000
+    },
+    "area": "Administrativo",
+    "relocatedAt": {
+      "_seconds": 1766506508,
+      "_nanoseconds": 990000000
+    },
+    "migratedAt": {
+      "_seconds": 1766505097,
+      "_nanoseconds": 356000000
+    },
+    "empresaId": "E65GgRA804BtOZuWTJ8o",
+    "sucursalId": "1fMecAaZ2Mxh6mLpGf0m",
+    "relocatedFromRoot": true,
+    "fechaIngreso": "2024-11-04",
+    "createdBy": "hTD8FYeueHhuXxGCjxD0DcYmkRG2",
+    "fechaActualizacion": {
+      "_seconds": 1764954238,
+      "_nanoseconds": 793000000
+    },
+    "actualizadoPor": "hTD8FYeueHhuXxGCjxD0DcYmkRG2"
+  },
+  {
+    "id": "moUtVwfMTV73OPlKBcLt",
+    "lastUidUpdate": {
+      "_seconds": 1762453766,
+      "_nanoseconds": 146000000
+    },
+    "estado": "activo",
+    "tipo": "operativo",
+    "relocatedBy": "hTD8FYeueHhuXxGCjxD0DcYmkRG2",
+    "migratedFromUid": "pbLX5nBx2WTZV1Z0sFMJkVtSmZy2",
+    "migratedFromEmpleadoId": "moUtVwfMTV73OPlKBcLt",
+    "nombre": "Carlos ",
+    "migratedFromProject": "legacy-auditoria",
+    "createdAt": {
+      "_seconds": 1761665465,
+      "_nanoseconds": 169000000
+    },
+    "apellido": "Sobrero ",
+    "cargo": "Inspector ",
+    "telefono": "",
+    "dni": "21.890.569",
+    "email": "",
+    "updatedAt": {
+      "_seconds": 1761665465,
+      "_nanoseconds": 169000000
+    },
+    "area": "Inspeccion",
+    "relocatedAt": {
+      "_seconds": 1766506509,
+      "_nanoseconds": 454000000
+    },
+    "migratedAt": {
+      "_seconds": 1766505097,
+      "_nanoseconds": 911000000
+    },
+    "empresaId": "E65GgRA804BtOZuWTJ8o",
+    "sucursalId": "1fMecAaZ2Mxh6mLpGf0m",
+    "relocatedFromRoot": true,
+    "fechaIngreso": "2021-11-01",
+    "createdBy": "hTD8FYeueHhuXxGCjxD0DcYmkRG2",
+    "fechaActualizacion": {
+      "_seconds": 1764954050,
+      "_nanoseconds": 619000000
+    },
+    "actualizadoPor": "hTD8FYeueHhuXxGCjxD0DcYmkRG2"
+  },
+  {
+    "id": "nQxL4rNjTUUInwA9nD12",
+    "lastUidUpdate": {
+      "_seconds": 1762453766,
+      "_nanoseconds": 146000000
+    },
+    "estado": "activo",
+    "tipo": "operativo",
+    "relocatedBy": "hTD8FYeueHhuXxGCjxD0DcYmkRG2",
+    "migratedFromUid": "pbLX5nBx2WTZV1Z0sFMJkVtSmZy2",
+    "migratedFromEmpleadoId": "nQxL4rNjTUUInwA9nD12",
+    "nombre": "CLADERA",
+    "migratedFromProject": "legacy-auditoria",
+    "createdAt": {
+      "_seconds": 1761666000,
+      "_nanoseconds": 123000000
+    },
+    "apellido": " ROMAN ",
+    "cargo": "Gerente",
+    "telefono": "",
+    "dni": "34109191",
+    "email": "",
+    "updatedAt": {
+      "_seconds": 1761669147,
+      "_nanoseconds": 120000000
+    },
+    "area": "Administrativo",
+    "relocatedAt": {
+      "_seconds": 1766506510,
+      "_nanoseconds": 38000000
+    },
+    "migratedAt": {
+      "_seconds": 1766505098,
+      "_nanoseconds": 531000000
+    },
+    "empresaId": "E65GgRA804BtOZuWTJ8o",
+    "sucursalId": "1fMecAaZ2Mxh6mLpGf0m",
+    "relocatedFromRoot": true,
+    "fechaIngreso": "2022-01-01",
+    "createdBy": "hTD8FYeueHhuXxGCjxD0DcYmkRG2",
+    "fechaActualizacion": {
+      "_seconds": 1764954204,
+      "_nanoseconds": 95000000
+    },
+    "actualizadoPor": "hTD8FYeueHhuXxGCjxD0DcYmkRG2"
+  },
+  {
+    "id": "qSKSwUHT6TTybfaDYRiA",
+    "area": "Inspeccion",
+    "lastUidUpdate": {
+      "_seconds": 1762453766,
+      "_nanoseconds": 146000000
+    },
+    "relocatedAt": {
+      "_seconds": 1766506510,
+      "_nanoseconds": 426000000
+    },
+    "estado": "activo",
+    "migratedAt": {
+      "_seconds": 1766505101,
+      "_nanoseconds": 510000000
+    },
+    "tipo": "operativo",
+    "empresaId": "E65GgRA804BtOZuWTJ8o",
+    "relocatedBy": "hTD8FYeueHhuXxGCjxD0DcYmkRG2",
+    "sucursalId": "msR4gsLAd1Bmb2xDjcmc",
+    "migratedFromUid": "pbLX5nBx2WTZV1Z0sFMJkVtSmZy2",
+    "migratedFromEmpleadoId": "qSKSwUHT6TTybfaDYRiA",
+    "relocatedFromRoot": true,
+    "nombre": "Franco ",
+    "migratedFromProject": "legacy-auditoria",
+    "createdAt": {
+      "_seconds": 1761670078,
+      "_nanoseconds": 799000000
+    },
+    "fechaIngreso": {
+      "_seconds": 1717977600,
+      "_nanoseconds": 0
+    },
+    "createdBy": "hTD8FYeueHhuXxGCjxD0DcYmkRG2",
+    "apellido": "Vera ",
+    "actualizadoPor": "hTD8FYeueHhuXxGCjxD0DcYmkRG2",
+    "cargo": "Inspector ",
+    "telefono": "",
+    "dni": "43863769",
+    "email": "",
+    "updatedAt": {
+      "_seconds": 1761670179,
+      "_nanoseconds": 109000000
+    }
+  },
+  {
+    "id": "s997vOSKaUAQ3KgwvTti",
+    "lastUidUpdate": {
+      "_seconds": 1762453766,
+      "_nanoseconds": 146000000
+    },
+    "estado": "activo",
+    "tipo": "administrativo",
+    "relocatedBy": "hTD8FYeueHhuXxGCjxD0DcYmkRG2",
+    "migratedFromUid": "pbLX5nBx2WTZV1Z0sFMJkVtSmZy2",
+    "migratedFromEmpleadoId": "s997vOSKaUAQ3KgwvTti",
+    "nombre": "Samuel ",
+    "migratedFromProject": "legacy-auditoria",
+    "createdAt": {
+      "_seconds": 1760442316,
+      "_nanoseconds": 824000000
+    },
+    "apellido": "Sanabria",
+    "cargo": "Responsable Segurdiad e Higiene",
+    "telefono": "+543364641610",
+    "dni": "22435733",
+    "email": "samuel.sanabria@ccmcontrolsrl.com",
+    "updatedAt": {
+      "_seconds": 1760442316,
+      "_nanoseconds": 824000000
+    },
+    "area": "Seguridad e Higienr",
+    "relocatedAt": {
+      "_seconds": 1766506511,
+      "_nanoseconds": 21000000
+    },
+    "migratedAt": {
+      "_seconds": 1766505099,
+      "_nanoseconds": 181000000
+    },
+    "empresaId": "E65GgRA804BtOZuWTJ8o",
+    "sucursalId": "1fMecAaZ2Mxh6mLpGf0m",
+    "relocatedFromRoot": true,
+    "fechaIngreso": "2023-10-01",
+    "createdBy": "hTD8FYeueHhuXxGCjxD0DcYmkRG2",
+    "fechaActualizacion": {
+      "_seconds": 1764954218,
+      "_nanoseconds": 855000000
+    },
+    "actualizadoPor": "hTD8FYeueHhuXxGCjxD0DcYmkRG2"
+  },
+  {
+    "id": "s9St0c3jnBDf433DCVPa",
+    "lastUidUpdate": {
+      "_seconds": 1762453766,
+      "_nanoseconds": 146000000
+    },
+    "estado": "activo",
+    "tipo": "administrativo",
+    "relocatedBy": "hTD8FYeueHhuXxGCjxD0DcYmkRG2",
+    "migratedFromUid": "pbLX5nBx2WTZV1Z0sFMJkVtSmZy2",
+    "migratedFromEmpleadoId": "s9St0c3jnBDf433DCVPa",
+    "nombre": "Garrido ",
+    "migratedFromProject": "legacy-auditoria",
+    "createdAt": {
+      "_seconds": 1761667833,
+      "_nanoseconds": 543000000
+    },
+    "apellido": "Agustina Denise",
+    "cargo": "Administrativa ",
+    "telefono": "",
+    "dni": "40.057.617",
+    "email": "",
+    "updatedAt": {
+      "_seconds": 1761667833,
+      "_nanoseconds": 543000000
+    },
+    "area": "Administrativo",
+    "relocatedAt": {
+      "_seconds": 1766506511,
+      "_nanoseconds": 638000000
+    },
+    "migratedAt": {
+      "_seconds": 1766505099,
+      "_nanoseconds": 800000000
+    },
+    "empresaId": "E65GgRA804BtOZuWTJ8o",
+    "sucursalId": "1fMecAaZ2Mxh6mLpGf0m",
+    "relocatedFromRoot": true,
+    "fechaIngreso": "2024-03-01",
+    "createdBy": "hTD8FYeueHhuXxGCjxD0DcYmkRG2",
+    "fechaActualizacion": {
+      "_seconds": 1764954250,
+      "_nanoseconds": 793000000
+    },
+    "actualizadoPor": "hTD8FYeueHhuXxGCjxD0DcYmkRG2"
+  },
+  {
+    "id": "ubwlA7xzjkIVJJDPVnQb",
+    "area": "Administrativo",
+    "lastUidUpdate": {
+      "_seconds": 1762453766,
+      "_nanoseconds": 146000000
+    },
+    "relocatedAt": {
+      "_seconds": 1766506512,
+      "_nanoseconds": 16000000
+    },
+    "estado": "activo",
+    "migratedAt": {
+      "_seconds": 1766505100,
+      "_nanoseconds": 350000000
+    },
+    "tipo": "administrativo",
+    "empresaId": "E65GgRA804BtOZuWTJ8o",
+    "relocatedBy": "hTD8FYeueHhuXxGCjxD0DcYmkRG2",
+    "sucursalId": "1fMecAaZ2Mxh6mLpGf0m",
+    "migratedFromUid": "pbLX5nBx2WTZV1Z0sFMJkVtSmZy2",
+    "migratedFromEmpleadoId": "ubwlA7xzjkIVJJDPVnQb",
+    "relocatedFromRoot": true,
+    "nombre": "Orieta ",
+    "migratedFromProject": "legacy-auditoria",
+    "createdAt": {
+      "_seconds": 1761669104,
+      "_nanoseconds": 399000000
+    },
+    "fechaIngreso": {
+      "_seconds": 1761609600,
+      "_nanoseconds": 0
+    },
+    "createdBy": "hTD8FYeueHhuXxGCjxD0DcYmkRG2",
+    "apellido": "Giuliana Belén",
+    "actualizadoPor": "hTD8FYeueHhuXxGCjxD0DcYmkRG2",
+    "cargo": "Coordinacion",
+    "telefono": "",
+    "dni": "36.603.702",
+    "email": "",
+    "updatedAt": {
+      "_seconds": 1761669371,
+      "_nanoseconds": 433000000
+    }
+  },
+  {
+    "id": "znRuwuE7tGi8cEQepeIv",
+    "area": "Inspeccion",
+    "lastUidUpdate": {
+      "_seconds": 1762453766,
+      "_nanoseconds": 146000000
+    },
+    "relocatedAt": {
+      "_seconds": 1766506512,
+      "_nanoseconds": 629000000
+    },
+    "estado": "activo",
+    "migratedAt": {
+      "_seconds": 1766505102,
+      "_nanoseconds": 127000000
+    },
+    "tipo": "operativo",
+    "empresaId": "E65GgRA804BtOZuWTJ8o",
+    "relocatedBy": "hTD8FYeueHhuXxGCjxD0DcYmkRG2",
+    "sucursalId": "msR4gsLAd1Bmb2xDjcmc",
+    "migratedFromUid": "pbLX5nBx2WTZV1Z0sFMJkVtSmZy2",
+    "migratedFromEmpleadoId": "znRuwuE7tGi8cEQepeIv",
+    "relocatedFromRoot": true,
+    "nombre": "Damian",
+    "migratedFromProject": "legacy-auditoria",
+    "createdAt": {
+      "_seconds": 1761670262,
+      "_nanoseconds": 95000000
+    },
+    "fechaIngreso": {
+      "_seconds": 1717977600,
+      "_nanoseconds": 0
+    },
+    "createdBy": "hTD8FYeueHhuXxGCjxD0DcYmkRG2",
+    "apellido": "ARMOYA ",
+    "actualizadoPor": "hTD8FYeueHhuXxGCjxD0DcYmkRG2",
+    "cargo": "Inspector ",
+    "telefono": "",
+    "dni": "28286443",
+    "email": "",
+    "updatedAt": {
+      "_seconds": 1761670262,
+      "_nanoseconds": 95000000
+    }
+  }
+]

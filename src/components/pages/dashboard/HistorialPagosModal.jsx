@@ -15,8 +15,9 @@ import {
   CircularProgress,
   Box
 } from '@mui/material';
-import { getDocs, query, orderBy } from 'firebase/firestore';
-import { auditUserCollection } from '../../../firebaseControlFile';
+import { getDocs, query, orderBy, collection } from 'firebase/firestore';
+import { dbAudit } from '../../../firebaseControlFile';
+import { firestoreRoutesCore } from '../../../core/firestore/firestoreRoutes.core';
 import PaymentIcon from '@mui/icons-material/Payment';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import EditIcon from '@mui/icons-material/Edit';
@@ -45,11 +46,20 @@ const HistorialPagosModal = ({ open, onClose, cliente }) => {
       if (!cliente) return;
       setLoading(true);
       try {
-        const pagosRef = auditUserCollection(cliente.id, 'pagos');
+        // Usar ownerId del cliente (cliente.id es el ownerId en el modelo owner-centric)
+        const ownerId = cliente.ownerId || cliente.id;
+        if (!ownerId) {
+          setHistorial([]);
+          setLoading(false);
+          return;
+        }
+        // Nota: pagos puede no estar en firestoreRoutesCore, usar construcción manual
+        const pagosRef = collection(dbAudit, 'apps', 'auditoria', 'owners', ownerId, 'pagos');
         const q = query(pagosRef, orderBy('fecha', 'desc'));
         const snapshot = await getDocs(q);
         setHistorial(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
       } catch (error) {
+        console.error('Error cargando historial de pagos:', error);
         setHistorial([]);
       } finally {
         setLoading(false);

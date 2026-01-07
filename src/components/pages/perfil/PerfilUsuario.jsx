@@ -22,8 +22,9 @@ import DrawIcon from '@mui/icons-material/Draw';
 import InfoIcon from '@mui/icons-material/Info';
 import { useAuth } from "../../context/AuthContext";
 import Swal from 'sweetalert2';
-import { dbAudit, auditUsersCollection } from '../../../firebaseControlFile';
+import { dbAudit } from '../../../firebaseControlFile';
 import { collection, getDocs, query, where } from 'firebase/firestore';
+import { firestoreRoutesCore } from '../../../core/firestore/firestoreRoutes.core';
 import { getUsers } from '../../../core/services/ownerUserService';
 import { useLocation, useNavigate } from 'react-router-dom';
 // Componentes modulares
@@ -79,11 +80,11 @@ const PerfilUsuario = () => {
 
   useEffect(() => {
     const fetchUsuariosCreados = async () => {
-      if (!userProfile?.uid) return;
+      if (!userProfile?.ownerId) return;
       setLoadingUsuariosCreados(true);
       try {
-        // Usar servicio de migración que combina legacy y owner-centric
-        const ownerId = userProfile.uid; // En modelo owner-centric, el admin es su propio owner
+        // Usar ownerId del token (owner-centric)
+        const ownerId = userProfile.ownerId;
         const lista = await getUsers(ownerId);
         setUsuariosCreados(lista);
       } catch (error) {
@@ -104,27 +105,28 @@ const PerfilUsuario = () => {
       }
     };
     fetchUsuariosCreados();
-  }, [userProfile?.uid, userProfile?.clienteAdminId]);
+  }, [userProfile?.ownerId]);
 
-  // Cargar formularios multi-tenant
+  // Cargar formularios owner-centric
   useEffect(() => {
     const fetchFormularios = async () => {
-      if (!userProfile?.uid) return;
+      if (!userProfile?.ownerId) return;
       setLoadingFormularios(true);
       try {
-        const formulariosRef = collection(dbAudit, 'formularios');
-        const q = query(formulariosRef, where('clienteAdminId', '==', userProfile.clienteAdminId || userProfile.uid));
-        const snapshot = await getDocs(q);
+        const ownerId = userProfile.ownerId;
+        const formulariosRef = collection(dbAudit, ...firestoreRoutesCore.formularios(ownerId));
+        const snapshot = await getDocs(formulariosRef);
         const lista = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         setFormularios(lista);
       } catch (error) {
+        console.error('Error cargando formularios:', error);
         setFormularios([]);
       } finally {
         setLoadingFormularios(false);
       }
     };
     fetchFormularios();
-  }, [userProfile?.uid, userProfile?.clienteAdminId]);
+  }, [userProfile?.ownerId]);
 
   const handleAgregarSocio = async () => {
     if (!emailSocio.trim()) {
@@ -613,7 +615,7 @@ const PerfilUsuario = () => {
               <PerfilUsuarios 
                 usuariosCreados={usuariosCreados} 
                 loading={loadingUsuariosCreados} 
-                clienteAdminId={userProfile?.clienteAdminId || userProfile?.uid}
+                ownerId={userProfile?.ownerId}
                 onRefresh={() => {
                   // Refrescar usuarios cuando se crea uno nuevo (usar servicio de migración)
                   const fetchUsuariosCreados = async () => {

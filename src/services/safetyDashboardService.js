@@ -12,7 +12,8 @@ import {
   Timestamp,
   onSnapshot 
 } from 'firebase/firestore';
-import { dbAudit, auditUserCollection } from '../firebaseControlFile';
+import { dbAudit } from '../firebaseControlFile';
+import { firestoreRoutesCore } from '../core/firestore/firestoreRoutes.core';
 import { computeOccupationalHealthMetrics } from '../utils/occupationalHealthMetrics';
 
 const isTruthyFlag = (value) => {
@@ -337,7 +338,9 @@ export const safetyDashboardService = {
     try {
       // Listener para accidentes
       if (userId) {
-        const accidentesRef = auditUserCollection(userId, 'accidentes');
+        if (!userId) throw new Error('ownerId es requerido');
+        const ownerId = userId; // userId ahora es ownerId
+        const accidentesRef = collection(dbAudit, ...firestoreRoutesCore.accidentes(ownerId));
         let qAccidentes;
         
         if (sucursalId === 'todas') {
@@ -366,7 +369,7 @@ export const safetyDashboardService = {
       
       // Listener para ausencias de salud ocupacional
       if (userId) {
-        const ausenciasRef = auditUserCollection(userId, 'ausencias');
+        const ausenciasRef = collection(dbAudit, ...firestoreRoutesCore.ausencias(ownerId));
         let qAusencias;
 
         if (sucursalId === 'todas') {
@@ -404,7 +407,7 @@ export const safetyDashboardService = {
       
       // Listener para capacitaciones
       if (userId) {
-        const capacitacionesRef = auditUserCollection(userId, 'capacitaciones');
+        const capacitacionesRef = collection(dbAudit, ...firestoreRoutesCore.capacitaciones(ownerId));
         let qCapacitaciones;
         
         if (sucursalId === 'todas') {
@@ -433,7 +436,7 @@ export const safetyDashboardService = {
       
       // Listener para empleados
       if (userId) {
-        const empleadosRef = auditUserCollection(userId, 'empleados');
+        const empleadosRef = collection(dbAudit, ...firestoreRoutesCore.empleados(ownerId));
         let qEmpleados;
         
         if (sucursalId === 'todas') {
@@ -466,13 +469,13 @@ export const safetyDashboardService = {
         return;
       }
       
-      const auditoriasRef = auditUserCollection(userId, 'reportes');
+      const auditoriasRef = collection(dbAudit, ...firestoreRoutesCore.reportes(ownerId));
             const auditoriaQueries = [];
       
       if (companyId) {
         auditoriaQueries.push(query(auditoriasRef, where('empresaId', '==', companyId)));
         auditoriaQueries.push(query(auditoriasRef, where('empresa', '==', companyId)));
-        auditoriaQueries.push(query(auditoriasRef, where('clienteAdminId', '==', companyId)));
+        // clienteAdminId eliminado - usar empresaId en su lugar
       } else {
         auditoriaQueries.push(query(auditoriasRef, orderBy('fechaCreacion', 'desc')));
       }
@@ -513,13 +516,13 @@ export const safetyDashboardService = {
         return [];
       }
       
-      const reportesRef = auditUserCollection(userId, 'reportes');
+      const reportesRef = collection(dbAudit, ...firestoreRoutesCore.reportes(ownerId));
             const queries = [];
 
       if (companyId) {
         queries.push(query(reportesRef, where('empresaId', '==', companyId)));
         queries.push(query(reportesRef, where('empresa', '==', companyId)));
-        queries.push(query(reportesRef, where('clienteAdminId', '==', companyId)));
+        // clienteAdminId eliminado - usar empresaId en su lugar
       } else {
         queries.push(query(reportesRef, orderBy('fechaCreacion', 'desc')));
       }
@@ -591,7 +594,10 @@ export const safetyDashboardService = {
       }
       
       // Los logs están en la colección del usuario
-      const logsRef = auditUserCollection(userId, 'logs_operarios');
+      if (!userId) throw new Error('ownerId es requerido');
+      const ownerId = userId; // userId ahora es ownerId
+      // logs_operarios puede estar en logs o en otra colección - usar logs por ahora
+      const logsRef = collection(dbAudit, ...firestoreRoutesCore.logs(ownerId));
       console.log('[SafetyDashboard] getLogsData usando path:', logsRef.path);
       
       const q = query(
@@ -629,7 +635,7 @@ export const safetyDashboardService = {
       }
       
       // Los formularios están en la colección del usuario
-      const formulariosRef = auditUserCollection(userId, 'formularios');
+      const formulariosRef = collection(dbAudit, ...firestoreRoutesCore.formularios(ownerId));
       console.log('[SafetyDashboard] getFormulariosData usando path:', formulariosRef.path);
       
       const q = query(
@@ -666,7 +672,9 @@ export const safetyDashboardService = {
       }
       
       // Las empresas están en la colección del usuario
-      const empresasRef = auditUserCollection(userId, 'empresas');
+      if (!userId) throw new Error('ownerId es requerido');
+      const ownerId = userId; // userId ahora es ownerId
+      const empresasRef = collection(dbAudit, ...firestoreRoutesCore.empresas(ownerId));
       const empresaRef = doc(empresasRef, companyId);
       console.log('[SafetyDashboard] getCompanyInfo usando path:', empresaRef.path);
       
@@ -691,8 +699,7 @@ export const safetyDashboardService = {
         return null;
       }
       
-      // Construir ruta correcta usando auditUserCollection
-      const sucursalesRef = auditUserCollection(userId, 'sucursales');
+      const sucursalesRef = collection(dbAudit, ...firestoreRoutesCore.sucursales(ownerId));
       const sucursalRef = doc(sucursalesRef, sucursalId);
       console.log('[SafetyDashboard] getSucursalInfo usando path:', sucursalRef.path);
       
@@ -717,7 +724,7 @@ export const safetyDashboardService = {
         return [];
       }
 
-      const empleadosRef = auditUserCollection(userId, 'empleados');
+      const empleadosRef = collection(dbAudit, ...firestoreRoutesCore.empleados(ownerId));
       let q;
       
       if (sucursalId === 'todas') {
@@ -757,7 +764,7 @@ export const safetyDashboardService = {
         return [];
       }
 
-      const capacitacionesRef = auditUserCollection(userId, 'capacitaciones');
+      const capacitacionesRef = collection(dbAudit, ...firestoreRoutesCore.capacitaciones(ownerId));
       let q;
       
       if (sucursalId === 'todas') {
@@ -797,7 +804,7 @@ export const safetyDashboardService = {
         return [];
       }
 
-      const accidentesRef = auditUserCollection(userId, 'accidentes');
+      const accidentesRef = collection(dbAudit, ...firestoreRoutesCore.accidentes(ownerId));
       let q;
       
       if (sucursalId === 'todas') {
@@ -837,7 +844,7 @@ export const safetyDashboardService = {
         return [];
       }
 
-      const ausenciasRef = auditUserCollection(userId, 'ausencias');
+      const ausenciasRef = collection(dbAudit, ...firestoreRoutesCore.ausencias(ownerId));
       let snapshot;
 
       if (sucursalId === 'todas') {

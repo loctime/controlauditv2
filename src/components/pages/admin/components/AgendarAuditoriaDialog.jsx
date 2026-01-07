@@ -19,8 +19,9 @@ import {
 } from "@mui/material";
 import { Add, Person, PersonOff } from "@mui/icons-material";
 import { toast } from 'react-toastify';
-import { getDocs, query, where } from "firebase/firestore";
-import { auditUsersCollection } from "../../../../firebaseControlFile";
+import { getDocs, query, where, collection } from "firebase/firestore";
+import { dbAudit } from "../../../../firebaseControlFile";
+import { firestoreRoutesCore } from "../../../../core/firestore/firestoreRoutes.core";
 import { useAuth } from "../../../context/AuthContext";
 
 const AgendarAuditoriaDialog = ({ open, onClose, onSave, empresas, sucursales, formularios, fechaPreestablecida }) => {
@@ -47,16 +48,17 @@ const AgendarAuditoriaDialog = ({ open, onClose, onSave, empresas, sucursales, f
 
   // Cargar usuarios operarios disponibles
   const cargarUsuariosOperarios = async () => {
-    if (!userProfile) return;
+    if (!userProfile?.ownerId) return;
     
     setCargandoUsuarios(true);
     try {
-      console.log('[DEBUG] Cargando usuarios operarios para clienteAdminId:', userProfile.clienteAdminId || userProfile.uid);
+      const ownerId = userProfile.ownerId;
+      console.log('[DEBUG] Cargando usuarios operarios para ownerId:', ownerId);
       
-      // Query para obtener usuarios operarios del mismo cliente
+      // Query para obtener usuarios operarios del mismo owner (owner-centric)
+      const usuariosRef = collection(dbAudit, ...firestoreRoutesCore.usuarios(ownerId));
       const q = query(
-        auditUsersCollection(),
-        where("clienteAdminId", "==", userProfile.clienteAdminId || userProfile.uid),
+        usuariosRef,
         where("role", "==", "operario")
       );
       

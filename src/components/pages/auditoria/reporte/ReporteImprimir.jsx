@@ -103,8 +103,7 @@ const BotonGenerarReporte = ({
               email: currentUserProfile.email,
               displayName: currentUserProfile.displayName,
               role: currentUserProfile.role,
-              clienteAdminId: currentUserProfile.clienteAdminId,
-              clienteAdminIdFallback: currentUserProfile.clienteAdminId || currentUserProfile.uid
+              ownerId: currentUserProfile.ownerId
             });
           } else {
             console.log('[ReporteImprimir] No se encontró usuario en cache');
@@ -117,7 +116,7 @@ const BotonGenerarReporte = ({
 
       // Asegurar que tenemos los datos de auth correctos
       const authData = {
-        clienteAdminId: currentUserProfile?.clienteAdminId || currentUserProfile?.uid,
+        ownerId: currentUserProfile?.ownerId,
         usuarioId: currentUserProfile?.uid,
         usuarioEmail: currentUserProfile?.email,
         userDisplayName: currentUserProfile?.displayName,
@@ -150,8 +149,7 @@ const BotonGenerarReporte = ({
         email: currentUserProfile?.email,
         displayName: currentUserProfile?.displayName,
         role: currentUserProfile?.role,
-        clienteAdminId: currentUserProfile?.clienteAdminId,
-        clienteAdminIdFallback: currentUserProfile?.clienteAdminId || currentUserProfile?.uid
+        ownerId: currentUserProfile?.ownerId
       });
 
       // Usar el servicio centralizado para guardar

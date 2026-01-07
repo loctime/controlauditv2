@@ -10,8 +10,9 @@ import {
   MenuItem,
   CircularProgress
 } from '@mui/material';
-import { addDoc, updateDoc, doc, Timestamp } from 'firebase/firestore';
-import { auditUserCollection } from '../../../firebaseControlFile';
+import { addDoc, updateDoc, doc, Timestamp, collection } from 'firebase/firestore';
+import { dbAudit } from '../../../firebaseControlFile';
+import { firestoreRoutesCore } from '../../../core/firestore/firestoreRoutes.core';
 import { useAuth } from '../../context/AuthContext';
 
 export default function EmpleadoForm({ open, onClose, onSave, empleado, sucursalId, empresaId }) {
@@ -72,14 +73,15 @@ export default function EmpleadoForm({ open, onClose, onSave, empleado, sucursal
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    if (!userProfile?.uid) {
-      alert('Error: No se pudo identificar el usuario');
+    if (!userProfile?.ownerId) {
+      alert('Error: ownerId no disponible');
       return;
     }
 
     setLoading(true);
 
     try {
+      const ownerId = userProfile.ownerId;
       const empleadoData = {
         ...formData,
         empresaId,
@@ -90,11 +92,13 @@ export default function EmpleadoForm({ open, onClose, onSave, empleado, sucursal
 
       if (empleado) {
         // Actualizar
-        await updateDoc(doc(auditUserCollection(userProfile.uid, 'empleados'), empleado.id), empleadoData);
+        const empleadoRef = doc(dbAudit, ...firestoreRoutesCore.empleado(ownerId, empleado.id));
+        await updateDoc(empleadoRef, empleadoData);
       } else {
         // Crear
         empleadoData.createdAt = Timestamp.now();
-        await addDoc(auditUserCollection(userProfile.uid, 'empleados'), empleadoData);
+        const empleadosRef = collection(dbAudit, ...firestoreRoutesCore.empleados(ownerId));
+        await addDoc(empleadosRef, empleadoData);
       }
 
       onSave();

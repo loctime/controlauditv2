@@ -45,7 +45,8 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import { toast } from 'react-toastify';
 import { collection, getDocs, query, orderBy, limit, where, addDoc } from 'firebase/firestore';
-import { dbAudit, auditUsersCollection } from '../../../firebaseControlFile';
+import { dbAudit } from '../../../firebaseControlFile';
+import { firestoreRoutesCore } from '../../../core/firestore/firestoreRoutes.core';
 
 // Configuración de tipos de acciones
 const TIPOS_ACCIONES = {
@@ -95,14 +96,21 @@ const LogsOperarios = () => {
         qLogs = query(logsRef, orderBy('fecha', 'desc'), limit(400));
       } else if (role === 'max') {
         // Clientes administradores ven sus logs y los de sus operarios
-        // Primero obtener los IDs de sus operarios
-        const usuariosRef = auditUsersCollection();
-        const qOperarios = query(usuariosRef, where('clienteAdminId', '==', userProfile?.uid));
-        const snapshotOperarios = await getDocs(qOperarios);
+        // Usar ownerId para filtrar logs del owner
+        if (!userProfile?.ownerId) {
+          setLogs([]);
+          setLoading(false);
+          return;
+        }
+        const ownerId = userProfile.ownerId;
+        
+        // Obtener IDs de operarios del owner desde apps/auditoria/owners/{ownerId}/usuarios
+        const usuariosRef = collection(dbAudit, ...firestoreRoutesCore.usuarios(ownerId));
+        const snapshotOperarios = await getDocs(usuariosRef);
         const operariosIds = snapshotOperarios.docs.map(doc => doc.id);
         
-        // Agregar el propio ID del administrador
-        const todosLosIds = [userProfile?.uid, ...operariosIds];
+        // Agregar el propio ID del administrador (ownerId)
+        const todosLosIds = [ownerId, ...operariosIds];
         
         // Crear consulta con filtro de usuarios
         qLogs = query(
@@ -113,9 +121,15 @@ const LogsOperarios = () => {
         );
       } else {
         // Operarios ven solo sus propios logs
+        if (!userProfile?.ownerId) {
+          setLogs([]);
+          setLoading(false);
+          return;
+        }
+        const ownerId = userProfile.ownerId;
         qLogs = query(
           logsRef, 
-          where('userId', '==', userProfile?.uid),
+          where('userId', '==', ownerId),
           orderBy('fecha', 'desc'), 
           limit(400)
         );
@@ -126,12 +140,19 @@ const LogsOperarios = () => {
       setLogs(logsData);
 
       // Obtener información de usuarios para mostrar nombres
-      const usuariosRef = auditUsersCollection();
-      const usuariosSnapshot = await getDocs(usuariosRef);
-      const usuariosData = {};
-      usuariosSnapshot.docs.forEach(doc => {
-        usuariosData[doc.id] = doc.data();
-      });
+      // Si hay ownerId, obtener usuarios del owner
+      if (userProfile?.ownerId) {
+        const ownerId = userProfile.ownerId;
+        const usuariosRef = collection(dbAudit, ...firestoreRoutesCore.usuarios(ownerId));
+        const usuariosSnapshot = await getDocs(usuariosRef);
+        const usuariosData = {};
+        usuariosSnapshot.docs.forEach(doc => {
+          usuariosData[doc.id] = doc.data();
+        });
+        setUsuarios(usuariosData);
+      } else {
+        setUsuarios({});
+      }
       setUsuarios(usuariosData);
     } catch (e) {
       console.error('Error al cargar logs:', e);
@@ -609,7 +630,7 @@ export const logUserAction = async (action, detalles = {}) => {
     };
 
     const logData = {
-      userId: userProfile.uid,
+      userId: userProfile.ownerId || userProfile.uid,
       userEmail: userProfile.email,
       userName: userProfile.displayName || userProfile.email,
       action: action,

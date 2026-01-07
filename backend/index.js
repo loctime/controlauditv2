@@ -106,12 +106,14 @@ app.get('/api/latest-apk', async (req, res) => {
   }
 });
 
-// Helper para obtener referencia a la colección de usuarios (ruta correcta: apps/auditoria/users)
-const getUsersCollection = () => {
+// Helper para obtener referencia a la colección de usuarios del owner (owner-centric)
+const getUsersCollection = (ownerId) => {
   return admin.firestore()
     .collection('apps')
     .doc('auditoria')
-    .collection('users');
+    .collection('owners')
+    .doc(ownerId)
+    .collection('usuarios');
 };
 
 // Middleware para verificar token de Firebase (solo admins pueden gestionar usuarios)
@@ -132,22 +134,17 @@ const verificarTokenAdmin = async (req, res, next) => {
       return res.status(401).json({ error: 'Token no proporcionado' });
     }
     const decodedToken = await admin.auth().verifyIdToken(token);
-    // Si el claim 'role' no está, intentar recuperarlo de Firestore y reasignar
+    // Validar que role y ownerId siempre vengan de custom claims (sin fallback legacy)
     if (!decodedToken.role) {
-      const userDoc = await getUsersCollection().doc(decodedToken.uid).get();
-      if (userDoc.exists && userDoc.data().role) {
-        // Reasignar el custom claim
-        await admin.auth().setCustomUserClaims(decodedToken.uid, { role: userDoc.data().role });
-        console.log(`[INFO] Claim 'role' reasignado a UID: ${decodedToken.uid} (${userDoc.data().role})`);
-        // Forzar al frontend a hacer logout/login para refrescar el token
-        return res.status(440).json({ error: 'El claim de rol fue actualizado. Por favor, cierra sesión y vuelve a iniciar para continuar.' });
-      } else {
-        return res.status(403).json({ error: 'No tienes permisos para gestionar usuarios (sin claim de rol y sin perfil válido).' });
-      }
+      return res.status(403).json({ error: 'No tienes permisos para gestionar usuarios (sin claim de rol).' });
     }
-    // Solo permitir si es supermax o max
-    if (decodedToken.role !== 'supermax' && decodedToken.role !== 'max') {
+    // Solo permitir si es admin (max ya no existe, solo admin y operario)
+    if (decodedToken.role !== 'admin') {
       return res.status(403).json({ error: 'No tienes permisos para gestionar usuarios' });
+    }
+    // Para admin, ownerId debe ser igual al uid
+    if (decodedToken.role === 'admin' && decodedToken.ownerId !== decodedToken.uid) {
+      return res.status(403).json({ error: 'Token inválido: admin debe tener ownerId === uid' });
     }
     req.user = decodedToken;
     next();
@@ -251,30 +248,17 @@ app.post('/api/admin/create-user', verificarTokenAdmin, async (req, res) => {
   }
 });
 
-// 2. Listar usuarios (filtrado por multi-tenant)
+// 2. Listar usuarios del owner (owner-centric)
 app.get('/api/list-users', verificarTokenAdmin, async (req, res) => {
   try {
-    const { role } = req.user;
-    let usuarios = [];
-
-    if (role === 'supermax') {
-      // Super admin ve todos los usuarios
-      const usuariosSnapshot = await getUsersCollection().get();
-      usuarios = usuariosSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-    } else if (role === 'max') {
-      // Cliente admin ve sus usuarios operarios
-      const usuariosSnapshot = await getUsersCollection()
-        .where('clienteAdminId', '==', req.user.uid)
-        .get();
-      
-      usuarios = usuariosSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-    }
+    const ownerId = req.user.uid; // Admin siempre tiene ownerId === uid
+    
+    // Leer usuarios del owner desde owner-centric
+    const usuariosSnapshot = await getUsersCollection(ownerId).get();
+    const usuarios = usuariosSnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }));
 
     res.json({ usuarios });
   } catch (error) {
@@ -283,28 +267,27 @@ app.get('/api/list-users', verificarTokenAdmin, async (req, res) => {
   }
 });
 
-// 3. Actualizar usuario (roles, permisos, etc.)
+// 3. Actualizar usuario del owner (owner-centric)
 app.put('/api/update-user/:uid', verificarTokenAdmin, async (req, res) => {
   const { uid } = req.params;
-  const { displayName, role, permisos, clienteAdminId } = req.body;
+  const { displayName, role, permisos } = req.body;
 
   try {
-    // Verificar permisos (solo puede actualizar sus propios usuarios)
-    if (req.user.role === 'max') {
-      const userDoc = await getUsersCollection().doc(uid).get();
-      if (!userDoc.exists || userDoc.data().clienteAdminId !== req.user.uid) {
-        return res.status(403).json({ error: 'No puedes actualizar este usuario' });
-      }
+    const ownerId = req.user.uid; // Admin siempre tiene ownerId === uid
+    
+    // Verificar que el usuario pertenezca al owner
+    const userDoc = await getUsersCollection(ownerId).doc(uid).get();
+    if (!userDoc.exists) {
+      return res.status(404).json({ error: 'Usuario no encontrado en el owner' });
     }
 
-    // Actualizar en Firestore
+    // Actualizar en Firestore owner-centric
     const updateData = {};
     if (displayName) updateData.displayName = displayName;
     if (role) updateData.role = role;
     if (permisos) updateData.permisos = permisos;
-    if (clienteAdminId) updateData.clienteAdminId = clienteAdminId;
 
-    await getUsersCollection().doc(uid).update(updateData);
+    await getUsersCollection(ownerId).doc(uid).update(updateData);
 
     res.json({
       success: true,
@@ -316,17 +299,17 @@ app.put('/api/update-user/:uid', verificarTokenAdmin, async (req, res) => {
   }
 });
 
-// 4. Eliminar usuario
+// 4. Eliminar usuario del owner (owner-centric)
 app.delete('/api/delete-user/:uid', verificarTokenAdmin, async (req, res) => {
   const { uid } = req.params;
 
   try {
-    // Verificar permisos
-    if (req.user.role === 'max') {
-      const userDoc = await getUsersCollection().doc(uid).get();
-      if (!userDoc.exists || userDoc.data().clienteAdminId !== req.user.uid) {
-        return res.status(403).json({ error: 'No puedes eliminar este usuario' });
-      }
+    const ownerId = req.user.uid; // Admin siempre tiene ownerId === uid
+    
+    // Verificar que el usuario pertenezca al owner
+    const userDoc = await getUsersCollection(ownerId).doc(uid).get();
+    if (!userDoc.exists) {
+      return res.status(404).json({ error: 'Usuario no encontrado en el owner' });
     }
 
     // No permitir eliminar al propio usuario
@@ -337,8 +320,8 @@ app.delete('/api/delete-user/:uid', verificarTokenAdmin, async (req, res) => {
     // Eliminar de Firebase Auth
     await admin.auth().deleteUser(uid);
     
-    // Eliminar de Firestore
-    await getUsersCollection().doc(uid).delete();
+    // Eliminar de Firestore owner-centric
+    await getUsersCollection(ownerId).doc(uid).delete();
     
     res.json({
       success: true,

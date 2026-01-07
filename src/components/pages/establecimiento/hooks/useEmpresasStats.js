@@ -1,17 +1,18 @@
 import { useState, useEffect, useCallback } from 'react';
-import { getDocs, query, where } from 'firebase/firestore';
-import { auditUserCollection } from '../../../../firebaseControlFile';
+import { getDocs, query, where, collection } from 'firebase/firestore';
+import { dbAudit } from '../../../../firebaseControlFile';
+import { firestoreRoutesCore } from '../../../../core/firestore/firestoreRoutes.core';
 
 /**
- * Hook para cargar estadísticas de empresas
+ * Hook para cargar estadísticas de empresas (owner-centric)
  */
-export const useEmpresasStats = (userEmpresas, userId = null) => {
+export const useEmpresasStats = (userEmpresas, ownerId = null) => {
   const [empresasStats, setEmpresasStats] = useState({});
 
-  const loadEmpresasStats = useCallback(async (empresas, providedUserId = null) => {
-    const uid = providedUserId || userId;
-    if (!uid) {
-      console.warn('⚠️ [useEmpresasStats] userId no proporcionado, retornando stats vacías');
+  const loadEmpresasStats = useCallback(async (empresas, providedOwnerId = null) => {
+    const ownerIdToUse = providedOwnerId || ownerId;
+    if (!ownerIdToUse) {
+      console.warn('⚠️ [useEmpresasStats] ownerId no proporcionado, retornando stats vacías');
       setEmpresasStats({});
       return;
     }
@@ -20,9 +21,9 @@ export const useEmpresasStats = (userEmpresas, userId = null) => {
     
     for (const empresa of empresas) {
       try {
-        // Las sucursales están en la colección del propietario de la empresa
-        const propietarioId = empresa.propietarioId || uid;
-        const sucursalesRef = auditUserCollection(propietarioId, 'sucursales');
+        // Las sucursales están en la colección del owner
+        const ownerIdForEmpresa = empresa.ownerId || ownerIdToUse;
+        const sucursalesRef = collection(dbAudit, ...firestoreRoutesCore.sucursales(ownerIdForEmpresa));
         
         console.log('[useEmpresasStats] Buscando sucursales para empresa', empresa.id, 'en path:', sucursalesRef.path);
         
@@ -41,11 +42,11 @@ export const useEmpresasStats = (userEmpresas, userId = null) => {
           continue;
         }
 
-        // Empleados, capacitaciones y accidentes están en la colección del propietario
+        // Empleados, capacitaciones y accidentes están en la colección del owner
         const [empleadosSnapshot, capacitacionesSnapshot, accidentesSnapshot] = await Promise.all([
-          getDocs(query(auditUserCollection(propietarioId, 'empleados'), where('sucursalId', 'in', sucursalesIds))),
-          getDocs(query(auditUserCollection(propietarioId, 'capacitaciones'), where('sucursalId', 'in', sucursalesIds))),
-          getDocs(query(auditUserCollection(propietarioId, 'accidentes'), where('sucursalId', 'in', sucursalesIds)))
+          getDocs(query(collection(dbAudit, ...firestoreRoutesCore.empleados(ownerIdForEmpresa)), where('sucursalId', 'in', sucursalesIds))),
+          getDocs(query(collection(dbAudit, ...firestoreRoutesCore.capacitaciones(ownerIdForEmpresa)), where('sucursalId', 'in', sucursalesIds))),
+          getDocs(query(collection(dbAudit, ...firestoreRoutesCore.accidentes(ownerIdForEmpresa)), where('sucursalId', 'in', sucursalesIds)))
         ]);
         
         stats[empresa.id] = {
@@ -70,13 +71,13 @@ export const useEmpresasStats = (userEmpresas, userId = null) => {
     }
     
     setEmpresasStats(stats);
-  }, [userId]);
+  }, [ownerId]);
 
   useEffect(() => {
-    if (userEmpresas && userEmpresas.length > 0 && userId) {
+    if (userEmpresas && userEmpresas.length > 0 && ownerId) {
       loadEmpresasStats(userEmpresas);
     }
-  }, [userEmpresas, userId, loadEmpresasStats]);
+  }, [userEmpresas, ownerId, loadEmpresasStats]);
 
   return { empresasStats, loadEmpresasStats };
 };

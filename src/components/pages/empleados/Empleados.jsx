@@ -28,8 +28,9 @@ import {
   Search as SearchIcon,
   CloudUpload as CloudUploadIcon
 } from '@mui/icons-material';
-import { query, where, getDocs, deleteDoc, doc } from 'firebase/firestore';
-import { auditUserCollection } from '../../../firebaseControlFile';
+import { query, where, getDocs, deleteDoc, doc, collection } from 'firebase/firestore';
+import { dbAudit } from '../../../firebaseControlFile';
+import { firestoreRoutesCore } from '../../../core/firestore/firestoreRoutes.core';
 import { useAuth } from '../../context/AuthContext';
 import { useGlobalSelection } from '../../../hooks/useGlobalSelection';
 import { normalizeEmpleado } from '../../../utils/firestoreUtils';
@@ -69,7 +70,7 @@ export default function Empleados() {
   }, [userEmpresas]);
 
   const loadEmpleados = useCallback(async () => {
-    if (!userProfile?.uid || !selectedSucursal) {
+    if (!userProfile?.ownerId || !selectedSucursal) {
       setEmpleados([]);
       setLoading(false);
       return;
@@ -77,7 +78,8 @@ export default function Empleados() {
 
     setLoading(true);
     try {
-      const empleadosRef = auditUserCollection(userProfile.uid, 'empleados');
+      const ownerId = userProfile.ownerId;
+      const empleadosRef = collection(dbAudit, ...firestoreRoutesCore.empleados(ownerId));
       const q = query(
         empleadosRef,
         where('sucursalId', '==', selectedSucursal)
@@ -93,7 +95,7 @@ export default function Empleados() {
     } finally {
       setLoading(false);
     }
-  }, [selectedSucursal, userProfile?.uid]);
+  }, [selectedSucursal, userProfile?.ownerId]);
 
   // Cargar empleados
   useEffect(() => {
@@ -122,14 +124,15 @@ export default function Empleados() {
   };
 
   const handleDeleteEmpleado = async (empleadoId, nombreEmpleado) => {
-    if (!userProfile?.uid) {
-      alert('Error: No se pudo identificar el usuario');
+    if (!userProfile?.ownerId) {
+      alert('Error: No se pudo identificar el owner');
       return;
     }
 
     if (window.confirm(`¿Está seguro de eliminar a ${nombreEmpleado}?`)) {
       try {
-        const empleadoRef = doc(auditUserCollection(userProfile.uid, 'empleados'), empleadoId);
+        const ownerId = userProfile.ownerId;
+        const empleadoRef = doc(dbAudit, ...firestoreRoutesCore.empleado(ownerId, empleadoId));
         await deleteDoc(empleadoRef);
         loadEmpleados();
       } catch (error) {

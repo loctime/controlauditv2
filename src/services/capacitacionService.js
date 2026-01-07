@@ -8,7 +8,8 @@ import {
   where,
   Timestamp 
 } from 'firebase/firestore';
-import { db, auditUserCollection } from '../firebaseControlFile';
+import { db } from '../firebaseControlFile';
+import { firestoreRoutesCore } from '../core/firestore/firestoreRoutes.core';
 import { registrarAccionSistema } from '../utils/firestoreUtils';
 import { addDocWithAppId, updateDocWithAppId, deleteDocWithAppId } from '../firebase/firestoreAppWriter';
 import { registrosAsistenciaService } from './registrosAsistenciaService';
@@ -50,8 +51,8 @@ const normalizeCapacitacion = (doc) => {
 
 export const capacitacionService = {
   /**
-   * Obtener capacitaciones de una empresa (multi-tenant)
-   * @param {string} userId - UID del usuario
+   * Obtener capacitaciones de una empresa (owner-centric)
+   * @param {string} userId - ID del owner (viene del token)
    * @param {string} empresaId - ID de la empresa
    * @returns {Promise<Array>} Lista de capacitaciones
    */
@@ -60,7 +61,9 @@ export const capacitacionService = {
       if (!userId || !empresaId) return [];
 
       // Leer desde arquitectura multi-tenant
-      const capacitacionesRef = auditUserCollection(userId, 'capacitaciones');
+      if (!userId) throw new Error('ownerId es requerido');
+      const ownerId = userId; // userId ahora es ownerId
+      const capacitacionesRef = collection(db, ...firestoreRoutesCore.capacitaciones(ownerId));
       
       // Filtrar solo por empresaId (filtro funcional, no por identidad)
       const snapshot = await getDocs(
@@ -75,8 +78,8 @@ export const capacitacionService = {
   },
 
   /**
-   * Obtener capacitaciones de una sucursal (multi-tenant)
-   * @param {string} userId - UID del usuario
+   * Obtener capacitaciones de una sucursal (owner-centric)
+   * @param {string} userId - ID del owner (viene del token)
    * @param {string} sucursalId - ID de la sucursal
    * @returns {Promise<Array>} Lista de capacitaciones
    */
@@ -85,7 +88,9 @@ export const capacitacionService = {
       if (!userId || !sucursalId) return [];
 
       // Leer desde arquitectura multi-tenant
-      const capacitacionesRef = auditUserCollection(userId, 'capacitaciones');
+      if (!userId) throw new Error('ownerId es requerido');
+      const ownerId = userId; // userId ahora es ownerId
+      const capacitacionesRef = collection(db, ...firestoreRoutesCore.capacitaciones(ownerId));
       
       // Filtrar solo por sucursalId (filtro funcional, no por identidad)
       const snapshot = await getDocs(
@@ -100,8 +105,8 @@ export const capacitacionService = {
   },
 
   /**
-   * Obtener capacitaciones de múltiples sucursales (multi-tenant)
-   * @param {string} userId - UID del usuario
+   * Obtener capacitaciones de múltiples sucursales (owner-centric)
+   * @param {string} userId - ID del owner (viene del token)
    * @param {Array<string>} sucursalesIds - IDs de las sucursales
    * @returns {Promise<Array>} Lista de capacitaciones
    */
@@ -110,7 +115,9 @@ export const capacitacionService = {
       if (!userId || !sucursalesIds || sucursalesIds.length === 0) return [];
 
       // Leer desde arquitectura multi-tenant
-      const capacitacionesRef = auditUserCollection(userId, 'capacitaciones');
+      if (!userId) throw new Error('ownerId es requerido');
+      const ownerId = userId; // userId ahora es ownerId
+      const capacitacionesRef = collection(db, ...firestoreRoutesCore.capacitaciones(ownerId));
       
       const capacitacionesData = [];
       const chunkSize = 10;
@@ -135,8 +142,8 @@ export const capacitacionService = {
   },
 
   /**
-   * Obtener todas las capacitaciones del usuario (multi-tenant)
-   * @param {string} userId - UID del usuario
+   * Obtener todas las capacitaciones del owner (owner-centric)
+   * @param {string} userId - ID del owner (viene del token)
    * @returns {Promise<Array>} Lista de capacitaciones
    */
   async getAllCapacitaciones(userId) {
@@ -144,7 +151,9 @@ export const capacitacionService = {
       if (!userId) return [];
 
       // Leer desde arquitectura multi-tenant - sin filtros por identidad
-      const capacitacionesRef = auditUserCollection(userId, 'capacitaciones');
+      if (!userId) throw new Error('ownerId es requerido');
+      const ownerId = userId; // userId ahora es ownerId
+      const capacitacionesRef = collection(db, ...firestoreRoutesCore.capacitaciones(ownerId));
       const snapshot = await getDocs(capacitacionesRef);
       
       return snapshot.docs.map(doc => normalizeCapacitacion(doc));
@@ -166,7 +175,9 @@ export const capacitacionService = {
       if (!userId || !capacitacionId) return null;
 
       // Leer desde arquitectura multi-tenant
-      const capacitacionRef = doc(auditUserCollection(userId, 'capacitaciones'), capacitacionId);
+      if (!userId) throw new Error('ownerId es requerido');
+      const ownerId = userId; // userId ahora es ownerId
+      const capacitacionRef = doc(db, ...firestoreRoutesCore.capacitacion(ownerId, capacitacionId));
       const capacitacionDoc = await getDoc(capacitacionRef);
       
       if (capacitacionDoc.exists()) {
@@ -212,7 +223,9 @@ export const capacitacionService = {
       }
 
       // Guardar en arquitectura multi-tenant
-      const capacitacionesRef = auditUserCollection(userId, 'capacitaciones');
+      if (!userId) throw new Error('ownerId es requerido');
+      const ownerId = userId; // userId ahora es ownerId
+      const capacitacionesRef = collection(db, ...firestoreRoutesCore.capacitaciones(ownerId));
       const capacitacionRef = await addDocWithAppId(capacitacionesRef, {
         ...capacitacionData,
         capacitacionTipoId, // ✅ Agregar capacitacionTipoId generado
@@ -257,7 +270,9 @@ export const capacitacionService = {
       // Si algún día se quiere cambiar el tipo, debe ser una acción explícita pasando capacitacionTipoId
 
       // Actualizar en arquitectura multi-tenant
-      const capacitacionRef = doc(auditUserCollection(userId, 'capacitaciones'), capacitacionId);
+      if (!userId) throw new Error('ownerId es requerido');
+      const ownerId = userId; // userId ahora es ownerId
+      const capacitacionRef = doc(db, ...firestoreRoutesCore.capacitacion(ownerId, capacitacionId));
       await updateDocWithAppId(capacitacionRef, {
         ...updateData,
         ultimaModificacion: Timestamp.now()
@@ -292,7 +307,9 @@ export const capacitacionService = {
       if (!userId) throw new Error('userId es requerido');
 
       // Eliminar en arquitectura multi-tenant
-      const capacitacionRef = doc(auditUserCollection(userId, 'capacitaciones'), capacitacionId);
+      if (!userId) throw new Error('ownerId es requerido');
+      const ownerId = userId; // userId ahora es ownerId
+      const capacitacionRef = doc(db, ...firestoreRoutesCore.capacitacion(ownerId, capacitacionId));
       await deleteDocWithAppId(capacitacionRef);
 
       // Registrar acción
@@ -324,7 +341,9 @@ export const capacitacionService = {
       if (!userId) throw new Error('userId es requerido');
 
       // Actualizar en arquitectura multi-tenant
-      const capacitacionRef = doc(auditUserCollection(userId, 'capacitaciones'), capacitacionId);
+      if (!userId) throw new Error('ownerId es requerido');
+      const ownerId = userId; // userId ahora es ownerId
+      const capacitacionRef = doc(db, ...firestoreRoutesCore.capacitacion(ownerId, capacitacionId));
       await updateDocWithAppId(capacitacionRef, {
         estado: 'completada',
         fechaCompletada: Timestamp.now(),
@@ -349,8 +368,8 @@ export const capacitacionService = {
   },
 
   /**
-   * Duplicar capacitación (multi-tenant)
-   * @param {string} userId - UID del usuario
+   * Duplicar capacitación (owner-centric)
+   * @param {string} userId - ID del owner (viene del token)
    * @param {Object} capacitacion - Capacitación a duplicar
    * @param {Object} user - Usuario que duplica
    * @returns {Promise<string>} ID de la capacitación duplicada
@@ -373,10 +392,11 @@ export const capacitacionService = {
       delete nuevaCapacitacion.updatedAt;
       delete nuevaCapacitacion.createdBy;
       delete nuevaCapacitacion.creadoPor;
-      delete nuevaCapacitacion.clienteAdminId;
+      // clienteAdminId eliminado - usar ownerId en su lugar
       delete nuevaCapacitacion.usuarioId;
       
-      const capacitacionesRef = auditUserCollection(userId, 'capacitaciones');
+      const ownerId = userId; // userId ahora es ownerId
+      const capacitacionesRef = collection(db, ...firestoreRoutesCore.capacitaciones(ownerId));
       const docRef = await addDocWithAppId(capacitacionesRef, nuevaCapacitacion);
 
       // Registrar acción
@@ -427,7 +447,9 @@ export const capacitacionService = {
       const { empleados, registroAsistencia, ...otrosCampos } = asistenciaData;
       
       if (Object.keys(otrosCampos).length > 0) {
-        const capacitacionRef = doc(auditUserCollection(userId, 'capacitaciones'), capacitacionId);
+        if (!userId) throw new Error('ownerId es requerido');
+      const ownerId = userId; // userId ahora es ownerId
+      const capacitacionRef = doc(db, ...firestoreRoutesCore.capacitacion(ownerId, capacitacionId));
         await updateDocWithAppId(capacitacionRef, {
           ...otrosCampos,
           updatedAt: Timestamp.now()

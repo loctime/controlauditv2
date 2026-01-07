@@ -1,0 +1,29 @@
+{
+  "id": "hTD8FYeueHhuXxGCjxD0DcYmkRG2",
+  "uid": "hTD8FYeueHhuXxGCjxD0DcYmkRG2",
+  "email": "ssanabria.sh@gmail.com",
+  "displayName": "ssanabria.sh@gmail.com",
+  "createdAt": {
+    "_seconds": 1766403097,
+    "_nanoseconds": 233000000
+  },
+  "role": "max",
+  "clienteAdminId": "hTD8FYeueHhuXxGCjxD0DcYmkRG2",
+  "empresas": [],
+  "auditorias": [],
+  "permisos": {
+    "puedeCrearEmpresas": true,
+    "puedeCrearSucursales": true,
+    "puedeCrearAuditorias": true,
+    "puedeCompartirFormularios": true,
+    "puedeAgregarSocios": true,
+    "puedeGestionarUsuarios": true,
+    "puedeVerLogs": true,
+    "puedeGestionarSistema": true,
+    "puedeEliminarUsuarios": true
+  },
+  "configuracion": {
+    "notificaciones": true,
+    "tema": "light"
+  }
+}

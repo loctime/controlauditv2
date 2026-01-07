@@ -1,10 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
-import { onSnapshot } from 'firebase/firestore';
-import { auditUserCollection } from '../../../../firebaseControlFile';
+import { onSnapshot, collection } from 'firebase/firestore';
+import { dbAudit } from '../../../../firebaseControlFile';
+import { firestoreRoutesCore } from '../../../../core/firestore/firestoreRoutes.core';
 
 /**
- * Hook para cargar formularios con cache (multi-tenant)
- * Los datos ya vienen filtrados desde apps/auditoria/users/{uid}/formularios
+ * Hook para cargar formularios con cache (owner-centric)
+ * Los datos ya vienen filtrados desde apps/auditoria/owners/{ownerId}/formularios
  */
 export const useFormulariosData = (user, userProfile) => {
   const [formularios, setFormularios] = useState([]);
@@ -37,7 +38,7 @@ export const useFormulariosData = (user, userProfile) => {
     }
 
     setLoading(true);
-    // Los datos ya vienen completos desde la colección multi-tenant
+    // Los datos ya vienen completos desde la colección owner-centric
     setFormulariosCompletos(metadatos);
     try {
       localStorage.setItem(CACHE_KEY, JSON.stringify({ 
@@ -54,7 +55,7 @@ export const useFormulariosData = (user, userProfile) => {
 
   // Suscripción reactiva
   useEffect(() => {
-    if (!user || !userProfile?.uid) {
+    if (!user || !userProfile?.ownerId) {
       setFormularios([]);
       setFormulariosCompletos([]);
       setLoading(false);
@@ -62,9 +63,10 @@ export const useFormulariosData = (user, userProfile) => {
     }
 
     setLoading(true);
-    // Usar estructura multi-tenant: apps/auditoria/users/{uid}/formularios
-    // Los datos ya vienen filtrados por usuario
-    const formulariosCollection = auditUserCollection(userProfile.uid, 'formularios');
+    // Usar estructura owner-centric: apps/auditoria/owners/{ownerId}/formularios
+    // Los datos ya vienen filtrados por owner
+    const ownerId = userProfile.ownerId;
+    const formulariosCollection = collection(dbAudit, ...firestoreRoutesCore.formularios(ownerId));
     const unsubscribe = onSnapshot(formulariosCollection, (res) => {
       const metadatos = res.docs.map((formulario) => {
         const data = formulario.data();

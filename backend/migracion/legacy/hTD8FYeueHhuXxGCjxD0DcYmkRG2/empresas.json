@@ -1,0 +1,65 @@
+[
+  {
+    "id": "E65GgRA804BtOZuWTJ8o",
+    "telefono": "03364641610",
+    "propietarioRole": "max",
+    "socios": [
+      "pbLX5nBx2WTZV1Z0sFMJkVtSmZy2"
+    ],
+    "createdAt": {
+      "_seconds": 1760442116,
+      "_nanoseconds": 733000000
+    },
+    "lastUidUpdate": {
+      "_seconds": 1762453751,
+      "_nanoseconds": 213000000
+    },
+    "migratedFromUid": "pbLX5nBx2WTZV1Z0sFMJkVtSmZy2",
+    "direccion": "LUIS VIALE 360 Loc.SAN NICOLAS DE LOS ARROYOS",
+    "nombre": "CC&M Control",
+    "propietarioId": "hTD8FYeueHhuXxGCjxD0DcYmkRG2",
+    "propietarioEmail": "ssanabria.sh@gmail.com",
+    "ultimaModificacion": {
+      "_seconds": 1761671891,
+      "_nanoseconds": 898000000
+    },
+    "logo": "",
+    "creadorId": "hTD8FYeueHhuXxGCjxD0DcYmkRG2",
+    "creadorRole": "max",
+    "creadorEmail": "ssanabria.sh@gmail.com"
+  },
+  {
+    "id": "cDiMVec96xmk4WfRCH9T",
+    "emailContacto": "ssanabria.sh@gmail.com",
+    "nombre": "Samuel sanabria",
+    "usuariosMaximos": 5,
+    "fechaVencimiento": null,
+    "usuariosActuales": 1,
+    "estadoPago": "al_dia",
+    "fechaUltimoPago": {
+      "_seconds": 1759764525,
+      "_nanoseconds": 284000000
+    },
+    "plan": "estandar",
+    "usuarios": [
+      "pbLX5nBx2WTZV1Z0sFMJkVtSmZy2"
+    ]
+  },
+  {
+    "id": "e5azglGux7umNB3stNIm",
+    "fechaVencimiento": null,
+    "plan": "estandar",
+    "usuariosActuales": 1,
+    "estadoPago": "al_dia",
+    "usuarios": [
+      "temp_1759763843514_0xsserapk"
+    ],
+    "emailContacto": "ssanabria.sh@gmail.com",
+    "usuariosMaximos": 5,
+    "nombre": "Samuel Sanabria",
+    "fechaUltimoPago": {
+      "_seconds": 1759763851,
+      "_nanoseconds": 702000000
+    }
+  }
+]

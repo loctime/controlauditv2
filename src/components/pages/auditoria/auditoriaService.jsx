@@ -1,6 +1,7 @@
 // Servicio centralizado para operaciones de auditoría
-import { collection, addDoc, getDocs, query, where, orderBy, serverTimestamp, doc } from 'firebase/firestore';
-import { dbAudit, auditUserCollection, auditUsersCollection, reportesCollection } from '../../../firebaseControlFile';
+import { collection, addDoc, getDocs, query, where, orderBy, serverTimestamp, doc, getDocs as getDocsQuery } from 'firebase/firestore';
+import { dbAudit } from '../../../firebaseControlFile';
+import { firestoreRoutesCore } from '../../../core/firestore/firestoreRoutes.core';
 import { uploadEvidence, ensureTaskbarFolder, ensureSubFolder } from '../../../services/controlFileB2Service';
 import { prepararDatosParaFirestore, registrarAccionSistema } from '../../../utils/firestoreUtils';
 import { getOfflineDatabase, generateOfflineId } from '../../../services/offlineDatabase';
@@ -602,7 +603,7 @@ class AuditoriaService {
         ),
         creadoPor: userProfile?.uid || null,
         creadoPorEmail: userProfile?.email || null,
-        clienteAdminId: userProfile?.clienteAdminId || userProfile?.uid || null,
+        ownerId: userProfile?.ownerId || null,
         usuarioId: userProfile?.uid || null,
         timestamp: serverTimestamp(),
         fechaCreacion: new Date().toISOString(),
@@ -634,19 +635,23 @@ class AuditoriaService {
       console.log('[AuditoriaService] Datos limpios para Firestore:', JSON.stringify(datosLimpios, null, 2));
       console.log('[AuditoriaService] Clasificaciones a guardar:', JSON.stringify(datosLimpios.clasificaciones, null, 2));
 
-      // Guardar en Firestore multi-tenant: apps/auditoria/users/{uid}/reportes
-      const reportesRef = auditUserCollection(userProfile.uid, 'reportes');
-      console.log('[AuditoriaService] Guardando reporte en ruta multi-tenant:', `apps/auditoria/users/${userProfile.uid}/reportes`);
+      // Guardar en Firestore owner-centric: apps/auditoria/owners/{ownerId}/reportes
+      if (!userProfile?.ownerId) {
+        throw new Error('ownerId es requerido para guardar reporte');
+      }
+      const ownerId = userProfile.ownerId; // ownerId viene del token
+      const reportesRef = collection(dbAudit, ...firestoreRoutesCore.reportes(ownerId));
+      console.log('[AuditoriaService] Guardando reporte en ruta owner-centric:', `apps/auditoria/owners/${ownerId}/reportes`);
       const docRef = await addDoc(reportesRef, datosLimpios);
 
       // Crear acciones requeridas en la subcolección de la sucursal si existen
       if (datosCompletos.accionesRequeridas && datosCompletos.accionesRequeridas.length > 0) {
         try {
-          // Obtener sucursalId - buscar en la colección de sucursales del usuario
+          // Obtener sucursalId - buscar en la colección de sucursales del owner
           let sucursalId = null;
           if (datosAuditoria.sucursal && datosAuditoria.sucursal !== "Casa Central") {
-            // Construir ruta correcta usando auditUserCollection
-            const sucursalesRef = auditUserCollection(userProfile.uid, 'sucursales');
+            // Construir ruta correcta usando firestoreRoutesCore (owner-centric)
+            const sucursalesRef = collection(dbAudit, ...firestoreRoutesCore.sucursales(ownerId));
             console.log('[AuditoriaService] Buscando sucursal por nombre en path:', sucursalesRef.path);
             const q = query(sucursalesRef, where("nombre", "==", datosAuditoria.sucursal));
             const sucursalesSnapshot = await getDocs(q);
@@ -658,8 +663,7 @@ class AuditoriaService {
 
           // Si encontramos sucursalId, crear las acciones requeridas
           if (sucursalId) {
-            const sucursalesRef = auditUserCollection(userProfile.uid, 'sucursales');
-            const sucursalDocRef = doc(sucursalesRef, sucursalId);
+            const sucursalDocRef = doc(dbAudit, ...firestoreRoutesCore.sucursal(ownerId, sucursalId));
             const accionesCollectionRef = collection(sucursalDocRef, 'acciones_requeridas');
             
             await AccionesRequeridasService.crearAccionesDesdeReporte(
@@ -732,7 +736,7 @@ class AuditoriaService {
         usuarioEmail: userProfile?.email || datosAuditoria.usuarioEmail || 'usuario@ejemplo.com',
         userDisplayName: userProfile?.displayName || userProfile?.email || 'Usuario',
         userRole: userProfile?.role || 'operario',
-        clienteAdminId: userProfile?.clienteAdminId || datosAuditoria.clienteAdminId || userProfile?.uid || datosAuditoria.usuarioId
+        ownerId: userProfile?.ownerId || datosAuditoria.ownerId || null
       };
 
       // Preparar datos para IndexedDB
@@ -841,40 +845,24 @@ class AuditoriaService {
    */
   static async obtenerAuditorias(userProfile, filtros = {}) {
     try {
-      let oldUid = userProfile.migratedFromUid;
-      
-      // Si no hay migratedFromUid, buscar por email para encontrar datos antiguos
-      if (!oldUid && userProfile.email) {
-        console.log('[auditoriaService.obtenerAuditorias] No hay migratedFromUid, buscando por email:', userProfile.email);
-        const usuariosRef = auditUsersCollection();
-        const emailQuery = query(usuariosRef, where('email', '==', userProfile.email));
-        const emailSnapshot = await getDocs(emailQuery);
-        
-        if (!emailSnapshot.empty) {
-          const usuariosConEmail = emailSnapshot.docs.filter(doc => doc.id !== userProfile.uid);
-          if (usuariosConEmail.length > 0) {
-            oldUid = usuariosConEmail[0].id;
-            console.log('[auditoriaService.obtenerAuditorias] ⚠️ Encontrado usuario antiguo por email:', oldUid);
-          }
-        }
+      // En modelo owner-centric, todas las auditorías pertenecen al ownerId
+      if (!userProfile?.ownerId) {
+        console.warn('[auditoriaService.obtenerAuditorias] ownerId no disponible');
+        return [];
       }
+      
+      const ownerId = userProfile.ownerId;
+      const reportesRef = collection(dbAudit, ...firestoreRoutesCore.reportes(ownerId));
       
       let auditorias = [];
       
       // Aplicar filtros según el rol del usuario (SIN orderBy para evitar índices compuestos)
       if (userProfile.role === 'operario') {
-        const reportesRef = reportesCollection();
+        // Operarios ven solo las auditorías compartidas con ellos o creadas por ellos
         const queries = [
           query(reportesRef, where("creadoPor", "==", userProfile.uid)),
           query(reportesRef, where("usuarioId", "==", userProfile.uid))
         ];
-        
-        if (oldUid) {
-          queries.push(
-            query(reportesRef, where("creadoPor", "==", oldUid)),
-            query(reportesRef, where("usuarioId", "==", oldUid))
-          );
-        }
         
         const snapshots = await Promise.all(queries.map(q => getDocs(q).catch(() => ({ docs: [] }))));
         const allAuditorias = snapshots.flatMap(s => s.docs.map(doc => ({ id: doc.id, ...doc.data() })));
@@ -887,34 +875,18 @@ class AuditoriaService {
           return timestampB - timestampA;
         });
       } else if (userProfile.role === 'max') {
-        const reportesRef = reportesCollection();
-        const queries = [
-          query(reportesRef, where("clienteAdminId", "==", userProfile.uid)),
-          query(reportesRef, where("creadoPor", "==", userProfile.uid)),
-          query(reportesRef, where("usuarioId", "==", userProfile.uid))
-        ];
-        
-        if (oldUid) {
-          queries.push(
-            query(reportesRef, where("clienteAdminId", "==", oldUid)),
-            query(reportesRef, where("creadoPor", "==", oldUid)),
-            query(reportesRef, where("usuarioId", "==", oldUid))
-          );
-        }
-        
-        const snapshots = await Promise.all(queries.map(q => getDocs(q).catch(() => ({ docs: [] }))));
-        const allAuditorias = snapshots.flatMap(s => s.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-        const uniqueAuditorias = Array.from(new Map(allAuditorias.map(a => [a.id, a])).values());
-        
-        // Ordenar en memoria por timestamp
-        auditorias = uniqueAuditorias.sort((a, b) => {
+        // Admin ve todas las auditorías de su ownerId
+        const snapshot = await getDocs(reportesRef);
+        auditorias = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        })).sort((a, b) => {
           const timestampA = a.timestamp?.toDate?.() || new Date(a.timestamp || 0);
           const timestampB = b.timestamp?.toDate?.() || new Date(b.timestamp || 0);
           return timestampB - timestampA;
         });
       } else {
         // Para supermax, no aplicar filtros (puede ver todo)
-        const reportesRef = reportesCollection();
         const snapshot = await getDocs(reportesRef);
         auditorias = snapshot.docs.map(doc => ({
           id: doc.id,

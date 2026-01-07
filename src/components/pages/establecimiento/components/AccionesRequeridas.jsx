@@ -41,7 +41,8 @@ import {
 } from '@mui/icons-material';
 import AccionesRequeridasService from '../../../../services/accionesRequeridasService';
 import { useAuth } from '../../../context/AuthContext';
-import { auditUserCollection } from '../../../../firebaseControlFile';
+import { dbAudit } from '../../../../firebaseControlFile';
+import { firestoreRoutesCore } from '../../../../core/firestore/firestoreRoutes.core';
 import { doc, collection } from 'firebase/firestore';
 import dayjs from 'dayjs';
 
@@ -67,11 +68,11 @@ const AccionesRequeridas = ({ sucursalId, sucursalNombre }) => {
     
     setLoading(true);
     try {
-      if (!userProfile?.uid) {
-        throw new Error('Usuario no autenticado');
+      if (!userProfile?.ownerId) {
+        throw new Error('ownerId no disponible');
       }
-      const sucursalesRef = auditUserCollection(userProfile.uid, 'sucursales');
-      const sucursalDocRef = doc(sucursalesRef, sucursalId);
+      const ownerId = userProfile.ownerId;
+      const sucursalDocRef = doc(dbAudit, ...firestoreRoutesCore.sucursal(ownerId, sucursalId));
       const accionesCollectionRef = collection(sucursalDocRef, 'acciones_requeridas');
       
       const filtros = filtroEstado !== 'todas' ? { estado: filtroEstado } : {};
@@ -159,12 +160,12 @@ const AccionesRequeridas = ({ sucursalId, sucursalNombre }) => {
     if (!accionSeleccionada || !textoDialog.trim()) return;
 
     try {
-      if (!userProfile?.uid) {
-        throw new Error('Usuario no autenticado');
+      if (!userProfile?.ownerId) {
+        throw new Error('ownerId no disponible');
       }
       
-      const sucursalesRef = auditUserCollection(userProfile.uid, 'sucursales');
-      const sucursalDocRef = doc(sucursalesRef, sucursalId);
+      const ownerId = userProfile.ownerId;
+      const sucursalDocRef = doc(dbAudit, ...firestoreRoutesCore.sucursal(ownerId, sucursalId));
       const accionesCollectionRef = collection(sucursalDocRef, 'acciones_requeridas');
       const accionDocRef = doc(accionesCollectionRef, accionSeleccionada.id);
       
@@ -172,7 +173,7 @@ const AccionesRequeridas = ({ sucursalId, sucursalNombre }) => {
         await AccionesRequeridasService.actualizarEstadoAccion(
           accionDocRef,
           textoDialog,
-          userProfile.uid,
+          ownerId,
           userProfile?.displayName || userProfile?.email,
           null
         );
@@ -180,7 +181,7 @@ const AccionesRequeridas = ({ sucursalId, sucursalNombre }) => {
         await AccionesRequeridasService.agregarComentarioAccion(
           accionDocRef,
           textoDialog,
-          userProfile.uid,
+          ownerId,
           userProfile?.displayName || userProfile?.email
         );
       }

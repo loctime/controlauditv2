@@ -12,7 +12,8 @@ import {
   updateDoc,
   arrayUnion
 } from 'firebase/firestore';
-import { auditUserCollection } from '../firebaseControlFile';
+import { dbAudit } from '../firebaseControlFile';
+import { firestoreRoutesCore } from '../core/firestore/firestoreRoutes.core';
 import { addDocWithAppId, updateDocWithAppId, deleteDocWithAppId } from '../firebase/firestoreAppWriter';
 import { registrarAccionSistema } from '../utils/firestoreUtils';
 
@@ -126,7 +127,9 @@ export const registrosAsistenciaService = {
         throw new Error('empleadoIds es requerido y debe tener al menos un empleado');
       }
 
-      const registrosRef = auditUserCollection(userId, 'registrosAsistencia');
+      if (!userId) throw new Error('ownerId es requerido');
+      const ownerId = userId; // userId ahora es ownerId
+      const registrosRef = collection(dbAudit, ...firestoreRoutesCore.registrosAsistencia(ownerId));
       
       // Validar y sanitizar imágenes (solo metadata liviana)
       const imagenesSanitizadas = validarYSanitizarImagenes(registroData.imagenes || []);
@@ -261,7 +264,9 @@ export const registrosAsistenciaService = {
       });
 
       // Obtener referencia al documento
-      const registrosRef = auditUserCollection(userId, 'registrosAsistencia');
+      if (!userId) throw new Error('ownerId es requerido');
+      const ownerId = userId; // userId ahora es ownerId
+      const registrosRef = collection(dbAudit, ...firestoreRoutesCore.registrosAsistencia(ownerId));
       const registroRef = doc(registrosRef, registroId);
 
       // Actualizar el documento agregando las imágenes al array usando arrayUnion
@@ -299,7 +304,9 @@ export const registrosAsistenciaService = {
         tipoNormalizado: typeof capacitacionIdStr
       });
       
-      const registrosRef = auditUserCollection(userId, 'registrosAsistencia');
+      if (!userId) throw new Error('ownerId es requerido');
+      const ownerId = userId; // userId ahora es ownerId
+      const registrosRef = collection(dbAudit, ...firestoreRoutesCore.registrosAsistencia(ownerId));
       
       try {
         // Intentar query con índice compuesto (capacitacionId + fecha)
@@ -403,7 +410,9 @@ export const registrosAsistenciaService = {
     try {
       if (!userId || !registroId) return null;
 
-      const registroRef = doc(auditUserCollection(userId, 'registrosAsistencia'), registroId);
+      if (!userId) throw new Error('ownerId es requerido');
+      const ownerId = userId; // userId ahora es ownerId
+      const registroRef = doc(dbAudit, ...firestoreRoutesCore.registroAsistencia(ownerId, registroId));
       const registroDoc = await getDoc(registroRef);
 
       if (registroDoc.exists()) {
@@ -434,7 +443,9 @@ export const registrosAsistenciaService = {
     try {
       if (!userId || !empleadoId) return [];
 
-      const registrosRef = auditUserCollection(userId, 'registrosAsistencia');
+      if (!userId) throw new Error('ownerId es requerido');
+      const ownerId = userId; // userId ahora es ownerId
+      const registrosRef = collection(dbAudit, ...firestoreRoutesCore.registrosAsistencia(ownerId));
       
       try {
         // OPTIMIZADO: Usar array-contains de Firestore (requiere índice)
@@ -605,7 +616,9 @@ export const registrosAsistenciaService = {
     try {
       if (!userId) throw new Error('userId es requerido');
 
-      const registroRef = doc(auditUserCollection(userId, 'registrosAsistencia'), registroId);
+      if (!userId) throw new Error('ownerId es requerido');
+      const ownerId = userId; // userId ahora es ownerId
+      const registroRef = doc(dbAudit, ...firestoreRoutesCore.registroAsistencia(ownerId, registroId));
       
       // Validar y sanitizar imágenes si se actualizan
       if (updateData.imagenes) {
@@ -648,7 +661,9 @@ export const registrosAsistenciaService = {
     try {
       if (!userId) throw new Error('userId es requerido');
 
-      const registroRef = doc(auditUserCollection(userId, 'registrosAsistencia'), registroId);
+      if (!userId) throw new Error('ownerId es requerido');
+      const ownerId = userId; // userId ahora es ownerId
+      const registroRef = doc(dbAudit, ...firestoreRoutesCore.registroAsistencia(ownerId, registroId));
       await deleteDocWithAppId(registroRef);
 
       // Registrar acción
@@ -680,7 +695,9 @@ export const registrosAsistenciaService = {
         return [];
       }
 
-      const registrosRef = auditUserCollection(userId, 'registrosAsistencia');
+      if (!userId) throw new Error('ownerId es requerido');
+      const ownerId = userId; // userId ahora es ownerId
+      const registrosRef = collection(dbAudit, ...firestoreRoutesCore.registrosAsistencia(ownerId));
       const q = query(registrosRef, orderBy('createdAt', 'desc'));
 
       const snapshot = await getDocs(q);

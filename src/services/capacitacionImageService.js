@@ -3,7 +3,8 @@ import { uploadEvidence, ensureTaskbarFolder, ensureSubFolder, ensureCapacitacio
 import { getOfflineDatabase, generateOfflineId } from './offlineDatabase';
 import syncQueueService from './syncQueue';
 import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
-import { db, auditUserCollection, auth } from '../firebaseControlFile';
+import { db, auth } from '../firebaseControlFile';
+import { firestoreRoutesCore } from '../core/firestore/firestoreRoutes.core';
 import { updateDocWithAppId } from '../firebase/firestoreAppWriter';
 import { 
   esArchivoLegacy, 
@@ -40,7 +41,9 @@ class CapacitacionImageService {
       // Obtener datos completos de la capacitación desde la colección multi-tenant
       let capacitacionData = null;
       try {
-        const capacitacionRef = doc(auditUserCollection(userId, 'capacitaciones'), capacitacionEventoId);
+        if (!userId) throw new Error('ownerId es requerido');
+        const ownerId = userId; // userId ahora es ownerId
+        const capacitacionRef = doc(db, ...firestoreRoutesCore.capacitacion(ownerId, capacitacionEventoId));
         const capacitacionSnap = await getDoc(capacitacionRef);
         
         if (capacitacionSnap.exists()) {
@@ -150,7 +153,9 @@ class CapacitacionImageService {
       // Obtener datos completos de la capacitación desde la colección multi-tenant
       let capacitacionData = null;
       try {
-        const capacitacionRef = doc(auditUserCollection(userId, 'capacitaciones'), capacitacionEventoId);
+        if (!userId) throw new Error('ownerId es requerido');
+        const ownerId = userId; // userId ahora es ownerId
+        const capacitacionRef = doc(db, ...firestoreRoutesCore.capacitacion(ownerId, capacitacionEventoId));
         const capacitacionSnap = await getDoc(capacitacionRef);
         
         if (capacitacionSnap.exists()) {
@@ -324,7 +329,9 @@ class CapacitacionImageService {
     
     if (!finalCompanyId || !finalSucursalId || !finalTipoId) {
       try {
-        const capacitacionRef = doc(auditUserCollection(userId, 'capacitaciones'), capacitacionEventoId);
+        if (!userId) throw new Error('ownerId es requerido');
+        const ownerId = userId; // userId ahora es ownerId
+        const capacitacionRef = doc(db, ...firestoreRoutesCore.capacitacion(ownerId, capacitacionEventoId));
         const capacitacionSnap = await getDoc(capacitacionRef);
         if (capacitacionSnap.exists()) {
           const capacitacionData = capacitacionSnap.data();
@@ -392,10 +399,11 @@ class CapacitacionImageService {
   async addImageToCapacitacion(capacitacionId, imageMetadata, userId) {
     try {
       if (!userId) {
-        throw new Error('userId es requerido para acceder a la colección multi-tenant');
+        throw new Error('ownerId es requerido');
       }
       
-      const capacitacionRef = doc(auditUserCollection(userId, 'capacitaciones'), capacitacionId);
+      const ownerId = userId; // userId ahora es ownerId
+      const capacitacionRef = doc(db, ...firestoreRoutesCore.capacitacion(ownerId, capacitacionId));
       const capacitacionSnap = await getDoc(capacitacionRef);
 
       if (!capacitacionSnap.exists()) {
@@ -429,10 +437,11 @@ class CapacitacionImageService {
   async removeImageFromCapacitacion(capacitacionId, imageId, userId) {
     try {
       if (!userId) {
-        throw new Error('userId es requerido para acceder a la colección multi-tenant');
+        throw new Error('ownerId es requerido');
       }
       
-      const capacitacionRef = doc(auditUserCollection(userId, 'capacitaciones'), capacitacionId);
+      const ownerId = userId; // userId ahora es ownerId
+      const capacitacionRef = doc(db, ...firestoreRoutesCore.capacitacion(ownerId, capacitacionId));
       const capacitacionSnap = await getDoc(capacitacionRef);
 
       if (!capacitacionSnap.exists()) {

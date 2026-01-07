@@ -28,8 +28,9 @@ import {
 import PeopleIcon from '@mui/icons-material/People';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import EditIcon from '@mui/icons-material/Edit';
-import { getDocs, query, where, addDoc, updateDoc, deleteDoc, doc, Timestamp } from 'firebase/firestore';
-import { auditUserCollection } from '../../../../firebaseControlFile';
+import { getDocs, query, where, addDoc, updateDoc, deleteDoc, doc, Timestamp, collection } from 'firebase/firestore';
+import { dbAudit } from '../../../../firebaseControlFile';
+import { firestoreRoutesCore } from '../../../../core/firestore/firestoreRoutes.core';
 import { useAuth } from '../../../context/AuthContext';
 import Swal from 'sweetalert2';
 
@@ -58,13 +59,14 @@ const EmpleadosContent = ({ sucursalId, sucursalNombre, navigateToPage, reloadSu
   }, [sucursalId]);
 
   const loadEmpleados = async () => {
-    if (!userProfile?.uid) {
-      console.error('Error: userProfile.uid es requerido');
+    if (!userProfile?.ownerId) {
+      console.error('Error: userProfile.ownerId es requerido');
       return;
     }
     setLoading(true);
     try {
-      const empleadosRef = auditUserCollection(userProfile.uid, 'empleados');
+      const ownerId = userProfile.ownerId;
+      const empleadosRef = collection(dbAudit, ...firestoreRoutesCore.empleados(ownerId));
       const q = query(empleadosRef, where('sucursalId', '==', sucursalId));
       const snapshot = await getDocs(q);
       const empleadosData = snapshot.docs.map(doc => ({
@@ -97,17 +99,18 @@ const EmpleadosContent = ({ sucursalId, sucursalNombre, navigateToPage, reloadSu
       return;
     }
 
-    if (!userProfile?.uid) {
+    if (!userProfile?.ownerId) {
       Swal.fire({
         icon: 'error',
         title: 'Error',
-        text: 'Usuario no autenticado'
+        text: 'ownerId no disponible'
       });
       return;
     }
 
     try {
-      const empleadosRef = auditUserCollection(userProfile.uid, 'empleados');
+      const ownerId = userProfile.ownerId;
+      const empleadosRef = collection(dbAudit, ...firestoreRoutesCore.empleados(ownerId));
       await addDoc(empleadosRef, {
         ...empleadoForm,
         sucursalId: sucursalId,
@@ -199,18 +202,19 @@ const EmpleadosContent = ({ sucursalId, sucursalNombre, navigateToPage, reloadSu
       return;
     }
 
-    if (!userProfile?.uid) {
+    if (!userProfile?.ownerId) {
       Swal.fire({
         icon: 'error',
         title: 'Error',
-        text: 'Usuario no autenticado'
+        text: 'ownerId no disponible'
       });
       return;
     }
 
     try {
-      const empleadosRef = auditUserCollection(userProfile.uid, 'empleados');
-      await updateDoc(doc(empleadosRef, empleadoEdit.id), {
+      const ownerId = userProfile.ownerId;
+      const empleadoRef = doc(dbAudit, ...firestoreRoutesCore.empleado(ownerId, empleadoEdit.id));
+      await updateDoc(empleadoRef, {
         nombre: empleadoEdit.nombre,
         apellido: empleadoEdit.apellido,
         dni: empleadoEdit.dni,
@@ -265,17 +269,18 @@ const EmpleadosContent = ({ sucursalId, sucursalNombre, navigateToPage, reloadSu
     });
 
     if (result.isConfirmed) {
-      if (!userProfile?.uid) {
+      if (!userProfile?.ownerId) {
         Swal.fire({
           icon: 'error',
           title: 'Error',
-          text: 'Usuario no autenticado'
+          text: 'ownerId no disponible'
         });
         return;
       }
       try {
-        const empleadosRef = auditUserCollection(userProfile.uid, 'empleados');
-        await updateDoc(doc(empleadosRef, empleado.id), {
+        const ownerId = userProfile.ownerId;
+        const empleadoRef = doc(dbAudit, ...firestoreRoutesCore.empleado(ownerId, empleado.id));
+        await updateDoc(empleadoRef, {
           estado: 'inactivo',
           fechaActualizacion: Timestamp.now()
         });
@@ -318,17 +323,18 @@ const EmpleadosContent = ({ sucursalId, sucursalNombre, navigateToPage, reloadSu
     });
 
     if (result.isConfirmed) {
-      if (!userProfile?.uid) {
+      if (!userProfile?.ownerId) {
         Swal.fire({
           icon: 'error',
           title: 'Error',
-          text: 'Usuario no autenticado'
+          text: 'ownerId no disponible'
         });
         return;
       }
       try {
-        const empleadosRef = auditUserCollection(userProfile.uid, 'empleados');
-        await deleteDoc(doc(empleadosRef, empleado.id));
+        const ownerId = userProfile.ownerId;
+        const empleadoRef = doc(dbAudit, ...firestoreRoutesCore.empleado(ownerId, empleado.id));
+        await deleteDoc(empleadoRef);
 
         // Recargar datos
         await loadEmpleados();

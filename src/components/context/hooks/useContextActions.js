@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { empresaService } from '../../../services/empresaService';
+import { createEmpresa, updateEmpresa as updateEmpresaOwner } from '../../../core/services/ownerEmpresaService';
 import { auditoriaService } from '../../../services/auditoriaService';
 import { saveCompleteUserCache } from '../../../services/completeOfflineCache';
 import { shouldEnableOffline } from '../../../utils/pwaDetection';
@@ -19,19 +19,25 @@ export const useContextActions = (
 ) => {
   
   const crearEmpresa = useCallback(async (empresaData) => {
-    const empresaId = await empresaService.crearEmpresa(empresaData, user, role, userProfile);
+    if (!userProfile?.ownerId) {
+      throw new Error('ownerId es requerido para crear empresa');
+    }
+    
+    const ownerId = userProfile.ownerId; // ownerId viene del token
+    const empresaId = empresaData.id || `empresa_${Date.now()}`;
+    
+    await createEmpresa(ownerId, {
+      id: empresaId,
+      nombre: empresaData.nombre,
+      activa: empresaData.activa !== undefined ? empresaData.activa : true
+    });
     
     const nuevaEmpresaConId = {
       id: empresaId,
-      ...empresaData,
-      propietarioId: role === 'operario' && userProfile?.clienteAdminId ? userProfile.clienteAdminId : user.uid,
-      propietarioEmail: role === 'operario' && userProfile?.clienteAdminId ? 'admin@empresa.com' : user.email,
-      propietarioRole: role === 'operario' ? 'max' : role,
-      creadorId: user.uid,
-      creadorEmail: user.email,
-      creadorRole: role,
-      createdAt: new Date(),
-      socios: [role === 'operario' && userProfile?.clienteAdminId ? userProfile.clienteAdminId : user.uid]
+      ownerId,
+      nombre: empresaData.nombre,
+      activa: empresaData.activa !== undefined ? empresaData.activa : true,
+      createdAt: new Date()
     };
     
     setUserEmpresas(prevEmpresas => {
@@ -40,7 +46,7 @@ export const useContextActions = (
     });
     
     return empresaId;
-  }, [user, role, userProfile, setUserEmpresas]);
+  }, [userProfile, setUserEmpresas]);
 
   const compartirAuditoria = useCallback(async (auditoriaId, emailUsuario) => {
     await auditoriaService.compartirAuditoria(auditoriaId, emailUsuario, user, userProfile);
@@ -51,18 +57,24 @@ export const useContextActions = (
   }, [user, userProfile, loadAuditoriasCompartidas]);
 
   const verificarYCorregirEmpresas = useCallback(async () => {
-    const { empresasCorregidas, empresasActualizadas } = 
-      await empresaService.verificarYCorregirEmpresas(userEmpresas, userProfile);
-    if (empresasCorregidas > 0) {
-      setUserEmpresas(empresasActualizadas);
-    }
-    return empresasCorregidas;
-  }, [userEmpresas, userProfile, setUserEmpresas]);
+    // Método legacy eliminado - no necesario en owner-centric
+    // Las empresas ya tienen ownerId correcto desde su creación
+    return 0;
+  }, []);
 
   const updateEmpresa = useCallback(async (empresaId, updateData) => {
-    await empresaService.updateEmpresa(empresaId, updateData, userProfile);
+    if (!userProfile?.ownerId) {
+      throw new Error('ownerId es requerido para actualizar empresa');
+    }
+    
+    const ownerId = userProfile.ownerId;
+    await updateEmpresaOwner(ownerId, empresaId, {
+      nombre: updateData.nombre,
+      activa: updateData.activa
+    });
+    
     setUserEmpresas((prev) => prev.map(e => 
-      e.id === empresaId ? { ...e, ...updateData, ultimaModificacion: new Date() } : e
+      e.id === empresaId ? { ...e, ...updateData } : e
     ));
     return true;
   }, [userProfile, setUserEmpresas]);
@@ -93,7 +105,7 @@ export const useContextActions = (
   return {
     crearEmpresa,
     compartirAuditoria,
-    verificarYCorregirEmpresas,
+    verificarYCorregirEmpresas, // Mantener para compatibilidad pero siempre retorna 0
     updateEmpresa,
     forceRefreshCache
   };

@@ -17,11 +17,13 @@ import {
   PhotoLibrary as PhotoLibraryIcon,
   Delete as DeleteIcon
 } from '@mui/icons-material';
-import { query, where, getDocs, doc, getDoc, Timestamp } from 'firebase/firestore';
-import { auditUserCollection } from '../../../../firebaseControlFile';
+import { query, where, getDocs, doc, getDoc, Timestamp, collection } from 'firebase/firestore';
+import { dbAudit } from '../../../../firebaseControlFile';
+import { firestoreRoutesCore } from '../../../../core/firestore/firestoreRoutes.core';
 import { registrosAsistenciaService } from '../../../../services/registrosAsistenciaService';
 import { uploadEvidence, ensureTaskbarFolder, ensureSubFolder } from '../../../../services/controlFileB2Service';
 import { auth } from '../../../../firebaseControlFile';
+import { useAuth } from '../../../../context/AuthContext';
 import { convertirShareTokenAUrl } from '@/utils/imageUtils';
 
 /**
@@ -44,6 +46,7 @@ export default function RegistrarAsistenciaInline({
   onCancel,
   compact = false
 }) {
+  const { userProfile } = useAuth();
   const [capacitacion, setCapacitacion] = useState(capacitacionProp || null);
   const [empleados, setEmpleados] = useState([]);
   const [selectedEmpleados, setSelectedEmpleados] = useState(new Set());
@@ -62,7 +65,7 @@ export default function RegistrarAsistenciaInline({
   const blobUrlsRef = useRef(new Map());
 
   useEffect(() => {
-    if (userId && capacitacionId) {
+    if (userProfile?.ownerId && capacitacionId) {
       loadData();
     }
     
@@ -77,8 +80,10 @@ export default function RegistrarAsistenciaInline({
   }, [capacitacionId, userId]);
 
   const loadData = async () => {
-    if (!userId) {
-      setError('Usuario no autenticado');
+    // Obtener ownerId del userProfile (viene del token)
+    const ownerId = userProfile?.ownerId;
+    if (!ownerId) {
+      setError('ownerId no disponible');
       setLoading(false);
       return;
     }
@@ -87,7 +92,7 @@ export default function RegistrarAsistenciaInline({
     try {
       // Cargar capacitación si no se pasó como prop
       if (!capacitacionProp) {
-        const capacitacionRef = doc(auditUserCollection(userId, 'capacitaciones'), capacitacionId);
+        const capacitacionRef = doc(dbAudit, ...firestoreRoutesCore.capacitacion(ownerId, capacitacionId));
         const capDoc = await getDoc(capacitacionRef);
         if (!capDoc.exists()) {
           setError('Capacitación no encontrada');
@@ -100,7 +105,7 @@ export default function RegistrarAsistenciaInline({
       // Cargar empleados de la sucursal
       const capData = capacitacionProp || { id: capacitacionId };
       if (capData.sucursalId) {
-        const empleadosRef = auditUserCollection(userId, 'empleados');
+        const empleadosRef = collection(dbAudit, ...firestoreRoutesCore.empleados(ownerId));
         const q = query(
           empleadosRef,
           where('sucursalId', '==', capData.sucursalId),

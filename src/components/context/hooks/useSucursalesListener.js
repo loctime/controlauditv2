@@ -1,11 +1,12 @@
 import { useEffect } from 'react';
-import { onSnapshot } from 'firebase/firestore';
-import { auditUserCollection } from '../../../firebaseControlFile.js';
+import { onSnapshot, collection } from 'firebase/firestore';
+import { dbAudit } from '../../../firebaseControlFile.js';
+import { firestoreRoutesCore } from '../../../core/firestore/firestoreRoutes.core';
 import { normalizeSucursal } from '../../../utils/firestoreUtils';
 
 /**
  * Hook para listener reactivo de sucursales con fallback offline
- * Multi-tenant: asume que auditUserCollection ya filtra por usuario
+ * Owner-centric: asume que firestoreRoutesCore ya filtra por owner
  * Los datos devueltos son visibles directamente sin filtros adicionales
  * @param {boolean} enableListener - Si es false, el listener no se activa (optimización para evitar duplicados)
  * @param {boolean} authReady - Si es false, el listener no se activa (previene queries prematuras)
@@ -22,14 +23,15 @@ export const useSucursalesListener = (userProfile, setUserSucursales, setLoading
       return;
     }
 
-    if (!userProfile || !userProfile.uid) {
+    if (!userProfile || !userProfile.ownerId) {
       setUserSucursales([]);
       setLoadingSucursales(false);
       return;
     }
 
     setLoadingSucursales(true);
-    const sucursalesRef = auditUserCollection(userProfile.uid, 'sucursales');
+    const ownerId = userProfile.ownerId;
+    const sucursalesRef = collection(dbAudit, ...firestoreRoutesCore.sucursales(ownerId));
 
     const unsubscribe = onSnapshot(sucursalesRef, 
       (snapshot) => {
@@ -64,6 +66,6 @@ export const useSucursalesListener = (userProfile, setUserSucursales, setLoading
 
     return unsubscribe;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userProfile?.uid, enableListener, authReady]);
+  }, [userProfile?.ownerId, enableListener, authReady]);
 };
 

@@ -4,25 +4,27 @@ import {
   getDocs, 
   getDoc, 
   query, 
-  where 
+  where,
+  collection
 } from 'firebase/firestore';
-import { auditUserCollection } from '../firebaseControlFile';
+import { dbAudit } from '../firebaseControlFile';
+import { firestoreRoutesCore } from '../core/firestore/firestoreRoutes.core';
 import { registrarAccionSistema, normalizeEmpleado } from '../utils/firestoreUtils';
 import { addDocWithAppId, updateDocWithAppId, deleteDocWithAppId } from '../firebase/firestoreAppWriter';
 
 export const empleadoService = {
   /**
-   * Obtener empleados de una empresa (multi-tenant)
-   * @param {string} userId - UID del usuario
+   * Obtener empleados de una empresa (owner-centric)
+   * @param {string} ownerId - ID del owner (viene del token)
    * @param {string} empresaId - ID de la empresa
    * @returns {Promise<Array>} Lista de empleados
    */
-  async getEmpleadosByEmpresa(userId, empresaId) {
+  async getEmpleadosByEmpresa(ownerId, empresaId) {
     try {
-      if (!userId || !empresaId) return [];
+      if (!ownerId || !empresaId) return [];
 
-      // 1. Obtener sucursales de la empresa (multi-tenant)
-      const sucursalesRef = auditUserCollection(userId, 'sucursales');
+      // 1. Obtener sucursales de la empresa (owner-centric)
+      const sucursalesRef = collection(dbAudit, ...firestoreRoutesCore.sucursales(ownerId));
       const sucursalesSnapshot = await getDocs(
         query(sucursalesRef, where('empresaId', '==', empresaId))
       );
@@ -31,7 +33,7 @@ export const empleadoService = {
       if (sucursalesIds.length === 0) return [];
 
       // 2. Obtener empleados de esas sucursales (máximo 10 por query)
-      const empleadosRef = auditUserCollection(userId, 'empleados');
+      const empleadosRef = collection(dbAudit, ...firestoreRoutesCore.empleados(ownerId));
       const empleadosData = [];
       const chunkSize = 10;
       
@@ -54,16 +56,16 @@ export const empleadoService = {
   },
 
   /**
-   * Obtener empleados de una sucursal (multi-tenant)
-   * @param {string} userId - UID del usuario
+   * Obtener empleados de una sucursal (owner-centric)
+   * @param {string} ownerId - ID del owner (viene del token)
    * @param {string} sucursalId - ID de la sucursal
    * @returns {Promise<Array>} Lista de empleados
    */
-  async getEmpleadosBySucursal(userId, sucursalId) {
+  async getEmpleadosBySucursal(ownerId, sucursalId) {
     try {
-      if (!userId || !sucursalId) return [];
+      if (!ownerId || !sucursalId) return [];
 
-      const empleadosRef = auditUserCollection(userId, 'empleados');
+      const empleadosRef = collection(dbAudit, ...firestoreRoutesCore.empleados(ownerId));
       const snapshot = await getDocs(
         query(empleadosRef, where('sucursalId', '==', sucursalId))
       );
@@ -76,16 +78,16 @@ export const empleadoService = {
   },
 
   /**
-   * Obtener empleados de múltiples sucursales (multi-tenant)
-   * @param {string} userId - UID del usuario
+   * Obtener empleados de múltiples sucursales (owner-centric)
+   * @param {string} ownerId - ID del owner (viene del token)
    * @param {Array<string>} sucursalesIds - IDs de las sucursales
    * @returns {Promise<Array>} Lista de empleados
    */
-  async getEmpleadosBySucursales(userId, sucursalesIds) {
+  async getEmpleadosBySucursales(ownerId, sucursalesIds) {
     try {
-      if (!userId || !sucursalesIds || sucursalesIds.length === 0) return [];
+      if (!ownerId || !sucursalesIds || sucursalesIds.length === 0) return [];
 
-      const empleadosRef = auditUserCollection(userId, 'empleados');
+      const empleadosRef = collection(dbAudit, ...firestoreRoutesCore.empleados(ownerId));
       const empleadosData = [];
       const chunkSize = 10;
       
@@ -108,16 +110,16 @@ export const empleadoService = {
   },
 
   /**
-   * Obtener un empleado por ID (multi-tenant)
-   * @param {string} userId - UID del usuario
+   * Obtener un empleado por ID (owner-centric)
+   * @param {string} ownerId - ID del owner (viene del token)
    * @param {string} empleadoId - ID del empleado
    * @returns {Promise<Object|null>} Datos del empleado o null
    */
-  async getEmpleadoById(userId, empleadoId) {
+  async getEmpleadoById(ownerId, empleadoId) {
     try {
-      if (!userId || !empleadoId) return null;
+      if (!ownerId || !empleadoId) return null;
 
-      const empleadoRef = doc(auditUserCollection(userId, 'empleados'), empleadoId);
+      const empleadoRef = doc(dbAudit, ...firestoreRoutesCore.empleado(ownerId, empleadoId));
       const empleadoDoc = await getDoc(empleadoRef);
       
       if (empleadoDoc.exists()) {
@@ -132,17 +134,17 @@ export const empleadoService = {
   },
 
   /**
-   * Crear un nuevo empleado (multi-tenant)
-   * @param {string} userId - UID del usuario
+   * Crear un nuevo empleado (owner-centric)
+   * @param {string} ownerId - ID del owner (viene del token)
    * @param {Object} empleadoData - Datos del empleado
    * @param {Object} user - Usuario que crea el empleado
    * @returns {Promise<string>} ID del empleado creado
    */
-  async crearEmpleado(userId, empleadoData, user) {
+  async crearEmpleado(ownerId, empleadoData, user) {
     try {
-      if (!userId) throw new Error('userId es requerido');
+      if (!ownerId) throw new Error('ownerId es requerido');
 
-      const empleadosRef = auditUserCollection(userId, 'empleados');
+      const empleadosRef = collection(dbAudit, ...firestoreRoutesCore.empleados(ownerId));
       const empleadoRef = await addDocWithAppId(empleadosRef, {
         ...empleadoData,
         createdAt: new Date(),
@@ -168,18 +170,18 @@ export const empleadoService = {
   },
 
   /**
-   * Actualizar un empleado (multi-tenant)
-   * @param {string} userId - UID del usuario
+   * Actualizar un empleado (owner-centric)
+   * @param {string} ownerId - ID del owner (viene del token)
    * @param {string} empleadoId - ID del empleado
    * @param {Object} updateData - Datos a actualizar
    * @param {Object} user - Usuario que actualiza
    * @returns {Promise<boolean>} True si se actualizó correctamente
    */
-  async updateEmpleado(userId, empleadoId, updateData, user) {
+  async updateEmpleado(ownerId, empleadoId, updateData, user) {
     try {
-      if (!userId) throw new Error('userId es requerido');
+      if (!ownerId) throw new Error('ownerId es requerido');
 
-      const empleadoRef = doc(auditUserCollection(userId, 'empleados'), empleadoId);
+      const empleadoRef = doc(dbAudit, ...firestoreRoutesCore.empleado(ownerId, empleadoId));
       await updateDocWithAppId(empleadoRef, {
         ...updateData,
         updatedAt: new Date(),
@@ -204,17 +206,17 @@ export const empleadoService = {
   },
 
   /**
-   * Eliminar un empleado (multi-tenant)
-   * @param {string} userId - UID del usuario
+   * Eliminar un empleado (owner-centric)
+   * @param {string} ownerId - ID del owner (viene del token)
    * @param {string} empleadoId - ID del empleado
    * @param {Object} user - Usuario que elimina
    * @returns {Promise<boolean>} True si se eliminó correctamente
    */
-  async deleteEmpleado(userId, empleadoId, user) {
+  async deleteEmpleado(ownerId, empleadoId, user) {
     try {
-      if (!userId) throw new Error('userId es requerido');
+      if (!ownerId) throw new Error('ownerId es requerido');
 
-      const empleadoRef = doc(auditUserCollection(userId, 'empleados'), empleadoId);
+      const empleadoRef = doc(dbAudit, ...firestoreRoutesCore.empleado(ownerId, empleadoId));
       await deleteDocWithAppId(empleadoRef);
 
       // Registrar acción

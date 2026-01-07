@@ -9,7 +9,8 @@ import {
   Timestamp,
   doc
 } from "firebase/firestore";
-import { db, auditUserCollection } from "../firebaseControlFile";
+import { db } from "../firebaseControlFile";
+import { firestoreRoutesCore } from '../core/firestore/firestoreRoutes.core';
 import { addDocWithAppId, updateDocWithAppId } from "../firebase/firestoreAppWriter";
 
 const AUSENCIAS_COLLECTION = "ausencias";
@@ -124,10 +125,9 @@ export async function listAusencias({
   userProfile
 }) {
   try {
-    if (!userProfile?.uid) {
-      throw new Error('userProfile.uid es requerido para listar ausencias');
-    }
-    const ausenciasRef = auditUserCollection(userProfile.uid, AUSENCIAS_COLLECTION);
+    if (!userProfile?.ownerId) throw new Error('userProfile.ownerId es requerido');
+    const ownerId = userProfile.ownerId;
+    const ausenciasRef = collection(db, ...firestoreRoutesCore.ausencias(ownerId));
     const results = [];
 
     const fetchByQuery = async (consulta) => {
@@ -226,7 +226,7 @@ export async function createAusencia({
   userProfile
 }) {
   if (!userProfile?.uid) {
-    throw new Error('userProfile.uid es requerido para crear ausencia');
+    throw new Error('userProfile.ownerId es requerido para crear ausencia');
   }
   const payload = {
     empresaId: empresaId || null,
@@ -249,7 +249,9 @@ export async function createAusencia({
     updatedAt: serverTimestamp()
   };
 
-  const ausenciasRef = auditUserCollection(userProfile.uid, AUSENCIAS_COLLECTION);
+  if (!userProfile?.ownerId) throw new Error('userProfile.ownerId es requerido');
+  const ownerId = userProfile.ownerId;
+  const ausenciasRef = collection(db, ...firestoreRoutesCore.ausencias(ownerId));
   const docRef = await addDocWithAppId(ausenciasRef, payload);
   const snapshot = await getDocs(
     query(
@@ -264,11 +266,9 @@ export async function createAusencia({
 
 export async function updateAusencia(ausenciaId, changes = {}, userProfile) {
   if (!ausenciaId) return;
-  if (!userProfile?.uid) {
-    throw new Error('userProfile.uid es requerido para actualizar ausencia');
-  }
-  const ausenciasRef = auditUserCollection(userProfile.uid, AUSENCIAS_COLLECTION);
-  const docRef = doc(ausenciasRef, ausenciaId);
+  if (!userProfile?.ownerId) throw new Error('userProfile.ownerId es requerido para actualizar ausencia');
+  const ownerId = userProfile.ownerId;
+  const docRef = doc(db, ...firestoreRoutesCore.ausencias(ownerId), ausenciaId);
   const payload = {
     ...changes,
     updatedAt: serverTimestamp()
@@ -283,11 +283,9 @@ export async function updateAusencia(ausenciaId, changes = {}, userProfile) {
 }
 
 export async function cerrarAusencia(ausenciaId, { fechaFin = new Date() } = {}, userProfile) {
-  if (!userProfile?.uid) {
-    throw new Error('userProfile.uid es requerido para cerrar ausencia');
-  }
-  const ausenciasRef = auditUserCollection(userProfile.uid, AUSENCIAS_COLLECTION);
-  const docRef = doc(ausenciasRef, ausenciaId);
+  if (!userProfile?.ownerId) throw new Error('userProfile.ownerId es requerido para cerrar ausencia');
+  const ownerId = userProfile.ownerId;
+  const docRef = doc(db, ...firestoreRoutesCore.ausencias(ownerId), ausenciaId);
   await updateDocWithAppId(docRef, {
     estado: "cerrada",
     fechaFin: toTimestamp(fechaFin),
@@ -305,10 +303,9 @@ export const AUSENCIA_ESTADOS = [
 
 export async function getAusenciaTipos({ maxResults = 200 } = {}, userProfile) {
   try {
-    if (!userProfile?.uid) {
-      throw new Error('userProfile.uid es requerido para obtener tipos de ausencias');
-    }
-    const ausenciasRef = auditUserCollection(userProfile.uid, AUSENCIAS_COLLECTION);
+    if (!userProfile?.ownerId) throw new Error('userProfile.ownerId es requerido');
+    const ownerId = userProfile.ownerId;
+    const ausenciasRef = collection(db, ...firestoreRoutesCore.ausencias(ownerId));
     const consulta = query(ausenciasRef, orderBy("tipo", "asc"), limit(maxResults));
     const snapshot = await getDocs(consulta);
     const unique = new Set();

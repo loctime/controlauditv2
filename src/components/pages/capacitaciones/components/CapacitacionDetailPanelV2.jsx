@@ -27,7 +27,8 @@ import useControlFileImages from '../../../../hooks/useControlFileImages';
 import { capacitacionService } from '../../../../services/capacitacionService';
 import { registrosAsistenciaServiceAdapter } from '../../../../services/adapters/registrosAsistenciaServiceAdapter';
 import { convertirShareTokenAUrl } from '../../../../utils/imageUtils';
-import { auditUserCollection } from '../../../../firebaseControlFile';
+import { dbAudit } from '../../../../firebaseControlFile';
+import { firestoreRoutesCore } from '../../../../core/firestore/firestoreRoutes.core';
 import { getDoc, doc } from 'firebase/firestore';
 import { normalizeEmpleado } from '../../../../utils/firestoreUtils';
 
@@ -112,8 +113,8 @@ const ContenidoRegistros = ({ entityId, userId, registryService, refreshKey }) =
       if (todosEmpleadoIds.size === 0) return;
 
       try {
-        // Cargar empleados por ID usando getDoc
-        const empleadosRef = auditUserCollection(userId, 'empleados');
+        // Cargar empleados por ID usando getDoc (owner-centric)
+        const ownerId = userId; // En este contexto, userId es ownerId
         const empleadosData = [];
         const empleadoIdsArray = Array.from(todosEmpleadoIds);
 
@@ -122,7 +123,7 @@ const ContenidoRegistros = ({ entityId, userId, registryService, refreshKey }) =
         for (let i = 0; i < empleadoIdsArray.length; i += chunkSize) {
           const chunk = empleadoIdsArray.slice(i, i + chunkSize);
           const promises = chunk.map(empId => 
-            getDoc(doc(empleadosRef, empId))
+            getDoc(doc(dbAudit, ...firestoreRoutesCore.empleado(ownerId, empId)))
               .then(docSnap => {
                 if (docSnap.exists()) {
                   return normalizeEmpleado(docSnap);

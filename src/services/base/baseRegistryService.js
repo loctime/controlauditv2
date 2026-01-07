@@ -28,7 +28,8 @@ import {
   updateDoc,
   arrayUnion
 } from 'firebase/firestore';
-import { auditUserCollection } from '../../firebaseControlFile';
+import { dbAudit } from '../../firebaseControlFile';
+import { firestoreRoutesCore } from '../../core/firestore/firestoreRoutes.core';
 import { addDocWithAppId } from '../../firebase/firestoreAppWriter';
 import { registrarAccionSistema } from '../../utils/firestoreUtils';
 
@@ -102,18 +103,18 @@ export function createBaseRegistryService({
 
   return {
     /**
-     * Crear registro base
+     * Crear registro base (owner-centric)
      * @param {Object} params
-     * @param {string} params.userId - UID del usuario
+     * @param {string} params.ownerId - ID del owner (viene del token)
      * @param {string} params.entityId - ID de la entidad padre
      * @param {Array|Object} params.personas - Personas involucradas (formato específico del dominio)
      * @param {Array} params.evidencias - Evidencias (vacío inicialmente)
      * @param {Object} params.metadata - Metadata adicional del registro
      * @returns {Promise<{id: string}>}
      */
-    async createRegistry({ userId, entityId, personas, evidencias = [], metadata = {} }) {
+    async createRegistry({ ownerId, entityId, personas, evidencias = [], metadata = {} }) {
       try {
-        if (!userId) throw new Error('userId es requerido');
+        if (!ownerId) throw new Error('ownerId es requerido');
         if (!entityId) throw new Error(`${entityIdField} es requerido`);
 
         // Validar personas
@@ -140,9 +141,10 @@ export function createBaseRegistryService({
           [personasField]: personasNormalizadas,
           [evidenciasField]: evidenciasSanitizadas,
           fecha: metadata.fecha || Timestamp.now(),
-          creadoPor: metadata.creadoPor || userId,
+          creadoPor: metadata.creadoPor || ownerId,
           createdAt: Timestamp.now(),
           appId: 'auditoria',
+          ownerId: ownerId,
           ...metadata
         };
 
@@ -160,12 +162,13 @@ export function createBaseRegistryService({
           [evidenciasField]: evidenciasSanitizadas.length
         });
 
-        const registrosRef = auditUserCollection(userId, collectionName);
+        // Construir ruta owner-centric dinámicamente
+        const registrosRef = collection(dbAudit, 'apps', 'auditoria', 'owners', ownerId, collectionName);
         const registroRef = await addDocWithAppId(registrosRef, registroData);
 
         // Registrar acción del sistema
         await registrarAccionSistema(
-          metadata.creadoPor || userId,
+          metadata.creadoPor || ownerId,
           `Registro creado en ${collectionName}`,
           { 
             registroId: registroRef.id, 
@@ -186,16 +189,16 @@ export function createBaseRegistryService({
     },
 
     /**
-     * Asociar evidencias a un registro existente
+     * Asociar evidencias a un registro existente (owner-centric)
      * @param {Object} params
-     * @param {string} params.userId - UID del usuario
+     * @param {string} params.ownerId - ID del owner (viene del token)
      * @param {string} params.registroId - ID del registro
      * @param {Array} params.evidencias - Array de evidencias con metadata
      * @returns {Promise<void>}
      */
-    async attachEvidencias({ userId, registroId, evidencias }) {
+    async attachEvidencias({ ownerId, registroId, evidencias }) {
       try {
-        if (!userId) throw new Error('userId es requerido');
+        if (!ownerId) throw new Error('ownerId es requerido');
         if (!registroId) throw new Error('registroId es requerido');
         if (!evidencias || evidencias.length === 0) {
           console.warn(`[${collectionName}] attachEvidencias: No hay evidencias para asociar`);
@@ -206,13 +209,12 @@ export function createBaseRegistryService({
         const evidenciasSanitizadas = sanitizeEvidencias(evidencias, validateEvidencias);
 
         console.log(`[${collectionName}] attachEvidencias:`, {
-          userId,
+          ownerId,
           registroId,
           evidenciasCount: evidenciasSanitizadas.length
         });
 
-        const registrosRef = auditUserCollection(userId, collectionName);
-        const registroRef = doc(registrosRef, registroId);
+        const registroRef = doc(dbAudit, 'apps', 'auditoria', 'owners', ownerId, collectionName, registroId);
 
         // Actualizar el documento agregando las evidencias al array usando arrayUnion
         await updateDoc(registroRef, {
@@ -227,15 +229,15 @@ export function createBaseRegistryService({
     },
 
     /**
-     * Obtener registros por entidad
-     * @param {string} userId - UID del usuario
+     * Obtener registros por entidad (owner-centric)
+     * @param {string} ownerId - ID del owner (viene del token)
      * @param {string} entityId - ID de la entidad
      * @returns {Promise<Array>} Lista de registros ordenados por fecha descendente
      */
-    async getRegistriesByEntity(userId, entityId) {
+    async getRegistriesByEntity(ownerId, entityId) {
       try {
-        if (!userId || !entityId) {
-          console.warn(`[${collectionName}] getRegistriesByEntity: parámetros faltantes`, { userId, entityId });
+        if (!ownerId || !entityId) {
+          console.warn(`[${collectionName}] getRegistriesByEntity: parámetros faltantes`, { ownerId, entityId });
           return [];
         }
 
@@ -243,13 +245,13 @@ export function createBaseRegistryService({
         const entityIdStr = String(entityId);
         
         console.log(`[${collectionName}] Buscando registros:`, { 
-          userId, 
+          ownerId, 
           [entityIdField]: entityIdStr,
           tipoOriginal: typeof entityId,
           tipoNormalizado: typeof entityIdStr
         });
         
-        const registrosRef = auditUserCollection(userId, collectionName);
+        const registrosRef = collection(dbAudit, 'apps', 'auditoria', 'owners', ownerId, collectionName);
         
         try {
           // Intentar query con índice compuesto (entityId + fecha)
@@ -332,22 +334,22 @@ export function createBaseRegistryService({
     },
 
     /**
-     * Obtener personas únicas por entidad
-     * @param {string} userId - UID del usuario
+     * Obtener personas únicas por entidad (owner-centric)
+     * @param {string} ownerId - ID del owner (viene del token)
      * @param {string} entityId - ID de la entidad
      * @returns {Promise<Array<string>>} IDs únicos de personas
      */
-    async getPersonasUnicasByEntity(userId, entityId) {
+    async getPersonasUnicasByEntity(ownerId, entityId) {
       try {
         const entityIdStr = String(entityId);
         
         console.log(`[${collectionName}] getPersonasUnicasByEntity:`, { 
-          userId, 
+          ownerId, 
           [entityIdField]: entityIdStr,
           tipoOriginal: typeof entityId
         });
         
-        const registros = await this.getRegistriesByEntity(userId, entityIdStr);
+        const registros = await this.getRegistriesByEntity(ownerId, entityIdStr);
         const personasUnicas = new Set();
         
         registros.forEach(reg => {
@@ -379,22 +381,22 @@ export function createBaseRegistryService({
     },
 
     /**
-     * Obtener evidencias por entidad
-     * @param {string} userId - UID del usuario
+     * Obtener evidencias por entidad (owner-centric)
+     * @param {string} ownerId - ID del owner (viene del token)
      * @param {string} entityId - ID de la entidad
      * @returns {Promise<Array>} Lista de evidencias con metadatos del registro
      */
-    async getEvidenciasByEntity(userId, entityId) {
+    async getEvidenciasByEntity(ownerId, entityId) {
       try {
         const entityIdStr = String(entityId);
         
         console.log(`[${collectionName}] getEvidenciasByEntity:`, { 
-          userId, 
+          ownerId, 
           [entityIdField]: entityIdStr,
           tipoOriginal: typeof entityId
         });
         
-        const registros = await this.getRegistriesByEntity(userId, entityIdStr);
+        const registros = await this.getRegistriesByEntity(ownerId, entityIdStr);
         const evidenciasConRegistro = [];
 
         registros.forEach(reg => {
@@ -423,19 +425,19 @@ export function createBaseRegistryService({
     },
 
     /**
-     * Obtener estadísticas básicas por entidad
-     * @param {string} userId - UID del usuario
+     * Obtener estadísticas básicas por entidad (owner-centric)
+     * @param {string} ownerId - ID del owner (viene del token)
      * @param {string} entityId - ID de la entidad
      * @returns {Promise<Object>} Estadísticas
      */
-    async getStatsByEntity(userId, entityId) {
+    async getStatsByEntity(ownerId, entityId) {
       try {
         const entityIdStr = String(entityId);
         
         const [registros, personasUnicas, evidencias] = await Promise.all([
-          this.getRegistriesByEntity(userId, entityIdStr),
-          this.getPersonasUnicasByEntity(userId, entityIdStr),
-          this.getEvidenciasByEntity(userId, entityIdStr)
+          this.getRegistriesByEntity(ownerId, entityIdStr),
+          this.getPersonasUnicasByEntity(ownerId, entityIdStr),
+          this.getEvidenciasByEntity(ownerId, entityIdStr)
         ]);
 
         return {

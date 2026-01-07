@@ -5,24 +5,26 @@ import {
   useTheme, useMediaQuery, alpha, Card, CardContent, IconButton, Tooltip
 } from '@mui/material';
 import { Business as BusinessIcon, ExpandMore as ExpandMoreIcon, Store as StoreIcon, LocationOn, Phone, Person } from '@mui/icons-material';
-import { query, where, onSnapshot } from 'firebase/firestore';
-import { auditUserCollection } from '../../../firebaseControlFile';
+import { query, where, onSnapshot, collection } from 'firebase/firestore';
+import { dbAudit } from '../../../firebaseControlFile';
+import { firestoreRoutesCore } from '../../../core/firestore/firestoreRoutes.core';
 import { useNavigate } from 'react-router-dom';
 import { normalizeSucursal } from '../../../utils/firestoreUtils';
+import { useAuth } from '../../../context/AuthContext';
 
-// Componente para mostrar sucursales de una empresa
-const SucursalesEmpresa = ({ empresaId, propietarioId }) => {
+// Componente para mostrar sucursales de una empresa (owner-centric)
+const SucursalesEmpresa = ({ empresaId, ownerId }) => {
   const [sucursales, setSucursales] = useState([]);
   const [loading, setLoading] = useState(true);
   const theme = useTheme();
   const isSmallMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
   useEffect(() => {
-    if (!empresaId || !propietarioId) return;
+    if (!empresaId || !ownerId) return;
     setLoading(true);
     
-    // Construir ruta correcta usando auditUserCollection
-    const sucursalesRef = auditUserCollection(propietarioId, 'sucursales');
+    // Construir ruta correcta usando firestoreRoutesCore (owner-centric)
+    const sucursalesRef = collection(dbAudit, ...firestoreRoutesCore.sucursales(ownerId));
     console.log('[SucursalesEmpresa] Buscando sucursales para empresa', empresaId, 'en path:', sucursalesRef.path);
     
     const q = query(sucursalesRef, where('empresaId', '==', empresaId));
@@ -35,7 +37,7 @@ const SucursalesEmpresa = ({ empresaId, propietarioId }) => {
       setLoading(false);
     });
     return () => unsubscribe();
-  }, [empresaId, propietarioId]);
+  }, [empresaId, ownerId]);
 
   if (loading) return (
     <Box sx={{ textAlign: 'center', py: 2 }}>
@@ -124,10 +126,14 @@ const PerfilEmpresas = ({ empresas, loading }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const isSmallMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const { userProfile } = useAuth();
   
   // Log de depuración
   console.debug('[PerfilEmpresas] empresas:', empresas);
   const navigate = useNavigate();
+  
+  // Obtener ownerId del userProfile (viene del token)
+  const ownerId = userProfile?.ownerId;
 
   return (
     <Box sx={{ 
@@ -370,7 +376,7 @@ const PerfilEmpresas = ({ empresas, loading }) => {
                   >
                     🏪 Sucursales
                   </Typography>
-                  <SucursalesEmpresa empresaId={empresa.id} propietarioId={empresa.propietarioId} />
+                  <SucursalesEmpresa empresaId={empresa.id} ownerId={ownerId || empresa.ownerId} />
                 </Box>
               </CardContent>
             </Card>
