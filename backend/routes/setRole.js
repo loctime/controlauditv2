@@ -3,15 +3,24 @@ import admin from '../firebaseAdmin.js';
 
 const router = express.Router();
 
-// Middleware: solo superadmin puede asignar roles
-const verificarSuperAdmin = async (req, res, next) => {
+// Middleware: solo admin puede asignar roles (owner-centric)
+const verificarAdmin = async (req, res, next) => {
   try {
     const token = req.headers.authorization?.split('Bearer ')[1];
     if (!token) return res.status(401).json({ error: 'Token no proporcionado' });
     const decodedToken = await admin.auth().verifyIdToken(token);
-    if (decodedToken.role !== 'supermax') {
-      return res.status(403).json({ error: 'Solo superadmin puede asignar roles' });
+    
+    // Validación owner-centric
+    if (decodedToken.appId !== 'auditoria') {
+      return res.status(403).json({ error: 'Token inválido: appId debe ser "auditoria"' });
     }
+    if (decodedToken.role !== 'admin') {
+      return res.status(403).json({ error: 'Solo admin puede asignar roles' });
+    }
+    if (decodedToken.ownerId !== decodedToken.uid) {
+      return res.status(403).json({ error: 'Token inválido: admin debe tener ownerId === uid' });
+    }
+    
     req.user = decodedToken;
     next();
   } catch (error) {
@@ -19,17 +28,29 @@ const verificarSuperAdmin = async (req, res, next) => {
   }
 };
 
-// POST /api/set-role { uid, role }
-router.post('/', verificarSuperAdmin, async (req, res) => {
-  const { uid, role } = req.body;
+// POST /api/set-role { uid, role, ownerId? }
+// Endpoint para asignar roles (solo admin, uso administrativo interno)
+router.post('/', verificarAdmin, async (req, res) => {
+  const { uid, role, ownerId } = req.body;
   if (!uid || !role) return res.status(400).json({ error: 'Faltan datos (uid, role)' });
-  if (!['supermax', 'max', 'operario'].includes(role)) {
-    return res.status(400).json({ error: 'Rol no permitido' });
+  
+  // Solo permitir roles owner-centric
+  if (!['admin', 'operario'].includes(role)) {
+    return res.status(400).json({ error: 'Rol no permitido. Solo se permiten: admin, operario' });
   }
+  
   try {
-    await admin.auth().setCustomUserClaims(uid, { role });
-    console.log(`[setRole] Superadmin ${req.user.uid} asignó rol ${role} a ${uid}`);
-    res.json({ success: true, message: `Rol ${role} asignado a ${uid}` });
+    // Construir custom claims owner-centric
+    const customClaims = {
+      appId: 'auditoria',
+      role: role,
+      ...(role === 'operario' && ownerId && { ownerId: ownerId }),
+      ...(role === 'admin' && { ownerId: uid }) // Admin siempre tiene ownerId === uid
+    };
+    
+    await admin.auth().setCustomUserClaims(uid, customClaims);
+    console.log(`[setRole] Admin ${req.user.uid} asignó rol ${role} a ${uid}`, customClaims);
+    res.json({ success: true, message: `Rol ${role} asignado a ${uid}`, claims: customClaims });
   } catch (error) {
     console.error('[setRole] Error:', error);
     res.status(500).json({ error: error.message });

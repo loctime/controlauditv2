@@ -137,10 +137,13 @@ const OwnerUserCreateDialog = ({ open, onClose, onSuccess }) => {
       // 4. Llamar al backend para crear usuario en Firebase Auth
       console.log('[OwnerUserCreateDialog] [PASO 2] Enviando request al backend...', { endpoint });
       
-      // Timeout de 20 segundos para el fetch
-      const fetchTimeout = 20000;
+      // Timeout de 40 segundos para el fetch (Render.com puede tener cold starts)
+      const fetchTimeout = 40000;
       const controller = new AbortController();
+      const fetchStartTime = Date.now();
       const timeoutId = setTimeout(() => {
+        const elapsed = Date.now() - fetchStartTime;
+        console.error('[OwnerUserCreateDialog] [PASO 2] ⚠️ TIMEOUT después de', elapsed, 'ms');
         controller.abort();
       }, fetchTimeout);
 
@@ -156,10 +159,14 @@ const OwnerUserCreateDialog = ({ open, onClose, onSuccess }) => {
           signal: controller.signal
         });
         clearTimeout(timeoutId);
+        const elapsed = Date.now() - fetchStartTime;
+        console.log('[OwnerUserCreateDialog] [PASO 2] ✅ Respuesta recibida en', elapsed, 'ms');
       } catch (fetchError) {
         clearTimeout(timeoutId);
+        const elapsed = Date.now() - fetchStartTime;
+        console.error('[OwnerUserCreateDialog] [PASO 2] ❌ Error en fetch después de', elapsed, 'ms:', fetchError);
         if (fetchError.name === 'AbortError') {
-          throw new Error('El servidor no respondió a tiempo. Por favor, intenta nuevamente.');
+          throw new Error(`El servidor no respondió después de ${Math.round(fetchTimeout/1000)} segundos. El backend puede estar iniciando (cold start). Por favor, intenta nuevamente.`);
         }
         throw fetchError;
       }

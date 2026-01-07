@@ -134,18 +134,28 @@ const verificarTokenAdmin = async (req, res, next) => {
       return res.status(401).json({ error: 'Token no proporcionado' });
     }
     const decodedToken = await admin.auth().verifyIdToken(token);
-    // Validar que role y ownerId siempre vengan de custom claims (sin fallback legacy)
+    
+    // Validación owner-centric: usar SOLO custom claims (sin fallback legacy)
+    // 1. Validar appId
+    if (decodedToken.appId !== 'auditoria') {
+      return res.status(403).json({ error: 'Token inválido: appId debe ser "auditoria"' });
+    }
+    
+    // 2. Validar role
     if (!decodedToken.role) {
       return res.status(403).json({ error: 'No tienes permisos para gestionar usuarios (sin claim de rol).' });
     }
-    // Solo permitir si es admin (max ya no existe, solo admin y operario)
+    
+    // 3. Solo permitir si es admin
     if (decodedToken.role !== 'admin') {
       return res.status(403).json({ error: 'No tienes permisos para gestionar usuarios' });
     }
-    // Para admin, ownerId debe ser igual al uid
-    if (decodedToken.role === 'admin' && decodedToken.ownerId !== decodedToken.uid) {
+    
+    // 4. Para admin, ownerId debe ser igual al uid
+    if (decodedToken.ownerId !== decodedToken.uid) {
       return res.status(403).json({ error: 'Token inválido: admin debe tener ownerId === uid' });
     }
+    
     req.user = decodedToken;
     next();
   } catch (error) {
@@ -166,9 +176,9 @@ const verificarTokenAdmin = async (req, res, next) => {
   }
 };
 
-// 1. Crear usuario (ya existente, mejorado)
+// 1. Crear usuario (owner-centric)
 app.post('/api/admin/create-user', verificarTokenAdmin, async (req, res) => {
-  const { email, password, nombre, role = 'operario', permisos = {}, clienteAdminId } = req.body;
+  const { email, password, nombre, role = 'operario', permisos = {} } = req.body;
   
   if (!email || !password || !nombre) {
     return res.status(400).json({ error: 'Faltan datos obligatorios' });
@@ -185,21 +195,16 @@ app.post('/api/admin/create-user', verificarTokenAdmin, async (req, res) => {
       });
     }
 
-    // SEGURIDAD: Si el usuario que crea es 'max', forzar role='operario'
-    // Los usuarios max solo pueden crear operarios, nunca administradores
-    let finalRole = role;
-    if (req.user.role === 'max') {
-      finalRole = 'operario';
-      console.log(`[SECURITY] Usuario max intentó crear usuario con role '${role}', forzado a 'operario'`);
-    }
-
-    // Validar que no se intenten crear roles privilegiados desde frontend
-    if (finalRole === 'max' || finalRole === 'supermax') {
+    // Validar que solo se puedan crear operarios desde el frontend
+    // Los admins solo se crean mediante scripts del backend
+    if (role !== 'operario') {
       return res.status(403).json({ 
-        error: 'No se pueden crear usuarios con roles privilegiados desde el frontend',
+        error: 'Solo se pueden crear usuarios con rol "operario" desde el frontend',
         message: 'Los administradores solo se crean mediante scripts del backend'
       });
     }
+    
+    const finalRole = 'operario';
 
     // 1. Crear usuario en Firebase Auth
     const userRecord = await admin.auth().createUser({
@@ -213,9 +218,10 @@ app.post('/api/admin/create-user', verificarTokenAdmin, async (req, res) => {
     // 2. Obtener ownerId (el admin que está creando el usuario)
     const ownerId = req.user.uid;
     
-    // 3. Asignar custom claims con role y ownerId (CRÍTICO para operarios)
+    // 3. Asignar custom claims owner-centric (CRÍTICO)
     // Esto debe ejecutarse ANTES de crear documento en owner-centric
     const customClaims = { 
+      appId: 'auditoria',
       role: finalRole,
       ...(finalRole === 'operario' && { ownerId: ownerId }) // Solo operarios tienen ownerId en claims
     };
@@ -335,7 +341,7 @@ app.delete('/api/delete-user/:uid', verificarTokenAdmin, async (req, res) => {
 
 
 
-app.use('/api/set-role', setRoleRouter); // Solo para superadmin, uso administrativo
+app.use('/api/set-role', setRoleRouter); // Solo para admin, uso administrativo interno
 
 // Iniciar servidor con configuración flexible
 const PORT = process.env.PORT || config.server.port;
