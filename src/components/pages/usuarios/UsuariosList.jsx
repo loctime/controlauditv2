@@ -71,7 +71,7 @@ const UsuariosList = ({ ownerId: propOwnerId, showAddButton = true }) => {
 
   // Validación de límite de usuarios
   const limiteUsuarios = userProfile?.limiteUsuarios ?? 0;
-  const usuariosActuales = usuarios.length;
+  const usuariosActuales = Array.isArray(usuarios) ? usuarios.length : 0;
   const puedeAgregar = usuariosActuales < limiteUsuarios || !limiteUsuarios; // Si no hay límite, permitir
 
   // Obtener ownerId del usuario autenticado (viene del token)
@@ -85,13 +85,13 @@ const UsuariosList = ({ ownerId: propOwnerId, showAddButton = true }) => {
         console.warn('[UsuariosList] No hay ownerId, usando servicio legacy');
         // Fallback a servicio legacy si no hay ownerId
         const lista = await userService.listUsers();
-        setUsuarios(lista);
+        setUsuarios(Array.isArray(lista) ? lista : []);
         return;
       }
 
       // Usar servicio owner-centric que combina legacy y owner-centric
       const lista = await getUsers(ownerId);
-      setUsuarios(lista);
+      setUsuarios(Array.isArray(lista) ? lista : []);
     } catch (error) {
       // No mostrar error si es permission-denied (error visual falso después de crear usuario)
       const isPermissionDenied = 
@@ -341,7 +341,7 @@ const UsuariosList = ({ ownerId: propOwnerId, showAddButton = true }) => {
         <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
           <CircularProgress />
         </Box>
-      ) : usuarios.length === 0 ? (
+      ) : !Array.isArray(usuarios) || usuarios.length === 0 ? (
         <Alert severity="info">No hay usuarios para mostrar.</Alert>
       ) : (
         <TableContainer component={Paper}>
