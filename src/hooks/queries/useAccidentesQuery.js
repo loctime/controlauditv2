@@ -1,9 +1,10 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useRef } from 'react';
-import { query, where, orderBy, onSnapshot } from 'firebase/firestore';
+import { query, where, orderBy, onSnapshot, collection } from 'firebase/firestore';
 import { obtenerAccidentes } from '../../services/accidenteService';
-import { auditUserCollection } from '../../firebaseControlFile';
-import { useAuth } from '../../components/context/AuthContext';
+import { dbAudit } from '../../firebaseControlFile';
+import { firestoreRoutesCore } from '../../core/firestore/firestoreRoutes.core';
+import { useAuth } from '@/components/context/AuthContext';
 
 /**
  * Hook TanStack Query para accidentes
@@ -109,7 +110,12 @@ export const useAccidentesQuery = (
     console.log('[useAccidentesQuery] Activando listener reactivo de accidentes');
     listenerActiveRef.current = true;
     currentQueryKeyRef.current = queryKey;
-    const accidentesRef = auditUserCollection(userId, 'accidentes');
+    if (!userProfile?.ownerId) {
+      console.error('[useAccidentesQuery] ownerId no disponible');
+      return;
+    }
+    const ownerId = userProfile.ownerId;
+    const accidentesRef = collection(dbAudit, ...firestoreRoutesCore.accidentes(ownerId));
     
     const conditions = [];
     if (filtros.empresaId) {
@@ -154,7 +160,7 @@ export const useAccidentesQuery = (
       listenerActiveRef.current = false;
       unsubscribe();
     };
-  }, [authReady, userId, filtros, queryClient, queryKey]);
+  }, [authReady, userId, userProfile?.ownerId, filtros, queryClient, queryKey]);
 
   return {
     accidentes,

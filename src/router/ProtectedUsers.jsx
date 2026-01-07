@@ -1,5 +1,5 @@
 // src/router/ProtectedUsers.js
-import { useAuth } from "../components/context/AuthContext";
+import { useAuth } from '@/components/context/AuthContext';
 import { Outlet, Navigate } from "react-router-dom";
 import { Box, CircularProgress, Typography, Alert, Button } from "@mui/material";
 

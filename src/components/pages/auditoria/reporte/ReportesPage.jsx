@@ -44,7 +44,7 @@ import PrintIcon from '@mui/icons-material/Print';
 import Swal from 'sweetalert2';
 import "./ReportesPage.css";
 import FiltrosReportes from "./FiltrosReportes";
-import { useAuth } from "../../../context/AuthContext";
+import { useAuth } from '@/components/context/AuthContext';
 import { getEmpresaIdFromReporte } from '../../../../services/useMetadataService';
 import dayjs from 'dayjs';
 import ReporteDetallePro from './ReporteDetallePro';

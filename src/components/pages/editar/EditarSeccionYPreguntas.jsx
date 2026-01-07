@@ -20,7 +20,7 @@ import EditIcon from "@mui/icons-material/Edit";
 import QuestionAnswerIcon from "@mui/icons-material/QuestionAnswer";
 import LabelIcon from "@mui/icons-material/Label";
 import DragIndicatorIcon from "@mui/icons-material/DragIndicator";
-import { useAuth } from "../../context/AuthContext";
+import { useAuth } from '@/components/context/AuthContext';
 import { alpha } from "@mui/material/styles";
 import { 
   useNormalizarSecciones, 

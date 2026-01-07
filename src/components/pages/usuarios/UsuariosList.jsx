@@ -25,7 +25,7 @@ import {
 import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon } from '@mui/icons-material';
 import { collection, getDocs, doc, deleteDoc, updateDoc, setDoc, query, where } from 'firebase/firestore';
 import { db } from '../../../firebaseControlFile';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '@/components/context/AuthContext';
 import { toast } from 'react-toastify';
 import { registrarAccionSistema } from '../../../utils/firestoreUtils';
 import Permiso from '../../common/Permiso';

@@ -22,7 +22,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { obtenerEmpleadosPorSucursal } from '../../../services/accidenteService';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '@/components/context/AuthContext';
 
 const NuevoIncidenteModal = ({ open, onClose, onIncidenteCreado, empresaId, sucursalId, empresaNombre, sucursalNombre }) => {
   const { userProfile } = useAuth();

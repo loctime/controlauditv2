@@ -1,5 +1,5 @@
 import { useEffect, useMemo } from 'react';
-import { useAuth } from '../components/context/AuthContext';
+import { useAuth } from '@/components/context/AuthContext';
 
 /**
  * Hook global para manejar la selección de empresa y sucursal

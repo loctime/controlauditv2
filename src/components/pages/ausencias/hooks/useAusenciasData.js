@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { listAusencias } from "../../../../services/ausenciasService";
-import { useAuth } from "../../../../components/context/AuthContext";
+import { useAuth } from '@/components/context/AuthContext';
 
 export const useAusenciasData = (
   selectedEmpresa,

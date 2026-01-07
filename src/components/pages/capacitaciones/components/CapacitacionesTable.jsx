@@ -32,7 +32,7 @@ import {
   PersonAdd as PersonAddIcon
 } from '@mui/icons-material';
 import { registrosAsistenciaService } from '../../../../services/registrosAsistenciaService';
-import { useAuth } from '../../../context/AuthContext';
+import { useAuth } from '@/components/context/AuthContext';
 
 /* ===================== Utils ===================== */
 

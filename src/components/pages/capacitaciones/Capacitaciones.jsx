@@ -12,7 +12,7 @@ import {
   Tab
 } from '@mui/material';
 import { Add as AddIcon } from '@mui/icons-material';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '@/components/context/AuthContext';
 import { useNavigate, useLocation } from 'react-router-dom';
 import CapacitacionForm from './CapacitacionForm';
 import RealizarCapacitacion from './RealizarCapacitacion';

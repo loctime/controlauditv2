@@ -28,9 +28,11 @@ import useControlFileImages from '../../../../hooks/useControlFileImages';
 import { obtenerAccidentePorId } from '../../../../services/accidenteService';
 import { registrosAccidenteService } from '../../../../services/registrosAccidenteService';
 import { convertirShareTokenAUrl } from '../../../../utils/imageUtils';
-import { auditUserCollection } from '../../../../firebaseControlFile';
-import { getDoc, doc } from 'firebase/firestore';
+import { dbAudit } from '../../../../firebaseControlFile';
+import { firestoreRoutesCore } from '../../../../core/firestore/firestoreRoutes.core';
+import { getDoc, doc, collection } from 'firebase/firestore';
 import { normalizeEmpleado } from '../../../../utils/firestoreUtils';
+import { useAuth } from '@/components/context/AuthContext';
 
 const accidenteServiceWrapper = {
   async getById(userId, accidenteId) {
@@ -47,6 +49,7 @@ const getEstadoColor = (estado) => {
 };
 
 const ContenidoRegistros = ({ entityId, userId, registryService, refreshKey }) => {
+  const { userProfile } = useAuth();
   const [registros, setRegistros] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
   // Map de registroId -> empleados cargados
@@ -119,7 +122,12 @@ const ContenidoRegistros = ({ entityId, userId, registryService, refreshKey }) =
 
       try {
         // Cargar empleados por ID usando getDoc
-        const empleadosRef = auditUserCollection(userId, 'empleados');
+        if (!userProfile?.ownerId) {
+          console.error('[ContenidoRegistros] ownerId no disponible');
+          return;
+        }
+        const ownerId = userProfile.ownerId;
+        const empleadosRef = collection(dbAudit, ...firestoreRoutesCore.empleados(ownerId));
         const empleadosData = [];
         const empleadoIdsArray = Array.from(todosEmpleadoIds);
 
@@ -185,7 +193,7 @@ const ContenidoRegistros = ({ entityId, userId, registryService, refreshKey }) =
     };
 
     loadEmpleados();
-  }, [registros, userId]);
+  }, [registros, userId, userProfile?.ownerId]);
 
   if (loading) {
     return (

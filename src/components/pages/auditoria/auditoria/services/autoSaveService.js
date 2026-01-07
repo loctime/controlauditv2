@@ -1,5 +1,6 @@
-import { doc, setDoc, getDoc, deleteDoc, query, where, getDocs } from 'firebase/firestore';
-import { dbAudit, auditAutosaveCollection } from '../../../../../firebaseControlFile';
+import { doc, setDoc, getDoc, deleteDoc, query, where, getDocs, collection } from 'firebase/firestore';
+import { dbAudit } from '../../../../../firebaseControlFile';
+import { firestoreRoutesCore } from '../../../../../core/firestore/firestoreRoutes.core';
 import { getOfflineDatabase, generateOfflineId, checkStorageLimit } from '../../../../../services/offlineDatabase';
 import syncQueueService from '../../../../../services/syncQueue';
 import { canWriteToFirestore, isContextComplete } from '../../../../../utils/firestoreWriteCheck';
@@ -103,7 +104,7 @@ class AutoSaveService {
   }
 
   // Limpiar datos guardados (localStorage, IndexedDB y Firestore)
-  async clearLocalStorage(userId = null) {
+  async clearLocalStorage(userId = null, ownerId = null) {
     try {
       // Limpiar localStorage
       localStorage.removeItem(this.storageKey);
@@ -133,15 +134,16 @@ class AutoSaveService {
           logger.warn('Error al limpiar IndexedDB:', indexedDBError);
         }
         
-        // Limpiar Firestore si está online
-        if (this.isOnline) {
+        // Limpiar Firestore si está online y hay ownerId
+        if (this.isOnline && ownerId) {
           try {
-            const autosaveRef = auditAutosaveCollection(userId);
+            const autosaveRef = collection(dbAudit, ...firestoreRoutesCore.autosaves(ownerId));
             const querySnapshot = await getDocs(autosaveRef);
             
             const deletePromises = [];
             querySnapshot.forEach((docSnapshot) => {
-              deletePromises.push(deleteDoc(doc(autosaveRef, docSnapshot.id)));
+              const autosaveDocRef = doc(dbAudit, ...firestoreRoutesCore.autosave(ownerId, docSnapshot.id));
+              deletePromises.push(deleteDoc(autosaveDocRef));
             });
             
             await Promise.all(deletePromises);
@@ -205,6 +207,13 @@ class AutoSaveService {
         } catch (e) {
           logger.debug('No se pudo obtener userProfile del cache:', e);
         }
+      }
+
+      // Obtener ownerId desde userProfile (viene del token)
+      const ownerId = userProfile?.ownerId;
+      if (!ownerId) {
+        logger.warn('ownerId no disponible, guardando solo offline');
+        return await this.saveOffline(userId, auditoriaData);
       }
 
       // Verificar si se puede escribir en Firestore
@@ -288,12 +297,11 @@ class AutoSaveService {
         autoSaved: true
       };
 
-      // Guardar en Firestore (solo metadatos y datos serializados)
+      // Guardar en Firestore (solo metadatos y datos serializados) - owner-centric
       try {
-        const autosaveRef = auditAutosaveCollection(userId);
-        const docRef = doc(autosaveRef, sessionId);
-        await setDoc(docRef, saveData);
-        logger.autosave('Guardado en Firestore exitoso', { sessionId, userId });
+        const autosaveDocRef = doc(dbAudit, ...firestoreRoutesCore.autosave(ownerId, sessionId));
+        await setDoc(autosaveDocRef, saveData);
+        logger.autosave('Guardado en Firestore exitoso (owner-centric)', { sessionId, userId, ownerId });
       } catch (firestoreError) {
         // Clasificar errores apropiadamente
         logger.firestore(
@@ -558,11 +566,14 @@ class AutoSaveService {
   }
 
   // Cargar desde Firestore
-  async loadFromFirestore(userId, sessionId) {
+  async loadFromFirestore(userId, sessionId, ownerId = null) {
     try {
-      const autosaveRef = auditAutosaveCollection(userId);
-      const docRef = doc(autosaveRef, sessionId);
-      const docSnap = await getDoc(docRef);
+      if (!ownerId) {
+        logger.warn('ownerId no disponible para cargar autosave');
+        return null;
+      }
+      const autosaveDocRef = doc(dbAudit, ...firestoreRoutesCore.autosave(ownerId, sessionId));
+      const docSnap = await getDoc(autosaveDocRef);
       
       if (docSnap.exists()) {
         const data = docSnap.data();
@@ -647,7 +658,7 @@ class AutoSaveService {
   }
 
   // Restaurar auditoría desde datos guardados
-  async restoreAuditoria(userId) {
+  async restoreAuditoria(userId, userProfile = null) {
     try {
       // Primero intentar cargar desde IndexedDB (offline) - tiene imágenes reales
       const db = await this.initOfflineDatabase();
@@ -740,7 +751,9 @@ class AutoSaveService {
           return localData;
         } else {
           // Si está completada, limpiar
-          this.clearLocalStorage(userId);
+          // Obtener ownerId desde userProfile si está disponible
+          const ownerId = userProfile?.ownerId || null;
+          await this.clearLocalStorage(userId, ownerId);
           return null;
         }
       }
@@ -945,13 +958,15 @@ class AutoSaveService {
   }
 
   // Limpiar datos antiguos (más de 7 días)
-  async cleanupOldData(userId = null) {
+  async cleanupOldData(userId = null, userProfile = null) {
     try {
       const savedData = this.loadFromLocalStorage();
       if (savedData) {
         const oneWeekAgo = Date.now() - (7 * 24 * 60 * 60 * 1000);
         if (savedData.timestamp < oneWeekAgo) {
-          await this.clearLocalStorage(userId);
+          // Obtener ownerId desde userProfile si está disponible
+          const ownerId = userProfile?.ownerId || null;
+          await this.clearLocalStorage(userId, ownerId);
         }
       }
     } catch (error) {

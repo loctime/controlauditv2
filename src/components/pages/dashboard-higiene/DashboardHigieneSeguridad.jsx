@@ -38,7 +38,7 @@ import {
   Info as InfoIcon,
   PictureAsPdf as PdfIcon
 } from '@mui/icons-material';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '@/components/context/AuthContext';
 import GraficoIndices from './components/GraficoIndices';
 import SelectoresDashboard from './components/SelectoresDashboard';
 import MetricChips from './components/MetricChips';

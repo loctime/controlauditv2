@@ -11,7 +11,7 @@ import {
 import { PersonAdd as PersonAddIcon } from '@mui/icons-material';
 import UsuariosList from '../usuarios/UsuariosList';
 import OwnerUserCreateDialog from '../usuarios/OwnerUserCreateDialog';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '@/components/context/AuthContext';
 
 const PerfilUsuarios = ({ usuariosCreados, loading, onRefresh }) => {
   const theme = useTheme();

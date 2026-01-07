@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import AccionesRequeridasService from '../../../../services/accionesRequeridasService';
-import { useAuth } from '../../../../components/context/AuthContext';
+import { useAuth } from '@/components/context/AuthContext';
 import { dbAudit } from '../../../../firebaseControlFile';
 import { firestoreRoutesCore } from '../../../../core/firestore/firestoreRoutes.core';
 import { doc, collection } from 'firebase/firestore';

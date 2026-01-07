@@ -32,7 +32,7 @@ import { getDocs, query, where, Timestamp, collection } from 'firebase/firestore
 import { dbAudit } from '../../../firebaseControlFile';
 import { firestoreRoutesCore } from '../../../core/firestore/firestoreRoutes.core';
 import { planAnualService } from '../../../services/planAnualService';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '@/components/context/AuthContext';
 import { normalizeEmpleado } from '../../../utils/firestoreUtils';
 import Swal from 'sweetalert2';
 import ConfirmacionGuardadoModal from './ConfirmacionGuardadoModal';

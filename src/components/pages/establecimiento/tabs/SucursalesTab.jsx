@@ -14,7 +14,7 @@ import StorefrontIcon from '@mui/icons-material/Storefront';
 import { getDocs, query, where, addDoc, updateDoc, deleteDoc, doc, Timestamp, collection } from 'firebase/firestore';
 import { dbAudit } from '../../../../firebaseControlFile';
 import { firestoreRoutesCore } from '../../../../core/firestore/firestoreRoutes.core';
-import { useAuth } from '../../../context/AuthContext';
+import { useAuth } from '@/components/context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
 import EmpleadosContent from './EmpleadosContent';

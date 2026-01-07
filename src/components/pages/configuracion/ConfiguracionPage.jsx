@@ -12,7 +12,7 @@ import {
   Alert
 } from '@mui/material';
 import { Settings as SettingsIcon, Security as SecurityIcon, Storage as StorageIcon, Speed as SpeedIcon } from '@mui/icons-material';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '@/components/context/AuthContext';
 
 const ConfiguracionPage = () => {
   const theme = useTheme();

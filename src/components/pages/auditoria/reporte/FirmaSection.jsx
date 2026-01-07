@@ -19,7 +19,7 @@ import {
   useTheme
 } from "@mui/material";
 import { CheckCircle, Edit, Person, Visibility, Save, Clear, Upload, Download } from "@mui/icons-material";
-import { useAuth } from "../../../context/AuthContext";
+import { useAuth } from '@/components/context/AuthContext';
 import SignaturePad from 'react-signature-canvas';
 import Swal from 'sweetalert2';
 import './ReportesPage.css'; // Asegúrate de que la clase CSS esté disponible

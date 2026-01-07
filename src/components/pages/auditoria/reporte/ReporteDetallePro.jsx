@@ -4,7 +4,7 @@ import { Typography, Box, Button, Dialog, DialogTitle, DialogContent, DialogActi
 import PrintIcon from '@mui/icons-material/Print';
 import CloseIcon from '@mui/icons-material/Close';
 import DownloadIcon from '@mui/icons-material/Download';
-import { useAuth } from '../../../context/AuthContext';
+import { useAuth } from '@/components/context/AuthContext';
 
 // Importar utilidades y componentes separados
 import { 

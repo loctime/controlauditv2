@@ -19,7 +19,7 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import ErrorIcon from '@mui/icons-material/Error';
 import InfoIcon from '@mui/icons-material/Info';
 import { uploadEvidence, ensureTaskbarFolder } from '../../../services/controlFileB2Service';
-import { useAuth } from '../../../components/context/AuthContext';
+import { useAuth } from '@/components/context/AuthContext';
 
 const TestControlFile = () => {
   const { user, loading: authLoading, isLogged } = useAuth();

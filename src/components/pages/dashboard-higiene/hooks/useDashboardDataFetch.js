@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { getDocs, query, where, orderBy, collection } from 'firebase/firestore';
 import { dbAudit } from '../../../../firebaseControlFile.js';
 import { firestoreRoutesCore } from '../../../../core/firestore/firestoreRoutes.core';
-import { useAuth } from '../../../context/AuthContext';
+import { useAuth } from '@/components/context/AuthContext';
 
 /**
  * Hook para cargar datos del dashboard de seguridad

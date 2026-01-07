@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { dbAudit } from '../../../firebaseControlFile';
 import { Box, Typography, Button, Alert } from '@mui/material';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '@/components/context/AuthContext';
 import { formularioService } from '../../../services/formularioService';
 
 const VistaFormularioPublico = () => {

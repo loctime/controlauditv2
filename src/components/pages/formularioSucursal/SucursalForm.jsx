@@ -3,7 +3,7 @@ import { Button, TextField, Grid, Typography, Box, MenuItem, FormControl, InputL
 import { db } from "../../../firebaseControlFile";
 import { getDocs, collection, query, where } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "../../context/AuthContext";
+import { useAuth } from '@/components/context/AuthContext';
 
 const SucursalForm = ({ agregarSucursal, empresaId }) => {
   const [empresas, setEmpresas] = useState([]);

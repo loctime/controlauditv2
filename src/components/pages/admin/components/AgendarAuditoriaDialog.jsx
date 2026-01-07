@@ -22,7 +22,7 @@ import { toast } from 'react-toastify';
 import { getDocs, query, where, collection } from "firebase/firestore";
 import { dbAudit } from "../../../../firebaseControlFile";
 import { firestoreRoutesCore } from "../../../../core/firestore/firestoreRoutes.core";
-import { useAuth } from "../../../context/AuthContext";
+import { useAuth } from '@/components/context/AuthContext';
 
 const AgendarAuditoriaDialog = ({ open, onClose, onSave, empresas, sucursales, formularios, fechaPreestablecida }) => {
   const { userProfile } = useAuth();

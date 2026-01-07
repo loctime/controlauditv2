@@ -23,7 +23,7 @@ import {
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import Swal from 'sweetalert2';
-import { useAuth } from "../../../context/AuthContext";
+import { useAuth } from '@/components/context/AuthContext';
 import { reporteService } from "../../../../services/reporteService";
 import { db } from "../../../../firebaseControlFile";
 

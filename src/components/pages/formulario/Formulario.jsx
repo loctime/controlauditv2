@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Button, TextField, Typography, Box } from "@mui/material";
 import { ArrowBack } from "@mui/icons-material";
 import { Timestamp } from "firebase/firestore";
-import { useAuth } from "../../context/AuthContext";
+import { useAuth } from '@/components/context/AuthContext';
 import Swal from 'sweetalert2';
 import { useNavigate } from "react-router-dom";
 import PublicIcon from '@mui/icons-material/Public';

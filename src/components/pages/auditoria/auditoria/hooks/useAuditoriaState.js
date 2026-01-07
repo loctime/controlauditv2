@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
-import { useAuth } from "../../../../context/AuthContext";
+import { useAuth } from '@/components/context/AuthContext';
 
 export const useAuditoriaState = () => {
   const location = useLocation();

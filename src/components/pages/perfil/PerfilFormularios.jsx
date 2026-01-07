@@ -16,7 +16,7 @@ import { usePermissions } from '../admin/hooks/usePermissions';
 import { useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
 import { registrarAccionSistema } from '../../../utils/firestoreUtils';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '@/components/context/AuthContext';
 
 const PerfilFormularios = ({ formularios, loading }) => {
   const theme = useTheme();

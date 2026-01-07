@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { query, where, getDocs, collection } from 'firebase/firestore';
 import { dbAudit } from '../../../../firebaseControlFile';
 import { firestoreRoutesCore } from '../../../../core/firestore/firestoreRoutes.core';
-import { useAuth } from '../../../context/AuthContext';
+import { useAuth } from '@/components/context/AuthContext';
 
 /**
  * Normaliza una capacitación unificando campos legacy

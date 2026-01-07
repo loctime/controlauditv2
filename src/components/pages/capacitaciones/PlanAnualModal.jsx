@@ -29,7 +29,7 @@ import {
   Storefront as StorefrontIcon
 } from '@mui/icons-material';
 import { Timestamp } from 'firebase/firestore';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '@/components/context/AuthContext';
 import Swal from 'sweetalert2';
 import { planAnualService } from '../../../services/planAnualService';
 

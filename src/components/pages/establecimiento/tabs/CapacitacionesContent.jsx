@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Button,
@@ -13,9 +13,10 @@ import {
   TableRow
 } from '@mui/material';
 import SchoolIcon from '@mui/icons-material/School';
-import { getDocs, query, where } from 'firebase/firestore';
-import { auditUserCollection } from '../../../../firebaseControlFile';
-import { useAuth } from '../../../context/AuthContext';
+import { getDocs, query, where, collection } from 'firebase/firestore';
+import { dbAudit } from '../../../../firebaseControlFile';
+import { firestoreRoutesCore } from '../../../../core/firestore/firestoreRoutes.core';
+import { useAuth } from '@/components/context/AuthContext';
 
 const CapacitacionesContent = ({ sucursalId, sucursalNombre, navigateToPage }) => {
   const { userProfile } = useAuth();
@@ -23,26 +24,19 @@ const CapacitacionesContent = ({ sucursalId, sucursalNombre, navigateToPage }) =
   const [planesAnuales, setPlanesAnuales] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    if (sucursalId) {
-      loadCapacitaciones();
+  const loadCapacitaciones = useCallback(async () => {
+    if (!sucursalId || !userProfile?.ownerId) {
+      return;
     }
-  }, [sucursalId]);
 
-  const loadCapacitaciones = async () => {
     setLoading(true);
     try {
       console.log('Cargando capacitaciones para sucursal:', sucursalId);
       
-      // Cargar capacitaciones individuales
-      if (!userProfile?.uid) {
-        console.error('Error: userProfile.uid es requerido');
-        setLoading(false);
-        return;
-      }
+      const ownerId = userProfile.ownerId;
       let capacitacionesData = [];
       try {
-        const capacitacionesRef = auditUserCollection(userProfile.uid, 'capacitaciones');
+        const capacitacionesRef = collection(dbAudit, ...firestoreRoutesCore.capacitaciones(ownerId));
         const capacitacionesQuery = query(capacitacionesRef, where('sucursalId', '==', sucursalId));
         const capacitacionesSnapshot = await getDocs(capacitacionesQuery);
         capacitacionesData = capacitacionesSnapshot.docs.map(doc => ({
@@ -61,10 +55,10 @@ const CapacitacionesContent = ({ sucursalId, sucursalNombre, navigateToPage }) =
         console.log('Error cargando capacitaciones:', capError);
       }
 
-      // Cargar planes anuales - usar el nombre correcto de la colección
+      // Cargar planes anuales - owner-centric
       let planesData = [];
       try {
-        const planesRef = auditUserCollection(userProfile.uid, 'planes_capacitaciones_anuales');
+        const planesRef = collection(dbAudit, ...firestoreRoutesCore.planesCapacitacionesAnuales(ownerId));
         const planesQuery = query(planesRef, where('sucursalId', '==', sucursalId));
         const planesSnapshot = await getDocs(planesQuery);
         planesData = planesSnapshot.docs.map(doc => ({
@@ -84,7 +78,11 @@ const CapacitacionesContent = ({ sucursalId, sucursalNombre, navigateToPage }) =
     } finally {
       setLoading(false);
     }
-  };
+  }, [sucursalId, userProfile?.ownerId]);
+
+  useEffect(() => {
+    loadCapacitaciones();
+  }, [loadCapacitaciones]);
 
   return (
     <Box>

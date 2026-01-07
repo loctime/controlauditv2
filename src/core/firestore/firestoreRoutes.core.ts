@@ -287,5 +287,30 @@ export const firestoreRoutesCore = {
     ownerId,
     'planes_capacitaciones_anuales',
     planId
+  ],
+
+  /**
+   * Colección de autosaves del owner
+   * Path: apps/auditoria/owners/{ownerId}/autosaves
+   */
+  autosaves: (ownerId: string): string[] => [
+    'apps',
+    'auditoria',
+    'owners',
+    ownerId,
+    'autosaves'
+  ],
+
+  /**
+   * Documento de autosave específico del owner
+   * Path: apps/auditoria/owners/{ownerId}/autosaves/{sessionId}
+   */
+  autosave: (ownerId: string, sessionId: string): string[] => [
+    'apps',
+    'auditoria',
+    'owners',
+    ownerId,
+    'autosaves',
+    sessionId
   ]
 };

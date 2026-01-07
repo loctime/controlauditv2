@@ -17,7 +17,7 @@ import {
   Alert,
   CircularProgress
 } from '@mui/material';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '@/components/context/AuthContext';
 import { auth } from '../../../firebaseControlFile';
 import { toast } from 'react-toastify';
 import { createUser } from '../../../core/services/ownerUserService';

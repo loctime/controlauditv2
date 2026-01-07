@@ -23,7 +23,7 @@ import {
 } from '@mui/icons-material';
 import capacitacionImageService from '../../../../services/capacitacionImageService';
 import { useConnectivity } from '../../../../hooks/useConnectivity';
-import { useAuth } from '../../../../components/context/AuthContext';
+import { useAuth } from '@/components/context/AuthContext';
 import { convertirShareTokenAUrl } from '@/utils/imageUtils';
 
 /**

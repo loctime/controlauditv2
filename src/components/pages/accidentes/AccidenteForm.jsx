@@ -12,8 +12,8 @@ import {
   Autocomplete
 } from '@mui/material';
 import { query, where, getDocs } from 'firebase/firestore';
-import { db, auditUserCollection } from '../../../firebaseControlFile';
-import { useAuth } from '../../context/AuthContext';
+import { db } from '../../../firebaseControlFile';
+import { useAuth } from '@/components/context/AuthContext';
 import { crearAccidente, crearIncidente, obtenerEmpleadosPorSucursal } from '../../../services/accidenteService';
 
 export default function AccidenteForm({ open, onClose, onSave, sucursalId, empresaId }) {

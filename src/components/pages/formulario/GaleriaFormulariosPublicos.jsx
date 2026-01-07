@@ -10,7 +10,7 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import SearchIcon from '@mui/icons-material/Search';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '@/components/context/AuthContext';
 
 const FILTROS = [
   { value: 'todos', label: 'Todos' },

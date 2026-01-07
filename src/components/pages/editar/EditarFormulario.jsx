@@ -2,7 +2,7 @@ import React, { useState, useCallback } from "react";
 import { useTheme, useMediaQuery, alpha, Box, Button, Card, CardContent, Typography, CircularProgress } from "@mui/material";
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import EditarSeccionYPreguntas from "./EditarSeccionYPreguntas";
-import { useAuth } from "../../context/AuthContext";
+import { useAuth } from '@/components/context/AuthContext';
 import Swal from 'sweetalert2';
 import { useNavigate, useSearchParams } from "react-router-dom";
 import FormulariosAccordionList from "./FormulariosAccordionList";

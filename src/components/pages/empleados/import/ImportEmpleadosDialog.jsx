@@ -22,7 +22,7 @@ import {
   Edit as EditIcon
 } from '@mui/icons-material';
 import * as XLSX from 'xlsx';
-import { useAuth } from '../../../context/AuthContext';
+import { useAuth } from '@/components/context/AuthContext';
 import { useEmpleadoImport } from './useEmpleadoImport';
 import ImportPreviewTable from './ImportPreviewTable';
 

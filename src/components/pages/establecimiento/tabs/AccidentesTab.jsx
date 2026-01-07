@@ -16,7 +16,7 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import ErrorIcon from '@mui/icons-material/Error';
 import { useNavigate } from 'react-router-dom';
 import { obtenerAccidentes } from '../../../../services/accidenteService';
-import { useAuth } from '../../../context/AuthContext';
+import { useAuth } from '@/components/context/AuthContext';
 
 const AccidentesTab = ({ empresaId, empresaNombre }) => {
   const navigate = useNavigate();

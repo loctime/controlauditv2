@@ -29,8 +29,9 @@ import {
   where,
   orderBy
 } from "firebase/firestore";
-import { db, auditUserCollection } from "../../../../firebaseControlFile";
-import { useAuth } from "../../../../components/context/AuthContext";
+import { dbAudit } from "../../../../firebaseControlFile";
+import { firestoreRoutesCore } from "../../../../core/firestore/firestoreRoutes.core";
+import { useAuth } from '@/components/context/AuthContext';
 import dayjs from "dayjs";
 
 const getInitialState = () => ({
@@ -125,7 +126,13 @@ export default function AusenciaFormDialog({
       }
       setLoadingEmployees(true);
       try {
-        const empleadosRef = auditUserCollection(userProfile.uid, "empleados");
+        if (!userProfile?.ownerId) {
+          console.error("Error: ownerId no disponible");
+          setEmpleados([]);
+          return;
+        }
+        const ownerId = userProfile.ownerId;
+        const empleadosRef = collection(dbAudit, ...firestoreRoutesCore.empleados(ownerId));
         const q = query(
           empleadosRef,
           where("sucursalId", "==", selectedSucursal),

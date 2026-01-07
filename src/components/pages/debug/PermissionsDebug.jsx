@@ -1,6 +1,6 @@
 import React from 'react';
 import { Box, Typography, Paper, List, ListItem, ListItemText, Divider } from '@mui/material';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '@/components/context/AuthContext';
 import { getMenuItems } from '../../../router/navigation';
 
 const PermissionsDebug = () => {

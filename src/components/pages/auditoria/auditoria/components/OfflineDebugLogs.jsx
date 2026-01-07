@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Box, Paper, Typography, IconButton, Collapse, Chip, Alert, Button, Snackbar } from '@mui/material';
 import { ExpandMore, ExpandLess, BugReport, Close, ContentCopy, Check } from '@mui/icons-material';
-import { useAuth } from '../../../../context/AuthContext';
+import { useAuth } from '@/components/context/AuthContext';
 
 // Los interceptores de console ya están inicializados en main.jsx
 // Solo necesitamos asegurarnos de que window.offlineDebugLogs existe

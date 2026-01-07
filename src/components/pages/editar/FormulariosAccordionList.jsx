@@ -26,7 +26,7 @@ import SearchIcon from '@mui/icons-material/Search';
 import { doc, updateDoc } from "firebase/firestore";
 import { db } from "../../../firebaseControlFile";
 import EditarFormularioModal from "./EditarFormularioModal";
-import { useAuth } from "../../context/AuthContext";
+import { useAuth } from '@/components/context/AuthContext';
 
 /**
  * Lista de formularios en modo acordeón expandible.

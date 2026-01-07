@@ -24,7 +24,7 @@ import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { obtenerEmpleadosPorSucursal } from '../../../../services/accidenteService';
 import { Timestamp } from 'firebase/firestore';
-import { useAuth } from '../../../context/AuthContext';
+import { useAuth } from '@/components/context/AuthContext';
 
 /**
  * Modal para editar accidente/incidente

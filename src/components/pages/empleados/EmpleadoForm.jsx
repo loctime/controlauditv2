@@ -13,7 +13,7 @@ import {
 import { addDoc, updateDoc, doc, Timestamp, collection } from 'firebase/firestore';
 import { dbAudit } from '../../../firebaseControlFile';
 import { firestoreRoutesCore } from '../../../core/firestore/firestoreRoutes.core';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '@/components/context/AuthContext';
 
 export default function EmpleadoForm({ open, onClose, onSave, empleado, sucursalId, empresaId }) {
   const { userProfile } = useAuth();

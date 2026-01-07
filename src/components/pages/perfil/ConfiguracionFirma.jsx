@@ -19,7 +19,7 @@ import {
   Delete as DeleteIcon
 } from '@mui/icons-material';
 import SignaturePad from 'react-signature-canvas';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '@/components/context/AuthContext';
 import Swal from 'sweetalert2';
 
 const capitalizeWords = (str) => {

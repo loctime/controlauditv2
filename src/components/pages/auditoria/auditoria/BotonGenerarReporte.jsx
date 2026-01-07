@@ -1,7 +1,7 @@
 // Componente optimizado para generar reportes de auditoría
 import React, { useState } from "react";
 import { Button, Box, Alert, Snackbar, CircularProgress } from "@mui/material";
-import { useAuth } from "../../../context/AuthContext";
+import { useAuth } from '@/components/context/AuthContext';
 import AuditoriaService from "../auditoriaService";
 import { buildReporteMetadata } from '../../../../services/useMetadataService';
 

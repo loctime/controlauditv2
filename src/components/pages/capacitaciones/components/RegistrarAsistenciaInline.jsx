@@ -23,7 +23,7 @@ import { firestoreRoutesCore } from '../../../../core/firestore/firestoreRoutes.
 import { registrosAsistenciaService } from '../../../../services/registrosAsistenciaService';
 import { uploadEvidence, ensureTaskbarFolder, ensureSubFolder } from '../../../../services/controlFileB2Service';
 import { auth } from '../../../../firebaseControlFile';
-import { useAuth } from '../../../../context/AuthContext';
+import { useAuth } from '@/components/context/AuthContext';
 import { convertirShareTokenAUrl } from '@/utils/imageUtils';
 
 /**

@@ -1,8 +1,9 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useRef } from 'react';
-import { query, where, getDocs, onSnapshot } from 'firebase/firestore';
-import { auditUserCollection } from '../../firebaseControlFile';
-import { useAuth } from '../../components/context/AuthContext';
+import { query, where, getDocs, onSnapshot, collection } from 'firebase/firestore';
+import { dbAudit } from '../../firebaseControlFile';
+import { firestoreRoutesCore } from '../../core/firestore/firestoreRoutes.core';
+import { useAuth } from '@/components/context/AuthContext';
 
 /**
  * Normaliza una capacitación unificando campos legacy
@@ -27,10 +28,10 @@ const normalizePlanAnual = (doc) => ({
 /**
  * Función de fetch para capacitaciones individuales
  */
-const fetchCapacitaciones = async (userId, selectedEmpresa, selectedSucursal, sucursalesDisponibles) => {
-  if (!userId) return [];
+const fetchCapacitaciones = async (userId, selectedEmpresa, selectedSucursal, sucursalesDisponibles, ownerId) => {
+  if (!userId || !ownerId) return [];
 
-  const capacitacionesRef = auditUserCollection(userId, 'capacitaciones');
+  const capacitacionesRef = collection(dbAudit, ...firestoreRoutesCore.capacitaciones(ownerId));
   let qCap;
 
   if (selectedSucursal) {
@@ -94,10 +95,10 @@ const fetchCapacitaciones = async (userId, selectedEmpresa, selectedSucursal, su
 /**
  * Función de fetch para planes anuales
  */
-const fetchPlanesAnuales = async (userId, selectedEmpresa, selectedSucursal) => {
-  if (!userId) return [];
+const fetchPlanesAnuales = async (userId, selectedEmpresa, selectedSucursal, ownerId) => {
+  if (!userId || !ownerId) return [];
 
-  const planesRef = auditUserCollection(userId, 'planes_capacitaciones_anuales');
+  const planesRef = collection(dbAudit, ...firestoreRoutesCore.planesCapacitacionesAnuales(ownerId));
   let planesQ;
 
   // Solo filtros funcionales: empresa, sucursal, año
@@ -143,6 +144,7 @@ export const useCapacitacionesQuery = (
   const { userProfile, authReady } = useAuth();
   const queryClient = useQueryClient();
   const userId = userProfile?.uid;
+  const ownerId = userProfile?.ownerId;
   const listenerActiveRef = useRef(false);
   const currentQueryKeyRef = useRef(null);
   const planesListenerActiveRef = useRef(false);
@@ -168,8 +170,8 @@ export const useCapacitacionesQuery = (
     refetch: refetchCapacitaciones
   } = useQuery({
     queryKey,
-    queryFn: () => fetchCapacitaciones(userId, selectedEmpresa, selectedSucursal, sucursalesDisponibles),
-    enabled: !!userId && empresasReady && authReady, // Bloquear hasta que authReady sea true
+    queryFn: () => fetchCapacitaciones(userId, selectedEmpresa, selectedSucursal, sucursalesDisponibles, ownerId),
+    enabled: !!userId && !!ownerId && empresasReady && authReady, // Bloquear hasta que authReady sea true
     staleTime: Infinity, // Los datos se mantienen frescos indefinidamente (el listener los actualiza)
     gcTime: 10 * 60 * 1000, // 10 minutos en cache
     refetchOnMount: false, // No refetch al montar (el listener mantiene actualizado)
@@ -198,8 +200,8 @@ export const useCapacitacionesQuery = (
     refetch: refetchPlanes
   } = useQuery({
     queryKey: planesQueryKey,
-    queryFn: () => fetchPlanesAnuales(userId, selectedEmpresa, selectedSucursal),
-    enabled: !!userId && empresasReady && authReady, // Bloquear hasta que authReady sea true
+    queryFn: () => fetchPlanesAnuales(userId, selectedEmpresa, selectedSucursal, ownerId),
+    enabled: !!userId && !!ownerId && empresasReady && authReady, // Bloquear hasta que authReady sea true
     staleTime: Infinity, // Los datos se mantienen frescos indefinidamente (el listener los actualiza)
     gcTime: 10 * 60 * 1000,
     refetchOnMount: false,
@@ -240,7 +242,11 @@ export const useCapacitacionesQuery = (
     console.log('[useCapacitacionesQuery] Activando listener reactivo de capacitaciones');
     listenerActiveRef.current = true;
     currentQueryKeyRef.current = queryKey;
-    const capacitacionesRef = auditUserCollection(userId, 'capacitaciones');
+    if (!ownerId) {
+      console.error('[useCapacitacionesQuery] ownerId no disponible');
+      return;
+    }
+    const capacitacionesRef = collection(dbAudit, ...firestoreRoutesCore.capacitaciones(ownerId));
     
     let qCap;
     if (selectedSucursal) {
@@ -301,7 +307,7 @@ export const useCapacitacionesQuery = (
       listenerActiveRef.current = false;
       unsubscribe();
     };
-  }, [authReady, userId, selectedEmpresa, selectedSucursal, sucursalesDisponibles, queryClient, queryKey]);
+  }, [authReady, userId, ownerId, selectedEmpresa, selectedSucursal, sucursalesDisponibles, queryClient, queryKey]);
 
   // Listener reactivo para planes anuales
   // Se activa inmediatamente para mostrar datos en tiempo real sin esperar el fetch inicial
@@ -324,7 +330,11 @@ export const useCapacitacionesQuery = (
     console.log('[useCapacitacionesQuery] Activando listener reactivo de planes anuales');
     planesListenerActiveRef.current = true;
     currentPlanesQueryKeyRef.current = planesQueryKey;
-    const planesRef = auditUserCollection(userId, 'planes_capacitaciones_anuales');
+    if (!ownerId) {
+      console.error('[useCapacitacionesQuery] ownerId no disponible');
+      return;
+    }
+    const planesRef = collection(dbAudit, ...firestoreRoutesCore.planesCapacitacionesAnuales(ownerId));
     
     let planesQ;
     if (selectedSucursal) {
@@ -365,7 +375,7 @@ export const useCapacitacionesQuery = (
       planesListenerActiveRef.current = false;
       unsubscribe();
     };
-  }, [authReady, userId, selectedEmpresa, selectedSucursal, queryClient, planesQueryKey]);
+  }, [authReady, userId, ownerId, selectedEmpresa, selectedSucursal, queryClient, planesQueryKey]);
 
   // Combinar estados (loading ya está definido arriba)
   const error = errorCapacitaciones || errorPlanes;

@@ -37,11 +37,13 @@ import {
   PhotoLibrary as PhotoLibraryIcon,
   Delete as DeleteIcon
 } from '@mui/icons-material';
-import { query, where, getDocs, doc, getDoc, Timestamp } from 'firebase/firestore';
-import { auditUserCollection } from '../../../firebaseControlFile';
+import { query, where, getDocs, doc, getDoc, Timestamp, collection } from 'firebase/firestore';
+import { dbAudit } from '../../../firebaseControlFile';
+import { firestoreRoutesCore } from '../../../core/firestore/firestoreRoutes.core';
 import { uploadEvidence, ensureTaskbarFolder, ensureSubFolder } from '../../../services/controlFileB2Service';
 import { auth } from '../../../firebaseControlFile';
 import { convertirShareTokenAUrl } from '../../../utils/imageUtils';
+import { useAuth } from '@/components/context/AuthContext';
 
 /**
  * Componente inline para registrar eventos asociados a una entidad
@@ -60,6 +62,7 @@ export default function EventRegistryInline({
   onCancel,
   compact = false
 }) {
+  const { userProfile } = useAuth();
   const [entity, setEntity] = useState(entityProp || null);
   const [personas, setPersonas] = useState([]);
   const [selectedPersonas, setSelectedPersonas] = useState(new Set());
@@ -112,7 +115,22 @@ export default function EventRegistryInline({
 
       // Cargar personas si hay configuración
       if (personasConfig && personasConfig.collectionName) {
-        const personasRef = auditUserCollection(userId, personasConfig.collectionName);
+        if (!userProfile?.ownerId) {
+          console.error('[EventRegistryInline] ownerId no disponible');
+          setError('Usuario no autenticado correctamente');
+          setLoading(false);
+          return;
+        }
+        const ownerId = userProfile.ownerId;
+        const collectionName = personasConfig.collectionName;
+        const routeFunction = firestoreRoutesCore[collectionName];
+        if (!routeFunction || typeof routeFunction !== 'function') {
+          console.error(`[EventRegistryInline] Collection ${collectionName} not found in firestoreRoutesCore`);
+          setError(`Colección ${collectionName} no encontrada`);
+          setLoading(false);
+          return;
+        }
+        const personasRef = collection(dbAudit, ...routeFunction(ownerId));
         let q = query(personasRef);
         
         // Aplicar filtros si existen

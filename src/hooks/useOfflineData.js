@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { getCompleteUserCache, saveCompleteUserCache } from '../services/completeOfflineCache';
-import { useAuth } from '../components/context/AuthContext';
+import { useAuth } from '@/components/context/AuthContext';
 import { getDocs, query, where, orderBy, limit } from 'firebase/firestore';
 import { shouldEnableOffline } from '../utils/pwaDetection';
 

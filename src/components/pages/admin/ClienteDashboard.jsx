@@ -18,7 +18,7 @@ import {
   History,
   Assignment
 } from "@mui/icons-material";
-import { useAuth } from "../../context/AuthContext";
+import { useAuth } from '@/components/context/AuthContext';
 import { useClienteDashboard } from "./hooks/useClienteDashboard";
 import { usePermissions } from "./hooks/usePermissions";
 

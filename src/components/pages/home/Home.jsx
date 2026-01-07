@@ -8,7 +8,7 @@ import DescriptionIcon from '@mui/icons-material/Description';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import AssessmentIcon from '@mui/icons-material/Assessment';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '@/components/context/AuthContext';
 import { useChromePreload } from '@/hooks/useChromePreload';
 import { shouldEnableOffline } from '../../../utils/pwaDetection';
 

@@ -10,7 +10,7 @@ import { dbAudit } from '../../../firebaseControlFile';
 import { firestoreRoutesCore } from '../../../core/firestore/firestoreRoutes.core';
 import { useNavigate } from 'react-router-dom';
 import { normalizeSucursal } from '../../../utils/firestoreUtils';
-import { useAuth } from '../../../context/AuthContext';
+import { useAuth } from '@/components/context/AuthContext';
 
 // Componente para mostrar sucursales de una empresa (owner-centric)
 const SucursalesEmpresa = ({ empresaId, ownerId }) => {

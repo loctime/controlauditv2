@@ -10,10 +10,11 @@ import {
   Typography
 } from '@mui/material';
 import SchoolIcon from '@mui/icons-material/School';
-import { getDocs, query, where } from 'firebase/firestore';
-import { auditUserCollection } from '../../../../firebaseControlFile';
+import { getDocs, query, where, collection } from 'firebase/firestore';
+import { dbAudit } from '../../../../firebaseControlFile';
+import { firestoreRoutesCore } from '../../../../core/firestore/firestoreRoutes.core';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../../../context/AuthContext';
+import { useAuth } from '@/components/context/AuthContext';
 
 const CapacitacionesTab = ({ empresaId, empresaNombre }) => {
   const navigate = useNavigate();
@@ -22,20 +23,21 @@ const CapacitacionesTab = ({ empresaId, empresaNombre }) => {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (empresaId && userProfile?.uid) {
+    if (empresaId && userProfile?.ownerId) {
       loadCapacitaciones();
     }
-  }, [empresaId, userProfile?.uid]);
+  }, [empresaId, userProfile?.ownerId]);
 
   const loadCapacitaciones = async () => {
-    if (!userProfile?.uid) {
-      console.error('Error: userProfile.uid es requerido');
+    if (!userProfile?.ownerId) {
+      console.error('Error: userProfile.ownerId es requerido');
       return;
     }
 
     setLoading(true);
     try {
-      const sucursalesRef = auditUserCollection(userProfile.uid, 'sucursales');
+      const ownerId = userProfile.ownerId;
+      const sucursalesRef = collection(dbAudit, ...firestoreRoutesCore.sucursales(ownerId));
       const sucursalesSnapshot = await getDocs(query(sucursalesRef, where('empresaId', '==', empresaId)));
       const sucursalesIds = sucursalesSnapshot.docs.map(doc => doc.id);
       
@@ -44,7 +46,7 @@ const CapacitacionesTab = ({ empresaId, empresaNombre }) => {
         return;
       }
 
-      const capacitacionesRef = auditUserCollection(userProfile.uid, 'capacitaciones');
+      const capacitacionesRef = collection(dbAudit, ...firestoreRoutesCore.capacitaciones(ownerId));
       const capacitacionesSnapshot = await getDocs(query(capacitacionesRef, where('sucursalId', 'in', sucursalesIds)));
       const capacitacionesData = capacitacionesSnapshot.docs.map(doc => ({
         id: doc.id,

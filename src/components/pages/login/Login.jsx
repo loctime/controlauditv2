@@ -23,7 +23,7 @@ import { onSignIn } from '../../../firebaseControlFile';
 import { syncUserToAuth } from '../../../services/authSyncService';
 import { Formik, Form, Field, ErrorMessage } from 'formik';
 import * as Yup from 'yup';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '@/components/context/AuthContext';
 
 const Login = () => {
   const theme = useTheme();

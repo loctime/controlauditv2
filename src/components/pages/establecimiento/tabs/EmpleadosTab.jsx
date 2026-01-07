@@ -12,7 +12,7 @@ import PeopleIcon from '@mui/icons-material/People';
 import { getDocs, query, where, collection } from 'firebase/firestore';
 import { dbAudit } from '../../../../firebaseControlFile';
 import { firestoreRoutesCore } from '../../../../core/firestore/firestoreRoutes.core';
-import { useAuth } from '../../../context/AuthContext';
+import { useAuth } from '@/components/context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { normalizeEmpleado } from '../../../../utils/firestoreUtils';
 

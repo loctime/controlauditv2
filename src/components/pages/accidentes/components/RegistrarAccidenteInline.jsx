@@ -6,11 +6,13 @@
 
 import React, { useState, useEffect } from 'react';
 import { Box, Typography } from '@mui/material';
-import { query, where, getDocs } from 'firebase/firestore';
-import { auditUserCollection } from '../../../../firebaseControlFile';
+import { query, where, getDocs, collection } from 'firebase/firestore';
+import { dbAudit } from '../../../../firebaseControlFile';
+import { firestoreRoutesCore } from '../../../../core/firestore/firestoreRoutes.core';
 import EventRegistryInline from '../../../shared/event-registry/EventRegistryInline';
 import { registrosAccidenteService } from '../../../../services/registrosAccidenteService';
 import { obtenerAccidentePorId } from '../../../../services/accidenteService';
+import { useAuth } from '@/components/context/AuthContext';
 
 /**
  * Componente para registrar seguimiento de accidente
@@ -23,6 +25,7 @@ const RegistrarAccidenteInline = ({
   onCancel,
   compact = false
 }) => {
+  const { userProfile } = useAuth();
   const [accidente, setAccidente] = useState(accidenteProp || null);
   const [personas, setPersonas] = useState([]);
   const [loading, setLoading] = useState(!accidenteProp);
@@ -50,14 +53,19 @@ const RegistrarAccidenteInline = ({
 
   // Cargar empleados de la sucursal del accidente
   useEffect(() => {
-    if (accidente && accidente.sucursalId && userId) {
+    if (accidente && accidente.sucursalId && userProfile?.ownerId) {
       loadEmpleados();
     }
-  }, [accidente?.sucursalId, userId]);
+  }, [accidente?.sucursalId, userProfile?.ownerId]);
 
   const loadEmpleados = async () => {
     try {
-      const empleadosRef = auditUserCollection(userId, 'empleados');
+      if (!userProfile?.ownerId) {
+        console.error('Error: ownerId no disponible');
+        return;
+      }
+      const ownerId = userProfile.ownerId;
+      const empleadosRef = collection(dbAudit, ...firestoreRoutesCore.empleados(ownerId));
       const q = query(
         empleadosRef,
         where('sucursalId', '==', accidente.sucursalId),

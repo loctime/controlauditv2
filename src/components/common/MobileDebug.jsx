@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Box, Typography, Button, Paper } from '@mui/material';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '@/components/context/AuthContext';
 
 const MobileDebug = () => {
   const { userProfile } = useAuth();

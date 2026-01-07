@@ -1,7 +1,7 @@
 // src/pages/Dashboard.jsx
 import React, { useState, useEffect } from "react";
 import { Typography, Box, Grid, Paper, Alert, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Button, TextField, Dialog, DialogTitle, DialogContent, DialogActions, Card, CardContent, Tabs, Tab, CircularProgress } from "@mui/material";
-import { useAuth } from "../../context/AuthContext";
+import { useAuth } from '@/components/context/AuthContext';
 import { doc, query, where, getDocs, getDoc, collection } from "firebase/firestore";
 import { dbAudit } from "../../../firebaseControlFile";
 import { firestoreRoutesCore } from "../../../core/firestore/firestoreRoutes.core";

@@ -31,7 +31,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import { getDocs, query, where, addDoc, updateDoc, deleteDoc, doc, Timestamp, collection } from 'firebase/firestore';
 import { dbAudit } from '../../../../firebaseControlFile';
 import { firestoreRoutesCore } from '../../../../core/firestore/firestoreRoutes.core';
-import { useAuth } from '../../../context/AuthContext';
+import { useAuth } from '@/components/context/AuthContext';
 import Swal from 'sweetalert2';
 
 const EmpleadosContent = ({ sucursalId, sucursalNombre, navigateToPage, reloadSucursalesStats, loadEmpresasStats, userEmpresas }) => {

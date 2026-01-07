@@ -28,7 +28,7 @@ import SchoolIcon from '@mui/icons-material/School';
 import ReportProblemIcon from '@mui/icons-material/ReportProblem';
 import { useNavigate } from "react-router-dom";
 import Swal from 'sweetalert2';
-import { useAuth } from "../../context/AuthContext";
+import { useAuth } from '@/components/context/AuthContext';
 import AddEmpresaModal from "./AddEmpresaModal";
 import EliminarEmpresa from "./EliminarEmpresa";
 import EditarEmpresaModal from "./EditarEmpresa";

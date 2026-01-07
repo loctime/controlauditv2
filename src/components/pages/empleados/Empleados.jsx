@@ -31,7 +31,7 @@ import {
 import { query, where, getDocs, deleteDoc, doc, collection } from 'firebase/firestore';
 import { dbAudit } from '../../../firebaseControlFile';
 import { firestoreRoutesCore } from '../../../core/firestore/firestoreRoutes.core';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '@/components/context/AuthContext';
 import { useGlobalSelection } from '../../../hooks/useGlobalSelection';
 import { normalizeEmpleado } from '../../../utils/firestoreUtils';
 import EmpleadoForm from './EmpleadoForm';

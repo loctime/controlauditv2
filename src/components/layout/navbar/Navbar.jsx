@@ -22,7 +22,7 @@ import { useState } from "react";
 import LogoutIcon from "@mui/icons-material/Logout";
 import { getMenuItems } from "../../../router/navigation";
 import { logout } from "../../../firebaseControlFile";
-import { useAuth } from "../../context/AuthContext";
+import { useAuth } from '@/components/context/AuthContext';
 import Brightness4Icon from '@mui/icons-material/Brightness4';
 import Brightness7Icon from '@mui/icons-material/Brightness7';
 import Switch from '@mui/material/Switch';

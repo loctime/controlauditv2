@@ -20,7 +20,7 @@ import AusenciasFilters from "./components/AusenciasFilters";
 import AusenciasTable from "./components/AusenciasTable";
 import AusenciaFormDialog from "./components/AusenciaFormDialog";
 import { getAusenciaTipos } from "../../../services/ausenciasService";
-import { useAuth } from "../../../components/context/AuthContext";
+import { useAuth } from '@/components/context/AuthContext';
 
 const defaultFilters = {
   tipo: "todos",

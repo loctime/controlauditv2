@@ -13,7 +13,7 @@ import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { es } from 'date-fns/locale';
 import { FileDownload } from '@mui/icons-material';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '@/components/context/AuthContext';
 import { useLocation, useNavigate } from 'react-router-dom';
 import NuevoAccidenteModal from './NuevoAccidenteModal';
 import NuevoIncidenteModal from './NuevoIncidenteModal';

@@ -36,7 +36,7 @@ import { getDocs, query, where, orderBy, collection } from "firebase/firestore";
 import { dbAudit } from "../../../firebaseControlFile";
 import { firestoreRoutesCore } from "../../../core/firestore/firestoreRoutes.core";
 import { toast } from 'react-toastify';
-import { useAuth } from "../../context/AuthContext";
+import { useAuth } from '@/components/context/AuthContext';
 
 const HistorialAuditorias = () => {
   const { userProfile } = useAuth();

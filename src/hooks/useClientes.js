@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { getDocs, updateDoc, doc, query, where, Timestamp, addDoc } from 'firebase/firestore';
 import { toast } from 'react-toastify';
-import { useAuth } from '../components/context/AuthContext';
+import { useAuth } from '@/components/context/AuthContext';
 
 /**
  * ⚠️ MIGRACIÓN PENDIENTE: Este hook usa colecciones que requieren referencias por parámetro:

@@ -15,7 +15,7 @@ import {
   Backdrop,
   Collapse
 } from "@mui/material";
-import { useAuth } from "../../context/AuthContext";
+import { useAuth } from '@/components/context/AuthContext';
 import { useGlobalSelection } from "../../../hooks/useGlobalSelection";
 import { useIndicesCalculator } from "../dashboard-higiene/hooks/useIndicesCalculator";
 import { useDashboardDataFetch } from "../dashboard-higiene/hooks/useDashboardDataFetch";

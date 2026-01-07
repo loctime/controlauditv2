@@ -20,7 +20,7 @@ import GroupIcon from '@mui/icons-material/Group';
 import SettingsIcon from '@mui/icons-material/Settings';
 import DrawIcon from '@mui/icons-material/Draw';
 import InfoIcon from '@mui/icons-material/Info';
-import { useAuth } from "../../context/AuthContext";
+import { useAuth } from '@/components/context/AuthContext';
 import Swal from 'sweetalert2';
 import { dbAudit } from '../../../firebaseControlFile';
 import { collection, getDocs, query, where } from 'firebase/firestore';

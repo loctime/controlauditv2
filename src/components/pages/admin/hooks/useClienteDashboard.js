@@ -3,7 +3,7 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import { collection, addDoc, query, where, getDocs, updateDoc, doc, deleteDoc, serverTimestamp, limit, orderBy, getDoc } from "firebase/firestore";
 import { db, dbAudit } from "../../../../firebaseControlFile";
 import { firestoreRoutesCore } from "../../../../core/firestore/firestoreRoutes.core";
-import { useAuth } from "../../../context/AuthContext";
+import { useAuth } from '@/components/context/AuthContext';
 import { toast } from 'react-toastify';
 import { normalizeSucursal } from '../../../../utils/firestoreUtils';
 

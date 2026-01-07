@@ -23,7 +23,7 @@ import {
 } from '@mui/icons-material';
 import { registrosAsistenciaService } from '../../../../services/registrosAsistenciaService';
 import { capacitacionService } from '../../../../services/capacitacionService';
-import { useAuth } from '../../../context/AuthContext';
+import { useAuth } from '@/components/context/AuthContext';
 import RegistrarAsistenciaInline from './RegistrarAsistenciaInline';
 
 /* ===================== Utils ===================== */

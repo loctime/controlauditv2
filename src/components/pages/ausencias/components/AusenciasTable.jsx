@@ -23,7 +23,7 @@ import DoneIcon from "@mui/icons-material/Done";
 import HistoryIcon from "@mui/icons-material/History";
 import CloseIcon from "@mui/icons-material/Close";
 import { cerrarAusencia, updateAusencia } from "../../../../services/ausenciasService";
-import { useAuth } from "../../../../components/context/AuthContext";
+import { useAuth } from '@/components/context/AuthContext';
 
 const formatDate = (value) => {
   if (!value) return "-";

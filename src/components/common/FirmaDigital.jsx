@@ -13,7 +13,7 @@ import {
   useTheme
 } from '@mui/material';
 import { Check as CheckIcon, Close as CloseIcon } from '@mui/icons-material';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '@/components/context/AuthContext';
 
 const FirmaDigital = ({ 
   onFirmar, 

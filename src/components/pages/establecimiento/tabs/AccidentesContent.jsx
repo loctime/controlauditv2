@@ -14,7 +14,7 @@ import {
 } from '@mui/material';
 import ReportProblemIcon from '@mui/icons-material/ReportProblem';
 import { obtenerAccidentes } from '../../../../services/accidenteService';
-import { useAuth } from '../../../context/AuthContext';
+import { useAuth } from '@/components/context/AuthContext';
 
 const AccidentesContent = ({ sucursalId, sucursalNombre, empresaId, navigateToPage }) => {
   const { userProfile } = useAuth();

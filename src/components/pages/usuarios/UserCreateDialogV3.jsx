@@ -21,7 +21,7 @@ import {
   CheckCircle as CheckCircleIcon,
   Pending as PendingIcon
 } from '@mui/icons-material';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '@/components/context/AuthContext';
 import { toast } from 'react-toastify';
 import userService from '../../../services/userService';
 import { registrarAccionSistema } from '../../../utils/firestoreUtils';

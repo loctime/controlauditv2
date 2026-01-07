@@ -42,7 +42,7 @@ import {
   Settings as SettingsIcon,
   Refresh as RefreshIcon
 } from '@mui/icons-material';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '@/components/context/AuthContext';
 import { toast } from 'react-toastify';
 import { collection, getDocs, query, orderBy, limit, where, addDoc } from 'firebase/firestore';
 import { dbAudit } from '../../../firebaseControlFile';
