@@ -7,12 +7,13 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { query, where, getDocs } from 'firebase/firestore';
+import { query, where, getDocs, collection } from 'firebase/firestore';
 import { dbAudit } from '../../../../firebaseControlFile';
 import { firestoreRoutesCore } from '../../../../core/firestore/firestoreRoutes.core';
 import EventRegistryInline from '../../../shared/event-registry/EventRegistryInline';
 import { registrosAsistenciaServiceAdapter } from '../../../../services/adapters/registrosAsistenciaServiceAdapter';
 import { capacitacionService } from '../../../../services/capacitacionService';
+import { useAuth } from '../../../../components/context/AuthContext';
 
 /**
  * Componente para registrar asistencia (versión migrada)

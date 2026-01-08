@@ -20,7 +20,6 @@ import { Link, useNavigate, Outlet } from "react-router-dom";
 import "./Navbar.css";
 import { useState } from "react";
 import LogoutIcon from "@mui/icons-material/Logout";
-import { getMenuItems } from "../../../router/navigation";
 import { logout } from "../../../firebaseControlFile";
 import { useAuth } from '@/components/context/AuthContext';
 import Brightness4Icon from '@mui/icons-material/Brightness4';
@@ -32,6 +31,9 @@ import GetAppIcon from '@mui/icons-material/GetApp';
 import InfoIcon from '@mui/icons-material/Info';
 import OfflineIndicator from '../../common/OfflineIndicator';
 import OfflineIndicatorMobile from '../../common/OfflineIndicatorMobile';
+import { getNavbarItems, getSidebarItems } from '../../../config/menuConfig';
+import Typography from '@mui/material/Typography';
+import Alert from '@mui/material/Alert';
 
 const drawerWidth = 240;
 
@@ -41,42 +43,57 @@ function Navbar(props) {
   const [anchorElHigiene, setAnchorElHigiene] = useState(null);
   const [anchorElEmpresarial, setAnchorElEmpresarial] = useState(null);
   const navigate = useNavigate();
-  const { logoutContext, user, role, permisos, userProfile } = useAuth();
+  const { logoutContext, user, role, permisos, userProfile, bloqueado } = useAuth();
   const { mode, toggleColorMode } = useColorMode();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const { canInstall, handleInstall, handleShowInfo } = usePWAInstall();
 
-  // Obtener menú dinámico basado en rol y permisos
-  const menuItems = getMenuItems(role, permisos);
+  const isBloqueado = bloqueado || permisos?.bloqueado || userProfile?.bloqueado || false;
+  const navbarItems = role ? getNavbarItems(role, permisos || {}) : { simple: [], higiene: [], empresarial: [] };
+  const sidebarItems = role ? getSidebarItems(role, permisos || {}) : [];
 
-  // ✅ Función para obtener la ruta del dashboard según el rol
-  const getDashboardRoute = () => {
-    switch (role) {
-      case 'supermax':
-        return '/dashboard';
-      case 'max':
-        return '/cliente-dashboard';
-      case 'operario':
-        return '/operario-dashboard';
-      default:
-        return '/';
-    }
-  };
+  const renderNavLink = (item) => (
+    <Link 
+      key={item.id} 
+      to={item.path} 
+      style={{ 
+        color: "#ffffff", 
+        textDecoration: "none", 
+        fontSize: '0.95rem', 
+        padding: '8px 12px', 
+        lineHeight: 1.2,
+        borderRadius: '4px',
+        transition: 'background-color 0.2s'
+      }}
+    >
+      {item.label}
+    </Link>
+  );
 
-  // ✅ Función para obtener el texto del dashboard según el rol
-  const getDashboardText = () => {
-    switch (role) {
-      case 'supermax':
-        return 'Panel de Control';
-      case 'max':
-        return 'Calendario';
-      case 'operario':
-        return 'Mi Dashboard';
-      default:
-        return 'Dashboard';
-    }
-  };
+  const renderMobileNavLink = (item) => (
+    <Link 
+      key={item.id} 
+      to={item.path} 
+      style={{ 
+        color: "#ffffff", 
+        textDecoration: "none", 
+        fontSize: '0.8rem',
+        fontWeight: 500,
+        padding: '4px 8px',
+        borderRadius: '3px',
+        transition: 'background-color 0.2s',
+        lineHeight: 1,
+        outline: 'none',
+        WebkitTapHighlightColor: 'transparent',
+        display: 'flex',
+        alignItems: 'center',
+        height: '100%'
+      }}
+    >
+      {item.label}
+    </Link>
+  );
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);
@@ -114,24 +131,30 @@ function Navbar(props) {
           </Box>
         </Box>
       )}
-      <List>
-        {menuItems.map(({ id, path, title, Icon }) => (
-          <Link key={id} to={path} style={{ textDecoration: 'none' }}>
-            <ListItem disablePadding>
-              <ListItemButton onClick={() => setMobileOpen(false)}>
-                <ListItemIcon>
-                  <Icon sx={{ color: "#ffffff" }} />
-                </ListItemIcon>
-                <ListItemText primary={title} sx={{ color: "#ffffff" }} />
-              </ListItemButton>
-            </ListItem>
-          </Link>
-        ))}
+      {isBloqueado ? (
+        <Box sx={{ p: 2 }}>
+          <Alert severity="error" sx={{ mb: 2 }}>
+            <Typography variant="body2">
+              Tu cuenta está bloqueada. Contacta al administrador.
+            </Typography>
+          </Alert>
+        </Box>
+      ) : (
+        <List>
+          {sidebarItems.map((item) => (
+            <Link key={item.id} to={item.path} style={{ textDecoration: 'none' }}>
+              <ListItem disablePadding>
+                <ListItemButton onClick={() => setMobileOpen(false)}>
+                  <ListItemIcon>
+                    <item.icon sx={{ color: "#ffffff" }} />
+                  </ListItemIcon>
+                  <ListItemText primary={item.label} sx={{ color: "#ffffff" }} />
+                </ListItemButton>
+              </ListItem>
+            </Link>
+          ))}
 
-        {/* Botones PWA - solo si se puede instalar */}
-        {canInstall && (
-          <>
-            
+          {canInstall && (
             <ListItem disablePadding>
               <ListItemButton onClick={handleShowInfo}>
                 <ListItemIcon>
@@ -140,18 +163,18 @@ function Navbar(props) {
                 <ListItemText primary={"Info App"} sx={{ color: "#ffffff" }} />
               </ListItemButton>
             </ListItem>
-          </>
-        )}
+          )}
 
-        <ListItem disablePadding>
-          <ListItemButton onClick={handleLogout}>
-            <ListItemIcon>
-              <LogoutIcon sx={{ color: "#ffffff" }} />
-            </ListItemIcon>
-            <ListItemText primary={"Cerrar sesión"} sx={{ color: "#ffffff" }} />
-          </ListItemButton>
-        </ListItem>
-      </List>
+          <ListItem disablePadding>
+            <ListItemButton onClick={handleLogout}>
+              <ListItemIcon>
+                <LogoutIcon sx={{ color: "#ffffff" }} />
+              </ListItemIcon>
+              <ListItemText primary={"Cerrar sesión"} sx={{ color: "#ffffff" }} />
+            </ListItemButton>
+          </ListItem>
+        </List>
+      )}
     </div>
   );
 
@@ -192,350 +215,287 @@ function Navbar(props) {
             alignItems: 'center'
           }
         }}>
-          {/* Navegación principal - oculta en móvil */}
-          <Box sx={{ 
-            display: { xs: 'none', md: 'flex' }, 
-            gap: 2, 
-            alignItems: 'center',
-            flex: 1
-          }}>
-            <Link to={getDashboardRoute()} style={{ 
-              color: "#ffffff", 
-              textDecoration: "none", 
-              fontSize: '0.95rem', 
-              padding: '8px 12px', 
-              lineHeight: 1.2,
-              borderRadius: '4px',
-              transition: 'background-color 0.2s',
-              '&:hover': {
-                backgroundColor: 'rgba(255,255,255,0.1)'
-              }
+          {!isBloqueado && (
+            <Box sx={{ 
+              display: { xs: 'none', md: 'flex' }, 
+              gap: 2, 
+              alignItems: 'center',
+              flex: 1
             }}>
-              {getDashboardText()}
-            </Link> 
-            <Link to="/auditoria" style={{ 
-              color: "#ffffff", 
-              textDecoration: "none", 
-              fontSize: '0.95rem', 
-              padding: '8px 12px', 
-              lineHeight: 1.2,
-              borderRadius: '4px',
-              transition: 'background-color 0.2s'
-            }}>
-              Auditoria
-            </Link>
-            <Link to="/reporte" style={{ 
-              color: "#ffffff", 
-              textDecoration: "none", 
-              fontSize: '0.95rem', 
-              padding: '8px 12px', 
-              lineHeight: 1.2,
-              borderRadius: '4px',
-              transition: 'background-color 0.2s'
-            }}>
-              Reporte
-            </Link>
-
-            
-            <Box 
-              onClick={handleEmpresarialMenuOpen}
-              sx={{
-                color: "#ffffff",
-                fontSize: '0.95rem',
-                padding: '8px 12px',
-                lineHeight: 1.2,
-                borderRadius: '4px',
-                transition: 'background-color 0.2s',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 0.5,
-                '&:hover': {
-                  backgroundColor: 'rgba(255,255,255,0.1)'
-                }
-              }}
-            >
-              Gestión Empresarial
-              <KeyboardArrowDownIcon sx={{ fontSize: '1rem' }} />
+              {navbarItems.simple.map(item => renderNavLink(item))}
+              
+              {navbarItems.empresarial.length > 0 && (
+                <>
+                  <Box 
+                    onClick={handleEmpresarialMenuOpen}
+                    sx={{
+                      color: "#ffffff",
+                      fontSize: '0.95rem',
+                      padding: '8px 12px',
+                      lineHeight: 1.2,
+                      borderRadius: '4px',
+                      transition: 'background-color 0.2s',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 0.5,
+                      '&:hover': {
+                        backgroundColor: 'rgba(255,255,255,0.1)'
+                      }
+                    }}
+                  >
+                    Gestión Empresarial
+                    <KeyboardArrowDownIcon sx={{ fontSize: '1rem' }} />
+                  </Box>
+                  <Menu
+                    anchorEl={anchorElEmpresarial}
+                    open={Boolean(anchorElEmpresarial)}
+                    onClose={handleEmpresarialMenuClose}
+                    anchorOrigin={{
+                      vertical: 'bottom',
+                      horizontal: 'left',
+                    }}
+                    transformOrigin={{
+                      vertical: 'top',
+                      horizontal: 'left',
+                    }}
+                    PaperProps={{
+                      sx: {
+                        backgroundColor: theme.palette.primary.main,
+                        color: '#ffffff',
+                        '& .MuiMenuItem-root': {
+                          color: '#ffffff',
+                          '&:hover': {
+                            backgroundColor: 'rgba(255,255,255,0.1)',
+                          },
+                        },
+                      },
+                    }}
+                  >
+                    {navbarItems.empresarial.map(item => (
+                      <MenuItem key={item.id} onClick={handleEmpresarialMenuClose}>
+                        <Link to={item.path} style={{ 
+                          color: '#ffffff', 
+                          textDecoration: 'none',
+                          width: '100%'
+                        }}>
+                          {item.label}
+                        </Link>
+                      </MenuItem>
+                    ))}
+                  </Menu>
+                </>
+              )}
+              
+              {navbarItems.higiene.length > 0 && (
+                <>
+                  <Box 
+                    onClick={handleHigieneMenuOpen}
+                    sx={{
+                      color: "#ffffff",
+                      fontSize: '0.95rem',
+                      padding: '8px 12px',
+                      lineHeight: 1.2,
+                      borderRadius: '4px',
+                      transition: 'background-color 0.2s',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 0.5,
+                      '&:hover': {
+                        backgroundColor: 'rgba(255,255,255,0.1)'
+                      }
+                    }}
+                  >
+                    Dashboard Higiene y Seguridad
+                    <KeyboardArrowDownIcon sx={{ fontSize: '1rem' }} />
+                  </Box>
+                  <Menu
+                    anchorEl={anchorElHigiene}
+                    open={Boolean(anchorElHigiene)}
+                    onClose={handleHigieneMenuClose}
+                    anchorOrigin={{
+                      vertical: 'bottom',
+                      horizontal: 'left',
+                    }}
+                    transformOrigin={{
+                      vertical: 'top',
+                      horizontal: 'left',
+                    }}
+                    PaperProps={{
+                      sx: {
+                        backgroundColor: theme.palette.primary.main,
+                        color: '#ffffff',
+                        '& .MuiMenuItem-root': {
+                          color: '#ffffff',
+                          '&:hover': {
+                            backgroundColor: 'rgba(255,255,255,0.1)',
+                          },
+                        },
+                      },
+                    }}
+                  >
+                    {navbarItems.higiene.map(item => (
+                      <MenuItem key={item.id} onClick={handleHigieneMenuClose}>
+                        <Link to={item.path} style={{ 
+                          color: '#ffffff', 
+                          textDecoration: 'none',
+                          width: '100%'
+                        }}>
+                          {item.label}
+                        </Link>
+                      </MenuItem>
+                    ))}
+                  </Menu>
+                </>
+              )}
             </Box>
-            <Menu
-              anchorEl={anchorElEmpresarial}
-              open={Boolean(anchorElEmpresarial)}
-              onClose={handleEmpresarialMenuClose}
-              anchorOrigin={{
-                vertical: 'bottom',
-                horizontal: 'left',
-              }}
-              transformOrigin={{
-                vertical: 'top',
-                horizontal: 'left',
-              }}
-              PaperProps={{
-                sx: {
-                  backgroundColor: theme.palette.primary.main,
-                  color: '#ffffff',
-                  '& .MuiMenuItem-root': {
-                    color: '#ffffff',
-                    '&:hover': {
-                      backgroundColor: 'rgba(255,255,255,0.1)',
-                    },
-                  },
-                },
-              }}
-            >
-              <MenuItem onClick={handleEmpresarialMenuClose}>
-                <Link to="/establecimiento" style={{ 
-                  color: '#ffffff', 
-                  textDecoration: 'none',
-                  width: '100%'
-                }}>
-                  Establecimiento
-                </Link>
-              </MenuItem>
-                            <MenuItem onClick={handleEmpresarialMenuClose}>
-                <Link to="/empleados" style={{ 
-                  color: '#ffffff', 
-                  textDecoration: 'none',
-                  width: '100%'
-                }}>
-                  Empleados
-                </Link>
-              </MenuItem>
-            </Menu>
-            
-            <Box 
-              onClick={handleHigieneMenuOpen}
-              sx={{
-                color: "#ffffff",
-                fontSize: '0.95rem',
-                padding: '8px 12px',
-                lineHeight: 1.2,
-                borderRadius: '4px',
-                transition: 'background-color 0.2s',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 0.5,
-                '&:hover': {
-                  backgroundColor: 'rgba(255,255,255,0.1)'
-                }
-              }}
-            >
-              Dashboard Higiene y Seguridad
-              <KeyboardArrowDownIcon sx={{ fontSize: '1rem' }} />
-            </Box>
-            <Menu
-              anchorEl={anchorElHigiene}
-              open={Boolean(anchorElHigiene)}
-              onClose={handleHigieneMenuClose}
-              anchorOrigin={{
-                vertical: 'bottom',
-                horizontal: 'left',
-              }}
-              transformOrigin={{
-                vertical: 'top',
-                horizontal: 'left',
-              }}
-              PaperProps={{
-                sx: {
-                  backgroundColor: theme.palette.primary.main,
-                  color: '#ffffff',
-                  '& .MuiMenuItem-root': {
-                    color: '#ffffff',
-                    '&:hover': {
-                      backgroundColor: 'rgba(255,255,255,0.1)',
-                    },
-                  },
-                },
-              }}
-            >
-              <MenuItem onClick={handleHigieneMenuClose}>
-                <Link to="/dashboard-seguridad" style={{ 
-                  color: '#ffffff', 
-                  textDecoration: 'none',
-                  width: '100%'
-                }}>
-                  Dashboard
-                </Link>
-              </MenuItem>
-              <MenuItem onClick={handleHigieneMenuClose}>
-                <Link to="/capacitaciones" style={{ 
-                  color: '#ffffff', 
-                  textDecoration: 'none',
-                  width: '100%'
-                }}>
-                  Capacitaciones
-                </Link>
-              </MenuItem>
-              <MenuItem onClick={handleHigieneMenuClose}>
-                <Link to="/accidentes" style={{ 
-                  color: '#ffffff', 
-                  textDecoration: 'none',
-                  width: '100%'
-                }}>
-                  Accidentes
-                </Link>
-              </MenuItem>
-              <MenuItem onClick={handleHigieneMenuClose}>
-                <Link
-                  to="/salud-ocupacional"
-                  style={{
-                    color: "#ffffff",
-                    textDecoration: "none",
-                    width: "100%"
-                  }}
-                >
-                  Salud ocupacional
-                </Link>
-              </MenuItem>
-            </Menu>
+          )}
 
-
-            <Link to="/perfil" style={{ 
-              color: "#ffffff", 
-              textDecoration: "none", 
-              fontSize: '0.95rem', 
-              padding: '8px 12px', 
-              lineHeight: 1.2,
-              borderRadius: '4px',
-              transition: 'background-color 0.2s'
-            }}>
-              Perfil
-            </Link>
-          </Box>
-
-          {/* Navegación en móvil - lado izquierdo */}
-          <Box sx={{ 
-            display: { xs: 'flex', md: 'none' }, 
-            gap: 1,
-            alignItems: 'center',
-            height: '100%'
-          }}>
-            <Link to={getDashboardRoute()} style={{ 
-              color: "#ffffff", 
-              textDecoration: "none", 
-              fontSize: '0.8rem',
-              fontWeight: 500,
-              padding: '4px 8px',
-              borderRadius: '3px',
-              transition: 'background-color 0.2s',
-              lineHeight: 1,
-              outline: 'none',
-              WebkitTapHighlightColor: 'transparent',
-              display: 'flex',
+          {!isBloqueado && (
+            <Box sx={{ 
+              display: { xs: 'flex', md: 'none' }, 
+              gap: 1,
               alignItems: 'center',
               height: '100%'
             }}>
-              Calendario
-            </Link>
-            <Box 
-              onClick={handleHigieneMenuOpen}
-              sx={{
-                color: "#ffffff",
-                fontSize: '0.8rem',
-                fontWeight: 500,
-                padding: '4px 8px',
-                borderRadius: '3px',
-                transition: 'background-color 0.2s',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 0.25,
-                height: '100%',
-                lineHeight: 1,
-                outline: 'none',
-                WebkitTapHighlightColor: 'transparent',
-                '&:hover': {
-                  backgroundColor: 'rgba(255,255,255,0.1)'
-                }
-              }}
-            >
-              Dash
-              <KeyboardArrowDownIcon sx={{ fontSize: '0.75rem' }} />
+              {navbarItems.simple.map(item => renderMobileNavLink(item))}
+              
+              {navbarItems.higiene.length > 0 && (
+                <>
+                  <Box 
+                    onClick={handleHigieneMenuOpen}
+                    sx={{
+                      color: "#ffffff",
+                      fontSize: '0.8rem',
+                      fontWeight: 500,
+                      padding: '4px 8px',
+                      borderRadius: '3px',
+                      transition: 'background-color 0.2s',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 0.25,
+                      height: '100%',
+                      lineHeight: 1,
+                      outline: 'none',
+                      WebkitTapHighlightColor: 'transparent',
+                      '&:hover': {
+                        backgroundColor: 'rgba(255,255,255,0.1)'
+                      }
+                    }}
+                  >
+                    Dash
+                    <KeyboardArrowDownIcon sx={{ fontSize: '0.75rem' }} />
+                  </Box>
+                  <Menu
+                    anchorEl={anchorElHigiene}
+                    open={Boolean(anchorElHigiene)}
+                    onClose={handleHigieneMenuClose}
+                    anchorOrigin={{
+                      vertical: 'bottom',
+                      horizontal: 'left',
+                    }}
+                    transformOrigin={{
+                      vertical: 'top',
+                      horizontal: 'left',
+                    }}
+                    PaperProps={{
+                      sx: {
+                        backgroundColor: theme.palette.primary.main,
+                        color: '#ffffff',
+                        '& .MuiMenuItem-root': {
+                          color: '#ffffff',
+                          '&:hover': {
+                            backgroundColor: 'rgba(255,255,255,0.1)',
+                          },
+                        },
+                      },
+                    }}
+                  >
+                    {navbarItems.higiene.map(item => (
+                      <MenuItem key={item.id} onClick={handleHigieneMenuClose}>
+                        <Link to={item.path} style={{ 
+                          color: '#ffffff', 
+                          textDecoration: 'none',
+                          width: '100%'
+                        }}>
+                          {item.label}
+                        </Link>
+                      </MenuItem>
+                    ))}
+                  </Menu>
+                </>
+              )}
+              
+              {navbarItems.empresarial.length > 0 && (
+                <>
+                  <Box 
+                    onClick={handleEmpresarialMenuOpen}
+                    sx={{
+                      color: "#ffffff",
+                      fontSize: '0.8rem',
+                      fontWeight: 500,
+                      padding: '4px 8px',
+                      borderRadius: '3px',
+                      transition: 'background-color 0.2s',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 0.25,
+                      height: '100%',
+                      lineHeight: 1,
+                      outline: 'none',
+                      WebkitTapHighlightColor: 'transparent',
+                      '&:hover': {
+                        backgroundColor: 'rgba(255,255,255,0.1)'
+                      }
+                    }}
+                  >
+                    Empresarial
+                    <KeyboardArrowDownIcon sx={{ fontSize: '0.75rem' }} />
+                  </Box>
+                  <Menu
+                    anchorEl={anchorElEmpresarial}
+                    open={Boolean(anchorElEmpresarial)}
+                    onClose={handleEmpresarialMenuClose}
+                    anchorOrigin={{
+                      vertical: 'bottom',
+                      horizontal: 'left',
+                    }}
+                    transformOrigin={{
+                      vertical: 'top',
+                      horizontal: 'left',
+                    }}
+                    PaperProps={{
+                      sx: {
+                        backgroundColor: theme.palette.primary.main,
+                        color: '#ffffff',
+                        '& .MuiMenuItem-root': {
+                          color: '#ffffff',
+                          '&:hover': {
+                            backgroundColor: 'rgba(255,255,255,0.1)',
+                          },
+                        },
+                      },
+                    }}
+                  >
+                    {navbarItems.empresarial.map(item => (
+                      <MenuItem key={item.id} onClick={handleEmpresarialMenuClose}>
+                        <Link to={item.path} style={{ 
+                          color: '#ffffff', 
+                          textDecoration: 'none',
+                          width: '100%'
+                        }}>
+                          {item.label}
+                        </Link>
+                      </MenuItem>
+                    ))}
+                  </Menu>
+                </>
+              )}
             </Box>
-            <Menu
-              anchorEl={anchorElHigiene}
-              open={Boolean(anchorElHigiene)}
-              onClose={handleHigieneMenuClose}
-              anchorOrigin={{
-                vertical: 'bottom',
-                horizontal: 'left',
-              }}
-              transformOrigin={{
-                vertical: 'top',
-                horizontal: 'left',
-              }}
-              PaperProps={{
-                sx: {
-                  backgroundColor: theme.palette.primary.main,
-                  color: '#ffffff',
-                  '& .MuiMenuItem-root': {
-                    color: '#ffffff',
-                    '&:hover': {
-                      backgroundColor: 'rgba(255,255,255,0.1)',
-                    },
-                  },
-                },
-              }}
-            >
-              <MenuItem onClick={handleHigieneMenuClose}>
-                <Link to="/dashboard-seguridad" style={{ 
-                  color: '#ffffff', 
-                  textDecoration: 'none',
-                  width: '100%'
-                }}>
-                  Dashboard
-                </Link>
-              </MenuItem>
-              <MenuItem onClick={handleHigieneMenuClose}>
-                <Link to="/capacitaciones" style={{ 
-                  color: '#ffffff', 
-                  textDecoration: 'none',
-                  width: '100%'
-                }}>
-                  Capacitaciones
-                </Link>
-              </MenuItem>
-              <MenuItem onClick={handleHigieneMenuClose}>
-                <Link to="/accidentes" style={{ 
-                  color: '#ffffff', 
-                  textDecoration: 'none',
-                  width: '100%'
-                }}>
-                  Accidentes
-                </Link>
-              </MenuItem>
-              <MenuItem onClick={handleHigieneMenuClose}>
-                <Link
-                  to="/salud-ocupacional"
-                  style={{
-                    color: "#ffffff",
-                    textDecoration: "none",
-                    width: "100%"
-                  }}
-                >
-                  Salud ocupacional
-                </Link>
-              </MenuItem>
-            </Menu>
-            <Link to="/auditoria" style={{ 
-              color: "#ffffff", 
-              textDecoration: "none", 
-              fontSize: '0.8rem',
-              fontWeight: 500,
-              padding: '4px 8px',
-              borderRadius: '3px',
-              transition: 'background-color 0.2s',
-              lineHeight: 1,
-              outline: 'none',
-              WebkitTapHighlightColor: 'transparent',
-              display: 'flex',
-              alignItems: 'center',
-              height: '100%'
-            }}>
-              Auditoria
-            </Link>
-          </Box>
+          )}
 
           {/* Controles del lado derecho - desktop */}
           <Box sx={{ 
