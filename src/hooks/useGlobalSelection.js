@@ -3,7 +3,7 @@ import { useAuth } from '@/components/context/AuthContext';
 
 /**
  * Hook global para manejar la selección de empresa y sucursal
- * Solo maneja IDs reales o null, nunca valores virtuales como "todas"
+ * Expone API unificada con valores normalizados (nunca null/undefined)
  */
 export const useGlobalSelection = () => {
   const {
@@ -15,55 +15,81 @@ export const useGlobalSelection = () => {
     setSelectedSucursal: setGlobalSelectedSucursal
   } = useAuth();
 
-  // Normalizar valores: convertir "todas" a null
-  const selectedEmpresaNormalizada = globalSelectedEmpresa && globalSelectedEmpresa !== 'todas' ? globalSelectedEmpresa : null;
-  const selectedSucursalNormalizada = globalSelectedSucursal && globalSelectedSucursal !== 'todas' ? globalSelectedSucursal : null;
+  // Normalizar valores: convertir null/undefined/'' a "todas", mantener "todas" como string
+  const empresaId = useMemo(() => {
+    if (!globalSelectedEmpresa || globalSelectedEmpresa === '' || globalSelectedEmpresa === 'todas') {
+      return 'todas';
+    }
+    return globalSelectedEmpresa;
+  }, [globalSelectedEmpresa]);
 
-  // Auto-seleccionar primera empresa si no hay ninguna seleccionada
+  const sucursalId = useMemo(() => {
+    if (!globalSelectedSucursal || globalSelectedSucursal === '' || globalSelectedSucursal === 'todas') {
+      return 'todas';
+    }
+    return globalSelectedSucursal;
+  }, [globalSelectedSucursal]);
+
+  // Flags para saber si está seleccionado "todas"
+  const isTodasEmpresas = empresaId === 'todas';
+  const isTodasSucursales = sucursalId === 'todas';
+
+  // Auto-seleccionar primera empresa si solo hay una disponible
   useEffect(() => {
-    if (userEmpresas && userEmpresas.length > 0 && !selectedEmpresaNormalizada) {
+    if (userEmpresas && userEmpresas.length === 1 && isTodasEmpresas) {
       setGlobalSelectedEmpresa(userEmpresas[0].id);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userEmpresas]);
+  }, [userEmpresas, isTodasEmpresas]);
 
   // Filtrar sucursales SOLO por empresa seleccionada
-  const sucursalesFiltradas = useMemo(() => {
-    if (!selectedEmpresaNormalizada) {
+  const sucursalesDisponibles = useMemo(() => {
+    if (isTodasEmpresas) {
       return [];
     }
-    return userSucursales?.filter(s => s.empresaId === selectedEmpresaNormalizada) || [];
-  }, [selectedEmpresaNormalizada, userSucursales]);
+    return userSucursales?.filter(s => s.empresaId === empresaId) || [];
+  }, [empresaId, isTodasEmpresas, userSucursales]);
 
-  // Si cambia la empresa y la sucursal seleccionada no pertenece a ella, setear null
+  // Si cambia la empresa y la sucursal seleccionada no pertenece a ella, resetear a "todas"
   useEffect(() => {
-    if (selectedEmpresaNormalizada && selectedSucursalNormalizada) {
-      const sucursalValida = sucursalesFiltradas.find(s => s.id === selectedSucursalNormalizada);
+    if (!isTodasEmpresas && !isTodasSucursales) {
+      const sucursalValida = sucursalesDisponibles.find(s => s.id === sucursalId);
       if (!sucursalValida) {
-        setGlobalSelectedSucursal(null);
+        setGlobalSelectedSucursal('todas');
       }
     }
-  }, [selectedEmpresaNormalizada, selectedSucursalNormalizada, sucursalesFiltradas, setGlobalSelectedSucursal]);
+  }, [empresaId, sucursalId, isTodasEmpresas, isTodasSucursales, sucursalesDisponibles, setGlobalSelectedSucursal]);
 
-  // Wrappers para setters: convertir '' a null (Material-UI puede enviar '' cuando se limpia)
-  const setSelectedEmpresaWrapper = (value) => {
-    const normalizedValue = value === '' || value === 'todas' ? null : value;
+  // Wrappers para setters: normalizar valores
+  const setEmpresa = (id) => {
+    // Convertir null/undefined/'' a "todas", mantener otros valores
+    const normalizedValue = (!id || id === '') ? 'todas' : id;
     setGlobalSelectedEmpresa(normalizedValue);
   };
 
-  const setSelectedSucursalWrapper = (value) => {
-    const normalizedValue = value === '' || value === 'todas' ? null : value;
+  const setSucursal = (id) => {
+    // Convertir null/undefined/'' a "todas", mantener otros valores
+    const normalizedValue = (!id || id === '') ? 'todas' : id;
     setGlobalSelectedSucursal(normalizedValue);
   };
 
   return {
-    selectedEmpresa: selectedEmpresaNormalizada || '',
-    selectedSucursal: selectedSucursalNormalizada || '',
-    setSelectedEmpresa: setSelectedEmpresaWrapper,
-    setSelectedSucursal: setSelectedSucursalWrapper,
-    sucursalesFiltradas,
-    userEmpresas,
-    userSucursales
+    empresaId,
+    sucursalId,
+    setEmpresa,
+    setSucursal,
+    empresasDisponibles: userEmpresas || [],
+    sucursalesDisponibles,
+    isTodasEmpresas,
+    isTodasSucursales,
+    // Mantener compatibilidad con código existente
+    selectedEmpresa: empresaId === 'todas' ? '' : empresaId,
+    selectedSucursal: sucursalId === 'todas' ? '' : sucursalId,
+    setSelectedEmpresa: setEmpresa,
+    setSelectedSucursal: setSucursal,
+    sucursalesFiltradas: sucursalesDisponibles,
+    userEmpresas: userEmpresas || [],
+    userSucursales: userSucursales || []
   };
 };
 

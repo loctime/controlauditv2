@@ -47,6 +47,69 @@ const AuthContextComponent = ({ children }) => {
   // Control para activar listeners diferidos
   const [enableDeferredListeners, setEnableDeferredListeners] = useState(false);
   
+  // Restaurar selección desde localStorage al inicializar
+  useEffect(() => {
+    if (!isLogged || !userContext) return;
+    
+    try {
+      const savedEmpresa = localStorage.getItem('globalSelectedEmpresa');
+      const savedSucursal = localStorage.getItem('globalSelectedSucursal');
+      
+      // Restaurar empresa solo si existe en userEmpresas
+      if (savedEmpresa && savedEmpresa !== 'todas' && userEmpresas?.length > 0) {
+        const empresaValida = userEmpresas.find(e => e.id === savedEmpresa);
+        if (empresaValida) {
+          setSelectedEmpresa(savedEmpresa);
+        }
+      }
+      
+      // Restaurar sucursal solo si existe en userSucursales y pertenece a la empresa seleccionada
+      if (savedSucursal && savedSucursal !== 'todas' && userSucursales?.length > 0) {
+        const empresaActual = savedEmpresa && savedEmpresa !== 'todas' ? savedEmpresa : selectedEmpresa;
+        if (empresaActual && empresaActual !== 'todas') {
+          const sucursalValida = userSucursales.find(
+            s => s.id === savedSucursal && s.empresaId === empresaActual
+          );
+          if (sucursalValida) {
+            setSelectedSucursal(savedSucursal);
+          }
+        }
+      }
+    } catch (error) {
+      console.warn('[AuthContext] Error restaurando selección desde localStorage:', error);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLogged, userContext, userEmpresas, userSucursales]);
+  
+  // Persistir selección en localStorage cuando cambie
+  useEffect(() => {
+    if (!isLogged || !userContext) return;
+    
+    try {
+      if (selectedEmpresa && selectedEmpresa !== 'todas') {
+        localStorage.setItem('globalSelectedEmpresa', selectedEmpresa);
+      } else {
+        localStorage.removeItem('globalSelectedEmpresa');
+      }
+    } catch (error) {
+      console.warn('[AuthContext] Error persistiendo empresa en localStorage:', error);
+    }
+  }, [selectedEmpresa, isLogged, userContext]);
+  
+  useEffect(() => {
+    if (!isLogged || !userContext) return;
+    
+    try {
+      if (selectedSucursal && selectedSucursal !== 'todas') {
+        localStorage.setItem('globalSelectedSucursal', selectedSucursal);
+      } else {
+        localStorage.removeItem('globalSelectedSucursal');
+      }
+    } catch (error) {
+      console.warn('[AuthContext] Error persistiendo sucursal en localStorage:', error);
+    }
+  }, [selectedSucursal, isLogged, userContext]);
+  
   // Hook de cache offline (solo para móvil)
   const { loadUserFromCache } = useOfflineCache();
   const enableOffline = shouldEnableOffline();
@@ -389,8 +452,12 @@ const AuthContextComponent = ({ children }) => {
     setUserEmpresas([]);
     setUserAuditorias([]);
     setAuditoriasCompartidas([]);
+    setSelectedEmpresa('todas');
+    setSelectedSucursal('todas');
     localStorage.removeItem("userInfo");
     localStorage.removeItem("isLogged");
+    localStorage.removeItem("globalSelectedEmpresa");
+    localStorage.removeItem("globalSelectedSucursal");
   };
 
   // Función simple para actualizar perfil en Firestore (sin sincronizar estado)

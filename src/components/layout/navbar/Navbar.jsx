@@ -34,6 +34,7 @@ import OfflineIndicatorMobile from '../../common/OfflineIndicatorMobile';
 import { getNavbarItems, getSidebarItems } from '../../../config/menuConfig';
 import Typography from '@mui/material/Typography';
 import Alert from '@mui/material/Alert';
+import GlobalFiltersBar from '../GlobalFiltersBar';
 
 const drawerWidth = 240;
 
@@ -43,7 +44,7 @@ function Navbar(props) {
   const [anchorElHigiene, setAnchorElHigiene] = useState(null);
   const [anchorElEmpresarial, setAnchorElEmpresarial] = useState(null);
   const navigate = useNavigate();
-  const { logoutContext, user, role, permisos, userProfile, bloqueado } = useAuth();
+  const { logoutContext, user, role, permisos, userProfile, bloqueado, isLogged } = useAuth();
   const { mode, toggleColorMode } = useColorMode();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
@@ -605,6 +606,9 @@ function Navbar(props) {
           </Box>
         </Toolbar>
       </AppBar>
+      
+      {/* Filtros globales - solo si el usuario está autenticado */}
+      {isLogged && <GlobalFiltersBar />}
       
       <Box component="nav" aria-label="mailbox folders">
         <Drawer
