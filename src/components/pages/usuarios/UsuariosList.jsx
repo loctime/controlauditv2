@@ -464,8 +464,67 @@ const UsuariosList = ({ ownerId: propOwnerId, showAddButton = true }) => {
       <OwnerUserCreateDialog
         open={openOwnerDialog}
         onClose={() => setOpenOwnerDialog(false)}
-        onSuccess={() => {
-          fetchUsuarios();
+        onSuccess={async () => {
+          // Esperar un momento para que Firestore propague los cambios y permisos
+          await new Promise(resolve => setTimeout(resolve, 1500));
+          
+          // Intentar actualizar la lista con reintentos
+          let intentos = 0;
+          const maxIntentos = 3;
+          let actualizado = false;
+          
+          while (intentos < maxIntentos && !actualizado) {
+            intentos++;
+            
+            try {
+              // Llamar directamente al servicio para verificar si hay usuarios nuevos
+              if (ownerId) {
+                const lista = await getUsers(ownerId);
+                if (Array.isArray(lista)) {
+                  setUsuarios(lista);
+                  actualizado = true;
+                  console.log('[UsuariosList] ✅ Lista actualizada después de crear usuario');
+                  return;
+                }
+              } else {
+                // Fallback legacy
+                const lista = await userService.listUsers();
+                const usuariosNormalizados = (Array.isArray(lista) ? lista : []).map(usuario => ({
+                  ...usuario,
+                  empresas: usuario.empresasAsignadas?.map((id) => ({ id, nombre: id })) || [],
+                  legacy: true
+                }));
+                setUsuarios(usuariosNormalizados);
+                actualizado = true;
+                return;
+              }
+            } catch (error) {
+              const isPermissionDenied = 
+                error.code === 'permission-denied' ||
+                error.message?.includes('permission-denied') ||
+                error.message?.includes('Missing or insufficient permissions');
+              
+              if (isPermissionDenied && intentos < maxIntentos) {
+                // Esperar más tiempo antes del siguiente intento
+                console.log(`[UsuariosList] Intento ${intentos}/${maxIntentos}: esperando propagación de permisos...`);
+                await new Promise(resolve => setTimeout(resolve, 1500 * intentos));
+              } else {
+                // Último intento falló o error diferente
+                if (intentos >= maxIntentos) {
+                  console.warn('[UsuariosList] No se pudo actualizar automáticamente. El usuario fue creado correctamente.');
+                  toast.info('Usuario creado exitosamente. Refresca la página para verlo en la lista.');
+                } else {
+                  console.error('[UsuariosList] Error al actualizar lista:', error);
+                  throw error;
+                }
+              }
+            }
+          }
+          
+          // Si no se pudo actualizar después de todos los intentos, hacer un refresh final
+          if (!actualizado) {
+            fetchUsuarios();
+          }
         }}
       />
       {/* Modal legacy para editar usuario */}

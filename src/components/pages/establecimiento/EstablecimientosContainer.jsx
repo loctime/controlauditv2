@@ -82,7 +82,7 @@ const EstablecimientosContainer = () => {
     handleEditLogoChange,
     handleEditEmpresa,
     setLoading: setEditLoading
-  } = useEmpresasEditHandlers(updateEmpresa);
+  } = useEmpresasEditHandlers(updateEmpresa, ownerId);
 
   const [openModal, setOpenModal] = useState(false);
   const [verificando, setVerificando] = useState(false);

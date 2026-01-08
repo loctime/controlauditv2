@@ -33,6 +33,7 @@ export async function createEmpresa(
     id: string;
     nombre: string;
     activa?: boolean;
+    logoShareToken?: string | null;
   }
 ): Promise<Empresa> {
   const methodName = 'createEmpresa';
@@ -61,6 +62,18 @@ export async function createEmpresa(
     throw new Error('empresaData.nombre es requerido');
   }
 
+  // Obtener uid del usuario autenticado (requerido por las rules de Firestore)
+  const authUser = auth.currentUser;
+  if (!authUser || !authUser.uid) {
+    throw new Error('Usuario no autenticado');
+  }
+  const authUid = authUser.uid;
+
+  // Validar que ownerId coincida con el usuario autenticado (requerido por las rules)
+  if (ownerId !== authUid) {
+    throw new Error('ownerId debe ser igual al usuario autenticado');
+  }
+
   const empresaRef = doc(
     db,
     ...path
@@ -75,19 +88,37 @@ export async function createEmpresa(
   };
 
   try {
+    // Crear documento con todos los campos necesarios
+    // El documento debe ser autocontenible y usable sin depender de otros servicios
+    const documentData: any = {
+      appId: 'auditoria',
+      id: empresaData.id,
+      nombre: empresaData.nombre,
+      ownerId: authUid,
+      activa: empresaData.activa !== undefined ? empresaData.activa : true,
+      logo: {
+        type: 'controlfile',
+        shareToken: empresaData.logoShareToken || null
+      },
+      createdAt: serverTimestamp(),
+      createdBy: authUid,
+      updatedAt: serverTimestamp(),
+      updatedBy: authUid
+    };
+    
     console.log(`[Firestore][${methodName}] Ejecutando setDoc...`);
     console.log(`[Firestore][${methodName}] empresaRef.path:`, empresaRef.path);
     console.log(`[Firestore][${methodName}] Datos a escribir:`, {
-      id: empresa.id,
-      ownerId: empresa.ownerId,
-      nombre: empresa.nombre,
-      activa: empresa.activa
+      appId: documentData.appId,
+      id: documentData.id,
+      nombre: documentData.nombre,
+      ownerId: documentData.ownerId,
+      activa: documentData.activa,
+      logo: documentData.logo,
+      createdBy: documentData.createdBy
     });
     
-    await setDoc(empresaRef, {
-      ...empresa,
-      createdAt: serverTimestamp()
-    });
+    await setDoc(empresaRef, documentData);
     
     console.log(`[Firestore][${methodName}] ✅ ===== OPERACIÓN EXITOSA =====`);
     console.log(`[Firestore][${methodName}] Path: ${pathString}`);

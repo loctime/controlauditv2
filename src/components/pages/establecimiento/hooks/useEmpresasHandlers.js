@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import Swal from 'sweetalert2';
 import { uploadEvidence, getDownloadUrl, ensureTaskbarFolder, createSubFolder, listFiles } from '../../../../services/controlFileB2Service';
 import { createEmpresa } from '../../../../core/services/ownerEmpresaService';
@@ -10,6 +11,7 @@ import { v4 as uuidv4 } from 'uuid';
  * Usa ownerEmpresaService.createEmpresa para crear empresas siguiendo el modelo owner-centric
  */
 export const useEmpresasHandlers = (ownerId, updateEmpresa, onEmpresaCreated) => {
+  const queryClient = useQueryClient();
   const [loading, setLoading] = useState(false);
   const [empresa, setEmpresa] = useState({
     nombre: "",
@@ -64,7 +66,7 @@ export const useEmpresasHandlers = (ownerId, updateEmpresa, onEmpresaCreated) =>
     console.log('[useEmpresasHandlers][handleAddEmpresa] ✅ Validaciones pasadas, iniciando creación');
     setLoading(true);
     try {
-      let logoURL = "";
+      let logoShareToken = null;
       if (empresa.logo) {
         try {
           // Obtener o crear carpeta de empresas desde ControlFile
@@ -83,17 +85,18 @@ export const useEmpresasHandlers = (ownerId, updateEmpresa, onEmpresaCreated) =>
             }
           }
           
-          // Subir logo a ControlFile
+          // Subir logo a ControlFile y obtener shareToken
           const result = await uploadEvidence({
             file: empresa.logo,
             auditId: 'empresas',
             companyId: 'system',
             parentId: folderIdEmpresas
           });
-          // Obtener URL temporal para guardar (se regenerará cuando se necesite)
-          logoURL = await getDownloadUrl(result.fileId);
           
-          console.log('[useEmpresasHandlers] ✅ Logo subido a ControlFile');
+          // Guardar shareToken (no URL temporal)
+          logoShareToken = result.shareToken || null;
+          
+          console.log('[useEmpresasHandlers] ✅ Logo subido a ControlFile, shareToken:', logoShareToken);
         } catch (error) {
           console.error('[useEmpresasHandlers] Error al subir logo:', error);
           Swal.fire({
@@ -101,6 +104,7 @@ export const useEmpresasHandlers = (ownerId, updateEmpresa, onEmpresaCreated) =>
             title: 'Advertencia',
             text: 'Error al subir el logo, pero la empresa se creará sin logo'
           });
+          // Continuar con logoShareToken = null
         }
       }
 
@@ -112,7 +116,8 @@ export const useEmpresasHandlers = (ownerId, updateEmpresa, onEmpresaCreated) =>
         ownerId,
         empresaId,
         nombre: empresa.nombre,
-        activa: true
+        activa: true,
+        logoShareToken
       });
 
       // Crear empresa usando ownerEmpresaService (modelo owner-centric)
@@ -120,7 +125,8 @@ export const useEmpresasHandlers = (ownerId, updateEmpresa, onEmpresaCreated) =>
         await createEmpresa(ownerId, {
           id: empresaId,
           nombre: empresa.nombre,
-          activa: true
+          activa: true,
+          logoShareToken: logoShareToken
         });
         console.log('[useEmpresasHandlers][handleAddEmpresa] ✅ Success - Empresa creada');
       } catch (error) {
@@ -159,6 +165,22 @@ export const useEmpresasHandlers = (ownerId, updateEmpresa, onEmpresaCreated) =>
         text: 'Empresa creada exitosamente'
       });
       
+      // Invalidar y refrescar la query de empresas para actualizar la lista
+      // Esperar un momento para que Firestore propague los cambios
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      try {
+        // Invalidar la query de empresas para forzar refetch
+        await queryClient.invalidateQueries({ 
+          queryKey: ['empresas', ownerId] 
+        });
+        
+        console.log('[useEmpresasHandlers] ✅ Query de empresas invalidada, lista se actualizará automáticamente');
+      } catch (queryError) {
+        console.warn('[useEmpresasHandlers] ⚠️ No se pudo invalidar query de empresas:', queryError);
+        // No es crítico, el listener reactivo debería actualizar eventualmente
+      }
+      
       if (onEmpresaCreated) {
         onEmpresaCreated();
       }
@@ -189,7 +211,7 @@ export const useEmpresasHandlers = (ownerId, updateEmpresa, onEmpresaCreated) =>
       console.log('[useEmpresasHandlers][handleAddEmpresa] ===== FINALIZANDO =====');
       setLoading(false);
     }
-  }, [empresa, ownerId, onEmpresaCreated]);
+  }, [empresa, ownerId, onEmpresaCreated, queryClient]);
 
   const resetEmpresa = useCallback(() => {
     setEmpresa({
@@ -214,7 +236,8 @@ export const useEmpresasHandlers = (ownerId, updateEmpresa, onEmpresaCreated) =>
 /**
  * Hook para handlers de edición de empresas
  */
-export const useEmpresasEditHandlers = (updateEmpresa) => {
+export const useEmpresasEditHandlers = (updateEmpresa, ownerId) => {
+  const queryClient = useQueryClient();
   const [loading, setLoading] = useState(false);
   const [empresaEdit, setEmpresaEdit] = useState(null);
 
@@ -297,6 +320,23 @@ export const useEmpresasEditHandlers = (updateEmpresa) => {
         title: 'Éxito',
         text: 'Empresa actualizada exitosamente'
       });
+      
+      // Invalidar y refrescar la query de empresas para actualizar la lista
+      if (ownerId) {
+        // Esperar un momento para que Firestore propague los cambios
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        try {
+          // Invalidar la query de empresas para forzar refetch
+          await queryClient.invalidateQueries({ 
+            queryKey: ['empresas', ownerId] 
+          });
+          
+          console.log('[useEmpresasEditHandlers] ✅ Query de empresas invalidada después de editar');
+        } catch (queryError) {
+          console.warn('[useEmpresasEditHandlers] ⚠️ No se pudo invalidar query de empresas:', queryError);
+        }
+      }
     } catch (error) {
       console.error('Error al actualizar empresa:', error);
       Swal.fire({
@@ -307,7 +347,7 @@ export const useEmpresasEditHandlers = (updateEmpresa) => {
     } finally {
       setLoading(false);
     }
-  }, [empresaEdit, updateEmpresa]);
+  }, [empresaEdit, updateEmpresa, ownerId, queryClient]);
 
   return {
     empresaEdit,
