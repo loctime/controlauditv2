@@ -203,7 +203,8 @@ const OwnerUserCreateDialog = ({ open, onClose, onSuccess }) => {
           role: 'operario',
           empresasAsignadas: [],
           activo: true,
-          appId: 'auditoria'
+          email: formData.email,
+          displayName: formData.nombre
         });
         console.log('[OwnerUserCreateDialog] [PASO 3] ✅ Usuario creado en Core exitosamente');
       } catch (createUserError) {

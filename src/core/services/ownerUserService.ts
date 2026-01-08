@@ -86,6 +86,8 @@ export async function createUser(
     role: 'admin' | 'operario';
     empresasAsignadas?: string[];
     activo?: boolean;
+    email?: string;
+    displayName?: string;
   }
 ): Promise<User> {
   const methodName = 'createUser';
@@ -146,12 +148,22 @@ export async function createUser(
 
   try {
     // Crear documento owner-centric directamente
-    await setDoc(userRef, {
+    const documentData: any = {
       ownerId: currentUserUid,
       appId: 'auditoria',
       role: userData.role,
       empresasAsignadas: empresasAsignadasValidadas
-    });
+    };
+    
+    // Agregar email y displayName si están disponibles
+    if (userData.email) {
+      documentData.email = userData.email;
+    }
+    if (userData.displayName) {
+      documentData.displayName = userData.displayName;
+    }
+    
+    await setDoc(userRef, documentData);
     
     console.log(`[Firestore][${methodName}] ✅ Operación exitosa`);
     console.log(`[Firestore][${methodName}] Path: ${pathString}`);
@@ -296,8 +308,9 @@ export async function assignEmpresasToUser(
 
 /**
  * Obtiene todos los usuarios del owner desde owner-centric
+ * Resuelve nombres de empresas y obtiene datos de Auth si están disponibles
  */
-export async function getUsers(ownerId: string): Promise<User[]> {
+export async function getUsers(ownerId: string): Promise<(User & { email?: string; displayName?: string; empresas?: Array<{ id: string; nombre: string }> })[]> {
   const methodName = 'getUsers';
   const path = firestoreRoutesCore.usuarios(ownerId);
   const pathString = path.join('/');
@@ -319,16 +332,33 @@ export async function getUsers(ownerId: string): Promise<User[]> {
     console.log(`[Firestore][${methodName}] ✅ Operación exitosa`);
     console.log(`[Firestore][${methodName}] Documentos encontrados: ${snapshot.docs.length}`);
     
+    // Obtener todas las empresas del owner para resolver nombres
+    const empresas = await getEmpresas(ownerId);
+    const empresasMap = new Map(empresas.map(emp => [emp.id, emp.nombre]));
+    
     return snapshot.docs.map(doc => {
       const data = doc.data();
+      const empresasAsignadas = data.empresasAsignadas || [];
+      
+      // Resolver nombres de empresas
+      const empresasResueltas = empresasAsignadas.map((empresaId: string) => ({
+        id: empresaId,
+        nombre: empresasMap.get(empresaId) || empresaId // Fallback al ID si no se encuentra
+      }));
+      
       return {
         id: doc.id,
         ownerId: data.ownerId,
         role: data.role,
-        empresasAsignadas: data.empresasAsignadas || [],
+        empresasAsignadas: empresasAsignadas,
+        empresas: empresasResueltas,
+        email: data.email || undefined,
+        displayName: data.displayName || undefined,
+        permisos: data.permisos || {},
         activo: data.activo !== undefined ? data.activo : true,
-        createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : (data.createdAt || new Date())
-      } as User;
+        createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : (data.createdAt || new Date()),
+        legacy: data.legacy || false
+      } as User & { email?: string; displayName?: string; empresas?: Array<{ id: string; nombre: string }>; permisos?: any; legacy?: boolean };
     });
   } catch (error: any) {
     console.group('[Firestore ERROR]');

@@ -85,11 +85,17 @@ const UsuariosList = ({ ownerId: propOwnerId, showAddButton = true }) => {
         console.warn('[UsuariosList] No hay ownerId, usando servicio legacy');
         // Fallback a servicio legacy si no hay ownerId
         const lista = await userService.listUsers();
-        setUsuarios(Array.isArray(lista) ? lista : []);
+        // Normalizar usuarios legacy para que tengan el mismo formato
+        const usuariosNormalizados = (Array.isArray(lista) ? lista : []).map(usuario => ({
+          ...usuario,
+          empresas: usuario.empresasAsignadas?.map((id) => ({ id, nombre: id })) || [],
+          legacy: true
+        }));
+        setUsuarios(usuariosNormalizados);
         return;
       }
 
-      // Usar servicio owner-centric que combina legacy y owner-centric
+      // Usar servicio owner-centric que resuelve nombres de empresas
       const lista = await getUsers(ownerId);
       setUsuarios(Array.isArray(lista) ? lista : []);
     } catch (error) {
@@ -350,8 +356,8 @@ const UsuariosList = ({ ownerId: propOwnerId, showAddButton = true }) => {
               <TableRow>
                 <TableCell>Nombre</TableCell>
                 <TableCell>Email</TableCell>
-                <TableCell>Permisos</TableCell>
-                <TableCell>Fecha Creación</TableCell>
+                <TableCell>Empresas</TableCell>
+                <TableCell>Fecha de creación</TableCell>
                 <TableCell>Acciones</TableCell>
               </TableRow>
             </TableHead>
@@ -359,56 +365,73 @@ const UsuariosList = ({ ownerId: propOwnerId, showAddButton = true }) => {
               {usuarios.map((usuario) => (
                 <TableRow key={usuario.id}>
                   <TableCell>
-                    {usuario.displayName || 'Sin nombre'}
-                    {usuario.legacy && (
-                      <Chip 
-                        label="Legacy" 
-                        size="small" 
-                        color="warning" 
-                        sx={{ ml: 1 }}
-                        title="Usuario legacy - Solo lectura"
-                      />
-                    )}
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Typography>
+                        {usuario.displayName || usuario.email || 'Sin nombre'}
+                      </Typography>
+                      {usuario.legacy && (
+                        <Chip 
+                          label="Legacy" 
+                          size="small" 
+                          color="warning" 
+                          title="Usuario legacy - Solo lectura"
+                        />
+                      )}
+                    </Box>
                   </TableCell>
                   <TableCell>{usuario.email || usuario.id}</TableCell>
                   <TableCell>
-                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                      {PERMISOS_LISTA.map((permiso) => (
-                        <Permiso permiso={permiso.key} key={permiso.key} fallback={null}>
-                          {usuario.permisos?.[permiso.key] && (
-                            <Chip
-                              key={permiso.key}
-                              label={permiso.label}
-                              size="small"
-                              variant="outlined"
-                            />
-                          )}
-                        </Permiso>
-                      ))}
-                    </Box>
+                    {usuario.empresas && usuario.empresas.length > 0 ? (
+                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                        {usuario.empresas.map((empresa) => (
+                          <Chip
+                            key={empresa.id}
+                            label={empresa.nombre}
+                            size="small"
+                            variant="outlined"
+                          />
+                        ))}
+                      </Box>
+                    ) : (
+                      <Typography variant="body2" color="text.secondary">
+                        Sin empresas
+                      </Typography>
+                    )}
                   </TableCell>
                   <TableCell>
                     {(() => {
                       // Soporta Firestore Timestamp, string ISO o Date
                       const fecha = usuario.createdAt;
                       if (!fecha) return 'N/A';
-                      if (typeof fecha === 'string' || fecha instanceof Date) {
-                        const d = new Date(fecha);
-                        return isNaN(d.getTime()) ? 'N/A' : d.toLocaleDateString('es-ES');
-                      }
-                      if (fecha.seconds) {
-                        // Firestore Timestamp
-                        const d = new Date(fecha.seconds * 1000);
-                        return d.toLocaleDateString('es-ES');
-                      }
-                      if (typeof fecha.toDate === 'function') {
+                      
+                      let dateObj;
+                      if (typeof fecha === 'string') {
+                        dateObj = new Date(fecha);
+                      } else if (fecha instanceof Date) {
+                        dateObj = fecha;
+                      } else if (fecha.seconds) {
+                        // Firestore Timestamp (objeto con seconds)
+                        dateObj = new Date(fecha.seconds * 1000);
+                      } else if (typeof fecha.toDate === 'function') {
+                        // Firestore Timestamp (método toDate)
                         try {
-                          return fecha.toDate().toLocaleDateString('es-ES');
+                          dateObj = fecha.toDate();
                         } catch {
                           return 'N/A';
                         }
+                      } else {
+                        return 'N/A';
                       }
-                      return 'N/A';
+                      
+                      if (isNaN(dateObj.getTime())) {
+                        return 'N/A';
+                      }
+                      
+                      // Formatear en dd/mm/yyyy
+                      const day = String(dateObj.getDate()).padStart(2, '0');
+                      const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+                      const year = dateObj.getFullYear();
+                      return `${day}/${month}/${year}`;
                     })()}
                   </TableCell>
                   <TableCell>
