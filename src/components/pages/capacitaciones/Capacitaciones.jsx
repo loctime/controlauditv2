@@ -30,6 +30,7 @@ import CapacitacionesAlertas from './components/CapacitacionesAlertas';
 import CapacitacionesEmptyState from './components/CapacitacionesEmptyState';
 import CapacitacionesTable from './components/CapacitacionesTable';
 import CapacitacionDetailPanelV2 from './components/CapacitacionDetailPanelV2';
+import GlobalFiltersBar from '../../layout/GlobalFiltersBar';
 
 export default function Capacitaciones() {
   const { userProfile, userSucursales, loadingSucursales, getUserSucursales, userEmpresas, loadingEmpresas } = useAuth();
@@ -317,14 +318,13 @@ export default function Capacitaciones() {
       {/* Contenido de las pestañas */}
       {activeTab === 0 && (
         <>
-          {/* Selectores */}
+          {/* Filtros globales (Empresa/Sucursal) */}
+          <Box sx={{ mb: 3 }}>
+            <GlobalFiltersBar compact={false} showSucursal={true} />
+          </Box>
+
+          {/* Filtros locales (Tipo/Estado) */}
           <SelectoresCapacitaciones
-            selectedEmpresa={selectedEmpresa}
-            selectedSucursal={selectedSucursal}
-            onEmpresaChange={setSelectedEmpresa}
-            onSucursalChange={setSelectedSucursal}
-            userEmpresas={userEmpresas}
-            sucursalesFiltradas={sucursalesFiltradas}
             filterTipo={filterTipo}
             onTipoChange={setFilterTipo}
             filterEstado={filterEstado}

@@ -27,6 +27,7 @@ import AccidentesHeader from './components/AccidentesHeader';
 import AccidentesAlertas from './components/AccidentesAlertas';
 import AccidentesFiltros from './components/AccidentesFiltros';
 import EstadisticasAccidentes from './components/EstadisticasAccidentes';
+import GlobalFiltersBar from '../../layout/GlobalFiltersBar';
 import AccidentesTabla from './components/AccidentesTabla';
 import AccidenteDetalleModal from './components/AccidenteDetalleModal';
 import AccidenteDetailPanelV2 from './components/AccidenteDetailPanelV2';
@@ -219,15 +220,15 @@ export default function Accidentes() {
           sucursalesFiltradas={sucursalesFiltradas}
         />
 
+        {/* Filtros globales (Empresa/Sucursal) */}
+        <Box sx={{ mb: 3 }}>
+          <GlobalFiltersBar compact={false} showSucursal={true} />
+        </Box>
+
+        {/* Filtros locales (Búsqueda, Tipo, Estado, Fechas) */}
         <Box sx={{ mb: 3 }}>
           <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={es}>
             <AccidentesFiltros
-              userEmpresas={userEmpresas}
-              sucursalesFiltradas={sucursalesFiltradas}
-              selectedEmpresa={selectedEmpresa}
-              setSelectedEmpresa={setSelectedEmpresa}
-              selectedSucursal={selectedSucursal}
-              setSelectedSucursal={setSelectedSucursal}
               filterTipo={filterTipo}
               setFilterTipo={setFilterTipo}
               filterEstado={filterEstado}

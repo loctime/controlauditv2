@@ -34,7 +34,6 @@ import OfflineIndicatorMobile from '../../common/OfflineIndicatorMobile';
 import { getNavbarItems, getSidebarItems } from '../../../config/menuConfig';
 import Typography from '@mui/material/Typography';
 import Alert from '@mui/material/Alert';
-import GlobalFiltersBar from '../GlobalFiltersBar';
 
 const drawerWidth = 240;
 
@@ -189,14 +188,10 @@ function Navbar(props) {
         position="fixed" 
         sx={{ 
           width: "100%", 
-          minHeight: { xs: 88, sm: 96 }, 
-          height: 'auto',
           zIndex: theme.zIndex.drawer + 1,
           borderRadius: '0 !important',
           boxShadow: 'none !important',
           borderBottom: '1px solid rgba(255,255,255,0.1)',
-          display: 'flex',
-          flexDirection: 'column',
           '&.MuiAppBar-root': {
             borderRadius: '0 !important',
             boxShadow: 'none !important'
@@ -610,24 +605,6 @@ function Navbar(props) {
             </IconButton>
           </Box>
         </Toolbar>
-        
-        {/* Fila inferior: Filtros globales */}
-        {isLogged && (
-          <Box sx={{
-            width: '100%',
-            flexShrink: 0,
-            height: 40,
-            minHeight: 40,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            position: 'relative',
-            zIndex: 1,
-            pointerEvents: 'auto'
-          }}>
-            <GlobalFiltersBar compact embedded />
-          </Box>
-        )}
       </AppBar>
       
       <Box component="nav" aria-label="mailbox folders">
@@ -660,7 +637,7 @@ function Navbar(props) {
         className="main-content-wrapper"
         sx={{ 
           flexGrow: 1, 
-          pt: { xs: 11, sm: 12 }, // Compensar altura del Navbar (48px toolbar + 40px filtros)
+          pt: { xs: 8, sm: 9 }, // Compensar altura del Navbar (48px/56px toolbar)
           pb: { xs: 1, sm: 2, md: 3 },
           width: "100%", 
           minHeight: "100vh", 

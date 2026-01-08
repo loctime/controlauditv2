@@ -13,15 +13,9 @@ import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { Search, Clear } from '@mui/icons-material';
 
 /**
- * Filtros de accidentes
+ * Filtros locales de accidentes (sin empresa/sucursal)
  */
 const AccidentesFiltros = React.memo(({
-  userEmpresas,
-  sucursalesFiltradas,
-  selectedEmpresa,
-  setSelectedEmpresa,
-  selectedSucursal,
-  setSelectedSucursal,
   filterTipo,
   setFilterTipo,
   filterEstado,
@@ -57,50 +51,6 @@ const AccidentesFiltros = React.memo(({
           )
         }}
       />
-    </Grid>
-
-    {/* Filtros existentes */}
-    <Grid item xs={12} sm={6} md={2}>
-      <FormControl fullWidth size="small">
-        <InputLabel>Empresa</InputLabel>
-        <Select
-          value={selectedEmpresa}
-          onChange={(e) => {
-            setSelectedEmpresa(e.target.value);
-            setSelectedSucursal('todas');
-          }}
-          label="Empresa"
-          disabled={!userEmpresas || userEmpresas.length === 0}
-          aria-label="Seleccionar empresa para filtrar accidentes"
-        >
-          <MenuItem value="todas"><em>Todas las empresas</em></MenuItem>
-          {userEmpresas?.map((empresa) => (
-            <MenuItem key={empresa.id} value={empresa.id}>
-              {empresa.nombre}
-            </MenuItem>
-          ))}
-        </Select>
-      </FormControl>
-    </Grid>
-
-    <Grid item xs={12} sm={6} md={2}>
-      <FormControl fullWidth size="small">
-        <InputLabel>Sucursal</InputLabel>
-        <Select
-          value={selectedSucursal}
-          onChange={(e) => setSelectedSucursal(e.target.value)}
-          label="Sucursal"
-          disabled={selectedEmpresa === 'todas'}
-          aria-label="Seleccionar sucursal para filtrar accidentes"
-        >
-          <MenuItem value="todas"><em>Todas las sucursales</em></MenuItem>
-          {sucursalesFiltradas?.map((sucursal) => (
-            <MenuItem key={sucursal.id} value={sucursal.id}>
-              {sucursal.nombre}
-            </MenuItem>
-          ))}
-        </Select>
-      </FormControl>
     </Grid>
 
     <Grid item xs={12} sm={6} md={2}>
