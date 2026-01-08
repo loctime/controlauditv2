@@ -48,49 +48,77 @@ const AuthContextComponent = ({ children }) => {
   const [enableDeferredListeners, setEnableDeferredListeners] = useState(false);
   
   // Restaurar selección desde localStorage al inicializar
+  // IMPORTANTE: Esperar a que empresas y sucursales estén cargadas
   useEffect(() => {
     if (!isLogged || !userContext) return;
+    // Esperar a que los datos estén cargados
+    if (loadingEmpresas || loadingSucursales) return;
     
     try {
       const savedEmpresa = localStorage.getItem('globalSelectedEmpresa');
       const savedSucursal = localStorage.getItem('globalSelectedSucursal');
       
-      // Restaurar empresa solo si existe en userEmpresas
+      // Restaurar empresa: validar existencia antes de restaurar
       if (savedEmpresa && savedEmpresa !== 'todas' && userEmpresas?.length > 0) {
         const empresaValida = userEmpresas.find(e => e.id === savedEmpresa);
         if (empresaValida) {
           setSelectedEmpresa(savedEmpresa);
+        } else {
+          // ID inválido, fallback a "todas"
+          setSelectedEmpresa('todas');
+        }
+      } else if (!savedEmpresa || savedEmpresa === 'todas') {
+        // No hay valor guardado o es "todas", asegurar que esté en "todas"
+        if (selectedEmpresa !== 'todas') {
+          setSelectedEmpresa('todas');
         }
       }
       
-      // Restaurar sucursal solo si existe en userSucursales y pertenece a la empresa seleccionada
+      // Restaurar sucursal: validar existencia y pertenencia a empresa
+      const empresaActual = savedEmpresa && savedEmpresa !== 'todas' ? savedEmpresa : selectedEmpresa;
       if (savedSucursal && savedSucursal !== 'todas' && userSucursales?.length > 0) {
-        const empresaActual = savedEmpresa && savedEmpresa !== 'todas' ? savedEmpresa : selectedEmpresa;
         if (empresaActual && empresaActual !== 'todas') {
           const sucursalValida = userSucursales.find(
             s => s.id === savedSucursal && s.empresaId === empresaActual
           );
           if (sucursalValida) {
             setSelectedSucursal(savedSucursal);
+          } else {
+            // Sucursal inválida o no pertenece a la empresa, fallback a "todas"
+            setSelectedSucursal('todas');
           }
+        } else {
+          // No hay empresa seleccionada, fallback a "todas"
+          setSelectedSucursal('todas');
+        }
+      } else if (!savedSucursal || savedSucursal === 'todas') {
+        // No hay valor guardado o es "todas", asegurar que esté en "todas"
+        if (selectedSucursal !== 'todas') {
+          setSelectedSucursal('todas');
         }
       }
     } catch (error) {
       console.warn('[AuthContext] Error restaurando selección desde localStorage:', error);
+      // En caso de error, asegurar valores por defecto
+      if (selectedEmpresa !== 'todas') {
+        setSelectedEmpresa('todas');
+      }
+      if (selectedSucursal !== 'todas') {
+        setSelectedSucursal('todas');
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isLogged, userContext, userEmpresas, userSucursales]);
+  }, [isLogged, userContext, userEmpresas, userSucursales, loadingEmpresas, loadingSucursales]);
   
   // Persistir selección en localStorage cuando cambie
+  // IMPORTANTE: Persistir "todas" como valor válido
   useEffect(() => {
     if (!isLogged || !userContext) return;
     
     try {
-      if (selectedEmpresa && selectedEmpresa !== 'todas') {
-        localStorage.setItem('globalSelectedEmpresa', selectedEmpresa);
-      } else {
-        localStorage.removeItem('globalSelectedEmpresa');
-      }
+      // Persistir siempre, incluyendo "todas"
+      const valueToSave = selectedEmpresa || 'todas';
+      localStorage.setItem('globalSelectedEmpresa', valueToSave);
     } catch (error) {
       console.warn('[AuthContext] Error persistiendo empresa en localStorage:', error);
     }
@@ -100,11 +128,9 @@ const AuthContextComponent = ({ children }) => {
     if (!isLogged || !userContext) return;
     
     try {
-      if (selectedSucursal && selectedSucursal !== 'todas') {
-        localStorage.setItem('globalSelectedSucursal', selectedSucursal);
-      } else {
-        localStorage.removeItem('globalSelectedSucursal');
-      }
+      // Persistir siempre, incluyendo "todas"
+      const valueToSave = selectedSucursal || 'todas';
+      localStorage.setItem('globalSelectedSucursal', valueToSave);
     } catch (error) {
       console.warn('[AuthContext] Error persistiendo sucursal en localStorage:', error);
     }

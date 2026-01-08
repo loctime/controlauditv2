@@ -15,20 +15,33 @@ export const useGlobalSelection = () => {
     setSelectedSucursal: setGlobalSelectedSucursal
   } = useAuth();
 
-  // Normalizar valores: convertir null/undefined/'' a "todas", mantener "todas" como string
+  // Normalizar valores: convertir null/undefined/'' a "todas", validar existencia
   const empresaId = useMemo(() => {
-    if (!globalSelectedEmpresa || globalSelectedEmpresa === '' || globalSelectedEmpresa === 'todas') {
+    const raw = globalSelectedEmpresa || 'todas';
+    if (raw === 'todas' || raw === '' || !raw) {
       return 'todas';
     }
-    return globalSelectedEmpresa;
-  }, [globalSelectedEmpresa]);
+    // Validar que el ID existe en userEmpresas
+    const exists = userEmpresas?.some(e => e.id === raw);
+    return exists ? raw : 'todas';
+  }, [globalSelectedEmpresa, userEmpresas]);
 
   const sucursalId = useMemo(() => {
-    if (!globalSelectedSucursal || globalSelectedSucursal === '' || globalSelectedSucursal === 'todas') {
+    const raw = globalSelectedSucursal || 'todas';
+    if (raw === 'todas' || raw === '' || !raw) {
       return 'todas';
     }
-    return globalSelectedSucursal;
-  }, [globalSelectedSucursal]);
+    // Validar que el ID existe en userSucursales y pertenece a la empresa seleccionada
+    const exists = userSucursales?.some(s => {
+      if (s.id !== raw) return false;
+      // Si hay empresa seleccionada, validar que la sucursal pertenezca
+      if (empresaId !== 'todas') {
+        return s.empresaId === empresaId;
+      }
+      return true;
+    });
+    return exists ? raw : 'todas';
+  }, [globalSelectedSucursal, userSucursales, empresaId]);
 
   // Flags para saber si está seleccionado "todas"
   const isTodasEmpresas = empresaId === 'todas';
@@ -55,10 +68,14 @@ export const useGlobalSelection = () => {
     if (!isTodasEmpresas && !isTodasSucursales) {
       const sucursalValida = sucursalesDisponibles.find(s => s.id === sucursalId);
       if (!sucursalValida) {
-        setGlobalSelectedSucursal('todas');
+        // Validar existencia antes de resetear
+        const rawSucursal = globalSelectedSucursal || 'todas';
+        if (rawSucursal !== 'todas') {
+          setGlobalSelectedSucursal('todas');
+        }
       }
     }
-  }, [empresaId, sucursalId, isTodasEmpresas, isTodasSucursales, sucursalesDisponibles, setGlobalSelectedSucursal]);
+  }, [empresaId, sucursalId, isTodasEmpresas, isTodasSucursales, sucursalesDisponibles, globalSelectedSucursal, setGlobalSelectedSucursal]);
 
   // Wrappers para setters: normalizar valores
   const setEmpresa = (id) => {

@@ -189,18 +189,21 @@ function Navbar(props) {
         position="fixed" 
         sx={{ 
           width: "100%", 
-          minHeight: { xs: 48, sm: 56 }, 
-          height: { xs: 48, sm: 56 },
+          minHeight: { xs: 88, sm: 96 }, 
+          height: 'auto',
           zIndex: theme.zIndex.drawer + 1,
           borderRadius: '0 !important',
           boxShadow: 'none !important',
           borderBottom: '1px solid rgba(255,255,255,0.1)',
+          display: 'flex',
+          flexDirection: 'column',
           '&.MuiAppBar-root': {
             borderRadius: '0 !important',
             boxShadow: 'none !important'
           }
         }}
       >
+        {/* Fila superior: Navegación principal */}
         <Toolbar sx={{
           gap: { xs: 1, sm: 2 },
           display: "flex",
@@ -211,6 +214,8 @@ function Navbar(props) {
           px: { xs: 1, sm: 1 },
           py: 0,
           position: "relative",
+          zIndex: 2,
+          flexShrink: 0,
           '& > *': {
             display: 'flex',
             alignItems: 'center'
@@ -605,10 +610,25 @@ function Navbar(props) {
             </IconButton>
           </Box>
         </Toolbar>
+        
+        {/* Fila inferior: Filtros globales */}
+        {isLogged && (
+          <Box sx={{
+            width: '100%',
+            flexShrink: 0,
+            height: 40,
+            minHeight: 40,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            position: 'relative',
+            zIndex: 1,
+            pointerEvents: 'auto'
+          }}>
+            <GlobalFiltersBar compact embedded />
+          </Box>
+        )}
       </AppBar>
-      
-      {/* Filtros globales - solo si el usuario está autenticado */}
-      {isLogged && <GlobalFiltersBar />}
       
       <Box component="nav" aria-label="mailbox folders">
         <Drawer
@@ -640,7 +660,8 @@ function Navbar(props) {
         className="main-content-wrapper"
         sx={{ 
           flexGrow: 1, 
-          py: { xs: 1, sm: 2, md: 3 }, 
+          pt: { xs: 11, sm: 12 }, // Compensar altura del Navbar (48px toolbar + 40px filtros)
+          pb: { xs: 1, sm: 2, md: 3 },
           width: "100%", 
           minHeight: "100vh", 
           px: { xs: 1, sm: 2, md: 3 }
