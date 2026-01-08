@@ -147,15 +147,21 @@ export async function createUser(
   };
 
   try {
-    // Crear documento owner-centric directamente
+    // Crear documento owner-centric con todos los campos necesarios
+    // El documento debe ser autocontenible y usable sin depender de Auth
     const documentData: any = {
-      ownerId: currentUserUid,
       appId: 'auditoria',
+      uid: userData.id,
+      ownerId: currentUserUid,
       role: userData.role,
-      empresasAsignadas: empresasAsignadasValidadas
+      empresasAsignadas: empresasAsignadasValidadas,
+      activo: userData.activo !== undefined ? userData.activo : true,
+      bloqueado: false,
+      createdAt: serverTimestamp(),
+      createdBy: currentUserUid
     };
     
-    // Agregar email y displayName si están disponibles
+    // Agregar email y displayName solo si están disponibles (no inventar valores)
     if (userData.email) {
       documentData.email = userData.email;
     }
