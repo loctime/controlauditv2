@@ -149,7 +149,7 @@ export const useDashboardRealtimeData = ({
               empresa.id,
               sucursalId,
               period,
-              userProfile?.uid
+              userProfile
             );
 
             if (cancelled) return;
@@ -196,7 +196,14 @@ export const useDashboardRealtimeData = ({
     const companyId =
       selectedEmpresa && selectedEmpresa !== "todas"
         ? selectedEmpresa
-        : userProfile?.empresaId || userProfile?.uid || "company-001";
+        : userProfile?.empresaId || null;
+    
+    if (!companyId) {
+      console.warn('⚠️ [Dashboard] companyId no disponible');
+      setLoading(false);
+      return;
+    }
+    
     const currentPeriod = `${selectedYear}-${selectedMonth
       .toString()
       .padStart(2, "0")}`;
@@ -222,7 +229,7 @@ export const useDashboardRealtimeData = ({
         setLoading(false);
         setIsCachedSnapshot(false);
       },
-      userProfile?.uid
+      userProfile
     );
 
     return () => {
