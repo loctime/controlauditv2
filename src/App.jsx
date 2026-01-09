@@ -13,6 +13,7 @@ import PWADownloadButton from './components/common/PWADownloadButton';
 import OfflineFallback from './components/common/OfflineFallback';
 import MobileDebug from './components/common/MobileDebug';
 import ErrorBoundary from './components/common/ErrorBoundary';
+import FeedbackButton from './components/common/FeedbackButton';
 import { useConnectivitySimple } from './hooks/useConnectivitySimple';
 
 const App = () => {
@@ -65,6 +66,7 @@ const App = () => {
                     <PWADownloadButton />
                   </>
                 )}
+                <FeedbackButton />
                 <ToastContainer
                   position="top-right"
                   autoClose={5000}

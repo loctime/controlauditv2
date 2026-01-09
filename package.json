@@ -28,6 +28,7 @@
     "optimize": "npm run clean && npm run build"
   },
   "dependencies": {
+    "@controlfile/feedback-sdk": "github:loctime/feedback-skd",
     "@emotion/cache": "^11.13.0",
     "@emotion/react": "^11.13.0",
     "@emotion/styled": "^11.13.0",
