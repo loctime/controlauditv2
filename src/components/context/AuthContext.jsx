@@ -304,6 +304,7 @@ const AuthContextComponent = ({ children }) => {
           const tokenRole = tokenResult.claims.role;
           const tokenOwnerId = tokenResult.claims.ownerId; // NO usar fallback - debe venir del token
           const tokenAppId = tokenResult.claims.appId;
+          const tokenSuperdev = tokenResult.claims.superdev === true; // Claim de superdev
           
           // Validar claims críticos
           if (!tokenRole || (tokenRole !== 'admin' && tokenRole !== 'operario')) {
@@ -351,7 +352,8 @@ const AuthContextComponent = ({ children }) => {
             displayName: firebaseUser.displayName || firebaseUser.email,
             role: tokenRole, // SOLO del token
             ownerId: resolvedOwnerId, // SOLO del token
-            appId: tokenAppId || 'auditoria'
+            appId: tokenAppId || 'auditoria',
+            superdev: tokenSuperdev // Claim de superdev
           };
           
           setUserContext(context);

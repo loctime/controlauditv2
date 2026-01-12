@@ -34,6 +34,7 @@ import OfflineIndicatorMobile from '../../common/OfflineIndicatorMobile';
 import { getNavbarItems, getSidebarItems } from '../../../config/menuConfig';
 import Typography from '@mui/material/Typography';
 import Alert from '@mui/material/Alert';
+import SuperdevSelector from '../../common/SuperdevSelector';
 
 const drawerWidth = 240;
 
@@ -511,6 +512,9 @@ function Navbar(props) {
               <OfflineIndicator userProfile={userProfile} />
             )}
 
+            {/* Selector Superdev (solo visible para usuarios con permisos) */}
+            <SuperdevSelector />
+
             <IconButton onClick={toggleColorMode} color="inherit" aria-label="Alternar modo claro/oscuro">
               {mode === 'dark' ? <Brightness7Icon /> : <Brightness4Icon />}
             </IconButton>
@@ -534,6 +538,11 @@ function Navbar(props) {
             {userProfile && (
               <OfflineIndicatorMobile userProfile={userProfile} />
             )}
+
+            {/* Selector Superdev para móvil (solo visible para usuarios con permisos) */}
+            <Box sx={{ display: { xs: 'flex', sm: 'none' } }}>
+              <SuperdevSelector />
+            </Box>
 
             {/* Switch de tema para móvil */}
             <IconButton 
