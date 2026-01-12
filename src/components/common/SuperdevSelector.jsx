@@ -62,7 +62,7 @@ const SuperdevSelector = () => {
     setOpen(false);
   };
 
-  const handleImpersonate = async (ownerId: string, ownerEmail: string) => {
+  const handleImpersonate = async (ownerId, ownerEmail) => {
     if (impersonating) return;
 
     setImpersonating(true);
@@ -84,7 +84,7 @@ const SuperdevSelector = () => {
       // 5. Recargar página para refrescar contexto
       // El AuthContext detectará el cambio automáticamente
       window.location.reload();
-    } catch (error: any) {
+    } catch (error) {
       console.error('[SuperdevSelector] Error al impersonar:', error);
       const errorMessage = error.message || 'Error al impersonar owner';
       toast.error(errorMessage, {
