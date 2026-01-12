@@ -1,6 +1,6 @@
 # 📋 Mejores Prácticas PWA Offline - Análisis y Recomendaciones
 
-## ✅ Lo que ya estamos haciendo correctamente
+## ✅ Lo que ya estamos haciendo correctamente.
 
 ### 1. **Service Workers**
 - ✅ **Registrado correctamente** en `index.html`
