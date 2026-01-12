@@ -23,12 +23,14 @@
     "die": "node scripts/release.js",
     "dev:web": "vite",
     "dev:full": "concurrently \"npm run dev\" \"npm run backend:dev\"",
+    "reinstall": "powershell -Command \"Remove-Item -Recurse -Force node_modules -ErrorAction SilentlyContinue; Remove-Item -Force package-lock.json -ErrorAction SilentlyContinue; npm install\"",
     "analyze": "npm run build && npx vite-bundle-analyzer dist",
     "clean": "rm -rf dist node_modules/.vite",
     "optimize": "npm run clean && npm run build"
   },
   "dependencies": {
     "@controlfile/feedback-sdk": "github:loctime/feedback-skd",
+    "@controlfile/sdk": "github:loctime/controlfile-sdk#v1.0.7",
     "@emotion/cache": "^11.13.0",
     "@emotion/react": "^11.13.0",
     "@emotion/styled": "^11.13.0",

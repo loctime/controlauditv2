@@ -176,7 +176,7 @@ const verificarTokenAdmin = async (req, res, next) => {
   }
 };
 
-// 1. Crear usuario (owner-centric)
+// 1. Crear usuario (owner-centric) - BACKEND COMPLETO
 app.post('/api/admin/create-user', verificarTokenAdmin, async (req, res) => {
   const { email, password, nombre, role = 'operario', permisos = {} } = req.body;
   
@@ -187,11 +187,10 @@ app.post('/api/admin/create-user', verificarTokenAdmin, async (req, res) => {
   try {
     // Verificar si Firebase Admin está disponible
     if (!admin) {
-      console.log('⚠️ Firebase Admin no disponible, retornando error para activar fallback');
+      console.log('⚠️ Firebase Admin no disponible');
       return res.status(503).json({ 
         error: 'Firebase Admin SDK no disponible',
-        message: 'Usando modo fallback - el frontend creará el usuario en Firestore directamente',
-        fallback: true
+        message: 'Servicio temporalmente no disponible'
       });
     }
 
@@ -205,8 +204,52 @@ app.post('/api/admin/create-user', verificarTokenAdmin, async (req, res) => {
     }
     
     const finalRole = 'operario';
+    const db = admin.firestore();
+    const ownerId = req.user.uid; // Admin siempre tiene ownerId === uid
 
-    // 1. Crear usuario en Firebase Auth
+    // =====================================================
+    // 1. LEER DOCUMENTO OWNER Y VALIDAR LÍMITES
+    // =====================================================
+    const ownerRef = db
+      .collection('apps')
+      .doc('auditoria')
+      .collection('owners')
+      .doc(ownerId);
+    
+    const ownerDoc = await ownerRef.get();
+    
+    if (!ownerDoc.exists) {
+      return res.status(404).json({ 
+        error: 'Owner no encontrado',
+        message: 'El documento del owner no existe. Ejecuta el script create-admin.js primero.'
+      });
+    }
+
+    const ownerData = ownerDoc.data();
+    const limits = ownerData.limits || {};
+    const usage = ownerData.usage || {};
+
+    // Validar límite de operarios
+    // maxOperarios = 0 → ilimitado
+    // maxOperarios > 0 → límite real
+    const maxOperarios = limits.maxOperarios || 0;
+    const currentOperarios = usage.operarios || 0;
+    
+    if (maxOperarios > 0 && currentOperarios >= maxOperarios) {
+      return res.status(403).json({ 
+        error: 'Límite de operarios alcanzado',
+        message: `Has alcanzado el límite de ${maxOperarios} operarios permitidos para tu plan`,
+        limit: maxOperarios,
+        current: currentOperarios
+      });
+    }
+
+    // Log para debug
+    console.log(`[ADMIN] ${ownerData.email || ownerId} (ownerId: ${ownerId}) creó un operario: ${email}`);
+
+    // =====================================================
+    // 2. CREAR USUARIO EN FIREBASE AUTH
+    // =====================================================
     const userRecord = await admin.auth().createUser({
       email,
       password,
@@ -215,42 +258,73 @@ app.post('/api/admin/create-user', verificarTokenAdmin, async (req, res) => {
       disabled: false
     });
 
-    // 2. Obtener ownerId (el admin que está creando el usuario)
-    const ownerId = req.user.uid;
+    const newUserId = userRecord.uid;
     
-    // 3. Asignar custom claims owner-centric (CRÍTICO)
-    // Esto debe ejecutarse ANTES de crear documento en owner-centric
+    // =====================================================
+    // 3. ASIGNAR CUSTOM CLAIMS
+    // =====================================================
     const customClaims = { 
       appId: 'auditoria',
       role: finalRole,
-      ...(finalRole === 'operario' && { ownerId: ownerId }) // Solo operarios tienen ownerId en claims
+      ownerId: ownerId // Solo operarios tienen ownerId en claims
     };
     
-    await admin.auth().setCustomUserClaims(userRecord.uid, customClaims);
-    console.log(`[INFO] Custom claims asignados a UID ${userRecord.uid}:`, customClaims);
+    await admin.auth().setCustomUserClaims(newUserId, customClaims);
+    console.log(`[INFO] Custom claims asignados a UID ${newUserId}:`, customClaims);
     
-    // NOTA: El documento en owner-centric se crea desde el frontend usando ownerUserService.createUser()
-    // El backend solo crea el usuario en Auth y setea los custom claims
+    // =====================================================
+    // 4. CREAR DOCUMENTO FIRESTORE (TRANSACCIÓN)
+    // =====================================================
+    const usuariosRef = getUsersCollection(ownerId).doc(newUserId);
+    
+    await db.runTransaction(async (transaction) => {
+      // Re-leer owner para asegurar consistencia
+      const ownerSnapshot = await transaction.get(ownerRef);
+      if (!ownerSnapshot.exists) {
+        throw new Error('Owner no encontrado durante transacción');
+      }
+
+      // Crear documento del usuario
+      transaction.set(usuariosRef, {
+        uid: newUserId,
+        email: email,
+        displayName: nombre,
+        appId: 'auditoria',
+        role: finalRole,
+        ownerId: ownerId,
+        empresasAsignadas: [],
+        activo: true,
+        bloqueado: false,
+        permisos: permisos || {},
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        createdBy: ownerId
+      });
+
+      // Actualizar contador de uso
+      transaction.update(ownerRef, {
+        'usage.operarios': admin.firestore.FieldValue.increment(1)
+      });
+    });
+
+    console.log(`[INFO] Usuario creado exitosamente: ${newUserId}`);
 
     res.json({ 
       success: true,
-      uid: userRecord.uid,
-      message: `Usuario creado y rol '${finalRole}' asignado automáticamente. El usuario debe cerrar sesión y volver a iniciar para obtener el claim.`
+      uid: newUserId,
+      message: `Usuario creado exitosamente. El usuario debe cerrar sesión y volver a iniciar para obtener los custom claims.`
     });
   } catch (error) {
     console.error('Error al crear usuario:', error);
     
-    // Si es un error de credenciales, activar fallback
-    if (error.code === 'app/invalid-credential') {
-      console.log('⚠️ Error de credenciales, activando fallback');
-      return res.status(503).json({ 
-        error: 'Credenciales de Firebase inválidas',
-        message: 'Usando modo fallback - el frontend creará el usuario en Firestore directamente',
-        fallback: true
+    // Si es un error de credenciales
+    if (error.code === 'app/invalid-credential' || error.code === 'auth/email-already-exists') {
+      return res.status(400).json({ 
+        error: error.message || 'Error al crear usuario en Auth',
+        code: error.code
       });
     }
     
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: error.message || 'Error interno del servidor' });
   }
 });
 
@@ -311,6 +385,7 @@ app.delete('/api/delete-user/:uid', verificarTokenAdmin, async (req, res) => {
 
   try {
     const ownerId = req.user.uid; // Admin siempre tiene ownerId === uid
+    const db = admin.firestore();
     
     // Verificar que el usuario pertenezca al owner
     const userDoc = await getUsersCollection(ownerId).doc(uid).get();
@@ -318,16 +393,44 @@ app.delete('/api/delete-user/:uid', verificarTokenAdmin, async (req, res) => {
       return res.status(404).json({ error: 'Usuario no encontrado en el owner' });
     }
 
+    const userData = userDoc.data();
+    
     // No permitir eliminar al propio usuario
     if (uid === req.user.uid) {
       return res.status(400).json({ error: 'No puedes eliminar tu propia cuenta' });
     }
 
+    // Obtener referencia al documento OWNER
+    const ownerRef = db
+      .collection('apps')
+      .doc('auditoria')
+      .collection('owners')
+      .doc(ownerId);
+
     // Eliminar de Firebase Auth
     await admin.auth().deleteUser(uid);
     
-    // Eliminar de Firestore owner-centric
-    await getUsersCollection(ownerId).doc(uid).delete();
+    // Eliminar de Firestore y decrementar usage en transacción atómica
+    await db.runTransaction(async (transaction) => {
+      // Verificar que el usuario aún existe (puede haber sido eliminado por otro proceso)
+      const userSnapshot = await transaction.get(getUsersCollection(ownerId).doc(uid));
+      if (!userSnapshot.exists) {
+        throw new Error('Usuario ya fue eliminado');
+      }
+
+      // Eliminar documento del usuario
+      transaction.delete(getUsersCollection(ownerId).doc(uid));
+
+      // Decrementar contador de uso
+      transaction.update(ownerRef, {
+        'usage.operarios': admin.firestore.FieldValue.increment(-1)
+      });
+    });
+
+    // Log para debug
+    const ownerDoc = await ownerRef.get();
+    const ownerData = ownerDoc.exists ? ownerDoc.data() : {};
+    console.log(`[ADMIN] ${ownerData.email || ownerId} (ownerId: ${ownerId}) eliminó operario: ${userData.email || uid}`);
     
     res.json({
       success: true,

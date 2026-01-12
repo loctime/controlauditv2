@@ -1,8 +1,14 @@
 /**
- * OwnerUserCreateDialog - Crear usuario usando el modelo owner-centric Core
+ * OwnerUserCreateDialog - Crear usuario operario
  * 
- * Este componente usa ÚNICAMENTE servicios del Core (src/core).
- * NO usa código legacy.
+ * Este componente llama al backend que maneja TODO el flujo:
+ * - Validación de límites (usage.operarios < limits.maxOperarios)
+ * - Creación en Firebase Auth
+ * - Custom claims (appId, role, ownerId)
+ * - Documento Firestore (owner-centric)
+ * - Actualización de usage.operarios
+ * 
+ * El frontend NO crea documentos Firestore directamente.
  */
 
 import React, { useState } from 'react';
@@ -20,7 +26,6 @@ import {
 import { useAuth } from '@/components/context/AuthContext';
 import { auth } from '../../../firebaseControlFile';
 import { toast } from 'react-toastify';
-import { createUser } from '../../../core/services/ownerUserService';
 
 const OwnerUserCreateDialog = ({ open, onClose, onSuccess }) => {
   const { user, userProfile } = useAuth();
@@ -85,21 +90,11 @@ const OwnerUserCreateDialog = ({ open, onClose, onSuccess }) => {
     setLoading(true);
     setError(null);
 
-    // Timeout de seguridad: máximo 30 segundos
-    const timeoutId = setTimeout(() => {
-      console.error('[OwnerUserCreateDialog] ⚠️ TIMEOUT: El proceso tardó más de 30 segundos');
-      setLoading(false);
-      setError('El proceso está tardando demasiado. Por favor, intenta nuevamente.');
-      toast.error('Timeout: El proceso está tardando demasiado');
-    }, 30000);
-
     try {
       console.log('[OwnerUserCreateDialog] ===== INICIO CREACIÓN USUARIO =====');
       console.log('[OwnerUserCreateDialog] Datos:', {
         email: formData.email,
-        ownerId,
-        userUid: user?.uid,
-        userProfileOwnerId: userProfile?.ownerId
+        nombre: formData.nombre
       });
 
       // 1. Verificar sesión activa
@@ -108,15 +103,10 @@ const OwnerUserCreateDialog = ({ open, onClose, onSuccess }) => {
         throw new Error('No hay sesión activa');
       }
 
-      // CRÍTICO: El servicio createUser requiere que ownerId === currentUser.uid
-      // Usar el uid del usuario autenticado directamente
-      const effectiveOwnerId = currentUser.uid;
-      console.log('[OwnerUserCreateDialog] Usando effectiveOwnerId:', effectiveOwnerId);
-
       // 2. Obtener token
-      console.log('[OwnerUserCreateDialog] [PASO 1] Obteniendo token de autenticación...');
+      console.log('[OwnerUserCreateDialog] Obteniendo token de autenticación...');
       const token = await currentUser.getIdToken(true);
-      console.log('[OwnerUserCreateDialog] [PASO 1] ✅ Token obtenido correctamente');
+      console.log('[OwnerUserCreateDialog] ✅ Token obtenido correctamente');
 
       // 3. Preparar payload para backend
       const backendUrl =
@@ -129,21 +119,19 @@ const OwnerUserCreateDialog = ({ open, onClose, onSuccess }) => {
         password: formData.password,
         nombre: formData.nombre,
         role: 'operario',
-        appId: 'auditoria',
-        clienteAdminId: null,
-        permisos: {},
+        permisos: {}
       };
 
-      // 4. Llamar al backend para crear usuario en Firebase Auth
-      console.log('[OwnerUserCreateDialog] [PASO 2] Enviando request al backend...', { endpoint });
+      // 4. Llamar al backend (ahora maneja TODO: validación límites, Auth, custom claims, Firestore, usage)
+      console.log('[OwnerUserCreateDialog] Enviando request al backend...', { endpoint });
       
       // Timeout de 40 segundos para el fetch (Render.com puede tener cold starts)
       const fetchTimeout = 40000;
       const controller = new AbortController();
       const fetchStartTime = Date.now();
-      const timeoutId = setTimeout(() => {
+      const fetchTimeoutId = setTimeout(() => {
         const elapsed = Date.now() - fetchStartTime;
-        console.error('[OwnerUserCreateDialog] [PASO 2] ⚠️ TIMEOUT después de', elapsed, 'ms');
+        console.error('[OwnerUserCreateDialog] ⚠️ TIMEOUT después de', elapsed, 'ms');
         controller.abort();
       }, fetchTimeout);
 
@@ -158,20 +146,20 @@ const OwnerUserCreateDialog = ({ open, onClose, onSuccess }) => {
           body: JSON.stringify(payload),
           signal: controller.signal
         });
-        clearTimeout(timeoutId);
+        clearTimeout(fetchTimeoutId);
         const elapsed = Date.now() - fetchStartTime;
-        console.log('[OwnerUserCreateDialog] [PASO 2] ✅ Respuesta recibida en', elapsed, 'ms');
+        console.log('[OwnerUserCreateDialog] ✅ Respuesta recibida en', elapsed, 'ms');
       } catch (fetchError) {
-        clearTimeout(timeoutId);
+        clearTimeout(fetchTimeoutId);
         const elapsed = Date.now() - fetchStartTime;
-        console.error('[OwnerUserCreateDialog] [PASO 2] ❌ Error en fetch después de', elapsed, 'ms:', fetchError);
+        console.error('[OwnerUserCreateDialog] ❌ Error en fetch después de', elapsed, 'ms:', fetchError);
         if (fetchError.name === 'AbortError') {
           throw new Error(`El servidor no respondió después de ${Math.round(fetchTimeout/1000)} segundos. El backend puede estar iniciando (cold start). Por favor, intenta nuevamente.`);
         }
         throw fetchError;
       }
 
-      console.log('[OwnerUserCreateDialog] [PASO 2] Respuesta del backend recibida:', {
+      console.log('[OwnerUserCreateDialog] Respuesta del backend recibida:', {
         status: response.status,
         ok: response.ok
       });
@@ -179,64 +167,38 @@ const OwnerUserCreateDialog = ({ open, onClose, onSuccess }) => {
       // 5. Si el backend responde error, cortar el flujo inmediatamente
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        const errorMessage = errorData.error || `Error ${response.status}: ${response.statusText}`;
-        console.error('[OwnerUserCreateDialog] [PASO 2] ❌ Error del backend:', errorMessage);
+        const errorMessage = errorData.error || errorData.message || `Error ${response.status}: ${response.statusText}`;
+        console.error('[OwnerUserCreateDialog] ❌ Error del backend:', errorMessage);
         throw new Error(errorMessage);
       }
 
       // 6. Obtener resultado del backend
       const result = await response.json();
-      const newUserId = result.uid;
-      console.log('[OwnerUserCreateDialog] [PASO 2] ✅ Usuario creado en Firebase Auth:', { newUserId });
+      console.log('[OwnerUserCreateDialog] ✅ Usuario creado exitosamente:', result);
 
-      // 7. Crear usuario en el Core (modelo owner-centric)
-      // CRÍTICO: Usar effectiveOwnerId (currentUser.uid) que es lo que requiere el servicio
-      console.log('[OwnerUserCreateDialog] [PASO 3] Creando usuario en Core...', { 
-        effectiveOwnerId, 
-        newUserId,
-        role: 'operario'
-      });
-      
-      try {
-        await createUser(effectiveOwnerId, {
-          id: newUserId,
-          role: 'operario',
-          empresasAsignadas: [],
-          activo: true,
-          email: formData.email,
-          displayName: formData.nombre
-        });
-        console.log('[OwnerUserCreateDialog] [PASO 3] ✅ Usuario creado en Core exitosamente');
-      } catch (createUserError) {
-        console.error('[OwnerUserCreateDialog] [PASO 3] ❌ Error en createUser:', createUserError);
-        throw createUserError;
-      }
+      // El backend ahora maneja TODO:
+      // - Validación de límites (usage.operarios < limits.maxOperarios)
+      // - Creación en Firebase Auth
+      // - Custom claims (appId, role, ownerId)
+      // - Documento Firestore (apps/auditoria/owners/{ownerId}/usuarios/{uid})
+      // - Actualización de usage.operarios (transacción atómica)
 
-      // 8. Mostrar éxito
+      // Mostrar éxito
       toast.success('Usuario creado exitosamente');
       console.log('[OwnerUserCreateDialog] ===== CREACIÓN EXITOSA =====');
       
-      // 9. Cerrar diálogo antes de llamar onSuccess
+      // Cerrar diálogo antes de llamar onSuccess
       onClose();
       
-      // 10. Llamar onSuccess después de cerrar (puede hacer refresh que falle por permisos)
+      // Llamar onSuccess para refrescar lista
       if (onSuccess) {
-        console.log('[OwnerUserCreateDialog] [PASO 4] Ejecutando onSuccess...');
+        console.log('[OwnerUserCreateDialog] Ejecutando onSuccess...');
         try {
           await onSuccess();
-          console.log('[OwnerUserCreateDialog] [PASO 4] ✅ onSuccess ejecutado correctamente');
+          console.log('[OwnerUserCreateDialog] ✅ onSuccess ejecutado correctamente');
         } catch (refreshError) {
-          // No mostrar errores de refresh secundarios (permission-denied esperado)
-          const isPermissionDenied = 
-            refreshError.code === 'permission-denied' ||
-            refreshError.message?.includes('permission-denied') ||
-            refreshError.message?.includes('Missing or insufficient permissions');
-          
-          if (isPermissionDenied) {
-            console.debug('[OwnerUserCreateDialog] [PASO 4] Permission denied en refresh (esperado, usuario creado correctamente)');
-          } else {
-            console.warn('[OwnerUserCreateDialog] [PASO 4] ⚠️ Error en refresh después de crear usuario:', refreshError);
-          }
+          // No mostrar errores de refresh secundarios
+          console.warn('[OwnerUserCreateDialog] ⚠️ Error en refresh después de crear usuario:', refreshError);
         }
       }
     } catch (err) {
@@ -253,7 +215,6 @@ const OwnerUserCreateDialog = ({ open, onClose, onSuccess }) => {
       setError(errorMessage);
       toast.error(errorMessage);
     } finally {
-      clearTimeout(timeoutId);
       console.log('[OwnerUserCreateDialog] ===== FINALIZANDO PROCESO =====');
       console.log('[OwnerUserCreateDialog] Deshabilitando loading...');
       setLoading(false);
