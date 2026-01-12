@@ -446,6 +446,151 @@ app.delete('/api/delete-user/:uid', verificarTokenAdmin, async (req, res) => {
 
 app.use('/api/set-role', setRoleRouter); // Solo para admin, uso administrativo interno
 
+// =====================================================
+// MIDDLEWARE: Verificar permisos superdev
+// =====================================================
+const verificarSuperdev = async (req, res, next) => {
+  try {
+    // Verificar si Firebase Admin está disponible
+    if (!admin) {
+      console.error('❌ Firebase Admin SDK no está disponible');
+      return res.status(503).json({ 
+        error: 'Servicio temporalmente no disponible',
+        message: 'Firebase Admin SDK no está configurado.',
+        code: 'SERVICE_UNAVAILABLE'
+      });
+    }
+
+    const token = req.headers.authorization?.split('Bearer ')[1];
+    if (!token) {
+      return res.status(401).json({ 
+        error: 'Token no proporcionado',
+        code: 'UNAUTHORIZED'
+      });
+    }
+
+    const decodedToken = await admin.auth().verifyIdToken(token);
+    
+    // Validar claim superdev
+    if (decodedToken.superdev !== true) {
+      console.warn(`[SUPERDEV] Intento de acceso sin permisos superdev - UID: ${decodedToken.uid}, Email: ${decodedToken.email || 'N/A'}`);
+      return res.status(403).json({ 
+        error: 'No tienes permisos de superdev',
+        code: 'FORBIDDEN'
+      });
+    }
+
+    // Log de acceso exitoso
+    console.log(`[SUPERDEV] Acceso autorizado - UID: ${decodedToken.uid}, Email: ${decodedToken.email || 'N/A'}`);
+    
+    req.user = decodedToken;
+    next();
+  } catch (error) {
+    console.error('[SUPERDEV] Error verificando token:', error);
+    
+    // Manejar errores específicos de Firebase Auth
+    if (error.code === 'auth/id-token-expired') {
+      return res.status(401).json({ 
+        error: 'Token expirado',
+        code: 'TOKEN_EXPIRED'
+      });
+    }
+    
+    if (error.code === 'auth/id-token-revoked') {
+      return res.status(401).json({ 
+        error: 'Token revocado',
+        code: 'TOKEN_REVOKED'
+      });
+    }
+    
+    res.status(401).json({ 
+      error: 'Token inválido',
+      code: 'UNAUTHORIZED'
+    });
+  }
+};
+
+// =====================================================
+// ENDPOINT: Listar owners disponibles para impersonación
+// =====================================================
+app.get('/api/superdev/list-owners', verificarSuperdev, async (req, res) => {
+  try {
+    const db = admin.firestore();
+    const superdevUid = req.user.uid;
+    const superdevEmail = req.user.email || 'N/A';
+
+    console.log(`[SUPERDEV] Listando owners - Superdev UID: ${superdevUid}, Email: ${superdevEmail}`);
+
+    // Obtener todos los owners de apps/auditoria/owners
+    const ownersRef = db
+      .collection('apps')
+      .doc('auditoria')
+      .collection('owners');
+
+    const ownersSnapshot = await ownersRef.get();
+
+    if (ownersSnapshot.empty) {
+      console.log('[SUPERDEV] No se encontraron owners en Firestore');
+      return res.json({ owners: [] });
+    }
+
+    // Filtrar y validar owners
+    const validOwners = [];
+    
+    for (const ownerDoc of ownersSnapshot.docs) {
+      const ownerId = ownerDoc.id;
+      const ownerData = ownerDoc.data();
+
+      // Validar que el owner cumpla los requisitos
+      // - role === 'admin'
+      // - appId === 'auditoria'
+      // - ownerId === doc.id
+      if (
+        ownerData.role === 'admin' &&
+        ownerData.appId === 'auditoria' &&
+        ownerData.ownerId === ownerId
+      ) {
+        try {
+          // Obtener información del usuario desde Firebase Auth
+          const authUser = await admin.auth().getUser(ownerId);
+          
+          validOwners.push({
+            ownerId: ownerId,
+            email: authUser.email || ownerData.email || '',
+            displayName: authUser.displayName || ownerData.displayName || authUser.email || '',
+            plan: ownerData.plan || null,
+            status: ownerData.status || 'active'
+          });
+        } catch (authError) {
+          // Si el usuario no existe en Auth, omitirlo pero loguear
+          console.warn(`[SUPERDEV] Owner ${ownerId} no tiene cuenta en Firebase Auth, omitiendo`);
+        }
+      } else {
+        // Log de owners inválidos (solo en desarrollo)
+        if (process.env.NODE_ENV === 'development') {
+          console.log(`[SUPERDEV] Owner ${ownerId} no cumple validaciones:`, {
+            role: ownerData.role,
+            appId: ownerData.appId,
+            ownerId: ownerData.ownerId,
+            expectedOwnerId: ownerId
+          });
+        }
+      }
+    }
+
+    console.log(`[SUPERDEV] Listado completado - ${validOwners.length} owners válidos encontrados`);
+
+    res.json({ owners: validOwners });
+  } catch (error) {
+    console.error('[SUPERDEV] Error al listar owners:', error);
+    res.status(500).json({ 
+      error: 'Error interno del servidor',
+      code: 'INTERNAL_ERROR',
+      message: error.message
+    });
+  }
+});
+
 // Iniciar servidor con configuración flexible
 const PORT = process.env.PORT || config.server.port;
 const HOST = '0.0.0.0'; // Para Render, usar 0.0.0.0 en lugar de localhost
