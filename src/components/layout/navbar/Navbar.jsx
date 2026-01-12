@@ -18,10 +18,13 @@ import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 
 import { Link, useNavigate, Outlet } from "react-router-dom";
 import "./Navbar.css";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import LogoutIcon from "@mui/icons-material/Logout";
 import { logout } from "../../../firebaseControlFile";
 import { useAuth } from '@/components/context/AuthContext';
+import { doc, getDoc } from 'firebase/firestore';
+import { dbAudit } from '../../../firebaseControlFile';
+import { firestoreRoutesCore } from '../../../core/firestore/firestoreRoutes.core';
 import Brightness4Icon from '@mui/icons-material/Brightness4';
 import Brightness7Icon from '@mui/icons-material/Brightness7';
 import Switch from '@mui/material/Switch';
@@ -34,6 +37,7 @@ import OfflineIndicatorMobile from '../../common/OfflineIndicatorMobile';
 import { getNavbarItems, getSidebarItems } from '../../../config/menuConfig';
 import Typography from '@mui/material/Typography';
 import Alert from '@mui/material/Alert';
+import Chip from '@mui/material/Chip';
 import SuperdevSelector from '../../common/SuperdevSelector';
 
 const drawerWidth = 240;
@@ -44,11 +48,41 @@ function Navbar(props) {
   const [anchorElHigiene, setAnchorElHigiene] = useState(null);
   const [anchorElEmpresarial, setAnchorElEmpresarial] = useState(null);
   const navigate = useNavigate();
-  const { logoutContext, user, role, permisos, userProfile, bloqueado, isLogged } = useAuth();
+  const { logoutContext, user, role, permisos, userProfile, bloqueado, isLogged, userContext } = useAuth();
   const { mode, toggleColorMode } = useColorMode();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const { canInstall, handleInstall, handleShowInfo } = usePWAInstall();
+  
+  // Estado para el email del owner impersonado
+  const [impersonatedOwnerEmail, setImpersonatedOwnerEmail] = useState(null);
+  
+  // Detectar si se está impersonando y cargar email del owner
+  useEffect(() => {
+    const isImpersonating = userContext?.superdev === true && userContext?.uid !== userContext?.ownerId;
+    
+    if (isImpersonating && userContext?.ownerId) {
+      // Cargar email/displayName del owner impersonado
+      const loadOwnerEmail = async () => {
+        try {
+          const ownerRef = doc(dbAudit, ...firestoreRoutesCore.owner(userContext.ownerId));
+          const ownerDoc = await getDoc(ownerRef);
+          if (ownerDoc.exists()) {
+            const ownerData = ownerDoc.data();
+            setImpersonatedOwnerEmail(ownerData.displayName || ownerData.email || userContext.ownerId);
+          } else {
+            setImpersonatedOwnerEmail(userContext.ownerId);
+          }
+        } catch (error) {
+          console.error('[Navbar] Error cargando email del owner:', error);
+          setImpersonatedOwnerEmail(userContext.ownerId);
+        }
+      };
+      loadOwnerEmail();
+    } else {
+      setImpersonatedOwnerEmail(null);
+    }
+  }, [userContext]);
 
   const isBloqueado = bloqueado || permisos?.bloqueado || userProfile?.bloqueado || false;
   const navbarItems = role ? getNavbarItems(role, permisos || {}) : { simple: [], higiene: [], empresarial: [] };
@@ -512,6 +546,22 @@ function Navbar(props) {
               <OfflineIndicator userProfile={userProfile} />
             )}
 
+            {/* Indicador de impersonación */}
+            {impersonatedOwnerEmail && (
+              <Chip
+                label={`Impersonando: ${impersonatedOwnerEmail}`}
+                color="warning"
+                size="small"
+                sx={{
+                  color: '#ffffff',
+                  backgroundColor: 'rgba(255, 152, 0, 0.2)',
+                  borderColor: '#ff9800',
+                  borderWidth: 1,
+                  borderStyle: 'solid',
+                }}
+              />
+            )}
+
             {/* Selector Superdev (solo visible para usuarios con permisos) */}
             <SuperdevSelector />
 
@@ -537,6 +587,24 @@ function Navbar(props) {
             {/* Indicador offline para móvil */}
             {userProfile && (
               <OfflineIndicatorMobile userProfile={userProfile} />
+            )}
+
+            {/* Indicador de impersonación para móvil */}
+            {impersonatedOwnerEmail && (
+              <Chip
+                label={`Impersonando: ${impersonatedOwnerEmail}`}
+                color="warning"
+                size="small"
+                sx={{
+                  color: '#ffffff',
+                  backgroundColor: 'rgba(255, 152, 0, 0.2)',
+                  borderColor: '#ff9800',
+                  borderWidth: 1,
+                  borderStyle: 'solid',
+                  fontSize: '0.7rem',
+                  height: 24,
+                }}
+              />
             )}
 
             {/* Selector Superdev para móvil (solo visible para usuarios con permisos) */}

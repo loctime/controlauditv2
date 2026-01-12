@@ -81,9 +81,8 @@ const SuperdevSelector = () => {
       // 4. Cerrar modal
       setOpen(false);
 
-      // 5. Recargar página para refrescar contexto
-      // El AuthContext detectará el cambio automáticamente
-      window.location.reload();
+      // 5. El AuthContext detectará el cambio automáticamente vía onAuthStateChanged
+      // No es necesario recargar la página
     } catch (error) {
       console.error('[SuperdevSelector] Error al impersonar:', error);
       const errorMessage = error.message || 'Error al impersonar owner';
@@ -169,15 +168,11 @@ const SuperdevSelector = () => {
                       <ListItemText
                         primary={owner.displayName || owner.email}
                         secondary={
-                          <Box>
+                          owner.displayName && owner.email !== owner.displayName ? (
                             <Typography variant="caption" color="text.secondary">
                               {owner.email}
                             </Typography>
-                            <br />
-                            <Typography variant="caption" color="text.secondary" sx={{ fontFamily: 'monospace' }}>
-                              ID: {owner.ownerId}
-                            </Typography>
-                          </Box>
+                          ) : null
                         }
                       />
                     </ListItemButton>
