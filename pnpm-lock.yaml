@@ -8,9 +8,6 @@ importers:
 
   .:
     dependencies:
-      '@controlfile/feedback-sdk':
-        specifier: github:loctime/feedback-skd
-        version: https://codeload.github.com/loctime/feedback-skd/tar.gz/fa493ec591049275e17ee86dc6c75550c7543a17(firebase@10.14.1)
       '@controlfile/sdk':
         specifier: github:loctime/controlfile-sdk#v1.0.8
         version: https://codeload.github.com/loctime/controlfile-sdk/tar.gz/9f382ee3f64958dca793806a04477ae8c7af63fe
@@ -339,12 +336,6 @@ packages:
   '@babel/types@7.28.5':
     resolution: {integrity: sha512-qQ5m48eI/MFLQ5PxQj4PFaprjyCTLI37ElWMmNs0K8Lk3dVeOdNpB3ks8jc7yM5CDmVC73eMVk/trk3fgmrUpA==}
     engines: {node: '>=6.9.0'}
-
-  '@controlfile/feedback-sdk@https://codeload.github.com/loctime/feedback-skd/tar.gz/fa493ec591049275e17ee86dc6c75550c7543a17':
-    resolution: {tarball: https://codeload.github.com/loctime/feedback-skd/tar.gz/fa493ec591049275e17ee86dc6c75550c7543a17}
-    version: 0.1.0
-    peerDependencies:
-      firebase: ^10
 
   '@controlfile/sdk@https://codeload.github.com/loctime/controlfile-sdk/tar.gz/9f382ee3f64958dca793806a04477ae8c7af63fe':
     resolution: {tarball: https://codeload.github.com/loctime/controlfile-sdk/tar.gz/9f382ee3f64958dca793806a04477ae8c7af63fe}
@@ -4793,10 +4784,6 @@ snapshots:
     dependencies:
       '@babel/helper-string-parser': 7.27.1
       '@babel/helper-validator-identifier': 7.28.5
-
-  '@controlfile/feedback-sdk@https://codeload.github.com/loctime/feedback-skd/tar.gz/fa493ec591049275e17ee86dc6c75550c7543a17(firebase@10.14.1)':
-    dependencies:
-      firebase: 10.14.1
 
   '@controlfile/sdk@https://codeload.github.com/loctime/controlfile-sdk/tar.gz/9f382ee3f64958dca793806a04477ae8c7af63fe': {}
 
