@@ -1,2 +1,6 @@
+packages:
+  - '.'
+  - 'backend'
+
 onlyBuiltDependencies:
   - "@controlfile/feedback-sdk"

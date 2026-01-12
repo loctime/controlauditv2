@@ -3,6 +3,11 @@
   "private": true,
   "version": "0.0.24",
   "type": "module",
+  "packageManager": "pnpm@10.18.3",
+  "engines": {
+    "node": ">=18.0.0 <21.0.0",
+    "pnpm": ">=10.0.0"
+  },
   "scripts": {
     "dev": "concurrently \"vite\" \"cd backend && pnpm run dev\"",
     "dev:staging": "vite --mode staging",
@@ -54,7 +59,6 @@
     "exceljs": "^4.4.0",
     "file-saver": "^2.0.5",
     "firebase": "^10.12.4",
-    "firebase-admin": "^13.6.0",
     "formik": "^2.4.5",
     "html2canvas": "^1.4.1",
     "html2pdf.js": "^0.10.2",
