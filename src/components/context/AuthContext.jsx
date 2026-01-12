@@ -331,29 +331,72 @@ const AuthContextComponent = ({ children }) => {
           // Resolver ownerId según role
           const resolvedOwnerId = tokenRole === 'admin' ? firebaseUser.uid : tokenOwnerId;
           
-          // 2. Validar existencia del documento en Firestore (solo exists/not exists)
-          const userDocRef = doc(db, "apps", "auditoria", "owners", resolvedOwnerId, "usuarios", firebaseUser.uid);
-          const userDocSnap = await getDoc(userDocRef);
+          // 2. Buscar perfil del usuario - MODELO OWNER-CENTRIC
+          // Primero buscar en /apps/auditoria/owners/{uid} (documento del owner)
+          let ownerDocSnap = null;
+          let userDocSnap = null;
+          let userProfileData = null;
           
-          if (!userDocSnap.exists()) {
-            console.error('[AUTH] ❌ Usuario no registrado en ControlAudit');
-            // Logout limpio - no debe quedar medio logueado
-            await signOut(auth);
-            setUser(null);
-            setUserContext(null);
-            setLoading(false);
-            return;
+          // Para admin: buscar su propio documento owner
+          // Para operario: buscar documento owner del ownerId del token
+          const ownerDocRef = doc(db, "apps", "auditoria", "owners", resolvedOwnerId);
+          ownerDocSnap = await getDoc(ownerDocRef);
+          
+          if (ownerDocSnap.exists()) {
+            // ✅ Owner existe - usar documento owner como perfil
+            const ownerData = ownerDocSnap.data();
+            userProfileData = {
+              uid: ownerData.uid || firebaseUser.uid,
+              email: ownerData.email || firebaseUser.email,
+              displayName: ownerData.displayName || firebaseUser.displayName || firebaseUser.email,
+              role: ownerData.role || tokenRole, // Preferir role del documento, fallback al token
+              ownerId: resolvedOwnerId,
+              appId: ownerData.appId || tokenAppId || 'auditoria',
+              status: ownerData.status,
+              superdev: tokenSuperdev // Claim de superdev
+            };
+            console.log('[AUTH] ✅ Perfil encontrado en owner:', userProfileData);
+          } else {
+            // ⚠️ Owner no existe - buscar en legacy /apps/auditoria/users/{uid}
+            console.log('[AUTH] ⚠️ Owner no encontrado, buscando en legacy...');
+            const legacyUserDocRef = doc(db, "apps", "auditoria", "users", firebaseUser.uid);
+            userDocSnap = await getDoc(legacyUserDocRef);
+            
+            if (userDocSnap.exists()) {
+              // ✅ Usuario legacy encontrado
+              const legacyData = userDocSnap.data();
+              userProfileData = {
+                uid: legacyData.uid || firebaseUser.uid,
+                email: legacyData.email || firebaseUser.email,
+                displayName: legacyData.displayName || firebaseUser.displayName || firebaseUser.email,
+                role: legacyData.role || tokenRole,
+                ownerId: resolvedOwnerId,
+                appId: legacyData.appId || tokenAppId || 'auditoria',
+                status: legacyData.status,
+                superdev: tokenSuperdev
+              };
+              console.log('[AUTH] ✅ Perfil encontrado en legacy:', userProfileData);
+            } else {
+              // ❌ No existe ni owner ni legacy
+              console.error('[AUTH] ❌ Usuario no registrado en ControlAudit (ni owner ni legacy)');
+              await signOut(auth);
+              setUser(null);
+              setUserContext(null);
+              setLoading(false);
+              return;
+            }
           }
           
-          // 3. Si existe, crear userContext solo desde custom claims
+          // 3. Crear userContext desde el perfil encontrado
           const context = {
-            uid: firebaseUser.uid,
-            email: firebaseUser.email,
-            displayName: firebaseUser.displayName || firebaseUser.email,
-            role: tokenRole, // SOLO del token
-            ownerId: resolvedOwnerId, // SOLO del token
-            appId: tokenAppId || 'auditoria',
-            superdev: tokenSuperdev // Claim de superdev
+            uid: userProfileData.uid,
+            email: userProfileData.email,
+            displayName: userProfileData.displayName,
+            role: userProfileData.role, // Del documento owner o legacy
+            ownerId: userProfileData.ownerId,
+            appId: userProfileData.appId,
+            status: userProfileData.status,
+            superdev: userProfileData.superdev
           };
           
           setUserContext(context);
