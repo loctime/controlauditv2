@@ -4,6 +4,10 @@
   "outputDirectory": "dist",
   "rewrites": [
     {
+      "source": "/api/(.*)",
+      "destination": "https://controlauditv2.onrender.com/api/$1"
+    },
+    {
       "source": "/((?!assets|icons|sw.js|manifest.json|clear-cache.js).*)",
       "destination": "/index.html"
     }
