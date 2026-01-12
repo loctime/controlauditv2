@@ -1,5 +1,5 @@
 {
-  "installCommand": "npm install -g pnpm@10.18.3 && pnpm install",
+  "installCommand": "corepack disable && npm install -g pnpm@10.18.3 && pnpm install",
   "buildCommand": "pnpm run build",
   "outputDirectory": "dist",
   "rewrites": [
