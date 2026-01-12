@@ -336,13 +336,16 @@ function Dashboard() {
       
       // 🔍 DIAGNÓSTICO: Verificar configuración del backend
       console.log('🔍 DIAGNÓSTICO DE BACKEND:');
-      console.log('   Backend URL:', getBackendUrl());
+      const backendUrl = getBackendUrl();
+      console.log('   Backend URL:', backendUrl || '(rutas relativas /api/*)');
       console.log('   Environment:', getEnvironmentInfo());
       console.log('   Usuario autenticado:', userProfile?.email);
       
       // Probar conectividad del backend
+      // ⚠️ ARQUITECTURA: En producción usar rutas relativas /api/health → Vercel rewrite
       try {
-        const healthCheck = await fetch(`${getBackendUrl()}/health`);
+        const healthEndpoint = backendUrl ? `${backendUrl}/api/health` : '/api/health';
+        const healthCheck = await fetch(healthEndpoint);
         const healthData = await healthCheck.json();
         console.log('✅ Backend health check:', healthData);
       } catch (error) {

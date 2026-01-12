@@ -1,8 +1,11 @@
 import { getBackendUrl, getConfig } from './environment.js';
 
 // Configuración del backend usando el sistema flexible
+// ⚠️ ARQUITECTURA: En producción, URL es '' (rutas relativas /api/* → Vercel rewrite)
+// Solo desarrollo local tiene URL absoluta
 const BACKEND_CONFIG = {
   // URL del backend (detectada automáticamente según el entorno)
+  // Producción: '' (rutas relativas), Desarrollo: URL absoluta
   URL: getBackendUrl(),
   
   // Endpoints de firmas digitales

@@ -4,9 +4,11 @@ import { getBackendUrl, getEnvironmentInfo } from '../config/environment.js';
 
 class BackendHealthCheck {
   constructor() {
+    // ⚠️ ARQUITECTURA: En producción, baseURL es '' (rutas relativas)
+    // Solo desarrollo local tiene URL absoluta
     this.baseURL = getBackendUrl();
     this.api = axios.create({
-      baseURL: this.baseURL,
+      baseURL: this.baseURL || '/api', // Producción: '/api', Desarrollo: URL absoluta
       timeout: 10000,
     });
   }
@@ -14,9 +16,23 @@ class BackendHealthCheck {
   // Verificar conectividad básica
   async checkConnectivity() {
     try {
-      console.log('🔍 Verificando conectividad con:', this.baseURL);
+      const displayUrl = this.baseURL || '(rutas relativas /api/*)';
+      console.log('🔍 Verificando conectividad con:', displayUrl);
       
-      const response = await this.api.get('/health');
+      // Si baseURL está vacío (producción), usar fetch directamente con ruta relativa
+      // Si baseURL tiene valor (desarrollo), usar axios con baseURL configurado
+      let response;
+      if (!this.baseURL) {
+        // Producción: usar fetch con ruta relativa /api/health → Vercel rewrite
+        const fetchResponse = await fetch('/api/health');
+        response = {
+          status: fetchResponse.status,
+          data: await fetchResponse.json()
+        };
+      } else {
+        // Desarrollo: usar axios con baseURL configurado
+        response = await this.api.get('/health');
+      }
       console.log('✅ Backend respondió:', response.data);
       
       return {

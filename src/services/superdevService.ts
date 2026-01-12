@@ -5,7 +5,12 @@ import { auth } from '../firebaseControlFile';
 import { signInWithCustomToken } from 'firebase/auth';
 import { getBackendUrl } from '../config/environment';
 
-const BACKEND_URL = getBackendUrl();
+// ⚠️ ARQUITECTURA: En producción, usar rutas relativas /api/* → Vercel rewrite
+// Solo desarrollo local necesita URL absoluta
+const getBackendBaseUrl = () => {
+  const url = getBackendUrl();
+  return url || ''; // Producción: '' (rutas relativas), Desarrollo: URL absoluta
+};
 
 /**
  * Interfaz para un owner disponible para impersonación
@@ -34,8 +39,10 @@ async function getAuthToken(): Promise<string> {
  */
 export async function impersonateOwner(ownerId: string): Promise<string> {
   const token = await getAuthToken();
+  const backendUrl = getBackendBaseUrl();
+  const endpoint = backendUrl ? `${backendUrl}/api/superdev/impersonate` : '/api/superdev/impersonate';
   
-  const response = await fetch(`${BACKEND_URL}/api/superdev/impersonate`, {
+  const response = await fetch(endpoint, {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${token}`,
@@ -83,7 +90,9 @@ export async function listOwners(): Promise<Owner[]> {
     
     // Intentar obtener lista desde backend
     // Si el endpoint no existe, retornará 404 y usaremos mock
-    const response = await fetch(`${BACKEND_URL}/api/superdev/list-owners`, {
+    const backendUrl = getBackendBaseUrl();
+    const endpoint = backendUrl ? `${backendUrl}/api/superdev/list-owners` : '/api/superdev/list-owners';
+    const response = await fetch(endpoint, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${token}`,

@@ -17,12 +17,10 @@ const nextApi = axios.create({
   timeout: 30000,
 });
 
-// Backend externo ControlFile (Render)
-const API_BASE_URL = `${getBackendUrl()}/api`;
-const externalApi = axios.create({
-  baseURL: API_BASE_URL,
-  timeout: 30000,
-});
+// ⚠️ ELIMINADO: externalApi ya no se usa
+// En producción, todas las llamadas deben usar rutas relativas /api/*
+// El backend de ControlAudit orquesta las llamadas a ControlFile
+// Solo desarrollo local necesita URL absoluta
 
 /* ============================================================================
    AUTH HELPERS
@@ -52,7 +50,6 @@ const addAuthToken = async (config) => {
 };
 
 nextApi.interceptors.request.use(addAuthToken);
-externalApi.interceptors.request.use(addAuthToken);
 
 /* ============================================================================
    ELIMINADO: PERFIL PENDING (LEGACY)
@@ -137,7 +134,10 @@ export const userService = {
   },
 
   async checkBackendHealth() {
-    const res = await externalApi.get('/health');
+    // ✅ Usar ruta relativa: /api/health → Vercel rewrite → ControlAudit backend
+    // En producción: /api/health (ruta relativa)
+    // En desarrollo: /api/health (nextApi ya tiene baseURL='/api')
+    const res = await nextApi.get('/health');
     return res.data;
   },
 

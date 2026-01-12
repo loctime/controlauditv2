@@ -3,6 +3,8 @@ import { getBackendUrl, getEnvironmentInfo } from '../config/environment.js';
 
 export class BackendStatus {
   constructor() {
+    // ⚠️ ARQUITECTURA: En producción, baseURL es '' (rutas relativas)
+    // Solo desarrollo local tiene URL absoluta
     this.baseURL = getBackendUrl();
     this.envInfo = getEnvironmentInfo();
   }
@@ -13,11 +15,12 @@ export class BackendStatus {
       frontend: {
         hostname: this.envInfo.hostname,
         environment: this.envInfo.environment,
-        backendUrl: this.envInfo.backendUrl
+        backendUrl: this.envInfo.backendUrl || '(rutas relativas /api/*)'
       },
       backend: {
-        expectedUrl: this.baseURL,
-        expectedEnvironment: this.envInfo.environment === 'production' ? 'production' : 'development'
+        expectedUrl: this.baseURL || '(rutas relativas /api/* → Vercel rewrite)',
+        expectedEnvironment: this.envInfo.environment === 'production' ? 'production' : 'development',
+        routing: this.baseURL ? 'direct' : 'vercel-rewrite'
       },
       recommendations: this.getRecommendations()
     };
@@ -29,12 +32,13 @@ export class BackendStatus {
     
     if (this.envInfo.environment === 'production') {
       recommendations.push('✅ Frontend en modo producción');
-      recommendations.push('💡 El backend debe estar en: ' + this.baseURL);
+      recommendations.push('💡 Usando rutas relativas /api/* → Vercel rewrite → ControlAudit backend');
+      recommendations.push('💡 El backend debe estar desplegado en Render.com');
       recommendations.push('💡 El backend debe tener NODE_ENV=production');
-      recommendations.push('💡 Verifica que el backend esté desplegado en Render.com');
+      recommendations.push('💡 Verifica vercel.json para el rewrite correcto');
     } else if (this.envInfo.environment === 'development') {
       recommendations.push('🔧 Frontend en modo desarrollo');
-      recommendations.push('💡 El backend debe estar en: http://localhost:4000');
+      recommendations.push('💡 El backend debe estar en: ' + (this.baseURL || 'http://localhost:4000'));
       recommendations.push('💡 Ejecuta: cd backend && pnpm run dev');
     } else {
       recommendations.push('⚠️ Entorno desconocido: ' + this.envInfo.environment);
@@ -51,7 +55,7 @@ export class BackendStatus {
 
   // Obtener URL esperada del backend
   getExpectedBackendUrl() {
-    return this.baseURL;
+    return this.baseURL || '(rutas relativas /api/* → Vercel rewrite)';
   }
 
   // Verificar si estamos en el entorno correcto

@@ -52,6 +52,7 @@ const getEnvironmentConfig = () => {
   
   if (hostname === 'demo.controlaudit.app') {
     // Entorno de demostración
+    // ⚠️ PRODUCCIÓN: Usar rutas relativas, Vercel hace rewrite a ControlAudit backend
     return {
       ...baseConfig,
       app: {
@@ -60,7 +61,7 @@ const getEnvironmentConfig = () => {
         environment: 'demo'
       },
       backend: {
-        url: 'https://controlfile.onrender.com',
+        url: '', // Rutas relativas /api/* → Vercel rewrite → ControlAudit backend
         timeout: 30000,
         maxRetries: 3
       },
@@ -75,6 +76,7 @@ const getEnvironmentConfig = () => {
   
   if (hostname === 'cliente.controlaudit.app') {
     // Entorno de clientes
+    // ⚠️ PRODUCCIÓN: Usar rutas relativas, Vercel hace rewrite a ControlAudit backend
     return {
       ...baseConfig,
       app: {
@@ -83,7 +85,7 @@ const getEnvironmentConfig = () => {
         environment: 'client'
       },
       backend: {
-        url: 'https://controlfile.onrender.com',
+        url: '', // Rutas relativas /api/* → Vercel rewrite → ControlAudit backend
         timeout: 30000,
         maxRetries: 3
       },
@@ -98,6 +100,7 @@ const getEnvironmentConfig = () => {
   
   if (hostname === 'controlaudit.app' || hostname === 'www.controlaudit.app') {
     // Entorno principal de producción
+    // ⚠️ PRODUCCIÓN: Usar rutas relativas, Vercel hace rewrite a ControlAudit backend
     return {
       ...baseConfig,
       app: {
@@ -106,7 +109,7 @@ const getEnvironmentConfig = () => {
         environment: 'production'
       },
       backend: {
-        url: 'https://controlfile.onrender.com',
+        url: '', // Rutas relativas /api/* → Vercel rewrite → ControlAudit backend
         timeout: 30000,
         maxRetries: 3
       },
@@ -119,7 +122,8 @@ const getEnvironmentConfig = () => {
   }
   
   if (hostname === 'controlaudit.vercel.app') {
-    // Entorno de Vercel (temporal)
+    // Entorno de Vercel (staging)
+    // ⚠️ PRODUCCIÓN: Usar rutas relativas, Vercel hace rewrite a ControlAudit backend
     return {
       ...baseConfig,
       app: {
@@ -128,7 +132,7 @@ const getEnvironmentConfig = () => {
         environment: 'staging'
       },
       backend: {
-        url: 'https://controlfile.onrender.com',
+        url: '', // Rutas relativas /api/* → Vercel rewrite → ControlAudit backend
         timeout: 30000,
         maxRetries: 3
       },
@@ -142,6 +146,7 @@ const getEnvironmentConfig = () => {
   
   if (hostname === 'auditoria.controldoc.app' || hostname === 'controlauditv2.onrender.com') {
     // Entorno de Render
+    // ⚠️ PRODUCCIÓN: Usar rutas relativas, Vercel hace rewrite a ControlAudit backend
     return {
       ...baseConfig,
       app: {
@@ -150,7 +155,7 @@ const getEnvironmentConfig = () => {
         environment: 'production'
       },
       backend: {
-        url: 'https://controlfile.onrender.com',
+        url: '', // Rutas relativas /api/* → Vercel rewrite → ControlAudit backend
         timeout: 30000,
         maxRetries: 3
       },
@@ -163,6 +168,8 @@ const getEnvironmentConfig = () => {
   }
   
   // Configuración por defecto (fallback)
+  // ⚠️ Si no es desarrollo local, usar rutas relativas (asume producción)
+  const isDevelopment = hostname === 'localhost' || hostname === '127.0.0.1';
   return {
     ...baseConfig,
     app: {
@@ -171,7 +178,9 @@ const getEnvironmentConfig = () => {
       environment: 'unknown'
     },
     backend: {
-      url: import.meta.env.VITE_BACKEND_URL || 'https://controlfile.onrender.com',
+      url: isDevelopment 
+        ? (import.meta.env.VITE_BACKEND_URL || 'http://localhost:4000')
+        : '', // Producción: rutas relativas
       timeout: 30000,
       maxRetries: 3
     },
@@ -213,6 +222,11 @@ export const isFeatureEnabled = (feature) => {
 };
 
 // Función para obtener la URL del backend
+// ⚠️ ARQUITECTURA IAM/Core:
+// - Desarrollo local: devuelve URL absoluta (http://localhost:4000)
+// - Producción: devuelve '' (rutas relativas /api/* → Vercel rewrite → ControlAudit backend)
+// - El frontend NO debe conocer URLs de backend en producción
+// - ControlFile solo es llamado desde el backend de ControlAudit
 export const getBackendUrl = () => {
   return config.backend.url;
 };
