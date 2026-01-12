@@ -1,6 +1,6 @@
 {
   "buildCommand": "pnpm run build",
-  "installCommand": "pnpm install --frozen-lockfile",
+  "installCommand": "pnpm install --frozen-lockfile --no-optional",
   "rewrites": [
     {
       "source": "/((?!assets|icons|sw.js|manifest.json|clear-cache.js).*)",
