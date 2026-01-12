@@ -22,7 +22,19 @@ import {
   Error as ErrorIcon
 } from '@mui/icons-material';
 import html2canvas from 'html2canvas';
-import { createFeedbackClient } from '@controlfile/feedback-sdk';
+/**
+ * @controlfile/feedback-sdk temporalmente deshabilitado
+ * 
+ * El SDK causaba errores en Vercel durante pnpm install (ERR_PNPM_PREPARE_PACKAGE).
+ * El paquete git-hosted no se puede instalar correctamente en el entorno de build.
+ * 
+ * Para reactivar:
+ * 1. Descomentar la dependencia en package.json: "@controlfile/feedback-sdk": "github:loctime/feedback-skd"
+ * 2. Descomentar el import y el código comentado en este archivo
+ * 3. Ejecutar pnpm install localmente y hacer commit del pnpm-lock.yaml actualizado
+ * 
+ * import { createFeedbackClient } from '@controlfile/feedback-sdk';
+ */
 import { auth } from '../../firebaseControlFile';
 import { useAuth } from '../context/AuthContext';
 
@@ -37,7 +49,11 @@ const FeedbackButton = () => {
   const feedbackClientRef = useRef(null);
 
   // Inicializar cliente de feedback
+  // @controlfile/feedback-sdk temporalmente deshabilitado hasta que se publique correctamente
   React.useEffect(() => {
+    // SDK deshabilitado temporalmente
+    feedbackClientRef.current = null;
+    /*
     try {
       feedbackClientRef.current = createFeedbackClient({
         appId: 'controlaudit',
@@ -50,6 +66,7 @@ const FeedbackButton = () => {
     } catch (error) {
       console.error('[FeedbackButton] Error inicializando SDK:', error);
     }
+    */
   }, []);
 
   const handleOpen = async () => {
@@ -97,7 +114,13 @@ const FeedbackButton = () => {
   };
 
   const handleSubmit = async () => {
-    if (!comment.trim() || !screenshot || !feedbackClientRef.current) {
+    // @controlfile/feedback-sdk temporalmente deshabilitado
+    if (!feedbackClientRef.current) {
+      setStatus('error');
+      setErrorMessage('El servicio de feedback está temporalmente deshabilitado');
+      return;
+    }
+    if (!comment.trim() || !screenshot) {
       return;
     }
 
@@ -180,8 +203,9 @@ const FeedbackButton = () => {
     }
   };
 
-  // No mostrar si el usuario no está autenticado
-  if (!isLogged) {
+  // No mostrar si el usuario no está autenticado o si el SDK está deshabilitado
+  // @controlfile/feedback-sdk temporalmente deshabilitado hasta que se publique correctamente
+  if (!isLogged || !feedbackClientRef.current) {
     return null;
   }
 
