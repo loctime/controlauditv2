@@ -6,25 +6,53 @@ import { fileURLToPath } from "url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// ===============================
+// CONFIG
+// ===============================
+const DEV_UID = "rixIn0BwiVPHB4SgR0K0SlnpSLC2";
+const APP_ID = "auditoria";
+const ROLE = "admin";
+
+// ===============================
+// INIT ADMIN
+// ===============================
 const serviceAccount = JSON.parse(
   fs.readFileSync(
     path.join(__dirname, "../serviceAccountKey-controlfile.json"),
-    "utf8")
+    "utf8"
+  )
 );
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
 });
 
-const DEV_UID = "rixIn0BwiVPHB4SgR0K0SlnpSLC2"; // tu usuario real
-
 async function run() {
-  await admin.auth().setCustomUserClaims(DEV_UID, {
-    superdev: true,
-  });
+  // 1. Obtener usuario actual
+  const user = await admin.auth().getUser(DEV_UID);
+  const currentClaims = user.customClaims || {};
 
-  console.log("✅ superdev habilitado para:", DEV_UID);
-  console.log("⚠️ El usuario debe volver a loguearse para refrescar el token");
+  console.log("🔎 Claims actuales:", currentClaims);
+
+  // 2. Construir claims completos (merge seguro)
+  const newClaims = {
+    ...currentClaims,      // mantiene lo existente
+    appId: APP_ID,
+    role: ROLE,
+    ownerId: DEV_UID,
+    superdev: true         // opcional
+  };
+
+  // 3. Setear claims
+  await admin.auth().setCustomUserClaims(DEV_UID, newClaims);
+
+  console.log("✅ Claims actualizados correctamente:");
+  console.log(newClaims);
+
+  console.log("⚠️ IMPORTANTE: cerrar sesión y volver a loguearse");
 }
 
-run().catch(console.error);
+run().catch(err => {
+  console.error("❌ Error seteando claims:", err);
+  process.exit(1);
+});

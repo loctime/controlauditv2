@@ -160,10 +160,9 @@ const SuperdevSelector = () => {
               <Divider sx={{ my: 2 }} />
               <List>
                 {owners.map((owner) => (
-                  <ListItem key={owner.ownerId} disablePadding>
+                  <ListItem key={owner.uid} disablePadding>
                     <ListItemButton
-                      onClick={() => handleImpersonate(owner.ownerId, owner.email)}
-                      disabled={impersonating}
+onClick={() => handleImpersonate(owner.uid, owner.email)}                      disabled={impersonating}
                     >
                       <ListItemText
                         primary={owner.displayName || owner.email}
