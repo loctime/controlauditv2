@@ -108,11 +108,8 @@ const OwnerUserCreateDialog = ({ open, onClose, onSuccess }) => {
       const token = await currentUser.getIdToken(true);
       console.log('[OwnerUserCreateDialog] ✅ Token obtenido correctamente');
 
-      // 3. Preparar payload para backend
-      const backendUrl =
-        import.meta.env.VITE_CONTROLFILE_BACKEND_URL ||
-        'https://controlfile.onrender.com';
-      const endpoint = `${backendUrl}/api/admin/create-user`;
+      // 3. Preparar payload para backend de ControlAudit (NO ControlFile directamente)
+      const endpoint = '/api/admin/create-user';
 
       const payload = {
         email: formData.email,

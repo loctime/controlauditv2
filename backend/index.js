@@ -6,7 +6,7 @@ import express from 'express';
 import cors from 'cors';
 import admin from './firebaseAdmin.js';
 import setRoleRouter from './routes/setRole.js';
-import { config, getEnvironmentInfo } from './config/environment.js';
+import { config, getEnvironmentInfo, getControlFileBackendUrl } from './config/environment.js';
 import fetch from 'node-fetch';
 
 const app = express();
@@ -248,32 +248,87 @@ app.post('/api/admin/create-user', verificarTokenAdmin, async (req, res) => {
     console.log(`[ADMIN] ${ownerData.email || ownerId} (ownerId: ${ownerId}) creó un operario: ${email}`);
 
     // =====================================================
-    // 2. CREAR USUARIO EN FIREBASE AUTH
+    // 2. LLAMAR A CONTROLFILE PARA GESTIÓN DE IDENTIDAD
+    //    ControlFile solo maneja: Auth + Claims
+    //    ⚠️ Timeout: 25s para evitar requests colgados en Render (cold starts)
     // =====================================================
-    const userRecord = await admin.auth().createUser({
+    const controlFileUrl = getControlFileBackendUrl();
+    const controlFileEndpoint = `${controlFileUrl}/api/admin/create-user`;
+    
+    // Usar el token del usuario actual que viene en el request
+    const adminToken = req.headers.authorization?.split('Bearer ')[1];
+    if (!adminToken) {
+      return res.status(401).json({ error: 'Token no proporcionado' });
+    }
+    
+    // Llamar a ControlFile para crear usuario y asignar claims
+    // Nota: Payload usa "nombre" pero ControlFile lo mapea a displayName en Auth
+    const controlFilePayload = {
       email,
       password,
-      displayName: nombre,
-      emailVerified: false,
-      disabled: false
-    });
-
-    const newUserId = userRecord.uid;
-    
-    // =====================================================
-    // 3. ASIGNAR CUSTOM CLAIMS
-    // =====================================================
-    const customClaims = { 
-      appId: 'auditoria',
+      nombre, // ControlFile mapea esto a displayName en Firebase Auth
       role: finalRole,
-      ownerId: ownerId // Solo operarios tienen ownerId en claims
+      appId: 'auditoria',
+      ownerId: ownerId
     };
     
-    await admin.auth().setCustomUserClaims(newUserId, customClaims);
-    console.log(`[INFO] Custom claims asignados a UID ${newUserId}:`, customClaims);
+    console.log(`[CONTROLAUDIT] Llamando a ControlFile para gestión de identidad: ${controlFileEndpoint}`);
+    
+    // Timeout de 25s para evitar requests colgados (Render cold starts)
+    const CONTROLFILE_TIMEOUT = 25000;
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => {
+      controller.abort();
+    }, CONTROLFILE_TIMEOUT);
+    
+    let controlFileResponse;
+    try {
+      controlFileResponse = await fetch(controlFileEndpoint, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${adminToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(controlFilePayload),
+        signal: controller.signal
+      });
+      clearTimeout(timeoutId);
+    } catch (fetchError) {
+      clearTimeout(timeoutId);
+      
+      if (fetchError.name === 'AbortError') {
+        console.error(`[CONTROLAUDIT] Timeout llamando a ControlFile después de ${CONTROLFILE_TIMEOUT}ms`);
+        return res.status(504).json({
+          error: 'Timeout al comunicarse con ControlFile',
+          message: `El servicio de identidad no respondió después de ${CONTROLFILE_TIMEOUT/1000} segundos. Puede estar iniciando (cold start). Intenta nuevamente.`
+        });
+      }
+      
+      console.error(`[CONTROLAUDIT] Error de red llamando a ControlFile:`, fetchError);
+      return res.status(503).json({
+        error: 'Error de comunicación con ControlFile',
+        message: 'No se pudo establecer conexión con el servicio de identidad. Verifica la conectividad.'
+      });
+    }
+
+    if (!controlFileResponse.ok) {
+      const errorData = await controlFileResponse.json().catch(() => ({}));
+      console.error(`[CONTROLAUDIT] Error en ControlFile:`, errorData);
+      return res.status(controlFileResponse.status).json({
+        error: errorData.error || 'Error al crear usuario en ControlFile',
+        message: errorData.message || 'No se pudo crear el usuario en el sistema de identidad'
+      });
+    }
+
+    const controlFileResult = await controlFileResponse.json();
+    const newUserId = controlFileResult.uid;
+    
+    console.log(`[CONTROLAUDIT] Usuario creado en ControlFile: ${newUserId}`);
+    console.log(`[CONTROLAUDIT] ControlFile maneja Auth + Claims, ControlAudit maneja Firestore owner-centric`);
     
     // =====================================================
-    // 4. CREAR DOCUMENTO FIRESTORE (TRANSACCIÓN)
+    // 3. CREAR DOCUMENTO FIRESTORE OWNER-CENTRIC (TRANSACCIÓN)
+    //    ControlAudit escribe Firestore owner-centric
     // =====================================================
     const usuariosRef = getUsersCollection(ownerId).doc(newUserId);
     
@@ -285,10 +340,13 @@ app.post('/api/admin/create-user', verificarTokenAdmin, async (req, res) => {
       }
 
       // Crear documento del usuario
+      // ⚠️ NAMING: El frontend envía "nombre" pero Firestore usa "displayName"
+      // Esto es consistente con Firebase Auth que también usa displayName
+      // Decisión: Normalizar siempre a displayName para mantener consistencia entre Auth y Firestore
       transaction.set(usuariosRef, {
         uid: newUserId,
         email: email,
-        displayName: nombre,
+        displayName: nombre, // Normalizado de "nombre" del payload a displayName
         appId: 'auditoria',
         role: finalRole,
         ownerId: ownerId,
@@ -311,7 +369,8 @@ app.post('/api/admin/create-user', verificarTokenAdmin, async (req, res) => {
     res.json({ 
       success: true,
       uid: newUserId,
-      message: `Usuario creado exitosamente. El usuario debe cerrar sesión y volver a iniciar para obtener los custom claims.`
+      message: `Usuario creado exitosamente. El usuario debe cerrar sesión y volver a iniciar para obtener los custom claims.`,
+      requiresReauth: true // Frontend puede usar esto para mostrar mensaje específico
     });
   } catch (error) {
     console.error('Error al crear usuario:', error);

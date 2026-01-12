@@ -68,11 +68,8 @@ externalApi.interceptors.request.use(addAuthToken);
 export const userService = {
   async createUser(userData) {
     try {
-      const backendUrl =
-        import.meta.env.VITE_CONTROLFILE_BACKEND_URL ||
-        'https://controlfile.onrender.com';
-
-      const endpoint = `${backendUrl}/api/admin/create-user`;
+      // ✅ Llamar al backend de ControlAudit (NO ControlFile directamente)
+      const endpoint = '/api/admin/create-user';
 
       const currentUser = await getCurrentUser();
       const token = await currentUser.getIdToken(true);

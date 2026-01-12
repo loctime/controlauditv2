@@ -37,6 +37,11 @@ const getEnvironmentConfig = () => {
       bcryptRounds: 12
     },
     
+    // Configuración de ControlFile (IAM/Core)
+    controlfile: {
+      backendUrl: process.env.CONTROLFILE_BACKEND_URL || 'https://controlfile.onrender.com'
+    },
+    
     // Configuración de logs
     logging: {
       level: 'info',
@@ -145,9 +150,15 @@ const getEnvironmentInfo = () => {
   };
 };
 
+// Función para obtener URL del backend de ControlFile
+const getControlFileBackendUrl = () => {
+  return config.controlfile.backendUrl;
+};
+
 export {
   config,
   getConfig,
   isEnvironment,
-  getEnvironmentInfo
+  getEnvironmentInfo,
+  getControlFileBackendUrl
 }; 

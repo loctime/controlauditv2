@@ -12,7 +12,7 @@ import admin from '../firebaseAdmin.js';
 // ===============================
 // CONFIGURACIÓN OWNER
 // ===============================
-const EMAIL = 'diegobertosi@gmail.com';
+const EMAIL = 'hys@maximia.com.ar';
 const PASSWORD = '123123123';
 const DISPLAY_NAME = 'Owner Principal';
 
