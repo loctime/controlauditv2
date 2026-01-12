@@ -1,5 +1,7 @@
 {
+  "installCommand": "npm install -g pnpm@10.18.3 && pnpm install",
   "buildCommand": "pnpm run build",
+  "outputDirectory": "dist",
   "rewrites": [
     {
       "source": "/((?!assets|icons|sw.js|manifest.json|clear-cache.js).*)",
