@@ -112,7 +112,7 @@ ControlAudit v2 es una aplicación web progresiva (PWA) que permite realizar aud
 
 ### **Prerrequisitos**
 - Node.js 18+ 
-- npm o yarn
+- pnpm (recomendado) o npm
 - Cuenta Firebase configurada
 - Git
 
@@ -124,24 +124,24 @@ git clone https://github.com/loctime/controlauditv2.git
 cd controlauditv2
 
 # 2. Instalar dependencias
-npm install
+pnpm install
 
 # 3. Configurar variables de entorno
 cp env.development.example .env.local
 # Editar .env.local con tus credenciales Firebase
 
 # 4. Ejecutar en desarrollo
-npm run dev              # Solo web
-npm run fer              # Solo móvil Android
-npm run die              # Ambos (web + móvil)
-npm run start:full       # Frontend + Backend
+pnpm run dev              # Frontend + Backend
+pnpm run dev:web          # Solo frontend
+pnpm run backend:dev       # Solo backend
+pnpm run die              # Release completo
 ```
 
 ### **Producción**
 
 ```bash
 # Build para producción
-npm run build
+pnpm run build
 
 # Desplegar en Vercel
 vercel --prod
@@ -149,20 +149,24 @@ vercel --prod
 
 ---
 
-## 📱 **Comandos NPM Disponibles**
+## 📱 **Comandos PNPM Disponibles**
 
 | Comando | Descripción |
 |---------|-------------|
-| `npm run dev` | Desarrollo web local (puerto 5173) |
-| `npm run fer` | Build y sincronización para Android |
-| `npm run die` | Build completo (web + móvil) |
-| `npm run build` | Build para producción |
-| `npm run preview` | Preview del build de producción |
-| `npm run start:full` | Frontend + Backend en desarrollo |
-| `npm run backend:dev` | Solo backend en desarrollo |
-| `npm run cap:sync` | Sincronizar Capacitor |
-| `npm run cap:open:android` | Abrir proyecto Android en Android Studio |
-| `npm run lint` | Ejecutar linter |
+| `pnpm run dev` | Desarrollo completo (frontend + backend) |
+| `pnpm run dev:web` | Solo desarrollo web (puerto 5173) |
+| `pnpm run backend:dev` | Solo backend en desarrollo |
+| `pnpm run backend:start` | Backend en modo producción |
+| `pnpm run die` | Release completo (build, commit, tag, push) |
+| `pnpm run build` | Build para producción |
+| `pnpm run build:staging` | Build en modo staging |
+| `pnpm run build:production` | Build en modo production |
+| `pnpm run preview` | Preview del build de producción |
+| `pnpm run lint` | Ejecutar linter |
+| `pnpm run analyze` | Análisis del bundle |
+| `pnpm run reinstall` | Reinstalar todas las dependencias |
+
+> 📖 Ver **[COMANDOS_PNPM.md](./COMANDOS_PNPM.md)** para la lista completa de comandos.
 
 ---
 
@@ -333,7 +337,7 @@ import { Permiso } from '@/components/common/Permiso';
 - 📖 **[docs/guias/GUIA_DESPLIEGUE_VERCEL.md](./docs/guias/GUIA_DESPLIEGUE_VERCEL.md)** - Despliegue en Vercel
 - 📖 **[docs/guias/CONFIGURAR_FIRESTORE.md](./docs/guias/CONFIGURAR_FIRESTORE.md)** - Configuración Firestore
 - 📖 **[docs/guias/CAPACITOR_SETUP.md](./docs/guias/CAPACITOR_SETUP.md)** - Configuración móvil
-- 📖 **[docs/guias/COMANDOS_NPM.md](./docs/guias/COMANDOS_NPM.md)** - Comandos de desarrollo
+- 📖 **[COMANDOS_PNPM.md](./COMANDOS_PNPM.md)** - Comandos de desarrollo
 
 ### **Documentación Técnica**
 - 📖 **[docs/arquitectura/README_COMPONENTES_REUTILIZABLES.md](./docs/arquitectura/README_COMPONENTES_REUTILIZABLES.md)** - Componentes y hooks reutilizables

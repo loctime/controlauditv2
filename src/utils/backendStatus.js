@@ -35,7 +35,7 @@ export class BackendStatus {
     } else if (this.envInfo.environment === 'development') {
       recommendations.push('🔧 Frontend en modo desarrollo');
       recommendations.push('💡 El backend debe estar en: http://localhost:4000');
-      recommendations.push('💡 Ejecuta: cd backend && npm run dev');
+      recommendations.push('💡 Ejecuta: cd backend && pnpm run dev');
     } else {
       recommendations.push('⚠️ Entorno desconocido: ' + this.envInfo.environment);
       recommendations.push('💡 Verifica la configuración del entorno');
@@ -107,7 +107,7 @@ export class BackendStatus {
       steps.push('   4. Verifica la configuración CORS');
     } else if (this.envInfo.environment === 'development') {
       steps.push('🔧 Para desarrollo:');
-      steps.push('   1. Ejecuta: cd backend && npm run dev');
+      steps.push('   1. Ejecuta: cd backend && pnpm run dev');
       steps.push('   2. Verifica que esté en http://localhost:4000');
       steps.push('   3. Verifica las variables de entorno locales');
     }

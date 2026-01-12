@@ -181,8 +181,8 @@ function main() {
     log('\n📝 Próximos pasos:', 'info');
     log('   1. Configura las variables de Firebase en los archivos .env', 'info');
     log('   2. Configura las credenciales del backend', 'info');
-    log('   3. Ejecuta el frontend: npm run dev', 'info');
-    log('   4. Ejecuta el backend: cd backend && npm start', 'info');
+    log('   3. Ejecuta el frontend: pnpm run dev', 'info');
+    log('   4. Ejecuta el backend: cd backend && pnpm start', 'info');
     
   } catch (error) {
     log(`❌ Error al crear configuración: ${error.message}`, 'error');

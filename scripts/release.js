@@ -68,18 +68,16 @@ function main() {
     log('  ✅ Release en GitHub', 'green');
     log('', 'reset');
     log('Uso:', 'yellow');
-    log('  npm run die "mensaje del commit"', 'reset');
+    log('  pnpm run die "mensaje del commit"', 'reset');
     log('', 'reset');
     log('Ejemplos:', 'yellow');
-    log('  npm run die "Fix login bug"', 'reset');
-    log('  npm run die "Add new dashboard"', 'reset');
-    log('  npm run die "Complete redesign"', 'reset');
+    log('  pnpm run die "Fix login bug"', 'reset');
+    log('  pnpm run die "Add new dashboard"', 'reset');
+    log('  pnpm run die "Complete redesign"', 'reset');
     log('', 'reset');
     log('🎯 Comandos alternativos:', 'cyan');
-    log('  npm run dev        - Desarrollo web + backend + Android (local)', 'reset');
-    log('  npm run dev:web    - Solo desarrollo web', 'reset');
-    log('  npm run fer        - Solo build + sync Android', 'reset');
-    log('  npm run build:full - Build + sync completo', 'reset');
+    log('  pnpm run dev        - Desarrollo web + backend + Android (local)', 'reset');
+    log('  pnpm run dev:web    - Solo desarrollo web', 'reset');
     return;
   }
 
@@ -130,7 +128,7 @@ function main() {
 
   // 5. Build de la aplicación web
   log('🏗️  Paso 4: Construyendo aplicación web...', 'yellow');
-  executeCommandWithOutput('npm run build');
+  executeCommandWithOutput('pnpm run build');
 
   // 6. Sync con Capacitor
   log('📱 Paso 5: Sincronizando con Capacitor...', 'yellow');
