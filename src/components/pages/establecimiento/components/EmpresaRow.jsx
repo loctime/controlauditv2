@@ -51,7 +51,7 @@ const EmpresaRow = React.memo(({
     </TableCell>
     <TableCell>
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-        {empresa.logo && empresa.logo.trim() !== "" ? (
+        {empresa.logo && typeof empresa.logo === 'string' && empresa.logo.trim() !== "" ? (
           <img
             src={empresa.logo}
             alt="Logo de la empresa"

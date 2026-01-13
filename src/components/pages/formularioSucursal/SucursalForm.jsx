@@ -172,7 +172,7 @@ const SucursalForm = ({ agregarSucursal, empresaId }) => {
                 <Typography variant="h6" color="primary" sx={{ flex: 1 }}>
                   {empresaSeleccionada.nombre}
                 </Typography>
-                {empresaSeleccionada.logo && empresaSeleccionada.logo.trim() !== "" ? (
+                {empresaSeleccionada.logo && typeof empresaSeleccionada.logo === 'string' && empresaSeleccionada.logo.trim() !== "" ? (
                   <img
                     src={empresaSeleccionada.logo}
                     alt={`Logo de ${empresaSeleccionada.nombre}`}

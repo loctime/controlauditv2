@@ -221,7 +221,7 @@ const SeleccionEmpresa = ({ empresas, empresaSeleccionada, onChange }) => {
                   }
                 }}
               >
-                {empresa.logo && empresa.logo.trim() !== "" ? (
+                {empresa.logo && typeof empresa.logo === 'string' && empresa.logo.trim() !== "" ? (
                   <Avatar
                     src={empresa.logo}
                     alt={`${empresa.nombre} logo`}
