@@ -8,7 +8,8 @@
  *   backend/migracion/legacy/{legacyUserId}/
  */
 
-import admin from "firebase-admin";
+// ⚠️ Usar la instancia única de Firebase Admin del backend
+import admin from "../firebaseAdmin.js";
 import fs from "fs";
 import path from "path";
 import process from "process";
@@ -17,18 +18,7 @@ import { fileURLToPath } from "url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const serviceAccount = JSON.parse(
-  fs.readFileSync(
-    path.join(__dirname, "../serviceAccountKey-controlfile.json"),
-    "utf8"
-  )
-);
-
-console.log("🔧 Inicializando Firebase Admin...");
-
-admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount),
-});
+console.log("🔧 Firebase Admin inicializado desde firebaseAdmin.js");
 
 // ========= CONFIG =========
 

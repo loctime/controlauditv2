@@ -1,10 +1,5 @@
-import admin from "firebase-admin";
-import fs from "fs";
-import path from "path";
-import { fileURLToPath } from "url";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+// ⚠️ Usar la instancia única de Firebase Admin del backend
+import admin from "../firebaseAdmin.js";
 
 // ===============================
 // CONFIG
@@ -12,20 +7,6 @@ const __dirname = path.dirname(__filename);
 const DEV_UID = "rixIn0BwiVPHB4SgR0K0SlnpSLC2";
 const APP_ID = "auditoria";
 const ROLE = "admin";
-
-// ===============================
-// INIT ADMIN
-// ===============================
-const serviceAccount = JSON.parse(
-  fs.readFileSync(
-    path.join(__dirname, "../serviceAccountKey-controlfile.json"),
-    "utf8"
-  )
-);
-
-admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount),
-});
 
 async function run() {
   // 1. Obtener usuario actual

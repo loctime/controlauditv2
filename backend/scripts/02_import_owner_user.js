@@ -8,7 +8,8 @@
  * Destino: apps/auditoria/owners/{ownerId}/...
  */
 
-import admin from "firebase-admin";
+// ⚠️ Usar la instancia única de Firebase Admin del backend
+import admin from "../firebaseAdmin.js";
 import fs from "fs";
 import path from "path";
 import process from "process";
@@ -21,18 +22,7 @@ const __dirname = path.dirname(__filename);
 
 // ================== FIREBASE ADMIN ==================
 
-const serviceAccount = JSON.parse(
-  fs.readFileSync(
-    path.join(__dirname, "../serviceAccountKey-controlfile.json"),
-    "utf8"
-  )
-);
-
-console.log("🔧 Inicializando Firebase Admin...");
-
-admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount),
-});
+console.log("🔧 Firebase Admin inicializado desde firebaseAdmin.js");
 
 const db = admin.firestore();
 
