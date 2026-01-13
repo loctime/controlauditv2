@@ -25,7 +25,7 @@
     },
     {
         id: "cliente-dashboard",
-        label: "Calendario",
+        label: "Dashboard",
         path: "/cliente-dashboard",
         icon: CalendarTodayIcon,
         rolesPermitidos: ['admin'],
