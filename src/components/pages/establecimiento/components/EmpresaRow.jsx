@@ -31,7 +31,10 @@ const EmpresaRow = React.memo(({
   formatearEmail,
   onEditClick,
   onOperariosClick,
-  EliminarEmpresaComponent
+  EliminarEmpresaComponent,
+  canEditEmpresa = false,
+  canDeleteEmpresa = false,
+  canManageOperarios = false
 }) => {
   const theme = useTheme();
   
@@ -160,16 +163,18 @@ const EmpresaRow = React.memo(({
     </TableCell>
     <TableCell>
       <Box sx={{ display: 'flex', gap: 1 }}>
-        <Tooltip title="Editar empresa">
-          <IconButton 
-            size="small" 
-            color="primary" 
-            onClick={() => onEditClick(empresa)}
-            aria-label={`Editar empresa ${empresa.nombre}`}
-          >
-            <BusinessIcon />
-          </IconButton>
-        </Tooltip>
+        {canEditEmpresa && (
+          <Tooltip title="Editar empresa">
+            <IconButton 
+              size="small" 
+              color="primary" 
+              onClick={() => onEditClick(empresa)}
+              aria-label={`Editar empresa ${empresa.nombre}`}
+            >
+              <BusinessIcon />
+            </IconButton>
+          </Tooltip>
+        )}
         <Tooltip title="Ver sucursales">
           <IconButton 
             size="small" 
@@ -180,7 +185,7 @@ const EmpresaRow = React.memo(({
             <StorefrontIcon />
           </IconButton>
         </Tooltip>
-        {onOperariosClick && (
+        {canManageOperarios && onOperariosClick && (
           <Tooltip title="Gestionar operarios">
             <IconButton 
               size="small" 
@@ -192,7 +197,9 @@ const EmpresaRow = React.memo(({
             </IconButton>
           </Tooltip>
         )}
-        {EliminarEmpresaComponent && <EliminarEmpresaComponent empresa={empresa} onEmpresaEliminada={() => {}} />}
+        {canDeleteEmpresa && EliminarEmpresaComponent && (
+          <EliminarEmpresaComponent empresa={empresa} onEmpresaEliminada={() => {}} />
+        )}
       </Box>
     </TableCell>
   </TableRow>

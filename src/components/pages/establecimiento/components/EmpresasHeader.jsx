@@ -13,7 +13,8 @@ const EmpresasHeader = React.memo(({
   onVerificar,
   verificando,
   onNavigateToAccidentes,
-  onAddEmpresa
+  onAddEmpresa,
+  canCreateEmpresa = false
 }) => (
   <Box sx={{
     display: 'flex',
@@ -64,14 +65,16 @@ const EmpresasHeader = React.memo(({
       >
         Accidentes
       </Button>
-      <Button
-        variant="contained"
-        onClick={onAddEmpresa}
-        startIcon={<BusinessIcon />}
-        size={isSmallMobile ? "small" : "medium"}
-      >
-        Agregar Empresa
-      </Button>
+      {canCreateEmpresa && (
+        <Button
+          variant="contained"
+          onClick={onAddEmpresa}
+          startIcon={<BusinessIcon />}
+          size={isSmallMobile ? "small" : "medium"}
+        >
+          Agregar Empresa
+        </Button>
+      )}
     </Box>
   </Box>
 ));

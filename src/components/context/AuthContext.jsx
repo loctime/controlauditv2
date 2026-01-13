@@ -19,6 +19,7 @@ import { useSucursalesListener } from './hooks/useSucursalesListener';
 import { useFormulariosListener } from './hooks/useFormulariosListener';
 import { useContextActions } from './hooks/useContextActions';
 import { useEmpresasQuery } from '../../hooks/queries/useEmpresasQuery';
+import { firestoreRoutesCore } from '../../core/firestore/firestoreRoutes.core';
 
 // Definimos y exportamos el contexto
 export const AuthContext = createContext();
@@ -398,6 +399,26 @@ const AuthContextComponent = ({ children }) => {
             status: userProfileData.status,
             superdev: userProfileData.superdev
           };
+          
+          // 3.1. Para operarios: agregar empresasPermitidas desde documento del usuario
+          if (tokenRole === 'operario' && resolvedOwnerId && firebaseUser.uid) {
+            try {
+              const userDocRef = doc(db, ...firestoreRoutesCore.usuario(resolvedOwnerId, firebaseUser.uid));
+              const userDocSnap = await getDoc(userDocRef);
+              
+              if (userDocSnap.exists()) {
+                const userData = userDocSnap.data();
+                context.empresasPermitidas = userData.empresasAsignadas || [];
+                console.log('[AUTH] ✅ Empresas permitidas cargadas para operario:', context.empresasPermitidas.length);
+              } else {
+                console.warn('[AUTH] ⚠️ Documento de usuario no encontrado para operario');
+                context.empresasPermitidas = [];
+              }
+            } catch (error) {
+              console.error('[AUTH] ❌ Error al cargar empresasPermitidas para operario:', error);
+              context.empresasPermitidas = [];
+            }
+          }
           
           setUserContext(context);
           console.log('[AUTH] ✅ Usuario autenticado:', context);

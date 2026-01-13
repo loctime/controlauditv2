@@ -57,9 +57,43 @@ export const usePermissions = () => {
     return permissions.puedeCrearAuditorias || role === 'supermax';
   }, [permissions.puedeCrearAuditorias, role]);
 
+  // ✅ Permisos para empresas - usando solo role y empresasPermitidas
+  const canCreateEmpresa = useMemo(() => {
+    return role === 'admin';
+  }, [role]);
+
+  const canEditEmpresa = useMemo(() => {
+    return role === 'admin';
+  }, [role]);
+
+  const canDeleteEmpresa = useMemo(() => {
+    return role === 'admin';
+  }, [role]);
+
+  const canManageOperarios = useMemo(() => {
+    return role === 'admin';
+  }, [role]);
+
+  // Función para verificar si puede ver una empresa específica
+  const canViewEmpresa = useCallback((empresaId) => {
+    if (!userProfile || !empresaId) return false;
+    
+    // Admin puede ver todas las empresas
+    if (role === 'admin') return true;
+    
+    // Operario solo puede ver empresas asignadas
+    if (role === 'operario') {
+      const empresasPermitidas = userProfile.empresasPermitidas || [];
+      return empresasPermitidas.includes(empresaId);
+    }
+    
+    return false;
+  }, [userProfile, role]);
+
+  // Compatibilidad: mantener canCrearEmpresas para código legacy
   const canCrearEmpresas = useMemo(() => {
-    return permissions.puedeCrearEmpresas || role === 'supermax';
-  }, [permissions.puedeCrearEmpresas, role]);
+    return role === 'admin';
+  }, [role]);
 
   const canCrearSucursales = useMemo(() => {
     return permissions.puedeCrearSucursales || role === 'supermax';
@@ -88,7 +122,12 @@ export const usePermissions = () => {
     permissions,
     canAgendarAuditorias,
     canCrearAuditorias,
-    canCrearEmpresas,
+    canCrearEmpresas, // Legacy
+    canCreateEmpresa, // Nuevo
+    canEditEmpresa,
+    canDeleteEmpresa,
+    canManageOperarios,
+    canViewEmpresa,
     canCrearSucursales,
     canCompartirFormularios,
     canAgregarUsuarios,

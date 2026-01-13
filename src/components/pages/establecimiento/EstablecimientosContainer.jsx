@@ -41,6 +41,7 @@ import EmpresaStats from "./components/EmpresaStats";
 
 // Hooks personalizados
 import { useEmpresasStats, useEmpresasHandlers, useEmpresasEditHandlers } from './hooks';
+import { usePermissions } from '@/components/pages/admin/hooks/usePermissions';
 
 // Componentes
 import EmpresasHeader from './components/EmpresasHeader';
@@ -63,6 +64,15 @@ const EstablecimientosContainer = () => {
   // Obtener ownerId desde userProfile (viene del token)
   const ownerId = userProfile?.ownerId;
   const { empresasStats, loadEmpresasStats } = useEmpresasStats(userEmpresas, ownerId);
+
+  // Obtener permisos del usuario
+  const {
+    canCreateEmpresa,
+    canEditEmpresa,
+    canDeleteEmpresa,
+    canManageOperarios,
+    canViewEmpresa
+  } = usePermissions();
 
   const {
     empresa,
@@ -182,6 +192,7 @@ const EstablecimientosContainer = () => {
           console.log('[EstablecimientosContainer] ownerId actual:', ownerId);
           setOpenModal(true);
         }}
+        canCreateEmpresa={canCreateEmpresa}
       />
 
       <Typography variant="body2" color="textSecondary" sx={{ mb: 3 }}>
@@ -209,7 +220,10 @@ const EstablecimientosContainer = () => {
           <Table>
             <EmpresaTableHeader />
             <TableBody>
-              {(userEmpresas || []).filter(empresa => empresa && empresa.id && empresa.nombre).map((empresa) => {
+              {(userEmpresas || [])
+                .filter(empresa => empresa && empresa.id && empresa.nombre)
+                .filter(empresa => canViewEmpresa(empresa.id))
+                .map((empresa) => {
                 const isExpanded = expandedRows.has(empresa.id);
                 const stats = empresasStats[empresa.id] || {
                   sucursales: 0,
@@ -232,6 +246,9 @@ const EstablecimientosContainer = () => {
                       onEditClick={handleOpenEditModal}
                       onOperariosClick={handleOpenOperariosModal}
                       EliminarEmpresaComponent={EliminarEmpresa}
+                      canEditEmpresa={canEditEmpresa}
+                      canDeleteEmpresa={canDeleteEmpresa}
+                      canManageOperarios={canManageOperarios}
                     />
 
                     <TableRow>
