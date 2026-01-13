@@ -332,92 +332,109 @@ const AuthContextComponent = ({ children }) => {
           // Resolver ownerId según role
           const resolvedOwnerId = tokenRole === 'admin' ? firebaseUser.uid : tokenOwnerId;
           
+          // Logs de token
+          console.log('[AUTH][TOKEN]', { 
+            authUid: firebaseUser.uid, 
+            tokenRole, 
+            tokenOwnerId 
+          });
+          
           // 2. Buscar perfil del usuario - MODELO OWNER-CENTRIC
-          // Primero buscar en /apps/auditoria/owners/{uid} (documento del owner)
-          let ownerDocSnap = null;
-          let userDocSnap = null;
-          let userProfileData = null;
+          // Separar flujo por tokenRole
+          let context = null;
           
-          // Para admin: buscar su propio documento owner
-          // Para operario: buscar documento owner del ownerId del token
-          const ownerDocRef = doc(db, "apps", "auditoria", "owners", resolvedOwnerId);
-          ownerDocSnap = await getDoc(ownerDocRef);
-          
-          if (ownerDocSnap.exists()) {
-            // ✅ Owner existe - usar documento owner como perfil
-            const ownerData = ownerDocSnap.data();
-            userProfileData = {
-              uid: ownerData.uid || firebaseUser.uid,
-              email: ownerData.email || firebaseUser.email,
-              displayName: ownerData.displayName || firebaseUser.displayName || firebaseUser.email,
-              role: ownerData.role || tokenRole, // Preferir role del documento, fallback al token
-              ownerId: resolvedOwnerId,
-              appId: ownerData.appId || tokenAppId || 'auditoria',
-              status: ownerData.status,
-              superdev: tokenSuperdev // Claim de superdev
-            };
-            console.log('[AUTH] ✅ Perfil encontrado en owner:', userProfileData);
-          } else {
-            // ⚠️ Owner no existe - buscar en legacy /apps/auditoria/users/{uid}
-            console.log('[AUTH] ⚠️ Owner no encontrado, buscando en legacy...');
-            const legacyUserDocRef = doc(db, "apps", "auditoria", "users", firebaseUser.uid);
-            userDocSnap = await getDoc(legacyUserDocRef);
+          if (tokenRole === 'admin') {
+            // ADMIN: Leer apps/auditoria/owners/{firebaseUser.uid} como perfil
+            const ownerDocRef = doc(db, "apps", "auditoria", "owners", firebaseUser.uid);
+            const ownerDocSnap = await getDoc(ownerDocRef);
             
-            if (userDocSnap.exists()) {
-              // ✅ Usuario legacy encontrado
-              const legacyData = userDocSnap.data();
-              userProfileData = {
-                uid: legacyData.uid || firebaseUser.uid,
-                email: legacyData.email || firebaseUser.email,
-                displayName: legacyData.displayName || firebaseUser.displayName || firebaseUser.email,
-                role: legacyData.role || tokenRole,
+            if (ownerDocSnap.exists()) {
+              const ownerData = ownerDocSnap.data();
+              context = {
+                uid: ownerData.uid || firebaseUser.uid,
+                email: ownerData.email || firebaseUser.email,
+                displayName: ownerData.displayName || firebaseUser.displayName || firebaseUser.email,
+                role: tokenRole, // Usar tokenRole, no ownerData.role
                 ownerId: resolvedOwnerId,
-                appId: legacyData.appId || tokenAppId || 'auditoria',
-                status: legacyData.status,
+                appId: ownerData.appId || tokenAppId || 'auditoria',
+                status: ownerData.status,
                 superdev: tokenSuperdev
               };
-              console.log('[AUTH] ✅ Perfil encontrado en legacy:', userProfileData);
+              console.log('[AUTH][PROFILE]', { 
+                profileSource: 'owner', 
+                resolvedOwnerId, 
+                profileUid: context.uid 
+              });
             } else {
-              // ❌ No existe ni owner ni legacy
-              console.error('[AUTH] ❌ Usuario no registrado en ControlAudit (ni owner ni legacy)');
+              // ⚠️ Admin no encontrado - buscar en legacy
+              console.log('[AUTH] ⚠️ Owner no encontrado, buscando en legacy...');
+              const legacyUserDocRef = doc(db, "apps", "auditoria", "users", firebaseUser.uid);
+              const legacyUserDocSnap = await getDoc(legacyUserDocRef);
+              
+              if (legacyUserDocSnap.exists()) {
+                const legacyData = legacyUserDocSnap.data();
+                context = {
+                  uid: legacyData.uid || firebaseUser.uid,
+                  email: legacyData.email || firebaseUser.email,
+                  displayName: legacyData.displayName || firebaseUser.displayName || firebaseUser.email,
+                  role: tokenRole, // Usar tokenRole, no legacyData.role
+                  ownerId: resolvedOwnerId,
+                  appId: legacyData.appId || tokenAppId || 'auditoria',
+                  status: legacyData.status,
+                  superdev: tokenSuperdev
+                };
+                console.log('[AUTH][PROFILE]', { 
+                  profileSource: 'legacy', 
+                  resolvedOwnerId, 
+                  profileUid: context.uid 
+                });
+              } else {
+                // ❌ Admin no existe ni owner ni legacy
+                console.error('[AUTH] ❌ Admin no registrado en ControlAudit (ni owner ni legacy)');
+                await signOut(auth);
+                setUser(null);
+                setUserContext(null);
+                setLoading(false);
+                return;
+              }
+            }
+          } else if (tokenRole === 'operario') {
+            // OPERARIO: NO leer owners/{resolvedOwnerId} como perfil
+            // Leer apps/auditoria/owners/{resolvedOwnerId}/usuarios/{firebaseUser.uid}
+            const userDocRef = doc(db, ...firestoreRoutesCore.usuario(resolvedOwnerId, firebaseUser.uid));
+            const userDocSnap = await getDoc(userDocRef);
+            
+            if (!userDocSnap.exists()) {
+              // ❌ Operario debe existir en owner-centric sí o sí
+              console.error('[AUTH] ❌ Operario no encontrado en owner-centric:', {
+                ownerId: resolvedOwnerId,
+                userId: firebaseUser.uid
+              });
               await signOut(auth);
               setUser(null);
               setUserContext(null);
               setLoading(false);
               return;
             }
-          }
-          
-          // 3. Crear userContext desde el perfil encontrado
-          const context = {
-            uid: userProfileData.uid,
-            email: userProfileData.email,
-            displayName: userProfileData.displayName,
-            role: userProfileData.role, // Del documento owner o legacy
-            ownerId: userProfileData.ownerId,
-            appId: userProfileData.appId,
-            status: userProfileData.status,
-            superdev: userProfileData.superdev
-          };
-          
-          // 3.1. Para operarios: agregar empresasPermitidas desde documento del usuario
-          if (tokenRole === 'operario' && resolvedOwnerId && firebaseUser.uid) {
-            try {
-              const userDocRef = doc(db, ...firestoreRoutesCore.usuario(resolvedOwnerId, firebaseUser.uid));
-              const userDocSnap = await getDoc(userDocRef);
-              
-              if (userDocSnap.exists()) {
-                const userData = userDocSnap.data();
-                context.empresasPermitidas = userData.empresasAsignadas || [];
-                console.log('[AUTH] ✅ Empresas permitidas cargadas para operario:', context.empresasPermitidas.length);
-              } else {
-                console.warn('[AUTH] ⚠️ Documento de usuario no encontrado para operario');
-                context.empresasPermitidas = [];
-              }
-            } catch (error) {
-              console.error('[AUTH] ❌ Error al cargar empresasPermitidas para operario:', error);
-              context.empresasPermitidas = [];
-            }
+            
+            const userData = userDocSnap.data();
+            context = {
+              uid: firebaseUser.uid, // Operario siempre usa su propio uid
+              email: userData.email || firebaseUser.email,
+              displayName: userData.displayName || firebaseUser.displayName || firebaseUser.email,
+              role: tokenRole, // Usar tokenRole, no userData.role
+              ownerId: resolvedOwnerId,
+              appId: userData.appId || tokenAppId || 'auditoria',
+              status: userData.status,
+              superdev: tokenSuperdev,
+              empresasPermitidas: userData.empresasAsignadas || []
+            };
+            console.log('[AUTH][PROFILE]', { 
+              profileSource: 'operarioDoc', 
+              resolvedOwnerId, 
+              profileUid: context.uid 
+            });
+            console.log('[AUTH] ✅ Empresas permitidas cargadas para operario:', context.empresasPermitidas.length);
           }
           
           setUserContext(context);
