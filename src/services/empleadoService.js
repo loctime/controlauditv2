@@ -135,26 +135,146 @@ export const empleadoService = {
 
   /**
    * Crear un nuevo empleado (owner-centric)
-   * @param {string} ownerId - ID del owner (viene del token)
-   * @param {Object} empleadoData - Datos del empleado
-   * @param {Object} user - Usuario que crea el empleado
+   * Soporta dos firmas:
+   * - crearEmpleado(ownerId, empleadoData, user) - firma estándar
+   * - crearEmpleado(empleadoData, user) - firma del hook de importación
+   * @param {string|Object} ownerIdOrData - ID del owner o datos del empleado
+   * @param {Object} empleadoDataOrUser - Datos del empleado o usuario
+   * @param {Object} [user] - Usuario que crea el empleado (opcional)
    * @returns {Promise<string>} ID del empleado creado
    */
-  async crearEmpleado(ownerId, empleadoData, user) {
+  async crearEmpleado(ownerIdOrData, empleadoDataOrUser, user) {
     try {
-      if (!ownerId) throw new Error('ownerId es requerido');
+      // Detectar la firma de la llamada
+      let ownerId, empleadoData, userObj;
+      
+      if (typeof ownerIdOrData === 'string') {
+        // Firma estándar: crearEmpleado(ownerId, empleadoData, user)
+        ownerId = ownerIdOrData;
+        empleadoData = empleadoDataOrUser;
+        userObj = user;
+      } else if (typeof ownerIdOrData === 'object' && ownerIdOrData !== null) {
+        // Firma del hook: crearEmpleado(empleadoData, user)
+        empleadoData = ownerIdOrData;
+        userObj = empleadoDataOrUser;
+        
+        // Extraer ownerId del user (userProfile)
+        if (!userObj || !userObj.ownerId) {
+          console.error('❌ ownerId no disponible en crearEmpleado', {
+            payload: empleadoData,
+            user: userObj
+          });
+          throw new Error('ownerId es requerido. Debe estar en user.ownerId o pasarse como primer parámetro');
+        }
+        ownerId = userObj.ownerId;
+      } else {
+        console.error('❌ Parámetros inválidos en crearEmpleado', {
+          firstParam: ownerIdOrData,
+          secondParam: empleadoDataOrUser,
+          thirdParam: user
+        });
+        throw new Error('Parámetros inválidos. Use crearEmpleado(ownerId, empleadoData, user) o crearEmpleado(empleadoData, user)');
+      }
+
+      if (!ownerId || typeof ownerId !== 'string') {
+        console.error('❌ ownerId inválido en crearEmpleado', {
+          ownerId,
+          type: typeof ownerId,
+          payload: empleadoData
+        });
+        throw new Error('ownerId es requerido y debe ser un string');
+      }
+
+      if (!empleadoData || typeof empleadoData !== 'object') {
+        console.error('❌ empleadoData inválido en crearEmpleado', {
+          empleadoData,
+          type: typeof empleadoData
+        });
+        throw new Error('empleadoData es requerido y debe ser un objeto');
+      }
+
+      // Función helper para normalizar IDs
+      const normalizeId = (id, fieldName) => {
+        // Si es null o undefined
+        if (id === null || id === undefined) {
+          console.error(`❌ ${fieldName} es null/undefined en crearEmpleado`, {
+            payload: empleadoData,
+            fieldName,
+            value: id
+          });
+          throw new Error(`${fieldName} es requerido y no puede ser null o undefined`);
+        }
+
+        // Si es 'todas'
+        if (id === 'todas' || id === 'Todas' || id === 'TODAS') {
+          console.error(`❌ ${fieldName} tiene valor inválido 'todas' en crearEmpleado`, {
+            payload: empleadoData,
+            fieldName,
+            value: id
+          });
+          throw new Error(`${fieldName} no puede ser 'todas'. Debe ser un ID específico`);
+        }
+
+        // Si es un objeto con propiedad id
+        if (typeof id === 'object' && id !== null && 'id' in id) {
+          if (typeof id.id !== 'string') {
+            console.error(`❌ ${fieldName}.id no es string en crearEmpleado`, {
+              payload: empleadoData,
+              fieldName,
+              objectValue: id,
+              idType: typeof id.id
+            });
+            throw new Error(`${fieldName} debe ser un string o un objeto con propiedad 'id' de tipo string`);
+          }
+          return id.id;
+        }
+
+        // Si no es string
+        if (typeof id !== 'string') {
+          console.error(`❌ ${fieldName} no es string en crearEmpleado`, {
+            payload: empleadoData,
+            fieldName,
+            value: id,
+            type: typeof id
+          });
+          throw new Error(`${fieldName} debe ser un string, recibido: ${typeof id}`);
+        }
+
+        // Si es string vacío
+        if (id.trim() === '') {
+          console.error(`❌ ${fieldName} es string vacío en crearEmpleado`, {
+            payload: empleadoData,
+            fieldName,
+            value: id
+          });
+          throw new Error(`${fieldName} no puede ser un string vacío`);
+        }
+
+        return id;
+      };
+
+      // Normalizar empresaId y sucursalId
+      const normalizedData = { ...empleadoData };
+      
+      if ('empresaId' in empleadoData) {
+        normalizedData.empresaId = normalizeId(empleadoData.empresaId, 'empresaId');
+      }
+      
+      if ('sucursalId' in empleadoData) {
+        normalizedData.sucursalId = normalizeId(empleadoData.sucursalId, 'sucursalId');
+      }
 
       const empleadosRef = collection(dbAudit, ...firestoreRoutesCore.empleados(ownerId));
       const empleadoRef = await addDocWithAppId(empleadosRef, {
-        ...empleadoData,
+        ...normalizedData,
         createdAt: new Date(),
-        createdBy: user?.uid,
+        createdBy: userObj?.uid,
         updatedAt: new Date()
       });
 
       // Registrar acción
       await registrarAccionSistema(
-        user?.uid,
+        userObj?.uid,
         'Empleado creado',
         { empleadoId: empleadoRef.id, nombre: empleadoData.nombre },
         'create',

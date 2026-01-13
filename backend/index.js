@@ -650,6 +650,101 @@ app.get('/api/superdev/list-owners', verificarSuperdev, async (req, res) => {
   }
 });
 
+// =====================================================
+// ENDPOINT: Impersonar owner (generar custom token)
+// =====================================================
+app.post('/api/superdev/impersonate', verificarSuperdev, async (req, res) => {
+  try {
+    const { ownerId } = req.body;
+    const superdevUid = req.user.uid;
+    const superdevEmail = req.user.email || 'N/A';
+
+    // Validar ownerId
+    if (!ownerId || typeof ownerId !== 'string' || ownerId.trim() === '') {
+      return res.status(400).json({
+        error: 'ownerId faltante o inválido',
+        code: 'INVALID_OWNER_ID'
+      });
+    }
+
+    const targetOwnerId = ownerId.trim();
+
+    console.log(`[SUPERDEV] Impersonación solicitada - Superdev: ${superdevUid} (${superdevEmail}), Target Owner: ${targetOwnerId}`);
+
+    const db = admin.firestore();
+
+    // 1. Validar existencia en Firestore
+    const ownerRef = db
+      .collection('apps')
+      .doc('auditoria')
+      .collection('owners')
+      .doc(targetOwnerId);
+
+    const ownerDoc = await ownerRef.get();
+
+    if (!ownerDoc.exists) {
+      console.warn(`[SUPERDEV] Owner no encontrado en Firestore: ${targetOwnerId}`);
+      return res.status(404).json({
+        error: 'Owner no encontrado',
+        code: 'OWNER_NOT_FOUND'
+      });
+    }
+
+    const ownerData = ownerDoc.data();
+
+    // 2. Validar estructura del owner
+    if (
+      ownerData.role !== 'admin' ||
+      ownerData.appId !== 'auditoria' ||
+      ownerData.ownerId !== targetOwnerId
+    ) {
+      console.warn(`[SUPERDEV] Owner inválido: ${targetOwnerId}`, {
+        role: ownerData.role,
+        appId: ownerData.appId,
+        ownerId: ownerData.ownerId,
+        expectedOwnerId: targetOwnerId
+      });
+      return res.status(403).json({
+        error: 'El UID no corresponde a un owner válido',
+        code: 'INVALID_OWNER'
+      });
+    }
+
+    // 3. Validar existencia en Firebase Auth
+    let authUser;
+    try {
+      authUser = await admin.auth().getUser(targetOwnerId);
+    } catch (authError) {
+      console.warn(`[SUPERDEV] Owner no tiene cuenta en Firebase Auth: ${targetOwnerId}`);
+      return res.status(404).json({
+        error: 'Owner no tiene cuenta de autenticación',
+        code: 'OWNER_AUTH_NOT_FOUND'
+      });
+    }
+
+    const targetOwnerEmail = authUser.email || ownerData.email || 'N/A';
+
+    // 4. Generar custom token con claims correctos
+    const customToken = await admin.auth().createCustomToken(targetOwnerId, {
+      appId: 'auditoria',
+      role: 'admin',
+      ownerId: targetOwnerId
+    });
+
+    // 5. Log de auditoría
+    console.log(`[SUPERDEV] Impersonación exitosa - Superdev: ${superdevUid} (${superdevEmail}) → Owner: ${targetOwnerId} (${targetOwnerEmail})`);
+
+    res.json({ customToken });
+  } catch (error) {
+    console.error('[SUPERDEV] Error al impersonar owner:', error);
+    res.status(500).json({
+      error: 'Error interno del servidor',
+      code: 'INTERNAL_ERROR',
+      message: error.message
+    });
+  }
+});
+
 // Iniciar servidor con configuración flexible
 const PORT = process.env.PORT || config.server.port;
 const HOST = '0.0.0.0'; // Para Render, usar 0.0.0.0 en lugar de localhost
