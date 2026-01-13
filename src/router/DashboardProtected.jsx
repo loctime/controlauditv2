@@ -3,6 +3,7 @@ import { useAuth } from '@/components/context/AuthContext';
 import { Navigate } from "react-router-dom";
 import { Box, Typography, Button } from "@mui/material";
 import { useNavigate } from "react-router-dom";
+import { isAdminUser } from '@/config/admin';
 
 const DashboardProtected = ({ children }) => {
   const { userProfile, role, permisos } = useAuth();
@@ -12,9 +13,9 @@ const DashboardProtected = ({ children }) => {
   console.log('DashboardProtected - role:', role, 'userProfile:', userProfile, 'permisos:', permisos);
 
   // Verificar si el usuario puede acceder al dashboard
+  // ⚠️ COMPATIBILIDAD LEGACY: admin, max y supermax tienen acceso administrativo
   const canAccessDashboard = () => {
-    // Solo supermax puede acceder al dashboard
-    return role === 'supermax';
+    return isAdminUser(userProfile || role);
   };
 
   if (!canAccessDashboard()) {

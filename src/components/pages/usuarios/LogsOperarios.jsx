@@ -43,6 +43,7 @@ import {
   Refresh as RefreshIcon
 } from '@mui/icons-material';
 import { useAuth } from '@/components/context/AuthContext';
+import { isAdminUser } from '@/config/admin';
 import { toast } from 'react-toastify';
 import { collection, getDocs, query, orderBy, limit, where, addDoc } from 'firebase/firestore';
 import { dbAudit } from '../../../firebaseControlFile';
@@ -166,12 +167,13 @@ const LogsOperarios = () => {
     fetchLogs();
   }, []);
 
-  // Verificar permisos multi-tenant
-  if (role !== 'max' && role !== 'supermax') {
+  // ⚠️ COMPATIBILIDAD LEGACY: admin, max y supermax tienen acceso administrativo
+  // Validación crítica de acceso administrativo
+  if (!isAdminUser(userProfile || role)) {
     return (
       <Box sx={{ p: 3 }}>
         <Alert severity="error">
-          Acceso restringido solo para administradores (max) y super administradores (supermax).
+          Acceso restringido solo para administradores.
         </Alert>
       </Box>
     );

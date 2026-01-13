@@ -6,7 +6,7 @@ import { doc, query, where, getDocs, getDoc, collection } from "firebase/firesto
 import { dbAudit } from "../../../firebaseControlFile";
 import { firestoreRoutesCore } from "../../../core/firestore/firestoreRoutes.core";
 import { toast } from 'react-toastify';
-import { verifyAdminCode, verifySuperAdminCode } from "../../../config/admin";
+import { verifyAdminCode, verifySuperAdminCode, isAdminUser } from "../../../config/admin";
 import GestionClientes from "./GestionClientes";
 import userService from "../../../services/userService";
 import { empresaService } from "../../../services/empresaService";
@@ -414,12 +414,13 @@ function Dashboard() {
     }
   };
 
-  // Solo super administradores pueden ver el dashboard
-  if (role !== 'supermax') {
+  // ⚠️ COMPATIBILIDAD LEGACY: admin, max y supermax tienen acceso administrativo
+  // Validación crítica de acceso administrativo
+  if (!isAdminUser(userProfile || role)) {
     return (
       <Box sx={{ p: 4 }}>
         <Typography variant="h4" color="error">
-          Acceso denegado: Solo los Super Administradores (supermax) pueden ver el Dashboard.
+          Acceso denegado: Solo los administradores pueden ver el Dashboard.
         </Typography>
       </Box>
     );

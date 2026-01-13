@@ -13,6 +13,7 @@ import {
 } from '@mui/material';
 import { Settings as SettingsIcon, Security as SecurityIcon, Storage as StorageIcon, Speed as SpeedIcon } from '@mui/icons-material';
 import { useAuth } from '@/components/context/AuthContext';
+import { isAdminUser } from '@/config/admin';
 
 const ConfiguracionPage = () => {
   const theme = useTheme();
@@ -20,12 +21,13 @@ const ConfiguracionPage = () => {
   const isSmallMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const { userProfile, role } = useAuth();
 
-  // Solo supermax puede acceder a esta página
-  if (role !== 'supermax') {
+  // ⚠️ COMPATIBILIDAD LEGACY: admin, max y supermax tienen acceso administrativo
+  // Validación crítica de acceso administrativo
+  if (!isAdminUser(userProfile || role)) {
     return (
       <Box sx={{ p: 4 }}>
         <Alert severity="error">
-          Acceso denegado: Solo los Super Administradores (supermax) pueden acceder a la configuración del sistema.
+          Acceso denegado: Solo los administradores pueden acceder a la configuración del sistema.
         </Alert>
       </Box>
     );

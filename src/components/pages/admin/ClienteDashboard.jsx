@@ -21,6 +21,7 @@ import {
 import { useAuth } from '@/components/context/AuthContext';
 import { useClienteDashboard } from "./hooks/useClienteDashboard";
 import { usePermissions } from "./hooks/usePermissions";
+import { isAdminUser } from '@/config/admin';
 
 // Componentes separados
 import CalendarioAuditorias from "./components/CalendarioAuditorias";
@@ -216,12 +217,13 @@ const ClienteDashboard = React.memo(() => {
     </Tabs>
   ), [currentTab, handleTabChange]);
 
-  // Solo clientes administradores pueden ver este dashboard
-  if (role !== 'max') {
+  // ⚠️ COMPATIBILIDAD LEGACY: admin, max y supermax tienen acceso administrativo
+  // Validación crítica de acceso administrativo
+  if (!isAdminUser(userProfile || role)) {
     return (
       <Box sx={{ p: 4 }}>
         <Typography variant="h4" color="error">
-          Acceso denegado: Solo los clientes administradores pueden ver este Dashboard.
+          Acceso denegado: Solo los administradores pueden ver este Dashboard.
         </Typography>
       </Box>
     );
