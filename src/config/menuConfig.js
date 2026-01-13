@@ -23,14 +23,7 @@
         rolesPermitidos: ['supermax'],
         location: 'sidebar',
     },
-    {
-        id: "cliente-dashboard",
-        label: "Dashboard",
-        path: "/cliente-dashboard",
-        icon: CalendarTodayIcon,
-        rolesPermitidos: ['admin'],
-        location: 'navbar',
-    },
+   
     {
         id: "operario-dashboard",
         label: "Mi Dashboard",
@@ -59,10 +52,11 @@
     },
     {
         id: "dashboard-seguridad",
-        label: "Dashboard",
+        label: "Dashboard Higiene y Seguridad",
         path: "/dashboard-seguridad",
         icon: HealthAndSafetyIcon,
-        rolesPermitidos: ['supermax', 'admin'],
+        rolesPermitidos: ['supermax', 'admin', 'operario'],
+        // Operario tiene acceso de solo lectura, max y supermax acceso completo
         grupo: 'higiene',
         location: 'navbar',
     },
@@ -71,7 +65,8 @@
         label: "Capacitaciones",
         path: "/capacitaciones",
         icon: SchoolIcon,
-        rolesPermitidos: ['supermax', 'admin'],
+        rolesPermitidos: ['supermax', 'admin', 'operario'],
+        // Operario tiene acceso de solo lectura para sus empresas asignadas
         grupo: 'higiene',
         location: 'navbar',
     },
@@ -80,7 +75,8 @@
         label: "Accidentes",
         path: "/accidentes",
         icon: ReportProblemIcon,
-        rolesPermitidos: ['supermax', 'admin'],
+        rolesPermitidos: ['supermax', 'admin', 'operario'],
+        // Operario tiene acceso de solo lectura para sus empresas asignadas
         grupo: 'higiene',
         location: 'navbar',
     },
@@ -89,16 +85,18 @@
         label: "Salud ocupacional",
         path: "/salud-ocupacional",
         icon: HealingIcon,
-        rolesPermitidos: ['supermax', 'admin'],
+        rolesPermitidos: ['supermax', 'admin', 'operario'],
+        // Operario tiene acceso de solo lectura para sus empresas asignadas
         grupo: 'higiene',
         location: 'navbar',
     },
     {
         id: "establecimiento",
-        label: "Establecimiento",
+        label: "Establecimientos",
         path: "/establecimiento",
         icon: BusinessIcon,
-        rolesPermitidos: ['supermax', 'admin'],
+        rolesPermitidos: ['supermax', 'admin', 'operario'],
+        // Operario tiene acceso de solo lectura (sin crear/editar), max y supermax acceso completo
         permisoRequerido: 'puedeCrearEmpresas',
         grupo: 'empresarial',
         location: 'navbar',
@@ -108,7 +106,7 @@
         label: "Empleados",
         path: "/empleados",
         icon: PeopleIcon,
-        rolesPermitidos: ['supermax', 'admin'],
+        rolesPermitidos: ['supermax', 'admin', 'operario'],
         grupo: 'empresarial',
         location: 'navbar',
     },
@@ -162,10 +160,14 @@
         const esAdmin = role === 'admin';
         
         if (item.permisoRequerido === 'puedeCrearAuditorias') {
-            return tienePermiso || esAdmin || esSupermax;
+            // Operario tiene acceso de solo lectura sin necesidad del permiso
+            const esOperario = role === 'operario';
+            return tienePermiso || esAdmin || esSupermax || esOperario;
         }
         if (item.permisoRequerido === 'puedeCrearEmpresas') {
-            return tienePermiso || esAdmin || esSupermax;
+            // Operario tiene acceso de solo lectura sin necesidad del permiso
+            const esOperario = role === 'operario';
+            return tienePermiso || esAdmin || esSupermax || esOperario;
         }
         if (item.permisoRequerido === 'puedeGestionarUsuarios') {
             return tienePermiso || esAdmin || esSupermax;

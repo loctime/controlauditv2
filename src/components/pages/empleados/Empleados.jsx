@@ -38,7 +38,7 @@ import EmpleadoForm from './EmpleadoForm';
 import ImportEmpleadosDialog from './import/ImportEmpleadosDialog';
 
 export default function Empleados() {
-  const { userProfile, loadingSucursales } = useAuth();
+  const { userProfile, loadingSucursales, role } = useAuth();
   
   // Usar selección global
   const {
@@ -176,35 +176,37 @@ export default function Empleados() {
         <Typography variant="h4" sx={{ fontWeight: 'bold' }}>
           Gestión de Empleados
         </Typography>
-        <Box sx={{ display: 'flex', gap: 2 }}>
-          <Button
-            variant="outlined"
-            startIcon={<CloudUploadIcon />}
-            onClick={() => setOpenImportDialog(true)}
-            disabled={!selectedSucursal}
-            sx={{
-              borderColor: 'primary.main',
-              '&:hover': {
-                borderColor: 'primary.dark',
-              }
-            }}
-          >
-            Importar Masivo
-          </Button>
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={() => handleOpenForm()}
-            sx={{
-              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-              '&:hover': {
-                background: 'linear-gradient(135deg, #5568d3 0%, #65408b 100%)',
-              }
-            }}
-          >
-            Nuevo Empleado
-          </Button>
-        </Box>
+        {role !== 'operario' && (
+          <Box sx={{ display: 'flex', gap: 2 }}>
+            <Button
+              variant="outlined"
+              startIcon={<CloudUploadIcon />}
+              onClick={() => setOpenImportDialog(true)}
+              disabled={!selectedSucursal}
+              sx={{
+                borderColor: 'primary.main',
+                '&:hover': {
+                  borderColor: 'primary.dark',
+                }
+              }}
+            >
+              Importar Masivo
+            </Button>
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={() => handleOpenForm()}
+              sx={{
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                '&:hover': {
+                  background: 'linear-gradient(135deg, #5568d3 0%, #65408b 100%)',
+                }
+              }}
+            >
+              Nuevo Empleado
+            </Button>
+          </Box>
+        )}
       </Box>
 
       {/* Alertas de estado */}
@@ -364,13 +366,15 @@ export default function Empleados() {
             <Typography color="text.secondary" sx={{ mb: 2 }}>
               No hay empleados registrados en esta sucursal
             </Typography>
-            <Button
-              variant="outlined"
-              startIcon={<AddIcon />}
-              onClick={() => handleOpenForm()}
-            >
-              Registrar Primer Empleado
-            </Button>
+            {role !== 'operario' && (
+              <Button
+                variant="outlined"
+                startIcon={<AddIcon />}
+                onClick={() => handleOpenForm()}
+              >
+                Registrar Primer Empleado
+              </Button>
+            )}
           </Box>
         ) : (
           <Table>
@@ -384,7 +388,9 @@ export default function Empleados() {
                 <TableCell><strong>Área</strong></TableCell>
                 <TableCell><strong>Tipo</strong></TableCell>
                 <TableCell><strong>Estado</strong></TableCell>
-                <TableCell align="center"><strong>Acciones</strong></TableCell>
+                {role !== 'operario' && (
+                  <TableCell align="center"><strong>Acciones</strong></TableCell>
+                )}
               </TableRow>
             </TableHead>
             <TableBody>
@@ -422,24 +428,26 @@ export default function Empleados() {
                       color={empleado.estado === 'activo' ? 'success' : 'default'}
                     />
                   </TableCell>
-                  <TableCell align="center">
-                    <IconButton
-                      size="small"
-                      color="primary"
-                      onClick={() => handleOpenForm(empleado)}
-                      aria-label={`Editar empleado ${empleado.nombre} ${empleado.apellido || ''}`}
-                    >
-                      <EditIcon />
-                    </IconButton>
-                    <IconButton
-                      size="small"
-                      color="error"
-                      onClick={() => handleDeleteEmpleado(empleado.id, `${empleado.nombre} ${empleado.apellido || ''}`)}
-                      aria-label={`Eliminar empleado ${empleado.nombre} ${empleado.apellido || ''}`}
-                    >
-                      <DeleteIcon />
-                    </IconButton>
-                  </TableCell>
+                  {role !== 'operario' && (
+                    <TableCell align="center">
+                      <IconButton
+                        size="small"
+                        color="primary"
+                        onClick={() => handleOpenForm(empleado)}
+                        aria-label={`Editar empleado ${empleado.nombre} ${empleado.apellido || ''}`}
+                      >
+                        <EditIcon />
+                      </IconButton>
+                      <IconButton
+                        size="small"
+                        color="error"
+                        onClick={() => handleDeleteEmpleado(empleado.id, `${empleado.nombre} ${empleado.apellido || ''}`)}
+                        aria-label={`Eliminar empleado ${empleado.nombre} ${empleado.apellido || ''}`}
+                      >
+                        <DeleteIcon />
+                      </IconButton>
+                    </TableCell>
+                  )}
                 </TableRow>
               ))}
             </TableBody>

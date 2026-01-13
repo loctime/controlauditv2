@@ -38,7 +38,8 @@ export const getMenuItems = (role, permisos = {}) => {
       path: "/dashboard-seguridad",
       title: "Dashboard Higiene y Seguridad",
       Icon: HealthAndSafetyIcon,
-      roles: ['max', 'supermax'],
+      roles: ['operario', 'max', 'supermax'],
+      // Operario tiene acceso de solo lectura, max y supermax acceso completo
       required: true
     },
     {
@@ -46,7 +47,8 @@ export const getMenuItems = (role, permisos = {}) => {
       path: "/cliente-dashboard",
       title: "Calendario de Auditorías",
       Icon: CalendarTodayIcon,
-      roles: ['max'],
+      roles: ['operario', 'max'],
+      // Operario puede ver calendario de auditorías (solo lectura)
       required: true
     },
     {
@@ -67,7 +69,8 @@ export const getMenuItems = (role, permisos = {}) => {
       title: "Auditoría",
       Icon: ChecklistIcon,
       roles: ['operario', 'max', 'supermax'],
-      required: permisos.puedeCrearAuditorias || role === 'max' || role === 'supermax'
+      // Operario tiene acceso de solo lectura (sin crear/editar), max y supermax acceso completo
+      required: permisos.puedeCrearAuditorias || role === 'max' || role === 'supermax' || role === 'operario'
     }
   ];
 
@@ -89,8 +92,9 @@ export const getMenuItems = (role, permisos = {}) => {
       path: "/establecimiento",
       title: "Establecimientos",
       Icon: BusinessIcon,
-      roles: ['max', 'supermax'],
-      required: permisos.puedeCrearEmpresas || role === 'max' || role === 'supermax'
+      roles: ['operario', 'max', 'supermax'],
+      // Operario tiene acceso de solo lectura (sin crear/editar), max y supermax acceso completo
+      required: permisos.puedeCrearEmpresas || role === 'max' || role === 'supermax' || role === 'operario'
     },
   ];
 
@@ -136,7 +140,8 @@ export const getMenuItems = (role, permisos = {}) => {
       title: "Reporte",
       Icon: PictureAsPdfIcon,
       roles: ['operario', 'max', 'supermax'],
-      required: permisos.puedeCrearAuditorias || role === 'max' || role === 'supermax'
+      // Operario tiene acceso de solo lectura, max y supermax acceso completo
+      required: permisos.puedeCrearAuditorias || role === 'max' || role === 'supermax' || role === 'operario'
     }
   ];
 
