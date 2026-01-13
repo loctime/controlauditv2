@@ -193,7 +193,9 @@ const EmpresaOperariosDialog = ({
             {usuarios.map((user) => (
               <ListItem key={user.id} button onClick={() => handleToggleUsuario(user.id)}>
                 <Box sx={{ flex: 1 }}>
-                  <Typography variant="body1">{`Usuario ${user.id}`}</Typography>
+                  <Typography variant="body1">
+                    {user.email || user.displayName || `Usuario ${user.id}`}
+                  </Typography>
                   <Box sx={{ display: 'flex', gap: 1, mt: 0.5 }}>
                     <Chip 
                       label={user.role} 

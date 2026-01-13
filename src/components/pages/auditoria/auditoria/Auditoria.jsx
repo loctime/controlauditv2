@@ -306,8 +306,9 @@ const AuditoriaRefactorizada = () => {
                    clasificaciones.some(seccion => seccion.some(clas => clas && (clas.condicion || clas.actitud))) ||
                    accionesRequeridas.some(seccion => seccion.some(acc => acc && acc.requiereAccion && acc.accionTexto));
     
+    // Solo actualizar si hay datos y el estado actual es false (evitar setState innecesario)
     if (hasData) {
-      setHasUnsavedChanges(true);
+      setHasUnsavedChanges(prev => prev === false ? true : prev);
     }
   }, [empresaSeleccionada, sucursalSeleccionada, formularioSeleccionadoId, respuestas, comentarios, imagenes, clasificaciones, accionesRequeridas]);
 
@@ -554,29 +555,30 @@ const AuditoriaRefactorizada = () => {
     }
   }, [formularios.length]);
 
-  // Forzar actualización del botón "Siguiente" cuando se restauran las respuestas
+  // Ref para comparar valores anteriores y evitar loops infinitos
+  const prevRespuestasRef = useRef();
+  const prevEmpresaRef = useRef();
+  const prevFormularioRef = useRef();
+
+  // Verificar cambios reales en respuestas usando comparación profunda
   useEffect(() => {
-    // Este efecto se ejecutará cada vez que cambien las respuestas
-    // Esto asegura que el botón "Siguiente" se actualice correctamente
-    if (respuestas && respuestas.length > 0) {
-      const todasCompletadas = todasLasPreguntasContestadas(respuestas);
-      const paso2Completo = pasoCompleto(2, {
-        empresaSeleccionada,
-        formularioSeleccionadoId,
-        respuestas
-      });
+    // Comparar serializando para detectar cambios reales en el contenido
+    const respuestasActuales = JSON.stringify(respuestas);
+    const respuestasAnteriores = JSON.stringify(prevRespuestasRef.current);
+    
+    const empresaCambio = empresaSeleccionada?.id !== prevEmpresaRef.current?.id;
+    const formularioCambio = formularioSeleccionadoId !== prevFormularioRef.current;
+    const respuestasCambiaron = respuestasActuales !== respuestasAnteriores;
+    
+    // Solo ejecutar si realmente cambió algo
+    if (respuestasCambiaron || empresaCambio || formularioCambio) {
+      // Actualizar refs solo cuando hay cambios reales
+      prevRespuestasRef.current = respuestas;
+      prevEmpresaRef.current = empresaSeleccionada;
+      prevFormularioRef.current = formularioSeleccionadoId;
       
-      console.log('🔄 [Auditoria] Respuestas cambiaron, verificando paso completo:', {
-        todasCompletadas,
-        paso2Completo,
-        respuestasLength: respuestas.length,
-        respuestasEstructura: respuestas.map((seccion, idx) => ({
-          seccion: idx,
-          length: seccion?.length || 0,
-          todasRespondidas: seccion?.every(resp => resp !== '' && resp !== null && resp !== undefined) || false,
-          contenido: seccion
-        }))
-      });
+      // Este efecto ya no hace logs para evitar spam en consola
+      // El botón "Siguiente" se actualiza automáticamente por React cuando cambian las props
     }
   }, [respuestas, empresaSeleccionada, formularioSeleccionadoId]);
 
@@ -631,8 +633,10 @@ const AuditoriaRefactorizada = () => {
     respuestas
   });
 
+  // Ref para evitar logs repetidos del mismo estado
+  const ultimoPaso2CompletoRef = useRef(null);
+  
   const pasoCompletoAuditoria = useCallback((step) => {
-    const todasCompletadas = todasLasPreguntasContestadas(respuestas);
     const resultado = pasoCompleto(step, {
       empresaSeleccionada,
       sucursalSeleccionada,
@@ -641,24 +645,11 @@ const AuditoriaRefactorizada = () => {
       sucursales
     });
     
-    // Log detallado solo para el paso 2 (preguntas)
-    if (step === 2) {
-      console.log(`[DEBUG] Paso ${step} completo:`, resultado, {
-        respuestasLength: respuestas?.length || 0,
-        respuestasEstructura: respuestas?.map((seccion, idx) => ({
-          seccion: idx,
-          length: seccion?.length || 0,
-          todasRespondidas: seccion?.every(resp => resp !== '' && resp !== null && resp !== undefined) || false,
-          contenido: seccion
-        })) || [],
-        todasCompletadas,
-        todasCompletadasDetalle: respuestas?.every(seccionRespuestas => {
-          if (!Array.isArray(seccionRespuestas)) return false;
-          return seccionRespuestas.every(respuesta => 
-            respuesta !== '' && respuesta !== null && respuesta !== undefined
-          );
-        }) || false
-      });
+    // Log solo cuando el resultado del paso 2 realmente cambia (no en cada render)
+    if (step === 2 && ultimoPaso2CompletoRef.current !== resultado) {
+      ultimoPaso2CompletoRef.current = resultado;
+      // Log solo cuando cambia el estado, no en cada render
+      console.log(`[DEBUG] Paso 2 completo: ${resultado}`);
     }
     
     return resultado;
