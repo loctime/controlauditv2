@@ -17,6 +17,7 @@ import {
 } from '@mui/material';
 import Swal from 'sweetalert2';
 import { getUsers, assignEmpresasToUser } from '../../../core/services/ownerUserService';
+import { getUserDisplayName } from '../../../utils/userDisplayNames';
 
 /**
  * Modal para gestionar la asignación de operarios a una empresa
@@ -150,7 +151,7 @@ const EmpresaOperariosDialog = ({
       Swal.fire({
         icon: 'success',
         title: 'Éxito',
-        text: 'Operarios asignados correctamente'
+        text: `${getUserDisplayName('default')}s asignados correctamente`
       });
 
       handleClose();
@@ -177,7 +178,7 @@ const EmpresaOperariosDialog = ({
   return (
     <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
       <DialogTitle>
-        Gestionar Operarios - {empresaNombre}
+        Gestionar {getUserDisplayName('default')}s - {empresaNombre}
       </DialogTitle>
       <DialogContent>
         {loading ? (
@@ -186,7 +187,7 @@ const EmpresaOperariosDialog = ({
           </Box>
         ) : usuarios.length === 0 ? (
           <Typography variant="body2" color="textSecondary" sx={{ py: 2 }}>
-            No hay operarios disponibles. Crea operarios desde la sección de usuarios.
+            No hay {getUserDisplayName('default').toLowerCase()}s disponibles. Crea {getUserDisplayName('default').toLowerCase()}s desde la sección de usuarios.
           </Typography>
         ) : (
           <List>

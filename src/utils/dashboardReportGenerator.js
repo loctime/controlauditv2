@@ -271,7 +271,7 @@ export const generarReporteDashboard = async ({
       empleadosData.push(['Empleados Inactivos', data.inactiveEmployees.toLocaleString('es-AR')]);
     }
     if (data.operators !== undefined && data.operators !== null) {
-      empleadosData.push(['Operarios', data.operators.toLocaleString('es-AR')]);
+      empleadosData.push([getUserDisplayName('report'), data.operators.toLocaleString('es-AR')]);
     }
     if (data.administrators !== undefined && data.administrators !== null) {
       empleadosData.push(['Administrativos', data.administrators.toLocaleString('es-AR')]);

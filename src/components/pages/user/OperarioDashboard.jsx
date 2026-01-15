@@ -30,6 +30,7 @@ import {
   Assessment
 } from "@mui/icons-material";
 import { useAuth } from '@/components/context/AuthContext';
+import { getUserDisplayName } from '../../../utils/userDisplayNames';
 import { collection, query, where, getDocs, orderBy, limit } from "firebase/firestore";
 import { dbAudit } from "../../../firebaseControlFile";
 
@@ -227,7 +228,7 @@ const OperarioDashboard = () => {
       {/* Header */}
       <Box sx={{ mb: 4 }}>
         <Typography variant="h4" component="h1" gutterBottom fontWeight="bold">
-          Dashboard de Operario
+          Dashboard de {getUserDisplayName('dashboard')}
         </Typography>
         <Typography variant="subtitle1" color="text.secondary">
           Bienvenido, {userProfile?.nombre || user?.email}

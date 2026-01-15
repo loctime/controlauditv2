@@ -18,6 +18,7 @@ import SchoolIcon from '@mui/icons-material/School';
 import ReportProblemIcon from '@mui/icons-material/ReportProblem';
 import PersonAddIcon from '@mui/icons-material/PersonAdd';
 import EmpresaTableCell from './EmpresaTableCell';
+import { getUserDisplayName } from '../../../../utils/userDisplayNames';
 
 /**
  * Fila principal de empresa
@@ -186,12 +187,12 @@ const EmpresaRow = React.memo(({
           </IconButton>
         </Tooltip>
         {canManageOperarios && onOperariosClick && (
-          <Tooltip title="Gestionar operarios">
+          <Tooltip title={`Gestionar ${getUserDisplayName('default').toLowerCase()}s`}>
             <IconButton 
               size="small" 
               onClick={() => onOperariosClick(empresa)} 
               color="info"
-              aria-label={`Gestionar operarios de ${empresa.nombre}`}
+              aria-label={`Gestionar ${getUserDisplayName('default').toLowerCase()}s de ${empresa.nombre}`}
             >
               <PersonAddIcon />
             </IconButton>

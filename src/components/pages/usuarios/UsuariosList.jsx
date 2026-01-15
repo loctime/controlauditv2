@@ -33,6 +33,7 @@ import { usePermiso } from '../../hooks/usePermiso';
 import userService from '../../../services/userService';
 import OwnerUserCreateDialog from './OwnerUserCreateDialog';
 import { getUsers } from '../../../core/services/ownerUserService';
+import { getUserDisplayName } from '../../../utils/userDisplayNames';
 
 const PERMISOS_LISTA = [
   { key: 'puedeCrearEmpresas', label: 'Crear Empresas' },
@@ -570,8 +571,8 @@ const UsuariosList = ({ ownerId: propOwnerId, showAddButton = true }) => {
             )}
             <Alert severity="info" sx={{ mt: 1 }}>
               {editando 
-                ? `Rol actual: ${editando.role || 'operario'}. Los roles no se pueden modificar desde el frontend.`
-                : 'El usuario se creará con rol Operario. Los administradores se crean exclusivamente mediante scripts del backend.'
+                ? `Rol actual: ${editando.role || getUserDisplayName('default').toLowerCase()}. Los roles no se pueden modificar desde el frontend.`
+                : `El usuario se creará con rol ${getUserDisplayName('default')}. Los administradores se crean exclusivamente mediante scripts del backend.`
               }
             </Alert>
             <Typography variant="h6" sx={{ mt: 2 }}>

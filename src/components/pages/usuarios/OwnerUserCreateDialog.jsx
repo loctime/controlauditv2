@@ -26,6 +26,7 @@ import {
 import { useAuth } from '@/components/context/AuthContext';
 import { auth } from '../../../firebaseControlFile';
 import { toast } from 'react-toastify';
+import { getUserDisplayName } from '../../../utils/userDisplayNames';
 
 const OwnerUserCreateDialog = ({ open, onClose, onSuccess }) => {
   const { user, userProfile } = useAuth();
@@ -221,7 +222,7 @@ const OwnerUserCreateDialog = ({ open, onClose, onSuccess }) => {
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
       <DialogTitle>
-        Crear Usuario Operario
+        Crear Usuario {getUserDisplayName('default')}
       </DialogTitle>
       
       <DialogContent>

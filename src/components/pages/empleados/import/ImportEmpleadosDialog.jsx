@@ -25,6 +25,7 @@ import * as XLSX from 'xlsx';
 import { useAuth } from '@/components/context/AuthContext';
 import { useEmpleadoImport } from './useEmpleadoImport';
 import ImportPreviewTable from './ImportPreviewTable';
+import { getUserDisplayName } from '../../../../utils/userDisplayNames';
 
 export default function ImportEmpleadosDialog({ open, onClose, onSuccess, empresaId, sucursalId }) {
   const { userProfile } = useAuth();
@@ -119,7 +120,7 @@ export default function ImportEmpleadosDialog({ open, onClose, onSuccess, empres
 
     // Datos de ejemplo
     const exampleData = [
-      ['Juan', 'Pérez', '12345678', 'juan.perez@ejemplo.com', '+54 11 1234-5678', 'Operario', 'Producción', 'operativo', 'activo', '2024-01-15'],
+      ['Juan', 'Pérez', '12345678', 'juan.perez@ejemplo.com', '+54 11 1234-5678', getUserDisplayName('default'), 'Producción', 'operativo', 'activo', '2024-01-15'],
       ['María', 'González', '23456789', 'maria.gonzalez@ejemplo.com', '+54 11 2345-6789', 'Supervisor', 'Producción', 'operativo', 'activo', '2024-02-01'],
       ['Carlos', 'López', '34567890', 'carlos.lopez@ejemplo.com', '+54 11 3456-7890', 'Administrativo', 'Administración', 'administrativo', 'activo', '2024-03-10']
     ];
@@ -236,7 +237,7 @@ export default function ImportEmpleadosDialog({ open, onClose, onSuccess, empres
                 fullWidth
                 multiline
                 rows={8}
-                placeholder="nombre	apellido	dni	email	telefono	cargo	area	tipo	estado	fechaIngreso&#10;Juan	Pérez	12345678	juan@ejemplo.com	+54 11 1234-5678	Operario	Producción	operativo	activo	2024-01-15"
+                placeholder={`nombre	apellido	dni	email	telefono	cargo	area	tipo	estado	fechaIngreso&#10;Juan	Pérez	12345678	juan@ejemplo.com	+54 11 1234-5678	${getUserDisplayName('default')}	Producción	operativo	activo	2024-01-15`}
                 value={pastedText}
                 onChange={(e) => setPastedText(e.target.value)}
                 disabled={loading}
@@ -266,13 +267,13 @@ export default function ImportEmpleadosDialog({ open, onClose, onSuccess, empres
           {activeTab === 2 && (
             <Box>
               <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                Ejemplo: diego bertosi 37399444 diego@gmail.com 112233445 operario produccion
+                Ejemplo: diego bertosi 37399444 diego@gmail.com 112233445 {getUserDisplayName('default').toLowerCase()} produccion
               </Typography>
               <TextField
                 fullWidth
                 multiline
                 rows={10}
-                placeholder="diego bertosi 37399444 diego@gmail.com 112233445 operario produccion&#10;martin dipalma 38488222 martin@gmail.com 119988776 administrativo administracion"
+                placeholder={`diego bertosi 37399444 diego@gmail.com 112233445 ${getUserDisplayName('default').toLowerCase()} produccion&#10;martin dipalma 38488222 martin@gmail.com 119988776 administrativo administracion`}
                 value={manualText}
                 onChange={(e) => setManualText(e.target.value)}
                 disabled={loading}

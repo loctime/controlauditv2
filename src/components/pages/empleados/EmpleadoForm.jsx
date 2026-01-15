@@ -14,6 +14,7 @@ import { addDoc, updateDoc, doc, Timestamp, collection } from 'firebase/firestor
 import { dbAudit } from '../../../firebaseControlFile';
 import { firestoreRoutesCore } from '../../../core/firestore/firestoreRoutes.core';
 import { useAuth } from '@/components/context/AuthContext';
+import { getUserDisplayName } from '../../../utils/userDisplayNames';
 
 export default function EmpleadoForm({ open, onClose, onSave, empleado, sucursalId, empresaId }) {
   const { userProfile, role } = useAuth();
@@ -195,7 +196,7 @@ export default function EmpleadoForm({ open, onClose, onSave, empleado, sucursal
                 name="cargo"
                 value={formData.cargo}
                 onChange={handleChange}
-                placeholder="Ej: Operario, Supervisor, etc."
+                placeholder={`Ej: ${getUserDisplayName('default')}, Supervisor, etc.`}
               />
             </Grid>
 
