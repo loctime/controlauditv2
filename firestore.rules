@@ -665,6 +665,62 @@ service cloud.firestore {
       allow delete: if isAuth() && ownerId == uid() && resource.data.ownerId == uid();
     }
     
+    // Empleados del owner
+    match /apps/auditoria/owners/{ownerId}/empleados/{empleadoId} {
+      // Lectura:
+      // - Owner puede leer todos sus empleados (ownerId == auth.uid)
+      // - Operario puede leer empleados del owner usando ownerId del token (request.auth.token.ownerId == ownerId)
+      allow read: if isAuth() && (
+        ownerId == uid() || 
+        (request.auth.token.ownerId == ownerId && request.auth.token.appId == 'auditoria')
+      );
+      
+      // CREAR: 
+      // - Owner puede crear empleados en sus empresas (ownerId == auth.uid)
+      // - Operario puede crear empleados si tiene acceso a la empresa (empresaId en empresasAsignadas)
+      allow create: if isAuth() && (
+        // Owner puede crear
+        (ownerId == uid() && request.resource.data.empresaId is string) ||
+        // Operario puede crear si tiene acceso a la empresa
+        (
+          request.auth.token.ownerId == ownerId 
+          && request.auth.token.appId == 'auditoria'
+          && request.resource.data.empresaId is string
+          && request.resource.data.empresaId in get(/databases/$(db)/documents/apps/auditoria/owners/$(ownerId)/usuarios/$(uid())).data.empresasAsignadas
+        )
+      );
+      
+      // ACTUALIZAR:
+      // - Owner puede actualizar empleados de sus empresas
+      // - Operario puede actualizar empleados si tiene acceso a la empresa del empleado
+      allow update: if isAuth() && (
+        // Owner puede actualizar
+        (ownerId == uid() && resource.data.empresaId is string) ||
+        // Operario puede actualizar si tiene acceso a la empresa del empleado
+        (
+          request.auth.token.ownerId == ownerId 
+          && request.auth.token.appId == 'auditoria'
+          && resource.data.empresaId is string
+          && resource.data.empresaId in get(/databases/$(db)/documents/apps/auditoria/owners/$(ownerId)/usuarios/$(uid())).data.empresasAsignadas
+        )
+      );
+      
+      // ELIMINAR:
+      // - Owner puede eliminar empleados de sus empresas
+      // - Operario puede eliminar empleados si tiene acceso a la empresa del empleado
+      allow delete: if isAuth() && (
+        // Owner puede eliminar
+        (ownerId == uid() && resource.data.empresaId is string) ||
+        // Operario puede eliminar si tiene acceso a la empresa del empleado
+        (
+          request.auth.token.ownerId == ownerId 
+          && request.auth.token.appId == 'auditoria'
+          && resource.data.empresaId is string
+          && resource.data.empresaId in get(/databases/$(db)/documents/apps/auditoria/owners/$(ownerId)/usuarios/$(uid())).data.empresasAsignadas
+        )
+      );
+    }
+    
     /* ========= DENY POR DEFECTO ========= */
     
     match /{document=**} {

@@ -28,14 +28,14 @@ import {
 import PeopleIcon from '@mui/icons-material/People';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import EditIcon from '@mui/icons-material/Edit';
-import { getDocs, query, where, addDoc, updateDoc, deleteDoc, doc, Timestamp, collection } from 'firebase/firestore';
+import { getDocs, query, where, addDoc, updateDoc, deleteDoc, doc, Timestamp, collection, getDoc } from 'firebase/firestore';
 import { dbAudit } from '../../../../firebaseControlFile';
 import { firestoreRoutesCore } from '../../../../core/firestore/firestoreRoutes.core';
 import { useAuth } from '@/components/context/AuthContext';
 import Swal from 'sweetalert2';
 
 const EmpleadosContent = ({ sucursalId, sucursalNombre, navigateToPage, reloadSucursalesStats, loadEmpresasStats, userEmpresas }) => {
-  const { userProfile } = useAuth();
+  const { userProfile, role } = useAuth();
   const [empleados, setEmpleados] = useState([]);
   const [loading, setLoading] = useState(false);
   const [openEmpleadoForm, setOpenEmpleadoForm] = useState(false);
@@ -58,6 +58,8 @@ const EmpleadosContent = ({ sucursalId, sucursalNombre, navigateToPage, reloadSu
     }
   }, [sucursalId]);
 
+  const [empresaIdFromSucursal, setEmpresaIdFromSucursal] = useState(null);
+
   const loadEmpleados = async () => {
     if (!userProfile?.ownerId) {
       console.error('Error: userProfile.ownerId es requerido');
@@ -66,6 +68,16 @@ const EmpleadosContent = ({ sucursalId, sucursalNombre, navigateToPage, reloadSu
     setLoading(true);
     try {
       const ownerId = userProfile.ownerId;
+      
+      // Obtener empresaId desde la sucursal si no lo tenemos
+      if (!empresaIdFromSucursal && sucursalId) {
+        const sucursalRef = doc(dbAudit, ...firestoreRoutesCore.sucursal(ownerId, sucursalId));
+        const sucursalSnap = await getDoc(sucursalRef);
+        if (sucursalSnap.exists()) {
+          setEmpresaIdFromSucursal(sucursalSnap.data().empresaId);
+        }
+      }
+      
       const empleadosRef = collection(dbAudit, ...firestoreRoutesCore.empleados(ownerId));
       const q = query(empleadosRef, where('sucursalId', '==', sucursalId));
       const snapshot = await getDocs(q);
@@ -108,6 +120,35 @@ const EmpleadosContent = ({ sucursalId, sucursalNombre, navigateToPage, reloadSu
       return;
     }
 
+    // Obtener empresaId desde la sucursal si no lo tenemos
+    let empresaId = empresaIdFromSucursal;
+    if (!empresaId && sucursalId) {
+      try {
+        const ownerId = userProfile.ownerId;
+        const sucursalRef = doc(dbAudit, ...firestoreRoutesCore.sucursal(ownerId, sucursalId));
+        const sucursalSnap = await getDoc(sucursalRef);
+        if (sucursalSnap.exists()) {
+          empresaId = sucursalSnap.data().empresaId;
+          setEmpresaIdFromSucursal(empresaId);
+        }
+      } catch (error) {
+        console.error('Error obteniendo empresaId desde sucursal:', error);
+      }
+    }
+
+    // Validar acceso a empresa para operarios
+    if (role === 'operario' && empresaId) {
+      const empresasAsignadas = userProfile?.empresasAsignadas || [];
+      if (!empresasAsignadas.includes(empresaId)) {
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: 'No tenés acceso a esa empresa'
+        });
+        return;
+      }
+    }
+
     try {
       const ownerId = userProfile.ownerId;
       const empleadosRef = collection(dbAudit, ...firestoreRoutesCore.empleados(ownerId));
@@ -115,8 +156,11 @@ const EmpleadosContent = ({ sucursalId, sucursalNombre, navigateToPage, reloadSu
         ...empleadoForm,
         sucursalId: sucursalId,
         sucursalNombre: sucursalNombre,
+        empresaId: empresaId,
         estado: 'activo',
-        fechaCreacion: Timestamp.now()
+        fechaCreacion: Timestamp.now(),
+        createdBy: userProfile?.uid,
+        createdByRole: role
       });
 
       setEmpleadoForm({

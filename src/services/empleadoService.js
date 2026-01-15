@@ -269,6 +269,7 @@ export const empleadoService = {
         ...normalizedData,
         createdAt: new Date(),
         createdBy: userObj?.uid,
+        createdByRole: userObj?.role,
         updatedAt: new Date()
       });
 

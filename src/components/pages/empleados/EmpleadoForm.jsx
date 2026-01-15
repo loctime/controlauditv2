@@ -16,7 +16,7 @@ import { firestoreRoutesCore } from '../../../core/firestore/firestoreRoutes.cor
 import { useAuth } from '@/components/context/AuthContext';
 
 export default function EmpleadoForm({ open, onClose, onSave, empleado, sucursalId, empresaId }) {
-  const { userProfile } = useAuth();
+  const { userProfile, role } = useAuth();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     nombre: '',
@@ -78,6 +78,15 @@ export default function EmpleadoForm({ open, onClose, onSave, empleado, sucursal
       return;
     }
 
+    // Validar acceso a empresa para operarios
+    if (role === 'operario' && empresaId) {
+      const empresasAsignadas = userProfile?.empresasAsignadas || [];
+      if (!empresasAsignadas.includes(empresaId)) {
+        alert('No tenés acceso a esa empresa');
+        return;
+      }
+    }
+
     setLoading(true);
 
     try {
@@ -97,6 +106,8 @@ export default function EmpleadoForm({ open, onClose, onSave, empleado, sucursal
       } else {
         // Crear
         empleadoData.createdAt = Timestamp.now();
+        empleadoData.createdBy = userProfile?.uid;
+        empleadoData.createdByRole = role;
         const empleadosRef = collection(dbAudit, ...firestoreRoutesCore.empleados(ownerId));
         await addDoc(empleadosRef, empleadoData);
       }
