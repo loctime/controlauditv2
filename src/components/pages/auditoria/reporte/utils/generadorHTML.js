@@ -10,6 +10,7 @@ import {
   generarFirmas
 } from './templatesReporte.js';
 import estilosCSS from './estilosReporte.css?raw';
+import { getUserDisplayName } from '../../../../utils/userDisplayNames';
 
 function generarContenidoImpresion({
   empresa,

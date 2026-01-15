@@ -1,6 +1,7 @@
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import html2canvas from 'html2canvas';
+import { getUserDisplayName } from './userDisplayNames';
 
 /**
  * Genera un reporte PDF profesional del dashboard de seguridad e higiene

@@ -1,5 +1,6 @@
 import React from "react";
 import { Paper, Typography } from "@mui/material";
+import { getUserDisplayName } from "../../../../utils/userDisplayNames";
 
 export default function DashboardHeader({ companyName, period }) {
   return (

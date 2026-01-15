@@ -23,6 +23,7 @@ import { useCapacitacionesMetrics } from "../dashboard-higiene/hooks/useCapacita
 import { useAccidentesAnalysis } from "../dashboard-higiene/hooks/useAccidentesAnalysis";
 import { useIndicesComparacion } from "../dashboard-higiene/hooks/useIndicesComparacion";
 import { generarReporteDashboard } from "../../../utils/dashboardReportGenerator";
+import { getUserDisplayName } from "../../../utils/userDisplayNames";
 import { toast } from "react-toastify";
 import DashboardLoading from "./components/DashboardLoading";
 import DashboardHeader from "./components/DashboardHeader";
