@@ -40,6 +40,12 @@ import ImportEmpleadosDialog from './import/ImportEmpleadosDialog';
 export default function Empleados() {
   const { userProfile, loadingSucursales, role } = useAuth();
   
+  // Determinar si el usuario puede crear empleados
+  // Admin siempre puede crear, operario solo si no está bloqueado
+  const canCreateEmpleado = !userProfile?.bloqueado && 
+    userProfile?.activo !== false && 
+    (role === 'admin' || role === 'operario');
+  
   // Usar selección global
   const {
     selectedEmpresa,
@@ -176,22 +182,24 @@ export default function Empleados() {
         <Typography variant="h4" sx={{ fontWeight: 'bold' }}>
           Gestión de Empleados
         </Typography>
-        {role !== 'operario' && (
+        {canCreateEmpleado && (
           <Box sx={{ display: 'flex', gap: 2 }}>
-            <Button
-              variant="outlined"
-              startIcon={<CloudUploadIcon />}
-              onClick={() => setOpenImportDialog(true)}
-              disabled={!selectedSucursal}
-              sx={{
-                borderColor: 'primary.main',
-                '&:hover': {
-                  borderColor: 'primary.dark',
-                }
-              }}
-            >
-              Importar Masivo
-            </Button>
+            {role !== 'operario' && (
+              <Button
+                variant="outlined"
+                startIcon={<CloudUploadIcon />}
+                onClick={() => setOpenImportDialog(true)}
+                disabled={!selectedSucursal}
+                sx={{
+                  borderColor: 'primary.main',
+                  '&:hover': {
+                    borderColor: 'primary.dark',
+                  }
+                }}
+              >
+                Importar Masivo
+              </Button>
+            )}
             <Button
               variant="contained"
               startIcon={<AddIcon />}
@@ -366,7 +374,7 @@ export default function Empleados() {
             <Typography color="text.secondary" sx={{ mb: 2 }}>
               No hay empleados registrados en esta sucursal
             </Typography>
-            {role !== 'operario' && (
+            {canCreateEmpleado && (
               <Button
                 variant="outlined"
                 startIcon={<AddIcon />}
