@@ -372,7 +372,8 @@ const SucursalesTab = ({ empresaId, empresaNombre, userEmpresas, loadEmpresasSta
         {activeTab === 'empleados' && (
           <EmpleadosContent 
             sucursalId={sucursal.id} 
-            sucursalNombre={sucursal.nombre} 
+            sucursalNombre={sucursal.nombre}
+            selectedEmpresa={empresaId}
             navigateToPage={navigateToPage}
             reloadSucursalesStats={reloadSucursalesStats}
             loadEmpresasStats={loadEmpresasStats}

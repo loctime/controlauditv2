@@ -34,7 +34,7 @@ import { firestoreRoutesCore } from '../../../../core/firestore/firestoreRoutes.
 import { useAuth } from '@/components/context/AuthContext';
 import Swal from 'sweetalert2';
 
-const EmpleadosContent = ({ sucursalId, sucursalNombre, navigateToPage, reloadSucursalesStats, loadEmpresasStats, userEmpresas }) => {
+const EmpleadosContent = ({ sucursalId, sucursalNombre, selectedEmpresa, navigateToPage, reloadSucursalesStats, loadEmpresasStats, userEmpresas }) => {
   const { userProfile, role } = useAuth();
   const [empleados, setEmpleados] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -58,8 +58,6 @@ const EmpleadosContent = ({ sucursalId, sucursalNombre, navigateToPage, reloadSu
     }
   }, [sucursalId]);
 
-  const [empresaIdFromSucursal, setEmpresaIdFromSucursal] = useState(null);
-
   const loadEmpleados = async () => {
     if (!userProfile?.ownerId) {
       console.error('Error: userProfile.ownerId es requerido');
@@ -68,16 +66,6 @@ const EmpleadosContent = ({ sucursalId, sucursalNombre, navigateToPage, reloadSu
     setLoading(true);
     try {
       const ownerId = userProfile.ownerId;
-      
-      // Obtener empresaId desde la sucursal si no lo tenemos
-      if (!empresaIdFromSucursal && sucursalId) {
-        const sucursalRef = doc(dbAudit, ...firestoreRoutesCore.sucursal(ownerId, sucursalId));
-        const sucursalSnap = await getDoc(sucursalRef);
-        if (sucursalSnap.exists()) {
-          setEmpresaIdFromSucursal(sucursalSnap.data().empresaId);
-        }
-      }
-      
       const empleadosRef = collection(dbAudit, ...firestoreRoutesCore.empleados(ownerId));
       const q = query(empleadosRef, where('sucursalId', '==', sucursalId));
       const snapshot = await getDocs(q);
@@ -120,47 +108,23 @@ const EmpleadosContent = ({ sucursalId, sucursalNombre, navigateToPage, reloadSu
       return;
     }
 
-    // Obtener empresaId desde la sucursal si no lo tenemos
-    let empresaId = empresaIdFromSucursal;
-    if (!empresaId && sucursalId) {
-      try {
-        const ownerId = userProfile.ownerId;
-        const sucursalRef = doc(dbAudit, ...firestoreRoutesCore.sucursal(ownerId, sucursalId));
-        const sucursalSnap = await getDoc(sucursalRef);
-        if (sucursalSnap.exists()) {
-          empresaId = sucursalSnap.data().empresaId;
-          setEmpresaIdFromSucursal(empresaId);
-        }
-      } catch (error) {
-        console.error('Error obteniendo empresaId desde sucursal:', error);
-      }
-    }
+    // selectedEmpresa es la ÚNICA fuente de verdad para empresaId
+    const empresaId = selectedEmpresa;
 
-    // Normalizar empresaId a string (puede venir como objeto o string)
-    let empresaIdNormalizado = null;
-    if (empresaId) {
-      if (typeof empresaId === 'string') {
-        empresaIdNormalizado = empresaId;
-      } else if (typeof empresaId === 'object' && empresaId !== null) {
-        // Si es un objeto, extraer el id
-        empresaIdNormalizado = empresaId.id || empresaId.uid || String(empresaId);
-      } else {
-        empresaIdNormalizado = String(empresaId);
-      }
+    if (!empresaId) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: 'Empresa no seleccionada'
+      });
+      return;
     }
 
     // Validar acceso a empresa para operarios
     // Admin tiene acceso total, operario solo a empresas en empresasAsignadas
-    if (role === 'operario' && empresaIdNormalizado) {
+    if (role === 'operario') {
       const empresasAsignadas = userProfile?.empresasAsignadas || [];
-      // Normalizar empresasAsignadas a strings para comparación
-      const empresasAsignadasNormalizadas = empresasAsignadas.map(emp => {
-        if (typeof emp === 'string') return emp;
-        if (typeof emp === 'object' && emp !== null) return emp.id || emp.uid || String(emp);
-        return String(emp);
-      });
-      
-      if (!empresasAsignadasNormalizadas.includes(empresaIdNormalizado)) {
+      if (!empresasAsignadas.includes(empresaId)) {
         Swal.fire({
           icon: 'error',
           title: 'Error',
@@ -172,15 +136,12 @@ const EmpleadosContent = ({ sucursalId, sucursalNombre, navigateToPage, reloadSu
 
     try {
       const ownerId = userProfile.ownerId;
-      // Usar empresaId normalizado
-      const empresaIdFinal = empresaIdNormalizado || empresaId;
-      
       const empleadosRef = collection(dbAudit, ...firestoreRoutesCore.empleados(ownerId));
       await addDoc(empleadosRef, {
         ...empleadoForm,
         sucursalId: sucursalId,
         sucursalNombre: sucursalNombre,
-        empresaId: empresaIdFinal,
+        empresaId: empresaId,
         estado: 'activo',
         fechaCreacion: Timestamp.now(),
         createdBy: userProfile?.uid,
