@@ -79,10 +79,31 @@ export default function EmpleadoForm({ open, onClose, onSave, empleado, sucursal
       return;
     }
 
+    // Normalizar empresaId a string (puede venir como objeto o string)
+    let empresaIdNormalizado = null;
+    if (empresaId) {
+      if (typeof empresaId === 'string') {
+        empresaIdNormalizado = empresaId;
+      } else if (typeof empresaId === 'object' && empresaId !== null) {
+        // Si es un objeto, extraer el id
+        empresaIdNormalizado = empresaId.id || empresaId.uid || String(empresaId);
+      } else {
+        empresaIdNormalizado = String(empresaId);
+      }
+    }
+
     // Validar acceso a empresa para operarios
-    if (role === 'operario' && empresaId) {
+    // Admin tiene acceso total, operario solo a empresas en empresasAsignadas
+    if (role === 'operario' && empresaIdNormalizado) {
       const empresasAsignadas = userProfile?.empresasAsignadas || [];
-      if (!empresasAsignadas.includes(empresaId)) {
+      // Normalizar empresasAsignadas a strings para comparación
+      const empresasAsignadasNormalizadas = empresasAsignadas.map(emp => {
+        if (typeof emp === 'string') return emp;
+        if (typeof emp === 'object' && emp !== null) return emp.id || emp.uid || String(emp);
+        return String(emp);
+      });
+      
+      if (!empresasAsignadasNormalizadas.includes(empresaIdNormalizado)) {
         alert('No tenés acceso a esa empresa');
         return;
       }
@@ -92,9 +113,12 @@ export default function EmpleadoForm({ open, onClose, onSave, empleado, sucursal
 
     try {
       const ownerId = userProfile.ownerId;
+      // Usar empresaId normalizado
+      const empresaIdFinal = empresaIdNormalizado || empresaId;
+      
       const empleadoData = {
         ...formData,
-        empresaId,
+        empresaId: empresaIdFinal,
         sucursalId,
         fechaIngreso: Timestamp.fromDate(new Date(formData.fechaIngreso)),
         updatedAt: Timestamp.now()

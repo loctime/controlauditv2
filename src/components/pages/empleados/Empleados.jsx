@@ -470,7 +470,7 @@ export default function Empleados() {
         onSave={handleSaveEmpleado}
         empleado={selectedEmpleado}
         sucursalId={selectedSucursal}
-        empresaId={userProfile?.empresaId || userProfile?.uid}
+        empresaId={selectedEmpresa}
       />
 
       {/* Dialog de Importación Masiva */}
