@@ -157,7 +157,18 @@ export default function ImportEmpleadosDialog({ open, onClose, onSuccess, empres
   const handleConfirmImport = async () => {
     try {
       const savedCount = await saveEmpleados(userProfile);
-      onSuccess(savedCount);
+      
+      // Calcular estadísticas
+      const validEmpleados = getValidEmpleados();
+      const erroresCount = empleadosParsed.length - validEmpleados.length;
+      
+      // Llamar onSuccess con objeto de estadísticas
+      onSuccess({
+        creados: savedCount,
+        conError: erroresCount,
+        advertencias: warnings.length,
+        total: empleadosParsed.length
+      });
       onClose();
     } catch (error) {
       console.error('Error al importar:', error);
@@ -312,14 +323,24 @@ export default function ImportEmpleadosDialog({ open, onClose, onSuccess, empres
             
             <Box sx={{ mt: 3 }}>
               <Alert severity={validEmpleados.length > 0 ? 'success' : 'error'}>
-                <Typography variant="body1">
-                  <strong>{validEmpleados.length}</strong> empleado(s) válido(s) de {empleadosParsed.length} total
+                <Typography variant="body1" sx={{ fontWeight: 'bold', mb: 1 }}>
+                  Resumen de validación
                 </Typography>
-                {errors.length > 0 && (
-                  <Typography variant="body2" sx={{ mt: 1 }}>
-                    {errors.length} error(es) bloqueante(s) encontrado(s)
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                  <Typography variant="body2">
+                    ✓ <strong>{validEmpleados.length}</strong> empleado(s) válido(s) de {empleadosParsed.length} total
                   </Typography>
-                )}
+                  {errors.length > 0 && (
+                    <Typography variant="body2" color="error.main">
+                      ⚠ <strong>{errors.length}</strong> empleado(s) con error(es) bloqueante(s)
+                    </Typography>
+                  )}
+                  {warnings.length > 0 && (
+                    <Typography variant="body2" color="warning.main">
+                      ⚠ <strong>{warnings.length}</strong> advertencia(s) encontrada(s)
+                    </Typography>
+                  )}
+                </Box>
               </Alert>
             </Box>
 

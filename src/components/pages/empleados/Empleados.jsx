@@ -184,22 +184,20 @@ export default function Empleados() {
         </Typography>
         {canCreateEmpleado && (
           <Box sx={{ display: 'flex', gap: 2 }}>
-            {role !== 'operario' && (
-              <Button
-                variant="outlined"
-                startIcon={<CloudUploadIcon />}
-                onClick={() => setOpenImportDialog(true)}
-                disabled={!selectedSucursal}
-                sx={{
-                  borderColor: 'primary.main',
-                  '&:hover': {
-                    borderColor: 'primary.dark',
-                  }
-                }}
-              >
-                Importar Masivo
-              </Button>
-            )}
+            <Button
+              variant="outlined"
+              startIcon={<CloudUploadIcon />}
+              onClick={() => setOpenImportDialog(true)}
+              disabled={!selectedSucursal}
+              sx={{
+                borderColor: 'primary.main',
+                '&:hover': {
+                  borderColor: 'primary.dark',
+                }
+              }}
+            >
+              Importar Masivo
+            </Button>
             <Button
               variant="contained"
               startIcon={<AddIcon />}
@@ -477,8 +475,18 @@ export default function Empleados() {
       <ImportEmpleadosDialog
         open={openImportDialog}
         onClose={() => setOpenImportDialog(false)}
-        onSuccess={(count) => {
-          alert(`¡Importación exitosa! Se crearon ${count} empleado(s)`);
+        onSuccess={(stats) => {
+          // Manejar tanto el formato antiguo (número) como el nuevo (objeto)
+          if (typeof stats === 'number') {
+            alert(`¡Importación exitosa! Se crearon ${stats} empleado(s)`);
+          } else {
+            const mensaje = `¡Importación completada!\n\n` +
+              `✔ Creados: ${stats.creados}\n` +
+              `⚠ Con error: ${stats.conError}\n` +
+              `⚠ Advertencias: ${stats.advertencias}\n` +
+              `Total procesados: ${stats.total}`;
+            alert(mensaje);
+          }
           loadEmpleados();
         }}
         empresaId={selectedEmpresa}
