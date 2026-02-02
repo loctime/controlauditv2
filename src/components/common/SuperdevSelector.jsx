@@ -25,14 +25,15 @@ import { impersonateOwner, signInWithImpersonationToken, listOwners } from '../.
 import { toast } from 'react-toastify';
 
 const SuperdevSelector = () => {
-  const { user, userContext } = useAuth();
+  const { userProfile } = useAuth();
   const [open, setOpen] = useState(false);
   const [owners, setOwners] = useState([]);
   const [loading, setLoading] = useState(false);
   const [impersonating, setImpersonating] = useState(false);
 
   // Verificar si el usuario tiene permisos superdev desde el contexto
-  const hasSuperdev = userContext?.superdev === true;
+  const hasSuperdev = userProfile?.role === 'superdev';
+
 
   // Cargar owners al abrir el modal
   useEffect(() => {
@@ -65,10 +66,12 @@ const SuperdevSelector = () => {
   const handleImpersonate = async (ownerId, ownerEmail) => {
     if (impersonating) return;
 
+    console.log('[SuperdevSelector] impersonando ownerId:', ownerId);
     setImpersonating(true);
     try {
       // 1. Obtener custom token del backend
-      const customToken = await impersonateOwner(ownerId);
+      const customToken = await impersonateOwner({ ownerId });
+
 
       // 2. Autenticarse con el custom token
       await signInWithImpersonationToken(customToken);
