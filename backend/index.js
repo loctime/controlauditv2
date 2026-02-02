@@ -530,6 +530,22 @@ const verificarSuperdev = async (req, res, next) => {
 
     const decodedToken = await admin.auth().verifyIdToken(token);
     
+    // Validar appId y role (modelo unificado)
+    if (decodedToken.appId !== 'auditoria') {
+      return res.status(403).json({ 
+        error: 'Token inválido: appId debe ser "auditoria"',
+        code: 'INVALID_APP_ID'
+      });
+    }
+    
+    if (decodedToken.role !== 'superdev') {
+      console.warn(`[SUPERDEV] Intento de acceso sin permisos superdev - UID: ${decodedToken.uid}, Email: ${decodedToken.email || 'N/A'}, Role: ${decodedToken.role}`);
+      return res.status(403).json({ 
+        error: 'No tienes permisos de superdev',
+        code: 'FORBIDDEN'
+      });
+    }
+
     // Validar claim superdev
     if (decodedToken.superdev !== true) {
       console.warn(`[SUPERDEV] Intento de acceso sin permisos superdev - UID: ${decodedToken.uid}, Email: ${decodedToken.email || 'N/A'}`);

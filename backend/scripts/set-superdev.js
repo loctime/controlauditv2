@@ -6,7 +6,7 @@ import admin from "../firebaseAdmin.js";
 // ===============================
 const DEV_UID = "rixIn0BwiVPHB4SgR0K0SlnpSLC2";
 const APP_ID = "auditoria";
-const ROLE = "admin";
+const ROLE = "superdev";
 
 async function run() {
   // 1. Obtener usuario actual
@@ -20,8 +20,8 @@ async function run() {
     ...currentClaims,      // mantiene lo existente
     appId: APP_ID,
     role: ROLE,
-    ownerId: DEV_UID,
-    superdev: true         // opcional
+    ownerId: DEV_UID
+    // Eliminado: superdev: true (usamos solo role='superdev')
   };
 
   // 3. Setear claims

@@ -35,8 +35,8 @@ router.post('/', verificarAdmin, async (req, res) => {
   if (!uid || !role) return res.status(400).json({ error: 'Faltan datos (uid, role)' });
   
   // Solo permitir roles owner-centric
-  if (!['admin', 'operario'].includes(role)) {
-    return res.status(400).json({ error: 'Rol no permitido. Solo se permiten: admin, operario' });
+  if (!['admin', 'operario', 'superdev'].includes(role)) {
+    return res.status(400).json({ error: 'Rol no permitido. Solo se permiten: admin, operario, superdev' });
   }
   
   try {
@@ -44,8 +44,7 @@ router.post('/', verificarAdmin, async (req, res) => {
     const customClaims = {
       appId: 'auditoria',
       role: role,
-      ...(role === 'operario' && ownerId && { ownerId: ownerId }),
-      ...(role === 'admin' && { ownerId: uid }) // Admin siempre tiene ownerId === uid
+      ownerId: uid // Todos los roles (incluyendo superdev) tienen ownerId === uid
     };
     
     await admin.auth().setCustomUserClaims(uid, customClaims);
