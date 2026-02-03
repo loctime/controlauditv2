@@ -641,12 +641,12 @@ const AuthContextComponent = ({ children }) => {
   // Función para resolver ownerId basado en selectedOwnerId
   const getEffectiveOwnerId = () => {
     // Si el usuario es tu UID específico y hay un selectedOwnerId, usar ese
-    if (userContext?.uid === 'rixIn0BwiVPHB4SgR0K0SlnpSLC2' && selectedOwnerId) {
+    if (user?.uid === 'rixIn0BwiVPHB4SgR0K0SlnpSLC2' && selectedOwnerId) {
       return selectedOwnerId;
     }
     
     // Para todos los demás casos, usar el ownerId normal del usuario
-    return userContext?.ownerId;
+    return userContext?.ownerId || user?.uid;
   };
 
   // Compatibilidad: userProfile y role desde userContext

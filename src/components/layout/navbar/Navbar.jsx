@@ -48,7 +48,7 @@ function Navbar(props) {
   const [anchorElHigiene, setAnchorElHigiene] = useState(null);
   const [anchorElEmpresarial, setAnchorElEmpresarial] = useState(null);
   const navigate = useNavigate();
-  const { logoutContext, user, role, permisos, userProfile, bloqueado, isLogged, userContext, selectedOwnerId } = useAuth();
+  const { logoutContext, user, role, permisos, userProfile, bloqueado, isLogged, userContext, selectedOwnerId, getEffectiveOwnerId } = useAuth();
   const { mode, toggleColorMode } = useColorMode();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
@@ -57,9 +57,12 @@ function Navbar(props) {
   // Estado para mostrar el owner seleccionado (solo para tu UID)
   const [selectedOwnerEmail, setSelectedOwnerEmail] = useState(null);
 
+  // Obtener el ownerId efectivo
+  const effectiveOwnerId = getEffectiveOwnerId();
+
   // Cargar email del owner seleccionado (solo para tu UID específico)
   useEffect(() => {
-    if (userContext?.uid === 'rixIn0BwiVPHB4SgR0K0SlnpSLC2' && selectedOwnerId) {
+    if (user?.uid === 'rixIn0BwiVPHB4SgR0K0SlnpSLC2' && selectedOwnerId && selectedOwnerId !== user.uid) {
       // Cargar email/displayName del owner seleccionado
       const loadOwnerEmail = async () => {
         try {
@@ -80,7 +83,7 @@ function Navbar(props) {
     } else {
       setSelectedOwnerEmail(null);
     }
-  }, [userContext, selectedOwnerId]);
+  }, [user, selectedOwnerId]);
 
   const isBloqueado = bloqueado || permisos?.bloqueado || userProfile?.bloqueado || false;
   const navbarItems = role ? getNavbarItems(role, permisos || {}) : { simple: [], higiene: [], empresarial: [] };
@@ -547,13 +550,13 @@ function Navbar(props) {
             {/* Indicador de owner seleccionado */}
             {selectedOwnerEmail && (
               <Chip
-                label={`Owner: ${selectedOwnerEmail}`}
-                color="primary"
+                label={`Viendo como: ${selectedOwnerEmail}`}
+                color="warning"
                 size="small"
                 sx={{
                   color: '#ffffff',
-                  backgroundColor: 'rgba(33, 150, 243, 0.2)',
-                  borderColor: '#2196f3',
+                  backgroundColor: 'rgba(255, 152, 0, 0.2)',
+                  borderColor: '#ff9800',
                   borderWidth: 1,
                   borderStyle: 'solid',
                 }}
@@ -590,13 +593,13 @@ function Navbar(props) {
             {/* Indicador de owner seleccionado para móvil */}
             {selectedOwnerEmail && (
               <Chip
-                label={`Owner: ${selectedOwnerEmail}`}
-                color="primary"
+                label={`Viendo como: ${selectedOwnerEmail}`}
+                color="warning"
                 size="small"
                 sx={{
                   color: '#ffffff',
-                  backgroundColor: 'rgba(33, 150, 243, 0.2)',
-                  borderColor: '#2196f3',
+                  backgroundColor: 'rgba(255, 152, 0, 0.2)',
+                  borderColor: '#ff9800',
                   borderWidth: 1,
                   borderStyle: 'solid',
                   fontSize: '0.7rem',
