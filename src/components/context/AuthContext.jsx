@@ -45,6 +45,9 @@ const AuthContextComponent = ({ children }) => {
   const [selectedEmpresa, setSelectedEmpresa] = useState('todas');
   const [selectedSucursal, setSelectedSucursal] = useState('todas');
   
+  // Estado para selectedOwnerId (solo para tu UID específico)
+  const [selectedOwnerId, setSelectedOwnerId] = useState(null);
+  
   // Control para activar listeners diferidos
   const [enableDeferredListeners, setEnableDeferredListeners] = useState(false);
   
@@ -136,6 +139,41 @@ const AuthContextComponent = ({ children }) => {
       console.warn('[AuthContext] Error persistiendo sucursal en localStorage:', error);
     }
   }, [selectedSucursal, isLogged, userContext]);
+
+  // Persistir selectedOwnerId en localStorage (solo para tu UID)
+  useEffect(() => {
+    if (!isLogged || !userContext) return;
+    
+    // Solo persistir selectedOwnerId para tu UID específico
+    if (userContext.uid === 'rixIn0BwiVPHB4SgR0K0SlnpSLC2') {
+      try {
+        if (selectedOwnerId) {
+          localStorage.setItem('selectedOwnerId', selectedOwnerId);
+        } else {
+          localStorage.removeItem('selectedOwnerId');
+        }
+      } catch (error) {
+        console.warn('[AuthContext] Error persistiendo selectedOwnerId en localStorage:', error);
+      }
+    }
+  }, [selectedOwnerId, isLogged, userContext]);
+
+  // Restaurar selectedOwnerId desde localStorage (solo para tu UID)
+  useEffect(() => {
+    if (!isLogged || !userContext) return;
+    
+    // Solo restaurar selectedOwnerId para tu UID específico
+    if (userContext.uid === 'rixIn0BwiVPHB4SgR0K0SlnpSLC2') {
+      try {
+        const savedOwnerId = localStorage.getItem('selectedOwnerId');
+        if (savedOwnerId) {
+          setSelectedOwnerId(savedOwnerId);
+        }
+      } catch (error) {
+        console.warn('[AuthContext] Error restaurando selectedOwnerId desde localStorage:', error);
+      }
+    }
+  }, [isLogged, userContext]);
   
   // Hook de cache offline (solo para móvil)
   const { loadUserFromCache } = useOfflineCache();
@@ -563,10 +601,12 @@ const AuthContextComponent = ({ children }) => {
     setAuditoriasCompartidas([]);
     setSelectedEmpresa('todas');
     setSelectedSucursal('todas');
+    setSelectedOwnerId(null); // Limpiar selectedOwnerId al hacer logout
     localStorage.removeItem("userInfo");
     localStorage.removeItem("isLogged");
     localStorage.removeItem("globalSelectedEmpresa");
     localStorage.removeItem("globalSelectedSucursal");
+    localStorage.removeItem("selectedOwnerId"); // Limpiar selectedOwnerId del localStorage
   };
 
   // Función simple para actualizar perfil en Firestore (sin sincronizar estado)
@@ -598,6 +638,17 @@ const AuthContextComponent = ({ children }) => {
     }
   };
 
+  // Función para resolver ownerId basado en selectedOwnerId
+  const getEffectiveOwnerId = () => {
+    // Si el usuario es tu UID específico y hay un selectedOwnerId, usar ese
+    if (userContext?.uid === 'rixIn0BwiVPHB4SgR0K0SlnpSLC2' && selectedOwnerId) {
+      return selectedOwnerId;
+    }
+    
+    // Para todos los demás casos, usar el ownerId normal del usuario
+    return userContext?.ownerId;
+  };
+
   // Compatibilidad: userProfile y role desde userContext
   const userProfile = userContext;
   const role = userContext?.role;
@@ -622,6 +673,9 @@ const AuthContextComponent = ({ children }) => {
     setSelectedEmpresa,
     selectedSucursal,
     setSelectedSucursal,
+    selectedOwnerId,
+    setSelectedOwnerId,
+    getEffectiveOwnerId, // Función para resolver ownerId
     handleLogin,
     logoutContext,
     crearEmpresa,

@@ -48,41 +48,39 @@ function Navbar(props) {
   const [anchorElHigiene, setAnchorElHigiene] = useState(null);
   const [anchorElEmpresarial, setAnchorElEmpresarial] = useState(null);
   const navigate = useNavigate();
-  const { logoutContext, user, role, permisos, userProfile, bloqueado, isLogged, userContext } = useAuth();
+  const { logoutContext, user, role, permisos, userProfile, bloqueado, isLogged, userContext, selectedOwnerId } = useAuth();
   const { mode, toggleColorMode } = useColorMode();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const { canInstall, handleInstall, handleShowInfo } = usePWAInstall();
-  
-  // Estado para el email del owner impersonado
-  const [impersonatedOwnerEmail, setImpersonatedOwnerEmail] = useState(null);
-  
-  // Detectar si se está impersonando y cargar email del owner
+
+  // Estado para mostrar el owner seleccionado (solo para tu UID)
+  const [selectedOwnerEmail, setSelectedOwnerEmail] = useState(null);
+
+  // Cargar email del owner seleccionado (solo para tu UID específico)
   useEffect(() => {
-    const isImpersonating = userContext?.superdev === true && userContext?.uid !== userContext?.ownerId;
-    
-    if (isImpersonating && userContext?.ownerId) {
-      // Cargar email/displayName del owner impersonado
+    if (userContext?.uid === 'rixIn0BwiVPHB4SgR0K0SlnpSLC2' && selectedOwnerId) {
+      // Cargar email/displayName del owner seleccionado
       const loadOwnerEmail = async () => {
         try {
-          const ownerRef = doc(dbAudit, ...firestoreRoutesCore.owner(userContext.ownerId));
+          const ownerRef = doc(dbAudit, ...firestoreRoutesCore.owner(selectedOwnerId));
           const ownerDoc = await getDoc(ownerRef);
           if (ownerDoc.exists()) {
             const ownerData = ownerDoc.data();
-            setImpersonatedOwnerEmail(ownerData.displayName || ownerData.email || userContext.ownerId);
+            setSelectedOwnerEmail(ownerData.displayName || ownerData.email || selectedOwnerId);
           } else {
-            setImpersonatedOwnerEmail(userContext.ownerId);
+            setSelectedOwnerEmail(selectedOwnerId);
           }
         } catch (error) {
-          console.error('[Navbar] Error cargando email del owner:', error);
-          setImpersonatedOwnerEmail(userContext.ownerId);
+          console.error('[Navbar] Error cargando email del owner seleccionado:', error);
+          setSelectedOwnerEmail(selectedOwnerId);
         }
       };
       loadOwnerEmail();
     } else {
-      setImpersonatedOwnerEmail(null);
+      setSelectedOwnerEmail(null);
     }
-  }, [userContext]);
+  }, [userContext, selectedOwnerId]);
 
   const isBloqueado = bloqueado || permisos?.bloqueado || userProfile?.bloqueado || false;
   const navbarItems = role ? getNavbarItems(role, permisos || {}) : { simple: [], higiene: [], empresarial: [] };
@@ -546,16 +544,16 @@ function Navbar(props) {
               <OfflineIndicator userProfile={userProfile} />
             )}
 
-            {/* Indicador de impersonación */}
-            {impersonatedOwnerEmail && (
+            {/* Indicador de owner seleccionado */}
+            {selectedOwnerEmail && (
               <Chip
-                label={`Impersonando: ${impersonatedOwnerEmail}`}
-                color="warning"
+                label={`Owner: ${selectedOwnerEmail}`}
+                color="primary"
                 size="small"
                 sx={{
                   color: '#ffffff',
-                  backgroundColor: 'rgba(255, 152, 0, 0.2)',
-                  borderColor: '#ff9800',
+                  backgroundColor: 'rgba(33, 150, 243, 0.2)',
+                  borderColor: '#2196f3',
                   borderWidth: 1,
                   borderStyle: 'solid',
                 }}
@@ -589,16 +587,16 @@ function Navbar(props) {
               <OfflineIndicatorMobile userProfile={userProfile} />
             )}
 
-            {/* Indicador de impersonación para móvil */}
-            {impersonatedOwnerEmail && (
+            {/* Indicador de owner seleccionado para móvil */}
+            {selectedOwnerEmail && (
               <Chip
-                label={`Impersonando: ${impersonatedOwnerEmail}`}
-                color="warning"
+                label={`Owner: ${selectedOwnerEmail}`}
+                color="primary"
                 size="small"
                 sx={{
                   color: '#ffffff',
-                  backgroundColor: 'rgba(255, 152, 0, 0.2)',
-                  borderColor: '#ff9800',
+                  backgroundColor: 'rgba(33, 150, 243, 0.2)',
+                  borderColor: '#2196f3',
                   borderWidth: 1,
                   borderStyle: 'solid',
                   fontSize: '0.7rem',

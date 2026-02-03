@@ -21,26 +21,39 @@ import {
 } from '@mui/material';
 import { Person } from '@mui/icons-material';
 import { useAuth } from '../context/AuthContext';
-import { impersonateOwner, signInWithImpersonationToken, listOwners } from '../../services/superdevService';
+import { listOwners } from '../../services/superdevService';
 import { toast } from 'react-toastify';
 
 const SuperdevSelector = () => {
-  const { userProfile } = useAuth();
+  const { user, selectedOwnerId, setSelectedOwnerId } = useAuth();
   const [open, setOpen] = useState(false);
   const [owners, setOwners] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [impersonating, setImpersonating] = useState(false);
 
-  // Verificar si el usuario tiene permisos superdev desde el contexto
-  const hasSuperdev = userProfile?.role === 'superdev';
+  // Debug: log para verificar el UID del usuario
+  console.log('[SuperdevSelector] user.uid:', user?.uid);
+  console.log('[SuperdevSelector] expected UID:', 'rixIn0BwiVPHB4SgR0K0SlnpSLC2');
+
+  // Verificar si el usuario es tu UID específico - usar auth.user.uid directamente
+  const isSpecificUser = user?.uid === 'rixIn0BwiVPHB4SgR0K0SlnpSLC2';
+  
+  console.log('[SuperdevSelector] isSpecificUser:', isSpecificUser);
+
+  // No mostrar si no es tu UID específico
+  if (!isSpecificUser) {
+    console.log('[SuperdevSelector] Componente oculto - UID no coincide');
+    return null;
+  }
+
+  console.log('[SuperdevSelector] Componente visible para UID específico');
 
 
   // Cargar owners al abrir el modal
   useEffect(() => {
-    if (open && hasSuperdev) {
+    if (open && isSpecificUser) {
       loadOwners();
     }
-  }, [open, hasSuperdev]);
+  }, [open, isSpecificUser]);
 
   const loadOwners = async () => {
     setLoading(true);
@@ -63,51 +76,28 @@ const SuperdevSelector = () => {
     setOpen(false);
   };
 
-  const handleImpersonate = async (ownerId, ownerEmail) => {
-    if (impersonating) return;
+  const handleSelectOwner = (ownerId, ownerEmail) => {
+    console.log('[SuperdevSelector] seleccionando ownerId:', ownerId);
+    
+    // Guardar el ownerId seleccionado en el estado global
+    setSelectedOwnerId(ownerId);
+    
+    // Mostrar mensaje de éxito
+    toast.success(`Owner seleccionado: ${ownerEmail}`, {
+      autoClose: 3000,
+    });
 
-    console.log('[SuperdevSelector] impersonando ownerId:', ownerId);
-    setImpersonating(true);
-    try {
-      // 1. Obtener custom token del backend
-      const customToken = await impersonateOwner({ ownerId });
-
-
-      // 2. Autenticarse con el custom token
-      await signInWithImpersonationToken(customToken);
-
-      // 3. Mostrar mensaje de éxito
-      toast.success(`Impersonando a: ${ownerEmail}`, {
-        autoClose: 3000,
-      });
-
-      // 4. Cerrar modal
-      setOpen(false);
-
-      // 5. El AuthContext detectará el cambio automáticamente vía onAuthStateChanged
-      // No es necesario recargar la página
-    } catch (error) {
-      console.error('[SuperdevSelector] Error al impersonar:', error);
-      const errorMessage = error.message || 'Error al impersonar owner';
-      toast.error(errorMessage, {
-        autoClose: 5000,
-      });
-    } finally {
-      setImpersonating(false);
-    }
+    // Cerrar modal
+    setOpen(false);
   };
 
-  // No mostrar si no tiene permisos superdev
-  if (!hasSuperdev) {
-    return null;
-  }
 
   return (
     <>
       {/* Botón/Chip en navbar */}
       <Chip
         icon={<Person />}
-        label="Modo Superdev"
+        label="Selector Owner"
         onClick={handleOpen}
         color="primary"
         variant="outlined"
@@ -136,7 +126,7 @@ const SuperdevSelector = () => {
         <DialogTitle>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <Person />
-            <Typography variant="h6">Seleccionar Owner para Impersonar</Typography>
+            <Typography variant="h6">Seleccionar Owner</Typography>
           </Box>
         </DialogTitle>
         <DialogContent>
@@ -155,17 +145,22 @@ const SuperdevSelector = () => {
             </Alert>
           ) : (
             <>
-              <Alert severity="warning" sx={{ mb: 2 }}>
+              <Alert severity="info" sx={{ mb: 2 }}>
                 <Typography variant="body2">
-                  Selecciona un owner para impersonar. Al hacer logout, volverás a tu sesión original.
+                  Selecciona un owner para ver sus datos. La app usará automáticamente el owner seleccionado.
                 </Typography>
+                {selectedOwnerId && (
+                  <Typography variant="body2" sx={{ mt: 1, fontWeight: 'bold' }}>
+                    Owner actual: {selectedOwnerId}
+                  </Typography>
+                )}
               </Alert>
               <Divider sx={{ my: 2 }} />
               <List>
                 {owners.map((owner) => (
                   <ListItem key={owner.uid} disablePadding>
                     <ListItemButton
-onClick={() => handleImpersonate(owner.uid, owner.email)}                      disabled={impersonating}
+                      onClick={() => handleSelectOwner(owner.uid, owner.email)}
                     >
                       <ListItemText
                         primary={owner.displayName || owner.email}
@@ -185,7 +180,7 @@ onClick={() => handleImpersonate(owner.uid, owner.email)}                      d
           )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleClose} disabled={impersonating}>
+          <Button onClick={handleClose}>
             Cancelar
           </Button>
         </DialogActions>
