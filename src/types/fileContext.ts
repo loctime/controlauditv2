@@ -3,7 +3,14 @@
  * Iteración 1: Tipos básicos necesarios para el flujo unificado de subida
  */
 
-export type ContextType = 'capacitacion' | 'accidente' | 'incidente' | 'salud';
+export type ContextType =
+  | 'capacitacion'
+  | 'accidente'
+  | 'incidente'
+  | 'salud'
+  | 'auditoria'
+  | 'reporte'
+  | 'empresa';
 
 export interface FileContext {
   contextType: ContextType;

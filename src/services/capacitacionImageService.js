@@ -1,5 +1,4 @@
 // src/services/capacitacionImageService.js
-import { uploadEvidence, ensureTaskbarFolder, ensureSubFolder, ensureCapacitacionFolder } from './controlFileB2Service';
 import { getOfflineDatabase, generateOfflineId } from './offlineDatabase';
 import syncQueueService from './syncQueue';
 import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
@@ -126,126 +125,8 @@ class CapacitacionImageService {
    * @returns {Promise<{fileId: string, shareToken: string}>}
    */
   async uploadImage(file, idToken, capacitacionEventoId, companyId, sucursalId = null, capacitacionTipoId = null, tipoArchivo = 'evidencia') {
-    // Wrapper: usar nuevo sistema internamente pero mantener API legacy
-    try {
-      return await this.uploadImageNew(file, idToken, capacitacionEventoId, companyId, sucursalId, capacitacionTipoId, tipoArchivo);
-    } catch (error) {
-      // Fallback a sistema legacy solo si el nuevo sistema falla
-      const errorMsg = error instanceof Error ? error.message : String(error);
-      console.warn(`[capacitacionImageService] ⚠️ [v1.0] Fallback a legacy por error: ${errorMsg}`);
-      return await this.uploadImageLegacy(file, idToken, capacitacionEventoId, companyId, sucursalId, capacitacionTipoId, tipoArchivo);
-    }
-  }
-
-  /**
-   * Subir imagen usando sistema legacy (fallback)
-   * @private
-   */
-  async uploadImageLegacy(file, idToken, capacitacionEventoId, companyId, sucursalId = null, capacitacionTipoId = null, tipoArchivo = 'evidencia') {
-    try {
-      // Obtener userId del usuario autenticado
-      const user = auth.currentUser;
-      if (!user) {
-        throw new Error('Usuario no autenticado');
-      }
-      const userId = user.uid;
-
-      // Obtener datos completos de la capacitación desde la colección multi-tenant
-      let capacitacionData = null;
-      try {
-        if (!userId) throw new Error('ownerId es requerido');
-        const ownerId = userId; // userId ahora es ownerId
-        const capacitacionRef = doc(db, ...firestoreRoutesCore.capacitacion(ownerId, capacitacionEventoId));
-        const capacitacionSnap = await getDoc(capacitacionRef);
-        
-        if (capacitacionSnap.exists()) {
-          capacitacionData = capacitacionSnap.data();
-        }
-      } catch (error) {
-        console.warn('⚠️ No se pudo obtener datos de la capacitación:', error);
-      }
-
-      // Determinar valores finales
-      const finalCompanyId = companyId || capacitacionData?.empresaId;
-      const finalSucursalId = sucursalId || capacitacionData?.sucursalId;
-      
-      if (!finalCompanyId) {
-        throw new Error('No se pudo obtener companyId para la capacitación');
-      }
-      
-      if (!finalSucursalId) {
-        throw new Error('No se pudo obtener sucursalId para la capacitación');
-      }
-
-      // ⚠️ capacitacionTipoId es OBLIGATORIO y debe venir persistido en Firestore
-      // NO se recalcula, NO se normaliza, NO hay fallback
-      const finalTipoId = capacitacionTipoId || capacitacionData?.capacitacionTipoId;
-      
-      if (!finalTipoId || typeof finalTipoId !== 'string' || finalTipoId.trim() === '') {
-        throw new Error('Capacitación sin capacitacionTipoId. Estado inválido. El capacitacionTipoId debe estar persistido en Firestore desde la creación.');
-      }
-      
-      console.log('[capacitacionImageService] 📁 [LEGACY] Creando estructura de carpetas:', {
-        capacitacionTipoId: finalTipoId,
-        capacitacionEventoId,
-        companyId: finalCompanyId,
-        sucursalId: finalSucursalId,
-        tipoArchivo
-      });
-      
-      // Asegurar estructura completa de carpetas:
-      // Capacitaciones/{capacitacionTipoId}/{capacitacionEventoId}/{companyId}/{sucursalId}/{tipoArchivo}/
-      // ⚠️ ESTRICTO: ensureCapacitacionFolder lanza error si falla, nunca devuelve null
-      let targetFolderId;
-      try {
-        targetFolderId = await ensureCapacitacionFolder(
-          finalTipoId,
-          capacitacionEventoId,
-          finalCompanyId,
-          finalSucursalId,
-          tipoArchivo
-        );
-        console.log('[capacitacionImageService] ✅ [LEGACY] Estructura de carpetas creada, targetFolderId:', targetFolderId);
-      } catch (error) {
-        // Propagar el error con contexto adicional - NO hacer fallback
-        console.error('[capacitacionImageService] ❌ [LEGACY] Error al crear estructura de carpetas:', error);
-        throw new Error(`Error al crear estructura de carpetas de capacitación: ${error.message}`);
-      }
-      
-      // Validación explícita: parentId NUNCA puede ser null para capacitaciones
-      if (!targetFolderId || typeof targetFolderId !== 'string' || targetFolderId.trim() === '') {
-        throw new Error(`parentId inválido para capacitación: ${targetFolderId}. La estructura de carpetas debe crearse completamente antes de subir archivos.`);
-      }
-      
-      console.log('[capacitacionImageService] 📤 [LEGACY] Subiendo archivo con parentId:', targetFolderId);
-      
-      const result = await uploadEvidence({
-        file,
-        auditId: capacitacionEventoId, // ⚠️ Solo compatibilidad legacy - capacitacionEventoId es el ID real
-        companyId: finalCompanyId,
-        parentId: targetFolderId, // ✅ NUNCA null - validado arriba
-        fecha: new Date(),
-        capacitacionTipoId: finalTipoId, // ✅ CLAVE
-        sucursalId: finalSucursalId, // ✅ CLAVE
-        tipoArchivo: tipoArchivo // ✅ CLAVE
-      });
-
-      return {
-        fileId: result.fileId,
-        shareToken: result.shareToken, // ✅ Retornar shareToken en lugar de fileURL
-        uploadedAt: new Date().toISOString(),
-        size: file.size,
-        name: file.name,
-        type: file.type,
-        capacitacionTipoId: finalTipoId,
-        capacitacionEventoId: capacitacionEventoId,
-        companyId: finalCompanyId,
-        sucursalId: finalSucursalId
-      };
-    } catch (error) {
-      console.error('❌ [LEGACY] Error al subir imagen de capacitación:', error);
-      throw error;
-    }
+    // Legacy retirado intencionalmente: solo flujo unificado con uploadFileWithContext.
+    return await this.uploadImageNew(file, idToken, capacitacionEventoId, companyId, sucursalId, capacitacionTipoId, tipoArchivo);
   }
 
   /**
@@ -632,4 +513,3 @@ class CapacitacionImageService {
 const capacitacionImageService = new CapacitacionImageService();
 
 export default capacitacionImageService;
-

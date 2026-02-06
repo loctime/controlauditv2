@@ -21,7 +21,7 @@ import { query, where, getDocs, doc, getDoc, Timestamp, collection } from 'fireb
 import { dbAudit } from '../../../../firebaseControlFile';
 import { firestoreRoutesCore } from '../../../../core/firestore/firestoreRoutes.core';
 import { registrosAsistenciaService } from '../../../../services/registrosAsistenciaService';
-import { uploadEvidence, ensureTaskbarFolder, ensureSubFolder } from '../../../../services/controlFileB2Service';
+import { uploadFileWithContext } from '../../../../services/unifiedFileUploadService';
 import { auth } from '../../../../firebaseControlFile';
 import { useAuth } from '@/components/context/AuthContext';
 import { convertirShareTokenAUrl } from '@/utils/imageUtils';
@@ -205,15 +205,20 @@ export default function RegistrarAsistenciaInline({
         if (!user) throw new Error('Usuario no autenticado');
         
         const companyId = capacitacion?.empresaId || 'system';
-        const mainFolderId = await ensureTaskbarFolder('ControlAudit');
-        const capacitacionesFolderId = await ensureSubFolder('Capacitaciones', mainFolderId);
-        const targetFolderId = capacitacionesFolderId || mainFolderId;
-        
-        const result = await uploadEvidence({
+        if (!capacitacion?.sucursalId || !capacitacion?.capacitacionTipoId) {
+          throw new Error('Capacitación sin sucursalId o capacitacionTipoId');
+        }
+
+        const result = await uploadFileWithContext({
           file: file,
-          auditId: `asistencia_${capacitacionId}`,
-          companyId: companyId,
-          parentId: targetFolderId,
+          context: {
+            contextType: 'capacitacion',
+            contextEventId: capacitacionId,
+            companyId: companyId,
+            sucursalId: capacitacion.sucursalId,
+            tipoArchivo: 'evidencia',
+            capacitacionTipoId: capacitacion.capacitacionTipoId
+          },
           fecha: new Date()
         });
         

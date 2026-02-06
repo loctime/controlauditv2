@@ -40,7 +40,7 @@ import {
 import { query, where, getDocs, doc, getDoc, Timestamp, collection } from 'firebase/firestore';
 import { dbAudit } from '../../../firebaseControlFile';
 import { firestoreRoutesCore } from '../../../core/firestore/firestoreRoutes.core';
-import { uploadEvidence, ensureTaskbarFolder, ensureSubFolder } from '../../../services/controlFileB2Service';
+import { uploadFileWithContext } from '../../../services/unifiedFileUploadService';
 import { auth } from '../../../firebaseControlFile';
 import { convertirShareTokenAUrl } from '../../../utils/imageUtils';
 import { useAuth } from '@/components/context/AuthContext';
@@ -261,15 +261,24 @@ export default function EventRegistryInline({
         if (!user) throw new Error('Usuario no autenticado');
         
         const companyId = entity?.empresaId || 'system';
-        const mainFolderId = await ensureTaskbarFolder('ControlAudit');
-        const folderName = evidenciasConfig.folderName || entityType || 'evidencias';
-        const targetFolderId = await ensureSubFolder(folderName, mainFolderId) || mainFolderId;
-        
-        const result = await uploadEvidence({
-          file: file,
-          auditId: `${entityType}_${entityId}`,
+        const context = {
+          contextType: entityType,
+          contextEventId: entityId,
           companyId: companyId,
-          parentId: targetFolderId,
+          tipoArchivo: 'evidencia',
+        };
+
+        if (entityType === 'capacitacion') {
+          if (!entity?.sucursalId || !entity?.capacitacionTipoId) {
+            throw new Error('Capacitación sin sucursalId o capacitacionTipoId');
+          }
+          context.sucursalId = entity.sucursalId;
+          context.capacitacionTipoId = entity.capacitacionTipoId;
+        }
+
+        const result = await uploadFileWithContext({
+          file: file,
+          context,
           fecha: new Date()
         });
         
