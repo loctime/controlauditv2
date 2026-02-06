@@ -1,6 +1,6 @@
 // src/services/controlFileB2Service.ts
-// Servicio para integración con ControlFile usando Backblaze B2 vía proxy
-// ⚠️ NUEVA ARQUITECTURA: presign → proxy-upload → confirm → guardar solo fileId
+// Servicio para integración con ControlFile vía proxy uploads
+// ⚠️ NUEVA ARQUITECTURA: presign → proxy-upload → confirm → fileId
 /**
  * ⚠️ SINGLE SOURCE OF TRUTH
  * Toda subida de archivos en ControlAudit / ControlFile
@@ -8,8 +8,9 @@
  * 
  * ⚠️ ARQUITECTURA ACTUAL:
  * - Frontend NUNCA hace PUT directo a S3/B2
- * - Todo upload pasa por /proxy-upload en backend
- * - El backend se encarga de hacer el PUT a Backblaze
+ * - Frontend NO conoce URLs, bucketKeys ni detalles del storage
+ * - Todo upload pasa por /uploads/proxy-upload en backend
+ * - El frontend solo maneja uploadSessionId
  * 
  * Prohibido subir archivos directamente desde componentes
  * o usar Firebase Storage de forma directa.
@@ -36,11 +37,12 @@ import { ensureTaskbarAppFolder } from '../utils/taskbar-folder';
 const BACKEND_URL = (import.meta as any).env?.VITE_CONTROLFILE_BACKEND_URL || 'https://controlfile.onrender.com';
 
 /**
- * Obtiene URL presignada para subir archivo a Backblaze B2
+ * Obtiene sesión de upload para subir archivo
+ * ⚠️ SOLO crea sesión, NO devuelve URLs ni bucketKeys
  * @param {File} file - Archivo a subir
- * @param {string | null} parentId - ID de la carpeta padre (opcional)
+ * @param {string | null} parentId - ID de la carpeta padre (requerido)
  * @param {Object} metadata - Metadata adicional para el archivo
- * @returns {Promise<{uploadSessionId: string, url: string, bucketKey: string}>}
+ * @returns {Promise<{uploadSessionId: string}>}
  */
 async function getPresignedUrl(
   file: File,
@@ -48,8 +50,6 @@ async function getPresignedUrl(
   metadata?: Record<string, any>
 ): Promise<{
   uploadSessionId: string;
-  url: string;
-  bucketKey: string;
 }> {
   const user = auth.currentUser;
   if (!user) {
@@ -61,7 +61,7 @@ async function getPresignedUrl(
     throw new Error('No se pudo obtener el token de autenticación');
   }
 
-  const response = await fetch(`${BACKEND_URL}/api/uploads/presign`, {
+  const response = await fetch(`${BACKEND_URL}/uploads/presign`, {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${token}`,
@@ -78,31 +78,34 @@ async function getPresignedUrl(
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ error: 'Error desconocido' }));
-    throw new Error(error.error || `Error al obtener URL presignada: ${response.status}`);
+    throw new Error(error.error || `Error al obtener sesión de upload: ${response.status}`);
   }
 
   const presignData = await response.json();
   
-  // 🚨 LOG DIAGNÓSTICO: Headers recibidos del backend
+  // 🚨 LOG DIAGNÓSTICO: Solo el uploadSessionId es relevante
   console.log('[SDK] Presign response headers:', Object.fromEntries(response.headers.entries()));
   console.log('[SDK] Presign data:', presignData);
+  console.log('[SDK] Upload session ID created:', presignData.uploadSessionId);
   
-  return presignData;
+  return {
+    uploadSessionId: presignData.uploadSessionId,
+  };
 }
 
 /**
  * Sube archivo a través del proxy del backend
  * ⚠️ NUEVA ARQUITECTURA: El frontend NUNCA hace PUT directo a S3/B2
- * Todo upload pasa por /proxy-upload en backend
- * @param {string} url - URL presignada de B2 (solo para referencia)
+ * Todo upload pasa por /uploads/proxy-upload en backend con sessionId
+ * @param {string} uploadSessionId - ID de sesión de upload (no URL)
  * @param {File} file - Archivo a subir
  * @returns {Promise<void>}
  */
-async function uploadFileToB2(url: string, file: File): Promise<void> {
+async function uploadFileToB2(uploadSessionId: string, file: File): Promise<void> {
   // 🚨 LOG DIAGNÓSTICO: Información completa del upload via proxy
   console.log('[SDK v1.0.5][AppFilesModule] uploadToStorage invoked (PROXY MODE)');
-  console.log('[SDK] Upload method: PROXY via backend');
-  console.log('[SDK] Original B2 URL (for reference only):', url);
+  console.log('[SDK] Upload method: PROXY via /uploads/proxy-upload');
+  console.log('[SDK] Upload session ID:', uploadSessionId);
   console.log('[SDK] File type:', file.type);
   console.log('[SDK] File size:', file.size);
   console.log('[SDK] File name:', file.name);
@@ -120,11 +123,11 @@ async function uploadFileToB2(url: string, file: File): Promise<void> {
   // Crear FormData para enviar al proxy del backend
   const formData = new FormData();
   formData.append('file', file);
-  formData.append('url', url); // URL presignada para que el backend haga el PUT
+  formData.append('sessionId', uploadSessionId); // sessionId, no URL
 
-  console.log('[SDK] Sending upload request to backend proxy...');
+  console.log('[SDK] Sending upload request to /uploads/proxy-upload...');
   
-  const response = await fetch(`${BACKEND_URL}/proxy-upload`, {
+  const response = await fetch(`${BACKEND_URL}/uploads/proxy-upload`, {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${token}`,
@@ -142,17 +145,18 @@ async function uploadFileToB2(url: string, file: File): Promise<void> {
     throw new Error(`Upload proxy failed with status ${response.status}: ${errorText}`);
   }
 
-  console.log('[SDK] ✅ Upload successful via proxy');
+  const result = await response.json();
+  console.log('[SDK] ✅ Upload successful via proxy:', result);
 }
 
 /**
- * Confirma upload en ControlFile y crea metadatos en Firestore
+ * Confirma upload en ControlFile usando el endpoint /uploads/confirm
  * @param {string} uploadSessionId - ID de la sesión de upload
- * @returns {Promise<{fileId: string, bucketKey: string}>}
+ * @returns {Promise<{fileId: string}>}
  */
 async function confirmUpload(
   uploadSessionId: string
-): Promise<{ fileId: string; bucketKey: string }> {
+): Promise<{ fileId: string }> {
   const user = auth.currentUser;
   if (!user) {
     throw new Error('Usuario no autenticado');
@@ -163,7 +167,7 @@ async function confirmUpload(
     throw new Error('No se pudo obtener el token de autenticación');
   }
 
-  const response = await fetch(`${BACKEND_URL}/api/uploads/confirm`, {
+  const response = await fetch(`${BACKEND_URL}/uploads/confirm`, {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${token}`,
@@ -180,12 +184,10 @@ async function confirmUpload(
   }
 
   const data = await response.json();
+  console.log('[SDK] Upload confirmed:', data);
   
-  // ✅ ELIMINADO: Fetch innecesario a /api/files/:id
-  // El backend debe devolver directamente { fileId, bucketKey }
   return {
     fileId: data.fileId,
-    bucketKey: data.bucketKey || '',
   };
 }
 
@@ -391,11 +393,11 @@ export async function uploadEvidence({
       };
     }
 
-    // 1. Obtener URL presignada
+    // 1. Obtener sesión de upload
     const presignData = await getPresignedUrl(file, resolvedParentId, metadata);
 
-    // 2. Subir archivo físico a B2
-    await uploadFileToB2(presignData.url, file);
+    // 2. Subir archivo físico vía proxy
+    await uploadFileToB2(presignData.uploadSessionId, file);
 
     // 3. Confirmar upload en ControlFile
     const { fileId } = await confirmUpload(presignData.uploadSessionId);
