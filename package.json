@@ -32,7 +32,7 @@
     "optimize": "pnpm run clean && pnpm run build"
   },
   "dependencies": {
-    "@controlfile/sdk": "github:loctime/controlfile-sdk#v1.0.8",
+    "@controlfile/sdk": "github:loctime/controlfile-sdk#v1.0.9",
     "@emotion/cache": "^11.13.0",
     "@emotion/react": "^11.13.0",
     "@emotion/styled": "^11.13.0",
