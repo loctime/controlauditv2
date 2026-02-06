@@ -213,7 +213,7 @@ class AuditoriaService {
    * @param {string} companyId - ID de la empresa
    * @returns {Promise<Array>} Array de metadata de imágenes subidas
    */
-  static async procesarImagenesPendientes(imagenes, parentFolderId, companyId) {
+  static async procesarImagenesPendientes(imagenes, auditEventId, companyId) {
     console.debug('[AuditoriaService] Procesando imágenes pendientes:', imagenes);
     
     if (!Array.isArray(imagenes)) {

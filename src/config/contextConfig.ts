@@ -11,6 +11,14 @@ export interface ContextConfig {
   requiresSucursalId: boolean;
   requiresTipoArchivo: boolean;
   validTiposArchivo: readonly string[];
+  folderConfig?: {
+    rootFolderName: string;
+    useArchivosRoot?: boolean;
+    includeEventFolder?: boolean;
+    includeCompanyFolder?: boolean;
+    includeSucursalFolder?: boolean;
+    includeTipoArchivoFolder?: boolean;
+  };
 }
 
 /**
