@@ -10,6 +10,10 @@
  * o usar Firebase Storage de forma directa.
  */
 
+// 🚨 LOG DIAGNÓSTICO: Versión del SDK
+console.log('[SDK] ControlFile SDK version: 1.0.5');
+console.log('[SDK] Using custom implementation (not @controlfile/sdk package)');
+
 import { auth, db } from '../firebaseControlFile';
 import { 
   collection, 
@@ -72,27 +76,61 @@ async function getPresignedUrl(
     throw new Error(error.error || `Error al obtener URL presignada: ${response.status}`);
   }
 
-  return await response.json();
+  const presignData = await response.json();
+  
+  // 🚨 LOG DIAGNÓSTICO: Headers recibidos del backend
+  console.log('[SDK] Presign response headers:', Object.fromEntries(response.headers.entries()));
+  console.log('[SDK] Presign data:', presignData);
+  
+  return presignData;
 }
 
 /**
  * Sube archivo físico a Backblaze B2 usando URL presignada
+ * ⚠️ CLAVE: NO setear Content-Type manualmente - el browser lo hace automáticamente
  * @param {string} url - URL presignada de B2
  * @param {File} file - Archivo a subir
  * @returns {Promise<void>}
  */
 async function uploadFileToB2(url: string, file: File): Promise<void> {
-  const response = await fetch(url, {
-    method: 'PUT',
-    body: file,
-    headers: {
-      'Content-Type': file.type || 'application/octet-stream',
-    },
-  });
+  // 🚨 LOG DIAGNÓSTICO: Información completa del upload
+  console.log('[SDK v1.0.5][AppFilesModule] uploadToStorage invoked');
+  console.log('[SDK] URL:', url);
+  console.log('[SDK] Method: PUT');
+  console.log('[SDK] File type:', file.type);
+  console.log('[SDK] File size:', file.size);
+  console.log('[SDK] File name:', file.name);
+  
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
 
-  if (!response.ok) {
-    throw new Error(`Error al subir archivo a B2: ${response.status}`);
-  }
+    xhr.open('PUT', url);
+
+    xhr.onload = () => {
+      console.log('[SDK] Upload response status:', xhr.status);
+      console.log('[SDK] Upload response headers:', xhr.getAllResponseHeaders());
+      
+      if (xhr.status >= 200 && xhr.status < 300) {
+        console.log('[SDK] ✅ Upload successful');
+        resolve();
+      } else {
+        console.error('[SDK] ❌ Upload failed with status:', xhr.status);
+        console.error('[SDK] Response text:', xhr.responseText);
+        reject(new Error(`Upload failed with status ${xhr.status}: ${xhr.responseText}`));
+      }
+    };
+
+    xhr.onerror = () => {
+      console.error('[SDK] ❌ Upload failed due to network error');
+      reject(new Error('Upload failed due to network error'));
+    };
+
+    // ⚠️ CLAVE: NO setear Content-Type - el browser lo hace automáticamente con el boundary correcto
+    console.log('[SDK] Content-Type filtered for browser upload');
+    console.log('[SDK] Sending request without manual Content-Type header');
+    
+    xhr.send(file);
+  });
 }
 
 /**
@@ -288,6 +326,10 @@ export async function uploadEvidence({
       }
     } else {
       // Legacy: construir metadata anidada
+      // 🚨 LOG DIAGNÓSTICO: Detectar flujo legacy
+      console.warn('[LEGACY SDK] uploadToStorage invoked - using legacy mode without metadata');
+      console.warn('[LEGACY SDK] auditId:', auditId, 'companyId:', companyId);
+      
       // Validar parámetros requeridos para modo legacy
       if (!auditId || !companyId) {
         throw new Error('auditId y companyId son requeridos en modo legacy (cuando no hay metadata)');
