@@ -2,7 +2,7 @@
 import { collection, addDoc, getDocs, query, where, orderBy, serverTimestamp, doc, getDocs as getDocsQuery } from 'firebase/firestore';
 import { dbAudit } from '../../../firebaseControlFile';
 import { firestoreRoutesCore } from '../../../core/firestore/firestoreRoutes.core';
-import { uploadEvidence, ensureTaskbarFolder, ensureSubFolder } from '../../../services/controlFileB2Service';
+import { uploadFileWithContext } from '../../../services/unifiedFileUploadService';
 import { prepararDatosParaFirestore, registrarAccionSistema } from '../../../utils/firestoreUtils';
 import { getOfflineDatabase, generateOfflineId } from '../../../services/offlineDatabase';
 import syncQueueService from '../../../services/syncQueue';
@@ -60,32 +60,6 @@ class AuditoriaService {
       return [];
     }
     
-    // Asegurar carpetas usando ensureTaskbarFolder y ensureSubFolder (evita duplicados)
-    let folderIdAuditorias = null;
-    
-    try {
-      // 1. Asegurar carpeta principal "ControlAudit" (verifica existencia antes de crear)
-      const mainFolderId = await ensureTaskbarFolder('ControlAudit');
-      if (!mainFolderId) {
-        throw new Error('No se pudo crear/obtener carpeta principal ControlAudit');
-      }
-      
-      // 2. Asegurar subcarpeta "Auditorías" (verifica existencia antes de crear)
-      folderIdAuditorias = await ensureSubFolder('Auditorías', mainFolderId);
-      
-      // Si no se pudo crear subcarpeta, usar carpeta principal como fallback
-      if (!folderIdAuditorias) {
-        console.warn('[AuditoriaService] ⚠️ No se pudo crear subcarpeta "Auditorías", usando carpeta principal');
-        folderIdAuditorias = mainFolderId;
-      }
-      
-      console.log('[AuditoriaService] 📋 FolderId final para subir imágenes:', folderIdAuditorias);
-      
-    } catch (error) {
-      console.error('[AuditoriaService] ❌ Error al asegurar carpetas:', error);
-      throw error; // Lanzar error en lugar de usar null para que el usuario sepa que falló
-    }
-    
     const imagenesProcesadas = [];
     
     for (let seccionIndex = 0; seccionIndex < imagenes.length; seccionIndex++) {
@@ -122,14 +96,17 @@ class AuditoriaService {
         // Solo subir si es File
         if (imagen instanceof File) {
           try {
-            console.log(`[AuditoriaService] 📤 Subiendo archivo a ControlFile: ${imagen.name}, tamaño: ${(imagen.size/1024/1024).toFixed(2)}MB, parentId: ${folderIdAuditorias || 'null (raíz)'}`);
+            console.log(`[AuditoriaService] 📤 Subiendo archivo a ControlFile: ${imagen.name}, tamaño: ${(imagen.size/1024/1024).toFixed(2)}MB`);
             
-            // Subir imagen a ControlFile usando uploadEvidence
-            const result = await uploadEvidence({
+            const result = await uploadFileWithContext({
               file: imagen,
-              auditId: 'auditoria_general',
-              companyId: 'system', // TODO: Obtener del contexto si está disponible
-              parentId: folderIdAuditorias
+              context: {
+                contextType: 'auditoria',
+                contextEventId: 'auditoria_general',
+                companyId: 'system',
+                tipoArchivo: 'evidencia'
+              },
+              fecha: new Date()
             });
             
             const timestamp = Date.now();
@@ -185,13 +162,16 @@ class AuditoriaService {
           const primeraImagen = imagen[0];
           if (primeraImagen instanceof File) {
             try {
-              // ✅ Usar uploadEvidence directamente (igual que arriba)
-              const result = await uploadEvidence({
-                file: primeraImagen,
-                auditId: 'auditoria_general',
+            const result = await uploadFileWithContext({
+              file: primeraImagen,
+              context: {
+                contextType: 'auditoria',
+                contextEventId: 'auditoria_general',
                 companyId: 'system',
-                parentId: folderIdAuditorias
-              });
+                tipoArchivo: 'evidencia'
+              },
+              fecha: new Date()
+            });
               
               seccionImagenes.push({
                 fileId: result.fileId,
@@ -229,11 +209,11 @@ class AuditoriaService {
   /**
    * Procesa imágenes pendientes (Files) y las sube a ControlFile
    * @param {Array} imagenes - Array de Files pendientes
-   * @param {string} parentFolderId - ID de la carpeta padre (subcarpeta de auditoría)
+   * @param {string} parentFolderId - ID de la carpeta padre (legacy, ignorado en flujo unificado)
    * @param {string} companyId - ID de la empresa
    * @returns {Promise<Array>} Array de metadata de imágenes subidas
    */
-  static async procesarImagenesPendientes(imagenes, parentFolderId, companyId) {
+  static async procesarImagenesPendientes(imagenes, auditEventId, companyId) {
     console.debug('[AuditoriaService] Procesando imágenes pendientes:', imagenes);
     
     if (!Array.isArray(imagenes)) {
@@ -271,16 +251,16 @@ class AuditoriaService {
         if (imagen instanceof File) {
           try {
             const nombreArchivo = `pregunta_${preguntaIndex}.png`;
-            console.log(`[AuditoriaService] 📤 Subiendo archivo a ControlFile: ${nombreArchivo}, tamaño: ${(imagen.size/1024/1024).toFixed(2)}MB, parentId: ${parentFolderId}`);
+            console.log(`[AuditoriaService] 📤 Subiendo archivo a ControlFile: ${nombreArchivo}, tamaño: ${(imagen.size/1024/1024).toFixed(2)}MB`);
             
-            // Subir imagen a ControlFile usando uploadEvidence
-            const result = await uploadEvidence({
+            const result = await uploadFileWithContext({
               file: imagen,
-              auditId: 'auditoria_general',
-              companyId: companyId,
-              seccionId: seccionIndex.toString(),
-              preguntaId: preguntaIndex.toString(),
-              parentId: parentFolderId,
+              context: {
+                contextType: 'auditoria',
+                contextEventId: 'auditoria_general',
+                companyId: companyId || 'system',
+                tipoArchivo: 'evidencia'
+              },
               fecha: new Date()
             });
             
@@ -517,39 +497,12 @@ class AuditoriaService {
         throw new Error("userProfile.uid es requerido para guardar la auditoría en arquitectura multi-tenant");
       }
 
-      // ✅ PASO 1: Generar nombre de carpeta con fecha y hora
-      const ahora = new Date();
-      const fechaHora = ahora.toISOString()
-        .replace(/T/, '_')
-        .replace(/:/g, '-')
-        .split('.')[0]; // Formato: 2025-12-30_01-45-30
-      const auditFechaHora = fechaHora;
-
-      // ✅ PASO 2: Crear subcarpeta dentro de "Auditorías"
-      const mainFolderId = await ensureTaskbarFolder('ControlAudit');
-      if (!mainFolderId) {
-        throw new Error('No se pudo obtener carpeta principal ControlAudit');
-      }
-
-      const auditoriasFolderId = await ensureSubFolder('Auditorías', mainFolderId);
-      if (!auditoriasFolderId) {
-        throw new Error('No se pudo obtener carpeta Auditorías');
-      }
-
-      // Crear subcarpeta específica para esta auditoría
-      const auditFolderId = await ensureSubFolder(auditFechaHora, auditoriasFolderId);
-      if (!auditFolderId) {
-        throw new Error(`No se pudo crear subcarpeta ${auditFechaHora}`);
-      }
-
-      console.log(`✅ Subcarpeta creada: ${auditFechaHora} (${auditFolderId})`);
-
-      // ✅ PASO 3: Procesar imágenes pendientes (Files) y subirlas a la subcarpeta
+      // ✅ PASO 1: Procesar imágenes pendientes (Files) usando flujo unificado
       let imagenesProcesadas = [];
       if (datosAuditoria.imagenes && datosAuditoria.imagenes.length > 0) {
         imagenesProcesadas = await this.procesarImagenesPendientes(
           datosAuditoria.imagenes,
-          auditFolderId,
+          null, // Legacy retirado intencionalmente: parentFolderId ya no se usa.
           datosAuditoria.empresa?.id || 'system'
         );
       }

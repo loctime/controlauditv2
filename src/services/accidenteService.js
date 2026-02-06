@@ -11,8 +11,7 @@ import {
 import { addDocWithAppId, updateDocWithAppId, deleteDocWithAppId } from '../firebase/firestoreAppWriter';
 import { db } from '../firebaseControlFile';
 import { firestoreRoutesCore } from '../core/firestore/firestoreRoutes.core';
-import { uploadEvidence, getDownloadUrl, ensureTaskbarFolder, ensureSubFolder } from './controlFileB2Service';
-import { getControlFileFolders, clearControlFileFolders } from './controlFileInit';
+import { getDownloadUrl } from './controlFileB2Service';
 import { registrarAccionSistema } from '../utils/firestoreUtils';
 import { uploadFileWithContext } from './unifiedFileUploadService';
 import { auth } from '../firebaseControlFile';
@@ -260,92 +259,6 @@ const subirImagenesNew = async (accidenteId, imagenes, companyId = 'system') => 
 };
 
 /**
- * Subir imágenes usando sistema legacy (fallback)
- * @private
- */
-const subirImagenesLegacy = async (accidenteId, imagenes, companyId = 'system') => {
-  try {
-    // PASO 1: Obtener carpeta raíz ControlAudit (ya existente)
-    const mainFolderId = await ensureTaskbarFolder('ControlAudit');
-    if (!mainFolderId) {
-      console.error('[accidenteService] ⛔ [LEGACY] Upload cancelado: carpeta accidentes no disponible - No se pudo obtener carpeta principal ControlAudit');
-      throw new Error('No se pudo obtener carpeta principal ControlAudit');
-    }
-
-    // PASO 2: Resolver subcarpeta "accidentes" con lógica GET-OR-CREATE
-    let folderIdAccidentes = null;
-    let subcarpetaCreada = false;
-
-    try {
-      // 2a. Buscar subcarpeta "accidentes" bajo ControlAudit
-      const folders = await getControlFileFolders();
-      folderIdAccidentes = folders.subFolders?.accidentes;
-
-      // 2b. SI NO EXISTE → crearla usando ensureSubFolder
-      if (!folderIdAccidentes) {
-        console.log('[accidenteService] 📂 [LEGACY] Subcarpeta accidentes no encontrada en cache, creando...');
-        folderIdAccidentes = await ensureSubFolder('Accidentes', mainFolderId);
-        
-        if (folderIdAccidentes) {
-          subcarpetaCreada = true;
-          console.log('[accidenteService] 📂 [LEGACY] Subcarpeta accidentes creada');
-          
-          // PASO 3: Invalidar cache si se creó la subcarpeta
-          clearControlFileFolders();
-          console.log('[accidenteService] ♻️ [LEGACY] Cache de carpetas invalidado');
-        } else {
-          console.error('[accidenteService] ⛔ [LEGACY] Upload cancelado: carpeta accidentes no disponible - No se pudo crear subcarpeta');
-          throw new Error('No se pudo crear subcarpeta accidentes');
-        }
-      } else {
-        // 2c. SI EXISTE → usar su id
-        console.log('[accidenteService] 📂 [LEGACY] Subcarpeta accidentes existente reutilizada');
-      }
-    } catch (error) {
-      console.error('[accidenteService] [LEGACY] Error al resolver carpeta de accidentes:', error);
-      console.error('[accidenteService] ⛔ [LEGACY] Upload cancelado: carpeta accidentes no disponible');
-      throw error;
-    }
-
-    // PASO 4: Validar que parentId es válido antes de subir
-    if (!folderIdAccidentes) {
-      console.error('[accidenteService] ⛔ [LEGACY] Upload cancelado: carpeta accidentes no disponible - folderIdAccidentes es null');
-      throw new Error('folderIdAccidentes no disponible');
-    }
-
-    // PASO 5: Subir imágenes SOLO si parentId es válido
-    const urls = [];
-    
-    for (let i = 0; i < imagenes.length; i++) {
-      const imagen = imagenes[i];
-      try {
-        // Subir imagen a ControlFile usando uploadEvidence
-        const result = await uploadEvidence({
-          file: imagen,
-          auditId: `accidente_${accidenteId}`,
-          companyId: companyId,
-          parentId: folderIdAccidentes
-        });
-        
-        // Obtener URL de descarga temporal
-        const url = await getDownloadUrl(result.fileId);
-        urls.push(url);
-        
-        console.log(`[accidenteService] ✅ [LEGACY] Imagen ${i + 1}/${imagenes.length} subida a ControlFile`);
-      } catch (error) {
-        console.error(`[accidenteService] [LEGACY] Error al subir imagen ${i + 1}:`, error);
-        // Continuar con las demás imágenes aunque una falle
-      }
-    }
-    
-    return urls;
-  } catch (error) {
-    console.error('[accidenteService] [LEGACY] Error al subir imágenes:', error);
-    throw error;
-  }
-};
-
-/**
  * Subir imágenes a ControlFile
  * 
  * @deprecated Esta función ahora usa internamente el nuevo modelo de contexto de evento (v1.0).
@@ -360,15 +273,8 @@ const subirImagenesLegacy = async (accidenteId, imagenes, companyId = 'system') 
  * @returns {Promise<string[]>} Array de URLs de descarga temporal
  */
 export const subirImagenes = async (accidenteId, imagenes, companyId = 'system') => {
-  // Wrapper: usar nuevo sistema internamente pero mantener API legacy
-  try {
-    return await subirImagenesNew(accidenteId, imagenes, companyId);
-  } catch (error) {
-    // Fallback a sistema legacy solo si el nuevo sistema falla
-    const errorMsg = error instanceof Error ? error.message : String(error);
-    console.warn(`[accidenteService] ⚠️ [v1.0] Fallback a legacy por error: ${errorMsg}`);
-    return await subirImagenesLegacy(accidenteId, imagenes, companyId);
-  }
+  // Legacy retirado intencionalmente: solo flujo unificado con uploadFileWithContext.
+  return await subirImagenesNew(accidenteId, imagenes, companyId);
 };
 
 // Obtener accidentes con filtros funcionales
