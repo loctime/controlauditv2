@@ -115,33 +115,64 @@ export async function resolveContextFolder(context: FileContext): Promise<string
   }
 
   try {
+    const folderConfig = config.folderConfig || {
+      rootFolderName: 'Archivos',
+      useArchivosRoot: true,
+      includeEventFolder: true,
+      includeCompanyFolder: config.requiresCompanyId,
+      includeSucursalFolder: config.requiresSucursalId,
+      includeTipoArchivoFolder: true,
+    };
+
+    const useArchivosRoot = folderConfig.useArchivosRoot ?? true;
+    const includeEventFolder = folderConfig.includeEventFolder ?? true;
+    const includeCompanyFolder = folderConfig.includeCompanyFolder ?? config.requiresCompanyId;
+    const includeSucursalFolder = folderConfig.includeSucursalFolder ?? config.requiresSucursalId;
+    const includeTipoArchivoFolder = folderConfig.includeTipoArchivoFolder ?? true;
+
     // 1. Carpeta principal ControlAudit
     const mainFolderId = await ensureTaskbarFolder('ControlAudit');
     if (!mainFolderId) {
       throw new Error('No se pudo crear/obtener carpeta principal ControlAudit');
     }
 
-    // 2. Carpeta Archivos (reemplaza Evidencias)
-    const archivosFolderId = await ensureSubFolder('Archivos', mainFolderId);
-    if (!archivosFolderId) {
-      throw new Error('No se pudo crear carpeta Archivos');
+    // 2. Carpeta raíz configurable (por defecto: Archivos)
+    let currentFolderId = mainFolderId;
+    if (useArchivosRoot) {
+      const archivosFolderId = await ensureSubFolder(folderConfig.rootFolderName, mainFolderId);
+      if (!archivosFolderId) {
+        throw new Error(`No se pudo crear carpeta ${folderConfig.rootFolderName}`);
+      }
+      currentFolderId = archivosFolderId;
+
+      // 3. Carpeta por contextType (solo si usamos raíz Archivos)
+      const contextTypeFolderId = await ensureSubFolder(context.contextType, currentFolderId);
+      if (!contextTypeFolderId) {
+        throw new Error(`No se pudo crear carpeta contextType: ${context.contextType}`);
+      }
+      currentFolderId = contextTypeFolderId;
+    } else {
+      const rootFolderId = await ensureSubFolder(folderConfig.rootFolderName, currentFolderId);
+      if (!rootFolderId) {
+        throw new Error(`No se pudo crear carpeta ${folderConfig.rootFolderName}`);
+      }
+      currentFolderId = rootFolderId;
     }
 
-    // 3. Carpeta por contextType
-    const contextTypeFolderId = await ensureSubFolder(context.contextType, archivosFolderId);
-    if (!contextTypeFolderId) {
-      throw new Error(`No se pudo crear carpeta contextType: ${context.contextType}`);
+    // 4. Carpeta por contextEventId (si aplica)
+    const shouldIncludeEventFolder =
+      includeEventFolder &&
+      !(context.contextType === 'auditoria' && context.contextEventId === 'auditoria_general');
+    if (shouldIncludeEventFolder) {
+      const eventFolderId = await ensureSubFolder(context.contextEventId, currentFolderId);
+      if (!eventFolderId) {
+        throw new Error(`No se pudo crear carpeta evento: ${context.contextEventId}`);
+      }
+      currentFolderId = eventFolderId;
     }
 
-    // 4. Carpeta por contextEventId
-    const eventFolderId = await ensureSubFolder(context.contextEventId, contextTypeFolderId);
-    if (!eventFolderId) {
-      throw new Error(`No se pudo crear carpeta evento: ${context.contextEventId}`);
-    }
-
-    // 5. Carpeta por companyId (si es requerido)
-    let currentFolderId = eventFolderId;
-    if (config.requiresCompanyId && context.companyId) {
+    // 5. Carpeta por companyId (si aplica)
+    if (includeCompanyFolder && context.companyId) {
       const companyFolderId = await ensureSubFolder(context.companyId, currentFolderId);
       if (!companyFolderId) {
         throw new Error(`No se pudo crear carpeta empresa: ${context.companyId}`);
@@ -149,8 +180,8 @@ export async function resolveContextFolder(context: FileContext): Promise<string
       currentFolderId = companyFolderId;
     }
 
-    // 6. Carpeta por sucursalId (si es requerido)
-    if (config.requiresSucursalId && context.sucursalId) {
+    // 6. Carpeta por sucursalId (si aplica)
+    if (includeSucursalFolder && context.sucursalId) {
       const sucursalFolderId = await ensureSubFolder(context.sucursalId, currentFolderId);
       if (!sucursalFolderId) {
         throw new Error(`No se pudo crear carpeta sucursal: ${context.sucursalId}`);
@@ -158,17 +189,20 @@ export async function resolveContextFolder(context: FileContext): Promise<string
       currentFolderId = sucursalFolderId;
     }
 
-    // 7. Carpeta por tipoArchivo (siempre presente)
-    const tipoArchivoFolderId = await ensureSubFolder(context.tipoArchivo, currentFolderId);
-    if (!tipoArchivoFolderId) {
-      throw new Error(`No se pudo crear carpeta tipoArchivo: ${context.tipoArchivo}`);
+    // 7. Carpeta por tipoArchivo (si aplica)
+    if (includeTipoArchivoFolder) {
+      const tipoArchivoFolderId = await ensureSubFolder(context.tipoArchivo, currentFolderId);
+      if (!tipoArchivoFolderId) {
+        throw new Error(`No se pudo crear carpeta tipoArchivo: ${context.tipoArchivo}`);
+      }
+      currentFolderId = tipoArchivoFolderId;
     }
 
     // Guardar en cache y mantener tamaño
-    folderCache.set(cacheKey, tipoArchivoFolderId);
+    folderCache.set(cacheKey, currentFolderId);
     maintainCache();
 
-    return tipoArchivoFolderId;
+    return currentFolderId;
   } catch (error) {
     console.error('[contextFolderResolver] ❌ Error al resolver carpeta:', error);
     throw error instanceof Error ? error : new Error(String(error));

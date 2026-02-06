@@ -1,7 +1,8 @@
 import { useState, useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import Swal from 'sweetalert2';
-import { uploadEvidence, getDownloadUrl, ensureTaskbarFolder, createSubFolder, listFiles } from '../../../../services/controlFileB2Service';
+import { getDownloadUrl } from '../../../../services/controlFileB2Service';
+import { uploadFileWithContext } from '../../../../services/unifiedFileUploadService';
 import { createEmpresa } from '../../../../core/services/ownerEmpresaService';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -66,31 +67,21 @@ export const useEmpresasHandlers = (ownerId, updateEmpresa, onEmpresaCreated) =>
     console.log('[useEmpresasHandlers][handleAddEmpresa] ✅ Validaciones pasadas, iniciando creación');
     setLoading(true);
     try {
+      // Generar ID único para la empresa (se usa también en el flujo de upload unificado)
+      const empresaId = uuidv4();
+
       let logoShareToken = null;
       if (empresa.logo) {
         try {
-          // Obtener o crear carpeta de empresas desde ControlFile
-          const mainFolderId = await ensureTaskbarFolder();
-          let folderIdEmpresas = null;
-          
-          if (mainFolderId) {
-            // Buscar carpeta de empresas existente o crearla
-            const files = await listFiles(mainFolderId);
-            const empresasFolder = files.find(f => f.type === 'folder' && f.name === 'Empresas');
-            
-            if (empresasFolder) {
-              folderIdEmpresas = empresasFolder.id;
-            } else {
-              folderIdEmpresas = await createSubFolder('Empresas', mainFolderId);
-            }
-          }
-          
-          // Subir logo a ControlFile y obtener shareToken
-          const result = await uploadEvidence({
+          const result = await uploadFileWithContext({
             file: empresa.logo,
-            auditId: 'empresas',
-            companyId: 'system',
-            parentId: folderIdEmpresas
+            context: {
+              contextType: 'empresa',
+              contextEventId: empresaId,
+              companyId: 'system',
+              tipoArchivo: 'logo'
+            },
+            fecha: new Date()
           });
           
           // Guardar shareToken (no URL temporal)
@@ -107,9 +98,6 @@ export const useEmpresasHandlers = (ownerId, updateEmpresa, onEmpresaCreated) =>
           // Continuar con logoShareToken = null
         }
       }
-
-      // Generar ID único para la empresa
-      const empresaId = uuidv4();
 
       console.log('[useEmpresasHandlers][handleAddEmpresa] Evento: Crear empresa');
       console.log('[useEmpresasHandlers][handleAddEmpresa] Parámetros:', {
@@ -271,29 +259,17 @@ export const useEmpresasEditHandlers = (updateEmpresa, ownerId) => {
       let logoURL = empresaEdit.logoURL || "";
       if (empresaEdit.logo && empresaEdit.logo instanceof File) {
         try {
-          // Obtener o crear carpeta de empresas desde ControlFile
-          const mainFolderId = await ensureTaskbarFolder();
-          let folderIdEmpresas = null;
-          
-          if (mainFolderId) {
-            // Buscar carpeta de empresas existente o crearla
-            const files = await listFiles(mainFolderId);
-            const empresasFolder = files.find(f => f.type === 'folder' && f.name === 'Empresas');
-            
-            if (empresasFolder) {
-              folderIdEmpresas = empresasFolder.id;
-            } else {
-              folderIdEmpresas = await createSubFolder('Empresas', mainFolderId);
-            }
-          }
-          
-          // Subir logo a ControlFile
-          const result = await uploadEvidence({
+          const result = await uploadFileWithContext({
             file: empresaEdit.logo,
-            auditId: 'empresas',
-            companyId: 'system',
-            parentId: folderIdEmpresas
+            context: {
+              contextType: 'empresa',
+              contextEventId: empresaEdit.id,
+              companyId: 'system',
+              tipoArchivo: 'logo'
+            },
+            fecha: new Date()
           });
+
           // Obtener URL temporal para guardar (se regenerará cuando se necesite)
           logoURL = await getDownloadUrl(result.fileId);
           
@@ -359,7 +335,6 @@ export const useEmpresasEditHandlers = (updateEmpresa, ownerId) => {
     setLoading
   };
 };
-
 
 
 
