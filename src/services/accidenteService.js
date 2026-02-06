@@ -16,6 +16,9 @@ import { registrarAccionSistema } from '../utils/firestoreUtils';
 import { uploadFileWithContext } from './unifiedFileUploadService';
 import { auth } from '../firebaseControlFile';
 
+// Referencia a la colección de logs
+const logsCollectionRef = collection(db, 'logs_operarios');
+
 /**
  * Servicio para gestión de accidentes e incidentes
  */
