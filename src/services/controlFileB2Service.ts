@@ -1,10 +1,15 @@
 // src/services/controlFileB2Service.ts
-// Servicio para integración con ControlFile usando Backblaze B2
-// Flujo oficial: presign → upload to B2 → confirm → guardar solo fileId
+// Servicio para integración con ControlFile usando Backblaze B2 vía proxy
+// ⚠️ NUEVA ARQUITECTURA: presign → proxy-upload → confirm → guardar solo fileId
 /**
  * ⚠️ SINGLE SOURCE OF TRUTH
  * Toda subida de archivos en ControlAudit / ControlFile
  * DEBE pasar por este servicio.
+ * 
+ * ⚠️ ARQUITECTURA ACTUAL:
+ * - Frontend NUNCA hace PUT directo a S3/B2
+ * - Todo upload pasa por /proxy-upload en backend
+ * - El backend se encarga de hacer el PUT a Backblaze
  * 
  * Prohibido subir archivos directamente desde componentes
  * o usar Firebase Storage de forma directa.
@@ -86,51 +91,58 @@ async function getPresignedUrl(
 }
 
 /**
- * Sube archivo físico a Backblaze B2 usando URL presignada
- * ⚠️ CLAVE: NO setear Content-Type manualmente - el browser lo hace automáticamente
- * @param {string} url - URL presignada de B2
+ * Sube archivo a través del proxy del backend
+ * ⚠️ NUEVA ARQUITECTURA: El frontend NUNCA hace PUT directo a S3/B2
+ * Todo upload pasa por /proxy-upload en backend
+ * @param {string} url - URL presignada de B2 (solo para referencia)
  * @param {File} file - Archivo a subir
  * @returns {Promise<void>}
  */
 async function uploadFileToB2(url: string, file: File): Promise<void> {
-  // 🚨 LOG DIAGNÓSTICO: Información completa del upload
-  console.log('[SDK v1.0.5][AppFilesModule] uploadToStorage invoked');
-  console.log('[SDK] URL:', url);
-  console.log('[SDK] Method: PUT');
+  // 🚨 LOG DIAGNÓSTICO: Información completa del upload via proxy
+  console.log('[SDK v1.0.5][AppFilesModule] uploadToStorage invoked (PROXY MODE)');
+  console.log('[SDK] Upload method: PROXY via backend');
+  console.log('[SDK] Original B2 URL (for reference only):', url);
   console.log('[SDK] File type:', file.type);
   console.log('[SDK] File size:', file.size);
   console.log('[SDK] File name:', file.name);
   
-  return new Promise((resolve, reject) => {
-    const xhr = new XMLHttpRequest();
+  const user = auth.currentUser;
+  if (!user) {
+    throw new Error('Usuario no autenticado');
+  }
 
-    xhr.open('PUT', url);
+  const token = await user.getIdToken();
+  if (!token) {
+    throw new Error('No se pudo obtener el token de autenticación');
+  }
 
-    xhr.onload = () => {
-      console.log('[SDK] Upload response status:', xhr.status);
-      console.log('[SDK] Upload response headers:', xhr.getAllResponseHeaders());
-      
-      if (xhr.status >= 200 && xhr.status < 300) {
-        console.log('[SDK] ✅ Upload successful');
-        resolve();
-      } else {
-        console.error('[SDK] ❌ Upload failed with status:', xhr.status);
-        console.error('[SDK] Response text:', xhr.responseText);
-        reject(new Error(`Upload failed with status ${xhr.status}: ${xhr.responseText}`));
-      }
-    };
+  // Crear FormData para enviar al proxy del backend
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('url', url); // URL presignada para que el backend haga el PUT
 
-    xhr.onerror = () => {
-      console.error('[SDK] ❌ Upload failed due to network error');
-      reject(new Error('Upload failed due to network error'));
-    };
-
-    // ⚠️ CLAVE: NO setear Content-Type - el browser lo hace automáticamente con el boundary correcto
-    console.log('[SDK] Content-Type filtered for browser upload');
-    console.log('[SDK] Sending request without manual Content-Type header');
-    
-    xhr.send(file);
+  console.log('[SDK] Sending upload request to backend proxy...');
+  
+  const response = await fetch(`${BACKEND_URL}/proxy-upload`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      // NO setear Content-Type manualmente - el browser lo hace automáticamente para FormData
+    },
+    body: formData,
   });
+
+  console.log('[SDK] Proxy upload response status:', response.status);
+  console.log('[SDK] Proxy upload response headers:', Object.fromEntries(response.headers.entries()));
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error('[SDK] ❌ Proxy upload failed:', errorText);
+    throw new Error(`Upload proxy failed with status ${response.status}: ${errorText}`);
+  }
+
+  console.log('[SDK] ✅ Upload successful via proxy');
 }
 
 /**
