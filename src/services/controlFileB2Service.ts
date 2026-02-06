@@ -61,7 +61,7 @@ async function getPresignedUrl(
     throw new Error('No se pudo obtener el token de autenticación');
   }
 
-  const response = await fetch(`${BACKEND_URL}/uploads/presign`, {
+const response = await fetch(`${BACKEND_URL}/api/uploads/presign`, {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${token}`,
@@ -84,7 +84,10 @@ async function getPresignedUrl(
   const presignData = await response.json();
   
   // 🚨 LOG DIAGNÓSTICO: Solo el uploadSessionId es relevante
-  console.log('[SDK] Presign response headers:', Object.fromEntries(response.headers.entries()));
+console.log(
+  '[SDK] Proxy upload response headers:',
+  Object.fromEntries(response.headers.entries())
+);
   console.log('[SDK] Presign data:', presignData);
   console.log('[SDK] Upload session ID created:', presignData.uploadSessionId);
   
@@ -127,7 +130,7 @@ async function uploadFileToB2(uploadSessionId: string, file: File): Promise<void
 
   console.log('[SDK] Sending upload request to /uploads/proxy-upload...');
   
-  const response = await fetch(`${BACKEND_URL}/uploads/proxy-upload`, {
+const response = await fetch(`${BACKEND_URL}/api/uploads/proxy-upload`, {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${token}`,
@@ -137,7 +140,10 @@ async function uploadFileToB2(uploadSessionId: string, file: File): Promise<void
   });
 
   console.log('[SDK] Proxy upload response status:', response.status);
-  console.log('[SDK] Proxy upload response headers:', Object.fromEntries(response.headers.entries()));
+console.log(
+  '[SDK] Proxy upload response headers:',
+  Object.fromEntries(response.headers.entries())
+);
 
   if (!response.ok) {
     const errorText = await response.text();
@@ -167,7 +173,7 @@ async function confirmUpload(
     throw new Error('No se pudo obtener el token de autenticación');
   }
 
-  const response = await fetch(`${BACKEND_URL}/uploads/confirm`, {
+const response = await fetch(`${BACKEND_URL}/api/uploads/confirm`, {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${token}`,
