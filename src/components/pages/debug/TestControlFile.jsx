@@ -18,7 +18,7 @@ import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import ErrorIcon from '@mui/icons-material/Error';
 import InfoIcon from '@mui/icons-material/Info';
-import { uploadEvidence, ensureTaskbarFolder } from '../../../services/controlFileB2Service';
+import { uploadFileWithContext } from '../../../services/unifiedFileUploadService';
 import { useAuth } from '@/components/context/AuthContext';
 
 const TestControlFile = () => {
@@ -114,18 +114,15 @@ const TestControlFile = () => {
     setResult(null);
 
     try {
-      // Asegurar carpeta principal antes de subir (evita duplicados)
-      const mainFolderId = await ensureTaskbarFolder('ControlAudit');
-      const targetFolderId = mainFolderId; // Usar carpeta principal para tests
-      
-      // Subir archivo usando ControlFile B2
-      const uploadResult = await uploadEvidence({
+      // Subir archivo usando el flujo unificado (legacy retirado intencionalmente)
+      const uploadResult = await uploadFileWithContext({
         file,
-        auditId,
-        companyId,
-        seccionId: seccionId || undefined,
-        preguntaId: preguntaId || undefined,
-        parentId: targetFolderId, // ✅ Usar carpeta verificada/creada
+        context: {
+          contextType: 'auditoria',
+          contextEventId: auditId,
+          companyId: companyId,
+          tipoArchivo: 'evidencia'
+        },
         fecha: new Date()
       });
 
@@ -458,4 +455,3 @@ const TestControlFile = () => {
 };
 
 export default TestControlFile;
-

@@ -2,7 +2,7 @@
 import { doc, updateDoc } from 'firebase/firestore';
 import { dbAudit } from '../../../../firebaseControlFile';
 import { firestoreRoutesCore } from '../../../../core/firestore/firestoreRoutes.core';
-import { uploadEvidence, ensureTaskbarFolder, ensureSubFolder } from '../../../../services/controlFileB2Service';
+import { uploadFileWithContext } from '../../../../services/unifiedFileUploadService';
 import generarContenidoImpresion from './generadorHTML';
 
 /**
@@ -61,16 +61,6 @@ export const guardarPdfEnStorage = async (reporteId, html, metadata = {}, compan
   try {
     console.log('[pdfStorageService] Iniciando guardado de PDF en ControlFile...');
     
-    // 1. Asegurar carpeta principal "ControlAudit"
-    const mainFolderId = await ensureTaskbarFolder('ControlAudit');
-    if (!mainFolderId) {
-      throw new Error('No se pudo crear/obtener carpeta principal ControlAudit');
-    }
-    
-    // 2. Asegurar subcarpeta "Reportes"
-    const reportesFolderId = await ensureSubFolder('Reportes', mainFolderId);
-    const targetFolderId = reportesFolderId || mainFolderId; // Fallback a principal si falla
-    
     // Generar nombre único para el archivo
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
     const fileName = `reporte-${reporteId}-${timestamp}.html`;
@@ -79,13 +69,16 @@ export const guardarPdfEnStorage = async (reporteId, html, metadata = {}, compan
     const htmlBlob = new Blob([html], { type: 'text/html; charset=utf-8' });
     const htmlFile = new File([htmlBlob], fileName, { type: 'text/html; charset=utf-8' });
     
-    // 3. Subir archivo a ControlFile usando uploadEvidence con parentId correcto
+    // Subir archivo a ControlFile usando flujo unificado (legacy retirado intencionalmente)
     console.log('[pdfStorageService] Subiendo archivo a ControlFile...');
-    const result = await uploadEvidence({
+    const result = await uploadFileWithContext({
       file: htmlFile,
-      auditId: `reporte_${reporteId}`,
-      companyId: companyId,
-      parentId: targetFolderId, // ✅ Usar carpeta verificada/creada
+      context: {
+        contextType: 'reporte',
+        contextEventId: `reporte_${reporteId}`,
+        companyId: companyId,
+        tipoArchivo: 'reporte'
+      },
       fecha: new Date()
     });
     
