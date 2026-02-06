@@ -209,7 +209,7 @@ class AuditoriaService {
   /**
    * Procesa imágenes pendientes (Files) y las sube a ControlFile
    * @param {Array} imagenes - Array de Files pendientes
-   * @param {string} auditEventId - ID del evento (legacy: antes parentFolderId)
+   * @param {string} parentFolderId - ID de la carpeta padre (legacy, ignorado en flujo unificado)
    * @param {string} companyId - ID de la empresa
    * @returns {Promise<Array>} Array de metadata de imágenes subidas
    */
@@ -253,12 +253,11 @@ class AuditoriaService {
             const nombreArchivo = `pregunta_${preguntaIndex}.png`;
             console.log(`[AuditoriaService] 📤 Subiendo archivo a ControlFile: ${nombreArchivo}, tamaño: ${(imagen.size/1024/1024).toFixed(2)}MB`);
             
-            const contextEventId = auditEventId || 'auditoria_general';
             const result = await uploadFileWithContext({
               file: imagen,
               context: {
                 contextType: 'auditoria',
-                contextEventId: contextEventId,
+                contextEventId: 'auditoria_general',
                 companyId: companyId || 'system',
                 tipoArchivo: 'evidencia'
               },
@@ -498,20 +497,12 @@ class AuditoriaService {
         throw new Error("userProfile.uid es requerido para guardar la auditoría en arquitectura multi-tenant");
       }
 
-      // ✅ PASO 1: Generar nombre de carpeta con fecha y hora (mantener estructura legacy)
-      const ahora = new Date();
-      const fechaHora = ahora.toISOString()
-        .replace(/T/, '_')
-        .replace(/:/g, '-')
-        .split('.')[0]; // Formato: 2025-12-30_01-45-30
-      const auditFechaHora = fechaHora;
-
-      // ✅ PASO 2: Procesar imágenes pendientes (Files) usando flujo unificado
+      // ✅ PASO 1: Procesar imágenes pendientes (Files) usando flujo unificado
       let imagenesProcesadas = [];
       if (datosAuditoria.imagenes && datosAuditoria.imagenes.length > 0) {
         imagenesProcesadas = await this.procesarImagenesPendientes(
           datosAuditoria.imagenes,
-          auditFechaHora,
+          null, // Legacy retirado intencionalmente: parentFolderId ya no se usa.
           datosAuditoria.empresa?.id || 'system'
         );
       }

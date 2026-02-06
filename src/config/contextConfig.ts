@@ -55,42 +55,18 @@ export const CONTEXT_CONFIG: Record<ContextType, ContextConfig> = {
     requiresSucursalId: false,
     requiresTipoArchivo: true,
     validTiposArchivo: ['evidencia'] as const,
-    folderConfig: {
-      rootFolderName: 'Auditorías',
-      useArchivosRoot: false,
-      includeEventFolder: true,
-      includeCompanyFolder: false,
-      includeSucursalFolder: false,
-      includeTipoArchivoFolder: false,
-    },
   },
   reporte: {
     requiresCompanyId: true,
     requiresSucursalId: false,
     requiresTipoArchivo: true,
     validTiposArchivo: ['reporte'] as const,
-    folderConfig: {
-      rootFolderName: 'Reportes',
-      useArchivosRoot: false,
-      includeEventFolder: false,
-      includeCompanyFolder: false,
-      includeSucursalFolder: false,
-      includeTipoArchivoFolder: false,
-    },
   },
   empresa: {
     requiresCompanyId: false,
     requiresSucursalId: false,
     requiresTipoArchivo: true,
     validTiposArchivo: ['logo'] as const,
-    folderConfig: {
-      rootFolderName: 'Empresas',
-      useArchivosRoot: false,
-      includeEventFolder: false,
-      includeCompanyFolder: false,
-      includeSucursalFolder: false,
-      includeTipoArchivoFolder: false,
-    },
   },
 } as const;
 
