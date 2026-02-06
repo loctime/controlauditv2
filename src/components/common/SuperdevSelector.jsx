@@ -22,12 +22,10 @@ import {
 import { Person, Home } from '@mui/icons-material';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'react-toastify';
-import { impersonateOwner, signInWithImpersonationToken } from '../../services/superdevService';
 
 const SuperdevSelector = () => {
-  const { user } = useAuth();
+  const { user, selectedOwnerId, setSelectedOwnerId } = useAuth();
   const [open, setOpen] = useState(false);
-  const [isImpersonating, setIsImpersonating] = useState(false);
 
   // Debug: log para verificar el UID del usuario
   console.log('[SuperdevSelector] user.uid:', user?.uid);
@@ -68,70 +66,25 @@ const SuperdevSelector = () => {
     setOpen(false);
   };
 
-  const handleSelectOwner = async (ownerId, ownerEmail) => {
-    console.log('[SuperdevSelector] Iniciando impersonación para ownerId:', ownerId);
+  const handleSelectOwner = (ownerId, ownerEmail) => {
+    console.log('[SuperdevSelector] seleccionando ownerId:', ownerId);
     
-    // Si es el mismo usuario, no hacer nada
+    // Guardar el ownerId seleccionado en el estado global
+    setSelectedOwnerId(ownerId);
+    
+    // Mostrar mensaje de éxito
     if (ownerId === user.uid) {
-      toast.info('Ya estás en tu cuenta', {
+      toast.success('Volviendo a mi cuenta', {
         autoClose: 3000,
       });
-      setOpen(false);
-      return;
+    } else {
+      toast.success(`Owner seleccionado: ${ownerEmail}`, {
+        autoClose: 3000,
+      });
     }
 
-    setIsImpersonating(true);
-    
-    try {
-      // 1. Obtener custom token del backend
-      toast.info('Generando token de impersonación...', {
-        autoClose: 2000,
-      });
-      
-      const customToken = await impersonateOwner(ownerId);
-      
-      // 2. Autenticar con el custom token
-      toast.info('Iniciando sesión como usuario seleccionado...', {
-        autoClose: 2000,
-      });
-      
-      await signInWithImpersonationToken(customToken);
-      
-      // 3. Éxito - recargar la app para que tome el nuevo usuario
-      toast.success(`Sesión iniciada como: ${ownerEmail}`, {
-        autoClose: 3000,
-      });
-      
-      // Cerrar modal antes de recargar
-      setOpen(false);
-      
-      // Recargar la página para que la app tome el nuevo contexto de autenticación
-      setTimeout(() => {
-        window.location.reload();
-      }, 1000);
-      
-    } catch (error) {
-      console.error('[SuperdevSelector] Error en impersonación:', error);
-      
-      // Manejar diferentes tipos de error
-      let errorMessage = 'Error al impersonar usuario';
-      
-      if (error.message.includes('PERMISSION_DENIED')) {
-        errorMessage = 'No tienes permisos para impersonar a este usuario';
-      } else if (error.message.includes('USER_NOT_FOUND')) {
-        errorMessage = 'Usuario no encontrado';
-      } else if (error.message.includes('INVALID_TOKEN')) {
-        errorMessage = 'Token de autenticación inválido';
-      } else if (error.message.includes('NETWORK_ERROR')) {
-        errorMessage = 'Error de conexión con el backend';
-      }
-      
-      toast.error(`${errorMessage}: ${error.message}`, {
-        autoClose: 5000,
-      });
-      
-      setIsImpersonating(false);
-    }
+    // Cerrar modal
+    setOpen(false);
   };
 
 
@@ -139,10 +92,10 @@ const SuperdevSelector = () => {
     <>
       {/* Botón/Chip en navbar */}
       <Chip
-        icon={<Person />}
-        label="Entrar como Owner"
+        icon={selectedOwnerId ? <Home /> : <Person />}
+        label={selectedOwnerId ? "Mi Cuenta" : "Selector Owner"}
         onClick={handleOpen}
-        color="primary"
+        color={selectedOwnerId ? "secondary" : "primary"}
         variant="outlined"
         sx={{
           cursor: 'pointer',
@@ -175,42 +128,36 @@ const SuperdevSelector = () => {
         <DialogContent>
           <Alert severity="info" sx={{ mb: 2 }}>
             <Typography variant="body2">
-              Selecciona un owner para impersonar. Iniciarás sesión realmente como ese usuario.
+              Selecciona un owner para ver sus datos. La app usará automáticamente el owner seleccionado.
             </Typography>
-            <Typography variant="body2" sx={{ mt: 1 }}>
-              Para volver a tu cuenta, cierra sesión y autentícate nuevamente.
-            </Typography>
+            {selectedOwnerId && (
+              <Typography variant="body2" sx={{ mt: 1, fontWeight: 'bold' }}>
+                Owner actual: {selectedOwnerId}
+              </Typography>
+            )}
           </Alert>
           <Divider sx={{ my: 2 }} />
-          
-          {isImpersonating ? (
-            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 4 }}>
-              <CircularProgress size={24} sx={{ mr: 2 }} />
-              <Typography variant="body2">Impersonando usuario...</Typography>
-            </Box>
-          ) : (
-            <List>
-              {staticOwners.map((owner) => (
-                <ListItem key={owner.uid} disablePadding>
-                  <ListItemButton
-                    onClick={() => handleSelectOwner(owner.uid, owner.email)}
-                    disabled={isImpersonating}
-                  >
-                    <ListItemText
-                      primary={owner.displayName || owner.email}
-                      secondary={
-                        owner.displayName && owner.email !== owner.displayName ? (
-                          <Typography variant="caption" color="text.secondary">
-                            {owner.email}
-                          </Typography>
-                        ) : null
-                      }
-                    />
-                  </ListItemButton>
-                </ListItem>
-              ))}
-            </List>
-          )}
+          <List>
+            {staticOwners.map((owner) => (
+              <ListItem key={owner.uid} disablePadding>
+                <ListItemButton
+                  onClick={() => handleSelectOwner(owner.uid, owner.email)}
+                  selected={selectedOwnerId === owner.uid}
+                >
+                  <ListItemText
+                    primary={owner.displayName || owner.email}
+                    secondary={
+                      owner.displayName && owner.email !== owner.displayName ? (
+                        <Typography variant="caption" color="text.secondary">
+                          {owner.email}
+                        </Typography>
+                      ) : null
+                    }
+                  />
+                </ListItemButton>
+              </ListItem>
+            ))}
+          </List>
         </DialogContent>
         <DialogActions>
           <Button onClick={handleClose}>

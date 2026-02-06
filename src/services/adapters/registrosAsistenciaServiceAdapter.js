@@ -86,7 +86,7 @@ export const registrosAsistenciaServiceAdapter = {
   async createRegistry({ userId, entityId, personas, evidencias = [], metadata = {} }) {
     // Mapear al formato esperado por el servicio base
     return await baseService.createRegistry({
-      userId,
+      ownerId: userId, // Mapear userId a ownerId
       entityId,
       personas,
       evidencias,
@@ -96,7 +96,7 @@ export const registrosAsistenciaServiceAdapter = {
 
   async attachEvidencias({ userId, registroId, evidencias }) {
     return await baseService.attachEvidencias({
-      userId,
+      ownerId: userId, // Mapear userId a ownerId
       registroId,
       evidencias
     });
