@@ -119,7 +119,7 @@ export default function Capacitaciones() {
     setPanelInitialMode('registrar');
   }, []);
 
-  const { handleRegistrarAsistencia, handleMarcarCompletada, handleDuplicar } = 
+  const { handleRegistrarAsistencia, handleMarcarCompletada, handleDuplicar, handleEliminar } = 
     useCapacitacionesHandlers(userProfile, handleRecargarConRefresh, navigate, handleOpenPanelRegistrar);
 
   // Refrescar cache cuando se vuelve a esta página (desde RegistrarAsistencia)
@@ -338,6 +338,7 @@ export default function Capacitaciones() {
             onRegistrarAsistencia={handleRegistrarAsistencia}
             onMarcarCompletada={handleMarcarCompletada}
             onDuplicar={handleDuplicar}
+            onEliminar={handleEliminar}
             onEditarPlan={handleEditarPlan}
             onRealizarCapacitacion={handleRealizarCapacitacion}
             selectedEmpresa={selectedEmpresa}

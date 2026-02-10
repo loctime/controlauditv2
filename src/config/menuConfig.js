@@ -13,6 +13,7 @@
     import SchoolIcon from '@mui/icons-material/School';
     import ReportProblemIcon from '@mui/icons-material/ReportProblem';
     import HealingIcon from '@mui/icons-material/Healing';
+    import AssignmentIcon from '@mui/icons-material/Assignment';
 
     export const MENU_ITEMS = [
     {
@@ -85,6 +86,16 @@
         label: "Salud ocupacional",
         path: "/salud-ocupacional",
         icon: HealingIcon,
+        rolesPermitidos: ['supermax', 'admin', 'operario'],
+        // Operario tiene acceso de solo lectura para sus empresas asignadas
+        grupo: 'higiene',
+        location: 'navbar',
+    },
+    {
+        id: "auditorias-manuales",
+        label: "Auditorías Manuales",
+        path: "/auditorias-manuales",
+        icon: AssignmentIcon,
         rolesPermitidos: ['supermax', 'admin', 'operario'],
         // Operario tiene acceso de solo lectura para sus empresas asignadas
         grupo: 'higiene',

@@ -29,7 +29,8 @@ import {
   Edit as EditIcon,
   CalendarMonth as CalendarIcon,
   MoreVert as MoreVertIcon,
-  PersonAdd as PersonAddIcon
+  PersonAdd as PersonAddIcon,
+  Delete as DeleteIcon
 } from '@mui/icons-material';
 import { registrosAsistenciaService } from '../../../../services/registrosAsistenciaService';
 import { useAuth } from '@/components/context/AuthContext';
@@ -83,6 +84,7 @@ const CapacitacionesTable = ({
   onMarcarCompletada,
   onEditarPlan,
   onRealizarCapacitacion,
+  onEliminar,
   selectedEmpresa = '',
   selectedSucursal = '',
   empresas = [],
@@ -260,7 +262,7 @@ const CapacitacionesTable = ({
   };
 
   const renderAcciones = (cap) => {
-    const hasMenuActions = cap.estado === 'activa' || cap.estado === 'plan_anual';
+    const hasMenuActions = cap.estado === 'activa' || cap.estado === 'plan_anual' || onEliminar;
 
     return (
       <Stack direction="row" spacing={0.5} alignItems="center">
@@ -344,6 +346,19 @@ const CapacitacionesTable = ({
               Realizar
             </MenuItem>
           </>
+        )}
+        {selectedCapacitacion.estado !== 'plan_anual' && onEliminar && (
+          <MenuItem
+            onClick={(e) => {
+              e.stopPropagation();
+              handleMenuClose();
+              onEliminar(selectedCapacitacion.id);
+            }}
+            sx={{ color: 'error.main' }}
+          >
+            <DeleteIcon fontSize="small" sx={{ mr: 1 }} />
+            Eliminar
+          </MenuItem>
         )}
       </Menu>
     );

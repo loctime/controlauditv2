@@ -49,10 +49,28 @@ export const useCapacitacionesHandlers = (userProfile, recargarDatos, navigate, 
     }
   }, [userProfile?.uid, recargarDatos]);
 
+  const handleEliminar = useCallback(async (capacitacionId) => {
+    if (!userProfile?.uid) {
+      alert('Error: Usuario no autenticado');
+      return;
+    }
+
+    if (window.confirm('¿Está seguro que desea eliminar esta capacitación? Esta acción no se puede deshacer.')) {
+      try {
+        await capacitacionService.deleteCapacitacion(userProfile.uid, capacitacionId, { uid: userProfile.uid });
+        recargarDatos();
+      } catch (error) {
+        console.error('Error al eliminar:', error);
+        alert('Error al eliminar la capacitación');
+      }
+    }
+  }, [userProfile?.uid, recargarDatos]);
+
   return {
     handleRegistrarAsistencia,
     handleMarcarCompletada,
-    handleDuplicar
+    handleDuplicar,
+    handleEliminar
   };
 };
 
