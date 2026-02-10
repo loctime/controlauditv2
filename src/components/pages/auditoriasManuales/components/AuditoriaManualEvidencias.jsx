@@ -46,9 +46,12 @@ export default function AuditoriaManualEvidencias({
   const [error, setError] = useState(null);
   const [previewImage, setPreviewImage] = useState(null);
   const [cameraOpen, setCameraOpen] = useState(false);
+  const [imageBlobUrls, setImageBlobUrls] = useState(new Map());
+  const [loadingImages, setLoadingImages] = useState(new Set());
 
   const cameraInputRef = useRef(null);
   const galleryInputRef = useRef(null);
+  const blobUrlsRef = useRef(new Map());
 
   useEffect(() => {
     if (auditoriaId && userProfile?.ownerId) {
@@ -68,6 +71,13 @@ export default function AuditoriaManualEvidencias({
         auditoriaId
       );
       setEvidencias(evidenciasData);
+      
+      // Cargar imágenes como blobs para evitar CORS
+      evidenciasData.forEach(evidencia => {
+        if (evidencia.shareToken && !blobUrlsRef.current.has(evidencia.id)) {
+          loadImageAsBlob(evidencia.id, evidencia.shareToken);
+        }
+      });
     } catch (err) {
       console.error('Error al cargar evidencias:', err);
       setError('Error al cargar las evidencias');
@@ -75,6 +85,62 @@ export default function AuditoriaManualEvidencias({
       setLoading(false);
     }
   };
+
+  const loadImageAsBlob = async (imageId, shareToken) => {
+    if (!shareToken) return;
+    if (loadingImages.has(imageId) || blobUrlsRef.current.has(imageId)) return;
+    
+    setLoadingImages(prev => new Set([...prev, imageId]));
+    
+    try {
+      const imageUrl = convertirShareTokenAUrl(shareToken);
+      if (!imageUrl) return;
+      
+      const response = await fetch(imageUrl, { 
+        mode: 'cors', 
+        credentials: 'omit' 
+      });
+      
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      
+      const blob = await response.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      
+      blobUrlsRef.current.set(imageId, blobUrl);
+      setImageBlobUrls(prev => {
+        const newMap = new Map(prev);
+        newMap.set(imageId, blobUrl);
+        return newMap;
+      });
+    } catch (err) {
+      console.error(`Error al cargar imagen ${imageId}:`, err);
+      // En caso de error, usar la URL directa como fallback
+      const fallbackUrl = convertirShareTokenAUrl(shareToken);
+      if (fallbackUrl) {
+        setImageBlobUrls(prev => {
+          const newMap = new Map(prev);
+          newMap.set(imageId, fallbackUrl);
+          return newMap;
+        });
+      }
+    } finally {
+      setLoadingImages(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(imageId);
+        return newSet;
+      });
+    }
+  };
+
+  // Cleanup de blob URLs al desmontar
+  useEffect(() => {
+    return () => {
+      blobUrlsRef.current.forEach(url => {
+        URL.revokeObjectURL(url);
+      });
+      blobUrlsRef.current.clear();
+    };
+  }, []);
 
   const handleCameraClick = () => {
     setCameraOpen(true);
@@ -156,12 +222,16 @@ export default function AuditoriaManualEvidencias({
           ev.id === tempId
             ? {
                 ...result,
-                shareToken: result.shareToken,
-                fileURL: convertirShareTokenAUrl(result.shareToken)
+                shareToken: result.shareToken
               }
             : ev
         )
       );
+
+      // Cargar imagen como blob
+      if (result.shareToken) {
+        loadImageAsBlob(result.fileId, result.shareToken);
+      }
 
       // Limpiar preview temporal
       URL.revokeObjectURL(previewURL);
@@ -217,8 +287,17 @@ export default function AuditoriaManualEvidencias({
     }
   };
 
-  const handlePreview = (evidencia) => {
-    const imageUrl = evidencia.fileURL || convertirShareTokenAUrl(evidencia.shareToken);
+  const handlePreview = async (evidencia) => {
+    // Preferir blob URL si está disponible
+    const blobUrl = imageBlobUrls.get(evidencia.id);
+    let imageUrl = blobUrl || evidencia.fileURL || convertirShareTokenAUrl(evidencia.shareToken);
+    
+    // Si no tenemos blob URL, intentar cargarlo
+    if (!blobUrl && evidencia.shareToken && !blobUrlsRef.current.has(evidencia.id)) {
+      await loadImageAsBlob(evidencia.id, evidencia.shareToken);
+      imageUrl = imageBlobUrls.get(evidencia.id) || imageUrl;
+    }
+    
     setPreviewImage({
       url: imageUrl,
       name: evidencia.nombre || 'evidencia',
@@ -293,8 +372,11 @@ export default function AuditoriaManualEvidencias({
       ) : (
         <Grid container spacing={2}>
           {evidencias.map((evidencia) => {
-            const imageUrl = evidencia.fileURL || convertirShareTokenAUrl(evidencia.shareToken);
+            // Usar blob URL si está disponible, sino usar URL directa
+            const blobUrl = imageBlobUrls.get(evidencia.id);
+            const imageUrl = blobUrl || evidencia.fileURL || convertirShareTokenAUrl(evidencia.shareToken);
             const isUploading = evidencia.uploading;
+            const isLoadingImage = loadingImages.has(evidencia.id) && !blobUrl;
 
             return (
               <Grid item xs={6} sm={4} md={3} key={evidencia.id}>
@@ -315,7 +397,7 @@ export default function AuditoriaManualEvidencias({
                     }
                   }}
                 >
-                  {isUploading ? (
+                  {isUploading || isLoadingImage ? (
                     <Box
                       sx={{
                         width: '100%',
@@ -333,12 +415,19 @@ export default function AuditoriaManualEvidencias({
                       <img
                         src={imageUrl}
                         alt={evidencia.nombre || 'Evidencia'}
+                        crossOrigin="anonymous"
                         style={{
                           width: '100%',
                           height: '100%',
                           objectFit: 'cover'
                         }}
                         onClick={() => handlePreview(evidencia)}
+                        onError={(e) => {
+                          // Si falla la carga, intentar cargar como blob si no se ha hecho
+                          if (evidencia.shareToken && !blobUrlsRef.current.has(evidencia.id)) {
+                            loadImageAsBlob(evidencia.id, evidencia.shareToken);
+                          }
+                        }}
                       />
                       <Box
                         className="overlay"
