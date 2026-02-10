@@ -35,6 +35,8 @@ const DashboardHigieneSeguridad = lazy(() =>
 const Ausencias = lazy(() =>
   import("../components/pages/ausencias/Ausencias")
 );
+const AuditoriasManuales = lazy(() => import('../components/pages/auditoriasManuales/AuditoriasManuales'));
+const AuditoriaManualDetalle = lazy(() => import('../components/pages/auditoriasManuales/components/AuditoriaManualDetalle'));
 
 export const routes = [
   {
@@ -152,6 +154,16 @@ export const routes = [
     Element: DashboardHigieneSeguridad,
     protected: true,
     roles: ['max', 'supermax']
+  },
+  {
+    id: "auditorias-manuales",
+    path: "/auditorias-manuales",
+    Element: AuditoriasManuales,
+  },
+  {
+    id: "auditoria-manual-detalle",
+    path: "/auditorias-manuales/:auditoriaId",
+    Element: AuditoriaManualDetalle,
   }
 ];
 

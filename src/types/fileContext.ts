@@ -10,7 +10,8 @@ export type ContextType =
   | 'salud'
   | 'auditoria'
   | 'reporte'
-  | 'empresa';
+  | 'empresa'
+  | 'auditoriaManual';
 
 export interface FileContext {
   contextType: ContextType;

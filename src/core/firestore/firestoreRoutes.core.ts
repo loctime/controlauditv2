@@ -312,5 +312,59 @@ export const firestoreRoutesCore = {
     ownerId,
     'autosaves',
     sessionId
+  ],
+
+  /**
+   * Colección de auditorías manuales del owner
+   * Path: apps/auditoria/owners/{ownerId}/auditoriasManuales
+   */
+  auditoriasManuales: (ownerId: string): string[] => [
+    'apps',
+    'auditoria',
+    'owners',
+    ownerId,
+    'auditoriasManuales'
+  ],
+
+  /**
+   * Documento de auditoría manual específica del owner
+   * Path: apps/auditoria/owners/{ownerId}/auditoriasManuales/{auditoriaId}
+   */
+  auditoriaManual: (ownerId: string, auditoriaId: string): string[] => [
+    'apps',
+    'auditoria',
+    'owners',
+    ownerId,
+    'auditoriasManuales',
+    auditoriaId
+  ],
+
+  /**
+   * Colección de evidencias de una auditoría manual
+   * Path: apps/auditoria/owners/{ownerId}/auditoriasManuales/{auditoriaId}/evidencias
+   */
+  evidenciasAuditoriaManual: (ownerId: string, auditoriaId: string): string[] => [
+    'apps',
+    'auditoria',
+    'owners',
+    ownerId,
+    'auditoriasManuales',
+    auditoriaId,
+    'evidencias'
+  ],
+
+  /**
+   * Documento de evidencia específica
+   * Path: apps/auditoria/owners/{ownerId}/auditoriasManuales/{auditoriaId}/evidencias/{evidenciaId}
+   */
+  evidenciaAuditoriaManual: (ownerId: string, auditoriaId: string, evidenciaId: string): string[] => [
+    'apps',
+    'auditoria',
+    'owners',
+    ownerId,
+    'auditoriasManuales',
+    auditoriaId,
+    'evidencias',
+    evidenciaId
   ]
 };

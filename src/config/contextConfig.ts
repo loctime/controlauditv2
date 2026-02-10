@@ -68,6 +68,12 @@ export const CONTEXT_CONFIG: Record<ContextType, ContextConfig> = {
     requiresTipoArchivo: true,
     validTiposArchivo: ['logo'] as const,
   },
+  auditoriaManual: {
+    requiresCompanyId: true,
+    requiresSucursalId: false,
+    requiresTipoArchivo: true,
+    validTiposArchivo: ['evidencia'] as const,
+  },
 } as const;
 
 /**
