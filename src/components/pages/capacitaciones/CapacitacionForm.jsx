@@ -22,7 +22,8 @@ export default function CapacitacionForm({ open, onClose, onSave, sucursalId, em
     descripcion: '',
     tipo: 'charla',
     instructor: '',
-    fechaRealizada: new Date().toISOString().split('T')[0]
+    fechaRealizada: new Date().toISOString().split('T')[0],
+    duracionMinutos: ''
   });
 
   const handleChange = (e) => {
@@ -40,21 +41,30 @@ export default function CapacitacionForm({ open, onClose, onSave, sucursalId, em
     setLoading(true);
 
     try {
-      await capacitacionService.crearCapacitacion(userProfile.uid, {
-        ...formData,
-        empresaId,
-        sucursalId,
-        estado: 'activa',
-        empleados: [],
-        fechaRealizada: Timestamp.fromDate(new Date(formData.fechaRealizada))
-      }, { uid: userProfile.uid });
+      await capacitacionService.crearCapacitacion(
+        userProfile.uid,
+        {
+          ...formData,
+          empresaId,
+          sucursalId,
+          estado: 'activa',
+          empleados: [],
+          // Guardar la duración en minutos como número (si se ingresó)
+          duracionMinutos: formData.duracionMinutos
+            ? Number(formData.duracionMinutos)
+            : null,
+          fechaRealizada: Timestamp.fromDate(new Date(formData.fechaRealizada))
+        },
+        { uid: userProfile.uid }
+      );
 
       setFormData({
         nombre: '',
         descripcion: '',
         tipo: 'charla',
         instructor: '',
-        fechaRealizada: new Date().toISOString().split('T')[0]
+        fechaRealizada: new Date().toISOString().split('T')[0],
+        duracionMinutos: ''
       });
       onSave();
     } catch (error) {
@@ -132,6 +142,19 @@ export default function CapacitacionForm({ open, onClose, onSave, sucursalId, em
                 value={formData.fechaRealizada}
                 onChange={handleChange}
                 InputLabelProps={{ shrink: true }}
+              />
+            </Grid>
+
+            <Grid item xs={12} md={4}>
+              <TextField
+                fullWidth
+                type="number"
+                label="Duración (minutos)"
+                name="duracionMinutos"
+                value={formData.duracionMinutos}
+                onChange={handleChange}
+                inputProps={{ min: 0, step: 15 }}
+                helperText="Tiempo estimado de la capacitación en minutos"
               />
             </Grid>
           </Grid>

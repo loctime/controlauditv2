@@ -18,7 +18,9 @@ export const useCapacitacionesMetrics = (capacitaciones, empleados, selectedYear
           capacitaciones: 0
         },
         capacitacionesVencidas: 0,
-        empleadosSinCapacitar: 0
+        empleadosSinCapacitar: 0,
+        totalDuracionMinutos: 0,
+        totalDuracionHoras: 0
       };
     }
 
@@ -93,6 +95,15 @@ export const useCapacitacionesMetrics = (capacitaciones, empleados, selectedYear
 
     const empleadosSinCapacitar = totalEmpleados - empleadosCapacitados;
 
+    // Tiempo total de capacitación (en minutos y horas) para el período
+    const totalDuracionMinutos = capacitacionesPeriodo.reduce((acum, cap) => {
+      const valor = Number(cap.duracionMinutos);
+      if (Number.isNaN(valor) || valor <= 0) return acum;
+      return acum + valor;
+    }, 0);
+
+    const totalDuracionHoras = totalDuracionMinutos / 60;
+
     return {
       totalCapacitaciones,
       completadas,
@@ -102,7 +113,9 @@ export const useCapacitacionesMetrics = (capacitaciones, empleados, selectedYear
       porcentajeCumplimiento,
       porTipo,
       capacitacionesVencidas,
-      empleadosSinCapacitar
+      empleadosSinCapacitar,
+      totalDuracionMinutos,
+      totalDuracionHoras
     };
   }, [capacitaciones, empleados, selectedYear]);
 

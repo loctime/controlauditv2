@@ -44,6 +44,8 @@ import { useTargetsMensualesData } from "./hooks/useTargetsMensualesData";
 import { useAccionesRequeridasStats } from "./hooks/useAccionesRequeridasStats";
 import { useDashboardRealtimeData } from "./hooks/useDashboardRealtimeData";
 import { useGoalsData } from "./hooks/useGoalsData";
+import { useAuditoriasManualesDashboard } from "./hooks/useAuditoriasManualesDashboard";
+import AuditoriasManualesWidget from "./components/AuditoriasManualesWidget";
 import InfoIcon from "@mui/icons-material/Info";
 import ReportProblemIcon from "@mui/icons-material/ReportProblem";
 import SchoolIcon from "@mui/icons-material/School";
@@ -207,6 +209,12 @@ export default function DashboardSeguridadV2() {
     accidentes: accidentesMemo,
     año: selectedYear,
     periodo: { mes: selectedMonth, año: selectedYear }
+  });
+
+  const { auditoriasManuales, total: totalAuditoriasManuales, loading: auditoriasManualesLoading } = useAuditoriasManualesDashboard({
+    ownerId: userProfile?.ownerId,
+    selectedEmpresa,
+    selectedSucursal
   });
   const datos = useMemo(() => {
     if (!selectedEmpresa || !selectedSucursal) {
@@ -819,6 +827,17 @@ export default function DashboardSeguridadV2() {
             <DashboardNoDataCard />
           )}
         </Suspense>
+
+        <DashboardSection
+          title="Auditorías manuales"
+          dataSection="auditorias-manuales"
+        >
+          <AuditoriasManualesWidget
+            auditoriasManuales={auditoriasManuales}
+            total={totalAuditoriasManuales}
+            loading={auditoriasManualesLoading}
+          />
+        </DashboardSection>
 
         <DashboardSection
           title="Dashboard General"

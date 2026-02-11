@@ -212,6 +212,25 @@ const CapacitacionesMetrics = React.memo(({ metrics }) => {
                 </Typography>
               </Card>
             </Grid>
+
+            {/* Tiempo total de capacitación */}
+            <Grid item xs={12}>
+              <Card elevation={1} sx={{ borderRadius: 2, textAlign: 'center', p: 2 }}>
+                <Typography variant="overline" color="text.secondary">
+                  Tiempo total dictado
+                </Typography>
+                <Typography variant="h5" sx={{ fontWeight: 'bold', color: 'text.primary' }}>
+                  {metrics.totalDuracionHoras > 0
+                    ? `${metrics.totalDuracionHoras.toFixed(1)} h`
+                    : '—'}
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  {metrics.totalDuracionMinutos > 0
+                    ? `${Math.round(metrics.totalDuracionMinutos)} minutos en el año seleccionado`
+                    : 'Sin duración registrada en las capacitaciones'}
+                </Typography>
+              </Card>
+            </Grid>
           </Grid>
         </Grid>
       </Grid>
