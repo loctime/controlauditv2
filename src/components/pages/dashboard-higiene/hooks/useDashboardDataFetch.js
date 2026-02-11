@@ -3,6 +3,7 @@ import { getDocs, query, where, orderBy, collection } from 'firebase/firestore';
 import { dbAudit } from '../../../../firebaseControlFile.js';
 import { firestoreRoutesCore } from '../../../../core/firestore/firestoreRoutes.core';
 import { useAuth } from '@/components/context/AuthContext';
+import { registrosAsistenciaService } from '../../../../services/registrosAsistenciaService';
 
 /**
  * Hook para cargar datos del dashboard de seguridad
@@ -317,6 +318,26 @@ export const useDashboardDataFetch = (
             ...doc.data()
           }));
         }
+      }
+
+      // Enriquecer con empleados desde registrosAsistencia (fuente de verdad para asistencia)
+      // Así la sección de cumplimiento de capacitaciones cuenta correctamente los empleados capacitados
+      if (ownerId && capacitacionesData.length > 0) {
+        const enriquecidas = await Promise.all(
+          capacitacionesData.map(async (cap) => {
+            try {
+              const empleadoIds = await registrosAsistenciaService.getEmpleadosUnicosByCapacitacion(ownerId, cap.id);
+              return {
+                ...cap,
+                empleados: empleadoIds.map((empleadoId) => ({ empleadoId, asistio: true }))
+              };
+            } catch (err) {
+              console.warn('[useDashboardDataFetch] Error enriqueciendo capacitación', cap.id, err);
+              return { ...cap, empleados: cap.empleados || [] };
+            }
+          })
+        );
+        capacitacionesData = enriquecidas;
       }
       
       return capacitacionesData;

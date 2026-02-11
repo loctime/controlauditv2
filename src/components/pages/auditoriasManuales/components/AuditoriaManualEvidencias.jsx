@@ -56,6 +56,12 @@ export default function AuditoriaManualEvidencias({
   useEffect(() => {
     if (auditoriaId && userProfile?.ownerId) {
       loadEvidencias();
+    } else {
+      console.warn('[AuditoriaManualEvidencias] Valores no disponibles:', {
+        auditoriaId,
+        ownerId: userProfile?.ownerId,
+        userProfile: !!userProfile
+      });
     }
   }, [auditoriaId, userProfile?.ownerId]);
 
@@ -247,7 +253,20 @@ export default function AuditoriaManualEvidencias({
   };
 
   const handleDelete = async (evidenciaId) => {
-    if (!userProfile?.ownerId) return;
+    if (!userProfile?.ownerId) {
+      setError('Usuario no autenticado');
+      return;
+    }
+
+    if (!auditoriaId) {
+      setError('ID de auditoría no disponible');
+      return;
+    }
+
+    if (!evidenciaId) {
+      setError('ID de evidencia no disponible');
+      return;
+    }
 
     const result = await Swal.fire({
       title: '¿Eliminar evidencia?',
@@ -263,13 +282,32 @@ export default function AuditoriaManualEvidencias({
     if (!result.isConfirmed) return;
 
     try {
+      console.log('[AuditoriaManualEvidencias] Eliminando evidencia:', {
+        ownerId: userProfile.ownerId,
+        auditoriaId,
+        evidenciaId
+      });
+
       await auditoriaManualImageService.deleteImage(
         userProfile.ownerId,
         auditoriaId,
         evidenciaId
       );
 
+      // Limpiar blob URL si existe
+      const blobUrl = blobUrlsRef.current.get(evidenciaId);
+      if (blobUrl) {
+        URL.revokeObjectURL(blobUrl);
+        blobUrlsRef.current.delete(evidenciaId);
+      }
+
+      // Actualizar estados
       setEvidencias(prev => prev.filter(ev => ev.id !== evidenciaId));
+      setImageBlobUrls(prev => {
+        const newMap = new Map(prev);
+        newMap.delete(evidenciaId);
+        return newMap;
+      });
       
       Swal.fire({
         icon: 'success',
@@ -279,6 +317,11 @@ export default function AuditoriaManualEvidencias({
       });
     } catch (err) {
       console.error('Error al eliminar evidencia:', err);
+      console.error('[AuditoriaManualEvidencias] Parámetros recibidos:', {
+        ownerId: userProfile?.ownerId,
+        auditoriaId,
+        evidenciaId
+      });
       Swal.fire({
         icon: 'error',
         title: 'Error',
@@ -453,10 +496,18 @@ export default function AuditoriaManualEvidencias({
                         >
                           <ZoomInIcon />
                         </IconButton>
-                        {!disabled && (
+                        {!disabled && evidencia.id && (
                           <IconButton
                             size="small"
-                            onClick={() => handleDelete(evidencia.id)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (evidencia.id) {
+                                handleDelete(evidencia.id);
+                              } else {
+                                console.error('[AuditoriaManualEvidencias] Intento de eliminar evidencia sin ID:', evidencia);
+                                setError('Error: La evidencia no tiene un ID válido');
+                              }
+                            }}
                             sx={{ color: 'white' }}
                           >
                             <DeleteIcon />
