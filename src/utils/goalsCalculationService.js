@@ -125,19 +125,69 @@ export async function calcularCumplimientoCapacitaciones(sucursal, capacitacione
       return fecha >= inicioAño && fecha <= finAño && cap.estado !== 'cancelada';
     });
 
-    // Calcular cumplimiento mensual
-    const completadasMensual = capacitacionesMes.length;
-    const porcentajeMensual = targetMensual > 0 
-      ? Math.round((completadasMensual / targetMensual) * 100) 
+    // Calcular cumplimiento mensual basado en HORAS
+    const horasMensual = capacitacionesMes.reduce((total, cap) => {
+      // Manejar diferentes formatos de duración
+      let duracion = 0;
+      
+      if (cap.duracionMinutos) {
+        duracion = Number(cap.duracionMinutos);
+      } else if (cap.duracion) {
+        // Si duración está en horas, convertirla a minutos
+        duracion = Number(cap.duracion) * 60;
+      } else if (cap.duracionHoras) {
+        // Si está explícitamente en horas
+        duracion = Number(cap.duracionHoras) * 60;
+      }
+      
+      // Validar que sea un número válido y positivo
+      if (Number.isNaN(duracion) || duracion <= 0) {
+        return total; // Ignorar valores inválidos
+      }
+      
+      return total + duracion;
+    }, 0);
+    const horasMensualEnHoras = horasMensual / 60;
+    
+    // Convertir target mensual de capacitaciones a horas (asumiendo 1 hora por capacitación como promedio)
+    const targetMensualHoras = targetMensual * 1; // 1 hora por capacitación como base
+    
+    const porcentajeMensual = targetMensualHoras > 0 
+      ? Math.round((horasMensualEnHoras / targetMensualHoras) * 100) 
       : 0;
     const estadoMensual = targetMensual > 0 
       ? obtenerEstadoCumplimiento(porcentajeMensual) 
       : 'sin_target';
 
-    // Calcular cumplimiento anual
-    const completadasAnual = capacitacionesAño.length;
-    const porcentajeAnual = targetAnual > 0 
-      ? Math.round((completadasAnual / targetAnual) * 100) 
+    // Calcular cumplimiento anual basado en HORAS
+    const horasAnual = capacitacionesAño.reduce((total, cap) => {
+      // Manejar diferentes formatos de duración
+      let duracion = 0;
+      
+      if (cap.duracionMinutos) {
+        duracion = Number(cap.duracionMinutos);
+      } else if (cap.duracion) {
+        // Si duración está en horas, convertirla a minutos
+        duracion = Number(cap.duracion) * 60;
+      } else if (cap.duracionHoras) {
+        // Si está explícitamente en horas
+        duracion = Number(cap.duracionHoras) * 60;
+      }
+      
+      // Validar que sea un número válido y positivo
+      if (Number.isNaN(duracion) || duracion <= 0) {
+        return total; // Ignorar valores inválidos
+      }
+      
+      return total + duracion;
+    }, 0);
+    const horasAnualEnHoras = horasAnual / 60;
+    
+    // Convertir target anual de capacitaciones a horas (asumiendo 1 hora por capacitación como promedio)
+    const targetAnualHoras = targetAnual * 1; // 1 hora por capacitación como base
+    
+    const porcentajeAnual = targetAnualHoras > 0 
+      ? Math.round((horasAnualEnHoras / targetAnualHoras) * 100) 
       : 0;
     const estadoAnual = targetAnual > 0 
       ? obtenerEstadoCumplimiento(porcentajeAnual) 
@@ -145,16 +195,18 @@ export async function calcularCumplimientoCapacitaciones(sucursal, capacitacione
 
     return {
       mensual: {
-        completadas: completadasMensual,
-        target: targetMensual,
+        completadas: Math.round(horasMensualEnHoras * 10) / 10, // horas con 1 decimal
+        target: targetMensualHoras,
         porcentaje: porcentajeMensual,
-        estado: estadoMensual
+        estado: estadoMensual,
+        capacitidadesCount: capacitacionesMes.length // mantener referencia por si se necesita
       },
       anual: {
-        completadas: completadasAnual,
-        target: targetAnual,
+        completadas: Math.round(horasAnualEnHoras * 10) / 10, // horas con 1 decimal
+        target: targetAnualHoras,
         porcentaje: porcentajeAnual,
-        estado: estadoAnual
+        estado: estadoAnual,
+        capacitacionesCount: capacitacionesAño.length // mantener referencia por si se necesita
       }
     };
   } catch (error) {

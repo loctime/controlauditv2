@@ -133,7 +133,7 @@ const CapacitacionesGoalsCard = ({ cumplimiento, sucursalNombre = '' }) => {
                 <Box sx={{ flex: 1 }}>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
                     <Typography variant="body2" color="text.secondary">
-                      {anual.completadas} de {anual.target} capacitaciones
+                      {anual.completadas}h de {anual.target}h
                     </Typography>
                     <Chip
                       label={`${anual.porcentaje}%`}
@@ -160,6 +160,12 @@ const CapacitacionesGoalsCard = ({ cumplimiento, sucursalNombre = '' }) => {
                   />
                 </Box>
               </Box>
+              {/* Mostrar referencia a cantidad de capacitaciones */}
+              {anual.capacitacionesCount !== undefined && (
+                <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+                  Basado en {anual.capacitacionesCount} capacitación{anual.capacitacionesCount !== 1 ? 'es' : ''} realizadas
+                </Typography>
+              )}
               {anual.porcentaje >= 100 && (
                 <Typography variant="caption" color="success.main" sx={{ mt: 1, display: 'block' }}>
                   ✅ Meta anual cumplida
@@ -167,7 +173,7 @@ const CapacitacionesGoalsCard = ({ cumplimiento, sucursalNombre = '' }) => {
               )}
               {anual.porcentaje > 100 && (
                 <Typography variant="caption" color="success.main" sx={{ mt: 0.5, display: 'block' }}>
-                  🎉 Superaste la meta anual en {anual.completadas - anual.target} capacitaciones
+                  🎉 Superaste la meta anual en {(anual.completadas - anual.target).toFixed(1)} horas
                 </Typography>
               )}
             </Box>

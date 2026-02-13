@@ -93,18 +93,20 @@ export const useGoalsData = ({
                 completadas: acc.mensual.completadas + (r.cap.mensual?.completadas || 0),
                 target: acc.mensual.target + (r.cap.mensual?.target || 0),
                 porcentaje: 0, // Se calculará después
-                estado: 'sin_target'
+                estado: 'sin_target',
+                capacitacionesCount: (acc.mensual.capacitacionesCount || 0) + (r.cap.mensual?.capacitacionesCount || 0)
               },
               anual: {
                 completadas: acc.anual.completadas + (r.cap.anual?.completadas || 0),
                 target: acc.anual.target + (r.cap.anual?.target || 0),
                 porcentaje: 0, // Se calculará después
-                estado: 'sin_target'
+                estado: 'sin_target',
+                capacitidadesCount: (acc.anual.capacitacionesCount || 0) + (r.cap.anual?.capacitacionesCount || 0)
               }
             }),
             {
-              mensual: { completadas: 0, target: 0, porcentaje: 0, estado: 'sin_target' },
-              anual: { completadas: 0, target: 0, porcentaje: 0, estado: 'sin_target' }
+              mensual: { completadas: 0, target: 0, porcentaje: 0, estado: 'sin_target', capacitidadesCount: 0 },
+              anual: { completadas: 0, target: 0, porcentaje: 0, estado: 'sin_target', capacitidadesCount: 0 }
             }
           );
 

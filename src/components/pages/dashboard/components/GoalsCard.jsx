@@ -126,10 +126,10 @@ const GoalsCard = ({
         <Box sx={{ mb: 2 }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
             <Typography variant="body2" color="text.secondary">
-              Realizadas: <strong>{valor}</strong>
+              Realizadas: <strong>{valor}h</strong>
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              Meta: <strong>{target}</strong>
+              Meta: <strong>{target}h</strong>
             </Typography>
           </Box>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
@@ -181,7 +181,7 @@ const GoalsCard = ({
             }}
           />
           <Typography variant="caption" color="text.secondary">
-            Cumplimiento: {valor} de {target} {tipoConfig.unidad}{target !== 1 ? 'es' : ''}
+            Cumplimiento: {valor}h de {target}h
           </Typography>
         </Box>
       </CardContent>
