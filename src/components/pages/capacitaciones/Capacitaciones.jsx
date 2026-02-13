@@ -30,6 +30,7 @@ import CapacitacionesAlertas from './components/CapacitacionesAlertas';
 import CapacitacionesEmptyState from './components/CapacitacionesEmptyState';
 import CapacitacionesTable from './components/CapacitacionesTable';
 import CapacitacionDetailPanelV2 from './components/CapacitacionDetailPanelV2';
+import CapacitacionesPersonalTable from '../dashboard/components/CapacitacionesPersonalTable';
 import GlobalFiltersBar from '../../layout/GlobalFiltersBar';
 
 export default function Capacitaciones() {
@@ -348,6 +349,42 @@ export default function Capacitaciones() {
             loading={loading}
             refreshKey={tableRefreshKey}
           />
+
+          {/* Tablas de cumplimiento individual por empleado */}
+          {filteredCapacitaciones && sucursalesFiltradas && (
+            <Box sx={{ mt: 4 }}>
+              <Typography variant="h5" sx={{ fontWeight: 'bold', mb: 3, color: 'text.primary' }}>
+                📊 Cumplimiento Individual de Capacitaciones
+              </Typography>
+              
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                {/* Obtener empleados de la sucursal seleccionada */}
+                {(() => {
+                  const sucursalSeleccionada = sucursalesFiltradas.find(s => s.id === selectedSucursal);
+                  const empleadosSucursal = sucursalSeleccionada?.empleados || [];
+                  
+                  return (
+                    <>
+                      <CapacitacionesPersonalTable
+                        empleados={empleadosSucursal}
+                        capacitaciones={filteredCapacitaciones}
+                        tipo="anual"
+                        selectedYear={new Date().getFullYear()}
+                        selectedMonth={new Date().getMonth() + 1}
+                      />
+                      <CapacitacionesPersonalTable
+                        empleados={empleadosSucursal}
+                        capacitaciones={filteredCapacitaciones}
+                        tipo="mensual"
+                        selectedYear={new Date().getFullYear()}
+                        selectedMonth={new Date().getMonth() + 1}
+                      />
+                    </>
+                  );
+                })()}
+              </Box>
+            </Box>
+          )}
         </>
       )}
 

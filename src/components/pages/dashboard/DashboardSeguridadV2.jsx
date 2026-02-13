@@ -39,7 +39,6 @@ import AccionesRequeridasWidget from "./components/AccionesRequeridasWidget";
 import CapacitacionesGoalsCard from "./components/CapacitacionesGoalsCard";
 import AccidentesGoalsCard from "./components/AccidentesGoalsCard";
 import GoalsCard from "./components/GoalsCard";
-import CapacitacionesPersonalTable from "./components/CapacitacionesPersonalTable";
 import DashboardSection from "./components/DashboardSection";
 import { useTargetsMensualesData } from "./hooks/useTargetsMensualesData";
 import { useAccionesRequeridasStats } from "./hooks/useAccionesRequeridasStats";
@@ -804,34 +803,6 @@ export default function DashboardSeguridadV2() {
           </Box>
         )}
       </Collapse>
-
-      {/* Tablas de cumplimiento individual de capacitaciones */}
-      {datos.metricas.totalEmpleados > 0 && (
-        <Box sx={{ mt: 2 }}>
-          <DashboardSection
-            title="Cumplimiento Individual de Capacitaciones"
-            dataSection="capacitaciones-personal"
-            showTitle={true}
-          >
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-              <CapacitacionesPersonalTable
-                empleados={datos.empleados}
-                capacitaciones={datos.capacitaciones}
-                tipo="anual"
-                selectedYear={selectedYear}
-                selectedMonth={selectedMonth}
-              />
-              <CapacitacionesPersonalTable
-                empleados={datos.empleados}
-                capacitaciones={datos.capacitaciones}
-                tipo="mensual"
-                selectedYear={selectedYear}
-                selectedMonth={selectedMonth}
-              />
-            </Box>
-          </DashboardSection>
-        </Box>
-      )}
 
       <Box
         data-graficos-dashboard
