@@ -17,6 +17,9 @@ import {
 } from '@mui/icons-material';
 import Permiso from '../../../common/Permiso';
 
+// Debug temporal para verificar permisos
+import { useAuth } from '@/components/context/AuthContext';
+
 /**
  * Componente de card para mostrar auditoría manual
  */
@@ -27,6 +30,14 @@ const AuditoriaManualCard = React.memo(({
   onCerrar,
   onEliminar
 }) => {
+  const { userProfile, role } = useAuth(); // Debug
+  
+  // Debug temporal
+  console.log('Debug AuditoriaManualCard:', {
+    role,
+    userProfile: userProfile ? 'exists' : 'null',
+    permisos: userProfile?.permisos
+  });
   const formatDate = (date) => {
     if (!date) return 'N/A';
     try {
@@ -128,6 +139,18 @@ const AuditoriaManualCard = React.memo(({
           )}
         </Box>
 
+        {/* Botón eliminar sin permisos temporalmente para debug */}
+        <Button
+          size="small"
+          variant="outlined"
+          color="error"
+          startIcon={<DeleteIcon />}
+          onClick={() => onEliminar(auditoria.id)}
+        >
+          Eliminar
+        </Button>
+
+        {/* 
         <Permiso permiso="puedeEliminarAuditoria">
           <Button
             size="small"
@@ -139,6 +162,7 @@ const AuditoriaManualCard = React.memo(({
             Eliminar
           </Button>
         </Permiso>
+        */}
       </CardActions>
     </Card>
   );
