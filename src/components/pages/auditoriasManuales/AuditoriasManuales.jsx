@@ -11,7 +11,11 @@ import {
   TextField,
   MenuItem,
   useTheme,
-  useMediaQuery
+  useMediaQuery,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions
 } from '@mui/material';
 import { Add as AddIcon } from '@mui/icons-material';
 import { useAuth } from '@/components/context/AuthContext';
@@ -36,6 +40,8 @@ export default function AuditoriasManuales() {
   const [error, setError] = useState(null);
   const [formOpen, setFormOpen] = useState(false);
   const [editingAuditoria, setEditingAuditoria] = useState(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [auditoriaToDelete, setAuditoriaToDelete] = useState(null);
 
   // Filtros
   const [filterEmpresa, setFilterEmpresa] = useState('');
@@ -167,6 +173,47 @@ export default function AuditoriasManuales() {
     setFormOpen(false);
     setEditingAuditoria(null);
     loadAuditorias();
+  };
+
+  const handleEliminar = (auditoriaId) => {
+    setAuditoriaToDelete(auditoriaId);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleConfirmarEliminar = async () => {
+    if (!auditoriaToDelete || !userProfile?.ownerId) return;
+
+    try {
+      await auditoriaManualService.eliminarAuditoriaManual(
+        userProfile.ownerId,
+        auditoriaToDelete
+      );
+
+      // Actualizar estado local eliminando la auditoría
+      setAuditorias(prev => prev.filter(a => a.id !== auditoriaToDelete));
+
+      Swal.fire({
+        icon: 'success',
+        title: 'Auditoría eliminada',
+        timer: 2000,
+        showConfirmButton: false
+      });
+    } catch (err) {
+      console.error('Error al eliminar auditoría:', err);
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: err.message || 'No se pudo eliminar la auditoría'
+      });
+    } finally {
+      setDeleteDialogOpen(false);
+      setAuditoriaToDelete(null);
+    }
+  };
+
+  const handleCancelarEliminar = () => {
+    setDeleteDialogOpen(false);
+    setAuditoriaToDelete(null);
   };
 
   if (!userProfile?.ownerId) {
@@ -321,6 +368,7 @@ export default function AuditoriasManuales() {
                 onVer={handleVer}
                 onEditar={handleEdit}
                 onCerrar={handleCerrar}
+                onEliminar={handleEliminar}
               />
             </Grid>
           ))}
@@ -339,6 +387,28 @@ export default function AuditoriasManuales() {
           auditoria={editingAuditoria}
         />
       )}
+
+      {/* Dialog de confirmación para eliminar */}
+      <Dialog open={deleteDialogOpen} onClose={handleCancelarEliminar}>
+        <DialogTitle>Eliminar auditoría</DialogTitle>
+        <DialogContent>
+          <Typography>
+            Esta acción eliminará definitivamente la auditoría. ¿Deseas continuar?
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCancelarEliminar}>
+            Cancelar
+          </Button>
+          <Button 
+            onClick={handleConfirmarEliminar} 
+            color="error" 
+            variant="contained"
+          >
+            Eliminar
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Container>
   );
 }

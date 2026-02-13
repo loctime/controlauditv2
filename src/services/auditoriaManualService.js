@@ -264,4 +264,24 @@ export const auditoriaManualService = {
       throw error;
     }
   },
+
+  /**
+   * Eliminar una auditoría manual
+   * @param {string} ownerId - ID del owner
+   * @param {string} auditoriaId - ID de la auditoría
+   * @returns {Promise<boolean>} true si se eliminó correctamente
+   */
+  async eliminarAuditoriaManual(ownerId, auditoriaId) {
+    try {
+      if (!ownerId || !auditoriaId) throw new Error('ownerId y auditoriaId son requeridos');
+
+      const auditoriaRef = doc(db, ...firestoreRoutesCore.auditoriaManual(ownerId, auditoriaId));
+      
+      await deleteDocWithAppId(auditoriaRef);
+      return true;
+    } catch (error) {
+      console.error('❌ Error al eliminar auditoría manual:', error);
+      throw error;
+    }
+  },
 };

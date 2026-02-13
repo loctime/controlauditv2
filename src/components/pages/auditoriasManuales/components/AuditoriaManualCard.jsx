@@ -12,8 +12,10 @@ import {
   CheckCircle as CheckCircleIcon,
   Edit as EditIcon,
   Visibility as VisibilityIcon,
-  PhotoCamera as PhotoCameraIcon
+  PhotoCamera as PhotoCameraIcon,
+  Delete as DeleteIcon
 } from '@mui/icons-material';
+import Permiso from '../../../common/Permiso';
 
 /**
  * Componente de card para mostrar auditoría manual
@@ -22,7 +24,8 @@ const AuditoriaManualCard = React.memo(({
   auditoria,
   onVer,
   onEditar,
-  onCerrar
+  onCerrar,
+  onEliminar
 }) => {
   const formatDate = (date) => {
     if (!date) return 'N/A';
@@ -94,34 +97,48 @@ const AuditoriaManualCard = React.memo(({
       </CardContent>
 
       <CardActions sx={{ justifyContent: 'space-between', px: 2, pb: 2 }}>
-        <Button
-          size="small"
-          startIcon={<VisibilityIcon />}
-          onClick={() => onVer(auditoria.id)}
-        >
-          Ver
-        </Button>
-        
-        {!isCerrada && (
-          <>
-            <Button
-              size="small"
-              variant="contained"
-              startIcon={<EditIcon />}
-              onClick={() => onEditar(auditoria.id)}
-            >
-              Editar
-            </Button>
-            <Button
-              size="small"
-              startIcon={<CheckCircleIcon />}
-              onClick={() => onCerrar(auditoria.id)}
-              color="success"
-            >
-              Cerrar
-            </Button>
-          </>
-        )}
+        <Box sx={{ display: 'flex', gap: 1 }}>
+          <Button
+            size="small"
+            startIcon={<VisibilityIcon />}
+            onClick={() => onVer(auditoria.id)}
+          >
+            Ver
+          </Button>
+          
+          {!isCerrada && (
+            <>
+              <Button
+                size="small"
+                variant="contained"
+                startIcon={<EditIcon />}
+                onClick={() => onEditar(auditoria.id)}
+              >
+                Editar
+              </Button>
+              <Button
+                size="small"
+                startIcon={<CheckCircleIcon />}
+                onClick={() => onCerrar(auditoria.id)}
+                color="success"
+              >
+                Cerrar
+              </Button>
+            </>
+          )}
+        </Box>
+
+        <Permiso permiso="puedeEliminarAuditoria">
+          <Button
+            size="small"
+            variant="outlined"
+            color="error"
+            startIcon={<DeleteIcon />}
+            onClick={() => onEliminar(auditoria.id)}
+          >
+            Eliminar
+          </Button>
+        </Permiso>
       </CardActions>
     </Card>
   );

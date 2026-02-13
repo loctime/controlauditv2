@@ -19,7 +19,8 @@ export const usePermissions = () => {
         puedeCrearAuditorias: false,
         puedeAgendarAuditorias: false,
         puedeCompartirFormularios: false,
-        puedeAgregarUsuarios: false // Solo admin puede
+        puedeAgregarUsuarios: false, // Solo admin puede
+        puedeEliminarAuditoria: false
       },
       max: {
         puedeCrearEmpresas: true,
@@ -27,7 +28,8 @@ export const usePermissions = () => {
         puedeCrearAuditorias: true,
         puedeAgendarAuditorias: true,
         puedeCompartirFormularios: true,
-        puedeAgregarUsuarios: true
+        puedeAgregarUsuarios: true,
+        puedeEliminarAuditoria: true
       },
       supermax: {
         puedeCrearEmpresas: true,
@@ -35,7 +37,8 @@ export const usePermissions = () => {
         puedeCrearAuditorias: true,
         puedeAgendarAuditorias: true,
         puedeCompartirFormularios: true,
-        puedeAgregarUsuarios: true
+        puedeAgregarUsuarios: true,
+        puedeEliminarAuditoria: true
       }
     };
 
