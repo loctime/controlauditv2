@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Container,
   Paper,
@@ -16,9 +16,12 @@ import AddCircleIcon from "@mui/icons-material/AddCircle";
 import LocalHospitalIcon from "@mui/icons-material/LocalHospital";
 import { useGlobalSelection } from "../../../hooks/useGlobalSelection";
 import { useAusenciasData } from "./hooks/useAusenciasData";
+import { useAusentismoMetrics } from "../../../hooks/useAusentismoMetrics";
 import AusenciasFilters from "./components/AusenciasFilters";
 import AusenciasTable from "./components/AusenciasTable";
 import AusenciaFormDialog from "./components/AusenciaFormDialog";
+import AbsenteeismDashboard from "../../AbsenteeismDashboard";
+import EmployeeAbsenceHistory from "../../EmployeeAbsenceHistory";
 import { getAusenciaTipos } from "../../../services/ausenciasService";
 import { useAuth } from '@/components/context/AuthContext';
 
@@ -63,6 +66,21 @@ export default function Ausencias() {
     filters
   );
 
+  const {
+    kpis,
+    rankingEmpleados,
+    rankingSucursales,
+    historyRows,
+    loading: loadingMetrics,
+    error: metricsError,
+    recargar: recargarMetrics
+  } = useAusentismoMetrics({
+    selectedEmpresa,
+    selectedSucursal,
+    sucursalesFiltradas,
+    userProfile
+  });
+
   useEffect(() => {
     let active = true;
     const fetchTipos = async () => {
@@ -75,7 +93,7 @@ export default function Ausencias() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [userProfile]);
 
   const handleChangeFilters = (changedFilters) => {
     setFilters((prev) => ({
@@ -193,7 +211,7 @@ export default function Ausencias() {
                 Salud Ocupacional
               </Typography>
               <Typography variant="body2" sx={{ color: "#6b7280" }}>
-                Gestiona ausencias, enfermedades y licencias mÃ©dicas del
+                Gestiona ausencias, enfermedades y licencias médicas del
                 personal.
               </Typography>
             </Box>
@@ -224,7 +242,7 @@ export default function Ausencias() {
             severity="info"
             sx={{ mb: 3 }}
           >
-            Selecciona una empresa y sucursal especÃ­fica para habilitar el
+            Selecciona una empresa y sucursal específica para habilitar el
             registro de ausencias.
           </Alert>
         )}
@@ -260,7 +278,7 @@ export default function Ausencias() {
             <TextField
               fullWidth
               size="small"
-              placeholder="Buscar por persona o descripciÃ³n..."
+              placeholder="Buscar por persona o descripción..."
               value={filters.search}
               onChange={(event) =>
                 handleChangeFilters({ search: event.target.value })
@@ -307,6 +325,20 @@ export default function Ausencias() {
             onRecargar={recargar}
           />
         )}
+
+        <AbsenteeismDashboard
+          kpis={kpis}
+          rankingEmpleados={rankingEmpleados}
+          rankingSucursales={rankingSucursales}
+          loading={loadingMetrics}
+          error={metricsError}
+        />
+
+        <EmployeeAbsenceHistory
+          rows={historyRows}
+          loading={loadingMetrics}
+          error={metricsError}
+        />
       </Paper>
 
       <AusenciaFormDialog
@@ -320,7 +352,7 @@ export default function Ausencias() {
         onAddTipo={handleTipoAdded}
         onRemoveTipo={handleTipoRemoved}
         onSaved={async () => {
-          await recargar();
+          await Promise.all([recargar(), recargarMetrics()]);
           const tiposActualizados = await getAusenciaTipos({}, userProfile);
           setTipoOptions(tiposActualizados);
           setOpenDialog(false);

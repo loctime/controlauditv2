@@ -5,6 +5,7 @@ import {
   orderBy,
   limit,
   getDocs,
+  getDoc,
   serverTimestamp,
   Timestamp,
   doc
@@ -13,7 +14,6 @@ import { db } from "../firebaseControlFile";
 import { firestoreRoutesCore } from '../core/firestore/firestoreRoutes.core';
 import { addDocWithAppId, updateDocWithAppId } from "../firebase/firestoreAppWriter";
 
-const AUSENCIAS_COLLECTION = "ausencias";
 const CHUNK_SIZE = 10;
 
 const mapAusenciaDoc = (docSnapshot) => {
@@ -58,6 +58,34 @@ const normalizeDate = (value) => {
   return null;
 };
 
+const normalizeDateStart = (value) => {
+  const date = normalizeDate(value);
+  if (!date) return null;
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+};
+
+const isClosedStatus = (estado) => {
+  const status = (estado || "").toLowerCase().trim();
+  return (
+    status.includes("cerr") ||
+    status.includes("finaliz") ||
+    status.includes("resuelt")
+  );
+};
+
+export const computeDiasAusente = (fechaInicio, fechaFin = null, now = new Date()) => {
+  const inicio = normalizeDateStart(fechaInicio);
+  if (!inicio) return 0;
+
+  const finReferencia = fechaFin || now;
+  const fin = normalizeDateStart(finReferencia);
+  if (!fin) return 1;
+  if (fin < inicio) return 1;
+
+  const diffDays = Math.floor((fin.getTime() - inicio.getTime()) / (24 * 60 * 60 * 1000)) + 1;
+  return Math.max(1, diffDays);
+};
+
 const filterByDateRange = (records, startDate, endDate) => {
   if (!startDate && !endDate) return records;
   const start = normalizeDate(startDate);
@@ -88,6 +116,7 @@ const filterByDateRange = (records, startDate, endDate) => {
 const filterByTipoEstado = (records, tipo, estado) => {
   let filtered = records;
   if (tipo && tipo !== "todos") {
+    const tipoLower = String(tipo).toLowerCase();
     filtered = filtered.filter((record) => {
       const recordTipo =
         record.tipo ||
@@ -95,7 +124,7 @@ const filterByTipoEstado = (records, tipo, estado) => {
         record.clasificacion ||
         record.etiqueta ||
         "";
-      return recordTipo.toLowerCase().includes(tipo.toLowerCase());
+      return String(recordTipo).toLowerCase() === tipoLower;
     });
   }
   if (estado && estado !== "todos") {
@@ -188,6 +217,25 @@ export async function listAusencias({
       });
     }
 
+    filtered = filtered.map((record) => {
+      const estadoRecord = record.estado || record.status || "abierto";
+      const cerrado = isClosedStatus(estadoRecord);
+      const diasPersistidos =
+        typeof record.diasAusente === "number" && record.diasAusente > 0
+          ? record.diasAusente
+          : null;
+
+      const diasAusente = cerrado
+        ? diasPersistidos ||
+          computeDiasAusente(record.fechaInicio || record.createdAt, record.fechaFin || null)
+        : computeDiasAusente(record.fechaInicio || record.createdAt, null);
+
+      return {
+        ...record,
+        diasAusente
+      };
+    });
+
     filtered.sort((a, b) => {
       const fechaA =
         normalizeDate(a.fechaInicio) ||
@@ -228,6 +276,12 @@ export async function createAusencia({
   if (!userProfile?.uid) {
     throw new Error('userProfile.ownerId es requerido para crear ausencia');
   }
+
+  const estadoNormalizado = estado || "abierto";
+  const diasAusente = isClosedStatus(estadoNormalizado)
+    ? computeDiasAusente(fechaInicio, fechaFin)
+    : computeDiasAusente(fechaInicio, null);
+
   const payload = {
     empresaId: empresaId || null,
     empresaNombre: empresaNombre || null,
@@ -236,9 +290,10 @@ export async function createAusencia({
     empleadoId: empleadoId || null,
     empleadoNombre: empleadoNombre || null,
     tipo: tipo || "enfermedad",
-    estado: estado || "abierto",
+    estado: estadoNormalizado,
     fechaInicio: toTimestamp(fechaInicio) || serverTimestamp(),
     fechaFin: toTimestamp(fechaFin),
+    diasAusente,
     observaciones: observaciones || "",
     horasPorDia: typeof horasPorDia === "number" ? horasPorDia : null,
     horasSemanales:
@@ -253,15 +308,8 @@ export async function createAusencia({
   const ownerId = userProfile.ownerId;
   const ausenciasRef = collection(db, ...firestoreRoutesCore.ausencias(ownerId));
   const docRef = await addDocWithAppId(ausenciasRef, payload);
-  const snapshot = await getDocs(
-    query(
-      ausenciasRef,
-      where("__name__", "==", docRef.id)
-    )
-  );
-
-  const created = snapshot.docs[0];
-  return created ? mapAusenciaDoc(created) : { id: docRef.id, ...payload };
+  const snapshot = await getDoc(docRef);
+  return snapshot.exists() ? mapAusenciaDoc(snapshot) : { id: docRef.id, ...payload };
 }
 
 export async function updateAusencia(ausenciaId, changes = {}, userProfile) {
@@ -269,16 +317,35 @@ export async function updateAusencia(ausenciaId, changes = {}, userProfile) {
   if (!userProfile?.ownerId) throw new Error('userProfile.ownerId es requerido para actualizar ausencia');
   const ownerId = userProfile.ownerId;
   const docRef = doc(db, ...firestoreRoutesCore.ausencias(ownerId), ausenciaId);
+  const currentSnapshot = await getDoc(docRef);
+  const currentData = currentSnapshot.exists() ? currentSnapshot.data() : {};
+
   const payload = {
     ...changes,
     updatedAt: serverTimestamp()
   };
+
   if (changes.fechaInicio) {
     payload.fechaInicio = toTimestamp(changes.fechaInicio);
   }
   if (Object.prototype.hasOwnProperty.call(changes, "fechaFin")) {
     payload.fechaFin = toTimestamp(changes.fechaFin);
   }
+
+  const nextEstado = changes.estado ?? currentData.estado ?? "abierto";
+  const nextFechaInicio =
+    Object.prototype.hasOwnProperty.call(changes, "fechaInicio")
+      ? changes.fechaInicio
+      : currentData.fechaInicio;
+  const nextFechaFin =
+    Object.prototype.hasOwnProperty.call(changes, "fechaFin")
+      ? changes.fechaFin
+      : currentData.fechaFin;
+
+  payload.diasAusente = isClosedStatus(nextEstado)
+    ? computeDiasAusente(nextFechaInicio, nextFechaFin)
+    : computeDiasAusente(nextFechaInicio, null);
+
   await updateDocWithAppId(docRef, payload);
 }
 
@@ -286,9 +353,14 @@ export async function cerrarAusencia(ausenciaId, { fechaFin = new Date() } = {},
   if (!userProfile?.ownerId) throw new Error('userProfile.ownerId es requerido para cerrar ausencia');
   const ownerId = userProfile.ownerId;
   const docRef = doc(db, ...firestoreRoutesCore.ausencias(ownerId), ausenciaId);
+  const currentSnapshot = await getDoc(docRef);
+  const currentData = currentSnapshot.exists() ? currentSnapshot.data() : {};
+  const diasAusente = computeDiasAusente(currentData.fechaInicio || null, fechaFin);
+
   await updateDocWithAppId(docRef, {
     estado: "cerrada",
     fechaFin: toTimestamp(fechaFin),
+    diasAusente,
     updatedAt: serverTimestamp()
   });
 }
@@ -321,5 +393,4 @@ export async function getAusenciaTipos({ maxResults = 200 } = {}, userProfile) {
     return [];
   }
 }
-
 

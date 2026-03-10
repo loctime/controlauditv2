@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   Table,
   TableBody,
@@ -58,6 +58,7 @@ const tipoColor = (tipo) => {
 };
 
 export default function AusenciasTable({ ausencias, onRecargar }) {
+  const { userProfile } = useAuth();
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [selectedAusencia, setSelectedAusencia] = useState(null);
@@ -332,5 +333,3 @@ export default function AusenciasTable({ ausencias, onRecargar }) {
     </>
   );
 }
-
-
