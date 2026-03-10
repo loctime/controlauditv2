@@ -796,7 +796,7 @@ export default function DashboardSeguridadV2() {
                   datosAccidentes={goalsAccidentes}
                   sucursalId={selectedSucursal !== 'todas' ? selectedSucursal : null}
                   sucursalNombre={selectedSucursal !== 'todas' && sucursalParaMetas?.nombre ? sucursalParaMetas.nombre : ''}
-                  puedeReiniciar={userProfile?.role === 'max' || userProfile?.role === 'supermax'}
+                  puedeReiniciar={userProfile?.role === 'admin' || userProfile?.role === 'superdev'}
                 />
               )}
             </Box>
@@ -924,3 +924,4 @@ export default function DashboardSeguridadV2() {
     </Container>
   );
 }
+

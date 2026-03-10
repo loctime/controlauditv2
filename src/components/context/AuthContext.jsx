@@ -20,6 +20,7 @@ import { useFormulariosListener } from './hooks/useFormulariosListener';
 import { useContextActions } from './hooks/useContextActions';
 import { useEmpresasQuery } from '../../hooks/queries/useEmpresasQuery';
 import { firestoreRoutesCore } from '../../core/firestore/firestoreRoutes.core';
+import { normalizeRole } from '../../utils/accessControl';
 
 // Definimos y exportamos el contexto
 export const AuthContext = createContext();
@@ -344,9 +345,10 @@ const AuthContextComponent = ({ children }) => {
           const tokenOwnerId = tokenResult.claims.ownerId; // NO usar fallback - debe venir del token
           const tokenAppId = tokenResult.claims.appId;
           const tokenSuperdev = tokenResult.claims.superdev === true; // Claim de superdev
+          const effectiveRole = normalizeRole(tokenRole, tokenSuperdev);
           
           // Validar claims críticos
-          if (!tokenRole || (tokenRole !== 'admin' && tokenRole !== 'operario')) {
+          if (!effectiveRole || (effectiveRole !== 'admin' && effectiveRole !== 'operario' && effectiveRole !== 'superdev')) {
             console.error('[AUTH] ❌ Token sin role válido');
             await signOut(auth);
             setUser(null);
@@ -358,7 +360,7 @@ const AuthContextComponent = ({ children }) => {
           // Validar ownerId según role
           // admin → ownerId = uid (no viene en token)
           // operario → ownerId DEBE venir en el token
-          if (tokenRole === 'operario' && !tokenOwnerId) {
+          if (effectiveRole === 'operario' && !tokenOwnerId) {
             console.error('[AUTH] ❌ Operario sin ownerId en token');
             await signOut(auth);
             setUser(null);
@@ -368,7 +370,7 @@ const AuthContextComponent = ({ children }) => {
           }
           
           // Resolver ownerId según role
-          const resolvedOwnerId = tokenRole === 'admin' ? firebaseUser.uid : tokenOwnerId;
+          const resolvedOwnerId = effectiveRole === 'operario' ? tokenOwnerId : firebaseUser.uid;
           
           // Logs de token
           console.log('[AUTH][TOKEN]', { 
@@ -381,7 +383,7 @@ const AuthContextComponent = ({ children }) => {
           // Separar flujo por tokenRole
           let context = null;
           
-          if (tokenRole === 'admin') {
+          if (effectiveRole === 'admin' || effectiveRole === 'superdev') {
             // ADMIN: Leer apps/auditoria/owners/{firebaseUser.uid} como perfil
             const ownerDocRef = doc(db, "apps", "auditoria", "owners", firebaseUser.uid);
             const ownerDocSnap = await getDoc(ownerDocRef);
@@ -392,7 +394,7 @@ const AuthContextComponent = ({ children }) => {
                 uid: ownerData.uid || firebaseUser.uid,
                 email: ownerData.email || firebaseUser.email,
                 displayName: ownerData.displayName || firebaseUser.displayName || firebaseUser.email,
-                role: tokenRole, // Usar tokenRole, no ownerData.role
+                role: effectiveRole,
                 ownerId: resolvedOwnerId,
                 appId: ownerData.appId || tokenAppId || 'auditoria',
                 status: ownerData.status,
@@ -415,7 +417,7 @@ const AuthContextComponent = ({ children }) => {
                   uid: legacyData.uid || firebaseUser.uid,
                   email: legacyData.email || firebaseUser.email,
                   displayName: legacyData.displayName || firebaseUser.displayName || firebaseUser.email,
-                  role: tokenRole, // Usar tokenRole, no legacyData.role
+                  role: effectiveRole,
                   ownerId: resolvedOwnerId,
                   appId: legacyData.appId || tokenAppId || 'auditoria',
                   status: legacyData.status,
@@ -436,7 +438,7 @@ const AuthContextComponent = ({ children }) => {
                 return;
               }
             }
-          } else if (tokenRole === 'operario') {
+          } else if (effectiveRole === 'operario') {
             // OPERARIO: NO leer owners/{resolvedOwnerId} como perfil
             // Leer apps/auditoria/owners/{resolvedOwnerId}/usuarios/{firebaseUser.uid}
             const userDocRef = doc(db, ...firestoreRoutesCore.usuario(resolvedOwnerId, firebaseUser.uid));
@@ -460,7 +462,7 @@ const AuthContextComponent = ({ children }) => {
               uid: firebaseUser.uid, // Operario siempre usa su propio uid
               email: userData.email || firebaseUser.email,
               displayName: userData.displayName || firebaseUser.displayName || firebaseUser.email,
-              role: tokenRole, // Usar tokenRole, no userData.role
+              role: effectiveRole,
               ownerId: resolvedOwnerId,
               appId: userData.appId || tokenAppId || 'auditoria',
               status: userData.status,
@@ -714,3 +716,5 @@ export const useAuth = () => {
 };
 
 export default AuthContextComponent;
+
+

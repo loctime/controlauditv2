@@ -197,7 +197,7 @@ const resolveOwnerId = (userProfile) => {
   
   // Si el usuario es admin/supermax/max → usar uid
   // (ownerId debería estar resuelto en el contexto, pero por compatibilidad)
-  if (userProfile.role === 'admin' || userProfile.role === 'supermax' || userProfile.role === 'max') {
+  if (userProfile.role === 'admin' || userProfile.role === 'superdev') {
     return userProfile.uid;
   }
   

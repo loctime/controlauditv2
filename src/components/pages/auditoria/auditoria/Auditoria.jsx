@@ -947,7 +947,7 @@ const AuditoriaRefactorizada = () => {
       )}
       
       {/* Debug info - solo para supermax */}
-      {role === 'supermax' && (
+      {role === 'superdev' && (
         <Alert severity="info" sx={{ mb: 2 }}>
           <Typography variant="body2">
             <strong>Debug Info:</strong>

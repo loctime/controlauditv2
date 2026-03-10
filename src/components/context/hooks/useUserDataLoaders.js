@@ -41,7 +41,7 @@ export const useUserDataLoaders = (
       const sucursalesRef = collection(dbAudit, ...firestoreRoutesCore.sucursales(ownerIdToUse));
       let sucursalesData = [];
       
-      if (role === 'supermax') {
+      if (role === 'superdev') {
         // Admin: cargar todas las sucursales del usuario
         const sucursalesSnapshot = await getDocs(sucursalesRef);
         sucursalesData = sucursalesSnapshot.docs.map(doc => normalizeSucursal(doc));
@@ -176,4 +176,5 @@ export const useUserDataLoaders = (
     loadAuditoriasCompartidas
   };
 };
+
 

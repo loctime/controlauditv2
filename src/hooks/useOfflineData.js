@@ -70,9 +70,9 @@ export const useOfflineData = (empresasCollectionRef, usuariosCollectionRef, for
         if (empresasCollectionRef) {
           let qEmpresas;
           
-          if (authUserProfile?.role === 'supermax') {
+          if (authUserProfile?.role === 'superdev') {
             qEmpresas = query(empresasCollectionRef);
-          } else if (authUserProfile?.role === 'max') {
+          } else if (authUserProfile?.role === 'admin') {
             // Cargar empresas propias
             const empresasPropias = query(empresasCollectionRef, where('propietarioId', '==', user.uid));
             const empresasPropiasSnapshot = await getDocs(empresasPropias);

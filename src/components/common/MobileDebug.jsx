@@ -5,7 +5,7 @@ import { useAuth } from '@/components/context/AuthContext';
 const MobileDebug = () => {
   const { userProfile } = useAuth();
   const [debugInfo, setDebugInfo] = useState({});
-  const isSupermax = !!userProfile && userProfile.role === 'supermax';
+  const isSupermax = !!userProfile && userProfile.role === 'superdev';
 
   useEffect(() => {
     const info = {
@@ -72,3 +72,4 @@ const MobileDebug = () => {
 };
 
 export default MobileDebug;
+

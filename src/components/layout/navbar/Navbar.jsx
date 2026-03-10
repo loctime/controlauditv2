@@ -86,8 +86,8 @@ function Navbar(props) {
   }, [user, selectedOwnerId]);
 
   const isBloqueado = bloqueado || permisos?.bloqueado || userProfile?.bloqueado || false;
-  const navbarItems = role ? getNavbarItems(role, permisos || {}) : { simple: [], higiene: [], empresarial: [] };
-  const sidebarItems = role ? getSidebarItems(role, permisos || {}) : [];
+  const navbarItems = role ? getNavbarItems(role, userProfile || {}) : { simple: [], higiene: [], empresarial: [] };
+  const sidebarItems = role ? getSidebarItems(role, userProfile || {}) : [];
 
   const renderNavLink = (item) => (
     <Link 
@@ -177,18 +177,37 @@ function Navbar(props) {
         </Box>
       ) : (
         <List>
-          {sidebarItems.map((item) => (
-            <Link key={item.id} to={item.path} style={{ textDecoration: 'none' }}>
-              <ListItem disablePadding>
-                <ListItemButton onClick={() => setMobileOpen(false)}>
-                  <ListItemIcon>
-                    <item.icon sx={{ color: "#ffffff" }} />
-                  </ListItemIcon>
-                  <ListItemText primary={item.label} sx={{ color: "#ffffff" }} />
-                </ListItemButton>
-              </ListItem>
-            </Link>
-          ))}
+          {sidebarItems.map((item) => {
+            if (item.type === "section") {
+              return (
+                <ListItem key={item.id} sx={{ pt: 1.5, pb: 0.5 }}>
+                  <ListItemText
+                    primary={item.label}
+                    primaryTypographyProps={{
+                      fontSize: "0.75rem",
+                      fontWeight: 700,
+                      letterSpacing: "0.08em",
+                      textTransform: "uppercase",
+                      color: "rgba(255,255,255,0.7)",
+                    }}
+                  />
+                </ListItem>
+              );
+            }
+
+            return (
+              <Link key={item.id} to={item.path} style={{ textDecoration: 'none' }}>
+                <ListItem disablePadding>
+                  <ListItemButton onClick={() => setMobileOpen(false)}>
+                    <ListItemIcon>
+                      <item.icon sx={{ color: "#ffffff" }} />
+                    </ListItemIcon>
+                    <ListItemText primary={item.label} sx={{ color: "#ffffff" }} />
+                  </ListItemButton>
+                </ListItem>
+              </Link>
+            );
+          })}
 
           {canInstall && (
             <ListItem disablePadding>
@@ -729,3 +748,5 @@ function Navbar(props) {
 }
 
 export default Navbar;
+
+

@@ -1,188 +1,88 @@
-import { lazy } from 'react';
+import { lazy } from "react";
+import { protectedRoutesConfig, publicRoutesConfig } from "../config/routesConfig";
 
-// Lazy loading de componentes principales
 const Home = lazy(() => import("../components/pages/home/Home"));
-const EstablecimientosContainer = lazy(() => import("../components/pages/establecimiento/EstablecimientosContainer"));
-const Auditoria = lazy(() => import("../components/pages/auditoria/auditoria/Auditoria"));
-const Formulario = lazy(() => import("../components/pages/formulario/Formulario"));
-const EditarFormulario = lazy(() => import("../components/pages/editar/EditarFormulario"));
-const Informe = lazy(() => import("../components/pages/auditoria/Informe"));
-const ReportesPage = lazy(() => import("../components/pages/auditoria/reporte/ReportesPage"));
-const PerfilUsuario = lazy(() => import("../components/pages/perfil/PerfilUsuario"));
-const LogsOperarios = lazy(() => import('../components/pages/usuarios').then(module => {
-  // Asegurar que siempre retornamos un componente válido
-  const Component = module.LogsOperarios || module.default;
-  if (!Component) {
-    throw new Error('LogsOperarios component not found');
-  }
-  return { default: Component };
-}));
 const Dashboard = lazy(() => import("../components/pages/dashboard/Dashboard"));
 const DashboardSeguridad = lazy(() => import("../components/pages/dashboard/DashboardSeguridadV2"));
 const ClienteDashboard = lazy(() => import("../components/pages/admin/ClienteDashboard"));
-const OperarioDashboard = lazy(() => import("../components/pages/user/OperarioDashboard"));
+const EstablecimientosContainer = lazy(() => import("../components/pages/establecimiento/EstablecimientosContainer"));
+const Auditoria = lazy(() => import("../components/pages/auditoria/auditoria/Auditoria"));
+const Formulario = lazy(() => import("../components/pages/formulario/Formulario"));
+const ReportesPage = lazy(() => import("../components/pages/auditoria/reporte/ReportesPage"));
+const PerfilUsuario = lazy(() => import("../components/pages/perfil/PerfilUsuario"));
 const PermissionsDebug = lazy(() => import("../components/pages/debug/PermissionsDebug"));
 const TestControlFile = lazy(() => import("../components/pages/debug/TestControlFile"));
-const GaleriaFormulariosPublicos = lazy(() => import('../components/pages/formulario/GaleriaFormulariosPublicos'));
-const ConfiguracionPage = lazy(() => import('../components/pages/configuracion/ConfiguracionPage'));
-const Empleados = lazy(() => import('../components/pages/empleados/Empleados'));
-const Capacitaciones = lazy(() => import('../components/pages/capacitaciones/Capacitaciones'));
-const RegistrarAsistencia = lazy(() => import('../components/pages/capacitaciones/RegistrarAsistencia'));
-const TrainingModule = lazy(() => import('../components/pages/training/TrainingModule'));
-const Accidentes = lazy(() => import('../components/pages/accidentes/Accidentes'));
-const DashboardHigieneSeguridad = lazy(() =>
-  import("../components/pages/dashboard-higiene/DashboardHigieneSeguridad")
+const LogsOperarios = lazy(() =>
+  import("../components/pages/usuarios").then((module) => {
+    const Component = module.LogsOperarios || module.default;
+    if (!Component) {
+      throw new Error("LogsOperarios component not found");
+    }
+    return { default: Component };
+  })
 );
-const Ausencias = lazy(() =>
-  import("../components/pages/ausencias/Ausencias")
+const GaleriaFormulariosPublicos = lazy(() =>
+  import("../components/pages/formulario/GaleriaFormulariosPublicos")
 );
-const AuditoriasManuales = lazy(() => import('../components/pages/auditoriasManuales/AuditoriasManuales'));
-const AuditoriaManualDetalle = lazy(() => import('../components/pages/auditoriasManuales/components/AuditoriaManualDetalle'));
+const ConfiguracionPage = lazy(() => import("../components/pages/configuracion/ConfiguracionPage"));
+const Empleados = lazy(() => import("../components/pages/empleados/Empleados"));
+const Capacitaciones = lazy(() => import("../components/pages/capacitaciones/Capacitaciones"));
+const RegistrarAsistencia = lazy(() =>
+  import("../components/pages/capacitaciones/RegistrarAsistencia")
+);
+const TrainingModule = lazy(() => import("../components/pages/training/TrainingModule"));
+const Accidentes = lazy(() => import("../components/pages/accidentes/Accidentes"));
+const Ausencias = lazy(() => import("../components/pages/ausencias/Ausencias"));
+const AuditoriasManuales = lazy(() =>
+  import("../components/pages/auditoriasManuales/AuditoriasManuales")
+);
+const AuditoriaManualDetalle = lazy(() =>
+  import("../components/pages/auditoriasManuales/components/AuditoriaManualDetalle")
+);
 
-export const routes = [
-  {
-    id: "dashboard",
-    path: "/dashboard",
-    Element: Dashboard,
-  },
-  {
-    id: "dashboard-seguridad",
-    path: "/dashboard-seguridad",
-    Element: DashboardSeguridad,
-  },
-  {
-    id: "cliente-dashboard",
-    path: "/cliente-dashboard",
-    Element: ClienteDashboard,
-  },
-  {
-    id: "operario-dashboard",
-    path: "/operario-dashboard",
-    Element: OperarioDashboard,
-  },
-  {
-    id: "home",
-    path: "/",
-    Element: Home,
-  },
-  {
-    id: "establecimiento",
-    path: "/establecimiento",
-    Element: EstablecimientosContainer,
-  },
-  {
-    id: "auditoria",
-    path: "/auditoria",
-    Element: Auditoria,
-  },
-  {
-    id: "formulario",
-    path: "/formulario",
-    Element: Formulario,
-  },
-  {
-    id: "editar",
-    path: "/editar",
-    Element: EditarFormulario,
-  },
-  {
-    id: "reporte",
-    path: "/reporte",
-    Element: ReportesPage,
-  },
-  {
-    id: "perfil",
-    path: "/perfil",
-    Element: PerfilUsuario,
-  },
-  {
-    id: "debug",
-    path: "/debug",
-    Element: PermissionsDebug,
-  },
-  {
-    id: "test-controlfile",
-    path: "/test-controlfile",
-    Element: TestControlFile,
-  },
-  {
-    id: "logs",
-    path: "/usuarios/logs",
-    Element: LogsOperarios,
-    protected: true,
-    roles: ['max', 'supermax']
-  },
-  {
-    id: "formularios-publicos",
-    path: "/formularios-publicos",
-    Element: GaleriaFormulariosPublicos,
-  },
-  {
-    id: "configuracion",
-    path: "/configuracion",
-    Element: ConfiguracionPage,
-  },
-  {
-    id: "empleados",
-    path: "/empleados",
-    Element: Empleados,
-  },
-  {
-    id: "capacitaciones",
-    path: "/capacitaciones",
-    Element: Capacitaciones,
-  },
-  {
-    id: "training",
-    path: "/training",
-    Element: TrainingModule,
-  },
-  {
-    id: "capacitacion-asistencia",
-    path: "/capacitacion/:capacitacionId/asistencia",
-    Element: RegistrarAsistencia,
-  },
-  {
-    id: "accidentes",
-    path: "/accidentes",
-    Element: Accidentes,
-  },
-  {
-    id: "salud-ocupacional",
-    path: "/salud-ocupacional",
-    Element: Ausencias,
-    protected: true,
-    roles: ['max', 'supermax']
-  },
-  {
-    id: "dashboard-seguridad",
-    path: "/dashboard-seguridad",
-    Element: DashboardHigieneSeguridad,
-    protected: true,
-    roles: ['max', 'supermax']
-  },
-  {
-    id: "auditorias-manuales",
-    path: "/auditorias-manuales",
-    Element: AuditoriasManuales,
-  },
-  {
-    id: "auditoria-manual-detalle",
-    path: "/auditorias-manuales/:auditoriaId",
-    Element: AuditoriaManualDetalle,
-  }
-];
+const Login = lazy(() => import("../components/pages/login/Login"));
+const Register = lazy(() => import("../components/pages/register/Register"));
+const ForgotPassword = lazy(() => import("../components/pages/forgotPassword/ForgotPassword"));
+const VistaFormularioPublico = lazy(() =>
+  import("../components/pages/formulario/VistaFormularioPublico")
+);
 
-// Logs de debug para producción
-console.log('🔍 [routesOptimized] Archivo cargado');
-console.log('🔍 [routesOptimized] Total de rutas exportadas:', routes.length);
-console.log('🔍 [routesOptimized] Rutas exportadas:', routes.map(r => ({ id: r.id, path: r.path })));
+const componentMap = {
+  home: Home,
+  tablero: Dashboard,
+  "dashboard-seguridad": DashboardSeguridad,
+  panel: ClienteDashboard,
+  establecimiento: EstablecimientosContainer,
+  auditoria: Auditoria,
+  formulario: Formulario,
+  reporte: ReportesPage,
+  perfil: PerfilUsuario,
+  debug: PermissionsDebug,
+  "test-controlfile": TestControlFile,
+  "usuarios-logs": LogsOperarios,
+  "formularios-publicos": GaleriaFormulariosPublicos,
+  configuracion: ConfiguracionPage,
+  empleados: Empleados,
+  capacitaciones: Capacitaciones,
+  training: TrainingModule,
+  "capacitacion-asistencia": RegistrarAsistencia,
+  accidentes: Accidentes,
+  "salud-ocupacional": Ausencias,
+  "auditorias-manuales": AuditoriasManuales,
+  "auditoria-manual-detalle": AuditoriaManualDetalle,
 
-const testControlFileRoute = routes.find(r => r.path === '/test-controlfile');
-if (testControlFileRoute) {
-  console.log('✅ [routesOptimized] Ruta /test-controlfile ENCONTRADA en export:', testControlFileRoute);
-} else {
-  console.error('❌ [routesOptimized] Ruta /test-controlfile NO ENCONTRADA en el array exportado');
-}
+  login: Login,
+  register: Register,
+  "forgot-password": ForgotPassword,
+  "formularios-public-view": VistaFormularioPublico,
+};
 
+export const routes = protectedRoutesConfig.map((route) => ({
+  ...route,
+  Element: componentMap[route.id],
+}));
 
+export const publicRoutes = publicRoutesConfig.map((route) => ({
+  ...route,
+  Element: componentMap[route.id],
+}));

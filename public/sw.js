@@ -18,7 +18,7 @@ const urlsToCache = [
   '/loguitoaudit.png',
   '/clear-cache.js',
   // Páginas principales para funcionamiento offline
-  '/dashboard',
+  '/tablero',
   '/auditoria',
   '/establecimiento',
   '/editar',
@@ -28,7 +28,7 @@ const urlsToCache = [
   '/establecimiento/',
   '/auditoria/',
   '/editar/',
-  '/dashboard/',
+  '/tablero/',
   '/reporte/',
   '/perfil/'
 ];

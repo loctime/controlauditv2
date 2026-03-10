@@ -22,7 +22,7 @@ export const usePermissions = () => {
         puedeAgregarUsuarios: false, // Solo admin puede
         puedeEliminarAuditoria: false
       },
-      max: {
+      admin: {
         puedeCrearEmpresas: true,
         puedeCrearSucursales: true,
         puedeCrearAuditorias: true,
@@ -31,7 +31,7 @@ export const usePermissions = () => {
         puedeAgregarUsuarios: true,
         puedeEliminarAuditoria: true
       },
-      supermax: {
+      superdev: {
         puedeCrearEmpresas: true,
         puedeCrearSucursales: true,
         puedeCrearAuditorias: true,
@@ -53,11 +53,11 @@ export const usePermissions = () => {
 
   // ✅ Funciones de validación de permisos
   const canAgendarAuditorias = useMemo(() => {
-    return permissions.puedeAgendarAuditorias || role === 'supermax';
+    return permissions.puedeAgendarAuditorias || role === 'superdev';
   }, [permissions.puedeAgendarAuditorias, role]);
 
   const canCrearAuditorias = useMemo(() => {
-    return permissions.puedeCrearAuditorias || role === 'supermax';
+    return permissions.puedeCrearAuditorias || role === 'superdev';
   }, [permissions.puedeCrearAuditorias, role]);
 
   // ✅ Permisos para empresas - usando solo role y empresasPermitidas
@@ -99,26 +99,26 @@ export const usePermissions = () => {
   }, [role]);
 
   const canCrearSucursales = useMemo(() => {
-    return permissions.puedeCrearSucursales || role === 'supermax';
+    return permissions.puedeCrearSucursales || role === 'superdev';
   }, [permissions.puedeCrearSucursales, role]);
 
   const canCompartirFormularios = useMemo(() => {
-    return permissions.puedeCompartirFormularios || role === 'supermax';
+    return permissions.puedeCompartirFormularios || role === 'superdev';
   }, [permissions.puedeCompartirFormularios, role]);
 
   // Solo el admin puede agregar usuarios
   const canAgregarUsuarios = useMemo(() => {
-    return (role === 'max' && permissions.puedeAgregarUsuarios) || role === 'supermax';
+    return (role === 'admin' && permissions.puedeAgregarUsuarios) || role === 'superdev';
   }, [permissions.puedeAgregarUsuarios, role]);
 
   // ✅ Función para verificar si puede auditar (usar auditorías)
   const canAuditar = useMemo(() => {
-    return permissions.puedeCrearAuditorias || role === 'supermax';
+    return permissions.puedeCrearAuditorias || role === 'superdev';
   }, [permissions.puedeCrearAuditorias, role]);
 
   // ✅ Función general para verificar cualquier permiso
   const hasPermission = useCallback((permissionKey) => {
-    return permissions[permissionKey] || role === 'supermax';
+    return permissions[permissionKey] || role === 'superdev';
   }, [permissions, role]);
 
   return {

@@ -251,11 +251,11 @@ export const empresaService = {
   canViewEmpresa(empresaId, userProfile, empresasResueltas = null) {
     if (!userProfile) return false;
     
-    if (userProfile.role === 'supermax') {
+    if (userProfile.role === 'superdev') {
       return true;
     }
     
-    if (userProfile.role === 'max') {
+    if (userProfile.role === 'admin') {
       if (userProfile.empresas && userProfile.empresas.includes(empresaId)) {
         return true;
       }
@@ -276,3 +276,4 @@ export const empresaService = {
   },
 
 };
+

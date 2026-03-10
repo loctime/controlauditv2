@@ -827,7 +827,7 @@ class AuditoriaService {
           const timestampB = b.timestamp?.toDate?.() || new Date(b.timestamp || 0);
           return timestampB - timestampA;
         });
-      } else if (userProfile.role === 'max') {
+      } else if (userProfile.role === 'admin') {
         // Admin ve todas las auditorías de su ownerId
         const snapshot = await getDocs(reportesRef);
         auditorias = snapshot.docs.map(doc => ({
@@ -930,3 +930,4 @@ class AuditoriaService {
 }
 
 export default AuditoriaService;
+

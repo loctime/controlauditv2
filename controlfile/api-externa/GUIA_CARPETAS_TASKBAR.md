@@ -535,7 +535,7 @@ for (const item of items) {
 // ❌ INCORRECTO: NO llamar en navegación
 const handleNavigation = () => {
   ensureTaskbarAppFolder({ ... }); // ❌ Innecesario
-  navigate('/dashboard');
+  navigate('/tablero');
 };
 ```
 

@@ -1,4 +1,4 @@
-﻿import React, { useMemo } from 'react';
+import React, { useMemo } from 'react';
 import { Alert, Box, Container, Typography } from '@mui/material';
 import { useAuth } from '@/components/context/AuthContext';
 import TrainingModuleTabs from './TrainingModuleTabs';
@@ -24,7 +24,7 @@ const MODULE_TABS = [
 export default function TrainingModule() {
   const { userProfile, role } = useAuth();
   const ownerId = userProfile?.ownerId;
-  const canViewConfiguration = role === 'admin' || role === 'supermax';
+  const canViewConfiguration = role === 'admin' || role === 'superdev';
 
   const visibleTabs = useMemo(
     () => MODULE_TABS.filter((tab) => !tab.adminOnly || canViewConfiguration),
@@ -78,4 +78,5 @@ export default function TrainingModule() {
     </Container>
   );
 }
+
 

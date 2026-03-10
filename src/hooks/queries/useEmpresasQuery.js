@@ -262,7 +262,7 @@ export const useEmpresasQuery = (options = {}) => {
       // No actualizar cache en caso de error, mantener datos existentes
     };
 
-    if (role === 'supermax') {
+    if (role === 'superdev') {
       // Supermax ve todas las empresas del ownerId
       const empresasMap = new Map();
       empresasMaps.push(empresasMap);
@@ -277,7 +277,7 @@ export const useEmpresasQuery = (options = {}) => {
         handleError
       );
       unsubscribes.push(unsubscribe);
-    } else if (role === 'max') {
+    } else if (role === 'admin') {
       // Max: buscar por creadorId y socios (owner-centric)
       // Nota: En modelo owner-centric, todas las empresas del ownerId son accesibles
       // pero podemos filtrar por creadorId si es necesario
@@ -342,3 +342,4 @@ export const useEmpresasQuery = (options = {}) => {
     refetch
   };
 };
+

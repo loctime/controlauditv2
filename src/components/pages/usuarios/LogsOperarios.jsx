@@ -92,10 +92,10 @@ const LogsOperarios = () => {
       let qLogs;
       
       // Filtrar logs según el rol del usuario actual
-      if (role === 'supermax') {
+      if (role === 'superdev') {
         // Super administradores ven todos los logs
         qLogs = query(logsRef, orderBy('fecha', 'desc'), limit(400));
-      } else if (role === 'max') {
+      } else if (role === 'admin') {
         // Clientes administradores ven sus logs y los de sus operarios
         // Usar ownerId para filtrar logs del owner
         if (!userProfile?.ownerId) {

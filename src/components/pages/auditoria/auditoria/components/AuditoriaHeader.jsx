@@ -45,7 +45,7 @@ const AuditoriaHeader = ({
               if (location.state?.from === 'perfil') {
                 navigate('/perfil');
               } else {
-                navigate('/dashboard');
+                navigate('/tablero');
               }
             }}
             variant="outlined"

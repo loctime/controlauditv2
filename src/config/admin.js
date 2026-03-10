@@ -1,3 +1,5 @@
+import { hasAccess, normalizeRole } from '../utils/accessControl';
+
 // Configuración del sistema de roles
 // Códigos de activación para diferentes niveles
 
@@ -15,15 +17,11 @@ export const SUPER_ADMIN_ACTIVATION_CODE = import.meta.env.VITE_SUPER_ADMIN_CODE
  * @returns {boolean} true si el usuario es administrador (admin, max o supermax)
  */
 export const isAdminUser = (userProfileOrRole) => {
-  const role = typeof userProfileOrRole === 'string' 
-    ? userProfileOrRole 
-    : userProfileOrRole?.role;
-  
-  if (!role) return false;
-  
-  // Roles válidos actuales: 'admin'
-  // Roles legacy compatibles: 'max', 'supermax'
-  return role === 'admin' || role === 'max' || role === 'supermax';
+  const isRoleString = typeof userProfileOrRole === 'string';
+  const role = isRoleString ? userProfileOrRole : userProfileOrRole?.role;
+  const superdev = isRoleString ? false : userProfileOrRole?.superdev === true;
+
+  return hasAccess({ role: normalizeRole(role), superdev }, ['admin', 'superdev']);
 };
 
 /**
@@ -40,19 +38,19 @@ export const isAdmin = (userProfile) => {
  * @deprecated Usar isAdminUser() en su lugar
  */
 export const isSuperAdmin = (userProfile) => {
-  return userProfile?.role === 'supermax';
+  return hasAccess(userProfile, ['superdev']);
 };
 
 // Función para obtener el rol del usuario
 export const getUserRole = (userEmail) => {
   // Verificar si es supermax por email específico
   if (userEmail === '1@gmail.com') {
-    return 'supermax';
+    return 'superdev';
   }
   
   // Por defecto, usuarios nuevos tienen rol 'max' (cliente administrador)
   // con todos los permisos habilitados
-  return 'max';
+  return 'admin';
 };
 
 // Función para verificar código de activación de cliente administrador
@@ -69,7 +67,7 @@ export const verifySuperAdminCode = (code) => {
 export const activateAdmin = async (userProfile, code) => {
   if (verifyAdminCode(code)) {
     return {
-      role: 'max', // Cliente administrador
+      role: 'admin', // Cliente administrador
       permisos: {
         puedeCrearEmpresas: true,
         puedeCrearSucursales: true,
@@ -90,7 +88,7 @@ export const activateAdmin = async (userProfile, code) => {
 export const activateSuperAdmin = async (userProfile, code) => {
   if (verifySuperAdminCode(code)) {
     return {
-      role: 'supermax', // Super administrador
+      role: 'superdev', // Super administrador
       permisos: {
         puedeCrearEmpresas: true,
         puedeCrearSucursales: true,
@@ -106,3 +104,4 @@ export const activateSuperAdmin = async (userProfile, code) => {
   }
   return null;
 }; 
+
