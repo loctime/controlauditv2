@@ -112,9 +112,9 @@ export const routesConfig = [
     icon: "People",
   },
   {
-    id: "capacitaciones",
-    path: "/capacitaciones",
-    label: "Capacitaciones",
+    id: "capacitacion-vieja",
+    path: "/capacitacion-vieja",
+    label: "Capacitación vieja",
     roles: ["operario", "admin", "superdev"],
     showInMenu: false,
     section: "higiene",
@@ -144,7 +144,7 @@ export const routesConfig = [
   {
     id: "training",
     path: "/training",
-    label: "Training",
+    label: "Capacitaciones",
     roles: ["operario", "admin", "superdev"],
     showInMenu: true,
     section: "higiene",

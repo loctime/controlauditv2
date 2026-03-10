@@ -109,6 +109,32 @@ function Navbar(props) {
     navigate("/login");
   };
 
+  const renderProfileLink = () => {
+    const items = groupedMenu.sistema || [];
+    if (!items.length) return null;
+
+    // Usamos el primer ítem visible de la sección sistema (normalmente /perfil)
+    const perfilRoute = items[0];
+
+    return (
+      <Link
+        key={perfilRoute.id}
+        to={perfilRoute.path}
+        style={{
+          color: "#ffffff",
+          textDecoration: "none",
+          fontSize: "0.95rem",
+          padding: "8px 12px",
+          lineHeight: 1.2,
+          borderRadius: "4px",
+          transition: "background-color 0.2s",
+        }}
+      >
+        {perfilRoute.label}
+      </Link>
+    );
+  };
+
   const renderGroupDropdown = (groupKey) => {
     const items = groupedMenu[groupKey] || [];
     if (items.length === 0) return null;
@@ -299,7 +325,7 @@ function Navbar(props) {
               {renderGroupDropdown('empresas')}
               {renderGroupDropdown('auditorias')}
               {renderGroupDropdown('higiene')}
-              {renderGroupDropdown('sistema')}
+              {renderProfileLink()}
             </Box>
           )}
 
