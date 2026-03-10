@@ -72,6 +72,15 @@
         location: 'navbar',
     },
     {
+        id: "training",
+        label: "Training 2.0",
+        path: "/training",
+        icon: SchoolIcon,
+        rolesPermitidos: ['supermax', 'admin', 'operario'],
+        grupo: 'higiene',
+        location: 'navbar',
+    },
+    {
         id: "accidentes",
         label: "Accidentes",
         path: "/accidentes",
@@ -242,3 +251,6 @@
     const items = getMenuItemsForRole(role, permisos);
     return items.filter(item => item.location === 'sidebar');
     };
+
+
+

@@ -28,6 +28,7 @@ const ConfiguracionPage = lazy(() => import('../components/pages/configuracion/C
 const Empleados = lazy(() => import('../components/pages/empleados/Empleados'));
 const Capacitaciones = lazy(() => import('../components/pages/capacitaciones/Capacitaciones'));
 const RegistrarAsistencia = lazy(() => import('../components/pages/capacitaciones/RegistrarAsistencia'));
+const TrainingModule = lazy(() => import('../components/pages/training/TrainingModule'));
 const Accidentes = lazy(() => import('../components/pages/accidentes/Accidentes'));
 const DashboardHigieneSeguridad = lazy(() =>
   import("../components/pages/dashboard-higiene/DashboardHigieneSeguridad")
@@ -132,6 +133,11 @@ export const routes = [
     Element: Capacitaciones,
   },
   {
+    id: "training",
+    path: "/training",
+    Element: TrainingModule,
+  },
+  {
     id: "capacitacion-asistencia",
     path: "/capacitacion/:capacitacionId/asistencia",
     Element: RegistrarAsistencia,
@@ -178,3 +184,5 @@ if (testControlFileRoute) {
 } else {
   console.error('❌ [routesOptimized] Ruta /test-controlfile NO ENCONTRADA en el array exportado');
 }
+
+

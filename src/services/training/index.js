@@ -1,0 +1,11 @@
+﻿export { trainingCatalogService } from './trainingCatalogService';
+export { trainingRequirementService } from './trainingRequirementService';
+export { trainingPlanService } from './trainingPlanService';
+export { trainingSessionService } from './trainingSessionService';
+export { trainingAttendanceService } from './trainingAttendanceService';
+export { trainingEvidenceService } from './trainingEvidenceService';
+export { trainingCertificateService } from './trainingCertificateService';
+export { employeeTrainingRecordService } from './employeeTrainingRecordService';
+export { trainingComplianceService } from './trainingComplianceService';
+export { trainingReportingService } from './trainingReportingService';
+export { trainingMigrationService } from './trainingMigrationService';
