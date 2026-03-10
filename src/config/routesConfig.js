@@ -37,6 +37,7 @@ export const routesConfig = [
     topNav: true,
     section: "main",
     order: 1,
+    icon: "Home",
   },
   {
     id: "dashboard-seguridad",
@@ -47,6 +48,7 @@ export const routesConfig = [
     topNav: true,
     section: "main",
     order: 2,
+    icon: "HealthAndSafety",
   },
   {
     id: "panel",
@@ -57,6 +59,7 @@ export const routesConfig = [
     topNav: true,
     section: "main",
     order: 3,
+    icon: "CalendarToday",
   },
   {
     id: "auditoria",
@@ -66,6 +69,7 @@ export const routesConfig = [
     showInMenu: true,
     section: "auditorias",
     order: 10,
+    icon: "Checklist",
   },
   {
     id: "auditorias-manuales",
@@ -75,6 +79,7 @@ export const routesConfig = [
     showInMenu: true,
     section: "auditorias",
     order: 11,
+    icon: "Assignment",
   },
   {
     id: "reporte",
@@ -84,6 +89,7 @@ export const routesConfig = [
     showInMenu: true,
     section: "auditorias",
     order: 12,
+    icon: "PictureAsPdf",
   },
   {
     id: "establecimiento",
@@ -93,6 +99,7 @@ export const routesConfig = [
     showInMenu: true,
     section: "empresas",
     order: 20,
+    icon: "Business",
   },
   {
     id: "empleados",
@@ -102,6 +109,7 @@ export const routesConfig = [
     showInMenu: true,
     section: "empresas",
     order: 21,
+    icon: "People",
   },
   {
     id: "capacitaciones",
@@ -111,6 +119,7 @@ export const routesConfig = [
     showInMenu: true,
     section: "higiene",
     order: 30,
+    icon: "School",
   },
   {
     id: "accidentes",
@@ -120,6 +129,7 @@ export const routesConfig = [
     showInMenu: true,
     section: "higiene",
     order: 31,
+    icon: "ReportProblem",
   },
   {
     id: "salud-ocupacional",
@@ -129,6 +139,7 @@ export const routesConfig = [
     showInMenu: true,
     section: "higiene",
     order: 32,
+    icon: "Healing",
   },
   {
     id: "training",
@@ -138,6 +149,7 @@ export const routesConfig = [
     showInMenu: true,
     section: "higiene",
     order: 33,
+    icon: "School",
   },
   {
     id: "formulario",
@@ -147,6 +159,7 @@ export const routesConfig = [
     showInMenu: true,
     section: "formularios",
     order: 40,
+    icon: "FormatListBulletedOutlined",
   },
   {
     id: "formularios-publicos",
@@ -156,6 +169,7 @@ export const routesConfig = [
     showInMenu: false,
     section: "formularios",
     order: 41,
+    icon: "FormatListBulletedOutlined",
   },
   {
     id: "configuracion",
@@ -165,6 +179,7 @@ export const routesConfig = [
     showInMenu: true,
     section: "sistema",
     order: 50,
+    icon: "Settings",
   },
   {
     id: "perfil",
@@ -174,6 +189,7 @@ export const routesConfig = [
     showInMenu: true,
     section: "sistema",
     order: 51,
+    icon: "Person",
   },
   {
     id: "usuarios-logs",
@@ -183,6 +199,7 @@ export const routesConfig = [
     showInMenu: true,
     section: "superdev-tools",
     order: 60,
+    icon: "BadgeOutlined",
   },
   {
     id: "debug",
@@ -192,6 +209,7 @@ export const routesConfig = [
     showInMenu: true,
     section: "superdev-tools",
     order: 61,
+    icon: "BugReport",
   },
   {
     id: "test-controlfile",
@@ -201,6 +219,7 @@ export const routesConfig = [
     showInMenu: true,
     section: "superdev-tools",
     order: 62,
+    icon: "Science",
   },
 
   // Dynamic/internal routes
