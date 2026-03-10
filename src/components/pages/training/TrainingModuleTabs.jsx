@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import { Paper, Tab, Tabs } from '@mui/material';
 
 export default function TrainingModuleTabs({ tabs = [], activeTab, onChangeTab }) {

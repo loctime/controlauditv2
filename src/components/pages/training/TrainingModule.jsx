@@ -1,30 +1,29 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Alert, Box, Container, Typography } from '@mui/material';
 import { useAuth } from '@/components/context/AuthContext';
 import TrainingModuleTabs from './TrainingModuleTabs';
 import useTrainingTabState from './useTrainingTabState';
 import DashboardScreen from './screens/DashboardScreen';
 import SessionsScreen from './screens/SessionsScreen';
-import CalendarScreen from './screens/CalendarScreen';
 import PeopleScreen from './screens/PeopleScreen';
-import CertificatesScreen from './screens/CertificatesScreen';
 import ConfigurationScreen from './screens/ConfigurationScreen';
 import ReportsScreen from './screens/ReportsScreen';
+import CalendarScreen from './screens/CalendarScreen';
 
 const MODULE_TABS = [
   { id: 'dashboard', label: 'Tablero' },
   { id: 'sessions', label: 'Sesiones' },
-  { id: 'calendar', label: 'Calendario' },
   { id: 'people', label: 'Personas' },
-  { id: 'certificates', label: 'Certificados' },
-  { id: 'configuration', label: 'Configuracion', adminOnly: true },
-  { id: 'reports', label: 'Reportes' }
+  { id: 'reports', label: 'Reportes' },
+  { id: 'configuration', label: 'Configuración', adminOnly: true }
 ];
 
 export default function TrainingModule() {
   const { userProfile, role } = useAuth();
   const ownerId = userProfile?.ownerId;
   const canViewConfiguration = role === 'admin' || role === 'superdev';
+
+  const [showDashboardCalendar, setShowDashboardCalendar] = useState(false);
 
   const visibleTabs = useMemo(
     () => MODULE_TABS.filter((tab) => !tab.adminOnly || canViewConfiguration),
@@ -36,15 +35,31 @@ export default function TrainingModule() {
   const renderScreen = () => {
     switch (activeTab) {
       case 'dashboard':
-        return <DashboardScreen onNavigate={setTab} />;
+        return (
+          <DashboardScreen
+            onNavigate={(target) => {
+              if (target === 'calendar') {
+                setShowDashboardCalendar(true);
+                return;
+              }
+              setShowDashboardCalendar(false);
+              setTab(target);
+            }}
+          >
+            {showDashboardCalendar && (
+              <Box sx={{ mt: 3 }}>
+                <Typography variant="h6" sx={{ mb: 1.5 }}>
+                  Calendario de sesiones
+                </Typography>
+                <CalendarScreen />
+              </Box>
+            )}
+          </DashboardScreen>
+        );
       case 'sessions':
         return <SessionsScreen />;
-      case 'calendar':
-        return <CalendarScreen />;
       case 'people':
         return <PeopleScreen />;
-      case 'certificates':
-        return <CertificatesScreen />;
       case 'configuration':
         return <ConfigurationScreen activeSection={activeSection} onSectionChange={setSection} />;
       case 'reports':
@@ -57,7 +72,9 @@ export default function TrainingModule() {
   if (!ownerId) {
     return (
       <Container maxWidth="xl" sx={{ py: 3 }}>
-        <Alert severity="warning">No hay contexto de owner disponible para el modulo de capacitacion.</Alert>
+        <Alert severity="warning">
+          No hay contexto de empresa disponible para el módulo de capacitaciones.
+        </Alert>
       </Container>
     );
   }
@@ -66,10 +83,10 @@ export default function TrainingModule() {
     <Container maxWidth="xl" sx={{ py: 3 }}>
       <Box sx={{ mb: 3 }}>
         <Typography variant="h4" sx={{ fontWeight: 700, mb: 1 }}>
-          Gestion de Capacitacion
+          Gestión de capacitaciones
         </Typography>
         <Typography variant="body1" color="text.secondary">
-          Ejecucion operativa de capacitaciones, cumplimiento por persona, certificados y reportes.
+          Operación diaria de capacitaciones, seguimiento por persona y control de cumplimiento.
         </Typography>
       </Box>
 

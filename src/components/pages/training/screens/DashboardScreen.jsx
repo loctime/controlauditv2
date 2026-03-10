@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Alert, Box, CircularProgress } from '@mui/material';
 import { useAuth } from '@/components/context/AuthContext';
 import {
@@ -15,7 +15,7 @@ function diffDays(validUntil) {
   return Math.ceil((expiryDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
 }
 
-export default function DashboardScreen({ onNavigate }) {
+export default function DashboardScreen({ onNavigate, children }) {
   const { userProfile } = useAuth();
   const ownerId = userProfile?.ownerId;
 
@@ -122,7 +122,7 @@ export default function DashboardScreen({ onNavigate }) {
   }, [ownerId]);
 
   if (!ownerId) {
-    return <Alert severity="warning">No hay contexto de owner disponible para el módulo de capacitación.</Alert>;
+    return <Alert severity="warning">No hay contexto de empresa disponible para el módulo de capacitación.</Alert>;
   }
 
   if (loading) {
@@ -135,13 +135,18 @@ export default function DashboardScreen({ onNavigate }) {
 
   return (
     <Box>
-      {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+      {error && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {error}
+        </Alert>
+      )}
       <TrainingDashboard
         compliance={metrics.compliance}
         operational={metrics.operational}
         alerts={metrics.alerts}
         onNavigate={onNavigate}
       />
+      {children}
     </Box>
   );
 }
