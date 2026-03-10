@@ -1,4 +1,4 @@
-﻿/**
+/**
  * SINGLE SOURCE OF TRUTH para rutas Firestore del CORE owner-centric
  * 
  * Este archivo define EXCLUSIVAMENTE las rutas del nuevo modelo owner-centric.
@@ -13,7 +13,7 @@
 /**
  * Rutas del modelo owner-centric
  * 
- * âœ… MODELO CORRECTO - Nuevo sistema core
+ * ✅ MODELO CORRECTO - Nuevo sistema core
  * Todas las features nuevas deben usar estas rutas.
  */
 export const firestoreRoutesCore = {
@@ -29,7 +29,7 @@ export const firestoreRoutesCore = {
   ],
 
   /**
-   * ColecciÃ³n de empresas del owner
+   * Colección de empresas del owner
    * Path: apps/auditoria/owners/{ownerId}/empresas
    */
   empresas: (ownerId: string): string[] => [
@@ -41,7 +41,7 @@ export const firestoreRoutesCore = {
   ],
 
   /**
-   * Documento de empresa especÃ­fica del owner
+   * Documento de empresa específica del owner
    * Path: apps/auditoria/owners/{ownerId}/empresas/{empresaId}
    */
   empresa: (ownerId: string, empresaId: string): string[] => [
@@ -54,7 +54,7 @@ export const firestoreRoutesCore = {
   ],
 
   /**
-   * ColecciÃ³n de usuarios del owner
+   * Colección de usuarios del owner
    * Path: apps/auditoria/owners/{ownerId}/usuarios
    */
   usuarios: (ownerId: string): string[] => [
@@ -66,7 +66,7 @@ export const firestoreRoutesCore = {
   ],
 
   /**
-   * Documento de usuario especÃ­fico del owner
+   * Documento de usuario específico del owner
    * Path: apps/auditoria/owners/{ownerId}/usuarios/{userId}
    */
   usuario: (ownerId: string, userId: string): string[] => [
@@ -79,7 +79,7 @@ export const firestoreRoutesCore = {
   ],
 
   /**
-   * ColecciÃ³n de reportes (auditorÃ­as) del owner
+   * Colección de reportes (auditorías) del owner
    * Path: apps/auditoria/owners/{ownerId}/reportes
    */
   reportes: (ownerId: string): string[] => [
@@ -91,7 +91,7 @@ export const firestoreRoutesCore = {
   ],
 
   /**
-   * Documento de reporte especÃ­fico del owner
+   * Documento de reporte específico del owner
    * Path: apps/auditoria/owners/{ownerId}/reportes/{reporteId}
    */
   reporte: (ownerId: string, reporteId: string): string[] => [
@@ -104,7 +104,7 @@ export const firestoreRoutesCore = {
   ],
 
   /**
-   * ColecciÃ³n de formularios del owner
+   * Colección de formularios del owner
    * Path: apps/auditoria/owners/{ownerId}/formularios
    */
   formularios: (ownerId: string): string[] => [
@@ -116,7 +116,7 @@ export const firestoreRoutesCore = {
   ],
 
   /**
-   * ColecciÃ³n de sucursales del owner
+   * Colección de sucursales del owner
    * Path: apps/auditoria/owners/{ownerId}/sucursales
    */
   sucursales: (ownerId: string): string[] => [
@@ -128,7 +128,7 @@ export const firestoreRoutesCore = {
   ],
 
   /**
-   * Documento de sucursal especÃ­fica del owner
+   * Documento de sucursal específica del owner
    * Path: apps/auditoria/owners/{ownerId}/sucursales/{sucursalId}
    */
   sucursal: (ownerId: string, sucursalId: string): string[] => [
@@ -141,7 +141,7 @@ export const firestoreRoutesCore = {
   ],
 
   /**
-   * ColecciÃ³n de empleados del owner
+   * Colección de empleados del owner
    * Path: apps/auditoria/owners/{ownerId}/empleados
    */
   empleados: (ownerId: string): string[] => [
@@ -153,7 +153,7 @@ export const firestoreRoutesCore = {
   ],
 
   /**
-   * Documento de empleado especÃ­fico del owner
+   * Documento de empleado específico del owner
    * Path: apps/auditoria/owners/{ownerId}/empleados/{empleadoId}
    */
   empleado: (ownerId: string, empleadoId: string): string[] => [
@@ -166,7 +166,7 @@ export const firestoreRoutesCore = {
   ],
 
   /**
-   * ColecciÃ³n de accidentes del owner
+   * Colección de accidentes del owner
    * Path: apps/auditoria/owners/{ownerId}/accidentes
    */
   accidentes: (ownerId: string): string[] => [
@@ -178,7 +178,7 @@ export const firestoreRoutesCore = {
   ],
 
   /**
-   * Documento de accidente especÃ­fico del owner
+   * Documento de accidente específico del owner
    * Path: apps/auditoria/owners/{ownerId}/accidentes/{accidenteId}
    */
   accidente: (ownerId: string, accidenteId: string): string[] => [
@@ -191,7 +191,7 @@ export const firestoreRoutesCore = {
   ],
 
   /**
-   * ColecciÃ³n de logs del owner
+   * Colección de logs del owner
    * Path: apps/auditoria/owners/{ownerId}/logs
    */
   logs: (ownerId: string): string[] => [
@@ -203,7 +203,7 @@ export const firestoreRoutesCore = {
   ],
 
   /**
-   * ColecciÃ³n de capacitaciones del owner
+   * Colección de capacitaciones del owner
    * Path: apps/auditoria/owners/{ownerId}/capacitaciones
    */
   capacitaciones: (ownerId: string): string[] => [
@@ -215,7 +215,7 @@ export const firestoreRoutesCore = {
   ],
 
   /**
-   * Documento de capacitaciÃ³n especÃ­fica del owner
+   * Documento de capacitación específica del owner
    * Path: apps/auditoria/owners/{ownerId}/capacitaciones/{capacitacionId}
    */
   capacitacion: (ownerId: string, capacitacionId: string): string[] => [
@@ -228,7 +228,7 @@ export const firestoreRoutesCore = {
   ],
 
   /**
-   * ColecciÃ³n de registros de asistencia del owner
+   * Colección de registros de asistencia del owner
    * Path: apps/auditoria/owners/{ownerId}/registrosAsistencia
    */
   registrosAsistencia: (ownerId: string): string[] => [
@@ -240,7 +240,7 @@ export const firestoreRoutesCore = {
   ],
 
   /**
-   * Documento de registro de asistencia especÃ­fico del owner
+   * Documento de registro de asistencia específico del owner
    * Path: apps/auditoria/owners/{ownerId}/registrosAsistencia/{registroId}
    */
   registroAsistencia: (ownerId: string, registroId: string): string[] => [
@@ -253,7 +253,7 @@ export const firestoreRoutesCore = {
   ],
 
   /**
-   * ColecciÃ³n de ausencias del owner
+   * Colección de ausencias del owner
    * Path: apps/auditoria/owners/{ownerId}/ausencias
    */
   ausencias: (ownerId: string): string[] => [
@@ -263,9 +263,17 @@ export const firestoreRoutesCore = {
     ownerId,
     'ausencias'
   ],
+  ausencia: (ownerId: string, ausenciaId: string): string[] => [
+    'apps',
+    'auditoria',
+    'owners',
+    ownerId,
+    'ausencias',
+    ausenciaId
+  ],
 
   /**
-   * ColecciÃ³n de planes anuales de capacitaciones del owner
+   * Colección de planes anuales de capacitaciones del owner
    * Path: apps/auditoria/owners/{ownerId}/planes_capacitaciones_anuales
    */
   planesCapacitacionesAnuales: (ownerId: string): string[] => [
@@ -277,7 +285,7 @@ export const firestoreRoutesCore = {
   ],
 
   /**
-   * Documento de plan anual especÃ­fico del owner
+   * Documento de plan anual específico del owner
    * Path: apps/auditoria/owners/{ownerId}/planes_capacitaciones_anuales/{planId}
    */
   planCapacitacionesAnual: (ownerId: string, planId: string): string[] => [
@@ -290,7 +298,7 @@ export const firestoreRoutesCore = {
   ],
 
   /**
-   * ColecciÃ³n de autosaves del owner
+   * Colección de autosaves del owner
    * Path: apps/auditoria/owners/{ownerId}/autosaves
    */
   /**
@@ -556,7 +564,7 @@ export const firestoreRoutesCore = {
   ],
 
   /**
-   * Documento de autosave especÃ­fico del owner
+   * Documento de autosave específico del owner
    * Path: apps/auditoria/owners/{ownerId}/autosaves/{sessionId}
    */
   autosave: (ownerId: string, sessionId: string): string[] => [
@@ -569,7 +577,7 @@ export const firestoreRoutesCore = {
   ],
 
   /**
-   * ColecciÃ³n de auditorÃ­as manuales del owner
+   * Colección de auditorías manuales del owner
    * Path: apps/auditoria/owners/{ownerId}/auditoriasManuales
    */
   auditoriasManuales: (ownerId: string): string[] => [
@@ -581,7 +589,7 @@ export const firestoreRoutesCore = {
   ],
 
   /**
-   * Documento de auditorÃ­a manual especÃ­fica del owner
+   * Documento de auditoría manual específica del owner
    * Path: apps/auditoria/owners/{ownerId}/auditoriasManuales/{auditoriaId}
    */
   auditoriaManual: (ownerId: string, auditoriaId: string): string[] => [
@@ -594,7 +602,7 @@ export const firestoreRoutesCore = {
   ],
 
   /**
-   * ColecciÃ³n de evidencias de una auditorÃ­a manual
+   * Colección de evidencias de una auditoría manual
    * Path: apps/auditoria/owners/{ownerId}/auditoriasManuales/{auditoriaId}/evidencias
    */
   evidenciasAuditoriaManual: (ownerId: string, auditoriaId: string): string[] => [
@@ -608,7 +616,7 @@ export const firestoreRoutesCore = {
   ],
 
   /**
-   * Documento de evidencia especÃ­fica
+   * Documento de evidencia específica
    * Path: apps/auditoria/owners/{ownerId}/auditoriasManuales/{auditoriaId}/evidencias/{evidenciaId}
    */
   evidenciaAuditoriaManual: (ownerId: string, auditoriaId: string, evidenciaId: string): string[] => [
@@ -622,3 +630,4 @@ export const firestoreRoutesCore = {
     evidenciaId
   ]
 };
+

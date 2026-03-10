@@ -48,7 +48,7 @@ export const CONTEXT_CONFIG: Record<ContextType, ContextConfig> = {
     requiresCompanyId: true,
     requiresSucursalId: false,
     requiresTipoArchivo: true,
-    validTiposArchivo: ['evidencia', 'consentimiento', 'historia_clinica'] as const,
+    validTiposArchivo: ['evidencia', 'consentimiento', 'historia_clinica', 'certificado', 'foto', 'pdf', 'documento'] as const,
   },
   auditoria: {
     requiresCompanyId: true,
@@ -90,3 +90,4 @@ export function getContextConfig(contextType: ContextType): ContextConfig {
   }
   return config;
 }
+

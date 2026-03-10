@@ -20,8 +20,9 @@ import {
   Typography
 } from "@mui/material";
 import DoneIcon from "@mui/icons-material/Done";
-import HistoryIcon from "@mui/icons-material/History";
-import CloseIcon from "@mui/icons-material/Close";
+import VisibilityIcon from "@mui/icons-material/Visibility";
+import RestartAltIcon from "@mui/icons-material/RestartAlt";
+import EditIcon from "@mui/icons-material/Edit";
 import { cerrarAusencia, updateAusencia } from "../../../../services/ausenciasService";
 import { useAuth } from '@/components/context/AuthContext';
 
@@ -57,11 +58,15 @@ const tipoColor = (tipo) => {
   return "default";
 };
 
-export default function AusenciasTable({ ausencias, onRecargar }) {
+export default function AusenciasTable({
+  ausencias,
+  onRecargar,
+  onOpenDetail,
+  onEditAusencia
+}) {
   const { userProfile } = useAuth();
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
-  const [selectedAusencia, setSelectedAusencia] = useState(null);
   const [ausenciaPorCerrar, setAusenciaPorCerrar] = useState(null);
   const [cerrando, setCerrando] = useState(false);
 
@@ -116,6 +121,7 @@ export default function AusenciasTable({ ausencias, onRecargar }) {
               <TableCell>Estado</TableCell>
               <TableCell>Fecha Inicio</TableCell>
               <TableCell>Fecha Fin</TableCell>
+              <TableCell>Archivos</TableCell>
               <TableCell>Observaciones</TableCell>
               <TableCell align="right">Acciones</TableCell>
             </TableRow>
@@ -123,7 +129,7 @@ export default function AusenciasTable({ ausencias, onRecargar }) {
           <TableBody>
             {paginated.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7}>
+                <TableCell colSpan={8}>
                   <Typography variant="body2" sx={{ py: 2, textAlign: "center" }}>
                     No hay ausencias registradas con los filtros seleccionados.
                   </Typography>
@@ -137,6 +143,7 @@ export default function AusenciasTable({ ausencias, onRecargar }) {
                   ausencia.categoria ||
                   ausencia.clasificacion ||
                   "Enfermedad";
+                const filesCount = typeof ausencia.filesCount === 'number' ? Math.max(0, ausencia.filesCount) : 0;
                 return (
                   <TableRow key={ausencia.id} hover>
                     <TableCell>
@@ -180,10 +187,18 @@ export default function AusenciasTable({ ausencias, onRecargar }) {
                     <TableCell>{formatDate(ausencia.fechaInicio)}</TableCell>
                     <TableCell>{formatDate(ausencia.fechaFin)}</TableCell>
                     <TableCell>
+                      <Chip
+                        size="small"
+                        label={filesCount}
+                        variant={filesCount > 0 ? 'filled' : 'outlined'}
+                        color={filesCount > 0 ? 'primary' : 'default'}
+                      />
+                    </TableCell>
+                    <TableCell>
                       <Typography
                         variant="body2"
                         sx={{
-                          maxWidth: 240,
+                          maxWidth: 200,
                           whiteSpace: "nowrap",
                           overflow: "hidden",
                           textOverflow: "ellipsis"
@@ -197,9 +212,17 @@ export default function AusenciasTable({ ausencias, onRecargar }) {
                         <Tooltip title="Ver detalle">
                           <IconButton
                             size="small"
-                            onClick={() => setSelectedAusencia(ausencia)}
+                            onClick={() => onOpenDetail?.(ausencia)}
                           >
-                            <HistoryIcon fontSize="small" />
+                            <VisibilityIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Editar">
+                          <IconButton
+                            size="small"
+                            onClick={() => onEditAusencia?.(ausencia)}
+                          >
+                            <EditIcon fontSize="small" />
                           </IconButton>
                         </Tooltip>
                         {estado.includes("cerr") ? (
@@ -208,15 +231,15 @@ export default function AusenciasTable({ ausencias, onRecargar }) {
                               size="small"
                               onClick={() => handleReabrirAusencia(ausencia)}
                             >
-                              <HistoryIcon fontSize="small" />
+                              <RestartAltIcon fontSize="small" />
                             </IconButton>
                           </Tooltip>
                         ) : (
                           <Tooltip title="Cerrar caso">
                             <IconButton
                               size="small"
-                          color="success"
-                          onClick={() => setAusenciaPorCerrar(ausencia)}
+                              color="success"
+                              onClick={() => setAusenciaPorCerrar(ausencia)}
                             >
                               <DoneIcon fontSize="small" />
                             </IconButton>
@@ -238,68 +261,10 @@ export default function AusenciasTable({ ausencias, onRecargar }) {
           rowsPerPage={rowsPerPage}
           onRowsPerPageChange={handleChangeRowsPerPage}
           rowsPerPageOptions={[5, 10, 25, 50]}
-          labelRowsPerPage="Filas por página"
+          labelRowsPerPage="Filas por pagina"
         />
       </TableContainer>
 
-      <Dialog
-        open={Boolean(selectedAusencia)}
-        onClose={() => setSelectedAusencia(null)}
-        fullWidth
-        maxWidth="sm"
-      >
-        <DialogTitle sx={{ fontWeight: 700 }}>
-          Detalle de ausencia
-        </DialogTitle>
-        <DialogContent dividers>
-          <Stack spacing={1.5}>
-            <Typography variant="subtitle2" sx={{ color: "#6b7280" }}>
-              Empleado
-            </Typography>
-            <Typography variant="body1" sx={{ fontWeight: 600 }}>
-              {selectedAusencia?.empleadoNombre || "Empleado no asignado"}
-            </Typography>
-
-            <Typography variant="subtitle2" sx={{ color: "#6b7280" }}>
-              Tipo
-            </Typography>
-            <Typography variant="body1">
-              {selectedAusencia?.tipo || "Sin especificar"}
-            </Typography>
-
-            <Typography variant="subtitle2" sx={{ color: "#6b7280" }}>
-              Estado
-            </Typography>
-            <Typography variant="body1">
-              {selectedAusencia?.estado || "Abierto"}
-            </Typography>
-
-            <Typography variant="subtitle2" sx={{ color: "#6b7280" }}>
-              Período
-            </Typography>
-            <Typography variant="body1">
-              {formatDate(selectedAusencia?.fechaInicio)} -{" "}
-              {formatDate(selectedAusencia?.fechaFin)}
-            </Typography>
-
-            <Typography variant="subtitle2" sx={{ color: "#6b7280" }}>
-              Observaciones
-            </Typography>
-            <Typography variant="body2">
-              {selectedAusencia?.observaciones || "Sin observaciones registradas"}
-            </Typography>
-          </Stack>
-        </DialogContent>
-        <DialogActions>
-          <Button
-            startIcon={<CloseIcon />}
-            onClick={() => setSelectedAusencia(null)}
-            sx={{ textTransform: "none" }}
-          >
-            Cerrar
-          </Button>
-        </DialogActions>
-      </Dialog>
       <Dialog
         open={Boolean(ausenciaPorCerrar)}
         onClose={() => (cerrando ? null : setAusenciaPorCerrar(null))}
@@ -307,7 +272,7 @@ export default function AusenciasTable({ ausencias, onRecargar }) {
         <DialogTitle sx={{ fontWeight: 700 }}>Confirmar cierre</DialogTitle>
         <DialogContent dividers>
           <Typography variant="body2">
-            ¿Querés cerrar el caso de ausencia para{" "}
+            �Quieres cerrar el caso de ausencia para{' '}
             <strong>{ausenciaPorCerrar?.empleadoNombre || "este empleado"}</strong>?
           </Typography>
         </DialogContent>

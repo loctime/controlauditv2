@@ -51,6 +51,7 @@ const resolveCertificate = (ausencia) => {
   const hasCertificate =
     Boolean(directUrl) ||
     Boolean(directFileId) ||
+    (typeof ausencia?.filesCount === 'number' && ausencia.filesCount > 0) ||
     ausencia?.certificado === true ||
     ausencia?.certificadoMedico === true;
 
@@ -226,4 +227,5 @@ export const getAbsenteeismKpis = (ausencias = [], now = new Date()) => {
     totalAusenciasMes
   };
 };
+
 

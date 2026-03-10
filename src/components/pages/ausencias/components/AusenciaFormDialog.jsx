@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Dialog,
   DialogTitle,
@@ -16,12 +16,18 @@ import {
   Checkbox,
   FormControlLabel,
   IconButton,
-  Tooltip
+  Tooltip,
+  Typography,
+  Chip,
+  Box
 } from "@mui/material";
 import Autocomplete from "@mui/material/Autocomplete";
 import CloseIcon from "@mui/icons-material/Close";
+import UploadFileIcon from "@mui/icons-material/UploadFile";
+import DeleteIcon from "@mui/icons-material/Delete";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
-import { createAusencia } from "../../../../services/ausenciasService";
+import { createAusencia, updateAusencia } from "../../../../services/ausenciasService";
+import { uploadAndAttachFiles } from "../../../../services/ausenciasFilesService";
 import {
   collection,
   getDocs,
@@ -33,6 +39,11 @@ import { dbAudit } from "../../../../firebaseControlFile";
 import { firestoreRoutesCore } from "../../../../core/firestore/firestoreRoutes.core";
 import { useAuth } from '@/components/context/AuthContext';
 import dayjs from "dayjs";
+
+const ACCEPTED_EXTENSIONS = [
+  '.pdf', '.jpg', '.jpeg', '.png', '.webp', '.doc', '.docx', '.txt'
+];
+const MAX_FILE_SIZE = 10 * 1024 * 1024;
 
 const getInitialState = () => ({
   empleadoId: "",
@@ -52,6 +63,19 @@ const normalizeEmployees = (snapshot) =>
     ...docSnapshot.data()
   }));
 
+const dateToDayjs = (value) => {
+  if (!value) return null;
+  if (dayjs.isDayjs(value)) return value;
+  if (value?.toDate) return dayjs(value.toDate());
+  const parsed = dayjs(value);
+  return parsed.isValid() ? parsed : null;
+};
+
+const normalizeFileError = (file, reason) => ({
+  fileName: file?.name || 'archivo',
+  message: reason
+});
+
 export default function AusenciaFormDialog({
   open,
   onClose,
@@ -62,7 +86,9 @@ export default function AusenciaFormDialog({
   tipoOptions = [],
   onAddTipo,
   onRemoveTipo,
-  onSaved
+  onSaved,
+  mode = 'create',
+  initialData = null
 }) {
   const { userProfile } = useAuth();
   const [form, setForm] = useState(getInitialState);
@@ -70,9 +96,21 @@ export default function AusenciaFormDialog({
   const [loadingEmployees, setLoadingEmployees] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [selectedFiles, setSelectedFiles] = useState([]);
+  const [fileErrors, setFileErrors] = useState([]);
 
-  const sucursalNombre = sucursal?.nombre || sucursal?.alias || "";
-  const empresaNombre = empresa?.nombre || empresa?.razonSocial || "";
+  const isEditMode = mode === 'edit' && Boolean(initialData?.id);
+
+  const sucursalNombre =
+    sucursal?.nombre ||
+    sucursal?.alias ||
+    initialData?.sucursalNombre ||
+    "";
+  const empresaNombre =
+    empresa?.nombre ||
+    empresa?.razonSocial ||
+    initialData?.empresaNombre ||
+    "";
 
   const canSubmit = useMemo(() => {
     const fechaInicioValida =
@@ -80,14 +118,19 @@ export default function AusenciaFormDialog({
       (typeof form.fechaInicio?.isValid === "function"
         ? form.fechaInicio.isValid()
         : true);
+
+    const companyOk = selectedEmpresa || initialData?.empresaId || initialData?.empresaNombre;
+    const branchOk =
+      (selectedSucursal && selectedSucursal !== 'todas') ||
+      (initialData?.sucursalId && initialData?.sucursalId !== 'todas');
+
     return (
-      selectedEmpresa &&
-      selectedSucursal &&
-      selectedSucursal !== "todas" &&
+      companyOk &&
+      branchOk &&
       form.empleadoId &&
       fechaInicioValida
     );
-  }, [selectedEmpresa, selectedSucursal, form.empleadoId, form.fechaInicio]);
+  }, [selectedEmpresa, selectedSucursal, form.empleadoId, form.fechaInicio, initialData]);
 
   const tipoSuggestions = useMemo(() => {
     const base = Array.isArray(tipoOptions) ? tipoOptions : [];
@@ -106,17 +149,40 @@ export default function AusenciaFormDialog({
 
   useEffect(() => {
     if (!open) return;
-    setForm((prev) => ({
-      ...getInitialState(),
-      fechaInicio: dayjs(),
-      estado: "abierta"
-    }));
+
+    if (isEditMode && initialData) {
+      setForm({
+        empleadoId: initialData.empleadoId || '',
+        tipo: initialData.tipo || '',
+        estado: initialData.estado || 'abierta',
+        fechaInicio: dateToDayjs(initialData.fechaInicio) || dayjs(),
+        fechaFin: dateToDayjs(initialData.fechaFin),
+        observaciones: initialData.observaciones || '',
+        horasPorDia: initialData.horasPorDia ?? '',
+        relacionAccidente: Boolean(initialData.relacionAccidente),
+        accidenteId: typeof initialData.relacionAccidente === 'string' ? initialData.relacionAccidente : ''
+      });
+    } else {
+      setForm({
+        ...getInitialState(),
+        fechaInicio: dayjs(),
+        estado: "abierta"
+      });
+    }
+
     setError("");
-  }, [open]);
+    setSelectedFiles([]);
+    setFileErrors([]);
+  }, [open, isEditMode, initialData]);
 
   useEffect(() => {
     const fetchEmployees = async () => {
-      if (!open || !selectedSucursal || selectedSucursal === "todas") {
+      const sucursalToUse =
+        selectedSucursal && selectedSucursal !== 'todas'
+          ? selectedSucursal
+          : initialData?.sucursalId;
+
+      if (!open || !sucursalToUse || sucursalToUse === 'todas') {
         setEmpleados([]);
         return;
       }
@@ -124,18 +190,19 @@ export default function AusenciaFormDialog({
         setEmpleados([]);
         return;
       }
+
       setLoadingEmployees(true);
       try {
         if (!userProfile?.ownerId) {
-          console.error("Error: ownerId no disponible");
           setEmpleados([]);
           return;
         }
+
         const ownerId = userProfile.ownerId;
         const empleadosRef = collection(dbAudit, ...firestoreRoutesCore.empleados(ownerId));
         const q = query(
           empleadosRef,
-          where("sucursalId", "==", selectedSucursal),
+          where("sucursalId", "==", sucursalToUse),
           orderBy("nombre", "asc")
         );
         const snapshot = await getDocs(q);
@@ -148,7 +215,7 @@ export default function AusenciaFormDialog({
       }
     };
     fetchEmployees();
-  }, [open, selectedSucursal, userProfile]);
+  }, [open, selectedSucursal, userProfile, initialData]);
 
   const handleChange = (field) => (event) => {
     const value =
@@ -159,13 +226,58 @@ export default function AusenciaFormDialog({
     }));
   };
 
+  const handleAddFiles = (event) => {
+    const files = Array.from(event.target.files || []);
+    if (!files.length) return;
+
+    const nextFiles = [];
+    const nextErrors = [];
+
+    files.forEach((file) => {
+      const lower = file.name.toLowerCase();
+      const extensionAllowed = ACCEPTED_EXTENSIONS.some((ext) => lower.endsWith(ext));
+
+      if (!extensionAllowed) {
+        nextErrors.push(normalizeFileError(file, 'Tipo de archivo no permitido'));
+        return;
+      }
+
+      if (file.size > MAX_FILE_SIZE) {
+        nextErrors.push(normalizeFileError(file, 'Archivo supera 10MB'));
+        return;
+      }
+
+      nextFiles.push({
+        id: `${file.name}-${file.size}-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+        file,
+        name: file.name,
+        size: file.size,
+        type: file.type || 'application/octet-stream'
+      });
+    });
+
+    setSelectedFiles((prev) => [...prev, ...nextFiles]);
+    if (nextErrors.length > 0) {
+      setFileErrors((prev) => [...prev, ...nextErrors]);
+    }
+
+    event.target.value = '';
+  };
+
+  const handleRemoveFile = (id) => {
+    setSelectedFiles((prev) => prev.filter((item) => item.id !== id));
+  };
+
   const handleSubmit = async () => {
     if (!canSubmit) {
       setError("Completa los campos obligatorios.");
       return;
     }
+
     setSubmitting(true);
     setError("");
+    setFileErrors([]);
+
     try {
       const empleadoSeleccionado = empleados.find(
         (emp) => emp.id === form.empleadoId
@@ -178,15 +290,16 @@ export default function AusenciaFormDialog({
         ? form.fechaFin.toDate()
         : form.fechaFin || null;
 
-      await createAusencia({
-        empresaId: selectedEmpresa === "todas" ? null : selectedEmpresa,
-        sucursalId: selectedSucursal,
+      const payload = {
+        empresaId: selectedEmpresa === "todas" ? null : (selectedEmpresa || initialData?.empresaId || null),
+        sucursalId: selectedSucursal && selectedSucursal !== 'todas' ? selectedSucursal : (initialData?.sucursalId || null),
         empresaNombre,
         sucursalNombre,
         empleadoId: form.empleadoId,
         empleadoNombre:
           empleadoSeleccionado?.nombre ||
           empleadoSeleccionado?.displayName ||
+          initialData?.empleadoNombre ||
           "Empleado sin nombre",
         tipo: form.tipo,
         estado: form.estado,
@@ -201,7 +314,35 @@ export default function AusenciaFormDialog({
           ? form.accidenteId || true
           : null,
         userProfile
-      });
+      };
+
+      let ausenciaGuardada = null;
+
+      if (isEditMode && initialData?.id) {
+        await updateAusencia(initialData.id, payload, userProfile);
+        ausenciaGuardada = { id: initialData.id, ...initialData, ...payload };
+      } else {
+        ausenciaGuardada = await createAusencia(payload);
+      }
+
+      const filesToUpload = selectedFiles.map((item) => item.file);
+      let uploadResult = { uploaded: [], errors: [] };
+
+      if (filesToUpload.length > 0 && ausenciaGuardada?.id) {
+        uploadResult = await uploadAndAttachFiles(
+          ausenciaGuardada.id,
+          filesToUpload,
+          {
+            companyId: payload.empresaId || 'system',
+            sucursalId: payload.sucursalId || null
+          },
+          userProfile
+        );
+      }
+
+      if (uploadResult.errors.length > 0) {
+        setFileErrors(uploadResult.errors);
+      }
 
       const tipoNormalizado = (form.tipo || "").trim();
       if (tipoNormalizado && typeof onAddTipo === "function") {
@@ -209,13 +350,25 @@ export default function AusenciaFormDialog({
       }
 
       if (onSaved) {
-        await onSaved();
+        await onSaved({
+          ausencia: ausenciaGuardada,
+          uploadErrors: uploadResult.errors,
+          mode: isEditMode ? 'edit' : 'create'
+        });
       }
-      setForm(getInitialState());
+
+      if (!isEditMode) {
+        setForm(getInitialState());
+      }
+
+      if (uploadResult.errors.length === 0) {
+        setSelectedFiles([]);
+        onClose?.();
+      }
     } catch (submitError) {
-      console.error("Error creando ausencia:", submitError);
+      console.error("Error guardando ausencia:", submitError);
       setError(
-        "No se pudo crear la ausencia. Verifica los datos e intenta nuevamente."
+        "No se pudo guardar la ausencia. Verifica los datos e intenta nuevamente."
       );
     } finally {
       setSubmitting(false);
@@ -225,7 +378,7 @@ export default function AusenciaFormDialog({
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
       <DialogTitle sx={{ fontWeight: 700 }}>
-        Registrar ausencia por salud
+        {isEditMode ? 'Editar ausencia' : 'Registrar ausencia por salud'}
       </DialogTitle>
       <DialogContent dividers>
         <Stack spacing={2}>
@@ -266,7 +419,7 @@ export default function AusenciaFormDialog({
               onChange={handleChange("empleadoId")}
               disabled={
                 loadingEmployees ||
-                !selectedSucursal ||
+                (!selectedSucursal && !initialData?.sucursalId) ||
                 selectedSucursal === "todas"
               }
             >
@@ -275,7 +428,7 @@ export default function AusenciaFormDialog({
                 <MenuItem key={empleado.id} value={empleado.id}>
                   {empleado.nombre ||
                     empleado.displayName ||
-                    `${empleado.apellido || ""} ${empleado.nombre || ""}` ||
+                    `${empleado.apellido || ""} ${empleado.nombre || ""}`.trim() ||
                     empleado.id}
                 </MenuItem>
               ))}
@@ -284,76 +437,76 @@ export default function AusenciaFormDialog({
 
           {loadingEmployees && (
             <Stack direction="row" spacing={1} alignItems="center">
-          <CircularProgress size={18} />
+              <CircularProgress size={18} />
               <span>Cargando empleados...</span>
             </Stack>
           )}
 
-      <Stack direction="row" spacing={1} alignItems="center">
-        <Autocomplete
-          freeSolo
-          clearOnBlur
-          handleHomeEndKeys
-          options={tipoSuggestions}
-          value={form.tipo || ""}
-          onChange={(_, newValue) => {
-            const nextValue = (newValue || "").trim();
-            setForm((prev) => ({
-              ...prev,
-              tipo: nextValue
-            }));
-          }}
-          onInputChange={(_, newInputValue) => {
-            setForm((prev) => ({
-              ...prev,
-              tipo: newInputValue
-            }));
-          }}
-          renderInput={(params) => (
-            <TextField {...params} label="Tipo" size="small" fullWidth />
-          )}
-          fullWidth
-        />
-        <Tooltip title="Eliminar tipo">
-          <span>
-            <IconButton
-              size="small"
-              color="error"
-              disabled={
-                !form.tipo ||
-                !tipoSuggestions.some(
-                  (tipo) =>
-                    tipo.toLowerCase() === form.tipo.trim().toLowerCase()
-                )
-              }
-              onClick={() => {
-                const actual = (form.tipo || "").trim();
-                if (
-                  !actual ||
-                  !tipoSuggestions.some(
-                    (tipo) => tipo.toLowerCase() === actual.toLowerCase()
-                  )
-                ) {
-                  return;
-                }
-                const confirmacion = window.confirm(
-                  `¿Eliminar el tipo "${actual}" de las sugerencias?`
-                );
-                if (!confirmacion) return;
-                if (typeof onRemoveTipo === "function") {
-                  onRemoveTipo(actual);
-                }
+          <Stack direction="row" spacing={1} alignItems="center">
+            <Autocomplete
+              freeSolo
+              clearOnBlur
+              handleHomeEndKeys
+              options={tipoSuggestions}
+              value={form.tipo || ""}
+              onChange={(_, newValue) => {
+                const nextValue = (newValue || "").trim();
                 setForm((prev) => ({
                   ...prev,
-                  tipo: ""
+                  tipo: nextValue
                 }));
               }}
-            >
-              <CloseIcon fontSize="small" />
-            </IconButton>
-          </span>
-        </Tooltip>
-      </Stack>
+              onInputChange={(_, newInputValue) => {
+                setForm((prev) => ({
+                  ...prev,
+                  tipo: newInputValue
+                }));
+              }}
+              renderInput={(params) => (
+                <TextField {...params} label="Tipo" size="small" fullWidth />
+              )}
+              fullWidth
+            />
+            <Tooltip title="Eliminar tipo">
+              <span>
+                <IconButton
+                  size="small"
+                  color="error"
+                  disabled={
+                    !form.tipo ||
+                    !tipoSuggestions.some(
+                      (tipo) =>
+                        tipo.toLowerCase() === form.tipo.trim().toLowerCase()
+                    )
+                  }
+                  onClick={() => {
+                    const actual = (form.tipo || "").trim();
+                    if (
+                      !actual ||
+                      !tipoSuggestions.some(
+                        (tipo) => tipo.toLowerCase() === actual.toLowerCase()
+                      )
+                    ) {
+                      return;
+                    }
+                    const confirmacion = window.confirm(
+                      `�Eliminar el tipo "${actual}" de las sugerencias?`
+                    );
+                    if (!confirmacion) return;
+                    if (typeof onRemoveTipo === "function") {
+                      onRemoveTipo(actual);
+                    }
+                    setForm((prev) => ({
+                      ...prev,
+                      tipo: ""
+                    }));
+                  }}
+                >
+                  <CloseIcon fontSize="small" />
+                </IconButton>
+              </span>
+            </Tooltip>
+          </Stack>
 
           <DatePicker
             label="Fecha inicio"
@@ -380,7 +533,7 @@ export default function AusenciaFormDialog({
           />
 
           <TextField
-            label="Horas por día (opcional)"
+            label="Horas por dia (opcional)"
             type="number"
             size="small"
             value={form.horasPorDia}
@@ -423,6 +576,80 @@ export default function AusenciaFormDialog({
             minRows={3}
           />
 
+          <Stack spacing={1}>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <Typography variant="subtitle2" sx={{ color: '#374151' }}>
+                Archivos adjuntos (opcional)
+              </Typography>
+              <Button
+                component="label"
+                size="small"
+                startIcon={<UploadFileIcon />}
+                variant="outlined"
+                disabled={submitting}
+              >
+                Agregar archivos
+                <input
+                  type="file"
+                  hidden
+                  multiple
+                  accept={ACCEPTED_EXTENSIONS.join(',')}
+                  onChange={handleAddFiles}
+                />
+              </Button>
+            </Box>
+
+            {selectedFiles.length > 0 && (
+              <Stack spacing={1}>
+                {selectedFiles.map((item) => (
+                  <Box
+                    key={item.id}
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      border: '1px solid #e5e7eb',
+                      borderRadius: '10px',
+                      px: 1.25,
+                      py: 0.75
+                    }}
+                  >
+                    <Stack>
+                      <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                        {item.name}
+                      </Typography>
+                      <Typography variant="caption" sx={{ color: '#6b7280' }}>
+                        {Math.round(item.size / 1024)} KB
+                      </Typography>
+                    </Stack>
+                    <IconButton
+                      size="small"
+                      color="error"
+                      onClick={() => handleRemoveFile(item.id)}
+                      disabled={submitting}
+                    >
+                      <DeleteIcon fontSize="small" />
+                    </IconButton>
+                  </Box>
+                ))}
+              </Stack>
+            )}
+
+            {selectedFiles.length === 0 && (
+              <Chip label="Sin archivos seleccionados" variant="outlined" size="small" />
+            )}
+          </Stack>
+
+          {fileErrors.length > 0 && (
+            <Alert severity="warning" onClose={() => setFileErrors([])}>
+              {fileErrors.map((item, idx) => (
+                <Typography key={`${item.fileName}-${idx}`} variant="body2">
+                  {item.fileName}: {item.message}
+                </Typography>
+              ))}
+            </Alert>
+          )}
+
           {error && (
             <Alert severity="error" onClose={() => setError("")}>
               {error}
@@ -444,11 +671,12 @@ export default function AusenciaFormDialog({
           onClick={handleSubmit}
           disabled={!canSubmit || submitting}
         >
-          {submitting ? "Guardando..." : "Guardar ausencia"}
+          {submitting ? "Guardando..." : isEditMode ? 'Guardar cambios' : "Guardar ausencia"}
         </Button>
       </DialogActions>
     </Dialog>
   );
 }
+
 
 

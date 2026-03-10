@@ -20,6 +20,7 @@ import { useAusentismoMetrics } from "../../../hooks/useAusentismoMetrics";
 import AusenciasFilters from "./components/AusenciasFilters";
 import AusenciasTable from "./components/AusenciasTable";
 import AusenciaFormDialog from "./components/AusenciaFormDialog";
+import AusenciaDetailPanel from "./components/AusenciaDetailPanel";
 import AbsenteeismDashboard from "../../AbsenteeismDashboard";
 import EmployeeAbsenceHistory from "../../EmployeeAbsenceHistory";
 import { getAusenciaTipos } from "../../../services/ausenciasService";
@@ -48,6 +49,8 @@ export default function Ausencias() {
   const [filters, setFilters] = useState(defaultFilters);
   const [openDialog, setOpenDialog] = useState(false);
   const [tipoOptions, setTipoOptions] = useState([]);
+  const [selectedAusenciaId, setSelectedAusenciaId] = useState(null);
+  const [editingAusencia, setEditingAusencia] = useState(null);
 
   const empresaSeleccionada = useMemo(
     () => userEmpresas?.find((empresa) => empresa.id === selectedEmpresa),
@@ -181,6 +184,22 @@ export default function Ausencias() {
     selectedSucursal !== "todas" &&
     userEmpresas?.length > 0;
 
+  const handleCreate = () => {
+    setEditingAusencia(null);
+    setOpenDialog(true);
+  };
+
+  const handleEditAusencia = (ausencia) => {
+    setEditingAusencia(ausencia || null);
+    setOpenDialog(true);
+  };
+
+  const handleRefreshAll = async () => {
+    await Promise.all([recargar(), recargarMetrics()]);
+    const tiposActualizados = await getAusenciaTipos({}, userProfile);
+    setTipoOptions(tiposActualizados);
+  };
+
   return (
     <Container maxWidth="xl" sx={{ py: 4 }}>
       <Paper
@@ -211,7 +230,7 @@ export default function Ausencias() {
                 Salud Ocupacional
               </Typography>
               <Typography variant="body2" sx={{ color: "#6b7280" }}>
-                Gestiona ausencias, enfermedades y licencias médicas del
+                Gestiona ausencias, enfermedades y licencias medicas del
                 personal.
               </Typography>
             </Box>
@@ -220,7 +239,7 @@ export default function Ausencias() {
           <Button
             variant="contained"
             startIcon={<AddCircleIcon />}
-            onClick={() => setOpenDialog(true)}
+            onClick={handleCreate}
             disabled={!canCreate}
             sx={{
               textTransform: "none",
@@ -242,7 +261,7 @@ export default function Ausencias() {
             severity="info"
             sx={{ mb: 3 }}
           >
-            Selecciona una empresa y sucursal específica para habilitar el
+            Selecciona una empresa y sucursal especifica para habilitar el
             registro de ausencias.
           </Alert>
         )}
@@ -278,7 +297,7 @@ export default function Ausencias() {
             <TextField
               fullWidth
               size="small"
-              placeholder="Buscar por persona o descripción..."
+              placeholder="Buscar por persona o descripcion..."
               value={filters.search}
               onChange={(event) =>
                 handleChangeFilters({ search: event.target.value })
@@ -322,7 +341,9 @@ export default function Ausencias() {
         ) : (
           <AusenciasTable
             ausencias={ausencias}
-            onRecargar={recargar}
+            onRecargar={handleRefreshAll}
+            onOpenDetail={(ausencia) => setSelectedAusenciaId(ausencia?.id || null)}
+            onEditAusencia={handleEditAusencia}
           />
         )}
 
@@ -343,7 +364,10 @@ export default function Ausencias() {
 
       <AusenciaFormDialog
         open={openDialog}
-        onClose={() => setOpenDialog(false)}
+        onClose={() => {
+          setOpenDialog(false);
+          setEditingAusencia(null);
+        }}
         empresa={empresaSeleccionada}
         sucursal={sucursalSeleccionada}
         selectedEmpresa={selectedEmpresa}
@@ -351,15 +375,25 @@ export default function Ausencias() {
         tipoOptions={tipoOptions}
         onAddTipo={handleTipoAdded}
         onRemoveTipo={handleTipoRemoved}
+        mode={editingAusencia ? 'edit' : 'create'}
+        initialData={editingAusencia}
         onSaved={async () => {
-          await Promise.all([recargar(), recargarMetrics()]);
-          const tiposActualizados = await getAusenciaTipos({}, userProfile);
-          setTipoOptions(tiposActualizados);
+          await handleRefreshAll();
           setOpenDialog(false);
+          setEditingAusencia(null);
+        }}
+      />
+
+      <AusenciaDetailPanel
+        open={Boolean(selectedAusenciaId)}
+        ausenciaId={selectedAusenciaId}
+        onClose={() => setSelectedAusenciaId(null)}
+        onUpdated={handleRefreshAll}
+        onEdit={(ausencia) => {
+          setEditingAusencia(ausencia);
+          setOpenDialog(true);
         }}
       />
     </Container>
   );
 }
-
-

@@ -8,7 +8,8 @@ import {
   getDoc,
   serverTimestamp,
   Timestamp,
-  doc
+  doc,
+  arrayUnion
 } from "firebase/firestore";
 import { db } from "../firebaseControlFile";
 import { firestoreRoutesCore } from '../core/firestore/firestoreRoutes.core';
@@ -35,7 +36,7 @@ const toTimestamp = (value) => {
       return Timestamp.fromDate(parsed);
     }
   }
-  if (value.toDate) {
+  if (value?.toDate) {
     return value;
   }
   return null;
@@ -51,7 +52,7 @@ const normalizeDate = (value) => {
   if (value?.toDate) {
     try {
       return value.toDate();
-    } catch (error) {
+    } catch (_error) {
       return null;
     }
   }
@@ -72,6 +73,14 @@ const isClosedStatus = (estado) => {
     status.includes("resuelt")
   );
 };
+
+const buildHistorialEvent = (evento = {}, userProfile) => ({
+  tipo: evento.tipo || 'actualizacion',
+  detalle: evento.detalle || '',
+  estado: evento.estado || null,
+  by: userProfile?.uid || null,
+  at: Timestamp.now()
+});
 
 export const computeDiasAusente = (fechaInicio, fechaFin = null, now = new Date()) => {
   const inicio = normalizeDateStart(fechaInicio);
@@ -232,6 +241,7 @@ export async function listAusencias({
 
       return {
         ...record,
+        filesCount: typeof record.filesCount === 'number' ? Math.max(0, record.filesCount) : 0,
         diasAusente
       };
     });
@@ -250,9 +260,35 @@ export async function listAusencias({
 
     return filtered;
   } catch (error) {
-    console.error("❌ [ausenciasService] Error listando ausencias:", error);
+    console.error("? [ausenciasService] Error listando ausencias:", error);
     return [];
   }
+}
+
+export async function getAusenciaById(ausenciaId, userProfile) {
+  if (!ausenciaId) throw new Error('ausenciaId es requerido');
+  if (!userProfile?.ownerId) throw new Error('userProfile.ownerId es requerido');
+
+  const ownerId = userProfile.ownerId;
+  const docRef = doc(db, ...firestoreRoutesCore.ausencia(ownerId, ausenciaId));
+  const snapshot = await getDoc(docRef);
+
+  if (!snapshot.exists()) return null;
+  return mapAusenciaDoc(snapshot);
+}
+
+export async function appendAusenciaHistorial(ausenciaId, evento = {}, userProfile) {
+  if (!ausenciaId) throw new Error('ausenciaId es requerido');
+  if (!userProfile?.ownerId) throw new Error('userProfile.ownerId es requerido');
+
+  const ownerId = userProfile.ownerId;
+  const docRef = doc(db, ...firestoreRoutesCore.ausencia(ownerId, ausenciaId));
+  const historialEvent = buildHistorialEvent(evento, userProfile);
+
+  await updateDocWithAppId(docRef, {
+    historial: arrayUnion(historialEvent),
+    updatedAt: serverTimestamp()
+  });
 }
 
 export async function createAusencia({
@@ -300,6 +336,18 @@ export async function createAusencia({
       typeof horasSemanales === "number" ? horasSemanales : null,
     diasLaborales: typeof diasLaborales === "number" ? diasLaborales : null,
     relacionAccidente: relacionAccidente || null,
+    filesCount: 0,
+    lastFileAt: null,
+    historial: [
+      buildHistorialEvent(
+        {
+          tipo: 'created',
+          detalle: 'Ausencia registrada',
+          estado: estadoNormalizado
+        },
+        userProfile
+      )
+    ],
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp()
   };
@@ -316,7 +364,7 @@ export async function updateAusencia(ausenciaId, changes = {}, userProfile) {
   if (!ausenciaId) return;
   if (!userProfile?.ownerId) throw new Error('userProfile.ownerId es requerido para actualizar ausencia');
   const ownerId = userProfile.ownerId;
-  const docRef = doc(db, ...firestoreRoutesCore.ausencias(ownerId), ausenciaId);
+  const docRef = doc(db, ...firestoreRoutesCore.ausencia(ownerId, ausenciaId));
   const currentSnapshot = await getDoc(docRef);
   const currentData = currentSnapshot.exists() ? currentSnapshot.data() : {};
 
@@ -333,6 +381,7 @@ export async function updateAusencia(ausenciaId, changes = {}, userProfile) {
   }
 
   const nextEstado = changes.estado ?? currentData.estado ?? "abierto";
+  const prevEstado = currentData.estado ?? 'abierto';
   const nextFechaInicio =
     Object.prototype.hasOwnProperty.call(changes, "fechaInicio")
       ? changes.fechaInicio
@@ -346,13 +395,42 @@ export async function updateAusencia(ausenciaId, changes = {}, userProfile) {
     ? computeDiasAusente(nextFechaInicio, nextFechaFin)
     : computeDiasAusente(nextFechaInicio, null);
 
+  if (nextEstado !== prevEstado) {
+    payload.historial = arrayUnion(
+      buildHistorialEvent(
+        {
+          tipo: 'status_changed',
+          detalle: `Estado actualizado de ${prevEstado} a ${nextEstado}`,
+          estado: nextEstado
+        },
+        userProfile
+      )
+    );
+  }
+
   await updateDocWithAppId(docRef, payload);
+}
+
+export async function updateAusenciaEstado(ausenciaId, estado, userProfile, options = {}) {
+  if (!ausenciaId) throw new Error('ausenciaId es requerido');
+  if (!estado) throw new Error('estado es requerido');
+
+  const changes = { estado };
+  if (isClosedStatus(estado) && !options.keepFechaFin) {
+    changes.fechaFin = options.fechaFin || new Date();
+  }
+
+  if (!isClosedStatus(estado) && options.clearFechaFin) {
+    changes.fechaFin = null;
+  }
+
+  await updateAusencia(ausenciaId, changes, userProfile);
 }
 
 export async function cerrarAusencia(ausenciaId, { fechaFin = new Date() } = {}, userProfile) {
   if (!userProfile?.ownerId) throw new Error('userProfile.ownerId es requerido para cerrar ausencia');
   const ownerId = userProfile.ownerId;
-  const docRef = doc(db, ...firestoreRoutesCore.ausencias(ownerId), ausenciaId);
+  const docRef = doc(db, ...firestoreRoutesCore.ausencia(ownerId, ausenciaId));
   const currentSnapshot = await getDoc(docRef);
   const currentData = currentSnapshot.exists() ? currentSnapshot.data() : {};
   const diasAusente = computeDiasAusente(currentData.fechaInicio || null, fechaFin);
@@ -361,6 +439,16 @@ export async function cerrarAusencia(ausenciaId, { fechaFin = new Date() } = {},
     estado: "cerrada",
     fechaFin: toTimestamp(fechaFin),
     diasAusente,
+    historial: arrayUnion(
+      buildHistorialEvent(
+        {
+          tipo: 'closed',
+          detalle: 'Ausencia cerrada',
+          estado: 'cerrada'
+        },
+        userProfile
+      )
+    ),
     updatedAt: serverTimestamp()
   });
 }
@@ -393,4 +481,3 @@ export async function getAusenciaTipos({ maxResults = 200 } = {}, userProfile) {
     return [];
   }
 }
-
