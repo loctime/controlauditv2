@@ -16,6 +16,7 @@ import { getDownloadUrl } from './controlFileB2Service';
 import { registrarAccionSistema } from '../utils/firestoreUtils';
 import { uploadFileWithContext } from './unifiedFileUploadService';
 import { auth } from '../firebaseControlFile';
+import { registrosAccidenteService } from './registrosAccidenteService';
 
 // Referencia a la colecciÃƒÆ’Ã‚Â³n de logs
 const logsCollectionRef = collection(db, 'logs_operarios');
@@ -102,9 +103,10 @@ export const crearAccidente = async (accidenteData, empleadosSeleccionados, imag
     const accidentesRef = collection(db, ...firestoreRoutesCore.accidentes(ownerId));
     const docRef = await addDocWithAppId(accidentesRef, accidenteDoc);
 
+    let imagenesUrls = [];
     // Subir imÃƒÆ’Ã‚Â¡genes si existen
     if (imagenes && imagenes.length > 0) {
-      const imagenesUrls = await subirImagenes(docRef.id, imagenes, accidenteData.empresaId);
+      imagenesUrls = await subirImagenes(docRef.id, imagenes, accidenteData.empresaId);
       await updateDocWithAppId(docRef, { imagenes: imagenesUrls });
     }
 
@@ -143,6 +145,26 @@ export const crearAccidente = async (accidenteData, empleadosSeleccionados, imag
       docRef.id,
       logsCollectionRef
     );
+
+    // Crear primer registro de seguimiento para que el panel lateral muestre datos
+    try {
+      const evidencias = (imagenesUrls && imagenesUrls.length > 0)
+        ? imagenesUrls.map(url => ({ id: url, fileId: url }))
+        : [];
+      await registrosAccidenteService.createRegistry({
+        ownerId,
+        entityId: docRef.id,
+        personas: empleadosInvolucrados,
+        evidencias,
+        metadata: {
+          fecha: Timestamp.now(),
+          descripcion: accidenteData.descripcion || 'Registro inicial',
+          creadoPor: actorId
+        }
+      });
+    } catch (regErr) {
+      console.warn('No se pudo crear el registro inicial del accidente (el accidente se creó correctamente):', regErr);
+    }
 
     const result = { id: docRef.id, ...accidenteDoc };
     return normalizeAccidente(result);
