@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+﻿import React, { useEffect, useState } from 'react';
 import { Alert, Box, CircularProgress, Grid, MenuItem, Paper, TextField, Typography } from '@mui/material';
 import { useAuth } from '@/components/context/AuthContext';
 import { trainingRequirementService, trainingReportingService } from '../../../../services/training';
@@ -39,7 +39,7 @@ export default function ReportsScreen() {
       ]);
 
       const complianceByRole = rules.reduce((acc, rule) => {
-        const key = rule.jobRoleId || 'unspecified_role';
+        const key = rule.jobRoleId || 'sin_puesto';
         acc[key] = (acc[key] || 0) + 1;
         return acc;
       }, {});
@@ -61,7 +61,7 @@ export default function ReportsScreen() {
       });
     } catch (err) {
       console.error('[ReportsScreen] load error', err);
-      setError(err.message || 'Unable to load reports.');
+      setError(err.message || 'No se pudieron cargar los reportes.');
     } finally {
       setLoading(false);
     }
@@ -72,7 +72,7 @@ export default function ReportsScreen() {
   }, [ownerId, branchId]);
 
   if (!ownerId) {
-    return <Alert severity="warning">Owner context is not available for training reports.</Alert>;
+    return <Alert severity="warning">No hay contexto de owner disponible para reportes.</Alert>;
   }
 
   return (
@@ -80,17 +80,17 @@ export default function ReportsScreen() {
       <Paper sx={{ p: 2, mb: 2 }}>
         <Grid container spacing={2} alignItems="center">
           <Grid item xs={12} md={4}>
-            <Typography variant="h6">Reports</Typography>
+            <Typography variant="h6">Reportes</Typography>
           </Grid>
           <Grid item xs={12} md={4}>
             <TextField
               select
               fullWidth
-              label="Branch"
+              label="Sucursal"
               value={branchId}
               onChange={(e) => setBranchId(e.target.value)}
             >
-              <MenuItem value="">All branches</MenuItem>
+              <MenuItem value="">Todas las sucursales</MenuItem>
               {userSucursales.map((branch) => (
                 <MenuItem key={branch.id} value={branch.id}>{branch.nombre || branch.id}</MenuItem>
               ))}
@@ -116,3 +116,4 @@ export default function ReportsScreen() {
     </Box>
   );
 }
+

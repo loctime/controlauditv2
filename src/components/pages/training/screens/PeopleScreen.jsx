@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+﻿import React, { useEffect, useState } from 'react';
 import { Alert, Box, CircularProgress } from '@mui/material';
 import { useAuth } from '@/components/context/AuthContext';
 import { empleadoService } from '../../../../services/empleadoService';
@@ -26,7 +26,7 @@ export default function PeopleScreen() {
         const list = await empleadoService.getEmpleadosBySucursales(ownerId, sucursalIds);
         setEmployees(list);
       } catch (err) {
-        setError(err.message || 'Unable to load employees.');
+        setError(err.message || 'No se pudieron cargar los empleados.');
       } finally {
         setLoadingEmployees(false);
       }
@@ -47,7 +47,7 @@ export default function PeopleScreen() {
         const history = await employeeTrainingRecordService.listByEmployee(ownerId, selectedEmployee.id);
         setRecords(history);
       } catch (err) {
-        setError(err.message || 'Unable to load employee history.');
+        setError(err.message || 'No se pudo cargar el historial del empleado.');
       } finally {
         setLoadingRecords(false);
       }
@@ -57,7 +57,7 @@ export default function PeopleScreen() {
   }, [ownerId, selectedEmployee]);
 
   if (!ownerId) {
-    return <Alert severity="warning">Owner context is not available for people training history.</Alert>;
+    return <Alert severity="warning">No hay contexto de owner disponible para historial por persona.</Alert>;
   }
 
   if (loadingEmployees) {
@@ -71,7 +71,7 @@ export default function PeopleScreen() {
   return (
     <Box>
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
-      {loadingRecords && <Alert severity="info" sx={{ mb: 2 }}>Loading employee history...</Alert>}
+      {loadingRecords && <Alert severity="info" sx={{ mb: 2 }}>Cargando historial del empleado...</Alert>}
       <PeopleTrainingHistoryView
         employees={employees}
         loadingEmployees={loadingEmployees}
@@ -82,3 +82,4 @@ export default function PeopleScreen() {
     </Box>
   );
 }
+

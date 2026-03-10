@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+﻿import React, { useMemo, useState } from 'react';
 import { Badge, Box, Paper, Stack, Typography } from '@mui/material';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
@@ -14,6 +14,18 @@ function EventDay(props) {
       <PickersDay {...other} day={day} outsideCurrentMonth={outsideCurrentMonth} />
     </Badge>
   );
+}
+
+function labelEstado(estado) {
+  const map = {
+    draft: 'Borrador',
+    scheduled: 'Programada',
+    in_progress: 'En progreso',
+    pending_closure: 'Pendiente de cierre',
+    closed: 'Cerrada',
+    cancelled: 'Cancelada'
+  };
+  return map[estado] || estado;
 }
 
 export default function TrainingCalendarView({ sessions = [] }) {
@@ -38,7 +50,7 @@ export default function TrainingCalendarView({ sessions = [] }) {
 
   return (
     <Stack spacing={2}>
-      <LocalizationProvider dateAdapter={AdapterDayjs}>
+      <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="es">
         <Paper sx={{ p: 2, maxWidth: 420 }}>
           <DateCalendar
             value={selectedDay}
@@ -50,15 +62,15 @@ export default function TrainingCalendarView({ sessions = [] }) {
       </LocalizationProvider>
 
       <Paper sx={{ p: 2 }}>
-        <Typography variant="h6" sx={{ mb: 1.5 }}>Sessions for {selectedDay.format('YYYY-MM-DD')}</Typography>
+        <Typography variant="h6" sx={{ mb: 1.5 }}>Sesiones para {selectedDay.format('YYYY-MM-DD')}</Typography>
         {sessionsForDay.length === 0 ? (
-          <Typography color="text.secondary">No sessions for selected day.</Typography>
+          <Typography color="text.secondary">No hay sesiones para el día seleccionado.</Typography>
         ) : (
           <Stack spacing={1}>
             {sessionsForDay.map((session) => (
               <Box key={session.id} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1, p: 1.5 }}>
                 <Typography sx={{ fontWeight: 700 }}>{session.trainingTypeId}</Typography>
-                <Typography variant="body2" color="text.secondary">{session.branchId} � {session.instructorId || 'No instructor'} � {session.status}</Typography>
+                <Typography variant="body2" color="text.secondary">{session.branchId} · {session.instructorId || 'Sin instructor'} · {labelEstado(session.status)}</Typography>
               </Box>
             ))}
           </Stack>
@@ -67,3 +79,4 @@ export default function TrainingCalendarView({ sessions = [] }) {
     </Stack>
   );
 }
+

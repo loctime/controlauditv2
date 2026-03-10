@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+﻿import React, { useEffect, useMemo, useState } from 'react';
 import {
   Alert,
   Box,
@@ -32,7 +32,6 @@ export default function SessionsScreen() {
 
   const [error, setError] = useState('');
   const [sessions, setSessions] = useState([]);
-  const [catalog, setCatalog] = useState([]);
   const [attendanceCountBySession, setAttendanceCountBySession] = useState({});
   const [selectedSessionId, setSelectedSessionId] = useState(null);
   const [editingSession, setEditingSession] = useState(null);
@@ -64,7 +63,6 @@ export default function SessionsScreen() {
       const catalogMap = Object.fromEntries(catalogList.map((item) => [item.id, item]));
       const branchMap = Object.fromEntries(userSucursales.map((branch) => [branch.id, branch]));
 
-      setCatalog(catalogList);
       setAttendanceCountBySession(byId);
       setSessions(sessionList.map((session) => ({
         ...session,
@@ -77,7 +75,7 @@ export default function SessionsScreen() {
       }
     } catch (err) {
       console.error('[SessionsScreen] load error', err);
-      setError(err.message || 'Unable to load sessions.');
+      setError(err.message || 'No se pudieron cargar las sesiones.');
     }
   };
 
@@ -110,7 +108,7 @@ export default function SessionsScreen() {
       setEditingSession(null);
       await load();
     } catch (err) {
-      setError(err.message || 'Unable to update session.');
+      setError(err.message || 'No se pudo actualizar la sesión.');
     }
   };
 
@@ -120,12 +118,12 @@ export default function SessionsScreen() {
       await trainingSessionService.transitionStatus(ownerId, session.id, targetStatus);
       await load();
     } catch (err) {
-      setError(err.message || `Unable to move session to ${targetStatus}.`);
+      setError(err.message || `No se pudo mover la sesión a ${targetStatus}.`);
     }
   };
 
   if (!ownerId) {
-    return <Alert severity="warning">Owner context is not available for training sessions.</Alert>;
+    return <Alert severity="warning">No hay contexto de owner disponible para sesiones.</Alert>;
   }
 
   return (
@@ -157,11 +155,11 @@ export default function SessionsScreen() {
         <Grid item xs={12}>
           <Paper sx={{ p: 2 }}>
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} justifyContent="space-between" alignItems={{ sm: 'center' }}>
-              <Typography variant="h6">Session Execution Workspace</Typography>
+              <Typography variant="h6">Espacio operativo de ejecución</Typography>
               {selectedSession && (
                 <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
-                  <Button variant="outlined" onClick={() => quickTransition(selectedSession, TRAINING_SESSION_STATUSES.IN_PROGRESS)}>Start</Button>
-                  <Button variant="outlined" onClick={() => quickTransition(selectedSession, TRAINING_SESSION_STATUSES.PENDING_CLOSURE)}>Move to pending closure</Button>
+                  <Button variant="outlined" onClick={() => quickTransition(selectedSession, TRAINING_SESSION_STATUSES.IN_PROGRESS)}>Iniciar</Button>
+                  <Button variant="outlined" onClick={() => quickTransition(selectedSession, TRAINING_SESSION_STATUSES.PENDING_CLOSURE)}>Mover a pendiente de cierre</Button>
                 </Stack>
               )}
             </Stack>
@@ -182,14 +180,14 @@ export default function SessionsScreen() {
       </Grid>
 
       <Dialog open={Boolean(editingSession)} onClose={() => setEditingSession(null)} maxWidth="sm" fullWidth>
-        <DialogTitle>Edit Session</DialogTitle>
+        <DialogTitle>Editar sesión</DialogTitle>
         <DialogContent>
           <Stack spacing={2} sx={{ mt: 1 }}>
-            <TextField label="Location" value={editingForm.location} onChange={(e) => setEditingForm((prev) => ({ ...prev, location: e.target.value }))} />
+            <TextField label="Ubicación" value={editingForm.location} onChange={(e) => setEditingForm((prev) => ({ ...prev, location: e.target.value }))} />
             <TextField label="Instructor" value={editingForm.instructorId} onChange={(e) => setEditingForm((prev) => ({ ...prev, instructorId: e.target.value }))} />
             <TextField
               type="datetime-local"
-              label="Scheduled Date"
+              label="Fecha programada"
               InputLabelProps={{ shrink: true }}
               value={editingForm.scheduledDate}
               onChange={(e) => setEditingForm((prev) => ({ ...prev, scheduledDate: e.target.value }))}
@@ -197,10 +195,11 @@ export default function SessionsScreen() {
           </Stack>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setEditingSession(null)}>Cancel</Button>
-          <Button variant="contained" onClick={saveEdit}>Save</Button>
+          <Button onClick={() => setEditingSession(null)}>Cancelar</Button>
+          <Button variant="contained" onClick={saveEdit}>Guardar</Button>
         </DialogActions>
       </Dialog>
     </Box>
   );
 }
+

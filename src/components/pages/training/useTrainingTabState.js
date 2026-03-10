@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+﻿import { useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
 const DEFAULT_TAB = 'dashboard';
@@ -53,3 +53,4 @@ export default function useTrainingTabState(tabs = [], canViewConfiguration = fa
     setSection
   };
 }
+

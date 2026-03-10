@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+﻿import React, { useEffect, useState } from 'react';
 import { Alert, Box, CircularProgress } from '@mui/material';
 import { useAuth } from '@/components/context/AuthContext';
 import { trainingSessionService } from '../../../../services/training';
@@ -21,7 +21,7 @@ export default function CalendarScreen() {
         const result = await trainingSessionService.listSessions(ownerId);
         setSessions(result);
       } catch (err) {
-        setError(err.message || 'Unable to load training calendar.');
+        setError(err.message || 'No se pudo cargar el calendario de capacitación.');
       } finally {
         setLoading(false);
       }
@@ -31,7 +31,7 @@ export default function CalendarScreen() {
   }, [ownerId]);
 
   if (!ownerId) {
-    return <Alert severity="warning">Owner context is not available for training calendar.</Alert>;
+    return <Alert severity="warning">No hay contexto de owner disponible para el calendario.</Alert>;
   }
 
   if (loading) {
@@ -49,3 +49,4 @@ export default function CalendarScreen() {
     </Box>
   );
 }
+

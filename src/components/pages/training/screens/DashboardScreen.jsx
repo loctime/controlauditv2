@@ -1,11 +1,10 @@
-import React, { useEffect, useState } from 'react';
+﻿import React, { useEffect, useState } from 'react';
 import { Alert, Box, CircularProgress } from '@mui/material';
 import { useAuth } from '@/components/context/AuthContext';
 import {
   employeeTrainingRecordService,
   trainingEvidenceService,
-  trainingReportingService,
-  trainingSessionService
+  trainingReportingService
 } from '../../../../services/training';
 import { TRAINING_COMPLIANCE_STATUSES, TRAINING_SESSION_STATUSES } from '../../../../types/trainingDomain';
 import TrainingDashboard from '../components/dashboard/TrainingDashboard';
@@ -113,7 +112,7 @@ export default function DashboardScreen({ onNavigate }) {
         });
       } catch (err) {
         console.error('[DashboardScreen] load error', err);
-        setError(err.message || 'Unable to load training dashboard.');
+        setError(err.message || 'No fue posible cargar el dashboard de capacitación.');
       } finally {
         setLoading(false);
       }
@@ -123,7 +122,7 @@ export default function DashboardScreen({ onNavigate }) {
   }, [ownerId]);
 
   if (!ownerId) {
-    return <Alert severity="warning">Owner context is not available for training module.</Alert>;
+    return <Alert severity="warning">No hay contexto de owner disponible para el módulo de capacitación.</Alert>;
   }
 
   if (loading) {
@@ -146,3 +145,4 @@ export default function DashboardScreen({ onNavigate }) {
     </Box>
   );
 }
+

@@ -1,7 +1,19 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { Alert, Button, Paper, Stack, Typography } from '@mui/material';
 import { trainingAttendanceService, trainingSessionService } from '../../../../../services/training';
 import { TRAINING_SESSION_STATUSES } from '../../../../../types/trainingDomain';
+
+function labelEstado(estado) {
+  const map = {
+    draft: 'borrador',
+    scheduled: 'programada',
+    in_progress: 'en progreso',
+    pending_closure: 'pendiente de cierre',
+    closed: 'cerrada',
+    cancelled: 'cancelada'
+  };
+  return map[estado] || estado;
+}
 
 export default function SessionClosurePanel({ ownerId, session, onChanged }) {
   const [error, setError] = useState('');
@@ -15,12 +27,12 @@ export default function SessionClosurePanel({ ownerId, session, onChanged }) {
     try {
       const result = await trainingSessionService.validateClosureGates(ownerId, session.id);
       if (result.canClose) {
-        setInfo('Session can be closed.');
+        setInfo('La sesión cumple todas las validaciones y puede cerrarse.');
       } else {
-        setInfo(`Pending: ${result.reasons.join(' | ')}`);
+        setInfo(`Pendiente: ${result.reasons.join(' | ')}`);
       }
     } catch (err) {
-      setError(err.message || 'Unable to validate closure gates.');
+      setError(err.message || 'No se pudieron validar los criterios de cierre.');
     }
   };
 
@@ -36,25 +48,26 @@ export default function SessionClosurePanel({ ownerId, session, onChanged }) {
       }
 
       onChanged();
-      setInfo(`Session moved to ${targetStatus}.`);
+      setInfo(`La sesión pasó a estado ${labelEstado(targetStatus)}.`);
     } catch (err) {
-      setError(err.message || `Unable to move session to ${targetStatus}.`);
+      setError(err.message || `No se pudo mover la sesión a ${labelEstado(targetStatus)}.`);
     }
   };
 
   return (
     <Paper sx={{ p: 2 }}>
-      <Typography variant="h6" sx={{ mb: 1.5 }}>Session Closure</Typography>
+      <Typography variant="h6" sx={{ mb: 1.5 }}>Cierre de sesión</Typography>
       {error && <Alert severity="error" sx={{ mb: 1.5 }}>{error}</Alert>}
       {info && <Alert severity="info" sx={{ mb: 1.5 }}>{info}</Alert>}
 
       <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
-        <Button variant="outlined" onClick={runValidate}>Validate Closure Gates</Button>
-        <Button variant="contained" onClick={() => transition(TRAINING_SESSION_STATUSES.IN_PROGRESS)}>Start</Button>
-        <Button variant="contained" onClick={() => transition(TRAINING_SESSION_STATUSES.PENDING_CLOSURE)}>Pending Closure</Button>
-        <Button variant="contained" color="success" onClick={() => transition(TRAINING_SESSION_STATUSES.CLOSED)}>Close Session</Button>
-        <Button variant="outlined" color="error" onClick={() => transition(TRAINING_SESSION_STATUSES.CANCELLED)}>Cancel Session</Button>
+        <Button variant="outlined" onClick={runValidate}>Validar criterios de cierre</Button>
+        <Button variant="contained" onClick={() => transition(TRAINING_SESSION_STATUSES.IN_PROGRESS)}>Iniciar</Button>
+        <Button variant="contained" onClick={() => transition(TRAINING_SESSION_STATUSES.PENDING_CLOSURE)}>Pendiente de cierre</Button>
+        <Button variant="contained" color="success" onClick={() => transition(TRAINING_SESSION_STATUSES.CLOSED)}>Cerrar sesión</Button>
+        <Button variant="outlined" color="error" onClick={() => transition(TRAINING_SESSION_STATUSES.CANCELLED)}>Cancelar sesión</Button>
       </Stack>
     </Paper>
   );
 }
+

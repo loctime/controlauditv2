@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { Paper, Table, TableBody, TableCell, TableHead, TableRow, Typography } from '@mui/material';
 import CertificateActionsMenu from './CertificateActionsMenu';
 
@@ -8,20 +8,29 @@ function dateText(value) {
   return Number.isNaN(date.getTime()) ? '-' : date.toISOString().slice(0, 10);
 }
 
+function statusLabel(status) {
+  const map = {
+    active: 'Activo',
+    revoked: 'Revocado',
+    expired: 'Vencido'
+  };
+  return map[status] || status;
+}
+
 export default function CertificatesListView({ certificates, onView, onDownload, onRevoke }) {
   return (
     <Paper sx={{ p: 1 }}>
-      <Typography variant="h6" sx={{ p: 1 }}>Certificates</Typography>
+      <Typography variant="h6" sx={{ p: 1 }}>Certificados</Typography>
       <Table size="small">
         <TableHead>
           <TableRow>
-            <TableCell>Certificate Number</TableCell>
-            <TableCell>Employee</TableCell>
-            <TableCell>Training</TableCell>
-            <TableCell>Issued Date</TableCell>
-            <TableCell>Expiration</TableCell>
-            <TableCell>Status</TableCell>
-            <TableCell align="right">Actions</TableCell>
+            <TableCell>Número de certificado</TableCell>
+            <TableCell>Empleado</TableCell>
+            <TableCell>Capacitación</TableCell>
+            <TableCell>Fecha de emisión</TableCell>
+            <TableCell>Vencimiento</TableCell>
+            <TableCell>Estado</TableCell>
+            <TableCell align="right">Acciones</TableCell>
           </TableRow>
         </TableHead>
         <TableBody>
@@ -32,7 +41,7 @@ export default function CertificatesListView({ certificates, onView, onDownload,
               <TableCell>{certificate.trainingName || certificate.trainingTypeId}</TableCell>
               <TableCell>{dateText(certificate.issuedAt)}</TableCell>
               <TableCell>{dateText(certificate.expiresAt)}</TableCell>
-              <TableCell>{certificate.status}</TableCell>
+              <TableCell>{statusLabel(certificate.status)}</TableCell>
               <TableCell align="right">
                 <CertificateActionsMenu
                   onView={() => onView(certificate)}
@@ -47,3 +56,4 @@ export default function CertificatesListView({ certificates, onView, onDownload,
     </Paper>
   );
 }
+

@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+﻿import React, { useMemo } from 'react';
 import { Alert, Box, Container, Typography } from '@mui/material';
 import { useAuth } from '@/components/context/AuthContext';
 import TrainingModuleTabs from './TrainingModuleTabs';
@@ -12,13 +12,13 @@ import ConfigurationScreen from './screens/ConfigurationScreen';
 import ReportsScreen from './screens/ReportsScreen';
 
 const MODULE_TABS = [
-  { id: 'dashboard', label: 'Dashboard' },
-  { id: 'sessions', label: 'Sessions' },
-  { id: 'calendar', label: 'Calendar' },
-  { id: 'people', label: 'People' },
-  { id: 'certificates', label: 'Certificates' },
-  { id: 'configuration', label: 'Configuration', adminOnly: true },
-  { id: 'reports', label: 'Reports' }
+  { id: 'dashboard', label: 'Tablero' },
+  { id: 'sessions', label: 'Sesiones' },
+  { id: 'calendar', label: 'Calendario' },
+  { id: 'people', label: 'Personas' },
+  { id: 'certificates', label: 'Certificados' },
+  { id: 'configuration', label: 'Configuracion', adminOnly: true },
+  { id: 'reports', label: 'Reportes' }
 ];
 
 export default function TrainingModule() {
@@ -57,7 +57,7 @@ export default function TrainingModule() {
   if (!ownerId) {
     return (
       <Container maxWidth="xl" sx={{ py: 3 }}>
-        <Alert severity="warning">Owner context is not available for training module.</Alert>
+        <Alert severity="warning">No hay contexto de owner disponible para el modulo de capacitacion.</Alert>
       </Container>
     );
   }
@@ -66,10 +66,10 @@ export default function TrainingModule() {
     <Container maxWidth="xl" sx={{ py: 3 }}>
       <Box sx={{ mb: 3 }}>
         <Typography variant="h4" sx={{ fontWeight: 700, mb: 1 }}>
-          Training Management
+          Gestion de Capacitacion
         </Typography>
         <Typography variant="body1" color="text.secondary">
-          Operational training execution, people compliance tracking, certificates and reporting.
+          Ejecucion operativa de capacitaciones, cumplimiento por persona, certificados y reportes.
         </Typography>
       </Box>
 
@@ -78,3 +78,4 @@ export default function TrainingModule() {
     </Container>
   );
 }
+

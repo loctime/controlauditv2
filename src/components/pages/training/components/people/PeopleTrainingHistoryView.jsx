@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { Grid, Paper, Typography } from '@mui/material';
 import EmployeeAutocomplete from './EmployeeAutocomplete';
 import EmployeeTrainingTimeline from './EmployeeTrainingTimeline';
@@ -14,7 +14,7 @@ export default function PeopleTrainingHistoryView({
     <Grid container spacing={2}>
       <Grid item xs={12}>
         <Paper sx={{ p: 2 }}>
-          <Typography variant="h6" sx={{ mb: 1.5 }}>Employee Training History</Typography>
+          <Typography variant="h6" sx={{ mb: 1.5 }}>Historial de capacitación por persona</Typography>
           <EmployeeAutocomplete
             options={employees}
             loading={loadingEmployees}
@@ -29,3 +29,4 @@ export default function PeopleTrainingHistoryView({
     </Grid>
   );
 }
+

@@ -1,4 +1,4 @@
-    import HomeIcon from '@mui/icons-material/Home';
+﻿    import HomeIcon from '@mui/icons-material/Home';
     import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
     import ChecklistIcon from '@mui/icons-material/Checklist';
     import BadgeOutlinedIcon from '@mui/icons-material/BadgeOutlined';
@@ -35,7 +35,7 @@
     },
     {
         id: "auditoria",
-        label: "Auditoría",
+        label: "AuditorÃ­a",
         path: "/auditoria",
         icon: ChecklistIcon,
         rolesPermitidos: ['supermax', 'admin', 'operario'],
@@ -73,7 +73,7 @@
     },
     {
         id: "training",
-        label: "Training",
+        label: "Capacitacion",
         path: "/training",
         icon: SchoolIcon,
         rolesPermitidos: ['supermax', 'admin', 'operario'],
@@ -102,7 +102,7 @@
     },
     {
         id: "auditorias-manuales",
-        label: "Auditorías Manuales",
+        label: "AuditorÃ­as Manuales",
         path: "/auditorias-manuales",
         icon: AssignmentIcon,
         rolesPermitidos: ['supermax', 'admin', 'operario'],
@@ -149,7 +149,7 @@
     },
     {
         id: "configuracion",
-        label: "Configuración",
+        label: "ConfiguraciÃ³n",
         path: "/configuracion",
         icon: SettingsIcon,
         rolesPermitidos: ['supermax'],
@@ -251,6 +251,8 @@
     const items = getMenuItemsForRole(role, permisos);
     return items.filter(item => item.location === 'sidebar');
     };
+
+
 
 
 

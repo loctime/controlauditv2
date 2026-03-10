@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { Grid, Paper, Typography } from '@mui/material';
 
 function Card({ label, value }) {
@@ -13,10 +13,11 @@ function Card({ label, value }) {
 export default function OperationalKpiCards({ operational }) {
   return (
     <Grid container spacing={1.5}>
-      <Grid item xs={12}><Typography variant="h6">Operational Status</Typography></Grid>
-      <Grid item xs={4}><Card label="This Week" value={operational.sessionsThisWeek} /></Grid>
-      <Grid item xs={4}><Card label="Pending Closure" value={operational.pendingClosure} /></Grid>
-      <Grid item xs={4}><Card label="Upcoming" value={operational.upcomingSessions} /></Grid>
+      <Grid item xs={12}><Typography variant="h6">Estado operativo</Typography></Grid>
+      <Grid item xs={4}><Card label="Esta semana" value={operational.sessionsThisWeek} /></Grid>
+      <Grid item xs={4}><Card label="Pend. cierre" value={operational.pendingClosure} /></Grid>
+      <Grid item xs={4}><Card label="Próximas" value={operational.upcomingSessions} /></Grid>
     </Grid>
   );
 }
+

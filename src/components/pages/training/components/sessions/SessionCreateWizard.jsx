@@ -1,7 +1,6 @@
-import React, { useMemo, useState } from 'react';
+﻿import React, { useMemo, useState } from 'react';
 import {
   Alert,
-  Box,
   Button,
   Checkbox,
   FormControlLabel,
@@ -23,7 +22,6 @@ import {
 } from '../../../../../services/training';
 import {
   TRAINING_COMPLIANCE_STATUSES,
-  TRAINING_EVALUATION_STATUSES,
   TRAINING_SESSION_STATUSES
 } from '../../../../../types/trainingDomain';
 
@@ -85,7 +83,7 @@ export default function SessionCreateWizard({ ownerId, onCreated }) {
   const loadSuggestions = async () => {
     if (!ownerId) return;
     if (!form.trainingTypeId || !form.companyId || !form.branchId) {
-      setError('Complete training type, company and branch first.');
+      setError('Completá tipo de capacitación, empresa y sucursal primero.');
       return;
     }
 
@@ -139,7 +137,7 @@ export default function SessionCreateWizard({ ownerId, onCreated }) {
       setStep(2);
     } catch (err) {
       console.error('[SessionCreateWizard] suggestion error', err);
-      setError(err.message || 'Unable to load participant suggestions.');
+      setError(err.message || 'No se pudieron cargar sugerencias de participantes.');
     } finally {
       setSaving(false);
     }
@@ -148,7 +146,7 @@ export default function SessionCreateWizard({ ownerId, onCreated }) {
   const createSession = async () => {
     if (!ownerId) return;
     if (!form.trainingTypeId || !form.companyId || !form.branchId || !form.scheduledDate) {
-      setError('Complete session data before creating.');
+      setError('Completá los datos de la sesión antes de crearla.');
       return;
     }
 
@@ -178,7 +176,7 @@ export default function SessionCreateWizard({ ownerId, onCreated }) {
       setSuggestedIds([]);
       setForm((prev) => ({ ...prev, location: '', scheduledDate: '' }));
     } catch (err) {
-      setError(err.message || 'Unable to create session.');
+      setError(err.message || 'No se pudo crear la sesión.');
     } finally {
       setSaving(false);
     }
@@ -197,7 +195,7 @@ export default function SessionCreateWizard({ ownerId, onCreated }) {
 
   return (
     <Paper sx={{ p: 2 }}>
-      <Typography variant="h6" sx={{ mb: 2 }}>Create Session</Typography>
+      <Typography variant="h6" sx={{ mb: 2 }}>Crear sesión</Typography>
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
       {step === 1 && (
@@ -207,7 +205,7 @@ export default function SessionCreateWizard({ ownerId, onCreated }) {
               <TextField
                 select
                 fullWidth
-                label="Training Type"
+                label="Tipo de capacitación"
                 value={form.trainingTypeId}
                 onFocus={ensureCatalog}
                 onChange={(e) => setForm({ ...form, trainingTypeId: e.target.value })}
@@ -221,7 +219,7 @@ export default function SessionCreateWizard({ ownerId, onCreated }) {
               <TextField
                 select
                 fullWidth
-                label="Company"
+                label="Empresa"
                 value={form.companyId}
                 onChange={(e) => setForm({ ...form, companyId: e.target.value, branchId: '' })}
               >
@@ -234,7 +232,7 @@ export default function SessionCreateWizard({ ownerId, onCreated }) {
               <TextField
                 select
                 fullWidth
-                label="Branch"
+                label="Sucursal"
                 value={form.branchId}
                 onChange={(e) => setForm({ ...form, branchId: e.target.value })}
               >
@@ -255,7 +253,7 @@ export default function SessionCreateWizard({ ownerId, onCreated }) {
               <TextField
                 fullWidth
                 type="datetime-local"
-                label="Date"
+                label="Fecha"
                 InputLabelProps={{ shrink: true }}
                 value={form.scheduledDate}
                 onChange={(e) => setForm({ ...form, scheduledDate: e.target.value })}
@@ -265,19 +263,19 @@ export default function SessionCreateWizard({ ownerId, onCreated }) {
               <TextField
                 select
                 fullWidth
-                label="Modality"
+                label="Modalidad"
                 value={form.modality}
                 onChange={(e) => setForm({ ...form, modality: e.target.value })}
               >
-                <MenuItem value="in_person">In Person</MenuItem>
+                <MenuItem value="in_person">Presencial</MenuItem>
                 <MenuItem value="virtual">Virtual</MenuItem>
-                <MenuItem value="hybrid">Hybrid</MenuItem>
+                <MenuItem value="hybrid">Híbrida</MenuItem>
               </TextField>
             </Grid>
             <Grid item xs={12}>
               <TextField
                 fullWidth
-                label="Location"
+                label="Ubicación"
                 value={form.location}
                 onChange={(e) => setForm({ ...form, location: e.target.value })}
               />
@@ -285,16 +283,16 @@ export default function SessionCreateWizard({ ownerId, onCreated }) {
           </Grid>
 
           <Button variant="contained" onClick={loadSuggestions} disabled={saving}>
-            {saving ? 'Loading suggestions...' : 'Continue to participants'}
+            {saving ? 'Cargando sugerencias...' : 'Continuar a participantes'}
           </Button>
         </Stack>
       )}
 
       {step === 2 && (
         <Stack spacing={2}>
-          <Typography variant="subtitle1">Step 2: Assign participants</Typography>
+          <Typography variant="subtitle1">Paso 2: asignar participantes</Typography>
           <Typography variant="body2" color="text.secondary">
-            Suggested participants include employees with expired, expiring or missing training and matrix-matched roles/sectors.
+            Los sugeridos incluyen empleados con capacitación vencida, por vencer o faltante y coincidencias de la matriz de requerimientos.
           </Typography>
 
           <Grid container spacing={2}>
@@ -302,11 +300,11 @@ export default function SessionCreateWizard({ ownerId, onCreated }) {
               <TextField
                 select
                 fullWidth
-                label="Role filter"
+                label="Filtro por puesto"
                 value={filters.role}
                 onChange={(e) => setFilters((prev) => ({ ...prev, role: e.target.value }))}
               >
-                <MenuItem value="">All roles</MenuItem>
+                <MenuItem value="">Todos los puestos</MenuItem>
                 {roleOptions.map((role) => <MenuItem key={role} value={role}>{role}</MenuItem>)}
               </TextField>
             </Grid>
@@ -314,16 +312,16 @@ export default function SessionCreateWizard({ ownerId, onCreated }) {
               <TextField
                 select
                 fullWidth
-                label="Sector filter"
+                label="Filtro por sector"
                 value={filters.sector}
                 onChange={(e) => setFilters((prev) => ({ ...prev, sector: e.target.value }))}
               >
-                <MenuItem value="">All sectors</MenuItem>
+                <MenuItem value="">Todos los sectores</MenuItem>
                 {sectorOptions.map((sector) => <MenuItem key={sector} value={sector}>{sector}</MenuItem>)}
               </TextField>
             </Grid>
             <Grid item xs={12} md={4} sx={{ display: 'flex', alignItems: 'center' }}>
-              <Button variant="outlined" onClick={selectFiltered}>Select filtered</Button>
+              <Button variant="outlined" onClick={selectFiltered}>Seleccionar filtrados</Button>
             </Grid>
           </Grid>
 
@@ -332,18 +330,19 @@ export default function SessionCreateWizard({ ownerId, onCreated }) {
               <FormControlLabel
                 key={employee.id}
                 control={<Checkbox checked={selectedIds.includes(employee.id)} onChange={() => toggleEmployee(employee.id)} />}
-                label={`${employee.nombre || employee.id}${suggestedIds.includes(employee.id) ? ' (suggested)' : ''}`}
+                label={`${employee.nombre || employee.id}${suggestedIds.includes(employee.id) ? ' (sugerido)' : ''}`}
               />
             ))}
-            {filteredEmployees.length === 0 && <Typography color="text.secondary">No employees available for selected filters.</Typography>}
+            {filteredEmployees.length === 0 && <Typography color="text.secondary">No hay empleados para los filtros seleccionados.</Typography>}
           </Paper>
 
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
-            <Button variant="outlined" onClick={() => setStep(1)}>Back</Button>
-            <Button variant="contained" onClick={createSession} disabled={saving}>{saving ? 'Creating...' : 'Create Session'}</Button>
+            <Button variant="outlined" onClick={() => setStep(1)}>Volver</Button>
+            <Button variant="contained" onClick={createSession} disabled={saving}>{saving ? 'Creando...' : 'Crear sesión'}</Button>
           </Stack>
         </Stack>
       )}
     </Paper>
   );
 }
+

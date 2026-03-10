@@ -1,10 +1,10 @@
-import React, { useEffect, useState } from 'react';
-import { Alert, Box, Button, CircularProgress, Grid, MenuItem, Paper, Stack, TextField, Typography } from '@mui/material';
+﻿import React, { useEffect, useState } from 'react';
+import { Alert, Box, Button, CircularProgress, Grid, Paper, Stack, TextField, Typography } from '@mui/material';
 import { useAuth } from '@/components/context/AuthContext';
 import { employeeTrainingRecordService } from '../../../../services/training';
 
 export default function EmployeeHistoryScreen() {
-  const { userProfile, userEmpresas = [], userSucursales = [], userEmpleados = [] } = useAuth();
+  const { userProfile } = useAuth();
   const ownerId = userProfile?.ownerId;
 
   const [loading, setLoading] = useState(false);
@@ -22,7 +22,7 @@ export default function EmployeeHistoryScreen() {
       setRecords(data);
     } catch (err) {
       console.error('[EmployeeHistoryScreen] load error', err);
-      setError(err.message || 'Unable to load employee training history.');
+      setError(err.message || 'No se pudo cargar el historial de capacitacion del empleado.');
       setRecords([]);
     } finally {
       setLoading(false);
@@ -36,7 +36,7 @@ export default function EmployeeHistoryScreen() {
   }, [ownerId]);
 
   if (!ownerId) {
-    return <Alert severity="warning">Owner context is not available for employee training history.</Alert>;
+    return <Alert severity="warning">No hay contexto de owner disponible para historial de empleados.</Alert>;
   }
 
   return (
@@ -44,12 +44,12 @@ export default function EmployeeHistoryScreen() {
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
       <Paper sx={{ p: 2, mb: 3 }}>
-        <Typography variant="h6" sx={{ mb: 2 }}>Employee Training History</Typography>
+        <Typography variant="h6" sx={{ mb: 2 }}>Historial de capacitacion por empleado</Typography>
         <Grid container spacing={2}>
           <Grid item xs={12} md={6}>
             <TextField
               fullWidth
-              label="Employee Id"
+              label="ID de empleado"
               value={employeeId}
               onChange={(e) => setEmployeeId(e.target.value)}
               placeholder="emp_44"
@@ -57,24 +57,24 @@ export default function EmployeeHistoryScreen() {
           </Grid>
           <Grid item xs={12} md={2}>
             <Button fullWidth variant="contained" sx={{ height: '100%' }} onClick={findEmployee} disabled={loading || !employeeId}>
-              {loading ? 'Searching...' : 'Search'}
+              {loading ? 'Buscando...' : 'Buscar'}
             </Button>
           </Grid>
         </Grid>
       </Paper>
 
       <Paper sx={{ p: 2 }}>
-        <Typography variant="h6" sx={{ mb: 2 }}>Records</Typography>
+        <Typography variant="h6" sx={{ mb: 2 }}>Registros</Typography>
         {loading ? <CircularProgress /> : records.length === 0 ? (
-          <Alert severity="info">No training records found for this employee.</Alert>
+          <Alert severity="info">No se encontraron registros para este empleado.</Alert>
         ) : (
           <Stack spacing={1.5}>
             {records.map((record) => (
               <Paper key={record.id} variant="outlined" sx={{ p: 1.5 }}>
                 <Typography sx={{ fontWeight: 700 }}>{record.trainingTypeId}</Typography>
-                <Typography variant="body2" color="text.secondary">Status: {record.complianceStatus} | Last result: {record.lastResult}</Typography>
-                <Typography variant="body2" color="text.secondary">Valid: {String(record.validFrom || '-')} to {String(record.validUntil || '-')}</Typography>
-                <Typography variant="body2">History count: {record.historyCount || 0}</Typography>
+                <Typography variant="body2" color="text.secondary">Estado: {record.complianceStatus} | Ultimo resultado: {record.lastResult}</Typography>
+                <Typography variant="body2" color="text.secondary">Vigencia: {String(record.validFrom || '-')} a {String(record.validUntil || '-')}</Typography>
+                <Typography variant="body2">Cantidad historica: {record.historyCount || 0}</Typography>
               </Paper>
             ))}
           </Stack>
@@ -83,3 +83,4 @@ export default function EmployeeHistoryScreen() {
     </Box>
   );
 }
+

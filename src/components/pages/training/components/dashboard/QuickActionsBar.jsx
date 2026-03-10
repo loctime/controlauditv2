@@ -1,14 +1,16 @@
-import React from 'react';
+﻿import React from 'react';
 import { Button, Paper, Stack } from '@mui/material';
 
-export default function QuickActionsBar({ onNavigate }) {
+export default function QuickActionsBar({ onNavigate, onOpenGuide }) {
   return (
     <Paper sx={{ p: 2 }}>
       <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
-        <Button variant="contained" onClick={() => onNavigate('sessions')}>+ New Session</Button>
-        <Button variant="outlined" onClick={() => onNavigate('calendar')}>View Calendar</Button>
-        <Button variant="outlined" onClick={() => onNavigate('people')}>View Expiring Trainings</Button>
+        <Button variant="contained" onClick={() => onNavigate('sessions')}>+ Nueva sesión</Button>
+        <Button variant="outlined" onClick={() => onNavigate('calendar')}>Ver calendario</Button>
+        <Button variant="outlined" onClick={() => onNavigate('people')}>Ver capacitaciones por vencer</Button>
+        <Button variant="text" onClick={onOpenGuide}>Ayuda / Guía de usuario</Button>
       </Stack>
     </Paper>
   );
 }
+

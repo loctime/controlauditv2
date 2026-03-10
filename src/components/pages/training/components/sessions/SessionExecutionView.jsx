@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+﻿import React, { useEffect, useMemo, useState } from 'react';
 import { Alert, Grid, MenuItem, Paper, Stack, TextField, Typography, Button } from '@mui/material';
 import { trainingAttendanceService, trainingCatalogService } from '../../../../../services/training';
 import {
@@ -20,6 +20,26 @@ const evaluationOptions = [
   TRAINING_EVALUATION_STATUSES.NOT_APPLICABLE
 ];
 
+function labelAsistencia(status) {
+  const map = {
+    present: 'Presente',
+    justified_absence: 'Ausencia justificada',
+    unjustified_absence: 'Ausencia injustificada',
+    rescheduled: 'Reprogramado'
+  };
+  return map[status] || status;
+}
+
+function labelEvaluacion(status) {
+  const map = {
+    approved: 'Aprobado',
+    failed: 'Desaprobado',
+    pending: 'Pendiente',
+    not_applicable: 'No aplica'
+  };
+  return map[status] || status;
+}
+
 export default function SessionExecutionView({ ownerId, session, onChanged }) {
   const [records, setRecords] = useState([]);
   const [error, setError] = useState('');
@@ -36,7 +56,7 @@ export default function SessionExecutionView({ ownerId, session, onChanged }) {
       setRecords(attendance);
       setRequiresEvaluation(Boolean(catalog?.requiresEvaluation));
     } catch (err) {
-      setError(err.message || 'Unable to load session execution records.');
+      setError(err.message || 'No se pudieron cargar los registros de ejecución.');
     }
   };
 
@@ -55,15 +75,25 @@ export default function SessionExecutionView({ ownerId, session, onChanged }) {
       await load();
       onChanged();
     } catch (err) {
-      setError(err.message || 'Unable to update attendance.');
+      setError(err.message || 'No se pudo actualizar la asistencia.');
     }
   };
+
+  const attendanceMenu = useMemo(
+    () => attendanceOptions.map((status) => <MenuItem key={status} value={status}>{labelAsistencia(status)}</MenuItem>),
+    []
+  );
+
+  const evaluationMenu = useMemo(
+    () => evaluationOptions.map((status) => <MenuItem key={status} value={status}>{labelEvaluacion(status)}</MenuItem>),
+    []
+  );
 
   if (!session) return null;
 
   return (
     <Paper sx={{ p: 2 }}>
-      <Typography variant="h6" sx={{ mb: 2 }}>Session Execution</Typography>
+      <Typography variant="h6" sx={{ mb: 2 }}>Ejecución de la sesión</Typography>
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
       <Stack spacing={1.5}>
@@ -75,11 +105,11 @@ export default function SessionExecutionView({ ownerId, session, onChanged }) {
                 select
                 fullWidth
                 size="small"
-                label="Attendance"
+                label="Asistencia"
                 value={record.attendanceStatus || TRAINING_ATTENDANCE_STATUSES.PRESENT}
                 onChange={(e) => updateRecord(record.employeeId, { attendanceStatus: e.target.value })}
               >
-                {attendanceOptions.map((status) => <MenuItem key={status} value={status}>{status}</MenuItem>)}
+                {attendanceMenu}
               </TextField>
             </Grid>
             <Grid item xs={12} md={3}>
@@ -87,19 +117,19 @@ export default function SessionExecutionView({ ownerId, session, onChanged }) {
                 select
                 fullWidth
                 size="small"
-                label="Evaluation"
+                label="Evaluación"
                 value={record.evaluationStatus || TRAINING_EVALUATION_STATUSES.PENDING}
                 onChange={(e) => updateRecord(record.employeeId, { evaluationStatus: e.target.value })}
                 disabled={!requiresEvaluation}
               >
-                {evaluationOptions.map((status) => <MenuItem key={status} value={status}>{status}</MenuItem>)}
+                {evaluationMenu}
               </TextField>
             </Grid>
             <Grid item xs={12} md={2}>
               <TextField
                 fullWidth
                 size="small"
-                label="Employee Signature Ref"
+                label="Firma empleado (ref)"
                 value={record.employeeSignature?.fileReference || ''}
                 onChange={(e) => updateRecord(record.employeeId, {
                   employeeSignature: {
@@ -113,7 +143,7 @@ export default function SessionExecutionView({ ownerId, session, onChanged }) {
               <TextField
                 fullWidth
                 size="small"
-                label="Instructor Signature Ref"
+                label="Firma instructor (ref)"
                 value={record.instructorSignature?.fileReference || ''}
                 onChange={(e) => updateRecord(record.employeeId, {
                   instructorSignature: {
@@ -127,11 +157,12 @@ export default function SessionExecutionView({ ownerId, session, onChanged }) {
         ))}
 
         {records.length === 0 && (
-          <Alert severity="info">No participants assigned yet.</Alert>
+          <Alert severity="info">No hay participantes asignados todavía.</Alert>
         )}
 
-        <Button variant="outlined" onClick={load}>Refresh</Button>
+        <Button variant="outlined" onClick={load}>Actualizar</Button>
       </Stack>
     </Paper>
   );
 }
+

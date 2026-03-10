@@ -1,16 +1,16 @@
-import React from 'react';
+﻿import React from 'react';
 import { Alert, Paper, Table, TableBody, TableCell, TableHead, TableRow, Typography } from '@mui/material';
 
 function statusLabel(record) {
   switch (record.complianceStatus) {
     case 'compliant':
-      return 'valid';
+      return 'vigente';
     case 'expiring_soon':
-      return 'expiring';
+      return 'por vencer';
     case 'expired':
-      return 'expired';
+      return 'vencido';
     default:
-      return 'incomplete';
+      return 'incompleto';
   }
 }
 
@@ -23,19 +23,19 @@ function dateText(value) {
 
 export default function EmployeeTrainingTimeline({ records = [] }) {
   if (records.length === 0) {
-    return <Alert severity="info">No training records for selected employee.</Alert>;
+    return <Alert severity="info">No hay registros de capacitación para el empleado seleccionado.</Alert>;
   }
 
   return (
     <Paper sx={{ p: 1 }}>
-      <Typography variant="h6" sx={{ p: 1 }}>Training Timeline</Typography>
+      <Typography variant="h6" sx={{ p: 1 }}>Línea de tiempo de capacitación</Typography>
       <Table size="small">
         <TableHead>
           <TableRow>
-            <TableCell>Training</TableCell>
-            <TableCell>Date</TableCell>
-            <TableCell>Expiration</TableCell>
-            <TableCell>Status</TableCell>
+            <TableCell>Capacitación</TableCell>
+            <TableCell>Fecha</TableCell>
+            <TableCell>Vencimiento</TableCell>
+            <TableCell>Estado</TableCell>
           </TableRow>
         </TableHead>
         <TableBody>
@@ -52,3 +52,4 @@ export default function EmployeeTrainingTimeline({ records = [] }) {
     </Paper>
   );
 }
+
