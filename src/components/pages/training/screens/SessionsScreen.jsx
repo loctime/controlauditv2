@@ -8,12 +8,15 @@ import {
   DialogContent,
   DialogTitle,
   Grid,
+  MenuItem,
   Paper,
   Stack,
   TextField,
   Typography
 } from '@mui/material';
 import { useAuth } from '@/components/context/AuthContext';
+import { empleadoService } from '../../../../services/empleadoService';
+import { getUsers } from '../../../../core/services/ownerUserService';
 import {
   trainingAttendanceService,
   trainingCatalogService,
@@ -26,6 +29,26 @@ import SessionExecutionView from '../components/sessions/SessionExecutionView';
 import SessionEvidencePanel from '../components/sessions/SessionEvidencePanel';
 import SessionClosurePanel from '../components/sessions/SessionClosurePanel';
 
+function personDisplayName(person) {
+  if (!person) return '';
+  if (person.displayName) return person.displayName;
+  if (person.nombreCompleto) return person.nombreCompleto;
+  if (person.apellido && person.nombre) return `${person.apellido}, ${person.nombre}`;
+  return person.nombre || person.email || '';
+}
+
+function labelSessionStatus(status) {
+  const map = {
+    draft: 'Borrador',
+    scheduled: 'Programada',
+    in_progress: 'En progreso',
+    pending_closure: 'Pendiente de cierre',
+    closed: 'Cerrada',
+    cancelled: 'Cancelada'
+  };
+  return map[status] || status;
+}
+
 export default function SessionsScreen() {
   const { userProfile, userSucursales = [], userEmpresas = [] } = useAuth();
   const ownerId = userProfile?.ownerId;
@@ -36,6 +59,7 @@ export default function SessionsScreen() {
   const [selectedSessionId, setSelectedSessionId] = useState(null);
   const [editingSession, setEditingSession] = useState(null);
   const [editingForm, setEditingForm] = useState({ location: '', instructorId: '', scheduledDate: '' });
+  const [instructorOptions, setInstructorOptions] = useState([]);
 
   const selectedSession = useMemo(
     () => sessions.find((session) => session.id === selectedSessionId) || null,
@@ -47,36 +71,54 @@ export default function SessionsScreen() {
     setError('');
 
     try {
-      const [sessionList, catalogList] = await Promise.all([
+      const branchIds = userSucursales.map((branch) => branch.id);
+      const [sessionList, catalogList, usersList, employeesList] = await Promise.all([
         trainingSessionService.listSessions(ownerId),
-        trainingCatalogService.listAll(ownerId)
+        trainingCatalogService.listAll(ownerId),
+        getUsers(ownerId).catch(() => []),
+        branchIds.length > 0 ? empleadoService.getEmpleadosBySucursales(ownerId, branchIds).catch(() => []) : Promise.resolve([])
       ]);
 
-      const attendanceCounts = await Promise.all(
-        sessionList.map(async (session) => {
-          const list = await trainingAttendanceService.listAttendanceBySession(ownerId, session.id).catch(() => []);
-          return [session.id, list.length];
-        })
-      );
-
-      const byId = Object.fromEntries(attendanceCounts);
       const catalogMap = Object.fromEntries(catalogList.map((item) => [item.id, item]));
       const branchMap = Object.fromEntries(userSucursales.map((branch) => [branch.id, branch]));
       const companyMap = Object.fromEntries(userEmpresas.map((company) => [company.id, company]));
+      const instructorMap = {
+        ...Object.fromEntries((usersList || []).map((user) => [user.id, personDisplayName(user) || user.email || 'Sin dato'])),
+        ...Object.fromEntries((employeesList || []).map((employee) => [employee.id, personDisplayName(employee) || employee.email || 'Sin dato']))
+      };
 
-      setAttendanceCountBySession(byId);
-      setSessions(
-        sessionList.map((session) => ({
-          ...session,
-          trainingTypeName: catalogMap[session.trainingTypeId]?.name,
-          branchName: branchMap[session.branchId]?.nombre,
-          companyName:
-            companyMap[session.companyId]?.nombre ||
-            branchMap[session.branchId]?.empresaNombre ||
-            branchMap[session.branchId]?.empresaId ||
-            ''
-        }))
-      );
+      const options = Object.entries(instructorMap)
+        .map(([id, label]) => ({ id, label }))
+        .sort((a, b) => a.label.localeCompare(b.label, 'es'));
+      setInstructorOptions(options);
+
+      const enrichedSessions = sessionList.map((session) => ({
+        ...session,
+        trainingTypeName: catalogMap[session.trainingTypeId]?.name || 'Sin dato',
+        branchName: branchMap[session.branchId]?.nombre || 'Sin dato',
+        companyName:
+          companyMap[session.companyId]?.nombre ||
+          branchMap[session.branchId]?.empresaNombre ||
+          'Sin dato',
+        instructorName: instructorMap[session.instructorId] || 'Sin asignar'
+      }));
+
+      setSessions(enrichedSessions);
+
+      const sessionsForCount = sessionList.slice(0, 30).filter((session) => attendanceCountBySession[session.id] === undefined);
+      if (sessionsForCount.length > 0) {
+        const countEntries = await Promise.all(
+          sessionsForCount.map(async (session) => {
+            const attendance = await trainingAttendanceService.listAttendanceBySession(ownerId, session.id).catch(() => []);
+            return [session.id, attendance.length];
+          })
+        );
+
+        setAttendanceCountBySession((prev) => ({
+          ...prev,
+          ...Object.fromEntries(countEntries)
+        }));
+      }
 
       if (!selectedSessionId && sessionList.length > 0) {
         setSelectedSessionId(sessionList[0].id);
@@ -89,7 +131,7 @@ export default function SessionsScreen() {
 
   useEffect(() => {
     load();
-  }, [ownerId]);
+  }, [ownerId, userSucursales, userEmpresas]);
 
   const openEdit = (session) => {
     setEditingSession(session);
@@ -116,7 +158,7 @@ export default function SessionsScreen() {
       setEditingSession(null);
       await load();
     } catch (err) {
-      setError(err.message || 'No se pudo actualizar la sesión.');
+      setError(err.message || 'No se pudo actualizar la sesion.');
     }
   };
 
@@ -126,7 +168,7 @@ export default function SessionsScreen() {
       await trainingSessionService.transitionStatus(ownerId, session.id, targetStatus);
       await load();
     } catch (err) {
-      setError(err.message || `No se pudo mover la sesión a ${targetStatus}.`);
+      setError(err.message || `No se pudo mover la sesion a ${labelSessionStatus(targetStatus)}.`);
     }
   };
 
@@ -141,7 +183,7 @@ export default function SessionsScreen() {
       <Grid container spacing={2}>
         <Grid item xs={12}>
           <Typography variant="h6" sx={{ mb: 1 }}>
-            1. Crear nueva sesión
+            1. Crear nueva sesion
           </Typography>
           <SessionCreateWizard
             ownerId={ownerId}
@@ -178,40 +220,30 @@ export default function SessionsScreen() {
         <Grid item xs={12}>
           <Paper sx={{ p: 2 }}>
             <Typography variant="h6" sx={{ mb: 1.5 }}>
-              3. Sesión seleccionada
+              3. Sesion seleccionada
             </Typography>
             {selectedSession ? (
               <Stack spacing={1.5}>
-                <Typography variant="subtitle1">Resumen de la sesión</Typography>
+                <Typography variant="subtitle1">Resumen de la sesion</Typography>
                 <Grid container spacing={1.5}>
                   <Grid item xs={12} md={3}>
-                    <Typography variant="body2" color="text.secondary">
-                      Capacitación
-                    </Typography>
-                    <Typography>{selectedSession.trainingTypeName || selectedSession.trainingTypeId}</Typography>
+                    <Typography variant="body2" color="text.secondary">Capacitacion</Typography>
+                    <Typography>{selectedSession.trainingTypeName || 'Sin dato'}</Typography>
                   </Grid>
                   <Grid item xs={12} md={3}>
-                    <Typography variant="body2" color="text.secondary">
-                      Empresa
-                    </Typography>
-                    <Typography>{selectedSession.companyName || 'Sin datos'}</Typography>
+                    <Typography variant="body2" color="text.secondary">Empresa</Typography>
+                    <Typography>{selectedSession.companyName || 'Sin dato'}</Typography>
                   </Grid>
                   <Grid item xs={12} md={3}>
-                    <Typography variant="body2" color="text.secondary">
-                      Sucursal
-                    </Typography>
-                    <Typography>{selectedSession.branchName || selectedSession.branchId}</Typography>
+                    <Typography variant="body2" color="text.secondary">Sucursal</Typography>
+                    <Typography>{selectedSession.branchName || 'Sin dato'}</Typography>
                   </Grid>
                   <Grid item xs={12} md={3}>
-                    <Typography variant="body2" color="text.secondary">
-                      Instructor
-                    </Typography>
-                    <Typography>{selectedSession.instructorId || 'Sin asignar'}</Typography>
+                    <Typography variant="body2" color="text.secondary">Instructor</Typography>
+                    <Typography>{selectedSession.instructorName || 'Sin asignar'}</Typography>
                   </Grid>
                   <Grid item xs={12} md={3}>
-                    <Typography variant="body2" color="text.secondary">
-                      Fecha
-                    </Typography>
+                    <Typography variant="body2" color="text.secondary">Fecha</Typography>
                     <Typography>
                       {selectedSession.scheduledDate?.toDate
                         ? selectedSession.scheduledDate.toDate().toLocaleString()
@@ -219,28 +251,22 @@ export default function SessionsScreen() {
                     </Typography>
                   </Grid>
                   <Grid item xs={12} md={3}>
-                    <Typography variant="body2" color="text.secondary">
-                      Modalidad
-                    </Typography>
+                    <Typography variant="body2" color="text.secondary">Modalidad</Typography>
                     <Typography>{selectedSession.modality || '-'}</Typography>
                   </Grid>
                   <Grid item xs={12} md={3}>
-                    <Typography variant="body2" color="text.secondary">
-                      Ubicación
-                    </Typography>
+                    <Typography variant="body2" color="text.secondary">Ubicacion</Typography>
                     <Typography>{selectedSession.location || '-'}</Typography>
                   </Grid>
                   <Grid item xs={12} md={3}>
-                    <Typography variant="body2" color="text.secondary">
-                      Estado
-                    </Typography>
-                    <Typography>{selectedSession.status}</Typography>
+                    <Typography variant="body2" color="text.secondary">Estado</Typography>
+                    <Typography>{labelSessionStatus(selectedSession.status)}</Typography>
                   </Grid>
                 </Grid>
               </Stack>
             ) : (
               <Typography color="text.secondary">
-                Seleccioná una sesión en la lista para ver su detalle operativo.
+                Selecciona una sesion en la lista para ver su detalle operativo.
               </Typography>
             )}
           </Paper>
@@ -260,11 +286,19 @@ export default function SessionsScreen() {
       </Grid>
 
       <Dialog open={Boolean(editingSession)} onClose={() => setEditingSession(null)} maxWidth="sm" fullWidth>
-        <DialogTitle>Editar sesión</DialogTitle>
+        <DialogTitle>Editar sesion</DialogTitle>
         <DialogContent>
           <Stack spacing={2} sx={{ mt: 1 }}>
-            <TextField label="Ubicación" value={editingForm.location} onChange={(e) => setEditingForm((prev) => ({ ...prev, location: e.target.value }))} />
-            <TextField label="Instructor" value={editingForm.instructorId} onChange={(e) => setEditingForm((prev) => ({ ...prev, instructorId: e.target.value }))} />
+            <TextField label="Ubicacion" value={editingForm.location} onChange={(e) => setEditingForm((prev) => ({ ...prev, location: e.target.value }))} />
+            <TextField
+              select
+              label="Instructor"
+              value={editingForm.instructorId}
+              onChange={(e) => setEditingForm((prev) => ({ ...prev, instructorId: e.target.value }))}
+            >
+              <MenuItem value="">Sin asignar</MenuItem>
+              {instructorOptions.map((option) => <MenuItem key={option.id} value={option.id}>{option.label}</MenuItem>)}
+            </TextField>
             <TextField
               type="datetime-local"
               label="Fecha programada"
@@ -282,4 +316,3 @@ export default function SessionsScreen() {
     </Box>
   );
 }
-

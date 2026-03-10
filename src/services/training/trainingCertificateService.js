@@ -1,4 +1,4 @@
-﻿import {
+import {
   buildOrderBy,
   buildWhere,
   createDocument,
@@ -7,28 +7,69 @@
   queryDocuments,
   updateDocument
 } from './trainingBaseService';
+import { collection, doc, runTransaction, Timestamp } from 'firebase/firestore';
 import { TRAINING_CERTIFICATE_STATUSES } from '../../types/trainingDomain';
-import { trainingAttendanceService } from './trainingAttendanceService';
+import { dbAudit } from '../../firebaseControlFile';
+import { firestoreRoutesCore } from '../../core/firestore/firestoreRoutes.core';
+
+async function createCertificateTransaction(ownerId, payload) {
+  let createdId = null;
+
+  await runTransaction(dbAudit, async (transaction) => {
+    const sessionRef = doc(dbAudit, ...firestoreRoutesCore.trainingSession(ownerId, payload.sessionId));
+    const sessionSnap = await transaction.get(sessionRef);
+
+    if (!sessionSnap.exists()) {
+      throw new Error('La sesion indicada no existe para emitir el certificado.');
+    }
+
+    const sessionData = sessionSnap.data() || {};
+    if (payload.trainingTypeId && sessionData.trainingTypeId && payload.trainingTypeId !== sessionData.trainingTypeId) {
+      throw new Error('La capacitacion del certificado no coincide con la sesion seleccionada.');
+    }
+
+    const certificatesRef = collection(dbAudit, ...firestoreRoutesCore.trainingCertificates(ownerId));
+    const certificateRef = doc(certificatesRef);
+    const now = Timestamp.now();
+
+    transaction.set(certificateRef, {
+      ...payload,
+      ownerId,
+      status: payload.status || TRAINING_CERTIFICATE_STATUSES.ACTIVE,
+      createdAt: now,
+      updatedAt: now
+    });
+
+    const attendanceRef = doc(
+      dbAudit,
+      ...firestoreRoutesCore.trainingSessionAttendanceItem(ownerId, payload.sessionId, payload.employeeId)
+    );
+
+    transaction.set(attendanceRef, {
+      employeeId: payload.employeeId,
+      sessionId: payload.sessionId,
+      certificateId: certificateRef.id,
+      validFrom: payload.validFrom || null,
+      validUntil: payload.expiresAt || null,
+      updatedAt: now
+    }, { merge: true });
+
+    createdId = certificateRef.id;
+  });
+
+  return { id: createdId };
+}
 
 export const trainingCertificateService = {
   async create(ownerId, payload) {
-    const ref = await createDocument(ownerId, 'trainingCertificates', {
+    if (payload.sessionId && payload.employeeId) {
+      return createCertificateTransaction(ownerId, payload);
+    }
+
+    return createDocument(ownerId, 'trainingCertificates', {
       ...payload,
       status: payload.status || TRAINING_CERTIFICATE_STATUSES.ACTIVE
     });
-
-    if (payload.sessionId && payload.employeeId) {
-      await trainingAttendanceService.linkCertificate(
-        ownerId,
-        payload.sessionId,
-        payload.employeeId,
-        ref.id,
-        payload.validFrom || null,
-        payload.expiresAt || null
-      );
-    }
-
-    return ref;
   },
 
   async update(ownerId, certificateId, payload) {

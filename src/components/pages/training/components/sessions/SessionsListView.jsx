@@ -15,11 +15,24 @@ import EditIcon from '@mui/icons-material/Edit';
 import CancelIcon from '@mui/icons-material/Cancel';
 import TaskAltIcon from '@mui/icons-material/TaskAlt';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
+import { TRAINING_SESSION_STATUSES } from '../../../../../types/trainingDomain';
 
 function dateText(value) {
   if (!value) return '-';
   const date = value?.toDate ? value.toDate() : new Date(value);
   return Number.isNaN(date.getTime()) ? '-' : date.toISOString().slice(0, 16).replace('T', ' ');
+}
+
+function canTransition(status, nextStatus) {
+  const map = {
+    [TRAINING_SESSION_STATUSES.DRAFT]: [TRAINING_SESSION_STATUSES.SCHEDULED, TRAINING_SESSION_STATUSES.CANCELLED],
+    [TRAINING_SESSION_STATUSES.SCHEDULED]: [TRAINING_SESSION_STATUSES.IN_PROGRESS, TRAINING_SESSION_STATUSES.CANCELLED],
+    [TRAINING_SESSION_STATUSES.IN_PROGRESS]: [TRAINING_SESSION_STATUSES.PENDING_CLOSURE, TRAINING_SESSION_STATUSES.CANCELLED],
+    [TRAINING_SESSION_STATUSES.PENDING_CLOSURE]: [TRAINING_SESSION_STATUSES.CLOSED, TRAINING_SESSION_STATUSES.IN_PROGRESS],
+    [TRAINING_SESSION_STATUSES.CLOSED]: [],
+    [TRAINING_SESSION_STATUSES.CANCELLED]: []
+  };
+  return (map[status] || []).includes(nextStatus);
 }
 
 function labelEstado(estado) {
@@ -51,7 +64,7 @@ export default function SessionsListView({
       <Table size="small">
         <TableHead>
           <TableRow>
-            <TableCell>Capacitación</TableCell>
+            <TableCell>Capacitacion</TableCell>
             <TableCell>Fecha</TableCell>
             <TableCell>Empresa</TableCell>
             <TableCell>Sucursal</TableCell>
@@ -64,11 +77,11 @@ export default function SessionsListView({
         <TableBody>
           {sessions.map((session) => (
             <TableRow key={session.id} hover>
-              <TableCell>{session.trainingTypeName || session.trainingTypeId}</TableCell>
+              <TableCell>{session.trainingTypeName || 'Sin dato'}</TableCell>
               <TableCell>{dateText(session.scheduledDate)}</TableCell>
               <TableCell>{session.companyName || '-'}</TableCell>
-              <TableCell>{session.branchName || session.branchId}</TableCell>
-              <TableCell>{session.instructorId || '-'}</TableCell>
+              <TableCell>{session.branchName || 'Sin dato'}</TableCell>
+              <TableCell>{session.instructorName || 'Sin asignar'}</TableCell>
               <TableCell>{labelEstado(session.status)}</TableCell>
               <TableCell>{attendanceCountBySession[session.id] || 0}</TableCell>
               <TableCell align="right">
@@ -77,25 +90,43 @@ export default function SessionsListView({
                     <VisibilityIcon fontSize="small" />
                   </IconButton>
                 </Tooltip>
-                <Tooltip title="Editar sesión">
+                <Tooltip title="Editar sesion">
                   <IconButton size="small" onClick={() => onEdit(session)}>
                     <EditIcon fontSize="small" />
                   </IconButton>
                 </Tooltip>
-                <Tooltip title="Ejecutar sesión">
-                  <IconButton size="small" onClick={() => onExecute(session)}>
-                    <PlayArrowIcon fontSize="small" />
-                  </IconButton>
+                <Tooltip title="Iniciar sesion">
+                  <span>
+                    <IconButton
+                      size="small"
+                      onClick={() => onExecute(session)}
+                      disabled={!canTransition(session.status, TRAINING_SESSION_STATUSES.IN_PROGRESS)}
+                    >
+                      <PlayArrowIcon fontSize="small" />
+                    </IconButton>
+                  </span>
                 </Tooltip>
                 <Tooltip title="Mover a pendiente de cierre">
-                  <IconButton size="small" onClick={() => onMoveToClosure(session)}>
-                    <TaskAltIcon fontSize="small" />
-                  </IconButton>
+                  <span>
+                    <IconButton
+                      size="small"
+                      onClick={() => onMoveToClosure(session)}
+                      disabled={!canTransition(session.status, TRAINING_SESSION_STATUSES.PENDING_CLOSURE)}
+                    >
+                      <TaskAltIcon fontSize="small" />
+                    </IconButton>
+                  </span>
                 </Tooltip>
-                <Tooltip title="Cancelar sesión">
-                  <IconButton size="small" onClick={() => onCancel(session)}>
-                    <CancelIcon fontSize="small" />
-                  </IconButton>
+                <Tooltip title="Cancelar sesion">
+                  <span>
+                    <IconButton
+                      size="small"
+                      onClick={() => onCancel(session)}
+                      disabled={!canTransition(session.status, TRAINING_SESSION_STATUSES.CANCELLED)}
+                    >
+                      <CancelIcon fontSize="small" />
+                    </IconButton>
+                  </span>
                 </Tooltip>
               </TableCell>
             </TableRow>

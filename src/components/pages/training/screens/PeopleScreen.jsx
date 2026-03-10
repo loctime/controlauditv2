@@ -82,9 +82,9 @@ export default function PeopleScreen() {
 
           return {
             ...record,
-            trainingName: training?.name || record.trainingTypeId,
+            trainingName: training?.name || 'Sin dato',
             companyName: company?.nombre || null,
-            branchName: branch?.nombre || record.branchId || null,
+            branchName: branch?.nombre || null,
             certificate
           };
         });
@@ -132,4 +132,5 @@ export default function PeopleScreen() {
     </Box>
   );
 }
+
 

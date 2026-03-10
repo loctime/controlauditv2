@@ -56,7 +56,7 @@ export default function EmployeeTrainingTimeline({ records = [] }) {
         <TableBody>
           {records.map((record) => (
             <TableRow key={record.id}>
-              <TableCell>{record.trainingName || record.trainingTypeId}</TableCell>
+              <TableCell>{record.trainingName || 'Sin dato'}</TableCell>
               <TableCell>{dateText(record.validFrom)}</TableCell>
               <TableCell>
                 {dateText(record.validFrom)} — {dateText(record.validUntil)}
@@ -83,4 +83,5 @@ export default function EmployeeTrainingTimeline({ records = [] }) {
     </Paper>
   );
 }
+
 

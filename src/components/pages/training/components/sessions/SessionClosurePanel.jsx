@@ -1,7 +1,19 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { Alert, Button, Paper, Stack, Typography } from '@mui/material';
 import { trainingAttendanceService, trainingSessionService } from '../../../../../services/training';
 import { TRAINING_SESSION_STATUSES } from '../../../../../types/trainingDomain';
+
+function canTransition(status, nextStatus) {
+  const map = {
+    [TRAINING_SESSION_STATUSES.DRAFT]: [TRAINING_SESSION_STATUSES.SCHEDULED, TRAINING_SESSION_STATUSES.CANCELLED],
+    [TRAINING_SESSION_STATUSES.SCHEDULED]: [TRAINING_SESSION_STATUSES.IN_PROGRESS, TRAINING_SESSION_STATUSES.CANCELLED],
+    [TRAINING_SESSION_STATUSES.IN_PROGRESS]: [TRAINING_SESSION_STATUSES.PENDING_CLOSURE, TRAINING_SESSION_STATUSES.CANCELLED],
+    [TRAINING_SESSION_STATUSES.PENDING_CLOSURE]: [TRAINING_SESSION_STATUSES.CLOSED, TRAINING_SESSION_STATUSES.IN_PROGRESS],
+    [TRAINING_SESSION_STATUSES.CLOSED]: [],
+    [TRAINING_SESSION_STATUSES.CANCELLED]: []
+  };
+  return (map[status] || []).includes(nextStatus);
+}
 
 function labelEstado(estado) {
   const map = {
@@ -27,7 +39,7 @@ export default function SessionClosurePanel({ ownerId, session, onChanged }) {
     try {
       const result = await trainingSessionService.validateClosureGates(ownerId, session.id);
       if (result.canClose) {
-        setInfo('La sesión cumple todas las validaciones y puede cerrarse.');
+        setInfo('La sesion cumple todas las validaciones y puede cerrarse.');
       } else {
         setInfo(`Pendiente: ${result.reasons.join(' | ')}`);
       }
@@ -48,26 +60,51 @@ export default function SessionClosurePanel({ ownerId, session, onChanged }) {
       }
 
       onChanged();
-      setInfo(`La sesión pasó a estado ${labelEstado(targetStatus)}.`);
+      setInfo(`La sesion paso a estado ${labelEstado(targetStatus)}.`);
     } catch (err) {
-      setError(err.message || `No se pudo mover la sesión a ${labelEstado(targetStatus)}.`);
+      setError(err.message || `No se pudo mover la sesion a ${labelEstado(targetStatus)}.`);
     }
   };
 
   return (
     <Paper sx={{ p: 2 }}>
-      <Typography variant="h6" sx={{ mb: 1.5 }}>Cierre de sesión</Typography>
+      <Typography variant="h6" sx={{ mb: 1.5 }}>Cierre de sesion</Typography>
       {error && <Alert severity="error" sx={{ mb: 1.5 }}>{error}</Alert>}
       {info && <Alert severity="info" sx={{ mb: 1.5 }}>{info}</Alert>}
 
       <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
         <Button variant="outlined" onClick={runValidate}>Validar criterios de cierre</Button>
-        <Button variant="contained" onClick={() => transition(TRAINING_SESSION_STATUSES.IN_PROGRESS)}>Iniciar</Button>
-        <Button variant="contained" onClick={() => transition(TRAINING_SESSION_STATUSES.PENDING_CLOSURE)}>Pendiente de cierre</Button>
-        <Button variant="contained" color="success" onClick={() => transition(TRAINING_SESSION_STATUSES.CLOSED)}>Cerrar sesión</Button>
-        <Button variant="outlined" color="error" onClick={() => transition(TRAINING_SESSION_STATUSES.CANCELLED)}>Cancelar sesión</Button>
+        <Button
+          variant="contained"
+          onClick={() => transition(TRAINING_SESSION_STATUSES.IN_PROGRESS)}
+          disabled={!canTransition(session.status, TRAINING_SESSION_STATUSES.IN_PROGRESS)}
+        >
+          Iniciar sesion
+        </Button>
+        <Button
+          variant="contained"
+          onClick={() => transition(TRAINING_SESSION_STATUSES.PENDING_CLOSURE)}
+          disabled={!canTransition(session.status, TRAINING_SESSION_STATUSES.PENDING_CLOSURE)}
+        >
+          Pendiente de cierre
+        </Button>
+        <Button
+          variant="contained"
+          color="success"
+          onClick={() => transition(TRAINING_SESSION_STATUSES.CLOSED)}
+          disabled={!canTransition(session.status, TRAINING_SESSION_STATUSES.CLOSED)}
+        >
+          Cerrar sesion
+        </Button>
+        <Button
+          variant="outlined"
+          color="error"
+          onClick={() => transition(TRAINING_SESSION_STATUSES.CANCELLED)}
+          disabled={!canTransition(session.status, TRAINING_SESSION_STATUSES.CANCELLED)}
+        >
+          Cancelar sesion
+        </Button>
       </Stack>
     </Paper>
   );
 }
-

@@ -1,4 +1,4 @@
-ï»¿import React from 'react';
+import React from 'react';
 import {
   Dialog,
   DialogContent,
@@ -17,7 +17,7 @@ export default function UserGuideDialog({ open, onClose }) {
   return (
     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth scroll="paper">
       <DialogTitle sx={{ pr: 6 }}>
-        Guia de Usuario - Modulo de Capacitacion
+        Guia de usuario - Modulo de capacitacion
         <IconButton onClick={onClose} sx={{ position: 'absolute', right: 8, top: 8 }}>
           <CloseIcon />
         </IconButton>
@@ -25,63 +25,35 @@ export default function UserGuideDialog({ open, onClose }) {
       <DialogContent dividers>
         <Stack spacing={1.5}>
           <Typography>
-            Esta guia explica como usar el modulo para gestionar la capacitacion en seguridad y cumplimiento.
+            Esta guia resume el uso actual del modulo de capacitacion para equipos de Higiene y Seguridad.
           </Typography>
 
-          <BlockTitle>1. Que hace cada pestana</BlockTitle>
-          <Typography><strong>Tablero:</strong> muestra indicadores de cumplimiento, estado operativo, alertas y accesos rapidos.</Typography>
-          <Typography><strong>Sesiones:</strong> permite crear sesiones, asignar participantes, registrar asistencia/evaluacion, cargar evidencias y cerrar sesiones.</Typography>
-          <Typography><strong>Calendario:</strong> vista mensual de sesiones programadas. Al seleccionar un dia, se muestran sus sesiones.</Typography>
-          <Typography><strong>Personas:</strong> historial por empleado con estado de vigencia de cada capacitacion.</Typography>
-          <Typography><strong>Certificados:</strong> emision y gestion de certificados (ver, descargar, revocar).</Typography>
-          <Typography><strong>Configuracion:</strong> parametros administrativos (catalogo, matriz de requerimientos, planes anuales).</Typography>
-          <Typography><strong>Reportes:</strong> seguimiento operativo y de cumplimiento por estado, sucursal y vencimientos.</Typography>
+          <BlockTitle>1. Navegacion del modulo</BlockTitle>
+          <Typography><strong>Tablero:</strong> indicadores, alertas, accesos rapidos y calendario como vista secundaria.</Typography>
+          <Typography><strong>Sesiones:</strong> alta de sesiones, seleccion de participantes, ejecucion, evidencias y cierre.</Typography>
+          <Typography><strong>Personas:</strong> ficha del empleado e historial con vigencia y vencimiento.</Typography>
+          <Typography><strong>Reportes:</strong> estado operativo y cumplimiento por sucursal/puesto.</Typography>
+          <Typography><strong>Configuracion:</strong> catalogo, matriz de requerimientos y planes anuales (perfil admin).</Typography>
 
-          <BlockTitle>2. Flujo correcto para administradores</BlockTitle>
-          <Typography>1) Configurar catalogo de capacitaciones.</Typography>
-          <Typography>2) Definir matriz de requerimientos por puesto, sector y riesgo.</Typography>
-          <Typography>3) Cargar planes anuales.</Typography>
-          <Typography>4) Crear sesiones y asignar participantes sugeridos por cumplimiento.</Typography>
-          <Typography>5) Validar evidencias, firmas y cierre de sesion.</Typography>
-          <Typography>6) Emitir o revocar certificados segun resultados.</Typography>
-          <Typography>7) Revisar reportes y alertas para acciones correctivas.</Typography>
+          <BlockTitle>2. Flujo operativo recomendado</BlockTitle>
+          <Typography>1) Configurar catalogo, matriz y plan anual (si aplica).</Typography>
+          <Typography>2) Crear sesion (tipo, empresa, sucursal, instructor, fecha y modalidad).</Typography>
+          <Typography>3) Seleccionar participantes sugeridos y confirmar creacion.</Typography>
+          <Typography>4) Iniciar sesion y registrar asistencia/evaluacion por participante.</Typography>
+          <Typography>5) Cargar evidencias y referencias de firma.</Typography>
+          <Typography>6) Pasar a pendiente de cierre y validar criterios.</Typography>
+          <Typography>7) Cerrar sesion cuando todas las validaciones esten completas.</Typography>
 
-          <BlockTitle>3. Flujo correcto para usuarios operativos</BlockTitle>
-          <Typography>1) Entrar a Sesiones y abrir la sesion asignada.</Typography>
-          <Typography>2) Registrar asistencia (presente o ausencias) y evaluacion.</Typography>
-          <Typography>3) Cargar evidencias y referencias de firma.</Typography>
-          <Typography>4) Dejar la sesion en pendiente de cierre o cerrarla si se cumplen validaciones.</Typography>
-          <Typography>5) Consultar Personas para verificar vigencias por empleado.</Typography>
+          <BlockTitle>3. Uso rapido por pantalla</BlockTitle>
+          <Typography><strong>Sesiones:</strong> el hub principal para crear, ejecutar y cerrar sesiones.</Typography>
+          <Typography><strong>Personas:</strong> revisar vigentes, por vencer, vencidas e incompletas por empleado.</Typography>
+          <Typography><strong>Reportes:</strong> priorizar acciones por estado y cumplimiento.</Typography>
+          <Typography><strong>Tablero:</strong> monitoreo diario y acceso al calendario de sesiones.</Typography>
 
-          <BlockTitle>4. Instrucciones paso a paso</BlockTitle>
-          <Typography><strong>Configurar el sistema</strong></Typography>
-          <Typography>1) Ir a Configuracion.</Typography>
-          <Typography>2) En Catalogo, crear tipos de capacitacion.</Typography>
-          <Typography>3) En Matriz, definir que capacitacion aplica por contexto laboral.</Typography>
-          <Typography>4) En Planes anuales, cargar la planificacion del periodo.</Typography>
-
-          <Typography><strong>Crear sesiones de capacitacion</strong></Typography>
-          <Typography>1) Ir a Sesiones y completar Paso 1 (tipo, empresa, sucursal, fecha, instructor y modalidad).</Typography>
-          <Typography>2) Continuar al Paso 2 y seleccionar participantes (manual + sugeridos por vencimiento/requerimiento).</Typography>
-          <Typography>3) Guardar para crear la sesion.</Typography>
-
-          <Typography><strong>Registrar asistencia</strong></Typography>
-          <Typography>1) Abrir la sesion en el espacio de ejecucion.</Typography>
-          <Typography>2) Cargar estado de asistencia por empleado.</Typography>
-          <Typography>3) Si corresponde, registrar resultado de evaluacion.</Typography>
-          <Typography>4) Registrar referencias de firma de empleado e instructor.</Typography>
-
-          <Typography><strong>Emitir certificados</strong></Typography>
-          <Typography>1) Ir a Certificados.</Typography>
-          <Typography>2) Seleccionar empleado, capacitacion y sesion.</Typography>
-          <Typography>3) Completar fechas y referencia de archivo.</Typography>
-          <Typography>4) Emitir certificado y verificar estado.</Typography>
-
-          <Typography><strong>Verificar cumplimiento de empleados</strong></Typography>
-          <Typography>1) Ir a Personas.</Typography>
-          <Typography>2) Buscar empleado en el selector.</Typography>
-          <Typography>3) Revisar linea de tiempo (vigente, por vencer, vencido, incompleto).</Typography>
-          <Typography>4) Usar Tablero y Reportes para priorizar acciones.</Typography>
+          <BlockTitle>4. Buenas practicas</BlockTitle>
+          <Typography>1) Evitar cerrar sesiones sin revisar validaciones de asistencia, evaluacion y evidencia.</Typography>
+          <Typography>2) Registrar instructor y participantes con datos identificables por nombre.</Typography>
+          <Typography>3) Revisar Personas y Reportes al finalizar cada jornada para detectar desvíos.</Typography>
         </Stack>
       </DialogContent>
     </Dialog>

@@ -1,4 +1,4 @@
-﻿import { buildOrderBy, buildWhere, getDocument, queryDocuments, setDocument } from './trainingBaseService';
+import { buildOrderBy, buildWhere, getDocument, queryDocuments, setDocument } from './trainingBaseService';
 import { getTrainingRecordId, TRAINING_COMPLIANCE_STATUSES } from '../../types/trainingDomain';
 
 function computeCompliance(validUntil) {
@@ -73,6 +73,27 @@ export const employeeTrainingRecordService = {
       buildWhere('employeeId', '==', employeeId),
       buildOrderBy('updatedAt', 'desc')
     ]);
+  },
+
+  async listByEmployees(ownerId, employeeIds = []) {
+    const uniqueIds = Array.from(new Set((employeeIds || []).filter(Boolean)));
+    if (uniqueIds.length === 0) {
+      return [];
+    }
+
+    const chunkSize = 10;
+    const records = [];
+
+    for (let i = 0; i < uniqueIds.length; i += chunkSize) {
+      const chunk = uniqueIds.slice(i, i + chunkSize);
+      const chunkRecords = await queryDocuments(ownerId, 'employeeTrainingRecords', [
+        buildWhere('employeeId', 'in', chunk),
+        buildOrderBy('updatedAt', 'desc')
+      ]);
+      records.push(...chunkRecords);
+    }
+
+    return records;
   },
 
   async listExpiring(ownerId, branchId, statuses = [TRAINING_COMPLIANCE_STATUSES.EXPIRING_SOON, TRAINING_COMPLIANCE_STATUSES.EXPIRED]) {

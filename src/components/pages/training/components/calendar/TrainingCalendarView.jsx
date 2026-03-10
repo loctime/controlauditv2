@@ -1,4 +1,4 @@
-﻿import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Badge, Box, Paper, Stack, Typography } from '@mui/material';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
@@ -64,13 +64,13 @@ export default function TrainingCalendarView({ sessions = [] }) {
       <Paper sx={{ p: 2 }}>
         <Typography variant="h6" sx={{ mb: 1.5 }}>Sesiones para {selectedDay.format('YYYY-MM-DD')}</Typography>
         {sessionsForDay.length === 0 ? (
-          <Typography color="text.secondary">No hay sesiones para el día seleccionado.</Typography>
+          <Typography color="text.secondary">No hay sesiones para el dia seleccionado.</Typography>
         ) : (
           <Stack spacing={1}>
             {sessionsForDay.map((session) => (
               <Box key={session.id} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1, p: 1.5 }}>
-                <Typography sx={{ fontWeight: 700 }}>{session.trainingTypeId}</Typography>
-                <Typography variant="body2" color="text.secondary">{session.branchId} · {session.instructorId || 'Sin instructor'} · {labelEstado(session.status)}</Typography>
+                <Typography sx={{ fontWeight: 700 }}>{session.trainingTypeName || 'Sin dato'}</Typography>
+                <Typography variant="body2" color="text.secondary">{session.branchName || 'Sin dato'} � {session.instructorName || 'Sin asignar'} � {labelEstado(session.status)}</Typography>
               </Box>
             ))}
           </Stack>
@@ -79,4 +79,3 @@ export default function TrainingCalendarView({ sessions = [] }) {
     </Stack>
   );
 }
-

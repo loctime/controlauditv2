@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Alert,
   Box,
@@ -138,7 +138,7 @@ export default function CertificatesScreen() {
               <TextField label="Numero de certificado" value={form.certificateNumber} onChange={(e) => setForm({ ...form, certificateNumber: e.target.value })} />
               <TextField select label="Empleado" value={form.employeeId} onChange={(e) => setForm({ ...form, employeeId: e.target.value })}>
                 {employees.map((employee) => (
-                  <MenuItem key={employee.id} value={employee.id}>{employee.nombre || employee.id}</MenuItem>
+                  <MenuItem key={employee.id} value={employee.id}>{employee.nombre || employee.displayName || employee.email || 'Sin dato'}</MenuItem>
                 ))}
               </TextField>
               <TextField select label="Capacitacion" value={form.trainingTypeId} onChange={(e) => setForm({ ...form, trainingTypeId: e.target.value })}>
@@ -148,7 +148,7 @@ export default function CertificatesScreen() {
               </TextField>
               <TextField select label="Sesion" value={form.sessionId} onChange={(e) => setForm({ ...form, sessionId: e.target.value })}>
                 {sessions.map((session) => (
-                  <MenuItem key={session.id} value={session.id}>{session.trainingTypeId} · {session.branchId}</MenuItem>
+                  <MenuItem key={session.id} value={session.id}>{trainingMap[session.trainingTypeId]?.name || 'Sin dato'} � {userSucursales.find((branch) => branch.id === session.branchId)?.nombre || 'Sin dato'}</MenuItem>
                 ))}
               </TextField>
               <TextField type="date" label="Fecha de emision" InputLabelProps={{ shrink: true }} value={form.issuedAt} onChange={(e) => setForm({ ...form, issuedAt: e.target.value })} />
@@ -180,8 +180,8 @@ export default function CertificatesScreen() {
           {viewCertificate && (
             <Stack spacing={1}>
               <Typography><strong>Numero:</strong> {viewCertificate.certificateNumber || viewCertificate.id}</Typography>
-              <Typography><strong>Empleado:</strong> {viewCertificate.employeeName || viewCertificate.employeeId}</Typography>
-              <Typography><strong>Capacitacion:</strong> {viewCertificate.trainingName || viewCertificate.trainingTypeId}</Typography>
+              <Typography><strong>Empleado:</strong> {viewCertificate.employeeName || 'Sin dato'}</Typography>
+              <Typography><strong>Capacitacion:</strong> {viewCertificate.trainingName || 'Sin dato'}</Typography>
               <Typography><strong>Estado:</strong> {labelEstadoCertificado(viewCertificate.status)}</Typography>
               <Typography><strong>Archivo:</strong> {viewCertificate.fileReference || '-'}</Typography>
             </Stack>
@@ -191,3 +191,4 @@ export default function CertificatesScreen() {
     </Box>
   );
 }
+

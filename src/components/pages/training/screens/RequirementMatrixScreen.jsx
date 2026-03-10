@@ -1,4 +1,4 @@
-ï»¿import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Alert, Box, Button, CircularProgress, Grid, MenuItem, Paper, Stack, TextField, Typography } from '@mui/material';
 import { useAuth } from '@/components/context/AuthContext';
 import { trainingCatalogService, trainingRequirementService } from '../../../../services/training';
@@ -52,7 +52,7 @@ export default function RequirementMatrixScreen() {
   const createRule = async () => {
     if (!ownerId) return;
     if (!form.companyId || !form.branchId || !form.trainingTypeId) {
-      setError('Empresa, sucursal y tipo de capacitaciÃ³n son obligatorios.');
+      setError('Empresa, sucursal y tipo de capacitación son obligatorios.');
       return;
     }
 
@@ -94,13 +94,13 @@ export default function RequirementMatrixScreen() {
               </TextField>
               <TextField label="ID de puesto" value={form.jobRoleId} onChange={(e) => setForm({ ...form, jobRoleId: e.target.value })} />
               <TextField label="ID de sector" value={form.sectorId} onChange={(e) => setForm({ ...form, sectorId: e.target.value })} />
-              <TextField label="ID de categorÃ­a de riesgo" value={form.riskCategoryId} onChange={(e) => setForm({ ...form, riskCategoryId: e.target.value })} />
-              <TextField select label="Tipo de capacitaciÃ³n" value={form.trainingTypeId} onChange={(e) => setForm({ ...form, trainingTypeId: e.target.value })}>
+              <TextField label="ID de categoría de riesgo" value={form.riskCategoryId} onChange={(e) => setForm({ ...form, riskCategoryId: e.target.value })} />
+              <TextField select label="Tipo de capacitación" value={form.trainingTypeId} onChange={(e) => setForm({ ...form, trainingTypeId: e.target.value })}>
                 {catalog.map((item) => <MenuItem key={item.id} value={item.id}>{item.name}</MenuItem>)}
               </TextField>
               <TextField type="number" label="Frecuencia (meses)" value={form.frequencyMonths} onChange={(e) => setForm({ ...form, frequencyMonths: Number(e.target.value) })} />
               <TextField select label="Obligatoria" value={form.mandatory ? 'true' : 'false'} onChange={(e) => setForm({ ...form, mandatory: e.target.value === 'true' })}>
-                <MenuItem value="true">SÃ­</MenuItem>
+                <MenuItem value="true">Sí</MenuItem>
                 <MenuItem value="false">No</MenuItem>
               </TextField>
               <TextField label="Regla de vencimiento" value={form.expirationRule} onChange={(e) => setForm({ ...form, expirationRule: e.target.value })} />
@@ -117,8 +117,8 @@ export default function RequirementMatrixScreen() {
               <Stack spacing={1}>
                 {rules.map((rule) => (
                   <Paper key={rule.id} variant="outlined" sx={{ p: 1.5 }}>
-                    <Typography sx={{ fontWeight: 700 }}>{rule.trainingTypeId} - {rule.frequencyMonths}m</Typography>
-                    <Typography variant="body2" color="text.secondary">{rule.companyId} / {rule.branchId} / {rule.jobRoleId || 'todos los puestos'}</Typography>
+                    <Typography sx={{ fontWeight: 700 }}>{catalog.find((item) => item.id === rule.trainingTypeId)?.name || 'Sin dato'} - {rule.frequencyMonths}m</Typography>
+                    <Typography variant="body2" color="text.secondary">{userEmpresas.find((empresa) => empresa.id === rule.companyId)?.nombre || 'Sin dato'} / {userSucursales.find((sucursal) => sucursal.id === rule.branchId)?.nombre || 'Sin dato'} / {rule.jobRoleId || 'todos los puestos'}</Typography>
                     <Typography variant="body2">{rule.mandatory ? 'Obligatoria' : 'Opcional'} - {rule.status}</Typography>
                   </Paper>
                 ))}
@@ -130,4 +130,5 @@ export default function RequirementMatrixScreen() {
     </Box>
   );
 }
+
 

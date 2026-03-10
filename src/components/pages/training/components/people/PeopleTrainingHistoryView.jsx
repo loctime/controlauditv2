@@ -40,7 +40,7 @@ export default function PeopleTrainingHistoryView({
                 <Typography>
                   {selectedEmployee.apellido && selectedEmployee.nombre
                     ? `${selectedEmployee.apellido}, ${selectedEmployee.nombre}`
-                    : selectedEmployee.nombre || selectedEmployee.displayName || selectedEmployee.id}
+                    : selectedEmployee.nombre || selectedEmployee.displayName || 'Sin dato'}
                 </Typography>
               </Grid>
               <Grid item xs={12} md={2}>
@@ -61,13 +61,13 @@ export default function PeopleTrainingHistoryView({
                 <Typography variant="body2" color="text.secondary">
                   Empresa
                 </Typography>
-                <Typography>{selectedEmployee.empresaNombre || selectedEmployee.empresaId || '-'}</Typography>
+                <Typography>{selectedEmployee.empresaNombre || '-'}</Typography>
               </Grid>
               <Grid item xs={12} md={2}>
                 <Typography variant="body2" color="text.secondary">
                   Sucursal
                 </Typography>
-                <Typography>{selectedEmployee.sucursalNombre || selectedEmployee.sucursalId || '-'}</Typography>
+                <Typography>{selectedEmployee.sucursalNombre || '-'}</Typography>
               </Grid>
               <Grid item xs={12} md={3}>
                 <Typography variant="body2" color="text.secondary">
@@ -76,7 +76,6 @@ export default function PeopleTrainingHistoryView({
                 <Typography>
                   {selectedEmployee.puesto ||
                     selectedEmployee.jobRoleName ||
-                    selectedEmployee.jobRoleId ||
                     '-'}
                 </Typography>
               </Grid>
@@ -112,4 +111,5 @@ export default function PeopleTrainingHistoryView({
     </Grid>
   );
 }
+
 

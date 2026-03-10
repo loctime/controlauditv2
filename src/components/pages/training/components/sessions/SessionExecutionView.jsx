@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Alert, Grid, MenuItem, Paper, Stack, TextField, Typography, Button } from '@mui/material';
 import { trainingAttendanceService, trainingCatalogService } from '../../../../../services/training';
+import { empleadoService } from '../../../../../services/empleadoService';
 import {
   TRAINING_ATTENDANCE_STATUSES,
   TRAINING_EVALUATION_STATUSES
@@ -44,6 +45,7 @@ export default function SessionExecutionView({ ownerId, session, onChanged }) {
   const [records, setRecords] = useState([]);
   const [error, setError] = useState('');
   const [requiresEvaluation, setRequiresEvaluation] = useState(false);
+  const [employeeNameMap, setEmployeeNameMap] = useState({});
 
   const load = async () => {
     if (!ownerId || !session?.id) return;
@@ -109,7 +111,7 @@ export default function SessionExecutionView({ ownerId, session, onChanged }) {
               <Typography>
                 {record.employeeDisplayName ||
                   record.employeeName ||
-                  record.employeeId}
+                  'Sin dato'}
               </Typography>
             </Grid>
             <Grid item xs={12} md={3}>
@@ -177,4 +179,6 @@ export default function SessionExecutionView({ ownerId, session, onChanged }) {
     </Paper>
   );
 }
+
+
 

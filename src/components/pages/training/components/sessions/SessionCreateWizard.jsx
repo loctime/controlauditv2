@@ -1,6 +1,7 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Alert,
+  Autocomplete,
   Button,
   Checkbox,
   FormControlLabel,
@@ -13,6 +14,7 @@ import {
 } from '@mui/material';
 import { useAuth } from '@/components/context/AuthContext';
 import { empleadoService } from '../../../../../services/empleadoService';
+import { getUsers } from '../../../../../core/services/ownerUserService';
 import {
   employeeTrainingRecordService,
   trainingAttendanceService,
@@ -29,6 +31,14 @@ function toIso(value) {
   return new Date(value).toISOString();
 }
 
+function personDisplayName(person) {
+  if (!person) return '';
+  if (person.displayName) return person.displayName;
+  if (person.nombreCompleto) return person.nombreCompleto;
+  if (person.apellido && person.nombre) return `${person.apellido}, ${person.nombre}`;
+  return person.nombre || person.email || '';
+}
+
 export default function SessionCreateWizard({ ownerId, onCreated }) {
   const { userProfile, userEmpresas = [], userSucursales = [] } = useAuth();
 
@@ -40,6 +50,7 @@ export default function SessionCreateWizard({ ownerId, onCreated }) {
   const [suggestedIds, setSuggestedIds] = useState([]);
   const [selectedIds, setSelectedIds] = useState([]);
   const [filters, setFilters] = useState({ role: '', sector: '' });
+  const [instructorOptions, setInstructorOptions] = useState([]);
 
   const [form, setForm] = useState({
     trainingTypeId: '',
@@ -56,6 +67,64 @@ export default function SessionCreateWizard({ ownerId, onCreated }) {
     [userSucursales, form.companyId]
   );
 
+
+  useEffect(() => {
+    let alive = true;
+
+    const loadInstructors = async () => {
+      if (!ownerId) {
+        if (alive) setInstructorOptions([]);
+        return;
+      }
+
+      const [usersList, employeesList] = await Promise.all([
+        getUsers(ownerId).catch(() => []),
+        form.branchId
+          ? empleadoService.getEmpleadosBySucursal(ownerId, form.branchId).catch(() => [])
+          : form.companyId
+          ? empleadoService.getEmpleadosByEmpresa(ownerId, form.companyId).catch(() => [])
+          : Promise.resolve([])
+      ]);
+
+      const optionMap = new Map();
+
+      (usersList || []).forEach((user) => {
+        const name = personDisplayName(user) || 'Sin dato';
+        const suffix = user.email ? ` (${user.email})` : '';
+        optionMap.set(user.id, { id: user.id, label: `${name}${suffix}`, source: 'user' });
+      });
+
+      (employeesList || []).forEach((employee) => {
+        if (optionMap.has(employee.id)) return;
+        const name = personDisplayName(employee) || 'Sin dato';
+        const suffix = employee.email ? ` (${employee.email})` : '';
+        optionMap.set(employee.id, { id: employee.id, label: `${name}${suffix}`, source: 'employee' });
+      });
+
+      const options = Array.from(optionMap.values()).sort((a, b) => a.label.localeCompare(b.label, 'es'));
+
+      if (!alive) return;
+      setInstructorOptions(options);
+
+      setForm((prev) => {
+        if (!prev.instructorId) {
+          return { ...prev, instructorId: options[0]?.id || '' };
+        }
+        return prev;
+      });
+    };
+
+    loadInstructors();
+
+    return () => {
+      alive = false;
+    };
+  }, [ownerId, form.branchId, form.companyId]);
+
+  const selectedInstructorLabel = useMemo(
+    () => instructorOptions.find((option) => option.id === form.instructorId)?.label || 'Sin definir',
+    [instructorOptions, form.instructorId]
+  );
   const filteredEmployees = useMemo(() => {
     return employees.filter((employee) => {
       const roleCandidate = employee.jobRoleId || employee.puestoId || employee.rolId || employee.puesto || employee.rol || '';
@@ -94,25 +163,31 @@ export default function SessionCreateWizard({ ownerId, onCreated }) {
       const employeesList = await empleadoService.getEmpleadosBySucursal(ownerId, form.branchId);
       setEmployees(employeesList);
 
-      const [rules, recordsByEmployee] = await Promise.all([
+      const [rules, records] = await Promise.all([
         trainingRequirementService.listRules(ownerId, {
           companyId: form.companyId,
           branchId: form.branchId,
           trainingTypeId: form.trainingTypeId,
           status: 'active'
         }),
-        Promise.all(employeesList.map(async (employee) => ({
-          employeeId: employee.id,
-          records: await employeeTrainingRecordService.listByEmployee(ownerId, employee.id)
-        })))
+        employeeTrainingRecordService.listByEmployees(ownerId, employeesList.map((employee) => employee.id))
       ]);
+
+      const recordsByEmployee = records.reduce((acc, record) => {
+        if (!acc[record.employeeId]) {
+          acc[record.employeeId] = [];
+        }
+        acc[record.employeeId].push(record);
+        return acc;
+      }, {});
 
       const suggested = new Set();
 
-      recordsByEmployee.forEach(({ employeeId, records }) => {
-        const target = records.find((record) => record.trainingTypeId === form.trainingTypeId);
+      employeesList.forEach((employee) => {
+        const employeeRecords = recordsByEmployee[employee.id] || [];
+        const target = employeeRecords.find((record) => record.trainingTypeId === form.trainingTypeId);
         if (!target || target.complianceStatus === TRAINING_COMPLIANCE_STATUSES.EXPIRED || target.complianceStatus === TRAINING_COMPLIANCE_STATUSES.EXPIRING_SOON || target.complianceStatus === TRAINING_COMPLIANCE_STATUSES.MISSING) {
-          suggested.add(employeeId);
+          suggested.add(employee.id);
         }
       });
 
@@ -248,11 +323,14 @@ export default function SessionCreateWizard({ ownerId, onCreated }) {
               </TextField>
             </Grid>
             <Grid item xs={12} md={4}>
-              <TextField
-                fullWidth
-                label="Instructor"
-                value={form.instructorId}
-                onChange={(e) => setForm({ ...form, instructorId: e.target.value })}
+              <Autocomplete
+                options={instructorOptions}
+                value={instructorOptions.find((option) => option.id === form.instructorId) || null}
+                onChange={(_, value) => setForm({ ...form, instructorId: value?.id || '' })}
+                getOptionLabel={(option) => option?.label || ''}
+                renderInput={(params) => (
+                  <TextField {...params} fullWidth label="Instructor" placeholder="Seleccionar instructor" />
+                )}
               />
             </Grid>
             <Grid item xs={12} md={4}>
@@ -404,7 +482,7 @@ export default function SessionCreateWizard({ ownerId, onCreated }) {
               <Typography variant="body2" color="text.secondary">
                 Instructor
               </Typography>
-              <Typography>{form.instructorId || 'Sin definir'}</Typography>
+              <Typography>{selectedInstructorLabel}</Typography>
             </Grid>
             <Grid item xs={12} md={4}>
               <Typography variant="body2" color="text.secondary">
@@ -445,4 +523,14 @@ export default function SessionCreateWizard({ ownerId, onCreated }) {
     </Paper>
   );
 }
+
+
+
+
+
+
+
+
+
+
 

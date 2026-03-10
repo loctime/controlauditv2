@@ -1,4 +1,4 @@
-Ôªøimport React, { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Alert, Box, Button, CircularProgress, Grid, MenuItem, Paper, Stack, TextField, Typography } from '@mui/material';
 import { useAuth } from '@/components/context/AuthContext';
 import { trainingCatalogService, trainingPlanService } from '../../../../services/training';
@@ -48,7 +48,7 @@ export default function AnnualPlansScreen() {
       setCatalog(catalogData);
     } catch (err) {
       console.error('[AnnualPlansScreen] load error', err);
-      setError('No se pudieron cargar los planes y sus √≠tems.');
+      setError('No se pudieron cargar los planes y sus Ìtems.');
     } finally {
       setLoading(false);
     }
@@ -80,7 +80,7 @@ export default function AnnualPlansScreen() {
   const createItem = async () => {
     if (!ownerId) return;
     if (!itemForm.planId || !itemForm.trainingTypeId) {
-      setError('Plan y tipo de capacitaci√≥n son obligatorios para crear el √≠tem.');
+      setError('Plan y tipo de capacitaciÛn son obligatorios para crear el Ìtem.');
       return;
     }
 
@@ -93,7 +93,7 @@ export default function AnnualPlansScreen() {
       });
       await load();
     } catch (err) {
-      setError(err.message || 'No se pudo crear el √≠tem del plan.');
+      setError(err.message || 'No se pudo crear el Ìtem del plan.');
     } finally {
       setSaving(false);
     }
@@ -112,7 +112,7 @@ export default function AnnualPlansScreen() {
           <Paper sx={{ p: 2, height: '100%' }}>
             <Typography variant="h6" sx={{ mb: 2 }}>Crear plan anual</Typography>
             <Stack spacing={1.5}>
-              <TextField label="A√±o" type="number" value={planForm.year} onChange={(e) => setPlanForm({ ...planForm, year: Number(e.target.value) })} />
+              <TextField label="AÒo" type="number" value={planForm.year} onChange={(e) => setPlanForm({ ...planForm, year: Number(e.target.value) })} />
               <TextField select label="Empresa" value={planForm.companyId} onChange={(e) => setPlanForm({ ...planForm, companyId: e.target.value, branchId: '' })}>
                 {userEmpresas.map((empresa) => <MenuItem key={empresa.id} value={empresa.id}>{empresa.nombre}</MenuItem>)}
               </TextField>
@@ -136,12 +136,12 @@ export default function AnnualPlansScreen() {
 
         <Grid item xs={12} md={6}>
           <Paper sx={{ p: 2, height: '100%' }}>
-            <Typography variant="h6" sx={{ mb: 2 }}>Crear √≠tem de plan</Typography>
+            <Typography variant="h6" sx={{ mb: 2 }}>Crear Ìtem de plan</Typography>
             <Stack spacing={1.5}>
               <TextField select label="Plan" value={itemForm.planId} onChange={(e) => setItemForm({ ...itemForm, planId: e.target.value })}>
-                {plans.map((plan) => <MenuItem key={plan.id} value={plan.id}>{plan.year} - {plan.branchId}</MenuItem>)}
+                {plans.map((plan) => <MenuItem key={plan.id} value={plan.id}>{plan.year} - {userSucursales.find((sucursal) => sucursal.id === plan.branchId)?.nombre || 'Sin dato'}</MenuItem>)}
               </TextField>
-              <TextField select label="Tipo de capacitaci√≥n" value={itemForm.trainingTypeId} onChange={(e) => setItemForm({ ...itemForm, trainingTypeId: e.target.value })}>
+              <TextField select label="Tipo de capacitaciÛn" value={itemForm.trainingTypeId} onChange={(e) => setItemForm({ ...itemForm, trainingTypeId: e.target.value })}>
                 {catalog.map((item) => <MenuItem key={item.id} value={item.id}>{item.name}</MenuItem>)}
               </TextField>
               <TextField type="number" label="Mes planificado" value={itemForm.plannedMonth} onChange={(e) => setItemForm({ ...itemForm, plannedMonth: Number(e.target.value) })} />
@@ -153,23 +153,23 @@ export default function AnnualPlansScreen() {
                 <MenuItem value="high">Alta</MenuItem>
               </TextField>
               <TextField multiline rows={2} label="Notas" value={itemForm.notes} onChange={(e) => setItemForm({ ...itemForm, notes: e.target.value })} />
-              <Button variant="contained" onClick={createItem} disabled={saving}>{saving ? 'Guardando...' : 'Crear √≠tem de plan'}</Button>
+              <Button variant="contained" onClick={createItem} disabled={saving}>{saving ? 'Guardando...' : 'Crear Ìtem de plan'}</Button>
             </Stack>
           </Paper>
         </Grid>
       </Grid>
 
       <Paper sx={{ p: 2, mt: 3 }}>
-        <Typography variant="h6" sx={{ mb: 2 }}>Planes e √≠tems</Typography>
+        <Typography variant="h6" sx={{ mb: 2 }}>Planes e Ìtems</Typography>
         {loading ? <CircularProgress /> : (
           <Stack spacing={1}>
             {plans.map((plan) => {
               const items = planItems.filter((item) => item.planId === plan.id);
               return (
                 <Paper key={plan.id} variant="outlined" sx={{ p: 2 }}>
-                  <Typography sx={{ fontWeight: 700 }}>{plan.year} ¬∑ {plan.branchId} ¬∑ {plan.status}</Typography>
+                  <Typography sx={{ fontWeight: 700 }}>{plan.year} ∑ {userSucursales.find((sucursal) => sucursal.id === plan.branchId)?.nombre || 'Sin dato'} ∑ {plan.status}</Typography>
                   <Typography variant="body2" color="text.secondary">{plan.notes || 'Sin notas'}</Typography>
-                  <Typography variant="body2" sx={{ mt: 1 }}>√çtems del plan: {items.length}</Typography>
+                  <Typography variant="body2" sx={{ mt: 1 }}>Õtems del plan: {items.length}</Typography>
                 </Paper>
               );
             })}
@@ -179,4 +179,5 @@ export default function AnnualPlansScreen() {
     </Box>
   );
 }
+
 

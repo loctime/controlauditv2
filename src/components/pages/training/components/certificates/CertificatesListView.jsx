@@ -1,4 +1,4 @@
-ï»¿import React from 'react';
+import React from 'react';
 import { Paper, Table, TableBody, TableCell, TableHead, TableRow, Typography } from '@mui/material';
 import CertificateActionsMenu from './CertificateActionsMenu';
 
@@ -24,10 +24,10 @@ export default function CertificatesListView({ certificates, onView, onDownload,
       <Table size="small">
         <TableHead>
           <TableRow>
-            <TableCell>NÃºmero de certificado</TableCell>
+            <TableCell>Número de certificado</TableCell>
             <TableCell>Empleado</TableCell>
-            <TableCell>CapacitaciÃ³n</TableCell>
-            <TableCell>Fecha de emisiÃ³n</TableCell>
+            <TableCell>Capacitación</TableCell>
+            <TableCell>Fecha de emisión</TableCell>
             <TableCell>Vencimiento</TableCell>
             <TableCell>Estado</TableCell>
             <TableCell align="right">Acciones</TableCell>
@@ -37,8 +37,8 @@ export default function CertificatesListView({ certificates, onView, onDownload,
           {certificates.map((certificate) => (
             <TableRow key={certificate.id}>
               <TableCell>{certificate.certificateNumber || certificate.id}</TableCell>
-              <TableCell>{certificate.employeeName || certificate.employeeId}</TableCell>
-              <TableCell>{certificate.trainingName || certificate.trainingTypeId}</TableCell>
+              <TableCell>{certificate.employeeName || 'Sin dato'}</TableCell>
+              <TableCell>{certificate.trainingName || 'Sin dato'}</TableCell>
               <TableCell>{dateText(certificate.issuedAt)}</TableCell>
               <TableCell>{dateText(certificate.expiresAt)}</TableCell>
               <TableCell>{statusLabel(certificate.status)}</TableCell>
@@ -56,4 +56,5 @@ export default function CertificatesListView({ certificates, onView, onDownload,
     </Paper>
   );
 }
+
 
