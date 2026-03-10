@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Alert, Grid, MenuItem, Paper, Stack, TextField, Typography, Button } from '@mui/material';
 import { trainingAttendanceService, trainingCatalogService } from '../../../../../services/training';
 import {
@@ -93,13 +93,25 @@ export default function SessionExecutionView({ ownerId, session, onChanged }) {
 
   return (
     <Paper sx={{ p: 2 }}>
-      <Typography variant="h6" sx={{ mb: 2 }}>Ejecución de la sesión</Typography>
-      {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+      <Typography variant="h6" sx={{ mb: 2 }}>
+        Participantes y ejecución
+      </Typography>
+      {error && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {error}
+        </Alert>
+      )}
 
       <Stack spacing={1.5}>
         {records.map((record) => (
           <Grid container spacing={1.5} key={record.employeeId} alignItems="center">
-            <Grid item xs={12} md={2}><Typography>{record.employeeId}</Typography></Grid>
+            <Grid item xs={12} md={3}>
+              <Typography>
+                {record.employeeDisplayName ||
+                  record.employeeName ||
+                  record.employeeId}
+              </Typography>
+            </Grid>
             <Grid item xs={12} md={3}>
               <TextField
                 select
@@ -125,7 +137,7 @@ export default function SessionExecutionView({ ownerId, session, onChanged }) {
                 {evaluationMenu}
               </TextField>
             </Grid>
-            <Grid item xs={12} md={2}>
+            <Grid item xs={12} md={3}>
               <TextField
                 fullWidth
                 size="small"
@@ -139,7 +151,7 @@ export default function SessionExecutionView({ ownerId, session, onChanged }) {
                 })}
               />
             </Grid>
-            <Grid item xs={12} md={2}>
+            <Grid item xs={12} md={3}>
               <TextField
                 fullWidth
                 size="small"

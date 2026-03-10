@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Alert,
   Box,
@@ -27,7 +27,7 @@ import SessionEvidencePanel from '../components/sessions/SessionEvidencePanel';
 import SessionClosurePanel from '../components/sessions/SessionClosurePanel';
 
 export default function SessionsScreen() {
-  const { userProfile, userSucursales = [] } = useAuth();
+  const { userProfile, userSucursales = [], userEmpresas = [] } = useAuth();
   const ownerId = userProfile?.ownerId;
 
   const [error, setError] = useState('');
@@ -62,13 +62,21 @@ export default function SessionsScreen() {
       const byId = Object.fromEntries(attendanceCounts);
       const catalogMap = Object.fromEntries(catalogList.map((item) => [item.id, item]));
       const branchMap = Object.fromEntries(userSucursales.map((branch) => [branch.id, branch]));
+      const companyMap = Object.fromEntries(userEmpresas.map((company) => [company.id, company]));
 
       setAttendanceCountBySession(byId);
-      setSessions(sessionList.map((session) => ({
-        ...session,
-        trainingTypeName: catalogMap[session.trainingTypeId]?.name,
-        branchName: branchMap[session.branchId]?.nombre
-      })));
+      setSessions(
+        sessionList.map((session) => ({
+          ...session,
+          trainingTypeName: catalogMap[session.trainingTypeId]?.name,
+          branchName: branchMap[session.branchId]?.nombre,
+          companyName:
+            companyMap[session.companyId]?.nombre ||
+            branchMap[session.branchId]?.empresaNombre ||
+            branchMap[session.branchId]?.empresaId ||
+            ''
+        }))
+      );
 
       if (!selectedSessionId && sessionList.length > 0) {
         setSelectedSessionId(sessionList[0].id);
@@ -123,7 +131,7 @@ export default function SessionsScreen() {
   };
 
   if (!ownerId) {
-    return <Alert severity="warning">No hay contexto de owner disponible para sesiones.</Alert>;
+    return <Alert severity="warning">No hay contexto de empresa disponible para sesiones.</Alert>;
   }
 
   return (
@@ -132,6 +140,9 @@ export default function SessionsScreen() {
 
       <Grid container spacing={2}>
         <Grid item xs={12}>
+          <Typography variant="h6" sx={{ mb: 1 }}>
+            1. Crear nueva sesión
+          </Typography>
           <SessionCreateWizard
             ownerId={ownerId}
             onCreated={(sessionId) => {
@@ -142,27 +153,96 @@ export default function SessionsScreen() {
         </Grid>
 
         <Grid item xs={12}>
+          <Typography variant="h6" sx={{ mb: 1 }}>
+            2. Lista de sesiones
+          </Typography>
           <SessionsListView
             sessions={sessions}
             attendanceCountBySession={attendanceCountBySession}
             onView={(session) => setSelectedSessionId(session.id)}
             onEdit={openEdit}
-            onClose={(session) => setSelectedSessionId(session.id)}
-            onCancel={(session) => quickTransition(session, TRAINING_SESSION_STATUSES.CANCELLED)}
+            onExecute={(session) => {
+              setSelectedSessionId(session.id);
+              quickTransition(session, TRAINING_SESSION_STATUSES.IN_PROGRESS);
+            }}
+            onMoveToClosure={(session) => {
+              setSelectedSessionId(session.id);
+              quickTransition(session, TRAINING_SESSION_STATUSES.PENDING_CLOSURE);
+            }}
+            onCancel={(session) =>
+              quickTransition(session, TRAINING_SESSION_STATUSES.CANCELLED)
+            }
           />
         </Grid>
 
         <Grid item xs={12}>
           <Paper sx={{ p: 2 }}>
-            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} justifyContent="space-between" alignItems={{ sm: 'center' }}>
-              <Typography variant="h6">Espacio operativo de ejecución</Typography>
-              {selectedSession && (
-                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
-                  <Button variant="outlined" onClick={() => quickTransition(selectedSession, TRAINING_SESSION_STATUSES.IN_PROGRESS)}>Iniciar</Button>
-                  <Button variant="outlined" onClick={() => quickTransition(selectedSession, TRAINING_SESSION_STATUSES.PENDING_CLOSURE)}>Mover a pendiente de cierre</Button>
-                </Stack>
-              )}
-            </Stack>
+            <Typography variant="h6" sx={{ mb: 1.5 }}>
+              3. Sesión seleccionada
+            </Typography>
+            {selectedSession ? (
+              <Stack spacing={1.5}>
+                <Typography variant="subtitle1">Resumen de la sesión</Typography>
+                <Grid container spacing={1.5}>
+                  <Grid item xs={12} md={3}>
+                    <Typography variant="body2" color="text.secondary">
+                      Capacitación
+                    </Typography>
+                    <Typography>{selectedSession.trainingTypeName || selectedSession.trainingTypeId}</Typography>
+                  </Grid>
+                  <Grid item xs={12} md={3}>
+                    <Typography variant="body2" color="text.secondary">
+                      Empresa
+                    </Typography>
+                    <Typography>{selectedSession.companyName || 'Sin datos'}</Typography>
+                  </Grid>
+                  <Grid item xs={12} md={3}>
+                    <Typography variant="body2" color="text.secondary">
+                      Sucursal
+                    </Typography>
+                    <Typography>{selectedSession.branchName || selectedSession.branchId}</Typography>
+                  </Grid>
+                  <Grid item xs={12} md={3}>
+                    <Typography variant="body2" color="text.secondary">
+                      Instructor
+                    </Typography>
+                    <Typography>{selectedSession.instructorId || 'Sin asignar'}</Typography>
+                  </Grid>
+                  <Grid item xs={12} md={3}>
+                    <Typography variant="body2" color="text.secondary">
+                      Fecha
+                    </Typography>
+                    <Typography>
+                      {selectedSession.scheduledDate?.toDate
+                        ? selectedSession.scheduledDate.toDate().toLocaleString()
+                        : String(selectedSession.scheduledDate || '')}
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={12} md={3}>
+                    <Typography variant="body2" color="text.secondary">
+                      Modalidad
+                    </Typography>
+                    <Typography>{selectedSession.modality || '-'}</Typography>
+                  </Grid>
+                  <Grid item xs={12} md={3}>
+                    <Typography variant="body2" color="text.secondary">
+                      Ubicación
+                    </Typography>
+                    <Typography>{selectedSession.location || '-'}</Typography>
+                  </Grid>
+                  <Grid item xs={12} md={3}>
+                    <Typography variant="body2" color="text.secondary">
+                      Estado
+                    </Typography>
+                    <Typography>{selectedSession.status}</Typography>
+                  </Grid>
+                </Grid>
+              </Stack>
+            ) : (
+              <Typography color="text.secondary">
+                Seleccioná una sesión en la lista para ver su detalle operativo.
+              </Typography>
+            )}
           </Paper>
         </Grid>
 

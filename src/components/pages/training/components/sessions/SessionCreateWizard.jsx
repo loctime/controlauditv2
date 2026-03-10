@@ -1,4 +1,4 @@
-﻿import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   Alert,
   Button,
@@ -195,8 +195,14 @@ export default function SessionCreateWizard({ ownerId, onCreated }) {
 
   return (
     <Paper sx={{ p: 2 }}>
-      <Typography variant="h6" sx={{ mb: 2 }}>Crear sesión</Typography>
-      {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+      <Typography variant="h6" sx={{ mb: 2 }}>
+        Crear sesión de capacitación
+      </Typography>
+      {error && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {error}
+        </Alert>
+      )}
 
       {step === 1 && (
         <Stack spacing={2}>
@@ -290,7 +296,7 @@ export default function SessionCreateWizard({ ownerId, onCreated }) {
 
       {step === 2 && (
         <Stack spacing={2}>
-          <Typography variant="subtitle1">Paso 2: asignar participantes</Typography>
+          <Typography variant="subtitle1">Paso 2: participantes</Typography>
           <Typography variant="body2" color="text.secondary">
             Los sugeridos incluyen empleados con capacitación vencida, por vencer o faltante y coincidencias de la matriz de requerimientos.
           </Typography>
@@ -336,9 +342,103 @@ export default function SessionCreateWizard({ ownerId, onCreated }) {
             {filteredEmployees.length === 0 && <Typography color="text.secondary">No hay empleados para los filtros seleccionados.</Typography>}
           </Paper>
 
+          <Typography variant="body2">
+            Participantes seleccionados: <strong>{selectedIds.length}</strong>
+          </Typography>
+
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
-            <Button variant="outlined" onClick={() => setStep(1)}>Volver</Button>
-            <Button variant="contained" onClick={createSession} disabled={saving}>{saving ? 'Creando...' : 'Crear sesión'}</Button>
+            <Button variant="outlined" onClick={() => setStep(1)}>
+              Volver
+            </Button>
+            <Button
+              variant="contained"
+              onClick={() => setStep(3)}
+              disabled={saving || selectedIds.length === 0}
+            >
+              Continuar a confirmación
+            </Button>
+          </Stack>
+        </Stack>
+      )}
+
+      {step === 3 && (
+        <Stack spacing={2}>
+          <Typography variant="subtitle1">Paso 3: confirmación</Typography>
+          <Typography variant="body2" color="text.secondary">
+            Revisá los datos de la sesión antes de crearla.
+          </Typography>
+
+          <Grid container spacing={2}>
+            <Grid item xs={12} md={4}>
+              <Typography variant="body2" color="text.secondary">
+                Capacitación
+              </Typography>
+              <Typography>
+                {catalogItems.find((item) => item.id === form.trainingTypeId)?.name ||
+                  'Sin seleccionar'}
+              </Typography>
+            </Grid>
+            <Grid item xs={12} md={4}>
+              <Typography variant="body2" color="text.secondary">
+                Empresa
+              </Typography>
+              <Typography>
+                {userEmpresas.find((c) => c.id === form.companyId)?.nombre || 'Sin seleccionar'}
+              </Typography>
+            </Grid>
+            <Grid item xs={12} md={4}>
+              <Typography variant="body2" color="text.secondary">
+                Sucursal
+              </Typography>
+              <Typography>
+                {userSucursales.find((b) => b.id === form.branchId)?.nombre || 'Sin seleccionar'}
+              </Typography>
+            </Grid>
+            <Grid item xs={12} md={4}>
+              <Typography variant="body2" color="text.secondary">
+                Fecha
+              </Typography>
+              <Typography>{form.scheduledDate || 'Sin definir'}</Typography>
+            </Grid>
+            <Grid item xs={12} md={4}>
+              <Typography variant="body2" color="text.secondary">
+                Instructor
+              </Typography>
+              <Typography>{form.instructorId || 'Sin definir'}</Typography>
+            </Grid>
+            <Grid item xs={12} md={4}>
+              <Typography variant="body2" color="text.secondary">
+                Modalidad
+              </Typography>
+              <Typography>
+                {form.modality === 'in_person'
+                  ? 'Presencial'
+                  : form.modality === 'virtual'
+                  ? 'Virtual'
+                  : form.modality === 'hybrid'
+                  ? 'Híbrida'
+                  : form.modality || '-'}
+              </Typography>
+            </Grid>
+            <Grid item xs={12}>
+              <Typography variant="body2" color="text.secondary">
+                Ubicación
+              </Typography>
+              <Typography>{form.location || '-'}</Typography>
+            </Grid>
+          </Grid>
+
+          <Typography variant="body2">
+            Participantes a invitar: <strong>{selectedIds.length}</strong>
+          </Typography>
+
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
+            <Button variant="outlined" onClick={() => setStep(2)}>
+              Volver a participantes
+            </Button>
+            <Button variant="contained" onClick={createSession} disabled={saving}>
+              {saving ? 'Creando...' : 'Crear sesión'}
+            </Button>
           </Stack>
         </Stack>
       )}
