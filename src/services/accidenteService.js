@@ -6,7 +6,8 @@ import {
   where, 
   orderBy,
   Timestamp,
-  getDoc
+  getDoc,
+  arrayUnion
 } from 'firebase/firestore';
 import { addDocWithAppId, updateDocWithAppId, deleteDocWithAppId } from '../firebase/firestoreAppWriter';
 import { db } from '../firebaseControlFile';
@@ -16,11 +17,11 @@ import { registrarAccionSistema } from '../utils/firestoreUtils';
 import { uploadFileWithContext } from './unifiedFileUploadService';
 import { auth } from '../firebaseControlFile';
 
-// Referencia a la colección de logs
+// Referencia a la colecciÃƒÆ’Ã‚Â³n de logs
 const logsCollectionRef = collection(db, 'logs_operarios');
 
 /**
- * Servicio para gestión de accidentes e incidentes
+ * Servicio para gestiÃƒÆ’Ã‚Â³n de accidentes e incidentes
  */
 
 /**
@@ -30,11 +31,31 @@ const logsCollectionRef = collection(db, 'logs_operarios');
  */
 const normalizeAccidente = (doc) => {
   if (!doc) return doc;
-  
+  const fecha = doc.fecha ?? doc.fechaHora ?? null;
+  const closedAt = doc.closedAt ?? doc.fechaCierre ?? null;
+
   return {
     ...doc,
+    fecha,
+    fechaHora: fecha,
     fechaCreacion: doc.fechaCreacion ?? doc.createdAt ?? null,
+    closedAt,
+    fechaCierre: closedAt,
     activa: doc.activa ?? true,
+  };
+};
+
+const resolveAccidenteContext = (contextOrAccidenteId, maybeUserProfile = null) => {
+  if (contextOrAccidenteId && typeof contextOrAccidenteId === 'object' && !Array.isArray(contextOrAccidenteId)) {
+    return {
+      ownerId: contextOrAccidenteId.ownerId || contextOrAccidenteId.userProfile?.ownerId || null,
+      accidenteId: contextOrAccidenteId.accidenteId || contextOrAccidenteId.id || null
+    };
+  }
+
+  return {
+    ownerId: maybeUserProfile?.ownerId || null,
+    accidenteId: contextOrAccidenteId || null
   };
 };
 
@@ -53,32 +74,41 @@ export const crearAccidente = async (accidenteData, empleadosSeleccionados, imag
     const fechaAccidente = accidenteData.fechaAccidente 
       ? Timestamp.fromDate(new Date(accidenteData.fechaAccidente))
       : Timestamp.now();
-    
+
+    if (!userProfile?.ownerId) throw new Error('userProfile.ownerId es requerido');
+    const ownerId = userProfile.ownerId;
+    const actorId = accidenteData.reportadoPor || userProfile?.uid || null;
+
     const accidenteDoc = {
+      ownerId,
       empresaId: accidenteData.empresaId,
       sucursalId: accidenteData.sucursalId,
       tipo: 'accidente',
       empleadosInvolucrados,
       descripcion: accidenteData.descripcion || '',
       imagenes: [],
+      fecha: fechaAccidente,
       fechaHora: fechaAccidente,
+      creadoPor: actorId,
+      actualizadoPor: actorId,
       createdAt: Timestamp.now(),
+      updatedAt: Timestamp.now(),
       reportadoPor: accidenteData.reportadoPor,
-      estado: 'abierto'
+      estado: 'abierto',
+      historialEstado: [{ from: null, to: 'abierto', by: actorId, at: Timestamp.now(), motivo: 'creacion' }],
+      cerradoPor: null,
+      closedAt: null
     };
-
-    if (!userProfile?.ownerId) throw new Error('userProfile.ownerId es requerido');
-    const ownerId = userProfile.ownerId;
     const accidentesRef = collection(db, ...firestoreRoutesCore.accidentes(ownerId));
     const docRef = await addDocWithAppId(accidentesRef, accidenteDoc);
 
-    // Subir imágenes si existen
+    // Subir imÃƒÆ’Ã‚Â¡genes si existen
     if (imagenes && imagenes.length > 0) {
       const imagenesUrls = await subirImagenes(docRef.id, imagenes, accidenteData.empresaId);
       await updateDocWithAppId(docRef, { imagenes: imagenesUrls });
     }
 
-    // Actualizar estado de empleados con días de reposo
+    // Actualizar estado de empleados con dÃƒÆ’Ã‚Â­as de reposo
     for (const emp of empleadosSeleccionados) {
       if (emp.conReposo) {
         await actualizarEstadoEmpleado(emp.id, 'inactivo', Timestamp.now(), userProfile);
@@ -135,8 +165,13 @@ export const crearIncidente = async (incidenteData, testigos = [], imagenes = []
     const fechaIncidente = incidenteData.fechaIncidente 
       ? Timestamp.fromDate(new Date(incidenteData.fechaIncidente))
       : Timestamp.now();
-    
+
+    if (!userProfile?.ownerId) throw new Error('userProfile.ownerId es requerido');
+    const ownerId = userProfile.ownerId;
+    const actorId = incidenteData.reportadoPor || userProfile?.uid || null;
+
     const incidenteDoc = {
+      ownerId,
       empresaId: incidenteData.empresaId,
       sucursalId: incidenteData.sucursalId,
       tipo: 'incidente',
@@ -144,18 +179,22 @@ export const crearIncidente = async (incidenteData, testigos = [], imagenes = []
       empleadosInvolucrados: [], // Los incidentes no tienen empleados con reposo
       descripcion: incidenteData.descripcion || '',
       imagenes: [],
+      fecha: fechaIncidente,
       fechaHora: fechaIncidente,
+      creadoPor: actorId,
+      actualizadoPor: actorId,
       createdAt: Timestamp.now(),
+      updatedAt: Timestamp.now(),
       reportadoPor: incidenteData.reportadoPor,
-      estado: 'abierto'
+      estado: 'abierto',
+      historialEstado: [{ from: null, to: 'abierto', by: actorId, at: Timestamp.now(), motivo: 'creacion' }],
+      cerradoPor: null,
+      closedAt: null
     };
-
-    if (!userProfile?.ownerId) throw new Error('userProfile.ownerId es requerido');
-    const ownerId = userProfile.ownerId;
     const accidentesRef = collection(db, ...firestoreRoutesCore.accidentes(ownerId));
     const docRef = await addDocWithAppId(accidentesRef, incidenteDoc);
 
-    // Subir imágenes si existen
+    // Subir imÃƒÆ’Ã‚Â¡genes si existen
     if (imagenes && imagenes.length > 0) {
       const imagenesUrls = await subirImagenes(docRef.id, imagenes, incidenteData.empresaId);
       await updateDocWithAppId(docRef, { imagenes: imagenesUrls });
@@ -203,11 +242,11 @@ export const actualizarEstadoEmpleado = async (empleadoId, estado, fechaInicioRe
 };
 
 /**
- * Subir imágenes usando el nuevo modelo de contexto de evento
- * Función interna que usa uploadFileWithContext()
+ * Subir imÃƒÆ’Ã‚Â¡genes usando el nuevo modelo de contexto de evento
+ * FunciÃƒÆ’Ã‚Â³n interna que usa uploadFileWithContext()
  * 
  * @private
- * @deprecated Esta función será removida en Iteración 2 cuando todos los componentes migren
+ * @deprecated Esta funciÃƒÆ’Ã‚Â³n serÃƒÆ’Ã‚Â¡ removida en IteraciÃƒÆ’Ã‚Â³n 2 cuando todos los componentes migren
  */
 const subirImagenesNew = async (accidenteId, imagenes, companyId = 'system') => {
   try {
@@ -217,7 +256,7 @@ const subirImagenesNew = async (accidenteId, imagenes, companyId = 'system') => 
     }
     const userId = user.uid;
 
-    console.log(`[accidenteService] 📤 [v1.0] Subiendo ${imagenes.length} imagen(es) con modelo de contexto: accidente/${accidenteId}/evidencia`);
+    console.log(`[accidenteService] ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã‚Â¤ [v1.0] Subiendo ${imagenes.length} imagen(es) con modelo de contexto: accidente/${accidenteId}/evidencia`);
 
     const urls = [];
     
@@ -241,11 +280,11 @@ const subirImagenesNew = async (accidenteId, imagenes, companyId = 'system') => 
         const url = await getDownloadUrl(result.fileId);
         urls.push(url);
         
-        console.log(`[accidenteService] ✅ [v1.0] Imagen ${i + 1}/${imagenes.length} subida exitosamente`);
+        console.log(`[accidenteService] ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ [v1.0] Imagen ${i + 1}/${imagenes.length} subida exitosamente`);
       } catch (error) {
         const errorMsg = error instanceof Error ? error.message : String(error);
-        console.error(`[accidenteService] ❌ [v1.0] Error al subir imagen ${i + 1}/${imagenes.length}:`, errorMsg);
-        // Continuar con las demás imágenes aunque una falle
+        console.error(`[accidenteService] ÃƒÂ¢Ã‚ÂÃ…â€™ [v1.0] Error al subir imagen ${i + 1}/${imagenes.length}:`, errorMsg);
+        // Continuar con las demÃƒÆ’Ã‚Â¡s imÃƒÆ’Ã‚Â¡genes aunque una falle
       }
     }
     
@@ -256,19 +295,19 @@ const subirImagenesNew = async (accidenteId, imagenes, companyId = 'system') => 
     return urls;
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error);
-    console.error(`[accidenteService] ❌ [v1.0] Error al subir imágenes (${imagenes.length} total):`, errorMsg);
+    console.error(`[accidenteService] ÃƒÂ¢Ã‚ÂÃ…â€™ [v1.0] Error al subir imÃƒÆ’Ã‚Â¡genes (${imagenes.length} total):`, errorMsg);
     throw error;
   }
 };
 
 /**
- * Subir imágenes a ControlFile
+ * Subir imÃƒÆ’Ã‚Â¡genes a ControlFile
  * 
- * @deprecated Esta función ahora usa internamente el nuevo modelo de contexto de evento (v1.0).
- * Se mantiene la API existente para compatibilidad total con código legacy.
+ * @deprecated Esta funciÃƒÆ’Ã‚Â³n ahora usa internamente el nuevo modelo de contexto de evento (v1.0).
+ * Se mantiene la API existente para compatibilidad total con cÃƒÆ’Ã‚Â³digo legacy.
  * 
- * Migración: Los componentes deberían migrar a usar uploadFileWithContext() directamente.
- * Esta función será removida en Iteración 2 cuando todos los componentes migren.
+ * MigraciÃƒÆ’Ã‚Â³n: Los componentes deberÃƒÆ’Ã‚Â­an migrar a usar uploadFileWithContext() directamente.
+ * Esta funciÃƒÆ’Ã‚Â³n serÃƒÆ’Ã‚Â¡ removida en IteraciÃƒÆ’Ã‚Â³n 2 cuando todos los componentes migren.
  * 
  * @param {string} accidenteId - ID del accidente
  * @param {File[]} imagenes - Array de archivos de imagen
@@ -307,9 +346,9 @@ export const obtenerAccidentes = async (filtros = {}, userProfile) => {
 
     let q;
     if (conditions.length > 0) {
-      q = query(accidentesRef, ...conditions, orderBy('fechaHora', 'desc'));
+      q = query(accidentesRef, ...conditions, orderBy('fecha', 'desc'));
     } else {
-      q = query(accidentesRef, orderBy('fechaHora', 'desc'));
+      q = query(accidentesRef, orderBy('fecha', 'desc'));
     }
 
     const snapshot = await getDocs(q);
@@ -323,15 +362,16 @@ export const obtenerAccidentes = async (filtros = {}, userProfile) => {
   }
 };
 
-// Obtener un accidente específico
-export const obtenerAccidentePorId = async (accidenteId, userProfile) => {
+// Obtener un accidente especÃƒÆ’Ã‚Â­fico
+export const obtenerAccidentePorId = async (contextOrAccidenteId, maybeUserProfile = null) => {
   try {
-    if (!userProfile?.ownerId) throw new Error('userProfile.ownerId es requerido');
-    const ownerId = userProfile.ownerId;
+    const { ownerId, accidenteId } = resolveAccidenteContext(contextOrAccidenteId, maybeUserProfile);
+    if (!ownerId) throw new Error('ownerId es requerido');
+    if (!accidenteId) throw new Error('accidenteId es requerido');
     const accidentesRef = collection(db, ...firestoreRoutesCore.accidentes(ownerId));
-    const docRef = doc(accidentesRef, accidenteId);
+    const docRef = doc(accidentesRef, String(accidenteId));
     const docSnap = await getDoc(docRef);
-    
+
     if (docSnap.exists()) {
       const data = { id: docSnap.id, ...docSnap.data() };
       return normalizeAccidente(data);
@@ -352,32 +392,31 @@ export const actualizarEstadoAccidente = async (accidenteId, nuevoEstado, userId
     const accidenteRef = doc(accidentesRef, accidenteId);
     const accidenteDoc = await getDoc(accidenteRef);
     const tipo = accidenteDoc.data()?.tipo || 'accidente';
-    const fechaAccidente = accidenteDoc.data()?.fechaHora;
-    const updateData = { estado: nuevoEstado };
-    
-    // Si se está cerrando un accidente y tiene empleados con reposo
+    const actorId = userId || userProfile?.uid || null;
+    const estadoAnterior = accidenteDoc.data()?.estado || null;
+    const updateData = {
+      estado: nuevoEstado,
+      updatedAt: Timestamp.now(),
+      actualizadoPor: actorId
+    };
+
     if (nuevoEstado === 'cerrado' && tipo === 'accidente') {
       const empleadosInvolucrados = accidenteDoc.data()?.empleadosInvolucrados || [];
       const fechaCierre = Timestamp.now();
-      const fechaAccidenteDate = fechaAccidente?.toDate ? fechaAccidente.toDate() : new Date(fechaAccidente);
       const fechaCierreDate = fechaCierre.toDate();
-      
-      // Calcular días perdidos para cada empleado y actualizar empleados
+
       const empleadosActualizados = empleadosInvolucrados.map(emp => {
         if (emp.conReposo && emp.fechaInicioReposo) {
-          // Calcular días perdidos desde inicio de reposo hasta cierre
-          const fechaInicioReposo = emp.fechaInicioReposo?.toDate 
-            ? emp.fechaInicioReposo.toDate() 
+          const fechaInicioReposo = emp.fechaInicioReposo?.toDate
+            ? emp.fechaInicioReposo.toDate()
             : new Date(emp.fechaInicioReposo);
-          
+
           const diasPerdidos = Math.max(0, Math.ceil((fechaCierreDate - fechaInicioReposo) / (1000 * 60 * 60 * 24)));
-          
-          // Reactivar empleado
-          actualizarEstadoEmpleado(emp.empleadoId, 'activo', null, userProfile).catch(err => 
+
+          actualizarEstadoEmpleado(emp.empleadoId, 'activo', null, userProfile).catch(err =>
             console.error(`Error reactivando empleado ${emp.empleadoId}:`, err)
           );
-          
-          // Retornar empleado con días perdidos guardados
+
           return {
             ...emp,
             diasPerdidos,
@@ -386,23 +425,32 @@ export const actualizarEstadoAccidente = async (accidenteId, nuevoEstado, userId
         }
         return emp;
       });
-      
-      // Actualizar empleados involucrados con días perdidos
+
       updateData.empleadosInvolucrados = empleadosActualizados;
       updateData.fechaCierre = fechaCierre;
+      updateData.closedAt = fechaCierre;
+      updateData.cerradoPor = actorId;
     }
-    
+
+    if (nuevoEstado && nuevoEstado !== estadoAnterior) {
+      updateData.historialEstado = arrayUnion({
+        from: estadoAnterior,
+        to: nuevoEstado,
+        by: actorId,
+        at: Timestamp.now(),
+        motivo: nuevoEstado === 'cerrado' ? 'cierre' : 'actualizacion_estado'
+      });
+    }
+
     await updateDocWithAppId(accidenteRef, updateData);
 
-    // Registrar log si hay userId
     if (userId) {
-      // registrarAccionSistema maneja la ruta internamente
       await registrarAccionSistema(
         userId,
         `Estado de ${tipo} actualizado a: ${nuevoEstado}`,
         {
           accidenteId,
-          estadoAnterior: accidenteDoc.data()?.estado,
+          estadoAnterior,
           estadoNuevo: nuevoEstado
         },
         'editar',
@@ -415,7 +463,6 @@ export const actualizarEstadoAccidente = async (accidenteId, nuevoEstado, userId
     throw error;
   }
 };
-
 // Obtener empleados por sucursal (para los selectores)
 // Incluye todos los empleados (activos e inactivos) para permitir reportar accidentes previos
 export const obtenerEmpleadosPorSucursal = async (sucursalId, userProfile) => {
@@ -439,7 +486,7 @@ export const obtenerEmpleadosPorSucursal = async (sucursalId, userProfile) => {
   }
 };
 
-// Obtener estadísticas de accidentes por empresa
+// Obtener estadÃƒÆ’Ã‚Â­sticas de accidentes por empresa
 export const obtenerEstadisticas = async (empresaId, userProfile) => {
   try {
     if (!userProfile?.ownerId) throw new Error('userProfile.ownerId es requerido');
@@ -464,7 +511,7 @@ export const obtenerEstadisticas = async (empresaId, userProfile) => {
       cerrados: accidentes.filter(a => a.estado === 'cerrado').length
     };
   } catch (error) {
-    console.error('Error al obtener estadísticas:', error);
+    console.error('Error al obtener estadÃƒÆ’Ã‚Â­sticas:', error);
     throw error;
   }
 };
@@ -518,21 +565,36 @@ export const actualizarAccidente = async (accidenteId, datosActualizados, imagen
       throw new Error('Accidente no encontrado');
     }
 
-    const updateData = { ...datosActualizados };
+    const updateData = {
+      ...datosActualizados,
+      updatedAt: Timestamp.now(),
+      actualizadoPor: userId || userProfile?.uid || null
+    };
 
-    // Si hay nuevas imágenes, subirlas
+    // Si hay nuevas imÃƒÆ’Ã‚Â¡genes, subirlas
     if (imagenesNuevas && imagenesNuevas.length > 0) {
       const accidenteData = accidenteDoc.data();
       const empresaId = datosActualizados.empresaId || accidenteData.empresaId || 'system';
       const nuevasUrls = await subirImagenes(accidenteId, imagenesNuevas, empresaId);
-      // Si ya vienen imágenes en datosActualizados (después de eliminar algunas), usar esas
+      // Si ya vienen imÃƒÆ’Ã‚Â¡genes en datosActualizados (despuÃƒÆ’Ã‚Â©s de eliminar algunas), usar esas
       // Si no, usar las existentes del documento
       const imagenesBase = updateData.imagenes || accidenteDoc.data().imagenes || [];
       updateData.imagenes = [...imagenesBase, ...nuevasUrls];
     } else if (!updateData.imagenes) {
-      // Si no hay nuevas imágenes pero no se enviaron imágenes en datosActualizados,
+      // Si no hay nuevas imÃƒÆ’Ã‚Â¡genes pero no se enviaron imÃƒÆ’Ã‚Â¡genes en datosActualizados,
       // mantener las existentes
       updateData.imagenes = accidenteDoc.data().imagenes || [];
+    }
+
+    const actorId = userId || userProfile?.uid || null;
+    if (datosActualizados.estado && datosActualizados.estado !== accidenteDoc.data()?.estado) {
+      updateData.historialEstado = arrayUnion({
+        from: accidenteDoc.data()?.estado || null,
+        to: datosActualizados.estado,
+        by: actorId,
+        at: Timestamp.now(),
+        motivo: 'actualizacion_estado'
+      });
     }
 
     await updateDocWithAppId(accidenteRef, updateData);
@@ -557,3 +619,19 @@ export const actualizarAccidente = async (accidenteId, datosActualizados, imagen
     throw error;
   }
 };
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

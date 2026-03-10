@@ -1,10 +1,10 @@
 // src/components/pages/accidentes/components/RegistrarAccidenteInline.jsx
 /**
  * Formulario inline para registrar seguimiento de accidente
- * Usa EventRegistryInline base con configuración específica de accidentes
+ * Usa EventRegistryInline base con configuraciÃƒÂ³n especÃƒÂ­fica de accidentes
  */
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Box, Typography } from '@mui/material';
 import { query, where, getDocs, collection } from 'firebase/firestore';
 import { dbAudit } from '../../../../firebaseControlFile';
@@ -21,28 +21,29 @@ const RegistrarAccidenteInline = ({
   accidenteId,
   accidente: accidenteProp,
   userId,
+  ownerId,
   onSaved,
   onCancel,
   compact = false
 }) => {
   const { userProfile } = useAuth();
+  const tenantOwnerId = ownerId || userProfile?.ownerId || null;
   const [accidente, setAccidente] = useState(accidenteProp || null);
   const [personas, setPersonas] = useState([]);
   const [loading, setLoading] = useState(!accidenteProp);
 
   useEffect(() => {
-    if (userId && accidenteId && !accidenteProp) {
+    if (tenantOwnerId && accidenteId && !accidenteProp) {
       loadAccidente();
     }
-  }, [accidenteId, userId]);
+  }, [accidenteId, tenantOwnerId]);
 
   const loadAccidente = async () => {
-    if (!userId) return;
+    if (!tenantOwnerId) return;
 
     setLoading(true);
     try {
-      const userProfile = { uid: userId };
-      const accidenteData = await obtenerAccidentePorId(accidenteId, userProfile);
+      const accidenteData = await obtenerAccidentePorId({ ownerId: tenantOwnerId, accidenteId });
       setAccidente(accidenteData);
     } catch (error) {
       console.error('Error cargando accidente:', error);
@@ -53,18 +54,14 @@ const RegistrarAccidenteInline = ({
 
   // Cargar empleados de la sucursal del accidente
   useEffect(() => {
-    if (accidente && accidente.sucursalId && userProfile?.ownerId) {
+    if (accidente && accidente.sucursalId && tenantOwnerId) {
       loadEmpleados();
     }
-  }, [accidente?.sucursalId, userProfile?.ownerId]);
+  }, [accidente?.sucursalId, tenantOwnerId]);
 
   const loadEmpleados = async () => {
     try {
-      if (!userProfile?.ownerId) {
-        console.error('Error: ownerId no disponible');
-        return;
-      }
-      const ownerId = userProfile.ownerId;
+      const ownerId = tenantOwnerId;
       const empleadosRef = collection(dbAudit, ...firestoreRoutesCore.empleados(ownerId));
       const q = query(
         empleadosRef,
@@ -84,7 +81,7 @@ const RegistrarAccidenteInline = ({
   };
 
   if (loading) {
-    return null; // EventRegistryInline manejará el loading
+    return null; // EventRegistryInline manejarÃƒÂ¡ el loading
   }
 
   return (
@@ -92,6 +89,8 @@ const RegistrarAccidenteInline = ({
       entityId={accidenteId}
       entityType="accidente"
       userId={userId}
+      ownerId={tenantOwnerId}
+      actorId={userId}
       entity={accidente}
       registryService={registrosAccidenteService}
       personasConfig={{
@@ -108,7 +107,7 @@ const RegistrarAccidenteInline = ({
               id: id,
               empleadoId: id,
               empleadoNombre: persona?.nombre || id,
-              conReposo: false // Se puede configurar después si es necesario
+              conReposo: false // Se puede configurar despuÃƒÂ©s si es necesario
             };
           });
         },
@@ -123,7 +122,7 @@ const RegistrarAccidenteInline = ({
         {
           id: 'descripcion',
           type: 'text',
-          label: 'Descripción del Seguimiento',
+          label: 'DescripciÃƒÂ³n del Seguimiento',
           required: true,
           multiline: true,
           rows: 4
@@ -149,7 +148,7 @@ const RegistrarAccidenteInline = ({
         {
           id: 'evidencias',
           type: 'evidencias',
-          label: 'Evidencias Fotográficas'
+          label: 'Evidencias FotogrÃƒÂ¡ficas'
         }
       ]}
       onSaved={onSaved}
@@ -160,3 +159,6 @@ const RegistrarAccidenteInline = ({
 };
 
 export default RegistrarAccidenteInline;
+
+
+

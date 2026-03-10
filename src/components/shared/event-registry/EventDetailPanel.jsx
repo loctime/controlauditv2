@@ -1,6 +1,6 @@
 // src/components/shared/event-registry/EventDetailPanel.jsx
 /**
- * Panel de detalles genérico para eventos con registros asociados
+ * Panel de detalles genÃƒÆ’Ã‚Â©rico para eventos con registros asociados
  * 
  * PROPS:
  * - open: boolean
@@ -8,8 +8,8 @@
  * - entityId: string
  * - initialMode: 'view' | 'registrar' (default: 'view')
  * - userId: string
- * - entityService: Object con método getById(userId, entityId)
- * - registryService: Object con métodos del BaseRegistryService
+ * - entityService: Object con mÃƒÆ’Ã‚Â©todo getById(userId, entityId)
+ * - registryService: Object con mÃƒÆ’Ã‚Â©todos del BaseRegistryService
  * - renderHeader: (entity) => ReactNode (opcional)
  * - renderActions: (entity) => ReactNode (opcional)
  * - tabs: Array<{id, label, component}> (opcional, usa defaults si no se pasa)
@@ -17,16 +17,15 @@
  * - onModeChange: (mode) => void (opcional)
  * - hideInternalHeader: boolean (opcional, oculta el header interno por defecto)
  * - hideTabs: boolean (opcional, oculta las tabs visuales)
- * - hideCloseButton: boolean (opcional, oculta el botón de cerrar)
+ * - hideCloseButton: boolean (opcional, oculta el botÃƒÆ’Ã‚Â³n de cerrar)
  */
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Drawer,
   Box,
   Typography,
   Chip,
-  Button,
   Divider,
   Tabs,
   Tab,
@@ -43,7 +42,7 @@ import {
 /**
  * Tab: Resumen (default)
  */
-const TabResumen = ({ entityId, userId, registryService, refreshKey }) => {
+const TabResumen = ({ entityId, userId, ownerId, registryService, refreshKey }) => {
   const [stats, setStats] = useState({
     totalRegistros: 0,
     totalPersonas: 0,
@@ -52,7 +51,8 @@ const TabResumen = ({ entityId, userId, registryService, refreshKey }) => {
   });
 
   useEffect(() => {
-    if (!entityId || !userId || !registryService) {
+    const tenantOwnerId = ownerId || userId;
+    if (!entityId || !tenantOwnerId || !registryService) {
       setStats(prev => ({ ...prev, loading: false }));
       return;
     }
@@ -62,7 +62,7 @@ const TabResumen = ({ entityId, userId, registryService, refreshKey }) => {
     const loadStats = async () => {
       try {
         const entityIdStr = String(entityId);
-        const statsData = await registryService.getStatsByEntity(userId, entityIdStr);
+        const statsData = await registryService.getStatsByEntity(tenantOwnerId, entityIdStr);
 
         if (mounted) {
           setStats({
@@ -80,7 +80,7 @@ const TabResumen = ({ entityId, userId, registryService, refreshKey }) => {
 
     loadStats();
     return () => { mounted = false; };
-  }, [entityId, userId, registryService, refreshKey]);
+  }, [entityId, userId, ownerId, registryService, refreshKey]);
 
   if (stats.loading) {
     return (
@@ -128,12 +128,13 @@ const TabResumen = ({ entityId, userId, registryService, refreshKey }) => {
 /**
  * Tab: Registros (default)
  */
-const TabRegistros = ({ entityId, userId, registryService, refreshKey }) => {
+const TabRegistros = ({ entityId, userId, ownerId, registryService, refreshKey }) => {
   const [registros, setRegistros] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!entityId || !userId || !registryService) {
+    const tenantOwnerId = ownerId || userId;
+    if (!entityId || !tenantOwnerId || !registryService) {
       setLoading(false);
       return;
     }
@@ -143,7 +144,7 @@ const TabRegistros = ({ entityId, userId, registryService, refreshKey }) => {
     const loadRegistros = async () => {
       try {
         const entityIdStr = String(entityId);
-        const data = await registryService.getRegistriesByEntity(userId, entityIdStr);
+        const data = await registryService.getRegistriesByEntity(tenantOwnerId, entityIdStr);
 
         if (mounted) {
           setRegistros(data);
@@ -159,7 +160,7 @@ const TabRegistros = ({ entityId, userId, registryService, refreshKey }) => {
 
     loadRegistros();
     return () => { mounted = false; };
-  }, [entityId, userId, registryService, refreshKey]);
+  }, [entityId, userId, ownerId, registryService, refreshKey]);
 
   if (loading) {
     return (
@@ -211,12 +212,13 @@ const TabRegistros = ({ entityId, userId, registryService, refreshKey }) => {
 /**
  * Tab: Evidencias (default)
  */
-const TabEvidencias = ({ entityId, userId, registryService, refreshKey }) => {
+const TabEvidencias = ({ entityId, userId, ownerId, registryService, refreshKey }) => {
   const [evidencias, setEvidencias] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!entityId || !userId || !registryService) {
+    const tenantOwnerId = ownerId || userId;
+    if (!entityId || !tenantOwnerId || !registryService) {
       setLoading(false);
       return;
     }
@@ -226,7 +228,7 @@ const TabEvidencias = ({ entityId, userId, registryService, refreshKey }) => {
     const loadEvidencias = async () => {
       try {
         const entityIdStr = String(entityId);
-        const data = await registryService.getEvidenciasByEntity(userId, entityIdStr);
+        const data = await registryService.getEvidenciasByEntity(tenantOwnerId, entityIdStr);
 
         if (mounted) {
           setEvidencias(data);
@@ -242,7 +244,7 @@ const TabEvidencias = ({ entityId, userId, registryService, refreshKey }) => {
 
     loadEvidencias();
     return () => { mounted = false; };
-  }, [entityId, userId, registryService, refreshKey]);
+  }, [entityId, userId, ownerId, registryService, refreshKey]);
 
   if (loading) {
     return (
@@ -277,12 +279,13 @@ const TabEvidencias = ({ entityId, userId, registryService, refreshKey }) => {
 /**
  * Tab: Personas (default)
  */
-const TabPersonas = ({ entityId, userId, registryService, refreshKey }) => {
+const TabPersonas = ({ entityId, userId, ownerId, registryService, refreshKey }) => {
   const [personas, setPersonas] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!entityId || !userId || !registryService) {
+    const tenantOwnerId = ownerId || userId;
+    if (!entityId || !tenantOwnerId || !registryService) {
       setLoading(false);
       return;
     }
@@ -292,7 +295,7 @@ const TabPersonas = ({ entityId, userId, registryService, refreshKey }) => {
     const loadPersonas = async () => {
       try {
         const entityIdStr = String(entityId);
-        const personaIds = await registryService.getPersonasUnicasByEntity(userId, entityIdStr);
+        const personaIds = await registryService.getPersonasUnicasByEntity(tenantOwnerId, entityIdStr);
 
         if (mounted) {
           setPersonas(personaIds);
@@ -308,7 +311,7 @@ const TabPersonas = ({ entityId, userId, registryService, refreshKey }) => {
 
     loadPersonas();
     return () => { mounted = false; };
-  }, [entityId, userId, registryService, refreshKey]);
+  }, [entityId, userId, ownerId, registryService, refreshKey]);
 
   if (loading) {
     return (
@@ -366,7 +369,7 @@ const DEFAULT_TABS = [
 /* ===================== Main Component ===================== */
 
 /**
- * Panel de detalles genérico para eventos con registros asociados
+ * Panel de detalles genÃƒÆ’Ã‚Â©rico para eventos con registros asociados
  */
 const EventDetailPanel = ({
   open,
@@ -374,6 +377,7 @@ const EventDetailPanel = ({
   entityId,
   initialMode = 'view',
   userId,
+  ownerId,
   entityService,
   registryService,
   renderHeader,
@@ -391,9 +395,10 @@ const EventDetailPanel = ({
   const [activeTab, setActiveTab] = useState(0);
   const [mode, setMode] = useState(initialMode);
   const [refreshKey, setRefreshKey] = useState(0);
+  const tenantOwnerId = ownerId || userId || null;
 
   useEffect(() => {
-    if (!open || !entityId || !userId) {
+    if (!open || !entityId || !tenantOwnerId) {
       setEntity(null);
       setLoading(false);
       setMode('view');
@@ -427,7 +432,7 @@ const EventDetailPanel = ({
 
     loadEntity();
     return () => { mounted = false; };
-  }, [open, entityId, userId, entityService]);
+  }, [open, entityId, tenantOwnerId, userId, entityService]);
 
   // Resetear modo cuando cambia la entidad o cuando se recibe initialMode
   useEffect(() => {
@@ -516,6 +521,7 @@ const EventDetailPanel = ({
                 entityId,
                 entity,
                 userId,
+                ownerId: tenantOwnerId,
                 onSaved: handleSaved,
                 onCancel: () => handleModeChange('view'),
                 compact: true
@@ -561,7 +567,7 @@ const EventDetailPanel = ({
 
                 <Divider sx={{ my: 2 }} />
 
-                {/* Información básica */}
+                {/* InformaciÃƒÆ’Ã‚Â³n bÃƒÆ’Ã‚Â¡sica */}
                 {entity && (
                   <Box sx={{ mb: 2 }}>
                     {entity.fechaRealizada && (
@@ -616,6 +622,7 @@ const EventDetailPanel = ({
                     key={`${tabs[0].id}-${refreshKey}`}
                     entityId={entityId ? String(entityId) : null}
                     userId={userId}
+                    ownerId={tenantOwnerId}
                     registryService={registryService}
                     refreshKey={refreshKey}
                   />
@@ -630,6 +637,7 @@ const EventDetailPanel = ({
                     key={`${tab.id}-${refreshKey}`}
                     entityId={entityId ? String(entityId) : null}
                     userId={userId}
+                    ownerId={tenantOwnerId}
                     registryService={registryService}
                     refreshKey={refreshKey}
                   />
@@ -644,3 +652,6 @@ const EventDetailPanel = ({
 };
 
 export default EventDetailPanel;
+
+
+

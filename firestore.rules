@@ -41,11 +41,11 @@ service cloud.firestore {
     function isBranch() { return userRole() == 'branch'; }
     function isDelivery(){return userRole() == 'delivery'; }
     
-    // Operación y campos
+    // OperaciÃƒÆ’Ã‚Â³n y campos
     function isCreate() { return !exists(resource.path); }
     function isUpdate() { return exists(resource.path); }
     
-    // Dueño por campo (e.g., userId/ownerId)
+    // DueÃƒÆ’Ã‚Â±o por campo (e.g., userId/ownerId)
     function ownerIs(field) {
       return isAuth() && (
         (isCreate() && request.resource.data[field] == uid()) ||
@@ -82,7 +82,7 @@ service cloud.firestore {
       return !(field in request.resource.data) || request.resource.data[field] is string || request.resource.data[field] == null;
     }
     
-    // Lectura pública por flag booleano del doc
+    // Lectura pÃƒÆ’Ã‚Âºblica por flag booleano del doc
     function publicRead(flagField) {
       return resource.data[flagField] == true;
     }
@@ -121,7 +121,7 @@ service cloud.firestore {
         && isTs("createdAt")
         && isTs("updatedAt");
       
-      // Actualización: Permite actualizaciones parciales
+      // ActualizaciÃƒÆ’Ã‚Â³n: Permite actualizaciones parciales
       allow update: if isAuth()
         && resource.data.userId == uid()
         && (!("userId" in request.resource.data) || request.resource.data.userId == resource.data.userId)
@@ -184,7 +184,7 @@ service cloud.firestore {
       allow delete: if ownerIs("userId");
     }
     
-    // Galerías de controlbio
+    // GalerÃƒÆ’Ã‚Â­as de controlbio
     match /apps/controlbio/galleries/{galleryId} {
       allow read: if publicRead("isActive") || (isAuth() && resource.data.userId == uid());
       
@@ -257,7 +257,7 @@ service cloud.firestore {
         allow update, delete: if isAuth() && storeOwnerId(storeId) == uid();
       }
       
-      // Categorías de cada tienda
+      // CategorÃƒÆ’Ã‚Â­as de cada tienda
       match /categories/{categoryId} {
         allow read: if true;
         allow create: if isAuth() && storeOwnerId(storeId) == uid();
@@ -436,7 +436,7 @@ service cloud.firestore {
           get(/databases/$(db)/documents/usuarios/$(request.auth.uid)).data.clienteAdminId == get(/databases/$(db)/documents/empresas/$(resource.data.empresaId)).data.propietarioId));
     }
     
-    // Auditorías
+    // AuditorÃƒÆ’Ã‚Â­as
     match /auditorias/{auditoriaId} {
       allow read: if isAuth() && 
         exists(/databases/$(db)/documents/usuarios/$(request.auth.uid)) &&
@@ -454,7 +454,7 @@ service cloud.firestore {
            get(/databases/$(db)/documents/usuarios/$(request.auth.uid)).data.clienteAdminId == get(/databases/$(db)/documents/empresas/$(request.resource.data.empresa)).data.propietarioId)));
     }
     
-    // Reportes (Auditorías antiguas)
+    // Reportes (AuditorÃƒÆ’Ã‚Â­as antiguas)
     match /reportes/{reporteId} {
       allow read: if isAuth() && 
         exists(/databases/$(db)/documents/usuarios/$(request.auth.uid)) &&
@@ -562,7 +562,7 @@ service cloud.firestore {
            get(/databases/$(db)/documents/usuarios/$(request.auth.uid)).data.clienteAdminId == get(/databases/$(db)/documents/empresas/$(request.resource.data.empresaId)).data.propietarioId)));
     }
     
-    /* ========= AUDITORÍA ========= */
+    /* ========= AUDITORÃƒÆ’Ã‚ÂA ========= */
     
     match /audit/{auditId} {
       allow read: if isAuth();
@@ -613,7 +613,7 @@ service cloud.firestore {
         (userId == uid() && request.auth.token.ownerId == ownerId)
       );
       
-      // CREAR: El owner puede crear usuarios (operarios/admins) para sí mismo
+      // CREAR: El owner puede crear usuarios (operarios/admins) para sÃƒÆ’Ã‚Â­ mismo
       allow create: if isAuth() 
         && ownerId == uid()
         && request.resource.data.ownerId == uid()
@@ -636,12 +636,12 @@ service cloud.firestore {
       allow delete: if isAuth() && ownerId == uid() && resource.data.ownerId == uid();
     }
     
-    // Reportes (auditorías) del owner
+    // Reportes (auditorÃƒÆ’Ã‚Â­as) del owner
     match /apps/auditoria/owners/{ownerId}/reportes/{reporteId} {
       // Lectura:
       // - Owner puede leer todos sus reportes (ownerId == auth.uid)
       // - Operario puede leer reportes del owner usando ownerId del token (request.auth.token.ownerId == ownerId)
-      // - También puede leer si está en compartidoCon
+      // - TambiÃƒÆ’Ã‚Â©n puede leer si estÃƒÆ’Ã‚Â¡ en compartidoCon
       allow read: if isAuth() && (
         ownerId == uid() || 
         (request.auth.token.ownerId == ownerId && request.auth.token.appId == 'auditoria') ||
@@ -881,6 +881,120 @@ service cloud.firestore {
       allow create, update: if isAuth() && ownerId == uid() && request.resource.data.appId == 'auditoria';
       allow delete: if isAuth() && ownerId == uid();
     }
+    // Accidentes del owner
+    match /apps/auditoria/owners/{ownerId}/accidentes/{accidenteId} {
+      allow read: if isAuth() && (
+        ownerId == uid() ||
+        (
+          request.auth.token.ownerId == ownerId &&
+          request.auth.token.appId == 'auditoria' &&
+          (
+            request.auth.token.role == 'admin' ||
+            (
+              request.auth.token.role == 'operario' &&
+              exists(/databases/$(db)/documents/apps/auditoria/owners/$(ownerId)/usuarios/$(uid())) &&
+              resource.data.empresaId is string &&
+              resource.data.empresaId in get(/databases/$(db)/documents/apps/auditoria/owners/$(ownerId)/usuarios/$(uid())).data.empresasAsignadas
+            )
+          )
+        )
+      );
+
+      allow create: if isAuth() && (
+        (ownerId == uid() && request.resource.data.empresaId is string) ||
+        (
+          request.auth.token.ownerId == ownerId &&
+          request.auth.token.appId == 'auditoria' &&
+          request.resource.data.empresaId is string &&
+          (
+            request.auth.token.role == 'admin' ||
+            (
+              request.auth.token.role == 'operario' &&
+              exists(/databases/$(db)/documents/apps/auditoria/owners/$(ownerId)/usuarios/$(uid())) &&
+              request.resource.data.empresaId in get(/databases/$(db)/documents/apps/auditoria/owners/$(ownerId)/usuarios/$(uid())).data.empresasAsignadas
+            )
+          )
+        )
+      );
+
+      allow update, delete: if isAuth() && (
+        (ownerId == uid() && resource.data.empresaId is string) ||
+        (
+          request.auth.token.ownerId == ownerId &&
+          request.auth.token.appId == 'auditoria' &&
+          resource.data.empresaId is string &&
+          (
+            request.auth.token.role == 'admin' ||
+            (
+              request.auth.token.role == 'operario' &&
+              exists(/databases/$(db)/documents/apps/auditoria/owners/$(ownerId)/usuarios/$(uid())) &&
+              resource.data.empresaId in get(/databases/$(db)/documents/apps/auditoria/owners/$(ownerId)/usuarios/$(uid())).data.empresasAsignadas
+            )
+          )
+        )
+      );
+    }
+
+    // Registros de accidentes del owner
+    match /apps/auditoria/owners/{ownerId}/registrosAccidente/{registroId} {
+      allow read: if isAuth() && (
+        ownerId == uid() ||
+        (
+          request.auth.token.ownerId == ownerId &&
+          request.auth.token.appId == 'auditoria' &&
+          (
+            request.auth.token.role == 'admin' ||
+            (
+              request.auth.token.role == 'operario' &&
+              exists(/databases/$(db)/documents/apps/auditoria/owners/$(ownerId)/usuarios/$(uid())) &&
+              exists(/databases/$(db)/documents/apps/auditoria/owners/$(ownerId)/accidentes/$(resource.data.accidenteId)) &&
+              resource.data.accidenteId is string &&
+              get(/databases/$(db)/documents/apps/auditoria/owners/$(ownerId)/accidentes/$(resource.data.accidenteId)).data.empresaId in
+                get(/databases/$(db)/documents/apps/auditoria/owners/$(ownerId)/usuarios/$(uid())).data.empresasAsignadas
+            )
+          )
+        )
+      );
+
+      allow create: if isAuth() && (
+        (ownerId == uid()) ||
+        (
+          request.auth.token.ownerId == ownerId &&
+          request.auth.token.appId == 'auditoria' &&
+          (
+            request.auth.token.role == 'admin' ||
+            (
+              request.auth.token.role == 'operario' &&
+              exists(/databases/$(db)/documents/apps/auditoria/owners/$(ownerId)/usuarios/$(uid())) &&
+              exists(/databases/$(db)/documents/apps/auditoria/owners/$(ownerId)/accidentes/$(request.resource.data.accidenteId)) &&
+              request.resource.data.accidenteId is string &&
+              get(/databases/$(db)/documents/apps/auditoria/owners/$(ownerId)/accidentes/$(request.resource.data.accidenteId)).data.empresaId in
+                get(/databases/$(db)/documents/apps/auditoria/owners/$(ownerId)/usuarios/$(uid())).data.empresasAsignadas
+            )
+          )
+        )
+      );
+
+      allow update, delete: if isAuth() && (
+        (ownerId == uid()) ||
+        (
+          request.auth.token.ownerId == ownerId &&
+          request.auth.token.appId == 'auditoria' &&
+          (
+            request.auth.token.role == 'admin' ||
+            (
+              request.auth.token.role == 'operario' &&
+              exists(/databases/$(db)/documents/apps/auditoria/owners/$(ownerId)/usuarios/$(uid())) &&
+              exists(/databases/$(db)/documents/apps/auditoria/owners/$(ownerId)/accidentes/$(resource.data.accidenteId)) &&
+              resource.data.accidenteId is string &&
+              get(/databases/$(db)/documents/apps/auditoria/owners/$(ownerId)/accidentes/$(resource.data.accidenteId)).data.empresaId in
+                get(/databases/$(db)/documents/apps/auditoria/owners/$(ownerId)/usuarios/$(uid())).data.empresasAsignadas
+            )
+          )
+        )
+      );
+    }
+
     /* ========= DENY POR DEFECTO ========= */
     
     match /{document=**} {
@@ -888,5 +1002,6 @@ service cloud.firestore {
     }
   }
 }
+
 
 

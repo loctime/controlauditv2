@@ -1,8 +1,8 @@
 // src/services/base/baseRegistryService.js
 /**
- * Factory para crear servicios de registros de eventos genéricos
+ * Factory para crear servicios de registros de eventos genricos
  * 
- * Patrón: Una entidad (capacitación, accidente) tiene múltiples registros asociados
+ * Patrn: Una entidad (capacitacin, accidente) tiene mltiples registros asociados
  * Cada registro puede tener: personas involucradas, evidencias, fecha, metadata
  * 
  * @example
@@ -29,14 +29,13 @@ import {
   arrayUnion
 } from 'firebase/firestore';
 import { dbAudit } from '../../firebaseControlFile';
-import { firestoreRoutesCore } from '../../core/firestore/firestoreRoutes.core';
 import { addDocWithAppId } from '../../firebase/firestoreAppWriter';
 import { registrarAccionSistema } from '../../utils/firestoreUtils';
 
 /**
  * Valida y sanitiza evidencias para asegurar que solo contengan metadata liviana
  * @param {Array} evidencias - Array de objetos de evidencia
- * @param {Function} validateEvidencias - Función de validación específica del dominio
+ * @param {Function} validateEvidencias - Funcin de validacin especfica del dominio
  * @returns {Array} Array sanitizado
  */
 function sanitizeEvidencias(evidencias, validateEvidencias) {
@@ -48,16 +47,16 @@ function sanitizeEvidencias(evidencias, validateEvidencias) {
     return validateEvidencias(evidencias);
   }
 
-  // Validación por defecto (similar a registrosAsistencia)
+  // Validacin por defecto (similar a registrosAsistencia)
   const camposPermitidos = ['id', 'fileId', 'shareToken', 'nombre', 'createdAt'];
   
   return evidencias.map((ev, index) => {
     if (!ev || typeof ev !== 'object') {
-      throw new Error(`Evidencia en índice ${index} debe ser un objeto`);
+      throw new Error(`Evidencia en ndice ${index} debe ser un objeto`);
     }
 
     if (!ev.id && !ev.fileId) {
-      throw new Error(`Evidencia en índice ${index} debe tener 'id' o 'fileId'`);
+      throw new Error(`Evidencia en ndice ${index} debe tener 'id' o 'fileId'`);
     }
 
     // Sanitizar: solo mantener campos permitidos
@@ -76,16 +75,22 @@ function sanitizeEvidencias(evidencias, validateEvidencias) {
   });
 }
 
+function resolveIdentity({ ownerId, userId, actorId }) {
+  const resolvedOwnerId = ownerId || userId || null;
+  const resolvedActorId = actorId || userId || ownerId || null;
+  return { resolvedOwnerId, resolvedActorId };
+}
+
 /**
  * Factory para crear servicios de registros
- * @param {Object} config - Configuración del servicio
- * @param {string} config.collectionName - Nombre de la colección (ej: 'registrosAsistencia')
+ * @param {Object} config - Configuracin del servicio
+ * @param {string} config.collectionName - Nombre de la coleccin (ej: 'registrosAsistencia')
  * @param {string} config.entityIdField - Campo del ID de entidad (ej: 'capacitacionId')
  * @param {string} config.personasField - Campo de personas (ej: 'empleadoIds')
  * @param {string} config.evidenciasField - Campo de evidencias (ej: 'imagenes')
- * @param {Function} config.validatePersonas - Función de validación de personas
- * @param {Function} config.normalizePersonas - Función para normalizar personas a formato estándar
- * @param {Function} config.validateEvidencias - Función para validar/sanitizar evidencias
+ * @param {Function} config.validatePersonas - Funcin de validacin de personas
+ * @param {Function} config.normalizePersonas - Funcin para normalizar personas a formato estndar
+ * @param {Function} config.validateEvidencias - Funcin para validar/sanitizar evidencias
  * @returns {Object} Servicio de registros configurado
  */
 export function createBaseRegistryService({
@@ -107,14 +112,15 @@ export function createBaseRegistryService({
      * @param {Object} params
      * @param {string} params.ownerId - ID del owner (viene del token)
      * @param {string} params.entityId - ID de la entidad padre
-     * @param {Array|Object} params.personas - Personas involucradas (formato específico del dominio)
-     * @param {Array} params.evidencias - Evidencias (vacío inicialmente)
+     * @param {Array|Object} params.personas - Personas involucradas (formato especfico del dominio)
+     * @param {Array} params.evidencias - Evidencias (vaco inicialmente)
      * @param {Object} params.metadata - Metadata adicional del registro
      * @returns {Promise<{id: string}>}
      */
-    async createRegistry({ ownerId, entityId, personas, evidencias = [], metadata = {} }) {
+    async createRegistry({ ownerId, userId, actorId, entityId, personas, evidencias = [], metadata = {} }) {
       try {
-        if (!ownerId) throw new Error('ownerId es requerido');
+        const { resolvedOwnerId, resolvedActorId } = resolveIdentity({ ownerId, userId, actorId });
+        if (!resolvedOwnerId) throw new Error('ownerId es requerido');
         if (!entityId) throw new Error(`${entityIdField} es requerido`);
 
         // Validar personas
@@ -141,10 +147,10 @@ export function createBaseRegistryService({
           [personasField]: personasNormalizadas,
           [evidenciasField]: evidenciasSanitizadas,
           fecha: metadata.fecha || Timestamp.now(),
-          creadoPor: metadata.creadoPor || ownerId,
+          creadoPor: metadata.creadoPor || resolvedActorId,
           createdAt: Timestamp.now(),
           appId: 'auditoria',
-          ownerId: ownerId,
+          ownerId: resolvedOwnerId,
           ...metadata
         };
 
@@ -162,13 +168,13 @@ export function createBaseRegistryService({
           [evidenciasField]: evidenciasSanitizadas.length
         });
 
-        // Construir ruta owner-centric dinámicamente
-        const registrosRef = collection(dbAudit, 'apps', 'auditoria', 'owners', ownerId, collectionName);
+        // Construir ruta owner-centric dinmicamente
+        const registrosRef = collection(dbAudit, 'apps', 'auditoria', 'owners', resolvedOwnerId, collectionName);
         const registroRef = await addDocWithAppId(registrosRef, registroData);
 
-        // Registrar acción del sistema
+        // Registrar accin del sistema
         await registrarAccionSistema(
-          metadata.creadoPor || ownerId,
+          metadata.creadoPor || resolvedActorId,
           `Registro creado en ${collectionName}`,
           { 
             registroId: registroRef.id, 
@@ -183,7 +189,7 @@ export function createBaseRegistryService({
 
         return { id: registroRef.id };
       } catch (error) {
-        console.error(`❌ Error creando registro en ${collectionName}:`, error);
+        console.error(`[${collectionName}] Error creando registro:`, error);
         throw error;
       }
     },
@@ -196,9 +202,10 @@ export function createBaseRegistryService({
      * @param {Array} params.evidencias - Array de evidencias con metadata
      * @returns {Promise<void>}
      */
-    async attachEvidencias({ ownerId, registroId, evidencias }) {
+    async attachEvidencias({ ownerId, userId, actorId, registroId, evidencias }) {
       try {
-        if (!ownerId) throw new Error('ownerId es requerido');
+        const { resolvedOwnerId, resolvedActorId } = resolveIdentity({ ownerId, userId, actorId });
+        if (!resolvedOwnerId) throw new Error('ownerId es requerido');
         if (!registroId) throw new Error('registroId es requerido');
         if (!evidencias || evidencias.length === 0) {
           console.warn(`[${collectionName}] attachEvidencias: No hay evidencias para asociar`);
@@ -209,21 +216,23 @@ export function createBaseRegistryService({
         const evidenciasSanitizadas = sanitizeEvidencias(evidencias, validateEvidencias);
 
         console.log(`[${collectionName}] attachEvidencias:`, {
-          ownerId,
+          ownerId: resolvedOwnerId,
           registroId,
           evidenciasCount: evidenciasSanitizadas.length
         });
 
-        const registroRef = doc(dbAudit, 'apps', 'auditoria', 'owners', ownerId, collectionName, registroId);
+        const registroRef = doc(dbAudit, 'apps', 'auditoria', 'owners', resolvedOwnerId, collectionName, registroId);
 
         // Actualizar el documento agregando las evidencias al array usando arrayUnion
         await updateDoc(registroRef, {
-          [evidenciasField]: arrayUnion(...evidenciasSanitizadas)
+          [evidenciasField]: arrayUnion(...evidenciasSanitizadas),
+          updatedAt: Timestamp.now(),
+          actualizadoPor: resolvedActorId
         });
 
         console.log(`[${collectionName}] Evidencias asociadas correctamente al registro:`, registroId);
       } catch (error) {
-        console.error(`❌ Error asociando evidencias en ${collectionName}:`, error);
+        console.error(`[${collectionName}] Error asociando evidencias:`, error);
         throw error;
       }
     },
@@ -237,7 +246,7 @@ export function createBaseRegistryService({
     async getRegistriesByEntity(ownerId, entityId) {
       try {
         if (!ownerId || !entityId) {
-          console.warn(`[${collectionName}] getRegistriesByEntity: parámetros faltantes`, { ownerId, entityId });
+          console.warn(`[${collectionName}] getRegistriesByEntity: parmetros faltantes`, { ownerId, entityId });
           return [];
         }
 
@@ -254,7 +263,7 @@ export function createBaseRegistryService({
         const registrosRef = collection(dbAudit, 'apps', 'auditoria', 'owners', ownerId, collectionName);
         
         try {
-          // Intentar query con índice compuesto (entityId + fecha)
+          // Intentar query con ndice compuesto (entityId + fecha)
           const q = query(
             registrosRef,
             where(entityIdField, '==', entityIdStr),
@@ -284,12 +293,12 @@ export function createBaseRegistryService({
           
           return resultados;
         } catch (queryError) {
-          // Si falla por índice faltante, usar fallback sin orderBy
+          // Si falla por ndice faltante, usar fallback sin orderBy
           if (queryError.code === 'failed-precondition' || queryError.message?.includes('index')) {
             console.warn(
-              `⚠️ Índice compuesto (${entityIdField} + fecha) no encontrado. ` +
+              `[${collectionName}] indice compuesto (${entityIdField} + fecha) no encontrado. ` +
               `Usando fallback sin orderBy. ` +
-              `Crear índice: (${entityIdField} ASC, fecha DESC) en ${collectionName}`
+              `Crear indice: (${entityIdField} ASC, fecha DESC)`
             );
             
             // Fallback: solo where, sin orderBy, ordenar en memoria
@@ -323,7 +332,7 @@ export function createBaseRegistryService({
           throw queryError;
         }
       } catch (error) {
-        console.error(`❌ Error obteniendo registros por entidad en ${collectionName}:`, error);
+        console.error(`[${collectionName}] Error obteniendo registros por entidad:`, error);
         console.error('Error details:', {
           code: error.code,
           message: error.message,
@@ -334,10 +343,10 @@ export function createBaseRegistryService({
     },
 
     /**
-     * Obtener personas únicas por entidad (owner-centric)
+     * Obtener personas nicas por entidad (owner-centric)
      * @param {string} ownerId - ID del owner (viene del token)
      * @param {string} entityId - ID de la entidad
-     * @returns {Promise<Array<string>>} IDs únicos de personas
+     * @returns {Promise<Array<string>>} IDs nicos de personas
      */
     async getPersonasUnicasByEntity(ownerId, entityId) {
       try {
@@ -356,7 +365,7 @@ export function createBaseRegistryService({
           const personas = reg[personasField];
           if (personas && Array.isArray(personas)) {
             personas.forEach(persona => {
-              // Extraer ID según el formato (string directo o objeto con id/empleadoId)
+              // Extraer ID segn el formato (string directo o objeto con id/empleadoId)
               const personaId = typeof persona === 'string' 
                 ? persona 
                 : (persona.id || persona.empleadoId || persona);
@@ -368,14 +377,14 @@ export function createBaseRegistryService({
         });
 
         const resultado = Array.from(personasUnicas);
-        console.log(`[${collectionName}] Personas únicas encontradas:`, {
+        console.log(`[${collectionName}] Personas nicas encontradas:`, {
           cantidad: resultado.length,
           [entityIdField]: entityIdStr,
           personas: resultado
         });
         return resultado;
       } catch (error) {
-        console.error(`❌ Error calculando personas únicas en ${collectionName}:`, error);
+        console.error(`[${collectionName}] Error calculando personas unicas:`, error);
         return [];
       }
     },
@@ -419,16 +428,16 @@ export function createBaseRegistryService({
         });
         return evidenciasConRegistro;
       } catch (error) {
-        console.error(`❌ Error obteniendo evidencias por entidad en ${collectionName}:`, error);
+        console.error(`[${collectionName}] Error obteniendo evidencias por entidad:`, error);
         return [];
       }
     },
 
     /**
-     * Obtener estadísticas básicas por entidad (owner-centric)
+     * Obtener estadsticas bsicas por entidad (owner-centric)
      * @param {string} ownerId - ID del owner (viene del token)
      * @param {string} entityId - ID de la entidad
-     * @returns {Promise<Object>} Estadísticas
+     * @returns {Promise<Object>} Estadsticas
      */
     async getStatsByEntity(ownerId, entityId) {
       try {
@@ -446,7 +455,7 @@ export function createBaseRegistryService({
           totalEvidencias: evidencias.length
         };
       } catch (error) {
-        console.error(`❌ Error obteniendo estadísticas en ${collectionName}:`, error);
+        console.error(`[${collectionName}] Error obteniendo estadisticas:`, error);
         return {
           totalRegistros: 0,
           totalPersonas: 0,
@@ -456,3 +465,7 @@ export function createBaseRegistryService({
     }
   };
 }
+
+
+
+

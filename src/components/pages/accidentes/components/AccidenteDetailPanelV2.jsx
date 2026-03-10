@@ -34,13 +34,6 @@ import { getDoc, doc, collection } from 'firebase/firestore';
 import { normalizeEmpleado } from '../../../../utils/firestoreUtils';
 import { useAuth } from '@/components/context/AuthContext';
 
-const accidenteServiceWrapper = {
-  async getById(userId, accidenteId) {
-    const userProfile = { uid: userId };
-    return await obtenerAccidentePorId(accidenteId, userProfile);
-  }
-};
-
 const getEstadoColor = (estado) => {
   const e = (estado || '').toLowerCase();
   if (e === 'cerrado') return 'success';
@@ -48,17 +41,17 @@ const getEstadoColor = (estado) => {
   return 'default';
 };
 
-const ContenidoRegistros = ({ entityId, userId, registryService, refreshKey }) => {
+const ContenidoRegistros = ({ entityId, userId, ownerId, registryService, refreshKey }) => {
   const { userProfile } = useAuth();
+  const tenantOwnerId = ownerId || userProfile?.ownerId || userId || null;
   const [registros, setRegistros] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
   // Map de registroId -> empleados cargados
   const [empleadosPorRegistro, setEmpleadosPorRegistro] = React.useState(new Map());
   
-  // Usar hook reutilizable para manejar imágenes
+  // Usar hook reutilizable para manejar imÃƒÂ¡genes
   const {
     blobUrls: evidenciasBlobUrls,
-    blobs: evidenciasBlobs,
     loading: evidenciasLoading,
     errors: evidenciasErrors,
     metadata: evidenciasMetadata,
@@ -69,7 +62,7 @@ const ContenidoRegistros = ({ entityId, userId, registryService, refreshKey }) =
   } = useControlFileImages(registros);
 
   React.useEffect(() => {
-    if (!entityId || !userId || !registryService) {
+    if (!entityId || !tenantOwnerId || !registryService) {
       setLoading(false);
       return;
     }
@@ -79,7 +72,7 @@ const ContenidoRegistros = ({ entityId, userId, registryService, refreshKey }) =
     const loadRegistros = async () => {
       try {
         const entityIdStr = String(entityId);
-        const data = await registryService.getRegistriesByEntity(userId, entityIdStr);
+        const data = await registryService.getRegistriesByEntity(tenantOwnerId, entityIdStr);
         if (mounted) {
           setRegistros(data);
           setLoading(false);
@@ -92,17 +85,17 @@ const ContenidoRegistros = ({ entityId, userId, registryService, refreshKey }) =
 
     loadRegistros();
     return () => { mounted = false; };
-  }, [entityId, userId, registryService, refreshKey]);
+  }, [entityId, userId, ownerId, userProfile?.ownerId, registryService, refreshKey]);
 
   // Cargar empleados para cada registro
   React.useEffect(() => {
-    if (!userId || registros.length === 0) return;
+    if (!tenantOwnerId || registros.length === 0) return;
 
     const loadEmpleados = async () => {
       const empleadosMap = new Map();
       
-      // Obtener todos los empleadoIds únicos de todos los registros
-      // En accidentes, los empleados están en empleadosInvolucrados
+      // Obtener todos los empleadoIds ÃƒÂºnicos de todos los registros
+      // En accidentes, los empleados estÃƒÂ¡n en empleadosInvolucrados
       const todosEmpleadoIds = new Set();
       registros.forEach(registro => {
         // Los registros de accidentes pueden tener empleadosInvolucrados como array de objetos o IDs
@@ -112,7 +105,7 @@ const ContenidoRegistros = ({ entityId, userId, registryService, refreshKey }) =
             if (empId) todosEmpleadoIds.add(empId);
           });
         }
-        // También verificar empleadoIds por compatibilidad
+        // TambiÃƒÂ©n verificar empleadoIds por compatibilidad
         if (registro.empleadoIds && Array.isArray(registro.empleadoIds)) {
           registro.empleadoIds.forEach(id => todosEmpleadoIds.add(id));
         }
@@ -126,12 +119,12 @@ const ContenidoRegistros = ({ entityId, userId, registryService, refreshKey }) =
           console.error('[ContenidoRegistros] ownerId no disponible');
           return;
         }
-        const ownerId = userProfile.ownerId;
+        const ownerId = tenantOwnerId;
         const empleadosRef = collection(dbAudit, ...firestoreRoutesCore.empleados(ownerId));
         const empleadosData = [];
         const empleadoIdsArray = Array.from(todosEmpleadoIds);
 
-        // Cargar empleados en paralelo (máximo 10 a la vez para no sobrecargar)
+        // Cargar empleados en paralelo (mÃƒÂ¡ximo 10 a la vez para no sobrecargar)
         const chunkSize = 10;
         for (let i = 0; i < empleadoIdsArray.length; i += chunkSize) {
           const chunk = empleadoIdsArray.slice(i, i + chunkSize);
@@ -152,7 +145,7 @@ const ContenidoRegistros = ({ entityId, userId, registryService, refreshKey }) =
           empleadosData.push(...chunkResults.filter(Boolean));
         }
 
-        // Crear mapa de empleados por ID para acceso rápido
+        // Crear mapa de empleados por ID para acceso rÃƒÂ¡pido
         const empleadosById = new Map();
         empleadosData.forEach(emp => {
           empleadosById.set(emp.id, emp);
@@ -171,7 +164,7 @@ const ContenidoRegistros = ({ entityId, userId, registryService, refreshKey }) =
             });
           }
           
-          // También procesar empleadoIds por compatibilidad
+          // TambiÃƒÂ©n procesar empleadoIds por compatibilidad
           if (registro.empleadoIds && Array.isArray(registro.empleadoIds)) {
             registro.empleadoIds.forEach(id => {
               const empleado = empleadosById.get(id);
@@ -193,7 +186,7 @@ const ContenidoRegistros = ({ entityId, userId, registryService, refreshKey }) =
     };
 
     loadEmpleados();
-  }, [registros, userId, userProfile?.ownerId]);
+  }, [registros, tenantOwnerId]);
 
   if (loading) {
     return (
@@ -237,7 +230,7 @@ const ContenidoRegistros = ({ entityId, userId, registryService, refreshKey }) =
                       {fechaStr}
                     </Typography>
                     <Typography variant="caption" color="text.secondary">
-                      {empleadosCount} empleado(s) • {evidencias.length} evidencia(s)
+                      {empleadosCount} empleado(s) Ã¢â‚¬Â¢ {evidencias.length} evidencia(s)
                     </Typography>
                   </Box>
                 </Box>
@@ -254,7 +247,7 @@ const ContenidoRegistros = ({ entityId, userId, registryService, refreshKey }) =
                       const hasBlobUrl = !!blobUrl;
                       const hasError = !!errorUrl;
                       
-                      // Si no hay blob URL y no está cargando y no hay error, intentar obtener URL legacy
+                      // Si no hay blob URL y no estÃƒÂ¡ cargando y no hay error, intentar obtener URL legacy
                       const fallbackUrl = !hasBlobUrl && !isLoading && !hasError 
                         ? convertirShareTokenAUrl(evidencia.shareToken || evidencia.url || evidencia)
                         : null;
@@ -306,7 +299,7 @@ const ContenidoRegistros = ({ entityId, userId, registryService, refreshKey }) =
                                       e.target.style.display = 'none';
                                     }}
                                   />
-                                  {/* Overlay con ícono "Ver" */}
+                                  {/* Overlay con ÃƒÂ­cono "Ver" */}
                                   <Box
                                     className="image-overlay"
                                     sx={{
@@ -430,6 +423,7 @@ const AccidenteDetailPanelV2 = ({
   accidenteId,
   initialMode = 'view',
   userId,
+  ownerId,
   onRegistrarAccidente,
   onMarcarCerrado,
   onEditarAccidente,
@@ -443,14 +437,20 @@ const AccidenteDetailPanelV2 = ({
     loading: true
   });
   const [accidente, setAccidente] = React.useState(null);
+  const [loadError, setLoadError] = React.useState(null);
+  const [notFound, setNotFound] = React.useState(false);
+  const { userProfile } = useAuth();
+  const tenantOwnerId = ownerId || userProfile?.ownerId || null;
 
   React.useEffect(() => {
     setCurrentMode(initialMode);
   }, [initialMode, accidenteId]);
 
   React.useEffect(() => {
-    if (!open || !accidenteId || !userId) {
+    if (!open || !accidenteId || !tenantOwnerId || !userId) {
       setAccidente(null);
+      setLoadError(null);
+      setNotFound(false);
       setKpiStats({ totalRegistros: 0, totalPersonas: 0, totalEvidencias: 0, loading: false });
       return;
     }
@@ -459,11 +459,14 @@ const AccidenteDetailPanelV2 = ({
 
     const loadData = async () => {
       try {
-        const accData = await accidenteServiceWrapper.getById(userId, accidenteId);
-        if (mounted) setAccidente(accData);
+        const accData = await obtenerAccidentePorId({ ownerId: tenantOwnerId, accidenteId });
+        if (mounted) {
+          setAccidente(accData);
+          setNotFound(!accData);
+        }
 
         const entityIdStr = String(accidenteId);
-        const stats = await registrosAccidenteService.getStatsByEntity(userId, entityIdStr);
+        const stats = await registrosAccidenteService.getStatsByEntity(tenantOwnerId, entityIdStr);
         if (mounted) {
           setKpiStats({
             ...stats,
@@ -473,6 +476,7 @@ const AccidenteDetailPanelV2 = ({
       } catch (error) {
         console.error('[AccidenteDetailPanelV2] Error cargando datos:', error);
         if (mounted) {
+          setLoadError(error?.message || 'No se pudo cargar el detalle del accidente');
           setKpiStats(prev => ({ ...prev, loading: false }));
         }
       }
@@ -480,7 +484,7 @@ const AccidenteDetailPanelV2 = ({
 
     loadData();
     return () => { mounted = false; };
-  }, [open, accidenteId, userId]);
+  }, [open, accidenteId, tenantOwnerId, userId]);
 
   const renderHeaderEjecutivo = (acc) => {
     if (!acc) return null;
@@ -562,6 +566,30 @@ const AccidenteDetailPanelV2 = ({
     );
   };
 
+  
+  const renderLoadState = () => {
+    if (loadError) {
+      return (
+        <Box sx={{ p: 3 }}>
+          <Typography color="error" variant="body2">
+            {loadError}
+          </Typography>
+        </Box>
+      );
+    }
+
+    if (notFound) {
+      return (
+        <Box sx={{ p: 3 }}>
+          <Typography color="text.secondary" variant="body2">
+            El accidente no existe o no tenÃ©s permisos para visualizarlo.
+          </Typography>
+        </Box>
+      );
+    }
+
+    return null;
+  };
   const renderActions = (acc) => {
     if (!acc) return null;
 
@@ -619,10 +647,14 @@ const AccidenteDetailPanelV2 = ({
       entityId={accidenteId}
       initialMode={currentMode}
       userId={userId}
-      entityService={accidenteServiceWrapper}
+      ownerId={tenantOwnerId}
+      entityService={{
+        getById: async (_actorId, id) => obtenerAccidentePorId({ ownerId: tenantOwnerId, accidenteId: id })
+      }}
       registryService={registrosAccidenteService}
       renderHeader={(acc) => {
-        if (acc) setAccidente(acc);
+        const fallback = renderLoadState();
+        if (fallback) return fallback;
         return renderHeaderEjecutivo(acc || accidente);
       }}
       renderActions={() => null}
@@ -650,10 +682,10 @@ const AccidenteDetailPanelV2 = ({
         }
         setKpiStats(prev => ({ ...prev, loading: true }));
         setTimeout(async () => {
-          if (accidenteId && userId) {
+          if (accidenteId && tenantOwnerId) {
             try {
               const entityIdStr = String(accidenteId);
-              const stats = await registrosAccidenteService.getStatsByEntity(userId, entityIdStr);
+              const stats = await registrosAccidenteService.getStatsByEntity(tenantOwnerId, entityIdStr);
               setKpiStats({ ...stats, loading: false });
             } catch (error) {
               console.error('[AccidenteDetailPanelV2] Error refrescando KPIs:', error);
@@ -670,3 +702,13 @@ const AccidenteDetailPanelV2 = ({
 };
 
 export default AccidenteDetailPanelV2;
+
+
+
+
+
+
+
+
+
+

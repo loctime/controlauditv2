@@ -9,15 +9,15 @@
  * - entity: Object | null (opcional, se carga si no se pasa)
  * - registryService: Object (servicio de registros)
  * - entityService: Object (servicio de entidad, para cargar si falta)
- * - fields: Array<FieldConfig> (configuración de campos)
+ * - fields: Array<FieldConfig> (configuraciÃƒÆ’Ã‚Â³n de campos)
  * - personasConfig: Object (config para campo de personas)
  * - evidenciasConfig: Object (config para campo de evidencias)
  * - onSaved: (registroId) => void
  * - onCancel: () => void
- * - compact: boolean (versión compacta)
+ * - compact: boolean (versiÃƒÆ’Ã‚Â³n compacta)
  */
 
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   Box,
   Typography,
@@ -37,7 +37,7 @@ import {
   PhotoLibrary as PhotoLibraryIcon,
   Delete as DeleteIcon
 } from '@mui/icons-material';
-import { query, where, getDocs, doc, getDoc, Timestamp, collection } from 'firebase/firestore';
+import { query, where, getDocs, Timestamp, collection } from 'firebase/firestore';
 import { dbAudit } from '../../../firebaseControlFile';
 import { firestoreRoutesCore } from '../../../core/firestore/firestoreRoutes.core';
 import { uploadFileWithContext } from '../../../services/unifiedFileUploadService';
@@ -52,6 +52,8 @@ export default function EventRegistryInline({
   entityId,
   entityType,
   userId,
+  ownerId,
+  actorId,
   entity: entityProp,
   registryService,
   entityService,
@@ -83,8 +85,11 @@ export default function EventRegistryInline({
   const galleryInputRef = useRef(null);
   const blobUrlsRef = useRef(new Map());
 
+  const tenantOwnerId = ownerId || userProfile?.ownerId || userId || null;
+  const currentActorId = actorId || userId || userProfile?.uid || null;
+
   useEffect(() => {
-    if (userId && entityId) {
+    if (tenantOwnerId && entityId) {
       loadData();
     }
     
@@ -96,10 +101,10 @@ export default function EventRegistryInline({
       });
       blobUrlsRef.current.clear();
     };
-  }, [entityId, userId]);
+  }, [entityId, tenantOwnerId, currentActorId]);
 
   const loadData = async () => {
-    if (!userId) {
+    if (!tenantOwnerId) {
       setError('Usuario no autenticado');
       setLoading(false);
       return;
@@ -107,26 +112,26 @@ export default function EventRegistryInline({
 
     setLoading(true);
     try {
-      // Cargar entidad si no se pasó como prop
+      // Cargar entidad si no se pasÃƒÆ’Ã‚Â³ como prop
       if (!entityProp && entityService && entityService.getById) {
-        const entityData = await entityService.getById(userId, entityId);
+        const entityData = await entityService.getById(currentActorId, entityId);
         setEntity(entityData);
       }
 
-      // Cargar personas si hay configuración
+      // Cargar personas si hay configuraciÃƒÆ’Ã‚Â³n
       if (personasConfig && personasConfig.collectionName) {
-        if (!userProfile?.ownerId) {
+        if (!tenantOwnerId) {
           console.error('[EventRegistryInline] ownerId no disponible');
           setError('Usuario no autenticado correctamente');
           setLoading(false);
           return;
         }
-        const ownerId = userProfile.ownerId;
+        const ownerId = tenantOwnerId;
         const collectionName = personasConfig.collectionName;
         const routeFunction = firestoreRoutesCore[collectionName];
         if (!routeFunction || typeof routeFunction !== 'function') {
           console.error(`[EventRegistryInline] Collection ${collectionName} not found in firestoreRoutesCore`);
-          setError(`Colección ${collectionName} no encontrada`);
+          setError(`ColecciÃƒÆ’Ã‚Â³n ${collectionName} no encontrada`);
           setLoading(false);
           return;
         }
@@ -158,7 +163,7 @@ export default function EventRegistryInline({
 
       // Cargar registros existentes para pre-seleccionar personas
       if (registryService && registryService.getRegistriesByEntity) {
-        const registros = await registryService.getRegistriesByEntity(userId, entityId);
+        const registros = await registryService.getRegistriesByEntity(tenantOwnerId, entityId);
         const personasRegistradas = new Set();
         registros.forEach(reg => {
           const personasField = personasConfig?.fieldName || 'empleadoIds';
@@ -179,7 +184,7 @@ export default function EventRegistryInline({
 
       // Cargar evidencias existentes
       if (registryService && registryService.getEvidenciasByEntity) {
-        const evidenciasExistentes = await registryService.getEvidenciasByEntity(userId, entityId);
+        const evidenciasExistentes = await registryService.getEvidenciasByEntity(tenantOwnerId, entityId);
         setEvidencias(evidenciasExistentes);
 
         // Cargar evidencias como blob URLs
@@ -232,11 +237,11 @@ export default function EventRegistryInline({
         return;
       }
       if (file.size > maxSize) {
-        setError(`La imagen es demasiado grande (máximo ${maxSize / 1024 / 1024}MB)`);
+        setError(`La imagen es demasiado grande (mÃƒÆ’Ã‚Â¡ximo ${maxSize / 1024 / 1024}MB)`);
         return;
       }
       if (evidencias.length >= maxCount) {
-        setError(`Máximo ${maxCount} evidencias permitidas`);
+        setError(`MÃƒÆ’Ã‚Â¡ximo ${maxCount} evidencias permitidas`);
         return;
       }
     }
@@ -270,7 +275,7 @@ export default function EventRegistryInline({
 
         if (entityType === 'capacitacion') {
           if (!entity?.sucursalId || !entity?.capacitacionTipoId) {
-            throw new Error('Capacitación sin sucursalId o capacitacionTipoId');
+            throw new Error('CapacitaciÃƒÆ’Ã‚Â³n sin sucursalId o capacitacionTipoId');
           }
           context.sucursalId = entity.sucursalId;
           context.capacitacionTipoId = entity.capacitacionTipoId;
@@ -380,8 +385,8 @@ export default function EventRegistryInline({
   const handleOpenGallery = () => galleryInputRef.current?.click();
 
   const handleGuardar = async () => {
-    if (!userId) return alert('Usuario no autenticado');
-    if (uploadingEvidencias.size > 0) return alert('Esperá que terminen de subir las evidencias');
+    if (!tenantOwnerId) return alert('Contexto de tenant no disponible');
+    if (uploadingEvidencias.size > 0) return alert('EsperÃƒÆ’Ã‚Â¡ que terminen de subir las evidencias');
     
     // Validar campos requeridos
     for (const field of fields) {
@@ -395,9 +400,9 @@ export default function EventRegistryInline({
       }
     }
 
-    // Validar personas si hay configuración
+    // Validar personas si hay configuraciÃƒÆ’Ã‚Â³n
     if (personasConfig && selectedPersonas.size === 0) {
-      return alert('Seleccioná al menos una persona');
+      return alert('SeleccionÃƒÆ’Ã‚Â¡ al menos una persona');
     }
 
     setSaving(true);
@@ -405,7 +410,7 @@ export default function EventRegistryInline({
     try {
       const entityIdStr = String(entityId);
 
-      // Preparar datos de personas según configuración
+      // Preparar datos de personas segÃƒÆ’Ã‚Âºn configuraciÃƒÆ’Ã‚Â³n
       let personasData = [];
       if (personasConfig) {
         if (personasConfig.normalize) {
@@ -417,13 +422,14 @@ export default function EventRegistryInline({
 
       // Crear registro base (sin evidencias)
       const registro = await registryService.createRegistry({
-        userId,
+        ownerId: tenantOwnerId,
+        actorId: currentActorId,
         entityId: entityIdStr,
         personas: personasData,
         evidencias: [],
         metadata: {
           ...customFields,
-          creadoPor: userId
+          creadoPor: currentActorId
         }
       });
 
@@ -443,7 +449,8 @@ export default function EventRegistryInline({
       // Asociar evidencias si hay
       if (evidenciasParaGuardar.length > 0) {
         await registryService.attachEvidencias({
-          userId,
+          ownerId: tenantOwnerId,
+          actorId: currentActorId,
           registroId: registro.id,
           evidencias: evidenciasParaGuardar
         });
@@ -545,7 +552,7 @@ export default function EventRegistryInline({
                 disabled={saving || uploadingEvidencias.size > 0}
                 size="small"
               >
-                Cámara
+                CÃƒÆ’Ã‚Â¡mara
               </Button>
               <Button
                 variant="outlined"
@@ -554,7 +561,7 @@ export default function EventRegistryInline({
                 disabled={saving || uploadingEvidencias.size > 0}
                 size="small"
               >
-                Galería
+                GalerÃƒÆ’Ã‚Â­a
               </Button>
             </Box>
 
@@ -775,10 +782,10 @@ export default function EventRegistryInline({
         </>
       )}
 
-      {/* Renderizar campos según configuración */}
+      {/* Renderizar campos segÃƒÆ’Ã‚Âºn configuraciÃƒÆ’Ã‚Â³n */}
       {fields.map(field => renderField(field))}
 
-      {/* Campos por defecto si no hay configuración */}
+      {/* Campos por defecto si no hay configuraciÃƒÆ’Ã‚Â³n */}
       {fields.length === 0 && (
         <>
           {/* Campo de personas por defecto */}
@@ -856,7 +863,7 @@ export default function EventRegistryInline({
                 disabled={saving || uploadingEvidencias.size > 0}
                 size="small"
               >
-                Cámara
+                CÃƒÆ’Ã‚Â¡mara
               </Button>
               <Button
                 variant="outlined"
@@ -865,7 +872,7 @@ export default function EventRegistryInline({
                 disabled={saving || uploadingEvidencias.size > 0}
                 size="small"
               >
-                Galería
+                GalerÃƒÆ’Ã‚Â­a
               </Button>
             </Box>
 
@@ -1066,3 +1073,9 @@ export default function EventRegistryInline({
     </Paper>
   );
 }
+
+
+
+
+
+

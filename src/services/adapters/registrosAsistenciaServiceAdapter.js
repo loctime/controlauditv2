@@ -3,7 +3,7 @@
  * Adapter que adapta registrosAsistenciaService al contrato del BaseRegistryService
  * 
  * Permite usar registrosAsistenciaService con EventDetailPanel y EventRegistryInline
- * manteniendo compatibilidad con código existente.
+ * manteniendo compatibilidad con cÃ³digo existente.
  */
 
 import { createBaseRegistryService } from '../base/baseRegistryService';
@@ -18,7 +18,7 @@ function validatePersonasCapacitacion(personas) {
 }
 
 /**
- * Normaliza personas a formato estándar para capacitaciones
+ * Normaliza personas a formato estÃ¡ndar para capacitaciones
  * Acepta: Array<string> | Array<{id, nombre}>
  * Retorna: Array<string> (mantener como strings para compatibilidad)
  */
@@ -32,7 +32,7 @@ function normalizePersonasCapacitacion(personas) {
 }
 
 /**
- * Valida y sanitiza evidencias (imágenes) para capacitaciones
+ * Valida y sanitiza evidencias (imÃ¡genes) para capacitaciones
  */
 function validateEvidenciasCapacitacion(evidencias) {
   if (!evidencias || !Array.isArray(evidencias)) {
@@ -43,11 +43,11 @@ function validateEvidenciasCapacitacion(evidencias) {
   
   return evidencias.map((ev, index) => {
     if (!ev || typeof ev !== 'object') {
-      throw new Error(`Evidencia en índice ${index} debe ser un objeto`);
+      throw new Error(`Evidencia en Ã­ndice ${index} debe ser un objeto`);
     }
 
     if (!ev.id && !ev.fileId) {
-      throw new Error(`Evidencia en índice ${index} debe tener 'id' o 'fileId'`);
+      throw new Error(`Evidencia en Ã­ndice ${index} debe tener 'id' o 'fileId'`);
     }
 
     const evidenciaSanitizada = {};
@@ -82,11 +82,12 @@ const baseService = createBaseRegistryService({
  * Adapter que implementa contrato del core y mantiene compatibilidad
  */
 export const registrosAsistenciaServiceAdapter = {
-  // Métodos del core (requeridos por EventDetailPanel/EventRegistryInline)
-  async createRegistry({ userId, entityId, personas, evidencias = [], metadata = {} }) {
+  // MÃ©todos del core (requeridos por EventDetailPanel/EventRegistryInline)
+  async createRegistry({ ownerId, userId, actorId, entityId, personas, evidencias = [], metadata = {} }) {
     // Mapear al formato esperado por el servicio base
     return await baseService.createRegistry({
-      ownerId: userId, // Mapear userId a ownerId
+      ownerId: ownerId || userId,
+      actorId: actorId || userId,
       entityId,
       personas,
       evidencias,
@@ -94,27 +95,30 @@ export const registrosAsistenciaServiceAdapter = {
     });
   },
 
-  async attachEvidencias({ userId, registroId, evidencias }) {
+  async attachEvidencias({ ownerId, userId, actorId, registroId, evidencias }) {
     return await baseService.attachEvidencias({
-      ownerId: userId, // Mapear userId a ownerId
+      ownerId: ownerId || userId,
+      actorId: actorId || userId,
       registroId,
       evidencias
     });
   },
 
-  async getRegistriesByEntity(userId, entityId) {
-    return await baseService.getRegistriesByEntity(userId, entityId);
+  async getRegistriesByEntity(ownerId, entityId) {
+    return await baseService.getRegistriesByEntity(ownerId, entityId);
   },
 
-  async getPersonasUnicasByEntity(userId, entityId) {
-    return await baseService.getPersonasUnicasByEntity(userId, entityId);
+  async getPersonasUnicasByEntity(ownerId, entityId) {
+    return await baseService.getPersonasUnicasByEntity(ownerId, entityId);
   },
 
-  async getEvidenciasByEntity(userId, entityId) {
-    return await baseService.getEvidenciasByEntity(userId, entityId);
+  async getEvidenciasByEntity(ownerId, entityId) {
+    return await baseService.getEvidenciasByEntity(ownerId, entityId);
   },
 
-  async getStatsByEntity(userId, entityId) {
-    return await baseService.getStatsByEntity(userId, entityId);
+  async getStatsByEntity(ownerId, entityId) {
+    return await baseService.getStatsByEntity(ownerId, entityId);
   }
 };
+
+

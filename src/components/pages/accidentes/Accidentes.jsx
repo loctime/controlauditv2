@@ -82,7 +82,7 @@ export default function Accidentes() {
     selectedSucursal,
     filterTipo,
     filterEstado,
-    !loadingEmpresas, // empresasReady: true cuando ya terminó de cargar (incluso si hay 0 empresas)
+    !loadingEmpresas, // empresasReady: true cuando ya terminÃ³ de cargar (incluso si hay 0 empresas)
     userProfile
   );
 
@@ -97,11 +97,11 @@ export default function Accidentes() {
   // Hook de ordenamiento
   const { orderBy, order, handleRequestSort, sortedAccidentes } = useAccidentesSorting(accidentes);
 
-  // Filtrar accidentes por búsqueda y fechas
+  // Filtrar accidentes por bÃºsqueda y fechas
   const accidentesFiltrados = useMemo(() => {
     let filtrados = sortedAccidentes;
 
-    // Filtro por búsqueda
+    // Filtro por bÃºsqueda
     if (searchTerm.trim()) {
       const term = searchTerm.toLowerCase();
       filtrados = filtrados.filter(acc => 
@@ -129,7 +129,7 @@ export default function Accidentes() {
     return filtrados;
   }, [sortedAccidentes, searchTerm, fechaDesde, fechaHasta]);
 
-  // Handlers de exportación
+  // Handlers de exportaciÃ³n
   const handleExportarExcel = async () => {
     try {
       await exportarAccidentesExcel(accidentesFiltrados);
@@ -225,7 +225,7 @@ export default function Accidentes() {
           <GlobalFiltersBar compact={false} showSucursal={true} />
         </Box>
 
-        {/* Filtros locales (Búsqueda, Tipo, Estado, Fechas) */}
+        {/* Filtros locales (BÃºsqueda, Tipo, Estado, Fechas) */}
         <Box sx={{ mb: 3 }}>
           <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={es}>
             <AccidentesFiltros
@@ -247,7 +247,7 @@ export default function Accidentes() {
           <EstadisticasAccidentes accidentes={accidentesFiltrados} />
         </Box>
 
-        {/* Botones de exportación */}
+        {/* Botones de exportaciÃ³n */}
         {accidentesFiltrados.length > 0 && (
           <Box sx={{ display: 'flex', gap: 1, mb: 2, justifyContent: 'flex-end' }}>
             <Button
@@ -345,11 +345,12 @@ export default function Accidentes() {
         accidenteId={selectedAccidenteId}
         initialMode={panelInitialMode}
         userId={userProfile?.uid}
+        ownerId={userProfile?.ownerId}
         onRegistrarAccidente={(accidenteId) => {
           setPanelInitialMode('registrar');
         }}
         onMarcarCerrado={async (accidenteId) => {
-          if (window.confirm('¿Marcar este accidente como cerrado?')) {
+          if (window.confirm('Â¿Marcar este accidente como cerrado?')) {
             try {
               await actualizarEstadoAccidente(accidenteId, 'cerrado', userProfile?.uid, userProfile);
               recargarAccidentes();
@@ -382,3 +383,4 @@ export default function Accidentes() {
     </Container>
   );
 }
+
