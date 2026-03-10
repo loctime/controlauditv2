@@ -1,65 +1,83 @@
-﻿import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Alert,
   Box,
   Button,
-  Chip,
-  CircularProgress,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
   Grid,
-  MenuItem,
   Paper,
   Stack,
   TextField,
   Typography
 } from '@mui/material';
 import { useAuth } from '@/components/context/AuthContext';
-import { trainingCatalogService, trainingSessionService } from '../../../../services/training';
+import {
+  trainingAttendanceService,
+  trainingCatalogService,
+  trainingSessionService
+} from '../../../../services/training';
 import { TRAINING_SESSION_STATUSES } from '../../../../types/trainingDomain';
-
-const statusLabels = Object.values(TRAINING_SESSION_STATUSES);
+import SessionsListView from '../components/sessions/SessionsListView';
+import SessionCreateWizard from '../components/sessions/SessionCreateWizard';
+import SessionExecutionView from '../components/sessions/SessionExecutionView';
+import SessionEvidencePanel from '../components/sessions/SessionEvidencePanel';
+import SessionClosurePanel from '../components/sessions/SessionClosurePanel';
 
 export default function SessionsScreen() {
-  const { userProfile, userEmpresas = [], userSucursales = [] } = useAuth();
+  const { userProfile, userSucursales = [] } = useAuth();
   const ownerId = userProfile?.ownerId;
 
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [sessions, setSessions] = useState([]);
-  const [catalogItems, setCatalogItems] = useState([]);
-  const [form, setForm] = useState({
-    trainingTypeId: '',
-    companyId: '',
-    branchId: '',
-    instructorId: userProfile?.uid || '',
-    location: '',
-    modality: 'in_person',
-    scheduledDate: ''
-  });
+  const [catalog, setCatalog] = useState([]);
+  const [attendanceCountBySession, setAttendanceCountBySession] = useState({});
+  const [selectedSessionId, setSelectedSessionId] = useState(null);
+  const [editingSession, setEditingSession] = useState(null);
+  const [editingForm, setEditingForm] = useState({ location: '', instructorId: '', scheduledDate: '' });
 
-  const branchOptions = useMemo(() => {
-    if (!form.companyId) return userSucursales;
-    return userSucursales.filter((s) => s.empresaId === form.companyId);
-  }, [form.companyId, userSucursales]);
+  const selectedSession = useMemo(
+    () => sessions.find((session) => session.id === selectedSessionId) || null,
+    [sessions, selectedSessionId]
+  );
 
   const load = async () => {
     if (!ownerId) return;
-
-    setLoading(true);
     setError('');
 
     try {
-      const [catalog, sessionsData] = await Promise.all([
-        trainingCatalogService.listActive(ownerId),
-        trainingSessionService.listSessions(ownerId)
+      const [sessionList, catalogList] = await Promise.all([
+        trainingSessionService.listSessions(ownerId),
+        trainingCatalogService.listAll(ownerId)
       ]);
-      setCatalogItems(catalog);
-      setSessions(sessionsData);
+
+      const attendanceCounts = await Promise.all(
+        sessionList.map(async (session) => {
+          const list = await trainingAttendanceService.listAttendanceBySession(ownerId, session.id).catch(() => []);
+          return [session.id, list.length];
+        })
+      );
+
+      const byId = Object.fromEntries(attendanceCounts);
+      const catalogMap = Object.fromEntries(catalogList.map((item) => [item.id, item]));
+      const branchMap = Object.fromEntries(userSucursales.map((branch) => [branch.id, branch]));
+
+      setCatalog(catalogList);
+      setAttendanceCountBySession(byId);
+      setSessions(sessionList.map((session) => ({
+        ...session,
+        trainingTypeName: catalogMap[session.trainingTypeId]?.name,
+        branchName: branchMap[session.branchId]?.nombre
+      })));
+
+      if (!selectedSessionId && sessionList.length > 0) {
+        setSelectedSessionId(sessionList[0].id);
+      }
     } catch (err) {
       console.error('[SessionsScreen] load error', err);
-      setError('Unable to load sessions');
-    } finally {
-      setLoading(false);
+      setError(err.message || 'Unable to load sessions.');
     }
   };
 
@@ -67,55 +85,42 @@ export default function SessionsScreen() {
     load();
   }, [ownerId]);
 
-  const createSession = async () => {
-    if (!ownerId) return;
-    if (!form.trainingTypeId || !form.companyId || !form.branchId || !form.scheduledDate) {
-      setError('Please complete training type, company, branch and schedule date.');
-      return;
-    }
+  const openEdit = (session) => {
+    setEditingSession(session);
+    const dateValue = session.scheduledDate?.toDate
+      ? session.scheduledDate.toDate().toISOString().slice(0, 16)
+      : new Date(session.scheduledDate).toISOString().slice(0, 16);
 
-    setSaving(true);
-    setError('');
+    setEditingForm({
+      location: session.location || '',
+      instructorId: session.instructorId || '',
+      scheduledDate: Number.isNaN(new Date(dateValue).getTime()) ? '' : dateValue
+    });
+  };
+
+  const saveEdit = async () => {
+    if (!ownerId || !editingSession) return;
 
     try {
-      await trainingSessionService.createSession(ownerId, {
-        trainingTypeId: form.trainingTypeId,
-        companyId: form.companyId,
-        branchId: form.branchId,
-        instructorId: form.instructorId,
-        location: form.location,
-        modality: form.modality,
-        scheduledDate: new Date(form.scheduledDate).toISOString(),
-        status: TRAINING_SESSION_STATUSES.SCHEDULED
+      await trainingSessionService.updateSession(ownerId, editingSession.id, {
+        location: editingForm.location,
+        instructorId: editingForm.instructorId,
+        scheduledDate: editingForm.scheduledDate ? new Date(editingForm.scheduledDate).toISOString() : editingSession.scheduledDate
       });
-
-      setForm((prev) => ({ ...prev, location: '', scheduledDate: '' }));
+      setEditingSession(null);
       await load();
     } catch (err) {
-      console.error('[SessionsScreen] create error', err);
-      setError(err.message || 'Unable to create session');
-    } finally {
-      setSaving(false);
+      setError(err.message || 'Unable to update session.');
     }
   };
 
-  const moveToPendingClosure = async (session) => {
+  const quickTransition = async (session, targetStatus) => {
     if (!ownerId) return;
     try {
-      await trainingSessionService.transitionStatus(ownerId, session.id, TRAINING_SESSION_STATUSES.PENDING_CLOSURE);
+      await trainingSessionService.transitionStatus(ownerId, session.id, targetStatus);
       await load();
     } catch (err) {
-      setError(err.message || 'Unable to move status');
-    }
-  };
-
-  const closeSession = async (session) => {
-    if (!ownerId) return;
-    try {
-      await trainingSessionService.transitionStatus(ownerId, session.id, TRAINING_SESSION_STATUSES.CLOSED);
-      await load();
-    } catch (err) {
-      setError(err.message || 'Unable to close session');
+      setError(err.message || `Unable to move session to ${targetStatus}.`);
     }
   };
 
@@ -125,88 +130,77 @@ export default function SessionsScreen() {
 
   return (
     <Box>
-      <Paper sx={{ p: 2, mb: 3 }}>
-        <Typography variant="h6" sx={{ mb: 2 }}>Create Session</Typography>
+      {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
-        {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
-
-        <Grid container spacing={2}>
-          <Grid item xs={12} md={3}>
-            <TextField select fullWidth label="Training Type" value={form.trainingTypeId} onChange={(e) => setForm({ ...form, trainingTypeId: e.target.value })}>
-              {catalogItems.map((item) => (
-                <MenuItem key={item.id} value={item.id}>{item.name}</MenuItem>
-              ))}
-            </TextField>
-          </Grid>
-          <Grid item xs={12} md={3}>
-            <TextField select fullWidth label="Company" value={form.companyId} onChange={(e) => setForm({ ...form, companyId: e.target.value, branchId: '' })}>
-              {userEmpresas.map((item) => (
-                <MenuItem key={item.id} value={item.id}>{item.nombre}</MenuItem>
-              ))}
-            </TextField>
-          </Grid>
-          <Grid item xs={12} md={3}>
-            <TextField select fullWidth label="Branch" value={form.branchId} onChange={(e) => setForm({ ...form, branchId: e.target.value })}>
-              {branchOptions.map((item) => (
-                <MenuItem key={item.id} value={item.id}>{item.nombre}</MenuItem>
-              ))}
-            </TextField>
-          </Grid>
-          <Grid item xs={12} md={3}>
-            <TextField fullWidth type="datetime-local" label="Scheduled Date" InputLabelProps={{ shrink: true }} value={form.scheduledDate} onChange={(e) => setForm({ ...form, scheduledDate: e.target.value })} />
-          </Grid>
-          <Grid item xs={12} md={3}>
-            <TextField fullWidth label="Instructor" value={form.instructorId} onChange={(e) => setForm({ ...form, instructorId: e.target.value })} />
-          </Grid>
-          <Grid item xs={12} md={3}>
-            <TextField fullWidth label="Location" value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} />
-          </Grid>
-          <Grid item xs={12} md={2}>
-            <TextField select fullWidth label="Modality" value={form.modality} onChange={(e) => setForm({ ...form, modality: e.target.value })}>
-              <MenuItem value="in_person">In Person</MenuItem>
-              <MenuItem value="virtual">Virtual</MenuItem>
-              <MenuItem value="hybrid">Hybrid</MenuItem>
-            </TextField>
-          </Grid>
-          <Grid item xs={12} md={1}>
-            <Button variant="contained" fullWidth sx={{ height: '100%' }} onClick={createSession} disabled={saving}>
-              {saving ? <CircularProgress size={20} /> : 'Create'}
-            </Button>
-          </Grid>
+      <Grid container spacing={2}>
+        <Grid item xs={12}>
+          <SessionCreateWizard
+            ownerId={ownerId}
+            onCreated={(sessionId) => {
+              setSelectedSessionId(sessionId);
+              load();
+            }}
+          />
         </Grid>
-      </Paper>
 
-      <Paper sx={{ p: 2 }}>
-        <Typography variant="h6" sx={{ mb: 2 }}>Session List</Typography>
+        <Grid item xs={12}>
+          <SessionsListView
+            sessions={sessions}
+            attendanceCountBySession={attendanceCountBySession}
+            onView={(session) => setSelectedSessionId(session.id)}
+            onEdit={openEdit}
+            onClose={(session) => setSelectedSessionId(session.id)}
+            onCancel={(session) => quickTransition(session, TRAINING_SESSION_STATUSES.CANCELLED)}
+          />
+        </Grid>
 
-        {loading ? (
-          <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}><CircularProgress /></Box>
-        ) : sessions.length === 0 ? (
-          <Alert severity="info">No sessions found.</Alert>
-        ) : (
-          <Stack spacing={1.5}>
-            {sessions.map((session) => (
-              <Paper key={session.id} variant="outlined" sx={{ p: 2 }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 2 }}>
-                  <Box>
-                    <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>{session.trainingTypeId}</Typography>
-                    <Typography variant="body2" color="text.secondary">{session.companyId} · {session.branchId} · {session.scheduledDate}</Typography>
-                  </Box>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Chip label={session.status} size="small" />
-                    {session.status === TRAINING_SESSION_STATUSES.IN_PROGRESS && (
-                      <Button size="small" onClick={() => moveToPendingClosure(session)}>Pending Closure</Button>
-                    )}
-                    {session.status === TRAINING_SESSION_STATUSES.PENDING_CLOSURE && (
-                      <Button size="small" variant="contained" onClick={() => closeSession(session)}>Close</Button>
-                    )}
-                  </Box>
-                </Box>
-              </Paper>
-            ))}
+        <Grid item xs={12}>
+          <Paper sx={{ p: 2 }}>
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} justifyContent="space-between" alignItems={{ sm: 'center' }}>
+              <Typography variant="h6">Session Execution Workspace</Typography>
+              {selectedSession && (
+                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
+                  <Button variant="outlined" onClick={() => quickTransition(selectedSession, TRAINING_SESSION_STATUSES.IN_PROGRESS)}>Start</Button>
+                  <Button variant="outlined" onClick={() => quickTransition(selectedSession, TRAINING_SESSION_STATUSES.PENDING_CLOSURE)}>Move to pending closure</Button>
+                </Stack>
+              )}
+            </Stack>
+          </Paper>
+        </Grid>
+
+        <Grid item xs={12}>
+          <SessionExecutionView ownerId={ownerId} session={selectedSession} onChanged={load} />
+        </Grid>
+
+        <Grid item xs={12} md={6}>
+          <SessionEvidencePanel ownerId={ownerId} session={selectedSession} />
+        </Grid>
+
+        <Grid item xs={12} md={6}>
+          <SessionClosurePanel ownerId={ownerId} session={selectedSession} onChanged={load} />
+        </Grid>
+      </Grid>
+
+      <Dialog open={Boolean(editingSession)} onClose={() => setEditingSession(null)} maxWidth="sm" fullWidth>
+        <DialogTitle>Edit Session</DialogTitle>
+        <DialogContent>
+          <Stack spacing={2} sx={{ mt: 1 }}>
+            <TextField label="Location" value={editingForm.location} onChange={(e) => setEditingForm((prev) => ({ ...prev, location: e.target.value }))} />
+            <TextField label="Instructor" value={editingForm.instructorId} onChange={(e) => setEditingForm((prev) => ({ ...prev, instructorId: e.target.value }))} />
+            <TextField
+              type="datetime-local"
+              label="Scheduled Date"
+              InputLabelProps={{ shrink: true }}
+              value={editingForm.scheduledDate}
+              onChange={(e) => setEditingForm((prev) => ({ ...prev, scheduledDate: e.target.value }))}
+            />
           </Stack>
-        )}
-      </Paper>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setEditingSession(null)}>Cancel</Button>
+          <Button variant="contained" onClick={saveEdit}>Save</Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }

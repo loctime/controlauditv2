@@ -1,44 +1,75 @@
 import React, { useEffect, useState } from 'react';
-import { Alert, Box, Button, CircularProgress, Grid, Paper, Stack, TextField, Typography } from '@mui/material';
+import { Alert, Box, CircularProgress, Grid, MenuItem, Paper, TextField, Typography } from '@mui/material';
 import { useAuth } from '@/components/context/AuthContext';
-import { trainingReportingService } from '../../../../services/training';
+import { trainingRequirementService, trainingReportingService } from '../../../../services/training';
+import ReportsHub from '../components/reports/ReportsHub';
+
+function daysToExpiry(value) {
+  if (!value) return null;
+  const date = value?.toDate ? value.toDate() : new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return Math.ceil((date.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+}
 
 export default function ReportsScreen() {
-  const { userProfile } = useAuth();
+  const { userProfile, userSucursales = [] } = useAuth();
   const ownerId = userProfile?.ownerId;
 
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [filters, setFilters] = useState({
-    branchId: '',
-    status: ''
+  const [branchId, setBranchId] = useState('');
+  const [data, setData] = useState({
+    sessionsByStatus: {},
+    complianceByBranch: { totalRules: 0, expiringSoon: 0, expired: 0 },
+    complianceByRole: {},
+    expiringCertificates: 0
   });
-  const [report, setReport] = useState(null);
 
-  const buildReport = async () => {
+  const load = async () => {
     if (!ownerId) return;
     setLoading(true);
     setError('');
 
     try {
-      const operational = await trainingReportingService.buildOperationalReport(ownerId, {
-        branchId: filters.branchId || undefined,
-        status: filters.status || undefined
+      const [operational, compliance, rules, certificateReport] = await Promise.all([
+        trainingReportingService.buildOperationalReport(ownerId, { branchId: branchId || undefined }),
+        trainingReportingService.buildComplianceReport(ownerId, { branchId: branchId || null }),
+        trainingRequirementService.listRules(ownerId, { branchId: branchId || undefined, status: 'active' }),
+        trainingReportingService.buildCertificateReport(ownerId)
+      ]);
+
+      const complianceByRole = rules.reduce((acc, rule) => {
+        const key = rule.jobRoleId || 'unspecified_role';
+        acc[key] = (acc[key] || 0) + 1;
+        return acc;
+      }, {});
+
+      const expiringCertificates = (certificateReport.certificates || []).filter((certificate) => {
+        const days = daysToExpiry(certificate.expiresAt);
+        return days !== null && days >= 0 && days <= 90;
+      }).length;
+
+      setData({
+        sessionsByStatus: operational.byStatus || {},
+        complianceByBranch: {
+          totalRules: compliance.totalRules || 0,
+          expiringSoon: compliance.expiringSoon || 0,
+          expired: compliance.expired || 0
+        },
+        complianceByRole,
+        expiringCertificates
       });
-      setReport(operational);
     } catch (err) {
-      console.error('[ReportsScreen] report error', err);
-      setError(err.message || 'Unable to build training report.');
+      console.error('[ReportsScreen] load error', err);
+      setError(err.message || 'Unable to load reports.');
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    if (ownerId) {
-      buildReport();
-    }
-  }, [ownerId]);
+    load();
+  }, [ownerId, branchId]);
 
   if (!ownerId) {
     return <Alert severity="warning">Owner context is not available for training reports.</Alert>;
@@ -46,39 +77,42 @@ export default function ReportsScreen() {
 
   return (
     <Box>
-      {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
-
-      <Paper sx={{ p: 2, mb: 3 }}>
-        <Typography variant="h6" sx={{ mb: 2 }}>Operational Session Report</Typography>
-        <Grid container spacing={2}>
+      <Paper sx={{ p: 2, mb: 2 }}>
+        <Grid container spacing={2} alignItems="center">
           <Grid item xs={12} md={4}>
-            <TextField fullWidth label="Branch Id" value={filters.branchId} onChange={(e) => setFilters({ ...filters, branchId: e.target.value })} />
+            <Typography variant="h6">Reports</Typography>
           </Grid>
           <Grid item xs={12} md={4}>
-            <TextField fullWidth label="Session Status" value={filters.status} onChange={(e) => setFilters({ ...filters, status: e.target.value })} placeholder="scheduled" />
-          </Grid>
-          <Grid item xs={12} md={2}>
-            <Button fullWidth variant="contained" sx={{ height: '100%' }} onClick={buildReport} disabled={loading}>
-              {loading ? 'Loading...' : 'Generate'}
-            </Button>
+            <TextField
+              select
+              fullWidth
+              label="Branch"
+              value={branchId}
+              onChange={(e) => setBranchId(e.target.value)}
+            >
+              <MenuItem value="">All branches</MenuItem>
+              {userSucursales.map((branch) => (
+                <MenuItem key={branch.id} value={branch.id}>{branch.nombre || branch.id}</MenuItem>
+              ))}
+            </TextField>
           </Grid>
         </Grid>
       </Paper>
 
-      <Paper sx={{ p: 2 }}>
-        <Typography variant="h6" sx={{ mb: 2 }}>Results</Typography>
-        {loading ? <CircularProgress /> : !report ? (
-          <Alert severity="info">No report generated yet.</Alert>
-        ) : (
-          <Stack spacing={1}>
-            <Typography>Total sessions: {report.totalSessions}</Typography>
-            <Typography variant="subtitle2" sx={{ mt: 1 }}>By status</Typography>
-            {Object.entries(report.byStatus || {}).map(([status, total]) => (
-              <Typography key={status} variant="body2">{status}: {total}</Typography>
-            ))}
-          </Stack>
-        )}
-      </Paper>
+      {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+
+      {loading ? (
+        <Box sx={{ display: 'flex', justifyContent: 'center', py: 6 }}>
+          <CircularProgress />
+        </Box>
+      ) : (
+        <ReportsHub
+          sessionsByStatus={data.sessionsByStatus}
+          complianceByBranch={data.complianceByBranch}
+          complianceByRole={data.complianceByRole}
+          expiringCertificates={data.expiringCertificates}
+        />
+      )}
     </Box>
   );
 }

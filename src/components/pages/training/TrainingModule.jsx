@@ -1,77 +1,79 @@
-﻿import React, { useMemo, useState } from 'react';
-import { Box, Container, Paper, Tab, Tabs, Typography } from '@mui/material';
+import React, { useMemo } from 'react';
+import { Alert, Box, Container, Typography } from '@mui/material';
+import { useAuth } from '@/components/context/AuthContext';
+import TrainingModuleTabs from './TrainingModuleTabs';
+import useTrainingTabState from './useTrainingTabState';
 import DashboardScreen from './screens/DashboardScreen';
 import SessionsScreen from './screens/SessionsScreen';
-import AnnualPlansScreen from './screens/AnnualPlansScreen';
-import CatalogScreen from './screens/CatalogScreen';
-import RequirementMatrixScreen from './screens/RequirementMatrixScreen';
-import EmployeeHistoryScreen from './screens/EmployeeHistoryScreen';
+import CalendarScreen from './screens/CalendarScreen';
+import PeopleScreen from './screens/PeopleScreen';
 import CertificatesScreen from './screens/CertificatesScreen';
+import ConfigurationScreen from './screens/ConfigurationScreen';
 import ReportsScreen from './screens/ReportsScreen';
 
 const MODULE_TABS = [
   { id: 'dashboard', label: 'Dashboard' },
   { id: 'sessions', label: 'Sessions' },
-  { id: 'plans', label: 'Annual Plans' },
-  { id: 'catalog', label: 'Training Catalog' },
-  { id: 'matrix', label: 'Requirement Matrix' },
-  { id: 'history', label: 'Employee Training History' },
+  { id: 'calendar', label: 'Calendar' },
+  { id: 'people', label: 'People' },
   { id: 'certificates', label: 'Certificates' },
+  { id: 'configuration', label: 'Configuration', adminOnly: true },
   { id: 'reports', label: 'Reports' }
 ];
 
 export default function TrainingModule() {
-  const [activeTab, setActiveTab] = useState('dashboard');
+  const { userProfile, role } = useAuth();
+  const ownerId = userProfile?.ownerId;
+  const canViewConfiguration = role === 'admin' || role === 'supermax';
 
-  const tabIndex = useMemo(() => MODULE_TABS.findIndex((tab) => tab.id === activeTab), [activeTab]);
+  const visibleTabs = useMemo(
+    () => MODULE_TABS.filter((tab) => !tab.adminOnly || canViewConfiguration),
+    [canViewConfiguration]
+  );
+
+  const { activeTab, activeSection, setTab, setSection } = useTrainingTabState(visibleTabs, canViewConfiguration);
 
   const renderScreen = () => {
     switch (activeTab) {
       case 'dashboard':
-        return <DashboardScreen />;
+        return <DashboardScreen onNavigate={setTab} />;
       case 'sessions':
         return <SessionsScreen />;
-      case 'plans':
-        return <AnnualPlansScreen />;
-      case 'catalog':
-        return <CatalogScreen />;
-      case 'matrix':
-        return <RequirementMatrixScreen />;
-      case 'history':
-        return <EmployeeHistoryScreen />;
+      case 'calendar':
+        return <CalendarScreen />;
+      case 'people':
+        return <PeopleScreen />;
       case 'certificates':
         return <CertificatesScreen />;
+      case 'configuration':
+        return <ConfigurationScreen activeSection={activeSection} onSectionChange={setSection} />;
       case 'reports':
         return <ReportsScreen />;
       default:
-        return <DashboardScreen />;
+        return <DashboardScreen onNavigate={setTab} />;
     }
   };
+
+  if (!ownerId) {
+    return (
+      <Container maxWidth="xl" sx={{ py: 3 }}>
+        <Alert severity="warning">Owner context is not available for training module.</Alert>
+      </Container>
+    );
+  }
 
   return (
     <Container maxWidth="xl" sx={{ py: 3 }}>
       <Box sx={{ mb: 3 }}>
         <Typography variant="h4" sx={{ fontWeight: 700, mb: 1 }}>
-          Training Management (EHS)
+          Training Management
         </Typography>
         <Typography variant="body1" color="text.secondary">
-          Required training, planned training, and executed training are managed in separated entities.
+          Operational training execution, people compliance tracking, certificates and reporting.
         </Typography>
       </Box>
 
-      <Paper sx={{ mb: 3 }}>
-        <Tabs
-          value={tabIndex === -1 ? 0 : tabIndex}
-          onChange={(_, index) => setActiveTab(MODULE_TABS[index].id)}
-          variant="scrollable"
-          scrollButtons="auto"
-        >
-          {MODULE_TABS.map((tab) => (
-            <Tab key={tab.id} label={tab.label} />
-          ))}
-        </Tabs>
-      </Paper>
-
+      <TrainingModuleTabs tabs={visibleTabs} activeTab={activeTab} onChangeTab={setTab} />
       {renderScreen()}
     </Container>
   );

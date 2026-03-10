@@ -73,7 +73,7 @@
     },
     {
         id: "training",
-        label: "Training 2.0",
+        label: "Training",
         path: "/training",
         icon: SchoolIcon,
         rolesPermitidos: ['supermax', 'admin', 'operario'],
@@ -251,6 +251,7 @@
     const items = getMenuItemsForRole(role, permisos);
     return items.filter(item => item.location === 'sidebar');
     };
+
 
 
 
