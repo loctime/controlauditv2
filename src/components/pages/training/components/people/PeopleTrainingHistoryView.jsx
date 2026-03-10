@@ -1,5 +1,5 @@
-﻿import React from 'react';
-import { Grid, Paper, Typography } from '@mui/material';
+import React from 'react';
+import { Chip, Grid, Paper, Stack, Typography } from '@mui/material';
 import EmployeeAutocomplete from './EmployeeAutocomplete';
 import EmployeeTrainingTimeline from './EmployeeTrainingTimeline';
 
@@ -8,13 +8,16 @@ export default function PeopleTrainingHistoryView({
   loadingEmployees,
   selectedEmployee,
   onSelectEmployee,
-  records
+  records,
+  complianceSummary
 }) {
   return (
     <Grid container spacing={2}>
       <Grid item xs={12}>
         <Paper sx={{ p: 2 }}>
-          <Typography variant="h6" sx={{ mb: 1.5 }}>Historial de capacitación por persona</Typography>
+          <Typography variant="h6" sx={{ mb: 1.5 }}>
+            Historial de capacitación por persona
+          </Typography>
           <EmployeeAutocomplete
             options={employees}
             loading={loadingEmployees}
@@ -23,6 +26,86 @@ export default function PeopleTrainingHistoryView({
           />
         </Paper>
       </Grid>
+      {selectedEmployee && (
+        <Grid item xs={12}>
+          <Paper sx={{ p: 2 }}>
+            <Typography variant="h6" sx={{ mb: 1 }}>
+              Ficha del empleado
+            </Typography>
+            <Grid container spacing={1.5}>
+              <Grid item xs={12} md={4}>
+                <Typography variant="body2" color="text.secondary">
+                  Nombre
+                </Typography>
+                <Typography>
+                  {selectedEmployee.apellido && selectedEmployee.nombre
+                    ? `${selectedEmployee.apellido}, ${selectedEmployee.nombre}`
+                    : selectedEmployee.nombre || selectedEmployee.displayName || selectedEmployee.id}
+                </Typography>
+              </Grid>
+              <Grid item xs={12} md={2}>
+                <Typography variant="body2" color="text.secondary">
+                  DNI
+                </Typography>
+                <Typography>
+                  {selectedEmployee.dni || selectedEmployee.documento || selectedEmployee.nroDocumento || '-'}
+                </Typography>
+              </Grid>
+              <Grid item xs={12} md={2}>
+                <Typography variant="body2" color="text.secondary">
+                  Legajo
+                </Typography>
+                <Typography>{selectedEmployee.legajo || '-'}</Typography>
+              </Grid>
+              <Grid item xs={12} md={2}>
+                <Typography variant="body2" color="text.secondary">
+                  Empresa
+                </Typography>
+                <Typography>{selectedEmployee.empresaNombre || selectedEmployee.empresaId || '-'}</Typography>
+              </Grid>
+              <Grid item xs={12} md={2}>
+                <Typography variant="body2" color="text.secondary">
+                  Sucursal
+                </Typography>
+                <Typography>{selectedEmployee.sucursalNombre || selectedEmployee.sucursalId || '-'}</Typography>
+              </Grid>
+              <Grid item xs={12} md={3}>
+                <Typography variant="body2" color="text.secondary">
+                  Puesto
+                </Typography>
+                <Typography>
+                  {selectedEmployee.puesto ||
+                    selectedEmployee.jobRoleName ||
+                    selectedEmployee.jobRoleId ||
+                    '-'}
+                </Typography>
+              </Grid>
+              <Grid item xs={12} md={9}>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                  Estado general de cumplimiento
+                </Typography>
+                <Stack direction="row" spacing={1} flexWrap="wrap">
+                  <Chip
+                    label={`Vigentes: ${complianceSummary.compliant}`}
+                    color="success"
+                    size="small"
+                  />
+                  <Chip
+                    label={`Por vencer: ${complianceSummary.expiringSoon}`}
+                    color="warning"
+                    size="small"
+                  />
+                  <Chip
+                    label={`Vencidas: ${complianceSummary.expired}`}
+                    color="error"
+                    size="small"
+                  />
+                </Stack>
+              </Grid>
+            </Grid>
+          </Paper>
+        </Grid>
+      )}
       <Grid item xs={12}>
         <EmployeeTrainingTimeline records={records} />
       </Grid>

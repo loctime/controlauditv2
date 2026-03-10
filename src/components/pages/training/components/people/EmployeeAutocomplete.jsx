@@ -1,9 +1,21 @@
-﻿import React from 'react';
+import React from 'react';
 import { Autocomplete, TextField } from '@mui/material';
 
 function employeeLabel(option) {
-  const dni = option?.dni || option?.documento || option?.nroDocumento;
-  return dni ? `${option.nombre || option.displayName || option.id} (${dni})` : (option.nombre || option.displayName || option.id || 'Empleado');
+  if (!option) return '';
+  const dni = option.dni || option.documento || option.nroDocumento;
+  const legajo = option.legajo;
+  const nombreBase =
+    option.nombreCompleto ||
+    (option.apellido && option.nombre
+      ? `${option.apellido}, ${option.nombre}`
+      : option.displayName || option.nombre || option.id || 'Empleado');
+
+  const partes = [nombreBase];
+  if (dni) partes.push(`DNI ${dni}`);
+  if (legajo) partes.push(`Legajo ${legajo}`);
+
+  return partes.join(' · ');
 }
 
 export default function EmployeeAutocomplete({ options = [], value, onChange, loading = false }) {
@@ -15,7 +27,13 @@ export default function EmployeeAutocomplete({ options = [], value, onChange, lo
       onChange={(_, nextValue) => onChange(nextValue)}
       getOptionLabel={employeeLabel}
       isOptionEqualToValue={(option, current) => option.id === current.id}
-      renderInput={(params) => <TextField {...params} label="Empleado" placeholder="Buscar empleado" />}
+      renderInput={(params) => (
+        <TextField
+          {...params}
+          label="Empleado"
+          placeholder="Buscar por nombre, DNI o legajo"
+        />
+      )}
     />
   );
 }
