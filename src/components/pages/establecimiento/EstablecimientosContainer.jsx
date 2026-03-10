@@ -55,14 +55,15 @@ const EstablecimientosContainer = () => {
     loadingEmpresas,
     crearEmpresa,
     verificarYCorregirEmpresas,
-    updateEmpresa
+    updateEmpresa,
+    getEffectiveOwnerId
   } = useAuth();
   const navigate = useNavigate();
   const theme = useTheme();
   const isSmallMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
-  // Obtener ownerId desde userProfile (viene del token)
-  const ownerId = userProfile?.ownerId;
+  // Obtener ownerId efectivo (soporta impersonación de superdev)
+  const ownerId = getEffectiveOwnerId ? getEffectiveOwnerId() : userProfile?.ownerId;
   const { empresasStats, loadEmpresasStats } = useEmpresasStats(userEmpresas, ownerId);
 
   // Obtener permisos del usuario

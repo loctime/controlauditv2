@@ -29,7 +29,7 @@ import SucursalRow from '../components/SucursalRow';
 import SucursalFormModal from '../components/SucursalFormModal';
 
 const SucursalesTab = ({ empresaId, empresaNombre, userEmpresas, loadEmpresasStats }) => {
-  const { userProfile } = useAuth();
+  const { userProfile, getEffectiveOwnerId } = useAuth();
   const navigate = useNavigate();
   const theme = useTheme();
   const { sucursalesStats, loadSucursalesStats } = useSucursalesStats();
@@ -70,11 +70,11 @@ const SucursalesTab = ({ empresaId, empresaNombre, userEmpresas, loadEmpresasSta
   const loadSucursales = async () => {
     setLoading(true);
     try {
-      if (!userProfile?.ownerId) {
-        console.error('Error: userProfile.ownerId es requerido');
+      const ownerId = getEffectiveOwnerId ? getEffectiveOwnerId() : userProfile?.ownerId;
+      if (!ownerId) {
+        console.error('Error: ownerId efectivo es requerido');
         return;
       }
-      const ownerId = userProfile.ownerId;
       const sucursalesRef = collection(dbAudit, ...firestoreRoutesCore.sucursales(ownerId));
       const q = query(sucursalesRef, where('empresaId', '==', empresaId));
       const snapshot = await getDocs(q);
@@ -185,7 +185,8 @@ const SucursalesTab = ({ empresaId, empresaNombre, userEmpresas, loadEmpresasSta
     }
 
     try {
-      if (!userProfile?.ownerId) {
+      const ownerId = getEffectiveOwnerId ? getEffectiveOwnerId() : userProfile?.ownerId;
+      if (!ownerId) {
         Swal.fire({
           icon: 'error',
           title: 'Error',
@@ -193,8 +194,6 @@ const SucursalesTab = ({ empresaId, empresaNombre, userEmpresas, loadEmpresasSta
         });
         return;
       }
-
-      const ownerId = userProfile.ownerId;
       const sucursalesRef = collection(dbAudit, ...firestoreRoutesCore.sucursales(ownerId));
 
       if (modalMode === 'create') {
@@ -300,7 +299,8 @@ const SucursalesTab = ({ empresaId, empresaNombre, userEmpresas, loadEmpresasSta
 
     if (result.isConfirmed) {
       try {
-        if (!userProfile?.ownerId) {
+        const ownerId = getEffectiveOwnerId ? getEffectiveOwnerId() : userProfile?.ownerId;
+        if (!ownerId) {
           Swal.fire({
             icon: 'error',
             title: 'Error',
@@ -308,8 +308,6 @@ const SucursalesTab = ({ empresaId, empresaNombre, userEmpresas, loadEmpresasSta
           });
           return;
         }
-
-        const ownerId = userProfile.ownerId;
         
         // Verificar si hay empleados asociados
         const empleadosRef = collection(dbAudit, ...firestoreRoutesCore.empleados(ownerId));
