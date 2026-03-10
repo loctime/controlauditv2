@@ -34,7 +34,7 @@ import LoadingSkeleton from "./components/LoadingSkeleton";
 import PermissionAlert from "./components/PermissionAlert";
 
 const ClienteDashboard = React.memo(() => {
-  const { role } = useAuth();
+  const { role, userProfile } = useAuth();
   const navigate = useNavigate();
   const [openDialog, setOpenDialog] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date());
