@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import {
   Container,
   Paper,
@@ -24,11 +24,12 @@ import AusenciaDetailPanel from "./components/AusenciaDetailPanel";
 import AbsenteeismDashboard from "../../AbsenteeismDashboard";
 import EmployeeAbsenceHistory from "../../EmployeeAbsenceHistory";
 import { getAusenciaTipos } from "../../../services/ausenciasService";
-import { useAuth } from '@/components/context/AuthContext';
+import { useAuth } from "@/components/context/AuthContext";
 
 const defaultFilters = {
   tipo: "todos",
   estado: "activas",
+  origen: "todos",
   startDate: null,
   endDate: null,
   search: ""
@@ -74,6 +75,11 @@ export default function Ausencias() {
     rankingEmpleados,
     rankingSucursales,
     historyRows,
+    topBradford,
+    ausenciasByMotivo,
+    monthlyTrend,
+    organizationalKpis,
+    alertsResumen,
     loading: loadingMetrics,
     error: metricsError,
     recargar: recargarMetrics
@@ -81,7 +87,8 @@ export default function Ausencias() {
     selectedEmpresa,
     selectedSucursal,
     sucursalesFiltradas,
-    userProfile
+    userProfile,
+    empleadosTotales: 0
   });
 
   useEffect(() => {
@@ -112,8 +119,8 @@ export default function Ausencias() {
   const totalActivas = useMemo(
     () =>
       ausencias.filter((ausencia) => {
-        const estado = (ausencia.estado || "abierto").toLowerCase();
-        return estado !== "cerrada" && estado !== "cerrado";
+        const estado = String(ausencia.estado || "abierta").toLowerCase();
+        return !estado.includes("cerr") && !estado.includes("finaliz") && !estado.includes("resuelt");
       }).length,
     [ausencias]
   );
@@ -351,6 +358,11 @@ export default function Ausencias() {
           kpis={kpis}
           rankingEmpleados={rankingEmpleados}
           rankingSucursales={rankingSucursales}
+          topBradford={topBradford}
+          ausenciasByMotivo={ausenciasByMotivo}
+          monthlyTrend={monthlyTrend}
+          organizationalKpis={organizationalKpis}
+          alertsResumen={alertsResumen}
           loading={loadingMetrics}
           error={metricsError}
         />
@@ -375,7 +387,7 @@ export default function Ausencias() {
         tipoOptions={tipoOptions}
         onAddTipo={handleTipoAdded}
         onRemoveTipo={handleTipoRemoved}
-        mode={editingAusencia ? 'edit' : 'create'}
+        mode={editingAusencia ? "edit" : "create"}
         initialData={editingAusencia}
         onSaved={async () => {
           await handleRefreshAll();
