@@ -14,6 +14,7 @@ import EventRegistryInline from '../../../shared/event-registry/EventRegistryInl
 import { registrosAccidenteService } from '../../../../services/registrosAccidenteService';
 import { obtenerAccidentePorId } from '../../../../services/accidenteService';
 import { useAuth } from '@/components/context/AuthContext';
+import { MAX_FILE_SIZE } from '@/services/fileValidationPolicy';
 /**
  * Componente para registrar seguimiento de accidente
  */
@@ -115,7 +116,7 @@ const RegistrarAccidenteInline = ({
       }}
       evidenciasConfig={{
         folderName: 'Accidentes',
-        maxSize: 10 * 1024 * 1024, // 10MB
+        maxSize: MAX_FILE_SIZE,
         maxCount: 20
       }}
       fields={[

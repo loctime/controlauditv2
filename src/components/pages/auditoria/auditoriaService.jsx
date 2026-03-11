@@ -79,12 +79,6 @@ const emptyFilesByQuestion = (secciones = []) => {
   });
 };
 
-const serializeFilesByQuestion = (filesByQuestion = []) => {
-  return filesByQuestion.map((valores, seccionIndex) => ({
-    seccion: seccionIndex,
-    valores
-  }));
-};
 
 const flattenFilesByQuestion = (filesByQuestion = []) => {
   return filesByQuestion.flatMap((seccion) =>
@@ -282,9 +276,7 @@ class AuditoriaService {
         numeroTrabajadores: datosAuditoria.numeroTrabajadores || '',
         nombreInspector: datosAuditoria.nombreInspector || '',
         nombreResponsable: datosAuditoria.nombreResponsable || '',
-        filesByQuestion: [],
-        filesCount: 0,
-        filesMigrationVersion: 1
+        filesCount: 0
       };
 
       const datosLimpios = this.limpiarArraysAnidados(prepararDatosParaFirestore(datosCompletos));
@@ -369,9 +361,7 @@ class AuditoriaService {
       const flatFiles = flattenFilesByQuestion(filesByQuestion);
 
       await updateDocWithAppId(docRef, {
-        filesByQuestion: serializeFilesByQuestion(filesByQuestion),
         filesCount: flatFiles.length,
-        filesMigrationVersion: 1,
         filesUploadFailures: uploadFailures,
         schemaVersion: SCHEMA_VERSION
       });

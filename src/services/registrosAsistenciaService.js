@@ -8,15 +8,13 @@ import {
   query, 
   where,
   orderBy,
-  Timestamp,
-  writeBatch,
-  updateDoc,
-  arrayUnion
+  Timestamp
 } from 'firebase/firestore';
 import { dbAudit } from '../firebaseControlFile';
 import { firestoreRoutesCore } from '../core/firestore/firestoreRoutes.core';
 import { addDocWithAppId, updateDocWithAppId, deleteDocWithAppId } from '../firebase/firestoreAppWriter';
 import { registrarAccionSistema } from '../utils/firestoreUtils';
+import { listFiles, saveFileRef } from './unifiedFileService';
 
 /**
  * Servicio para gestión de registros de asistencia
@@ -109,6 +107,50 @@ function validarYSanitizarImagenes(imagenes) {
   });
 }
 
+async function resolveCompanyIdByCapacitacion(ownerId, capacitacionId) {
+  try {
+    const capRef = doc(dbAudit, ...firestoreRoutesCore.capacitacion(ownerId, String(capacitacionId)));
+    const capSnap = await getDoc(capRef);
+    if (!capSnap.exists()) return 'system';
+    const capData = capSnap.data() || {};
+    return capData.empresaId || 'system';
+  } catch (_error) {
+    return 'system';
+  }
+}
+
+async function persistCanonicalImages({ ownerId, registroId, capacitacionId, empleadoIds = [], imagenes = [], uploadedBy = null }) {
+  const imagenesSanitizadas = validarYSanitizarImagenes(imagenes || []);
+  if (imagenesSanitizadas.length === 0) return;
+
+  const companyId = await resolveCompanyIdByCapacitacion(ownerId, capacitacionId);
+
+  await Promise.all(
+    imagenesSanitizadas.map((img) =>
+      saveFileRef({
+        ownerId,
+        module: 'capacitaciones',
+        entityId: String(capacitacionId),
+        fileRef: {
+          fileId: img.fileId || img.id,
+          shareToken: img.shareToken || null,
+          name: img.nombre || 'evidencia',
+          mimeType: img.mimeType || 'application/octet-stream',
+          size: img.size || 0,
+          module: 'capacitaciones',
+          entityId: String(capacitacionId),
+          companyId,
+          uploadedBy: uploadedBy || null,
+          uploadedAt: img.createdAt || null,
+          status: 'active',
+          schemaVersion: 1,
+          registroId: String(registroId),
+          empleadoIds: Array.isArray(empleadoIds) ? empleadoIds : []
+        }
+      })
+    )
+  );
+}
 export const registrosAsistenciaService = {
   /**
    * Crear un nuevo registro de asistencia
@@ -128,44 +170,45 @@ export const registrosAsistenciaService = {
         throw new Error('empleadoIds es requerido y debe tener al menos un empleado');
       }
 
-      if (!userId) throw new Error('ownerId es requerido');
-      const ownerId = userId; // userId ahora es ownerId
+      const ownerId = userId;
       const registrosRef = collection(dbAudit, ...firestoreRoutesCore.registrosAsistencia(ownerId));
-      
-      // Validar y sanitizar imágenes (solo metadata liviana)
       const imagenesSanitizadas = validarYSanitizarImagenes(registroData.imagenes || []);
-      
-      // ⚠️ CRÍTICO: Normalizar capacitacionId a string para consistencia
       const capacitacionIdStr = String(registroData.capacitacionId);
-      
+
       const nuevoRegistro = {
-        capacitacionId: capacitacionIdStr, // ⚠️ Siempre guardar como string
+        capacitacionId: capacitacionIdStr,
         empleadoIds: registroData.empleadoIds,
-        // imagenIds: array de strings para queries eficientes
-        imagenIds: imagenesSanitizadas.map(img => img.id || img.fileId).filter(Boolean),
-        // imagenes: solo metadata liviana { id, shareToken, nombre, createdAt }
-        imagenes: imagenesSanitizadas,
         fecha: registroData.fecha || Timestamp.now(),
         creadoPor: user?.uid || userId,
         createdAt: Timestamp.now(),
         appId: 'auditoria'
       };
-      
-      logger.debug('[registrosAsistenciaService] Creando registro:', {
+
+      logger.debug('[registrosAsistenciaService] Creando registro (canonico):', {
         capacitacionId: capacitacionIdStr,
         tipo: typeof capacitacionIdStr,
         empleadoIds: nuevoRegistro.empleadoIds.length,
-        imagenes: nuevoRegistro.imagenes.length
+        evidencias: imagenesSanitizadas.length
       });
 
       const registroRef = await addDocWithAppId(registrosRef, nuevoRegistro);
 
-      // Registrar acción
+      if (imagenesSanitizadas.length > 0) {
+        await persistCanonicalImages({
+          ownerId,
+          registroId: registroRef.id,
+          capacitacionId: capacitacionIdStr,
+          empleadoIds: registroData.empleadoIds,
+          imagenes: imagenesSanitizadas,
+          uploadedBy: user?.uid || userId
+        });
+      }
+
       await registrarAccionSistema(
         user?.uid,
         'Registro de asistencia creado',
-        { 
-          registroId: registroRef.id, 
+        {
+          registroId: registroRef.id,
           capacitacionId: registroData.capacitacionId,
           empleadosCount: registroData.empleadoIds.length,
           imagenesCount: registroData.imagenes?.length || 0
@@ -177,7 +220,7 @@ export const registrosAsistenciaService = {
 
       return registroRef.id;
     } catch (error) {
-      logger.error('❌ Error creando registro de asistencia:', error);
+      logger.error('Error creando registro de asistencia:', error);
       throw error;
     }
   },
@@ -254,30 +297,26 @@ export const registrosAsistenciaService = {
       if (!userId) throw new Error('userId es requerido');
       if (!registroId) throw new Error('registroId es requerido');
       if (!imagenes || imagenes.length === 0) {
-        logger.warn('[attachImagesToRegistro] No hay imágenes para asociar');
+        logger.warn('[attachImagesToRegistro] No hay imagenes para asociar');
         return;
       }
 
-      logger.debug('[registrosAsistenciaService] attachImagesToRegistro:', {
-        userId,
+      const ownerId = userId;
+      const registro = await this.getRegistroById(ownerId, registroId);
+      if (!registro) throw new Error('Registro no encontrado');
+
+      await persistCanonicalImages({
+        ownerId,
         registroId,
-        imagenesCount: imagenes.length
+        capacitacionId: registro.capacitacionId,
+        empleadoIds: Array.isArray(registro.empleadoIds) ? registro.empleadoIds : [],
+        imagenes,
+        uploadedBy: userId
       });
 
-      // Obtener referencia al documento
-      if (!userId) throw new Error('ownerId es requerido');
-      const ownerId = userId; // userId ahora es ownerId
-      const registrosRef = collection(dbAudit, ...firestoreRoutesCore.registrosAsistencia(ownerId));
-      const registroRef = doc(registrosRef, registroId);
-
-      // Actualizar el documento agregando las imágenes al array usando arrayUnion
-      await updateDoc(registroRef, {
-        imagenes: arrayUnion(...imagenes)
-      });
-
-      logger.debug('[registrosAsistenciaService] Imágenes asociadas correctamente al registro:', registroId);
+      logger.debug('[registrosAsistenciaService] Imagenes asociadas en files subcollection:', registroId);
     } catch (error) {
-      logger.error('❌ Error asociando imágenes al registro:', error);
+      logger.error('Error asociando imagenes al registro:', error);
       throw error;
     }
   },
@@ -534,39 +573,53 @@ export const registrosAsistenciaService = {
    */
   async getImagenesByCapacitacion(userId, capacitacionId) {
     try {
-      // ⚠️ CRÍTICO: Normalizar capacitacionId a string
       const capacitacionIdStr = String(capacitacionId);
-      
-      logger.debug('[registrosAsistenciaService] getImagenesByCapacitacion:', { 
-        userId, 
-        capacitacionId: capacitacionIdStr,
-        tipoOriginal: typeof capacitacionId
+
+      const canonicalFiles = await listFiles({
+        ownerId: userId,
+        module: 'capacitaciones',
+        entityId: capacitacionIdStr
       });
-      
+
+      if (canonicalFiles.length > 0) {
+        return canonicalFiles
+          .filter((fileRef) => fileRef?.status !== 'deleted')
+          .map((fileRef) => ({
+            id: fileRef.id || fileRef.fileId,
+            fileId: fileRef.fileId,
+            shareToken: fileRef.shareToken || null,
+            nombre: fileRef.name || 'evidencia',
+            mimeType: fileRef.mimeType || 'application/octet-stream',
+            size: fileRef.size || 0,
+            createdAt: fileRef.uploadedAt || fileRef.createdAt || null,
+            registroId: fileRef.registroId || null,
+            registroFecha: fileRef.registroFecha || null,
+            empleadoIds: Array.isArray(fileRef.empleadoIds)
+              ? fileRef.empleadoIds
+              : (Array.isArray(fileRef.personasIds) ? fileRef.personasIds : [])
+          }));
+      }
+
+      // Fallback legacy solo lectura.
       const registros = await this.getRegistrosByCapacitacion(userId, capacitacionIdStr);
       const imagenesConRegistro = [];
 
-      registros.forEach(reg => {
+      registros.forEach((reg) => {
         if (reg.imagenes && Array.isArray(reg.imagenes)) {
-          reg.imagenes.forEach(img => {
+          reg.imagenes.forEach((img) => {
             imagenesConRegistro.push({
               ...img,
               registroId: reg.id,
               registroFecha: reg.fecha,
-              empleadoIds: reg.empleadoIds // Empleados asociados a esta imagen
+              empleadoIds: reg.empleadoIds
             });
           });
         }
       });
 
-      logger.debug('[registrosAsistenciaService] Imágenes encontradas:', {
-        cantidad: imagenesConRegistro.length,
-        capacitacionId: capacitacionIdStr,
-        imagenes: imagenesConRegistro
-      });
       return imagenesConRegistro;
     } catch (error) {
-      logger.error('❌ Error obteniendo imágenes por capacitación:', error);
+      logger.error('Error obteniendo imagenes por capacitacion:', error);
       return [];
     }
   },
@@ -617,28 +670,41 @@ export const registrosAsistenciaService = {
     try {
       if (!userId) throw new Error('userId es requerido');
 
-      if (!userId) throw new Error('ownerId es requerido');
-      const ownerId = userId; // userId ahora es ownerId
+      const ownerId = userId;
       const registroRef = doc(dbAudit, ...firestoreRoutesCore.registroAsistencia(ownerId, registroId));
-      
-      // Validar y sanitizar imágenes si se actualizan
-      if (updateData.imagenes) {
-        const imagenesSanitizadas = validarYSanitizarImagenes(updateData.imagenes);
-        updateData.imagenes = imagenesSanitizadas;
-        // Actualizar imagenIds para queries eficientes
-        updateData.imagenIds = imagenesSanitizadas.map(img => img.id || img.fileId).filter(Boolean);
+
+      const updatePayload = { ...(updateData || {}) };
+      const imagenesNuevas = Array.isArray(updatePayload.imagenes) ? updatePayload.imagenes : [];
+
+      // Canonico: nunca persistir arrays legacy de evidencias en el registro.
+      delete updatePayload.imagenes;
+      delete updatePayload.imagenIds;
+      delete updatePayload.evidencias;
+
+      if (imagenesNuevas.length > 0) {
+        const registroActual = await this.getRegistroById(ownerId, registroId);
+        if (!registroActual) throw new Error('Registro no encontrado');
+        await persistCanonicalImages({
+          ownerId,
+          registroId,
+          capacitacionId: registroActual.capacitacionId,
+          empleadoIds: Array.isArray(registroActual.empleadoIds) ? registroActual.empleadoIds : [],
+          imagenes: imagenesNuevas,
+          uploadedBy: user?.uid || userId
+        });
       }
 
-      await updateDocWithAppId(registroRef, {
-        ...updateData,
-        updatedAt: Timestamp.now()
-      });
+      if (Object.keys(updatePayload).length > 0) {
+        await updateDocWithAppId(registroRef, {
+          ...updatePayload,
+          updatedAt: Timestamp.now()
+        });
+      }
 
-      // Registrar acción
       await registrarAccionSistema(
         user?.uid,
         'Registro de asistencia actualizado',
-        { registroId, cambios: Object.keys(updateData) },
+        { registroId, cambios: Object.keys(updateData || {}) },
         'update',
         'registroAsistencia',
         registroId
@@ -646,7 +712,7 @@ export const registrosAsistenciaService = {
 
       return true;
     } catch (error) {
-      logger.error('❌ Error actualizando registro de asistencia:', error);
+      logger.error('Error actualizando registro de asistencia:', error);
       throw error;
     }
   },

@@ -433,10 +433,15 @@ export const capacitacionService = {
       
       // NUEVO: Crear registro en registrosAsistencia (fuente de verdad)
       if (asistenciaData.registroAsistencia) {
+        const evidenciasCanonicas = asistenciaData.registroAsistencia.files
+          || asistenciaData.registroAsistencia.evidencias
+          || asistenciaData.registroAsistencia.imagenes
+          || [];
+
         const registroData = {
           capacitacionId,
           empleadoIds: asistenciaData.registroAsistencia.empleados || asistenciaData.empleados?.map(e => e.empleadoId) || [],
-          imagenes: asistenciaData.registroAsistencia.imagenes || [],
+          imagenes: evidenciasCanonicas,
           fecha: asistenciaData.registroAsistencia.fecha || Timestamp.now()
         };
         
@@ -445,7 +450,9 @@ export const capacitacionService = {
       
       // LEGACY: Mantener compatibilidad con código antiguo que espera actualización directa
       // Solo actualizar campos NO relacionados con empleados/imágenes
-      const { empleados, registroAsistencia, ...otrosCampos } = asistenciaData;
+      const otrosCampos = { ...asistenciaData };
+      delete otrosCampos.empleados;
+      delete otrosCampos.registroAsistencia;
       
       if (Object.keys(otrosCampos).length > 0) {
         if (!userId) throw new Error('ownerId es requerido');

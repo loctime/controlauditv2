@@ -81,6 +81,7 @@ function normalizePersonasAccidente(personas) {
  */
 export const registrosAccidenteService = createBaseRegistryService({
   collectionName: 'registrosAccidente',
+  module: 'accidentes',
   entityIdField: 'accidenteId',
   personasField: 'empleadosInvolucrados',
   evidenciasField: 'imagenes',
@@ -88,3 +89,4 @@ export const registrosAccidenteService = createBaseRegistryService({
   normalizePersonas: normalizePersonasAccidente,
   validateEvidencias: validateEvidenciasAccidente
 });
+

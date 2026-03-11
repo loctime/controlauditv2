@@ -1,240 +1,166 @@
 import logger from '@/utils/logger';
 // src/services/auditoriaManualImageService.js
-import { 
-  collection, 
-  doc, 
-  getDocs, 
-  getDoc,
-  query,
-  orderBy,
-  Timestamp 
-} from 'firebase/firestore';
-import { db, auth } from '../firebaseControlFile';
-import { firestoreRoutesCore } from '../core/firestore/firestoreRoutes.core';
-import { addDocWithAppId, deleteDocWithAppId } from '../firebase/firestoreAppWriter';
-import { uploadFileWithContext } from './unifiedFileUploadService';
+import { auth } from '../firebaseControlFile';
+import { uploadFiles, listFiles, saveFileRef, softDeleteFile } from './unifiedFileService';
 import { auditoriaManualService } from './auditoriaManualService';
 
-/**
- * Servicio para gestión de evidencias (imágenes) de auditorías manuales
- * Evidencias se almacenan en subcolección: auditoriasManuales/{auditoriaId}/evidencias
- */
+const FILE_MODULE = 'auditorias';
 
-/**
- * Normaliza un documento de evidencia
- * @param {Object} doc - Documento de Firestore
- * @returns {Object} Documento normalizado
- */
-const normalizeEvidencia = (doc) => {
-  if (!doc) return null;
-  
+const normalizeFileRef = (fileRef) => {
+  if (!fileRef) return null;
+
   return {
-    id: doc.id,
-    ...doc.data(),
-    createdAt: doc.data().createdAt || null,
+    id: fileRef.id,
+    fileDocId: fileRef.id,
+    fileId: fileRef.fileId,
+    shareToken: fileRef.shareToken || null,
+    nombre: fileRef.name || 'evidencia',
+    contentType: fileRef.mimeType || 'application/octet-stream',
+    mimeType: fileRef.mimeType || 'application/octet-stream',
+    size: fileRef.size || 0,
+    status: fileRef.status || 'active',
+    createdAt: fileRef.uploadedAt || fileRef.createdAt || null,
+    uploadedBy: fileRef.uploadedBy || null
   };
 };
 
 export const auditoriaManualImageService = {
-  /**
-   * Subir imagen como evidencia de auditoría manual
-   * @param {File} file - Archivo a subir
-   * @param {string} ownerId - ID del owner
-   * @param {string} auditoriaId - ID de la auditoría
-   * @param {string} empresaId - ID de la empresa
-   * @param {string|null} sucursalId - ID de la sucursal (opcional)
-   * @returns {Promise<Object>} Metadata de la imagen subida { fileId, shareToken, ... }
-   */
   async uploadImage(file, ownerId, auditoriaId, empresaId, sucursalId = null) {
     try {
       const user = auth.currentUser;
-      if (!user) {
-        throw new Error('Usuario no autenticado');
-      }
+      if (!user) throw new Error('Usuario no autenticado');
 
-      // Validar que la auditoría existe y obtener datos
       const auditoria = await auditoriaManualService.obtenerAuditoriaManual(ownerId, auditoriaId);
-      if (!auditoria) {
-        throw new Error('Auditoría no encontrada');
-      }
-
+      if (!auditoria) throw new Error('Auditoria no encontrada');
       if (auditoria.estado === 'cerrada') {
-        throw new Error('No se pueden agregar evidencias a una auditoría cerrada');
+        throw new Error('No se pueden agregar evidencias a una auditoria cerrada');
       }
 
-      // Usar valores de la auditoría si no se proporcionan
       const finalEmpresaId = empresaId || auditoria.empresaId;
       const finalSucursalId = sucursalId !== null ? sucursalId : auditoria.sucursalId;
-
       if (!finalEmpresaId) {
-        throw new Error('No se pudo obtener empresaId para la auditoría');
+        throw new Error('No se pudo obtener empresaId para la auditoria');
       }
 
-      logger.debug(`[auditoriaManualImageService] 📤 Subiendo evidencia: auditoriaManual/${auditoriaId}/evidencia`);
-
-      // Subir archivo usando unifiedFileUploadService
-      const result = await uploadFileWithContext({
-        file,
-        context: {
-          contextType: 'auditoriaManual',
-          contextEventId: auditoriaId,
-          companyId: finalEmpresaId,
-          sucursalId: finalSucursalId,
-          tipoArchivo: 'evidencia'
-        },
-        fecha: new Date(),
-        uploadedBy: user.uid
+      const uploadResult = await uploadFiles({
+        ownerId,
+        module: FILE_MODULE,
+        entityId: String(auditoriaId),
+        companyId: finalEmpresaId,
+        files: [file],
+        uploadedBy: user.uid,
+        contextType: 'auditoriaManual',
+        tipoArchivo: 'evidencia',
+        sucursalId: finalSucursalId || undefined
       });
 
-      // Guardar metadata en subcolección de evidencias
-      const evidenciaMetadata = {
-        fileId: result.fileId,
-        shareToken: result.shareToken,
-        nombre: file.name,
-        contentType: file.type,
-        size: file.size,
-        createdAt: Timestamp.now(),
-        createdBy: user.uid,
-      };
+      if (!uploadResult?.fileRefs?.length) {
+        const reason = uploadResult?.failures?.[0]?.message || 'No se pudo persistir metadata canonica';
+        throw new Error(reason);
+      }
 
-      await this.addImageMetadata(ownerId, auditoriaId, evidenciaMetadata);
-
-      // Incrementar contador de evidencias
       await auditoriaManualService.incrementarEvidenciasCount(ownerId, auditoriaId);
-
-      return {
-        ...evidenciaMetadata,
-        uploadedAt: result.uploadedAt,
-      };
+      return normalizeFileRef(uploadResult.fileRefs[0]);
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);
-      logger.error(`[auditoriaManualImageService] ❌ Error al subir evidencia (${auditoriaId}):`, errorMsg);
+      logger.error(`[auditoriaManualImageService] Error al subir evidencia (${auditoriaId}):`, errorMsg);
       throw error;
     }
   },
 
-  /**
-   * Agregar metadata de imagen a la subcolección de evidencias
-   * @param {string} ownerId - ID del owner
-   * @param {string} auditoriaId - ID de la auditoría
-   * @param {Object} imageMetadata - Metadata de la imagen
-   * @returns {Promise<string>} ID de la evidencia creada
-   */
   async addImageMetadata(ownerId, auditoriaId, imageMetadata) {
     try {
       if (!ownerId || !auditoriaId) throw new Error('ownerId y auditoriaId son requeridos');
+      if (!imageMetadata?.fileId) throw new Error('fileId es requerido');
 
-      const evidenciasRef = collection(
-        db, 
-        ...firestoreRoutesCore.evidenciasAuditoriaManual(ownerId, auditoriaId)
-      );
+      const fileRef = await saveFileRef({
+        ownerId,
+        module: FILE_MODULE,
+        entityId: String(auditoriaId),
+        fileRef: {
+          fileId: imageMetadata.fileId,
+          shareToken: imageMetadata.shareToken || null,
+          name: imageMetadata.nombre || 'evidencia',
+          mimeType: imageMetadata.contentType || imageMetadata.mimeType || 'application/octet-stream',
+          size: imageMetadata.size || 0,
+          module: FILE_MODULE,
+          entityId: String(auditoriaId),
+          companyId: imageMetadata.companyId || 'system',
+          uploadedBy: imageMetadata.createdBy || null,
+          uploadedAt: imageMetadata.createdAt || null,
+          status: 'active',
+          schemaVersion: 1
+        }
+      });
 
-      const evidenciaDoc = {
-        fileId: imageMetadata.fileId,
-        shareToken: imageMetadata.shareToken,
-        nombre: imageMetadata.nombre,
-        contentType: imageMetadata.contentType,
-        size: imageMetadata.size,
-        createdAt: imageMetadata.createdAt || Timestamp.now(),
-        createdBy: imageMetadata.createdBy,
-      };
-
-      const docRef = await addDocWithAppId(evidenciasRef, evidenciaDoc);
-      return docRef.id;
+      return fileRef.id;
     } catch (error) {
-      logger.error('❌ Error al agregar metadata de evidencia:', error);
+      logger.error('Error al agregar metadata canonica de evidencia:', error);
       throw error;
     }
   },
 
-  /**
-   * Obtener todas las evidencias de una auditoría
-   * @param {string} ownerId - ID del owner
-   * @param {string} auditoriaId - ID de la auditoría
-   * @returns {Promise<Array>} Lista de evidencias
-   */
   async obtenerEvidencias(ownerId, auditoriaId) {
     try {
       if (!ownerId || !auditoriaId) return [];
 
-      const evidenciasRef = collection(
-        db, 
-        ...firestoreRoutesCore.evidenciasAuditoriaManual(ownerId, auditoriaId)
-      );
+      const fileRefs = await listFiles({
+        ownerId,
+        module: FILE_MODULE,
+        entityId: String(auditoriaId)
+      });
 
-      const q = query(evidenciasRef, orderBy('createdAt', 'desc'));
-      const snapshot = await getDocs(q);
-
-      return snapshot.docs.map(doc => normalizeEvidencia(doc));
+      return fileRefs.map((item) => normalizeFileRef(item));
     } catch (error) {
-      logger.error('❌ Error al obtener evidencias:', error);
+      logger.error('Error al obtener evidencias:', error);
       return [];
     }
   },
 
-  /**
-   * Obtener una evidencia por ID
-   * @param {string} ownerId - ID del owner
-   * @param {string} auditoriaId - ID de la auditoría
-   * @param {string} evidenciaId - ID de la evidencia
-   * @returns {Promise<Object|null>} Datos de la evidencia o null
-   */
   async obtenerEvidencia(ownerId, auditoriaId, evidenciaId) {
     try {
       if (!ownerId || !auditoriaId || !evidenciaId) return null;
 
-      const evidenciaRef = doc(
-        db, 
-        ...firestoreRoutesCore.evidenciaAuditoriaManual(ownerId, auditoriaId, evidenciaId)
-      );
-      const evidenciaDoc = await getDoc(evidenciaRef);
+      const fileRefs = await listFiles({
+        ownerId,
+        module: FILE_MODULE,
+        entityId: String(auditoriaId),
+        includeDeleted: true
+      });
 
-      if (evidenciaDoc.exists()) {
-        return normalizeEvidencia(evidenciaDoc);
-      }
-
-      return null;
+      const found = fileRefs.find((item) => item.id === evidenciaId || item.fileId === evidenciaId);
+      return normalizeFileRef(found || null);
     } catch (error) {
-      logger.error('❌ Error al obtener evidencia:', error);
+      logger.error('Error al obtener evidencia:', error);
       return null;
     }
   },
 
-  /**
-   * Eliminar una evidencia
-   * @param {string} ownerId - ID del owner
-   * @param {string} auditoriaId - ID de la auditoría
-   * @param {string} evidenciaId - ID de la evidencia
-   * @returns {Promise<void>}
-   */
   async deleteImage(ownerId, auditoriaId, evidenciaId) {
     try {
       if (!ownerId || !auditoriaId || !evidenciaId) {
         throw new Error('ownerId, auditoriaId y evidenciaId son requeridos');
       }
 
-      // Verificar que la auditoría no esté cerrada
       const auditoria = await auditoriaManualService.obtenerAuditoriaManual(ownerId, auditoriaId);
-      if (!auditoria) {
-        throw new Error('Auditoría no encontrada');
-      }
-
+      if (!auditoria) throw new Error('Auditoria no encontrada');
       if (auditoria.estado === 'cerrada') {
-        throw new Error('No se pueden eliminar evidencias de una auditoría cerrada');
+        throw new Error('No se pueden eliminar evidencias de una auditoria cerrada');
       }
 
-      const evidenciaRef = doc(
-        db, 
-        ...firestoreRoutesCore.evidenciaAuditoriaManual(ownerId, auditoriaId, evidenciaId)
-      );
+      const user = auth.currentUser;
+      await softDeleteFile({
+        ownerId,
+        module: FILE_MODULE,
+        entityId: String(auditoriaId),
+        fileDocId: evidenciaId,
+        deletedBy: user?.uid || null
+      });
 
-      await deleteDocWithAppId(evidenciaRef);
-
-      // Decrementar contador de evidencias
       await auditoriaManualService.decrementarEvidenciasCount(ownerId, auditoriaId);
     } catch (error) {
-      logger.error('❌ Error al eliminar evidencia:', error);
+      logger.error('Error al eliminar evidencia:', error);
       throw error;
     }
-  },
+  }
 };

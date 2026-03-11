@@ -1,44 +1,21 @@
 import logger from '@/utils/logger';
 // src/services/base/baseRegistryService.js
-/**
- * Factory para crear servicios de registros de eventos genricos
- * 
- * Patrn: Una entidad (capacitacin, accidente) tiene mltiples registros asociados
- * Cada registro puede tener: personas involucradas, evidencias, fecha, metadata
- * 
- * @example
- * const registrosAccidenteService = createBaseRegistryService({
- *   collectionName: 'registrosAccidente',
- *   entityIdField: 'accidenteId',
- *   personasField: 'empleadosInvolucrados',
- *   evidenciasField: 'imagenes',
- *   validatePersonas: (personas) => { if (!personas?.length) throw new Error('Requerido'); },
- *   normalizePersonas: (personas) => personas.map(p => p.empleadoId),
- *   validateEvidencias: (evidencias) => evidencias.map(e => ({ id: e.id, shareToken: e.shareToken }))
- * });
- */
 
-import { 
-  collection, 
-  doc, 
-  getDocs, 
-  query, 
-  where,
+import {
+  collection,
+  doc,
+  getDoc,
+  getDocs,
   orderBy,
+  query,
   Timestamp,
-  updateDoc,
-  arrayUnion
+  where
 } from 'firebase/firestore';
 import { dbAudit } from '../../firebaseControlFile';
 import { addDocWithAppId } from '../../firebase/firestoreAppWriter';
 import { registrarAccionSistema } from '../../utils/firestoreUtils';
+import { listFiles, saveFileRef } from '../../services/unifiedFileService';
 
-/**
- * Valida y sanitiza evidencias para asegurar que solo contengan metadata liviana
- * @param {Array} evidencias - Array de objetos de evidencia
- * @param {Function} validateEvidencias - Funcin de validacin especfica del dominio
- * @returns {Array} Array sanitizado
- */
 function sanitizeEvidencias(evidencias, validateEvidencias) {
   if (!evidencias || !Array.isArray(evidencias)) {
     return [];
@@ -48,21 +25,19 @@ function sanitizeEvidencias(evidencias, validateEvidencias) {
     return validateEvidencias(evidencias);
   }
 
-  // Validacin por defecto (similar a registrosAsistencia)
   const camposPermitidos = ['id', 'fileId', 'shareToken', 'nombre', 'createdAt'];
-  
+
   return evidencias.map((ev, index) => {
     if (!ev || typeof ev !== 'object') {
-      throw new Error(`Evidencia en ndice ${index} debe ser un objeto`);
+      throw new Error(`Evidencia en indice ${index} debe ser un objeto`);
     }
 
     if (!ev.id && !ev.fileId) {
-      throw new Error(`Evidencia en ndice ${index} debe tener 'id' o 'fileId'`);
+      throw new Error(`Evidencia en indice ${index} debe tener 'id' o 'fileId'`);
     }
 
-    // Sanitizar: solo mantener campos permitidos
     const evidenciaSanitizada = {};
-    camposPermitidos.forEach(campo => {
+    camposPermitidos.forEach((campo) => {
       if (ev[campo] !== undefined) {
         evidenciaSanitizada[campo] = ev[campo];
       }
@@ -82,20 +57,22 @@ function resolveIdentity({ ownerId, userId, actorId }) {
   return { resolvedOwnerId, resolvedActorId };
 }
 
-/**
- * Factory para crear servicios de registros
- * @param {Object} config - Configuracin del servicio
- * @param {string} config.collectionName - Nombre de la coleccin (ej: 'registrosAsistencia')
- * @param {string} config.entityIdField - Campo del ID de entidad (ej: 'capacitacionId')
- * @param {string} config.personasField - Campo de personas (ej: 'empleadoIds')
- * @param {string} config.evidenciasField - Campo de evidencias (ej: 'imagenes')
- * @param {Function} config.validatePersonas - Funcin de validacin de personas
- * @param {Function} config.normalizePersonas - Funcin para normalizar personas a formato estndar
- * @param {Function} config.validateEvidencias - Funcin para validar/sanitizar evidencias
- * @returns {Object} Servicio de registros configurado
- */
+function resolveModuleByCollection(collectionName, moduleOverride = null) {
+  if (moduleOverride) return moduleOverride;
+
+  switch (collectionName) {
+    case 'registrosAsistencia':
+      return 'capacitaciones';
+    case 'registrosAccidente':
+      return 'accidentes';
+    default:
+      return null;
+  }
+}
+
 export function createBaseRegistryService({
   collectionName,
+  module,
   entityIdField,
   personasField,
   evidenciasField = 'evidencias',
@@ -108,45 +85,28 @@ export function createBaseRegistryService({
   }
 
   return {
-    /**
-     * Crear registro base (owner-centric)
-     * @param {Object} params
-     * @param {string} params.ownerId - ID del owner (viene del token)
-     * @param {string} params.entityId - ID de la entidad padre
-     * @param {Array|Object} params.personas - Personas involucradas (formato especfico del dominio)
-     * @param {Array} params.evidencias - Evidencias (vaco inicialmente)
-     * @param {Object} params.metadata - Metadata adicional del registro
-     * @returns {Promise<{id: string}>}
-     */
     async createRegistry({ ownerId, userId, actorId, entityId, personas, evidencias = [], metadata = {} }) {
       try {
         const { resolvedOwnerId, resolvedActorId } = resolveIdentity({ ownerId, userId, actorId });
         if (!resolvedOwnerId) throw new Error('ownerId es requerido');
         if (!entityId) throw new Error(`${entityIdField} es requerido`);
 
-        // Validar personas
         if (validatePersonas) {
           validatePersonas(personas);
         } else if (!personas || (Array.isArray(personas) && personas.length === 0)) {
           throw new Error(`${personasField} es requerido y debe tener al menos una persona`);
         }
 
-        // Normalizar personas
-        const personasNormalizadas = normalizePersonas 
+        const personasNormalizadas = normalizePersonas
           ? normalizePersonas(personas)
           : (Array.isArray(personas) ? personas : [personas]);
 
-        // Normalizar entityId a string
         const entityIdStr = String(entityId);
-
-        // Sanitizar evidencias
         const evidenciasSanitizadas = sanitizeEvidencias(evidencias, validateEvidencias);
 
-        // Crear documento del registro
         const registroData = {
           [entityIdField]: entityIdStr,
           [personasField]: personasNormalizadas,
-          [evidenciasField]: evidenciasSanitizadas,
           fecha: metadata.fecha || Timestamp.now(),
           creadoPor: metadata.creadoPor || resolvedActorId,
           createdAt: Timestamp.now(),
@@ -155,30 +115,30 @@ export function createBaseRegistryService({
           ...metadata
         };
 
-        // Agregar campo de IDs para queries eficientes si es array
         if (Array.isArray(personasNormalizadas)) {
           const idsField = `${personasField.replace(/s$/, '')}Ids`;
-          registroData[idsField] = personasNormalizadas.map(p => 
-            typeof p === 'string' ? p : (p.id || p.empleadoId || p)
-          ).filter(Boolean);
+          registroData[idsField] = personasNormalizadas
+            .map((p) => (typeof p === 'string' ? p : (p.id || p.empleadoId || p)))
+            .filter(Boolean);
         }
 
-        logger.debug(`[${collectionName}] Creando registro:`, {
-          [entityIdField]: entityIdStr,
-          [personasField]: personasNormalizadas.length,
-          [evidenciasField]: evidenciasSanitizadas.length
-        });
-
-        // Construir ruta owner-centric dinmicamente
         const registrosRef = collection(dbAudit, 'apps', 'auditoria', 'owners', resolvedOwnerId, collectionName);
         const registroRef = await addDocWithAppId(registrosRef, registroData);
 
-        // Registrar accin del sistema
+        if (evidenciasSanitizadas.length > 0) {
+          await this.attachEvidencias({
+            ownerId: resolvedOwnerId,
+            actorId: resolvedActorId,
+            registroId: registroRef.id,
+            evidencias: evidenciasSanitizadas
+          });
+        }
+
         await registrarAccionSistema(
           metadata.creadoPor || resolvedActorId,
           `Registro creado en ${collectionName}`,
-          { 
-            registroId: registroRef.id, 
+          {
+            registroId: registroRef.id,
             [entityIdField]: entityId,
             personasCount: personasNormalizadas.length,
             evidenciasCount: evidenciasSanitizadas.length
@@ -195,14 +155,6 @@ export function createBaseRegistryService({
       }
     },
 
-    /**
-     * Asociar evidencias a un registro existente (owner-centric)
-     * @param {Object} params
-     * @param {string} params.ownerId - ID del owner (viene del token)
-     * @param {string} params.registroId - ID del registro
-     * @param {Array} params.evidencias - Array de evidencias con metadata
-     * @returns {Promise<void>}
-     */
     async attachEvidencias({ ownerId, userId, actorId, registroId, evidencias }) {
       try {
         const { resolvedOwnerId, resolvedActorId } = resolveIdentity({ ownerId, userId, actorId });
@@ -213,58 +165,81 @@ export function createBaseRegistryService({
           return;
         }
 
-        // Sanitizar evidencias
         const evidenciasSanitizadas = sanitizeEvidencias(evidencias, validateEvidencias);
+        const registroRef = doc(dbAudit, 'apps', 'auditoria', 'owners', resolvedOwnerId, collectionName, registroId);
+        const registroSnap = await getDoc(registroRef);
+        if (!registroSnap.exists()) {
+          throw new Error(`[${collectionName}] Registro no encontrado: ${registroId}`);
+        }
 
-        logger.debug(`[${collectionName}] attachEvidencias:`, {
+        const registroData = registroSnap.data() || {};
+        const entityId = String(registroData[entityIdField] || evidenciasSanitizadas[0]?.entityId || '');
+        if (!entityId) {
+          throw new Error(`[${collectionName}] No se pudo resolver entityId para registro ${registroId}`);
+        }
+
+        const resolvedModule = resolveModuleByCollection(collectionName, module || evidenciasSanitizadas[0]?.module);
+        if (!resolvedModule) {
+          logger.warn(`[${collectionName}] Modulo no resuelto, se omite persistencia canonica`, {
+            registroId,
+            collectionName,
+            module
+          });
+          return;
+        }
+
+        await Promise.all(
+          evidenciasSanitizadas.map((ev) =>
+            saveFileRef({
+              ownerId: resolvedOwnerId,
+              module: resolvedModule,
+              entityId,
+              fileRef: {
+                fileId: ev.fileId || ev.id,
+                shareToken: ev.shareToken || null,
+                name: ev.nombre || 'evidencia',
+                mimeType: ev.mimeType || 'application/octet-stream',
+                size: ev.size || 0,
+                module: resolvedModule,
+                entityId,
+                companyId: ev.companyId || registroData.companyId || registroData.empresaId || 'system',
+                uploadedBy: resolvedActorId || null,
+                uploadedAt: ev.createdAt || null,
+                status: 'active',
+                schemaVersion: 1,
+                registroId: String(registroId),
+                [personasField]: Array.isArray(ev?.personasIds)
+                  ? ev.personasIds
+                  : (Array.isArray(ev?.empleadoIds) ? ev.empleadoIds : [])
+              }
+            })
+          )
+        );
+
+        logger.debug(`[${collectionName}] Evidencias asociadas en files subcollection`, {
           ownerId: resolvedOwnerId,
           registroId,
+          entityId,
+          module: resolvedModule,
           evidenciasCount: evidenciasSanitizadas.length
         });
-
-        const registroRef = doc(dbAudit, 'apps', 'auditoria', 'owners', resolvedOwnerId, collectionName, registroId);
-
-        // Actualizar el documento agregando las evidencias al array usando arrayUnion
-        await updateDoc(registroRef, {
-          [evidenciasField]: arrayUnion(...evidenciasSanitizadas),
-          updatedAt: Timestamp.now(),
-          actualizadoPor: resolvedActorId
-        });
-
-        logger.debug(`[${collectionName}] Evidencias asociadas correctamente al registro:`, registroId);
       } catch (error) {
         logger.error(`[${collectionName}] Error asociando evidencias:`, error);
         throw error;
       }
     },
 
-    /**
-     * Obtener registros por entidad (owner-centric)
-     * @param {string} ownerId - ID del owner (viene del token)
-     * @param {string} entityId - ID de la entidad
-     * @returns {Promise<Array>} Lista de registros ordenados por fecha descendente
-     */
     async getRegistriesByEntity(ownerId, entityId) {
       try {
         if (!ownerId || !entityId) {
-          logger.warn(`[${collectionName}] getRegistriesByEntity: parmetros faltantes`, { ownerId, entityId });
+          logger.warn(`[${collectionName}] getRegistriesByEntity: parametros faltantes`, { ownerId, entityId });
           return [];
         }
 
-        // Normalizar entityId a string
         const entityIdStr = String(entityId);
-        
-        logger.debug(`[${collectionName}] Buscando registros:`, { 
-          ownerId, 
-          [entityIdField]: entityIdStr,
-          tipoOriginal: typeof entityId,
-          tipoNormalizado: typeof entityIdStr
-        });
-        
         const registrosRef = collection(dbAudit, 'apps', 'auditoria', 'owners', ownerId, collectionName);
-        
+
         try {
-          // Intentar query con ndice compuesto (entityId + fecha)
           const q = query(
             registrosRef,
             where(entityIdField, '==', entityIdStr),
@@ -272,161 +247,108 @@ export function createBaseRegistryService({
           );
 
           const snapshot = await getDocs(q);
-          const resultados = snapshot.docs.map(doc => {
-            const data = doc.data();
+          return snapshot.docs.map((docSnap) => {
+            const data = docSnap.data();
             return {
-              id: doc.id,
+              id: docSnap.id,
               ...data,
               [entityIdField]: String(data[entityIdField] || entityIdStr)
             };
           });
-          
-          logger.debug(`[${collectionName}] Registros encontrados:`, {
-            cantidad: resultados.length,
-            [entityIdField]: entityIdStr,
-            registros: resultados.map(r => ({
-              id: r.id,
-              [entityIdField]: r[entityIdField],
-              [personasField]: r[personasField]?.length || 0,
-              [evidenciasField]: r[evidenciasField]?.length || 0
-            }))
-          });
-          
-          return resultados;
         } catch (queryError) {
-          // Si falla por ndice faltante, usar fallback sin orderBy
           if (queryError.code === 'failed-precondition' || queryError.message?.includes('index')) {
-            logger.warn(
-              `[${collectionName}] indice compuesto (${entityIdField} + fecha) no encontrado. ` +
-              `Usando fallback sin orderBy. ` +
-              `Crear indice: (${entityIdField} ASC, fecha DESC)`
-            );
-            
-            // Fallback: solo where, sin orderBy, ordenar en memoria
-            const q = query(
-              registrosRef,
-              where(entityIdField, '==', entityIdStr)
-            );
-
+            const q = query(registrosRef, where(entityIdField, '==', entityIdStr));
             const snapshot = await getDocs(q);
-            const resultados = snapshot.docs.map(doc => {
-              const data = doc.data();
-              return {
-                id: doc.id,
-                ...data,
-                [entityIdField]: String(data[entityIdField] || entityIdStr)
-              };
-            }).sort((a, b) => {
-              // Ordenar por fecha descendente en memoria
-              const fechaA = a.fecha?.toMillis?.() || a.fecha?.seconds || 0;
-              const fechaB = b.fecha?.toMillis?.() || b.fecha?.seconds || 0;
-              return fechaB - fechaA;
-            });
-            
-            logger.debug(`[${collectionName}] Registros encontrados (fallback):`, {
-              cantidad: resultados.length,
-              [entityIdField]: entityIdStr
-            });
-            
-            return resultados;
+            return snapshot.docs
+              .map((docSnap) => {
+                const data = docSnap.data();
+                return {
+                  id: docSnap.id,
+                  ...data,
+                  [entityIdField]: String(data[entityIdField] || entityIdStr)
+                };
+              })
+              .sort((a, b) => {
+                const fechaA = a.fecha?.toMillis?.() || a.fecha?.seconds || 0;
+                const fechaB = b.fecha?.toMillis?.() || b.fecha?.seconds || 0;
+                return fechaB - fechaA;
+              });
           }
           throw queryError;
         }
       } catch (error) {
         logger.error(`[${collectionName}] Error obteniendo registros por entidad:`, error);
-        logger.error('Error details:', {
-          code: error.code,
-          message: error.message,
-          stack: error.stack
-        });
         return [];
       }
     },
 
-    /**
-     * Obtener personas nicas por entidad (owner-centric)
-     * @param {string} ownerId - ID del owner (viene del token)
-     * @param {string} entityId - ID de la entidad
-     * @returns {Promise<Array<string>>} IDs nicos de personas
-     */
     async getPersonasUnicasByEntity(ownerId, entityId) {
       try {
-        const entityIdStr = String(entityId);
-        
-        logger.debug(`[${collectionName}] getPersonasUnicasByEntity:`, { 
-          ownerId, 
-          [entityIdField]: entityIdStr,
-          tipoOriginal: typeof entityId
-        });
-        
-        const registros = await this.getRegistriesByEntity(ownerId, entityIdStr);
+        const registros = await this.getRegistriesByEntity(ownerId, String(entityId));
         const personasUnicas = new Set();
-        
-        registros.forEach(reg => {
+
+        registros.forEach((reg) => {
           const personas = reg[personasField];
           if (personas && Array.isArray(personas)) {
-            personas.forEach(persona => {
-              // Extraer ID segn el formato (string directo o objeto con id/empleadoId)
-              const personaId = typeof persona === 'string' 
-                ? persona 
-                : (persona.id || persona.empleadoId || persona);
-              if (personaId) {
-                personasUnicas.add(personaId);
-              }
+            personas.forEach((persona) => {
+              const personaId = typeof persona === 'string' ? persona : (persona.id || persona.empleadoId || persona);
+              if (personaId) personasUnicas.add(personaId);
             });
           }
         });
 
-        const resultado = Array.from(personasUnicas);
-        logger.debug(`[${collectionName}] Personas nicas encontradas:`, {
-          cantidad: resultado.length,
-          [entityIdField]: entityIdStr,
-          personas: resultado
-        });
-        return resultado;
+        return Array.from(personasUnicas);
       } catch (error) {
         logger.error(`[${collectionName}] Error calculando personas unicas:`, error);
         return [];
       }
     },
 
-    /**
-     * Obtener evidencias por entidad (owner-centric)
-     * @param {string} ownerId - ID del owner (viene del token)
-     * @param {string} entityId - ID de la entidad
-     * @returns {Promise<Array>} Lista de evidencias con metadatos del registro
-     */
     async getEvidenciasByEntity(ownerId, entityId) {
       try {
         const entityIdStr = String(entityId);
-        
-        logger.debug(`[${collectionName}] getEvidenciasByEntity:`, { 
-          ownerId, 
-          [entityIdField]: entityIdStr,
-          tipoOriginal: typeof entityId
-        });
-        
+        const resolvedModule = resolveModuleByCollection(collectionName, module);
+
+        if (resolvedModule) {
+          const canonicalFiles = await listFiles({ ownerId, module: resolvedModule, entityId: entityIdStr });
+          if (canonicalFiles.length > 0) {
+            return canonicalFiles
+              .filter((fileRef) => fileRef?.status !== 'deleted')
+              .map((fileRef) => ({
+                id: fileRef.id || fileRef.fileId,
+                fileId: fileRef.fileId,
+                shareToken: fileRef.shareToken || null,
+                nombre: fileRef.name || 'evidencia',
+                mimeType: fileRef.mimeType || 'application/octet-stream',
+                size: fileRef.size || 0,
+                createdAt: fileRef.uploadedAt || fileRef.createdAt || null,
+                registroId: fileRef.registroId || null,
+                registroFecha: fileRef.registroFecha || null,
+                [personasField]: Array.isArray(fileRef[personasField])
+                  ? fileRef[personasField]
+                  : (Array.isArray(fileRef.empleadoIds) ? fileRef.empleadoIds : [])
+              }));
+          }
+        }
+
+        // Fallback legacy solo lectura.
         const registros = await this.getRegistriesByEntity(ownerId, entityIdStr);
         const evidenciasConRegistro = [];
 
-        registros.forEach(reg => {
+        registros.forEach((reg) => {
           const evidencias = reg[evidenciasField];
           if (evidencias && Array.isArray(evidencias)) {
-            evidencias.forEach(ev => {
+            evidencias.forEach((ev) => {
               evidenciasConRegistro.push({
                 ...ev,
                 registroId: reg.id,
                 registroFecha: reg.fecha,
-                [personasField]: reg[personasField] // Personas asociadas a esta evidencia
+                [personasField]: reg[personasField]
               });
             });
           }
         });
 
-        logger.debug(`[${collectionName}] Evidencias encontradas:`, {
-          cantidad: evidenciasConRegistro.length,
-          [entityIdField]: entityIdStr
-        });
         return evidenciasConRegistro;
       } catch (error) {
         logger.error(`[${collectionName}] Error obteniendo evidencias por entidad:`, error);
@@ -434,16 +356,10 @@ export function createBaseRegistryService({
       }
     },
 
-    /**
-     * Obtener estadsticas bsicas por entidad (owner-centric)
-     * @param {string} ownerId - ID del owner (viene del token)
-     * @param {string} entityId - ID de la entidad
-     * @returns {Promise<Object>} Estadsticas
-     */
     async getStatsByEntity(ownerId, entityId) {
       try {
         const entityIdStr = String(entityId);
-        
+
         const [registros, personasUnicas, evidencias] = await Promise.all([
           this.getRegistriesByEntity(ownerId, entityIdStr),
           this.getPersonasUnicasByEntity(ownerId, entityIdStr),
@@ -466,7 +382,3 @@ export function createBaseRegistryService({
     }
   };
 }
-
-
-
-
