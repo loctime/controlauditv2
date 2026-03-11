@@ -1,4 +1,4 @@
-﻿import {
+import {
   buildOrderBy,
   buildWhere,
   createDocument,
@@ -21,10 +21,53 @@ const IMMUTABLE_ON_CLOSED_FIELDS = [
   'instructorId'
 ];
 
+const PLAN_LINK_KEYS = ['sessionOrigin', 'planId', 'planItemId', 'planLinkedAt', 'planLinkedBy'];
+
+function hasPlanLinkField(payload = {}) {
+  return PLAN_LINK_KEYS.some((key) => key in payload);
+}
+
+function normalizeSessionPlanLink(data = {}, { fillLinkedAt = false } = {}) {
+  const hasPlanRefs = Boolean(data.planId || data.planItemId);
+  let sessionOrigin = data.sessionOrigin;
+
+  if (!sessionOrigin) {
+    sessionOrigin = hasPlanRefs ? 'plan' : 'ad_hoc';
+  }
+
+  if (sessionOrigin !== 'plan' && sessionOrigin !== 'ad_hoc') {
+    throw new Error('sessionOrigin must be plan or ad_hoc');
+  }
+
+  if (sessionOrigin === 'plan') {
+    if (!data.planId || !data.planItemId) {
+      throw new Error('Plan-linked sessions require planId and planItemId');
+    }
+
+    return {
+      ...data,
+      sessionOrigin,
+      planLinkedAt: data.planLinkedAt || (fillLinkedAt ? nowTs() : null),
+      planLinkedBy: data.planLinkedBy || null
+    };
+  }
+
+  return {
+    ...data,
+    sessionOrigin: 'ad_hoc',
+    planId: null,
+    planItemId: null,
+    planLinkedAt: null,
+    planLinkedBy: null
+  };
+}
+
 export const trainingSessionService = {
   async createSession(ownerId, payload) {
+    const normalizedPlanLink = normalizeSessionPlanLink(payload, { fillLinkedAt: true });
+
     return createDocument(ownerId, 'trainingSessions', {
-      ...payload,
+      ...normalizedPlanLink,
       status: payload.status || TRAINING_SESSION_STATUSES.DRAFT,
       closureChecklist: payload.closureChecklist || {
         attendanceComplete: false,
@@ -47,7 +90,25 @@ export const trainingSessionService = {
       }
     }
 
-    return updateDocument(ownerId, 'trainingSession', sessionId, payload);
+    let nextPayload = payload;
+    if (hasPlanLinkField(payload)) {
+      const currentData = { ...current };
+      delete currentData.id;
+      const normalized = normalizeSessionPlanLink(
+        { ...currentData, ...payload },
+        { fillLinkedAt: true }
+      );
+      nextPayload = {
+        ...payload,
+        sessionOrigin: normalized.sessionOrigin,
+        planId: normalized.planId,
+        planItemId: normalized.planItemId,
+        planLinkedAt: normalized.planLinkedAt,
+        planLinkedBy: normalized.planLinkedBy
+      };
+    }
+
+    return updateDocument(ownerId, 'trainingSession', sessionId, nextPayload);
   },
 
   async removeSession(ownerId, sessionId) {
@@ -158,3 +219,5 @@ export const trainingSessionService = {
     };
   }
 };
+
+
