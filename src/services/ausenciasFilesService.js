@@ -9,7 +9,7 @@
 } from 'firebase/firestore';
 import { db } from '../firebaseControlFile';
 import { firestoreRoutesCore } from '../core/firestore/firestoreRoutes.core';
-import { addDocWithAppId, updateDocWithAppId } from '../firebase/firestoreAppWriter';
+import { updateDocWithAppId } from '../firebase/firestoreAppWriter';
 import { uploadFiles, listFiles, softDeleteFile } from './unifiedFileService';
 import { resolveDownloadUrl, resolveViewUrl } from './fileResolverService';
 import { appendAusenciaHistorial } from './ausenciasService';
@@ -72,21 +72,11 @@ export async function uploadAndAttachFiles(
     entityCollection: 'ausencias'
   });
 
-  const filesRef = getAusenciaFilesRef(ownerId, ausenciaId);
-  const uploaded = [];
-
-  for (const fileRef of uploadResult.fileRefs) {
-    const payload = {
-      ...fileRef,
-      status: 'active',
-      deletedAt: null,
-      deletedBy: null,
-      updatedAt: serverTimestamp()
-    };
-
-    const metaRef = await addDocWithAppId(filesRef, payload);
-    uploaded.push({ id: metaRef.id, ...payload });
-  }
+  // uploadFiles ya persiste FileRef canonico en subcoleccion files.
+  const uploaded = uploadResult.fileRefs.map((fileRef) => ({
+    ...fileRef,
+    status: fileRef.status || 'active'
+  }));
 
   if (uploaded.length > 0) {
     const ausenciaRef = getAusenciaRef(ownerId, ausenciaId);

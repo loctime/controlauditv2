@@ -1,5 +1,5 @@
-﻿import logger from '@/utils/logger';
-import React, { useState, useRef, useEffect } from 'react';
+import logger from '@/utils/logger';
+import { useState, useRef, useEffect } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -18,18 +18,16 @@ import {
 import {
   CameraAlt as CameraIcon,
   PhotoLibrary as PhotoLibraryIcon,
-  Delete as DeleteIcon,
-  CloudUpload as CloudUploadIcon,
-  CloudOff as CloudOffIcon
+  Delete as DeleteIcon,  CloudOff as CloudOffIcon
 } from '@mui/icons-material';
 import capacitacionImageService from '../../../../services/capacitacionImageService';
 import { useConnectivity } from '../../../../hooks/useConnectivity';
 import { useAuth } from '@/components/context/AuthContext';
-import { convertirShareTokenAUrl } from '@/utils/imageUtils';
+import UnifiedFilePreview from '../../../common/files/UnifiedFilePreview';
 import { validateFiles } from '../../../../services/fileValidationPolicy';
 
 /**
- * DiÃ¡logo para gestionar imÃ¡genes de capacitaciones
+ * Diálogo para gestionar imágenes de capacitaciones
  */
 const CapacitacionImagesDialog = ({
   open,
@@ -50,125 +48,112 @@ const CapacitacionImagesDialog = ({
   const cameraInputRef = useRef(null);
   const galleryInputRef = useRef(null);
 
-  // Cargar imÃ¡genes existentes al abrir
+  // Cargar imágenes existentes al abrir
   useEffect(() => {
     if (open && capacitacion) {
       loadImages();
     }
   }, [open, capacitacion]);
 
-  const loadImages = () => {
-    if (capacitacion?.imagenes) {
-      setImagenes(capacitacion.imagenes);
-    } else {
+    const loadImages = async () => {
+    if (!capacitacion?.id || !user?.uid) {
+      setImagenes([]);
+      return;
+    }
+
+    try {
+      const files = await capacitacionImageService.getArchivosCapacitacion(
+        String(capacitacion.id),
+        user.uid
+      );
+      setImagenes(Array.isArray(files) ? files.filter((file) => file?.status !== 'deleted') : []);
+    } catch (err) {
+      logger.error('Error cargando evidencias de capacitacion:', err);
       setImagenes([]);
     }
   };
 
-  const handleFileSelect = async (event, source) => {
+    const handleFileSelect = async (event) => {
     const files = Array.from(event.target.files || []);
     if (!files.length) return;
 
     const validation = validateFiles(files);
     if (validation.rejected.length > 0) {
       setError(validation.rejected.map((item) => `${item.fileName}: ${item.issues.map((issue) => issue.message).join(', ')}`).join(' | '));
+      event.target.value = '';
       return;
     }
 
-    const file = validation.accepted[0];
-    if (!file) return;
     setError(null);
     setLoading(true);
 
     try {
-      // Agregar imagen temporalmente con preview
-      const tempId = `temp_${Date.now()}`;
-      const previewURL = URL.createObjectURL(file);
-      
-      const tempImage = {
-        id: tempId,
-        fileURL: previewURL,
-        file: file,
-        uploading: true,
-        offline: !isOnline
-      };
-
-      setImagenes(prev => [...prev, tempImage]);
-      setUploadingIndex(imagenes.length);
-
-      // Validar autenticaciÃ³n desde el contexto
       if (!user || !isLogged || authLoading) {
-        throw new Error('Usuario no autenticado o autenticaciÃ³n en proceso');
+        throw new Error('Usuario no autenticado o autenticacion en proceso');
       }
 
-      // Obtener el token desde el usuario del contexto
-      const idToken = await user.getIdToken();
-      
-      if (!idToken) {
-        throw new Error('No se pudo obtener el token de autenticaciÃ³n');
+      for (const file of validation.accepted) {
+        const tempId = `temp_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+        setImagenes((prev) => [...prev, { id: tempId, nombre: file.name, uploading: true }]);
+
+        try {
+          const idToken = await user.getIdToken();
+          const companyId = capacitacion.empresaId || null;
+          const sucursalId = capacitacion.sucursalId || null;
+          const capacitacionTipoId = capacitacion.capacitacionTipoId || capacitacion.nombre || null;
+
+          const result = await capacitacionImageService.uploadImageSmart(
+            file,
+            idToken,
+            capacitacion.id,
+            companyId,
+            sucursalId,
+            isOnline,
+            capacitacionTipoId,
+            'evidencia'
+          );
+
+          await capacitacionImageService.addImageToCapacitacion(
+            capacitacion.id,
+            {
+              ...result,
+              nombre: result.name || file.name,
+              mimeType: result.type || file.type || 'application/octet-stream',
+              size: result.size || file.size
+            },
+            user.uid
+          );
+
+          setImagenes((prev) => prev.filter((img) => img.id !== tempId));
+        } catch (singleErr) {
+          logger.error('Error subiendo evidencia de capacitacion:', singleErr);
+          setError(`Error al subir ${file.name}: ${singleErr.message}`);
+          setImagenes((prev) => prev.filter((img) => img.id !== tempId));
+        }
       }
 
-      // Subir imagen (companyId y sucursalId se obtendrÃ¡n automÃ¡ticamente si no se proporcionan)
-      const companyId = capacitacion.empresaId || null;
-      const sucursalId = capacitacion.sucursalId || null;
-      // âœ… Usar capacitacionTipoId si estÃ¡ disponible, sino usar nombre (el servicio lo normalizarÃ¡)
-      const capacitacionTipoId = capacitacion.capacitacionTipoId || capacitacion.nombre || null;
-      const result = await capacitacionImageService.uploadImageSmart(
-        file,
-        idToken,
-        capacitacion.id,        // capacitacionEventoId
-        companyId,
-        sucursalId,
-        isOnline,
-        capacitacionTipoId,     // capacitacionTipoId (normalizado o nombre para normalizar)
-        'evidencia'             // tipoArchivo
-      );
-
-      // Actualizar imagen con metadata real
-      // âœ… Guardar solo shareToken, NO fileURL
-      const finalImage = {
-        ...result,
-        shareToken: result.shareToken, // âœ… shareToken es lo Ãºnico que se guarda
-        uploadedAt: result.uploadedAt || new Date().toISOString()
-      };
-
-      // Agregar a Firestore
-      await capacitacionImageService.addImageToCapacitacion(
-        capacitacion.id,
-        finalImage
-      );
-
-      // Actualizar estado local
-      setImagenes(prev => 
-        prev.map(img => img.id === tempId ? finalImage : img)
-      );
-
+      await loadImages();
       if (onImagesUpdated) {
         onImagesUpdated();
       }
     } catch (err) {
       logger.error('Error al subir imagen:', err);
       setError(`Error al subir imagen: ${err.message}`);
-      // Eliminar imagen temporal en caso de error
-      setImagenes(prev => prev.filter(img => img.id !== tempId));
     } finally {
       setLoading(false);
       setUploadingIndex(null);
-      // Limpiar inputs
       if (cameraInputRef.current) cameraInputRef.current.value = '';
       if (galleryInputRef.current) galleryInputRef.current.value = '';
+      event.target.value = '';
     }
   };
 
   const handleDeleteImage = async (imageId) => {
-    if (!window.confirm('Â¿Eliminar esta imagen?')) return;
+    if (!window.confirm('¿Eliminar esta imagen?')) return;
 
     try {
       setLoading(true);
-      await capacitacionImageService.removeImageFromCapacitacion(
-        capacitacion.id,
-        imageId
-      );
+      await capacitacionImageService.removeImageFromCapacitacion(capacitacion.id, imageId, user?.uid);
 
       setImagenes(prev => prev.filter(img => 
         img.fileId !== imageId && img.id !== imageId
@@ -193,20 +178,7 @@ const CapacitacionImagesDialog = ({
     galleryInputRef.current?.click();
   };
 
-  const getImageURL = (image) => {
-    // âœ… PRIORIDAD: Usar shareToken con helper global
-    if (image.shareToken) {
-      return convertirShareTokenAUrl(image.shareToken);
-    }
-    // âš ï¸ COMPATIBILIDAD: Para datos antiguos con fileURL (solo lectura)
-    if (image.fileURL) return image.fileURL;
-    // Preview local antes de subir
-    if (image.file) return URL.createObjectURL(image.file);
-    // âš ï¸ COMPATIBILIDAD: Para datos antiguos con url (solo lectura)
-    if (image.url) return image.url;
-    return null;
-  };
-
+  
   return (
     <Dialog 
       open={open} 
@@ -218,7 +190,7 @@ const CapacitacionImagesDialog = ({
       <DialogTitle>
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <Typography variant="h6">
-            ImÃ¡genes de CapacitaciÃ³n
+            Imágenes de Capacitación
           </Typography>
           {!isOnline && (
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -238,7 +210,7 @@ const CapacitacionImagesDialog = ({
           </Alert>
         )}
 
-        {/* Botones de acciÃ³n */}
+        {/* Botones de acción */}
         <Box sx={{ display: 'flex', gap: 2, mb: 3, flexWrap: 'wrap' }}>
           <Button
             variant="contained"
@@ -247,7 +219,7 @@ const CapacitacionImagesDialog = ({
             disabled={loading}
             fullWidth={isMobile}
           >
-            CÃ¡mara
+            Cámara
           </Button>
           <Button
             variant="outlined"
@@ -256,7 +228,7 @@ const CapacitacionImagesDialog = ({
             disabled={loading}
             fullWidth={isMobile}
           >
-            GalerÃ­a
+            Galería
           </Button>
         </Box>
 
@@ -267,7 +239,7 @@ const CapacitacionImagesDialog = ({
           multiple
           accept="*/*"
           capture="environment"
-          onChange={(e) => handleFileSelect(e, 'camera')}
+          onChange={handleFileSelect}
           style={{ display: 'none' }}
         />
         <input
@@ -275,11 +247,11 @@ const CapacitacionImagesDialog = ({
           type="file"
           multiple
           accept="*/*"
-          onChange={(e) => handleFileSelect(e, 'gallery')}
+          onChange={handleFileSelect}
           style={{ display: 'none' }}
         />
 
-        {/* Grid de imÃ¡genes */}
+        {/* Grid de imágenes */}
         {imagenes.length === 0 ? (
           <Box 
             sx={{ 
@@ -290,50 +262,41 @@ const CapacitacionImagesDialog = ({
           >
             <PhotoLibraryIcon sx={{ fontSize: 64, mb: 2, opacity: 0.3 }} />
             <Typography variant="body1">
-              No hay imÃ¡genes agregadas
+              No hay imágenes agregadas
             </Typography>
             <Typography variant="body2" sx={{ mt: 1 }}>
-              Usa los botones de arriba para agregar imÃ¡genes
+              Usa los botones de arriba para agregar imágenes
             </Typography>
           </Box>
         ) : (
           <Grid container spacing={2}>
             {imagenes.map((image, index) => {
-              const imageURL = getImageURL(image);
               const isUploading = uploadingIndex === index || image.uploading;
               const isOffline = image.offline || !isOnline;
+              const fileRef = {
+                id: image.id || image.fileId || `image-${index}`,
+                fileId: image.fileId || image.id || null,
+                shareToken: image.shareToken || null,
+                name: image.nombre || image.name || `Evidencia ${index + 1}`,
+                mimeType: image.mimeType || image.type || 'application/octet-stream',
+                status: image.status || 'active'
+              };
 
               return (
-                <Grid item xs={6} sm={4} md={3} key={image.id || image.fileId || index}>
+                <Grid item xs={6} sm={4} md={3} key={fileRef.id}>
                   <Box
                     sx={{
                       position: 'relative',
-                      paddingTop: '100%', // Aspect ratio 1:1
                       borderRadius: 1,
                       overflow: 'hidden',
                       border: '1px solid',
                       borderColor: 'divider',
-                      backgroundColor: 'background.paper'
+                      backgroundColor: 'background.paper',
+                      p: 0.75
                     }}
                   >
-                    {imageURL && (
-                      <img
-                        src={imageURL}
-                        alt={`Imagen ${index + 1}`}
-                        style={{
-                          position: 'absolute',
-                          top: 0,
-                          left: 0,
-                          width: '100%',
-                          height: '100%',
-                          objectFit: 'cover',
-                          cursor: 'pointer'
-                        }}
-                        onClick={() => window.open(imageURL, '_blank')}
-                      />
-                    )}
-                    
-                    {/* Overlay con acciones */}
+                    <UnifiedFilePreview fileRef={fileRef} height={160} />
+
                     <Box
                       sx={{
                         position: 'absolute',
@@ -393,6 +356,9 @@ const CapacitacionImagesDialog = ({
 };
 
 export default CapacitacionImagesDialog;
+
+
+
 
 
 

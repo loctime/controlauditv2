@@ -1,9 +1,8 @@
 import logger from '@/utils/logger';
-import React from 'react';
 import { Container } from '@mui/material';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/components/context/AuthContext';
-import RegistrarAsistenciaInline from './components/RegistrarAsistenciaInline';
+import RegistrarAsistenciaInline from './components/RegistrarAsistenciaInlineV2';
 /**
  * Página dedicada para registrar asistencia
  * Mantiene compatibilidad con la ruta /capacitacion/:id/asistencia
@@ -33,4 +32,5 @@ export default function RegistrarAsistencia() {
     </Container>
   );
 }
+
 

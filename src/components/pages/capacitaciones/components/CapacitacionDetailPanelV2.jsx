@@ -17,17 +17,14 @@ import {
 } from '@mui/material';
 import {
   PlayArrow as PlayArrowIcon,
-  ExpandMore as ExpandMoreIcon,
-  Visibility as VisibilityIcon
+  ExpandMore as ExpandMoreIcon
 } from '@mui/icons-material';
 import EventDetailPanel from '../../../shared/event-registry/EventDetailPanel';
 import RegistrarAsistenciaInlineV2 from './RegistrarAsistenciaInlineV2';
-import ImagePreviewDialog from '../../../shared/ImagePreviewDialog';
 import EvidenciaEmpleadoList from '../../../shared/EvidenciaEmpleadoList';
-import useControlFileImages from '../../../../hooks/useControlFileImages';
+import UnifiedFilePreview from '../../../common/files/UnifiedFilePreview';
 import { capacitacionService } from '../../../../services/capacitacionService';
 import { registrosAsistenciaServiceAdapter } from '../../../../services/adapters/registrosAsistenciaServiceAdapter';
-import { convertirShareTokenAUrl } from '../../../../utils/imageUtils';
 import { dbAudit } from '../../../../firebaseControlFile';
 import { firestoreRoutesCore } from '../../../../core/firestore/firestoreRoutes.core';
 import { getDoc, doc } from 'firebase/firestore';
@@ -56,19 +53,6 @@ const ContenidoRegistros = ({ entityId, userId, registryService, refreshKey }) =
   const [loading, setLoading] = React.useState(true);
   // Map de registroId -> empleados cargados
   const [empleadosPorRegistro, setEmpleadosPorRegistro] = React.useState(new Map());
-  
-  // Usar hook reutilizable para manejar imágenes
-  const {
-    blobUrls: evidenciasBlobUrls,
-    blobs: evidenciasBlobs,
-    loading: evidenciasLoading,
-    errors: evidenciasErrors,
-    metadata: evidenciasMetadata,
-    modalOpen,
-    selectedEvidencia,
-    openImage,
-    closeImage
-  } = useControlFileImages(registros);
 
   React.useEffect(() => {
     if (!entityId || !userId || !registryService) {
@@ -216,142 +200,23 @@ const ContenidoRegistros = ({ entityId, userId, registryService, refreshKey }) =
                 {evidencias.length > 0 ? (
                   <Grid container spacing={2}>
                     {evidencias.map((evidencia, idx) => {
-                      const imgId = evidencia.id || `${registro.id}-${idx}`;
-                      const blobUrl = evidenciasBlobUrls.get(imgId);
-                      const isLoading = evidenciasLoading.get(imgId);
-                      const errorUrl = evidenciasErrors.get(imgId);
-                      const metadata = evidenciasMetadata.get(imgId);
-                      const hasBlobUrl = !!blobUrl;
-                      const hasError = !!errorUrl;
-                      
-                      // Si no hay blob URL y no está cargando y no hay error, intentar obtener URL legacy
-                      const fallbackUrl = !hasBlobUrl && !isLoading && !hasError 
-                        ? convertirShareTokenAUrl(evidencia.shareToken || evidencia.url || evidencia)
-                        : null;
-                      
                       const empleadosDelRegistro = empleadosPorRegistro.get(registro.id) || [];
-                      
+                      const fileRef = {
+                        id: evidencia.id || `${registro.id}-${idx}`,
+                        fileId: evidencia.fileId || evidencia.id || null,
+                        shareToken: evidencia.shareToken || null,
+                        name: evidencia.nombre || `Evidencia ${idx + 1}`,
+                        mimeType: evidencia.mimeType || 'application/octet-stream',
+                        status: evidencia.status || 'active'
+                      };
+
                       return (
-                        <Grid item xs={6} sm={4} md={3} key={imgId}>
+                        <Grid item xs={6} sm={4} md={3} key={fileRef.id}>
                           <Box sx={{ display: 'flex', flexDirection: 'row', gap: 1, alignItems: 'flex-start' }}>
-                            {/* Imagen */}
-                            <Box
-                              sx={{
-                                position: 'relative',
-                                width: '60%',
-                                paddingTop: '60%', // Mantener aspecto cuadrado pero más pequeño
-                                flexShrink: 0,
-                                borderRadius: 1,
-                                overflow: 'hidden',
-                                border: '1px solid',
-                                borderColor: 'divider',
-                                backgroundColor: 'background.paper',
-                                cursor: (hasBlobUrl || errorUrl || fallbackUrl) ? 'pointer' : 'default',
-                                '&:hover': {
-                                  '& .image-overlay': {
-                                    opacity: 1
-                                  }
-                                }
-                              }}
-                              onClick={() => openImage(imgId, evidencia)}
-                            >
-                            {hasBlobUrl ? (
-                              <>
-                                <img
-                                  src={blobUrl}
-                                  alt={metadata?.nombre || `Evidencia ${idx + 1}`}
-                                  style={{
-                                    position: 'absolute',
-                                    top: 0,
-                                    left: 0,
-                                    width: '100%',
-                                    height: '100%',
-                                    objectFit: 'cover'
-                                  }}
-                                  onError={(e) => {
-                                    e.target.style.display = 'none';
-                                  }}
-                                />
-                                {/* Overlay con ícono "Ver" */}
-                                <Box
-                                  className="image-overlay"
-                                  sx={{
-                                    position: 'absolute',
-                                    top: 0,
-                                    left: 0,
-                                    width: '100%',
-                                    height: '100%',
-                                    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    opacity: 0,
-                                    transition: 'opacity 0.2s ease-in-out',
-                                    zIndex: 1
-                                  }}
-                                >
-                                  <VisibilityIcon sx={{ color: 'white', fontSize: 32 }} />
-                                </Box>
-                              </>
-                            ) : isLoading ? (
-                              <Box
-                                sx={{
-                                  position: 'absolute',
-                                  top: 0,
-                                  left: 0,
-                                  width: '100%',
-                                  height: '100%',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  backgroundColor: 'grey.100'
-                                }}
-                              >
-                                <CircularProgress size={24} />
-                              </Box>
-                            ) : (errorUrl || fallbackUrl) ? (
-                              <Box
-                                sx={{
-                                  position: 'absolute',
-                                  top: 0,
-                                  left: 0,
-                                  width: '100%',
-                                  height: '100%',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  backgroundColor: 'grey.200',
-                                  flexDirection: 'column',
-                                  gap: 1,
-                                  p: 1
-                                }}
-                              >
-                                <Typography variant="caption" color="text.secondary" align="center">
-                                  Click para abrir
-                                </Typography>
-                              </Box>
-                            ) : (
-                              <Box
-                                sx={{
-                                  position: 'absolute',
-                                  top: 0,
-                                  left: 0,
-                                  width: '100%',
-                                  height: '100%',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  backgroundColor: 'grey.100'
-                                }}
-                              >
-                                <Typography variant="caption" color="text.secondary">
-                                  Sin imagen
-                                </Typography>
-                              </Box>
-                            )}
+                            <Box sx={{ width: '60%', flexShrink: 0 }}>
+                              <UnifiedFilePreview fileRef={fileRef} height={130} />
                             </Box>
-                            
-                            {/* Lista de empleados */}
+
                             {empleadosDelRegistro.length > 0 && (
                               <Box sx={{ flex: 1, minWidth: 0 }}>
                                 <EvidenciaEmpleadoList
@@ -377,15 +242,7 @@ const ContenidoRegistros = ({ entityId, userId, registryService, refreshKey }) =
         })}
       </Stack>
 
-      {/* Modal de vista previa */}
-      <ImagePreviewDialog
-        open={modalOpen}
-        onClose={closeImage}
-        imageUrl={selectedEvidencia?.imageUrl}
-        imageBlob={selectedEvidencia?.imageBlob}
-        imageName={selectedEvidencia?.imageName}
-        imageSize={selectedEvidencia?.imageSize}
-      />
+
     </Box>
   );
 };
@@ -396,10 +253,7 @@ const CapacitacionDetailPanelV2 = ({
   capacitacionId,
   initialMode = 'view',
   userId,
-  onRegistrarAsistencia,
-  onMarcarCompletada,
-  onEditarPlan,
-  onRealizarCapacitacion,
+  onRegistrarAsistencia,  onRealizarCapacitacion,
   onSaved
 }) => {
   const [currentMode, setCurrentMode] = React.useState(initialMode);
@@ -632,3 +486,8 @@ const CapacitacionDetailPanelV2 = ({
 };
 
 export default CapacitacionDetailPanelV2;
+
+
+
+
+

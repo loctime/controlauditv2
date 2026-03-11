@@ -40,7 +40,7 @@ import { useAuth } from '@/components/context/AuthContext';
 import dayjs from 'dayjs';
 import { validateFiles } from '../../../../services/fileValidationPolicy';
 
-const ACCEPTED_EXTENSIONS = ['.pdf', '.jpg', '.jpeg', '.png', '.webp', '.doc', '.docx', '.txt'];
+const FILE_ACCEPT = '*/*';
 const ORIGEN_OPTIONS = [
   { value: 'manual', label: 'Manual' },
   { value: 'accidente', label: 'Accidente' },
@@ -648,7 +648,7 @@ export default function AusenciaFormDialog({
                   type='file'
                   hidden
                   multiple
-                  accept={ACCEPTED_EXTENSIONS.join(',')}
+                  accept={FILE_ACCEPT}
                   onChange={handleAddFiles}
                 />
               </Button>

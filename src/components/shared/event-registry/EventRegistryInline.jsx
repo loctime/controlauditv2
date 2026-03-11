@@ -41,11 +41,20 @@ import {
 import { query, where, getDocs, Timestamp, collection } from 'firebase/firestore';
 import { dbAudit } from '../../../firebaseControlFile';
 import { firestoreRoutesCore } from '../../../core/firestore/firestoreRoutes.core';
-import { uploadFileWithContext } from '../../../services/unifiedFileUploadService';
-import { auth } from '../../../firebaseControlFile';
+import { uploadFiles } from '../../../services/unifiedFileService';
 import { validateFiles } from '../../../services/fileValidationPolicy';
 import { useAuth } from '@/components/context/AuthContext';
 import UnifiedFilePreview from '../../common/files/UnifiedFilePreview';
+
+const ENTITY_TYPE_TO_MODULE = {
+  accidente: 'accidentes',
+  incidente: 'incidentes',
+  capacitacion: 'capacitaciones',
+  salud: 'salud_ocupacional',
+  salud_ocupacional: 'salud_ocupacional',
+  auditoria: 'auditorias',
+  auditorias: 'auditorias'
+};
 
 /**
  * Componente inline para registrar eventos asociados a una entidad
@@ -240,42 +249,45 @@ export default function EventRegistryInline({
       setUploadingEvidencias(prev => new Set([...prev, tempId]));
 
       try {
-        const user = auth.currentUser;
-        if (!user) throw new Error('Usuario no autenticado');
-        
-        const companyId = entity?.empresaId || 'system';
-        const context = {
-          contextType: entityType,
-          contextEventId: entityId,
-          companyId: companyId,
-          tipoArchivo: 'evidencia',
-        };
+        const ownerId = tenantOwnerId;
+        if (!ownerId) throw new Error('Contexto de owner no disponible');
 
-        if (entityType === 'capacitacion') {
-          if (!entity?.sucursalId || !entity?.capacitacionTipoId) {
-            throw new Error('CapacitaciÃƒÆ’Ã‚Â³n sin sucursalId o capacitacionTipoId');
-          }
-          context.sucursalId = entity.sucursalId;
-          context.capacitacionTipoId = entity.capacitacionTipoId;
+        const companyId = entity?.empresaId || 'system';
+        const module = ENTITY_TYPE_TO_MODULE[entityType] || 'capacitaciones';
+        const uploadResult = await uploadFiles({
+          ownerId,
+          module,
+          entityId: String(entityId),
+          companyId,
+          files: [file],
+          uploadedBy: currentActorId || null,
+          contextType: entityType,
+          tipoArchivo: 'evidencia',
+          sucursalId: entity?.sucursalId || undefined,
+          capacitacionTipoId: entity?.capacitacionTipoId || undefined
+        });
+
+        if (!uploadResult.fileRefs || uploadResult.fileRefs.length === 0) {
+          throw new Error('No se pudo persistir metadata canonica del archivo');
         }
 
-        const result = await uploadFileWithContext({
-          file: file,
-          context,
-          fecha: new Date()
-        });
-        
+        const persisted = uploadResult.fileRefs[0];
         const finalEvidencia = {
-          id: result.fileId,
-          shareToken: result.shareToken,
-          nombre: file.name,
-          createdAt: Timestamp.now(),
-          fileId: result.fileId
+          id: persisted.id || persisted.fileId,
+          fileDocId: persisted.id,
+          shareToken: persisted.shareToken,
+          nombre: persisted.name || file.name,
+          createdAt: persisted.uploadedAt || Timestamp.now(),
+          fileId: persisted.fileId,
+          mimeType: persisted.mimeType,
+          size: persisted.size,
+          status: persisted.status || 'active'
         };
-        
-        setEvidencias(prev => 
-          prev.map(ev => ev.id === tempId ? finalEvidencia : ev)
-        );
+
+        setEvidencias((prev) =>
+          prev.map((ev) => (ev.id === tempId ? finalEvidencia : ev))
+        );
+
       } catch (err) {
         logger.error('Error al subir evidencia:', err);
         setError(`Error al subir ${file.name}: ${err.message}`);

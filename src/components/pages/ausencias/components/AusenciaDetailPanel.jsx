@@ -20,7 +20,6 @@ import {
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import UploadFileIcon from '@mui/icons-material/UploadFile';
-import DownloadIcon from '@mui/icons-material/Download';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
@@ -35,12 +34,12 @@ import {
 import {
   listAusenciaFiles,
   removeAusenciaFileMeta,
-  resolveFileUrl,
   uploadAndAttachFiles
 } from '../../../../services/ausenciasFilesService';
 import { useAuth } from '@/components/context/AuthContext';
+import UnifiedFilePreview from '../../../common/files/UnifiedFilePreview';
 
-const ACCEPTED_EXTENSIONS = ['.pdf', '.jpg', '.jpeg', '.png', '.webp', '.doc', '.docx', '.txt'];
+const FILE_ACCEPT = '*/*';
 
 const ORIGEN_LABELS = {
   manual: 'Manual',
@@ -241,15 +240,6 @@ export default function AusenciaDetailPanel({
     }
   };
 
-  const handleOpenFile = async (file) => {
-    const url = await resolveFileUrl(file);
-    if (!url) {
-      setError('No se pudo resolver el archivo para abrirlo.');
-      return;
-    }
-    window.open(url, '_blank', 'noopener,noreferrer');
-  };
-
   const handleRemoveFile = async (fileMetaId) => {
     const confirmed = window.confirm('Eliminar este archivo de la ausencia?');
     if (!confirmed) return;
@@ -409,7 +399,7 @@ export default function AusenciaDetailPanel({
                     type="file"
                     hidden
                     multiple
-                    accept={ACCEPTED_EXTENSIONS.join(',')}
+                    accept={FILE_ACCEPT}
                     onChange={handleUploadFiles}
                   />
                 </Button>
@@ -440,22 +430,13 @@ export default function AusenciaDetailPanel({
                           alignItems: 'center'
                         }}
                       >
-                        <Box sx={{ minWidth: 0 }}>
-                          <Typography variant="body2" sx={{ fontWeight: 600 }} noWrap>
-                            {file.nombre || file.fileId || file.id}
+                        <Box sx={{ minWidth: 0, flex: 1 }}>
+                          <Typography variant="body2" sx={{ fontWeight: 600, mb: 0.75 }} noWrap>
+                            {file.name || file.nombre || file.fileId || file.id}
                           </Typography>
-                          <Typography variant="caption" sx={{ color: '#6b7280' }}>
-                            {file.tipoArchivo || 'documento'} - {file.size ? `${Math.round(file.size / 1024)} KB` : 'Sin tamano'}
-                          </Typography>
+                          <UnifiedFilePreview fileRef={file} height={180} />
                         </Box>
                         <Stack direction="row" spacing={0.5}>
-                          <Tooltip title="Abrir / descargar">
-                            <span>
-                              <IconButton size="small" onClick={() => handleOpenFile(file)} disabled={busyAction}>
-                                <DownloadIcon fontSize="small" />
-                              </IconButton>
-                            </span>
-                          </Tooltip>
                           <Tooltip title="Eliminar archivo">
                             <span>
                               <IconButton

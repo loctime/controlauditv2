@@ -1,5 +1,5 @@
 import logger from '@/utils/logger';
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import {
   Table,
   TableBody,
@@ -33,7 +33,7 @@ import {
   PersonAdd as PersonAddIcon,
   Delete as DeleteIcon
 } from '@mui/icons-material';
-import { registrosAsistenciaService } from '../../../../services/registrosAsistenciaService';
+import { registrosAsistenciaServiceAdapter } from '../../../../services/adapters/registrosAsistenciaServiceAdapter';
 import { useAuth } from '@/components/context/AuthContext';
 
 /* ===================== Utils ===================== */
@@ -172,10 +172,7 @@ const CapacitacionesTable = ({
           
           if (!statsCache.current[capIdStr]) {
             promises.push(
-              registrosAsistenciaService.getEmpleadosUnicosByCapacitacion(
-                userProfile.uid,
-                capIdStr
-              ).then(empleados => {
+              registrosAsistenciaServiceAdapter.getPersonasUnicasByEntity(userProfile.uid, capIdStr).then(empleados => {
                 if (mounted) {
                   statsCache.current[capIdStr] = empleados.length;
                 }
@@ -190,10 +187,7 @@ const CapacitacionesTable = ({
 
           if (!evidenciasCache.current[capIdStr]) {
             promises.push(
-              registrosAsistenciaService.getImagenesByCapacitacion(
-                userProfile.uid,
-                capIdStr
-              ).then(imgs => {
+              registrosAsistenciaServiceAdapter.getEvidenciasByEntity(userProfile.uid, capIdStr).then(imgs => {
                 if (mounted) {
                   evidenciasCache.current[capIdStr] = imgs.length;
                 }
@@ -517,3 +511,5 @@ const CapacitacionesTable = ({
 };
 
 export default CapacitacionesTable;
+
+
