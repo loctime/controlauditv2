@@ -27,22 +27,11 @@ const SuperdevSelector = () => {
   const { user, selectedOwnerId, setSelectedOwnerId } = useAuth();
   const [open, setOpen] = useState(false);
 
-  // Debug: log para verificar el UID del usuario
-  console.log('[SuperdevSelector] user.uid:', user?.uid);
-  console.log('[SuperdevSelector] expected UID:', 'rixIn0BwiVPHB4SgR0K0SlnpSLC2');
-
-  // Verificar si el usuario es tu UID específico - usar auth.user.uid directamente
   const isSpecificUser = user?.uid === 'rixIn0BwiVPHB4SgR0K0SlnpSLC2';
-  
-  console.log('[SuperdevSelector] isSpecificUser:', isSpecificUser);
 
-  // No mostrar si no es tu UID específico
   if (!isSpecificUser) {
-    console.log('[SuperdevSelector] Componente oculto - UID no coincide');
     return null;
   }
-
-  console.log('[SuperdevSelector] Componente visible para UID específico');
 
   // Lista estática de owners para impersonación (sin backend)
  const staticOwners = [
@@ -67,7 +56,6 @@ const SuperdevSelector = () => {
   };
 
   const handleSelectOwner = (ownerId, ownerEmail) => {
-    console.log('[SuperdevSelector] seleccionando ownerId:', ownerId);
     
     // Guardar el ownerId seleccionado en el estado global
     setSelectedOwnerId(ownerId);

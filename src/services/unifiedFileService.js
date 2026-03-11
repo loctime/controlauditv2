@@ -1,0 +1,198 @@
+﻿import {
+  collection,
+  doc,
+  getDocs,
+  orderBy,
+  query,
+  serverTimestamp
+} from 'firebase/firestore';
+import { db } from '../firebaseControlFile';
+import { firestoreRoutesCore } from '../core/firestore/firestoreRoutes.core';
+import { addDocWithAppId, updateDocWithAppId } from '../firebase/firestoreAppWriter';
+import { uploadFileWithContext } from './unifiedFileUploadService';
+import { validateFiles } from './fileValidationPolicy';
+import { resolveViewUrl } from './fileResolverService';
+
+const SCHEMA_VERSION = 1;
+
+const MODULE_TO_CONTEXT = {
+  auditorias: 'auditoria',
+  accidentes: 'accidente',
+  incidentes: 'incidente',
+  salud_ocupacional: 'salud',
+  capacitaciones: 'capacitacion'
+};
+
+function resolveEntityDocPath(ownerId, module, entityId, entityCollection) {
+  if (entityCollection === 'registrosAsistencia') {
+    return firestoreRoutesCore.registroAsistencia(ownerId, entityId);
+  }
+
+  switch (module) {
+    case 'auditorias':
+      return firestoreRoutesCore.reporte(ownerId, entityId);
+    case 'accidentes':
+    case 'incidentes':
+      return firestoreRoutesCore.accidente(ownerId, entityId);
+    case 'salud_ocupacional':
+      return firestoreRoutesCore.ausencia(ownerId, entityId);
+    case 'capacitaciones':
+      return firestoreRoutesCore.capacitacion(ownerId, entityId);
+    default:
+      throw new Error(`Modulo no soportado: ${module}`);
+  }
+}
+
+function filesCollectionRef(ownerId, module, entityId, entityCollection) {
+  const entityPath = resolveEntityDocPath(ownerId, module, entityId, entityCollection);
+  return collection(db, ...entityPath, 'files');
+}
+
+function toFileRefPayload(file, uploadResult, params) {
+  return {
+    fileId: uploadResult.fileId,
+    shareToken: uploadResult.shareToken || null,
+    name: file.name,
+    mimeType: file.type || 'application/octet-stream',
+    size: file.size || 0,
+    module: params.module,
+    entityId: params.entityId,
+    companyId: params.companyId,
+    uploadedBy: params.uploadedBy || null,
+    uploadedAt: serverTimestamp(),
+    status: 'active',
+    schemaVersion: SCHEMA_VERSION,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+    legacyMirror: true
+  };
+}
+
+export async function uploadFiles(params) {
+  const {
+    ownerId,
+    module,
+    entityId,
+    companyId,
+    files,
+    uploadedBy,
+    entityCollection,
+    contextType,
+    tipoArchivo = 'evidencia',
+    sucursalId,
+    capacitacionTipoId,
+    empleadoIds
+  } = params;
+
+  if (!ownerId) throw new Error('ownerId es requerido');
+  if (!module) throw new Error('module es requerido');
+  if (!entityId) throw new Error('entityId es requerido');
+  if (!companyId) throw new Error('companyId es requerido');
+
+  const validation = validateFiles(files || []);
+  const uploaded = [];
+
+  const context = contextType || MODULE_TO_CONTEXT[module];
+  if (!context) {
+    throw new Error(`No se pudo resolver contextType para modulo ${module}`);
+  }
+
+  const ref = filesCollectionRef(ownerId, module, entityId, entityCollection);
+
+  for (const file of validation.accepted) {
+    const result = await uploadFileWithContext({
+      file,
+      context: {
+        contextType: context,
+        contextEventId: String(entityId),
+        companyId,
+        tipoArchivo,
+        sucursalId: sucursalId || undefined,
+        capacitacionTipoId: capacitacionTipoId || undefined,
+        empleadoIds: empleadoIds || undefined
+      },
+      fecha: new Date(),
+      uploadedBy
+    });
+
+    const payload = toFileRefPayload(file, result, {
+      module,
+      entityId,
+      companyId,
+      uploadedBy
+    });
+
+    const created = await addDocWithAppId(ref, payload);
+
+    uploaded.push({
+      id: created.id,
+      ...payload,
+      uploadedAt: new Date().toISOString()
+    });
+  }
+
+  return {
+    fileRefs: uploaded,
+    rejected: validation.rejected,
+    warnings: validation.warnings
+  };
+}
+
+export async function listFiles(params) {
+  const { ownerId, module, entityId, includeDeleted = false, entityCollection } = params;
+  if (!ownerId) throw new Error('ownerId es requerido');
+
+  const ref = filesCollectionRef(ownerId, module, entityId, entityCollection);
+
+  let snapshot;
+  try {
+    snapshot = await getDocs(query(ref, orderBy('uploadedAt', 'desc')));
+  } catch (_error) {
+    snapshot = await getDocs(ref);
+  }
+
+  const rows = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+  if (includeDeleted) return rows;
+
+  return rows.filter((row) => row.status !== 'deleted');
+}
+
+export async function softDeleteFile(params) {
+  const { ownerId, module, entityId, fileDocId, deletedBy, entityCollection } = params;
+  if (!ownerId || !fileDocId) throw new Error('ownerId y fileDocId son requeridos');
+
+  const ref = doc(filesCollectionRef(ownerId, module, entityId, entityCollection), fileDocId);
+
+  await updateDocWithAppId(ref, {
+    status: 'deleted',
+    deletedAt: serverTimestamp(),
+    deletedBy: deletedBy || null,
+    updatedAt: serverTimestamp()
+  });
+}
+
+export function buildLegacyImageMirror(fileRefs = []) {
+  return fileRefs
+    .filter((fileRef) => fileRef.status !== 'deleted')
+    .map((fileRef) => {
+      const url = resolveViewUrl(fileRef);
+      if (url) return url;
+      if (fileRef.shareToken) return fileRef.shareToken;
+      return fileRef.fileId;
+    })
+    .filter(Boolean);
+}
+
+export function buildLegacyImageMetadataMirror(fileRefs = []) {
+  return fileRefs
+    .filter((fileRef) => fileRef.status !== 'deleted')
+    .map((fileRef) => ({
+      id: fileRef.fileId,
+      fileId: fileRef.fileId,
+      shareToken: fileRef.shareToken || null,
+      nombre: fileRef.name,
+      createdAt: fileRef.uploadedAt || new Date().toISOString(),
+      mimeType: fileRef.mimeType,
+      size: fileRef.size
+    }));
+}

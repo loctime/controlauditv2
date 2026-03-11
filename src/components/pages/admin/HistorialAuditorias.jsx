@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 //src/components/pages/admin/HistorialAuditorias.jsx
 import React, { useState, useEffect } from "react";
 import {
@@ -78,13 +79,13 @@ const HistorialAuditorias = () => {
       
       setAuditorias(auditoriasData);
       
-      console.log('[DEBUG] Historial cargado desde owner-centric:', {
+      logger.debug('[DEBUG] Historial cargado desde owner-centric:', {
         total: auditoriasData.length,
         ownerId: ownerId
       });
       
     } catch (error) {
-      console.error('Error cargando auditorías:', error);
+      logger.error('Error cargando auditorías:', error);
       toast.error('Error al cargar el historial');
     } finally {
       setLoading(false);

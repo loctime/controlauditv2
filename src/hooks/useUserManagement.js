@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 // src/hooks/useUserManagement.js
 // ⚠️ CÓDIGO OBSOLETO: Este hook ya no se usa.
 // Las funciones de creación de usuarios ahora se manejan directamente con userService.createUser()
@@ -33,7 +34,7 @@ export const useUserManagement = (user, userProfile, usuariosCollectionRef, form
       
       return true;
     } catch (error) {
-      console.error("Error al editar permisos del operario:", error);
+      logger.error("Error al editar permisos del operario:", error);
       throw error;
     }
   };
@@ -42,33 +43,33 @@ export const useUserManagement = (user, userProfile, usuariosCollectionRef, form
   const logAccionOperario = async (userId, accion, detalles = {}) => {
     try {
       if (!logsCollectionRef) {
-        console.warn('logAccionOperario: logsCollectionRef no proporcionado');
+        logger.warn('logAccionOperario: logsCollectionRef no proporcionado');
         return;
       }
       await registrarLogOperario(userId, accion, detalles, {}, logsCollectionRef);
     } catch (error) {
-      console.error("Error al registrar log de operario:", error);
+      logger.error("Error al registrar log de operario:", error);
     }
   };
 
   // Funciones obsoletas - retornan funciones vacías para evitar errores
   const crearOperario = async () => {
-    console.warn('crearOperario está obsoleto. Usa userService.createUser() directamente.');
+    logger.warn('crearOperario está obsoleto. Usa userService.createUser() directamente.');
     throw new Error('Función obsoleta. Usa userService.createUser() desde los componentes.');
   };
 
   const asignarUsuarioAClienteAdmin = async () => {
-    console.warn('asignarUsuarioAClienteAdmin está obsoleto.');
+    logger.warn('asignarUsuarioAClienteAdmin está obsoleto.');
     throw new Error('Función obsoleta.');
   };
 
   const getUsuariosDeClienteAdmin = async () => {
-    console.warn('getUsuariosDeClienteAdmin está obsoleto. Usa userService.listUsers() directamente.');
+    logger.warn('getUsuariosDeClienteAdmin está obsoleto. Usa userService.listUsers() directamente.');
     return [];
   };
 
   const getFormulariosDeClienteAdmin = async () => {
-    console.warn('getFormulariosDeClienteAdmin está obsoleto.');
+    logger.warn('getFormulariosDeClienteAdmin está obsoleto.');
     return [];
   };
 

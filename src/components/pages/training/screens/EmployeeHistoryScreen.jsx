@@ -1,8 +1,8 @@
-﻿import React, { useEffect, useState } from 'react';
+import logger from '@/utils/logger';
+import React, { useEffect, useState } from 'react';
 import { Alert, Box, Button, CircularProgress, Grid, Paper, Stack, TextField, Typography } from '@mui/material';
 import { useAuth } from '@/components/context/AuthContext';
 import { employeeTrainingRecordService } from '../../../../services/training';
-
 export default function EmployeeHistoryScreen() {
   const { userProfile } = useAuth();
   const ownerId = userProfile?.ownerId;
@@ -21,7 +21,7 @@ export default function EmployeeHistoryScreen() {
       const data = await employeeTrainingRecordService.listByEmployee(ownerId, employeeId);
       setRecords(data);
     } catch (err) {
-      console.error('[EmployeeHistoryScreen] load error', err);
+      logger.error('[EmployeeHistoryScreen] load error', err);
       setError(err.message || 'No se pudo cargar el historial de capacitacion del empleado.');
       setRecords([]);
     } finally {

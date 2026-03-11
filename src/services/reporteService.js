@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 // src/services/reporteService.js
 // Servicio para operaciones de reportes/auditorías
 // NOTA: Solo mueve escrituras, no resuelve lógica compleja (offline, autosave, etc.)
@@ -25,7 +26,7 @@ export const reporteService = {
       
       await deleteDocWithAppId(reporteRef);
     } catch (error) {
-      console.error('Error al eliminar reporte:', error);
+      logger.error('Error al eliminar reporte:', error);
       throw error;
     }
   },
@@ -44,7 +45,7 @@ export const reporteService = {
         estado: 'completada'
       });
     } catch (error) {
-      console.error('Error al marcar auditoría como completada:', error);
+      logger.error('Error al marcar auditoría como completada:', error);
       throw error;
     }
   }

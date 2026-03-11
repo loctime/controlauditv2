@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 import React, { useEffect, useState } from 'react';
 import {
   Dialog,
@@ -59,7 +60,7 @@ const HistorialPagosModal = ({ open, onClose, cliente }) => {
         const snapshot = await getDocs(q);
         setHistorial(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
       } catch (error) {
-        console.error('Error cargando historial de pagos:', error);
+        logger.error('Error cargando historial de pagos:', error);
         setHistorial([]);
       } finally {
         setLoading(false);

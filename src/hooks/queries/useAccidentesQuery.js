@@ -1,10 +1,10 @@
+import logger from '@/utils/logger';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { query, where, orderBy, onSnapshot, collection } from 'firebase/firestore';
 import { obtenerAccidentes } from '../../services/accidenteService';
 import { dbAudit } from '../../firebaseControlFile';
 import { firestoreRoutesCore } from '../../core/firestore/firestoreRoutes.core';
 import { useAuth } from '@/components/context/AuthContext';
-
 /**
  * Hook de accidentes basado en listener realtime (onSnapshot)
  * Estrategia única para evitar duplicación con React Query.
@@ -82,7 +82,7 @@ export const useAccidentesQuery = (
         setLoading(false);
       },
       (listenerError) => {
-        console.error('[useAccidentesQuery] Error en listener:', listenerError);
+        logger.error('[useAccidentesQuery] Error en listener:', listenerError);
         setError(listenerError);
         setLoading(false);
       }
@@ -99,7 +99,7 @@ export const useAccidentesQuery = (
       const data = await obtenerAccidentes(filtros, userProfile);
       setAccidentes(data);
     } catch (refreshError) {
-      console.error('[useAccidentesQuery] Error recargando accidentes:', refreshError);
+      logger.error('[useAccidentesQuery] Error recargando accidentes:', refreshError);
       setError(refreshError);
     }
   }, [ownerId, filtros, userProfile]);

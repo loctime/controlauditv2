@@ -1,8 +1,8 @@
+import logger from '@/utils/logger';
 // src/hooks/useControlFileImages.js
 
 import React from 'react';
 import { convertirShareTokenAUrl } from '../utils/imageUtils';
-
 /**
  * Hook reutilizable para manejar imágenes de ControlFile
  * 
@@ -106,7 +106,7 @@ const useControlFileImages = (registros = []) => {
                 loadingRef.current.delete(imgId);
               })
               .catch(error => {
-                console.error(`[useControlFileImages] Error cargando imagen ${imgId}:`, error);
+                logger.error(`[useControlFileImages] Error cargando imagen ${imgId}:`, error);
                 
                 // Actualizar estados
                 setEvidenciasErrors(prev => {

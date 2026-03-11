@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 /**
  * Utilidades para la gestión de auditorías
  * Funciones de validación, progreso y navegación

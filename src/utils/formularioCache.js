@@ -1,5 +1,5 @@
+import logger from '@/utils/logger';
 import { useCallback, useEffect, useState } from 'react';
-
 // ✅ Configuración del cache
 const CACHE_CONFIG = {
   EXPIRATION_TIME: 5 * 60 * 1000, // 5 minutos
@@ -35,10 +35,10 @@ class FormularioCache {
       // Limpiar cache si excede el tamaño máximo
       this.cleanup();
       
-      console.log('✅ Formulario cacheado:', formularioId);
+      logger.debug('✅ Formulario cacheado:', formularioId);
       return true;
     } catch (error) {
-      console.warn('⚠️ Error al cachear formulario:', error);
+      logger.warn('⚠️ Error al cachear formulario:', error);
       return false;
     }
   }
@@ -63,10 +63,10 @@ class FormularioCache {
       cacheData.lastAccessed = Date.now();
       localStorage.setItem(cacheKey, JSON.stringify(cacheData));
       
-      console.log('✅ Formulario recuperado del cache:', formularioId);
+      logger.debug('✅ Formulario recuperado del cache:', formularioId);
       return cacheData.data;
     } catch (error) {
-      console.warn('⚠️ Error al recuperar cache:', error);
+      logger.warn('⚠️ Error al recuperar cache:', error);
       return null;
     }
   }
@@ -76,10 +76,10 @@ class FormularioCache {
     try {
       const cacheKey = this.getCacheKey(formularioId);
       localStorage.removeItem(cacheKey);
-      console.log('🗑️ Formulario eliminado del cache:', formularioId);
+      logger.debug('🗑️ Formulario eliminado del cache:', formularioId);
       return true;
     } catch (error) {
-      console.warn('⚠️ Error al eliminar del cache:', error);
+      logger.warn('⚠️ Error al eliminar del cache:', error);
       return false;
     }
   }
@@ -116,10 +116,10 @@ class FormularioCache {
       const toRemove = cacheInfo.slice(0, cacheKeys.length - this.maxSize);
       toRemove.forEach(({ key }) => {
         localStorage.removeItem(key);
-        console.log('🗑️ Cache limpiado:', key);
+        logger.debug('🗑️ Cache limpiado:', key);
       });
     } catch (error) {
-      console.warn('⚠️ Error al limpiar cache:', error);
+      logger.warn('⚠️ Error al limpiar cache:', error);
     }
   }
 
@@ -133,10 +133,10 @@ class FormularioCache {
         localStorage.removeItem(key);
       });
       
-      console.log('🗑️ Todo el cache de formularios limpiado');
+      logger.debug('🗑️ Todo el cache de formularios limpiado');
       return true;
     } catch (error) {
-      console.warn('⚠️ Error al limpiar todo el cache:', error);
+      logger.warn('⚠️ Error al limpiar todo el cache:', error);
       return false;
     }
   }
@@ -155,7 +155,7 @@ class FormularioCache {
       
       return stats;
     } catch (error) {
-      console.warn('⚠️ Error al obtener estadísticas del cache:', error);
+      logger.warn('⚠️ Error al obtener estadísticas del cache:', error);
       return null;
     }
   }
@@ -240,7 +240,7 @@ export const usePreloadFormularios = (formularioIds) => {
     setPreloadedData(preloaded);
     setIsPreloading(false);
     
-    console.log(`✅ Precargados ${Object.keys(preloaded).length} formularios`);
+    logger.debug(`✅ Precargados ${Object.keys(preloaded).length} formularios`);
   }, [formularioIds]);
 
   useEffect(() => {

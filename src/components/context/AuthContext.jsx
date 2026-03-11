@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 // src/components/context/AuthContext.jsx
 import { createContext, useState, useEffect, useContext, useRef } from "react";
 import { auth } from "../../firebaseControlFile";
@@ -11,7 +12,6 @@ import { empresaService } from '../../services/empresaService';
 import { auditoriaService } from '../../services/auditoriaService';
 import { saveCompleteUserCache } from '../../services/completeOfflineCache';
 import { shouldEnableOffline } from '../../utils/pwaDetection';
-
 // Hooks personalizados
 import { useOfflineCache } from './hooks/useOfflineCache';
 import { useUserDataLoaders } from './hooks/useUserDataLoaders';
@@ -103,7 +103,7 @@ const AuthContextComponent = ({ children }) => {
         }
       }
     } catch (error) {
-      console.warn('[AuthContext] Error restaurando selección desde localStorage:', error);
+      logger.warn('[AuthContext] Error restaurando selección desde localStorage:', error);
       // En caso de error, asegurar valores por defecto
       if (selectedEmpresa !== 'todas') {
         setSelectedEmpresa('todas');
@@ -125,7 +125,7 @@ const AuthContextComponent = ({ children }) => {
       const valueToSave = selectedEmpresa || 'todas';
       localStorage.setItem('globalSelectedEmpresa', valueToSave);
     } catch (error) {
-      console.warn('[AuthContext] Error persistiendo empresa en localStorage:', error);
+      logger.warn('[AuthContext] Error persistiendo empresa en localStorage:', error);
     }
   }, [selectedEmpresa, isLogged, userContext]);
   
@@ -137,7 +137,7 @@ const AuthContextComponent = ({ children }) => {
       const valueToSave = selectedSucursal || 'todas';
       localStorage.setItem('globalSelectedSucursal', valueToSave);
     } catch (error) {
-      console.warn('[AuthContext] Error persistiendo sucursal en localStorage:', error);
+      logger.warn('[AuthContext] Error persistiendo sucursal en localStorage:', error);
     }
   }, [selectedSucursal, isLogged, userContext]);
 
@@ -154,7 +154,7 @@ const AuthContextComponent = ({ children }) => {
           localStorage.removeItem('selectedOwnerId');
         }
       } catch (error) {
-        console.warn('[AuthContext] Error persistiendo selectedOwnerId en localStorage:', error);
+        logger.warn('[AuthContext] Error persistiendo selectedOwnerId en localStorage:', error);
       }
     }
   }, [selectedOwnerId, isLogged, userContext]);
@@ -171,7 +171,7 @@ const AuthContextComponent = ({ children }) => {
           setSelectedOwnerId(savedOwnerId);
         }
       } catch (error) {
-        console.warn('[AuthContext] Error restaurando selectedOwnerId desde localStorage:', error);
+        logger.warn('[AuthContext] Error restaurando selectedOwnerId desde localStorage:', error);
       }
     }
   }, [isLogged, userContext]);
@@ -312,9 +312,9 @@ const AuthContextComponent = ({ children }) => {
             userSucursales || [],
             userFormularios || []
           );
-          console.log('✅ Cache actualizado automáticamente');
+          logger.debug('✅ Cache actualizado automáticamente');
         } catch (error) {
-          console.error('❌ Error actualizando cache:', error);
+          logger.error('❌ Error actualizando cache:', error);
         }
       }, 3000);
       
@@ -349,7 +349,7 @@ const AuthContextComponent = ({ children }) => {
           
           // Validar claims críticos
           if (!effectiveRole || (effectiveRole !== 'admin' && effectiveRole !== 'operario' && effectiveRole !== 'superdev')) {
-            console.error('[AUTH] ❌ Token sin role válido');
+            logger.error('[AUTH] ❌ Token sin role válido');
             await signOut(auth);
             setUser(null);
             setUserContext(null);
@@ -361,7 +361,7 @@ const AuthContextComponent = ({ children }) => {
           // admin → ownerId = uid (no viene en token)
           // operario → ownerId DEBE venir en el token
           if (effectiveRole === 'operario' && !tokenOwnerId) {
-            console.error('[AUTH] ❌ Operario sin ownerId en token');
+            logger.error('[AUTH] ❌ Operario sin ownerId en token');
             await signOut(auth);
             setUser(null);
             setUserContext(null);
@@ -373,7 +373,7 @@ const AuthContextComponent = ({ children }) => {
           const resolvedOwnerId = effectiveRole === 'operario' ? tokenOwnerId : firebaseUser.uid;
           
           // Logs de token
-          console.log('[AUTH][TOKEN]', { 
+          logger.debug('[AUTH][TOKEN]', { 
             authUid: firebaseUser.uid, 
             tokenRole, 
             tokenOwnerId 
@@ -400,14 +400,14 @@ const AuthContextComponent = ({ children }) => {
                 status: ownerData.status,
                 superdev: tokenSuperdev
               };
-              console.log('[AUTH][PROFILE]', { 
+              logger.debug('[AUTH][PROFILE]', { 
                 profileSource: 'owner', 
                 resolvedOwnerId, 
                 profileUid: context.uid 
               });
             } else {
               // ⚠️ Admin no encontrado - buscar en legacy
-              console.log('[AUTH] ⚠️ Owner no encontrado, buscando en legacy...');
+              logger.debug('[AUTH] ⚠️ Owner no encontrado, buscando en legacy...');
               const legacyUserDocRef = doc(db, "apps", "auditoria", "users", firebaseUser.uid);
               const legacyUserDocSnap = await getDoc(legacyUserDocRef);
               
@@ -423,14 +423,14 @@ const AuthContextComponent = ({ children }) => {
                   status: legacyData.status,
                   superdev: tokenSuperdev
                 };
-                console.log('[AUTH][PROFILE]', { 
+                logger.debug('[AUTH][PROFILE]', { 
                   profileSource: 'legacy', 
                   resolvedOwnerId, 
                   profileUid: context.uid 
                 });
               } else {
                 // ❌ Admin no existe ni owner ni legacy
-                console.error('[AUTH] ❌ Admin no registrado en ControlAudit (ni owner ni legacy)');
+                logger.error('[AUTH] ❌ Admin no registrado en ControlAudit (ni owner ni legacy)');
                 await signOut(auth);
                 setUser(null);
                 setUserContext(null);
@@ -446,7 +446,7 @@ const AuthContextComponent = ({ children }) => {
             
             if (!userDocSnap.exists()) {
               // ❌ Operario debe existir en owner-centric sí o sí
-              console.error('[AUTH] ❌ Operario no encontrado en owner-centric:', {
+              logger.error('[AUTH] ❌ Operario no encontrado en owner-centric:', {
                 ownerId: resolvedOwnerId,
                 userId: firebaseUser.uid
               });
@@ -469,16 +469,16 @@ const AuthContextComponent = ({ children }) => {
               superdev: tokenSuperdev,
               empresasPermitidas: userData.empresasAsignadas || []
             };
-            console.log('[AUTH][PROFILE]', { 
+            logger.debug('[AUTH][PROFILE]', { 
               profileSource: 'operarioDoc', 
               resolvedOwnerId, 
               profileUid: context.uid 
             });
-            console.log('[AUTH] ✅ Empresas permitidas cargadas para operario:', context.empresasPermitidas.length);
+            logger.debug('[AUTH] ✅ Empresas permitidas cargadas para operario:', context.empresasPermitidas.length);
           }
           
           setUserContext(context);
-          console.log('[AUTH] ✅ Usuario autenticado:', context);
+          logger.debug('[AUTH] ✅ Usuario autenticado:', context);
           
           // Cargar datos desde cache primero (solo datos secundarios)
           if (enableOffline && loadUserFromCache) {
@@ -502,7 +502,7 @@ const AuthContextComponent = ({ children }) => {
                 }
               }
             } catch (cacheError) {
-              console.warn('⚠️ Error cargando cache:', cacheError);
+              logger.warn('⚠️ Error cargando cache:', cacheError);
             }
           }
           
@@ -530,7 +530,7 @@ const AuthContextComponent = ({ children }) => {
                 localStorage.setItem(initKey, 'true');
               }
             } catch (error) {
-              console.error('[AuthContext] Error inicializando ControlFile:', error);
+              logger.error('[AuthContext] Error inicializando ControlFile:', error);
             }
           }
         } else {
@@ -568,12 +568,12 @@ const AuthContextComponent = ({ children }) => {
                 setEnableDeferredListeners(true);
               }
             } catch (error) {
-              console.error('Error cargando cache offline:', error);
+              logger.error('Error cargando cache offline:', error);
             }
           }
         }
       } catch (error) {
-        console.error('AuthContext error:', error);
+        logger.error('AuthContext error:', error);
         setUserContext(null);
       } finally {
         clearTimeout(timeoutId);
@@ -616,7 +616,7 @@ const AuthContextComponent = ({ children }) => {
   // El auth se maneja exclusivamente con custom claims del token
   const updateUserProfile = async (updates) => {
     if (!userContext?.ownerId || !user?.uid) {
-      console.error('[AuthContext] ownerId o uid no disponible');
+      logger.error('[AuthContext] ownerId o uid no disponible');
       return false;
     }
 
@@ -635,7 +635,7 @@ const AuthContextComponent = ({ children }) => {
       
       return true;
     } catch (error) {
-      console.error("Error al actualizar perfil:", error);
+      logger.error("Error al actualizar perfil:", error);
       throw error;
     }
   };
@@ -709,7 +709,7 @@ const AuthContextComponent = ({ children }) => {
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
-    console.error("useAuth debe ser usado dentro de un AuthContextProvider");
+    logger.error("useAuth debe ser usado dentro de un AuthContextProvider");
     throw new Error("useAuth debe ser usado dentro de un AuthContextProvider");
   }
   return context;

@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 // src/components/pages/capacitaciones/components/RegistrarAsistenciaInlineV2.jsx
 /**
  * Formulario inline para registrar asistencia usando EventRegistryInline base
@@ -14,7 +15,6 @@ import EventRegistryInline from '../../../shared/event-registry/EventRegistryInl
 import { registrosAsistenciaServiceAdapter } from '../../../../services/adapters/registrosAsistenciaServiceAdapter';
 import { capacitacionService } from '../../../../services/capacitacionService';
 import { useAuth } from '../../../../components/context/AuthContext';
-
 /**
  * Componente para registrar asistencia (versión migrada)
  */
@@ -49,7 +49,7 @@ const RegistrarAsistenciaInlineV2 = ({
       );
       setCapacitacion(capacitacionData);
     } catch (error) {
-      console.error('Error cargando capacitación:', error);
+      logger.error('Error cargando capacitación:', error);
     } finally {
       setLoading(false);
     }
@@ -80,7 +80,7 @@ const RegistrarAsistenciaInlineV2 = ({
       }));
       setPersonas(empleadosData);
     } catch (error) {
-      console.error('Error cargando empleados:', error);
+      logger.error('Error cargando empleados:', error);
     }
   };
 

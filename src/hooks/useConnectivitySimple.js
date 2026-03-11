@@ -1,5 +1,5 @@
+import logger from '@/utils/logger';
 import { useState, useEffect } from 'react';
-
 /**
  * Hook simple para detectar conectividad básica
  * Versión simplificada que evita problemas en producción
@@ -19,12 +19,12 @@ export const useConnectivitySimple = () => {
     }
 
     const handleOnline = () => {
-      console.log('🌐 Conexión restaurada');
+      logger.debug('🌐 Conexión restaurada');
       setIsOnline(true);
     };
 
     const handleOffline = () => {
-      console.log('📴 Conexión perdida');
+      logger.debug('📴 Conexión perdida');
       setIsOnline(false);
     };
 

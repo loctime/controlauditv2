@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 import { useEffect, useCallback } from "react";
 import { getDocs, query, where, limit, collection } from "firebase/firestore";
 import { dbAudit } from "../../../../../firebaseControlFile";
@@ -5,7 +6,6 @@ import { firestoreRoutesCore } from "../../../../../core/firestore/firestoreRout
 import { storageUtils } from "../../../../../utils/utilitiesOptimization";
 import { getCompleteUserCache } from "../../../../../services/completeOfflineCache";
 import { normalizeSucursal } from "../../../../../utils/firestoreUtils";
-
 export const useAuditoriaData = (
   setEmpresas,
   setSucursales,
@@ -55,7 +55,7 @@ export const useAuditoriaData = (
             }
           }
         } catch (localStorageError) {
-          console.error('Error parseando cache de localStorage:', localStorageError);
+          logger.error('Error parseando cache de localStorage:', localStorageError);
         }
       }
       
@@ -83,7 +83,7 @@ export const useAuditoriaData = (
             return cacheData;
           }
         } catch (indexedDBError) {
-          console.warn('Error cargando desde IndexedDB, intentando localStorage:', indexedDBError.message);
+          logger.warn('Error cargando desde IndexedDB, intentando localStorage:', indexedDBError.message);
         }
       }
       
@@ -114,12 +114,12 @@ export const useAuditoriaData = (
           }
         }
       } catch (localStorageError) {
-        console.error('Error parseando cache de localStorage:', localStorageError);
+        logger.error('Error parseando cache de localStorage:', localStorageError);
       }
       return null;
       
     } catch (error) {
-      console.error('Error al cargar cache offline:', error);
+      logger.error('Error al cargar cache offline:', error);
       return null;
     }
   }, [userProfile, setEmpresas, setFormularios, setSucursales]);
@@ -200,7 +200,7 @@ export const useAuditoriaData = (
           }
         }
       }).catch(err => {
-        console.warn('Error al cargar datos desde cache:', err);
+        logger.warn('Error al cargar datos desde cache:', err);
       });
     }
   }, [userProfile, userEmpresas, userFormularios, userSucursales, cargarDatosDelCache]);
@@ -257,7 +257,7 @@ export const useAuditoriaData = (
       
       return [];
     } catch (error) {
-      console.error("Error al obtener empresas con sucursales:", error);
+      logger.error("Error al obtener empresas con sucursales:", error);
       return [];
     }
   };
@@ -300,7 +300,7 @@ export const useAuditoriaData = (
           }
         }
       } catch (e) {
-        console.warn('Error cargando desde localStorage:', e);
+        logger.warn('Error cargando desde localStorage:', e);
       }
       // No retornar aquí, continuar con la lógica normal si localStorage falla
     }
@@ -327,7 +327,7 @@ export const useAuditoriaData = (
           }
         }
       } catch (error) {
-        console.error("Error al cargar empresas:", error);
+        logger.error("Error al cargar empresas:", error);
         setEmpresas([]);
       }
     };
@@ -350,7 +350,7 @@ export const useAuditoriaData = (
           }
         }
       } catch (e) {
-        console.warn('Error cargando sucursales desde localStorage:', e);
+        logger.warn('Error cargando sucursales desde localStorage:', e);
       }
       return;
     }
@@ -432,7 +432,7 @@ export const useAuditoriaData = (
 
         setSucursales(sucursalesData);
       } catch (error) {
-        console.error("Error al obtener sucursales:", error);
+        logger.error("Error al obtener sucursales:", error);
         setSucursales([]);
       }
     };
@@ -454,7 +454,7 @@ export const useAuditoriaData = (
           }
         }
       } catch (e) {
-        console.warn('Error cargando formularios desde localStorage:', e);
+        logger.warn('Error cargando formularios desde localStorage:', e);
       }
       return;
     }
@@ -534,7 +534,7 @@ export const useAuditoriaData = (
           }
         }
       } catch (error) {
-        console.error("Error al obtener formularios:", error);
+        logger.error("Error al obtener formularios:", error);
         
         // Fallback: intentar cargar desde cache en caso de error
         try {
@@ -543,7 +543,7 @@ export const useAuditoriaData = (
             setFormularios(cacheData.formularios);
           }
         } catch (cacheError) {
-          console.error("Error al cargar desde cache:", cacheError);
+          logger.error("Error al cargar desde cache:", cacheError);
           setFormularios([]);
         }
       }

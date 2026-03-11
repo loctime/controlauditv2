@@ -1,7 +1,7 @@
+import logger from '@/utils/logger';
 import { useState, useEffect, useCallback } from 'react';
 import { obtenerAccidentes } from '../../../../services/accidenteService';
 import Swal from 'sweetalert2';
-
 /**
  * Hook para cargar accidentes con filtros
  */
@@ -35,7 +35,7 @@ export const useAccidentesData = (selectedEmpresa, selectedSucursal, filterTipo,
       const accidentesData = await obtenerAccidentes(filtros, userProfile);
       setAccidentes(accidentesData);
     } catch (error) {
-      console.error('Error cargando accidentes:', error);
+      logger.error('Error cargando accidentes:', error);
       Swal.fire('Error', 'No se pudieron cargar los accidentes', 'error');
     } finally {
       setLoading(false);

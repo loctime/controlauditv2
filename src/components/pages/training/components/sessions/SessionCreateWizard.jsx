@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 import { useEffect, useMemo, useState } from 'react';
 import {
   Alert,
@@ -50,8 +51,8 @@ function planStatusLabel(status) {
   return labels[status] || status || 'Sin dato';
 }
 
-function canDetectPlan(form) {
-  return Boolean(form.trainingTypeId && form.companyId && form.branchId && form.scheduledDate);
+function canDetectPlan(trainingTypeId, companyId, branchId, scheduledDate) {
+  return Boolean(trainingTypeId && companyId && branchId && scheduledDate);
 }
 
 export default function SessionCreateWizard({ ownerId, onCreated }) {
@@ -72,7 +73,6 @@ export default function SessionCreateWizard({ ownerId, onCreated }) {
   const [planCandidates, setPlanCandidates] = useState([]);
   const [planMode, setPlanMode] = useState('ad_hoc');
   const [selectedPlanItemId, setSelectedPlanItemId] = useState('');
-  const [lastPlanLookupKey, setLastPlanLookupKey] = useState('');
 
   const [form, setForm] = useState({
     trainingTypeId: '',
@@ -83,6 +83,11 @@ export default function SessionCreateWizard({ ownerId, onCreated }) {
     location: '',
     scheduledDate: ''
   });
+
+  const planTrainingTypeId = form.trainingTypeId;
+  const planCompanyId = form.companyId;
+  const planBranchId = form.branchId;
+  const planScheduledDate = form.scheduledDate;
 
   const branchOptions = useMemo(
     () => userSucursales.filter((branch) => !form.companyId || branch.empresaId === form.companyId),
@@ -190,23 +195,11 @@ export default function SessionCreateWizard({ ownerId, onCreated }) {
     let alive = true;
 
     const detectPlanCandidates = async () => {
-      if (!ownerId || !canDetectPlan(form)) {
+      if (!ownerId || !canDetectPlan(planTrainingTypeId, planCompanyId, planBranchId, planScheduledDate)) {
         setPlanCandidates([]);
         setSelectedPlanItemId('');
         setPlanMode('ad_hoc');
         setPlanDetectError('');
-        setLastPlanLookupKey('');
-        return;
-      }
-
-      const lookupKey = [
-        form.trainingTypeId,
-        form.companyId,
-        form.branchId,
-        form.scheduledDate
-      ].join('|');
-
-      if (lookupKey === lastPlanLookupKey) {
         return;
       }
 
@@ -215,16 +208,15 @@ export default function SessionCreateWizard({ ownerId, onCreated }) {
 
       try {
         const candidates = await trainingPlanService.findCompatiblePlanItems(ownerId, {
-          trainingTypeId: form.trainingTypeId,
-          companyId: form.companyId,
-          branchId: form.branchId,
-          scheduledDate: toIso(form.scheduledDate)
+          trainingTypeId: planTrainingTypeId,
+          companyId: planCompanyId,
+          branchId: planBranchId,
+          scheduledDate: toIso(planScheduledDate)
         });
 
         if (!alive) return;
 
         setPlanCandidates(candidates);
-        setLastPlanLookupKey(lookupKey);
 
         if (candidates.length > 0) {
           setPlanMode('plan');
@@ -256,7 +248,7 @@ export default function SessionCreateWizard({ ownerId, onCreated }) {
     return () => {
       alive = false;
     };
-  }, [ownerId, form, form.trainingTypeId, form.companyId, form.branchId, form.scheduledDate, lastPlanLookupKey]);
+  }, [ownerId, planTrainingTypeId, planCompanyId, planBranchId, planScheduledDate]);
 
   const loadSuggestions = async () => {
     if (!ownerId) return;
@@ -274,9 +266,9 @@ export default function SessionCreateWizard({ ownerId, onCreated }) {
 
       const [rules, records] = await Promise.all([
         trainingRequirementService.listRules(ownerId, {
-          companyId: form.companyId,
-          branchId: form.branchId,
-          trainingTypeId: form.trainingTypeId,
+          companyId: planCompanyId,
+          branchId: planBranchId,
+          trainingTypeId: planTrainingTypeId,
           status: 'active'
         }),
         employeeTrainingRecordService.listByEmployees(ownerId, employeesList.map((employee) => employee.id))
@@ -320,7 +312,7 @@ export default function SessionCreateWizard({ ownerId, onCreated }) {
       setSelectedIds(suggestedArr);
       setStep(2);
     } catch (err) {
-      console.error('[SessionCreateWizard] suggestion error', err);
+      logger.error('[SessionCreateWizard] suggestion error', err);
       setError(err.message || 'No se pudieron cargar sugerencias de participantes.');
     } finally {
       setSaving(false);
@@ -344,19 +336,19 @@ export default function SessionCreateWizard({ ownerId, onCreated }) {
 
     try {
       const ref = await trainingSessionService.createSession(ownerId, {
-        trainingTypeId: form.trainingTypeId,
-        companyId: form.companyId,
-        branchId: form.branchId,
+        trainingTypeId: planTrainingTypeId,
+        companyId: planCompanyId,
+        branchId: planBranchId,
         instructorId: form.instructorId,
         location: form.location,
         modality: form.modality,
-        scheduledDate: toIso(form.scheduledDate),
+        scheduledDate: toIso(planScheduledDate),
         status: TRAINING_SESSION_STATUSES.SCHEDULED,
         sessionOrigin: planMode === 'plan' ? 'plan' : 'ad_hoc',
         planId: planMode === 'plan' ? selectedPlanCandidate?.planId || null : null,
-        planItemId: planMode === 'plan' ? selectedPlanCandidate?.planItemId || null : null,
-        planLinkedBy: planMode === 'plan' ? userProfile?.uid || null : null,
-        planLinkedAt: planMode === 'plan' ? new Date().toISOString() : null
+        planItemId: planMode === 'plan' ? selectedPlanCandidate?.planItemId || null : null
+      }, {
+        currentUserId: userProfile?.uid || null
       });
 
       if (selectedIds.length > 0) {
@@ -371,7 +363,6 @@ export default function SessionCreateWizard({ ownerId, onCreated }) {
       setPlanCandidates([]);
       setSelectedPlanItemId('');
       setPlanMode('ad_hoc');
-      setLastPlanLookupKey('');
       setForm((prev) => ({
         ...prev,
         location: '',
@@ -398,7 +389,7 @@ export default function SessionCreateWizard({ ownerId, onCreated }) {
   const planCandidateLabel = (candidate) => {
     const companyName = companyById[form.companyId]?.nombre || 'Empresa';
     const branchName = branchById[form.branchId]?.nombre || 'Sucursal';
-    return `${candidate.planYear} · ${companyName} / ${branchName} · Mes ${candidate.plannedMonth} · ${planStatusLabel(candidate.planStatus)}`;
+    return `${candidate.planYear} | ${companyName} / ${branchName} | Mes ${candidate.plannedMonth} | ${planStatusLabel(candidate.planStatus)}`;
   };
 
   return (
@@ -505,13 +496,13 @@ export default function SessionCreateWizard({ ownerId, onCreated }) {
                 {planDetectError && <Alert severity="warning" sx={{ mb: 1.5 }}>{planDetectError}</Alert>}
                 {planDetectLoading && <Alert severity="info" sx={{ mb: 1.5 }}>Buscando items compatibles del plan anual...</Alert>}
 
-                {!canDetectPlan(form) && (
+                {!canDetectPlan(planTrainingTypeId, planCompanyId, planBranchId, planScheduledDate) && (
                   <Typography variant="body2" color="text.secondary">
                     Completa tipo, empresa, sucursal y fecha para detectar items del plan anual.
                   </Typography>
                 )}
 
-                {canDetectPlan(form) && !planDetectLoading && (
+                {canDetectPlan(planTrainingTypeId, planCompanyId, planBranchId, planScheduledDate) && !planDetectLoading && (
                   <Stack spacing={1.5}>
                     {planCandidates.length > 0 ? (
                       <>
@@ -728,4 +719,8 @@ export default function SessionCreateWizard({ ownerId, onCreated }) {
     </Paper>
   );
 }
+
+
+
+
 

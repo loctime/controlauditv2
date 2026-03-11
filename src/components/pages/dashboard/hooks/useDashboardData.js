@@ -1,10 +1,10 @@
+import logger from '@/utils/logger';
 import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '@/components/context/AuthContext';
 import { auditoriaService } from '../../../../services/auditoriaService';
 import { obtenerAccidentes } from '../../../../services/accidenteService';
 import { capacitacionService } from '../../../../services/capacitacionService';
 import autoSaveService from '../../../pages/auditoria/auditoria/services/autoSaveService';
-
 /**
  * Hook central para reunir datos del dashboard
  * Reutiliza servicios existentes sin duplicar lógica
@@ -60,7 +60,7 @@ export const useDashboardData = () => {
           summary
         });
       } catch (error) {
-        console.error('[useDashboardData] Error cargando datos:', error);
+        logger.error('[useDashboardData] Error cargando datos:', error);
       } finally {
         setLoading(false);
       }
@@ -75,7 +75,7 @@ export const useDashboardData = () => {
       if (!userProfile?.ownerId) return [];
       return await auditoriaService.getUserAuditorias(user?.uid, userProfile?.role, userProfile);
     } catch (error) {
-      console.error('[useDashboardData] Error cargando auditorías:', error);
+      logger.error('[useDashboardData] Error cargando auditorías:', error);
       return [];
     }
   };
@@ -86,7 +86,7 @@ export const useDashboardData = () => {
       if (!userProfile?.ownerId) return [];
       return await obtenerAccidentes({}, userProfile);
     } catch (error) {
-      console.error('[useDashboardData] Error cargando accidentes:', error);
+      logger.error('[useDashboardData] Error cargando accidentes:', error);
       return [];
     }
   };
@@ -97,7 +97,7 @@ export const useDashboardData = () => {
       if (!userProfile?.ownerId) return [];
       return await capacitacionService.getAllCapacitaciones(userProfile.ownerId);
     } catch (error) {
-      console.error('[useDashboardData] Error cargando capacitaciones:', error);
+      logger.error('[useDashboardData] Error cargando capacitaciones:', error);
       return [];
     }
   };
@@ -108,7 +108,7 @@ export const useDashboardData = () => {
       if (!user?.uid) return [];
       return await autoSaveService.getOfflineAuditorias(user.uid);
     } catch (error) {
-      console.error('[useDashboardData] Error cargando auditorías offline:', error);
+      logger.error('[useDashboardData] Error cargando auditorías offline:', error);
       return [];
     }
   };

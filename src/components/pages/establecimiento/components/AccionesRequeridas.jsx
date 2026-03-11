@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 import React, { useState, useEffect } from 'react';
 import {
   Box,
@@ -79,7 +80,7 @@ const AccionesRequeridas = ({ sucursalId, sucursalNombre }) => {
       const accionesData = await AccionesRequeridasService.obtenerAccionesPorSucursal(accionesCollectionRef, filtros);
       setAcciones(accionesData);
     } catch (error) {
-      console.error('Error cargando acciones requeridas:', error);
+      logger.error('Error cargando acciones requeridas:', error);
     } finally {
       setLoading(false);
     }
@@ -191,7 +192,7 @@ const AccionesRequeridas = ({ sucursalId, sucursalNombre }) => {
       setAccionSeleccionada(null);
       await cargarAcciones();
     } catch (error) {
-      console.error('Error guardando:', error);
+      logger.error('Error guardando:', error);
       alert('Error al guardar. Por favor, intente nuevamente.');
     }
   };

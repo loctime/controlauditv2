@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 import React, { useState, useEffect } from 'react';
 import {
   Box,
@@ -60,7 +61,7 @@ const EmpleadosContent = ({ sucursalId, sucursalNombre, selectedEmpresa, navigat
 
   const loadEmpleados = async () => {
     if (!userProfile?.ownerId) {
-      console.error('Error: userProfile.ownerId es requerido');
+      logger.error('Error: userProfile.ownerId es requerido');
       return;
     }
     setLoading(true);
@@ -75,7 +76,7 @@ const EmpleadosContent = ({ sucursalId, sucursalNombre, selectedEmpresa, navigat
       }));
       setEmpleados(empleadosData);
     } catch (error) {
-      console.error('Error cargando empleados:', error);
+      logger.error('Error cargando empleados:', error);
     } finally {
       setLoading(false);
     }
@@ -179,7 +180,7 @@ const EmpleadosContent = ({ sucursalId, sucursalNombre, selectedEmpresa, navigat
         text: 'Empleado creado exitosamente'
       });
     } catch (error) {
-      console.error('Error creando empleado:', error);
+      logger.error('Error creando empleado:', error);
       Swal.fire({
         icon: 'error',
         title: 'Error',
@@ -276,7 +277,7 @@ const EmpleadosContent = ({ sucursalId, sucursalNombre, selectedEmpresa, navigat
         text: 'Empleado actualizado exitosamente'
       });
     } catch (error) {
-      console.error('Error actualizando empleado:', error);
+      logger.error('Error actualizando empleado:', error);
       Swal.fire({
         icon: 'error',
         title: 'Error',
@@ -329,7 +330,7 @@ const EmpleadosContent = ({ sucursalId, sucursalNombre, selectedEmpresa, navigat
           text: `${empleado.nombre} ${empleado.apellido} ha sido desactivado`
         });
       } catch (error) {
-        console.error('Error desactivando empleado:', error);
+        logger.error('Error desactivando empleado:', error);
         Swal.fire({
           icon: 'error',
           title: 'Error',
@@ -380,7 +381,7 @@ const EmpleadosContent = ({ sucursalId, sucursalNombre, selectedEmpresa, navigat
           text: `${empleado.nombre} ${empleado.apellido} ha sido eliminado permanentemente`
         });
       } catch (error) {
-        console.error('Error eliminando empleado:', error);
+        logger.error('Error eliminando empleado:', error);
         Swal.fire({
           icon: 'error',
           title: 'Error',

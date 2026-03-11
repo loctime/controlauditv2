@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 import React, { useState, useEffect } from 'react';
 import {
   Box,
@@ -48,7 +49,7 @@ const AccidentesTab = ({ empresaId, empresaNombre }) => {
       
       setRecentesAccidentes(ordenados);
     } catch (error) {
-      console.error('Error cargando estadísticas:', error);
+      logger.error('Error cargando estadísticas:', error);
     } finally {
       setLoading(false);
     }

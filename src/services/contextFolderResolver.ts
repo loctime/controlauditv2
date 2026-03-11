@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 /**
  * Resolver global de carpetas basado en contexto de evento
  * Iteración 1: Resuelve estructura de carpetas según contextType y configuración
@@ -11,7 +12,6 @@
 import { ensureTaskbarFolder, ensureSubFolder } from './controlFileB2Service';
 import { FileContext } from '../types/fileContext';
 import { getContextConfig } from '../config/contextConfig';
-
 /**
  * Cache en memoria para resoluciones de carpetas
  * Evita múltiples llamadas a ControlFile para la misma estructura
@@ -204,7 +204,7 @@ export async function resolveContextFolder(context: FileContext): Promise<string
 
     return currentFolderId;
   } catch (error) {
-    console.error('[contextFolderResolver] ❌ Error al resolver carpeta:', error);
+    logger.error('[contextFolderResolver] ❌ Error al resolver carpeta:', error);
     throw error instanceof Error ? error : new Error(String(error));
   }
 }

@@ -1,3 +1,4 @@
+﻿import logger from '@/utils/logger';
 import { useEffect, useMemo, useState } from "react";
 import {
   Dialog,
@@ -40,10 +41,7 @@ import { firestoreRoutesCore } from "../../../../core/firestore/firestoreRoutes.
 import { useAuth } from '@/components/context/AuthContext';
 import dayjs from "dayjs";
 
-const ACCEPTED_EXTENSIONS = [
-  '.pdf', '.jpg', '.jpeg', '.png', '.webp', '.doc', '.docx', '.txt'
-];
-const MAX_FILE_SIZE = 10 * 1024 * 1024;
+import { validateFiles, MAX_FILE_SIZE } from '../../../../services/fileValidationPolicy';
 
 const getInitialState = () => ({
   empleadoId: "",
@@ -208,7 +206,7 @@ export default function AusenciaFormDialog({
         const snapshot = await getDocs(q);
         setEmpleados(normalizeEmployees(snapshot));
       } catch (fetchError) {
-        console.error("Error cargando empleados:", fetchError);
+        logger.error("Error cargando empleados:", fetchError);
         setEmpleados([]);
       } finally {
         setLoadingEmployees(false);
@@ -230,31 +228,19 @@ export default function AusenciaFormDialog({
     const files = Array.from(event.target.files || []);
     if (!files.length) return;
 
-    const nextFiles = [];
-    const nextErrors = [];
+    const validation = validateFiles(files);
 
-    files.forEach((file) => {
-      const lower = file.name.toLowerCase();
-      const extensionAllowed = ACCEPTED_EXTENSIONS.some((ext) => lower.endsWith(ext));
+    const nextFiles = validation.accepted.map((file) => ({
+      id: ${file.name}---,
+      file,
+      name: file.name,
+      size: file.size,
+      type: file.type || 'application/octet-stream'
+    }));
 
-      if (!extensionAllowed) {
-        nextErrors.push(normalizeFileError(file, 'Tipo de archivo no permitido'));
-        return;
-      }
-
-      if (file.size > MAX_FILE_SIZE) {
-        nextErrors.push(normalizeFileError(file, 'Archivo supera 10MB'));
-        return;
-      }
-
-      nextFiles.push({
-        id: `${file.name}-${file.size}-${Date.now()}-${Math.random().toString(16).slice(2)}`,
-        file,
-        name: file.name,
-        size: file.size,
-        type: file.type || 'application/octet-stream'
-      });
-    });
+    const nextErrors = validation.rejected.map((entry) =>
+      normalizeFileError(entry.fileName, entry.issues.map((issue) => issue.message).join(', '))
+    );
 
     setSelectedFiles((prev) => [...prev, ...nextFiles]);
     if (nextErrors.length > 0) {
@@ -366,7 +352,7 @@ export default function AusenciaFormDialog({
         onClose?.();
       }
     } catch (submitError) {
-      console.error("Error guardando ausencia:", submitError);
+      logger.error("Error guardando ausencia:", submitError);
       setError(
         "No se pudo guardar la ausencia. Verifica los datos e intenta nuevamente."
       );
@@ -490,7 +476,7 @@ export default function AusenciaFormDialog({
                       return;
                     }
                     const confirmacion = window.confirm(
-                      `�Eliminar el tipo "${actual}" de las sugerencias?`
+                      `ï¿½Eliminar el tipo "${actual}" de las sugerencias?`
                     );
                     if (!confirmacion) return;
                     if (typeof onRemoveTipo === "function") {
@@ -677,6 +663,9 @@ export default function AusenciaFormDialog({
     </Dialog>
   );
 }
+
+
+
 
 
 

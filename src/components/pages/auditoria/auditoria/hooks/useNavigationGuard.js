@@ -1,6 +1,6 @@
+import logger from '@/utils/logger';
 import { useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-
 export const useNavigationGuard = ({
   hasUnsavedChanges,
   onSave,
@@ -55,11 +55,11 @@ export const useNavigationGuard = ({
     }
 
     try {
-      console.log('🔄 Autoguardando cambios...');
+      logger.debug('🔄 Autoguardando cambios...');
       await onSave();
-      console.log('✅ Autoguardado completado');
+      logger.debug('✅ Autoguardado completado');
     } catch (error) {
-      console.error('❌ Error en autoguardado:', error);
+      logger.error('❌ Error en autoguardado:', error);
     }
   }, [onSave, checkUnsavedChanges]);
 
@@ -77,9 +77,9 @@ export const useNavigationGuard = ({
         if (onSave) {
           try {
             await onSave();
-            console.log('💾 Cambios guardados antes de salir');
+            logger.debug('💾 Cambios guardados antes de salir');
           } catch (error) {
-            console.error('❌ Error al guardar antes de salir:', error);
+            logger.error('❌ Error al guardar antes de salir:', error);
           }
         }
         
@@ -97,9 +97,9 @@ export const useNavigationGuard = ({
     if (onDiscard) {
       try {
         await onDiscard();
-        console.log('🗑️ Cambios descartados');
+        logger.debug('🗑️ Cambios descartados');
       } catch (error) {
-        console.error('❌ Error al descartar cambios:', error);
+        logger.error('❌ Error al descartar cambios:', error);
       }
     }
     
@@ -123,7 +123,7 @@ export const useNavigationGuard = ({
             try {
               await onSave();
             } catch (error) {
-              console.error('❌ Error al guardar antes de salir:', error);
+              logger.error('❌ Error al guardar antes de salir:', error);
             }
           }
           

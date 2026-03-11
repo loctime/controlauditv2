@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 import React from 'react';
 import {
   Dialog,
@@ -28,7 +29,7 @@ const ExitConfirmation = ({
       await onSave();
       onClose();
     } catch (error) {
-      console.error('Error al guardar antes de salir:', error);
+      logger.error('Error al guardar antes de salir:', error);
     }
   };
 
@@ -37,7 +38,7 @@ const ExitConfirmation = ({
       await onDiscard();
       onClose();
     } catch (error) {
-      console.error('Error al descartar cambios:', error);
+      logger.error('Error al descartar cambios:', error);
     }
   };
 

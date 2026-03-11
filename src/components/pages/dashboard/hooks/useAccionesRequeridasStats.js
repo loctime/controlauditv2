@@ -1,10 +1,10 @@
+import logger from '@/utils/logger';
 import { useState, useEffect } from 'react';
 import AccionesRequeridasService from '../../../../services/accionesRequeridasService';
 import { useAuth } from '@/components/context/AuthContext';
 import { dbAudit } from '../../../../firebaseControlFile';
 import { firestoreRoutesCore } from '../../../../core/firestore/firestoreRoutes.core';
 import { doc, collection } from 'firebase/firestore';
-
 export const useAccionesRequeridasStats = (sucursales, selectedSucursal) => {
   const { userProfile } = useAuth();
   const [estadisticas, setEstadisticas] = useState({});
@@ -64,7 +64,7 @@ export const useAccionesRequeridasStats = (sucursales, selectedSucursal) => {
             totalEnProceso += stats.enProceso;
             totalCanceladas += stats.canceladas;
           } catch (error) {
-            console.warn(`Error cargando estadísticas para sucursal ${sucursal.id}:`, error);
+            logger.warn(`Error cargando estadísticas para sucursal ${sucursal.id}:`, error);
             estadisticasPorSucursal[sucursal.id] = {
               total: 0,
               pendientes: 0,
@@ -88,7 +88,7 @@ export const useAccionesRequeridasStats = (sucursales, selectedSucursal) => {
           });
         }
       } catch (error) {
-        console.error('Error cargando estadísticas de acciones requeridas:', error);
+        logger.error('Error cargando estadísticas de acciones requeridas:', error);
       } finally {
         if (isMounted) {
           setLoading(false);

@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 // Optimización de importaciones de Payment
 // Importar solo los componentes necesarios para reducir el tamaño del bundle
 
@@ -65,7 +66,7 @@ export const paymentUtils = {
       
       return await response.json();
     } catch (error) {
-      console.error('Error creating payment preference:', error);
+      logger.error('Error creating payment preference:', error);
       throw error;
     }
   },
@@ -105,7 +106,7 @@ export const paymentUtils = {
       
       return await response.json();
     } catch (error) {
-      console.error('Error processing card payment:', error);
+      logger.error('Error processing card payment:', error);
       throw error;
     }
   },
@@ -121,7 +122,7 @@ export const paymentUtils = {
       
       return await response.json();
     } catch (error) {
-      console.error('Error fetching payment methods:', error);
+      logger.error('Error fetching payment methods:', error);
       throw error;
     }
   },
@@ -137,7 +138,7 @@ export const paymentUtils = {
       
       return await response.json();
     } catch (error) {
-      console.error('Error fetching card info:', error);
+      logger.error('Error fetching card info:', error);
       throw error;
     }
   },

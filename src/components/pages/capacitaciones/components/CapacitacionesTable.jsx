@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   Table,
@@ -179,7 +180,7 @@ const CapacitacionesTable = ({
                   statsCache.current[capIdStr] = empleados.length;
                 }
               }).catch(err => {
-                console.error('[CapacitacionesTable] Error cargando stats:', err);
+                logger.error('[CapacitacionesTable] Error cargando stats:', err);
                 if (mounted) {
                   statsCache.current[capIdStr] = 0;
                 }
@@ -197,7 +198,7 @@ const CapacitacionesTable = ({
                   evidenciasCache.current[capIdStr] = imgs.length;
                 }
               }).catch(err => {
-                console.error('[CapacitacionesTable] Error cargando evidencias:', err);
+                logger.error('[CapacitacionesTable] Error cargando evidencias:', err);
                 if (mounted) {
                   evidenciasCache.current[capIdStr] = 0;
                 }
@@ -216,7 +217,7 @@ const CapacitacionesTable = ({
           setReady(true);
         }
       } catch (error) {
-        console.error('[CapacitacionesTable] Error en loadAll:', error);
+        logger.error('[CapacitacionesTable] Error en loadAll:', error);
         if (mounted) {
           setReady(true); // Mostrar tabla aunque haya errores
         }

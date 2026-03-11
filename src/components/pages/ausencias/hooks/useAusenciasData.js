@@ -1,7 +1,7 @@
+import logger from '@/utils/logger';
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { listAusencias } from "../../../../services/ausenciasService";
 import { useAuth } from '@/components/context/AuthContext';
-
 export const useAusenciasData = (
   selectedEmpresa,
   selectedSucursal,
@@ -40,7 +40,7 @@ export const useAusenciasData = (
       });
       setAusencias(data);
     } catch (error) {
-      console.error("Error cargando ausencias:", error);
+      logger.error("Error cargando ausencias:", error);
       setAusencias([]);
     } finally {
       setLoading(false);

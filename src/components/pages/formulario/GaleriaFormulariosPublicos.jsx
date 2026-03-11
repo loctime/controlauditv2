@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 import React, { useEffect, useState, useMemo } from 'react';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { dbAudit } from '../../../firebaseControlFile';
@@ -39,7 +40,7 @@ const GaleriaFormulariosPublicos = ({ onCopiar }) => {
       const snapshot = await getDocs(q);
       setFormularios(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
       setLoading(false);
-      console.debug('[GaleriaFormulariosPublicos] Formularios públicos cargados:', snapshot.docs.length);
+      logger.debug('[GaleriaFormulariosPublicos] Formularios públicos cargados:', snapshot.docs.length);
     };
     fetchPublicForms();
   }, []);
@@ -69,12 +70,12 @@ const GaleriaFormulariosPublicos = ({ onCopiar }) => {
           );
         });
         
-        console.debug('[GaleriaFormulariosPublicos] Formularios copiados detectados:', formulariosCopiados.map(f => f.nombre));
+        logger.debug('[GaleriaFormulariosPublicos] Formularios copiados detectados:', formulariosCopiados.map(f => f.nombre));
         
         setMisFormulariosCopiados(formulariosCopiados);
-        console.debug('[GaleriaFormulariosPublicos] Formularios del usuario cargados:', misFormularios.length);
+        logger.debug('[GaleriaFormulariosPublicos] Formularios del usuario cargados:', misFormularios.length);
       } catch (error) {
-        console.error('Error al cargar formularios del usuario:', error);
+        logger.error('Error al cargar formularios del usuario:', error);
       }
     };
     
@@ -134,15 +135,15 @@ const GaleriaFormulariosPublicos = ({ onCopiar }) => {
       if (!yaCopiadoAntes && !usuarioYaCopio) {
         const usuariosQueCopiaron = form.usuariosQueCopiaron || [];
         await formularioService.incrementarContadorCopias(form.id, userProfile.uid, form, usuariosQueCopiaron);
-        console.debug('[GaleriaFormulariosPublicos] Contador incrementado - primera copia del usuario');
+        logger.debug('[GaleriaFormulariosPublicos] Contador incrementado - primera copia del usuario');
       } else {
-        console.debug('[GaleriaFormulariosPublicos] No se incrementa contador - usuario ya copió este formulario antes');
+        logger.debug('[GaleriaFormulariosPublicos] No se incrementa contador - usuario ya copió este formulario antes');
       }
       
       // Copiar realmente el formulario a la cuenta del usuario
       if (userProfile) {
         await formularioService.copiarFormularioPublico(form, userProfile);
-        console.debug('[GaleriaFormulariosPublicos] Formulario copiado a sistema:', userProfile.uid);
+        logger.debug('[GaleriaFormulariosPublicos] Formulario copiado a sistema:', userProfile.uid);
       }
       
       // Llamar función onCopiar si existe (para compatibilidad)
@@ -157,7 +158,7 @@ const GaleriaFormulariosPublicos = ({ onCopiar }) => {
         } : f));
       }
       
-      console.log('[GaleriaFormulariosPublicos] Formulario copiado:', form.id);
+      logger.debug('[GaleriaFormulariosPublicos] Formulario copiado:', form.id);
       
       // Actualizar lista de formularios copiados
       setMisFormulariosCopiados(prev => [...prev, { ...form, creadorId: userProfile.uid }]);
@@ -166,7 +167,7 @@ const GaleriaFormulariosPublicos = ({ onCopiar }) => {
       setCopiadoExitoso(form.id);
       setTimeout(() => setCopiadoExitoso(null), 2000);
     } catch (e) {
-      console.error('Error al copiar formulario:', e);
+      logger.error('Error al copiar formulario:', e);
     } finally {
       setCopiandoId(null);
     }
@@ -180,9 +181,9 @@ const GaleriaFormulariosPublicos = ({ onCopiar }) => {
       const newRating = ((form.rating || 0) * (form.ratingsCount || 0) + value) / ratingsCount;
       await formularioService.actualizarRating(form.id, newRating, ratingsCount, form);
       setFormularios(prev => prev.map(f => f.id === form.id ? { ...f, rating: newRating, ratingsCount } : f));
-      console.log('[GaleriaFormulariosPublicos] Formulario puntuado:', form.id, value);
+      logger.debug('[GaleriaFormulariosPublicos] Formulario puntuado:', form.id, value);
     } catch (e) {
-      console.error('Error al puntuar:', e);
+      logger.error('Error al puntuar:', e);
     } finally {
       setRatingLoading(null);
     }
@@ -208,7 +209,7 @@ const GaleriaFormulariosPublicos = ({ onCopiar }) => {
         variant="outlined"
         startIcon={<ArrowBackIcon />}
         onClick={() => {
-          console.debug('[GaleriaFormulariosPublicos] Volver a /editar');
+          logger.debug('[GaleriaFormulariosPublicos] Volver a /editar');
           navigate('/editar');
         }}
         aria-label="Volver a edición"
@@ -259,7 +260,7 @@ const GaleriaFormulariosPublicos = ({ onCopiar }) => {
           
           // Debug: mostrar información sobre formularios copiados
           if (form.nombre === 'RGRL') {
-            console.debug('[DEBUG] Formulario RGRL:', {
+            logger.debug('[DEBUG] Formulario RGRL:', {
               formId: form.id,
               misFormulariosCopiados: misFormulariosCopiados.map(f => ({ 
                 nombre: f.nombre, 

@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 // src/components/pages/admin/hooks/useClienteDashboard.js
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { collection, addDoc, query, where, getDocs, updateDoc, doc, deleteDoc, serverTimestamp, limit, orderBy, getDoc } from "firebase/firestore";
@@ -6,7 +7,6 @@ import { firestoreRoutesCore } from "../../../../core/firestore/firestoreRoutes.
 import { useAuth } from '@/components/context/AuthContext';
 import { toast } from 'react-toastify';
 import { normalizeSucursal } from '../../../../utils/firestoreUtils';
-
 export const useClienteDashboard = () => {
   const { userProfile, role } = useAuth();
   const [auditorias, setAuditorias] = useState([]);
@@ -37,7 +37,7 @@ export const useClienteDashboard = () => {
       
       return empresasData;
     } catch (error) {
-      console.error('Error cargando empresas:', error);
+      logger.error('Error cargando empresas:', error);
       return [];
     }
   }, [userProfile?.ownerId]);
@@ -77,7 +77,7 @@ export const useClienteDashboard = () => {
       }
       return sucursalesData;
     } catch (error) {
-      console.error('Error cargando sucursales:', error);
+      logger.error('Error cargando sucursales:', error);
       return [];
     }
   }, [userProfile?.ownerId]);
@@ -98,7 +98,7 @@ export const useClienteDashboard = () => {
       
       return formulariosData;
     } catch (error) {
-      console.error('Error cargando formularios:', error);
+      logger.error('Error cargando formularios:', error);
       return [];
     }
   }, [userProfile?.ownerId]);
@@ -132,7 +132,7 @@ export const useClienteDashboard = () => {
           }
           return null;
         } catch (error) {
-          console.error(`Error cargando usuario ${userId}:`, error);
+          logger.error(`Error cargando usuario ${userId}:`, error);
           return null;
         }
       });
@@ -164,7 +164,7 @@ export const useClienteDashboard = () => {
         return auditoria;
       });
     } catch (error) {
-      console.error('Error cargando información de usuarios:', error);
+      logger.error('Error cargando información de usuarios:', error);
       return auditoriasData;
     }
   }, []);
@@ -193,7 +193,7 @@ export const useClienteDashboard = () => {
 
       return auditoriasData;
     } catch (error) {
-      console.error('Error cargando auditorías:', error);
+      logger.error('Error cargando auditorías:', error);
       return [];
     }
   }, [userProfile?.uid, cargarInformacionUsuarios]);
@@ -216,7 +216,7 @@ export const useClienteDashboard = () => {
             };
           }
         } catch (error) {
-          console.error('Error obteniendo información del encargado:', error);
+          logger.error('Error obteniendo información del encargado:', error);
           // Si no se puede obtener la información, usar solo el ID
           encargadoInfo = { id: formData.encargado };
         }
@@ -258,7 +258,7 @@ export const useClienteDashboard = () => {
       toast.success('Auditoría agendada exitosamente');
       return true;
     } catch (error) {
-      console.error('Error agendando auditoría:', error);
+      logger.error('Error agendando auditoría:', error);
       toast.error('Error al agendar la auditoría');
       return false;
     }
@@ -270,7 +270,7 @@ export const useClienteDashboard = () => {
       try {
         if (!userProfile?.uid) return;
 
-        console.log('[DEBUG] Iniciando carga paralela de datos...');
+        logger.debug('[DEBUG] Iniciando carga paralela de datos...');
         
         // Cargar empresas primero (necesarias para sucursales)
         setLoadingStates(prev => ({ ...prev, empresas: true }));
@@ -308,7 +308,7 @@ export const useClienteDashboard = () => {
           auditorias: false
         });
 
-        console.log('[DEBUG] Datos cargados con optimización:', {
+        logger.debug('[DEBUG] Datos cargados con optimización:', {
           empresas: empresasData.length,
           sucursales: sucursalesData.length,
           formularios: formulariosData.length,
@@ -316,7 +316,7 @@ export const useClienteDashboard = () => {
         });
 
       } catch (error) {
-        console.error('Error cargando datos:', error);
+        logger.error('Error cargando datos:', error);
         toast.error('Error al cargar los datos');
         setLoadingStates({
           empresas: false,
@@ -375,7 +375,7 @@ export const useClienteDashboard = () => {
       ));
       toast.success('Auditoría marcada como completada');
     } catch (error) {
-      console.error('Error completando auditoría:', error);
+      logger.error('Error completando auditoría:', error);
       toast.error('Error al marcar como completada');
     }
   }, [userProfile?.ownerId]);
@@ -391,7 +391,7 @@ export const useClienteDashboard = () => {
       setAuditorias(prev => prev.filter(aud => aud.id !== auditoriaId));
       toast.success('Auditoría eliminada');
     } catch (error) {
-      console.error('Error eliminando auditoría:', error);
+      logger.error('Error eliminando auditoría:', error);
       toast.error('Error al eliminar la auditoría');
     }
   }, [userProfile?.ownerId]);

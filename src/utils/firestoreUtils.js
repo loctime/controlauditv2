@@ -1,7 +1,7 @@
+import logger from '@/utils/logger';
 // Utilidades para manejar datos de Firestore
 
 import { addDoc, Timestamp } from 'firebase/firestore';
-
 /**
  * Convierte arrays anidados a objetos planos para Firestore
  * @param {Array} arraysAnidados - Array de arrays (ej: respuestas, comentarios, imágenes)
@@ -101,7 +101,7 @@ export const reconstruirDatosDesdeFirestore = (datosFirestore) => {
 export const registrarLogOperario = async (userId, accion, detalles = {}, metadata = {}, logsCollectionRef) => {
   try {
     if (!logsCollectionRef) {
-      console.error('registrarLogOperario: logsCollectionRef es requerido');
+      logger.error('registrarLogOperario: logsCollectionRef es requerido');
       return;
     }
 
@@ -137,14 +137,14 @@ export const registrarLogOperario = async (userId, accion, detalles = {}, metada
     await addDoc(logsCollectionRef, logData);
     
     // Log en consola para debugging
-    console.log(`[LOG OPERARIO] ${userId} - ${accion}`, {
+    logger.debug(`[LOG OPERARIO] ${userId} - ${accion}`, {
       detalles,
       browser,
       url: currentUrl,
       timestamp: new Date().toISOString()
     });
   } catch (error) {
-    console.error('Error al registrar log de operario:', error);
+    logger.error('Error al registrar log de operario:', error);
   }
 };
 
@@ -169,7 +169,7 @@ export const registrarAccionSistema = async (userId, accion, detalles = {}, tipo
     
     await registrarLogOperario(userId, accion, detalles, metadata, logsCollectionRef);
   } catch (error) {
-    console.error('Error al registrar acción del sistema:', error);
+    logger.error('Error al registrar acción del sistema:', error);
   }
 };
 

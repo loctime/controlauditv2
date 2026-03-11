@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 // Optimización de importaciones de Firebase
 // Importar solo los servicios necesarios para reducir el tamaño del bundle
 //
@@ -12,7 +13,6 @@ import { getAuth, connectAuthEmulator } from 'firebase/auth';
 import { getFirestore, connectFirestoreEmulator } from 'firebase/firestore';
 import { getStorage, connectStorageEmulator } from 'firebase/storage';
 import { getAnalytics, isSupported } from 'firebase/analytics';
-
 // Configuración de Firebase (importar desde firebaseControlFile para ControlAudit)
 // NOTA: Este archivo parece no estar en uso. Si se necesita, usar firebaseControlFile.js
 // Por ahora, comentamos la importación ya que este archivo no se usa
@@ -39,7 +39,7 @@ export const getFirebaseAuth = () => {
       try {
         connectAuthEmulator(auth, 'http://localhost:9099');
       } catch (error) {
-        console.log('Auth emulator already connected');
+        logger.debug('Auth emulator already connected');
       }
     }
   }
@@ -56,7 +56,7 @@ export const getFirebaseFirestore = () => {
       try {
         connectFirestoreEmulator(db, 'localhost', 8080);
       } catch (error) {
-        console.log('Firestore emulator already connected');
+        logger.debug('Firestore emulator already connected');
       }
     }
   }
@@ -73,7 +73,7 @@ export const getFirebaseStorage = () => {
       try {
         connectStorageEmulator(storage, 'localhost', 9199);
       } catch (error) {
-        console.log('Storage emulator already connected');
+        logger.debug('Storage emulator already connected');
       }
     }
   }

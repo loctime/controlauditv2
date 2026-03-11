@@ -1,9 +1,9 @@
-﻿import React, { useEffect, useState } from 'react';
+import logger from '@/utils/logger';
+import React, { useEffect, useState } from 'react';
 import { Alert, Box, CircularProgress, Grid, MenuItem, Paper, TextField, Typography } from '@mui/material';
 import { useAuth } from '@/components/context/AuthContext';
 import { trainingRequirementService, trainingReportingService } from '../../../../services/training';
 import ReportsHub from '../components/reports/ReportsHub';
-
 function daysToExpiry(value) {
   if (!value) return null;
   const date = value?.toDate ? value.toDate() : new Date(value);
@@ -60,7 +60,7 @@ export default function ReportsScreen() {
         expiringCertificates
       });
     } catch (err) {
-      console.error('[ReportsScreen] load error', err);
+      logger.error('[ReportsScreen] load error', err);
       setError(err.message || 'No se pudieron cargar los reportes.');
     } finally {
       setLoading(false);

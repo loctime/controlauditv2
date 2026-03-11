@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 import React, { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { 
@@ -141,7 +142,7 @@ const AuditoriaRefactorizada = () => {
       );
       
       if (faltanDatos) {
-        console.log('🔄 [Auditoria] Datos faltantes detectados, cargando de respaldo...');
+        logger.debug('🔄 [Auditoria] Datos faltantes detectados, cargando de respaldo...');
         setCargandoDatosRespaldo(true);
         setDatosRespaldoCargados(true);
         
@@ -152,9 +153,9 @@ const AuditoriaRefactorizada = () => {
             getUserSucursales(),
             getUserFormularios()
           ]);
-          console.log('✅ [Auditoria] Datos de respaldo cargados');
+          logger.debug('✅ [Auditoria] Datos de respaldo cargados');
         } catch (error) {
-          console.warn('⚠️ [Auditoria] Error cargando datos de respaldo:', error);
+          logger.warn('⚠️ [Auditoria] Error cargando datos de respaldo:', error);
         } finally {
           setCargandoDatosRespaldo(false);
         }
@@ -412,7 +413,7 @@ const AuditoriaRefactorizada = () => {
           });
 
           if (shouldRestore.isConfirmed) {
-            console.log('🔄 Restaurando auditoría con datos:', {
+            logger.debug('🔄 Restaurando auditoría con datos:', {
               respuestas: savedData.respuestas?.length || 0,
               comentarios: savedData.comentarios?.length || 0,
               imagenes: savedData.imagenes?.length || 0,
@@ -451,8 +452,8 @@ const AuditoriaRefactorizada = () => {
               ? savedData.accionesRequeridas 
               : (typeof savedData.accionesRequeridas === 'string' ? JSON.parse(savedData.accionesRequeridas) : []);
             
-            console.log('📋 Respuestas restauradas (contenido):', JSON.stringify(respuestasRestauradas));
-            console.log('📋 Respuestas restauradas (estructura):', {
+            logger.debug('📋 Respuestas restauradas (contenido):', JSON.stringify(respuestasRestauradas));
+            logger.debug('📋 Respuestas restauradas (estructura):', {
               length: respuestasRestauradas.length,
               primeraSeccion: respuestasRestauradas[0],
               todasLasSecciones: respuestasRestauradas.map((seccion, idx) => ({
@@ -465,7 +466,7 @@ const AuditoriaRefactorizada = () => {
             
             // Verificar inmediatamente si están completas
             const todasCompletadasAhora = todasLasPreguntasContestadas(respuestasRestauradas);
-            console.log('✅ Verificación inmediata - Todas completadas:', todasCompletadasAhora);
+            logger.debug('✅ Verificación inmediata - Todas completadas:', todasCompletadasAhora);
             
             // Restaurar arrays PRIMERO (antes de formularioSeleccionadoId)
             setRespuestas(respuestasRestauradas);
@@ -500,7 +501,7 @@ const AuditoriaRefactorizada = () => {
             // Forzar re-render para que el botón "Siguiente" se actualice correctamente
             // Usar setTimeout para asegurar que el estado se haya actualizado completamente
             setTimeout(() => {
-              console.log('🔄 [Auditoria] Estado después de restaurar:', {
+              logger.debug('🔄 [Auditoria] Estado después de restaurar:', {
                 respuestasLength: respuestasRestauradas.length,
                 todasCompletadas: todasLasPreguntasContestadas(respuestasRestauradas),
                 pasoCompleto2: pasoCompleto(2, {
@@ -513,14 +514,14 @@ const AuditoriaRefactorizada = () => {
               // Forzar actualización del botón "Siguiente" re-evaluando pasoCompletoAuditoria
               // Esto asegura que el botón se habilite correctamente
               const paso2Completo = pasoCompletoAuditoria(2);
-              console.log('🔄 [Auditoria] Re-evaluando paso 2 después de restaurar:', paso2Completo);
+              logger.debug('🔄 [Auditoria] Re-evaluando paso 2 después de restaurar:', paso2Completo);
               
               // Forzar un re-render adicional para asegurar que el botón se actualice
               // Esto es necesario porque React puede no actualizar inmediatamente después de setState
               setForceUpdate(prev => prev + 1);
             }, 200);
             
-            console.log('✅ Auditoría restaurada:', {
+            logger.debug('✅ Auditoría restaurada:', {
               paso: 2,
               progreso: `${preguntasRespondidas}/${totalPreguntas}`,
               respuestasRestauradas: respuestasRestauradas.length,
@@ -538,7 +539,7 @@ const AuditoriaRefactorizada = () => {
           restoreAttemptedRef.current = true;
         }
       } catch (error) {
-        console.error('❌ Error al restaurar auditoría:', error);
+        logger.error('❌ Error al restaurar auditoría:', error);
         restoreAttemptedRef.current = true;
       }
     };
@@ -592,9 +593,9 @@ const AuditoriaRefactorizada = () => {
         try {
           // Forzar guardado inmediato antes de cerrar
           await handleAutoSave(true);
-          console.log('💾 Guardado antes de cerrar/refrescar');
+          logger.debug('💾 Guardado antes de cerrar/refrescar');
         } catch (error) {
-          console.error('❌ Error al guardar antes de cerrar:', error);
+          logger.error('❌ Error al guardar antes de cerrar:', error);
         }
       }
     };
@@ -609,7 +610,7 @@ const AuditoriaRefactorizada = () => {
 
   // Verificar firmas cuando cambien
   useEffect(() => {
-    console.log('[DEBUG] useEffect firmas - firmaAuditor:', firmaAuditor, 'firmaResponsable:', firmaResponsable);
+    logger.debug('[DEBUG] useEffect firmas - firmaAuditor:', firmaAuditor, 'firmaResponsable:', firmaResponsable);
     verificarFirmasCompletadas();
   }, [firmaAuditor, firmaResponsable]);
 
@@ -649,7 +650,7 @@ const AuditoriaRefactorizada = () => {
     if (step === 2 && ultimoPaso2CompletoRef.current !== resultado) {
       ultimoPaso2CompletoRef.current = resultado;
       // Log solo cuando cambia el estado, no en cada render
-      console.log(`[DEBUG] Paso 2 completo: ${resultado}`);
+      logger.debug(`[DEBUG] Paso 2 completo: ${resultado}`);
     }
     
     return resultado;
@@ -660,8 +661,8 @@ const AuditoriaRefactorizada = () => {
 
   // Función para forzar actualización del estado (botón "Actualizar")
   const handleForzarActualizacion = useCallback(() => {
-    console.log('🔄 [Auditoria] Forzando actualización del estado...');
-    console.log('🔄 [Auditoria] Estado actual respuestas:', respuestas);
+    logger.debug('🔄 [Auditoria] Forzando actualización del estado...');
+    logger.debug('🔄 [Auditoria] Estado actual respuestas:', respuestas);
     
     // Si hay respuestas, simplemente llamar a handleGuardarRespuestas para forzar actualización
     if (respuestas && respuestas.length > 0) {
@@ -675,7 +676,7 @@ const AuditoriaRefactorizada = () => {
           for (let j = 0; j < nuevasRespuestas[i].length && !encontrada; j++) {
             if (nuevasRespuestas[i][j] && nuevasRespuestas[i][j] !== '' && nuevasRespuestas[i][j] !== null && nuevasRespuestas[i][j] !== undefined) {
               const valorOriginal = nuevasRespuestas[i][j];
-              console.log(`🔄 [Auditoria] Desmarcando y remarcando respuesta en sección ${i}, pregunta ${j}: ${valorOriginal}`);
+              logger.debug(`🔄 [Auditoria] Desmarcando y remarcando respuesta en sección ${i}, pregunta ${j}: ${valorOriginal}`);
               
               // Desmarcar temporalmente
               nuevasRespuestas[i][j] = '';
@@ -687,7 +688,7 @@ const AuditoriaRefactorizada = () => {
               setTimeout(() => {
                 nuevasRespuestas[i][j] = valorOriginal;
                 handleGuardarRespuestas(nuevasRespuestas);
-                console.log('🔄 [Auditoria] Respuesta remarcada');
+                logger.debug('🔄 [Auditoria] Respuesta remarcada');
               }, 100);
               
               encontrada = true;
@@ -697,12 +698,12 @@ const AuditoriaRefactorizada = () => {
       }
       
       if (!encontrada) {
-        console.log('⚠️ [Auditoria] No se encontraron respuestas válidas, forzando guardado de todas formas');
+        logger.debug('⚠️ [Auditoria] No se encontraron respuestas válidas, forzando guardado de todas formas');
         // Si no hay respuestas válidas, simplemente forzar guardado
         handleGuardarRespuestas(nuevasRespuestas);
       }
     } else {
-      console.log('⚠️ [Auditoria] No hay respuestas para actualizar');
+      logger.debug('⚠️ [Auditoria] No hay respuestas para actualizar');
       setForceUpdate(prev => prev + 1);
     }
   }, [respuestas, handleGuardarRespuestas]);
@@ -731,7 +732,7 @@ const AuditoriaRefactorizada = () => {
   useEffect(() => {
     // NO ejecutar si estamos restaurando datos
     if (isRestoringRef.current) {
-      console.log('🔄 [Auditoria] Omitiendo configuración de formulario durante restore');
+      logger.debug('🔄 [Auditoria] Omitiendo configuración de formulario durante restore');
       return;
     }
     
@@ -759,7 +760,7 @@ const AuditoriaRefactorizada = () => {
       } else {
         // Si hay datos existentes, solo asegurar que las secciones coincidan
         // pero mantener los datos existentes
-        console.log('🔄 [Auditoria] Manteniendo datos existentes al cambiar formulario', {
+        logger.debug('🔄 [Auditoria] Manteniendo datos existentes al cambiar formulario', {
           tieneRespuestas: tieneRespuestasExistentes,
           tieneComentarios: tieneComentariosExistentes,
           tieneAccionesRequeridas: tieneAccionesRequeridasExistentes
@@ -778,7 +779,7 @@ const AuditoriaRefactorizada = () => {
       const empresa = empresas.find(e => e.id === location.state.empresa || e.nombre === location.state.empresa);
       if (empresa) {
         setEmpresaSeleccionada(empresa);
-        console.log('[DEBUG Auditoria] Empresa seleccionada por agenda:', empresa);
+        logger.debug('[DEBUG Auditoria] Empresa seleccionada por agenda:', empresa);
       }
     }
     
@@ -790,7 +791,7 @@ const AuditoriaRefactorizada = () => {
       const sucursal = sucursales.find(s => s.id === location.state.sucursal || s.nombre === location.state.sucursal);
       if (sucursal) {
         setSucursalSeleccionada(sucursal.nombre);
-        console.log('[DEBUG Auditoria] Sucursal seleccionada por agenda:', sucursal);
+        logger.debug('[DEBUG Auditoria] Sucursal seleccionada por agenda:', sucursal);
       } else {
         setSucursalSeleccionada(location.state.sucursal);
       }
@@ -808,16 +809,16 @@ const AuditoriaRefactorizada = () => {
       activeStep === 0
     ) {
       setActiveStep(1);
-      console.log('[DEBUG Auditoria] Salto automático al paso 2 por agenda');
+      logger.debug('[DEBUG Auditoria] Salto automático al paso 2 por agenda');
     }
   }, [location.state, empresaSeleccionada, sucursalSeleccionada, formularioSeleccionadoId, activeStep]);
 
   // Debug: Verificar clasificaciones antes de crear pasos
   useEffect(() => {
-    console.log('🔍 [Auditoria] clasificaciones en estado:', clasificaciones);
-    console.log('🔍 [Auditoria] Tipo:', typeof clasificaciones, Array.isArray(clasificaciones));
+    logger.debug('🔍 [Auditoria] clasificaciones en estado:', clasificaciones);
+    logger.debug('🔍 [Auditoria] Tipo:', typeof clasificaciones, Array.isArray(clasificaciones));
     if (Array.isArray(clasificaciones) && clasificaciones.length > 0) {
-      console.log('🔍 [Auditoria] Contenido:', JSON.stringify(clasificaciones, null, 2));
+      logger.debug('🔍 [Auditoria] Contenido:', JSON.stringify(clasificaciones, null, 2));
     }
   }, [clasificaciones]);
 

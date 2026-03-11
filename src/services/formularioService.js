@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 // src/services/formularioService.js
 import { 
   collection,
@@ -33,7 +34,7 @@ export const formularioService = {
         ...doc.data()
       }));
     } catch (error) {
-      console.error('Error al obtener formularios del owner:', error);
+      logger.error('Error al obtener formularios del owner:', error);
       throw error;
     }
   },
@@ -88,7 +89,7 @@ export const formularioService = {
       
       return docRef.id;
     } catch (error) {
-      console.error('Error al crear formulario:', error);
+      logger.error('Error al crear formulario:', error);
       throw error;
     }
   },
@@ -125,7 +126,7 @@ export const formularioService = {
         formularioId
       );
     } catch (error) {
-      console.error('Error al actualizar formulario:', error);
+      logger.error('Error al actualizar formulario:', error);
       throw error;
     }
   },
@@ -158,7 +159,7 @@ export const formularioService = {
         formularioId
       );
     } catch (error) {
-      console.error('Error al eliminar formulario:', error);
+      logger.error('Error al eliminar formulario:', error);
       throw error;
     }
   },
@@ -193,7 +194,7 @@ export const formularioService = {
       
       return docRef.id;
     } catch (error) {
-      console.error('Error al copiar formulario público:', error);
+      logger.error('Error al copiar formulario público:', error);
       throw error;
     }
   },
@@ -226,7 +227,7 @@ export const formularioService = {
         usuariosQueCopiaron: [...usuariosQueCopiaron, userId]
       });
     } catch (error) {
-      console.error('Error al incrementar contador de copias:', error);
+      logger.error('Error al incrementar contador de copias:', error);
       throw error;
     }
   },
@@ -259,7 +260,7 @@ export const formularioService = {
         ratingsCount
       });
     } catch (error) {
-      console.error('Error al actualizar rating:', error);
+      logger.error('Error al actualizar rating:', error);
       throw error;
     }
   }

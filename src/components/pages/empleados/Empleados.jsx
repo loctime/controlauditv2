@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   Container,
@@ -96,7 +97,7 @@ export default function Empleados() {
       
       setEmpleados(empleadosData);
     } catch (error) {
-      console.error('Error al cargar empleados:', error);
+      logger.error('Error al cargar empleados:', error);
       setEmpleados([]);
     } finally {
       setLoading(false);
@@ -142,7 +143,7 @@ export default function Empleados() {
         await deleteDoc(empleadoRef);
         loadEmpleados();
       } catch (error) {
-        console.error('Error al eliminar empleado:', error);
+        logger.error('Error al eliminar empleado:', error);
         alert('Error al eliminar el empleado');
       }
     }

@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 import React, { useState, useRef, useEffect } from 'react';
 import {
   Box,
@@ -62,7 +63,7 @@ const ConfiguracionFirma = () => {
         const canvas = sigPadRef.current._canvas;
         // Configurar willReadFrequently directamente en el canvas
         canvas.willReadFrequently = true;
-        console.debug('[ConfiguracionFirma] Canvas optimizado para lecturas frecuentes');
+        logger.debug('[ConfiguracionFirma] Canvas optimizado para lecturas frecuentes');
       }
     };
 
@@ -112,7 +113,7 @@ const ConfiguracionFirma = () => {
       setIsEditing(false);
       Swal.fire('Éxito', 'Datos y firma guardados correctamente', 'success');
     } catch (error) {
-      console.error('Error al guardar firma:', error);
+      logger.error('Error al guardar firma:', error);
       Swal.fire('Error', 'Error al guardar los datos', 'error');
     } finally {
       setIsSaving(false);
@@ -141,7 +142,7 @@ const ConfiguracionFirma = () => {
         setHasSignature(false);
         Swal.fire('Éxito', 'Firma eliminada correctamente', 'success');
       } catch (error) {
-        console.error('Error al eliminar firma:', error);
+        logger.error('Error al eliminar firma:', error);
         Swal.fire('Error', 'Error al eliminar la firma', 'error');
       } finally {
         setIsSaving(false);

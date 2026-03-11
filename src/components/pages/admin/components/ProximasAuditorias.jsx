@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 // src/components/pages/admin/components/ProximasAuditorias.jsx
 import React from "react";
 import { 
@@ -35,7 +36,7 @@ const ProximasAuditorias = ({ auditoriasPendientes }) => {
   };
 
   // Debug: Mostrar todos los IDs de auditorías pendientes
-  console.debug("[ProximasAuditorias] IDs de auditoriasPendientes:", auditoriasPendientes.map(a => a.id));
+  logger.debug("[ProximasAuditorias] IDs de auditoriasPendientes:", auditoriasPendientes.map(a => a.id));
   
   // Función para obtener el nombre del usuario
   const getNombreUsuario = (encargado) => {
@@ -110,7 +111,7 @@ const ProximasAuditorias = ({ auditoriasPendientes }) => {
             .slice(0, 5)
             .map((auditoria, idx) => {
               // Debug: Log de cada auditoría renderizada
-              console.debug(`[ProximasAuditorias] Renderizando auditoría`, { idx, id: auditoria.id, empresa: auditoria.empresa });
+              logger.debug(`[ProximasAuditorias] Renderizando auditoría`, { idx, id: auditoria.id, empresa: auditoria.empresa });
               return (
                 <Box 
                   key={`${auditoria.id}-${idx}`} 

@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 // src/services/controlFileB2Service.ts
 // Servicio para integración con ControlFile vía proxy uploads
 // ⚠️ NUEVA ARQUITECTURA: presign → proxy-upload → confirm → fileId
@@ -17,8 +18,8 @@
  */
 
 // 🚨 LOG DIAGNÓSTICO: Versión del SDK
-console.log('[SDK] ControlFile SDK version: 1.0.5');
-console.log('[SDK] Using custom implementation (not @controlfile/sdk package)');
+logger.debug('[SDK] ControlFile SDK version: 1.0.5');
+logger.debug('[SDK] Using custom implementation (not @controlfile/sdk package)');
 
 import { auth, db } from '../firebaseControlFile';
 import { 
@@ -84,12 +85,12 @@ const response = await fetch(`${BACKEND_URL}/api/uploads/presign`, {
   const presignData = await response.json();
   
   // 🚨 LOG DIAGNÓSTICO: Solo el uploadSessionId es relevante
-console.log(
+logger.debug(
   '[SDK] Proxy upload response headers:',
   Object.fromEntries(response.headers.entries())
 );
-  console.log('[SDK] Presign data:', presignData);
-  console.log('[SDK] Upload session ID created:', presignData.uploadSessionId);
+  logger.debug('[SDK] Presign data:', presignData);
+  logger.debug('[SDK] Upload session ID created:', presignData.uploadSessionId);
   
   return {
     uploadSessionId: presignData.uploadSessionId,
@@ -106,12 +107,12 @@ console.log(
  */
 async function uploadFileToB2(uploadSessionId: string, file: File): Promise<void> {
   // 🚨 LOG DIAGNÓSTICO: Información completa del upload via proxy
-  console.log('[SDK v1.0.5][AppFilesModule] uploadToStorage invoked (PROXY MODE)');
-  console.log('[SDK] Upload method: PROXY via /uploads/proxy-upload');
-  console.log('[SDK] Upload session ID:', uploadSessionId);
-  console.log('[SDK] File type:', file.type);
-  console.log('[SDK] File size:', file.size);
-  console.log('[SDK] File name:', file.name);
+  logger.debug('[SDK v1.0.5][AppFilesModule] uploadToStorage invoked (PROXY MODE)');
+  logger.debug('[SDK] Upload method: PROXY via /uploads/proxy-upload');
+  logger.debug('[SDK] Upload session ID:', uploadSessionId);
+  logger.debug('[SDK] File type:', file.type);
+  logger.debug('[SDK] File size:', file.size);
+  logger.debug('[SDK] File name:', file.name);
   
   const user = auth.currentUser;
   if (!user) {
@@ -128,7 +129,7 @@ async function uploadFileToB2(uploadSessionId: string, file: File): Promise<void
   formData.append('file', file);
   formData.append('sessionId', uploadSessionId); // sessionId, no URL
 
-  console.log('[SDK] Sending upload request to /uploads/proxy-upload...');
+  logger.debug('[SDK] Sending upload request to /uploads/proxy-upload...');
   
 const response = await fetch(`${BACKEND_URL}/api/uploads/proxy-upload`, {
     method: 'POST',
@@ -139,20 +140,20 @@ const response = await fetch(`${BACKEND_URL}/api/uploads/proxy-upload`, {
     body: formData,
   });
 
-  console.log('[SDK] Proxy upload response status:', response.status);
-console.log(
+  logger.debug('[SDK] Proxy upload response status:', response.status);
+logger.debug(
   '[SDK] Proxy upload response headers:',
   Object.fromEntries(response.headers.entries())
 );
 
   if (!response.ok) {
     const errorText = await response.text();
-    console.error('[SDK] ❌ Proxy upload failed:', errorText);
+    logger.error('[SDK] ❌ Proxy upload failed:', errorText);
     throw new Error(`Upload proxy failed with status ${response.status}: ${errorText}`);
   }
 
   const result = await response.json();
-  console.log('[SDK] ✅ Upload successful via proxy:', result);
+  logger.debug('[SDK] ✅ Upload successful via proxy:', result);
 }
 
 /**
@@ -190,7 +191,7 @@ const response = await fetch(`${BACKEND_URL}/api/uploads/confirm`, {
   }
 
   const data = await response.json();
-  console.log('[SDK] Upload confirmed:', data);
+  logger.debug('[SDK] Upload confirmed:', data);
   
   return {
     fileId: data.fileId,
@@ -218,7 +219,7 @@ function generateShareToken(): string {
  */
 async function createShareToken(fileId: string, userId: string): Promise<string> {
   try {
-    console.log('[controlFileB2Service] 🔗 Creando share para fileId:', fileId, 'userId:', userId);
+    logger.debug('[controlFileB2Service] 🔗 Creando share para fileId:', fileId, 'userId:', userId);
     
     const sharesCol = collection(db, 'shares');
     let token: string;
@@ -252,7 +253,7 @@ async function createShareToken(fileId: string, userId: string): Promise<string>
     };
     
     
-    console.log('[controlFileB2Service] 🔗 Guardando share en /shares/' + token, shareData);
+    logger.debug('[controlFileB2Service] 🔗 Guardando share en /shares/' + token, shareData);
     await setDoc(shareDocRef, shareData);
     
     // Verificar que se creó correctamente
@@ -261,11 +262,11 @@ async function createShareToken(fileId: string, userId: string): Promise<string>
       throw new Error('El share no se creó correctamente en Firestore');
     }
     
-    console.log('[controlFileB2Service] ✅ Share token creado exitosamente:', token);
-    console.log('[controlFileB2Service] ✅ Documento verificado en /shares/' + token);
+    logger.debug('[controlFileB2Service] ✅ Share token creado exitosamente:', token);
+    logger.debug('[controlFileB2Service] ✅ Documento verificado en /shares/' + token);
     return token;
   } catch (error) {
-    console.error('[controlFileB2Service] ❌ Error al crear share token:', error);
+    logger.error('[controlFileB2Service] ❌ Error al crear share token:', error);
     throw error instanceof Error ? error : new Error(String(error));
   }
 }
@@ -347,8 +348,8 @@ export async function uploadEvidence({
     } else {
       // Legacy: construir metadata anidada
       // 🚨 LOG DIAGNÓSTICO: Detectar flujo legacy
-      console.warn('[LEGACY SDK] uploadToStorage invoked - using legacy mode without metadata');
-      console.warn('[LEGACY SDK] auditId:', auditId, 'companyId:', companyId);
+      logger.warn('[LEGACY SDK] uploadToStorage invoked - using legacy mode without metadata');
+      logger.warn('[LEGACY SDK] auditId:', auditId, 'companyId:', companyId);
       
       // Validar parámetros requeridos para modo legacy
       if (!auditId || !companyId) {
@@ -415,7 +416,7 @@ export async function uploadEvidence({
     return { fileId, shareToken };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    console.error('[controlFileB2Service] ❌ Error al subir evidencia:', errorMessage);
+    logger.error('[controlFileB2Service] ❌ Error al subir evidencia:', errorMessage);
     throw error instanceof Error ? error : new Error(errorMessage);
   }
 }
@@ -455,7 +456,7 @@ export async function getDownloadUrl(fileId: string): Promise<string> {
     const { downloadUrl } = await response.json();
     return downloadUrl;
   } catch (error) {
-    console.error('[controlFileB2Service] ❌ Error al obtener URL de descarga:', error);
+    logger.error('[controlFileB2Service] ❌ Error al obtener URL de descarga:', error);
     throw error instanceof Error ? error : new Error(String(error));
   }
 }
@@ -499,7 +500,7 @@ export async function listFiles(
     const { items } = await response.json();
     return items || [];
   } catch (error) {
-    console.error('[controlFileB2Service] ❌ Error al listar archivos:', error);
+    logger.error('[controlFileB2Service] ❌ Error al listar archivos:', error);
     return [];
   }
 }
@@ -550,7 +551,7 @@ export async function createFolder(
     const { folderId } = await response.json();
     return folderId;
   } catch (error) {
-    console.error('[controlFileB2Service] ❌ Error al crear carpeta:', error);
+    logger.error('[controlFileB2Service] ❌ Error al crear carpeta:', error);
     return null;
   }
 }
@@ -588,7 +589,7 @@ export async function getFileInfo(fileId: string): Promise<any | null> {
 
     return await response.json();
   } catch (error) {
-    console.error('[controlFileB2Service] ❌ Error al obtener información del archivo:', error);
+    logger.error('[controlFileB2Service] ❌ Error al obtener información del archivo:', error);
     return null;
   }
 }
@@ -616,10 +617,10 @@ export async function ensureTaskbarFolder(appName: string = 'ControlAudit'): Pro
       color: 'text-blue-600'
     });
 
-    console.log(`[controlFileB2Service] ✅ Carpeta principal asegurada: ${appName} (${folderId})`);
+    logger.debug(`[controlFileB2Service] ✅ Carpeta principal asegurada: ${appName} (${folderId})`);
     return folderId;
   } catch (error) {
-    console.error('[controlFileB2Service] ❌ Error al asegurar carpeta principal:', error);
+    logger.error('[controlFileB2Service] ❌ Error al asegurar carpeta principal:', error);
     return null;
   }
 }
@@ -667,7 +668,7 @@ export async function ensureSubFolder(
       for (const docSnap of snapshot.docs) {
         const data = docSnap.data();
         if (!data.deletedAt) {
-          console.log(`📂 Subcarpeta existente reutilizada: ${name} (${docSnap.id})`);
+          logger.debug(`📂 Subcarpeta existente reutilizada: ${name} (${docSnap.id})`);
           return docSnap.id;
         }
       }
@@ -675,17 +676,17 @@ export async function ensureSubFolder(
 
     // 3. Si NO existe, crear nueva subcarpeta con source: 'navbar' usando API
     // Nota: Las subcarpetas se crean con source: 'navbar' porque van dentro de la carpeta principal del taskbar
-    console.log(`📂 Creando subcarpeta: ${name}`);
+    logger.debug(`📂 Creando subcarpeta: ${name}`);
     const folderId = await createFolder(name, parentId, 'navbar');
     
     if (folderId) {
-      console.log(`📂 Subcarpeta creada: ${name} (${folderId})`);
+      logger.debug(`📂 Subcarpeta creada: ${name} (${folderId})`);
       return folderId;
     } else {
       // ⚠️ ESTRICTO: Si createFolder devuelve null, lanzar error en lugar de devolver null silenciosamente
       // Esto evita fallbacks silenciosos que causan que los archivos se guarden en ubicaciones incorrectas
       const errorMsg = `No se pudo crear subcarpeta "${name}" con parentId "${parentId}". El backend de ControlFile devolvió null.`;
-      console.error(`❌ [controlFileB2Service] ${errorMsg}`);
+      logger.error(`❌ [controlFileB2Service] ${errorMsg}`);
       throw new Error(errorMsg);
     }
   } catch (error) {
@@ -694,7 +695,7 @@ export async function ensureSubFolder(
       throw error;
     }
     // Si es otro tipo de error, convertirlo a Error
-    console.error('[controlFileB2Service] ❌ Error al asegurar subcarpeta:', error);
+    logger.error('[controlFileB2Service] ❌ Error al asegurar subcarpeta:', error);
     throw new Error(`Error al asegurar subcarpeta: ${String(error)}`);
   }
 }
@@ -739,7 +740,7 @@ export async function createNavbarFolder(
     if (!parentId) {
       const mainFolderId = await ensureTaskbarFolder();
       if (!mainFolderId) {
-        console.warn('[controlFileB2Service] No se pudo obtener carpeta principal');
+        logger.warn('[controlFileB2Service] No se pudo obtener carpeta principal');
         return null;
       }
       parentId = mainFolderId;
@@ -748,7 +749,7 @@ export async function createNavbarFolder(
     // Buscar o crear carpeta navbar
     return await createSubFolder(name, parentId);
   } catch (error) {
-    console.error('[controlFileB2Service] Error al crear carpeta navbar:', error);
+    logger.error('[controlFileB2Service] Error al crear carpeta navbar:', error);
     return null;
   }
 }
@@ -825,15 +826,15 @@ export async function ensureCapacitacionFolder(
   }
   
   // 3. Normalizar capacitacionTipoId
-  console.log(`[controlFileB2Service] 🔄 Normalizando capacitacionTipoId: "${capacitacionTipoId}"`);
+  logger.debug(`[controlFileB2Service] 🔄 Normalizando capacitacionTipoId: "${capacitacionTipoId}"`);
   const tipoIdNormalizado = normalizarCapacitacionTipoId(capacitacionTipoId);
   if (!tipoIdNormalizado) {
     throw new Error(`No se pudo normalizar capacitacionTipoId: ${capacitacionTipoId}`);
   }
-  console.log(`[controlFileB2Service] ✅ CapacitacionTipoId normalizado: "${tipoIdNormalizado}"`);
+  logger.debug(`[controlFileB2Service] ✅ CapacitacionTipoId normalizado: "${tipoIdNormalizado}"`);
   
   // 4. Carpeta por tipo de capacitación (reutilizable) - ESTE ES EL PASO CRÍTICO
-  console.log(`[controlFileB2Service] 📂 [PASO CRÍTICO] Creando carpeta tipo capacitación: "${tipoIdNormalizado}" dentro de Capacitaciones (${capacitacionesFolderId})`);
+  logger.debug(`[controlFileB2Service] 📂 [PASO CRÍTICO] Creando carpeta tipo capacitación: "${tipoIdNormalizado}" dentro de Capacitaciones (${capacitacionesFolderId})`);
   const tipoFolderId = await ensureSubFolder(tipoIdNormalizado, capacitacionesFolderId);
   if (!tipoFolderId) {
     throw new Error(`No se pudo crear carpeta tipo capacitación: ${tipoIdNormalizado}`);
@@ -842,7 +843,7 @@ export async function ensureCapacitacionFolder(
   if (tipoFolderId === capacitacionesFolderId) {
     throw new Error(`ERROR CRÍTICO: tipoFolderId (${tipoFolderId}) es igual a capacitacionesFolderId. La carpeta por tipo NO se creó correctamente.`);
   }
-  console.log(`[controlFileB2Service] ✅ Carpeta tipo capacitación creada: ${tipoFolderId} (diferente de Capacitaciones: ${capacitacionesFolderId})`);
+  logger.debug(`[controlFileB2Service] ✅ Carpeta tipo capacitación creada: ${tipoFolderId} (diferente de Capacitaciones: ${capacitacionesFolderId})`);
   
   // 5. Carpeta por evento de capacitación (cada vez que se dicta)
   const eventoFolderId = await ensureSubFolder(capacitacionEventoId, tipoFolderId);
@@ -872,8 +873,8 @@ export async function ensureCapacitacionFolder(
     if (tipoArchivoFolderId === capacitacionesFolderId) {
       throw new Error(`ERROR CRÍTICO: La carpeta final (${tipoArchivoFolderId}) es igual a capacitacionesFolderId. La estructura completa NO se creó.`);
     }
-    console.log(`[controlFileB2Service] ✅ Estructura completa creada: Capacitaciones/${tipoIdNormalizado}/${capacitacionEventoId}/${companyId}/${sucursalId}/${tipoArchivo}`);
-    console.log(`[controlFileB2Service] ✅ Carpeta final retornada: ${tipoArchivoFolderId} (NO es Capacitaciones: ${capacitacionesFolderId})`);
+    logger.debug(`[controlFileB2Service] ✅ Estructura completa creada: Capacitaciones/${tipoIdNormalizado}/${capacitacionEventoId}/${companyId}/${sucursalId}/${tipoArchivo}`);
+    logger.debug(`[controlFileB2Service] ✅ Carpeta final retornada: ${tipoArchivoFolderId} (NO es Capacitaciones: ${capacitacionesFolderId})`);
     return tipoArchivoFolderId;
   }
   
@@ -882,8 +883,8 @@ export async function ensureCapacitacionFolder(
   if (sucursalFolderId === capacitacionesFolderId) {
     throw new Error(`ERROR CRÍTICO: La carpeta final (${sucursalFolderId}) es igual a capacitacionesFolderId. La estructura completa NO se creó.`);
   }
-  console.log(`[controlFileB2Service] ✅ Estructura creada: Capacitaciones/${tipoIdNormalizado}/${capacitacionEventoId}/${companyId}/${sucursalId}`);
-  console.log(`[controlFileB2Service] ✅ Carpeta final retornada: ${sucursalFolderId} (NO es Capacitaciones: ${capacitacionesFolderId})`);
+  logger.debug(`[controlFileB2Service] ✅ Estructura creada: Capacitaciones/${tipoIdNormalizado}/${capacitacionEventoId}/${companyId}/${sucursalId}`);
+  logger.debug(`[controlFileB2Service] ✅ Carpeta final retornada: ${sucursalFolderId} (NO es Capacitaciones: ${capacitacionesFolderId})`);
   return sucursalFolderId;
 }
 

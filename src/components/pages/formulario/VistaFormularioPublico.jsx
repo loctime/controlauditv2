@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { collection, query, where, getDocs } from 'firebase/firestore';
@@ -5,7 +6,6 @@ import { dbAudit } from '../../../firebaseControlFile';
 import { Box, Typography, Button, Alert } from '@mui/material';
 import { useAuth } from '@/components/context/AuthContext';
 import { formularioService } from '../../../services/formularioService';
-
 const VistaFormularioPublico = () => {
   const { publicSharedId } = useParams();
   const [form, setForm] = useState(null);
@@ -20,7 +20,7 @@ const VistaFormularioPublico = () => {
       const snapshot = await getDocs(q);
       setForm(snapshot.empty ? null : { id: snapshot.docs[0].id, ...snapshot.docs[0].data() });
       setLoading(false);
-      console.debug('[VistaFormularioPublico] Formulario público cargado:', snapshot.empty ? 'No encontrado' : snapshot.docs[0].id);
+      logger.debug('[VistaFormularioPublico] Formulario público cargado:', snapshot.empty ? 'No encontrado' : snapshot.docs[0].id);
     };
     fetchForm();
   }, [publicSharedId]);
@@ -31,9 +31,9 @@ const VistaFormularioPublico = () => {
       await formularioService.copiarFormularioPublico(form, userProfile);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-      console.debug('[VistaFormularioPublico] Formulario copiado a sistema:', userProfile.uid);
+      logger.debug('[VistaFormularioPublico] Formulario copiado a sistema:', userProfile.uid);
     } catch (error) {
-      console.error('Error al copiar formulario:', error);
+      logger.error('Error al copiar formulario:', error);
     }
   };
 

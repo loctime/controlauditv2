@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 import React, { useState, useMemo, useCallback, memo } from "react";
 import {
   Typography,
@@ -92,7 +93,7 @@ const EditarSeccionYPreguntas = ({
 
   // ✅ Debug cuando cambia el formulario
   React.useEffect(() => {
-    console.log('🔄 Formulario seleccionado cambió:', {
+    logger.debug('🔄 Formulario seleccionado cambió:', {
       id: formularioSeleccionado?.id,
       nombre: formularioSeleccionado?.nombre,
       secciones: formularioSeleccionado?.secciones,
@@ -103,17 +104,17 @@ const EditarSeccionYPreguntas = ({
 
   // ✅ Debug para el modal de editar pregunta
   React.useEffect(() => {
-    console.log('🔧 [DEBUG] modalEditarPreguntaAbierto cambió a:', modalEditarPreguntaAbierto);
+    logger.debug('🔧 [DEBUG] modalEditarPreguntaAbierto cambió a:', modalEditarPreguntaAbierto);
     if (modalEditarPreguntaAbierto) {
-      console.log('🔧 [DEBUG] Modal de editar pregunta ABIERTO');
-      console.log('🔧 [DEBUG] preguntaSeleccionada:', preguntaSeleccionada);
-      console.log('🔧 [DEBUG] nuevoTextoPregunta:', nuevoTextoPregunta);
+      logger.debug('🔧 [DEBUG] Modal de editar pregunta ABIERTO');
+      logger.debug('🔧 [DEBUG] preguntaSeleccionada:', preguntaSeleccionada);
+      logger.debug('🔧 [DEBUG] nuevoTextoPregunta:', nuevoTextoPregunta);
     }
   }, [modalEditarPreguntaAbierto, preguntaSeleccionada, nuevoTextoPregunta]);
 
   // ✅ Debug de props recibidas
   React.useEffect(() => {
-    console.log('🔧 [DEBUG] EditarSeccionYPreguntas props:', {
+    logger.debug('🔧 [DEBUG] EditarSeccionYPreguntas props:', {
       formularioSeleccionado: formularioSeleccionado?.id,
       puedeEditar,
       puedeEliminar,
@@ -226,16 +227,16 @@ const EditarSeccionYPreguntas = ({
   }, []);
 
   const handleEditarPregunta = useCallback((preguntaData) => {
-    console.log('🔧 [DEBUG] handleEditarPregunta llamado con:', preguntaData);
-    console.log('🔧 [DEBUG] puedeEditar:', puedeEditar);
+    logger.debug('🔧 [DEBUG] handleEditarPregunta llamado con:', preguntaData);
+    logger.debug('🔧 [DEBUG] puedeEditar:', puedeEditar);
     
     setPreguntaSeleccionada(preguntaData);
     setNuevoTextoPregunta(preguntaData.pregunta);
     setModalEditarPreguntaAbierto(true);
     
-    console.log('🔧 [DEBUG] Estados actualizados - preguntaSeleccionada:', preguntaData);
-    console.log('🔧 [DEBUG] Estados actualizados - nuevoTextoPregunta:', preguntaData.pregunta);
-    console.log('🔧 [DEBUG] Estados actualizados - modalEditarPreguntaAbierto: true');
+    logger.debug('🔧 [DEBUG] Estados actualizados - preguntaSeleccionada:', preguntaData);
+    logger.debug('🔧 [DEBUG] Estados actualizados - nuevoTextoPregunta:', preguntaData.pregunta);
+    logger.debug('🔧 [DEBUG] Estados actualizados - modalEditarPreguntaAbierto: true');
   }, [puedeEditar]);
 
   return (
@@ -469,7 +470,7 @@ const EditarSeccionYPreguntas = ({
                           <IconButton 
                             size="small"
                             onClick={() => {
-                              console.log('🔧 [DEBUG] Click en editar pregunta:', { pregunta, seccionNombre: seccion.nombre, index: preguntaIndex });
+                              logger.debug('🔧 [DEBUG] Click en editar pregunta:', { pregunta, seccionNombre: seccion.nombre, index: preguntaIndex });
                               handleEditarPregunta({ pregunta, seccionNombre: seccion.nombre, index: preguntaIndex });
                             }}
                             aria-label={`Editar pregunta: ${pregunta}`}

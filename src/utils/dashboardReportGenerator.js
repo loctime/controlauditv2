@@ -1,8 +1,8 @@
+import logger from '@/utils/logger';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import html2canvas from 'html2canvas';
 import { getUserDisplayName } from './userDisplayNames';
-
 /**
  * Genera un reporte PDF profesional del dashboard de seguridad e higiene
  * Incluye todas las métricas, índices, gráficos y recomendaciones
@@ -1258,7 +1258,7 @@ export const generarReporteDashboard = async ({
       yPosition += 8;
     }
   } catch (error) {
-    console.warn('Error al generar gráficos:', error);
+    logger.warn('Error al generar gráficos:', error);
     addSectionTitle('11. ANÁLISIS GRÁFICO', 16, 10);
     doc.setFontSize(10);
     doc.setTextColor(0, 0, 0);

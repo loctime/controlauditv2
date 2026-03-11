@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 import { useCallback } from 'react';
 import { getDocs, query, where, doc, collection } from 'firebase/firestore';
 import { dbAudit } from '../../../firebaseControlFile.js';
@@ -5,7 +6,6 @@ import { firestoreRoutesCore } from '../../../core/firestore/firestoreRoutes.cor
 import { empresaService } from '../../../services/empresaService';
 import { auditoriaService } from '../../../services/auditoriaService';
 import { normalizeSucursal } from '../../../utils/firestoreUtils';
-
 /**
  * Hook para funciones de carga de datos del usuario
  */
@@ -68,7 +68,7 @@ export const useUserDataLoaders = (
       setLoadingSucursales(false);
       return sucursalesData;
     } catch (error) {
-      console.error('❌ Error cargando sucursales:', error);
+      logger.error('❌ Error cargando sucursales:', error);
       
       // Fallback al cache offline solo si está habilitado (móvil)
       if (loadUserFromCache) {
@@ -81,7 +81,7 @@ export const useUserDataLoaders = (
             return normalizedSucursales;
           }
         } catch (cacheError) {
-          console.error('Error cargando sucursales desde cache:', cacheError);
+          logger.error('Error cargando sucursales desde cache:', cacheError);
         }
       }
       
@@ -114,7 +114,7 @@ export const useUserDataLoaders = (
       setLoadingFormularios(false);
       return formulariosData;
     } catch (error) {
-      console.error('❌ Error cargando formularios:', error);
+      logger.error('❌ Error cargando formularios:', error);
       
       // Fallback al cache offline solo si está habilitado (móvil)
       if (loadUserFromCache) {
@@ -126,7 +126,7 @@ export const useUserDataLoaders = (
             return cachedData.formularios;
           }
         } catch (cacheError) {
-          console.error('Error cargando formularios desde cache:', cacheError);
+          logger.error('Error cargando formularios desde cache:', cacheError);
         }
       }
       
@@ -147,7 +147,7 @@ export const useUserDataLoaders = (
       const auditorias = await auditoriaService.getUserAuditorias(ownerId, role, profileToUse);
       return auditorias;
     } catch (error) {
-      console.error('❌ Error cargando auditorías:', error);
+      logger.error('❌ Error cargando auditorías:', error);
       return [];
     }
   }, [role, userProfile]);
@@ -163,7 +163,7 @@ export const useUserDataLoaders = (
       const auditorias = await auditoriaService.getAuditoriasCompartidas(ownerId, profileToUse);
       return auditorias;
     } catch (error) {
-      console.error('❌ Error cargando auditorías compartidas:', error);
+      logger.error('❌ Error cargando auditorías compartidas:', error);
       return [];
     }
   }, [userProfile]);

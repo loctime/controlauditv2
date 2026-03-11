@@ -1,29 +1,29 @@
+import logger from '@/utils/logger';
 import { useCallback, useMemo } from 'react';
-
 // ✅ Función para normalizar las secciones (manejar tanto arrays como objetos)
 export const useNormalizarSecciones = () => {
   return useCallback((secciones) => {
-    console.log('🔍 Normalizando secciones:', secciones);
+    logger.debug('🔍 Normalizando secciones:', secciones);
     
     if (!secciones) {
-      console.log('⚠️ No hay secciones definidas');
+      logger.debug('⚠️ No hay secciones definidas');
       return [];
     }
     
     // Si es un array, devolverlo tal como está
     if (Array.isArray(secciones)) {
-      console.log('✅ Secciones ya es un array, longitud:', secciones.length);
+      logger.debug('✅ Secciones ya es un array, longitud:', secciones.length);
       return secciones;
     }
     
     // Si es un objeto, convertirlo a array
     if (typeof secciones === 'object') {
       const seccionesArray = Object.values(secciones);
-      console.log('🔄 Secciones convertidas de objeto a array, longitud:', seccionesArray.length);
+      logger.debug('🔄 Secciones convertidas de objeto a array, longitud:', seccionesArray.length);
       return seccionesArray;
     }
     
-    console.log('❌ Formato de secciones no reconocido:', typeof secciones);
+    logger.debug('❌ Formato de secciones no reconocido:', typeof secciones);
     return [];
   }, []);
 };
@@ -42,9 +42,9 @@ export const useFormularioCache = (formularioSeleccionado, seccionesNormalizadas
         secciones: seccionesNormalizadas
       };
       localStorage.setItem(cacheKey, JSON.stringify(cacheData));
-      console.log('✅ Formulario cacheado en localStorage:', cacheKey);
+      logger.debug('✅ Formulario cacheado en localStorage:', cacheKey);
     } catch (error) {
-      console.warn('⚠️ Error al cachear formulario:', error);
+      logger.warn('⚠️ Error al cachear formulario:', error);
     }
   }, [formularioSeleccionado, seccionesNormalizadas]);
 
@@ -59,14 +59,14 @@ export const useFormularioCache = (formularioSeleccionado, seccionesNormalizadas
         const cacheData = JSON.parse(cached);
         const tiempoExpiracion = 5 * 60 * 1000; // 5 minutos
         if (Date.now() - cacheData.timestamp < tiempoExpiracion) {
-          console.log('✅ Formulario recuperado del cache:', cacheKey);
+          logger.debug('✅ Formulario recuperado del cache:', cacheKey);
           return cacheData.formulario;
         } else {
           localStorage.removeItem(cacheKey);
         }
       }
     } catch (error) {
-      console.warn('⚠️ Error al recuperar cache:', error);
+      logger.warn('⚠️ Error al recuperar cache:', error);
     }
     return null;
   }, [formularioSeleccionado?.id]);

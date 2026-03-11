@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 // src/components/shared/ImagePreviewDialog.jsx
 
 import React from 'react';
@@ -87,11 +88,11 @@ const ImagePreviewDialog = ({
       } else if (imageUrl && imageUrl.startsWith('blob:')) {
         // ⚠️ Blob URL sin blob disponible: mejor fallback a abrir en nueva pestaña
         // (fetch de blob: puede fallar en Safari)
-        console.warn('[ImagePreviewDialog] Blob URL sin blob disponible, usando fallback');
+        logger.warn('[ImagePreviewDialog] Blob URL sin blob disponible, usando fallback');
         window.open(imageUrl, '_blank');
       }
     } catch (error) {
-      console.error('[ImagePreviewDialog] Error al descargar imagen:', error);
+      logger.error('[ImagePreviewDialog] Error al descargar imagen:', error);
       // Fallback: abrir en nueva pestaña
       if (imageUrl) {
         window.open(imageUrl, '_blank');

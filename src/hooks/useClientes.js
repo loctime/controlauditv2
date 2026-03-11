@@ -1,8 +1,8 @@
+import logger from '@/utils/logger';
 import { useState, useEffect } from 'react';
 import { getDocs, updateDoc, doc, query, where, Timestamp, addDoc } from 'firebase/firestore';
 import { toast } from 'react-toastify';
 import { useAuth } from '@/components/context/AuthContext';
-
 /**
  * ⚠️ MIGRACIÓN PENDIENTE: Este hook usa colecciones que requieren referencias por parámetro:
  * - apps/audit/users (necesita referencia de colección)
@@ -41,7 +41,7 @@ export const useClientes = (usuariosCollectionRef, empresasCollectionRef) => {
   // Cargar todos los clientes (max)
   const cargarClientes = async () => {
     if (!usuariosCollectionRef) {
-      console.error('useClientes: usuariosCollectionRef es requerido');
+      logger.error('useClientes: usuariosCollectionRef es requerido');
       setLoading(false);
       return;
     }
@@ -78,7 +78,7 @@ export const useClientes = (usuariosCollectionRef, empresasCollectionRef) => {
       
       setClientes(clientesData);
     } catch (error) {
-      console.error('Error al cargar clientes:', error);
+      logger.error('Error al cargar clientes:', error);
       toast.error('Error al cargar clientes');
     } finally {
       setLoading(false);
@@ -89,7 +89,7 @@ export const useClientes = (usuariosCollectionRef, empresasCollectionRef) => {
   const cargarOperarios = async (clienteId) => {
     if (operariosPorCliente[clienteId]) return; // Ya cargados
     if (!usuariosCollectionRef) {
-      console.error('useClientes: usuariosCollectionRef es requerido');
+      logger.error('useClientes: usuariosCollectionRef es requerido');
       return;
     }
     
@@ -134,7 +134,7 @@ export const useClientes = (usuariosCollectionRef, empresasCollectionRef) => {
       toast.success(`Pago procesado para ${cliente.nombre || cliente.email}`);
       cargarClientes();
     } catch (error) {
-      console.error('Error al procesar pago:', error);
+      logger.error('Error al procesar pago:', error);
       toast.error('Error al procesar pago');
     }
   };
@@ -161,7 +161,7 @@ export const useClientes = (usuariosCollectionRef, empresasCollectionRef) => {
       toast.success(`Demo activado para ${cliente.nombre || cliente.email}`);
       cargarClientes();
     } catch (error) {
-      console.error('Error al activar demo:', error);
+      logger.error('Error al activar demo:', error);
       toast.error('Error al activar demo');
     }
   };
@@ -182,7 +182,7 @@ export const useClientes = (usuariosCollectionRef, empresasCollectionRef) => {
       toast.success(`${cliente.activo ? 'Desactivado' : 'Activado'} ${cliente.nombre || cliente.email}`);
       cargarClientes();
     } catch (error) {
-      console.error('Error al cambiar estado:', error);
+      logger.error('Error al cambiar estado:', error);
       toast.error('Error al cambiar estado');
     }
   };
@@ -214,7 +214,7 @@ export const useClientes = (usuariosCollectionRef, empresasCollectionRef) => {
       toast.success('Cliente actualizado correctamente');
       cargarClientes();
     } catch (error) {
-      console.error('Error al actualizar cliente:', error);
+      logger.error('Error al actualizar cliente:', error);
       toast.error('Error al actualizar cliente');
     }
   };

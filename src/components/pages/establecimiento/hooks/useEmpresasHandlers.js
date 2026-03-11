@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 import { useState, useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import Swal from 'sweetalert2';
@@ -5,7 +6,6 @@ import { getDownloadUrl } from '../../../../services/controlFileB2Service';
 import { uploadFileWithContext } from '../../../../services/unifiedFileUploadService';
 import { createEmpresa } from '../../../../core/services/ownerEmpresaService';
 import { v4 as uuidv4 } from 'uuid';
-
 /**
  * Hook para handlers de empresas
  * 
@@ -37,15 +37,15 @@ export const useEmpresasHandlers = (ownerId, updateEmpresa, onEmpresaCreated) =>
   }, []);
 
   const handleAddEmpresa = useCallback(async () => {
-    console.log('[useEmpresasHandlers][handleAddEmpresa] ===== INICIO =====');
-    console.log('[useEmpresasHandlers][handleAddEmpresa] Estado inicial:', {
+    logger.debug('[useEmpresasHandlers][handleAddEmpresa] ===== INICIO =====');
+    logger.debug('[useEmpresasHandlers][handleAddEmpresa] Estado inicial:', {
       nombre: empresa.nombre,
       ownerId,
       tieneLogo: !!empresa.logo
     });
 
     if (!empresa.nombre.trim()) {
-      console.warn('[useEmpresasHandlers][handleAddEmpresa] ⚠️ Validación fallida: nombre vacío');
+      logger.warn('[useEmpresasHandlers][handleAddEmpresa] ⚠️ Validación fallida: nombre vacío');
       Swal.fire({
         icon: 'error',
         title: 'Error',
@@ -55,7 +55,7 @@ export const useEmpresasHandlers = (ownerId, updateEmpresa, onEmpresaCreated) =>
     }
 
     if (!ownerId) {
-      console.error('[useEmpresasHandlers][handleAddEmpresa] ❌ ERROR: ownerId no disponible');
+      logger.error('[useEmpresasHandlers][handleAddEmpresa] ❌ ERROR: ownerId no disponible');
       Swal.fire({
         icon: 'error',
         title: 'Error',
@@ -64,7 +64,7 @@ export const useEmpresasHandlers = (ownerId, updateEmpresa, onEmpresaCreated) =>
       return;
     }
 
-    console.log('[useEmpresasHandlers][handleAddEmpresa] ✅ Validaciones pasadas, iniciando creación');
+    logger.debug('[useEmpresasHandlers][handleAddEmpresa] ✅ Validaciones pasadas, iniciando creación');
     setLoading(true);
     try {
       // Generar ID único para la empresa (se usa también en el flujo de upload unificado)
@@ -87,9 +87,9 @@ export const useEmpresasHandlers = (ownerId, updateEmpresa, onEmpresaCreated) =>
           // Guardar shareToken (no URL temporal)
           logoShareToken = result.shareToken || null;
           
-          console.log('[useEmpresasHandlers] ✅ Logo subido a ControlFile, shareToken:', logoShareToken);
+          logger.debug('[useEmpresasHandlers] ✅ Logo subido a ControlFile, shareToken:', logoShareToken);
         } catch (error) {
-          console.error('[useEmpresasHandlers] Error al subir logo:', error);
+          logger.error('[useEmpresasHandlers] Error al subir logo:', error);
           Swal.fire({
             icon: 'warning',
             title: 'Advertencia',
@@ -99,8 +99,8 @@ export const useEmpresasHandlers = (ownerId, updateEmpresa, onEmpresaCreated) =>
         }
       }
 
-      console.log('[useEmpresasHandlers][handleAddEmpresa] Evento: Crear empresa');
-      console.log('[useEmpresasHandlers][handleAddEmpresa] Parámetros:', {
+      logger.debug('[useEmpresasHandlers][handleAddEmpresa] Evento: Crear empresa');
+      logger.debug('[useEmpresasHandlers][handleAddEmpresa] Parámetros:', {
         ownerId,
         empresaId,
         nombre: empresa.nombre,
@@ -116,21 +116,21 @@ export const useEmpresasHandlers = (ownerId, updateEmpresa, onEmpresaCreated) =>
           activa: true,
           logoShareToken: logoShareToken
         });
-        console.log('[useEmpresasHandlers][handleAddEmpresa] ✅ Success - Empresa creada');
+        logger.debug('[useEmpresasHandlers][handleAddEmpresa] ✅ Success - Empresa creada');
       } catch (error) {
         console.group('[Firestore ERROR]');
-        console.error('code:', error.code);
-        console.error('message:', error.message);
-        console.error('stack:', error.stack);
+        logger.error('code:', error.code);
+        logger.error('message:', error.message);
+        logger.error('stack:', error.stack);
         console.groupEnd();
         
-        console.error('[useEmpresasHandlers][handleAddEmpresa] ❌ ERROR al llamar createEmpresa');
-        console.error('[useEmpresasHandlers][handleAddEmpresa] Parámetros:', {
+        logger.error('[useEmpresasHandlers][handleAddEmpresa] ❌ ERROR al llamar createEmpresa');
+        logger.error('[useEmpresasHandlers][handleAddEmpresa] Parámetros:', {
           ownerId,
           empresaId,
           nombre: empresa.nombre
         });
-        console.error('[useEmpresasHandlers][handleAddEmpresa] Error:', error);
+        logger.error('[useEmpresasHandlers][handleAddEmpresa] Error:', error);
         throw error; // Re-lanzar para que el catch externo lo maneje
       }
 
@@ -145,7 +145,7 @@ export const useEmpresasHandlers = (ownerId, updateEmpresa, onEmpresaCreated) =>
         logo: null
       });
 
-      console.log('[useEmpresasHandlers][handleAddEmpresa] ✅ ===== ÉXITO COMPLETO =====');
+      logger.debug('[useEmpresasHandlers][handleAddEmpresa] ✅ ===== ÉXITO COMPLETO =====');
       
       Swal.fire({
         icon: 'success',
@@ -163,9 +163,9 @@ export const useEmpresasHandlers = (ownerId, updateEmpresa, onEmpresaCreated) =>
           queryKey: ['empresas', ownerId] 
         });
         
-        console.log('[useEmpresasHandlers] ✅ Query de empresas invalidada, lista se actualizará automáticamente');
+        logger.debug('[useEmpresasHandlers] ✅ Query de empresas invalidada, lista se actualizará automáticamente');
       } catch (queryError) {
-        console.warn('[useEmpresasHandlers] ⚠️ No se pudo invalidar query de empresas:', queryError);
+        logger.warn('[useEmpresasHandlers] ⚠️ No se pudo invalidar query de empresas:', queryError);
         // No es crítico, el listener reactivo debería actualizar eventualmente
       }
       
@@ -174,17 +174,17 @@ export const useEmpresasHandlers = (ownerId, updateEmpresa, onEmpresaCreated) =>
       }
     } catch (error) {
       console.group('[Firestore ERROR]');
-      console.error('code:', error.code);
-      console.error('message:', error.message);
-      console.error('stack:', error.stack);
+      logger.error('code:', error.code);
+      logger.error('message:', error.message);
+      logger.error('stack:', error.stack);
       console.groupEnd();
       
-      console.error('[useEmpresasHandlers][handleAddEmpresa] ===== ERROR CAPTURADO =====');
-      console.error('[useEmpresasHandlers][handleAddEmpresa] Error completo:', error);
-      console.error('[useEmpresasHandlers][handleAddEmpresa] error.code:', error.code);
-      console.error('[useEmpresasHandlers][handleAddEmpresa] error.message:', error.message);
-      console.error('[useEmpresasHandlers][handleAddEmpresa] error.stack:', error.stack);
-      console.error('[useEmpresasHandlers][handleAddEmpresa] Parámetros al momento del error:', {
+      logger.error('[useEmpresasHandlers][handleAddEmpresa] ===== ERROR CAPTURADO =====');
+      logger.error('[useEmpresasHandlers][handleAddEmpresa] Error completo:', error);
+      logger.error('[useEmpresasHandlers][handleAddEmpresa] error.code:', error.code);
+      logger.error('[useEmpresasHandlers][handleAddEmpresa] error.message:', error.message);
+      logger.error('[useEmpresasHandlers][handleAddEmpresa] error.stack:', error.stack);
+      logger.error('[useEmpresasHandlers][handleAddEmpresa] Parámetros al momento del error:', {
         ownerId,
         empresaNombre: empresa.nombre,
         tieneLogo: !!empresa.logo
@@ -196,7 +196,7 @@ export const useEmpresasHandlers = (ownerId, updateEmpresa, onEmpresaCreated) =>
         text: error.message || 'Error al crear la empresa'
       });
     } finally {
-      console.log('[useEmpresasHandlers][handleAddEmpresa] ===== FINALIZANDO =====');
+      logger.debug('[useEmpresasHandlers][handleAddEmpresa] ===== FINALIZANDO =====');
       setLoading(false);
     }
   }, [empresa, ownerId, onEmpresaCreated, queryClient]);
@@ -273,9 +273,9 @@ export const useEmpresasEditHandlers = (updateEmpresa, ownerId) => {
           // Obtener URL temporal para guardar (se regenerará cuando se necesite)
           logoURL = await getDownloadUrl(result.fileId);
           
-          console.log('[useEmpresasHandlers] ✅ Logo actualizado en ControlFile');
+          logger.debug('[useEmpresasHandlers] ✅ Logo actualizado en ControlFile');
         } catch (error) {
-          console.error('[useEmpresasHandlers] Error al subir logo:', error);
+          logger.error('[useEmpresasHandlers] Error al subir logo:', error);
           Swal.fire({
             icon: 'warning',
             title: 'Advertencia',
@@ -308,13 +308,13 @@ export const useEmpresasEditHandlers = (updateEmpresa, ownerId) => {
             queryKey: ['empresas', ownerId] 
           });
           
-          console.log('[useEmpresasEditHandlers] ✅ Query de empresas invalidada después de editar');
+          logger.debug('[useEmpresasEditHandlers] ✅ Query de empresas invalidada después de editar');
         } catch (queryError) {
-          console.warn('[useEmpresasEditHandlers] ⚠️ No se pudo invalidar query de empresas:', queryError);
+          logger.warn('[useEmpresasEditHandlers] ⚠️ No se pudo invalidar query de empresas:', queryError);
         }
       }
     } catch (error) {
-      console.error('Error al actualizar empresa:', error);
+      logger.error('Error al actualizar empresa:', error);
       Swal.fire({
         icon: 'error',
         title: 'Error',

@@ -1,9 +1,9 @@
+import logger from '@/utils/logger';
 import React from 'react';
 import { Box, Typography, Divider } from '@mui/material';
-
 const PerfilConfiguracion = ({ userProfile }) => {
   // Log de depuración
-  console.debug('[PerfilConfiguracion] userProfile:', userProfile);
+  logger.debug('[PerfilConfiguracion] userProfile:', userProfile);
   return (
     <Box sx={{ p: 3 }}>
       <Typography variant="h6" gutterBottom>

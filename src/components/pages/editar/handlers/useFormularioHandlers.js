@@ -1,9 +1,9 @@
+import logger from '@/utils/logger';
 import { useCallback } from 'react';
 import { doc, updateDoc, deleteDoc } from "firebase/firestore";
 import { db } from "../../../../firebaseControlFile";
 import Swal from 'sweetalert2';
 import { registrarAccionSistema } from '../../../../utils/firestoreUtils';
-
 export const useFormularioHandlers = ({
   formularioSeleccionado,
   setFormularioSeleccionado,
@@ -21,7 +21,7 @@ export const useFormularioHandlers = ({
     setAccordionOpen
   ) => {
     if (!puedeEditar) {
-      console.log('[DEBUG] Usuario no tiene permisos para editar:', {
+      logger.debug('[DEBUG] Usuario no tiene permisos para editar:', {
         puedeEditar,
         formularioId: formularioSeleccionado?.id,
         usuarioId: user?.uid
@@ -66,7 +66,7 @@ export const useFormularioHandlers = ({
       Swal.fire("Éxito", "Formulario actualizado exitosamente.", "success");
       setAccordionOpen(false);
     } catch (error) {
-      console.error("Error al actualizar formulario:", error);
+      logger.error("Error al actualizar formulario:", error);
       Swal.fire("Error", "Error al actualizar el formulario.", "error");
     }
   }, [puedeEditar, formularioSeleccionado.id, setFormularioSeleccionado, user]);
@@ -102,7 +102,7 @@ export const useFormularioHandlers = ({
       setModalEditarSeccionAbierto(false);
       Swal.fire("Éxito", "Sección actualizada exitosamente.", "success");
     } catch (error) {
-      console.error("Error al actualizar sección:", error);
+      logger.error("Error al actualizar sección:", error);
       Swal.fire("Error", "Error al actualizar la sección.", "error");
     }
   }, [puedeEditar, seccionesNormalizadas, formularioSeleccionado.id, setFormularioSeleccionado]);
@@ -112,21 +112,21 @@ export const useFormularioHandlers = ({
     nuevoTextoPregunta,
     setModalEditarPreguntaAbierto
   ) => {
-    console.log('🔧 [DEBUG] handleGuardarCambiosPregunta llamado');
-    console.log('🔧 [DEBUG] puedeEditar:', puedeEditar);
-    console.log('🔧 [DEBUG] preguntaSeleccionada:', preguntaSeleccionada);
-    console.log('🔧 [DEBUG] nuevoTextoPregunta:', nuevoTextoPregunta);
-    console.log('🔧 [DEBUG] seccionesNormalizadas:', seccionesNormalizadas);
+    logger.debug('🔧 [DEBUG] handleGuardarCambiosPregunta llamado');
+    logger.debug('🔧 [DEBUG] puedeEditar:', puedeEditar);
+    logger.debug('🔧 [DEBUG] preguntaSeleccionada:', preguntaSeleccionada);
+    logger.debug('🔧 [DEBUG] nuevoTextoPregunta:', nuevoTextoPregunta);
+    logger.debug('🔧 [DEBUG] seccionesNormalizadas:', seccionesNormalizadas);
     
     if (!puedeEditar) {
-      console.log('🔧 [DEBUG] Usuario no tiene permisos para editar');
+      logger.debug('🔧 [DEBUG] Usuario no tiene permisos para editar');
       Swal.fire("Error", "No tienes permisos para editar este formulario.", "error");
       return;
     }
 
     try {
       if (!preguntaSeleccionada) {
-        console.log('🔧 [DEBUG] No hay pregunta seleccionada');
+        logger.debug('🔧 [DEBUG] No hay pregunta seleccionada');
         Swal.fire("Error", "No se ha seleccionado ninguna pregunta.", "error");
         return;
       }
@@ -141,8 +141,8 @@ export const useFormularioHandlers = ({
         return seccion;
       });
 
-      console.log('🔧 [DEBUG] Secciones actualizadas:', seccionesActualizadas);
-      console.log('🔧 [DEBUG] Formulario ID:', formularioSeleccionado.id);
+      logger.debug('🔧 [DEBUG] Secciones actualizadas:', seccionesActualizadas);
+      logger.debug('🔧 [DEBUG] Formulario ID:', formularioSeleccionado.id);
 
       const formularioRef = doc(db, "formularios", formularioSeleccionado.id);
       await updateDoc(formularioRef, { 
@@ -150,13 +150,13 @@ export const useFormularioHandlers = ({
         ultimaModificacion: new Date()
       });
       
-      console.log('🔧 [DEBUG] Documento actualizado en Firestore exitosamente');
+      logger.debug('🔧 [DEBUG] Documento actualizado en Firestore exitosamente');
       
       setFormularioSeleccionado(prev => ({ ...prev, secciones: seccionesActualizadas }));
       setModalEditarPreguntaAbierto(false);
       Swal.fire("Éxito", "Pregunta actualizada exitosamente.", "success");
     } catch (error) {
-      console.error("Error al actualizar pregunta:", error);
+      logger.error("Error al actualizar pregunta:", error);
       Swal.fire("Error", "Error al actualizar la pregunta.", "error");
     }
   }, [puedeEditar, seccionesNormalizadas, formularioSeleccionado.id, setFormularioSeleccionado]);
@@ -167,21 +167,21 @@ export const useFormularioHandlers = ({
     setModalAgregarPreguntaAbierto,
     setNuevaPregunta
   ) => {
-    console.log('🔧 [DEBUG] handleGuardarNuevaPregunta llamado');
-    console.log('🔧 [DEBUG] puedeEditar:', puedeEditar);
-    console.log('🔧 [DEBUG] seccionSeleccionada:', seccionSeleccionada);
-    console.log('🔧 [DEBUG] nuevaPregunta:', nuevaPregunta);
-    console.log('🔧 [DEBUG] seccionesNormalizadas:', seccionesNormalizadas);
+    logger.debug('🔧 [DEBUG] handleGuardarNuevaPregunta llamado');
+    logger.debug('🔧 [DEBUG] puedeEditar:', puedeEditar);
+    logger.debug('🔧 [DEBUG] seccionSeleccionada:', seccionSeleccionada);
+    logger.debug('🔧 [DEBUG] nuevaPregunta:', nuevaPregunta);
+    logger.debug('🔧 [DEBUG] seccionesNormalizadas:', seccionesNormalizadas);
     
     if (!puedeEditar) {
-      console.log('🔧 [DEBUG] Usuario no tiene permisos para editar');
+      logger.debug('🔧 [DEBUG] Usuario no tiene permisos para editar');
       Swal.fire("Error", "No tienes permisos para editar este formulario.", "error");
       return;
     }
 
     try {
       if (!seccionSeleccionada) {
-        console.log('🔧 [DEBUG] No hay sección seleccionada');
+        logger.debug('🔧 [DEBUG] No hay sección seleccionada');
         Swal.fire("Error", "Sección no proporcionada.", "error");
         return;
       }
@@ -194,8 +194,8 @@ export const useFormularioHandlers = ({
         return seccion;
       });
 
-      console.log('🔧 [DEBUG] Secciones actualizadas:', seccionesActualizadas);
-      console.log('🔧 [DEBUG] Formulario ID:', formularioSeleccionado.id);
+      logger.debug('🔧 [DEBUG] Secciones actualizadas:', seccionesActualizadas);
+      logger.debug('🔧 [DEBUG] Formulario ID:', formularioSeleccionado.id);
 
       const formularioRef = doc(db, "formularios", formularioSeleccionado.id);
       await updateDoc(formularioRef, { 
@@ -203,14 +203,14 @@ export const useFormularioHandlers = ({
         ultimaModificacion: new Date()
       });
       
-      console.log('🔧 [DEBUG] Documento actualizado en Firestore exitosamente');
+      logger.debug('🔧 [DEBUG] Documento actualizado en Firestore exitosamente');
       
       setFormularioSeleccionado(prev => ({ ...prev, secciones: seccionesActualizadas }));
       setModalAgregarPreguntaAbierto(false);
       setNuevaPregunta('');
       Swal.fire("Éxito", "Pregunta agregada exitosamente.", "success");
     } catch (error) {
-      console.error("Error al agregar pregunta:", error);
+      logger.error("Error al agregar pregunta:", error);
       Swal.fire("Error", "Error al agregar pregunta.", "error");
     }
   }, [puedeEditar, seccionesNormalizadas, formularioSeleccionado.id, setFormularioSeleccionado]);
@@ -253,7 +253,7 @@ export const useFormularioHandlers = ({
         localStorage.removeItem(`formulario_${id}`);
         Swal.fire("Eliminado", "Formulario eliminado exitosamente.", "success");
       } catch (error) {
-        console.error("Error al eliminar formulario:", error);
+        logger.error("Error al eliminar formulario:", error);
         Swal.fire("Error", "Error al eliminar el formulario.", "error");
       }
     }
@@ -286,21 +286,21 @@ export const useFormularioHandlers = ({
         setFormularioSeleccionado(prev => ({ ...prev, secciones: seccionesActualizadas }));
         Swal.fire("Eliminado", "Sección eliminada exitosamente.", "success");
       } catch (error) {
-        console.error("Error al eliminar sección:", error);
+        logger.error("Error al eliminar sección:", error);
         Swal.fire("Error", "Error al eliminar la sección.", "error");
       }
     }
   }, [puedeEliminar, seccionesNormalizadas, formularioSeleccionado.id, setFormularioSeleccionado]);
 
   const handleEliminarPregunta = useCallback(async (indexPregunta, nombreSeccion) => {
-    console.log('🔧 [DEBUG] handleEliminarPregunta llamado');
-    console.log('🔧 [DEBUG] puedeEliminar:', puedeEliminar);
-    console.log('🔧 [DEBUG] indexPregunta:', indexPregunta);
-    console.log('🔧 [DEBUG] nombreSeccion:', nombreSeccion);
-    console.log('🔧 [DEBUG] seccionesNormalizadas:', seccionesNormalizadas);
+    logger.debug('🔧 [DEBUG] handleEliminarPregunta llamado');
+    logger.debug('🔧 [DEBUG] puedeEliminar:', puedeEliminar);
+    logger.debug('🔧 [DEBUG] indexPregunta:', indexPregunta);
+    logger.debug('🔧 [DEBUG] nombreSeccion:', nombreSeccion);
+    logger.debug('🔧 [DEBUG] seccionesNormalizadas:', seccionesNormalizadas);
     
     if (!puedeEliminar) {
-      console.log('🔧 [DEBUG] Usuario no tiene permisos para eliminar');
+      logger.debug('🔧 [DEBUG] Usuario no tiene permisos para eliminar');
       Swal.fire("Error", "No tienes permisos para eliminar preguntas.", "error");
       return;
     }
@@ -325,8 +325,8 @@ export const useFormularioHandlers = ({
           return seccion;
         });
 
-        console.log('🔧 [DEBUG] Secciones actualizadas:', seccionesActualizadas);
-        console.log('🔧 [DEBUG] Formulario ID:', formularioSeleccionado.id);
+        logger.debug('🔧 [DEBUG] Secciones actualizadas:', seccionesActualizadas);
+        logger.debug('🔧 [DEBUG] Formulario ID:', formularioSeleccionado.id);
 
         const formularioRef = doc(db, "formularios", formularioSeleccionado.id);
         await updateDoc(formularioRef, { 
@@ -334,24 +334,24 @@ export const useFormularioHandlers = ({
           ultimaModificacion: new Date()
         });
         
-        console.log('🔧 [DEBUG] Documento actualizado en Firestore exitosamente');
+        logger.debug('🔧 [DEBUG] Documento actualizado en Firestore exitosamente');
         
         setFormularioSeleccionado(prev => ({ ...prev, secciones: seccionesActualizadas }));
         Swal.fire("Eliminado", "Pregunta eliminada exitosamente.", "success");
       } catch (error) {
-        console.error("Error al eliminar pregunta:", error);
+        logger.error("Error al eliminar pregunta:", error);
         Swal.fire("Error", "Error al eliminar la pregunta.", "error");
       }
     }
   }, [puedeEliminar, seccionesNormalizadas, formularioSeleccionado.id, setFormularioSeleccionado]);
 
   const handleAgregarSeccion = useCallback(async (nombreSeccion) => {
-    console.log('🔧 [DEBUG] handleAgregarSeccion llamado');
-    console.log('🔧 [DEBUG] puedeEditar:', puedeEditar);
-    console.log('🔧 [DEBUG] nombreSeccion:', nombreSeccion);
+    logger.debug('🔧 [DEBUG] handleAgregarSeccion llamado');
+    logger.debug('🔧 [DEBUG] puedeEditar:', puedeEditar);
+    logger.debug('🔧 [DEBUG] nombreSeccion:', nombreSeccion);
     
     if (!puedeEditar) {
-      console.log('🔧 [DEBUG] Usuario no tiene permisos para editar');
+      logger.debug('🔧 [DEBUG] Usuario no tiene permisos para editar');
       Swal.fire("Error", "No tienes permisos para agregar secciones.", "error");
       return;
     }
@@ -369,8 +369,8 @@ export const useFormularioHandlers = ({
 
       const seccionesActualizadas = [...seccionesNormalizadas, nuevaSeccion];
 
-      console.log('🔧 [DEBUG] Secciones actualizadas:', seccionesActualizadas);
-      console.log('🔧 [DEBUG] Formulario ID:', formularioSeleccionado.id);
+      logger.debug('🔧 [DEBUG] Secciones actualizadas:', seccionesActualizadas);
+      logger.debug('🔧 [DEBUG] Formulario ID:', formularioSeleccionado.id);
 
       const formularioRef = doc(db, "formularios", formularioSeleccionado.id);
       await updateDoc(formularioRef, { 
@@ -378,12 +378,12 @@ export const useFormularioHandlers = ({
         ultimaModificacion: new Date()
       });
       
-      console.log('🔧 [DEBUG] Documento actualizado en Firestore exitosamente');
+      logger.debug('🔧 [DEBUG] Documento actualizado en Firestore exitosamente');
       
       setFormularioSeleccionado(prev => ({ ...prev, secciones: seccionesActualizadas }));
       Swal.fire("Éxito", "Sección agregada exitosamente.", "success");
     } catch (error) {
-      console.error("Error al agregar sección:", error);
+      logger.error("Error al agregar sección:", error);
       Swal.fire("Error", "Error al agregar la sección.", "error");
     }
   }, [puedeEditar, seccionesNormalizadas, formularioSeleccionado.id, setFormularioSeleccionado]);

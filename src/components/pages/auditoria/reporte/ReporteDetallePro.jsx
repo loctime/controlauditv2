@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 import React, { forwardRef, useImperativeHandle, useMemo } from "react";
 import PreguntasRespuestasList from "../../../common/PreguntasRespuestasList";
 import { Typography, Box, Button, Dialog, DialogTitle, DialogContent, DialogActions, IconButton, Alert, useTheme } from "@mui/material";
@@ -5,7 +6,6 @@ import PrintIcon from '@mui/icons-material/Print';
 import CloseIcon from '@mui/icons-material/Close';
 import DownloadIcon from '@mui/icons-material/Download';
 import { useAuth } from '@/components/context/AuthContext';
-
 // Importar utilidades y componentes separados
 import { 
   normalizarRespuestas, 
@@ -82,18 +82,18 @@ const ReporteDetallePro = forwardRef(({ open = false, onClose = () => {}, report
   const fecha = normalizarFecha(reporte);
 
   // Debug logs para ver qué datos están llegando
-  console.log('🔍 [ReporteDetallePro] reporte.clasificaciones RAW:', reporte.clasificaciones);
-  console.log('🔍 [ReporteDetallePro] clasificacionesNormalizadas:', clasificacionesNormalizadas);
-  console.log('🔍 [ReporteDetallePro] Tipo de clasificaciones RAW:', typeof reporte.clasificaciones, Array.isArray(reporte.clasificaciones));
-  console.debug('[ReporteDetallePro] empresa normalizada:', empresa);
-  console.debug('[ReporteDetallePro] formulario normalizado:', formulario);
-  console.debug('[ReporteDetallePro] sucursal:', sucursal);
-  console.debug('[ReporteDetallePro] fecha:', fecha);
-  console.debug('[ReporteDetallePro] reporte.empresa:', reporte.empresa);
-  console.debug('[ReporteDetallePro] reporte.formulario:', reporte.formulario);
-  console.debug('[ReporteDetallePro] reporte.formularioNombre:', reporte.formularioNombre);
-  console.debug('[ReporteDetallePro] reporte.fecha:', reporte.fecha);
-  console.debug('[ReporteDetallePro] reporte.fechaGuardado:', reporte.fechaGuardado);
+  logger.debug('🔍 [ReporteDetallePro] reporte.clasificaciones RAW:', reporte.clasificaciones);
+  logger.debug('🔍 [ReporteDetallePro] clasificacionesNormalizadas:', clasificacionesNormalizadas);
+  logger.debug('🔍 [ReporteDetallePro] Tipo de clasificaciones RAW:', typeof reporte.clasificaciones, Array.isArray(reporte.clasificaciones));
+  logger.debug('[ReporteDetallePro] empresa normalizada:', empresa);
+  logger.debug('[ReporteDetallePro] formulario normalizado:', formulario);
+  logger.debug('[ReporteDetallePro] sucursal:', sucursal);
+  logger.debug('[ReporteDetallePro] fecha:', fecha);
+  logger.debug('[ReporteDetallePro] reporte.empresa:', reporte.empresa);
+  logger.debug('[ReporteDetallePro] reporte.formulario:', reporte.formulario);
+  logger.debug('[ReporteDetallePro] reporte.formularioNombre:', reporte.formularioNombre);
+  logger.debug('[ReporteDetallePro] reporte.fecha:', reporte.fecha);
+  logger.debug('[ReporteDetallePro] reporte.fechaGuardado:', reporte.fechaGuardado);
 
   // Usar la firma pasada por prop o la del reporte
   const firmaResponsableFinal = firmaResponsable || reporte.firmaResponsable;
@@ -174,7 +174,7 @@ const ReporteDetallePro = forwardRef(({ open = false, onClose = () => {}, report
         try {
           accionesRequeridasNormalizadas = JSON.parse(reporte.accionesRequeridas);
         } catch (error) {
-          console.warn('Error parseando accionesRequeridas:', error);
+          logger.warn('Error parseando accionesRequeridas:', error);
           accionesRequeridasNormalizadas = [];
         }
       } else if (Array.isArray(reporte.accionesRequeridas)) {
@@ -230,7 +230,7 @@ const ReporteDetallePro = forwardRef(({ open = false, onClose = () => {}, report
       try {
         await descargarPdf(urlPdf, fileName);
       } catch (error) {
-        console.error('Error al descargar PDF:', error);
+        logger.error('Error al descargar PDF:', error);
         alert('❌ Error al descargar el reporte. Intenta nuevamente.');
       }
     }
@@ -242,7 +242,7 @@ const ReporteDetallePro = forwardRef(({ open = false, onClose = () => {}, report
   const tienePdfDisponible = pdfUrl || reporte.pdfUrl || pdfLocalStorage;
 
   // En el modal, eliminar la firma del responsable y mostrar aclaración solo en la firma del auditor
-  console.log('[ReporteDetallePro] Renderizando modal...');
+  logger.debug('[ReporteDetallePro] Renderizando modal...');
   if (modo === 'modal') {
     return (
       <Dialog 

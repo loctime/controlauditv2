@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 import React, { useEffect, useState, useRef } from 'react';
 import './Home.css';
 import { Typography, Button, Grid, List, ListItem, ListItemIcon, ListItemText, Divider, useTheme, Box, LinearProgress, Alert } from '@mui/material';
@@ -11,7 +12,6 @@ import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import { useAuth } from '@/components/context/AuthContext';
 import { useChromePreload } from '@/hooks/useChromePreload';
 import { shouldEnableOffline } from '../../../utils/pwaDetection';
-
 const features = [
   { icon: <CheckCircleIcon color="success" />, text: 'Gestión completa de formularios' },
   { icon: <DescriptionIcon color="primary" />, text: 'Generación automática de informes en PDF' },
@@ -27,7 +27,7 @@ const steps = [
 
 const Home = () => {
   // Debug log para renderizado
-  console.debug('[Home] Renderizando página principal');
+  logger.debug('[Home] Renderizando página principal');
   const navigate = useNavigate();
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
@@ -145,7 +145,7 @@ const Home = () => {
         }
         
       } catch (error) {
-        console.error('Error cargando datos offline:', error);
+        logger.error('Error cargando datos offline:', error);
         setErrorCarga('Error cargando datos para modo offline');
       } finally {
         setCargandoDatosOffline(false);
@@ -195,10 +195,10 @@ const Home = () => {
       const shouldPreloadAgain = cacheAge > 24 * 60 * 60 * 1000; // 24 horas
       
       if (!cacheIsFresh || shouldPreloadAgain) {
-        console.log('🚀 [Chrome PWA] Detectado - Ejecutando precarga automática en 3 segundos...');
+        logger.debug('🚀 [Chrome PWA] Detectado - Ejecutando precarga automática en 3 segundos...');
         
         const preloadTimer = setTimeout(() => {
-          console.log('🔄 [Chrome PWA] Iniciando precarga de páginas para cachear correctamente...');
+          logger.debug('🔄 [Chrome PWA] Iniciando precarga de páginas para cachear correctamente...');
           startPreload().then(() => {
             // Marcar como precargado en esta sesión
             sessionStorage.setItem('chrome_preload_done', 'true');
@@ -209,7 +209,7 @@ const Home = () => {
         
         return () => clearTimeout(preloadTimer);
       } else {
-        console.log('ℹ️ [Chrome PWA] Cache reciente, saltando precarga automática');
+        logger.debug('ℹ️ [Chrome PWA] Cache reciente, saltando precarga automática');
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -285,20 +285,20 @@ const Home = () => {
                             position: 'top-center'
                           });
                         } catch (error) {
-                          console.error('❌ [Home Chrome] Error guardando cache:', error);
+                          logger.error('❌ [Home Chrome] Error guardando cache:', error);
                           toast.error(`❌ Error guardando cache: ${error.message}`, {
                             autoClose: 7000,
                             position: 'top-center'
                           });
                         }
                       } else if (!shouldEnableOffline()) {
-                        console.log('💻 Desktop: Precarga completada (cache offline no necesario)');
+                        logger.debug('💻 Desktop: Precarga completada (cache offline no necesario)');
                         toast.success('✅ Precarga completada', {
                           autoClose: 3000,
                           position: 'top-center'
                         });
                       } else {
-                        console.warn('⚠️ [Home Chrome] No hay datos para guardar en cache');
+                        logger.warn('⚠️ [Home Chrome] No hay datos para guardar en cache');
                         toast.warning('⚠️ No hay datos disponibles para guardar en cache. Asegúrate de estar conectado.', {
                           autoClose: 5000,
                           position: 'top-center'
@@ -361,7 +361,7 @@ const Home = () => {
                           position: 'top-center'
                         });
                       } catch (error) {
-                        console.error('Error al recargar datos:', error);
+                        logger.error('Error al recargar datos:', error);
                         setErrorCarga('Error al recargar datos');
                         toast.error('❌ Error al recargar datos', {
                           autoClose: 3000,

@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 import React, { useState, useEffect } from 'react';
 import {
   Drawer,
@@ -79,7 +80,7 @@ const TabResumen = ({ capacitacionId, userId }) => {
         // ⚠️ IMPORTANTE: Asegurar que capacitacionId sea string
         const capacitacionIdStr = String(capacitacionId);
         
-        console.log('[TabResumen] Cargando stats para:', { 
+        logger.debug('[TabResumen] Cargando stats para:', { 
           userId, 
           capacitacionId: capacitacionIdStr,
           tipoOriginal: typeof capacitacionId,
@@ -92,7 +93,7 @@ const TabResumen = ({ capacitacionId, userId }) => {
           registrosAsistenciaService.getImagenesByCapacitacion(userId, capacitacionIdStr)
         ]);
 
-        console.log('[TabResumen] Resultados:', {
+        logger.debug('[TabResumen] Resultados:', {
           registros: registros.length,
           empleadosUnicos: empleadosUnicos.length,
           imagenes: imagenes.length,
@@ -110,7 +111,7 @@ const TabResumen = ({ capacitacionId, userId }) => {
           });
         }
       } catch (error) {
-        console.error('[TabResumen] Error cargando resumen:', error);
+        logger.error('[TabResumen] Error cargando resumen:', error);
         if (mounted) {
           setStats(prev => ({ ...prev, loading: false }));
         }
@@ -197,21 +198,21 @@ const TabRegistros = ({ capacitacionId, userId }) => {
     const loadRegistros = async () => {
       try {
         const capacitacionIdStr = String(capacitacionId);
-        console.log('[TabRegistros] Cargando registros para:', { userId, capacitacionId: capacitacionIdStr });
+        logger.debug('[TabRegistros] Cargando registros para:', { userId, capacitacionId: capacitacionIdStr });
         
         const data = await registrosAsistenciaService.getRegistrosByCapacitacion(
           userId,
           capacitacionIdStr
         );
 
-        console.log('[TabRegistros] Registros obtenidos:', data.length, data);
+        logger.debug('[TabRegistros] Registros obtenidos:', data.length, data);
 
         if (mounted) {
           setRegistros(data);
           setLoading(false);
         }
       } catch (error) {
-        console.error('[TabRegistros] Error cargando registros:', error);
+        logger.error('[TabRegistros] Error cargando registros:', error);
         if (mounted) {
           setLoading(false);
         }
@@ -313,7 +314,7 @@ const TabEvidencias = ({ capacitacionId, userId }) => {
           setLoading(false);
         }
       } catch (error) {
-        console.error('Error cargando evidencias:', error);
+        logger.error('Error cargando evidencias:', error);
         if (mounted) {
           setLoading(false);
         }
@@ -346,7 +347,7 @@ const TabEvidencias = ({ capacitacionId, userId }) => {
     const { shareToken, nombre } = imagen;
     
     if (!shareToken) {
-      console.warn('Imagen sin shareToken:', imagen);
+      logger.warn('Imagen sin shareToken:', imagen);
       return;
     }
 
@@ -481,7 +482,7 @@ const TabEmpleados = ({ capacitacionId, userId }) => {
           setLoading(false);
         }
       } catch (error) {
-        console.error('Error cargando empleados:', error);
+        logger.error('Error cargando empleados:', error);
         if (mounted) {
           setLoading(false);
         }
@@ -578,7 +579,7 @@ const CapacitacionDetailPanel = ({
         // ⚠️ IMPORTANTE: Asegurar que capacitacionId sea string para consistencia
         const capacitacionIdStr = String(capacitacionId);
         
-        console.log('[CapacitacionDetailPanel] Cargando capacitación:', {
+        logger.debug('[CapacitacionDetailPanel] Cargando capacitación:', {
           capacitacionId: capacitacionIdStr,
           tipo: typeof capacitacionIdStr,
           userId: userProfile.uid
@@ -590,14 +591,14 @@ const CapacitacionDetailPanel = ({
           false // No calcular empleados aquí, se hace en tabs
         );
 
-        console.log('[CapacitacionDetailPanel] Capacitación cargada:', data);
+        logger.debug('[CapacitacionDetailPanel] Capacitación cargada:', data);
 
         if (mounted) {
           setCapacitacion(data);
           setLoading(false);
         }
       } catch (error) {
-        console.error('[CapacitacionDetailPanel] Error cargando capacitación:', error);
+        logger.error('[CapacitacionDetailPanel] Error cargando capacitación:', error);
         if (mounted) {
           setLoading(false);
         }
@@ -737,7 +738,7 @@ const CapacitacionDetailPanel = ({
               userId={userProfile?.uid}
               compact={true}
               onSaved={(registroId) => {
-                console.log('[CapacitacionDetailPanel] Registro guardado:', registroId);
+                logger.debug('[CapacitacionDetailPanel] Registro guardado:', registroId);
                 setMode('view');
                 setRefreshKey(prev => prev + 1); // Forzar refresh de tabs
                 setActiveTab(1); // Cambiar a tab de Registros

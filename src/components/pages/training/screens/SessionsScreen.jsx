@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   Alert,
@@ -124,7 +125,7 @@ export default function SessionsScreen() {
         setSelectedSessionId(sessionList[0].id);
       }
     } catch (err) {
-      console.error('[SessionsScreen] load error', err);
+      logger.error('[SessionsScreen] load error', err);
       setError(err.message || 'No se pudieron cargar las sesiones.');
     }
   };

@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 // Generador de HTML para reportes de auditoría
 // Función refactorizada para usar módulos separados
 
@@ -236,7 +237,7 @@ body::before {
         \`;
         document.head.appendChild(style);
       } catch (e) {
-        console.log('No se pudieron modificar los márgenes de impresión');
+        logger.debug('No se pudieron modificar los márgenes de impresión');
       }
     });
 

@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 // src/services/planAnualService.js
 import { 
   doc, 
@@ -34,7 +35,7 @@ export const planAnualService = {
       
       return docRef.id;
     } catch (error) {
-      console.error('Error al crear plan anual:', error);
+      logger.error('Error al crear plan anual:', error);
       throw error;
     }
   },
@@ -58,7 +59,7 @@ export const planAnualService = {
         updatedAt: Timestamp.now()
       });
     } catch (error) {
-      console.error('Error al actualizar plan anual:', error);
+      logger.error('Error al actualizar plan anual:', error);
       throw error;
     }
   },
@@ -85,7 +86,7 @@ export const planAnualService = {
       
       return null;
     } catch (error) {
-      console.error('Error al obtener plan anual:', error);
+      logger.error('Error al obtener plan anual:', error);
       return null;
     }
   },
@@ -106,7 +107,7 @@ export const planAnualService = {
       
       return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     } catch (error) {
-      console.error('Error al obtener planes anuales:', error);
+      logger.error('Error al obtener planes anuales:', error);
       return [];
     }
   }

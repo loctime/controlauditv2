@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 // Optimización de importaciones de Forms
 // Importar solo los componentes necesarios para reducir el tamaño del bundle
 
@@ -27,7 +28,7 @@ export const getFormikConfig = async (options = {}) => {
     initialValues: {},
     validationSchema: null,
     onSubmit: (values) => {
-      console.log('Form submitted:', values);
+      logger.debug('Form submitted:', values);
     },
     enableReinitialize: true,
     validateOnChange: true,

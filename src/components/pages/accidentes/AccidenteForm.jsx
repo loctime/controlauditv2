@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 import React, { useState, useEffect } from 'react';
 import {
   Dialog,
@@ -44,7 +45,7 @@ export default function AccidenteForm({ open, onClose, onSave, sucursalId, empre
       // Filtrar solo activos para el selector
       setEmpleados(empleadosData.filter(emp => emp.estado === 'activo'));
     } catch (error) {
-      console.error('Error al cargar empleados:', error);
+      logger.error('Error al cargar empleados:', error);
     }
   };
 
@@ -99,7 +100,7 @@ export default function AccidenteForm({ open, onClose, onSave, sucursalId, empre
       setSelectedEmpleado(null);
       onSave();
     } catch (error) {
-      console.error('Error al guardar accidente:', error);
+      logger.error('Error al guardar accidente:', error);
       alert('Error al guardar el accidente');
     } finally {
       setLoading(false);

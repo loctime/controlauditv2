@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 // src/services/controlFileInit.js
 // Inicialización de carpetas de ControlFile usando Backblaze B2 (flujo oficial)
 // ✅ Usa ensureTaskbarFolder() y ensureSubFolder() para evitar duplicados
@@ -20,7 +21,7 @@ export const initializeControlFileFolders = async () => {
   try {
     const user = auth.currentUser;
     if (!user) {
-      console.warn('[controlFileInit] Usuario no autenticado');
+      logger.warn('[controlFileInit] Usuario no autenticado');
       return { mainFolderId: null, subFolders: {} };
     }
 
@@ -28,7 +29,7 @@ export const initializeControlFileFolders = async () => {
     const mainFolderId = await ensureTaskbarFolder('ControlAudit');
     
     if (!mainFolderId) {
-      console.warn('[controlFileInit] No se pudo crear/obtener carpeta principal');
+      logger.warn('[controlFileInit] No se pudo crear/obtener carpeta principal');
       return { mainFolderId: null, subFolders: {} };
     }
 
@@ -40,7 +41,7 @@ export const initializeControlFileFolders = async () => {
     const archivosFolderId = await ensureSubFolder('Archivos', mainFolderId);
     if (archivosFolderId) {
       subFolders['archivos'] = archivosFolderId;
-      console.log('[controlFileInit] ✅ Carpeta Archivos creada para nuevo modelo de contexto');
+      logger.debug('[controlFileInit] ✅ Carpeta Archivos creada para nuevo modelo de contexto');
     }
     
     // Mantener carpetas legacy para compatibilidad
@@ -62,13 +63,13 @@ export const initializeControlFileFolders = async () => {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(folderData));
     } catch (e) {
-      console.warn('[controlFileInit] Error al guardar en cache:', e);
+      logger.warn('[controlFileInit] Error al guardar en cache:', e);
     }
 
-    console.log('[controlFileInit] ✅ Carpetas inicializadas (sin duplicados):', folderData);
+    logger.debug('[controlFileInit] ✅ Carpetas inicializadas (sin duplicados):', folderData);
     return folderData;
   } catch (error) {
-    console.error('[controlFileInit] ❌ Error al inicializar carpetas:', error);
+    logger.error('[controlFileInit] ❌ Error al inicializar carpetas:', error);
     return { mainFolderId: null, subFolders: {} };
   }
 };
@@ -85,18 +86,18 @@ export const getControlFileFolders = async () => {
       if (stored) {
         const folderData = JSON.parse(stored);
         if (folderData.mainFolderId) {
-          console.log('[controlFileInit] ✅ Carpetas obtenidas desde cache');
+          logger.debug('[controlFileInit] ✅ Carpetas obtenidas desde cache');
           return folderData;
         }
       }
     } catch (e) {
-      console.warn('[controlFileInit] Error al leer cache:', e);
+      logger.warn('[controlFileInit] Error al leer cache:', e);
     }
 
     // Si no hay cache válido, inicializar
     return await initializeControlFileFolders();
   } catch (error) {
-    console.error('[controlFileInit] ❌ Error al obtener carpetas:', error);
+    logger.error('[controlFileInit] ❌ Error al obtener carpetas:', error);
     return { mainFolderId: null, subFolders: { auditorias: null, accidentes: null, empresas: null } };
   }
 };
@@ -107,9 +108,9 @@ export const getControlFileFolders = async () => {
 export const clearControlFileFolders = () => {
   try {
     localStorage.removeItem(STORAGE_KEY);
-    console.log('[controlFileInit] ✅ Cache limpiado');
+    logger.debug('[controlFileInit] ✅ Cache limpiado');
   } catch (e) {
-    console.warn('[controlFileInit] Error al limpiar cache:', e);
+    logger.warn('[controlFileInit] Error al limpiar cache:', e);
   }
 };
 

@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 import React, { memo, useCallback } from "react";
 import {
   Typography,
@@ -117,7 +118,7 @@ const SeccionItem = memo(({
                             size="small" 
                             color="primary" 
                             onClick={() => {
-                              console.log('🔧 [DEBUG] Click en icono editar pregunta:', { pregunta, seccionNombre: seccion.nombre, index: preguntaIndex });
+                              logger.debug('🔧 [DEBUG] Click en icono editar pregunta:', { pregunta, seccionNombre: seccion.nombre, index: preguntaIndex });
                               onEditarPregunta({ pregunta, seccionNombre: seccion.nombre, index: preguntaIndex });
                             }}
                             sx={{ opacity: 0.7, ':hover': { opacity: 1 } }}

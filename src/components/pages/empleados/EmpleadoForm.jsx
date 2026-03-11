@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 import React, { useState, useEffect } from 'react';
 import {
   Dialog,
@@ -111,7 +112,7 @@ export default function EmpleadoForm({ open, onClose, onSave, empleado, sucursal
 
       onSave();
     } catch (error) {
-      console.error('Error al guardar empleado:', error);
+      logger.error('Error al guardar empleado:', error);
       alert('Error al guardar el empleado');
     } finally {
       setLoading(false);

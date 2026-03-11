@@ -1,6 +1,6 @@
+import logger from '@/utils/logger';
 import React, { useEffect, useRef, forwardRef, useImperativeHandle, useState } from 'react';
 import { Box, Typography, Alert, CircularProgress } from '@mui/material';
-
 // Mapeo de colores por categoría
 const COLOR_MAP = {
   'Conforme': '#43a047',        // verde
@@ -46,20 +46,20 @@ const EstadisticasChart = forwardRef(({ estadisticas, title, height = 320, width
   const drawChart = (elementId, dataObj, chartTitle) => {
     try {
       if (!window.google || !window.google.visualization) {
-        console.error('[EstadisticasChart] Google Charts no está disponible');
+        logger.error('[EstadisticasChart] Google Charts no está disponible');
         return;
       }
 
       const element = document.getElementById(elementId);
       if (!element) {
-        console.error(`[EstadisticasChart] Elemento ${elementId} no encontrado`);
+        logger.error(`[EstadisticasChart] Elemento ${elementId} no encontrado`);
         return;
       }
 
       const entries = Object.entries(dataObj).filter(([_, value]) => value > 0);
       
       if (entries.length === 0) {
-        console.warn('[EstadisticasChart] No hay datos válidos para mostrar');
+        logger.warn('[EstadisticasChart] No hay datos válidos para mostrar');
         element.innerHTML = '<div style="text-align: center; padding: 20px; color: #666;">No hay datos para mostrar</div>';
         return;
       }
@@ -98,9 +98,9 @@ const EstadisticasChart = forwardRef(({ estadisticas, title, height = 320, width
         chartInstance.current = chart;
       }
 
-      console.log(`[EstadisticasChart] Gráfico ${elementId} dibujado exitosamente`);
+      logger.debug(`[EstadisticasChart] Gráfico ${elementId} dibujado exitosamente`);
     } catch (error) {
-      console.error(`[EstadisticasChart] Error dibujando gráfico ${elementId}:`, error);
+      logger.error(`[EstadisticasChart] Error dibujando gráfico ${elementId}:`, error);
       setError(`Error al dibujar el gráfico: ${error.message}`);
     }
   };
@@ -110,7 +110,7 @@ const EstadisticasChart = forwardRef(({ estadisticas, title, height = 320, width
     return new Promise((resolve, reject) => {
       // Verificar si ya está cargado
       if (window.google && window.google.charts) {
-        console.log('[EstadisticasChart] Google Charts ya cargado');
+        logger.debug('[EstadisticasChart] Google Charts ya cargado');
         setGoogleLoaded(true);
         resolve();
         return;
@@ -119,7 +119,7 @@ const EstadisticasChart = forwardRef(({ estadisticas, title, height = 320, width
       // Verificar si el script ya está en el DOM
       const existingScript = document.querySelector('script[src*="gstatic.com/charts/loader.js"]');
       if (existingScript) {
-        console.log('[EstadisticasChart] Script de Google Charts ya existe, esperando carga...');
+        logger.debug('[EstadisticasChart] Script de Google Charts ya existe, esperando carga...');
         const checkLoaded = () => {
           if (window.google && window.google.charts) {
             setGoogleLoaded(true);
@@ -137,17 +137,17 @@ const EstadisticasChart = forwardRef(({ estadisticas, title, height = 320, width
       script.async = true;
       
       script.onload = () => {
-        console.log('[EstadisticasChart] Script de Google Charts cargado');
+        logger.debug('[EstadisticasChart] Script de Google Charts cargado');
         window.google.charts.load('current', { packages: ['corechart'] });
         window.google.charts.setOnLoadCallback(() => {
-          console.log('[EstadisticasChart] Google Charts inicializado');
+          logger.debug('[EstadisticasChart] Google Charts inicializado');
           setGoogleLoaded(true);
           resolve();
         });
       };
       
       script.onerror = (error) => {
-        console.error('[EstadisticasChart] Error cargando Google Charts:', error);
+        logger.error('[EstadisticasChart] Error cargando Google Charts:', error);
         reject(new Error('No se pudo cargar Google Charts'));
       };
       
@@ -161,20 +161,20 @@ const EstadisticasChart = forwardRef(({ estadisticas, title, height = 320, width
       setError(null);
       
       if (Array.isArray(estadisticas)) {
-        console.log('[EstadisticasChart] Dibujando múltiples gráficos');
+        logger.debug('[EstadisticasChart] Dibujando múltiples gráficos');
         estadisticas.forEach((item, idx) => {
           if (item.estadisticas && hasValidData(item.estadisticas)) {
             drawChart(`donutchart-${idx}`, item.estadisticas, item.title);
           }
         });
       } else {
-        console.log('[EstadisticasChart] Dibujando gráfico único');
+        logger.debug('[EstadisticasChart] Dibujando gráfico único');
         if (hasValidData(estadisticas)) {
           drawChart('donutchart-main', estadisticas, title);
         }
       }
     } catch (error) {
-      console.error('[EstadisticasChart] Error dibujando gráficos:', error);
+      logger.error('[EstadisticasChart] Error dibujando gráficos:', error);
       setError(`Error al dibujar los gráficos: ${error.message}`);
     } finally {
       setLoading(false);
@@ -182,12 +182,12 @@ const EstadisticasChart = forwardRef(({ estadisticas, title, height = 320, width
   };
 
   useEffect(() => {
-    console.log('[EstadisticasChart] Iniciando carga de gráficos...');
-    console.log('[EstadisticasChart] estadisticas:', estadisticas);
-    console.log('[EstadisticasChart] title:', title);
+    logger.debug('[EstadisticasChart] Iniciando carga de gráficos...');
+    logger.debug('[EstadisticasChart] estadisticas:', estadisticas);
+    logger.debug('[EstadisticasChart] title:', title);
     
     if (!hasValidData(estadisticas)) {
-      console.warn('[EstadisticasChart] No hay datos válidos para mostrar');
+      logger.warn('[EstadisticasChart] No hay datos válidos para mostrar');
       setLoading(false);
       return;
     }
@@ -201,7 +201,7 @@ const EstadisticasChart = forwardRef(({ estadisticas, title, height = 320, width
         setTimeout(drawCharts, 100);
       })
       .catch((error) => {
-        console.error('[EstadisticasChart] Error cargando Google Charts:', error);
+        logger.error('[EstadisticasChart] Error cargando Google Charts:', error);
         setError(`Error al cargar Google Charts: ${error.message}`);
         setLoading(false);
       });

@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 import React from 'react';
 import {
   Dialog,
@@ -430,10 +431,10 @@ const ResumenAuditoriaModal = ({
                                             
                                             // Intentar diagnosticar el problema
                                             try {
-                                              console.warn(`[ResumenAuditoriaModal] ⚠️ Error cargando imagen (shareToken: ${shareToken})`);
-                                              console.warn(`[ResumenAuditoriaModal] URL completa: ${imagenUrl}`);
-                                              console.warn(`[ResumenAuditoriaModal] Verifica en Firestore: /shares/${shareToken}`);
-                                              console.warn(`[ResumenAuditoriaModal] Prueba directamente: https://files.controldoc.app/api/shares/${shareToken}/image`);
+                                              logger.warn(`[ResumenAuditoriaModal] ⚠️ Error cargando imagen (shareToken: ${shareToken})`);
+                                              logger.warn(`[ResumenAuditoriaModal] URL completa: ${imagenUrl}`);
+                                              logger.warn(`[ResumenAuditoriaModal] Verifica en Firestore: /shares/${shareToken}`);
+                                              logger.warn(`[ResumenAuditoriaModal] Prueba directamente: https://files.controldoc.app/api/shares/${shareToken}/image`);
                                               
                                               // Intentar fetch para ver la respuesta
                                               const testResponse = await fetch(`https://files.controldoc.app/api/shares/${shareToken}`, { 
@@ -442,12 +443,12 @@ const ResumenAuditoriaModal = ({
                                               });
                                               if (testResponse.ok) {
                                                 const shareData = await testResponse.json();
-                                                console.warn(`[ResumenAuditoriaModal] Share existe:`, shareData);
+                                                logger.warn(`[ResumenAuditoriaModal] Share existe:`, shareData);
                                               } else {
-                                                console.warn(`[ResumenAuditoriaModal] Share no encontrado o no accesible. Status: ${testResponse.status}`);
+                                                logger.warn(`[ResumenAuditoriaModal] Share no encontrado o no accesible. Status: ${testResponse.status}`);
                                               }
                                             } catch (fetchError) {
-                                              console.warn(`[ResumenAuditoriaModal] ⚠️ Error al diagnosticar (shareToken: ${shareToken}):`, fetchError);
+                                              logger.warn(`[ResumenAuditoriaModal] ⚠️ Error al diagnosticar (shareToken: ${shareToken}):`, fetchError);
                                             }
                                             
                                             e.target.style.display = 'none'; 

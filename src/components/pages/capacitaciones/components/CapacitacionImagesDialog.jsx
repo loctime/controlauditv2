@@ -1,3 +1,4 @@
+﻿import logger from '@/utils/logger';
 import React, { useState, useRef, useEffect } from 'react';
 import {
   Dialog,
@@ -25,9 +26,10 @@ import capacitacionImageService from '../../../../services/capacitacionImageServ
 import { useConnectivity } from '../../../../hooks/useConnectivity';
 import { useAuth } from '@/components/context/AuthContext';
 import { convertirShareTokenAUrl } from '@/utils/imageUtils';
+import { validateFiles } from '../../../../services/fileValidationPolicy';
 
 /**
- * Diálogo para gestionar imágenes de capacitaciones
+ * DiÃ¡logo para gestionar imÃ¡genes de capacitaciones
  */
 const CapacitacionImagesDialog = ({
   open,
@@ -48,7 +50,7 @@ const CapacitacionImagesDialog = ({
   const cameraInputRef = useRef(null);
   const galleryInputRef = useRef(null);
 
-  // Cargar imágenes existentes al abrir
+  // Cargar imÃ¡genes existentes al abrir
   useEffect(() => {
     if (open && capacitacion) {
       loadImages();
@@ -64,21 +66,17 @@ const CapacitacionImagesDialog = ({
   };
 
   const handleFileSelect = async (event, source) => {
-    const file = event.target.files?.[0];
+    const files = Array.from(event.target.files || []);
+    if (!files.length) return;
+
+    const validation = validateFiles(files);
+    if (validation.rejected.length > 0) {
+      setError(validation.rejected.map((item) => `${item.fileName}: ${item.issues.map((issue) => issue.message).join(', ')}`).join(' | '));
+      return;
+    }
+
+    const file = validation.accepted[0];
     if (!file) return;
-
-    // Validar que es una imagen
-    if (!file.type.startsWith('image/')) {
-      setError('Solo se permiten archivos de imagen');
-      return;
-    }
-
-    // Validar tamaño (máx 10MB)
-    if (file.size > 10 * 1024 * 1024) {
-      setError('La imagen es demasiado grande (máximo 10MB)');
-      return;
-    }
-
     setError(null);
     setLoading(true);
 
@@ -98,22 +96,22 @@ const CapacitacionImagesDialog = ({
       setImagenes(prev => [...prev, tempImage]);
       setUploadingIndex(imagenes.length);
 
-      // Validar autenticación desde el contexto
+      // Validar autenticaciÃ³n desde el contexto
       if (!user || !isLogged || authLoading) {
-        throw new Error('Usuario no autenticado o autenticación en proceso');
+        throw new Error('Usuario no autenticado o autenticaciÃ³n en proceso');
       }
 
       // Obtener el token desde el usuario del contexto
       const idToken = await user.getIdToken();
       
       if (!idToken) {
-        throw new Error('No se pudo obtener el token de autenticación');
+        throw new Error('No se pudo obtener el token de autenticaciÃ³n');
       }
 
-      // Subir imagen (companyId y sucursalId se obtendrán automáticamente si no se proporcionan)
+      // Subir imagen (companyId y sucursalId se obtendrÃ¡n automÃ¡ticamente si no se proporcionan)
       const companyId = capacitacion.empresaId || null;
       const sucursalId = capacitacion.sucursalId || null;
-      // ✅ Usar capacitacionTipoId si está disponible, sino usar nombre (el servicio lo normalizará)
+      // âœ… Usar capacitacionTipoId si estÃ¡ disponible, sino usar nombre (el servicio lo normalizarÃ¡)
       const capacitacionTipoId = capacitacion.capacitacionTipoId || capacitacion.nombre || null;
       const result = await capacitacionImageService.uploadImageSmart(
         file,
@@ -127,10 +125,10 @@ const CapacitacionImagesDialog = ({
       );
 
       // Actualizar imagen con metadata real
-      // ✅ Guardar solo shareToken, NO fileURL
+      // âœ… Guardar solo shareToken, NO fileURL
       const finalImage = {
         ...result,
-        shareToken: result.shareToken, // ✅ shareToken es lo único que se guarda
+        shareToken: result.shareToken, // âœ… shareToken es lo Ãºnico que se guarda
         uploadedAt: result.uploadedAt || new Date().toISOString()
       };
 
@@ -149,7 +147,7 @@ const CapacitacionImagesDialog = ({
         onImagesUpdated();
       }
     } catch (err) {
-      console.error('Error al subir imagen:', err);
+      logger.error('Error al subir imagen:', err);
       setError(`Error al subir imagen: ${err.message}`);
       // Eliminar imagen temporal en caso de error
       setImagenes(prev => prev.filter(img => img.id !== tempId));
@@ -163,7 +161,7 @@ const CapacitacionImagesDialog = ({
   };
 
   const handleDeleteImage = async (imageId) => {
-    if (!window.confirm('¿Eliminar esta imagen?')) return;
+    if (!window.confirm('Â¿Eliminar esta imagen?')) return;
 
     try {
       setLoading(true);
@@ -180,7 +178,7 @@ const CapacitacionImagesDialog = ({
         onImagesUpdated();
       }
     } catch (err) {
-      console.error('Error al eliminar imagen:', err);
+      logger.error('Error al eliminar imagen:', err);
       setError(`Error al eliminar imagen: ${err.message}`);
     } finally {
       setLoading(false);
@@ -196,15 +194,15 @@ const CapacitacionImagesDialog = ({
   };
 
   const getImageURL = (image) => {
-    // ✅ PRIORIDAD: Usar shareToken con helper global
+    // âœ… PRIORIDAD: Usar shareToken con helper global
     if (image.shareToken) {
       return convertirShareTokenAUrl(image.shareToken);
     }
-    // ⚠️ COMPATIBILIDAD: Para datos antiguos con fileURL (solo lectura)
+    // âš ï¸ COMPATIBILIDAD: Para datos antiguos con fileURL (solo lectura)
     if (image.fileURL) return image.fileURL;
     // Preview local antes de subir
     if (image.file) return URL.createObjectURL(image.file);
-    // ⚠️ COMPATIBILIDAD: Para datos antiguos con url (solo lectura)
+    // âš ï¸ COMPATIBILIDAD: Para datos antiguos con url (solo lectura)
     if (image.url) return image.url;
     return null;
   };
@@ -220,7 +218,7 @@ const CapacitacionImagesDialog = ({
       <DialogTitle>
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <Typography variant="h6">
-            Imágenes de Capacitación
+            ImÃ¡genes de CapacitaciÃ³n
           </Typography>
           {!isOnline && (
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -240,7 +238,7 @@ const CapacitacionImagesDialog = ({
           </Alert>
         )}
 
-        {/* Botones de acción */}
+        {/* Botones de acciÃ³n */}
         <Box sx={{ display: 'flex', gap: 2, mb: 3, flexWrap: 'wrap' }}>
           <Button
             variant="contained"
@@ -249,7 +247,7 @@ const CapacitacionImagesDialog = ({
             disabled={loading}
             fullWidth={isMobile}
           >
-            Cámara
+            CÃ¡mara
           </Button>
           <Button
             variant="outlined"
@@ -258,7 +256,7 @@ const CapacitacionImagesDialog = ({
             disabled={loading}
             fullWidth={isMobile}
           >
-            Galería
+            GalerÃ­a
           </Button>
         </Box>
 
@@ -266,7 +264,8 @@ const CapacitacionImagesDialog = ({
         <input
           ref={cameraInputRef}
           type="file"
-          accept="image/*"
+          multiple
+          accept="*/*"
           capture="environment"
           onChange={(e) => handleFileSelect(e, 'camera')}
           style={{ display: 'none' }}
@@ -274,12 +273,13 @@ const CapacitacionImagesDialog = ({
         <input
           ref={galleryInputRef}
           type="file"
-          accept="image/*"
+          multiple
+          accept="*/*"
           onChange={(e) => handleFileSelect(e, 'gallery')}
           style={{ display: 'none' }}
         />
 
-        {/* Grid de imágenes */}
+        {/* Grid de imÃ¡genes */}
         {imagenes.length === 0 ? (
           <Box 
             sx={{ 
@@ -290,10 +290,10 @@ const CapacitacionImagesDialog = ({
           >
             <PhotoLibraryIcon sx={{ fontSize: 64, mb: 2, opacity: 0.3 }} />
             <Typography variant="body1">
-              No hay imágenes agregadas
+              No hay imÃ¡genes agregadas
             </Typography>
             <Typography variant="body2" sx={{ mt: 1 }}>
-              Usa los botones de arriba para agregar imágenes
+              Usa los botones de arriba para agregar imÃ¡genes
             </Typography>
           </Box>
         ) : (
@@ -393,4 +393,10 @@ const CapacitacionImagesDialog = ({
 };
 
 export default CapacitacionImagesDialog;
+
+
+
+
+
+
 

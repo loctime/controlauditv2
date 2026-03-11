@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 import React, { useState, useEffect } from 'react';
 import {
   Box, Typography, Accordion, AccordionSummary, AccordionDetails,
@@ -25,15 +26,15 @@ const SucursalesEmpresa = ({ empresaId, ownerId }) => {
     
     // Construir ruta correcta usando firestoreRoutesCore (owner-centric)
     const sucursalesRef = collection(dbAudit, ...firestoreRoutesCore.sucursales(ownerId));
-    console.log('[SucursalesEmpresa] Buscando sucursales para empresa', empresaId, 'en path:', sucursalesRef.path);
+    logger.debug('[SucursalesEmpresa] Buscando sucursales para empresa', empresaId, 'en path:', sucursalesRef.path);
     
     const q = query(sucursalesRef, where('empresaId', '==', empresaId));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       setSucursales(snapshot.docs.map(doc => normalizeSucursal(doc)));
       setLoading(false);
-      console.debug(`[SucursalesEmpresa] ${snapshot.docs.length} sucursales para empresa ${empresaId}`);
+      logger.debug(`[SucursalesEmpresa] ${snapshot.docs.length} sucursales para empresa ${empresaId}`);
     }, (error) => {
-      console.error('[SucursalesEmpresa] Error cargando sucursales:', error);
+      logger.error('[SucursalesEmpresa] Error cargando sucursales:', error);
       setLoading(false);
     });
     return () => unsubscribe();
@@ -129,7 +130,7 @@ const PerfilEmpresas = ({ empresas, loading }) => {
   const { userProfile } = useAuth();
   
   // Log de depuración
-  console.debug('[PerfilEmpresas] empresas:', empresas);
+  logger.debug('[PerfilEmpresas] empresas:', empresas);
   const navigate = useNavigate();
   
   // Obtener ownerId del userProfile (viene del token)
@@ -172,7 +173,7 @@ const PerfilEmpresas = ({ empresas, loading }) => {
           variant="contained"
           color="primary"
           onClick={() => {
-            console.log('[PerfilEmpresas] Navegando a /establecimiento');
+            logger.debug('[PerfilEmpresas] Navegando a /establecimiento');
             navigate('/establecimiento');
           }}
           sx={{ 

@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 import React, { useState } from 'react';
 import {
   Dialog,
@@ -68,7 +69,7 @@ export default function CapacitacionForm({ open, onClose, onSave, sucursalId, em
       });
       onSave();
     } catch (error) {
-      console.error('Error al guardar capacitación:', error);
+      logger.error('Error al guardar capacitación:', error);
       alert('Error al guardar la capacitación');
     } finally {
       setLoading(false);

@@ -1,6 +1,5 @@
 import React from 'react';
 import { usePermiso } from '../hooks/usePermiso';
-
 /**
  * Componente para renderizar children solo si el usuario tiene el permiso indicado.
  * @param {string} permiso - Nombre del permiso (ej: 'puedeCompartirFormularios')
@@ -9,8 +8,6 @@ import { usePermiso } from '../hooks/usePermiso';
  */
 const Permiso = ({ permiso, children, fallback = null }) => {
   const tienePermiso = usePermiso(permiso);
-  // Debug log
-  console.debug(`[Permiso] Render para '${permiso}':`, tienePermiso);
   return tienePermiso ? children : fallback;
 };
 

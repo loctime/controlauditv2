@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 // Utilidades para manejo de cámara e imágenes
 
 /**
@@ -10,12 +11,12 @@
 export const comprimirImagen = (file, maxWidth = 800, quality = 0.7) => {
   return new Promise((resolve) => {
     if (!file.type.startsWith('image/')) {
-      console.warn('Archivo no es una imagen:', file.type);
+      logger.warn('Archivo no es una imagen:', file.type);
       resolve(file);
       return;
     }
 
-    console.log(`🔄 Comprimiendo imagen: ${(file.size/1024/1024).toFixed(2)}MB`);
+    logger.debug(`🔄 Comprimiendo imagen: ${(file.size/1024/1024).toFixed(2)}MB`);
 
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
@@ -63,16 +64,16 @@ export const comprimirImagen = (file, maxWidth = 800, quality = 0.7) => {
         const reductionPercent = Math.round((1 - compressedFile.size/file.size) * 100);
         const finalSizeMB = (compressedFile.size/1024/1024).toFixed(2);
         
-        console.log(`✅ Imagen optimizada: ${(file.size/1024/1024).toFixed(2)}MB -> ${finalSizeMB}MB (${reductionPercent}% reducción)`);
+        logger.debug(`✅ Imagen optimizada: ${(file.size/1024/1024).toFixed(2)}MB -> ${finalSizeMB}MB (${reductionPercent}% reducción)`);
         
         if (compressedFile.size > 2 * 1024 * 1024) {
-          console.warn(`⚠️ Imagen aún grande (${finalSizeMB}MB), aplicando compresión adicional`);
+          logger.warn(`⚠️ Imagen aún grande (${finalSizeMB}MB), aplicando compresión adicional`);
           canvas.toBlob((finalBlob) => {
             const finalFile = new File([finalBlob], file.name, {
               type: 'image/jpeg',
               lastModified: Date.now()
             });
-            console.log(`🎯 Compresión final: ${(finalFile.size/1024/1024).toFixed(2)}MB`);
+            logger.debug(`🎯 Compresión final: ${(finalFile.size/1024/1024).toFixed(2)}MB`);
             resolve(finalFile);
           }, 'image/jpeg', 0.4);
         } else {
@@ -82,7 +83,7 @@ export const comprimirImagen = (file, maxWidth = 800, quality = 0.7) => {
     };
     
     img.onerror = () => {
-      console.error('Error al cargar la imagen para compresión');
+      logger.error('Error al cargar la imagen para compresión');
       resolve(file);
     };
     
@@ -154,17 +155,17 @@ export const checkBrowserCompatibility = () => {
   const hasGetUserMedia = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
   const hasEnumerateDevices = !!(navigator.mediaDevices && navigator.mediaDevices.enumerateDevices);
   
-  console.log('🔍 Verificando compatibilidad del navegador:');
-  console.log('- HTTPS/Localhost:', isHTTPS);
-  console.log('- getUserMedia disponible:', hasGetUserMedia);
-  console.log('- enumerateDevices disponible:', hasEnumerateDevices);
+  logger.debug('🔍 Verificando compatibilidad del navegador:');
+  logger.debug('- HTTPS/Localhost:', isHTTPS);
+  logger.debug('- getUserMedia disponible:', hasGetUserMedia);
+  logger.debug('- enumerateDevices disponible:', hasEnumerateDevices);
   
   if (!isHTTPS) {
-    console.warn('⚠️ La cámara requiere HTTPS (excepto en localhost)');
+    logger.warn('⚠️ La cámara requiere HTTPS (excepto en localhost)');
   }
   
   if (!hasGetUserMedia) {
-    console.error('❌ getUserMedia no está disponible en este navegador');
+    logger.error('❌ getUserMedia no está disponible en este navegador');
     return false;
   }
   
@@ -181,17 +182,17 @@ export const detectAvailableCameras = async () => {
     
     const devices = await navigator.mediaDevices.enumerateDevices();
     const videoDevices = devices.filter(device => device.kind === 'videoinput');
-    console.log('📷 Cámaras disponibles:', videoDevices.length);
+    logger.debug('📷 Cámaras disponibles:', videoDevices.length);
     return videoDevices;
   } catch (error) {
-    console.error('Error al detectar cámaras:', error);
+    logger.error('Error al detectar cámaras:', error);
     try {
       const devices = await navigator.mediaDevices.enumerateDevices();
       const videoDevices = devices.filter(device => device.kind === 'videoinput');
-      console.log('📷 Cámaras detectadas (sin permisos):', videoDevices.length);
+      logger.debug('📷 Cámaras detectadas (sin permisos):', videoDevices.length);
       return videoDevices;
     } catch (fallbackError) {
-      console.error('Error en fallback de detección:', fallbackError);
+      logger.error('Error en fallback de detección:', fallbackError);
       return [];
     }
   }

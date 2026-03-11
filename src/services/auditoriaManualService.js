@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 // src/services/auditoriaManualService.js
 import { 
   collection, 
@@ -73,7 +74,7 @@ export const auditoriaManualService = {
 
       return docRef.id;
     } catch (error) {
-      console.error('❌ Error al crear auditoría manual:', error);
+      logger.error('❌ Error al crear auditoría manual:', error);
       throw error;
     }
   },
@@ -124,7 +125,7 @@ export const auditoriaManualService = {
       const snapshot = await getDocs(q);
       return snapshot.docs.map(doc => normalizeAuditoriaManual(doc));
     } catch (error) {
-      console.error('❌ Error al obtener auditorías manuales:', error);
+      logger.error('❌ Error al obtener auditorías manuales:', error);
       return [];
     }
   },
@@ -148,7 +149,7 @@ export const auditoriaManualService = {
 
       return null;
     } catch (error) {
-      console.error('❌ Error al obtener auditoría manual:', error);
+      logger.error('❌ Error al obtener auditoría manual:', error);
       return null;
     }
   },
@@ -187,7 +188,7 @@ export const auditoriaManualService = {
 
       await updateDocWithAppId(auditoriaRef, updateData);
     } catch (error) {
-      console.error('❌ Error al actualizar auditoría manual:', error);
+      logger.error('❌ Error al actualizar auditoría manual:', error);
       throw error;
     }
   },
@@ -214,7 +215,7 @@ export const auditoriaManualService = {
         updatedBy: userProfile.uid,
       });
     } catch (error) {
-      console.error('❌ Error al cerrar auditoría manual:', error);
+      logger.error('❌ Error al cerrar auditoría manual:', error);
       throw error;
     }
   },
@@ -236,7 +237,7 @@ export const auditoriaManualService = {
         updatedAt: Timestamp.now(),
       });
     } catch (error) {
-      console.error('❌ Error al incrementar contador de evidencias:', error);
+      logger.error('❌ Error al incrementar contador de evidencias:', error);
       throw error;
     }
   },
@@ -260,7 +261,7 @@ export const auditoriaManualService = {
         updatedAt: Timestamp.now(),
       });
     } catch (error) {
-      console.error('❌ Error al decrementar contador de evidencias:', error);
+      logger.error('❌ Error al decrementar contador de evidencias:', error);
       throw error;
     }
   },
@@ -280,7 +281,7 @@ export const auditoriaManualService = {
       await deleteDocWithAppId(auditoriaRef);
       return true;
     } catch (error) {
-      console.error('❌ Error al eliminar auditoría manual:', error);
+      logger.error('❌ Error al eliminar auditoría manual:', error);
       throw error;
     }
   },

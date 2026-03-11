@@ -1,9 +1,9 @@
+import logger from '@/utils/logger';
 import { useEffect } from 'react';
 import { onSnapshot, collection } from 'firebase/firestore';
 import { dbAudit } from '../../../firebaseControlFile.js';
 import { firestoreRoutesCore } from '../../../core/firestore/firestoreRoutes.core';
 import { normalizeSucursal } from '../../../utils/firestoreUtils';
-
 /**
  * Hook para listener reactivo de sucursales con fallback offline
  * Owner-centric: asume que firestoreRoutesCore ya filtra por owner
@@ -41,21 +41,21 @@ export const useSucursalesListener = (userProfile, setUserSucursales, setLoading
         setLoadingSucursales(false);
       },
       async (error) => {
-        console.error('❌ Error en listener de sucursales:', error);
+        logger.error('❌ Error en listener de sucursales:', error);
         
         // Fallback al cache offline solo si está habilitado (móvil)
         if (loadUserFromCache) {
           try {
             const cachedData = await loadUserFromCache();
             if (cachedData?.sucursales && cachedData.sucursales.length > 0) {
-              console.log('🔄 [Offline] Usando sucursales del cache IndexedDB:', cachedData.sucursales.length);
+              logger.debug('🔄 [Offline] Usando sucursales del cache IndexedDB:', cachedData.sucursales.length);
               const normalizedSucursales = cachedData.sucursales.map(sucursal => normalizeSucursal(sucursal));
               setUserSucursales(normalizedSucursales);
               setLoadingSucursales(false);
               return;
             }
           } catch (cacheError) {
-            console.error('Error cargando sucursales desde cache:', cacheError);
+            logger.error('Error cargando sucursales desde cache:', cacheError);
           }
         }
         

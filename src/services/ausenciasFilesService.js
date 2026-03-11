@@ -1,4 +1,4 @@
-import {
+ï»¿import {
   collection,
   doc,
   getDocs,
@@ -10,30 +10,11 @@ import {
 import { db } from '../firebaseControlFile';
 import { firestoreRoutesCore } from '../core/firestore/firestoreRoutes.core';
 import { addDocWithAppId, updateDocWithAppId } from '../firebase/firestoreAppWriter';
-import { uploadFileWithContext } from './unifiedFileUploadService';
-import { getDownloadUrl } from './controlFileB2Service';
-import { convertirShareTokenAUrl } from '../utils/imageUtils';
+import { uploadFiles, listFiles, softDeleteFile } from './unifiedFileService';
+import { resolveDownloadUrl, resolveViewUrl } from './fileResolverService';
 import { appendAusenciaHistorial } from './ausenciasService';
 
-const ALLOWED_FILE_TYPES = new Set(['certificado', 'foto', 'pdf', 'documento']);
-const DEFAULT_MAX_FILE_SIZE = 10 * 1024 * 1024;
-
-const resolveTipoArchivo = (file) => {
-  if (!file) return 'documento';
-  const mimeType = String(file.type || '').toLowerCase();
-  const fileName = String(file.name || '').toLowerCase();
-
-  if (mimeType.startsWith('image/')) {
-    return 'foto';
-  }
-  if (mimeType === 'application/pdf' || fileName.endsWith('.pdf')) {
-    return 'pdf';
-  }
-
-  return 'documento';
-};
-
-const isAllowedTipoArchivo = (tipoArchivo) => ALLOWED_FILE_TYPES.has(tipoArchivo);
+const DEFAULT_MAX_FILE_SIZE = 500 * 1024 * 1024;
 
 const getAusenciaRef = (ownerId, ausenciaId) =>
   doc(db, ...firestoreRoutesCore.ausencia(ownerId, ausenciaId));
@@ -67,62 +48,44 @@ export async function uploadAndAttachFiles(
 
   const ownerId = userProfile.ownerId;
   const maxFileSize = options.maxFileSize || DEFAULT_MAX_FILE_SIZE;
-  const selectedFiles = Array.from(files || []);
 
-  const uploaded = [];
-  const errors = [];
-
-  for (const file of selectedFiles) {
-    try {
-      if (!file) continue;
-      if (file.size > maxFileSize) {
-        throw new Error(`Archivo excede el tamaño máximo (${Math.round(maxFileSize / (1024 * 1024))}MB)`);
-      }
-
-      const tipoArchivo = resolveTipoArchivo(file);
-      if (!isAllowedTipoArchivo(tipoArchivo)) {
-        throw new Error(`Tipo de archivo no permitido: ${tipoArchivo}`);
-      }
-
-      const result = await uploadFileWithContext({
-        file,
-        context: {
-          contextType: 'salud',
-          contextEventId: String(ausenciaId),
-          companyId: context.companyId || context.empresaId || 'system',
-          sucursalId: context.sucursalId || null,
-          tipoArchivo
-        },
-        fecha: new Date(),
-        uploadedBy: userProfile.uid
-      });
-
-      const filePayload = {
-        fileId: result.fileId,
-        shareToken: result.shareToken,
-        nombre: file.name || result.fileId,
-        mimeType: file.type || 'application/octet-stream',
-        size: file.size || null,
-        tipoArchivo,
-        uploadedBy: userProfile.uid || null,
-        createdAt: serverTimestamp(),
-        deletedAt: null
-      };
-
-      const filesRef = getAusenciaFilesRef(ownerId, ausenciaId);
-      const fileMetaRef = await addDocWithAppId(filesRef, filePayload);
-
-      uploaded.push({
-        id: fileMetaRef.id,
-        ...filePayload,
-        createdAt: new Date()
-      });
-    } catch (error) {
-      errors.push({
+  const oversized = Array.from(files || []).filter((file) => file?.size > maxFileSize);
+  if (oversized.length > 0) {
+    return {
+      uploaded: [],
+      errors: oversized.map((file) => ({
         fileName: file?.name || 'archivo',
-        message: error?.message || 'Error desconocido al subir archivo'
-      });
-    }
+        message: `Archivo excede el tamano maximo (${Math.round(maxFileSize / (1024 * 1024))}MB)`
+      }))
+    };
+  }
+
+  const uploadResult = await uploadFiles({
+    ownerId,
+    module: 'salud_ocupacional',
+    entityId: String(ausenciaId),
+    companyId: context.companyId || context.empresaId || 'system',
+    files,
+    uploadedBy: userProfile.uid || null,
+    contextType: 'salud',
+    tipoArchivo: 'documento',
+    entityCollection: 'ausencias'
+  });
+
+  const filesRef = getAusenciaFilesRef(ownerId, ausenciaId);
+  const uploaded = [];
+
+  for (const fileRef of uploadResult.fileRefs) {
+    const payload = {
+      ...fileRef,
+      status: 'active',
+      deletedAt: null,
+      deletedBy: null,
+      updatedAt: serverTimestamp()
+    };
+
+    const metaRef = await addDocWithAppId(filesRef, payload);
+    uploaded.push({ id: metaRef.id, ...payload });
   }
 
   if (uploaded.length > 0) {
@@ -130,7 +93,8 @@ export async function uploadAndAttachFiles(
     await updateDocWithAppId(ausenciaRef, {
       filesCount: increment(uploaded.length),
       lastFileAt: serverTimestamp(),
-      updatedAt: serverTimestamp()
+      updatedAt: serverTimestamp(),
+      filesMigrationVersion: 1
     });
 
     await appendAusenciaHistorial(
@@ -143,7 +107,14 @@ export async function uploadAndAttachFiles(
     );
   }
 
-  return { uploaded, errors };
+  return {
+    uploaded,
+    errors: uploadResult.rejected.map((item) => ({
+      fileName: item.fileName,
+      message: item.issues.map((issue) => issue.message).join(', ')
+    })),
+    warnings: uploadResult.warnings
+  };
 }
 
 export async function listAusenciaFiles(ausenciaId, userProfile) {
@@ -151,29 +122,32 @@ export async function listAusenciaFiles(ausenciaId, userProfile) {
   if (!userProfile?.ownerId) throw new Error('userProfile.ownerId es requerido');
 
   const ownerId = userProfile.ownerId;
-  const filesRef = getAusenciaFilesRef(ownerId, ausenciaId);
 
+  const canonical = await listFiles({
+    ownerId,
+    module: 'salud_ocupacional',
+    entityId: String(ausenciaId),
+    entityCollection: 'ausencias'
+  });
+
+  if (canonical.length > 0) return canonical;
+
+  const filesRef = getAusenciaFilesRef(ownerId, ausenciaId);
   let snapshot;
   try {
-    const orderedQuery = query(filesRef, orderBy('createdAt', 'desc'));
-    snapshot = await getDocs(orderedQuery);
+    snapshot = await getDocs(query(filesRef, orderBy('createdAt', 'desc')));
   } catch (_error) {
     snapshot = await getDocs(filesRef);
   }
 
-  const files = snapshot.docs
-    .map((docSnapshot) => ({
-      id: docSnapshot.id,
-      ...docSnapshot.data()
-    }))
-    .filter((file) => !file.deletedAt)
+  return snapshot.docs
+    .map((docSnapshot) => ({ id: docSnapshot.id, ...docSnapshot.data() }))
+    .filter((file) => file.status !== 'deleted' && !file.deletedAt)
     .sort((a, b) => {
       const createdA = normalizeTimestamp(a.createdAt)?.getTime() || 0;
       const createdB = normalizeTimestamp(b.createdAt)?.getTime() || 0;
       return createdB - createdA;
     });
-
-  return files;
 }
 
 export async function removeAusenciaFileMeta(ausenciaId, fileMetaId, userProfile) {
@@ -183,12 +157,14 @@ export async function removeAusenciaFileMeta(ausenciaId, fileMetaId, userProfile
   if (!userProfile?.ownerId) throw new Error('userProfile.ownerId es requerido');
 
   const ownerId = userProfile.ownerId;
-  const fileRef = doc(db, ...firestoreRoutesCore.ausencia(ownerId, ausenciaId), 'files', fileMetaId);
 
-  await updateDocWithAppId(fileRef, {
-    deletedAt: serverTimestamp(),
+  await softDeleteFile({
+    ownerId,
+    module: 'salud_ocupacional',
+    entityId: String(ausenciaId),
+    fileDocId: fileMetaId,
     deletedBy: userProfile.uid || null,
-    updatedAt: serverTimestamp()
+    entityCollection: 'ausencias'
   });
 
   const ausenciaRef = getAusenciaRef(ownerId, ausenciaId);
@@ -201,7 +177,7 @@ export async function removeAusenciaFileMeta(ausenciaId, fileMetaId, userProfile
     ausenciaId,
     {
       tipo: 'file_removed',
-      detalle: 'Se eliminó un archivo adjunto'
+      detalle: 'Se elimino un archivo adjunto'
     },
     userProfile
   );
@@ -209,18 +185,7 @@ export async function removeAusenciaFileMeta(ausenciaId, fileMetaId, userProfile
 
 export async function resolveFileUrl(file) {
   if (!file) return null;
-
-  if (file.shareToken) {
-    return convertirShareTokenAUrl(file.shareToken);
-  }
-
-  if (file.fileId) {
-    try {
-      return await getDownloadUrl(file.fileId);
-    } catch (_error) {
-      return null;
-    }
-  }
-
-  return null;
+  const viewUrl = resolveViewUrl(file);
+  if (viewUrl) return viewUrl;
+  return await resolveDownloadUrl(file);
 }

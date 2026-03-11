@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 // src/components/pages/dashboard/hooks/useGoalsData.js
 import { useState, useEffect, useMemo, useRef } from 'react';
 import {
@@ -195,7 +196,7 @@ export const useGoalsData = ({
           }
         }
       } catch (err) {
-        console.error('Error calculando metas:', err);
+        logger.error('Error calculando metas:', err);
         if (isMounted) {
           setError(err.message || 'Error al calcular metas');
           // No limpiar datos en caso de error, mantener los anteriores

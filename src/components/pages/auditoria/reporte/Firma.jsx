@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 import React, { useRef, useEffect, useState } from 'react';
 import SignatureCanvas from 'react-signature-canvas';
 import PropTypes from 'prop-types';
@@ -52,7 +53,7 @@ const Firma = ({ title, setFirmaURL, firmaExistente }) => {
         const canvas = sigCanvas.current._canvas;
         // Configurar willReadFrequently directamente en el canvas
         canvas.willReadFrequently = true;
-        console.debug('[Firma] Canvas optimizado para lecturas frecuentes');
+        logger.debug('[Firma] Canvas optimizado para lecturas frecuentes');
       }
     };
 

@@ -1,6 +1,6 @@
+import logger from '@/utils/logger';
 import { useCallback } from 'react';
 import { capacitacionService } from '../../../../services/capacitacionService';
-
 /**
  * Hook para manejar las acciones de capacitaciones
  * Usa arquitectura multi-tenant: apps/auditoria/users/{uid}/{coleccion}
@@ -26,7 +26,7 @@ export const useCapacitacionesHandlers = (userProfile, recargarDatos, navigate, 
         await capacitacionService.completarCapacitacion(userProfile.uid, capacitacionId, { uid: userProfile.uid });
         recargarDatos();
       } catch (error) {
-        console.error('Error al marcar completada:', error);
+        logger.error('Error al marcar completada:', error);
         alert('Error al actualizar la capacitación');
       }
     }
@@ -43,7 +43,7 @@ export const useCapacitacionesHandlers = (userProfile, recargarDatos, navigate, 
         await capacitacionService.duplicarCapacitacion(userProfile.uid, capacitacion, { uid: userProfile.uid });
         recargarDatos();
       } catch (error) {
-        console.error('Error al duplicar:', error);
+        logger.error('Error al duplicar:', error);
         alert('Error al duplicar la capacitación');
       }
     }
@@ -60,7 +60,7 @@ export const useCapacitacionesHandlers = (userProfile, recargarDatos, navigate, 
         await capacitacionService.deleteCapacitacion(userProfile.uid, capacitacionId, { uid: userProfile.uid });
         recargarDatos();
       } catch (error) {
-        console.error('Error al eliminar:', error);
+        logger.error('Error al eliminar:', error);
         alert('Error al eliminar la capacitación');
       }
     }

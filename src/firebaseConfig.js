@@ -1,8 +1,8 @@
+import logger from '@/utils/logger';
 import { initializeApp, getApps } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
-
 // ⚠️ CONFIGURACIÓN SOLO PARA CONTROLFILE (controlstorage-eb796)
 // Este archivo se usa EXCLUSIVAMENTE para ControlFile integration
 // Para Firestore y Auth de ControlAudit, usar firebaseControlFile.js
@@ -23,8 +23,8 @@ if (!firebaseConfig.apiKey || !firebaseConfig.authDomain || !firebaseConfig.proj
   if (!firebaseConfig.apiKey) missing.push('VITE_FIREBASE_API_KEY');
   if (!firebaseConfig.authDomain) missing.push('VITE_FIREBASE_AUTH_DOMAIN');
   if (!firebaseConfig.projectId) missing.push('VITE_FIREBASE_PROJECT_ID');
-  console.warn('[firebaseConfig] ⚠️ Variables de ControlFile no configuradas:', missing.join(', '));
-  console.warn('[firebaseConfig] ControlFile puede no funcionar correctamente sin estas variables.');
+  logger.warn('[firebaseConfig] ⚠️ Variables de ControlFile no configuradas:', missing.join(', '));
+  logger.warn('[firebaseConfig] ControlFile puede no funcionar correctamente sin estas variables.');
 }
 
 // Inicializar app con nombre explícito para ControlFile
@@ -40,7 +40,7 @@ if (existingApp) {
 }
 
 // Log de verificación
-console.log('[firebaseConfig] 🔧 ControlFile Firebase inicializado - projectId:', app.options.projectId);
+logger.debug('[firebaseConfig] 🔧 ControlFile Firebase inicializado - projectId:', app.options.projectId);
 
 // Exports: auth, db, storage para ControlFile
 // NOTA: Estos solo deben usarse para ControlFile integration

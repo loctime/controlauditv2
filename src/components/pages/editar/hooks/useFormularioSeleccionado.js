@@ -1,8 +1,8 @@
+import logger from '@/utils/logger';
 import { useState, useEffect, useCallback } from 'react';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../../../../firebaseControlFile';
 import Swal from 'sweetalert2';
-
 /**
  * Hook para manejar la selección y carga de formularios
  */
@@ -33,7 +33,7 @@ export const useFormularioSeleccionado = (formularios, formulariosCompletos, sea
     if (formularioId && formulariosCompletos.length > 0 && !formularioSeleccionado) {
       const detalle = formulariosCompletos.find(f => f.id === formularioId);
       if (detalle) {
-        console.log('[useFormularioSeleccionado] Auto-seleccionando desde query:', formularioId);
+        logger.debug('[useFormularioSeleccionado] Auto-seleccionando desde query:', formularioId);
         setFormularioSeleccionado(detalle);
         setSearchParams({});
       }
@@ -65,7 +65,7 @@ export const useFormularioSeleccionado = (formularios, formulariosCompletos, sea
         const meta = formularios.find(f => f.id === formularioId);
         detalle = { ...meta, ...formularioData, id: formularioId };
       } catch (error) {
-        console.error("Error cargando formulario:", error);
+        logger.error("Error cargando formulario:", error);
         Swal.fire("Error", "No se pudo cargar el formulario. Verifica tu conexión.", "error");
         setCargandoFormulario(false);
         return;

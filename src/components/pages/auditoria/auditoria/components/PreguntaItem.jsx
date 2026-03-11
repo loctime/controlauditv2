@@ -1,3 +1,4 @@
+﻿import logger from '@/utils/logger';
 import React, { useState, useRef, useEffect } from "react";
 import { 
   Box, 
@@ -30,8 +31,9 @@ import {
   preguntaContestada 
 } from '../utils/respuestaUtils.jsx';
 import { convertirShareTokenAUrl } from '@/utils/imageUtils';
+import { validateFiles } from '@/services/fileValidationPolicy';
 // Imports eliminados: uploadEvidence, ensureTaskbarFolder, ensureSubFolder, useAuth
-// Ya no se suben archivos aquí, solo se seleccionan
+// Ya no se suben archivos aquÃ­, solo se seleccionan
 
 const PreguntaItem = ({
   seccionIndex,
@@ -59,7 +61,7 @@ const PreguntaItem = ({
   const [expandedAccion, setExpandedAccion] = useState(false);
   const fileInputRef = useRef(null);
   
-  // Inicializar estado local de acción requerida
+  // Inicializar estado local de acciÃ³n requerida
   const accionData = accionRequerida || {
     requiereAccion: false,
     accionTexto: '',
@@ -68,18 +70,22 @@ const PreguntaItem = ({
 
   // Handler para seleccionar imagen (SIN subir)
   const handleFileUpload = (event) => {
-    const file = event.target.files?.[0];
+    const files = Array.from(event.target.files || []);
+    if (!files.length) return;
+
+    const validation = validateFiles(files);
+    const file = validation.accepted[0];
     if (!file) return;
 
-    // ✅ PROTECCIÓN IDEMPOTENTE: Si ya hay imagen con fileId, no hacer nada
+    // âœ… PROTECCIÃ“N IDEMPOTENTE: Si ya hay imagen con fileId, no hacer nada
     if (imagenes && typeof imagenes === 'object' && imagenes.fileId) {
-      console.log('✅ [PreguntaItem] Imagen ya subida, ignorando:', imagenes.fileId);
+      logger.debug('âœ… [PreguntaItem] Imagen ya subida, ignorando:', imagenes.fileId);
       return;
     }
 
-    // ✅ SOLO guardar File en estado local y notificar al padre
-    // NO subir archivos aquí - se subirán al guardar el reporte
-    console.log('📸 [PreguntaItem] Imagen seleccionada (pendiente de subir):', file.name);
+    // âœ… SOLO guardar File en estado local y notificar al padre
+    // NO subir archivos aquÃ­ - se subirÃ¡n al guardar el reporte
+    logger.debug('ðŸ“¸ [PreguntaItem] Imagen seleccionada (pendiente de subir):', file.name);
     if (onImageUploaded) {
       onImageUploaded(seccionIndex, preguntaIndex, file);
     }
@@ -221,7 +227,7 @@ const PreguntaItem = ({
           })()}
         </Stack>
         
-        {/* Botones de clasificación Condición y Actitud */}
+        {/* Botones de clasificaciÃ³n CondiciÃ³n y Actitud */}
         <Stack 
           direction="row" 
           spacing={isMobile ? 0.5 : 1}
@@ -231,16 +237,16 @@ const PreguntaItem = ({
             variant={clasificacion?.condicion ? "contained" : "outlined"}
             startIcon={<BuildIcon />}
             onClick={() => {
-              console.log('🔍 [PreguntaItem] Click en botón Condición:', { seccionIndex, preguntaIndex, clasificacion, onClasificacionChange: !!onClasificacionChange });
+              logger.debug('ðŸ” [PreguntaItem] Click en botÃ³n CondiciÃ³n:', { seccionIndex, preguntaIndex, clasificacion, onClasificacionChange: !!onClasificacionChange });
               if (onClasificacionChange) {
                 const nuevaClasificacion = {
                   condicion: !clasificacion?.condicion,
                   actitud: clasificacion?.actitud || false
                 };
-                console.log('🔍 [PreguntaItem] Llamando onClasificacionChange con:', nuevaClasificacion);
+                logger.debug('ðŸ” [PreguntaItem] Llamando onClasificacionChange con:', nuevaClasificacion);
                 onClasificacionChange(seccionIndex, preguntaIndex, nuevaClasificacion);
               } else {
-                console.error('🔍 [PreguntaItem] onClasificacionChange NO está definido!');
+                logger.error('ðŸ” [PreguntaItem] onClasificacionChange NO estÃ¡ definido!');
               }
             }}
             sx={{ 
@@ -258,23 +264,23 @@ const PreguntaItem = ({
               }
             }}
           >
-            Condición
+            CondiciÃ³n
           </Button>
           
           <Button
             variant={clasificacion?.actitud ? "contained" : "outlined"}
             startIcon={<PeopleIcon />}
             onClick={() => {
-              console.log('🔍 [PreguntaItem] Click en botón Actitud:', { seccionIndex, preguntaIndex, clasificacion, onClasificacionChange: !!onClasificacionChange });
+              logger.debug('ðŸ” [PreguntaItem] Click en botÃ³n Actitud:', { seccionIndex, preguntaIndex, clasificacion, onClasificacionChange: !!onClasificacionChange });
               if (onClasificacionChange) {
                 const nuevaClasificacion = {
                   condicion: clasificacion?.condicion || false,
                   actitud: !clasificacion?.actitud
                 };
-                console.log('🔍 [PreguntaItem] Llamando onClasificacionChange con:', nuevaClasificacion);
+                logger.debug('ðŸ” [PreguntaItem] Llamando onClasificacionChange con:', nuevaClasificacion);
                 onClasificacionChange(seccionIndex, preguntaIndex, nuevaClasificacion);
               } else {
-                console.error('🔍 [PreguntaItem] onClasificacionChange NO está definido!');
+                logger.error('ðŸ” [PreguntaItem] onClasificacionChange NO estÃ¡ definido!');
               }
             }}
             sx={{ 
@@ -353,7 +359,8 @@ const PreguntaItem = ({
             id={`upload-gallery-${seccionIndex}-${preguntaIndex}`}
             ref={fileInputRef}
             type="file"
-            accept="image/*"
+              multiple
+              accept="*/*"
             onChange={handleFileUpload}
             style={{ display: 'none' }}
           />
@@ -393,7 +400,7 @@ const PreguntaItem = ({
                   cursor: 'pointer'
                 }}
                 onClick={() => {
-                  // Abrir imagen en nueva pestaña usando share token (URL persistente)
+                  // Abrir imagen en nueva pestaÃ±a usando share token (URL persistente)
                   const url = getImageUrl(imagenes);
                   if (url) {
                     window.open(url, '_blank');
@@ -401,7 +408,7 @@ const PreguntaItem = ({
                 }}
                 onError={(e) => {
                   // Si falla la carga, puede ser un problema de CORS o archivo eliminado
-                  console.error('[PreguntaItem] Error al cargar imagen:', e);
+                  logger.error('[PreguntaItem] Error al cargar imagen:', e);
                 }}
               />
               <Button
@@ -424,20 +431,20 @@ const PreguntaItem = ({
                 }}
                 onClick={(e) => {
                   e.stopPropagation();
-                  // Función para eliminar imagen
+                  // FunciÃ³n para eliminar imagen
                   if (typeof onDeleteImage === 'function') {
                     onDeleteImage(seccionIndex, preguntaIndex, 0);
                   }
                 }}
               >
-                ×
+                Ã—
               </Button>
             </Box>
           </Box>
         )}
       </Box>
 
-      {/* Sección de Acción Requerida */}
+      {/* SecciÃ³n de AcciÃ³n Requerida */}
       <Box mt={isMobile ? 1.5 : 2}>
         <FormControlLabel
           control={
@@ -471,7 +478,7 @@ const PreguntaItem = ({
                 fontWeight: 500
               }}
             >
-              Acción requerida
+              AcciÃ³n requerida
             </Typography>
           }
         />
@@ -489,7 +496,7 @@ const PreguntaItem = ({
           >
             <Stack spacing={2}>
               <TextField
-                label="Descripción de la acción requerida"
+                label="DescripciÃ³n de la acciÃ³n requerida"
                 multiline
                 rows={2}
                 value={accionData.accionTexto || ''}
@@ -508,7 +515,7 @@ const PreguntaItem = ({
                 error={accionData.requiereAccion && !accionData.accionTexto}
                 helperText={
                   accionData.requiereAccion && !accionData.accionTexto
-                    ? 'La descripción es requerida'
+                    ? 'La descripciÃ³n es requerida'
                     : ''
                 }
               />
@@ -542,3 +549,5 @@ const PreguntaItem = ({
 };
 
 export default PreguntaItem; 
+
+

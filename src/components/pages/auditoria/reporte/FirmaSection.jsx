@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 import React, { useState, useEffect, useRef } from "react";
 import Firma from "./Firma";
 import ResumenAuditoriaModal from "./ResumenAuditoriaModal";
@@ -67,7 +68,7 @@ const FirmaSection = ({
   // Aplicar automáticamente la firma del auditor si tiene una configurada
   useEffect(() => {
     if (userProfile?.firmaDigital && !firmaAuditorURL && !firmaAuditorAutoAplicada) {
-      console.log('[DEBUG] Aplicando firma automática del auditor desde perfil');
+      logger.debug('[DEBUG] Aplicando firma automática del auditor desde perfil');
       setFirmaAuditorURL(userProfile.firmaDigital);
       setFirmaAuditorAutoAplicada(true);
       if (onSaveFirmaAuditor) {
@@ -84,7 +85,7 @@ const FirmaSection = ({
       onDatosReporteChange &&
       (!datosReporte?.nombreInspector || datosReporte.nombreInspector.trim() === '')
     ) {
-      console.log('[DEBUG] Autocompletando nombre del inspector desde perfil:', userProfile.nombre);
+      logger.debug('[DEBUG] Autocompletando nombre del inspector desde perfil:', userProfile.nombre);
       nombreInspectorAutoCompletado.current = true;
       onDatosReporteChange({
         ...datosReporte,
@@ -111,7 +112,7 @@ const FirmaSection = ({
         const canvas = sigPadRef.current._canvas;
         // Configurar willReadFrequently directamente en el canvas
         canvas.willReadFrequently = true;
-        console.debug('[FirmaSection] Canvas optimizado para lecturas frecuentes');
+        logger.debug('[FirmaSection] Canvas optimizado para lecturas frecuentes');
       }
     };
 
@@ -176,9 +177,9 @@ const FirmaSection = ({
           dni: dni.trim(),
           telefono: telefono.trim()
         });
-        console.log('[DEBUG] Firma y datos guardados en el perfil');
+        logger.debug('[DEBUG] Firma y datos guardados en el perfil');
       } catch (error) {
-        console.error('[DEBUG] Error al guardar en el perfil:', error);
+        logger.error('[DEBUG] Error al guardar en el perfil:', error);
         // Continuar aunque falle el guardado en perfil
       }
       
@@ -200,7 +201,7 @@ const FirmaSection = ({
       setModalCrearFirmaAbierto(false);
       Swal.fire('Éxito', 'Firma creada, guardada en tu perfil y aplicada correctamente', 'success');
     } catch (error) {
-      console.error('Error al guardar firma:', error);
+      logger.error('Error al guardar firma:', error);
       Swal.fire('Error', 'Error al guardar la firma', 'error');
     } finally {
       setIsSaving(false);

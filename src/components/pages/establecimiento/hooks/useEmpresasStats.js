@@ -1,8 +1,8 @@
+import logger from '@/utils/logger';
 import { useState, useEffect, useCallback } from 'react';
 import { getDocs, query, where, collection } from 'firebase/firestore';
 import { dbAudit } from '../../../../firebaseControlFile';
 import { firestoreRoutesCore } from '../../../../core/firestore/firestoreRoutes.core';
-
 /**
  * Hook para cargar estadísticas de empresas (owner-centric)
  */
@@ -12,7 +12,7 @@ export const useEmpresasStats = (userEmpresas, ownerId = null) => {
   const loadEmpresasStats = useCallback(async (empresas, providedOwnerId = null) => {
     const ownerIdToUse = providedOwnerId || ownerId;
     if (!ownerIdToUse) {
-      console.warn('⚠️ [useEmpresasStats] ownerId no proporcionado, retornando stats vacías');
+      logger.warn('⚠️ [useEmpresasStats] ownerId no proporcionado, retornando stats vacías');
       setEmpresasStats({});
       return;
     }
@@ -25,7 +25,7 @@ export const useEmpresasStats = (userEmpresas, ownerId = null) => {
         const ownerIdForEmpresa = empresa.ownerId || ownerIdToUse;
         const sucursalesRef = collection(dbAudit, ...firestoreRoutesCore.sucursales(ownerIdForEmpresa));
         
-        console.log('[useEmpresasStats] Buscando sucursales para empresa', empresa.id, 'en path:', sucursalesRef.path);
+        logger.debug('[useEmpresasStats] Buscando sucursales para empresa', empresa.id, 'en path:', sucursalesRef.path);
         
         const sucursalesSnapshot = await getDocs(query(sucursalesRef, where('empresaId', '==', empresa.id)));
         const sucursalesIds = sucursalesSnapshot.docs.map(doc => doc.id);
@@ -58,7 +58,7 @@ export const useEmpresasStats = (userEmpresas, ownerId = null) => {
           accidentesAbiertos: accidentesSnapshot.docs.filter(doc => doc.data().estado === 'abierto').length
         };
       } catch (error) {
-        console.error(`[useEmpresasStats] Error cargando stats para empresa ${empresa.id}:`, error);
+        logger.error(`[useEmpresasStats] Error cargando stats para empresa ${empresa.id}:`, error);
         stats[empresa.id] = {
           sucursales: 0,
           empleados: 0,

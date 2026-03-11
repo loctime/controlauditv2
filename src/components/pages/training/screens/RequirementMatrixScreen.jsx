@@ -1,8 +1,8 @@
+import logger from '@/utils/logger';
 import React, { useEffect, useState } from 'react';
 import { Alert, Box, Button, CircularProgress, Grid, MenuItem, Paper, Stack, TextField, Typography } from '@mui/material';
 import { useAuth } from '@/components/context/AuthContext';
 import { trainingCatalogService, trainingRequirementService } from '../../../../services/training';
-
 export default function RequirementMatrixScreen() {
   const { userProfile, userEmpresas = [], userSucursales = [] } = useAuth();
   const ownerId = userProfile?.ownerId;
@@ -38,7 +38,7 @@ export default function RequirementMatrixScreen() {
       setRules(rulesData);
       setCatalog(catalogData);
     } catch (err) {
-      console.error('[RequirementMatrixScreen] load error', err);
+      logger.error('[RequirementMatrixScreen] load error', err);
       setError('No se pudo cargar la matriz de requerimientos.');
     } finally {
       setLoading(false);
@@ -52,7 +52,7 @@ export default function RequirementMatrixScreen() {
   const createRule = async () => {
     if (!ownerId) return;
     if (!form.companyId || !form.branchId || !form.trainingTypeId) {
-      setError('Empresa, sucursal y tipo de capacitación son obligatorios.');
+      setError('Empresa, sucursal y tipo de capacitaciï¿½n son obligatorios.');
       return;
     }
 
@@ -94,13 +94,13 @@ export default function RequirementMatrixScreen() {
               </TextField>
               <TextField label="ID de puesto" value={form.jobRoleId} onChange={(e) => setForm({ ...form, jobRoleId: e.target.value })} />
               <TextField label="ID de sector" value={form.sectorId} onChange={(e) => setForm({ ...form, sectorId: e.target.value })} />
-              <TextField label="ID de categoría de riesgo" value={form.riskCategoryId} onChange={(e) => setForm({ ...form, riskCategoryId: e.target.value })} />
-              <TextField select label="Tipo de capacitación" value={form.trainingTypeId} onChange={(e) => setForm({ ...form, trainingTypeId: e.target.value })}>
+              <TextField label="ID de categorï¿½a de riesgo" value={form.riskCategoryId} onChange={(e) => setForm({ ...form, riskCategoryId: e.target.value })} />
+              <TextField select label="Tipo de capacitaciï¿½n" value={form.trainingTypeId} onChange={(e) => setForm({ ...form, trainingTypeId: e.target.value })}>
                 {catalog.map((item) => <MenuItem key={item.id} value={item.id}>{item.name}</MenuItem>)}
               </TextField>
               <TextField type="number" label="Frecuencia (meses)" value={form.frequencyMonths} onChange={(e) => setForm({ ...form, frequencyMonths: Number(e.target.value) })} />
               <TextField select label="Obligatoria" value={form.mandatory ? 'true' : 'false'} onChange={(e) => setForm({ ...form, mandatory: e.target.value === 'true' })}>
-                <MenuItem value="true">Sí</MenuItem>
+                <MenuItem value="true">Sï¿½</MenuItem>
                 <MenuItem value="false">No</MenuItem>
               </TextField>
               <TextField label="Regla de vencimiento" value={form.expirationRule} onChange={(e) => setForm({ ...form, expirationRule: e.target.value })} />

@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 import React, { useState } from "react";
 import { Box, Button, FormControl, Grid, IconButton, InputAdornment, InputLabel, OutlinedInput, TextField, Typography, Alert } from "@mui/material";
 import { Visibility, VisibilityOff } from "@mui/icons-material";
@@ -5,7 +6,6 @@ import { useNavigate, Link } from "react-router-dom";
 import { signUp } from '../../../firebaseControlFile';
 import { Formik, Form, Field, ErrorMessage } from 'formik';
 import * as Yup from 'yup';
-
 const Register = () => {
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
@@ -41,7 +41,7 @@ const Register = () => {
       await signUp({ email: values.email, password: values.password });
       navigate("/");
     } catch (error) {
-      console.error(error);
+      logger.error(error);
       let errorMessage = 'Error al registrar. Por favor, inténtalo de nuevo.';
       
       if (error.code === 'auth/email-already-in-use') {

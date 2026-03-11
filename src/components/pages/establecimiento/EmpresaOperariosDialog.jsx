@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 import React, { useState, useEffect } from 'react';
 import {
   Dialog,
@@ -53,27 +54,27 @@ const EmpresaOperariosDialog = ({
   const loadUsuarios = async () => {
     if (!ownerId) return;
     
-    console.log('[EmpresaOperariosDialog][loadUsuarios] Evento: Cargar usuarios del owner');
-    console.log('[EmpresaOperariosDialog][loadUsuarios] Parámetros:', { ownerId, empresaId, empresaNombre });
+    logger.debug('[EmpresaOperariosDialog][loadUsuarios] Evento: Cargar usuarios del owner');
+    logger.debug('[EmpresaOperariosDialog][loadUsuarios] Parámetros:', { ownerId, empresaId, empresaNombre });
     
     setLoading(true);
     try {
       const users = await getUsers(ownerId);
-      console.log('[EmpresaOperariosDialog][loadUsuarios] ✅ Success - Usuarios obtenidos:', users.length);
+      logger.debug('[EmpresaOperariosDialog][loadUsuarios] ✅ Success - Usuarios obtenidos:', users.length);
       // Filtrar solo operarios (excluir admins)
       const operarios = users.filter(user => user.role === 'operario' && user.activo);
-      console.log('[EmpresaOperariosDialog][loadUsuarios] Operarios filtrados:', operarios.length);
+      logger.debug('[EmpresaOperariosDialog][loadUsuarios] Operarios filtrados:', operarios.length);
       setUsuarios(operarios);
     } catch (error) {
       console.group('[Firestore ERROR]');
-      console.error('code:', error.code);
-      console.error('message:', error.message);
-      console.error('stack:', error.stack);
+      logger.error('code:', error.code);
+      logger.error('message:', error.message);
+      logger.error('stack:', error.stack);
       console.groupEnd();
       
-      console.error('[EmpresaOperariosDialog][loadUsuarios] ❌ ERROR');
-      console.error('[EmpresaOperariosDialog][loadUsuarios] Parámetros:', { ownerId, empresaId });
-      console.error('[EmpresaOperariosDialog][loadUsuarios] Error:', error);
+      logger.error('[EmpresaOperariosDialog][loadUsuarios] ❌ ERROR');
+      logger.error('[EmpresaOperariosDialog][loadUsuarios] Parámetros:', { ownerId, empresaId });
+      logger.error('[EmpresaOperariosDialog][loadUsuarios] Error:', error);
       Swal.fire({
         icon: 'error',
         title: 'Error',
@@ -105,12 +106,12 @@ const EmpresaOperariosDialog = ({
   };
 
   const handleSave = async () => {
-    console.log('[EmpresaOperariosDialog][handleSave] Evento: Guardar asignaciones de operarios');
-    console.log('[EmpresaOperariosDialog][handleSave] Parámetros:', { ownerId, empresaId, empresaNombre });
-    console.log('[EmpresaOperariosDialog][handleSave] Usuarios a asignar:', Array.from(usuariosAsignados));
+    logger.debug('[EmpresaOperariosDialog][handleSave] Evento: Guardar asignaciones de operarios');
+    logger.debug('[EmpresaOperariosDialog][handleSave] Parámetros:', { ownerId, empresaId, empresaNombre });
+    logger.debug('[EmpresaOperariosDialog][handleSave] Usuarios a asignar:', Array.from(usuariosAsignados));
     
     if (!ownerId || !empresaId) {
-      console.warn('[EmpresaOperariosDialog][handleSave] ⚠️ Faltan datos requeridos');
+      logger.warn('[EmpresaOperariosDialog][handleSave] ⚠️ Faltan datos requeridos');
       Swal.fire({
         icon: 'error',
         title: 'Error',
@@ -132,7 +133,7 @@ const EmpresaOperariosDialog = ({
             ? [...(user.empresasAsignadas || []), empresaId]
             : (user.empresasAsignadas || []).filter(id => id !== empresaId);
 
-          console.log('[EmpresaOperariosDialog][handleSave] Actualizando usuario:', {
+          logger.debug('[EmpresaOperariosDialog][handleSave] Actualizando usuario:', {
             userId: user.id,
             debeEstarAsignado,
             estaAsignado,
@@ -140,13 +141,13 @@ const EmpresaOperariosDialog = ({
           });
 
           await assignEmpresasToUser(ownerId, user.id, nuevasEmpresas);
-          console.log('[EmpresaOperariosDialog][handleSave] ✅ Usuario actualizado:', user.id);
+          logger.debug('[EmpresaOperariosDialog][handleSave] ✅ Usuario actualizado:', user.id);
         }
       });
 
       await Promise.all(promises);
 
-      console.log('[EmpresaOperariosDialog][handleSave] ✅ Success - Todas las asignaciones guardadas');
+      logger.debug('[EmpresaOperariosDialog][handleSave] ✅ Success - Todas las asignaciones guardadas');
 
       Swal.fire({
         icon: 'success',
@@ -157,14 +158,14 @@ const EmpresaOperariosDialog = ({
       handleClose();
     } catch (error) {
       console.group('[Firestore ERROR]');
-      console.error('code:', error.code);
-      console.error('message:', error.message);
-      console.error('stack:', error.stack);
+      logger.error('code:', error.code);
+      logger.error('message:', error.message);
+      logger.error('stack:', error.stack);
       console.groupEnd();
       
-      console.error('[EmpresaOperariosDialog][handleSave] ❌ ERROR');
-      console.error('[EmpresaOperariosDialog][handleSave] Parámetros:', { ownerId, empresaId });
-      console.error('[EmpresaOperariosDialog][handleSave] Error:', error);
+      logger.error('[EmpresaOperariosDialog][handleSave] ❌ ERROR');
+      logger.error('[EmpresaOperariosDialog][handleSave] Parámetros:', { ownerId, empresaId });
+      logger.error('[EmpresaOperariosDialog][handleSave] Error:', error);
       Swal.fire({
         icon: 'error',
         title: 'Error',

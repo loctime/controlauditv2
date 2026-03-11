@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 /**
  * Servicio de gestión de usuarios del owner
  * 
@@ -63,14 +64,14 @@ export async function validateEmpresasAsignadas(
     const empresasInvalidas = empresaIds.filter(empresaId => !empresasValidasSet.has(empresaId));
     
     if (empresasInvalidas.length > 0) {
-      console.warn(`[validateEmpresasAsignadas] ⚠️ IDs de empresas inválidos detectados:`, empresasInvalidas);
-      console.warn(`[validateEmpresasAsignadas] IDs válidos encontrados: ${empresasValidas.length} de ${empresaIds.length}`);
-      console.warn(`[validateEmpresasAsignadas] ownerId: ${ownerId}`);
+      logger.warn(`[validateEmpresasAsignadas] ⚠️ IDs de empresas inválidos detectados:`, empresasInvalidas);
+      logger.warn(`[validateEmpresasAsignadas] IDs válidos encontrados: ${empresasValidas.length} de ${empresaIds.length}`);
+      logger.warn(`[validateEmpresasAsignadas] ownerId: ${ownerId}`);
     }
     
     return empresasValidas;
   } catch (error: any) {
-    console.error('[validateEmpresasAsignadas] ❌ Error al validar empresas:', error);
+    logger.error('[validateEmpresasAsignadas] ❌ Error al validar empresas:', error);
     // En caso de error, retornar array vacío para evitar asignar empresas inválidas
     return [];
   }
@@ -96,13 +97,13 @@ export async function createUser(
   const pathString = path.join('/');
   const currentUid = auth.currentUser?.uid || 'not-authenticated';
 
-  console.log(`[Firestore][${methodName}] Iniciando operación`);
-  console.log(`[Firestore][${methodName}] Path: ${pathString}`);
-  console.log(`[Firestore][${methodName}] Tipo: ${operation}`);
-  console.log(`[Firestore][${methodName}] ownerId: ${ownerId}`);
-  console.log(`[Firestore][${methodName}] userId: ${userData.id}`);
-  console.log(`[Firestore][${methodName}] role: ${userData.role}`);
-  console.log(`[Firestore][${methodName}] uid: ${currentUid}`);
+  logger.debug(`[Firestore][${methodName}] Iniciando operación`);
+  logger.debug(`[Firestore][${methodName}] Path: ${pathString}`);
+  logger.debug(`[Firestore][${methodName}] Tipo: ${operation}`);
+  logger.debug(`[Firestore][${methodName}] ownerId: ${ownerId}`);
+  logger.debug(`[Firestore][${methodName}] userId: ${userData.id}`);
+  logger.debug(`[Firestore][${methodName}] role: ${userData.role}`);
+  logger.debug(`[Firestore][${methodName}] uid: ${currentUid}`);
 
   if (!ownerId) {
     throw new Error('ownerId es requerido');
@@ -133,7 +134,7 @@ export async function createUser(
   if (userData.empresasAsignadas && userData.empresasAsignadas.length > 0) {
     empresasAsignadasValidadas = await validateEmpresasAsignadas(currentUserUid, userData.empresasAsignadas);
     if (empresasAsignadasValidadas.length !== userData.empresasAsignadas.length) {
-      console.warn(`[Firestore][${methodName}] ⚠️ Algunas empresas asignadas fueron filtradas. Originales: ${userData.empresasAsignadas.length}, Válidas: ${empresasAsignadasValidadas.length}`);
+      logger.warn(`[Firestore][${methodName}] ⚠️ Algunas empresas asignadas fueron filtradas. Originales: ${userData.empresasAsignadas.length}, Válidas: ${empresasAsignadasValidadas.length}`);
     }
   }
 
@@ -171,24 +172,24 @@ export async function createUser(
     
     await setDoc(userRef, documentData);
     
-    console.log(`[Firestore][${methodName}] ✅ Operación exitosa`);
-    console.log(`[Firestore][${methodName}] Path: ${pathString}`);
+    logger.debug(`[Firestore][${methodName}] ✅ Operación exitosa`);
+    logger.debug(`[Firestore][${methodName}] Path: ${pathString}`);
     return user;
   } catch (error: any) {
     console.group('[Firestore ERROR]');
-    console.error('code:', error.code);
-    console.error('message:', error.message);
-    console.error('stack:', error.stack);
+    logger.error('code:', error.code);
+    logger.error('message:', error.message);
+    logger.error('stack:', error.stack);
     console.groupEnd();
     
-    console.error(`[Firestore][${methodName}] ❌ ERROR`);
-    console.error(`[Firestore][${methodName}] Path: ${pathString}`);
-    console.error(`[Firestore][${methodName}] Tipo: ${operation}`);
-    console.error(`[Firestore][${methodName}] error.code: ${error.code || 'unknown'}`);
-    console.error(`[Firestore][${methodName}] error.message: ${error.message || 'unknown'}`);
-    console.error(`[Firestore][${methodName}] ownerId: ${ownerId}`);
-    console.error(`[Firestore][${methodName}] userId: ${userData.id}`);
-    console.error(`[Firestore][${methodName}] uid: ${currentUid}`);
+    logger.error(`[Firestore][${methodName}] ❌ ERROR`);
+    logger.error(`[Firestore][${methodName}] Path: ${pathString}`);
+    logger.error(`[Firestore][${methodName}] Tipo: ${operation}`);
+    logger.error(`[Firestore][${methodName}] error.code: ${error.code || 'unknown'}`);
+    logger.error(`[Firestore][${methodName}] error.message: ${error.message || 'unknown'}`);
+    logger.error(`[Firestore][${methodName}] ownerId: ${ownerId}`);
+    logger.error(`[Firestore][${methodName}] userId: ${userData.id}`);
+    logger.error(`[Firestore][${methodName}] uid: ${currentUid}`);
     throw error;
   }
 }
@@ -210,13 +211,13 @@ export async function assignEmpresasToUser(
   const pathString = path.join('/');
   const currentUid = auth.currentUser?.uid || 'not-authenticated';
 
-  console.log(`[Firestore][${methodName}] Iniciando operación`);
-  console.log(`[Firestore][${methodName}] Path: ${pathString}`);
-  console.log(`[Firestore][${methodName}] Tipo: ${operation}`);
-  console.log(`[Firestore][${methodName}] ownerId: ${ownerId}`);
-  console.log(`[Firestore][${methodName}] userId: ${userId}`);
-  console.log(`[Firestore][${methodName}] empresaIds: ${JSON.stringify(empresaIds)}`);
-  console.log(`[Firestore][${methodName}] uid: ${currentUid}`);
+  logger.debug(`[Firestore][${methodName}] Iniciando operación`);
+  logger.debug(`[Firestore][${methodName}] Path: ${pathString}`);
+  logger.debug(`[Firestore][${methodName}] Tipo: ${operation}`);
+  logger.debug(`[Firestore][${methodName}] ownerId: ${ownerId}`);
+  logger.debug(`[Firestore][${methodName}] userId: ${userId}`);
+  logger.debug(`[Firestore][${methodName}] empresaIds: ${JSON.stringify(empresaIds)}`);
+  logger.debug(`[Firestore][${methodName}] uid: ${currentUid}`);
 
   if (!ownerId) {
     throw new Error('ownerId es requerido');
@@ -232,8 +233,8 @@ export async function assignEmpresasToUser(
   const empresasAsignadasValidadas = await validateEmpresasAsignadas(ownerId, empresaIds);
   
   if (empresasAsignadasValidadas.length !== empresaIds.length) {
-    console.warn(`[Firestore][${methodName}] ⚠️ Algunas empresas asignadas fueron filtradas. Originales: ${empresaIds.length}, Válidas: ${empresasAsignadasValidadas.length}`);
-    console.warn(`[Firestore][${methodName}] IDs inválidos filtrados:`, empresaIds.filter(id => !empresasAsignadasValidadas.includes(id)));
+    logger.warn(`[Firestore][${methodName}] ⚠️ Algunas empresas asignadas fueron filtradas. Originales: ${empresaIds.length}, Válidas: ${empresasAsignadasValidadas.length}`);
+    logger.warn(`[Firestore][${methodName}] IDs inválidos filtrados:`, empresaIds.filter(id => !empresasAsignadasValidadas.includes(id)));
   }
 
   const userRef = doc(db, ...path);
@@ -256,10 +257,10 @@ export async function assignEmpresasToUser(
       id => !empresasNuevasSet.has(id)
     );
 
-    console.log(`[Firestore][${methodName}] Empresas previas: ${empresasPrevias.length}`);
-    console.log(`[Firestore][${methodName}] Empresas nuevas: ${empresasAsignadasValidadas.length}`);
-    console.log(`[Firestore][${methodName}] Empresas agregadas: ${empresasAgregadas.length}`);
-    console.log(`[Firestore][${methodName}] Empresas quitadas: ${empresasQuitadas.length}`);
+    logger.debug(`[Firestore][${methodName}] Empresas previas: ${empresasPrevias.length}`);
+    logger.debug(`[Firestore][${methodName}] Empresas nuevas: ${empresasAsignadasValidadas.length}`);
+    logger.debug(`[Firestore][${methodName}] Empresas agregadas: ${empresasAgregadas.length}`);
+    logger.debug(`[Firestore][${methodName}] Empresas quitadas: ${empresasQuitadas.length}`);
 
     // 3) Actualizar documentos de empresas agregadas: operarios[userId] = true
     const updatesEmpresasAgregadas = empresasAgregadas.map(empresaId => {
@@ -288,26 +289,26 @@ export async function assignEmpresasToUser(
       ...updatesEmpresasQuitadas
     ]);
 
-    console.log(`[Firestore][${methodName}] ✅ Operación exitosa`);
-    console.log(`[Firestore][${methodName}] Path: ${pathString}`);
-    console.log(`[Firestore][${methodName}] Usuario actualizado: ${pathString}`);
-    console.log(`[Firestore][${methodName}] Empresas actualizadas: ${updatesEmpresasAgregadas.length + updatesEmpresasQuitadas.length}`);
+    logger.debug(`[Firestore][${methodName}] ✅ Operación exitosa`);
+    logger.debug(`[Firestore][${methodName}] Path: ${pathString}`);
+    logger.debug(`[Firestore][${methodName}] Usuario actualizado: ${pathString}`);
+    logger.debug(`[Firestore][${methodName}] Empresas actualizadas: ${updatesEmpresasAgregadas.length + updatesEmpresasQuitadas.length}`);
   } catch (error: any) {
     console.group('[Firestore ERROR]');
-    console.error('code:', error.code);
-    console.error('message:', error.message);
-    console.error('stack:', error.stack);
+    logger.error('code:', error.code);
+    logger.error('message:', error.message);
+    logger.error('stack:', error.stack);
     console.groupEnd();
     
-    console.error(`[Firestore][${methodName}] ❌ ERROR`);
-    console.error(`[Firestore][${methodName}] Path: ${pathString}`);
-    console.error(`[Firestore][${methodName}] Tipo: ${operation}`);
-    console.error(`[Firestore][${methodName}] error.code: ${error.code || 'unknown'}`);
-    console.error(`[Firestore][${methodName}] error.message: ${error.message || 'unknown'}`);
-    console.error(`[Firestore][${methodName}] ownerId: ${ownerId}`);
-    console.error(`[Firestore][${methodName}] userId: ${userId}`);
-    console.error(`[Firestore][${methodName}] empresaIds: ${JSON.stringify(empresaIds)}`);
-    console.error(`[Firestore][${methodName}] uid: ${currentUid}`);
+    logger.error(`[Firestore][${methodName}] ❌ ERROR`);
+    logger.error(`[Firestore][${methodName}] Path: ${pathString}`);
+    logger.error(`[Firestore][${methodName}] Tipo: ${operation}`);
+    logger.error(`[Firestore][${methodName}] error.code: ${error.code || 'unknown'}`);
+    logger.error(`[Firestore][${methodName}] error.message: ${error.message || 'unknown'}`);
+    logger.error(`[Firestore][${methodName}] ownerId: ${ownerId}`);
+    logger.error(`[Firestore][${methodName}] userId: ${userId}`);
+    logger.error(`[Firestore][${methodName}] empresaIds: ${JSON.stringify(empresaIds)}`);
+    logger.error(`[Firestore][${methodName}] uid: ${currentUid}`);
     throw error;
   }
 }
@@ -322,10 +323,10 @@ export async function getUsers(ownerId: string): Promise<(User & { email?: strin
   const pathString = path.join('/');
   const currentUid = auth.currentUser?.uid || 'not-authenticated';
 
-  console.log(`[Firestore][${methodName}] Iniciando operación`);
-  console.log(`[Firestore][${methodName}] Path: ${pathString}`);
-  console.log(`[Firestore][${methodName}] ownerId: ${ownerId}`);
-  console.log(`[Firestore][${methodName}] uid: ${currentUid}`);
+  logger.debug(`[Firestore][${methodName}] Iniciando operación`);
+  logger.debug(`[Firestore][${methodName}] Path: ${pathString}`);
+  logger.debug(`[Firestore][${methodName}] ownerId: ${ownerId}`);
+  logger.debug(`[Firestore][${methodName}] uid: ${currentUid}`);
 
   if (!ownerId) {
     throw new Error('ownerId es requerido');
@@ -335,8 +336,8 @@ export async function getUsers(ownerId: string): Promise<(User & { email?: strin
     const usuariosRef = collection(db, ...path);
     const snapshot = await getDocs(usuariosRef);
     
-    console.log(`[Firestore][${methodName}] ✅ Operación exitosa`);
-    console.log(`[Firestore][${methodName}] Documentos encontrados: ${snapshot.docs.length}`);
+    logger.debug(`[Firestore][${methodName}] ✅ Operación exitosa`);
+    logger.debug(`[Firestore][${methodName}] Documentos encontrados: ${snapshot.docs.length}`);
     
     // Obtener todas las empresas del owner para resolver nombres
     const empresas = await getEmpresas(ownerId);
@@ -368,16 +369,16 @@ export async function getUsers(ownerId: string): Promise<(User & { email?: strin
     });
   } catch (error: any) {
     console.group('[Firestore ERROR]');
-    console.error('code:', error.code);
-    console.error('message:', error.message);
-    console.error('stack:', error.stack);
+    logger.error('code:', error.code);
+    logger.error('message:', error.message);
+    logger.error('stack:', error.stack);
     console.groupEnd();
     
-    console.error(`[Firestore][${methodName}] ❌ ERROR`);
-    console.error(`[Firestore][${methodName}] error.code: ${error.code || 'unknown'}`);
-    console.error(`[Firestore][${methodName}] error.message: ${error.message || 'unknown'}`);
-    console.error(`[Firestore][${methodName}] ownerId: ${ownerId}`);
-    console.error(`[Firestore][${methodName}] uid: ${currentUid}`);
+    logger.error(`[Firestore][${methodName}] ❌ ERROR`);
+    logger.error(`[Firestore][${methodName}] error.code: ${error.code || 'unknown'}`);
+    logger.error(`[Firestore][${methodName}] error.message: ${error.message || 'unknown'}`);
+    logger.error(`[Firestore][${methodName}] ownerId: ${ownerId}`);
+    logger.error(`[Firestore][${methodName}] uid: ${currentUid}`);
     throw error;
   }
 }
@@ -395,12 +396,12 @@ export async function getUser(
   const pathString = path.join('/');
   const currentUid = auth.currentUser?.uid || 'not-authenticated';
 
-  console.log(`[Firestore][${methodName}] Iniciando operación`);
-  console.log(`[Firestore][${methodName}] Path: ${pathString}`);
-  console.log(`[Firestore][${methodName}] Tipo: ${operation}`);
-  console.log(`[Firestore][${methodName}] ownerId: ${ownerId}`);
-  console.log(`[Firestore][${methodName}] userId: ${userId}`);
-  console.log(`[Firestore][${methodName}] uid: ${currentUid}`);
+  logger.debug(`[Firestore][${methodName}] Iniciando operación`);
+  logger.debug(`[Firestore][${methodName}] Path: ${pathString}`);
+  logger.debug(`[Firestore][${methodName}] Tipo: ${operation}`);
+  logger.debug(`[Firestore][${methodName}] ownerId: ${ownerId}`);
+  logger.debug(`[Firestore][${methodName}] userId: ${userId}`);
+  logger.debug(`[Firestore][${methodName}] uid: ${currentUid}`);
 
   if (!ownerId) {
     throw new Error('ownerId es requerido');
@@ -418,13 +419,13 @@ export async function getUser(
     const snapshot = await getDoc(userRef);
     
     if (!snapshot.exists()) {
-      console.log(`[Firestore][${methodName}] ⚠️ Documento no existe`);
-      console.log(`[Firestore][${methodName}] Path: ${pathString}`);
+      logger.debug(`[Firestore][${methodName}] ⚠️ Documento no existe`);
+      logger.debug(`[Firestore][${methodName}] Path: ${pathString}`);
       return null;
     }
 
-    console.log(`[Firestore][${methodName}] ✅ Operación exitosa`);
-    console.log(`[Firestore][${methodName}] Path: ${pathString}`);
+    logger.debug(`[Firestore][${methodName}] ✅ Operación exitosa`);
+    logger.debug(`[Firestore][${methodName}] Path: ${pathString}`);
     
     const data = snapshot.data();
     return {
@@ -436,14 +437,14 @@ export async function getUser(
       createdAt: data.createdAt?.toDate() || new Date()
     } as User;
   } catch (error: any) {
-    console.error(`[Firestore][${methodName}] ❌ ERROR`);
-    console.error(`[Firestore][${methodName}] Path: ${pathString}`);
-    console.error(`[Firestore][${methodName}] Tipo: ${operation}`);
-    console.error(`[Firestore][${methodName}] error.code: ${error.code || 'unknown'}`);
-    console.error(`[Firestore][${methodName}] error.message: ${error.message || 'unknown'}`);
-    console.error(`[Firestore][${methodName}] ownerId: ${ownerId}`);
-    console.error(`[Firestore][${methodName}] userId: ${userId}`);
-    console.error(`[Firestore][${methodName}] uid: ${currentUid}`);
+    logger.error(`[Firestore][${methodName}] ❌ ERROR`);
+    logger.error(`[Firestore][${methodName}] Path: ${pathString}`);
+    logger.error(`[Firestore][${methodName}] Tipo: ${operation}`);
+    logger.error(`[Firestore][${methodName}] error.code: ${error.code || 'unknown'}`);
+    logger.error(`[Firestore][${methodName}] error.message: ${error.message || 'unknown'}`);
+    logger.error(`[Firestore][${methodName}] ownerId: ${ownerId}`);
+    logger.error(`[Firestore][${methodName}] userId: ${userId}`);
+    logger.error(`[Firestore][${methodName}] uid: ${currentUid}`);
     throw error;
   }
 }
@@ -461,12 +462,12 @@ export async function deactivateUser(
   const pathString = path.join('/');
   const currentUid = auth.currentUser?.uid || 'not-authenticated';
 
-  console.log(`[Firestore][${methodName}] Iniciando operación`);
-  console.log(`[Firestore][${methodName}] Path: ${pathString}`);
-  console.log(`[Firestore][${methodName}] Tipo: ${operation}`);
-  console.log(`[Firestore][${methodName}] ownerId: ${ownerId}`);
-  console.log(`[Firestore][${methodName}] userId: ${userId}`);
-  console.log(`[Firestore][${methodName}] uid: ${currentUid}`);
+  logger.debug(`[Firestore][${methodName}] Iniciando operación`);
+  logger.debug(`[Firestore][${methodName}] Path: ${pathString}`);
+  logger.debug(`[Firestore][${methodName}] Tipo: ${operation}`);
+  logger.debug(`[Firestore][${methodName}] ownerId: ${ownerId}`);
+  logger.debug(`[Firestore][${methodName}] userId: ${userId}`);
+  logger.debug(`[Firestore][${methodName}] uid: ${currentUid}`);
 
   if (!ownerId) {
     throw new Error('ownerId es requerido');
@@ -484,17 +485,17 @@ export async function deactivateUser(
     await updateDoc(userRef, {
       activo: false
     });
-    console.log(`[Firestore][${methodName}] ✅ Operación exitosa`);
-    console.log(`[Firestore][${methodName}] Path: ${pathString}`);
+    logger.debug(`[Firestore][${methodName}] ✅ Operación exitosa`);
+    logger.debug(`[Firestore][${methodName}] Path: ${pathString}`);
   } catch (error: any) {
-    console.error(`[Firestore][${methodName}] ❌ ERROR`);
-    console.error(`[Firestore][${methodName}] Path: ${pathString}`);
-    console.error(`[Firestore][${methodName}] Tipo: ${operation}`);
-    console.error(`[Firestore][${methodName}] error.code: ${error.code || 'unknown'}`);
-    console.error(`[Firestore][${methodName}] error.message: ${error.message || 'unknown'}`);
-    console.error(`[Firestore][${methodName}] ownerId: ${ownerId}`);
-    console.error(`[Firestore][${methodName}] userId: ${userId}`);
-    console.error(`[Firestore][${methodName}] uid: ${currentUid}`);
+    logger.error(`[Firestore][${methodName}] ❌ ERROR`);
+    logger.error(`[Firestore][${methodName}] Path: ${pathString}`);
+    logger.error(`[Firestore][${methodName}] Tipo: ${operation}`);
+    logger.error(`[Firestore][${methodName}] error.code: ${error.code || 'unknown'}`);
+    logger.error(`[Firestore][${methodName}] error.message: ${error.message || 'unknown'}`);
+    logger.error(`[Firestore][${methodName}] ownerId: ${ownerId}`);
+    logger.error(`[Firestore][${methodName}] userId: ${userId}`);
+    logger.error(`[Firestore][${methodName}] uid: ${currentUid}`);
     throw error;
   }
 }

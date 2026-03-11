@@ -27,7 +27,7 @@ function hasPlanLinkField(payload = {}) {
   return PLAN_LINK_KEYS.some((key) => key in payload);
 }
 
-function normalizeSessionPlanLink(data = {}, { fillLinkedAt = false } = {}) {
+function normalizeSessionPlanLink(data = {}, { fillLinkedAt = false, actorUserId = null } = {}) {
   const hasPlanRefs = Boolean(data.planId || data.planItemId);
   let sessionOrigin = data.sessionOrigin;
 
@@ -47,8 +47,8 @@ function normalizeSessionPlanLink(data = {}, { fillLinkedAt = false } = {}) {
     return {
       ...data,
       sessionOrigin,
-      planLinkedAt: data.planLinkedAt || (fillLinkedAt ? nowTs() : null),
-      planLinkedBy: data.planLinkedBy || null
+      planLinkedAt: fillLinkedAt ? nowTs() : (data.planLinkedAt || null),
+      planLinkedBy: fillLinkedAt ? (actorUserId || null) : (data.planLinkedBy || null)
     };
   }
 
@@ -63,8 +63,11 @@ function normalizeSessionPlanLink(data = {}, { fillLinkedAt = false } = {}) {
 }
 
 export const trainingSessionService = {
-  async createSession(ownerId, payload) {
-    const normalizedPlanLink = normalizeSessionPlanLink(payload, { fillLinkedAt: true });
+  async createSession(ownerId, payload, options = {}) {
+    const normalizedPlanLink = normalizeSessionPlanLink(payload, {
+      fillLinkedAt: true,
+      actorUserId: options.currentUserId || null
+    });
 
     return createDocument(ownerId, 'trainingSessions', {
       ...normalizedPlanLink,
@@ -77,7 +80,7 @@ export const trainingSessionService = {
     });
   },
 
-  async updateSession(ownerId, sessionId, payload) {
+  async updateSession(ownerId, sessionId, payload, options = {}) {
     const current = await getDocument(ownerId, 'trainingSession', sessionId);
     if (!current) {
       throw new Error('Training session not found');
@@ -96,7 +99,10 @@ export const trainingSessionService = {
       delete currentData.id;
       const normalized = normalizeSessionPlanLink(
         { ...currentData, ...payload },
-        { fillLinkedAt: true }
+        {
+          fillLinkedAt: true,
+          actorUserId: options.currentUserId || null
+        }
       );
       nextPayload = {
         ...payload,
@@ -219,5 +225,3 @@ export const trainingSessionService = {
     };
   }
 };
-
-

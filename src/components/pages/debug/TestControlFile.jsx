@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 import React, { useState, useEffect } from 'react';
 import {
   Container,
@@ -128,10 +129,10 @@ const TestControlFile = () => {
 
       setResult(uploadResult);
       setDebugInfo(prev => ({ ...prev, tokenObtained: true, tokenError: null, lastError: null }));
-      console.log('✅ Archivo subido exitosamente:', uploadResult);
+      logger.debug('✅ Archivo subido exitosamente:', uploadResult);
     } catch (err) {
       const errorMsg = err.message || 'Error desconocido al subir archivo';
-      console.error('❌ Error al subir archivo:', err);
+      logger.error('❌ Error al subir archivo:', err);
       setError(errorMsg);
       setDebugInfo(prev => ({ ...prev, lastError: errorMsg }));
     } finally {

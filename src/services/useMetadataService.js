@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 // Servicio centralizado para metadatos de reportes y empresas
 // Siempre usar estos helpers para leer/escribir metadatos
 
@@ -44,11 +45,11 @@ export function normalizeReporteEmpresa(reporte, empresas = []) {
  */
 export function buildReporteMetadata({ empresa, sucursal, formulario, datosReporte, ...rest }) {
   if (!empresa || !empresa.id || !empresa.nombre) {
-    console.error('[MetadataService] Empresa inválida al guardar reporte', empresa);
+    logger.error('[MetadataService] Empresa inválida al guardar reporte', empresa);
     throw new Error('Empresa inválida');
   }
   if (!formulario || !formulario.id || !formulario.nombre) {
-    console.error('[MetadataService] Formulario inválido al guardar reporte', formulario);
+    logger.error('[MetadataService] Formulario inválido al guardar reporte', formulario);
     throw new Error('Formulario inválido');
   }
   

@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 // src/components/shared/event-registry/EventRegistryInline.jsx
 /**
  * Formulario inline para registrar eventos asociados a una entidad
@@ -121,7 +122,7 @@ export default function EventRegistryInline({
       // Cargar personas si hay configuraciÃƒÆ’Ã‚Â³n
       if (personasConfig && personasConfig.collectionName) {
         if (!tenantOwnerId) {
-          console.error('[EventRegistryInline] ownerId no disponible');
+          logger.error('[EventRegistryInline] ownerId no disponible');
           setError('Usuario no autenticado correctamente');
           setLoading(false);
           return;
@@ -130,7 +131,7 @@ export default function EventRegistryInline({
         const collectionName = personasConfig.collectionName;
         const routeFunction = firestoreRoutesCore[collectionName];
         if (!routeFunction || typeof routeFunction !== 'function') {
-          console.error(`[EventRegistryInline] Collection ${collectionName} not found in firestoreRoutesCore`);
+          logger.error(`[EventRegistryInline] Collection ${collectionName} not found in firestoreRoutesCore`);
           setError(`ColecciÃƒÆ’Ã‚Â³n ${collectionName} no encontrada`);
           setLoading(false);
           return;
@@ -195,7 +196,7 @@ export default function EventRegistryInline({
         });
       }
     } catch (error) {
-      console.error('Error al cargar datos:', error);
+      logger.error('Error al cargar datos:', error);
       setError('Error al cargar los datos');
     } finally {
       setLoading(false);
@@ -302,7 +303,7 @@ export default function EventRegistryInline({
         loadEvidenciaAsBlob(result.fileId, result.shareToken);
         URL.revokeObjectURL(previewURL);
       } catch (err) {
-        console.error('Error al subir evidencia:', err);
+        logger.error('Error al subir evidencia:', err);
         setError(`Error al subir ${file.name}: ${err.message}`);
         setEvidencias(prev => prev.filter(ev => ev.id !== tempId));
         URL.revokeObjectURL(previewURL);
@@ -346,7 +347,7 @@ export default function EventRegistryInline({
         return newMap;
       });
     } catch (error) {
-      console.error(`Error cargando evidencia ${evidenciaId}:`, error);
+      logger.error(`Error cargando evidencia ${evidenciaId}:`, error);
       const fallbackUrl = convertirShareTokenAUrl(shareToken);
       if (fallbackUrl) {
         blobUrlsRef.current.set(evidenciaId, fallbackUrl);
@@ -463,7 +464,7 @@ export default function EventRegistryInline({
       }
 
     } catch (e) {
-      console.error(e);
+      logger.error(e);
       alert(e.message);
     } finally {
       setSaving(false);

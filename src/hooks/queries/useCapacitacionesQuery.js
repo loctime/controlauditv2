@@ -1,10 +1,10 @@
+import logger from '@/utils/logger';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useRef } from 'react';
 import { query, where, getDocs, onSnapshot, collection } from 'firebase/firestore';
 import { dbAudit } from '../../firebaseControlFile';
 import { firestoreRoutesCore } from '../../core/firestore/firestoreRoutes.core';
 import { useAuth } from '@/components/context/AuthContext';
-
 /**
  * Normaliza una capacitación unificando campos legacy
  */
@@ -239,11 +239,11 @@ export const useCapacitacionesQuery = (
     }
 
     // Si el queryKey cambió, el cleanup del efecto anterior ya desactivó el listener anterior
-    console.log('[useCapacitacionesQuery] Activando listener reactivo de capacitaciones');
+    logger.debug('[useCapacitacionesQuery] Activando listener reactivo de capacitaciones');
     listenerActiveRef.current = true;
     currentQueryKeyRef.current = queryKey;
     if (!ownerId) {
-      console.error('[useCapacitacionesQuery] ownerId no disponible');
+      logger.error('[useCapacitacionesQuery] ownerId no disponible');
       return;
     }
     const capacitacionesRef = collection(dbAudit, ...firestoreRoutesCore.capacitaciones(ownerId));
@@ -294,16 +294,16 @@ export const useCapacitacionesQuery = (
 
         // Actualizar cache inmediatamente - esto hará que los datos aparezcan en la UI de inmediato
         queryClient.setQueryData(queryKey, capacitacionesData);
-        console.log('[useCapacitacionesQuery] ✅ Cache actualizado inmediatamente con', capacitacionesData.length, 'capacitaciones');
+        logger.debug('[useCapacitacionesQuery] ✅ Cache actualizado inmediatamente con', capacitacionesData.length, 'capacitaciones');
       },
       (error) => {
-        console.error('[useCapacitacionesQuery] ❌ Error en listener:', error);
+        logger.error('[useCapacitacionesQuery] ❌ Error en listener:', error);
         listenerActiveRef.current = false;
       }
     );
 
     return () => {
-      console.log('[useCapacitacionesQuery] Desactivando listener reactivo');
+      logger.debug('[useCapacitacionesQuery] Desactivando listener reactivo');
       listenerActiveRef.current = false;
       unsubscribe();
     };
@@ -327,11 +327,11 @@ export const useCapacitacionesQuery = (
     }
 
     // Si el queryKey cambió, el cleanup del efecto anterior ya desactivó el listener anterior
-    console.log('[useCapacitacionesQuery] Activando listener reactivo de planes anuales');
+    logger.debug('[useCapacitacionesQuery] Activando listener reactivo de planes anuales');
     planesListenerActiveRef.current = true;
     currentPlanesQueryKeyRef.current = planesQueryKey;
     if (!ownerId) {
-      console.error('[useCapacitacionesQuery] ownerId no disponible');
+      logger.error('[useCapacitacionesQuery] ownerId no disponible');
       return;
     }
     const planesRef = collection(dbAudit, ...firestoreRoutesCore.planesCapacitacionesAnuales(ownerId));
@@ -362,16 +362,16 @@ export const useCapacitacionesQuery = (
         }));
 
         queryClient.setQueryData(planesQueryKey, planesData);
-        console.log('[useCapacitacionesQuery] Cache actualizado con', planesData.length, 'planes anuales');
+        logger.debug('[useCapacitacionesQuery] Cache actualizado con', planesData.length, 'planes anuales');
       },
       (error) => {
-        console.error('[useCapacitacionesQuery] Error en listener de planes:', error);
+        logger.error('[useCapacitacionesQuery] Error en listener de planes:', error);
         planesListenerActiveRef.current = false;
       }
     );
 
     return () => {
-      console.log('[useCapacitacionesQuery] Desactivando listener reactivo de planes');
+      logger.debug('[useCapacitacionesQuery] Desactivando listener reactivo de planes');
       planesListenerActiveRef.current = false;
       unsubscribe();
     };

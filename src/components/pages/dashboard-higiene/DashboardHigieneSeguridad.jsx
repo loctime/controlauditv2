@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 import React, { useState, useEffect, useMemo } from 'react';
 import {
   Container,
@@ -709,14 +710,14 @@ const DashboardHigieneSeguridad = () => {
                   alertas,
                   opciones: opcionesReporte,
                   onProgress: (progress) => {
-                    console.log(`Generando reporte: ${progress}%`);
+                    logger.debug(`Generando reporte: ${progress}%`);
                   }
                 });
 
                 toast.dismiss(loadingToastId);
                 toast.success('✅ Reporte PDF generado exitosamente');
               } catch (error) {
-                console.error('Error al generar reporte:', error);
+                logger.error('Error al generar reporte:', error);
                 toast.dismiss();
                 toast.error('❌ Error al generar el reporte. Intenta nuevamente.');
               } finally {

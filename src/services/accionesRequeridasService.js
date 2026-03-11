@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 /**
  * Servicio para gestionar acciones requeridas en sucursales
  * Service agnóstico a paths de Firestore - recibe CollectionReference/DocumentReference como parámetros
@@ -39,10 +40,10 @@ class AccionesRequeridasService {
       };
 
       const docRef = await addDocWithAppId(accionesCollectionRef, accionCompleta);
-      console.log(`✅ Acción requerida creada: ${docRef.id}`);
+      logger.debug(`✅ Acción requerida creada: ${docRef.id}`);
       return docRef.id;
     } catch (error) {
-      console.error('❌ Error al crear acción requerida:', error);
+      logger.error('❌ Error al crear acción requerida:', error);
       throw error;
     }
   }
@@ -67,10 +68,10 @@ class AccionesRequeridasService {
       );
       
       const ids = await Promise.all(promesas);
-      console.log(`✅ ${ids.length} acciones requeridas creadas`);
+      logger.debug(`✅ ${ids.length} acciones requeridas creadas`);
       return ids;
     } catch (error) {
-      console.error('❌ Error al crear acciones requeridas:', error);
+      logger.error('❌ Error al crear acciones requeridas:', error);
       throw error;
     }
   }
@@ -123,7 +124,7 @@ class AccionesRequeridasService {
 
       return acciones;
     } catch (error) {
-      console.error('❌ Error al obtener acciones requeridas:', error);
+      logger.error('❌ Error al obtener acciones requeridas:', error);
       throw error;
     }
   }
@@ -175,9 +176,9 @@ class AccionesRequeridasService {
       }
 
       await updateDocWithAppId(accionDocRef, updateData);
-      console.log(`✅ Estado de acción actualizado: ${accionDocRef.id} -> ${nuevoEstado}`);
+      logger.debug(`✅ Estado de acción actualizado: ${accionDocRef.id} -> ${nuevoEstado}`);
     } catch (error) {
-      console.error('❌ Error al actualizar estado de acción:', error);
+      logger.error('❌ Error al actualizar estado de acción:', error);
       throw error;
     }
   }
@@ -217,9 +218,9 @@ class AccionesRequeridasService {
         fechaActualizacion: serverTimestamp()
       });
 
-      console.log(`✅ Comentario agregado a acción: ${accionDocRef.id}`);
+      logger.debug(`✅ Comentario agregado a acción: ${accionDocRef.id}`);
     } catch (error) {
-      console.error('❌ Error al agregar comentario:', error);
+      logger.error('❌ Error al agregar comentario:', error);
       throw error;
     }
   }
@@ -259,9 +260,9 @@ class AccionesRequeridasService {
         fechaActualizacion: serverTimestamp()
       });
 
-      console.log(`✅ Modificación registrada en acción: ${accionDocRef.id}`);
+      logger.debug(`✅ Modificación registrada en acción: ${accionDocRef.id}`);
     } catch (error) {
-      console.error('❌ Error al registrar modificación:', error);
+      logger.error('❌ Error al registrar modificación:', error);
       throw error;
     }
   }
@@ -292,9 +293,9 @@ class AccionesRequeridasService {
         fechaActualizacion: serverTimestamp()
       });
 
-      console.log(`✅ Texto de acción actualizado: ${accionDocRef.id}`);
+      logger.debug(`✅ Texto de acción actualizado: ${accionDocRef.id}`);
     } catch (error) {
-      console.error('❌ Error al actualizar texto de acción:', error);
+      logger.error('❌ Error al actualizar texto de acción:', error);
       throw error;
     }
   }
@@ -311,9 +312,9 @@ class AccionesRequeridasService {
       }
 
       await deleteDocWithAppId(accionDocRef);
-      console.log(`✅ Acción eliminada: ${accionDocRef.id}`);
+      logger.debug(`✅ Acción eliminada: ${accionDocRef.id}`);
     } catch (error) {
-      console.error('❌ Error al eliminar acción:', error);
+      logger.error('❌ Error al eliminar acción:', error);
       throw error;
     }
   }
@@ -357,7 +358,7 @@ class AccionesRequeridasService {
 
       return estadisticas;
     } catch (error) {
-      console.error('❌ Error al obtener estadísticas:', error);
+      logger.error('❌ Error al obtener estadísticas:', error);
       throw error;
     }
   }

@@ -1,6 +1,6 @@
+import logger from '@/utils/logger';
 import React from 'react';
 import { Dialog, DialogTitle, DialogContent, DialogActions, TextField, Button, Typography } from '@mui/material';
-
 const PerfilDialogs = ({
   openDialogSocio,
   setOpenDialogSocio,
@@ -10,7 +10,7 @@ const PerfilDialogs = ({
   handleAgregarSocio
 }) => {
   // Log de depuración
-  console.debug('[PerfilDialogs] render');
+  logger.debug('[PerfilDialogs] render');
   return (
     <>
       {/* Dialog para agregar socio */}

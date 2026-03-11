@@ -1,10 +1,10 @@
+import logger from '@/utils/logger';
 import React, { useState } from "react";
 import { Box, Button, Grid, TextField, Typography, Alert } from "@mui/material";
 import { useNavigate, Link } from "react-router-dom";
 import { forgotPassword } from "../../../firebaseControlFile";
 import { Formik, Form, Field } from 'formik';
 import * as Yup from 'yup';
-
 const ForgotPassword = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
@@ -30,7 +30,7 @@ const ForgotPassword = () => {
       await forgotPassword(values.email);
       setSuccess('Se ha enviado un correo de recuperación a tu dirección de email.');
     } catch (error) {
-      console.error(error);
+      logger.error(error);
       let errorMessage = 'Error al enviar el correo de recuperación.';
       
       if (error.code === 'auth/user-not-found') {

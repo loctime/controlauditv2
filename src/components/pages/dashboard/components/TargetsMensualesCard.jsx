@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 // src/components/pages/dashboard/components/TargetsMensualesCard.jsx
 import React, { useState, useEffect } from 'react';
 import {
@@ -53,7 +54,7 @@ export default function TargetsMensualesCard({ sucursales, selectedSucursal, pro
         const progresosCalculados = await calcularProgresoTargets(sucursalesConTarget);
         setProgresos(progresosCalculados);
       } catch (error) {
-        console.error('Error cargando progresos de targets:', error);
+        logger.error('Error cargando progresos de targets:', error);
       } finally {
         setLoading(false);
       }

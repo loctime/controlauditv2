@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 // Servicio real para el dashboard de higiene y seguridad
 // Conecta con datos reales de Firestore
 import { 
@@ -112,7 +113,7 @@ const aggregateAuditClassifications = (auditorias = []) => {
       try {
         value = JSON.parse(value);
       } catch (error) {
-        console.warn('⚠️ [Dashboard] No se pudo parsear clasificaciones:', error);
+        logger.warn('⚠️ [Dashboard] No se pudo parsear clasificaciones:', error);
         return false;
       }
     }
@@ -213,11 +214,11 @@ export const safetyDashboardService = {
       const ownerId = resolveOwnerId(userProfile);
       
       if (!ownerId) {
-        console.warn('⚠️ [SafetyDashboard] ownerId no disponible desde userProfile');
+        logger.warn('⚠️ [SafetyDashboard] ownerId no disponible desde userProfile');
         return this.getDefaultData(companyId, sucursalId, period);
       }
       
-      console.log(`🔍 [SafetyDashboard] Obteniendo datos para empresa ${companyId}, sucursal ${sucursalId}, período ${period}, ownerId: ${ownerId}`);
+      logger.debug(`🔍 [SafetyDashboard] Obteniendo datos para empresa ${companyId}, sucursal ${sucursalId}, período ${period}, ownerId: ${ownerId}`);
       
       // Obtener datos de múltiples fuentes en paralelo
       const [
@@ -267,7 +268,7 @@ export const safetyDashboardService = {
       };
       
     } catch (error) {
-      console.error('❌ [SafetyDashboard] Error obteniendo datos:', error);
+      logger.error('❌ [SafetyDashboard] Error obteniendo datos:', error);
       // Retornar datos por defecto en caso de error
       return this.getDefaultData(companyId, sucursalId, period);
     }
@@ -278,12 +279,12 @@ export const safetyDashboardService = {
     const ownerId = resolveOwnerId(userProfile);
     
     if (!ownerId) {
-      console.warn('⚠️ [SafetyDashboard] ownerId no disponible desde userProfile, no se puede suscribir');
+      logger.warn('⚠️ [SafetyDashboard] ownerId no disponible desde userProfile, no se puede suscribir');
       if (onError) onError(new Error('ownerId no disponible'));
       return () => {};
     }
     
-    console.log(`🔍 [SafetyDashboard] Suscribiéndose a dashboard en tiempo real para empresa ${companyId}, sucursal ${sucursalId}, ownerId: ${ownerId}`);
+    logger.debug(`🔍 [SafetyDashboard] Suscribiéndose a dashboard en tiempo real para empresa ${companyId}, sucursal ${sucursalId}, ownerId: ${ownerId}`);
     
     const unsubscribes = [];
     let isLoading = false;
@@ -309,7 +310,7 @@ export const safetyDashboardService = {
         isLoading = true;
         
         try {
-          console.log('🔄 [SafetyDashboard] Recargando datos del dashboard...');
+          logger.debug('🔄 [SafetyDashboard] Recargando datos del dashboard...');
           
           const [
             auditoriasData,
@@ -355,7 +356,7 @@ export const safetyDashboardService = {
             occupationalHealth: metrics.occupationalHealth
           });
         } catch (error) {
-          console.error('❌ [SafetyDashboard] Error recalculando métricas:', error);
+          logger.error('❌ [SafetyDashboard] Error recalculando métricas:', error);
           if (onError) onError(error);
         } finally {
           isLoading = false;
@@ -390,11 +391,11 @@ export const safetyDashboardService = {
         
         const unsubscribeAccidentes = onSnapshot(qAccidentes, 
           (snapshot) => {
-            console.log(`🔄 [SafetyDashboard] Cambios detectados en accidentes: ${snapshot.docs.length} documentos`);
+            logger.debug(`🔄 [SafetyDashboard] Cambios detectados en accidentes: ${snapshot.docs.length} documentos`);
             recargarDashboard();
           },
           (error) => {
-            console.error('❌ [SafetyDashboard] Error en listener de accidentes:', error);
+            logger.error('❌ [SafetyDashboard] Error en listener de accidentes:', error);
             if (onError) onError(error);
           }
         );
@@ -421,13 +422,13 @@ export const safetyDashboardService = {
         const unsubscribeAusencias = onSnapshot(
           qAusencias,
           (snapshot) => {
-            console.log(
+            logger.debug(
               `🔄 [Dashboard] Cambios detectados en ausencias: ${snapshot.docs.length} documentos`
             );
             recargarDashboard();
           },
           (error) => {
-            console.error(
+            logger.error(
               '❌ [Dashboard] Error en listener de ausencias:',
               error
             );
@@ -453,11 +454,11 @@ export const safetyDashboardService = {
         
         const unsubscribeCapacitaciones = onSnapshot(qCapacitaciones,
           (snapshot) => {
-            console.log(`🔄 [SafetyDashboard] Cambios detectados en capacitaciones: ${snapshot.docs.length} documentos`);
+            logger.debug(`🔄 [SafetyDashboard] Cambios detectados en capacitaciones: ${snapshot.docs.length} documentos`);
             recargarDashboard();
           },
           (error) => {
-            console.error('❌ [SafetyDashboard] Error en listener de capacitaciones:', error);
+            logger.error('❌ [SafetyDashboard] Error en listener de capacitaciones:', error);
             if (onError) onError(error);
           }
         );
@@ -480,11 +481,11 @@ export const safetyDashboardService = {
         
         const unsubscribeEmpleados = onSnapshot(qEmpleados,
           (snapshot) => {
-            console.log(`🔄 [SafetyDashboard] Cambios detectados en empleados: ${snapshot.docs.length} documentos`);
+            logger.debug(`🔄 [SafetyDashboard] Cambios detectados en empleados: ${snapshot.docs.length} documentos`);
             recargarDashboard();
           },
           (error) => {
-            console.error('❌ [SafetyDashboard] Error en listener de empleados:', error);
+            logger.error('❌ [SafetyDashboard] Error en listener de empleados:', error);
             if (onError) onError(error);
           }
         );
@@ -507,11 +508,11 @@ export const safetyDashboardService = {
         const unsubscribe = onSnapshot(
           auditoriaQuery,
           (snapshot) => {
-            console.log(`🔄 [SafetyDashboard] Cambios detectados en auditorías (${index + 1}): ${snapshot.docs.length} documentos`);
+            logger.debug(`🔄 [SafetyDashboard] Cambios detectados en auditorías (${index + 1}): ${snapshot.docs.length} documentos`);
             recargarDashboard();
           },
           (error) => {
-            console.error('❌ [SafetyDashboard] Error en listener de auditorías:', error);
+            logger.error('❌ [SafetyDashboard] Error en listener de auditorías:', error);
             if (onError) onError(error);
           }
         );
@@ -525,7 +526,7 @@ export const safetyDashboardService = {
       };
       
     } catch (error) {
-      console.error('❌ [SafetyDashboard] Error configurando listeners:', error);
+      logger.error('❌ [SafetyDashboard] Error configurando listeners:', error);
       if (onError) onError(error);
       return () => {};
     }
@@ -535,7 +536,7 @@ export const safetyDashboardService = {
   async getAuditoriasData(companyId, period, ownerId) {
     try {
       if (!ownerId) {
-        console.warn('⚠️ getAuditoriasData: ownerId requerido');
+        logger.warn('⚠️ getAuditoriasData: ownerId requerido');
         return [];
       }
       
@@ -559,7 +560,7 @@ export const safetyDashboardService = {
 
       snapshots.forEach((result) => {
         if (result.status !== 'fulfilled') {
-          console.warn('⚠️ [SafetyDashboard] Error en consulta de reportes:', result.reason);
+          logger.warn('⚠️ [SafetyDashboard] Error en consulta de reportes:', result.reason);
           return;
         }
 
@@ -599,11 +600,11 @@ export const safetyDashboardService = {
         return fechaB - fechaA;
       });
 
-      console.log(`📊 [SafetyDashboard] ${auditorias.length} auditorías (reportes) encontradas`);
+      logger.debug(`📊 [SafetyDashboard] ${auditorias.length} auditorías (reportes) encontradas`);
       return auditorias;
 
     } catch (error) {
-      console.error('❌ [SafetyDashboard] Error obteniendo auditorías (reportes):', error);
+      logger.error('❌ [SafetyDashboard] Error obteniendo auditorías (reportes):', error);
       return [];
     }
   },
@@ -612,13 +613,13 @@ export const safetyDashboardService = {
   async getLogsData(companyId, period, ownerId = null) {
     try {
       if (!ownerId) {
-        console.warn('⚠️ [SafetyDashboard] getLogsData: ownerId no proporcionado');
+        logger.warn('⚠️ [SafetyDashboard] getLogsData: ownerId no proporcionado');
         return [];
       }
       
       // logs_operarios puede estar en logs o en otra colección - usar logs por ahora
       const logsRef = collection(dbAudit, ...firestoreRoutesCore.logs(ownerId));
-      console.log('[SafetyDashboard] getLogsData usando path:', logsRef.path);
+      logger.debug('[SafetyDashboard] getLogsData usando path:', logsRef.path);
       
       const q = query(
         logsRef,
@@ -637,11 +638,11 @@ export const safetyDashboardService = {
         });
       });
       
-      console.log(`📝 [SafetyDashboard] ${logs.length} logs encontrados`);
+      logger.debug(`📝 [SafetyDashboard] ${logs.length} logs encontrados`);
       return logs;
       
     } catch (error) {
-      console.error('❌ [SafetyDashboard] Error obteniendo logs:', error);
+      logger.error('❌ [SafetyDashboard] Error obteniendo logs:', error);
       return [];
     }
   },
@@ -650,13 +651,13 @@ export const safetyDashboardService = {
   async getFormulariosData(companyId, period, ownerId = null) {
     try {
       if (!ownerId) {
-        console.warn('⚠️ [SafetyDashboard] getFormulariosData: ownerId no proporcionado');
+        logger.warn('⚠️ [SafetyDashboard] getFormulariosData: ownerId no proporcionado');
         return [];
       }
       
       // Los formularios están en la colección del usuario
       const formulariosRef = collection(dbAudit, ...firestoreRoutesCore.formularios(ownerId));
-      console.log('[SafetyDashboard] getFormulariosData usando path:', formulariosRef.path);
+      logger.debug('[SafetyDashboard] getFormulariosData usando path:', formulariosRef.path);
       
       const q = query(
         formulariosRef,
@@ -674,11 +675,11 @@ export const safetyDashboardService = {
         });
       });
       
-      console.log(`📋 [SafetyDashboard] ${formularios.length} formularios encontrados`);
+      logger.debug(`📋 [SafetyDashboard] ${formularios.length} formularios encontrados`);
       return formularios;
       
     } catch (error) {
-      console.error('❌ [SafetyDashboard] Error obteniendo formularios:', error);
+      logger.error('❌ [SafetyDashboard] Error obteniendo formularios:', error);
       return [];
     }
   },
@@ -687,14 +688,14 @@ export const safetyDashboardService = {
   async getCompanyInfo(companyId, ownerId = null) {
     try {
       if (!ownerId) {
-        console.warn('⚠️ [SafetyDashboard] getCompanyInfo: ownerId no proporcionado');
+        logger.warn('⚠️ [SafetyDashboard] getCompanyInfo: ownerId no proporcionado');
         return null;
       }
       
       // Las empresas están en la colección del usuario
       const empresasRef = collection(dbAudit, ...firestoreRoutesCore.empresas(ownerId));
       const empresaRef = doc(empresasRef, companyId);
-      console.log('[SafetyDashboard] getCompanyInfo usando path:', empresaRef.path);
+      logger.debug('[SafetyDashboard] getCompanyInfo usando path:', empresaRef.path);
       
       const empresaDoc = await getDoc(empresaRef);
       
@@ -704,7 +705,7 @@ export const safetyDashboardService = {
       
       return null;
     } catch (error) {
-      console.error('❌ [SafetyDashboard] Error obteniendo info empresa:', error);
+      logger.error('❌ [SafetyDashboard] Error obteniendo info empresa:', error);
       return null;
     }
   },
@@ -713,13 +714,13 @@ export const safetyDashboardService = {
   async getSucursalInfo(sucursalId, ownerId) {
     try {
       if (!ownerId) {
-        console.warn('⚠️ [SafetyDashboard] getSucursalInfo: ownerId no proporcionado');
+        logger.warn('⚠️ [SafetyDashboard] getSucursalInfo: ownerId no proporcionado');
         return null;
       }
       
       const sucursalesRef = collection(dbAudit, ...firestoreRoutesCore.sucursales(ownerId));
       const sucursalRef = doc(sucursalesRef, sucursalId);
-      console.log('[SafetyDashboard] getSucursalInfo usando path:', sucursalRef.path);
+      logger.debug('[SafetyDashboard] getSucursalInfo usando path:', sucursalRef.path);
       
       const sucursalDoc = await getDoc(sucursalRef);
       
@@ -729,7 +730,7 @@ export const safetyDashboardService = {
       
       return null;
     } catch (error) {
-      console.error('❌ [SafetyDashboard] Error obteniendo info sucursal:', error);
+      logger.error('❌ [SafetyDashboard] Error obteniendo info sucursal:', error);
       return null;
     }
   },
@@ -738,7 +739,7 @@ export const safetyDashboardService = {
   async getEmpleados(sucursalId, ownerId = null) {
     try {
       if (!ownerId) {
-        console.warn('⚠️ [SafetyDashboard] getEmpleados: ownerId no proporcionado, retornando array vacío');
+        logger.warn('⚠️ [SafetyDashboard] getEmpleados: ownerId no proporcionado, retornando array vacío');
         return [];
       }
 
@@ -765,11 +766,11 @@ export const safetyDashboardService = {
         });
       });
       
-      console.log(`👥 [SafetyDashboard] ${empleados.length} empleados encontrados para ownerId ${ownerId}`);
+      logger.debug(`👥 [SafetyDashboard] ${empleados.length} empleados encontrados para ownerId ${ownerId}`);
       return empleados;
       
     } catch (error) {
-      console.error('❌ [SafetyDashboard] Error obteniendo empleados:', error);
+      logger.error('❌ [SafetyDashboard] Error obteniendo empleados:', error);
       return [];
     }
   },
@@ -778,7 +779,7 @@ export const safetyDashboardService = {
   async getCapacitaciones(sucursalId, period, ownerId = null) {
     try {
       if (!ownerId) {
-        console.warn('⚠️ [SafetyDashboard] getCapacitaciones: ownerId no proporcionado, retornando array vacío');
+        logger.warn('⚠️ [SafetyDashboard] getCapacitaciones: ownerId no proporcionado, retornando array vacío');
         return [];
       }
 
@@ -805,11 +806,11 @@ export const safetyDashboardService = {
         });
       });
       
-      console.log(`📚 [SafetyDashboard] ${capacitaciones.length} capacitaciones encontradas para ownerId ${ownerId}`);
+      logger.debug(`📚 [SafetyDashboard] ${capacitaciones.length} capacitaciones encontradas para ownerId ${ownerId}`);
       return capacitaciones;
       
     } catch (error) {
-      console.error('❌ [SafetyDashboard] Error obteniendo capacitaciones:', error);
+      logger.error('❌ [SafetyDashboard] Error obteniendo capacitaciones:', error);
       return [];
     }
   },
@@ -818,7 +819,7 @@ export const safetyDashboardService = {
   async getAccidentes(sucursalId, period, ownerId = null) {
     try {
       if (!ownerId) {
-        console.warn('⚠️ [SafetyDashboard] getAccidentes: ownerId no proporcionado, retornando array vacío');
+        logger.warn('⚠️ [SafetyDashboard] getAccidentes: ownerId no proporcionado, retornando array vacío');
         return [];
       }
 
@@ -845,11 +846,11 @@ export const safetyDashboardService = {
         });
       });
       
-      console.log(`🚨 [SafetyDashboard] ${accidentes.length} accidentes encontrados para ownerId ${ownerId}`);
+      logger.debug(`🚨 [SafetyDashboard] ${accidentes.length} accidentes encontrados para ownerId ${ownerId}`);
       return accidentes;
       
     } catch (error) {
-      console.error('❌ [SafetyDashboard] Error obteniendo accidentes:', error);
+      logger.error('❌ [SafetyDashboard] Error obteniendo accidentes:', error);
       return [];
     }
   },
@@ -858,7 +859,7 @@ export const safetyDashboardService = {
   async getAusencias(companyId, sucursalId, period, ownerId = null) {
     try {
       if (!ownerId) {
-        console.warn('⚠️ [SafetyDashboard] getAusencias: ownerId no proporcionado, retornando array vacío');
+        logger.warn('⚠️ [SafetyDashboard] getAusencias: ownerId no proporcionado, retornando array vacío');
         return [];
       }
 
@@ -936,10 +937,10 @@ export const safetyDashboardService = {
       };
 
       const filtered = ausencias.filter(overlapsPeriod);
-      console.log(`🏥 [SafetyDashboard] ${filtered.length} ausencias encontradas para ownerId ${ownerId}`);
+      logger.debug(`🏥 [SafetyDashboard] ${filtered.length} ausencias encontradas para ownerId ${ownerId}`);
       return filtered;
     } catch (error) {
-      console.error('❌ [SafetyDashboard] Error obteniendo ausencias:', error);
+      logger.error('❌ [SafetyDashboard] Error obteniendo ausencias:', error);
       return [];
     }
   },

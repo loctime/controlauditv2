@@ -1,10 +1,10 @@
+import logger from '@/utils/logger';
 // Componente optimizado para generar reportes de auditoría
 import React, { useState } from "react";
 import { Button, Box, Alert, Snackbar, CircularProgress } from "@mui/material";
 import { useAuth } from '@/components/context/AuthContext';
 import AuditoriaService from "../auditoriaService";
 import { buildReporteMetadata } from '../../../../services/useMetadataService';
-
 const BotonGenerarReporte = ({ 
   onClick, 
   deshabilitado, 
@@ -36,15 +36,15 @@ const BotonGenerarReporte = ({
     }
 
     // Las firmas son opcionales - no validar como obligatorias
-    console.log('[BotonGenerarReporte] Firmas opcionales - Auditor:', !!firmaAuditor, 'Responsable:', !!firmaResponsable);
+    logger.debug('[BotonGenerarReporte] Firmas opcionales - Auditor:', !!firmaAuditor, 'Responsable:', !!firmaResponsable);
     
     // Debug de clasificaciones
-    console.log('🔍 [BotonGenerarReporte] handleGuardar - clasificaciones recibidas como prop:', clasificaciones);
-    console.log('🔍 [BotonGenerarReporte] handleGuardar - Tipo:', typeof clasificaciones, Array.isArray(clasificaciones));
+    logger.debug('🔍 [BotonGenerarReporte] handleGuardar - clasificaciones recibidas como prop:', clasificaciones);
+    logger.debug('🔍 [BotonGenerarReporte] handleGuardar - Tipo:', typeof clasificaciones, Array.isArray(clasificaciones));
     if (Array.isArray(clasificaciones) && clasificaciones.length > 0) {
-      console.log('🔍 [BotonGenerarReporte] handleGuardar - Contenido:', JSON.stringify(clasificaciones, null, 2));
+      logger.debug('🔍 [BotonGenerarReporte] handleGuardar - Contenido:', JSON.stringify(clasificaciones, null, 2));
     } else {
-      console.warn('🔍 [BotonGenerarReporte] handleGuardar - ⚠️ clasificaciones está vacío o no es array!');
+      logger.warn('🔍 [BotonGenerarReporte] handleGuardar - ⚠️ clasificaciones está vacío o no es array!');
     }
 
     setGuardando(true);
@@ -53,11 +53,11 @@ const BotonGenerarReporte = ({
       let currentUserProfile = userProfile;
       
       if (!currentUserProfile) {
-        console.log('[BotonGenerarReporte] userProfile no disponible, buscando en cache...');
+        logger.debug('[BotonGenerarReporte] userProfile no disponible, buscando en cache...');
         try {
           // Verificar si IndexedDB está disponible
           if (!window.indexedDB) {
-            console.warn('[BotonGenerarReporte] IndexedDB no está disponible');
+            logger.warn('[BotonGenerarReporte] IndexedDB no está disponible');
             throw new Error('IndexedDB no disponible');
           }
 
@@ -68,7 +68,7 @@ const BotonGenerarReporte = ({
               
               // Verificar si la object store 'settings' existe
               if (!db.objectStoreNames.contains('settings')) {
-                console.warn('[BotonGenerarReporte] Object store "settings" no existe');
+                logger.warn('[BotonGenerarReporte] Object store "settings" no existe');
                 resolve(null);
                 return;
               }
@@ -86,35 +86,35 @@ const BotonGenerarReporte = ({
               };
               
               store.get('complete_user_cache').onerror = function(e) {
-                console.error('[BotonGenerarReporte] Error al obtener cache:', e.target.error);
+                logger.error('[BotonGenerarReporte] Error al obtener cache:', e.target.error);
                 resolve(null);
               };
             };
             
             request.onerror = function(event) {
-              console.error('[BotonGenerarReporte] Error al abrir IndexedDB:', event.target.error);
+              logger.error('[BotonGenerarReporte] Error al abrir IndexedDB:', event.target.error);
               reject(event.target.error);
             };
             
             request.onupgradeneeded = function(event) {
-              console.log('[BotonGenerarReporte] IndexedDB necesita actualización');
+              logger.debug('[BotonGenerarReporte] IndexedDB necesita actualización');
               // No hacer nada aquí, solo para evitar errores
             };
           });
           
           if (cachedUser) {
             currentUserProfile = cachedUser;
-            console.log('[BotonGenerarReporte] Usuario encontrado en cache:', {
+            logger.debug('[BotonGenerarReporte] Usuario encontrado en cache:', {
               uid: currentUserProfile.uid,
               email: currentUserProfile.email,
               displayName: currentUserProfile.displayName,
               role: currentUserProfile.role
             });
           } else {
-            console.log('[BotonGenerarReporte] No se encontró usuario en cache');
+            logger.debug('[BotonGenerarReporte] No se encontró usuario en cache');
           }
         } catch (error) {
-          console.error('[BotonGenerarReporte] Error al obtener usuario del cache:', error);
+          logger.error('[BotonGenerarReporte] Error al obtener usuario del cache:', error);
           // Continuar sin userProfile del cache
         }
       }
@@ -134,10 +134,10 @@ const BotonGenerarReporte = ({
         datosReporte, // Incluir los datos adicionales del reporte
         fechaGuardado: new Date(),
       });
-      console.log('🔍 [BotonGenerarReporte] Clasificaciones recibidas como prop:', clasificaciones);
-      console.log('🔍 [BotonGenerarReporte] Tipo de clasificaciones:', typeof clasificaciones, Array.isArray(clasificaciones));
-      console.debug('[BotonGenerarReporte] Guardando auditoría con metadatos:', datosAuditoria);
-      console.log('🔍 [BotonGenerarReporte] Clasificaciones en datosAuditoria:', datosAuditoria.clasificaciones);
+      logger.debug('🔍 [BotonGenerarReporte] Clasificaciones recibidas como prop:', clasificaciones);
+      logger.debug('🔍 [BotonGenerarReporte] Tipo de clasificaciones:', typeof clasificaciones, Array.isArray(clasificaciones));
+      logger.debug('[BotonGenerarReporte] Guardando auditoría con metadatos:', datosAuditoria);
+      logger.debug('🔍 [BotonGenerarReporte] Clasificaciones en datosAuditoria:', datosAuditoria.clasificaciones);
 
       // Usar el servicio centralizado para guardar
       const auditoriaId = await AuditoriaService.guardarAuditoria(datosAuditoria, currentUserProfile);
@@ -154,7 +154,7 @@ const BotonGenerarReporte = ({
       }
     } catch (error) {
       setGuardadoExitoso(false);
-      console.error("❌ Error al guardar auditoría:", error);
+      logger.error("❌ Error al guardar auditoría:", error);
       setMensaje(`❌ Error al guardar: ${error.message}`);
       setTipoMensaje("error");
       setMostrarMensaje(true);

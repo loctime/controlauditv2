@@ -1,9 +1,9 @@
+import logger from '@/utils/logger';
 import React from "react";
 import { Box, Typography, Paper, Divider, Chip } from "@mui/material";
 import BuildIcon from '@mui/icons-material/Build';
 import PeopleIcon from '@mui/icons-material/People';
 import { convertirShareTokenAUrl } from '../../utils/imageUtils';
-
 /**
  * .Componente reutilizable para mostrar preguntas, respuestas, comentarios e imágenes agrupadas por sección.
  * Props:
@@ -14,54 +14,35 @@ import { convertirShareTokenAUrl } from '../../utils/imageUtils';
  * - clasificaciones: array de arrays de objetos { condicion: boolean, actitud: boolean }
  */
 const PreguntasRespuestasList = ({ secciones = [], respuestas = [], comentarios = [], imagenes = [], clasificaciones = [] }) => {
-  // Debug de props
-  if (process.env.NODE_ENV === 'development') {
-    // eslint-disable-next-line no-console
-    console.log('[PreguntasRespuestasList] secciones:', secciones);
-    // eslint-disable-next-line no-console
-    console.log('[PreguntasRespuestasList] respuestas:', respuestas);
-    // eslint-disable-next-line no-console
-    console.log('[PreguntasRespuestasList] comentarios:', comentarios);
-    // eslint-disable-next-line no-console
-    console.log('[PreguntasRespuestasList] imagenes:', imagenes);
-    // eslint-disable-next-line no-console
-    console.log('[PreguntasRespuestasList] clasificaciones:', clasificaciones);
-  }
 
   if (!Array.isArray(secciones) || secciones.length === 0) {
-    console.warn("[PreguntasRespuestasList] No hay secciones para mostrar");
+    logger.warn("[PreguntasRespuestasList] No hay secciones para mostrar");
     return <Typography variant="body2" color="text.secondary">No hay datos para mostrar.</Typography>;
   }
 
   // Función helper para procesar imagen usando helper global
   const procesarImagen = (imagen, seccionIndex, preguntaIndex) => {
-    console.debug(`[PreguntasRespuestasList] Procesando imagen para sección ${seccionIndex}, pregunta ${preguntaIndex}:`, imagen);
     
     if (!imagen || imagen === null || imagen === undefined) {
-      console.debug(`[PreguntasRespuestasList] No hay imagen para sección ${seccionIndex}, pregunta ${preguntaIndex}`);
       return null;
     }
 
     // Si es un array de imágenes, tomar la primera
     if (Array.isArray(imagen) && imagen.length > 0) {
-      console.debug(`[PreguntasRespuestasList] Array de imágenes:`, imagen);
       return convertirShareTokenAUrl(imagen[0]);
     }
 
     // Si es "[object Object]", es una imagen corrupta
     if (typeof imagen === 'string' && imagen === '[object Object]') {
-      console.warn(`[PreguntasRespuestasList] Imagen corrupta "[object Object]" para sección ${seccionIndex}, pregunta ${preguntaIndex}`);
+      logger.warn(`[PreguntasRespuestasList] Imagen corrupta "[object Object]" para sección ${seccionIndex}, pregunta ${preguntaIndex}`);
       return null;
     }
 
     // Usar helper global para convertir shareToken a URL
     const url = convertirShareTokenAUrl(imagen);
     if (url) {
-      console.debug(`[PreguntasRespuestasList] URL generada: ${url}`);
       return url;
     }
-
-    console.debug(`[PreguntasRespuestasList] Formato de imagen no reconocido:`, imagen);
     return null;
   };
 
@@ -76,26 +57,11 @@ const PreguntasRespuestasList = ({ secciones = [], respuestas = [], comentarios 
           {Array.isArray(seccion.preguntas) && seccion.preguntas.length > 0 ? (
             seccion.preguntas.map((pregunta, pIdx) => {
               const respuesta = respuestas[sIdx]?.[pIdx];
-              // Log por cada respuesta
-              if (process.env.NODE_ENV === 'development') {
-                // eslint-disable-next-line no-console
-                console.log(`[PreguntasRespuestasList] Render pregunta [${sIdx}][${pIdx}]:`, respuesta);
-              }
               const mostrarRespuesta = !respuesta ? "Sin responder" : respuesta;
               const comentario = comentarios[sIdx]?.[pIdx] || "";
               const imagen = imagenes[sIdx]?.[pIdx];
               const imagenProcesada = procesarImagen(imagen, sIdx, pIdx);
               const clasificacion = clasificaciones[sIdx]?.[pIdx] || { condicion: false, actitud: false };
-              
-              // Log más visible para debug
-              console.log(`🔍 [PreguntasRespuestasList] Sección ${sIdx}, Pregunta ${pIdx} - Clasificación:`, {
-                clasificacion: clasificacion,
-                tieneCondicion: clasificacion.condicion,
-                tieneActitud: clasificacion.actitud,
-                mostrarChips: clasificacion.condicion || clasificacion.actitud,
-                tipoCondicion: typeof clasificacion.condicion,
-                tipoActitud: typeof clasificacion.actitud
-              });
 
               return (
                 <Box key={pIdx} sx={{ mb: 2, pl: 1, borderLeft: '3px solid #1976d2' }}>
@@ -149,19 +115,16 @@ const PreguntasRespuestasList = ({ secciones = [], respuestas = [], comentarios 
                           // Intentar diagnosticar el problema
                           try {
                             const response = await fetch(imagenProcesada, { method: 'HEAD', mode: 'no-cors' });
-                            console.warn(`[PreguntasRespuestasList] ⚠️ Error cargando imagen (shareToken: ${shareToken})`);
-                            console.warn(`[PreguntasRespuestasList] URL: ${imagenProcesada}`);
-                            console.warn(`[PreguntasRespuestasList] Verifica en Firestore: /shares/${shareToken}`);
-                            console.warn(`[PreguntasRespuestasList] Verifica endpoint: https://files.controldoc.app/api/shares/${shareToken}/image`);
+                            logger.warn(`[PreguntasRespuestasList] ⚠️ Error cargando imagen (shareToken: ${shareToken})`);
+                            logger.warn(`[PreguntasRespuestasList] URL: ${imagenProcesada}`);
+                            logger.warn(`[PreguntasRespuestasList] Verifica en Firestore: /shares/${shareToken}`);
+                            logger.warn(`[PreguntasRespuestasList] Verifica endpoint: https://files.controldoc.app/api/shares/${shareToken}/image`);
                           } catch (fetchError) {
-                            console.warn(`[PreguntasRespuestasList] ⚠️ Error al diagnosticar (shareToken: ${shareToken}):`, fetchError);
-                            console.warn(`[PreguntasRespuestasList] URL completa: ${imagenProcesada}`);
+                            logger.warn(`[PreguntasRespuestasList] ⚠️ Error al diagnosticar (shareToken: ${shareToken}):`, fetchError);
+                            logger.warn(`[PreguntasRespuestasList] URL completa: ${imagenProcesada}`);
                           }
                           
                           e.target.style.display = 'none'; 
-                        }}
-                        onLoad={() => {
-                          console.debug(`[PreguntasRespuestasList] ✅ Imagen cargada exitosamente`);
                         }}
                         loading="lazy"
                         crossOrigin="anonymous"

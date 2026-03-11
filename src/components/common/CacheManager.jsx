@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 import React, { useState, useEffect } from 'react';
 import {
   Card,
@@ -55,7 +56,7 @@ const CacheManager = () => {
       const stats = await getCacheStats(userProfile?.uid);
       setCacheStats(stats);
     } catch (error) {
-      console.error('Error cargando estadísticas de cache:', error);
+      logger.error('Error cargando estadísticas de cache:', error);
     }
   };
 
@@ -71,7 +72,7 @@ const CacheManager = () => {
       await loadCacheStats();
       alert('Cache actualizado correctamente');
     } catch (error) {
-      console.error('Error actualizando cache:', error);
+      logger.error('Error actualizando cache:', error);
       alert('Error actualizando cache: ' + error.message);
     }
     setLoading(false);
@@ -84,7 +85,7 @@ const CacheManager = () => {
       await loadCacheStats();
       alert('Cache limpiado correctamente');
     } catch (error) {
-      console.error('Error limpiando cache:', error);
+      logger.error('Error limpiando cache:', error);
       alert('Error limpiando cache: ' + error.message);
     }
     setLoading(false);

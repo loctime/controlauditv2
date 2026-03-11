@@ -1,6 +1,6 @@
+import logger from '@/utils/logger';
 import { useState, useEffect } from 'react';
 import { calcularProgresoTargets } from '../../../../utils/sucursalTargetUtils';
-
 export const useTargetsMensualesData = (sucursales, selectedSucursal) => {
   const [progresos, setProgresos] = useState({});
   const [loading, setLoading] = useState(true);
@@ -44,7 +44,7 @@ export const useTargetsMensualesData = (sucursales, selectedSucursal) => {
           setProgresos(progresosCalculados);
         }
       } catch (error) {
-        console.error('Error cargando progresos de targets:', error);
+        logger.error('Error cargando progresos de targets:', error);
       } finally {
         if (isMounted) {
           setLoading(false);

@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 import React from 'react';
 import {
   Dialog,
@@ -37,7 +38,7 @@ const AccidenteDetalleModal = React.memo(({
       onClose();
       if (onCerrarCaso) onCerrarCaso();
     } catch (error) {
-      console.error('Error actualizando estado:', error);
+      logger.error('Error actualizando estado:', error);
       Swal.fire('Error', 'No se pudo actualizar el estado', 'error');
     }
   };

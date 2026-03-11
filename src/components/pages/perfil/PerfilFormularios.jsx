@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 import React from 'react';
 import {
   Box, Typography, ListItem, ListItemAvatar, Avatar, ListItemText, Alert,
@@ -25,7 +26,7 @@ const PerfilFormularios = ({ formularios, loading }) => {
   const { userProfile } = useAuth();
   
   // Log de depuración
-  console.debug('[PerfilFormularios] formularios:', formularios);
+  logger.debug('[PerfilFormularios] formularios:', formularios);
   const [openShareId, setOpenShareId] = useState(null);
   const [shareLink, setShareLink] = useState('');
   const [copying, setCopying] = useState(false);
@@ -37,7 +38,7 @@ const PerfilFormularios = ({ formularios, loading }) => {
     
     // Verificar si el formulario es propio (no copiado)
     if (form.formularioOriginalId) {
-      console.warn('[PerfilFormularios] No se puede compartir un formulario copiado:', form.id);
+      logger.warn('[PerfilFormularios] No se puede compartir un formulario copiado:', form.id);
       return;
     }
     
@@ -48,7 +49,7 @@ const PerfilFormularios = ({ formularios, loading }) => {
         esPublico: true,
         publicSharedId
       });
-      console.debug('[CompartirFormulario] Formulario actualizado como público:', form.id, publicSharedId);
+      logger.debug('[CompartirFormulario] Formulario actualizado como público:', form.id, publicSharedId);
     }
     const url = `${window.location.origin}/formularios/public/${publicSharedId}`;
     setShareLink(url);
@@ -94,7 +95,7 @@ const PerfilFormularios = ({ formularios, loading }) => {
         // Recargar la página para actualizar la lista
         window.location.reload();
       } catch (error) {
-        console.error('Error al eliminar formulario:', error);
+        logger.error('Error al eliminar formulario:', error);
         Swal.fire('Error', 'No se pudo eliminar el formulario.', 'error');
       }
     }
@@ -137,7 +138,7 @@ const PerfilFormularios = ({ formularios, loading }) => {
           variant="contained"
           color="primary"
           onClick={() => {
-            console.log('[PerfilFormularios] Navegando a /editar');
+            logger.debug('[PerfilFormularios] Navegando a /editar');
             navigate('/editar');
           }}
           sx={{ 

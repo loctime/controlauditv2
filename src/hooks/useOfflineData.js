@@ -1,9 +1,9 @@
+import logger from '@/utils/logger';
 import { useState, useEffect, useCallback } from 'react';
 import { getCompleteUserCache, saveCompleteUserCache } from '../services/completeOfflineCache';
 import { useAuth } from '@/components/context/AuthContext';
 import { getDocs, query, where, orderBy, limit } from 'firebase/firestore';
 import { shouldEnableOffline } from '../utils/pwaDetection';
-
 /**
  * Hook para cargar datos de la aplicación, priorizando el cache offline
  * y actualizando desde la red cuando sea necesario.
@@ -43,7 +43,7 @@ export const useOfflineData = (empresasCollectionRef, usuariosCollectionRef, for
 
     // 1. Intentar cargar desde cache offline
     try {
-      console.log('🔍 Intentando cargar cache offline para usuario:', user.uid);
+      logger.debug('🔍 Intentando cargar cache offline para usuario:', user.uid);
       cachedData = await getCompleteUserCache(user.uid);
       if (cachedData) {
         setProfile(cachedData.userProfile);
@@ -51,20 +51,20 @@ export const useOfflineData = (empresasCollectionRef, usuariosCollectionRef, for
         setFormularios(cachedData.formularios || []);
         setAuditorias(cachedData.auditorias || []);
         setCacheLoaded(true);
-        console.log('✅ Datos cargados desde cache offline:', {
+        logger.debug('✅ Datos cargados desde cache offline:', {
           empresas: (cachedData.empresas || []).length,
           formularios: (cachedData.formularios || []).length
         });
       } else {
-        console.log('⚠️ No hay datos en cache offline para usuario:', user.uid);
+        logger.debug('⚠️ No hay datos en cache offline para usuario:', user.uid);
       }
     } catch (err) {
-      console.warn('⚠️ Error al cargar datos desde cache offline:', err);
+      logger.warn('⚠️ Error al cargar datos desde cache offline:', err);
     }
 
     // 2. Si hay conexión, intentar cargar desde la red y actualizar cache
     if (isOnline) {
-      console.log('🌐 Cargando datos desde la red...');
+      logger.debug('🌐 Cargando datos desde la red...');
       try {
         // Cargar empresas
         if (empresasCollectionRef) {
@@ -157,13 +157,13 @@ export const useOfflineData = (empresasCollectionRef, usuariosCollectionRef, for
             formularios: formularios, // Usar el estado actual de formularios
             auditorias: auditorias // Usar el estado actual de auditorias
           });
-          console.log('✅ Datos cargados desde la red y guardados en cache offline.');
+          logger.debug('✅ Datos cargados desde la red y guardados en cache offline.');
         } else if (!shouldEnableOffline()) {
-          console.log('💻 Desktop: Datos cargados (cache offline no necesario)');
+          logger.debug('💻 Desktop: Datos cargados (cache offline no necesario)');
         }
 
       } catch (err) {
-        console.error('❌ Error al cargar datos desde la red:', err);
+        logger.error('❌ Error al cargar datos desde la red:', err);
         setError('Error al cargar datos desde la red. Intenta nuevamente.');
         // Si falla la carga online y no hay cache, limpiar estados
         if (!cachedData) {

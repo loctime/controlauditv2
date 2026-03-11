@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import { reporteService } from "../../../../services/reporteService";
 import { db } from "../../../../firebaseControlFile";
@@ -91,8 +92,8 @@ const ReportesPage = () => {
   const vieneDelPerfil = location.state?.from === 'perfil';
   
   // Debug para verificar si se está detectando móvil correctamente
-  console.log('ReportesPage - isMobile:', isMobile);
-  console.log('ReportesPage - isSmallMobile:', isSmallMobile);
+  logger.debug('ReportesPage - isMobile:', isMobile);
+  logger.debug('ReportesPage - isSmallMobile:', isSmallMobile);
 
   // Estados primero
   const [reportes, setReportes] = useState([]);
@@ -191,7 +192,7 @@ const ReportesPage = () => {
     
     // Verificar cache antes de cargar
     if (reportesCacheRef.current[ownerId] && lastOwnerIdRef.current === ownerId) {
-      console.log('[DEBUG] Usando datos cacheados para owner:', ownerId);
+      logger.debug('[DEBUG] Usando datos cacheados para owner:', ownerId);
       setReportes(reportesCacheRef.current[ownerId]);
       setFilteredReportes(reportesCacheRef.current[ownerId]);
       setLoading(false);
@@ -202,7 +203,7 @@ const ReportesPage = () => {
     setError(null);
     
     try {
-      console.log('[DEBUG] Cargando reportes desde auditoriaService para owner:', ownerId);
+      logger.debug('[DEBUG] Cargando reportes desde auditoriaService para owner:', ownerId);
       
       // Usar auditoriaService que ya maneja owner-centric
       const reportesData = await auditoriaService.getUserAuditorias(
@@ -218,7 +219,7 @@ const ReportesPage = () => {
         return fechaB - fechaA;
       });
 
-      console.log('[DEBUG]', reportesOrdenados.length, 'reportes cargados');
+      logger.debug('[DEBUG]', reportesOrdenados.length, 'reportes cargados');
       
       // Guardar en cache
       reportesCacheRef.current[ownerId] = reportesOrdenados;
@@ -227,7 +228,7 @@ const ReportesPage = () => {
       setReportes(reportesOrdenados);
       setFilteredReportes(reportesOrdenados);
     } catch (error) {
-      console.error("Error fetching reportes:", error);
+      logger.error("Error fetching reportes:", error);
       setError("Error al cargar los reportes. Por favor, intenta de nuevo.");
     } finally {
       setLoading(false);
@@ -246,13 +247,13 @@ const ReportesPage = () => {
   }, [userProfile?.uid]);
 
   useEffect(() => {
-    console.log('[DEBUG] Aplicando filtros...');
-    console.log('[DEBUG] reportes totales:', reportes.length);
-    console.log('[DEBUG] empresasSeleccionadas:', empresasSeleccionadas);
-    console.log('[DEBUG] formulariosSeleccionados:', formulariosSeleccionados);
-    console.log('[DEBUG] fechaDesde:', fechaDesde);
-    console.log('[DEBUG] fechaHasta:', fechaHasta);
-    console.log('[DEBUG] searchTerm:', searchTerm);
+    logger.debug('[DEBUG] Aplicando filtros...');
+    logger.debug('[DEBUG] reportes totales:', reportes.length);
+    logger.debug('[DEBUG] empresasSeleccionadas:', empresasSeleccionadas);
+    logger.debug('[DEBUG] formulariosSeleccionados:', formulariosSeleccionados);
+    logger.debug('[DEBUG] fechaDesde:', fechaDesde);
+    logger.debug('[DEBUG] fechaHasta:', fechaHasta);
+    logger.debug('[DEBUG] searchTerm:', searchTerm);
     
     let filtered = [...reportes];
 
@@ -303,13 +304,13 @@ const ReportesPage = () => {
       });
     }
 
-    console.log('[DEBUG] reportes filtrados:', filtered.length);
+    logger.debug('[DEBUG] reportes filtrados:', filtered.length);
     setFilteredReportes(filtered);
   }, [reportes, empresasSeleccionadas, formulariosSeleccionados, fechaDesde, fechaHasta, searchTerm, userEmpresas]);
 
   // Handlers
   const handleSelectReporte = (reporte) => {
-    console.log('[DEBUG] Seleccionando reporte:', reporte);
+    logger.debug('[DEBUG] Seleccionando reporte:', reporte);
     setSelectedReporte(reporte);
     setOpenModal(true);
   };
@@ -390,7 +391,7 @@ const ReportesPage = () => {
         
         Swal.fire('Eliminado', 'El reporte ha sido eliminado correctamente', 'success');
       } catch (error) {
-        console.error('Error al eliminar reporte:', error);
+        logger.error('Error al eliminar reporte:', error);
         Swal.fire('Error', 'No se pudo eliminar el reporte. Por favor, intenta de nuevo.', 'error');
       }
     }
@@ -403,7 +404,7 @@ const ReportesPage = () => {
       flexDirection: 'column', 
       gap: isSmallMobile ? 2 : 3 
     }}>
-      {console.log('Renderizando vista móvil:', true)}
+      {logger.debug('Renderizando vista móvil:', true)}
       {filteredReportes.map((reporte) => (
         <Card 
           key={reporte.id}

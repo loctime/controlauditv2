@@ -1,8 +1,8 @@
+import logger from '@/utils/logger';
 import React, { useState, useEffect } from 'react';
 import { Box, Paper, Typography, IconButton, Collapse, Chip, Alert, Button, Snackbar } from '@mui/material';
 import { ExpandMore, ExpandLess, BugReport, Close, ContentCopy, Check } from '@mui/icons-material';
 import { useAuth } from '@/components/context/AuthContext';
-
 // Los interceptores de console ya están inicializados en main.jsx
 // Solo necesitamos asegurarnos de que window.offlineDebugLogs existe
 window.offlineDebugLogs = window.offlineDebugLogs || [];
@@ -17,7 +17,7 @@ const loadLogsFromStorage = () => {
       return parsed;
     }
   } catch (e) {
-    console.warn('Error cargando logs desde localStorage:', e);
+    logger.warn('Error cargando logs desde localStorage:', e);
   }
   return [];
 };
@@ -29,7 +29,7 @@ const saveLogsToStorage = (logs) => {
     const logsToSave = logs.slice(-50);
     localStorage.setItem('offline_debug_logs', JSON.stringify(logsToSave));
   } catch (e) {
-    console.warn('Error guardando logs en localStorage:', e);
+    logger.warn('Error guardando logs en localStorage:', e);
   }
 };
 
@@ -58,7 +58,7 @@ const OfflineDebugLogs = () => {
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
       }).catch(err => {
-        console.error('Error copiando logs:', err);
+        logger.error('Error copiando logs:', err);
         // Fallback para navegadores que no soportan clipboard API
         const textArea = document.createElement('textarea');
         textArea.value = logsText;
@@ -71,12 +71,12 @@ const OfflineDebugLogs = () => {
           setCopied(true);
           setTimeout(() => setCopied(false), 2000);
         } catch (e) {
-          console.error('Error con fallback de copia:', e);
+          logger.error('Error con fallback de copia:', e);
         }
         document.body.removeChild(textArea);
       });
     } catch (error) {
-      console.error('Error preparando logs para copiar:', error);
+      logger.error('Error preparando logs para copiar:', error);
     }
   };
 

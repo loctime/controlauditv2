@@ -1,8 +1,8 @@
+import logger from '@/utils/logger';
 import { useState, useEffect, useCallback } from 'react';
 import { onSnapshot, collection } from 'firebase/firestore';
 import { dbAudit } from '../../../../firebaseControlFile';
 import { firestoreRoutesCore } from '../../../../core/firestore/firestoreRoutes.core';
-
 /**
  * Hook para cargar formularios con cache (owner-centric)
  * Los datos ya vienen filtrados desde apps/auditoria/owners/{ownerId}/formularios
@@ -27,14 +27,14 @@ export const useFormulariosData = (user, userProfile) => {
           const idsActual = metadatos.map(f => f.id).sort().join(',');
           if (idsCache === idsActual) {
             setFormulariosCompletos(cache.formularios);
-            console.debug('[useFormulariosData] Formularios cargados de cache');
+            logger.debug('[useFormulariosData] Formularios cargados de cache');
             setLoading(false);
             return;
           }
         }
       }
     } catch (e) { 
-      console.warn('Error leyendo cache:', e); 
+      logger.warn('Error leyendo cache:', e); 
     }
 
     setLoading(true);
@@ -46,11 +46,11 @@ export const useFormulariosData = (user, userProfile) => {
         timestamp: Date.now() 
       }));
     } catch (e) { 
-      console.warn('Error guardando cache:', e); 
+      logger.warn('Error guardando cache:', e); 
     }
     
     setLoading(false);
-    console.debug('[useFormulariosData] Formularios cargados de Firestore');
+    logger.debug('[useFormulariosData] Formularios cargados de Firestore');
   }, []);
 
   // Suscripción reactiva
@@ -81,7 +81,7 @@ export const useFormulariosData = (user, userProfile) => {
       cargarDetallesFormularios(metadatos);
     }, (error) => {
       setLoading(false);
-      console.error('[onSnapshot] Error:', error);
+      logger.error('[onSnapshot] Error:', error);
     });
 
     return () => unsubscribe();

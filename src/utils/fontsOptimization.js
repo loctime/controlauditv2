@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 // Optimización de importaciones de Fonts
 // Importar solo los componentes necesarios para reducir el tamaño del bundle
 
@@ -51,7 +52,7 @@ export const loadGoogleFonts = async (fonts = []) => {
     await Promise.all(fontUrls.map(loadFont));
     return { success: true, fonts: fontsToLoad };
   } catch (error) {
-    console.error('Error loading Google Fonts:', error);
+    logger.error('Error loading Google Fonts:', error);
     return { success: false, error };
   }
 };

@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 // Servicio centralizado para operaciones de auditoría
 import { collection, addDoc, getDocs, query, where, orderBy, serverTimestamp, doc, getDocs as getDocsQuery } from 'firebase/firestore';
 import { dbAudit } from '../../../firebaseControlFile';
@@ -7,7 +8,6 @@ import { prepararDatosParaFirestore, registrarAccionSistema } from '../../../uti
 import { getOfflineDatabase, generateOfflineId } from '../../../services/offlineDatabase';
 import syncQueueService from '../../../services/syncQueue';
 import AccionesRequeridasService from '../../../services/accionesRequeridasService';
-
 /**
  * Servicio centralizado para operaciones de auditoría
  * Maneja guardado, consultas, procesamiento de imágenes y estadísticas
@@ -53,10 +53,10 @@ class AuditoriaService {
    * @returns {Promise<Array>} URLs de las imágenes subidas
    */
   static async procesarImagenes(imagenes) {
-    console.debug('[AuditoriaService] Procesando imágenes:', imagenes);
+    logger.debug('[AuditoriaService] Procesando imágenes:', imagenes);
     
     if (!Array.isArray(imagenes)) {
-      console.warn('[AuditoriaService] imagenes no es un array:', imagenes);
+      logger.warn('[AuditoriaService] imagenes no es un array:', imagenes);
       return [];
     }
     
@@ -66,10 +66,10 @@ class AuditoriaService {
       const seccionImagenes = [];
       const seccionActual = imagenes[seccionIndex];
       
-      console.debug(`[AuditoriaService] Procesando sección ${seccionIndex}:`, seccionActual);
+      logger.debug(`[AuditoriaService] Procesando sección ${seccionIndex}:`, seccionActual);
       
       if (!Array.isArray(seccionActual)) {
-        console.warn(`[AuditoriaService] Sección ${seccionIndex} no es un array:`, seccionActual);
+        logger.warn(`[AuditoriaService] Sección ${seccionIndex} no es un array:`, seccionActual);
         imagenesProcesadas.push([]);
         continue;
       }
@@ -77,18 +77,18 @@ class AuditoriaService {
       for (let preguntaIndex = 0; preguntaIndex < seccionActual.length; preguntaIndex++) {
         const imagen = seccionActual[preguntaIndex];
         
-        console.debug(`[AuditoriaService] Procesando imagen sección ${seccionIndex}, pregunta ${preguntaIndex}:`, imagen);
+        logger.debug(`[AuditoriaService] Procesando imagen sección ${seccionIndex}, pregunta ${preguntaIndex}:`, imagen);
         
         // ✅ REGLA DE ORO: Si imagen tiene fileId, preservar sin subir (ya fue subida)
         if (imagen && typeof imagen === 'object' && imagen.fileId) {
-          console.log(`[AuditoriaService] Imagen ya subida, preservando fileId: ${imagen.fileId}`);
+          logger.debug(`[AuditoriaService] Imagen ya subida, preservando fileId: ${imagen.fileId}`);
           seccionImagenes.push(imagen);
           continue;
         }
         
         // ✅ Si tiene url pero no fileId, preservar (compatibilidad)
         if (imagen && typeof imagen === 'object' && imagen.url && !imagen.fileId) {
-          console.log(`[AuditoriaService] Imagen con URL preservada: ${imagen.url}`);
+          logger.debug(`[AuditoriaService] Imagen con URL preservada: ${imagen.url}`);
           seccionImagenes.push(imagen);
           continue;
         }
@@ -96,7 +96,7 @@ class AuditoriaService {
         // Solo subir si es File
         if (imagen instanceof File) {
           try {
-            console.log(`[AuditoriaService] 📤 Subiendo archivo a ControlFile: ${imagen.name}, tamaño: ${(imagen.size/1024/1024).toFixed(2)}MB`);
+            logger.debug(`[AuditoriaService] 📤 Subiendo archivo a ControlFile: ${imagen.name}, tamaño: ${(imagen.size/1024/1024).toFixed(2)}MB`);
             
             const result = await uploadFileWithContext({
               file: imagen,
@@ -122,22 +122,22 @@ class AuditoriaService {
               timestamp: timestamp
             };
             
-            console.debug(`[AuditoriaService] Imagen subida exitosamente a ControlFile:`, imagenProcesada);
+            logger.debug(`[AuditoriaService] Imagen subida exitosamente a ControlFile:`, imagenProcesada);
             seccionImagenes.push(imagenProcesada);
           } catch (error) {
-            console.error(`[AuditoriaService] Error al procesar imagen:`, error);
+            logger.error(`[AuditoriaService] Error al procesar imagen:`, error);
             seccionImagenes.push(null);
           }
         } else if (imagen && typeof imagen === 'object' && imagen.url) {
           // Si ya es un objeto con URL (ya procesada - compatible con URLs antiguas de Storage)
-          console.debug(`[AuditoriaService] Imagen ya procesada:`, imagen);
+          logger.debug(`[AuditoriaService] Imagen ya procesada:`, imagen);
           seccionImagenes.push(imagen);
         } else if (typeof imagen === 'string' && imagen.trim() !== '') {
           // Si es string, puede ser shareToken o URL antigua
           // Si empieza con http, es URL antigua (solo lectura, no guardar)
           // Si no, asumir que es shareToken
           if (imagen.startsWith('http://') || imagen.startsWith('https://')) {
-            console.debug(`[AuditoriaService] ⚠️ URL antigua detectada (solo lectura):`, imagen);
+            logger.debug(`[AuditoriaService] ⚠️ URL antigua detectada (solo lectura):`, imagen);
             // NO guardar URL, solo mantener para compatibilidad de lectura
             seccionImagenes.push({
               nombre: 'imagen_existente',
@@ -147,7 +147,7 @@ class AuditoriaService {
             });
           } else {
             // Asumir que es shareToken
-            console.debug(`[AuditoriaService] ✅ ShareToken detectado:`, imagen);
+            logger.debug(`[AuditoriaService] ✅ ShareToken detectado:`, imagen);
             seccionImagenes.push({
               nombre: 'imagen_existente',
               tipo: 'image/*',
@@ -158,7 +158,7 @@ class AuditoriaService {
           }
         } else if (Array.isArray(imagen) && imagen.length > 0) {
           // Si es un array de imágenes, procesar la primera
-          console.debug(`[AuditoriaService] Array de imágenes, procesando primera:`, imagen);
+          logger.debug(`[AuditoriaService] Array de imágenes, procesando primera:`, imagen);
           const primeraImagen = imagen[0];
           if (primeraImagen instanceof File) {
             try {
@@ -184,7 +184,7 @@ class AuditoriaService {
                 timestamp: Date.now()
               });
             } catch (error) {
-              console.error(`[AuditoriaService] Error al procesar primera imagen del array:`, error);
+              logger.error(`[AuditoriaService] Error al procesar primera imagen del array:`, error);
               seccionImagenes.push(null);
             }
           } else if (primeraImagen && typeof primeraImagen === 'object' && primeraImagen.url) {
@@ -193,16 +193,16 @@ class AuditoriaService {
             seccionImagenes.push(null);
           }
         } else {
-          console.debug(`[AuditoriaService] Imagen no válida o null:`, imagen);
+          logger.debug(`[AuditoriaService] Imagen no válida o null:`, imagen);
           seccionImagenes.push(null);
         }
       }
       
-      console.debug(`[AuditoriaService] Sección ${seccionIndex} procesada:`, seccionImagenes);
+      logger.debug(`[AuditoriaService] Sección ${seccionIndex} procesada:`, seccionImagenes);
       imagenesProcesadas.push(seccionImagenes);
     }
     
-    console.debug('[AuditoriaService] Todas las imágenes procesadas:', imagenesProcesadas);
+    logger.debug('[AuditoriaService] Todas las imágenes procesadas:', imagenesProcesadas);
     return imagenesProcesadas;
   }
 
@@ -214,10 +214,10 @@ class AuditoriaService {
    * @returns {Promise<Array>} Array de metadata de imágenes subidas
    */
   static async procesarImagenesPendientes(imagenes, auditEventId, companyId) {
-    console.debug('[AuditoriaService] Procesando imágenes pendientes:', imagenes);
+    logger.debug('[AuditoriaService] Procesando imágenes pendientes:', imagenes);
     
     if (!Array.isArray(imagenes)) {
-      console.warn('[AuditoriaService] imagenes no es un array:', imagenes);
+      logger.warn('[AuditoriaService] imagenes no es un array:', imagenes);
       return [];
     }
     
@@ -227,10 +227,10 @@ class AuditoriaService {
       const seccionImagenes = [];
       const seccionActual = imagenes[seccionIndex];
       
-      console.debug(`[AuditoriaService] Procesando sección ${seccionIndex}:`, seccionActual);
+      logger.debug(`[AuditoriaService] Procesando sección ${seccionIndex}:`, seccionActual);
       
       if (!Array.isArray(seccionActual)) {
-        console.warn(`[AuditoriaService] Sección ${seccionIndex} no es un array:`, seccionActual);
+        logger.warn(`[AuditoriaService] Sección ${seccionIndex} no es un array:`, seccionActual);
         imagenesProcesadas.push([]);
         continue;
       }
@@ -238,11 +238,11 @@ class AuditoriaService {
       for (let preguntaIndex = 0; preguntaIndex < seccionActual.length; preguntaIndex++) {
         const imagen = seccionActual[preguntaIndex];
         
-        console.debug(`[AuditoriaService] Procesando imagen sección ${seccionIndex}, pregunta ${preguntaIndex}:`, imagen);
+        logger.debug(`[AuditoriaService] Procesando imagen sección ${seccionIndex}, pregunta ${preguntaIndex}:`, imagen);
         
         // ✅ Si ya tiene fileId, preservar (ya fue subida previamente)
         if (imagen && typeof imagen === 'object' && imagen.fileId) {
-          console.log(`[AuditoriaService] Imagen ya subida, preservando fileId: ${imagen.fileId}`);
+          logger.debug(`[AuditoriaService] Imagen ya subida, preservando fileId: ${imagen.fileId}`);
           seccionImagenes.push(imagen);
           continue;
         }
@@ -251,7 +251,7 @@ class AuditoriaService {
         if (imagen instanceof File) {
           try {
             const nombreArchivo = `pregunta_${preguntaIndex}.png`;
-            console.log(`[AuditoriaService] 📤 Subiendo archivo a ControlFile: ${nombreArchivo}, tamaño: ${(imagen.size/1024/1024).toFixed(2)}MB`);
+            logger.debug(`[AuditoriaService] 📤 Subiendo archivo a ControlFile: ${nombreArchivo}, tamaño: ${(imagen.size/1024/1024).toFixed(2)}MB`);
             
             const result = await uploadFileWithContext({
               file: imagen,
@@ -275,27 +275,27 @@ class AuditoriaService {
               size: imagen.size
             };
             
-            console.debug(`[AuditoriaService] Imagen subida exitosamente a ControlFile:`, imagenProcesada);
+            logger.debug(`[AuditoriaService] Imagen subida exitosamente a ControlFile:`, imagenProcesada);
             seccionImagenes.push(imagenProcesada);
           } catch (error) {
-            console.error(`[AuditoriaService] Error al procesar imagen:`, error);
+            logger.error(`[AuditoriaService] Error al procesar imagen:`, error);
             seccionImagenes.push(null);
           }
         } else if (imagen && typeof imagen === 'object' && imagen.shareToken) {
           // Si ya es un objeto con shareToken (compatibilidad)
-          console.debug(`[AuditoriaService] Imagen ya procesada:`, imagen);
+          logger.debug(`[AuditoriaService] Imagen ya procesada:`, imagen);
           seccionImagenes.push(imagen);
         } else {
-          console.debug(`[AuditoriaService] Imagen no válida o null:`, imagen);
+          logger.debug(`[AuditoriaService] Imagen no válida o null:`, imagen);
           seccionImagenes.push(null);
         }
       }
       
-      console.debug(`[AuditoriaService] Sección ${seccionIndex} procesada:`, seccionImagenes);
+      logger.debug(`[AuditoriaService] Sección ${seccionIndex} procesada:`, seccionImagenes);
       imagenesProcesadas.push(seccionImagenes);
     }
     
-    console.debug('[AuditoriaService] Todas las imágenes procesadas:', imagenesProcesadas);
+    logger.debug('[AuditoriaService] Todas las imágenes procesadas:', imagenesProcesadas);
     return imagenesProcesadas;
   }
 
@@ -474,7 +474,7 @@ class AuditoriaService {
     try {
       return await this.guardarAuditoriaOnline(datosAuditoria, userProfile);
     } catch (error) {
-      console.error('❌ Error en guardado online, fallback a offline:', error);
+      logger.error('❌ Error en guardado online, fallback a offline:', error);
       return await this.guardarAuditoriaOffline(datosAuditoria, userProfile);
     }
   }
@@ -585,8 +585,8 @@ class AuditoriaService {
       const datosLimpios = this.limpiarArraysAnidados(datosCompletos);
 
       // Log para debugging
-      console.log('[AuditoriaService] Datos limpios para Firestore:', JSON.stringify(datosLimpios, null, 2));
-      console.log('[AuditoriaService] Clasificaciones a guardar:', JSON.stringify(datosLimpios.clasificaciones, null, 2));
+      logger.debug('[AuditoriaService] Datos limpios para Firestore:', JSON.stringify(datosLimpios, null, 2));
+      logger.debug('[AuditoriaService] Clasificaciones a guardar:', JSON.stringify(datosLimpios.clasificaciones, null, 2));
 
       // Guardar en Firestore owner-centric: apps/auditoria/owners/{ownerId}/reportes
       if (!userProfile?.ownerId) {
@@ -594,7 +594,7 @@ class AuditoriaService {
       }
       const ownerId = userProfile.ownerId; // ownerId viene del token
       const reportesRef = collection(dbAudit, ...firestoreRoutesCore.reportes(ownerId));
-      console.log('[AuditoriaService] Guardando reporte en ruta owner-centric:', `apps/auditoria/owners/${ownerId}/reportes`);
+      logger.debug('[AuditoriaService] Guardando reporte en ruta owner-centric:', `apps/auditoria/owners/${ownerId}/reportes`);
       const docRef = await addDoc(reportesRef, datosLimpios);
 
       // Crear acciones requeridas en la subcolección de la sucursal si existen
@@ -605,7 +605,7 @@ class AuditoriaService {
           if (datosAuditoria.sucursal && datosAuditoria.sucursal !== "Casa Central") {
             // Construir ruta correcta usando firestoreRoutesCore (owner-centric)
             const sucursalesRef = collection(dbAudit, ...firestoreRoutesCore.sucursales(ownerId));
-            console.log('[AuditoriaService] Buscando sucursal por nombre en path:', sucursalesRef.path);
+            logger.debug('[AuditoriaService] Buscando sucursal por nombre en path:', sucursalesRef.path);
             const q = query(sucursalesRef, where("nombre", "==", datosAuditoria.sucursal));
             const sucursalesSnapshot = await getDocs(q);
             
@@ -626,13 +626,13 @@ class AuditoriaService {
               datosAuditoria.empresa?.id || null,
               datosCompletos.accionesRequeridas
             );
-            console.log(`✅ ${datosCompletos.accionesRequeridas.length} acciones requeridas creadas en sucursal`);
+            logger.debug(`✅ ${datosCompletos.accionesRequeridas.length} acciones requeridas creadas en sucursal`);
           } else {
-            console.warn('⚠️ No se encontró sucursalId, las acciones requeridas no se crearán en la subcolección');
+            logger.warn('⚠️ No se encontró sucursalId, las acciones requeridas no se crearán en la subcolección');
           }
         } catch (accionesError) {
           // No fallar el guardado del reporte si falla la creación de acciones
-          console.error('❌ Error al crear acciones requeridas (no crítico):', accionesError);
+          logger.error('❌ Error al crear acciones requeridas (no crítico):', accionesError);
         }
       }
 
@@ -651,11 +651,11 @@ class AuditoriaService {
         docRef.id
       );
 
-      console.log(`✅ Auditoría guardada exitosamente: ${docRef.id}`);
+      logger.debug(`✅ Auditoría guardada exitosamente: ${docRef.id}`);
       return docRef.id;
 
     } catch (error) {
-      console.error("❌ Error al guardar auditoría online:", error);
+      logger.error("❌ Error al guardar auditoría online:", error);
       throw error;
     }
   }
@@ -721,11 +721,11 @@ class AuditoriaService {
       // Encolar para sincronización
       await syncQueueService.enqueueAuditoria(saveData, 1);
 
-      console.log(`✅ Auditoría guardada offline: ${auditoriaId}`);
+      logger.debug(`✅ Auditoría guardada offline: ${auditoriaId}`);
       return auditoriaId;
 
     } catch (error) {
-      console.error("❌ Error al guardar auditoría offline:", error);
+      logger.error("❌ Error al guardar auditoría offline:", error);
       throw error;
     }
   }
@@ -748,7 +748,7 @@ class AuditoriaService {
           
           // ✅ REGLA DE ORO: NO guardar en IndexedDB imágenes que ya tengan fileId
           if (imagen && typeof imagen === 'object' && imagen.fileId) {
-            console.log(`[AuditoriaService] Imagen ya sincronizada, NO guardando en IndexedDB: ${imagen.fileId}`);
+            logger.debug(`[AuditoriaService] Imagen ya sincronizada, NO guardando en IndexedDB: ${imagen.fileId}`);
             continue;
           }
           
@@ -780,12 +780,12 @@ class AuditoriaService {
               size: imagen.size
             };
 
-            console.log(`📸 Foto guardada offline: ${fotoId}`);
+            logger.debug(`📸 Foto guardada offline: ${fotoId}`);
           }
         }
       }
     } catch (error) {
-      console.error('❌ Error al guardar fotos offline:', error);
+      logger.error('❌ Error al guardar fotos offline:', error);
       throw error;
     }
   }
@@ -800,7 +800,7 @@ class AuditoriaService {
     try {
       // En modelo owner-centric, todas las auditorías pertenecen al ownerId
       if (!userProfile?.ownerId) {
-        console.warn('[auditoriaService.obtenerAuditorias] ownerId no disponible');
+        logger.warn('[auditoriaService.obtenerAuditorias] ownerId no disponible');
         return [];
       }
       
@@ -875,7 +875,7 @@ class AuditoriaService {
       return auditoriasFiltradas;
 
     } catch (error) {
-      console.error("❌ Error al obtener auditorías:", error);
+      logger.error("❌ Error al obtener auditorías:", error);
       throw error;
     }
   }
@@ -923,7 +923,7 @@ class AuditoriaService {
       return estadisticas;
 
     } catch (error) {
-      console.error("❌ Error al obtener estadísticas:", error);
+      logger.error("❌ Error al obtener estadísticas:", error);
       throw error;
     }
   }

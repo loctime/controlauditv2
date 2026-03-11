@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 import React, { useState, useEffect } from 'react';
 import {
   Box,
@@ -35,7 +36,7 @@ const AccidentesContent = ({ sucursalId, sucursalNombre, empresaId, navigateToPa
       const accidentesData = await obtenerAccidentes({ sucursalId }, userProfile);
       setAccidentes(accidentesData);
     } catch (error) {
-      console.error('Error cargando accidentes:', error);
+      logger.error('Error cargando accidentes:', error);
     } finally {
       setLoading(false);
     }

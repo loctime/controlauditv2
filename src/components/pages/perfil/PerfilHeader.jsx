@@ -1,7 +1,7 @@
+import logger from '@/utils/logger';
 import React from 'react';
 import { Grid, Avatar, Typography, Box, Chip } from '@mui/material';
 import { Person as PersonIcon, Email as EmailIcon } from '@mui/icons-material';
-
 // Utilidad para agrupar permisos por categoría
 const agruparPermisos = (permisos) => {
   if (!permisos) return {};
@@ -37,7 +37,7 @@ const traducirPermiso = (key) => {
 const PerfilHeader = ({ userProfile }) => {
   if (!userProfile) return null;
   // Log de depuración
-  console.debug('[PerfilHeader] userProfile:', userProfile);
+  logger.debug('[PerfilHeader] userProfile:', userProfile);
   return (
     <Grid container alignItems="center" spacing={2} sx={{ m: 0, p: 0, width: '100%' }}>
       {/* Avatar */}

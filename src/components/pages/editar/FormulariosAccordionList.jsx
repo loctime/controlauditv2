@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 import React, { useRef, useState, useMemo } from "react";
 import {
   Accordion,
@@ -49,7 +50,7 @@ const FormulariosAccordionList = ({ formularios, onEditar, formularioSeleccionad
   const [error, setError] = useState(null);
 
   const handleEditar = (id) => {
-    console.debug(`[FormulariosAccordionList] Editar formulario: ${id}`);
+    logger.debug(`[FormulariosAccordionList] Editar formulario: ${id}`);
     onEditar(id);
     setTimeout(() => {
       if (scrollToEdicion) scrollToEdicion();
@@ -128,10 +129,10 @@ const FormulariosAccordionList = ({ formularios, onEditar, formularioSeleccionad
               reject(event.target.error);
             };
           });
-          console.log('✅ Cache de formularios invalidado después de editar formulario');
+          logger.debug('✅ Cache de formularios invalidado después de editar formulario');
         }
       } catch (cacheError) {
-        console.warn('⚠️ Error invalidando cache de formularios:', cacheError);
+        logger.warn('⚠️ Error invalidando cache de formularios:', cacheError);
       }
 
       // Recargar formularios del contexto después de un pequeño delay
@@ -139,7 +140,7 @@ const FormulariosAccordionList = ({ formularios, onEditar, formularioSeleccionad
         try {
           await getUserFormularios();
         } catch (error) {
-          console.warn('⚠️ Error recargando formularios del contexto:', error);
+          logger.warn('⚠️ Error recargando formularios del contexto:', error);
         }
       }, 1000);
 
@@ -147,7 +148,7 @@ const FormulariosAccordionList = ({ formularios, onEditar, formularioSeleccionad
       setOpenEditModal(false);
       setFormularioEdit(null);
     } catch (error) {
-      console.error("[FormulariosAccordionList] Error al actualizar formulario:", error);
+      logger.error("[FormulariosAccordionList] Error al actualizar formulario:", error);
       setError("Error al actualizar el formulario: " + error.message);
     } finally {
       setEditLoading(false);

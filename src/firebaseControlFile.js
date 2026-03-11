@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 // src/firebaseControlFile.js
 import { initializeApp, getApps } from 'firebase/app';
 import {
@@ -29,13 +30,13 @@ if (!firebaseControlFileConfig.apiKey || !firebaseControlFileConfig.authDomain |
   if (!firebaseControlFileConfig.apiKey) missing.push('VITE_FIREBASE_API_KEY');
   if (!firebaseControlFileConfig.authDomain) missing.push('VITE_FIREBASE_AUTH_DOMAIN');
   if (!firebaseControlFileConfig.projectId) missing.push('VITE_FIREBASE_PROJECT_ID');
-  console.error('[firebaseControlFile] ❌ Faltan variables de entorno requeridas:', missing.join(', '));
+  logger.error('[firebaseControlFile] ❌ Faltan variables de entorno requeridas:', missing.join(', '));
   throw new Error(`Missing required Firebase ControlFile environment variables: ${missing.join(', ')}`);
 }
 
 // Validar que el projectId sea controlstorage-eb796
 if (firebaseControlFileConfig.projectId !== 'controlstorage-eb796') {
-  console.error('[firebaseControlFile] ❌ projectId incorrecto. Esperado: controlstorage-eb796, recibido:', firebaseControlFileConfig.projectId);
+  logger.error('[firebaseControlFile] ❌ projectId incorrecto. Esperado: controlstorage-eb796, recibido:', firebaseControlFileConfig.projectId);
   throw new Error(`Invalid Firebase ControlFile projectId. Expected 'controlstorage-eb796', got '${firebaseControlFileConfig.projectId}'`);
 }
 
@@ -52,9 +53,9 @@ if (existingApp) {
 }
 
 // Log de verificación
-console.log('[firebaseControlFile] ✅ Firebase ControlFile inicializado - projectId:', controlFileApp.options.projectId);
+logger.debug('[firebaseControlFile] ✅ Firebase ControlFile inicializado - projectId:', controlFileApp.options.projectId);
 if (controlFileApp.options.projectId !== 'controlstorage-eb796') {
-  console.warn('[firebaseControlFile] ⚠️ ADVERTENCIA: projectId no es controlstorage-eb796:', controlFileApp.options.projectId);
+  logger.warn('[firebaseControlFile] ⚠️ ADVERTENCIA: projectId no es controlstorage-eb796:', controlFileApp.options.projectId);
 }
 
 // Exports: auth, db, storage para ControlAudit (usando controlstorage-eb796)
@@ -76,7 +77,7 @@ export const onSignIn = async ({ email, password }) => {
 
 export const logout = () => {
   return signOut(auth).catch((error) => {
-    console.error('Error al cerrar sesión:', error);
+    logger.error('Error al cerrar sesión:', error);
     throw error;
   });
 };

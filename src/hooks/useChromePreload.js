@@ -1,6 +1,6 @@
+import logger from '@/utils/logger';
 import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-
 export const useChromePreload = () => {
   const [isPreloading, setIsPreloading] = useState(false);
   const [currentPage, setCurrentPage] = useState('');
@@ -32,7 +32,7 @@ export const useChromePreload = () => {
     
     if (!shouldPreload || isPreloading || hasPreloaded.current || hasPreloadedThisSession) {
       if (hasPreloadedThisSession) {
-        console.log('ℹ️ [ChromePreload] Ya se precargó en esta sesión, saltando...');
+        logger.debug('ℹ️ [ChromePreload] Ya se precargó en esta sesión, saltando...');
       }
       return;
     }
@@ -40,7 +40,7 @@ export const useChromePreload = () => {
     hasPreloaded.current = true;
     sessionStorage.setItem('chrome_preload_done', 'true');
 
-    console.log('🚀 [ChromePreload] Iniciando precarga automática para Chrome...');
+    logger.debug('🚀 [ChromePreload] Iniciando precarga automática para Chrome...');
     setIsPreloading(true);
     setPreloadProgress(0);
 
@@ -129,7 +129,7 @@ export const useChromePreload = () => {
         if (progressBar) progressBar.style.width = `${progress}%`;
         if (progressText) progressText.textContent = `Precargando ${page.name}... (${Math.round(progress)}%)`;
         
-        console.log(`🔄 [ChromePreload] Precargando: ${page.name} (${page.path})`);
+        logger.debug(`🔄 [ChromePreload] Precargando: ${page.name} (${page.path})`);
         
         // Navegar a la página para precargarla
         navigate(page.path);
@@ -139,14 +139,14 @@ export const useChromePreload = () => {
       }
 
       // Volver al home después de precargar todo
-      console.log('✅ [ChromePreload] Precarga completada, volviendo al home...');
+      logger.debug('✅ [ChromePreload] Precarga completada, volviendo al home...');
       navigate('/');
       
       // Esperar un poco para que el home se cargue
       await new Promise(resolve => setTimeout(resolve, 1000));
       
       // FORZAR guardado del cache después de precargar (crítico para Chrome)
-      console.log('💾 [ChromePreload] Forzando guardado del cache de datos...');
+      logger.debug('💾 [ChromePreload] Forzando guardado del cache de datos...');
       try {
         // Importar dinámicamente para evitar dependencias circulares
         const { saveCompleteUserCache } = await import('../services/completeOfflineCache');
@@ -154,13 +154,13 @@ export const useChromePreload = () => {
         // Obtener datos del contexto (necesitamos acceso al userProfile)
         // Esto se hará desde el componente que llama a startPreload
         // Por ahora, solo logueamos
-        console.log('📝 [ChromePreload] Cache de datos debe guardarse desde AuthContext');
+        logger.debug('📝 [ChromePreload] Cache de datos debe guardarse desde AuthContext');
         
         // Actualizar UI
         if (progressText) progressText.textContent = 'Guardando cache de datos...';
         await new Promise(resolve => setTimeout(resolve, 2000));
       } catch (cacheError) {
-        console.error('❌ [ChromePreload] Error guardando cache:', cacheError);
+        logger.error('❌ [ChromePreload] Error guardando cache:', cacheError);
       }
       
       // Actualizar UI final
@@ -170,7 +170,7 @@ export const useChromePreload = () => {
       await new Promise(resolve => setTimeout(resolve, 1500));
       
     } catch (error) {
-      console.error('❌ [ChromePreload] Error durante la precarga:', error);
+      logger.error('❌ [ChromePreload] Error durante la precarga:', error);
       if (progressText) progressText.textContent = 'Error en la precarga';
     } finally {
       // Quitar loader

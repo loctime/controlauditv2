@@ -1,7 +1,7 @@
+import logger from '@/utils/logger';
 import { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { useAuth } from '@/components/context/AuthContext';
-
 export const useAuditoriaState = () => {
   const location = useLocation();
   const { userProfile } = useAuth();
@@ -55,7 +55,7 @@ export const useAuditoriaState = () => {
 
   // Helper para logs
   const log = (msg, ...args) => {
-    console.log(`[AUDITORIA] ${msg}`, ...args);
+    logger.debug(`[AUDITORIA] ${msg}`, ...args);
   };
 
   // Función para generar hash de la auditoría
@@ -78,7 +78,7 @@ export const useAuditoriaState = () => {
     const nuevoHash = generarHashAuditoria();
     
     if (auditoriaHash && auditoriaHash !== nuevoHash && firmasValidas) {
-      console.log('[DEBUG] Cambios detectados en las respuestas, reiniciando firmas');
+      logger.debug('[DEBUG] Cambios detectados en las respuestas, reiniciando firmas');
       reiniciarFirmas();
     }
     
@@ -94,7 +94,7 @@ export const useAuditoriaState = () => {
 
   // Función para reiniciar firmas
   const reiniciarFirmas = () => {
-    console.log('[DEBUG] Reiniciando firmas debido a cambios en las respuestas de la auditoría');
+    logger.debug('[DEBUG] Reiniciando firmas debido a cambios en las respuestas de la auditoría');
     setFirmaAuditor(null);
     setFirmaResponsable(null);
     setFirmasCompletadas(false);

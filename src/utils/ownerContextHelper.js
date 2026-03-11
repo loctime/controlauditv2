@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 // src/utils/ownerContextHelper.js
 // Helper central para resolver ownerId efectivo en toda la aplicación
 
@@ -16,13 +17,13 @@ export const getEffectiveOwnerId = (authContext) => {
   
   // Si el usuario es tu UID específico y hay un selectedOwnerId, usar ese
   if (user?.uid === 'rixIn0BwiVPHB4SgR0K0SlnpSLC2' && selectedOwnerId) {
-    console.log(`[ownerContextHelper] Usando selectedOwnerId: ${selectedOwnerId}`);
+    logger.debug(`[ownerContextHelper] Usando selectedOwnerId: ${selectedOwnerId}`);
     return selectedOwnerId;
   }
   
   // Para todos los demás casos, usar el ownerId normal del usuario
   const effectiveOwnerId = userContext?.ownerId || user?.uid;
-  console.log(`[ownerContextHelper] Usando ownerId normal: ${effectiveOwnerId}`);
+  logger.debug(`[ownerContextHelper] Usando ownerId normal: ${effectiveOwnerId}`);
   return effectiveOwnerId;
 };
 

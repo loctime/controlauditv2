@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 // src/services/capacitacionService.js
 import { 
   collection, 
@@ -32,7 +33,7 @@ const normalizeCapacitacion = (doc) => {
       tipoId = normalizarCapacitacionTipoId(doc.data().nombre);
     } catch (error) {
       // Documento legacy mal formado - mantener null sin romper
-      console.warn('⚠️ No se pudo normalizar capacitacionTipoId para documento legacy:', doc.id, error);
+      logger.warn('⚠️ No se pudo normalizar capacitacionTipoId para documento legacy:', doc.id, error);
       tipoId = null;
     }
   }
@@ -72,7 +73,7 @@ export const capacitacionService = {
       
       return snapshot.docs.map(doc => normalizeCapacitacion(doc));
     } catch (error) {
-      console.error('❌ Error obteniendo capacitaciones por empresa:', error);
+      logger.error('❌ Error obteniendo capacitaciones por empresa:', error);
       return [];
     }
   },
@@ -99,7 +100,7 @@ export const capacitacionService = {
       
       return snapshot.docs.map(doc => normalizeCapacitacion(doc));
     } catch (error) {
-      console.error('❌ Error obteniendo capacitaciones por sucursal:', error);
+      logger.error('❌ Error obteniendo capacitaciones por sucursal:', error);
       return [];
     }
   },
@@ -136,7 +137,7 @@ export const capacitacionService = {
       
       return capacitacionesData;
     } catch (error) {
-      console.error('❌ Error obteniendo capacitaciones por sucursales:', error);
+      logger.error('❌ Error obteniendo capacitaciones por sucursales:', error);
       return [];
     }
   },
@@ -158,7 +159,7 @@ export const capacitacionService = {
       
       return snapshot.docs.map(doc => normalizeCapacitacion(doc));
     } catch (error) {
-      console.error('❌ Error obteniendo todas las capacitaciones:', error);
+      logger.error('❌ Error obteniendo todas las capacitaciones:', error);
       return [];
     }
   },
@@ -195,7 +196,7 @@ export const capacitacionService = {
       
       return null;
     } catch (error) {
-      console.error('❌ Error obteniendo capacitación por ID:', error);
+      logger.error('❌ Error obteniendo capacitación por ID:', error);
       return null;
     }
   },
@@ -245,7 +246,7 @@ export const capacitacionService = {
 
       return capacitacionRef.id;
     } catch (error) {
-      console.error('❌ Error creando capacitación:', error);
+      logger.error('❌ Error creando capacitación:', error);
       throw error;
     }
   },
@@ -290,7 +291,7 @@ export const capacitacionService = {
 
       return true;
     } catch (error) {
-      console.error('❌ Error actualizando capacitación:', error);
+      logger.error('❌ Error actualizando capacitación:', error);
       throw error;
     }
   },
@@ -324,7 +325,7 @@ export const capacitacionService = {
 
       return true;
     } catch (error) {
-      console.error('❌ Error eliminando capacitación:', error);
+      logger.error('❌ Error eliminando capacitación:', error);
       throw error;
     }
   },
@@ -362,7 +363,7 @@ export const capacitacionService = {
 
       return true;
     } catch (error) {
-      console.error('❌ Error completando capacitación:', error);
+      logger.error('❌ Error completando capacitación:', error);
       throw error;
     }
   },
@@ -411,7 +412,7 @@ export const capacitacionService = {
 
       return docRef.id;
     } catch (error) {
-      console.error('❌ Error duplicando capacitación:', error);
+      logger.error('❌ Error duplicando capacitación:', error);
       throw error;
     }
   },
@@ -458,7 +459,7 @@ export const capacitacionService = {
       
       // ⚠️ NO actualizar capacitacion.empleados - se calcula dinámicamente desde registrosAsistencia
     } catch (error) {
-      console.error('Error al registrar asistencia:', error);
+      logger.error('Error al registrar asistencia:', error);
       throw error;
     }
   },
@@ -473,7 +474,7 @@ export const capacitacionService = {
     try {
       return await registrosAsistenciaService.getEmpleadosUnicosByCapacitacion(userId, capacitacionId);
     } catch (error) {
-      console.error('❌ Error obteniendo empleados por capacitación:', error);
+      logger.error('❌ Error obteniendo empleados por capacitación:', error);
       return [];
     }
   },
@@ -488,7 +489,7 @@ export const capacitacionService = {
     try {
       return await registrosAsistenciaService.getRegistrosByCapacitacion(userId, capacitacionId);
     } catch (error) {
-      console.error('❌ Error obteniendo registros de asistencia:', error);
+      logger.error('❌ Error obteniendo registros de asistencia:', error);
       return [];
     }
   }

@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 // Optimización de importaciones de React Router
 // Importar solo los componentes necesarios para reducir el tamaño del bundle
 
@@ -248,7 +249,7 @@ export const navigationUtils = {
         searchParams: Object.fromEntries(urlObj.searchParams)
       };
     } catch (error) {
-      console.error('Error parsing URL:', error);
+      logger.error('Error parsing URL:', error);
       return null;
     }
   },

@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 /**
  * OwnerUserCreateDialog - Crear usuario operario
  * 
@@ -92,8 +93,8 @@ const OwnerUserCreateDialog = ({ open, onClose, onSuccess }) => {
     setError(null);
 
     try {
-      console.log('[OwnerUserCreateDialog] ===== INICIO CREACIÓN USUARIO =====');
-      console.log('[OwnerUserCreateDialog] Datos:', {
+      logger.debug('[OwnerUserCreateDialog] ===== INICIO CREACIÓN USUARIO =====');
+      logger.debug('[OwnerUserCreateDialog] Datos:', {
         email: formData.email,
         nombre: formData.nombre
       });
@@ -105,9 +106,9 @@ const OwnerUserCreateDialog = ({ open, onClose, onSuccess }) => {
       }
 
       // 2. Obtener token
-      console.log('[OwnerUserCreateDialog] Obteniendo token de autenticación...');
+      logger.debug('[OwnerUserCreateDialog] Obteniendo token de autenticación...');
       const token = await currentUser.getIdToken(true);
-      console.log('[OwnerUserCreateDialog] ✅ Token obtenido correctamente');
+      logger.debug('[OwnerUserCreateDialog] ✅ Token obtenido correctamente');
 
       // 3. Preparar payload para backend de ControlAudit (NO ControlFile directamente)
       const endpoint = '/api/admin/create-user';
@@ -121,7 +122,7 @@ const OwnerUserCreateDialog = ({ open, onClose, onSuccess }) => {
       };
 
       // 4. Llamar al backend (ahora maneja TODO: validación límites, Auth, custom claims, Firestore, usage)
-      console.log('[OwnerUserCreateDialog] Enviando request al backend...', { endpoint });
+      logger.debug('[OwnerUserCreateDialog] Enviando request al backend...', { endpoint });
       
       // Timeout de 40 segundos para el fetch (Render.com puede tener cold starts)
       const fetchTimeout = 40000;
@@ -129,7 +130,7 @@ const OwnerUserCreateDialog = ({ open, onClose, onSuccess }) => {
       const fetchStartTime = Date.now();
       const fetchTimeoutId = setTimeout(() => {
         const elapsed = Date.now() - fetchStartTime;
-        console.error('[OwnerUserCreateDialog] ⚠️ TIMEOUT después de', elapsed, 'ms');
+        logger.error('[OwnerUserCreateDialog] ⚠️ TIMEOUT después de', elapsed, 'ms');
         controller.abort();
       }, fetchTimeout);
 
@@ -146,18 +147,18 @@ const OwnerUserCreateDialog = ({ open, onClose, onSuccess }) => {
         });
         clearTimeout(fetchTimeoutId);
         const elapsed = Date.now() - fetchStartTime;
-        console.log('[OwnerUserCreateDialog] ✅ Respuesta recibida en', elapsed, 'ms');
+        logger.debug('[OwnerUserCreateDialog] ✅ Respuesta recibida en', elapsed, 'ms');
       } catch (fetchError) {
         clearTimeout(fetchTimeoutId);
         const elapsed = Date.now() - fetchStartTime;
-        console.error('[OwnerUserCreateDialog] ❌ Error en fetch después de', elapsed, 'ms:', fetchError);
+        logger.error('[OwnerUserCreateDialog] ❌ Error en fetch después de', elapsed, 'ms:', fetchError);
         if (fetchError.name === 'AbortError') {
           throw new Error(`El servidor no respondió después de ${Math.round(fetchTimeout/1000)} segundos. El backend puede estar iniciando (cold start). Por favor, intenta nuevamente.`);
         }
         throw fetchError;
       }
 
-      console.log('[OwnerUserCreateDialog] Respuesta del backend recibida:', {
+      logger.debug('[OwnerUserCreateDialog] Respuesta del backend recibida:', {
         status: response.status,
         ok: response.ok
       });
@@ -166,13 +167,13 @@ const OwnerUserCreateDialog = ({ open, onClose, onSuccess }) => {
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         const errorMessage = errorData.error || errorData.message || `Error ${response.status}: ${response.statusText}`;
-        console.error('[OwnerUserCreateDialog] ❌ Error del backend:', errorMessage);
+        logger.error('[OwnerUserCreateDialog] ❌ Error del backend:', errorMessage);
         throw new Error(errorMessage);
       }
 
       // 6. Obtener resultado del backend
       const result = await response.json();
-      console.log('[OwnerUserCreateDialog] ✅ Usuario creado exitosamente:', result);
+      logger.debug('[OwnerUserCreateDialog] ✅ Usuario creado exitosamente:', result);
 
       // El backend ahora maneja TODO:
       // - Validación de límites (usage.operarios < limits.maxOperarios)
@@ -183,27 +184,27 @@ const OwnerUserCreateDialog = ({ open, onClose, onSuccess }) => {
 
       // Mostrar éxito
       toast.success('Usuario creado exitosamente');
-      console.log('[OwnerUserCreateDialog] ===== CREACIÓN EXITOSA =====');
+      logger.debug('[OwnerUserCreateDialog] ===== CREACIÓN EXITOSA =====');
       
       // Cerrar diálogo antes de llamar onSuccess
       onClose();
       
       // Llamar onSuccess para refrescar lista
       if (onSuccess) {
-        console.log('[OwnerUserCreateDialog] Ejecutando onSuccess...');
+        logger.debug('[OwnerUserCreateDialog] Ejecutando onSuccess...');
         try {
           await onSuccess();
-          console.log('[OwnerUserCreateDialog] ✅ onSuccess ejecutado correctamente');
+          logger.debug('[OwnerUserCreateDialog] ✅ onSuccess ejecutado correctamente');
         } catch (refreshError) {
           // No mostrar errores de refresh secundarios
-          console.warn('[OwnerUserCreateDialog] ⚠️ Error en refresh después de crear usuario:', refreshError);
+          logger.warn('[OwnerUserCreateDialog] ⚠️ Error en refresh después de crear usuario:', refreshError);
         }
       }
     } catch (err) {
-      console.error('[OwnerUserCreateDialog] ===== ERROR EN CREACIÓN =====');
-      console.error('[OwnerUserCreateDialog] Error completo:', err);
-      console.error('[OwnerUserCreateDialog] Error message:', err.message);
-      console.error('[OwnerUserCreateDialog] Error stack:', err.stack);
+      logger.error('[OwnerUserCreateDialog] ===== ERROR EN CREACIÓN =====');
+      logger.error('[OwnerUserCreateDialog] Error completo:', err);
+      logger.error('[OwnerUserCreateDialog] Error message:', err.message);
+      logger.error('[OwnerUserCreateDialog] Error stack:', err.stack);
       
       let errorMessage = 'Error al crear usuario';
       if (err.message) {
@@ -213,8 +214,8 @@ const OwnerUserCreateDialog = ({ open, onClose, onSuccess }) => {
       setError(errorMessage);
       toast.error(errorMessage);
     } finally {
-      console.log('[OwnerUserCreateDialog] ===== FINALIZANDO PROCESO =====');
-      console.log('[OwnerUserCreateDialog] Deshabilitando loading...');
+      logger.debug('[OwnerUserCreateDialog] ===== FINALIZANDO PROCESO =====');
+      logger.debug('[OwnerUserCreateDialog] Deshabilitando loading...');
       setLoading(false);
     }
   };

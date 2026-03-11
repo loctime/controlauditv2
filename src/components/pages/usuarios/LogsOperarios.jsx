@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 import React, { useEffect, useState } from 'react';
 import {
   Table,
@@ -156,7 +157,7 @@ const LogsOperarios = () => {
       }
       setUsuarios(usuariosData);
     } catch (e) {
-      console.error('Error al cargar logs:', e);
+      logger.error('Error al cargar logs:', e);
       toast.error('Error al cargar logs');
     } finally {
       setLoading(false);
@@ -618,7 +619,7 @@ export const logUserAction = async (action, detalles = {}) => {
     const { userProfile } = useAuth();
     
     if (!userProfile?.uid) {
-      console.warn('No se pudo registrar la acción: usuario no autenticado');
+      logger.warn('No se pudo registrar la acción: usuario no autenticado');
       return;
     }
 
@@ -674,9 +675,9 @@ export const logUserAction = async (action, detalles = {}) => {
     const logsRef = collection(dbAudit, 'logs_operarios');
     await addDoc(logsRef, logData);
 
-    console.log('Acción registrada:', action, logData);
+    logger.debug('Acción registrada:', action, logData);
   } catch (error) {
-    console.error('Error al registrar acción:', error);
+    logger.error('Error al registrar acción:', error);
   }
 };
 

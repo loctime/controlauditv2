@@ -1,9 +1,9 @@
+import logger from '@/utils/logger';
 import { useState, useRef, useEffect } from 'react';
 import generarContenidoImpresion from '../utils/generadorHTML';
 import { generarYGuardarPdf } from '../utils/pdfStorageServiceSimple';
 import { registrarAccionSistema } from '../../../../../utils/firestoreUtils';
 import { convertirImagenesADataUrls, convertirShareTokenAUrl } from '@/utils/imageUtils';
-
 // Hook personalizado para manejar la lógica de impresión de reportes
 export const useImpresionReporte = () => {
   const [isProcessing, setIsProcessing] = useState(false);
@@ -21,7 +21,7 @@ export const useImpresionReporte = () => {
         setIsChartReady(ready);
         
         if (ready) {
-          console.log('[useImpresionReporte] ✅ Gráfico listo para impresión');
+          logger.debug('[useImpresionReporte] ✅ Gráfico listo para impresión');
         }
       }
     };
@@ -40,7 +40,7 @@ export const useImpresionReporte = () => {
   // Función para impresión en móviles
   const printMobileOptimized = async (html) => {
     try {
-      console.log('[useImpresionReporte] Iniciando impresión para móvil...');
+      logger.debug('[useImpresionReporte] Iniciando impresión para móvil...');
       
       const printFrame = document.createElement('iframe');
       printFrame.style.position = 'fixed';
@@ -69,10 +69,10 @@ export const useImpresionReporte = () => {
         }, 1000);
       }, 1000);
       
-      console.log('[useImpresionReporte] ✅ Impresión móvil iniciada');
+      logger.debug('[useImpresionReporte] ✅ Impresión móvil iniciada');
       
     } catch (error) {
-      console.error('[useImpresionReporte] ❌ Error en impresión móvil:', error);
+      logger.error('[useImpresionReporte] ❌ Error en impresión móvil:', error);
       throw error;
     }
   };
@@ -107,17 +107,17 @@ export const useImpresionReporte = () => {
           }
         }, 1000);
         
-        console.log(`[useImpresionReporte] ✅ Impresión completada (intento ${retryCount + 1})`);
+        logger.debug(`[useImpresionReporte] ✅ Impresión completada (intento ${retryCount + 1})`);
         
       } catch (error) {
-        console.error(`[useImpresionReporte] Error en impresión (intento ${retryCount + 1}):`, error);
+        logger.error(`[useImpresionReporte] Error en impresión (intento ${retryCount + 1}):`, error);
         
         if (retryCount < maxPrintRetries) {
-          console.log(`[useImpresionReporte] 🔄 Reintentando impresión... (${retryCount + 1}/${maxPrintRetries})`);
+          logger.debug(`[useImpresionReporte] 🔄 Reintentando impresión... (${retryCount + 1}/${maxPrintRetries})`);
           await new Promise(resolve => setTimeout(resolve, 3000));
           await printWithRetry(retryCount + 1);
         } else {
-          console.error('[useImpresionReporte] ❌ Máximo de reintentos alcanzado');
+          logger.error('[useImpresionReporte] ❌ Máximo de reintentos alcanzado');
           alert('❌ Error: No se pudo completar la impresión después de varios intentos.');
           setIsChartReady(true);
         }
@@ -129,7 +129,7 @@ export const useImpresionReporte = () => {
 
   // Función principal de impresión
   const handleImprimir = async (datosReporte, reporteId = null, userId = null) => {
-    console.log('[useImpresionReporte] Iniciando proceso de impresión...');
+    logger.debug('[useImpresionReporte] Iniciando proceso de impresión...');
     
     setIsProcessing(true);
     setIsChartReady(false);
@@ -139,7 +139,7 @@ export const useImpresionReporte = () => {
     
     // Verificar que el gráfico esté listo
     if (!chartRef.current) {
-      console.error('[useImpresionReporte] ❌ chartRef.current no disponible');
+      logger.error('[useImpresionReporte] ❌ chartRef.current no disponible');
       alert('Error: El gráfico no está listo. Por favor, espere un momento y vuelva a intentar.');
       setIsChartReady(true);
       setIsProcessing(false);
@@ -148,7 +148,7 @@ export const useImpresionReporte = () => {
     
     // Esperar a que el gráfico esté listo
     if (chartRef.current.isReady && !chartRef.current.isReady()) {
-      console.log('[useImpresionReporte] ⏳ Gráfico no está listo, esperando...');
+      logger.debug('[useImpresionReporte] ⏳ Gráfico no está listo, esperando...');
       
       let waitCount = 0;
       const maxWait = 50;
@@ -156,27 +156,27 @@ export const useImpresionReporte = () => {
       while (!chartRef.current.isReady() && waitCount < maxWait) {
         await new Promise(resolve => setTimeout(resolve, 500));
         waitCount++;
-        console.log(`[useImpresionReporte] Esperando gráfico... ${waitCount}/${maxWait}`);
+        logger.debug(`[useImpresionReporte] Esperando gráfico... ${waitCount}/${maxWait}`);
         
         if (waitCount % 10 === 0 && chartRef.current.getImage) {
-          console.log('[useImpresionReporte] 🔄 Forzando regeneración de imagen...');
+          logger.debug('[useImpresionReporte] 🔄 Forzando regeneración de imagen...');
           try {
             await chartRef.current.getImage();
           } catch (error) {
-            console.error('[useImpresionReporte] Error forzando regeneración:', error);
+            logger.error('[useImpresionReporte] Error forzando regeneración:', error);
           }
         }
       }
       
       if (!chartRef.current.isReady()) {
-        console.error('[useImpresionReporte] ❌ Timeout esperando que el gráfico esté listo');
+        logger.error('[useImpresionReporte] ❌ Timeout esperando que el gráfico esté listo');
         alert('Error: El gráfico tardó demasiado en generarse. Por favor, intente nuevamente.');
         setIsChartReady(true);
         setIsProcessing(false);
         return;
       }
       
-      console.log('[useImpresionReporte] ✅ Gráfico listo después de esperar');
+      logger.debug('[useImpresionReporte] ✅ Gráfico listo después de esperar');
     }
     
     // Obtener imagen del gráfico principal
@@ -187,33 +187,33 @@ export const useImpresionReporte = () => {
     while (retryCount < maxRetries && (!chartImgDataUrl || chartImgDataUrl.length < 1000)) {
       if (chartRef.current && chartRef.current.getImage) {
         try {
-          console.log(`[useImpresionReporte] Intento ${retryCount + 1}: Generando imagen del gráfico principal...`);
+          logger.debug(`[useImpresionReporte] Intento ${retryCount + 1}: Generando imagen del gráfico principal...`);
           
           if (retryCount > 0) {
             await new Promise(resolve => setTimeout(resolve, 2000));
           }
           
           chartImgDataUrl = await chartRef.current.getImage();
-          console.log('[useImpresionReporte] Imagen del gráfico principal generada:', chartImgDataUrl ? 'Sí' : 'No');
+          logger.debug('[useImpresionReporte] Imagen del gráfico principal generada:', chartImgDataUrl ? 'Sí' : 'No');
           
           if (chartImgDataUrl && chartImgDataUrl.length > 1000 && chartImgDataUrl.startsWith('data:image')) {
-            console.log('[useImpresionReporte] ✅ Imagen válida obtenida en intento', retryCount + 1);
+            logger.debug('[useImpresionReporte] ✅ Imagen válida obtenida en intento', retryCount + 1);
             break;
           } else {
-            console.warn(`[useImpresionReporte] ⚠️ Imagen no válida en intento ${retryCount + 1}, reintentando...`);
+            logger.warn(`[useImpresionReporte] ⚠️ Imagen no válida en intento ${retryCount + 1}, reintentando...`);
           }
         } catch (error) {
-          console.error(`[useImpresionReporte] Error en intento ${retryCount + 1}:`, error);
+          logger.error(`[useImpresionReporte] Error en intento ${retryCount + 1}:`, error);
         }
       } else {
-        console.warn('[useImpresionReporte] chartRef.current no disponible o no tiene getImage');
+        logger.warn('[useImpresionReporte] chartRef.current no disponible o no tiene getImage');
         break;
       }
       retryCount++;
     }
     
     if (!chartImgDataUrl || chartImgDataUrl.length < 1000) {
-      console.error('[useImpresionReporte] ❌ No se pudo obtener una imagen válida después de', maxRetries, 'intentos');
+      logger.error('[useImpresionReporte] ❌ No se pudo obtener una imagen válida después de', maxRetries, 'intentos');
       setIsChartReady(true);
       setIsProcessing(false);
       return;
@@ -226,10 +226,10 @@ export const useImpresionReporte = () => {
         const clasificacionesRef = sectionChartRefs.current['clasificaciones'];
         if (clasificacionesRef && clasificacionesRef.getImage) {
           clasificacionesChartImgDataUrl = await clasificacionesRef.getImage();
-          console.log('[useImpresionReporte] Imagen de gráfico de clasificaciones generada:', clasificacionesChartImgDataUrl ? 'Sí' : 'No');
+          logger.debug('[useImpresionReporte] Imagen de gráfico de clasificaciones generada:', clasificacionesChartImgDataUrl ? 'Sí' : 'No');
         }
       } catch (error) {
-        console.error('[useImpresionReporte] Error obteniendo imagen de gráfico de clasificaciones:', error);
+        logger.error('[useImpresionReporte] Error obteniendo imagen de gráfico de clasificaciones:', error);
       }
     }
     
@@ -237,31 +237,31 @@ export const useImpresionReporte = () => {
     let sectionChartsImgDataUrl = [];
     if (sectionChartRefs.current && sectionChartRefs.current.length > 0) {
       try {
-        console.log('[useImpresionReporte] Generando imágenes de gráficos por sección...');
+        logger.debug('[useImpresionReporte] Generando imágenes de gráficos por sección...');
         sectionChartsImgDataUrl = await Promise.all(
           sectionChartRefs.current.map(async (ref, index) => {
             if (ref && ref.getImage && typeof index === 'number') {
               try {
                 const imageUrl = await ref.getImage();
-                console.log(`[useImpresionReporte] Imagen de sección ${index} generada:`, imageUrl ? 'Sí' : 'No');
+                logger.debug(`[useImpresionReporte] Imagen de sección ${index} generada:`, imageUrl ? 'Sí' : 'No');
                 return imageUrl;
               } catch (error) {
-                console.error(`[useImpresionReporte] Error obteniendo imagen de gráfico por sección ${index}:`, error);
+                logger.error(`[useImpresionReporte] Error obteniendo imagen de gráfico por sección ${index}:`, error);
                 return '';
               }
             }
             return '';
           })
         );
-        console.log('[useImpresionReporte] Imágenes de gráficos por sección generadas:', sectionChartsImgDataUrl.filter(url => url).length);
+        logger.debug('[useImpresionReporte] Imágenes de gráficos por sección generadas:', sectionChartsImgDataUrl.filter(url => url).length);
       } catch (error) {
-        console.error('[useImpresionReporte] Error obteniendo imágenes de gráficos por sección:', error);
+        logger.error('[useImpresionReporte] Error obteniendo imágenes de gráficos por sección:', error);
       }
     }
     
     // Convertir imágenes a data URLs antes de generar el HTML
     // Primero convertir shareTokens a URLs, luego a base64
-    console.log('[useImpresionReporte] 🔄 Convirtiendo imágenes del reporte a data URLs...');
+    logger.debug('[useImpresionReporte] 🔄 Convirtiendo imágenes del reporte a data URLs...');
     const imagenesConUrls = datosReporte.imagenes?.map(seccion => 
       Array.isArray(seccion) 
         ? seccion.map(img => convertirShareTokenAUrl(img) || img)
@@ -301,7 +301,7 @@ export const useImpresionReporte = () => {
     if (reporteId) {
       try {
         setIsSavingPdf(true);
-        console.log('[useImpresionReporte] Guardando PDF en Storage...');
+        logger.debug('[useImpresionReporte] Guardando PDF en Storage...');
         
         const pdfUrl = await generarYGuardarPdf(reporteId, {
           ...datosReporte,
@@ -312,10 +312,10 @@ export const useImpresionReporte = () => {
         });
         
         setPdfUrl(pdfUrl);
-        console.log('[useImpresionReporte] ✅ PDF guardado exitosamente:', pdfUrl);
+        logger.debug('[useImpresionReporte] ✅ PDF guardado exitosamente:', pdfUrl);
         
       } catch (error) {
-        console.error('[useImpresionReporte] ❌ Error guardando PDF:', error);
+        logger.error('[useImpresionReporte] ❌ Error guardando PDF:', error);
         // No interrumpir la impresión si falla el guardado
       } finally {
         setIsSavingPdf(false);
@@ -324,11 +324,11 @@ export const useImpresionReporte = () => {
     
     // Detectar si es dispositivo móvil y usar el método apropiado
     const isMobile = isMobileDevice();
-    console.log('[useImpresionReporte] Es dispositivo móvil:', isMobile);
+    logger.debug('[useImpresionReporte] Es dispositivo móvil:', isMobile);
     
     if (isMobile) {
       // En móviles, solo generar el PDF sin abrir diálogo de impresión
-      console.log('[useImpresionReporte] Dispositivo móvil detectado - solo generando PDF');
+      logger.debug('[useImpresionReporte] Dispositivo móvil detectado - solo generando PDF');
       // No llamar a printMobileOptimized, solo generar el PDF
     } else {
       // En desktop, usar el método normal de impresión
@@ -353,7 +353,7 @@ export const useImpresionReporte = () => {
           reporteId
         );
       } catch (error) {
-        console.error('[useImpresionReporte] Error registrando log:', error);
+        logger.error('[useImpresionReporte] Error registrando log:', error);
         // No interrumpir el proceso si falla el log
       }
     }

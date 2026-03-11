@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 // src/services/empresaService.js
 import { 
   doc, 
@@ -51,9 +52,9 @@ export const empresaService = {
       }
 
       if (!ownerId) {
-        console.error('[empresaService][getEmpresasForOperario] ❌ ERROR: ownerId es requerido');
-        console.error('[empresaService][getEmpresasForOperario] userId:', userId);
-        console.error('[empresaService][getEmpresasForOperario] ownerId recibido:', ownerId);
+        logger.error('[empresaService][getEmpresasForOperario] ❌ ERROR: ownerId es requerido');
+        logger.error('[empresaService][getEmpresasForOperario] userId:', userId);
+        logger.error('[empresaService][getEmpresasForOperario] ownerId recibido:', ownerId);
         return { ownerId: null, empresas: [], empresasAsignadas: [], userDocRef: null, empresasQueryRef: null };
       }
 
@@ -63,10 +64,10 @@ export const empresaService = {
       const userSnapshot = await getDoc(userRef);
 
       if (!userSnapshot.exists()) {
-        console.error('[empresaService][getEmpresasForOperario] ❌ ERROR DE PROVISIONING: Operario no encontrado en owner-centric');
-        console.error('[empresaService][getEmpresasForOperario] Path:', userRef.path);
-        console.error('[empresaService][getEmpresasForOperario] userId:', userId);
-        console.error('[empresaService][getEmpresasForOperario] ownerId:', ownerId);
+        logger.error('[empresaService][getEmpresasForOperario] ❌ ERROR DE PROVISIONING: Operario no encontrado en owner-centric');
+        logger.error('[empresaService][getEmpresasForOperario] Path:', userRef.path);
+        logger.error('[empresaService][getEmpresasForOperario] userId:', userId);
+        logger.error('[empresaService][getEmpresasForOperario] ownerId:', ownerId);
         return { ownerId: null, empresas: [], empresasAsignadas: [], userDocRef: null, empresasQueryRef: null };
       }
 
@@ -100,7 +101,7 @@ export const empresaService = {
           const empresaSnap = await getDoc(empresaRef);
 
           if (!empresaSnap.exists()) {
-            console.warn(`[empresaService][getEmpresasForOperario] Empresa ${empresaId} no encontrada`);
+            logger.warn(`[empresaService][getEmpresasForOperario] Empresa ${empresaId} no encontrada`);
             return null;
           }
 
@@ -113,7 +114,7 @@ export const empresaService = {
             createdAt: empresaData.createdAt?.toDate() || new Date()
           };
         } catch (error) {
-          console.error(`[empresaService][getEmpresasForOperario] Error al leer empresa ${empresaId}:`, error);
+          logger.error(`[empresaService][getEmpresasForOperario] Error al leer empresa ${empresaId}:`, error);
           return null;
         }
       });
@@ -134,7 +135,7 @@ export const empresaService = {
         empresasQueryRef: null // ⚠️ Operarios NO pueden usar queries
       };
       } catch (error) {
-        console.error('[empresaService][getEmpresasForOperario] ❌ Error:', error);
+        logger.error('[empresaService][getEmpresasForOperario] ❌ Error:', error);
         return { ownerId: null, empresas: [], empresasAsignadas: [], userDocRef: null, empresasQueryRef: null };
       }
     },
@@ -179,11 +180,11 @@ export const empresaService = {
   async getEmpresasForOwner(ownerId) {
     try {
       if (!ownerId) {
-        console.log('[empresaService][getEmpresasForOwner] ownerId no proporcionado');
+        logger.debug('[empresaService][getEmpresasForOwner] ownerId no proporcionado');
         return [];
       }
 
-      console.log(`[empresaService][getEmpresasForOwner] 🔄 Leyendo empresas del owner ${ownerId}`);
+      logger.debug(`[empresaService][getEmpresasForOwner] 🔄 Leyendo empresas del owner ${ownerId}`);
       const empresas = await getEmpresas(ownerId);
 
       const empresasNormalizadas = empresas.map(emp => ({
@@ -194,10 +195,10 @@ export const empresaService = {
         createdAt: emp.createdAt
       }));
 
-      console.log(`[empresaService][getEmpresasForOwner] ✅ Encontradas ${empresasNormalizadas.length} empresas`);
+      logger.debug(`[empresaService][getEmpresasForOwner] ✅ Encontradas ${empresasNormalizadas.length} empresas`);
       return empresasNormalizadas;
     } catch (error) {
-      console.error('[empresaService][getEmpresasForOwner] ❌ Error:', error);
+      logger.error('[empresaService][getEmpresasForOwner] ❌ Error:', error);
       return [];
     }
   },
@@ -222,7 +223,7 @@ export const empresaService = {
         // Por ahora, si no está disponible, retornar vacío (se obtendrá desde token en AuthContext)
         const ownerId = userProfile?.ownerId;
         if (!ownerId) {
-          console.error('[empresaService][getUserEmpresas] ❌ ownerId no disponible para operario');
+          logger.error('[empresaService][getUserEmpresas] ❌ ownerId no disponible para operario');
           return [];
         }
         
@@ -234,7 +235,7 @@ export const empresaService = {
       const ownerId = userProfile?.uid || userId;
       return await this.getEmpresasForOwner(ownerId);
     } catch (error) {
-      console.error("[empresaService] Error al obtener empresas del usuario:", error);
+      logger.error("[empresaService] Error al obtener empresas del usuario:", error);
       return [];
     }
   },

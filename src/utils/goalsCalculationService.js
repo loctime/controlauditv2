@@ -1,6 +1,6 @@
+import logger from '@/utils/logger';
 // src/utils/goalsCalculationService.js
 import { getDocs } from 'firebase/firestore';
-
 /**
  * Servicio para calcular cumplimiento de metas y objetivos
  */
@@ -210,7 +210,7 @@ export async function calcularCumplimientoCapacitaciones(sucursal, capacitacione
       }
     };
   } catch (error) {
-    console.error('Error calculando cumplimiento de capacitaciones:', error);
+    logger.error('Error calculando cumplimiento de capacitaciones:', error);
     return {
       mensual: { completadas: 0, target: 0, porcentaje: 0, estado: 'sin_target' },
       anual: { completadas: 0, target: 0, porcentaje: 0, estado: 'sin_target' }
@@ -243,7 +243,7 @@ export async function calcularCumplimientoAuditoriasAnual(sucursal, auditorias =
     let auditoriasData = auditorias;
     if (!auditoriasData) {
       if (!auditoriasQueries || auditoriasQueries.length === 0) {
-        console.warn('calcularCumplimientoAuditoriasAnual: auditorias o auditoriasQueries son requeridos');
+        logger.warn('calcularCumplimientoAuditoriasAnual: auditorias o auditoriasQueries son requeridos');
         return { completadas: 0, target: 0, porcentaje: 0, estado: 'sin_target' };
       }
 
@@ -323,7 +323,7 @@ export async function calcularCumplimientoAuditoriasAnual(sucursal, auditorias =
 
     return { completadas, target: targetAnual, porcentaje, estado };
   } catch (error) {
-    console.error('Error calculando cumplimiento anual de auditorías:', error);
+    logger.error('Error calculando cumplimiento anual de auditorías:', error);
     return { completadas: 0, target: 0, porcentaje: 0, estado: 'sin_target' };
   }
 }
@@ -358,7 +358,7 @@ export async function calcularDiasSinAccidentes(sucursal, accidentes = null, acc
       let accidentesData = accidentes;
       if (!accidentesData || accidentesData.length === 0) {
         if (!accidentesQueries || accidentesQueries.length === 0) {
-          console.warn('calcularDiasSinAccidentes: accidentes o accidentesQueries son requeridos');
+          logger.warn('calcularDiasSinAccidentes: accidentes o accidentesQueries son requeridos');
           return { 
             dias: 0, 
             estado: 'sin_datos', 
@@ -464,7 +464,7 @@ export async function calcularDiasSinAccidentes(sucursal, accidentes = null, acc
       semaforo
     };
   } catch (error) {
-    console.error('Error calculando días sin accidentes:', error);
+    logger.error('Error calculando días sin accidentes:', error);
     return { 
       dias: 0, 
       estado: 'sin_datos', 

@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 import React, { useState, useEffect } from "react";
 import {
   Button,
@@ -144,7 +145,7 @@ const EstablecimientosContainer = () => {
         text: 'Las empresas han sido verificadas y corregidas si era necesario'
       });
     } catch (error) {
-      console.error('Error al verificar empresas:', error);
+      logger.error('Error al verificar empresas:', error);
       Swal.fire({
         icon: 'error',
         title: 'Error',
@@ -188,9 +189,9 @@ const EstablecimientosContainer = () => {
         verificando={verificando}
         onNavigateToAccidentes={() => navigate('/accidentes')}
         onAddEmpresa={() => {
-          console.log('🔵 [EstablecimientosContainer] Botón "Agregar Empresa" clickeado');
-          console.log('[EstablecimientosContainer] Abriendo modal...');
-          console.log('[EstablecimientosContainer] ownerId actual:', ownerId);
+          logger.debug('🔵 [EstablecimientosContainer] Botón "Agregar Empresa" clickeado');
+          logger.debug('[EstablecimientosContainer] Abriendo modal...');
+          logger.debug('[EstablecimientosContainer] ownerId actual:', ownerId);
           setOpenModal(true);
         }}
         canCreateEmpresa={canCreateEmpresa}
@@ -293,15 +294,15 @@ const EstablecimientosContainer = () => {
           open={openModal}
           handleClose={handleCloseModal}
           handleAddEmpresa={async () => {
-            console.log('🔵 [EstablecimientosContainer] handleAddEmpresa wrapper llamado');
-            console.log('[EstablecimientosContainer] ownerId:', ownerId);
-            console.log('[EstablecimientosContainer] empresa:', empresa);
+            logger.debug('🔵 [EstablecimientosContainer] handleAddEmpresa wrapper llamado');
+            logger.debug('[EstablecimientosContainer] ownerId:', ownerId);
+            logger.debug('[EstablecimientosContainer] empresa:', empresa);
             try {
               await handleAddEmpresa();
-              console.log('[EstablecimientosContainer] ✅ handleAddEmpresa completado, cerrando modal');
+              logger.debug('[EstablecimientosContainer] ✅ handleAddEmpresa completado, cerrando modal');
               setOpenModal(false);
             } catch (error) {
-              console.error('[EstablecimientosContainer] ❌ ERROR en handleAddEmpresa:', error);
+              logger.error('[EstablecimientosContainer] ❌ ERROR en handleAddEmpresa:', error);
               throw error; // Re-lanzar para que se muestre el error
             }
           }}

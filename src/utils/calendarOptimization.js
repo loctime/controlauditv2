@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 // Optimización de importaciones de Calendar
 // Importar solo los componentes necesarios para reducir el tamaño del bundle
 
@@ -59,16 +60,16 @@ export const getFullCalendarConfig = async (options = {}) => {
     weekends: true,
     events: [],
     select: (arg) => {
-      console.log('Fecha seleccionada:', arg.startStr);
+      logger.debug('Fecha seleccionada:', arg.startStr);
     },
     eventClick: (arg) => {
-      console.log('Evento clickeado:', arg.event.title);
+      logger.debug('Evento clickeado:', arg.event.title);
     },
     eventDrop: (arg) => {
-      console.log('Evento movido:', arg.event.title);
+      logger.debug('Evento movido:', arg.event.title);
     },
     eventResize: (arg) => {
-      console.log('Evento redimensionado:', arg.event.title);
+      logger.debug('Evento redimensionado:', arg.event.title);
     },
     ...options
   };
@@ -97,7 +98,7 @@ export const getReactCalendarConfig = async (options = {}) => {
     selectRange: false,
     multiple: false,
     onChange: (value) => {
-      console.log('Fecha seleccionada:', value);
+      logger.debug('Fecha seleccionada:', value);
     },
     ...options
   };

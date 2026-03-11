@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 import React, { useState, useEffect } from 'react';
 import {
   Paper,
@@ -63,9 +64,9 @@ export default function RealizarCapacitacion({
     ? userSucursales.filter(s => s.empresaId === selectedEmpresa)
     : userSucursales;
   
-  console.log('[RealizarCapacitacion] userSucursales:', userSucursales.length);
-  console.log('[RealizarCapacitacion] selectedEmpresa:', selectedEmpresa);
-  console.log('[RealizarCapacitacion] sucursalesDisponibles:', sucursalesDisponibles.length);
+  logger.debug('[RealizarCapacitacion] userSucursales:', userSucursales.length);
+  logger.debug('[RealizarCapacitacion] selectedEmpresa:', selectedEmpresa);
+  logger.debug('[RealizarCapacitacion] sucursalesDisponibles:', sucursalesDisponibles.length);
 
   // Cargar planes anuales cuando cambia la empresa o sucursal
   useEffect(() => {
@@ -126,7 +127,7 @@ export default function RealizarCapacitacion({
 
   const loadPlanesAnuales = async () => {
     if (!userProfile?.ownerId) {
-      console.error('[RealizarCapacitacion] ownerId no disponible');
+      logger.error('[RealizarCapacitacion] ownerId no disponible');
       return;
     }
 
@@ -153,10 +154,10 @@ export default function RealizarCapacitacion({
         plan.sucursalId === selectedSucursal || plan.sucursalId === null
       );
       
-      console.log('[RealizarCapacitacion] Planes encontrados:', planesFiltrados.length);
+      logger.debug('[RealizarCapacitacion] Planes encontrados:', planesFiltrados.length);
       setPlanesAnuales(planesFiltrados);
     } catch (error) {
-      console.error('Error cargando planes anuales:', error);
+      logger.error('Error cargando planes anuales:', error);
       Swal.fire('Error', 'Error al cargar planes anuales', 'error');
     } finally {
       setLoading(false);
@@ -180,7 +181,7 @@ export default function RealizarCapacitacion({
       const empleadosData = snapshot.docs.map(doc => normalizeEmpleado(doc));
       setEmpleados(empleadosData);
     } catch (error) {
-      console.error('Error cargando empleados:', error);
+      logger.error('Error cargando empleados:', error);
       Swal.fire('Error', 'Error al cargar empleados', 'error');
     }
   };
@@ -301,7 +302,7 @@ export default function RealizarCapacitacion({
       Swal.fire('Éxito', 'Capacitación guardada correctamente', 'success');
       
     } catch (error) {
-      console.error('Error guardando capacitación:', error);
+      logger.error('Error guardando capacitación:', error);
       Swal.fire('Error', 'Error al guardar la capacitación', 'error');
     }
   };

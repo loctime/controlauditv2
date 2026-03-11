@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 // src/components/pages/accidentes/components/RegistrarAccidenteInline.jsx
 /**
  * Formulario inline para registrar seguimiento de accidente
@@ -13,7 +14,6 @@ import EventRegistryInline from '../../../shared/event-registry/EventRegistryInl
 import { registrosAccidenteService } from '../../../../services/registrosAccidenteService';
 import { obtenerAccidentePorId } from '../../../../services/accidenteService';
 import { useAuth } from '@/components/context/AuthContext';
-
 /**
  * Componente para registrar seguimiento de accidente
  */
@@ -46,7 +46,7 @@ const RegistrarAccidenteInline = ({
       const accidenteData = await obtenerAccidentePorId({ ownerId: tenantOwnerId, accidenteId });
       setAccidente(accidenteData);
     } catch (error) {
-      console.error('Error cargando accidente:', error);
+      logger.error('Error cargando accidente:', error);
     } finally {
       setLoading(false);
     }
@@ -76,7 +76,7 @@ const RegistrarAccidenteInline = ({
       }));
       setPersonas(empleadosData);
     } catch (error) {
-      console.error('Error cargando empleados:', error);
+      logger.error('Error cargando empleados:', error);
     }
   };
 

@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 // src/services/base/baseRegistryService.js
 /**
  * Factory para crear servicios de registros de eventos genricos
@@ -162,7 +163,7 @@ export function createBaseRegistryService({
           ).filter(Boolean);
         }
 
-        console.log(`[${collectionName}] Creando registro:`, {
+        logger.debug(`[${collectionName}] Creando registro:`, {
           [entityIdField]: entityIdStr,
           [personasField]: personasNormalizadas.length,
           [evidenciasField]: evidenciasSanitizadas.length
@@ -189,7 +190,7 @@ export function createBaseRegistryService({
 
         return { id: registroRef.id };
       } catch (error) {
-        console.error(`[${collectionName}] Error creando registro:`, error);
+        logger.error(`[${collectionName}] Error creando registro:`, error);
         throw error;
       }
     },
@@ -208,14 +209,14 @@ export function createBaseRegistryService({
         if (!resolvedOwnerId) throw new Error('ownerId es requerido');
         if (!registroId) throw new Error('registroId es requerido');
         if (!evidencias || evidencias.length === 0) {
-          console.warn(`[${collectionName}] attachEvidencias: No hay evidencias para asociar`);
+          logger.warn(`[${collectionName}] attachEvidencias: No hay evidencias para asociar`);
           return;
         }
 
         // Sanitizar evidencias
         const evidenciasSanitizadas = sanitizeEvidencias(evidencias, validateEvidencias);
 
-        console.log(`[${collectionName}] attachEvidencias:`, {
+        logger.debug(`[${collectionName}] attachEvidencias:`, {
           ownerId: resolvedOwnerId,
           registroId,
           evidenciasCount: evidenciasSanitizadas.length
@@ -230,9 +231,9 @@ export function createBaseRegistryService({
           actualizadoPor: resolvedActorId
         });
 
-        console.log(`[${collectionName}] Evidencias asociadas correctamente al registro:`, registroId);
+        logger.debug(`[${collectionName}] Evidencias asociadas correctamente al registro:`, registroId);
       } catch (error) {
-        console.error(`[${collectionName}] Error asociando evidencias:`, error);
+        logger.error(`[${collectionName}] Error asociando evidencias:`, error);
         throw error;
       }
     },
@@ -246,14 +247,14 @@ export function createBaseRegistryService({
     async getRegistriesByEntity(ownerId, entityId) {
       try {
         if (!ownerId || !entityId) {
-          console.warn(`[${collectionName}] getRegistriesByEntity: parmetros faltantes`, { ownerId, entityId });
+          logger.warn(`[${collectionName}] getRegistriesByEntity: parmetros faltantes`, { ownerId, entityId });
           return [];
         }
 
         // Normalizar entityId a string
         const entityIdStr = String(entityId);
         
-        console.log(`[${collectionName}] Buscando registros:`, { 
+        logger.debug(`[${collectionName}] Buscando registros:`, { 
           ownerId, 
           [entityIdField]: entityIdStr,
           tipoOriginal: typeof entityId,
@@ -280,7 +281,7 @@ export function createBaseRegistryService({
             };
           });
           
-          console.log(`[${collectionName}] Registros encontrados:`, {
+          logger.debug(`[${collectionName}] Registros encontrados:`, {
             cantidad: resultados.length,
             [entityIdField]: entityIdStr,
             registros: resultados.map(r => ({
@@ -295,7 +296,7 @@ export function createBaseRegistryService({
         } catch (queryError) {
           // Si falla por ndice faltante, usar fallback sin orderBy
           if (queryError.code === 'failed-precondition' || queryError.message?.includes('index')) {
-            console.warn(
+            logger.warn(
               `[${collectionName}] indice compuesto (${entityIdField} + fecha) no encontrado. ` +
               `Usando fallback sin orderBy. ` +
               `Crear indice: (${entityIdField} ASC, fecha DESC)`
@@ -322,7 +323,7 @@ export function createBaseRegistryService({
               return fechaB - fechaA;
             });
             
-            console.log(`[${collectionName}] Registros encontrados (fallback):`, {
+            logger.debug(`[${collectionName}] Registros encontrados (fallback):`, {
               cantidad: resultados.length,
               [entityIdField]: entityIdStr
             });
@@ -332,8 +333,8 @@ export function createBaseRegistryService({
           throw queryError;
         }
       } catch (error) {
-        console.error(`[${collectionName}] Error obteniendo registros por entidad:`, error);
-        console.error('Error details:', {
+        logger.error(`[${collectionName}] Error obteniendo registros por entidad:`, error);
+        logger.error('Error details:', {
           code: error.code,
           message: error.message,
           stack: error.stack
@@ -352,7 +353,7 @@ export function createBaseRegistryService({
       try {
         const entityIdStr = String(entityId);
         
-        console.log(`[${collectionName}] getPersonasUnicasByEntity:`, { 
+        logger.debug(`[${collectionName}] getPersonasUnicasByEntity:`, { 
           ownerId, 
           [entityIdField]: entityIdStr,
           tipoOriginal: typeof entityId
@@ -377,14 +378,14 @@ export function createBaseRegistryService({
         });
 
         const resultado = Array.from(personasUnicas);
-        console.log(`[${collectionName}] Personas nicas encontradas:`, {
+        logger.debug(`[${collectionName}] Personas nicas encontradas:`, {
           cantidad: resultado.length,
           [entityIdField]: entityIdStr,
           personas: resultado
         });
         return resultado;
       } catch (error) {
-        console.error(`[${collectionName}] Error calculando personas unicas:`, error);
+        logger.error(`[${collectionName}] Error calculando personas unicas:`, error);
         return [];
       }
     },
@@ -399,7 +400,7 @@ export function createBaseRegistryService({
       try {
         const entityIdStr = String(entityId);
         
-        console.log(`[${collectionName}] getEvidenciasByEntity:`, { 
+        logger.debug(`[${collectionName}] getEvidenciasByEntity:`, { 
           ownerId, 
           [entityIdField]: entityIdStr,
           tipoOriginal: typeof entityId
@@ -422,13 +423,13 @@ export function createBaseRegistryService({
           }
         });
 
-        console.log(`[${collectionName}] Evidencias encontradas:`, {
+        logger.debug(`[${collectionName}] Evidencias encontradas:`, {
           cantidad: evidenciasConRegistro.length,
           [entityIdField]: entityIdStr
         });
         return evidenciasConRegistro;
       } catch (error) {
-        console.error(`[${collectionName}] Error obteniendo evidencias por entidad:`, error);
+        logger.error(`[${collectionName}] Error obteniendo evidencias por entidad:`, error);
         return [];
       }
     },
@@ -455,7 +456,7 @@ export function createBaseRegistryService({
           totalEvidencias: evidencias.length
         };
       } catch (error) {
-        console.error(`[${collectionName}] Error obteniendo estadisticas:`, error);
+        logger.error(`[${collectionName}] Error obteniendo estadisticas:`, error);
         return {
           totalRegistros: 0,
           totalPersonas: 0,

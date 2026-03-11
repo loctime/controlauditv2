@@ -1,6 +1,6 @@
+import logger from '@/utils/logger';
 import React, { memo } from 'react';
 import { Alert, Box, Typography, Button } from '@mui/material';
-
 const AlertasFaltantes = memo(({ 
   cargandoDatosRespaldo,
   userEmpresas,
@@ -31,7 +31,7 @@ const AlertasFaltantes = memo(({
           return null;
         }
       } catch (e) {
-        console.error('Error parseando cache:', e);
+        logger.error('Error parseando cache:', e);
       }
     }
     // Solo mostrar alerta si realmente NO hay empresas disponibles
@@ -65,7 +65,7 @@ const AlertasFaltantes = memo(({
           return null;
         }
       } catch (e) {
-        console.error('Error parseando cache:', e);
+        logger.error('Error parseando cache:', e);
       }
     }
     return (
@@ -98,7 +98,7 @@ const AlertasFaltantes = memo(({
           return null;
         }
       } catch (e) {
-        console.error('Error parseando cache:', e);
+        logger.error('Error parseando cache:', e);
       }
     }
     return (

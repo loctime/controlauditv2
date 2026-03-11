@@ -1,6 +1,6 @@
+import logger from '@/utils/logger';
 import { useState, useEffect, useCallback } from 'react';
 import syncQueueService from '../services/syncQueue';
-
 /**
  * Hook para detectar el estado de conectividad
  * Maneja tanto navigator.onLine como eventos de red
@@ -52,7 +52,7 @@ export const useConnectivity = () => {
     } catch (error) {
       // Silenciar errores de conectividad (es normal cuando no hay internet)
       if (error.name !== 'AbortError') {
-        console.log('🔍 Verificación de conectividad falló:', error.message);
+        logger.debug('🔍 Verificación de conectividad falló:', error.message);
       }
       return false;
     }
@@ -71,7 +71,7 @@ export const useConnectivity = () => {
       
       // Verificar debounce - evitar múltiples sincronizaciones muy seguidas
       if (now - lastSyncAttempt < DEBOUNCE_TIME) {
-        console.log('⏳ Sincronización automática en cooldown, esperando...');
+        logger.debug('⏳ Sincronización automática en cooldown, esperando...');
         return;
       }
       
@@ -81,30 +81,30 @@ export const useConnectivity = () => {
       const queueStats = await syncQueueService.getQueueStats();
       
       if (queueStats && queueStats.total > 0) {
-        console.log('🔄 Activando sincronización automática - items pendientes:', queueStats.total);
+        logger.debug('🔄 Activando sincronización automática - items pendientes:', queueStats.total);
         
         // Pequeño delay para asegurar que la conexión esté estable
         setTimeout(async () => {
           try {
             await syncQueueService.processQueue();
-            console.log('✅ Sincronización automática completada');
+            logger.debug('✅ Sincronización automática completada');
           } catch (error) {
-            console.error('❌ Error en sincronización automática:', error);
+            logger.error('❌ Error en sincronización automática:', error);
           }
         }, 2000); // 2 segundos de delay
         
         setAutoSyncTriggered(true);
       } else {
-        console.log('📭 No hay items pendientes para sincronizar');
+        logger.debug('📭 No hay items pendientes para sincronizar');
       }
     } catch (error) {
-      console.error('❌ Error al verificar cola de sincronización:', error);
+      logger.error('❌ Error al verificar cola de sincronización:', error);
     }
   }, [lastSyncAttempt]);
 
   // Manejar cambios de conectividad
   const handleOnline = useCallback(async () => {
-    console.log('🌐 Conexión restaurada');
+    logger.debug('🌐 Conexión restaurada');
     // Usar setTimeout para evitar actualizaciones durante el render
     setTimeout(async () => {
       try {
@@ -120,14 +120,14 @@ export const useConnectivity = () => {
         }
         detectConnectionType();
       } catch (error) {
-        console.error('Error en handleOnline:', error);
+        logger.error('Error en handleOnline:', error);
         setIsOnline(false);
       }
     }, 0);
   }, [detectConnectionType, checkRealConnectivity, autoSyncTriggered, triggerAutoSync]);
 
   const handleOffline = useCallback(() => {
-    console.log('📴 Conexión perdida');
+    logger.debug('📴 Conexión perdida');
     // Usar setTimeout para evitar actualizaciones durante el render
     setTimeout(() => {
       setIsOnline(false);
@@ -155,7 +155,7 @@ export const useConnectivity = () => {
           if (typeof navigator !== 'undefined' && navigator.onLine) {
             const realConnectivity = await checkRealConnectivity();
             if (!realConnectivity) {
-              console.log('📱 Móvil: navigator.onLine dice online pero no hay conectividad real');
+              logger.debug('📱 Móvil: navigator.onLine dice online pero no hay conectividad real');
               // Usar setTimeout para evitar actualizar durante render
               setTimeout(() => {
                 setIsOnline(false);
@@ -163,7 +163,7 @@ export const useConnectivity = () => {
             }
           }
         } catch (error) {
-          console.error('Error en verificación inicial de conectividad:', error);
+          logger.error('Error en verificación inicial de conectividad:', error);
           // No actualizar estado si hay error, dejar el valor inicial
         }
       };
@@ -191,7 +191,7 @@ export const useConnectivity = () => {
         }
       };
     } catch (error) {
-      console.error('❌ Error configurando listeners de conectividad:', error);
+      logger.error('❌ Error configurando listeners de conectividad:', error);
     }
   }, [handleOnline, handleOffline, detectConnectionType, checkRealConnectivity]);
 

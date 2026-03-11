@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 // Componente optimizado para generar reportes de auditoría
 import React, { useState } from "react";
 import { Button, Box, Alert, Snackbar, CircularProgress } from "@mui/material";
@@ -5,7 +6,6 @@ import { useAuth } from '@/components/context/AuthContext';
 import AuditoriaService from "../auditoriaService";
 import { buildReporteMetadata } from '../../../../services/useMetadataService';
 import autoSaveService from "../auditoria/services/autoSaveService";
-
 const BotonGenerarReporte = ({ 
   onClick, 
   deshabilitado, 
@@ -39,7 +39,7 @@ const BotonGenerarReporte = ({
     }
 
     // Las firmas son opcionales - no validar como obligatorias
-    console.log('[ReporteImprimir] Firmas opcionales - Auditor:', !!firmaAuditor, 'Responsable:', !!firmaResponsable);
+    logger.debug('[ReporteImprimir] Firmas opcionales - Auditor:', !!firmaAuditor, 'Responsable:', !!firmaResponsable);
 
     setGuardando(true);
     try {
@@ -47,11 +47,11 @@ const BotonGenerarReporte = ({
       let currentUserProfile = userProfile;
       
       if (!currentUserProfile) {
-        console.log('[ReporteImprimir] userProfile no disponible, buscando en cache...');
+        logger.debug('[ReporteImprimir] userProfile no disponible, buscando en cache...');
         try {
           // Verificar si IndexedDB está disponible
           if (!window.indexedDB) {
-            console.warn('[ReporteImprimir] IndexedDB no está disponible');
+            logger.warn('[ReporteImprimir] IndexedDB no está disponible');
             throw new Error('IndexedDB no disponible');
           }
 
@@ -62,7 +62,7 @@ const BotonGenerarReporte = ({
               
               // Verificar si la object store 'settings' existe
               if (!db.objectStoreNames.contains('settings')) {
-                console.warn('[ReporteImprimir] Object store "settings" no existe');
+                logger.warn('[ReporteImprimir] Object store "settings" no existe');
                 resolve(null);
                 return;
               }
@@ -80,25 +80,25 @@ const BotonGenerarReporte = ({
               };
               
               store.get('complete_user_cache').onerror = function(e) {
-                console.error('[ReporteImprimir] Error al obtener cache:', e.target.error);
+                logger.error('[ReporteImprimir] Error al obtener cache:', e.target.error);
                 resolve(null);
               };
             };
             
             request.onerror = function(event) {
-              console.error('[ReporteImprimir] Error al abrir IndexedDB:', event.target.error);
+              logger.error('[ReporteImprimir] Error al abrir IndexedDB:', event.target.error);
               reject(event.target.error);
             };
             
             request.onupgradeneeded = function(event) {
-              console.log('[ReporteImprimir] IndexedDB necesita actualización');
+              logger.debug('[ReporteImprimir] IndexedDB necesita actualización');
               // .No hacer nada aquí, solo para evitar errores
             };
           });
           
           if (cachedUser) {
             currentUserProfile = cachedUser;
-            console.log('[ReporteImprimir] Usuario encontrado en cache:', {
+            logger.debug('[ReporteImprimir] Usuario encontrado en cache:', {
               uid: currentUserProfile.uid,
               email: currentUserProfile.email,
               displayName: currentUserProfile.displayName,
@@ -106,10 +106,10 @@ const BotonGenerarReporte = ({
               ownerId: currentUserProfile.ownerId
             });
           } else {
-            console.log('[ReporteImprimir] No se encontró usuario en cache');
+            logger.debug('[ReporteImprimir] No se encontró usuario en cache');
           }
         } catch (error) {
-          console.error('[ReporteImprimir] Error al obtener usuario del cache:', error);
+          logger.error('[ReporteImprimir] Error al obtener usuario del cache:', error);
           // Continuar sin userProfile del cache
         }
       }
@@ -141,10 +141,10 @@ const BotonGenerarReporte = ({
         ...authData,
         fechaGuardado: new Date(),
       });
-      console.log('🔍 [ReporteImprimir] clasificaciones recibidas:', clasificaciones);
-      console.log('🔍 [ReporteImprimir] clasificaciones en datosAuditoria:', datosAuditoria.clasificaciones);
-      console.debug('[ReporteImprimir] Guardando auditoría con metadatos:', datosAuditoria);
-      console.log('[ReporteImprimir] userProfile final que se pasa al servicio:', {
+      logger.debug('🔍 [ReporteImprimir] clasificaciones recibidas:', clasificaciones);
+      logger.debug('🔍 [ReporteImprimir] clasificaciones en datosAuditoria:', datosAuditoria.clasificaciones);
+      logger.debug('[ReporteImprimir] Guardando auditoría con metadatos:', datosAuditoria);
+      logger.debug('[ReporteImprimir] userProfile final que se pasa al servicio:', {
         uid: currentUserProfile?.uid,
         email: currentUserProfile?.email,
         displayName: currentUserProfile?.displayName,
@@ -158,9 +158,9 @@ const BotonGenerarReporte = ({
       // Limpiar autoguardado al completar exitosamente
       try {
         await autoSaveService.clearLocalStorage(currentUserProfile?.uid);
-        console.log('🗑️ Autoguardado limpiado después de completar auditoría');
+        logger.debug('🗑️ Autoguardado limpiado después de completar auditoría');
       } catch (cleanupError) {
-        console.warn('⚠️ Error al limpiar autoguardado:', cleanupError);
+        logger.warn('⚠️ Error al limpiar autoguardado:', cleanupError);
       }
       
       setGuardadoExitoso(true);
@@ -175,7 +175,7 @@ const BotonGenerarReporte = ({
       }
     } catch (error) {
       setGuardadoExitoso(false);
-      console.error("❌ Error al guardar auditoría:", error);
+      logger.error("❌ Error al guardar auditoría:", error);
       setMensaje(`❌ Error al guardar: ${error.message}`);
       setTipoMensaje("error");
       setMostrarMensaje(true);

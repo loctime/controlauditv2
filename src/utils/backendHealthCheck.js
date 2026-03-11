@@ -1,7 +1,7 @@
+import logger from '@/utils/logger';
 // src/utils/backendHealthCheck.js
 import axios from 'axios';
 import { getBackendUrl, getEnvironmentInfo } from '../config/environment.js';
-
 class BackendHealthCheck {
   constructor() {
     // ⚠️ ARQUITECTURA: En producción, baseURL es '' (rutas relativas)
@@ -17,7 +17,7 @@ class BackendHealthCheck {
   async checkConnectivity() {
     try {
       const displayUrl = this.baseURL || '(rutas relativas /api/*)';
-      console.log('🔍 Verificando conectividad con:', displayUrl);
+      logger.debug('🔍 Verificando conectividad con:', displayUrl);
       
       // Si baseURL está vacío (producción), usar fetch directamente con ruta relativa
       // Si baseURL tiene valor (desarrollo), usar axios con baseURL configurado
@@ -33,7 +33,7 @@ class BackendHealthCheck {
         // Desarrollo: usar axios con baseURL configurado
         response = await this.api.get('/health');
       }
-      console.log('✅ Backend respondió:', response.data);
+      logger.debug('✅ Backend respondió:', response.data);
       
       return {
         success: true,
@@ -42,7 +42,7 @@ class BackendHealthCheck {
         url: this.baseURL
       };
     } catch (error) {
-      console.error('❌ Error de conectividad:', error);
+      logger.error('❌ Error de conectividad:', error);
       
       return {
         success: false,
@@ -63,7 +63,7 @@ class BackendHealthCheck {
   // Verificar configuración del entorno
   checkEnvironment() {
     const envInfo = getEnvironmentInfo();
-    console.log('📋 Información del entorno:', envInfo);
+    logger.debug('📋 Información del entorno:', envInfo);
     
     return {
       hostname: envInfo.hostname,
@@ -112,7 +112,7 @@ class BackendHealthCheck {
 
   // Diagnóstico completo mejorado
   async runFullDiagnostic() {
-    console.log('🚀 Iniciando diagnóstico completo del backend...');
+    logger.debug('🚀 Iniciando diagnóstico completo del backend...');
     
     const results = {
       timestamp: new Date().toISOString(),
@@ -169,7 +169,7 @@ class BackendHealthCheck {
       }
     }
 
-    console.log('📊 Resultados del diagnóstico:', results);
+    logger.debug('📊 Resultados del diagnóstico:', results);
     return results;
   }
 }

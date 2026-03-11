@@ -1,5 +1,4 @@
 import { usePermissions } from '../pages/admin/hooks/usePermissions';
-
 /**
  * Hook para verificar si el usuario tiene un permiso específico.
  * @param {string} key - Nombre del permiso (ej: 'puedeCompartirFormularios')
@@ -8,7 +7,5 @@ import { usePermissions } from '../pages/admin/hooks/usePermissions';
 export function usePermiso(key) {
   const { hasPermission, permissions } = usePermissions();
   const result = hasPermission(key) || !!permissions[key];
-  // Debug log
-  console.debug(`[usePermiso] Permiso '${key}':`, result);
   return result;
 } 

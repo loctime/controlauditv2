@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 // src/components/shared/event-registry/EventDetailPanel.jsx
 /**
  * Panel de detalles genÃƒÆ’Ã‚Â©rico para eventos con registros asociados
@@ -71,7 +72,7 @@ const TabResumen = ({ entityId, userId, ownerId, registryService, refreshKey }) 
           });
         }
       } catch (error) {
-        console.error('[TabResumen] Error cargando stats:', error);
+        logger.error('[TabResumen] Error cargando stats:', error);
         if (mounted) {
           setStats(prev => ({ ...prev, loading: false }));
         }
@@ -151,7 +152,7 @@ const TabRegistros = ({ entityId, userId, ownerId, registryService, refreshKey }
           setLoading(false);
         }
       } catch (error) {
-        console.error('[TabRegistros] Error cargando registros:', error);
+        logger.error('[TabRegistros] Error cargando registros:', error);
         if (mounted) {
           setLoading(false);
         }
@@ -235,7 +236,7 @@ const TabEvidencias = ({ entityId, userId, ownerId, registryService, refreshKey 
           setLoading(false);
         }
       } catch (error) {
-        console.error('[TabEvidencias] Error cargando evidencias:', error);
+        logger.error('[TabEvidencias] Error cargando evidencias:', error);
         if (mounted) {
           setLoading(false);
         }
@@ -302,7 +303,7 @@ const TabPersonas = ({ entityId, userId, ownerId, registryService, refreshKey })
           setLoading(false);
         }
       } catch (error) {
-        console.error('[TabPersonas] Error cargando personas:', error);
+        logger.error('[TabPersonas] Error cargando personas:', error);
         if (mounted) {
           setLoading(false);
         }
@@ -409,7 +410,7 @@ const EventDetailPanel = ({
 
     const loadEntity = async () => {
       if (!entityService || !entityService.getById) {
-        console.warn('[EventDetailPanel] entityService.getById no disponible');
+        logger.warn('[EventDetailPanel] entityService.getById no disponible');
         setLoading(false);
         return;
       }
@@ -423,7 +424,7 @@ const EventDetailPanel = ({
           setLoading(false);
         }
       } catch (error) {
-        console.error('[EventDetailPanel] Error cargando entidad:', error);
+        logger.error('[EventDetailPanel] Error cargando entidad:', error);
         if (mounted) {
           setLoading(false);
         }
@@ -453,7 +454,7 @@ const EventDetailPanel = ({
   };
 
   const handleSaved = (registroId) => {
-    console.log('[EventDetailPanel] Registro guardado:', registroId);
+    logger.debug('[EventDetailPanel] Registro guardado:', registroId);
     handleModeChange('view');
     setRefreshKey(prev => prev + 1); // Forzar refresh de tabs
     setActiveTab(1); // Cambiar a tab de Registros

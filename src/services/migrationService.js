@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 // Servicio para migrar todos los datos relacionados con un ownerId antiguo a un ownerId nuevo
 // Migra automáticamente empresas, formularios, reportes, sucursales, empleados, etc.
 // 
@@ -23,7 +24,7 @@ import { writeBatchWithAppId } from '../firebase/firestoreAppWriter';
  * @returns {Promise<Object>} - Resumen de la migración
  */
 export const migrateAllUserData = async (oldOwnerId, newOwnerId) => {
-  console.log(`[migrationService] 🚀 Iniciando migración completa de ${oldOwnerId} → ${newOwnerId}`);
+  logger.debug(`[migrationService] 🚀 Iniciando migración completa de ${oldOwnerId} → ${newOwnerId}`);
   
   const migrationSummary = {
     empresas: 0,
@@ -57,7 +58,7 @@ export const migrateAllUserData = async (oldOwnerId, newOwnerId) => {
     };
 
     // 1. Migrar EMPRESAS (owner-centric)
-    console.log('[migrationService] 📦 Migrando empresas...');
+    logger.debug('[migrationService] 📦 Migrando empresas...');
     const empresasRef = collection(dbAudit, ...firestoreRoutesCore.empresas(oldOwnerId));
     const empresasSnapshot = await getDocs(empresasRef);
     
@@ -81,7 +82,7 @@ export const migrateAllUserData = async (oldOwnerId, newOwnerId) => {
     }
 
     // 2. Migrar FORMULARIOS (owner-centric)
-    console.log('[migrationService] 📋 Migrando formularios...');
+    logger.debug('[migrationService] 📋 Migrando formularios...');
     const formulariosRef = collection(dbAudit, ...firestoreRoutesCore.formularios(oldOwnerId));
     const formulariosSnapshot = await getDocs(formulariosRef);
     
@@ -116,7 +117,7 @@ export const migrateAllUserData = async (oldOwnerId, newOwnerId) => {
     }
 
     // 3. Migrar REPORTES/AUDITORIAS (owner-centric)
-    console.log('[migrationService] 📊 Migrando reportes/auditorías...');
+    logger.debug('[migrationService] 📊 Migrando reportes/auditorías...');
     const reportesRef = collection(dbAudit, ...firestoreRoutesCore.reportes(oldOwnerId));
     const reportesSnapshot = await getDocs(reportesRef);
     
@@ -145,7 +146,7 @@ export const migrateAllUserData = async (oldOwnerId, newOwnerId) => {
     }
 
     // 4. Migrar SUCURSALES (owner-centric)
-    console.log('[migrationService] 🏢 Migrando sucursales...');
+    logger.debug('[migrationService] 🏢 Migrando sucursales...');
     const sucursalesRef = collection(dbAudit, ...firestoreRoutesCore.sucursales(oldOwnerId));
     const sucursalesSnapshot = await getDocs(sucursalesRef);
     
@@ -166,7 +167,7 @@ export const migrateAllUserData = async (oldOwnerId, newOwnerId) => {
     }
 
     // 5. Migrar EMPLEADOS (owner-centric)
-    console.log('[migrationService] 👥 Migrando empleados...');
+    logger.debug('[migrationService] 👥 Migrando empleados...');
     const empleadosRef = collection(dbAudit, ...firestoreRoutesCore.empleados(oldOwnerId));
     const empleadosSnapshot = await getDocs(empleadosRef);
     
@@ -187,7 +188,7 @@ export const migrateAllUserData = async (oldOwnerId, newOwnerId) => {
     }
 
     // 6. Migrar CAPACITACIONES (owner-centric)
-    console.log('[migrationService] 📚 Migrando capacitaciones...');
+    logger.debug('[migrationService] 📚 Migrando capacitaciones...');
     const capacitacionesRef = collection(dbAudit, ...firestoreRoutesCore.capacitaciones(oldOwnerId));
     const capacitacionesSnapshot = await getDocs(capacitacionesRef);
     
@@ -208,7 +209,7 @@ export const migrateAllUserData = async (oldOwnerId, newOwnerId) => {
     }
 
     // 7. Migrar ACCIDENTES (owner-centric)
-    console.log('[migrationService] ⚠️ Migrando accidentes...');
+    logger.debug('[migrationService] ⚠️ Migrando accidentes...');
     const accidentesRef = collection(dbAudit, ...firestoreRoutesCore.accidentes(oldOwnerId));
     const accidentesSnapshot = await getDocs(accidentesRef);
     
@@ -229,7 +230,7 @@ export const migrateAllUserData = async (oldOwnerId, newOwnerId) => {
     }
 
     // 8. Migrar USUARIOS OPERARIOS (owner-centric)
-    console.log('[migrationService] 👤 Migrando usuarios operarios...');
+    logger.debug('[migrationService] 👤 Migrando usuarios operarios...');
     const usuariosRef = collection(dbAudit, ...firestoreRoutesCore.usuarios(oldOwnerId));
     const usuariosSnapshot = await getDocs(usuariosRef);
     
@@ -250,17 +251,17 @@ export const migrateAllUserData = async (oldOwnerId, newOwnerId) => {
     }
 
     // Ejecutar todas las migraciones en paralelo
-    console.log(`[migrationService] 🚀 Ejecutando ${migrationPromises.length} migraciones en paralelo...`);
+    logger.debug(`[migrationService] 🚀 Ejecutando ${migrationPromises.length} migraciones en paralelo...`);
     await Promise.all(migrationPromises);
 
     // Calcular total
     migrationSummary.total = Object.values(migrationSummary).reduce((sum, val) => sum + (typeof val === 'number' ? val : 0), 0);
     
-    console.log('[migrationService] ✅ Migración completa:', migrationSummary);
+    logger.debug('[migrationService] ✅ Migración completa:', migrationSummary);
     return migrationSummary;
     
   } catch (error) {
-    console.error('[migrationService] ❌ Error en migración:', error);
+    logger.error('[migrationService] ❌ Error en migración:', error);
     throw error;
   }
 };

@@ -1,10 +1,10 @@
+import logger from '@/utils/logger';
 /**
  * Función utilitaria para inicializar datos offline
  * Se usa en AuthContext y en el botón "Recargar" para asegurar que Edge PWA funcione offline
  */
 import { getCompleteUserCache } from '../services/completeOfflineCache';
 import { getOfflineDatabase } from '../services/offlineDatabase';
-
 /**
  * Inicializa los datos offline asegurándose de que IndexedDB esté listo
  * Esta función es crítica para Edge PWA cuando entra offline directamente
@@ -23,7 +23,7 @@ export const initializeOfflineData = async (userProfile, setUserEmpresas, setUse
     try {
       await getOfflineDatabase();
     } catch (dbError) {
-      console.warn('Error inicializando IndexedDB:', dbError);
+      logger.warn('Error inicializando IndexedDB:', dbError);
       // Continuar con localStorage como fallback
     }
     
@@ -55,7 +55,7 @@ export const initializeOfflineData = async (userProfile, setUserEmpresas, setUse
           }
         }
       } catch (localStorageError) {
-        console.error('Error parseando cache de localStorage:', localStorageError);
+        logger.error('Error parseando cache de localStorage:', localStorageError);
       }
     }
     
@@ -83,7 +83,7 @@ export const initializeOfflineData = async (userProfile, setUserEmpresas, setUse
           return cacheData;
         }
       } catch (indexedDBError) {
-        console.warn('Error cargando desde IndexedDB, intentando localStorage:', indexedDBError.message);
+        logger.warn('Error cargando desde IndexedDB, intentando localStorage:', indexedDBError.message);
       }
     }
     
@@ -114,13 +114,13 @@ export const initializeOfflineData = async (userProfile, setUserEmpresas, setUse
         }
       }
     } catch (localStorageError) {
-      console.error('Error parseando cache de localStorage:', localStorageError);
+      logger.error('Error parseando cache de localStorage:', localStorageError);
     }
     
     return null;
     
   } catch (error) {
-    console.error('Error al inicializar datos offline:', error);
+    logger.error('Error al inicializar datos offline:', error);
     return null;
   }
 };

@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 // src/components/pages/user/OperarioDashboard.jsx
 // Dashboard para Operarios
 import React, { useState, useEffect, useMemo } from "react";
@@ -96,7 +97,7 @@ const OperarioDashboard = () => {
         });
         
       } catch (error) {
-        console.error('Error al cargar auditorías:', error);
+        logger.error('Error al cargar auditorías:', error);
       } finally {
         setLoading(false);
       }

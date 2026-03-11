@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 import React, { useState, useEffect } from 'react';
 import {
   Container,
@@ -104,7 +105,7 @@ export default function AuditoriasManuales() {
 
       setAuditorias(data);
     } catch (err) {
-      console.error('Error al cargar auditorías:', err);
+      logger.error('Error al cargar auditorías:', err);
       setError('Error al cargar las auditorías manuales');
     } finally {
       setLoading(false);
@@ -160,7 +161,7 @@ export default function AuditoriasManuales() {
         showConfirmButton: false
       });
     } catch (err) {
-      console.error('Error al cerrar auditoría:', err);
+      logger.error('Error al cerrar auditoría:', err);
       Swal.fire({
         icon: 'error',
         title: 'Error',
@@ -199,7 +200,7 @@ export default function AuditoriasManuales() {
         showConfirmButton: false
       });
     } catch (err) {
-      console.error('Error al eliminar auditoría:', err);
+      logger.error('Error al eliminar auditoría:', err);
       Swal.fire({
         icon: 'error',
         title: 'Error',

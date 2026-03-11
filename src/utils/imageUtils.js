@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 /**
  * Utilidades unificadas para manejo de imágenes con ControlFile
  * Patrón obligatorio: shareToken en datos, URL en render, base64 en impresión
@@ -23,7 +24,7 @@ export const convertirShareTokenAUrl = (valor) => {
     
     // ⚠️ SOLO para compatibilidad legacy - NO persistir URLs
     if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
-      console.warn('[imageUtils] ⚠️ URL legacy detectada (no persistir):', trimmed);
+      logger.warn('[imageUtils] ⚠️ URL legacy detectada (no persistir):', trimmed);
       return trimmed;
     }
     
@@ -48,7 +49,7 @@ export const convertirImagenADataUrl = async (imageUrl) => {
   try {
     const res = await fetch(imageUrl, { mode: 'cors', credentials: 'omit' });
     if (!res.ok) {
-      console.warn(`[imageUtils] No se pudo cargar imagen: ${imageUrl} (status: ${res.status})`);
+      logger.warn(`[imageUtils] No se pudo cargar imagen: ${imageUrl} (status: ${res.status})`);
       return null;
     }
     
@@ -60,7 +61,7 @@ export const convertirImagenADataUrl = async (imageUrl) => {
       reader.readAsDataURL(blob);
     });
   } catch (error) {
-    console.error(`[imageUtils] Error convirtiendo imagen a base64: ${imageUrl}`, error);
+    logger.error(`[imageUtils] Error convirtiendo imagen a base64: ${imageUrl}`, error);
     return null;
   }
 };

@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 // Función para comprimir imágenes - Optimizada para evitar tildes del sistema
 import logger from '../../../../../utils/logger';
 

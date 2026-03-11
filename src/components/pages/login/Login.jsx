@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 import React, { useState } from 'react';
 import { 
   Box, 
@@ -58,7 +59,7 @@ const Login = () => {
         userCredential = await syncUserToAuth(values.email, values.password);
       } catch (syncError) {
         // Si syncUserToAuth falla, intentar login normal como fallback
-        console.log('[Login] syncUserToAuth falló, intentando login normal...', syncError);
+        logger.debug('[Login] syncUserToAuth falló, intentando login normal...', syncError);
         const result = await onSignIn({ 
           email: values.email, 
           password: values.password 
@@ -69,7 +70,7 @@ const Login = () => {
       handleLogin(userCredential.user);
       navigate("/");
     } catch (error) {
-      console.error('[Login] Error en autenticación:', error);
+      logger.error('[Login] Error en autenticación:', error);
       let errorMessage = 'Correo electrónico o contraseña incorrectos';
       
       if (error.code === 'auth/user-not-found') {

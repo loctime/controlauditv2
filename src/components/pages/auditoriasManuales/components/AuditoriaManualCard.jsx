@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 import React from 'react';
 import {
   Card,
@@ -33,7 +34,7 @@ const AuditoriaManualCard = React.memo(({
   const { userProfile, role } = useAuth(); // Debug
   
   // Debug temporal
-  console.log('Debug AuditoriaManualCard:', {
+  logger.debug('Debug AuditoriaManualCard:', {
     role,
     userProfile: userProfile ? 'exists' : 'null',
     permisos: userProfile?.permisos

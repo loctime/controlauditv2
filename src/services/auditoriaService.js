@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 // src/services/auditoriaService.js
 import { 
   collection, 
@@ -21,28 +22,28 @@ export const auditoriaService = {
   async getUserAuditorias(userId, role, userProfile = null) {
     try {
       if (!userProfile || !userProfile.ownerId) {
-        console.error('[auditoriaService] getUserAuditorias: userProfile.ownerId es requerido');
+        logger.error('[auditoriaService] getUserAuditorias: userProfile.ownerId es requerido');
         return [];
       }
 
       const ownerId = userProfile.ownerId; // ownerId viene del token, no del uid
 
-      console.log('[AUDIT PATH] getUserAuditorias - ownerId usado:', ownerId, '| Role:', role, '| userId:', userId);
+      logger.debug('[AUDIT PATH] getUserAuditorias - ownerId usado:', ownerId, '| Role:', role, '| userId:', userId);
 
       // Leer desde owner-centric: apps/auditoria/owners/{ownerId}/reportes
       const reportesRef = collection(dbAudit, ...firestoreRoutesCore.reportes(ownerId));
-      console.log('[AUDIT PATH] Leyendo desde:', `apps/auditoria/owners/${ownerId}/reportes`);
+      logger.debug('[AUDIT PATH] Leyendo desde:', `apps/auditoria/owners/${ownerId}/reportes`);
       
       const q = query(reportesRef, limit(500));
       const snapshotResult = await getDocs(q);
-      console.log('[AUDIT PATH] Resultado principal:', snapshotResult.size, 'documentos');
+      logger.debug('[AUDIT PATH] Resultado principal:', snapshotResult.size, 'documentos');
       
       return snapshotResult.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       }));
     } catch (error) {
-      console.error("[auditoriaService] Error al obtener auditorías del owner:", error);
+      logger.error("[auditoriaService] Error al obtener auditorías del owner:", error);
       return [];
     }
   },
@@ -51,13 +52,13 @@ export const auditoriaService = {
   async getAuditoriasCompartidas(userId, userProfile = null) {
     try {
       if (!userProfile || !userProfile.ownerId) {
-        console.error('[auditoriaService] getAuditoriasCompartidas: userProfile.ownerId es requerido');
+        logger.error('[auditoriaService] getAuditoriasCompartidas: userProfile.ownerId es requerido');
         return [];
       }
 
       const ownerId = userProfile.ownerId; // ownerId viene del token
 
-      console.log('[auditoriaService] getAuditoriasCompartidas - Inicio query:', {
+      logger.debug('[auditoriaService] getAuditoriasCompartidas - Inicio query:', {
         ownerId,
         userId,
         filtros: 'compartidoCon array-contains userId, límite 200'
@@ -68,14 +69,14 @@ export const auditoriaService = {
       const q = query(reportesRef, where("compartidoCon", "array-contains", userId), limit(200));
       const snapshot = await getDocs(q);
       
-      console.log('[auditoriaService] getAuditoriasCompartidas - resultado:', snapshot.size, 'documentos');
+      logger.debug('[auditoriaService] getAuditoriasCompartidas - resultado:', snapshot.size, 'documentos');
       
       return snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       }));
     } catch (error) {
-      console.error("[auditoriaService] Error al obtener auditorías compartidas:", error);
+      logger.error("[auditoriaService] Error al obtener auditorías compartidas:", error);
       return [];
     }
   },
@@ -89,7 +90,7 @@ export const auditoriaService = {
 
       const ownerId = userProfile.ownerId; // ownerId viene del token
 
-      console.log('[auditoriaService] compartirAuditoria - Inicio:', {
+      logger.debug('[auditoriaService] compartirAuditoria - Inicio:', {
         ownerId,
         auditoriaId,
         emailUsuario,
@@ -107,7 +108,7 @@ export const auditoriaService = {
       
       const usuarioDoc = snapshot.docs[0];
       const usuarioId = usuarioDoc.id;
-      console.log('[auditoriaService] compartirAuditoria - usuario encontrado:', usuarioId);
+      logger.debug('[auditoriaService] compartirAuditoria - usuario encontrado:', usuarioId);
       
       // Actualizar auditoría en owner-centric
       const reportesRef = collection(dbAudit, ...firestoreRoutesCore.reportes(ownerId));
@@ -123,7 +124,7 @@ export const auditoriaService = {
             compartidoCon: [...compartidoCon, usuarioId]
           });
           
-          console.log('[auditoriaService] compartirAuditoria - auditoría actualizada exitosamente');
+          logger.debug('[auditoriaService] compartirAuditoria - auditoría actualizada exitosamente');
           
           await registrarAccionSistema(
             user.uid,
@@ -134,7 +135,7 @@ export const auditoriaService = {
             auditoriaId
           );
         } else {
-          console.log('[auditoriaService] compartirAuditoria - usuario ya está en compartidoCon');
+          logger.debug('[auditoriaService] compartirAuditoria - usuario ya está en compartidoCon');
         }
       } else {
         throw new Error("Auditoría no encontrada");
@@ -142,7 +143,7 @@ export const auditoriaService = {
       
       return true;
     } catch (error) {
-      console.error("[auditoriaService] Error al compartir auditoría:", error);
+      logger.error("[auditoriaService] Error al compartir auditoría:", error);
       throw error;
     }
   },

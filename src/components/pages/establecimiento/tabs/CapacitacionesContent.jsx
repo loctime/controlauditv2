@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
@@ -31,7 +32,7 @@ const CapacitacionesContent = ({ sucursalId, sucursalNombre, navigateToPage }) =
 
     setLoading(true);
     try {
-      console.log('Cargando capacitaciones para sucursal:', sucursalId);
+      logger.debug('Cargando capacitaciones para sucursal:', sucursalId);
       
       const ownerId = userProfile.ownerId;
       let capacitacionesData = [];
@@ -44,15 +45,15 @@ const CapacitacionesContent = ({ sucursalId, sucursalNombre, navigateToPage }) =
           ...doc.data(),
           tipo: 'individual'
         }));
-        console.log('Capacitaciones encontradas con sucursalId:', capacitacionesData.length, capacitacionesData);
+        logger.debug('Capacitaciones encontradas con sucursalId:', capacitacionesData.length, capacitacionesData);
         
         // Si no encuentra capacitaciones específicas de la sucursal, buscar por empresa
         if (capacitacionesData.length === 0) {
-          console.log('No se encontraron capacitaciones específicas de la sucursal, buscando por empresa...');
+          logger.debug('No se encontraron capacitaciones específicas de la sucursal, buscando por empresa...');
           // Aquí necesitaríamos el empresaId, pero por ahora solo mostramos el mensaje
         }
       } catch (capError) {
-        console.log('Error cargando capacitaciones:', capError);
+        logger.debug('Error cargando capacitaciones:', capError);
       }
 
       // Cargar planes anuales - owner-centric
@@ -66,15 +67,15 @@ const CapacitacionesContent = ({ sucursalId, sucursalNombre, navigateToPage }) =
           ...doc.data(),
           tipo: 'plan_anual'
         }));
-        console.log('Planes anuales encontrados:', planesData.length, planesData);
+        logger.debug('Planes anuales encontrados:', planesData.length, planesData);
       } catch (planesError) {
-        console.log('Error con planes_capacitaciones_anuales:', planesError);
+        logger.debug('Error con planes_capacitaciones_anuales:', planesError);
       }
 
       setCapacitaciones(capacitacionesData);
       setPlanesAnuales(planesData);
     } catch (error) {
-      console.error('Error cargando capacitaciones:', error);
+      logger.error('Error cargando capacitaciones:', error);
     } finally {
       setLoading(false);
     }

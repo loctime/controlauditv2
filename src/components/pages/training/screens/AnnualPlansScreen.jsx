@@ -1,8 +1,8 @@
+import logger from '@/utils/logger';
 import React, { useEffect, useState } from 'react';
 import { Alert, Box, Button, CircularProgress, Grid, MenuItem, Paper, Stack, TextField, Typography } from '@mui/material';
 import { useAuth } from '@/components/context/AuthContext';
 import { trainingCatalogService, trainingPlanService } from '../../../../services/training';
-
 export default function AnnualPlansScreen() {
   const { userProfile, userEmpresas = [], userSucursales = [] } = useAuth();
   const ownerId = userProfile?.ownerId;
@@ -47,7 +47,7 @@ export default function AnnualPlansScreen() {
       setPlanItems(itemsData);
       setCatalog(catalogData);
     } catch (err) {
-      console.error('[AnnualPlansScreen] load error', err);
+      logger.error('[AnnualPlansScreen] load error', err);
       setError('No se pudieron cargar los planes y sus items.');
     } finally {
       setLoading(false);

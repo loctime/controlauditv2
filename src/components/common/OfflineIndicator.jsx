@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 import React, { useState, useEffect } from 'react';
 import {
   Box,
@@ -57,7 +58,7 @@ const OfflineIndicator = ({ userProfile }) => {
           setOfflineStats(stats);
           setQueueStats(queue);
         } catch (error) {
-          console.error('Error al obtener estadísticas offline:', error);
+          logger.error('Error al obtener estadísticas offline:', error);
         }
       }
     };
@@ -80,7 +81,7 @@ const OfflineIndicator = ({ userProfile }) => {
           const queue = await syncQueueService.getQueueStats();
           setQueueStats(queue);
         } catch (error) {
-          console.error('Error al actualizar estadísticas:', error);
+          logger.error('Error al actualizar estadísticas:', error);
         }
       } else if (event === 'item_success' || event === 'item_failed') {
         // Actualizar estadísticas cuando un item se procesa
@@ -88,7 +89,7 @@ const OfflineIndicator = ({ userProfile }) => {
           const queue = await syncQueueService.getQueueStats();
           setQueueStats(queue);
         } catch (error) {
-          console.error('Error al actualizar estadísticas:', error);
+          logger.error('Error al actualizar estadísticas:', error);
         }
       }
     });
@@ -102,7 +103,7 @@ const OfflineIndicator = ({ userProfile }) => {
       setIsProcessing(true);
       await syncQueueService.processQueue();
     } catch (error) {
-      console.error('Error en sincronización manual:', error);
+      logger.error('Error en sincronización manual:', error);
     } finally {
       setIsProcessing(false);
     }
@@ -118,7 +119,7 @@ const OfflineIndicator = ({ userProfile }) => {
       const stats = await autoSaveService.getOfflineStats();
       setOfflineStats(stats);
     } catch (error) {
-      console.error('Error al limpiar datos fallidos:', error);
+      logger.error('Error al limpiar datos fallidos:', error);
     }
   };
 

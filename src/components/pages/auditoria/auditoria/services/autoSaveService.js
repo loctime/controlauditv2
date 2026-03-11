@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 import { doc, setDoc, getDoc, deleteDoc, query, where, getDocs, collection } from 'firebase/firestore';
 import { dbAudit } from '../../../../../firebaseControlFile';
 import { firestoreRoutesCore } from '../../../../../core/firestore/firestoreRoutes.core';
@@ -5,7 +6,6 @@ import { getOfflineDatabase, generateOfflineId, checkStorageLimit } from '../../
 import syncQueueService from '../../../../../services/syncQueue';
 import { canWriteToFirestore, isContextComplete } from '../../../../../utils/firestoreWriteCheck';
 import logger from '../../../../../utils/logger';
-
 class AutoSaveService {
   constructor() {
     this.storageKey = 'auditoria_autosave';
@@ -532,7 +532,7 @@ class AutoSaveService {
           
           // ✅ REGLA DE ORO: NO guardar en IndexedDB imágenes que ya tengan fileId
           if (imagen && typeof imagen === 'object' && imagen.fileId) {
-            console.log(`[AutoSaveService] Imagen ya sincronizada, NO guardando en IndexedDB: ${imagen.fileId}`);
+            logger.debug(`[AutoSaveService] Imagen ya sincronizada, NO guardando en IndexedDB: ${imagen.fileId}`);
             continue;
           }
           

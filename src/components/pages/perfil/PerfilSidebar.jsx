@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 import React from 'react';
 import { 
   Paper, 
@@ -31,7 +32,7 @@ const PerfilSidebar = ({ selectedSection, onSelectSection }) => {
   const isSmallMobile = useMediaQuery(theme.breakpoints.down('sm'));
   
   // Log de depuración
-  console.debug('[PerfilSidebar] selectedSection:', selectedSection);
+  logger.debug('[PerfilSidebar] selectedSection:', selectedSection);
   
   if (isMobile) {
     // Vista móvil con Box de MUI

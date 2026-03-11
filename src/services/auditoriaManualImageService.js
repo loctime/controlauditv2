@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 // src/services/auditoriaManualImageService.js
 import { 
   collection, 
@@ -69,7 +70,7 @@ export const auditoriaManualImageService = {
         throw new Error('No se pudo obtener empresaId para la auditoría');
       }
 
-      console.log(`[auditoriaManualImageService] 📤 Subiendo evidencia: auditoriaManual/${auditoriaId}/evidencia`);
+      logger.debug(`[auditoriaManualImageService] 📤 Subiendo evidencia: auditoriaManual/${auditoriaId}/evidencia`);
 
       // Subir archivo usando unifiedFileUploadService
       const result = await uploadFileWithContext({
@@ -107,7 +108,7 @@ export const auditoriaManualImageService = {
       };
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);
-      console.error(`[auditoriaManualImageService] ❌ Error al subir evidencia (${auditoriaId}):`, errorMsg);
+      logger.error(`[auditoriaManualImageService] ❌ Error al subir evidencia (${auditoriaId}):`, errorMsg);
       throw error;
     }
   },
@@ -141,7 +142,7 @@ export const auditoriaManualImageService = {
       const docRef = await addDocWithAppId(evidenciasRef, evidenciaDoc);
       return docRef.id;
     } catch (error) {
-      console.error('❌ Error al agregar metadata de evidencia:', error);
+      logger.error('❌ Error al agregar metadata de evidencia:', error);
       throw error;
     }
   },
@@ -166,7 +167,7 @@ export const auditoriaManualImageService = {
 
       return snapshot.docs.map(doc => normalizeEvidencia(doc));
     } catch (error) {
-      console.error('❌ Error al obtener evidencias:', error);
+      logger.error('❌ Error al obtener evidencias:', error);
       return [];
     }
   },
@@ -194,7 +195,7 @@ export const auditoriaManualImageService = {
 
       return null;
     } catch (error) {
-      console.error('❌ Error al obtener evidencia:', error);
+      logger.error('❌ Error al obtener evidencia:', error);
       return null;
     }
   },
@@ -232,7 +233,7 @@ export const auditoriaManualImageService = {
       // Decrementar contador de evidencias
       await auditoriaManualService.decrementarEvidenciasCount(ownerId, auditoriaId);
     } catch (error) {
-      console.error('❌ Error al eliminar evidencia:', error);
+      logger.error('❌ Error al eliminar evidencia:', error);
       throw error;
     }
   },

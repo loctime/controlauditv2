@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 import React, { useState, useEffect } from 'react';
 import {
   Box,
@@ -30,7 +31,7 @@ const CapacitacionesTab = ({ empresaId, empresaNombre }) => {
 
   const loadCapacitaciones = async () => {
     if (!userProfile?.ownerId) {
-      console.error('Error: userProfile.ownerId es requerido');
+      logger.error('Error: userProfile.ownerId es requerido');
       return;
     }
 
@@ -54,7 +55,7 @@ const CapacitacionesTab = ({ empresaId, empresaNombre }) => {
       }));
       setCapacitaciones(capacitacionesData);
     } catch (error) {
-      console.error('Error cargando capacitaciones:', error);
+      logger.error('Error cargando capacitaciones:', error);
     } finally {
       setLoading(false);
     }

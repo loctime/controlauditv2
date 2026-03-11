@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 import React, { useState } from 'react';
 import {
   Dialog,
@@ -245,7 +246,7 @@ export default function PlanAnualModal({
       onClose();
       
     } catch (error) {
-      console.error('Error creando plan anual:', error);
+      logger.error('Error creando plan anual:', error);
       Swal.fire('Error', 'Error al crear el plan anual', 'error');
     }
   };

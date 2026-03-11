@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 // Templates HTML modulares para reportes de auditoría
 // Funciones helper para generar secciones del reporte
 
@@ -354,8 +355,8 @@ export const generarGraficoPrincipal = (chartImgDataUrl, titulo = 'Gráfico de D
                src="${chartImgDataUrl}" 
                alt="${titulo}" 
                style="max-width: 100%; height: auto; border: 2px solid #3498db; border-radius: 8px; min-height: 200px; display: block;" 
-               onerror="this.style.display='none'; this.nextElementSibling.style.display='block'; console.error('Error cargando imagen del gráfico principal');" 
-               onload="console.log('Imagen del gráfico principal cargada exitosamente');" />
+               onerror="this.style.display='none'; this.nextElementSibling.style.display='block'; logger.error('Error cargando imagen del gráfico principal');" 
+               onload="logger.debug('Imagen del gráfico principal cargada exitosamente');" />
           <div style="display: none; border: 2px dashed #e74c3c; padding: 20px; text-align: center; background: #fff5f5; min-height: 200px;">
             <p style="color: #e74c3c; font-weight: bold; margin: 0;">⚠️ GRÁFICO NO DISPONIBLE</p>
             <p style="color: #7f8c8d; font-size: 12px; margin: 5px 0 0 0;">Error al cargar la imagen del gráfico</p>
@@ -407,7 +408,7 @@ export const generarSeccion = ({
               alt="Sección ${sIdx+1}" 
               style="max-width: 300px; height: auto; border-radius: 4px; border: 1px solid #3498db;"
               onerror="this.style.display='none'; this.nextElementSibling.style.display='block';"
-              onload="console.log('Imagen de sección ${sIdx+1} cargada exitosamente');" />
+              onload="logger.debug('Imagen de sección ${sIdx+1} cargada exitosamente');" />
          <div style="display: none; border: 2px dashed #e74c3c; padding: 10px; text-align: center; background: #fff5f5; margin: 10px 0;">
            <p style="color: #e74c3c; font-weight: bold; margin: 0; font-size: 12px;">⚠️ GRÁFICO SECCIÓN ${sIdx+1} NO DISPONIBLE</p>
          </div>

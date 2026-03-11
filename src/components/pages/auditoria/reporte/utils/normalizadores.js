@@ -1,7 +1,7 @@
+import logger from '@/utils/logger';
 // Utilidades de normalización para reportes de auditoría
 // Funciones extraídas de ReporteDetallePro.jsx para mejorar mantenibilidad
 import { convertirShareTokenAUrl } from '@/utils/imageUtils';
-
 // Normaliza respuestas a array de arrays de strings
 export const normalizarRespuestas = (res) => {
   if (!Array.isArray(res)) {
@@ -35,42 +35,42 @@ export const normalizarRespuestas = (res) => {
 
 // Normaliza empresa
 export const normalizarEmpresa = (empresa) => {
-  console.debug('[normalizarEmpresa] entrada:', empresa);
+  logger.debug('[normalizarEmpresa] entrada:', empresa);
   
   if (empresa && typeof empresa === "object" && empresa.nombre) {
-    console.debug('[normalizarEmpresa] objeto con nombre:', empresa);
+    logger.debug('[normalizarEmpresa] objeto con nombre:', empresa);
     return empresa;
   }
   
   if (typeof empresa === "string" && empresa.trim()) {
-    console.debug('[normalizarEmpresa] string válido:', empresa);
+    logger.debug('[normalizarEmpresa] string válido:', empresa);
     return { nombre: empresa.trim() };
   }
   
-  console.debug('[normalizarEmpresa] fallback a vacío');
+  logger.debug('[normalizarEmpresa] fallback a vacío');
   return { nombre: "Empresa no disponible" };
 };
 
 // Normaliza formulario
 export const normalizarFormulario = (formulario, nombreForm) => {
-  console.debug('[normalizarFormulario] formulario:', formulario, 'nombreForm:', nombreForm);
+  logger.debug('[normalizarFormulario] formulario:', formulario, 'nombreForm:', nombreForm);
   
   if (formulario && typeof formulario === "object" && formulario.nombre) {
-    console.debug('[normalizarFormulario] objeto con nombre:', formulario);
+    logger.debug('[normalizarFormulario] objeto con nombre:', formulario);
     return formulario;
   }
   
   if (nombreForm && nombreForm.trim()) {
-    console.debug('[normalizarFormulario] usando nombreForm:', nombreForm);
+    logger.debug('[normalizarFormulario] usando nombreForm:', nombreForm);
     return { nombre: nombreForm.trim() };
   }
   
   if (typeof formulario === "string" && formulario.trim()) {
-    console.debug('[normalizarFormulario] string válido:', formulario);
+    logger.debug('[normalizarFormulario] string válido:', formulario);
     return { nombre: formulario.trim() };
   }
   
-  console.debug('[normalizarFormulario] fallback a vacío');
+  logger.debug('[normalizarFormulario] fallback a vacío');
   return { nombre: "Formulario no disponible" };
 };
 
@@ -78,39 +78,39 @@ export const normalizarFormulario = (formulario, nombreForm) => {
 
 // Normaliza imagenes: array de objetos {seccion, valores: [ ... ]} a array de arrays de urls
 export const normalizarImagenes = (imagenesFirestore, secciones) => {
-  console.debug('[normalizarImagenes] imagenesFirestore:', imagenesFirestore);
-  console.debug('[normalizarImagenes] secciones:', secciones);
+  logger.debug('[normalizarImagenes] imagenesFirestore:', imagenesFirestore);
+  logger.debug('[normalizarImagenes] secciones:', secciones);
   
   if (!Array.isArray(imagenesFirestore)) {
-    console.debug('[normalizarImagenes] imagenesFirestore no es array, retornando array vacío');
+    logger.debug('[normalizarImagenes] imagenesFirestore no es array, retornando array vacío');
     return secciones.map(() => []);
   }
   
   // Si es array de objetos {seccion, valores}
   if (imagenesFirestore.length > 0 && imagenesFirestore[0] && typeof imagenesFirestore[0] === 'object' && Array.isArray(imagenesFirestore[0].valores)) {
-    console.debug('[normalizarImagenes] Procesando formato de objetos por sección');
+    logger.debug('[normalizarImagenes] Procesando formato de objetos por sección');
     const resultado = secciones.map((_, idx) => {
       const imgSec = imagenesFirestore.find(img => img.seccion === idx);
-      console.debug(`[normalizarImagenes] Sección ${idx}, imgSec:`, imgSec);
+      logger.debug(`[normalizarImagenes] Sección ${idx}, imgSec:`, imgSec);
       
       if (!imgSec || !Array.isArray(imgSec.valores)) {
-        console.debug(`[normalizarImagenes] Sección ${idx} no tiene valores válidos`);
+        logger.debug(`[normalizarImagenes] Sección ${idx} no tiene valores válidos`);
         return [];
       }
       
       const imagenesSeccion = imgSec.valores.map(val => {
-        console.debug(`[normalizarImagenes] Procesando valor:`, val);
+        logger.debug(`[normalizarImagenes] Procesando valor:`, val);
         
         // ✅ PRIORIDAD 1: Si es un objeto con shareToken, construir URL persistente
         if (val && typeof val === "object" && val.shareToken) {
           const url = `https://files.controldoc.app/api/shares/${val.shareToken}/image`;
-          console.debug(`[normalizarImagenes] Encontrado shareToken en objeto, URL: ${url}`);
+          logger.debug(`[normalizarImagenes] Encontrado shareToken en objeto, URL: ${url}`);
           return url;
         }
         
         // ⚠️ COMPATIBILIDAD: Si es un objeto con URL válida (datos antiguos)
         if (val && typeof val === "object" && val.url && typeof val.url === 'string') {
-          console.debug(`[normalizarImagenes] Encontrada URL en objeto: ${val.url}`);
+          logger.debug(`[normalizarImagenes] Encontrada URL en objeto: ${val.url}`);
           return val.url;
         } 
         
@@ -118,37 +118,37 @@ export const normalizarImagenes = (imagenesFirestore, secciones) => {
         if (typeof val === "string") {
           const urlConvertida = convertirShareTokenAUrl(val);
           if (urlConvertida) {
-            console.debug(`[normalizarImagenes] String convertido a URL: ${urlConvertida}`);
+            logger.debug(`[normalizarImagenes] String convertido a URL: ${urlConvertida}`);
             return urlConvertida;
           }
         } 
         
         // Si es "[object Object]", es una imagen corrupta
         else if (typeof val === "string" && val === '[object Object]') {
-          console.warn(`[normalizarImagenes] Imagen corrupta "[object Object]" detectada`);
+          logger.warn(`[normalizarImagenes] Imagen corrupta "[object Object]" detectada`);
           return "";
         } 
         
         // Cualquier otro caso
         else {
-          console.debug(`[normalizarImagenes] Valor no válido:`, val);
+          logger.debug(`[normalizarImagenes] Valor no válido:`, val);
           return "";
         }
       });
       
-      console.debug(`[normalizarImagenes] Imágenes de sección ${idx}:`, imagenesSeccion);
+      logger.debug(`[normalizarImagenes] Imágenes de sección ${idx}:`, imagenesSeccion);
       return imagenesSeccion;
     });
     
-    console.debug('[normalizarImagenes] Resultado final:', resultado);
+    logger.debug('[normalizarImagenes] Resultado final:', resultado);
     return resultado;
   }
   
   // Si es array de arrays (formato clásico)
   if (Array.isArray(imagenesFirestore[0])) {
-    console.debug('[normalizarImagenes] Procesando formato de arrays anidados');
+    logger.debug('[normalizarImagenes] Procesando formato de arrays anidados');
     const resultado = imagenesFirestore.map((seccionImagenes, idx) => {
-      console.debug(`[normalizarImagenes] Procesando sección ${idx}:`, seccionImagenes);
+      logger.debug(`[normalizarImagenes] Procesando sección ${idx}:`, seccionImagenes);
       if (!Array.isArray(seccionImagenes)) return [];
       
       return seccionImagenes.map(img => {
@@ -169,16 +169,16 @@ export const normalizarImagenes = (imagenesFirestore, secciones) => {
       });
     });
     
-    console.debug('[normalizarImagenes] Resultado final (formato clásico):', resultado);
+    logger.debug('[normalizarImagenes] Resultado final (formato clásico):', resultado);
     return resultado;
   }
   
   // Si es un objeto plano con claves numéricas
   if (imagenesFirestore.length > 0 && typeof imagenesFirestore[0] === 'object' && !Array.isArray(imagenesFirestore[0])) {
-    console.debug('[normalizarImagenes] Procesando formato de objeto plano');
+    logger.debug('[normalizarImagenes] Procesando formato de objeto plano');
     const resultado = secciones.map((_, idx) => {
       const seccionImagenes = imagenesFirestore[idx];
-      console.debug(`[normalizarImagenes] Sección ${idx} del objeto plano:`, seccionImagenes);
+      logger.debug(`[normalizarImagenes] Sección ${idx} del objeto plano:`, seccionImagenes);
       
       if (!seccionImagenes) return [];
       
@@ -222,12 +222,12 @@ export const normalizarImagenes = (imagenesFirestore, secciones) => {
       return [];
     });
     
-    console.debug('[normalizarImagenes] Resultado final (objeto plano):', resultado);
+    logger.debug('[normalizarImagenes] Resultado final (objeto plano):', resultado);
     return resultado;
   }
   
   // Fallback clásico
-  console.debug('[normalizarImagenes] Usando fallback, retornando arrays vacíos');
+  logger.debug('[normalizarImagenes] Usando fallback, retornando arrays vacíos');
   return secciones.map(() => []);
 };
 
@@ -248,16 +248,16 @@ export const normalizarComentarios = (comentariosFirestore, secciones) => {
 
 // Normaliza fecha desde diferentes formatos de Firestore
 export const normalizarFecha = (reporte) => {
-  console.debug('[normalizarFecha] reporte.fecha:', reporte.fecha);
-  console.debug('[normalizarFecha] reporte.fechaGuardado:', reporte.fechaGuardado);
-  console.debug('[normalizarFecha] reporte.timestamp:', reporte.timestamp);
-  console.debug('[normalizarFecha] reporte.fechaCreacion:', reporte.fechaCreacion);
-  console.debug('[normalizarFecha] reporte.fechaActualizacion:', reporte.fechaActualizacion);
+  logger.debug('[normalizarFecha] reporte.fecha:', reporte.fecha);
+  logger.debug('[normalizarFecha] reporte.fechaGuardado:', reporte.fechaGuardado);
+  logger.debug('[normalizarFecha] reporte.timestamp:', reporte.timestamp);
+  logger.debug('[normalizarFecha] reporte.fechaCreacion:', reporte.fechaCreacion);
+  logger.debug('[normalizarFecha] reporte.fechaActualizacion:', reporte.fechaActualizacion);
   
   // Intentar con reporte.fecha (Timestamp de Firestore)
   if (reporte.fecha && reporte.fecha.seconds) {
     const fechaTimestamp = new Date(reporte.fecha.seconds * 1000);
-    console.debug('[normalizarFecha] usando reporte.fecha:', fechaTimestamp);
+    logger.debug('[normalizarFecha] usando reporte.fecha:', fechaTimestamp);
     return fechaTimestamp.toLocaleDateString('es-ES');
   }
   
@@ -266,18 +266,18 @@ export const normalizarFecha = (reporte) => {
     try {
       const fechaGuardado = new Date(reporte.fechaGuardado);
       if (!isNaN(fechaGuardado.getTime())) {
-        console.debug('[normalizarFecha] usando reporte.fechaGuardado:', fechaGuardado);
+        logger.debug('[normalizarFecha] usando reporte.fechaGuardado:', fechaGuardado);
         return fechaGuardado.toLocaleDateString('es-ES');
       }
     } catch (error) {
-      console.error('[normalizarFecha] error parseando fechaGuardado:', error);
+      logger.error('[normalizarFecha] error parseando fechaGuardado:', error);
     }
   }
   
   // Intentar con reporte.timestamp
   if (reporte.timestamp && reporte.timestamp.seconds) {
     const fechaTimestamp = new Date(reporte.timestamp.seconds * 1000);
-    console.debug('[normalizarFecha] usando reporte.timestamp:', fechaTimestamp);
+    logger.debug('[normalizarFecha] usando reporte.timestamp:', fechaTimestamp);
     return fechaTimestamp.toLocaleDateString('es-ES');
   }
   
@@ -286,11 +286,11 @@ export const normalizarFecha = (reporte) => {
     try {
       const fechaCreacion = new Date(reporte.fechaCreacion);
       if (!isNaN(fechaCreacion.getTime())) {
-        console.debug('[normalizarFecha] usando reporte.fechaCreacion:', fechaCreacion);
+        logger.debug('[normalizarFecha] usando reporte.fechaCreacion:', fechaCreacion);
         return fechaCreacion.toLocaleDateString('es-ES');
       }
     } catch (error) {
-      console.error('[normalizarFecha] error parseando fechaCreacion:', error);
+      logger.error('[normalizarFecha] error parseando fechaCreacion:', error);
     }
   }
   
@@ -299,23 +299,23 @@ export const normalizarFecha = (reporte) => {
     try {
       const fechaActualizacion = new Date(reporte.fechaActualizacion);
       if (!isNaN(fechaActualizacion.getTime())) {
-        console.debug('[normalizarFecha] usando reporte.fechaActualizacion:', fechaActualizacion);
+        logger.debug('[normalizarFecha] usando reporte.fechaActualizacion:', fechaActualizacion);
         return fechaActualizacion.toLocaleDateString('es-ES');
       }
     } catch (error) {
-      console.error('[normalizarFecha] error parseando fechaActualizacion:', error);
+      logger.error('[normalizarFecha] error parseando fechaActualizacion:', error);
     }
   }
   
-  console.debug('[normalizarFecha] fallback a fecha actual');
+  logger.debug('[normalizarFecha] fallback a fecha actual');
   return new Date().toLocaleDateString('es-ES');
 };
 
 // Normaliza empresa usando todos los campos disponibles del reporte
 export const normalizarEmpresaCompleta = (reporte) => {
-  console.debug('[normalizarEmpresa] reporte.empresa:', reporte.empresa);
-  console.debug('[normalizarEmpresa] reporte.empresaId:', reporte.empresaId);
-  console.debug('[normalizarEmpresa] reporte.empresaNombre:', reporte.empresaNombre);
+  logger.debug('[normalizarEmpresa] reporte.empresa:', reporte.empresa);
+  logger.debug('[normalizarEmpresa] reporte.empresaId:', reporte.empresaId);
+  logger.debug('[normalizarEmpresa] reporte.empresaNombre:', reporte.empresaNombre);
   
   // Si tenemos objeto completo
   if (reporte.empresa && typeof reporte.empresa === "object" && reporte.empresa.nombre) {
@@ -342,12 +342,12 @@ export const normalizarEmpresaCompleta = (reporte) => {
 
 // Normaliza clasificaciones: array de objetos {seccion, valores: [ ... ]} a array de arrays de objetos { condicion: boolean, actitud: boolean }
 export const normalizarClasificaciones = (clasificacionesFirestore, secciones) => {
-  console.log('🔍 [normalizarClasificaciones] clasificacionesFirestore:', clasificacionesFirestore);
-  console.log('🔍 [normalizarClasificaciones] Tipo:', typeof clasificacionesFirestore, Array.isArray(clasificacionesFirestore));
-  console.log('🔍 [normalizarClasificaciones] secciones:', secciones);
+  logger.debug('🔍 [normalizarClasificaciones] clasificacionesFirestore:', clasificacionesFirestore);
+  logger.debug('🔍 [normalizarClasificaciones] Tipo:', typeof clasificacionesFirestore, Array.isArray(clasificacionesFirestore));
+  logger.debug('🔍 [normalizarClasificaciones] secciones:', secciones);
   
   if (!clasificacionesFirestore || (Array.isArray(clasificacionesFirestore) && clasificacionesFirestore.length === 0)) {
-    console.debug('[normalizarClasificaciones] No hay clasificaciones o array vacío, retornando arrays con valores por defecto');
+    logger.debug('[normalizarClasificaciones] No hay clasificaciones o array vacío, retornando arrays con valores por defecto');
     return secciones.map((seccion) => 
       Array(seccion?.preguntas?.length || 0).fill({ condicion: false, actitud: false })
     );
@@ -375,7 +375,7 @@ export const normalizarClasificaciones = (clasificacionesFirestore, secciones) =
   
   // Si es array de objetos {seccion, valores}
   if (clasificacionesFirestore.length > 0 && clasificacionesFirestore[0] && typeof clasificacionesFirestore[0] === 'object' && clasificacionesFirestore[0].seccion !== undefined && Array.isArray(clasificacionesFirestore[0].valores)) {
-    console.debug('[normalizarClasificaciones] Procesando formato de objetos por sección');
+    logger.debug('[normalizarClasificaciones] Procesando formato de objetos por sección');
     return secciones.map((_, idx) => {
       const clasSec = clasificacionesFirestore.find(clas => clas.seccion === idx || clas.seccion === idx.toString());
       if (!clasSec || !Array.isArray(clasSec.valores)) {
@@ -395,7 +395,7 @@ export const normalizarClasificaciones = (clasificacionesFirestore, secciones) =
   
   // Si es array de arrays (formato clásico)
   if (clasificacionesFirestore.length > 0 && Array.isArray(clasificacionesFirestore[0])) {
-    console.debug('[normalizarClasificaciones] Procesando formato de arrays anidados');
+    logger.debug('[normalizarClasificaciones] Procesando formato de arrays anidados');
     return clasificacionesFirestore.map((seccionClasificaciones) => {
       if (!Array.isArray(seccionClasificaciones)) {
         return [];
@@ -413,7 +413,7 @@ export const normalizarClasificaciones = (clasificacionesFirestore, secciones) =
   }
   
   // Fallback: retornar arrays vacíos con valores por defecto
-  console.debug('[normalizarClasificaciones] Usando fallback');
+  logger.debug('[normalizarClasificaciones] Usando fallback');
   return secciones.map((seccion) => 
     Array(seccion?.preguntas?.length || 0).fill({ condicion: false, actitud: false })
   );
@@ -421,10 +421,10 @@ export const normalizarClasificaciones = (clasificacionesFirestore, secciones) =
 
 // Normaliza formulario usando todos los campos disponibles del reporte
 export const normalizarFormularioCompleto = (reporte) => {
-  console.debug('[normalizarFormulario] reporte.formulario:', reporte.formulario);
-  console.debug('[normalizarFormulario] reporte.formularioId:', reporte.formularioId);
-  console.debug('[normalizarFormulario] reporte.formularioNombre:', reporte.formularioNombre);
-  console.debug('[normalizarFormulario] reporte.nombreForm:', reporte.nombreForm);
+  logger.debug('[normalizarFormulario] reporte.formulario:', reporte.formulario);
+  logger.debug('[normalizarFormulario] reporte.formularioId:', reporte.formularioId);
+  logger.debug('[normalizarFormulario] reporte.formularioNombre:', reporte.formularioNombre);
+  logger.debug('[normalizarFormulario] reporte.nombreForm:', reporte.nombreForm);
   
   // Si tenemos objeto completo
   if (reporte.formulario && typeof reporte.formulario === "object" && reporte.formulario.nombre) {

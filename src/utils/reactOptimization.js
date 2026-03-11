@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 // Optimización de importaciones de React
 // Importar solo los componentes necesarios para reducir el tamaño del bundle
 
@@ -99,7 +100,7 @@ export const reactUtils = {
       }
       
       componentDidCatch(error, errorInfo) {
-        console.error('Error caught by boundary:', error, errorInfo);
+        logger.error('Error caught by boundary:', error, errorInfo);
       }
       
       render() {
@@ -206,7 +207,7 @@ export const hookUtils = {
         const item = window.localStorage.getItem(key);
         return item ? JSON.parse(item) : initialValue;
       } catch (error) {
-        console.error(error);
+        logger.error(error);
         return initialValue;
       }
     });
@@ -217,7 +218,7 @@ export const hookUtils = {
         setStoredValue(valueToStore);
         window.localStorage.setItem(key, JSON.stringify(valueToStore));
       } catch (error) {
-        console.error(error);
+        logger.error(error);
       }
     };
     
@@ -233,7 +234,7 @@ export const hookUtils = {
         const item = window.sessionStorage.getItem(key);
         return item ? JSON.parse(item) : initialValue;
       } catch (error) {
-        console.error(error);
+        logger.error(error);
         return initialValue;
       }
     });
@@ -244,7 +245,7 @@ export const hookUtils = {
         setStoredValue(valueToStore);
         window.sessionStorage.setItem(key, JSON.stringify(valueToStore));
       } catch (error) {
-        console.error(error);
+        logger.error(error);
       }
     };
     

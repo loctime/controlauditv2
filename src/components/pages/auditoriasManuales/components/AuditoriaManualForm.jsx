@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 import React, { useState, useEffect } from 'react';
 import {
   Dialog,
@@ -163,7 +164,7 @@ export default function AuditoriaManualForm({
       onSave();
       onClose();
     } catch (err) {
-      console.error('Error al guardar auditoría:', err);
+      logger.error('Error al guardar auditoría:', err);
       setError(err.message || 'Error al guardar la auditoría');
     } finally {
       setLoading(false);

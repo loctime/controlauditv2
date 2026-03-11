@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 import React, { useState, useEffect } from 'react';
 import {
   Dialog,
@@ -95,7 +96,7 @@ const EditarAccidenteModal = ({
       const empleadosData = await obtenerEmpleadosPorSucursal(accidente.sucursalId, userProfile);
       setEmpleados(empleadosData);
     } catch (err) {
-      console.error('Error cargando empleados:', err);
+      logger.error('Error cargando empleados:', err);
       setError('Error al cargar empleados');
     } finally {
       setLoadingEmpleados(false);
@@ -201,7 +202,7 @@ const EditarAccidenteModal = ({
       await onGuardar(accidente.id, datosActualizados, imagenesNuevas);
       onClose();
     } catch (err) {
-      console.error('Error al actualizar:', err);
+      logger.error('Error al actualizar:', err);
       setError('Error al actualizar el registro');
     } finally {
       setLoading(false);

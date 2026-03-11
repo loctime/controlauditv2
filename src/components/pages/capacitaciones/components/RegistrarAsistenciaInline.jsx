@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 import React, { useState, useEffect, useRef } from 'react';
 import {
   Box,
@@ -141,7 +142,7 @@ export default function RegistrarAsistenciaInline({
         }
       });
     } catch (error) {
-      console.error('Error al cargar datos:', error);
+      logger.error('Error al cargar datos:', error);
       setError('Error al cargar los datos');
     } finally {
       setLoading(false);
@@ -237,7 +238,7 @@ export default function RegistrarAsistenciaInline({
         loadImageAsBlob(result.fileId, result.shareToken);
         URL.revokeObjectURL(previewURL);
       } catch (err) {
-        console.error('Error al subir imagen:', err);
+        logger.error('Error al subir imagen:', err);
         setError(`Error al subir ${file.name}: ${err.message}`);
         setImagenes(prev => prev.filter(img => img.id !== tempId));
         URL.revokeObjectURL(previewURL);
@@ -281,7 +282,7 @@ export default function RegistrarAsistenciaInline({
         return newMap;
       });
     } catch (error) {
-      console.error(`Error cargando imagen ${imageId}:`, error);
+      logger.error(`Error cargando imagen ${imageId}:`, error);
       const fallbackUrl = convertirShareTokenAUrl(shareToken);
       if (fallbackUrl) {
         blobUrlsRef.current.set(imageId, fallbackUrl);
@@ -365,7 +366,7 @@ export default function RegistrarAsistenciaInline({
       }
 
     } catch (e) {
-      console.error(e);
+      logger.error(e);
       alert(e.message);
     } finally {
       setSaving(false);

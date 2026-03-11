@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   Alert,
@@ -72,7 +73,7 @@ export default function CertificatesScreen() {
       setSessions(sess);
       setCertificates(merged);
     } catch (err) {
-      console.error('[CertificatesScreen] load error', err);
+      logger.error('[CertificatesScreen] load error', err);
       setError(err.message || 'No se pudieron cargar los certificados.');
     }
   };
@@ -148,7 +149,7 @@ export default function CertificatesScreen() {
               </TextField>
               <TextField select label="Sesion" value={form.sessionId} onChange={(e) => setForm({ ...form, sessionId: e.target.value })}>
                 {sessions.map((session) => (
-                  <MenuItem key={session.id} value={session.id}>{trainingMap[session.trainingTypeId]?.name || 'Sin dato'} · {userSucursales.find((branch) => branch.id === session.branchId)?.nombre || 'Sin dato'}</MenuItem>
+                  <MenuItem key={session.id} value={session.id}>{trainingMap[session.trainingTypeId]?.name || 'Sin dato'} ï¿½ {userSucursales.find((branch) => branch.id === session.branchId)?.nombre || 'Sin dato'}</MenuItem>
                 ))}
               </TextField>
               <TextField type="date" label="Fecha de emision" InputLabelProps={{ shrink: true }} value={form.issuedAt} onChange={(e) => setForm({ ...form, issuedAt: e.target.value })} />

@@ -1,8 +1,8 @@
+import logger from '@/utils/logger';
   import { useState, useCallback } from 'react';
   import * as XLSX from 'xlsx';
   import { Timestamp } from 'firebase/firestore';
   import { empleadoService } from '../../../../services/empleadoService';
-
   /**
    * Sinónimos y variantes de encabezados esperados
    */
@@ -687,7 +687,7 @@
 
         return savedCount;
       } catch (error) {
-        console.error('Error al guardar empleados:', error);
+        logger.error('Error al guardar empleados:', error);
         throw error;
       } finally {
         setLoading(false);

@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 import React, {
   useState,
   useMemo,
@@ -441,7 +442,7 @@ export default function DashboardSeguridadV2() {
         try {
           parsed = JSON.parse(parsed);
         } catch (error) {
-          console.warn("No se pudieron parsear las clasificaciones de auditoría:", error);
+          logger.warn("No se pudieron parsear las clasificaciones de auditoría:", error);
           return [];
         }
       }
@@ -646,7 +647,7 @@ export default function DashboardSeguridadV2() {
         alertas,
         opciones: reportOptions,
         onProgress: (progress) => {
-          console.log(`Generando reporte: ${progress}%`);
+          logger.debug(`Generando reporte: ${progress}%`);
         },
         // Nuevos parámetros para secciones adicionales
         targetsProgresos,
@@ -666,7 +667,7 @@ export default function DashboardSeguridadV2() {
       toast.dismiss(loadingToastId);
       toast.success("✅ Reporte PDF generado exitosamente");
     } catch (error) {
-      console.error("Error al generar reporte:", error);
+      logger.error("Error al generar reporte:", error);
       toast.dismiss();
       toast.error("❌ Error al generar el reporte. Intenta nuevamente.");
     } finally {

@@ -1,6 +1,6 @@
+import logger from '@/utils/logger';
 import { useState, useEffect, useCallback } from 'react';
 import { auditoriaManualService } from '../../../../services/auditoriaManualService';
-
 /**
  * Hook para cargar auditorías manuales en el dashboard (cantidad y lista con nombres).
  * Respeta filtros de empresa/sucursal y opcionalmente año/mes.
@@ -38,7 +38,7 @@ export function useAuditoriasManualesDashboard({
       const data = await auditoriaManualService.obtenerAuditoriasManuales(ownerId, filters);
       setAuditoriasManuales(Array.isArray(data) ? data : []);
     } catch (err) {
-      console.error('Error cargando auditorías manuales para dashboard:', err);
+      logger.error('Error cargando auditorías manuales para dashboard:', err);
       setAuditoriasManuales([]);
     } finally {
       setLoading(false);

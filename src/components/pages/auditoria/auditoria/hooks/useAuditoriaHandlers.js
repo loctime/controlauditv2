@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 import { useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';

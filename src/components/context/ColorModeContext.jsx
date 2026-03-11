@@ -1,6 +1,5 @@
 import React, { createContext, useMemo, useState, useContext, useEffect } from 'react';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
-
 // Contexto para el modo de color
 const ColorModeContext = createContext({ toggleColorMode: () => {}, mode: 'light' });
 
@@ -20,8 +19,6 @@ export const ColorModeProvider = ({ children }) => {
 
   useEffect(() => {
     localStorage.setItem('colorMode', mode);
-    // Debug log
-    console.debug('[ColorMode] Modo actual:', mode);
     if (typeof document !== 'undefined') {
       document.body.setAttribute('data-theme', mode);
     }

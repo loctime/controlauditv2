@@ -1,10 +1,10 @@
+import logger from '@/utils/logger';
 import React, { useState, useEffect } from "react";
 import { Button, TextField, Grid, Typography, Box, MenuItem, FormControl, InputLabel, Select, Paper, Alert, CircularProgress } from "@mui/material";
 import { db } from "../../../firebaseControlFile";
 import { getDocs, collection, query, where } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from '@/components/context/AuthContext';
-
 const SucursalForm = ({ agregarSucursal, empresaId }) => {
   const [empresas, setEmpresas] = useState([]);
   const [empresaSeleccionada, setEmpresaSeleccionada] = useState(null);
@@ -57,7 +57,7 @@ const SucursalForm = ({ agregarSucursal, empresaId }) => {
         }
         
       } catch (error) {
-        console.error("[SucursalForm] Error al obtener empresas:", error);
+        logger.error("[SucursalForm] Error al obtener empresas:", error);
         setError("Error al cargar las empresas: " + error.message);
       } finally {
         setLoading(false);

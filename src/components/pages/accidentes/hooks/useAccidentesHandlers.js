@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 import { useCallback } from 'react';
 import {
   crearAccidente,
@@ -26,7 +27,7 @@ export const useAccidentesHandlers = (userProfile, recargarAccidentes) => {
       Swal.fire('Éxito', 'Accidente reportado correctamente', 'success');
       recargarAccidentes();
     } catch (error) {
-      console.error('Error creando accidente:', error);
+      logger.error('Error creando accidente:', error);
       throw error;
     }
   }, [userProfile, recargarAccidentes]);
@@ -45,7 +46,7 @@ export const useAccidentesHandlers = (userProfile, recargarAccidentes) => {
       Swal.fire('Éxito', 'Incidente reportado correctamente', 'success');
       recargarAccidentes();
     } catch (error) {
-      console.error('Error creando incidente:', error);
+      logger.error('Error creando incidente:', error);
       throw error;
     }
   }, [userProfile, recargarAccidentes]);
@@ -67,7 +68,7 @@ export const useAccidentesHandlers = (userProfile, recargarAccidentes) => {
         recargarAccidentes();
       }
     } catch (error) {
-      console.error('Error actualizando estado:', error);
+      logger.error('Error actualizando estado:', error);
       Swal.fire('Error', 'No se pudo actualizar el estado', 'error');
     }
   }, [recargarAccidentes, userProfile]);
@@ -97,7 +98,7 @@ export const useAccidentesHandlers = (userProfile, recargarAccidentes) => {
         recargarAccidentes();
       }
     } catch (error) {
-      console.error('Error eliminando accidente:', error);
+      logger.error('Error eliminando accidente:', error);
       Swal.fire('Error', 'No se pudo eliminar el registro', 'error');
     }
   }, [recargarAccidentes, userProfile]);
@@ -108,7 +109,7 @@ export const useAccidentesHandlers = (userProfile, recargarAccidentes) => {
       Swal.fire('Éxito', 'Accidente actualizado correctamente', 'success');
       recargarAccidentes();
     } catch (error) {
-      console.error('Error actualizando accidente:', error);
+      logger.error('Error actualizando accidente:', error);
       Swal.fire('Error', 'No se pudo actualizar el registro', 'error');
       throw error;
     }

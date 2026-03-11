@@ -1,5 +1,5 @@
+import logger from '@/utils/logger';
 import { useCallback } from 'react';
-
 /**
  * Hook para manejar cache offline IndexedDB
  * Compatible con Chrome y Edge
@@ -21,7 +21,7 @@ export const useOfflineCache = () => {
               if (!db.objectStoreNames.contains('settings')) {
                 // Si no hay object store, intentar localStorage (Chrome)
                 if (isChrome) {
-                  console.log('📦 [Chrome] IndexedDB sin settings, intentando localStorage...');
+                  logger.debug('📦 [Chrome] IndexedDB sin settings, intentando localStorage...');
                   const localCache = localStorage.getItem('complete_user_cache');
                   if (localCache) {
                     try {
@@ -48,7 +48,7 @@ export const useOfflineCache = () => {
                 } else {
                   // Fallback a localStorage si IndexedDB está vacío (especialmente en Chrome)
                   if (isChrome) {
-                    console.log('📦 [Chrome] IndexedDB vacío, intentando localStorage...');
+                    logger.debug('📦 [Chrome] IndexedDB vacío, intentando localStorage...');
                     const localCache = localStorage.getItem('complete_user_cache');
                     if (localCache) {
                       try {
@@ -66,10 +66,10 @@ export const useOfflineCache = () => {
               };
               
               store.get('complete_user_cache').onerror = function(error) {
-                console.warn('⚠️ Error leyendo desde IndexedDB store:', error);
+                logger.warn('⚠️ Error leyendo desde IndexedDB store:', error);
                 // Si falla IndexedDB, intentar localStorage (Chrome)
                 if (isChrome) {
-                  console.log('📦 [Chrome] Error en IndexedDB, usando localStorage...');
+                  logger.debug('📦 [Chrome] Error en IndexedDB, usando localStorage...');
                   const localCache = localStorage.getItem('complete_user_cache');
                   if (localCache) {
                     try {
@@ -88,7 +88,7 @@ export const useOfflineCache = () => {
             request.onerror = function(event) {
               // Si IndexedDB falla completamente, usar localStorage (Chrome)
               if (isChrome) {
-                console.log('📦 [Chrome] IndexedDB no disponible, usando localStorage...');
+                logger.debug('📦 [Chrome] IndexedDB no disponible, usando localStorage...');
                 const localCache = localStorage.getItem('complete_user_cache');
                 if (localCache) {
                   try {
@@ -106,21 +106,21 @@ export const useOfflineCache = () => {
           });
           
           if (cachedUser) {
-            console.log('✅ Cache cargado desde IndexedDB');
+            logger.debug('✅ Cache cargado desde IndexedDB');
             return cachedUser;
           }
         } catch (indexedDBError) {
-          console.warn('⚠️ Error en IndexedDB, intentando localStorage:', indexedDBError);
+          logger.warn('⚠️ Error en IndexedDB, intentando localStorage:', indexedDBError);
           // Si IndexedDB falla, intentar localStorage (especialmente útil en Chrome)
           if (isChrome) {
             const localCache = localStorage.getItem('complete_user_cache');
             if (localCache) {
               try {
                 const parsed = JSON.parse(localCache);
-                console.log('✅ Cache cargado desde localStorage (Chrome fallback)');
+                logger.debug('✅ Cache cargado desde localStorage (Chrome fallback)');
                 return parsed;
               } catch (e) {
-                console.error('Error parseando localStorage cache:', e);
+                logger.error('Error parseando localStorage cache:', e);
               }
             }
           }
@@ -133,17 +133,17 @@ export const useOfflineCache = () => {
         if (localCache) {
           try {
             const parsed = JSON.parse(localCache);
-            console.log('✅ Cache cargado desde localStorage (Chrome)');
+            logger.debug('✅ Cache cargado desde localStorage (Chrome)');
             return parsed;
           } catch (e) {
-            console.error('Error parseando localStorage cache:', e);
+            logger.error('Error parseando localStorage cache:', e);
           }
         }
       }
       
       return null;
     } catch (error) {
-      console.error('❌ Error al cargar usuario desde cache:', error);
+      logger.error('❌ Error al cargar usuario desde cache:', error);
       // Último fallback: localStorage
       try {
         const localCache = localStorage.getItem('complete_user_cache');

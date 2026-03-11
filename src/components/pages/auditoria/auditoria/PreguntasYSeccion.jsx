@@ -1,8 +1,8 @@
+import logger from '@/utils/logger';
 import React, { useState, useEffect, useRef } from "react";
 import { Button, Box, Typography, Stack, useTheme, useMediaQuery } from "@mui/material";
 import WarningIcon from '@mui/icons-material/Warning';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
-
 // Importar componentes separados
 import CameraDialog from './components/CameraDialog';
 import CommentModal from './components/CommentModal';
@@ -136,7 +136,7 @@ const PreguntasYSeccion = ({
       
       // Si hay respuestas en props pero no en estado, restaurarlas
       if (tieneRespuestasEnProps && !tieneRespuestasEnEstado) {
-        console.log('🔄 [PreguntasYSeccion] Restaurando respuestas al volver al paso de preguntas');
+        logger.debug('🔄 [PreguntasYSeccion] Restaurando respuestas al volver al paso de preguntas');
         const newRespuestas = secciones.map((seccion, seccionIndex) => 
           Array(seccion.preguntas.length).fill('').map((_, preguntaIndex) => 
             respuestasExistentes[seccionIndex]?.[preguntaIndex] || ''
@@ -211,7 +211,7 @@ const PreguntasYSeccion = ({
       // Esto asegura que las respuestas restauradas siempre se apliquen
       const debeActualizar = propsCambiaron && tieneRespuestasEnProps;
       
-      console.log('🔍 [PreguntasYSeccion] Verificando actualización:', {
+      logger.debug('🔍 [PreguntasYSeccion] Verificando actualización:', {
         initialized,
         propsCambiaron,
         tieneRespuestasEnProps,
@@ -227,7 +227,7 @@ const PreguntasYSeccion = ({
       });
       
       if (debeActualizar) {
-        console.log('🔄 [PreguntasYSeccion] Actualizando desde respuestas restauradas');
+        logger.debug('🔄 [PreguntasYSeccion] Actualizando desde respuestas restauradas');
         
         // Actualizar respuestas
         const newRespuestas = secciones.map((seccion, seccionIndex) => 
@@ -238,7 +238,7 @@ const PreguntasYSeccion = ({
               : '';
           })
         );
-        console.log('📋 [PreguntasYSeccion] Nuevas respuestas a establecer:', newRespuestas);
+        logger.debug('📋 [PreguntasYSeccion] Nuevas respuestas a establecer:', newRespuestas);
         setRespuestas(newRespuestas);
 
         // Actualizar comentarios
@@ -350,7 +350,7 @@ const PreguntasYSeccion = ({
   };
 
   const handleClasificacionChange = (seccionIndex, preguntaIndex, nuevaClasificacion) => {
-    console.log('🔍 [PreguntasYSeccion] handleClasificacionChange llamado:', {
+    logger.debug('🔍 [PreguntasYSeccion] handleClasificacionChange llamado:', {
       seccionIndex,
       preguntaIndex,
       nuevaClasificacion,
@@ -359,13 +359,13 @@ const PreguntasYSeccion = ({
     const nuevasClasificaciones = clasificaciones.map((clas, index) =>
       index === seccionIndex ? [...clas.slice(0, preguntaIndex), nuevaClasificacion, ...clas.slice(preguntaIndex + 1)] : clas
     );
-    console.log('🔍 [PreguntasYSeccion] Nuevas clasificaciones después del cambio:', nuevasClasificaciones);
+    logger.debug('🔍 [PreguntasYSeccion] Nuevas clasificaciones después del cambio:', nuevasClasificaciones);
     setClasificaciones(nuevasClasificaciones);
     if (guardarClasificaciones) {
-      console.log('🔍 [PreguntasYSeccion] Llamando a guardarClasificaciones con:', nuevasClasificaciones);
+      logger.debug('🔍 [PreguntasYSeccion] Llamando a guardarClasificaciones con:', nuevasClasificaciones);
       guardarClasificaciones(nuevasClasificaciones);
     } else {
-      console.warn('🔍 [PreguntasYSeccion] guardarClasificaciones NO está definido!');
+      logger.warn('🔍 [PreguntasYSeccion] guardarClasificaciones NO está definido!');
     }
   };
 
@@ -436,16 +436,16 @@ const PreguntasYSeccion = ({
     
     setImagenes(nuevasImagenes);
     guardarImagenes(nuevasImagenes);
-    console.log(`🗑️ Imagen eliminada de pregunta ${preguntaIndex} de sección ${seccionIndex}`);
+    logger.debug(`🗑️ Imagen eliminada de pregunta ${preguntaIndex} de sección ${seccionIndex}`);
   };
 
   // Handler para cuando se selecciona una imagen (File pendiente de subir)
   const handleImageUploaded = (seccionIndex, preguntaIndex, file) => {
-    console.log('📸 [PreguntasYSeccion] Imagen seleccionada (pendiente):', { seccionIndex, preguntaIndex, fileName: file?.name });
+    logger.debug('📸 [PreguntasYSeccion] Imagen seleccionada (pendiente):', { seccionIndex, preguntaIndex, fileName: file?.name });
     
     // ✅ Guardar File object en estado (pendiente de subir)
     if (!(file instanceof File)) {
-      console.error('❌ [PreguntasYSeccion] Se esperaba File object:', file);
+      logger.error('❌ [PreguntasYSeccion] Se esperaba File object:', file);
       return;
     }
     
@@ -460,7 +460,7 @@ const PreguntasYSeccion = ({
     
     setImagenes(nuevasImagenes);
     guardarImagenes(nuevasImagenes);
-    console.log(`✅ File guardado para pregunta ${preguntaIndex} de sección ${seccionIndex}`);
+    logger.debug(`✅ File guardado para pregunta ${preguntaIndex} de sección ${seccionIndex}`);
   };
 
   // Función para navegar a una pregunta específica
@@ -484,13 +484,13 @@ const PreguntasYSeccion = ({
             elemento.style.boxShadow = '';
           }, 3000);
           
-          console.log(`✅ Navegación exitosa a pregunta ${preguntaIndex} de sección ${seccionIndex}`);
+          logger.debug(`✅ Navegación exitosa a pregunta ${preguntaIndex} de sección ${seccionIndex}`);
         } else if (intentos < maxIntentos) {
           intentos++;
-          console.log(`🔄 Intento ${intentos} de ${maxIntentos} para encontrar elemento`);
+          logger.debug(`🔄 Intento ${intentos} de ${maxIntentos} para encontrar elemento`);
           setTimeout(buscarElemento, 50);
         } else {
-          console.warn(`❌ Elemento no encontrado después de ${maxIntentos} intentos: pregunta-${seccionIndex}-${preguntaIndex}`);
+          logger.warn(`❌ Elemento no encontrado después de ${maxIntentos} intentos: pregunta-${seccionIndex}-${preguntaIndex}`);
         }
       };
       

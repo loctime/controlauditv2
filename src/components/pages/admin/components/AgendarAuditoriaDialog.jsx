@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 // src/components/pages/admin/components/AgendarAuditoriaDialog.jsx
 import React, { useState, useEffect } from "react";
 import { 
@@ -53,7 +54,7 @@ const AgendarAuditoriaDialog = ({ open, onClose, onSave, empresas, sucursales, f
     setCargandoUsuarios(true);
     try {
       const ownerId = userProfile.ownerId;
-      console.log('[DEBUG] Cargando usuarios operarios para ownerId:', ownerId);
+      logger.debug('[DEBUG] Cargando usuarios operarios para ownerId:', ownerId);
       
       // Query para obtener usuarios operarios del mismo owner (owner-centric)
       const usuariosRef = collection(dbAudit, ...firestoreRoutesCore.usuarios(ownerId));
@@ -68,10 +69,10 @@ const AgendarAuditoriaDialog = ({ open, onClose, onSave, empresas, sucursales, f
         ...doc.data()
       }));
       
-      console.log(`[DEBUG] ${usuarios.length} usuarios operarios cargados`);
+      logger.debug(`[DEBUG] ${usuarios.length} usuarios operarios cargados`);
       setUsuariosOperarios(usuarios);
     } catch (error) {
-      console.error('[ERROR] Error al cargar usuarios operarios:', error);
+      logger.error('[ERROR] Error al cargar usuarios operarios:', error);
       toast.error('Error al cargar la lista de usuarios');
     } finally {
       setCargandoUsuarios(false);

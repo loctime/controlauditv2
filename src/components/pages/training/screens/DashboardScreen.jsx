@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 import React, { useEffect, useState } from 'react';
 import { Alert, Box, CircularProgress } from '@mui/material';
 import { useAuth } from '@/components/context/AuthContext';
@@ -111,7 +112,7 @@ export default function DashboardScreen({ onNavigate, children }) {
           }
         });
       } catch (err) {
-        console.error('[DashboardScreen] load error', err);
+        logger.error('[DashboardScreen] load error', err);
         setError(err.message || 'No fue posible cargar el dashboard de capacitación.');
       } finally {
         setLoading(false);

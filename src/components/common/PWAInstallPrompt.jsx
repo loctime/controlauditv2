@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 import React, { useState, useEffect } from 'react';
 import { 
   Button, 
@@ -157,9 +158,9 @@ const PWAInstallPrompt = () => {
       const { outcome } = await deferredPrompt.userChoice;
       
       if (outcome === 'accepted') {
-        console.log('PWA instalada por el usuario');
+        logger.debug('PWA instalada por el usuario');
       } else {
-        console.log('PWA no instalada por el usuario');
+        logger.debug('PWA no instalada por el usuario');
       }
       
       setDeferredPrompt(null);
@@ -175,8 +176,8 @@ const PWAInstallPrompt = () => {
     const isEdge = navigator.userAgent.includes('Edg');
     const isChrome = navigator.userAgent.includes('Chrome') && !navigator.userAgent.includes('Edg');
     
-    console.log('=== INSTALACIÓN DESDE MODAL ===');
-    console.log('Navegador actual:', isEdge ? 'Edge' : isChrome ? 'Chrome' : 'Otro');
+    logger.debug('=== INSTALACIÓN DESDE MODAL ===');
+    logger.debug('Navegador actual:', isEdge ? 'Edge' : isChrome ? 'Chrome' : 'Otro');
     
     if (isChrome) {
       // Si es Chrome, redirigir a Edge
@@ -185,7 +186,7 @@ const PWAInstallPrompt = () => {
       
       // Detectar si es móvil
       const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-      console.log('Dispositivo móvil detectado:', isMobile);
+      logger.debug('Dispositivo móvil detectado:', isMobile);
       
       if (isMobile) {
         // En móvil, mostrar mensaje simple y claro
@@ -287,7 +288,7 @@ const PWAInstallPrompt = () => {
             window.open(edgeUrl, '_blank');
             setShowInstallDialog(false);
           } catch (error) {
-            console.warn('No se pudo abrir Edge:', error);
+            logger.warn('No se pudo abrir Edge:', error);
             // Si no se puede abrir Edge, ir a descarga
             window.open('https://www.microsoft.com/edge', '_blank');
             setShowInstallDialog(false);
@@ -304,9 +305,9 @@ const PWAInstallPrompt = () => {
         const { outcome } = await deferredPrompt.userChoice;
         
         if (outcome === 'accepted') {
-          console.log('PWA instalada por el usuario');
+          logger.debug('PWA instalada por el usuario');
         } else {
-          console.log('PWA no instalada por el usuario');
+          logger.debug('PWA no instalada por el usuario');
         }
         
         setDeferredPrompt(null);

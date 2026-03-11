@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 import AppBar from "@mui/material/AppBar";
 import Box from "@mui/material/Box";
 import CssBaseline from "@mui/material/CssBaseline";
@@ -40,7 +41,6 @@ import Alert from '@mui/material/Alert';
 import Chip from '@mui/material/Chip';
 import SuperdevSelector from '../../common/SuperdevSelector';
 import { getGroupedMenuOrEmpty, MENU_GROUP_LABELS } from '../../../router/menuBuilder';
-
 const drawerWidth = 240;
 
 function Navbar(props) {
@@ -75,7 +75,7 @@ function Navbar(props) {
             setSelectedOwnerEmail(selectedOwnerId);
           }
         } catch (error) {
-          console.error('[Navbar] Error cargando email del owner seleccionado:', error);
+          logger.error('[Navbar] Error cargando email del owner seleccionado:', error);
           setSelectedOwnerEmail(selectedOwnerId);
         }
       };

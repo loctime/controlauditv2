@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 import React, { useState, useEffect } from 'react';
 import {
   Box,
@@ -51,7 +52,7 @@ const EmpleadosTab = ({ empresaId, empresaNombre }) => {
       const empleadosData = empleadosSnapshot.docs.map(doc => normalizeEmpleado(doc));
       setEmpleados(empleadosData);
     } catch (error) {
-      console.error('Error cargando empleados:', error);
+      logger.error('Error cargando empleados:', error);
     } finally {
       setLoading(false);
     }

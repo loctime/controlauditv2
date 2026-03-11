@@ -1,3 +1,4 @@
+﻿import logger from '@/utils/logger';
 import React, { useState, useEffect } from 'react';
 import {
   Dialog,
@@ -23,6 +24,7 @@ import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { obtenerEmpleadosPorSucursal } from '../../../services/accidenteService';
 import { useAuth } from '@/components/context/AuthContext';
+import { validateFiles } from '../../../services/fileValidationPolicy';
 
 const NuevoIncidenteModal = ({ open, onClose, onIncidenteCreado, empresaId, sucursalId, empresaNombre, sucursalNombre }) => {
   const { userProfile } = useAuth();
@@ -55,7 +57,7 @@ const NuevoIncidenteModal = ({ open, onClose, onIncidenteCreado, empresaId, sucu
       const empleadosData = await obtenerEmpleadosPorSucursal(sucursalId, userProfile);
       setEmpleados(empleadosData);
     } catch (err) {
-      console.error('Error cargando empleados:', err);
+      logger.error('Error cargando empleados:', err);
       setError('Error al cargar empleados');
     } finally {
       setLoadingEmpleados(false);
@@ -73,17 +75,12 @@ const NuevoIncidenteModal = ({ open, onClose, onIncidenteCreado, empresaId, sucu
   };
 
   const handleImagenesChange = (e) => {
-    const files = Array.from(e.target.files);
-    
-    // Validar tamaño y tipo
-    const validFiles = files.filter(file => {
-      const isImage = file.type.startsWith('image/');
-      const isValidSize = file.size <= 5 * 1024 * 1024; // 5MB
-      return isImage && isValidSize;
-    });
+    const files = Array.from(e.target.files || []);
+    const validation = validateFiles(files);
+    const validFiles = validation.accepted;
 
-    if (validFiles.length !== files.length) {
-      setError('Algunas imágenes fueron rechazadas. Solo se permiten imágenes menores a 5MB.');
+    if (validation.rejected.length > 0) {
+      setError(validation.rejected.map((item) => `${item.fileName}: ${item.issues.map((issue) => issue.message).join(', ')}`).join(' | '));
     }
 
     setImagenes([...imagenes, ...validFiles]);
@@ -111,7 +108,7 @@ const NuevoIncidenteModal = ({ open, onClose, onIncidenteCreado, empresaId, sucu
     }
 
     if (!descripcion.trim()) {
-      setError('La descripción es requerida');
+      setError('La descripciÃ³n es requerida');
       return;
     }
 
@@ -131,7 +128,7 @@ const NuevoIncidenteModal = ({ open, onClose, onIncidenteCreado, empresaId, sucu
       // Reset form
       handleClose();
     } catch (err) {
-      console.error('Error al crear incidente:', err);
+      logger.error('Error al crear incidente:', err);
       setError('Error al crear el incidente. Por favor intente nuevamente.');
     } finally {
       setLoading(false);
@@ -171,7 +168,7 @@ const NuevoIncidenteModal = ({ open, onClose, onIncidenteCreado, empresaId, sucu
         )}
 
         <Grid container spacing={2}>
-          {/* Fila 1: Fecha | Descripción */}
+          {/* Fila 1: Fecha | DescripciÃ³n */}
           <Grid item xs={12} md={6}>
             <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 1 }}>
               Fecha del Incidente *
@@ -191,7 +188,7 @@ const NuevoIncidenteModal = ({ open, onClose, onIncidenteCreado, empresaId, sucu
 
           <Grid item xs={12} md={6}>
             <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 1 }}>
-              Descripción del Incidente *
+              DescripciÃ³n del Incidente *
             </Typography>
             <TextField
               fullWidth
@@ -205,7 +202,7 @@ const NuevoIncidenteModal = ({ open, onClose, onIncidenteCreado, empresaId, sucu
             />
           </Grid>
 
-          {/* Fila 2: Testigos | Imágenes */}
+          {/* Fila 2: Testigos | ImÃ¡genes */}
           <Grid item xs={12} md={6}>
             <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 1 }}>
               Testigos / Personal Involucrado *
@@ -274,7 +271,7 @@ const NuevoIncidenteModal = ({ open, onClose, onIncidenteCreado, empresaId, sucu
 
           <Grid item xs={12} md={6}>
             <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 1 }}>
-              Imágenes (Opcional)
+              ImÃ¡genes (Opcional)
             </Typography>
             
             <Button
@@ -284,12 +281,12 @@ const NuevoIncidenteModal = ({ open, onClose, onIncidenteCreado, empresaId, sucu
               startIcon={<CloudUploadIcon />}
               sx={{ mb: 1 }}
             >
-              Subir Imágenes
+              Subir ImÃ¡genes
               <input
                 type="file"
                 hidden
                 multiple
-                accept="image/*"
+                accept="*/*"
                 onChange={handleImagenesChange}
               />
             </Button>
@@ -351,5 +348,10 @@ const NuevoIncidenteModal = ({ open, onClose, onIncidenteCreado, empresaId, sucu
 };
 
 export default NuevoIncidenteModal;
+
+
+
+
+
 
 

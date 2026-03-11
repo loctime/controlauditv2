@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 // src/services/registrosAsistenciaService.js
 import { 
   collection, 
@@ -76,7 +77,7 @@ function validarYSanitizarImagenes(imagenes) {
         }
         // Detectar strings muy largos que podrían ser base64
         if (valor.length > 1000 && /^[A-Za-z0-9+/=]+$/.test(valor)) {
-          console.warn(
+          logger.warn(
             `⚠️ Imagen en índice ${index}, campo ${camposImg[valIndex]}: String muy largo detectado, ` +
             `podría ser base64. Verificar que solo se guarde shareToken.`
           );
@@ -150,7 +151,7 @@ export const registrosAsistenciaService = {
         appId: 'auditoria'
       };
       
-      console.log('[registrosAsistenciaService] Creando registro:', {
+      logger.debug('[registrosAsistenciaService] Creando registro:', {
         capacitacionId: capacitacionIdStr,
         tipo: typeof capacitacionIdStr,
         empleadoIds: nuevoRegistro.empleadoIds.length,
@@ -176,7 +177,7 @@ export const registrosAsistenciaService = {
 
       return registroRef.id;
     } catch (error) {
-      console.error('❌ Error creando registro de asistencia:', error);
+      logger.error('❌ Error creando registro de asistencia:', error);
       throw error;
     }
   },
@@ -192,7 +193,7 @@ export const registrosAsistenciaService = {
    */
   async createRegistroAsistencia({ userId, capacitacionId, empleadoIds, imagenes }) {
     try {
-      console.log('[registrosAsistenciaService] createRegistroAsistencia - Datos recibidos:', {
+      logger.debug('[registrosAsistenciaService] createRegistroAsistencia - Datos recibidos:', {
         userId,
         capacitacionId,
         empleadoIds: empleadoIds?.length || 0,
@@ -217,7 +218,7 @@ export const registrosAsistenciaService = {
         fecha: Timestamp.now()
       };
 
-      console.log('[registrosAsistenciaService] createRegistroAsistencia - Datos enviados:', {
+      logger.debug('[registrosAsistenciaService] createRegistroAsistencia - Datos enviados:', {
         capacitacionId: registroData.capacitacionId,
         tipoCapacitacionId: typeof registroData.capacitacionId,
         empleadoIds: registroData.empleadoIds.length,
@@ -231,11 +232,11 @@ export const registrosAsistenciaService = {
         { uid: userId }
       );
 
-      console.log('[registrosAsistenciaService] createRegistroAsistencia - ID generado:', registroId);
+      logger.debug('[registrosAsistenciaService] createRegistroAsistencia - ID generado:', registroId);
 
       return { id: registroId };
     } catch (error) {
-      console.error('❌ Error en createRegistroAsistencia:', error);
+      logger.error('❌ Error en createRegistroAsistencia:', error);
       throw error;
     }
   },
@@ -253,11 +254,11 @@ export const registrosAsistenciaService = {
       if (!userId) throw new Error('userId es requerido');
       if (!registroId) throw new Error('registroId es requerido');
       if (!imagenes || imagenes.length === 0) {
-        console.warn('[attachImagesToRegistro] No hay imágenes para asociar');
+        logger.warn('[attachImagesToRegistro] No hay imágenes para asociar');
         return;
       }
 
-      console.log('[registrosAsistenciaService] attachImagesToRegistro:', {
+      logger.debug('[registrosAsistenciaService] attachImagesToRegistro:', {
         userId,
         registroId,
         imagenesCount: imagenes.length
@@ -274,9 +275,9 @@ export const registrosAsistenciaService = {
         imagenes: arrayUnion(...imagenes)
       });
 
-      console.log('[registrosAsistenciaService] Imágenes asociadas correctamente al registro:', registroId);
+      logger.debug('[registrosAsistenciaService] Imágenes asociadas correctamente al registro:', registroId);
     } catch (error) {
-      console.error('❌ Error asociando imágenes al registro:', error);
+      logger.error('❌ Error asociando imágenes al registro:', error);
       throw error;
     }
   },
@@ -290,14 +291,14 @@ export const registrosAsistenciaService = {
   async getRegistrosByCapacitacion(userId, capacitacionId) {
     try {
       if (!userId || !capacitacionId) {
-        console.warn('[registrosAsistenciaService] getRegistrosByCapacitacion: parámetros faltantes', { userId, capacitacionId });
+        logger.warn('[registrosAsistenciaService] getRegistrosByCapacitacion: parámetros faltantes', { userId, capacitacionId });
         return [];
       }
 
       // ⚠️ CRÍTICO: Normalizar capacitacionId a string para consistencia
       const capacitacionIdStr = String(capacitacionId);
       
-      console.log('[registrosAsistenciaService] Buscando registros:', { 
+      logger.debug('[registrosAsistenciaService] Buscando registros:', { 
         userId, 
         capacitacionId: capacitacionIdStr,
         tipoOriginal: typeof capacitacionId,
@@ -327,7 +328,7 @@ export const registrosAsistenciaService = {
           };
         });
         
-        console.log('[registrosAsistenciaService] Registros encontrados:', {
+        logger.debug('[registrosAsistenciaService] Registros encontrados:', {
           cantidad: resultados.length,
           capacitacionIdBuscado: capacitacionIdStr,
           registros: resultados.map(r => ({
@@ -343,7 +344,7 @@ export const registrosAsistenciaService = {
       } catch (queryError) {
         // Si falla por índice faltante, usar fallback sin orderBy
         if (queryError.code === 'failed-precondition' || queryError.message?.includes('index')) {
-          console.warn(
+          logger.warn(
             '⚠️ Índice compuesto (capacitacionId + fecha) no encontrado. ' +
             'Usando fallback sin orderBy. ' +
             'Crear índice: (capacitacionId ASC, fecha DESC) en registrosAsistencia'
@@ -370,7 +371,7 @@ export const registrosAsistenciaService = {
             return fechaB - fechaA;
           });
           
-          console.log('[registrosAsistenciaService] Registros encontrados (fallback):', {
+          logger.debug('[registrosAsistenciaService] Registros encontrados (fallback):', {
             cantidad: resultados.length,
             capacitacionIdBuscado: capacitacionIdStr,
             registros: resultados.map(r => ({
@@ -388,8 +389,8 @@ export const registrosAsistenciaService = {
         throw queryError;
       }
     } catch (error) {
-      console.error('❌ Error obteniendo registros por capacitación:', error);
-      console.error('Error details:', {
+      logger.error('❌ Error obteniendo registros por capacitación:', error);
+      logger.error('Error details:', {
         code: error.code,
         message: error.message,
         stack: error.stack,
@@ -424,7 +425,7 @@ export const registrosAsistenciaService = {
 
       return null;
     } catch (error) {
-      console.error('❌ Error obteniendo registro por ID:', error);
+      logger.error('❌ Error obteniendo registro por ID:', error);
       return null;
     }
   },
@@ -466,7 +467,7 @@ export const registrosAsistenciaService = {
         // Fallback: Si el índice no existe aún, usar filtrado en memoria
         // Esto puede ocurrir durante desarrollo antes de crear índices
         if (queryError.code === 'failed-precondition' || queryError.message?.includes('index')) {
-          console.warn(
+          logger.warn(
             '⚠️ Índice para getRegistrosByEmpleado no encontrado. ' +
             'Usando fallback (menos eficiente). ' +
             'Crear índice: (empleadoIds ASC, fecha DESC)'
@@ -481,7 +482,7 @@ export const registrosAsistenciaService = {
         throw queryError;
       }
     } catch (error) {
-      console.error('❌ Error obteniendo registros por empleado:', error);
+      logger.error('❌ Error obteniendo registros por empleado:', error);
       return [];
     }
   },
@@ -497,7 +498,7 @@ export const registrosAsistenciaService = {
       // ⚠️ CRÍTICO: Normalizar capacitacionId a string
       const capacitacionIdStr = String(capacitacionId);
       
-      console.log('[registrosAsistenciaService] getEmpleadosUnicosByCapacitacion:', { 
+      logger.debug('[registrosAsistenciaService] getEmpleadosUnicosByCapacitacion:', { 
         userId, 
         capacitacionId: capacitacionIdStr,
         tipoOriginal: typeof capacitacionId
@@ -513,14 +514,14 @@ export const registrosAsistenciaService = {
       });
 
       const resultado = Array.from(empleadoIdsUnicos);
-      console.log('[registrosAsistenciaService] Empleados únicos encontrados:', {
+      logger.debug('[registrosAsistenciaService] Empleados únicos encontrados:', {
         cantidad: resultado.length,
         capacitacionId: capacitacionIdStr,
         empleados: resultado
       });
       return resultado;
     } catch (error) {
-      console.error('❌ Error calculando empleados únicos:', error);
+      logger.error('❌ Error calculando empleados únicos:', error);
       return [];
     }
   },
@@ -536,7 +537,7 @@ export const registrosAsistenciaService = {
       // ⚠️ CRÍTICO: Normalizar capacitacionId a string
       const capacitacionIdStr = String(capacitacionId);
       
-      console.log('[registrosAsistenciaService] getImagenesByCapacitacion:', { 
+      logger.debug('[registrosAsistenciaService] getImagenesByCapacitacion:', { 
         userId, 
         capacitacionId: capacitacionIdStr,
         tipoOriginal: typeof capacitacionId
@@ -558,14 +559,14 @@ export const registrosAsistenciaService = {
         }
       });
 
-      console.log('[registrosAsistenciaService] Imágenes encontradas:', {
+      logger.debug('[registrosAsistenciaService] Imágenes encontradas:', {
         cantidad: imagenesConRegistro.length,
         capacitacionId: capacitacionIdStr,
         imagenes: imagenesConRegistro
       });
       return imagenesConRegistro;
     } catch (error) {
-      console.error('❌ Error obteniendo imágenes por capacitación:', error);
+      logger.error('❌ Error obteniendo imágenes por capacitación:', error);
       return [];
     }
   },
@@ -599,7 +600,7 @@ export const registrosAsistenciaService = {
 
       return imagenesEmpleado;
     } catch (error) {
-      console.error('❌ Error obteniendo imágenes por empleado:', error);
+      logger.error('❌ Error obteniendo imágenes por empleado:', error);
       return [];
     }
   },
@@ -645,7 +646,7 @@ export const registrosAsistenciaService = {
 
       return true;
     } catch (error) {
-      console.error('❌ Error actualizando registro de asistencia:', error);
+      logger.error('❌ Error actualizando registro de asistencia:', error);
       throw error;
     }
   },
@@ -678,7 +679,7 @@ export const registrosAsistenciaService = {
 
       return true;
     } catch (error) {
-      console.error('❌ Error eliminando registro de asistencia:', error);
+      logger.error('❌ Error eliminando registro de asistencia:', error);
       throw error;
     }
   },
@@ -691,7 +692,7 @@ export const registrosAsistenciaService = {
   async getAllRegistros(userId) {
     try {
       if (!userId) {
-        console.warn('[registrosAsistenciaService] getAllRegistros: userId faltante');
+        logger.warn('[registrosAsistenciaService] getAllRegistros: userId faltante');
         return [];
       }
 
@@ -711,7 +712,7 @@ export const registrosAsistenciaService = {
         };
       });
 
-      console.log('[registrosAsistenciaService] 🔍 DIAGNÓSTICO - Todos los registros:', {
+      logger.debug('[registrosAsistenciaService] 🔍 DIAGNÓSTICO - Todos los registros:', {
         total: resultados.length,
         registros: resultados.map(r => ({
           id: r.id,
@@ -725,7 +726,7 @@ export const registrosAsistenciaService = {
 
       return resultados;
     } catch (error) {
-      console.error('❌ Error en getAllRegistros (diagnóstico):', error);
+      logger.error('❌ Error en getAllRegistros (diagnóstico):', error);
       return [];
     }
   }

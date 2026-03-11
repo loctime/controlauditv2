@@ -1,5 +1,5 @@
+import logger from '@/utils/logger';
 import { useState, useEffect } from 'react';
-
 export const usePWAInstall = () => {
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [isInstalled, setIsInstalled] = useState(false);
@@ -42,10 +42,10 @@ export const usePWAInstall = () => {
       const { outcome } = await deferredPrompt.userChoice;
       
       if (outcome === 'accepted') {
-        console.log('PWA instalada por el usuario');
+        logger.debug('PWA instalada por el usuario');
         setShowButton(false);
       } else {
-        console.log('PWA no instalada por el usuario');
+        logger.debug('PWA no instalada por el usuario');
       }
       
       setDeferredPrompt(null);
@@ -62,44 +62,44 @@ export const usePWAInstall = () => {
       const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
       const isIOSStandalone = window.navigator.standalone === true;
       
-      console.log('=== PWA INSTALL CHECK ===');
-      console.log('isStandalone:', isStandalone);
-      console.log('isIOSStandalone:', isIOSStandalone);
-      console.log('display-mode:', window.matchMedia('(display-mode: standalone)').matches);
-      console.log('navigator.standalone:', window.navigator.standalone);
+      logger.debug('=== PWA INSTALL CHECK ===');
+      logger.debug('isStandalone:', isStandalone);
+      logger.debug('isIOSStandalone:', isIOSStandalone);
+      logger.debug('display-mode:', window.matchMedia('(display-mode: standalone)').matches);
+      logger.debug('navigator.standalone:', window.navigator.standalone);
       
       if (isStandalone || isIOSStandalone) {
         setIsInstalled(true);
-        console.log('App ya está instalada');
+        logger.debug('App ya está instalada');
         return;
       }
-      console.log('App NO está instalada');
+      logger.debug('App NO está instalada');
     };
 
     checkIfInstalled();
 
     // Escuchar el evento beforeinstallprompt
     const handleBeforeInstallPrompt = (e) => {
-      console.log('=== BEFORE INSTALL PROMPT ===');
-      console.log('Evento recibido:', e);
+      logger.debug('=== BEFORE INSTALL PROMPT ===');
+      logger.debug('Evento recibido:', e);
       e.preventDefault();
       setDeferredPrompt(e);
       setShowButton(true);
-      console.log('Prompt disponible, mostrando botón');
+      logger.debug('Prompt disponible, mostrando botón');
     };
 
     // Escuchar cuando se instala la PWA
     const handleAppInstalled = () => {
-      console.log('=== APP INSTALLED ===');
+      logger.debug('=== APP INSTALLED ===');
       setIsInstalled(true);
       setShowButton(false);
       setDeferredPrompt(null);
     };
 
     // Verificar si el evento ya se disparó
-    console.log('=== PWA HOOK INIT ===');
-    console.log('Service Worker disponible:', 'serviceWorker' in navigator);
-    console.log('Manifest disponible:', !!document.querySelector('link[rel="manifest"]'));
+    logger.debug('=== PWA HOOK INIT ===');
+    logger.debug('Service Worker disponible:', 'serviceWorker' in navigator);
+    logger.debug('Manifest disponible:', !!document.querySelector('link[rel="manifest"]'));
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
     window.addEventListener('appinstalled', handleAppInstalled);
@@ -117,7 +117,7 @@ export const usePWAInstall = () => {
     
     if (isChrome) {
       // Si es Chrome, redirigir a Edge
-      console.log('Redirigiendo a Edge para mejor experiencia...');
+      logger.debug('Redirigiendo a Edge para mejor experiencia...');
       
       // Crear URL para Edge con la misma página
       const currentUrl = window.location.href;
@@ -223,7 +223,7 @@ export const usePWAInstall = () => {
           try {
             window.open(edgeUrl, '_blank');
           } catch (error) {
-            console.warn('No se pudo abrir Edge:', error);
+            logger.warn('No se pudo abrir Edge:', error);
             // Si no se puede abrir Edge, ir a descarga
             window.open('https://www.microsoft.com/edge', '_blank');
           }
@@ -239,9 +239,9 @@ export const usePWAInstall = () => {
         const { outcome } = await deferredPrompt.userChoice;
         
         if (outcome === 'accepted') {
-          console.log('PWA instalada por el usuario');
+          logger.debug('PWA instalada por el usuario');
         } else {
-          console.log('PWA no instalada por el usuario');
+          logger.debug('PWA no instalada por el usuario');
         }
         
         setDeferredPrompt(null);
@@ -274,7 +274,7 @@ export const usePWAInstall = () => {
           window.open(edgeUrl, '_blank');
           alert('La app se abrirá en Microsoft Edge para mejor experiencia offline.');
         } catch (error) {
-          console.warn('No se pudo abrir Edge:', error);
+          logger.warn('No se pudo abrir Edge:', error);
           alert('No se pudo abrir Edge. Usando la información normal de la app.');
           window.dispatchEvent(new CustomEvent('showPWAInfo'));
         }

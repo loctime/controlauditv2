@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 // Servicio simplificado para manejar el guardado y descarga de PDFs
 // Versión temporal para evitar problemas de importación
 
@@ -8,13 +9,13 @@
  */
 export const descargarPdf = async (url, fileName = 'reporte-auditoria.html') => {
   try {
-    console.log('[pdfStorageServiceSimple] 🚀 Iniciando descarga:', fileName);
+    logger.debug('[pdfStorageServiceSimple] 🚀 Iniciando descarga:', fileName);
     
     // Detectar si estamos en una PWA instalada
     const isPWA = window.matchMedia('(display-mode: standalone)').matches || 
                   window.navigator.standalone === true;
     
-    console.log('[pdfStorageServiceSimple] PWA detectada:', isPWA);
+    logger.debug('[pdfStorageServiceSimple] PWA detectada:', isPWA);
     
     if (isPWA) {
       // En PWA, usar fetch para descargar y mostrar notificación
@@ -55,10 +56,10 @@ export const descargarPdf = async (url, fileName = 'reporte-auditoria.html') => 
           }
         }, 500);
         
-        console.log('[pdfStorageServiceSimple] ✅ Descarga completada en PWA:', fileName);
+        logger.debug('[pdfStorageServiceSimple] ✅ Descarga completada en PWA:', fileName);
         
       } catch (fetchError) {
-        console.warn('[pdfStorageServiceSimple] Error con fetch, usando método tradicional:', fetchError);
+        logger.warn('[pdfStorageServiceSimple] Error con fetch, usando método tradicional:', fetchError);
         
         // Fallback al método tradicional
         const link = document.createElement('a');
@@ -89,11 +90,11 @@ export const descargarPdf = async (url, fileName = 'reporte-auditoria.html') => 
         alert('✅ ¡Reporte descargado exitosamente!\n\n' + fileName);
       }, 500);
       
-      console.log('[pdfStorageServiceSimple] ✅ Descarga completada en navegador:', fileName);
+      logger.debug('[pdfStorageServiceSimple] ✅ Descarga completada en navegador:', fileName);
     }
     
   } catch (error) {
-    console.error('[pdfStorageServiceSimple] ❌ Error descargando PDF:', error);
+    logger.error('[pdfStorageServiceSimple] ❌ Error descargando PDF:', error);
     
     // Notificación de error
     alert('❌ Error al descargar el reporte. Intenta nuevamente.');
@@ -109,7 +110,7 @@ export const descargarPdf = async (url, fileName = 'reporte-auditoria.html') => 
  */
 export const generarYGuardarPdf = async (reporteId, datosReporte) => {
   try {
-    console.log('[pdfStorageServiceSimple] Generando PDF local...');
+    logger.debug('[pdfStorageServiceSimple] Generando PDF local...');
     
     // Importar el generador de HTML
     const { default: generarContenidoImpresion } = await import('./generadorHTML');
@@ -138,11 +139,11 @@ export const generarYGuardarPdf = async (reporteId, datosReporte) => {
     pdfsGuardados.push(pdfData);
     localStorage.setItem('pdfsGuardados', JSON.stringify(pdfsGuardados));
     
-    console.log('[pdfStorageServiceSimple] ✅ PDF local generado:', pdfUrl);
+    logger.debug('[pdfStorageServiceSimple] ✅ PDF local generado:', pdfUrl);
     return pdfUrl;
     
   } catch (error) {
-    console.error('[pdfStorageServiceSimple] ❌ Error generando PDF local:', error);
+    logger.error('[pdfStorageServiceSimple] ❌ Error generando PDF local:', error);
     throw error;
   }
 };
@@ -158,13 +159,13 @@ export const obtenerPdfGuardado = (reporteId) => {
     const pdfEncontrado = pdfsGuardados.find(pdf => pdf.reporteId === reporteId);
     
     if (pdfEncontrado) {
-      console.log('[pdfStorageServiceSimple] ✅ PDF encontrado en localStorage:', pdfEncontrado.url);
+      logger.debug('[pdfStorageServiceSimple] ✅ PDF encontrado en localStorage:', pdfEncontrado.url);
       return pdfEncontrado.url;
     }
     
     return null;
   } catch (error) {
-    console.error('[pdfStorageServiceSimple] ❌ Error obteniendo PDF guardado:', error);
+    logger.error('[pdfStorageServiceSimple] ❌ Error obteniendo PDF guardado:', error);
     return null;
   }
 };
@@ -185,8 +186,8 @@ export const limpiarPdfsAntiguos = () => {
     });
     
     localStorage.setItem('pdfsGuardados', JSON.stringify(pdfsActualizados));
-    console.log('[pdfStorageServiceSimple] ✅ PDFs antiguos limpiados');
+    logger.debug('[pdfStorageServiceSimple] ✅ PDFs antiguos limpiados');
   } catch (error) {
-    console.error('[pdfStorageServiceSimple] ❌ Error limpiando PDFs antiguos:', error);
+    logger.error('[pdfStorageServiceSimple] ❌ Error limpiando PDFs antiguos:', error);
   }
 };

@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 import React, { useState } from "react";
 import { Button, TextField, Typography, Box } from "@mui/material";
 import { ArrowBack } from "@mui/icons-material";
@@ -7,7 +8,6 @@ import Swal from 'sweetalert2';
 import { useNavigate } from "react-router-dom";
 import PublicIcon from '@mui/icons-material/Public';
 import { formularioService } from '../../../services/formularioService';
-
 const Formulario = () => {
   const { user, userProfile, getUserFormularios } = useAuth();
   const navigate = useNavigate();
@@ -58,7 +58,7 @@ const Formulario = () => {
       };
       
       const formularioId = await formularioService.crearFormulario(formularioData, user, userProfile);
-      console.log("Formulario creado con ID: ", formularioId);
+      logger.debug("Formulario creado con ID: ", formularioId);
       
       // Invalidar cache offline para forzar recarga de formularios
       try {
@@ -90,10 +90,10 @@ const Formulario = () => {
               reject(event.target.error);
             };
           });
-          console.log('✅ Cache de formularios invalidado después de crear formulario');
+          logger.debug('✅ Cache de formularios invalidado después de crear formulario');
         }
       } catch (cacheError) {
-        console.warn('⚠️ Error invalidando cache de formularios:', cacheError);
+        logger.warn('⚠️ Error invalidando cache de formularios:', cacheError);
       }
       
       // Recargar formularios del contexto después de un pequeño delay
@@ -101,7 +101,7 @@ const Formulario = () => {
         try {
           await getUserFormularios();
         } catch (error) {
-          console.warn('⚠️ Error recargando formularios del contexto:', error);
+          logger.warn('⚠️ Error recargando formularios del contexto:', error);
         }
       }, 1000);
       
@@ -111,7 +111,7 @@ const Formulario = () => {
       setNombreFormulario("");
       setSecciones([{ nombre: "", preguntas: "" }]);
     } catch (error) {
-      console.error("Error al crear el formulario: ", error);
+      logger.error("Error al crear el formulario: ", error);
       Swal.fire("Error", "Error al crear el formulario.", "error");
     }
   };
@@ -124,7 +124,7 @@ const Formulario = () => {
           variant="outlined"
           startIcon={<PublicIcon />}
           onClick={() => {
-            console.debug('[Formulario] Ir a galería de formularios públicos');
+            logger.debug('[Formulario] Ir a galería de formularios públicos');
             navigate('/formularios-publicos');
           }}
           sx={{ borderRadius: '20px', px: 3, py: 1 }}

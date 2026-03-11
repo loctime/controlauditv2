@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   Container,
@@ -134,7 +135,7 @@ export default function Accidentes() {
     try {
       await exportarAccidentesExcel(accidentesFiltrados);
     } catch (error) {
-      console.error('Error exportando Excel:', error);
+      logger.error('Error exportando Excel:', error);
     }
   };
 
@@ -142,7 +143,7 @@ export default function Accidentes() {
     try {
       exportarAccidentesPDF(accidentesFiltrados);
     } catch (error) {
-      console.error('Error exportando PDF:', error);
+      logger.error('Error exportando PDF:', error);
     }
   };
 
@@ -356,7 +357,7 @@ export default function Accidentes() {
               recargarAccidentes();
               setSelectedAccidenteId(null);
             } catch (error) {
-              console.error('Error al cerrar accidente:', error);
+              logger.error('Error al cerrar accidente:', error);
               alert('Error al actualizar el estado del accidente');
             }
           }
@@ -366,7 +367,7 @@ export default function Accidentes() {
           setOpenEditarModal(true);
         }}
         onSaved={(registroId) => {
-          console.log('[Accidentes] Registro guardado, refrescando datos');
+          logger.debug('[Accidentes] Registro guardado, refrescando datos');
           recargarAccidentes();
         }}
       />

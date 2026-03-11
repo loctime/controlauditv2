@@ -1,8 +1,8 @@
+import logger from '@/utils/logger';
 import { useState, useCallback } from 'react';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import { dbAudit } from '../../../../firebaseControlFile';
 import { firestoreRoutesCore } from '../../../../core/firestore/firestoreRoutes.core';
-
 /**
  * Hook para cargar estadísticas de sucursales (owner-centric)
  */
@@ -11,7 +11,7 @@ export const useSucursalesStats = () => {
 
   const loadSucursalesStats = useCallback(async (sucursalesList, ownerId = null) => {
     if (!ownerId) {
-      console.warn('⚠️ [useSucursalesStats] ownerId no proporcionado, retornando stats vacías');
+      logger.warn('⚠️ [useSucursalesStats] ownerId no proporcionado, retornando stats vacías');
       setSucursalesStats({});
       return;
     }
@@ -32,7 +32,7 @@ export const useSucursalesStats = () => {
           const accionesSnapshot = await getDocs(collection(dbAudit, ...firestoreRoutesCore.sucursales(ownerId), sucursal.id, 'acciones_requeridas'));
           accionesRequeridasCount = accionesSnapshot.docs.length;
         } catch (error) {
-          console.warn(`Error cargando acciones requeridas para sucursal ${sucursal.id}:`, error);
+          logger.warn(`Error cargando acciones requeridas para sucursal ${sucursal.id}:`, error);
         }
         
         const capacitacionesData = capacitacionesSnapshot.docs.map(doc => doc.data());
@@ -51,7 +51,7 @@ export const useSucursalesStats = () => {
           accionesRequeridas: accionesRequeridasCount
         };
       } catch (error) {
-        console.error(`Error cargando stats para sucursal ${sucursal.id}:`, error);
+        logger.error(`Error cargando stats para sucursal ${sucursal.id}:`, error);
         stats[sucursal.id] = { 
           empleados: 0, 
           capacitaciones: 0, 

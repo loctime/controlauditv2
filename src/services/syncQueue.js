@@ -1,5 +1,5 @@
+import logger from '@/utils/logger';
 import { getOfflineDatabase, generateOfflineId } from './offlineDatabase';
-
 /**
  * Servicio de cola de sincronización con backoff exponencial
  * Maneja la sincronización de auditorías offline con Firebase
@@ -29,7 +29,7 @@ class SyncQueueService {
       try {
         callback(event, data);
       } catch (error) {
-        console.error('❌ Error en listener de sincronización:', error);
+        logger.error('❌ Error en listener de sincronización:', error);
       }
     });
   }
@@ -55,7 +55,7 @@ class SyncQueueService {
       };
 
       await db.add('syncQueue', queueItem);
-      console.log('📝 Auditoría encolada para sincronización:', queueId);
+      logger.debug('📝 Auditoría encolada para sincronización:', queueId);
       
       this.notifyListeners('enqueued', { type: 'auditoria', id: queueId });
       
@@ -66,7 +66,7 @@ class SyncQueueService {
 
       return queueId;
     } catch (error) {
-      console.error('❌ Error al encolar auditoría:', error);
+      logger.error('❌ Error al encolar auditoría:', error);
       throw error;
     }
   }
@@ -92,13 +92,13 @@ class SyncQueueService {
       };
 
       await db.add('syncQueue', queueItem);
-      console.log('📸 Foto encolada para sincronización:', queueId);
+      logger.debug('📸 Foto encolada para sincronización:', queueId);
       
       this.notifyListeners('enqueued', { type: 'photo', id: queueId });
       
       return queueId;
     } catch (error) {
-      console.error('❌ Error al encolar foto:', error);
+      logger.error('❌ Error al encolar foto:', error);
       throw error;
     }
   }
@@ -112,7 +112,7 @@ class SyncQueueService {
       
       // Verificar que el object store existe antes de acceder
       if (!db.objectStoreNames.contains('syncQueue')) {
-        console.warn('⚠️ Object store "syncQueue" no existe, retornando estadísticas vacías');
+        logger.warn('⚠️ Object store "syncQueue" no existe, retornando estadísticas vacías');
         return {
           total: 0,
           totalIncludingFailed: 0,
@@ -163,7 +163,7 @@ class SyncQueueService {
 
       // Log temporal para debugging - mostrar items pendientes
       if (pendingItems.length > 0) {
-        console.log('[getQueueStats] Items pendientes encontrados:', pendingItems.map(item => ({
+        logger.debug('[getQueueStats] Items pendientes encontrados:', pendingItems.map(item => ({
           id: item.id,
           type: item.type,
           retries: item.retries,
@@ -174,7 +174,7 @@ class SyncQueueService {
 
       return stats;
     } catch (error) {
-      console.error('❌ Error al obtener estadísticas de cola:', error);
+      logger.error('❌ Error al obtener estadísticas de cola:', error);
       // Retornar estadísticas vacías en lugar de null para evitar errores
       return {
         total: 0,
@@ -193,12 +193,12 @@ class SyncQueueService {
    */
   startProcessing() {
     if (this.isProcessing) {
-      console.log('⏳ Procesamiento ya está activo');
+      logger.debug('⏳ Procesamiento ya está activo');
       return;
     }
 
     this.isProcessing = true;
-    console.log('🚀 Iniciando procesamiento de cola de sincronización');
+    logger.debug('🚀 Iniciando procesamiento de cola de sincronización');
     
     this.notifyListeners('processing_started', {});
     
@@ -221,7 +221,7 @@ class SyncQueueService {
     }
     
     this.isProcessing = false;
-    console.log('⏹️ Procesamiento de cola detenido');
+    logger.debug('⏹️ Procesamiento de cola detenido');
     
     this.notifyListeners('processing_stopped', {});
   }
@@ -242,7 +242,7 @@ class SyncQueueService {
       );
 
       if (itemsToProcess.length === 0) {
-        console.log('📭 No hay items listos para procesar');
+        logger.debug('📭 No hay items listos para procesar');
         return;
       }
 
@@ -254,7 +254,7 @@ class SyncQueueService {
         return a.createdAt - b.createdAt;
       });
 
-      console.log(`🔄 Procesando ${itemsToProcess.length} items de la cola`);
+      logger.debug(`🔄 Procesando ${itemsToProcess.length} items de la cola`);
 
       for (const item of itemsToProcess) {
         try {
@@ -267,7 +267,7 @@ class SyncQueueService {
               if (!auditoria || !auditoria.empresa || !auditoria.formulario) {
                 // Si no tiene datos completos y ya tiene varios reintentos, marcar como fallido
                 if (item.retries >= 3) {
-                  console.warn(`⚠️ Item ${item.id} tiene datos incompletos después de ${item.retries} intentos, marcando como fallido`);
+                  logger.warn(`⚠️ Item ${item.id} tiene datos incompletos después de ${item.retries} intentos, marcando como fallido`);
                   await this.handleItemError(item, new Error('Datos incompletos persistentes después de múltiples intentos'));
                   continue;
                 }
@@ -277,13 +277,13 @@ class SyncQueueService {
           
           await this.processItem(item);
         } catch (error) {
-          console.error(`❌ Error procesando item ${item.id}:`, error);
+          logger.error(`❌ Error procesando item ${item.id}:`, error);
           await this.handleItemError(item, error);
         }
       }
 
     } catch (error) {
-      console.error('❌ Error en procesamiento de cola:', error);
+      logger.error('❌ Error en procesamiento de cola:', error);
     }
   }
 
@@ -291,7 +291,7 @@ class SyncQueueService {
    * Procesar un item individual
    */
   async processItem(item) {
-    console.log(`🔄 Procesando item: ${item.type} (${item.id})`);
+    logger.debug(`🔄 Procesando item: ${item.type} (${item.id})`);
     
     this.notifyListeners('item_processing', { item });
 
@@ -312,7 +312,7 @@ class SyncQueueService {
 
       // Si llegamos aquí, el item se procesó exitosamente
       await this.removeItem(item.id);
-      console.log(`✅ Item procesado exitosamente: ${item.id}`);
+      logger.debug(`✅ Item procesado exitosamente: ${item.id}`);
       
       this.notifyListeners('item_success', { item });
 
@@ -340,7 +340,7 @@ class SyncQueueService {
         if (auditoriaIdToSearch) {
           const fullAuditoria = await db.get('auditorias', auditoriaIdToSearch);
           if (fullAuditoria) {
-            console.log('[SyncQueue] Datos incompletos en cola, obteniendo de IndexedDB:', auditoriaIdToSearch);
+            logger.debug('[SyncQueue] Datos incompletos en cola, obteniendo de IndexedDB:', auditoriaIdToSearch);
             // Combinar datos de la cola con datos completos de IndexedDB
             auditoriaData = {
               ...fullAuditoria,
@@ -351,7 +351,7 @@ class SyncQueueService {
               id: fullAuditoria.id || auditoriaData.id || auditoriaIdToSearch
             };
           } else {
-            console.warn('[SyncQueue] Auditoría no encontrada en IndexedDB:', auditoriaIdToSearch);
+            logger.warn('[SyncQueue] Auditoría no encontrada en IndexedDB:', auditoriaIdToSearch);
             // Si no se encuentra en IndexedDB y ya tiene varios reintentos, marcar como fallido inmediatamente
             if (item.retries >= 3) {
               throw new Error(`Auditoría no encontrada en IndexedDB después de ${item.retries} intentos. Datos perdidos o corruptos.`);
@@ -359,7 +359,7 @@ class SyncQueueService {
           }
         }
       } catch (error) {
-        console.warn('[SyncQueue] No se pudo obtener auditoría completa de IndexedDB:', error);
+        logger.warn('[SyncQueue] No se pudo obtener auditoría completa de IndexedDB:', error);
         // Si ya tiene varios reintentos y sigue sin datos, marcar como fallido
         if (item.retries >= 3) {
           throw new Error(`No se pudieron obtener datos de IndexedDB después de ${item.retries} intentos: ${error.message}`);
@@ -377,7 +377,7 @@ class SyncQueueService {
     }
     
     // Log para debugging - verificar qué datos tenemos
-    console.log('[SyncQueue] Datos de auditoría recibidos:', {
+    logger.debug('[SyncQueue] Datos de auditoría recibidos:', {
       userId: auditoriaData.userId,
       userEmail: auditoriaData.userEmail,
       usuarioEmail: auditoriaData.usuarioEmail,
@@ -443,20 +443,20 @@ class SyncQueueService {
             ownerId: tokenOwnerId,
             ...profileData
           };
-          console.log('[SyncQueue] ✅ Perfil actual obtenido desde owner-centric:', {
+          logger.debug('[SyncQueue] ✅ Perfil actual obtenido desde owner-centric:', {
             uid: currentUserProfile.uid,
             ownerId: currentUserProfile.ownerId,
             email: currentUserProfile.email,
             role: currentUserProfile.role
           });
         } else {
-          console.warn('[SyncQueue] ⚠️ Perfil de usuario no encontrado en owner-centric para:', currentUser.uid, 'ownerId:', tokenOwnerId);
+          logger.warn('[SyncQueue] ⚠️ Perfil de usuario no encontrado en owner-centric para:', currentUser.uid, 'ownerId:', tokenOwnerId);
         }
       } catch (userError) {
-        console.warn('[SyncQueue] ⚠️ No se pudo obtener usuario autenticado, usando datos offline:', userError.message);
+        logger.warn('[SyncQueue] ⚠️ No se pudo obtener usuario autenticado, usando datos offline:', userError.message);
       }
     } catch (error) {
-      console.warn('[SyncQueue] ⚠️ No se pudo obtener perfil actual desde Firestore, usando datos offline:', error.message);
+      logger.warn('[SyncQueue] ⚠️ No se pudo obtener perfil actual desde Firestore, usando datos offline:', error.message);
     }
     
     // Usar perfil actual si está disponible, sino usar datos offline como fallback
@@ -468,7 +468,7 @@ class SyncQueueService {
       role: auditoriaData.userRole || 'operario'
     };
     
-    console.log('[SyncQueue] 📋 Usando userProfile para sincronización:', {
+    logger.debug('[SyncQueue] 📋 Usando userProfile para sincronización:', {
       uid: userProfile.uid,
       clienteAdminId: userProfile.clienteAdminId,
       email: userProfile.email,
@@ -492,7 +492,7 @@ class SyncQueueService {
     }
 
     // Log para debugging
-    console.log('[SyncQueue] Sincronizando auditoría con datos:', {
+    logger.debug('[SyncQueue] Sincronizando auditoría con datos:', {
       auditoriaId: auditoriaData.id,
       empresa: auditoriaData.empresa,
       formulario: auditoriaData.formulario,
@@ -521,7 +521,7 @@ class SyncQueueService {
       firebaseId: auditoriaId
     });
 
-    console.log(`✅ Auditoría sincronizada: ${auditoriaId}`);
+    logger.debug(`✅ Auditoría sincronizada: ${auditoriaId}`);
   }
 
   /**
@@ -545,14 +545,14 @@ class SyncQueueService {
         
         // ✅ REGLA DE ORO: Si imagen tiene fileId, preservar tal cual (ya fue subida)
         if (imagen && typeof imagen === 'object' && imagen.fileId) {
-          console.log('[SyncQueue] Imagen ya sincronizada, preservando fileId:', imagen.fileId);
+          logger.debug('[SyncQueue] Imagen ya sincronizada, preservando fileId:', imagen.fileId);
           seccionImagenes.push(imagen);
           continue;
         }
         
         // ✅ Si tiene url pero no fileId, preservar (compatibilidad)
         if (imagen && typeof imagen === 'object' && imagen.url && !imagen.fileId) {
-          console.log('[SyncQueue] Imagen con URL preservada:', imagen.url);
+          logger.debug('[SyncQueue] Imagen con URL preservada:', imagen.url);
           seccionImagenes.push(imagen);
           continue;
         }
@@ -587,7 +587,7 @@ class SyncQueueService {
    */
   async syncPhoto(item) {
     // Implementar sincronización de foto individual si es necesario
-    console.log('📸 Sincronizando foto individual:', item.id);
+    logger.debug('📸 Sincronizando foto individual:', item.id);
     // Por ahora, las fotos se sincronizan junto con la auditoría
   }
 
@@ -596,7 +596,7 @@ class SyncQueueService {
    */
   async updateAuditoria(item) {
     // Implementar actualización de auditoría si es necesario
-    console.log('🔄 Actualizando auditoría:', item.id);
+    logger.debug('🔄 Actualizando auditoría:', item.id);
   }
 
   /**
@@ -615,7 +615,7 @@ class SyncQueueService {
     if (newRetries >= this.maxRetries || isPermanentError) {
       // Máximo de reintentos alcanzado o error permanente, marcar como error
       const reason = isPermanentError ? 'Error permanente (datos corruptos/perdidos)' : `Máximo de reintentos (${this.maxRetries}) alcanzado`;
-      console.error(`❌ Item falló definitivamente: ${reason} -`, item.id);
+      logger.error(`❌ Item falló definitivamente: ${reason} -`, item.id);
       
       await db.put('syncQueue', {
         ...item,
@@ -637,7 +637,7 @@ class SyncQueueService {
         nextRetry: nextRetry
       });
 
-      console.log(`⏰ Item reprogramado para reintento ${newRetries}/${this.maxRetries} en ${retryDelay/1000}s:`, item.id);
+      logger.debug(`⏰ Item reprogramado para reintento ${newRetries}/${this.maxRetries} en ${retryDelay/1000}s:`, item.id);
       
       this.notifyListeners('item_retry', { item, retries: newRetries, nextRetry });
     }
@@ -651,7 +651,7 @@ class SyncQueueService {
       const db = await getOfflineDatabase();
       await db.delete('syncQueue', itemId);
     } catch (error) {
-      console.error('❌ Error al eliminar item de cola:', error);
+      logger.error('❌ Error al eliminar item de cola:', error);
     }
   }
 
@@ -671,12 +671,12 @@ class SyncQueueService {
         await db.delete('syncQueue', item.id);
       }
 
-      console.log(`🧹 ${failedItems.length} items fallidos eliminados de la cola`);
+      logger.debug(`🧹 ${failedItems.length} items fallidos eliminados de la cola`);
       this.notifyListeners('queue_cleared', { count: failedItems.length });
       
       return failedItems.length;
     } catch (error) {
-      console.error('❌ Error al limpiar cola:', error);
+      logger.error('❌ Error al limpiar cola:', error);
       throw error;
     }
   }

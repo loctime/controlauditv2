@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 /**
  * Servicio de gestión de empresas del owner
  * 
@@ -42,15 +43,15 @@ export async function createEmpresa(
   const pathString = path.join('/');
   const currentUid = auth.currentUser?.uid || 'not-authenticated';
 
-  console.log(`[Firestore][${methodName}] ===== INICIO OPERACIÓN FIRESTORE =====`);
-  console.log(`[Firestore][${methodName}] Iniciando operación`);
-  console.log(`[Firestore][${methodName}] Path: ${pathString}`);
-  console.log(`[Firestore][${methodName}] Tipo: ${operation}`);
-  console.log(`[Firestore][${methodName}] ownerId: ${ownerId}`);
-  console.log(`[Firestore][${methodName}] empresaId: ${empresaData.id}`);
-  console.log(`[Firestore][${methodName}] uid: ${currentUid}`);
-  console.log(`[Firestore][${methodName}] auth.currentUser existe:`, !!auth.currentUser);
-  console.log(`[Firestore][${methodName}] auth.currentUser?.uid:`, auth.currentUser?.uid);
+  logger.debug(`[Firestore][${methodName}] ===== INICIO OPERACIÓN FIRESTORE =====`);
+  logger.debug(`[Firestore][${methodName}] Iniciando operación`);
+  logger.debug(`[Firestore][${methodName}] Path: ${pathString}`);
+  logger.debug(`[Firestore][${methodName}] Tipo: ${operation}`);
+  logger.debug(`[Firestore][${methodName}] ownerId: ${ownerId}`);
+  logger.debug(`[Firestore][${methodName}] empresaId: ${empresaData.id}`);
+  logger.debug(`[Firestore][${methodName}] uid: ${currentUid}`);
+  logger.debug(`[Firestore][${methodName}] auth.currentUser existe:`, !!auth.currentUser);
+  logger.debug(`[Firestore][${methodName}] auth.currentUser?.uid:`, auth.currentUser?.uid);
 
   if (!ownerId) {
     throw new Error('ownerId es requerido');
@@ -106,9 +107,9 @@ export async function createEmpresa(
       updatedBy: authUid
     };
     
-    console.log(`[Firestore][${methodName}] Ejecutando setDoc...`);
-    console.log(`[Firestore][${methodName}] empresaRef.path:`, empresaRef.path);
-    console.log(`[Firestore][${methodName}] Datos a escribir:`, {
+    logger.debug(`[Firestore][${methodName}] Ejecutando setDoc...`);
+    logger.debug(`[Firestore][${methodName}] empresaRef.path:`, empresaRef.path);
+    logger.debug(`[Firestore][${methodName}] Datos a escribir:`, {
       appId: documentData.appId,
       id: documentData.id,
       nombre: documentData.nombre,
@@ -120,29 +121,29 @@ export async function createEmpresa(
     
     await setDoc(empresaRef, documentData);
     
-    console.log(`[Firestore][${methodName}] ✅ ===== OPERACIÓN EXITOSA =====`);
-    console.log(`[Firestore][${methodName}] Path: ${pathString}`);
+    logger.debug(`[Firestore][${methodName}] ✅ ===== OPERACIÓN EXITOSA =====`);
+    logger.debug(`[Firestore][${methodName}] Path: ${pathString}`);
     return empresa;
   } catch (error: any) {
     console.group('[Firestore ERROR]');
-    console.error('code:', error.code);
-    console.error('message:', error.message);
-    console.error('stack:', error.stack);
+    logger.error('code:', error.code);
+    logger.error('message:', error.message);
+    logger.error('stack:', error.stack);
     console.groupEnd();
     
-    console.error(`[Firestore][${methodName}] ===== ERROR EN FIRESTORE =====`);
-    console.error(`[Firestore][${methodName}] ❌ ERROR`);
-    console.error(`[Firestore][${methodName}] Path: ${pathString}`);
-    console.error(`[Firestore][${methodName}] Tipo: ${operation}`);
-    console.error(`[Firestore][${methodName}] error.code: ${error.code || 'unknown'}`);
-    console.error(`[Firestore][${methodName}] error.message: ${error.message || 'unknown'}`);
-    console.error(`[Firestore][${methodName}] error.name: ${error.name || 'unknown'}`);
-    console.error(`[Firestore][${methodName}] error.stack:`, error.stack);
-    console.error(`[Firestore][${methodName}] ownerId: ${ownerId}`);
-    console.error(`[Firestore][${methodName}] empresaId: ${empresaData.id}`);
-    console.error(`[Firestore][${methodName}] uid: ${currentUid}`);
-    console.error(`[Firestore][${methodName}] auth.currentUser existe:`, !!auth.currentUser);
-    console.error(`[Firestore][${methodName}] auth.currentUser?.uid:`, auth.currentUser?.uid);
+    logger.error(`[Firestore][${methodName}] ===== ERROR EN FIRESTORE =====`);
+    logger.error(`[Firestore][${methodName}] ❌ ERROR`);
+    logger.error(`[Firestore][${methodName}] Path: ${pathString}`);
+    logger.error(`[Firestore][${methodName}] Tipo: ${operation}`);
+    logger.error(`[Firestore][${methodName}] error.code: ${error.code || 'unknown'}`);
+    logger.error(`[Firestore][${methodName}] error.message: ${error.message || 'unknown'}`);
+    logger.error(`[Firestore][${methodName}] error.name: ${error.name || 'unknown'}`);
+    logger.error(`[Firestore][${methodName}] error.stack:`, error.stack);
+    logger.error(`[Firestore][${methodName}] ownerId: ${ownerId}`);
+    logger.error(`[Firestore][${methodName}] empresaId: ${empresaData.id}`);
+    logger.error(`[Firestore][${methodName}] uid: ${currentUid}`);
+    logger.error(`[Firestore][${methodName}] auth.currentUser existe:`, !!auth.currentUser);
+    logger.error(`[Firestore][${methodName}] auth.currentUser?.uid:`, auth.currentUser?.uid);
     throw error;
   }
 }
@@ -157,11 +158,11 @@ export async function getEmpresas(ownerId: string): Promise<Empresa[]> {
   const pathString = path.join('/');
   const currentUid = auth.currentUser?.uid || 'not-authenticated';
 
-  console.log(`[Firestore][${methodName}] Iniciando operación`);
-  console.log(`[Firestore][${methodName}] Path: ${pathString}`);
-  console.log(`[Firestore][${methodName}] Tipo: ${operation}`);
-  console.log(`[Firestore][${methodName}] ownerId: ${ownerId}`);
-  console.log(`[Firestore][${methodName}] uid: ${currentUid}`);
+  logger.debug(`[Firestore][${methodName}] Iniciando operación`);
+  logger.debug(`[Firestore][${methodName}] Path: ${pathString}`);
+  logger.debug(`[Firestore][${methodName}] Tipo: ${operation}`);
+  logger.debug(`[Firestore][${methodName}] ownerId: ${ownerId}`);
+  logger.debug(`[Firestore][${methodName}] uid: ${currentUid}`);
 
   if (!ownerId) {
     throw new Error('ownerId es requerido');
@@ -174,9 +175,9 @@ export async function getEmpresas(ownerId: string): Promise<Empresa[]> {
 
   try {
     const snapshot = await getDocs(empresasRef);
-    console.log(`[Firestore][${methodName}] ✅ Operación exitosa`);
-    console.log(`[Firestore][${methodName}] Path: ${pathString}`);
-    console.log(`[Firestore][${methodName}] Documentos encontrados: ${snapshot.docs.length}`);
+    logger.debug(`[Firestore][${methodName}] ✅ Operación exitosa`);
+    logger.debug(`[Firestore][${methodName}] Path: ${pathString}`);
+    logger.debug(`[Firestore][${methodName}] Documentos encontrados: ${snapshot.docs.length}`);
     
     return snapshot.docs.map(doc => {
       const data = doc.data();
@@ -190,18 +191,18 @@ export async function getEmpresas(ownerId: string): Promise<Empresa[]> {
     });
   } catch (error: any) {
     console.group('[Firestore ERROR]');
-    console.error('code:', error.code);
-    console.error('message:', error.message);
-    console.error('stack:', error.stack);
+    logger.error('code:', error.code);
+    logger.error('message:', error.message);
+    logger.error('stack:', error.stack);
     console.groupEnd();
     
-    console.error(`[Firestore][${methodName}] ❌ ERROR`);
-    console.error(`[Firestore][${methodName}] Path: ${pathString}`);
-    console.error(`[Firestore][${methodName}] Tipo: ${operation}`);
-    console.error(`[Firestore][${methodName}] error.code: ${error.code || 'unknown'}`);
-    console.error(`[Firestore][${methodName}] error.message: ${error.message || 'unknown'}`);
-    console.error(`[Firestore][${methodName}] ownerId: ${ownerId}`);
-    console.error(`[Firestore][${methodName}] uid: ${currentUid}`);
+    logger.error(`[Firestore][${methodName}] ❌ ERROR`);
+    logger.error(`[Firestore][${methodName}] Path: ${pathString}`);
+    logger.error(`[Firestore][${methodName}] Tipo: ${operation}`);
+    logger.error(`[Firestore][${methodName}] error.code: ${error.code || 'unknown'}`);
+    logger.error(`[Firestore][${methodName}] error.message: ${error.message || 'unknown'}`);
+    logger.error(`[Firestore][${methodName}] ownerId: ${ownerId}`);
+    logger.error(`[Firestore][${methodName}] uid: ${currentUid}`);
     throw error;
   }
 }
@@ -219,12 +220,12 @@ export async function getEmpresa(
   const pathString = path.join('/');
   const currentUid = auth.currentUser?.uid || 'not-authenticated';
 
-  console.log(`[Firestore][${methodName}] Iniciando operación`);
-  console.log(`[Firestore][${methodName}] Path: ${pathString}`);
-  console.log(`[Firestore][${methodName}] Tipo: ${operation}`);
-  console.log(`[Firestore][${methodName}] ownerId: ${ownerId}`);
-  console.log(`[Firestore][${methodName}] empresaId: ${empresaId}`);
-  console.log(`[Firestore][${methodName}] uid: ${currentUid}`);
+  logger.debug(`[Firestore][${methodName}] Iniciando operación`);
+  logger.debug(`[Firestore][${methodName}] Path: ${pathString}`);
+  logger.debug(`[Firestore][${methodName}] Tipo: ${operation}`);
+  logger.debug(`[Firestore][${methodName}] ownerId: ${ownerId}`);
+  logger.debug(`[Firestore][${methodName}] empresaId: ${empresaId}`);
+  logger.debug(`[Firestore][${methodName}] uid: ${currentUid}`);
 
   if (!ownerId) {
     throw new Error('ownerId es requerido');
@@ -242,13 +243,13 @@ export async function getEmpresa(
     const snapshot = await getDoc(empresaRef);
     
     if (!snapshot.exists()) {
-      console.log(`[Firestore][${methodName}] ⚠️ Documento no existe`);
-      console.log(`[Firestore][${methodName}] Path: ${pathString}`);
+      logger.debug(`[Firestore][${methodName}] ⚠️ Documento no existe`);
+      logger.debug(`[Firestore][${methodName}] Path: ${pathString}`);
       return null;
     }
 
-    console.log(`[Firestore][${methodName}] ✅ Operación exitosa`);
-    console.log(`[Firestore][${methodName}] Path: ${pathString}`);
+    logger.debug(`[Firestore][${methodName}] ✅ Operación exitosa`);
+    logger.debug(`[Firestore][${methodName}] Path: ${pathString}`);
     
     const data = snapshot.data();
     return {
@@ -259,14 +260,14 @@ export async function getEmpresa(
       createdAt: data.createdAt?.toDate() || new Date()
     } as Empresa;
   } catch (error: any) {
-    console.error(`[Firestore][${methodName}] ❌ ERROR`);
-    console.error(`[Firestore][${methodName}] Path: ${pathString}`);
-    console.error(`[Firestore][${methodName}] Tipo: ${operation}`);
-    console.error(`[Firestore][${methodName}] error.code: ${error.code || 'unknown'}`);
-    console.error(`[Firestore][${methodName}] error.message: ${error.message || 'unknown'}`);
-    console.error(`[Firestore][${methodName}] ownerId: ${ownerId}`);
-    console.error(`[Firestore][${methodName}] empresaId: ${empresaId}`);
-    console.error(`[Firestore][${methodName}] uid: ${currentUid}`);
+    logger.error(`[Firestore][${methodName}] ❌ ERROR`);
+    logger.error(`[Firestore][${methodName}] Path: ${pathString}`);
+    logger.error(`[Firestore][${methodName}] Tipo: ${operation}`);
+    logger.error(`[Firestore][${methodName}] error.code: ${error.code || 'unknown'}`);
+    logger.error(`[Firestore][${methodName}] error.message: ${error.message || 'unknown'}`);
+    logger.error(`[Firestore][${methodName}] ownerId: ${ownerId}`);
+    logger.error(`[Firestore][${methodName}] empresaId: ${empresaId}`);
+    logger.error(`[Firestore][${methodName}] uid: ${currentUid}`);
     throw error;
   }
 }
@@ -285,13 +286,13 @@ export async function updateEmpresa(
   const pathString = path.join('/');
   const currentUid = auth.currentUser?.uid || 'not-authenticated';
 
-  console.log(`[Firestore][${methodName}] Iniciando operación`);
-  console.log(`[Firestore][${methodName}] Path: ${pathString}`);
-  console.log(`[Firestore][${methodName}] Tipo: ${operation}`);
-  console.log(`[Firestore][${methodName}] ownerId: ${ownerId}`);
-  console.log(`[Firestore][${methodName}] empresaId: ${empresaId}`);
-  console.log(`[Firestore][${methodName}] uid: ${currentUid}`);
-  console.log(`[Firestore][${methodName}] Datos a actualizar:`, JSON.stringify(data));
+  logger.debug(`[Firestore][${methodName}] Iniciando operación`);
+  logger.debug(`[Firestore][${methodName}] Path: ${pathString}`);
+  logger.debug(`[Firestore][${methodName}] Tipo: ${operation}`);
+  logger.debug(`[Firestore][${methodName}] ownerId: ${ownerId}`);
+  logger.debug(`[Firestore][${methodName}] empresaId: ${empresaId}`);
+  logger.debug(`[Firestore][${methodName}] uid: ${currentUid}`);
+  logger.debug(`[Firestore][${methodName}] Datos a actualizar:`, JSON.stringify(data));
 
   if (!ownerId) {
     throw new Error('ownerId es requerido');
@@ -307,17 +308,17 @@ export async function updateEmpresa(
 
   try {
     await updateDoc(empresaRef, data);
-    console.log(`[Firestore][${methodName}] ✅ Operación exitosa`);
-    console.log(`[Firestore][${methodName}] Path: ${pathString}`);
+    logger.debug(`[Firestore][${methodName}] ✅ Operación exitosa`);
+    logger.debug(`[Firestore][${methodName}] Path: ${pathString}`);
   } catch (error: any) {
-    console.error(`[Firestore][${methodName}] ❌ ERROR`);
-    console.error(`[Firestore][${methodName}] Path: ${pathString}`);
-    console.error(`[Firestore][${methodName}] Tipo: ${operation}`);
-    console.error(`[Firestore][${methodName}] error.code: ${error.code || 'unknown'}`);
-    console.error(`[Firestore][${methodName}] error.message: ${error.message || 'unknown'}`);
-    console.error(`[Firestore][${methodName}] ownerId: ${ownerId}`);
-    console.error(`[Firestore][${methodName}] empresaId: ${empresaId}`);
-    console.error(`[Firestore][${methodName}] uid: ${currentUid}`);
+    logger.error(`[Firestore][${methodName}] ❌ ERROR`);
+    logger.error(`[Firestore][${methodName}] Path: ${pathString}`);
+    logger.error(`[Firestore][${methodName}] Tipo: ${operation}`);
+    logger.error(`[Firestore][${methodName}] error.code: ${error.code || 'unknown'}`);
+    logger.error(`[Firestore][${methodName}] error.message: ${error.message || 'unknown'}`);
+    logger.error(`[Firestore][${methodName}] ownerId: ${ownerId}`);
+    logger.error(`[Firestore][${methodName}] empresaId: ${empresaId}`);
+    logger.error(`[Firestore][${methodName}] uid: ${currentUid}`);
     throw error;
   }
 }

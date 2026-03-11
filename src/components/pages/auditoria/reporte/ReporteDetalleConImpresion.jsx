@@ -1,9 +1,9 @@
+import logger from '@/utils/logger';
 import React, { useRef } from 'react';
 import ReactToPrint from 'react-to-print';
 import Reporte from './ReporteImprimir.jsx';
 import { Box, Button } from '@mui/material';
 import PrintIcon from '@mui/icons-material/Print';
-
 // CSS para ocultar el botón en impresión
 const style = `
 @media print {
@@ -27,10 +27,10 @@ const ReporteConImpresion = (props) => {
           )}
           content={() => reporteRef.current}
           onBeforeGetContent={() => {
-            console.log('[DEBUG] Preparando impresión del reporte...');
+            logger.debug('[DEBUG] Preparando impresión del reporte...');
           }}
           onAfterPrint={() => {
-            console.log('[DEBUG] Impresión completada.');
+            logger.debug('[DEBUG] Impresión completada.');
           }}
         />
       </Box>

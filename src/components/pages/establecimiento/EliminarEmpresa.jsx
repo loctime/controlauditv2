@@ -1,15 +1,15 @@
+import logger from '@/utils/logger';
 import React from "react";
 import Swal from "sweetalert2";
 import { IconButton } from "@mui/material";
 import DeleteIcon from "@mui/icons-material/Delete";
 import { db } from "../../../firebaseControlFile";
 import { doc, deleteDoc } from "firebase/firestore";
-
 const EliminarEmpresa = ({ empresa, onEmpresaEliminada }) => {
   const handleDelete = async () => {
     // Validar que tenemos los datos necesarios
     if (!empresa || !empresa.id) {
-      console.error("Empresa inválida:", empresa);
+      logger.error("Empresa inválida:", empresa);
       await Swal.fire({
         title: 'Error',
         text: 'Datos de empresa inválidos',
@@ -65,7 +65,7 @@ const EliminarEmpresa = ({ empresa, onEmpresaEliminada }) => {
         }
       }
     } catch (error) {
-      console.error("Error al eliminar la empresa:", error);
+      logger.error("Error al eliminar la empresa:", error);
       
       // Mostrar error específico
       let errorMessage = 'No se pudo eliminar la empresa.';
@@ -91,7 +91,7 @@ const EliminarEmpresa = ({ empresa, onEmpresaEliminada }) => {
 
   // Validar que tenemos los datos necesarios para renderizar
   if (!empresa || !empresa.id || !empresa.nombre) {
-    console.warn("EliminarEmpresa: Datos de empresa incompletos", empresa);
+    logger.warn("EliminarEmpresa: Datos de empresa incompletos", empresa);
     return null;
   }
 

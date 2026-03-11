@@ -1,10 +1,10 @@
+import logger from '@/utils/logger';
 // Servicio para manejar el guardado y descarga de PDFs usando ControlFile
 import { doc, updateDoc } from 'firebase/firestore';
 import { dbAudit } from '../../../../firebaseControlFile';
 import { firestoreRoutesCore } from '../../../../core/firestore/firestoreRoutes.core';
 import { uploadFileWithContext } from '../../../../services/unifiedFileUploadService';
 import generarContenidoImpresion from './generadorHTML';
-
 /**
  * Convierte HTML a PDF usando la API del navegador
  * @param {string} html - Contenido HTML del reporte
@@ -44,7 +44,7 @@ const htmlToPdf = async (html) => {
     
     return blob;
   } catch (error) {
-    console.error('[pdfStorageService] Error generando PDF:', error);
+    logger.error('[pdfStorageService] Error generando PDF:', error);
     throw error;
   }
 };
@@ -59,7 +59,7 @@ const htmlToPdf = async (html) => {
  */
 export const guardarPdfEnStorage = async (reporteId, html, metadata = {}, companyId = 'system') => {
   try {
-    console.log('[pdfStorageService] Iniciando guardado de PDF en ControlFile...');
+    logger.debug('[pdfStorageService] Iniciando guardado de PDF en ControlFile...');
     
     // Generar nombre único para el archivo
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
@@ -70,7 +70,7 @@ export const guardarPdfEnStorage = async (reporteId, html, metadata = {}, compan
     const htmlFile = new File([htmlBlob], fileName, { type: 'text/html; charset=utf-8' });
     
     // Subir archivo a ControlFile usando flujo unificado (legacy retirado intencionalmente)
-    console.log('[pdfStorageService] Subiendo archivo a ControlFile...');
+    logger.debug('[pdfStorageService] Subiendo archivo a ControlFile...');
     const result = await uploadFileWithContext({
       file: htmlFile,
       context: {
@@ -85,12 +85,12 @@ export const guardarPdfEnStorage = async (reporteId, html, metadata = {}, compan
     // ✅ Usar shareToken para URL persistente
     const shareUrl = `https://files.controldoc.app/api/shares/${result.shareToken}/image`;
     
-    console.log('[pdfStorageService] ✅ PDF guardado exitosamente en ControlFile, fileId:', result.fileId);
-    console.log('[pdfStorageService] ✅ Share token:', result.shareToken);
+    logger.debug('[pdfStorageService] ✅ PDF guardado exitosamente en ControlFile, fileId:', result.fileId);
+    logger.debug('[pdfStorageService] ✅ Share token:', result.shareToken);
     return shareUrl;
     
   } catch (error) {
-    console.error('[pdfStorageService] ❌ Error guardando PDF:', error);
+    logger.error('[pdfStorageService] ❌ Error guardando PDF:', error);
     throw error;
   }
 };
@@ -104,7 +104,7 @@ export const guardarPdfEnStorage = async (reporteId, html, metadata = {}, compan
  */
 export const generarYGuardarPdf = async (reporteId, datosReporte, ownerId = null) => {
   try {
-    console.log('[pdfStorageService] Generando PDF completo...');
+    logger.debug('[pdfStorageService] Generando PDF completo...');
     
     if (!ownerId) {
       throw new Error('ownerId es requerido para generar y guardar PDF en owner-centric. Proporcione ownerId desde userProfile.ownerId.');
@@ -132,14 +132,14 @@ export const generarYGuardarPdf = async (reporteId, datosReporte, ownerId = null
     try {
       await actualizarReporteConPdf(reporteId, downloadURL, ownerId);
     } catch (updateError) {
-      console.warn('[pdfStorageService] ⚠️ PDF guardado pero no se pudo actualizar el reporte:', updateError);
+      logger.warn('[pdfStorageService] ⚠️ PDF guardado pero no se pudo actualizar el reporte:', updateError);
       // No lanzar error, el PDF ya está guardado
     }
     
     return downloadURL;
     
   } catch (error) {
-    console.error('[pdfStorageService] ❌ Error generando y guardando PDF:', error);
+    logger.error('[pdfStorageService] ❌ Error generando y guardando PDF:', error);
     throw error;
   }
 };
@@ -159,9 +159,9 @@ export const descargarPdf = (url, fileName = 'reporte-auditoria.html') => {
     link.click();
     document.body.removeChild(link);
     
-    console.log('[pdfStorageService] ✅ Descarga iniciada:', fileName);
+    logger.debug('[pdfStorageService] ✅ Descarga iniciada:', fileName);
   } catch (error) {
-    console.error('[pdfStorageService] ❌ Error descargando PDF:', error);
+    logger.error('[pdfStorageService] ❌ Error descargando PDF:', error);
     throw error;
   }
 };
@@ -175,7 +175,7 @@ export const descargarPdf = (url, fileName = 'reporte-auditoria.html') => {
  */
 export const actualizarReporteConPdf = async (reporteId, pdfUrl, ownerId = null) => {
   try {
-    console.log('[pdfStorageService] Actualizando reporte con URL del PDF...');
+    logger.debug('[pdfStorageService] Actualizando reporte con URL del PDF...');
     
     if (!ownerId) {
       throw new Error('ownerId es requerido para actualizar reporte en owner-centric. Proporcione ownerId desde userProfile.ownerId.');
@@ -183,7 +183,7 @@ export const actualizarReporteConPdf = async (reporteId, pdfUrl, ownerId = null)
     
     // Actualizar en ruta owner-centric: apps/auditoria/owners/{ownerId}/reportes
     const reporteRef = doc(dbAudit, ...firestoreRoutesCore.reporte(ownerId, reporteId));
-    console.log('[pdfStorageService] Actualizando reporte en ruta owner-centric:', `apps/auditoria/owners/${ownerId}/reportes/${reporteId}`);
+    logger.debug('[pdfStorageService] Actualizando reporte en ruta owner-centric:', `apps/auditoria/owners/${ownerId}/reportes/${reporteId}`);
     
     await updateDoc(reporteRef, {
       pdfUrl: pdfUrl,
@@ -191,9 +191,9 @@ export const actualizarReporteConPdf = async (reporteId, pdfUrl, ownerId = null)
       ultimaActualizacion: new Date().toISOString()
     });
     
-    console.log('[pdfStorageService] ✅ Reporte actualizado con URL del PDF');
+    logger.debug('[pdfStorageService] ✅ Reporte actualizado con URL del PDF');
   } catch (error) {
-    console.error('[pdfStorageService] ❌ Error actualizando reporte:', error);
+    logger.error('[pdfStorageService] ❌ Error actualizando reporte:', error);
     throw error;
   }
 };
@@ -206,7 +206,7 @@ export const actualizarReporteConPdf = async (reporteId, pdfUrl, ownerId = null)
  * @deprecated Usar API de ControlFile directamente para eliminar archivos
  */
 export const eliminarPdfDelStorage = async (fileId) => {
-  console.warn('[pdfStorageService] ⚠️ eliminarPdfDelStorage está deprecated. Usar API de ControlFile directamente.');
+  logger.warn('[pdfStorageService] ⚠️ eliminarPdfDelStorage está deprecated. Usar API de ControlFile directamente.');
   // TODO: Implementar eliminación vía API de ControlFile si es necesario
   throw new Error('Eliminación de archivos debe hacerse vía API de ControlFile');
 };

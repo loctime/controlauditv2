@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 import React, { useState, useEffect } from 'react';
 import {
   Box,
@@ -83,7 +84,7 @@ const UsuariosList = ({ ownerId: propOwnerId, showAddButton = true }) => {
     setLoading(true);
     try {
       if (!ownerId) {
-        console.warn('[UsuariosList] No hay ownerId, usando servicio legacy');
+        logger.warn('[UsuariosList] No hay ownerId, usando servicio legacy');
         // Fallback a servicio legacy si no hay ownerId
         const lista = await userService.listUsers();
         // Normalizar usuarios legacy para que tengan el mismo formato
@@ -108,10 +109,10 @@ const UsuariosList = ({ ownerId: propOwnerId, showAddButton = true }) => {
         error.response?.data?.error?.includes('permission-denied');
       
       if (isPermissionDenied) {
-        console.debug('[UsuariosList] Permission denied al cargar usuarios (esperado después de crear usuario en Core)');
+        logger.debug('[UsuariosList] Permission denied al cargar usuarios (esperado después de crear usuario en Core)');
         setUsuarios([]);
       } else {
-        console.error('[UsuariosList] Error al cargar usuarios:', error);
+        logger.error('[UsuariosList] Error al cargar usuarios:', error);
         toast.error('Error al cargar usuarios: ' + error.message);
         setUsuarios([]);
       }
@@ -275,7 +276,7 @@ const UsuariosList = ({ ownerId: propOwnerId, showAddButton = true }) => {
       handleCloseModal();
       fetchUsuarios();
     } catch (error) {
-      console.error('Error al actualizar usuario:', error);
+      logger.error('Error al actualizar usuario:', error);
       toast.error(error.message);
     }
   };
@@ -315,7 +316,7 @@ const UsuariosList = ({ ownerId: propOwnerId, showAddButton = true }) => {
         toast.success('Usuario eliminado exitosamente');
         fetchUsuarios();
       } catch (error) {
-        console.error('Error al eliminar usuario:', error);
+        logger.error('Error al eliminar usuario:', error);
         toast.error(error.message);
       }
     }
@@ -484,7 +485,7 @@ const UsuariosList = ({ ownerId: propOwnerId, showAddButton = true }) => {
                 if (Array.isArray(lista)) {
                   setUsuarios(lista);
                   actualizado = true;
-                  console.log('[UsuariosList] ✅ Lista actualizada después de crear usuario');
+                  logger.debug('[UsuariosList] ✅ Lista actualizada después de crear usuario');
                   return;
                 }
               } else {
@@ -507,15 +508,15 @@ const UsuariosList = ({ ownerId: propOwnerId, showAddButton = true }) => {
               
               if (isPermissionDenied && intentos < maxIntentos) {
                 // Esperar más tiempo antes del siguiente intento
-                console.log(`[UsuariosList] Intento ${intentos}/${maxIntentos}: esperando propagación de permisos...`);
+                logger.debug(`[UsuariosList] Intento ${intentos}/${maxIntentos}: esperando propagación de permisos...`);
                 await new Promise(resolve => setTimeout(resolve, 1500 * intentos));
               } else {
                 // Último intento falló o error diferente
                 if (intentos >= maxIntentos) {
-                  console.warn('[UsuariosList] No se pudo actualizar automáticamente. El usuario fue creado correctamente.');
+                  logger.warn('[UsuariosList] No se pudo actualizar automáticamente. El usuario fue creado correctamente.');
                   toast.info('Usuario creado exitosamente. Refresca la página para verlo en la lista.');
                 } else {
-                  console.error('[UsuariosList] Error al actualizar lista:', error);
+                  logger.error('[UsuariosList] Error al actualizar lista:', error);
                   throw error;
                 }
               }

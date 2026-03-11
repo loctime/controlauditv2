@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 import React, { useState, useEffect, useRef } from "react";
 import { 
   Box, 
@@ -74,7 +75,7 @@ const PerfilUsuario = () => {
     const tab = params.get('tab');
     if (tab && validTabs.includes(tab)) {
       setSelectedSection(tab);
-      console.debug('[PerfilUsuario] Tab seleccionado desde URL:', tab);
+      logger.debug('[PerfilUsuario] Tab seleccionado desde URL:', tab);
     }
   }, [location.search]);
 
@@ -95,9 +96,9 @@ const PerfilUsuario = () => {
           error.message?.includes('Missing or insufficient permissions');
         
         if (isPermissionDenied) {
-          console.debug('[PerfilUsuario] Permission denied al cargar usuarios (esperado después de crear usuario en Core)');
+          logger.debug('[PerfilUsuario] Permission denied al cargar usuarios (esperado después de crear usuario en Core)');
         } else {
-          console.warn('[PerfilUsuario] Error al cargar usuarios:', error);
+          logger.warn('[PerfilUsuario] Error al cargar usuarios:', error);
         }
         setUsuariosCreados([]);
       } finally {
@@ -119,7 +120,7 @@ const PerfilUsuario = () => {
         const lista = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         setFormularios(lista);
       } catch (error) {
-        console.error('Error cargando formularios:', error);
+        logger.error('Error cargando formularios:', error);
         setFormularios([]);
       } finally {
         setLoadingFormularios(false);
@@ -634,9 +635,9 @@ const PerfilUsuario = () => {
                         error.message?.includes('Missing or insufficient permissions');
                       
                       if (isPermissionDenied) {
-                        console.debug('[PerfilUsuario] Permission denied al refrescar usuarios (esperado después de crear usuario en Core)');
+                        logger.debug('[PerfilUsuario] Permission denied al refrescar usuarios (esperado después de crear usuario en Core)');
                       } else {
-                        console.warn('[PerfilUsuario] Error al refrescar usuarios:', error);
+                        logger.warn('[PerfilUsuario] Error al refrescar usuarios:', error);
                       }
                       setUsuariosCreados([]);
                     } finally {

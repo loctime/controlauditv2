@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 import React, { useState, useEffect, useRef } from "react";
 import { 
   Dialog, 
@@ -90,7 +91,7 @@ const CameraDialog = ({
 
   const startCamera = async () => {
     try {
-      console.log('🔄 Iniciando cámara...');
+      logger.debug('🔄 Iniciando cámara...');
       setCameraStatus('starting');
       setCameraError(null);
       
@@ -118,10 +119,10 @@ const CameraDialog = ({
 
       let stream;
       try {
-        console.log(`📹 Intentando con cámara ${currentCamera === 'environment' ? 'trasera' : 'frontal'} y configuración HD...`);
+        logger.debug(`📹 Intentando con cámara ${currentCamera === 'environment' ? 'trasera' : 'frontal'} y configuración HD...`);
         stream = await navigator.mediaDevices.getUserMedia(constraints);
       } catch (basicError) {
-        console.log('⚠️ Fallback a configuración básica:', basicError.message);
+        logger.debug('⚠️ Fallback a configuración básica:', basicError.message);
         try {
           stream = await navigator.mediaDevices.getUserMedia({ 
             video: { 
@@ -129,7 +130,7 @@ const CameraDialog = ({
             } 
           });
         } catch (fallbackError) {
-          console.log('⚠️ Fallback a configuración mínima:', fallbackError.message);
+          logger.debug('⚠️ Fallback a configuración mínima:', fallbackError.message);
           stream = await navigator.mediaDevices.getUserMedia({ 
             video: true 
           });
@@ -142,8 +143,8 @@ const CameraDialog = ({
         videoRef.current.srcObject = stream;
         
         videoRef.current.onloadedmetadata = () => {
-          console.log('✅ Cámara iniciada correctamente');
-          console.log(`📐 Dimensiones del video: ${videoRef.current.videoWidth}x${videoRef.current.videoHeight}`);
+          logger.debug('✅ Cámara iniciada correctamente');
+          logger.debug(`📐 Dimensiones del video: ${videoRef.current.videoWidth}x${videoRef.current.videoHeight}`);
           setCameraStatus('ready');
           
           if (cameraZoom > 1) {
@@ -157,17 +158,17 @@ const CameraDialog = ({
         };
         
         videoRef.current.onerror = (error) => {
-          console.error('❌ Error en el video:', error);
+          logger.error('❌ Error en el video:', error);
           setCameraStatus('error');
           setCameraError('Error en el video');
         };
         
         videoRef.current.oncanplay = () => {
-          console.log('🎬 Video listo para reproducir');
+          logger.debug('🎬 Video listo para reproducir');
         };
       }
     } catch (error) {
-      console.error('❌ Error al acceder a la cámara:', error);
+      logger.error('❌ Error al acceder a la cámara:', error);
       setCameraStatus('error');
       setCameraError(error.message);
       
@@ -179,7 +180,7 @@ const CameraDialog = ({
 
   const capturePhoto = async () => {
     if (!videoRef.current || !canvasRef.current) {
-      console.error('❌ Referencias de video o canvas no disponibles');
+      logger.error('❌ Referencias de video o canvas no disponibles');
       alert('Error: No se puede acceder a la cámara. Intenta activar la cámara primero.');
       return;
     }
@@ -189,13 +190,13 @@ const CameraDialog = ({
     const ctx = canvas.getContext('2d');
     
     if (video.readyState < 2) {
-      console.error('❌ Video no está listo');
+      logger.error('❌ Video no está listo');
       alert('La cámara no está lista. Espera un momento e intenta de nuevo.');
       return;
     }
     
     try {
-      console.log('📸 Capturando foto...');
+      logger.debug('📸 Capturando foto...');
       
       // Animación de captura
       setCaptureAnimation(true);
@@ -207,7 +208,7 @@ const CameraDialog = ({
       let { videoWidth, videoHeight } = video;
       
       if (!videoWidth || !videoHeight) {
-        console.warn('⚠️ Dimensiones de video no disponibles, usando valores por defecto');
+        logger.warn('⚠️ Dimensiones de video no disponibles, usando valores por defecto');
         videoWidth = 640;
         videoHeight = 480;
       }
@@ -235,7 +236,7 @@ const CameraDialog = ({
       
       canvas.toBlob(async (blob) => {
         if (!blob) {
-          console.error('❌ Error al generar blob de imagen');
+          logger.error('❌ Error al generar blob de imagen');
           alert('Error al procesar la imagen. Intenta de nuevo.');
           return;
         }
@@ -252,7 +253,7 @@ const CameraDialog = ({
         
         setCompressionProgress(100);
         
-        console.log('✅ Foto capturada y guardada exitosamente');
+        logger.debug('✅ Foto capturada y guardada exitosamente');
         
         // Cerrar cámara automáticamente después de capturar
         setTimeout(() => {
@@ -263,7 +264,7 @@ const CameraDialog = ({
       }, 'image/jpeg', 0.6);
       
     } catch (error) {
-      console.error('❌ Error al capturar foto:', error);
+      logger.error('❌ Error al capturar foto:', error);
       alert('Error al capturar la foto. Intenta de nuevo.');
       setCompressionProgress(0);
     }
@@ -280,7 +281,7 @@ const CameraDialog = ({
     setCurrentCamera(newCamera);
     setCameraZoom(1);
     
-    console.log(`🔄 Cambiando a cámara: ${newCamera === 'environment' ? 'trasera' : 'frontal'}`);
+    logger.debug(`🔄 Cambiando a cámara: ${newCamera === 'environment' ? 'trasera' : 'frontal'}`);
     
     setTimeout(() => {
       startCamera();
@@ -302,7 +303,7 @@ const CameraDialog = ({
                 advanced: [{ zoom: newZoom }]
               });
             } catch (error) {
-              console.log('Zoom no soportado en este dispositivo');
+              logger.debug('Zoom no soportado en este dispositivo');
               if (videoRef.current) {
                 videoRef.current.style.transform = `scale(${newZoom})`;
                 videoRef.current.style.transformOrigin = 'center center';
@@ -334,7 +335,7 @@ const CameraDialog = ({
                 advanced: [{ zoom: newZoom }]
               });
             } catch (error) {
-              console.log('Zoom no soportado en este dispositivo');
+              logger.debug('Zoom no soportado en este dispositivo');
               if (videoRef.current) {
                 videoRef.current.style.transform = newZoom === 1 ? 'none' : `scale(${newZoom})`;
                 videoRef.current.style.transformOrigin = 'center center';

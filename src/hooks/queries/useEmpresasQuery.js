@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useContext, useMemo, useRef } from 'react';
 import { onSnapshot, query, where, doc, collection } from 'firebase/firestore';
@@ -5,7 +6,6 @@ import { empresaService } from '../../services/empresaService';
 import { dbAudit } from '../../firebaseControlFile';
 import { AuthContext } from '@/components/context/AuthContext';
 import { firestoreRoutesCore } from '../../core/firestore/firestoreRoutes.core';
-
 /**
  * Hook TanStack Query para empresas - ÚNICA FUENTE DE VERDAD REACTIVA
  * 
@@ -61,7 +61,7 @@ export const useEmpresasQuery = (options = {}) => {
         return [];
       }
 
-      console.log('[useEmpresasQuery] Fetch inicial de empresas (owner-centric)');
+      logger.debug('[useEmpresasQuery] Fetch inicial de empresas (owner-centric)');
       // Usar servicios owner-centric según el rol
       if (role === 'operario') {
         const resultado = await empresaService.getEmpresasForOperario(userId, ownerId);
@@ -99,7 +99,7 @@ export const useEmpresasQuery = (options = {}) => {
 
     // ✅ OPERARIO: Flujo owner-centric aislado
     if (role === 'operario') {
-      console.log('[useEmpresasQuery] ✅ Operario detectado - usando flujo owner-centric');
+      logger.debug('[useEmpresasQuery] ✅ Operario detectado - usando flujo owner-centric');
       
       listenerActiveRef.current = true;
       currentQueryKeyRef.current = queryKey;
@@ -111,7 +111,7 @@ export const useEmpresasQuery = (options = {}) => {
       const configurarOperario = async () => {
         try {
           if (!ownerId) {
-            console.error('[useEmpresasQuery] ❌ ownerId no disponible');
+            logger.error('[useEmpresasQuery] ❌ ownerId no disponible');
             queryClient.setQueryData(queryKey, []);
             return;
           }
@@ -126,7 +126,7 @@ export const useEmpresasQuery = (options = {}) => {
 
           const { empresas, empresasAsignadas, userDocRef } = resultado;
           
-          console.log('[useEmpresasQuery] ✅ Operario configurado desde servicio:', {
+          logger.debug('[useEmpresasQuery] ✅ Operario configurado desde servicio:', {
             userId,
             ownerId,
             empresasCount: empresas.length
@@ -139,10 +139,10 @@ export const useEmpresasQuery = (options = {}) => {
           const unsubscribeUser = onSnapshot(
             userDocRef,
             async () => {
-              console.log('[useEmpresasQuery] Operario: documento usuario cambió, haciendo refetch completo');
+              logger.debug('[useEmpresasQuery] Operario: documento usuario cambió, haciendo refetch completo');
               
               if (!ownerId) {
-                console.error('[useEmpresasQuery] ❌ ownerId no disponible en refetch');
+                logger.error('[useEmpresasQuery] ❌ ownerId no disponible en refetch');
                 return;
               }
               
@@ -152,7 +152,7 @@ export const useEmpresasQuery = (options = {}) => {
               }
             },
             (error) => {
-              console.error('[useEmpresasQuery] Operario: error al escuchar documento owner-centric:', error);
+              logger.error('[useEmpresasQuery] Operario: error al escuchar documento owner-centric:', error);
             }
           );
           unsubscribesOperario.push(unsubscribeUser);
@@ -165,10 +165,10 @@ export const useEmpresasQuery = (options = {}) => {
                 const unsubscribeEmpresa = onSnapshot(
                   empresaRef,
                   async () => {
-                    console.log(`[useEmpresasQuery] Operario: empresa ${empresaId} cambió, haciendo refetch completo`);
+                    logger.debug(`[useEmpresasQuery] Operario: empresa ${empresaId} cambió, haciendo refetch completo`);
                     
                     if (!ownerId) {
-                      console.error('[useEmpresasQuery] ❌ ownerId no disponible en refetch de empresa');
+                      logger.error('[useEmpresasQuery] ❌ ownerId no disponible en refetch de empresa');
                       return;
                     }
                     
@@ -180,18 +180,18 @@ export const useEmpresasQuery = (options = {}) => {
                   (error) => {
                     // Ignorar errores de permisos (empresa puede haber sido desasignada)
                     if (error.code !== 'permission-denied') {
-                      console.error(`[useEmpresasQuery] Operario: error al escuchar empresa ${empresaId}:`, error);
+                      logger.error(`[useEmpresasQuery] Operario: error al escuchar empresa ${empresaId}:`, error);
                     }
                   }
                 );
                 unsubscribesOperario.push(unsubscribeEmpresa);
               } catch (error) {
-                console.error(`[useEmpresasQuery] Operario: error al crear listener para empresa ${empresaId}:`, error);
+                logger.error(`[useEmpresasQuery] Operario: error al crear listener para empresa ${empresaId}:`, error);
               }
             });
           }
         } catch (error) {
-          console.error('[useEmpresasQuery] Operario: error al configurar:', error);
+          logger.error('[useEmpresasQuery] Operario: error al configurar:', error);
           queryClient.setQueryData(queryKey, []);
         }
       };
@@ -201,7 +201,7 @@ export const useEmpresasQuery = (options = {}) => {
 
       // Cleanup específico para operario
       return () => {
-        console.log('[useEmpresasQuery] Desactivando listener reactivo de operario');
+        logger.debug('[useEmpresasQuery] Desactivando listener reactivo de operario');
         listenerActiveRef.current = false;
         currentQueryKeyRef.current = null;
         unsubscribesOperario.forEach(unsubscribe => unsubscribe());
@@ -227,12 +227,12 @@ export const useEmpresasQuery = (options = {}) => {
       return;
     }
 
-    console.log('[useEmpresasQuery] Activando listener reactivo de empresas (max/supermax) - owner-centric');
+    logger.debug('[useEmpresasQuery] Activando listener reactivo de empresas (max/supermax) - owner-centric');
     listenerActiveRef.current = true;
     currentQueryKeyRef.current = queryKey;
     
     if (!ownerId) {
-      console.error('[useEmpresasQuery] ❌ ownerId no disponible para max/supermax');
+      logger.error('[useEmpresasQuery] ❌ ownerId no disponible para max/supermax');
       return;
     }
     
@@ -253,12 +253,12 @@ export const useEmpresasQuery = (options = {}) => {
       
       // Actualizar el cache de TanStack Query con los nuevos datos
       queryClient.setQueryData(queryKey, empresasUnificadas);
-      console.log('[useEmpresasQuery] Cache actualizado con', empresasUnificadas.length, 'empresas');
+      logger.debug('[useEmpresasQuery] Cache actualizado con', empresasUnificadas.length, 'empresas');
     };
 
     // Función para manejar errores
     const handleError = (error) => {
-      console.error('[useEmpresasQuery] Error en listener:', error);
+      logger.error('[useEmpresasQuery] Error en listener:', error);
       // No actualizar cache en caso de error, mantener datos existentes
     };
 
@@ -328,7 +328,7 @@ export const useEmpresasQuery = (options = {}) => {
     }
 
     return () => {
-      console.log('[useEmpresasQuery] Desactivando listener reactivo');
+      logger.debug('[useEmpresasQuery] Desactivando listener reactivo');
       listenerActiveRef.current = false;
       currentQueryKeyRef.current = null;
       unsubscribes.forEach(unsubscribe => unsubscribe());

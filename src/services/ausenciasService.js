@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 import {
   collection,
   query,
@@ -260,7 +261,7 @@ export async function listAusencias({
 
     return filtered;
   } catch (error) {
-    console.error("? [ausenciasService] Error listando ausencias:", error);
+    logger.error("? [ausenciasService] Error listando ausencias:", error);
     return [];
   }
 }
@@ -477,7 +478,7 @@ export async function getAusenciaTipos({ maxResults = 200 } = {}, userProfile) {
     });
     return Array.from(unique);
   } catch (error) {
-    console.error("Error obteniendo tipos de ausencias:", error);
+    logger.error("Error obteniendo tipos de ausencias:", error);
     return [];
   }
 }

@@ -1,7 +1,7 @@
+import logger from '@/utils/logger';
 import React from "react";
 import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper } from "@mui/material";
 import { convertirShareTokenAUrl } from '@/utils/imageUtils';
-
 const getSafeValue = (val) => {
   if (!val) return "Dato no disponible";
   if (typeof val === "string") return val;
@@ -24,38 +24,38 @@ const getSafeValue = (val) => {
 
 // Función helper para procesar imagen usando helper global
 const procesarImagen = (imagen, seccionIndex, preguntaIndex) => {
-  console.debug(`[ImagenesTable] Procesando imagen para sección ${seccionIndex}, pregunta ${preguntaIndex}:`, imagen);
+  logger.debug(`[ImagenesTable] Procesando imagen para sección ${seccionIndex}, pregunta ${preguntaIndex}:`, imagen);
   
   if (!imagen || imagen === null || imagen === undefined) {
-    console.debug(`[ImagenesTable] No hay imagen para sección ${seccionIndex}, pregunta ${preguntaIndex}`);
+    logger.debug(`[ImagenesTable] No hay imagen para sección ${seccionIndex}, pregunta ${preguntaIndex}`);
     return null;
   }
 
   // Si es un array de imágenes, tomar la primera
   if (Array.isArray(imagen) && imagen.length > 0) {
-    console.debug(`[ImagenesTable] Array de imágenes:`, imagen);
+    logger.debug(`[ImagenesTable] Array de imágenes:`, imagen);
     return convertirShareTokenAUrl(imagen[0]);
   }
 
   // Si es "[object Object]", es una imagen corrupta
   if (typeof imagen === 'string' && imagen === '[object Object]') {
-    console.warn(`[ImagenesTable] Imagen corrupta "[object Object]" para sección ${seccionIndex}, pregunta ${preguntaIndex}`);
+    logger.warn(`[ImagenesTable] Imagen corrupta "[object Object]" para sección ${seccionIndex}, pregunta ${preguntaIndex}`);
     return null;
   }
 
   // Usar helper global para convertir shareToken a URL
   const url = convertirShareTokenAUrl(imagen);
   if (url) {
-    console.debug(`[ImagenesTable] URL generada: ${url}`);
+    logger.debug(`[ImagenesTable] URL generada: ${url}`);
     return url;
   }
 
-  console.debug(`[ImagenesTable] Formato de imagen no reconocido:`, imagen);
+  logger.debug(`[ImagenesTable] Formato de imagen no reconocido:`, imagen);
   return null;
 };
 
 const ImagenesTable = ({ secciones, imagenes, comentarios }) => {
-  console.debug('[ImagenesTable] Props recibidas:', { secciones, imagenes, comentarios });
+  logger.debug('[ImagenesTable] Props recibidas:', { secciones, imagenes, comentarios });
 
   return (
     <TableContainer component={Paper}>
@@ -75,7 +75,7 @@ const ImagenesTable = ({ secciones, imagenes, comentarios }) => {
               const imagenProcesada = procesarImagen(imagen, seccionIndex, preguntaIndex);
               const comentario = comentarios[seccionIndex]?.[preguntaIndex];
               
-              console.debug(`[ImagenesTable] Renderizando fila sección ${seccionIndex}, pregunta ${preguntaIndex}:`, {
+              logger.debug(`[ImagenesTable] Renderizando fila sección ${seccionIndex}, pregunta ${preguntaIndex}:`, {
                 imagen: imagen,
                 imagenProcesada: imagenProcesada,
                 comentario: comentario
@@ -92,11 +92,11 @@ const ImagenesTable = ({ secciones, imagenes, comentarios }) => {
                         alt="Imagen" 
                         style={{ width: "400px", height: "auto" }}
                         onError={(e) => { 
-                          console.error(`[ImagenesTable] Error cargando imagen: ${imagenProcesada}`, e);
+                          logger.error(`[ImagenesTable] Error cargando imagen: ${imagenProcesada}`, e);
                           e.target.style.display = 'none'; 
                         }}
                         onLoad={() => {
-                          console.debug(`[ImagenesTable] Imagen cargada exitosamente: ${imagenProcesada}`);
+                          logger.debug(`[ImagenesTable] Imagen cargada exitosamente: ${imagenProcesada}`);
                         }}
                       />
                     ) : (

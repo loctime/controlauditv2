@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 // src/services/empleadoService.js
 import { 
   doc, 
@@ -50,7 +51,7 @@ export const empleadoService = {
       
       return empleadosData;
     } catch (error) {
-      console.error('❌ Error obteniendo empleados por empresa:', error);
+      logger.error('❌ Error obteniendo empleados por empresa:', error);
       return [];
     }
   },
@@ -72,7 +73,7 @@ export const empleadoService = {
       
       return snapshot.docs.map(doc => normalizeEmpleado(doc));
     } catch (error) {
-      console.error('❌ Error obteniendo empleados por sucursal:', error);
+      logger.error('❌ Error obteniendo empleados por sucursal:', error);
       return [];
     }
   },
@@ -104,7 +105,7 @@ export const empleadoService = {
       
       return empleadosData;
     } catch (error) {
-      console.error('❌ Error obteniendo empleados por sucursales:', error);
+      logger.error('❌ Error obteniendo empleados por sucursales:', error);
       return [];
     }
   },
@@ -128,7 +129,7 @@ export const empleadoService = {
       
       return null;
     } catch (error) {
-      console.error('❌ Error obteniendo empleado por ID:', error);
+      logger.error('❌ Error obteniendo empleado por ID:', error);
       return null;
     }
   },
@@ -160,7 +161,7 @@ export const empleadoService = {
         
         // Extraer ownerId del user (userProfile)
         if (!userObj || !userObj.ownerId) {
-          console.error('❌ ownerId no disponible en crearEmpleado', {
+          logger.error('❌ ownerId no disponible en crearEmpleado', {
             payload: empleadoData,
             user: userObj
           });
@@ -168,7 +169,7 @@ export const empleadoService = {
         }
         ownerId = userObj.ownerId;
       } else {
-        console.error('❌ Parámetros inválidos en crearEmpleado', {
+        logger.error('❌ Parámetros inválidos en crearEmpleado', {
           firstParam: ownerIdOrData,
           secondParam: empleadoDataOrUser,
           thirdParam: user
@@ -177,7 +178,7 @@ export const empleadoService = {
       }
 
       if (!ownerId || typeof ownerId !== 'string') {
-        console.error('❌ ownerId inválido en crearEmpleado', {
+        logger.error('❌ ownerId inválido en crearEmpleado', {
           ownerId,
           type: typeof ownerId,
           payload: empleadoData
@@ -186,7 +187,7 @@ export const empleadoService = {
       }
 
       if (!empleadoData || typeof empleadoData !== 'object') {
-        console.error('❌ empleadoData inválido en crearEmpleado', {
+        logger.error('❌ empleadoData inválido en crearEmpleado', {
           empleadoData,
           type: typeof empleadoData
         });
@@ -197,7 +198,7 @@ export const empleadoService = {
       const normalizeId = (id, fieldName) => {
         // Si es null o undefined
         if (id === null || id === undefined) {
-          console.error(`❌ ${fieldName} es null/undefined en crearEmpleado`, {
+          logger.error(`❌ ${fieldName} es null/undefined en crearEmpleado`, {
             payload: empleadoData,
             fieldName,
             value: id
@@ -207,7 +208,7 @@ export const empleadoService = {
 
         // Si es 'todas'
         if (id === 'todas' || id === 'Todas' || id === 'TODAS') {
-          console.error(`❌ ${fieldName} tiene valor inválido 'todas' en crearEmpleado`, {
+          logger.error(`❌ ${fieldName} tiene valor inválido 'todas' en crearEmpleado`, {
             payload: empleadoData,
             fieldName,
             value: id
@@ -218,7 +219,7 @@ export const empleadoService = {
         // Si es un objeto con propiedad id
         if (typeof id === 'object' && id !== null && 'id' in id) {
           if (typeof id.id !== 'string') {
-            console.error(`❌ ${fieldName}.id no es string en crearEmpleado`, {
+            logger.error(`❌ ${fieldName}.id no es string en crearEmpleado`, {
               payload: empleadoData,
               fieldName,
               objectValue: id,
@@ -231,7 +232,7 @@ export const empleadoService = {
 
         // Si no es string
         if (typeof id !== 'string') {
-          console.error(`❌ ${fieldName} no es string en crearEmpleado`, {
+          logger.error(`❌ ${fieldName} no es string en crearEmpleado`, {
             payload: empleadoData,
             fieldName,
             value: id,
@@ -242,7 +243,7 @@ export const empleadoService = {
 
         // Si es string vacío
         if (id.trim() === '') {
-          console.error(`❌ ${fieldName} es string vacío en crearEmpleado`, {
+          logger.error(`❌ ${fieldName} es string vacío en crearEmpleado`, {
             payload: empleadoData,
             fieldName,
             value: id
@@ -285,7 +286,7 @@ export const empleadoService = {
 
       return empleadoRef.id;
     } catch (error) {
-      console.error('❌ Error creando empleado:', error);
+      logger.error('❌ Error creando empleado:', error);
       throw error;
     }
   },
@@ -321,7 +322,7 @@ export const empleadoService = {
 
       return true;
     } catch (error) {
-      console.error('❌ Error actualizando empleado:', error);
+      logger.error('❌ Error actualizando empleado:', error);
       throw error;
     }
   },
@@ -352,7 +353,7 @@ export const empleadoService = {
 
       return true;
     } catch (error) {
-      console.error('❌ Error eliminando empleado:', error);
+      logger.error('❌ Error eliminando empleado:', error);
       throw error;
     }
   }

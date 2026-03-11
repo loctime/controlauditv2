@@ -1,6 +1,6 @@
+import logger from '@/utils/logger';
 import { useEffect, useRef, useState } from "react";
 import { safetyDashboardService } from "../../../../services/safetyDashboardService";
-
 const FILTER_STORAGE_KEY = "dashboard-seguridad-filtros";
 const PREFETCH_MAX_PAYLOAD_BYTES = 1.5 * 1024 * 1024;
 
@@ -169,7 +169,7 @@ export const useDashboardRealtimeData = ({
 
         prefetchedPeriodsRef.current.add(periodSignature);
       } catch (error) {
-        console.error("❌ [Dashboard] Error durante la precarga anticipada:", error);
+        logger.error("❌ [Dashboard] Error durante la precarga anticipada:", error);
       }
     };
 
@@ -199,7 +199,7 @@ export const useDashboardRealtimeData = ({
         : userProfile?.empresaId || null;
     
     if (!companyId) {
-      console.warn('⚠️ [Dashboard] companyId no disponible');
+      logger.warn('⚠️ [Dashboard] companyId no disponible');
       setLoading(false);
       return;
     }

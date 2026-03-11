@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Drawer,
@@ -83,7 +84,7 @@ const HistoryItem = ({ item }) => (
       primaryTypographyProps={{ variant: 'body2', sx: { fontWeight: 600 } }}
       secondaryTypographyProps={{ variant: 'caption', sx: { color: '#6b7280' } }}
       primary={item.detalle || item.tipo || 'Actualizacion'}
-      secondary={`${formatDateTime(item.at)}${item.by ? ` · ${item.by}` : ''}`}
+      secondary={`${formatDateTime(item.at)}${item.by ? ` ï¿½ ${item.by}` : ''}`}
     />
   </ListItem>
 );
@@ -130,7 +131,7 @@ export default function AusenciaDetailPanel({
       setAusencia(ausenciaData);
       setFiles(filesData);
     } catch (loadError) {
-      console.error('Error cargando detalle de ausencia:', loadError);
+      logger.error('Error cargando detalle de ausencia:', loadError);
       setError('No se pudo cargar el detalle de la ausencia.');
       setAusencia(null);
       setFiles([]);
@@ -152,7 +153,7 @@ export default function AusenciaDetailPanel({
       await refreshData();
       await onUpdated?.();
     } catch (actionError) {
-      console.error('Error cerrando ausencia:', actionError);
+      logger.error('Error cerrando ausencia:', actionError);
       setError('No se pudo cerrar la ausencia.');
     } finally {
       setBusyAction(false);
@@ -169,7 +170,7 @@ export default function AusenciaDetailPanel({
       await refreshData();
       await onUpdated?.();
     } catch (actionError) {
-      console.error('Error reabriendo ausencia:', actionError);
+      logger.error('Error reabriendo ausencia:', actionError);
       setError('No se pudo reabrir la ausencia.');
     } finally {
       setBusyAction(false);
@@ -201,7 +202,7 @@ export default function AusenciaDetailPanel({
       await refreshData();
       await onUpdated?.();
     } catch (uploadError) {
-      console.error('Error subiendo archivos de ausencia:', uploadError);
+      logger.error('Error subiendo archivos de ausencia:', uploadError);
       setError('No se pudieron subir los archivos.');
     } finally {
       setBusyAction(false);
@@ -219,7 +220,7 @@ export default function AusenciaDetailPanel({
   };
 
   const handleRemoveFile = async (fileMetaId) => {
-    const confirmed = window.confirm('¿Eliminar este archivo de la ausencia?');
+    const confirmed = window.confirm('ï¿½Eliminar este archivo de la ausencia?');
     if (!confirmed) return;
 
     setBusyAction(true);
@@ -228,7 +229,7 @@ export default function AusenciaDetailPanel({
       await refreshData();
       await onUpdated?.();
     } catch (removeError) {
-      console.error('Error eliminando archivo de ausencia:', removeError);
+      logger.error('Error eliminando archivo de ausencia:', removeError);
       setError('No se pudo eliminar el archivo.');
     } finally {
       setBusyAction(false);
@@ -382,7 +383,7 @@ export default function AusenciaDetailPanel({
                             {file.nombre || file.fileId || file.id}
                           </Typography>
                           <Typography variant="caption" sx={{ color: '#6b7280' }}>
-                            {file.tipoArchivo || 'documento'} · {file.size ? `${Math.round(file.size / 1024)} KB` : 'Sin tamaño'}
+                            {file.tipoArchivo || 'documento'} ï¿½ {file.size ? `${Math.round(file.size / 1024)} KB` : 'Sin tamaï¿½o'}
                           </Typography>
                         </Box>
                         <Stack direction="row" spacing={0.5}>

@@ -1,9 +1,9 @@
+import logger from '@/utils/logger';
 import { useState, useEffect, useCallback } from 'react';
 import { query, where, getDocs, collection } from 'firebase/firestore';
 import { dbAudit } from '../../../../firebaseControlFile';
 import { firestoreRoutesCore } from '../../../../core/firestore/firestoreRoutes.core';
 import { useAuth } from '@/components/context/AuthContext';
-
 /**
  * Normaliza una capacitación unificando campos legacy
  * Preserva todos los campos originales
@@ -130,7 +130,7 @@ export const useCapacitacionesData = (selectedEmpresa, selectedSucursal, sucursa
           setLoading(false);
         }
       } catch (error) {
-        console.error('Error al cargar capacitaciones:', error);
+        logger.error('Error al cargar capacitaciones:', error);
         if (mounted) {
           setLoading(false);
         }
@@ -170,7 +170,7 @@ export const useCapacitacionesData = (selectedEmpresa, selectedSucursal, sucursa
           setPlanesAnuales(planesData);
         }
       } catch (error) {
-        console.error('Error al cargar planes anuales:', error);
+        logger.error('Error al cargar planes anuales:', error);
         if (mounted) {
           setPlanesAnuales([]);
         }

@@ -1,8 +1,8 @@
+import logger from '@/utils/logger';
 import { getOfflineDatabase } from './offlineDatabase';
 import { auth, dbAudit } from '../firebaseControlFile';
 import { getDocs, query, where, collection } from 'firebase/firestore';
 import { firestoreRoutesCore } from '../core/firestore/firestoreRoutes.core';
-
 /**
  * Sistema de cache completo para funcionamiento offline
  * Guarda TODOS los datos necesarios para que la app funcione sin conexión
@@ -43,7 +43,7 @@ export const saveCompleteUserCache = async (userProfile, empresas = null, sucurs
       
       if (empresas && empresas.length > 0) {
         empresasData = empresas;
-        console.log('✅ Usando empresas ya cargadas en memoria:', empresasData.length);
+        logger.debug('✅ Usando empresas ya cargadas en memoria:', empresasData.length);
       } else {
         const { empresaService } = await import('./empresaService');
         empresasData = await empresaService.getUserEmpresas(
@@ -51,12 +51,12 @@ export const saveCompleteUserCache = async (userProfile, empresas = null, sucurs
           userProfile.role,
           userProfile.clienteAdminId
         );
-        console.log('✅ Empresas cargadas desde servicio (con migración):', empresasData.length);
+        logger.debug('✅ Empresas cargadas desde servicio (con migración):', empresasData.length);
       }
       
       cacheData.empresas = empresasData;
     } catch (error) {
-      console.error('Error cacheando empresas:', error);
+      logger.error('Error cacheando empresas:', error);
     }
 
     try {
@@ -64,7 +64,7 @@ export const saveCompleteUserCache = async (userProfile, empresas = null, sucurs
       
       if (formularios && formularios.length > 0) {
         formulariosData = formularios;
-        console.log('✅ Usando formularios ya cargados en memoria:', formulariosData.length);
+        logger.debug('✅ Usando formularios ya cargados en memoria:', formulariosData.length);
       } else {
         const oldUid = userProfile.migratedFromUid;
         const formulariosQueries = [];
@@ -77,12 +77,12 @@ export const saveCompleteUserCache = async (userProfile, empresas = null, sucurs
           ...doc.data()
         }));
         
-        console.log('✅ Formularios cargados (con migración):', formulariosData.length);
+        logger.debug('✅ Formularios cargados (con migración):', formulariosData.length);
       }
       
       cacheData.formularios = formulariosData;
     } catch (error) {
-      console.error('Error cacheando formularios:', error);
+      logger.error('Error cacheando formularios:', error);
     }
 
     try {
@@ -90,7 +90,7 @@ export const saveCompleteUserCache = async (userProfile, empresas = null, sucurs
       
       if (sucursales && sucursales.length > 0) {
         sucursalesData = sucursales;
-        console.log('✅ Usando sucursales ya cargadas en memoria:', sucursalesData.length);
+        logger.debug('✅ Usando sucursales ya cargadas en memoria:', sucursalesData.length);
       } else {
         // Leer sucursales desde owner-centric
         const empresasIds = cacheData.empresas.map(emp => emp.id);
@@ -127,7 +127,7 @@ export const saveCompleteUserCache = async (userProfile, empresas = null, sucurs
       
       cacheData.sucursales = sucursalesData;
     } catch (error) {
-      console.error('Error cacheando sucursales:', error);
+      logger.error('Error cacheando sucursales:', error);
     }
 
     try {
@@ -139,9 +139,9 @@ export const saveCompleteUserCache = async (userProfile, empresas = null, sucurs
         ...doc.data()
       }));
       
-      console.log('✅ Reportes/auditorías cargados desde owner-centric:', cacheData.auditorias.length);
+      logger.debug('✅ Reportes/auditorías cargados desde owner-centric:', cacheData.auditorias.length);
     } catch (error) {
-      console.error('Error cacheando auditorías:', error);
+      logger.error('Error cacheando auditorías:', error);
       cacheData.auditorias = [];
     }
 
@@ -157,19 +157,19 @@ export const saveCompleteUserCache = async (userProfile, empresas = null, sucurs
         const newPercentage = quota > 0 ? (newUsage / quota) * 100 : 0;
         
         if (newPercentage > 90) {
-          console.warn('⚠️ Cuota casi llena:', newPercentage.toFixed(1) + '%');
+          logger.warn('⚠️ Cuota casi llena:', newPercentage.toFixed(1) + '%');
           await clearOldCacheIfNeeded();
         } else if (percentage > 80) {
-          console.log('📊 Cuota de almacenamiento:', percentage.toFixed(1) + '%');
+          logger.debug('📊 Cuota de almacenamiento:', percentage.toFixed(1) + '%');
         }
       }
     } catch (quotaError) {
-      console.warn('No se pudo verificar cuota:', quotaError);
+      logger.warn('No se pudo verificar cuota:', quotaError);
     }
     
     try {
       if (!offlineDb.objectStoreNames.contains('settings')) {
-        console.warn('⚠️ Object store "settings" no existe, intentando recrear base de datos...');
+        logger.warn('⚠️ Object store "settings" no existe, intentando recrear base de datos...');
         
         try {
           offlineDb.close();
@@ -177,11 +177,11 @@ export const saveCompleteUserCache = async (userProfile, empresas = null, sucurs
           offlineDb = await getOfflineDatabase();
           
           if (!offlineDb.objectStoreNames.contains('settings')) {
-            console.warn('⚠️ Object store "settings" aún no existe después de reabrir, guardando solo en localStorage');
+            logger.warn('⚠️ Object store "settings" aún no existe después de reabrir, guardando solo en localStorage');
             throw new Error('Settings store not found after reopen');
           }
         } catch (reopenError) {
-          console.warn('⚠️ Error al reabrir base de datos:', reopenError);
+          logger.warn('⚠️ Error al reabrir base de datos:', reopenError);
           throw new Error('Settings store not found');
         }
       }
@@ -191,16 +191,16 @@ export const saveCompleteUserCache = async (userProfile, empresas = null, sucurs
         value: cacheData,
         updatedAt: Date.now()
       });
-      console.log('✅ Cache guardado en IndexedDB');
+      logger.debug('✅ Cache guardado en IndexedDB');
     } catch (indexedDBError) {
-      console.warn('⚠️ Error guardando en IndexedDB, usando solo localStorage:', indexedDBError);
+      logger.warn('⚠️ Error guardando en IndexedDB, usando solo localStorage:', indexedDBError);
     }
     
     try {
       localStorage.setItem('complete_user_cache', JSON.stringify(cacheData));
     } catch (localStorageError) {
       if (localStorageError.name === 'QuotaExceededError') {
-        console.warn('⚠️ localStorage lleno, limpiando cache antiguo...');
+        logger.warn('⚠️ localStorage lleno, limpiando cache antiguo...');
         try {
           const essentialCache = {
             ...cacheData,
@@ -208,16 +208,16 @@ export const saveCompleteUserCache = async (userProfile, empresas = null, sucurs
           };
           localStorage.setItem('complete_user_cache', JSON.stringify(essentialCache));
         } catch (e) {
-          console.error('No se pudo guardar en localStorage incluso después de limpiar:', e);
+          logger.error('No se pudo guardar en localStorage incluso después de limpiar:', e);
         }
       } else {
-        console.error('No se pudo guardar en localStorage:', localStorageError);
+        logger.error('No se pudo guardar en localStorage:', localStorageError);
       }
     }
 
     return cacheData;
   } catch (error) {
-    console.error('Error guardando cache completo:', error);
+    logger.error('Error guardando cache completo:', error);
     throw error;
   }
 };
@@ -231,21 +231,21 @@ export const getCompleteUserCache = async (userId) => {
       const db = await getOfflineDatabase();
       
       if (!db.objectStoreNames.contains('settings')) {
-        console.warn('⚠️ Object store "settings" no existe en IndexedDB, intentando localStorage...');
+        logger.warn('⚠️ Object store "settings" no existe en IndexedDB, intentando localStorage...');
         throw new Error('Settings store not found');
       }
       
       const cached = await db.get('settings', 'complete_user_cache');
       
       if (!cached || !cached.value) {
-        console.log('📭 No hay cache completo disponible en IndexedDB');
+        logger.debug('📭 No hay cache completo disponible en IndexedDB');
         throw new Error('No cache in IndexedDB');
       }
 
       const cacheData = cached.value;
       
       if (cacheData.userId !== userId) {
-        console.warn('⚠️ Cache de otro usuario, limpiando...');
+        logger.warn('⚠️ Cache de otro usuario, limpiando...');
         await clearCompleteUserCache();
         throw new Error('Cache user mismatch');
       }
@@ -254,12 +254,12 @@ export const getCompleteUserCache = async (userId) => {
       const cacheAgeDays = cacheAge / (1000 * 60 * 60 * 24);
       
       if (cacheAgeDays > CACHE_EXPIRY_DAYS) {
-        console.warn('⚠️ Cache expirado, limpiando...');
+        logger.warn('⚠️ Cache expirado, limpiando...');
         await clearCompleteUserCache();
         throw new Error('Cache expired');
       }
 
-      console.log('✅ Cache cargado desde IndexedDB:', {
+      logger.debug('✅ Cache cargado desde IndexedDB:', {
         empresas: cacheData.empresas?.length || 0,
         formularios: cacheData.formularios?.length || 0,
         sucursales: cacheData.sucursales?.length || 0
@@ -267,19 +267,19 @@ export const getCompleteUserCache = async (userId) => {
 
       return cacheData;
     } catch (indexedDBError) {
-      console.warn('⚠️ IndexedDB falló, intentando localStorage:', indexedDBError.message);
+      logger.warn('⚠️ IndexedDB falló, intentando localStorage:', indexedDBError.message);
       
       try {
         const localCache = localStorage.getItem('complete_user_cache');
         if (!localCache) {
-          console.log('📭 No hay cache en localStorage');
+          logger.debug('📭 No hay cache en localStorage');
           return null;
         }
         
         const cacheData = JSON.parse(localCache);
         
         if (cacheData.userId !== userId) {
-          console.warn('⚠️ Cache de localStorage de otro usuario, limpiando...');
+          logger.warn('⚠️ Cache de localStorage de otro usuario, limpiando...');
           localStorage.removeItem('complete_user_cache');
           return null;
         }
@@ -288,12 +288,12 @@ export const getCompleteUserCache = async (userId) => {
         const cacheAgeDays = cacheAge / (1000 * 60 * 60 * 24);
         
         if (cacheAgeDays > CACHE_EXPIRY_DAYS) {
-          console.warn('⚠️ Cache de localStorage expirado, limpiando...');
+          logger.warn('⚠️ Cache de localStorage expirado, limpiando...');
           localStorage.removeItem('complete_user_cache');
           return null;
         }
 
-        console.log('✅ Cache cargado desde localStorage:', {
+        logger.debug('✅ Cache cargado desde localStorage:', {
           empresas: cacheData.empresas?.length || 0,
           formularios: cacheData.formularios?.length || 0,
           sucursales: cacheData.sucursales?.length || 0
@@ -301,12 +301,12 @@ export const getCompleteUserCache = async (userId) => {
 
         return cacheData;
       } catch (localStorageError) {
-        console.error('❌ Error parseando cache de localStorage:', localStorageError);
+        logger.error('❌ Error parseando cache de localStorage:', localStorageError);
         return null;
       }
     }
   } catch (error) {
-    console.error('❌ Error obteniendo cache completo:', error);
+    logger.error('❌ Error obteniendo cache completo:', error);
     return null;
   }
 };
@@ -323,7 +323,7 @@ export const clearCompleteUserCache = async () => {
     } catch (e) {
     }
   } catch (error) {
-    console.error('Error limpiando cache completo:', error);
+    logger.error('Error limpiando cache completo:', error);
   }
 };
 
@@ -340,7 +340,7 @@ const clearOldCacheIfNeeded = async () => {
       const cacheAgeDays = cacheAge / (1000 * 60 * 60 * 24);
       
       if (cacheAgeDays > 7 && cached.value.auditorias) {
-        console.log('🧹 Limpiando auditorías antiguas del cache para liberar espacio...');
+        logger.debug('🧹 Limpiando auditorías antiguas del cache para liberar espacio...');
         const updatedCache = {
           ...cached.value,
           auditorias: []
@@ -352,11 +352,11 @@ const clearOldCacheIfNeeded = async () => {
           updatedAt: Date.now()
         });
         
-        console.log('✅ Cache optimizado');
+        logger.debug('✅ Cache optimizado');
       }
     }
   } catch (error) {
-    console.warn('Error limpiando cache antiguo:', error);
+    logger.warn('Error limpiando cache antiguo:', error);
   }
 };
 
@@ -368,7 +368,7 @@ export const hasCompleteCache = async (userId) => {
     const cache = await getCompleteUserCache(userId);
     return cache !== null;
   } catch (error) {
-    console.error('Error verificando cache completo:', error);
+    logger.error('Error verificando cache completo:', error);
     return false;
   }
 };
@@ -416,7 +416,7 @@ export const getCacheStats = async (userId = null) => {
       version: cache.version
     };
   } catch (error) {
-    console.error('Error obteniendo estadísticas de cache:', error);
+    logger.error('Error obteniendo estadísticas de cache:', error);
     return {
       hasCache: false,
       empresas: 0,
@@ -443,7 +443,7 @@ export const refreshCompleteCache = async (userProfile) => {
     
     return cacheData;
   } catch (error) {
-    console.error('Error actualizando cache completo:', error);
+    logger.error('Error actualizando cache completo:', error);
     throw error;
   }
 };

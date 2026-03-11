@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 // src/components/pages/dashboard/components/AccidentesGoalsCard.jsx
 import React, { useState } from 'react';
 import { 
@@ -124,7 +125,7 @@ const AccidentesGoalsCard = ({
       // Recargar la página o actualizar datos
       window.location.reload();
     } catch (error) {
-      console.error('Error reiniciando contador:', error);
+      logger.error('Error reiniciando contador:', error);
       Swal.fire({
         icon: 'error',
         title: 'Error',

@@ -1,10 +1,10 @@
+import logger from '@/utils/logger';
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { getDocs, query, where, orderBy, collection } from 'firebase/firestore';
 import { dbAudit } from '../../../../firebaseControlFile.js';
 import { firestoreRoutesCore } from '../../../../core/firestore/firestoreRoutes.core';
 import { useAuth } from '@/components/context/AuthContext';
 import { registrosAsistenciaService } from '../../../../services/registrosAsistenciaService';
-
 /**
  * Hook para cargar datos del dashboard de seguridad
  * Usa arquitectura owner-centric: apps/auditoria/owners/{ownerId}/{coleccion}
@@ -70,7 +70,7 @@ export const useDashboardDataFetch = (
       
       return empleadosData;
     } catch (error) {
-      console.error('Error cargando empleados:', error);
+      logger.error('Error cargando empleados:', error);
       return [];
     }
   }, [selectedSucursal, sucursalesFiltradas, userProfile?.ownerId]);
@@ -145,7 +145,7 @@ export const useDashboardDataFetch = (
       
       return accidentesData;
     } catch (error) {
-      console.error('Error cargando accidentes:', error);
+      logger.error('Error cargando accidentes:', error);
       return [];
     }
   }, [selectedSucursal, selectedYear, calcularPeriodo, sucursalesFiltradas, userProfile?.ownerId]);
@@ -247,7 +247,7 @@ export const useDashboardDataFetch = (
 
       return ausenciasData;
     } catch (error) {
-      console.error('Error cargando ausencias:', error);
+      logger.error('Error cargando ausencias:', error);
       return [];
     }
   }, [selectedSucursal, selectedYear, calcularPeriodo, sucursalesFiltradas, userProfile?.ownerId]);
@@ -332,7 +332,7 @@ export const useDashboardDataFetch = (
                 empleados: empleadoIds.map((empleadoId) => ({ empleadoId, asistio: true }))
               };
             } catch (err) {
-              console.warn('[useDashboardDataFetch] Error enriqueciendo capacitación', cap.id, err);
+              logger.warn('[useDashboardDataFetch] Error enriqueciendo capacitación', cap.id, err);
               return { ...cap, empleados: cap.empleados || [] };
             }
           })
@@ -342,7 +342,7 @@ export const useDashboardDataFetch = (
       
       return capacitacionesData;
     } catch (error) {
-      console.error('Error cargando capacitaciones:', error);
+      logger.error('Error cargando capacitaciones:', error);
       return [];
     }
   }, [selectedSucursal, selectedYear, calcularPeriodo, sucursalesFiltradas, userProfile?.ownerId]);
@@ -395,7 +395,7 @@ export const useDashboardDataFetch = (
             }
           }
         } catch (error) {
-          console.warn('Error consultando auditorías para empresa', empresaId, error);
+          logger.warn('Error consultando auditorías para empresa', empresaId, error);
         }
       };
 
@@ -440,7 +440,7 @@ export const useDashboardDataFetch = (
 
       return auditoriasFiltradas;
     } catch (error) {
-      console.error('Error cargando auditorías:', error);
+      logger.error('Error cargando auditorías:', error);
       return [];
     }
   }, [selectedEmpresa, selectedSucursal, selectedYear, calcularPeriodo, sucursalesFiltradas, empresasDisponibles, userProfile?.ownerId]);
@@ -496,7 +496,7 @@ export const useDashboardDataFetch = (
           setLoading(false);
         }
       } catch (error) {
-        console.error('Error cargando datos:', error);
+        logger.error('Error cargando datos:', error);
         if (mounted) {
           setLoading(false);
         }
@@ -536,7 +536,7 @@ export const useDashboardDataFetch = (
       setAuditorias(auditoriasData);
       setAusencias(ausenciasData);
     } catch (error) {
-      console.error('Error cargando datos:', error);
+      logger.error('Error cargando datos:', error);
     } finally {
       setLoading(false);
     }

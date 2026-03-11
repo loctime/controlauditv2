@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 import React, { useState, useEffect, useRef } from 'react';
 import {
   Box,
@@ -57,7 +58,7 @@ export default function AuditoriaManualEvidencias({
     if (auditoriaId && userProfile?.ownerId) {
       loadEvidencias();
     } else {
-      console.warn('[AuditoriaManualEvidencias] Valores no disponibles:', {
+      logger.warn('[AuditoriaManualEvidencias] Valores no disponibles:', {
         auditoriaId,
         ownerId: userProfile?.ownerId,
         userProfile: !!userProfile
@@ -85,7 +86,7 @@ export default function AuditoriaManualEvidencias({
         }
       });
     } catch (err) {
-      console.error('Error al cargar evidencias:', err);
+      logger.error('Error al cargar evidencias:', err);
       setError('Error al cargar las evidencias');
     } finally {
       setLoading(false);
@@ -119,7 +120,7 @@ export default function AuditoriaManualEvidencias({
         return newMap;
       });
     } catch (err) {
-      console.error(`Error al cargar imagen ${imageId}:`, err);
+      logger.error(`Error al cargar imagen ${imageId}:`, err);
       // En caso de error, usar la URL directa como fallback
       const fallbackUrl = convertirShareTokenAUrl(shareToken);
       if (fallbackUrl) {
@@ -242,7 +243,7 @@ export default function AuditoriaManualEvidencias({
       // Limpiar preview temporal
       URL.revokeObjectURL(previewURL);
     } catch (err) {
-      console.error('Error al subir imagen:', err);
+      logger.error('Error al subir imagen:', err);
       setError(err.message || 'Error al subir la imagen');
       
       // Eliminar imagen temporal en caso de error
@@ -282,7 +283,7 @@ export default function AuditoriaManualEvidencias({
     if (!result.isConfirmed) return;
 
     try {
-      console.log('[AuditoriaManualEvidencias] Eliminando evidencia:', {
+      logger.debug('[AuditoriaManualEvidencias] Eliminando evidencia:', {
         ownerId: userProfile.ownerId,
         auditoriaId,
         evidenciaId
@@ -316,8 +317,8 @@ export default function AuditoriaManualEvidencias({
         showConfirmButton: false
       });
     } catch (err) {
-      console.error('Error al eliminar evidencia:', err);
-      console.error('[AuditoriaManualEvidencias] Parámetros recibidos:', {
+      logger.error('Error al eliminar evidencia:', err);
+      logger.error('[AuditoriaManualEvidencias] Parámetros recibidos:', {
         ownerId: userProfile?.ownerId,
         auditoriaId,
         evidenciaId
@@ -504,7 +505,7 @@ export default function AuditoriaManualEvidencias({
                               if (evidencia.id) {
                                 handleDelete(evidencia.id);
                               } else {
-                                console.error('[AuditoriaManualEvidencias] Intento de eliminar evidencia sin ID:', evidencia);
+                                logger.error('[AuditoriaManualEvidencias] Intento de eliminar evidencia sin ID:', evidencia);
                                 setError('Error: La evidencia no tiene un ID válido');
                               }
                             }}

@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 // src/components/pages/accidentes/components/AccidenteDetailPanelV2.jsx
 
 import React from 'react';
@@ -78,7 +79,7 @@ const ContenidoRegistros = ({ entityId, userId, ownerId, registryService, refres
           setLoading(false);
         }
       } catch (error) {
-        console.error('[ContenidoRegistros] Error:', error);
+        logger.error('[ContenidoRegistros] Error:', error);
         if (mounted) setLoading(false);
       }
     };
@@ -116,7 +117,7 @@ const ContenidoRegistros = ({ entityId, userId, ownerId, registryService, refres
       try {
         // Cargar empleados por ID usando getDoc
         if (!userProfile?.ownerId) {
-          console.error('[ContenidoRegistros] ownerId no disponible');
+          logger.error('[ContenidoRegistros] ownerId no disponible');
           return;
         }
         const ownerId = tenantOwnerId;
@@ -137,7 +138,7 @@ const ContenidoRegistros = ({ entityId, userId, ownerId, registryService, refres
                 return null;
               })
               .catch(error => {
-                console.warn(`[ContenidoRegistros] Error cargando empleado ${empId}:`, error);
+                logger.warn(`[ContenidoRegistros] Error cargando empleado ${empId}:`, error);
                 return null;
               })
           );
@@ -181,7 +182,7 @@ const ContenidoRegistros = ({ entityId, userId, ownerId, registryService, refres
 
         setEmpleadosPorRegistro(empleadosMap);
       } catch (error) {
-        console.error('[ContenidoRegistros] Error cargando empleados:', error);
+        logger.error('[ContenidoRegistros] Error cargando empleados:', error);
       }
     };
 
@@ -474,7 +475,7 @@ const AccidenteDetailPanelV2 = ({
           });
         }
       } catch (error) {
-        console.error('[AccidenteDetailPanelV2] Error cargando datos:', error);
+        logger.error('[AccidenteDetailPanelV2] Error cargando datos:', error);
         if (mounted) {
           setLoadError(error?.message || 'No se pudo cargar el detalle del accidente');
           setKpiStats(prev => ({ ...prev, loading: false }));
@@ -676,7 +677,7 @@ const AccidenteDetailPanelV2 = ({
         />
       )}
       onSaved={(registroId) => {
-        console.log('[AccidenteDetailPanelV2] Registro guardado:', registroId);
+        logger.debug('[AccidenteDetailPanelV2] Registro guardado:', registroId);
         if (onSaved) {
           onSaved(registroId);
         }
@@ -688,7 +689,7 @@ const AccidenteDetailPanelV2 = ({
               const stats = await registrosAccidenteService.getStatsByEntity(tenantOwnerId, entityIdStr);
               setKpiStats({ ...stats, loading: false });
             } catch (error) {
-              console.error('[AccidenteDetailPanelV2] Error refrescando KPIs:', error);
+              logger.error('[AccidenteDetailPanelV2] Error refrescando KPIs:', error);
               setKpiStats(prev => ({ ...prev, loading: false }));
             }
           }

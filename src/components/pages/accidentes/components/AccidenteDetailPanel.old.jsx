@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 // src/components/pages/accidentes/components/AccidenteDetailPanel.jsx
 /**
  * Panel de detalles de accidente usando EventDetailPanel base
@@ -170,7 +171,7 @@ const AccidenteDetailPanel = ({
         />
       )}
       onSaved={(registroId) => {
-        console.log('[AccidenteDetailPanel] Registro guardado:', registroId);
+        logger.debug('[AccidenteDetailPanel] Registro guardado:', registroId);
         if (onSaved) {
           onSaved(registroId);
         }

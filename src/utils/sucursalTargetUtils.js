@@ -1,6 +1,6 @@
+import logger from '@/utils/logger';
 // src/utils/sucursalTargetUtils.js
 import { getDocs } from 'firebase/firestore';
-
 /**
  * Calcula el número de auditorías completadas en el mes actual para una sucursal
  * @param {string} sucursalId - ID de la sucursal
@@ -13,7 +13,7 @@ export async function getAuditoriasMesActual(sucursalId, sucursalNombre = null, 
   try {
     if (!sucursalId) return 0;
     if (!reportesQueries || reportesQueries.length === 0) {
-      console.warn('getAuditoriasMesActual: reportesQueries es requerido');
+      logger.warn('getAuditoriasMesActual: reportesQueries es requerido');
       return 0;
     }
 
@@ -91,7 +91,7 @@ export async function getAuditoriasMesActual(sucursalId, sucursalNombre = null, 
 
     return auditorias.length;
   } catch (error) {
-    console.error('Error calculando auditorías del mes:', error);
+    logger.error('Error calculando auditorías del mes:', error);
     return 0;
   }
 }
@@ -114,7 +114,7 @@ export async function calcularProgresoTarget(sucursal, reportesQueries = null) {
   }
 
   if (!reportesQueries || reportesQueries.length === 0) {
-    console.warn('calcularProgresoTarget: reportesQueries es requerido');
+    logger.warn('calcularProgresoTarget: reportesQueries es requerido');
     return { completadas: 0, target: 0, porcentaje: 0, estado: 'sin_target' };
   }
 
@@ -150,7 +150,7 @@ export async function getAuditoriasAñoActual(sucursalId, sucursalNombre = null,
   try {
     if (!sucursalId) return 0;
     if (!reportesQueries || reportesQueries.length === 0) {
-      console.warn('getAuditoriasAñoActual: reportesQueries es requerido');
+      logger.warn('getAuditoriasAñoActual: reportesQueries es requerido');
       return 0;
     }
 
@@ -227,7 +227,7 @@ export async function getAuditoriasAñoActual(sucursalId, sucursalNombre = null,
 
     return auditorias.length;
   } catch (error) {
-    console.error('Error calculando auditorías del año:', error);
+    logger.error('Error calculando auditorías del año:', error);
     return 0;
   }
 }
@@ -284,7 +284,7 @@ export async function calcularProgresoTargetAnualAuditorias(sucursal, año = nul
  */
 export async function calcularProgresoTargets(sucursales, getReportesQueries = null) {
   if (!getReportesQueries || typeof getReportesQueries !== 'function') {
-    console.warn('calcularProgresoTargets: getReportesQueries es requerido');
+    logger.warn('calcularProgresoTargets: getReportesQueries es requerido');
     return {};
   }
 

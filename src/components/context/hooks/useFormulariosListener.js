@@ -1,8 +1,8 @@
+import logger from '@/utils/logger';
 import { useEffect } from 'react';
 import { onSnapshot, collection } from 'firebase/firestore';
 import { dbAudit } from '../../../firebaseControlFile.js';
 import { firestoreRoutesCore } from '../../../core/firestore/firestoreRoutes.core';
-
 /**
  * Hook para listener reactivo de formularios con fallback offline
  * Owner-centric: asume que firestoreRoutesCore ya filtra por owner
@@ -46,20 +46,20 @@ export const useFormulariosListener = (userProfile, setUserFormularios, setLoadi
         setLoadingFormularios(false);
       },
       async (error) => {
-        console.error('❌ Error en listener de formularios:', error);
+        logger.error('❌ Error en listener de formularios:', error);
         
         // Fallback al cache offline solo si está habilitado (móvil)
         if (loadUserFromCache) {
           try {
             const cachedData = await loadUserFromCache();
             if (cachedData?.formularios && cachedData.formularios.length > 0) {
-              console.log('🔄 [Offline] Usando formularios del cache IndexedDB:', cachedData.formularios.length);
+              logger.debug('🔄 [Offline] Usando formularios del cache IndexedDB:', cachedData.formularios.length);
               setUserFormularios(cachedData.formularios);
               setLoadingFormularios(false);
               return;
             }
           } catch (cacheError) {
-            console.error('Error cargando formularios desde cache:', cacheError);
+            logger.error('Error cargando formularios desde cache:', cacheError);
           }
         }
         

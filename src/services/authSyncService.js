@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 // Servicio para sincronizar usuarios de Firestore con Firebase Auth
 // Auto-crea usuarios en Auth si existen en Firestore usuarios/ pero no en Auth
 
@@ -22,16 +23,16 @@ export const syncUserToAuth = async (email, password) => {
     // Verificar qué proyecto de Auth estamos usando
     const authApp = auth.app;
     const authConfig = authApp.options;
-    console.log('[authSyncService] 🔧 Usando Auth del proyecto:', authConfig.projectId);
+    logger.debug('[authSyncService] 🔧 Usando Auth del proyecto:', authConfig.projectId);
     
     // 1. Intentar login normal
-    console.log('[authSyncService] Intentando login para:', email);
+    logger.debug('[authSyncService] Intentando login para:', email);
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      console.log('[authSyncService] ✅ Login exitoso');
+      logger.debug('[authSyncService] ✅ Login exitoso');
       return userCredential;
     } catch (loginError) {
-      console.log('[authSyncService] Error en login:', loginError.code, loginError.message);
+      logger.debug('[authSyncService] Error en login:', loginError.code, loginError.message);
       
       // 2. Si falla con "user-not-found" o "invalid-credential", buscar en Firestore
       // "invalid-credential" puede ocurrir cuando el usuario no existe en el nuevo Auth
@@ -39,7 +40,7 @@ export const syncUserToAuth = async (email, password) => {
                                    loginError.code === 'auth/invalid-credential';
       
       if (shouldCheckFirestore) {
-        console.log('[authSyncService] Usuario no encontrado/encontrado con credenciales inválidas en Auth, buscando en Firestore...');
+        logger.debug('[authSyncService] Usuario no encontrado/encontrado con credenciales inválidas en Auth, buscando en Firestore...');
         
         // Buscar usuario en Firestore por email
         const usuariosRef = collection(db, 'apps', 'audit', 'users');
@@ -51,40 +52,40 @@ export const syncUserToAuth = async (email, password) => {
           const userDoc = querySnapshot.docs[0];
           const userData = userDoc.data();
           
-          console.log('[authSyncService] ✅ Usuario encontrado en Firestore:', userData.email);
-          console.log('[authSyncService] 📝 El usuario existe en Firestore pero no en el nuevo Auth.');
-          console.log('[authSyncService] 🔄 Creando usuario en Auth del proyecto ControlFile...');
+          logger.debug('[authSyncService] ✅ Usuario encontrado en Firestore:', userData.email);
+          logger.debug('[authSyncService] 📝 El usuario existe en Firestore pero no en el nuevo Auth.');
+          logger.debug('[authSyncService] 🔄 Creando usuario en Auth del proyecto ControlFile...');
           
           // 3. Crear usuario en Auth (nuevo proyecto)
           try {
             const newUserCredential = await createUserWithEmailAndPassword(auth, email, password);
-            console.log('[authSyncService] ✅ Usuario creado en Auth:', newUserCredential.user.uid);
+            logger.debug('[authSyncService] ✅ Usuario creado en Auth:', newUserCredential.user.uid);
             
             // 4. Verificar que el UID del Firestore coincida con el nuevo UID
             // Si no coincide, actualizar el documento en Firestore
             if (userData.uid !== newUserCredential.user.uid) {
-              console.warn('[authSyncService] ⚠️ UID diferente detectado. Firestore:', userData.uid, 'Auth:', newUserCredential.user.uid);
-              console.warn('[authSyncService] ⚠️ Nota: El documento en Firestore mantendrá su UID original.');
-              console.warn('[authSyncService] ⚠️ Considera migrar el documento o usar el nuevo UID.');
+              logger.warn('[authSyncService] ⚠️ UID diferente detectado. Firestore:', userData.uid, 'Auth:', newUserCredential.user.uid);
+              logger.warn('[authSyncService] ⚠️ Nota: El documento en Firestore mantendrá su UID original.');
+              logger.warn('[authSyncService] ⚠️ Considera migrar el documento o usar el nuevo UID.');
             }
             
             // 5. El usuario ya está autenticado después de createUserWithEmailAndPassword
             // No necesitamos hacer login nuevamente
-            console.log('[authSyncService] ✅ Login exitoso después de crear usuario');
+            logger.debug('[authSyncService] ✅ Login exitoso después de crear usuario');
             return newUserCredential;
             
           } catch (createError) {
-            console.error('[authSyncService] ❌ Error al crear usuario en Auth:', createError);
+            logger.error('[authSyncService] ❌ Error al crear usuario en Auth:', createError);
             
             if (createError.code === 'auth/email-already-in-use') {
               // Email ya existe en Auth (puede ser un problema de sincronización)
-              console.log('[authSyncService] Email ya existe en Auth, intentando login nuevamente...');
+              logger.debug('[authSyncService] Email ya existe en Auth, intentando login nuevamente...');
               try {
                 const retryCredential = await signInWithEmailAndPassword(auth, email, password);
                 return retryCredential;
               } catch (retryError) {
                 // Si sigue fallando, puede ser que la contraseña sea diferente
-                console.error('[authSyncService] ❌ Error al autenticar usuario existente:', retryError.code);
+                logger.error('[authSyncService] ❌ Error al autenticar usuario existente:', retryError.code);
                 throw new Error('El usuario existe en el nuevo Auth pero la contraseña no coincide. Verifica tu contraseña o solicita un restablecimiento.');
               }
             }
@@ -93,7 +94,7 @@ export const syncUserToAuth = async (email, password) => {
           }
         } else {
           // Usuario no existe ni en Auth ni en Firestore
-          console.log('[authSyncService] ❌ Usuario no encontrado en Firestore');
+          logger.debug('[authSyncService] ❌ Usuario no encontrado en Firestore');
           
           // Si es invalid-credential y no existe en Firestore, puede ser contraseña incorrecta
           if (loginError.code === 'auth/invalid-credential') {
@@ -108,7 +109,7 @@ export const syncUserToAuth = async (email, password) => {
       }
     }
   } catch (error) {
-    console.error('[authSyncService] ❌ Error en syncUserToAuth:', error);
+    logger.error('[authSyncService] ❌ Error en syncUserToAuth:', error);
     throw error;
   }
 };
@@ -135,7 +136,7 @@ export const getUserFromFirestore = async (email) => {
     
     return null;
   } catch (error) {
-    console.error('[authSyncService] Error al buscar usuario en Firestore:', error);
+    logger.error('[authSyncService] Error al buscar usuario en Firestore:', error);
     throw error;
   }
 };

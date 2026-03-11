@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 import React, { useState, useEffect } from 'react';
 import {
   Box,
@@ -38,7 +39,7 @@ const OfflineIndicatorMobile = ({ userProfile }) => {
           const queue = await syncQueueService.getQueueStats();
           setQueueStats(queue);
         } catch (error) {
-          console.error('Error al obtener estadísticas de cola:', error);
+          logger.error('Error al obtener estadísticas de cola:', error);
         }
       }
     };
@@ -61,7 +62,7 @@ const OfflineIndicatorMobile = ({ userProfile }) => {
           const queue = await syncQueueService.getQueueStats();
           setQueueStats(queue);
         } catch (error) {
-          console.error('Error al actualizar estadísticas:', error);
+          logger.error('Error al actualizar estadísticas:', error);
         }
       } else if (event === 'item_success' || event === 'item_failed') {
         // Actualizar estadísticas cuando un item se procesa
@@ -69,7 +70,7 @@ const OfflineIndicatorMobile = ({ userProfile }) => {
           const queue = await syncQueueService.getQueueStats();
           setQueueStats(queue);
         } catch (error) {
-          console.error('Error al actualizar estadísticas:', error);
+          logger.error('Error al actualizar estadísticas:', error);
         }
       }
     });
@@ -105,7 +106,7 @@ const OfflineIndicatorMobile = ({ userProfile }) => {
       setSnackbarSeverity('success');
       setShowSnackbar(true);
     } catch (error) {
-      console.error('Error en sincronización manual:', error);
+      logger.error('Error en sincronización manual:', error);
       setSnackbarMessage('Error en sincronización');
       setSnackbarSeverity('error');
       setShowSnackbar(true);

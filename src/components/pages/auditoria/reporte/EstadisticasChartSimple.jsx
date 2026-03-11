@@ -1,6 +1,6 @@
+import logger from '@/utils/logger';
 import React, { forwardRef, useImperativeHandle, useRef, useEffect, useState } from 'react';
 import { Box, Typography, Paper } from '@mui/material';
-
 // Mapeo de colores por categoría
 const COLOR_MAP = {
   'Conforme': '#43a047',        // verde
@@ -37,12 +37,12 @@ const EstadisticasChartSimple = forwardRef(({ estadisticas, title, height = 320,
   // Función para generar imagen del gráfico
   const generateChartImage = async () => {
     if (!hasValidData(estadisticas)) {
-      console.log('[EstadisticasChartSimple] No hay datos válidos para generar imagen');
+      logger.debug('[EstadisticasChartSimple] No hay datos válidos para generar imagen');
       return null;
     }
 
     try {
-      console.log('[EstadisticasChartSimple] Generando imagen con Canvas API...');
+      logger.debug('[EstadisticasChartSimple] Generando imagen con Canvas API...');
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
       const { total, porcentajes } = calcularPorcentajes(estadisticas);
@@ -157,12 +157,12 @@ const EstadisticasChartSimple = forwardRef(({ estadisticas, title, height = 320,
       ctx.textAlign = 'center';
       ctx.fillText('Gráfico de Barras y Torta - Distribución de respuestas', canvas.width / 2, legendY);
       
-      console.log('[EstadisticasChartSimple] Imagen generada exitosamente con Canvas API');
+      logger.debug('[EstadisticasChartSimple] Imagen generada exitosamente con Canvas API');
       const dataUrl = canvas.toDataURL('image/png', 0.9);
-      console.log('[EstadisticasChartSimple] Tamaño de imagen generada:', dataUrl.length, 'bytes');
+      logger.debug('[EstadisticasChartSimple] Tamaño de imagen generada:', dataUrl.length, 'bytes');
       return dataUrl;
     } catch (error) {
-      console.error('[EstadisticasChartSimple] Error generando imagen del gráfico:', error);
+      logger.error('[EstadisticasChartSimple] Error generando imagen del gráfico:', error);
       
       // Fallback final: imagen de error
       const canvas = document.createElement('canvas');
@@ -194,13 +194,13 @@ const EstadisticasChartSimple = forwardRef(({ estadisticas, title, height = 320,
     getImage: async () => {
       // Si ya tenemos la imagen generada y es válida, la devolvemos
       if (imageDataUrl && imageDataUrl.length > 1000 && imageDataUrl.startsWith('data:image')) {
-        console.log('[EstadisticasChartSimple] ✅ Devolviendo imagen ya generada');
+        logger.debug('[EstadisticasChartSimple] ✅ Devolviendo imagen ya generada');
         return imageDataUrl;
       }
       
       // Si está generándose, esperar un poco
       if (isGenerating) {
-        console.log('[EstadisticasChartSimple] ⏳ Esperando que termine la generación...');
+        logger.debug('[EstadisticasChartSimple] ⏳ Esperando que termine la generación...');
         let waitCount = 0;
         while (isGenerating && waitCount < 10) {
           await new Promise(resolve => setTimeout(resolve, 500));
@@ -209,20 +209,20 @@ const EstadisticasChartSimple = forwardRef(({ estadisticas, title, height = 320,
         
         // Si después de esperar tenemos una imagen válida, la devolvemos
         if (imageDataUrl && imageDataUrl.length > 1000 && imageDataUrl.startsWith('data:image')) {
-          console.log('[EstadisticasChartSimple] ✅ Imagen generada después de esperar');
+          logger.debug('[EstadisticasChartSimple] ✅ Imagen generada después de esperar');
           return imageDataUrl;
         }
       }
       
       // Si no tenemos imagen válida, generamos una nueva
-      console.log('[EstadisticasChartSimple] 🔄 Generando nueva imagen...');
+      logger.debug('[EstadisticasChartSimple] 🔄 Generando nueva imagen...');
       const newImageUrl = await generateChartImage();
       if (newImageUrl && newImageUrl.length > 1000 && newImageUrl.startsWith('data:image')) {
         setImageDataUrl(newImageUrl);
-        console.log('[EstadisticasChartSimple] ✅ Nueva imagen generada y guardada');
+        logger.debug('[EstadisticasChartSimple] ✅ Nueva imagen generada y guardada');
         return newImageUrl;
       } else {
-        console.error('[EstadisticasChartSimple] ❌ Error: No se pudo generar una imagen válida');
+        logger.error('[EstadisticasChartSimple] ❌ Error: No se pudo generar una imagen válida');
         return null;
       }
     },
@@ -239,7 +239,7 @@ const EstadisticasChartSimple = forwardRef(({ estadisticas, title, height = 320,
       setIsGenerating(true);
       const generateImage = async () => {
         try {
-          console.log('[EstadisticasChartSimple] Generando imagen en useEffect...');
+          logger.debug('[EstadisticasChartSimple] Generando imagen en useEffect...');
           
           // Pequeño delay para asegurar que el componente esté completamente renderizado
           await new Promise(resolve => setTimeout(resolve, 100));
@@ -247,24 +247,24 @@ const EstadisticasChartSimple = forwardRef(({ estadisticas, title, height = 320,
           const imageUrl = await generateChartImage();
           if (imageUrl && imageUrl.length > 1000 && imageUrl.startsWith('data:image')) {
             setImageDataUrl(imageUrl);
-            console.log('[EstadisticasChartSimple] ✅ Imagen guardada en estado:', imageUrl.length, 'bytes');
+            logger.debug('[EstadisticasChartSimple] ✅ Imagen guardada en estado:', imageUrl.length, 'bytes');
           } else {
-            console.warn('[EstadisticasChartSimple] ⚠️ Imagen generada no válida, reintentando...');
+            logger.warn('[EstadisticasChartSimple] ⚠️ Imagen generada no válida, reintentando...');
             // Reintentar después de un delay
             setTimeout(async () => {
               try {
                 const retryImageUrl = await generateChartImage();
                 if (retryImageUrl && retryImageUrl.length > 1000 && retryImageUrl.startsWith('data:image')) {
                   setImageDataUrl(retryImageUrl);
-                  console.log('[EstadisticasChartSimple] ✅ Imagen de reintento guardada:', retryImageUrl.length, 'bytes');
+                  logger.debug('[EstadisticasChartSimple] ✅ Imagen de reintento guardada:', retryImageUrl.length, 'bytes');
                 }
               } catch (retryError) {
-                console.error('[EstadisticasChartSimple] Error en reintento:', retryError);
+                logger.error('[EstadisticasChartSimple] Error en reintento:', retryError);
               }
             }, 1000);
           }
         } catch (error) {
-          console.error('[EstadisticasChartSimple] Error generando imagen en useEffect:', error);
+          logger.error('[EstadisticasChartSimple] Error generando imagen en useEffect:', error);
         } finally {
           setIsGenerating(false);
         }
@@ -274,10 +274,10 @@ const EstadisticasChartSimple = forwardRef(({ estadisticas, title, height = 320,
   }, [estadisticas, title]);
 
   // Verificar si hay datos válidos
-  console.log('[EstadisticasChartSimple] estadisticas:', estadisticas);
-  console.log('[EstadisticasChartSimple] hasValidData:', hasValidData(estadisticas));
-  console.log('[EstadisticasChartSimple] title:', title);
-  console.log('[EstadisticasChartSimple] imageDataUrl length:', imageDataUrl ? imageDataUrl.length : 0);
+  logger.debug('[EstadisticasChartSimple] estadisticas:', estadisticas);
+  logger.debug('[EstadisticasChartSimple] hasValidData:', hasValidData(estadisticas));
+  logger.debug('[EstadisticasChartSimple] title:', title);
+  logger.debug('[EstadisticasChartSimple] imageDataUrl length:', imageDataUrl ? imageDataUrl.length : 0);
   
   // Siempre mostrar algo para debug
   if (!hasValidData(estadisticas)) {

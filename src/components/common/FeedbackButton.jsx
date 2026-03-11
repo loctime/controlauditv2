@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 import React, { useState, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import {
@@ -64,7 +65,7 @@ const FeedbackButton = () => {
         }
       });
     } catch (error) {
-      console.error('[FeedbackButton] Error inicializando SDK:', error);
+      logger.error('[FeedbackButton] Error inicializando SDK:', error);
     }
     */
   }, []);
@@ -97,7 +98,7 @@ const FeedbackButton = () => {
         }
       }, 'image/png');
     } catch (error) {
-      console.error('[FeedbackButton] Error capturando screenshot:', error);
+      logger.error('[FeedbackButton] Error capturando screenshot:', error);
       setStatus('error');
       setErrorMessage('Error al capturar la pantalla');
     }
@@ -155,7 +156,7 @@ const FeedbackButton = () => {
         handleClose();
       }, 2000);
     } catch (error) {
-      console.error('[FeedbackButton] Error enviando feedback:', error);
+      logger.error('[FeedbackButton] Error enviando feedback:', error);
       setStatus('error');
       setErrorMessage(error.message || 'Error al enviar el feedback');
     }

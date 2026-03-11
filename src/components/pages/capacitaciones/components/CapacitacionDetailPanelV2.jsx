@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 // src/components/pages/capacitaciones/components/CapacitacionDetailPanelV2.jsx
 
 import React from 'react';
@@ -86,7 +87,7 @@ const ContenidoRegistros = ({ entityId, userId, registryService, refreshKey }) =
           setLoading(false);
         }
       } catch (error) {
-        console.error('[ContenidoRegistros] Error:', error);
+        logger.error('[ContenidoRegistros] Error:', error);
         if (mounted) setLoading(false);
       }
     };
@@ -131,7 +132,7 @@ const ContenidoRegistros = ({ entityId, userId, registryService, refreshKey }) =
                 return null;
               })
               .catch(error => {
-                console.warn(`[ContenidoRegistros] Error cargando empleado ${empId}:`, error);
+                logger.warn(`[ContenidoRegistros] Error cargando empleado ${empId}:`, error);
                 return null;
               })
           );
@@ -157,7 +158,7 @@ const ContenidoRegistros = ({ entityId, userId, registryService, refreshKey }) =
 
         setEmpleadosPorRegistro(empleadosMap);
       } catch (error) {
-        console.error('[ContenidoRegistros] Error cargando empleados:', error);
+        logger.error('[ContenidoRegistros] Error cargando empleados:', error);
       }
     };
 
@@ -437,7 +438,7 @@ const CapacitacionDetailPanelV2 = ({
           });
         }
       } catch (error) {
-        console.error('[CapacitacionDetailPanelV2] Error cargando datos:', error);
+        logger.error('[CapacitacionDetailPanelV2] Error cargando datos:', error);
         if (mounted) {
           setKpiStats(prev => ({ ...prev, loading: false }));
         }
@@ -605,7 +606,7 @@ const CapacitacionDetailPanelV2 = ({
         />
       )}
       onSaved={(registroId) => {
-        console.log('[CapacitacionDetailPanelV2] Registro guardado:', registroId);
+        logger.debug('[CapacitacionDetailPanelV2] Registro guardado:', registroId);
         if (onSaved) {
           onSaved(registroId);
         }
@@ -617,7 +618,7 @@ const CapacitacionDetailPanelV2 = ({
               const stats = await registrosAsistenciaServiceAdapter.getStatsByEntity(userId, entityIdStr);
               setKpiStats({ ...stats, loading: false });
             } catch (error) {
-              console.error('[CapacitacionDetailPanelV2] Error refrescando KPIs:', error);
+              logger.error('[CapacitacionDetailPanelV2] Error refrescando KPIs:', error);
               setKpiStats(prev => ({ ...prev, loading: false }));
             }
           }

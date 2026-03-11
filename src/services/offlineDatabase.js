@@ -1,5 +1,5 @@
+import logger from '@/utils/logger';
 import { openDB } from 'idb';
-
 /**
  * Configuración de base de datos IndexedDB para funcionalidad offline
  */
@@ -17,11 +17,11 @@ export const initOfflineDatabase = async () => {
   try {
     const db = await openDB(DB_NAME, DB_VERSION, {
       upgrade(db, oldVersion) {
-        console.log(`🔄 Actualizando base de datos de versión ${oldVersion} a ${DB_VERSION}`);
+        logger.debug(`🔄 Actualizando base de datos de versión ${oldVersion} a ${DB_VERSION}`);
         
         // Crear todos los object stores necesarios
         if (!db.objectStoreNames.contains('auditorias')) {
-          console.log('✅ Creando object store: auditorias');
+          logger.debug('✅ Creando object store: auditorias');
           const auditoriasStore = db.createObjectStore('auditorias', { keyPath: 'id' });
           auditoriasStore.createIndex('by-updatedAt', 'updatedAt');
           auditoriasStore.createIndex('by-status', 'status');
@@ -29,14 +29,14 @@ export const initOfflineDatabase = async () => {
         }
 
         if (!db.objectStoreNames.contains('fotos')) {
-          console.log('✅ Creando object store: fotos');
+          logger.debug('✅ Creando object store: fotos');
           const fotosStore = db.createObjectStore('fotos', { keyPath: 'id' });
           fotosStore.createIndex('by-auditoriaId', 'auditoriaId');
           fotosStore.createIndex('by-createdAt', 'createdAt');
         }
 
         if (!db.objectStoreNames.contains('syncQueue')) {
-          console.log('✅ Creando object store: syncQueue');
+          logger.debug('✅ Creando object store: syncQueue');
           const syncQueueStore = db.createObjectStore('syncQueue', { keyPath: 'id' });
           syncQueueStore.createIndex('by-createdAt', 'createdAt');
           syncQueueStore.createIndex('by-nextRetry', 'nextRetry');
@@ -44,19 +44,19 @@ export const initOfflineDatabase = async () => {
         }
 
         if (!db.objectStoreNames.contains('settings')) {
-          console.log('✅ Creando object store: settings');
+          logger.debug('✅ Creando object store: settings');
           db.createObjectStore('settings', { keyPath: 'key' });
         }
 
         if (!db.objectStoreNames.contains('userProfile')) {
-          console.log('✅ Creando object store: userProfile');
+          logger.debug('✅ Creando object store: userProfile');
           const userProfileStore = db.createObjectStore('userProfile', { keyPath: 'uid' });
           userProfileStore.createIndex('by-email', 'email');
           userProfileStore.createIndex('by-role', 'role');
         }
 
         if (!db.objectStoreNames.contains('empresas')) {
-          console.log('✅ Creando object store: empresas');
+          logger.debug('✅ Creando object store: empresas');
           const empresasStore = db.createObjectStore('empresas', { keyPath: 'id' });
           empresasStore.createIndex('by-propietarioId', 'propietarioId');
           empresasStore.createIndex('by-creadorId', 'creadorId');
@@ -64,14 +64,14 @@ export const initOfflineDatabase = async () => {
         }
 
         if (!db.objectStoreNames.contains('formularios')) {
-          console.log('✅ Creando object store: formularios');
+          logger.debug('✅ Creando object store: formularios');
           const formulariosStore = db.createObjectStore('formularios', { keyPath: 'id' });
           formulariosStore.createIndex('by-creadorId', 'creadorId');
           formulariosStore.createIndex('by-clienteAdminId', 'clienteAdminId');
           formulariosStore.createIndex('by-nombre', 'nombre');
         }
         
-        console.log('✅ Base de datos actualizada correctamente');
+        logger.debug('✅ Base de datos actualizada correctamente');
       },
     });
 
@@ -80,15 +80,15 @@ export const initOfflineDatabase = async () => {
     const missingStores = requiredStores.filter(store => !db.objectStoreNames.contains(store));
     
     if (missingStores.length > 0) {
-      console.warn(`⚠️ Object stores faltantes detectados: ${missingStores.join(', ')}`);
-      console.warn('⚠️ Esto puede requerir cerrar y reabrir la aplicación para crear los stores');
+      logger.warn(`⚠️ Object stores faltantes detectados: ${missingStores.join(', ')}`);
+      logger.warn('⚠️ Esto puede requerir cerrar y reabrir la aplicación para crear los stores');
     } else {
-      console.log('✅ Todos los object stores están presentes');
+      logger.debug('✅ Todos los object stores están presentes');
     }
 
     return db;
   } catch (error) {
-    console.error('Error al inicializar base de datos offline:', error);
+    logger.error('Error al inicializar base de datos offline:', error);
     throw error;
   }
 };
@@ -101,7 +101,7 @@ export const getOfflineDatabase = async () => {
     // Usar initOfflineDatabase para asegurar que todos los object stores existan
     return await initOfflineDatabase();
   } catch (error) {
-    console.error('Error al obtener base de datos offline:', error);
+    logger.error('Error al obtener base de datos offline:', error);
     throw error;
   }
 };
@@ -131,7 +131,7 @@ export const getStorageInfo = async () => {
       percentage: Math.round(percentage * 100) / 100
     };
   } catch (error) {
-    console.error('Error al obtener información de almacenamiento:', error);
+    logger.error('Error al obtener información de almacenamiento:', error);
     return {
       quota: 0,
       usage: 0,
@@ -168,7 +168,7 @@ export const checkStorageLimit = async (estimatedSize = 100 * 1024 * 1024) => { 
       }
     };
   } catch (error) {
-    console.error('Error al verificar límites de almacenamiento:', error);
+    logger.error('Error al verificar límites de almacenamiento:', error);
     return {
       canStore: false,
       reason: 'error',
@@ -213,7 +213,7 @@ export const cleanupOldData = async () => {
       queueItemsDeleted: queueToDelete.length
     };
   } catch (error) {
-    console.error('Error en limpieza de datos antiguos:', error);
+    logger.error('Error en limpieza de datos antiguos:', error);
     throw error;
   }
 };

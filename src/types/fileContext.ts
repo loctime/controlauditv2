@@ -1,7 +1,9 @@
-/**
+﻿/**
  * Tipos TypeScript para el modelo de contexto de evento
- * Iteración 1: Tipos básicos necesarios para el flujo unificado de subida
+ * Iteracion 2: incluye modulo/entidad para contrato FileRef unificado
  */
+
+import { UnifiedModule } from './fileRef';
 
 export type ContextType =
   | 'capacitacion'
@@ -19,9 +21,12 @@ export interface FileContext {
   companyId: string;
   tipoArchivo: string;
   sucursalId?: string;
-  // Campos específicos opcionales por contexto
-  capacitacionTipoId?: string; // Solo para capacitacion
-  empleadoIds?: string[]; // Para algunos contextos
+  // Campos especificos opcionales por contexto
+  capacitacionTipoId?: string;
+  empleadoIds?: string[];
+  // Contrato canonico de archivo
+  module?: UnifiedModule;
+  entityId?: string;
 }
 
 export interface FileUploadParams {

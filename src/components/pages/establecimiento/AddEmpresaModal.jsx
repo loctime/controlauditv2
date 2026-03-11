@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 import React from 'react';
 import {
   Dialog,
@@ -30,8 +31,8 @@ const AddEmpresaModal = ({
   loading
 }) => {
   const handleClickAdd = () => {
-    console.log('[AddEmpresaModal][handleClickAdd] Evento: Usuario hizo clic en "Agregar Empresa"');
-    console.log('[AddEmpresaModal][handleClickAdd] Datos del formulario:', {
+    logger.debug('[AddEmpresaModal][handleClickAdd] Evento: Usuario hizo clic en "Agregar Empresa"');
+    logger.debug('[AddEmpresaModal][handleClickAdd] Datos del formulario:', {
       nombre: empresa.nombre,
       direccion: empresa.direccion,
       telefono: empresa.telefono,

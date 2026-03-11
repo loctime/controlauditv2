@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 // src/components/pages/dashboard/components/AccionesRequeridasWidget.jsx
 import React, { useState, useEffect } from 'react';
 import {
@@ -85,7 +86,7 @@ export default function AccionesRequeridasWidget({ sucursales, selectedSucursal,
             totalEnProceso += stats.enProceso;
             totalCanceladas += stats.canceladas;
           } catch (error) {
-            console.warn(`Error cargando estadísticas para sucursal ${sucursal.id}:`, error);
+            logger.warn(`Error cargando estadísticas para sucursal ${sucursal.id}:`, error);
             estadisticasPorSucursal[sucursal.id] = {
               total: 0,
               pendientes: 0,
@@ -107,7 +108,7 @@ export default function AccionesRequeridasWidget({ sucursales, selectedSucursal,
           porSucursal: estadisticasPorSucursal
         });
       } catch (error) {
-        console.error('Error cargando estadísticas de acciones requeridas:', error);
+        logger.error('Error cargando estadísticas de acciones requeridas:', error);
       } finally {
         setLoading(false);
       }

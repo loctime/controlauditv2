@@ -1,8 +1,9 @@
+import logger from '@/utils/logger';
 // Test para verificar que la estructura de datos es compatible con Firestore
 // Firestore no acepta arrays anidados, solo objetos planos
 
 export const testFirestoreStructure = (data) => {
-  console.log('🧪 Testing Firestore structure compatibility...');
+  logger.debug('🧪 Testing Firestore structure compatibility...');
   
   const issues = [];
   
@@ -25,10 +26,10 @@ export const testFirestoreStructure = (data) => {
   checkValue(data);
   
   if (issues.length === 0) {
-    console.log('✅ Estructura compatible con Firestore');
+    logger.debug('✅ Estructura compatible con Firestore');
   } else {
-    console.warn('⚠️ Problemas encontrados:');
-    issues.forEach(issue => console.warn(issue));
+    logger.warn('⚠️ Problemas encontrados:');
+    issues.forEach(issue => logger.warn(issue));
   }
   
   return issues.length === 0;

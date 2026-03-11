@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { listAusencias } from "../services/ausenciasService";
 import {
@@ -47,7 +48,7 @@ export const useAusentismoMetrics = ({
 
       setAusencias(Array.isArray(data) ? data : []);
     } catch (fetchError) {
-      console.error("Error cargando métricas de ausentismo:", fetchError);
+      logger.error("Error cargando mï¿½tricas de ausentismo:", fetchError);
       setError(fetchError);
       setAusencias([]);
     } finally {

@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 import React, { useState, useRef } from 'react';
 import {
   Dialog,
@@ -171,7 +172,7 @@ export default function ImportEmpleadosDialog({ open, onClose, onSuccess, empres
       });
       onClose();
     } catch (error) {
-      console.error('Error al importar:', error);
+      logger.error('Error al importar:', error);
       alert(`Error al importar empleados: ${error.message}`);
     }
   };

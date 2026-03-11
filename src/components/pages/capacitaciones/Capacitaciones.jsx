@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   Container,
@@ -127,7 +128,7 @@ export default function Capacitaciones() {
   useEffect(() => {
     // Detectar cuando se vuelve a esta ruta y forzar refresh del cache
     if (location.pathname === '/capacitaciones' && capacitaciones.length > 0 && !loading) {
-      console.log('[Capacitaciones] Detectado retorno a página, refrescando cache');
+      logger.debug('[Capacitaciones] Detectado retorno a página, refrescando cache');
       setTableRefreshKey(prev => prev + 1);
     }
   }, [location.pathname, loading]); // Refrescar cuando se navega a esta página
@@ -230,7 +231,7 @@ export default function Capacitaciones() {
           <Button
             variant="outlined"
             onClick={() => {
-              console.log('🔍 Estado actual:', {
+              logger.debug('🔍 Estado actual:', {
                 userProfile,
                 userEmpresas,
                 userSucursales,
