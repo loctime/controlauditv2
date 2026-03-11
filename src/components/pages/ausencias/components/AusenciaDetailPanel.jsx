@@ -1,5 +1,6 @@
 import logger from '@/utils/logger';
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Drawer,
   Box,
@@ -25,6 +26,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import HistoryIcon from '@mui/icons-material/History';
 import RestartAltIcon from '@mui/icons-material/RestartAlt';
+import LaunchIcon from '@mui/icons-material/Launch';
 import {
   getAusenciaById,
   cerrarAusencia,
@@ -39,6 +41,34 @@ import {
 import { useAuth } from '@/components/context/AuthContext';
 
 const ACCEPTED_EXTENSIONS = ['.pdf', '.jpg', '.jpeg', '.png', '.webp', '.doc', '.docx', '.txt'];
+
+const ORIGEN_LABELS = {
+  manual: 'Manual',
+  accidente: 'Accidente',
+  incidente: 'Incidente',
+  salud_ocupacional: 'Salud ocupacional',
+  licencia_medica: 'Licencia medica',
+  permiso: 'Permiso',
+  enfermedad: 'Enfermedad'
+};
+
+const normalizeStatus = (estado) => {
+  const normalized = String(estado || '').toLowerCase().trim().replace(/\s+/g, '_');
+  if (normalized.includes('cerr') || normalized.includes('finaliz') || normalized.includes('resuelt')) {
+    return 'cerrada';
+  }
+  if (normalized.includes('progreso')) {
+    return 'en_progreso';
+  }
+  return 'abierta';
+};
+
+const statusLabel = (estado) => {
+  const canonical = normalizeStatus(estado);
+  if (canonical === 'en_progreso') return 'En progreso';
+  if (canonical === 'cerrada') return 'Cerrada';
+  return 'Abierta';
+};
 
 const formatDate = (value) => {
   if (!value) return '-';
@@ -65,9 +95,9 @@ const formatDateTime = (value) => {
 };
 
 const getStatusColor = (estado = '') => {
-  const normalized = estado.toLowerCase();
-  if (normalized.includes('cerr')) return 'success';
-  if (normalized.includes('progreso')) return 'warning';
+  const normalized = normalizeStatus(estado);
+  if (normalized === 'cerrada') return 'success';
+  if (normalized === 'en_progreso') return 'warning';
   return 'info';
 };
 
@@ -84,7 +114,7 @@ const HistoryItem = ({ item }) => (
       primaryTypographyProps={{ variant: 'body2', sx: { fontWeight: 600 } }}
       secondaryTypographyProps={{ variant: 'caption', sx: { color: '#6b7280' } }}
       primary={item.detalle || item.tipo || 'Actualizacion'}
-      secondary={`${formatDateTime(item.at)}${item.by ? ` � ${item.by}` : ''}`}
+      secondary={`${formatDateTime(item.at)}${item.by ? ` - ${item.by}` : ''}`}
     />
   </ListItem>
 );
@@ -97,6 +127,7 @@ export default function AusenciaDetailPanel({
   onEdit
 }) {
   const { userProfile } = useAuth();
+  const navigate = useNavigate();
   const [ausencia, setAusencia] = useState(null);
   const [files, setFiles] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -104,8 +135,8 @@ export default function AusenciaDetailPanel({
   const [busyAction, setBusyAction] = useState(false);
   const [uploadErrors, setUploadErrors] = useState([]);
 
-  const estado = (ausencia?.estado || 'abierta').toLowerCase();
-  const isClosed = estado.includes('cerr');
+  const estado = normalizeStatus(ausencia?.estado || 'abierta');
+  const isClosed = estado === 'cerrada';
 
   const historialOrdenado = useMemo(() => {
     const base = Array.isArray(ausencia?.historial) ? [...ausencia.historial] : [];
@@ -220,7 +251,7 @@ export default function AusenciaDetailPanel({
   };
 
   const handleRemoveFile = async (fileMetaId) => {
-    const confirmed = window.confirm('�Eliminar este archivo de la ausencia?');
+    const confirmed = window.confirm('Eliminar este archivo de la ausencia?');
     if (!confirmed) return;
 
     setBusyAction(true);
@@ -234,6 +265,20 @@ export default function AusenciaDetailPanel({
     } finally {
       setBusyAction(false);
     }
+  };
+
+  const origenValue = String(ausencia?.origen || 'manual').toLowerCase();
+  const origenLabel = ORIGEN_LABELS[origenValue] || origenValue;
+  const canNavigateToOrigin = Boolean(
+    ausencia?.origenId &&
+    ['accidente', 'incidente'].includes(String(ausencia?.origen || '').toLowerCase())
+  );
+
+  const handleGoToOriginEvent = () => {
+    if (!canNavigateToOrigin) return;
+    const origenId = String(ausencia?.origenId || '').trim();
+    if (!origenId) return;
+    navigate(`/accidentes?accidenteId=${encodeURIComponent(origenId)}`);
   };
 
   return (
@@ -291,14 +336,14 @@ export default function AusenciaDetailPanel({
           ) : (
             <Stack spacing={2}>
               <Paper variant="outlined" sx={{ p: 2, borderRadius: '12px' }}>
-                <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
+                <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1, flexWrap: 'wrap' }}>
                   <Chip
                     label={ausencia.tipo || 'Sin tipo'}
                     size="small"
                     variant="outlined"
                   />
                   <Chip
-                    label={ausencia.estado || 'abierta'}
+                    label={statusLabel(ausencia.estado)}
                     size="small"
                     color={getStatusColor(ausencia.estado)}
                   />
@@ -311,8 +356,25 @@ export default function AusenciaDetailPanel({
 
                 <Typography variant="body2"><strong>Empresa:</strong> {ausencia.empresaNombre || '-'}</Typography>
                 <Typography variant="body2"><strong>Sucursal:</strong> {ausencia.sucursalNombre || '-'}</Typography>
+                <Typography variant="body2"><strong>Motivo:</strong> {ausencia.motivo || '-'}</Typography>
+                <Typography variant="body2"><strong>Origen:</strong> {origenLabel}</Typography>
+                <Typography variant="body2"><strong>ID origen:</strong> {ausencia.origenId || '-'}</Typography>
+                <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: 0.75, mb: 0.5 }}>
+                  <Typography variant="body2"><strong>Evento origen:</strong></Typography>
+                  <Button
+                    variant="text"
+                    size="small"
+                    startIcon={<LaunchIcon fontSize="small" />}
+                    onClick={handleGoToOriginEvent}
+                    disabled={!canNavigateToOrigin}
+                    sx={{ px: 0.5, minWidth: 0 }}
+                  >
+                    Ir al evento
+                  </Button>
+                </Stack>
                 <Typography variant="body2"><strong>Inicio:</strong> {formatDate(ausencia.fechaInicio)}</Typography>
                 <Typography variant="body2"><strong>Fin:</strong> {formatDate(ausencia.fechaFin)}</Typography>
+                <Typography variant="body2"><strong>Dias ausente:</strong> {ausencia.diasAusente || 0}</Typography>
                 <Typography variant="body2" sx={{ mt: 1 }}>
                   <strong>Observaciones:</strong> {ausencia.observaciones || 'Sin observaciones'}
                 </Typography>
@@ -383,7 +445,7 @@ export default function AusenciaDetailPanel({
                             {file.nombre || file.fileId || file.id}
                           </Typography>
                           <Typography variant="caption" sx={{ color: '#6b7280' }}>
-                            {file.tipoArchivo || 'documento'} � {file.size ? `${Math.round(file.size / 1024)} KB` : 'Sin tama�o'}
+                            {file.tipoArchivo || 'documento'} - {file.size ? `${Math.round(file.size / 1024)} KB` : 'Sin tamano'}
                           </Typography>
                         </Box>
                         <Stack direction="row" spacing={0.5}>
@@ -442,3 +504,4 @@ export default function AusenciaDetailPanel({
     </Drawer>
   );
 }
+

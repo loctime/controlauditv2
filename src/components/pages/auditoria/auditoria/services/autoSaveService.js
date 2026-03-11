@@ -5,7 +5,6 @@ import { firestoreRoutesCore } from '../../../../../core/firestore/firestoreRout
 import { getOfflineDatabase, generateOfflineId, checkStorageLimit } from '../../../../../services/offlineDatabase';
 import syncQueueService from '../../../../../services/syncQueue';
 import { canWriteToFirestore, isContextComplete } from '../../../../../utils/firestoreWriteCheck';
-import logger from '../../../../../utils/logger';
 class AutoSaveService {
   constructor() {
     this.storageKey = 'auditoria_autosave';
@@ -49,6 +48,90 @@ class AutoSaveService {
     return `auditoria_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   }
 
+  toFileDraftDescriptor(item) {
+    if (!item) return null;
+
+    if (item instanceof File) {
+      return {
+        kind: 'pending_local',
+        name: item.name || 'archivo',
+        mimeType: item.type || 'application/octet-stream',
+        size: item.size || 0
+      };
+    }
+
+    if (typeof item === 'object' && (item.fileId || item.shareToken)) {
+      return {
+        kind: 'file_ref',
+        fileDocId: item.fileDocId || item.id || null,
+        fileId: item.fileId || item.shareToken,
+        shareToken: item.shareToken || null,
+        name: item.name || item.nombre || 'archivo',
+        mimeType: item.mimeType || 'application/octet-stream',
+        size: item.size || 0,
+        module: item.module || 'auditorias',
+        entityId: item.entityId || null,
+        companyId: item.companyId || null,
+        uploadedBy: item.uploadedBy || null,
+        uploadedAt: item.uploadedAt || null,
+        status: item.status || 'active',
+        schemaVersion: item.schemaVersion || 1
+      };
+    }
+
+    if (typeof item === 'string' && item.trim() !== '') {
+      return { kind: 'legacy_string', value: item.trim() };
+    }
+
+    return null;
+  }
+
+  buildFilesDraftByQuestion(imagenes = []) {
+    if (!Array.isArray(imagenes)) return [];
+
+    return imagenes.map((seccion) => {
+      if (!Array.isArray(seccion)) return [];
+      return seccion.map((cell) => {
+        const list = Array.isArray(cell) ? cell : cell ? [cell] : [];
+        return list.map((item) => this.toFileDraftDescriptor(item)).filter(Boolean);
+      });
+    });
+  }
+
+  restoreImagenesFromDraft(draft = []) {
+    if (!Array.isArray(draft)) return [];
+
+    return draft.map((seccion) => {
+      if (!Array.isArray(seccion)) return [];
+      return seccion.map((cell) => {
+        const list = Array.isArray(cell) ? cell : cell ? [cell] : [];
+        return list
+          .map((item) => {
+            if (!item || typeof item !== 'object') return null;
+            if (item.kind === 'file_ref' && (item.fileId || item.shareToken)) {
+              return {
+                fileDocId: item.fileDocId || null,
+                fileId: item.fileId || item.shareToken,
+                shareToken: item.shareToken || null,
+                name: item.name || 'archivo',
+                mimeType: item.mimeType || 'application/octet-stream',
+                size: item.size || 0,
+                module: item.module || 'auditorias',
+        entityId: item.entityId || null,
+        companyId: item.companyId || null,
+        uploadedBy: item.uploadedBy || null,
+        uploadedAt: item.uploadedAt || null,
+        status: item.status || 'active',
+        schemaVersion: item.schemaVersion || 1
+      };
+            }
+            return null;
+          })
+          .filter(Boolean);
+      });
+    });
+  }
+
   // Guardar en localStorage como respaldo
   saveToLocalStorage(data) {
     try {
@@ -81,9 +164,16 @@ class AutoSaveService {
           comentarios: typeof parsedData.comentarios === 'string' 
             ? JSON.parse(parsedData.comentarios) 
             : parsedData.comentarios || [],
-          imagenes: typeof parsedData.imagenes === 'string' 
-            ? JSON.parse(parsedData.imagenes) 
-            : parsedData.imagenes || [],
+          filesDraftByQuestion: typeof parsedData.filesDraftByQuestion === 'string'
+            ? JSON.parse(parsedData.filesDraftByQuestion)
+            : parsedData.filesDraftByQuestion || [],
+          imagenes: this.restoreImagenesFromDraft(
+            (typeof parsedData.filesDraftByQuestion === 'string'
+              ? JSON.parse(parsedData.filesDraftByQuestion)
+              : parsedData.filesDraftByQuestion) ||
+              (typeof parsedData.imagenes === 'string' ? JSON.parse(parsedData.imagenes) : parsedData.imagenes) ||
+              []
+          ),
           clasificaciones: typeof parsedData.clasificaciones === 'string' 
             ? JSON.parse(parsedData.clasificaciones) 
             : parsedData.clasificaciones || [],
@@ -254,11 +344,7 @@ class AutoSaveService {
         ? JSON.stringify(auditoriaData.comentarios) 
         : '[]';
       
-      const imagenesParaFirestore = auditoriaData.imagenes 
-        ? JSON.stringify(auditoriaData.imagenes.map(seccion => 
-            seccion.map(img => img instanceof File ? 'image' : img)
-          )) 
-        : '[]';
+      const filesDraftParaFirestore = JSON.stringify(this.buildFilesDraftByQuestion(auditoriaData.imagenes || []));
       
       const clasificacionesParaFirestore = auditoriaData.clasificaciones 
         ? JSON.stringify(auditoriaData.clasificaciones) 
@@ -284,7 +370,7 @@ class AutoSaveService {
         // Arrays anidados convertidos a strings JSON para Firestore
         respuestas: respuestasParaFirestore,
         comentarios: comentariosParaFirestore,
-        imagenes: imagenesParaFirestore,
+        filesDraftByQuestion: filesDraftParaFirestore,
         clasificaciones: clasificacionesParaFirestore,
         accionesRequeridas: accionesRequeridasParaFirestore,
         secciones: seccionesParaFirestore,
@@ -327,9 +413,7 @@ class AutoSaveService {
         secciones: auditoriaData.secciones || [],
         respuestas: auditoriaData.respuestas || [], // Guardar como array, no string JSON
         comentarios: auditoriaData.comentarios || [], // Guardar como array, no string JSON
-        imagenes: auditoriaData.imagenes ? auditoriaData.imagenes.map(seccion => 
-          seccion.map(img => img instanceof File ? 'image' : img)
-        ) : [], // Guardar referencias, no File objects
+        filesDraftByQuestion: this.buildFilesDraftByQuestion(auditoriaData.imagenes || []),
         clasificaciones: auditoriaData.clasificaciones || [], // Guardar como array, no string JSON
         accionesRequeridas: auditoriaData.accionesRequeridas || [], // Guardar como array, no string JSON
         activeStep: auditoriaData.activeStep || 0,
@@ -448,9 +532,13 @@ class AutoSaveService {
       // Preparar datos para IndexedDB con información completa del usuario
       // IMPORTANTE: Las auditorías autoguardadas NO deben sincronizarse automáticamente
       const isAutoSaved = auditoriaData.autoSaved !== false; // Por defecto es autoguardado
+      const filesDraftByQuestion = this.buildFilesDraftByQuestion(auditoriaData.imagenes || []);
+      const auditoriaDataWithoutLegacyImages = { ...auditoriaData };
+      delete auditoriaDataWithoutLegacyImages.imagenes;
+
       const saveData = {
         id: auditoriaId,
-        ...auditoriaData,
+        ...auditoriaDataWithoutLegacyImages,
         userId,
         // Incluir datos completos del usuario para sincronización
         userEmail: userProfile?.email || 'usuario@ejemplo.com',
@@ -467,7 +555,8 @@ class AutoSaveService {
         updatedAt: Date.now(),
         // Las auditorías autoguardadas NO deben tener status 'pending_sync'
         // Solo se sincronizan cuando el usuario finaliza la auditoría
-        status: isAutoSaved ? 'auto_saved' : 'pending_sync'
+        status: isAutoSaved ? 'auto_saved' : 'pending_sync',
+        filesDraftByQuestion
       };
 
       // Log para debugging (solo en development)
@@ -496,7 +585,7 @@ class AutoSaveService {
       // También guardar en localStorage como respaldo (sin imágenes)
       const datosParaLocalStorage = {
         ...saveData,
-        imagenes: saveData.imagenes.map(seccion => seccion.map(img => img ? 'image' : null))
+        filesDraftByQuestion: saveData.filesDraftByQuestion || []
       };
       this.saveToLocalStorage(datosParaLocalStorage);
 
@@ -507,7 +596,12 @@ class AutoSaveService {
       logger.error('Error en autoguardado offline:', error);
       
       // Fallback a localStorage
-      this.saveToLocalStorage(auditoriaData);
+      const fallbackData = { ...auditoriaData };
+      delete fallbackData.imagenes;
+      this.saveToLocalStorage({
+        ...fallbackData,
+        filesDraftByQuestion: this.buildFilesDraftByQuestion(auditoriaData.imagenes || [])
+      });
       
       return false;
     }
@@ -528,34 +622,37 @@ class AutoSaveService {
         if (!Array.isArray(seccionImagenes)) continue;
 
         for (let preguntaIndex = 0; preguntaIndex < seccionImagenes.length; preguntaIndex++) {
-          const imagen = seccionImagenes[preguntaIndex];
-          
-          // ✅ REGLA DE ORO: NO guardar en IndexedDB imágenes que ya tengan fileId
-          if (imagen && typeof imagen === 'object' && imagen.fileId) {
-            logger.debug(`[AutoSaveService] Imagen ya sincronizada, NO guardando en IndexedDB: ${imagen.fileId}`);
-            continue;
-          }
-          
-          // Solo guardar File objects que aún no tienen fileId
-          if (imagen instanceof File) {
-            // Convertir File a Blob y guardar en IndexedDB
-            const fotoId = generateOfflineId();
-            const fotoData = {
-              id: fotoId,
-              auditoriaId: auditoriaId,
-              seccionIndex: seccionIndex,
-              preguntaIndex: preguntaIndex,
-              blob: imagen,
-              mime: imagen.type,
-              width: 0, // Se puede calcular si es necesario
-              height: 0,
-              size: imagen.size,
-              createdAt: Date.now(),
-              originalName: imagen.name
-            };
+          const cell = seccionImagenes[preguntaIndex];
+          const items = Array.isArray(cell) ? cell : cell ? [cell] : [];
 
-            await db.put('fotos', fotoData);
-            fotosGuardadas++;
+          for (let questionItemIndex = 0; questionItemIndex < items.length; questionItemIndex++) {
+            const imagen = items[questionItemIndex];
+
+            if (imagen && typeof imagen === 'object' && imagen.fileId) {
+              logger.debug(`[AutoSaveService] Imagen ya sincronizada, NO guardando en IndexedDB: ${imagen.fileId}`);
+              continue;
+            }
+
+            if (imagen instanceof File) {
+              const fotoId = generateOfflineId();
+              const fotoData = {
+                id: fotoId,
+                auditoriaId: auditoriaId,
+                seccionIndex: seccionIndex,
+                preguntaIndex: preguntaIndex,
+                questionItemIndex,
+                blob: imagen,
+                mime: imagen.type,
+                width: 0,
+                height: 0,
+                size: imagen.size,
+                createdAt: Date.now(),
+                originalName: imagen.name
+              };
+
+              await db.put('fotos', fotoData);
+              fotosGuardadas++;
+            }
           }
         }
       }
@@ -587,9 +684,16 @@ class AutoSaveService {
           comentarios: typeof data.comentarios === 'string' 
             ? JSON.parse(data.comentarios) 
             : data.comentarios || [],
-          imagenes: typeof data.imagenes === 'string' 
-            ? JSON.parse(data.imagenes) 
-            : data.imagenes || [],
+          filesDraftByQuestion: typeof data.filesDraftByQuestion === 'string'
+            ? JSON.parse(data.filesDraftByQuestion)
+            : data.filesDraftByQuestion || [],
+          imagenes: this.restoreImagenesFromDraft(
+            (typeof data.filesDraftByQuestion === 'string'
+              ? JSON.parse(data.filesDraftByQuestion)
+              : data.filesDraftByQuestion) ||
+              (typeof data.imagenes === 'string' ? JSON.parse(data.imagenes) : data.imagenes) ||
+              []
+          ),
           clasificaciones: typeof data.clasificaciones === 'string' 
             ? JSON.parse(data.clasificaciones) 
             : data.clasificaciones || [],
@@ -786,7 +890,8 @@ class AutoSaveService {
       }
 
       // Reconstruir el array de imágenes con los File objects
-      const imagenesRestauradas = [...(auditoriaData.imagenes || [])];
+      const imagenesBase = this.restoreImagenesFromDraft(auditoriaData.filesDraftByQuestion || auditoriaData.imagenes || []);
+      const imagenesRestauradas = [...imagenesBase];
 
       for (const foto of fotos) {
         const { seccionIndex, preguntaIndex, blob, mime, originalName } = foto;
@@ -798,15 +903,21 @@ class AutoSaveService {
         if (!Array.isArray(imagenesRestauradas[seccionIndex])) {
           imagenesRestauradas[seccionIndex] = [];
         }
+        if (!Array.isArray(imagenesRestauradas[seccionIndex][preguntaIndex])) {
+          imagenesRestauradas[seccionIndex][preguntaIndex] = [];
+        }
 
-        // Convertir Blob a File object
         if (blob instanceof Blob) {
           const file = new File([blob], originalName || `foto_${foto.id}.jpg`, {
             type: mime || 'image/jpeg',
             lastModified: foto.createdAt || Date.now()
           });
-          
-          imagenesRestauradas[seccionIndex][preguntaIndex] = file;
+
+          if (Number.isInteger(foto.questionItemIndex)) {
+            imagenesRestauradas[seccionIndex][preguntaIndex][foto.questionItemIndex] = file;
+          } else {
+            imagenesRestauradas[seccionIndex][preguntaIndex].push(file);
+          }
         }
       }
 

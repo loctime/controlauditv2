@@ -1,111 +1,85 @@
-import logger from '@/utils/logger';
-import React from "react";
-import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper } from "@mui/material";
-import { convertirShareTokenAUrl } from '@/utils/imageUtils';
+import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Box } from '@mui/material';
+import UnifiedFilePreview from '@/components/common/files/UnifiedFilePreview';
+
 const getSafeValue = (val) => {
-  if (!val) return "Dato no disponible";
-  if (typeof val === "string") return val;
-  if (typeof val === "object") {
-    // Si es array, toma el primer elemento
+  if (!val) return 'Dato no disponible';
+  if (typeof val === 'string') return val;
+  if (typeof val === 'object') {
     if (Array.isArray(val)) return getSafeValue(val[0]);
-    // Si tiene campo url, úsalo para imagen
-    if (val.url) return val.url;
-    // Si tiene campo texto, úsalo para comentario
     if (val.texto) return val.texto;
-    // Si tiene campo base64
-    if (val.base64) return val.base64;
-    // Si es un File, muestra el nombre
     if (val.name) return val.name;
-    // Si es un objeto plano, muestra JSON
     return JSON.stringify(val);
   }
   return String(val);
 };
 
-// Función helper para procesar imagen usando helper global
-const procesarImagen = (imagen, seccionIndex, preguntaIndex) => {
-  logger.debug(`[ImagenesTable] Procesando imagen para sección ${seccionIndex}, pregunta ${preguntaIndex}:`, imagen);
-  
-  if (!imagen || imagen === null || imagen === undefined) {
-    logger.debug(`[ImagenesTable] No hay imagen para sección ${seccionIndex}, pregunta ${preguntaIndex}`);
-    return null;
-  }
-
-  // Si es un array de imágenes, tomar la primera
-  if (Array.isArray(imagen) && imagen.length > 0) {
-    logger.debug(`[ImagenesTable] Array de imágenes:`, imagen);
-    return convertirShareTokenAUrl(imagen[0]);
-  }
-
-  // Si es "[object Object]", es una imagen corrupta
-  if (typeof imagen === 'string' && imagen === '[object Object]') {
-    logger.warn(`[ImagenesTable] Imagen corrupta "[object Object]" para sección ${seccionIndex}, pregunta ${preguntaIndex}`);
-    return null;
-  }
-
-  // Usar helper global para convertir shareToken a URL
-  const url = convertirShareTokenAUrl(imagen);
-  if (url) {
-    logger.debug(`[ImagenesTable] URL generada: ${url}`);
-    return url;
-  }
-
-  logger.debug(`[ImagenesTable] Formato de imagen no reconocido:`, imagen);
-  return null;
+const toFileRefList = (value) => {
+  const asList = Array.isArray(value) ? value : value ? [value] : [];
+  return asList
+    .map((item) => {
+      if (!item) return null;
+      if (item.fileId || item.shareToken) {
+        return {
+          fileId: item.fileId || item.shareToken,
+          shareToken: item.shareToken || null,
+          name: item.name || item.nombre || 'archivo',
+          mimeType: item.mimeType || item.tipo || 'application/octet-stream',
+          size: item.size || 0,
+          status: item.status || 'active'
+        };
+      }
+      if (typeof item === 'string') {
+        const match = item.match(/\/shares\/([^/]+)/i);
+        const shareToken = item.startsWith('http') ? match?.[1] : item;
+        if (!shareToken) return null;
+        return {
+          fileId: shareToken,
+          shareToken,
+          name: 'archivo_legacy',
+          mimeType: 'application/octet-stream',
+          size: 0,
+          status: 'active'
+        };
+      }
+      return null;
+    })
+    .filter(Boolean);
 };
 
-const ImagenesTable = ({ secciones, imagenes, comentarios }) => {
-  logger.debug('[ImagenesTable] Props recibidas:', { secciones, imagenes, comentarios });
-
+export default function ImagenesTable({ secciones, imagenes, comentarios }) {
   return (
     <TableContainer component={Paper}>
       <Table>
         <TableHead>
           <TableRow>
-            <TableCell>Sección</TableCell>
+            <TableCell>Seccion</TableCell>
             <TableCell>Pregunta</TableCell>
-            <TableCell>Imagen</TableCell>
+            <TableCell>Archivo</TableCell>
             <TableCell>Comentario</TableCell>
           </TableRow>
         </TableHead>
         <TableBody>
           {secciones.flatMap((seccion, seccionIndex) =>
             seccion.preguntas.map((pregunta, preguntaIndex) => {
-              const imagen = imagenes[seccionIndex]?.[preguntaIndex];
-              const imagenProcesada = procesarImagen(imagen, seccionIndex, preguntaIndex);
-              const comentario = comentarios[seccionIndex]?.[preguntaIndex];
-              
-              logger.debug(`[ImagenesTable] Renderizando fila sección ${seccionIndex}, pregunta ${preguntaIndex}:`, {
-                imagen: imagen,
-                imagenProcesada: imagenProcesada,
-                comentario: comentario
-              });
+              const fileList = toFileRefList(imagenes?.[seccionIndex]?.[preguntaIndex]);
+              const comentario = comentarios?.[seccionIndex]?.[preguntaIndex];
 
               return (
                 <TableRow key={`${seccion.nombre}-${preguntaIndex}`}>
                   <TableCell>{seccion.nombre}</TableCell>
                   <TableCell>{pregunta}</TableCell>
                   <TableCell>
-                    {imagenProcesada ? (
-                      <img 
-                        src={imagenProcesada} 
-                        alt="Imagen" 
-                        style={{ width: "400px", height: "auto" }}
-                        onError={(e) => { 
-                          logger.error(`[ImagenesTable] Error cargando imagen: ${imagenProcesada}`, e);
-                          e.target.style.display = 'none'; 
-                        }}
-                        onLoad={() => {
-                          logger.debug(`[ImagenesTable] Imagen cargada exitosamente: ${imagenProcesada}`);
-                        }}
-                      />
+                    {fileList.length > 0 ? (
+                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                        {fileList.map((fileRef, idx) => (
+                          <UnifiedFilePreview key={`${fileRef.fileId}-${idx}`} fileRef={fileRef} height={220} />
+                        ))}
+                      </Box>
                     ) : (
-                      "Imagen no disponible"
+                      'Archivo no disponible'
                     )}
                   </TableCell>
-                  <TableCell>
-                    {comentario ? getSafeValue(comentario) : "Comentario no disponible"}
-                  </TableCell>
+                  <TableCell>{comentario ? getSafeValue(comentario) : 'Comentario no disponible'}</TableCell>
                 </TableRow>
               );
             })
@@ -114,6 +88,5 @@ const ImagenesTable = ({ secciones, imagenes, comentarios }) => {
       </Table>
     </TableContainer>
   );
-};
+}
 
-export default ImagenesTable;

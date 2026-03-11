@@ -2,6 +2,7 @@ import logger from '@/utils/logger';
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { listAusencias } from "../../../../services/ausenciasService";
 import { useAuth } from '@/components/context/AuthContext';
+
 export const useAusenciasData = (
   selectedEmpresa,
   selectedSucursal,
@@ -35,6 +36,7 @@ export const useAusenciasData = (
         endDate: filters.endDate,
         tipo: filters.tipo,
         estado: filters.estado,
+        origen: filters.origen,
         search: filters.search,
         userProfile
       });
@@ -53,6 +55,7 @@ export const useAusenciasData = (
     filters.endDate,
     filters.tipo,
     filters.estado,
+    filters.origen,
     filters.search,
     userProfile
   ]);
@@ -76,5 +79,4 @@ export const useAusenciasData = (
     recargar: loadAusencias
   };
 };
-
 

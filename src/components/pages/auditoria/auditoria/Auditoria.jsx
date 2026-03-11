@@ -303,7 +303,7 @@ const AuditoriaRefactorizada = () => {
     const hasData = empresaSeleccionada || sucursalSeleccionada || formularioSeleccionadoId || 
                    respuestas.some(seccion => seccion.some(resp => resp !== '')) ||
                    comentarios.some(seccion => seccion.some(com => com !== '')) ||
-                   imagenes.some(seccion => seccion.some(img => img !== null)) ||
+                   imagenes.some(seccion => seccion.some(img => Array.isArray(img) ? img.length > 0 : img !== null)) ||
                    clasificaciones.some(seccion => seccion.some(clas => clas && (clas.condicion || clas.actitud))) ||
                    accionesRequeridas.some(seccion => seccion.some(acc => acc && acc.requiereAccion && acc.accionTexto));
     
@@ -833,6 +833,10 @@ const AuditoriaRefactorizada = () => {
     return empresaSeleccionada?.id || null;
   }, [empresaSeleccionada]);
 
+  const ownerId = useMemo(() => {
+    return userProfile?.ownerId || null;
+  }, [userProfile?.ownerId]);
+
   // Crear los pasos usando el componente
   const steps = useMemo(() => createAuditoriaSteps({
     // Estados
@@ -880,7 +884,8 @@ const AuditoriaRefactorizada = () => {
     
     // IDs para carga de imágenes
     auditId,
-    companyId
+    companyId,
+    ownerId
   }), [
     empresas,
     empresaSeleccionada,
@@ -917,7 +922,8 @@ const AuditoriaRefactorizada = () => {
     theme,
     isMobile,
     auditId,
-    companyId
+    companyId,
+    ownerId
   ]);
 
   // Scroll al top cuando se llega al paso de firmas (paso 3)
@@ -1123,3 +1129,4 @@ const AuditoriaRefactorizada = () => {
 };
 
 export default AuditoriaRefactorizada; 
+

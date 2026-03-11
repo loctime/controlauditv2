@@ -1,4 +1,5 @@
 import logger from '@/utils/logger';
+import { WARNING_FILE_SIZE } from '@/services/fileValidationPolicy';
 // Utilidades para manejo de cámara e imágenes
 
 /**
@@ -8,7 +9,7 @@ import logger from '@/utils/logger';
  * @param {number} quality - Calidad de compresión (0-1)
  * @returns {Promise<File>} - Archivo comprimido
  */
-export const comprimirImagen = (file, maxWidth = 800, quality = 0.7) => {
+export const comprimirImagen = (file) => {
   return new Promise((resolve) => {
     if (!file.type.startsWith('image/')) {
       logger.warn('Archivo no es una imagen:', file.type);
@@ -45,13 +46,13 @@ export const comprimirImagen = (file, maxWidth = 800, quality = 0.7) => {
       
       let compressionQuality = 0.6;
       
-      if (file.size > 10 * 1024 * 1024) {
+      if (file.size > WARNING_FILE_SIZE) {
         compressionQuality = 0.3;
-      } else if (file.size > 5 * 1024 * 1024) {
+      } else if (file.size > WARNING_FILE_SIZE * 0.25) {
         compressionQuality = 0.4;
-      } else if (file.size > 2 * 1024 * 1024) {
+      } else if (file.size > WARNING_FILE_SIZE * 0.1) {
         compressionQuality = 0.5;
-      } else if (file.size > 1 * 1024 * 1024) {
+      } else if (file.size > WARNING_FILE_SIZE * 0.02) {
         compressionQuality = 0.6;
       }
       
@@ -66,7 +67,7 @@ export const comprimirImagen = (file, maxWidth = 800, quality = 0.7) => {
         
         logger.debug(`✅ Imagen optimizada: ${(file.size/1024/1024).toFixed(2)}MB -> ${finalSizeMB}MB (${reductionPercent}% reducción)`);
         
-        if (compressedFile.size > 2 * 1024 * 1024) {
+        if (compressedFile.size > WARNING_FILE_SIZE * 0.1) {
           logger.warn(`⚠️ Imagen aún grande (${finalSizeMB}MB), aplicando compresión adicional`);
           canvas.toBlob((finalBlob) => {
             const finalFile = new File([finalBlob], file.name, {
@@ -220,3 +221,5 @@ export const getCameraErrorMessage = (error) => {
   
   return 'No se pudo acceder a la cámara.';
 };
+
+

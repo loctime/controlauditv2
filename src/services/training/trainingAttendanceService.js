@@ -1,8 +1,8 @@
-﻿import { collection, doc, getDoc, getDocs, query, orderBy, where, Timestamp } from 'firebase/firestore';
+import { collection, doc, getDoc, getDocs, query, orderBy, where, Timestamp } from 'firebase/firestore';
 import { dbAudit } from '../../firebaseControlFile';
 import { firestoreRoutesCore } from '../../core/firestore/firestoreRoutes.core';
 import { setDocWithAppId, updateDocWithAppId } from '../../firebase/firestoreAppWriter';
-import { ensureOwnerId } from './trainingBaseService';
+import { ensureOwnerId, getDocument } from './trainingBaseService';
 import {
   TRAINING_ATTENDANCE_STATUSES,
   TRAINING_EVALUATION_STATUSES
@@ -19,13 +19,33 @@ function attendanceDocument(ownerId, sessionId, employeeId) {
   return doc(dbAudit, ...firestoreRoutesCore.trainingSessionAttendanceItem(ownerId, sessionId, employeeId));
 }
 
+function attendanceByEmployeeCollection(ownerId) {
+  ensureOwnerId(ownerId);
+  return collection(dbAudit, ...firestoreRoutesCore.trainingAttendanceByEmployee(ownerId));
+}
+
+function attendanceByEmployeeDocument(ownerId, employeeId, sessionId) {
+  ensureOwnerId(ownerId);
+  return doc(dbAudit, ...firestoreRoutesCore.trainingAttendanceByEmployeeItem(ownerId, `${employeeId}_${sessionId}`));
+}
+
+async function getSessionMeta(ownerId, sessionId, provided = null) {
+  if (provided) return provided;
+  return getDocument(ownerId, 'trainingSession', sessionId);
+}
+
 export const trainingAttendanceService = {
   async upsertAttendance(ownerId, sessionId, employeeId, payload) {
+    const now = Timestamp.now();
     const ref = attendanceDocument(ownerId, sessionId, employeeId);
+    const sessionData = await getSessionMeta(ownerId, sessionId, payload.sessionData || null);
 
-    await setDocWithAppId(ref, {
+    const attendanceData = {
       employeeId,
       sessionId,
+      trainingTypeId: payload.trainingTypeId || sessionData?.trainingTypeId || null,
+      companyId: payload.companyId || sessionData?.companyId || null,
+      branchId: payload.branchId || sessionData?.branchId || null,
       attendanceStatus: payload.attendanceStatus || TRAINING_ATTENDANCE_STATUSES.INVITED,
       evaluationStatus: payload.evaluationStatus || TRAINING_EVALUATION_STATUSES.NOT_APPLICABLE,
       score: payload.score ?? null,
@@ -36,8 +56,32 @@ export const trainingAttendanceService = {
       certificateId: payload.certificateId || null,
       validFrom: payload.validFrom || null,
       validUntil: payload.validUntil || null,
-      updatedAt: Timestamp.now()
-    }, { merge: true });
+      updatedAt: now
+    };
+
+    await setDocWithAppId(ref, attendanceData, { merge: true });
+
+    const denormRef = attendanceByEmployeeDocument(ownerId, employeeId, sessionId);
+    await setDocWithAppId(denormRef, attendanceData, { merge: true });
+
+    const shouldRecompute = Boolean(attendanceData.trainingTypeId) && (
+      attendanceData.attendanceStatus !== TRAINING_ATTENDANCE_STATUSES.INVITED
+      || Boolean(attendanceData.validUntil)
+      || Boolean(attendanceData.certificateId)
+      || payload.forceRecompute
+    );
+
+    if (shouldRecompute) {
+      await employeeTrainingRecordService.recomputeEmployeeRecord(
+        ownerId,
+        employeeId,
+        attendanceData.trainingTypeId,
+        {
+          companyId: attendanceData.companyId,
+          branchId: attendanceData.branchId
+        }
+      );
+    }
 
     return ref;
   },
@@ -67,48 +111,54 @@ export const trainingAttendanceService = {
   },
 
   async listAttendanceByEmployee(ownerId, employeeId) {
-    const sessionsRef = collection(dbAudit, ...firestoreRoutesCore.trainingSessions(ownerId));
-    const sessionsSnap = await getDocs(sessionsRef);
-
-    const allResults = [];
-
-    for (const sessionDoc of sessionsSnap.docs) {
-      const attRef = attendanceCollection(ownerId, sessionDoc.id);
-      const attSnap = await getDocs(query(attRef, where('employeeId', '==', employeeId)));
-      attSnap.docs.forEach((attDoc) => {
-        allResults.push({
-          id: attDoc.id,
-          sessionId: sessionDoc.id,
-          ...attDoc.data()
-        });
-      });
-    }
-
-    return allResults.sort((a, b) => {
-      const aTs = a.updatedAt?.seconds || 0;
-      const bTs = b.updatedAt?.seconds || 0;
-      return bTs - aTs;
-    });
+    const ref = attendanceByEmployeeCollection(ownerId);
+    const snap = await getDocs(query(ref, where('employeeId', '==', employeeId), orderBy('updatedAt', 'desc')));
+    return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
   },
 
   async linkCertificate(ownerId, sessionId, employeeId, certificateId, validFrom, validUntil) {
+    const now = Timestamp.now();
     const ref = attendanceDocument(ownerId, sessionId, employeeId);
     await updateDocWithAppId(ref, {
       certificateId,
       validFrom,
       validUntil,
-      updatedAt: Timestamp.now()
+      updatedAt: now
     });
+
+    const denormRef = attendanceByEmployeeDocument(ownerId, employeeId, sessionId);
+    await setDocWithAppId(denormRef, {
+      employeeId,
+      sessionId,
+      certificateId,
+      validFrom,
+      validUntil,
+      updatedAt: now
+    }, { merge: true });
+
+    const currentAttendance = await this.getAttendance(ownerId, sessionId, employeeId);
+    const trainingTypeId = currentAttendance?.trainingTypeId;
+    if (trainingTypeId) {
+      await employeeTrainingRecordService.recomputeEmployeeRecord(ownerId, employeeId, trainingTypeId, {
+        companyId: currentAttendance.companyId,
+        branchId: currentAttendance.branchId
+      });
+    }
   },
 
   async materializeEmployeeRecord(ownerId, sessionId, sessionData = null) {
+    const sessionMeta = await getSessionMeta(ownerId, sessionId, sessionData);
     const records = await this.listAttendanceBySession(ownerId, sessionId);
-    await Promise.all(records.map((record) => employeeTrainingRecordService.upsertFromAttendance(ownerId, {
-      ...record,
-      sessionId,
-      trainingTypeId: sessionData?.trainingTypeId || record.trainingTypeId,
-      branchId: sessionData?.branchId,
-      companyId: sessionData?.companyId
-    })));
+
+    await Promise.all(records.map(async (record) => {
+      await this.upsertAttendance(ownerId, sessionId, record.employeeId, {
+        ...record,
+        trainingTypeId: sessionMeta?.trainingTypeId || record.trainingTypeId,
+        branchId: sessionMeta?.branchId || record.branchId,
+        companyId: sessionMeta?.companyId || record.companyId,
+        sessionData: sessionMeta,
+        forceRecompute: true
+      });
+    }));
   }
 };

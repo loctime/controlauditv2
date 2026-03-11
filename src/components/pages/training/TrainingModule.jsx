@@ -8,6 +8,7 @@ import SessionsScreen from './screens/SessionsScreen';
 import PeopleScreen from './screens/PeopleScreen';
 import ConfigurationScreen from './screens/ConfigurationScreen';
 import ReportsScreen from './screens/ReportsScreen';
+import ComplianceScreen from './screens/ComplianceScreen';
 import CalendarScreen from './screens/CalendarScreen';
 
 const MODULE_TABS = [
@@ -15,6 +16,7 @@ const MODULE_TABS = [
   { id: 'sessions', label: 'Sesiones' },
   { id: 'people', label: 'Personas' },
   { id: 'reports', label: 'Reportes' },
+  { id: 'compliance', label: 'Cumplimiento' },
   { id: 'configuration', label: 'Configuración', adminOnly: true }
 ];
 
@@ -64,6 +66,8 @@ export default function TrainingModule() {
         return <ConfigurationScreen activeSection={activeSection} onSectionChange={setSection} />;
       case 'reports':
         return <ReportsScreen />;
+      case 'compliance':
+        return <ComplianceScreen />;
       default:
         return <DashboardScreen onNavigate={setTab} />;
     }
@@ -95,5 +99,6 @@ export default function TrainingModule() {
     </Container>
   );
 }
+
 
 

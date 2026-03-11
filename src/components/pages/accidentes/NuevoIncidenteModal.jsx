@@ -16,27 +16,24 @@ import {
   IconButton,
   Alert,
   Chip,
-  Divider,
-  Grid
+  Grid,
+  Switch,
+  MenuItem
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
-import CloudUploadIcon from '@mui/icons-material/CloudUpload';
-import DeleteIcon from '@mui/icons-material/Delete';
 import { obtenerEmpleadosPorSucursal } from '../../../services/accidenteService';
 import { useAuth } from '@/components/context/AuthContext';
-import { validateFiles } from '../../../services/fileValidationPolicy';
+import UnifiedFileUploader from '../../common/files/UnifiedFileUploader';
 
 const NuevoIncidenteModal = ({ open, onClose, onIncidenteCreado, empresaId, sucursalId, empresaNombre, sucursalNombre }) => {
   const { userProfile } = useAuth();
   const [empleados, setEmpleados] = useState([]);
   const [testigosSeleccionados, setTestigosSeleccionados] = useState([]);
   const [descripcion, setDescripcion] = useState('');
-  const [fechaIncidente, setFechaIncidente] = useState(() => {
-    const hoy = new Date();
-    return hoy.toISOString().split('T')[0];
-  });
+  const [fechaIncidente, setFechaIncidente] = useState(() => new Date().toISOString().split('T')[0]);
   const [imagenes, setImagenes] = useState([]);
-  const [imagenesPreview, setImagenesPreview] = useState([]);
+  const [tieneLesion, setTieneLesion] = useState(false);
+  const [empleadoAfectadoId, setEmpleadoAfectadoId] = useState('');
   const [loading, setLoading] = useState(false);
   const [loadingEmpleados, setLoadingEmpleados] = useState(false);
   const [error, setError] = useState('');
@@ -44,9 +41,7 @@ const NuevoIncidenteModal = ({ open, onClose, onIncidenteCreado, empresaId, sucu
   useEffect(() => {
     if (open && sucursalId) {
       cargarEmpleados();
-      // Resetear fecha a hoy cuando se abre el modal
-      const hoy = new Date();
-      setFechaIncidente(hoy.toISOString().split('T')[0]);
+      setFechaIncidente(new Date().toISOString().split('T')[0]);
     }
   }, [open, sucursalId]);
 
@@ -65,50 +60,23 @@ const NuevoIncidenteModal = ({ open, onClose, onIncidenteCreado, empresaId, sucu
   };
 
   const handleTestigoToggle = (empleado) => {
-    const existe = testigosSeleccionados.find(e => e.id === empleado.id);
-    
-    if (existe) {
-      setTestigosSeleccionados(testigosSeleccionados.filter(e => e.id !== empleado.id));
-    } else {
-      setTestigosSeleccionados([...testigosSeleccionados, empleado]);
-    }
-  };
-
-  const handleImagenesChange = (e) => {
-    const files = Array.from(e.target.files || []);
-    const validation = validateFiles(files);
-    const validFiles = validation.accepted;
-
-    if (validation.rejected.length > 0) {
-      setError(validation.rejected.map((item) => `${item.fileName}: ${item.issues.map((issue) => issue.message).join(', ')}`).join(' | '));
-    }
-
-    setImagenes([...imagenes, ...validFiles]);
-
-    // Crear previews
-    validFiles.forEach(file => {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImagenesPreview(prev => [...prev, reader.result]);
-      };
-      reader.readAsDataURL(file);
-    });
-  };
-
-  const handleRemoveImagen = (index) => {
-    setImagenes(imagenes.filter((_, i) => i !== index));
-    setImagenesPreview(imagenesPreview.filter((_, i) => i !== index));
+    const existe = testigosSeleccionados.find((e) => e.id === empleado.id);
+    setTestigosSeleccionados(existe
+      ? testigosSeleccionados.filter((e) => e.id !== empleado.id)
+      : [...testigosSeleccionados, empleado]);
   };
 
   const handleSubmit = async () => {
-    // Validaciones
     if (testigosSeleccionados.length === 0) {
       setError('Debe seleccionar al menos un testigo');
       return;
     }
-
     if (!descripcion.trim()) {
-      setError('La descripciÃ³n es requerida');
+      setError('La descripcion es requerida');
+      return;
+    }
+    if (tieneLesion && !empleadoAfectadoId) {
+      setError('Debe seleccionar el empleado afectado cuando hay lesion.');
       return;
     }
 
@@ -116,16 +84,18 @@ const NuevoIncidenteModal = ({ open, onClose, onIncidenteCreado, empresaId, sucu
     setError('');
 
     try {
+      const empleadoAfectado = empleados.find((emp) => emp.id === empleadoAfectadoId);
       await onIncidenteCreado({
         empresaId,
         sucursalId,
         descripcion,
         fechaIncidente,
         testigos: testigosSeleccionados,
-        imagenes
+        imagenes,
+        tieneLesion,
+        empleadoAfectadoId: tieneLesion ? empleadoAfectadoId : null,
+        empleadoAfectadoNombre: tieneLesion ? (empleadoAfectado?.nombre || null) : null
       });
-
-      // Reset form
       handleClose();
     } catch (err) {
       logger.error('Error al crear incidente:', err);
@@ -138,12 +108,16 @@ const NuevoIncidenteModal = ({ open, onClose, onIncidenteCreado, empresaId, sucu
   const handleClose = () => {
     setTestigosSeleccionados([]);
     setDescripcion('');
-    const hoy = new Date();
-    setFechaIncidente(hoy.toISOString().split('T')[0]);
+    setFechaIncidente(new Date().toISOString().split('T')[0]);
     setImagenes([]);
-    setImagenesPreview([]);
+    setTieneLesion(false);
+    setEmpleadoAfectadoId('');
     setError('');
     onClose();
+  };
+
+  const removePendingFile = (index) => {
+    setImagenes((prev) => prev.filter((_, i) => i !== index));
   };
 
   return (
@@ -151,9 +125,7 @@ const NuevoIncidenteModal = ({ open, onClose, onIncidenteCreado, empresaId, sucu
       <DialogTitle>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Typography variant="h6">Reportar Nuevo Incidente</Typography>
-          <IconButton onClick={handleClose} size="small">
-            <CloseIcon />
-          </IconButton>
+          <IconButton onClick={handleClose} size="small"><CloseIcon /></IconButton>
         </Box>
         <Typography variant="caption" color="textSecondary">
           Empresa: {empresaNombre} | Sucursal: {sucursalNombre}
@@ -168,57 +140,35 @@ const NuevoIncidenteModal = ({ open, onClose, onIncidenteCreado, empresaId, sucu
         )}
 
         <Grid container spacing={2}>
-          {/* Fila 1: Fecha | DescripciÃ³n */}
           <Grid item xs={12} md={6}>
-            <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 1 }}>
-              Fecha del Incidente *
-            </Typography>
-            <TextField
-              fullWidth
-              type="date"
-              value={fechaIncidente}
-              onChange={(e) => setFechaIncidente(e.target.value)}
-              variant="outlined"
-              size="small"
-              InputLabelProps={{
-                shrink: true,
-              }}
-            />
+            <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 1 }}>Fecha del Incidente *</Typography>
+            <TextField fullWidth type="date" value={fechaIncidente} onChange={(e) => setFechaIncidente(e.target.value)} size="small" InputLabelProps={{ shrink: true }} />
           </Grid>
 
           <Grid item xs={12} md={6}>
-            <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 1 }}>
-              DescripciÃ³n del Incidente *
-            </Typography>
-            <TextField
-              fullWidth
-              multiline
-              rows={4}
-              value={descripcion}
-              onChange={(e) => setDescripcion(e.target.value)}
-              placeholder="Describa detalladamente lo ocurrido..."
-              variant="outlined"
-              size="small"
-            />
+            <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 1 }}>Descripcion del Incidente *</Typography>
+            <TextField fullWidth multiline rows={4} value={descripcion} onChange={(e) => setDescripcion(e.target.value)} placeholder="Describa detalladamente lo ocurrido..." size="small" />
           </Grid>
 
-          {/* Fila 2: Testigos | ImÃ¡genes */}
+          <Grid item xs={12}>
+            <Box sx={{ border: '1px solid #e5e7eb', borderRadius: 1.5, p: 1.5 }}>
+              <FormControlLabel control={<Switch checked={tieneLesion} onChange={(e) => setTieneLesion(e.target.checked)} color="warning" />} label="El incidente tuvo lesion" />
+              {tieneLesion && (
+                <TextField select fullWidth size="small" label="Empleado afectado" value={empleadoAfectadoId} onChange={(e) => setEmpleadoAfectadoId(e.target.value)} sx={{ mt: 1 }}>
+                  {empleados.map((empleado) => (
+                    <MenuItem key={empleado.id} value={empleado.id}>{empleado.nombre}</MenuItem>
+                  ))}
+                </TextField>
+              )}
+            </Box>
+          </Grid>
+
           <Grid item xs={12} md={6}>
-            <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 1 }}>
-              Testigos / Personal Involucrado *
-            </Typography>
-            <Typography variant="caption" color="textSecondary" sx={{ display: 'block', mb: 1 }}>
-              Seleccione las personas que presenciaron o estuvieron relacionadas con el incidente
-            </Typography>
-            
+            <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 1 }}>Testigos / Personal Involucrado *</Typography>
             {loadingEmpleados ? (
-              <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
-                <CircularProgress size={24} />
-              </Box>
+              <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}><CircularProgress size={24} /></Box>
             ) : empleados.length === 0 ? (
-              <Alert severity="info" sx={{ fontSize: '0.875rem' }}>
-                No hay empleados en esta sucursal
-              </Alert>
+              <Alert severity="info" sx={{ fontSize: '0.875rem' }}>No hay empleados en esta sucursal</Alert>
             ) : (
               <Box sx={{ maxHeight: 300, overflowY: 'auto', pr: 1 }}>
                 <FormGroup>
@@ -227,38 +177,12 @@ const NuevoIncidenteModal = ({ open, onClose, onIncidenteCreado, empresaId, sucu
                     return (
                       <FormControlLabel
                         key={empleado.id}
-                        control={
-                          <Checkbox
-                            size="small"
-                            checked={testigosSeleccionados.some(e => e.id === empleado.id)}
-                            onChange={() => handleTestigoToggle(empleado)}
-                          />
-                        }
+                        control={<Checkbox size="small" checked={testigosSeleccionados.some((e) => e.id === empleado.id)} onChange={() => handleTestigoToggle(empleado)} />}
                         label={
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                            <Typography 
-                              variant="body2" 
-                              sx={{ 
-                                color: estaInactivo ? 'error.main' : 'inherit',
-                                fontWeight: estaInactivo ? 'bold' : 'normal'
-                              }}
-                            >
-                              {empleado.nombre}
-                            </Typography>
-                            <Chip 
-                              label={empleado.cargo || 'Sin cargo'} 
-                              size="small" 
-                              variant="outlined" 
-                              sx={{ height: 20, fontSize: '0.7rem' }} 
-                            />
-                            {estaInactivo && (
-                              <Chip 
-                                label="Inactivo" 
-                                size="small" 
-                                color="error"
-                                sx={{ height: 20, fontSize: '0.65rem' }} 
-                              />
-                            )}
+                            <Typography variant="body2" sx={{ color: estaInactivo ? 'error.main' : 'inherit', fontWeight: estaInactivo ? 'bold' : 'normal' }}>{empleado.nombre}</Typography>
+                            <Chip label={empleado.cargo || 'Sin cargo'} size="small" variant="outlined" sx={{ height: 20, fontSize: '0.7rem' }} />
+                            {estaInactivo && <Chip label="Inactivo" size="small" color="error" sx={{ height: 20, fontSize: '0.65rem' }} />}
                           </Box>
                         }
                       />
@@ -270,58 +194,18 @@ const NuevoIncidenteModal = ({ open, onClose, onIncidenteCreado, empresaId, sucu
           </Grid>
 
           <Grid item xs={12} md={6}>
-            <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 1 }}>
-              ImÃ¡genes (Opcional)
-            </Typography>
-            
-            <Button
-              variant="outlined"
-              component="label"
-              size="small"
-              startIcon={<CloudUploadIcon />}
-              sx={{ mb: 1 }}
-            >
-              Subir ImÃ¡genes
-              <input
-                type="file"
-                hidden
-                multiple
-                accept="*/*"
-                onChange={handleImagenesChange}
-              />
-            </Button>
-
-            {imagenesPreview.length > 0 && (
-              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1 }}>
-                {imagenesPreview.map((preview, index) => (
-                  <Box key={index} sx={{ position: 'relative' }}>
-                    <img
-                      src={preview}
-                      alt={`Preview ${index + 1}`}
-                      style={{
-                        width: 80,
-                        height: 80,
-                        objectFit: 'cover',
-                        borderRadius: 4
-                      }}
-                    />
-                    <IconButton
-                      size="small"
-                      onClick={() => handleRemoveImagen(index)}
-                      sx={{
-                        position: 'absolute',
-                        top: -8,
-                        right: -8,
-                        bgcolor: 'error.main',
-                        color: 'white',
-                        width: 20,
-                        height: 20,
-                        '&:hover': { bgcolor: 'error.dark' }
-                      }}
-                    >
-                      <DeleteIcon sx={{ fontSize: 14 }} />
-                    </IconButton>
-                  </Box>
+            <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 1 }}>Archivos (Opcional)</Typography>
+            <UnifiedFileUploader
+              id="nuevo-incidente-files"
+              files={imagenes}
+              onFilesChange={(nextFiles) => setImagenes(nextFiles)}
+              helperText="Puedes adjuntar multiples evidencias"
+              inputProps={{ style: { width: '100%' } }}
+            />
+            {imagenes.length > 0 && (
+              <Box sx={{ mt: 1, display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                {imagenes.map((file, index) => (
+                  <Chip key={`${file.name}-${index}`} size="small" label={file.name} onDelete={() => removePendingFile(index)} />
                 ))}
               </Box>
             )}
@@ -330,16 +214,8 @@ const NuevoIncidenteModal = ({ open, onClose, onIncidenteCreado, empresaId, sucu
       </DialogContent>
 
       <DialogActions sx={{ px: 3, py: 2 }}>
-        <Button onClick={handleClose} disabled={loading}>
-          Cancelar
-        </Button>
-        <Button
-          onClick={handleSubmit}
-          variant="contained"
-          color="warning"
-          disabled={loading || testigosSeleccionados.length === 0}
-          startIcon={loading && <CircularProgress size={16} />}
-        >
+        <Button onClick={handleClose} disabled={loading}>Cancelar</Button>
+        <Button onClick={handleSubmit} variant="contained" color="warning" disabled={loading || testigosSeleccionados.length === 0} startIcon={loading && <CircularProgress size={16} />}>
           {loading ? 'Guardando...' : 'Reportar Incidente'}
         </Button>
       </DialogActions>
@@ -348,10 +224,4 @@ const NuevoIncidenteModal = ({ open, onClose, onIncidenteCreado, empresaId, sucu
 };
 
 export default NuevoIncidenteModal;
-
-
-
-
-
-
 

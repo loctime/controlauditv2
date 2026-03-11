@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import { useMemo } from "react";
 import {
   Grid,
   FormControl,
@@ -10,6 +10,16 @@ import {
 } from "@mui/material";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { AUSENCIA_ESTADOS } from "../../../../services/ausenciasService";
+
+const ORIGEN_OPTIONS = [
+  { value: "manual", label: "Manual" },
+  { value: "accidente", label: "Accidente" },
+  { value: "incidente", label: "Incidente" },
+  { value: "salud_ocupacional", label: "Salud ocupacional" },
+  { value: "licencia_medica", label: "Licencia medica" },
+  { value: "permiso", label: "Permiso" },
+  { value: "enfermedad", label: "Enfermedad" }
+];
 
 const capitalize = (value) =>
   value.charAt(0).toUpperCase() + value.slice(1).toLowerCase();
@@ -122,6 +132,27 @@ export default function AusenciasFilters({
               {AUSENCIA_ESTADOS.map((estado) => (
                 <MenuItem key={estado.value} value={estado.value}>
                   {capitalize(estado.label)}
+                </MenuItem>
+              ))}
+              <MenuItem value="activas">Activas</MenuItem>
+              <MenuItem value="cerradas">Cerradas</MenuItem>
+            </Select>
+          </FormControl>
+        </Grid>
+
+        <Grid item xs={12} md={2}>
+          <FormControl fullWidth size="small">
+            <InputLabel>Origen</InputLabel>
+            <Select
+              label="Origen"
+              value={filters.origen || "todos"}
+              onChange={(event) => onChangeFilters({ origen: event.target.value })}
+              aria-label="Filtrar ausencias por origen"
+            >
+              <MenuItem value="todos">Todos</MenuItem>
+              {ORIGEN_OPTIONS.map((origen) => (
+                <MenuItem key={origen.value} value={origen.value}>
+                  {origen.label}
                 </MenuItem>
               ))}
             </Select>

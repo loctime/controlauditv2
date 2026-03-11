@@ -166,12 +166,23 @@ export const trainingSessionService = {
       }
     }
 
-    return updateDocument(ownerId, 'trainingSession', sessionId, {
+    const updateRef = await updateDocument(ownerId, 'trainingSession', sessionId, {
       status: newStatus,
       ...(newStatus === TRAINING_SESSION_STATUSES.IN_PROGRESS && !current.executedDate
         ? { executedDate: nowTs() }
         : {})
     });
+
+    if (newStatus === TRAINING_SESSION_STATUSES.CLOSED) {
+      const updatedSession = {
+        ...current,
+        id: sessionId,
+        status: newStatus
+      };
+      await trainingAttendanceService.materializeEmployeeRecord(ownerId, sessionId, updatedSession);
+    }
+
+    return updateRef;
   },
 
   async validateClosureGates(ownerId, sessionId) {
@@ -225,3 +236,4 @@ export const trainingSessionService = {
     };
   }
 };
+

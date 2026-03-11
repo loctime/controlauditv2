@@ -888,3 +888,32 @@ export async function ensureCapacitacionFolder(
   return sucursalFolderId;
 }
 
+
+export async function deleteFile(fileId: string): Promise<void> {
+  if (!fileId) {
+    throw new Error('fileId es requerido');
+  }
+
+  const user = auth.currentUser;
+  if (!user) {
+    throw new Error('Usuario no autenticado');
+  }
+
+  const token = await user.getIdToken();
+  if (!token) {
+    throw new Error('No se pudo obtener el token de autenticacion');
+  }
+
+  const response = await fetch(`${BACKEND_URL}/api/files/${fileId}`, {
+    method: 'DELETE',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: 'Error desconocido' }));
+    throw new Error(error.error || `Error al eliminar archivo: ${response.status}`);
+  }
+}
+

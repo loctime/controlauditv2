@@ -453,3 +453,159 @@ export const normalizarFormularioCompleto = (reporte) => {
   
   return { id: 'unknown', nombre: "Formulario no disponible" };
 };
+
+const parseLegacyShareToken = (value) => {
+  if (!value || typeof value !== 'string') return null;
+  if (!value.startsWith('http://') && !value.startsWith('https://')) return value;
+  const match = value.match(/\/shares\/([^/]+)/i);
+  return match?.[1] || null;
+};
+
+const toFileRef = (value) => {
+  if (!value) return null;
+  if (value.fileId || value.shareToken) {
+    return {
+      fileDocId: value.fileDocId || value.id || null,
+      fileId: value.fileId || value.shareToken,
+      shareToken: value.shareToken || null,
+      name: value.name || value.nombre || 'archivo',
+      mimeType: value.mimeType || value.tipo || 'application/octet-stream',
+      size: value.size || value.tamano || value['tama�o'] || 0,
+      status: value.status || 'active',
+      questionRef: value.questionRef || null
+    };
+  }
+
+  if (typeof value === 'string') {
+    const shareToken = parseLegacyShareToken(value);
+    if (!shareToken) return null;
+    return {
+      fileDocId: null,
+      fileId: shareToken,
+      shareToken,
+      name: 'archivo_legacy',
+      mimeType: 'application/octet-stream',
+      size: 0,
+      status: 'active',
+      questionRef: null
+    };
+  }
+
+  return null;
+};
+
+const hasFilesInMatrix = (matrix = []) =>
+  matrix.some((seccion) => Array.isArray(seccion) && seccion.some((pregunta) => Array.isArray(pregunta) && pregunta.length > 0));
+
+const toFilesByQuestionLookup = (filesByQuestion = []) => {
+  const byDocId = new Map();
+  const byFileId = new Map();
+
+  const seccionesValues =
+    filesByQuestion[0] && typeof filesByQuestion[0] === 'object' && Array.isArray(filesByQuestion[0].valores)
+      ? filesByQuestion.map((item) => item.valores || [])
+      : filesByQuestion;
+
+  seccionesValues.forEach((seccionValues, seccionIndex) => {
+    if (!Array.isArray(seccionValues)) return;
+    seccionValues.forEach((cell, preguntaIndex) => {
+      const list = Array.isArray(cell) ? cell : cell ? [cell] : [];
+      list.forEach((item) => {
+        if (!item || typeof item !== 'object') return;
+        const location = { seccionIndex, preguntaIndex };
+        if (item.fileDocId) byDocId.set(String(item.fileDocId), location);
+        if (item.fileId) byFileId.set(String(item.fileId), location);
+      });
+    });
+  });
+
+  return { byDocId, byFileId };
+};
+
+const resolveQuestionLocation = (fileRef, lookup) => {
+  if (!fileRef) return null;
+
+  const questionRef = fileRef.questionRef;
+  if (
+    questionRef &&
+    Number.isInteger(questionRef.seccionIndex) &&
+    Number.isInteger(questionRef.preguntaIndex)
+  ) {
+    return {
+      seccionIndex: questionRef.seccionIndex,
+      preguntaIndex: questionRef.preguntaIndex
+    };
+  }
+
+  if (fileRef.fileDocId && lookup.byDocId.has(String(fileRef.fileDocId))) {
+    return lookup.byDocId.get(String(fileRef.fileDocId));
+  }
+
+  if (fileRef.fileId && lookup.byFileId.has(String(fileRef.fileId))) {
+    return lookup.byFileId.get(String(fileRef.fileId));
+  }
+
+  return null;
+};
+
+export const normalizarArchivosPorPregunta = (reporte, secciones = [], canonicalFiles = []) => {
+  const output = secciones.map((seccion) =>
+    Array((seccion?.preguntas || []).length)
+      .fill(null)
+      .map(() => [])
+  );
+
+  const filesByQuestion = Array.isArray(reporte?.filesByQuestion) ? reporte.filesByQuestion : [];
+  const lookup = toFilesByQuestionLookup(filesByQuestion);
+
+  if (Array.isArray(canonicalFiles) && canonicalFiles.length > 0) {
+    canonicalFiles
+      .filter((item) => item && item.status !== 'deleted')
+      .forEach((item) => {
+        const normalized = toFileRef({ ...item, fileDocId: item.id || item.fileDocId || null });
+        if (!normalized) return;
+
+        const location = resolveQuestionLocation(normalized, lookup);
+        if (!location) return;
+
+        const { seccionIndex, preguntaIndex } = location;
+        if (!output[seccionIndex] || !Array.isArray(output[seccionIndex][preguntaIndex])) return;
+        output[seccionIndex][preguntaIndex].push(normalized);
+      });
+
+    if (hasFilesInMatrix(output)) {
+      return output;
+    }
+  }
+
+  if (filesByQuestion.length > 0) {
+    const seccionesValues =
+      filesByQuestion[0] && typeof filesByQuestion[0] === 'object' && Array.isArray(filesByQuestion[0].valores)
+        ? filesByQuestion.map((item) => item.valores || [])
+        : filesByQuestion;
+
+    seccionesValues.forEach((seccionValues, seccionIndex) => {
+      if (!Array.isArray(seccionValues) || !output[seccionIndex]) return;
+      seccionValues.forEach((cell, preguntaIndex) => {
+        const asList = Array.isArray(cell) ? cell : cell ? [cell] : [];
+        output[seccionIndex][preguntaIndex] = asList.map(toFileRef).filter((item) => item && item.status !== 'deleted');
+      });
+    });
+
+    if (hasFilesInMatrix(output)) {
+      return output;
+    }
+  }
+
+  // Fallback legacy: compatibilidad con auditorias historicas que solo tienen imagenes.
+  const legacy = normalizarImagenes(reporte?.imagenes || [], secciones);
+  legacy.forEach((seccionValues, seccionIndex) => {
+    if (!Array.isArray(seccionValues) || !output[seccionIndex]) return;
+    seccionValues.forEach((value, preguntaIndex) => {
+      const ref = toFileRef(value);
+      output[seccionIndex][preguntaIndex] = ref ? [ref] : [];
+    });
+  });
+
+  return output;
+};

@@ -1,5 +1,5 @@
 ﻿import { convertirShareTokenAUrl } from '../utils/imageUtils';
-import { getDownloadUrl } from './controlFileB2Service';
+import { getDownloadUrl as getDownloadUrlByFileId } from './controlFileB2Service';
 import { classifyPreviewType } from './fileValidationPolicy';
 
 export function resolveViewUrl(fileRef) {
@@ -15,13 +15,18 @@ export async function resolveDownloadUrl(fileRef) {
 
   if (fileRef.fileId) {
     try {
-      return await getDownloadUrl(fileRef.fileId);
+      return await getDownloadUrlByFileId(fileRef.fileId);
     } catch (_error) {
       // fallback below
     }
   }
 
   return resolveViewUrl(fileRef);
+}
+
+// Alias explicito para uso de UI/servicios con contrato uniforme basado en FileRef.
+export async function getDownloadUrl(fileRef) {
+  return await resolveDownloadUrl(fileRef);
 }
 
 export async function resolveFileAccess(fileRef) {

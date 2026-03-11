@@ -43,8 +43,9 @@ import { dbAudit } from '../../../firebaseControlFile';
 import { firestoreRoutesCore } from '../../../core/firestore/firestoreRoutes.core';
 import { uploadFileWithContext } from '../../../services/unifiedFileUploadService';
 import { auth } from '../../../firebaseControlFile';
-import { convertirShareTokenAUrl } from '../../../utils/imageUtils';
+import { validateFiles } from '../../../services/fileValidationPolicy';
 import { useAuth } from '@/components/context/AuthContext';
+import UnifiedFilePreview from '../../common/files/UnifiedFilePreview';
 
 /**
  * Componente inline para registrar eventos asociados a una entidad
@@ -75,8 +76,6 @@ export default function EventRegistryInline({
   // Estados para evidencias
   const [evidencias, setEvidencias] = useState([]);
   const [uploadingEvidencias, setUploadingEvidencias] = useState(new Set());
-  const [evidenciaBlobUrls, setEvidenciaBlobUrls] = useState(new Map());
-  const [loadingEvidencias, setLoadingEvidencias] = useState(new Set());
   const [error, setError] = useState(null);
   
   // Estados para campos custom
@@ -84,7 +83,6 @@ export default function EventRegistryInline({
   
   const cameraInputRef = useRef(null);
   const galleryInputRef = useRef(null);
-  const blobUrlsRef = useRef(new Map());
 
   const tenantOwnerId = ownerId || userProfile?.ownerId || userId || null;
   const currentActorId = actorId || userId || userProfile?.uid || null;
@@ -94,14 +92,6 @@ export default function EventRegistryInline({
       loadData();
     }
     
-    return () => {
-      blobUrlsRef.current.forEach(url => {
-        if (url && url.startsWith('blob:')) {
-          URL.revokeObjectURL(url);
-        }
-      });
-      blobUrlsRef.current.clear();
-    };
   }, [entityId, tenantOwnerId, currentActorId]);
 
   const loadData = async () => {
@@ -187,13 +177,6 @@ export default function EventRegistryInline({
       if (registryService && registryService.getEvidenciasByEntity) {
         const evidenciasExistentes = await registryService.getEvidenciasByEntity(tenantOwnerId, entityId);
         setEvidencias(evidenciasExistentes);
-
-        // Cargar evidencias como blob URLs
-        evidenciasExistentes.forEach(ev => {
-          if (ev.shareToken || ev.id) {
-            loadEvidenciaAsBlob(ev.id || ev.fileId, ev.shareToken || ev.id);
-          }
-        });
       }
     } catch (error) {
       logger.error('Error al cargar datos:', error);
@@ -228,28 +211,22 @@ export default function EventRegistryInline({
     if (files.length === 0) return;
 
     setError(null);
-
-    const maxSize = evidenciasConfig.maxSize || 10 * 1024 * 1024; // 10MB default
     const maxCount = evidenciasConfig.maxCount || 50;
+    const validation = validateFiles(files);
 
-    for (const file of files) {
-      if (!file.type.startsWith('image/')) {
-        setError('Solo se permiten archivos de imagen');
-        return;
-      }
-      if (file.size > maxSize) {
-        setError(`La imagen es demasiado grande (mÃƒÆ’Ã‚Â¡ximo ${maxSize / 1024 / 1024}MB)`);
-        return;
-      }
-      if (evidencias.length >= maxCount) {
-        setError(`MÃƒÆ’Ã‚Â¡ximo ${maxCount} evidencias permitidas`);
-        return;
-      }
+    if (validation.rejected.length > 0) {
+      setError(validation.rejected.map((item) => item.fileName).join(' | '));
+      return;
     }
 
-    for (const file of files) {
+    const validFiles = validation.accepted;
+    if (evidencias.length + validFiles.length > maxCount) {
+      setError(`Maximo ${maxCount} evidencias permitidas`);
+      return;
+    }
+
+    for (const file of validFiles) {
       const tempId = `temp_${Date.now()}_${Math.random().toString(36).substring(7)}`;
-      const previewURL = URL.createObjectURL(file);
       
       const tempEvidencia = {
         id: tempId,
@@ -298,15 +275,11 @@ export default function EventRegistryInline({
         
         setEvidencias(prev => 
           prev.map(ev => ev.id === tempId ? finalEvidencia : ev)
-        );
-        
-        loadEvidenciaAsBlob(result.fileId, result.shareToken);
-        URL.revokeObjectURL(previewURL);
+        );
       } catch (err) {
         logger.error('Error al subir evidencia:', err);
         setError(`Error al subir ${file.name}: ${err.message}`);
         setEvidencias(prev => prev.filter(ev => ev.id !== tempId));
-        URL.revokeObjectURL(previewURL);
       } finally {
         setUploadingEvidencias(prev => {
           const newSet = new Set(prev);
@@ -320,65 +293,7 @@ export default function EventRegistryInline({
     if (galleryInputRef.current) galleryInputRef.current.value = '';
   };
 
-  const loadEvidenciaAsBlob = async (evidenciaId, shareToken) => {
-    if (!shareToken) return;
-    if (loadingEvidencias.has(evidenciaId) || evidenciaBlobUrls.has(evidenciaId) || blobUrlsRef.current.has(evidenciaId)) return;
-    
-    setLoadingEvidencias(prev => new Set([...prev, evidenciaId]));
-    
-    try {
-      const evidenciaUrl = convertirShareTokenAUrl(shareToken);
-      if (!evidenciaUrl) return;
-      
-      const response = await fetch(evidenciaUrl, { 
-        mode: 'cors', 
-        credentials: 'omit' 
-      });
-      
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      
-      const blob = await response.blob();
-      const blobUrl = URL.createObjectURL(blob);
-      
-      blobUrlsRef.current.set(evidenciaId, blobUrl);
-      setEvidenciaBlobUrls(prev => {
-        const newMap = new Map(prev);
-        newMap.set(evidenciaId, blobUrl);
-        return newMap;
-      });
-    } catch (error) {
-      logger.error(`Error cargando evidencia ${evidenciaId}:`, error);
-      const fallbackUrl = convertirShareTokenAUrl(shareToken);
-      if (fallbackUrl) {
-        blobUrlsRef.current.set(evidenciaId, fallbackUrl);
-        setEvidenciaBlobUrls(prev => {
-          const newMap = new Map(prev);
-          newMap.set(evidenciaId, fallbackUrl);
-          return newMap;
-        });
-      }
-    } finally {
-      setLoadingEvidencias(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(evidenciaId);
-        return newSet;
-      });
-    }
-  };
-
   const handleDeleteEvidencia = (evidenciaId) => {
-    const blobUrl = evidenciaBlobUrls.get(evidenciaId) || blobUrlsRef.current.get(evidenciaId);
-    if (blobUrl && blobUrl.startsWith('blob:')) {
-      URL.revokeObjectURL(blobUrl);
-    }
-    
-    blobUrlsRef.current.delete(evidenciaId);
-    setEvidenciaBlobUrls(prev => {
-      const newMap = new Map(prev);
-      newMap.delete(evidenciaId);
-      return newMap;
-    });
-    
     setEvidencias(prev => prev.filter(ev => ev.id !== evidenciaId));
   };
 
@@ -569,7 +484,7 @@ export default function EventRegistryInline({
             <input
               ref={cameraInputRef}
               type="file"
-              accept="image/*"
+              accept="*/*"
               capture="environment"
               onChange={handleFileSelect}
               multiple
@@ -578,7 +493,7 @@ export default function EventRegistryInline({
             <input
               ref={galleryInputRef}
               type="file"
-              accept="image/*"
+              accept="*/*"
               onChange={handleFileSelect}
               multiple
               style={{ display: 'none' }}
@@ -592,15 +507,15 @@ export default function EventRegistryInline({
               <Grid container spacing={2}>
                 {evidencias.map((evidencia, index) => {
                   const isUploading = uploadingEvidencias.has(evidencia.id) || evidencia.uploading;
-                  const isLoading = loadingEvidencias.has(evidencia.id);
-                  
-                  const blobUrl = evidenciaBlobUrls.get(evidencia.id);
-                  const directUrl = convertirShareTokenAUrl(evidencia.shareToken || evidencia.url);
-                  const evidenciaUrl = blobUrl || directUrl;
-                  
-                  if (!evidenciaUrl && (evidencia.shareToken || evidencia.id) && !isLoading && !isUploading) {
-                    loadEvidenciaAsBlob(evidencia.id, evidencia.shareToken || evidencia.id);
-                  }
+                  const fileRef = {
+                    id: evidencia.id || evidencia.fileId || `evidencia-${index}`,
+                    fileId: evidencia.fileId || evidencia.id || null,
+                    shareToken: evidencia.shareToken || null,
+                    name: evidencia.nombre || `Evidencia ${index + 1}`,
+                    mimeType: evidencia.mimeType || 'application/octet-stream',
+                    status: evidencia.status || 'active'
+                  };
+                  const canPreview = Boolean(fileRef.fileId || fileRef.shareToken);
 
                   return (
                     <Grid item xs={6} sm={4} md={3} key={evidencia.id || index}>
@@ -615,26 +530,20 @@ export default function EventRegistryInline({
                           backgroundColor: 'background.paper'
                         }}
                       >
-                        {evidenciaUrl ? (
-                          <img
-                            src={evidenciaUrl}
-                            alt={`Evidencia ${index + 1}`}
-                            style={{
+                        {canPreview ? (
+                          <Box
+                            sx={{
                               position: 'absolute',
                               top: 0,
                               left: 0,
                               width: '100%',
                               height: '100%',
-                              objectFit: 'cover',
-                              cursor: 'pointer'
+                              p: 0.5,
+                              bgcolor: 'background.paper'
                             }}
-                            onClick={() => window.open(evidenciaUrl, '_blank')}
-                            onError={() => {
-                              if (evidencia.shareToken || evidencia.id) {
-                                loadEvidenciaAsBlob(evidencia.id, evidencia.shareToken || evidencia.id);
-                              }
-                            }}
-                          />
+                          >
+                            <UnifiedFilePreview fileRef={fileRef} height={150} />
+                          </Box>
                         ) : (
                           <Box
                             sx={{
@@ -650,7 +559,7 @@ export default function EventRegistryInline({
                               color: 'text.secondary'
                             }}
                           >
-                            {isLoading || isUploading ? (
+                            {isUploading ? (
                               <CircularProgress size={24} />
                             ) : (
                               <Typography variant="caption">Cargando...</Typography>
@@ -880,7 +789,7 @@ export default function EventRegistryInline({
             <input
               ref={cameraInputRef}
               type="file"
-              accept="image/*"
+              accept="*/*"
               capture="environment"
               onChange={handleFileSelect}
               multiple
@@ -889,7 +798,7 @@ export default function EventRegistryInline({
             <input
               ref={galleryInputRef}
               type="file"
-              accept="image/*"
+              accept="*/*"
               onChange={handleFileSelect}
               multiple
               style={{ display: 'none' }}
@@ -903,15 +812,15 @@ export default function EventRegistryInline({
               <Grid container spacing={2}>
                 {evidencias.map((evidencia, index) => {
                   const isUploading = uploadingEvidencias.has(evidencia.id) || evidencia.uploading;
-                  const isLoading = loadingEvidencias.has(evidencia.id);
-                  
-                  const blobUrl = evidenciaBlobUrls.get(evidencia.id);
-                  const directUrl = convertirShareTokenAUrl(evidencia.shareToken || evidencia.url);
-                  const evidenciaUrl = blobUrl || directUrl;
-                  
-                  if (!evidenciaUrl && (evidencia.shareToken || evidencia.id) && !isLoading && !isUploading) {
-                    loadEvidenciaAsBlob(evidencia.id, evidencia.shareToken || evidencia.id);
-                  }
+                  const fileRef = {
+                    id: evidencia.id || evidencia.fileId || `evidencia-${index}`,
+                    fileId: evidencia.fileId || evidencia.id || null,
+                    shareToken: evidencia.shareToken || null,
+                    name: evidencia.nombre || `Evidencia ${index + 1}`,
+                    mimeType: evidencia.mimeType || 'application/octet-stream',
+                    status: evidencia.status || 'active'
+                  };
+                  const canPreview = Boolean(fileRef.fileId || fileRef.shareToken);
 
                   return (
                     <Grid item xs={6} sm={4} md={3} key={evidencia.id || index}>
@@ -926,26 +835,20 @@ export default function EventRegistryInline({
                           backgroundColor: 'background.paper'
                         }}
                       >
-                        {evidenciaUrl ? (
-                          <img
-                            src={evidenciaUrl}
-                            alt={`Evidencia ${index + 1}`}
-                            style={{
+                        {canPreview ? (
+                          <Box
+                            sx={{
                               position: 'absolute',
                               top: 0,
                               left: 0,
                               width: '100%',
                               height: '100%',
-                              objectFit: 'cover',
-                              cursor: 'pointer'
+                              p: 0.5,
+                              bgcolor: 'background.paper'
                             }}
-                            onClick={() => window.open(evidenciaUrl, '_blank')}
-                            onError={() => {
-                              if (evidencia.shareToken || evidencia.id) {
-                                loadEvidenciaAsBlob(evidencia.id, evidencia.shareToken || evidencia.id);
-                              }
-                            }}
-                          />
+                          >
+                            <UnifiedFilePreview fileRef={fileRef} height={150} />
+                          </Box>
                         ) : (
                           <Box
                             sx={{
@@ -961,7 +864,7 @@ export default function EventRegistryInline({
                               color: 'text.secondary'
                             }}
                           >
-                            {isLoading || isUploading ? (
+                            {isUploading ? (
                               <CircularProgress size={24} />
                             ) : (
                               <Typography variant="caption">Cargando...</Typography>

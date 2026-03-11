@@ -1,5 +1,5 @@
 import logger from '@/utils/logger';
-import React, { forwardRef, useImperativeHandle, useMemo } from "react";
+import React, { forwardRef, useEffect, useImperativeHandle, useMemo, useState } from "react";
 import PreguntasRespuestasList from "../../../common/PreguntasRespuestasList";
 import { Typography, Box, Button, Dialog, DialogTitle, DialogContent, DialogActions, IconButton, Alert, useTheme } from "@mui/material";
 import PrintIcon from '@mui/icons-material/Print';
@@ -9,7 +9,7 @@ import { useAuth } from '@/components/context/AuthContext';
 // Importar utilidades y componentes separados
 import { 
   normalizarRespuestas, 
-  normalizarImagenes, 
+  normalizarArchivosPorPregunta, 
   normalizarComentarios, 
   normalizarClasificaciones,
   normalizarFecha,
@@ -17,6 +17,7 @@ import {
   normalizarFormularioCompleto
 } from './utils/normalizadores';
 import { useImpresionReporte } from './hooks/useImpresionReporte';
+import { listFiles } from '../../../../services/unifiedFileService';
 import { descargarPdf, obtenerPdfGuardado } from './utils/pdfStorageServiceSimple';
 import HeaderReporte from './components/HeaderReporte';
 import EstadisticasReporte from './components/EstadisticasReporte';
@@ -52,6 +53,46 @@ const ReporteDetallePro = forwardRef(({ open = false, onClose = () => {}, report
       }
     }
   }));
+
+
+  const [canonicalFiles, setCanonicalFiles] = useState([]);
+
+  useEffect(() => {
+    let mounted = true;
+
+    const loadCanonicalFiles = async () => {
+      if (!reporte?.id) {
+        if (mounted) setCanonicalFiles([]);
+        return;
+      }
+
+      const ownerId = reporte.ownerId || userProfile?.ownerId;
+      if (!ownerId) {
+        if (mounted) setCanonicalFiles([]);
+        return;
+      }
+
+      try {
+        const files = await listFiles({
+          ownerId,
+          module: 'auditorias',
+          entityId: reporte.id
+        });
+
+        if (mounted) setCanonicalFiles(Array.isArray(files) ? files : []);
+      } catch (error) {
+        logger.warn('[ReporteDetallePro] No se pudieron cargar archivos canonicos, se usara fallback legacy', error);
+        if (mounted) setCanonicalFiles([]);
+      }
+    };
+
+    loadCanonicalFiles();
+
+    return () => {
+      mounted = false;
+    };
+  }, [reporte?.id, reporte?.ownerId, userProfile?.ownerId]);
+
   if (!reporte) {
     return modo === 'modal' ? (
       <Dialog open={open} onClose={onClose} maxWidth="lg" fullWidth>
@@ -76,7 +117,7 @@ const ReporteDetallePro = forwardRef(({ open = false, onClose = () => {}, report
   const formulario = normalizarFormularioCompleto(reporte);
   const sucursal = reporte.sucursal || '';
   const respuestasNormalizadas = normalizarRespuestas(reporte.respuestas || []);
-  const imagenesNormalizadas = normalizarImagenes(reporte.imagenes, secciones);
+  const imagenesNormalizadas = normalizarArchivosPorPregunta(reporte, secciones, canonicalFiles);
   const comentariosNormalizados = normalizarComentarios(reporte.comentarios, secciones);
   const clasificacionesNormalizadas = normalizarClasificaciones(reporte.clasificaciones, secciones);
   const fecha = normalizarFecha(reporte);
@@ -138,7 +179,7 @@ const ReporteDetallePro = forwardRef(({ open = false, onClose = () => {}, report
   // Calcular estadísticas de clasificaciones (Condición y Actitud)
   const estadisticasClasificaciones = useMemo(() => {
     if (!clasificacionesNormalizadas || clasificacionesNormalizadas.length === 0) {
-      return { Condición: 0, Actitud: 0 };
+      return { Condicion: 0, Actitud: 0 };
     }
     
     let condicionCount = 0;
@@ -156,7 +197,7 @@ const ReporteDetallePro = forwardRef(({ open = false, onClose = () => {}, report
     });
     
     return {
-      'Condición': condicionCount,
+      'Condicion': condicionCount,
       'Actitud': actitudCount,
       'Total': totalPreguntas
     };
@@ -494,3 +535,4 @@ const ReporteDetallePro = forwardRef(({ open = false, onClose = () => {}, report
 });
 
 export default ReporteDetallePro;
+

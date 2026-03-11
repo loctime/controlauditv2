@@ -15,7 +15,6 @@ import { addDocWithAppId, updateDocWithAppId } from '../firebase/firestoreAppWri
 import { dbAudit, db } from '../firebaseControlFile';
 import { getEmpresas } from '../core/services/ownerEmpresaService';
 import { firestoreRoutesCore } from '../core/firestore/firestoreRoutes.core';
-import { logger } from '../utils/logger';
 
 export const empresaService = {
 

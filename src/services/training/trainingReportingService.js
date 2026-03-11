@@ -1,6 +1,8 @@
-﻿import { trainingSessionService } from './trainingSessionService';
+import { trainingSessionService } from './trainingSessionService';
 import { trainingCertificateService } from './trainingCertificateService';
 import { trainingComplianceService } from './trainingComplianceService';
+import { trainingRoleRequirementService } from './trainingRoleRequirementService';
+import { trainingRiskComplianceService } from './trainingRiskComplianceService';
 
 export const trainingReportingService = {
   async buildOperationalReport(ownerId, filters = {}) {
@@ -32,5 +34,17 @@ export const trainingReportingService = {
   async buildComplianceReport(ownerId, scope = {}) {
     const snapshot = await trainingComplianceService.buildSnapshot(ownerId, scope);
     return snapshot;
+  },
+
+  async buildRoleComplianceReport(ownerId, scope = {}) {
+    const missing = await trainingRoleRequirementService.computeMissingByRole(ownerId, scope);
+    return {
+      totalMissing: missing.length,
+      missing
+    };
+  },
+
+  async buildRiskComplianceReport(ownerId, scope = {}) {
+    return trainingRiskComplianceService.computeComplianceByRisk(ownerId, scope);
   }
 };

@@ -1,4 +1,3 @@
-import logger from '@/utils/logger';
 import React from 'react';
 import {
   Dialog,
@@ -13,7 +12,6 @@ import {
   CardContent,
   Chip,
   Avatar,
-  Divider,
   List,
   ListItem,
   ListItemText,
@@ -41,8 +39,8 @@ import {
   People as PeopleIcon
 } from '@mui/icons-material';
 import Firma from './Firma';
-import { normalizarImagenes } from './utils/normalizadores';
-import { convertirShareTokenAUrl } from '@/utils/imageUtils';
+import { normalizarArchivosPorPregunta } from './utils/normalizadores';
+import UnifiedFilePreview from '@/components/common/files/UnifiedFilePreview';
 
 const ResumenAuditoriaModal = ({ 
   open, 
@@ -63,21 +61,9 @@ const ResumenAuditoriaModal = ({
 }) => {
   const theme = useTheme();
 
-  // Normalizar imágenes usando la misma función que ReporteDetallePro
-  const imagenesNormalizadas = React.useMemo(() => {
-    if (!imagenes || imagenes.length === 0) return [];
-    return normalizarImagenes(imagenes, secciones || []);
+    const archivosPorPregunta = React.useMemo(() => {
+    return normalizarArchivosPorPregunta({ filesByQuestion: imagenes, imagenes }, secciones || []);
   }, [imagenes, secciones]);
-
-  // Función helper para procesar imagen usando helper global
-  const procesarImagen = (imagen) => {
-    if (!imagen || imagen === null || imagen === undefined) {
-      return null;
-    }
-
-    // Usar helper global para convertir shareToken a URL
-    return convertirShareTokenAUrl(imagen);
-  };
 
   // Función para obtener el icono según la calificación
   const getCalificacionIcon = (calificacion) => {
@@ -372,8 +358,7 @@ const ResumenAuditoriaModal = ({
                         
                         {seccion.preguntas.map((pregunta, preguntaIndex) => {
                           const respuesta = respuestas?.[seccionIndex]?.[preguntaIndex] || '';
-                          const imagen = imagenesNormalizadas?.[seccionIndex]?.[preguntaIndex];
-                          const imagenUrl = procesarImagen(imagen);
+                          const fileList = archivosPorPregunta?.[seccionIndex]?.[preguntaIndex] || [];
                           return (
                             <ListItem key={preguntaIndex} sx={{ 
                               flexDirection: 'column', 
@@ -392,7 +377,7 @@ const ResumenAuditoriaModal = ({
                                 }
                                 secondary={
                                   <Box>
-                                    <Box display="flex" alignItems="center" gap={1} mb={imagenUrl ? 1 : 0}>
+                                    <Box display="flex" alignItems="center" gap={1} mb={fileList.length > 0 ? 1 : 0}>
                                       {respuesta ? (
                                         <>
                                           {getCalificacionIcon(respuesta)}
@@ -412,50 +397,11 @@ const ResumenAuditoriaModal = ({
                                         />
                                       )}
                                     </Box>
-                                    {imagenUrl && (
-                                      <Box mt={1}>
-                                        <img
-                                          src={imagenUrl}
-                                          alt={`Imagen pregunta ${preguntaIndex + 1}`}
-                                          style={{ 
-                                            maxWidth: '100%', 
-                                            maxHeight: '300px', 
-                                            borderRadius: 4, 
-                                            border: '1px solid #ccc',
-                                            display: 'block'
-                                          }}
-                                          onError={async (e) => { 
-                                            // Extraer shareToken de la URL para logging más útil
-                                            const shareTokenMatch = imagenUrl?.match(/\/shares\/([^\/]+)\/image/);
-                                            const shareToken = shareTokenMatch ? shareTokenMatch[1] : 'desconocido';
-                                            
-                                            // Intentar diagnosticar el problema
-                                            try {
-                                              logger.warn(`[ResumenAuditoriaModal] ⚠️ Error cargando imagen (shareToken: ${shareToken})`);
-                                              logger.warn(`[ResumenAuditoriaModal] URL completa: ${imagenUrl}`);
-                                              logger.warn(`[ResumenAuditoriaModal] Verifica en Firestore: /shares/${shareToken}`);
-                                              logger.warn(`[ResumenAuditoriaModal] Prueba directamente: https://files.controldoc.app/api/shares/${shareToken}/image`);
-                                              
-                                              // Intentar fetch para ver la respuesta
-                                              const testResponse = await fetch(`https://files.controldoc.app/api/shares/${shareToken}`, { 
-                                                method: 'GET',
-                                                headers: { 'Accept': 'application/json' }
-                                              });
-                                              if (testResponse.ok) {
-                                                const shareData = await testResponse.json();
-                                                logger.warn(`[ResumenAuditoriaModal] Share existe:`, shareData);
-                                              } else {
-                                                logger.warn(`[ResumenAuditoriaModal] Share no encontrado o no accesible. Status: ${testResponse.status}`);
-                                              }
-                                            } catch (fetchError) {
-                                              logger.warn(`[ResumenAuditoriaModal] ⚠️ Error al diagnosticar (shareToken: ${shareToken}):`, fetchError);
-                                            }
-                                            
-                                            e.target.style.display = 'none'; 
-                                          }}
-                                          loading="lazy"
-                                          crossOrigin="anonymous"
-                                        />
+                                    {fileList.length > 0 && (
+                                      <Box mt={1} sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                                        {fileList.map((fileRef, fileIndex) => (
+                                          <UnifiedFilePreview key={`${fileRef.fileId || 'file'}-${fileIndex}`} fileRef={fileRef} height={220} />
+                                        ))}
                                       </Box>
                                     )}
                                   </Box>
@@ -539,3 +485,6 @@ const ResumenAuditoriaModal = ({
 };
 
 export default ResumenAuditoriaModal; 
+
+
+

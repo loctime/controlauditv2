@@ -238,6 +238,13 @@ export const routesConfig = [
 
   // Legacy aliases
   {
+    id: "legacy-ausencias",
+    path: "/ausencias",
+    roles: ["operario", "admin", "superdev"],
+    showInMenu: false,
+    redirectTo: "/salud-ocupacional",
+  },
+  {
     id: "legacy-dashboard",
     path: "/dashboard",
     roles: ["operario", "admin", "superdev"],
@@ -269,3 +276,4 @@ export const routesConfig = [
 
 export const protectedRoutesConfig = routesConfig.filter((route) => !route.public);
 export const publicRoutesConfig = routesConfig.filter((route) => route.public);
+

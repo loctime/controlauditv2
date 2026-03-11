@@ -68,6 +68,7 @@ const componentMap = {
   "capacitacion-asistencia": RegistrarAsistencia,
   accidentes: Accidentes,
   "salud-ocupacional": Ausencias,
+  "legacy-ausencias": Ausencias,
   "auditorias-manuales": AuditoriasManuales,
   "auditoria-manual-detalle": AuditoriaManualDetalle,
 
@@ -86,3 +87,4 @@ export const publicRoutes = publicRoutesConfig.map((route) => ({
   ...route,
   Element: componentMap[route.id],
 }));
+

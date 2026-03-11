@@ -1,5 +1,5 @@
-﻿import logger from '@/utils/logger';
-import { useEffect, useMemo, useState } from "react";
+import logger from '@/utils/logger';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -14,45 +14,82 @@ import {
   MenuItem,
   Alert,
   CircularProgress,
-  Checkbox,
-  FormControlLabel,
   IconButton,
   Tooltip,
   Typography,
   Chip,
   Box
-} from "@mui/material";
-import Autocomplete from "@mui/material/Autocomplete";
-import CloseIcon from "@mui/icons-material/Close";
-import UploadFileIcon from "@mui/icons-material/UploadFile";
-import DeleteIcon from "@mui/icons-material/Delete";
-import { DatePicker } from "@mui/x-date-pickers/DatePicker";
-import { createAusencia, updateAusencia } from "../../../../services/ausenciasService";
-import { uploadAndAttachFiles } from "../../../../services/ausenciasFilesService";
+} from '@mui/material';
+import Autocomplete from '@mui/material/Autocomplete';
+import CloseIcon from '@mui/icons-material/Close';
+import UploadFileIcon from '@mui/icons-material/UploadFile';
+import DeleteIcon from '@mui/icons-material/Delete';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import { createAusencia, updateAusencia } from '../../../../services/ausenciasService';
+import { uploadAndAttachFiles } from '../../../../services/ausenciasFilesService';
 import {
   collection,
   getDocs,
   query,
   where,
   orderBy
-} from "firebase/firestore";
-import { dbAudit } from "../../../../firebaseControlFile";
-import { firestoreRoutesCore } from "../../../../core/firestore/firestoreRoutes.core";
+} from 'firebase/firestore';
+import { dbAudit } from '../../../../firebaseControlFile';
+import { firestoreRoutesCore } from '../../../../core/firestore/firestoreRoutes.core';
 import { useAuth } from '@/components/context/AuthContext';
-import dayjs from "dayjs";
+import dayjs from 'dayjs';
+import { validateFiles } from '../../../../services/fileValidationPolicy';
 
-import { validateFiles, MAX_FILE_SIZE } from '../../../../services/fileValidationPolicy';
+const ACCEPTED_EXTENSIONS = ['.pdf', '.jpg', '.jpeg', '.png', '.webp', '.doc', '.docx', '.txt'];
+const ORIGEN_OPTIONS = [
+  { value: 'manual', label: 'Manual' },
+  { value: 'accidente', label: 'Accidente' },
+  { value: 'incidente', label: 'Incidente' },
+  { value: 'salud_ocupacional', label: 'Salud ocupacional' },
+  { value: 'licencia_medica', label: 'Licencia medica' },
+  { value: 'permiso', label: 'Permiso' },
+  { value: 'enfermedad', label: 'Enfermedad' }
+];
 
+const normalizeLegacyOrigen = (data = {}) => {
+  if (data.origen) return data.origen;
+  if (typeof data.relacionAccidente === 'string' && data.relacionAccidente.trim()) {
+    return 'accidente';
+  }
+  if (data.relacionAccidente === true) return 'accidente';
+  return 'manual';
+};
+
+const normalizeLegacyOrigenId = (data = {}, origen = 'manual') => {
+  if (origen === 'manual') return '';
+  if (typeof data.origenId === 'string' && data.origenId.trim()) return data.origenId.trim();
+  if (typeof data.relacionAccidente === 'string' && data.relacionAccidente.trim()) {
+    return data.relacionAccidente.trim();
+  }
+  return '';
+};
+
+const normalizeEstado = (estado) => {
+  const normalized = String(estado || '').toLowerCase().trim().replace(/\s+/g, '_');
+  if (normalized.includes('cerr') || normalized.includes('finaliz') || normalized.includes('resuelt')) {
+    return 'cerrada';
+  }
+  if (normalized.includes('progreso')) {
+    return 'en_progreso';
+  }
+  return 'abierta';
+};
 const getInitialState = () => ({
-  empleadoId: "",
-  tipo: "",
-  estado: "abierta",
+  empleadoId: '',
+  tipo: '',
+  motivo: '',
+  origen: 'manual',
+  origenId: '',
+  estado: 'abierta',
   fechaInicio: dayjs(),
   fechaFin: null,
-  observaciones: "",
-  horasPorDia: "",
-  relacionAccidente: false,
-  accidenteId: ""
+  observaciones: '',
+  horasPorDia: ''
 });
 
 const normalizeEmployees = (snapshot) =>
@@ -69,8 +106,8 @@ const dateToDayjs = (value) => {
   return parsed.isValid() ? parsed : null;
 };
 
-const normalizeFileError = (file, reason) => ({
-  fileName: file?.name || 'archivo',
+const normalizeFileError = (fileName, reason) => ({
+  fileName: fileName || 'archivo',
   message: reason
 });
 
@@ -93,7 +130,7 @@ export default function AusenciaFormDialog({
   const [empleados, setEmpleados] = useState([]);
   const [loadingEmployees, setLoadingEmployees] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useState('');
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [fileErrors, setFileErrors] = useState([]);
 
@@ -103,17 +140,17 @@ export default function AusenciaFormDialog({
     sucursal?.nombre ||
     sucursal?.alias ||
     initialData?.sucursalNombre ||
-    "";
+    '';
   const empresaNombre =
     empresa?.nombre ||
     empresa?.razonSocial ||
     initialData?.empresaNombre ||
-    "";
+    '';
 
   const canSubmit = useMemo(() => {
     const fechaInicioValida =
       form.fechaInicio &&
-      (typeof form.fechaInicio?.isValid === "function"
+      (typeof form.fechaInicio?.isValid === 'function'
         ? form.fechaInicio.isValid()
         : true);
 
@@ -122,26 +159,41 @@ export default function AusenciaFormDialog({
       (selectedSucursal && selectedSucursal !== 'todas') ||
       (initialData?.sucursalId && initialData?.sucursalId !== 'todas');
 
+    const origenOk = form.origen === 'manual' || String(form.origenId || '').trim().length > 0;
+
     return (
       companyOk &&
       branchOk &&
       form.empleadoId &&
-      fechaInicioValida
+      String(form.tipo || '').trim().length > 0 &&
+      String(form.motivo || '').trim().length > 0 &&
+      fechaInicioValida &&
+      origenOk
     );
-  }, [selectedEmpresa, selectedSucursal, form.empleadoId, form.fechaInicio, initialData]);
+  }, [
+    selectedEmpresa,
+    selectedSucursal,
+    form.empleadoId,
+    form.tipo,
+    form.motivo,
+    form.origen,
+    form.origenId,
+    form.fechaInicio,
+    initialData
+  ]);
 
   const tipoSuggestions = useMemo(() => {
     const base = Array.isArray(tipoOptions) ? tipoOptions : [];
     const unique = new Set(
       base
-        .map((tipo) => (typeof tipo === "string" ? tipo.trim() : ""))
+        .map((tipo) => (typeof tipo === 'string' ? tipo.trim() : ''))
         .filter(Boolean)
     );
     if (form.tipo && !unique.has(form.tipo.trim())) {
       unique.add(form.tipo.trim());
     }
     return Array.from(unique).sort((a, b) =>
-      a.localeCompare(b, "es", { sensitivity: "base" })
+      a.localeCompare(b, 'es', { sensitivity: 'base' })
     );
   }, [tipoOptions, form.tipo]);
 
@@ -149,26 +201,28 @@ export default function AusenciaFormDialog({
     if (!open) return;
 
     if (isEditMode && initialData) {
+      const origen = normalizeLegacyOrigen(initialData);
       setForm({
         empleadoId: initialData.empleadoId || '',
         tipo: initialData.tipo || '',
-        estado: initialData.estado || 'abierta',
+        motivo: initialData.motivo || initialData.tipo || '',
+        origen,
+        origenId: normalizeLegacyOrigenId(initialData, origen),
+        estado: normalizeEstado(initialData.estado || 'abierta'),
         fechaInicio: dateToDayjs(initialData.fechaInicio) || dayjs(),
         fechaFin: dateToDayjs(initialData.fechaFin),
         observaciones: initialData.observaciones || '',
-        horasPorDia: initialData.horasPorDia ?? '',
-        relacionAccidente: Boolean(initialData.relacionAccidente),
-        accidenteId: typeof initialData.relacionAccidente === 'string' ? initialData.relacionAccidente : ''
+        horasPorDia: initialData.horasPorDia ?? ''
       });
     } else {
       setForm({
         ...getInitialState(),
         fechaInicio: dayjs(),
-        estado: "abierta"
+        estado: 'abierta'
       });
     }
 
-    setError("");
+    setError('');
     setSelectedFiles([]);
     setFileErrors([]);
   }, [open, isEditMode, initialData]);
@@ -200,13 +254,13 @@ export default function AusenciaFormDialog({
         const empleadosRef = collection(dbAudit, ...firestoreRoutesCore.empleados(ownerId));
         const q = query(
           empleadosRef,
-          where("sucursalId", "==", sucursalToUse),
-          orderBy("nombre", "asc")
+          where('sucursalId', '==', sucursalToUse),
+          orderBy('nombre', 'asc')
         );
         const snapshot = await getDocs(q);
         setEmpleados(normalizeEmployees(snapshot));
       } catch (fetchError) {
-        logger.error("Error cargando empleados:", fetchError);
+        logger.error('Error cargando empleados:', fetchError);
         setEmpleados([]);
       } finally {
         setLoadingEmployees(false);
@@ -216,8 +270,7 @@ export default function AusenciaFormDialog({
   }, [open, selectedSucursal, userProfile, initialData]);
 
   const handleChange = (field) => (event) => {
-    const value =
-      event && event.target ? event.target.value : event?.target?.checked;
+    const value = event?.target?.value;
     setForm((prev) => ({
       ...prev,
       [field]: value
@@ -230,8 +283,8 @@ export default function AusenciaFormDialog({
 
     const validation = validateFiles(files);
 
-    const nextFiles = validation.accepted.map((file) => ({
-      id: ${file.name}---,
+    const nextFiles = validation.accepted.map((file, index) => ({
+      id: `${file.name}-${Date.now()}-${index}`,
       file,
       name: file.name,
       size: file.size,
@@ -256,18 +309,16 @@ export default function AusenciaFormDialog({
 
   const handleSubmit = async () => {
     if (!canSubmit) {
-      setError("Completa los campos obligatorios.");
+      setError('Completa los campos obligatorios.');
       return;
     }
 
     setSubmitting(true);
-    setError("");
+    setError('');
     setFileErrors([]);
 
     try {
-      const empleadoSeleccionado = empleados.find(
-        (emp) => emp.id === form.empleadoId
-      );
+      const empleadoSeleccionado = empleados.find((emp) => emp.id === form.empleadoId);
 
       const fechaInicio = form.fechaInicio?.toDate
         ? form.fechaInicio.toDate()
@@ -277,7 +328,7 @@ export default function AusenciaFormDialog({
         : form.fechaFin || null;
 
       const payload = {
-        empresaId: selectedEmpresa === "todas" ? null : (selectedEmpresa || initialData?.empresaId || null),
+        empresaId: selectedEmpresa === 'todas' ? null : (selectedEmpresa || initialData?.empresaId || null),
         sucursalId: selectedSucursal && selectedSucursal !== 'todas' ? selectedSucursal : (initialData?.sucursalId || null),
         empresaNombre,
         sucursalNombre,
@@ -286,19 +337,19 @@ export default function AusenciaFormDialog({
           empleadoSeleccionado?.nombre ||
           empleadoSeleccionado?.displayName ||
           initialData?.empleadoNombre ||
-          "Empleado sin nombre",
+          'Empleado sin nombre',
         tipo: form.tipo,
-        estado: form.estado,
+        motivo: form.motivo,
+        origen: form.origen,
+        origenId: form.origen === 'manual' ? null : String(form.origenId || '').trim() || null,
+        estado: normalizeEstado(form.estado || 'abierta'),
         fechaInicio,
         fechaFin,
         observaciones: form.observaciones,
         horasPorDia:
-          form.horasPorDia !== ""
+          form.horasPorDia !== ''
             ? Number.parseFloat(form.horasPorDia)
             : undefined,
-        relacionAccidente: form.relacionAccidente
-          ? form.accidenteId || true
-          : null,
         userProfile
       };
 
@@ -330,8 +381,8 @@ export default function AusenciaFormDialog({
         setFileErrors(uploadResult.errors);
       }
 
-      const tipoNormalizado = (form.tipo || "").trim();
-      if (tipoNormalizado && typeof onAddTipo === "function") {
+      const tipoNormalizado = (form.tipo || '').trim();
+      if (tipoNormalizado && typeof onAddTipo === 'function') {
         onAddTipo(tipoNormalizado);
       }
 
@@ -352,69 +403,71 @@ export default function AusenciaFormDialog({
         onClose?.();
       }
     } catch (submitError) {
-      logger.error("Error guardando ausencia:", submitError);
-      setError(
-        "No se pudo guardar la ausencia. Verifica los datos e intenta nuevamente."
-      );
+      logger.error('Error guardando ausencia:', submitError);
+      if (submitError?.code === 'AUSENCIA_DUPLICADA') {
+        setError('Ya existe una ausencia activa con la misma referencia de origen y fecha.');
+      } else {
+        setError('No se pudo guardar la ausencia. Verifica los datos e intenta nuevamente.');
+      }
     } finally {
       setSubmitting(false);
     }
   };
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+    <Dialog open={open} onClose={onClose} maxWidth='sm' fullWidth>
       <DialogTitle sx={{ fontWeight: 700 }}>
-        {isEditMode ? 'Editar ausencia' : 'Registrar ausencia por salud'}
+        {isEditMode ? 'Editar ausencia' : 'Registrar ausencia'}
       </DialogTitle>
       <DialogContent dividers>
         <Stack spacing={2}>
           <Stack spacing={0.5}>
             <TextField
-              label="Empresa"
+              label='Empresa'
               value={
                 empresaNombre ||
-                (selectedEmpresa === "todas"
-                  ? "Todas las empresas"
-                  : "Sin empresa")
+                (selectedEmpresa === 'todas'
+                  ? 'Todas las empresas'
+                  : 'Sin empresa')
               }
-              variant="outlined"
-              size="small"
+              variant='outlined'
+              size='small'
               fullWidth
               InputProps={{ readOnly: true }}
             />
             <TextField
-              label="Sucursal"
+              label='Sucursal'
               value={
                 sucursalNombre ||
-                (selectedSucursal === "todas"
-                  ? "Todas las sucursales"
-                  : "Sin sucursal")
+                (selectedSucursal === 'todas'
+                  ? 'Todas las sucursales'
+                  : 'Sin sucursal')
               }
-              variant="outlined"
-              size="small"
+              variant='outlined'
+              size='small'
               fullWidth
               InputProps={{ readOnly: true }}
             />
           </Stack>
 
-          <FormControl fullWidth size="small">
+          <FormControl fullWidth size='small'>
             <InputLabel>Empleado</InputLabel>
             <Select
-              label="Empleado"
+              label='Empleado'
               value={form.empleadoId}
-              onChange={handleChange("empleadoId")}
+              onChange={handleChange('empleadoId')}
               disabled={
                 loadingEmployees ||
                 (!selectedSucursal && !initialData?.sucursalId) ||
-                selectedSucursal === "todas"
+                selectedSucursal === 'todas'
               }
             >
-              <MenuItem value="">Selecciona un empleado</MenuItem>
+              <MenuItem value=''>Selecciona un empleado</MenuItem>
               {empleados.map((empleado) => (
                 <MenuItem key={empleado.id} value={empleado.id}>
                   {empleado.nombre ||
                     empleado.displayName ||
-                    `${empleado.apellido || ""} ${empleado.nombre || ""}`.trim() ||
+                    `${empleado.apellido || ''} ${empleado.nombre || ''}`.trim() ||
                     empleado.id}
                 </MenuItem>
               ))}
@@ -422,21 +475,21 @@ export default function AusenciaFormDialog({
           </FormControl>
 
           {loadingEmployees && (
-            <Stack direction="row" spacing={1} alignItems="center">
+            <Stack direction='row' spacing={1} alignItems='center'>
               <CircularProgress size={18} />
               <span>Cargando empleados...</span>
             </Stack>
           )}
 
-          <Stack direction="row" spacing={1} alignItems="center">
+          <Stack direction='row' spacing={1} alignItems='center'>
             <Autocomplete
               freeSolo
               clearOnBlur
               handleHomeEndKeys
               options={tipoSuggestions}
-              value={form.tipo || ""}
+              value={form.tipo || ''}
               onChange={(_, newValue) => {
-                const nextValue = (newValue || "").trim();
+                const nextValue = (newValue || '').trim();
                 setForm((prev) => ({
                   ...prev,
                   tipo: nextValue
@@ -449,15 +502,15 @@ export default function AusenciaFormDialog({
                 }));
               }}
               renderInput={(params) => (
-                <TextField {...params} label="Tipo" size="small" fullWidth />
+                <TextField {...params} label='Tipo' size='small' fullWidth />
               )}
               fullWidth
             />
-            <Tooltip title="Eliminar tipo">
+            <Tooltip title='Eliminar tipo'>
               <span>
                 <IconButton
-                  size="small"
-                  color="error"
+                  size='small'
+                  color='error'
                   disabled={
                     !form.tipo ||
                     !tipoSuggestions.some(
@@ -466,7 +519,7 @@ export default function AusenciaFormDialog({
                     )
                   }
                   onClick={() => {
-                    const actual = (form.tipo || "").trim();
+                    const actual = (form.tipo || '').trim();
                     if (
                       !actual ||
                       !tipoSuggestions.some(
@@ -476,87 +529,103 @@ export default function AusenciaFormDialog({
                       return;
                     }
                     const confirmacion = window.confirm(
-                      `ï¿½Eliminar el tipo "${actual}" de las sugerencias?`
+                      `Eliminar el tipo "${actual}" de las sugerencias?`
                     );
                     if (!confirmacion) return;
-                    if (typeof onRemoveTipo === "function") {
+                    if (typeof onRemoveTipo === 'function') {
                       onRemoveTipo(actual);
                     }
                     setForm((prev) => ({
                       ...prev,
-                      tipo: ""
+                      tipo: ''
                     }));
                   }}
                 >
-                  <CloseIcon fontSize="small" />
+                  <CloseIcon fontSize='small' />
                 </IconButton>
               </span>
             </Tooltip>
           </Stack>
 
+          <TextField
+            label='Motivo'
+            size='small'
+            value={form.motivo}
+            onChange={handleChange('motivo')}
+            fullWidth
+          />
+
+          <FormControl fullWidth size='small'>
+            <InputLabel>Origen</InputLabel>
+            <Select
+              label='Origen'
+              value={form.origen}
+              onChange={(event) => {
+                const value = event.target.value;
+                setForm((prev) => ({
+                  ...prev,
+                  origen: value,
+                  origenId: value === 'manual' ? '' : prev.origenId
+                }));
+              }}
+            >
+              {ORIGEN_OPTIONS.map((option) => (
+                <MenuItem key={option.value} value={option.value}>
+                  {option.label}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+
+          {form.origen !== 'manual' && (
+            <TextField
+              label='ID de origen'
+              size='small'
+              value={form.origenId}
+              onChange={handleChange('origenId')}
+              fullWidth
+              required
+            />
+          )}
+
           <DatePicker
-            label="Fecha inicio"
+            label='Fecha inicio'
             value={form.fechaInicio}
             onChange={(value) => setForm((prev) => ({ ...prev, fechaInicio: value }))}
             slotProps={{
               textField: {
-                size: "small",
+                size: 'small',
                 fullWidth: true
               }
             }}
           />
 
           <DatePicker
-            label="Fecha fin (opcional)"
+            label='Fecha fin (opcional)'
             value={form.fechaFin}
             onChange={(value) => setForm((prev) => ({ ...prev, fechaFin: value }))}
             slotProps={{
               textField: {
-                size: "small",
+                size: 'small',
                 fullWidth: true
               }
             }}
           />
 
           <TextField
-            label="Horas por dia (opcional)"
-            type="number"
-            size="small"
+            label='Horas por dia (opcional)'
+            type='number'
+            size='small'
             value={form.horasPorDia}
-            onChange={handleChange("horasPorDia")}
+            onChange={handleChange('horasPorDia')}
             fullWidth
           />
 
-          <FormControlLabel
-            control={
-              <Checkbox
-                checked={form.relacionAccidente}
-                onChange={(event) =>
-                  setForm((prev) => ({
-                    ...prev,
-                    relacionAccidente: event.target.checked
-                  }))
-                }
-              />
-            }
-            label="Relacionado a accidente"
-          />
-
-          {form.relacionAccidente && (
-            <TextField
-              label="Referencia accidente (opcional)"
-              size="small"
-              value={form.accidenteId}
-              onChange={handleChange("accidenteId")}
-              fullWidth
-            />
-          )}
-
           <TextField
-            label="Observaciones"
-            size="small"
+            label='Observaciones'
+            size='small'
             value={form.observaciones}
-            onChange={handleChange("observaciones")}
+            onChange={handleChange('observaciones')}
             fullWidth
             multiline
             minRows={3}
@@ -564,19 +633,19 @@ export default function AusenciaFormDialog({
 
           <Stack spacing={1}>
             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <Typography variant="subtitle2" sx={{ color: '#374151' }}>
+              <Typography variant='subtitle2' sx={{ color: '#374151' }}>
                 Archivos adjuntos (opcional)
               </Typography>
               <Button
-                component="label"
-                size="small"
+                component='label'
+                size='small'
                 startIcon={<UploadFileIcon />}
-                variant="outlined"
+                variant='outlined'
                 disabled={submitting}
               >
                 Agregar archivos
                 <input
-                  type="file"
+                  type='file'
                   hidden
                   multiple
                   accept={ACCEPTED_EXTENSIONS.join(',')}
@@ -601,20 +670,20 @@ export default function AusenciaFormDialog({
                     }}
                   >
                     <Stack>
-                      <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                      <Typography variant='body2' sx={{ fontWeight: 600 }}>
                         {item.name}
                       </Typography>
-                      <Typography variant="caption" sx={{ color: '#6b7280' }}>
+                      <Typography variant='caption' sx={{ color: '#6b7280' }}>
                         {Math.round(item.size / 1024)} KB
                       </Typography>
                     </Stack>
                     <IconButton
-                      size="small"
-                      color="error"
+                      size='small'
+                      color='error'
                       onClick={() => handleRemoveFile(item.id)}
                       disabled={submitting}
                     >
-                      <DeleteIcon fontSize="small" />
+                      <DeleteIcon fontSize='small' />
                     </IconButton>
                   </Box>
                 ))}
@@ -622,14 +691,14 @@ export default function AusenciaFormDialog({
             )}
 
             {selectedFiles.length === 0 && (
-              <Chip label="Sin archivos seleccionados" variant="outlined" size="small" />
+              <Chip label='Sin archivos seleccionados' variant='outlined' size='small' />
             )}
           </Stack>
 
           {fileErrors.length > 0 && (
-            <Alert severity="warning" onClose={() => setFileErrors([])}>
+            <Alert severity='warning' onClose={() => setFileErrors([])}>
               {fileErrors.map((item, idx) => (
-                <Typography key={`${item.fileName}-${idx}`} variant="body2">
+                <Typography key={`${item.fileName}-${idx}`} variant='body2'>
                   {item.fileName}: {item.message}
                 </Typography>
               ))}
@@ -637,7 +706,7 @@ export default function AusenciaFormDialog({
           )}
 
           {error && (
-            <Alert severity="error" onClose={() => setError("")}>
+            <Alert severity='error' onClose={() => setError('')}>
               {error}
             </Alert>
           )}
@@ -646,26 +715,22 @@ export default function AusenciaFormDialog({
       <DialogActions>
         <Button
           onClick={onClose}
-          sx={{ textTransform: "none" }}
+          sx={{ textTransform: 'none' }}
           disabled={submitting}
         >
           Cancelar
         </Button>
         <Button
-          variant="contained"
-          sx={{ textTransform: "none", fontWeight: 600 }}
+          variant='contained'
+          sx={{ textTransform: 'none', fontWeight: 600 }}
           onClick={handleSubmit}
           disabled={!canSubmit || submitting}
         >
-          {submitting ? "Guardando..." : isEditMode ? 'Guardar cambios' : "Guardar ausencia"}
+          {submitting ? 'Guardando...' : isEditMode ? 'Guardar cambios' : 'Guardar ausencia'}
         </Button>
       </DialogActions>
     </Dialog>
   );
 }
-
-
-
-
 
 

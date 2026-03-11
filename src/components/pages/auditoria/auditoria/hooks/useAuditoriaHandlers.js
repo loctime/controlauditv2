@@ -1,11 +1,9 @@
 import logger from '@/utils/logger';
 import { useCallback, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
 import autoSaveService from '../services/autoSaveService';
 import { verificarFirmasCompletadas, filtrarSucursalesPorEmpresa } from '../utils/auditoriaUtils';
-import { generarContenidoImpresion, abrirImpresionNativa } from '../utils/impresionUtils';
-import logger from '../../../../../utils/logger';
+import { generarContenidoImpresion, abrirImpresionNativa as abrirImpresionNativaUtil } from '../utils/impresionUtils';
 
 /**
  * Hook personalizado para manejar todos los handlers de la auditoría
@@ -94,7 +92,7 @@ export const useAuditoriaHandlers = ({
     const hasData = empresaSeleccionada || sucursalSeleccionada || formularioSeleccionadoId || 
                    respuestas.some(seccion => seccion.some(resp => resp !== '')) ||
                    comentarios.some(seccion => seccion.some(com => com !== '')) ||
-                   imagenes.some(seccion => seccion.some(img => img !== null)) ||
+                   imagenes.some(seccion => seccion.some(img => Array.isArray(img) ? img.length > 0 : img !== null)) ||
                    clasificaciones.some(seccion => seccion.some(clas => clas && (clas.condicion || clas.actitud))) ||
                    accionesRequeridas.some(seccion => seccion.some(acc => acc && acc.requiereAccion && acc.accionTexto));
     
@@ -118,7 +116,7 @@ export const useAuditoriaHandlers = ({
 
     // OPTIMIZACIÓN: Detectar si solo hay empresa/sucursal (sin respuestas/imágenes)
     const tieneRespuestas = respuestas.some(seccion => seccion.some(resp => resp !== ''));
-    const tieneImagenes = imagenes.some(seccion => seccion.some(img => img !== null));
+    const tieneImagenes = imagenes.some(seccion => seccion.some(img => Array.isArray(img) ? img.length > 0 : img !== null));
     const tieneComentarios = comentarios.some(seccion => seccion.some(com => com !== ''));
     const tieneClasificaciones = clasificaciones.some(seccion => seccion.some(clas => clas && (clas.condicion || clas.actitud)));
     const esGuardadoSimple = !tieneRespuestas && !tieneImagenes && !tieneComentarios && !tieneClasificaciones;
@@ -375,7 +373,7 @@ export const useAuditoriaHandlers = ({
   // Handler de impresión
   const abrirImpresionNativa = useCallback((params) => {
     const contenido = generarContenidoImpresion(params);
-    abrirImpresionNativa(contenido);
+    abrirImpresionNativaUtil(contenido);
   }, []);
 
   return {
@@ -415,3 +413,6 @@ export const useAuditoriaHandlers = ({
 };
 
 export default useAuditoriaHandlers;
+
+
+

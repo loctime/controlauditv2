@@ -1,4 +1,4 @@
-﻿export { trainingCatalogService } from './trainingCatalogService';
+export { trainingCatalogService } from './trainingCatalogService';
 export { trainingRequirementService } from './trainingRequirementService';
 export { trainingPlanService } from './trainingPlanService';
 export { trainingSessionService } from './trainingSessionService';
@@ -9,3 +9,6 @@ export { employeeTrainingRecordService } from './employeeTrainingRecordService';
 export { trainingComplianceService } from './trainingComplianceService';
 export { trainingReportingService } from './trainingReportingService';
 export { trainingMigrationService } from './trainingMigrationService';
+export { trainingRoleRequirementService } from './trainingRoleRequirementService';
+export { trainingRiskComplianceService } from './trainingRiskComplianceService';
+export { auditEvidenceService } from './auditEvidenceService';

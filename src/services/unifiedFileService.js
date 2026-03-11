@@ -1,4 +1,4 @@
-﻿import {
+import {
   collection,
   doc,
   getDocs,
@@ -10,6 +10,7 @@ import { db } from '../firebaseControlFile';
 import { firestoreRoutesCore } from '../core/firestore/firestoreRoutes.core';
 import { addDocWithAppId, updateDocWithAppId } from '../firebase/firestoreAppWriter';
 import { uploadFileWithContext } from './unifiedFileUploadService';
+import { deleteFile } from './controlFileB2Service';
 import { validateFiles } from './fileValidationPolicy';
 import { resolveViewUrl } from './fileResolverService';
 
@@ -68,6 +69,27 @@ function toFileRefPayload(file, uploadResult, params) {
   };
 }
 
+export async function saveFileRef(params) {
+  const { ownerId, module, entityId, fileRef, entityCollection } = params;
+  if (!ownerId) throw new Error('ownerId es requerido');
+  if (!module) throw new Error('module es requerido');
+  if (!entityId) throw new Error('entityId es requerido');
+  if (!fileRef?.fileId) throw new Error('fileRef.fileId es requerido');
+
+  const ref = filesCollectionRef(ownerId, module, entityId, entityCollection);
+  const payload = {
+    ...fileRef,
+    schemaVersion: SCHEMA_VERSION,
+    status: fileRef.status || 'active',
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+    legacyMirror: true
+  };
+
+  const created = await addDocWithAppId(ref, payload);
+  return { id: created.id, ...payload };
+}
+
 export async function uploadFiles(params) {
   const {
     ownerId,
@@ -91,13 +113,12 @@ export async function uploadFiles(params) {
 
   const validation = validateFiles(files || []);
   const uploaded = [];
+  const failures = [];
 
   const context = contextType || MODULE_TO_CONTEXT[module];
   if (!context) {
     throw new Error(`No se pudo resolver contextType para modulo ${module}`);
   }
-
-  const ref = filesCollectionRef(ownerId, module, entityId, entityCollection);
 
   for (const file of validation.accepted) {
     const result = await uploadFileWithContext({
@@ -122,19 +143,50 @@ export async function uploadFiles(params) {
       uploadedBy
     });
 
-    const created = await addDocWithAppId(ref, payload);
+    try {
+      const saved = await saveFileRef({
+        ownerId,
+        module,
+        entityId,
+        fileRef: payload,
+        entityCollection
+      });
 
-    uploaded.push({
-      id: created.id,
-      ...payload,
-      uploadedAt: new Date().toISOString()
-    });
+      uploaded.push({ ...saved, uploadedAt: new Date().toISOString() });
+    } catch (persistError) {
+      let cleanupAttempted = false;
+      let cleanupSucceeded = false;
+      let cleanupError = null;
+
+      // Best effort: evitar archivo huerfano si falla persistencia canonica.
+      if (result?.fileId) {
+        cleanupAttempted = true;
+        try {
+          await deleteFile(result.fileId);
+          cleanupSucceeded = true;
+        } catch (deleteError) {
+          cleanupError = deleteError instanceof Error ? deleteError.message : String(deleteError);
+        }
+      }
+
+      failures.push({
+        fileName: file?.name || 'archivo',
+        fileId: result?.fileId || null,
+        code: 'FILE_REF_PERSIST_FAILED',
+        message: persistError instanceof Error ? persistError.message : String(persistError),
+        orphanRisk: !cleanupSucceeded,
+        cleanupAttempted,
+        cleanupSucceeded,
+        cleanupError
+      });
+    }
   }
 
   return {
     fileRefs: uploaded,
     rejected: validation.rejected,
-    warnings: validation.warnings
+    warnings: validation.warnings,
+    failures
   };
 }
 

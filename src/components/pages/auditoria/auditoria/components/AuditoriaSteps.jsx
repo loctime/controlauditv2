@@ -82,7 +82,8 @@ export const createAuditoriaSteps = ({
   
   // IDs para carga de imágenes
   auditId,
-  companyId
+  companyId,
+  ownerId
 }) => {
   return [
     {
@@ -193,6 +194,7 @@ export const createAuditoriaSteps = ({
               accionesRequeridasExistentes={accionesRequeridas}
               auditId={auditId}
               companyId={companyId}
+              ownerId={ownerId}
             />
             
             {validarTodasLasPreguntas() && (

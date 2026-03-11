@@ -1,18 +1,16 @@
-﻿import logger from '@/utils/logger';
-import React, { useState, useRef, useEffect } from "react";
-import { 
-  Box, 
-  Typography, 
-  Button, 
-  Stack, 
-  Chip, 
-  useTheme, 
-  useMediaQuery,
+import { useMemo, useState } from 'react';
+import {
+  Box,
+  Typography,
+  Button,
+  Stack,
+  Chip,
+  useTheme,
   Collapse,
   Checkbox,
   FormControlLabel,
   TextField
-} from "@mui/material";
+} from '@mui/material';
 import CameraAltIcon from '@mui/icons-material/CameraAlt';
 import UploadIcon from '@mui/icons-material/Upload';
 import CommentIcon from '@mui/icons-material/Comment';
@@ -24,18 +22,22 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import dayjs from 'dayjs';
-import { 
-  respuestasPosibles, 
-  obtenerColorRespuesta, 
-  obtenerIconoRespuesta, 
-  preguntaContestada 
+import {
+  respuestasPosibles,
+  obtenerColorRespuesta,
+  obtenerIconoRespuesta,
+  preguntaContestada
 } from '../utils/respuestaUtils.jsx';
-import { convertirShareTokenAUrl } from '@/utils/imageUtils';
-import { validateFiles } from '@/services/fileValidationPolicy';
-// Imports eliminados: uploadEvidence, ensureTaskbarFolder, ensureSubFolder, useAuth
-// Ya no se suben archivos aquÃ­, solo se seleccionan
+import UnifiedFileUploader from '@/components/common/files/UnifiedFileUploader';
+import UnifiedFilePreview from '@/components/common/files/UnifiedFilePreview';
 
-const PreguntaItem = ({
+const toFileArray = (value) => {
+  if (!value) return [];
+  if (Array.isArray(value)) return value;
+  return [value];
+};
+
+export default function PreguntaItem({
   seccionIndex,
   preguntaIndex,
   pregunta,
@@ -53,161 +55,82 @@ const PreguntaItem = ({
   onClasificacionChange,
   accionRequerida,
   onAccionRequeridaChange,
-  auditId,
-  companyId,
   onImageUploaded
-}) => {
+}) {
   const theme = useTheme();
   const [expandedAccion, setExpandedAccion] = useState(false);
-  const fileInputRef = useRef(null);
-  
-  // Inicializar estado local de acciÃ³n requerida
-  const accionData = accionRequerida || {
-    requiereAccion: false,
-    accionTexto: '',
-    fechaVencimiento: null
-  };
 
-  // Handler para seleccionar imagen (SIN subir)
-  const handleFileUpload = (event) => {
-    const files = Array.from(event.target.files || []);
-    if (!files.length) return;
+  const accionData =
+    accionRequerida || {
+      requiereAccion: false,
+      accionTexto: '',
+      fechaVencimiento: null
+    };
 
-    const validation = validateFiles(files);
-    const file = validation.accepted[0];
-    if (!file) return;
-
-    // âœ… PROTECCIÃ“N IDEMPOTENTE: Si ya hay imagen con fileId, no hacer nada
-    if (imagenes && typeof imagenes === 'object' && imagenes.fileId) {
-      logger.debug('âœ… [PreguntaItem] Imagen ya subida, ignorando:', imagenes.fileId);
-      return;
-    }
-
-    // âœ… SOLO guardar File en estado local y notificar al padre
-    // NO subir archivos aquÃ­ - se subirÃ¡n al guardar el reporte
-    logger.debug('ðŸ“¸ [PreguntaItem] Imagen seleccionada (pendiente de subir):', file.name);
-    if (onImageUploaded) {
-      onImageUploaded(seccionIndex, preguntaIndex, file);
-    }
-
-    // Limpiar el input para permitir seleccionar el mismo archivo de nuevo
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
-  };
-
+  const files = useMemo(() => toFileArray(imagenes), [imagenes]);
   const isProcesando = procesandoImagen?.[`${seccionIndex}-${preguntaIndex}`] || false;
 
-  // Obtener URL de imagen usando helper global
-  const getImageUrl = (imageData) => {
-    if (!imageData) return null;
-    
-    // Si es un File, crear URL local (solo para preview antes de subir)
-    if (imageData instanceof File) {
-      return URL.createObjectURL(imageData);
-    }
-    
-    // Usar helper global para convertir shareToken a URL
-    return convertirShareTokenAUrl(imageData);
+  const handleUploaderChange = (_merged, result) => {
+    const accepted = result?.accepted || [];
+    if (!accepted.length || !onImageUploaded) return;
+    onImageUploaded(seccionIndex, preguntaIndex, accepted);
   };
 
-  // Estado para URL de imagen resuelta
-  const resolvedImageUrl = getImageUrl(imagenes);
-
   return (
-    <Box 
+    <Box
       sx={{
         ...mobileBoxStyle,
-        border: preguntaContestada([respuesta], 0, 0) 
-          ? `2px solid ${obtenerColorRespuesta(respuesta).backgroundColor}` 
+        border: preguntaContestada([respuesta], 0, 0)
+          ? `2px solid ${obtenerColorRespuesta(respuesta).backgroundColor}`
           : '2px solid #2196f3',
-        backgroundColor: preguntaContestada([respuesta], 0, 0) 
-          ? `${obtenerColorRespuesta(respuesta).backgroundColor}15` 
+        backgroundColor: preguntaContestada([respuesta], 0, 0)
+          ? `${obtenerColorRespuesta(respuesta).backgroundColor}15`
           : '#e3f2fd',
         p: isMobile ? 2 : 3,
         mb: isMobile ? 2 : 3
       }}
       id={`pregunta-${seccionIndex}-${preguntaIndex}`}
     >
-      <Box sx={{ 
-        display: 'flex', 
-        alignItems: 'center', 
-        gap: isMobile ? 1 : 2, 
-        mb: isMobile ? 1.5 : 2 
-      }}>
-        <Typography 
-          variant={isMobile ? "body1" : "subtitle1"} 
-          sx={{ 
-            fontWeight: 500, 
-            flex: 1,
-            fontSize: isMobile ? '0.875rem' : '1rem'
-          }}
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: isMobile ? 1 : 2, mb: isMobile ? 1.5 : 2 }}>
+        <Typography
+          variant={isMobile ? 'body1' : 'subtitle1'}
+          sx={{ fontWeight: 500, flex: 1, fontSize: isMobile ? '0.875rem' : '1rem' }}
         >
           {pregunta}
         </Typography>
         {preguntaContestada([respuesta], 0, 0) ? (
-          <Chip 
-            icon={<CheckCircleIcon />} 
-            label="Contestada" 
-            color="success" 
-            size={isMobile ? "small" : "medium"}
-            sx={{ fontSize: isMobile ? '0.75rem' : '0.875rem' }}
-          />
+          <Chip icon={<CheckCircleIcon />} label="Contestada" color="success" size={isMobile ? 'small' : 'medium'} />
         ) : (
-          <Chip 
-            icon={<WarningIcon />} 
-            label="Sin contestar" 
-            color="warning" 
-            size={isMobile ? "small" : "medium"}
-            sx={{ fontSize: isMobile ? '0.75rem' : '0.875rem' }}
-          />
+          <Chip icon={<WarningIcon />} label="Sin contestar" color="warning" size={isMobile ? 'small' : 'medium'} />
         )}
       </Box>
-      
+
       <Stack direction="column" spacing={isMobile ? 1 : 1.5}>
-        <Stack 
-          direction="row" 
-          spacing={isMobile ? 0.5 : 1} 
-          flexWrap="wrap"
-          sx={{ gap: isMobile ? 0.5 : 1 }}
-        >
-          {(() => {
-            const respuestaSeleccionada = respuesta;
-            
-            // Si hay una respuesta seleccionada, solo mostrar esa
-            if (respuestaSeleccionada && respuestaSeleccionada.trim() !== '') {
-              return (
-                <Button
-                  key={respuestaSeleccionada}
-                  variant="contained"
-                  startIcon={obtenerIconoRespuesta(respuestaSeleccionada)}
-                  onClick={() => onRespuestaChange(seccionIndex, preguntaIndex, respuestaSeleccionada)}
-                  sx={{ 
-                    minWidth: isMobile ? 80 : 120,
-                    fontSize: isMobile ? '0.75rem' : '0.875rem',
-                    py: isMobile ? 0.5 : 1,
-                    px: isMobile ? 1 : 2,
-                    ...obtenerColorRespuesta(respuestaSeleccionada),
-                    animation: 'fadeIn 0.3s ease-in',
-                    '@keyframes fadeIn': {
-                      from: { opacity: 0, transform: 'scale(0.9)' },
-                      to: { opacity: 1, transform: 'scale(1)' }
-                    }
-                  }}
-                >
-                  {respuestaSeleccionada}
-                </Button>
-              );
-            }
-            
-            // Si no hay respuesta seleccionada, mostrar todas las opciones
-            return respuestasPosibles.map((respuestaOption, index) => (
+        <Stack direction="row" spacing={isMobile ? 0.5 : 1} flexWrap="wrap" sx={{ gap: isMobile ? 0.5 : 1 }}>
+          {respuesta && respuesta.trim() !== ''
+            ? (
+              <Button
+                variant="contained"
+                startIcon={obtenerIconoRespuesta(respuesta)}
+                onClick={() => onRespuestaChange(seccionIndex, preguntaIndex, respuesta)}
+                sx={{
+                  minWidth: isMobile ? 80 : 120,
+                  fontSize: isMobile ? '0.75rem' : '0.875rem',
+                  py: isMobile ? 0.5 : 1,
+                  px: isMobile ? 1 : 2,
+                  ...obtenerColorRespuesta(respuesta)
+                }}
+              >
+                {respuesta}
+              </Button>
+              )
+            : respuestasPosibles.map((respuestaOption, index) => (
               <Button
                 key={index}
                 variant="outlined"
                 startIcon={obtenerIconoRespuesta(respuestaOption)}
                 onClick={() => onRespuestaChange(seccionIndex, preguntaIndex, respuestaOption)}
-                sx={{ 
+                sx={{
                   minWidth: isMobile ? 80 : 120,
                   fontSize: isMobile ? '0.75rem' : '0.875rem',
                   py: isMobile ? 0.5 : 1,
@@ -217,234 +140,131 @@ const PreguntaItem = ({
                   '&:hover': {
                     backgroundColor: obtenerColorRespuesta(respuestaOption).backgroundColor,
                     color: 'white',
-                    borderColor: obtenerColorRespuesta(respuestaOption).backgroundColor,
+                    borderColor: obtenerColorRespuesta(respuestaOption).backgroundColor
                   }
                 }}
               >
                 {respuestaOption}
               </Button>
-            ));
-          })()}
+              ))}
         </Stack>
-        
-        {/* Botones de clasificaciÃ³n CondiciÃ³n y Actitud */}
-        <Stack 
-          direction="row" 
-          spacing={isMobile ? 0.5 : 1}
-          sx={{ gap: isMobile ? 0.5 : 1 }}
-        >
+
+        <Stack direction="row" spacing={isMobile ? 0.5 : 1} sx={{ gap: isMobile ? 0.5 : 1 }}>
           <Button
-            variant={clasificacion?.condicion ? "contained" : "outlined"}
+            variant={clasificacion?.condicion ? 'contained' : 'outlined'}
             startIcon={<BuildIcon />}
-            onClick={() => {
-              logger.debug('ðŸ” [PreguntaItem] Click en botÃ³n CondiciÃ³n:', { seccionIndex, preguntaIndex, clasificacion, onClasificacionChange: !!onClasificacionChange });
-              if (onClasificacionChange) {
-                const nuevaClasificacion = {
-                  condicion: !clasificacion?.condicion,
-                  actitud: clasificacion?.actitud || false
-                };
-                logger.debug('ðŸ” [PreguntaItem] Llamando onClasificacionChange con:', nuevaClasificacion);
-                onClasificacionChange(seccionIndex, preguntaIndex, nuevaClasificacion);
-              } else {
-                logger.error('ðŸ” [PreguntaItem] onClasificacionChange NO estÃ¡ definido!');
-              }
-            }}
-            sx={{ 
-              minWidth: isMobile ? 80 : 120,
-              fontSize: isMobile ? '0.75rem' : '0.875rem',
-              py: isMobile ? 0.5 : 1,
-              px: isMobile ? 1 : 2,
-              backgroundColor: clasificacion?.condicion ? theme.palette.info.main : 'transparent',
-              color: clasificacion?.condicion ? 'white' : theme.palette.info.main,
-              borderColor: theme.palette.info.main,
-              '&:hover': {
-                backgroundColor: clasificacion?.condicion ? theme.palette.info.dark : theme.palette.info.light,
-                color: 'white',
-                borderColor: theme.palette.info.main,
-              }
-            }}
+            onClick={() =>
+              onClasificacionChange?.(seccionIndex, preguntaIndex, {
+                condicion: !clasificacion?.condicion,
+                actitud: clasificacion?.actitud || false
+              })
+            }
           >
-            CondiciÃ³n
+            Condicion
           </Button>
-          
           <Button
-            variant={clasificacion?.actitud ? "contained" : "outlined"}
+            variant={clasificacion?.actitud ? 'contained' : 'outlined'}
             startIcon={<PeopleIcon />}
-            onClick={() => {
-              logger.debug('ðŸ” [PreguntaItem] Click en botÃ³n Actitud:', { seccionIndex, preguntaIndex, clasificacion, onClasificacionChange: !!onClasificacionChange });
-              if (onClasificacionChange) {
-                const nuevaClasificacion = {
-                  condicion: clasificacion?.condicion || false,
-                  actitud: !clasificacion?.actitud
-                };
-                logger.debug('ðŸ” [PreguntaItem] Llamando onClasificacionChange con:', nuevaClasificacion);
-                onClasificacionChange(seccionIndex, preguntaIndex, nuevaClasificacion);
-              } else {
-                logger.error('ðŸ” [PreguntaItem] onClasificacionChange NO estÃ¡ definido!');
-              }
-            }}
-            sx={{ 
-              minWidth: isMobile ? 80 : 120,
-              fontSize: isMobile ? '0.75rem' : '0.875rem',
-              py: isMobile ? 0.5 : 1,
-              px: isMobile ? 1 : 2,
-              backgroundColor: clasificacion?.actitud ? theme.palette.secondary.main : 'transparent',
-              color: clasificacion?.actitud ? 'white' : theme.palette.secondary.main,
-              borderColor: theme.palette.secondary.main,
-              '&:hover': {
-                backgroundColor: clasificacion?.actitud ? theme.palette.secondary.dark : theme.palette.secondary.light,
-                color: 'white',
-                borderColor: theme.palette.secondary.main,
-              }
-            }}
+            onClick={() =>
+              onClasificacionChange?.(seccionIndex, preguntaIndex, {
+                condicion: clasificacion?.condicion || false,
+                actitud: !clasificacion?.actitud
+              })
+            }
           >
             Actitud
           </Button>
         </Stack>
-        
-        <Button
-          variant="outlined"
-          startIcon={<CommentIcon />}
-          onClick={() => onOpenModal(seccionIndex, preguntaIndex)}
-          sx={{ 
-            minWidth: isMobile ? 80 : 120,
-            fontSize: isMobile ? '0.75rem' : '0.875rem',
-            py: isMobile ? 0.5 : 1,
-            px: isMobile ? 1 : 2
-          }}
-        >
+
+        <Button variant="outlined" startIcon={<CommentIcon />} onClick={() => onOpenModal(seccionIndex, preguntaIndex)}>
           Comentario
         </Button>
-        
-        <Stack 
-          direction="row" 
-          spacing={isMobile ? 0.5 : 1}
-          sx={{ gap: isMobile ? 0.5 : 1 }}
-        >
+
+        <Stack direction="row" spacing={isMobile ? 0.5 : 1} sx={{ gap: isMobile ? 0.5 : 1 }}>
           <Button
             variant="outlined"
             component="span"
             startIcon={<CameraAltIcon />}
             onClick={() => onOpenCameraDialog(seccionIndex, preguntaIndex)}
             disabled={isProcesando}
-            sx={{ 
-              minWidth: isMobile ? 80 : 120,
-              fontSize: isMobile ? '0.75rem' : '0.875rem',
-              py: isMobile ? 0.5 : 1,
-              px: isMobile ? 1 : 2
-            }}
           >
             {isProcesando ? 'Procesando...' : 'Camara'}
           </Button>
-          
+
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
             <label htmlFor={`upload-gallery-${seccionIndex}-${preguntaIndex}`}>
-              <Button
-                variant="outlined"
-                component="span"
-                startIcon={<UploadIcon />}
-                sx={{ 
-                  minWidth: isMobile ? 80 : 120,
-                  fontSize: isMobile ? '0.75rem' : '0.875rem',
-                  py: isMobile ? 0.5 : 1,
-                  px: isMobile ? 1 : 2
-                }}
-                disabled={isProcesando}
-              >
+              <Button variant="outlined" component="span" startIcon={<UploadIcon />} disabled={isProcesando}>
                 {isProcesando ? 'Procesando...' : 'Subir'}
               </Button>
             </label>
-          </Box>
-          <input
-            id={`upload-gallery-${seccionIndex}-${preguntaIndex}`}
-            ref={fileInputRef}
-            type="file"
-              multiple
+            <UnifiedFileUploader
+              id={`upload-gallery-${seccionIndex}-${preguntaIndex}`}
               accept="*/*"
-            onChange={handleFileUpload}
-            style={{ display: 'none' }}
-          />
+              files={[]}
+              onFilesChange={handleUploaderChange}
+              helperText=""
+              inputProps={{ style: { display: 'none' } }}
+            />
+          </Box>
         </Stack>
       </Stack>
-      
-      {/* Comentario y foto debajo, bien separados */}
-      <Box 
-        mt={isMobile ? 1.5 : 2} 
-        display="flex" 
-        alignItems="center" 
-        gap={isMobile ? 2 : 3} 
-        flexWrap="wrap"
-      >
-        <Typography 
-          variant="body2" 
-          color="text.secondary" 
-          sx={{ 
-            fontStyle: 'italic',
-            fontSize: isMobile ? '0.75rem' : '0.875rem'
-          }}
+
+      <Box mt={isMobile ? 1.5 : 2} display="flex" alignItems="center" gap={isMobile ? 2 : 3} flexWrap="wrap">
+        <Typography
+          variant="body2"
+          color="text.secondary"
+          sx={{ fontStyle: 'italic', fontSize: isMobile ? '0.75rem' : '0.875rem' }}
         >
-          {comentario ? `Comentario: ${comentario}` : "Sin comentario"}
+          {comentario ? `Comentario: ${comentario}` : 'Sin comentario'}
         </Typography>
-        
-        {imagenes && resolvedImageUrl && (
+
+        {files.length > 0 && (
           <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', alignItems: 'center' }}>
-            <Box sx={{ position: 'relative' }}>
-              <img
-                src={resolvedImageUrl}
-                alt={`Imagen de la pregunta ${preguntaIndex}`}
-                style={{ 
-                  maxWidth: isMobile ? '80px' : '100px', 
-                  maxHeight: isMobile ? '80px' : '100px', 
-                  borderRadius: 8, 
-                  border: '1px solid #eee',
-                  cursor: 'pointer'
-                }}
-                onClick={() => {
-                  // Abrir imagen en nueva pestaÃ±a usando share token (URL persistente)
-                  const url = getImageUrl(imagenes);
-                  if (url) {
-                    window.open(url, '_blank');
-                  }
-                }}
-                onError={(e) => {
-                  // Si falla la carga, puede ser un problema de CORS o archivo eliminado
-                  logger.error('[PreguntaItem] Error al cargar imagen:', e);
-                }}
-              />
-              <Button
-                size="small"
-                sx={{
-                  position: 'absolute',
-                  top: -8,
-                  right: -8,
-                  minWidth: 'auto',
-                  width: 20,
-                  height: 20,
-                  borderRadius: '50%',
-                  backgroundColor: '#f44336',
-                  color: 'white',
-                  fontSize: '12px',
-                  padding: 0,
-                  '&:hover': {
-                    backgroundColor: '#d32f2f'
-                  }
-                }}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  // FunciÃ³n para eliminar imagen
-                  if (typeof onDeleteImage === 'function') {
-                    onDeleteImage(seccionIndex, preguntaIndex, 0);
-                  }
-                }}
-              >
-                Ã—
-              </Button>
-            </Box>
+            {files.map((fileItem, fileIndex) => {
+              const previewFileRef =
+                fileItem && typeof fileItem === 'object' && (fileItem.fileId || fileItem.shareToken)
+                  ? fileItem
+                  : null;
+
+              return (
+                <Box key={`${preguntaIndex}-${fileIndex}`} sx={{ position: 'relative', width: isMobile ? 90 : 120 }}>
+                  {previewFileRef ? (
+                    <UnifiedFilePreview fileRef={previewFileRef} height={isMobile ? 80 : 100} />
+                  ) : (
+                    <Typography variant="caption" color="text.secondary">
+                      Archivo pendiente: {fileItem?.name || 'sin nombre'}
+                    </Typography>
+                  )}
+                  <Button
+                    size="small"
+                    sx={{
+                      position: 'absolute',
+                      top: -8,
+                      right: -8,
+                      minWidth: 'auto',
+                      width: 20,
+                      height: 20,
+                      borderRadius: '50%',
+                      backgroundColor: '#f44336',
+                      color: 'white',
+                      fontSize: '12px',
+                      padding: 0,
+                      '&:hover': { backgroundColor: '#d32f2f' }
+                    }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDeleteImage?.(seccionIndex, preguntaIndex, fileIndex);
+                    }}
+                  >
+                    x
+                  </Button>
+                </Box>
+              );
+            })}
           </Box>
         )}
       </Box>
 
-      {/* SecciÃ³n de AcciÃ³n Requerida */}
       <Box mt={isMobile ? 1.5 : 2}>
         <FormControlLabel
           control={
@@ -453,101 +273,67 @@ const PreguntaItem = ({
               onChange={(e) => {
                 const nuevaAccion = {
                   ...accionData,
-                  requiereAccion: e.target.checked
+                  requiereAccion: e.target.checked,
+                  accionTexto: e.target.checked ? accionData.accionTexto : '',
+                  fechaVencimiento: e.target.checked ? accionData.fechaVencimiento : null
                 };
-                if (!e.target.checked) {
-                  // Si se desmarca, limpiar datos
-                  nuevaAccion.accionTexto = '';
-                  nuevaAccion.fechaVencimiento = null;
-                  setExpandedAccion(false);
-                } else {
-                  setExpandedAccion(true);
-                }
-                if (onAccionRequeridaChange) {
-                  onAccionRequeridaChange(seccionIndex, preguntaIndex, nuevaAccion);
-                }
+                setExpandedAccion(Boolean(e.target.checked));
+                onAccionRequeridaChange?.(seccionIndex, preguntaIndex, nuevaAccion);
               }}
-              size={isMobile ? "small" : "medium"}
+              size={isMobile ? 'small' : 'medium'}
             />
           }
-          label={
-            <Typography 
-              variant="body2" 
-              sx={{ 
-                fontSize: isMobile ? '0.75rem' : '0.875rem',
-                fontWeight: 500
-              }}
-            >
-              AcciÃ³n requerida
-            </Typography>
-          }
+          label={<Typography variant="body2">Accion requerida</Typography>}
         />
-        
+
         <Collapse in={expandedAccion || (accionData.requiereAccion && accionData.accionTexto)}>
-          <Box 
-            sx={{ 
-              mt: 1, 
-              p: 2, 
-              bgcolor: 'background.default',
-              borderRadius: 1,
-              border: '1px solid',
-              borderColor: 'divider'
-            }}
-          >
-            <Stack spacing={2}>
-              <TextField
-                label="DescripciÃ³n de la acciÃ³n requerida"
-                multiline
-                rows={2}
-                value={accionData.accionTexto || ''}
-                onChange={(e) => {
-                  const nuevaAccion = {
-                    ...accionData,
-                    accionTexto: e.target.value
-                  };
-                  if (onAccionRequeridaChange) {
-                    onAccionRequeridaChange(seccionIndex, preguntaIndex, nuevaAccion);
-                  }
-                }}
-                size="small"
-                fullWidth
-                required={accionData.requiereAccion}
-                error={accionData.requiereAccion && !accionData.accionTexto}
-                helperText={
-                  accionData.requiereAccion && !accionData.accionTexto
-                    ? 'La descripciÃ³n es requerida'
-                    : ''
-                }
-              />
-              
-              <DatePicker
-                label="Fecha de vencimiento (opcional)"
-                value={accionData.fechaVencimiento ? dayjs(accionData.fechaVencimiento) : null}
-                onChange={(value) => {
-                  const nuevaAccion = {
-                    ...accionData,
-                    fechaVencimiento: value ? value.toDate() : null
-                  };
-                  if (onAccionRequeridaChange) {
-                    onAccionRequeridaChange(seccionIndex, preguntaIndex, nuevaAccion);
-                  }
-                }}
-                slotProps={{
-                  textField: {
-                    size: "small",
-                    fullWidth: true
-                  }
-                }}
-                minDate={dayjs()}
-              />
-            </Stack>
+          <Box sx={{ mt: 1, p: 2, borderRadius: 1, bgcolor: 'warning.50', border: `1px solid ${theme.palette.warning.light}` }}>
+            <TextField
+              fullWidth
+              multiline
+              minRows={2}
+              maxRows={4}
+              label="Accion a tomar"
+              value={accionData.accionTexto || ''}
+              onChange={(e) =>
+                onAccionRequeridaChange?.(seccionIndex, preguntaIndex, {
+                  ...accionData,
+                  requiereAccion: true,
+                  accionTexto: e.target.value
+                })
+              }
+              sx={{ mb: 2 }}
+            />
+
+            <DatePicker
+              label="Fecha de vencimiento"
+              value={accionData.fechaVencimiento ? dayjs(accionData.fechaVencimiento) : null}
+              onChange={(newValue) =>
+                onAccionRequeridaChange?.(seccionIndex, preguntaIndex, {
+                  ...accionData,
+                  requiereAccion: true,
+                  fechaVencimiento: newValue ? newValue.toISOString() : null
+                })
+              }
+              slotProps={{ textField: { fullWidth: true, size: 'small' } }}
+            />
+
+            <Button
+              size="small"
+              variant="text"
+              color="warning"
+              startIcon={expandedAccion ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+              onClick={() => setExpandedAccion(!expandedAccion)}
+              sx={{ mt: 1 }}
+            >
+              {expandedAccion ? 'Ocultar detalles' : 'Mostrar detalles'}
+            </Button>
           </Box>
         </Collapse>
       </Box>
     </Box>
   );
-};
+}
 
-export default PreguntaItem; 
 
 

@@ -1,8 +1,8 @@
 import logger from '@/utils/logger';
-// Función para comprimir imágenes - Optimizada para evitar tildes del sistema
-import logger from '../../../../../utils/logger';
+import { validateFile, MAX_FILE_SIZE, WARNING_FILE_SIZE } from '@/services/fileValidationPolicy';
+// Funcion para comprimir imagenes
 
-export const comprimirImagen = (file, maxWidth = 800, quality = 0.7) => {
+export const comprimirImagen = (file) => {
   return new Promise((resolve) => {
     // Validar que sea una imagen
     if (!file.type.startsWith('image/')) {
@@ -48,14 +48,14 @@ export const comprimirImagen = (file, maxWidth = 800, quality = 0.7) => {
       // Compresión más agresiva según el tamaño original
       let compressionQuality = 0.6; // Calidad base más baja
       
-      if (file.size > 10 * 1024 * 1024) { // > 10MB
-        compressionQuality = 0.3; // Muy agresiva
-      } else if (file.size > 5 * 1024 * 1024) { // > 5MB
-        compressionQuality = 0.4; // Agresiva
-      } else if (file.size > 2 * 1024 * 1024) { // > 2MB
-        compressionQuality = 0.5; // Moderada
-      } else if (file.size > 1 * 1024 * 1024) { // > 1MB
-        compressionQuality = 0.6; // Normal
+      if (file.size > WARNING_FILE_SIZE) {
+        compressionQuality = 0.3;
+      } else if (file.size > WARNING_FILE_SIZE * 0.25) {
+        compressionQuality = 0.4;
+      } else if (file.size > WARNING_FILE_SIZE * 0.1) {
+        compressionQuality = 0.5;
+      } else if (file.size > WARNING_FILE_SIZE * 0.02) {
+        compressionQuality = 0.6;
       }
       
       canvas.toBlob((blob) => {
@@ -75,7 +75,7 @@ export const comprimirImagen = (file, maxWidth = 800, quality = 0.7) => {
         });
         
         // Verificar que el tamaño final sea razonable (< 2MB)
-        if (compressedFile.size > 2 * 1024 * 1024) {
+        if (compressedFile.size > WARNING_FILE_SIZE * 0.1) {
           logger.debug('Imagen aún grande, aplicando compresión adicional', { sizeMB: finalSizeMB });
           // Aplicar compresión adicional si aún es muy grande
           canvas.toBlob((finalBlob) => {
@@ -101,23 +101,20 @@ export const comprimirImagen = (file, maxWidth = 800, quality = 0.7) => {
   });
 };
 
-// Función para validar archivo de imagen
 export const validarArchivoImagen = (file) => {
-  // Validar tipo de archivo
-  if (!file.type.startsWith('image/')) {
-    logger.error('Archivo no es una imagen:', file.type);
-    return { valido: false, error: 'Por favor selecciona solo archivos de imagen (JPG, PNG, etc.)' };
+  const result = validateFile(file);
+  if (!result.valid) {
+    return { valido: false, error: result.issues.map((i) => i.message).join(' | ') };
   }
-  
-  // Validar tamaño máximo (50MB para permitir archivos grandes que se comprimirán)
-  const maxSize = 50 * 1024 * 1024; // 50MB
-  if (file.size > maxSize) {
-    logger.error('Archivo demasiado grande', { size: file.size, sizeMB: (file.size/1024/1024).toFixed(1) });
-    return { 
-      valido: false, 
-      error: `El archivo es demasiado grande (${(file.size/1024/1024).toFixed(1)}MB). El tamaño máximo es 50MB.` 
-    };
+
+  if (file.size >= WARNING_FILE_SIZE) {
+    logger.warn('Archivo grande detectado', { sizeMB: (file.size / 1024 / 1024).toFixed(1) });
   }
-  
+
+  if (file.size > MAX_FILE_SIZE) {
+    return { valido: false, error: 'El archivo excede el tamano maximo permitido (500MB).' };
+  }
+
   return { valido: true };
 }; 
+

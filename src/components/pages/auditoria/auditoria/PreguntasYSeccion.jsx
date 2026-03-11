@@ -1,38 +1,54 @@
 import logger from '@/utils/logger';
-import React, { useState, useEffect, useRef } from "react";
-import { Button, Box, Typography, Stack, useTheme, useMediaQuery } from "@mui/material";
+import { useEffect, useMemo, useState } from 'react';
+import { Button, Box, Typography, Stack, useTheme, useMediaQuery } from '@mui/material';
 import WarningIcon from '@mui/icons-material/Warning';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
-// Importar componentes separados
 import CameraDialog from './components/CameraDialog';
 import CommentModal from './components/CommentModal';
 import PendingQuestionsModal from './components/PendingQuestionsModal';
 import PreguntaItem from './components/PreguntaItem';
-
-// Importar utilidades
 import { obtenerPreguntasNoContestadas } from './utils/respuestaUtils.jsx';
-import { comprimirImagen, validarArchivoImagen } from './utils/imageUtils';
+import { softDeleteFile } from '../../../../services/unifiedFileService';
 
-const PreguntasYSeccion = ({ 
-  secciones: seccionesObj = {}, 
-  guardarRespuestas, 
-  guardarComentario, 
+const normalizeQuestionMatrix = (secciones, source, emptyValue) =>
+  secciones.map((seccion, seccionIndex) =>
+    Array(seccion.preguntas.length)
+      .fill(null)
+      .map((_, preguntaIndex) => {
+        const value = source?.[seccionIndex]?.[preguntaIndex];
+        return value === undefined || value === null ? emptyValue : value;
+      })
+  );
+
+const normalizeFilesMatrix = (secciones, source) =>
+  secciones.map((seccion, seccionIndex) =>
+    Array(seccion.preguntas.length)
+      .fill(null)
+      .map((_, preguntaIndex) => {
+        const value = source?.[seccionIndex]?.[preguntaIndex];
+        if (!value) return [];
+        return Array.isArray(value) ? value : [value];
+      })
+  );
+
+export default function PreguntasYSeccion({
+  secciones: seccionesObj = {},
+  guardarRespuestas,
+  guardarComentario,
   guardarImagenes,
   guardarClasificaciones,
   guardarAccionesRequeridas,
-  // Props para mantener respuestas existentes
   respuestasExistentes = [],
   comentariosExistentes = [],
   imagenesExistentes = [],
   clasificacionesExistentes = [],
   accionesRequeridasExistentes = [],
-  // Props para carga de imágenes
-  auditId,
-  companyId
-}) => {
+  ownerId = null
+}) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-  const isSmallMobile = useMediaQuery(theme.breakpoints.down('xs'));
+
+  const secciones = useMemo(() => Object.values(seccionesObj || {}), [seccionesObj]);
 
   const mobileBoxStyle = {
     mb: isMobile ? 1.5 : 3,
@@ -41,517 +57,204 @@ const PreguntasYSeccion = ({
     bgcolor: 'background.paper',
     border: `1px solid ${theme.palette.divider}`,
     boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
-    overflow: 'hidden',
-    minHeight: isMobile ? '100px' : '120px',
-    display: 'flex',
-    flexDirection: 'column',
-    justifyContent: 'space-between'
+    overflow: 'hidden'
   };
 
   const [respuestas, setRespuestas] = useState([]);
   const [comentarios, setComentarios] = useState([]);
   const [clasificaciones, setClasificaciones] = useState([]);
   const [accionesRequeridas, setAccionesRequeridas] = useState([]);
+  const [imagenes, setImagenes] = useState([]);
+
   const [modalAbierto, setModalAbierto] = useState(false);
-  const [comentario, setComentario] = useState("");
+  const [comentario, setComentario] = useState('');
   const [currentSeccionIndex, setCurrentSeccionIndex] = useState(null);
   const [currentPreguntaIndex, setCurrentPreguntaIndex] = useState(null);
-  const [initialized, setInitialized] = useState(false);
-  const [imagenes, setImagenes] = useState([]);
-  const [procesandoImagen, setProcesandoImagen] = useState({});
+
   const [openCameraDialog, setOpenCameraDialog] = useState(false);
   const [currentImageSeccion, setCurrentImageSeccion] = useState(null);
   const [currentImagePregunta, setCurrentImagePregunta] = useState(null);
   const [openPreguntasNoContestadas, setOpenPreguntasNoContestadas] = useState(false);
 
-  // Refs para rastrear props anteriores y detectar cambios
-  const prevPropsRef = useRef({
-    respuestasExistentes: null,
-    comentariosExistentes: null,
-    imagenesExistentes: null,
-    clasificacionesExistentes: null
-  });
-
-  const secciones = Object.values(seccionesObj);
-
   useEffect(() => {
-    if (!initialized && secciones.length > 0) {
-      // Inicializar con respuestas existentes o vacías
-      const newRespuestas = secciones.map((seccion, seccionIndex) => 
-        Array(seccion.preguntas.length).fill('').map((_, preguntaIndex) => 
-          respuestasExistentes[seccionIndex]?.[preguntaIndex] || ''
-        )
-      );
-      setRespuestas(newRespuestas);
+    if (!secciones.length) return;
 
-      // Inicializar con comentarios existentes o vacíos
-      const newComentarios = secciones.map((seccion, seccionIndex) => 
-        Array(seccion.preguntas.length).fill('').map((_, preguntaIndex) => 
-          comentariosExistentes[seccionIndex]?.[preguntaIndex] || ''
-        )
-      );
-      setComentarios(newComentarios);
+    setRespuestas(normalizeQuestionMatrix(secciones, respuestasExistentes, ''));
+    setComentarios(normalizeQuestionMatrix(secciones, comentariosExistentes, ''));
+    setImagenes(normalizeFilesMatrix(secciones, imagenesExistentes));
 
-      // Inicializar con imágenes existentes o null
-      const newImagenes = secciones.map((seccion, seccionIndex) => 
-        Array(seccion.preguntas.length).fill(null).map((_, preguntaIndex) => 
-          imagenesExistentes[seccionIndex]?.[preguntaIndex] || null
-        )
-      );
-      setImagenes(newImagenes);
-
-      // Inicializar con clasificaciones existentes o vacías
-      const newClasificaciones = secciones.map((seccion, seccionIndex) => 
-        Array(seccion.preguntas.length).fill(null).map((_, preguntaIndex) => 
-          clasificacionesExistentes[seccionIndex]?.[preguntaIndex] || { condicion: false, actitud: false }
-        )
-      );
-      setClasificaciones(newClasificaciones);
-
-      // Inicializar con acciones requeridas existentes o vacías
-      const newAccionesRequeridas = secciones.map((seccion, seccionIndex) => 
-        Array(seccion.preguntas.length).fill(null).map((_, preguntaIndex) => 
-          accionesRequeridasExistentes[seccionIndex]?.[preguntaIndex] || null
-        )
-      );
-      setAccionesRequeridas(newAccionesRequeridas);
-
-      setInitialized(true);
-    } else if (initialized && secciones.length > 0) {
-      // Si ya está inicializado pero las secciones cambiaron o hay respuestas existentes que no están en el estado interno
-      // Esto maneja el caso cuando el usuario navega hacia atrás y vuelve al paso de preguntas
-      const tieneRespuestasEnProps = respuestasExistentes && respuestasExistentes.length > 0 && 
-        respuestasExistentes.some((seccion) => 
-          Array.isArray(seccion) && seccion.some((resp) => 
-            resp !== '' && resp !== null && resp !== undefined
-          )
-        );
-      
-      const tieneRespuestasEnEstado = respuestas && respuestas.length > 0 && 
-        respuestas.some((seccion) => 
-          Array.isArray(seccion) && seccion.some((resp) => 
-            resp !== '' && resp !== null && resp !== undefined
-          )
-        );
-      
-      // Si hay respuestas en props pero no en estado, restaurarlas
-      if (tieneRespuestasEnProps && !tieneRespuestasEnEstado) {
-        logger.debug('🔄 [PreguntasYSeccion] Restaurando respuestas al volver al paso de preguntas');
-        const newRespuestas = secciones.map((seccion, seccionIndex) => 
-          Array(seccion.preguntas.length).fill('').map((_, preguntaIndex) => 
-            respuestasExistentes[seccionIndex]?.[preguntaIndex] || ''
-          )
-        );
-        setRespuestas(newRespuestas);
-        
-        if (comentariosExistentes && comentariosExistentes.length > 0) {
-          const newComentarios = secciones.map((seccion, seccionIndex) => 
-            Array(seccion.preguntas.length).fill('').map((_, preguntaIndex) => 
-              comentariosExistentes[seccionIndex]?.[preguntaIndex] || ''
-            )
-          );
-          setComentarios(newComentarios);
-        }
-        
-        if (imagenesExistentes && imagenesExistentes.length > 0) {
-          const newImagenes = secciones.map((seccion, seccionIndex) => 
-            Array(seccion.preguntas.length).fill(null).map((_, preguntaIndex) => 
-              imagenesExistentes[seccionIndex]?.[preguntaIndex] || null
-            )
-          );
-          setImagenes(newImagenes);
-        }
-        
-        if (clasificacionesExistentes && clasificacionesExistentes.length > 0) {
-          const newClasificaciones = secciones.map((seccion, seccionIndex) => 
-            Array(seccion.preguntas.length).fill(null).map((_, preguntaIndex) => 
-              clasificacionesExistentes[seccionIndex]?.[preguntaIndex] || { condicion: false, actitud: false }
-            )
-          );
-          setClasificaciones(newClasificaciones);
-        }
-      }
-    }
-  }, [initialized, secciones, respuestasExistentes, comentariosExistentes, imagenesExistentes, clasificacionesExistentes, respuestas]);
-
-  // Nuevo useEffect para actualizar cuando las props cambian después de la inicialización
-  // Esto es necesario cuando se restauran datos después de que el componente ya se inicializó
-  useEffect(() => {
-    // Solo actualizar si ya está inicializado y hay secciones
-    if (initialized && secciones.length > 0) {
-      // Comparar con props anteriores para detectar cambios
-      const propsCambiaron = 
-        JSON.stringify(prevPropsRef.current.respuestasExistentes) !== JSON.stringify(respuestasExistentes) ||
-        JSON.stringify(prevPropsRef.current.comentariosExistentes) !== JSON.stringify(comentariosExistentes) ||
-        JSON.stringify(prevPropsRef.current.clasificacionesExistentes) !== JSON.stringify(clasificacionesExistentes) ||
-        (imagenesExistentes && imagenesExistentes.length > 0 && 
-         JSON.stringify(prevPropsRef.current.imagenesExistentes?.map(seccion => 
-           seccion.map(img => img instanceof File ? 'FILE' : img)
-         )) !== JSON.stringify(imagenesExistentes.map(seccion => 
-           seccion.map(img => img instanceof File ? 'FILE' : img)
-         )));
-      
-      // Verificar si hay respuestas válidas en las props
-      const tieneRespuestasEnProps = respuestasExistentes && respuestasExistentes.length > 0 && 
-        respuestasExistentes.some((seccion) => 
-          Array.isArray(seccion) && seccion.some((resp) => 
-            resp !== '' && resp !== null && resp !== undefined
-          )
-        );
-      
-      // Verificar si el estado interno está vacío o incompleto comparado con las props
-      const estadoInternoVacioOIncompleto = !respuestas || respuestas.length === 0 || 
-        !respuestas.some((seccion) => 
-          Array.isArray(seccion) && seccion.some((resp) => 
-            resp !== '' && resp !== null && resp !== undefined
-          )
-        );
-      
-      // ACTUALIZAR SIEMPRE que las props cambien Y tengan datos válidos
-      // Esto asegura que las respuestas restauradas siempre se apliquen
-      const debeActualizar = propsCambiaron && tieneRespuestasEnProps;
-      
-      logger.debug('🔍 [PreguntasYSeccion] Verificando actualización:', {
-        initialized,
-        propsCambiaron,
-        tieneRespuestasEnProps,
-        estadoInternoVacioOIncompleto,
-        debeActualizar,
-        respuestasExistentesLength: respuestasExistentes?.length || 0,
-        respuestasExistentesContenido: respuestasExistentes,
-        respuestasExistentesPrimeraSeccion: respuestasExistentes?.[0],
-        respuestasExistentesPrimeraSeccionLength: respuestasExistentes?.[0]?.length || 0,
-        respuestasExistentesPrimeraSeccionContenido: respuestasExistentes?.[0],
-        respuestasLength: respuestas.length,
-        respuestasContenido: respuestas
-      });
-      
-      if (debeActualizar) {
-        logger.debug('🔄 [PreguntasYSeccion] Actualizando desde respuestas restauradas');
-        
-        // Actualizar respuestas
-        const newRespuestas = secciones.map((seccion, seccionIndex) => 
-          Array(seccion.preguntas.length).fill('').map((_, preguntaIndex) => {
-            const restaurada = respuestasExistentes[seccionIndex]?.[preguntaIndex];
-            return restaurada !== undefined && restaurada !== null && restaurada !== '' 
-              ? restaurada 
-              : '';
+    setClasificaciones(
+      secciones.map((seccion, seccionIndex) =>
+        Array(seccion.preguntas.length)
+          .fill(null)
+          .map((_, preguntaIndex) => {
+            const value = clasificacionesExistentes?.[seccionIndex]?.[preguntaIndex];
+            return value || { condicion: false, actitud: false };
           })
-        );
-        logger.debug('📋 [PreguntasYSeccion] Nuevas respuestas a establecer:', newRespuestas);
-        setRespuestas(newRespuestas);
+      )
+    );
 
-        // Actualizar comentarios
-        const tieneComentariosRestaurados = comentariosExistentes && comentariosExistentes.length > 0 &&
-          comentariosExistentes.some((seccion) => 
-            Array.isArray(seccion) && seccion.some((com) => 
-              com !== '' && com !== null && com !== undefined
-            )
-          );
-        
-        if (tieneComentariosRestaurados) {
-          const newComentarios = secciones.map((seccion, seccionIndex) => 
-            Array(seccion.preguntas.length).fill('').map((_, preguntaIndex) => {
-              const restaurado = comentariosExistentes[seccionIndex]?.[preguntaIndex];
-              return restaurado !== undefined && restaurado !== null && restaurado !== '' 
-                ? restaurado 
-                : '';
-            })
-          );
-          setComentarios(newComentarios);
-        }
-
-        // Actualizar imágenes (File objects)
-        const tieneImagenesRestauradas = imagenesExistentes && imagenesExistentes.length > 0 &&
-          imagenesExistentes.some((seccion) => 
-            Array.isArray(seccion) && seccion.some((img) => 
-              img !== null && img !== undefined
-            )
-          );
-        
-        if (tieneImagenesRestauradas) {
-          const newImagenes = secciones.map((seccion, seccionIndex) => 
-            Array(seccion.preguntas.length).fill(null).map((_, preguntaIndex) => {
-              const restaurada = imagenesExistentes[seccionIndex]?.[preguntaIndex];
-              // Priorizar imágenes restauradas (File objects desde IndexedDB)
-              return restaurada !== null && restaurada !== undefined 
-                ? restaurada 
-                : null;
-            })
-          );
-          setImagenes(newImagenes);
-        }
-
-        // Actualizar clasificaciones
-        const tieneClasificacionesRestauradas = clasificacionesExistentes && clasificacionesExistentes.length > 0 &&
-          clasificacionesExistentes.some((seccion) => 
-            Array.isArray(seccion) && seccion.some((clas) => 
-              clas && (clas.condicion || clas.actitud)
-            )
-          );
-        
-        if (tieneClasificacionesRestauradas) {
-          const newClasificaciones = secciones.map((seccion, seccionIndex) => 
-            Array(seccion.preguntas.length).fill(null).map((_, preguntaIndex) => {
-              const restaurada = clasificacionesExistentes[seccionIndex]?.[preguntaIndex];
-              return restaurada && (restaurada.condicion || restaurada.actitud)
-                ? restaurada 
-                : { condicion: false, actitud: false };
-            })
-          );
-          setClasificaciones(newClasificaciones);
-        }
-      }
-      
-      // Actualizar refs con las props actuales
-      prevPropsRef.current = {
-        respuestasExistentes,
-        comentariosExistentes,
-        imagenesExistentes,
-        clasificacionesExistentes
-      };
-    }
-  }, [initialized, secciones.length, respuestasExistentes, comentariosExistentes, imagenesExistentes, clasificacionesExistentes]);
+    setAccionesRequeridas(
+      secciones.map((seccion, seccionIndex) =>
+        Array(seccion.preguntas.length)
+          .fill(null)
+          .map((_, preguntaIndex) => accionesRequeridasExistentes?.[seccionIndex]?.[preguntaIndex] || null)
+      )
+    );
+  }, [
+    secciones,
+    respuestasExistentes,
+    comentariosExistentes,
+    imagenesExistentes,
+    clasificacionesExistentes,
+    accionesRequeridasExistentes
+  ]);
 
   const handleRespuestaChange = (seccionIndex, preguntaIndex, value) => {
-    const respuestaActual = respuestas[seccionIndex]?.[preguntaIndex];
-    
-    // Si la respuesta seleccionada es la misma que ya estaba seleccionada, la deseleccionamos
-    if (respuestaActual === value) {
-      const nuevasRespuestas = respuestas.map((resp, index) =>
-        index === seccionIndex ? [...resp.slice(0, preguntaIndex), '', ...resp.slice(preguntaIndex + 1)] : resp
-      );
-      setRespuestas(nuevasRespuestas);
-      guardarRespuestas(nuevasRespuestas);
-    } else {
-      // Si es una respuesta diferente, la seleccionamos
-      const nuevasRespuestas = respuestas.map((resp, index) =>
-        index === seccionIndex ? [...resp.slice(0, preguntaIndex), value, ...resp.slice(preguntaIndex + 1)] : resp
-      );
-      setRespuestas(nuevasRespuestas);
-      guardarRespuestas(nuevasRespuestas);
-    }
-  };
-
-  const handleComentarioChange = (event) => {
-    setComentario(event.target.value);
+    const next = respuestas.map((seccion, idx) =>
+      idx === seccionIndex ? [...seccion.slice(0, preguntaIndex), seccion[preguntaIndex] === value ? '' : value, ...seccion.slice(preguntaIndex + 1)] : seccion
+    );
+    setRespuestas(next);
+    guardarRespuestas(next);
   };
 
   const handleGuardarComentario = () => {
-    if (currentSeccionIndex !== null && currentPreguntaIndex !== null) {
-      const nuevosComentarios = comentarios.map((coment, index) =>
-        index === currentSeccionIndex ? [...coment.slice(0, currentPreguntaIndex), comentario, ...coment.slice(currentPreguntaIndex + 1)] : coment
-      );
-      setComentarios(nuevosComentarios);
-      guardarComentario(nuevosComentarios);
-      setModalAbierto(false);
-      setComentario("");
-    }
+    if (currentSeccionIndex === null || currentPreguntaIndex === null) return;
+
+    const next = comentarios.map((seccion, idx) =>
+      idx === currentSeccionIndex
+        ? [...seccion.slice(0, currentPreguntaIndex), comentario, ...seccion.slice(currentPreguntaIndex + 1)]
+        : seccion
+    );
+
+    setComentarios(next);
+    guardarComentario(next);
+    setModalAbierto(false);
+    setComentario('');
   };
 
   const handleClasificacionChange = (seccionIndex, preguntaIndex, nuevaClasificacion) => {
-    logger.debug('🔍 [PreguntasYSeccion] handleClasificacionChange llamado:', {
-      seccionIndex,
-      preguntaIndex,
-      nuevaClasificacion,
-      clasificacionesActuales: clasificaciones
-    });
-    const nuevasClasificaciones = clasificaciones.map((clas, index) =>
-      index === seccionIndex ? [...clas.slice(0, preguntaIndex), nuevaClasificacion, ...clas.slice(preguntaIndex + 1)] : clas
+    const next = clasificaciones.map((seccion, idx) =>
+      idx === seccionIndex
+        ? [...seccion.slice(0, preguntaIndex), nuevaClasificacion, ...seccion.slice(preguntaIndex + 1)]
+        : seccion
     );
-    logger.debug('🔍 [PreguntasYSeccion] Nuevas clasificaciones después del cambio:', nuevasClasificaciones);
-    setClasificaciones(nuevasClasificaciones);
-    if (guardarClasificaciones) {
-      logger.debug('🔍 [PreguntasYSeccion] Llamando a guardarClasificaciones con:', nuevasClasificaciones);
-      guardarClasificaciones(nuevasClasificaciones);
-    } else {
-      logger.warn('🔍 [PreguntasYSeccion] guardarClasificaciones NO está definido!');
-    }
+    setClasificaciones(next);
+    guardarClasificaciones?.(next);
   };
 
   const handleAccionRequeridaChange = (seccionIndex, preguntaIndex, accionData) => {
-    const nuevasAcciones = accionesRequeridas.map((acc, index) =>
-      index === seccionIndex ? [...acc.slice(0, preguntaIndex), accionData, ...acc.slice(preguntaIndex + 1)] : acc
+    const next = accionesRequeridas.map((seccion, idx) =>
+      idx === seccionIndex ? [...seccion.slice(0, preguntaIndex), accionData, ...seccion.slice(preguntaIndex + 1)] : seccion
     );
-    setAccionesRequeridas(nuevasAcciones);
-    if (guardarAccionesRequeridas) {
-      guardarAccionesRequeridas(nuevasAcciones);
+    setAccionesRequeridas(next);
+    guardarAccionesRequeridas?.(next);
+  };
+
+  const handleDeleteImage = async (seccionIndex, preguntaIndex, fileIndex) => {
+    const target = imagenes?.[seccionIndex]?.[preguntaIndex]?.[fileIndex] || null;
+    const hasCanonicalRef =
+      target &&
+      typeof target === 'object' &&
+      target.fileDocId &&
+      target.entityId &&
+      target.module;
+
+    if (hasCanonicalRef && ownerId) {
+      try {
+        await softDeleteFile({
+          ownerId,
+          module: target.module || 'auditorias',
+          entityId: target.entityId,
+          fileDocId: target.fileDocId
+        });
+      } catch (error) {
+        logger.warn('[PreguntasYSeccion] No se pudo aplicar soft delete canonico, se elimina de UI', error);
+      }
     }
+
+    const next = imagenes.map((seccion, idx) => {
+      if (idx !== seccionIndex) return seccion;
+      const current = Array.isArray(seccion[preguntaIndex]) ? seccion[preguntaIndex] : [];
+      const updated = current.filter((_, index) => index !== fileIndex);
+      return [...seccion.slice(0, preguntaIndex), updated, ...seccion.slice(preguntaIndex + 1)];
+    });
+
+    setImagenes(next);
+    guardarImagenes(next);
+  };
+
+  const handleImageUploaded = (seccionIndex, preguntaIndex, filesSeleccionados = []) => {
+    const validFiles = (filesSeleccionados || []).filter((f) => f instanceof File);
+    if (!validFiles.length) return;
+
+    const next = imagenes.map((seccion, idx) => {
+      if (idx !== seccionIndex) return seccion;
+      const current = Array.isArray(seccion[preguntaIndex]) ? seccion[preguntaIndex] : [];
+      return [...seccion.slice(0, preguntaIndex), [...current, ...validFiles], ...seccion.slice(preguntaIndex + 1)];
+    });
+
+    setImagenes(next);
+    guardarImagenes(next);
   };
 
   const handleOpenModal = (seccionIndex, preguntaIndex) => {
     setCurrentSeccionIndex(seccionIndex);
     setCurrentPreguntaIndex(preguntaIndex);
-    setComentario(comentarios[seccionIndex][preguntaIndex] || "");
+    setComentario(comentarios?.[seccionIndex]?.[preguntaIndex] || '');
     setModalAbierto(true);
   };
 
-  const handleCloseModal = () => {
-    setModalAbierto(false);
-    setComentario("");
-  };
-
-  // ❌ ELIMINADO: handleFileChange - usar solo handleFileUpload en PreguntaItem
-
-  // Funciones para manejar cámara web
   const handleOpenCameraDialog = (seccionIndex, preguntaIndex) => {
     setCurrentImageSeccion(seccionIndex);
     setCurrentImagePregunta(preguntaIndex);
     setOpenCameraDialog(true);
   };
 
-  const handleCloseCameraDialog = () => {
+  const handlePhotoCapture = (capturedFile) => {
+    if (!(capturedFile instanceof File)) return;
+    handleImageUploaded(currentImageSeccion, currentImagePregunta, [capturedFile]);
     setOpenCameraDialog(false);
   };
 
-  const handlePhotoCapture = (compressedFile) => {
-    // ✅ Usar el input de PreguntaItem en lugar de handleFileChange
-    const input = document.getElementById(`upload-gallery-${currentImageSeccion}-${currentImagePregunta}`);
-    if (input) {
-      // Crear un DataTransfer para simular selección de archivo
-      const dataTransfer = new DataTransfer();
-      dataTransfer.items.add(compressedFile);
-      input.files = dataTransfer.files;
-      input.dispatchEvent(new Event('change', { bubbles: true }));
-    }
-  };
-
   const handleSelectFromGallery = () => {
-    // ✅ Usar el input de PreguntaItem (ya no hay inputs duplicados)
     const input = document.getElementById(`upload-gallery-${currentImageSeccion}-${currentImagePregunta}`);
-    if (input) {
-      input.click();
-    }
-    handleCloseCameraDialog();
+    if (input) input.click();
+    setOpenCameraDialog(false);
   };
 
-  const handleDeleteImage = (seccionIndex, preguntaIndex, imageIndex) => {
-    const nuevasImagenes = imagenes.map((img, index) => {
-      if (index === seccionIndex) {
-        // Eliminar la imagen (solo hay una por pregunta)
-        return [...img.slice(0, preguntaIndex), null, ...img.slice(preguntaIndex + 1)];
-      }
-      return img;
-    });
-    
-    setImagenes(nuevasImagenes);
-    guardarImagenes(nuevasImagenes);
-    logger.debug(`🗑️ Imagen eliminada de pregunta ${preguntaIndex} de sección ${seccionIndex}`);
-  };
+  const preguntasNoContestadas = obtenerPreguntasNoContestadas(secciones, respuestas);
 
-  // Handler para cuando se selecciona una imagen (File pendiente de subir)
-  const handleImageUploaded = (seccionIndex, preguntaIndex, file) => {
-    logger.debug('📸 [PreguntasYSeccion] Imagen seleccionada (pendiente):', { seccionIndex, preguntaIndex, fileName: file?.name });
-    
-    // ✅ Guardar File object en estado (pendiente de subir)
-    if (!(file instanceof File)) {
-      logger.error('❌ [PreguntasYSeccion] Se esperaba File object:', file);
-      return;
-    }
-    
-    // Actualizar el estado de imágenes con File object
-    const nuevasImagenes = imagenes.map((img, index) => {
-      if (index === seccionIndex) {
-        // Reemplazar cualquier imagen existente con el nuevo File
-        return [...img.slice(0, preguntaIndex), file, ...img.slice(preguntaIndex + 1)];
-      }
-      return img;
-    });
-    
-    setImagenes(nuevasImagenes);
-    guardarImagenes(nuevasImagenes);
-    logger.debug(`✅ File guardado para pregunta ${preguntaIndex} de sección ${seccionIndex}`);
-  };
-
-  // Función para navegar a una pregunta específica
-  const navegarAPregunta = (seccionIndex, preguntaIndex) => {
-    setTimeout(() => {
-      let intentos = 0;
-      const maxIntentos = 10;
-      
-      const buscarElemento = () => {
-        const elemento = document.getElementById(`pregunta-${seccionIndex}-${preguntaIndex}`);
-        if (elemento) {
-          elemento.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          
-          elemento.style.backgroundColor = '#fff3cd';
-          elemento.style.border = '3px solid #ffc107';
-          elemento.style.boxShadow = '0 0 10px rgba(255, 193, 7, 0.5)';
-          
-          setTimeout(() => {
-            elemento.style.backgroundColor = '';
-            elemento.style.border = '';
-            elemento.style.boxShadow = '';
-          }, 3000);
-          
-          logger.debug(`✅ Navegación exitosa a pregunta ${preguntaIndex} de sección ${seccionIndex}`);
-        } else if (intentos < maxIntentos) {
-          intentos++;
-          logger.debug(`🔄 Intento ${intentos} de ${maxIntentos} para encontrar elemento`);
-          setTimeout(buscarElemento, 50);
-        } else {
-          logger.warn(`❌ Elemento no encontrado después de ${maxIntentos} intentos: pregunta-${seccionIndex}-${preguntaIndex}`);
-        }
-      };
-      
-      buscarElemento();
-    }, 150);
-  };
-
-  if (!Array.isArray(secciones)) {
+  if (!Array.isArray(secciones) || secciones.length === 0) {
     return (
       <Box sx={mobileBoxStyle}>
         <Typography variant="body2" color="text.secondary">
-          Error: Las secciones no están en el formato correcto.
+          Error: Las secciones no estan en el formato correcto.
         </Typography>
       </Box>
     );
   }
 
-  const preguntasNoContestadas = obtenerPreguntasNoContestadas(secciones, respuestas);
-
   return (
     <Box>
-      {/* Botón de progreso compacto */}
       <Box sx={{ mb: isMobile ? 1 : 1.5 }}>
         <Button
           variant="outlined"
           size="small"
           onClick={() => setOpenPreguntasNoContestadas(true)}
           startIcon={preguntasNoContestadas.length > 0 ? <WarningIcon /> : <CheckCircleIcon />}
-          color={preguntasNoContestadas.length > 0 ? "warning" : "success"}
-          sx={{ 
-            fontSize: '0.75rem',
-            height: '32px',
-            px: 2,
-            py: 0.5,
-            borderRadius: 2,
-            borderWidth: '2px',
-            '&:hover': {
-              borderWidth: '2px'
-            }
-          }}
+          color={preguntasNoContestadas.length > 0 ? 'warning' : 'success'}
         >
-          {preguntasNoContestadas.length > 0 
-            ? `${preguntasNoContestadas.length} pendientes` 
-            : 'Todas completadas'
-          }
+          {preguntasNoContestadas.length > 0 ? `${preguntasNoContestadas.length} pendientes` : 'Todas completadas'}
         </Button>
       </Box>
 
       {secciones.map((seccion, seccionIndex) => (
         <Box key={seccionIndex} mb={isMobile ? 2 : 4}>
-          <Typography 
-            variant={isMobile ? "h6" : "h5"} 
-            sx={{ 
-              mb: isMobile ? 1.5 : 2, 
-              fontWeight: 'bold', 
-              color: 'primary.main',
-              fontSize: isMobile ? '1.25rem' : '1.5rem'
-            }}
-          >
+          <Typography variant={isMobile ? 'h6' : 'h5'} sx={{ mb: isMobile ? 1.5 : 2, fontWeight: 'bold', color: 'primary.main' }}>
             {seccionIndex + 1}. {seccion.nombre}
           </Typography>
+
           <Stack spacing={isMobile ? 2 : 3}>
             {seccion.preguntas.map((pregunta, preguntaIndex) => (
               <PreguntaItem
@@ -559,11 +262,11 @@ const PreguntasYSeccion = ({
                 seccionIndex={seccionIndex}
                 preguntaIndex={preguntaIndex}
                 pregunta={pregunta}
-                respuesta={respuestas[seccionIndex]?.[preguntaIndex] || ''}
-                comentario={comentarios[seccionIndex]?.[preguntaIndex] || ''}
-                imagenes={imagenes[seccionIndex]?.[preguntaIndex] || null}
-                clasificacion={clasificaciones[seccionIndex]?.[preguntaIndex] || { condicion: false, actitud: false }}
-                accionRequerida={accionesRequeridas[seccionIndex]?.[preguntaIndex] || null}
+                respuesta={respuestas?.[seccionIndex]?.[preguntaIndex] || ''}
+                comentario={comentarios?.[seccionIndex]?.[preguntaIndex] || ''}
+                imagenes={imagenes?.[seccionIndex]?.[preguntaIndex] || []}
+                clasificacion={clasificaciones?.[seccionIndex]?.[preguntaIndex] || { condicion: false, actitud: false }}
+                accionRequerida={accionesRequeridas?.[seccionIndex]?.[preguntaIndex] || null}
                 isMobile={isMobile}
                 mobileBoxStyle={mobileBoxStyle}
                 onRespuestaChange={handleRespuestaChange}
@@ -572,9 +275,7 @@ const PreguntasYSeccion = ({
                 onDeleteImage={handleDeleteImage}
                 onClasificacionChange={handleClasificacionChange}
                 onAccionRequeridaChange={handleAccionRequeridaChange}
-                procesandoImagen={procesandoImagen}
-                auditId={auditId}
-                companyId={companyId}
+                procesandoImagen={{}}
                 onImageUploaded={handleImageUploaded}
               />
             ))}
@@ -582,20 +283,17 @@ const PreguntasYSeccion = ({
         </Box>
       ))}
 
-      {/* ❌ ELIMINADOS: Inputs duplicados - ahora se manejan en PreguntaItem */}
-
-      {/* Modales */}
       <CommentModal
         open={modalAbierto}
-        onClose={handleCloseModal}
+        onClose={() => setModalAbierto(false)}
         comentario={comentario}
-        onComentarioChange={handleComentarioChange}
+        onComentarioChange={(event) => setComentario(event.target.value)}
         onGuardarComentario={handleGuardarComentario}
       />
 
       <CameraDialog
         open={openCameraDialog}
-        onClose={handleCloseCameraDialog}
+        onClose={() => setOpenCameraDialog(false)}
         onPhotoCapture={handlePhotoCapture}
         onSelectFromGallery={handleSelectFromGallery}
         seccionIndex={currentImageSeccion}
@@ -606,10 +304,16 @@ const PreguntasYSeccion = ({
         open={openPreguntasNoContestadas}
         onClose={() => setOpenPreguntasNoContestadas(false)}
         preguntasNoContestadas={preguntasNoContestadas}
-        onNavigateToQuestion={navegarAPregunta}
+        onNavigateToQuestion={(seccionIndex, preguntaIndex) => {
+          const element = document.getElementById(`pregunta-${seccionIndex}-${preguntaIndex}`);
+          if (element) {
+            element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          } else {
+            logger.warn('No se encontro el elemento para navegar a la pregunta');
+          }
+        }}
       />
     </Box>
   );
-};
+}
 
-export default PreguntasYSeccion;

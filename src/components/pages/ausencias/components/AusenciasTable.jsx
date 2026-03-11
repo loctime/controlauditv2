@@ -26,6 +26,34 @@ import EditIcon from "@mui/icons-material/Edit";
 import { cerrarAusencia, updateAusencia } from "../../../../services/ausenciasService";
 import { useAuth } from '@/components/context/AuthContext';
 
+const ORIGEN_LABELS = {
+  manual: 'Manual',
+  accidente: 'Accidente',
+  incidente: 'Incidente',
+  salud_ocupacional: 'Salud ocupacional',
+  licencia_medica: 'Licencia medica',
+  permiso: 'Permiso',
+  enfermedad: 'Enfermedad'
+};
+
+const normalizeStatus = (estado) => {
+  const normalized = String(estado || '').toLowerCase().trim().replace(/\s+/g, '_');
+  if (normalized.includes('cerr') || normalized.includes('finaliz') || normalized.includes('resuelt')) {
+    return 'cerrada';
+  }
+  if (normalized.includes('progreso')) {
+    return 'en_progreso';
+  }
+  return 'abierta';
+};
+
+const statusLabel = (estado) => {
+  const canonical = normalizeStatus(estado);
+  if (canonical === 'en_progreso') return 'En progreso';
+  if (canonical === 'cerrada') return 'Cerrada';
+  return 'Abierta';
+};
+
 const formatDate = (value) => {
   if (!value) return "-";
   const date =
@@ -43,9 +71,9 @@ const formatDate = (value) => {
 };
 
 const statusColor = (estado) => {
-  const normalized = (estado || "").toLowerCase();
-  if (normalized.includes("cerr")) return "success";
-  if (normalized.includes("progreso")) return "warning";
+  const normalized = normalizeStatus(estado);
+  if (normalized === 'cerrada') return "success";
+  if (normalized === 'en_progreso') return "warning";
   return "info";
 };
 
@@ -118,6 +146,7 @@ export default function AusenciasTable({
             <TableRow>
               <TableCell>Empleado</TableCell>
               <TableCell>Tipo</TableCell>
+              <TableCell>Origen</TableCell>
               <TableCell>Estado</TableCell>
               <TableCell>Fecha Inicio</TableCell>
               <TableCell>Fecha Fin</TableCell>
@@ -129,7 +158,7 @@ export default function AusenciasTable({
           <TableBody>
             {paginated.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={8}>
+                <TableCell colSpan={9}>
                   <Typography variant="body2" sx={{ py: 2, textAlign: "center" }}>
                     No hay ausencias registradas con los filtros seleccionados.
                   </Typography>
@@ -137,13 +166,15 @@ export default function AusenciasTable({
               </TableRow>
             ) : (
               paginated.map((ausencia) => {
-                const estado = (ausencia.estado || "abierto").toLowerCase();
+                const estado = normalizeStatus(ausencia.estado);
                 const tipo =
                   ausencia.tipo ||
                   ausencia.categoria ||
                   ausencia.clasificacion ||
                   "Enfermedad";
                 const filesCount = typeof ausencia.filesCount === 'number' ? Math.max(0, ausencia.filesCount) : 0;
+                const origen = String(ausencia.origen || 'manual').toLowerCase();
+                const origenLabel = ORIGEN_LABELS[origen] || origen;
                 return (
                   <TableRow key={ausencia.id} hover>
                     <TableCell>
@@ -165,9 +196,23 @@ export default function AusenciasTable({
                       />
                     </TableCell>
                     <TableCell>
+                      <Stack spacing={0.5}>
+                        <Chip
+                          size="small"
+                          label={origenLabel}
+                          variant="outlined"
+                        />
+                        {ausencia.origenId && (
+                          <Typography variant="caption" sx={{ color: "#6b7280" }}>
+                            ID: {ausencia.origenId}
+                          </Typography>
+                        )}
+                      </Stack>
+                    </TableCell>
+                    <TableCell>
                       <Chip
                         size="small"
-                        label={estado.charAt(0).toUpperCase() + estado.slice(1)}
+                        label={statusLabel(estado)}
                         color={statusColor(estado)}
                         variant="filled"
                         sx={
@@ -204,7 +249,7 @@ export default function AusenciasTable({
                           textOverflow: "ellipsis"
                         }}
                       >
-                        {ausencia.observaciones || "Sin observaciones"}
+                        {ausencia.observaciones || ausencia.motivo || "Sin observaciones"}
                       </Typography>
                     </TableCell>
                     <TableCell align="right">
@@ -225,7 +270,7 @@ export default function AusenciasTable({
                             <EditIcon fontSize="small" />
                           </IconButton>
                         </Tooltip>
-                        {estado.includes("cerr") ? (
+                        {estado === 'cerrada' ? (
                           <Tooltip title="Reabrir caso">
                             <IconButton
                               size="small"
@@ -272,7 +317,7 @@ export default function AusenciasTable({
         <DialogTitle sx={{ fontWeight: 700 }}>Confirmar cierre</DialogTitle>
         <DialogContent dividers>
           <Typography variant="body2">
-            ¿Quieres cerrar el caso de ausencia para{' '}
+            Quieres cerrar el caso de ausencia para{' '}
             <strong>{ausenciaPorCerrar?.empleadoNombre || "este empleado"}</strong>?
           </Typography>
         </DialogContent>

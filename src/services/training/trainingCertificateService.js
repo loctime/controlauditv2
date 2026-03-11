@@ -11,6 +11,7 @@ import { collection, doc, runTransaction, Timestamp } from 'firebase/firestore';
 import { TRAINING_CERTIFICATE_STATUSES } from '../../types/trainingDomain';
 import { dbAudit } from '../../firebaseControlFile';
 import { firestoreRoutesCore } from '../../core/firestore/firestoreRoutes.core';
+import { trainingAttendanceService } from './trainingAttendanceService';
 
 async function createCertificateTransaction(ownerId, payload) {
   let createdId = null;
@@ -57,6 +58,15 @@ async function createCertificateTransaction(ownerId, payload) {
     createdId = certificateRef.id;
   });
 
+  await trainingAttendanceService.linkCertificate(
+    ownerId,
+    payload.sessionId,
+    payload.employeeId,
+    createdId,
+    payload.validFrom || null,
+    payload.expiresAt || null
+  );
+
   return { id: createdId };
 }
 
@@ -73,19 +83,59 @@ export const trainingCertificateService = {
   },
 
   async update(ownerId, certificateId, payload) {
-    return updateDocument(ownerId, 'trainingCertificate', certificateId, payload);
+    const result = await updateDocument(ownerId, 'trainingCertificate', certificateId, payload);
+    const next = await this.getById(ownerId, certificateId);
+
+    if (next?.sessionId && next?.employeeId) {
+      await trainingAttendanceService.linkCertificate(
+        ownerId,
+        next.sessionId,
+        next.employeeId,
+        next.status === TRAINING_CERTIFICATE_STATUSES.REVOKED ? null : next.id,
+        next.validFrom || null,
+        next.expiresAt || null
+      );
+    }
+
+    return result;
   },
 
   async revoke(ownerId, certificateId, revokedReason) {
-    return updateDocument(ownerId, 'trainingCertificate', certificateId, {
+    const current = await this.getById(ownerId, certificateId);
+    const result = await updateDocument(ownerId, 'trainingCertificate', certificateId, {
       status: TRAINING_CERTIFICATE_STATUSES.REVOKED,
       revokedReason: revokedReason || 'revoked_by_user',
       revokedAt: new Date().toISOString()
     });
+
+    if (current?.sessionId && current?.employeeId) {
+      await trainingAttendanceService.linkCertificate(
+        ownerId,
+        current.sessionId,
+        current.employeeId,
+        null,
+        current.validFrom || null,
+        null
+      );
+    }
+
+    return result;
   },
 
   async remove(ownerId, certificateId) {
-    return deleteDocument(ownerId, 'trainingCertificate', certificateId);
+    const current = await this.getById(ownerId, certificateId);
+    await deleteDocument(ownerId, 'trainingCertificate', certificateId);
+
+    if (current?.sessionId && current?.employeeId) {
+      await trainingAttendanceService.linkCertificate(
+        ownerId,
+        current.sessionId,
+        current.employeeId,
+        null,
+        null,
+        null
+      );
+    }
   },
 
   async getById(ownerId, certificateId) {

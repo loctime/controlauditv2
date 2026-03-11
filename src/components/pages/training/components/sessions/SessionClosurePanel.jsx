@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Alert, Button, Paper, Stack, Typography } from '@mui/material';
-import { trainingAttendanceService, trainingSessionService } from '../../../../../services/training';
+import { trainingSessionService } from '../../../../../services/training';
 import { TRAINING_SESSION_STATUSES } from '../../../../../types/trainingDomain';
 
 function canTransition(status, nextStatus) {
@@ -55,9 +55,6 @@ export default function SessionClosurePanel({ ownerId, session, onChanged }) {
     try {
       await trainingSessionService.transitionStatus(ownerId, session.id, targetStatus);
 
-      if (targetStatus === TRAINING_SESSION_STATUSES.CLOSED) {
-        await trainingAttendanceService.materializeEmployeeRecord(ownerId, session.id, session);
-      }
 
       onChanged();
       setInfo(`La sesion paso a estado ${labelEstado(targetStatus)}.`);
@@ -108,3 +105,5 @@ export default function SessionClosurePanel({ ownerId, session, onChanged }) {
     </Paper>
   );
 }
+
+

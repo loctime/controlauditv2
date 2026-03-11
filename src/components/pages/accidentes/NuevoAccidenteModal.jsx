@@ -17,15 +17,12 @@ import {
   IconButton,
   Alert,
   Chip,
-  Divider,
   Grid
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
-import CloudUploadIcon from '@mui/icons-material/CloudUpload';
-import DeleteIcon from '@mui/icons-material/Delete';
 import { obtenerEmpleadosPorSucursal } from '../../../services/accidenteService';
 import { useAuth } from '@/components/context/AuthContext';
-import { validateFiles } from '../../../services/fileValidationPolicy';
+import UnifiedFileUploader from '../../common/files/UnifiedFileUploader';
 
 const NuevoAccidenteModal = ({ open, onClose, onAccidenteCreado, empresaId, sucursalId, empresaNombre, sucursalNombre }) => {
   const { userProfile } = useAuth();
@@ -37,7 +34,6 @@ const NuevoAccidenteModal = ({ open, onClose, onAccidenteCreado, empresaId, sucu
     return hoy.toISOString().split('T')[0];
   });
   const [imagenes, setImagenes] = useState([]);
-  const [imagenesPreview, setImagenesPreview] = useState([]);
   const [loading, setLoading] = useState(false);
   const [loadingEmpleados, setLoadingEmpleados] = useState(false);
   const [error, setError] = useState('');
@@ -45,7 +41,6 @@ const NuevoAccidenteModal = ({ open, onClose, onAccidenteCreado, empresaId, sucu
   useEffect(() => {
     if (open && sucursalId) {
       cargarEmpleados();
-      // Resetear fecha a hoy cuando se abre el modal
       const hoy = new Date();
       setFechaAccidente(hoy.toISOString().split('T')[0]);
     }
@@ -67,60 +62,33 @@ const NuevoAccidenteModal = ({ open, onClose, onAccidenteCreado, empresaId, sucu
 
   const handleEmpleadoToggle = (empleado) => {
     const existe = empleadosSeleccionados.find(e => e.id === empleado.id);
-    
+
     if (existe) {
       setEmpleadosSeleccionados(empleadosSeleccionados.filter(e => e.id !== empleado.id));
     } else {
-      setEmpleadosSeleccionados([...empleadosSeleccionados, { 
-        ...empleado, 
-        conReposo: false 
+      setEmpleadosSeleccionados([...empleadosSeleccionados, {
+        ...empleado,
+        conReposo: false
       }]);
     }
   };
 
   const handleReposoToggle = (empleadoId) => {
-    setEmpleadosSeleccionados(empleadosSeleccionados.map(emp => 
-      emp.id === empleadoId 
+    setEmpleadosSeleccionados(empleadosSeleccionados.map(emp =>
+      emp.id === empleadoId
         ? { ...emp, conReposo: !emp.conReposo }
         : emp
     ));
   };
 
-  const handleImagenesChange = (e) => {
-    const files = Array.from(e.target.files || []);
-    const validation = validateFiles(files);
-    const validFiles = validation.accepted;
-
-    if (validation.rejected.length > 0) {
-      setError(validation.rejected.map((item) => `${item.fileName}: ${item.issues.map((issue) => issue.message).join(', ')}`).join(' | '));
-    }
-
-    setImagenes([...imagenes, ...validFiles]);
-
-    // Crear previews
-    validFiles.forEach(file => {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImagenesPreview(prev => [...prev, reader.result]);
-      };
-      reader.readAsDataURL(file);
-    });
-  };
-
-  const handleRemoveImagen = (index) => {
-    setImagenes(imagenes.filter((_, i) => i !== index));
-    setImagenesPreview(imagenesPreview.filter((_, i) => i !== index));
-  };
-
   const handleSubmit = async () => {
-    // Validaciones
     if (empleadosSeleccionados.length === 0) {
       setError('Debe seleccionar al menos un empleado involucrado');
       return;
     }
 
     if (!descripcion.trim()) {
-      setError('La descripciÃ³n es requerida');
+      setError('La descripcion es requerida');
       return;
     }
 
@@ -136,8 +104,6 @@ const NuevoAccidenteModal = ({ open, onClose, onAccidenteCreado, empresaId, sucu
         empleadosSeleccionados,
         imagenes
       });
-
-      // Reset form
       handleClose();
     } catch (err) {
       logger.error('Error al crear accidente:', err);
@@ -153,9 +119,12 @@ const NuevoAccidenteModal = ({ open, onClose, onAccidenteCreado, empresaId, sucu
     const hoy = new Date();
     setFechaAccidente(hoy.toISOString().split('T')[0]);
     setImagenes([]);
-    setImagenesPreview([]);
     setError('');
     onClose();
+  };
+
+  const removePendingFile = (index) => {
+    setImagenes((prev) => prev.filter((_, i) => i !== index));
   };
 
   return (
@@ -180,7 +149,6 @@ const NuevoAccidenteModal = ({ open, onClose, onAccidenteCreado, empresaId, sucu
         )}
 
         <Grid container spacing={2}>
-          {/* Fila 1: Fecha | DescripciÃ³n */}
           <Grid item xs={12} md={6}>
             <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 1 }}>
               Fecha del Accidente *
@@ -192,15 +160,13 @@ const NuevoAccidenteModal = ({ open, onClose, onAccidenteCreado, empresaId, sucu
               onChange={(e) => setFechaAccidente(e.target.value)}
               variant="outlined"
               size="small"
-              InputLabelProps={{
-                shrink: true,
-              }}
+              InputLabelProps={{ shrink: true }}
             />
           </Grid>
 
           <Grid item xs={12} md={6}>
             <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 1 }}>
-              DescripciÃ³n del Accidente *
+              Descripcion del Accidente *
             </Typography>
             <TextField
               fullWidth
@@ -214,12 +180,11 @@ const NuevoAccidenteModal = ({ open, onClose, onAccidenteCreado, empresaId, sucu
             />
           </Grid>
 
-          {/* Fila 2: Involucrados | ImÃ¡genes */}
           <Grid item xs={12} md={6}>
             <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 1 }}>
               Empleados Involucrados *
             </Typography>
-            
+
             {loadingEmpleados ? (
               <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
                 <CircularProgress size={24} />
@@ -245,53 +210,39 @@ const NuevoAccidenteModal = ({ open, onClose, onAccidenteCreado, empresaId, sucu
                           }
                           label={
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                              <Typography 
-                                variant="body2" 
-                                sx={{ 
+                              <Typography
+                                variant="body2"
+                                sx={{
                                   color: estaInactivo ? 'error.main' : 'inherit',
                                   fontWeight: estaInactivo ? 'bold' : 'normal'
                                 }}
                               >
                                 {empleado.nombre}
                               </Typography>
-                              <Chip 
-                                label={empleado.cargo || 'Sin cargo'} 
-                                size="small" 
-                                variant="outlined" 
-                                sx={{ height: 20, fontSize: '0.7rem' }} 
-                              />
+                              <Chip label={empleado.cargo || 'Sin cargo'} size="small" variant="outlined" sx={{ height: 20, fontSize: '0.7rem' }} />
                               {estaInactivo && (
-                                <Chip 
-                                  label="Inactivo" 
-                                  size="small" 
-                                  color="error"
-                                  sx={{ height: 20, fontSize: '0.65rem' }} 
-                                />
+                                <Chip label="Inactivo" size="small" color="error" sx={{ height: 20, fontSize: '0.65rem' }} />
                               )}
                             </Box>
                           }
                         />
-                      
-                      {empleadosSeleccionados.some(e => e.id === empleado.id) && (
-                        <Box sx={{ ml: 4, mt: 0.25 }}>
-                          <FormControlLabel
-                            control={
-                              <Switch
-                                size="small"
-                                checked={empleadosSeleccionados.find(e => e.id === empleado.id)?.conReposo || false}
-                                onChange={() => handleReposoToggle(empleado.id)}
-                                color="warning"
-                              />
-                            }
-                            label={
-                              <Typography variant="caption" color="warning.main">
-                                Con reposo
-                              </Typography>
-                            }
-                          />
-                        </Box>
-                      )}
-                    </Box>
+
+                        {empleadosSeleccionados.some(e => e.id === empleado.id) && (
+                          <Box sx={{ ml: 4, mt: 0.25 }}>
+                            <FormControlLabel
+                              control={
+                                <Switch
+                                  size="small"
+                                  checked={empleadosSeleccionados.find(e => e.id === empleado.id)?.conReposo || false}
+                                  onChange={() => handleReposoToggle(empleado.id)}
+                                  color="warning"
+                                />
+                              }
+                              label={<Typography variant="caption" color="warning.main">Con reposo</Typography>}
+                            />
+                          </Box>
+                        )}
+                      </Box>
                     );
                   })}
                 </FormGroup>
@@ -301,57 +252,26 @@ const NuevoAccidenteModal = ({ open, onClose, onAccidenteCreado, empresaId, sucu
 
           <Grid item xs={12} md={6}>
             <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 1 }}>
-              ImÃ¡genes (Opcional)
+              Archivos (Opcional)
             </Typography>
-            
-            <Button
-              variant="outlined"
-              component="label"
-              size="small"
-              startIcon={<CloudUploadIcon />}
-              sx={{ mb: 1 }}
-            >
-              Subir ImÃ¡genes
-              <input
-                type="file"
-                hidden
-                multiple
-                accept="*/*"
-                onChange={handleImagenesChange}
-              />
-            </Button>
 
-            {imagenesPreview.length > 0 && (
-              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1 }}>
-                {imagenesPreview.map((preview, index) => (
-                  <Box key={index} sx={{ position: 'relative' }}>
-                    <img
-                      src={preview}
-                      alt={`Preview ${index + 1}`}
-                      style={{
-                        width: 80,
-                        height: 80,
-                        objectFit: 'cover',
-                        borderRadius: 4
-                      }}
-                    />
-                    <IconButton
-                      size="small"
-                      onClick={() => handleRemoveImagen(index)}
-                      sx={{
-                        position: 'absolute',
-                        top: -8,
-                        right: -8,
-                        bgcolor: 'error.main',
-                        color: 'white',
-                        width: 20,
-                        height: 20,
-                        '&:hover': { bgcolor: 'error.dark' }
-                      }}
-                    >
-                      <DeleteIcon sx={{ fontSize: 14 }} />
-                    </IconButton>
-                  </Box>
+            <UnifiedFileUploader
+              id="nuevo-accidente-files"
+              files={imagenes}
+              onFilesChange={(nextFiles) => setImagenes(nextFiles)}
+              helperText="Puedes adjuntar multiples evidencias"
+              inputProps={{ style: { width: '100%' } }}
+            />
+
+            {imagenes.length > 0 && (
+              <Box sx={{ mt: 1, display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                {imagenes.map((file, index) => (
+                  <Chip
+                    key={`${file.name}-${index}`}
+                    size="small"
+                    label={file.name}
+                    onDelete={() => removePendingFile(index)}
+                  />
                 ))}
               </Box>
             )}
@@ -360,9 +280,7 @@ const NuevoAccidenteModal = ({ open, onClose, onAccidenteCreado, empresaId, sucu
       </DialogContent>
 
       <DialogActions sx={{ px: 3, py: 2 }}>
-        <Button onClick={handleClose} disabled={loading}>
-          Cancelar
-        </Button>
+        <Button onClick={handleClose} disabled={loading}>Cancelar</Button>
         <Button
           onClick={handleSubmit}
           variant="contained"
@@ -378,10 +296,4 @@ const NuevoAccidenteModal = ({ open, onClose, onAccidenteCreado, empresaId, sucu
 };
 
 export default NuevoAccidenteModal;
-
-
-
-
-
-
 

@@ -1,6 +1,4 @@
-import logger from '@/utils/logger';
-// src/components/pages/accidentes/components/AccidenteDetailPanelV2.jsx
-
+﻿import logger from '@/utils/logger';
 import React from 'react';
 import {
   Box,
@@ -18,21 +16,13 @@ import {
 import {
   Edit as EditIcon,
   CheckCircle as CheckCircleIcon,
-  ExpandMore as ExpandMoreIcon,
-  Visibility as VisibilityIcon
+  ExpandMore as ExpandMoreIcon
 } from '@mui/icons-material';
 import EventDetailPanel from '../../../shared/event-registry/EventDetailPanel';
 import RegistrarAccidenteInline from './RegistrarAccidenteInline';
-import ImagePreviewDialog from '../../../shared/ImagePreviewDialog';
-import EvidenciaEmpleadoList from '../../../shared/EvidenciaEmpleadoList';
-import useControlFileImages from '../../../../hooks/useControlFileImages';
+import UnifiedFilePreview from '../../../common/files/UnifiedFilePreview';
 import { obtenerAccidentePorId } from '../../../../services/accidenteService';
 import { registrosAccidenteService } from '../../../../services/registrosAccidenteService';
-import { convertirShareTokenAUrl } from '../../../../utils/imageUtils';
-import { dbAudit } from '../../../../firebaseControlFile';
-import { firestoreRoutesCore } from '../../../../core/firestore/firestoreRoutes.core';
-import { getDoc, doc, collection } from 'firebase/firestore';
-import { normalizeEmpleado } from '../../../../utils/firestoreUtils';
 import { useAuth } from '@/components/context/AuthContext';
 
 const getEstadoColor = (estado) => {
@@ -42,28 +32,21 @@ const getEstadoColor = (estado) => {
   return 'default';
 };
 
-const ContenidoRegistros = ({ entityId, userId, ownerId, registryService, refreshKey }) => {
-  const { userProfile } = useAuth();
-  const tenantOwnerId = ownerId || userProfile?.ownerId || userId || null;
+const toFileRef = (evidencia, idx) => ({
+  id: evidencia?.id || evidencia?.fileId || `${idx}`,
+  fileId: evidencia?.fileId || evidencia?.id || null,
+  shareToken: evidencia?.shareToken || null,
+  name: evidencia?.nombre || `Evidencia ${idx + 1}`,
+  mimeType: evidencia?.mimeType || 'application/octet-stream',
+  status: evidencia?.status || 'active'
+});
+
+const ContenidoRegistros = ({ entityId, ownerId, registryService, refreshKey }) => {
   const [registros, setRegistros] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
-  // Map de registroId -> empleados cargados
-  const [empleadosPorRegistro, setEmpleadosPorRegistro] = React.useState(new Map());
-  
-  // Usar hook reutilizable para manejar imÃƒÂ¡genes
-  const {
-    blobUrls: evidenciasBlobUrls,
-    loading: evidenciasLoading,
-    errors: evidenciasErrors,
-    metadata: evidenciasMetadata,
-    modalOpen,
-    selectedEvidencia,
-    openImage,
-    closeImage
-  } = useControlFileImages(registros);
 
   React.useEffect(() => {
-    if (!entityId || !tenantOwnerId || !registryService) {
+    if (!entityId || !ownerId || !registryService) {
       setLoading(false);
       return;
     }
@@ -72,10 +55,9 @@ const ContenidoRegistros = ({ entityId, userId, ownerId, registryService, refres
 
     const loadRegistros = async () => {
       try {
-        const entityIdStr = String(entityId);
-        const data = await registryService.getRegistriesByEntity(tenantOwnerId, entityIdStr);
+        const data = await registryService.getRegistriesByEntity(ownerId, String(entityId));
         if (mounted) {
-          setRegistros(data);
+          setRegistros(data || []);
           setLoading(false);
         }
       } catch (error) {
@@ -85,109 +67,10 @@ const ContenidoRegistros = ({ entityId, userId, ownerId, registryService, refres
     };
 
     loadRegistros();
-    return () => { mounted = false; };
-  }, [entityId, userId, ownerId, userProfile?.ownerId, registryService, refreshKey]);
-
-  // Cargar empleados para cada registro
-  React.useEffect(() => {
-    if (!tenantOwnerId || registros.length === 0) return;
-
-    const loadEmpleados = async () => {
-      const empleadosMap = new Map();
-      
-      // Obtener todos los empleadoIds ÃƒÂºnicos de todos los registros
-      // En accidentes, los empleados estÃƒÂ¡n en empleadosInvolucrados
-      const todosEmpleadoIds = new Set();
-      registros.forEach(registro => {
-        // Los registros de accidentes pueden tener empleadosInvolucrados como array de objetos o IDs
-        if (registro.empleadosInvolucrados && Array.isArray(registro.empleadosInvolucrados)) {
-          registro.empleadosInvolucrados.forEach(emp => {
-            const empId = typeof emp === 'string' ? emp : (emp.empleadoId || emp.id);
-            if (empId) todosEmpleadoIds.add(empId);
-          });
-        }
-        // TambiÃƒÂ©n verificar empleadoIds por compatibilidad
-        if (registro.empleadoIds && Array.isArray(registro.empleadoIds)) {
-          registro.empleadoIds.forEach(id => todosEmpleadoIds.add(id));
-        }
-      });
-
-      if (todosEmpleadoIds.size === 0) return;
-
-      try {
-        // Cargar empleados por ID usando getDoc
-        if (!userProfile?.ownerId) {
-          logger.error('[ContenidoRegistros] ownerId no disponible');
-          return;
-        }
-        const ownerId = tenantOwnerId;
-        const empleadosRef = collection(dbAudit, ...firestoreRoutesCore.empleados(ownerId));
-        const empleadosData = [];
-        const empleadoIdsArray = Array.from(todosEmpleadoIds);
-
-        // Cargar empleados en paralelo (mÃƒÂ¡ximo 10 a la vez para no sobrecargar)
-        const chunkSize = 10;
-        for (let i = 0; i < empleadoIdsArray.length; i += chunkSize) {
-          const chunk = empleadoIdsArray.slice(i, i + chunkSize);
-          const promises = chunk.map(empId => 
-            getDoc(doc(empleadosRef, empId))
-              .then(docSnap => {
-                if (docSnap.exists()) {
-                  return normalizeEmpleado(docSnap);
-                }
-                return null;
-              })
-              .catch(error => {
-                logger.warn(`[ContenidoRegistros] Error cargando empleado ${empId}:`, error);
-                return null;
-              })
-          );
-          const chunkResults = await Promise.all(promises);
-          empleadosData.push(...chunkResults.filter(Boolean));
-        }
-
-        // Crear mapa de empleados por ID para acceso rÃƒÂ¡pido
-        const empleadosById = new Map();
-        empleadosData.forEach(emp => {
-          empleadosById.set(emp.id, emp);
-        });
-
-        // Asignar empleados a cada registro
-        registros.forEach(registro => {
-          const empleadosDelRegistro = [];
-          
-          // Procesar empleadosInvolucrados (formato de accidentes)
-          if (registro.empleadosInvolucrados && Array.isArray(registro.empleadosInvolucrados)) {
-            registro.empleadosInvolucrados.forEach(emp => {
-              const empId = typeof emp === 'string' ? emp : (emp.empleadoId || emp.id);
-              const empleado = empleadosById.get(empId);
-              if (empleado) empleadosDelRegistro.push(empleado);
-            });
-          }
-          
-          // TambiÃƒÂ©n procesar empleadoIds por compatibilidad
-          if (registro.empleadoIds && Array.isArray(registro.empleadoIds)) {
-            registro.empleadoIds.forEach(id => {
-              const empleado = empleadosById.get(id);
-              if (empleado && !empleadosDelRegistro.find(e => e.id === id)) {
-                empleadosDelRegistro.push(empleado);
-              }
-            });
-          }
-          
-          if (empleadosDelRegistro.length > 0) {
-            empleadosMap.set(registro.id, empleadosDelRegistro);
-          }
-        });
-
-        setEmpleadosPorRegistro(empleadosMap);
-      } catch (error) {
-        logger.error('[ContenidoRegistros] Error cargando empleados:', error);
-      }
+    return () => {
+      mounted = false;
     };
-
-    loadEmpleados();
-  }, [registros, tenantOwnerId]);
+  }, [entityId, ownerId, registryService, refreshKey]);
 
   if (loading) {
     return (
@@ -212,26 +95,20 @@ const ContenidoRegistros = ({ entityId, userId, ownerId, registryService, refres
       <Stack spacing={1.5}>
         {registros.map((registro) => {
           const fechaStr = registro.fecha?.toDate?.()?.toLocaleDateString() || registro.fecha || 'N/A';
-          const evidencias = registro.imagenes || [];
+          const evidenciasRaw = Array.isArray(registro.imagenes) ? registro.imagenes : [];
+          const evidencias = evidenciasRaw
+            .map((ev, idx) => toFileRef(ev, idx))
+            .filter((fileRef) => fileRef.status !== 'deleted' && (fileRef.fileId || fileRef.shareToken));
           const empleadosCount = registro.empleadosInvolucrados?.length || registro.empleadoIds?.length || 0;
-          
+
           return (
             <Accordion key={registro.id} elevation={1}>
-              <AccordionSummary
-                expandIcon={<ExpandMoreIcon />}
-                sx={{
-                  '& .MuiAccordionSummary-content': {
-                    alignItems: 'center'
-                  }
-                }}
-              >
+              <AccordionSummary expandIcon={<ExpandMoreIcon />}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', pr: 2 }}>
                   <Box>
-                    <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
-                      {fechaStr}
-                    </Typography>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>{fechaStr}</Typography>
                     <Typography variant="caption" color="text.secondary">
-                      {empleadosCount} empleado(s) Ã¢â‚¬Â¢ {evidencias.length} evidencia(s)
+                      {empleadosCount} empleado(s) | {evidencias.length} evidencia(s)
                     </Typography>
                   </Box>
                 </Box>
@@ -239,160 +116,16 @@ const ContenidoRegistros = ({ entityId, userId, ownerId, registryService, refres
               <AccordionDetails>
                 {evidencias.length > 0 ? (
                   <Grid container spacing={2}>
-                    {evidencias.map((evidencia, idx) => {
-                      const imgId = evidencia.id || `${registro.id}-${idx}`;
-                      const blobUrl = evidenciasBlobUrls.get(imgId);
-                      const isLoading = evidenciasLoading.get(imgId);
-                      const errorUrl = evidenciasErrors.get(imgId);
-                      const metadata = evidenciasMetadata.get(imgId);
-                      const hasBlobUrl = !!blobUrl;
-                      const hasError = !!errorUrl;
-                      
-                      // Si no hay blob URL y no estÃƒÂ¡ cargando y no hay error, intentar obtener URL legacy
-                      const fallbackUrl = !hasBlobUrl && !isLoading && !hasError 
-                        ? convertirShareTokenAUrl(evidencia.shareToken || evidencia.url || evidencia)
-                        : null;
-                      
-                      const empleadosDelRegistro = empleadosPorRegistro.get(registro.id) || [];
-                      
-                      // Obtener empleadoIds de la evidencia (puede estar en evidencia.empleadoIds o evidencia.empleadosInvolucrados)
-                      const evidenciaEmpleadoIds = evidencia.empleadoIds || 
-                        (evidencia.empleadosInvolucrados ? evidencia.empleadosInvolucrados.map(e => typeof e === 'string' ? e : (e.empleadoId || e.id)).filter(Boolean) : null);
-                      
-                      return (
-                        <Grid item xs={6} sm={4} md={3} key={imgId}>
-                          <Box sx={{ display: 'flex', flexDirection: 'row', gap: 1, alignItems: 'flex-start' }}>
-                            {/* Imagen */}
-                            <Box
-                              sx={{
-                                position: 'relative',
-                                width: '60%',
-                                paddingTop: '60%',
-                                flexShrink: 0,
-                                borderRadius: 1,
-                                overflow: 'hidden',
-                                border: '1px solid',
-                                borderColor: 'divider',
-                                backgroundColor: 'background.paper',
-                                cursor: (hasBlobUrl || errorUrl || fallbackUrl) ? 'pointer' : 'default',
-                                '&:hover': {
-                                  '& .image-overlay': {
-                                    opacity: 1
-                                  }
-                                }
-                              }}
-                              onClick={() => openImage(imgId, evidencia)}
-                            >
-                              {hasBlobUrl ? (
-                                <>
-                                  <img
-                                    src={blobUrl}
-                                    alt={metadata?.nombre || `Evidencia ${idx + 1}`}
-                                    style={{
-                                      position: 'absolute',
-                                      top: 0,
-                                      left: 0,
-                                      width: '100%',
-                                      height: '100%',
-                                      objectFit: 'cover'
-                                    }}
-                                    onError={(e) => {
-                                      e.target.style.display = 'none';
-                                    }}
-                                  />
-                                  {/* Overlay con ÃƒÂ­cono "Ver" */}
-                                  <Box
-                                    className="image-overlay"
-                                    sx={{
-                                      position: 'absolute',
-                                      top: 0,
-                                      left: 0,
-                                      width: '100%',
-                                      height: '100%',
-                                      backgroundColor: 'rgba(0, 0, 0, 0.5)',
-                                      display: 'flex',
-                                      alignItems: 'center',
-                                      justifyContent: 'center',
-                                      opacity: 0,
-                                      transition: 'opacity 0.2s ease-in-out',
-                                      zIndex: 1
-                                    }}
-                                  >
-                                    <VisibilityIcon sx={{ color: 'white', fontSize: 32 }} />
-                                  </Box>
-                                </>
-                              ) : isLoading ? (
-                                <Box
-                                  sx={{
-                                    position: 'absolute',
-                                    top: 0,
-                                    left: 0,
-                                    width: '100%',
-                                    height: '100%',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    backgroundColor: 'grey.100'
-                                  }}
-                                >
-                                  <CircularProgress size={24} />
-                                </Box>
-                              ) : (errorUrl || fallbackUrl) ? (
-                                <Box
-                                  sx={{
-                                    position: 'absolute',
-                                    top: 0,
-                                    left: 0,
-                                    width: '100%',
-                                    height: '100%',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    backgroundColor: 'grey.200',
-                                    flexDirection: 'column',
-                                    gap: 1,
-                                    p: 1
-                                  }}
-                                >
-                                  <Typography variant="caption" color="text.secondary" align="center">
-                                    Click para abrir
-                                  </Typography>
-                                </Box>
-                              ) : (
-                                <Box
-                                  sx={{
-                                    position: 'absolute',
-                                    top: 0,
-                                    left: 0,
-                                    width: '100%',
-                                    height: '100%',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    backgroundColor: 'grey.100'
-                                  }}
-                                >
-                                  <Typography variant="caption" color="text.secondary">
-                                    Sin imagen
-                                  </Typography>
-                                </Box>
-                              )}
-                            </Box>
-                            
-                            {/* Lista de empleados */}
-                            {empleadosDelRegistro.length > 0 && (
-                              <Box sx={{ flex: 1, minWidth: 0 }}>
-                                <EvidenciaEmpleadoList
-                                  empleados={empleadosDelRegistro}
-                                  evidenciaEmpleadoIds={evidenciaEmpleadoIds}
-                                  maxVisible={2}
-                                />
-                              </Box>
-                            )}
-                          </Box>
-                        </Grid>
-                      );
-                    })}
+                    {evidencias.map((fileRef) => (
+                      <Grid item xs={12} sm={6} md={4} key={fileRef.id || fileRef.fileId}>
+                        <Box sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1, p: 1 }}>
+                          <Typography variant="caption" sx={{ display: 'block', mb: 1 }}>
+                            {fileRef.name}
+                          </Typography>
+                          <UnifiedFilePreview fileRef={fileRef} height={160} />
+                        </Box>
+                      </Grid>
+                    ))}
                   </Grid>
                 ) : (
                   <Typography variant="body2" color="text.secondary">
@@ -404,16 +137,6 @@ const ContenidoRegistros = ({ entityId, userId, ownerId, registryService, refres
           );
         })}
       </Stack>
-
-      {/* Modal de vista previa */}
-      <ImagePreviewDialog
-        open={modalOpen}
-        onClose={closeImage}
-        imageUrl={selectedEvidencia?.imageUrl}
-        imageBlob={selectedEvidencia?.imageBlob}
-        imageName={selectedEvidencia?.imageName}
-        imageSize={selectedEvidencia?.imageSize}
-      />
     </Box>
   );
 };
@@ -431,12 +154,7 @@ const AccidenteDetailPanelV2 = ({
   onSaved
 }) => {
   const [currentMode, setCurrentMode] = React.useState(initialMode);
-  const [kpiStats, setKpiStats] = React.useState({
-    totalRegistros: 0,
-    totalPersonas: 0,
-    totalEvidencias: 0,
-    loading: true
-  });
+  const [kpiStats, setKpiStats] = React.useState({ totalRegistros: 0, totalPersonas: 0, totalEvidencias: 0, loading: true });
   const [accidente, setAccidente] = React.useState(null);
   const [loadError, setLoadError] = React.useState(null);
   const [notFound, setNotFound] = React.useState(false);
@@ -466,100 +184,71 @@ const AccidenteDetailPanelV2 = ({
           setNotFound(!accData);
         }
 
-        const entityIdStr = String(accidenteId);
-        const stats = await registrosAccidenteService.getStatsByEntity(tenantOwnerId, entityIdStr);
+        const stats = await registrosAccidenteService.getStatsByEntity(tenantOwnerId, String(accidenteId));
         if (mounted) {
-          setKpiStats({
-            ...stats,
-            loading: false
-          });
+          setKpiStats({ ...stats, loading: false });
         }
       } catch (error) {
         logger.error('[AccidenteDetailPanelV2] Error cargando datos:', error);
         if (mounted) {
           setLoadError(error?.message || 'No se pudo cargar el detalle del accidente');
-          setKpiStats(prev => ({ ...prev, loading: false }));
+          setKpiStats((prev) => ({ ...prev, loading: false }));
         }
       }
     };
 
     loadData();
-    return () => { mounted = false; };
+    return () => {
+      mounted = false;
+    };
   }, [open, accidenteId, tenantOwnerId, userId]);
 
   const renderHeaderEjecutivo = (acc) => {
     if (!acc) return null;
 
-    const fechaStr = acc.fechaHora
-      ? (acc.fechaHora.toDate?.()?.toLocaleDateString() || acc.fechaHora)
-      : null;
+    const fechaStr = acc.fechaHora ? (acc.fechaHora.toDate?.()?.toLocaleDateString() || acc.fechaHora) : null;
 
     return (
       <Box>
-        <Paper
-          elevation={2}
-          sx={{
-            p: 2,
-            mb: 2,
-            mt: { xs: 6, sm: 7 },
-            background: 'linear-gradient(to bottom, rgba(255,255,255,1), rgba(248,249,250,1))'
-          }}
-        >
+        <Paper elevation={2} sx={{ p: 2, mb: 2, mt: { xs: 6, sm: 7 } }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <Box sx={{ flex: 1 }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1, flexWrap: 'wrap' }}>
-                <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                  {acc.descripcion || 'Accidente'}
-                </Typography>
-                <Chip
-                  label={acc.estado || 'N/A'}
-                  color={getEstadoColor(acc.estado)}
-                  size="small"
-                />
-                {acc.tipo && (
-                  <Chip
-                    label={acc.tipo}
-                    size="small"
-                    variant="outlined"
-                  />
-                )}
+                <Typography variant="h6" sx={{ fontWeight: 600 }}>{acc.descripcion || 'Accidente'}</Typography>
+                <Chip label={acc.estado || 'N/A'} color={getEstadoColor(acc.estado)} size="small" />
+                {acc.tipo && <Chip label={acc.tipo} size="small" variant="outlined" />}
               </Box>
 
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap' }}>
-                {fechaStr && (
-                  <Typography variant="body2" color="text.secondary">
-                    {fechaStr}
-                  </Typography>
-                )}
+                {fechaStr && <Typography variant="body2" color="text.secondary">{fechaStr}</Typography>}
                 {kpiStats.loading ? (
                   <CircularProgress size={16} />
                 ) : (
                   <>
-                    <Chip
-                      label={`${kpiStats.totalRegistros} Registros`}
-                      size="small"
-                      variant="outlined"
-                      color="primary"
-                    />
-                    <Chip
-                      label={`${kpiStats.totalPersonas} Empleados`}
-                      size="small"
-                      variant="outlined"
-                      color="primary"
-                    />
-                    <Chip
-                      label={`${kpiStats.totalEvidencias} Evidencias`}
-                      size="small"
-                      variant="outlined"
-                      color="primary"
-                    />
+                    <Chip label={`${kpiStats.totalRegistros} Registros`} size="small" variant="outlined" color="primary" />
+                    <Chip label={`${kpiStats.totalPersonas} Empleados`} size="small" variant="outlined" color="primary" />
+                    <Chip label={`${kpiStats.totalEvidencias} Evidencias`} size="small" variant="outlined" color="primary" />
                   </>
                 )}
               </Box>
             </Box>
-            
+
             <Box sx={{ ml: 2 }}>
-              {renderActions(acc)}
+              {acc.estado === 'abierto' && (
+                <Stack direction="row" spacing={1}>
+                  <Button size="medium" variant="contained" onClick={() => { setCurrentMode('registrar'); onRegistrarAccidente?.(accidenteId); }}>
+                    Registrar Seguimiento
+                  </Button>
+                  <Button size="medium" variant="outlined" startIcon={<CheckCircleIcon />} onClick={() => onMarcarCerrado?.(accidenteId)}>
+                    Cerrar
+                  </Button>
+                  {onEditarAccidente && (
+                    <Button size="medium" variant="outlined" startIcon={<EditIcon />} onClick={() => { onEditarAccidente(acc); onClose(); }}>
+                      Editar
+                    </Button>
+                  )}
+                </Stack>
+              )}
             </Box>
           </Box>
         </Paper>
@@ -567,77 +256,13 @@ const AccidenteDetailPanelV2 = ({
     );
   };
 
-  
   const renderLoadState = () => {
     if (loadError) {
-      return (
-        <Box sx={{ p: 3 }}>
-          <Typography color="error" variant="body2">
-            {loadError}
-          </Typography>
-        </Box>
-      );
+      return <Box sx={{ p: 3 }}><Typography color="error" variant="body2">{loadError}</Typography></Box>;
     }
-
     if (notFound) {
-      return (
-        <Box sx={{ p: 3 }}>
-          <Typography color="text.secondary" variant="body2">
-            El accidente no existe o no tenÃ©s permisos para visualizarlo.
-          </Typography>
-        </Box>
-      );
+      return <Box sx={{ p: 3 }}><Typography color="text.secondary" variant="body2">El accidente no existe o no tenes permisos para visualizarlo.</Typography></Box>;
     }
-
-    return null;
-  };
-  const renderActions = (acc) => {
-    if (!acc) return null;
-
-    if (acc.estado === 'abierto') {
-      return (
-        <Stack direction="row" spacing={1}>
-          <Button
-            size="medium"
-            variant="contained"
-            onClick={() => {
-              setCurrentMode('registrar');
-              if (onRegistrarAccidente) {
-                onRegistrarAccidente(accidenteId);
-              }
-            }}
-          >
-            Registrar Seguimiento
-          </Button>
-          <Button
-            size="medium"
-            variant="outlined"
-            startIcon={<CheckCircleIcon />}
-            onClick={() => {
-              if (onMarcarCerrado) {
-                onMarcarCerrado(accidenteId);
-              }
-            }}
-          >
-            Cerrar
-          </Button>
-          {onEditarAccidente && (
-            <Button
-              size="medium"
-              variant="outlined"
-              startIcon={<EditIcon />}
-              onClick={() => {
-                onEditarAccidente(acc);
-                onClose();
-              }}
-            >
-              Editar
-            </Button>
-          )}
-        </Stack>
-      );
-    }
-
     return null;
   };
 
@@ -649,9 +274,7 @@ const AccidenteDetailPanelV2 = ({
       initialMode={currentMode}
       userId={userId}
       ownerId={tenantOwnerId}
-      entityService={{
-        getById: async (_actorId, id) => obtenerAccidentePorId({ ownerId: tenantOwnerId, accidenteId: id })
-      }}
+      entityService={{ getById: async (_actorId, id) => obtenerAccidentePorId({ ownerId: tenantOwnerId, accidenteId: id }) }}
       registryService={registrosAccidenteService}
       renderHeader={(acc) => {
         const fallback = renderLoadState();
@@ -659,57 +282,29 @@ const AccidenteDetailPanelV2 = ({
         return renderHeaderEjecutivo(acc || accidente);
       }}
       renderActions={() => null}
-      hideInternalHeader={true}
-      hideTabs={true}
-      hideCloseButton={true}
-      tabs={[
-        {
-          id: 'registros',
-          label: 'Registros',
-          component: ContenidoRegistros
-        }
-      ]}
-      renderRegistryForm={(props) => (
-        <RegistrarAccidenteInline
-          {...props}
-          accidenteId={props.entityId}
-          accidente={props.entity}
-        />
-      )}
+      hideInternalHeader
+      hideTabs
+      hideCloseButton
+      tabs={[{ id: 'registros', label: 'Registros', component: ContenidoRegistros }]}
+      renderRegistryForm={(props) => <RegistrarAccidenteInline {...props} accidenteId={props.entityId} accidente={props.entity} />}
       onSaved={(registroId) => {
-        logger.debug('[AccidenteDetailPanelV2] Registro guardado:', registroId);
-        if (onSaved) {
-          onSaved(registroId);
-        }
-        setKpiStats(prev => ({ ...prev, loading: true }));
+        onSaved?.(registroId);
+        setKpiStats((prev) => ({ ...prev, loading: true }));
         setTimeout(async () => {
           if (accidenteId && tenantOwnerId) {
             try {
-              const entityIdStr = String(accidenteId);
-              const stats = await registrosAccidenteService.getStatsByEntity(tenantOwnerId, entityIdStr);
+              const stats = await registrosAccidenteService.getStatsByEntity(tenantOwnerId, String(accidenteId));
               setKpiStats({ ...stats, loading: false });
             } catch (error) {
               logger.error('[AccidenteDetailPanelV2] Error refrescando KPIs:', error);
-              setKpiStats(prev => ({ ...prev, loading: false }));
+              setKpiStats((prev) => ({ ...prev, loading: false }));
             }
           }
         }, 500);
       }}
-      onModeChange={(mode) => {
-        setCurrentMode(mode);
-      }}
+      onModeChange={(mode) => setCurrentMode(mode)}
     />
   );
 };
 
 export default AccidenteDetailPanelV2;
-
-
-
-
-
-
-
-
-
-
