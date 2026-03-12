@@ -1,4 +1,5 @@
 export { trainingCatalogService } from './trainingCatalogService';
+export { trainingCategoryService } from '../trainingCategoryService';
 export { trainingRequirementService } from './trainingRequirementService';
 export { trainingPlanService } from './trainingPlanService';
 export { trainingSessionService } from './trainingSessionService';

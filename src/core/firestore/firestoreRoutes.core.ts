@@ -1,4 +1,4 @@
-﻿/**
+/**
  * SINGLE SOURCE OF TRUTH para rutas Firestore del CORE owner-centric
  * 
  * Este archivo define EXCLUSIVAMENTE las rutas del nuevo modelo owner-centric.
@@ -340,6 +340,31 @@ export const firestoreRoutesCore = {
     ownerId,
     'training_catalog',
     trainingTypeId
+  ],
+
+  /**
+   * Collection of global training categories (per owner)
+   * Path: apps/auditoria/owners/{ownerId}/training_categories
+   */
+  trainingCategories: (ownerId: string): string[] => [
+    'apps',
+    'auditoria',
+    'owners',
+    ownerId,
+    'training_categories'
+  ],
+
+  /**
+   * Document of training category
+   * Path: apps/auditoria/owners/{ownerId}/training_categories/{categoryId}
+   */
+  trainingCategoryItem: (ownerId: string, categoryId: string): string[] => [
+    'apps',
+    'auditoria',
+    'owners',
+    ownerId,
+    'training_categories',
+    categoryId
   ],
 
   /**
