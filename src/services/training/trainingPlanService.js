@@ -14,6 +14,24 @@ const PLAN_STATUS_PRIORITY = {
   draft: 2
 };
 
+/**
+ * Genera los meses planificados según la vigencia del tipo de capacitación.
+ * occurrencesPerYear = 12 / validityMonths; meses distribuidos uniformemente.
+ * @param {number} validityMonths - Vigencia en meses (1-12). Si no válido, se usa 12.
+ * @returns {number[]} Array de meses (1-12) ordenados ascendente.
+ */
+function generatePlannedMonths(validityMonths) {
+  const v = Number(validityMonths);
+  const interval = v > 0 && v <= 12 ? v : 12;
+  const months = [];
+  for (let m = 1; m <= 12; m += interval) {
+    months.push(m);
+  }
+  return months;
+}
+
+export { generatePlannedMonths };
+
 function toDateValue(value) {
   if (!value) return null;
   if (value?.toDate) return value.toDate();
@@ -108,11 +126,10 @@ export const trainingPlanService = {
       return [];
     }
 
-    const sessionYear = dateValue.getFullYear();
     const sessionMonth = dateValue.getMonth() + 1;
 
     const [plans, planItems] = await Promise.all([
-      this.listPlans(ownerId, { year: sessionYear, companyId, branchId }),
+      this.listPlans(ownerId, { companyId, branchId }),
       this.listPlanItems(ownerId, { trainingTypeId })
     ]);
 
@@ -134,7 +151,7 @@ export const trainingPlanService = {
           planId: plan.id,
           planItemId: item.id,
           planStatus: plan.status || 'draft',
-          planYear: plan.year,
+          planYear: plan.year ?? null,
           planUpdatedAt: plan.updatedAt || null,
           plannedMonth: Number(item.plannedMonth || 0),
           trainingTypeId: item.trainingTypeId,
@@ -204,5 +221,109 @@ export const trainingPlanService = {
     });
 
     return { planId, planItemId: itemRef.id, createdPlan };
+  },
+
+  /**
+   * Añade un tipo de capacitación al plan permanente con frecuencia automática por vigencia.
+   * Find-or-create plan por (companyId, branchId) sin year. Crea un ítem por cada mes devuelto por generatePlannedMonths(validityMonths), evitando duplicados (planId, trainingTypeId, plannedMonth).
+   * @param {string} ownerId
+   * @param {{ companyId: string, branchId: string, trainingTypeId: string, validityMonths?: number, notes?: string, responsibleUserId?: string }}
+   * @returns {{ planId: string, createdItemIds: string[], createdPlan: boolean }}
+   */
+  async addTrainingTypeToPlan(ownerId, {
+    companyId,
+    branchId,
+    trainingTypeId,
+    validityMonths = 12,
+    notes = '',
+    responsibleUserId = ''
+  } = {}) {
+    if (!companyId || !branchId || !trainingTypeId) {
+      throw new Error('Faltan empresa, sucursal o tipo de capacitación.');
+    }
+
+    const existingPlans = await this.listPlans(ownerId, { companyId, branchId });
+    let planId;
+    let createdPlan = false;
+
+    if (existingPlans.length > 0) {
+      planId = existingPlans[0].id;
+    } else {
+      const planRef = await this.createPlan(ownerId, {
+        companyId,
+        branchId,
+        notes: '',
+        responsibleUserId: responsibleUserId || undefined,
+        status: 'draft'
+      });
+      planId = planRef.id;
+      createdPlan = true;
+    }
+
+    const months = generatePlannedMonths(validityMonths);
+    const existingItems = await this.listPlanItems(ownerId, { planId, trainingTypeId });
+    const existingMonths = new Set(existingItems.map((i) => Number(i.plannedMonth)));
+    const createdItemIds = [];
+
+    for (const month of months) {
+      if (existingMonths.has(month)) continue;
+      const itemRef = await this.createPlanItem(ownerId, {
+        planId,
+        trainingTypeId,
+        plannedMonth: month,
+        status: 'planned',
+        targetAudience: '',
+        estimatedParticipants: 0,
+        priority: 'medium',
+        notes: notes || ''
+      });
+      createdItemIds.push(itemRef.id);
+      existingMonths.add(month);
+    }
+
+    if (createdItemIds.length === 0) {
+      throw new Error('Esta capacitación ya está en el plan con todos los meses calculados. No se agregaron ítems nuevos.');
+    }
+
+    return { planId, createdItemIds, createdPlan };
+  },
+
+  /**
+   * Añade un tipo de capacitación a un plan existente (por planId) con frecuencia automática.
+   * @param {string} ownerId
+   * @param {{ planId: string, trainingTypeId: string, validityMonths?: number, notes?: string }}
+   * @returns {{ planId: string, createdItemIds: string[] }}
+   */
+  async addTrainingTypeToPlanByPlanId(ownerId, { planId, trainingTypeId, validityMonths = 12, notes = '' } = {}) {
+    if (!planId || !trainingTypeId) {
+      throw new Error('Faltan plan o tipo de capacitación.');
+    }
+
+    const months = generatePlannedMonths(validityMonths);
+    const existingItems = await this.listPlanItems(ownerId, { planId, trainingTypeId });
+    const existingMonths = new Set(existingItems.map((i) => Number(i.plannedMonth)));
+    const createdItemIds = [];
+
+    for (const month of months) {
+      if (existingMonths.has(month)) continue;
+      const itemRef = await this.createPlanItem(ownerId, {
+        planId,
+        trainingTypeId,
+        plannedMonth: month,
+        status: 'planned',
+        targetAudience: '',
+        estimatedParticipants: 0,
+        priority: 'medium',
+        notes: notes || ''
+      });
+      createdItemIds.push(itemRef.id);
+      existingMonths.add(month);
+    }
+
+    if (createdItemIds.length === 0) {
+      throw new Error('Esta capacitación ya está en el plan con todos los meses calculados. No se agregaron ítems nuevos.');
+    }
+
+    return { planId, createdItemIds };
   }
 };

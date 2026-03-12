@@ -185,7 +185,7 @@ export default function EventRegistryInline({
       // Cargar evidencias existentes
       if (registryService && registryService.getEvidenciasByEntity) {
         const evidenciasExistentes = await registryService.getEvidenciasByEntity(tenantOwnerId, entityId);
-        setEvidencias(evidenciasExistentes);
+        setEvidencias((evidenciasExistentes || []).map((ev) => ({ ...ev, existing: true })));
       }
     } catch (error) {
       logger.error('Error al cargar datos:', error);
@@ -281,7 +281,8 @@ export default function EventRegistryInline({
           fileId: persisted.fileId,
           mimeType: persisted.mimeType,
           size: persisted.size,
-          status: persisted.status || 'active'
+          status: persisted.status || 'active',
+          existing: false
         };
 
         setEvidencias((prev) =>
@@ -363,7 +364,7 @@ export default function EventRegistryInline({
 
       // Preparar evidencias para guardar
       const evidenciasParaGuardar = evidencias
-        .filter(ev => ev.fileId && !ev.id?.startsWith('temp_'))
+        .filter(ev => !ev.existing && ev.fileId && !ev.id?.startsWith('temp_'))
         .map(ev => ({
           fileId: ev.fileId,
           shareToken: ev.shareToken,
@@ -989,6 +990,8 @@ export default function EventRegistryInline({
     </Paper>
   );
 }
+
+
 
 
 

@@ -1,4 +1,4 @@
-﻿import logger from '@/utils/logger';
+import logger from '@/utils/logger';
 import React from 'react';
 import {
   Box,
@@ -43,10 +43,12 @@ const toFileRef = (evidencia, idx) => ({
 
 const ContenidoRegistros = ({ entityId, ownerId, registryService, refreshKey }) => {
   const [registros, setRegistros] = React.useState([]);
+  const [evidenciasByRegistro, setEvidenciasByRegistro] = React.useState(new Map());
   const [loading, setLoading] = React.useState(true);
 
   React.useEffect(() => {
     if (!entityId || !ownerId || !registryService) {
+      setEvidenciasByRegistro(new Map());
       setLoading(false);
       return;
     }
@@ -55,9 +57,55 @@ const ContenidoRegistros = ({ entityId, ownerId, registryService, refreshKey }) 
 
     const loadRegistros = async () => {
       try {
-        const data = await registryService.getRegistriesByEntity(ownerId, String(entityId));
+        const [data, evidencias] = await Promise.all([
+          registryService.getRegistriesByEntity(ownerId, String(entityId)),
+          registryService.getEvidenciasByEntity(ownerId, String(entityId))
+        ]);
+
+        const byRegistro = new Map();
+        const evidenciasSinRegistro = [];
+        (evidencias || []).forEach((ev, idx) => {
+          const registroId = ev?.registroId ? String(ev.registroId) : '';
+
+          const fileRef = {
+            id: ev?.id || ev?.fileId || ('evidencia-' + idx),
+            fileId: ev?.fileId || ev?.id || null,
+            shareToken: ev?.shareToken || null,
+            name: ev?.nombre || ev?.name || ('Evidencia ' + (idx + 1)),
+            mimeType: ev?.mimeType || 'application/octet-stream',
+            status: ev?.status || 'active'
+          };
+
+          if (!fileRef.fileId && !fileRef.shareToken) return;
+
+          if (!registroId) {
+            evidenciasSinRegistro.push(fileRef);
+            return;
+          }
+
+          if (!byRegistro.has(registroId)) byRegistro.set(registroId, []);
+          byRegistro.get(registroId).push(fileRef);
+        });
+
+        if (evidenciasSinRegistro.length > 0 && Array.isArray(data) && data.length > 0) {
+          const fallbackRegistroId = String(data[0].id);
+          if (!byRegistro.has(fallbackRegistroId)) byRegistro.set(fallbackRegistroId, []);
+          byRegistro.set(fallbackRegistroId, [...byRegistro.get(fallbackRegistroId), ...evidenciasSinRegistro]);
+        }
+
+        byRegistro.forEach((list, key) => {
+          const seen = new Set();
+          byRegistro.set(key, list.filter((fileRef) => {
+            const dedupeKey = fileRef.fileId || fileRef.id;
+            if (!dedupeKey || seen.has(dedupeKey)) return false;
+            seen.add(dedupeKey);
+            return true;
+          }));
+        });
+
         if (mounted) {
           setRegistros(data || []);
+          setEvidenciasByRegistro(byRegistro);
           setLoading(false);
         }
       } catch (error) {
@@ -95,10 +143,12 @@ const ContenidoRegistros = ({ entityId, ownerId, registryService, refreshKey }) 
       <Stack spacing={1.5}>
         {registros.map((registro) => {
           const fechaStr = registro.fecha?.toDate?.()?.toLocaleDateString() || registro.fecha || 'N/A';
-          const evidenciasRaw = Array.isArray(registro.imagenes) ? registro.imagenes : [];
-          const evidencias = evidenciasRaw
+          const evidenciasCanonicas = evidenciasByRegistro.get(String(registro.id)) || [];
+          const evidenciasLegacyRaw = Array.isArray(registro.imagenes) ? registro.imagenes : [];
+          const evidenciasLegacy = evidenciasLegacyRaw
             .map((ev, idx) => toFileRef(ev, idx))
             .filter((fileRef) => fileRef.status !== 'deleted' && (fileRef.fileId || fileRef.shareToken));
+          const evidencias = evidenciasCanonicas.length > 0 ? evidenciasCanonicas : evidenciasLegacy;
           const empleadosCount = registro.empleadosInvolucrados?.length || registro.empleadoIds?.length || 0;
 
           return (
@@ -308,3 +358,6 @@ const AccidenteDetailPanelV2 = ({
 };
 
 export default AccidenteDetailPanelV2;
+
+
+

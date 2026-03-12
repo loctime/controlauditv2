@@ -2,9 +2,11 @@ import {
   collection,
   doc,
   getDocs,
+  limit,
   orderBy,
   query,
-  serverTimestamp
+  serverTimestamp,
+  where
 } from 'firebase/firestore';
 import { db } from '../firebaseControlFile';
 import { firestoreRoutesCore } from '../core/firestore/firestoreRoutes.core';
@@ -77,13 +79,25 @@ export async function saveFileRef(params) {
   if (!fileRef?.fileId) throw new Error('fileRef.fileId es requerido');
 
   const ref = filesCollectionRef(ownerId, module, entityId, entityCollection);
-  const payload = {
+  const basePayload = {
     ...fileRef,
     schemaVersion: SCHEMA_VERSION,
     status: fileRef.status || 'active',
-    createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
     legacyMirror: true
+  };
+
+  // Evita duplicados por fileId en la misma entidad.
+  const existingSnap = await getDocs(query(ref, where('fileId', '==', fileRef.fileId), limit(1)));
+  if (!existingSnap.empty) {
+    const existingDoc = existingSnap.docs[0];
+    await updateDocWithAppId(doc(ref, existingDoc.id), basePayload);
+    return { id: existingDoc.id, ...existingDoc.data(), ...basePayload };
+  }
+
+  const payload = {
+    ...basePayload,
+    createdAt: serverTimestamp()
   };
 
   const created = await addDocWithAppId(ref, payload);
@@ -224,6 +238,7 @@ export async function softDeleteFile(params) {
 }
 
 export function buildLegacyImageMirror(fileRefs = []) {
+  const seen = new Set();
   return fileRefs
     .filter((fileRef) => fileRef.status !== 'deleted')
     .map((fileRef) => {
@@ -232,7 +247,11 @@ export function buildLegacyImageMirror(fileRefs = []) {
       if (fileRef.shareToken) return fileRef.shareToken;
       return fileRef.fileId;
     })
-    .filter(Boolean);
+    .filter((value) => {
+      if (!value || seen.has(value)) return false;
+      seen.add(value);
+      return true;
+    });
 }
 
 export function buildLegacyImageMetadataMirror(fileRefs = []) {
@@ -248,3 +267,4 @@ export function buildLegacyImageMetadataMirror(fileRefs = []) {
       size: fileRef.size
     }));
 }
+

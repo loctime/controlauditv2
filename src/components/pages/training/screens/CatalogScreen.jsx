@@ -33,6 +33,7 @@ import {
   trainingCatalogService,
   trainingCategoryService,
   trainingPlanService,
+  generatePlannedMonths,
   trainingSessionService,
   trainingAttendanceService,
 } from '../../../../services/training';
@@ -74,8 +75,6 @@ export default function CatalogScreen({ onNavigateToPlans }) {
   const [addToPlanForm, setAddToPlanForm] = useState({
     companyId: '',
     branchId: '',
-    year: new Date().getFullYear(),
-    plannedMonth: 1,
     notes: ''
   });
   const [addToPlanSaving, setAddToPlanSaving] = useState(false);
@@ -242,33 +241,30 @@ export default function CatalogScreen({ onNavigateToPlans }) {
     setAddToPlanForm({
       companyId: '',
       branchId: '',
-      year: new Date().getFullYear(),
-      plannedMonth: 1,
       notes: ''
     });
   };
 
   const addTrainingTypeToPlan = async () => {
     if (!ownerId || !addToPlanItem?.id || !addToPlanForm.companyId || !addToPlanForm.branchId) {
-      setAddToPlanError('Selecciona empresa, sucursal y año.');
+      setAddToPlanError('Selecciona empresa y sucursal.');
       return;
     }
     setAddToPlanSaving(true);
     setAddToPlanError('');
     try {
-      await trainingPlanService.addTrainingTypeToAnnualPlan(ownerId, {
+      await trainingPlanService.addTrainingTypeToPlan(ownerId, {
         companyId: addToPlanForm.companyId,
         branchId: addToPlanForm.branchId,
-        year: Number(addToPlanForm.year),
         trainingTypeId: addToPlanItem.id,
-        plannedMonth: Number(addToPlanForm.plannedMonth) || 1,
+        validityMonths: Number(addToPlanItem.validityMonths) || 12,
         notes: (addToPlanForm.notes || '').trim() || '',
         responsibleUserId: userProfile?.uid || ''
       });
       setAddToPlanSuccess(true);
     } catch (err) {
       logger.error('[CatalogScreen] addTrainingTypeToPlan error', err);
-      setAddToPlanError(err.message || 'No se pudo agregar al plan anual.');
+      setAddToPlanError(err.message || 'No se pudo agregar al plan.');
     } finally {
       setAddToPlanSaving(false);
     }
@@ -276,7 +272,7 @@ export default function CatalogScreen({ onNavigateToPlans }) {
 
   const closeAddToPlanModal = () => {
     setAddToPlanItem(null);
-    setAddToPlanForm({ companyId: '', branchId: '', year: new Date().getFullYear(), plannedMonth: 1, notes: '' });
+    setAddToPlanForm({ companyId: '', branchId: '', notes: '' });
     setAddToPlanError('');
     setAddToPlanSuccess(false);
   };
@@ -484,15 +480,24 @@ export default function CatalogScreen({ onNavigateToPlans }) {
                     }}
                   >
                     <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 0.25 }}>
-                      Frecuencia recomendada:
+                      Frecuencia automática
+                    </Typography>
+                    <Typography variant="body2" sx={{ mb: 0.5 }}>
+                      1 capacitación cada {Number(addToPlanItem.validityMonths) || 12} meses
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 0.25 }}>
+                      Meses planificados
                     </Typography>
                     <Typography variant="body2">
                       {(() => {
-                        const validityMonths = Number(addToPlanItem.validityMonths) || 1;
-                        const days = validityMonths * 30;
-                        return validityMonths === 12
-                          ? `1 vez al año (~${days} días)`
-                          : `1 cada ${validityMonths} meses (~${days} días)`;
+                        const validityMonths = Number(addToPlanItem.validityMonths) || 12;
+                        const months = generatePlannedMonths(validityMonths);
+                        const names = months.map((m) =>
+                          new Date(2000, m - 1, 1).toLocaleString('es', { month: 'long' })
+                        );
+                        return names.length === 1
+                          ? names[0]
+                          : names.slice(0, -1).join(', ') + (names.length > 1 ? ' y ' : '') + names[names.length - 1];
                       })()}
                     </Typography>
                   </Box>
@@ -527,31 +532,6 @@ export default function CatalogScreen({ onNavigateToPlans }) {
                         {sucursal.nombre}
                       </MenuItem>
                     ))}
-                </TextField>
-                <TextField
-                  type="number"
-                  fullWidth
-                  label="Año"
-                  value={addToPlanForm.year}
-                  onChange={(e) =>
-                    setAddToPlanForm((f) => ({ ...f, year: Number(e.target.value) || new Date().getFullYear() }))
-                  }
-                  inputProps={{ min: new Date().getFullYear() - 2, max: new Date().getFullYear() + 5 }}
-                />
-                <TextField
-                  select
-                  fullWidth
-                  label="Mes planificado"
-                  value={addToPlanForm.plannedMonth}
-                  onChange={(e) =>
-                    setAddToPlanForm((f) => ({ ...f, plannedMonth: Number(e.target.value) || 1 }))
-                  }
-                >
-                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((m) => (
-                    <MenuItem key={m} value={m}>
-                      {new Date(2000, m - 1, 1).toLocaleString('es', { month: 'long' })}
-                    </MenuItem>
-                  ))}
                 </TextField>
                 <TextField
                   fullWidth

@@ -1,13 +1,14 @@
 import logger from '@/utils/logger';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { query, where, orderBy, onSnapshot, collection } from 'firebase/firestore';
 import { obtenerAccidentes } from '../../services/accidenteService';
+import { listFiles, buildLegacyImageMirror } from '../../services/unifiedFileService';
 import { dbAudit } from '../../firebaseControlFile';
 import { firestoreRoutesCore } from '../../core/firestore/firestoreRoutes.core';
 import { useAuth } from '@/components/context/AuthContext';
 /**
  * Hook de accidentes basado en listener realtime (onSnapshot)
- * Estrategia única para evitar duplicación con React Query.
+ * Estrategia unica para evitar duplicacion con React Query.
  */
 export const useAccidentesQuery = (
   selectedEmpresa,
@@ -21,6 +22,7 @@ export const useAccidentesQuery = (
   const [accidentes, setAccidentes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const listenerSeqRef = useRef(0);
 
   const ownerId = userProfile?.ownerId;
 
@@ -40,6 +42,35 @@ export const useAccidentesQuery = (
     }
     return result;
   }, [selectedEmpresa, selectedSucursal, filterTipo, filterEstado]);
+
+  const resolveModuleByTipo = (tipo) => (tipo === 'incidente' ? 'incidentes' : 'accidentes');
+
+  const enrichWithCanonicalFiles = useCallback(async (rows, currentOwnerId) => {
+    if (!currentOwnerId) return rows;
+
+    return await Promise.all(
+      rows.map(async (row) => {
+        try {
+          const files = await listFiles({
+            ownerId: currentOwnerId,
+            module: resolveModuleByTipo(row?.tipo),
+            entityId: String(row?.id)
+          });
+
+          return {
+            ...row,
+            files,
+            imagenes: files.length > 0 ? buildLegacyImageMirror(files) : (Array.isArray(row?.imagenes) ? row.imagenes : [])
+          };
+        } catch (_error) {
+          return {
+            ...row,
+            files: Array.isArray(row?.files) ? row.files : []
+          };
+        }
+      })
+    );
+  }, []);
 
   useEffect(() => {
     if (!authReady || !ownerId || !empresasReady) {
@@ -72,14 +103,24 @@ export const useAccidentesQuery = (
 
     const unsubscribe = onSnapshot(
       q,
-      (snapshot) => {
-        const accidentesData = snapshot.docs.map((docSnap) => ({
-          id: docSnap.id,
-          ...docSnap.data()
-        }));
+      async (snapshot) => {
+        try {
+          const seq = ++listenerSeqRef.current;
+          const accidentesData = snapshot.docs.map((docSnap) => ({
+            id: docSnap.id,
+            ...docSnap.data()
+          }));
 
-        setAccidentes(accidentesData);
-        setLoading(false);
+          const enriched = await enrichWithCanonicalFiles(accidentesData, ownerId);
+          if (seq === listenerSeqRef.current) {
+            setAccidentes(enriched);
+            setLoading(false);
+          }
+        } catch (listenerParseError) {
+          logger.error('[useAccidentesQuery] Error enriqueciendo listener:', listenerParseError);
+          setError(listenerParseError);
+          setLoading(false);
+        }
       },
       (listenerError) => {
         logger.error('[useAccidentesQuery] Error en listener:', listenerError);
@@ -89,7 +130,7 @@ export const useAccidentesQuery = (
     );
 
     return () => unsubscribe();
-  }, [authReady, ownerId, empresasReady, filtros]);
+  }, [authReady, ownerId, empresasReady, filtros, enrichWithCanonicalFiles]);
 
   const recargarAccidentes = useCallback(async () => {
     if (!ownerId) return;

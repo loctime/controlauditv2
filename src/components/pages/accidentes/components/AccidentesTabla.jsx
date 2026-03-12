@@ -26,6 +26,22 @@ import {
 /**
  * Tabla de accidentes
  */
+const getEvidenciasCount = (accidente) => {
+  if (Array.isArray(accidente?.files) && accidente.files.length > 0) {
+    const seen = new Set();
+    return accidente.files
+      .filter((fileRef) => fileRef?.status !== 'deleted')
+      .filter((fileRef) => {
+        const key = fileRef?.fileId || fileRef?.id;
+        if (!key || seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      }).length;
+  }
+
+  const legacy = Array.isArray(accidente?.imagenes) ? accidente.imagenes : [];
+  return new Set(legacy.filter(Boolean)).size;
+};
 const AccidentesTabla = React.memo(({
   accidentes,
   page,
@@ -130,10 +146,10 @@ const AccidentesTabla = React.memo(({
                   </Box>
                 </TableCell>
                 <TableCell>
-                  {accidente.imagenes?.length > 0 && (
+                  {getEvidenciasCount(accidente) > 0 && (
                     <Chip
                       icon={<ImageIcon />}
-                      label={accidente.imagenes.length}
+                      label={getEvidenciasCount(accidente)}
                       size="small"
                       variant="outlined"
                     />
@@ -203,4 +219,6 @@ const AccidentesTabla = React.memo(({
 AccidentesTabla.displayName = 'AccidentesTabla';
 
 export default AccidentesTabla;
+
+
 

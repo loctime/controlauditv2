@@ -312,8 +312,15 @@ export function createBaseRegistryService({
         if (resolvedModule) {
           const canonicalFiles = await listFiles({ ownerId, module: resolvedModule, entityId: entityIdStr });
           if (canonicalFiles.length > 0) {
+            const seen = new Set();
             return canonicalFiles
               .filter((fileRef) => fileRef?.status !== 'deleted')
+              .filter((fileRef) => {
+                const key = fileRef?.fileId || fileRef?.id;
+                if (!key || seen.has(key)) return false;
+                seen.add(key);
+                return true;
+              })
               .map((fileRef) => ({
                 id: fileRef.id || fileRef.fileId,
                 fileId: fileRef.fileId,
@@ -382,3 +389,4 @@ export function createBaseRegistryService({
     }
   };
 }
+

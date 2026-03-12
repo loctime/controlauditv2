@@ -1,4 +1,4 @@
-﻿import { convertirShareTokenAUrl } from '../utils/imageUtils';
+import { convertirShareTokenAUrl } from '../utils/imageUtils';
 import { getDownloadUrl as getDownloadUrlByFileId } from './controlFileB2Service';
 import { classifyPreviewType } from './fileValidationPolicy';
 
@@ -32,7 +32,10 @@ export async function getDownloadUrl(fileRef) {
 export async function resolveFileAccess(fileRef) {
   const viewUrl = resolveViewUrl(fileRef);
   const downloadUrl = await resolveDownloadUrl(fileRef);
-  const previewType = classifyPreviewType(fileRef?.mimeType || '');
+  const previewType = classifyPreviewType(
+    fileRef?.mimeType || '',
+    fileRef?.name || fileRef?.nombre || fileRef?.fileName || ''
+  );
 
   return {
     previewType,
@@ -40,3 +43,4 @@ export async function resolveFileAccess(fileRef) {
     downloadUrl
   };
 }
+

@@ -1,4 +1,4 @@
-﻿export const MAX_FILE_SIZE = 500 * 1024 * 1024;
+export const MAX_FILE_SIZE = 500 * 1024 * 1024;
 export const WARNING_FILE_SIZE = 100 * 1024 * 1024;
 
 export const BLOCKED_EXTENSIONS = new Set(['exe', 'bat', 'cmd', 'msi', 'sh', 'js']);
@@ -19,6 +19,13 @@ export const PREVIEWABLE_MIME_TYPES = {
   audio: /^audio\//i
 };
 
+const PREVIEWABLE_EXTENSIONS = {
+  image: new Set(['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg', 'heic', 'heif']),
+  pdf: new Set(['pdf']),
+  video: new Set(['mp4', 'mov', 'avi', 'mkv', 'webm', 'm4v']),
+  audio: new Set(['mp3', 'wav', 'ogg', 'm4a', 'aac'])
+};
+
 const getExtension = (fileName = '') => {
   const chunks = String(fileName).toLowerCase().split('.');
   return chunks.length > 1 ? chunks.pop() : '';
@@ -29,11 +36,14 @@ const isExecutableMime = (mimeType = '') => {
   return EXECUTABLE_MIME_PREFIXES.some((prefix) => value.startsWith(prefix));
 };
 
-export function classifyPreviewType(mimeType = '') {
-  if (PREVIEWABLE_MIME_TYPES.image.test(mimeType)) return 'image';
-  if (PREVIEWABLE_MIME_TYPES.pdf.test(mimeType)) return 'pdf';
-  if (PREVIEWABLE_MIME_TYPES.video.test(mimeType)) return 'video';
-  if (PREVIEWABLE_MIME_TYPES.audio.test(mimeType)) return 'audio';
+export function classifyPreviewType(mimeType = '', fileName = '') {
+  const normalizedMime = String(mimeType || '').toLowerCase();
+  const ext = getExtension(fileName || '');
+
+  if (PREVIEWABLE_MIME_TYPES.image.test(normalizedMime) || PREVIEWABLE_EXTENSIONS.image.has(ext)) return 'image';
+  if (PREVIEWABLE_MIME_TYPES.pdf.test(normalizedMime) || PREVIEWABLE_EXTENSIONS.pdf.has(ext)) return 'pdf';
+  if (PREVIEWABLE_MIME_TYPES.video.test(normalizedMime) || PREVIEWABLE_EXTENSIONS.video.has(ext)) return 'video';
+  if (PREVIEWABLE_MIME_TYPES.audio.test(normalizedMime) || PREVIEWABLE_EXTENSIONS.audio.has(ext)) return 'audio';
   return 'download';
 }
 
@@ -99,3 +109,4 @@ export function validateFiles(files = []) {
 
   return { accepted, rejected, warnings };
 }
+

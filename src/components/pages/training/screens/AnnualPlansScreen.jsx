@@ -19,7 +19,6 @@ export default function AnnualPlansScreen() {
   const [catalog, setCatalog] = useState([]);
 
   const [planForm, setPlanForm] = useState({
-    year: new Date().getFullYear(),
     companyId: '',
     branchId: '',
     notes: ''
@@ -28,7 +27,6 @@ export default function AnnualPlansScreen() {
   const [itemForm, setItemForm] = useState({
     planId: '',
     trainingTypeId: '',
-    plannedMonth: 1,
     notes: ''
   });
 
@@ -103,22 +101,24 @@ export default function AnnualPlansScreen() {
   const createItem = async () => {
     if (!ownerId) return;
     if (!itemForm.planId || !itemForm.trainingTypeId) {
-      setError('Plan y tipo de capacitación son obligatorios para crear el item.');
+      setError('Plan y tipo de capacitación son obligatorios.');
       return;
     }
+    const catalogItem = catalog.find((c) => c.id === itemForm.trainingTypeId);
+    const validityMonths = Number(catalogItem?.validityMonths) || 12;
 
     setSaving(true);
     try {
-      await trainingPlanService.createPlanItem(ownerId, {
-        ...itemForm,
-        plannedMonth: Number(itemForm.plannedMonth || 1),
-        targetAudience: '',
-        estimatedParticipants: 0,
-        priority: 'medium'
+      await trainingPlanService.addTrainingTypeToPlanByPlanId(ownerId, {
+        planId: itemForm.planId,
+        trainingTypeId: itemForm.trainingTypeId,
+        validityMonths,
+        notes: (itemForm.notes || '').trim() || ''
       });
+      setItemForm((prev) => ({ ...prev, trainingTypeId: '', notes: '' }));
       await load();
     } catch (err) {
-      setError(err.message || 'No se pudo crear el item del plan.');
+      setError(err.message || 'No se pudo agregar la capacitación al plan.');
     } finally {
       setSaving(false);
     }
@@ -135,9 +135,8 @@ export default function AnnualPlansScreen() {
       <Grid container spacing={2}>
         <Grid item xs={12} md={6}>
           <Paper sx={{ p: 2, height: '100%' }}>
-            <Typography variant="h6" sx={{ mb: 2 }}>Crear plan anual</Typography>
+            <Typography variant="h6" sx={{ mb: 2 }}>Crear plan</Typography>
             <Stack spacing={1.5}>
-              <TextField label="Año" type="number" value={planForm.year} onChange={(e) => setPlanForm({ ...planForm, year: Number(e.target.value) })} />
               <TextField
                 select
                 label="Empresa"
@@ -190,8 +189,8 @@ export default function AnnualPlansScreen() {
               >
                 {plans.map((plan) => (
                   <MenuItem key={plan.id} value={plan.id}>
-                    {plan.year} -{' '}
                     {userSucursales.find((sucursal) => sucursal.id === plan.branchId)?.nombre || 'Sin dato'}
+                    {plan.year != null ? ` (${plan.year})` : ''}
                   </MenuItem>
                 ))}
               </TextField>
@@ -203,17 +202,10 @@ export default function AnnualPlansScreen() {
               >
                 {catalog.map((item) => (
                   <MenuItem key={item.id} value={item.id}>
-                    {item.name}
+                    {item.name} (vigencia: {Number(item.validityMonths) || 12} meses)
                   </MenuItem>
                 ))}
               </TextField>
-              <TextField
-                type="number"
-                label="Mes planificado"
-                value={itemForm.plannedMonth}
-                onChange={(e) => setItemForm({ ...itemForm, plannedMonth: Number(e.target.value) })}
-                inputProps={{ min: 1, max: 12 }}
-              />
               <TextField
                 multiline
                 rows={2}
@@ -257,10 +249,8 @@ export default function AnnualPlansScreen() {
                 return (
                   <Paper key={plan.id} variant="outlined" sx={{ p: 2 }}>
                     <Typography sx={{ fontWeight: 700 }}>
-                      {plan.year} -{' '}
-                      {userSucursales.find((sucursal) => sucursal.id === plan.branchId)?.nombre ||
-                        'Sin dato'}{' '}
-                      - {plan.status}
+                      {userSucursales.find((sucursal) => sucursal.id === plan.branchId)?.nombre || 'Sin dato'}
+                      {plan.year != null ? ` (${plan.year})` : ''} - {plan.status}
                     </Typography>
                     <Typography variant="body2" color="text.secondary">
                       {plan.notes || 'Sin notas'}

@@ -3,7 +3,7 @@ export { trainingCategoryService } from '../trainingCategoryService';
 export { trainingSectorService } from '../trainingSectorService';
 export { trainingRiskCategoryService } from '../trainingRiskCategoryService';
 export { trainingRequirementService } from './trainingRequirementService';
-export { trainingPlanService } from './trainingPlanService';
+export { trainingPlanService, generatePlannedMonths } from './trainingPlanService';
 export { trainingSessionService } from './trainingSessionService';
 export { trainingAttendanceService } from './trainingAttendanceService';
 export { trainingEvidenceService } from './trainingEvidenceService';
