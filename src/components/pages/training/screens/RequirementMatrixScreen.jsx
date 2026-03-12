@@ -148,7 +148,7 @@ export default function RequirementMatrixScreen() {
   const createRule = async () => {
     if (!ownerId) return;
     if (!form.companyId || !form.branchId || !form.trainingTypeId) {
-      setError('Empresa, sucursal y tipo de capacitaci�n son obligatorios.');
+      setError('Empresa, sucursal y tipo de capacitación son obligatorios.');
       return;
     }
 
@@ -238,7 +238,7 @@ export default function RequirementMatrixScreen() {
               </TextField>
               <TextField type="number" label="Frecuencia (meses)" value={form.frequencyMonths} onChange={(e) => setForm({ ...form, frequencyMonths: Number(e.target.value) })} />
               <TextField select label="Obligatoria" value={form.mandatory ? 'true' : 'false'} onChange={(e) => setForm({ ...form, mandatory: e.target.value === 'true' })}>
-                <MenuItem value="true">S�</MenuItem>
+                <MenuItem value="true">Sí</MenuItem>
                 <MenuItem value="false">No</MenuItem>
               </TextField>
               <TextField label="Regla de vencimiento" value={form.expirationRule} onChange={(e) => setForm({ ...form, expirationRule: e.target.value })} />

@@ -470,7 +470,7 @@ const toFileRef = (value) => {
       shareToken: value.shareToken || null,
       name: value.name || value.nombre || 'archivo',
       mimeType: value.mimeType || value.tipo || 'application/octet-stream',
-      size: value.size || value.tamano || value['tama�o'] || 0,
+      size: value.size || value.tamano || value['tamaño'] || 0,
       status: value.status || 'active',
       questionRef: value.questionRef || null
     };
