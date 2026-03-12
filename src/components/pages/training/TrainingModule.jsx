@@ -6,6 +6,7 @@ import useTrainingTabState from './useTrainingTabState';
 import DashboardScreen from './screens/DashboardScreen';
 import SessionsScreen from './screens/SessionsScreen';
 import PeopleScreen from './screens/PeopleScreen';
+import EmployeeTrainingHistoryScreen from './screens/EmployeeTrainingHistoryScreen';
 import ConfigurationScreen from './screens/ConfigurationScreen';
 import ReportsScreen from './screens/ReportsScreen';
 import ComplianceScreen from './screens/ComplianceScreen';
@@ -15,6 +16,7 @@ const MODULE_TABS = [
   { id: 'dashboard', label: 'Tablero' },
   { id: 'sessions', label: 'Sesiones' },
   { id: 'people', label: 'Personas' },
+  { id: 'history', label: 'Historial' },
   { id: 'reports', label: 'Reportes' },
   { id: 'compliance', label: 'Cumplimiento' },
   { id: 'configuration', label: 'Configuración', adminOnly: true }
@@ -62,6 +64,8 @@ export default function TrainingModule() {
         return <SessionsScreen />;
       case 'people':
         return <PeopleScreen />;
+      case 'history':
+        return <EmployeeTrainingHistoryScreen />;
       case 'configuration':
         return <ConfigurationScreen activeSection={activeSection} onSectionChange={setSection} />;
       case 'reports':

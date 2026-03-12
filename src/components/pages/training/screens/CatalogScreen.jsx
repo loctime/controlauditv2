@@ -5,18 +5,50 @@ import {
   Autocomplete,
   Box,
   Button,
+  Chip,
   CircularProgress,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
   Grid,
+  IconButton,
   MenuItem,
   Paper,
   Stack,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableRow,
   TextField,
+  Tooltip,
   Typography,
 } from '@mui/material';
+import EditIcon from '@mui/icons-material/Edit';
+import DeleteIcon from '@mui/icons-material/Delete';
+import BarChartIcon from '@mui/icons-material/BarChart';
 import { useAuth } from '@/components/context/AuthContext';
-import { trainingCatalogService, trainingCategoryService } from '../../../../services/training';
+import {
+  trainingCatalogService,
+  trainingCategoryService,
+  trainingSessionService,
+  trainingAttendanceService,
+} from '../../../../services/training';
+import { empleadoService } from '../../../../services/empleadoService';
+
+function complianceLabelFromValidUntil(validUntil) {
+  if (!validUntil) return { label: 'Sin vigencia', status: 'missing' };
+  const toDate = validUntil?.toDate ? validUntil.toDate() : new Date(validUntil);
+  const days = Math.ceil((toDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+  if (days < 0) return { label: 'Vencida', status: 'expired' };
+  if (days < 30) return { label: 'Por vencer (<30d)', status: 'critical' };
+  if (days <= 60) return { label: 'Por vencer (30-60d)', status: 'expiring_soon' };
+  return { label: 'Vigente', status: 'compliant' };
+}
+
 export default function CatalogScreen() {
-  const { userProfile } = useAuth();
+  const { userProfile, userSucursales = [] } = useAuth();
   const ownerId = userProfile?.ownerId;
 
   const [loading, setLoading] = useState(true);
@@ -27,6 +59,16 @@ export default function CatalogScreen() {
   const [selectedCategories, setSelectedCategories] = useState([]);
   const [newCategoryName, setNewCategoryName] = useState('');
   const [addingCategory, setAddingCategory] = useState(false);
+  const [editItem, setEditItem] = useState(null);
+  const [editForm, setEditForm] = useState({ name: '', categoryIds: [], modality: 'in_person', recommendedDurationMinutes: 60, validityMonths: 12, description: '', status: 'active' });
+  const [editSelectedCategories, setEditSelectedCategories] = useState([]);
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [deleteConfirmItem, setDeleteConfirmItem] = useState(null);
+  const [deleting, setDeleting] = useState(false);
+  const [recordsDialogItem, setRecordsDialogItem] = useState(null);
+  const [recordsLoading, setRecordsLoading] = useState(false);
+  const [recordsList, setRecordsList] = useState([]);
+  const [employeesMap, setEmployeesMap] = useState({});
   const [form, setForm] = useState({
     name: '',
     description: '',
@@ -119,6 +161,89 @@ export default function CatalogScreen() {
     }
   };
 
+  const openEdit = (item) => {
+    const cats = (item.categoryIds || []).map((id) => categories.find((c) => c.id === id)).filter(Boolean);
+    setEditItem(item);
+    setEditForm({
+      name: item.name || '',
+      modality: item.modality || 'in_person',
+      recommendedDurationMinutes: item.recommendedDurationMinutes ?? 60,
+      validityMonths: item.validityMonths ?? 12,
+      description: item.description || '',
+      status: item.status || 'active',
+    });
+    setEditSelectedCategories(cats);
+  };
+
+  const saveEdit = async () => {
+    if (!ownerId || !editItem?.id) return;
+    if (!editForm.name?.trim()) {
+      setError('El nombre es obligatorio.');
+      return;
+    }
+    setSavingEdit(true);
+    setError('');
+    try {
+      const categoryIds = editSelectedCategories.map((c) => c.id);
+      await trainingCatalogService.update(ownerId, editItem.id, {
+        name: editForm.name.trim(),
+        categoryIds,
+        modality: editForm.modality,
+        recommendedDurationMinutes: Number(editForm.recommendedDurationMinutes || 0),
+        validityMonths: Number(editForm.validityMonths || 0),
+        description: (editForm.description || '').trim() || undefined,
+        status: editForm.status,
+      });
+      setEditItem(null);
+      await load();
+    } catch (err) {
+      setError(err.message || 'No se pudo actualizar el tipo de capacitación.');
+    } finally {
+      setSavingEdit(false);
+    }
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!ownerId || !deleteConfirmItem?.id) return;
+    setDeleting(true);
+    setError('');
+    try {
+      const sessions = await trainingSessionService.listSessions(ownerId, { trainingTypeId: deleteConfirmItem.id });
+      if (sessions?.length > 0) {
+        await trainingCatalogService.update(ownerId, deleteConfirmItem.id, { status: 'inactive' });
+      } else {
+        await trainingCatalogService.remove(ownerId, deleteConfirmItem.id);
+      }
+      setDeleteConfirmItem(null);
+      await load();
+    } catch (err) {
+      setError(err.message || 'No se pudo eliminar o desactivar.');
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const openRecordsDialog = async (item) => {
+    setRecordsDialogItem(item);
+    setRecordsList([]);
+    setRecordsLoading(true);
+    try {
+      const [attendances, employees] = await Promise.all([
+        trainingAttendanceService.listByTrainingTypeId(ownerId, item.id),
+        userSucursales?.length
+          ? empleadoService.getEmpleadosBySucursales(ownerId, userSucursales.map((s) => s.id))
+          : Promise.resolve([]),
+      ]);
+      setRecordsList(attendances || []);
+      setEmployeesMap(Object.fromEntries((employees || []).map((e) => [e.id, e])));
+    } catch (err) {
+      logger.error('[CatalogScreen] load records error', err);
+      setRecordsList([]);
+    } finally {
+      setRecordsLoading(false);
+    }
+  };
+
   if (!ownerId) {
     return <Alert severity="warning">No hay contexto de owner disponible para cat�logo.</Alert>;
   }
@@ -181,9 +306,30 @@ export default function CatalogScreen() {
               <Stack spacing={1}>
                 {items.map((item) => (
                   <Paper key={item.id} variant="outlined" sx={{ p: 1.5 }}>
-                    <Typography sx={{ fontWeight: 700 }}>{item.name} ({item.status})</Typography>
-                    <Typography variant="body2" color="text.secondary">{(item.categoryIds?.length ? item.categoryIds.map((id) => categories.find((c) => c.id === id)?.name || id).join(', ') : item.category || '—')} � {item.modality} � {item.validityMonths} meses</Typography>
-                    <Typography variant="body2">{item.description || 'Sin descripci�n'}</Typography>
+                    <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
+                      <Box sx={{ flex: 1 }}>
+                        <Typography sx={{ fontWeight: 700 }}>{item.name} ({item.status})</Typography>
+                        <Typography variant="body2" color="text.secondary">{(item.categoryIds?.length ? item.categoryIds.map((id) => categories.find((c) => c.id === id)?.name || id).join(', ') : item.category || '—')} � {item.modality} � {item.validityMonths} meses</Typography>
+                        <Typography variant="body2">{item.description || 'Sin descripci�n'}</Typography>
+                      </Box>
+                      <Stack direction="row" spacing={0.5}>
+                        <Tooltip title="Ver registros">
+                          <IconButton size="small" onClick={() => openRecordsDialog(item)}>
+                            <BarChartIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Editar">
+                          <IconButton size="small" onClick={() => openEdit(item)}>
+                            <EditIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Eliminar">
+                          <IconButton size="small" color="error" onClick={() => setDeleteConfirmItem(item)}>
+                            <DeleteIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      </Stack>
+                    </Stack>
                   </Paper>
                 ))}
               </Stack>
@@ -191,6 +337,101 @@ export default function CatalogScreen() {
           </Paper>
         </Grid>
       </Grid>
+
+      <Dialog open={Boolean(editItem)} onClose={() => setEditItem(null)} maxWidth="sm" fullWidth>
+        <DialogTitle>Editar tipo de capacitación</DialogTitle>
+        <DialogContent>
+          <Stack spacing={1.5} sx={{ mt: 1 }}>
+            <TextField label="Nombre" value={editForm.name} onChange={(e) => setEditForm((f) => ({ ...f, name: e.target.value }))} fullWidth />
+            <Autocomplete
+              multiple
+              freeSolo={false}
+              options={categories}
+              value={editSelectedCategories}
+              getOptionLabel={(opt) => (opt?.name ?? '')}
+              isOptionEqualToValue={(opt, val) => opt?.id === val?.id}
+              onChange={(_, newValue) => setEditSelectedCategories(newValue || [])}
+              renderInput={(params) => <TextField {...params} label="Categorías" placeholder="Seleccionar" />}
+            />
+            <TextField multiline rows={2} label="Descripción" value={editForm.description} onChange={(e) => setEditForm((f) => ({ ...f, description: e.target.value }))} fullWidth />
+            <TextField select label="Modalidad" value={editForm.modality} onChange={(e) => setEditForm((f) => ({ ...f, modality: e.target.value }))} fullWidth>
+              <MenuItem value="in_person">Presencial</MenuItem>
+              <MenuItem value="virtual">Virtual</MenuItem>
+              <MenuItem value="hybrid">Híbrida</MenuItem>
+            </TextField>
+            <TextField type="number" label="Duración (min)" value={editForm.recommendedDurationMinutes} onChange={(e) => setEditForm((f) => ({ ...f, recommendedDurationMinutes: e.target.value }))} fullWidth />
+            <TextField type="number" label="Vigencia (meses)" value={editForm.validityMonths} onChange={(e) => setEditForm((f) => ({ ...f, validityMonths: e.target.value }))} fullWidth />
+            <TextField select label="Estado" value={editForm.status} onChange={(e) => setEditForm((f) => ({ ...f, status: e.target.value }))} fullWidth>
+              <MenuItem value="active">Activo</MenuItem>
+              <MenuItem value="inactive">Inactivo</MenuItem>
+            </TextField>
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setEditItem(null)}>Cancelar</Button>
+          <Button variant="contained" onClick={saveEdit} disabled={savingEdit}>{savingEdit ? 'Guardando...' : 'Guardar'}</Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={Boolean(deleteConfirmItem)} onClose={() => !deleting && setDeleteConfirmItem(null)}>
+        <DialogTitle>Eliminar tipo de capacitación</DialogTitle>
+        <DialogContent>
+          <Typography>
+            ¿Eliminar &quot;{deleteConfirmItem?.name}&quot;? Si existe al menos una sesión con este tipo, se desactivará (estado inactivo) en lugar de borrarlo.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteConfirmItem(null)} disabled={deleting}>Cancelar</Button>
+          <Button variant="contained" color="error" onClick={handleDeleteConfirm} disabled={deleting}>{deleting ? 'Procesando...' : 'Eliminar'}</Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={Boolean(recordsDialogItem)} onClose={() => setRecordsDialogItem(null)} maxWidth="md" fullWidth>
+        <DialogTitle>Registros: {recordsDialogItem?.name}</DialogTitle>
+        <DialogContent>
+          {recordsLoading ? (
+            <CircularProgress sx={{ my: 2 }} />
+          ) : (
+            <Table size="small" sx={{ mt: 1 }}>
+              <TableHead>
+                <TableRow>
+                  <TableCell>Empleado</TableCell>
+                  <TableCell>Fecha vigencia desde</TableCell>
+                  <TableCell>Vence</TableCell>
+                  <TableCell>Estado</TableCell>
+                  <TableCell>Certificado</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {recordsList.length === 0 ? (
+                  <TableRow><TableCell colSpan={5} align="center">Sin registros</TableCell></TableRow>
+                ) : (
+                  recordsList.map((row) => {
+                    const emp = employeesMap[row.employeeId];
+                    const name = emp ? `${emp.apellido || ''}, ${emp.nombre || ''}`.trim() || emp.nombre : row.employeeId;
+                    const { label: statusLabel, status } = complianceLabelFromValidUntil(row.validUntil);
+                    const chipColor = status === 'compliant' ? 'success' : status === 'expiring_soon' ? 'warning' : status === 'expired' ? 'error' : 'default';
+                    const validFromStr = row.validFrom?.toDate ? row.validFrom.toDate().toLocaleDateString() : (row.validFrom ? String(row.validFrom) : '—');
+                    const validUntilStr = row.validUntil?.toDate ? row.validUntil.toDate().toLocaleDateString() : (row.validUntil ? String(row.validUntil) : '—');
+                    return (
+                      <TableRow key={row.id}>
+                        <TableCell>{name}</TableCell>
+                        <TableCell>{validFromStr}</TableCell>
+                        <TableCell>{validUntilStr}</TableCell>
+                        <TableCell><Chip label={statusLabel} color={chipColor} size="small" /></TableCell>
+                        <TableCell>{row.certificateId ? 'Sí' : '—'}</TableCell>
+                      </TableRow>
+                    );
+                  })
+                )}
+              </TableBody>
+            </Table>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setRecordsDialogItem(null)}>Cerrar</Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }

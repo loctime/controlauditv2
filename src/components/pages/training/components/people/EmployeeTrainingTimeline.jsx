@@ -1,16 +1,16 @@
 import React from 'react';
-import { Alert, Button, Paper, Table, TableBody, TableCell, TableHead, TableRow, Typography } from '@mui/material';
+import { Alert, Button, Chip, Paper, Table, TableBody, TableCell, TableHead, TableRow, Typography } from '@mui/material';
 
-function statusLabel(complianceStatus) {
+function statusConfig(complianceStatus) {
   switch (complianceStatus) {
     case 'compliant':
-      return 'Vigente';
+      return { label: 'Vigente', color: 'success' };
     case 'expiring_soon':
-      return 'Por vencer';
+      return { label: 'Por vencer', color: 'warning' };
     case 'expired':
-      return 'Vencida';
+      return { label: 'Vencida', color: 'error' };
     default:
-      return 'Incompleta';
+      return { label: 'Incompleta', color: 'default' };
   }
 }
 
@@ -62,7 +62,7 @@ export default function EmployeeTrainingTimeline({ records = [] }) {
                 {dateText(record.validFrom)} — {dateText(record.validUntil)}
               </TableCell>
               <TableCell>{dateText(record.validUntil)}</TableCell>
-              <TableCell>{statusLabel(record.complianceStatus)}</TableCell>
+              <TableCell><Chip label={statusConfig(record.complianceStatus).label} color={statusConfig(record.complianceStatus).color} size="small" /></TableCell>
               <TableCell>
                 {record.certificate ? (
                   <Button

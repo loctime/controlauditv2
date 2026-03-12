@@ -2,7 +2,14 @@ import { collection, doc, getDoc, getDocs, query, orderBy, where, Timestamp } fr
 import { dbAudit } from '../../firebaseControlFile';
 import { firestoreRoutesCore } from '../../core/firestore/firestoreRoutes.core';
 import { setDocWithAppId, updateDocWithAppId } from '../../firebase/firestoreAppWriter';
-import { ensureOwnerId, getDocument } from './trainingBaseService';
+import {
+  buildLimit,
+  buildOrderBy,
+  buildWhere,
+  ensureOwnerId,
+  getDocument,
+  queryDocuments
+} from './trainingBaseService';
 import {
   TRAINING_ATTENDANCE_STATUSES,
   TRAINING_EVALUATION_STATUSES
@@ -114,6 +121,15 @@ export const trainingAttendanceService = {
     const ref = attendanceByEmployeeCollection(ownerId);
     const snap = await getDocs(query(ref, where('employeeId', '==', employeeId), orderBy('updatedAt', 'desc')));
     return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  },
+
+  async listByTrainingTypeId(ownerId, trainingTypeId, options = {}) {
+    const constraints = [
+      buildWhere('trainingTypeId', '==', trainingTypeId),
+      buildOrderBy('updatedAt', 'desc')
+    ];
+    if (options.limit) constraints.push(buildLimit(options.limit));
+    return queryDocuments(ownerId, 'trainingAttendanceByEmployee', constraints);
   },
 
   async linkCertificate(ownerId, sessionId, employeeId, certificateId, validFrom, validUntil) {
