@@ -1,9 +1,13 @@
 import logger from '@/utils/logger';
-import React, { useEffect, useState } from 'react';
-import { Alert, Box, Button, CircularProgress, Grid, MenuItem, Paper, Stack, TextField, Typography } from '@mui/material';
+import React, { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { Alert, Box, Button, Chip, CircularProgress, Grid, MenuItem, Paper, Stack, TextField, Typography } from '@mui/material';
 import { useAuth } from '@/components/context/AuthContext';
 import { trainingCatalogService, trainingPlanService } from '../../../../services/training';
+
 export default function AnnualPlansScreen() {
+  const [searchParams] = useSearchParams();
+  const filterTrainingTypeId = searchParams.get('trainingTypeId') || null;
   const { userProfile, userEmpresas = [], userSucursales = [] } = useAuth();
   const ownerId = userProfile?.ownerId;
 
@@ -18,8 +22,6 @@ export default function AnnualPlansScreen() {
     year: new Date().getFullYear(),
     companyId: '',
     branchId: '',
-    responsibleUserId: userProfile?.uid || '',
-    status: 'draft',
     notes: ''
   });
 
@@ -27,9 +29,6 @@ export default function AnnualPlansScreen() {
     planId: '',
     trainingTypeId: '',
     plannedMonth: 1,
-    targetAudience: '',
-    estimatedParticipants: 0,
-    priority: 'medium',
     notes: ''
   });
 
@@ -58,6 +57,26 @@ export default function AnnualPlansScreen() {
     load();
   }, [ownerId]);
 
+  const { filteredPlans, filteredPlanItemsByPlan, filterTypeName } = useMemo(() => {
+    if (!filterTrainingTypeId) {
+      return {
+        filteredPlans: plans,
+        filteredPlanItemsByPlan: (planId) => planItems.filter((i) => i.planId === planId),
+        filterTypeName: null
+      };
+    }
+    const planIdsWithType = new Set(
+      planItems.filter((i) => i.trainingTypeId === filterTrainingTypeId).map((i) => i.planId)
+    );
+    const filtered = plans.filter((p) => planIdsWithType.has(p.id));
+    return {
+      filteredPlans: filtered,
+      filteredPlanItemsByPlan: (planId) =>
+        planItems.filter((i) => i.planId === planId && i.trainingTypeId === filterTrainingTypeId),
+      filterTypeName: catalog.find((c) => c.id === filterTrainingTypeId)?.name || filterTrainingTypeId
+    };
+  }, [plans, planItems, catalog, filterTrainingTypeId]);
+
   const createPlan = async () => {
     if (!ownerId) return;
     if (!planForm.companyId || !planForm.branchId) {
@@ -67,7 +86,11 @@ export default function AnnualPlansScreen() {
 
     setSaving(true);
     try {
-      const ref = await trainingPlanService.createPlan(ownerId, planForm);
+      const ref = await trainingPlanService.createPlan(ownerId, {
+        ...planForm,
+        responsibleUserId: userProfile?.uid || '',
+        status: 'draft'
+      });
       setItemForm((prev) => ({ ...prev, planId: ref.id }));
       await load();
     } catch (err) {
@@ -88,8 +111,10 @@ export default function AnnualPlansScreen() {
     try {
       await trainingPlanService.createPlanItem(ownerId, {
         ...itemForm,
-        estimatedParticipants: Number(itemForm.estimatedParticipants || 0),
-        plannedMonth: Number(itemForm.plannedMonth || 1)
+        plannedMonth: Number(itemForm.plannedMonth || 1),
+        targetAudience: '',
+        estimatedParticipants: 0,
+        priority: 'medium'
       });
       await load();
     } catch (err) {
@@ -140,22 +165,6 @@ export default function AnnualPlansScreen() {
                   ))}
               </TextField>
               <TextField
-                label="Usuario responsable"
-                value={planForm.responsibleUserId}
-                onChange={(e) => setPlanForm({ ...planForm, responsibleUserId: e.target.value })}
-              />
-              <TextField
-                select
-                label="Estado"
-                value={planForm.status}
-                onChange={(e) => setPlanForm({ ...planForm, status: e.target.value })}
-              >
-                <MenuItem value="draft">Borrador</MenuItem>
-                <MenuItem value="approved">Aprobado</MenuItem>
-                <MenuItem value="in_progress">En progreso</MenuItem>
-                <MenuItem value="closed">Cerrado</MenuItem>
-              </TextField>
-              <TextField
                 multiline
                 rows={2}
                 label="Notas"
@@ -203,30 +212,8 @@ export default function AnnualPlansScreen() {
                 label="Mes planificado"
                 value={itemForm.plannedMonth}
                 onChange={(e) => setItemForm({ ...itemForm, plannedMonth: Number(e.target.value) })}
+                inputProps={{ min: 1, max: 12 }}
               />
-              <TextField
-                label="Audiencia objetivo"
-                value={itemForm.targetAudience}
-                onChange={(e) => setItemForm({ ...itemForm, targetAudience: e.target.value })}
-              />
-              <TextField
-                type="number"
-                label="Participantes estimados"
-                value={itemForm.estimatedParticipants}
-                onChange={(e) =>
-                  setItemForm({ ...itemForm, estimatedParticipants: Number(e.target.value) })
-                }
-              />
-              <TextField
-                select
-                label="Prioridad"
-                value={itemForm.priority}
-                onChange={(e) => setItemForm({ ...itemForm, priority: e.target.value })}
-              >
-                <MenuItem value="low">Baja</MenuItem>
-                <MenuItem value="medium">Media</MenuItem>
-                <MenuItem value="high">Alta</MenuItem>
-              </TextField>
               <TextField
                 multiline
                 rows={2}
@@ -243,30 +230,48 @@ export default function AnnualPlansScreen() {
       </Grid>
 
       <Paper sx={{ p: 2, mt: 3 }}>
-        <Typography variant="h6" sx={{ mb: 2 }}>Planes e items</Typography>
+        <Stack direction="row" alignItems="center" gap={1} sx={{ mb: 2 }}>
+          <Typography variant="h6">Planes e items</Typography>
+          {filterTypeName && (
+            <Chip
+              label={`Filtrado por: ${filterTypeName}`}
+              size="small"
+              color="primary"
+              variant="outlined"
+            />
+          )}
+        </Stack>
         {loading ? (
           <CircularProgress />
         ) : (
           <Stack spacing={1}>
-            {plans.map((plan) => {
-              const items = planItems.filter((item) => item.planId === plan.id);
-              return (
-                <Paper key={plan.id} variant="outlined" sx={{ p: 2 }}>
-                  <Typography sx={{ fontWeight: 700 }}>
-                    {plan.year} -{' '}
-                    {userSucursales.find((sucursal) => sucursal.id === plan.branchId)?.nombre ||
-                      'Sin dato'}{' '}
-                    - {plan.status}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    {plan.notes || 'Sin notas'}
-                  </Typography>
-                  <Typography variant="body2" sx={{ mt: 1 }}>
-                    items del plan: {items.length}
-                  </Typography>
-                </Paper>
-              );
-            })}
+            {filteredPlans.length === 0 ? (
+              <Typography color="text.secondary">
+                {filterTrainingTypeId
+                  ? 'Ningún plan contiene este tipo de capacitación.'
+                  : 'No hay planes. Crea un plan o agrega capacitaciones desde el catálogo.'}
+              </Typography>
+            ) : (
+              filteredPlans.map((plan) => {
+                const items = filteredPlanItemsByPlan(plan.id);
+                return (
+                  <Paper key={plan.id} variant="outlined" sx={{ p: 2 }}>
+                    <Typography sx={{ fontWeight: 700 }}>
+                      {plan.year} -{' '}
+                      {userSucursales.find((sucursal) => sucursal.id === plan.branchId)?.nombre ||
+                        'Sin dato'}{' '}
+                      - {plan.status}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      {plan.notes || 'Sin notas'}
+                    </Typography>
+                    <Typography variant="body2" sx={{ mt: 1 }}>
+                      items del plan{filterTrainingTypeId ? ' (tipo filtrado)' : ''}: {items.length}
+                    </Typography>
+                  </Paper>
+                );
+              })
+            )}
           </Stack>
         )}
       </Paper>

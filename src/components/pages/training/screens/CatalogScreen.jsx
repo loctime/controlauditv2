@@ -32,6 +32,7 @@ import { useAuth } from '@/components/context/AuthContext';
 import {
   trainingCatalogService,
   trainingCategoryService,
+  trainingPlanService,
   trainingSessionService,
   trainingAttendanceService,
 } from '../../../../services/training';
@@ -47,8 +48,8 @@ function complianceLabelFromValidUntil(validUntil) {
   return { label: 'Vigente', status: 'compliant' };
 }
 
-export default function CatalogScreen() {
-  const { userProfile, userSucursales = [] } = useAuth();
+export default function CatalogScreen({ onNavigateToPlans }) {
+  const { userProfile, userEmpresas = [], userSucursales = [] } = useAuth();
   const ownerId = userProfile?.ownerId;
 
   const [loading, setLoading] = useState(true);
@@ -69,6 +70,17 @@ export default function CatalogScreen() {
   const [recordsLoading, setRecordsLoading] = useState(false);
   const [recordsList, setRecordsList] = useState([]);
   const [employeesMap, setEmployeesMap] = useState({});
+  const [addToPlanItem, setAddToPlanItem] = useState(null);
+  const [addToPlanForm, setAddToPlanForm] = useState({
+    companyId: '',
+    branchId: '',
+    year: new Date().getFullYear(),
+    plannedMonth: 1,
+    notes: ''
+  });
+  const [addToPlanSaving, setAddToPlanSaving] = useState(false);
+  const [addToPlanError, setAddToPlanError] = useState('');
+  const [addToPlanSuccess, setAddToPlanSuccess] = useState(false);
   const [form, setForm] = useState({
     name: '',
     description: '',
@@ -223,6 +235,52 @@ export default function CatalogScreen() {
     }
   };
 
+  const openAddToPlanModal = (item) => {
+    setAddToPlanItem(item);
+    setAddToPlanError('');
+    setAddToPlanSuccess(false);
+    setAddToPlanForm({
+      companyId: '',
+      branchId: '',
+      year: new Date().getFullYear(),
+      plannedMonth: 1,
+      notes: ''
+    });
+  };
+
+  const addTrainingTypeToPlan = async () => {
+    if (!ownerId || !addToPlanItem?.id || !addToPlanForm.companyId || !addToPlanForm.branchId) {
+      setAddToPlanError('Selecciona empresa, sucursal y año.');
+      return;
+    }
+    setAddToPlanSaving(true);
+    setAddToPlanError('');
+    try {
+      await trainingPlanService.addTrainingTypeToAnnualPlan(ownerId, {
+        companyId: addToPlanForm.companyId,
+        branchId: addToPlanForm.branchId,
+        year: Number(addToPlanForm.year),
+        trainingTypeId: addToPlanItem.id,
+        plannedMonth: Number(addToPlanForm.plannedMonth) || 1,
+        notes: (addToPlanForm.notes || '').trim() || '',
+        responsibleUserId: userProfile?.uid || ''
+      });
+      setAddToPlanSuccess(true);
+    } catch (err) {
+      logger.error('[CatalogScreen] addTrainingTypeToPlan error', err);
+      setAddToPlanError(err.message || 'No se pudo agregar al plan anual.');
+    } finally {
+      setAddToPlanSaving(false);
+    }
+  };
+
+  const closeAddToPlanModal = () => {
+    setAddToPlanItem(null);
+    setAddToPlanForm({ companyId: '', branchId: '', year: new Date().getFullYear(), plannedMonth: 1, notes: '' });
+    setAddToPlanError('');
+    setAddToPlanSuccess(false);
+  };
+
   const openRecordsDialog = async (item) => {
     setRecordsDialogItem(item);
     setRecordsList([]);
@@ -301,7 +359,7 @@ export default function CatalogScreen() {
 
         <Grid item xs={12} md={7}>
           <Paper sx={{ p: 2 }}>
-            <Typography variant="h6" sx={{ mb: 2 }}>Cat�logo</Typography>
+            <Typography variant="h6" sx={{ mb: 2 }}>Catálogo</Typography>
             {loading ? <CircularProgress /> : (
               <Stack spacing={1}>
                 {items.map((item) => (
@@ -312,7 +370,13 @@ export default function CatalogScreen() {
                         <Typography variant="body2" color="text.secondary">{(item.categoryIds?.length ? item.categoryIds.map((id) => categories.find((c) => c.id === id)?.name || id).join(', ') : item.category || '—')} � {item.modality} � {item.validityMonths} meses</Typography>
                         <Typography variant="body2">{item.description || 'Sin descripci�n'}</Typography>
                       </Box>
-                      <Stack direction="row" spacing={0.5}>
+                      <Stack direction="row" spacing={0.5} flexWrap="wrap" alignItems="center">
+                        <Button size="small" variant="outlined" onClick={() => openAddToPlanModal(item)}>
+                          Agregar a plan anual
+                        </Button>
+                        <Button size="small" onClick={() => onNavigateToPlans?.(item.id)}>
+                          Ver en planes anuales
+                        </Button>
                         <Tooltip title="Ver registros">
                           <IconButton size="small" onClick={() => openRecordsDialog(item)}>
                             <BarChartIcon fontSize="small" />
@@ -383,6 +447,121 @@ export default function CatalogScreen() {
         <DialogActions>
           <Button onClick={() => setDeleteConfirmItem(null)} disabled={deleting}>Cancelar</Button>
           <Button variant="contained" color="error" onClick={handleDeleteConfirm} disabled={deleting}>{deleting ? 'Procesando...' : 'Eliminar'}</Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
+        open={Boolean(addToPlanItem)}
+        onClose={() => !addToPlanSaving && closeAddToPlanModal()}
+        maxWidth="xs"
+        fullWidth
+      >
+        <DialogTitle>
+          Agregar a plan anual {addToPlanItem ? `: ${addToPlanItem.name}` : ''}
+        </DialogTitle>
+        <DialogContent>
+          <Stack spacing={1.5} sx={{ mt: 1 }}>
+            {addToPlanError && (
+              <Alert severity="error" onClose={() => setAddToPlanError('')}>
+                {addToPlanError}
+              </Alert>
+            )}
+            {addToPlanSuccess ? (
+              <Alert severity="success">
+                Agregado al plan anual. Puedes ir a Planes anuales para editarlo.
+              </Alert>
+            ) : (
+              <>
+                <TextField
+                  select
+                  fullWidth
+                  label="Empresa"
+                  value={addToPlanForm.companyId}
+                  onChange={(e) =>
+                    setAddToPlanForm((f) => ({ ...f, companyId: e.target.value, branchId: '' }))
+                  }
+                >
+                  {userEmpresas.map((empresa) => (
+                    <MenuItem key={empresa.id} value={empresa.id}>
+                      {empresa.nombre}
+                    </MenuItem>
+                  ))}
+                </TextField>
+                <TextField
+                  select
+                  fullWidth
+                  label="Sucursal"
+                  value={addToPlanForm.branchId}
+                  onChange={(e) => setAddToPlanForm((f) => ({ ...f, branchId: e.target.value }))}
+                  disabled={!addToPlanForm.companyId}
+                >
+                  {userSucursales
+                    .filter((s) => !addToPlanForm.companyId || s.empresaId === addToPlanForm.companyId)
+                    .map((sucursal) => (
+                      <MenuItem key={sucursal.id} value={sucursal.id}>
+                        {sucursal.nombre}
+                      </MenuItem>
+                    ))}
+                </TextField>
+                <TextField
+                  type="number"
+                  fullWidth
+                  label="Año"
+                  value={addToPlanForm.year}
+                  onChange={(e) =>
+                    setAddToPlanForm((f) => ({ ...f, year: Number(e.target.value) || new Date().getFullYear() }))
+                  }
+                  inputProps={{ min: new Date().getFullYear() - 2, max: new Date().getFullYear() + 5 }}
+                />
+                <TextField
+                  select
+                  fullWidth
+                  label="Mes planificado"
+                  value={addToPlanForm.plannedMonth}
+                  onChange={(e) =>
+                    setAddToPlanForm((f) => ({ ...f, plannedMonth: Number(e.target.value) || 1 }))
+                  }
+                >
+                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((m) => (
+                    <MenuItem key={m} value={m}>
+                      {new Date(2000, m - 1, 1).toLocaleString('es', { month: 'long' })}
+                    </MenuItem>
+                  ))}
+                </TextField>
+                <TextField
+                  fullWidth
+                  label="Notas (opcional)"
+                  value={addToPlanForm.notes}
+                  onChange={(e) => setAddToPlanForm((f) => ({ ...f, notes: e.target.value }))}
+                  multiline
+                  rows={2}
+                />
+              </>
+            )}
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          {addToPlanSuccess ? (
+            <>
+              <Button onClick={closeAddToPlanModal}>Cerrar</Button>
+              <Button variant="contained" onClick={() => { closeAddToPlanModal(); onNavigateToPlans?.(addToPlanItem?.id); }}>
+                Ir a planes anuales
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button onClick={closeAddToPlanModal} disabled={addToPlanSaving}>
+                Cancelar
+              </Button>
+              <Button
+                variant="contained"
+                onClick={addTrainingTypeToPlan}
+                disabled={addToPlanSaving || !addToPlanForm.companyId || !addToPlanForm.branchId}
+              >
+                {addToPlanSaving ? 'Agregando...' : 'Confirmar'}
+              </Button>
+            </>
+          )}
         </DialogActions>
       </Dialog>
 

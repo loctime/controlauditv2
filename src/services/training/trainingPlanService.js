@@ -145,5 +145,64 @@ export const trainingPlanService = {
         };
       })
       .sort(sortCompatibleCandidates);
+  },
+
+  /**
+   * Añade un tipo de capacitación a un plan anual (find-or-create plan, evita ítem duplicado).
+   * @param {string} ownerId
+   * @param {{ companyId: string, branchId: string, year: number, trainingTypeId: string, plannedMonth?: number, notes?: string, responsibleUserId?: string }}
+   * @returns {{ planId: string, planItemId: string, createdPlan: boolean }}
+   * @throws Si ya existe un ítem para ese trainingTypeId en el plan.
+   */
+  async addTrainingTypeToAnnualPlan(ownerId, {
+    companyId,
+    branchId,
+    year,
+    trainingTypeId,
+    plannedMonth = 1,
+    notes = '',
+    responsibleUserId = ''
+  } = {}) {
+    if (!companyId || !branchId || !year || !trainingTypeId) {
+      throw new Error('Faltan empresa, sucursal, año o tipo de capacitación.');
+    }
+
+    const yearNum = Number(year);
+    const existingPlans = await this.listPlans(ownerId, { year: yearNum, companyId, branchId });
+    let planId;
+    let createdPlan = false;
+
+    if (existingPlans.length > 0) {
+      planId = existingPlans[0].id;
+    } else {
+      const planRef = await this.createPlan(ownerId, {
+        year: yearNum,
+        companyId,
+        branchId,
+        notes: '',
+        responsibleUserId: responsibleUserId || undefined,
+        status: 'draft'
+      });
+      planId = planRef.id;
+      createdPlan = true;
+    }
+
+    const existingItems = await this.listPlanItems(ownerId, { planId, trainingTypeId });
+    if (existingItems.length > 0) {
+      throw new Error('Esta capacitación ya está en el plan anual seleccionado.');
+    }
+
+    const itemRef = await this.createPlanItem(ownerId, {
+      planId,
+      trainingTypeId,
+      plannedMonth: Number(plannedMonth) || 1,
+      status: 'planned',
+      targetAudience: '',
+      estimatedParticipants: 0,
+      priority: 'medium',
+      notes: notes || ''
+    });
+
+    return { planId, planItemId: itemRef.id, createdPlan };
   }
 };

@@ -9,7 +9,7 @@ const CONFIG_SECTIONS = [
   { id: 'plans', label: 'Planes anuales' }
 ];
 
-export default function ConfigurationHub({ activeSection, onSectionChange }) {
+export default function ConfigurationHub({ activeSection, onSectionChange, onNavigateToPlans }) {
   const currentIndex = Math.max(0, CONFIG_SECTIONS.findIndex((section) => section.id === activeSection));
 
   return (
@@ -27,7 +27,9 @@ export default function ConfigurationHub({ activeSection, onSectionChange }) {
         </Tabs>
       </Paper>
 
-      {activeSection === 'catalog' && <CatalogScreenAdapter />}
+      {activeSection === 'catalog' && (
+        <CatalogScreenAdapter onNavigateToPlans={onNavigateToPlans || (() => onSectionChange('plans'))} />
+      )}
       {activeSection === 'plans' && <AnnualPlansScreenAdapter />}
     </Stack>
   );

@@ -47,11 +47,24 @@ export default function useTrainingTabState(tabs = [], canViewConfiguration = fa
     setSearchParams(nextParams, { replace: true });
   };
 
+  const navigateToPlans = (trainingTypeId) => {
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.set('tab', canViewConfiguration ? 'configuration' : DEFAULT_TAB);
+    nextParams.set('section', 'plans');
+    if (trainingTypeId) {
+      nextParams.set('trainingTypeId', trainingTypeId);
+    } else {
+      nextParams.delete('trainingTypeId');
+    }
+    setSearchParams(nextParams, { replace: true });
+  };
+
   return {
     activeTab,
     activeSection,
     setTab,
-    setSection
+    setSection,
+    navigateToPlans
   };
 }
 

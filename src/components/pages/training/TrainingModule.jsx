@@ -34,7 +34,7 @@ export default function TrainingModule() {
     [canViewConfiguration]
   );
 
-  const { activeTab, activeSection, setTab, setSection } = useTrainingTabState(visibleTabs, canViewConfiguration);
+  const { activeTab, activeSection, setTab, setSection, navigateToPlans } = useTrainingTabState(visibleTabs, canViewConfiguration);
 
   const renderScreen = () => {
     switch (activeTab) {
@@ -67,7 +67,13 @@ export default function TrainingModule() {
       case 'history':
         return <EmployeeTrainingHistoryScreen />;
       case 'configuration':
-        return <ConfigurationScreen activeSection={activeSection} onSectionChange={setSection} />;
+        return (
+          <ConfigurationScreen
+            activeSection={activeSection}
+            onSectionChange={setSection}
+            onNavigateToPlans={navigateToPlans}
+          />
+        );
       case 'reports':
         return <ReportsScreen />;
       case 'compliance':
