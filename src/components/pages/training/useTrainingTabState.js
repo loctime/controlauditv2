@@ -2,7 +2,8 @@ import { useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
 const DEFAULT_TAB = 'dashboard';
-const CONFIG_SECTIONS = ['catalog', 'matrix', 'plans'];
+// matrix oculto temporalmente; section=matrix se trata como catalog
+const CONFIG_SECTIONS = ['catalog', 'plans'];
 
 export default function useTrainingTabState(tabs = [], canViewConfiguration = false) {
   const [searchParams, setSearchParams] = useSearchParams();

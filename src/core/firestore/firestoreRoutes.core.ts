@@ -368,6 +368,56 @@ export const firestoreRoutesCore = {
   ],
 
   /**
+   * Collection of training sectors (per owner)
+   * Path: apps/auditoria/owners/{ownerId}/training_sectors
+   */
+  trainingSectors: (ownerId: string): string[] => [
+    'apps',
+    'auditoria',
+    'owners',
+    ownerId,
+    'training_sectors'
+  ],
+
+  /**
+   * Document of training sector
+   * Path: apps/auditoria/owners/{ownerId}/training_sectors/{sectorId}
+   */
+  trainingSectorItem: (ownerId: string, sectorId: string): string[] => [
+    'apps',
+    'auditoria',
+    'owners',
+    ownerId,
+    'training_sectors',
+    sectorId
+  ],
+
+  /**
+   * Collection of training risk categories (per owner)
+   * Path: apps/auditoria/owners/{ownerId}/training_risk_categories
+   */
+  trainingRiskCategories: (ownerId: string): string[] => [
+    'apps',
+    'auditoria',
+    'owners',
+    ownerId,
+    'training_risk_categories'
+  ],
+
+  /**
+   * Document of training risk category
+   * Path: apps/auditoria/owners/{ownerId}/training_risk_categories/{categoryId}
+   */
+  trainingRiskCategoryItem: (ownerId: string, categoryId: string): string[] => [
+    'apps',
+    'auditoria',
+    'owners',
+    ownerId,
+    'training_risk_categories',
+    categoryId
+  ],
+
+  /**
    * Collection of requirement matrix rules
    * Path: apps/auditoria/owners/{ownerId}/training_requirement_matrix
    */

@@ -64,6 +64,7 @@ const componentMap = {
   configuracion: ConfiguracionPage,
   empleados: Empleados,
   capacitaciones: Capacitaciones,
+  "capacitacion-vieja": Capacitaciones,
   training: TrainingModule,
   "capacitacion-asistencia": RegistrarAsistencia,
   accidentes: Accidentes,

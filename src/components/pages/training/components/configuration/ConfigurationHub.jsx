@@ -1,12 +1,11 @@
-﻿import React from 'react';
+import React from 'react';
 import { Paper, Stack, Tab, Tabs } from '@mui/material';
 import CatalogScreenAdapter from './CatalogScreenAdapter';
-import RequirementMatrixScreenAdapter from './RequirementMatrixScreenAdapter';
 import AnnualPlansScreenAdapter from './AnnualPlansScreenAdapter';
 
+// Matriz de requerimientos oculta temporalmente (RequirementMatrixScreenAdapter)
 const CONFIG_SECTIONS = [
   { id: 'catalog', label: 'Catalogo de capacitacion' },
-  { id: 'matrix', label: 'Matriz de requerimientos' },
   { id: 'plans', label: 'Planes anuales' }
 ];
 
@@ -29,7 +28,6 @@ export default function ConfigurationHub({ activeSection, onSectionChange }) {
       </Paper>
 
       {activeSection === 'catalog' && <CatalogScreenAdapter />}
-      {activeSection === 'matrix' && <RequirementMatrixScreenAdapter />}
       {activeSection === 'plans' && <AnnualPlansScreenAdapter />}
     </Stack>
   );
