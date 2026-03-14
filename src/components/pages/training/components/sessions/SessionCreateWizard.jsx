@@ -55,7 +55,26 @@ function canDetectPlan(trainingTypeId, companyId, branchId, scheduledDate) {
   return Boolean(trainingTypeId && companyId && branchId && scheduledDate);
 }
 
-export default function SessionCreateWizard({ ownerId, onCreated }) {
+const defaultForm = (userProfile) => ({
+  trainingTypeId: '',
+  companyId: '',
+  branchId: '',
+  instructorId: userProfile?.uid || '',
+  modality: 'in_person',
+  location: '',
+  scheduledDate: ''
+});
+
+export default function SessionCreateWizard({
+  ownerId,
+  onCreated,
+  initialValues,
+  initialPlanMode = 'ad_hoc',
+  initialPlanItemId,
+  initialPlanId,
+  initialPlanCandidate,
+  onCancel
+}) {
   const { userProfile, userEmpresas = [], userSucursales = [] } = useAuth();
 
   const [step, setStep] = useState(1);
@@ -70,19 +89,38 @@ export default function SessionCreateWizard({ ownerId, onCreated }) {
 
   const [planDetectLoading, setPlanDetectLoading] = useState(false);
   const [planDetectError, setPlanDetectError] = useState('');
-  const [planCandidates, setPlanCandidates] = useState([]);
-  const [planMode, setPlanMode] = useState('ad_hoc');
-  const [selectedPlanItemId, setSelectedPlanItemId] = useState('');
+  const [planCandidates, setPlanCandidates] = useState(() =>
+    initialPlanMode === 'plan' && initialPlanCandidate ? [initialPlanCandidate] : []
+  );
+  const [planMode, setPlanMode] = useState(initialPlanMode);
+  const [selectedPlanItemId, setSelectedPlanItemId] = useState(initialPlanItemId || '');
 
-  const [form, setForm] = useState({
-    trainingTypeId: '',
-    companyId: '',
-    branchId: '',
-    instructorId: userProfile?.uid || '',
-    modality: 'in_person',
-    location: '',
-    scheduledDate: ''
+  const [form, setForm] = useState(() => {
+    const base = defaultForm(userProfile);
+    if (initialValues && typeof initialValues === 'object') {
+      return { ...base, ...initialValues };
+    }
+    return base;
   });
+
+  useEffect(() => {
+    if (!initialValues || typeof initialValues !== 'object') return;
+    setForm((prev) => ({ ...prev, ...initialValues }));
+  }, [initialValues]);
+
+  useEffect(() => {
+    if (initialPlanMode === 'plan' && initialPlanCandidate) {
+      setPlanMode('plan');
+      setPlanCandidates([initialPlanCandidate]);
+      if (initialPlanItemId) setSelectedPlanItemId(initialPlanItemId);
+    }
+  }, [initialPlanMode, initialPlanCandidate, initialPlanItemId]);
+
+  useEffect(() => {
+    if (initialValues?.trainingTypeId && ownerId) {
+      ensureCatalog();
+    }
+  }, [ownerId, initialValues?.trainingTypeId]);
 
   const planTrainingTypeId = form.trainingTypeId;
   const planCompanyId = form.companyId;
@@ -147,28 +185,23 @@ export default function SessionCreateWizard({ ownerId, onCreated }) {
         return;
       }
 
-      const [usersList, employeesList] = await Promise.all([
-        getUsers(ownerId).catch(() => []),
-        form.branchId
-          ? empleadoService.getEmpleadosBySucursal(ownerId, form.branchId).catch(() => [])
-          : form.companyId
-          ? empleadoService.getEmpleadosByEmpresa(ownerId, form.companyId).catch(() => [])
-          : Promise.resolve([])
-      ]);
+      // Solo instructores: yo (usuario actual) + usuarios del owner (mis usuarios). No empleados de sucursal/empresa.
+      const usersList = await getUsers(ownerId).catch(() => []);
 
       const optionMap = new Map();
 
+      // Siempre incluir al usuario actual primero (yo)
+      if (userProfile?.uid) {
+        const meLabel = personDisplayName(userProfile) || userProfile.email || 'Yo';
+        const suffix = userProfile.email ? ` (${userProfile.email})` : '';
+        optionMap.set(userProfile.uid, { id: userProfile.uid, label: `${meLabel}${suffix}`, source: 'current' });
+      }
+
       (usersList || []).forEach((user) => {
+        if (optionMap.has(user.id)) return;
         const name = personDisplayName(user) || 'Sin dato';
         const suffix = user.email ? ` (${user.email})` : '';
         optionMap.set(user.id, { id: user.id, label: `${name}${suffix}`, source: 'user' });
-      });
-
-      (employeesList || []).forEach((employee) => {
-        if (optionMap.has(employee.id)) return;
-        const name = personDisplayName(employee) || 'Sin dato';
-        const suffix = employee.email ? ` (${employee.email})` : '';
-        optionMap.set(employee.id, { id: employee.id, label: `${name}${suffix}`, source: 'employee' });
       });
 
       const options = Array.from(optionMap.values()).sort((a, b) => a.label.localeCompare(b.label, 'es'));
@@ -178,7 +211,7 @@ export default function SessionCreateWizard({ ownerId, onCreated }) {
 
       setForm((prev) => {
         if (!prev.instructorId) {
-          return { ...prev, instructorId: options[0]?.id || '' };
+          return { ...prev, instructorId: options[0]?.id || userProfile?.uid || '' };
         }
         return prev;
       });
@@ -189,7 +222,7 @@ export default function SessionCreateWizard({ ownerId, onCreated }) {
     return () => {
       alive = false;
     };
-  }, [ownerId, form.branchId, form.companyId]);
+  }, [ownerId, userProfile?.uid, userProfile?.displayName, userProfile?.email]);
 
   useEffect(() => {
     let alive = true;
@@ -546,9 +579,16 @@ export default function SessionCreateWizard({ ownerId, onCreated }) {
             </Grid>
           </Grid>
 
-          <Button variant="contained" onClick={loadSuggestions} disabled={saving}>
-            {saving ? 'Cargando sugerencias...' : 'Continuar a participantes'}
-          </Button>
+          <Stack direction="row" spacing={1.5}>
+            {onCancel && (
+              <Button variant="outlined" onClick={onCancel}>
+                Cancelar
+              </Button>
+            )}
+            <Button variant="contained" onClick={loadSuggestions} disabled={saving}>
+              {saving ? 'Cargando sugerencias...' : 'Continuar a participantes'}
+            </Button>
+          </Stack>
         </Stack>
       )}
 
@@ -608,6 +648,11 @@ export default function SessionCreateWizard({ ownerId, onCreated }) {
             <Button variant="outlined" onClick={() => setStep(1)}>
               Volver
             </Button>
+            {onCancel && (
+              <Button variant="outlined" onClick={onCancel}>
+                Cancelar
+              </Button>
+            )}
             <Button
               variant="contained"
               onClick={() => setStep(3)}
@@ -710,6 +755,11 @@ export default function SessionCreateWizard({ ownerId, onCreated }) {
             <Button variant="outlined" onClick={() => setStep(2)}>
               Volver a participantes
             </Button>
+            {onCancel && (
+              <Button variant="outlined" onClick={onCancel}>
+                Cancelar
+              </Button>
+            )}
             <Button variant="contained" onClick={createSession} disabled={saving}>
               {saving ? 'Creando...' : 'Crear sesion'}
             </Button>

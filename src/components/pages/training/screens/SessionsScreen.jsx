@@ -26,6 +26,7 @@ import {
 import { TRAINING_SESSION_STATUSES } from '../../../../types/trainingDomain';
 import SessionsListView from '../components/sessions/SessionsListView';
 import SessionCreateWizard from '../components/sessions/SessionCreateWizard';
+import TrainingSessionEntry from '../components/sessions/TrainingSessionEntry';
 import SessionExecutionView from '../components/sessions/SessionExecutionView';
 import SessionEvidencePanel from '../components/sessions/SessionEvidencePanel';
 import SessionClosurePanel from '../components/sessions/SessionClosurePanel';
@@ -61,6 +62,8 @@ export default function SessionsScreen() {
   const [editingSession, setEditingSession] = useState(null);
   const [editingForm, setEditingForm] = useState({ location: '', instructorId: '', scheduledDate: '' });
   const [instructorOptions, setInstructorOptions] = useState([]);
+  const [wizardOpen, setWizardOpen] = useState(false);
+  const [wizardInitial, setWizardInitial] = useState(null);
 
   const selectedSession = useMemo(
     () => sessions.find((session) => session.id === selectedSessionId) || null,
@@ -183,21 +186,44 @@ export default function SessionsScreen() {
 
       <Grid container spacing={2}>
         <Grid item xs={12}>
-          <Typography variant="h6" sx={{ mb: 1 }}>
-            1. Crear nueva sesion
-          </Typography>
-          <SessionCreateWizard
-            ownerId={ownerId}
-            onCreated={(sessionId) => {
-              setSelectedSessionId(sessionId);
-              load();
-            }}
-          />
+          {!wizardOpen ? (
+            <TrainingSessionEntry
+              ownerId={ownerId}
+              onOpenWizardFromPlan={(payload) => {
+                setWizardInitial(payload);
+                setWizardOpen(true);
+              }}
+              onOpenWizardAdHoc={() => {
+                setWizardInitial({ initialPlanMode: 'ad_hoc' });
+                setWizardOpen(true);
+              }}
+            />
+          ) : (
+            <SessionCreateWizard
+              key={wizardInitial?.initialPlanItemId ?? wizardInitial?.initialPlanMode ?? 'wizard'}
+              ownerId={ownerId}
+              initialValues={wizardInitial?.initialValues}
+              initialPlanMode={wizardInitial?.initialPlanMode}
+              initialPlanItemId={wizardInitial?.initialPlanItemId}
+              initialPlanId={wizardInitial?.initialPlanId}
+              initialPlanCandidate={wizardInitial?.initialPlanCandidate}
+              onCreated={(sessionId) => {
+                setSelectedSessionId(sessionId);
+                setWizardOpen(false);
+                setWizardInitial(null);
+                load();
+              }}
+              onCancel={() => {
+                setWizardOpen(false);
+                setWizardInitial(null);
+              }}
+            />
+          )}
         </Grid>
 
         <Grid item xs={12}>
           <Typography variant="h6" sx={{ mb: 1 }}>
-            2. Lista de sesiones
+            Lista de sesiones
           </Typography>
           <SessionsListView
             sessions={sessions}
