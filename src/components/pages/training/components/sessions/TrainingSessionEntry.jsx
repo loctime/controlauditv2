@@ -69,7 +69,7 @@ async function loadPlanItemsForCurrentMonth(ownerId, year, month) {
   return result;
 }
 
-export default function TrainingSessionEntry({ ownerId, onOpenWizardFromPlan, onOpenWizardAdHoc }) {
+export default function TrainingSessionEntry({ ownerId, onOpenWizardFromPlan, onOpenWizardAdHoc, onOpenQuickSession }) {
   const { userEmpresas = [], userSucursales = [] } = useAuth();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -122,25 +122,39 @@ export default function TrainingSessionEntry({ ownerId, onOpenWizardFromPlan, on
     const scheduledDate = new Date(year, month - 1, Math.min(15, new Date(year, month, 0).getDate()), 9, 0);
     const scheduledDateIso = scheduledDate.toISOString().slice(0, 16);
 
-    onOpenWizardFromPlan({
-      initialValues: {
+    // Si existe la función para sesión rápida, usarla
+    if (onOpenQuickSession) {
+      onOpenQuickSession({
         trainingTypeId: item.trainingTypeId,
         companyId: plan.companyId,
         branchId: plan.branchId,
-        scheduledDate: scheduledDateIso
-      },
-      initialPlanMode: 'plan',
-      initialPlanItemId: item.id,
-      initialPlanId: plan.id,
-      initialPlanCandidate: {
+        scheduledDate: scheduledDateIso,
         planId: plan.id,
         planItemId: item.id,
-        planStatus: plan.status || 'draft',
-        planYear: plan.year,
-        plannedMonth: Number(item.plannedMonth) || month,
-        trainingTypeId: item.trainingTypeId
-      }
-    });
+        planMode: 'plan'
+      });
+    } else {
+      // Fallback al wizard original
+      onOpenWizardFromPlan({
+        initialValues: {
+          trainingTypeId: item.trainingTypeId,
+          companyId: plan.companyId,
+          branchId: plan.branchId,
+          scheduledDate: scheduledDateIso
+        },
+        initialPlanMode: 'plan',
+        initialPlanItemId: item.id,
+        initialPlanId: plan.id,
+        initialPlanCandidate: {
+          planId: plan.id,
+          planItemId: item.id,
+          planStatus: plan.status || 'draft',
+          planYear: plan.year,
+          plannedMonth: Number(item.plannedMonth) || month,
+          trainingTypeId: item.trainingTypeId
+        }
+      });
+    }
   };
 
   if (!ownerId) return null;
@@ -189,7 +203,7 @@ export default function TrainingSessionEntry({ ownerId, onOpenWizardFromPlan, on
                       variant="contained"
                       onClick={() => handleCreateFromPlan(row)}
                     >
-                      Crear sesión desde plan
+                      Registrar Capacitación
                     </Button>
                   </CardActions>
                 </Card>

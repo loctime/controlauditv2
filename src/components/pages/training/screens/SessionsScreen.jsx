@@ -26,6 +26,7 @@ import {
 import { TRAINING_SESSION_STATUSES } from '../../../../types/trainingDomain';
 import SessionsListView from '../components/sessions/SessionsListView';
 import SessionCreateWizard from '../components/sessions/SessionCreateWizard';
+import CreateTrainingSession from '../components/sessions/CreateTrainingSession';
 import TrainingSessionEntry from '../components/sessions/TrainingSessionEntry';
 import SessionExecutionView from '../components/sessions/SessionExecutionView';
 import SessionEvidencePanel from '../components/sessions/SessionEvidencePanel';
@@ -64,6 +65,8 @@ export default function SessionsScreen() {
   const [instructorOptions, setInstructorOptions] = useState([]);
   const [wizardOpen, setWizardOpen] = useState(false);
   const [wizardInitial, setWizardInitial] = useState(null);
+  const [createMode, setCreateMode] = useState('wizard'); // 'wizard' | 'quick' | 'planned'
+  const [quickSessionData, setQuickSessionData] = useState(null);
 
   const selectedSession = useMemo(
     () => sessions.find((session) => session.id === selectedSessionId) || null,
@@ -176,6 +179,12 @@ export default function SessionsScreen() {
     }
   };
 
+  const handleOpenQuickSession = (data) => {
+    setQuickSessionData(data);
+    setCreateMode('quick');
+    setWizardOpen(false);
+  };
+
   if (!ownerId) {
     return <Alert severity="warning">No hay contexto de empresa disponible para sesiones.</Alert>;
   }
@@ -187,17 +196,62 @@ export default function SessionsScreen() {
       <Grid container spacing={2}>
         <Grid item xs={12}>
           {!wizardOpen ? (
-            <TrainingSessionEntry
-              ownerId={ownerId}
-              onOpenWizardFromPlan={(payload) => {
-                setWizardInitial(payload);
-                setWizardOpen(true);
-              }}
-              onOpenWizardAdHoc={() => {
-                setWizardInitial({ initialPlanMode: 'ad_hoc' });
-                setWizardOpen(true);
-              }}
-            />
+            <Box>
+              <Box sx={{ mb: 2, display: 'flex', gap: 2, alignItems: 'center' }}>
+                <Typography variant="h6">Crear Nueva Capacitación</Typography>
+                <Button
+                  variant={createMode === 'wizard' ? 'contained' : 'outlined'}
+                  size="small"
+                  onClick={() => setCreateMode('wizard')}
+                >
+                  Wizard Original
+                </Button>
+                <Button
+                  variant={createMode === 'quick' ? 'contained' : 'outlined'}
+                  size="small"
+                  onClick={() => setCreateMode('quick')}
+                >
+                  Registro Rápido
+                </Button>
+                <Button
+                  variant={createMode === 'planned' ? 'contained' : 'outlined'}
+                  size="small"
+                  onClick={() => setCreateMode('planned')}
+                >
+                  Programación
+                </Button>
+              </Box>
+              
+              {createMode === 'wizard' ? (
+                <TrainingSessionEntry
+                  ownerId={ownerId}
+                  onOpenWizardFromPlan={(payload) => {
+                    setWizardInitial(payload);
+                    setWizardOpen(true);
+                  }}
+                  onOpenWizardAdHoc={() => {
+                    setWizardInitial({ initialPlanMode: 'ad_hoc' });
+                    setWizardOpen(true);
+                  }}
+                  onOpenQuickSession={handleOpenQuickSession}
+                />
+              ) : (
+                <CreateTrainingSession
+                  ownerId={ownerId}
+                  mode={createMode}
+                  initialData={quickSessionData}
+                  onSaved={(sessionId) => {
+                    setSelectedSessionId(sessionId);
+                    setQuickSessionData(null);
+                    load();
+                  }}
+                  onCancel={() => {
+                    setCreateMode('wizard');
+                    setQuickSessionData(null);
+                  }}
+                />
+              )}
+            </Box>
           ) : (
             <SessionCreateWizard
               key={wizardInitial?.initialPlanItemId ?? wizardInitial?.initialPlanMode ?? 'wizard'}
