@@ -5,7 +5,7 @@ export default function TrainingModuleTabs({ tabs = [], activeTab, onChangeTab }
   const currentIndex = tabs.findIndex((tab) => tab.id === activeTab);
 
   return (
-    <Paper sx={{ mb: 3 }}>
+    <Paper sx={{ mb: 1.5 }}>
       <Tabs
         value={currentIndex === -1 ? 0 : currentIndex}
         onChange={(_, index) => onChangeTab(tabs[index].id)}

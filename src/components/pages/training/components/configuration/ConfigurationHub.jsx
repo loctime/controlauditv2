@@ -13,7 +13,7 @@ export default function ConfigurationHub({ activeSection, onSectionChange, onNav
   const currentIndex = Math.max(0, CONFIG_SECTIONS.findIndex((section) => section.id === activeSection));
 
   return (
-    <Stack spacing={2}>
+    <Stack spacing={1}>
       <Paper>
         <Tabs
           value={currentIndex}
