@@ -15,6 +15,7 @@ import {
   TextField,
   Typography
 } from '@mui/material';
+import ListIcon from '@mui/icons-material/List';
 import { useAuth } from '@/components/context/AuthContext';
 import { empleadoService } from '../../../../services/empleadoService';
 import { getUsers } from '../../../../core/services/ownerUserService';
@@ -67,6 +68,7 @@ export default function SessionsScreen() {
   const [wizardInitial, setWizardInitial] = useState(null);
   const [createMode, setCreateMode] = useState('wizard'); // 'wizard' | 'quick' | 'planned'
   const [quickSessionData, setQuickSessionData] = useState(null);
+  const [showSessionsList, setShowSessionsList] = useState(false);
 
   const selectedSession = useMemo(
     () => sessions.find((session) => session.id === selectedSessionId) || null,
@@ -126,10 +128,6 @@ export default function SessionsScreen() {
           ...Object.fromEntries(countEntries)
         }));
       }
-
-      if (!selectedSessionId && sessionList.length > 0) {
-        setSelectedSessionId(sessionList[0].id);
-      }
     } catch (err) {
       logger.error('[SessionsScreen] load error', err);
       setError(err.message || 'No se pudieron cargar las sesiones.');
@@ -185,6 +183,10 @@ export default function SessionsScreen() {
     setWizardOpen(false);
   };
 
+  const handleCloseQuickSession = () => {
+    setQuickSessionData(null);
+  };
+
   if (!ownerId) {
     return <Alert severity="warning">No hay contexto de empresa disponible para sesiones.</Alert>;
   }
@@ -200,45 +202,24 @@ export default function SessionsScreen() {
               <Box sx={{ mb: 2, display: 'flex', gap: 2, alignItems: 'center' }}>
                 <Typography variant="h6">Crear Nueva Capacitación</Typography>
                 <Button
-                  variant={createMode === 'wizard' ? 'contained' : 'outlined'}
-                  size="small"
-                  onClick={() => setCreateMode('wizard')}
+                  variant="outlined"
+                  startIcon={<ListIcon />}
+                  onClick={() => setShowSessionsList(!showSessionsList)}
                 >
-                  Wizard Original
-                </Button>
-                <Button
-                  variant={createMode === 'quick' ? 'contained' : 'outlined'}
-                  size="small"
-                  onClick={() => setCreateMode('quick')}
-                >
-                  Registro Rápido
-                </Button>
-                <Button
-                  variant={createMode === 'planned' ? 'contained' : 'outlined'}
-                  size="small"
-                  onClick={() => setCreateMode('planned')}
-                >
-                  Programación
+                  Sesiones
                 </Button>
               </Box>
               
-              {createMode === 'wizard' ? (
-                <TrainingSessionEntry
-                  ownerId={ownerId}
-                  onOpenWizardFromPlan={(payload) => {
-                    setWizardInitial(payload);
-                    setWizardOpen(true);
-                  }}
-                  onOpenWizardAdHoc={() => {
-                    setWizardInitial({ initialPlanMode: 'ad_hoc' });
-                    setWizardOpen(true);
-                  }}
-                  onOpenQuickSession={handleOpenQuickSession}
-                />
-              ) : (
+              <TrainingSessionEntry
+                ownerId={ownerId}
+                onOpenQuickSession={handleOpenQuickSession}
+                onCloseQuickSession={handleCloseQuickSession}
+              />
+              
+              {quickSessionData && (
                 <CreateTrainingSession
                   ownerId={ownerId}
-                  mode={createMode}
+                  mode="quick"
                   initialData={quickSessionData}
                   onSaved={(sessionId) => {
                     setSelectedSessionId(sessionId);
@@ -246,7 +227,6 @@ export default function SessionsScreen() {
                     load();
                   }}
                   onCancel={() => {
-                    setCreateMode('wizard');
                     setQuickSessionData(null);
                   }}
                 />
@@ -276,93 +256,105 @@ export default function SessionsScreen() {
         </Grid>
 
         <Grid item xs={12}>
-          <Typography variant="h6" sx={{ mb: 1 }}>
-            Lista de sesiones
-          </Typography>
-          <SessionsListView
-            sessions={sessions}
-            attendanceCountBySession={attendanceCountBySession}
-            onView={(session) => setSelectedSessionId(session.id)}
-            onEdit={openEdit}
-            onExecute={(session) => {
-              setSelectedSessionId(session.id);
-              quickTransition(session, TRAINING_SESSION_STATUSES.IN_PROGRESS);
-            }}
-            onMoveToClosure={(session) => {
-              setSelectedSessionId(session.id);
-              quickTransition(session, TRAINING_SESSION_STATUSES.PENDING_CLOSURE);
-            }}
-            onCancel={(session) =>
-              quickTransition(session, TRAINING_SESSION_STATUSES.CANCELLED)
-            }
-          />
-        </Grid>
-
-        <Grid item xs={12}>
-          <Paper sx={{ p: 2 }}>
-            <Typography variant="h6" sx={{ mb: 1.5 }}>
-              3. Sesion seleccionada
-            </Typography>
-            {selectedSession ? (
-              <Stack spacing={1.5}>
-                <Typography variant="subtitle1">Resumen de la sesion</Typography>
-                <Grid container spacing={1.5}>
-                  <Grid item xs={12} md={3}>
-                    <Typography variant="body2" color="text.secondary">Capacitacion</Typography>
-                    <Typography>{selectedSession.trainingTypeName || 'Sin dato'}</Typography>
-                  </Grid>
-                  <Grid item xs={12} md={3}>
-                    <Typography variant="body2" color="text.secondary">Empresa</Typography>
-                    <Typography>{selectedSession.companyName || 'Sin dato'}</Typography>
-                  </Grid>
-                  <Grid item xs={12} md={3}>
-                    <Typography variant="body2" color="text.secondary">Sucursal</Typography>
-                    <Typography>{selectedSession.branchName || 'Sin dato'}</Typography>
-                  </Grid>
-                  <Grid item xs={12} md={3}>
-                    <Typography variant="body2" color="text.secondary">Instructor</Typography>
-                    <Typography>{selectedSession.instructorName || 'Sin asignar'}</Typography>
-                  </Grid>
-                  <Grid item xs={12} md={3}>
-                    <Typography variant="body2" color="text.secondary">Fecha</Typography>
-                    <Typography>
-                      {selectedSession.scheduledDate?.toDate
-                        ? selectedSession.scheduledDate.toDate().toLocaleString()
-                        : String(selectedSession.scheduledDate || '')}
-                    </Typography>
-                  </Grid>
-                  <Grid item xs={12} md={3}>
-                    <Typography variant="body2" color="text.secondary">Modalidad</Typography>
-                    <Typography>{selectedSession.modality || '-'}</Typography>
-                  </Grid>
-                  <Grid item xs={12} md={3}>
-                    <Typography variant="body2" color="text.secondary">Ubicacion</Typography>
-                    <Typography>{selectedSession.location || '-'}</Typography>
-                  </Grid>
-                  <Grid item xs={12} md={3}>
-                    <Typography variant="body2" color="text.secondary">Estado</Typography>
-                    <Typography>{labelSessionStatus(selectedSession.status)}</Typography>
-                  </Grid>
-                </Grid>
-              </Stack>
-            ) : (
-              <Typography color="text.secondary">
-                Selecciona una sesion en la lista para ver su detalle operativo.
+          {showSessionsList && (
+            <>
+              <Typography variant="h6" sx={{ mb: 1 }}>
+                Lista de sesiones
               </Typography>
-            )}
-          </Paper>
+              <SessionsListView
+                sessions={sessions}
+                attendanceCountBySession={attendanceCountBySession}
+                onView={(session) => setSelectedSessionId(session.id)}
+                onEdit={openEdit}
+                onExecute={(session) => {
+                  setSelectedSessionId(session.id);
+                  quickTransition(session, TRAINING_SESSION_STATUSES.IN_PROGRESS);
+                }}
+                onMoveToClosure={(session) => {
+                  setSelectedSessionId(session.id);
+                  quickTransition(session, TRAINING_SESSION_STATUSES.PENDING_CLOSURE);
+                }}
+                onCancel={(session) =>
+                  quickTransition(session, TRAINING_SESSION_STATUSES.CANCELLED)
+                }
+              />
+            </>
+          )}
         </Grid>
 
         <Grid item xs={12}>
-          <SessionExecutionView ownerId={ownerId} session={selectedSession} onChanged={load} />
+          {selectedSessionId && (
+            <Paper sx={{ p: 2 }}>
+              <Typography variant="h6" sx={{ mb: 1.5 }}>
+                3. Sesion seleccionada
+              </Typography>
+              {selectedSession ? (
+                <Stack spacing={1.5}>
+                  <Typography variant="subtitle1">Resumen de la sesion</Typography>
+                  <Grid container spacing={1.5}>
+                    <Grid item xs={12} md={3}>
+                      <Typography variant="body2" color="text.secondary">Capacitacion</Typography>
+                      <Typography>{selectedSession.trainingTypeName || 'Sin dato'}</Typography>
+                    </Grid>
+                    <Grid item xs={12} md={3}>
+                      <Typography variant="body2" color="text.secondary">Empresa</Typography>
+                      <Typography>{selectedSession.companyName || 'Sin dato'}</Typography>
+                    </Grid>
+                    <Grid item xs={12} md={3}>
+                      <Typography variant="body2" color="text.secondary">Sucursal</Typography>
+                      <Typography>{selectedSession.branchName || 'Sin dato'}</Typography>
+                    </Grid>
+                    <Grid item xs={12} md={3}>
+                      <Typography variant="body2" color="text.secondary">Instructor</Typography>
+                      <Typography>{selectedSession.instructorName || 'Sin asignar'}</Typography>
+                    </Grid>
+                    <Grid item xs={12} md={3}>
+                      <Typography variant="body2" color="text.secondary">Fecha</Typography>
+                      <Typography>
+                        {selectedSession.scheduledDate?.toDate
+                          ? selectedSession.scheduledDate.toDate().toLocaleString()
+                          : String(selectedSession.scheduledDate || '')}
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={12} md={3}>
+                      <Typography variant="body2" color="text.secondary">Modalidad</Typography>
+                      <Typography>{selectedSession.modality || '-'}</Typography>
+                    </Grid>
+                    <Grid item xs={12} md={3}>
+                      <Typography variant="body2" color="text.secondary">Ubicacion</Typography>
+                      <Typography>{selectedSession.location || '-'}</Typography>
+                    </Grid>
+                    <Grid item xs={12} md={3}>
+                      <Typography variant="body2" color="text.secondary">Estado</Typography>
+                      <Typography>{labelSessionStatus(selectedSession.status)}</Typography>
+                    </Grid>
+                  </Grid>
+                </Stack>
+              ) : (
+                <Typography color="text.secondary">
+                  Selecciona una sesion en la lista para ver su detalle operativo.
+                </Typography>
+              )}
+            </Paper>
+          )}
+        </Grid>
+
+        <Grid item xs={12}>
+          {selectedSessionId && (
+            <SessionExecutionView ownerId={ownerId} session={selectedSession} onChanged={load} />
+          )}
         </Grid>
 
         <Grid item xs={12} md={6}>
-          <SessionEvidencePanel ownerId={ownerId} session={selectedSession} />
+          {selectedSessionId && (
+            <SessionEvidencePanel ownerId={ownerId} session={selectedSession} />
+          )}
         </Grid>
 
         <Grid item xs={12} md={6}>
-          <SessionClosurePanel ownerId={ownerId} session={selectedSession} onChanged={load} />
+          {selectedSessionId && (
+            <SessionClosurePanel ownerId={ownerId} session={selectedSession} onChanged={load} />
+          )}
         </Grid>
       </Grid>
 

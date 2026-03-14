@@ -69,11 +69,12 @@ async function loadPlanItemsForCurrentMonth(ownerId, year, month) {
   return result;
 }
 
-export default function TrainingSessionEntry({ ownerId, onOpenWizardFromPlan, onOpenWizardAdHoc, onOpenQuickSession }) {
+export default function TrainingSessionEntry({ ownerId, onOpenQuickSession, onCloseQuickSession }) {
   const { userEmpresas = [], userSucursales = [] } = useAuth();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [planItems, setPlanItems] = useState([]);
+  const [openSessionId, setOpenSessionId] = useState(null);
 
   const companyById = Object.fromEntries((userEmpresas || []).map((c) => [c.id, c]));
   const branchById = Object.fromEntries((userSucursales || []).map((b) => [b.id, b]));
@@ -116,13 +117,25 @@ export default function TrainingSessionEntry({ ownerId, onOpenWizardFromPlan, on
 
   const handleCreateFromPlan = (row) => {
     const { plan, item } = row;
+    const sessionId = `${plan.id}-${item.id}`;
+    
+    // Si ya está abierto, cerrar
+    if (openSessionId === sessionId) {
+      setOpenSessionId(null);
+      if (onCloseQuickSession) {
+        onCloseQuickSession();
+      }
+      return;
+    }
+    
     const now = new Date();
     const year = now.getFullYear();
     const month = now.getMonth() + 1;
     const scheduledDate = new Date(year, month - 1, Math.min(15, new Date(year, month, 0).getDate()), 9, 0);
     const scheduledDateIso = scheduledDate.toISOString().slice(0, 16);
 
-    // Si existe la función para sesión rápida, usarla
+    // Abrir el registro rápido
+    setOpenSessionId(sessionId);
     if (onOpenQuickSession) {
       onOpenQuickSession({
         trainingTypeId: item.trainingTypeId,
@@ -132,27 +145,6 @@ export default function TrainingSessionEntry({ ownerId, onOpenWizardFromPlan, on
         planId: plan.id,
         planItemId: item.id,
         planMode: 'plan'
-      });
-    } else {
-      // Fallback al wizard original
-      onOpenWizardFromPlan({
-        initialValues: {
-          trainingTypeId: item.trainingTypeId,
-          companyId: plan.companyId,
-          branchId: plan.branchId,
-          scheduledDate: scheduledDateIso
-        },
-        initialPlanMode: 'plan',
-        initialPlanItemId: item.id,
-        initialPlanId: plan.id,
-        initialPlanCandidate: {
-          planId: plan.id,
-          planItemId: item.id,
-          planStatus: plan.status || 'draft',
-          planYear: plan.year,
-          plannedMonth: Number(item.plannedMonth) || month,
-          trainingTypeId: item.trainingTypeId
-        }
       });
     }
   };
@@ -203,7 +195,7 @@ export default function TrainingSessionEntry({ ownerId, onOpenWizardFromPlan, on
                       variant="contained"
                       onClick={() => handleCreateFromPlan(row)}
                     >
-                      Registrar Capacitación
+                      {openSessionId === `${row.plan.id}-${row.item.id}` ? 'Cerrar' : 'Abrir'}
                     </Button>
                   </CardActions>
                 </Card>
@@ -217,13 +209,6 @@ export default function TrainingSessionEntry({ ownerId, onOpenWizardFromPlan, on
             </Typography>
           )}
 
-          <Button
-            variant="outlined"
-            startIcon={<AddCircleOutlineIcon />}
-            onClick={onOpenWizardAdHoc}
-          >
-            + Crear sesión nueva
-          </Button>
         </>
       )}
     </Paper>
