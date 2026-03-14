@@ -23,8 +23,8 @@ export default function AnnualPlansScreenAdapter() {
 
   return (
     <>
-      <Box sx={{ display: 'flex', width: '100%', minHeight: 'calc(100vh - 64px)', alignItems: 'stretch' }}>
-        <Box sx={{ flex: 1, minWidth: 0 }}>
+      <Box sx={{ display: 'flex', width: '100%', alignItems: 'stretch' }}>
+        <Box sx={{ flex: 1, minWidth: 0, transition: 'flex 0.25s ease' }}>
           <AnnualPlansPage
             onRegisterRefresh={(fn) => {
               refreshPlansRef.current = fn;

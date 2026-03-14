@@ -95,8 +95,8 @@ export default function TrainingModule() {
 
   return (
     <Container maxWidth="xl" sx={{ py: 3 }}>
-      <Box sx={{ mb: 3 }}>
-        <Typography variant="h4" sx={{ fontWeight: 700, mb: 1 }}>
+      <Box sx={{ mb: 3, display: 'flex', alignItems: 'baseline', gap: 1.5, flexWrap: 'wrap' }}>
+        <Typography variant="h4" sx={{ fontWeight: 700 }}>
           Gestión de capacitaciones
         </Typography>
         <Typography variant="body1" color="text.secondary">
