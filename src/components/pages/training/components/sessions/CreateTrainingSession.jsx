@@ -511,11 +511,6 @@ export default function CreateTrainingSession({
 
       await Promise.all(attendancePromises);
 
-      // 3. Si es modo rápido, cerrar sesión directamente
-      if (mode === 'quick') {
-        await trainingSessionService.transitionStatus(ownerId, sessionRef.id, TRAINING_SESSION_STATUSES.CLOSED);
-      }
-
       setSuccess(`Capacitación ${mode === 'quick' ? 'registrada' : 'programada'} exitosamente`);
       
       // Resetear formulario
@@ -798,22 +793,30 @@ export default function CreateTrainingSession({
                             </Box>
                           </TableCell>
                           <TableCell>
-                            <TextField
-                              select
-                              fullWidth
-                              size="small"
-                              value={isSelected ? record.attendanceStatus : ''}
-                              onChange={(e) => {
-                                if (!isSelected) toggleEmployee(employee.id);
-                                updateParticipantRecord(employee.id, 'attendanceStatus', e.target.value);
-                              }}
-                              disabled={!isSelected}
-                            >
-                              <MenuItem value={TRAINING_ATTENDANCE_STATUSES.PRESENT}>Presente</MenuItem>
-                              <MenuItem value={TRAINING_ATTENDANCE_STATUSES.JUSTIFIED_ABSENCE}>Ausencia Justificada</MenuItem>
-                              <MenuItem value={TRAINING_ATTENDANCE_STATUSES.UNJUSTIFIED_ABSENCE}>Ausencia Injustificada</MenuItem>
-                              <MenuItem value={TRAINING_ATTENDANCE_STATUSES.RESCHEDULED}>Reprogramado</MenuItem>
-                            </TextField>
+                            <Box sx={{ display: 'flex', gap: 1 }}>
+                              <Button
+                                size="small"
+                                variant={isSelected && record.attendanceStatus === TRAINING_ATTENDANCE_STATUSES.PRESENT ? "contained" : "outlined"}
+                                onClick={() => {
+                                  if (!isSelected) toggleEmployee(employee.id);
+                                  updateParticipantRecord(employee.id, 'attendanceStatus', TRAINING_ATTENDANCE_STATUSES.PRESENT);
+                                }}
+                                disabled={!isSelected}
+                              >
+                                Presente
+                              </Button>
+                              <Button
+                                size="small"
+                                variant={isSelected && record.attendanceStatus === TRAINING_ATTENDANCE_STATUSES.JUSTIFIED_ABSENCE ? "contained" : "outlined"}
+                                onClick={() => {
+                                  if (!isSelected) toggleEmployee(employee.id);
+                                  updateParticipantRecord(employee.id, 'attendanceStatus', TRAINING_ATTENDANCE_STATUSES.JUSTIFIED_ABSENCE);
+                                }}
+                                disabled={!isSelected}
+                              >
+                                Ausente
+                              </Button>
+                            </Box>
                           </TableCell>
                           {requiresEvaluation && (
                             <TableCell>

@@ -222,7 +222,7 @@ export default function SessionsScreen() {
                   mode="quick"
                   initialData={quickSessionData}
                   onSaved={(sessionId) => {
-                    setSelectedSessionId(sessionId);
+                    // No establecer selectedSessionId para modo rápido
                     setQuickSessionData(null);
                     load();
                   }}
