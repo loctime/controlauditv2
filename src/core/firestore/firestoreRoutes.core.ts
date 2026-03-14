@@ -493,6 +493,31 @@ export const firestoreRoutesCore = {
   ],
 
   /**
+   * Collection of plan–training-type config (frequency, start month)
+   * Path: apps/auditoria/owners/{ownerId}/training_plan_training_types
+   */
+  trainingPlanTrainingTypes: (ownerId: string): string[] => [
+    'apps',
+    'auditoria',
+    'owners',
+    ownerId,
+    'training_plan_training_types'
+  ],
+
+  /**
+   * Document of plan–training-type config (id = `${planId}_${trainingTypeId}`)
+   * Path: apps/auditoria/owners/{ownerId}/training_plan_training_types/{configId}
+   */
+  trainingPlanTrainingType: (ownerId: string, configId: string): string[] => [
+    'apps',
+    'auditoria',
+    'owners',
+    ownerId,
+    'training_plan_training_types',
+    configId
+  ],
+
+  /**
    * Collection of training sessions
    * Path: apps/auditoria/owners/{ownerId}/training_sessions
    */

@@ -5,6 +5,7 @@ import {
   deleteDocument,
   getDocument,
   queryDocuments,
+  setDocument,
   updateDocument
 } from './trainingBaseService';
 
@@ -15,22 +16,42 @@ const PLAN_STATUS_PRIORITY = {
 };
 
 /**
- * Genera los meses planificados según la vigencia del tipo de capacitación.
- * occurrencesPerYear = 12 / validityMonths; meses distribuidos uniformemente.
- * @param {number} validityMonths - Vigencia en meses (1-12). Si no válido, se usa 12.
- * @returns {number[]} Array de meses (1-12) ordenados ascendente.
+ * Genera los meses planificados para el plan anual (solo año calendario).
+ * No usa ciclo modular: solo meses desde startMonth hasta ≤ 12.
+ * @param {number} frequencyMonths - Cada cuántos meses se repite (1-12). Si no válido, se usa 12.
+ * @param {number} [startMonth=1] - Mes de inicio del ciclo (1-12). Por defecto 1 (enero).
+ * @returns {number[]} Array de meses (1-12) ordenado ascendente.
  */
-function generatePlannedMonths(validityMonths) {
-  const v = Number(validityMonths);
-  const interval = v > 0 && v <= 12 ? v : 12;
+function generatePlannedMonths(frequencyMonths, startMonth = 1) {
+  const freq = Number(frequencyMonths);
+  const start = Number(startMonth);
+  const interval = freq > 0 && freq <= 12 ? freq : 12;
+  const from = (start > 0 && start <= 12 ? start : 1);
   const months = [];
-  for (let m = 1; m <= 12; m += interval) {
+  for (let m = from; m <= 12; m += interval) {
     months.push(m);
   }
   return months;
 }
 
 export { generatePlannedMonths };
+
+const PLAN_TRAINING_TYPE_CONFIG_ID = (planId, trainingTypeId) => `${planId}_${trainingTypeId}`;
+
+async function getPlanTrainingTypeConfig(ownerId, planId, trainingTypeId) {
+  const id = PLAN_TRAINING_TYPE_CONFIG_ID(planId, trainingTypeId);
+  return getDocument(ownerId, 'trainingPlanTrainingType', id);
+}
+
+async function setPlanTrainingTypeConfig(ownerId, planId, trainingTypeId, { frequencyMonths, startMonth }) {
+  const id = PLAN_TRAINING_TYPE_CONFIG_ID(planId, trainingTypeId);
+  await setDocument(ownerId, 'trainingPlanTrainingType', id, {
+    planId,
+    trainingTypeId,
+    frequencyMonths: Number(frequencyMonths) || 12,
+    startMonth: (Number(startMonth) > 0 && Number(startMonth) <= 12) ? Number(startMonth) : 1
+  });
+}
 
 function toDateValue(value) {
   if (!value) return null;
@@ -224,10 +245,10 @@ export const trainingPlanService = {
   },
 
   /**
-   * Añade un tipo de capacitación al plan permanente con frecuencia automática por vigencia.
-   * Find-or-create plan por (companyId, branchId) sin year. Crea un ítem por cada mes devuelto por generatePlannedMonths(validityMonths), evitando duplicados (planId, trainingTypeId, plannedMonth).
+   * Añade un tipo de capacitación al plan permanente con frecuencia automática.
+   * Find-or-create plan por (companyId, branchId). Persiste config en training_plan_training_type y crea un ítem por cada mes de generatePlannedMonths(frequencyMonths, startMonth).
    * @param {string} ownerId
-   * @param {{ companyId: string, branchId: string, trainingTypeId: string, validityMonths?: number, notes?: string, responsibleUserId?: string }}
+   * @param {{ companyId: string, branchId: string, trainingTypeId: string, validityMonths?: number, startMonth?: number, notes?: string, responsibleUserId?: string }}
    * @returns {{ planId: string, createdItemIds: string[], createdPlan: boolean }}
    */
   async addTrainingTypeToPlan(ownerId, {
@@ -235,6 +256,7 @@ export const trainingPlanService = {
     branchId,
     trainingTypeId,
     validityMonths = 12,
+    startMonth = 1,
     notes = '',
     responsibleUserId = ''
   } = {}) {
@@ -260,7 +282,11 @@ export const trainingPlanService = {
       createdPlan = true;
     }
 
-    const months = generatePlannedMonths(validityMonths);
+    const frequencyMonths = Number(validityMonths) > 0 && Number(validityMonths) <= 12 ? Number(validityMonths) : 12;
+    const start = (Number(startMonth) > 0 && Number(startMonth) <= 12) ? Number(startMonth) : 1;
+    await setPlanTrainingTypeConfig(ownerId, planId, trainingTypeId, { frequencyMonths, startMonth: start });
+
+    const months = generatePlannedMonths(frequencyMonths, start);
     const existingItems = await this.listPlanItems(ownerId, { planId, trainingTypeId });
     const existingMonths = new Set(existingItems.map((i) => Number(i.plannedMonth)));
     const createdItemIds = [];
@@ -290,16 +316,21 @@ export const trainingPlanService = {
 
   /**
    * Añade un tipo de capacitación a un plan existente (por planId) con frecuencia automática.
+   * Persiste config en training_plan_training_type y crea ítems con generatePlannedMonths(frequencyMonths, startMonth).
    * @param {string} ownerId
-   * @param {{ planId: string, trainingTypeId: string, validityMonths?: number, notes?: string }}
+   * @param {{ planId: string, trainingTypeId: string, validityMonths?: number, startMonth?: number, notes?: string }}
    * @returns {{ planId: string, createdItemIds: string[] }}
    */
-  async addTrainingTypeToPlanByPlanId(ownerId, { planId, trainingTypeId, validityMonths = 12, notes = '' } = {}) {
+  async addTrainingTypeToPlanByPlanId(ownerId, { planId, trainingTypeId, validityMonths = 12, startMonth = 1, notes = '' } = {}) {
     if (!planId || !trainingTypeId) {
       throw new Error('Faltan plan o tipo de capacitación.');
     }
 
-    const months = generatePlannedMonths(validityMonths);
+    const frequencyMonths = Number(validityMonths) > 0 && Number(validityMonths) <= 12 ? Number(validityMonths) : 12;
+    const start = (Number(startMonth) > 0 && Number(startMonth) <= 12) ? Number(startMonth) : 1;
+    await setPlanTrainingTypeConfig(ownerId, planId, trainingTypeId, { frequencyMonths, startMonth: start });
+
+    const months = generatePlannedMonths(frequencyMonths, start);
     const existingItems = await this.listPlanItems(ownerId, { planId, trainingTypeId });
     const existingMonths = new Set(existingItems.map((i) => Number(i.plannedMonth)));
     const createdItemIds = [];
@@ -325,5 +356,7 @@ export const trainingPlanService = {
     }
 
     return { planId, createdItemIds };
-  }
+  },
+
+  getPlanTrainingTypeConfig
 };

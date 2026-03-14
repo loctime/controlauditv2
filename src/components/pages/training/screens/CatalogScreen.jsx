@@ -76,6 +76,7 @@ export default function CatalogScreen({ onNavigateToPlans }) {
   const [addToPlanForm, setAddToPlanForm] = useState({
     companyId: '',
     branchId: '',
+    startMonth: 1,
     notes: ''
   });
   const [addToPlanSaving, setAddToPlanSaving] = useState(false);
@@ -279,6 +280,7 @@ export default function CatalogScreen({ onNavigateToPlans }) {
     setAddToPlanForm({
       companyId: '',
       branchId: '',
+      startMonth: 1,
       notes: ''
     });
   };
@@ -296,6 +298,7 @@ export default function CatalogScreen({ onNavigateToPlans }) {
         branchId: addToPlanForm.branchId,
         trainingTypeId: addToPlanItem.id,
         validityMonths: Number(addToPlanItem.validityMonths) || 12,
+        startMonth: Number(addToPlanForm.startMonth) || 1,
         notes: (addToPlanForm.notes || '').trim() || '',
         responsibleUserId: userProfile?.uid || ''
       });
@@ -310,7 +313,7 @@ export default function CatalogScreen({ onNavigateToPlans }) {
 
   const closeAddToPlanModal = () => {
     setAddToPlanItem(null);
-    setAddToPlanForm({ companyId: '', branchId: '', notes: '' });
+    setAddToPlanForm({ companyId: '', branchId: '', startMonth: 1, notes: '' });
     setAddToPlanError('');
     setAddToPlanSuccess(false);
   };
@@ -588,7 +591,8 @@ export default function CatalogScreen({ onNavigateToPlans }) {
                     <Typography variant="body2">
                       {(() => {
                         const validityMonths = Number(addToPlanItem.validityMonths) || 12;
-                        const months = generatePlannedMonths(validityMonths);
+                        const startMonth = Number(addToPlanForm.startMonth) || 1;
+                        const months = generatePlannedMonths(validityMonths, startMonth);
                         const names = months.map((m) =>
                           new Date(2000, m - 1, 1).toLocaleString('es', { month: 'long' })
                         );
@@ -599,6 +603,19 @@ export default function CatalogScreen({ onNavigateToPlans }) {
                     </Typography>
                   </Box>
                 )}
+                <TextField
+                  select
+                  fullWidth
+                  label="Mes de inicio"
+                  value={addToPlanForm.startMonth}
+                  onChange={(e) => setAddToPlanForm((f) => ({ ...f, startMonth: Number(e.target.value) || 1 }))}
+                >
+                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((m) => (
+                    <MenuItem key={m} value={m}>
+                      {new Date(2000, m - 1, 1).toLocaleString('es', { month: 'long' })}
+                    </MenuItem>
+                  ))}
+                </TextField>
                 <TextField
                   select
                   fullWidth
