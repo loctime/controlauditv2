@@ -228,6 +228,10 @@ export default function SessionCreateWizard({
     let alive = true;
 
     const detectPlanCandidates = async () => {
+      if (initialPlanMode === 'plan' && planMode === 'plan') {
+        return;
+      }
+
       if (!ownerId || !canDetectPlan(planTrainingTypeId, planCompanyId, planBranchId, planScheduledDate)) {
         setPlanCandidates([]);
         setSelectedPlanItemId('');
@@ -281,7 +285,7 @@ export default function SessionCreateWizard({
     return () => {
       alive = false;
     };
-  }, [ownerId, planTrainingTypeId, planCompanyId, planBranchId, planScheduledDate]);
+  }, [ownerId, planTrainingTypeId, planCompanyId, planBranchId, planScheduledDate, initialPlanMode, planMode]);
 
   const loadSuggestions = async () => {
     if (!ownerId) return;
@@ -427,9 +431,19 @@ export default function SessionCreateWizard({
 
   return (
     <Paper sx={{ p: 2 }}>
-      <Typography variant="h6" sx={{ mb: 2 }}>
-        Crear sesion de capacitacion
-      </Typography>
+      <Grid container justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
+        <Grid item>
+          <Typography variant="h6">
+            Crear sesion de capacitacion
+          </Typography>
+        </Grid>
+        <Grid item sx={{ textAlign: 'right' }}>
+          <Typography variant="subtitle1">Paso 2: participantes</Typography>
+          <Typography variant="body2" color="text.secondary">
+            Los sugeridos incluyen empleados con capacitacion vencida, por vencer o faltante y coincidencias de la matriz de requerimientos.
+          </Typography>
+        </Grid>
+      </Grid>
       {error && (
         <Alert severity="error" sx={{ mb: 2 }}>
           {error}
@@ -523,57 +537,86 @@ export default function SessionCreateWizard({
             </Grid>
             <Grid item xs={12}>
               <Paper variant="outlined" sx={{ p: 1.5 }}>
-                <Typography variant="subtitle2" sx={{ mb: 1 }}>
-                  Vinculacion al plan anual
-                </Typography>
-                {planDetectError && <Alert severity="warning" sx={{ mb: 1.5 }}>{planDetectError}</Alert>}
-                {planDetectLoading && <Alert severity="info" sx={{ mb: 1.5 }}>Buscando items compatibles del plan anual...</Alert>}
-
-                {!canDetectPlan(planTrainingTypeId, planCompanyId, planBranchId, planScheduledDate) && (
-                  <Typography variant="body2" color="text.secondary">
-                    Completa tipo, empresa, sucursal y fecha para detectar items del plan anual.
-                  </Typography>
-                )}
-
-                {canDetectPlan(planTrainingTypeId, planCompanyId, planBranchId, planScheduledDate) && !planDetectLoading && (
+                {initialPlanMode === 'plan' && planMode === 'plan' ? (
                   <Stack spacing={1.5}>
-                    {planCandidates.length > 0 ? (
-                      <>
-                        <Alert severity="info">
-                          Se encontraron {planCandidates.length} items de plan compatibles para esta sesion.
-                        </Alert>
-                        <TextField
-                          select
-                          fullWidth
-                          label="Origen de la sesion"
-                          value={planMode}
-                          onChange={(e) => setPlanMode(e.target.value)}
-                        >
-                          <MenuItem value="plan">Vincular al plan anual</MenuItem>
-                          <MenuItem value="ad_hoc">Crear como ad-hoc</MenuItem>
-                        </TextField>
-                        {planMode === 'plan' && (
-                          <TextField
-                            select
-                            fullWidth
-                            label="Item de plan sugerido"
-                            value={selectedPlanItemId}
-                            onChange={(e) => setSelectedPlanItemId(e.target.value)}
-                          >
-                            {planCandidates.map((candidate) => (
-                              <MenuItem key={candidate.planItemId} value={candidate.planItemId}>
-                                {planCandidateLabel(candidate)}
-                              </MenuItem>
-                            ))}
-                          </TextField>
-                        )}
-                      </>
-                    ) : (
-                      <Alert severity="info">
-                        No hay item de plan compatible para esta fecha. La sesion se creara como ad-hoc.
-                      </Alert>
+                    <Typography variant="subtitle2" sx={{ mb: 0.5 }}>
+                      Sesion vinculada al plan anual
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      Esta sesion se creara vinculada al plan anual.
+                    </Typography>
+                    {selectedPlanCandidate && (
+                      <Typography variant="body2" fontWeight={500}>
+                        {selectedPlanCandidate.planYear ?? '—'} | {companyById[form.companyId]?.nombre || 'Empresa'} / {branchById[form.branchId]?.nombre || 'Sucursal'} | Mes {selectedPlanCandidate.plannedMonth ?? '—'}
+                      </Typography>
                     )}
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      color="secondary"
+                      onClick={() => {
+                        setPlanMode('ad_hoc');
+                        setSelectedPlanItemId('');
+                      }}
+                    >
+                      Cancelar vinculacion
+                    </Button>
                   </Stack>
+                ) : (
+                  <>
+                    <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                      Vinculacion al plan anual
+                    </Typography>
+                    {planDetectError && <Alert severity="warning" sx={{ mb: 1.5 }}>{planDetectError}</Alert>}
+                    {planDetectLoading && <Alert severity="info" sx={{ mb: 1.5 }}>Buscando items compatibles del plan anual...</Alert>}
+
+                    {!canDetectPlan(planTrainingTypeId, planCompanyId, planBranchId, planScheduledDate) && (
+                      <Typography variant="body2" color="text.secondary">
+                        Completa tipo, empresa, sucursal y fecha para detectar items del plan anual.
+                      </Typography>
+                    )}
+
+                    {canDetectPlan(planTrainingTypeId, planCompanyId, planBranchId, planScheduledDate) && !planDetectLoading && (
+                      <Stack spacing={1.5}>
+                        {planCandidates.length > 0 ? (
+                          <>
+                            <Alert severity="info">
+                              Se encontraron {planCandidates.length} items de plan compatibles para esta sesion.
+                            </Alert>
+                            <TextField
+                              select
+                              fullWidth
+                              label="Origen de la sesion"
+                              value={planMode}
+                              onChange={(e) => setPlanMode(e.target.value)}
+                            >
+                              <MenuItem value="plan">Vincular al plan anual</MenuItem>
+                              <MenuItem value="ad_hoc">Crear como ad-hoc</MenuItem>
+                            </TextField>
+                            {planMode === 'plan' && (
+                              <TextField
+                                select
+                                fullWidth
+                                label="Item de plan sugerido"
+                                value={selectedPlanItemId}
+                                onChange={(e) => setSelectedPlanItemId(e.target.value)}
+                              >
+                                {planCandidates.map((candidate) => (
+                                  <MenuItem key={candidate.planItemId} value={candidate.planItemId}>
+                                    {planCandidateLabel(candidate)}
+                                  </MenuItem>
+                                ))}
+                              </TextField>
+                            )}
+                          </>
+                        ) : (
+                          <Alert severity="info">
+                            No hay item de plan compatible para esta fecha. La sesion se creara como ad-hoc.
+                          </Alert>
+                        )}
+                      </Stack>
+                    )}
+                  </>
                 )}
               </Paper>
             </Grid>
@@ -594,10 +637,6 @@ export default function SessionCreateWizard({
 
       {step === 2 && (
         <Stack spacing={2}>
-          <Typography variant="subtitle1">Paso 2: participantes</Typography>
-          <Typography variant="body2" color="text.secondary">
-            Los sugeridos incluyen empleados con capacitacion vencida, por vencer o faltante y coincidencias de la matriz de requerimientos.
-          </Typography>
 
           <Grid container spacing={2}>
             <Grid item xs={12} md={4}>
