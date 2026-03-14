@@ -31,6 +31,7 @@ const RegistrarAsistencia = lazy(() =>
   import("../components/pages/capacitaciones/RegistrarAsistencia")
 );
 const TrainingModule = lazy(() => import("../components/pages/training/TrainingModule"));
+const PlanItemsPage = lazy(() => import("../components/pages/training/screens/PlanItemsPage"));
 const Accidentes = lazy(() => import("../components/pages/accidentes/Accidentes"));
 const Ausencias = lazy(() => import("../components/pages/ausencias/Ausencias"));
 const AuditoriasManuales = lazy(() =>
@@ -66,6 +67,7 @@ const componentMap = {
   capacitaciones: Capacitaciones,
   "capacitacion-vieja": Capacitaciones,
   training: TrainingModule,
+  "training-plan-items": PlanItemsPage,
   "capacitacion-asistencia": RegistrarAsistencia,
   accidentes: Accidentes,
   "salud-ocupacional": Ausencias,

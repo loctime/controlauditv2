@@ -1,22 +1,66 @@
-import React from 'react';
+import React, { useRef, useState } from 'react';
+import { Box } from '@mui/material';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/components/context/AuthContext';
 import AnnualPlansPage from '../../screens/AnnualPlansPage';
+import PlanDetailDrawer from '../plans/PlanDetailDrawer';
+import PlanEditDialog from '../plans/PlanEditDialog';
 
 export default function AnnualPlansScreenAdapter() {
+  const navigate = useNavigate();
+  const { userEmpresas = [], userSucursales = [] } = useAuth();
+
+  const [viewPlan, setViewPlan] = useState(null);
+  const [editPlan, setEditPlan] = useState(null);
+  const refreshPlansRef = useRef(null);
+
+  const handleCloseView = () => setViewPlan(null);
+  const handleCloseEdit = () => setEditPlan(null);
+
+  const handleSaved = () => {
+    refreshPlansRef.current?.();
+  };
+
   return (
-    <AnnualPlansPage
-      onCreatePlan={() => {
-        // TODO: abrir modal o navegación para crear plan
-      }}
-      onViewPlan={(plan) => {
-        // TODO: navegar a vista de detalle del plan
-      }}
-      onEditPlan={(plan) => {
-        // TODO: abrir modal de edición del plan
-      }}
-      onOpenPlanItems={(plan) => {
-        // TODO: navegar a ítems del plan
-      }}
-    />
+    <>
+      <Box sx={{ display: 'flex', width: '100%', minHeight: 'calc(100vh - 64px)', alignItems: 'stretch' }}>
+        <Box sx={{ flex: 1, minWidth: 0 }}>
+          <AnnualPlansPage
+            onRegisterRefresh={(fn) => {
+              refreshPlansRef.current = fn;
+            }}
+            onCreatePlan={() => setEditPlan({})}
+            onViewPlan={(plan) => setViewPlan(plan)}
+            onEditPlan={(plan) => {
+              setViewPlan(null);
+              setEditPlan(plan);
+            }}
+            onOpenPlanItems={(plan) => navigate(`/training/plans/${plan.id}`)}
+          />
+        </Box>
+
+        {viewPlan && (
+          <PlanDetailDrawer
+            variant="inline"
+            plan={viewPlan}
+            open={true}
+            onClose={handleCloseView}
+            onSaved={handleSaved}
+            onOpenPlanItems={(p) => navigate(`/training/plans/${p.id}`)}
+            companies={userEmpresas}
+            branches={userSucursales}
+          />
+        )}
+      </Box>
+
+      <PlanEditDialog
+        plan={editPlan}
+        open={editPlan !== null}
+        onClose={handleCloseEdit}
+        onSaved={handleSaved}
+        companies={userEmpresas}
+        branches={userSucursales}
+      />
+    </>
   );
 }
-

@@ -6,20 +6,11 @@ import {
   Button,
   Chip,
   CircularProgress,
-  IconButton,
-  Menu,
-  MenuItem,
   Paper,
   TextField,
   Typography
 } from '@mui/material';
-import {
-  Add as AddIcon,
-  Edit as EditIcon,
-  Visibility as ViewIcon,
-  List as ListIcon,
-  MoreVert as MoreVertIcon
-} from '@mui/icons-material';
+import { Add as AddIcon } from '@mui/icons-material';
 import {
   DataGrid,
   GridToolbarContainer,
@@ -114,7 +105,8 @@ export default function AnnualPlansPage({
   onCreatePlan,
   onViewPlan,
   onEditPlan,
-  onOpenPlanItems
+  onOpenPlanItems,
+  onRegisterRefresh
 }) {
   const { userProfile, userEmpresas = [], userSucursales = [] } = useAuth();
   const ownerId = userProfile?.ownerId;
@@ -125,7 +117,6 @@ export default function AnnualPlansPage({
   const [filterCompany, setFilterCompany] = useState('');
   const [filterBranch, setFilterBranch] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
-  const [actionAnchor, setActionAnchor] = useState({ open: false, plan: null, anchorEl: null });
 
   const companyMap = useMemo(() => Object.fromEntries((userEmpresas || []).map((e) => [e.id, e.nombre])), [userEmpresas]);
   const branchMap = useMemo(() => Object.fromEntries((userSucursales || []).map((s) => [s.id, s.nombre])), [userSucursales]);
@@ -161,6 +152,11 @@ export default function AnnualPlansPage({
     fetchPlans();
   }, [fetchPlans]);
 
+  React.useEffect(() => {
+    onRegisterRefresh?.(fetchPlans);
+    return () => onRegisterRefresh?.(null);
+  }, [fetchPlans, onRegisterRefresh]);
+
   const filteredRows = useMemo(() => {
     let rows = plans.map((p) => ({
       id: p.id,
@@ -185,21 +181,6 @@ export default function AnnualPlansPage({
     });
     return rows;
   }, [plans, filterCompany, filterBranch, filterStatus]);
-
-  const handleActionClose = () => setActionAnchor({ open: false, plan: null, anchorEl: null });
-
-  const handleView = (plan) => {
-    handleActionClose();
-    onViewPlan?.(plan);
-  };
-  const handleEdit = (plan) => {
-    handleActionClose();
-    onEditPlan?.(plan);
-  };
-  const handleItems = (plan) => {
-    handleActionClose();
-    onOpenPlanItems?.(plan);
-  };
 
   const columns = useMemo(
     () => [
@@ -248,22 +229,22 @@ export default function AnnualPlansPage({
       },
       {
         field: 'actions',
-        headerName: 'Acciones',
+        headerName: '',
         type: 'actions',
-        width: 80,
+        width: 100,
         getActions: (params) => [
-          <IconButton
-            key="menu"
+          <Button
+            key="ver-mas"
             size="small"
-            onClick={(e) => setActionAnchor({ open: true, plan: params.row._raw, anchorEl: e.currentTarget })}
-            aria-label="Abrir acciones"
+            variant="outlined"
+            onClick={() => onViewPlan?.(params.row._raw)}
           >
-            <MoreVertIcon />
-          </IconButton>
+            Ver más
+          </Button>
         ]
       }
     ],
-    [companyMap, branchMap]
+    [companyMap, branchMap, onViewPlan]
   );
 
   if (!ownerId) {
@@ -328,24 +309,6 @@ export default function AnnualPlansPage({
           }}
         />
       </Paper>
-
-      <Menu
-        open={actionAnchor.open}
-        anchorEl={actionAnchor.anchorEl}
-        onClose={handleActionClose}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-        transformOrigin={{ vertical: 'top', horizontal: 'right' }}
-      >
-        <MenuItem onClick={() => handleView(actionAnchor.plan)}>
-          <ViewIcon sx={{ mr: 1 }} fontSize="small" /> Ver plan
-        </MenuItem>
-        <MenuItem onClick={() => handleEdit(actionAnchor.plan)}>
-          <EditIcon sx={{ mr: 1 }} fontSize="small" /> Editar plan
-        </MenuItem>
-        <MenuItem onClick={() => handleItems(actionAnchor.plan)}>
-          <ListIcon sx={{ mr: 1 }} fontSize="small" /> Abrir ítems del plan
-        </MenuItem>
-      </Menu>
     </Box>
   );
 }

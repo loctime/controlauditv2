@@ -224,6 +224,12 @@ export const routesConfig = [
 
   // Dynamic/internal routes
   {
+    id: "training-plan-items",
+    path: "/training/plans/:planId",
+    roles: ["operario", "admin", "superdev"],
+    showInMenu: false,
+  },
+  {
     id: "auditoria-manual-detalle",
     path: "/auditorias-manuales/:auditoriaId",
     roles: ["operario", "admin", "superdev"],
