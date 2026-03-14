@@ -20,12 +20,14 @@ import {
   Box,
   CircularProgress,
   Divider,
-  IconButton
+  IconButton,
+  Rating
 } from '@mui/material';
 import SaveIcon from '@mui/icons-material/Save';
 import UploadIcon from '@mui/icons-material/Upload';
 import AttachFileIcon from '@mui/icons-material/AttachFile';
 import ShareIcon from '@mui/icons-material/Share';
+import StarIcon from '@mui/icons-material/Star';
 import { useAuth } from '@/components/context/AuthContext';
 import { empleadoService } from '../../../../../services/empleadoService';
 import { getUsers } from '../../../../../core/services/ownerUserService';
@@ -68,8 +70,7 @@ const defaultForm = (userProfile) => ({
 
 const defaultParticipantRecord = () => ({
   attendanceStatus: TRAINING_ATTENDANCE_STATUSES.PRESENT,
-  evaluationStatus: TRAINING_EVALUATION_STATUSES.PENDING,
-  score: null,
+  score: 0,
   employeeSignature: null,
   instructorSignature: null,
   notes: ''
@@ -113,20 +114,28 @@ export default function CreateTrainingSession({
 
   // Inicializar con datos precargados si existen
   useEffect(() => {
-    if (initialData) {
-      setForm(prev => ({
-        ...prev,
-        trainingTypeId: initialData.trainingTypeId || prev.trainingTypeId,
-        companyId: initialData.companyId || prev.companyId,
-        branchId: initialData.branchId || prev.branchId,
-        scheduledDate: initialData.scheduledDate || prev.scheduledDate
-      }));
-      
-      if (initialData.planMode === 'plan') {
-        setPlanMode('plan');
-        setSelectedPlanItemId(initialData.planItemId || '');
+    const initializeWithData = async () => {
+      if (initialData) {
+        // Primero cargar el catálogo
+        await ensureCatalog();
+        
+        // Luego establecer los datos del formulario
+        setForm(prev => ({
+          ...prev,
+          trainingTypeId: initialData.trainingTypeId || prev.trainingTypeId,
+          companyId: initialData.companyId || prev.companyId,
+          branchId: initialData.branchId || prev.branchId,
+          scheduledDate: initialData.scheduledDate || prev.scheduledDate
+        }));
+        
+        if (initialData.planMode === 'plan') {
+          setPlanMode('plan');
+          setSelectedPlanItemId(initialData.planItemId || '');
+        }
       }
-    }
+    };
+    
+    initializeWithData();
   }, [initialData]);
 
   const branchOptions = useMemo(
@@ -492,7 +501,7 @@ export default function CreateTrainingSession({
           companyId: form.companyId,
           branchId: form.branchId,
           attendanceStatus: record.attendanceStatus,
-          evaluationStatus: requiresEvaluation ? record.evaluationStatus : TRAINING_EVALUATION_STATUSES.NOT_APPLICABLE,
+          evaluationStatus: TRAINING_EVALUATION_STATUSES.APPROVED, // Todos están aprobados si están seleccionados
           score: record.score,
           employeeSignature: record.employeeSignature,
           instructorSignature: record.instructorSignature,
@@ -750,10 +759,7 @@ export default function CreateTrainingSession({
                       <TableCell sx={{ minWidth: 200 }}>Participante</TableCell>
                       <TableCell sx={{ minWidth: 120 }}>Asistencia</TableCell>
                       {requiresEvaluation && (
-                        <TableCell sx={{ minWidth: 120 }}>Evaluación</TableCell>
-                      )}
-                      {requiresEvaluation && (
-                        <TableCell sx={{ minWidth: 100 }}>Calificación</TableCell>
+                        <TableCell sx={{ minWidth: 120 }}>⭐ Calificación</TableCell>
                       )}
                       <TableCell sx={{ minWidth: 200 }}>Notas</TableCell>
                     </TableRow>
@@ -811,37 +817,17 @@ export default function CreateTrainingSession({
                           </TableCell>
                           {requiresEvaluation && (
                             <TableCell>
-                              <TextField
-                                select
-                                fullWidth
-                                size="small"
-                                value={isSelected ? record.evaluationStatus : ''}
-                                onChange={(e) => {
+                              <Rating
+                                name={`score-${employee.id}`}
+                                value={isSelected ? (record.score || 0) : 0}
+                                max={5}
+                                onChange={(event, newValue) => {
                                   if (!isSelected) toggleEmployee(employee.id);
-                                  updateParticipantRecord(employee.id, 'evaluationStatus', e.target.value);
+                                  updateParticipantRecord(employee.id, 'score', newValue || 0);
                                 }}
                                 disabled={!isSelected}
-                              >
-                                <MenuItem value={TRAINING_EVALUATION_STATUSES.APPROVED}>Aprobado</MenuItem>
-                                <MenuItem value={TRAINING_EVALUATION_STATUSES.FAILED}>Desaprobado</MenuItem>
-                                <MenuItem value={TRAINING_EVALUATION_STATUSES.PENDING}>Pendiente</MenuItem>
-                              </TextField>
-                            </TableCell>
-                          )}
-                          {requiresEvaluation && (
-                            <TableCell>
-                              <TextField
-                                fullWidth
                                 size="small"
-                                type="number"
-                                value={isSelected ? (record.score || '') : ''}
-                                onChange={(e) => {
-                                  if (!isSelected) toggleEmployee(employee.id);
-                                  updateParticipantRecord(employee.id, 'score', parseInt(e.target.value) || null);
-                                }}
-                                disabled={!isSelected}
-                                inputProps={{ min: 0, max: 100 }}
-                                placeholder="0-100"
+                                precision={0.5}
                               />
                             </TableCell>
                           )}
