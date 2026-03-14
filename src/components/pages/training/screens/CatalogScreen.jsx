@@ -1,5 +1,5 @@
 import logger from '@/utils/logger';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Alert,
   Autocomplete,
@@ -28,6 +28,7 @@ import {
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import BarChartIcon from '@mui/icons-material/BarChart';
+import FilterListIcon from '@mui/icons-material/FilterList';
 import { useAuth } from '@/components/context/AuthContext';
 import {
   trainingCatalogService,
@@ -91,6 +92,43 @@ export default function CatalogScreen({ onNavigateToPlans }) {
     requiresCertificate: true,
     status: 'active'
   });
+
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterCategory, setFilterCategory] = useState('');
+  const [filterModality, setFilterModality] = useState('');
+  const [filterStatus, setFilterStatus] = useState('');
+
+  const filteredItems = useMemo(() => {
+    let list = items;
+    const term = (searchTerm || '').trim().toLowerCase();
+    if (term) {
+      list = list.filter(
+        (item) =>
+          (item.name || '').toLowerCase().includes(term) ||
+          (item.description || '').toLowerCase().includes(term)
+      );
+    }
+    if (filterCategory) {
+      list = list.filter(
+        (item) => (item.categoryIds || []).some((id) => id === filterCategory)
+      );
+    }
+    if (filterModality) {
+      list = list.filter((item) => (item.modality || '') === filterModality);
+    }
+    if (filterStatus) {
+      list = list.filter((item) => (item.status || '') === filterStatus);
+    }
+    return list;
+  }, [items, searchTerm, filterCategory, filterModality, filterStatus]);
+
+  const hasActiveFilters = !!(searchTerm || filterCategory || filterModality || filterStatus);
+  const clearFilters = useCallback(() => {
+    setSearchTerm('');
+    setFilterCategory('');
+    setFilterModality('');
+    setFilterStatus('');
+  }, []);
 
   const loadCategories = useCallback(async () => {
     if (!ownerId) return;
@@ -355,10 +393,69 @@ export default function CatalogScreen({ onNavigateToPlans }) {
 
         <Grid item xs={12} md={7}>
           <Paper sx={{ p: 2 }}>
-            <Typography variant="h6" sx={{ mb: 2 }}>Catálogo</Typography>
+            <Stack direction="row" alignItems="center" flexWrap="wrap" spacing={2} sx={{ mb: 2, gap: 1 }}>
+              <Typography variant="h6" sx={{ flexShrink: 0 }}>Catálogo</Typography>
+              <Stack direction="row" spacing={1.5} flexWrap="wrap" alignItems="center" sx={{ flex: 1, minWidth: 0 }}>
+                <TextField
+                  size="small"
+                  placeholder="Buscar…"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  sx={{ minWidth: 160 }}
+                  inputProps={{ 'aria-label': 'Buscar por nombre o descripción' }}
+                />
+                <TextField
+                  select
+                  size="small"
+                  label="Categoría"
+                  value={filterCategory}
+                  onChange={(e) => setFilterCategory(e.target.value)}
+                  sx={{ minWidth: 160 }}
+                >
+                  <MenuItem value="">Todas</MenuItem>
+                  {(categories || []).map((c) => (
+                    <MenuItem key={c.id} value={c.id}>{c.name}</MenuItem>
+                  ))}
+                </TextField>
+                <TextField
+                  select
+                  size="small"
+                  label="Modalidad"
+                  value={filterModality}
+                  onChange={(e) => setFilterModality(e.target.value)}
+                  sx={{ minWidth: 120 }}
+                >
+                  <MenuItem value="">Todas</MenuItem>
+                  <MenuItem value="in_person">Presencial</MenuItem>
+                  <MenuItem value="virtual">Virtual</MenuItem>
+                  <MenuItem value="hybrid">Híbrida</MenuItem>
+                </TextField>
+                <TextField
+                  select
+                  size="small"
+                  label="Estado"
+                  value={filterStatus}
+                  onChange={(e) => setFilterStatus(e.target.value)}
+                  sx={{ minWidth: 110 }}
+                >
+                  <MenuItem value="">Todos</MenuItem>
+                  <MenuItem value="active">Activo</MenuItem>
+                  <MenuItem value="inactive">Inactivo</MenuItem>
+                </TextField>
+                <Button
+                  variant="outlined"
+                  size="small"
+                  onClick={clearFilters}
+                  disabled={!hasActiveFilters}
+                  startIcon={<FilterListIcon />}
+                >
+                  Limpiar filtros
+                </Button>
+              </Stack>
+            </Stack>
             {loading ? <CircularProgress /> : (
               <Stack spacing={1}>
-                {items.map((item) => (
+                {filteredItems.map((item) => (
                   <Paper key={item.id} variant="outlined" sx={{ p: 1.5 }}>
                     <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
                       <Box sx={{ flex: 1 }}>
