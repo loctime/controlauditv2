@@ -6,11 +6,13 @@ import {
   Button,
   Chip,
   CircularProgress,
+  MenuItem,
   Paper,
+  Stack,
   TextField,
   Typography
 } from '@mui/material';
-import { Add as AddIcon } from '@mui/icons-material';
+import { Add as AddIcon, FilterList as FilterListIcon } from '@mui/icons-material';
 import {
   DataGrid,
   GridToolbarContainer,
@@ -27,8 +29,19 @@ import { es } from 'date-fns/locale';
 const PLAN_STATUS_CONFIG = {
   active: { label: 'Activo', color: 'success' },
   draft: { label: 'Borrador', color: 'default' },
-  closed: { label: 'Cerrado', color: 'primary' }
+  closed: { label: 'Cerrado', color: 'primary' },
+  completed: { label: 'Completado', color: 'success' },
+  cancelled: { label: 'Cancelado', color: 'error' }
 };
+
+const STATUS_FILTER_OPTIONS = [
+  { value: '', label: 'Todos' },
+  { value: 'draft', label: 'Borrador' },
+  { value: 'active', label: 'Activo' },
+  { value: 'closed', label: 'Cerrado' },
+  { value: 'completed', label: 'Completado' },
+  { value: 'cancelled', label: 'Cancelado' }
+];
 
 function formatUpdatedAt(value) {
   if (!value) return '—';
@@ -45,58 +58,17 @@ function formatUpdatedAt(value) {
   return isValid(date) ? format(date, "d MMM yyyy, HH:mm", { locale: es }) : '—';
 }
 
-function CustomToolbar({ onCreatePlan, companies, branches, filterCompany, filterBranch, filterStatus, onFilterCompany, onFilterBranch, onFilterStatus }) {
-  const statusOptions = useMemo(() => Object.entries(PLAN_STATUS_CONFIG).map(([value, { label }]) => ({ value, label })), []);
-
+function CustomToolbar({ onCreatePlan }) {
   return (
     <GridToolbarContainer sx={{ p: 1, gap: 1, flexWrap: 'wrap' }}>
       <Button startIcon={<AddIcon />} variant="contained" size="small" onClick={onCreatePlan}>
         Crear plan
       </Button>
-      <TextField
-        select
-        size="small"
-        label="Empresa"
-        value={filterCompany}
-        onChange={(e) => onFilterCompany(e.target.value)}
-        sx={{ minWidth: 180 }}
-      >
-        <MenuItem value="">Todas</MenuItem>
-        {(companies || []).map((c) => (
-          <MenuItem key={c.id} value={c.id}>{c.nombre}</MenuItem>
-        ))}
-      </TextField>
-      <TextField
-        select
-        size="small"
-        label="Sucursal"
-        value={filterBranch}
-        onChange={(e) => onFilterBranch(e.target.value)}
-        sx={{ minWidth: 180 }}
-      >
-        <MenuItem value="">Todas</MenuItem>
-        {(branches || []).map((b) => (
-          <MenuItem key={b.id} value={b.id}>{b.nombre}</MenuItem>
-        ))}
-      </TextField>
-      <TextField
-        select
-        size="small"
-        label="Estado"
-        value={filterStatus}
-        onChange={(e) => onFilterStatus(e.target.value)}
-        sx={{ minWidth: 120 }}
-      >
-        <MenuItem value="">Todos</MenuItem>
-        {statusOptions.map(({ value, label }) => (
-          <MenuItem key={value} value={value}>{label}</MenuItem>
-        ))}
-      </TextField>
       <Box sx={{ flexGrow: 1 }} />
       <GridToolbarColumnsButton />
       <GridToolbarFilterButton />
       <GridToolbarDensitySelector />
-      <GridToolbarQuickFilter debounceMs={200} placeholder="Buscar…" />
+      <GridToolbarQuickFilter debounceMs={200} placeholder="Buscar en tabla…" />
     </GridToolbarContainer>
   );
 }
@@ -106,7 +78,8 @@ export default function AnnualPlansPage({
   onViewPlan,
   onEditPlan,
   onOpenPlanItems,
-  onRegisterRefresh
+  onRegisterRefresh,
+  filterPropsFromParent = null
 }) {
   const { userProfile, userEmpresas = [], userSucursales = [] } = useAuth();
   const ownerId = userProfile?.ownerId;
@@ -114,12 +87,44 @@ export default function AnnualPlansPage({
   const [plans, setPlans] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [filterCompany, setFilterCompany] = useState('');
-  const [filterBranch, setFilterBranch] = useState('');
-  const [filterStatus, setFilterStatus] = useState('');
+  const [searchTermLocal, setSearchTermLocal] = useState('');
+  const [filterCompanyLocal, setFilterCompanyLocal] = useState('');
+  const [filterBranchLocal, setFilterBranchLocal] = useState('');
+  const [filterYearLocal, setFilterYearLocal] = useState('');
+  const [filterStatusLocal, setFilterStatusLocal] = useState('');
+
+  const useParentFilters = !!filterPropsFromParent;
+  const searchTerm = useParentFilters ? filterPropsFromParent.searchTerm : searchTermLocal;
+  const filterCompany = useParentFilters ? filterPropsFromParent.filterCompany : filterCompanyLocal;
+  const filterBranch = useParentFilters ? filterPropsFromParent.filterBranch : filterBranchLocal;
+  const filterYear = useParentFilters ? filterPropsFromParent.filterYear : filterYearLocal;
+  const filterStatus = useParentFilters ? filterPropsFromParent.filterStatus : filterStatusLocal;
 
   const companyMap = useMemo(() => Object.fromEntries((userEmpresas || []).map((e) => [e.id, e.nombre])), [userEmpresas]);
   const branchMap = useMemo(() => Object.fromEntries((userSucursales || []).map((s) => [s.id, s.nombre])), [userSucursales]);
+
+  const availableYears = useMemo(() => {
+    const years = new Set(plans.map((p) => p.year).filter((y) => y != null).map(Number));
+    const currentYear = new Date().getFullYear();
+    for (let y = currentYear + 2; y >= currentYear - 5; y--) years.add(y);
+    return Array.from(years).sort((a, b) => b - a);
+  }, [plans]);
+
+  const branchesByCompany = useMemo(() => {
+    if (!filterCompany) return userSucursales || [];
+    return (userSucursales || []).filter((s) => s.empresaId === filterCompany);
+  }, [userSucursales, filterCompany]);
+
+  const hasActiveFilters = searchTerm || filterCompany || filterBranch || filterYear || filterStatus;
+
+  const clearFilters = useCallback(() => {
+    if (useParentFilters) return;
+    setSearchTermLocal('');
+    setFilterCompanyLocal('');
+    setFilterBranchLocal('');
+    setFilterYearLocal('');
+    setFilterStatusLocal('');
+  }, [useParentFilters]);
 
   const fetchPlans = useCallback(async () => {
     if (!ownerId) return;
@@ -170,7 +175,17 @@ export default function AnnualPlansPage({
     }));
     if (filterCompany) rows = rows.filter((r) => r.companyId === filterCompany);
     if (filterBranch) rows = rows.filter((r) => r.branchId === filterBranch);
+    if (filterYear) rows = rows.filter((r) => r.year === Number(filterYear));
     if (filterStatus) rows = rows.filter((r) => r.status === filterStatus);
+    if (searchTerm.trim()) {
+      const term = searchTerm.trim().toLowerCase();
+      rows = rows.filter((r) => {
+        const companyName = (companyMap[r.companyId] || '').toLowerCase();
+        const branchName = (branchMap[r.branchId] || '').toLowerCase();
+        const yearStr = String(r.year ?? '');
+        return companyName.includes(term) || branchName.includes(term) || yearStr.includes(term);
+      });
+    }
     rows.sort((a, b) => {
       const yearA = a.year ?? 0;
       const yearB = b.year ?? 0;
@@ -180,7 +195,7 @@ export default function AnnualPlansPage({
       return tB - tA;
     });
     return rows;
-  }, [plans, filterCompany, filterBranch, filterStatus]);
+  }, [plans, filterCompany, filterBranch, filterYear, filterStatus, searchTerm, companyMap, branchMap]);
 
   const columns = useMemo(
     () => [
@@ -263,6 +278,84 @@ export default function AnnualPlansPage({
         </Alert>
       )}
 
+      {!useParentFilters && (
+        <Paper variant="outlined" sx={{ p: 2, mb: 2 }}>
+          <Stack direction="row" spacing={2} flexWrap="wrap" alignItems="center">
+            <TextField
+              size="small"
+              placeholder="Buscar…"
+              value={searchTerm}
+              onChange={(e) => setSearchTermLocal(e.target.value)}
+              sx={{ minWidth: 200 }}
+              inputProps={{ 'aria-label': 'Buscar por empresa, sucursal o año' }}
+            />
+            <TextField
+              select
+              size="small"
+              label="Empresa"
+              value={filterCompany}
+              onChange={(e) => {
+                setFilterCompanyLocal(e.target.value);
+                setFilterBranchLocal('');
+              }}
+              sx={{ minWidth: 180 }}
+            >
+              <MenuItem value="">Todas</MenuItem>
+              {(userEmpresas || []).map((c) => (
+                <MenuItem key={c.id} value={c.id}>{c.nombre}</MenuItem>
+              ))}
+            </TextField>
+            <TextField
+              select
+              size="small"
+              label="Sucursal"
+              value={filterBranch}
+              onChange={(e) => setFilterBranchLocal(e.target.value)}
+              sx={{ minWidth: 180 }}
+            >
+              <MenuItem value="">Todas</MenuItem>
+              {branchesByCompany.map((b) => (
+                <MenuItem key={b.id} value={b.id}>{b.nombre}</MenuItem>
+              ))}
+            </TextField>
+            <TextField
+              select
+              size="small"
+              label="Año"
+              value={filterYear}
+              onChange={(e) => setFilterYearLocal(e.target.value)}
+              sx={{ minWidth: 100 }}
+            >
+              <MenuItem value="">Todos</MenuItem>
+              {availableYears.map((y) => (
+                <MenuItem key={y} value={String(y)}>{y}</MenuItem>
+              ))}
+            </TextField>
+            <TextField
+              select
+              size="small"
+              label="Estado"
+              value={filterStatus}
+              onChange={(e) => setFilterStatusLocal(e.target.value)}
+              sx={{ minWidth: 140 }}
+            >
+              {STATUS_FILTER_OPTIONS.map((opt) => (
+                <MenuItem key={opt.value || 'all'} value={opt.value}>{opt.label}</MenuItem>
+              ))}
+            </TextField>
+            <Button
+              variant="outlined"
+              size="small"
+              onClick={clearFilters}
+              disabled={!hasActiveFilters}
+              startIcon={<FilterListIcon />}
+            >
+              Limpiar filtros
+            </Button>
+          </Stack>
+        </Paper>
+      )}
+
       <Paper sx={{ height: 560, width: '100%' }}>
         <DataGrid
           rows={filteredRows}
@@ -277,19 +370,7 @@ export default function AnnualPlansPage({
           }}
           disableRowSelectionOnClick
           slots={{
-            toolbar: () => (
-              <CustomToolbar
-                onCreatePlan={() => onCreatePlan?.()}
-                companies={userEmpresas}
-                branches={userSucursales}
-                filterCompany={filterCompany}
-                filterBranch={filterBranch}
-                filterStatus={filterStatus}
-                onFilterCompany={setFilterCompany}
-                onFilterBranch={setFilterBranch}
-                onFilterStatus={setFilterStatus}
-              />
-            ),
+            toolbar: () => <CustomToolbar onCreatePlan={() => onCreatePlan?.()} />,
             noRowsOverlay: () => (
               <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: 1 }}>
                 <Typography color="text.secondary">No hay planes anuales</Typography>

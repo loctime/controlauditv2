@@ -122,7 +122,11 @@ export default function PlanItemsPage() {
 
   return (
     <Box>
-      <Button startIcon={<ArrowBackIcon />} onClick={() => navigate('/training')} sx={{ mb: 2 }}>
+      <Button
+        startIcon={<ArrowBackIcon />}
+        onClick={() => navigate({ pathname: '/training', search: '?tab=configuration&section=plans' })}
+        sx={{ mb: 2 }}
+      >
         Volver a capacitaciones
       </Button>
 

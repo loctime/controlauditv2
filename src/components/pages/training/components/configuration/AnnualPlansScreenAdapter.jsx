@@ -6,7 +6,13 @@ import AnnualPlansPage from '../../screens/AnnualPlansPage';
 import PlanDetailDrawer from '../plans/PlanDetailDrawer';
 import PlanEditDialog from '../plans/PlanEditDialog';
 
-export default function AnnualPlansScreenAdapter() {
+export default function AnnualPlansScreenAdapter({
+  filterSearchTerm,
+  filterCompany,
+  filterBranch,
+  filterYear,
+  filterStatus
+} = {}) {
   const navigate = useNavigate();
   const { userEmpresas = [], userSucursales = [] } = useAuth();
 
@@ -21,11 +27,23 @@ export default function AnnualPlansScreenAdapter() {
     refreshPlansRef.current?.();
   };
 
+  const filterProps =
+    filterSearchTerm !== undefined
+      ? {
+          searchTerm: filterSearchTerm,
+          filterCompany: filterCompany ?? '',
+          filterBranch: filterBranch ?? '',
+          filterYear: filterYear ?? '',
+          filterStatus: filterStatus ?? ''
+        }
+      : null;
+
   return (
     <>
       <Box sx={{ display: 'flex', width: '100%', alignItems: 'stretch' }}>
         <Box sx={{ flex: 1, minWidth: 0, transition: 'flex 0.25s ease' }}>
           <AnnualPlansPage
+            filterPropsFromParent={filterProps}
             onRegisterRefresh={(fn) => {
               refreshPlansRef.current = fn;
             }}
