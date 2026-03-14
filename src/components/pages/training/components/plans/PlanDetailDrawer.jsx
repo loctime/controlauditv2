@@ -20,7 +20,8 @@ import { Close as CloseIcon } from '@mui/icons-material';
 import { format, parseISO, isValid } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useAuth } from '@/components/context/AuthContext';
-import { trainingPlanService } from '../../../../../services/training';
+import { trainingPlanService, trainingCatalogService } from '../../../../../services/training';
+import PlanItemsByMonthView from '../../utils/PlanItemsByMonthView';
 
 const PLAN_STATUS_CONFIG = {
   active: { label: 'Activo', color: 'success' },
@@ -237,6 +238,7 @@ function TabItems({ plan, onOpenFullPage }) {
   const { userProfile } = useAuth();
   const ownerId = userProfile?.ownerId;
   const [items, setItems] = useState([]);
+  const [typeNameMap, setTypeNameMap] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -245,8 +247,13 @@ function TabItems({ plan, onOpenFullPage }) {
     setLoading(true);
     setError('');
     try {
-      const list = await trainingPlanService.listPlanItems(ownerId, { planId: plan.id });
+      const [list, catalog] = await Promise.all([
+        trainingPlanService.listPlanItems(ownerId, { planId: plan.id }),
+        trainingCatalogService.listAll(ownerId)
+      ]);
       setItems(Array.isArray(list) ? list : []);
+      const map = Object.fromEntries((catalog || []).map((c) => [c.id, c.name || c.id]));
+      setTypeNameMap(map);
     } catch (err) {
       setError(err?.message || 'No se pudieron cargar los ítems.');
       setItems([]);
@@ -259,6 +266,8 @@ function TabItems({ plan, onOpenFullPage }) {
     load();
   }, [load]);
 
+  const title = plan.year != null ? `PLAN ANUAL ${plan.year}` : null;
+
   return (
     <Stack spacing={2} sx={{ pt: 1 }}>
       {onOpenFullPage && (
@@ -269,19 +278,13 @@ function TabItems({ plan, onOpenFullPage }) {
       {error && <Alert severity="error">{error}</Alert>}
       {loading ? (
         <Typography color="text.secondary">Cargando…</Typography>
-      ) : items.length === 0 ? (
-        <Typography color="text.secondary">No hay ítems en este plan.</Typography>
       ) : (
-        <List dense disablePadding>
-          {items.map((item) => (
-            <ListItem key={item.id} disablePadding>
-              <ListItemText
-                primary={`Tipo: ${item.trainingTypeId || '—'}`}
-                secondary={`Mes: ${item.plannedMonth ?? '—'} · ${item.status ?? '—'}`}
-              />
-            </ListItem>
-          ))}
-        </List>
+        <PlanItemsByMonthView
+          items={items}
+          typeNameMap={typeNameMap}
+          title={title}
+          showStatusChip
+        />
       )}
     </Stack>
   );

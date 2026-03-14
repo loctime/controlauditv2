@@ -1,9 +1,10 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Alert, Box, Button, List, ListItem, ListItemText, Paper, Typography } from '@mui/material';
+import { Alert, Box, Button, Paper, Typography } from '@mui/material';
 import { ArrowBack as ArrowBackIcon } from '@mui/icons-material';
 import { useAuth } from '@/components/context/AuthContext';
-import { trainingPlanService } from '../../../../services/training';
+import { trainingPlanService, trainingCatalogService } from '../../../../services/training';
+import PlanItemsByMonthView from '../utils/PlanItemsByMonthView';
 
 export default function PlanItemsPage() {
   const { planId } = useParams();
@@ -11,7 +12,9 @@ export default function PlanItemsPage() {
   const { userProfile } = useAuth();
   const ownerId = userProfile?.ownerId;
 
+  const [plan, setPlan] = useState(null);
   const [items, setItems] = useState([]);
+  const [typeNameMap, setTypeNameMap] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -20,11 +23,19 @@ export default function PlanItemsPage() {
     setLoading(true);
     setError('');
     try {
-      const list = await trainingPlanService.listPlanItems(ownerId, { planId });
+      const [planData, list, catalog] = await Promise.all([
+        trainingPlanService.getPlanById(ownerId, planId),
+        trainingPlanService.listPlanItems(ownerId, { planId }),
+        trainingCatalogService.listAll(ownerId)
+      ]);
+      setPlan(planData || null);
       setItems(Array.isArray(list) ? list : []);
+      const map = Object.fromEntries((catalog || []).map((c) => [c.id, c.name || c.id]));
+      setTypeNameMap(map);
     } catch (err) {
       setError(err?.message || 'No se pudieron cargar los ítems del plan.');
       setItems([]);
+      setPlan(null);
     } finally {
       setLoading(false);
     }
@@ -33,6 +44,8 @@ export default function PlanItemsPage() {
   useEffect(() => {
     load();
   }, [load]);
+
+  const title = plan?.year != null ? `PLAN ANUAL ${plan.year}` : null;
 
   if (!ownerId) {
     return (
@@ -65,19 +78,13 @@ export default function PlanItemsPage() {
       <Paper sx={{ p: 2 }}>
         {loading ? (
           <Typography color="text.secondary">Cargando…</Typography>
-        ) : items.length === 0 ? (
-          <Typography color="text.secondary">No hay ítems en este plan.</Typography>
         ) : (
-          <List dense>
-            {items.map((item) => (
-              <ListItem key={item.id}>
-                <ListItemText
-                  primary={`Tipo: ${item.trainingTypeId || '—'}`}
-                  secondary={`Mes planificado: ${item.plannedMonth ?? '—'} · Estado: ${item.status ?? '—'}`}
-                />
-              </ListItem>
-            ))}
-          </List>
+          <PlanItemsByMonthView
+            items={items}
+            typeNameMap={typeNameMap}
+            title={title}
+            showStatusChip
+          />
         )}
       </Paper>
     </Box>
