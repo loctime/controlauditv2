@@ -13,16 +13,25 @@ import {
   Typography
 } from '@mui/material';
 import {
+  DataGrid,
+  GridToolbarContainer,
+  GridToolbarColumnsButton,
+  GridToolbarFilterButton,
+  GridToolbarDensitySelector,
+  GridToolbarQuickFilter
+} from '@mui/x-data-grid';
+import {
   ArrowBack as ArrowBackIcon,
   School as SchoolIcon,
   CheckCircle as CheckCircleIcon,
   AccessTime as AccessTimeIcon,
-  Percent as PercentIcon
+  Percent as PercentIcon,
+  Cancel as CancelIcon
 } from '@mui/icons-material';
 import { useAuth } from '@/components/context/AuthContext';
 import { trainingPlanService, trainingCatalogService } from '../../../../services/training';
+import { getMonthName } from '../utils/planItemsGroupByMonth';
 import TrainingPlanCalendar from '../components/TrainingPlanCalendar';
-import TrainingPlanTimeline from '../components/TrainingPlanTimeline';
 
 export default function PlanItemsPage() {
   const { planId } = useParams();
@@ -71,6 +80,26 @@ export default function PlanItemsPage() {
     return { total, completed, pending, compliance };
   }, [items]);
 
+  const planYear = plan?.year ?? new Date().getFullYear();
+
+  const tableRows = useMemo(() => {
+    return items.map((item) => ({
+      id: item.id,
+      trainingName: typeNameMap[item.trainingTypeId] || item.trainingTypeId || '—',
+      mes: getMonthName(item.plannedMonth),
+      mesNum: Number(item.plannedMonth) || 0,
+      status: item.status || 'planned',
+      responsable: item.responsibleUserId || item.responsibleUserName || '—',
+      fechaPlanificada: item.plannedMonth && planYear ? `${getMonthName(item.plannedMonth)} ${planYear}` : '—'
+    }));
+  }, [items, typeNameMap, planYear]);
+
+  const statusConfig = {
+    planned: { label: 'Planificado', Icon: AccessTimeIcon, color: 'text.secondary' },
+    completed: { label: 'Completado', Icon: CheckCircleIcon, color: 'success.main' },
+    cancelled: { label: 'Cancelado', Icon: CancelIcon, color: 'error.main' }
+  };
+
   if (!ownerId) {
     return (
       <Alert severity="warning">No hay contexto de owner disponible.</Alert>
@@ -110,29 +139,31 @@ export default function PlanItemsPage() {
           {/* 1. HEADER */}
           <Grid item xs={12}>
             <Paper variant="outlined" sx={{ p: 2 }}>
-              <Typography variant="h4" fontWeight={700} sx={{ mb: 0.5 }}>
-                PLAN ANUAL {year}
-              </Typography>
-              <Stack direction="row" spacing={2} flexWrap="wrap" sx={{ mb: 2 }}>
-                <Typography variant="body2" color="text.secondary">
-                  <strong>Empresa:</strong> {companyName}
+              <Stack direction="row" alignItems="center" spacing={2} flexWrap="wrap" sx={{ mb: 2 }}>
+                <Typography variant="h4" fontWeight={700}>
+                  PLAN ANUAL {year}
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
-                  <strong>Sucursal:</strong> {branchName}
+                  Empresa: {companyName}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Sucursal: {branchName}
                 </Typography>
               </Stack>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-                Cumplimiento: {kpis.completed} de {kpis.total} capacitaciones
-              </Typography>
               <LinearProgress
                 variant="determinate"
                 value={kpis.total > 0 ? (kpis.completed / kpis.total) * 100 : 0}
                 sx={{ height: 8, borderRadius: 4 }}
                 color="primary"
               />
-              <Typography variant="body2" fontWeight={600} sx={{ mt: 0.5 }}>
-                {kpis.compliance}%
-              </Typography>
+              <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={1} sx={{ mt: 0.5 }}>
+                <Typography variant="body2" color="text.secondary">
+                  Cumplimiento: {kpis.completed} de {kpis.total} capacitaciones
+                </Typography>
+                <Typography variant="body2" fontWeight={600}>
+                  {kpis.compliance}%
+                </Typography>
+              </Stack>
             </Paper>
           </Grid>
 
@@ -198,7 +229,7 @@ export default function PlanItemsPage() {
             </Card>
           </Grid>
 
-          {/* 3. YEAR CALENDAR GRID */}
+          {/* SECTION 1 — CALENDARIO ANUAL */}
           <Grid item xs={12}>
             <Typography variant="h6" fontWeight={600} sx={{ mb: 2 }}>
               Calendario anual
@@ -210,13 +241,71 @@ export default function PlanItemsPage() {
             />
           </Grid>
 
-          {/* 4. TIMELINE */}
+          {/* SECTION 2 — LISTADO DEL PLAN */}
           <Grid item xs={12}>
             <Typography variant="h6" fontWeight={600} sx={{ mb: 2 }}>
-              Distribución en el año
+              Plan de capacitaciones
             </Typography>
-            <Paper variant="outlined" sx={{ p: 2 }}>
-              <TrainingPlanTimeline items={items} typeNameMap={typeNameMap} />
+            <Paper variant="outlined" sx={{ height: 400, width: '100%' }}>
+              <DataGrid
+                rows={tableRows}
+                columns={[
+                  {
+                    field: 'trainingName',
+                    headerName: 'Capacitación',
+                    flex: 1,
+                    minWidth: 180
+                  },
+                  {
+                    field: 'mes',
+                    headerName: 'Mes',
+                    width: 120,
+                    sortComparator: (v1, v2, row1, row2) =>
+                      (row1.mesNum || 0) - (row2.mesNum || 0)
+                  },
+                  {
+                    field: 'status',
+                    headerName: 'Estado',
+                    width: 140,
+                    renderCell: ({ value }) => {
+                      const config = statusConfig[value] || statusConfig.planned;
+                      const Icon = config.Icon;
+                      return (
+                        <Stack direction="row" alignItems="center" spacing={0.5}>
+                          <Icon sx={{ fontSize: 18, color: config.color }} />
+                          <span>{config.label}</span>
+                        </Stack>
+                      );
+                    }
+                  },
+                  {
+                    field: 'responsable',
+                    headerName: 'Responsable',
+                    width: 140
+                  },
+                  {
+                    field: 'fechaPlanificada',
+                    headerName: 'Fecha planificada',
+                    width: 160
+                  }
+                ]}
+                pageSizeOptions={[10, 25, 50]}
+                initialState={{
+                  pagination: { paginationModel: { pageSize: 10 } },
+                  sorting: { sortModel: [{ field: 'mes', sort: 'asc' }] }
+                }}
+                disableRowSelectionOnClick
+                slots={{
+                  toolbar: () => (
+                    <GridToolbarContainer sx={{ p: 1, gap: 1 }}>
+                      <GridToolbarColumnsButton />
+                      <GridToolbarFilterButton />
+                      <GridToolbarDensitySelector />
+                      <GridToolbarQuickFilter debounceMs={200} placeholder="Buscar…" />
+                    </GridToolbarContainer>
+                  )
+                }}
+              />
             </Paper>
           </Grid>
 
