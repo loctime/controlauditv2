@@ -32,19 +32,24 @@ function planStatusLabel(status) {
 
 /**
  * Obtiene los ítems de plan anual planificados para el mes actual.
+ * Lista todos los planes (muchos no tienen campo year) y filtra por año en cliente si existe.
  * @param {string} ownerId
  * @param {number} year
  * @param {number} month (1-12)
  * @returns {Promise<Array<{ plan, item, trainingTypeName, companyName, branchName }>>}
  */
 async function loadPlanItemsForCurrentMonth(ownerId, year, month) {
-  const [plans, catalogList] = await Promise.all([
-    trainingPlanService.listPlans(ownerId, { year }),
+  const [allPlans, catalogList] = await Promise.all([
+    trainingPlanService.listPlans(ownerId),
     trainingCatalogService.listActive(ownerId)
   ]);
 
   const catalogMap = Object.fromEntries(catalogList.map((c) => [c.id, c.name]));
   const result = [];
+
+  const plans = allPlans.filter(
+    (plan) => plan.year == null || plan.year === undefined || Number(plan.year) === year
+  );
 
   for (const plan of plans) {
     const items = await trainingPlanService.listPlanItems(ownerId, { planId: plan.id });

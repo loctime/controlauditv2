@@ -297,6 +297,7 @@ export default function CatalogScreen({ onNavigateToPlans }) {
         companyId: addToPlanForm.companyId,
         branchId: addToPlanForm.branchId,
         trainingTypeId: addToPlanItem.id,
+        year: new Date().getFullYear(),
         validityMonths: Number(addToPlanItem.validityMonths) || 12,
         startMonth: Number(addToPlanForm.startMonth) || 1,
         notes: (addToPlanForm.notes || '').trim() || '',

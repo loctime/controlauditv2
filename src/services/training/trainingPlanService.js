@@ -8,33 +8,15 @@ import {
   setDocument,
   updateDocument
 } from './trainingBaseService';
+import { generatePlannedMonths, getCurrentCalendarYear } from './trainingPlanUtils.js';
+
+export { generatePlannedMonths, getCurrentCalendarYear };
 
 const PLAN_STATUS_PRIORITY = {
   approved: 0,
   in_progress: 1,
   draft: 2
 };
-
-/**
- * Genera los meses planificados para el plan anual (solo año calendario).
- * No usa ciclo modular: solo meses desde startMonth hasta ≤ 12.
- * @param {number} frequencyMonths - Cada cuántos meses se repite (1-12). Si no válido, se usa 12.
- * @param {number} [startMonth=1] - Mes de inicio del ciclo (1-12). Por defecto 1 (enero).
- * @returns {number[]} Array de meses (1-12) ordenado ascendente.
- */
-function generatePlannedMonths(frequencyMonths, startMonth = 1) {
-  const freq = Number(frequencyMonths);
-  const start = Number(startMonth);
-  const interval = freq > 0 && freq <= 12 ? freq : 12;
-  const from = (start > 0 && start <= 12 ? start : 1);
-  const months = [];
-  for (let m = from; m <= 12; m += interval) {
-    months.push(m);
-  }
-  return months;
-}
-
-export { generatePlannedMonths };
 
 const PLAN_TRAINING_TYPE_CONFIG_ID = (planId, trainingTypeId) => `${planId}_${trainingTypeId}`;
 
@@ -245,16 +227,18 @@ export const trainingPlanService = {
   },
 
   /**
-   * Añade un tipo de capacitación al plan permanente con frecuencia automática.
-   * Find-or-create plan por (companyId, branchId). Persiste config en training_plan_training_type y crea un ítem por cada mes de generatePlannedMonths(frequencyMonths, startMonth).
+   * Añade un tipo de capacitación al plan con frecuencia automática.
+   * Find-or-create plan por (companyId, branchId) y opcionalmente year. Los ítems se generan
+   * siempre para el año del plan; NUNCA se usa el año siguiente.
    * @param {string} ownerId
-   * @param {{ companyId: string, branchId: string, trainingTypeId: string, validityMonths?: number, startMonth?: number, notes?: string, responsibleUserId?: string }}
+   * @param {{ companyId: string, branchId: string, trainingTypeId: string, year?: number, validityMonths?: number, startMonth?: number, notes?: string, responsibleUserId?: string }}
    * @returns {{ planId: string, createdItemIds: string[], createdPlan: boolean }}
    */
   async addTrainingTypeToPlan(ownerId, {
     companyId,
     branchId,
     trainingTypeId,
+    year: planYearParam,
     validityMonths = 12,
     startMonth = 1,
     notes = '',
@@ -264,7 +248,12 @@ export const trainingPlanService = {
       throw new Error('Faltan empresa, sucursal o tipo de capacitación.');
     }
 
-    const existingPlans = await this.listPlans(ownerId, { companyId, branchId });
+    const planYear = planYearParam != null && !Number.isNaN(Number(planYearParam))
+      ? Number(planYearParam)
+      : getCurrentCalendarYear();
+
+    const existingPlans = await this.listPlans(ownerId, { companyId, branchId, year: planYear });
+
     let planId;
     let createdPlan = false;
 
@@ -274,6 +263,7 @@ export const trainingPlanService = {
       const planRef = await this.createPlan(ownerId, {
         companyId,
         branchId,
+        year: planYear,
         notes: '',
         responsibleUserId: responsibleUserId || undefined,
         status: 'draft'
@@ -316,7 +306,8 @@ export const trainingPlanService = {
 
   /**
    * Añade un tipo de capacitación a un plan existente (por planId) con frecuencia automática.
-   * Persiste config en training_plan_training_type y crea ítems con generatePlannedMonths(frequencyMonths, startMonth).
+   * Los ítems se generan con plannedMonth (1-12) y pertenecen SIEMPRE al año del plan (plan.year).
+   * No se usa el año actual del sistema para los ítems.
    * @param {string} ownerId
    * @param {{ planId: string, trainingTypeId: string, validityMonths?: number, startMonth?: number, notes?: string }}
    * @returns {{ planId: string, createdItemIds: string[] }}
