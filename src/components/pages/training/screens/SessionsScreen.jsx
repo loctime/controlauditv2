@@ -26,7 +26,6 @@ import {
 } from '../../../../services/training';
 import { TRAINING_SESSION_STATUSES } from '../../../../types/trainingDomain';
 import SessionsListView from '../components/sessions/SessionsListView';
-import SessionCreateWizard from '../components/sessions/SessionCreateWizard';
 import CreateTrainingSession from '../components/sessions/CreateTrainingSession';
 import TrainingSessionEntry from '../components/sessions/TrainingSessionEntry';
 import SessionExecutionView from '../components/sessions/SessionExecutionView';
@@ -64,9 +63,6 @@ export default function SessionsScreen() {
   const [editingSession, setEditingSession] = useState(null);
   const [editingForm, setEditingForm] = useState({ location: '', instructorId: '', scheduledDate: '' });
   const [instructorOptions, setInstructorOptions] = useState([]);
-  const [wizardOpen, setWizardOpen] = useState(false);
-  const [wizardInitial, setWizardInitial] = useState(null);
-  const [createMode, setCreateMode] = useState('wizard'); // 'wizard' | 'quick' | 'planned'
   const [quickSessionData, setQuickSessionData] = useState(null);
   const [showSessionsList, setShowSessionsList] = useState(false);
 
@@ -179,8 +175,6 @@ export default function SessionsScreen() {
 
   const handleOpenQuickSession = (data) => {
     setQuickSessionData(data);
-    setCreateMode('quick');
-    setWizardOpen(false);
   };
 
   const handleCloseQuickSession = () => {
@@ -197,62 +191,39 @@ export default function SessionsScreen() {
 
       <Grid container spacing={2}>
         <Grid item xs={12}>
-          {!wizardOpen ? (
-            <Box>
-              <Box sx={{ mb: 2, display: 'flex', gap: 2, alignItems: 'center' }}>
-                <Typography variant="h6">Crear Nueva Capacitación</Typography>
-                <Button
-                  variant="outlined"
-                  startIcon={<ListIcon />}
-                  onClick={() => setShowSessionsList(!showSessionsList)}
-                >
-                  Sesiones
-                </Button>
-              </Box>
-              
-              <TrainingSessionEntry
-                ownerId={ownerId}
-                onOpenQuickSession={handleOpenQuickSession}
-                onCloseQuickSession={handleCloseQuickSession}
-              />
-              
-              {quickSessionData && (
-                <CreateTrainingSession
-                  ownerId={ownerId}
-                  mode="quick"
-                  initialData={quickSessionData}
-                  onSaved={(sessionId) => {
-                    // No establecer selectedSessionId para modo rápido
-                    setQuickSessionData(null);
-                    load();
-                  }}
-                  onCancel={() => {
-                    setQuickSessionData(null);
-                  }}
-                />
-              )}
+          <Box>
+            <Box sx={{ mb: 2, display: 'flex', gap: 2, alignItems: 'center' }}>
+              <Typography variant="h6">Crear Nueva Capacitación</Typography>
+              <Button
+                variant="outlined"
+                startIcon={<ListIcon />}
+                onClick={() => setShowSessionsList(!showSessionsList)}
+              >
+                Sesiones
+              </Button>
             </Box>
-          ) : (
-            <SessionCreateWizard
-              key={wizardInitial?.initialPlanItemId ?? wizardInitial?.initialPlanMode ?? 'wizard'}
+
+            <TrainingSessionEntry
               ownerId={ownerId}
-              initialValues={wizardInitial?.initialValues}
-              initialPlanMode={wizardInitial?.initialPlanMode}
-              initialPlanItemId={wizardInitial?.initialPlanItemId}
-              initialPlanId={wizardInitial?.initialPlanId}
-              initialPlanCandidate={wizardInitial?.initialPlanCandidate}
-              onCreated={(sessionId) => {
-                setSelectedSessionId(sessionId);
-                setWizardOpen(false);
-                setWizardInitial(null);
-                load();
-              }}
-              onCancel={() => {
-                setWizardOpen(false);
-                setWizardInitial(null);
-              }}
+              onOpenQuickSession={handleOpenQuickSession}
+              onCloseQuickSession={handleCloseQuickSession}
             />
-          )}
+
+            {quickSessionData && (
+              <CreateTrainingSession
+                ownerId={ownerId}
+                mode="quick"
+                initialData={quickSessionData}
+                onSaved={() => {
+                  setQuickSessionData(null);
+                  load();
+                }}
+                onCancel={() => {
+                  setQuickSessionData(null);
+                }}
+              />
+            )}
+          </Box>
         </Grid>
 
         <Grid item xs={12}>

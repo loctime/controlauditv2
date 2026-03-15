@@ -197,110 +197,61 @@ export const trainingPlanService = {
   },
 
   /**
-   * Añade un tipo de capacitación a un plan anual (find-or-create plan, evita ítem duplicado).
+   * API unificada: asigna un tipo de capacitación a un plan.
+   * Si se pasa planId se usa ese plan; si no, find-or-create por (companyId, branchId, year).
    * @param {string} ownerId
-   * @param {{ companyId: string, branchId: string, year: number, trainingTypeId: string, plannedMonth?: number, notes?: string, responsibleUserId?: string }}
-   * @returns {{ planId: string, planItemId: string, createdPlan: boolean }}
-   * @throws Si ya existe un ítem para ese trainingTypeId en el plan.
+   * @param {{ planId?: string, companyId?: string, branchId?: string, year?: number, trainingTypeId: string, plannedMonth?: number, validityMonths?: number, startMonth?: number, notes?: string, responsibleUserId?: string }}
+   * @returns {{ planId: string, createdItemIds: string[], createdPlan?: boolean }}
    */
-  async addTrainingTypeToAnnualPlan(ownerId, {
+  async assignTrainingTypeToPlan(ownerId, {
+    planId: planIdParam,
     companyId,
     branchId,
-    year,
+    year: yearParam,
     trainingTypeId,
-    plannedMonth = 1,
-    notes = '',
-    responsibleUserId = ''
-  } = {}) {
-    if (!companyId || !branchId || !year || !trainingTypeId) {
-      throw new Error('Faltan empresa, sucursal, año o tipo de capacitación.');
-    }
-
-    const yearNum = Number(year);
-    const existingPlans = await this.listPlans(ownerId, { year: yearNum, companyId, branchId });
-    let planId;
-    let createdPlan = false;
-
-    if (existingPlans.length > 0) {
-      planId = existingPlans[0].id;
-    } else {
-      const planRef = await this.createPlan(ownerId, {
-        year: yearNum,
-        companyId,
-        branchId,
-        notes: '',
-        responsibleUserId: responsibleUserId || undefined,
-        status: 'draft'
-      });
-      planId = planRef.id;
-      createdPlan = true;
-    }
-
-    const existingItems = await this.listPlanItems(ownerId, { planId, trainingTypeId });
-    if (existingItems.length > 0) {
-      throw new Error('Esta capacitación ya está en el plan anual seleccionado.');
-    }
-
-    const itemRef = await this.createPlanItem(ownerId, {
-      planId,
-      trainingTypeId,
-      plannedMonth: Number(plannedMonth) || 1,
-      status: 'planned',
-      targetAudience: '',
-      estimatedParticipants: 0,
-      priority: 'medium',
-      notes: notes || ''
-    });
-
-    return { planId, planItemId: itemRef.id, createdPlan };
-  },
-
-  /**
-   * Añade un tipo de capacitación al plan con frecuencia automática.
-   * Find-or-create plan por (companyId, branchId) y opcionalmente year. Los ítems se generan
-   * siempre para el año del plan; NUNCA se usa el año siguiente.
-   * @param {string} ownerId
-   * @param {{ companyId: string, branchId: string, trainingTypeId: string, year?: number, validityMonths?: number, startMonth?: number, notes?: string, responsibleUserId?: string }}
-   * @returns {{ planId: string, createdItemIds: string[], createdPlan: boolean }}
-   */
-  async addTrainingTypeToPlan(ownerId, {
-    companyId,
-    branchId,
-    trainingTypeId,
-    year: planYearParam,
+    plannedMonth,
     validityMonths = 12,
     startMonth = 1,
     notes = '',
     responsibleUserId = ''
   } = {}) {
-    if (!companyId || !branchId || !trainingTypeId) {
-      throw new Error('Faltan empresa, sucursal o tipo de capacitación.');
+    if (!trainingTypeId) {
+      throw new Error('Faltan tipo de capacitación.');
     }
 
-    const planYear = planYearParam != null && !Number.isNaN(Number(planYearParam))
-      ? Number(planYearParam)
-      : getCurrentCalendarYear();
-
-    const existingPlans = await this.listPlans(ownerId, { companyId, branchId, year: planYear });
-
-    let planId;
+    let planId = planIdParam;
     let createdPlan = false;
 
-    if (existingPlans.length > 0) {
-      planId = existingPlans[0].id;
+    if (planId) {
+      const plan = await getDocument(ownerId, 'trainingPlan', planId);
+      if (!plan) {
+        throw new Error('Plan no encontrado.');
+      }
     } else {
-      const planRef = await this.createPlan(ownerId, {
-        companyId,
-        branchId,
-        year: planYear,
-        notes: '',
-        responsibleUserId: responsibleUserId || undefined,
-        status: 'draft'
-      });
-      planId = planRef.id;
-      createdPlan = true;
+      if (!companyId || !branchId) {
+        throw new Error('Faltan empresa y sucursal para crear o buscar el plan.');
+      }
+      const planYear = yearParam != null && !Number.isNaN(Number(yearParam))
+        ? Number(yearParam)
+        : getCurrentCalendarYear();
+      const existingPlans = await this.listPlans(ownerId, { companyId, branchId, year: planYear });
+      if (existingPlans.length > 0) {
+        planId = existingPlans[0].id;
+      } else {
+        const planRef = await this.createPlan(ownerId, {
+          companyId,
+          branchId,
+          year: planYear,
+          notes: '',
+          responsibleUserId: responsibleUserId || undefined,
+          status: 'draft'
+        });
+        planId = planRef.id;
+        createdPlan = true;
+      }
     }
 
+    const plan = await getDocument(ownerId, 'trainingPlan', planId);
     const frequencyMonths = Number(validityMonths) > 0 && Number(validityMonths) <= 12 ? Number(validityMonths) : 12;
     const start = (Number(startMonth) > 0 && Number(startMonth) <= 12) ? Number(startMonth) : 1;
     await setPlanTrainingTypeConfig(ownerId, planId, trainingTypeId, { frequencyMonths, startMonth: start });
@@ -320,7 +271,9 @@ export const trainingPlanService = {
         targetAudience: '',
         estimatedParticipants: 0,
         priority: 'medium',
-        notes: notes || ''
+        notes: notes || '',
+        companyId: plan?.companyId || companyId || null,
+        branchId: plan?.branchId || branchId || null
       });
       createdItemIds.push(itemRef.id);
       existingMonths.add(month);
@@ -331,51 +284,6 @@ export const trainingPlanService = {
     }
 
     return { planId, createdItemIds, createdPlan };
-  },
-
-  /**
-   * Añade un tipo de capacitación a un plan existente (por planId) con frecuencia automática.
-   * Los ítems se generan con plannedMonth (1-12) y pertenecen SIEMPRE al año del plan (plan.year).
-   * No se usa el año actual del sistema para los ítems.
-   * @param {string} ownerId
-   * @param {{ planId: string, trainingTypeId: string, validityMonths?: number, startMonth?: number, notes?: string }}
-   * @returns {{ planId: string, createdItemIds: string[] }}
-   */
-  async addTrainingTypeToPlanByPlanId(ownerId, { planId, trainingTypeId, validityMonths = 12, startMonth = 1, notes = '' } = {}) {
-    if (!planId || !trainingTypeId) {
-      throw new Error('Faltan plan o tipo de capacitación.');
-    }
-
-    const frequencyMonths = Number(validityMonths) > 0 && Number(validityMonths) <= 12 ? Number(validityMonths) : 12;
-    const start = (Number(startMonth) > 0 && Number(startMonth) <= 12) ? Number(startMonth) : 1;
-    await setPlanTrainingTypeConfig(ownerId, planId, trainingTypeId, { frequencyMonths, startMonth: start });
-
-    const months = generatePlannedMonths(frequencyMonths, start);
-    const existingItems = await this.listPlanItems(ownerId, { planId, trainingTypeId });
-    const existingMonths = new Set(existingItems.map((i) => Number(i.plannedMonth)));
-    const createdItemIds = [];
-
-    for (const month of months) {
-      if (existingMonths.has(month)) continue;
-      const itemRef = await this.createPlanItem(ownerId, {
-        planId,
-        trainingTypeId,
-        plannedMonth: month,
-        status: 'planned',
-        targetAudience: '',
-        estimatedParticipants: 0,
-        priority: 'medium',
-        notes: notes || ''
-      });
-      createdItemIds.push(itemRef.id);
-      existingMonths.add(month);
-    }
-
-    if (createdItemIds.length === 0) {
-      throw new Error('Esta capacitación ya está en el plan con todos los meses calculados. No se agregaron ítems nuevos.');
-    }
-
-    return { planId, createdItemIds };
   },
 
   getPlanTrainingTypeConfig

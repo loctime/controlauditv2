@@ -12,6 +12,19 @@ import { trainingAttendanceService } from './trainingAttendanceService';
 import { trainingCatalogService } from './trainingCatalogService';
 import { resolveTrainingPeriod } from './trainingPeriodUtils';
 
+const VALID_TRANSITIONS = {
+  [TRAINING_SESSION_STATUSES.DRAFT]: [TRAINING_SESSION_STATUSES.SCHEDULED, TRAINING_SESSION_STATUSES.CANCELLED],
+  [TRAINING_SESSION_STATUSES.SCHEDULED]: [TRAINING_SESSION_STATUSES.IN_PROGRESS, TRAINING_SESSION_STATUSES.CANCELLED],
+  [TRAINING_SESSION_STATUSES.IN_PROGRESS]: [TRAINING_SESSION_STATUSES.PENDING_CLOSURE, TRAINING_SESSION_STATUSES.CANCELLED],
+  [TRAINING_SESSION_STATUSES.PENDING_CLOSURE]: [TRAINING_SESSION_STATUSES.CLOSED, TRAINING_SESSION_STATUSES.IN_PROGRESS],
+  [TRAINING_SESSION_STATUSES.CLOSED]: [],
+  [TRAINING_SESSION_STATUSES.CANCELLED]: []
+};
+
+function getAllowedTransitions(currentStatus) {
+  return VALID_TRANSITIONS[currentStatus] || [];
+}
+
 const IMMUTABLE_ON_CLOSED_FIELDS = [
   'trainingTypeId',
   'companyId',
@@ -67,6 +80,8 @@ function normalizeSessionPlanLink(data = {}, { fillLinkedAt = false, actorUserId
 }
 
 export const trainingSessionService = {
+  getAllowedTransitions,
+
   async createSession(ownerId, payload, options = {}) {
     const normalizedPlanLink = normalizeSessionPlanLink(payload, {
       fillLinkedAt: true,
@@ -196,16 +211,7 @@ export const trainingSessionService = {
       throw new Error('Training session not found');
     }
 
-    const validTransitions = {
-      [TRAINING_SESSION_STATUSES.DRAFT]: [TRAINING_SESSION_STATUSES.SCHEDULED, TRAINING_SESSION_STATUSES.CANCELLED],
-      [TRAINING_SESSION_STATUSES.SCHEDULED]: [TRAINING_SESSION_STATUSES.IN_PROGRESS, TRAINING_SESSION_STATUSES.CANCELLED],
-      [TRAINING_SESSION_STATUSES.IN_PROGRESS]: [TRAINING_SESSION_STATUSES.PENDING_CLOSURE, TRAINING_SESSION_STATUSES.CANCELLED],
-      [TRAINING_SESSION_STATUSES.PENDING_CLOSURE]: [TRAINING_SESSION_STATUSES.CLOSED, TRAINING_SESSION_STATUSES.IN_PROGRESS],
-      [TRAINING_SESSION_STATUSES.CLOSED]: [],
-      [TRAINING_SESSION_STATUSES.CANCELLED]: []
-    };
-
-    const allowed = validTransitions[current.status] || [];
+    const allowed = getAllowedTransitions(current.status);
     if (!allowed.includes(newStatus)) {
       throw new Error(`Invalid transition: ${current.status} -> ${newStatus}`);
     }

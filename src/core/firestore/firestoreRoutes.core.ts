@@ -670,23 +670,6 @@ export const firestoreRoutesCore = {
     'training_compliance_snapshots',
     snapshotId
   ],
-  trainingComplianceMatrix: (ownerId: string): string[] => [
-    'apps',
-    'auditoria',
-    'owners',
-    ownerId,
-    'training_compliance_matrix'
-  ],
-
-  trainingComplianceMatrixItem: (ownerId: string, cellId: string): string[] => [
-    'apps',
-    'auditoria',
-    'owners',
-    ownerId,
-    'training_compliance_matrix',
-    cellId
-  ],
-
   trainingAttendanceByEmployee: (ownerId: string): string[] => [
     'apps',
     'auditoria',

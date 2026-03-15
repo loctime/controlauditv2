@@ -1,11 +1,7 @@
 import { Timestamp } from 'firebase/firestore';
 import {
-  buildLimit,
-  buildOrderBy,
-  buildWhere,
   createDocument,
-  queryDocuments,
-  setDocument
+  queryDocuments
 } from './trainingBaseService';
 import { trainingRequirementService } from './trainingRequirementService';
 import { employeeTrainingRecordService } from './employeeTrainingRecordService';
@@ -82,80 +78,17 @@ export const trainingComplianceService = {
   },
 
   async recomputeEmployeeTrainingRecord(ownerId, employeeId, trainingTypeId, metadata = {}) {
-    const recordId = await employeeTrainingRecordService.recomputeEmployeeRecord(
+    return employeeTrainingRecordService.recomputeEmployeeRecord(
       ownerId,
       employeeId,
       trainingTypeId,
       metadata
     );
-
-    if (recordId) {
-      const record = await employeeTrainingRecordService.getByEmployeeAndType(ownerId, employeeId, trainingTypeId);
-      if (record) {
-        await this.upsertMatrixCell(ownerId, {
-          employeeId,
-          trainingTypeId,
-          companyId: record.companyId || metadata.companyId || null,
-          branchId: record.branchId || metadata.branchId || null,
-          ...complianceFromRecord(record),
-          sourceRecordId: recordId,
-          sources: record.sources || [],
-          roleId: metadata.roleId || null,
-          riskIds: metadata.riskIds || []
-        });
-      }
-    }
-
-    return recordId;
-  },
-
-  async upsertMatrixCell(ownerId, payload) {
-    if (!payload.employeeId || !payload.trainingTypeId) {
-      return null;
-    }
-
-    const cellId = getTrainingRecordId(payload.employeeId, payload.trainingTypeId);
-    await setDocument(ownerId, 'trainingComplianceMatrixItem', cellId, {
-      employeeId: payload.employeeId,
-      trainingTypeId: payload.trainingTypeId,
-      companyId: payload.companyId || null,
-      branchId: payload.branchId || null,
-      complianceStatus: payload.complianceStatus || TRAINING_COMPLIANCE_STATUSES.MISSING,
-      validUntil: payload.validUntil || null,
-      validFrom: payload.validFrom || null,
-      daysToExpire: payload.daysToExpire ?? null,
-      lastSessionId: payload.lastSessionId || null,
-      lastResult: payload.lastAttendanceStatus || payload.lastResult || 'missing',
-      lastAttendanceStatus: payload.lastAttendanceStatus || payload.lastResult || 'missing',
-      lastPeriodKey: payload.lastPeriodKey || null,
-      lastPeriodResultId: payload.lastPeriodResultId || null,
-      sourceRecordId: payload.sourceRecordId || null,
-      sources: payload.sources || [],
-      roleId: payload.roleId || null,
-      riskIds: payload.riskIds || [],
-      lastComputedAt: payload.lastComputedAt || Timestamp.now()
-    });
-
-    return cellId;
   },
 
   async getEmployeeCompliance(ownerId, employeeId, filters = {}) {
-    const constraints = [
-      buildWhere('employeeId', '==', employeeId),
-      buildOrderBy('trainingTypeId', 'asc')
-    ];
-
-    if (filters.complianceStatuses?.length) {
-      constraints.unshift(buildWhere('complianceStatus', 'in', filters.complianceStatuses));
-    }
-
-    if (filters.limit) constraints.push(buildLimit(filters.limit));
-
-    const matrixRows = await queryDocuments(ownerId, 'trainingComplianceMatrix', constraints);
-    if (matrixRows.length > 0) return matrixRows;
-
     const records = await employeeTrainingRecordService.listByEmployee(ownerId, employeeId);
-    return records.map((record) => ({
+    let result = records.map((record) => ({
       id: getTrainingRecordId(record.employeeId, record.trainingTypeId),
       employeeId: record.employeeId,
       trainingTypeId: record.trainingTypeId,
@@ -165,6 +98,15 @@ export const trainingComplianceService = {
       sourceRecordId: record.id,
       sources: record.sources || []
     }));
+
+    if (filters.complianceStatuses?.length) {
+      result = result.filter((r) => filters.complianceStatuses.includes(r.complianceStatus));
+    }
+    if (filters.limit) {
+      result = result.slice(0, filters.limit);
+    }
+
+    return result;
   },
 
   async buildMatrix(ownerId, {
@@ -231,13 +173,6 @@ export const trainingComplianceService = {
         };
 
         matrix.push(normalized);
-
-        if (persist) {
-          await this.upsertMatrixCell(ownerId, {
-            ...normalized,
-            lastComputedAt: Timestamp.now()
-          });
-        }
       }
     }
 

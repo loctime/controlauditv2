@@ -293,11 +293,11 @@ export default function CatalogScreen({ onNavigateToPlans }) {
     setAddToPlanSaving(true);
     setAddToPlanError('');
     try {
-      await trainingPlanService.addTrainingTypeToPlan(ownerId, {
+      await trainingPlanService.assignTrainingTypeToPlan(ownerId, {
         companyId: addToPlanForm.companyId,
         branchId: addToPlanForm.branchId,
-        trainingTypeId: addToPlanItem.id,
         year: new Date().getFullYear(),
+        trainingTypeId: addToPlanItem.id,
         validityMonths: Number(addToPlanItem.validityMonths) || 12,
         startMonth: Number(addToPlanForm.startMonth) || 1,
         notes: (addToPlanForm.notes || '').trim() || '',
@@ -305,7 +305,7 @@ export default function CatalogScreen({ onNavigateToPlans }) {
       });
       setAddToPlanSuccess(true);
     } catch (err) {
-      logger.error('[CatalogScreen] addTrainingTypeToPlan error', err);
+      logger.error('[CatalogScreen] assignTrainingTypeToPlan error', err);
       setAddToPlanError(err.message || 'No se pudo agregar al plan.');
     } finally {
       setAddToPlanSaving(false);

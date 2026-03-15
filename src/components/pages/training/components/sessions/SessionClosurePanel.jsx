@@ -3,16 +3,9 @@ import { Alert, Button, Paper, Stack, Typography } from '@mui/material';
 import { trainingSessionService } from '../../../../../services/training';
 import { TRAINING_SESSION_STATUSES } from '../../../../../types/trainingDomain';
 
-function canTransition(status, nextStatus) {
-  const map = {
-    [TRAINING_SESSION_STATUSES.DRAFT]: [TRAINING_SESSION_STATUSES.SCHEDULED, TRAINING_SESSION_STATUSES.CANCELLED],
-    [TRAINING_SESSION_STATUSES.SCHEDULED]: [TRAINING_SESSION_STATUSES.IN_PROGRESS, TRAINING_SESSION_STATUSES.CANCELLED],
-    [TRAINING_SESSION_STATUSES.IN_PROGRESS]: [TRAINING_SESSION_STATUSES.PENDING_CLOSURE, TRAINING_SESSION_STATUSES.CANCELLED],
-    [TRAINING_SESSION_STATUSES.PENDING_CLOSURE]: [TRAINING_SESSION_STATUSES.CLOSED, TRAINING_SESSION_STATUSES.IN_PROGRESS],
-    [TRAINING_SESSION_STATUSES.CLOSED]: [],
-    [TRAINING_SESSION_STATUSES.CANCELLED]: []
-  };
-  return (map[status] || []).includes(nextStatus);
+function canTransition(sessionStatus, nextStatus) {
+  const allowed = trainingSessionService.getAllowedTransitions(sessionStatus);
+  return allowed.includes(nextStatus);
 }
 
 function labelEstado(estado) {
@@ -74,14 +67,14 @@ export default function SessionClosurePanel({ ownerId, session, onChanged }) {
         <Button
           variant="contained"
           onClick={() => transition(TRAINING_SESSION_STATUSES.IN_PROGRESS)}
-          disabled={!canTransition(session.status, TRAINING_SESSION_STATUSES.IN_PROGRESS)}
+          disabled={!canTransition(session?.status, TRAINING_SESSION_STATUSES.IN_PROGRESS)}
         >
           Iniciar sesion
         </Button>
         <Button
           variant="contained"
           onClick={() => transition(TRAINING_SESSION_STATUSES.PENDING_CLOSURE)}
-          disabled={!canTransition(session.status, TRAINING_SESSION_STATUSES.PENDING_CLOSURE)}
+          disabled={!canTransition(session?.status, TRAINING_SESSION_STATUSES.PENDING_CLOSURE)}
         >
           Pendiente de cierre
         </Button>
@@ -89,7 +82,7 @@ export default function SessionClosurePanel({ ownerId, session, onChanged }) {
           variant="contained"
           color="success"
           onClick={() => transition(TRAINING_SESSION_STATUSES.CLOSED)}
-          disabled={!canTransition(session.status, TRAINING_SESSION_STATUSES.CLOSED)}
+          disabled={!canTransition(session?.status, TRAINING_SESSION_STATUSES.CLOSED)}
         >
           Cerrar sesion
         </Button>
@@ -97,7 +90,7 @@ export default function SessionClosurePanel({ ownerId, session, onChanged }) {
           variant="outlined"
           color="error"
           onClick={() => transition(TRAINING_SESSION_STATUSES.CANCELLED)}
-          disabled={!canTransition(session.status, TRAINING_SESSION_STATUSES.CANCELLED)}
+          disabled={!canTransition(session?.status, TRAINING_SESSION_STATUSES.CANCELLED)}
         >
           Cancelar sesion
         </Button>

@@ -313,46 +313,6 @@
       ]
     },
     {
-      "collectionGroup": "training_compliance_matrix",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "companyId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "branchId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "complianceStatus",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "validUntil",
-          "order": "ASCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "training_compliance_matrix",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "employeeId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "complianceStatus",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "validUntil",
-          "order": "ASCENDING"
-        }
-      ]
-    },
-    {
       "collectionGroup": "training_attendance_by_employee",
       "queryScope": "COLLECTION",
       "fields": [
@@ -531,9 +491,7 @@
           "order": "DESCENDING"
         }
       ]
-    }
-
-,
+    },
     {
       "collectionGroup": "ausencias",
       "queryScope": "COLLECTION",

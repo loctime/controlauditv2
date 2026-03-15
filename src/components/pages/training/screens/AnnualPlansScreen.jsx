@@ -109,7 +109,7 @@ export default function AnnualPlansScreen() {
 
     setSaving(true);
     try {
-      await trainingPlanService.addTrainingTypeToPlanByPlanId(ownerId, {
+      await trainingPlanService.assignTrainingTypeToPlan(ownerId, {
         planId: itemForm.planId,
         trainingTypeId: itemForm.trainingTypeId,
         validityMonths,

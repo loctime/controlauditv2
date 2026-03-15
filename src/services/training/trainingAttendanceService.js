@@ -134,6 +134,11 @@ export const trainingAttendanceService = {
   resolveAttendancePeriod: resolveTrainingPeriod,
 
   async upsertAttendance(ownerId, sessionId, employeeId, payload) {
+    // Validaciones para evitar undefined
+    if (!ownerId) throw new Error('ownerId es requerido');
+    if (!sessionId) throw new Error('sessionId es requerido');
+    if (!employeeId) throw new Error('employeeId es requerido');
+    
     const now = Timestamp.now();
     const ref = attendanceDocument(ownerId, sessionId, employeeId);
     const denormRef = attendanceByEmployeeDocument(ownerId, employeeId, sessionId);
@@ -170,6 +175,11 @@ export const trainingAttendanceService = {
     if (!attendanceData.trainingTypeId) {
       throw new Error('No se pudo registrar la asistencia porque la sesi\u00f3n no tiene trainingTypeId.');
     }
+
+    // Validaciones adicionales para las claves usadas en referencias
+    if (!attendanceData.periodYear) throw new Error('periodYear es requerido para construir referencias');
+    if (!attendanceData.periodMonth) throw new Error('periodMonth es requerido para construir referencias');
+    if (!attendanceData.periodKey) throw new Error('periodKey es requerido para construir referencias');
 
     const nextConsumesPeriod = isAttendanceStatusPeriodConsumer(attendanceData.attendanceStatus);
     const nextLockId = buildAttendancePeriodLockId(
