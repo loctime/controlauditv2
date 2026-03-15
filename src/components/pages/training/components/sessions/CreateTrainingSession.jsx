@@ -26,18 +26,15 @@ import SaveIcon from '@mui/icons-material/Save';
 import UploadIcon from '@mui/icons-material/Upload';
 import AttachFileIcon from '@mui/icons-material/AttachFile';
 import { useAuth } from '@/components/context/AuthContext';
-import { empleadoService } from '../../../../../services/empleadoService';
 import { getUsers } from '../../../../../core/services/ownerUserService';
 import {
-  employeeTrainingRecordService,
   trainingAttendanceService,
   trainingCatalogService,
+  trainingExecutionService,
   trainingPlanService,
-  trainingRequirementService,
   trainingSessionService
 } from '../../../../../services/training';
 import {
-  TRAINING_COMPLIANCE_STATUSES,
   TRAINING_SESSION_STATUSES,
   TRAINING_ATTENDANCE_STATUSES,
   TRAINING_EVALUATION_STATUSES
@@ -53,15 +50,6 @@ function personDisplayName(person) {
   if (person.nombreCompleto) return person.nombreCompleto;
   if (person.apellido && person.nombre) return `${person.apellido}, ${person.nombre}`;
   return person.nombre || person.email || '';
-}
-
-function resolveMonthlyPeriodFromDate(value) {
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return null;
-  return {
-    periodYear: parsed.getFullYear(),
-    periodMonth: parsed.getMonth() + 1
-  };
 }
 
 function formatPeriodLabel(periodYear, periodMonth) {
@@ -107,7 +95,6 @@ export default function CreateTrainingSession({
   // Catálogos y opciones
   const [catalogItems, setCatalogItems] = useState([]);
   const [instructorOptions, setInstructorOptions] = useState([]);
-  const [employees, setEmployees] = useState([]);
   const [suggestedIds, setSuggestedIds] = useState([]);
   const [selectedIds, setSelectedIds] = useState([]);
   const [filters, setFilters] = useState({ role: '', sector: '' });
@@ -124,7 +111,10 @@ export default function CreateTrainingSession({
   const [planCandidates, setPlanCandidates] = useState([]);
   const [selectedPlanItemId, setSelectedPlanItemId] = useState('');
   const [planMode, setPlanMode] = useState('ad_hoc');
-  const [periodOccupancyByEmployee, setPeriodOccupancyByEmployee] = useState({});
+  const [eligibleEmployees, setEligibleEmployees] = useState([]);
+  const [blockedEmployees, setBlockedEmployees] = useState([]);
+  const [scheduledPeriod, setScheduledPeriod] = useState(null);
+  const [loadingParticipants, setLoadingParticipants] = useState(false);
 
   // Inicializar con datos precargados si existen
   useEffect(() => {
@@ -167,14 +157,19 @@ export default function CreateTrainingSession({
     [userSucursales]
   );
 
-  const scheduledPeriod = useMemo(
-    () => resolveMonthlyPeriodFromDate(form.scheduledDate),
-    [form.scheduledDate]
+  const employees = useMemo(
+    () => [...eligibleEmployees, ...blockedEmployees],
+    [eligibleEmployees, blockedEmployees]
   );
 
   const blockedEmployeeIdSet = useMemo(
-    () => new Set(Object.keys(periodOccupancyByEmployee)),
-    [periodOccupancyByEmployee]
+    () => new Set(blockedEmployees.map((e) => e.id)),
+    [blockedEmployees]
+  );
+
+  const blockedByEmployeeId = useMemo(
+    () => Object.fromEntries(blockedEmployees.map((e) => [e.id, e])),
+    [blockedEmployees]
   );
 
   const filteredEmployees = useMemo(() => {
@@ -299,155 +294,62 @@ export default function CreateTrainingSession({
     detectPlanCandidates();
   }, [ownerId, mode, form.trainingTypeId, form.companyId, form.branchId, form.scheduledDate]);
 
-  // Cargar empleados cuando se selecciona sucursal o hay datos iniciales
+  // Cargar participantes sugeridos desde el servicio (lógica en trainingExecutionService)
   useEffect(() => {
-    if (!ownerId || !form.branchId) {
-      setEmployees([]);
-      setPeriodOccupancyByEmployee({});
-      return;
-    }
-
-    const loadEmployees = async () => {
-      try {
-        const employeesList = await empleadoService.getEmpleadosBySucursal(ownerId, form.branchId);
-        setEmployees(employeesList);
-        await loadSuggestions(employeesList);
-      } catch (err) {
-        setError(err.message || 'No se pudieron cargar los empleados');
-      }
-    };
-
-    loadEmployees();
-  }, [ownerId, form.branchId, initialData]);
-
-  useEffect(() => {
-    if (!ownerId || !form.trainingTypeId || !form.companyId || !form.branchId || !scheduledPeriod) {
-      setPeriodOccupancyByEmployee({});
+    if (!ownerId || !form.branchId || !form.trainingTypeId || !form.companyId || !form.scheduledDate) {
+      setEligibleEmployees([]);
+      setBlockedEmployees([]);
+      setSuggestedIds([]);
+      setScheduledPeriod(null);
       return;
     }
 
     let alive = true;
+    setLoadingParticipants(true);
 
-    const loadPeriodOccupancy = async () => {
-      try {
-        const locks = await trainingAttendanceService.listPeriodLocks(ownerId, {
-          companyId: form.companyId,
-          branchId: form.branchId,
-          trainingTypeId: form.trainingTypeId,
-          periodYear: scheduledPeriod.periodYear,
-          periodMonth: scheduledPeriod.periodMonth
-        });
-
-        if (!alive) return;
-
-        const occupancy = {};
-        (locks || []).forEach((lock) => {
-          occupancy[lock.employeeId] = lock;
-        });
-        setPeriodOccupancyByEmployee(occupancy);
-      } catch (err) {
-        if (!alive) return;
-        console.warn('Error loading attendance period occupancy:', err);
-        setPeriodOccupancyByEmployee({});
-      }
+    const sessionContext = {
+      trainingTypeId: form.trainingTypeId,
+      companyId: form.companyId,
+      branchId: form.branchId,
+      scheduledDate: form.scheduledDate,
+      planId: planMode === 'plan' ? (initialData?.planId || planCandidates.find((c) => c.planItemId === selectedPlanItemId)?.planId) || null : null,
+      planItemId: planMode === 'plan' ? (initialData?.planItemId || selectedPlanItemId) || null : null
     };
 
-    loadPeriodOccupancy();
+    trainingExecutionService.suggestParticipants(ownerId, sessionContext)
+      .then((result) => {
+        if (!alive) return;
+        setEligibleEmployees(result.eligibleEmployees || []);
+        setBlockedEmployees(result.blockedEmployees || []);
+        setSuggestedIds(result.suggestedIds || []);
+        setSelectedIds(result.suggestedIds || []);
+        setScheduledPeriod(result.period || null);
+      })
+      .catch((err) => {
+        if (!alive) return;
+        console.warn('Error loading participant suggestions:', err);
+        setEligibleEmployees([]);
+        setBlockedEmployees([]);
+        setSuggestedIds([]);
+        setScheduledPeriod(null);
+      })
+      .finally(() => {
+        if (alive) setLoadingParticipants(false);
+      });
+
     return () => { alive = false; };
-  }, [ownerId, form.trainingTypeId, form.companyId, form.branchId, scheduledPeriod]);
-
-  // Cargar sugerencias de participantes
-  const loadSuggestions = async (employeesList = null) => {
-    if (!ownerId || !form.trainingTypeId || !form.companyId || !form.branchId || !form.scheduledDate) {
-      return;
-    }
-
-    const list = employeesList || employees;
-    if (list.length === 0) return;
-
-    try {
-      const [rules, records] = await Promise.all([
-        trainingRequirementService.listRules(ownerId, {
-          companyId: form.companyId,
-          branchId: form.branchId,
-          trainingTypeId: form.trainingTypeId,
-          status: 'active'
-        }),
-        employeeTrainingRecordService.listByEmployees(ownerId, list.map((employee) => employee.id))
-      ]);
-
-      const recordsByEmployee = records.reduce((acc, record) => {
-        if (!acc[record.employeeId]) {
-          acc[record.employeeId] = [];
-        }
-        acc[record.employeeId].push(record);
-        return acc;
-      }, {});
-
-      const suggested = new Set();
-
-      list.forEach((employee) => {
-        const employeeRecords = recordsByEmployee[employee.id] || [];
-        const target = employeeRecords.find((record) => record.trainingTypeId === form.trainingTypeId);
-        if (!target || 
-            target.complianceStatus === TRAINING_COMPLIANCE_STATUSES.EXPIRED || 
-            target.complianceStatus === TRAINING_COMPLIANCE_STATUSES.EXPIRING_SOON || 
-            target.complianceStatus === TRAINING_COMPLIANCE_STATUSES.MISSING) {
-          suggested.add(employee.id);
-        }
-      });
-
-      list.forEach((employee) => {
-        const roleCandidate = employee.jobRoleId || employee.puestoId || employee.rolId || employee.puesto || employee.rol || null;
-        const sectorCandidate = employee.sectorId || employee.sector || null;
-
-        const matrixMatch = rules.some((rule) => {
-          const roleMatches = !rule.jobRoleId || !roleCandidate || rule.jobRoleId === roleCandidate;
-          const sectorMatches = !rule.sectorId || !sectorCandidate || rule.sectorId === sectorCandidate;
-          return roleMatches && sectorMatches;
-        });
-
-        if (matrixMatch) {
-          suggested.add(employee.id);
-        }
-      });
-
-      const suggestedArr = Array.from(suggested).filter((employeeId) => !blockedEmployeeIdSet.has(employeeId));
-      setSuggestedIds(suggestedArr);
-      setSelectedIds(suggestedArr);
-    } catch (err) {
-      console.warn('Error loading suggestions:', err);
-    }
-  };
-
-  useEffect(() => {
-    if (!ownerId || employees.length === 0) return;
-    loadSuggestions(employees);
   }, [
     ownerId,
-    employees,
+    form.branchId,
     form.trainingTypeId,
     form.companyId,
-    form.branchId,
     form.scheduledDate,
-    blockedEmployeeIdSet
+    planMode,
+    initialData?.planId,
+    initialData?.planItemId,
+    planCandidates,
+    selectedPlanItemId
   ]);
-
-  useEffect(() => {
-    if (blockedEmployeeIdSet.size === 0) return;
-
-    setSelectedIds((current) => current.filter((employeeId) => !blockedEmployeeIdSet.has(employeeId)));
-    setSuggestedIds((current) => current.filter((employeeId) => !blockedEmployeeIdSet.has(employeeId)));
-    setParticipantRecords((prev) => {
-      const next = { ...prev };
-      Object.keys(next).forEach((employeeId) => {
-        if (blockedEmployeeIdSet.has(employeeId)) {
-          delete next[employeeId];
-        }
-      });
-      return next;
-    });
-  }, [blockedEmployeeIdSet]);
 
   // Gestionar selección de participantes
   const toggleEmployee = (employeeId) => {
@@ -872,7 +774,7 @@ export default function CreateTrainingSession({
                       const isSelected = selectedIds.includes(employee.id);
                       const record = participantRecords[employee.id] || defaultParticipantRecord();
                       const isSuggested = suggestedIds.includes(employee.id);
-                      const blockInfo = periodOccupancyByEmployee[employee.id] || null;
+                      const blockInfo = blockedByEmployeeId[employee.id] || null;
                       const isBlocked = Boolean(blockInfo);
 
                       return (

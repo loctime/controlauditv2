@@ -6,6 +6,7 @@ export { trainingRequirementService } from './trainingRequirementService';
 export { trainingPlanService, generatePlannedMonths } from './trainingPlanService';
 export { trainingSessionService } from './trainingSessionService';
 export { trainingAttendanceService } from './trainingAttendanceService';
+export { trainingExecutionService } from './trainingExecutionService';
 export { trainingPeriodResultService } from './trainingPeriodResultService';
 export { trainingEvidenceService } from './trainingEvidenceService';
 export { trainingCertificateService } from './trainingCertificateService';
