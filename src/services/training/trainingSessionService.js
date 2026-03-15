@@ -2,7 +2,6 @@ import {
   buildOrderBy,
   buildWhere,
   createDocument,
-  deleteDocument,
   getDocument,
   queryDocuments,
   updateDocument,
@@ -11,6 +10,7 @@ import {
 import { TRAINING_SESSION_STATUSES } from '../../types/trainingDomain';
 import { trainingAttendanceService } from './trainingAttendanceService';
 import { trainingCatalogService } from './trainingCatalogService';
+import { resolveTrainingPeriod } from './trainingPeriodUtils';
 
 const IMMUTABLE_ON_CLOSED_FIELDS = [
   'trainingTypeId',
@@ -18,7 +18,11 @@ const IMMUTABLE_ON_CLOSED_FIELDS = [
   'branchId',
   'scheduledDate',
   'executedDate',
-  'instructorId'
+  'instructorId',
+  'periodType',
+  'periodYear',
+  'periodMonth',
+  'periodKey'
 ];
 
 const PLAN_LINK_KEYS = ['sessionOrigin', 'planId', 'planItemId', 'planLinkedAt', 'planLinkedBy'];
@@ -68,10 +72,17 @@ export const trainingSessionService = {
       fillLinkedAt: true,
       actorUserId: options.currentUserId || null
     });
+    const resolvedPeriod = await resolveTrainingPeriod(ownerId, normalizedPlanLink);
 
     return createDocument(ownerId, 'trainingSessions', {
       ...normalizedPlanLink,
+      ...resolvedPeriod,
       status: payload.status || TRAINING_SESSION_STATUSES.DRAFT,
+      deletedAt: null,
+      deletionReason: null,
+      closedAt: payload.status === TRAINING_SESSION_STATUSES.CLOSED ? nowTs() : null,
+      closedBy: payload.status === TRAINING_SESSION_STATUSES.CLOSED ? (options.currentUserId || null) : null,
+      version: 1,
       closureChecklist: payload.closureChecklist || {
         attendanceComplete: false,
         requiredSignaturesComplete: false,
@@ -114,11 +125,50 @@ export const trainingSessionService = {
       };
     }
 
+    const immutablePeriodTouched = ['periodType', 'periodYear', 'periodMonth', 'periodKey'].some((field) => field in payload);
+    if (current.status !== TRAINING_SESSION_STATUSES.DRAFT && immutablePeriodTouched) {
+      throw new Error('Scheduled or closed session period fields are immutable');
+    }
+
+    const mergedSession = { ...current, ...nextPayload };
+    const resolvedPeriod = await resolveTrainingPeriod(ownerId, mergedSession);
+    nextPayload = {
+      ...nextPayload,
+      ...resolvedPeriod,
+      version: Number(current.version || 1) + 1
+    };
+
     return updateDocument(ownerId, 'trainingSession', sessionId, nextPayload);
   },
 
-  async removeSession(ownerId, sessionId) {
-    return deleteDocument(ownerId, 'trainingSession', sessionId);
+  async removeSession(ownerId, sessionId, options = {}) {
+    const session = await this.getSessionById(ownerId, sessionId);
+    if (!session) {
+      throw new Error('Training session not found');
+    }
+
+    const attendanceRecords = await trainingAttendanceService.listAttendanceBySession(ownerId, sessionId);
+    await Promise.all(attendanceRecords.map((record) =>
+      trainingAttendanceService.upsertAttendance(ownerId, sessionId, record.employeeId, {
+        ...record,
+        isDeleted: true,
+        correctedAt: nowTs(),
+        correctedBy: options.currentUserId || null,
+        sessionData: {
+          ...session,
+          deletedAt: nowTs(),
+          deletionReason: options.deletionReason || 'soft_delete'
+        },
+        forceRecompute: true
+      })
+    ));
+
+    return updateDocument(ownerId, 'trainingSession', sessionId, {
+      deletedAt: nowTs(),
+      deletionReason: options.deletionReason || 'soft_delete',
+      status: TRAINING_SESSION_STATUSES.CANCELLED,
+      version: Number(session.version || 1) + 1
+    });
   },
 
   async getSessionById(ownerId, sessionId) {
@@ -131,6 +181,7 @@ export const trainingSessionService = {
     if (filters.branchId) constraints.push(buildWhere('branchId', '==', filters.branchId));
     if (filters.trainingTypeId) constraints.push(buildWhere('trainingTypeId', '==', filters.trainingTypeId));
     if (filters.status) constraints.push(buildWhere('status', '==', filters.status));
+    if (!filters.includeDeleted) constraints.push(buildWhere('deletedAt', '==', null));
 
     if (filters.dateFrom) constraints.push(buildWhere('scheduledDate', '>=', filters.dateFrom));
     if (filters.dateTo) constraints.push(buildWhere('scheduledDate', '<=', filters.dateTo));
@@ -168,6 +219,9 @@ export const trainingSessionService = {
 
     const updateRef = await updateDocument(ownerId, 'trainingSession', sessionId, {
       status: newStatus,
+      closedAt: newStatus === TRAINING_SESSION_STATUSES.CLOSED ? nowTs() : current.closedAt || null,
+      closedBy: newStatus === TRAINING_SESSION_STATUSES.CLOSED ? null : current.closedBy || null,
+      version: Number(current.version || 1) + 1,
       ...(newStatus === TRAINING_SESSION_STATUSES.IN_PROGRESS && !current.executedDate
         ? { executedDate: nowTs() }
         : {})

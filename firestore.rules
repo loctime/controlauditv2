@@ -1020,6 +1020,15 @@ service cloud.firestore {
       allow delete: if isAuth() && ownerId == uid();
     }
 
+    match /apps/auditoria/owners/{ownerId}/employee_training_period_results/{id} {
+      allow read: if isAuth() && (
+        ownerId == uid() ||
+        (request.auth.token.ownerId == ownerId && request.auth.token.appId == 'auditoria')
+      );
+      allow create, update: if isAuth() && ownerId == uid() && request.resource.data.appId == 'auditoria';
+      allow delete: if isAuth() && ownerId == uid();
+    }
+
     // Training Compliance Snapshots (derived read model)
     match /apps/auditoria/owners/{ownerId}/training_compliance_snapshots/{id} {
       allow read: if isAuth() && (

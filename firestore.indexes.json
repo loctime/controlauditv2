@@ -385,6 +385,32 @@
       ]
     },
     {
+      "collectionGroup": "training_attendance_by_employee",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "employeeId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "trainingTypeId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "periodYear",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "periodMonth",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "updatedAt",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
       "collectionGroup": "training_attendance_period_locks",
       "queryScope": "COLLECTION",
       "fields": [
@@ -410,6 +436,80 @@
         },
         {
           "fieldPath": "employeeId",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "employee_training_period_results",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "companyId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "branchId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "periodYear",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "periodMonth",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "trainingTypeId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "employeeId",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "employee_training_period_results",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "employeeId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "trainingTypeId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "periodYear",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "periodMonth",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "employee_training_period_results",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "trainingTypeId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "periodYear",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "periodMonth",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "finalStatus",
           "order": "ASCENDING"
         }
       ]

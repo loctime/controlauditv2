@@ -7,7 +7,12 @@ import {
   queryDocuments,
   setDocument
 } from './trainingBaseService';
-import { getTrainingRecordId, TRAINING_COMPLIANCE_STATUSES } from '../../types/trainingDomain';
+import {
+  getTrainingRecordId,
+  TRAINING_ATTENDANCE_STATUSES,
+  TRAINING_COMPLIANCE_STATUSES
+} from '../../types/trainingDomain';
+import { trainingPeriodResultService } from './trainingPeriodResultService';
 
 function computeCompliance(validUntil) {
   if (!validUntil) {
@@ -49,18 +54,23 @@ function tsToMillis(value) {
   return parsed.getTime();
 }
 
-function pickLatestAttendance(attendances = []) {
-  if (!Array.isArray(attendances) || attendances.length === 0) return null;
+function comparePeriodResults(a, b) {
+  const validUntilDiff = tsToMillis(b.finalValidUntil) - tsToMillis(a.finalValidUntil);
+  if (validUntilDiff !== 0) return validUntilDiff;
 
-  return [...attendances].sort((a, b) => {
-    const validUntilDiff = tsToMillis(b.validUntil) - tsToMillis(a.validUntil);
-    if (validUntilDiff !== 0) return validUntilDiff;
+  const validFromDiff = tsToMillis(b.finalValidFrom) - tsToMillis(a.finalValidFrom);
+  if (validFromDiff !== 0) return validFromDiff;
 
-    const validFromDiff = tsToMillis(b.validFrom) - tsToMillis(a.validFrom);
-    if (validFromDiff !== 0) return validFromDiff;
+  const periodKeyDiff = String(b.periodKey || '').localeCompare(String(a.periodKey || ''));
+  if (periodKeyDiff !== 0) return periodKeyDiff;
 
-    return tsToMillis(b.updatedAt) - tsToMillis(a.updatedAt);
-  })[0];
+  return tsToMillis(b.updatedAt) - tsToMillis(a.updatedAt);
+}
+
+function pickLatestPresentPeriodResult(results = []) {
+  const presentResults = (results || []).filter((result) => result.finalStatus === TRAINING_ATTENDANCE_STATUSES.PRESENT);
+  if (presentResults.length === 0) return null;
+  return [...presentResults].sort(comparePeriodResults)[0];
 }
 
 function buildMissingPayload(employeeId, trainingTypeId, current = null, metadata = {}) {
@@ -69,8 +79,10 @@ function buildMissingPayload(employeeId, trainingTypeId, current = null, metadat
     trainingTypeId,
     branchId: metadata.branchId || current?.branchId || null,
     companyId: metadata.companyId || current?.companyId || null,
+    lastPeriodKey: null,
+    lastPeriodResultId: null,
     lastSessionId: null,
-    lastResult: 'missing',
+    lastAttendanceStatus: 'missing',
     validFrom: null,
     validUntil: null,
     certificateId: null,
@@ -100,8 +112,10 @@ export const employeeTrainingRecordService = {
       trainingTypeId: attendance.trainingTypeId,
       branchId: attendance.branchId || current?.branchId || null,
       companyId: attendance.companyId || current?.companyId || null,
+      lastPeriodKey: attendance.periodKey || current?.lastPeriodKey || null,
+      lastPeriodResultId: attendance.periodResultId || current?.lastPeriodResultId || null,
       lastSessionId: attendance.sessionId || current?.lastSessionId || null,
-      lastResult: attendance.evaluationStatus || attendance.lastResult || current?.lastResult || 'pending',
+      lastAttendanceStatus: attendance.attendanceStatus || current?.lastAttendanceStatus || 'pending',
       validFrom: attendance.validFrom || null,
       validUntil: attendance.validUntil || null,
       certificateId: attendance.certificateId || null,
@@ -120,17 +134,15 @@ export const employeeTrainingRecordService = {
     if (!ownerId || !employeeId || !trainingTypeId) return null;
 
     const recordId = getTrainingRecordId(employeeId, trainingTypeId);
-    const [current, attendances] = await Promise.all([
+    const [current, periodResults] = await Promise.all([
       getDocument(ownerId, 'employeeTrainingRecord', recordId),
-      queryDocuments(ownerId, 'trainingAttendanceByEmployee', [
-        buildWhere('employeeId', '==', employeeId),
-        buildWhere('trainingTypeId', '==', trainingTypeId),
-        buildOrderBy('updatedAt', 'desc'),
-        buildLimit(100)
-      ])
+      trainingPeriodResultService.listByEmployee(ownerId, employeeId, {
+        trainingTypeId,
+        limit: 100
+      })
     ]);
 
-    const latest = pickLatestAttendance(attendances);
+    const latest = pickLatestPresentPeriodResult(periodResults);
     if (!latest) {
       const missingPayload = buildMissingPayload(employeeId, trainingTypeId, current, metadata);
       await setDocument(ownerId, 'employeeTrainingRecord', recordId, missingPayload);
@@ -143,16 +155,18 @@ export const employeeTrainingRecordService = {
       trainingTypeId,
       branchId: latest.branchId || metadata.branchId || current?.branchId || null,
       companyId: latest.companyId || metadata.companyId || current?.companyId || null,
-      lastSessionId: latest.sessionId || current?.lastSessionId || null,
-      lastResult: latest.evaluationStatus || current?.lastResult || 'pending',
-      validFrom: latest.validFrom || null,
-      validUntil: latest.validUntil || null,
-      certificateId: latest.certificateId || null,
+      lastPeriodKey: latest.periodKey || current?.lastPeriodKey || null,
+      lastPeriodResultId: latest.id || current?.lastPeriodResultId || null,
+      lastSessionId: latest.consumerSessionId || current?.lastSessionId || null,
+      lastAttendanceStatus: latest.finalStatus || current?.lastAttendanceStatus || 'pending',
+      validFrom: latest.finalValidFrom || null,
+      validUntil: latest.finalValidUntil || null,
+      certificateId: latest.finalCertificateId || null,
       complianceStatus: compliance.complianceStatus,
       daysToExpire: compliance.daysToExpire,
-      historyCount: Math.max(current?.historyCount || 0, attendances.length),
+      historyCount: Math.max(current?.historyCount || 0, periodResults.length),
       lastComputedAt: nowTs(),
-      sources: latest.sources || current?.sources || []
+      sources: latest.allSessionIds || current?.sources || []
     };
 
     await setDocument(ownerId, 'employeeTrainingRecord', recordId, payload);

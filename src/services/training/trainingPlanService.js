@@ -9,6 +9,7 @@ import {
   updateDocument
 } from './trainingBaseService';
 import { generatePlannedMonths, getCurrentCalendarYear } from './trainingPlanUtils.js';
+import { formatPeriodKey, PERIOD_TYPE_MONTHLY } from './trainingPeriodUtils';
 
 export { generatePlannedMonths, getCurrentCalendarYear };
 
@@ -94,14 +95,39 @@ export const trainingPlanService = {
   },
 
   async createPlanItem(ownerId, payload) {
+    const plan = payload.planId ? await getDocument(ownerId, 'trainingPlan', payload.planId) : null;
+    const periodYear = Number(payload.periodYear || payload.plannedYear || plan?.year || 0);
+    const periodMonth = Number(payload.periodMonth || payload.plannedMonth || 0);
     return createDocument(ownerId, 'trainingPlanItems', {
       ...payload,
+      plannedYear: periodYear || null,
+      periodType: payload.periodType || PERIOD_TYPE_MONTHLY,
+      periodYear: periodYear || null,
+      periodMonth: periodMonth || null,
+      periodKey: (periodYear && periodMonth) ? formatPeriodKey(periodYear, periodMonth) : null,
+      companyId: payload.companyId || plan?.companyId || null,
+      branchId: payload.branchId || plan?.branchId || null,
       status: payload.status || 'planned'
     });
   },
 
   async updatePlanItem(ownerId, planItemId, payload) {
-    return updateDocument(ownerId, 'trainingPlanItem', planItemId, payload);
+    const current = await getDocument(ownerId, 'trainingPlanItem', planItemId);
+    const plan = (payload.planId || current?.planId)
+      ? await getDocument(ownerId, 'trainingPlan', payload.planId || current.planId)
+      : null;
+    const periodYear = Number(payload.periodYear || payload.plannedYear || current?.periodYear || plan?.year || 0);
+    const periodMonth = Number(payload.periodMonth || payload.plannedMonth || current?.periodMonth || 0);
+    return updateDocument(ownerId, 'trainingPlanItem', planItemId, {
+      ...payload,
+      plannedYear: periodYear || current?.plannedYear || null,
+      periodType: payload.periodType || current?.periodType || PERIOD_TYPE_MONTHLY,
+      periodYear: periodYear || current?.periodYear || null,
+      periodMonth: periodMonth || current?.periodMonth || null,
+      periodKey: (periodYear && periodMonth) ? formatPeriodKey(periodYear, periodMonth) : (current?.periodKey || null),
+      companyId: payload.companyId || current?.companyId || plan?.companyId || null,
+      branchId: payload.branchId || current?.branchId || plan?.branchId || null
+    });
   },
 
   async removePlanItem(ownerId, planItemId) {

@@ -1,5 +1,5 @@
 import logger from '@/utils/logger';
-import React, { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Alert, Box, Button, CircularProgress, Grid, Paper, Stack, TextField, Typography } from '@mui/material';
 import { useAuth } from '@/components/context/AuthContext';
 import { employeeTrainingRecordService } from '../../../../services/training';
@@ -12,7 +12,7 @@ export default function EmployeeHistoryScreen() {
   const [records, setRecords] = useState([]);
   const [employeeId, setEmployeeId] = useState('');
 
-  const findEmployee = async () => {
+  const findEmployee = useCallback(async () => {
     if (!ownerId || !employeeId) return;
     setLoading(true);
     setError('');
@@ -27,13 +27,13 @@ export default function EmployeeHistoryScreen() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [ownerId, employeeId]);
 
   useEffect(() => {
     if (employeeId) {
       findEmployee();
     }
-  }, [ownerId]);
+  }, [employeeId, findEmployee]);
 
   if (!ownerId) {
     return <Alert severity="warning">No hay contexto de owner disponible para historial de empleados.</Alert>;
@@ -72,7 +72,7 @@ export default function EmployeeHistoryScreen() {
             {records.map((record) => (
               <Paper key={record.id} variant="outlined" sx={{ p: 1.5 }}>
                 <Typography sx={{ fontWeight: 700 }}>{record.trainingTypeId}</Typography>
-                <Typography variant="body2" color="text.secondary">Estado: {record.complianceStatus} | Ultimo resultado: {record.lastResult}</Typography>
+                <Typography variant="body2" color="text.secondary">Estado: {record.complianceStatus} | Ultimo resultado: {record.lastAttendanceStatus || record.lastResult}</Typography>
                 <Typography variant="body2" color="text.secondary">Vigencia: {String(record.validFrom || '-')} a {String(record.validUntil || '-')}</Typography>
                 <Typography variant="body2">Cantidad historica: {record.historyCount || 0}</Typography>
               </Paper>
@@ -83,4 +83,3 @@ export default function EmployeeHistoryScreen() {
     </Box>
   );
 }
-

@@ -1,5 +1,5 @@
 import logger from '@/utils/logger';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Alert,
   Box,
@@ -17,6 +17,7 @@ import { useAuth } from '@/components/context/AuthContext';
 import {
   trainingAttendanceService,
   trainingCatalogService,
+  trainingReportingService,
 } from '../../../../services/training';
 import { empleadoService } from '../../../../services/empleadoService';
 import EmployeeAutocomplete from '../components/people/EmployeeAutocomplete';
@@ -48,6 +49,7 @@ export default function EmployeeTrainingHistoryScreen() {
   const [employees, setEmployees] = useState([]);
   const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [attendances, setAttendances] = useState([]);
+  const [periodResults, setPeriodResults] = useState([]);
   const [catalog, setCatalog] = useState([]);
 
   const catalogMap = useMemo(() => Object.fromEntries(catalog.map((c) => [c.id, c])), [catalog]);
@@ -91,17 +93,23 @@ export default function EmployeeTrainingHistoryScreen() {
     const load = async () => {
       if (!ownerId || !selectedEmployee?.id) {
         setAttendances([]);
+        setPeriodResults([]);
         return;
       }
       setLoadingHistory(true);
       setError('');
       try {
-        const list = await trainingAttendanceService.listAttendanceByEmployee(ownerId, selectedEmployee.id);
+        const [list, periodHistory] = await Promise.all([
+          trainingAttendanceService.listAttendanceByEmployee(ownerId, selectedEmployee.id),
+          trainingReportingService.buildEmployeePeriodHistory(ownerId, selectedEmployee.id)
+        ]);
         setAttendances(list || []);
+        setPeriodResults(periodHistory?.rows || []);
       } catch (err) {
         logger.error('[EmployeeTrainingHistoryScreen] loadHistory', err);
         setError(err.message || 'No se pudo cargar el historial.');
         setAttendances([]);
+        setPeriodResults([]);
       } finally {
         setLoadingHistory(false);
       }
@@ -134,6 +142,31 @@ export default function EmployeeTrainingHistoryScreen() {
 
       {selectedEmployee && (
         <Paper sx={{ p: 2 }}>
+          <Typography variant="h6" sx={{ mb: 1.5 }}>
+            Resultados consolidados por periodo
+          </Typography>
+          {!loadingHistory && periodResults.length > 0 && (
+            <Table size="small" sx={{ mb: 3 }}>
+              <TableHead>
+                <TableRow>
+                  <TableCell>Periodo</TableCell>
+                  <TableCell>Capacitaci&oacute;n</TableCell>
+                  <TableCell>Estado final</TableCell>
+                  <TableCell>Sesi&oacute;n consumidora</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {periodResults.map((row) => (
+                  <TableRow key={row.id}>
+                    <TableCell>{row.periodKey}</TableCell>
+                    <TableCell>{catalogMap[row.trainingTypeId]?.name || row.trainingTypeId || 'Sin dato'}</TableCell>
+                    <TableCell>{row.finalStatus}</TableCell>
+                    <TableCell>{row.consumerSessionId || '—'}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
           <Typography variant="h6" sx={{ mb: 1.5 }}>
             Registros de realizaciones
           </Typography>

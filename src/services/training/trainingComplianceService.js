@@ -21,7 +21,10 @@ function complianceFromRecord(record) {
       validFrom: null,
       daysToExpire: null,
       lastSessionId: null,
-      lastResult: 'missing'
+      lastResult: 'missing',
+      lastAttendanceStatus: 'missing',
+      lastPeriodKey: null,
+      lastPeriodResultId: null
     };
   }
 
@@ -31,7 +34,10 @@ function complianceFromRecord(record) {
     validFrom: record.validFrom || null,
     daysToExpire: record.daysToExpire ?? null,
     lastSessionId: record.lastSessionId || null,
-    lastResult: record.lastResult || 'pending'
+    lastResult: record.lastAttendanceStatus || record.lastResult || 'pending',
+    lastAttendanceStatus: record.lastAttendanceStatus || record.lastResult || 'pending',
+    lastPeriodKey: record.lastPeriodKey || null,
+    lastPeriodResultId: record.lastPeriodResultId || null
   };
 }
 
@@ -119,7 +125,10 @@ export const trainingComplianceService = {
       validFrom: payload.validFrom || null,
       daysToExpire: payload.daysToExpire ?? null,
       lastSessionId: payload.lastSessionId || null,
-      lastResult: payload.lastResult || 'missing',
+      lastResult: payload.lastAttendanceStatus || payload.lastResult || 'missing',
+      lastAttendanceStatus: payload.lastAttendanceStatus || payload.lastResult || 'missing',
+      lastPeriodKey: payload.lastPeriodKey || null,
+      lastPeriodResultId: payload.lastPeriodResultId || null,
       sourceRecordId: payload.sourceRecordId || null,
       sources: payload.sources || [],
       roleId: payload.roleId || null,

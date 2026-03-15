@@ -5,6 +5,7 @@ import { trainingAttendanceService } from './trainingAttendanceService';
 import { trainingCertificateService } from './trainingCertificateService';
 import { trainingEvidenceService } from './trainingEvidenceService';
 import { trainingComplianceService } from './trainingComplianceService';
+import { trainingPeriodResultService } from './trainingPeriodResultService';
 
 function toDateValue(value) {
   if (!value) return null;
@@ -78,6 +79,10 @@ export const auditEvidenceService = {
         persist: false
       })
       : null;
+    const periodResults = await trainingPeriodResultService.listByScope(ownerId, {
+      companyId,
+      branchId
+    });
 
     return {
       metadata: {
@@ -93,6 +98,7 @@ export const auditEvidenceService = {
       },
       sessions: selectedSessions,
       attendanceBySession,
+      periodResults,
       certificates,
       complianceMatrix: matrix,
       evidenceBySession
