@@ -130,6 +130,7 @@ export const trainingPlanService = {
     }
 
     const sessionMonth = dateValue.getMonth() + 1;
+    const sessionYear = dateValue.getFullYear();
 
     const [plans, planItems] = await Promise.all([
       this.listPlans(ownerId, { companyId, branchId }),
@@ -144,8 +145,10 @@ export const trainingPlanService = {
 
     return planItems
       .filter((item) => {
-        if (!planById[item.planId]) return false;
+        const plan = planById[item.planId];
+        if (!plan) return false;
         if (Number(item.plannedMonth || 0) !== sessionMonth) return false;
+        if (Number(plan.year || 0) !== sessionYear) return false;
         return item.status !== 'cancelled';
       })
       .map((item) => {

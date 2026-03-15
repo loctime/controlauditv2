@@ -1049,6 +1049,33 @@ service cloud.firestore {
       allow delete: if isAuth() && ownerId == uid();
     }
 
+    match /apps/auditoria/owners/{ownerId}/training_attendance_period_locks/{id} {
+      allow read: if isAuth() && (
+        ownerId == uid() ||
+        (request.auth.token.ownerId == ownerId && request.auth.token.appId == 'auditoria')
+      );
+      allow create, update: if isAuth() && (
+        ownerId == uid() ||
+        (
+          request.auth.token.ownerId == ownerId
+          && request.auth.token.appId == 'auditoria'
+          && exists(/databases/$(db)/documents/apps/auditoria/owners/$(ownerId)/usuarios/$(uid()))
+          && request.resource.data.companyId is string
+          && request.resource.data.companyId in get(/databases/$(db)/documents/apps/auditoria/owners/$(ownerId)/usuarios/$(uid())).data.empresasAsignadas
+        )
+      ) && request.resource.data.appId == 'auditoria';
+      allow delete: if isAuth() && (
+        ownerId == uid() ||
+        (
+          request.auth.token.ownerId == ownerId
+          && request.auth.token.appId == 'auditoria'
+          && exists(/databases/$(db)/documents/apps/auditoria/owners/$(ownerId)/usuarios/$(uid()))
+          && resource.data.companyId is string
+          && resource.data.companyId in get(/databases/$(db)/documents/apps/auditoria/owners/$(ownerId)/usuarios/$(uid())).data.empresasAsignadas
+        )
+      );
+    }
+
     // Training Compliance Matrix (derived read model)
     match /apps/auditoria/owners/{ownerId}/training_compliance_matrix/{id} {
       allow read: if isAuth() && (

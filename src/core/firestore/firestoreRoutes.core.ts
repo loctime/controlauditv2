@@ -704,6 +704,23 @@ export const firestoreRoutesCore = {
     id
   ],
 
+  trainingAttendancePeriodLocks: (ownerId: string): string[] => [
+    'apps',
+    'auditoria',
+    'owners',
+    ownerId,
+    'training_attendance_period_locks'
+  ],
+
+  trainingAttendancePeriodLock: (ownerId: string, id: string): string[] => [
+    'apps',
+    'auditoria',
+    'owners',
+    ownerId,
+    'training_attendance_period_locks',
+    id
+  ],
+
   jobRoles: (ownerId: string): string[] => [
     'apps',
     'auditoria',

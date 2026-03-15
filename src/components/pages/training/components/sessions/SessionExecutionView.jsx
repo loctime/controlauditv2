@@ -1,7 +1,6 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Alert, Grid, MenuItem, Paper, Stack, TextField, Typography, Button } from '@mui/material';
 import { trainingAttendanceService, trainingCatalogService } from '../../../../../services/training';
-import { empleadoService } from '../../../../../services/empleadoService';
 import {
   TRAINING_ATTENDANCE_STATUSES,
   TRAINING_EVALUATION_STATUSES
@@ -41,11 +40,15 @@ function labelEvaluacion(status) {
   return map[status] || status;
 }
 
+function buildAttendanceConflictMessage(error, employeeName) {
+  const periodKey = error?.details?.periodKey || 'ese período';
+  return `${employeeName || 'El empleado'} ya registró esta capacitación en ${periodKey} en otra sesión.`;
+}
+
 export default function SessionExecutionView({ ownerId, session, onChanged }) {
   const [records, setRecords] = useState([]);
   const [error, setError] = useState('');
   const [requiresEvaluation, setRequiresEvaluation] = useState(false);
-  const [employeeNameMap, setEmployeeNameMap] = useState({});
 
   const load = async () => {
     if (!ownerId || !session?.id) return;
@@ -77,6 +80,16 @@ export default function SessionExecutionView({ ownerId, session, onChanged }) {
       await load();
       onChanged();
     } catch (err) {
+      if (err?.code === 'training_attendance_period_conflict') {
+        const current = records.find((record) => record.employeeId === employeeId) || {};
+        await load();
+        setError(buildAttendanceConflictMessage(
+          err,
+          current.employeeDisplayName || current.employeeName || current.employeeId
+        ));
+        return;
+      }
+
       setError(err.message || 'No se pudo actualizar la asistencia.');
     }
   };

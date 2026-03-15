@@ -1,10 +1,9 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Alert,
   Autocomplete,
   Button,
   Checkbox,
-  FormControlLabel,
   Grid,
   MenuItem,
   Paper,
@@ -26,8 +25,6 @@ import {
 import SaveIcon from '@mui/icons-material/Save';
 import UploadIcon from '@mui/icons-material/Upload';
 import AttachFileIcon from '@mui/icons-material/AttachFile';
-import ShareIcon from '@mui/icons-material/Share';
-import StarIcon from '@mui/icons-material/Star';
 import { useAuth } from '@/components/context/AuthContext';
 import { empleadoService } from '../../../../../services/empleadoService';
 import { getUsers } from '../../../../../core/services/ownerUserService';
@@ -58,6 +55,23 @@ function personDisplayName(person) {
   return person.nombre || person.email || '';
 }
 
+function resolveMonthlyPeriodFromDate(value) {
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return null;
+  return {
+    periodYear: parsed.getFullYear(),
+    periodMonth: parsed.getMonth() + 1
+  };
+}
+
+function formatPeriodLabel(periodYear, periodMonth) {
+  const date = new Date(periodYear, Math.max(Number(periodMonth || 1) - 1, 0), 1);
+  return new Intl.DateTimeFormat('es-AR', {
+    month: 'long',
+    year: 'numeric'
+  }).format(date);
+}
+
 const defaultForm = (userProfile) => ({
   trainingTypeId: '',
   companyId: '',
@@ -69,7 +83,7 @@ const defaultForm = (userProfile) => ({
 });
 
 const defaultParticipantRecord = () => ({
-  attendanceStatus: TRAINING_ATTENDANCE_STATUSES.PRESENT,
+  attendanceStatus: TRAINING_ATTENDANCE_STATUSES.INVITED,
   score: 0,
   employeeSignature: null,
   instructorSignature: null,
@@ -101,7 +115,6 @@ export default function CreateTrainingSession({
   // Datos de ejecución por participante
   const [participantRecords, setParticipantRecords] = useState({});
   const [requiresEvaluation, setRequiresEvaluation] = useState(false);
-  const [requiresSignature, setRequiresSignature] = useState(false);
   
   // Estados para documentos
   const [uploadedFiles, setUploadedFiles] = useState([]);
@@ -111,6 +124,7 @@ export default function CreateTrainingSession({
   const [planCandidates, setPlanCandidates] = useState([]);
   const [selectedPlanItemId, setSelectedPlanItemId] = useState('');
   const [planMode, setPlanMode] = useState('ad_hoc');
+  const [periodOccupancyByEmployee, setPeriodOccupancyByEmployee] = useState({});
 
   // Inicializar con datos precargados si existen
   useEffect(() => {
@@ -153,6 +167,16 @@ export default function CreateTrainingSession({
     [userSucursales]
   );
 
+  const scheduledPeriod = useMemo(
+    () => resolveMonthlyPeriodFromDate(form.scheduledDate),
+    [form.scheduledDate]
+  );
+
+  const blockedEmployeeIdSet = useMemo(
+    () => new Set(Object.keys(periodOccupancyByEmployee)),
+    [periodOccupancyByEmployee]
+  );
+
   const filteredEmployees = useMemo(() => {
     return employees.filter((employee) => {
       const roleCandidate = employee.jobRoleId || employee.puestoId || employee.rolId || employee.puesto || employee.rol || '';
@@ -162,6 +186,21 @@ export default function CreateTrainingSession({
       return roleOk && sectorOk;
     });
   }, [employees, filters]);
+
+  const selectableFilteredEmployees = useMemo(
+    () => filteredEmployees.filter((employee) => !blockedEmployeeIdSet.has(employee.id)),
+    [filteredEmployees, blockedEmployeeIdSet]
+  );
+
+  const allSelectableFilteredSelected = useMemo(
+    () => selectableFilteredEmployees.length > 0 && selectableFilteredEmployees.every((employee) => selectedIds.includes(employee.id)),
+    [selectableFilteredEmployees, selectedIds]
+  );
+
+  const someSelectableFilteredSelected = useMemo(
+    () => selectableFilteredEmployees.some((employee) => selectedIds.includes(employee.id)),
+    [selectableFilteredEmployees, selectedIds]
+  );
 
   const roleOptions = useMemo(() => Array.from(new Set(employees
     .map((employee) => employee.jobRoleId || employee.puestoId || employee.rolId || employee.puesto || employee.rol)
@@ -264,6 +303,7 @@ export default function CreateTrainingSession({
   useEffect(() => {
     if (!ownerId || !form.branchId) {
       setEmployees([]);
+      setPeriodOccupancyByEmployee({});
       return;
     }
 
@@ -279,6 +319,42 @@ export default function CreateTrainingSession({
 
     loadEmployees();
   }, [ownerId, form.branchId, initialData]);
+
+  useEffect(() => {
+    if (!ownerId || !form.trainingTypeId || !form.companyId || !form.branchId || !scheduledPeriod) {
+      setPeriodOccupancyByEmployee({});
+      return;
+    }
+
+    let alive = true;
+
+    const loadPeriodOccupancy = async () => {
+      try {
+        const locks = await trainingAttendanceService.listPeriodLocks(ownerId, {
+          companyId: form.companyId,
+          branchId: form.branchId,
+          trainingTypeId: form.trainingTypeId,
+          periodYear: scheduledPeriod.periodYear,
+          periodMonth: scheduledPeriod.periodMonth
+        });
+
+        if (!alive) return;
+
+        const occupancy = {};
+        (locks || []).forEach((lock) => {
+          occupancy[lock.employeeId] = lock;
+        });
+        setPeriodOccupancyByEmployee(occupancy);
+      } catch (err) {
+        if (!alive) return;
+        console.warn('Error loading attendance period occupancy:', err);
+        setPeriodOccupancyByEmployee({});
+      }
+    };
+
+    loadPeriodOccupancy();
+    return () => { alive = false; };
+  }, [ownerId, form.trainingTypeId, form.companyId, form.branchId, scheduledPeriod]);
 
   // Cargar sugerencias de participantes
   const loadSuggestions = async (employeesList = null) => {
@@ -336,7 +412,7 @@ export default function CreateTrainingSession({
         }
       });
 
-      const suggestedArr = Array.from(suggested);
+      const suggestedArr = Array.from(suggested).filter((employeeId) => !blockedEmployeeIdSet.has(employeeId));
       setSuggestedIds(suggestedArr);
       setSelectedIds(suggestedArr);
     } catch (err) {
@@ -344,8 +420,39 @@ export default function CreateTrainingSession({
     }
   };
 
+  useEffect(() => {
+    if (!ownerId || employees.length === 0) return;
+    loadSuggestions(employees);
+  }, [
+    ownerId,
+    employees,
+    form.trainingTypeId,
+    form.companyId,
+    form.branchId,
+    form.scheduledDate,
+    blockedEmployeeIdSet
+  ]);
+
+  useEffect(() => {
+    if (blockedEmployeeIdSet.size === 0) return;
+
+    setSelectedIds((current) => current.filter((employeeId) => !blockedEmployeeIdSet.has(employeeId)));
+    setSuggestedIds((current) => current.filter((employeeId) => !blockedEmployeeIdSet.has(employeeId)));
+    setParticipantRecords((prev) => {
+      const next = { ...prev };
+      Object.keys(next).forEach((employeeId) => {
+        if (blockedEmployeeIdSet.has(employeeId)) {
+          delete next[employeeId];
+        }
+      });
+      return next;
+    });
+  }, [blockedEmployeeIdSet]);
+
   // Gestionar selección de participantes
   const toggleEmployee = (employeeId) => {
+    if (blockedEmployeeIdSet.has(employeeId)) return;
+
     setSelectedIds((current) => {
       const isSelected = current.includes(employeeId);
       const next = isSelected 
@@ -371,11 +478,12 @@ export default function CreateTrainingSession({
   };
 
   const selectFiltered = () => {
-    const next = Array.from(new Set([...selectedIds, ...filteredEmployees.map((employee) => employee.id)]));
+    const availableEmployees = filteredEmployees.filter((employee) => !blockedEmployeeIdSet.has(employee.id));
+    const next = Array.from(new Set([...selectedIds, ...availableEmployees.map((employee) => employee.id)]));
     setSelectedIds(next);
     
     // Inicializar registros para nuevos participantes
-    filteredEmployees.forEach((employee) => {
+    availableEmployees.forEach((employee) => {
       if (!selectedIds.includes(employee.id)) {
         setParticipantRecords((prev) => ({
           ...prev,
@@ -432,7 +540,6 @@ export default function CreateTrainingSession({
       try {
         const catalog = await trainingCatalogService.getById(ownerId, form.trainingTypeId);
         setRequiresEvaluation(Boolean(catalog?.requiresEvaluation));
-        setRequiresSignature(Boolean(catalog?.requiresSignature));
       } catch (err) {
         console.warn('Error loading catalog requirements:', err);
       }
@@ -500,7 +607,7 @@ export default function CreateTrainingSession({
           trainingTypeId: form.trainingTypeId,
           companyId: form.companyId,
           branchId: form.branchId,
-          attendanceStatus: record.attendanceStatus,
+          attendanceStatus: mode === 'quick' ? record.attendanceStatus : TRAINING_ATTENDANCE_STATUSES.INVITED,
           evaluationStatus: TRAINING_EVALUATION_STATUSES.APPROVED, // Todos están aprobados si están seleccionados
           score: record.score,
           employeeSignature: record.employeeSignature,
@@ -529,11 +636,6 @@ export default function CreateTrainingSession({
       setSaving(false);
     }
   };
-
-  const selectedPlanCandidate = useMemo(
-    () => planCandidates.find((candidate) => candidate.planItemId === selectedPlanItemId) || null,
-    [planCandidates, selectedPlanItemId]
-  );
 
   return (
     <Paper sx={{ p: 3 }}>
@@ -727,6 +829,12 @@ export default function CreateTrainingSession({
                 </Grid>
               </Grid>
 
+              {blockedEmployeeIdSet.size > 0 && scheduledPeriod && (
+                <Alert severity="warning" sx={{ mb: 2 }}>
+                  Hay {blockedEmployeeIdSet.size} empleado(s) ya registrados para esta capacitación en {formatPeriodLabel(scheduledPeriod.periodYear, scheduledPeriod.periodMonth)}.
+                </Alert>
+              )}
+
               <Alert severity="info" sx={{ mb: 2 }}>
                 {requiresEvaluation && 'Esta capacitación requiere evaluación. '}
                 Marca la casilla para incluir al participante y completa los datos de ejecución.
@@ -739,8 +847,8 @@ export default function CreateTrainingSession({
                     <TableRow>
                       <TableCell padding="checkbox" sx={{ minWidth: 60 }}>
                         <Checkbox
-                          indeterminate={selectedIds.length > 0 && selectedIds.length < filteredEmployees.length}
-                          checked={filteredEmployees.length > 0 && selectedIds.length === filteredEmployees.length}
+                          indeterminate={someSelectableFilteredSelected && !allSelectableFilteredSelected}
+                          checked={allSelectableFilteredSelected}
                           onChange={(e) => {
                             if (e.target.checked) {
                               selectFiltered();
@@ -764,6 +872,8 @@ export default function CreateTrainingSession({
                       const isSelected = selectedIds.includes(employee.id);
                       const record = participantRecords[employee.id] || defaultParticipantRecord();
                       const isSuggested = suggestedIds.includes(employee.id);
+                      const blockInfo = periodOccupancyByEmployee[employee.id] || null;
+                      const isBlocked = Boolean(blockInfo);
 
                       return (
                         <TableRow
@@ -777,6 +887,7 @@ export default function CreateTrainingSession({
                           <TableCell padding="checkbox">
                             <Checkbox
                               checked={isSelected}
+                              disabled={isBlocked}
                               onChange={() => toggleEmployee(employee.id)}
                             />
                           </TableCell>
@@ -788,6 +899,11 @@ export default function CreateTrainingSession({
                               {isSuggested && (
                                 <Typography variant="caption" color="primary">
                                   (Sugerido - capacitación requerida)
+                                </Typography>
+                              )}
+                              {isBlocked && (
+                                <Typography variant="caption" color="warning.main" display="block">
+                                  Ya registrado en {formatPeriodLabel(blockInfo.periodYear, blockInfo.periodMonth)} en otra sesiÃ³n
                                 </Typography>
                               )}
                             </Box>
@@ -947,7 +1063,7 @@ export default function CreateTrainingSession({
                         Vista Previa de Documentos
                       </Typography>
                       <Grid container spacing={2}>
-                        {previewFiles.map((file, index) => (
+                        {previewFiles.map((file) => (
                           <Grid item xs={12} sm={6} md={4} key={file.id}>
                             <Paper variant="outlined" sx={{ p: 1, textAlign: 'center', position: 'relative' }}>
                               {file.mimeType && file.mimeType.startsWith('image/') ? (
