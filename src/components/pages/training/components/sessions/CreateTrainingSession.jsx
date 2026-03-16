@@ -92,7 +92,8 @@ export default function CreateTrainingSession({
   onSaved,
   onCancel,
   mode = 'quick', // 'quick' | 'planned'
-  initialData = null // Datos precargados desde planes
+  initialData = null, // Datos precargados desde planes
+  compact = false // true cuando se usa dentro del sidebar (Drawer)
 }) {
   const { userProfile, userEmpresas = [], userSucursales = [] } = useAuth();
 
@@ -561,24 +562,33 @@ export default function CreateTrainingSession({
     }
   };
 
+  const sectionSpacing = compact ? 2 : 3;
+  const sectionPadding = compact ? 1.5 : 2;
+  const sectionTitleVariant = compact ? 'subtitle2' : 'h6';
+  const sectionTitleMb = compact ? 1 : 2;
+  const gridSpacing = compact ? 1.5 : 2;
+  const gridCols = compact ? { xs: 12, sm: 6 } : { xs: 12, md: 4 }; // 2 cols en compact, 3 en normal
+  const tableMaxHeight = compact ? 320 : 500;
+
   return (
-    <Paper sx={{ p: 3 }}>
-      <Typography variant="h5" sx={{ mb: 3 }}>
+    <Paper sx={{ p: compact ? 1.5 : 3 }}>
+      <Typography variant={compact ? 'subtitle1' : 'h5'} sx={{ mb: compact ? 1.5 : 3, fontWeight: 600 }}>
         {initialData ? 'Registrar Capacitación desde Plan' : (mode === 'quick' ? 'Registrar Capacitación Rápida' : 'Programar Capacitación')}
       </Typography>
 
-      {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
-      {success && <Alert severity="success" sx={{ mb: 2 }}>{success}</Alert>}
+      {error && <Alert severity="error" sx={{ mb: 1.5 }}>{error}</Alert>}
+      {success && <Alert severity="success" sx={{ mb: 1.5 }}>{success}</Alert>}
 
-      <Stack spacing={3}>
+      <Stack spacing={sectionSpacing}>
         {/* Sección 1: Datos de la Capacitación */}
-        <Paper variant="outlined" sx={{ p: 2 }}>
-          <Typography variant="h6" sx={{ mb: 2 }}>1. Datos de la Capacitación</Typography>
-          <Grid container spacing={2}>
-            <Grid item xs={12} md={4}>
+        <Paper variant="outlined" sx={{ p: sectionPadding }}>
+          <Typography variant={sectionTitleVariant} sx={{ mb: sectionTitleMb, fontWeight: 600 }}>1. Datos de la Capacitación</Typography>
+          <Grid container spacing={gridSpacing}>
+            <Grid item {...gridCols}>
               <TextField
                 select
                 fullWidth
+                size="small"
                 label="Tipo de Capacitación"
                 value={form.trainingTypeId}
                 onFocus={ensureCatalog}
@@ -589,10 +599,11 @@ export default function CreateTrainingSession({
                 ))}
               </TextField>
             </Grid>
-            <Grid item xs={12} md={4}>
+            <Grid item {...gridCols}>
               <TextField
                 select
                 fullWidth
+                size="small"
                 label="Empresa"
                 value={form.companyId}
                 onChange={(e) => setForm({ ...form, companyId: e.target.value, branchId: '' })}
@@ -602,10 +613,11 @@ export default function CreateTrainingSession({
                 ))}
               </TextField>
             </Grid>
-            <Grid item xs={12} md={4}>
+            <Grid item {...gridCols}>
               <TextField
                 select
                 fullWidth
+                size="small"
                 label="Sucursal"
                 value={form.branchId}
                 onChange={(e) => setForm({ ...form, branchId: e.target.value })}
@@ -615,20 +627,21 @@ export default function CreateTrainingSession({
                 ))}
               </TextField>
             </Grid>
-            <Grid item xs={12} md={4}>
+            <Grid item {...gridCols}>
               <Autocomplete
                 options={instructorOptions}
                 value={instructorOptions.find((option) => option.id === form.instructorId) || null}
                 onChange={(_, value) => setForm({ ...form, instructorId: value?.id || '' })}
                 getOptionLabel={(option) => option?.label || ''}
                 renderInput={(params) => (
-                  <TextField {...params} fullWidth label="Instructor" placeholder="Seleccionar instructor" />
+                  <TextField {...params} fullWidth size="small" label="Instructor" placeholder="Seleccionar" />
                 )}
               />
             </Grid>
-            <Grid item xs={12} md={4}>
+            <Grid item {...gridCols}>
               <TextField
                 fullWidth
+                size="small"
                 type="datetime-local"
                 label="Fecha y Hora"
                 InputLabelProps={{ shrink: true }}
@@ -636,10 +649,11 @@ export default function CreateTrainingSession({
                 onChange={(e) => setForm({ ...form, scheduledDate: e.target.value })}
               />
             </Grid>
-            <Grid item xs={12} md={4}>
+            <Grid item {...gridCols}>
               <TextField
                 select
                 fullWidth
+                size="small"
                 label="Modalidad"
                 value={form.modality}
                 onChange={(e) => setForm({ ...form, modality: e.target.value })}
@@ -652,9 +666,11 @@ export default function CreateTrainingSession({
             <Grid item xs={12}>
               <TextField
                 fullWidth
+                size="small"
                 label="Ubicación"
                 value={form.location}
                 onChange={(e) => setForm({ ...form, location: e.target.value })}
+                placeholder={compact ? 'Ej. Aula 1' : undefined}
               />
             </Grid>
 
@@ -698,78 +714,76 @@ export default function CreateTrainingSession({
         </Paper>
 
         {/* Sección 2: Participantes y Ejecución Unificados */}
-        <Paper variant="outlined" sx={{ p: 2 }}>
-          <Typography variant="h6" sx={{ mb: 2 }}>
+        <Paper variant="outlined" sx={{ p: sectionPadding }}>
+          <Typography variant={sectionTitleVariant} sx={{ mb: sectionTitleMb, fontWeight: 600 }}>
             2. Participantes y Ejecución ({selectedIds.length})
           </Typography>
           
           {employees.length === 0 ? (
-            <Alert severity="info">
+            <Alert severity="info" sx={compact ? { py: 0.5 } : undefined}>
               Selecciona una sucursal para cargar los participantes disponibles
             </Alert>
           ) : (
             <>
               {/* Filtros */}
-              <Grid container spacing={2} sx={{ mb: 2 }}>
-                <Grid item xs={12} md={3}>
+              <Grid container spacing={gridSpacing} sx={{ mb: 1.5 }}>
+                <Grid item xs={12} sm={6}>
                   <TextField
                     select
                     fullWidth
                     size="small"
-                    label="Filtro por Puesto"
+                    label="Puesto"
                     value={filters.role}
                     onChange={(e) => setFilters((prev) => ({ ...prev, role: e.target.value }))}
                   >
-                    <MenuItem value="">Todos los puestos</MenuItem>
+                    <MenuItem value="">Todos</MenuItem>
                     {roleOptions.map((role) => (
                       <MenuItem key={role} value={role}>{role}</MenuItem>
                     ))}
                   </TextField>
                 </Grid>
-                <Grid item xs={12} md={3}>
+                <Grid item xs={12} sm={6}>
                   <TextField
                     select
                     fullWidth
                     size="small"
-                    label="Filtro por Sector"
+                    label="Sector"
                     value={filters.sector}
                     onChange={(e) => setFilters((prev) => ({ ...prev, sector: e.target.value }))}
                   >
-                    <MenuItem value="">Todos los sectores</MenuItem>
+                    <MenuItem value="">Todos</MenuItem>
                     {sectorOptions.map((sector) => (
                       <MenuItem key={sector} value={sector}>{sector}</MenuItem>
                     ))}
                   </TextField>
                 </Grid>
-                <Grid item xs={12} md={3} sx={{ display: 'flex', alignItems: 'center' }}>
+                <Grid item xs={12} sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
                   <Button variant="outlined" onClick={selectFiltered} size="small">
-                    Seleccionar Filtrados
+                    Seleccionar filtrados
                   </Button>
-                </Grid>
-                <Grid item xs={12} md={3} sx={{ display: 'flex', alignItems: 'center' }}>
-                  <Typography variant="body2" color="text.secondary">
-                    {selectedIds.length} participantes seleccionados
+                  <Typography variant="caption" color="text.secondary">
+                    {selectedIds.length} seleccionados
                   </Typography>
                 </Grid>
               </Grid>
 
               {blockedEmployeeIdSet.size > 0 && scheduledPeriod && (
-                <Alert severity="warning" sx={{ mb: 2 }}>
+                <Alert severity="warning" sx={{ mb: 1.5 }}>
                   Hay {blockedEmployeeIdSet.size} empleado(s) ya registrados para esta capacitación en {formatPeriodLabel(scheduledPeriod.periodYear, scheduledPeriod.periodMonth)}.
                 </Alert>
               )}
 
-              <Alert severity="info" sx={{ mb: 2 }}>
-                {requiresEvaluation && 'Esta capacitación requiere evaluación. '}
-                Marca la casilla para incluir al participante y completa los datos de ejecución.
+              <Alert severity="info" sx={{ mb: 1.5 }}>
+                {requiresEvaluation && 'Requiere evaluación. '}
+                Marca la casilla y completa asistencia y calificación.
               </Alert>
 
               {/* Tabla Unificada */}
-              <TableContainer component={Paper} variant="outlined" sx={{ maxHeight: 500 }}>
+              <TableContainer component={Paper} variant="outlined" sx={{ maxHeight: tableMaxHeight }}>
                 <Table stickyHeader size="small">
                   <TableHead>
                     <TableRow>
-                      <TableCell padding="checkbox" sx={{ minWidth: 60 }}>
+                      <TableCell padding="checkbox" sx={{ minWidth: compact ? 44 : 60 }}>
                         <Checkbox
                           indeterminate={someSelectableFilteredSelected && !allSelectableFilteredSelected}
                           checked={allSelectableFilteredSelected}
@@ -783,12 +797,12 @@ export default function CreateTrainingSession({
                           }}
                         />
                       </TableCell>
-                      <TableCell sx={{ minWidth: 200 }}>Participante</TableCell>
-                      <TableCell sx={{ minWidth: 120 }}>Asistencia</TableCell>
+                      <TableCell sx={{ minWidth: compact ? 140 : 200 }}>Participante</TableCell>
+                      <TableCell sx={{ minWidth: compact ? 100 : 120 }}>Asistencia</TableCell>
                       {requiresEvaluation && (
-                        <TableCell sx={{ minWidth: 120 }}>⭐ Calificación</TableCell>
+                        <TableCell sx={{ minWidth: compact ? 90 : 120 }}>⭐</TableCell>
                       )}
-                      <TableCell sx={{ minWidth: 200 }}>Notas</TableCell>
+                      <TableCell sx={{ minWidth: compact ? 120 : 200 }}>Notas</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -929,15 +943,15 @@ export default function CreateTrainingSession({
               
               {/* Sección de Documentos */}
               {selectedIds.length > 0 && (
-                <Paper variant="outlined" sx={{ p: 2, mt: 2 }}>
-                  <Typography variant="h6" sx={{ mb: 2 }}>
-                    3. Documentos de la Capacitación
+                <Paper variant="outlined" sx={{ p: sectionPadding, mt: 1.5 }}>
+                  <Typography variant={sectionTitleVariant} sx={{ mb: sectionTitleMb, fontWeight: 600 }}>
+                    3. Documentos
                   </Typography>
-                  <Alert severity="info" sx={{ mb: 2 }}>
-                    Sube los documentos de prueba, fotos, archivos de asistencia o cualquier evidencia de la capacitación realizada.
+                  <Alert severity="info" sx={{ mb: 1.5 }}>
+                    Sube evidencia: documentos, fotos o archivos de asistencia.
                   </Alert>
                   
-                  <Grid container spacing={2}>
+                  <Grid container spacing={gridSpacing}>
                     <Grid item xs={12} md={6}>
                       <Stack spacing={2}>
                         <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
@@ -1006,11 +1020,11 @@ export default function CreateTrainingSession({
 
                   {/* Vista previa de documentos */}
                   {previewFiles.length > 0 && (
-                    <Paper variant="outlined" sx={{ p: 2, mt: 2 }}>
-                      <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 600 }}>
-                        Vista Previa de Documentos
+                    <Paper variant="outlined" sx={{ p: sectionPadding, mt: 1.5 }}>
+                      <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>
+                        Vista previa
                       </Typography>
-                      <Grid container spacing={2}>
+                      <Grid container spacing={gridSpacing}>
                         {previewFiles.map((file) => (
                           <Grid item xs={12} sm={6} md={4} key={file.id}>
                             <Paper variant="outlined" sx={{ p: 1, textAlign: 'center', position: 'relative' }}>
@@ -1087,10 +1101,10 @@ export default function CreateTrainingSession({
           )}
         </Paper>
 
-        <Divider />
+        <Divider sx={{ my: compact ? 1 : 2 }} />
 
         {/* Botones de acción */}
-        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} justifyContent="flex-end">
+        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={compact ? 1 : 2} justifyContent="flex-end">
           {onCancel && (
             <Button variant="outlined" onClick={onCancel} disabled={saving}>
               Cancelar

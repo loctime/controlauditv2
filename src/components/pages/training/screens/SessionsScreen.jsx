@@ -8,7 +8,9 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
+  Drawer,
   Grid,
+  IconButton,
   MenuItem,
   Paper,
   Stack,
@@ -16,6 +18,7 @@ import {
   Typography
 } from '@mui/material';
 import ListIcon from '@mui/icons-material/List';
+import CloseIcon from '@mui/icons-material/Close';
 import { useAuth } from '@/components/context/AuthContext';
 import { empleadoService } from '../../../../services/empleadoService';
 import { getUsers } from '../../../../core/services/ownerUserService';
@@ -208,22 +211,43 @@ export default function SessionsScreen() {
               onOpenQuickSession={handleOpenQuickSession}
               onCloseQuickSession={handleCloseQuickSession}
             />
-
-            {quickSessionData && (
-              <CreateTrainingSession
-                ownerId={ownerId}
-                mode="quick"
-                initialData={quickSessionData}
-                onSaved={() => {
-                  setQuickSessionData(null);
-                  load();
-                }}
-                onCancel={() => {
-                  setQuickSessionData(null);
-                }}
-              />
-            )}
           </Box>
+
+          <Drawer
+            anchor="right"
+            open={Boolean(quickSessionData)}
+            onClose={() => setQuickSessionData(null)}
+            slotProps={{ backdrop: { sx: { backgroundColor: 'rgba(0,0,0,0.3)' } } }}
+            PaperProps={{
+              sx: { width: { xs: '100%', sm: 520 } }
+            }}
+          >
+            <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', px: 2, py: 1.5, borderBottom: 1, borderColor: 'divider' }}>
+                <Typography variant="h6">Registrar desde plan</Typography>
+                <IconButton aria-label="Cerrar" onClick={() => setQuickSessionData(null)} size="small">
+                  <CloseIcon />
+                </IconButton>
+              </Box>
+              <Box sx={{ flex: 1, overflow: 'auto', p: 2 }}>
+                {quickSessionData && (
+                  <CreateTrainingSession
+                    ownerId={ownerId}
+                    mode="quick"
+                    initialData={quickSessionData}
+                    compact
+                    onSaved={() => {
+                      setQuickSessionData(null);
+                      load();
+                    }}
+                    onCancel={() => {
+                      setQuickSessionData(null);
+                    }}
+                  />
+                )}
+              </Box>
+            </Box>
+          </Drawer>
         </Grid>
 
         <Grid item xs={12}>
