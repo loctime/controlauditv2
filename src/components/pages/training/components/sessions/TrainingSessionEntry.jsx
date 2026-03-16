@@ -76,12 +76,16 @@ async function loadPlanItemsForCurrentMonth(ownerId, year, month) {
   return result;
 }
 
-export default function TrainingSessionEntry({ ownerId, onOpenQuickSession, onCloseQuickSession }) {
+export default function TrainingSessionEntry({
+  ownerId,
+  openQuickSessionKey = null,
+  onOpenQuickSession,
+  onCloseQuickSession
+}) {
   const { userEmpresas = [], userSucursales = [] } = useAuth();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [planItems, setPlanItems] = useState([]);
-  const [openSessionId, setOpenSessionId] = useState(null);
 
   const companyById = Object.fromEntries((userEmpresas || []).map((c) => [c.id, c]));
   const branchById = Object.fromEntries((userSucursales || []).map((b) => [b.id, b]));
@@ -124,21 +128,15 @@ export default function TrainingSessionEntry({ ownerId, onOpenQuickSession, onCl
 
   const handleCreateFromPlan = (row) => {
     const { plan, item } = row;
-    const sessionId = `${plan.id}-${item.id}`;
-    
-    // Si ya está abierto, cerrar
-    if (openSessionId === sessionId) {
-      setOpenSessionId(null);
-      if (onCloseQuickSession) {
-        onCloseQuickSession();
-      }
+    const sessionKey = `${plan.id}-${item.id}`;
+
+    // Si ya está abierto (sidebar visible para esta tarjeta), cerrar
+    if (openQuickSessionKey === sessionKey) {
+      if (onCloseQuickSession) onCloseQuickSession();
       return;
     }
-    
-    const scheduledDateIso = getLocalDateTime();
 
-    // Abrir el registro rápido
-    setOpenSessionId(sessionId);
+    const scheduledDateIso = getLocalDateTime();
     if (onOpenQuickSession) {
       onOpenQuickSession({
         trainingTypeId: item.trainingTypeId,
@@ -198,7 +196,7 @@ export default function TrainingSessionEntry({ ownerId, onOpenQuickSession, onCl
                       variant="contained"
                       onClick={() => handleCreateFromPlan(row)}
                     >
-                      {openSessionId === `${row.plan.id}-${row.item.id}` ? 'Cerrar' : 'Abrir'}
+                      {openQuickSessionKey === `${row.plan.id}-${row.item.id}` ? 'Cerrar' : 'Abrir'}
                     </Button>
                   </CardActions>
                 </Card>

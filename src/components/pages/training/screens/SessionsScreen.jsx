@@ -208,6 +208,11 @@ export default function SessionsScreen() {
 
             <TrainingSessionEntry
               ownerId={ownerId}
+              openQuickSessionKey={
+                quickSessionData?.planId != null && quickSessionData?.planItemId != null
+                  ? `${quickSessionData.planId}-${quickSessionData.planItemId}`
+                  : null
+              }
               onOpenQuickSession={handleOpenQuickSession}
               onCloseQuickSession={handleCloseQuickSession}
             />
