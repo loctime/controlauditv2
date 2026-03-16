@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
 const DEFAULT_TAB = 'dashboard';
@@ -13,12 +13,22 @@ export default function useTrainingTabState(tabs = [], canViewConfiguration = fa
   const rawTab = searchParams.get('tab');
   const rawSection = searchParams.get('section');
 
-  const normalizedTab = allowedTabs.includes(rawTab) ? rawTab : DEFAULT_TAB;
+  // Redirect legacy tab=history to tab=people (History merged into People)
+  const effectiveTab = rawTab === 'history' ? 'people' : rawTab;
+  const normalizedTab = allowedTabs.includes(effectiveTab) ? effectiveTab : DEFAULT_TAB;
   const activeTab = !canViewConfiguration && normalizedTab === 'configuration' ? DEFAULT_TAB : normalizedTab;
 
   const activeSection = activeTab === 'configuration' && CONFIG_SECTIONS.includes(rawSection)
     ? rawSection
     : 'catalog';
+
+  // Replace URL when landing on legacy tab=history so address bar shows tab=people
+  useEffect(() => {
+    if (rawTab !== 'history') return;
+    const next = new URLSearchParams(searchParams);
+    next.set('tab', 'people');
+    setSearchParams(next, { replace: true });
+  }, [rawTab, searchParams, setSearchParams]);
 
   const setTab = (tabId) => {
     const nextTab = allowedTabs.includes(tabId) ? tabId : DEFAULT_TAB;

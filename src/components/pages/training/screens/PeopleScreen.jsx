@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Alert, Box, CircularProgress } from '@mui/material';
+import { Alert, Box, CircularProgress, Paper, Tab, Tabs, Typography } from '@mui/material';
 import { useAuth } from '@/components/context/AuthContext';
 import { empleadoService } from '../../../../services/empleadoService';
 import {
@@ -7,7 +7,16 @@ import {
   trainingCatalogService,
   trainingCertificateService
 } from '../../../../services/training';
-import PeopleTrainingHistoryView from '../components/people/PeopleTrainingHistoryView';
+import EmployeeAutocomplete from '../components/people/EmployeeAutocomplete';
+import PeopleSummaryTab from '../components/people/PeopleSummaryTab';
+import PeopleHistoryTab from '../components/people/PeopleHistoryTab';
+import PeopleCertificatesTab from '../components/people/PeopleCertificatesTab';
+
+const PEOPLE_SUB_TABS = [
+  { id: 'summary', label: 'Resumen' },
+  { id: 'history', label: 'Historial' },
+  { id: 'certificates', label: 'Certificados' }
+];
 
 export default function PeopleScreen() {
   const { userProfile, userSucursales = [], userEmpresas = [] } = useAuth();
@@ -19,6 +28,7 @@ export default function PeopleScreen() {
   const [employees, setEmployees] = useState([]);
   const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [records, setRecords] = useState([]);
+  const [peopleSubTab, setPeopleSubTab] = useState('summary');
 
   const [complianceSummary, setComplianceSummary] = useState({
     compliant: 0,
@@ -120,17 +130,56 @@ export default function PeopleScreen() {
   return (
     <Box>
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
-      {loadingRecords && <Alert severity="info" sx={{ mb: 2 }}>Cargando historial del empleado...</Alert>}
-      <PeopleTrainingHistoryView
-        employees={employees}
-        loadingEmployees={loadingEmployees}
-        selectedEmployee={selectedEmployee}
-        onSelectEmployee={setSelectedEmployee}
-        records={records}
-        complianceSummary={complianceSummary}
-      />
+      {loadingRecords && peopleSubTab === 'summary' && (
+        <Alert severity="info" sx={{ mb: 2 }}>Cargando historial del empleado...</Alert>
+      )}
+
+      <Paper sx={{ p: 2, mb: 2 }}>
+        <Typography variant="h6" sx={{ mb: 1.5 }}>
+          Historial de capacitación por persona
+        </Typography>
+        <EmployeeAutocomplete
+          options={employees}
+          loading={loadingEmployees}
+          value={selectedEmployee}
+          onChange={setSelectedEmployee}
+        />
+      </Paper>
+
+      {selectedEmployee && (
+        <>
+          <Tabs
+            value={peopleSubTab}
+            onChange={(_, v) => setPeopleSubTab(v)}
+            sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}
+          >
+            {PEOPLE_SUB_TABS.map((t) => (
+              <Tab key={t.id} value={t.id} label={t.label} />
+            ))}
+          </Tabs>
+          <Box sx={{ mt: 1 }}>
+            {peopleSubTab === 'summary' && (
+              <PeopleSummaryTab
+                selectedEmployee={selectedEmployee}
+                records={records}
+                complianceSummary={complianceSummary}
+              />
+            )}
+            {peopleSubTab === 'history' && (
+              <PeopleHistoryTab ownerId={ownerId} selectedEmployee={selectedEmployee} />
+            )}
+            {peopleSubTab === 'certificates' && (
+              <PeopleCertificatesTab ownerId={ownerId} selectedEmployee={selectedEmployee} />
+            )}
+          </Box>
+        </>
+      )}
+
+      {!selectedEmployee && (
+        <Typography color="text.secondary">
+          Seleccione un empleado para ver su resumen, historial de realizaciones y certificados.
+        </Typography>
+      )}
     </Box>
   );
 }
-
-
