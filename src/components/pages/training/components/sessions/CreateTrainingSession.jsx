@@ -570,6 +570,11 @@ export default function CreateTrainingSession({
   const gridCols = compact ? { xs: 12, sm: 6 } : { xs: 12, md: 4 }; // 2 cols en compact, 3 en normal
   const tableMaxHeight = compact ? 320 : 500;
 
+  /** Entrada desde "Capacitaciones planificadas este mes": datos del plan fijos, solo se editan instructor, fecha y ubicación */
+  const isFromPlan = Boolean(initialData?.planId ?? initialData?.planMode === 'plan');
+  const trainingTypeName = catalogItems.find((c) => c.id === form.trainingTypeId)?.name || form.trainingTypeId || '—';
+  const modalityLabel = { in_person: 'Presencial', virtual: 'Virtual', hybrid: 'Híbrida' }[form.modality] || form.modality;
+
   return (
     <Paper sx={{ p: compact ? 1.5 : 3 }}>
       <Typography variant={compact ? 'subtitle1' : 'h5'} sx={{ mb: compact ? 1.5 : 3, fontWeight: 600 }}>
@@ -584,95 +589,146 @@ export default function CreateTrainingSession({
         <Paper variant="outlined" sx={{ p: sectionPadding }}>
           <Typography variant={sectionTitleVariant} sx={{ mb: sectionTitleMb, fontWeight: 600 }}>1. Datos de la Capacitación</Typography>
           <Grid container spacing={gridSpacing}>
-            <Grid item {...gridCols}>
-              <TextField
-                select
-                fullWidth
-                size="small"
-                label="Tipo de Capacitación"
-                value={form.trainingTypeId}
-                onFocus={ensureCatalog}
-                onChange={(e) => setForm({ ...form, trainingTypeId: e.target.value })}
-              >
-                {catalogItems.map((item) => (
-                  <MenuItem key={item.id} value={item.id}>{item.name}</MenuItem>
-                ))}
-              </TextField>
-            </Grid>
-            <Grid item {...gridCols}>
-              <TextField
-                select
-                fullWidth
-                size="small"
-                label="Empresa"
-                value={form.companyId}
-                onChange={(e) => setForm({ ...form, companyId: e.target.value, branchId: '' })}
-              >
-                {userEmpresas.map((company) => (
-                  <MenuItem key={company.id} value={company.id}>{company.nombre}</MenuItem>
-                ))}
-              </TextField>
-            </Grid>
-            <Grid item {...gridCols}>
-              <TextField
-                select
-                fullWidth
-                size="small"
-                label="Sucursal"
-                value={form.branchId}
-                onChange={(e) => setForm({ ...form, branchId: e.target.value })}
-              >
-                {branchOptions.map((branch) => (
-                  <MenuItem key={branch.id} value={branch.id}>{branch.nombre}</MenuItem>
-                ))}
-              </TextField>
-            </Grid>
-            <Grid item {...gridCols}>
-              <Autocomplete
-                options={instructorOptions}
-                value={instructorOptions.find((option) => option.id === form.instructorId) || null}
-                onChange={(_, value) => setForm({ ...form, instructorId: value?.id || '' })}
-                getOptionLabel={(option) => option?.label || ''}
-                renderInput={(params) => (
-                  <TextField {...params} fullWidth size="small" label="Instructor" placeholder="Seleccionar" />
-                )}
-              />
-            </Grid>
-            <Grid item {...gridCols}>
-              <TextField
-                fullWidth
-                size="small"
-                type="datetime-local"
-                label="Fecha y Hora"
-                InputLabelProps={{ shrink: true }}
-                value={form.scheduledDate}
-                onChange={(e) => setForm({ ...form, scheduledDate: e.target.value })}
-              />
-            </Grid>
-            <Grid item {...gridCols}>
-              <TextField
-                select
-                fullWidth
-                size="small"
-                label="Modalidad"
-                value={form.modality}
-                onChange={(e) => setForm({ ...form, modality: e.target.value })}
-              >
-                <MenuItem value="in_person">Presencial</MenuItem>
-                <MenuItem value="virtual">Virtual</MenuItem>
-                <MenuItem value="hybrid">Híbrida</MenuItem>
-              </TextField>
-            </Grid>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                size="small"
-                label="Ubicación"
-                value={form.location}
-                onChange={(e) => setForm({ ...form, location: e.target.value })}
-                placeholder={compact ? 'Ej. Aula 1' : undefined}
-              />
-            </Grid>
+            {isFromPlan ? (
+              <>
+                {/* Desde plan: solo lectura tipo, empresa, sucursal, modalidad */}
+                <Grid item xs={12}>
+                  <Box sx={{ py: 0.5, px: 1.5, bgcolor: 'action.hover', borderRadius: 1 }}>
+                    <Typography variant="body2" color="text.secondary">
+                      <strong>{trainingTypeName}</strong>
+                      {' · '}
+                      {companyById[form.companyId]?.nombre || '—'} / {branchById[form.branchId]?.nombre || '—'}
+                      {' · '}
+                      {modalityLabel}
+                    </Typography>
+                  </Box>
+                </Grid>
+                <Grid item {...gridCols}>
+                  <Autocomplete
+                    options={instructorOptions}
+                    value={instructorOptions.find((option) => option.id === form.instructorId) || null}
+                    onChange={(_, value) => setForm({ ...form, instructorId: value?.id || '' })}
+                    getOptionLabel={(option) => option?.label || ''}
+                    renderInput={(params) => (
+                      <TextField {...params} fullWidth size="small" label="Instructor" placeholder="Seleccionar" />
+                    )}
+                  />
+                </Grid>
+                <Grid item {...gridCols}>
+                  <TextField
+                    fullWidth
+                    size="small"
+                    type="datetime-local"
+                    label="Fecha y Hora"
+                    InputLabelProps={{ shrink: true }}
+                    value={form.scheduledDate}
+                    onChange={(e) => setForm({ ...form, scheduledDate: e.target.value })}
+                  />
+                </Grid>
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
+                    size="small"
+                    label="Ubicación"
+                    value={form.location}
+                    onChange={(e) => setForm({ ...form, location: e.target.value })}
+                    placeholder={compact ? 'Ej. Aula 1' : undefined}
+                  />
+                </Grid>
+              </>
+            ) : (
+              <>
+                <Grid item {...gridCols}>
+                  <TextField
+                    select
+                    fullWidth
+                    size="small"
+                    label="Tipo de Capacitación"
+                    value={form.trainingTypeId}
+                    onFocus={ensureCatalog}
+                    onChange={(e) => setForm({ ...form, trainingTypeId: e.target.value })}
+                  >
+                    {catalogItems.map((item) => (
+                      <MenuItem key={item.id} value={item.id}>{item.name}</MenuItem>
+                    ))}
+                  </TextField>
+                </Grid>
+                <Grid item {...gridCols}>
+                  <TextField
+                    select
+                    fullWidth
+                    size="small"
+                    label="Empresa"
+                    value={form.companyId}
+                    onChange={(e) => setForm({ ...form, companyId: e.target.value, branchId: '' })}
+                  >
+                    {userEmpresas.map((company) => (
+                      <MenuItem key={company.id} value={company.id}>{company.nombre}</MenuItem>
+                    ))}
+                  </TextField>
+                </Grid>
+                <Grid item {...gridCols}>
+                  <TextField
+                    select
+                    fullWidth
+                    size="small"
+                    label="Sucursal"
+                    value={form.branchId}
+                    onChange={(e) => setForm({ ...form, branchId: e.target.value })}
+                  >
+                    {branchOptions.map((branch) => (
+                      <MenuItem key={branch.id} value={branch.id}>{branch.nombre}</MenuItem>
+                    ))}
+                  </TextField>
+                </Grid>
+                <Grid item {...gridCols}>
+                  <Autocomplete
+                    options={instructorOptions}
+                    value={instructorOptions.find((option) => option.id === form.instructorId) || null}
+                    onChange={(_, value) => setForm({ ...form, instructorId: value?.id || '' })}
+                    getOptionLabel={(option) => option?.label || ''}
+                    renderInput={(params) => (
+                      <TextField {...params} fullWidth size="small" label="Instructor" placeholder="Seleccionar" />
+                    )}
+                  />
+                </Grid>
+                <Grid item {...gridCols}>
+                  <TextField
+                    fullWidth
+                    size="small"
+                    type="datetime-local"
+                    label="Fecha y Hora"
+                    InputLabelProps={{ shrink: true }}
+                    value={form.scheduledDate}
+                    onChange={(e) => setForm({ ...form, scheduledDate: e.target.value })}
+                  />
+                </Grid>
+                <Grid item {...gridCols}>
+                  <TextField
+                    select
+                    fullWidth
+                    size="small"
+                    label="Modalidad"
+                    value={form.modality}
+                    onChange={(e) => setForm({ ...form, modality: e.target.value })}
+                  >
+                    <MenuItem value="in_person">Presencial</MenuItem>
+                    <MenuItem value="virtual">Virtual</MenuItem>
+                    <MenuItem value="hybrid">Híbrida</MenuItem>
+                  </TextField>
+                </Grid>
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
+                    size="small"
+                    label="Ubicación"
+                    value={form.location}
+                    onChange={(e) => setForm({ ...form, location: e.target.value })}
+                    placeholder={compact ? 'Ej. Aula 1' : undefined}
+                  />
+                </Grid>
+              </>
+            )}
 
             {/* Vinculación con plan anual (solo modo planned) */}
             {mode === 'planned' && planCandidates.length > 0 && (
@@ -725,59 +781,6 @@ export default function CreateTrainingSession({
             </Alert>
           ) : (
             <>
-              {/* Filtros */}
-              <Grid container spacing={gridSpacing} sx={{ mb: 1.5 }}>
-                <Grid item xs={12} sm={6}>
-                  <TextField
-                    select
-                    fullWidth
-                    size="small"
-                    label="Puesto"
-                    value={filters.role}
-                    onChange={(e) => setFilters((prev) => ({ ...prev, role: e.target.value }))}
-                  >
-                    <MenuItem value="">Todos</MenuItem>
-                    {roleOptions.map((role) => (
-                      <MenuItem key={role} value={role}>{role}</MenuItem>
-                    ))}
-                  </TextField>
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <TextField
-                    select
-                    fullWidth
-                    size="small"
-                    label="Sector"
-                    value={filters.sector}
-                    onChange={(e) => setFilters((prev) => ({ ...prev, sector: e.target.value }))}
-                  >
-                    <MenuItem value="">Todos</MenuItem>
-                    {sectorOptions.map((sector) => (
-                      <MenuItem key={sector} value={sector}>{sector}</MenuItem>
-                    ))}
-                  </TextField>
-                </Grid>
-                <Grid item xs={12} sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
-                  <Button variant="outlined" onClick={selectFiltered} size="small">
-                    Seleccionar filtrados
-                  </Button>
-                  <Typography variant="caption" color="text.secondary">
-                    {selectedIds.length} seleccionados
-                  </Typography>
-                </Grid>
-              </Grid>
-
-              {blockedEmployeeIdSet.size > 0 && scheduledPeriod && (
-                <Alert severity="warning" sx={{ mb: 1.5 }}>
-                  Hay {blockedEmployeeIdSet.size} empleado(s) ya registrados para esta capacitación en {formatPeriodLabel(scheduledPeriod.periodYear, scheduledPeriod.periodMonth)}.
-                </Alert>
-              )}
-
-              <Alert severity="info" sx={{ mb: 1.5 }}>
-                {requiresEvaluation && 'Requiere evaluación. '}
-                Marca la casilla y completa asistencia y calificación.
-              </Alert>
-
               {/* Tabla Unificada */}
               <TableContainer component={Paper} variant="outlined" sx={{ maxHeight: tableMaxHeight }}>
                 <Table stickyHeader size="small">
