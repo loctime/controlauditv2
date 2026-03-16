@@ -833,7 +833,7 @@ export default function CreateTrainingSession({
                         Asistencia
                       </TableCell>
                       {requiresEvaluation && (
-                        <TableCell sx={{ width: compact ? 70 : undefined, minWidth: compact ? 70 : 120 }}>⭐</TableCell>
+                        <TableCell sx={{ width: compact ? 70 : undefined, minWidth: compact ? 70 : 120, textAlign: 'center' }}>⭐</TableCell>
                       )}
                       <TableCell sx={{ minWidth: compact ? 0 : 200 }}>Notas</TableCell>
                     </TableRow>
@@ -959,6 +959,9 @@ export default function CreateTrainingSession({
                                 ref={(el) => { ratingCellRefs.current[employee.id] = el; }}
                                 tabIndex={0}
                                 sx={{
+                                  display: 'flex',
+                                  justifyContent: 'center',
+                                  alignItems: 'center',
                                   ...(compact ? { width: 64, py: 1.25 } : { py: 1 }),
                                   ...(starsHighlighted && {
                                     border: '1.5px solid',
