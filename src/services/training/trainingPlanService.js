@@ -167,21 +167,33 @@ export const trainingPlanService = {
       return [];
     }
 
-    const planById = Object.fromEntries(plans.map((plan) => [plan.id, plan]));
+    const toPlanKey = (p) => (p?.id != null ? String(p.id) : null);
+    const planById = Object.fromEntries(plans.map((plan) => [toPlanKey(plan), plan]).filter(([k]) => k != null));
+
+    const toItemPlanKey = (item) => {
+      const raw = item.planId;
+      if (raw == null) return null;
+      if (typeof raw === 'string') return raw;
+      if (typeof raw === 'object' && raw?.id != null) return String(raw.id);
+      return String(raw);
+    };
 
     return planItems
       .filter((item) => {
-        const plan = planById[item.planId];
+        const plan = planById[toItemPlanKey(item)];
         if (!plan) return false;
         if (Number(item.plannedMonth || 0) !== sessionMonth) return false;
         if (Number(plan.year || 0) !== sessionYear) return false;
         return item.status !== 'cancelled';
       })
       .map((item) => {
-        const plan = planById[item.planId];
+        const plan = planById[toItemPlanKey(item)];
+        if (!plan) return null;
+        const planIdStr = toPlanKey(plan);
+        const itemIdStr = item?.id != null ? String(item.id) : null;
         return {
-          planId: plan.id,
-          planItemId: item.id,
+          planId: planIdStr,
+          planItemId: itemIdStr,
           planStatus: plan.status || 'draft',
           planYear: plan.year ?? null,
           planUpdatedAt: plan.updatedAt || null,
@@ -193,6 +205,7 @@ export const trainingPlanService = {
           notes: item.notes || ''
         };
       })
+      .filter(Boolean)
       .sort(sortCompatibleCandidates);
   },
 

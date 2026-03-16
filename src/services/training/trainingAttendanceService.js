@@ -30,46 +30,82 @@ import {
   buildAttendancePeriodLockId,
   buildEmployeeTrainingPeriodResultId,
   formatPeriodKey,
-  getRecordPeriod,
   isAttendanceStatusPeriodConsumer,
   resolveTrainingPeriod
 } from './trainingPeriodUtils';
 
+/** Asegura que un segmento de path sea string (evita error .path en serializer de transacción). */
+function pathSegment(v) {
+  if (v == null) return '';
+  if (typeof v === 'string') return v;
+  if (typeof v === 'number') return String(v);
+  if (typeof v === 'object' && v != null) {
+    if (v.id != null) return String(v.id);
+    if (typeof v.path === 'string') return v.path.split('/').pop() || '';
+  }
+  return String(v);
+}
+
+/** Valida que el path no tenga segmentos vacíos/undefined; evita refs inválidos. */
+function ensureValidPath(path, label) {
+  if (!Array.isArray(path) || path.length === 0) {
+    throw new Error(`${label}: path debe ser un array no vacío`);
+  }
+  const invalid = path.some((s) => s == null || s === '');
+  if (invalid) {
+    console.error(`${label} path inválido`, path);
+    throw new Error(`${label}: path contiene segmentos vacíos o undefined`);
+  }
+}
+
 function attendanceCollection(ownerId, sessionId) {
   ensureOwnerId(ownerId);
-  return collection(dbAudit, ...firestoreRoutesCore.trainingSessionAttendance(ownerId, sessionId));
+  const path = firestoreRoutesCore.trainingSessionAttendance(ownerId, sessionId).map(pathSegment);
+  ensureValidPath(path, 'trainingSessionAttendance');
+  return collection(dbAudit, ...path);
 }
 
 function attendanceDocument(ownerId, sessionId, employeeId) {
   ensureOwnerId(ownerId);
-  return doc(dbAudit, ...firestoreRoutesCore.trainingSessionAttendanceItem(ownerId, sessionId, employeeId));
+  const path = firestoreRoutesCore.trainingSessionAttendanceItem(ownerId, sessionId, employeeId).map(pathSegment);
+  ensureValidPath(path, 'trainingSessionAttendanceItem');
+  return doc(dbAudit, ...path);
 }
 
 function attendanceByEmployeeCollection(ownerId) {
   ensureOwnerId(ownerId);
-  return collection(dbAudit, ...firestoreRoutesCore.trainingAttendanceByEmployee(ownerId));
+  const path = firestoreRoutesCore.trainingAttendanceByEmployee(ownerId).map(pathSegment);
+  ensureValidPath(path, 'trainingAttendanceByEmployee');
+  return collection(dbAudit, ...path);
 }
 
 function attendanceByEmployeeDocument(ownerId, employeeId, sessionId) {
   ensureOwnerId(ownerId);
-  return doc(dbAudit, ...firestoreRoutesCore.trainingAttendanceByEmployeeItem(ownerId, `${employeeId}_${sessionId}`));
+  const path = firestoreRoutesCore.trainingAttendanceByEmployeeItem(ownerId, `${employeeId}_${sessionId}`).map(pathSegment);
+  ensureValidPath(path, 'trainingAttendanceByEmployeeItem');
+  return doc(dbAudit, ...path);
 }
 
 function attendancePeriodLockDocument(ownerId, lockId) {
   ensureOwnerId(ownerId);
-  return doc(dbAudit, ...firestoreRoutesCore.trainingAttendancePeriodLock(ownerId, lockId));
+  const path = firestoreRoutesCore.trainingAttendancePeriodLock(ownerId, lockId).map(pathSegment);
+  ensureValidPath(path, 'trainingAttendancePeriodLock');
+  return doc(dbAudit, ...path);
 }
 
 function periodResultDocument(ownerId, resultId) {
   ensureOwnerId(ownerId);
-  return doc(dbAudit, ...firestoreRoutesCore.employeeTrainingPeriodResult(ownerId, resultId));
+  const path = firestoreRoutesCore.employeeTrainingPeriodResult(ownerId, resultId).map(pathSegment);
+  ensureValidPath(path, 'employeeTrainingPeriodResult');
+  return doc(dbAudit, ...path);
 }
 
 function buildPeriodAttendanceQuery(ownerId, employeeId, trainingTypeId, periodYear, periodMonth) {
+  const col = attendanceByEmployeeCollection(ownerId);
   return query(
-    attendanceByEmployeeCollection(ownerId),
-    where('employeeId', '==', employeeId),
-    where('trainingTypeId', '==', trainingTypeId),
+    col,
+    where('employeeId', '==', String(employeeId)),
+    where('trainingTypeId', '==', String(trainingTypeId)),
     where('periodYear', '==', Number(periodYear)),
     where('periodMonth', '==', Number(periodMonth))
   );
@@ -127,6 +163,21 @@ function enrichAttendanceForConsolidation(record, sessionData = null) {
 
 export { formatPeriodKey, buildAttendancePeriodLockId, resolveTrainingPeriod as resolveAttendancePeriod };
 
+/**
+ * Normaliza id a string; evita pasar objetos/refs a transaction.get(query) (error .path en serializer).
+ * Soporta string, number, DocumentReference (.id o .path).
+ */
+function normalizeId(value) {
+  if (value == null) return null;
+  if (typeof value === 'string') return value;
+  if (typeof value === 'number') return String(value);
+  if (typeof value === 'object') {
+    if (value.id != null) return String(value.id);
+    if (typeof value.path === 'string') return value.path.split('/').pop() || null;
+  }
+  return null;
+}
+
 export const trainingAttendanceService = {
   isAttendanceStatusPeriodConsumer,
   formatPeriodKey,
@@ -134,23 +185,38 @@ export const trainingAttendanceService = {
   resolveAttendancePeriod: resolveTrainingPeriod,
 
   async upsertAttendance(ownerId, sessionId, employeeId, payload) {
-    // Validaciones para evitar undefined
     if (!ownerId) throw new Error('ownerId es requerido');
-    if (!sessionId) throw new Error('sessionId es requerido');
-    if (!employeeId) throw new Error('employeeId es requerido');
-    
+
+    sessionId = normalizeId(sessionId);
+    employeeId = normalizeId(employeeId);
+
+    if (!sessionId) throw new Error('sessionId inválido');
+    if (!employeeId) throw new Error('employeeId inválido');
+
     const now = Timestamp.now();
+
     const ref = attendanceDocument(ownerId, sessionId, employeeId);
     const denormRef = attendanceByEmployeeDocument(ownerId, employeeId, sessionId);
+
     const sessionData = await getSessionMeta(ownerId, sessionId, payload.sessionData || null);
+    if (!sessionData) throw new Error(`No se encontró la sesión ${sessionId}`);
+
     const resolvedPeriod = await resolveTrainingPeriod(ownerId, sessionData);
+
+    const trainingTypeId = normalizeId(payload.trainingTypeId || sessionData?.trainingTypeId);
+    const companyId = normalizeId(payload.companyId || sessionData?.companyId);
+    const branchId = normalizeId(payload.branchId || sessionData?.branchId);
+
+    if (!trainingTypeId) {
+      throw new Error('trainingTypeId es requerido');
+    }
 
     const attendanceData = {
       employeeId,
       sessionId,
-      trainingTypeId: payload.trainingTypeId || sessionData?.trainingTypeId || null,
-      companyId: payload.companyId || sessionData?.companyId || null,
-      branchId: payload.branchId || sessionData?.branchId || null,
+      trainingTypeId,
+      companyId,
+      branchId,
       attendanceStatus: payload.attendanceStatus || TRAINING_ATTENDANCE_STATUSES.INVITED,
       evaluationStatus: payload.evaluationStatus || TRAINING_EVALUATION_STATUSES.NOT_APPLICABLE,
       score: payload.score ?? null,
@@ -172,202 +238,140 @@ export const trainingAttendanceService = {
       updatedAt: now
     };
 
-    if (!attendanceData.trainingTypeId) {
-      throw new Error('No se pudo registrar la asistencia porque la sesi\u00f3n no tiene trainingTypeId.');
-    }
+    if (!attendanceData.periodYear) throw new Error('periodYear inválido');
+    if (!attendanceData.periodMonth) throw new Error('periodMonth inválido');
+    if (!attendanceData.periodKey) throw new Error('periodKey inválido');
 
-    // Validaciones adicionales para las claves usadas en referencias
-    if (!attendanceData.periodYear) throw new Error('periodYear es requerido para construir referencias');
-    if (!attendanceData.periodMonth) throw new Error('periodMonth es requerido para construir referencias');
-    if (!attendanceData.periodKey) throw new Error('periodKey es requerido para construir referencias');
-
-    const nextConsumesPeriod = isAttendanceStatusPeriodConsumer(attendanceData.attendanceStatus);
     const nextLockId = buildAttendancePeriodLockId(
       employeeId,
-      attendanceData.trainingTypeId,
+      trainingTypeId,
       attendanceData.periodYear,
       attendanceData.periodMonth
     );
+
     const nextLockRef = attendancePeriodLockDocument(ownerId, nextLockId);
+
     const periodResultId = buildEmployeeTrainingPeriodResultId(
       employeeId,
-      attendanceData.trainingTypeId,
+      trainingTypeId,
       attendanceData.periodKey
     );
+
     const periodResultRef = periodResultDocument(ownerId, periodResultId);
+
+    const attendancePeriodQuery = buildPeriodAttendanceQuery(
+      ownerId,
+      employeeId,
+      trainingTypeId,
+      attendanceData.periodYear,
+      attendanceData.periodMonth
+    );
+
+    const periodAttendanceSnap = await getDocs(attendancePeriodQuery);
+
+    const periodAttendances = periodAttendanceSnap.docs.map((item) => ({
+      id: item.id,
+      ...item.data()
+    }));
+
+    const nextDenormId = `${employeeId}_${sessionId}`;
+
+    const recomputeSet = periodAttendances.filter((item) => item.id !== nextDenormId);
+
+    recomputeSet.push(enrichAttendanceForConsolidation({
+      ...attendanceData,
+      id: nextDenormId,
+      createdAt: payload.createdAt || now
+    }, sessionData));
+
+    const existingPresentElsewhere = recomputeSet.find(
+      (item) =>
+        !item.isDeleted &&
+        item.attendanceStatus === TRAINING_ATTENDANCE_STATUSES.PRESENT &&
+        item.sessionId !== sessionId
+    );
+
+    if (existingPresentElsewhere) {
+      throw createPeriodConflictError(existingPresentElsewhere, employeeId);
+    }
+
+    const consolidatedResult =
+      trainingPeriodResultService.consolidatePeriodAttendances(recomputeSet, now);
 
     await runTransaction(dbAudit, async (transaction) => {
       const currentSnap = await transaction.get(ref);
-      const currentAttendance = currentSnap.exists() ? { id: currentSnap.id, ...currentSnap.data() } : null;
-      const currentPeriod = getRecordPeriod(currentAttendance, resolvedPeriod);
-      const currentTrainingTypeId = currentAttendance?.trainingTypeId || attendanceData.trainingTypeId;
-      const currentConsumesPeriod = isAttendanceStatusPeriodConsumer(currentAttendance?.attendanceStatus);
-      const currentLockId = currentConsumesPeriod && currentTrainingTypeId && currentPeriod
-        ? buildAttendancePeriodLockId(employeeId, currentTrainingTypeId, currentPeriod.periodYear, currentPeriod.periodMonth)
+
+      const currentAttendance = currentSnap.exists()
+        ? { id: currentSnap.id, ...currentSnap.data() }
         : null;
-      const currentLockRef = currentLockId ? attendancePeriodLockDocument(ownerId, currentLockId) : null;
-      const currentPeriodChanged = Boolean(
-        currentAttendance
-        && currentTrainingTypeId
-        && currentPeriod
-        && (
-          currentTrainingTypeId !== attendanceData.trainingTypeId
-          || currentPeriod.periodKey !== attendanceData.periodKey
-        )
+
+      transaction.set(
+        ref,
+        decorateWithAppId({
+          ...attendanceData,
+          createdAt: currentAttendance?.createdAt || now
+        }),
+        { merge: true }
       );
 
-      const attendancePeriodQuery = buildPeriodAttendanceQuery(
-        ownerId,
-        employeeId,
-        attendanceData.trainingTypeId,
-        attendanceData.periodYear,
-        attendanceData.periodMonth
+      transaction.set(
+        denormRef,
+        decorateWithAppId({
+          ...attendanceData,
+          createdAt: currentAttendance?.createdAt || now
+        }),
+        { merge: true }
       );
-      const periodAttendanceSnap = await transaction.get(attendancePeriodQuery);
-      const periodAttendances = periodAttendanceSnap.docs.map((item) => ({
-        id: item.id,
-        ...item.data()
-      }));
-
-      const nextDenormId = `${employeeId}_${sessionId}`;
-      const recomputeSet = periodAttendances.filter((item) => item.id !== nextDenormId);
-      recomputeSet.push(enrichAttendanceForConsolidation({
-        ...attendanceData,
-        id: nextDenormId,
-        createdAt: currentAttendance?.createdAt || payload.createdAt || now
-      }, sessionData));
-
-      const existingPresentElsewhere = nextConsumesPeriod
-        ? recomputeSet.find((item) =>
-          !item.isDeleted
-          && item.attendanceStatus === TRAINING_ATTENDANCE_STATUSES.PRESENT
-          && item.sessionId !== sessionId)
-        : null;
-      if (existingPresentElsewhere) {
-        throw createPeriodConflictError(existingPresentElsewhere, employeeId);
-      }
-
-      const consolidatedResult = trainingPeriodResultService.consolidatePeriodAttendances(recomputeSet, now);
-
-      // Todas las escrituras van al final
-      transaction.set(ref, decorateWithAppId({
-        ...attendanceData,
-        createdAt: currentAttendance?.createdAt || payload.createdAt || now
-      }), { merge: true });
-      transaction.set(denormRef, decorateWithAppId({
-        ...attendanceData,
-        createdAt: currentAttendance?.createdAt || payload.createdAt || now
-      }), { merge: true });
 
       if (consolidatedResult) {
-        transaction.set(periodResultRef, decorateWithAppId({
-          ...consolidatedResult,
-          createdAt: currentAttendance?.createdAt || payload.createdAt || now,
-          updatedAt: now
-        }), { merge: true });
+        transaction.set(
+          periodResultRef,
+          decorateWithAppId({
+            ...consolidatedResult,
+            updatedAt: now
+          }),
+          { merge: true }
+        );
       } else {
         transaction.delete(periodResultRef);
       }
 
       if (consolidatedResult?.finalStatus === TRAINING_ATTENDANCE_STATUSES.PRESENT) {
-        transaction.set(nextLockRef, decorateWithAppId({
-          employeeId,
-          trainingTypeId: attendanceData.trainingTypeId,
-          periodType: attendanceData.periodType,
-          periodYear: attendanceData.periodYear,
-          periodMonth: attendanceData.periodMonth,
-          periodKey: attendanceData.periodKey,
-          sessionId: consolidatedResult.consumerSessionId,
-          periodResultId,
-          planId: sessionData?.planId || null,
-          planItemId: sessionData?.planItemId || null,
-          attendanceStatus: consolidatedResult.finalStatus,
-          companyId: attendanceData.companyId,
-          branchId: attendanceData.branchId,
-          createdAt: now,
-          updatedAt: now
-        }), { merge: true });
+        transaction.set(
+          nextLockRef,
+          decorateWithAppId({
+            employeeId,
+            trainingTypeId,
+            periodYear: attendanceData.periodYear,
+            periodMonth: attendanceData.periodMonth,
+            periodKey: attendanceData.periodKey,
+            sessionId: consolidatedResult.consumerSessionId,
+            periodResultId,
+            planId: normalizeId(sessionData?.planId) || null,
+            planItemId: normalizeId(sessionData?.planItemId) || null,
+            companyId,
+            branchId,
+            createdAt: now,
+            updatedAt: now
+          }),
+          { merge: true }
+        );
       } else {
         transaction.delete(nextLockRef);
       }
-
-      if (currentLockRef && currentLockId && currentLockId !== nextLockId) {
-        transaction.delete(currentLockRef);
-      }
-
-      if (currentPeriodChanged) {
-        const staleQuery = buildPeriodAttendanceQuery(
-          ownerId,
-          employeeId,
-          currentTrainingTypeId,
-          currentPeriod.periodYear,
-          currentPeriod.periodMonth
-        );
-        const staleSnap = await transaction.get(staleQuery);
-        const staleRecords = staleSnap.docs
-          .map((item) => ({ id: item.id, ...item.data() }))
-          .filter((item) => item.id !== nextDenormId);
-        const staleResultId = buildEmployeeTrainingPeriodResultId(
-          employeeId,
-          currentTrainingTypeId,
-          currentPeriod.periodKey
-        );
-        const staleResultRef = periodResultDocument(ownerId, staleResultId);
-        const staleLockId = buildAttendancePeriodLockId(
-          employeeId,
-          currentTrainingTypeId,
-          currentPeriod.periodYear,
-          currentPeriod.periodMonth
-        );
-        const staleLockRef = attendancePeriodLockDocument(ownerId, staleLockId);
-        const staleConsolidated = trainingPeriodResultService.consolidatePeriodAttendances(staleRecords, now);
-
-        if (staleConsolidated) {
-          transaction.set(staleResultRef, decorateWithAppId({
-            ...staleConsolidated,
-            updatedAt: now
-          }), { merge: true });
-          if (staleConsolidated.finalStatus === TRAINING_ATTENDANCE_STATUSES.PRESENT) {
-            transaction.set(staleLockRef, decorateWithAppId({
-              employeeId,
-              trainingTypeId: currentTrainingTypeId,
-              periodType: currentPeriod.periodType,
-              periodYear: currentPeriod.periodYear,
-              periodMonth: currentPeriod.periodMonth,
-              periodKey: currentPeriod.periodKey,
-              sessionId: staleConsolidated.consumerSessionId,
-              periodResultId: staleResultId,
-              attendanceStatus: staleConsolidated.finalStatus,
-              companyId: staleConsolidated.companyId || null,
-              branchId: staleConsolidated.branchId || null,
-              createdAt: now,
-              updatedAt: now
-            }), { merge: true });
-          } else {
-            transaction.delete(staleLockRef);
-          }
-        } else {
-          transaction.delete(staleResultRef);
-          transaction.delete(staleLockRef);
-        }
-      }
     });
 
-    const shouldRecompute = Boolean(attendanceData.trainingTypeId) && (
-      attendanceData.attendanceStatus !== TRAINING_ATTENDANCE_STATUSES.INVITED
-      || Boolean(attendanceData.validUntil)
-      || Boolean(attendanceData.certificateId)
-      || payload.forceRecompute
-    );
+    const shouldRecompute =
+      attendanceData.attendanceStatus !== TRAINING_ATTENDANCE_STATUSES.INVITED;
 
     if (shouldRecompute) {
       await trainingComplianceService.recomputeEmployeeTrainingRecord(
         ownerId,
         employeeId,
-        attendanceData.trainingTypeId,
+        trainingTypeId,
         {
-          companyId: attendanceData.companyId,
-          branchId: attendanceData.branchId
+          companyId,
+          branchId
         }
       );
     }

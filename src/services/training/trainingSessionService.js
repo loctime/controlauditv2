@@ -40,12 +40,23 @@ const IMMUTABLE_ON_CLOSED_FIELDS = [
 
 const PLAN_LINK_KEYS = ['sessionOrigin', 'planId', 'planItemId', 'planLinkedAt', 'planLinkedBy'];
 
+/** Convierte planId/planItemId a string; evita pasar DocumentReference a getDocument (error .path). */
+function toPlanIdString(value) {
+  if (value == null) return null;
+  if (typeof value === 'string') return value;
+  if (typeof value === 'number') return String(value);
+  if (typeof value === 'object' && value != null && value.id != null) return String(value.id);
+  return null;
+}
+
 function hasPlanLinkField(payload = {}) {
   return PLAN_LINK_KEYS.some((key) => key in payload);
 }
 
 function normalizeSessionPlanLink(data = {}, { fillLinkedAt = false, actorUserId = null } = {}) {
-  const hasPlanRefs = Boolean(data.planId || data.planItemId);
+  const planId = toPlanIdString(data.planId);
+  const planItemId = toPlanIdString(data.planItemId);
+  const hasPlanRefs = Boolean(planId && planItemId);
   let sessionOrigin = data.sessionOrigin;
 
   if (!sessionOrigin) {
@@ -57,12 +68,14 @@ function normalizeSessionPlanLink(data = {}, { fillLinkedAt = false, actorUserId
   }
 
   if (sessionOrigin === 'plan') {
-    if (!data.planId || !data.planItemId) {
+    if (!planId || !planItemId) {
       throw new Error('Plan-linked sessions require planId and planItemId');
     }
 
     return {
       ...data,
+      planId,
+      planItemId,
       sessionOrigin,
       planLinkedAt: fillLinkedAt ? nowTs() : (data.planLinkedAt || null),
       planLinkedBy: fillLinkedAt ? (actorUserId || null) : (data.planLinkedBy || null)

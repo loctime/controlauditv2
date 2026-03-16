@@ -44,6 +44,15 @@ function toIso(value) {
   return new Date(value).toISOString();
 }
 
+/** Normaliza planId/planItemId a string (Firestore puede devolver DocumentReference). Evita error .path en getDocument. */
+function toPlanIdString(value) {
+  if (value == null) return null;
+  if (typeof value === 'string') return value;
+  if (typeof value === 'number') return String(value);
+  if (typeof value === 'object' && value?.id != null) return String(value.id);
+  return null;
+}
+
 function personDisplayName(person) {
   if (!person) return '';
   if (person.displayName) return person.displayName;
@@ -134,7 +143,7 @@ export default function CreateTrainingSession({
         
         if (initialData.planMode === 'plan') {
           setPlanMode('plan');
-          setSelectedPlanItemId(initialData.planItemId || '');
+          setSelectedPlanItemId(toPlanIdString(initialData.planItemId) || '');
         }
       }
     };
@@ -312,8 +321,8 @@ export default function CreateTrainingSession({
       companyId: form.companyId,
       branchId: form.branchId,
       scheduledDate: form.scheduledDate,
-      planId: planMode === 'plan' ? (initialData?.planId || planCandidates.find((c) => c.planItemId === selectedPlanItemId)?.planId) || null : null,
-      planItemId: planMode === 'plan' ? (initialData?.planItemId || selectedPlanItemId) || null : null
+      planId: toPlanIdString(planMode === 'plan' ? (initialData?.planId || planCandidates.find((c) => c.planItemId === selectedPlanItemId)?.planId) || null : null),
+      planItemId: toPlanIdString(planMode === 'plan' ? (initialData?.planItemId || selectedPlanItemId) || null : null)
     };
 
     trainingExecutionService.suggestParticipants(ownerId, sessionContext)
@@ -483,7 +492,7 @@ export default function CreateTrainingSession({
     setSuccess('');
 
     try {
-      // 1. Crear sesión
+      // 1. Crear sesión (planId/planItemId ya normalizados a string con toPlanIdString)
       const sessionRef = await trainingSessionService.createSession(ownerId, {
         trainingTypeId: form.trainingTypeId,
         companyId: form.companyId,
@@ -494,8 +503,8 @@ export default function CreateTrainingSession({
         scheduledDate: toIso(form.scheduledDate),
         status: mode === 'quick' ? TRAINING_SESSION_STATUSES.CLOSED : TRAINING_SESSION_STATUSES.SCHEDULED,
         sessionOrigin: planMode === 'plan' ? 'plan' : 'ad_hoc',
-        planId: planMode === 'plan' ? (initialData?.planId || planCandidates.find(c => c.planItemId === selectedPlanItemId)?.planId || null) : null,
-        planItemId: planMode === 'plan' ? (initialData?.planItemId || selectedPlanItemId) : null,
+        planId: toPlanIdString(planMode === 'plan' ? (initialData?.planId || planCandidates.find(c => c.planItemId === selectedPlanItemId)?.planId || null) : null),
+        planItemId: toPlanIdString(planMode === 'plan' ? (initialData?.planItemId || selectedPlanItemId) : null),
         executedDate: mode === 'quick' ? new Date().toISOString() : null
       }, {
         currentUserId: userProfile?.uid || null
@@ -527,13 +536,26 @@ export default function CreateTrainingSession({
         setForm(defaultForm(userProfile));
         setSelectedIds([]);
         setParticipantRecords({});
-        setEmployees([]);
         setSuccess('');
         if (onSaved) onSaved(sessionRef.id);
       }, 2000);
 
     } catch (err) {
-      setError(err.message || 'No se pudo guardar la capacitación');
+      console.error('[CreateTrainingSession] Error al guardar', err);
+      const msg = err?.message || '';
+      const isPathError = msg.includes("reading 'path'") || msg.includes('reading "path"');
+      const isPeriodConflict = err?.code === 'training_attendance_period_conflict';
+      let displayMessage = msg || 'No se pudo guardar la capacitación';
+      if (isPathError) {
+        displayMessage = 'Error al vincular con el plan. Por favor, vuelve a abrir "Registrar desde Plan" e inténtalo de nuevo.';
+      } else if (isPeriodConflict) {
+        const d = err?.details || {};
+        const periodLabel = d.periodYear && d.periodMonth
+          ? new Date(d.periodYear, d.periodMonth - 1).toLocaleDateString('es', { month: 'long', year: 'numeric' })
+          : 'este período';
+        displayMessage = `Un empleado ya tiene esta capacitación registrada como asistió en otra sesión (${periodLabel}). Solo puede contarse una sesión por empleado por período. Revisa la otra sesión o quita la asistencia allí antes de guardar aquí.`;
+      }
+      setError(displayMessage);
     } finally {
       setSaving(false);
     }
@@ -805,7 +827,7 @@ export default function CreateTrainingSession({
                               )}
                               {isBlocked && (
                                 <Typography variant="caption" color="warning.main" display="block">
-                                  Ya registrado en {formatPeriodLabel(blockInfo.periodYear, blockInfo.periodMonth)} en otra sesiÃ³n
+                                  Ya registrado en {formatPeriodLabel(blockInfo.periodYear, blockInfo.periodMonth)} en otra sesión
                                 </Typography>
                               )}
                             </Box>
@@ -846,7 +868,7 @@ export default function CreateTrainingSession({
                                   if (!isSelected) toggleEmployee(employee.id);
                                   updateParticipantRecord(employee.id, 'score', newValue || 0);
                                 }}
-                                disabled={!isSelected}
+                                disabled={!isSelected || record.attendanceStatus !== TRAINING_ATTENDANCE_STATUSES.PRESENT}
                                 size="small"
                                 precision={0.5}
                               />

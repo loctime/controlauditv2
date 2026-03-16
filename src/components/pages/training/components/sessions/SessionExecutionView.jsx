@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Alert, Grid, MenuItem, Paper, Stack, TextField, Typography, Button } from '@mui/material';
 import { trainingAttendanceService, trainingCatalogService } from '../../../../../services/training';
+import { resolveTrainingPeriod } from '../../../../../services/training/trainingPeriodUtils';
 import {
   TRAINING_ATTENDANCE_STATUSES,
   TRAINING_EVALUATION_STATUSES
@@ -45,14 +46,58 @@ function buildAttendanceConflictMessage(error, employeeName) {
   return `${employeeName || 'El empleado'} ya registró esta capacitación en ${periodKey} en otra sesión.`;
 }
 
+/**
+ * Normalize plan id: Firestore may return DocumentReference; we need a string or null for getDocument.
+ */
+function toPlanId(value) {
+  if (value == null) return null;
+  if (typeof value === 'string') return value;
+  if (typeof value === 'object' && value.id != null) return String(value.id);
+  return null;
+}
+
+function toEmployeeKey(value) {
+  if (value == null) return '';
+  if (typeof value === 'string' || typeof value === 'number') return String(value);
+  if (typeof value === 'object' && value.id != null) return String(value.id);
+  if (typeof value === 'object' && value.employeeId != null) return toEmployeeKey(value.employeeId);
+  try {
+    return JSON.stringify(value);
+  } catch {
+    return '';
+  }
+}
+
+/**
+ * Builds a session-like object for resolveTrainingPeriod (dates may be Firestore Timestamps).
+ * Ensures planId/planItemId are strings or null (never DocumentReferences) to avoid .path errors in getDocument.
+ */
+function toSessionLike(session) {
+  if (!session) return null;
+  const planId = toPlanId(session.planId);
+  const planItemId = toPlanId(session.planItemId);
+  const hasPlan = Boolean(planId && planItemId);
+  return {
+    scheduledDate: session.scheduledDate,
+    executedDate: session.executedDate || null,
+    planId: planId || null,
+    planItemId: planItemId || null,
+    sessionOrigin: hasPlan ? 'plan' : 'ad_hoc'
+  };
+}
+
 export default function SessionExecutionView({ ownerId, session, onChanged }) {
   const [records, setRecords] = useState([]);
   const [error, setError] = useState('');
   const [requiresEvaluation, setRequiresEvaluation] = useState(false);
+  const [period, setPeriod] = useState(null);
+  const [periodLocksByEmployee, setPeriodLocksByEmployee] = useState({});
 
   const load = async () => {
     if (!ownerId || !session?.id) return;
     setError('');
+    setPeriod(null);
+    setPeriodLocksByEmployee({});
     try {
       const [attendance, catalog] = await Promise.all([
         trainingAttendanceService.listAttendanceBySession(ownerId, session.id),
@@ -60,6 +105,33 @@ export default function SessionExecutionView({ ownerId, session, onChanged }) {
       ]);
       setRecords(attendance);
       setRequiresEvaluation(Boolean(catalog?.requiresEvaluation));
+
+      const sessionLike = toSessionLike(session);
+      if (!sessionLike) return;
+      let resolvedPeriod;
+      try {
+        resolvedPeriod = await resolveTrainingPeriod(ownerId, sessionLike);
+      } catch (periodErr) {
+        return;
+      }
+      setPeriod(resolvedPeriod);
+
+      const locks = await trainingAttendanceService.listPeriodLocks(ownerId, {
+        companyId: session.companyId,
+        branchId: session.branchId,
+        trainingTypeId: session.trainingTypeId,
+        periodYear: resolvedPeriod.periodYear,
+        periodMonth: resolvedPeriod.periodMonth
+      });
+      const byEmployee = {};
+      (locks || []).forEach((lock) => {
+        const key = toEmployeeKey(lock.employeeId);
+        byEmployee[key] = {
+          consumed: true,
+          isOtherSession: lock.sessionId !== session.id
+        };
+      });
+      setPeriodLocksByEmployee(byEmployee);
     } catch (err) {
       setError(err.message || 'No se pudieron cargar los registros de ejecución.');
     }
@@ -70,10 +142,12 @@ export default function SessionExecutionView({ ownerId, session, onChanged }) {
   }, [ownerId, session?.id]);
 
   const updateRecord = async (employeeId, patch) => {
+    const normalizedEmployeeId = toEmployeeKey(employeeId);
     if (!ownerId || !session?.id) return;
+    if (periodLocksByEmployee[normalizedEmployeeId]?.consumed) return;
     try {
-      const current = records.find((record) => record.employeeId === employeeId) || {};
-      await trainingAttendanceService.upsertAttendance(ownerId, session.id, employeeId, {
+      const current = records.find((record) => toEmployeeKey(record.employeeId) === normalizedEmployeeId) || {};
+      await trainingAttendanceService.upsertAttendance(ownerId, session.id, normalizedEmployeeId, {
         ...current,
         ...patch
       });
@@ -118,70 +192,88 @@ export default function SessionExecutionView({ ownerId, session, onChanged }) {
       )}
 
       <Stack spacing={1.5}>
-        {records.map((record) => (
-          <Grid container spacing={1.5} key={record.employeeId} alignItems="center">
-            <Grid item xs={12} md={3}>
-              <Typography>
-                {record.employeeDisplayName ||
-                  record.employeeName ||
-                  'Sin dato'}
-              </Typography>
+        {records.map((record) => {
+          const employeeKey = toEmployeeKey(record.employeeId);
+          const lockInfo = periodLocksByEmployee[employeeKey];
+          const isReadOnly = Boolean(lockInfo?.consumed);
+          const showCompletedInOtherSession = Boolean(lockInfo?.isOtherSession);
+          const evaluationDisabled = !requiresEvaluation || record.attendanceStatus !== TRAINING_ATTENDANCE_STATUSES.PRESENT;
+
+          return (
+            <Grid container spacing={1.5} key={employeeKey || String(index)} alignItems="center">
+              {showCompletedInOtherSession && (
+                <Grid item xs={12}>
+                  <Typography variant="caption" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+                    Completado en otra sesión este mes
+                  </Typography>
+                </Grid>
+              )}
+              <Grid item xs={12} md={3}>
+                <Typography>
+                  {record.employeeDisplayName ||
+                    record.employeeName ||
+                    'Sin dato'}
+                </Typography>
+              </Grid>
+              <Grid item xs={12} md={3}>
+                <TextField
+                  select
+                  fullWidth
+                  size="small"
+                  label="Asistencia"
+                  value={record.attendanceStatus || TRAINING_ATTENDANCE_STATUSES.PRESENT}
+                  onChange={(e) => updateRecord(record.employeeId, { attendanceStatus: e.target.value })}
+                  disabled={isReadOnly}
+                >
+                  {attendanceMenu}
+                </TextField>
+              </Grid>
+              <Grid item xs={12} md={3}>
+                <TextField
+                  select
+                  fullWidth
+                  size="small"
+                  label="Evaluación"
+                  value={record.evaluationStatus || TRAINING_EVALUATION_STATUSES.PENDING}
+                  onChange={(e) => updateRecord(record.employeeId, { evaluationStatus: e.target.value })}
+                  disabled={evaluationDisabled || isReadOnly}
+                >
+                  {evaluationMenu}
+                </TextField>
+              </Grid>
+              <Grid item xs={12} md={3}>
+                <TextField
+                  fullWidth
+                  size="small"
+                  label="Firma empleado (ref)"
+                  value={record.employeeSignature?.fileReference || ''}
+                  onChange={(e) => updateRecord(record.employeeId, {
+                    employeeSignature: {
+                      signedAt: new Date().toISOString(),
+                      fileReference: e.target.value
+                    }
+                  })}
+                  disabled={isReadOnly}
+                />
+              </Grid>
+              <Grid item xs={12} md={3}>
+                <TextField
+                  fullWidth
+                  size="small"
+                  label="Firma instructor (ref)"
+                  value={record.instructorSignature?.fileReference || ''}
+                  onChange={(e) => updateRecord(record.employeeId, {
+                    instructorSignature: {
+                      signedAt: new Date().toISOString(),
+                      fileReference: e.target.value
+                    }
+                  })}
+                  disabled={isReadOnly}
+                />
+              </Grid>
             </Grid>
-            <Grid item xs={12} md={3}>
-              <TextField
-                select
-                fullWidth
-                size="small"
-                label="Asistencia"
-                value={record.attendanceStatus || TRAINING_ATTENDANCE_STATUSES.PRESENT}
-                onChange={(e) => updateRecord(record.employeeId, { attendanceStatus: e.target.value })}
-              >
-                {attendanceMenu}
-              </TextField>
-            </Grid>
-            <Grid item xs={12} md={3}>
-              <TextField
-                select
-                fullWidth
-                size="small"
-                label="Evaluación"
-                value={record.evaluationStatus || TRAINING_EVALUATION_STATUSES.PENDING}
-                onChange={(e) => updateRecord(record.employeeId, { evaluationStatus: e.target.value })}
-                disabled={!requiresEvaluation}
-              >
-                {evaluationMenu}
-              </TextField>
-            </Grid>
-            <Grid item xs={12} md={3}>
-              <TextField
-                fullWidth
-                size="small"
-                label="Firma empleado (ref)"
-                value={record.employeeSignature?.fileReference || ''}
-                onChange={(e) => updateRecord(record.employeeId, {
-                  employeeSignature: {
-                    signedAt: new Date().toISOString(),
-                    fileReference: e.target.value
-                  }
-                })}
-              />
-            </Grid>
-            <Grid item xs={12} md={3}>
-              <TextField
-                fullWidth
-                size="small"
-                label="Firma instructor (ref)"
-                value={record.instructorSignature?.fileReference || ''}
-                onChange={(e) => updateRecord(record.employeeId, {
-                  instructorSignature: {
-                    signedAt: new Date().toISOString(),
-                    fileReference: e.target.value
-                  }
-                })}
-              />
-            </Grid>
-          </Grid>
-        ))}
+          );
+        })}
 
         {records.length === 0 && (
           <Alert severity="info">No hay participantes asignados todavía.</Alert>
